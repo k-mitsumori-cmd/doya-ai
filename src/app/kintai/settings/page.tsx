@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 
 function computeSchedulePreview(workStart: string, workEnd: string, breakMinutes: number): string {
   if (!workStart || !workEnd) return ''
@@ -28,6 +28,8 @@ function computeSchedulePreview(workStart: string, workEnd: string, breakMinutes
 export default function SettingsPage() {
   const [rules, setRules] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const requestVersion = useRef(0)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState({ name: '', workStart: '09:00', workEnd: '18:00', breakMinutes: 60, overtimeCalcMethod: 'daily', flexEnabled: false, coreStart: '', coreEnd: '' })
@@ -35,16 +37,28 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const fetchRules = () => {
+  const fetchRules = async () => {
+    const version = ++requestVersion.current
     setLoading(true)
-    fetch('/api/kintai/work-rules')
-      .then(r => r.json())
-      .then(d => setRules(d.rules || []))
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    setLoadError(false)
+    setRules([])
+    try {
+      const response = await fetch('/api/kintai/work-rules', { cache: 'no-store' })
+      if (!response.ok) throw new Error('Failed to fetch work rules')
+      const data = await response.json()
+      if (!Array.isArray(data?.rules)) throw new Error('Invalid work rules response')
+      if (version === requestVersion.current) setRules(data.rules)
+    } catch {
+      if (version === requestVersion.current) setLoadError(true)
+    } finally {
+      if (version === requestVersion.current) setLoading(false)
+    }
   }
 
-  useEffect(() => { fetchRules() }, [])
+  useEffect(() => {
+    void fetchRules()
+    return () => { requestVersion.current += 1 }
+  }, [])
 
   const openCreate = () => {
     setEditing(null)
@@ -71,7 +85,7 @@ export default function SettingsPage() {
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       if (!res.ok) { const d = await res.json(); alert(d.error || '保存に失敗しました'); return }
       setShowForm(false)
-      fetchRules()
+      void fetchRules()
     } catch { alert('通信エラー') } finally { setSaving(false) }
   }
 
@@ -82,7 +96,7 @@ export default function SettingsPage() {
       const res = await fetch(`/api/kintai/work-rules/${showDeleteConfirm.id}`, { method: 'DELETE' })
       if (!res.ok) { const d = await res.json(); alert(d.error || '削除に失敗しました'); return }
       setShowDeleteConfirm(null)
-      fetchRules()
+      void fetchRules()
     } catch { alert('通信エラー') } finally { setDeleting(false) }
   }
 
@@ -103,7 +117,7 @@ export default function SettingsPage() {
               <p className="text-xs text-slate-500">勤務時間やフレックスを設定しよう</p>
             </div>
           </div>
-          <button onClick={openCreate} className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20">
+          <button onClick={openCreate} disabled={loading || loadError} className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20 disabled:opacity-50">
             <span className="material-symbols-outlined text-lg">add</span>ルールを追加
           </button>
         </div>
@@ -118,6 +132,11 @@ export default function SettingsPage() {
           <div className="flex flex-col items-center justify-center py-16 gap-4">
             <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700">
+            就業ルールを取得できませんでした。
+            <button type="button" onClick={() => void fetchRules()} className="ml-2 font-bold underline">再読み込み</button>
           </div>
         ) : rules.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center fade-in-up">

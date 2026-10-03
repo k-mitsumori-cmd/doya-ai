@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const DEPT_BORDER_COLORS = [
   '#7f19e6', '#2563eb', '#0891b2', '#059669', '#d97706',
@@ -14,6 +14,8 @@ function getDeptBorderColor(index: number): string {
 export default function DepartmentsPage() {
   const [departments, setDepartments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const requestVersion = useRef(0)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [name, setName] = useState('')
@@ -21,16 +23,28 @@ export default function DepartmentsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const fetchDepts = () => {
+  const fetchDepts = async () => {
+    const version = ++requestVersion.current
     setLoading(true)
-    fetch('/api/kintai/departments')
-      .then(r => r.json())
-      .then(d => setDepartments(d.departments || []))
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    setLoadError(false)
+    setDepartments([])
+    try {
+      const response = await fetch('/api/kintai/departments', { cache: 'no-store' })
+      if (!response.ok) throw new Error('Failed to fetch departments')
+      const data = await response.json()
+      if (!Array.isArray(data?.departments)) throw new Error('Invalid departments response')
+      if (version === requestVersion.current) setDepartments(data.departments)
+    } catch {
+      if (version === requestVersion.current) setLoadError(true)
+    } finally {
+      if (version === requestVersion.current) setLoading(false)
+    }
   }
 
-  useEffect(() => { fetchDepts() }, [])
+  useEffect(() => {
+    void fetchDepts()
+    return () => { requestVersion.current += 1 }
+  }, [])
 
   const openCreate = () => { setEditing(null); setName(''); setShowForm(true) }
   const openEdit = (dept: any) => { setEditing(dept); setName(dept.name); setShowForm(true) }
@@ -45,7 +59,7 @@ export default function DepartmentsPage() {
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if (!res.ok) { const d = await res.json(); alert(d.error || '保存に失敗しました'); return }
       setShowForm(false)
-      fetchDepts()
+      void fetchDepts()
     } catch { alert('通信エラー') } finally { setSaving(false) }
   }
 
@@ -56,7 +70,7 @@ export default function DepartmentsPage() {
       const res = await fetch(`/api/kintai/departments/${showDeleteConfirm.id}`, { method: 'DELETE' })
       if (!res.ok) { const d = await res.json(); alert(d.error || '削除に失敗しました'); return }
       setShowDeleteConfirm(null)
-      fetchDepts()
+      void fetchDepts()
     } catch { alert('通信エラー') } finally { setDeleting(false) }
   }
 
@@ -70,14 +84,14 @@ export default function DepartmentsPage() {
             <img src="/kintai/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
               <h1 className="text-2xl font-black text-slate-800">部署管理</h1>
-              {!loading && (
+              {!loading && !loadError && (
                 <span className="text-sm text-slate-500">
                   全<span className="font-bold text-[#7f19e6]">{departments.length}</span>部署
                 </span>
               )}
             </div>
           </div>
-          <button onClick={openCreate} className="flex items-center gap-2 px-5 py-3 bg-[#7f19e6] text-white text-base font-black rounded-full hover:bg-[#6a14c2] transition-all shadow-lg shadow-[#7f19e6]/20">
+          <button onClick={openCreate} disabled={loading || loadError} className="flex items-center gap-2 px-5 py-3 bg-[#7f19e6] text-white text-base font-black rounded-full hover:bg-[#6a14c2] transition-all shadow-lg shadow-[#7f19e6]/20 disabled:opacity-50">
             <span className="material-symbols-outlined text-xl">add</span>部署を追加
           </button>
         </div>
@@ -86,6 +100,11 @@ export default function DepartmentsPage() {
           <div className="flex flex-col items-center justify-center py-16 gap-4">
             <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700">
+            部署情報を取得できませんでした。
+            <button type="button" onClick={() => void fetchDepts()} className="ml-2 font-bold underline">再読み込み</button>
           </div>
         ) : departments.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center fade-in-up">
