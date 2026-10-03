@@ -179,6 +179,14 @@ export async function POST(req: NextRequest) {
     const { ok: _ok, reason, ...details } = quota
     return NextResponse.json({ error: reason, ...details }, { status: 429, headers: { 'Cache-Control': 'no-store' } })
   }
+  // 登録済みロゴが欠けている場合、ロゴなし画像を作って生成枠を消費しない。
+  const logoBuf = brandRow.logoPath ? await downloadBuffer(brandRow.logoPath).catch(() => null) : null
+  if (brandRow.logoPath && !logoBuf) {
+    return NextResponse.json({ error: '登録済みロゴを読み込めませんでした。ロゴを再登録するか外してから再試行してください。' }, { status: 503 })
+  }
+  const logo = logoBuf
+    ? { buffer: logoBuf, config: ((brandRow.logoConfig as LogoConfig | null) ?? DEFAULT_LOGO_CONFIG) }
+    : null
   const claim = await claimImageBudget(identity, placementKeys.length * requestedVariations, true)
   if (!claim.ok) {
     const { ok: _ok, reason, ...details } = claim
@@ -209,13 +217,6 @@ export async function POST(req: NextRequest) {
     },
     select: { id: true },
   })
-
-  // ロゴ（登録されていれば書き出し時に合成する）
-  // ⚠️ 読み込みに失敗しても生成は続ける。ロゴが入らないことより画像が出ない方が困る。
-  const logoBuf = brandRow.logoPath ? await downloadBuffer(brandRow.logoPath).catch(() => null) : null
-  const logo = logoBuf
-    ? { buffer: logoBuf, config: ((brandRow.logoConfig as LogoConfig | null) ?? DEFAULT_LOGO_CONFIG) }
-    : null
 
   // ⚠️ 同じサイズで見比べたいという要望に応えるための「3パターン」。
   //    構図を変えて同じサイズを複数回作る。枚数の枠もそのぶん消費する。

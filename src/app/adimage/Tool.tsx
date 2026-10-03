@@ -226,8 +226,14 @@ export default function AdImageTool() {
     if (!brandId) return
     setLogoBusy(true)
     try {
-      await fetch(`/api/adimage/brands/${brandId}/logo`, { method: 'DELETE' })
+      const response = await fetch(`/api/adimage/brands/${brandId}/logo`, { method: 'DELETE' })
+      if (!response.ok) {
+        const result = await response.json().catch(() => null)
+        throw new Error(result?.error || 'ロゴを外せませんでした')
+      }
       setLogoName('')
+    } catch (e) {
+      notifyError(setError, e instanceof Error ? e.message : 'ロゴを外せませんでした')
     } finally {
       setLogoBusy(false)
     }
