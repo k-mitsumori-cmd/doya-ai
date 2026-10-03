@@ -139,24 +139,32 @@ export async function POST(req: NextRequest) {
     const employee = admission.employee
 
     // 招待メールを自動送信
-    const org = await prisma.kintaiOrganization.findUnique({
-      where: { id: ctx.organizationId },
-      select: { name: true },
-    })
+    let organizationName = '組織'
+    try {
+      const org = await prisma.kintaiOrganization.findUnique({
+        where: { id: ctx.organizationId },
+        select: { name: true },
+      })
+      organizationName = org?.name || organizationName
+    } catch {
+      console.error('[kintai/employees] organization name lookup failed after creation')
+    }
     const baseUrl = process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'
     const inviteUrl = `${baseUrl}/kintai/invite/${inviteToken}`
 
-    sendEmail({
-      to: email,
-      subject: `【ドヤ勤怠】${esc(org?.name || '組織')}への招待`,
-      html: `
+    let emailSent = false
+    try {
+      const emailResult = await sendEmail({
+        to: email,
+        subject: `【ドヤ勤怠】${organizationName.replace(/[\r\n]/g, ' ')}への招待`,
+        html: `
         <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
           <div style="text-align: center; margin-bottom: 24px;">
             <div style="display: inline-block; width: 48px; height: 48px; border-radius: 16px; background: linear-gradient(135deg, #7f19e6, #5b0fb3); color: white; line-height: 48px; font-size: 20px; font-weight: bold;">⏰</div>
           </div>
           <h1 style="text-align: center; font-size: 24px; font-weight: 800; color: #1e293b; margin-bottom: 8px;">ドヤ勤怠への招待</h1>
           <p style="text-align: center; color: #64748b; font-size: 15px; margin-bottom: 24px;">
-            <strong style="color: #7f19e6;">${esc(org?.name || '組織')}</strong> に招待されました
+            <strong style="color: #7f19e6;">${esc(organizationName)}</strong> に招待されました
           </p>
           <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
             ${esc(name)} さん、こんにちは！<br>
@@ -174,10 +182,14 @@ export async function POST(req: NextRequest) {
           <p style="color: #cbd5e1; font-size: 11px; text-align: center;">ドヤ勤怠 by ドヤAI</p>
         </div>
       `,
-      tags: [{ name: 'service', value: 'kintai-invite' }],
-    }).catch(e => console.error('[kintai/employees] invite email failed:'))
+        tags: [{ name: 'service', value: 'kintai-invite' }],
+      })
+      emailSent = emailResult.success
+    } catch {
+      console.error('[kintai/employees] invite email failed')
+    }
 
-    return NextResponse.json({ employee, inviteUrl }, { status: 201 })
+    return NextResponse.json({ employee, inviteUrl, emailSent }, { status: 201 })
   } catch (e: any) {
     console.error('[kintai/employees POST]')
     let msg = '作成に失敗しました'

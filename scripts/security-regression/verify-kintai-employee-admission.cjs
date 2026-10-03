@@ -12,6 +12,7 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
   await check('concurrent employee creation counts and writes under the same organization lock', async () => {
     let activeCount = 0
     let creates = 0
+    let sends = 0
     let lockCalls = 0
     let previous = Promise.resolve()
     const prisma = {
@@ -36,7 +37,7 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
       },
       kintaiDepartment: { findFirst: async () => null },
       kintaiWorkRule: { findFirst: async () => null },
-      kintaiOrganization: { findUnique: async () => ({ name: '会社' }) },
+      kintaiOrganization: { findUnique: async () => { throw Error('temporary lookup failure') } },
     }
     const api = load('src/app/api/kintai/employees/route.ts', {
       'next/server': { NextResponse: Response },
@@ -45,13 +46,17 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
       '@/lib/kintai/access': access,
       '@/lib/kintai/employee-admission': admission,
       '@/lib/kintai/invite-token': inviteToken,
-      '@/lib/email': { sendEmail: async () => {} },
+      '@/lib/email': { sendEmail: async ({ subject }) => { sends++; assert.ok(subject.includes('組織')); return { success: false } } },
     }, { crypto: webcrypto })
     const request = () => ({ json: async () => ({ name: '山田', email: 'yamada@example.test' }) })
     const responses = await Promise.all([api.POST(request()), api.POST(request())])
     assert.deepEqual(responses.map(r => r.status).sort(), [201, 403])
     assert.equal(lockCalls, 2)
     assert.equal(creates, 1)
+    assert.equal(sends, 1)
+    const created = await responses.find(r => r.status === 201).json()
+    assert.equal(created.emailSent, false)
+    assert.ok(created.inviteUrl)
     const denied = await responses.find(r => r.status === 403).json()
     assert.equal(denied.code, 'KINTAI_EMPLOYEE_LIMIT')
     assert.equal(denied.canManageBilling, true)

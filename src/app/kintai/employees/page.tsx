@@ -39,6 +39,7 @@ export default function EmployeesPage() {
   const [form, setForm] = useState({ name: '', nameKana: '', email: '', departmentId: '', workRuleId: '', employmentType: 'full_time', hireDate: '', role: 'employee' })
   const [saving, setSaving] = useState(false)
   const [limitNotice, setLimitNotice] = useState<{ message: string; href?: string; action?: string } | null>(null)
+  const [inviteDeliveryFailure, setInviteDeliveryFailure] = useState<string | null>(null)
   const togglingRef = useRef(new Set<string>())
   const [togglingIds, setTogglingIds] = useState(new Set<string>())
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -128,6 +129,10 @@ export default function EmployeesPage() {
         if (d.code === 'KINTAI_EMPLOYEE_LIMIT') { showEmployeeLimit(d); return }
         alert((d.error || '保存に失敗しました') + (d.detail ? '\n\n詳細: ' + d.detail : ''))
         return
+      }
+      if (!editing) {
+        const result = await res.json()
+        setInviteDeliveryFailure(result.emailSent === true ? null : typeof result.inviteUrl === 'string' ? result.inviteUrl : null)
       }
       setLimitNotice(null)
       setShowForm(false)
@@ -230,6 +235,18 @@ export default function EmployeesPage() {
           <div role="alert" className="rounded-xl border border-purple-200 bg-purple-50 p-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-medium text-purple-900">{limitNotice.message}</p>
             {limitNotice.href && <Link href={limitNotice.href} className="rounded-lg bg-[#7f19e6] px-4 py-2 text-sm font-bold text-white hover:bg-[#6a14c2]">{limitNotice.action}</Link>}
+          </div>
+        )}
+        {inviteDeliveryFailure && (
+          <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-2">
+            <p className="text-sm font-medium text-amber-900">従業員を作成しましたが、招待メールを送信できませんでした。以下のURLをコピーして共有してください。</p>
+            <div className="flex gap-2">
+              <input aria-label="招待URL" value={inviteDeliveryFailure} readOnly className="min-w-0 flex-1 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm" />
+              <button type="button" onClick={async () => {
+                try { await navigator.clipboard.writeText(inviteDeliveryFailure) }
+                catch { alert('自動でコピーできませんでした。URL欄から手動でコピーしてください。') }
+              }} className="rounded-lg bg-amber-700 px-3 py-2 text-sm font-bold text-white">コピー</button>
+            </div>
           </div>
         )}
 
