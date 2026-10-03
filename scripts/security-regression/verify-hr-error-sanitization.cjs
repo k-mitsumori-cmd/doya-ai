@@ -49,6 +49,7 @@ async function expectSafe(promise, expected) {
       } },
       '@/lib/hr/access': { getHrContext: async () => ctx, hasMinRole: () => true },
       '@/lib/hr/types': { HrMemberRole: { ADMIN: 'ADMIN' } },
+      '@/lib/hr/billing': { hrJstMonthRange: () => ({ start: new Date('2099-01-01'), end: new Date('2099-02-01') }) },
       '@/lib/hr/evaluation-access': { getEvaluationReadWhere: async () => ({}) },
       '@/lib/hr/one-on-one-access': { getOneOnOneReadWhere: async () => ({}) },
     })

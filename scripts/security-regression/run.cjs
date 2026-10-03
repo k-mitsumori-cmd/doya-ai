@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const hrOneOnOneMonth = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-one-on-one-month.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrOneOnOneMonth.error || hrOneOnOneMonth.status !== 0) {
+  console.error('Security regression failed: verify-hr-one-on-one-month.cjs');
+  process.exit(1);
+}
 const hrLoadErrorUi = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-load-error-ui.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrLoadErrorUi.error || hrLoadErrorUi.status !== 0) {
   console.error('Security regression failed: verify-hr-load-error-ui.cjs');

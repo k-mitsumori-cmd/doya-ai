@@ -7,6 +7,7 @@ import { getEvaluationReadWhere } from '@/lib/hr/evaluation-access'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
+import { hrJstMonthRange } from '@/lib/hr/billing'
 import { getOneOnOneReadWhere } from '@/lib/hr/one-on-one-access'
 
 export async function GET() {
@@ -20,6 +21,7 @@ export async function GET() {
     const oneOnOneWhere = await getOneOnOneReadWhere(ctx)
 
     const orgId = ctx.organizationId
+    const month = hrJstMonthRange()
 
     const [org, employeeCount, departmentCount, activeEvaluationPeriods, monthlyOneOnOnes, recentOneOnOneRecords] =
       await Promise.all([
@@ -38,7 +40,8 @@ export async function GET() {
           where: {
             ...oneOnOneWhere,
             conductedAt: {
-              gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+              gte: month.start,
+              lt: month.end,
             },
           },
         }),

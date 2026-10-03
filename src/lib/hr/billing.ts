@@ -110,8 +110,19 @@ export async function checkEmployeeLimit(organizationId: string): Promise<string
 
 /** 日本時間の当月1日0時。実行環境のタイムゾーンに依存しない。 */
 export function hrJstMonthStart(now = new Date()): Date {
+  return hrJstMonthRange(now).start
+}
+
+/** 日本時間の当月初めから翌月初めまでの半開区間。 */
+export function hrJstMonthRange(now = new Date()): { start: Date; end: Date } {
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
-  return new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1) - 9 * 60 * 60 * 1000)
+  const year = jst.getUTCFullYear()
+  const month = jst.getUTCMonth()
+  const offset = 9 * 60 * 60 * 1000
+  return {
+    start: new Date(Date.UTC(year, month, 1) - offset),
+    end: new Date(Date.UTC(year, month + 1, 1) - offset),
+  }
 }
 
 export type HrAiReservation = { organizationId: string; resetAt: Date }
