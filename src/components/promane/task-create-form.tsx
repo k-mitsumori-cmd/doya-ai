@@ -82,6 +82,7 @@ export function TaskCreateForm({
       <form onSubmit={handleSubmit} className="space-y-3">
         <Input
           placeholder="✏️ タスク名を入力..."
+          maxLength={200}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="h-12 rounded-2xl text-[16px] font-bold bg-gray-50 border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-400 transition-all"

@@ -157,7 +157,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
           {/* タイトル */}
           <div>
             <label className="block text-[12px] font-black text-gray-700 mb-1.5">タスク名 <span className="text-rose-500">*</span></label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-11 rounded-xl text-[14px] font-bold" />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} className="h-11 rounded-xl text-[14px] font-bold" />
           </div>
 
           {/* 説明 */}
@@ -165,6 +165,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
             <label className="block text-[12px] font-black text-gray-700 mb-1.5">詳細・メモ</label>
             <textarea
               value={description}
+              maxLength={5000}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className="w-full px-3 py-2 rounded-xl border border-gray-200 text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"

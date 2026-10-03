@@ -50,7 +50,7 @@ function fixture(operation, conflict = false) {
     : operation === 'move'
       ? actions.moveTask('workspace', 'task', 'done', 0)
       : actions.deleteTask('workspace', 'task')
-  return { call, state: () => ({ attempts, writes }) }
+  return { call, actions, state: () => ({ attempts, writes }) }
 }
 
 ;(async () => {
@@ -64,4 +64,23 @@ function fixture(operation, conflict = false) {
     assert.deepEqual(revoked.state(), { attempts: 2, writes: 0 }, `${operation} no committed write`)
   }
   console.log('PASS task create, move and delete retry in a serializable transaction and recheck revoked membership')
+
+  for (const patch of [
+    { title: 'x'.repeat(201) }, { title: ' ' }, { title: 12 },
+    { description: 'x'.repeat(5001) }, { description: {} },
+  ]) {
+    const invalid = fixture('create')
+    await assert.rejects(invalid.actions.createTask('workspace', { projectId: 'project', title: 'Task', ...patch }))
+    await assert.rejects(invalid.actions.updateTask('workspace', 'task', patch))
+    assert.equal(invalid.state().writes, 0)
+  }
+  const exact = fixture('create')
+  const text = { title: '題'.repeat(200), description: '説'.repeat(5000) }
+  const created = await exact.actions.createTask('workspace', { projectId: 'project', ...text })
+  const updated = await exact.actions.updateTask('workspace', 'task', text)
+  assert.equal(created.title, text.title)
+  assert.equal(created.description, text.description)
+  assert.equal(updated.title, text.title)
+  assert.equal(updated.description, text.description)
+  console.log('PASS task text rejects overflow without truncation and preserves exact boundaries')
 })().catch(error => { console.error(error); process.exitCode = 1 })

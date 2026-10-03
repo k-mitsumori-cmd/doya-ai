@@ -21,6 +21,16 @@ function validateTaskFields(status?: string, priority?: string, order?: number) 
   }
 }
 
+function validateTaskText(data: { title?: unknown; description?: unknown }, requireTitle = false) {
+  if (requireTitle || data.title !== undefined) {
+    if (typeof data.title !== "string" || !data.title.trim()) throw new Error("タスク名は必須です");
+    if (data.title.trim().length > 200) throw new Error("タスク名は200文字以内で入力してください");
+  }
+  if (data.description != null && (typeof data.description !== "string" || data.description.length > 5000)) {
+    throw new Error("タスクの説明は5000文字以内で入力してください");
+  }
+}
+
 async function retryTaskTransaction<T>(commit: () => Promise<T>): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt++) {
     try { return await commit(); }
@@ -72,7 +82,7 @@ export async function createTask(workspaceSlug: string, data: {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
-  if (!data.title?.trim()) throw new Error("タスク名は必須です");
+  validateTaskText(data, true);
   if (!data.projectId) throw new Error("projectId は必須です");
   validateTaskFields(data.status, data.priority);
 
@@ -102,8 +112,8 @@ export async function createTask(workspaceSlug: string, data: {
     return tx.promaneTask.create({
       data: {
         projectId: data.projectId,
-        title: data.title.trim().slice(0, 200),
-        description: data.description?.slice(0, 5000) || null,
+        title: data.title.trim(),
+        description: data.description || null,
         status: data.status || "todo",
         priority: data.priority || "medium",
         assigneeId: data.assigneeId || null,
@@ -132,9 +142,7 @@ export async function updateTask(workspaceSlug: string, taskId: string, data: {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
-  if (data.title !== undefined && (typeof data.title !== "string" || !data.title.trim())) {
-    throw new Error("タスク名は空にできません");
-  }
+  validateTaskText(data);
   validateTaskFields(data.status, data.priority, data.order);
 
   // Read retained dates and write in one serializable transaction. Otherwise
@@ -162,8 +170,8 @@ export async function updateTask(workspaceSlug: string, taskId: string, data: {
         return tx.promaneTask.update({
           where: { id: taskId },
           data: {
-            ...(data.title !== undefined && { title: data.title.trim().slice(0, 200) }),
-            ...(data.description !== undefined && { description: data.description?.slice(0, 5000) || null }),
+            ...(data.title !== undefined && { title: data.title.trim() }),
+            ...(data.description !== undefined && { description: data.description || null }),
             ...(data.status !== undefined && { status: data.status }),
             ...(data.priority !== undefined && { priority: data.priority }),
             ...(data.assigneeId !== undefined && { assigneeId: data.assigneeId }),
