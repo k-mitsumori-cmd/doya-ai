@@ -74,7 +74,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const user: any = session?.user || null
     if (!user?.id) {
       return NextResponse.json(
-        { success: false, error: 'この機能は有料プラン限定です（ログインが必要です）。', code: 'PAID_ONLY' },
+        { success: false, error: 'この機能は有料プラン限定です（ログインが必要です）。', code: 'PAID_ONLY', loginRequired: true },
         { status: 401 }
       )
     }
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const isPaid = plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE'
     if (!isPaid) {
       return NextResponse.json(
-        { success: false, error: 'AI修正チャットは有料プラン限定です。', code: 'PAID_ONLY', upgradeUrl: '/pricing' },
+        { success: false, error: 'AI修正チャットは有料プラン限定です。', code: 'PAID_ONLY', upgradeUrl: '/seo/pricing' },
         { status: 402 }
       )
     }

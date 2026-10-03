@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { TrendingUp, AlertTriangle, CheckCircle2, Zap, ThumbsUp, Wrench, Loader2, Activity, ScanSearch, ListChecks, Sparkles, Brain, PenTool, RefreshCw } from 'lucide-react'
@@ -70,6 +71,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
   const [mode, setMode] = useState<'auto' | 'manual'>('auto')
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState<string | null>(null)
+  const [paidAction, setPaidAction] = useState<'login' | 'pricing' | null>(null)
   const [needTarget, setNeedTarget] = useState<null | { headings: string[] }>(null)
   const [targetHeading, setTargetHeading] = useState<string>('')
   const [analyzing, setAnalyzing] = useState(true)
@@ -420,6 +422,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                   onClick={() => {
                     setSelected(it)
                     setApplyError(null)
+                    setPaidAction(null)
                     setNeedTarget(null)
                     setTargetHeading('')
                     setMode(it.kind === 'manual' ? 'manual' : 'auto')
@@ -463,6 +466,14 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
           {applyError && (
             <div className="mt-3 p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold">
               {applyError}
+              {paidAction && (
+                <Link
+                  href={paidAction === 'login' ? `/auth/signin?callbackUrl=${encodeURIComponent(`/seo/articles/${articleId}`)}` : '/seo/pricing'}
+                  className="mt-2 block w-fit text-blue-700 underline"
+                >
+                  {paidAction === 'login' ? 'ログインする' : 'SEOの料金プランを見る'}
+                </Link>
+              )}
             </div>
           )}
           {needTarget?.headings?.length ? (
@@ -527,6 +538,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                 onClick={async () => {
                   setApplying(true)
                   setApplyError(null)
+                  setPaidAction(null)
                   try {
                     // 1) 軽い改善は既存autofixで即適用
                     if (selected.id !== 'OPEN_EDIT' && selected.kind === 'quick') {
@@ -564,6 +576,9 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                     if (json?.code === 'NEED_TARGET' && Array.isArray(json?.headings)) {
                       setNeedTarget({ headings: json.headings })
                       throw new Error('長文のため見出し指定が必要です（見出しを選んで再実行してください）。')
+                    }
+                    if (json?.code === 'PAID_ONLY') {
+                      setPaidAction(json?.loginRequired || res.status === 401 ? 'login' : 'pricing')
                     }
                     if (!res.ok || json?.success === false) {
                       throw new Error(json?.error || `API Error: ${res.status}`)
@@ -750,4 +765,3 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
     </div>
   )
 }
-

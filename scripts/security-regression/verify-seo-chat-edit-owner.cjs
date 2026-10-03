@@ -27,11 +27,13 @@ async function run(identity, plan) {
 (async () => {
   let result = await run(null, 'PRO');
   assert.equal(result.status, 401);
+  assert.equal(result.body.loginRequired, true);
   assert.equal(result.reads, 0);
   assert.equal(result.aiCalls, 0);
 
   result = await run('owner', 'FREE');
   assert.equal(result.status, 402);
+  assert.equal(result.body.upgradeUrl, '/seo/pricing');
   assert.equal(result.reads, 0);
   assert.equal(result.aiCalls, 0);
 

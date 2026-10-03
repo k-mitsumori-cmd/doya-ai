@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -99,6 +100,7 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
   const [editText, setEditText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [paidAction, setPaidAction] = useState<'login' | 'pricing' | null>(null)
 
   async function applyByMarkdownEdit(heading: HeadingItem, type: Exclude<ActionType, 'edit'>) {
     // NOTE: セクション保存されていない見出しでも、記事Markdownを直接編集して反映できるようにする
@@ -127,6 +129,7 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
     })
     const json = await res.json().catch(() => ({}))
     if (json?.code === 'PAID_ONLY') {
+      setPaidAction(json?.loginRequired || res.status === 401 ? 'login' : 'pricing')
       throw new Error(json?.error || 'この操作は有料プラン限定です。')
     }
     if (!res.ok || json?.success === false) {
@@ -151,6 +154,8 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
     if (!heading) return
 
     if (type === 'edit') {
+      setError(null)
+      setPaidAction(null)
       setActiveAction({ id: headingId, type })
       if (heading.sectionId) {
         setEditText(heading.content || '')
@@ -164,6 +169,7 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
 
     setLoading(true)
     setError(null)
+    setPaidAction(null)
 
     try {
       // セクションがあるなら従来通り section API を叩く。無ければ記事Markdown編集で適用する。
@@ -210,6 +216,7 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
 
     setLoading(true)
     setError(null)
+    setPaidAction(null)
 
     try {
       // セクションがあれば section を更新、無ければ markdown を直接更新して保存する
@@ -259,6 +266,14 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
       {error && (
         <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold mb-4">
           {error}
+          {paidAction && (
+            <Link
+              href={paidAction === 'login' ? `/auth/signin?callbackUrl=${encodeURIComponent(`/seo/articles/${articleId}`)}` : '/seo/pricing'}
+              className="mt-2 block w-fit text-blue-700 underline"
+            >
+              {paidAction === 'login' ? 'ログインする' : 'SEOの料金プランを見る'}
+            </Link>
+          )}
         </div>
       )}
 
@@ -404,4 +419,3 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
     </div>
   )
 }
-
