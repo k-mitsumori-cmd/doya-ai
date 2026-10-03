@@ -30,5 +30,7 @@ assert.equal(preferences.readDoyalistPreferences(storage).defaultIndustry, '')
 assert.equal(preferences.readDoyalistPreferences(storage).defaultRegion, '')
 saved = '{broken'
 assert.equal(preferences.readDoyalistPreferences(storage).defaultIndustry, '')
+assert.equal(preferences.readDoyalistPreferences({ getItem: () => { throw Error('storage blocked') } }).defaultIndustry, '')
+assert.equal(preferences.readDoyalistPreferences().defaultIndustry, '')
 assert.throws(() => preferences.saveDoyalistPreferences({ setItem: () => { throw Error('storage full') } }, { defaultIndustry: '', defaultRegion: '' }))
 console.log('PASS Doyalist preferences apply only valid saved extraction defaults and report storage failures')

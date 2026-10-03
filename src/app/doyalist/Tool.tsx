@@ -83,7 +83,7 @@ export default function DoyalistTool() {
   const [keywords, setKeywords] = useState('')
   const [countInput, setCountInput] = useState('100')
   useEffect(() => {
-    const defaults = readDoyalistPreferences(localStorage)
+    const defaults = readDoyalistPreferences()
     if (defaults.defaultIndustry) setIndustry(defaults.defaultIndustry)
     if (defaults.defaultRegion) setArea(defaults.defaultRegion)
   }, [])

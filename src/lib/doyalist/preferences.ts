@@ -12,9 +12,9 @@ export const DEFAULT_DOYALIST_PREFERENCES: DoyalistPreferences = {
   defaultRegion: '',
 }
 
-export function readDoyalistPreferences(storage: Pick<Storage, 'getItem'>): DoyalistPreferences {
+export function readDoyalistPreferences(storage?: Pick<Storage, 'getItem'>): DoyalistPreferences {
   try {
-    const raw = storage.getItem(DOYALIST_PREFERENCES_KEY)
+    const raw = (storage ?? window.localStorage).getItem(DOYALIST_PREFERENCES_KEY)
     if (!raw) return { ...DEFAULT_DOYALIST_PREFERENCES }
     const value = JSON.parse(raw)
     return {

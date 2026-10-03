@@ -79,7 +79,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setMounted(true)
-    setSettings(readDoyalistPreferences(localStorage))
+    setSettings(readDoyalistPreferences())
     void loadUsage()
   }, [loadUsage])
 
