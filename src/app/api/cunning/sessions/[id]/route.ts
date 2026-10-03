@@ -112,8 +112,11 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   const s = await ownedSession(userId, p.id)
   if (!s) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   const deleted = await writeCunningSession(userId, p.id, async tx => {
-    await tx.cunningTranscript.deleteMany({ where: { sessionId: p.id } })
+    // Audio windows restrict transcript deletion, and final answers reference
+    // their transcript. Remove dependents first within the session write lock.
+    await tx.cunningAudioWindow.deleteMany({ where: { sessionId: p.id } })
     await tx.cunningAnswer.deleteMany({ where: { sessionId: p.id } })
+    await tx.cunningTranscript.deleteMany({ where: { sessionId: p.id } })
     await tx.cunningSession.update({ where: { id: p.id }, data: {
       status: 'deleted', title: '', personaNote: null, report: Prisma.DbNull,
       knowledgeBaseId: null, companyProfileId: null, applicantProfileId: null,
