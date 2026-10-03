@@ -9,17 +9,21 @@ let ctxUserId = 'u1';
 let customerCalls = 0;
 let checkoutCalls = 0;
 let portalCalls = 0;
+let portalOptions = null;
+let portalResolvedCustomerId = 'cus_verified';
 let genericCheckoutCalls = 0;
 let existingSubscription = false;
 let checkoutOptions = null;
+let customerEmail = 'test@example.invalid';
+let customerOwnerId = 'u1';
 const prisma = {
   user: { findUnique: async () => ({ id: 'u1', stripeCustomerId: 'cus_test', email: 'test@example.invalid', name: 'Test' }) },
   hrOrganizationMember: { findFirst: async () => ({ role }) },
 };
 const stripe = {
-  customers: { retrieve: async () => { customerCalls++; return { id: 'cus_test' }; } },
+  customers: { retrieve: async () => { customerCalls++; return { id: 'cus_test', email: customerEmail, metadata: { userId: customerOwnerId } }; } },
   checkout: { sessions: { create: async (options) => { checkoutCalls++; checkoutOptions = options; return { id: 'cs_test', url: 'https://offline.invalid/checkout' }; } } },
-  billingPortal: { sessions: { create: async () => { portalCalls++; return { url: 'https://offline.invalid/portal' }; } } },
+  billingPortal: { sessions: { create: async (options) => { portalCalls++; portalOptions = options; return { url: 'https://offline.invalid/portal' }; } } },
 };
 const common = {
   'next/server': { NextResponse: Response },
@@ -34,7 +38,18 @@ const checkout = load('src/app/api/hr/billing/checkout/route.ts', {
   ...common,
   '@/lib/stripe': { stripe, findActiveLikeSubscriptions: async () => existingSubscription ? [{ id: 'sub_existing' }] : [], STRIPE_PRICE_IDS: { hr: { starter: { monthly: 'price_test', yearly: 'price_yearly' }, pro: { monthly: 'price_test', yearly: 'price_yearly' }, enterprise: { monthly: 'price_test', yearly: 'price_yearly' } } } },
 });
-const portal = load('src/app/api/hr/billing/portal/route.ts', { ...common, '@/lib/stripe': { stripe } });
+const portal = load('src/app/api/hr/billing/portal/route.ts', {
+  ...common,
+  '@/lib/stripe': {
+    stripe,
+    resolveBillingCustomerId: async ({ userId, email, stripeCustomerId }) => {
+      assert.equal(userId, 'u1');
+      assert.equal(email, 'test@example.invalid');
+      assert.equal(stripeCustomerId, 'cus_test');
+      return portalResolvedCustomerId;
+    },
+  },
+});
 const generic = load('src/app/api/stripe/checkout/route.ts', {
   'next/server': { NextResponse: Response },
   'next-auth': common['next-auth'],
@@ -80,12 +95,28 @@ const generic = load('src/app/api/stripe/checkout/route.ts', {
   assert.equal((await response.json()).code, 'ALREADY_SUBSCRIBED');
   assert.equal(checkoutCalls, 0, 'existing subscription must not create a second checkout');
   existingSubscription = false;
+  customerEmail = 'other@example.invalid';
+  response = await checkout.POST(req);
+  assert.equal(response.status, 409);
+  assert.equal((await response.json()).code, 'CUSTOMER_OWNERSHIP_MISMATCH');
+  assert.equal(checkoutCalls, 0, 'foreign customer email must not create a checkout');
+  customerEmail = 'test@example.invalid';
+  customerOwnerId = 'other-user';
+  response = await checkout.POST(req);
+  assert.equal(response.status, 409);
+  assert.equal(checkoutCalls, 0, 'foreign customer owner must not create a checkout');
+  customerOwnerId = 'u1';
   response = await checkout.POST(req);
   assert.equal(response.status, 200);
   response = await portal.POST({});
   assert.equal(response.status, 200);
   assert.equal(checkoutCalls, 1);
   assert.equal(portalCalls, 1);
+  assert.equal(portalOptions.customer, 'cus_verified', 'portal must use the verified customer, not the stored pointer');
+  portalResolvedCustomerId = null;
+  response = await portal.POST({});
+  assert.equal(response.status, 409);
+  assert.equal(portalCalls, 1, 'unverified customer must not reach the billing portal');
   assert.match(checkoutOptions.success_url, /\/hr\/settings\/billing\?success=true&session_id=\{CHECKOUT_SESSION_ID\}$/);
   console.log('PASS HR billing: non-owner and mismatched identity rejected before Stripe; owner accepted');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

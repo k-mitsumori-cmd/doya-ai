@@ -6,13 +6,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { stripe } from '@/lib/stripe'
+import { stripe, resolveBillingCustomerId } from '@/lib/stripe'
 import { getHrContext } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { logAudit } from '@/lib/hr/audit'
 
 // POST /api/hr/billing/portal
-// Stripeカスタマーポータルセッションを作成（User.stripeCustomerIdを使用）
+// Stripeカスタマーポータルセッションを作成（本人の契約・請求履歴を検証）
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -31,38 +31,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'この組織のプランはオーナーのみ変更できます。', code: 'HR_BILLING_OWNER_REQUIRED' }, { status: 403 })
     }
 
-    // User.stripeCustomerIdを使用（組織ではなくユーザーレベル）
+    // 保存済み顧客IDだけでは本人性を証明できない。共通ポータルと同じ検証を通す。
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { stripeCustomerId: true },
+      select: { id: true, email: true, stripeCustomerId: true },
     })
 
-    if (!dbUser?.stripeCustomerId) {
-      return NextResponse.json(
-        { error: 'Stripe顧客情報がまだ登録されていません。先にプランをご購入ください。' },
-        { status: 400 }
-      )
+    if (!dbUser?.email) {
+      return NextResponse.json({ error: 'ユーザー情報を確認できませんでした。' }, { status: 404 })
+    }
+    const customerId = await resolveBillingCustomerId({
+      userId: dbUser.id,
+      email: dbUser.email,
+      stripeCustomerId: dbUser.stripeCustomerId,
+    })
+    if (!customerId) {
+      return NextResponse.json({ error: '本人の契約情報を確認できませんでした。時間をおいて再試行してください。' }, { status: 409 })
     }
 
-    // 顧客IDが現モードに存在するか検証（テスト/本番不整合での500を防ぐ）
-    try {
-      const c = await stripe.customers.retrieve(dbUser.stripeCustomerId)
-      if ((c as any)?.deleted) throw Object.assign(new Error('deleted'), { code: 'resource_missing' })
-    } catch (err: any) {
-      if (err?.code === 'resource_missing' || err?.statusCode === 404) {
-        await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: null } }).catch(() => {})
-        return NextResponse.json(
-          { error: '有効なサブスクリプションが見つかりません。アップグレードからお手続きください。' },
-          { status: 400 }
-        )
-      }
-      throw err
-    }
-
-    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp'
+    const baseUrl = (process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp').replace(/\/+$/, '')
 
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: dbUser.stripeCustomerId,
+      customer: customerId,
       return_url: `${baseUrl}/hr/settings/billing`,
       locale: 'ja',
     })

@@ -69,6 +69,10 @@ export async function POST(req: NextRequest) {
     if (!dbUser) {
       return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
     }
+    const expectedEmail = String(dbUser.email || user.email || '').trim().toLowerCase()
+    if (!expectedEmail) {
+      return NextResponse.json({ error: '契約者のメールアドレスを確認できませんでした。' }, { status: 409 })
+    }
 
     // 旧HR専用入口も共通Checkoutと同じ二重契約ガードを通す。
     try {
@@ -97,7 +101,16 @@ export async function POST(req: NextRequest) {
     if (stripeCustomerId) {
       try {
         const existing = await stripe.customers.retrieve(stripeCustomerId)
-        if ((existing as any)?.deleted) stripeCustomerId = null
+        if ('deleted' in existing && existing.deleted) stripeCustomerId = null
+        else if (
+          existing.email?.trim().toLowerCase() !== expectedEmail ||
+          (existing.metadata?.userId && existing.metadata.userId !== user.id)
+        ) {
+          return NextResponse.json({
+            error: '保存済みのStripe顧客が契約者と一致しません。決済を開始していません。',
+            code: 'CUSTOMER_OWNERSHIP_MISMATCH',
+          }, { status: 409 })
+        }
       } catch (err: any) {
         if (err?.code === 'resource_missing' || err?.statusCode === 404) {
           stripeCustomerId = null
@@ -110,7 +123,7 @@ export async function POST(req: NextRequest) {
     // StripeCustomerがない場合は作成してUser.stripeCustomerIdに保存
     if (!stripeCustomerId) {
       const customer = await stripe.customers.create({
-        email: dbUser.email || user.email,
+        email: expectedEmail,
         name: dbUser.name || user.name,
         metadata: {
           userId: user.id,
