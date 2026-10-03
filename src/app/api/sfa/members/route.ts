@@ -9,7 +9,7 @@ import { escapeHtml } from '@/lib/html-escape'
 import { getSfaContext, hasMinRole, orgSlugFrom } from '@/lib/sfa/access'
 import { ROLE_HIERARCHY } from '@/lib/sfa/types'
 import { sendEmail } from '@/lib/email'
-import { sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
+import { canManageSfaBilling, sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
 
 const INVITABLE_ROLES = ['member', 'manager', 'admin']
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: '招待の作成に失敗しました（既に招待済みかもしれません）' }, { status: 409 })
   }
-  if (admitted.limit) return sfaQuotaResponse(admitted.limit, ctx.role === 'owner')
+  if (admitted.limit) return sfaQuotaResponse(admitted.limit, await canManageSfaBilling(prisma, ctx.organizationId, ctx.userId))
   if (admitted.created.kind === 'duplicate') {
     return NextResponse.json(
       { error: admitted.created.status === 'ACTIVE' ? '既に参加済みのメンバーです' : '既に招待済みです' },

@@ -19,6 +19,7 @@ async function run(body, lead) {
     '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org' }), orgSlugFrom: () => 'org' },
     '@/lib/sfa/ai': { scoreLead: async () => { aiCalls++; return { score: 70 }; } },
     '@/lib/sfa/ai-limit': { reserveSfaAiUsage: async () => ({ id: 'reservation' }), completeSfaAiUsage: async () => {}, releaseSfaAiUsage: async () => {} },
+    '@/lib/sfa/limits': { canManageSfaBilling: async () => { throw Error('No quota was reached'); } },
   };
   const exported = {};
   vm.runInNewContext(code, { exports: exported, require: (name) => { assert(name in deps, name); return deps[name]; } });

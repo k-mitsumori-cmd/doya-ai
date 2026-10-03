@@ -53,6 +53,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
       '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org' }), orgSlugFrom: () => 'org' },
       '@/lib/sfa/ai': { suggestNextAction: async () => { calls++; return { action: 'Follow up' }; } },
       '@/lib/sfa/ai-limit': { reserveSfaAiUsage: async () => ({ id: 'reservation' }), completeSfaAiUsage: async () => {}, releaseSfaAiUsage: async () => {} },
+      '@/lib/sfa/limits': { canManageSfaBilling: async () => { throw Error('No quota was reached'); } },
       '@/lib/sfa/constants': { ACTIVITY_TYPE_LABEL: {} },
     });
     await checkRoute('SFA next action', route.POST, [null, { dealId: {} }, { dealId: 42 }], { dealId: 'deal' }, () => calls);

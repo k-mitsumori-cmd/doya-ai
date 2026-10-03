@@ -48,14 +48,15 @@ export async function issuePromaneInvitation(args: {
         const limits = await getUserPromaneLimits(workspace.userId, tx)
         const active = await tx.promaneMember.count({ where: { workspaceId: args.workspaceId, isActive: true } })
         const atLimit = (count: number) => limits.maxMembersPerWorkspace >= 0 && count >= limits.maxMembersPerWorkspace
+        const canManageBilling = args.userId === workspace.userId
         const limitResponse = () => ({
           success: false as const,
-            response: {
-              status: 403,
-            error: `メンバーと有効な招待の上限（${limits.maxMembersPerWorkspace}名）に達しました。${inviter.role === 'owner' ? 'プランをご確認ください。' : '利用枠の変更はワークスペースの契約者にご相談ください。'}`,
-              code: 'PROMANE_MEMBER_LIMIT_REACHED',
-              limitReached: true,
-              canManageBilling: inviter.role === 'owner',
+          response: {
+            status: 403,
+            error: `メンバーと有効な招待の上限（${limits.maxMembersPerWorkspace}名）に達しました。${canManageBilling ? 'プランをご確認ください。' : '利用枠の変更はワークスペースの契約者にご相談ください。'}`,
+            code: 'PROMANE_MEMBER_LIMIT_REACHED',
+            limitReached: true,
+            canManageBilling,
           },
         })
         if (atLimit(active)) return limitResponse()

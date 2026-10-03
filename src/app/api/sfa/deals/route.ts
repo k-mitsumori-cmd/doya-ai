@@ -9,7 +9,7 @@ import { getSfaContext, orgSlugFrom, ensurePipeline } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 import { parseSfaAmount } from '@/lib/sfa/amount'
 import { recordServiceUsage } from '@/lib/service-usage'
-import { sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
+import { canManageSfaBilling, sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
 
 // GET /api/sfa/deals — カンバン用に「ステージ一覧 + 商談一覧（取引先名つき）」を返す
 export async function GET(req: NextRequest) {
@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
       lastActivityAt: now,
     },
   }))
-  if (admitted.limit) return sfaQuotaResponse(admitted.limit, ctx.role === 'owner')
+  if (admitted.limit) return sfaQuotaResponse(admitted.limit, await canManageSfaBilling(prisma, ctx.organizationId, ctx.userId))
   const deal = admitted.created
   await recordServiceUsage({
     userId: ctx.userId,

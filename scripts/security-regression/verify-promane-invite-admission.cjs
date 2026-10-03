@@ -56,7 +56,7 @@ function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.
   };
 }
 
-function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, inviterRole = 'admin', conflicts = 0, existingInvite = false, existingRole = 'member' } = {}) {
+function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, inviterRole = 'admin', actorId = 'admin', conflicts = 0, existingInvite = false, existingRole = 'member' } = {}) {
   let attempts = 0;
   let writes = 0;
   const tx = {
@@ -78,7 +78,7 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
       },
       create: async ({ data }) => {
         assert.equal(data.workspaceId, 'ws');
-        assert.equal(data.invitedById, 'admin');
+        assert.equal(data.invitedById, actorId);
         writes++;
         return { token: data.token, expiresAt: data.expiresAt };
       },
@@ -105,7 +105,7 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
     },
   });
   return {
-    run: () => helper.issuePromaneInvitation({ workspaceId: 'ws', userId: 'admin', email: 'invited@example.com', role: 'member' }),
+    run: () => helper.issuePromaneInvitation({ workspaceId: 'ws', userId: actorId, email: 'invited@example.com', role: 'member' }),
     state: () => ({ attempts, writes }),
   };
 }
@@ -151,10 +151,16 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
     assert.deepEqual(f.state(), { attempts: 1, writes: 0 });
   });
   await check('workspace owner receives owner billing guidance at the seat cap', async () => {
-    const f = issueFixture({ pending: 2, inviterRole: 'owner' });
+    const f = issueFixture({ pending: 2, inviterRole: 'owner', actorId: 'owner' });
     const result = await f.run();
     assert.equal(result.response.canManageBilling, true);
     assert.match(result.response.error, /プランをご確認/);
+  });
+  await check('another owner-role member is directed to the paying workspace owner', async () => {
+    const f = issueFixture({ pending: 2, inviterRole: 'owner', actorId: 'admin' });
+    const result = await f.run();
+    assert.equal(result.response.canManageBilling, false);
+    assert.match(result.response.error, /契約者にご相談/);
   });
   await check('existing invitation is reused only while an active seat remains', async () => {
     const reusable = issueFixture({ existingInvite: true });

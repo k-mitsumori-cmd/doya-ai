@@ -62,12 +62,12 @@ export async function releaseSfaAiUsage(id: string): Promise<void> {
 
 export function sfaAiLimitResponse(quota: Extract<SfaAiReservation, { limit: number }>, canManageBilling: boolean) {
   return NextResponse.json({
-    error: `今月のAI実行上限（${quota.limit}回）に達しました。プロプランで枠を広げられます。`,
+    error: `今月のAI実行上限（${quota.limit}回）に達しました。${canManageBilling ? 'プロプランで枠を広げられます。' : '利用枠の変更は組織の契約者にご相談ください。'}`,
     code: 'SFA_AI_LIMIT_REACHED',
     limitReached: true,
     canManageBilling,
     used: quota.used,
     limit: quota.limit,
-    upgradeUrl: '/sfa/pricing',
+    ...(canManageBilling && quota.upgradeAvailable ? { upgradeUrl: '/sfa/pricing' } : {}),
   }, { status: 402 })
 }

@@ -48,7 +48,11 @@ function fixture(plan, initial = 0) {
   assert.equal((await free.api.reserveSfaAiUsage('org', 'member-c', 'score')).limit, 20);
   const quota = free.api.sfaAiLimitResponse({ limit: 20, used: 20 }, false);
   assert.equal(quota.status, 402);
-  assert.equal((await quota.json()).code, 'SFA_AI_LIMIT_REACHED');
+  const memberLimit = await quota.json();
+  assert.equal(memberLimit.code, 'SFA_AI_LIMIT_REACHED');
+  assert.equal(memberLimit.upgradeUrl, undefined);
+  assert.match(memberLimit.error, /契約者にご相談/);
+  assert.equal((await free.api.sfaAiLimitResponse({ limit: 20, used: 20, upgradeAvailable: true }, true).json()).upgradeUrl, '/sfa/pricing');
 
   const light = fixture('LIGHT', 299);
   const first = await light.api.reserveSfaAiUsage('org', 'member', 'score');

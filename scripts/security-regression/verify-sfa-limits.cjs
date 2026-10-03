@@ -7,7 +7,11 @@ function fixture(plan = 'FREE', counts = {}) {
   let selectedUser = null;
   const tx = {
     sfaMember: {
-      findFirst: async () => ({ userId: 'owner' }),
+      findFirst: async ({ where, orderBy }) => {
+        assert.equal(where.organizationId, 'org');
+        assert.equal(JSON.stringify(orderBy), JSON.stringify([{ createdAt: 'asc' }, { id: 'asc' }]));
+        return { userId: 'owner' };
+      },
       count: async ({ where }) => state.members + (where.OR.length > 1 ? state.pending : 0),
       create: async () => { state.pending++; return { id: `member-${state.pending}` }; },
     },
@@ -55,6 +59,8 @@ function fixture(plan = 'FREE', counts = {}) {
   assert.equal(free.state.accounts, 50);
   assert.equal(free.state.deals, 50);
   assert.equal(free.selectedUser, 'owner', 'the organization owner pays for the shared quota');
+  assert.equal(await free.limits.canManageSfaBilling(free.tx, 'org', 'owner'), true);
+  assert.equal(await free.limits.canManageSfaBilling(free.tx, 'org', 'another-owner-role-member'), false);
   const blocked = responses.find((r) => r.limit);
   const response = free.limits.sfaQuotaResponse(blocked.limit, true);
   assert.equal(response.status, 402);

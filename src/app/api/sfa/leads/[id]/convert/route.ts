@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 import { parseSfaAmount } from '@/lib/sfa/amount'
-import { sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
+import { canManageSfaBilling, sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
       return { account, deal }
     })
-    if (admitted.limit) return sfaQuotaResponse(admitted.limit, c.role === 'owner')
+    if (admitted.limit) return sfaQuotaResponse(admitted.limit, await canManageSfaBilling(prisma, c.organizationId, c.userId))
     const result = admitted.created
 
     if (!result) return NextResponse.json({ error: '既に転換済み、または無効化されたリードです。再読み込みして状態をご確認ください。' }, { status: 409 })

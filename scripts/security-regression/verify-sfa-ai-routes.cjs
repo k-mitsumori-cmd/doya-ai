@@ -12,7 +12,10 @@ async function invoke(action, mode, active = true) {
     },
     completeSfaAiUsage: async (id) => { assert.equal(id, 'reservation'); state.completed++; },
     releaseSfaAiUsage: async (id) => { assert.equal(id, 'reservation'); state.released++; },
-    sfaAiLimitResponse: () => Response.json({ code: 'SFA_AI_LIMIT_REACHED' }, { status: 402 }),
+    sfaAiLimitResponse: (_, canManageBilling) => {
+      assert.equal(canManageBilling, false);
+      return Response.json({ code: 'SFA_AI_LIMIT_REACHED' }, { status: 402 });
+    },
   };
   const prisma = action === 'score' ? { sfaLead: {
     findUnique: async () => ({ id: 'item', organizationId: 'org', isActive: active, name: 'Lead', raw: null }),
@@ -30,6 +33,7 @@ async function invoke(action, mode, active = true) {
       suggestNextAction: async () => { state.provider++; if (mode === 'provider-error') throw new Error('provider'); return { action: 'Follow up' }; },
     },
     '@/lib/sfa/ai-limit': quota,
+    '@/lib/sfa/limits': { canManageSfaBilling: async (_, org, user) => { assert.equal(org, 'org'); assert.equal(user, 'member'); return false; } },
     '@/lib/sfa/constants': { ACTIVITY_TYPE_LABEL: {} },
   };
   const route = load(`src/app/api/sfa/ai/${action === 'score' ? 'score' : 'next-action'}/route.ts`, deps);

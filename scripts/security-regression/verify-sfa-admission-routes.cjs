@@ -6,6 +6,11 @@ let attempted = 0;
 let emailed = 0;
 const quota = {
   withSfaAdmission: async () => ({ limit }),
+  canManageSfaBilling: async (_, organizationId, userId) => {
+    assert.equal(organizationId, 'org');
+    assert.equal(userId, 'actor');
+    return true;
+  },
   sfaQuotaResponse: (value) => Response.json({ code: 'SFA_LIMIT_REACHED', resource: value.resource }, { status: 402 }),
 };
 const shared = {

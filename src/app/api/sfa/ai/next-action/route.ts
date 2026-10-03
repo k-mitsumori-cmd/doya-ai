@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { suggestNextAction } from '@/lib/sfa/ai'
 import { reserveSfaAiUsage, completeSfaAiUsage, releaseSfaAiUsage, sfaAiLimitResponse } from '@/lib/sfa/ai-limit'
+import { canManageSfaBilling } from '@/lib/sfa/limits'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
 
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
     console.error('[sfa/ai/next-action] quota reservation failed')
     return NextResponse.json({ error: '利用状況を確認できません。しばらくしてから再試行してください' }, { status: 503 })
   }
-  if ('limit' in reservation) return sfaAiLimitResponse(reservation, ctx.role === 'owner')
+  if ('limit' in reservation) return sfaAiLimitResponse(reservation, await canManageSfaBilling(prisma, ctx.organizationId, ctx.userId))
 
   try {
     const result = await suggestNextAction({

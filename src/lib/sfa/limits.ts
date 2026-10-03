@@ -33,15 +33,25 @@ export function sfaQuotaResponse(limit: SfaQuotaExceeded, canManageBilling = fal
   }, { status: 402 })
 }
 
-/** SFA は組織の資源を使うため、操作したメンバーではなく組織オーナーの契約で判定する。 */
-export async function sfaOwnerPlanTier(tx: Tx, organizationId: string): Promise<PlanTier> {
-  const owner = await tx.sfaMember.findFirst({
+/** Shared SFA quota and billing actions use the same paying owner. */
+export async function sfaBillingOwnerUserId(db: Pick<Tx, 'sfaMember'>, organizationId: string): Promise<string | null> {
+  const owner = await db.sfaMember.findFirst({
     where: { organizationId, role: 'owner', status: 'ACTIVE', userId: { not: null } },
-    orderBy: { createdAt: 'asc' },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     select: { userId: true },
   })
-  const user = owner?.userId
-    ? await tx.user.findUnique({ where: { id: owner.userId }, select: { plan: true } })
+  return owner?.userId ?? null
+}
+
+export async function canManageSfaBilling(db: Pick<Tx, 'sfaMember'>, organizationId: string, userId: string): Promise<boolean> {
+  return (await sfaBillingOwnerUserId(db, organizationId)) === userId
+}
+
+/** SFA は組織の資源を使うため、操作したメンバーではなく組織オーナーの契約で判定する。 */
+export async function sfaOwnerPlanTier(tx: Tx, organizationId: string): Promise<PlanTier> {
+  const ownerUserId = await sfaBillingOwnerUserId(tx, organizationId)
+  const user = ownerUserId
+    ? await tx.user.findUnique({ where: { id: ownerUserId }, select: { plan: true } })
     : null
   // 認証済みの組織オーナーにプラン行が無い場合は無料枠。GUEST と表示・案内しない。
   return tierFrom(user?.plan ?? 'FREE')
