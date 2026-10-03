@@ -421,6 +421,7 @@ function BannerTestPageInner() {
   const INITIAL_FETCH_LIMIT = 30
   const [hasMoreFromApi, setHasMoreFromApi] = useState(true)
   const [isFetchingAll, setIsFetchingAll] = useState(false)
+  const [templateFetchError, setTemplateFetchError] = useState(false)
   const [fetchProgress, setFetchProgress] = useState(0) // 0〜100
   const templateOffsetRef = useRef(0)
 
@@ -642,7 +643,8 @@ function BannerTestPageInner() {
       
       try {
         // クライアント側キャッシュをチェック
-        const cached = localStorage.getItem(CACHE_KEY)
+        let cached: string | null = null
+        try { cached = localStorage.getItem(CACHE_KEY) } catch { /* Continue with the API when browser storage is unavailable. */ }
         if (cached) {
           try {
             const { data, timestamp } = JSON.parse(cached)
@@ -693,7 +695,7 @@ function BannerTestPageInner() {
             }
           } catch (e) {
             // キャッシュが壊れている場合は無視
-            localStorage.removeItem(CACHE_KEY)
+            try { localStorage.removeItem(CACHE_KEY) } catch { /* Storage may be blocked. */ }
           }
         }
         
@@ -799,18 +801,21 @@ function BannerTestPageInner() {
   const fetchRemainingTemplates = useCallback(async (startOffset: number) => {
     if (isFetchingAll) return
     setIsFetchingAll(true)
+    setTemplateFetchError(false)
     setFetchProgress(0)
     const BATCH_SIZE = 100
     let offset = startOffset
     let hasMore = true
+    let failed = false
     // dbTotalCountが分からない場合の推定総数（進捗バー用）
     const estimatedTotal = 350
     try {
       while (hasMore) {
         const res = await fetch(`/api/banner/test/templates?limit=${BATCH_SIZE}&offset=${offset}`)
-        if (!res.ok) break
+        if (!res.ok) throw new Error(`テンプレートの追加取得に失敗しました (${res.status})`)
         const data = await res.json()
-        if (data.templates?.length > 0) {
+        if (!Array.isArray(data.templates)) throw new Error('テンプレートの応答が正しくありません')
+        if (data.templates.length > 0) {
           setTemplates(prev => {
             const existingIds = new Set(prev.map(t => t.id))
             const newOnes = data.templates.filter((t: BannerTemplate) => !existingIds.has(t.id))
@@ -827,12 +832,14 @@ function BannerTestPageInner() {
       }
       setFetchProgress(100)
     } catch (e) {
+      failed = true
       console.error('[Templates] Background fetch failed:')
     } finally {
-      setHasMoreFromApi(false)
+      setHasMoreFromApi(failed)
+      setTemplateFetchError(failed)
       setIsFetchingAll(false)
       templateOffsetRef.current = offset
-      console.log(`[Templates] All templates loaded (total offset: ${offset})`)
+      if (!failed) console.log(`[Templates] All templates loaded (total offset: ${offset})`)
     }
   }, [isFetchingAll])
 
@@ -1658,6 +1665,11 @@ function BannerTestPageInner() {
                   {!isFetchingAll && ' — 各カテゴリの「もっと見る」で表示を増やせます'}
                 </span>
               </div>
+              {templateFetchError && hasMoreFromApi && !isFetchingAll && (
+                <button type="button" onClick={() => void fetchRemainingTemplates(templateOffsetRef.current)} className="mt-2 text-xs font-bold text-amber-300 underline">
+                  一部のテンプレートを取得できませんでした。続きから再読み込み
+                </button>
+              )}
             </div>
           )}
 
