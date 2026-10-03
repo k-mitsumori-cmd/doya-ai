@@ -5,12 +5,15 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
+import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
+import { lockCurrentKintaiActor } from '@/lib/kintai/manager-admission'
 import type { Prisma } from '@prisma/client'
 import { recalculateDayForEmployee } from '@/lib/kintai/recalculate'
 import { openShiftStart } from '@/lib/kintai/shift-records'
 
 class RequestConflict extends Error {}
 class InvalidCorrection extends Error {}
+class RequestForbidden extends Error {}
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -65,6 +68,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     const p = await ctx.params
     const body = await req.json()
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
     const { status, reviewerComment } = body
 
     const existing = await prisma.kintaiRequest.findUnique({
@@ -99,23 +105,27 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (!hasMinRole(kctx.role, 'manager')) {
         return NextResponse.json({ error: '承認権限がありません' }, { status: 403 })
       }
-      // マネージャーは自部署の申請のみ承認可能（hr_admin以上は全部署OK）
-      if (kctx.role === 'manager') {
-        const requester = await prisma.kintaiEmployee.findUnique({
-          where: { id: existing.employeeId },
-          select: { departmentId: true },
-        })
-        const approver = await prisma.kintaiEmployee.findUnique({
-          where: { id: kctx.employeeId },
-          select: { departmentId: true },
-        })
-        if (!approver?.departmentId || requester?.departmentId !== approver.departmentId) {
-          return NextResponse.json({ error: '他部署の申請は承認できません' }, { status: 403 })
-        }
-      }
     }
 
     const updated = await prisma.$transaction(async (tx) => {
+      await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
+      const actorRole = await lockCurrentKintaiActor(tx, kctx)
+      if (!actorRole) throw new RequestForbidden('申請を変更する権限がありません')
+      if (status === 'approved' || status === 'rejected' || cancellingLeave) {
+        if (!hasMinRole(actorRole, 'manager')) throw new RequestForbidden('承認権限がありません')
+        if (actorRole === 'manager') {
+          const requester = await tx.kintaiEmployee.findUnique({
+            where: { id: existing.employeeId }, select: { organizationId: true, departmentId: true },
+          })
+          const approver = await tx.kintaiEmployee.findUnique({
+            where: { id: kctx.employeeId }, select: { organizationId: true, departmentId: true },
+          })
+          if (requester?.organizationId !== kctx.organizationId || approver?.organizationId !== kctx.organizationId ||
+              !approver.departmentId || requester.departmentId !== approver.departmentId) {
+            throw new RequestForbidden('他部署の申請は承認できません')
+          }
+        }
+      }
       if (cancellingLeave || (status === 'approved' && ['clock_fix', 'leave'].includes(existing.type))) {
         const employees = await tx.$queryRaw<Array<{ id: string }>>`
           SELECT id FROM kintai_employees
@@ -156,6 +166,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if ((e as { code?: string })?.code === 'P2025') return NextResponse.json({ error: '対象の打刻が変更されています。再読み込みしてください。' }, { status: 409 })
     if (e instanceof RequestConflict) return NextResponse.json({ error: e.message }, { status: 409 })
     if (e instanceof InvalidCorrection) return NextResponse.json({ error: e.message }, { status: 400 })
+    if (e instanceof RequestForbidden) return NextResponse.json({ error: e.message }, { status: 403 })
     console.error('[kintai/requests/[id] PATCH]')
     return NextResponse.json({ error: '更新に失敗しました' }, { status: 500 })
   }

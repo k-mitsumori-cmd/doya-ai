@@ -29,6 +29,8 @@ const prisma = { ...db, $transaction: async fn => fn(db) };
 const route = load('src/app/api/kintai/requests/[id]/route.ts', {
   'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma },
   '@/lib/kintai/access': { getKintaiContext: async () => ({ organizationId: 'org', employeeId: 'admin', role: 'hr_admin' }), hasMinRole: () => true },
+  '@/lib/kintai/employee-admission': { lockKintaiEmployeeAdmission: async () => {} },
+  '@/lib/kintai/manager-admission': { lockCurrentKintaiActor: async () => 'hr_admin' },
   '@/lib/kintai/recalculate': { recalculateDayForEmployee: async (_employee, _org, date) => recalculated.push(date.toISOString()) },
   '@/lib/kintai/shift-records': load('src/lib/kintai/shift-records.ts'),
 });

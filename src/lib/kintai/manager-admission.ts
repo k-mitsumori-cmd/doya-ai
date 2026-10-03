@@ -1,8 +1,8 @@
 import type { Prisma } from '@prisma/client'
 import type { KintaiContext, KintaiMemberRole } from './types'
 
-/** Hold the current member and employee rows while an admin mutation commits. */
-export async function lockCurrentKintaiManager(
+/** Hold the current member and employee rows while a mutation commits. */
+export async function lockCurrentKintaiActor(
   tx: Prisma.TransactionClient,
   ctx: KintaiContext,
 ): Promise<KintaiMemberRole | null> {
@@ -17,7 +17,15 @@ export async function lockCurrentKintaiManager(
   `
   const actor = rows[0]
   if (actor?.status !== 'ACTIVE' || !actor.isActive) return null
-  return actor.role === 'hr_admin' || actor.role === 'system_admin'
+  return actor.role === 'employee' || actor.role === 'manager' || actor.role === 'hr_admin' || actor.role === 'system_admin'
     ? actor.role
     : null
+}
+
+export async function lockCurrentKintaiManager(
+  tx: Prisma.TransactionClient,
+  ctx: KintaiContext,
+): Promise<KintaiMemberRole | null> {
+  const role = await lockCurrentKintaiActor(tx, ctx)
+  return role === 'hr_admin' || role === 'system_admin' ? role : null
 }
