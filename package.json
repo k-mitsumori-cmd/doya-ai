@@ -91,6 +91,9 @@
     "typescript": "^5.3.3"
   },
   "overrides": {
-    "postcss": "$postcss"
+    "postcss": "$postcss",
+    "pptxgenjs": {
+      "image-size": "2.0.4"
+    }
   }
 }
