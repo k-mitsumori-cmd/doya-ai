@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -24,12 +25,24 @@ export async function GET(req: NextRequest) {
     const departmentId = url.searchParams.get('departmentId') || ''
     const status = url.searchParams.get('status') || ''
     const employmentType = url.searchParams.get('employmentType') || ''
+    const sort = url.searchParams.get('sort') || 'name'
     const page = Number(url.searchParams.get('page') || '1')
     const requestedPageSize = Number(url.searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE))
     if (!Number.isInteger(page) || page < 1 || page > 1000000 || !Number.isInteger(requestedPageSize) || requestedPageSize < 1) {
       return NextResponse.json({ error: 'ページ番号・件数が不正です' }, { status: 400 })
     }
+    if (!['name', 'hireDate', 'department'].includes(sort)) {
+      return NextResponse.json({ error: '並び替えの指定が不正です' }, { status: 400 })
+    }
     const pageSize = Math.min(MAX_PAGE_SIZE, requestedPageSize)
+    const nameOrder: Prisma.HrEmployeeOrderByWithRelationInput[] = [
+      { lastName: 'asc' }, { firstName: 'asc' }, { id: 'asc' },
+    ]
+    const orderBy: Prisma.HrEmployeeOrderByWithRelationInput[] = sort === 'hireDate'
+      ? [{ hireDate: 'desc' }, ...nameOrder]
+      : sort === 'department'
+        ? [{ department: { name: 'asc' } }, ...nameOrder]
+        : nameOrder
 
     const where: any = { organizationId: ctx.organizationId }
     if (!hasMinRole(ctx.role, HrMemberRole.MANAGER)) {
@@ -56,7 +69,7 @@ export async function GET(req: NextRequest) {
         include: {
           department: { select: { id: true, name: true, code: true } },
         },
-        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }, { id: 'asc' }],
+        orderBy,
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),

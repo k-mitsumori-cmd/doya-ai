@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import toast from 'react-hot-toast'
 import EmployeeGrid from '@/components/hr/EmployeeGrid'
 import { Employee } from '@/components/hr/EmployeeCard'
 import CsvImportModal from '@/components/hr/CsvImportModal'
@@ -14,59 +13,72 @@ interface Department {
 }
 
 type SortKey = 'name' | 'hireDate' | 'department'
+const PAGE_SIZE = 20
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('name')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [reloadKey, setReloadKey] = useState(0)
   const [showImport, setShowImport] = useState(false)
   const [canManageEmployees, setCanManageEmployees] = useState(false)
   const [hasLinkedEmployee, setHasLinkedEmployee] = useState<boolean | null>(null)
+  const requestVersion = useRef(0)
 
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
+    const version = ++requestVersion.current
+    setLoading(true)
+    setLoadError(false)
+    setEmployees([])
+    setTotal(0)
+    setTotalPages(0)
     try {
-      const [empRes, deptRes, usageRes] = await Promise.all([
-        fetch('/api/hr/employees'),
-        fetch('/api/hr/departments'),
-        fetch('/api/hr/usage'),
+      const readJson = async (url: string) => {
+        const response = await fetch(url, { cache: 'no-store' })
+        if (!response.ok) throw new Error('HR data request failed')
+        return response.json()
+      }
+      const [employeeData, deptData, usage] = await Promise.all([
+        readJson(`/api/hr/employees?page=${page}&pageSize=${PAGE_SIZE}&sort=${sortKey}`),
+        readJson('/api/hr/departments'),
+        readJson('/api/hr/usage'),
       ])
-      if (usageRes.ok) {
-        const usage = await usageRes.json()
-        setCanManageEmployees(usage.canManageEmployees === true)
-        setHasLinkedEmployee(usage.hasLinkedEmployee === true)
+      if (employeeData?.success !== true || !Array.isArray(employeeData.items) ||
+        !Number.isSafeInteger(employeeData.total) || employeeData.total < 0 ||
+        employeeData.page !== page || employeeData.pageSize !== PAGE_SIZE ||
+        employeeData.totalPages !== Math.ceil(employeeData.total / PAGE_SIZE) ||
+        employeeData.items.length !== Math.max(0, Math.min(PAGE_SIZE, employeeData.total - (page - 1) * PAGE_SIZE)) ||
+        deptData?.success !== true || !Array.isArray(deptData.flat) ||
+        typeof usage?.canManageEmployees !== 'boolean' || typeof usage?.hasLinkedEmployee !== 'boolean') {
+        throw new Error('Invalid HR data response')
       }
-      if (empRes.ok) {
-        const empData = await empRes.json()
-        setEmployees(empData.items ?? empData.employees ?? [])
+      if (version !== requestVersion.current) return
+      if (page > Math.max(1, employeeData.totalPages)) {
+        setPage(Math.max(1, employeeData.totalPages))
+        return
       }
-      if (deptRes.ok) {
-        const deptData = await deptRes.json()
-        setDepartments(deptData.flat ?? deptData.departments ?? [])
-      }
-    } catch (e: any) {
-      toast.error('データの取得に失敗しました')
+      setEmployees(employeeData.items)
+      setTotal(employeeData.total)
+      setTotalPages(employeeData.totalPages)
+      setDepartments(deptData.flat)
+      setCanManageEmployees(usage.canManageEmployees)
+      setHasLinkedEmployee(usage.hasLinkedEmployee)
+    } catch {
+      if (version === requestVersion.current) setLoadError(true)
     } finally {
-      setLoading(false)
+      if (version === requestVersion.current) setLoading(false)
     }
-  }
+  }, [page, sortKey])
 
   useEffect(() => {
-    fetchData()
-  }, [])
-
-  const sortedEmployees = [...employees].sort((a, b) => {
-    switch (sortKey) {
-      case 'name':
-        return `${a.lastName ?? ''}${a.firstName ?? ''}`.localeCompare(`${b.lastName ?? ''}${b.firstName ?? ''}`, 'ja')
-      case 'hireDate':
-        return ((b as any).hireDate ?? '').localeCompare((a as any).hireDate ?? '')
-      case 'department':
-        return ((a as any).department?.name ?? '').localeCompare((b as any).department?.name ?? '', 'ja')
-      default:
-        return 0
-    }
-  })
+    void fetchData()
+    return () => { requestVersion.current += 1 }
+  }, [fetchData, reloadKey])
 
   return (
     <div className="p-6 lg:p-10 max-w-7xl mx-auto">
@@ -75,8 +87,8 @@ export default function EmployeesPage() {
         <div>
           <h1 className="text-3xl font-black text-slate-900">
             従業員一覧
-            {!loading && employees.length > 0 && (
-              <span className="ml-3 text-lg font-bold text-slate-400">全 {employees.length} 名</span>
+            {!loading && !loadError && (
+              <span className="ml-3 text-lg font-bold text-slate-400">全 {total} 名</span>
             )}
           </h1>
           <p className="text-sm text-slate-500 mt-1">{canManageEmployees ? '組織のメンバーを管理' : 'あなたの従業員情報を確認'}</p>
@@ -99,8 +111,15 @@ export default function EmployeesPage() {
         </div>}
       </div>
 
+      {loadError && (
+        <div role="alert" className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+          従業員情報を取得できませんでした。
+          <button type="button" onClick={() => setReloadKey(key => key + 1)} className="ml-2 underline">再読み込み</button>
+        </div>
+      )}
+
       {/* Sort Controls */}
-      {!loading && employees.length > 0 && (
+      {!loading && !loadError && total > 0 && (
         <div className="flex items-center gap-2 mb-4">
           <span className="text-sm font-bold text-slate-500 flex items-center gap-1">
             <span className="material-symbols-outlined text-sm">sort</span>
@@ -113,7 +132,7 @@ export default function EmployeesPage() {
           ].map((opt) => (
             <button
               key={opt.key}
-              onClick={() => setSortKey(opt.key)}
+              onClick={() => { setSortKey(opt.key); setPage(1) }}
               className={`px-3 py-1.5 rounded-full text-sm font-bold transition-all ${
                 sortKey === opt.key
                   ? 'bg-blue-100 text-blue-700'
@@ -140,7 +159,7 @@ export default function EmployeesPage() {
             </div>
           ))}
         </div>
-      ) : employees.length === 0 ? (
+      ) : loadError ? null : employees.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -183,15 +202,23 @@ export default function EmployeesPage() {
           </div> : null}
         </motion.div>
       ) : (
-        <EmployeeGrid employees={sortedEmployees} departments={departments} />
+        <EmployeeGrid employees={employees} departments={departments} />
+      )}
+
+      {!loading && !loadError && totalPages > 1 && (
+        <nav aria-label="従業員一覧のページ切り替え" className="mt-6 flex flex-wrap items-center justify-center gap-4 text-sm font-bold text-slate-600">
+          <button type="button" disabled={page <= 1} onClick={() => setPage(current => current - 1)} className="rounded-full border border-slate-200 px-4 py-2 disabled:opacity-40">前のページ</button>
+          <span>{page} / {totalPages} ページ（{(page - 1) * PAGE_SIZE + 1}〜{Math.min(page * PAGE_SIZE, total)}名を表示）</span>
+          <button type="button" disabled={page >= totalPages} onClick={() => setPage(current => current + 1)} className="rounded-full border border-slate-200 px-4 py-2 disabled:opacity-40">次のページ</button>
+        </nav>
       )}
 
       <CsvImportModal
         open={showImport}
         onClose={() => setShowImport(false)}
         onImported={() => {
-          setLoading(true)
-          fetchData()
+          if (page === 1) setReloadKey(key => key + 1)
+          else setPage(1)
         }}
       />
     </div>
