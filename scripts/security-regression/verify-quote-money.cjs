@@ -36,5 +36,14 @@ const document=load('src/lib/quote/document.ts',{'@/lib/prisma':{prisma:{quoteDo
  assert.equal(await document.nextQuoteNo('org',new Date('2026-12-31T15:00:00Z')),'Q-202701-0001');
  lastQuoteNo='Q-202701-0004';
  assert.equal(await document.nextQuoteNo('org',new Date('2026-12-31T15:00:00Z')),'Q-202701-0005');
+ for(const lineItems of [
+  [{qty:2,unitPrice:2000000000,taxRate:10,priceSource:'manual'}],
+  [{qty:1,unitPrice:2000000000,taxRate:10,priceSource:'manual'}],
+ ]) {
+  let writes=0;
+  const db={quoteDocument:{findUnique:async()=>({lineItems,discountType:null,discountValue:0}),update:async()=>{writes++}}};
+  await assert.rejects(document.recalcDocument('d',db),e=>e.code==='QUOTE_TOTAL_OUT_OF_RANGE');
+  assert.equal(writes,0);
+ }
  console.log(JSON.stringify({outcome:'PASS',calculationCases:cases,pdfSubtotal:true,pdfDiscount:true,pdfExclTax:true,jstMonthBoundary:true},null,2));
 })().catch(error=>{console.error(error);process.exitCode=1});

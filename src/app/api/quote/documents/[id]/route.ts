@@ -172,6 +172,9 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
       return NextResponse.json({ document: updated })
     }, { isolationLevel: 'Serializable' })
   } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'QUOTE_TOTAL_OUT_OF_RANGE') {
+      return NextResponse.json({ error: '見積金額の合計が保存可能な上限を超えています。数量・単価を見直してください。変更は保存されていません。' }, { status: 400 })
+    }
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2034') {
       return NextResponse.json({ error: '別の操作と更新が重なりました。再読み込みして内容を確認してから保存してください。' }, { status: 409 })
     }

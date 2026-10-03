@@ -37,11 +37,21 @@ export async function recalcDocument(
   if (!doc) return
   // 「要見積」の行は合計に含めない。0円として足すと総額を誤らせる
   const billable = billableLines(doc.lineItems)
+  // 明細の乗算と合算がDBの Int 上限を超える前に止める。
+  // 巨額入力を Number で計算し続けると精度が失われ、保存時に500になる。
+  const intMax = 2147483647
+  const rawTotal = billable.reduce((sum, line) => sum + BigInt(line.qty) * BigInt(line.unitPrice), 0n)
+  if (rawTotal > BigInt(intMax)) {
+    throw Object.assign(new Error('見積金額が保存可能な上限を超えています'), { code: 'QUOTE_TOTAL_OUT_OF_RANGE' })
+  }
   const t = calcTotals(
     billable.map((l) => ({ qty: l.qty, unitPrice: l.unitPrice, taxRate: l.taxRate })),
     doc.discountType,
     doc.discountValue
   )
+  if (!Number.isInteger(t.totalInclTax) || t.totalInclTax > intMax) {
+    throw Object.assign(new Error('税込合計が保存可能な上限を超えています'), { code: 'QUOTE_TOTAL_OUT_OF_RANGE' })
+  }
   await db.quoteDocument.update({
     where: { id: documentId },
     data: { totalExclTax: t.totalExclTax, taxAmount: t.taxAmount, totalInclTax: t.totalInclTax },

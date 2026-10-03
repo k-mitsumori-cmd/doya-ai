@@ -168,6 +168,9 @@ export async function POST(req: NextRequest) {
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
       break
     } catch (err: any) {
+      if (err?.code === 'QUOTE_TOTAL_OUT_OF_RANGE') {
+        return NextResponse.json({ error: '見積金額の合計が保存可能な上限を超えています。数量・単価を見直してください。保存されていません。' }, { status: 400 })
+      }
       // 採番の衝突か同時作成による直列化競合。最新件数を読み直して再試行する。
       if (err?.code !== 'P2002' && err?.code !== 'P2034') {
         return NextResponse.json({ error: '見積書を作成できませんでした。再読み込みして状態をご確認ください。' }, { status: 500 })
