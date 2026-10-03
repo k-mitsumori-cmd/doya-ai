@@ -1,6 +1,19 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+interface Employee {
+  id: string
+  name: string
+  email: string
+  organizationName: string | null
+  role: string
+  memberStatus: string
+  departmentName: string | null
+  createdAt: string
+}
+
+const PAGE_SIZE = 50
 
 const ROLE_LABELS: Record<string, string> = { system_admin: 'システム管理者', hr_admin: '人事管理者', manager: '部門管理者', employee: '一般' }
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
@@ -10,26 +23,61 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
 }
 
 export default function AdminKintaiEmployeesPage() {
-  const [employees, setEmployees] = useState<any[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [reloadKey, setReloadKey] = useState(0)
+  const requestVersion = useRef(0)
 
   useEffect(() => {
-    fetch('/api/admin/kintai/employees')
-      .then(r => r.json())
-      .then(d => setEmployees(d.employees || []))
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
+    const timer = setTimeout(() => { setSearch(searchInput.trim()); setPage(1) }, 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
 
-  const filtered = useMemo(() => {
-    return employees.filter(e => {
-      if (search && !e.name.includes(search) && !e.email.includes(search) && !e.organizationName.includes(search)) return false
-      if (statusFilter && e.memberStatus !== statusFilter) return false
-      return true
-    })
-  }, [employees, search, statusFilter])
+  const fetchEmployees = useCallback(async () => {
+    const version = ++requestVersion.current
+    setLoading(true)
+    setLoadError(false)
+    setEmployees([])
+    setTotal(0)
+    setTotalPages(0)
+    try {
+      const params = new URLSearchParams({ page: String(page) })
+      if (search) params.set('search', search)
+      if (statusFilter) params.set('status', statusFilter)
+      const response = await fetch(`/api/admin/kintai/employees?${params}`, { cache: 'no-store' })
+      if (!response.ok) throw new Error('Failed to fetch employees')
+      const data = await response.json()
+      if (!Array.isArray(data?.employees) || !Number.isSafeInteger(data.total) || data.total < 0 ||
+        data.page !== page || data.pageSize !== PAGE_SIZE || data.totalPages !== Math.ceil(data.total / PAGE_SIZE) ||
+        data.employees.length !== Math.max(0, Math.min(PAGE_SIZE, data.total - (page - 1) * PAGE_SIZE))) {
+        throw new Error('Invalid employees response')
+      }
+      if (version !== requestVersion.current) return
+      if (page > Math.max(1, data.totalPages)) {
+        setPage(Math.max(1, data.totalPages))
+        return
+      }
+      setEmployees(data.employees)
+      setTotal(data.total)
+      setTotalPages(data.totalPages)
+    } catch {
+      if (version === requestVersion.current) setLoadError(true)
+    } finally {
+      if (version === requestVersion.current) setLoading(false)
+    }
+  }, [page, search, statusFilter])
+
+  useEffect(() => {
+    void fetchEmployees()
+    return () => { requestVersion.current += 1 }
+  }, [fetchEmployees, reloadKey])
 
   if (loading) {
     return (
@@ -45,18 +93,25 @@ export default function AdminKintaiEmployeesPage() {
         <h1 className="text-2xl font-bold text-white flex items-center gap-3">
           <span className="text-3xl">👥</span> 全従業員一覧
         </h1>
-        <p className="text-sm text-white/40 mt-1">全組織の従業員 {employees.length}名</p>
+        {!loadError && <p className="text-sm text-white/40 mt-1">該当する従業員 {total}名</p>}
       </div>
+
+      {loadError && (
+        <div role="alert" className="rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">
+          従業員情報を取得できませんでした。
+          <button type="button" onClick={() => setReloadKey(key => key + 1)} className="ml-2 font-bold underline">再読み込み</button>
+        </div>
+      )}
 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <input
-            type="text" value={search} onChange={e => setSearch(e.target.value)}
+            type="text" value={searchInput} maxLength={100} onChange={e => setSearchInput(e.target.value)}
             placeholder="名前・メール・組織名で検索..."
             className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
           />
         </div>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
           className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white/60 focus:outline-none focus:border-purple-500/50">
           <option value="">全ステータス</option>
           <option value="ACTIVE">参加済</option>
@@ -80,10 +135,12 @@ export default function AdminKintaiEmployeesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {loadError ? (
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-white/30">取得できませんでした</td></tr>
+              ) : employees.length === 0 ? (
                 <tr><td colSpan={7} className="px-5 py-10 text-center text-white/30">該当なし</td></tr>
               ) : (
-                filtered.map(emp => {
+                employees.map(emp => {
                   const st = STATUS_LABELS[emp.memberStatus] || STATUS_LABELS.INACTIVE
                   return (
                     <tr key={emp.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
@@ -108,6 +165,13 @@ export default function AdminKintaiEmployeesPage() {
           </table>
         </div>
       </div>
+      {!loadError && totalPages > 1 && (
+        <nav aria-label="従業員一覧のページ切り替え" className="flex items-center justify-center gap-3 text-sm text-white/60">
+          <button type="button" disabled={page <= 1} onClick={() => setPage(current => current - 1)} className="rounded-lg border border-white/10 px-3 py-1 disabled:opacity-40">前へ</button>
+          <span>{page} / {totalPages} ページ</span>
+          <button type="button" disabled={page >= totalPages} onClick={() => setPage(current => current + 1)} className="rounded-lg border border-white/10 px-3 py-1 disabled:opacity-40">次へ</button>
+        </nav>
+      )}
     </div>
   )
 }

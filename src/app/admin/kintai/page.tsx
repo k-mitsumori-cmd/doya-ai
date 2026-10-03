@@ -29,17 +29,24 @@ export default function AdminKintaiPage() {
   const [stats, setStats] = useState<KintaiStats | null>(null)
   const [orgs, setOrgs] = useState<OrgSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
-    fetch('/api/admin/kintai')
-      .then(r => r.json())
+    setLoading(true)
+    setLoadError(false)
+    fetch('/api/admin/kintai', { cache: 'no-store' })
+      .then(r => { if (!r.ok) throw new Error('Failed to fetch kintai overview'); return r.json() })
       .then(d => {
-        setStats(d.stats || null)
-        setOrgs(d.organizations || [])
+        if (!d.stats || !Number.isSafeInteger(d.stats.totalOrgs) || !Array.isArray(d.organizations)) {
+          throw new Error('Invalid kintai overview response')
+        }
+        setStats(d.stats)
+        setOrgs(d.organizations)
       })
-      .catch(console.error)
+      .catch(() => { setStats(null); setOrgs([]); setLoadError(true) })
       .finally(() => setLoading(false))
-  }, [])
+  }, [reloadKey])
 
   if (loading) {
     return (
@@ -49,6 +56,7 @@ export default function AdminKintaiPage() {
           <p className="text-white/40 text-sm">読み込み中...</p>
         </div>
       </div>
+
     )
   }
 
@@ -70,6 +78,13 @@ export default function AdminKintaiPage() {
           ドヤ勤怠を開く →
         </Link>
       </div>
+
+      {loadError && (
+        <div role="alert" className="rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">
+          勤怠の運営状況を取得できませんでした。
+          <button type="button" onClick={() => setReloadKey(key => key + 1)} className="ml-2 font-bold underline">再読み込み</button>
+        </div>
+      )}
 
       {/* Stats Grid */}
       {stats && (
@@ -103,7 +118,8 @@ export default function AdminKintaiPage() {
       {/* Organizations Table */}
       <div>
         <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span>🏢</span> 組織一覧
+          <span>🏢</span> 最近の組織（最大20件）
+          <Link href="/admin/kintai/organizations" className="ml-auto text-sm text-purple-300 underline">すべて見る</Link>
         </h2>
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
@@ -116,7 +132,9 @@ export default function AdminKintaiPage() {
               </tr>
             </thead>
             <tbody>
-              {orgs.length === 0 ? (
+              {loadError ? (
+                <tr><td colSpan={4} className="px-5 py-10 text-center text-white/30">取得できませんでした</td></tr>
+              ) : orgs.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-5 py-10 text-center text-white/30">
                     組織がまだありません
