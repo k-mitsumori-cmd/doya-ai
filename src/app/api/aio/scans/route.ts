@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getAioContext, orgSlugFrom } from '@/lib/aio/access'
 import {
@@ -13,6 +14,7 @@ import {
 import { runAndPersistScan } from '@/lib/aio/run'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { decodeAioScanCursor, encodeAioScanCursor } from '@/lib/aio/scan-cursor'
+import { scanCoverageCounts } from '@/lib/aio/coverage'
 
 // ⚠️ 上限の正本は lib/aio/types.ts。ここに数字を書かない
 //    （サイドバーの表示も同じ定義を読む）
@@ -36,7 +38,17 @@ export async function GET(req: NextRequest) {
     take: 61,
   })
   const page = rows.slice(0, 60)
-  const items = page.map((r) => ({ ...r, status: effectiveScanStatus(r.status, r.updatedAt) }))
+  // Project only the small coverage object; saved summaries can contain many answer excerpts.
+  const coverageRows = page.length ? await prisma.$queryRaw<{ id: string; coverage: unknown }[]>(Prisma.sql`
+    SELECT id, summary->'coverage' AS coverage FROM aio_scans
+    WHERE "organizationId" = ${ctx.organizationId} AND id IN (${Prisma.join(page.map(row => row.id))})
+  `) : []
+  const coverageById = new Map(coverageRows.map(row => [row.id, scanCoverageCounts({ coverage: row.coverage })]))
+  const items = page.map((row) => ({
+    ...row,
+    status: effectiveScanStatus(row.status, row.updatedAt),
+    coverage: coverageById.get(row.id) ?? null,
+  }))
   return NextResponse.json({ items, nextCursor: rows.length > 60 ? encodeAioScanCursor(page[page.length - 1], ctx.organizationId) : null }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }
 

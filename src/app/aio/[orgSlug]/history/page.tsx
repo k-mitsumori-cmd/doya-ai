@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { aioGet } from '@/lib/aio/client'
+import type { ScanCoverageCounts } from '@/lib/aio/coverage'
 
 type ScanRow = {
   id: string; status: string; awarenessPct: number | null; shareOfVoice: number | null
-  ownCitationPct: number | null; createdAt: string
+  ownCitationPct: number | null; createdAt: string; coverage: ScanCoverageCounts | null
 }
 type ScanPage = { items: ScanRow[]; nextCursor: string | null }
 
@@ -59,7 +60,7 @@ export default function AioHistoryPage() {
     {!loading && !error && items.length === 0 && <p className="rounded-xl border bg-white p-6 text-slate-600">保存済みのスキャンはありません。</p>}
     <ol className="space-y-3">{items.map(row => <li key={row.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><p className="font-bold text-slate-900">{new Date(row.createdAt).toLocaleString('ja-JP')}</p><p className="mt-1 text-sm text-slate-600">{row.status === 'done' ? `言及率 ${metric(row.awarenessPct)} ・ SoV ${metric(row.shareOfVoice)} ・ 自社引用 ${metric(row.ownCitationPct)}` : row.status === 'failed' ? '測定失敗' : '処理中'}</p></div>
+        <div><p className="font-bold text-slate-900">{new Date(row.createdAt).toLocaleString('ja-JP')}</p><p className="mt-1 text-sm text-slate-600">{row.status === 'done' ? `言及率 ${metric(row.awarenessPct)} ・ SoV ${metric(row.shareOfVoice)} ・ 自社引用 ${metric(row.ownCitationPct)}` : row.status === 'failed' ? '測定失敗' : '処理中'}</p>{row.status === 'done' && <p className={`mt-1 text-xs font-bold ${row.coverage?.failed ? 'text-amber-700' : 'text-slate-500'}`}>{row.coverage ? row.coverage.failed > 0 ? `一部未測定：${row.coverage.succeeded}/${row.coverage.attempted} 回成功。数値は成功分のみ` : '全件測定済み' : '測定範囲の記録なし（過去の結果）'}</p>}</div>
         <Link href={`${base}/history/${encodeURIComponent(row.id)}`} className="rounded-lg bg-purple-700 px-4 py-2 text-sm font-bold text-white">結果を見る</Link>
       </div>
     </li>)}</ol>

@@ -7,13 +7,14 @@ import { readAioDashboard } from '@/lib/aio/dashboard'
 import { aioSend, AioApiError } from '@/lib/aio/client'
 import { TrialNote } from '@/components/TrialCallout'
 import { AIO_MAX_PROMPTS_PER_SCAN, ENGINE_LABEL, type EngineId, type ScanSummary } from '@/lib/aio/types'
+import { isCompleteScan, type ScanCoverageCounts } from '@/lib/aio/coverage'
 import { DoyaKun, sym, type Mood } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
 
 type Tab = 'visibility' | 'sov' | 'citations' | 'recommend'
 
-interface ScanRow { id: string; status: string; awarenessPct: number | null; shareOfVoice: number | null; ownCitationPct: number | null; createdAt: string }
+interface ScanRow { id: string; status: string; awarenessPct: number | null; shareOfVoice: number | null; ownCitationPct: number | null; createdAt: string; coverage: ScanCoverageCounts | null }
 interface Summary {
   coverage?: ScanSummary['coverage']
   totalRuns: number; brandRuns: number; awarenessPct: number; shareOfVoice: number; ownCitationPct: number
@@ -72,7 +73,8 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
       setScans(data.items)
       setLastFailed(data.lastFailed)
       const { latest, prev } = data
-      setDeltas(latest && prev ? {
+      setDeltas(latest && prev && isCompleteScan(latest.coverage) && isCompleteScan(prev.coverage)
+        && [latest.awarenessPct, latest.shareOfVoice, latest.ownCitationPct, prev.awarenessPct, prev.shareOfVoice, prev.ownCitationPct].every(value => typeof value === 'number' && Number.isFinite(value)) ? {
         awareness: Math.round(((latest.awarenessPct ?? 0) - (prev.awarenessPct ?? 0)) * 10) / 10,
         sov: Math.round(((latest.shareOfVoice ?? 0) - (prev.shareOfVoice ?? 0)) * 10) / 10,
         citation: Math.round(((latest.ownCitationPct ?? 0) - (prev.ownCitationPct ?? 0)) * 10) / 10,
@@ -101,8 +103,10 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
     setScanLimit(null)
     toast.loading('スキャン中…（数分かかります）', { id: 'scan' })
     try {
-      await aioSend('/api/aio/scans', orgSlug, 'POST')
-      toast.success('スキャン完了', { id: 'scan' })
+      const result = await aioSend<{ summary?: { coverage?: ScanCoverageCounts } }>('/api/aio/scans', orgSlug, 'POST')
+      const coverage = result.summary?.coverage
+      if (coverage?.failed) toast(`一部未測定（${coverage.succeeded}/${coverage.attempted} 回成功）。結果を確認してください。`, { id: 'scan', icon: '⚠️' })
+      else toast.success('スキャン完了', { id: 'scan' })
       await load()
     } catch (e: any) {
       const msg = e?.message || 'スキャンに失敗しました'
@@ -117,7 +121,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
   }
 
   const trend = useMemo(
-    () => scans.filter((s) => s.status === 'done').slice().reverse().map((s) => ({
+    () => scans.filter((s) => s.status === 'done' && isCompleteScan(s.coverage) && Number.isFinite(s.awarenessPct) && Number.isFinite(s.shareOfVoice)).slice().reverse().map((s) => ({
       date: new Date(s.createdAt).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }),
       認知度: s.awarenessPct ?? 0,
       SoV: s.shareOfVoice ?? 0,
@@ -217,6 +221,10 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
       <p className="font-black">一部の回答を測定できませんでした</p>
       <p>予定 {summary.coverage.attempted} 回のうち、成功 {summary.coverage.succeeded} 回・未測定 {summary.coverage.failed} 回です。数値と改善提案は成功した回答のみを対象としています。未測定は「言及なし」や0点を意味しません。</p>
       <p>外部AIの応答や測定処理に失敗した可能性があります。測定条件が異なるため、過去の数値との単純比較はできません。必要に応じて残りの利用枠を確認して再スキャンしてください。</p>
+    </div>
+  ) : summary && !summary.coverage ? (
+    <div role="status" className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700">
+      この過去のスキャンには測定範囲の記録がありません。数値を他のスキャンと比較する際はご注意ください。
     </div>
   ) : null
 
@@ -516,9 +524,9 @@ function VisibilityTab({ summary, trend, delta, brandName }: { summary: Summary;
         </div>
       </Card>
 
-      <Card title="認知度・SoVの推移">
+      <Card title="認知度・SoVの推移（全件測定済みのみ）">
         {trend.length <= 1 ? (
-          <p className="text-sm text-slate-400 font-bold py-12 text-center">スキャンを重ねると推移が表示されます</p>
+          <p className="text-sm text-slate-400 font-bold py-12 text-center">全件測定済みのスキャンが2回以上あると推移が表示されます</p>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
