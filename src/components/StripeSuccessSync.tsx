@@ -58,18 +58,34 @@ function StripeSuccessSyncInner() {
 
         toast.dismiss('stripe-sync')
         const tier = String(data?.plan || 'PRO') === 'ENTERPRISE' ? 'ENTERPRISE' : 'PRO'
-        await applyToUi(tier)
+        window.dispatchEvent(new CustomEvent('doya:checkout-verified', {
+          detail: {
+            sessionId,
+            plan: String(data?.plan || 'PRO'),
+            paymentStatus: data?.paymentStatus,
+            amountTotal: data?.amountTotal,
+            subscriptionStatus: data?.subscriptionStatus,
+          },
+        }))
         setModalPlan(tier)
+        // 契約同期は成功済み。セッションの再取得だけが失敗しても未決済扱いにしない。
+        try {
+          await applyToUi(tier)
+        } catch {
+          toast.error('画面のプラン表示を更新できませんでした。再読み込みしてください。')
+        }
       } catch (e: any) {
         // ここで黙って終わると、利用者は「申し込めていない」と判断してもう一度申し込む
         // （＝二重契約・二重課金。2026-08に実際に発生）。必ず状態と次の操作を見せる。
         toast.dismiss('stripe-sync')
         setFailed(true)
       } finally {
-        // session_id を履歴に残さない（再訪で二重同期しないため）
+        // 決済前のクエリだけで完了表示や購入計測を行わない。
         try {
           const url = new URL(window.location.href)
           url.searchParams.delete('session_id')
+          url.searchParams.delete('success')
+          url.searchParams.delete('plan')
           router.replace(url.pathname + url.search, { scroll: false })
         } catch {}
       }
@@ -83,9 +99,13 @@ function StripeSuccessSyncInner() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || '反映できませんでした')
       const tier = String(data?.planId || '').includes('enterprise') ? 'ENTERPRISE' : 'PRO'
-      await applyToUi(tier)
       setFailed(false)
       setModalPlan(tier)
+      try {
+        await applyToUi(tier)
+      } catch {
+        toast.error('画面のプラン表示を更新できませんでした。再読み込みしてください。')
+      }
     } catch (e: any) {
       toast.error(e?.message || '反映できませんでした。お手数ですがお問い合わせください')
     } finally {
@@ -104,14 +124,13 @@ function StripeSuccessSyncInner() {
         planName={modalPlan ?? 'PRO'}
       />
 
-      {/* 反映に失敗したときは「決済は完了している」ことを明示し、再試行だけをさせる。
-          ここで何も出さないと再申込＝二重課金を誘発する。 */}
+      {/* Stripe が未確認のときは支払済みと断定しない。二重申込も避ける。 */}
       {failed && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-gray-900">お支払いは完了しています</h2>
+            <h2 className="text-lg font-bold text-gray-900">契約状態を確認できませんでした</h2>
             <p className="mt-3 text-sm leading-relaxed text-gray-600">
-              ご契約の反映処理が一時的に失敗しました。<strong className="text-gray-900">重複してお申し込みされる必要はございません</strong>。
+              決済結果またはプランの反映を確認できませんでした。<strong className="text-gray-900">二重申込を避けるため、再申込の前に契約状態を確認してください。</strong>
               下のボタンから反映をやり直せます。
             </p>
             <div className="mt-5 flex gap-3">

@@ -3,7 +3,7 @@
 import { Suspense, useEffect } from 'react'
 import Script from 'next/script'
 import { useSession } from 'next-auth/react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 
 // GA4測定ID（ドヤマーケと同一プロパティ・同一ストリーム）
 // 同一プロパティにすることで「ドヤマーケ記事 → doya-ai登録 → 課金」の
@@ -32,7 +32,6 @@ const TOOL_PATHS = new Set([
 // sign_up / purchase / login / tool_open の発火（重複防止つき）
 function GaEventsTrackerInner() {
   const { data: session } = useSession()
-  const searchParams = useSearchParams()
   const pathname = usePathname()
 
   // アトリビューションCookie（Slack通知用。src/lib/attribution.ts と対）
@@ -61,27 +60,41 @@ function GaEventsTrackerInner() {
     }
   }, [pathname])
 
-  // 課金完了: Stripe成功リダイレクト（?success=true&session_id=...）を検知
+  // URLパラメータは誰でも付けられるため、サーバーで契約を確認した後だけ計測する。
   useEffect(() => {
-    try {
-      const success = searchParams.get('success')
-      const sessionId = searchParams.get('session_id')
-      if (success === 'true' && sessionId) {
-        const guardKey = `ga_purchase_${sessionId}`
-        if (!localStorage.getItem(guardKey)) {
+    const onVerified = (event: Event) => {
+      const { sessionId, plan, paymentStatus, amountTotal, subscriptionStatus } = (
+        event as CustomEvent<{
+          sessionId?: string
+          plan?: string
+          paymentStatus?: string
+          amountTotal?: number | null
+          subscriptionStatus?: string
+        }>
+      ).detail || {}
+      if (!sessionId) return
+      try {
+        const guardKey = `ga_subscription_verified_${sessionId}`
+        if (localStorage.getItem(guardKey)) return
+        gaEvent('subscription_activated', { transaction_id: sessionId, item_name: plan || 'pro' })
+        if (subscriptionStatus === 'trialing') {
+          gaEvent('begin_trial', { transaction_id: sessionId, item_name: plan || 'pro' })
+        } else if (paymentStatus === 'paid' && typeof amountTotal === 'number' && amountTotal > 0) {
           gaEvent('purchase', {
             transaction_id: sessionId,
-            value: 9980,
+            value: amountTotal / 100,
             currency: 'JPY',
-            item_name: searchParams.get('plan') || 'pro',
+            item_name: plan || 'pro',
           })
-          localStorage.setItem(guardKey, '1')
         }
+        localStorage.setItem(guardKey, '1')
+      } catch {
+        // ストレージ不可の場合も決済反映を妨げない。
       }
-    } catch {
-      // localStorage不可（プライベートモード等）でも他機能に影響させない
     }
-  }, [searchParams])
+    window.addEventListener('doya:checkout-verified', onVerified)
+    return () => window.removeEventListener('doya:checkout-verified', onVerified)
+  }, [])
 
   // 新規登録: 初回ログイン直後（firstLoginAtが30分以内）に一度だけ発火
   useEffect(() => {

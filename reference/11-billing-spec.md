@@ -46,7 +46,7 @@
 | **INV-7** | 課金・解約の Slack 通知は **Webhook 以外の経路からも**出る | Webhook が死ぬと無音になる（障害#3） |
 | **INV-8** | 決済後の反映処理は**ルートレイアウト**に置く（特定サービスの戻り先ページに置かない） | 戻り先が変わると保険が走らない（障害#2） |
 | **INV-9** | 生きている契約があるユーザーには**新規 Checkout を作らせない**（409 で中断） | 二重契約・トライアル無しの即時満額課金 |
-| **INV-10** | 反映に失敗したら**利用者に「支払いは完了している／再申込不要」を明示**する | 再申込＝二重課金 |
+| **INV-10** | 反映に失敗したら**未確認の決済を完了と断定せず、再申込前の契約確認と再同期を案内**する | 再申込＝二重課金 |
 | **INV-11** | `UserServiceSubscription.stripeSubscriptionId` に一意制約を付けない | P2002 で2件目以降の upsert が失敗（障害#5） |
 | **INV-12** | 日次の課金監査は **Stripe API を直接読む**（DBだけを見て健全性を判断しない） | DB が壊れていることを DB では検知できない |
 
@@ -224,7 +224,7 @@ User.plan → isPaidPlan() / 各サービスの上限テーブル
 ### 4.2 冪等性
 
 - 全経路が **upsert / 絶対値の更新**のみ（インクリメントや差分適用をしない）ので、何度実行しても同じ結果になる。
-- `StripeSuccessSync` は `handledRef` と URL からの `session_id` 削除で二重発火を防ぐ。
+- `StripeSuccessSync` は `handledRef` と URL からの決済クエリ削除で二重発火を防ぐ。成功表示は `/api/stripe/sync` が本人の完了済みCheckoutと契約を確認した後だけ出す。
 - Webhook は署名検証後に `StripeWebhookEvent` へイベントID・種類・処理状態・処理試行回数を記録する。完了済みIDは再処理せず、処理中の重複には503を返す。失敗または5分のリース失効後はStripeの再送で取得し直す。通知本文・署名シークレットは保存しない。
 - 上記はDB反映処理の重複抑止であり、非同期の運営通知の到達保証ではない。実際のStripe配送経路は別途監視・点検する。
 
@@ -236,8 +236,8 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
         → POST /api/stripe/sync { sessionId }
            ├─ 成功 → doya:plan-updated イベント発火 + session 更新 + router.refresh()
            │        → UpgradeSuccessModal を表示
-           └─ 失敗 → 「お支払いは完了しています／重複して申し込む必要はありません」
-                     モーダルを出し、再試行ボタンで /api/stripe/sync/latest を叩く   ← INV-10
+           └─ 失敗 → 決済結果は未確認と表示し、二重申込を避けるよう案内する
+                     再試行ボタンで /api/stripe/sync/latest を叩く   ← INV-10
 ```
 
 `successPath` は `checkout/route.ts` が planId のサービス名から決める（`seo`→`/seo`, `banner`→`/banner`,
@@ -297,7 +297,7 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 | 段 | 対策 | 実装 |
 |----|------|------|
 | 1 | **入口で止める**: 生きている契約があれば Checkout を作らず `409 ALREADY_SUBSCRIBED` | `checkout/route.ts` + `findActiveLikeSubscriptions()` |
-| 2 | **誤解させない**: 反映失敗時に「支払いは完了・再申込不要」を明示し再試行導線を出す | `StripeSuccessSync.tsx` |
+| 2 | **誤解させない**: 反映失敗時は決済完了を断定せず、二重申込防止と再試行導線を出す | `StripeSuccessSync.tsx` |
 | 3 | **後から見つける**: 同一メールで生きている契約が2本以上なら日次監査で critical 通知 | `billing-audit.ts` の `duplicates` |
 
 > 段1の照会が Stripe 側エラーで失敗した場合は**決済を止めない**（機会損失を作らない）。

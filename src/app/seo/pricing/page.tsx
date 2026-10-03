@@ -6,8 +6,7 @@ import { getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
 import { higherPlan } from '@/lib/plan-utils'
 import SeoCancelScheduleNotice from '@/components/SeoCancelScheduleNotice'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
-import { AnimatePresence, motion } from 'framer-motion'
-import { Sparkles, X, Timer } from 'lucide-react'
+import { Timer } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 export default function SeoPricingPage() {
@@ -19,27 +18,6 @@ export default function SeoPricingPage() {
   const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
   const isFreeHourActive = isLoggedIn && isWithinFreeHour(firstLoginAt)
   const [freeHourRemainingMs, setFreeHourRemainingMs] = useState(() => getFreeHourRemainingMs(firstLoginAt))
-
-  const [welcomeOpen, setWelcomeOpen] = useState(false)
-  const [welcomePlan, setWelcomePlan] = useState<string>('')
-
-  useEffect(() => {
-    // /api/stripe/checkout の success_url に合わせて、成功時にリッチな歓迎モーダルを出す
-    const url = new URL(window.location.href)
-    const ok = url.searchParams.get('success') === 'true'
-    const plan = String(url.searchParams.get('plan') || '')
-    if (!ok) return
-    if (!plan) return
-    const key = `doyaSeo.welcome.shown.${plan}`
-    try {
-      if (window.sessionStorage.getItem(key)) return
-      window.sessionStorage.setItem(key, '1')
-    } catch {
-      // ignore
-    }
-    setWelcomePlan(plan)
-    setWelcomeOpen(true)
-  }, [])
 
   const tierLabel = tier === 'GUEST' ? 'ゲスト' : tier === 'FREE' ? '無料' : tier === 'LIGHT' ? 'ライト' : tier === 'PRO' ? 'PRO' : 'Enterprise'
 
@@ -138,43 +116,6 @@ export default function SeoPricingPage() {
           )}
         </div>
       </main>
-
-      {/* Welcome modal */}
-      <AnimatePresence>
-        {welcomeOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4"
-            onClick={() => setWelcomeOpen(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.92, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.92, opacity: 0, y: 10 }}
-              className="relative bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button onClick={() => setWelcomeOpen(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-500">
-                <X className="w-5 h-5" />
-              </button>
-              <div className="text-center">
-                <Sparkles className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-2xl font-black text-slate-900 mb-2">ようこそ！プランが有効になりました</h3>
-                <p className="text-slate-600 font-bold mb-6">
-                  {welcomePlan === 'enterprise' ? 'Enterprise' : 'PRO'} の機能が解放されました。画像生成やAI自動修正が使えます。
-                </p>
-                <Link href="/seo">
-                  <button className="w-full py-4 rounded-2xl bg-blue-600 text-white font-black text-base hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">
-                    生成記事一覧へ戻る
-                  </button>
-                </Link>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }

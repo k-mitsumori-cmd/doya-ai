@@ -5,13 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Crown, 
   Sparkles, 
-  Check, 
-  Zap, 
-  Palette, 
-  MessageSquare, 
-  Clock, 
-  Star,
-  Rocket,
   PartyPopper,
   X
 } from 'lucide-react'
@@ -23,26 +16,8 @@ interface UpgradeSuccessModalProps {
   planName?: 'PRO' | 'ENTERPRISE'
 }
 
-const PRO_FEATURES = [
-  { icon: Palette, text: '月150枚まで生成可能', highlight: true },
-  { icon: Zap, text: 'サイズ自由指定' },
-  { icon: MessageSquare, text: '同時生成: 最大5枚' },
-  { icon: Star, text: '高品質な画像生成' },
-]
-
-const ENTERPRISE_FEATURES = [
-  { icon: Rocket, text: '月1000枚まで生成可能', highlight: true },
-  { icon: Palette, text: '大量運用・チーム向け' },
-  { icon: Zap, text: '優先サポート' },
-  { icon: Star, text: 'さらに上限UP相談可' },
-]
-
 export default function UpgradeSuccessModal({ isOpen, onClose, planName = 'PRO' }: UpgradeSuccessModalProps) {
   const [showContent, setShowContent] = useState(false)
-  
-  const features = planName === 'ENTERPRISE' ? ENTERPRISE_FEATURES : PRO_FEATURES
-  const planLabel = planName === 'ENTERPRISE' ? 'エンタープライズ' : 'プロ'
-  const planColor = planName === 'ENTERPRISE' ? 'rose' : 'orange'
 
   useEffect(() => {
     if (isOpen) {
@@ -120,6 +95,7 @@ export default function UpgradeSuccessModal({ isOpen, onClose, planName = 'PRO' 
           {/* 閉じるボタン */}
           <button
             onClick={onClose}
+            aria-label="閉じる"
             className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors z-10"
           >
             <X className="w-4 h-4 text-slate-500" />
@@ -152,64 +128,29 @@ export default function UpgradeSuccessModal({ isOpen, onClose, planName = 'PRO' 
               </div>
               
               <h2 className="text-2xl font-black text-slate-900 mb-2">
-                {planLabel}プランへ<br />アップグレード完了！
+                プランの反映が<br />完了しました
               </h2>
               
               <p className="text-slate-600 text-sm mb-6">
-                ご登録ありがとうございます！<br />
-                さっそく新しい機能をお楽しみください 🎉
+                ご登録ありがとうございます。<br />
+                ご契約中の機能をご利用いただけます。
               </p>
             </motion.div>
 
-            {/* 新機能リスト */}
+            {/* 契約は全サービス共通。サービス固有の枚数や機能をここで断定しない。 */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: showContent ? 1 : 0 }}
               transition={{ delay: 0.5 }}
               className="bg-slate-50 rounded-2xl p-4 mb-6 text-left"
             >
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-2">
                 <Sparkles className={`w-4 h-4 ${planName === 'ENTERPRISE' ? 'text-rose-500' : 'text-orange-500'}`} />
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                  できることが増えました！
+                  全サービス共通プラン
                 </span>
               </div>
-              
-              <ul className="space-y-2">
-                {features.map((feature, index) => (
-                  <motion.li
-                    key={index}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 + index * 0.1 }}
-                    className={`flex items-center gap-3 p-2 rounded-xl ${
-                      feature.highlight 
-                        ? planName === 'ENTERPRISE'
-                          ? 'bg-rose-100'
-                          : 'bg-orange-100'
-                        : 'bg-white'
-                    }`}
-                  >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      feature.highlight
-                        ? planName === 'ENTERPRISE'
-                          ? 'bg-rose-500 text-white'
-                          : 'bg-orange-500 text-white'
-                        : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      <feature.icon className="w-4 h-4" />
-                    </div>
-                    <span className={`text-sm font-medium ${
-                      feature.highlight ? 'text-slate-900 font-bold' : 'text-slate-700'
-                    }`}>
-                      {feature.text}
-                    </span>
-                    <Check className={`w-4 h-4 ml-auto ${
-                      planName === 'ENTERPRISE' ? 'text-rose-500' : 'text-orange-500'
-                    }`} />
-                  </motion.li>
-                ))}
-              </ul>
+              <p className="text-sm text-slate-700">各サービスで利用できる機能と上限は、それぞれのプラン画面でご確認ください。</p>
             </motion.div>
 
             {/* CTAボタン */}
@@ -225,8 +166,7 @@ export default function UpgradeSuccessModal({ isOpen, onClose, planName = 'PRO' 
               }`}
             >
               <span className="flex items-center justify-center gap-2">
-                <Rocket className="w-5 h-5" />
-                さっそくバナーを作成する
+                利用を続ける
               </span>
             </motion.button>
           </div>
@@ -235,4 +175,3 @@ export default function UpgradeSuccessModal({ isOpen, onClose, planName = 'PRO' 
     </AnimatePresence>
   )
 }
-

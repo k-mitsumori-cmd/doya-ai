@@ -9,7 +9,6 @@ import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 function PricingContent() {
   const searchParams = useSearchParams()
   const canceled = searchParams.get('canceled') || searchParams.get('payment') === 'cancelled'
-  const success = searchParams.get('success')
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -24,12 +23,6 @@ function PricingContent() {
         {canceled && (
           <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-center">
             決済がキャンセルされました。もう一度お試しください。
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-center">
-            🎉 ご登録ありがとうございます！プランが有効になりました。
           </div>
         )}
 

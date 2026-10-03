@@ -112,6 +112,9 @@ export async function POST(request: NextRequest) {
       servicePlan: planId,
       subscriptionId: subscription.id,
       priceId,
+      paymentStatus: checkout.payment_status,
+      amountTotal: checkout.amount_total,
+      subscriptionStatus: subscription.status,
     })
   } catch (e: any) {
     console.error('Stripe sync error:')

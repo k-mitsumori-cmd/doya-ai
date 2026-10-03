@@ -175,7 +175,7 @@ export default function RootLayout({
           {/* 改善点・要望をうかがうカード。無料プランの方に、
               1 / 5 / 20回目の利用でだけ右下に出る（判定は lib/feedback.ts） */}
           <FeedbackMount />
-          {/* GA4（ドヤマーケと同一プロパティ）: PV計測 + sign_up/purchaseイベント */}
+          {/* GA4（ドヤマーケと同一プロパティ）: PV・登録・検証済み契約イベント */}
           <GoogleAnalytics />
           {/* ログイン状態を dataLayer に流す。GTM側で「ログイン済みには
               HubSpotのポップアップを出さない」除外条件を書くために必要 */}
