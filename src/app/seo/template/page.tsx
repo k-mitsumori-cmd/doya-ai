@@ -420,7 +420,7 @@ export default function SeoTestPage() {
                         </div>
                         <p className="text-[10px] text-slate-400 mt-1.5">
                           残り{remaining}回生成できます
-                          {plan === 'FREE' && <span className="ml-1">/ <a href="/pricing" className="text-blue-500 hover:underline">PRO版で月30回</a></span>}
+                          {plan === 'FREE' && <span className="ml-1">/ <a href="/seo/pricing" className="text-blue-500 hover:underline">PRO版で月30回</a></span>}
                         </p>
                       </div>
                     )
