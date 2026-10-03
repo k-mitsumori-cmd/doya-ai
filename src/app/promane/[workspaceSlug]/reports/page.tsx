@@ -1,4 +1,5 @@
 import { timeEntryBelongsToProject } from "@/lib/promane/time-entry-project";
+import { laborCostForEntry } from "@/lib/promane/labor-cost";
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -29,9 +30,10 @@ export default async function ReportsPage({ params }: { params: Promise<{ worksp
     let laborCost = 0;
     let totalMinutes = 0;
     members.forEach((member) => {
-      const minutes = member.timeEntries.filter((te) => timeEntryBelongsToProject(te, project.id, taskIds)).reduce((sum, te) => sum + safe(te.duration), 0);
-      totalMinutes += minutes;
-      laborCost += (minutes / 60) * safe(member.hourlyRate);
+      member.timeEntries.filter((te) => timeEntryBelongsToProject(te, project.id, taskIds)).forEach((te) => {
+        totalMinutes += safe(te.duration);
+        laborCost += laborCostForEntry(te, member.hourlyRate);
+      });
     });
     // 経費の負値を 0 にクランプ (会計的に経費マイナスは異常)
     const expenseCost = project.expenses.reduce((sum, e) => sum + safe(e.amount), 0);

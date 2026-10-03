@@ -1,4 +1,5 @@
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
+import { laborCostForEntry } from "@/lib/promane/labor-cost";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { formatCurrency, formatCurrencyWithSign, formatPercent, profitEmoji, profitLabel, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, BILLING_TYPE_LABELS } from "@/lib/promane/format";
@@ -51,7 +52,7 @@ export default async function ProjectDetailPage({
   members.forEach((member) => {
     const minutes = member.timeEntries.reduce((sum, te) => sum + te.duration, 0);
     totalMinutes += minutes;
-    laborCost += (minutes / 60) * member.hourlyRate;
+    laborCost += member.timeEntries.reduce((sum, te) => sum + laborCostForEntry(te, member.hourlyRate), 0);
   });
   const expenseCost = project.expenses.reduce((sum, e) => sum + e.amount, 0);
   const totalCost = laborCost + expenseCost;

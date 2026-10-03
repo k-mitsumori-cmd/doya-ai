@@ -28,7 +28,7 @@ export async function createTimeEntry(workspaceSlug: string, data: {
   // セキュリティ: memberIdが自分のworkspaceか確認 (IDOR防止)
   const member = await prisma.promaneMember.findFirst({
     where: { id: data.memberId, workspaceId: workspace.id },
-    select: { id: true },
+    select: { id: true, hourlyRate: true },
   });
   if (!member) throw new Error("メンバーが見つかりません");
 
@@ -57,6 +57,7 @@ export async function createTimeEntry(workspaceSlug: string, data: {
       projectId,
       memberId: data.memberId,
       duration,
+      hourlyRateSnapshot: member.hourlyRate,
       date: workDate,
       note: data.note?.slice(0, 1000) || null,
     },

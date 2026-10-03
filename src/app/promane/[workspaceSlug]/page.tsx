@@ -1,4 +1,5 @@
 import { timeEntryBelongsToProject } from "@/lib/promane/time-entry-project";
+import { laborCostForEntry } from "@/lib/promane/labor-cost";
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -74,7 +75,7 @@ async function getChartData(workspaceId: string) {
       member: { workspaceId },
       date: { gte: sixMonthsAgo },
     },
-    select: { duration: true, date: true, member: { select: { hourlyRate: true } } },
+    select: { duration: true, hourlyRateSnapshot: true, date: true, member: { select: { hourlyRate: true } } },
   });
 
   const monthlyData = new Map<string, { revenue: number; cost: number }>();
@@ -99,7 +100,7 @@ async function getChartData(workspaceId: string) {
   for (const te of timeEntries) {
     const key = `${te.date.getMonth() + 1}月`;
     if (monthlyData.has(key)) {
-      const cost = (safe(te.duration) / 60) * safe(te.member.hourlyRate);
+      const cost = laborCostForEntry(te, te.member.hourlyRate);
       monthlyData.get(key)!.cost += cost;
     }
   }
@@ -185,10 +186,9 @@ async function getDashboardData(workspaceId: string) {
     const taskIds = project.tasks.map((t) => t.id);
     let laborCost = 0;
     members.forEach((member) => {
-      const memberTime = member.timeEntries
-        .filter((te) => timeEntryBelongsToProject(te, project.id, taskIds))
-        .reduce((sum, te) => sum + safeNum(te.duration), 0);
-      laborCost += (memberTime / 60) * safeNum(member.hourlyRate);
+      member.timeEntries.filter((te) => timeEntryBelongsToProject(te, project.id, taskIds)).forEach((te) => {
+        laborCost += laborCostForEntry(te, member.hourlyRate);
+      });
     });
     // 経費は負値を 0 にクランプ (経費がマイナスは会計的に異常)
     const expenseCost = project.expenses.reduce((sum, e) => sum + safeNum(e.amount), 0);

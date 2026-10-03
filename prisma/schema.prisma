@@ -2667,6 +2667,7 @@ model PromaneTimeEntry {
   project   PromaneProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   memberId  String
   duration  Int
+  hourlyRateSnapshot Int?          // 工数登録時の時給。移行前の記録は当時値が不明なため移行時点の時給で補完する
   date      DateTime
   note      String?
   task      PromaneTask?  @relation(fields: [taskId], references: [id], onDelete: SetNull)
