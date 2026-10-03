@@ -175,6 +175,11 @@ if (kintaiEmployeeAdmission.error || kintaiEmployeeAdmission.status !== 0) {
   console.error('Security regression failed: verify-kintai-employee-admission.cjs');
   process.exit(1);
 }
+const kintaiDepartmentMutation = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-department-mutation-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiDepartmentMutation.error || kintaiDepartmentMutation.status !== 0) {
+  console.error('Security regression failed: verify-kintai-department-mutation-atomic.cjs');
+  process.exit(1);
+}
 const staticAssetUrls = spawnSync(process.execPath, [path.join(__dirname, 'verify-static-asset-urls.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (staticAssetUrls.error || staticAssetUrls.status !== 0) {
   console.error('Security regression failed: verify-static-asset-urls.cjs');

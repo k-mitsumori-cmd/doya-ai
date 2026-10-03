@@ -9,7 +9,12 @@ async function departments(){
   const method=tail?'PATCH':'POST';let writes=0;
   const departments=[{id:'own',organizationId:'org1',parentId:null},{id:'ok',organizationId:'org1',parentId:null},{id:'child',organizationId:'org1',parentId:'own'},{id:'foreign',organizationId:'org2',parentId:null},{id:'loop',organizationId:'org1',parentId:'loop'}];
   const prisma={[service+'Department']:{findFirst:finder(departments),create:async()=>{writes++;return{id:'new'}},update:async()=>{writes++;return{id:'own'}}},[service+'Employee']:{findFirst:finder([{id:'manager',organizationId:'org1'},{id:'foreign-manager',organizationId:'org2'}])}};
+  if(service==='kintai')prisma.$transaction=async fn=>fn(prisma);
   const mocks={...auth,'next/server':{NextResponse:Resp},'@/lib/prisma':{prisma},'@/lib/department-integrity':helper,[`@/lib/${service}/access`]:{[service==='hr'?'getHrContext':'getKintaiContext']:async()=>({organizationId:'org1',role:'owner'}),hasMinRole:()=>true}};
+  if(service==='kintai'){
+    mocks['@/lib/kintai/employee-admission']={lockKintaiEmployeeAdmission:async()=>{}};
+    mocks['@/lib/kintai/manager-admission']={lockCurrentKintaiManager:async()=> 'hr_admin'};
+  }
   const api=load(`src/app/api/${service}/departments/${tail}route.ts`,mocks);
   for(const data of [{parentId:'foreign'},{managerId:'foreign-manager'},{parentId:'loop'},...(tail?[{parentId:'child'},{parentId:'own'}]:[])])await check(service+' '+method+' rejects '+JSON.stringify(data),async()=>{let before=writes;const r=await api[method](req({name:'Test',...data}),ctx);assert.equal(r.status,400);assert.equal(writes,before)});
   await check(service+' '+method+' accepts same-organization links and clears nullable links',async()=>{assert([200,201].includes((await api[method](req({name:'Test',parentId:'ok',managerId:'manager'}),ctx)).status));assert([200,201].includes((await api[method](req({name:'Test',parentId:null,managerId:null}),ctx)).status))});

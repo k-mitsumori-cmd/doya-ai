@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validDepartmentParent } from '@/lib/department-integrity'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
+import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
+import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 
 export async function GET() {
   try {
@@ -32,32 +34,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
-    const { name, parentId, managerId } = await req.json()
-    if (!name) return NextResponse.json({ error: '部署名は必須です' }, { status: 400 })
-
-    if (parentId && !(await validDepartmentParent(undefined, parentId, (parent) =>
-      prisma.kintaiDepartment.findFirst({
-        where: { id: parent, organizationId: ctx.organizationId }, select: { id: true, parentId: true },
-      })
-    ))) return NextResponse.json({ error: '同じ組織の循環しない親部署を指定してください' }, { status: 400 })
-    if (managerId) {
-      const manager = await prisma.kintaiEmployee.findFirst({
-        where: { id: managerId, organizationId: ctx.organizationId }, select: { id: true },
-      })
-      if (!manager) return NextResponse.json({ error: '責任者が同じ組織に存在しません' }, { status: 400 })
+    const body = await req.json()
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
+    const { name, parentId, managerId } = body
+    if (typeof name !== 'string' || !name.trim()) return NextResponse.json({ error: '部署名は必須です' }, { status: 400 })
+    if ((parentId != null && typeof parentId !== 'string') || (managerId != null && typeof managerId !== 'string')) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
     }
 
-    const dept = await prisma.kintaiDepartment.create({
-      data: {
-        organizationId: ctx.organizationId,
-        name,
-        parentId: parentId || null,
-        managerId: managerId || null,
-      },
-      include: { _count: { select: { employees: true } } },
-    })
+    return await prisma.$transaction(async (tx) => {
+      await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
+      if (!(await lockCurrentKintaiManager(tx, ctx))) {
+        return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+      }
+      if (parentId && !(await validDepartmentParent(undefined, parentId, (parent) =>
+        tx.kintaiDepartment.findFirst({
+          where: { id: parent, organizationId: ctx.organizationId }, select: { id: true, parentId: true },
+        })
+      ))) return NextResponse.json({ error: '同じ組織の循環しない親部署を指定してください' }, { status: 400 })
+      if (managerId) {
+        const manager = await tx.kintaiEmployee.findFirst({
+          where: { id: managerId, organizationId: ctx.organizationId }, select: { id: true },
+        })
+        if (!manager) return NextResponse.json({ error: '責任者が同じ組織に存在しません' }, { status: 400 })
+      }
 
-    return NextResponse.json({ department: dept }, { status: 201 })
+      const dept = await tx.kintaiDepartment.create({
+        data: {
+          organizationId: ctx.organizationId,
+          name: name.trim(),
+          parentId: parentId || null,
+          managerId: managerId || null,
+        },
+        include: { _count: { select: { employees: true } } },
+      })
+      return NextResponse.json({ department: dept }, { status: 201 })
+    })
   } catch (e) {
     console.error('[kintai/departments POST]')
     return NextResponse.json({ error: '作成に失敗しました' }, { status: 500 })
