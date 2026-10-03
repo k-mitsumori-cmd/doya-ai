@@ -21,7 +21,6 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
-    "@google-cloud/storage": "^7.19.0",
     "@google/generative-ai": "^0.24.1",
     "@mozilla/readability": "^0.6.0",
     "@next-auth/prisma-adapter": "^1.0.7",
@@ -94,6 +93,9 @@
     "postcss": "$postcss",
     "pptxgenjs": {
       "image-size": "2.0.4"
+    },
+    "exceljs": {
+      "uuid": "11.1.1"
     }
   }
 }
