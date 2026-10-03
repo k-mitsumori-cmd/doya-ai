@@ -7,11 +7,10 @@ const rows = Array.from({ length: 251 }, (_, i) => ({
   employeeId: 'employee-1', status: 'pending', submittedAt: new Date('2026-09-24T00:00:00Z'),
 }))
 const prisma = {
-  kintaiEmployee: { findMany: async () => [{ id: 'employee-1' }] },
   kintaiRequest: {
-    findFirst: async ({ where }) => rows.find((row) => row.id === where.id && where.employeeId.in.includes(row.employeeId)) || null,
+    findFirst: async ({ where }) => rows.find((row) => row.id === where.id && where.employee.organizationId === 'org') || null,
     findMany: async ({ where, cursor, take, orderBy }) => {
-      assert.deepEqual(JSON.parse(JSON.stringify(where.employeeId)), { in: ['employee-1'] })
+      assert.deepEqual(JSON.parse(JSON.stringify(where.employee)), { organizationId: 'org' })
       assert.equal(take, 101)
       assert.deepEqual(JSON.parse(JSON.stringify(orderBy)), [{ submittedAt: 'desc' }, { id: 'desc' }])
       const start = cursor ? rows.findIndex((row) => row.id === cursor.id) + 1 : 0

@@ -24,29 +24,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
     }
 
-    const where: any = {}
+    const where: any = { employee: { organizationId: ctx.organizationId } }
 
-    if (hasMinRole(ctx.role, 'hr_admin')) {
-      const empIds = await prisma.kintaiEmployee.findMany({
-        where: { organizationId: ctx.organizationId },
-        select: { id: true },
-      })
-      where.employeeId = { in: empIds.map((e) => e.id) }
-    } else if (hasMinRole(ctx.role, 'manager')) {
+    if (!hasMinRole(ctx.role, 'hr_admin') && hasMinRole(ctx.role, 'manager')) {
       const myEmp = await prisma.kintaiEmployee.findUnique({
         where: { id: ctx.employeeId },
-        select: { departmentId: true },
+        select: { organizationId: true, departmentId: true },
       })
-      if (myEmp?.departmentId) {
-        const deptEmps = await prisma.kintaiEmployee.findMany({
-          where: { organizationId: ctx.organizationId, departmentId: myEmp.departmentId },
-          select: { id: true },
-        })
-        where.employeeId = { in: deptEmps.map((e) => e.id) }
+      if (myEmp?.organizationId === ctx.organizationId && myEmp.departmentId) {
+        where.employee.departmentId = myEmp.departmentId
       } else {
         where.employeeId = ctx.employeeId
       }
-    } else {
+    } else if (!hasMinRole(ctx.role, 'hr_admin')) {
       where.employeeId = ctx.employeeId
     }
 
