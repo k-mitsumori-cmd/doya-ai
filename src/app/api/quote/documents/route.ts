@@ -48,6 +48,15 @@ export async function GET(req: NextRequest) {
 
 const VALID_SOURCES: PriceSource[] = ['own_price', 'market', 'competitor', 'manual', 'ai_estimate', 'unknown']
 
+function quoteInteger(value: unknown, fallback: number, min: number): number | null {
+  if (value == null || value === '') return fallback
+  if (typeof value !== 'number' && typeof value !== 'string') return null
+  const raw = String(value).normalize('NFKC').trim().replace(/\s/g, '')
+  if (!/^\d+$/.test(raw) && !/^\d{1,3}(,\d{3})+$/.test(raw)) return null
+  const parsed = Number(raw.replace(/,/g, ''))
+  return Number.isSafeInteger(parsed) && parsed >= min && parsed <= 2147483647 ? parsed : null
+}
+
 export async function POST(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
@@ -90,6 +99,10 @@ export async function POST(req: NextRequest) {
 
   const title = String(body?.title || '').trim() || 'お見積り'
   const items: any[] = Array.isArray(body?.items) ? body.items.slice(0, 60) : []
+  const validItems = items.filter((i) => i && i.itemName)
+  if (validItems.some((i) => quoteInteger(i.qty, 1, 1) === null || quoteInteger(i.unitPrice, 0, 0) === null)) {
+    return NextResponse.json({ error: '数量と単価は範囲内の整数で入力してください。見積書は保存されていません。' }, { status: 400 })
+  }
 
   // 商材は自組織のものだけを紐付ける（他組織のIDを渡されても無視する）
   let productId: string | null = null
@@ -132,15 +145,14 @@ export async function POST(req: NextRequest) {
             deliveryTerms: body?.deliveryTerms ? String(body.deliveryTerms).slice(0, 2000) : issuer?.deliveryTerms ?? null,
             notes: body?.notes ? String(body.notes).slice(0, 2000) : issuer?.notes ?? null,
             lineItems: {
-              create: items
-                .filter((i) => i && i.itemName)
+              create: validItems
                 .map((i, idx) => ({
                   ord: idx,
                   itemName: String(i.itemName).slice(0, 200),
                   spec: i.spec ? String(i.spec).slice(0, 1000) : null,
-                  qty: Number.isFinite(Number(i.qty)) ? Math.max(1, Math.round(Number(i.qty))) : 1,
+                  qty: quoteInteger(i.qty, 1, 1)!,
                   unit: String(i.unit || '式').slice(0, 12),
-                  unitPrice: Number.isFinite(Number(i.unitPrice)) ? Math.max(0, Math.round(Number(i.unitPrice))) : 0,
+                  unitPrice: quoteInteger(i.unitPrice, 0, 0)!,
                   taxRate: Number(i.taxRate) === 8 ? 8 : 10,
                   priceSource: VALID_SOURCES.includes(i.priceSource) ? i.priceSource : 'manual',
                   sourceRef: i.sourceRef ? String(i.sourceRef).slice(0, 1000) : null,

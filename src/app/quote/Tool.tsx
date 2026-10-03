@@ -304,6 +304,12 @@ export default function QuoteTool() {
 
   async function suggest() {
     if (!selectedProduct) return
+    const rawBudget = budget.normalize('NFKC').trim().replace(/\s/g, '')
+    const normalizedBudget = rawBudget.replace(/,/g, '')
+    if (rawBudget && (!(/^\d+$/.test(rawBudget) || /^\d{1,3}(,\d{3})+$/.test(rawBudget)) || !Number.isSafeInteger(Number(normalizedBudget)))) {
+      setError('想定予算は整数の円で入力してください。入力内容は変更されていません。')
+      return
+    }
     setSuggesting(true)
     setError('')
     setUpgradeUrl(null)
@@ -314,7 +320,7 @@ export default function QuoteTool() {
         body: JSON.stringify({
           productId: selectedProduct,
           situation: situation.trim() || undefined,
-          budget: budget ? Number(budget.replace(/[^0-9]/g, '')) : undefined,
+          budget: normalizedBudget ? Number(normalizedBudget) : undefined,
         }),
       })
       const d = await r.json()
@@ -737,7 +743,12 @@ export default function QuoteTool() {
                       <span className="mb-1 block text-slate-500">数量</span>
                       <input
                         value={it.qty}
-                        onChange={(e) => updateItem(idx, { qty: Math.max(1, Number(e.target.value.replace(/[^0-9]/g, '')) || 1) })}
+                        onChange={(e) => {
+                          const raw = e.target.value.normalize('NFKC').replace(/\s/g, '')
+                          const v = raw.replace(/,/g, '')
+                          if (raw && (!(/^\d+$/.test(raw) || /^\d{1,3}(,\d{3})+$/.test(raw)) || Number(v) > 2147483647)) return
+                          updateItem(idx, { qty: Math.max(1, Number(v) || 1) })
+                        }}
                         inputMode="numeric"
                         className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
                       />
@@ -755,7 +766,9 @@ export default function QuoteTool() {
                       <input
                         value={it.unitPrice ?? ''}
                         onChange={(e) => {
-                          const v = e.target.value.replace(/[^0-9]/g, '')
+                          const raw = e.target.value.normalize('NFKC').replace(/\s/g, '')
+                          const v = raw.replace(/,/g, '')
+                          if (raw && (!(/^\d+$/.test(raw) || /^\d{1,3}(,\d{3})+$/.test(raw)) || Number(v) > 2147483647)) return
                           // 手で金額を入れたら出所は「手入力」に変える。
                           // AIが出した根拠のラベルを、人が変えた数字に付けたままにしない。
                           updateItem(idx, { unitPrice: v === '' ? null : Number(v), priceSource: 'manual', sourceRef: '手入力' })

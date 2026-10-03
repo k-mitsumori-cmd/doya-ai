@@ -15,6 +15,15 @@ type Ctx = { params: Promise<{ id: string }> }
 
 const VALID_SOURCES: PriceSource[] = ['own_price', 'market', 'competitor', 'manual', 'ai_estimate', 'unknown']
 
+function quoteInteger(value: unknown, fallback: number, min: number): number | null {
+  if (value == null || value === '') return fallback
+  if (typeof value !== 'number' && typeof value !== 'string') return null
+  const raw = String(value).normalize('NFKC').trim().replace(/\s/g, '')
+  if (!/^\d+$/.test(raw) && !/^\d{1,3}(,\d{3})+$/.test(raw)) return null
+  const parsed = Number(raw.replace(/,/g, ''))
+  return Number.isSafeInteger(parsed) && parsed >= min && parsed <= 2147483647 ? parsed : null
+}
+
 export async function GET(req: NextRequest, ctxParam: Ctx) {
   const p = await ctxParam.params
   const ctx = await getQuoteContext(orgSlugFrom(req))
@@ -46,6 +55,14 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return NextResponse.json({ error: '更新内容が不正です' }, { status: 400 })
   }
+  if ('discountValue' in body && quoteInteger(body.discountValue, 0, 0) === null) {
+    return NextResponse.json({ error: '割引額・割引率は範囲内の整数で入力してください。変更は保存されていません。' }, { status: 400 })
+  }
+  if (Array.isArray(body.items) && body.items.slice(0, 60).filter((i: any) => i && i.itemName).some((i: any) =>
+    quoteInteger(i.qty, 1, 1) === null || quoteInteger(i.unitPrice, 0, 0) === null
+  )) {
+    return NextResponse.json({ error: '数量と単価は範囲内の整数で入力してください。変更は保存されていません。' }, { status: 400 })
+  }
   try {
     // 判定・明細・状態・合計を同じトランザクションで扱う。
     // 同時の確定と編集は直列化し、競合時には再確認を求める。
@@ -72,7 +89,7 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
         data.discountType = body.discountType === 'rate' || body.discountType === 'amount' ? body.discountType : null
       }
       if ('discountValue' in body) {
-        data.discountValue = Number.isFinite(Number(body.discountValue)) ? Math.max(0, Math.round(Number(body.discountValue))) : 0
+        data.discountValue = quoteInteger(body.discountValue, 0, 0)!
       }
 
       // --- ステータス遷移 ---
@@ -131,9 +148,9 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
             ord: idx,
             itemName: String(i.itemName).slice(0, 200),
             spec: i.spec ? String(i.spec).slice(0, 1000) : null,
-            qty: Number.isFinite(Number(i.qty)) ? Math.max(1, Math.round(Number(i.qty))) : 1,
+            qty: quoteInteger(i.qty, 1, 1)!,
             unit: String(i.unit || '式').slice(0, 12),
-            unitPrice: Number.isFinite(Number(i.unitPrice)) ? Math.max(0, Math.round(Number(i.unitPrice))) : 0,
+            unitPrice: quoteInteger(i.unitPrice, 0, 0)!,
             taxRate: Number(i.taxRate) === 8 ? 8 : 10,
             priceSource: VALID_SOURCES.includes(i.priceSource) ? i.priceSource : 'manual',
             sourceRef: i.sourceRef ? String(i.sourceRef).slice(0, 1000) : null,

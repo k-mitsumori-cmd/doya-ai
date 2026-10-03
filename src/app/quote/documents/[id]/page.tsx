@@ -124,7 +124,7 @@ export default function QuoteDocumentPage() {
           clientCompany,
           clientPerson,
           discountType: discountType || null,
-          discountValue: discountValue ? Number(discountValue.replace(/[^0-9]/g, '')) : 0,
+          discountValue: discountValue ? Number(discountValue) : 0,
           notes,
           paymentTerms,
           deliveryTerms,
@@ -279,7 +279,12 @@ export default function QuoteDocumentPage() {
                   <label className="text-xs font-semibold">
                     <span className="mb-1 block text-slate-500">数量</span>
                     <input disabled={saving || doc.status !== 'draft'} value={it.qty} inputMode="numeric"
-                      onChange={(e) => updateItem(idx, { qty: Math.max(1, Number(e.target.value.replace(/[^0-9]/g, '')) || 1) })}
+                      onChange={(e) => {
+                        const raw = e.target.value.normalize('NFKC').replace(/\s/g, '')
+                        const v = raw.replace(/,/g, '')
+                        if (raw && (!(/^\d+$/.test(raw) || /^\d{1,3}(,\d{3})+$/.test(raw)) || Number(v) > 2147483647)) return
+                        updateItem(idx, { qty: Math.max(1, Number(v) || 1) })
+                      }}
                       className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
                   </label>
                   <label className="text-xs font-semibold">
@@ -291,7 +296,9 @@ export default function QuoteDocumentPage() {
                     <span className="mb-1 block text-slate-500">単価</span>
                     <input disabled={saving || doc.status !== 'draft'} value={it.unitPrice || ''} inputMode="numeric" placeholder="要見積"
                       onChange={(e) => {
-                        const v = e.target.value.replace(/[^0-9]/g, '')
+                        const raw = e.target.value.normalize('NFKC').replace(/\s/g, '')
+                        const v = raw.replace(/,/g, '')
+                        if (raw && (!(/^\d+$/.test(raw) || /^\d{1,3}(,\d{3})+$/.test(raw)) || Number(v) > 2147483647)) return
                         // 人が金額を変えたら出所ラベルも「手入力」に揃える
                         updateItem(idx, { unitPrice: v === '' ? 0 : Number(v), priceSource: 'manual', sourceRef: '手入力' })
                       }}
@@ -332,7 +339,12 @@ export default function QuoteDocumentPage() {
               <label className="text-xs font-semibold">
                 <span className="mb-1 block text-slate-500">{discountType === 'rate' ? '割引率' : '割引額'}</span>
                 <input disabled={saving || doc.status !== 'draft'} value={discountValue} inputMode="numeric"
-                  onChange={(e) => setDiscountValue(e.target.value.replace(/[^0-9]/g, ''))}
+                  onChange={(e) => {
+                    const raw = e.target.value.normalize('NFKC').replace(/\s/g, '')
+                    const v = raw.replace(/,/g, '')
+                    if (raw && (!(/^\d+$/.test(raw) || /^\d{1,3}(,\d{3})+$/.test(raw)) || Number(v) > 2147483647)) return
+                    setDiscountValue(v)
+                  }}
                   className="w-28 rounded-xl border-2 border-slate-200 px-3 py-2 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
               </label>
             )}

@@ -16,12 +16,32 @@ function load(file,deps){const exports={};vm.runInNewContext(compile(read(file))
    assert.equal(response.status,200);const saved=row.lineItems[0];assert.equal(saved.priceSource,source==='invalid'?'manual':source);assert.equal(saved.sourceRef,item.sourceRef);assert.equal(saved.rangeMin,100);assert.equal(saved.rangeMax,300);
    results.push({method,source,savedSource:saved.priceSource,outcome:'PASS'});
   }
+  if(source==='own_price') {
+   for(const [field,value] of [['qty',1.5],['qty','１,５'],['unitPrice',1.5],['unitPrice','1,5'],['unitPrice',2147483648]]) {
+    const before=JSON.stringify(row.lineItems);
+    for(const [method,handler] of [['POST',req=>create.POST(req)],['PATCH',req=>update.PATCH(req,{params:Promise.resolve({id:'d'})})]]) {
+     const response=await handler({json:async()=>({items:[{...item,[field]:value}]})});
+     assert.equal(response.status,400,`${method} ${field}=${value}`);
+     assert.equal(JSON.stringify(row.lineItems),before,`${method} must not replace saved items`);
+    }
+   }
+   const discount=await update.PATCH({json:async()=>({discountValue:1.5})},{params:Promise.resolve({id:'d'})});
+   assert.equal(discount.status,400);
+   results.push({case:'quote API rejects fractional, malformed and out-of-range money before write',outcome:'PASS'});
+  }
  }
  // Execute the actual unit-price input callback on both editing screens.
  for(const file of ['src/app/quote/Tool.tsx','src/app/quote/documents/[id]/page.tsx']) {
   const ast=ts.createSourceFile('p.tsx',read(file),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let callback;
   function walk(n){if(ts.isJsxAttribute(n)&&n.name.getText(ast)==='onChange'&&n.initializer?.expression){const c=n.initializer.expression.getText(ast);if(c.includes('unitPrice:')&&c.includes("sourceRef: '手入力'"))callback=c;}ts.forEachChild(n,walk);}walk(ast);assert(callback);
-  let patch;const fn=vm.runInNewContext(compile('('+callback+')'),{idx:0,updateItem:(_,p)=>patch=p});fn({target:{value:'300'}});assert.equal(patch.unitPrice,300);assert.equal(patch.priceSource,'manual');assert.equal(patch.sourceRef,'手入力');results.push({case:file+' manual edit',outcome:'PASS'});
+  let patch;const fn=vm.runInNewContext(compile('('+callback+')'),{idx:0,updateItem:(_,p)=>patch=p});
+  for(const [value,expected] of [['300',300],['３００',300],['1,500',1500]]) {
+   patch=undefined;fn({target:{value}});assert.equal(patch?.unitPrice,expected);assert.equal(patch?.priceSource,'manual');assert.equal(patch?.sourceRef,'手入力');
+  }
+  for(const value of ['1.5','1,5','abc','2147483648']) {
+   patch=undefined;fn({target:{value}});assert.equal(patch,undefined,`${file}: ${value} must not silently change the amount`);
+  }
+  results.push({case:file+' manual edit and Japanese number input',outcome:'PASS'});
  }
  console.log(JSON.stringify(results,null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;});
