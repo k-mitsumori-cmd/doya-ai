@@ -765,6 +765,11 @@ if (doyalistUsageSummary.error || doyalistUsageSummary.status !== 0) {
   console.error('Security regression failed: verify-doyalist-usage-summary.cjs');
   process.exit(1);
 }
+const doyalistPreferences = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyalist-preferences.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyalistPreferences.error || doyalistPreferences.status !== 0) {
+  console.error('Security regression failed: verify-doyalist-preferences.cjs');
+  process.exit(1);
+}
 const doyalistStreamJson = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyalist-stream-json.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (doyalistStreamJson.error || doyalistStreamJson.status !== 0) {
   console.error('Security regression failed: verify-doyalist-stream-json.cjs');

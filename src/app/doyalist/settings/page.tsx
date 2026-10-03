@@ -1,26 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES, AREAS } from '@/lib/doyalist/constants'
-
-const SETTINGS_KEY = 'doyalist:settings'
-
-interface Settings {
-  density: 'comfortable' | 'compact'
-  defaultIndustry: string
-  defaultRegion: string
-  emailNotifications: boolean
-}
-
-const DEFAULT_SETTINGS: Settings = {
-  density: 'comfortable',
-  defaultIndustry: '',
-  defaultRegion: '',
-  emailNotifications: true,
-}
+import { DEFAULT_DOYALIST_PREFERENCES, readDoyalistPreferences, saveDoyalistPreferences, type DoyalistPreferences } from '@/lib/doyalist/preferences'
 
 interface Usage {
   plan?: { raw?: string; tier?: string; periodEnd?: string | null } | string
@@ -61,31 +46,52 @@ const CHARS = {
 
 export default function SettingsPage() {
   const { data: session } = useSession()
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [settings, setSettings] = useState(DEFAULT_DOYALIST_PREFERENCES)
   const [usage, setUsage] = useState(null as Usage | null)
+  const [usageLoading, setUsageLoading] = useState(true)
+  const [usageError, setUsageError] = useState('')
   const [exporting, setExporting] = useState(false)
   const exportingRef = useRef(false)
   const [mounted, setMounted] = useState(false)
 
-  useEffect(() => {
-    setMounted(true)
+  const loadUsage = useCallback(async () => {
+    setUsageLoading(true)
+    setUsageError('')
+    setUsage(null)
     try {
-      const raw = localStorage.getItem(SETTINGS_KEY)
-      if (raw) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) })
-    } catch { /* ignore */ }
-    fetch('/api/doyalist/usage')
-      .then((r) => r.json())
-      .then((data) => setUsage(data))
-      .catch(() => {})
+      const response = await fetch('/api/doyalist/usage', { cache: 'no-store' })
+      const data = await response.json().catch(() => null)
+      if (!response.ok || data?.success !== true ||
+        !['FREE', 'LIGHT', 'PRO', 'ENTERPRISE'].includes(data?.plan?.tier) ||
+        !Number.isInteger(data?.limits?.maxCompaniesPerMonth) ||
+        !Number.isInteger(data?.limits?.maxApproachesPerMonth) ||
+        !Number.isInteger(data?.usage?.companiesGenerated) ||
+        !Number.isInteger(data?.usage?.approachesGenerated)) {
+        throw new Error(data?.error || '利用状況を取得できませんでした')
+      }
+      setUsage(data)
+    } catch (error) {
+      setUsageError(error instanceof Error ? error.message : '利用状況を取得できませんでした')
+    } finally {
+      setUsageLoading(false)
+    }
   }, [])
 
-  const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
-    setSettings((prev) => {
-      const next = { ...prev, [key]: value }
-      try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
-      return next
-    })
-    toast.success('設定を保存しました', { duration: 1500 })
+  useEffect(() => {
+    setMounted(true)
+    setSettings(readDoyalistPreferences(localStorage))
+    void loadUsage()
+  }, [loadUsage])
+
+  const update = <K extends keyof DoyalistPreferences>(key: K, value: DoyalistPreferences[K]) => {
+    const next = { ...settings, [key]: value }
+    try {
+      saveDoyalistPreferences(localStorage, next)
+      setSettings(next)
+      toast.success('このブラウザに保存しました', { duration: 1500 })
+    } catch {
+      toast.error('設定を保存できませんでした。ブラウザの保存設定をご確認ください')
+    }
   }
 
   const handleExportAll = async () => {
@@ -189,6 +195,16 @@ export default function SettingsPage() {
 
           {/* ===== Col 2: Plan & Usage ===== */}
           <Card icon="diamond" title="プラン" subtitle="ご契約状況">
+            {usageLoading ? (
+              <p className="py-10 text-center text-sm font-bold text-slate-500">契約状況を確認しています…</p>
+            ) : usageError || !usage ? (
+              <div className="py-8 text-center">
+                <p role="alert" className="text-sm font-bold text-rose-700">{usageError || '契約状況を確認できませんでした'}</p>
+                <p className="mt-2 text-xs text-slate-500">プランと利用量は確認できていません。</p>
+                <button onClick={() => void loadUsage()} className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white">再読み込み</button>
+              </div>
+            ) : (
+            <>
             <div className="text-center pb-5 border-b border-slate-100">
               <span className={`inline-block text-xs font-black px-3 py-1 rounded-full mb-2 ${
                 tier === 'PRO' || tier === 'LIGHT' ? 'bg-cyan-100 text-cyan-700'
@@ -227,36 +243,13 @@ export default function SettingsPage() {
               <span className="material-symbols-outlined text-base">arrow_upward</span>
               プランをアップグレード
             </Link>
+            </>
+            )}
           </Card>
 
           {/* ===== Col 3: Preferences ===== */}
-          <Card icon="tune" title="設定" subtitle="表示・通知・データ">
-            {/* 表示密度 */}
-            <SettingRow label="表示密度" help="一覧表示の余白">
-              <div className="flex gap-1.5">
-                {(['comfortable', 'compact'] as const).map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => update('density', d)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      settings.density === d
-                        ? 'bg-[#0a1530] text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {d === 'comfortable' ? '標準' : 'コンパクト'}
-                  </button>
-                ))}
-              </div>
-            </SettingRow>
-
-            {/* メール通知 */}
-            <SettingRow label="メール通知" help="重要イベント時にメール">
-              <ToggleSwitch
-                checked={settings.emailNotifications}
-                onChange={(v) => update('emailNotifications', v)}
-              />
-            </SettingRow>
+          <Card icon="tune" title="設定" subtitle="抽出の初期条件・データ">
+            <p className="mb-3 text-xs text-slate-500">初期条件はこのブラウザに保存され、次に抽出画面を開いたときに適用されます。</p>
 
             {/* デフォルト業界 */}
             <SettingRow label="既定の業界" help="新規抽出時の初期値">
@@ -440,21 +433,5 @@ function UsageBar({ label, used, max, color }: { label: string; used: number; ma
         <p className="text-[10px] text-amber-600 mt-1 font-bold">⏰ あと {(max - used).toLocaleString()} で上限です</p>
       )}
     </div>
-  )
-}
-
-function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex w-11 h-6 rounded-full transition-colors ${checked ? 'bg-cyan-500' : 'bg-slate-300'}`}
-      aria-pressed={checked}
-    >
-      <span
-        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
-          checked ? 'translate-x-[1.375rem]' : 'translate-x-0.5'
-        }`}
-      />
-    </button>
   )
 }

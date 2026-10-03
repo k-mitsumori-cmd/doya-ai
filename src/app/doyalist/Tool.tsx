@@ -6,6 +6,7 @@ import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES, AREAS as AREA_LIST, SIZES } from '@/lib/doyalist/constants'
 import { AREA_TO_PREFECTURES } from '@/lib/doyalist/collect/prefecture-codes'
+import { readDoyalistPreferences } from '@/lib/doyalist/preferences'
 
 interface Company {
   id?: string
@@ -81,6 +82,11 @@ export default function DoyalistTool() {
   const [size, setSize] = useState('指定なし')
   const [keywords, setKeywords] = useState('')
   const [countInput, setCountInput] = useState('100')
+  useEffect(() => {
+    const defaults = readDoyalistPreferences(localStorage)
+    if (defaults.defaultIndustry) setIndustry(defaults.defaultIndustry)
+    if (defaults.defaultRegion) setArea(defaults.defaultRegion)
+  }, [])
   const count = Number(countInput)
   const validCount = /^\d+$/.test(countInput) && Number.isSafeInteger(count) && count >= 1 && count <= 10000
 
