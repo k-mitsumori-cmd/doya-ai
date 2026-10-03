@@ -297,6 +297,8 @@ export default function EditPage() {
   const unsavedRef = useRef(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [projectInfo, setProjectInfo] = useState<any>(null)
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -382,42 +384,51 @@ export default function EditPage() {
   }, [exportDropdownOpen])
 
   // ドラフト取得
-  const fetchDraft = useCallback(async () => {
+  const fetchDraft = useCallback(async (signal: AbortSignal) => {
     if (!draftId) {
       try {
-        const res = await fetch(`/api/interview/projects/${projectId}`)
+        const res = await fetch(`/api/interview/projects/${projectId}`, { cache: 'no-store', signal })
         const data = await res.json()
-        if (data.success) {
-          setProjectInfo(data.project)
-          if (data.project?.thumbnailUrl) {
-            setBannerUrl(data.project.thumbnailUrl)
-          }
-          const latestDraft = data.project.drafts?.[0]
-          if (latestDraft) {
-            setDraftId(latestDraft.id)
-          } else {
-            setLoading(false)
-            return
-          }
+        if (!res.ok || !data.success || !data.project) throw new Error(data.error || 'プロジェクトを読み込めませんでした')
+        if (signal.aborted) return
+        setProjectInfo(data.project)
+        if (data.project.thumbnailUrl) {
+          setBannerUrl(data.project.thumbnailUrl)
         }
-      } catch {
+        const latestDraft = data.project.drafts?.[0]
+        if (latestDraft) {
+          setDraftId(latestDraft.id)
+        } else {
+          setLoading(false)
+        }
+      } catch (error) {
+        if (signal.aborted) return
+        setLoadError(error instanceof Error ? error.message : 'プロジェクトを読み込めませんでした')
         setLoading(false)
-        return
       }
     }
   }, [draftId, projectId])
 
   useEffect(() => {
+    const controller = new AbortController()
+    setLoading(true)
+    setLoadError(null)
     if (!draftId) {
-      fetchDraft()
-      return
+      void fetchDraft(controller.signal)
+      return () => controller.abort()
     }
 
     let active = true
-    fetch(`/api/interview/articles/${draftId}`)
-      .then((r) => r.json())
+    fetch(`/api/interview/articles/${draftId}`, { cache: 'no-store', signal: controller.signal })
+      .then(async (response) => {
+        const data = await response.json()
+        if (!response.ok || !data.success || typeof data.draft?.content !== 'string' || typeof data.draft?.id !== 'string') {
+          throw new Error(data.error || '記事を読み込めませんでした')
+        }
+        return data
+      })
       .then((data) => {
-        if (active && data.success) {
+        if (active) {
           draftVersionsRef.current[data.draft.id] = data.draft.updatedAt
           setContent(data.draft.content)
           setTitle(data.draft.title || '')
@@ -428,10 +439,10 @@ export default function EditPage() {
           }
         }
       })
-      .catch(console.error)
+      .catch((error) => { if (active) setLoadError(error instanceof Error ? error.message : '記事を読み込めませんでした') })
       .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [draftId, fetchDraft])
+    return () => { active = false; controller.abort() }
+  }, [draftId, fetchDraft, retryCount])
 
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
@@ -935,6 +946,18 @@ ${htmlBody}
             <div className="h-8 bg-slate-200 rounded-lg w-1/3 animate-pulse" />
             <div className="h-[600px] bg-white border border-slate-200 rounded-xl animate-pulse" />
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div role="alert" className="max-w-lg rounded-2xl border border-red-200 bg-white p-8 text-center shadow-sm">
+          <p className="font-bold text-red-800">記事を読み込めませんでした</p>
+          <p className="mt-2 text-sm text-slate-600">{loadError}</p>
+          <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-5 rounded-lg bg-blue-600 px-5 py-2 text-sm font-bold text-white hover:bg-blue-700">再試行</button>
         </div>
       </div>
     )
