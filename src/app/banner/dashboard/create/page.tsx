@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
-import { UNIFIED_PRO_PLAN_ID } from '@/lib/unified-plan'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -16,10 +15,9 @@ import {
   TrendingUp, Layers, Link2
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, getBannerMaxImagesPerRequest, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
+import { BANNER_PRICING, getBannerDailyLimitByUserPlan, getBannerMaxImagesPerRequest, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
 import { DashboardLayout } from '@/components/DashboardLayout' // New import
 import { FeatureGuide } from '@/components/FeatureGuide'
-import { CheckoutButton } from '@/components/CheckoutButton'
 import { UiIcon, type UiIconName } from '@/components/icons'
 import BannerLimitModal from '@/components/banner/BannerLimitModal'
 import { useBannerQuota } from '@/components/banner/useBannerQuota'
@@ -1050,7 +1048,6 @@ export default function BannerDashboard() {
     if (p.includes('FREE')) return 'FREE' as const
     return 'FREE' as const
   }, [bannerPlan])
-  const isEnterpriseUser = !isGuest && planTier === 'ENTERPRISE'
   const isPaidUser = !isGuest && (planTier === 'LIGHT' || planTier === 'PRO' || planTier === 'ENTERPRISE')
   const maxCount = getBannerMaxImagesPerRequest(bannerPlan)
   const currentSizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
@@ -2358,39 +2355,13 @@ export default function BannerDashboard() {
                 )}
               </button>
 
-              {isGuest && !isGenerating && remainingCount <= 0 && (
+              {sessionStatus === 'unauthenticated' && !isGenerating && remainingCount <= 0 && (
                 <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm text-center font-medium">
-                  <div className="font-black">今月の生成上限に達しました。</div>
-
-                  {isGuest ? (
-                    <div className="mt-2">ログインしてプランをご確認ください。</div>
-                  ) : isEnterpriseUser ? (
-                    <div className="mt-2">
-                      上限をさらにUPしたい場合は{' '}
-                      <a
-                        href={HIGH_USAGE_CONTACT_URL}
-                        target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
-                        rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
-                        className="font-black underline underline-offset-2 hover:opacity-80"
-                      >
-                        マーケティング施策を丸投げする
-                      </a>
-                      からご相談ください。
-                    </div>
-                  ) : (
-                    <div className="mt-3 flex justify-center">
-                      {/* 以前は有料ユーザーに banner-enterprise（¥49,800の価格ID）を出していた。
-                          エンタープライズは廃止済みで価格設定も無いため、統一プランに固定する。 */}
-                      <CheckoutButton
-                        planId={UNIFIED_PRO_PLAN_ID}
-                        loginCallbackUrl="/banner/dashboard"
-                        className="px-4 py-2 rounded-xl text-sm"
-                        variant="secondary"
-                      >
-                        プロプランへアップグレード
-                      </CheckoutButton>
-                    </div>
-                  )}
+                  <div className="font-black">バナーの生成にはログインが必要です。</div>
+                  <p className="mt-2">ログインすると月{BANNER_PRICING.freeLimit}枚まで無料で生成できます。</p>
+                  <Link href="/auth/signin?callbackUrl=%2Fbanner%2Fdashboard%2Fcreate" className="mt-3 inline-block font-black underline underline-offset-2">
+                    ログインして無料で生成する
+                  </Link>
                 </div>
               )}
               

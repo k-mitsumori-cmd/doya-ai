@@ -172,7 +172,7 @@ export default function BannerTestPage() {
 }
 
 function BannerTestPageInner() {
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
   const [templates, setTemplates] = useState<BannerTemplate[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<BannerTemplate | null>(null)
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true)
@@ -1159,8 +1159,11 @@ function BannerTestPageInner() {
 
   // バナー生成
   const handleGenerate = async () => {
-    // ゲストでも生成可能（PLAN_CONFIG.GUEST: dailyLimit 5）
-    // ログインチェックは不要（日次制限で制御）
+    if (sessionStatus === 'loading') return
+    if (!session) {
+      window.location.assign('/auth/signin?callbackUrl=%2Fbanner%2Fdashboard')
+      return
+    }
 
     if (!selectedTemplate) {
       toast.error('テンプレートを選択してください')
@@ -1225,6 +1228,15 @@ function BannerTestPageInner() {
       if (!res.ok) {
         // ⚠️ 上限到達はエラーではなく「一番アップグレードに近い瞬間」。
         //    トーストで数秒流すのではなく、プランと初月無料を提示するモーダルで受け止める。
+        if (res.status === 401 && result?.code === 'LOGIN_REQUIRED') {
+          clearInterval(messageInterval)
+          setShowGenerationModal(false)
+          setIsGenerating(false)
+          setGenerationProgress(0)
+          setLoadingMessage('')
+          window.location.assign('/auth/signin?callbackUrl=%2Fbanner%2Fdashboard')
+          return
+        }
         if (res.status === 429 && result?.code === 'MONTHLY_LIMIT_REACHED') {
           quota.acceptLimit(result?.usage)
           const used = result?.usage?.monthlyUsed
@@ -2356,6 +2368,14 @@ function BannerTestPageInner() {
                         </div>
                       </div>
                     </div>
+                  ) : sessionStatus === 'unauthenticated' ? (
+                    <a
+                      href="/auth/signin?callbackUrl=%2Fbanner%2Fdashboard"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-3 font-bold text-white hover:bg-blue-700 sm:rounded-xl sm:py-4"
+                    >
+                      <LogIn className="h-5 w-5" />
+                      ログインして無料で生成する
+                    </a>
                   ) : isOverMonthlyLimit ? (
                     <div className="w-full py-3 sm:py-4 bg-gray-700 text-white rounded-lg sm:rounded-xl text-center">
                       <div className="flex items-center justify-center gap-2 text-red-400 font-bold text-sm sm:text-base">
@@ -2372,7 +2392,7 @@ function BannerTestPageInner() {
                   ) : (
                     <button
                       onClick={handleGenerate}
-                      disabled={!serviceName.trim() || quota.checking}
+                      disabled={sessionStatus === 'loading' || !serviceName.trim() || quota.checking}
                       className="w-full py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded-lg sm:rounded-xl transition-colors flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-base"
                     >
                       <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />

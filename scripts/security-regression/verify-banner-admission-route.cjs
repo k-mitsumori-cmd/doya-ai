@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
 const crypto = require('node:crypto')
 
-function fixture({ claim = 'reserved', banners = ['data:image/png;base64,AAAA'], throwGeneration = false } = {}) {
+function fixture({ claim = 'reserved', banners = ['data:image/png;base64,AAAA'], throwGeneration = false, authenticated = true } = {}) {
   let modelCalls = 0
   let releases = []
   let historyWrites = 0
@@ -16,7 +16,7 @@ function fixture({ claim = 'reserved', banners = ['data:image/png;base64,AAAA'],
       new Response(JSON.stringify(body), { status: opts?.status ?? 200, headers: { 'content-type': 'application/json' } }),
       { cookies: { set() {} } },
     ) } },
-    'next-auth': { getServerSession: async () => ({ user: { id: 'u1' } }) },
+    'next-auth': { getServerSession: async () => authenticated ? { user: { id: 'u1' } } : null },
     '@/lib/auth': { authOptions: {} },
     '@/lib/nanobanner': {
       isNanobannerConfigured: () => true,
@@ -49,7 +49,13 @@ function fixture({ claim = 'reserved', banners = ['data:image/png;base64,AAAA'],
 }
 
 ;(async () => {
-  let f = fixture({ claim: 'throw' })
+  let f = fixture({ authenticated: false })
+  const guest = await f.api.POST(f.request())
+  assert.equal(guest.status, 401)
+  assert.equal((await guest.json()).code, 'LOGIN_REQUIRED')
+  assert.equal(f.modelCalls, 0)
+
+  f = fixture({ claim: 'throw' })
   assert.equal((await f.api.POST(f.request())).status, 503)
   assert.equal(f.modelCalls, 0)
 
