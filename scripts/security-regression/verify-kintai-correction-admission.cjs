@@ -2,10 +2,13 @@ const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
 let writes = 0;
+const db = { kintaiRequest: { create: async ({ data }) => { writes++; return { id: 'request', ...data }; } } };
 const route = load('src/app/api/kintai/requests/route.ts', {
   'next/server': { NextResponse: Response },
-  '@/lib/prisma': { prisma: { kintaiRequest: { create: async ({ data }) => { writes++; return { id: 'request', ...data }; } } } },
-  '@/lib/kintai/access': { getKintaiContext: async () => ({ employeeId: 'employee' }), hasMinRole: () => false },
+  '@/lib/prisma': { prisma: { ...db, $transaction: async fn => fn(db) } },
+  '@/lib/kintai/access': { getKintaiContext: async () => ({ employeeId: 'employee', organizationId: 'org' }), hasMinRole: () => false },
+  '@/lib/kintai/employee-admission': { lockKintaiEmployeeAdmission: async () => {} },
+  '@/lib/kintai/manager-admission': { lockCurrentKintaiActor: async () => 'employee' },
 });
 
 const submit = async details => route.POST({ json: async () => ({ type: 'clock_fix', details, reason: 'Test correction' }) });

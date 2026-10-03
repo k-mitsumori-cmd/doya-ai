@@ -25,6 +25,8 @@ const route = load('src/app/api/kintai/requests/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
   '@/lib/kintai/access': { getKintaiContext: async () => ({ employeeId: 'viewer', organizationId: 'org', role: 'hr_admin' }), hasMinRole: () => true },
+  '@/lib/kintai/employee-admission': { lockKintaiEmployeeAdmission: async () => {} },
+  '@/lib/kintai/manager-admission': { lockCurrentKintaiActor: async () => 'hr_admin' },
 });
 
 (async () => {

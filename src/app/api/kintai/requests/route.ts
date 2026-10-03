@@ -5,6 +5,10 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
+import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
+import { lockCurrentKintaiActor } from '@/lib/kintai/manager-admission'
+
+class RequestForbidden extends Error {}
 
 export async function GET(req: NextRequest) {
   try {
@@ -83,7 +87,11 @@ export async function POST(req: NextRequest) {
     if (!ctx) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     if (ctx.isActive === false) return NextResponse.json({ error: '無効化された従業員は申請を作成できません' }, { status: 403 })
 
-    const { type, details, reason } = await req.json()
+    const body = await req.json()
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
+    const { type, details, reason } = body
     // SEC: タイプ値のホワイトリスト検証
     const ALLOWED_TYPES = ['clock_fix', 'leave', 'overtime', 'holiday_work']
     if (!type || !ALLOWED_TYPES.includes(type)) {
@@ -130,19 +138,26 @@ export async function POST(req: NextRequest) {
 
     const savedDetails = { ...(details || {}) }
     delete savedDetails.leaveCancellation
-    const request = await prisma.kintaiRequest.create({
-      data: {
-        employeeId: ctx.employeeId,
-        type,
-        details: savedDetails,
-        reason: reason || null,
-        status: 'pending',
-      },
-      include: { employee: { select: { name: true } } },
+    const request = await prisma.$transaction(async tx => {
+      await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
+      if (!await lockCurrentKintaiActor(tx, ctx)) {
+        throw new RequestForbidden('申請を作成する権限がありません')
+      }
+      return tx.kintaiRequest.create({
+        data: {
+          employeeId: ctx.employeeId,
+          type,
+          details: savedDetails,
+          reason: reason || null,
+          status: 'pending',
+        },
+        include: { employee: { select: { name: true } } },
+      })
     })
 
     return NextResponse.json({ request }, { status: 201 })
   } catch (e) {
+    if (e instanceof RequestForbidden) return NextResponse.json({ error: e.message }, { status: 403 })
     console.error('[kintai/requests POST]')
     return NextResponse.json({ error: '申請の作成に失敗しました' }, { status: 500 })
   }

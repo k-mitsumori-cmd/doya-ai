@@ -60,6 +60,8 @@ async function main() {
 
   const requests = load('src/app/api/kintai/requests/route.ts', { ...common,
     '@/lib/kintai/access': { getKintaiContext: async () => inactive, hasMinRole: access.hasMinRole },
+    '@/lib/kintai/employee-admission': { lockKintaiEmployeeAdmission: async () => {} },
+    '@/lib/kintai/manager-admission': load('src/lib/kintai/manager-admission.ts'),
   })
   assert.equal((await requests.POST({ json: async () => ({ type: 'leave' }) })).status, 403)
   const requestById = load('src/app/api/kintai/requests/[id]/route.ts', { ...common,
