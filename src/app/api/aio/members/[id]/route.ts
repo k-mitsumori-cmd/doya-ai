@@ -27,7 +27,7 @@ async function mutateMember(ctx: AioContext, targetId: string, action: 'update' 
         if (!target) return { kind: 'missing' as const }
         if (target.role === 'owner') return { kind: 'owner' as const }
         if (target.id === actor.id) return { kind: 'self' as const }
-        if (target.status === 'ACTIVE' && rank(target.role) >= rank(actor.role)) return { kind: 'peer' as const }
+        if (!Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, target.role) || rank(target.role) >= rank(actor.role)) return { kind: 'peer' as const }
         if (action === 'update') {
           if (!role || rank(role) >= rank(actor.role)) return { kind: 'role' as const }
           const member = await tx.aioMember.update({ where: { id: target.id }, data: { role } })
@@ -52,7 +52,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (!hasMinRole(sctx.role, 'admin')) return NextResponse.json({ error: '権限がありません' }, { status: 403 })
 
   const body = await req.json().catch(() => ({}))
-  const role = EDITABLE_ROLES.includes(body.role) ? (body.role as string) : null
+  const role = EDITABLE_ROLES.includes(body?.role) ? (body.role as string) : null
   if (!role) return NextResponse.json({ error: '不正な権限です' }, { status: 400 })
   const result = await mutateMember(sctx, p.id, 'update', role)
   if (result.kind === 'forbidden') return NextResponse.json({ error: '権限がありません' }, { status: 403 })

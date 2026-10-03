@@ -14,7 +14,7 @@ function fixture(service, { deliverySuccess = true, role = 'owner', currentRole 
       create: async ({ data }) => { creations++; return { id: 'member', ...data }; },
     },
     [orgModel]: { findUnique: async () => ({ name: 'Acme' }) },
-    $queryRaw: async sql => service === 'aio' && sql.join('?').includes('FROM aio_members')
+    $queryRaw: async sql => ['aio', 'shodan', 'sfa'].includes(service) && sql.join('?').includes(`FROM ${service}_members`)
       ? ['owner', 'admin'].includes(currentRole) ? [{ role: currentRole }] : []
       : [{ id: 'org' }],
     $transaction: async (fn) => fn(prisma),
@@ -67,11 +67,13 @@ function fixture(service, { deliverySuccess = true, role = 'owner', currentRole 
   const expired = fixture('sfa', { expiredInvite: true, deliverySuccess: false });
   assert.equal((await expired.post({ email: 'valid@example.com' })).status, 200);
   assert.equal(expired.staleRemoved, 1, 'expired pending invite is replaced before re-inviting');
-  for (const options of [{ role: 'owner', currentRole: 'member', inviteRole: 'member' }, { role: 'owner', currentRole: 'admin', inviteRole: 'admin' }]) {
-    const stale = fixture('aio', options);
-    assert.equal((await stale.post({ email: 'valid@example.com', role: options.inviteRole })).status, 403);
-    assert.equal(stale.creations, 0);
-    assert.equal(stale.emails, 0);
+  for (const service of ['aio', 'shodan', 'sfa']) {
+    for (const options of [{ role: 'owner', currentRole: 'member', inviteRole: 'member' }, { role: 'owner', currentRole: 'admin', inviteRole: 'admin' }]) {
+      const stale = fixture(service, options);
+      assert.equal((await stale.post({ email: 'valid@example.com', role: options.inviteRole })).status, 403);
+      assert.equal(stale.creations, 0);
+      assert.equal(stale.emails, 0);
+    }
   }
   console.log('PASS SFA/AIO/Shodan team invites: malformed input rejected before send and delivery truth reported');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -158,7 +158,7 @@ function creationFixture(service, { currentRole = 'owner' } = {}) {
       assert.equal(fixture.pending.length, 1)
       assert.equal(fixture.sent(), 2)
     })
-    if (['aio', 'quote', 'mensetsu', 'aishodan'].includes(service.id)) {
+    if (['aio', 'shodan', 'quote', 'mensetsu', 'aishodan'].includes(service.id)) {
       await check(`${service.id} revoked inviter cannot create or send an invite`, async () => {
         const fixture = creationFixture(service, { currentRole: 'member' })
         assert.equal((await fixture.invite()).status, 403)

@@ -66,6 +66,10 @@ export async function POST(req: NextRequest) {
   let admitted
   try {
     admitted = await withSfaAdmission(ctx.organizationId, { members: 1 }, async (tx) => {
+      const actor = await tx.$queryRaw<{ role: string }[]>`SELECT role FROM sfa_members
+        WHERE id = ${ctx.memberId} AND "organizationId" = ${ctx.organizationId}
+        AND "userId" = ${ctx.userId} AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
+      if (!actor.length || rank(role) >= rank(actor[0].role)) return { kind: 'forbidden' as const }
       const dup = await tx.sfaMember.findFirst({
         where: duplicateWhere,
       })
@@ -82,6 +86,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '招待の作成に失敗しました（既に招待済みかもしれません）' }, { status: 409 })
   }
   if (admitted.limit) return sfaQuotaResponse(admitted.limit, await canManageSfaBilling(prisma, ctx.organizationId, ctx.userId))
+  if (admitted.created.kind === 'forbidden') return NextResponse.json({ error: '招待権限がありません。再読み込みしてください' }, { status: 403 })
   if (admitted.created.kind === 'duplicate') {
     return NextResponse.json(
       { error: admitted.created.status === 'ACTIVE' ? '既に参加済みのメンバーです' : '既に招待済みです' },
