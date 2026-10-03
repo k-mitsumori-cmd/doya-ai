@@ -34,6 +34,10 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   const result = await prisma.$transaction(async (tx) => {
     // Share the reservation lock, then lock this scan against completion updates.
     await tx.$queryRaw`SELECT id FROM aio_organizations WHERE id = ${sctx.organizationId} FOR NO KEY UPDATE`
+    const actor = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM aio_members
+      WHERE id = ${sctx.memberId} AND "organizationId" = ${sctx.organizationId}
+      AND "userId" = ${sctx.userId} AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
+    if (!actor.length) return 'forbidden'
     await tx.$queryRaw`SELECT id FROM aio_scans WHERE id = ${p.id} AND "organizationId" = ${sctx.organizationId} FOR NO KEY UPDATE`
     const scan = await tx.aioScan.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
     if (!scan || scan.status === 'deleted') return 'missing'
@@ -59,6 +63,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     return 'deleted'
   })
   if (result === 'missing') return NextResponse.json({ error: 'スキャンが見つかりません' }, { status: 404 })
+  if (result === 'forbidden') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   if (result === 'processing') return NextResponse.json({ error: '実行中のスキャンは削除できません。完了後にお試しください。' }, { status: 409 })
   if (result === 'unsupported') return NextResponse.json({ error: '現在の状態では削除できません。再読み込みしてください。' }, { status: 409 })
   return NextResponse.json({ ok: true })
