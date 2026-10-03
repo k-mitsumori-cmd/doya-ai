@@ -63,7 +63,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     where: { organizationId: member.organizationId, userId, status: 'ACTIVE' },
   })
   if (existing) {
-    await prisma.sfaMember.delete({ where: { id: member.id } }).catch(() => {})
+    // 読み取り後に別の承諾が完了しても、ACTIVE になったメンバーを削除しない。
+    await prisma.sfaMember.deleteMany({
+      where: { id: member.id, organizationId: member.organizationId, status: 'PENDING', inviteToken: p.token },
+    }).catch(() => {})
     return NextResponse.json({ ok: true, organizationSlug: member.organization.slug, alreadyMember: true })
   }
 

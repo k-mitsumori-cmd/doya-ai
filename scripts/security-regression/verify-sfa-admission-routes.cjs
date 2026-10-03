@@ -70,5 +70,27 @@ const request = (body) => ({ url: 'http://local/api/sfa', headers: { get: () => 
   }).POST;
   assert.equal((await invite(request({}), { params: Promise.resolve({ token: 'token' }) })).status, 402);
   assert.equal(attempted, 0, 'blocked quota must stop every database write and usage event');
+  let guardedDelete = false;
+  const alreadyMemberInvite = load('src/app/api/sfa/invite/[token]/route.ts', {
+    ...shared,
+    'next-auth': { getServerSession: async () => ({ user: { id: 'invitee', email: 'member@example.com' } }) },
+    '@/lib/auth': { authOptions: {} },
+    '@/lib/prisma': { prisma: { sfaMember: {
+      findUnique: async () => ({ id: 'invite', organizationId: 'org', organization: { slug: 'org' }, status: 'PENDING', createdAt: new Date(), inviteEmail: 'member@example.com' }),
+      findFirst: async () => ({ id: 'already-active' }),
+      delete: async () => { throw Error('must not delete by id alone'); },
+      deleteMany: async ({ where }) => {
+        assert.equal(where.id, 'invite');
+        assert.equal(where.status, 'PENDING');
+        assert.equal(where.inviteToken, 'token');
+        guardedDelete = true;
+        return { count: 0 }; // 別の承諾で既に ACTIVE になった場合
+      },
+    } } },
+  }).POST;
+  const already = await alreadyMemberInvite(request({}), { params: Promise.resolve({ token: 'token' }) });
+  assert.equal(already.status, 200);
+  assert.equal((await already.json()).alreadyMember, true);
+  assert.equal(guardedDelete, true, 'an ACTIVE member must never be removed by an outdated invitation read');
   console.log('PASS SFA admission routes: every creation path blocks at quota without writes or email');
 })().catch((error) => { console.error(error); process.exitCode = 1; });
