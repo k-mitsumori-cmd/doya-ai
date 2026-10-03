@@ -94,15 +94,18 @@ function feedbackFixture({ fail = false } = {}) {
     const prisma = {
       aioOrganization: { findMany: async () => [organization] },
       user: { findMany: async () => [{ id: 'user-1', plan: 'PRO' }] },
+      aioScan: { findMany: async () => [], groupBy: async () => [] },
     }
     const route = load('src/app/api/cron/aio-scan/route.ts', {
       'next/server': { NextResponse: { json } },
       '@/lib/prisma': { prisma },
       '@/lib/aio/run': { runAndPersistScan: async () => {
         if (scanThrows) throw Error('private provider detail')
-        return { status: 'failed', error: 'private model detail' }
+        return { id: 'scan-1', status: 'failed', error: 'private model detail' }
       } },
       '@/lib/unified-plan': { isPaidPlan: () => true },
+      '@/lib/aio/quota': { scanQuota: () => ({ since: new Date(0), limit: 30 }) },
+      '@/lib/aio/types': { SCAN_STALE_MS: 600000 },
     }, { process: { env: { CRON_SECRET: 'secret' } } })
     const response = await route.GET(request('aio-scan'))
     assert.equal(response.status, 200)
