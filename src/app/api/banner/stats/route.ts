@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { shouldResetMonthlyUsage, getBannerMonthlyLimitByUserPlan } from '@/lib/pricing'
+import { higherPlan } from '@/lib/plan-utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -39,14 +40,18 @@ export async function GET(request: NextRequest) {
     })
 
     // 使用状況（UserServiceSubscriptionから取得）
-    const sub = await prisma.userServiceSubscription.findUnique({
-      where: { userId_serviceId: { userId, serviceId: 'banner' } },
-      select: { plan: true, monthlyUsage: true, lastUsageReset: true },
-    })
+    const [sub, account] = await Promise.all([
+      prisma.userServiceSubscription.findUnique({
+        where: { userId_serviceId: { userId, serviceId: 'banner' } },
+        select: { plan: true, monthlyUsage: true, lastUsageReset: true },
+      }),
+      prisma.user.findUnique({ where: { id: userId }, select: { plan: true } }),
+    ])
+    if (!account) return NextResponse.json({ error: '利用プランを確認できませんでした' }, { status: 503, headers: privateHeaders })
 
     // 月が変わっていたら0（日本時間基準）
     const monthlyUsage = shouldResetMonthlyUsage(sub?.lastUsageReset) ? 0 : (sub?.monthlyUsage || 0)
-    const monthlyLimit = getBannerMonthlyLimitByUserPlan(sub?.plan)
+    const monthlyLimit = getBannerMonthlyLimitByUserPlan(higherPlan(sub?.plan, account.plan))
 
     return NextResponse.json({
       totalBanners: totalCount,

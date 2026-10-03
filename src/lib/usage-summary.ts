@@ -23,7 +23,7 @@ import { FREE_LIMITS, PRO_MONTHLY_LIMITS, ENTERPRISE_MONTHLY_LIMITS } from '@/li
 import { isPaidPlan } from '@/lib/unified-plan'
 import { PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/shodan/types'
 import { countMonthlyCompanies, DOYALIST_LIMITS } from '@/lib/doyalist/limits'
-import { tierFrom } from '@/lib/plan-utils'
+import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { getOrganizationBilling } from '@/lib/organization-billing'
 
 /** 1本の枠。limit が null なら上限なし */
@@ -206,12 +206,12 @@ export async function getUsageSummary(
     }
 
     case 'banner': {
-      // Match the subscription row used by the generation endpoints, including legacy plans.
+      // 生成予約と同じく、統一プランとサービス個別付与の上位を採用する。
       const sub = await prisma.userServiceSubscription.findUnique({
         where: { userId_serviceId: { userId, serviceId: 'banner' } },
         select: { plan: true, monthlyUsage: true, lastUsageReset: true },
       })
-      const bannerPlan = sub?.plan || plan || 'FREE'
+      const bannerPlan = higherPlan(sub?.plan, plan)
       return {
         title: '作ったバナー',
         unit: '枚',

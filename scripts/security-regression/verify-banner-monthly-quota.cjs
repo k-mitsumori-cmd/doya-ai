@@ -81,6 +81,16 @@ function fixture(initial = null, accountPlan = 'FREE') {
   assert.equal(newPaid.row.plan, 'PRO')
   assert.equal(newPaid.row.monthlyUsage, 5)
 
+  const staleFree = fixture({ id: 'banner-sub', plan: 'FREE', monthlyUsage: 15, lastUsageReset: new Date() }, 'PRO')
+  const restoredPaid = await reserveBannerMonthlyImages('u-stale', 10, staleFree.db)
+  assert.equal(restoredPaid.state, 'reserved')
+  assert.equal(restoredPaid.reservation.count, 5)
+  assert.equal(restoredPaid.reservation.usage.monthlyLimit, 150)
+  assert.equal(staleFree.row.monthlyUsage, 20)
+
+  const individualGrant = fixture({ id: 'banner-sub', plan: 'PRO', monthlyUsage: 15, lastUsageReset: new Date() }, 'FREE')
+  assert.equal((await reserveBannerMonthlyImages('u-grant', 5, individualGrant.db)).state, 'reserved')
+
   const reset = fixture({ id: 'banner-sub', plan: 'FREE', monthlyUsage: 15, lastUsageReset: new Date() })
   const blocked = await reserveBannerMonthlyImages('u4', 1, reset.db)
   assert.equal(blocked.state, 'limit')
@@ -115,6 +125,7 @@ function fixture(initial = null, accountPlan = 'FREE') {
     assert(source.includes('getBannerMaxImagesPerRequest('), `${page} must use the server batch cap`)
   }
   const fromUrl = fs.readFileSync(path.join(root, 'src/app/api/banner/from-url/route.ts'), 'utf8')
+  assert(fromUrl.includes('higherPlan(bannerSub?.plan, accountPlan?.plan)'), 'URL preview must use the account entitlement when the banner row is stale')
   assert(fromUrl.includes('Math.min(desiredCount, getBannerMaxImagesPerRequest(actualPlan))'), 'URL preview must not reject a batch larger than the server will generate')
   const templateGenerate = fs.readFileSync(path.join(root, 'src/app/api/banner/test/generate/route.ts'), 'utf8')
   assert(templateGenerate.includes("requestedCustomPrompt && bannerPlan !== 'ENTERPRISE'"), 'template detailed instructions must be server-gated')

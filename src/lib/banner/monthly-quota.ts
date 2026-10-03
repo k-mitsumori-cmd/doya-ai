@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getBannerMonthlyLimitByUserPlan, getBannerMaxImagesPerRequest, shouldResetMonthlyUsage } from '@/lib/pricing'
+import { higherPlan } from '@/lib/plan-utils'
 
 type BannerQuotaDb = Pick<PrismaClient, 'user' | 'userServiceSubscription'>
 
@@ -41,13 +42,13 @@ export async function reserveBannerMonthlyImages(
   db: BannerQuotaDb = prisma,
 ): Promise<BannerQuotaClaim> {
   if (!userId || !Number.isSafeInteger(requestedCount) || requestedCount < 1) throw new Error('Invalid banner quota request')
+  const account = await db.user.findUnique({ where: { id: userId }, select: { plan: true } })
+  if (!account) throw new Error('Banner quota account unavailable')
   const existing = await db.userServiceSubscription.findUnique({
     where: { userId_serviceId: { userId, serviceId: SERVICE_ID } },
     select: { id: true },
   })
   if (!existing) {
-    const account = await db.user.findUnique({ where: { id: userId }, select: { plan: true } })
-    if (!account) throw new Error('Banner quota account unavailable')
     await db.userServiceSubscription.upsert({
       where: { userId_serviceId: { userId, serviceId: SERVICE_ID } },
       create: { userId, serviceId: SERVICE_ID, plan: account.plan || 'FREE', dailyUsage: 0, monthlyUsage: 0, lastUsageReset: new Date() },
@@ -70,7 +71,8 @@ export async function reserveBannerMonthlyImages(
       continue
     }
 
-    const plan = String(current.plan || 'FREE').toUpperCase()
+    // 契約の基準はUser.plan。古いサービス行がFREEでも、有料契約者の権利を失わせない。
+    const plan = higherPlan(current.plan, account.plan)
     const count = Math.min(requestedCount, getBannerMaxImagesPerRequest(plan))
     const limit = getBannerMonthlyLimitByUserPlan(plan)
     if (limit >= 0 && current.monthlyUsage + count > limit) {

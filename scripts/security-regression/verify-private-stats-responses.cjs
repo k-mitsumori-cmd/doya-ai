@@ -19,7 +19,7 @@ function admin(mode) {
   })
 }
 
-function banner(mode) {
+function banner(mode, subPlan = 'FREE', accountPlan = 'PRO') {
   return load('src/app/api/banner/stats/route.ts', {
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => mode === 'guest' ? null : { user: { id: 'owner' } } },
@@ -29,9 +29,11 @@ function banner(mode) {
         if (mode === 'error') throw new Error('PRIVATE_DATABASE_ERROR')
         return 2
       } },
-      userServiceSubscription: { findUnique: async () => ({ plan: 'FREE', monthlyUsage: 1, lastUsageReset: new Date() }) },
+      userServiceSubscription: { findUnique: async () => ({ plan: subPlan, monthlyUsage: 1, lastUsageReset: new Date() }) },
+      user: { findUnique: async () => accountPlan ? { plan: accountPlan } : null },
     } },
-    '@/lib/pricing': { shouldResetMonthlyUsage: () => false, getBannerMonthlyLimitByUserPlan: () => 15 },
+    '@/lib/pricing': { shouldResetMonthlyUsage: () => false, getBannerMonthlyLimitByUserPlan: plan => plan === 'PRO' ? 150 : 15 },
+    '@/lib/plan-utils': { higherPlan: (service, account) => service === 'PRO' || account === 'PRO' ? 'PRO' : 'FREE' },
   })
 }
 
@@ -48,5 +50,8 @@ function banner(mode) {
     assertPrivate(result)
     assert.equal(JSON.stringify(await result.json()).includes('PRIVATE_'), false)
   }
+  assert.equal((await (await banner('owner', 'FREE', 'PRO').GET(new Request('https://example.test/api/banner/stats'))).json()).monthlyLimit, 150)
+  assert.equal((await (await banner('owner', 'PRO', 'FREE').GET(new Request('https://example.test/api/banner/stats'))).json()).monthlyLimit, 150)
+  assert.equal((await banner('owner', 'FREE', null).GET(new Request('https://example.test/api/banner/stats'))).status, 503)
   console.log('PASS admin and banner statistics stay private and hide internal errors')
 })().catch((error) => { console.error(error); process.exitCode = 1 })

@@ -14,6 +14,7 @@ const common = {
   '@/lib/prisma': { prisma: {} },
   '@/lib/pricing': {},
   '@/lib/banner/monthly-quota': {},
+  '@/lib/plan-utils': {},
   '@/lib/service-usage': {},
   '@/lib/notifications': { sendErrorNotification: async (data) => { notifications.push(data) } },
   crypto,

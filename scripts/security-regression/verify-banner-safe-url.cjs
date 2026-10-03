@@ -15,6 +15,7 @@ function harness(auth=true){const exports={},calls=[];let reads=0,model=0,browse
  if(name==='@/lib/nanobanner')return{isNanobannerConfigured:()=>true,generateBanners:async()=>{model++;throw Error('Model must not run');}};
  if(name==='@/lib/pricing')return{getCurrentMonthJST:()=> '2026-09',isWithinFreeHour:()=>true};
  if(name==='@/lib/banner/monthly-quota')return{reserveBannerMonthlyImages:async()=>{throw Error('Quota must not run before safe URL rejection')},releaseBannerMonthlyImages:async()=>{throw Error('No reservation to release')}};
+ if(name==='@/lib/plan-utils')return{higherPlan:()=> 'FREE'};
  if(name==='@/lib/prisma')return{prisma:{userServiceSubscription:{findUnique:async()=>null},user:{findUnique:async()=>({plan:'FREE'})}}};
  if(name==='@/lib/service-usage')return{};
  if(name==='crypto')return{};

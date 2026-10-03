@@ -9,6 +9,7 @@ import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, getBannerMaxImagesPerRequest, shouldResetMonthlyUsage, getCurrentMonthJST, isWithinFreeHour } from '@/lib/pricing'
 import { reserveBannerMonthlyImages, releaseBannerMonthlyImages, type BannerReservation } from '@/lib/banner/monthly-quota'
+import { higherPlan } from '@/lib/plan-utils'
 import { isFirstServiceUse, notifyFirstServiceUse, notifyServiceActivity } from '@/lib/service-usage'
 import crypto from 'crypto'
 import sharp from 'sharp'
@@ -1425,8 +1426,11 @@ export async function POST(request: NextRequest) {
       where: { userId_serviceId: { userId, serviceId: 'banner' } },
       select: { monthlyUsage: true, lastUsageReset: true, plan: true },
     }) : null
-    const accountPlan = !disableLimits && !bannerSub ? await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } }) : null
-    const planRaw = String(bannerSub?.plan || accountPlan?.plan || (session?.user as any)?.plan || 'FREE').toUpperCase()
+    const accountPlan = !disableLimits ? await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } }) : null
+    if (!disableLimits && !accountPlan) return NextResponse.json({ error: '利用プランを確認できませんでした。再度お試しください。' }, { status: 503 })
+    const planRaw = disableLimits
+      ? String((session?.user as any)?.plan || 'FREE').toUpperCase()
+      : higherPlan(bannerSub?.plan, accountPlan?.plan)
     const isPaidUser = !isGuest && ['LIGHT', 'PRO', 'ENTERPRISE', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS'].includes(planRaw)
 
     // 1時間生成し放題の判定（セッションから firstLoginAt を取得）
