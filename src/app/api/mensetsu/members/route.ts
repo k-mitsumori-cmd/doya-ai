@@ -73,6 +73,10 @@ export async function POST(req: NextRequest) {
     result = await prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM mensetsu_organizations WHERE id = ${c.organizationId} FOR UPDATE`
       if (rows.length === 0) return { kind: 'missing' as const }
+      const actor = await tx.$queryRaw<{ role: MensetsuRole }[]>`SELECT role FROM mensetsu_members
+        WHERE "organizationId" = ${c.organizationId} AND "userId" = ${c.userId}
+        AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
+      if (!actor.length || ROLE_HIERARCHY[role] > ROLE_HIERARCHY[actor[0].role]) return { kind: 'forbidden' as const }
       const cutoff = new Date(Date.now() - INVITE_TTL_MS)
       const duplicate = await tx.mensetsuMember.findFirst({
         where: { organizationId: c.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gte: cutoff } }] },
@@ -90,6 +94,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '招待を作成できませんでした。再試行してください' }, { status: 409 })
   }
   if (result.kind === 'missing') return NextResponse.json({ error: '組織が見つかりません' }, { status: 404 })
+  if (result.kind === 'forbidden') return NextResponse.json({ error: 'メンバーを招待する権限がありません。再読み込みしてください' }, { status: 403 })
   if (result.kind === 'duplicate') return NextResponse.json({ error: result.status === 'ACTIVE' ? 'このメールの方は既にメンバーです' : '既に招待済みです' }, { status: 409 })
   const member = result.member
 

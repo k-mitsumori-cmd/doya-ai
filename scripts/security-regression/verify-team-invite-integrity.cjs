@@ -64,7 +64,7 @@ function acceptanceFixture(service, { createdAt = new Date(), role = 'member', e
   }
 }
 
-function creationFixture(service) {
+function creationFixture(service, { currentRole = 'owner' } = {}) {
   const pending = []
   let sent = 0
   let sequence = 0
@@ -86,8 +86,8 @@ function creationFixture(service) {
     },
   }
   const tx = {
-    $queryRaw: async sql => service.id === 'aio' && sql.join('?').includes('FROM aio_members')
-      ? [{ role: 'owner' }]
+    $queryRaw: async sql => sql.join('?').includes(`FROM ${service.id}_members`)
+      ? ['owner', 'admin'].includes(currentRole) ? [{ role: currentRole }] : []
       : [{ id: 'org' }],
     [service.model]: member,
   }
@@ -158,6 +158,14 @@ function creationFixture(service) {
       assert.equal(fixture.pending.length, 1)
       assert.equal(fixture.sent(), 2)
     })
+    if (['aio', 'quote', 'mensetsu', 'aishodan'].includes(service.id)) {
+      await check(`${service.id} revoked inviter cannot create or send an invite`, async () => {
+        const fixture = creationFixture(service, { currentRole: 'member' })
+        assert.equal((await fixture.invite()).status, 403)
+        assert.equal(fixture.pending.length, 0)
+        assert.equal(fixture.sent(), 0, 'mock sender only; no external email is sent')
+      })
+    }
   }
   console.log(JSON.stringify({ passed: results.length, results }))
 })().catch(error => { console.error(error); process.exitCode = 1 })

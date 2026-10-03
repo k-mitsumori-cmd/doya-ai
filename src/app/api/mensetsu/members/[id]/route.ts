@@ -12,12 +12,40 @@ import { ROLE_HIERARCHY, type MensetsuRole } from '@/lib/mensetsu/types'
 type Ctx = { params: Promise<{ id: string }> }
 const ROLES: MensetsuRole[] = ['admin', 'manager', 'member']
 
-async function load(id: string, organizationId: string) {
-  // id だけで他組織のメンバーに到達させない（二重条件）
-  return prisma.mensetsuMember.findFirst({
-    where: { id, organizationId },
-    select: { id: true, role: true, status: true, userId: true },
-  })
+type MemberContext = NonNullable<Awaited<ReturnType<typeof getMensetsuContext>>>
+
+async function mutateMember(c: MemberContext, targetId: string, action: 'update' | 'delete', role?: MensetsuRole) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM mensetsu_members WHERE "organizationId" = ${c.organizationId}
+          AND ("userId" = ${c.userId} OR id = ${targetId}) ORDER BY id FOR UPDATE`
+        const actor = await tx.mensetsuMember.findFirst({
+          where: { organizationId: c.organizationId, userId: c.userId, status: 'ACTIVE', role: { in: ['owner', 'admin'] } },
+          select: { id: true, role: true },
+        })
+        if (!actor) return { kind: 'forbidden' as const }
+        const target = await tx.mensetsuMember.findFirst({ where: { id: targetId, organizationId: c.organizationId } })
+        if (!target) return { kind: 'missing' as const }
+        if (target.id === actor.id || target.userId === c.userId) return { kind: 'self' as const }
+        const targetRank = ROLE_HIERARCHY[target.role as MensetsuRole]
+        if (target.role === 'owner' || targetRank === undefined || targetRank >= ROLE_HIERARCHY[actor.role as MensetsuRole]) {
+          return { kind: 'peer' as const }
+        }
+        if (action === 'update') {
+          if (!role || ROLE_HIERARCHY[role] > ROLE_HIERARCHY[actor.role as MensetsuRole]) return { kind: 'role' as const }
+          await tx.mensetsuMember.update({ where: { id: target.id }, data: { role } })
+          return { kind: 'updated' as const }
+        }
+        await tx.mensetsuMember.delete({ where: { id: target.id } })
+        return { kind: 'deleted' as const }
+      }, { isolationLevel: 'Serializable' })
+    } catch (error) {
+      if (!(error && typeof error === 'object' && 'code' in error && error.code === 'P2034')) throw error
+      if (attempt === 2) throw new Error('メンバー情報が同時に変更されました。再読み込みしてお試しください')
+    }
+  }
+  throw new Error('メンバーを変更できませんでした')
 }
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
@@ -28,27 +56,16 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '権限を変更する権限がありません' }, { status: 403 })
   }
 
-  const m = await load(p.id, c.organizationId)
-  if (!m) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-
   const body = await req.json().catch(() => ({}))
   const role = body?.role as MensetsuRole
   if (!ROLES.includes(role)) {
     return NextResponse.json({ error: '指定できない権限です' }, { status: 400 })
   }
-  // ⚠️ 自分自身の権限は変えられない（自己降格で組織を管理不能にしないため）
-  if (m.userId && m.userId === c.userId) {
-    return NextResponse.json({ error: '自分の権限は変更できません' }, { status: 403 })
-  }
-  // ⚠️ owner には手を出せない。また自分と同格以上のメンバーも変更できない
-  if (m.role === 'owner' || ROLE_HIERARCHY[m.role as MensetsuRole] >= ROLE_HIERARCHY[c.role]) {
-    return NextResponse.json({ error: 'このメンバーの権限は変更できません' }, { status: 403 })
-  }
-  if (ROLE_HIERARCHY[role] > ROLE_HIERARCHY[c.role]) {
-    return NextResponse.json({ error: '自分より上の権限は付与できません' }, { status: 403 })
-  }
-
-  await prisma.mensetsuMember.update({ where: { id: m.id }, data: { role } })
+  const result = await mutateMember(c, p.id, 'update', role)
+  if (result.kind === 'forbidden' || result.kind === 'peer') return NextResponse.json({ error: 'このメンバーの権限は変更できません' }, { status: 403 })
+  if (result.kind === 'missing') return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+  if (result.kind === 'self') return NextResponse.json({ error: '自分の権限は変更できません' }, { status: 403 })
+  if (result.kind === 'role') return NextResponse.json({ error: '自分より上の権限は付与できません' }, { status: 403 })
   return NextResponse.json({ ok: true, role })
 }
 
@@ -60,18 +77,9 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: 'メンバーを外す権限がありません' }, { status: 403 })
   }
 
-  const m = await load(p.id, c.organizationId)
-  if (!m) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-  if (m.role === 'owner') {
-    return NextResponse.json({ error: 'オーナーは外せません' }, { status: 403 })
-  }
-  if (m.userId && m.userId === c.userId) {
-    return NextResponse.json({ error: '自分自身は外せません' }, { status: 403 })
-  }
-  if (ROLE_HIERARCHY[m.role as MensetsuRole] >= ROLE_HIERARCHY[c.role]) {
-    return NextResponse.json({ error: 'このメンバーは外せません' }, { status: 403 })
-  }
-
-  await prisma.mensetsuMember.delete({ where: { id: m.id } })
+  const result = await mutateMember(c, p.id, 'delete')
+  if (result.kind === 'forbidden' || result.kind === 'peer') return NextResponse.json({ error: 'このメンバーは外せません' }, { status: 403 })
+  if (result.kind === 'missing') return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+  if (result.kind === 'self') return NextResponse.json({ error: '自分自身は外せません' }, { status: 403 })
   return NextResponse.json({ ok: true })
 }
