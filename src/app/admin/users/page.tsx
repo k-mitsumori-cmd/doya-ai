@@ -8,6 +8,7 @@ import {
   ChevronDown, Download, Check, X, Edit3, RotateCcw, Zap, Calendar, AlertTriangle, Trash2
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
+import { higherPlan } from '@/lib/plan-utils'
 
 interface ServiceSubscription {
   id: string
@@ -71,10 +72,11 @@ const PLAN_STYLES: Record<string, { bg: string; text: string; border: string; la
   FREE:       { bg: 'bg-gray-500/20',   text: 'text-gray-400',   border: 'border-gray-500/30',   label: 'おためし' },
   LIGHT:      { bg: 'bg-blue-500/20',   text: 'text-blue-400',   border: 'border-blue-500/30',   label: 'ライト' },
   PRO:        { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/30', label: 'プロ' },
+  BUNDLE:     { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/30', label: 'バンドル（旧）' },
   ENTERPRISE: { bg: 'bg-slate-500/20',  text: 'text-slate-300',  border: 'border-slate-500/30',  label: 'エンタープライズ' },
 }
 
-const PLAN_OPTIONS = ['FREE', 'LIGHT', 'PRO', 'ENTERPRISE']
+const PLAN_OPTIONS = ['FREE', 'LIGHT', 'PRO', 'BUNDLE', 'ENTERPRISE']
 
 // 残り生成可能数を計算（共通プラン）
 function getRemainingGenerations(plan: string, dailyUsage: number): number {
@@ -204,45 +206,9 @@ export default function AdminUsersPage() {
     await handleUpdateUser(userId, updates)
   }
 
-  // コンプリートパック: 両サービスのプランを同時に更新
+  // 統一プランは User.plan が正本。API が関連サービスへの反映を一括で行う。
   const handleUpdateCompletePlan = async (userId: string, newPlan: string) => {
-    try {
-      setIsSaving(true)
-      // bannerとwriting両方を更新
-      const response1 = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ userId, serviceId: 'banner', servicePlan: newPlan }),
-      })
-      const response2 = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ userId, serviceId: 'writing', servicePlan: newPlan }),
-      })
-      // ユーザー本体のplanも更新
-      const response3 = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ userId, plan: newPlan }),
-      })
-
-      if (!response1.ok || !response2.ok || !response3.ok) {
-        throw new Error('更新に失敗しました')
-      }
-
-      await fetchUsers()
-      toast.success('プランを更新しました（コンプリートパック）')
-      return true
-    } catch (error) {
-      console.error('Update error:')
-      toast.error('更新に失敗しました')
-      return false
-    } finally {
-      setIsSaving(false)
-    }
+    return handleUpdateUser(userId, { plan: newPlan })
   }
 
   const handleUpdateServicePlan = async (userId: string, serviceId: string, newPlan: string) => {
@@ -581,8 +547,7 @@ export default function AdminUsersPage() {
                     <td className="px-6 py-4">
                       {(() => {
                         // 共通プランを取得（bannerとwritingは連動）
-                        const bannerSub = user.serviceSubscriptions?.find((s) => s.serviceId === 'banner')
-                        const currentPlan = bannerSub?.plan || user.plan || 'FREE'
+                        const currentPlan = user.plan || 'FREE'
                         const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
                         return (
                           <select
@@ -620,9 +585,8 @@ export default function AdminUsersPage() {
                     <td className="px-6 py-4">
                       {(() => {
                         // コンプリートパックなのでbannerのプランを参照（共通プラン）
-                        const bannerSub = user.serviceSubscriptions?.find((s) => s.serviceId === 'banner')
                         const writingSub = user.serviceSubscriptions?.find((s) => s.serviceId === 'writing')
-                        const currentPlan = bannerSub?.plan || user.plan || 'FREE'
+                        const currentPlan = higherPlan(writingSub?.plan, user.plan)
                         const dailyUsage = writingSub?.dailyUsage || 0
                         const remaining = getRemainingGenerations(currentPlan, dailyUsage)
                         const limit = getDailyLimit(currentPlan)
@@ -808,7 +772,7 @@ export default function AdminUsersPage() {
                   {(() => {
                     const bannerSub = editingUser.serviceSubscriptions?.find((s) => s.serviceId === 'banner')
                     const writingSub = editingUser.serviceSubscriptions?.find((s) => s.serviceId === 'writing')
-                    const currentPlan = bannerSub?.plan || editingUser.plan || 'FREE'
+                    const currentPlan = editingUser.plan || 'FREE'
                     const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
                     
                     const bannerUsage = editingUser.bannerQuota.used
@@ -816,8 +780,9 @@ export default function AdminUsersPage() {
                     const bannerLimit = editingUser.bannerQuota.limit
                     
                     const writingUsage = writingSub?.dailyUsage || 0
-                    const writingRemaining = getRemainingGenerations(currentPlan, writingUsage)
-                    const writingLimit = getDailyLimit(currentPlan)
+                    const writingPlan = higherPlan(writingSub?.plan, editingUser.plan)
+                    const writingRemaining = getRemainingGenerations(writingPlan, writingUsage)
+                    const writingLimit = getDailyLimit(writingPlan)
                     
                     return (
                       <>

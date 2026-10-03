@@ -34,6 +34,7 @@ const prisma = {
 const summary = load('src/lib/usage-summary.ts', {
   '@/lib/prisma': { prisma },
   '@/lib/persona/usage': { getPersonaUsage: async () => null },
+  '@/lib/seo-article-admission': {},
   '@/lib/pricing': {},
   '@/lib/plan-limit': {
     FREE_LIMITS: { mensetsuSessions: 3, aishodanSessions: 5, quoteDocuments: 3 },

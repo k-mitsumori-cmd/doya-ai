@@ -9,6 +9,7 @@
 //    追加するときは必ず、実際に上限判定しているコードと同じ数え方にすること。
 import { prisma } from '@/lib/prisma'
 import { getPersonaUsage } from '@/lib/persona/usage'
+import { getSeoArticleMonthlyUsage } from '@/lib/seo-article-admission'
 import {
   BANNER_PRICING,
   PERSONA_PRICING,
@@ -226,16 +227,21 @@ export async function getUsageSummary(
     }
 
     case 'seo': {
+      const sub = await prisma.userServiceSubscription.findUnique({
+        where: { userId_serviceId: { userId, serviceId: 'seo' } },
+        select: { plan: true },
+      })
+      const seoPlan = higherPlan(sub?.plan, plan)
       return {
         title: '書いた記事',
         unit: '本',
         total: null,
-        planLabel,
+        planLabel: planLabelOf(seoPlan),
         meters: [
           {
             label: '今月',
-            used: await subscriptionUsage(userId, 'seo', 'monthly'),
-            limit: norm(getSeoMonthlyLimitByUserPlan(plan) ?? SEO_PRICING.freeLimit),
+            used: await getSeoArticleMonthlyUsage(prisma, userId),
+            limit: norm(getSeoMonthlyLimitByUserPlan(seoPlan) ?? SEO_PRICING.freeLimit),
           },
         ],
       }

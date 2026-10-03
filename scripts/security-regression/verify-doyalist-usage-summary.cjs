@@ -28,6 +28,7 @@ const limits = load('src/lib/doyalist/limits.ts', {
 const { getUsageSummary } = load('src/lib/usage-summary.ts', {
   '@/lib/prisma': { prisma },
   '@/lib/persona/usage': {},
+  '@/lib/seo-article-admission': {},
   '@/lib/pricing': pricing,
   '@/lib/plan-limit': {},
   '@/lib/organization-billing': {},

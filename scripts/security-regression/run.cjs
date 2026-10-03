@@ -545,6 +545,11 @@ if (adminBannerQuota.error || adminBannerQuota.status !== 0) {
   console.error('Security regression failed: verify-admin-banner-quota.cjs');
   process.exit(1);
 }
+const seoUsageSummary = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-usage-summary.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (seoUsageSummary.error || seoUsageSummary.status !== 0) {
+  console.error('Security regression failed: verify-seo-usage-summary.cjs');
+  process.exit(1);
+}
 const navigation = spawnSync(process.execPath, [path.join(__dirname, 'verify-active-service-navigation.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (navigation.error || navigation.status !== 0) {
   console.error('Security regression failed: verify-active-service-navigation.cjs');

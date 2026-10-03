@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { summarizeBannerMonthlyQuota } from '@/lib/admin/banner-quota'
+import { higherPlan } from '@/lib/plan-utils'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
         user.plan,
         user.role,
         user._count.generations,
-        bannerSub?.plan || user.plan || 'FREE',
+        higherPlan(bannerSub?.plan, user.plan),
         summarizeBannerMonthlyQuota(bannerSub ?? null, user.plan).used,
         user.createdAt.toISOString().split('T')[0],
         user.updatedAt.toISOString().split('T')[0],
@@ -148,4 +149,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'エクスポートに失敗しました' }, { status: 500 })
   }
 }
-
