@@ -230,9 +230,8 @@ export const SEO_PRICING: ServicePricing = {
 
 // SEO: user.plan から月次上限を決定（Stripe webhookの更新方針に合わせる）
 export function getSeoMonthlyLimitByUserPlan(plan: string | null | undefined): number {
-  // テスト用: 回数制限を無効化（本番で戻すのが簡単なように環境変数で制御）
-  // Vercel側で DOYA_DISABLE_LIMITS=1 を設定すると無制限になる
-  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.SEO_DISABLE_LIMITS === '1') return -1
+  // 記事作成・再生成の入場判定は seoMonthlyArticleLimit() で固定の月次枠を適用する。
+  // 表示だけ環境変数で無制限にすると、押した後に429になるため同じ枠を返す。
   const p = String(plan || 'FREE').toUpperCase()
   if (p === 'ENTERPRISE') return SEO_PRICING.enterpriseLimit ?? 200
   if (p === 'PRO') return SEO_PRICING.proLimit

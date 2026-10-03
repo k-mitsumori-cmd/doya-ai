@@ -3,6 +3,10 @@ const { load } = require('./load-typescript.cjs')
 
 const unified = load('src/lib/unified-plan.ts')
 const pricing = load('src/lib/pricing.ts', { './unified-plan': unified })
+for (const flag of ['DOYA_DISABLE_LIMITS', 'SEO_DISABLE_LIMITS']) {
+  const withLegacyFlag = load('src/lib/pricing.ts', { './unified-plan': unified }, { process: { env: { [flag]: '1' } } })
+  assert.equal(withLegacyFlag.getSeoMonthlyLimitByUserPlan('FREE'), 3, 'SEO display must not claim unlimited when admission still enforces three articles')
+}
 const planUtils = load('src/lib/plan-utils.ts')
 let accountPlan = 'PRO'
 let servicePlan = 'FREE'
