@@ -10,30 +10,39 @@ export default function AioSettingsPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [form, setForm] = useState({ brandName: '', brandUrl: '', aliases: '', competitors: '', category: '', market: '日本' })
 
   useEffect(() => {
+    let active = true
+    setLoading(true)
+    setLoadError(null)
+    setSaved(false)
     aioGet<{ profile: any }>('/api/aio/brand-profile', orgSlug)
       .then((d) => {
+        if (!active) return
+        if (!d || !Object.prototype.hasOwnProperty.call(d, 'profile')) throw new Error('ブランド設定の応答を確認できませんでした')
         const p = d.profile
-        if (p) {
-          setForm({
-            brandName: p.brandName || '',
-            brandUrl: p.brandUrl || '',
-            aliases: Array.isArray(p.aliases) ? p.aliases.join(', ') : '',
-            competitors: Array.isArray(p.competitors) ? p.competitors.join(', ') : '',
-            category: p.category || '',
-            market: p.market || '日本',
-          })
-        }
+        if (p !== null && (typeof p !== 'object' || Array.isArray(p) || typeof p.id !== 'string')) throw new Error('ブランド設定の形式が正しくありません')
+        setForm({
+          brandName: p?.brandName || '',
+          brandUrl: p?.brandUrl || '',
+          aliases: Array.isArray(p?.aliases) ? p.aliases.join(', ') : '',
+          competitors: Array.isArray(p?.competitors) ? p.competitors.join(', ') : '',
+          category: p?.category || '',
+          market: p?.market || '日本',
+        })
       })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [orgSlug])
+      .catch((e) => { if (active) setLoadError(e instanceof Error ? e.message : 'ブランド設定を読み込めませんでした') })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [orgSlug, retryCount])
 
   const save = async () => {
+    if (loading || loadError) return
     if (!form.brandName.trim()) { setError('ブランド名は必須です'); toast.error('ブランド名は必須です'); return }
     setSaving(true)
     setError(null)
@@ -60,6 +69,16 @@ export default function AioSettingsPage() {
   }
 
   if (loading) return <div className="p-6 text-slate-400 font-bold">読み込み中…</div>
+  if (loadError) return (
+    <div className="max-w-2xl mx-auto p-6">
+      <PageHeader icon="manage_search" title="ブランド設定" subtitle="追跡する自社ブランドと競合を登録します" />
+      <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-800">
+        <p className="font-bold">ブランド設定を読み込めませんでした。既存の設定を保護するため、確認できるまで編集できません。</p>
+        <p className="mt-2 text-sm">{loadError}</p>
+        <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-4 rounded-lg bg-white px-4 py-2 text-sm font-bold text-rose-800 border border-rose-300 hover:bg-rose-100">再試行</button>
+      </div>
+    </div>
+  )
 
   const field = (label: string, key: keyof typeof form, placeholder: string, hint?: string) => (
     <div>
