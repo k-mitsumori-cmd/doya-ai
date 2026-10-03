@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
-function fixture(service, { deliverySuccess = true, role = 'owner', expiredInvite = false } = {}) {
+function fixture(service, { deliverySuccess = true, role = 'owner', currentRole = role, expiredInvite = false } = {}) {
   let creations = 0;
   let emails = 0;
   let staleRemoved = 0;
@@ -14,7 +14,9 @@ function fixture(service, { deliverySuccess = true, role = 'owner', expiredInvit
       create: async ({ data }) => { creations++; return { id: 'member', ...data }; },
     },
     [orgModel]: { findUnique: async () => ({ name: 'Acme' }) },
-    $queryRaw: async () => [{ id: 'org' }],
+    $queryRaw: async sql => service === 'aio' && sql.join('?').includes('FROM aio_members')
+      ? ['owner', 'admin'].includes(currentRole) ? [{ role: currentRole }] : []
+      : [{ id: 'org' }],
     $transaction: async (fn) => fn(prisma),
   };
   const api = load(`src/app/api/${service}/members/route.ts`, {
@@ -23,7 +25,7 @@ function fixture(service, { deliverySuccess = true, role = 'owner', expiredInvit
     '@/lib/prisma': { prisma },
     '@/lib/html-escape': { escapeHtml: (text) => text },
     [`@/lib/${service}/access`]: {
-      [`get${service === 'sfa' ? 'Sfa' : service === 'aio' ? 'Aio' : 'Shodan'}Context`]: async () => role === 'anonymous' ? null : { organizationId: 'org', role },
+      [`get${service === 'sfa' ? 'Sfa' : service === 'aio' ? 'Aio' : 'Shodan'}Context`]: async () => role === 'anonymous' ? null : { organizationId: 'org', role, userId: 'user', memberId: 'actor' },
       hasMinRole: (actual) => actual === 'owner' || actual === 'admin',
       orgSlugFrom: () => 'acme',
     },
@@ -65,5 +67,11 @@ function fixture(service, { deliverySuccess = true, role = 'owner', expiredInvit
   const expired = fixture('sfa', { expiredInvite: true, deliverySuccess: false });
   assert.equal((await expired.post({ email: 'valid@example.com' })).status, 200);
   assert.equal(expired.staleRemoved, 1, 'expired pending invite is replaced before re-inviting');
+  for (const options of [{ role: 'owner', currentRole: 'member', inviteRole: 'member' }, { role: 'owner', currentRole: 'admin', inviteRole: 'admin' }]) {
+    const stale = fixture('aio', options);
+    assert.equal((await stale.post({ email: 'valid@example.com', role: options.inviteRole })).status, 403);
+    assert.equal(stale.creations, 0);
+    assert.equal(stale.emails, 0);
+  }
   console.log('PASS SFA/AIO/Shodan team invites: malformed input rejected before send and delivery truth reported');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

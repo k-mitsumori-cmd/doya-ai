@@ -85,7 +85,12 @@ function creationFixture(service) {
       return row
     },
   }
-  const tx = { $queryRaw: async () => [{ id: 'org' }], [service.model]: member }
+  const tx = {
+    $queryRaw: async sql => service.id === 'aio' && sql.join('?').includes('FROM aio_members')
+      ? [{ role: 'owner' }]
+      : [{ id: 'org' }],
+    [service.model]: member,
+  }
   const prisma = {
     [service.organization]: { findUnique: async () => ({ name: 'Example' }) },
     $transaction: fn => {
@@ -100,7 +105,7 @@ function creationFixture(service) {
     '@/lib/prisma': { prisma },
     '@/lib/html-escape': { escapeHtml: value => value },
     [`@/lib/${service.id}/access`]: {
-      [service.context]: async () => ({ organizationId: 'org', organizationName: 'Example', userId: 'owner', role: 'owner' }),
+      [service.context]: async () => ({ organizationId: 'org', organizationName: 'Example', userId: 'owner', memberId: 'actor', role: 'owner' }),
       hasMinRole: () => true,
       orgSlugFrom: () => undefined,
     },
