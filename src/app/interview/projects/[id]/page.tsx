@@ -105,18 +105,28 @@ export default function ProjectOverviewPage() {
 
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [deleting, setDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/interview/projects/${projectId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success) setProject(data.project)
+    const controller = new AbortController()
+    setLoading(true)
+    setLoadError(null)
+    setProject(null)
+    fetch(`/api/interview/projects/${projectId}`, { signal: controller.signal, cache: 'no-store' })
+      .then(async (response) => {
+        const data = await response.json()
+        if (response.status === 404) return null
+        if (!response.ok || !data.success || !data.project) throw new Error(data.error || 'プロジェクトを読み込めませんでした')
+        return data.project as ProjectDetail
       })
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [projectId])
+      .then((data) => { if (!controller.signal.aborted) setProject(data) })
+      .catch((error) => { if (!controller.signal.aborted) setLoadError(error instanceof Error ? error.message : 'プロジェクトを読み込めませんでした') })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [projectId, retryCount])
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -180,6 +190,15 @@ export default function ProjectOverviewPage() {
           </div>
         </motion.div>
       </>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+        <p className="font-bold text-red-800">{loadError}</p>
+        <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-4 rounded-lg border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
+      </div>
     )
   }
 
