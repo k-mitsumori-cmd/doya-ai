@@ -35,6 +35,7 @@ export async function evaluateSession(input: EvaluateInput): Promise<EvaluationR
   const candidateWordCount = input.turns
     .filter((t) => t.speaker === 'candidate')
     .reduce((n, t) => n + t.text.length, 0)
+  const candidateStatements = input.turns.filter((t) => t.speaker === 'candidate').map((t) => t.text)
 
   const prompt = [
     'あなたは公正な採用評価を行う面接評価者です。以下の面接の逐語ログを、示された評価軸とルーブリックに厳密に従って採点してください。',
@@ -105,8 +106,12 @@ export async function evaluateSession(input: EvaluateInput): Promise<EvaluationR
     .map((s) => {
       const n = Number(s.score)
       const valid = Number.isFinite(n) && n >= 1 && n <= 5
-      // 引用が無いスコアは根拠不十分として情報不足に倒す（幻覚での加点を防ぐ）
-      const quotes = Array.isArray(s.quotes) ? s.quotes.filter((q) => typeof q === 'string' && q.trim()) : []
+      // 面接官の発言やモデルが作った文を根拠にしない。引用は応募者の逐語ログに
+      // 一字一句存在するものだけ残す。
+      const quotes = Array.isArray(s.quotes) ? s.quotes
+        .filter((q): q is string => typeof q === 'string' && !!q.trim())
+        .map((q) => q.trim())
+        .filter((q) => candidateStatements.some((statement) => statement.includes(q))) : []
       const insufficient = !!s.insufficient || !valid || quotes.length === 0
       return {
         criterionKey: s.criterionKey,
@@ -132,10 +137,9 @@ export async function evaluateSession(input: EvaluateInput): Promise<EvaluationR
 
   let verdict: Verdict = VALID_VERDICTS.includes(raw.verdict) ? raw.verdict : 'hold'
 
-  // 発話量が極端に少ない／過半の軸が情報不足なら、reject を確定させず hold に倒す。
-  // AIの判定だけで応募者を落とさないための安全弁（C2）。
+  // 発話量が極端に少ない／過半の軸が情報不足なら推薦も見送りも確定させない。
   const insufficientRatio = scores.filter((s) => s.insufficient).length / Math.max(1, scores.length)
-  if (verdict === 'reject' && (insufficientRatio >= 0.5 || candidateWordCount < 200)) {
+  if (insufficientRatio >= 0.5 || candidateWordCount < 200) {
     verdict = 'hold'
   }
 
