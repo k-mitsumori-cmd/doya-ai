@@ -1697,7 +1697,6 @@ export async function POST(request: NextRequest) {
               userId,
               serviceId: 'banner',
               action: 'バナー生成（URLから）',
-              summary: targetUrl || keywordForMeta,
             })
           }
         }

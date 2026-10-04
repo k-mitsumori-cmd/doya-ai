@@ -320,7 +320,6 @@ export async function POST(request: NextRequest) {
               userId,
               serviceId: 'banner',
               action: 'バナー生成',
-              summary: `${category || ''} / ${keyword.trim()}`.trim(),
             })
           }
         }

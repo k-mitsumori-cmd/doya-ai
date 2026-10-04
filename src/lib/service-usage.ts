@@ -90,7 +90,6 @@ async function recordServiceUsageImpl(opts: ServiceUsageOptions): Promise<void> 
         userId,
         serviceId,
         action: opts.action,
-        summary: opts.summary,
       })
     } else {
       await notifyServiceActivity(opts)
@@ -130,7 +129,6 @@ export async function notifyFirstServiceUse(opts: {
   userId: string
   serviceId: string
   action?: string
-  summary?: string
 }): Promise<void> {
   const { userId, serviceId } = opts
   // 同時リクエストで二重に飛ぶのを抑える（インスタンスをまたぐ多重送信までは防げない）
@@ -202,10 +200,7 @@ export async function notifyFirstServiceUse(opts: {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: [
-            `*操作*\n${opts.action || '利用'}`,
-            opts.summary ? `> ${truncate(opts.summary, 300)}` : null,
-          ].filter(Boolean).join('\n'),
+          text: `*操作*\n${opts.action || '利用'}`,
         },
       },
       {
