@@ -109,4 +109,43 @@ const post = (body = { jobTitle: '営業' }) => route.POST(new Request('http://o
     assert.equal(generateCalls, before)
     assert.equal(templates.length, 0)
   })
+  await check('model overflow cannot exceed interview time or create invalid jumps', async () => {
+    const raw = {
+      criteria: Array.from({ length: 8 }, (_, i) => ({ key: `c${i}`, name: `Criterion ${i}`, rubric: {}, weight: 1 })),
+      questions: Array.from({ length: 12 }, (_, i) => ({
+        text: `Question ${i}`, targetMin: 3, criterionKeys: ['c0'],
+        branches: [{ label: 'branch', matchHint: 'hint', text: 'follow-up', skipTo: i === 0 ? 12 : i === 1 ? 1 : 4 }],
+      })),
+      intro: 'intro', closing: 'closing',
+    }
+    const generator = load('src/lib/mensetsu/template.ts', {
+      '@seo/lib/gemini': { GEMINI_TEXT_MODEL_DEFAULT: 'test', geminiGenerateJson: async () => raw },
+      './guardrails': { GUARDRAIL_PROMPT: '', stripViolations: (items) => ({ kept: items, removed: [] }), findViolations: () => [] },
+      './types': { LEVEL_LABELS: { mid: '中途' } },
+    })
+    const { template } = await generator.generateTemplate({ profile: {}, jobTitle: '営業', level: 'mid', durationMin: 10 })
+    assert.equal(template.criteria.length, 7)
+    assert.equal(template.questions.length, 4)
+    assert.ok(template.questions.reduce((total, question) => total + question.targetMin, 0) <= 6)
+    assert.equal(template.questions[0].branches[0].skipTo, null)
+    assert.equal(template.questions[1].branches[0].skipTo, null)
+    assert.equal(template.questions[2].branches[0].skipTo, 4)
+    const filtered = {
+      ...raw,
+      questions: [
+        { text: 'forbidden', targetMin: 1 },
+        { text: 'kept first', targetMin: 2, branches: [{ label: 'branch', matchHint: 'hint', skipTo: 4 }] },
+        { text: 'kept second', targetMin: 2 },
+        { text: 'kept third', targetMin: 2 },
+      ],
+    }
+    const filteredGenerator = load('src/lib/mensetsu/template.ts', {
+      '@seo/lib/gemini': { GEMINI_TEXT_MODEL_DEFAULT: 'test', geminiGenerateJson: async () => filtered },
+      './guardrails': { GUARDRAIL_PROMPT: '', stripViolations: (items) => ({ kept: items.filter((item) => item.text !== 'forbidden'), removed: [{ text: 'forbidden', label: 'blocked' }] }), findViolations: () => [] },
+      './types': { LEVEL_LABELS: { mid: '中途' } },
+    })
+    const safe = await filteredGenerator.generateTemplate({ profile: {}, jobTitle: '営業', level: 'mid', durationMin: 10 })
+    assert.equal(safe.template.questions.length, 3)
+    assert.equal(safe.template.questions[0].branches[0].skipTo, 3)
+  })
 })().catch((error) => { console.error(error); process.exitCode = 1 })

@@ -104,12 +104,14 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
   )
 
   // --- 生成後の安全網: 禁止領域に触れる質問を機械的に除去 ---
-  const { kept, removed } = stripViolations(raw.questions || [])
+  const originalQuestions = raw.questions || []
+  const { kept, removed } = stripViolations(originalQuestions)
 
   // --- 正規化: keyの重複排除、criterionKeys の実在チェック ---
   const seen = new Set<string>()
   const criteria = (raw.criteria || [])
     .filter((c) => c && c.key && c.name)
+    .slice(0, 7)
     .map((c, i) => {
       let key = String(c.key).replace(/[^a-zA-Z0-9_]/g, '') || `c${i + 1}`
       while (seen.has(key)) key = `${key}_${i + 1}`
@@ -124,7 +126,16 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
     })
 
   const validKeys = new Set(criteria.map((c) => c.key))
-  const questions = kept.map((q) => ({
+  // A one-minute minimum cannot fit if the model returns more questions than
+  // requested, regardless of the duration normalizer below.
+  const selected = kept.slice(0, qCount)
+  const remapSkipTo = (target: unknown, questionIndex: number): number | null => {
+    const originalPosition = Number(target)
+    if (!Number.isInteger(originalPosition) || originalPosition < 1) return null
+    const selectedIndex = selected.indexOf(originalQuestions[originalPosition - 1])
+    return selectedIndex > questionIndex ? selectedIndex + 1 : null
+  }
+  const questions = selected.map((q, questionIndex) => ({
     text: String(q.text),
     followUpHint: String(q.followUpHint || ''),
     targetMin: Number.isFinite(q.targetMin) ? Math.max(1, Math.min(10, Number(q.targetMin))) : 3,
@@ -138,7 +149,7 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
         label: String(b.label),
         matchHint: String(b.matchHint),
         text: b.text ? String(b.text) : undefined,
-        skipTo: Number.isFinite(Number(b.skipTo)) ? Number(b.skipTo) : null,
+        skipTo: remapSkipTo(b.skipTo, questionIndex),
       }))
       .filter((b: any) => findViolations([b.text || '']).length === 0),
   }))
