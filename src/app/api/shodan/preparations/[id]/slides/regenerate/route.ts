@@ -12,6 +12,7 @@ import { signedUrl } from '@/lib/shodan/storage'
 import type { ProposalSlide } from '@/lib/shodan/types'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { getShodanBilling } from '@/lib/shodan/billing'
+import { claimShodanSlideLease, releaseShodanSlideLease, ShodanSlideGenerationInProgressError } from '@/lib/shodan/slide-generation-lease'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -38,28 +39,42 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const index = body.index
   const instruction = typeof body.instruction === 'string' ? body.instruction.trim().slice(0, 500) || undefined : undefined
 
-  const prep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
-  if (!prep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-  const slides = (prep.slidesJson as unknown as ProposalSlide[] | null) || []
-  const images = ((prep.slideImages as unknown as StoredSlide[] | null) || []).slice()
-  // slideImages は slidesJson と整列保持。索引は両配列の範囲内（=スライド画像が存在する枠）に限定。
-  if (!Number.isInteger(index) || index < 0 || index >= slides.length || index >= images.length) {
-    return NextResponse.json({ error: '不正なスライドです' }, { status: 400 })
-  }
-
-  const profile = await prisma.shodanCompanyProfile.findUnique({ where: { organizationId: sctx.organizationId } })
-  const brand = {
-    brandColors: (profile?.brandColors as string[] | null) || undefined,
-    logoUrl: profile?.logoPath ? await signedUrl(profile.logoPath) : null,
-  }
-
+  const existingPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
+  if (!existingPrep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+  let lease: string
   try {
-    const img = await generateSlideImage(sctx.userId, prep.id, slides[index], index, { extra: instruction, brand })
-    await saveSlideImages(prep.id, sctx.organizationId, prep.slidesJson, images, [{ index, image: img }])
-    return NextResponse.json({ success: true, data: { index, image: { title: img.title, role: img.role, imageUrl: await signedUrl(img.imagePath) } } })
-  } catch (e: any) {
-    if (e instanceof SlideImageConflict) return NextResponse.json({ error: e.message }, { status: 409 })
-    console.error('[shodan/slides/regenerate]')
-    return NextResponse.json({ error: '再生成に失敗しました' }, { status: 500 })
+    lease = await claimShodanSlideLease(existingPrep.id)
+  } catch (error) {
+    if (error instanceof ShodanSlideGenerationInProgressError) return NextResponse.json({ error: 'この資料のスライドを生成中です。完了後に再度お試しください。', code: 'GENERATION_PENDING' }, { status: 409 })
+    console.error('[shodan/slides/regenerate] lease unavailable')
+    return NextResponse.json({ error: '再生成を開始できませんでした。時間をおいて再度お試しください。' }, { status: 503 })
+  }
+  try {
+    const prep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
+    if (!prep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+    const slides = (prep.slidesJson as unknown as ProposalSlide[] | null) || []
+    const images = ((prep.slideImages as unknown as StoredSlide[] | null) || []).slice()
+    // slideImages は slidesJson と整列保持。索引は両配列の範囲内（=スライド画像が存在する枠）に限定。
+    if (!Number.isInteger(index) || index < 0 || index >= slides.length || index >= images.length) {
+      return NextResponse.json({ error: '不正なスライドです' }, { status: 400 })
+    }
+
+    const profile = await prisma.shodanCompanyProfile.findUnique({ where: { organizationId: sctx.organizationId } })
+    const brand = {
+      brandColors: (profile?.brandColors as string[] | null) || undefined,
+      logoUrl: profile?.logoPath ? await signedUrl(profile.logoPath) : null,
+    }
+
+    try {
+      const img = await generateSlideImage(sctx.userId, prep.id, slides[index], index, { extra: instruction, brand })
+      await saveSlideImages(prep.id, sctx.organizationId, prep.slidesJson, images, [{ index, image: img }])
+      return NextResponse.json({ success: true, data: { index, image: { title: img.title, role: img.role, imageUrl: await signedUrl(img.imagePath) } } })
+    } catch (e: any) {
+      if (e instanceof SlideImageConflict) return NextResponse.json({ error: e.message }, { status: 409 })
+      console.error('[shodan/slides/regenerate]')
+      return NextResponse.json({ error: '再生成に失敗しました' }, { status: 500 })
+    }
+  } finally {
+    await releaseShodanSlideLease(existingPrep.id, lease).catch(() => console.error('[shodan/slides/regenerate] lease release failed'))
   }
 }

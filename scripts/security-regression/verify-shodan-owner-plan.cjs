@@ -22,6 +22,7 @@ function fixture(ownerPlan, actorPlan, role, owners = ['owner']) {
     '@/lib/prisma': { prisma },
     '@/lib/shodan/access': { getShodanContext: async () => member, orgSlugFrom: () => 'org-slug' },
     '@/lib/shodan/billing': { getShodanBilling: (db, orgId) => getShodanBilling(db, orgId) },
+    '@/lib/shodan/slide-generation-lease': { claimShodanSlideLease: async () => 'lease', releaseShodanSlideLease: async () => {}, ShodanSlideGenerationInProgressError: class extends Error {} },
     '@/lib/unified-plan': { isPaidPlan: (plan) => plan === 'PRO' || plan === 'ENTERPRISE' },
     '@/lib/shodan/ai': { analyzeCompany: async () => { providerCalls++; return {} }, generateProposal: async () => '', generateSlides: async () => [] },
     '@/lib/service-usage': { recordServiceUsage: async () => {} },
