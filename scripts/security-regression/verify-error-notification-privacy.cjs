@@ -21,6 +21,7 @@ const notifications = load('src/lib/notifications.ts', {
   './alert': {
     recordErrorAndCheckBurst: () => ({ count: 1, burst: false }),
     shouldSend: (signature) => { signatures.push(signature); return true },
+    clearSendCooldown: () => {},
     notifyAlert: async () => {},
     burstThreshold: () => 5,
     buildAiRepairPrompt: (options) => JSON.stringify(options),
@@ -73,7 +74,7 @@ const notifications = load('src/lib/notifications.ts', {
       './slack-voice': { voicePayload: (payload) => payload },
       './prisma': { prisma: { systemSetting: { findUnique: async () => ({ value: 'https://webhook.invalid' }) } }, withRetry: async (operation) => operation() },
       './gcp-usage': {}, './attribution': {},
-      './alert': { recordErrorAndCheckBurst: () => ({ count: 1, burst: false }), shouldSend: () => true, buildAiRepairPrompt: () => '', notifyAlert: async () => {}, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
+      './alert': { recordErrorAndCheckBurst: () => ({ count: 1, burst: false }), shouldSend: () => true, clearSendCooldown: () => {}, buildAiRepairPrompt: () => '', notifyAlert: async () => {}, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
       './runtime-alert-limit': { claimRuntimeAlert: async () => ({ state: 'allowed' }), releaseRuntimeAlertClaim: async () => {} },
     }, {
       fetch: async () => { throw new Error(secret) },
@@ -94,7 +95,7 @@ const notifications = load('src/lib/notifications.ts', {
       './slack-voice': { voicePayload: (payload) => payload },
       './prisma': { prisma: { systemSetting: { findUnique: async () => ({ value: 'https://webhook.invalid' }) } }, withRetry: async (operation) => operation() },
       './gcp-usage': {}, './attribution': {},
-      './alert': { recordErrorAndCheckBurst: () => ({ count: 5, burst: true }), shouldSend: () => true, buildAiRepairPrompt: () => '', notifyAlert: async (alert) => { bursts.push(alert) }, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
+      './alert': { recordErrorAndCheckBurst: () => ({ count: 5, burst: true }), shouldSend: () => true, clearSendCooldown: () => {}, buildAiRepairPrompt: () => '', notifyAlert: async (alert) => { bursts.push(alert) }, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
       './runtime-alert-limit': {
         claimRuntimeAlert: async (hash, channel) => {
           assert(['api-error', 'api-burst'].includes(channel))
@@ -136,7 +137,7 @@ const notifications = load('src/lib/notifications.ts', {
       './slack-voice': { voicePayload: (payload) => payload },
       './prisma': { prisma: { systemSetting: { findUnique: async () => ({ value: 'https://webhook.invalid' }) } }, withRetry: async (operation) => operation() },
       './gcp-usage': {}, './attribution': {},
-      './alert': { recordErrorAndCheckBurst: () => ({ count: 1, burst: false }), shouldSend: () => true, buildAiRepairPrompt: () => '', notifyAlert: async () => {}, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
+      './alert': { recordErrorAndCheckBurst: () => ({ count: 1, burst: false }), shouldSend: () => true, clearSendCooldown: () => {}, buildAiRepairPrompt: () => '', notifyAlert: async () => {}, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
       './runtime-alert-limit': {
         claimRuntimeAlert: async () => ({ state: 'allowed', key: 'api-error:v1:test', value: 'future' }),
         releaseRuntimeAlertClaim: async () => { releases++ },
@@ -148,6 +149,72 @@ const notifications = load('src/lib/notifications.ts', {
     })
     await failed.sendErrorNotification({ errorMessage: secret, pathname: '/api/banner/generate', timestamp: secret })
     assert.equal(releases, 1)
+  })
+
+  await check('A failed production delivery can retry on the same instance', async () => {
+    let attempts = 0
+    let releases = 0
+    let localChecks = 0
+    const retryable = load('src/lib/notifications.ts', {
+      'node:crypto': crypto,
+      './service-operations-daily': {}, './service-operations-state': {},
+      './slack-voice': { voicePayload: (payload) => payload },
+      './prisma': { prisma: {}, withRetry: async (operation) => operation() },
+      './gcp-usage': {}, './attribution': {},
+      './alert': {
+        recordErrorAndCheckBurst: () => ({ count: 1, burst: false }),
+        shouldSend: () => { localChecks++; return false },
+        clearSendCooldown: () => {},
+        buildAiRepairPrompt: () => '', notifyAlert: async () => {}, burstThreshold: () => 5,
+        getAlertWebhook: async () => 'https://webhook.invalid',
+      },
+      './runtime-alert-limit': {
+        claimRuntimeAlert: async () => ({ state: 'allowed', key: 'api-error:v1:test', value: 'future' }),
+        releaseRuntimeAlertClaim: async () => { releases++ },
+      },
+    }, {
+      AbortSignal,
+      process: { env: { VERCEL_ENV: 'production' } },
+      fetch: async () => ({ ok: ++attempts > 1, status: 503 }),
+      console: { error() {}, log() {}, warn() {} },
+    })
+    const incident = { errorMessage: secret, pathname: '/api/banner/generate', timestamp: secret }
+    await retryable.sendErrorNotification(incident)
+    await retryable.sendErrorNotification(incident)
+    assert.equal(attempts, 2)
+    assert.equal(releases, 1)
+    assert.equal(localChecks, 0)
+  })
+
+  await check('Fallback cooldown is cleared after failed delivery', async () => {
+    const reserved = new Set()
+    let attempts = 0
+    let clears = 0
+    const fallback = load('src/lib/notifications.ts', {
+      'node:crypto': crypto,
+      './service-operations-daily': {}, './service-operations-state': {},
+      './slack-voice': { voicePayload: (payload) => payload },
+      './prisma': { prisma: {}, withRetry: async (operation) => operation() },
+      './gcp-usage': {}, './attribution': {},
+      './alert': {
+        recordErrorAndCheckBurst: () => ({ count: 1, burst: false }),
+        shouldSend: (key) => { if (reserved.has(key)) return false; reserved.add(key); return true },
+        clearSendCooldown: (key) => { clears++; reserved.delete(key) },
+        buildAiRepairPrompt: () => '', notifyAlert: async () => {}, burstThreshold: () => 5,
+        getAlertWebhook: async () => 'https://webhook.invalid',
+      },
+      './runtime-alert-limit': { claimRuntimeAlert: async () => ({ state: 'unavailable' }), releaseRuntimeAlertClaim: async () => {} },
+    }, {
+      AbortSignal,
+      fetch: async () => ({ ok: ++attempts > 1, status: 503 }),
+      console: { error() {}, log() {}, warn() {} },
+    })
+    const incident = { errorMessage: secret, pathname: '/api/banner/generate', timestamp: secret }
+    await fallback.sendErrorNotification(incident)
+    await fallback.sendErrorNotification(incident)
+    await fallback.sendErrorNotification(incident)
+    assert.equal(attempts, 2)
+    assert.equal(clears, 1)
   })
 
   await check('Shared error handler never reads or forwards request bodies', async () => {

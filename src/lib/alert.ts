@@ -42,6 +42,11 @@ export function shouldSend(key: string, cooldownMs: number): boolean {
   return true
 }
 
+/** Undo a local reservation when delivery could not be completed. */
+export function clearSendCooldown(key: string): void {
+  lastSent.delete(key)
+}
+
 // --- バースト検知 ---
 const errorTimes: number[] = []
 const BURST_WINDOW_MS = 5 * 60_000
