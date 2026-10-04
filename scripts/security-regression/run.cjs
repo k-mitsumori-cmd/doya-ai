@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const aioPromptArchive = spawnSync(process.execPath, [path.join(__dirname, 'verify-aio-prompt-archive.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (aioPromptArchive.error || aioPromptArchive.status !== 0) {
+  console.error('Security regression failed: verify-aio-prompt-archive.cjs');
+  process.exit(1);
+}
 const adbannerCopyPlanCta = spawnSync(process.execPath, [path.join(__dirname, 'verify-adbanner-copy-plan-cta.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adbannerCopyPlanCta.error || adbannerCopyPlanCta.status !== 0) {
   console.error('Security regression failed: verify-adbanner-copy-plan-cta.cjs');

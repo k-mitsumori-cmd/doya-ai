@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   const [profile, prompts] = await Promise.all([
     prisma.aioBrandProfile.findUnique({ where: { organizationId: ctx.organizationId } }),
-    prisma.aioPrompt.findMany({ where: { organizationId: ctx.organizationId, isActive: true } }),
+    prisma.aioPrompt.findMany({ where: { organizationId: ctx.organizationId, isActive: true, archivedAt: null } }),
   ])
   if (!profile?.brandName) return NextResponse.json({ error: '先に追跡ブランドを設定してください' }, { status: 400 })
   if (prompts.length === 0) return NextResponse.json({ error: '監視プロンプトを1件以上登録してください' }, { status: 400 })

@@ -73,8 +73,8 @@ export default function AioPromptsPage() {
     try { await aioSend(`/api/aio/prompts/${p.id}`, orgSlug, 'PATCH', { isActive: !p.isActive }); load() } catch (e: any) { toast.error(e.message) }
   }
   const remove = async (p: Prompt) => {
-    if (!confirm('削除しますか？')) return
-    try { await aioSend(`/api/aio/prompts/${p.id}`, orgSlug, 'DELETE'); load() } catch (e: any) { toast.error(e.message) }
+    if (!confirm('この質問を保管しますか？過去の測定履歴は残り、監視対象から外れます。')) return
+    try { await aioSend(`/api/aio/prompts/${p.id}`, orgSlug, 'DELETE'); toast.success('質問を保管しました'); load() } catch (e: any) { toast.error(e.message) }
   }
 
   return (
@@ -127,8 +127,8 @@ export default function AioPromptsPage() {
                 <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${p.isActive ? 'left-4' : 'left-0.5'}`} />
               </button>
               <p className="flex-1 text-sm font-bold text-slate-800">{p.text}</p>
-              <button onClick={() => remove(p)} className="text-slate-300 hover:text-red-500 transition-colors">
-                <span className="material-symbols-outlined text-[20px]">delete</span>
+              <button onClick={() => remove(p)} title="保管" aria-label="質問を保管" className="text-slate-400 hover:text-purple-700 transition-colors">
+                <span className="material-symbols-outlined text-[20px]">archive</span>
               </button>
             </div>
           ))}

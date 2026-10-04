@@ -3516,6 +3516,7 @@ model AioPrompt {
   text           String          @db.Text
   category       String? // 任意の分類タグ
   isActive       Boolean         @default(true)
+  archivedAt     DateTime?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 

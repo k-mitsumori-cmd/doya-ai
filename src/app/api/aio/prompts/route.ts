@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const ctx = await getAioContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   const prompts = await prisma.aioPrompt.findMany({
-    where: { organizationId: ctx.organizationId },
+    where: { organizationId: ctx.organizationId, archivedAt: null },
     orderBy: { createdAt: 'asc' },
   })
   return NextResponse.json({ prompts }, { headers: { 'Cache-Control': 'no-store' } })
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const billing = await getAioBilling(tx, ctx.organizationId)
     if (!billing) return { kind: 'billing' } as const
     if (!isPaidPlan(billing.plan)) {
-      const count = await tx.aioPrompt.count({ where: { organizationId: ctx.organizationId } })
+      const count = await tx.aioPrompt.count({ where: { organizationId: ctx.organizationId, archivedAt: null } })
       if (count >= FREE_PROMPT_LIMIT) return { kind: 'limit' } as const
     }
     const prompt = await tx.aioPrompt.create({

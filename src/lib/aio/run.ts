@@ -47,7 +47,7 @@ export async function runAndPersistScan(
   const [profile, prompts] = await Promise.all([
     prisma.aioBrandProfile.findUnique({ where: { organizationId } }),
     // 安定した順序で全アクティブ質問を測定する。
-    prisma.aioPrompt.findMany({ where: { organizationId, isActive: true }, orderBy: { createdAt: 'asc' } }),
+    prisma.aioPrompt.findMany({ where: { organizationId, isActive: true, archivedAt: null }, orderBy: { createdAt: 'asc' } }),
   ])
   if (!profile?.brandName) {
     return { id: '', status: 'failed', error: '追跡ブランドが未設定です' }

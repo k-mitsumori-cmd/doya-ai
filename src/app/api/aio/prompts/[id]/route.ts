@@ -16,7 +16,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (!hasMinRole(sctx.role, 'manager')) return NextResponse.json({ error: '編集権限がありません' }, { status: 403 })
 
   // organizationId + id の二重検索（IDOR防止）
-  const target = await prisma.aioPrompt.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
+  const target = await prisma.aioPrompt.findFirst({ where: { id: p.id, organizationId: sctx.organizationId, archivedAt: null } })
   if (!target) return NextResponse.json({ error: 'プロンプトが見つかりません' }, { status: 404 })
 
   const body = await req.json().catch(() => ({}))
@@ -25,19 +25,28 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (typeof body.isActive === 'boolean') data.isActive = body.isActive
   if (typeof body.category === 'string') data.category = body.category.trim().slice(0, 80) || null
 
-  const updated = await prisma.aioPrompt.update({ where: { id: target.id }, data })
-  return NextResponse.json({ ok: true, prompt: updated })
+  const updated = await prisma.aioPrompt.updateMany({ where: { id: target.id, organizationId: sctx.organizationId, archivedAt: null }, data })
+  if (updated.count !== 1) return NextResponse.json({ error: 'プロンプトが見つかりません' }, { status: 404 })
+  const prompt = await prisma.aioPrompt.findUnique({ where: { id: target.id } })
+  return NextResponse.json({ ok: true, prompt })
 }
 
-// DELETE /api/aio/prompts/[id]（manager+）
+// DELETE /api/aio/prompts/[id]（manager+）— 測定履歴の参照元を残して保管
 export async function DELETE(req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const sctx = await getAioContext(orgSlugFrom(req))
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   if (!hasMinRole(sctx.role, 'manager')) return NextResponse.json({ error: '編集権限がありません' }, { status: 403 })
 
-  const target = await prisma.aioPrompt.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
-  if (!target) return NextResponse.json({ error: 'プロンプトが見つかりません' }, { status: 404 })
-  await prisma.aioPrompt.delete({ where: { id: target.id } })
-  return NextResponse.json({ ok: true })
+  const result = await prisma.$transaction(async (tx) => {
+    // POST と同じ組織ロックで枠の解放と新規登録を直列化する。
+    await tx.$queryRaw`SELECT id FROM aio_organizations WHERE id = ${sctx.organizationId} FOR NO KEY UPDATE`
+    const archived = await tx.aioPrompt.updateMany({
+      where: { id: p.id, organizationId: sctx.organizationId, archivedAt: null },
+      data: { archivedAt: new Date(), isActive: false },
+    })
+    return archived.count === 1
+  })
+  if (!result) return NextResponse.json({ error: 'プロンプトが見つかりません' }, { status: 404 })
+  return NextResponse.json({ ok: true, archived: true })
 }
