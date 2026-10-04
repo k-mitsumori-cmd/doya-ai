@@ -7,6 +7,17 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+async function retryRateTransaction<T>(commit: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { return await commit() }
+    catch (error) {
+      if (!(error && typeof error === 'object' && 'code' in error && error.code === 'P2034')) throw error
+      if (attempt === 2) throw new Error('同時にメンバーが変更されました')
+    }
+  }
+  throw new Error('時間単価を更新できませんでした')
+}
+
 type Ctx = { params: Promise<{ id: string }> }
 
 /**
@@ -39,40 +50,25 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
     const rate = hourlyRate
 
-    // ワークスペース所属 + 権限確認
-    const workspace = await prisma.promaneWorkspace.findFirst({
-      where: { slug: workspaceSlug, members: { some: { userId, isActive: true } } },
-      select: { id: true },
-    })
-    if (!workspace) {
-      return NextResponse.json({ error: 'ワークスペースにアクセスできません' }, { status: 403 })
-    }
-
-    const myMember = await prisma.promaneMember.findFirst({
-      where: { workspaceId: workspace.id, userId, isActive: true },
-      select: { role: true },
-    })
-    if (!myMember || !['owner', 'admin'].includes(myMember.role)) {
-      return NextResponse.json(
-        { error: '時間単価を変更する権限がありません（owner/admin のみ）' },
-        { status: 403 }
-      )
-    }
-
-    // IDOR防止: 対象メンバーが自WSに属するか
-    const target = await prisma.promaneMember.findFirst({
-      where: { id: memberId, workspaceId: workspace.id },
-      select: { id: true },
-    })
-    if (!target) {
-      return NextResponse.json({ error: 'メンバーが見つかりません' }, { status: 404 })
-    }
-
-    await prisma.promaneMember.update({
-      where: { id: memberId },
-      data: { hourlyRate: rate },
-    })
-
+    const result = await retryRateTransaction(() => prisma.$transaction(async tx => {
+      const workspace = await tx.promaneWorkspace.findFirst({
+        where: { slug: workspaceSlug, members: { some: { userId, isActive: true } } },
+        select: { id: true },
+      })
+      if (!workspace) return { status: 403 as const, error: 'ワークスペースにアクセスできません' }
+      const actor = await tx.promaneMember.findFirst({
+        where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin'] } },
+        select: { id: true },
+      })
+      if (!actor) return { status: 403 as const, error: '時間単価を変更する権限がありません（owner/admin のみ）' }
+      const updated = await tx.promaneMember.updateMany({
+        where: { id: memberId, workspaceId: workspace.id },
+        data: { hourlyRate: rate },
+      })
+      if (updated.count !== 1) return { status: 404 as const, error: 'メンバーが見つかりません' }
+      return { status: 200 as const }
+    }, { isolationLevel: 'Serializable' }))
+    if (result.status !== 200) return NextResponse.json({ error: result.error }, { status: result.status })
     return NextResponse.json({ success: true, hourlyRate: rate })
   } catch (e: any) {
     console.error('[promane/members/rate] failed')
