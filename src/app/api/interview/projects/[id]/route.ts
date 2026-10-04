@@ -191,10 +191,15 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       }
     }
 
-    const updated = await prisma.interviewProject.update({
-      where: { id },
-      data,
+    const updated = await prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${id}))`
+      const current = await tx.interviewProject.findUnique({
+        where: { id }, select: { userId: true, guestId: true },
+      })
+      if (!current || checkOwnership(current, userId, guestId)) return null
+      return tx.interviewProject.update({ where: { id }, data })
     })
+    if (!updated) return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
 
     return NextResponse.json({
       success: true,

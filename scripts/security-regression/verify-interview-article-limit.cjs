@@ -295,9 +295,15 @@ async function events() {
   const { PUT: updateProject } = load('src/app/api/interview/projects/[id]/route.ts', {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma: {
+      $transaction: async fn => fn({
+        $executeRaw: async () => 1,
+        interviewProject: {
+          findUnique: async () => ({ id: 'p1', userId: 'u1', guestId: null }),
+          update: async ({ data }) => { projectWrites++; return { id: 'p1', title: 'Test', status: 'DRAFT', updatedAt: new Date(), ...data }; },
+        },
+      }),
       interviewProject: {
         findUnique: async () => ({ id: 'p1', userId: 'u1', guestId: null }),
-        update: async ({ data }) => { projectWrites++; return { id: 'p1', title: 'Test', status: 'DRAFT', updatedAt: new Date(), ...data }; },
       },
       interviewRecipe: { findFirst: async ({ where }) => {
         checkedRecipe = true;
