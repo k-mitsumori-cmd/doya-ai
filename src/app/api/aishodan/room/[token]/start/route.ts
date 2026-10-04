@@ -7,11 +7,19 @@ import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { assertRoomUsable, loadRoomByToken, toPublicSession } from '@/lib/aishodan/public'
+import { resolveUserId } from '@/lib/aishodan/access'
 import { assertFreeLimit, jstStartOfMonthUtc, FREE_LIMITS } from '@/lib/plan-limit'
 
 type Ctx = { params: Promise<{ token: string }> }
 
 const GUEST_COOKIE = 'aishodan_gid'
+// 練習は販売枠を消費しないが、音声接続の実費は発生する。
+const PREVIEW_DAILY_LIMIT = 10
+
+function jstStartOfDayUtc(): Date {
+  const jst = new Date(Date.now() + 9 * 3600_000)
+  return new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), jst.getUTCDate()) - 9 * 3600_000)
+}
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
   const p = await ctxParam.params
@@ -26,10 +34,14 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     return NextResponse.json({ error: '記録に関する同意が必要です' }, { status: 400 })
   }
 
+  // 練習URLが転送・流出しても、組織外の人に音声の従量課金を発生させない。
+  const previewUserId = room.isPreview ? await resolveUserId() : null
+  if (room.isPreview && !previewUserId) return NextResponse.json({ error: '練習を開始するにはログインしてください。' }, { status: 401 })
+
   // 無料枠の上限（services.ts の「商談5件まで」を実際に効かせる）
   // ⚠️ 判定するのは見込み客ではなく、この部屋を出している契約者のプラン。
   //    ⚠️ 上限が無いと、公開URLを配った分だけ Realtime の従量課金が青天井になる。
-  const owner = await prisma.aishodanMember.findFirst({
+  const owner = room.isPreview ? null : await prisma.aishodanMember.findFirst({
     where: { organizationId: room.organizationId, status: 'ACTIVE', role: 'owner', userId: { not: null } },
     select: { userId: true },
     orderBy: { createdAt: 'asc' },
@@ -71,7 +83,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   }
 
   const unavailable = '現在この商談ルームはご利用いただけません。お手数ですが担当者までご連絡ください。'
-  let result: { kind: 'created'; session: Awaited<ReturnType<typeof prisma.aishodanSession.create>> } | { kind: 'unavailable' } | { kind: 'expired' } | { kind: 'changed' } | null = null
+  let result: { kind: 'created'; session: Awaited<ReturnType<typeof prisma.aishodanSession.create>> } | { kind: 'unavailable' } | { kind: 'expired' } | { kind: 'changed' } | { kind: 'previewLimit' } | { kind: 'previewUnauthorized' } | null = null
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       result = await prisma.$transaction(async (tx) => {
@@ -86,7 +98,17 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
 
         // 組織全体の枠と、この部屋の枠を同じ直列化トランザクションで確保する。
         // セッション保存が失敗した場合は部屋の回数もロールバックされる。
-        if (!currentRoom.isPreview && quota.limit !== undefined) {
+        if (currentRoom.isPreview) {
+          const member = await tx.aishodanMember.findFirst({
+            where: { organizationId: room.organizationId, userId: previewUserId!, status: 'ACTIVE' },
+            select: { id: true },
+          })
+          if (!member) return { kind: 'previewUnauthorized' } as const
+          const usedToday = await tx.aishodanSession.count({
+            where: { organizationId: room.organizationId, room: { isPreview: true }, createdAt: { gte: jstStartOfDayUtc() } },
+          })
+          if (usedToday >= PREVIEW_DAILY_LIMIT) return { kind: 'previewLimit' } as const
+        } else if (quota.limit !== undefined) {
           const used = await tx.aishodanSession.count({
             where: {
               organizationId: room.organizationId,
@@ -137,6 +159,8 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   }
   if (result?.kind === 'expired') return NextResponse.json({ error: 'この商談ルームの公開期間は終了しました。' }, { status: 410 })
   if (result?.kind === 'changed') return NextResponse.json({ error: '商談ルームの設定が更新されました。再読み込みしてください。' }, { status: 409 })
+  if (result?.kind === 'previewUnauthorized') return NextResponse.json({ error: 'この組織の練習ルームはご利用いただけません。' }, { status: 403 })
+  if (result?.kind === 'previewLimit') return NextResponse.json({ error: '本日の練習回数の上限に達しました。明日またお試しください。', code: 'PREVIEW_DAILY_LIMIT' }, { status: 429 })
   if (!result || result.kind !== 'created') return NextResponse.json({ error: unavailable }, { status: 429 })
   const session = result.session
 
