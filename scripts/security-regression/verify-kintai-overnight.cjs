@@ -33,7 +33,9 @@ const recalc = load('src/lib/kintai/recalculate.ts', { '@/lib/prisma': { prisma 
 const access = { getKintaiContext: async () => ({ employeeId: 'e1', organizationId: 'o1', userId: 'u1' }) };
 const clock = load('src/app/api/kintai/clock/route.ts', {
   'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/kintai/access': access,
-  '@/lib/kintai/recalculate': recalc, '@/lib/kintai/shift-records': shift,
+  '@/lib/kintai/recalculate': recalc, '@/lib/kintai/employee-admission': { lockKintaiEmployeeAdmission: async () => {} },
+  '@/lib/kintai/manager-admission': { lockCurrentKintaiActor: async () => 'employee' },
+  '@/lib/kintai/shift-records': shift,
   '@/lib/service-usage': { recordServiceUsage: async () => {} },
 }, { Date: FixedDate });
 const dashboard = load('src/app/api/kintai/dashboard/route.ts', {
