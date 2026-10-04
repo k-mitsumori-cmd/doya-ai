@@ -72,14 +72,18 @@ export function CheckoutButton({
 
       if (!response.ok) {
         // すでに契約が有効: 二重課金を防ぐためサーバが決済を中断した。
-        // その場でプランを再同期し、画面を最新化して終わる（利用者に不安を残さない）。
+        // 再同期の成功を確認できた場合だけ、反映済みと伝えて画面を更新する。
         if (data?.code === 'ALREADY_SUBSCRIBED') {
           toast.loading('ご契約を確認しました。プランを反映しています…', { id: 'already-subscribed' })
           try {
-            await fetch('/api/stripe/sync/latest', { method: 'POST' })
-          } catch {}
-          toast.success('すでにご契約済みです。プランを反映しました', { id: 'already-subscribed' })
-          window.location.reload()
+            const syncResponse = await fetch('/api/stripe/sync/latest', { method: 'POST' })
+            const syncResult = await syncResponse.json()
+            if (!syncResponse.ok || syncResult?.ok !== true) throw new Error('契約情報を再同期できませんでした')
+            toast.success('ご契約のプランを反映しました', { id: 'already-subscribed' })
+            window.location.reload()
+          } catch {
+            toast.error('ご契約は確認できましたが、プランの反映を確認できませんでした。時間をおいて画面を再読み込みしてください。', { id: 'already-subscribed' })
+          }
           return
         }
         // 代表的な設定ミス（Stripeのtest/live不一致）は分かりやすい文言で出す
@@ -129,4 +133,3 @@ export function CheckoutButton({
     </button>
   )
 }
-
