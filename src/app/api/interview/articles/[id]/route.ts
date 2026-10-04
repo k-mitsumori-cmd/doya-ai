@@ -144,7 +144,15 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
 
     // 同じミリ秒内の更新も、次回保存から区別できる更新日時にする。
     data.updatedAt = new Date(Math.max(Date.now(), expectedUpdatedAt.getTime() + 1))
-    const updated = await prisma.interviewDraft.update({ where: { id, updatedAt: expectedUpdatedAt }, data })
+    const updated = await prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${draft.projectId}))`
+      const current = await tx.interviewDraft.findUnique({
+        where: { id }, select: { projectId: true, project: { select: { userId: true, guestId: true } } },
+      })
+      if (!current || current.projectId !== draft.projectId || checkOwnership(current.project, userId, guestId)) return null
+      return tx.interviewDraft.update({ where: { id, updatedAt: expectedUpdatedAt }, data })
+    })
+    if (!updated) return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
 
     return NextResponse.json({
       success: true,
