@@ -10,6 +10,7 @@ import type { CompanyResearch } from '@/lib/shodan/types'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { getShodanBilling } from '@/lib/shodan/billing'
+import { claimShodanSlideLease, releaseShodanSlideLease, ShodanSlideGenerationInProgressError } from '@/lib/shodan/slide-generation-lease'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -20,10 +21,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
   // organizationId + id で取得（IDOR防止）
-  const prep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
-  if (!prep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-  const research = prep.research as unknown as CompanyResearch | null
-  if (!research) return NextResponse.json({ error: '先に企業調査が必要です' }, { status: 400 })
+  const existingPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
+  if (!existingPrep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+  if (!existingPrep.research) return NextResponse.json({ error: '先に企業調査が必要です' }, { status: 400 })
 
   // 提案資料の生成はプロプラン限定（企業調査までは無料で試せる）
   const billing = await getShodanBilling(prisma, sctx.organizationId)
@@ -36,7 +36,21 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     )
   }
 
+  let lease: string
   try {
+    lease = await claimShodanSlideLease(existingPrep.id)
+  } catch (error) {
+    if (error instanceof ShodanSlideGenerationInProgressError) return NextResponse.json({ error: 'この資料を生成中です。完了後に再度お試しください。', code: 'GENERATION_PENDING' }, { status: 409 })
+    console.error('[shodan/generate] lease unavailable')
+    return NextResponse.json({ error: '資料の生成を開始できませんでした。時間をおいて再度お試しください。' }, { status: 503 })
+  }
+  let prep = existingPrep
+  try {
+    const currentPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
+    if (!currentPrep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+    prep = currentPrep
+    const research = prep.research as unknown as CompanyResearch | null
+    if (!research) return NextResponse.json({ error: '先に企業調査が必要です' }, { status: 400 })
     const profile = await prisma.shodanCompanyProfile.findUnique({ where: { organizationId: sctx.organizationId } })
     const own: OwnCompanyProfile | null = profile
       ? {
@@ -73,7 +87,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       count: Array.isArray(slides) ? slides.length : 0,
       input: { preparationId: prep.id },
       metadata: { organizationId: sctx.organizationId },
-    })
+    }).catch(() => console.error('[shodan/generate] usage record failed'))
 
     return NextResponse.json({ id: prep.id, status: 'done' })
   } catch {
@@ -84,5 +98,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       data: { errorMessage: '提案資料の生成に失敗しました。再生成をお試しください。' },
     }).catch(() => {})
     return NextResponse.json({ id: prep.id, error: '提案資料の生成に失敗しました。再生成をお試しください。' }, { status: 500 })
+  } finally {
+    await releaseShodanSlideLease(existingPrep.id, lease).catch(() => console.error('[shodan/generate] lease release failed'))
   }
 }
