@@ -42,6 +42,16 @@ function routeFixture(){
  const mocks={'node:crypto':require('node:crypto'),'next/server':{NextResponse:Resp},'next-auth':{getServerSession:async()=>signed?{user:{email:'owner@example.test'}}:null},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:{user:{findUnique:async()=>f.state.user,update:async()=>{throw Error('Non-atomic user write')}}}},'@/lib/stripe':{...stripeModule,stripe,findActiveLikeSubscriptions:async()=>stripeModule.isDoyaSubscription(sub)?[{id:sub.id,status:sub.status,customerId:typeof sub.customer==='string'?sub.customer:sub.customer.id,priceId:sub.items.data[0]?.price.id||null,planId:stripeModule.resolvePlanIdFromSubscription(sub).planId}]:[]},'@/lib/billing-subscription-notice':subscriptionNotice,'@/lib/billing-sync':{syncUnifiedBilling:async i=>{writes++;return f.sync(i)}},'@/lib/notifications':{sendEventNotification:async()=>{notices++}},'@/lib/stripe-webhook-receipts':{claimStripeWebhookEvent:async()=>({kind:'claimed',token:'test-claim'}),finishStripeWebhookEvent:async()=>{}},'@/lib/stripe-webhook-notifications':{enqueueStripeWebhookNotification:async(_id,_type,_token,payload)=>{queued=payload},deliverStripeWebhookNotification:async id=>{const row=f.state.notices[id];if(row&&row.status==='pending'){row.status='sent';notices++;return 'sent'}if(queued){queued=null;notices++;return 'sent'}return 'skipped'}}};
  return {f,checkout,sub,mocks,get writes(){return writes},get notices(){return notices},set signed(x){signed=x},set legacyEmail(x){legacyEmail=x}};
 }
+function splitSubscriptionFixture(){
+ const f=routeFixture();f.sub.metadata.planId='banner-light';f.sub.items.data[0].price.id='price_banner_light_monthly';
+ const higher={...structuredClone(f.sub),id:'sub-higher',customer:'cus2',metadata:{userId:'u1',planId:'banner-pro'},items:{data:[{price:{id:'price_banner_pro_monthly'}}]}};
+ f.mocks['@/lib/stripe'].findActiveLikeSubscriptions=async()=>[
+  {id:f.sub.id,status:'active',customerId:'cus1',planId:'banner-light'},
+  {id:higher.id,status:'active',customerId:'cus2',planId:'banner-pro'},
+ ];
+ f.mocks['@/lib/stripe'].stripe.subscriptions.retrieve=async id=>id===higher.id?higher:f.sub;
+ return {f,higher};
+}
 const req=()=>new Request('https://local.test/api/stripe/sync',{method:'POST',body:JSON.stringify({sessionId:'cs1'})});
 async function routes(){
  await check('subscription notice uses verified plan and status without inventing payment or trial duration',async()=>{
@@ -63,6 +73,31 @@ async function routes(){
   assert.equal(stripeModule.resolvePlanIdFromSubscription({...foreign,items:{data:[{price:{id:'price_banner_pro_monthly'}}]}}).planId,'seo-pro');
  });
  await check('checkout own active contract syncs all services',async()=>{let f=routeFixture(),api=load('src/app/api/stripe/sync/route.ts',f.mocks);let r=await api.POST(req());assert.equal(r.status,200);assert.equal(f.f.state.user.plan,'PRO');assert.equal(f.notices,1)});
+ await check('checkout sync preserves a higher live contract on another customer',async()=>{
+  const {f}=splitSubscriptionFixture();const response=await load('src/app/api/stripe/sync/route.ts',f.mocks).POST(req());
+  assert.equal(response.status,200);assert.equal(response.body.plan,'PRO');assert.equal(response.body.subscriptionId,'sub-higher');
+  assert.equal(f.f.state.user.plan,'PRO');assert.equal(f.f.state.user.stripeCustomerId,'cus2');assert.equal(f.f.state.user.stripeSubscriptionId,'sub-higher');
+ });
+ await check('checkout sync ignores a candidate canceled after discovery',async()=>{
+  const {f,higher}=splitSubscriptionFixture();higher.status='canceled';
+  const response=await load('src/app/api/stripe/sync/route.ts',f.mocks).POST(req());
+  assert.equal(response.status,200);assert.equal(response.body.plan,'LIGHT');assert.equal(f.f.state.user.stripeSubscriptionId,'sub1');
+ });
+ await check('checkout sync rejects a foreign higher contract before writes',async()=>{
+  const {f,higher}=splitSubscriptionFixture();higher.metadata.userId='other';
+  const response=await load('src/app/api/stripe/sync/route.ts',f.mocks).POST(req());
+  assert.equal(response.status,409);assert.equal(f.writes,0);
+ });
+ await check('checkout sync accepts verified new contract before list catches up',async()=>{
+  const f=routeFixture();f.mocks['@/lib/stripe'].findActiveLikeSubscriptions=async()=>[];
+  const response=await load('src/app/api/stripe/sync/route.ts',f.mocks).POST(req());
+  assert.equal(response.status,200);assert.equal(f.f.state.user.plan,'PRO');
+ });
+ await check('checkout sync discovery outage never writes a lower plan',async()=>{
+  const {f}=splitSubscriptionFixture();f.mocks['@/lib/stripe'].findActiveLikeSubscriptions=async()=>{throw Error('temporary Stripe failure')};
+  const response=await load('src/app/api/stripe/sync/route.ts',f.mocks).POST(req());
+  assert.equal(response.status,500);assert.equal(f.writes,0);
+ });
  for(const route of ['sync','sync/latest'])await check(route+' queues actual LIGHT trial without a fixed 30-day promise',async()=>{
   let f=routeFixture();f.sub.metadata.planId='banner-light';f.sub.status='trialing';f.sub.trial_end=1900000000;
   assert.equal((await load('src/app/api/stripe/'+route+'/route.ts',f.mocks).POST(req())).status,200);
@@ -109,6 +144,13 @@ async function webhook(){
    '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt-lower',type:'customer.subscription.updated',data:{object:f.sub}})}};
   const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
   assert.equal(response.status,200);assert.equal(f.f.state.user.plan,'PRO');assert.equal(f.f.state.user.stripeSubscriptionId,'sub-higher');
+ });
+ await check('new subscription can sync before Stripe list includes it',async()=>{
+  let f=routeFixture();f.mocks['@/lib/stripe'].findActiveLikeSubscriptions=async()=>[];
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt-new-before-list',type:'customer.subscription.created',data:{object:f.sub}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,200);assert.equal(f.f.state.user.plan,'PRO');assert.equal(f.writes,1);
  });
  for(const type of ['customer.subscription.created','customer.subscription.updated'])await check(type+' cannot restore canceled access from delayed active snapshot',async()=>{
   let f=routeFixture();await f.f.sync({userId:'u1',plan:'PRO',stripeSubscriptionId:'sub1'});
@@ -206,6 +248,14 @@ async function webhook(){
    '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt1',type:'checkout.session.completed',data:{object:f.checkout}})}};
   const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
   assert.equal(response.status,200);assert.equal(f.writes,1);assert.equal(f.notices,1);
+ });
+ await check('delayed checkout webhook preserves the higher live contract',async()=>{
+  const {f}=splitSubscriptionFixture();f.checkout.metadata={app:'doya-ai',userId:'u1',planId:'banner-light'};
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/prisma':{prisma:{user:{findUnique:async()=>f.f.state.user}},withRetry:fn=>fn()},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt-split-checkout',type:'checkout.session.completed',data:{object:f.checkout}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,200);assert.equal(f.f.state.user.plan,'PRO');assert.equal(f.f.state.user.stripeSubscriptionId,'sub-higher');
  });
  await check('Doya checkout identity mismatch requests retry without writes',async()=>{
   let f=routeFixture();f.checkout.metadata={app:'doya-ai',userId:'other',planId:'banner-pro'};

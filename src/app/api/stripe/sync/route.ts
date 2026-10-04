@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'node:crypto'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { stripe, ACTIVE_LIKE_STATUSES, isDoyaSubscription, resolvePlanIdFromSubscription, planTierFromPlanId } from '@/lib/stripe'
+import { stripe, ACTIVE_LIKE_STATUSES, findActiveLikeSubscriptions, isDoyaSubscription, isDoyaSubscriptionOwnedByUser, resolvePlanIdFromSubscription, planTierFromPlanId } from '@/lib/stripe'
 import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
 import { deliverStripeWebhookNotification } from '@/lib/stripe-webhook-notifications'
@@ -16,6 +16,8 @@ import { billingSubscriptionNotice } from '@/lib/billing-subscription-notice'
 //
 // - success_url で受け取った session_id を使って Stripe から checkout session / subscription を取得
 // - DBに stripeCustomerId / stripeSubscriptionId / サービス別plan を反映
+
+const TIER_RANK: Record<string, number> = { FREE: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
 
 export async function POST(request: NextRequest) {
   try {
@@ -80,15 +82,40 @@ export async function POST(request: NextRequest) {
     if (subscriptionCustomerId !== customerId || (subscription.metadata?.userId && subscription.metadata.userId !== user.id)) {
       return NextResponse.json({ error: 'Subscription does not match user' }, { status: 403 })
     }
-    const { planId, priceId } = resolvePlanIdFromSubscription(subscription as any)
+    const { planId } = resolvePlanIdFromSubscription(subscription as any)
     const resolvedPlan = planTierFromPlanId(planId)
     if (resolvedPlan === 'FREE') return NextResponse.json({ error: '契約プランを確認できませんでした。再度同期してください。' }, { status: 409 })
+
+    // The checkout subscription is verified above, but another live subscription may
+    // already grant a higher tier. Include this freshly retrieved subscription even
+    // if Stripe's list endpoint has not yet caught up with checkout completion.
+    const candidates = await findActiveLikeSubscriptions({
+      userId: user.id, email: user.email, stripeCustomerId: customerId,
+    })
+    let selected = subscription
+    let selectedPlan: ReturnType<typeof planTierFromPlanId> = resolvedPlan
+    for (const candidate of candidates) {
+      const tier = planTierFromPlanId(candidate.planId)
+      if ((TIER_RANK[tier] ?? 0) <= (TIER_RANK[selectedPlan] ?? 0)) continue
+      const live = await stripe.subscriptions.retrieve(candidate.id)
+      if (!ACTIVE_LIKE_STATUSES.has(String(live.status))) continue
+      if (!(await isDoyaSubscriptionOwnedByUser(live, user))) {
+        return NextResponse.json({ error: '契約情報の一致を確認できませんでした。再度同期してください。' }, { status: 409 })
+      }
+      const livePlan = planTierFromPlanId(resolvePlanIdFromSubscription(live).planId)
+      if ((TIER_RANK[livePlan] ?? 0) > (TIER_RANK[selectedPlan] ?? 0)) {
+        selected = live
+        selectedPlan = livePlan
+      }
+    }
+    const selectedCustomerId = typeof selected.customer === 'string' ? selected.customer : selected.customer.id
+    const { planId: selectedPlanId, priceId: selectedPriceId } = resolvePlanIdFromSubscription(selected)
     const notice = billingSubscriptionNotice(subscription, planId)
     const notificationId = `billing-sync:${subscription.id}:${randomUUID()}`
     const { userPlan } = await syncUnifiedBilling({
-      userId: user.id, plan: resolvedPlan,
-      stripeCustomerId: customerId, stripeSubscriptionId: subscription.id,
-      stripePriceId: priceId, stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      userId: user.id, plan: selectedPlan,
+      stripeCustomerId: selectedCustomerId, stripeSubscriptionId: selected.id,
+      stripePriceId: selectedPriceId, stripeCurrentPeriodEnd: new Date(selected.current_period_end * 1000),
       notificationOnUpgrade: {
         id: notificationId,
         payload: {
@@ -110,12 +137,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       plan: userPlan,
-      servicePlan: planId,
-      subscriptionId: subscription.id,
-      priceId,
+      servicePlan: selectedPlanId,
+      subscriptionId: selected.id,
+      priceId: selectedPriceId,
       paymentStatus: checkout.payment_status,
       amountTotal: checkout.amount_total,
-      subscriptionStatus: subscription.status,
+      subscriptionStatus: selected.status,
     })
   } catch (e: any) {
     console.error('Stripe sync error:')

@@ -273,7 +273,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   }))
   if (!user) throw new Error(`[Webhook] checkout.session.completed: user not found for session ${session.id}`)
 
-  await updateUserSubscription(userId, sub)
+  await updateBestLiveSubscription({ id: userId, email: user.email }, sub)
 
   // ------------------------------------------------------------------
   // 申し込み通知（無料トライアルか、即課金かを必ず区別する）
@@ -337,11 +337,17 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
 const TIER_RANK: Record<string, number> = { FREE: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
 
 /** A later lower-tier event must not overwrite another live, higher-tier contract. */
-async function updateBestLiveSubscription(user: WebhookUser, live: Stripe.Subscription) {
+async function updateBestLiveSubscription(user: { id: string; email: string | null }, live: Stripe.Subscription) {
   const customerId = typeof live.customer === 'string' ? live.customer : live.customer?.id
   const candidates = (await findActiveLikeSubscriptions({
     userId: user.id, email: user.email, stripeCustomerId: customerId,
   })).filter((candidate) => planTierFromPlanId(candidate.planId) !== 'FREE')
+  // A freshly completed checkout may be retrievable before it appears in the list.
+  // The direct retrieval still needs the same owner check below.
+  const { planId: livePlanId } = resolvePlanIdFromSubscription(live)
+  if (planTierFromPlanId(livePlanId) !== 'FREE' && !candidates.some((candidate) => candidate.id === live.id)) {
+    candidates.push({ id: live.id, status: String(live.status), customerId: customerId || '', priceId: null, planId: livePlanId })
+  }
   if (candidates.length === 0) throw new Error(`[Webhook] no active contract found for subscription ${live.id}`)
   candidates.sort((a, b) =>
     (TIER_RANK[planTierFromPlanId(b.planId)] ?? 0) - (TIER_RANK[planTierFromPlanId(a.planId)] ?? 0)
