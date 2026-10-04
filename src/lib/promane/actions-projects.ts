@@ -37,6 +37,8 @@ async function retryProjectTransaction<T>(commit: () => Promise<T>): Promise<T> 
   throw new Error('案件を保存できませんでした');
 }
 
+const STALE_PROJECT_ERROR = '別の画面で案件が更新されています。入力を保管してから最新版を開き直してください';
+
 export async function createProject(workspaceSlug: string, data: {
   name: string;
   clientId?: string;
@@ -123,6 +125,7 @@ export async function createProject(workspaceSlug: string, data: {
 }
 
 export async function updateProject(workspaceSlug: string, projectId: string, data: {
+  expectedUpdatedAt: string;
   name?: string;
   clientId?: string | null;
   description?: string | null;
@@ -140,6 +143,14 @@ export async function updateProject(workspaceSlug: string, projectId: string, da
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
   validatePromaneProjectText(data, true);
+  if (typeof data.expectedUpdatedAt !== 'string') {
+    throw new Error('案件の更新情報がありません。入力を保管してから画面を開き直してください');
+  }
+  const expectedUpdatedAt = new Date(data.expectedUpdatedAt);
+  if (!Number.isFinite(expectedUpdatedAt.getTime()) ||
+      expectedUpdatedAt.toISOString() !== data.expectedUpdatedAt) {
+    throw new Error('案件の更新情報がありません。入力を保管してから画面を開き直してください');
+  }
 
   const project = await retryProjectTransaction(() => prisma.$transaction(async (tx) => {
     const member = await tx.promaneMember.findFirst({
@@ -150,9 +161,12 @@ export async function updateProject(workspaceSlug: string, projectId: string, da
     // 既存値で部分更新の整合性チェック
     const existing = await tx.promaneProject.findFirst({
       where: { id: projectId, workspaceId: workspace.id },
-      select: { startDate: true, endDate: true },
+      select: { startDate: true, endDate: true, updatedAt: true },
     });
     if (!existing) throw new Error("プロジェクトが見つかりません");
+    if (existing.updatedAt.getTime() !== expectedUpdatedAt.getTime()) {
+      throw new Error(STALE_PROJECT_ERROR);
+    }
 
     if (data.clientId) {
       const client = await tx.promaneClient.findFirst({
@@ -173,9 +187,11 @@ export async function updateProject(workspaceSlug: string, projectId: string, da
       validatedDates = validateDates(finalStart, finalEnd);
     }
 
-    return tx.promaneProject.update({
-      where: { id: projectId },
-      data: {
+    try {
+      return await tx.promaneProject.update({
+        where: { id: projectId, workspaceId: workspace.id, updatedAt: expectedUpdatedAt },
+        data: {
+          updatedAt: new Date(Math.max(Date.now(), expectedUpdatedAt.getTime() + 1)),
         ...(data.name !== undefined && { name: data.name.trim() }),
         ...(data.clientId !== undefined && { clientId: data.clientId || null }),
         ...(data.description !== undefined && { description: data.description || null }),
@@ -187,9 +203,15 @@ export async function updateProject(workspaceSlug: string, projectId: string, da
         ...(data.estimatedHours !== undefined && { estimatedHours: data.estimatedHours }),
         ...(data.startDate !== undefined && { startDate: validatedDates!.startDate }),
         ...(data.endDate !== undefined && { endDate: validatedDates!.endDate }),
-        ...(data.tags !== undefined && { tags: data.tags || null }),
-      },
-    });
+          ...(data.tags !== undefined && { tags: data.tags || null }),
+        },
+      });
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+        throw new Error(STALE_PROJECT_ERROR);
+      }
+      throw error;
+    }
 
   }, { isolationLevel: 'Serializable' }));
 

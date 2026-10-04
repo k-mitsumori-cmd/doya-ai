@@ -30,6 +30,7 @@ export default async function EditProjectPage({
   // ProjectForm が要求する形に整形
   const projectData = {
     id: project.id,
+    updatedAt: project.updatedAt,
     name: project.name,
     clientId: project.clientId,
     description: project.description,

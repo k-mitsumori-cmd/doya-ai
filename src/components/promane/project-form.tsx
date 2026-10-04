@@ -14,10 +14,12 @@ import { Card, CardContent } from "@/components/promane/ui/card";
 import { PROJECT_STATUS_LABELS, BILLING_TYPE_LABELS } from "@/lib/promane/format";
 import { toast } from "sonner";
 import Image from "next/image";
+import { AlertCircle } from "lucide-react";
 
 type Client = { id: string; name: string };
 type ProjectData = {
   id: string;
+  updatedAt: Date;
   name: string;
   clientId: string | null;
   description: string | null;
@@ -100,6 +102,7 @@ export function ProjectForm({
       if (project) {
         await updateProject(workspaceSlug, project.id, {
           ...data,
+          expectedUpdatedAt: new Date(project.updatedAt).toISOString(),
           clientId: data.clientId ?? null,
           description: data.description ?? null,
           estimatedHours: data.estimatedHours ?? null,
@@ -140,7 +143,7 @@ export function ProjectForm({
       <CardContent className="pt-6">
         {error && (
           <div className="mb-4 p-3 rounded-xl bg-rose-50 border-2 border-rose-200 flex items-start gap-2">
-            <span className="text-rose-500 text-lg flex-shrink-0">⚠️</span>
+            <AlertCircle className="h-5 w-5 text-rose-500 flex-shrink-0" aria-hidden="true" />
             <p className="text-[13px] font-black text-rose-700">{error}</p>
           </div>
         )}
