@@ -102,7 +102,7 @@ export default function MensetsuTool() {
   const sessionsRef = useRef(sessions)
   sessionsRef.current = sessions
   const [issuedUrl, setIssuedUrl] = useState<string | null>(null)
-  const [issueLimit, setIssueLimit] = useState<{ message: string; url: string } | null>(null)
+  const [issueLimit, setIssueLimit] = useState<{ message: string; url: string; label: string } | null>(null)
   /** 発行直後のコピーボタンを押したことが分かるようにする */
   const [issuedCopied, setIssuedCopied] = useState(false)
   const [candidateName, setCandidateName] = useState('')
@@ -320,6 +320,8 @@ export default function MensetsuTool() {
           : `質問${data.template.questions.length}問・評価軸${data.template.criteria.length}個を作成しました。`
       )
       await load()
+    } catch {
+      notifyError(setError, '通信に失敗しました。時間をおいてもう一度お試しください。')
     } finally {
       setBusy(null)
     }
@@ -356,8 +358,12 @@ export default function MensetsuTool() {
       })
       const data = await res.json()
       if (!res.ok) {
-        if (res.status === 402 && data?.code === 'LIMIT_REACHED' && data?.upgradeUrl === '/mensetsu/pricing') {
-          setIssueLimit({ message: data.error, url: data.upgradeUrl })
+        if (res.status === 402 && data?.code === 'LIMIT_REACHED') {
+          if (data?.upgradeUrl === '/mensetsu/pricing') {
+            setIssueLimit({ message: data.error, url: data.upgradeUrl, label: 'プロプランの料金と30日間無料の対象条件を確認する' })
+          } else if (typeof data?.contactUrl === 'string' && data.contactUrl.startsWith('https://')) {
+            setIssueLimit({ message: data.error, url: data.contactUrl, label: '追加枠を相談する' })
+          }
         }
         notifyError(setError, data?.error || '発行に失敗しました')
         return
@@ -765,7 +771,7 @@ export default function MensetsuTool() {
                   {issueLimit && error === issueLimit.message && (
                     <div role="alert" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
                       <p>{issueLimit.message}</p>
-                      <Link href={issueLimit.url} className="mt-2 inline-block text-blue-700 underline">プロプランの料金と30日間無料の対象条件を確認する</Link>
+                      <Link href={issueLimit.url} className="mt-2 inline-block text-blue-700 underline">{issueLimit.label}</Link>
                     </div>
                   )}
                   {templates.find((t) => t.id === selectedTemplate)?.status === 'draft' && (

@@ -7,7 +7,7 @@ const ts = require('typescript')
 const source = fs.readFileSync(path.join(__dirname, '../../src/app/api/mensetsu/sessions/route.ts'), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 
-async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails = false } = {}) {
+async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails = false, member = false } = {}) {
   let count = used
   let attempts = 0
   let creates = 0
@@ -38,6 +38,7 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     '@/lib/organization-billing': { getOrganizationOwnerUserId: async () => 'user' },
+    '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
     '@/lib/mensetsu/interview-url': { interviewUrl: (token) => `https://example.com/interview/${token}` },
     '@/lib/plan-limit': {
       assertFreeLimit: async () => ++quotaChecks === 1
@@ -47,7 +48,7 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
       jstStartOfMonthUtc: () => new Date(),
     },
     '@/lib/service-usage': { recordServiceUsage: async () => {} },
-    '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: 'user', role: 'owner' }), orgSlugFrom: () => 'org' },
+    '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: member ? 'member' : 'user', role: member ? 'member' : 'owner' }), orgSlugFrom: () => 'org' },
   }
   const exports = {}
   vm.runInNewContext(compiled, { exports, require: (name) => { assert.ok(name in dependencies, name); return dependencies[name] }, console, Date, URL })
@@ -67,7 +68,13 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
     assert.equal(blocked.attempts, 2)
     assert.equal(blocked.creates, 0)
     assert.equal(blocked.body.upgradeUrl, expectedUpgrade)
+    assert.equal(blocked.body.contactUrl, limit === 30 ? 'https://doyamarke.surisuta.jp/contact' : undefined)
   }
+
+  const memberBlocked = await exercise({ limit: 30, used: 30, member: true })
+  assert.equal(memberBlocked.status, 402)
+  assert.equal(memberBlocked.body.upgradeUrl, undefined)
+  assert.equal(memberBlocked.body.contactUrl, undefined)
 
   const failed = await exercise({ createFails: true })
   assert.equal(failed.status, 503)

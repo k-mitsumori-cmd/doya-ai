@@ -85,6 +85,7 @@ async function main() {
         return 'owner'
       } },
       '@/lib/quote/access': access, '@/lib/mensetsu/access': access, '@/lib/aishodan/access': access,
+      '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
       '@/lib/quote/document': {}, '@/lib/mensetsu/interview-url': {}, '@/lib/mensetsu/template': {},
       '@/lib/aishodan/knowledge': {}, '@/lib/aishodan/defaults': {}, '@/lib/service-usage': {},
       '@/lib/plan-limit': { FREE_LIMITS: quota, assertFreeLimit: async (receivedKey, _count, ownerId) => {

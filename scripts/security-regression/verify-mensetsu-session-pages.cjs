@@ -26,6 +26,7 @@ const route = load('src/app/api/mensetsu/sessions/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
   '@/lib/organization-billing': {},
+  '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
   '@/lib/mensetsu/interview-url': {},
   '@/lib/plan-limit': {},
   '@/lib/service-usage': {},

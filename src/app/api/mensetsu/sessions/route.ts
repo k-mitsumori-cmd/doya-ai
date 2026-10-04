@@ -10,6 +10,7 @@ import { prisma } from '@/lib/prisma'
 import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { interviewUrl } from '@/lib/mensetsu/interview-url'
 import { assertFreeLimit, FREE_LIMITS, jstStartOfMonthUtc } from '@/lib/plan-limit'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
 
@@ -91,7 +92,9 @@ export async function POST(req: NextRequest) {
     canManageBilling,
     used: checked.used,
     limit: checked.limit,
-    ...(canManageBilling && checked.limit === FREE_LIMITS.mensetsuSessions ? { upgradeUrl: '/mensetsu/pricing' } : {}),
+    ...(canManageBilling ? checked.limit === FREE_LIMITS.mensetsuSessions
+      ? { upgradeUrl: '/mensetsu/pricing' }
+      : { contactUrl: SUPPORT_CONTACT_URL } : {}),
   }, { status: 402 })
   const quota = await checkQuota()
   if (!quota.ok) return quotaResponse(quota)
