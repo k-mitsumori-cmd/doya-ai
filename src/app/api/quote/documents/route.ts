@@ -10,6 +10,7 @@ import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { defaultExpiry, nextQuoteNo, recalcDocument } from '@/lib/quote/document'
 import { assertFreeLimit, FREE_LIMITS, jstStartOfMonthUtc } from '@/lib/plan-limit'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { recordServiceUsage } from '@/lib/service-usage'
 import type { PriceSource } from '@/lib/quote/types'
 
@@ -97,7 +98,9 @@ export async function POST(req: NextRequest) {
     canManageBilling,
     used: checked.used,
     limit: checked.limit,
-    ...(canManageBilling && checked.limit === FREE_LIMITS.quoteDocuments ? { upgradeUrl: '/quote/pricing' } : {}),
+    ...(canManageBilling ? checked.limit === FREE_LIMITS.quoteDocuments
+      ? { upgradeUrl: '/quote/pricing' }
+      : { contactUrl: SUPPORT_CONTACT_URL } : {}),
   }, { status: 402 })
   const quota = await checkQuota()
   if (!quota.ok) return quotaResponse(quota)

@@ -38,6 +38,7 @@ const productRoute = load('src/app/api/quote/products/route.ts', common)
 const documentRoute = load('src/app/api/quote/documents/route.ts', {
   ...common,
   '@/lib/quote/document': {},
+  '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
   '@/lib/organization-billing': {},
   '@/lib/plan-limit': {},
   '@/lib/service-usage': {},

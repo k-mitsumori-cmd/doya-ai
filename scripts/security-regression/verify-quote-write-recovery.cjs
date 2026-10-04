@@ -27,7 +27,7 @@ async function verifyOrganization() {
   const env = {
     Error,
     orgName: 'テスト組織', creatingOrgRequest: { current: false },
-    setCreatingOrg: value => { loading = value }, setError: value => { error = value }, setUpgradeUrl() {},
+    setCreatingOrg: value => { loading = value }, setError: value => { error = value }, setQuotaAction() {},
     notifyError: (setter, message) => setter(message), withOrg: (_service, route) => route,
     fetch: () => { fetches++; return new Promise((resolve, reject) => pending.push({ resolve, reject })) },
     load: async () => { loads++ },
@@ -57,7 +57,7 @@ async function verifyProduct() {
     Error,
     draftProfile: { companyName: 'テスト商材' }, productName: 'テスト商材', draftUrl: 'https://example.invalid',
     savingProductRequest: { current: false },
-    setSavingProduct: value => { loading = value }, setError: value => { error = value }, setUpgradeUrl() {},
+    setSavingProduct: value => { loading = value }, setError: value => { error = value }, setQuotaAction() {},
     setProductSaveUncertain: value => { uncertain = value },
     notifyError: (setter, message) => setter(message), withOrg: (_service, route) => route,
     fetch: () => { fetches++; return new Promise((resolve, reject) => pending.push({ resolve, reject })) },
