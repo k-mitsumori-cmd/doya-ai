@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getShodanContext, hasMinRole, orgSlugFrom } from '@/lib/shodan/access'
 import { researchCompany } from '@/lib/shodan/research'
 import { draftOwnProfile } from '@/lib/shodan/ai'
+import { reserveShodanProfileExtraction, ShodanProfileDailyLimitError, SHODAN_PROFILE_DAILY_LIMIT } from '@/lib/shodan/profile-extraction-budget'
 
 function normalizeUrl(input: unknown): string | null {
   if (typeof input !== 'string') return null
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
   if (!url) return NextResponse.json({ error: '有効な自社URLを入力してください' }, { status: 400 })
 
   try {
+    await reserveShodanProfileExtraction(ctx.organizationId)
     const research = await researchCompany(url)
     if (research.sourceStatus?.homepage === 'failed' && !research.companyName && !research.description) {
       throw new Error('company research yielded no usable facts')
@@ -51,7 +53,13 @@ export async function POST(req: NextRequest) {
       },
       gaps: draft.gaps,
     })
-  } catch (e: any) {
+  } catch (e) {
+    if (e instanceof ShodanProfileDailyLimitError) {
+      return NextResponse.json({
+        code: 'SHODAN_PROFILE_DAILY_LIMIT',
+        error: `本日の自社情報の自動入力は組織で${SHODAN_PROFILE_DAILY_LIMIT}回までです。明日お試しいただくか、下の項目を直接入力してください。`,
+      }, { status: 429 })
+    }
     console.error('[shodan/company-profile/extract]')
     return NextResponse.json({ error: '自社情報の抽出に失敗しました。URLを確認して再度お試しください。' }, { status: 500 })
   }

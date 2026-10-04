@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { shodanGet, shodanSend } from '@/lib/shodan/client'
+import { ShodanApiError, shodanGet, shodanSend } from '@/lib/shodan/client'
 import { DoyaKun, PageHeader, sym, type Mood } from '@/components/shodan/ui'
 import toast from 'react-hot-toast'
 
@@ -58,6 +58,7 @@ export default function ShodanSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [extractUrl, setExtractUrl] = useState('')
   const [extracting, setExtracting] = useState(false)
+  const [extractLimitMessage, setExtractLimitMessage] = useState<string | null>(null)
   const [gaps, setGaps] = useState<Set<string>>(new Set())
   // ブランド（資料に反映）
   const [brandColors, setBrandColors] = useState<string[]>(['#7f19e6', '#f59e0b'])
@@ -126,9 +127,13 @@ export default function ShodanSettingsPage() {
         return next
       })
       setGaps(new Set(d.gaps || []))
+      setExtractLimitMessage(null)
       const gapCount = (d.gaps || []).length
       toast.success(gapCount ? `自動入力しました。加筆推奨が${gapCount}項目あります` : '自動入力しました！')
-    } catch (e: any) { toast.error(e.message) } finally { setExtracting(false) }
+    } catch (e) {
+      if (e instanceof ShodanApiError && e.code === 'SHODAN_PROFILE_DAILY_LIMIT') setExtractLimitMessage(e.message)
+      else toast.error(e instanceof Error ? e.message : '自社情報の抽出に失敗しました')
+    } finally { setExtracting(false) }
   }
 
   const save = async () => {
@@ -232,6 +237,7 @@ export default function ShodanSettingsPage() {
               {extracting ? '抽出中…' : 'AIで自動入力'}
             </button>
           </div>
+          {extractLimitMessage && <p role="alert" className="mt-3 rounded-lg bg-white px-3 py-2 text-xs font-bold text-purple-950">{extractLimitMessage}</p>}
         </div>
         <DoyaKun mood={extracting ? 'focus' : 'present'} size={110} className="!absolute -bottom-2 right-2" />
       </div>

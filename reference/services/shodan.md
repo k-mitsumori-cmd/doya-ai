@@ -40,6 +40,7 @@ URL起点で以下まで調査して仮説提案に反映する：
 - `types.ts` — 役割/Context/CompanyResearch/CompanyAnalysis 型
 - `access.ts` — `getShodanContext(orgSlug?)` / `orgSlugFrom(req)`(?org= or x-shodan-org) / `hasMinRole` / `getOrCreateOrganization`（SFA準拠）
 - `billing.ts` — ACTIVEな単独オーナーの契約を取得。オーナーが不明・複数なら有料処理を停止する。
+- `profile-extraction-budget.ts` — 自社情報のAI自動入力を組織単位でJSTの1日50回まで予約。失敗時も呼び出し回数に含め、再試行の連打を防ぐ。月次の企業調査枠とは別の運用保護枠。
 - `research.ts` — `researchCompany(url)`：SSRF安全fetch＋サイトクロール＋gBizINFO照合。`src/lib/doyalist/collect/{web-scraper,gbizinfo}` を再利用。
 - `ai.ts` — `analyzeCompany(research, own)`（`geminiGenerateJson`）/ `generateProposal(research, analysis, own)`（`geminiGenerateText`＝Claude Sonnet 4.6主）。`@seo/lib/gemini` 経由。
 - `client.ts` — クライアントfetchヘルパー（`?org=` 付与）
@@ -48,6 +49,7 @@ URL起点で以下まで調査して仮説提案に反映する：
 - `me` (GET 認証/オンボ状態), `organization` (POST作成)
 - `members` (GET/POST招待), `members/[id]` (PATCH/DELETE), `invite/[token]` (GET/POST)
 - `company-profile` (GET/PUT 自社情報)
+- `company-profile/extract` (POST 自社URLから下書きを作成。日次の運用保護枠に達したら429と手入力案内)
 - `preparations` (GET一覧 / POST: **URL→リサーチ**、組織の月次枠を予約、maxDuration=300), `preparations/[id]` (GET/DELETE)
 - `preparations/[id]/generate` (POST: 有料組織で分析→提案資料生成), `preparations/[id]/slides/generate` と `slides/regenerate` (有料組織でスライド画像生成・再生成)
 

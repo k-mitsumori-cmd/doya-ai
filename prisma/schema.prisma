@@ -3393,7 +3393,7 @@ model ShodanPreparation {
   status            String             @default("processing") // processing / done / failed
   errorMessage      String?            @db.Text
   // 成果物
-  research          Json? // 深掘り調査（従業員数/マーケ実施状況/オウンドメディア規模/記事更新頻度 等）
+  research          Json? // 深掘り調査（公開従業員数/マーケ実施状況/オウンドメディアの有無・所在 等）
   analysis          Json? // 現状分析・課題仮説・解決策
   proposalMarkdown  String?            @db.Text // 提案資料（Markdown）
   slidesJson        Json? // 提案スライド構成（ProposalSlide[]）

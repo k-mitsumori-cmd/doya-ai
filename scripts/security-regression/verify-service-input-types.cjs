@@ -139,6 +139,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
       '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'org', role: 'owner' }), hasMinRole: () => true, orgSlugFrom: () => 'org' },
       '@/lib/shodan/research': { researchCompany: async () => { calls++; return { companyName: 'Acme' }; } },
       '@/lib/shodan/ai': { draftOwnProfile: async () => ({ companyName: 'Acme', gaps: [] }) },
+      '@/lib/shodan/profile-extraction-budget': { reserveShodanProfileExtraction: async () => {} },
     });
     await checkRoute('Shodan own profile extraction', route.POST,
       [null, {}, { url: 42 }, { url: [] }, { url: {} }, { url: 'ftp://example.com' }],
