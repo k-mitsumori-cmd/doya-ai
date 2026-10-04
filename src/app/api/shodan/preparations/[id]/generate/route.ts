@@ -21,7 +21,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
   // organizationId + id で取得（IDOR防止）
-  const existingPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
+  const existingPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId, status: { not: 'deleted' } } })
   if (!existingPrep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   if (!existingPrep.research) return NextResponse.json({ error: '先に企業調査が必要です' }, { status: 400 })
 
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   }
   let prep = existingPrep
   try {
-    const currentPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
+    const currentPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId, status: { not: 'deleted' } } })
     if (!currentPrep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
     prep = currentPrep
     const research = prep.research as unknown as CompanyResearch | null

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     )
   }
 
-  const existingPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
+  const existingPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId, status: { not: 'deleted' } } })
   if (!existingPrep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   let lease: string
   try {
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   }
   try {
     // リース取得前に別の呼び出しが完了している可能性があるので、未生成枠を取り直す。
-    const prep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
+    const prep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId, status: { not: 'deleted' } } })
     if (!prep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
     const slides = (prep.slidesJson as unknown as ProposalSlide[] | null) || []
     if (!slides.length) return NextResponse.json({ error: '先に提案資料の構成を生成してください' }, { status: 400 })

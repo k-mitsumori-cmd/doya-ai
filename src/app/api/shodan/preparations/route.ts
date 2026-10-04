@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   const { searchParams } = new URL(req.url)
   const select = { id: true, targetUrl: true, targetName: true, status: true, createdAt: true, updatedAt: true } as const
-  const where = { organizationId: ctx.organizationId }
+  const where = { organizationId: ctx.organizationId, status: { not: 'deleted' } }
   const watch = searchParams.get('watch')
   if (searchParams.has('watch')) {
     const ids = watch?.split(',') || []
@@ -111,6 +111,7 @@ export async function POST(req: NextRequest) {
         OR: [
           { status: 'done' },
           { status: 'researched' },
+          { status: 'deleted' },
           { status: 'processing', updatedAt: { gte: staleBefore } },
         ],
       },

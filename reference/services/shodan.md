@@ -34,7 +34,7 @@ URL起点で以下まで調査して仮説提案に反映する：
 - `ShodanOrganization` (id/name/slug)
 - `ShodanMember` (organizationId/userId/role/status/inviteEmail/inviteToken) ※SFA同型
 - `ShodanCompanyProfile` (organizationId @unique / 自社情報: companyName/url/description/valueProp/products/targetCustomer/pricingNote/caseStudies)
-- `ShodanPreparation` (organizationId / targetUrl / targetName / status(processing|done|failed) / research(Json) / analysis(Json) / proposalMarkdown / errorMessage)
+- `ShodanPreparation` (organizationId / targetUrl / targetName / status(processing|researched|done|failed|deleted) / research(Json) / analysis(Json) / proposalMarkdown / errorMessage)
 
 ### lib（`src/lib/shodan/`）
 - `types.ts` — 役割/Context/CompanyResearch/CompanyAnalysis 型
@@ -61,6 +61,7 @@ URL起点で以下まで調査して仮説提案に反映する：
 - `src/components/shodan/`：`ShodanSidebar.tsx`, `Markdown.tsx`（依存なしの軽量Markdownレンダラ）
 
 ## 運用メモ
+- 成功した企業調査を削除した場合、調査内容・提案内容を消去し、当月の利用実績を示す `deleted` 行だけ残す。失敗した調査は行ごと削除して枠を戻す。進行中の調査・資料生成は削除できない。一覧と詳細では `deleted` を表示せず、月次利用枠には含める。
 - **本番DB**: 既存の `shodan_*` テーブルを使用する。スキーマを変更する際は現在のマイグレーションと本番DB状態を確認し、無条件に `prisma db push` しない。
 - 環境変数: `ANTHROPIC_API_KEY`(主) / `GOOGLE_GENAI_API_KEY`(フォールバック) / `GBIZINFO_API_TOKEN`(従業員数等) / `NEXTAUTH_URL`(招待リンク)。
 - 有料組織の提案スライドは画像生成を使用する。生成APIの実費が発生するため、検証で実際の生成を行う場合は事前に費用を確認する。

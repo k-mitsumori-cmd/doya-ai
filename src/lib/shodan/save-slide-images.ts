@@ -21,7 +21,7 @@ export async function saveSlideImages(
       FOR UPDATE
     `
     if (locked.length !== 1) throw new SlideImageConflict()
-    const current = await tx.shodanPreparation.findFirst({ where: { id, organizationId } })
+    const current = await tx.shodanPreparation.findFirst({ where: { id, organizationId, status: { not: 'deleted' } } })
     if (!current || JSON.stringify(current.slidesJson) !== JSON.stringify(expectedSlides)) throw new SlideImageConflict()
     const slides = current.slidesJson as unknown as ProposalSlide[]
     const existing = (current.slideImages as unknown as StoredSlide[] | null) || []

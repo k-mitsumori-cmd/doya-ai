@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const index = body.index
   const instruction = typeof body.instruction === 'string' ? body.instruction.trim().slice(0, 500) || undefined : undefined
 
-  const existingPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
+  const existingPrep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId, status: { not: 'deleted' } } })
   if (!existingPrep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   let lease: string
   try {
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '再生成を開始できませんでした。時間をおいて再度お試しください。' }, { status: 503 })
   }
   try {
-    const prep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
+    const prep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId, status: { not: 'deleted' } } })
     if (!prep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
     const slides = (prep.slidesJson as unknown as ProposalSlide[] | null) || []
     const images = ((prep.slideImages as unknown as StoredSlide[] | null) || []).slice()

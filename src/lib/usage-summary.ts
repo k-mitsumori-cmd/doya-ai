@@ -330,7 +330,7 @@ export async function getUsageSummary(
       const billing = await getShodanBilling(prisma, orgIds[0])
       if (!billing) return null
       const total = orgIds.length
-        ? await prisma.shodanPreparation.count({ where: { organizationId: { in: orgIds } } })
+        ? await prisma.shodanPreparation.count({ where: { organizationId: { in: orgIds }, status: { not: 'deleted' } } })
         : 0
       // ⚠️ 数え方をルート（api/shodan/preparations）と必ず揃える。
       //    失敗した調査や、止まったままの processing を含めて数えていたため、
@@ -344,6 +344,7 @@ export async function getUsageSummary(
               OR: [
                 { status: 'done' },
                 { status: 'researched' },
+                { status: 'deleted' },
                 { status: 'processing', updatedAt: { gte: staleBefore } },
               ],
             },

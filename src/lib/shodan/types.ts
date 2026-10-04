@@ -26,8 +26,8 @@ export const ROLE_LABEL: Record<ShodanRole, string> = {
 }
 
 export type MemberStatus = 'ACTIVE' | 'PENDING' | 'INACTIVE'
-// processing=リサーチ実行中 / researched=調査完了・提案生成待ち or 生成中 / done=完成 / failed=失敗
-export type PrepStatus = 'processing' | 'researched' | 'done' | 'failed'
+// processing=リサーチ実行中 / researched=調査完了・提案生成待ち or 生成中 / done=完成 / failed=失敗 / deleted=内容削除・利用枠の記録のみ
+export type PrepStatus = 'processing' | 'researched' | 'done' | 'failed' | 'deleted'
 
 // Vercel maxDuration(300s) でハンドラが強制終了されると catch が走らず 'processing' のまま残る。
 // この時間を超えた処理中は実質失敗とみなす（無限スピナー防止）。maxDuration(5分)より長く取る。

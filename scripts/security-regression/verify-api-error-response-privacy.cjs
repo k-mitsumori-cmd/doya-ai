@@ -117,9 +117,11 @@ const response = { NextResponse: Response }
   await check('shodan detail hides previously stored provider failure details', async () => {
     const route = load('src/app/api/shodan/preparations/[id]/route.ts', {
       'next/server': response,
+      '@prisma/client': { Prisma: { DbNull: Symbol('DbNull') } },
       '@/lib/prisma': { prisma: { shodanPreparation: { findFirst: async () => ({ id: 'prep-1', organizationId: 'org-1', status: 'failed', errorMessage: secret, slideImages: [] }) } } },
       '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'org-1' }), orgSlugFrom: () => 'org' },
       '@/lib/shodan/types': { effectivePrepStatus: () => 'failed' },
+      '@/lib/shodan/slide-generation-lease': { shodanSlideLeaseKey: () => 'lease' },
       '@/lib/shodan/storage': { signedUrl: async () => '' },
     })
     const result = await route.GET({}, { params: Promise.resolve({ id: 'prep-1' }) })

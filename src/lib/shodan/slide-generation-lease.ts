@@ -8,14 +8,14 @@ export class ShodanSlideGenerationInProgressError extends Error {
   constructor() { super('Shodan slide generation already in progress') }
 }
 
-function leaseKey(preparationId: string): string {
+export function shodanSlideLeaseKey(preparationId: string): string {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(preparationId)) throw new Error('Invalid preparation ID')
   return `shodan-slide-generation:v1:${preparationId}`
 }
 
 /** One image batch or regeneration per preparation at a time, across serverless instances. */
 export async function claimShodanSlideLease(preparationId: string, db: PrismaClient = prisma, now = Date.now()): Promise<string> {
-  const key = leaseKey(preparationId)
+  const key = shodanSlideLeaseKey(preparationId)
   const token = `${now + LEASE_MS}:${randomUUID()}`
   await db.$transaction(async tx => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`
@@ -31,5 +31,5 @@ export async function claimShodanSlideLease(preparationId: string, db: PrismaCli
 }
 
 export async function releaseShodanSlideLease(preparationId: string, token: string, db: PrismaClient = prisma): Promise<void> {
-  await db.systemSetting.deleteMany({ where: { key: leaseKey(preparationId), value: token } })
+  await db.systemSetting.deleteMany({ where: { key: shodanSlideLeaseKey(preparationId), value: token } })
 }
