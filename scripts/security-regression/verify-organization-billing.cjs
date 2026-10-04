@@ -101,6 +101,7 @@ async function main() {
         quotaOwner = ownerId
         return { ok: false, used: quota[key], limit: quota[key], reason: '上限に達しました' }
       } },
+      '@/lib/organization-quota-ledger': { getOrganizationQuotaUsage: async () => { throw Error('blocked quota must not read ledger') }, recordOrganizationQuotaUsage: async () => { throw Error('blocked quota must not write ledger') } },
     })
     const req = () => new Request('https://example.invalid/api/test', { method: 'POST', body: '{}' })
     const memberResponse = await route.POST(req())

@@ -10,6 +10,7 @@ import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { defaultExpiry, nextQuoteNo, recalcDocument } from '@/lib/quote/document'
 import { assertFreeLimit, FREE_LIMITS, jstStartOfMonthUtc } from '@/lib/plan-limit'
+import { getOrganizationQuotaUsage, recordOrganizationQuotaUsage } from '@/lib/organization-quota-ledger'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { recordServiceUsage } from '@/lib/service-usage'
 import type { PriceSource } from '@/lib/quote/types'
@@ -85,12 +86,13 @@ export async function POST(req: NextRequest) {
   // 無料枠の上限（services.ts の「見積書3件まで」を実際に効かせる）
   const checkQuota = () => assertFreeLimit(
     'quoteDocuments',
-    () => prisma.quoteDocument.count({ where: { organizationId: ctx.organizationId } }),
+    () => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ctx.organizationId, 'lifetime', () =>
+      prisma.quoteDocument.count({ where: { organizationId: ctx.organizationId } })),
     ownerUserId,
-    (since) =>
+    (since) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ctx.organizationId, 'monthly', () =>
       prisma.quoteDocument.count({
         where: { organizationId: ctx.organizationId, createdAt: { gte: since } },
-      })
+      }), since)
   )
   const quotaResponse = (checked: Awaited<ReturnType<typeof checkQuota>>) => NextResponse.json({
     error: canManageBilling ? checked.reason : `この組織の利用上限（${checked.limit}件）に達しました。利用枠の変更は組織の契約者にご相談ください。`,
@@ -144,16 +146,16 @@ export async function POST(req: NextRequest) {
       result = await prisma.$transaction(async (tx) => {
         // 上限確認と作成を同一の Serializable トランザクションにする。
         // 複数タブで同時に作っても、片方は競合として再試行され上限を超えない。
-        const used = await tx.quoteDocument.count({
-          where: {
-            organizationId: ctx.organizationId,
-            ...(quota.limit === FREE_LIMITS.quoteDocuments ? {} : { createdAt: { gte: jstStartOfMonthUtc() } }),
-          },
-        })
-        if (quota.limit !== undefined && used >= quota.limit) return { kind: 'limit' } as const
+        const now = new Date()
+        const lifetime = await getOrganizationQuotaUsage(tx, 'quoteDocuments', ctx.organizationId, 'lifetime', () =>
+          tx.quoteDocument.count({ where: { organizationId: ctx.organizationId } }), now)
+        const monthly = await getOrganizationQuotaUsage(tx, 'quoteDocuments', ctx.organizationId, 'monthly', () =>
+          tx.quoteDocument.count({ where: { organizationId: ctx.organizationId, createdAt: { gte: jstStartOfMonthUtc(now) } } }), now)
+        if (quota.limit !== undefined && (quota.limit === FREE_LIMITS.quoteDocuments ? lifetime : monthly) >= quota.limit) return { kind: 'limit' } as const
         const created = await tx.quoteDocument.create({
           data: {
             organizationId: ctx.organizationId,
+            createdAt: now,
             productId,
             quoteNo,
             title: title.slice(0, 200),
@@ -184,6 +186,7 @@ export async function POST(req: NextRequest) {
           select: { id: true, quoteNo: true },
         })
         await recalcDocument(created.id, tx)
+        await recordOrganizationQuotaUsage(tx, 'quoteDocuments', ctx.organizationId, lifetime, monthly, now)
         return { kind: 'created', doc: created } as const
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
       break

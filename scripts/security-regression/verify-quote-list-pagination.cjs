@@ -41,6 +41,7 @@ const documentRoute = load('src/app/api/quote/documents/route.ts', {
   '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
   '@/lib/organization-billing': {},
   '@/lib/plan-limit': {},
+  '@/lib/organization-quota-ledger': {},
   '@/lib/service-usage': {},
 })
 
