@@ -70,7 +70,7 @@ export function FinanceTab({
         toast.error(data?.error || `追加に失敗しました（${res.status}）`, { duration: 6000 });
         return;
       }
-      toast.success("経費を登録したよ！");
+      toast.success("経費を登録しました");
       setShowForm(false);
       router.refresh();
     } catch (e: any) {
@@ -100,7 +100,7 @@ export function FinanceTab({
         toast.error(data?.error || "削除に失敗しました");
         return;
       }
-      toast.success("経費を削除したよ");
+      toast.success("経費を削除しました");
       router.refresh();
     } catch (e: any) {
       toast.error(e?.message || "通信エラー");

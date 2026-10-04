@@ -10,6 +10,17 @@ function validateAmount(v: number | undefined | null, field: string): number {
   return validatePromaneInteger(v, field);
 }
 
+async function retryTimeTransaction<T>(commit: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { return await commit(); }
+    catch (error) {
+      if (!(error && typeof error === 'object' && 'code' in error && error.code === 'P2034')) throw error;
+      if (attempt === 2) throw new Error('同時に記録が変更されました。少し待って再度操作してください');
+    }
+  }
+  throw new Error('記録を変更できませんでした');
+}
+
 export async function createTimeEntry(workspaceSlug: string, data: {
   taskId?: string;
   projectId?: string;
@@ -71,14 +82,17 @@ export async function deleteTimeEntry(workspaceSlug: string, entryId: string) {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
-  // セキュリティ: workspace所属確認 (IDOR防止)
-  const existing = await prisma.promaneTimeEntry.findFirst({
-    where: { id: entryId, member: { workspaceId: workspace.id } },
-    select: { id: true },
-  });
-  if (!existing) throw new Error("時間記録が見つかりません");
-
-  await prisma.promaneTimeEntry.delete({ where: { id: entryId } });
+  await retryTimeTransaction(() => prisma.$transaction(async tx => {
+    const actor = await tx.promaneMember.findFirst({
+      where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin', 'member'] } },
+      select: { id: true },
+    });
+    if (!actor) throw new Error('ワークスペースの変更権限がありません');
+    const deleted = await tx.promaneTimeEntry.deleteMany({
+      where: { id: entryId, member: { workspaceId: workspace.id } },
+    });
+    if (deleted.count !== 1) throw new Error('時間記録が見つかりません');
+  }, { isolationLevel: 'Serializable' }));
   revalidatePath(`/promane/${workspaceSlug}/timesheet`);
 }
 
@@ -113,15 +127,25 @@ export async function deleteExpense(workspaceSlug: string, expenseId: string, pr
   const { userId } = await requirePromaneAuthAction();
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
-  // セキュリティ: workspace所属確認 (IDOR防止)
-  const existing = await prisma.promaneExpense.findFirst({
-    where: { id: expenseId, project: { workspaceId: workspace.id } },
-    select: { id: true },
-  });
-  if (!existing) throw new Error("経費が見つかりません");
-
-  await prisma.promaneExpense.delete({ where: { id: expenseId } });
-  revalidatePath(`/promane/${workspaceSlug}/projects/${projectId}`);
+  const actualProjectId = await retryTimeTransaction(() => prisma.$transaction(async tx => {
+    const actor = await tx.promaneMember.findFirst({
+      where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin', 'member'] } },
+      select: { id: true },
+    });
+    if (!actor) throw new Error('ワークスペースの変更権限がありません');
+    const existing = await tx.promaneExpense.findFirst({
+      where: { id: expenseId, project: { workspaceId: workspace.id } },
+      select: { projectId: true },
+    });
+    if (!existing) throw new Error('経費が見つかりません');
+    if (existing.projectId !== projectId) throw new Error('対象のプロジェクトが一致しません');
+    const deleted = await tx.promaneExpense.deleteMany({
+      where: { id: expenseId, projectId: existing.projectId, project: { workspaceId: workspace.id } },
+    });
+    if (deleted.count !== 1) throw new Error('経費が見つかりません');
+    return existing.projectId;
+  }, { isolationLevel: 'Serializable' }));
+  revalidatePath(`/promane/${workspaceSlug}/projects/${actualProjectId}`);
 }
 
 export async function updateMemberRate(workspaceSlug: string, memberId: string, hourlyRate: number) {

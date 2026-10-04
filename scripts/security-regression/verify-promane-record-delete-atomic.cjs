@@ -1,0 +1,141 @@
+const assert = require('node:assert/strict')
+const { load, check, results } = require('./load-typescript.cjs')
+
+function fixture({ active = true, foreign = false, projectId = 'p', revokeDuringCommit = false } = {}) {
+  let memberActive = active
+  let attempts = 0
+  let writes = 0
+  let committed = false
+  const prisma = {
+    $transaction: async (fn, options) => {
+      assert.equal(options.isolationLevel, 'Serializable')
+      attempts++
+      const tx = {
+        promaneMember: { findFirst: async ({ where }) => {
+          assert.equal(where.workspaceId, 'w')
+          assert.equal(where.userId, 'u')
+          assert.equal(where.isActive, true)
+          return memberActive ? { id: 'actor' } : null
+        } },
+        promaneTimeEntry: { deleteMany: async ({ where }) => {
+          assert.equal(where.id, 'entry')
+          assert.equal(where.member.workspaceId, 'w')
+          writes++
+          return { count: foreign ? 0 : 1 }
+        } },
+        promaneExpense: {
+          findFirst: async ({ where }) => {
+            assert.equal(where.project.workspaceId, 'w')
+            return foreign ? null : { projectId: 'p' }
+          },
+          deleteMany: async ({ where }) => {
+            assert.equal(where.project.workspaceId, 'w')
+            assert.equal(where.projectId, 'p')
+            writes++
+            return { count: 1 }
+          },
+        },
+      }
+      const result = await fn(tx)
+      if (revokeDuringCommit && attempts === 1) {
+        memberActive = false
+        throw Object.assign(new Error('serialization conflict'), { code: 'P2034' })
+      }
+      committed = true
+      return result
+    },
+  }
+  const actions = load('src/lib/promane/actions-time-entries.ts', {
+    './time-input': load('src/lib/promane/time-input.ts'),
+    '@/lib/prisma': { prisma },
+    '@/lib/promane/auth': {
+      requirePromaneAuthAction: async () => ({ userId: 'u' }),
+      requireWritableWorkspace: async () => ({ id: 'w' }),
+    },
+    'next/cache': { revalidatePath() {} },
+  })
+  return {
+    deleteTime: () => actions.deleteTimeEntry('ws', 'entry'),
+    deleteExpense: () => actions.deleteExpense('ws', 'expense', projectId),
+    state: () => ({ attempts, writes, committed }),
+  }
+}
+
+function apiFixture() {
+  let active = true
+  let attempts = 0
+  let writes = 0
+  let committed = false
+  const prisma = {
+    $transaction: async function (fn, options) {
+      assert.equal(options.isolationLevel, 'Serializable')
+      attempts++
+      const result = await fn(this)
+      if (attempts === 1) {
+        active = false
+        throw Object.assign(new Error('serialization conflict'), { code: 'P2034' })
+      }
+      committed = true
+      return result
+    },
+    promaneWorkspace: { findFirst: async () => active ? { id: 'w' } : null },
+    promaneProject: { findFirst: async () => ({ id: 'p' }) },
+    promaneExpense: {
+      create: async ({ data }) => { writes++; return data },
+      deleteMany: async () => { writes++; return { count: 1 } },
+    },
+  }
+  const api = load('src/app/api/promane/expenses/route.ts', {
+    '@/lib/promane/time-input': load('src/lib/promane/time-input.ts'),
+    'next/server': { NextResponse: Response },
+    'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
+    '@/lib/auth': {},
+    '@/lib/prisma': { prisma },
+  })
+  return {
+    post: () => api.POST({ json: async () => ({ workspaceSlug: 'ws', projectId: 'p', category: 'travel', amount: 100, description: 'Taxi', date: '2026-09-01' }) }),
+    delete: () => api.DELETE({ nextUrl: new URL('https://example.test/api/promane/expenses?workspaceSlug=ws&id=expense') }),
+    state: () => ({ attempts, writes, committed }),
+  }
+}
+
+;(async () => {
+  await check('time and expense deletion commits for the current workspace', async () => {
+    for (const method of ['deleteTime', 'deleteExpense']) {
+      const f = fixture()
+      await f[method]()
+      assert.deepEqual(f.state(), { attempts: 1, writes: 1, committed: true })
+    }
+  })
+  await check('foreign records and revoked membership cannot delete', async () => {
+    for (const method of ['deleteTime', 'deleteExpense']) {
+      const foreign = fixture({ foreign: true })
+      await assert.rejects(foreign[method](), /見つかりません/)
+      assert.equal(foreign.state().committed, false)
+      const revoked = fixture({ active: false })
+      await assert.rejects(revoked[method](), /変更権限がありません/)
+      assert.deepEqual(revoked.state(), { attempts: 1, writes: 0, committed: false })
+    }
+  })
+  await check('expense deletion rejects a mismatched project parameter', async () => {
+    const f = fixture({ projectId: 'other' })
+    await assert.rejects(f.deleteExpense(), /プロジェクトが一致しません/)
+    assert.equal(f.state().writes, 0)
+  })
+  await check('membership revocation on retry aborts both deletions', async () => {
+    for (const method of ['deleteTime', 'deleteExpense']) {
+      const f = fixture({ revokeDuringCommit: true })
+      await assert.rejects(f[method](), /変更権限がありません/)
+      assert.deepEqual(f.state(), { attempts: 2, writes: 1, committed: false })
+    }
+  })
+  await check('expense API rechecks revoked access after serialization conflicts', async () => {
+    for (const method of ['post', 'delete']) {
+      const f = apiFixture()
+      const response = await f[method]()
+      assert.equal(response.status, 403)
+      assert.deepEqual(f.state(), { attempts: 2, writes: 1, committed: true })
+    }
+  })
+  console.log(JSON.stringify({ passed: results.length, results }, null, 2))
+})().catch(error => { console.error(error); process.exitCode = 1 })
