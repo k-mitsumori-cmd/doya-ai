@@ -114,21 +114,24 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     const outcome = await prisma.$transaction(async tx => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${material.projectId}))`
       const current = await tx.interviewMaterial.findUnique({
-        where: { id }, select: { id: true, projectId: true, status: true, filePath: true },
+        where: { id }, select: { id: true, projectId: true, status: true, filePath: true,
+          project: { select: { userId: true, guestId: true } } },
       })
       if (!current || current.projectId !== material.projectId) return 'missing' as const
+      if (checkOwnership(current.project, userId, guestId)) return 'owner_changed' as const
       if (current.status === 'PROCESSING') return 'processing' as const
-      await preserveInterviewTranscriptionUsageBeforeDelete(tx, material.project)
+      await preserveInterviewTranscriptionUsageBeforeDelete(tx, current.project)
       if (current.filePath) {
         await enqueueInterviewMaterialStoragePurge(tx, {
           id, projectId: current.projectId, filePath: current.filePath,
-          userId: material.project.userId, guestId: material.project.guestId,
+          userId: current.project.userId, guestId: current.project.guestId,
         })
       }
       await tx.interviewMaterial.delete({ where: { id } })
       return 'deleted' as const
     })
     if (outcome === 'missing') return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+    if (outcome === 'owner_changed') return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
     if (outcome === 'processing') return NextResponse.json({ success: false, error: '文字起こし中は素材を削除できません。完了後に再試行してください。' }, { status: 409 })
     return NextResponse.json({ success: true, fileCleanupPending: true })
   } catch (e: any) {

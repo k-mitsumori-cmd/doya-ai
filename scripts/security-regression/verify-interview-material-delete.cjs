@@ -3,12 +3,14 @@ const { load } = require('./load-typescript.cjs')
 
 let status = 'PROCESSING', queueFails = false, queueCalls = 0, deleteCalls = 0, lockCalls = 0
 let ownerDenied = false
+let currentOwner = { userId: 'owner', guestId: null }
 const material = { id: 'm1', projectId: 'p1', status: 'UPLOADED', filePath: 'owner/p1/123_file.mp3',
   project: { userId: 'owner', guestId: null } }
 const tx = {
   $executeRaw: async () => { lockCalls++; return 1 },
   interviewMaterial: {
-    findUnique: async () => ({ id: 'm1', projectId: 'p1', status, filePath: material.filePath }),
+    findUnique: async () => ({ id: 'm1', projectId: 'p1', status, filePath: material.filePath,
+      project: currentOwner }),
     delete: async () => { deleteCalls++; return {} },
   },
 }
@@ -17,7 +19,7 @@ const route = load('src/app/api/interview/materials/[id]/route.ts', {
   'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
   '@/lib/prisma': { prisma },
   '@/lib/interview/access': { requireDatabase: () => null, getInterviewUser: async () => ({ userId: 'owner' }),
-    getGuestIdFromRequest: () => null, checkOwnership: () => ownerDenied ? { status: 404 } : null },
+    getGuestIdFromRequest: () => null, checkOwnership: owner => ownerDenied || owner.userId !== 'owner' ? { status: 404 } : null },
   '@/lib/interview/storage': { getSignedFileUrl: async () => { throw Error('unexpected storage read') } },
   '@/lib/interview/transcription-budget': { preserveInterviewTranscriptionUsageBeforeDelete: async () => {} },
   '@/lib/interview/storage-purge-queue': { enqueueInterviewMaterialStoragePurge: async (received, item) => {
@@ -34,6 +36,11 @@ const ctx = { params: Promise.resolve({ id: 'm1' }) }
   assert.equal((await route.DELETE({}, ctx)).status, 404)
   assert.equal(lockCalls, 0)
   ownerDenied = false
+  currentOwner = { userId: 'claimed-owner', guestId: 'old-guest' }
+  assert.equal((await route.DELETE({}, ctx)).status, 404)
+  assert.equal(queueCalls, 0)
+  assert.equal(deleteCalls, 0)
+  currentOwner = material.project
   assert.equal((await route.DELETE({}, ctx)).status, 409)
   assert.equal(queueCalls, 0)
   assert.equal(deleteCalls, 0)

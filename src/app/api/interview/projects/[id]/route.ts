@@ -241,14 +241,19 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     // 再試行可能なストレージ削除記録とDB削除を同じトランザクションで確定する。
     const deleted = await prisma.$transaction(async tx => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${id}))`
+      const current = await tx.interviewProject.findUnique({
+        where: { id }, select: { id: true, userId: true, guestId: true },
+      })
+      if (!current || checkOwnership(current, userId, guestId)) return 'missing' as const
       const processing = await tx.interviewMaterial.count({ where: { projectId: id, status: 'PROCESSING' } })
-      if (processing > 0) return false
-      await preserveInterviewTranscriptionUsageBeforeDelete(tx, project)
-      await enqueueInterviewProjectStoragePurge(tx, project)
+      if (processing > 0) return 'processing' as const
+      await preserveInterviewTranscriptionUsageBeforeDelete(tx, current)
+      await enqueueInterviewProjectStoragePurge(tx, current)
       await tx.interviewProject.delete({ where: { id } })
-      return true
+      return 'deleted' as const
     })
-    if (!deleted) return NextResponse.json({ success: false, error: '文字起こし中はプロジェクトを削除できません。完了後に再試行してください。' }, { status: 409 })
+    if (deleted === 'missing') return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+    if (deleted === 'processing') return NextResponse.json({ success: false, error: '文字起こし中はプロジェクトを削除できません。完了後に再試行してください。' }, { status: 409 })
 
     return NextResponse.json({ success: true, fileCleanupPending: true })
   } catch {

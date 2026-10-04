@@ -56,7 +56,10 @@ const deleteTx = {
   $executeRaw: async () => 1,
   interviewMaterial: { count: async () => activeProcessing ? 1 : 0 },
   systemSetting: { create: async () => { queuedCalls++; if (queueFailure) throw Error('queue unavailable') } },
-  interviewProject: { delete: async () => { projectDeleteCalls++; return {} } },
+  interviewProject: {
+    findUnique: async () => ({ id: 'old-project', userId: 'owner', guestId: null }),
+    delete: async () => { projectDeleteCalls++; return {} },
+  },
 }
 const projectRoute = load('src/app/api/interview/projects/[id]/route.ts', {
   'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
