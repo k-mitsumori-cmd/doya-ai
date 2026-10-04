@@ -92,6 +92,13 @@ const fixtureMessages=[
   ]) assert.equal(classify(route,429,{code,error}),null,code);
   assert.ok(classify('/api/seo/articles',429,{code:'SEO_ARTICLE_LIMIT',error:'今月の生成回数の上限に達しました（3回/月）。'}));
  });
+ await check('interview upload quota keeps its own actionable error UI',async()=>{
+  for(const code of ['GUEST_UPLOAD_LIMIT','PLAN_UPLOAD_LIMIT']){
+   const body={code,error:'現在のプランのファイル上限（100MB）を超えています。',actionUrl:'/interview/pricing'};
+   assert.equal(classify('/api/interview/materials/upload-url',400,body),null,code);
+  }
+  assert.ok(classify('/api/interview/articles/generate',429,{code:'MONTHLY_LIMIT_REACHED',error:'今月の上限に達しました。'}));
+ });
  await check('external APIs and successful JSON do not produce prompts; response bodies remain readable',async()=>{
   const notices=[];const original=async()=>Response.json({code:'LIMIT',error:'今月の上限に達しました'},{status:429});const fn=observe(original,'http://localhost',x=>notices.push(x));let r=await fn('/api/persona/generate');assert.equal((await r.json()).code,'LIMIT');await new Promise(r=>setTimeout(r,20));assert.equal(notices.length,1);await fn('https://external.invalid/api/persona/generate');await new Promise(r=>setTimeout(r,10));assert.equal(notices.length,1);
   const success=observe(async()=>Response.json({code:'LIMIT'}),'http://localhost',x=>notices.push(x));await success('/api/persona/generate');assert.equal(notices.length,1);

@@ -19,6 +19,9 @@ export function classifyServiceLimit(path: string, status: number, data: unknown
   if (!service || !config) return null
   const message = typeof body.error === 'string' ? body.error : typeof body.message === 'string' ? body.message : ''
   const code = typeof body.code === 'string' ? body.code : ''
+  // Interview upload screens render the file-size reason and its own action.
+  // A second global dialog obscures the actionable error in the upload list.
+  if (service === 'interview' && ['GUEST_UPLOAD_LIMIT', 'PLAN_UPLOAD_LIMIT'].includes(code)) return null
   // Provider capacity and retry ceilings apply to every plan; upgrading cannot remove them.
   if (/RATE_LIMIT|CONCURRENT|BUSY|UNAVAILABLE|REQUEST_IMAGE_LIMIT/.test(code) || ['SEO_IMAGE_DAILY_LIMIT', 'SEO_IMAGE_SUGGESTION_LIMIT', 'SEO_TEXT_DAILY_LIMIT', 'SWIPE_QUESTION_LIMIT', 'STYLE_PREVIEW_DAILY_CAP', 'DOYASLIDE_TEXT_DAILY_LIMIT', 'CUNNING_COMPANY_DAILY_LIMIT'].includes(code) || /Google AI|Gemini|OpenAI|APIの使用量|接続の試行|ログイン試行|ファイルサイズ|リクエストが多|しばらく|混み合|同時実行|処理中|生成中|現在の解析/.test(message)) return null
   const feature = ['PLAN', 'PAID_ONLY', 'PRO_ONLY', 'DURATION_LIMIT', 'GIF_PRO_ONLY', 'TEMPLATE_PRO_ONLY'].includes(code) || /(?:有料|プロ|Pro|PRO)プラン(?:以上|限定|の機能)|(?:プラン|プロ)(?:を|に|の)アップグレード|上位プラン|Pro以上のプラン|プランでは利用できません|現在のプランでは.{0,30}(?:作成できません|利用できません|までです)/.test(message)
