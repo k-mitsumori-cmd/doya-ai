@@ -4,10 +4,13 @@ import { useEffect, useState, useMemo } from 'react'
 import { formatMinutesJa } from '@/lib/kintai/format'
 import { ATTENDANCE_STATUS_LABELS } from '@/lib/kintai/types'
 
+const NON_WORKING_STATUSES = new Set(['absent', 'holiday', 'paid_leave', 'special_leave'])
+
 function getStatusInfo(att: any): { label: string; color: string; bgColor: string; circleColor: string } {
-  if (!att?.clockIn) return { label: '未出勤', color: 'text-red-600', bgColor: 'bg-red-100', circleColor: '#ef4444' }
-  if (att.clockOut) return { label: '退勤済', color: 'text-blue-600', bgColor: 'bg-blue-100', circleColor: '#2563eb' }
-  return { label: '出勤中', color: 'text-green-600', bgColor: 'bg-green-100', circleColor: '#16a34a' }
+  if (att?.clockOut) return { label: '退勤済', color: 'text-blue-600', bgColor: 'bg-blue-100', circleColor: '#2563eb' }
+  if (att?.clockIn) return { label: '出勤中', color: 'text-green-600', bgColor: 'bg-green-100', circleColor: '#16a34a' }
+  if (!att?.clockIn && NON_WORKING_STATUSES.has(att?.status)) return { label: ATTENDANCE_STATUS_LABELS[att.status], color: 'text-slate-600', bgColor: 'bg-slate-100', circleColor: '#64748b' }
+  return { label: '未出勤', color: 'text-red-600', bgColor: 'bg-red-100', circleColor: '#ef4444' }
 }
 
 export default function AdminAttendancePage() {
@@ -77,9 +80,10 @@ export default function AdminAttendancePage() {
 
   const stats = useMemo(() => {
     const working = filtered.filter(e => e.attendance?.clockIn && !e.attendance?.clockOut).length
-    const notClocked = filtered.filter(e => !e.attendance?.clockIn).length
+    const notClocked = filtered.filter(e => !e.attendance?.clockIn && !e.attendance?.clockOut && !NON_WORKING_STATUSES.has(e.attendance?.status)).length
+    const nonWorking = filtered.filter(e => !e.attendance?.clockIn && !e.attendance?.clockOut && NON_WORKING_STATUSES.has(e.attendance?.status)).length
     const clockedOut = filtered.filter(e => e.attendance?.clockOut).length
-    return { working, notClocked, clockedOut }
+    return { working, notClocked, nonWorking, clockedOut }
   }, [filtered])
 
   const totals = useMemo(() => {
@@ -160,7 +164,7 @@ export default function AdminAttendancePage() {
 
         {/* Summary stats with bears */}
         {!loading && filtered.length > 0 && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex items-center gap-3 fade-in-up-1">
               <img src="/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png" alt="" width={44} height={44} className="bear-bounce" />
               <div>
@@ -180,6 +184,13 @@ export default function AdminAttendancePage() {
               <div>
                 <p className="text-xl font-bold text-slate-800">{stats.clockedOut}<span className="text-sm font-normal text-slate-500 ml-0.5">名</span></p>
                 <p className="text-xs text-blue-600 font-medium">退勤済</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex items-center gap-3 fade-in-up-3">
+              <span className="material-symbols-outlined text-3xl text-slate-500" aria-hidden="true">event_busy</span>
+              <div>
+                <p className="text-xl font-bold text-slate-800">{stats.nonWorking}<span className="text-sm font-normal text-slate-500 ml-0.5">名</span></p>
+                <p className="text-xs text-slate-600 font-medium">休暇・欠勤等</p>
               </div>
             </div>
           </div>
