@@ -27,6 +27,11 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const dateParam = searchParams.get('date')
+    if (searchParams.has('date') && (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam) ||
+        !Number.isFinite(new Date(`${dateParam}T00:00:00Z`).getTime()) ||
+        new Date(`${dateParam}T00:00:00Z`).toISOString().slice(0, 10) !== dateParam)) {
+      return NextResponse.json({ error: '日付の指定が正しくありません' }, { status: 400 })
+    }
 
     // 日付の範囲を計算（JST 基準）
     const now = new Date()
@@ -98,9 +103,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
     const clockType = body.type as ClockType
-    const note = (body.note as string) || undefined
+    if (body.note != null && (typeof body.note !== 'string' || body.note.length > 1000)) {
+      return NextResponse.json({ error: 'メモは1000文字以内で入力してください' }, { status: 400 })
+    }
+    const note = typeof body.note === 'string' ? body.note.trim() || undefined : undefined
 
     if (!['clock_in', 'clock_out', 'break_start', 'break_end'].includes(clockType)) {
       return NextResponse.json({ error: '無効な打刻種別です' }, { status: 400 })
