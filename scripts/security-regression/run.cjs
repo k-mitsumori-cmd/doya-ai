@@ -910,6 +910,11 @@ if (promaneRecordDeleteAtomic.error || promaneRecordDeleteAtomic.status !== 0) {
   console.error('Security regression failed: verify-promane-record-delete-atomic.cjs');
   process.exit(1);
 }
+const promaneClientWriteAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-client-write-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (promaneClientWriteAtomic.error || promaneClientWriteAtomic.status !== 0) {
+  console.error('Security regression failed: verify-promane-client-write-atomic.cjs');
+  process.exit(1);
+}
 const adminKintaiEmployeePages = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-kintai-employee-pages.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adminKintaiEmployeePages.error || adminKintaiEmployeePages.status !== 0) {
   console.error('Security regression failed: verify-admin-kintai-employee-pages.cjs');
