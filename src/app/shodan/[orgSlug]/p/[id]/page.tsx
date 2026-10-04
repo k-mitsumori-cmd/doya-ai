@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { shodanGet, shodanSend } from '@/lib/shodan/client'
+import { ShodanApiError, shodanGet, shodanSend } from '@/lib/shodan/client'
 import Markdown from '@/components/shodan/Markdown'
 import { DoyaKun, SiteShot, type Mood } from '@/components/shodan/ui'
 import SlideDeck from '@/components/shodan/SlideDeck'
@@ -65,6 +65,14 @@ export default function ShodanResultPage() {
   const [prep, setPrep] = useState<Prep | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [retrying, setRetrying] = useState(false)
+  const [planNotice, setPlanNotice] = useState<{ message: string; href?: string; label?: string } | null>(null)
+  const showActionableError = (error: unknown, fallback: string) => {
+    if (error instanceof ShodanApiError && (error.code === 'PLAN' || error.code === 'LIMIT')) {
+      setPlanNotice({ message: error.message, href: error.actionUrl, label: error.actionLabel })
+      return
+    }
+    toast.error(error instanceof Error ? error.message : fallback)
+  }
 
   // 調査中(processing)の間だけポーリングし、done/failed/researched になったら停止。
   // stopped フラグで「初回fetchがinterval設定前に完了する競合」でも確実に止める（無限ポーリング防止）。
@@ -92,9 +100,10 @@ export default function ShodanResultPage() {
     setRetrying(true)
     try {
       const d = await shodanSend<{ id: string; status: string }>('/api/shodan/preparations', orgSlug, 'POST', { url: prep.targetUrl })
+      setPlanNotice(null)
       toast.success('再生成を開始しました')
       router.replace(`/shodan/${encodeURIComponent(orgSlug)}/p/${d.id}`)
-    } catch (e: any) { toast.error(e.message); setRetrying(false) }
+    } catch (e) { showActionableError(e, '再生成に失敗しました'); setRetrying(false) }
   }
 
   // 提案の表示切替（スライド / 文書）
@@ -129,7 +138,8 @@ export default function ShodanResultPage() {
         }
       }
       router.push(`/shodan/${encodeURIComponent(orgSlug)}/p/${id}/slides`)
-    } catch (e: any) { toast.error(e.message || 'スライド生成に失敗しました'); setSlidesBusy(false) }
+      setPlanNotice(null)
+    } catch (e) { showActionableError(e, 'スライド生成に失敗しました'); setSlidesBusy(false) }
   }
   // 調査済み（提案未生成）案件から提案資料を作成
   const [generating, setGenerating] = useState(false)
@@ -141,8 +151,9 @@ export default function ShodanResultPage() {
       if (d.status !== 'done') throw new Error('提案生成に失敗しました')
       const r = await shodanGet<{ item: Prep }>(`/api/shodan/preparations/${prep.id}`, orgSlug)
       setPrep(r.item)
+      setPlanNotice(null)
       toast.success('提案資料が完成しました！')
-    } catch (e: any) { toast.error(e.message) } finally { setGenerating(false) }
+    } catch (e) { showActionableError(e, '提案資料の生成に失敗しました'); setGenerating(false) }
   }
 
   // 「提案資料を作成中」の楽しいステップ送り
@@ -213,6 +224,11 @@ export default function ShodanResultPage() {
           </div>
         </div>
       </div>
+
+      {planNotice && <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-bold text-amber-950 shodan-no-print">
+        <p>{planNotice.message}</p>
+        {planNotice.href && planNotice.label && <Link href={planNotice.href} className="mt-2 inline-block text-purple-700 underline">{planNotice.label}</Link>}
+      </div>}
 
       {/* 完了サマリー＋成果物への素早いジャンプ */}
       {prep.status === 'done' && r && (

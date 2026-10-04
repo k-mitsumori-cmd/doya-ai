@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 
-function fixture(initialUsed = 4, plan = 'FREE', researchResult = { companyName: 'Example' }) {
+function fixture(initialUsed = 4, ownerPlan = 'FREE', researchResult = { companyName: 'Example' }, role = 'owner') {
   const rows = Array.from({ length: initialUsed }, (_, i) => ({ id: `old-${i}`, status: 'researched' }))
   let chain = Promise.resolve()
   let locks = 0
@@ -21,9 +21,10 @@ function fixture(initialUsed = 4, plan = 'FREE', researchResult = { companyName:
         return row
       },
     },
+    shodanMember: { findMany: async () => [{ userId: 'owner-1' }] },
+    user: { findUnique: async ({ where }) => ({ plan: where.id === 'owner-1' ? ownerPlan : 'PRO' }) },
   }
   const prisma = {
-    user: { findUnique: async () => ({ plan }) },
     $transaction: (fn) => {
       const result = chain.then(() => fn(tx))
       chain = result.catch(() => {})
@@ -35,10 +36,13 @@ function fixture(initialUsed = 4, plan = 'FREE', researchResult = { companyName:
       return row
     } },
   }
+  const billing = load('src/lib/shodan/billing.ts')
   const route = load('src/app/api/shodan/preparations/route.ts', {
     'next/server': { NextResponse: { json: (body, opts = {}) => ({ body, status: opts.status || 200 }) } },
     '@/lib/prisma': { prisma },
-    '@/lib/shodan/access': { getShodanContext: async () => ({ userId: 'user-1', organizationId: 'org-1', memberId: 'member-1' }), orgSlugFrom: () => 'org' },
+    '@/lib/shodan/access': { getShodanContext: async () => ({ userId: role === 'owner' ? 'owner-1' : 'member-1', organizationId: 'org-1', organizationSlug: 'org', role, memberId: 'member-1' }), orgSlugFrom: () => 'org' },
+    '@/lib/shodan/billing': billing,
+    '@/lib/unified-plan': { isPaidPlan: (plan) => plan !== 'FREE' && plan !== 'GUEST' },
     '@/lib/shodan/research': { researchCompany: async () => { researchCalls++; return researchResult } },
     '@/lib/shodan/types': { effectivePrepStatus: (status) => status, PREP_STALE_MS: 360000, SHODAN_MONTHLY_LIMIT: { FREE: 5, PRO: 50, ENTERPRISE: 300 } },
     '@/lib/plan-limit': { jstStartOfMonthUtc: () => new Date('2026-08-31T15:00:00Z') },
@@ -53,7 +57,7 @@ function fixture(initialUsed = 4, plan = 'FREE', researchResult = { companyName:
     const responses = await Promise.all([f.post(), f.post()])
     assert.deepEqual(responses.map((r) => r.status).sort(), [200, 402])
     assert.equal(responses.find((r) => r.status === 402).body.code, 'LIMIT')
-    assert.equal(responses.find((r) => r.status === 402).body.upgradeUrl, '/shodan/pricing')
+    assert.equal(responses.find((r) => r.status === 402).body.upgradeUrl, '/shodan/pricing?org=org')
     assert.equal(f.researchCalls, 1)
     assert.equal(f.rows.length, 5)
   })
@@ -66,6 +70,18 @@ function fixture(initialUsed = 4, plan = 'FREE', researchResult = { companyName:
     assert.equal(response.body.upgradeUrl, undefined)
     assert.equal(response.body.contactUrl, 'https://doyamarke.surisuta.jp/contact')
     assert.equal(f.researchCalls, 0)
+  })
+  await check('member plan cannot change the shared organization cap or purchase action', async () => {
+    const freeOwner = fixture(5, 'FREE', { companyName: 'Example' }, 'member')
+    const blocked = await freeOwner.post()
+    assert.equal(blocked.status, 402)
+    assert.equal(blocked.body.upgradeUrl, undefined)
+    assert.equal(blocked.body.contactUrl, undefined)
+    assert.match(blocked.body.error, /組織オーナー/)
+    assert.equal(freeOwner.researchCalls, 0)
+    const paidOwner = fixture(5, 'PRO', { companyName: 'Example' }, 'member')
+    assert.equal((await paidOwner.post()).status, 200)
+    assert.equal(paidOwner.researchCalls, 1)
   })
   await check('unusable Shodan research fails and releases the reserved monthly slot', async () => {
     const f = fixture(4, 'FREE', { sourceStatus: { homepage: 'failed', gbizinfo: 'skipped', prtimes: 'skipped' } })

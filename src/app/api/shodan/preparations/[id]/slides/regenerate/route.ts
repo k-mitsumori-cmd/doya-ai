@@ -11,6 +11,7 @@ import { generateSlideImage, type StoredSlide } from '@/lib/shodan/slide-image'
 import { signedUrl } from '@/lib/shodan/storage'
 import type { ProposalSlide } from '@/lib/shodan/types'
 import { isPaidPlan } from '@/lib/unified-plan'
+import { getShodanBilling } from '@/lib/shodan/billing'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -21,9 +22,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
   // スライド資料の生成・再生成はプロプラン限定
-  const user = await prisma.user.findUnique({ where: { id: sctx.userId }, select: { plan: true } })
-  if (!isPaidPlan(user?.plan)) {
-    return NextResponse.json({ error: 'スライド資料の生成はプロプランの機能です。', code: 'PLAN' }, { status: 402 })
+  const billing = await getShodanBilling(prisma, sctx.organizationId)
+  if (!billing) return NextResponse.json({ error: '組織の契約情報を確認できませんでした。時間をおいて再度お試しください。' }, { status: 503 })
+  if (!isPaidPlan(billing.plan)) {
+    const canManageBilling = sctx.role === 'owner' && sctx.userId === billing.ownerUserId
+    return NextResponse.json({ error: canManageBilling ? 'スライド資料の生成はプロプランの機能です。' : 'この組織でスライド資料を生成するには、組織オーナーのプロプラン契約が必要です。', code: 'PLAN', ...(canManageBilling ? { upgradeUrl: `/shodan/pricing?org=${encodeURIComponent(sctx.organizationSlug)}` } : {}) }, { status: 402 })
   }
 
   const body = await req.json().catch(() => null)

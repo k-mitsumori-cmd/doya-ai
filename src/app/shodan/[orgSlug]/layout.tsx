@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getShodanContext } from '@/lib/shodan/access'
 import { prisma } from '@/lib/prisma'
+import { getShodanBilling } from '@/lib/shodan/billing'
 import ShodanAppLayout from '@/components/shodan/ShodanAppLayout'
 
 export const dynamic = 'force-dynamic'
@@ -31,13 +32,13 @@ export default async function ShodanOrgLayout(
   // 当該組織のACTIVEメンバーでなければ入口へ（他組織は解決されない＝IDOR安全）
   if (!ctx || ctx.organizationSlug !== orgSlug) redirect('/shodan')
 
-  const org = await prisma.shodanOrganization.findUnique({
-    where: { id: ctx.organizationId },
-    select: { name: true },
-  })
+  const [org, billing] = await Promise.all([
+    prisma.shodanOrganization.findUnique({ where: { id: ctx.organizationId }, select: { name: true } }),
+    getShodanBilling(prisma, ctx.organizationId),
+  ])
 
   return (
-    <ShodanAppLayout orgSlug={orgSlug} orgName={org?.name}>
+    <ShodanAppLayout orgSlug={orgSlug} orgName={org?.name} organizationPlan={billing?.plan ?? null} canManageBilling={ctx.role === 'owner' && ctx.userId === billing?.ownerUserId}>
       {children}
     </ShodanAppLayout>
   )

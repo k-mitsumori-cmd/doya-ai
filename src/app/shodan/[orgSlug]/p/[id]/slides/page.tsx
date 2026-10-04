@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { shodanGet, shodanSend } from '@/lib/shodan/client'
+import { ShodanApiError, shodanGet, shodanSend } from '@/lib/shodan/client'
 import { DoyaKun, sym } from '@/components/shodan/ui'
 import type { ProposalSlide } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
@@ -22,6 +22,7 @@ export default function ShodanSlidesEditPage() {
   const [busy, setBusy] = useState<Record<number, boolean>>({})
   const [active, setActive] = useState(0)
   const [pdfBusy, setPdfBusy] = useState(false)
+  const [planNotice, setPlanNotice] = useState<{ message: string; href?: string; label?: string } | null>(null)
 
   const urlToDataUrl = (url: string) => fetch(url).then((r) => {
     if (!r.ok) throw new Error('画像の取得に失敗しました。再読み込みしてからお試しください。')
@@ -71,8 +72,12 @@ export default function ShodanSlidesEditPage() {
         const imgs = prev.slideImages.slice(); imgs[index] = d.data.image
         return { ...prev, slideImages: imgs }
       })
+      setPlanNotice(null)
       toast.success('スライドを再生成しました')
-    } catch (e: any) { toast.error(e.message || '再生成に失敗') } finally { setBusy((b) => ({ ...b, [index]: false })) }
+    } catch (e) {
+      if (e instanceof ShodanApiError && e.code === 'PLAN') setPlanNotice({ message: e.message, href: e.actionUrl, label: e.actionLabel })
+      else toast.error(e instanceof Error ? e.message : '再生成に失敗しました')
+    } finally { setBusy((b) => ({ ...b, [index]: false })) }
   }
 
   if (notFound) return <div className="p-10 text-center"><DoyaKun mood="error" size={96} /><p className="text-slate-500 font-bold mt-3">見つかりませんでした。<Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}`} className="text-purple-600 underline ml-1">戻る</Link></p></div>
@@ -102,6 +107,11 @@ export default function ShodanSlidesEditPage() {
           </button>
         )}
       </div>
+
+      {planNotice && <div role="alert" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
+        <p>{planNotice.message}</p>
+        {planNotice.href && planNotice.label && <Link href={planNotice.href} className="mt-2 inline-block text-purple-700 underline">{planNotice.label}</Link>}
+      </div>}
 
       <div role="status" className="mb-5 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm text-purple-950">
         <p className="font-bold">画像の生成状況：{readySlides} / {totalSlides}枚{missingSlides > 0 ? `（残り${missingSlides}枚）` : ''}</p>

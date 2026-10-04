@@ -5,7 +5,7 @@ import ShodanSidebar from './ShodanSidebar'
 import { Menu } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-export default function ShodanAppLayout({ orgSlug, orgName, children }: { orgSlug: string; orgName?: string; children: React.ReactNode }) {
+export default function ShodanAppLayout({ orgSlug, orgName, organizationPlan, canManageBilling, children }: { orgSlug: string; orgName?: string; organizationPlan: string | null; canManageBilling: boolean; children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -21,7 +21,7 @@ export default function ShodanAppLayout({ orgSlug, orgName, children }: { orgSlu
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex">
-        <ShodanSidebar orgSlug={orgSlug} orgName={orgName} isCollapsed={sidebarCollapsed} onToggle={(c) => setSidebarCollapsed(c)} />
+        <ShodanSidebar orgSlug={orgSlug} orgName={orgName} organizationPlan={organizationPlan} canManageBilling={canManageBilling} isCollapsed={sidebarCollapsed} onToggle={(c) => setSidebarCollapsed(c)} />
       </div>
 
       {/* Mobile overlay */}
@@ -37,7 +37,7 @@ export default function ShodanAppLayout({ orgSlug, orgName, children }: { orgSlu
         {mobileMenuOpen && (
           <motion.div initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }} transition={{ duration: 0.2, ease: 'easeOut' }}
             className="fixed inset-y-0 left-0 z-50 md:hidden">
-            <ShodanSidebar orgSlug={orgSlug} orgName={orgName} forceExpanded isMobile onToggle={() => setMobileMenuOpen(false)} />
+            <ShodanSidebar orgSlug={orgSlug} orgName={orgName} organizationPlan={organizationPlan} canManageBilling={canManageBilling} forceExpanded isMobile onToggle={() => setMobileMenuOpen(false)} />
           </motion.div>
         )}
       </AnimatePresence>

@@ -43,6 +43,7 @@ const summary = load('src/lib/usage-summary.ts', {
   },
   '@/lib/unified-plan': { isPaidPlan: (plan) => plan === 'PRO' || plan === 'ENTERPRISE' },
   '@/lib/organization-billing': { getOrganizationBilling: async (_service, organizationId) => ({ plan: organizationId === 'org-a' ? 'FREE' : 'PRO' }) },
+  '@/lib/shodan/billing': { getShodanBilling: async (_db, organizationId) => ({ ownerUserId: organizationId === 'org-a' ? 'free-owner' : 'pro-owner', plan: organizationId === 'org-a' ? 'FREE' : 'PRO' }) },
   '@/lib/shodan/types': { PREP_STALE_MS: 300000, SHODAN_MONTHLY_LIMIT: { FREE: 1, PRO: 30, ENTERPRISE: 200 } },
   '@/lib/doyalist/limits': {},
   '@/lib/plan-utils': {},
@@ -57,6 +58,8 @@ const summary = load('src/lib/usage-summary.ts', {
   assert.equal(quote.meters[0].limit, 3, 'quote shows the FREE owner limit even for a PRO member')
   const shodan = await summary.getUsageSummary('shodan', 'viewer', 'PRO', 'team-a')
   assert.equal(shodan.meters[0].used, 2, 'selected organization controls shodan usage')
+  assert.equal(shodan.meters[0].limit, 1, 'Shodan uses its FREE owner rather than the PRO viewer')
+  assert.equal(shodan.planLabel, '無料')
   assert.equal(await summary.getUsageSummary('shodan', 'viewer', 'PRO', 'foreign'), null)
 
   const aishodan = await summary.getUsageSummary('aishodan', 'viewer', 'PRO')
@@ -75,6 +78,7 @@ const summary = load('src/lib/usage-summary.ts', {
     '@/lib/prisma': { prisma: { user: { findFirst: async () => ({ id: 'viewer', plan: 'FREE' }) } } },
     '@/lib/aio/access': { getAioContext: async () => null, orgSlugFrom: () => undefined },
     '@/lib/aio/usage': { getAioUsage: async () => null },
+    '@/lib/shodan/access': { getShodanContext: async slug => slug === 'foreign' ? null : { organizationId: 'org-a' } },
     '@/lib/usage-summary': { getUsageSummary: async (...args) => {
       seen.push(args)
       return args[3] === 'foreign' ? null : { meters: [] }

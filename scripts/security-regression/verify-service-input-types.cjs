@@ -113,6 +113,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
       '@/lib/shodan/access': { getShodanContext: async () => ({ userId: 'user', organizationId: 'org' }), orgSlugFrom: () => 'org' },
       '@/lib/shodan/slide-image': { generateSlideImage: async () => { calls++; return { title: 'Slide', role: 'body', imagePath: 'new' }; } },
       '@/lib/shodan/storage': { signedUrl: async () => 'https://example.com/image.png' },
+      '@/lib/shodan/billing': { getShodanBilling: async () => ({ ownerUserId: 'user', plan: 'PRO' }) },
       '@/lib/unified-plan': { isPaidPlan: () => true },
     });
     await checkRoute('Shodan slide regenerate', (req) => route.POST(req, params),

@@ -26,9 +26,11 @@ import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 interface Props extends SidebarProps {
   orgSlug: string
   orgName?: string
+  organizationPlan: string | null
+  canManageBilling: boolean
 }
 
-function ShodanSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapsed, onToggle, forceExpanded, isMobile }: Props) {
+function ShodanSidebarImpl({ orgSlug, orgName, organizationPlan, canManageBilling, isCollapsed: controlledIsCollapsed, onToggle, forceExpanded, isMobile }: Props) {
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
   // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
@@ -40,17 +42,18 @@ function ShodanSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapse
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const base = `/shodan/${encodeURIComponent(orgSlug)}`
+  const pricingHref = `/shodan/pricing?org=${encodeURIComponent(orgSlug)}`
   const NAV: NavItem[] = [
     { href: base, label: '商談準備一覧', icon: LayoutDashboard },
     { href: `${base}/new`, label: '新規作成', icon: Sparkles, hot: true },
     { href: `${base}/settings`, label: '自社情報', icon: Building2 },
     { href: `${base}/members`, label: 'メンバー', icon: Users },
-    { href: '/shodan/pricing', label: '料金プラン', icon: CreditCard },
+    { href: pricingHref, label: '料金プラン', icon: CreditCard },
   ]
 
   const planLabel = (() => {
-    if (!isLoggedIn) return 'GUEST'
-    const p = String((session?.user as any)?.plan || 'FREE').toUpperCase()
+    if (!organizationPlan) return '確認中'
+    const p = organizationPlan.toUpperCase()
     if (p === 'ENTERPRISE') return 'ENTERPRISE'
     if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS' || p === 'BUNDLE') return 'PRO'
     if (p === 'LIGHT') return 'LIGHT'
@@ -96,16 +99,18 @@ function ShodanSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapse
                   <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
                     <Zap className="w-4 h-4 text-fuchsia-600 fill-fuchsia-600" />
                   </div>
-                  <p className="text-xs font-black text-white">現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
+                  <p className="text-xs font-black text-white">組織のプラン：{planLabel}</p>
                 </div>
                 <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-90 mb-2">
-                  {planLabel === 'PRO' || planLabel === 'ENTERPRISE'
-                    ? 'ご利用中のプランの内容をご確認いただけます。'
-                    : <>プロプラン ¥9,980/月<TrialInlineSuffix />で無制限・チーム招待</>}
+                  {!organizationPlan ? '組織の契約情報を確認できませんでした。'
+                    : !canManageBilling ? '利用枠の変更は組織オーナーにご相談ください。'
+                      : planLabel === 'PRO' || planLabel === 'ENTERPRISE'
+                        ? 'ご利用中のプランの内容をご確認いただけます。'
+                        : <>プロプラン ¥9,980/月<TrialInlineSuffix />で利用枠が広がります。</>}
                 </p>
-                <Link href="/shodan/pricing" className="w-full py-2 bg-white text-fuchsia-700 text-[11px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md block text-center">
-                  {planLabel === 'PRO' || planLabel === 'ENTERPRISE' ? 'プランを確認する' : 'プロにアップグレード'}
-                </Link>
+                {organizationPlan && <Link href={pricingHref} className="w-full py-2 bg-white text-fuchsia-700 text-[11px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md block text-center">
+                  {!canManageBilling || planLabel === 'PRO' || planLabel === 'ENTERPRISE' ? 'プランを確認する' : 'プロにアップグレード'}
+                </Link>}
               </div>
             </div>
           )}

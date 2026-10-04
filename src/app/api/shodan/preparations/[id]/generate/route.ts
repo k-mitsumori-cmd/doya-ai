@@ -9,6 +9,7 @@ import { analyzeCompany, generateProposal, generateSlides, type OwnCompanyProfil
 import type { CompanyResearch } from '@/lib/shodan/types'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { getShodanBilling } from '@/lib/shodan/billing'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -25,10 +26,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!research) return NextResponse.json({ error: '先に企業調査が必要です' }, { status: 400 })
 
   // 提案資料の生成はプロプラン限定（企業調査までは無料で試せる）
-  const user = await prisma.user.findUnique({ where: { id: sctx.userId }, select: { plan: true } })
-  if (!isPaidPlan(user?.plan)) {
+  const billing = await getShodanBilling(prisma, sctx.organizationId)
+  if (!billing) return NextResponse.json({ error: '組織の契約情報を確認できませんでした。時間をおいて再度お試しください。' }, { status: 503 })
+  if (!isPaidPlan(billing.plan)) {
+    const canManageBilling = sctx.role === 'owner' && sctx.userId === billing.ownerUserId
     return NextResponse.json(
-      { error: '提案資料の生成はプロプランの機能です。プロプランにアップグレードするとご利用いただけます。', code: 'PLAN' },
+      { error: canManageBilling ? '提案資料の生成はプロプランの機能です。プロプランにアップグレードするとご利用いただけます。' : 'この組織で提案資料を生成するには、組織オーナーのプロプラン契約が必要です。', code: 'PLAN', ...(canManageBilling ? { upgradeUrl: `/shodan/pricing?org=${encodeURIComponent(sctx.organizationSlug)}` } : {}) },
       { status: 402 }
     )
   }

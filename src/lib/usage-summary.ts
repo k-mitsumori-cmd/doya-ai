@@ -23,6 +23,7 @@ import {
 import { FREE_LIMITS, PRO_MONTHLY_LIMITS, ENTERPRISE_MONTHLY_LIMITS } from '@/lib/plan-limit'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/shodan/types'
+import { getShodanBilling } from '@/lib/shodan/billing'
 import { countMonthlyCompanies, DOYALIST_LIMITS } from '@/lib/doyalist/limits'
 import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { getOrganizationBilling } from '@/lib/organization-billing'
@@ -322,6 +323,9 @@ export async function getUsageSummary(
     case 'shodan': {
       const orgIds = await orgIdsOf('shodanMember', userId, orgSlug)
       if (!orgIds) return null
+      if (!orgIds.length) return null
+      const billing = await getShodanBilling(prisma, orgIds[0])
+      if (!billing) return null
       const total = orgIds.length
         ? await prisma.shodanPreparation.count({ where: { organizationId: { in: orgIds } } })
         : 0
@@ -342,7 +346,7 @@ export async function getUsageSummary(
             },
           })
         : 0
-      const p = String(plan || 'FREE').toUpperCase()
+      const p = billing.plan.toUpperCase()
       const limit = isPaidPlan(p)
         ? p === 'ENTERPRISE'
           ? SHODAN_MONTHLY_LIMIT.ENTERPRISE
@@ -352,7 +356,7 @@ export async function getUsageSummary(
         title: '調べた企業',
         unit: '件',
         total,
-        planLabel,
+        planLabel: planLabelOf(p),
         meters: [{ label: '今月', used, limit }],
       }
     }

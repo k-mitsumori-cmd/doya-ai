@@ -34,6 +34,7 @@ const { getUsageSummary } = load('src/lib/usage-summary.ts', {
   '@/lib/organization-billing': {},
   '@/lib/unified-plan': unified,
   '@/lib/shodan/types': {},
+  '@/lib/shodan/billing': {},
   '@/lib/doyalist/limits': limits,
   '@/lib/plan-utils': planUtils,
 })
@@ -44,6 +45,7 @@ const { GET } = load('src/app/api/usage/[service]/route.ts', {
   '@/lib/prisma': { prisma },
   '@/lib/aio/access': {},
   '@/lib/aio/usage': {},
+  '@/lib/shodan/access': {},
   '@/lib/usage-summary': { getUsageSummary },
 })
 

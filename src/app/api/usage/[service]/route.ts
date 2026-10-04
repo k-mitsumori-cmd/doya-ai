@@ -11,6 +11,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getAioContext, orgSlugFrom } from '@/lib/aio/access'
 import { getAioUsage } from '@/lib/aio/usage'
+import { getShodanContext } from '@/lib/shodan/access'
 import { getUsageSummary } from '@/lib/usage-summary'
 
 type Ctx = { params: Promise<{ service: string }> }
@@ -42,6 +43,10 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     }
     const orgSlug = new URL(_req.url).searchParams.get('org')?.trim() || undefined
     const summary = await getUsageSummary(service, user.id, user.plan, orgSlug)
+    if (!summary && orgSlug && service === 'shodan') {
+      const shodan = await getShodanContext(orgSlug)
+      return NextResponse.json({ error: shodan ? '組織の契約情報を確認できません' : '組織にアクセスできません', summary: null }, { status: shodan ? 409 : 403, headers: privateHeaders })
+    }
     if (!summary && orgSlug && ['mensetsu', 'aishodan', 'quote', 'shodan'].includes(service)) {
       return NextResponse.json({ error: '組織にアクセスできません', summary: null }, { status: 403, headers: privateHeaders })
     }

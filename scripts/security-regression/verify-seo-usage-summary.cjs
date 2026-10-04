@@ -33,6 +33,7 @@ const { getUsageSummary } = load('src/lib/usage-summary.ts', {
   '@/lib/organization-billing': {},
   '@/lib/unified-plan': unified,
   '@/lib/shodan/types': {},
+  '@/lib/shodan/billing': {},
   '@/lib/doyalist/limits': {},
   '@/lib/plan-utils': planUtils,
 })

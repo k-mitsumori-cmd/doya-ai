@@ -8,12 +8,9 @@ import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { researchCompany } from '@/lib/shodan/research'
 import { effectivePrepStatus, PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/shodan/types'
 import { jstStartOfMonthUtc } from '@/lib/plan-limit'
+import { getShodanBilling } from '@/lib/shodan/billing'
+import { isPaidPlan } from '@/lib/unified-plan'
 
-// 統一プラン：有料判定
-function isPaidPlan(plan?: string | null): boolean {
-  const p = (plan || 'FREE').toUpperCase()
-  return p !== 'FREE' && p !== 'GUEST'
-}
 // ⚠️ 上限の正本は lib/shodan/types.ts。ここに数字を書かない
 //    （サイドバーの表示も同じ定義を読む）
 
@@ -84,15 +81,16 @@ export async function POST(req: NextRequest) {
   // プラン制限（組織単位・月次）
   // ⚠️ 有料プランにも上限を置く。1件ごとにサイト巡回とAI呼び出しの実費が出るため、
   //    無制限にすると月額を上回る使われ方を止められない。
-  const user = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { plan: true } })
   const reservation = await prisma.$transaction(async (tx) => {
     // 組織ごとに予約を直列化する。件数確認と作成を分けると同時POSTで上限を超える。
     const organizations = await tx.$queryRaw<{ id: string }[]>`
       SELECT id FROM shodan_organizations WHERE id = ${ctx.organizationId} FOR NO KEY UPDATE
     `
     if (!organizations.length) return { kind: 'missing' } as const
-    const limit = isPaidPlan(user?.plan)
-      ? String(user?.plan || '').toUpperCase() === 'ENTERPRISE'
+    const billing = await getShodanBilling(tx, ctx.organizationId)
+    if (!billing) return { kind: 'billing' } as const
+    const limit = isPaidPlan(billing.plan)
+      ? billing.plan.toUpperCase() === 'ENTERPRISE'
         ? SHODAN_MONTHLY_LIMIT.ENTERPRISE
         : SHODAN_MONTHLY_LIMIT.PRO
       : SHODAN_MONTHLY_LIMIT.FREE
@@ -116,7 +114,7 @@ export async function POST(req: NextRequest) {
       },
     })
     if (usedThisMonth >= limit) {
-      return { kind: 'limit', limit } as const
+      return { kind: 'limit', limit, billing } as const
     }
     const prep = await tx.shodanPreparation.create({
       data: { organizationId: ctx.organizationId, createdByMemberId: ctx.memberId, targetUrl, status: 'processing' },
@@ -127,17 +125,25 @@ export async function POST(req: NextRequest) {
   if (reservation.kind === 'missing') {
     return NextResponse.json({ error: '組織が見つかりません' }, { status: 404 })
   }
+  if (reservation.kind === 'billing') {
+    return NextResponse.json({ error: '組織の契約情報を確認できませんでした。時間をおいて再度お試しください。' }, { status: 503 })
+  }
   if (reservation.kind === 'limit') {
     // ⚠️ 既に支払っている方に「プロにご登録を」と返さないこと
-    const reason = isPaidPlan(user?.plan)
-      ? `今月の上限（${reservation.limit}件）に達しました。来月1日に枠が戻ります。追加をご希望の場合はお問い合わせよりご相談ください。`
-      : `無料プランは月${reservation.limit}件までです。プロプランにご登録いただくと上限が広がります。`
+    const paid = isPaidPlan(reservation.billing.plan)
+    const canManageBilling = ctx.role === 'owner' && ctx.userId === reservation.billing.ownerUserId
+    const reason = !canManageBilling
+      ? `この組織の今月の上限（${reservation.limit}件）に達しました。利用枠について組織オーナーにご相談ください。`
+      : paid
+        ? `今月の上限（${reservation.limit}件）に達しました。来月1日に枠が戻ります。追加をご希望の場合はお問い合わせよりご相談ください。`
+        : `無料プランは月${reservation.limit}件までです。プロプランにご登録いただくと上限が広がります。`
     return NextResponse.json({
       error: reason,
       code: 'LIMIT',
-      ...(isPaidPlan(user?.plan)
+      canManageBilling,
+      ...(canManageBilling ? paid
         ? { contactUrl: 'https://doyamarke.surisuta.jp/contact' }
-        : { upgradeUrl: '/shodan/pricing' }),
+        : { upgradeUrl: `/shodan/pricing?org=${encodeURIComponent(ctx.organizationSlug)}` } : {}),
     }, { status: 402 })
   }
 
