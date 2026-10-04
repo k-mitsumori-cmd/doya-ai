@@ -41,6 +41,7 @@ const prisma = {
 const limits = load('src/lib/doyaslide/limits.ts', {
   '@/lib/prisma': { prisma },
   '@/lib/plan-utils': { tierFrom: (value) => value },
+  '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
 }, { Date: FixedDate });
 
 (async () => {
@@ -51,6 +52,7 @@ const limits = load('src/lib/doyaslide/limits.ts', {
   const paidNotice = limits.quotaExceededPayload(150);
   assert.equal(paidNotice.code, 'LIMIT_REACHED');
   assert.equal(paidNotice.upgradeUrl, undefined);
+  assert.equal(paidNotice.contactUrl, 'https://doyamarke.surisuta.jp/contact');
   assert.match(paidNotice.error, /来月1日/);
   assert.doesNotMatch(paidNotice.error, /アップグレード/);
   assert.equal(await limits.getMonthlyUsage('user'), 0, 'JST month rollover must clear displayed usage');

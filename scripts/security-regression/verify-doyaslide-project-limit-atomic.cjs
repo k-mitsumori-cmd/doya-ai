@@ -38,6 +38,7 @@ const prisma = {
 const limits = load('src/lib/doyaslide/limits.ts', {
   '@/lib/prisma': { prisma },
   '@/lib/plan-utils': { tierFrom: () => 'FREE' },
+  '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
 });
 const docTypes = [{ value: 'proposal', defaultCount: 10, defaultAspect: 'wide' }];
 const route = load('src/app/api/doyaslide/projects/route.ts', {

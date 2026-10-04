@@ -59,8 +59,16 @@ const fixtureMessages=[
   assert.equal(classify('/api/shodan/preparations',402,{...member,code:'LIMIT'}).kind,'owner');
   const owner={...member,canManageBilling:true,upgradeUrl:'/shodan/pricing?org=example-org'};
   assert.equal(classify('/api/shodan/preparations/id/generate',402,owner).pricingHref,'/shodan/pricing?org=example-org');
+  assert.equal(classify('/api/shodan/preparations/id/generate',402,owner).action,'upgrade');
   assert.equal(classify('/api/shodan/preparations/id/generate',402,{...owner,upgradeUrl:'//external.example/pricing'}).pricingHref,'/shodan/pricing');
   assert.equal(classify('/api/shodan/preparations/id/generate',402,{...owner,upgradeUrl:'/shodan/pricing?org=example-org&next=https://external.example'}).pricingHref,'/shodan/pricing');
+ });
+ await check('server quota action wins over LIGHT tier guesses without exposing arbitrary URLs',async()=>{
+  const quota={code:'LIMIT_REACHED',error:'今月の生成枚数の上限（150枚）に達しました。'};
+  assert.equal(classify('/api/doyaslide/generate',403,{...quota,contactUrl:'https://doyamarke.surisuta.jp/contact'}).action,'contact');
+  assert.equal(classify('/api/doyalist/collect',403,{...quota,contactUrl:'https://doyamarke.surisuta.jp/contact'}).action,'contact');
+  assert.equal(classify('/api/seo/articles',429,{...quota,upgradeUrl:'/seo/pricing'}).action,'upgrade');
+  assert.equal(classify('/api/seo/articles',429,{...quota,upgradeUrl:'//external.invalid/pricing'}).action,undefined);
  });
  await check('Kintai employee cap directs non-contract admins to the owner',async()=>{
   const body={code:'KINTAI_EMPLOYEE_LIMIT',error:'従業員数が上限（100名）に達しています。',canManageBilling:false};

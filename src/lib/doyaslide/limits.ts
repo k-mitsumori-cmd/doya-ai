@@ -4,6 +4,7 @@
 // 統一プラン方式（無料 / プロ¥9,980）。判定は User.plan を tierFrom で正規化。
 import { prisma } from '@/lib/prisma'
 import { tierFrom, type PlanTier } from '@/lib/plan-utils'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 export interface DoyaSlideLimits {
   tier: PlanTier
@@ -57,7 +58,7 @@ export function quotaExceededPayload(limit: number) {
     error: quotaExceededMessage(limit),
     code: 'LIMIT_REACHED',
     limit,
-    ...(limit === DOYASLIDE_LIMITS.FREE.maxSlidesPerMonth ? { upgradeUrl: '/doyaslide/pricing' } : {}),
+    ...(limit === DOYASLIDE_LIMITS.FREE.maxSlidesPerMonth ? { upgradeUrl: '/doyaslide/pricing' } : { contactUrl: SUPPORT_CONTACT_URL }),
   }
 }
 

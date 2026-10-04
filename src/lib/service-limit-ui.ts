@@ -1,6 +1,6 @@
 import { SERVICES } from './services'
 
-export type ServiceLimit = { service: string; name: string; pricingHref: string; kind: 'quota' | 'feature' | 'capacity' | 'owner' | 'organization'; message: string }
+export type ServiceLimit = { service: string; name: string; pricingHref: string; kind: 'quota' | 'feature' | 'capacity' | 'owner' | 'organization'; message: string; action?: 'upgrade' | 'contact' }
 export const LIMIT_EVENT = 'doya:service-limit'
 const services = new Map(SERVICES.map(s => [s.id, { name: s.name, pricingHref: s.pricingHref.endsWith('/pricing') ? s.pricingHref : '/pricing' }]))
 services.set('nagusame', { name: 'なぐさめAI', pricingHref: '/nagusame/pricing' })
@@ -42,7 +42,14 @@ export function classifyServiceLimit(path: string, status: number, data: unknown
   const pricingHref = service === 'shodan' && body.canManageBilling === true && typeof body.upgradeUrl === 'string'
     && /^\/shodan\/pricing\?org=[a-z0-9-]{1,100}$/.test(body.upgradeUrl)
     ? body.upgradeUrl : config.pricingHref
-  return { service, ...config, pricingHref, kind, message }
+  // APIが明示した導線を優先する。LIGHTとPROで同じ枠のサービスでは
+  // セッションの階層だけから「PROに変更すれば増える」と推測できない。
+  const action = typeof body.contactUrl === 'string' ||
+    (typeof body.upgradeUrl === 'string' && /^https:\/\/doyamarke\.surisuta\.jp\/contact\/?$/.test(body.upgradeUrl))
+    ? 'contact' as const
+    : body.upgradeUrl === pricingHref || body.upgradePath === pricingHref || body.actionUrl === pricingHref
+      ? 'upgrade' as const : undefined
+  return { service, ...config, pricingHref, kind, message, action }
 }
 
 export function showServiceLimit(path: string, status: number, data: unknown): boolean {
