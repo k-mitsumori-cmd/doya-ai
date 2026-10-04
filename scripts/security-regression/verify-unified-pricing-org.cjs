@@ -26,8 +26,8 @@ const mocks = {
   '@/components/CheckoutButton': { CheckoutButton: () => { checkoutCount++; return React.createElement('button', null, 'CHECKOUT') } },
   '@/components/TrialCallout': { TrialBadge: empty, TrialNote: empty, useTrialEligible: () => false },
   '@/lib/services': { getServiceById: () => service, getPublicServices: () => [service] },
-  '@/lib/plan-utils': { higherPlan: (_a, b) => b },
-  '@/lib/unified-plan': { isPaidPlan: value => !['FREE', 'GUEST', null, undefined].includes(value),
+  '@/lib/plan-utils': { higherPlan: (_a, b) => b, tierFrom: value => value === 'STARTER' ? 'PRO' : value },
+  '@/lib/unified-plan': {
     UNIFIED_PRO_PRICE_LABEL: '¥9,980', UNIFIED_PRO_PLAN_ID: 'banner-pro', UNIFIED_PLAN_COPY: {
       freeName: '無料プラン', proName: 'プロプラン', freeTagline: '無料', proNote: '統一プラン',
     } },
@@ -63,4 +63,15 @@ personalPlan = 'FREE'
 html = render({ currentPlan: 'STARTER', planSource: 'organization', canPurchase: true })
 assert.equal(checkoutCount, 0)
 assert.ok(html.includes('組織でご利用中のプラン'))
+personalPlan = 'FREE'
+html = render({ currentPlan: 'LIGHT', planSource: 'organization', canPurchase: false })
+assert.equal(checkoutCount, 0)
+assert.ok(html.includes('組織の現在のプランはライトです'))
+assert.ok(!html.includes('組織でご利用中のプラン'))
+assert.ok(!html.includes('課金状態を確認してプランを反映する'))
+personalPlan = 'LIGHT'
+html = render({ currentPlan: 'FREE', canPurchase: true })
+assert.equal(checkoutCount, 1)
+assert.ok(html.includes('現在ライトプランをご利用中です'))
+assert.ok(!html.includes('課金状態を確認してプランを反映する'))
 console.log('PASS organization price table uses owner plan and omits member billing controls')

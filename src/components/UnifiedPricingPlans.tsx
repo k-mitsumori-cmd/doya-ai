@@ -9,9 +9,8 @@ import { usePathname } from 'next/navigation'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallout'
 import { getServiceById, getPublicServices } from '@/lib/services'
-import { higherPlan } from '@/lib/plan-utils'
+import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import {
-  isPaidPlan,
   UNIFIED_PRO_PRICE_LABEL,
   UNIFIED_PRO_PLAN_ID,
   UNIFIED_PLAN_COPY,
@@ -65,7 +64,7 @@ export function UnifiedPricingPlans({
   // 呼び出し元に FREE 固定の古い料金ページがあっても、契約中の統一プランを優先する。
   // セッションはサーバー側で User.plan を読み直してから返される。
   const accountPlan = authStatus === 'authenticated' ? (session?.user as { plan?: string } | undefined)?.plan : undefined
-  const plan = planSource === 'organization' ? (!currentPlan ? '' : currentPlan.toUpperCase() === 'ENTERPRISE' ? 'ENTERPRISE' : isPaidPlan(currentPlan) ? 'PRO' : 'FREE')
+  const plan = planSource === 'organization' ? (currentPlan ? tierFrom(currentPlan) : '')
     : accountPlan ? higherPlan(currentPlan, accountPlan) : (currentPlan || '').toUpperCase()
   const isPro = authStatus === 'authenticated' && (plan === 'PRO' || plan === 'BUNDLE' || plan === 'ENTERPRISE')
   const planKnown = planSource === 'organization' ? Boolean(currentPlan) : Boolean(accountPlan)
@@ -133,6 +132,13 @@ export function UnifiedPricingPlans({
           )}
         </div>
       </div>
+
+      {authStatus === 'authenticated' && plan === 'LIGHT' && (
+        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-950">
+          <p className="font-black">{planSource === 'organization' ? '組織の現在のプランはライトです。' : '現在ライトプランをご利用中です。'}</p>
+          <p className="mt-1">プロプランへの変更は、現在のご契約からお手続きいただけます。</p>
+        </div>
+      )}
 
       {/* ===== 2プランカード ===== */}
       <div className="grid gap-6 md:grid-cols-2 max-w-4xl mx-auto items-stretch">
@@ -306,7 +312,7 @@ export function UnifiedPricingPlans({
              どのサービスからでも契約できるのに、救済はバナー専用画面にしか無く、
              他サービスから契約した方は自力で直せなかった（2026-08）。
              料金表は全サービスに出るので、ここに置けば必ず届く。 */}
-      {canPurchase && authStatus === 'authenticated' && planKnown && !isPro && (
+      {canPurchase && authStatus === 'authenticated' && planKnown && plan === 'FREE' && (
         <div className="mt-6 text-center">
           <button
             type="button"
@@ -329,7 +335,7 @@ export function UnifiedPricingPlans({
       {/* プラン管理・解約 */}
       {canPurchase && <div className="mt-4 text-center">
         <a href={`/api/stripe/portal?returnTo=${encodeURIComponent(returnTo)}`} className="text-xs font-bold text-slate-400 transition hover:text-slate-600 hover:underline">
-          ご契約中の方：お支払い方法の変更・プランの解約はこちら
+          ご契約中の方：プラン変更・お支払い方法の変更・解約はこちら
         </a>
       </div>}
     </section>
