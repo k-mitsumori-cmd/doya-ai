@@ -1811,8 +1811,10 @@ function BannerTestPageInner() {
                       </div>
                       <p className="text-xs text-gray-400 mt-1">
                         来月1日にリセットされます
-                        {currentPlan !== 'ENTERPRISE' && (
-                          <> / <button type="button" onClick={() => quota.usage && quota.showLimit(quota.usage)} className="text-amber-400 hover:underline">プランの詳細を見る</button></>
+                        {' / '}{currentPlan === 'ENTERPRISE' ? (
+                          <a href={HIGH_USAGE_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline">追加の利用枠を相談する</a>
+                        ) : (
+                          <button type="button" onClick={() => quota.usage && quota.showLimit(quota.usage)} className="text-amber-400 hover:underline">プランの詳細を見る</button>
                         )}
                       </p>
                     </div>
