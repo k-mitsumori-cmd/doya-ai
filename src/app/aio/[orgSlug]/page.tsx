@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { readAioDashboard } from '@/lib/aio/dashboard'
 import { aioSend, AioApiError } from '@/lib/aio/client'
 import { TrialNote } from '@/components/TrialCallout'
+import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { AIO_MAX_PROMPTS_PER_SCAN, ENGINE_LABEL, type EngineId, type ScanSummary } from '@/lib/aio/types'
 import { isCompleteScan, type ScanCoverageCounts } from '@/lib/aio/coverage'
 import { DoyaKun, sym, type Mood } from '@/components/aio/ui'
@@ -195,9 +196,15 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
       <p className="mt-1 text-xs font-bold text-purple-800">{scanLimit}</p>
       {!isOwner && <p className="mt-2 text-xs font-bold text-purple-700">組織の利用枠を増やすには、組織オーナーにご相談ください。</p>}
       {!isPaid && isOwner && <TrialNote className="mt-2" />}
-      <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`} className="mt-3 inline-flex rounded-xl bg-purple-700 px-4 py-2 text-xs font-black text-white hover:bg-purple-800">
-        {isPaid && isOwner ? '追加枠について相談する' : '料金プランを確認する'}
-      </Link>
+      {isOwner && (isPaid ? (
+        <a href={HIGH_USAGE_CONTACT_URL} className="mt-3 inline-flex rounded-xl bg-purple-700 px-4 py-2 text-xs font-black text-white hover:bg-purple-800">
+          追加枠について相談する
+        </a>
+      ) : (
+        <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`} className="mt-3 inline-flex rounded-xl bg-purple-700 px-4 py-2 text-xs font-black text-white hover:bg-purple-800">
+          料金プランを確認する
+        </Link>
+      ))}
     </div>
   ) : null
 
