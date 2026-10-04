@@ -8,6 +8,7 @@ const common = {
   'next-auth': { getServerSession: async () => { throw new Error(secret) } },
   '@/lib/auth': { authOptions: {} },
   '@/lib/stripe': {},
+  '@/lib/checkout-reservation': { CheckoutReservationError: class extends Error {} },
   '@/lib/prisma': { prisma: {} },
   '@/lib/unified-plan': { UNIFIED_TRIAL_DAYS: 30 },
   '@/lib/trial': {},

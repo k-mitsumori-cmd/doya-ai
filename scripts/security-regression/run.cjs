@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const checkoutReservation = spawnSync(process.execPath, [path.join(__dirname, 'verify-checkout-reservation.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (checkoutReservation.error || checkoutReservation.status !== 0) {
+  console.error('Security regression failed: verify-checkout-reservation.cjs');
+  process.exit(1);
+}
 const adimageLogoAvailability = spawnSync(process.execPath, [path.join(__dirname, 'verify-adimage-logo-availability.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adimageLogoAvailability.error || adimageLogoAvailability.status !== 0) {
   console.error('Security regression failed: verify-adimage-logo-availability.cjs');

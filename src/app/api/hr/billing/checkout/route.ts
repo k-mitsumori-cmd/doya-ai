@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
+import type Stripe from 'stripe'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -10,6 +11,7 @@ import { stripe, STRIPE_PRICE_IDS, findActiveLikeSubscriptions } from '@/lib/str
 import { getHrContext } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { logAudit } from '@/lib/hr/audit'
+import { CheckoutReservationError, createReservedCheckoutSession } from '@/lib/checkout-reservation'
 
 // HR用Stripe価格IDマッピング（統一課金のSTRIPE_PRICE_IDSから取得）
 const HR_PLAN_PRICES: Record<string, { monthly: string; yearly: string }> = {
@@ -139,7 +141,7 @@ export async function POST(req: NextRequest) {
 
     const baseUrl = (process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp').replace(/\/+$/, '')
 
-    const checkoutSession = await stripe.checkout.sessions.create({
+    const checkoutParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
       payment_method_types: ['card'],
       allow_promotion_codes: true,
@@ -162,6 +164,14 @@ export async function POST(req: NextRequest) {
         planId: `hr-${plan}`,
       },
       client_reference_id: user.id,
+    }
+    const checkoutSession = await createReservedCheckoutSession({
+      userId: user.id,
+      signatureParts: { priceId, plan, interval, stripeCustomerId, baseUrl },
+      create: (idempotencyKey, expiresAt) => stripe.checkout.sessions.create(
+        { ...checkoutParams, expires_at: expiresAt },
+        { idempotencyKey },
+      ),
     })
 
     // 監査ログ
@@ -180,6 +190,12 @@ export async function POST(req: NextRequest) {
     })
   } catch (e: any) {
     console.error('[hr/billing/checkout] unexpected error')
+    if (e instanceof CheckoutReservationError) {
+      const userMessage = e.code === 'CHECKOUT_ALREADY_COMPLETED'
+        ? '直前のお申し込みを確認中です。画面を再読み込みしてください。'
+        : '決済画面がすでに開かれています。二重のお申し込みを防ぐため、先ほどの決済画面をご利用いただくか、有効期限が切れてから再度お試しください。'
+      return NextResponse.json({ code: e.code, error: userMessage }, { status: e.status })
+    }
     return NextResponse.json(
       { error: 'Failed to create checkout session' },
       { status: 500 }

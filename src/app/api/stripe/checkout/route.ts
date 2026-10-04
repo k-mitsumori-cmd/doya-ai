@@ -5,6 +5,7 @@ import { createCheckoutSession, STRIPE_PRICE_IDS, findActiveLikeSubscriptions } 
 import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
 import { isTrialEligible } from '@/lib/trial'
 import { prisma } from '@/lib/prisma'
+import { CheckoutReservationError, createReservedCheckoutSession } from '@/lib/checkout-reservation'
 
 /** 同一オリジン内のパスだけを戻り先として許可する（オープンリダイレクト防止） */
 function safeReturnPath(raw: unknown): string | null {
@@ -210,17 +211,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Checkout Session作成
-    const checkoutSession = await createCheckoutSession({
-      priceId,
+    const checkoutSession = await createReservedCheckoutSession({
       userId: dbUser.id,
-      userEmail: session.user.email,
-      successUrl,
-      cancelUrl,
-      trialDays,
-      metadata: {
-        planId,
-        serviceId: service,
-      },
+      signatureParts: { priceId, planId, service, email: session.user.email, successUrl, cancelUrl, trialDays },
+      create: (idempotencyKey, expiresAt) => createCheckoutSession({
+        priceId,
+        userId: dbUser.id,
+        userEmail: session.user.email!,
+        successUrl,
+        cancelUrl,
+        trialDays,
+        idempotencyKey,
+        expiresAt,
+        metadata: { planId, serviceId: service },
+      }),
     })
 
     return NextResponse.json({
@@ -230,6 +234,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Checkout session error:')
+
+    if (error instanceof CheckoutReservationError) {
+      const userMessage = error.code === 'CHECKOUT_ALREADY_COMPLETED'
+        ? '直前のお申し込みを確認中です。画面を再読み込みしてください。'
+        : '決済画面がすでに開かれています。二重のお申し込みを防ぐため、先ほどの決済画面をご利用いただくか、有効期限が切れてから再度お試しください。'
+      return NextResponse.json({ code: error.code, error: userMessage }, { status: error.status })
+    }
 
     // Stripeの「test/liveモード不一致」をユーザーが復旧できる形で案内
     if (looksLikeStripeModeMismatch(error)) {

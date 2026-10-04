@@ -33,6 +33,7 @@ const common = {
   '@/lib/hr/access': { getHrContext: async () => ({ userId: ctxUserId, organizationId: 'org1', role }) },
   '@/lib/hr/types': { HrMemberRole },
   '@/lib/hr/audit': { logAudit: async () => {} },
+  '@/lib/checkout-reservation': { CheckoutReservationError: class extends Error {}, createReservedCheckoutSession: ({ create }) => create('test-key', 1900000000) },
 };
 const checkout = load('src/app/api/hr/billing/checkout/route.ts', {
   ...common,
@@ -55,6 +56,7 @@ const generic = load('src/app/api/stripe/checkout/route.ts', {
   'next-auth': common['next-auth'],
   '@/lib/auth': common['@/lib/auth'],
   '@/lib/prisma': { prisma },
+  '@/lib/checkout-reservation': common['@/lib/checkout-reservation'],
   '@/lib/stripe': {
     STRIPE_PRICE_IDS: {},
     findActiveLikeSubscriptions: async () => [],

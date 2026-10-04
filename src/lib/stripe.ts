@@ -500,6 +500,8 @@ export async function createCheckoutSession({
   metadata,
   mode = 'subscription',
   trialDays,
+  idempotencyKey,
+  expiresAt,
 }: {
   priceId: string
   userId: string
@@ -510,6 +512,8 @@ export async function createCheckoutSession({
   mode?: 'subscription' | 'payment'
   // 無料トライアル日数（初月無料など）。subscription モードのときのみ有効。
   trialDays?: number
+  idempotencyKey?: string
+  expiresAt?: number
 }) {
   // 1日以上のときだけトライアルを付与（0/未指定はトライアル無し）
   const trial = mode === 'subscription' && typeof trialDays === 'number' && trialDays >= 1
@@ -520,6 +524,7 @@ export async function createCheckoutSession({
     mode,
     payment_method_types: ['card'],
     allow_promotion_codes: true,
+    ...(expiresAt ? { expires_at: expiresAt } : {}),
     line_items: [
       {
         price: priceId,
@@ -556,7 +561,7 @@ export async function createCheckoutSession({
     automatic_tax: {
       enabled: false, // 税込み価格のため無効
     },
-  })
+  }, idempotencyKey ? { idempotencyKey } : undefined)
 
   return session
 }
