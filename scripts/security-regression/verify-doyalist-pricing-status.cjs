@@ -32,6 +32,8 @@ async function load(response) {
   assert.equal(normalizePlan(undefined), null)
   assert.equal(normalizePlan('FREE'), 'FREE')
   assert.equal(normalizePlan('LIGHT'), 'LIGHT')
+  assert.equal(normalizePlan('BUNDLE'), 'PRO')
+  for (const invalid of ['NOT_PRO', 'APPROVED', 'NOT_ENTERPRISE', 'LIGHTWEIGHT']) assert.equal(normalizePlan(invalid), null, invalid)
   assert.deepEqual(await load(Response.json({ error: 'unavailable' }, { status: 503 })), { plan: null, error: true })
   assert.deepEqual(await load(Response.json({ error: 'login' }, { status: 401 })), { plan: null, error: false })
   assert.deepEqual(await load(Response.json({})), { plan: null, error: true })

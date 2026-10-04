@@ -10,7 +10,8 @@ import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import { FreeHourPopup } from '@/components/FreeHourPopup'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, ENTERPRISE_CONTACT_MAILTO, isWithinFreeHour, getBannerMaxImagesPerRequest } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, ENTERPRISE_CONTACT_MAILTO, isWithinFreeHour, getBannerMaxImagesPerRequest, getBannerMonthlyLimitByUserPlan } from '@/lib/pricing'
+import { tierFrom } from '@/lib/plan-utils'
 import { CheckoutButton } from '@/components/CheckoutButton'
 
 const DEFAULT_FREE_SIZE = '1080x1080'
@@ -72,15 +73,7 @@ function BannerUrlAutoPageInner() {
   const bannerPlan = !isGuest
     ? String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
     : 'GUEST'
-  const bannerPlanTier = (() => {
-    const p = bannerPlan
-    if (!p || p === 'GUEST') return 'GUEST' as const
-    if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
-    if (p.includes('PRO') || p.includes('BUNDLE') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
-    if (p.includes('LIGHT')) return 'LIGHT' as const
-    if (p.includes('FREE')) return 'FREE' as const
-    return 'FREE' as const
-  })()
+  const bannerPlanTier = tierFrom(bannerPlan)
   const isPaidUser = bannerPlanTier === 'LIGHT' || bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
   const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
   const isFreeHourActive = !isGuest && isWithinFreeHour(firstLoginAt)
@@ -294,7 +287,7 @@ function BannerUrlAutoPageInner() {
   }
 
   const monthlyRemaining = limitUsage?.monthlyRemaining
-  const inferredLimit = bannerPlanTier === 'ENTERPRISE' ? BANNER_PRICING.enterpriseLimit ?? 1000 : bannerPlanTier === 'PRO' ? BANNER_PRICING.proLimit : 0
+  const inferredLimit = bannerPlanTier === 'GUEST' ? BANNER_PRICING.guestLimit : getBannerMonthlyLimitByUserPlan(bannerPlanTier)
   const effectiveLimit = limitUsage?.monthlyLimit ?? inferredLimit
   const limitIsEnterprise = effectiveLimit >= (BANNER_PRICING.enterpriseLimit ?? 1000)
   const limitIsPro = effectiveLimit >= BANNER_PRICING.proLimit
@@ -792,7 +785,7 @@ function BannerUrlAutoPageInner() {
 
               {/* 現在プラン表示 */}
               <p className="text-xs font-black text-slate-700 mt-2">
-                現在のプラン：{bannerPlanTier === 'GUEST' ? 'ゲスト' : bannerPlanTier === 'FREE' ? '無料' : bannerPlanTier === 'PRO' ? 'PRO' : 'Enterprise'}
+                現在のプラン：{bannerPlanTier === 'GUEST' ? 'ゲスト' : bannerPlanTier === 'FREE' ? '無料' : bannerPlanTier === 'LIGHT' ? 'ライト' : bannerPlanTier === 'PRO' ? 'PRO' : 'Enterprise'}
                 {isPaidUser && (
                   <Link href="/banner/dashboard/plan" className="ml-2 text-blue-600 hover:underline">アカウント画面で変更/解約 →</Link>
                 )}

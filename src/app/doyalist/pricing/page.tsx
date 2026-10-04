@@ -7,10 +7,10 @@ import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 type PlanId = 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
 
 function normalizePlan(rawTier: unknown): PlanId | null {
-  const s = String(rawTier || '').toUpperCase()
-  if (s.includes('ENTERPRISE')) return 'ENTERPRISE'
-  if (s.includes('PRO') || s.includes('BUNDLE') || s.includes('BUSINESS') || s.includes('STARTER') || s.includes('BASIC')) return 'PRO'
-  if (s.includes('LIGHT')) return 'LIGHT'
+  const s = String(rawTier || '').trim().toUpperCase()
+  if (s === 'ENTERPRISE') return 'ENTERPRISE'
+  if (['PRO', 'BUNDLE', 'BUSINESS', 'STARTER', 'BASIC', 'PREMIUM'].includes(s)) return 'PRO'
+  if (s === 'LIGHT') return 'LIGHT'
   return s === 'FREE' ? 'FREE' : null
 }
 
