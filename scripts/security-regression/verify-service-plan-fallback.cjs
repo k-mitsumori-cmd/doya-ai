@@ -70,5 +70,12 @@ function sidebar(service, plan, isLoggedIn) {
   assert.equal(foreign.error, true, 'an invalid selected organization cannot be treated as a new account')
   assert.equal(sidebar('sfa', 'LIGHT', true), 'LIGHT')
   assert.equal(planUtils.higherPlan('FREE', 'BUNDLE'), 'PRO')
+  for (const [raw, expected] of [['BANNER_PRO', 'PRO'], ['PRO_MONTHLY', 'PRO'], ['BASIC', 'PRO'], ['PREMIUM', 'PRO'], ['BANNER_LIGHT', 'LIGHT'], ['ENTERPRISE_MONTHLY', 'ENTERPRISE']]) {
+    assert.equal(planUtils.tierFrom(raw), expected, raw)
+  }
+  for (const raw of ['NOT_PRO', 'APPROVED', 'NOT_ENTERPRISE', 'LIGHTWEIGHT', 'UNKNOWN']) {
+    assert.equal(planUtils.tierFrom(raw), 'FREE', raw)
+    assert.equal(planUtils.higherPlan('FREE', raw), 'FREE', raw)
+  }
   console.log('PASS service plan fallback: Cunning, SFA and DoyaSlide preserve unknown status; BUNDLE stays PRO')
 })().catch((error) => { console.error(error); process.exitCode = 1 })

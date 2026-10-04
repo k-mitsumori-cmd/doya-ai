@@ -12,15 +12,16 @@ export type PlanTier = 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
 
 /**
  * 生のプラン文字列からPlanTierに正規化する。
- * BANNER_PRO / PRO_MONTHLY / BASIC / STARTER / BUSINESS などの揺れに対応。
+ * BANNER_PRO / PRO_MONTHLY / BASIC / STARTER / BUSINESS などの既知の揺れに対応。
+ * 部分一致は NOT_PRO 等の未知の値に権限を与えるため使用しない。
  */
 export function tierFrom(raw: unknown): PlanTier {
-  const p = String(raw || '').toUpperCase()
+  const p = String(raw || '').trim().toUpperCase().replace(/-/g, '_')
   if (!p || p === 'GUEST') return 'GUEST'
-  if (p.includes('ENTERPRISE')) return 'ENTERPRISE'
-  if (p.includes('PRO') || p.includes('BUNDLE') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS') || p === 'PREMIUM') return 'PRO'
-  if (p.includes('LIGHT')) return 'LIGHT'
-  if (p.includes('FREE')) return 'FREE'
+  if (p === 'ENTERPRISE' || p === 'ENTERPRISE_MONTHLY' || p === 'BANNER_ENTERPRISE') return 'ENTERPRISE'
+  if (['PRO', 'PRO_MONTHLY', 'BANNER_PRO', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS', 'PREMIUM'].includes(p)) return 'PRO'
+  if (p === 'LIGHT' || p === 'LIGHT_MONTHLY' || p === 'BANNER_LIGHT') return 'LIGHT'
+  if (p === 'FREE') return 'FREE'
   return 'FREE'
 }
 
