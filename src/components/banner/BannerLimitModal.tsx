@@ -79,12 +79,12 @@ export default function BannerLimitModal({
 
   if (!isOpen) return null
 
-  const pro = priceOf('banner-pro')
+  const isEnterprise = (monthlyLimit ?? 0) >= (BANNER_PRICING.enterpriseLimit ?? 1000)
+  const isPro = !isEnterprise && (monthlyLimit ?? 0) >= BANNER_PRICING.proLimit
+  const nextPlan = priceOf(isPro ? 'banner-enterprise' : 'banner-pro')
 
-  // すでにPRO相当の枠を使い切っている人にアップグレードを勧めても意味がない。
-  // その場合は相談導線だけを出す（サーバー側も upgradeUrl を相談先に切り替えている）。
-  const isAtTopPlan = (monthlyLimit ?? 0) >= BANNER_PRICING.proLimit
-  const destination = isAtTopPlan ? (HIGH_USAGE_CONTACT_URL || '/banner/pricing') : upgradeUrl?.startsWith('/banner/') ? upgradeUrl : '/banner/pricing'
+  // ENTERPRISE 上限に達した場合のみ追加枠の相談へ。PRO には次の ENTERPRISE 枠を案内する。
+  const destination = isEnterprise ? (HIGH_USAGE_CONTACT_URL || '/banner/pricing') : upgradeUrl?.startsWith('/banner/') ? upgradeUrl : '/banner/pricing'
 
   const remaining = monthlyUsed != null && monthlyLimit != null ? Math.max(0, monthlyLimit - monthlyUsed) : 0
   const title = remaining > 0 ? `今月はあと${remaining}枚生成できます` : monthlyLimit != null ? `今月の${monthlyLimit}枚を使い切りました` : '今月の生成上限に達しました'
@@ -161,23 +161,23 @@ export default function BannerLimitModal({
               </div>
             )}
 
-            {!isAtTopPlan && (
+            {!isEnterprise && (
               <div className="mt-4 space-y-2">
-                {pro && (
+                {nextPlan && (
                   <div className="rounded-xl border border-blue-500/60 bg-gradient-to-r from-blue-600/20 to-purple-600/20 px-4 py-3">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-xs font-black text-white">{pro.name}</p>
-                          <TrialBadge tone="dark" />
+                          <p className="text-xs font-black text-white">{nextPlan.name}</p>
+                          {!isPro && <TrialBadge tone="dark" />}
                         </div>
                         <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-blue-200">
-                          <Check className="h-3 w-3 text-blue-300" />月{BANNER_PRICING.proLimit}枚まで生成
+                          <Check className="h-3 w-3 text-blue-300" />月{isPro ? BANNER_PRICING.enterpriseLimit : BANNER_PRICING.proLimit}枚まで生成
                         </p>
                       </div>
-                      <p className="ml-3 shrink-0 text-sm font-black text-white">{pro.priceLabel}</p>
+                      <p className="ml-3 shrink-0 text-sm font-black text-white">{nextPlan.priceLabel}</p>
                     </div>
-                    <TrialNote tone="dark" className="mt-2" />
+                    {!isPro && <TrialNote tone="dark" className="mt-2" />}
                   </div>
                 )}
               </div>
@@ -193,8 +193,10 @@ export default function BannerLimitModal({
                 className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3.5 font-bold text-white shadow-lg shadow-blue-600/30 transition-transform hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Rocket className="h-5 w-5" />
-                {isAtTopPlan
+                {isEnterprise
                   ? '上限アップを相談する'
+                  : isPro
+                    ? 'エンタープライズプランを確認する'
                   : trialEligible
                     ? `${TRIAL_DAYS}日間無料でプロを試す`
                     : 'プランをアップグレード'}

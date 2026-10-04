@@ -33,6 +33,8 @@ type ApiResponse = {
   error?: string
 }
 
+type MonthlyUsage = { monthlyLimit?: number; monthlyUsed?: number; monthlyRemaining?: number }
+
 async function safeReadJson(res: Response): Promise<{ ok: boolean; status: number; data: any; text: string }> {
   const status = res.status
   const text = await res.text().catch(() => '')
@@ -88,6 +90,7 @@ function BannerUrlAutoPageInner() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string>('')
   const [errorType, setErrorType] = useState<'limit' | 'system' | null>(null) // エラー種別
+  const [limitUsage, setLimitUsage] = useState<MonthlyUsage | null>(null)
   const [banners, setBanners] = useState<string[]>([])
   const imageBanners = useMemo(
     () => banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/')),
@@ -131,6 +134,7 @@ function BannerUrlAutoPageInner() {
 
     setError('')
     setErrorType(null)
+    setLimitUsage(null)
     setIsGenerating(true)
     // 生成開始時に前回の結果を消さない（消すと画面が「パチパチ」しやすい）
     // 新しい結果が返ってきたタイミングで上書きする
@@ -154,17 +158,20 @@ function BannerUrlAutoPageInner() {
       window.clearTimeout(timeout)
 
       const parsed = await safeReadJson(res)
-      const data = (parsed.data || {}) as ApiResponse & { code?: string; usage?: { dailyLimit?: number; dailyUsed?: number; dailyRemaining?: number }; upgradeUrl?: string }
+      const data = (parsed.data || {}) as ApiResponse & { code?: string; usage?: MonthlyUsage }
       if (!parsed.ok) {
         // エラーの種類を判定
-        const isLimitError = data?.code === 'DAILY_LIMIT_REACHED' || parsed.status === 429
-        const msg = data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || 'URLからの自動生成に失敗しました'
+        const isLimitError = parsed.status === 429 && data?.code === 'MONTHLY_LIMIT_REACHED'
+        const msg = isLimitError && (data.usage?.monthlyRemaining ?? 0) > 0
+          ? '選択した枚数が今月の残り枠を超えています。'
+          : data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || 'URLからの自動生成に失敗しました'
         
         setError(msg)
         setErrorType(isLimitError ? 'limit' : 'system')
+        setLimitUsage(isLimitError ? data.usage || null : null)
         
         if (isLimitError) {
-          toast.error('本日の生成上限に達しました', { icon: '⚠️', duration: 6000 })
+          toast.error('今月の生成枠をご確認ください', { duration: 6000 })
         } else {
           toast.error(msg.length > 50 ? '生成に失敗しました' : msg, { icon: '❌', duration: 5000 })
         }
@@ -212,6 +219,7 @@ function BannerUrlAutoPageInner() {
 
     setError('')
     setErrorType(null)
+    setLimitUsage(null)
     setIsGenerating(true)
 
     try {
@@ -233,16 +241,19 @@ function BannerUrlAutoPageInner() {
       window.clearTimeout(timeout)
 
       const parsed = await safeReadJson(res)
-      const data = (parsed.data || {}) as ApiResponse & { code?: string; usage?: { dailyLimit?: number; dailyUsed?: number; dailyRemaining?: number }; upgradeUrl?: string }
+      const data = (parsed.data || {}) as ApiResponse & { code?: string; usage?: MonthlyUsage }
       if (!parsed.ok) {
-        const isLimitError = data?.code === 'DAILY_LIMIT_REACHED' || parsed.status === 429
-        const msg = data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || 'バリエーション再生成に失敗しました'
+        const isLimitError = parsed.status === 429 && data?.code === 'MONTHLY_LIMIT_REACHED'
+        const msg = isLimitError && (data.usage?.monthlyRemaining ?? 0) > 0
+          ? '選択した枚数が今月の残り枠を超えています。'
+          : data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || 'バリエーション再生成に失敗しました'
 
         setError(msg)
         setErrorType(isLimitError ? 'limit' : 'system')
+        setLimitUsage(isLimitError ? data.usage || null : null)
 
         if (isLimitError) {
-          toast.error('本日の生成上限に達しました', { icon: '⚠️', duration: 6000 })
+          toast.error('今月の生成枠をご確認ください', { duration: 6000 })
         } else {
           toast.error(msg.length > 50 ? '再生成に失敗しました' : msg, { icon: '❌', duration: 5000 })
         }
@@ -281,6 +292,12 @@ function BannerUrlAutoPageInner() {
       toast.error('ダウンロードに失敗しました')
     }
   }
+
+  const monthlyRemaining = limitUsage?.monthlyRemaining
+  const inferredLimit = bannerPlanTier === 'ENTERPRISE' ? BANNER_PRICING.enterpriseLimit ?? 1000 : bannerPlanTier === 'PRO' ? BANNER_PRICING.proLimit : 0
+  const effectiveLimit = limitUsage?.monthlyLimit ?? inferredLimit
+  const limitIsEnterprise = effectiveLimit >= (BANNER_PRICING.enterpriseLimit ?? 1000)
+  const limitIsPro = effectiveLimit >= BANNER_PRICING.proLimit
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900">
@@ -519,9 +536,16 @@ function BannerUrlAutoPageInner() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-black text-red-800">
-                        {errorType === 'limit' ? '本日の生成上限に達しました' : '生成に失敗しました'}
+                        {errorType === 'limit'
+                          ? typeof monthlyRemaining === 'number' && monthlyRemaining > 0
+                            ? `今月はあと${monthlyRemaining}枚生成できます`
+                            : '今月の生成上限に達しました'
+                          : '生成に失敗しました'}
                       </p>
                       <p className="mt-1 text-xs text-red-700 leading-relaxed">{error}</p>
+                      {errorType === 'limit' && typeof monthlyRemaining === 'number' && monthlyRemaining > 0 && (
+                        <p className="mt-1 text-xs text-red-700">枚数を{monthlyRemaining}枚以下に減らすと、今月の残り枠で生成できます。</p>
+                      )}
                       
                       {errorType === 'limit' ? (
                         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -535,20 +559,29 @@ function BannerUrlAutoPageInner() {
                                 ログインして続ける
                               </Link>
                               <span className="text-[10px] text-red-600 font-bold">
-                                ログインすると上限がリセットされます
+                                ログイン後の利用枠をご確認ください
                               </span>
                             </>
+                          ) : limitIsEnterprise ? (
+                            <a
+                              href={HIGH_USAGE_CONTACT_URL || 'https://doyamarke.surisuta.jp/contact'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-black rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              追加の利用枠を相談する
+                            </a>
                           ) : (
                             <>
                               <Link
-                                href="/banner/dashboard/plan"
+                                href="/banner/pricing"
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-black rounded-lg hover:bg-blue-700 transition-colors"
                               >
                                 <Sparkles className="w-3.5 h-3.5" />
-                                プランをアップグレード
+                                {limitIsPro ? 'エンタープライズプランを確認する' : 'プランを確認する'}
                               </Link>
                               <span className="text-[10px] text-red-600 font-bold">
-                                プロプランなら月150枚まで生成可能
+                                {limitIsPro ? `エンタープライズプランは月${BANNER_PRICING.enterpriseLimit}枚まで` : `プロプランは月${BANNER_PRICING.proLimit}枚まで`}
                               </span>
                             </>
                           )}
