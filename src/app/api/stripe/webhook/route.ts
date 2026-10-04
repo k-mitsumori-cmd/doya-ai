@@ -294,16 +294,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   if (!isDoyaSubscription(subscription)) return
-  const user = await findUserForSubscription(subscription)
+  // Stripe may deliver an older "created" event after a later update or cancellation.
+  // Never grant access from the event snapshot without checking the current state.
+  const live = await stripe.subscriptions.retrieve(subscription.id)
+  if (!isDoyaSubscription(live)) return
+  const user = await findUserForSubscription(live)
   if (!user) {
     throw new Error(`[Webhook] subscription.created: user not found for subscription ${subscription.id}`)
   }
-  await updateUserSubscription(user.id, subscription)
+  if (live.status === 'canceled' || live.status === 'unpaid') {
+    await handleSubscriptionDeleted(live)
+    return
+  }
+  await updateUserSubscription(user.id, live)
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<EventNotification | null> {
   if (!isDoyaSubscription(subscription)) return null
-  const user = await findUserForSubscription(subscription)
+  // A delayed update can carry a plan/status that Stripe has already superseded.
+  const live = await stripe.subscriptions.retrieve(subscription.id)
+  if (!isDoyaSubscription(live)) return null
+  const user = await findUserForSubscription(live)
 
   if (!user) {
     throw new Error(`[Webhook] subscription.updated: user not found for subscription ${subscription.id}`)
@@ -313,12 +324,12 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
   // - canceled: 期間終了時の解約、またはトライアル終了時に支払い方法が無く missing_payment_method:'cancel' で解約
   // - unpaid: トライアル後/更新の初回課金が失敗しダンニング(再試行)も尽きた終端状態。
   //   updateUserSubscription は status を見ず PRO 付与するため、ここで弾かないと未入金のまま PRO が残る。
-  if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
-    console.log(`Subscription ${subscription.status} via updated event for user: ${user.id}`)
-    return handleSubscriptionDeleted(subscription)
+  if (live.status === 'canceled' || live.status === 'unpaid') {
+    console.log(`Subscription ${live.status} via updated event for user: ${user.id}`)
+    return handleSubscriptionDeleted(live)
   }
 
-  await updateUserSubscription(user.id, subscription)
+  await updateUserSubscription(user.id, live)
   return null
 }
 

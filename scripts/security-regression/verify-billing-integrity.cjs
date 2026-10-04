@@ -89,6 +89,29 @@ async function routes(){
  }
 }
 async function webhook(){
+ for(const type of ['customer.subscription.created','customer.subscription.updated'])await check(type+' uses current Stripe plan instead of delayed event snapshot',async()=>{
+  let f=routeFixture();const stale=structuredClone(f.sub);
+  f.sub.metadata.planId='banner-light';f.sub.items.data[0].price.id='price_banner_light_monthly';
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt-stale-plan',type,data:{object:stale}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,200);assert.equal(f.f.state.user.plan,'LIGHT');assert.equal(f.writes,1);
+ });
+ for(const type of ['customer.subscription.created','customer.subscription.updated'])await check(type+' cannot restore canceled access from delayed active snapshot',async()=>{
+  let f=routeFixture();await f.f.sync({userId:'u1',plan:'PRO',stripeSubscriptionId:'sub1'});
+  const stale=structuredClone(f.sub);f.sub.status='canceled';
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt-stale-active',type,data:{object:stale}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,200);assert.equal(f.f.state.user.plan,'FREE');assert.equal(f.f.state.user.stripeSubscriptionId,null);
+ });
+ await check('subscription current-state lookup outage retries without changing entitlements',async()=>{
+  let f=routeFixture();f.mocks['@/lib/stripe'].stripe.subscriptions.retrieve=async()=>{throw Error('temporary Stripe failure')};
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt-lookup-fail',type:'customer.subscription.updated',data:{object:f.sub}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,500);assert.equal(f.f.state.user.plan,'FREE');assert.equal(f.writes,0);
+ });
  for(const kind of ['processed','inflight'])await check('webhook '+kind+' receipt does not reprocess billing',async()=>{
   let f=routeFixture();f.mocks['@/lib/stripe-webhook-receipts'].claimStripeWebhookEvent=async()=>({kind});
   const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
