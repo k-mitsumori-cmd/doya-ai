@@ -29,11 +29,7 @@ const ARTICLE_PROVIDER_STREAM_MAX_BYTES = 8 * 1024 * 1024
 const ARTICLE_PROVIDER_EVENT_MAX_CHARS = 512 * 1024
 const ARTICLE_TEXT_MAX_CHARS = 512 * 1024
 
-class ProjectOwnerChangedError extends Error {
-  constructor(readonly transferredToUserId: string | null = null) {
-    super('Interview project owner changed during article generation')
-  }
-}
+class ProjectOwnerChangedError extends Error {}
 
 function getGeminiApiKey(): string {
   const key =
@@ -69,7 +65,6 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       let claim: ArticleClaim | null = null
       let draftSaved = false
-      let refundTransferredToUserId: string | null = null
       try {
         // ====== 認証 ======
         const { userId, plan } = await getInterviewUser()
@@ -298,11 +293,7 @@ export async function POST(req: NextRequest) {
           const currentProject = await tx.interviewProject.findUnique({
             where: { id: projectId }, select: { userId: true, guestId: true },
           })
-          if (!currentProject || checkOwnership(currentProject, userId, guestId)) {
-            throw new ProjectOwnerChangedError(
-              !userId && guestId && currentProject?.guestId === guestId ? currentProject.userId : null
-            )
-          }
+          if (!currentProject || checkOwnership(currentProject, userId, guestId)) throw new ProjectOwnerChangedError()
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${projectId}))`
           const maxVersion = await tx.interviewDraft.aggregate({
             where: { projectId },
@@ -356,7 +347,6 @@ export async function POST(req: NextRequest) {
         controller.close()
       } catch (error) {
         providerAbort.abort()
-        refundTransferredToUserId = error instanceof ProjectOwnerChangedError ? error.transferredToUserId : null
         if (!cancelled) {
           console.error('[interview] article generation failed')
           try {
@@ -369,7 +359,7 @@ export async function POST(req: NextRequest) {
           controller.close()
         }
       } finally {
-        if (claim && !draftSaved) await refundArticleBudget(claim, refundTransferredToUserId)
+        if (claim && !draftSaved) await refundArticleBudget(claim)
       }
     },
     cancel() {

@@ -15,7 +15,7 @@ export function interviewArticleDailyLimit(plan: InterviewPlanCode): number {
   return ARTICLE_LIMIT[plan]
 }
 
-export type ArticleClaim = { key: string; day: string }
+export type ArticleClaim = { key: string; day: string; guestId: string | null }
 export type ArticleAdmission =
   | { state: 'allowed'; claim: ArticleClaim; limit: number }
   | { state: 'limit'; limit: number }
@@ -46,7 +46,7 @@ export async function claimArticleBudget(identity: { userId: string | null; gues
     `
     if (!rows.length) return { state: 'limit', limit }
     const day = (JSON.parse(rows[0].value) as { day: string }).day
-    return { state: 'allowed', claim: { key, day }, limit }
+    return { state: 'allowed', claim: { key, day, guestId: userId ? null : guestId }, limit }
   }
   try {
     if (guestId && !userId) {
@@ -69,25 +69,36 @@ export async function claimArticleBudget(identity: { userId: string | null; gues
 }
 
 /** Refund only the same JST day's failed attempt. A DB outage fails closed. */
-export async function refundArticleBudget(claim: ArticleClaim, transferredToUserId: string | null = null): Promise<void> {
+export async function refundArticleBudget(claim: ArticleClaim): Promise<void> {
   try {
-    const accountKey = transferredToUserId
-      ? `interview-article:v1:${createHash('sha256').update(`user:${transferredToUserId}`).digest('hex')}`
-      : claim.key
-    await prisma.$executeRaw`
-      UPDATE "SystemSetting" AS setting SET "value" = (
+    const decrement = async (db: Prisma.TransactionClient | typeof prisma, key: string) => db.$executeRaw`
+      UPDATE "SystemSetting" SET "value" = (
         "value"::jsonb || jsonb_build_object('count', GREATEST(0, ("value"::jsonb->>'count')::integer - 1))
-      )::text
-      WHERE setting."key" IN (${claim.key}, ${accountKey}) AND setting."value"::jsonb->>'day' = ${claim.day}
-        AND (setting."value"::jsonb->>'count')::integer > 0
-        AND (setting."key" = ${claim.key} OR EXISTS (
-          SELECT 1 FROM "SystemSetting" AS guest
-          WHERE guest."key" = ${claim.key}
-            AND guest."value"::jsonb->>'day' = ${claim.day}
-            AND guest."value"::jsonb->>'transferDay' = ${claim.day}
-            AND guest."value"::jsonb->>'transferredToUserId' = ${transferredToUserId}
-        ))
+      )::text WHERE "key" = ${key} AND "value"::jsonb->>'day' = ${claim.day}
+        AND ("value"::jsonb->>'count')::integer > 0
     `
+    if (!claim.guestId) {
+      await decrement(prisma, claim.key)
+      return
+    }
+    await prisma.$transaction(async tx => {
+      // This lock makes a refund and guest-to-account transfer observe one
+      // another in a fixed order, including ordinary provider failures.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-guest-project'), hashtext(${claim.guestId}))`
+      const row = await tx.systemSetting.findUnique({ where: { key: claim.key }, select: { value: true } })
+      let transferredToUserId: string | null = null
+      if (row) {
+        const value = JSON.parse(row.value) as { day?: unknown; transferDay?: unknown; transferredToUserId?: unknown }
+        if (value.day === claim.day && value.transferDay === claim.day && typeof value.transferredToUserId === 'string') {
+          transferredToUserId = value.transferredToUserId
+        }
+      }
+      await decrement(tx, claim.key)
+      if (transferredToUserId) {
+        const accountKey = `interview-article:v1:${createHash('sha256').update(`user:${transferredToUserId}`).digest('hex')}`
+        await decrement(tx, accountKey)
+      }
+    }, { timeout: 20_000 })
   } catch {
     console.error('[interview] article budget refund unavailable')
   }

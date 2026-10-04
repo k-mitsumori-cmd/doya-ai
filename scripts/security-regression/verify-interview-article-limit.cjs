@@ -46,7 +46,6 @@ let locks = 0;
 let projectOwner = 'u1';
 let projectGuestId = null;
 let changeOwnerDuringProvider = false;
-let lastRefundTarget = null;
 let claimedIdentity;
 let recipeOwner = 'u1';
 let recipeIsTemplate = false;
@@ -91,7 +90,7 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
   '@/lib/interview/gemini-request': load('src/lib/interview/gemini-request.ts'),
   '@/lib/interview/article-budget': {
     claimArticleBudget: async (identity) => { assert.equal(identity.projectId, 'p1'); budgetCalls++; claimedIdentity = identity; return admission; },
-    refundArticleBudget: async (_claim, transferredToUserId) => { refunds++; lastRefundTarget = transferredToUserId; },
+    refundArticleBudget: async () => { refunds++; },
   },
   '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
 }, {
@@ -224,7 +223,6 @@ async function events() {
   assert.equal(refunds, 7, 'The abandoned article reservation is refunded');
   assert.equal(drafts, 3, 'An article is not saved to a transferred project');
   assert.equal(locks, locksBeforeOwnerChange + 1, 'The lifecycle lock is acquired before rejecting the save');
-  assert.equal(lastRefundTarget, null, 'An account-to-account owner change does not refund another account');
   changeOwnerDuringProvider = false;
   asGuest = true;
   recipeIsTemplate = true;
@@ -232,7 +230,6 @@ async function events() {
   output = await events();
   assert.equal(output.at(-1).code, 'PROJECT_OWNER_CHANGED');
   assert.equal(claimedIdentity.guestId, 'g1');
-  assert.equal(lastRefundTarget, 'u2', 'A claimed guest attempt refunds the transferred account copy');
   assert.equal(refunds, 8);
   assert.equal(drafts, 3);
   changeOwnerDuringProvider = false;
@@ -241,15 +238,20 @@ async function events() {
   let reservationLocks = 0;
   let reservationQueries = 0;
   let guestProjectClaimed = true;
-  let refundSql = '';
-  let refundValues = [];
+  let transferMarker = false;
+  const refundedKeys = [];
   const reservationDb = {
     $transaction: async (fn) => fn({
-      $executeRaw: async () => { reservationLocks++; return 1; },
+      $executeRaw: async (parts, ...values) => {
+        if (String(parts[0]).includes('pg_advisory_xact_lock')) reservationLocks++;
+        else refundedKeys.push(values[0]);
+        return 1;
+      },
       interviewProject: { findUnique: async () => ({ userId: guestProjectClaimed ? 'u2' : null, guestId: 'g1' }) },
       $queryRaw: async () => { reservationQueries++; return [{ value: JSON.stringify({ day: '2026-10-05', count: 1 }) }]; },
+      systemSetting: { findUnique: async () => ({ value: JSON.stringify({ day: '2026-10-05', count: 1,
+        ...(transferMarker ? { transferDay: '2026-10-05', transferredToUserId: 'u2' } : {}) }) }) },
     }),
-    $executeRaw: async (parts, ...values) => { refundSql = parts.join('?'); refundValues = values; return 2; },
   };
   const budget = load('src/lib/interview/article-budget.ts', {
     'node:crypto': require('node:crypto'), '@/lib/prisma': { prisma: reservationDb },
@@ -262,10 +264,15 @@ async function events() {
   assert.equal((await budget.claimArticleBudget(guestIdentity)).state, 'allowed');
   assert.equal(reservationLocks, 2);
   assert.equal(reservationQueries, 1);
-  await budget.refundArticleBudget({ key: 'guest-budget-key', day: '2026-10-05' }, 'u2');
-  assert.match(refundSql, /transferDay/);
-  assert.match(refundSql, /transferredToUserId/);
-  assert(refundValues.includes('u2'));
+  const guestClaim = { key: 'guest-budget-key', day: '2026-10-05', guestId: 'g1' };
+  await budget.refundArticleBudget(guestClaim);
+  assert.deepEqual(refundedKeys, ['guest-budget-key'], 'A refund before transfer only reduces the guest counter');
+  transferMarker = true;
+  refundedKeys.length = 0;
+  await budget.refundArticleBudget(guestClaim);
+  assert.equal(refundedKeys.length, 2, 'A refund after transfer reduces both counters');
+  assert.equal(refundedKeys[0], 'guest-budget-key');
+  assert.equal(refundedKeys[1], `interview-article:v1:${require('node:crypto').createHash('sha256').update('user:u2').digest('hex')}`);
   let viewerId = null;
   let storedOwner = null;
   const { GET: readRecipe } = load('src/app/api/interview/recipes/[id]/route.ts', {
