@@ -8,6 +8,56 @@ const access = {
 
 ;(async () => {
   for (const archivedAfterInitialRead of [false, true]) {
+    for (const existingPreview of [false, true]) {
+      await check(`preview ${existingPreview ? 'reuse' : 'create'} ${archivedAfterInitialRead ? 'rejects archive race' : 'writes while active'}`, async () => {
+        let writes = 0
+        let locks = 0
+        const tx = {
+          $queryRaw: async () => { locks++; return [{ id: 'product' }] },
+          aishodanProduct: { findFirst: async ({ where }) => { assert.equal(where.archivedAt, null); return archivedAfterInitialRead ? null : { id: 'product' } } },
+          aishodanRoom: {
+            findFirst: async () => existingPreview ? { id: 'preview', sessionCount: 2 } : null,
+            update: async () => { writes++; return { token: 'existing' } },
+            create: async () => { writes++; return { token: 'new' } },
+          },
+        }
+        const prisma = {
+          aishodanScenario: { findFirst: async () => ({ id: 'scenario', product: { id: 'product', name: 'Product' } }) },
+          $transaction: async fn => fn(tx),
+        }
+        const route = load('src/app/api/aishodan/scenarios/[id]/preview/route.ts', {
+          crypto: { randomBytes: () => Buffer.alloc(24) }, 'next/server': { NextResponse: Response },
+          '@/lib/prisma': { prisma }, '@/lib/aishodan/access': access,
+        })
+        const response = await route.POST({}, { params: Promise.resolve({ id: 'scenario' }) })
+        assert.equal(response.status, archivedAfterInitialRead ? 409 : 200)
+        assert.equal(locks, 1)
+        assert.equal(writes, archivedAfterInitialRead ? 0 : 1)
+      })
+    }
+
+    await check(`room reactivation ${archivedAfterInitialRead ? 'rejects archive race' : 'writes while active'}`, async () => {
+      let writes = 0
+      let locks = 0
+      const tx = {
+        aishodanRoom: {
+          findFirst: async () => ({ scenario: { productId: 'product' } }),
+          updateMany: async () => { writes++; return { count: 1 } },
+        },
+        $queryRaw: async () => { locks++; return [{ id: 'product' }] },
+        aishodanProduct: { findFirst: async ({ where }) => { assert.equal(where.archivedAt, null); return archivedAfterInitialRead ? null : { id: 'product' } } },
+      }
+      const prisma = { $transaction: async fn => fn(tx) }
+      const route = load('src/app/api/aishodan/rooms/[id]/route.ts', {
+        'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma },
+        '@/lib/aishodan/access': { ...access, hasMinRole: () => true },
+      })
+      const response = await route.PATCH({ json: async () => ({ isActive: true }) }, { params: Promise.resolve({ id: 'room' }) })
+      assert.equal(response.status, archivedAfterInitialRead ? 409 : 200)
+      assert.equal(locks, 1)
+      assert.equal(writes, archivedAfterInitialRead ? 0 : 1)
+    })
+
     await check(`room issue ${archivedAfterInitialRead ? 'rejects archive race' : 'writes while active'}`, async () => {
       let writes = 0
       const tx = {

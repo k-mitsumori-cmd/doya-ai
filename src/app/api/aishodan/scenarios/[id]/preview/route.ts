@@ -27,43 +27,60 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   // 他組織のシナリオで練習ルームを作らせない
   const scenario = await prisma.aishodanScenario.findFirst({
     where: { id: p.id, product: { organizationId: ctx.organizationId, archivedAt: null } },
-    include: { product: { select: { name: true } } },
+    include: { product: { select: { id: true, name: true } } },
   })
   if (!scenario) return NextResponse.json({ error: 'シナリオが見つかりません' }, { status: 404 })
 
   const expiresAt = new Date(Date.now() + PREVIEW_DAYS * 24 * 60 * 60 * 1000)
 
-  // 既存の練習ルームがあれば、期限と上限を伸ばして使い回す
-  const existing = await prisma.aishodanRoom.findFirst({
-    where: { organizationId: ctx.organizationId, scenarioId: scenario.id, isPreview: true },
-    orderBy: { createdAt: 'desc' },
-  })
-  if (existing) {
-    const room = await prisma.aishodanRoom.update({
-      where: { id: existing.id },
-      data: {
-        isActive: true,
-        expiresAt,
-        // ⚠️ 練習を繰り返すと sessionCount が上限に当たって開けなくなる。
-        //    使うたびに枠を足しておく。
-        maxSessions: existing.sessionCount + 50,
-      },
-      select: { token: true },
-    })
-    return NextResponse.json({ token: room.token, reused: true })
-  }
+  try {
+    const result = await prisma.$transaction(async tx => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM aishodan_products WHERE id = ${scenario.product.id}
+        AND "organizationId" = ${ctx.organizationId} FOR NO KEY UPDATE
+      `
+      if (!locked.length) return null
+      const product = await tx.aishodanProduct.findFirst({
+        where: { id: scenario.product.id, organizationId: ctx.organizationId, archivedAt: null },
+        select: { id: true },
+      })
+      if (!product) return null
 
-  const room = await prisma.aishodanRoom.create({
-    data: {
-      organizationId: ctx.organizationId,
-      scenarioId: scenario.id,
-      name: `【練習】${scenario.product.name}`,
-      token: randomBytes(24).toString('base64url'),
-      expiresAt,
-      maxSessions: 50,
-      isPreview: true,
-    },
-    select: { token: true },
-  })
-  return NextResponse.json({ token: room.token, reused: false })
+      // 商材保管中に既存の練習ルームを再開しない。
+      const existing = await tx.aishodanRoom.findFirst({
+        where: { organizationId: ctx.organizationId, scenarioId: scenario.id, isPreview: true },
+        orderBy: { createdAt: 'desc' },
+      })
+      if (existing) {
+        const room = await tx.aishodanRoom.update({
+          where: { id: existing.id },
+          data: {
+            isActive: true,
+            expiresAt,
+            maxSessions: existing.sessionCount + 50,
+          },
+          select: { token: true },
+        })
+        return { token: room.token, reused: true }
+      }
+
+      const room = await tx.aishodanRoom.create({
+        data: {
+          organizationId: ctx.organizationId,
+          scenarioId: scenario.id,
+          name: `【練習】${scenario.product.name}`,
+          token: randomBytes(24).toString('base64url'),
+          expiresAt,
+          maxSessions: 50,
+          isPreview: true,
+        },
+        select: { token: true },
+      })
+      return { token: room.token, reused: false }
+    }, { maxWait: 10000, timeout: 30000 })
+    if (!result) return NextResponse.json({ error: '保管済み商材の練習URLは発行できません。' }, { status: 409 })
+    return NextResponse.json(result)
+  } catch {
+    return NextResponse.json({ error: '練習URLを発行できませんでした。商材の状態を確認して再試行してください。' }, { status: 503 })
+  }
 }

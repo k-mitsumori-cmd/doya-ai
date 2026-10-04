@@ -20,14 +20,6 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   }
 
   const body = await req.json().catch(() => ({}))
-  if (body?.isActive === true) {
-    const room = await prisma.aishodanRoom.findFirst({
-      where: { id: p.id, organizationId: ctx.organizationId },
-      select: { scenario: { select: { product: { select: { archivedAt: true } } } } },
-    })
-    if (!room) return NextResponse.json({ error: 'ルームが見つかりません' }, { status: 404 })
-    if (room.scenario.product.archivedAt) return NextResponse.json({ error: '保管済み商材の商談URLは再公開できません。' }, { status: 409 })
-  }
   const data: Record<string, unknown> = {}
   if ('isActive' in body) data.isActive = Boolean(body.isActive)
   if ('name' in body && String(body.name).trim()) data.name = String(body.name).trim().slice(0, 200)
@@ -39,12 +31,37 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
     data.expiresAt = Number.isFinite(d) && d > 0 ? new Date(Date.now() + d * 24 * 60 * 60 * 1000) : null
   }
 
-  const updated = await prisma.aishodanRoom.updateMany({
-    where: { id: p.id, organizationId: ctx.organizationId, ...((data.isActive === true) ? { scenario: { product: { archivedAt: null } } } : {}) },
-    data,
-  })
-  if (updated.count === 0) return NextResponse.json({ error: 'ルームが見つかりません' }, { status: 404 })
-  return NextResponse.json({ ok: true })
+  try {
+    const result = await prisma.$transaction(async tx => {
+      const room = await tx.aishodanRoom.findFirst({
+        where: { id: p.id, organizationId: ctx.organizationId },
+        select: { scenario: { select: { productId: true } } },
+      })
+      if (!room) return 'not-found' as const
+      if (data.isActive === true) {
+        // 商材保管と同じ行をロックし、再公開が保管後に確定するのを防ぐ。
+        const locked = await tx.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM aishodan_products WHERE id = ${room.scenario.productId}
+          AND "organizationId" = ${ctx.organizationId} FOR NO KEY UPDATE
+        `
+        if (!locked.length) return 'archived' as const
+        const product = await tx.aishodanProduct.findFirst({
+          where: { id: room.scenario.productId, organizationId: ctx.organizationId, archivedAt: null },
+          select: { id: true },
+        })
+        if (!product) return 'archived' as const
+      }
+      const updated = await tx.aishodanRoom.updateMany({
+        where: { id: p.id, organizationId: ctx.organizationId }, data,
+      })
+      return updated.count ? 'updated' as const : 'not-found' as const
+    }, { maxWait: 10000, timeout: 30000 })
+    if (result === 'not-found') return NextResponse.json({ error: 'ルームが見つかりません' }, { status: 404 })
+    if (result === 'archived') return NextResponse.json({ error: '保管済み商材の商談URLは再公開できません。' }, { status: 409 })
+    return NextResponse.json({ ok: true })
+  } catch {
+    return NextResponse.json({ error: '商談URLを更新できませんでした。再試行してください。' }, { status: 503 })
+  }
 }
 
 export async function DELETE(req: NextRequest, ctxParam: Ctx) {
