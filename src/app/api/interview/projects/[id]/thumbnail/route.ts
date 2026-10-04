@@ -256,7 +256,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     // The first image belongs to the project. Explicit regeneration spends one
     // shared manual AI-edit credit before reaching the paid image provider.
     if (current.thumbnailUrl && force) {
-      const admission = await claimAuxBudget({ userId, guestId, plan })
+      const admission = await claimAuxBudget({ userId, guestId, plan, projectId: id })
       if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
       auxClaim = admission.claim
     }

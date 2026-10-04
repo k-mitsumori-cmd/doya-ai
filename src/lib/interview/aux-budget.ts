@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import type { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import type { InterviewPlanCode } from './types'
@@ -12,13 +13,17 @@ const AUX_LIMIT: Record<InterviewPlanCode, number> = {
   ENTERPRISE: 100,
 }
 
-export type AuxClaim = { key: string; day: string }
+export type AuxClaim = { key: string; day: string; guestId: string | null }
 export type AuxAdmission =
   | { state: 'allowed'; claim: AuxClaim; limit: number }
   | { state: 'limit'; limit: number }
+  | { state: 'owner_changed' }
   | { state: 'unavailable' }
 
 export function auxAdmissionError(admission: Exclude<AuxAdmission, { state: 'allowed' }>, plan: InterviewPlanCode): NextResponse {
+  if (admission.state === 'owner_changed') {
+    return NextResponse.json({ success: false, error: 'プロジェクトが見つかりません。画面を再読み込みしてください。' }, { status: 404 })
+  }
   if (admission.state === 'limit') {
     return NextResponse.json({
       success: false,
@@ -36,13 +41,14 @@ export function interviewAuxDailyLimit(plan: InterviewPlanCode): number {
 }
 
 /** Reserve one manual AI-assisted edit across all app instances. */
-export async function claimAuxBudget(identity: { userId: string | null; guestId: string | null; plan: InterviewPlanCode }): Promise<AuxAdmission> {
-  const subject = identity.userId ? `user:${identity.userId}` : identity.guestId ? `guest:${identity.guestId}` : null
+export async function claimAuxBudget(identity: { userId: string | null; guestId: string | null; plan: InterviewPlanCode; projectId: string }): Promise<AuxAdmission> {
+  const { userId, guestId, projectId } = identity
+  const subject = userId ? `user:${userId}` : guestId ? `guest:${guestId}` : null
   if (!subject) return { state: 'unavailable' }
   const limit = interviewAuxDailyLimit(identity.plan)
   const key = `interview-aux:v1:${createHash('sha256').update(subject).digest('hex')}`
-  try {
-    const rows = await prisma.$queryRaw<Array<{ value: string }>>`
+  const reserve = async (db: Prisma.TransactionClient | typeof prisma): Promise<AuxAdmission> => {
+    const rows = await db.$queryRaw<Array<{ value: string }>>`
       INSERT INTO "SystemSetting" ("id", "key", "value")
       VALUES (${randomUUID()}, ${key}, jsonb_build_object(
         'day', to_char(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD'), 'count', 1
@@ -57,7 +63,20 @@ export async function claimAuxBudget(identity: { userId: string | null; guestId:
       RETURNING "value"
     `
     if (!rows.length) return { state: 'limit', limit }
-    return { state: 'allowed', claim: { key, day: (JSON.parse(rows[0].value) as { day: string }).day }, limit }
+    return { state: 'allowed', claim: { key, day: (JSON.parse(rows[0].value) as { day: string }).day, guestId: userId ? null : guestId }, limit }
+  }
+  try {
+    if (guestId && !userId) {
+      return await prisma.$transaction(async tx => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-guest-project'), hashtext(${guestId}))`
+        const project = await tx.interviewProject.findUnique({
+          where: { id: projectId }, select: { userId: true, guestId: true },
+        })
+        if (!project || project.userId || project.guestId !== guestId) return { state: 'owner_changed' }
+        return reserve(tx)
+      }, { timeout: 20_000 })
+    }
+    return await reserve(prisma)
   } catch {
     console.error('[interview] auxiliary budget unavailable')
     return { state: 'unavailable' }
@@ -66,13 +85,32 @@ export async function claimAuxBudget(identity: { userId: string | null; guestId:
 
 export async function refundAuxBudget(claim: AuxClaim): Promise<void> {
   try {
-    await prisma.$executeRaw`
+    const decrement = async (db: Prisma.TransactionClient | typeof prisma, key: string) => db.$executeRaw`
       UPDATE "SystemSetting" SET "value" = (
         "value"::jsonb || jsonb_build_object('count', GREATEST(0, ("value"::jsonb->>'count')::integer - 1))
-      )::text
-      WHERE "key" = ${claim.key} AND "value"::jsonb->>'day' = ${claim.day}
+      )::text WHERE "key" = ${key} AND "value"::jsonb->>'day' = ${claim.day}
         AND ("value"::jsonb->>'count')::integer > 0
     `
+    if (!claim.guestId) {
+      await decrement(prisma, claim.key)
+      return
+    }
+    await prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-guest-project'), hashtext(${claim.guestId}))`
+      const row = await tx.systemSetting.findUnique({ where: { key: claim.key }, select: { value: true } })
+      let transferredToUserId: string | null = null
+      if (row) {
+        const value = JSON.parse(row.value) as { day?: unknown; transferDay?: unknown; transferredToUserId?: unknown }
+        if (value.day === claim.day && value.transferDay === claim.day && typeof value.transferredToUserId === 'string') {
+          transferredToUserId = value.transferredToUserId
+        }
+      }
+      await decrement(tx, claim.key)
+      if (transferredToUserId) {
+        const accountKey = `interview-aux:v1:${createHash('sha256').update(`user:${transferredToUserId}`).digest('hex')}`
+        await decrement(tx, accountKey)
+      }
+    }, { timeout: 20_000 })
   } catch {
     console.error('[interview] auxiliary budget refund unavailable')
   }

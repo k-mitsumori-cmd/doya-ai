@@ -16,6 +16,7 @@ import { parseProofreadOutput } from '@/lib/interview/ai-output'
 import { auxAdmissionError, claimAuxBudget, claimIncludedProofread, finishIncludedProofread, refundAuxBudget, refundIncludedProofread, type AuxClaim, type IncludedProofreadClaim } from '@/lib/interview/aux-budget'
 
 type Ctx = { params: Promise<{ id: string }> }
+class ProjectOwnerChangedError extends Error {}
 
 async function resolveId(ctx: Ctx): Promise<string> {
   const p = await ctx.params
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     } else if (included.state === 'unavailable') {
       return NextResponse.json({ success: false, error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503 })
     } else {
-      const admission = await claimAuxBudget({ userId, guestId, plan })
+      const admission = await claimAuxBudget({ userId, guestId, plan, projectId: draft.project.id })
       if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
       auxClaim = admission.claim
     }
@@ -131,16 +132,23 @@ ${draft.content.slice(0, 60000)}`
     }
 
     // 校閲結果をDBに保存
-    const review = await prisma.interviewReview.create({
-      data: {
-        projectId: draft.project.id,
-        draftId: draft.id,
-        report: result.summary || '',
-        checks: result.checks || null,
-        score: result.score ?? null,
-        readabilityScore: null,
-        suggestions: result.suggestions || [],
-      },
+    const review = await prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${draft.project.id}))`
+      const current = await tx.interviewProject.findUnique({
+        where: { id: draft.project.id }, select: { userId: true, guestId: true },
+      })
+      if (!current || checkOwnership(current, userId, guestId)) throw new ProjectOwnerChangedError()
+      return tx.interviewReview.create({
+        data: {
+          projectId: draft.project.id,
+          draftId: draft.id,
+          report: result.summary || '',
+          checks: result.checks || null,
+          score: result.score ?? null,
+          readabilityScore: null,
+          suggestions: result.suggestions || [],
+        },
+      })
     })
 
     completed = true
@@ -158,6 +166,9 @@ ${draft.content.slice(0, 60000)}`
     })
   } catch (e: any) {
     console.error('[interview] proofread error:')
+    if (e instanceof ProjectOwnerChangedError) {
+      return NextResponse.json({ success: false, error: 'プロジェクトが変更されました。画面を再読み込みしてください。' }, { status: 404 })
+    }
     return NextResponse.json(
       { success: false, error: e instanceof InterviewGeminiError ? e.message : '校正に失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }

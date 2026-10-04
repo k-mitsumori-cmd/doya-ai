@@ -90,11 +90,11 @@ const route = load('src/app/api/interview/claim-guest/route.ts', {
     assert.deepEqual(JSON.parse(quotaValue), { usedSeconds: 420, reservedSeconds: 30 })
     assert.equal(accountUpdates, 1)
     assert.equal(dailyTransfers, 2)
-    assert.equal(transferMarkers, 1)
+    assert.equal(transferMarkers, 2)
     assert.equal((await claim('account-owner', 'guest-owner', now)).count, 0)
     assert.equal(accountUpdates, 1)
     assert.equal(dailyTransfers, 2)
-    assert.equal(transferMarkers, 1)
+    assert.equal(transferMarkers, 2)
   })
   await check('another account with the old cookie cannot claim the project', async () => {
     assert.equal((await claim('other-account', 'guest-owner', now)).count, 0)

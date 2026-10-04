@@ -67,7 +67,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
-    const admission = await claimAuxBudget({ userId, guestId, plan })
+    const admission = await claimAuxBudget({ userId, guestId, plan, projectId: draft.project.id })
     if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
     claim = admission.claim
 

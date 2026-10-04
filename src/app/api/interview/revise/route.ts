@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     // ドラフトの所有者チェック
     const draft = await prisma.interviewDraft.findUnique({
       where: { id: draftId },
-      include: { project: { select: { userId: true, guestId: true } } },
+      include: { project: { select: { id: true, userId: true, guestId: true } } },
     })
     if (!draft) {
       return NextResponse.json({ success: false, error: 'ドラフトが見つかりません' }, { status: 404 })
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     const apiKey = getGeminiApiKey()
     const model = process.env.INTERVIEW_GEMINI_MODEL || process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash'
-    const admission = await claimAuxBudget({ userId, guestId, plan })
+    const admission = await claimAuxBudget({ userId, guestId, plan, projectId: draft.project.id })
     if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
     claim = admission.claim
 
