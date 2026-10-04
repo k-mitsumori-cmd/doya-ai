@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!isPaidPlan(billing.plan)) {
     const canManageBilling = sctx.role === 'owner' && sctx.userId === billing.ownerUserId
     return NextResponse.json(
-      { error: canManageBilling ? '提案資料の生成はプロプランの機能です。プロプランにアップグレードするとご利用いただけます。' : 'この組織で提案資料を生成するには、組織オーナーのプロプラン契約が必要です。', code: 'PLAN', ...(canManageBilling ? { upgradeUrl: `/shodan/pricing?org=${encodeURIComponent(sctx.organizationSlug)}` } : {}) },
+      { error: canManageBilling ? '提案資料の生成はプロプランの機能です。プロプランにアップグレードするとご利用いただけます。' : 'この組織で提案資料を生成するには、組織オーナーのプロプラン契約が必要です。', code: 'PLAN', canManageBilling, ...(canManageBilling ? { upgradeUrl: `/shodan/pricing?org=${encodeURIComponent(sctx.organizationSlug)}` } : {}) },
       { status: 402 }
     )
   }

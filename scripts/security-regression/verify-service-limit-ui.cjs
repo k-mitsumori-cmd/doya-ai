@@ -53,6 +53,15 @@ const fixtureMessages=[
   assert.equal(classify('/api/sfa/ai/score',402,{...body,code:'SFA_AI_LIMIT_REACHED',canManageBilling:false}).kind,'owner');
   assert.equal(classify('/api/sfa/ai/next-action',402,{...body,code:'SFA_AI_LIMIT_REACHED',canManageBilling:true}).kind,'quota');
  });
+ await check('Shodan organization members cannot buy an ineffective personal upgrade',async()=>{
+  const member={code:'PLAN',error:'この組織で提案資料を生成するには、組織オーナーのプロプラン契約が必要です。',canManageBilling:false};
+  assert.equal(classify('/api/shodan/preparations/id/generate',402,member).kind,'owner');
+  assert.equal(classify('/api/shodan/preparations',402,{...member,code:'LIMIT'}).kind,'owner');
+  const owner={...member,canManageBilling:true,upgradeUrl:'/shodan/pricing?org=example-org'};
+  assert.equal(classify('/api/shodan/preparations/id/generate',402,owner).pricingHref,'/shodan/pricing?org=example-org');
+  assert.equal(classify('/api/shodan/preparations/id/generate',402,{...owner,upgradeUrl:'//external.example/pricing'}).pricingHref,'/shodan/pricing');
+  assert.equal(classify('/api/shodan/preparations/id/generate',402,{...owner,upgradeUrl:'/shodan/pricing?org=example-org&next=https://external.example'}).pricingHref,'/shodan/pricing');
+ });
  await check('Kintai employee cap directs non-contract admins to the owner',async()=>{
   const body={code:'KINTAI_EMPLOYEE_LIMIT',error:'従業員数が上限（100名）に達しています。',canManageBilling:false};
   assert.equal(classify('/api/kintai/employees',403,body).kind,'owner');

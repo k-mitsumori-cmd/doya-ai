@@ -26,6 +26,8 @@ export function classifyServiceLimit(path: string, status: number, data: unknown
   if (!feature && !quota && typeof body.upgradePath !== 'string') return null
   const kind = service === 'promane' && ['LIMIT', 'PROMANE_MEMBER_LIMIT_REACHED'].includes(code) && body.canManageBilling === false
     ? 'owner'
+    : service === 'shodan' && ['PLAN', 'LIMIT'].includes(code) && body.canManageBilling === false
+    ? 'owner'
     : ['quote', 'mensetsu', 'aishodan'].includes(service) && code === 'LIMIT_REACHED' && body.canManageBilling === false
     ? 'owner'
     : service === 'aio' && code === 'LIMIT' && body.canManageBilling === false
@@ -37,7 +39,10 @@ export function classifyServiceLimit(path: string, status: number, data: unknown
     : service === 'hr' && /^HR_ORG_(EMPLOYEE|MEMBER|AI)_LIMIT$/.test(code)
     ? body.canManageBilling === true ? 'organization' : 'owner'
     : /不要なワークスペースを整理/.test(message) ? 'capacity' : /^\/api\/(?:aishodan\/room|mensetsu\/live)\//.test(path) ? 'owner' : quota ? 'quota' : 'feature'
-  return { service, ...config, kind, message }
+  const pricingHref = service === 'shodan' && body.canManageBilling === true && typeof body.upgradeUrl === 'string'
+    && /^\/shodan\/pricing\?org=[a-z0-9-]{1,100}$/.test(body.upgradeUrl)
+    ? body.upgradeUrl : config.pricingHref
+  return { service, ...config, pricingHref, kind, message }
 }
 
 export function showServiceLimit(path: string, status: number, data: unknown): boolean {

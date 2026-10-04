@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!billing) return NextResponse.json({ error: '組織の契約情報を確認できませんでした。時間をおいて再度お試しください。' }, { status: 503 })
   if (!isPaidPlan(billing.plan)) {
     const canManageBilling = sctx.role === 'owner' && sctx.userId === billing.ownerUserId
-    return NextResponse.json({ error: canManageBilling ? 'スライド資料の生成はプロプランの機能です。' : 'この組織でスライド資料を生成するには、組織オーナーのプロプラン契約が必要です。', code: 'PLAN', ...(canManageBilling ? { upgradeUrl: `/shodan/pricing?org=${encodeURIComponent(sctx.organizationSlug)}` } : {}) }, { status: 402 })
+    return NextResponse.json({ error: canManageBilling ? 'スライド資料の生成はプロプランの機能です。' : 'この組織でスライド資料を生成するには、組織オーナーのプロプラン契約が必要です。', code: 'PLAN', canManageBilling, ...(canManageBilling ? { upgradeUrl: `/shodan/pricing?org=${encodeURIComponent(sctx.organizationSlug)}` } : {}) }, { status: 402 })
   }
 
   const body = await req.json().catch(() => null)
