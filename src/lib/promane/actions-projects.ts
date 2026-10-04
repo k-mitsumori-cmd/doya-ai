@@ -247,33 +247,38 @@ export async function deleteProject(workspaceSlug: string, projectId: string) {
 export async function repairInvalidProjects(workspaceSlug: string): Promise<{ repaired: number }> {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await requireWritableWorkspace(workspaceSlug, userId, true);
-
-  const projects = await prisma.promaneProject.findMany({
-    where: { workspaceId: workspace.id },
-    select: { id: true, contractAmount: true, monthlyAmount: true, hourlyRate: true, estimatedHours: true, startDate: true, endDate: true },
-  });
-  let repaired = 0;
-  for (const p of projects) {
-    const fixes: any = {};
-    if (p.contractAmount < 0) { fixes.contractAmount = 0; }
-    if (p.monthlyAmount != null && p.monthlyAmount < 0) { fixes.monthlyAmount = 0; }
-    if (p.hourlyRate != null && p.hourlyRate < 0) { fixes.hourlyRate = 0; }
-    if (p.estimatedHours != null && p.estimatedHours < 0) { fixes.estimatedHours = 0; }
-    if (p.startDate && p.endDate && p.endDate < p.startDate) { fixes.endDate = null; }
-    if (Object.keys(fixes).length > 0) {
-      // Skip rows whose repair-relevant values changed after the scan.
-      const result = await prisma.promaneProject.updateMany({
+  const repaired = await retryProjectTransaction(() => prisma.$transaction(async tx => {
+    const member = await tx.promaneMember.findFirst({
+      where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin'] } },
+      select: { id: true },
+    });
+    if (!member) throw new Error('データ修復はオーナー・管理者のみ実行できます');
+    const projects = await tx.promaneProject.findMany({
+      where: { workspaceId: workspace.id },
+      select: { id: true, contractAmount: true, monthlyAmount: true, hourlyRate: true, estimatedHours: true, startDate: true, endDate: true },
+    });
+    let count = 0;
+    for (const project of projects) {
+      const fixes: any = {};
+      if (project.contractAmount < 0) fixes.contractAmount = 0;
+      if (project.monthlyAmount != null && project.monthlyAmount < 0) fixes.monthlyAmount = 0;
+      if (project.hourlyRate != null && project.hourlyRate < 0) fixes.hourlyRate = 0;
+      if (project.estimatedHours != null && project.estimatedHours < 0) fixes.estimatedHours = 0;
+      if (project.startDate && project.endDate && project.endDate < project.startDate) fixes.endDate = null;
+      if (Object.keys(fixes).length === 0) continue;
+      const result = await tx.promaneProject.updateMany({
         where: {
-          id: p.id, workspaceId: workspace.id,
-          contractAmount: p.contractAmount, monthlyAmount: p.monthlyAmount,
-          hourlyRate: p.hourlyRate, estimatedHours: p.estimatedHours,
-          startDate: p.startDate, endDate: p.endDate,
+          id: project.id, workspaceId: workspace.id,
+          contractAmount: project.contractAmount, monthlyAmount: project.monthlyAmount,
+          hourlyRate: project.hourlyRate, estimatedHours: project.estimatedHours,
+          startDate: project.startDate, endDate: project.endDate,
         },
         data: fixes,
       });
-      repaired += result.count;
+      count += result.count;
     }
-  }
+    return count;
+  }, { isolationLevel: 'Serializable', timeout: 20_000 }));
   revalidatePath(`/promane/${workspaceSlug}`);
   return { repaired };
 }

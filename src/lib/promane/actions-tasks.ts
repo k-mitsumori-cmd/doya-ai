@@ -238,28 +238,36 @@ export async function moveTask(workspaceSlug: string, taskId: string, newStatus:
 export async function repairInvalidTaskDates(workspaceSlug: string): Promise<{ repaired: number }> {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await requireWritableWorkspace(workspaceSlug, userId, true);
-
-  const tasks = await prisma.promaneTask.findMany({
-    where: {
-      project: { workspaceId: workspace.id },
-      startDate: { not: null },
-      dueDate: { not: null },
-    },
-    select: { id: true, startDate: true, dueDate: true },
-  });
-
-  const broken = tasks.filter((t) => t.startDate && t.dueDate && t.dueDate < t.startDate);
-  if (broken.length === 0) return { repaired: 0 };
-
-  await prisma.$transaction(
-    broken.map((t) =>
-      prisma.promaneTask.update({
-        where: { id: t.id },
-        data: { dueDate: null }, // 不正な dueDate を null に
-      })
-    )
-  );
-
+  const repaired = await retryTaskTransaction(() => prisma.$transaction(async tx => {
+    const member = await tx.promaneMember.findFirst({
+      where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ["owner", "admin"] } },
+      select: { id: true },
+    });
+    if (!member) throw new Error("データ修復はオーナー・管理者のみ実行できます");
+    const tasks = await tx.promaneTask.findMany({
+      where: {
+        project: { workspaceId: workspace.id },
+        startDate: { not: null },
+        dueDate: { not: null },
+      },
+      select: { id: true, startDate: true, dueDate: true },
+    });
+    let count = 0;
+    for (const task of tasks) {
+      if (!task.startDate || !task.dueDate || task.dueDate >= task.startDate) continue;
+      const updated = await tx.promaneTask.updateMany({
+        where: {
+          id: task.id,
+          project: { workspaceId: workspace.id },
+          startDate: task.startDate,
+          dueDate: task.dueDate,
+        },
+        data: { dueDate: null },
+      });
+      count += updated.count;
+    }
+    return count;
+  }, { isolationLevel: "Serializable", timeout: 20_000 }));
   revalidatePath(`/promane/${workspaceSlug}`);
-  return { repaired: broken.length };
+  return { repaired };
 }
