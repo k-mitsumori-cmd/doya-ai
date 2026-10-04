@@ -12,6 +12,7 @@ function fixture({ claim = 'reserved', banners = ['data:image/png;base64,AAAA'],
     usage: { monthlyLimit: 15, monthlyUsed: 3, monthlyRemaining: 12 },
   }
   const api = load('src/app/api/banner/generate/route.ts', {
+    '@vercel/functions': { waitUntil: () => {} },
     'next/server': { NextResponse: { json: (body, opts) => Object.assign(
       new Response(JSON.stringify(body), { status: opts?.status ?? 200, headers: { 'content-type': 'application/json' } }),
       { cookies: { set() {} } },

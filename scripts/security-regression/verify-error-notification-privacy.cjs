@@ -50,7 +50,7 @@ const notifications = load('src/lib/notifications.ts', {
     assert.equal(posted.length, 1)
     const body = JSON.stringify(posted[0])
     assert(!body.includes(secret))
-    assert(body.includes('/api/banner'))
+    assert(body.includes('/api/banner/generate'))
     assert(body.includes('500'))
     assert(body.includes('POST'))
     assert(!body.includes('apiKey'))
@@ -119,6 +119,13 @@ const notifications = load('src/lib/notifications.ts', {
     assert.equal(shared.size, 2)
     assert.equal(sends[0].signal instanceof AbortSignal, true)
     assert(!JSON.stringify(sends[0].body).includes(secret))
+    for (const pathname of ['/api/banner/refine', '/api/cron/daily-summary', '/api/cron/monthly-summary']) {
+      await makeInstance().sendErrorNotification({ errorMessage: 'Another failure', pathname, requestMethod: 'POST', httpStatus: 500, timestamp: secret })
+    }
+    assert.equal(sends.length, 4, 'separate static routes must not suppress one another')
+    assert.equal(shared.size, 5)
+    await makeInstance().sendErrorNotification({ errorMessage: secret, pathname: `/api/banner/generate/${secret}`, requestMethod: 'POST', httpStatus: 500, timestamp: secret })
+    assert.equal(sends.length, 4, 'a dynamic suffix must not create a new alert source')
   })
 
   await check('HTTP delivery failure releases the shared claim', async () => {

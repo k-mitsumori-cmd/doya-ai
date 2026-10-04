@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { waitUntil } from '@vercel/functions'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
@@ -373,13 +374,14 @@ export async function POST(request: NextRequest) {
     return res
 
   } catch {
-    console.error('Banner generation API failed')
-    sendErrorNotification({
+    console.warn('Banner generation API failed')
+    const notification = sendErrorNotification({
       errorMessage: 'Banner generation failed',
       pathname: '/api/banner/generate',
       requestMethod: 'POST',
       timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
-    }).catch(() => {})
+    })
+    try { waitUntil(notification) } catch { await notification }
 
     return NextResponse.json(
       { error: 'バナー生成中にエラーが発生しました。しばらく待ってから再試行してください。' },

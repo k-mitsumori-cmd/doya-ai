@@ -14,6 +14,7 @@ let response = new Response(JSON.stringify({ candidates: [{ content: { parts: [
 let notifications = 0
 const sharp = () => ({ resize() { return this }, png() { return this }, async toBuffer() { return Buffer.from('image') } })
 const api = load('src/app/api/banner/refine/route.ts', {
+  '@vercel/functions': { waitUntil: () => {} },
   'next/server': { NextResponse: { json: (body, options) => new Response(JSON.stringify(body), { status: options?.status || 200 }) } },
   'next-auth': { getServerSession: async () => ({ user: { id: 'u1' } }) },
   '@/lib/auth': { authOptions: {} },

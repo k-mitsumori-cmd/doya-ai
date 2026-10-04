@@ -5,8 +5,10 @@ const { load, check } = require('./load-typescript.cjs')
 
 const secret = 'PRIVATE_PROVIDER_RESPONSE_OR_USER_PROMPT'
 const notifications = []
+const backgroundTasks = []
 const sessionFailure = { getServerSession: async () => { throw new Error(secret) } }
 const common = {
+  '@vercel/functions': { waitUntil: (task) => { backgroundTasks.push(task) } },
   'next/server': { NextResponse: Response },
   'next-auth': sessionFailure,
   '@/lib/auth': { authOptions: {} },
@@ -27,6 +29,7 @@ const common = {
     assert.equal(response.status, 500)
     assert(!JSON.stringify(await response.json()).includes(secret))
     assert.equal(notifications.length, 1)
+    assert.equal(backgroundTasks.length, 1)
     assert(!JSON.stringify(notifications[0]).includes(secret))
     assert.equal(notifications[0].errorStack, undefined)
   })
@@ -55,8 +58,28 @@ const common = {
     assert.equal(response.status, 500)
     assert(!JSON.stringify(await response.json()).includes(secret))
     assert.equal(notifications.length, 2)
+    assert.equal(backgroundTasks.length, 2)
     assert(!JSON.stringify(notifications[1]).includes(secret))
     assert.equal(notifications[1].errorStack, undefined)
+  })
+
+  await check('Banner error notification finishes before returning if waitUntil is unavailable', async () => {
+    let finishNotification
+    let notificationStarted
+    const started = new Promise((resolve) => { notificationStarted = resolve })
+    const fallback = load('src/app/api/banner/generate/route.ts', {
+      ...common,
+      '@vercel/functions': { waitUntil: () => { throw new Error('No request context') } },
+      '@/lib/notifications': { sendErrorNotification: () => new Promise((resolve) => { finishNotification = resolve; notificationStarted() }) },
+    })
+    let completed = false
+    const response = fallback.POST({}).then((result) => { completed = true; return result })
+    await started
+    assert.equal(completed, false)
+    assert.equal(typeof finishNotification, 'function')
+    finishNotification()
+    assert.equal((await response).status, 500)
+    assert.equal(completed, true)
   })
 
   for (const [label, providerMessage, quota] of [

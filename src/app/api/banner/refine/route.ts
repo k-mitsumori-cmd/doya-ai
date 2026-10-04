@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { waitUntil } from '@vercel/functions'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import sharp from 'sharp'
@@ -232,13 +233,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
     throw lastError || new Error('バナーの再生成に失敗しました')
 
   } catch {
-    console.error('Banner refine failed')
-    sendErrorNotification({
+    console.warn('Banner refine failed')
+    const notification = sendErrorNotification({
       errorMessage: 'Banner refine failed',
       pathname: '/api/banner/refine',
       requestMethod: 'POST',
       timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
-    }).catch(() => {})
+    })
+    try { waitUntil(notification) } catch { await notification }
     return NextResponse.json({
       success: false,
       error: 'バナーの再生成に失敗しました',

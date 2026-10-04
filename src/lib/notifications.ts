@@ -24,13 +24,30 @@ export type ErrorNotificationData = {
   requestBody?: string
 }
 
+// Only static call sites may contribute a third path segment to Slack or the
+// shared throttle key. Dynamic request IDs and user input stay out of both.
+const staticErrorLocations = new Set([
+  '/api/banner/generate', '/api/banner/refine', '/api/opening/analyze',
+  '/api/cron/analytics-report', '/api/cron/appstore-country-report',
+  '/api/cron/appstore-marketing-report', '/api/cron/appstore-report',
+  '/api/cron/appstore-source-report', '/api/cron/daily-summary',
+  '/api/cron/doyamarke-body-check', '/api/cron/drip-report-evening',
+  '/api/cron/drip-report-morning', '/api/cron/gcp-usage',
+  '/api/cron/media-seo-report', '/api/cron/monthly-summary',
+  '/api/cron/noroi-engagement-report', '/api/cron/noroi-monthly-summary',
+  '/api/cron/noroi-morning-digest', '/api/cron/noroi-weekly-summary',
+  '/api/cron/spend-report', '/api/cron/weekly-summary',
+  '/api/cron/yurusen-appstore-report', '/api/cron/yurusen-morning-digest',
+])
+
 function safeErrorLocation(data: ErrorNotificationData): string {
   try {
     const pathname = new URL(data.pathname || data.requestUrl || '/', 'https://doya.invalid').pathname
-    const parts = pathname.split('/').filter(Boolean).slice(0, 2)
-    return parts.every((part) => /^[a-z][a-z0-9-]{0,39}$/.test(part))
-      ? `/${parts.join('/')}`
-      : '/api'
+    const parts = pathname.split('/').filter(Boolean)
+    const prefix = parts.slice(0, 2)
+    if (!prefix.every((part) => /^[a-z][a-z0-9-]{0,39}$/.test(part))) return '/api'
+    const staticLocation = `/${parts.slice(0, 3).join('/')}`
+    return staticErrorLocations.has(staticLocation) ? staticLocation : `/${prefix.join('/')}`
   } catch {
     return '/api'
   }
