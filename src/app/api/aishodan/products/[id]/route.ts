@@ -3,9 +3,7 @@ export const dynamic = 'force-dynamic'
 
 // DELETE /api/aishodan/products/[id] — 商材（取り込んだサービス）を削除
 //
-// ⚠️ **道連れが大きい。** onDelete: Cascade により
-//    ナレッジ・取り込みページ・シナリオ・商談URL・**実施済みの商談ログ**まで消える。
-//    復旧手段は無いので、管理者以上に限り、件数を返して画面で必ず確認させる。
+// ⚠️ onDelete: Cascade により商談ログも消えるため、記録がある商材は削除しない。
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/access'
@@ -20,18 +18,25 @@ export async function DELETE(req: NextRequest, ctxParam: Ctx) {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
 
-  // ⚠️ id だけで引かない。必ず所有者条件と併用する（他組織の商材を消させない）
-  const product = await prisma.aishodanProduct.findFirst({
-    where: { id: p.id, organizationId: ctx.organizationId },
-    select: { id: true },
-  })
-  if (!product) return NextResponse.json({ error: '商材が見つかりません' }, { status: 404 })
-
-  // 何が道連れになるかを数えてから消す（画面に出して納得してもらうため）
-  const sessions = await prisma.aishodanSession.count({
-    where: { room: { scenario: { productId: product.id } } },
-  })
-
-  await prisma.aishodanProduct.delete({ where: { id: product.id } })
-  return NextResponse.json({ ok: true, deletedSessions: sessions })
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // 所属確認・記録数確認・削除を同じトランザクションで行う。
+      const product = await tx.aishodanProduct.findFirst({
+        where: { id: p.id, organizationId: ctx.organizationId },
+        select: { id: true },
+      })
+      if (!product) return 'not-found' as const
+      const sessions = await tx.aishodanSession.count({
+        where: { organizationId: ctx.organizationId, room: { scenario: { productId: product.id } } },
+      })
+      if (sessions > 0) return 'has-sessions' as const
+      await tx.aishodanProduct.delete({ where: { id: product.id } })
+      return 'deleted' as const
+    }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+    if (result === 'not-found') return NextResponse.json({ error: '商材が見つかりません' }, { status: 404 })
+    if (result === 'has-sessions') return NextResponse.json({ error: '商談記録がある商材は削除できません。商材を編集してご利用ください。' }, { status: 409 })
+    return NextResponse.json({ ok: true, deletedSessions: 0 })
+  } catch {
+    return NextResponse.json({ error: '削除できませんでした。商談の発行状況を確認してから再試行してください。' }, { status: 503 })
+  }
 }

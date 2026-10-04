@@ -335,6 +335,11 @@ if (aishodanProductAdmission.error || aishodanProductAdmission.status !== 0) {
   console.error('Security regression failed: verify-aishodan-product-admission.cjs');
   process.exit(1);
 }
+const aishodanProductDelete = spawnSync(process.execPath, [path.join(__dirname, 'verify-aishodan-product-delete.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (aishodanProductDelete.error || aishodanProductDelete.status !== 0) {
+  console.error('Security regression failed: verify-aishodan-product-delete.cjs');
+  process.exit(1);
+}
 const mensetsuSessionAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-mensetsu-session-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (mensetsuSessionAtomic.error || mensetsuSessionAtomic.status !== 0) {
   console.error('Security regression failed: verify-mensetsu-session-atomic.cjs');

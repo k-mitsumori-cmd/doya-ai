@@ -254,8 +254,7 @@ export default function AishodanTool() {
 
   /**
    * 商材を削除する。
-   * ⚠️ ナレッジ・シナリオ・商談URL・**実施済みの商談ログ**まで道連れで消える。
-   *    元に戻せないので、何が消えるかを具体的に出してから聞く。
+   * 商談記録はサーバーで保護し、削除できる場合も失う内容を先に示す。
    */
   async function deleteProduct(prod: Product) {
     const rooms = prod.scenarios.length > 0 ? '発行済みの商談URL' : ''
@@ -266,7 +265,8 @@ export default function AishodanTool() {
       `・ナレッジ ${prod._count.chunks}件 / 取り込んだ ${prod._count.sources}ページ`,
       '・シナリオ',
       rooms && `・${rooms}（配布済みのURLは開けなくなります）`,
-      '・この商材で実施した商談の記録',
+      '',
+      'この商材に商談記録がある場合は削除できません。',
     ]
       .filter(Boolean)
       .join('\n')
