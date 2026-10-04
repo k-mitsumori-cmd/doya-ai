@@ -7,7 +7,7 @@ import toast from 'react-hot-toast'
 
 export type PlanUpdatedDetail = {
   serviceId?: 'banner' | 'seo' | 'kantan' | 'bundle'
-  planTier?: 'FREE' | 'PRO' | 'ENTERPRISE' | 'BUSINESS' | 'BUNDLE'
+  planTier?: 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE' | 'BUSINESS' | 'BUNDLE'
   source?: 'stripe-sync' | 'stripe-webhook' | 'manual'
   at?: number
 }
@@ -43,5 +43,4 @@ export default function PlanUpdatedListener() {
 
   return null
 }
-
 

@@ -13,7 +13,7 @@ import confetti from 'canvas-confetti'
 interface UpgradeSuccessModalProps {
   isOpen: boolean
   onClose: () => void
-  planName?: 'PRO' | 'ENTERPRISE'
+  planName?: 'LIGHT' | 'PRO' | 'ENTERPRISE'
 }
 
 export default function UpgradeSuccessModal({ isOpen, onClose, planName = 'PRO' }: UpgradeSuccessModalProps) {

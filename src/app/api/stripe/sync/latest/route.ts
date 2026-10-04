@@ -72,7 +72,7 @@ export async function POST(_req: NextRequest) {
     const before = await prisma.user.findUnique({ where: { id: user.id }, select: { name: true } })
     const notice = billingSubscriptionNotice(subscription, bestPlanId)
     const notificationId = `billing-sync:${subscription.id}:${randomUUID()}`
-    await syncUnifiedBilling({
+    const { userPlan } = await syncUnifiedBilling({
       userId: user.id, plan: currentTier,
       stripeCustomerId: customerId, stripeSubscriptionId: subscription.id,
       stripePriceId: priceId, stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
@@ -95,6 +95,7 @@ export async function POST(_req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      plan: userPlan,
       customerId,
       subscriptionId: subscription.id,
       planId: bestPlanId,

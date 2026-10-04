@@ -25,6 +25,13 @@ export function tierFrom(raw: unknown): PlanTier {
   return 'FREE'
 }
 
+/** 同期APIが確定した User.plan だけを決済後UIへ反映する。 */
+export function paidTierFromSyncResult(raw: unknown): 'LIGHT' | 'PRO' | 'ENTERPRISE' {
+  const tier = tierFrom(raw)
+  if (tier === 'LIGHT' || tier === 'PRO' || tier === 'ENTERPRISE') return tier
+  throw new Error('契約プランを確認できませんでした。再読み込みしてください。')
+}
+
 /**
  * PlanTierの日本語表示ラベルを返す。
  */

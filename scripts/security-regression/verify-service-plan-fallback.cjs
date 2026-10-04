@@ -77,5 +77,11 @@ function sidebar(service, plan, isLoggedIn) {
     assert.equal(planUtils.tierFrom(raw), 'FREE', raw)
     assert.equal(planUtils.higherPlan('FREE', raw), 'FREE', raw)
   }
+  for (const [raw, expected] of [['LIGHT', 'LIGHT'], ['PRO', 'PRO'], ['ENTERPRISE', 'ENTERPRISE'], ['BUNDLE', 'PRO']]) {
+    assert.equal(planUtils.paidTierFromSyncResult(raw), expected, raw)
+  }
+  for (const raw of [null, undefined, 'FREE', 'NOT_PRO', 'banner-starter']) {
+    assert.throws(() => planUtils.paidTierFromSyncResult(raw), /契約プランを確認できませんでした/, String(raw))
+  }
   console.log('PASS service plan fallback: Cunning, SFA and DoyaSlide preserve unknown status; BUNDLE stays PRO')
 })().catch((error) => { console.error(error); process.exitCode = 1 })

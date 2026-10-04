@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, getGuestUsage } from '@/lib/pricing'
-import { tierFrom } from '@/lib/plan-utils'
+import { paidTierFromSyncResult, tierFrom } from '@/lib/plan-utils'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
@@ -175,13 +175,14 @@ export default function BannerPlanPage() {
       toast.loading('Stripeの契約状況を確認中…', { id: 'plan-sync' })
       const res = await fetch('/api/stripe/sync/latest', { method: 'POST' })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || 'プラン反映に失敗しました')
+      if (!res.ok || data?.ok !== true) throw new Error(data?.error || 'プラン反映に失敗しました')
+      const syncedTier = paidTierFromSyncResult(data.plan)
       toast.success('プランを反映しました！', { id: 'plan-sync' })
       // 他画面へ即通知
       try {
         window.dispatchEvent(
           new CustomEvent('doya:plan-updated', {
-            detail: { serviceId: 'banner', planTier: String(data?.planId || '').includes('enterprise') ? 'ENTERPRISE' : String(data?.planId || '').includes('light') ? 'LIGHT' : 'PRO', source: 'manual', at: Date.now() },
+            detail: { serviceId: 'banner', planTier: syncedTier, source: 'manual', at: Date.now() },
           })
         )
       } catch {}

@@ -100,7 +100,8 @@ async function routes(){
  });
  for(const route of ['sync','sync/latest'])await check(route+' queues actual LIGHT trial without a fixed 30-day promise',async()=>{
   let f=routeFixture();f.sub.metadata.planId='banner-light';f.sub.items.data[0].price.id='price_banner_light_monthly';f.sub.status='trialing';f.sub.trial_end=1900000000;
-  assert.equal((await load('src/app/api/stripe/'+route+'/route.ts',f.mocks).POST(req())).status,200);
+  const response=await load('src/app/api/stripe/'+route+'/route.ts',f.mocks).POST(req());
+  assert.equal(response.status,200);assert.equal(response.body.plan,'LIGHT');
   const payload=Object.values(f.f.state.notices)[0].payload;
   assert.equal(payload.type,'trial_start');assert.match(payload.details,/ライトプラン/);assert.doesNotMatch(payload.details,/プロプラン|30日|初回請求/);
  });

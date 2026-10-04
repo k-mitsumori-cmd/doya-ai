@@ -5,14 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import UpgradeSuccessModal from '@/components/UpgradeSuccessModal'
-
-function tierFromPlanId(planId: unknown): string {
-  const id = String(planId || '')
-  if (id === 'bundle') return 'BUNDLE'
-  if (id.includes('enterprise')) return 'ENTERPRISE'
-  if (id.includes('light') || id.includes('starter')) return 'LIGHT'
-  return 'PRO'
-}
+import { paidTierFromSyncResult } from '@/lib/plan-utils'
 
 /**
  * Stripe決済からの戻り（?success=true&session_id=cs_...）を**どのサービスの戻り先でも**検知し、
@@ -29,7 +22,7 @@ function StripeSuccessSyncInner() {
   const router = useRouter()
   const { update: updateSession } = useSession()
   const handledRef = useRef(false)
-  const [modalPlan, setModalPlan] = useState<'PRO' | 'ENTERPRISE' | null>(null)
+  const [modalPlan, setModalPlan] = useState<'LIGHT' | 'PRO' | 'ENTERPRISE' | null>(null)
   const [failed, setFailed] = useState(false)
   const [portalReturnFailed, setPortalReturnFailed] = useState(false)
   const [retrying, setRetrying] = useState(false)
@@ -57,7 +50,7 @@ function StripeSuccessSyncInner() {
           const res = await fetch('/api/stripe/sync/latest', { method: 'POST' })
           const data = await res.json().catch(() => ({}))
           if (!res.ok || data?.ok !== true) throw new Error('契約状態を確認できませんでした')
-          const tier = tierFromPlanId(data.planId)
+          const tier = paidTierFromSyncResult(data.plan)
           toast.success('最新の契約内容を確認しました', { id: 'stripe-portal-sync' })
           try {
             await applyToUi(tier, 'stripe-portal-return')
@@ -92,14 +85,14 @@ function StripeSuccessSyncInner() {
           body: JSON.stringify({ sessionId }),
         })
         const data = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(data?.error || 'プラン反映に失敗しました')
+        if (!res.ok || data?.ok !== true) throw new Error(data?.error || 'プラン反映に失敗しました')
 
         toast.dismiss('stripe-sync')
-        const tier = String(data?.plan || 'PRO') === 'ENTERPRISE' ? 'ENTERPRISE' : 'PRO'
+        const tier = paidTierFromSyncResult(data.plan)
         window.dispatchEvent(new CustomEvent('doya:checkout-verified', {
           detail: {
             sessionId,
-            plan: String(data?.plan || 'PRO'),
+            plan: String(data.plan),
             paymentStatus: data?.paymentStatus,
             amountTotal: data?.amountTotal,
             subscriptionStatus: data?.subscriptionStatus,
@@ -135,10 +128,10 @@ function StripeSuccessSyncInner() {
     try {
       const res = await fetch('/api/stripe/sync/latest', { method: 'POST' })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || '反映できませんでした')
-      const tier = tierFromPlanId(data?.planId)
+      if (!res.ok || data?.ok !== true) throw new Error(data?.error || '反映できませんでした')
+      const tier = paidTierFromSyncResult(data.plan)
       setFailed(false)
-      if (tier === 'PRO' || tier === 'ENTERPRISE') setModalPlan(tier)
+      setModalPlan(tier)
       try {
         await applyToUi(tier)
       } catch {
