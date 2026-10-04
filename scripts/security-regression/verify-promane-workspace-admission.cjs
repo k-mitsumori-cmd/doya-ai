@@ -57,6 +57,14 @@ function fixture({ tier = 'FREE', used = 0, named = 'Team', fail = false } = {})
       assert.deepEqual(f.state(), { writes: 1, locks: 1 })
     }
   })
+  await check('non-string workspace names never consume a slot', async () => {
+    for (const named of [123, { label: 'Team' }, ['Team'], true, null]) {
+      const f = fixture({ named })
+      const result = await f.run()
+      assert.equal(result.status, 400)
+      assert.deepEqual(f.state(), { writes: 0, locks: 0 })
+    }
+  })
   await check('database errors do not expose internal details', async () => {
     const result = await fixture({ fail: true }).run()
     assert.equal(result.status, 500)

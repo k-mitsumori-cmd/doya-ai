@@ -24,10 +24,10 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}))
-    const name = String(body?.name || '').trim()
-    if (!name) {
+    if (typeof body?.name !== 'string' || !body.name.trim()) {
       return NextResponse.json({ error: 'ワークスペース名は必須です' }, { status: 400 })
     }
+    const name = body.name.trim()
     if (name.length > 100) {
       return NextResponse.json({ error: 'ワークスペース名は100文字以内' }, { status: 400 })
     }
