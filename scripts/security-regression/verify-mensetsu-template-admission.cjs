@@ -90,6 +90,16 @@ const post = (body = { jobTitle: '営業' }) => route.POST(new Request('http://o
     assert.equal((await blocked.json()).upgradeUrl, '/mensetsu/pricing')
     assert.equal(generateCalls, 1)
   })
+  await check('archived question set keeps history while freeing one active slot', async () => {
+    templates[0].status = 'archived'
+    const oldId = templates[0].id
+    const created = await post()
+    assert.equal(created.status, 200)
+    assert.equal(templates.length, 2)
+    assert.equal(templates[0].id, oldId)
+    assert.equal(templates[0].status, 'archived')
+    assert.equal(templates[1].status, 'draft')
+  })
   await check('provider and save failures release the reserved slot', async () => {
     templates.length = 0
     failGenerate = true

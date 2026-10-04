@@ -7,7 +7,7 @@ const ts = require('typescript')
 const source = fs.readFileSync(path.join(__dirname, '../../src/app/api/mensetsu/sessions/route.ts'), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 
-async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails = false, member = false } = {}) {
+async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails = false, member = false, archiveBeforeCommit = false } = {}) {
   let count = used
   let attempts = 0
   let creates = 0
@@ -23,7 +23,9 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
         count = limit
         throw Object.assign(Error('concurrent issue'), { code: 'P2034' })
       }
-      return fn({ mensetsuSession: {
+      return fn({ mensetsuTemplate: {
+        findFirst: async () => ({ status: archiveBeforeCommit ? 'archived' : 'draft' }),
+      }, mensetsuSession: {
         count: async () => count,
         create: async () => {
           creates++
@@ -64,6 +66,9 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
   assert.equal(success.count, 3)
   assert.equal(success.creates, 1)
   assert.equal(success.usageSummary, '営業')
+  const archived = await exercise({ archiveBeforeCommit: true })
+  assert.equal(archived.status, 409)
+  assert.equal(archived.creates, 0)
 
   for (const [limit, expectedUpgrade] of [[3, '/mensetsu/pricing'], [30, undefined]]) {
     const blocked = await exercise({ limit, used: limit, conflictOnce: true })
@@ -88,7 +93,7 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
   {
     let rows = [], lifetime = 0, monthly = 0, creates = 0
     const prisma = {
-      mensetsuTemplate: { findFirst: async () => ({ id: 'template', jobTitle: '営業', _count: { questions: 1, criteria: 1 } }) },
+      mensetsuTemplate: { findFirst: async () => ({ id: 'template', jobTitle: '営業', status: 'draft', _count: { questions: 1, criteria: 1 } }) },
       mensetsuOrganization: { findUnique: async () => ({ retentionDays: 30 }) },
       mensetsuSession: { count: async () => rows.length, create: async () => { const session = { id: `s${++creates}`, token: 'token', expiresAt: new Date(), candidateName: null }; rows.push(session); return session } },
     }

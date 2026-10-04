@@ -166,7 +166,7 @@ export default function MensetsuTool() {
         // ⚠️ 入力欄には登録済みのURLを入れておく。空だと「未登録なのか
         //    登録済みなのに空なのか」が分からない
         setCompanyUrl(c.profile?.sourceUrl || '')
-        setSelectedTemplate(t.templates[0]?.id || '')
+        setSelectedTemplate(t.templates.find((template: Template) => template.status !== 'archived')?.id || '')
       } else {
         setOrg(null)
         setTemplates([])
@@ -232,22 +232,20 @@ export default function MensetsuTool() {
     }
   }
 
-  /**
-   * 質問セットを削除する。
-   * 面接記録が残る質問セットは削除させず、応募者の記録を保護する。
-   */
+  /** 面接記録がある質問セットは保管し、履歴を残して利用枠を空ける。 */
   const deleteTemplate = async (t: Template) => {
     const n = t._count?.sessions ?? 0
-    if (n > 0) {
-      notifyError(setError, `この質問セットには面接記録が${n}件あるため削除できません。質問セットを編集してご利用ください。`)
-      return
-    }
-    const warn = [
+    const warn = (n > 0 ? [
+      `質問セット「${t.name}」を保管します。`,
+      '',
+      `面接記録${n}件を残し、新しい面接URLの発行を停止します。`,
+      '保管後は編集できません。発行済みの面接URLは引き続き利用できます。',
+    ] : [
       `質問セット「${t.name}」を削除します。`,
       '',
       '次のものも一緒に消えます。元に戻せません。',
       `・質問 ${t._count?.questions ?? 0}問 / 評価軸 ${t._count?.criteria ?? 0}個`,
-    ]
+    ])
       .filter(Boolean)
       .join('\n')
     if (!window.confirm(warn)) return
@@ -667,13 +665,13 @@ export default function MensetsuTool() {
                             編集
                           </Link>
                           {/* ⚠️ 面接の記録まで消える操作。隣の「編集」と見た目を分ける（赤） */}
-                          {canDelete && (
+                          {canDelete && (t.status !== 'archived' || !t._count?.sessions) && (
                             <button
                               onClick={() => deleteTemplate(t)}
                               disabled={deletingId === t.id}
                               className="rounded-lg border border-rose-300 bg-white px-4 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              {deletingId === t.id ? '削除中…' : '削除'}
+                              {deletingId === t.id ? (t._count?.sessions ? '保管中…' : '削除中…') : (t._count?.sessions ? '保管' : '削除')}
                             </button>
                           )}
                         </div>
@@ -730,7 +728,7 @@ export default function MensetsuTool() {
                   <p className="mt-0.5 text-sm font-bold text-[#0066ff]">URLを送れたら、ここで完了です</p>
                 </div>
               </div>
-              {templates.length === 0 ? (
+              {templates.every((t) => t.status === 'archived') ? (
                 <p className="mt-3 text-sm font-semibold text-[#425071]">先に質問セットを作成してください。</p>
               ) : (
                 <>
@@ -742,10 +740,10 @@ export default function MensetsuTool() {
                         onChange={(e) => setSelectedTemplate(e.target.value)}
                         className="w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 text-base font-semibold outline-none focus:border-[#0066ff]"
                       >
-                        {templates.map((t) => (
+                        {templates.filter((t) => t.status !== 'archived').map((t) => (
                           <option key={t.id} value={t.id}>
                             {t.name}
-                            {t.status === 'draft' ? '（下書き）' : t.status === 'archived' ? '（保管）' : ''}
+                            {t.status === 'draft' ? '（下書き）' : ''}
                           </option>
                         ))}
                       </select>

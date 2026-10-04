@@ -8,9 +8,10 @@ function fixture(failQuestion = false, organizationId = 'org-1') {
   const lazy = (work) => ({ then: (resolve, reject) => Promise.resolve().then(work).then(resolve, reject) });
   const prisma = {
     mensetsuTemplate: {
-      findFirst: async ({ where }) => where.id === template.id && where.organizationId === template.organizationId ? { id: template.id } : null,
+      findFirst: async ({ where }) => where.id === template.id && where.organizationId === template.organizationId ? { id: template.id, status: template.status || 'draft' } : null,
       update: ({ where, data }) => lazy(() => {
         if (where.id !== template.id || where.organizationId !== template.organizationId) throw new Error('foreign organization');
+        if (where.status?.not === template.status) throw Object.assign(new Error('archived'), { code: 'P2025' });
         template = { ...template, ...data };
         return template;
       }),
@@ -75,9 +76,11 @@ function fixture(failQuestion = false, organizationId = 'org-1') {
   assert.equal(f.state().transactions, 0);
   for (const sessions of [0, 2]) {
     let deletes = 0;
+    let archived = 0;
     const tx = { mensetsuTemplate: {
-      findFirst: async () => ({ id: 'template-1', _count: { sessions } }),
+      findFirst: async () => ({ id: 'template-1', status: 'draft', _count: { sessions } }),
       delete: async () => { deletes++; },
+      update: async ({ data }) => { assert.equal(data.status, 'archived'); archived++; },
     } };
     const prisma = { $transaction: async (fn, options) => { assert.equal(options.isolationLevel, 'Serializable'); return fn(tx); } };
     const { DELETE } = load('src/app/api/mensetsu/templates/[id]/route.ts', {
@@ -87,8 +90,10 @@ function fixture(failQuestion = false, organizationId = 'org-1') {
       '@/lib/mensetsu/guardrails': { findViolations: () => [] },
     });
     const response = await DELETE({}, { params: Promise.resolve({ id: 'template-1' }) });
-    assert.equal(response.status, sessions ? 409 : 200);
+    assert.equal(response.status, 200);
     assert.equal(deletes, sessions ? 0 : 1);
+    assert.equal(archived, sessions ? 1 : 0);
+    assert.equal((await response.json()).archived, sessions ? true : undefined);
   }
   console.log('PASS mensetsu template: basic fields and replacement questions commit or roll back together');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

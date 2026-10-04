@@ -250,8 +250,14 @@ export default function TemplateEditPage() {
             {notice}
           </div>
         )}
+        {status === 'archived' && (
+          <p className="mt-5 rounded-lg bg-slate-100 p-4 text-sm font-semibold text-slate-700">
+            この質問セットは保管済みです。面接記録を守るため編集と新しいURLの発行はできません。
+          </p>
+        )}
 
         {/* 基本情報 */}
+        <fieldset disabled={status === 'archived'}>
         <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">
           <h2 className="text-base font-black text-[#0a0f3c]">基本情報</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -289,7 +295,7 @@ export default function TemplateEditPage() {
               >
                 <option value="draft">下書き</option>
                 <option value="active">運用中</option>
-                <option value="archived">保管</option>
+                {status === 'archived' && <option value="archived">保管</option>}
               </select>
             </label>
           </div>
@@ -533,10 +539,11 @@ export default function TemplateEditPage() {
           </div>
         </section>
 
+        </fieldset>
         <div className="sticky bottom-4 mt-6 flex justify-end">
           <button
             onClick={save}
-            disabled={saving}
+            disabled={saving || status === 'archived'}
             className="rounded-lg bg-[#0066ff] px-8 py-3.5 text-sm font-black text-white shadow-lg disabled:bg-[#b9cdf5]"
           >
             {saving ? '保存中…' : '保存する'}

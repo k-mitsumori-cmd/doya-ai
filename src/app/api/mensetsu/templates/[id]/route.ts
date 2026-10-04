@@ -44,11 +44,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   const existing = await prisma.mensetsuTemplate.findFirst({
     where: { id, organizationId: c.organizationId },
-    select: { id: true },
+    select: { id: true, status: true },
   })
   if (!existing) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+  if (existing.status === 'archived') return NextResponse.json({ error: '保管済みの質問セットは編集できません。' }, { status: 409 })
 
   const body = await req.json().catch(() => ({}))
+  if (body?.status === 'archived') return NextResponse.json({ error: '質問セットの保管は一覧の「保管」から行ってください。' }, { status: 400 })
 
   // 担当者が手で追加した質問も差別的でないか検査する（生成物だけでなく編集後も守る）
   if (Array.isArray(body?.questions)) {
@@ -111,7 +113,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (Number(body?.durationMin) === 10) data.durationMin = 10
   if (typeof body?.intro === 'string') data.intro = body.intro
   if (typeof body?.closing === 'string') data.closing = body.closing
-  if (['draft', 'active', 'archived'].includes(body?.status)) data.status = body.status
+  if (['draft', 'active'].includes(body?.status)) data.status = body.status
 
   // 質問の全置換（順序の入れ替え・削除を素直に扱うため）
   // 基本情報も質問と同じトランザクションで保存する。質問の作成失敗時に名前だけ残さない。
@@ -148,10 +150,15 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         })
       ),
     ] : []
-  await prisma.$transaction([
-    prisma.mensetsuTemplate.update({ where: { id, organizationId: c.organizationId }, data }),
-    ...questionWrites,
-  ])
+  try {
+    await prisma.$transaction([
+      prisma.mensetsuTemplate.update({ where: { id, organizationId: c.organizationId, status: { not: 'archived' } }, data }),
+      ...questionWrites,
+    ])
+  } catch (error: any) {
+    if (error?.code === 'P2025') return NextResponse.json({ error: '保管済みの質問セットは編集できません。' }, { status: 409 })
+    throw error
+  }
 
   const template = await prisma.mensetsuTemplate.findUnique({
     where: { id },
@@ -183,15 +190,19 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       // 応募者データと利用履歴を守るため、質問セット自体の削除を拒否する。
       const t = await tx.mensetsuTemplate.findFirst({
         where: { id, organizationId: c.organizationId },
-        select: { id: true, _count: { select: { sessions: true } } },
+        select: { id: true, status: true, _count: { select: { sessions: true } } },
       })
       if (!t) return 'not-found' as const
-      if (t._count.sessions > 0) return 'has-sessions' as const
+      if (t._count.sessions > 0) {
+        if (t.status === 'archived') return 'archived' as const
+        await tx.mensetsuTemplate.update({ where: { id: t.id }, data: { status: 'archived' } })
+        return 'archived' as const
+      }
       await tx.mensetsuTemplate.delete({ where: { id: t.id } })
       return 'deleted' as const
     }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
     if (result === 'not-found') return NextResponse.json({ error: '質問セットが見つかりません' }, { status: 404 })
-    if (result === 'has-sessions') return NextResponse.json({ error: '面接記録がある質問セットは削除できません。記録の保持期限が過ぎるまで、質問セットを編集してご利用ください。' }, { status: 409 })
+    if (result === 'archived') return NextResponse.json({ ok: true, archived: true, deletedSessions: 0 })
     return NextResponse.json({ ok: true, deletedSessions: 0 })
   } catch {
     return NextResponse.json({ error: '削除できませんでした。面接の発行状況を確認してから再試行してください。' }, { status: 503 })

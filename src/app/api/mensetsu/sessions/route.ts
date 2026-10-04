@@ -125,6 +125,7 @@ export async function POST(req: NextRequest) {
     include: { _count: { select: { questions: true, criteria: true } } },
   })
   if (!template) return NextResponse.json({ error: 'テンプレートが見つかりません' }, { status: 404 })
+  if (template.status === 'archived') return NextResponse.json({ error: '保管済みの質問セットから新しい面接URLは発行できません。' }, { status: 409 })
   if (template._count.questions === 0) {
     return NextResponse.json({ error: '質問が1問もないテンプレートでは面接を発行できません' }, { status: 400 })
   }
@@ -144,10 +145,15 @@ export async function POST(req: NextRequest) {
     Date.now() + Math.max(1, org?.retentionDays ?? 180) * 24 * 60 * 60 * 1000
   )
 
-  let result: { kind: 'created'; session: { id: string; token: string; expiresAt: Date; candidateName: string | null } } | { kind: 'limit' } | null = null
+  let result: { kind: 'created'; session: { id: string; token: string; expiresAt: Date; candidateName: string | null } } | { kind: 'limit' } | { kind: 'archived' } | null = null
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       result = await prisma.$transaction(async (tx) => {
+        const currentTemplate = await tx.mensetsuTemplate.findFirst({
+          where: { id: templateId, organizationId: ctx.organizationId },
+          select: { status: true },
+        })
+        if (!currentTemplate || currentTemplate.status === 'archived') return { kind: 'archived' } as const
         const now = new Date()
         const lifetime = await getOrganizationQuotaUsage(tx, 'mensetsuSessions', ctx.organizationId, 'lifetime', () =>
           tx.mensetsuSession.count({ where: { organizationId: ctx.organizationId } }), now)
@@ -188,6 +194,7 @@ export async function POST(req: NextRequest) {
     if (latestQuota.ok) return NextResponse.json({ error: 'プラン情報が更新されました。再読み込みしてからもう一度お試しください。' }, { status: 409 })
     return quotaResponse(latestQuota)
   }
+  if (result?.kind === 'archived') return NextResponse.json({ error: '保管済みの質問セットから新しい面接URLは発行できません。' }, { status: 409 })
   if (!result) return NextResponse.json({ error: '面接URLを発行できませんでした。時間をおいてもう一度お試しください。' }, { status: 503 })
   const session = result.session
 
