@@ -6,6 +6,7 @@ let nextId = 0
 let generateCalls = 0
 let failGenerate = false
 let failSave = false
+let invalidCriteria = false
 let waitForGeneration
 let releaseGeneration
 const pendingStatus = 'generating'
@@ -58,7 +59,7 @@ const route = load('src/app/api/mensetsu/templates/route.ts', {
     generateCalls++
     if (waitForGeneration) await waitForGeneration
     if (failGenerate) throw Error('provider failed')
-    return { template: { intro: 'Hi', closing: 'Bye', criteria: [{ key: 'skill', name: 'Skill', weight: 1, rubric: {} }], questions: [{ text: 'Question', targetMin: 2, criterionKeys: ['skill'] }] }, removed: [] }
+    return { template: { intro: 'Hi', closing: 'Bye', criteria: invalidCriteria ? [] : [{ key: 'skill', name: 'Skill', weight: 1, rubric: {} }], questions: [{ text: 'Question', targetMin: 2, criterionKeys: ['skill'] }] }, removed: [] }
   } },
 })
 const post = (body = { jobTitle: '営業' }) => route.POST(new Request('http://offline.invalid/api/mensetsu/templates', {
@@ -109,9 +110,20 @@ const post = (body = { jobTitle: '営業' }) => route.POST(new Request('http://o
     assert.equal(generateCalls, before)
     assert.equal(templates.length, 0)
   })
+  await check('question sets without evaluation criteria are not saved', async () => {
+    templates.length = 0
+    invalidCriteria = true
+    const response = await post()
+    assert.equal(response.status, 502)
+    assert.equal(templates.length, 0)
+    invalidCriteria = false
+  })
   await check('model overflow cannot exceed interview time or create invalid jumps', async () => {
     const raw = {
-      criteria: Array.from({ length: 8 }, (_, i) => ({ key: `c${i}`, name: `Criterion ${i}`, rubric: {}, weight: 1 })),
+      criteria: Array.from({ length: 8 }, (_, i) => ({
+        key: `c${i}`, name: `Criterion ${i}`, weight: 1,
+        rubric: i === 0 ? {} : { '1': '不足', '2': '初歩', '3': '標準', '4': '良好', '5': '卓越' },
+      })),
       questions: Array.from({ length: 12 }, (_, i) => ({
         text: `Question ${i}`, targetMin: 3, criterionKeys: ['c0'],
         branches: [{ label: 'branch', matchHint: 'hint', text: 'follow-up', skipTo: i === 0 ? 12 : i === 1 ? 1 : 4 }],
@@ -125,6 +137,7 @@ const post = (body = { jobTitle: '営業' }) => route.POST(new Request('http://o
     })
     const { template } = await generator.generateTemplate({ profile: {}, jobTitle: '営業', level: 'mid', durationMin: 10 })
     assert.equal(template.criteria.length, 7)
+    assert.ok(!template.criteria.some((criterion) => criterion.key === 'c0'))
     assert.equal(template.questions.length, 4)
     assert.ok(template.questions.reduce((total, question) => total + question.targetMin, 0) <= 6)
     assert.equal(template.questions[0].branches[0].skipTo, null)

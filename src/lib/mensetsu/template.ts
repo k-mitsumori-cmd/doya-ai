@@ -5,7 +5,17 @@
 // 差別的質問はプロンプト制約（GUARDRAIL_PROMPT）＋生成後の機械チェックの二段で排除する。
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { GUARDRAIL_PROMPT, findViolations, stripViolations, type GuardrailViolation } from './guardrails'
-import { LEVEL_LABELS, type CompanyProfileData, type GeneratedTemplate, type MensetsuLevel } from './types'
+import { LEVEL_LABELS, type CompanyProfileData, type GeneratedTemplate, type MensetsuLevel, type Rubric } from './types'
+
+const RUBRIC_LEVELS = ['1', '2', '3', '4', '5'] as const
+
+function hasCompleteRubric(value: unknown): value is Rubric {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  return RUBRIC_LEVELS.every((level) => {
+    const description = (value as Record<string, unknown>)[level]
+    return typeof description === 'string' && description.trim().length > 0
+  })
+}
 
 export interface GenerateTemplateInput {
   profile: CompanyProfileData
@@ -110,7 +120,7 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
   // --- 正規化: keyの重複排除、criterionKeys の実在チェック ---
   const seen = new Set<string>()
   const criteria = (raw.criteria || [])
-    .filter((c) => c && c.key && c.name)
+    .filter((c) => c && c.key && c.name && hasCompleteRubric(c.rubric))
     .slice(0, 7)
     .map((c, i) => {
       let key = String(c.key).replace(/[^a-zA-Z0-9_]/g, '') || `c${i + 1}`

@@ -164,10 +164,10 @@ export async function POST(req: NextRequest) {
       focus,
     })
 
-    if (template.questions.length === 0) {
+    if (template.questions.length === 0 || template.criteria.length === 0) {
       await releaseReservation(templateId)
       return NextResponse.json(
-        { error: '有効な質問を生成できませんでした。職種や見たい点を具体的にして再実行してください。' },
+        { error: '有効な質問・評価軸を生成できませんでした。職種や見たい点を具体的にして再実行してください。' },
         { status: 502 }
       )
     }

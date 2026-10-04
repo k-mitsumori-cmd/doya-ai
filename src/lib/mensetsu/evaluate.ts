@@ -139,7 +139,7 @@ export async function evaluateSession(input: EvaluateInput): Promise<EvaluationR
 
   // 発話量が極端に少ない／過半の軸が情報不足なら推薦も見送りも確定させない。
   const insufficientRatio = scores.filter((s) => s.insufficient).length / Math.max(1, scores.length)
-  if (insufficientRatio >= 0.5 || candidateWordCount < 200) {
+  if (scores.length === 0 || insufficientRatio >= 0.5 || candidateWordCount < 200) {
     verdict = 'hold'
   }
 

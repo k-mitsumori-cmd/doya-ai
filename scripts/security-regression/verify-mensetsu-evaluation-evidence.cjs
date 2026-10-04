@@ -54,4 +54,10 @@ const response = (quotes, verdict = 'recommend') => ({
     assert.equal(result.scores[0].score, 5)
     assert.equal(result.verdict, 'hold')
   })
+  await check('a template without evaluation criteria cannot yield a recommendation', async () => {
+    raw = response([quote])
+    const result = await evaluateSession({ ...input, criteria: [] })
+    assert.equal(result.scores.length, 0)
+    assert.equal(result.verdict, 'hold')
+  })
 })().catch((error) => { console.error(error); process.exitCode = 1 })
