@@ -1,10 +1,18 @@
 'use client'
 
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import UpgradeSuccessModal from '@/components/UpgradeSuccessModal'
+
+function tierFromPlanId(planId: unknown): string {
+  const id = String(planId || '')
+  if (id === 'bundle') return 'BUNDLE'
+  if (id.includes('enterprise')) return 'ENTERPRISE'
+  if (id.includes('light') || id.includes('starter')) return 'LIGHT'
+  return 'PRO'
+}
 
 /**
  * Stripe決済からの戻り（?success=true&session_id=cs_...）を**どのサービスの戻り先でも**検知し、
@@ -23,23 +31,53 @@ function StripeSuccessSyncInner() {
   const handledRef = useRef(false)
   const [modalPlan, setModalPlan] = useState<'PRO' | 'ENTERPRISE' | null>(null)
   const [failed, setFailed] = useState(false)
+  const [portalReturnFailed, setPortalReturnFailed] = useState(false)
   const [retrying, setRetrying] = useState(false)
 
   /** 反映後にUI全体を最新化する（プラン表示・生成上限などを即座に切り替える） */
-  const applyToUi = async (planTier: string) => {
+  const applyToUi = useCallback(async (planTier: string, source = 'stripe-success-sync') => {
     try {
       window.dispatchEvent(
         new CustomEvent('doya:plan-updated', {
-          detail: { planTier, source: 'stripe-success-sync', at: Date.now() },
+          detail: { planTier, source, at: Date.now() },
         })
       )
     } catch {}
     await updateSession?.()
     router.refresh()
-  }
+  }, [router, updateSession])
 
   useEffect(() => {
     if (handledRef.current) return
+    if (searchParams.get('portal_return') === 'plan_change') {
+      handledRef.current = true
+      ;(async () => {
+        try {
+          toast.loading('契約状況を確認しています…', { id: 'stripe-portal-sync' })
+          const res = await fetch('/api/stripe/sync/latest', { method: 'POST' })
+          const data = await res.json().catch(() => ({}))
+          if (!res.ok || data?.ok !== true) throw new Error('契約状態を確認できませんでした')
+          const tier = tierFromPlanId(data.planId)
+          toast.success('最新の契約内容を確認しました', { id: 'stripe-portal-sync' })
+          try {
+            await applyToUi(tier, 'stripe-portal-return')
+          } catch {
+            toast.error('画面のプラン表示を更新できませんでした。再読み込みしてください。')
+          }
+        } catch {
+          toast.dismiss('stripe-portal-sync')
+          setPortalReturnFailed(true)
+          setFailed(true)
+        } finally {
+          try {
+            const url = new URL(window.location.href)
+            url.searchParams.delete('portal_return')
+            router.replace(url.pathname + url.search + url.hash, { scroll: false })
+          } catch {}
+        }
+      })()
+      return
+    }
     if (searchParams.get('success') !== 'true') return
     const sessionId = searchParams.get('session_id')
     if (!sessionId) return
@@ -90,7 +128,7 @@ function StripeSuccessSyncInner() {
         } catch {}
       }
     })()
-  }, [searchParams, router, updateSession])
+  }, [searchParams, router, applyToUi])
 
   const handleRetry = async () => {
     setRetrying(true)
@@ -98,9 +136,9 @@ function StripeSuccessSyncInner() {
       const res = await fetch('/api/stripe/sync/latest', { method: 'POST' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || '反映できませんでした')
-      const tier = String(data?.planId || '').includes('enterprise') ? 'ENTERPRISE' : 'PRO'
+      const tier = tierFromPlanId(data?.planId)
       setFailed(false)
-      setModalPlan(tier)
+      if (tier === 'PRO' || tier === 'ENTERPRISE') setModalPlan(tier)
       try {
         await applyToUi(tier)
       } catch {
@@ -130,7 +168,7 @@ function StripeSuccessSyncInner() {
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <h2 className="text-lg font-bold text-gray-900">契約状態を確認できませんでした</h2>
             <p className="mt-3 text-sm leading-relaxed text-gray-600">
-              決済結果またはプランの反映を確認できませんでした。<strong className="text-gray-900">二重申込を避けるため、再申込の前に契約状態を確認してください。</strong>
+              {portalReturnFailed ? 'プラン変更画面から戻りましたが、最新の契約状態を確認できませんでした。' : '決済結果またはプランの反映を確認できませんでした。'}<strong className="text-gray-900">二重申込を避けるため、再申込の前に契約状態を確認してください。</strong>
               下のボタンから反映をやり直せます。
             </p>
             <div className="mt-5 flex gap-3">

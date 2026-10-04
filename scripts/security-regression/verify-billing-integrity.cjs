@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');const {load,check,results}=require('./verify-data-integrity.cjs');
-const stripeModule=load('src/lib/stripe.ts',{stripe:class{}});const ids=Array.from(stripeModule.ALL_SERVICE_IDS);
+const stripeModule=load('src/lib/stripe.ts',{stripe:class{},'node:crypto':require('node:crypto')});const ids=Array.from(stripeModule.ALL_SERVICE_IDS);
 const subscriptionNotice=load('src/lib/billing-subscription-notice.ts');
 const grants=load('src/lib/billing-manual-grants.ts',{'@/lib/prisma':{prisma:{}}});
 const json=v=>JSON.parse(JSON.stringify(v));
@@ -99,7 +99,7 @@ async function routes(){
   assert.equal(response.status,500);assert.equal(f.writes,0);
  });
  for(const route of ['sync','sync/latest'])await check(route+' queues actual LIGHT trial without a fixed 30-day promise',async()=>{
-  let f=routeFixture();f.sub.metadata.planId='banner-light';f.sub.status='trialing';f.sub.trial_end=1900000000;
+  let f=routeFixture();f.sub.metadata.planId='banner-light';f.sub.items.data[0].price.id='price_banner_light_monthly';f.sub.status='trialing';f.sub.trial_end=1900000000;
   assert.equal((await load('src/app/api/stripe/'+route+'/route.ts',f.mocks).POST(req())).status,200);
   const payload=Object.values(f.f.state.notices)[0].payload;
   assert.equal(payload.type,'trial_start');assert.match(payload.details,/ライトプラン/);assert.doesNotMatch(payload.details,/プロプラン|30日|初回請求/);

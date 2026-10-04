@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { stripe, resolveBillingCustomerId } from '@/lib/stripe'
+import { createCustomerPortalSession, resolveBillingCustomerId } from '@/lib/stripe'
 import { getHrContext } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { logAudit } from '@/lib/hr/audit'
@@ -51,10 +51,9 @@ export async function POST(req: NextRequest) {
 
     const baseUrl = (process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp').replace(/\/+$/, '')
 
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${baseUrl}/hr/settings/billing`,
-      locale: 'ja',
+    const portalSession = await createCustomerPortalSession({
+      customerId,
+      returnUrl: `${baseUrl}/hr/settings/billing`,
     })
 
     // 監査ログ

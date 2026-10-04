@@ -43,6 +43,11 @@ const portal = load('src/app/api/hr/billing/portal/route.ts', {
   ...common,
   '@/lib/stripe': {
     stripe,
+    createCustomerPortalSession: async ({ customerId, returnUrl }) => {
+      portalCalls++;
+      portalOptions = { customer: customerId, return_url: returnUrl };
+      return { url: 'https://offline.invalid/portal' };
+    },
     resolveBillingCustomerId: async ({ userId, email, stripeCustomerId }) => {
       assert.equal(userId, 'u1');
       assert.equal(email, 'test@example.invalid');

@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const planChange = spawnSync(process.execPath, [path.join(__dirname, 'verify-plan-change.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (planChange.error || planChange.status !== 0) {
+  console.error('Security regression failed: verify-plan-change.cjs');
+  process.exit(1);
+}
 const checkoutReservation = spawnSync(process.execPath, [path.join(__dirname, 'verify-checkout-reservation.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (checkoutReservation.error || checkoutReservation.status !== 0) {
   console.error('Security regression failed: verify-checkout-reservation.cjs');

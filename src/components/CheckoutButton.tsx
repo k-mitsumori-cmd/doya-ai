@@ -71,6 +71,19 @@ export function CheckoutButton({
       const data = await response.json()
 
       if (!response.ok) {
+        if (data?.code === 'PLAN_CHANGE_REQUIRED') {
+          const portalResponse = await fetch('/api/stripe/portal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ returnTo: currentPath || '/', purpose: 'plan_change' }),
+          })
+          const portal = await portalResponse.json()
+          if (!portalResponse.ok || !portal?.url) {
+            throw new Error(portal?.error || 'プラン変更画面を開けませんでした。時間をおいて再度お試しください。')
+          }
+          window.location.href = portal.url
+          return
+        }
         // すでに契約が有効: 二重課金を防ぐためサーバが決済を中断した。
         // 再同期の成功を確認できた場合だけ、反映済みと伝えて画面を更新する。
         if (data?.code === 'ALREADY_SUBSCRIBED') {

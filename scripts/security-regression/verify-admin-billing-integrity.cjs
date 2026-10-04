@@ -1,4 +1,4 @@
-const assert=require('node:assert/strict');const {load,check,results}=require('./verify-data-integrity.cjs');const stripeModule=load('src/lib/stripe.ts',{stripe:class{}});
+const assert=require('node:assert/strict');const {load,check,results}=require('./verify-data-integrity.cjs');const stripeModule=load('src/lib/stripe.ts',{stripe:class{},'node:crypto':require('node:crypto')});
 const Resp={json:(body,opts)=>({body,status:opts?.status??200})};
 function fixture(){let valid=true,fail=false,foreignId=null,deleted=0,synced=[],cancels=[],txCalls=0,subscriptionUpdate=null,staleDaily=false,staleMonthly=false;const user={id:'u1',email:'owner@example.test',stripeSubscriptionId:'sub1'};
  const stripe={subscriptions:{cancel:async id=>{if(fail)throw Error('network failure');cancels.push(id)},retrieve:async id=>({id,status:'active',metadata:{userId:id===foreignId?'other':'u1'}})}};

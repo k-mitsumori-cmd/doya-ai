@@ -1,4 +1,5 @@
 import Stripe from 'stripe'
+import { createHash } from 'node:crypto'
 
 // ========================================
 // Stripe設定
@@ -444,7 +445,9 @@ export function resolvePlanIdFromSubscription(subscription: {
   const priceId = subscription.items.data[0]?.price.id || null
   const fromMeta = isDoyaPlanId(subscription.metadata?.planId) ? subscription.metadata?.planId : null
   const fromPrice = getPlanIdFromStripePriceId(priceId)
-  return { planId: String(fromMeta || fromPrice || ''), priceId }
+  // ポータルでプランを変更すると subscription.metadata.planId は以前の値のまま。
+  // 現在の請求価格を優先し、移行済みの未知価格だけメタデータへフォールバックする。
+  return { planId: String(fromPrice || fromMeta || ''), priceId }
 }
 
 export function getPlanIdFromStripePriceId(priceId: string | null | undefined): PlanId | null {
@@ -572,11 +575,13 @@ export async function createCheckoutSession({
 export async function createCustomerPortalSession({
   customerId,
   returnUrl,
+  requirePlanChange = false,
 }: {
   customerId: string
   returnUrl: string
+  requirePlanChange?: boolean
 }) {
-  const configurationId = await getOrCreateCustomerPortalConfigurationId()
+  const configurationId = await getOrCreateCustomerPortalConfigurationId(requirePlanChange)
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
     return_url: returnUrl,
@@ -596,19 +601,62 @@ export async function createCustomerPortalSession({
 // - 環境変数 STRIPE_PORTAL_CONFIGURATION_ID があればそれを使う
 // - なければ Stripe 側に既存設定があれば再利用し、なければ作成する
 //   ※ Serverlessでも過剰作成にならないよう「list→metadata一致」を優先する
-async function getOrCreateCustomerPortalConfigurationId(): Promise<string | null> {
+async function getOrCreateCustomerPortalConfigurationId(requirePlanChange = false): Promise<string | null> {
   const configured = String(process.env.STRIPE_PORTAL_CONFIGURATION_ID || '').trim()
-  if (configured) return configured
-
-  // 価格IDが未設定（ダミー）の環境では、作成してもプラン変更の候補が空になるため
-  // 設定IDなしでセッションを作る（Stripe側のデフォルト設定に委ねる）
   const realPriceIds = collectRealPriceIds()
-  if (realPriceIds.length === 0) return null
+  if (configured) {
+    if (!requirePlanChange) return configured
+    const config = await stripe.billingPortal.configurations.retrieve(configured)
+    // stripe@14の型には存在しないが、Stripe APIは試用継続設定を返す。
+    const trialBehavior = (config.features.subscription_update as { trial_update_behavior?: string }).trial_update_behavior
+    if (!config.active || !config.features.subscription_update.enabled ||
+        !config.features.subscription_update.default_allowed_updates.includes('price') ||
+        trialBehavior !== 'continue_trial') {
+      throw new Error('Configured Stripe portal does not support plan changes')
+    }
+    return configured
+  }
+
+  // 価格設定のない環境では、解約・支払方法のポータルだけを開ける。
+  if (realPriceIds.length === 0) {
+    if (requirePlanChange) throw new Error('Stripe portal plan prices are not configured')
+    return null
+  }
 
   try {
-    const existing = await stripe.billingPortal.configurations.list({ limit: 100 })
-    const found = existing.data.find((c) => (c.metadata as any)?.app === 'doya-ai')
-    if (found?.id) return found.id
+    // 各Priceの実際のProductをStripeから確認する。統一プランでも
+    // LIGHT/PRO/ENTERPRISEは別Productのため、1商品へ全価格を紐付けない。
+    const prices = await Promise.all(realPriceIds.map(id => stripe.prices.retrieve(id)))
+    const groups = new Map<string, string[]>()
+    for (const price of prices) {
+      const product = typeof price.product === 'string' ? price.product : price.product?.id
+      if (!product || !price.active || !price.recurring) throw new Error('Stripe portal price is not an active recurring price')
+      groups.set(product, [...(groups.get(product) || []), price.id])
+    }
+    if (groups.size > 10) throw new Error('Stripe portal product limit exceeded')
+    const products = [...groups].map(([product, ids]) => ({ product, prices: ids.sort() }))
+      .sort((a, b) => a.product.localeCompare(b.product))
+    const priceSignature = createHash('sha256').update(JSON.stringify(products)).digest('hex')
+
+    let cursor: string | undefined
+    const cursors = new Set<string>()
+    while (true) {
+      const page = await stripe.billingPortal.configurations.list({ limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
+      const found = page.data.find(c => {
+        const update = c.features.subscription_update
+        const trialBehavior = (update as { trial_update_behavior?: string }).trial_update_behavior
+        // StripeのConfiguration取得結果には、作成時のproductsが含まれない。
+        // priceSignatureは作成時に確定した商品・価格の構成を示す。
+        return c.active && update.enabled && update.default_allowed_updates.includes('price') && trialBehavior === 'continue_trial' &&
+          c.metadata?.app === 'doya-ai' && c.metadata?.portalVersion === 'v2' && c.metadata?.priceSignature === priceSignature
+      })
+      if (found) return found.id
+      if (!page.has_more) break
+      const next = page.data[page.data.length - 1]?.id
+      if (!next || cursors.has(next)) throw new Error('Stripe portal configuration pagination did not advance')
+      cursors.add(next)
+      cursor = next
+    }
 
     const created = await stripe.billingPortal.configurations.create({
       business_profile: {
@@ -624,29 +672,35 @@ async function getOrCreateCustomerPortalConfigurationId(): Promise<string | null
           enabled: true,
           mode: 'at_period_end',
           // Stripeがサポートしている範囲で理由入力を有効化
-          cancellation_reason: { enabled: true } as any,
+          cancellation_reason: {
+            enabled: true,
+            options: ['too_expensive', 'missing_features', 'switched_service', 'unused', 'other'],
+          },
         },
         // サブスクのプラン変更（アップ/ダウン両方）
         subscription_update: {
           enabled: true,
           default_allowed_updates: ['price'],
+          // 既定のend_trialだと、30日間無料の途中で上位プランへ移るだけで試用が終了する。
+          trial_update_behavior: 'continue_trial',
           // 変更候補をこのアプリの価格に絞る（他商品を誤って表示しない）
-          products: [
-            {
-              product: process.env.STRIPE_PRODUCT_BANNER_ID!,
-              prices: realPriceIds,
-            },
-          ].filter((p) => !!p.product || (p.prices?.length || 0) > 0),
-        },
+          products,
+        } as any,
       },
       metadata: {
         app: 'doya-ai',
+        portalVersion: 'v2',
+        priceSignature,
       },
-    })
+    }, { idempotencyKey: `doya-portal-v2-trial:${priceSignature}` })
 
+    if ((created.features.subscription_update as { trial_update_behavior?: string }).trial_update_behavior !== 'continue_trial') {
+      throw new Error('Stripe portal did not preserve the free trial')
+    }
     return created?.id || null
   } catch (e) {
     console.error('[Stripe] Failed to get/create customer portal configuration:')
+    if (requirePlanChange) throw e
     return null
   }
 }

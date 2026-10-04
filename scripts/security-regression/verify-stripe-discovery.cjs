@@ -4,7 +4,7 @@ function fixture({customers=1,subscriptions=1,fail='',repeat=false,emptyStored=f
  const calls=[];
  const list=async(kind,q)=>{calls.push({kind,...q});if(fail===kind&&q.starting_after)throw Error('synthetic unavailable');const count=kind==='customers'?customers:emptyStored&&q.customer==='stale'?0:subscriptions;const prefix=kind==='customers'?'c':'s'+q.customer+'-';const start=q.starting_after?Number(q.starting_after.slice(prefix.length))+1:0;const data=Array.from({length:Math.max(0,Math.min(100,count-start))},(_,i)=>{if(kind==='customers')return{id:prefix+(start+i),email:q.email};const item=sub(prefix+(start+i),start+i===count-1?'trialing':'canceled');if(q.customer==='foreign')item.metadata.userId='other';return item});if(repeat)return{data:kind==='customers'?[{id:'same',email:q.email}]:[sub('same')],has_more:true};return{data,has_more:start+data.length<count}};
  const stripe={customers:{list:q=>list('customers',q),retrieve:async id=>({id,email:id==='foreign'?'other@example.invalid':'x@example.invalid'})},subscriptions:{list:q=>list('subscriptions',q)},invoices:{list:async()=>({data:[],has_more:false})}};
- const module=load('src/lib/stripe.ts',{stripe:function(){return stripe}});return{module,calls};
+ const module=load('src/lib/stripe.ts',{stripe:function(){return stripe},'node:crypto':require('node:crypto')});return{module,calls};
 }
 (async()=>{
 for(const n of [0,1,100,101,205])await check('all '+n+' customers searched, no duplicate stored customer',async()=>{const f=fixture({customers:n});const rows=await f.module.findActiveLikeSubscriptions({userId:'u1',email:'x@example.invalid',stripeCustomerId:n?'c0':null});assert.equal(rows.length,n);assert.equal(f.calls.filter(c=>c.kind==='subscriptions').length,n)});

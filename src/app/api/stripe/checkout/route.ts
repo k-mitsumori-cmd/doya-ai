@@ -136,11 +136,13 @@ export async function POST(request: NextRequest) {
       })
       if (existing.length > 0) {
         const s = existing[0]!
+        const planChange = existing.length === 1 && !!s.priceId && s.priceId !== priceId
         return NextResponse.json(
           {
-            code: 'ALREADY_SUBSCRIBED',
-            error:
-              'すでにご契約が有効です。二重のご請求を防ぐため決済を中断しました。プランの反映が見えない場合は画面を再読み込みしてください。',
+            code: planChange ? 'PLAN_CHANGE_REQUIRED' : 'ALREADY_SUBSCRIBED',
+            error: planChange
+              ? '現在のご契約のプラン変更画面へご案内します。新しい契約は作成しません。'
+              : 'すでにご契約が有効です。二重のご請求を防ぐため決済を中断しました。プランの反映が見えない場合は画面を再読み込みしてください。',
             status: s.status,
             subscriptionId: s.id,
           },

@@ -17,7 +17,8 @@ function safeReturnPath(raw: string | null | undefined): string {
   // 同一オリジン内のパスのみ許可
   if (!v.startsWith('/')) return '/banner/dashboard/plan'
   if (v.startsWith('//')) return '/banner/dashboard/plan'
-  return v
+  if (/[\\\u0000-\u001f]/.test(v)) return '/banner/dashboard/plan'
+  return v.split('?')[0]!.split('#')[0]! || '/banner/dashboard/plan'
 }
 
 function portalFailureUrl(request: NextRequest, reason: 'missing' | 'error'): URL {
@@ -120,11 +121,15 @@ export async function POST(request: NextRequest) {
       .replace(/\/+$/, '')
     const body = await request.json().catch(() => ({}))
     const returnTo = safeReturnPath(body?.returnTo)
+    const requirePlanChange = body?.purpose === 'plan_change'
+    const returnUrl = new URL(`${baseUrl}${returnTo}`)
+    if (requirePlanChange) returnUrl.searchParams.set('portal_return', 'plan_change')
 
     // カスタマーポータルセッション作成
     const portalSession = await createCustomerPortalSession({
       customerId,
-      returnUrl: `${baseUrl}${returnTo}`,
+      returnUrl: returnUrl.toString(),
+      requirePlanChange,
     })
 
     return NextResponse.json({

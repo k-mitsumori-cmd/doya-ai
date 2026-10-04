@@ -84,9 +84,12 @@ export async function POST(req: NextRequest) {
         stripeCustomerId: dbUser.stripeCustomerId,
       })
       if (existing.length > 0) {
+        const planChange = existing.length === 1 && !!existing[0]?.priceId && existing[0].priceId !== priceId
         return NextResponse.json({
-          code: 'ALREADY_SUBSCRIBED',
-          error: 'すでにご契約が有効です。二重のご請求を防ぐため決済を中断しました。',
+          code: planChange ? 'PLAN_CHANGE_REQUIRED' : 'ALREADY_SUBSCRIBED',
+          error: planChange
+            ? '現在のご契約のプラン変更は契約管理画面で行ってください。'
+            : 'すでにご契約が有効です。二重のご請求を防ぐため決済を中断しました。',
         }, { status: 409 })
       }
     } catch {
