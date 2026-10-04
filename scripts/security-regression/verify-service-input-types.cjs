@@ -132,5 +132,17 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
       [null, {}, { companyName: {} }, { logoPath: 42 }, { brandColors: [5] }],
       { companyName: 'Acme', brandColors: ['#112233'] }, () => calls);
   }
+  {
+    let calls = 0;
+    const route = load('src/app/api/shodan/company-profile/extract/route.ts', {
+      'next/server': server,
+      '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'org', role: 'owner' }), hasMinRole: () => true, orgSlugFrom: () => 'org' },
+      '@/lib/shodan/research': { researchCompany: async () => { calls++; return { companyName: 'Acme' }; } },
+      '@/lib/shodan/ai': { draftOwnProfile: async () => ({ companyName: 'Acme', gaps: [] }) },
+    });
+    await checkRoute('Shodan own profile extraction', route.POST,
+      [null, {}, { url: 42 }, { url: [] }, { url: {} }, { url: 'ftp://example.com' }],
+      { url: 'https://example.com' }, () => calls);
+  }
   console.log('PASS active service API input types: malformed requests stop before AI calls or DB writes');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

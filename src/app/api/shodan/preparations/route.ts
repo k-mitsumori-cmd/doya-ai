@@ -18,6 +18,7 @@ function normalizeUrl(input: unknown): string | null {
   if (typeof input !== 'string') return null
   let s = input.trim()
   if (!s) return null
+  if (/^[a-z][a-z0-9+.-]*:/i.test(s) && !/^https?:\/\//i.test(s)) return null
   if (!/^https?:\/\//i.test(s)) s = 'https://' + s
   try {
     const u = new URL(s)

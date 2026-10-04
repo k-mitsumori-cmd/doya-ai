@@ -54,7 +54,7 @@ function fixture(initialUsed = 4, ownerPlan = 'FREE', researchResult = { company
 (async () => {
   await check('malformed URL input is rejected before quota or provider calls', async () => {
     const f = fixture()
-    for (const body of [null, {}, { url: 3 }, { url: [] }, { url: {} }, { url: '' }]) {
+    for (const body of [null, {}, { url: 3 }, { url: [] }, { url: {} }, { url: '' }, { url: 'ftp://example.com' }]) {
       assert.equal((await f.post(body)).status, 400)
     }
     assert.equal(f.rows.length, 4)

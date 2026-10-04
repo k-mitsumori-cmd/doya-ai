@@ -7,9 +7,11 @@ import { getShodanContext, hasMinRole, orgSlugFrom } from '@/lib/shodan/access'
 import { researchCompany } from '@/lib/shodan/research'
 import { draftOwnProfile } from '@/lib/shodan/ai'
 
-function normalizeUrl(input: string): string | null {
-  let s = (input || '').trim()
+function normalizeUrl(input: unknown): string | null {
+  if (typeof input !== 'string') return null
+  let s = input.trim()
   if (!s) return null
+  if (/^[a-z][a-z0-9+.-]*:/i.test(s) && !/^https?:\/\//i.test(s)) return null
   if (!/^https?:\/\//i.test(s)) s = 'https://' + s
   try {
     const u = new URL(s)
@@ -27,7 +29,7 @@ export async function POST(req: NextRequest) {
   if (!hasMinRole(ctx.role, 'manager')) return NextResponse.json({ error: '自社情報の編集権限がありません' }, { status: 403 })
 
   const body = await req.json().catch(() => ({}))
-  const url = normalizeUrl(body.url as string)
+  const url = normalizeUrl(body?.url)
   if (!url) return NextResponse.json({ error: '有効な自社URLを入力してください' }, { status: 400 })
 
   try {
