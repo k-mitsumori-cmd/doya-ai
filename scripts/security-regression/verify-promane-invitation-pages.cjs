@@ -16,7 +16,8 @@ let failCount = false
 let memberActive = true
 let deletions = 0
 const prisma = {
-  promaneMember: { findUnique: async ({ where }) =>
+  $transaction: async function (fn, options) { assert.equal(options.isolationLevel, 'Serializable'); return fn(this) },
+  promaneMember: { findFirst: async ({ where }) => where.workspaceId === 'own-workspace' && memberActive ? { id: 'owner' } : null, findUnique: async ({ where }) =>
     where.workspaceId_userId.workspaceId === 'own-workspace' && where.workspaceId_userId.userId === 'owner'
       ? { role: 'owner', isActive: memberActive } : null },
   promaneInvitation: {

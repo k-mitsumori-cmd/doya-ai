@@ -925,6 +925,11 @@ if (promaneWorkspaceSettingsAtomic.error || promaneWorkspaceSettingsAtomic.statu
   console.error('Security regression failed: verify-promane-workspace-settings-atomic.cjs');
   process.exit(1);
 }
+const promaneInvitationDeleteAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-invitation-delete-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (promaneInvitationDeleteAtomic.error || promaneInvitationDeleteAtomic.status !== 0) {
+  console.error('Security regression failed: verify-promane-invitation-delete-atomic.cjs');
+  process.exit(1);
+}
 const adminKintaiEmployeePages = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-kintai-employee-pages.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adminKintaiEmployeePages.error || adminKintaiEmployeePages.status !== 0) {
   console.error('Security regression failed: verify-admin-kintai-employee-pages.cjs');

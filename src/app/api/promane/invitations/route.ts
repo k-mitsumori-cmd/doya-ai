@@ -7,6 +7,17 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+async function retryInvitationTransaction<T>(commit: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { return await commit() }
+    catch (error) {
+      if (!(error && typeof error === 'object' && 'code' in error && error.code === 'P2034')) throw error
+      if (attempt === 2) throw new Error('同時に招待が変更されました')
+    }
+  }
+  throw new Error('招待を取り消せませんでした')
+}
+
 /**
  * GET /api/promane/invitations
  * Query: ?type=received|sent (default: received)
@@ -120,21 +131,24 @@ export async function DELETE(req: NextRequest) {
     const id = req.nextUrl.searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id は必須です' }, { status: 400 })
 
-    const inv = await prisma.promaneInvitation.findUnique({
-      where: { id },
-      select: { workspaceId: true, acceptedAt: true },
-    })
-    if (!inv) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-    if (inv.acceptedAt) return NextResponse.json({ error: '既に承諾済みです' }, { status: 410 })
-
-    const member = await prisma.promaneMember.findUnique({
-      where: { workspaceId_userId: { workspaceId: inv.workspaceId, userId } },
-    })
-    if (!member?.isActive || !['owner', 'admin'].includes(member.role)) {
-      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
-    }
-
-    await prisma.promaneInvitation.delete({ where: { id } })
+    const result = await retryInvitationTransaction(() => prisma.$transaction(async tx => {
+      const invitation = await tx.promaneInvitation.findUnique({
+        where: { id }, select: { workspaceId: true, acceptedAt: true },
+      })
+      if (!invitation) return { status: 404 as const, error: '見つかりません' }
+      if (invitation.acceptedAt) return { status: 410 as const, error: '既に承諾済みです' }
+      const member = await tx.promaneMember.findFirst({
+        where: { workspaceId: invitation.workspaceId, userId, isActive: true, role: { in: ['owner', 'admin'] } },
+        select: { id: true },
+      })
+      if (!member) return { status: 403 as const, error: '権限がありません' }
+      const deleted = await tx.promaneInvitation.deleteMany({
+        where: { id, workspaceId: invitation.workspaceId, acceptedAt: null },
+      })
+      if (deleted.count !== 1) return { status: 409 as const, error: '招待の状態が変更されました。画面を更新してください' }
+      return { status: 200 as const }
+    }, { isolationLevel: 'Serializable' }))
+    if (result.status !== 200) return NextResponse.json({ error: result.error }, { status: result.status })
     return NextResponse.json({ success: true })
   } catch (e: any) {
     console.error('[promane/invitations][DELETE]')
