@@ -7,10 +7,10 @@ export type RuntimeAlertClaim =
   | { state: 'allowed'; key: string; value: string }
   | { state: 'limited' | 'unavailable' }
 
-/** One atomic budget per call site across Vercel instances. DB failure must not hide a server failure. */
-export async function claimRuntimeAlert(sourceHash: string): Promise<RuntimeAlertClaim> {
+/** One atomic budget per fixed alert source across Vercel instances. DB failure must not hide a server failure. */
+export async function claimRuntimeAlert(sourceHash: string, channel: 'server-error' | 'api-error' = 'server-error'): Promise<RuntimeAlertClaim> {
   if (!/^[a-f0-9]{24}$/.test(sourceHash)) return { state: 'unavailable' }
-  const key = `server-error:v1:${sourceHash}`
+  const key = `${channel}:v1:${sourceHash}`
   const now = Date.now()
   const value = String(now + WINDOW_MS)
   try {

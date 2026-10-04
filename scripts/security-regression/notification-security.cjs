@@ -114,7 +114,7 @@ async function main(){
   const serverPrisma={
     $queryRaw:async(sql,...params)=>{
       const statement=sql.join('?');assert(statement.includes('ON CONFLICT ("key") DO UPDATE'));assert(statement.includes('WHEN "SystemSetting"."value" ~'));
-      const [,key,value,now]=params;assert(/^server-error:v1:[a-f0-9]{24}$/.test(key));
+      const [,key,value,now]=params;assert(/^(?:server-error|api-error):v1:[a-f0-9]{24}$/.test(key));
       if(Number(serverRows.get(key))>now)return [];
       serverRows.set(key,value);return [{key}];
     },
@@ -124,6 +124,9 @@ async function main(){
   const serverSignature='a'.repeat(24);
   const serverClaims=await Promise.all(Array.from({length:30},()=>makeServerLimiter().claimRuntimeAlert(serverSignature)));
   assert.equal(serverClaims.filter(x=>x.state==='allowed').length,1);assert.equal(serverClaims.filter(x=>x.state==='limited').length,29);pass('30 server instances share one atomic alert claim');
+  const apiClaims=await Promise.all(Array.from({length:30},()=>makeServerLimiter().claimRuntimeAlert(serverSignature,'api-error')));
+  assert.equal(apiClaims.filter(x=>x.state==='allowed').length,1);assert.equal(apiClaims.filter(x=>x.state==='limited').length,29);
+  assert.equal(serverRows.size,2);pass('API alerts have a separate shared claim across 30 instances');
   assert.equal((await makeServerLimiter().claimRuntimeAlert('bad')).state,'unavailable');pass('malformed server fingerprint rejected');
   serverClock+=600001;
   const renewed=await makeServerLimiter().claimRuntimeAlert(serverSignature);assert.equal(renewed.state,'allowed');

@@ -5,7 +5,8 @@ import { voicePayload } from './slack-voice';
 import { prisma, withRetry } from './prisma'
 import { fetchGCPUsageReport } from './gcp-usage'
 import { serviceLabelOf } from './attribution'
-import { recordErrorAndCheckBurst, shouldSend, notifyAlert, burstThreshold, buildAiRepairPrompt } from './alert'
+import { recordErrorAndCheckBurst, shouldSend, notifyAlert, burstThreshold, buildAiRepairPrompt, getAlertWebhook } from './alert'
+import { claimRuntimeAlert, releaseRuntimeAlertClaim, type RuntimeAlertClaim } from './runtime-alert-limit'
 
 export type ErrorNotificationData = {
   errorMessage: string
@@ -64,26 +65,41 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
     const digest = createHash('sha256').update(`${data.pathname || data.requestUrl || ''}:${data.errorMessage || ''}`).digest('hex')
     const sig = `err:${safe.pathname}:${digest}`
     if (shouldSend(sig, 5 * 60_000)) {
-      const slackWebhook = await withRetry(() => prisma.systemSetting.findUnique({
-        where: { key: 'slack_webhook' },
-      }))
-      const webhookUrl = slackWebhook?.value || ''
-      if (webhookUrl) {
-        const aiPrompt = buildAiRepairPrompt({
-          system: 'ドヤAI (09_Cursol・Next.js/Prisma)',
-          where: `${safe.requestMethod || ''} ${safe.pathname || ''}`.trim(),
-          errorType: 'ServerError',
-          message: safe.errorMessage,
-          env: process.env.VERCEL_ENV || process.env.NODE_ENV || 'unknown',
-          extra: { httpStatus: safe.httpStatus },
-        })
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(voicePayload({
-            text: `${formatErrorMessage(safe)}\n\n*AIへの修正依頼（コピペ用）*\n\`\`\`${aiPrompt.slice(0, 2800)}\`\`\``,
-          })),
-        })
+      // Budget by fixed, sanitized route/status rather than request content. This
+      // prevents one API failure from paging once per Vercel instance.
+      const sourceHash = createHash('sha256')
+        .update(`${safe.requestMethod || ''}:${safe.pathname}:${safe.httpStatus || ''}`)
+        .digest('hex').slice(0, 24)
+      const claim: RuntimeAlertClaim = process.env.VERCEL_ENV === 'production'
+        ? await claimRuntimeAlert(sourceHash, 'api-error') : { state: 'unavailable' }
+      if (claim.state !== 'limited') {
+        try {
+          const webhookUrl = await getAlertWebhook()
+          if (!webhookUrl) {
+            if (claim.state === 'allowed') await releaseRuntimeAlertClaim(claim)
+          } else {
+            const aiPrompt = buildAiRepairPrompt({
+              system: 'ドヤAI (09_Cursol・Next.js/Prisma)',
+              where: `${safe.requestMethod || ''} ${safe.pathname || ''}`.trim(),
+              errorType: 'ServerError',
+              message: safe.errorMessage,
+              env: process.env.VERCEL_ENV || process.env.NODE_ENV || 'unknown',
+              extra: { httpStatus: safe.httpStatus },
+            })
+            const response = await fetch(webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              signal: AbortSignal.timeout(5000),
+              body: JSON.stringify(voicePayload({
+                text: `${formatErrorMessage(safe)}\n\n*AIへの修正依頼（コピペ用）*\n\`\`\`${aiPrompt.slice(0, 2800)}\`\`\``,
+              })),
+            })
+            if (!response.ok) throw new Error('Slack delivery failed')
+          }
+        } catch {
+          if (claim.state === 'allowed') await releaseRuntimeAlertClaim(claim)
+          throw new Error('API error notification failed')
+        }
       }
     }
 
