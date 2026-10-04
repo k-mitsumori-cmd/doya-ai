@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import type { PrismaClient } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { higherPlan } from '@/lib/plan-utils'
+import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 
 type BannerTextDb = Pick<PrismaClient, '$transaction' | 'user' | 'userServiceSubscription'>
 
@@ -13,7 +14,7 @@ export type BannerTextUsage = {
 
 export type BannerTextAdmission =
   | { state: 'allowed'; usage: BannerTextUsage }
-  | { state: 'limit'; usage: BannerTextUsage }
+  | { state: 'limit'; usage: BannerTextUsage; upgradeAvailable: boolean }
 
 export function bannerTextDailyLimit(plan: string | null | undefined): number {
   if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.BANNER_DISABLE_LIMITS === '1') return -1
@@ -39,7 +40,8 @@ export async function reserveBannerTextCall(userId: string, db: BannerTextDb = p
     db.user.findUnique({ where: { id: userId }, select: { plan: true } }),
   ])
   if (!account) throw new Error('Banner text account unavailable')
-  const limit = bannerTextDailyLimit(higherPlan(subscription?.plan, account.plan))
+  const plan = higherPlan(subscription?.plan, account.plan)
+  const limit = bannerTextDailyLimit(plan)
   if (limit < 0) return { state: 'allowed', usage: dailyUsage(limit, 0) }
 
   const key = `banner-text:v1:${createHash('sha256').update(userId).digest('hex')}`
@@ -51,7 +53,7 @@ export async function reserveBannerTextCall(userId: string, db: BannerTextDb = p
     if (saved && !/^\d{4}-\d{2}-\d{2}:\d+$/.test(saved)) throw new Error('Banner text usage ledger invalid')
     const used = saved.startsWith(`${day}:`) ? Number(saved.slice(day.length + 1)) : 0
     if (!Number.isSafeInteger(used)) throw new Error('Banner text usage ledger invalid')
-    if (used >= limit) return { state: 'limit' as const, usage: dailyUsage(limit, used) }
+    if (used >= limit) return { state: 'limit' as const, usage: dailyUsage(limit, used), upgradeAvailable: plan === 'GUEST' || plan === 'FREE' || plan === 'LIGHT' }
     await tx.systemSetting.upsert({
       where: { key },
       create: { key, value: `${day}:${used + 1}` },
@@ -61,11 +63,11 @@ export async function reserveBannerTextCall(userId: string, db: BannerTextDb = p
   }, { timeout: 15000 })
 }
 
-export function bannerTextLimitPayload(usage: BannerTextUsage) {
+export function bannerTextLimitPayload(usage: BannerTextUsage, upgradeAvailable: boolean) {
   return {
     error: `本日のAI相談・コピー提案の上限（${usage.dailyLimit}回）に達しました。`,
     code: 'DAILY_TEXT_LIMIT_REACHED',
     usage,
-    upgradeUrl: '/banner/pricing',
+    ...(upgradeAvailable ? { upgradeUrl: '/banner/pricing' } : { contactUrl: HIGH_USAGE_CONTACT_URL }),
   }
 }

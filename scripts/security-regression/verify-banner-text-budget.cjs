@@ -22,6 +22,7 @@ async function main() {
     'node:crypto': crypto,
     '@/lib/prisma': { prisma: db },
     '@/lib/plan-utils': load('src/lib/plan-utils.ts'),
+    '@/lib/pricing': { HIGH_USAGE_CONTACT_URL: 'https://example.com/contact' },
   })
   assert.equal(budget.bannerTextDailyLimit('FREE'), 10)
   assert.equal(budget.bannerTextDailyLimit('LIGHT'), 30)
@@ -35,7 +36,8 @@ async function main() {
   const denied = await budget.reserveBannerTextCall('member-1', db)
   assert.equal(denied.state, 'limit')
   assert.equal(denied.usage.dailyRemaining, 0)
-  assert.equal(budget.bannerTextLimitPayload(denied.usage).upgradeUrl, '/banner/pricing')
+  assert.equal(denied.upgradeAvailable, true)
+  assert.equal(budget.bannerTextLimitPayload(denied.usage, denied.upgradeAvailable).upgradeUrl, '/banner/pricing')
   const ledgerKey = [...values.keys()].find(key => key.startsWith('banner-text:v1:'))
   assert(ledgerKey)
   values.set(ledgerKey, '2000-01-01:10')
@@ -52,6 +54,14 @@ async function main() {
   accountPlan = 'FREE'; servicePlan = 'PRO'
   const individualGrant = await budget.reserveBannerTextCall('member-grant', db)
   assert.equal(individualGrant.usage.dailyLimit, 100)
+  const paidKey = `banner-text:v1:${crypto.createHash('sha256').update('member-grant').digest('hex')}`
+  const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  values.set(paidKey, `${today}:100`)
+  const paidDenied = await budget.reserveBannerTextCall('member-grant', db)
+  assert.equal(paidDenied.state, 'limit')
+  assert.equal(paidDenied.upgradeAvailable, false)
+  assert.equal(budget.bannerTextLimitPayload(paidDenied.usage, paidDenied.upgradeAvailable).contactUrl, 'https://example.com/contact')
+  assert.equal(budget.bannerTextLimitPayload(paidDenied.usage, paidDenied.upgradeAvailable).upgradeUrl, undefined)
 
   for (const route of ['src/app/api/banner/chat/route.ts', 'src/app/api/banner/copy/route.ts']) {
     let providerCalled = false

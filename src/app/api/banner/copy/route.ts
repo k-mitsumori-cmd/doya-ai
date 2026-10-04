@@ -513,7 +513,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503 })
     }
     if (admission.state === 'limit') {
-      return NextResponse.json(bannerTextLimitPayload(admission.usage), { status: 429 })
+      return NextResponse.json(bannerTextLimitPayload(admission.usage, admission.upgradeAvailable), { status: 429 })
     }
     const raw = await callGemini(prompt, apiKey)
     const parsed = extractJsonObject(raw)

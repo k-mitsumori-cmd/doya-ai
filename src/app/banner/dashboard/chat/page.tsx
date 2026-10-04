@@ -170,6 +170,7 @@ export default function BannerChatPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [limitModal, setLimitModal] = useState<{ open: boolean; used?: number; limit?: number; message?: string; upgradeUrl?: string }>({ open: false })
   const [textLimit, setTextLimit] = useState<number | null>(null)
+  const [textLimitAction, setTextLimitAction] = useState<{ href: string; label: string } | null>(null)
   const quota = useBannerQuota(setLimitModal)
   const [isRefining, setIsRefining] = useState(false)
   const [proposedSpec, setProposedSpec] = useState<BannerSpec | null>(null)
@@ -253,12 +254,18 @@ export default function BannerChatPage() {
       if (parsed.status === 429 && data?.code === 'DAILY_TEXT_LIMIT_REACHED') {
         const limit = Number(data?.usage?.dailyLimit)
         setTextLimit(Number.isFinite(limit) && limit > 0 ? limit : null)
+        setTextLimitAction(typeof data?.upgradeUrl === 'string' && data.upgradeUrl === '/banner/pricing'
+          ? { href: data.upgradeUrl, label: 'プランを確認する' }
+          : typeof data?.contactUrl === 'string' && data.contactUrl.startsWith('https://')
+            ? { href: data.contactUrl, label: 'お問い合わせ' }
+            : null)
         pushAssistant(data?.error || '本日のAI相談の上限に達しました。')
         return
       }
       if (!parsed.ok) throw new Error(data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || 'AIチャットに失敗しました')
 
       setTextLimit(null)
+      setTextLimitAction(null)
       pushAssistant(String(data.reply || '了解です。'))
       if (data.spec) {
         setProposedSpec(data.spec as BannerSpec)
@@ -603,9 +610,9 @@ export default function BannerChatPage() {
                 {textLimit !== null && (
                   <div role="status" className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-slate-800">
                     <p>本日のAI相談・コピー提案の上限（{textLimit}回）に達しました。日本時間の翌日にリセットされます。</p>
-                    <Link href="/banner/pricing" className="mt-2 inline-flex items-center gap-1 font-bold text-blue-700 underline">
-                      プランを確認する <ArrowRight className="h-4 w-4" />
-                    </Link>
+                    {textLimitAction && <Link href={textLimitAction.href} className="mt-2 inline-flex items-center gap-1 font-bold text-blue-700 underline">
+                      {textLimitAction.label} <ArrowRight className="h-4 w-4" />
+                    </Link>}
                   </div>
                 )}
                 <div className="relative">
