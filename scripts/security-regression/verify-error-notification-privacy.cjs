@@ -95,7 +95,7 @@ const notifications = load('src/lib/notifications.ts', {
       './slack-voice': { voicePayload: (payload) => payload },
       './prisma': { prisma: { systemSetting: { findUnique: async () => ({ value: 'https://webhook.invalid' }) } }, withRetry: async (operation) => operation() },
       './gcp-usage': {}, './attribution': {},
-      './alert': { recordErrorAndCheckBurst: () => ({ count: 5, burst: true }), shouldSend: () => true, clearSendCooldown: () => {}, buildAiRepairPrompt: () => '', notifyAlert: async (alert) => { bursts.push(alert) }, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
+      './alert': { recordErrorAndCheckBurst: () => ({ count: 5, burst: true }), shouldSend: () => true, clearSendCooldown: () => {}, buildAiRepairPrompt: () => '', notifyAlert: async (alert) => { bursts.push(alert); return true }, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
       './runtime-alert-limit': {
         claimRuntimeAlert: async (hash, channel) => {
           assert(['api-error', 'api-burst'].includes(channel))
@@ -215,6 +215,75 @@ const notifications = load('src/lib/notifications.ts', {
     await fallback.sendErrorNotification(incident)
     assert.equal(attempts, 2)
     assert.equal(clears, 1)
+  })
+
+  await check('Failed burst delivery releases the shared claim and retries', async () => {
+    let sends = 0
+    let releases = 0
+    let localChecks = 0
+    const burstRetry = load('src/lib/notifications.ts', {
+      'node:crypto': crypto,
+      './service-operations-daily': {}, './service-operations-state': {},
+      './slack-voice': { voicePayload: (payload) => payload },
+      './prisma': { prisma: {}, withRetry: async (operation) => operation() },
+      './gcp-usage': {}, './attribution': {},
+      './alert': {
+        recordErrorAndCheckBurst: () => ({ count: 15, burst: true }),
+        shouldSend: () => { localChecks++; return false },
+        clearSendCooldown: () => {},
+        buildAiRepairPrompt: () => '', burstThreshold: () => 15,
+        getAlertWebhook: async () => 'https://webhook.invalid',
+        notifyAlert: async () => ++sends > 1,
+      },
+      './runtime-alert-limit': {
+        claimRuntimeAlert: async (_hash, channel) => channel === 'api-error'
+          ? { state: 'limited' }
+          : { state: 'allowed', key: 'api-burst:v1:test', value: 'future' },
+        releaseRuntimeAlertClaim: async (claim) => { assert.equal(claim.key, 'api-burst:v1:test'); releases++ },
+      },
+    }, {
+      process: { env: { VERCEL_ENV: 'production' } },
+      console: { error() {}, log() {}, warn() {} },
+    })
+    const incident = { errorMessage: 'Server failure', pathname: '/api/banner/generate', timestamp: secret }
+    await burstRetry.sendErrorNotification(incident)
+    await burstRetry.sendErrorNotification(incident)
+    assert.equal(sends, 2)
+    assert.equal(releases, 1)
+    assert.equal(localChecks, 0)
+  })
+
+  await check('Generic alert returns delivery status and releases failed local cooldown', async () => {
+    let attempts = 0
+    const realAlert = load('src/lib/alert.ts', {
+      './slack-voice': { voicePayload: (payload) => payload },
+      './prisma': { prisma: {}, withRetry: async (operation) => operation() },
+    }, {
+      AbortSignal,
+      fetch: async () => ({ ok: ++attempts > 1, status: 503 }),
+      console: { error() {}, log() {}, warn() {} },
+    })
+    // Exercise the module's actual in-memory dedupe, not a mocked limiter.
+    assert.equal(await realAlert.notifyAlert({ title: 'Synthetic alert', webhookUrl: 'https://webhook.invalid', dedupKey: 'retry-test' }), false)
+    assert.equal(await realAlert.notifyAlert({ title: 'Synthetic alert', webhookUrl: 'https://webhook.invalid', dedupKey: 'retry-test' }), true)
+    assert.equal(await realAlert.notifyAlert({ title: 'Synthetic alert', webhookUrl: 'https://webhook.invalid', dedupKey: 'retry-test' }), false)
+    assert.equal(attempts, 2)
+  })
+
+  await check('Missing alert webhook does not consume a local cooldown', async () => {
+    let attempts = 0
+    const noWebhook = load('src/lib/alert.ts', {
+      './slack-voice': { voicePayload: (payload) => payload },
+      './prisma': { prisma: { systemSetting: { findUnique: async () => null } }, withRetry: async (operation) => operation() },
+    }, {
+      process: { env: {} },
+      AbortSignal,
+      fetch: async () => { attempts++; return { ok: true } },
+      console: { error() {}, log() {}, warn() {} },
+    })
+    assert.equal(await noWebhook.notifyAlert({ title: 'Synthetic alert', dedupKey: 'missing-webhook' }), false)
+    assert.equal(await noWebhook.notifyAlert({ title: 'Synthetic alert', webhookUrl: 'https://webhook.invalid', dedupKey: 'missing-webhook' }), true)
+    assert.equal(attempts, 1)
   })
 
   await check('Shared error handler never reads or forwards request bodies', async () => {

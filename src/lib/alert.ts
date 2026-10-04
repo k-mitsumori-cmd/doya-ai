@@ -126,7 +126,8 @@ export type AlertLevel = 'warn' | 'critical'
 type Extra = Record<string, string | number | boolean | null | undefined>
 
 /**
- * 運用アラートを Slack に送る。dedupKey を渡すと cooldownMs の間は同一キーの再送を抑止。
+ * 運用アラートを Slack に送る。送信成功時のみ true を返す。
+ * dedupKey を渡すと cooldownMs の間は同一キーの再送を抑止する。
  */
 export async function notifyAlert(opts: {
   title: string
@@ -140,12 +141,16 @@ export async function notifyAlert(opts: {
   cooldownMs?: number
   /** そのまま AI に貼れる修正依頼文（あれば専用ブロックで表示） */
   aiRepair?: string
-}): Promise<void> {
+}): Promise<boolean> {
   const { title, detail, context, level = 'warn', extra, dedupKey, cooldownMs = 10 * 60_000, aiRepair } = opts
-  if (dedupKey && !shouldSend(`alert:${dedupKey}`, cooldownMs)) return
+  const localKey = dedupKey ? `alert:${dedupKey}` : undefined
+  if (localKey && !shouldSend(localKey, cooldownMs)) return false
 
   const webhook = opts.webhookUrl || await getAlertWebhook()
-  if (!webhook) return
+  if (!webhook) {
+    if (localKey) clearSendCooldown(localKey)
+    return false
+  }
 
   const env = process.env.VERCEL_ENV || process.env.NODE_ENV || 'unknown'
   const label = level === 'critical' ? '要対応・重大' : '要確認'
@@ -205,8 +210,13 @@ export async function notifyAlert(opts: {
     if (!res.ok) {
       void res.body?.cancel().catch(() => {})
       console.error('notifyAlert: slack webhook failed', res.status)
+      if (localKey) clearSendCooldown(localKey)
+      return false
     }
+    return true
   } catch {
     console.error('notifyAlert: failed to post')
+    if (localKey) clearSendCooldown(localKey)
+    return false
   }
 }

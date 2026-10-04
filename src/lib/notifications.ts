@@ -122,17 +122,26 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
     }
 
     // 直近5分でしきい値を超えたら「エラー急増」を別途通知（15分クールダウン）
-    if (burst && shouldSend('burst', 15 * 60_000)) {
+    if (burst) {
       const burstHash = createHash('sha256').update('api-error-burst').digest('hex').slice(0, 24)
       const burstClaim = process.env.VERCEL_ENV === 'production'
         ? await claimRuntimeAlert(burstHash, 'api-burst') : { state: 'unavailable' as const }
-      if (burstClaim.state !== 'limited') {
-        await notifyAlert({
-          level: 'critical',
-          title: 'エラー急増を検知',
-          context: safe.pathname || 'api',
-          detail: `直近5分で ${count} 件のAPIエラー（しきい値 ${burstThreshold()} 件）。障害の可能性があります。`,
-        })
+      const burstLocalReserved = burstClaim.state === 'unavailable' && shouldSend('burst', 15 * 60_000)
+      if (burstClaim.state === 'allowed' || burstLocalReserved) {
+        let delivered = false
+        try {
+          delivered = await notifyAlert({
+            level: 'critical',
+            title: 'エラー急増を検知',
+            context: safe.pathname || 'api',
+            detail: `直近5分で ${count} 件のAPIエラー（しきい値 ${burstThreshold()} 件）。障害の可能性があります。`,
+          })
+        } finally {
+          if (!delivered) {
+            if (burstClaim.state === 'allowed') await releaseRuntimeAlertClaim(burstClaim)
+            if (burstLocalReserved) clearSendCooldown('burst')
+          }
+        }
       }
     }
   } catch {
