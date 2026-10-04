@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, getGuestUsage } from '@/lib/pricing'
+import { tierFrom } from '@/lib/plan-utils'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
@@ -48,17 +49,7 @@ export default function BannerPlanPage() {
   const { data: session, status } = useSession()
   const isGuest = !session
   const bannerPlanRaw = session ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase() : 'GUEST'
-  const bannerPlanTier = (() => {
-    const p = String(bannerPlanRaw || '').toUpperCase()
-    if (!p || p === 'GUEST') return 'GUEST' as const
-    // 既存環境の揺れに耐える（例: BANNER_PRO / PRO_MONTHLY / BASIC / STARTER / BUSINESS など）
-    if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
-    if (p.includes('PRO') || p.includes('BUNDLE') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
-    if (p.includes('LIGHT')) return 'LIGHT' as const
-    if (p.includes('FREE')) return 'FREE' as const
-    // 不明だがログイン済みの場合はFREE扱い（安全側）
-    return 'FREE' as const
-  })()
+  const bannerPlanTier = tierFrom(bannerPlanRaw)
 
   const isEnterprise = !isGuest && bannerPlanTier === 'ENTERPRISE'
   const isPro = !isGuest && bannerPlanTier === 'PRO'

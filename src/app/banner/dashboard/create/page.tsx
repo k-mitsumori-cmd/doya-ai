@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, getBannerDailyLimitByUserPlan, getBannerMaxImagesPerRequest, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
+import { tierFrom } from '@/lib/plan-utils'
 import { DashboardLayout } from '@/components/DashboardLayout' // New import
 import { FeatureGuide } from '@/components/FeatureGuide'
 import { UiIcon, type UiIconName } from '@/components/icons'
@@ -1039,15 +1040,7 @@ export default function BannerDashboard() {
   
   const isGuest = !session
   const bannerPlan = session ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase() : 'GUEST'
-  const planTier = useMemo(() => {
-    const p = String(bannerPlan || '').toUpperCase()
-    if (!p || p === 'GUEST') return 'GUEST' as const
-    if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
-    if (p.includes('PRO') || p.includes('BUNDLE') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
-    if (p.includes('LIGHT')) return 'LIGHT' as const
-    if (p.includes('FREE')) return 'FREE' as const
-    return 'FREE' as const
-  }, [bannerPlan])
+  const planTier = tierFrom(bannerPlan)
   const isPaidUser = !isGuest && (planTier === 'LIGHT' || planTier === 'PRO' || planTier === 'ENTERPRISE')
   const maxCount = getBannerMaxImagesPerRequest(bannerPlan)
   const currentSizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default

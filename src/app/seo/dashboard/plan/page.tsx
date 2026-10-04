@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ExternalLink, Loader2, RefreshCcw, Shield, Sparkles, Timer, X } from 'lucide-react'
 import { SEO_PRICING, getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
+import { tierFrom } from '@/lib/plan-utils'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import SeoCancelScheduleNotice from '@/components/SeoCancelScheduleNotice'
 
@@ -17,15 +18,6 @@ type SubStatus = {
   status?: string
   planId?: string | null
   error?: string
-}
-
-function tierFrom(raw: any) {
-  const p = String(raw || '').toUpperCase()
-  if (!p || p === 'GUEST') return 'GUEST' as const
-  if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
-  if (p.includes('PRO')) return 'PRO' as const
-  if (p.includes('LIGHT')) return 'LIGHT' as const
-  return 'FREE' as const
 }
 
 function formatRemainingDays(unixSeconds: number) {
@@ -435,5 +427,4 @@ export default function SeoPlanPage() {
     </div>
   )
 }
-
 
