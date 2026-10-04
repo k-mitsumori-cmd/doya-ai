@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
-import { isPaidPlan } from '@/lib/unified-plan'
+import { planLabel, tierFrom } from '@/lib/plan-utils'
 import type { OrganizationService } from '@/lib/organization-billing'
 
 type BillingState =
@@ -59,7 +59,7 @@ export function OrganizationPricingPlans({ serviceId }: { serviceId: Organizatio
     </div>
   }
   if (billing.kind === 'ready' && !billing.canManageBilling) {
-    const label = billing.plan.toUpperCase() === 'ENTERPRISE' ? 'エンタープライズ' : isPaidPlan(billing.plan) ? 'プロ' : '無料'
+    const label = planLabel(tierFrom(billing.plan))
     return <div role="status" className="mx-auto max-w-xl rounded-2xl border border-blue-200 bg-blue-50 p-6 text-sm leading-7 text-blue-900">
       この組織の現在のプランは{label}です。ご自身の契約を変更しても組織の利用枠は増えません。利用枠の変更は組織のオーナーにご相談ください。
     </div>

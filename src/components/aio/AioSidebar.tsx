@@ -22,7 +22,7 @@ import {
   SidebarUsagePanel,
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
-import { isPaidPlan } from '@/lib/unified-plan'
+import { tierFrom } from '@/lib/plan-utils'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
 interface Props extends SidebarProps {
@@ -55,13 +55,9 @@ function AioSidebarImpl({ orgSlug, orgName, organizationPlan, isOwner = true, is
 
   const planLabel = (() => {
     if (organizationPlan === null) return '確認できません'
-    if (organizationPlan !== undefined) return organizationPlan.toUpperCase() === 'ENTERPRISE' ? 'ENTERPRISE' : isPaidPlan(organizationPlan) ? 'PRO' : 'FREE'
+    if (organizationPlan !== undefined) return tierFrom(organizationPlan)
     if (!isLoggedIn) return 'GUEST'
-    const p = String((session?.user as any)?.plan || 'FREE').toUpperCase()
-    if (p === 'ENTERPRISE') return 'ENTERPRISE'
-    if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS' || p === 'BUNDLE') return 'PRO'
-    if (p === 'LIGHT') return 'LIGHT'
-    return 'FREE'
+    return tierFrom((session?.user as { plan?: string })?.plan || 'FREE')
   })()
 
   const isActive = (href: string) => {
@@ -106,7 +102,7 @@ function AioSidebarImpl({ orgSlug, orgName, organizationPlan, isOwner = true, is
                   <p className="text-xs font-black text-white">{organizationPlan !== undefined ? '組織のプラン' : '現在'}：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
                 </div>
                 <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-90 mb-2">
-                  {organizationPlan === null ? '組織の契約情報を確認できません。管理者にお問い合わせください。' : !isOwner && planLabel === 'FREE' ? '利用枠の拡大は組織オーナーにご相談ください。' : planLabel === 'PRO' || planLabel === 'ENTERPRISE'
+                  {organizationPlan === null ? '組織の契約情報を確認できません。管理者にお問い合わせください。' : !isOwner && (planLabel === 'FREE' || planLabel === 'LIGHT') ? '利用枠の拡大は組織オーナーにご相談ください。' : planLabel === 'PRO' || planLabel === 'ENTERPRISE'
                     ? 'ご利用中のプランの内容をご確認いただけます。'
                     : <>プロプラン ¥9,980/月<TrialInlineSuffix />でSoV・引用元・改善アクションも閲覧</>}
                 </p>

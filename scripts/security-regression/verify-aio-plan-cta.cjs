@@ -4,7 +4,7 @@ const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.
 const empty=()=>null,container=({children})=>React.createElement('div',null,children);let count=0;
 for(const plan of [null,'FREE','LIGHT','PRO','ENTERPRISE','BASIC','STARTER','BUSINESS','BUNDLE'])for(const isMobile of [false,true]){
  const exports={}, session=plan?{user:{plan}}:null;
- const mocks={'@/lib/unified-plan':require('./load-typescript.cjs').load('src/lib/unified-plan.ts'),react:{...React,useState:v=>[v,()=>{}]},'next/link':({href,children})=>React.createElement('a',{href},children),'next/navigation':{usePathname:()=>'/aio/test'},'next-auth/react':{useSession:()=>({data:session,status:plan?'authenticated':'unauthenticated'}),signOut(){}},'lucide-react':{LayoutDashboard:empty,CreditCard:empty,Zap:empty,Eye:empty,ScanSearch:empty},'@/components/TrialCallout':{TrialInlineSuffix:()=>React.createElement('span',null,'TRIAL_MARKER')},'@/components/sidebar/themes':{aioTheme:{}},'@/components/sidebar':new Proxy({useSidebarState:()=>({isCollapsed:false,showLabel:true,toggle(){}}),SidebarShell:container},{get:(o,k)=>k in o?o[k]:empty}),'@/components/ToolSwitcherMenu':{ToolSwitcherMenu:empty}};
+ const mocks={'@/lib/plan-utils':require('./load-typescript.cjs').load('src/lib/plan-utils.ts'),react:{...React,useState:v=>[v,()=>{}]},'next/link':({href,children})=>React.createElement('a',{href},children),'next/navigation':{usePathname:()=>'/aio/test'},'next-auth/react':{useSession:()=>({data:session,status:plan?'authenticated':'unauthenticated'}),signOut(){}},'lucide-react':{LayoutDashboard:empty,CreditCard:empty,Zap:empty,Eye:empty,ScanSearch:empty},'@/components/TrialCallout':{TrialInlineSuffix:()=>React.createElement('span',null,'TRIAL_MARKER')},'@/components/sidebar/themes':{aioTheme:{}},'@/components/sidebar':new Proxy({useSidebarState:()=>({isCollapsed:false,showLabel:true,toggle(){}}),SidebarShell:container},{get:(o,k)=>k in o?o[k]:empty}),'@/components/ToolSwitcherMenu':{ToolSwitcherMenu:empty}};
  vm.runInNewContext(compiled,{exports,require:n=>{if(n in mocks)return mocks[n];throw Error(n)}});const html=renderToStaticMarkup(React.createElement(exports.default,{isMobile,orgSlug:'test'}));const paid=plan&&!['FREE','LIGHT'].includes(plan);
  assert.ok(html.includes('href="/aio/pricing?org=test"'));
  if(paid){assert.ok(html.includes('プランを確認する'));assert.ok(!html.includes('プロにアップグレード')); assert.ok(!html.includes('TRIAL_MARKER'));assert.ok(!html.includes('→'));assert.ok(!html.includes('>UP<'));}
@@ -16,6 +16,12 @@ for(const plan of [null,'FREE','LIGHT','PRO','ENTERPRISE','BASIC','STARTER','BUS
  if(plan==='FREE'){
   const orgHtml=renderToStaticMarkup(React.createElement(exports.default,{isMobile,orgSlug:'test',organizationPlan:'PRO',isOwner:true}));
   assert.ok(orgHtml.includes('組織のプラン：PRO'));assert.ok(!orgHtml.includes('TRIAL_MARKER'));assert.ok(!orgHtml.includes('プロにアップグレード'));
+ }
+ if(plan==='LIGHT'){
+  const orgHtml=renderToStaticMarkup(React.createElement(exports.default,{isMobile,orgSlug:'test',organizationPlan:'LIGHT',isOwner:true}));
+  assert.ok(orgHtml.includes('組織のプラン：LIGHT'));assert.ok(orgHtml.includes('プロにアップグレード'));
+  const memberHtml=renderToStaticMarkup(React.createElement(exports.default,{isMobile,orgSlug:'test',organizationPlan:'LIGHT',isOwner:false}));
+  assert.ok(memberHtml.includes('組織オーナーにご相談ください'));assert.ok(!memberHtml.includes('プロにアップグレード'));
  }
  count++;console.log('PASS',plan||'GUEST',isMobile?'mobile':'desktop');
 }
