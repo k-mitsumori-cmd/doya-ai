@@ -47,11 +47,19 @@ function fixture(initialUsed = 4, ownerPlan = 'FREE', researchResult = { company
     '@/lib/shodan/types': { effectivePrepStatus: (status) => status, PREP_STALE_MS: 360000, SHODAN_MONTHLY_LIMIT: { FREE: 5, PRO: 50, ENTERPRISE: 300 } },
     '@/lib/plan-limit': { jstStartOfMonthUtc: () => new Date('2026-08-31T15:00:00Z') },
   })
-  const post = () => route.POST({ json: async () => ({ url: 'https://example.com' }) })
+  const post = (body = { url: 'https://example.com' }) => route.POST({ json: async () => body })
   return { post, rows, get researchCalls() { return researchCalls } }
 }
 
 (async () => {
+  await check('malformed URL input is rejected before quota or provider calls', async () => {
+    const f = fixture()
+    for (const body of [null, {}, { url: 3 }, { url: [] }, { url: {} }, { url: '' }]) {
+      assert.equal((await f.post(body)).status, 400)
+    }
+    assert.equal(f.rows.length, 4)
+    assert.equal(f.researchCalls, 0)
+  })
   await check('concurrent requests reserve only the one remaining slot', async () => {
     const f = fixture()
     const responses = await Promise.all([f.post(), f.post()])

@@ -14,8 +14,9 @@ import { isPaidPlan } from '@/lib/unified-plan'
 // ⚠️ 上限の正本は lib/shodan/types.ts。ここに数字を書かない
 //    （サイドバーの表示も同じ定義を読む）
 
-function normalizeUrl(input: string): string | null {
-  let s = (input || '').trim()
+function normalizeUrl(input: unknown): string | null {
+  if (typeof input !== 'string') return null
+  let s = input.trim()
   if (!s) return null
   if (!/^https?:\/\//i.test(s)) s = 'https://' + s
   try {
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-  const targetUrl = normalizeUrl(body.url as string)
+  const targetUrl = normalizeUrl(body?.url)
   if (!targetUrl) return NextResponse.json({ error: '有効なURLを入力してください' }, { status: 400 })
 
   // プラン制限（組織単位・月次）
