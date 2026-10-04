@@ -915,6 +915,16 @@ if (promaneClientWriteAtomic.error || promaneClientWriteAtomic.status !== 0) {
   console.error('Security regression failed: verify-promane-client-write-atomic.cjs');
   process.exit(1);
 }
+const promaneRepairAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-repair-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (promaneRepairAtomic.error || promaneRepairAtomic.status !== 0) {
+  console.error('Security regression failed: verify-promane-repair-atomic.cjs');
+  process.exit(1);
+}
+const promaneWorkspaceSettingsAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-workspace-settings-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (promaneWorkspaceSettingsAtomic.error || promaneWorkspaceSettingsAtomic.status !== 0) {
+  console.error('Security regression failed: verify-promane-workspace-settings-atomic.cjs');
+  process.exit(1);
+}
 const adminKintaiEmployeePages = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-kintai-employee-pages.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adminKintaiEmployeePages.error || adminKintaiEmployeePages.status !== 0) {
   console.error('Security regression failed: verify-admin-kintai-employee-pages.cjs');
