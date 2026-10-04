@@ -15,19 +15,19 @@ import { ShodanResearchMock, ShodanHypothesisMock, ShodanProposalMock } from './
 const ROWS: ShowcaseRow[] = [
   {
     icon: 'travel_explore', title: 'URLを入れるだけで深掘り調査',
-    desc: '商談先のURLを貼るだけで、従業員数・マーケ施策・オウンドメディアの規模や更新頻度まで公開情報を自動で収集。アポ前の調べ物がゼロになります。',
-    bullets: ['従業員数・マーケ状況を自動収集', 'オウンドメディアの規模と更新頻度を把握', 'PR TIMES等の最新動向もチェック'],
+    desc: '商談先のURLを貼ると、公開されている従業員数・マーケ施策・オウンドメディアの所在を調査します。',
+    bullets: ['公開情報から従業員数・マーケ状況を調査', 'オウンドメディアの有無と所在を確認', 'PR TIMES等の公開情報もチェック'],
     visual: <MockWindow title="doya-ai.surisuta.jp/shodan"><ShodanResearchMock /></MockWindow>,
   },
   {
     icon: 'psychology', title: '課題仮説をAIが立案',
-    desc: '集めた情報から現状分析と課題仮説を自動生成。優先度つきで整理されるので、どこを突けば刺さるかが一目でわかります。',
+    desc: 'プロプランでは、集めた情報から現状分析と課題仮説を生成。優先度つきで論点を整理します。',
     bullets: ['現状分析から課題を自動抽出', '優先度つきで論点を整理', '担当者ごとの品質のばらつきを抑制'],
     visual: <MockWindow title="課題仮説"><ShodanHypothesisMock /></MockWindow>,
   },
   {
     icon: 'description', title: '提案資料を一括生成',
-    desc: '現状分析→課題仮説→解決策の型で提案書（Markdown）を一括生成。自社情報を登録すれば、自社の商材・強みに最適化された提案になります。',
+    desc: 'プロプランでは、現状分析→課題仮説→解決策の型で提案書（Markdown）を生成。自社情報を登録すれば、自社の商材・強みに合わせた提案になります。',
     bullets: ['現状分析・課題仮説・解決策を自動構成', 'Markdownでコピーして資料に流用', '自社の商材・強みに最適化'],
     visual: <MockWindow title="提案資料"><ShodanProposalMock /></MockWindow>,
   },
@@ -119,7 +119,7 @@ export default function ShodanEntryPage() {
         eyebrow="商談準備AI"
         title="商談準備を、"
         highlight="URL1本で。"
-        subtitle="リサーチ → 課題仮説 → 解決策 → 提案資料まで、AIが一気通貫で仕上げます。"
+        subtitle="無料で企業調査を試せます。プロプランでは課題仮説・解決策・提案資料まで作成します。"
         note="Googleアカウントでかんたんに始められます"
         ctaHref={CTA}
         ctaLabel="無料ではじめる"

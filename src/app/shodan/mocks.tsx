@@ -9,8 +9,8 @@ export function ShodanResearchMock() {
     { icon: 'link', l: 'URL', v: 'mirai-seisaku.example.jp' },
     { icon: 'groups', l: '従業員数', v: '約120名' },
     { icon: 'campaign', l: 'マーケ実施状況', v: 'リスティング・SNS運用あり' },
-    { icon: 'article', l: 'オウンドメディア', v: '記事48本／技術ブログ' },
-    { icon: 'update', l: '更新頻度', v: '月4〜6本（直近3ヶ月）' },
+    { icon: 'article', l: 'オウンドメディア', v: '技術ブログあり' },
+    { icon: 'contact_page', l: '問い合わせ導線', v: 'サイト内にあり' },
   ]
   return (
     <div className="p-4 bg-slate-50/60">
@@ -38,7 +38,7 @@ export function ShodanResearchMock() {
           <span className="text-[11px] font-black text-slate-700">AIサマリー</span>
         </div>
         <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-          BtoB製造業。オウンドメディアは運用中だが更新が不定期で、リード獲得の導線が…
+          BtoB製造業。技術ブログを確認。問い合わせへの導線を調べ、商談前の論点を整理します。
         </p>
       </div>
     </div>
@@ -48,7 +48,7 @@ export function ShodanResearchMock() {
 /** 課題仮説リスト */
 export function ShodanHypothesisMock() {
   const items = [
-    { p: '高', t: 'メディア更新が不定期でリードが伸び悩む', d: '記事数はあるが導線設計と更新体制に課題' },
+    { p: '高', t: '技術ブログから問い合わせへの導線を確認', d: '記事から相談につながる経路を商談で聞き取る' },
     { p: '中', t: '問い合わせ後のフォロー導線が弱い', d: 'CTAはあるが資料DL・ナーチャリング未整備' },
     { p: '中', t: '技術の強みが顧客言語で伝わっていない', d: '製品説明が専門用語中心で訴求が届きにくい' },
   ]
