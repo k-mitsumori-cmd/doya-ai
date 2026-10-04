@@ -15,7 +15,7 @@ function moduleAt(file,deps) {
   const before=structuredClone(row);let active=false,reads=0,writes=0,transactions=0;
   const check=()=>assert.equal(active,true,'query escaped transaction');
   const fail=name=>{if(fault===name)throw Error('injected '+name);};
-  const tx={quoteDocument:{
+  const tx={quoteMember:{findFirst:async()=>{check();return {role:'manager'};}},quoteDocument:{
    findFirst:async({where})=>{check();assert.equal(where.organizationId,'o');return fault==='foreign'?null:structuredClone(row);},
    findUnique:async()=>{check();reads++;if(reads===2)fail('response');return structuredClone(row);},
    update:async({data})=>{check();writes++;fail('totalInclTax' in data?'totals':'metadata');row={...row,...data};return structuredClone(row);}

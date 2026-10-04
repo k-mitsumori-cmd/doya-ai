@@ -84,6 +84,11 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
     // 判定・明細・状態・合計を同じトランザクションで扱う。
     // 同時の確定と編集は直列化し、競合時には再確認を求める。
     return await prisma.$transaction(async (tx) => {
+      const actor = await tx.quoteMember.findFirst({
+        where: { organizationId: ctx.organizationId, userId: ctx.userId, status: 'ACTIVE' },
+        select: { role: true },
+      })
+      if (!actor) return NextResponse.json({ error: '組織へのアクセス権がありません。再読み込みしてください' }, { status: 403 })
       const existing = await tx.quoteDocument.findFirst({
         where: { id: p.id, organizationId: ctx.organizationId },
         select: { id: true, status: true },
@@ -114,7 +119,7 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
         if (!['draft', 'confirmed', 'sent'].includes(next)) {
           return NextResponse.json({ error: 'ステータスが不正です' }, { status: 400 })
         }
-        if (next !== existing.status && !hasMinRole(ctx.role, 'manager')) {
+        if (next !== existing.status && !hasMinRole(actor.role, 'manager')) {
           return NextResponse.json({ error: '見積書の承認状態を変更する権限がありません' }, { status: 403 })
         }
         if (next === 'sent' && existing.status !== 'confirmed') {
@@ -203,9 +208,25 @@ export async function DELETE(req: NextRequest, ctxParam: Ctx) {
   if (!hasMinRole(ctx.role, 'manager')) {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
-  const deleted = await prisma.quoteDocument.deleteMany({
-    where: { id: p.id, organizationId: ctx.organizationId },
-  })
-  if (deleted.count === 0) return NextResponse.json({ error: '見積書が見つかりません' }, { status: 404 })
-  return NextResponse.json({ ok: true })
+  try {
+    return await prisma.$transaction(async tx => {
+      const actor = await tx.quoteMember.findFirst({
+        where: { organizationId: ctx.organizationId, userId: ctx.userId, status: 'ACTIVE' },
+        select: { role: true },
+      })
+      if (!actor || !hasMinRole(actor.role, 'manager')) {
+        return NextResponse.json({ error: '見積書を削除する権限がありません。再読み込みしてください' }, { status: 403 })
+      }
+      const deleted = await tx.quoteDocument.deleteMany({
+        where: { id: p.id, organizationId: ctx.organizationId },
+      })
+      if (deleted.count === 0) return NextResponse.json({ error: '見積書が見つかりません' }, { status: 404 })
+      return NextResponse.json({ ok: true })
+    }, { isolationLevel: 'Serializable' })
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2034') {
+      return NextResponse.json({ error: '別の操作と削除が重なりました。再読み込みして状態を確認してください。' }, { status: 409 })
+    }
+    return NextResponse.json({ error: '見積書を削除できませんでした。再読み込みして状態をご確認ください。' }, { status: 500 })
+  }
 }

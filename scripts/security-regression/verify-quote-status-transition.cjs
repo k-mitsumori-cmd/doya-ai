@@ -26,6 +26,7 @@ walk(ast);
     const bodies = [], errors = [];
     let itemWrites = 0;
     const prisma = {
+      quoteMember: {findFirst:async()=>({role})},
       quoteDocument: {findFirst:async()=>({...row}), findUnique:async()=>row, update:async({data})=>(row={...row,...data})},
       quoteLineItem: {deleteMany:async()=>{itemWrites++;}, createMany:async()=>{itemWrites++;}},
       $transaction:async a=>a(prisma),
@@ -60,6 +61,7 @@ walk(ast);
   ]) {
     let writes = 0;
     const prisma = {
+      quoteMember: {findFirst:async()=>({role})},
       quoteDocument: {findFirst:async()=>({id:'d',status}), update:async()=>{writes++;}, findUnique:async()=>({id:'d',status})},
       quoteLineItem: {deleteMany:async()=>{writes++;},createMany:async()=>{writes++;}},
       $transaction:async fn=>fn(prisma),
