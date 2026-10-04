@@ -87,20 +87,22 @@ const notifications = load('src/lib/notifications.ts', {
   await check('Production API errors from isolated instances share one alert', async () => {
     const shared = new Set()
     const sends = []
+    const bursts = []
     const makeInstance = () => load('src/lib/notifications.ts', {
       'node:crypto': crypto,
       './service-operations-daily': {}, './service-operations-state': {},
       './slack-voice': { voicePayload: (payload) => payload },
       './prisma': { prisma: { systemSetting: { findUnique: async () => ({ value: 'https://webhook.invalid' }) } }, withRetry: async (operation) => operation() },
       './gcp-usage': {}, './attribution': {},
-      './alert': { recordErrorAndCheckBurst: () => ({ count: 1, burst: false }), shouldSend: () => true, buildAiRepairPrompt: () => '', notifyAlert: async () => {}, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
+      './alert': { recordErrorAndCheckBurst: () => ({ count: 5, burst: true }), shouldSend: () => true, buildAiRepairPrompt: () => '', notifyAlert: async (alert) => { bursts.push(alert) }, burstThreshold: () => 5, getAlertWebhook: async () => 'https://webhook.invalid' },
       './runtime-alert-limit': {
         claimRuntimeAlert: async (hash, channel) => {
-          assert.equal(channel, 'api-error')
+          assert(['api-error', 'api-burst'].includes(channel))
           assert.match(hash, /^[a-f0-9]{24}$/)
-          if (shared.has(hash)) return { state: 'limited' }
-          shared.add(hash)
-          return { state: 'allowed', key: `api-error:v1:${hash}`, value: 'future' }
+          const key = `${channel}:v1:${hash}`
+          if (shared.has(key)) return { state: 'limited' }
+          shared.add(key)
+          return { state: 'allowed', key, value: 'future' }
         },
         releaseRuntimeAlertClaim: async () => {},
       },
@@ -113,7 +115,8 @@ const notifications = load('src/lib/notifications.ts', {
       errorMessage: 'Same underlying failure', pathname: '/api/banner/generate', requestMethod: 'POST', httpStatus: 500, timestamp: secret,
     })))
     assert.equal(sends.length, 1)
-    assert.equal(shared.size, 1)
+    assert.equal(bursts.length, 1)
+    assert.equal(shared.size, 2)
     assert.equal(sends[0].signal instanceof AbortSignal, true)
     assert(!JSON.stringify(sends[0].body).includes(secret))
   })

@@ -52,8 +52,8 @@ function safeErrorNotification(data: ErrorNotificationData): ErrorNotificationDa
 
 /**
  * APIエラー通知（Slack等）を送信する
- * - 設定は `SystemSetting` の `slack_webhook` を参照
- * - 設定が無い場合はno-op
+ * - 送信先はアラート専用環境変数、`SystemSetting`、代替環境変数の順に参照
+ * - 送信先が無い場合はno-op
  */
 export async function sendErrorNotification(data: ErrorNotificationData): Promise<void> {
   try {
@@ -105,12 +105,17 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
 
     // 直近5分でしきい値を超えたら「エラー急増」を別途通知（15分クールダウン）
     if (burst && shouldSend('burst', 15 * 60_000)) {
-      await notifyAlert({
-        level: 'critical',
-        title: 'エラー急増を検知',
-        context: safe.pathname || 'api',
-        detail: `直近5分で ${count} 件のAPIエラー（しきい値 ${burstThreshold()} 件）。障害の可能性があります。`,
-      })
+      const burstHash = createHash('sha256').update('api-error-burst').digest('hex').slice(0, 24)
+      const burstClaim = process.env.VERCEL_ENV === 'production'
+        ? await claimRuntimeAlert(burstHash, 'api-burst') : { state: 'unavailable' as const }
+      if (burstClaim.state !== 'limited') {
+        await notifyAlert({
+          level: 'critical',
+          title: 'エラー急増を検知',
+          context: safe.pathname || 'api',
+          detail: `直近5分で ${count} 件のAPIエラー（しきい値 ${burstThreshold()} 件）。障害の可能性があります。`,
+        })
+      }
     }
   } catch {
     // 通知の失敗で処理自体を止めない
