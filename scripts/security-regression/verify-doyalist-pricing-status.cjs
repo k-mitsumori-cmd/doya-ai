@@ -31,11 +31,12 @@ async function load(response) {
 ;(async () => {
   assert.equal(normalizePlan(undefined), null)
   assert.equal(normalizePlan('FREE'), 'FREE')
-  assert.equal(normalizePlan('LIGHT'), 'PRO')
+  assert.equal(normalizePlan('LIGHT'), 'LIGHT')
   assert.deepEqual(await load(Response.json({ error: 'unavailable' }, { status: 503 })), { plan: null, error: true })
   assert.deepEqual(await load(Response.json({ error: 'login' }, { status: 401 })), { plan: null, error: false })
   assert.deepEqual(await load(Response.json({})), { plan: null, error: true })
   assert.deepEqual(await load(Response.json({ plan: { tier: 'FREE' } })), { plan: 'FREE', error: false })
   assert.deepEqual(await load(Response.json({ plan: { tier: 'PRO' } })), { plan: 'PRO', error: false })
+  assert.deepEqual(await load(Response.json({ plan: { tier: 'LIGHT' } })), { plan: 'LIGHT', error: false })
   console.log('PASS doyalist pricing: failed or malformed usage never becomes FREE')
 })().catch((error) => { console.error(error); process.exitCode = 1 })

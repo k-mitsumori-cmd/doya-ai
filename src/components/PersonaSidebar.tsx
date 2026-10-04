@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Clock, Zap, Target } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
-import { isPaidPlan as hasPaidPlan, UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
+import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
+import { tierFrom } from '@/lib/plan-utils'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { personaTheme } from '@/components/sidebar/themes'
 import {
@@ -45,8 +46,8 @@ function PersonaSidebarImpl({
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const isPaidPlan = isLoggedIn && hasPaidPlan((session?.user as any)?.plan)
-  const planLabel = !isLoggedIn ? 'GUEST' : isPaidPlan ? 'PRO' : 'FREE'
+  const planLabel = isLoggedIn ? tierFrom((session?.user as { plan?: string })?.plan || 'FREE') : 'GUEST'
+  const isPro = planLabel === 'PRO' || planLabel === 'ENTERPRISE'
 
   const isActive = (href: string) => {
     if (href === '/persona') return pathname === '/persona'
@@ -95,13 +96,13 @@ function PersonaSidebarImpl({
                 現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
               </p>
               <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-80">
-                {isPaidPlan ? 'ご利用中のプランの内容をご確認いただけます。' : <>PROプラン：{UNIFIED_PRO_PRICE_LABEL}/月<TrialInlineSuffix /></>}
+                {isPro ? 'ご利用中のプランの内容をご確認いただけます。' : <>PROプラン：{UNIFIED_PRO_PRICE_LABEL}/月<TrialInlineSuffix /></>}
               </p>
               <Link
                 href="/persona/pricing"
                 className="mt-3 w-full py-2 bg-white text-purple-600 text-[11px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md block text-center"
               >
-                {isPaidPlan ? 'プランを確認する' : 'PROを始める'}
+                {isPro ? 'プランを確認する' : planLabel === 'LIGHT' ? 'PROにアップグレード' : 'PROを始める'}
               </Link>
             </div>
             <Link
@@ -113,11 +114,11 @@ function PersonaSidebarImpl({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] text-white font-bold leading-snug truncate">
-                  {isPaidPlan ? `現在：${planLabel}` : `${planLabel === 'GUEST' ? 'ゲスト' : planLabel} → PRO`}
+                  {isPro ? `現在：${planLabel}` : `${planLabel === 'GUEST' ? 'ゲスト' : planLabel} → PRO`}
                 </p>
               </div>
               <span className="flex-shrink-0 px-3 py-1.5 bg-white text-purple-600 text-[10px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md whitespace-nowrap">
-                {isPaidPlan ? 'プラン確認' : 'UP'}
+                {isPro ? 'プラン確認' : 'UP'}
               </span>
             </Link>
           </div>

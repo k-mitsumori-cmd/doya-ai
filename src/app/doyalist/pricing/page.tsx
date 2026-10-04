@@ -4,13 +4,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
-type PlanId = 'FREE' | 'PRO' | 'ENTERPRISE'
+type PlanId = 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
 
 function normalizePlan(rawTier: unknown): PlanId | null {
   const s = String(rawTier || '').toUpperCase()
   if (s.includes('ENTERPRISE')) return 'ENTERPRISE'
-  // 統一プラン方式: PRO / LIGHT / BUSINESS / STARTER / BASIC は全て PRO 扱い
-  if (s.includes('PRO') || s.includes('LIGHT') || s.includes('BUSINESS') || s.includes('STARTER') || s.includes('BASIC')) return 'PRO'
+  if (s.includes('PRO') || s.includes('BUNDLE') || s.includes('BUSINESS') || s.includes('STARTER') || s.includes('BASIC')) return 'PRO'
+  if (s.includes('LIGHT')) return 'LIGHT'
   return s === 'FREE' ? 'FREE' : null
 }
 

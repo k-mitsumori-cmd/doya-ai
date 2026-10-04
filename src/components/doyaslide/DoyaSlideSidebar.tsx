@@ -60,7 +60,8 @@ function DoyaSlideSidebarImpl({
     if (!plan) return isLoggedIn ? '未確認' : 'GUEST'
     const p = plan.toUpperCase()
     if (p === 'ENTERPRISE') return 'ENTERPRISE'
-    if (p === 'PRO' || p === 'BUSINESS' || p === 'STARTER' || p === 'LIGHT' || p === 'BASIC') return 'PRO'
+    if (p === 'PRO' || p === 'BUSINESS' || p === 'STARTER' || p === 'BASIC' || p === 'BUNDLE') return 'PRO'
+    if (p === 'LIGHT') return 'LIGHT'
     return p === 'FREE' ? 'FREE' : '未確認'
   })()
 

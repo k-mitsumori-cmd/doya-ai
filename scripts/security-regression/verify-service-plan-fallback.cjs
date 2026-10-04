@@ -2,6 +2,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const vm = require('node:vm')
 const ts = require('typescript')
+const planUtils = require('./load-typescript.cjs').load('src/lib/plan-utils.ts')
 
 function expression(file, variable) {
   const source = fs.readFileSync(file, 'utf8')
@@ -58,6 +59,8 @@ function sidebar(service, plan, isLoggedIn) {
     assert.equal(sidebar(service, undefined, false), 'GUEST')
     assert.equal(sidebar(service, 'PRO', true), 'PRO')
     assert.equal(sidebar(service, 'FREE', true), 'FREE')
+    assert.equal(sidebar(service, 'LIGHT', true), 'LIGHT')
+    assert.equal(sidebar(service, 'unexpected', true), '未確認')
   }
   const guest = await pricing('sfa', Response.json({ onboarded: false, memberships: [] }))
   assert.equal(guest.plan, null); assert.equal(guest.error, false); assert.equal(guest.role, null)
@@ -66,10 +69,6 @@ function sidebar(service, plan, isLoggedIn) {
   const foreign = await pricing('sfa', Response.json({ onboarded: false, memberships: [] }), 'foreign')
   assert.equal(foreign.error, true, 'an invalid selected organization cannot be treated as a new account')
   assert.equal(sidebar('sfa', 'LIGHT', true), 'LIGHT')
-  const planUtils = {}
-  vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/plan-utils.ts', 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-  }).outputText, { exports: planUtils })
   assert.equal(planUtils.higherPlan('FREE', 'BUNDLE'), 'PRO')
   console.log('PASS service plan fallback: Cunning, SFA and DoyaSlide preserve unknown status; BUNDLE stays PRO')
 })().catch((error) => { console.error(error); process.exitCode = 1 })
