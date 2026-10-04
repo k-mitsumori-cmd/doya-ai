@@ -27,6 +27,7 @@ import { getShodanBilling } from '@/lib/shodan/billing'
 import { countMonthlyCompanies, DOYALIST_LIMITS } from '@/lib/doyalist/limits'
 import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { getOrganizationBilling } from '@/lib/organization-billing'
+import { getOrganizationQuotaUsage } from '@/lib/organization-quota-ledger'
 
 /** 1本の枠。limit が null なら上限なし */
 export interface UsageMeter {
@@ -268,11 +269,12 @@ export async function getUsageSummary(
         key: 'mensetsuSessions',
         plan: orgPlan,
         orgIds,
-        countAll: (ids) => prisma.mensetsuSession.count({ where: { organizationId: { in: ids } } }),
-        countSince: (ids, since) =>
+        countAll: (ids) => getOrganizationQuotaUsage(prisma, 'mensetsuSessions', ids[0], 'lifetime', () =>
+          prisma.mensetsuSession.count({ where: { organizationId: { in: ids } } })),
+        countSince: (ids, since) => getOrganizationQuotaUsage(prisma, 'mensetsuSessions', ids[0], 'monthly', () =>
           prisma.mensetsuSession.count({
             where: { organizationId: { in: ids }, createdAt: { gte: since } },
-          }),
+          }), since),
       })
     }
 
@@ -287,18 +289,18 @@ export async function getUsageSummary(
         key: 'aishodanSessions',
         plan: ownerPlan,
         orgIds,
-        countAll: (ids) =>
+        countAll: (ids) => getOrganizationQuotaUsage(prisma, 'aishodanSessions', ids[0], 'lifetime', () =>
           prisma.aishodanSession.count({
             where: { organizationId: { in: ids }, room: { isPreview: false } },
-          }),
-        countSince: (ids, since) =>
+          })),
+        countSince: (ids, since) => getOrganizationQuotaUsage(prisma, 'aishodanSessions', ids[0], 'monthly', () =>
           prisma.aishodanSession.count({
             where: {
               organizationId: { in: ids },
               room: { isPreview: false },
               createdAt: { gte: since },
             },
-          }),
+          }), since),
       })
     }
 
@@ -312,11 +314,12 @@ export async function getUsageSummary(
         key: 'quoteDocuments',
         plan: orgPlan,
         orgIds,
-        countAll: (ids) => prisma.quoteDocument.count({ where: { organizationId: { in: ids } } }),
-        countSince: (ids, since) =>
+        countAll: (ids) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ids[0], 'lifetime', () =>
+          prisma.quoteDocument.count({ where: { organizationId: { in: ids } } })),
+        countSince: (ids, since) => getOrganizationQuotaUsage(prisma, 'quoteDocuments', ids[0], 'monthly', () =>
           prisma.quoteDocument.count({
             where: { organizationId: { in: ids }, createdAt: { gte: since } },
-          }),
+          }), since),
       })
     }
 

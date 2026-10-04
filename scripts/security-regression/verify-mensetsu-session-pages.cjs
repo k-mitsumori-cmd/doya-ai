@@ -29,6 +29,7 @@ const route = load('src/app/api/mensetsu/sessions/route.ts', {
   '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
   '@/lib/mensetsu/interview-url': {},
   '@/lib/plan-limit': {},
+  '@/lib/organization-quota-ledger': {},
   '@/lib/service-usage': {},
   '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'own-org' }), orgSlugFrom: () => 'own-org' },
 })

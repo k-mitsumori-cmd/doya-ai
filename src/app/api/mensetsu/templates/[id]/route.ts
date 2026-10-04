@@ -177,13 +177,23 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
 
-  // ⚠️ id だけで引かない。必ず所有者条件と併用する（他組織のものを消させない）
-  const t = await prisma.mensetsuTemplate.findFirst({
-    where: { id, organizationId: c.organizationId },
-    select: { id: true, _count: { select: { sessions: true } } },
-  })
-  if (!t) return NextResponse.json({ error: '質問セットが見つかりません' }, { status: 404 })
-
-  await prisma.mensetsuTemplate.delete({ where: { id: t.id } })
-  return NextResponse.json({ ok: true, deletedSessions: t._count.sessions })
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // 面接記録は質問セットへの外部キーで連鎖削除される。記録がある場合は
+      // 応募者データと利用履歴を守るため、質問セット自体の削除を拒否する。
+      const t = await tx.mensetsuTemplate.findFirst({
+        where: { id, organizationId: c.organizationId },
+        select: { id: true, _count: { select: { sessions: true } } },
+      })
+      if (!t) return 'not-found' as const
+      if (t._count.sessions > 0) return 'has-sessions' as const
+      await tx.mensetsuTemplate.delete({ where: { id: t.id } })
+      return 'deleted' as const
+    }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+    if (result === 'not-found') return NextResponse.json({ error: '質問セットが見つかりません' }, { status: 404 })
+    if (result === 'has-sessions') return NextResponse.json({ error: '面接記録がある質問セットは削除できません。記録の保持期限が過ぎるまで、質問セットを編集してご利用ください。' }, { status: 409 })
+    return NextResponse.json({ ok: true, deletedSessions: 0 })
+  } catch {
+    return NextResponse.json({ error: '削除できませんでした。面接の発行状況を確認してから再試行してください。' }, { status: 503 })
+  }
 }

@@ -168,6 +168,8 @@ User.plan → isPaidPlan() / 各サービスの上限テーブル
 
 **これ以外を一次ソースにしない**（INV-1）。
 
+見積書・面接URL・商談セッションの組織枠は `src/lib/organization-quota-ledger.ts` の利用台帳と現存レコード数の大きい方で判定する。レコードの削除や保持期限による消去で無料の累計枠と有料の当月枠を戻さない。利用台帳の更新は作成と同一の Serializable トランザクションに含め、サイドバーの残枠表示も同じ台帳を参照する。
+
 #### セッション（NextAuth）側
 
 `src/lib/auth.ts` の `session()` コールバックが毎回 DB から読み、`session.user` に載せる。

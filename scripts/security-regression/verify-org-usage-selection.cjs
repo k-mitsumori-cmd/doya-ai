@@ -6,6 +6,7 @@ const memberships = [
   { organizationId: 'org-b', slug: 'team-b', role: 'member', createdAt: 2 },
 ]
 const counts = { 'org-a': 2, 'org-b': 4 }
+const savedUsage = { quoteDocuments: { 'org-a': 3 }, mensetsuSessions: { 'org-b': 5 }, aishodanSessions: { 'org-a': 3 } }
 const member = {
   findFirst: async ({ where, orderBy }) => {
     if (where.organizationId) {
@@ -43,6 +44,7 @@ const summary = load('src/lib/usage-summary.ts', {
   },
   '@/lib/unified-plan': { isPaidPlan: (plan) => plan === 'PRO' || plan === 'ENTERPRISE' },
   '@/lib/organization-billing': { getOrganizationBilling: async (_service, organizationId) => ({ plan: organizationId === 'org-a' ? 'FREE' : 'PRO' }) },
+  '@/lib/organization-quota-ledger': { getOrganizationQuotaUsage: async (_db, key, orgId, _period, countLive) => Math.max(await countLive(), savedUsage[key]?.[orgId] ?? 0) },
   '@/lib/shodan/billing': { getShodanBilling: async (_db, organizationId) => ({ ownerUserId: organizationId === 'org-a' ? 'free-owner' : 'pro-owner', plan: organizationId === 'org-a' ? 'FREE' : 'PRO' }) },
   '@/lib/shodan/types': { PREP_STALE_MS: 300000, SHODAN_MONTHLY_LIMIT: { FREE: 1, PRO: 30, ENTERPRISE: 200 } },
   '@/lib/doyalist/limits': {},
@@ -51,10 +53,10 @@ const summary = load('src/lib/usage-summary.ts', {
 
 ;(async () => {
   const interview = await summary.getUsageSummary('mensetsu', 'viewer', 'PRO')
-  assert.equal(interview.meters[0].used, 4, 'interview uses newest organization by default')
+  assert.equal(interview.meters[0].used, 5, 'interview uses newest organization and retained quota by default')
   assert.equal(interview.meters[0].limit, 30)
   const quote = await summary.getUsageSummary('quote', 'viewer', 'PRO')
-  assert.equal(quote.meters[0].used, 2, 'quote uses owned organization before newer membership')
+  assert.equal(quote.meters[0].used, 3, 'quote uses owned organization and retained quota before newer membership')
   assert.equal(quote.meters[0].limit, 3, 'quote shows the FREE owner limit even for a PRO member')
   const shodan = await summary.getUsageSummary('shodan', 'viewer', 'PRO', 'team-a')
   assert.equal(shodan.meters[0].used, 2, 'selected organization controls shodan usage')
@@ -63,7 +65,7 @@ const summary = load('src/lib/usage-summary.ts', {
   assert.equal(await summary.getUsageSummary('shodan', 'viewer', 'PRO', 'foreign'), null)
 
   const aishodan = await summary.getUsageSummary('aishodan', 'viewer', 'PRO')
-  assert.equal(aishodan.meters[0].used, 2)
+  assert.equal(aishodan.meters[0].used, 3)
   assert.equal(aishodan.meters[0].limit, 5, 'guest-facing admission uses the FREE owner, not the PRO viewer')
   assert.equal(aishodan.planLabel, '無料')
   const selected = await summary.getUsageSummary('aishodan', 'viewer', 'FREE', 'team-b')

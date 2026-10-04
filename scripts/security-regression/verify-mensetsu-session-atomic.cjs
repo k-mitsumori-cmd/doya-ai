@@ -48,6 +48,7 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
       FREE_LIMITS: { mensetsuSessions: 3 },
       jstStartOfMonthUtc: () => new Date(),
     },
+    '@/lib/organization-quota-ledger': { getOrganizationQuotaUsage: async (_db, _key, _org, _period, countLive) => countLive(), recordOrganizationQuotaUsage: async () => {} },
     '@/lib/service-usage': { recordServiceUsage: async ({ summary }) => { usageSummary = summary } },
     '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: member ? 'member' : 'user', role: member ? 'member' : 'owner' }), orgSlugFrom: () => 'org' },
   }
@@ -82,5 +83,35 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
   assert.equal(failed.status, 503)
   assert.equal(failed.creates, 1)
   assert.equal(failed.count, 0)
+
+  // A retention purge can remove every session row without restoring the issue quota.
+  {
+    let rows = [], lifetime = 0, monthly = 0, creates = 0
+    const prisma = {
+      mensetsuTemplate: { findFirst: async () => ({ id: 'template', jobTitle: '営業', _count: { questions: 1, criteria: 1 } }) },
+      mensetsuOrganization: { findUnique: async () => ({ retentionDays: 30 }) },
+      mensetsuSession: { count: async () => rows.length, create: async () => { const session = { id: `s${++creates}`, token: 'token', expiresAt: new Date(), candidateName: null }; rows.push(session); return session } },
+    }
+    prisma.$transaction = async fn => fn(prisma)
+    const ledger = { getOrganizationQuotaUsage: async (_db, _key, _org, period, countLive) => Math.max(await countLive(), period === 'lifetime' ? lifetime : monthly), recordOrganizationQuotaUsage: async (_db, _key, _org, usedLifetime, usedMonthly) => { lifetime = usedLifetime + 1; monthly = usedMonthly + 1 } }
+    const dependencies = {
+      crypto: require('node:crypto'), 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma },
+      '@/lib/organization-billing': { getOrganizationOwnerUserId: async () => 'user' },
+      '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
+      '@/lib/mensetsu/interview-url': { interviewUrl: token => `https://example.com/interview/${token}` },
+      '@/lib/plan-limit': { assertFreeLimit: async (_key, count) => { const used = await count(); return { ok: used < 3, used, limit: 3, reason: '上限に達しました' } }, FREE_LIMITS: { mensetsuSessions: 3 }, jstStartOfMonthUtc: () => new Date() },
+      '@/lib/organization-quota-ledger': ledger, '@/lib/service-usage': { recordServiceUsage: async () => {} },
+      '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: 'user', role: 'owner' }), orgSlugFrom: () => 'org' },
+    }
+    const exports = {}
+    vm.runInNewContext(compiled, { exports, require: name => { assert.ok(name in dependencies, name); return dependencies[name] }, console, Date, URL })
+    const request = { json: async () => ({ templateId: 'template' }) }
+    for (let i = 0; i < 3; i++) { assert.equal((await exports.POST(request)).status, 200); rows = [] }
+    const blocked = await exports.POST(request)
+    assert.equal(blocked.status, 402)
+    assert.equal((await blocked.json()).code, 'LIMIT_REACHED')
+    assert.equal(creates, 3)
+    assert.equal(lifetime, 3)
+  }
   console.log('PASS mensetsu issue: serialized quota, paid/free response and failed insert')
 })().catch((error) => { console.error(error); process.exitCode = 1 })

@@ -31,6 +31,7 @@ const { getUsageSummary } = load('src/lib/usage-summary.ts', {
   '@/lib/pricing': pricing,
   '@/lib/plan-limit': {},
   '@/lib/organization-billing': {},
+  '@/lib/organization-quota-ledger': {},
   '@/lib/unified-plan': unified,
   '@/lib/shodan/types': {},
   '@/lib/shodan/billing': {},

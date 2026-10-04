@@ -234,18 +234,19 @@ export default function MensetsuTool() {
 
   /**
    * 質問セットを削除する。
-   * ⚠️ 質問・評価軸だけでなく、この質問セットで実施した**面接の記録まで**消える。
-   *    元に戻せないので、何が何件消えるかを出してから聞く。
+   * 面接記録が残る質問セットは削除させず、応募者の記録を保護する。
    */
   const deleteTemplate = async (t: Template) => {
     const n = t._count?.sessions ?? 0
+    if (n > 0) {
+      notifyError(setError, `この質問セットには面接記録が${n}件あるため削除できません。質問セットを編集してご利用ください。`)
+      return
+    }
     const warn = [
       `質問セット「${t.name}」を削除します。`,
       '',
       '次のものも一緒に消えます。元に戻せません。',
       `・質問 ${t._count?.questions ?? 0}問 / 評価軸 ${t._count?.criteria ?? 0}個`,
-      n > 0 ? `・この質問セットで実施した面接 ${n}件の記録（逐語ログ・評価）` : '',
-      n > 0 ? '・発行済みの面接URLは開けなくなります' : '',
     ]
       .filter(Boolean)
       .join('\n')

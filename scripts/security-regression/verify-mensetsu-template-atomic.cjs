@@ -73,5 +73,22 @@ function fixture(failQuestion = false, organizationId = 'org-1') {
   assert.equal(denied.status, 404);
   assert.equal(f.state().template.name, 'Original');
   assert.equal(f.state().transactions, 0);
+  for (const sessions of [0, 2]) {
+    let deletes = 0;
+    const tx = { mensetsuTemplate: {
+      findFirst: async () => ({ id: 'template-1', _count: { sessions } }),
+      delete: async () => { deletes++; },
+    } };
+    const prisma = { $transaction: async (fn, options) => { assert.equal(options.isolationLevel, 'Serializable'); return fn(tx); } };
+    const { DELETE } = load('src/app/api/mensetsu/templates/[id]/route.ts', {
+      'next/server': { NextResponse: Response },
+      '@/lib/prisma': { prisma },
+      '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org-1', role: 'admin' }), hasMinRole: () => true, orgSlugFrom: () => undefined },
+      '@/lib/mensetsu/guardrails': { findViolations: () => [] },
+    });
+    const response = await DELETE({}, { params: Promise.resolve({ id: 'template-1' }) });
+    assert.equal(response.status, sessions ? 409 : 200);
+    assert.equal(deletes, sessions ? 0 : 1);
+  }
   console.log('PASS mensetsu template: basic fields and replacement questions commit or roll back together');
 })().catch((error) => { console.error(error); process.exitCode = 1; });
