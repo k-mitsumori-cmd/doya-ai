@@ -290,9 +290,13 @@ export default function AishodanTool() {
 
   /**
    * 商談URLを削除する。
-   * ⚠️ 配布済みのURLが開けなくなり、その商談の記録も消える。
+   * 商談記録があるURLは公開停止で保管し、削除しない。
    */
   async function deleteRoom(room: Room) {
+    if (room._count.sessions > 0) {
+      notifyError(setError, `この商談URLには記録が${room._count.sessions}件あるため削除できません。「公開を停止」で新規アクセスを止めてください。`)
+      return
+    }
     const warn = [
       `商談URL「${room.name}」を削除します。`,
       // ⚠️ 名前は同じものが並ぶ。URLと発行日まで出さないと取り違える
@@ -300,9 +304,6 @@ export default function AishodanTool() {
       `（${new Date(room.createdAt).toLocaleString('ja-JP')} 発行）`,
       '',
       '・配布済みのURLは開けなくなります',
-      room._count.sessions > 0
-        ? `・この商談URLで実施した ${room._count.sessions}件の記録も消えます`
-        : '',
       '',
       '元に戻せません。',
     ]

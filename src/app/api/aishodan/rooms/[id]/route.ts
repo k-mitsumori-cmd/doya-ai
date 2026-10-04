@@ -43,13 +43,25 @@ export async function DELETE(req: NextRequest, ctxParam: Ctx) {
   const p = await ctxParam.params
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
-  // ルーム削除は商談ログも道連れになる（onDelete: Cascade）。管理者以上に限る
+  // ルーム削除は商談ログも道連れになる（onDelete: Cascade）。管理者以上に限る。
   if (!hasMinRole(ctx.role, 'admin')) {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
-  const deleted = await prisma.aishodanRoom.deleteMany({
-    where: { id: p.id, organizationId: ctx.organizationId },
-  })
-  if (deleted.count === 0) return NextResponse.json({ error: 'ルームが見つかりません' }, { status: 404 })
-  return NextResponse.json({ ok: true })
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const room = await tx.aishodanRoom.findFirst({
+        where: { id: p.id, organizationId: ctx.organizationId },
+        select: { id: true, _count: { select: { sessions: true } } },
+      })
+      if (!room) return 'not-found' as const
+      if (room._count.sessions > 0) return 'has-sessions' as const
+      await tx.aishodanRoom.delete({ where: { id: room.id } })
+      return 'deleted' as const
+    }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+    if (result === 'not-found') return NextResponse.json({ error: 'ルームが見つかりません' }, { status: 404 })
+    if (result === 'has-sessions') return NextResponse.json({ error: '商談記録があるURLは削除できません。公開を停止して記録を保管してください。' }, { status: 409 })
+    return NextResponse.json({ ok: true })
+  } catch {
+    return NextResponse.json({ error: '削除できませんでした。商談の状況をご確認のうえ再試行してください。' }, { status: 503 })
+  }
 }
