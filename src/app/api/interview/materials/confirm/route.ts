@@ -78,16 +78,27 @@ export async function POST(req: NextRequest) {
       const storageLimited = metadata.size > storageMax
       const isGuest = !userId
       const contact = plan === 'PRO' || plan === 'ENTERPRISE'
-      await prisma.$transaction(async (tx) => {
+      const rejectedState = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${material.projectId}))`
+        const current = await tx.interviewMaterial.findUnique({
+          where: { id: materialId },
+          select: { projectId: true, filePath: true, project: { select: { userId: true, guestId: true } } },
+        })
+        if (!current || current.projectId !== material.projectId || checkOwnership(current.project, userId, guestId)) return 'missing' as const
+        if (current.filePath !== storagePath) return 'changed' as const
         const rejected = await tx.interviewMaterial.updateMany({
-          where: { id: material.id, status: 'UPLOADED', fileUrl: null },
+          where: { id: material.id, status: 'UPLOADED', fileUrl: null, filePath: storagePath },
           data: { status: 'ERROR', error: storageLimited ? 'ファイルサイズがアップロード先の容量上限を超えています' : 'ファイルサイズがプランの上限を超えています' },
         })
-        if (rejected.count) await enqueueInterviewMaterialStoragePurge(tx, {
+        if (!rejected.count) return 'changed' as const
+        await enqueueInterviewMaterialStoragePurge(tx, {
           id: material.id, projectId: material.projectId, filePath: storagePath,
-          userId: material.project.userId, guestId: material.project.guestId,
+          userId: current.project.userId, guestId: current.project.guestId,
         })
+        return 'rejected' as const
       })
+      if (rejectedState === 'missing') return NextResponse.json({ success: false, error: '素材が見つかりません' }, { status: 404 })
+      if (rejectedState === 'changed') return NextResponse.json({ success: false, error: '素材の状態が変更されました。再読み込みしてください。' }, { status: 409 })
       return NextResponse.json({
         success: false,
         error: storageLimited
@@ -106,18 +117,29 @@ export async function POST(req: NextRequest) {
     const fileUrl = await getSignedFileUrl(storagePath, 7 * 24 * 3600) // 7日間有効
 
     // DBステータス更新
-    const updated = await prisma.interviewMaterial.updateMany({
-      where: { id: materialId, status: { in: ['UPLOADED', 'COMPLETED'] } },
-      data: {
-        status: 'COMPLETED',
-        fileUrl,
-        fileSize: BigInt(metadata.size),
-        mimeType: (metadata.mimeType && metadata.mimeType !== 'application/octet-stream')
-          ? metadata.mimeType
-          : (material.mimeType || metadata.mimeType),
-      },
+    const updated = await prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${material.projectId}))`
+      const current = await tx.interviewMaterial.findUnique({
+        where: { id: materialId },
+        select: { projectId: true, filePath: true, project: { select: { userId: true, guestId: true } } },
+      })
+      if (!current || current.projectId !== material.projectId || checkOwnership(current.project, userId, guestId)) return 'missing' as const
+      if (current.filePath !== storagePath) return 'changed' as const
+      const result = await tx.interviewMaterial.updateMany({
+        where: { id: materialId, status: { in: ['UPLOADED', 'COMPLETED'] }, filePath: storagePath },
+        data: {
+          status: 'COMPLETED',
+          fileUrl,
+          fileSize: BigInt(metadata.size),
+          mimeType: (metadata.mimeType && metadata.mimeType !== 'application/octet-stream')
+            ? metadata.mimeType
+            : (material.mimeType || metadata.mimeType),
+        },
+      })
+      return result.count ? 'updated' as const : 'changed' as const
     })
-    if (!updated.count) return NextResponse.json({ success: false, error: '素材の状態が変更されました。再読み込みしてください。' }, { status: 409 })
+    if (updated === 'missing') return NextResponse.json({ success: false, error: '素材が見つかりません' }, { status: 404 })
+    if (updated === 'changed') return NextResponse.json({ success: false, error: '素材の状態が変更されました。再読み込みしてください。' }, { status: 409 })
 
     return NextResponse.json({
       success: true,

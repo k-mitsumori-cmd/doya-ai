@@ -23,29 +23,31 @@ let currentFileUrl = null
 let metadataReads = 0
 let signedReads = 0
 let queued = []
+let currentOwner = { userId: null, guestId: 'guest-1' }
+let claimAfterMetadata = false
 const material = () => ({
   id: 'material-1', projectId: 'project-1', filePath: 'guest_guest-1/project-1/audio.wav',
   fileName: 'audio.wav', mimeType: 'audio/wav', type: 'audio', status: currentStatus,
-  fileUrl: currentFileUrl, project: { userId: null, guestId: 'guest-1' },
+  fileUrl: currentFileUrl, project: currentOwner,
 })
 const tx = {
-  interviewMaterial: { updateMany: async ({ where, data }) => {
-    if (where.status !== currentStatus || (where.fileUrl === null && currentFileUrl !== null)) return { count: 0 }
-    currentStatus = data.status
-    return { count: 1 }
-  } },
+  $executeRaw: async () => 1,
+  interviewMaterial: {
+    findUnique: async () => material(),
+    updateMany: async ({ where, data }) => {
+      const statusMatches = typeof where.status === 'string' ? where.status === currentStatus : where.status.in.includes(currentStatus)
+      if (!statusMatches || (where.fileUrl === null && currentFileUrl !== null) || where.filePath !== material().filePath) return { count: 0 }
+      currentStatus = data.status
+      if (data.fileUrl) currentFileUrl = data.fileUrl
+      if (data.fileSize) currentSize = Number(data.fileSize)
+      return { count: 1 }
+    },
+  },
   systemSetting: { create: async ({ data }) => { queued.push(data); return data } },
 }
 const prisma = {
   interviewMaterial: {
     findUnique: async () => material(),
-    updateMany: async ({ where, data }) => {
-      if (!where.status.in.includes(currentStatus)) return { count: 0 }
-      currentStatus = data.status
-      currentFileUrl = data.fileUrl
-      currentSize = Number(data.fileSize)
-      return { count: 1 }
-    },
   },
   $transaction: async (fn) => fn(tx),
 }
@@ -58,7 +60,7 @@ const confirm = load('src/app/api/interview/materials/confirm/route.ts', {
   '@/lib/interview/access': access,
   '@/lib/interview/storage': {
     ensureBucket: async () => {}, getDetectedMaxFileSize: () => 500,
-    getFileMetadata: async () => { metadataReads++; return { size: currentSize, mimeType: 'audio/wav' } },
+    getFileMetadata: async () => { metadataReads++; if (claimAfterMetadata) currentOwner = { userId: 'account-1', guestId: 'guest-1' }; return { size: currentSize, mimeType: 'audio/wav' } },
     getSignedFileUrl: async () => { signedReads++; return 'https://storage.example.test/signed' },
   },
   '@/lib/interview/types': { getMaxFileSize: () => 500 },
@@ -121,5 +123,18 @@ const request = () => ({ cookies: { get: () => guestId ? { value: guestId } : un
     assert.equal(currentStatus, 'COMPLETED')
     assert.equal(currentFileUrl, 'https://storage.example.test/signed')
     assert.equal(queued.length, 0)
+  })
+  await check('claim during storage lookup blocks both confirmation and over-limit purge', async () => {
+    currentStatus = 'UPLOADED'; currentFileUrl = null; currentSize = 81; queued = []
+    claimAfterMetadata = true
+    assert.equal((await confirm.POST(request())).status, 404)
+    assert.equal(currentStatus, 'UPLOADED')
+    currentOwner = { userId: null, guestId: 'guest-1' }
+    currentSize = 101
+    assert.equal((await confirm.POST(request())).status, 404)
+    assert.equal(currentStatus, 'UPLOADED')
+    assert.equal(queued.length, 0)
+    claimAfterMetadata = false
+    currentOwner = { userId: null, guestId: 'guest-1' }
   })
 })().catch(error => { console.error(error); process.exitCode = 1 })
