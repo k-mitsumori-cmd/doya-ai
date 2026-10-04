@@ -138,7 +138,7 @@ ${draft.content.slice(0, 60000)}`
         where: { id: draft.project.id }, select: { userId: true, guestId: true },
       })
       if (!current || checkOwnership(current, userId, guestId)) throw new ProjectOwnerChangedError()
-      return tx.interviewReview.create({
+      const saved = await tx.interviewReview.create({
         data: {
           projectId: draft.project.id,
           draftId: draft.id,
@@ -149,12 +149,13 @@ ${draft.content.slice(0, 60000)}`
           suggestions: result.suggestions || [],
         },
       })
+      if (includedClaim && !await finishIncludedProofread(includedClaim, tx)) {
+        throw new Error('Included proofreading settlement failed')
+      }
+      return saved
     })
 
     completed = true
-    if (includedClaim && !await finishIncludedProofread(includedClaim)) {
-      console.error('[interview] included proofread could not be settled')
-    }
 
     return NextResponse.json({
       success: true,

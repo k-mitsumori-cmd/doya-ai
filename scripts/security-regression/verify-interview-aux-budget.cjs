@@ -69,6 +69,7 @@ async function main() {
   let providerFails = true;
   let refunds = 0;
   let includedSettlements = 0;
+  let includedSettlementSucceeds = true;
   let hasPreviousReview = false;
   let projectOwner = 'u1';
   let reviewWrites = 0;
@@ -82,11 +83,16 @@ async function main() {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma: {
       interviewDraft: { findUnique: async () => draft },
-      $transaction: async (fn) => fn({
-        $executeRaw: async () => 1,
-        interviewProject: { findUnique: async () => ({ userId: projectOwner, guestId: null }) },
-        interviewReview: { create: async () => { reviewWrites++; return { id: 'review1' }; } },
-      }),
+      $transaction: async (fn) => {
+        let stagedReviewWrites = 0;
+        const result = await fn({
+          $executeRaw: async () => 1,
+          interviewProject: { findUnique: async () => ({ userId: projectOwner, guestId: null }) },
+          interviewReview: { create: async () => { stagedReviewWrites++; return { id: 'review1' }; } },
+        });
+        reviewWrites += stagedReviewWrites;
+        return result;
+      },
       interviewReview: {
         findFirst: async () => hasPreviousReview ? { id: 'review1' } : null,
       },
@@ -118,7 +124,7 @@ async function main() {
       auxAdmissionError: ({ limit }) => Response.json({ code: 'INTERVIEW_AUX_LIMIT_REACHED', upgradeUrl: '/interview/pricing', limit }, { status: 429 }),
       refundAuxBudget: async () => { refunds++; },
       refundIncludedProofread: async () => { refunds++; },
-      finishIncludedProofread: async () => { includedSettlements++; return true; },
+      finishIncludedProofread: async (_claim, tx) => { assert(tx, 'Included settlement shares the review transaction'); includedSettlements++; return includedSettlementSucceeds; },
     },
   };
   const globals = { process: { env: { GEMINI_API_KEY: 'local-test-key' } } };
@@ -173,20 +179,28 @@ async function main() {
   assert.equal(refunds, 1, 'The included proofreading does not consume the manual allowance');
   assert.equal(reviewWrites, 1);
 
+  includedSettlementSucceeds = false;
+  const unsettled = await proofread({ json: async () => ({}) }, { params: Promise.resolve({ id: 'd1' }) });
+  assert.equal(unsettled.status, 500);
+  assert.equal(reviewWrites, 1, 'A review rolls back when included proofreading cannot settle');
+  assert.equal(includedSettlements, 2);
+  assert.equal(refunds, 2, 'The failed included reservation is refunded');
+  includedSettlementSucceeds = true;
+
   projectOwner = 'u2';
   included = { state: 'already' };
   admission = { state: 'allowed', claim: { key: 'aux', day: '2026-10-01' }, limit: 5 };
   const staleReview = await proofread({ json: async () => ({}) }, { params: Promise.resolve({ id: 'd1' }) });
   assert.equal(staleReview.status, 404, 'Ownership is rechecked before saving a review');
   assert.equal(reviewWrites, 1, 'A transferred project receives no stale guest review');
-  assert.equal(refunds, 2);
+  assert.equal(refunds, 3);
   projectOwner = 'u1';
 
   hasPreviousReview = true;
   admission = { state: 'limit', limit: 5 };
   const repeat = await proofread({ json: async () => ({}) }, { params: Promise.resolve({ id: 'd1' }) });
   assert.equal(repeat.status, 429, 'A saved review makes the next proofreading an auxiliary request');
-  assert.equal(providerCalls, 3);
+  assert.equal(providerCalls, 4);
 
   console.log('PASS interview auxiliary limits reject before AI, included proofread blocks overlap, and failure refunds');
 }

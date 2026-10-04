@@ -148,9 +148,9 @@ export async function claimIncludedProofread(draftId: string): Promise<IncludedP
   }
 }
 
-export async function finishIncludedProofread(claim: IncludedProofreadClaim): Promise<boolean> {
+export async function finishIncludedProofread(claim: IncludedProofreadClaim, db: Prisma.TransactionClient | typeof prisma = prisma): Promise<boolean> {
   try {
-    const changed = await prisma.$executeRaw`
+    const changed = await db.$executeRaw`
       UPDATE "SystemSetting" SET "value" = jsonb_build_object('state', 'done')::text
       WHERE "key" = ${claim.key} AND "value"::jsonb->>'state' = 'pending'
         AND "value"::jsonb->>'lease' = ${claim.lease}
