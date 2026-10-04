@@ -139,17 +139,26 @@ export async function PUT(req: NextRequest, ctxParam: Ctx) {
     data.schedulingLabel = normalizeSchedulingLabel(body.schedulingLabel)
   }
 
-  // 商材プロフィール（「話してはいけないこと」もここで編集する）
-  if (body?.profile && typeof body.profile === 'object') {
-    await prisma.aishodanProduct.update({
-      where: { id: scenario.productId },
-      data: { profile: body.profile as any },
+  // 保管と編集を直列化し、プロフィールとシナリオを一緒に確定する。
+  const saved = await prisma.$transaction(async (tx) => {
+    const locked = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM aishodan_products WHERE id = ${scenario.productId}
+      AND "organizationId" = ${ctx.organizationId} FOR NO KEY UPDATE
+    `
+    if (!locked.length) return false
+    const product = await tx.aishodanProduct.findFirst({
+      where: { id: scenario.productId, organizationId: ctx.organizationId, archivedAt: null }, select: { id: true },
     })
-  }
-
-  if (Object.keys(data).length > 0) {
-    await prisma.aishodanScenario.update({ where: { id: scenario.id }, data })
-  }
+    if (!product) return false
+    if (body?.profile && typeof body.profile === 'object') {
+      await tx.aishodanProduct.update({ where: { id: product.id }, data: { profile: body.profile as any } })
+    }
+    if (Object.keys(data).length > 0) {
+      await tx.aishodanScenario.update({ where: { id: scenario.id }, data })
+    }
+    return true
+  }, { maxWait: 10000, timeout: 30000 })
+  if (!saved) return NextResponse.json({ error: '保管済み商材のシナリオは編集できません。' }, { status: 409 })
 
   const updated = await loadOwned(scenario.id, ctx.organizationId)
   return NextResponse.json({

@@ -8,6 +8,7 @@
 // ⚠️ 根拠が見つからない場合は回答を作らせない。
 //    商談は取引の入口であり、もっともらしい嘘は実害になる。
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import { safeFetchText, htmlToText } from '@/lib/net/safe-fetch'
 import { chunkText } from '@/lib/cunning/rag'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
@@ -108,13 +109,13 @@ export async function ingestPages(productId: string, pages: CrawledPage[]): Prom
 }
 
 /** 手入力のFAQ・想定問答を取り込む */
-export async function ingestManual(productId: string, title: string, text: string): Promise<number> {
-  const source = await prisma.aishodanSource.create({
+export async function ingestManual(productId: string, title: string, text: string, db: Prisma.TransactionClient = prisma): Promise<number> {
+  const source = await db.aishodanSource.create({
     data: { productId, type: 'manual', title, rawText: text },
   })
   const chunks = chunkText(text)
   if (chunks.length === 0) return 0
-  await prisma.aishodanChunk.createMany({
+  await db.aishodanChunk.createMany({
     data: chunks.map((t, ord) => ({ productId, sourceId: source.id, ord, text: t })),
   })
   return chunks.length

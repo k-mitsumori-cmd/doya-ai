@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const aishodanArchiveWrite = spawnSync(process.execPath, [path.join(__dirname, 'verify-aishodan-archive-write-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (aishodanArchiveWrite.error || aishodanArchiveWrite.status !== 0) {
+  console.error('Security regression failed: verify-aishodan-archive-write-atomic.cjs');
+  process.exit(1);
+}
 const shodanDeleteQuota = spawnSync(process.execPath, [path.join(__dirname, 'verify-shodan-delete-quota.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shodanDeleteQuota.error || shodanDeleteQuota.status !== 0) {
   console.error('Security regression failed: verify-shodan-delete-quota.cjs');

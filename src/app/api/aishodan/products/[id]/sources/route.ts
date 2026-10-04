@@ -47,6 +47,18 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   if (!text) return NextResponse.json({ error: '内容を入力してください' }, { status: 400 })
 
   const title = String(body?.title || '手入力のナレッジ').slice(0, 200)
-  const count = await ingestManual(product.id, title, text.slice(0, 100000))
+  const count = await prisma.$transaction(async (tx) => {
+    const locked = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM aishodan_products WHERE id = ${product.id}
+      AND "organizationId" = ${ctx.organizationId} FOR NO KEY UPDATE
+    `
+    if (!locked.length) return null
+    const active = await tx.aishodanProduct.findFirst({
+      where: { id: product.id, organizationId: ctx.organizationId, archivedAt: null }, select: { id: true },
+    })
+    if (!active) return null
+    return ingestManual(product.id, title, text.slice(0, 100000), tx)
+  }, { maxWait: 10000, timeout: 30000 })
+  if (count === null) return NextResponse.json({ error: '保管済み商材にナレッジは追加できません。' }, { status: 409 })
   return NextResponse.json({ chunkCount: count })
 }

@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   // 他組織のシナリオでルームを作らせない
   const scenario = await prisma.aishodanScenario.findFirst({
     where: { id: scenarioId, product: { organizationId: ctx.organizationId, archivedAt: null } },
-    include: { product: { select: { name: true } } },
+    include: { product: { select: { id: true, name: true } } },
   })
   if (!scenario) return NextResponse.json({ error: 'シナリオが見つかりません' }, { status: 404 })
 
@@ -56,18 +56,36 @@ export async function POST(req: NextRequest) {
   const token = randomBytes(24).toString('base64url')
 
   const days = Number(body?.expiresInDays)
-  const room = await prisma.aishodanRoom.create({
-    data: {
-      organizationId: ctx.organizationId,
-      scenarioId: scenario.id,
-      name: String(body?.name || `${scenario.product.name} 商談ルーム`).slice(0, 200),
-      token,
-      expiresAt: Number.isFinite(days) && days > 0 ? new Date(Date.now() + days * 24 * 60 * 60 * 1000) : null,
-      maxSessions: Number.isFinite(Number(body?.maxSessions))
-        ? Math.max(1, Math.min(5000, Math.round(Number(body.maxSessions))))
-        : 500,
-    },
-  })
+  let room
+  try {
+    room = await prisma.$transaction(async (tx) => {
+      // 商材保管と同じ行をロックし、保管直後のURL発行を防ぐ。
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM aishodan_products WHERE id = ${scenario.product.id}
+        AND "organizationId" = ${ctx.organizationId} FOR NO KEY UPDATE
+      `
+      if (!locked.length) return null
+      const product = await tx.aishodanProduct.findFirst({
+        where: { id: scenario.product.id, organizationId: ctx.organizationId, archivedAt: null }, select: { id: true },
+      })
+      if (!product) return null
+      return tx.aishodanRoom.create({
+        data: {
+          organizationId: ctx.organizationId,
+          scenarioId: scenario.id,
+          name: String(body?.name || `${scenario.product.name} 商談ルーム`).slice(0, 200),
+          token,
+          expiresAt: Number.isFinite(days) && days > 0 ? new Date(Date.now() + days * 24 * 60 * 60 * 1000) : null,
+          maxSessions: Number.isFinite(Number(body?.maxSessions))
+            ? Math.max(1, Math.min(5000, Math.round(Number(body.maxSessions))))
+            : 500,
+        },
+      })
+    }, { maxWait: 10000, timeout: 30000 })
+  } catch {
+    return NextResponse.json({ error: '商談URLを発行できませんでした。商材の状態を確認して再試行してください。' }, { status: 503 })
+  }
+  if (!room) return NextResponse.json({ error: '保管済み商材の商談URLは発行できません。' }, { status: 409 })
 
   void recordServiceUsage({
     userId: ctx.userId,
