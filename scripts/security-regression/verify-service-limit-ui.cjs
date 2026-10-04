@@ -89,6 +89,7 @@ const fixtureMessages=[
    ['/api/doyaslide/style-preview','STYLE_PREVIEW_DAILY_CAP','本日のスタイル見本生成枠に達しました。既存の見本をご利用ください。'],
    ['/api/doyaslide/analyze','DOYASLIDE_TEXT_DAILY_LIMIT','本日の参考URL解析の運用上限（50回）に達しました。明日お試しください。'],
    ['/api/seo/articles/id/check','SEO_TEXT_DAILY_LIMIT','本日のAI編集の運用上限（100回）に達しました。明日お試しください。'],
+   ['/api/aishodan/room/token/start','PREVIEW_DAILY_LIMIT','本日の練習回数の上限に達しました。明日またお試しください。'],
   ]) assert.equal(classify(route,429,{code,error}),null,code);
   assert.ok(classify('/api/seo/articles',429,{code:'SEO_ARTICLE_LIMIT',error:'今月の生成回数の上限に達しました（3回/月）。'}));
  });
