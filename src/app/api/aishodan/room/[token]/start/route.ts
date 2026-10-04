@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { assertRoomUsable, loadRoomByToken, toPublicSession } from '@/lib/aishodan/public'
 import { resolveUserId } from '@/lib/aishodan/access'
 import { assertFreeLimit, jstStartOfMonthUtc, FREE_LIMITS } from '@/lib/plan-limit'
+import { getOrganizationQuotaUsage, recordOrganizationQuotaUsage } from '@/lib/organization-quota-ledger'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -48,22 +49,27 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   })
   // ⚠️ 練習は無料枠を消費させない。シナリオを詰めるたびに枠が減ると
   //    「試すと損をする」構造になり、品質調整をしなくなる。
-  const quota = room.isPreview
-    ? { ok: true as const }
-    : await assertFreeLimit(
+  let quota: Awaited<ReturnType<typeof assertFreeLimit>>
+  try {
+    quota = room.isPreview ? { ok: true } : await assertFreeLimit(
         'aishodanSessions',
-        () => prisma.aishodanSession.count({ where: { organizationId: room.organizationId, room: { isPreview: false } } }),
+        () => getOrganizationQuotaUsage(prisma, 'aishodanSessions', room.organizationId, 'lifetime', () =>
+          prisma.aishodanSession.count({ where: { organizationId: room.organizationId, room: { isPreview: false } } })),
         owner?.userId ?? null,
         // ⚠️ 商談1件ごとに Realtime の通話料が発生する。有料プランにも月次の上限が要る
-        (since) =>
+        (since) => getOrganizationQuotaUsage(prisma, 'aishodanSessions', room.organizationId, 'monthly', () =>
           prisma.aishodanSession.count({
             where: {
               organizationId: room.organizationId,
               room: { isPreview: false },
               createdAt: { gte: since },
             },
-          })
+          }), since)
       )
+  } catch {
+    console.error('[aishodan/room/start] quota unavailable')
+    return NextResponse.json({ error: '商談ルームの利用状況を確認できませんでした。時間をおいて再試行してください。' }, { status: 503 })
+  }
   if (!quota.ok) {
     // ⚠️ 見込み客に課金の話を見せない。相手には落ち度がない。
     return NextResponse.json(
@@ -98,6 +104,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
 
         // 組織全体の枠と、この部屋の枠を同じ直列化トランザクションで確保する。
         // セッション保存が失敗した場合は部屋の回数もロールバックされる。
+        let billableUsage: { lifetime: number; monthly: number; now: Date } | null = null
         if (currentRoom.isPreview) {
           const member = await tx.aishodanMember.findFirst({
             where: { organizationId: room.organizationId, userId: previewUserId!, status: 'ACTIVE' },
@@ -109,14 +116,13 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
           })
           if (usedToday >= PREVIEW_DAILY_LIMIT) return { kind: 'previewLimit' } as const
         } else if (quota.limit !== undefined) {
-          const used = await tx.aishodanSession.count({
-            where: {
-              organizationId: room.organizationId,
-              room: { isPreview: false },
-              ...(quota.limit === FREE_LIMITS.aishodanSessions ? {} : { createdAt: { gte: jstStartOfMonthUtc() } }),
-            },
-          })
-          if (used >= quota.limit) return { kind: 'unavailable' } as const
+          const now = new Date()
+          const lifetime = await getOrganizationQuotaUsage(tx, 'aishodanSessions', room.organizationId, 'lifetime', () =>
+            tx.aishodanSession.count({ where: { organizationId: room.organizationId, room: { isPreview: false } } }), now)
+          const monthly = await getOrganizationQuotaUsage(tx, 'aishodanSessions', room.organizationId, 'monthly', () =>
+            tx.aishodanSession.count({ where: { organizationId: room.organizationId, room: { isPreview: false }, createdAt: { gte: jstStartOfMonthUtc(now) } } }), now)
+          if ((quota.limit === FREE_LIMITS.aishodanSessions ? lifetime : monthly) >= quota.limit) return { kind: 'unavailable' } as const
+          billableUsage = { lifetime, monthly, now }
         }
 
         const reserved = await tx.aishodanRoom.updateMany({
@@ -146,13 +152,15 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
             referrer: req.headers.get('referer')?.slice(0, 500) || null,
             utm: Object.keys(utm).length > 0 ? utm : undefined,
             purgeAfter: new Date(Date.now() + Math.max(1, room.organization.retentionDays) * 24 * 60 * 60 * 1000),
+            ...(billableUsage ? { createdAt: billableUsage.now } : {}),
           },
         })
+        if (billableUsage) await recordOrganizationQuotaUsage(tx, 'aishodanSessions', room.organizationId, billableUsage.lifetime, billableUsage.monthly, billableUsage.now)
         return { kind: 'created', session } as const
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
       break
     } catch (error: any) {
-      if (error?.code === 'P2034' && attempt < 4) continue
+      if ((error?.code === 'P2034' || error?.code === 'P2002') && attempt < 4) continue
       console.error('[aishodan/room/start] create failed', error?.code || 'unknown')
       return NextResponse.json({ error: '商談を開始できませんでした。時間をおいてもう一度お試しください。' }, { status: 503 })
     }

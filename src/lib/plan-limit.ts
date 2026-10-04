@@ -98,8 +98,8 @@ export interface QuotaResult {
 }
 
 /** JST 当月1日0時の UTC Date。有料プランの枠は毎月ここで戻る */
-export function jstStartOfMonthUtc(): Date {
-  const jst = new Date(Date.now() + 9 * 3600_000)
+export function jstStartOfMonthUtc(now = new Date()): Date {
+  const jst = new Date(now.getTime() + 9 * 3600_000)
   return new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1, 0, 0, 0) - 9 * 3600_000)
 }
 

@@ -345,6 +345,11 @@ if (aishodanStartAtomic.error || aishodanStartAtomic.status !== 0) {
   console.error('Security regression failed: verify-aishodan-room-start-atomic.cjs');
   process.exit(1);
 }
+const organizationQuotaLedger = spawnSync(process.execPath, [path.join(__dirname, 'verify-organization-quota-ledger.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (organizationQuotaLedger.error || organizationQuotaLedger.status !== 0) {
+  console.error('Security regression failed: verify-organization-quota-ledger.cjs');
+  process.exit(1);
+}
 const seoChatEditOwner = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-chat-edit-owner.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (seoChatEditOwner.error || seoChatEditOwner.status !== 0) {
   console.error('Security regression failed: verify-seo-chat-edit-owner.cjs');

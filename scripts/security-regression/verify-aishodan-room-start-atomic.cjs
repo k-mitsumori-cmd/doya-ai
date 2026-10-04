@@ -7,9 +7,11 @@ const ts = require('typescript')
 const source = fs.readFileSync(path.join(__dirname, '../../src/app/api/aishodan/room/[token]/start/route.ts'), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 
-async function exercise({ preview = false, used = 0, roomCount = 0, createFails = false, conflictOnce = false, authenticated = true, member = true } = {}) {
+async function exercise({ preview = false, used = 0, ledgerUsed = 0, roomCount = 0, createFails = false, ledgerFails = false, quotaUnavailable = false, conflictOnce = false, authenticated = true, member = true } = {}) {
   let count = roomCount
   let usage = used
+  let ledgerLifetime = ledgerUsed
+  let ledgerMonthly = ledgerUsed
   let creates = 0
   let attempts = 0
   let countedWhere
@@ -28,7 +30,7 @@ async function exercise({ preview = false, used = 0, roomCount = 0, createFails 
         usage = 3
         throw Object.assign(Error('concurrent insert'), { code: 'P2034' })
       }
-      const before = { count, usage }
+      const before = { count, usage, ledgerLifetime, ledgerMonthly }
       const tx = {
         aishodanMember: { findFirst: async () => member ? ({ id: 'membership' }) : null },
         aishodanRoom: {
@@ -45,7 +47,7 @@ async function exercise({ preview = false, used = 0, roomCount = 0, createFails 
           },
         },
       }
-      try { return await fn(tx) } catch (error) { count = before.count; usage = before.usage; throw error }
+      try { return await fn(tx) } catch (error) { count = before.count; usage = before.usage; ledgerLifetime = before.ledgerLifetime; ledgerMonthly = before.ledgerMonthly; throw error }
     },
   }
   const response = { json: (body, init) => { const r = Response.json(body, init); r.cookies = { set: () => {} }; return r } }
@@ -55,13 +57,21 @@ async function exercise({ preview = false, used = 0, roomCount = 0, createFails 
     '@/lib/prisma': { prisma },
     '@/lib/aishodan/public': { loadRoomByToken: async () => room, assertRoomUsable: () => ({ ok: true }), toPublicSession: (s) => ({ id: s.id }) },
     '@/lib/aishodan/access': { resolveUserId: async () => authenticated ? 'owner' : undefined },
-    '@/lib/plan-limit': { assertFreeLimit: async () => ({ ok: true, limit: 3, used }), jstStartOfMonthUtc: () => new Date(), FREE_LIMITS: { aishodanSessions: 3 } },
+    '@/lib/plan-limit': { assertFreeLimit: async () => { if (quotaUnavailable) throw Error('synthetic DB failure'); return { ok: true, limit: 3, used } }, jstStartOfMonthUtc: () => new Date(), FREE_LIMITS: { aishodanSessions: 3 } },
+    '@/lib/organization-quota-ledger': {
+      getOrganizationQuotaUsage: async (_db, _key, _org, period, countLive) => Math.max(await countLive(), period === 'monthly' ? ledgerMonthly : ledgerLifetime),
+      recordOrganizationQuotaUsage: async (_tx, _key, _org, lifetime, monthly) => {
+        if (ledgerFails) throw Error('synthetic ledger failure')
+        ledgerLifetime = lifetime + 1
+        ledgerMonthly = monthly + 1
+      },
+    },
   }
   const exports = {}
   vm.runInNewContext(compiled, { exports, require: (name) => { assert.ok(name in deps, name); return deps[name] }, console, Date, URL, process: { env: { NODE_ENV: 'test' } } })
   const req = { url: 'https://example.com/api/aishodan/room/token/start', json: async () => ({ consent: true }), cookies: { get: () => undefined }, headers: { get: () => null } }
   const result = await exports.POST(req, { params: Promise.resolve({ token: 'token123' }) })
-  return { status: result.status, body: await result.json(), count, usage, creates, attempts, countedWhere }
+  return { status: result.status, body: await result.json(), count, usage, ledgerLifetime, ledgerMonthly, creates, attempts, countedWhere }
 }
 
 ;(async () => {
@@ -69,6 +79,7 @@ async function exercise({ preview = false, used = 0, roomCount = 0, createFails 
   assert.equal(success.status, 200)
   assert.equal(success.count, 1)
   assert.equal(success.usage, 3)
+  assert.equal(success.ledgerLifetime, 3)
 
   const realGuest = await exercise({ authenticated: false })
   assert.equal(realGuest.status, 200)
@@ -77,6 +88,14 @@ async function exercise({ preview = false, used = 0, roomCount = 0, createFails 
   assert.equal(atLimit.status, 429)
   assert.equal(atLimit.count, 0)
   assert.equal(atLimit.creates, 0)
+
+  const deletedHistory = await exercise({ used: 0, ledgerUsed: 3 })
+  assert.equal(deletedHistory.status, 429)
+  assert.equal(deletedHistory.creates, 0)
+
+  const unavailable = await exercise({ quotaUnavailable: true })
+  assert.equal(unavailable.status, 503)
+  assert.equal(unavailable.creates, 0)
 
   const conflict = await exercise({ used: 2, conflictOnce: true })
   assert.equal(conflict.status, 429)
@@ -88,6 +107,12 @@ async function exercise({ preview = false, used = 0, roomCount = 0, createFails 
   assert.equal(failed.status, 503)
   assert.equal(failed.count, 0)
   assert.equal(failed.usage, 0)
+  assert.equal(failed.ledgerLifetime, 0)
+
+  const ledgerFailure = await exercise({ ledgerFails: true })
+  assert.equal(ledgerFailure.status, 503)
+  assert.equal(ledgerFailure.usage, 0)
+  assert.equal(ledgerFailure.ledgerLifetime, 0)
 
   const previewGuest = await exercise({ preview: true, authenticated: false })
   assert.equal(previewGuest.status, 401)
