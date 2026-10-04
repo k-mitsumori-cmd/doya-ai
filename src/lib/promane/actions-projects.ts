@@ -202,13 +202,17 @@ export async function updateProject(workspaceSlug: string, projectId: string, da
 export async function deleteProject(workspaceSlug: string, projectId: string) {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
-  // セキュリティ: workspace所属確認 (IDOR防止)
-  const existing = await prisma.promaneProject.findFirst({
-    where: { id: projectId, workspaceId: workspace.id },
-    select: { id: true },
-  });
-  if (!existing) throw new Error("プロジェクトが見つかりません");
-  await prisma.promaneProject.delete({ where: { id: projectId } });
+  await retryProjectTransaction(() => prisma.$transaction(async (tx) => {
+    const member = await tx.promaneMember.findFirst({
+      where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin', 'member'] } },
+      select: { id: true },
+    });
+    if (!member) throw new Error('ワークスペースの変更権限がありません');
+    const deleted = await tx.promaneProject.deleteMany({
+      where: { id: projectId, workspaceId: workspace.id },
+    });
+    if (deleted.count !== 1) throw new Error('プロジェクトが見つかりません');
+  }, { isolationLevel: 'Serializable' }));
   revalidatePath(`/promane/${workspaceSlug}/projects`);
   revalidatePath(`/promane/${workspaceSlug}`);
 }

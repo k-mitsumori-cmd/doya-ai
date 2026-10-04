@@ -900,6 +900,11 @@ if (adminKintaiOrgPages.error || adminKintaiOrgPages.status !== 0) {
   console.error('Security regression failed: verify-admin-kintai-organization-pages.cjs');
   process.exit(1);
 }
+const promaneProjectDeleteAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-project-delete-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (promaneProjectDeleteAtomic.error || promaneProjectDeleteAtomic.status !== 0) {
+  console.error('Security regression failed: verify-promane-project-delete-atomic.cjs');
+  process.exit(1);
+}
 const adminKintaiEmployeePages = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-kintai-employee-pages.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adminKintaiEmployeePages.error || adminKintaiEmployeePages.status !== 0) {
   console.error('Security regression failed: verify-admin-kintai-employee-pages.cjs');
