@@ -15,6 +15,7 @@ import { runAndPersistScan } from '@/lib/aio/run'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { decodeAioScanCursor, encodeAioScanCursor } from '@/lib/aio/scan-cursor'
 import { scanCoverageCounts } from '@/lib/aio/coverage'
+import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 
 // ⚠️ 上限の正本は lib/aio/types.ts。ここに数字を書かない
 //    （サイドバーの表示も同じ定義を読む）
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
     if (result.code === 'PROMPT_LIMIT') return NextResponse.json({ error: result.error, code: result.code }, { status: 400 })
     if (result.code === 'LIMIT') {
       const canManageBilling = ctx.role === 'owner'
-      return NextResponse.json({ error: result.error, code: 'LIMIT', canManageBilling, ...(canManageBilling && result.upgradeAvailable ? { upgradeUrl: '/aio/pricing' } : {}) }, { status: 402 })
+      return NextResponse.json({ error: result.error, code: 'LIMIT', canManageBilling, ...(canManageBilling ? result.upgradeAvailable ? { upgradeUrl: '/aio/pricing' } : { contactUrl: HIGH_USAGE_CONTACT_URL } : {}) }, { status: 402 })
     }
     if (result.code === 'BILLING_OWNER') {
       return NextResponse.json({ error: result.error, code: result.code }, { status: 409 })

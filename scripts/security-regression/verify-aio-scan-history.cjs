@@ -33,6 +33,7 @@ const route = load('src/app/api/aio/scans/route.ts', {
   '@/lib/aio/access': { getAioContext: async slug => ({ organizationId: slug === 'other' ? 'org-other' : 'org-main' }), orgSlugFrom: req => req.nextUrl.searchParams.get('org') },
   '@/lib/aio/types': { effectiveScanStatus: status => status },
   '@/lib/aio/run': {}, '@/lib/service-usage': {}, '@/lib/aio/scan-cursor': cursors, '@/lib/aio/coverage': coverage,
+  '@/lib/pricing': { HIGH_USAGE_CONTACT_URL: 'https://example.com/contact' },
 })
 const get = (org = 'main', cursor) => {
   const url = new URL(`https://local.test/api/aio/scans?org=${org}`)

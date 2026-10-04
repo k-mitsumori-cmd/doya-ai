@@ -33,6 +33,9 @@ export class AioApiError extends Error {
     message: string,
     public readonly status: number,
     public readonly code: string | null,
+    public readonly canManageBilling: boolean | null = null,
+    public readonly upgradeUrl: string | null = null,
+    public readonly contactUrl: string | null = null,
   ) {
     super(message)
     this.name = 'AioApiError'
@@ -60,6 +63,9 @@ export async function aioSend<T = any>(
     typeof (data as any)?.error === 'string' ? (data as any).error : `操作に失敗しました (${res.status})`,
     res.status,
     typeof (data as any)?.code === 'string' ? (data as any).code : null,
+    typeof (data as any)?.canManageBilling === 'boolean' ? (data as any).canManageBilling : null,
+    typeof (data as any)?.upgradeUrl === 'string' ? (data as any).upgradeUrl : null,
+    typeof (data as any)?.contactUrl === 'string' ? (data as any).contactUrl : null,
   )
   return data as T
 }

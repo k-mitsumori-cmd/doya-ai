@@ -46,6 +46,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
   const [error, setError] = useState<string | null>(null)
   const [errorSource, setErrorSource] = useState<'load' | 'scan'>('load')
   const [scanLimit, setScanLimit] = useState<string | null>(null)
+  const [scanLimitAction, setScanLimitAction] = useState<'owner' | 'upgrade' | 'contact' | null>(null)
   const [brandName, setBrandName] = useState<string | null>(null)
   const [activePrompts, setActivePrompts] = useState<number | null>(null)
   const [promptTexts, setPromptTexts] = useState<string[]>([])
@@ -102,6 +103,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
     setRunning(true)
     setError(null)
     setScanLimit(null)
+    setScanLimitAction(null)
     toast.loading('スキャン中…（数分かかります）', { id: 'scan' })
     try {
       const result = await aioSend<{ summary?: { coverage?: ScanCoverageCounts } }>('/api/aio/scans', orgSlug, 'POST')
@@ -114,6 +116,10 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
       toast.error(msg, { id: 'scan' })
       if (e instanceof AioApiError && e.code === 'LIMIT') {
         setScanLimit(msg)
+        setScanLimitAction(e.canManageBilling === false ? 'owner'
+          : e.upgradeUrl === '/aio/pricing' ? 'upgrade'
+          : e.contactUrl === HIGH_USAGE_CONTACT_URL ? 'contact'
+          : isOwner ? isPaid ? 'contact' : 'upgrade' : 'owner')
       } else {
         setErrorSource('scan')
         setError(msg)
@@ -194,17 +200,17 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
     <div role="alert" className="mb-5 rounded-2xl border border-purple-200 bg-purple-50 px-5 py-4">
       <p className="text-sm font-black text-purple-900">スキャンの利用枠に達しました</p>
       <p className="mt-1 text-xs font-bold text-purple-800">{scanLimit}</p>
-      {!isOwner && <p className="mt-2 text-xs font-bold text-purple-700">組織の利用枠を増やすには、組織オーナーにご相談ください。</p>}
-      {!isPaid && isOwner && <TrialNote className="mt-2" />}
-      {isOwner && (isPaid ? (
+      {scanLimitAction === 'owner' && <p className="mt-2 text-xs font-bold text-purple-700">組織の利用枠を増やすには、組織オーナーにご相談ください。</p>}
+      {scanLimitAction === 'upgrade' && <TrialNote className="mt-2" />}
+      {scanLimitAction === 'contact' ? (
         <a href={HIGH_USAGE_CONTACT_URL} className="mt-3 inline-flex rounded-xl bg-purple-700 px-4 py-2 text-xs font-black text-white hover:bg-purple-800">
           追加枠について相談する
         </a>
-      ) : (
+      ) : scanLimitAction === 'upgrade' ? (
         <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`} className="mt-3 inline-flex rounded-xl bg-purple-700 px-4 py-2 text-xs font-black text-white hover:bg-purple-800">
           料金プランを確認する
         </Link>
-      ))}
+      ) : null}
     </div>
   ) : null
 
