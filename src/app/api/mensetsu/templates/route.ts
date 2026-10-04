@@ -93,6 +93,9 @@ export async function POST(req: NextRequest) {
   const focus = String(body?.focus || '').trim() || undefined
 
   if (!jobTitle) return NextResponse.json({ error: '職種を入力してください' }, { status: 400 })
+  if (jobTitle.length > 200 || (focus && focus.length > 1000)) {
+    return NextResponse.json({ error: '職種または特に見たい点の入力が長すぎます。内容を短くして再試行してください。' }, { status: 400 })
+  }
 
   // 他組織のプロフィールを参照させない（二重条件）
   const profile = profileId

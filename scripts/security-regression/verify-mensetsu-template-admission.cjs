@@ -61,8 +61,8 @@ const route = load('src/app/api/mensetsu/templates/route.ts', {
     return { template: { intro: 'Hi', closing: 'Bye', criteria: [{ key: 'skill', name: 'Skill', weight: 1, rubric: {} }], questions: [{ text: 'Question', targetMin: 2, criterionKeys: ['skill'] }] }, removed: [] }
   } },
 })
-const post = () => route.POST(new Request('http://offline.invalid/api/mensetsu/templates', {
-  method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jobTitle: '営業' }),
+const post = (body = { jobTitle: '営業' }) => route.POST(new Request('http://offline.invalid/api/mensetsu/templates', {
+  method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
 }))
 
 ;(async () => {
@@ -100,5 +100,13 @@ const post = () => route.POST(new Request('http://offline.invalid/api/mensetsu/t
     assert.equal(templates.length, 0)
     failSave = false
     assert.equal((await post()).status, 200)
+  })
+  await check('oversized template inputs do not reach the provider', async () => {
+    templates.length = 0
+    const before = generateCalls
+    assert.equal((await post({ jobTitle: '営'.repeat(201) })).status, 400)
+    assert.equal((await post({ jobTitle: '営業', focus: '重'.repeat(1001) })).status, 400)
+    assert.equal(generateCalls, before)
+    assert.equal(templates.length, 0)
   })
 })().catch((error) => { console.error(error); process.exitCode = 1 })

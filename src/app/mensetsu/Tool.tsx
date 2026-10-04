@@ -600,6 +600,7 @@ export default function MensetsuTool() {
                 <input
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
+                  maxLength={200}
                   placeholder="職種（例: フィールドセールス）"
                   className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
                 />
@@ -620,6 +621,7 @@ export default function MensetsuTool() {
                 <input
                   value={focus}
                   onChange={(e) => setFocus(e.target.value)}
+                  maxLength={1000}
                   placeholder="特に見たい点（任意）"
                   className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
                 />
