@@ -55,8 +55,8 @@ export interface AdImageIdentity {
 }
 
 function isPaid(plan?: string | null) {
-  const p = (plan || 'FREE').toUpperCase()
-  return p !== 'FREE' && p !== 'GUEST'
+  const p = (plan || '').trim().toUpperCase()
+  return ['LIGHT', 'PRO', 'ENTERPRISE', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS', 'PREMIUM'].includes(p)
 }
 
 export async function getIdentity(req: NextRequest): Promise<AdImageIdentity> {

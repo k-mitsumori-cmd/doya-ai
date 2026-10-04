@@ -71,10 +71,10 @@ export function setGuestCookie(res: NextResponse, guestId: string): void {
  * プランコードの正規化
  */
 export function normalizePlan(raw: any): InterviewPlanCode {
-  const s = String(raw || '').toUpperCase().trim()
-  if (s.includes('ENTERPRISE')) return 'ENTERPRISE'
-  if (['PRO', 'BASIC', 'STARTER', 'BUSINESS', 'BUNDLE'].some((tier) => s.includes(tier))) return 'PRO'
-  if (s.includes('LIGHT')) return 'LIGHT'
+  const s = String(raw || '').toUpperCase().trim().replace(/-/g, '_')
+  if (['ENTERPRISE', 'ENTERPRISE_MONTHLY', 'INTERVIEW_ENTERPRISE'].includes(s)) return 'ENTERPRISE'
+  if (['PRO', 'PRO_MONTHLY', 'INTERVIEW_PRO', 'BASIC', 'STARTER', 'BUSINESS', 'BUNDLE', 'PREMIUM'].includes(s)) return 'PRO'
+  if (['LIGHT', 'LIGHT_MONTHLY', 'INTERVIEW_LIGHT'].includes(s)) return 'LIGHT'
   if (s === 'GUEST') return 'GUEST'
   return 'FREE'
 }

@@ -16,6 +16,8 @@ const { normalizePlan } = load('src/lib/interview/access.ts', {
 assert.equal(normalizePlan('BUNDLE'), 'PRO');
 assert.equal(normalizePlan('LIGHT'), 'LIGHT');
 assert.equal(normalizePlan('ENTERPRISE'), 'ENTERPRISE');
+assert.equal(normalizePlan('INTERVIEW_PRO'), 'PRO');
+for (const invalid of ['NOT_PRO', 'APPROVED', 'NOT_ENTERPRISE', 'LIGHTWEIGHT']) assert.equal(normalizePlan(invalid), 'FREE', invalid);
 const { interviewArticleDailyLimit } = load('src/lib/interview/article-budget.ts', {
   'node:crypto': { createHash: () => ({ update: () => ({ digest: () => 'hash' }) }), randomUUID: () => 'uuid' },
   '@/lib/prisma': { prisma: {} },

@@ -10,6 +10,11 @@ if (personaUsagePlanLabel.error || personaUsagePlanLabel.status !== 0) {
   console.error('Security regression failed: verify-persona-usage-plan-label.cjs');
   process.exit(1);
 }
+const adimagePlanAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-adimage-plan-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (adimagePlanAdmission.error || adimagePlanAdmission.status !== 0) {
+  console.error('Security regression failed: verify-adimage-plan-admission.cjs');
+  process.exit(1);
+}
 const planChange = spawnSync(process.execPath, [path.join(__dirname, 'verify-plan-change.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (planChange.error || planChange.status !== 0) {
   console.error('Security regression failed: verify-plan-change.cjs');
