@@ -37,6 +37,18 @@ function getRequestSummary(r: any): string {
     }
     if (d.startDate) return `${d.startDate}（終了日を確認してください）`
   }
+  if (r.type === 'overtime' && r.details) {
+    const d = r.details as any
+    if (typeof d.date === 'string' && (Number.isInteger(d.hours) || Number.isInteger(d.minutes))) {
+      return `${d.date} 残業予定 ${Number.isInteger(d.hours) ? d.hours : 0}時間${Number.isInteger(d.minutes) ? d.minutes : 0}分`
+    }
+  }
+  if (r.type === 'holiday_work' && r.details) {
+    const d = r.details as any
+    if (typeof d.date === 'string' && typeof d.startTime === 'string' && typeof d.endTime === 'string') {
+      return `${d.date} 休日出勤予定 ${d.startTime}〜${d.endTime}`
+    }
+  }
   return ''
 }
 

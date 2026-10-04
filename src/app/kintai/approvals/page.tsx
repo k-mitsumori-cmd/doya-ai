@@ -168,7 +168,14 @@ export default function ApprovalsPage() {
       return { summary: `${d.startDate || ''} 〜 ${d.endDate || ''} ${leaveLabel[d.leaveType] || '休暇'}`, isDetailed: true }
     }
     if (r.type === 'overtime' && d) {
-      return { summary: `${d.date || ''} ${d.hours || ''}時間 残業申請`, isDetailed: true }
+      if (typeof d.date === 'string' && (Number.isInteger(d.hours) || Number.isInteger(d.minutes))) {
+        return { summary: `${d.date} 残業予定 ${Number.isInteger(d.hours) ? d.hours : 0}時間${Number.isInteger(d.minutes) ? d.minutes : 0}分`, isDetailed: true }
+      }
+    }
+    if (r.type === 'holiday_work' && d) {
+      if (typeof d.date === 'string' && typeof d.startTime === 'string' && typeof d.endTime === 'string') {
+        return { summary: `${d.date} 休日出勤予定 ${d.startTime}〜${d.endTime}`, isDetailed: true }
+      }
     }
     return { summary: r.reason || '-', isDetailed: false }
   }
