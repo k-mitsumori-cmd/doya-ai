@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const adbannerCopyPlanCta = spawnSync(process.execPath, [path.join(__dirname, 'verify-adbanner-copy-plan-cta.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (adbannerCopyPlanCta.error || adbannerCopyPlanCta.status !== 0) {
+  console.error('Security regression failed: verify-adbanner-copy-plan-cta.cjs');
+  process.exit(1);
+}
 const planChange = spawnSync(process.execPath, [path.join(__dirname, 'verify-plan-change.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (planChange.error || planChange.status !== 0) {
   console.error('Security regression failed: verify-plan-change.cjs');

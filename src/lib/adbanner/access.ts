@@ -20,8 +20,7 @@ export interface AdIdentity {
 }
 
 function isPaid(plan?: string | null) {
-  const p = (plan || 'FREE').toUpperCase()
-  return p !== 'FREE' && p !== 'GUEST'
+  return ['LIGHT', 'PRO', 'ENTERPRISE', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS'].includes((plan || '').toUpperCase())
 }
 
 /** リクエストから利用者の識別とプランを解決 */

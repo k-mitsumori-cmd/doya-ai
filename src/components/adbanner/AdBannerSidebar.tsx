@@ -14,6 +14,7 @@ import {
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { tierFrom } from '@/lib/plan-utils'
 
 const NAV: NavItem[] = [
   { href: '/adbanner/dashboard', label: 'キャンペーン一覧', icon: LayoutDashboard },
@@ -32,13 +33,8 @@ function AdBannerSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
   const [logoutOpen, setLogoutOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
 
-  const planLabel = (() => {
-    if (!isLoggedIn) return 'GUEST'
-    const p = String((session?.user as any)?.plan || 'FREE').toUpperCase()
-    if (p === 'ENTERPRISE') return 'ENTERPRISE'
-    if (['PRO', 'BASIC', 'STARTER', 'BUSINESS', 'BUNDLE'].includes(p)) return 'PRO'
-    return 'FREE'
-  })()
+  const planLabel = isLoggedIn ? tierFrom((session?.user as { plan?: string })?.plan || 'FREE') : 'GUEST'
+  const isPro = planLabel === 'PRO' || planLabel === 'ENTERPRISE'
   const isActive = (href: string) => {
     if (href === '/adbanner/dashboard') return pathname === '/adbanner/dashboard'
     return pathname === href || pathname.startsWith(href + '/')
@@ -66,8 +62,8 @@ function AdBannerSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
                 <div className="w-8 h-8 rounded-lg bg-white grid place-items-center shadow-md"><Zap className="w-4 h-4 text-orange-500 fill-orange-500" /></div>
                 <p className="text-xs font-black text-white">現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
               </div>
-              <p className="text-[10px] text-purple-100 font-bold opacity-90 mb-2">PRO ¥9,980/月<TrialInlineSuffix />で 1日60枚・全サイズ・改善</p>
-              <Link href="/adbanner/pricing" className="block w-full py-2 bg-white text-orange-600 text-[11px] font-black rounded-lg text-center hover:bg-orange-50 transition-colors shadow-md">プロにアップグレード</Link>
+              <p className="text-[10px] text-purple-100 font-bold opacity-90 mb-2">{isPro ? 'ご利用中のプランの内容をご確認いただけます。' : planLabel === 'LIGHT' ? 'このサービスはライトプランで1日60枚まで利用できます。' : <>PRO ¥9,980/月<TrialInlineSuffix />で 1日60枚・全サイズ・改善</>}</p>
+              <Link href="/adbanner/pricing" className="block w-full py-2 bg-white text-orange-600 text-[11px] font-black rounded-lg text-center hover:bg-orange-50 transition-colors shadow-md">{isPro ? 'プランを確認する' : planLabel === 'LIGHT' ? '全サービスのプランを確認する' : 'プロにアップグレード'}</Link>
             </div>
           )}
         </div>

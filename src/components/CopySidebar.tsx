@@ -21,6 +21,7 @@ import {
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { higherPlan } from '@/lib/plan-utils'
 
 const COPY_NAV: NavItem[] = [
   { href: '/copy/new', label: '新規コピー生成', icon: PenLine, hot: true },
@@ -48,14 +49,9 @@ function CopySidebarImpl({
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const planLabel = (() => {
-    if (!isLoggedIn) return 'GUEST'
-    const p = String((session?.user as any)?.copyPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
-    if (p === 'ENTERPRISE') return 'ENTERPRISE'
-    if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return 'PRO'
-    if (p === 'LIGHT') return 'LIGHT'
-    return 'FREE'
-  })()
+  const account = session?.user as { plan?: string; copyPlan?: string } | undefined
+  const planLabel = isLoggedIn ? higherPlan(account?.copyPlan || 'FREE', account?.plan || 'FREE') : 'GUEST'
+  const isPro = planLabel === 'PRO' || planLabel === 'ENTERPRISE'
 
   const isActive = (href: string) => {
     if (href === '/copy') return pathname === '/copy'
@@ -102,13 +98,13 @@ function CopySidebarImpl({
                 現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
               </p>
               <p className="text-[10px] text-amber-100 font-bold leading-relaxed opacity-80">
-                プロプラン：¥9,980/月<TrialInlineSuffix />
+                {isPro ? 'ご利用中のプランの内容をご確認いただけます。' : <>プロプラン：¥9,980/月<TrialInlineSuffix /></>}
               </p>
               <Link
                 href="/copy/pricing"
                 className="mt-3 w-full py-2 bg-white text-amber-600 text-[11px] font-black rounded-lg hover:bg-amber-50 transition-colors shadow-md block text-center"
               >
-                プロにアップグレード
+                {isPro ? 'プランを確認する' : 'プロにアップグレード'}
               </Link>
             </div>
             <Link
@@ -120,11 +116,11 @@ function CopySidebarImpl({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] text-white font-bold leading-snug truncate">
-                  {planLabel === 'GUEST' ? 'ゲスト' : planLabel} → プロ
+                  {isPro ? `現在：${planLabel}` : `${planLabel === 'GUEST' ? 'ゲスト' : planLabel} → プロ`}
                 </p>
               </div>
               <span className="flex-shrink-0 px-3 py-1.5 bg-white text-amber-600 text-[10px] font-black rounded-lg hover:bg-amber-50 transition-colors shadow-md whitespace-nowrap">
-                UP
+                {isPro ? 'プラン確認' : 'UP'}
               </span>
             </Link>
           </div>
