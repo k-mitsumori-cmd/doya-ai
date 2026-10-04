@@ -121,6 +121,10 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
   const seen = new Set<string>()
   const criteria = (raw.criteria || [])
     .filter((c) => c && c.key && c.name && hasCompleteRubric(c.rubric))
+    .filter((c) => findViolations([
+      String(c.name), String(c.description || ''),
+      ...RUBRIC_LEVELS.map((level) => c.rubric[level]),
+    ]).length === 0)
     .slice(0, 7)
     .map((c, i) => {
       let key = String(c.key).replace(/[^a-zA-Z0-9_]/g, '') || `c${i + 1}`
@@ -147,21 +151,21 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
   }
   const questions = selected.map((q, questionIndex) => ({
     text: String(q.text),
-    followUpHint: String(q.followUpHint || ''),
+    followUpHint: findViolations([String(q.followUpHint || '')]).length === 0 ? String(q.followUpHint || '') : '',
     targetMin: Number.isFinite(q.targetMin) ? Math.max(1, Math.min(10, Number(q.targetMin))) : 3,
     // 実在しない軸を指していたら空にする（採点時の参照切れを防ぐ）
     criterionKeys: (q.criterionKeys || []).filter((k) => validKeys.has(k)),
     // 分岐。枝の質問も就職差別チェックの対象にする（幹だけ見ても意味がない）
     branches: (q.branches || [])
       .filter((b: any) => b && b.label && b.matchHint)
+      .filter((b: any) => findViolations([String(b.label), String(b.matchHint), String(b.text || '')]).length === 0)
       .slice(0, 4)
       .map((b: any) => ({
         label: String(b.label),
         matchHint: String(b.matchHint),
         text: b.text ? String(b.text) : undefined,
         skipTo: remapSkipTo(b.skipTo, questionIndex),
-      }))
-      .filter((b: any) => findViolations([b.text || '']).length === 0),
+      })),
   }))
 
   // --- 時間予算の安全網 ---
@@ -187,8 +191,10 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
     template: {
       criteria,
       questions,
-      intro: String(raw.intro || ''),
-      closing: String(raw.closing || ''),
+      intro: findViolations([String(raw.intro || '')]).length === 0
+        ? String(raw.intro || '') : 'AIが面接を行い、内容を記録します。よろしくお願いいたします。',
+      closing: findViolations([String(raw.closing || '')]).length === 0
+        ? String(raw.closing || '') : '本日はありがとうございました。結果は採用ご担当者からご案内します。',
     },
     removed,
   }

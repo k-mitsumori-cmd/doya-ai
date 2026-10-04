@@ -161,4 +161,32 @@ const post = (body = { jobTitle: '営業' }) => route.POST(new Request('http://o
     assert.equal(safe.template.questions.length, 3)
     assert.equal(safe.template.questions[0].branches[0].skipTo, 3)
   })
+  await check('protected topics cannot survive in scoring or live interview guidance', async () => {
+    const guardrails = load('src/lib/mensetsu/guardrails.ts')
+    assert.equal(guardrails.findViolations(['年齢層の異なる顧客への提案経験']).length, 0)
+    const rubric = { '1': '不足', '2': '初歩', '3': '標準', '4': '良好', '5': '卓越' }
+    const generated = {
+      criteria: [
+        { key: 'skill', name: '協働力', description: 'チームとの協働', rubric, weight: 1 },
+        { key: 'family', name: '家族構成', description: '家庭環境', rubric, weight: 1 },
+      ],
+      questions: [{ text: 'チームで働いた経験を教えてください', followUpHint: '家族構成を確認する', targetMin: 2, criterionKeys: ['skill', 'family'], branches: [
+        { label: '不適切', matchHint: '宗教を聞く', text: '経歴を教えてください' },
+        { label: '適切', matchHint: '具体的な経験', text: '役割を教えてください' },
+      ] }],
+      intro: '年齢を確認します', closing: '本日はありがとうございました',
+    }
+    const generator = load('src/lib/mensetsu/template.ts', {
+      '@seo/lib/gemini': { GEMINI_TEXT_MODEL_DEFAULT: 'test', geminiGenerateJson: async () => generated },
+      './guardrails': guardrails,
+      './types': { LEVEL_LABELS: { mid: '中途' } },
+    })
+    const { template } = await generator.generateTemplate({ profile: {}, jobTitle: '営業', level: 'mid', durationMin: 10 })
+    assert.equal(template.criteria.length, 1)
+    assert.equal(template.criteria[0].key, 'skill')
+    assert.equal(template.questions[0].criterionKeys.length, 1)
+    assert.equal(template.questions[0].followUpHint, '')
+    assert.equal(template.questions[0].branches.length, 1)
+    assert.match(template.intro, /AIが面接/)
+  })
 })().catch((error) => { console.error(error); process.exitCode = 1 })
