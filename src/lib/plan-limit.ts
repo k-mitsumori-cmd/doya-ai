@@ -132,8 +132,10 @@ export async function assertFreeLimit(
   if (tier !== 'FREE') {
     const table = tier === 'ENTERPRISE' ? ENTERPRISE_MONTHLY_LIMITS : PRO_MONTHLY_LIMITS
     const monthly = table[key]
-    // 上限を置いていない種類、または月次を数える手段が渡されていない場合は通す
-    if (monthly == null || !countSince) return { ok: true }
+    // 登録件数など上限を置かない種類だけ通す。月次集計の渡し忘れは
+    // 実費が発生する有料枠を無制限にしてしまうため、必ず失敗させる。
+    if (monthly == null) return { ok: true }
+    if (!countSince) throw new Error(`Monthly usage counter is required for ${key}`)
 
     const used = await countSince(jstStartOfMonthUtc())
     if (used < monthly) return { ok: true, used, limit: monthly }

@@ -58,6 +58,13 @@ async function main() {
   const paidOwner = await limit.assertFreeLimit('quoteDocuments', async () => 3, 'owner', async () => 5)
   assert.equal(paidOwner.ok, true)
   assert.equal(paidOwner.limit, 100)
+  await assert.rejects(
+    limit.assertFreeLimit('quoteDocuments', async () => 3, 'owner'),
+    /Monthly usage counter is required for quoteDocuments/,
+    'a finite paid quota must not become unlimited when its monthly counter is missing'
+  )
+  const unmeteredPaid = await limit.assertFreeLimit('aishodanProducts', async () => 3, 'owner')
+  assert.equal(unmeteredPaid.ok, true, 'unmetered registration remains available to paid owners')
 
   for (const [file, service, key] of [
     ['src/app/api/quote/documents/route.ts', 'quote', 'quoteDocuments'],
