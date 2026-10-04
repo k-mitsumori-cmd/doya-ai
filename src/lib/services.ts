@@ -1519,7 +1519,7 @@ export const SERVICES: Service[] = [
       '見積書の作成に毎回半日かけているのをやめたい',
     ],
     pricing: {
-      free: { name: '無料プラン', limit: '見積書3件まで', dailyLimit: -1, price: 0 },
+      free: { name: '無料プラン', limit: '商材1件 / 見積書3件まで', dailyLimit: -1, price: 0 },
       pro: { name: 'プロプラン', limit: '見積書 月100件 / PDF出力 / チーム共有', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
     status: 'active',

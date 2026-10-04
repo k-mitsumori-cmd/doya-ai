@@ -34,7 +34,12 @@ const common = {
     orgSlugFrom: () => 'own-org',
   },
 }
-const productRoute = load('src/app/api/quote/products/route.ts', common)
+const productRoute = load('src/app/api/quote/products/route.ts', {
+  ...common,
+  '@/lib/plan-limit': {},
+  '@/lib/organization-quota-ledger': {},
+  '@/lib/unified-plan': {},
+})
 const documentRoute = load('src/app/api/quote/documents/route.ts', {
   ...common,
   '@/lib/quote/document': {},

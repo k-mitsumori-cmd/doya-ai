@@ -26,6 +26,8 @@ import { isPaidPlan } from '@/lib/unified-plan'
 export const FREE_LIMITS = {
   /** 見積書の作成件数（累計） */
   quoteDocuments: 3,
+  /** 見積もり商材の登録件数（累計） */
+  quoteProducts: 1,
   /** 商材の登録件数（累計） */
   aishodanProducts: 1,
   /** 商談の実施件数（累計） */
@@ -48,6 +50,7 @@ export const PRO_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   aishodanSessions: 30,
   // テキストのみで軽い
   quoteDocuments: 100,
+  quoteProducts: null,
   // 置き場所を作るだけで実費が出ない
   aishodanProducts: null,
   mensetsuTemplates: null,
@@ -58,6 +61,7 @@ export const ENTERPRISE_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   mensetsuSessions: 200,
   aishodanSessions: 200,
   quoteDocuments: 500,
+  quoteProducts: null,
   aishodanProducts: null,
   mensetsuTemplates: null,
 }

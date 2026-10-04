@@ -283,6 +283,9 @@ export default function QuoteTool() {
       responseReceived = true
       responseOk = r.ok
       const d = await r.json().catch(() => null)
+      if (r.status === 402 && d?.code === 'LIMIT_REACHED' && d?.upgradeUrl === '/quote/pricing') {
+        setQuotaAction({ url: '/quote/pricing', label: 'プロプランの料金と30日間無料の対象条件を確認する' })
+      }
       if (!r.ok) throw new Error(d?.error || '商材を登録できませんでした')
       if (typeof d?.product?.id !== 'string') throw new Error('登録結果を確認できませんでした。商材一覧を再読み込みして確認してください')
       setDraftProfile(null)
