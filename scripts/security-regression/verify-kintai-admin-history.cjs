@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
+const shift = load('src/lib/kintai/shift-records.ts')
 
 let role = 'hr_admin'
 let reads = 0
@@ -32,6 +33,7 @@ const ranks = { employee: 0, manager: 1, hr_admin: 2 }
 const route = load('src/app/api/kintai/attendance/admin/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
+  '@/lib/kintai/shift-records': shift,
   '@/lib/kintai/access': {
     getKintaiContext: async () => ({ organizationId: 'org', employeeId: 'viewer', role }),
     hasMinRole: (actual, required) => ranks[actual] >= ranks[required],
@@ -51,7 +53,7 @@ const get = (date) => route.GET(new Request(`https://local.invalid/api/kintai/at
     assert.equal(data.employees[0].attendance.id, attendance.id)
   }
   const before = reads
-  for (const date of ['2026-02-29', '2026-13-01', '2026-09-20extra']) {
+  for (const date of ['', '2026-02-29', '2026-13-01', '2026-09-20extra']) {
     assert.equal((await get(date)).status, 400)
   }
   assert.equal(reads, before, 'invalid dates must not query employee records')

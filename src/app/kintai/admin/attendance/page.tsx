@@ -57,18 +57,23 @@ export default function AdminAttendancePage() {
     return () => controller.abort()
   }, [date, retryCount])
 
-  const prevDay = () => { const d = new Date(date); d.setDate(d.getDate() - 1); setDate(d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })) }
-  const nextDay = () => { const d = new Date(date); d.setDate(d.getDate() + 1); setDate(d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })) }
+  const shiftDay = (offset: number) => {
+    const d = new Date(`${date}T00:00:00Z`)
+    d.setUTCDate(d.getUTCDate() + offset)
+    setDate(d.toISOString().slice(0, 10))
+  }
+  const prevDay = () => shiftDay(-1)
+  const nextDay = () => shiftDay(1)
   const goToday = () => setDate(new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }))
 
   const isToday = date === new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
 
   const filtered = deptFilter ? employees.filter(e => e.departmentId === deptFilter) : employees
 
-  const dateObj = new Date(date + 'T00:00:00+09:00')
+  const dateObj = new Date(date + 'T00:00:00Z')
   const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
-  const dayOfWeek = dateObj.getDay()
-  const dateLabel = `${dateObj.getFullYear()}年${dateObj.getMonth() + 1}月${dateObj.getDate()}日（${WEEKDAYS[dayOfWeek]}）`
+  const dayOfWeek = dateObj.getUTCDay()
+  const dateLabel = `${dateObj.getUTCFullYear()}年${dateObj.getUTCMonth() + 1}月${dateObj.getUTCDate()}日（${WEEKDAYS[dayOfWeek]}）`
 
   const stats = useMemo(() => {
     const working = filtered.filter(e => e.attendance?.clockIn && !e.attendance?.clockOut).length
@@ -221,6 +226,9 @@ export default function AdminAttendancePage() {
                       const att = emp.attendance
                       const statusInfo = getStatusInfo(att)
                       const hasOvertime = att?.overtimeMinutes > 0
+                      const clockInJstDate = att?.clockIn
+                        ? new Date(att.clockIn).toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
+                        : null
 
                       return (
                         <tr key={emp.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : ''} ${hasOvertime ? 'border-l-[3px] border-l-orange-400' : ''}`}>
@@ -238,7 +246,10 @@ export default function AdminAttendancePage() {
                           <td className="px-4 py-3 text-slate-600">{emp.departmentName || <span className="text-slate-300">-</span>}</td>
                           <td className="px-4 py-3 text-center">
                             {att?.clockIn ? (
-                              <span className="font-medium text-slate-700">{new Date(att.clockIn).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}</span>
+                              <span className="font-medium text-slate-700">
+                                {clockInJstDate && clockInJstDate < date && <span className="mr-1 text-[10px] text-slate-500">前日</span>}
+                                {new Date(att.clockIn).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}
+                              </span>
                             ) : (
                               <span className="text-slate-300">-</span>
                             )}

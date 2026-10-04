@@ -5,6 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
+import { openShiftStart } from '@/lib/kintai/shift-records'
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,7 +15,8 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const dateParam = searchParams.get('date') || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
+    const requestedDate = searchParams.get('date')
+    const dateParam = requestedDate === null ? new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }) : requestedDate
 
     // @db.Date フィールドはUTC midnightで保存されるためUTC基準でクエリ
     if (!/^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/.test(dateParam)) {
@@ -60,18 +62,18 @@ export async function GET(req: NextRequest) {
 
     const attMap = new Map(attendances.map(a => [a.employeeId, a]))
 
-    // 出勤中（退勤前）の従業員をclock recordsから検出
-    const todayClockRecords = await prisma.kintaiClockRecord.findMany({
+    // 前日から継続する勤務も管理者の出勤状況に含める。
+    const relevantClockRecords = await prisma.kintaiClockRecord.findMany({
       where: {
         employeeId: { in: allEmployees.map(e => e.id) },
-        timestamp: { gte: clockDayStart, lt: clockDayEnd },
+        timestamp: { gte: new Date(clockDayStart.getTime() - 86400000), lt: clockDayEnd },
       },
       orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
     })
 
     // 従業員ごとにclock recordsをグループ化
-    const clockMap = new Map<string, typeof todayClockRecords>()
-    todayClockRecords.forEach(r => {
+    const clockMap = new Map<string, typeof relevantClockRecords>()
+    relevantClockRecords.forEach(r => {
       const arr = clockMap.get(r.employeeId) || []
       arr.push(r)
       clockMap.set(r.employeeId, arr)
@@ -81,24 +83,23 @@ export async function GET(req: NextRequest) {
       const att = attMap.get(emp.id) || null
       const records = clockMap.get(emp.id) || []
 
-      // attendanceレコードがなくてもclock_inがあれば出勤中として返す
-      if (!att && records.length > 0) {
-        const clockIn = records.find(r => r.type === 'clock_in')
-        const lastRecord = records[records.length - 1]
-        const isWorking = lastRecord.type !== 'clock_out'
-        if (clockIn && isWorking) {
+      // 日次実績が未作成でも、前日から続く未退勤シフトは出勤中として返す。
+      if (!att || att.clockOut) {
+        const clockIn = openShiftStart(records)
+        if (clockIn) {
           return {
             id: emp.id,
             name: emp.name,
             departmentId: emp.departmentId,
             departmentName: emp.department?.name || null,
             attendance: {
+              ...att,
               clockIn: clockIn.timestamp,
               clockOut: null,
-              workMinutes: 0,
-              overtimeMinutes: 0,
-              breakMinutes: 0,
-              lateMinutes: 0,
+              workMinutes: att?.workMinutes || 0,
+              overtimeMinutes: att?.overtimeMinutes || 0,
+              breakMinutes: att?.breakMinutes || 0,
+              lateMinutes: att?.lateMinutes || 0,
               status: 'working',
             },
           }
