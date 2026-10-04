@@ -97,6 +97,19 @@ async function webhook(){
   const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
   assert.equal(response.status,200);assert.equal(f.f.state.user.plan,'LIGHT');assert.equal(f.writes,1);
  });
+ await check('lower-tier update cannot replace another current higher-tier subscription',async()=>{
+  let f=routeFixture();f.sub.metadata.planId='banner-light';f.sub.items.data[0].price.id='price_banner_light_monthly';
+  const higher={...structuredClone(f.sub),id:'sub-higher',metadata:{userId:'u1',planId:'banner-pro'},items:{data:[{price:{id:'price_banner_pro_monthly'}}]}};
+  f.mocks['@/lib/stripe'].findActiveLikeSubscriptions=async()=>[
+   {id:f.sub.id,status:'active',customerId:'cus1',planId:'banner-light'},
+   {id:higher.id,status:'active',customerId:'cus1',planId:'banner-pro'},
+  ];
+  f.mocks['@/lib/stripe'].stripe.subscriptions.retrieve=async id=>id===higher.id?higher:f.sub;
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt-lower',type:'customer.subscription.updated',data:{object:f.sub}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,200);assert.equal(f.f.state.user.plan,'PRO');assert.equal(f.f.state.user.stripeSubscriptionId,'sub-higher');
+ });
  for(const type of ['customer.subscription.created','customer.subscription.updated'])await check(type+' cannot restore canceled access from delayed active snapshot',async()=>{
   let f=routeFixture();await f.f.sync({userId:'u1',plan:'PRO',stripeSubscriptionId:'sub1'});
   const stale=structuredClone(f.sub);f.sub.status='canceled';
@@ -145,7 +158,7 @@ async function webhook(){
   let f=routeFixture();f.sub.metadata={planId:'banner-pro'};let lookups=0;
   const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
    '@/lib/prisma':{prisma:{user:{findFirst:async()=>++lookups===1?null:f.f.state.user}},withRetry:fn=>fn()},
-   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt-legacy',type:'customer.subscription.updated',data:{object:f.sub}})}};
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],isDoyaSubscriptionOwnedByUser:async()=>true,constructWebhookEvent:()=>({id:'evt-legacy',type:'customer.subscription.updated',data:{object:f.sub}})}};
   const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
   assert.equal(response.status,200);assert.equal(f.writes,1);assert.equal(lookups,2);
  });

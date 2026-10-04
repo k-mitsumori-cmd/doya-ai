@@ -8,6 +8,7 @@ import {
   getPlanIdFromStripePriceId,
   isDoyaPlanId,
   isDoyaSubscription,
+  isDoyaSubscriptionOwnedByUser,
   planTierFromPlanId,
   findActiveLikeSubscriptions,
 } from '@/lib/stripe'
@@ -306,7 +307,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     await handleSubscriptionDeleted(live)
     return
   }
-  await updateUserSubscription(user.id, live)
+  if (ACTIVE_LIKE_STATUSES.has(String(live.status))) await updateBestLiveSubscription(user, live)
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<EventNotification | null> {
@@ -329,11 +330,30 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
     return handleSubscriptionDeleted(live)
   }
 
-  await updateUserSubscription(user.id, live)
+  if (ACTIVE_LIKE_STATUSES.has(String(live.status))) await updateBestLiveSubscription(user, live)
   return null
 }
 
 const TIER_RANK: Record<string, number> = { FREE: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
+
+/** A later lower-tier event must not overwrite another live, higher-tier contract. */
+async function updateBestLiveSubscription(user: WebhookUser, live: Stripe.Subscription) {
+  const customerId = typeof live.customer === 'string' ? live.customer : live.customer?.id
+  const candidates = (await findActiveLikeSubscriptions({
+    userId: user.id, email: user.email, stripeCustomerId: customerId,
+  })).filter((candidate) => planTierFromPlanId(candidate.planId) !== 'FREE')
+  if (candidates.length === 0) throw new Error(`[Webhook] no active contract found for subscription ${live.id}`)
+  candidates.sort((a, b) =>
+    (TIER_RANK[planTierFromPlanId(b.planId)] ?? 0) - (TIER_RANK[planTierFromPlanId(a.planId)] ?? 0)
+  )
+  const best = candidates[0]!
+  const selected = best.id === live.id ? live : await stripe.subscriptions.retrieve(best.id)
+  if (!ACTIVE_LIKE_STATUSES.has(String(selected.status)) ||
+      !(await isDoyaSubscriptionOwnedByUser(selected, user))) {
+    throw new Error(`[Webhook] selected contract changed for subscription ${live.id}`)
+  }
+  await updateUserSubscription(user.id, selected)
+}
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<EventNotification | null> {
   if (!isDoyaSubscription(subscription)) return null
