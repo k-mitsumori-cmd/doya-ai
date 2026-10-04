@@ -1222,7 +1222,7 @@ export const SERVICES: Service[] = [
     bgGradient: 'from-blue-50 to-violet-50',
     href: '/promane',
     dashboardHref: '/promane',
-    pricingHref: '/promane',
+    pricingHref: '/promane/pricing',
     guideHref: '/promane',
     features: [
       'ガントチャートで進捗ひと目',

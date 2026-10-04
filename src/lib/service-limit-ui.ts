@@ -3,7 +3,6 @@ import { SERVICES } from './services'
 export type ServiceLimit = { service: string; name: string; pricingHref: string; kind: 'quota' | 'feature' | 'capacity' | 'owner' | 'organization'; message: string }
 export const LIMIT_EVENT = 'doya:service-limit'
 const services = new Map(SERVICES.map(s => [s.id, { name: s.name, pricingHref: s.pricingHref.endsWith('/pricing') ? s.pricingHref : '/pricing' }]))
-services.set('promane', { name: 'ドヤプロマネ', pricingHref: '/promane/pricing' })
 services.set('nagusame', { name: 'なぐさめAI', pricingHref: '/nagusame/pricing' })
 services.set('swipe', { name: 'ドヤスワイプ', pricingHref: '/pricing' })
 // These coming-soon services have no dedicated pricing route yet.
