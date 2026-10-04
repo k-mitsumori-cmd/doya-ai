@@ -25,6 +25,7 @@ const ts = require('typescript')
   await check('single employee writes history in the admitted transaction', async () => {
     let employeeWrites = 0
     let historyWrites = 0
+    let usageSummary
     const tx = {
       hrEmployee: { create: async ({ data }) => { employeeWrites++; return { id: 'e', lastName: data.lastName, firstName: data.firstName, department: null } } },
       hrEmployeeHistory: { create: async ({ data }) => { historyWrites++; assert.equal(data.employeeId, 'e') } },
@@ -41,11 +42,12 @@ const ts = require('typescript')
         createWithinEmployeeLimit: async (id, create) => { assert.equal(id, 'o'); return { allowed: true, value: await create(tx) } },
         employeeLimitMessage: () => '',
       },
-      '@/lib/service-usage': { recordServiceUsage: async () => {} },
+      '@/lib/service-usage': { recordServiceUsage: async ({ summary }) => { usageSummary = summary } },
     })
     const response = await api.POST({ json: async () => ({ lastName: '山田', firstName: '太郎' }) })
     assert.equal(response.status, 200)
     assert.deepEqual([employeeWrites, historyWrites], [1, 1])
+    assert.equal(usageSummary, undefined)
   })
 
   await check('CSV import reports partial success and a persistent PRO contact route', async () => {

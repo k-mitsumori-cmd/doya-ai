@@ -197,7 +197,6 @@ export async function POST(req: NextRequest) {
       userId: ctx.userId,
       serviceId: 'hr',
       action: '従業員登録',
-      summary: `${employee.lastName} ${employee.firstName}`.trim(),
       metadata: { organizationId: ctx.organizationId },
     })
 

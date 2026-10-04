@@ -182,7 +182,8 @@ export async function POST(req: NextRequest) {
     userId: ctx.userId,
     serviceId: 'mensetsu',
     action: '面接URLを発行',
-    summary: `${template.jobTitle}${session.candidateName ? ` / ${session.candidateName}` : ''}`,
+    // 初回利用通知にも渡るため、応募者名は運用ログに含めない。
+    summary: template.jobTitle,
   })
 
   // 面接のお渡し方はURLの手渡しのみ。

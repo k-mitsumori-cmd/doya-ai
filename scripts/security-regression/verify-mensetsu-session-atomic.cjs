@@ -12,6 +12,7 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
   let attempts = 0
   let creates = 0
   let quotaChecks = 0
+  let usageSummary
   const prisma = {
     mensetsuTemplate: { findFirst: async () => ({ id: 'template', jobTitle: '営業', _count: { questions: 1, criteria: 1 } }) },
     mensetsuOrganization: { findUnique: async () => ({ retentionDays: 30 }) },
@@ -47,13 +48,13 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
       FREE_LIMITS: { mensetsuSessions: 3 },
       jstStartOfMonthUtc: () => new Date(),
     },
-    '@/lib/service-usage': { recordServiceUsage: async () => {} },
+    '@/lib/service-usage': { recordServiceUsage: async ({ summary }) => { usageSummary = summary } },
     '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: member ? 'member' : 'user', role: member ? 'member' : 'owner' }), orgSlugFrom: () => 'org' },
   }
   const exports = {}
   vm.runInNewContext(compiled, { exports, require: (name) => { assert.ok(name in dependencies, name); return dependencies[name] }, console, Date, URL })
   const response = await exports.POST({ json: async () => ({ templateId: 'template', candidateName: '候補者' }) })
-  return { status: response.status, body: await response.json(), count, creates, attempts }
+  return { status: response.status, body: await response.json(), count, creates, attempts, usageSummary }
 }
 
 ;(async () => {
@@ -61,6 +62,7 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
   assert.equal(success.status, 200)
   assert.equal(success.count, 3)
   assert.equal(success.creates, 1)
+  assert.equal(success.usageSummary, '営業')
 
   for (const [limit, expectedUpgrade] of [[3, '/mensetsu/pricing'], [30, undefined]]) {
     const blocked = await exercise({ limit, used: limit, conflictOnce: true })
