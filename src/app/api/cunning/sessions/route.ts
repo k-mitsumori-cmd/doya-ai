@@ -9,6 +9,7 @@ import { getUserId } from '@/lib/cunning/access'
 import { canStartSession } from '@/lib/cunning/limits'
 import { parseCunningSessionInput } from '@/lib/cunning/session-input'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 // GET /api/cunning/sessions — セッション一覧
 export async function GET(req: NextRequest) {
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
   const can = await canStartSession(userId)
-  if (!can.ok) return NextResponse.json({ error: can.reason, code: can.code, ...(can.upgradeAvailable ? { upgradeUrl: '/cunning/pricing' } : {}) }, { status: 403 })
+  if (!can.ok) return NextResponse.json({ error: can.reason, code: can.code, ...(can.code === 'LIMIT' ? can.upgradeAvailable ? { upgradeUrl: '/cunning/pricing' } : { contactUrl: SUPPORT_CONTACT_URL } : {}) }, { status: 403 })
 
   let input: ReturnType<typeof parseCunningSessionInput>
   try { input = parseCunningSessionInput(await req.json()) }

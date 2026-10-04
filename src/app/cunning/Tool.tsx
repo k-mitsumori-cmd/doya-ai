@@ -10,6 +10,7 @@ import { MODES, MODE_IDS, getMode } from '@/lib/cunning/modes'
 import type { CunningMode } from '@/lib/cunning/types'
 import { recordingAllowance } from '@/lib/cunning/allowance-client'
 import { appendCunningProfilePage, parseCunningProfilePage } from '@/lib/cunning/profile-pages'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 interface KB { id: string; name: string; _count: { chunks: number } }
 interface Company { id: string; companyName: string | null; url: string }
@@ -372,7 +373,7 @@ export default function CunningTool() {
           )}
         </button>
         {(usageError || (overLimit && usage?.reservedSeconds > 0)) && <button type="button" onClick={load} className="mt-3 w-full rounded-xl border border-slate-300 p-3 font-bold text-slate-700">利用状況を再確認する</button>}
-        {overLimit && !usage?.reservedSeconds && <button type="button" onClick={() => showServiceLimit('/api/cunning/sessions', 403, { code: 'LIMIT' })} className="mt-3 w-full rounded-xl bg-violet-700 p-3 font-bold text-white">プラン・利用条件を確認する</button>}
+        {overLimit && !usage?.reservedSeconds && <a href={usage?.plan === 'FREE' ? '/cunning/pricing' : SUPPORT_CONTACT_URL} className="mt-3 block w-full rounded-xl bg-violet-700 p-3 text-center font-bold text-white">{usage?.plan === 'FREE' ? 'プラン・利用条件を確認する' : '追加の利用枠を相談する'}</a>}
         <p className="text-center text-xs text-slate-400 font-bold mt-2">
           開始後、会議/配信タブの音声共有を許可してください（Chrome/Edge推奨）
         </p>

@@ -19,6 +19,7 @@ import { looksLikeQuestion } from '@/lib/cunning/classify'
 import { getMode, MODES_BY_CATEGORY } from '@/lib/cunning/modes'
 import type { CunningMode } from '@/lib/cunning/types'
 import { UiIcon } from '@/components/icons'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 interface AnswerCard {
   language?: 'ja' | 'en' | 'auto'
@@ -77,6 +78,7 @@ export default function CunningLivePage() {
 
   const [allowanceState, setAllowanceState] = useState<'loading' | 'ready' | 'error' | 'limit'>('loading')
   const [allowanceRetry, setAllowanceRetry] = useState(0)
+  const [allowanceUpgradeAvailable, setAllowanceUpgradeAvailable] = useState<boolean | null>(null)
   const [sessionState, setSessionState] = useState<'loading' | 'ready' | 'ended' | 'error'>('loading')
   const [interruptedRecording, setInterruptedRecording] = useState(false)
   const [historyIncomplete, setHistoryIncomplete] = useState(false)
@@ -344,15 +346,18 @@ const SILENCE_PEAK = 8
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 10000)
     remainingSecRef.current = null
+    setAllowanceUpgradeAvailable(null)
     setAllowanceState('loading')
     fetch('/api/cunning/usage', { cache: 'no-store', signal: controller.signal })
       .then(async (r) => {
         if (!r.ok) throw new Error('利用状況を取得できませんでした')
-        return recordingAllowance(await r.json())
+        const data = await r.json()
+        return { seconds: recordingAllowance(data), upgradeAvailable: data.plan === 'FREE' }
       })
-      .then((seconds) => {
+      .then(({ seconds, upgradeAvailable }) => {
         if (!active) return
         remainingSecRef.current = seconds
+        setAllowanceUpgradeAvailable(upgradeAvailable)
         setAllowanceState(seconds === 0 ? 'limit' : 'ready')
       })
       .catch(() => {
@@ -1148,12 +1153,12 @@ const SILENCE_PEAK = 8
       </div>}
       {transcriptionIssue && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         <p>{transcriptionIssue.message}</p>
-        {transcriptionIssue.limit && <Link href="/cunning/pricing" className="font-bold underline">プランと利用上限を確認する</Link>}
+        {transcriptionIssue.limit && <a href={allowanceUpgradeAvailable === false ? SUPPORT_CONTACT_URL : '/cunning/pricing'} className="font-bold underline">{allowanceUpgradeAvailable === false ? '追加の利用枠を相談する' : 'プランと利用上限を確認する'}</a>}
       </div>}
       {allowanceState !== 'ready' && <div role={allowanceState === 'loading' ? 'status' : 'alert'} className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
         {allowanceState === 'loading' && <p>利用可能な時間を確認しています。</p>}
         {allowanceState === 'error' && <><p>利用状況を確認できないため、録音を開始できません。</p><button type="button" onClick={() => setAllowanceRetry((n) => n + 1)} className="mt-2 font-bold underline">再試行する</button></>}
-        {allowanceState === 'limit' && <><p>今月の利用時間の上限に達しました。</p><Link href="/cunning/pricing" className="font-bold underline">プランと利用上限を確認する</Link></>}
+        {allowanceState === 'limit' && <><p>今月の利用時間の上限に達しました。</p><a href={allowanceUpgradeAvailable === false ? SUPPORT_CONTACT_URL : '/cunning/pricing'} className="font-bold underline">{allowanceUpgradeAvailable === false ? '追加の利用枠を相談する' : 'プランと利用上限を確認する'}</a></>}
       </div>}
       {sessionState !== 'ready' && <div role="status" className="mb-4 rounded-xl border border-slate-200 p-4 text-sm">
         {sessionState === 'loading' && 'セッションを確認しています。'}

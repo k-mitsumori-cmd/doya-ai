@@ -15,13 +15,14 @@ await check('only free exhausted recording quota can be expanded by an upgrade',
 await check('missing account cannot start',async()=>{serverUsage=null;assert.equal((await integrated.canStartSession('u')).ok,false)});
 for(const seconds of [0,1,59,60,3600,-1])await check('exact seconds '+seconds,()=>assert.equal(recordingAllowance({remainingSeconds:seconds,limits:{maxMinutesPerMonth:seconds===-1?-1:60}}),seconds));
 for(const value of [null,{}, {plan:'GUEST'}, {remainingMinutes:1}, ...[-2,0.5,Infinity,NaN,3601,'1'].map(remainingSeconds=>({remainingSeconds,limits:{maxMinutesPerMonth:60}})),{remainingSeconds:-1,limits:{maxMinutesPerMonth:60}}])await check('invalid allowance rejected '+JSON.stringify(value),()=>assert.throws(()=>recordingAllowance(value)));
-for(const kind of ['success','limit','unlimited','http','network','guest','invalid','stale'])await check('usage load '+kind,async()=>{
- let cleanup,resolve,phase='loading',ref={current:null};const pending=new Promise(r=>resolve=r);
- evaluate(effect,{useEffect:f=>cleanup=f(),sessionId:'test',allowanceRetry:0,remainingSecRef:ref,setAllowanceState:v=>phase=v,AbortController,setTimeout,clearTimeout,recordingAllowance,fetch:()=>kind==='network'?Promise.reject(Error('offline')):pending});
+for(const kind of ['success','limit','paid-limit','unlimited','http','network','guest','invalid','stale'])await check('usage load '+kind,async()=>{
+ let cleanup,resolve,phase='loading',upgrade=null,ref={current:null};const pending=new Promise(r=>resolve=r);
+ evaluate(effect,{useEffect:f=>cleanup=f(),sessionId:'test',allowanceRetry:0,remainingSecRef:ref,setAllowanceState:v=>phase=v,setAllowanceUpgradeAvailable:v=>upgrade=v,AbortController,setTimeout,clearTimeout,recordingAllowance,fetch:()=>kind==='network'?Promise.reject(Error('offline')):pending});
  if(kind==='stale')cleanup();
- resolve({ok:kind!=='http',json:async()=>kind==='guest'?{plan:'GUEST'}:kind==='invalid'?{}:{remainingSeconds:kind==='limit'?0:kind==='unlimited'?-1:1,limits:{maxMinutesPerMonth:kind==='unlimited'?-1:60}}});await flush();await flush();
- assert.equal(phase,['success','unlimited'].includes(kind)?'ready':kind==='limit'?'limit':kind==='stale'?'loading':'error');
- assert.equal(ref.current,['success'].includes(kind)?1:kind==='limit'?0:kind==='unlimited'?-1:null);cleanup();
+ resolve({ok:kind!=='http',json:async()=>kind==='guest'?{plan:'GUEST'}:kind==='invalid'?{}:{plan:kind==='paid-limit'?'PRO':'FREE',remainingSeconds:['limit','paid-limit'].includes(kind)?0:kind==='unlimited'?-1:1,limits:{maxMinutesPerMonth:kind==='unlimited'?-1:60}}});await flush();await flush();
+ assert.equal(phase,['success','unlimited'].includes(kind)?'ready':['limit','paid-limit'].includes(kind)?'limit':kind==='stale'?'loading':'error');
+ assert.equal(ref.current,kind==='success'?1:['limit','paid-limit'].includes(kind)?0:kind==='unlimited'?-1:null);cleanup();
+ assert.equal(upgrade,kind==='paid-limit'?false:['success','limit','unlimited'].includes(kind)?true:null);
 });
 for(const seconds of [1,-1])await check('timer stop with remaining '+seconds,()=>{
  let callback,ended=0;const elapsedRef={current:0};evaluate(tick,{useEffect:f=>f(),running:true,sessionId:'test',stopAll:()=>{},finishSession:()=>ended++,elapsedRef,remainingSecRef:{current:seconds},setInterval:f=>{callback=f;return 1},clearInterval:()=>{},setElapsed:()=>{},showServiceLimit:()=>{},fetch:()=>Promise.resolve({})});callback();assert.equal(ended,seconds===1?1:0);assert.equal(elapsedRef.current,1);
