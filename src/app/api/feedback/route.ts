@@ -90,14 +90,16 @@ export async function POST(req: NextRequest) {
   const looksLikeUnknownForm =
     !serviceId && Object.keys(body || {}).some((k) => !['action', 'serviceId', 'service'].includes(k))
   if (looksLikeUnknownForm) {
-    notifyAlert({
+    const receivedKeys = Object.keys(body || {}).slice(0, 16)
+      .map((key) => /^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(key) ? key : '[非標準キー]')
+    await notifyAlert({
       level: 'critical',
       title: 'お問い合わせフォームの送信が受け取れていません（キー不一致の可能性）',
       context: '利用者には「送信に失敗しました」と表示され、内容は保存も通知もされていません',
-      detail: `受信したキー: ${Object.keys(body || {}).join(', ') || '(なし)'}`,
+      detail: `受信したキー: ${receivedKeys.join(', ') || '(なし)'}`,
       dedupKey: 'feedback-payload-mismatch',
       cooldownMs: 6 * 3600_000,
-    }).catch(() => {})
+    }).catch(() => false)
   }
 
   if (!serviceId) return NextResponse.json({ error: 'サービスが不明です' }, { status: 400 })
