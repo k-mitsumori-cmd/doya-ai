@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 import { writeCunningSession } from '@/lib/cunning/session-write'
 import { canStartSession } from '@/lib/cunning/limits'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { generateAnswer } from '@/lib/cunning/answer'
 import { retrieveChunks } from '@/lib/cunning/rag'
 import { resolveSessionContext } from '@/lib/cunning/context'
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
       } else {
         if (ctx.status !== 'active') return NextResponse.json({ error: '終了したセッションでは回答生成できません' }, { status: 409 })
         const allowance = await canStartSession(userId)
-        if (!allowance.ok) return NextResponse.json({ error: allowance.reason, code: allowance.code ?? 'LIMIT', ...(allowance.upgradeAvailable ? { upgradeUrl: '/cunning/pricing' } : {}) }, { status: 403 })
+        if (!allowance.ok) return NextResponse.json({ error: allowance.reason, code: allowance.code ?? 'LIMIT', ...(allowance.code === 'LIMIT' ? allowance.upgradeAvailable ? { upgradeUrl: '/cunning/pricing' } : { contactUrl: SUPPORT_CONTACT_URL } : {}) }, { status: 403 })
       }
       mode = ctx.mode
       company = ctx.company

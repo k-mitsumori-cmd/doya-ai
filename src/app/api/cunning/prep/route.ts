@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 import { canStartSession } from '@/lib/cunning/limits'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { generatePrep } from '@/lib/cunning/prep'
 import { resolveSessionContext } from '@/lib/cunning/context'
 import { admitCunningAnswer } from '@/lib/cunning/answer-admission'
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
       if (!admission.accepted) return NextResponse.json({ error: '録音の有効期限が切れています。', code: 'RECORDING_ENDED' }, { status: 409 })
     } else {
       const allowance = await canStartSession(userId)
-      if (!allowance.ok) return NextResponse.json({ error: allowance.reason, code: allowance.code ?? 'LIMIT', ...(allowance.upgradeAvailable ? { upgradeUrl: '/cunning/pricing' } : {}) }, { status: 403 })
+      if (!allowance.ok) return NextResponse.json({ error: allowance.reason, code: allowance.code ?? 'LIMIT', ...(allowance.code === 'LIMIT' ? allowance.upgradeAvailable ? { upgradeUrl: '/cunning/pricing' } : { contactUrl: SUPPORT_CONTACT_URL } : {}) }, { status: 403 })
     }
 
     let chunks: KnowledgeChunkLite[] | undefined
