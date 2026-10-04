@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { getSeoGenerationOwner, getSeoGenerationPlanForUser } from '@/lib/seoArticleOwner'
 import { runSeoArticleRegenerationWithinLimit, SeoArticleNotFoundError, SeoArticleQuotaError } from '@/lib/seo-article-admission'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     return NextResponse.json({ success: true, jobId: job.id, articleId, autoStart: body.autoStart })
   } catch (e: any) {
-    if (e instanceof SeoArticleQuotaError) return NextResponse.json({ success: false, code: 'SEO_ARTICLE_LIMIT', error: `今月の生成回数の上限に達しました（${e.limit}回/月）。`, upgradeUrl: '/seo/pricing' }, { status: 429 })
+    if (e instanceof SeoArticleQuotaError) return NextResponse.json({ success: false, code: 'SEO_ARTICLE_LIMIT', error: `今月の生成回数の上限に達しました（${e.limit}回/月）。`, ...(e.upgradeAvailable ? { upgradeUrl: '/seo/pricing' } : { contactUrl: SUPPORT_CONTACT_URL }) }, { status: 429 })
     if (e instanceof SeoArticleNotFoundError) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     if (e?.code === 'P2025') return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     if (e instanceof SyntaxError) return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })

@@ -9,6 +9,9 @@ assert.deepEqual(JSON.parse(JSON.stringify(access.isTrialActive(new Date().toISO
 const { createSeoArticleWithinLimit, getSeoArticleMonthlyUsage, getSeoArticleMonthlyUsageForUsers, seoArticleUsageKey, SeoArticleQuotaError } = load('src/lib/seo-article-admission.ts', {
   'node:crypto': require('node:crypto'), '@/lib/prisma': { prisma: {} }, '@/lib/seoAccess': access,
 });
+for (const [plan, upgradeAvailable] of [['GUEST', false], ['FREE', true], ['LIGHT', true], ['PRO', false], ['ENTERPRISE', false]]) {
+  assert.equal(new SeoArticleQuotaError(1, plan === 'GUEST', plan).upgradeAvailable, upgradeAvailable, `${plan} quota action`);
+}
 
 let rows = [];
 let jobs = [];

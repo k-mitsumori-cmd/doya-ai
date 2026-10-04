@@ -4,6 +4,7 @@ import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 import { getSeoGenerationPlanForUser } from '@/lib/seoArticleOwner'
 import { runSeoArticleRegenerationWithinLimit, SeoArticleNotFoundError, SeoArticleQuotaError } from '@/lib/seo-article-admission'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { z } from 'zod'
 import type { Prisma } from '@prisma/client'
 
@@ -159,7 +160,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       jobId: newJobId,
     })
   } catch (e: any) {
-    if (e instanceof SeoArticleQuotaError) return NextResponse.json({ success: false, code: 'SEO_ARTICLE_LIMIT', error: `今月の生成回数の上限に達しました（${e.limit}回/月）。`, upgradeUrl: '/seo/pricing' }, { status: 429 })
+    if (e instanceof SeoArticleQuotaError) return NextResponse.json({ success: false, code: 'SEO_ARTICLE_LIMIT', error: `今月の生成回数の上限に達しました（${e.limit}回/月）。`, ...(e.upgradeAvailable ? { upgradeUrl: '/seo/pricing' } : { contactUrl: SUPPORT_CONTACT_URL }) }, { status: 429 })
     if (e instanceof SeoArticleNotFoundError) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     if (e?.code === 'P2025') return NextResponse.json({ success: false, error: '記事が更新されたか、アクセス権が変わりました。再読み込みしてから操作してください。' }, { status: 409 })
     if (e?.name === 'SyntaxError' || e?.name === 'ZodError') return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })

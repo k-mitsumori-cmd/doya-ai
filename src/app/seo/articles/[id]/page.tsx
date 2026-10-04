@@ -18,6 +18,7 @@ import { CompletionModal } from '@seo/components/CompletionModal'
 import { patchSeoClientSettings, readSeoClientSettings } from '@seo/lib/clientSettings'
 import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 import { FeatureGuide } from '@/components/FeatureGuide'
+import { seoLimitActionFromResponse, type SeoLimitAction } from '@/lib/seo-limit-action'
 import { CompetitorAnalysisTab } from '@/components/seo/CompetitorAnalysisTab'
 import {
   Download,
@@ -559,6 +560,7 @@ function SeoArticleInner() {
   const [resumeNotice, setResumeNotice] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [articleLimitMessage, setArticleLimitMessage] = useState<string | null>(null)
+  const [articleLimitAction, setArticleLimitAction] = useState<SeoLimitAction>(null)
   const [memo, setMemo] = useState('')
   const [tab, setTab] = useState<typeof TABS[number]['id']>('preview')
   const [markdownDraft, setMarkdownDraft] = useState('')
@@ -756,6 +758,8 @@ function SeoArticleInner() {
     }
     setAddingService(true)
     setAddServiceError(null)
+    setArticleLimitMessage(null)
+    setArticleLimitAction(null)
     try {
       const res = await fetch(`/api/seo/articles/${id}/candidates`, {
         method: 'POST',
@@ -772,7 +776,10 @@ function SeoArticleInner() {
       })
       const json = await res.json()
       if (!res.ok || !json.success) {
-        if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') setArticleLimitMessage(json.error || '今月の記事生成枠に達しました。')
+        if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') {
+          setArticleLimitMessage(json.error || '今月の記事生成枠に達しました。')
+          setArticleLimitAction(seoLimitActionFromResponse(json))
+        }
         throw new Error(json.error || '追加に失敗しました')
       }
       // 成功したらフォームをリセット
@@ -1133,6 +1140,7 @@ function SeoArticleInner() {
     setResumeBusy(true)
     setResumeNotice(null)
     setArticleLimitMessage(null)
+    setArticleLimitAction(null)
     try {
       const retryFailedJob = latestJob?.status === 'error' && !!latestJobId
       const res = await fetch(retryFailedJob ? `/api/seo/jobs/${latestJobId}/resume` : `/api/seo/articles/${article.id}/jobs`, {
@@ -1142,7 +1150,10 @@ function SeoArticleInner() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
-        if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') setArticleLimitMessage(json.error || '今月の記事生成枠に達しました。')
+        if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') {
+          setArticleLimitMessage(json.error || '今月の記事生成枠に達しました。')
+          setArticleLimitAction(seoLimitActionFromResponse(json))
+        }
         throw new Error(json?.error || `再開に失敗しました (${res.status})`)
       }
       const jobId = retryFailedJob ? latestJobId : json.jobId
@@ -1572,7 +1583,7 @@ function SeoArticleInner() {
         )}
         {articleLimitMessage && (
           <div role="alert" className="mt-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs sm:text-sm font-bold text-amber-900">
-            {articleLimitMessage} <Link href="/seo/pricing" className="ml-2 underline underline-offset-2">プランを見る</Link>
+            {articleLimitMessage} {articleLimitAction && <Link href={articleLimitAction.href} className="ml-2 underline underline-offset-2">{articleLimitAction.label}</Link>}
           </div>
         )}
 

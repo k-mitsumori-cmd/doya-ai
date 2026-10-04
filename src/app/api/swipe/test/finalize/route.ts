@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { isTrialActive, normalizeSeoPlan } from '@/lib/seoAccess'
 import { createSeoArticleWithinLimit, SeoArticleQuotaError } from '@/lib/seo-article-admission'
-import { getSeoCharLimitByUserPlan } from '@/lib/pricing'
+import { getSeoCharLimitByUserPlan, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { SwipeQuestionSchema } from '@/lib/swipe-request'
 import { SeoCreateArticleInputSchema } from '@seo/lib/types'
 
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     })
     return NextResponse.json({ success: true, jobId: job!.id, articleId: article.id })
   } catch (error: unknown) {
-    if (error instanceof SeoArticleQuotaError) return NextResponse.json({ code: 'SEO_ARTICLE_LIMIT', error: `今月の生成回数の上限に達しました（${error.limit}回/月）。プランをアップグレードすると増やせます。`, upgradeUrl: '/seo/dashboard/plan' }, { status: 429 })
+    if (error instanceof SeoArticleQuotaError) return NextResponse.json({ code: 'SEO_ARTICLE_LIMIT', error: `今月の生成回数の上限に達しました（${error.limit}回/月）。${error.upgradeAvailable ? 'プランをアップグレードすると増やせます。' : '追加のご利用についてはお問い合わせください。'}`, ...(error.upgradeAvailable ? { upgradeUrl: '/seo/dashboard/plan' } : { contactUrl: SUPPORT_CONTACT_URL }) }, { status: 429 })
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') return NextResponse.json({ error: 'この記事はすでに生成されています。画面を更新して確認してください。' }, { status: 409 })
     console.error('[swipe/test/finalize] error:')
     return NextResponse.json({ error: '記事の作成に失敗しました。時間をおいて再試行してください。' }, { status: 503 })

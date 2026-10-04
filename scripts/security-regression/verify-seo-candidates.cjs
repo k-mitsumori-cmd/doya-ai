@@ -6,7 +6,7 @@ function fixture(identity='owner',kind='user',failure){
  const model={findFirst:async({where})=>matches(where)?row:null,update:async({where,data})=>{calls.push('update');assert.ok(matches(where));assert.equal(where.updatedAt,row.updatedAt);assert.ok(data.updatedAt>row.updatedAt);if(failure==='conflict')throw Object.assign(new Error('stale'),{code:'P2025'});return{...row,...data}}};
  const prisma={seoArticle:model,seoJob:{updateMany:async()=>({count:0}),create:async()=>{calls.push('job');if(failure==='job')throw new Error('job failure');return{id:'j'}}}};
  prisma.$transaction=async fn=>{try{const result=await fn(prisma);calls.push('commit');return result}catch(e){calls.push('rollback');throw e}};
- const api=load('src/app/api/seo/articles/[id]/candidates/route.ts',{'next/server':{NextResponse:Response},zod:{z},'@/lib/seoArticleOwner':owner,'@/lib/seo-article-admission':{runSeoArticleRegenerationWithinLimit:({action})=>prisma.$transaction(action),SeoArticleQuotaError:class extends Error{},SeoArticleNotFoundError:class extends Error{}},'@seo/lib/bootstrap':{ensureSeoSchema:async()=>{}},'@/lib/prisma':{prisma}});return{api,calls};
+ const api=load('src/app/api/seo/articles/[id]/candidates/route.ts',{'next/server':{NextResponse:Response},zod:{z},'@/lib/seoArticleOwner':owner,'@/lib/seo-article-admission':{runSeoArticleRegenerationWithinLimit:({action})=>prisma.$transaction(action),SeoArticleQuotaError:class extends Error{},SeoArticleNotFoundError:class extends Error{}},'@/lib/pricing':{SUPPORT_CONTACT_URL:'https://example.com/contact'},'@seo/lib/bootstrap':{ensureSeoSchema:async()=>{}},'@/lib/prisma':{prisma}});return{api,calls};
 }
 const ctx={params:Promise.resolve({id:'a'})},request=body=>({json:async()=>body});
 (async()=>{

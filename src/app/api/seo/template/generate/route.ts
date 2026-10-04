@@ -6,7 +6,7 @@ import { SeoCreateArticleInputSchema } from '@seo/lib/types'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { isTrialActive, normalizeSeoPlan } from '@/lib/seoAccess'
 import { createSeoArticleWithinLimit, SeoArticleQuotaError } from '@/lib/seo-article-admission'
-import { getSeoCharLimitByUserPlan } from '@/lib/pricing'
+import { getSeoCharLimitByUserPlan, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 /**
  * スワイプ結果から記事を生成するAPI
@@ -145,7 +145,8 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     if (error instanceof SeoArticleQuotaError) {
       return NextResponse.json({ code: 'SEO_ARTICLE_LIMIT',
-        error: error.guest ? '記事を生成するにはログインしてください。' : `今月の生成回数の上限に達しました（${error.limit}回/月）。プランをアップグレードすると増やせます。`,
+        error: error.guest ? '記事を生成するにはログインしてください。' : `今月の生成回数の上限に達しました（${error.limit}回/月）。${error.upgradeAvailable ? 'プランをアップグレードすると増やせます。' : '追加のご利用についてはお問い合わせください。'}`,
+        ...(!error.guest && (error.upgradeAvailable ? { upgradeUrl: '/seo/pricing' } : { contactUrl: SUPPORT_CONTACT_URL })),
       }, { status: 429 })
     }
     console.error('[seo/template/generate] failed')

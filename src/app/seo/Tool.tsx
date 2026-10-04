@@ -23,6 +23,7 @@ import { Button } from '@seo/components/ui/Button'
 import { Badge } from '@seo/components/ui/Badge'
 import { ProgressBar } from '@seo/components/ui/ProgressBar'
 import { FeatureGuide } from '@/components/FeatureGuide'
+import { seoLimitActionFromResponse, type SeoLimitAction } from '@/lib/seo-limit-action'
 
 type SeoArticleRow = {
   id: string
@@ -96,7 +97,7 @@ export default function SeoTool() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [articleLimitReached, setArticleLimitReached] = useState(false)
+  const [articleLimitAction, setArticleLimitAction] = useState<SeoLimitAction>(null)
   const [regenBusyId, setRegenBusyId] = useState<string | null>(null)
   const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -209,7 +210,7 @@ export default function SeoTool() {
   async function regenerate(articleId: string) {
     if (!articleId) return
     setActionError(null)
-    setArticleLimitReached(false)
+    setArticleLimitAction(null)
     setRegenBusyId(articleId)
     try {
       const res = await fetch(`/api/seo/articles/${articleId}/jobs`, {
@@ -219,7 +220,7 @@ export default function SeoTool() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
-        if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') setArticleLimitReached(true)
+        if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') setArticleLimitAction(seoLimitActionFromResponse(json))
         throw new Error(json?.error || `API Error: ${res.status}`)
       }
       const jobId = String(json?.jobId || '').trim()
@@ -481,7 +482,7 @@ export default function SeoTool() {
       {actionError && (
         <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
           {actionError}
-          {articleLimitReached && <Link href="/seo/pricing" className="ml-3 underline underline-offset-2">プランを見る</Link>}
+          {articleLimitAction && <Link href={articleLimitAction.href} className="ml-3 underline underline-offset-2">{articleLimitAction.label}</Link>}
         </div>
       )}
 

@@ -4,8 +4,11 @@ import { prisma } from '@/lib/prisma'
 import { jstMonthRange, seoMonthlyArticleLimit, type SeoPlanCode } from '@/lib/seoAccess'
 
 export class SeoArticleQuotaError extends Error {
-  constructor(readonly limit: number, readonly guest: boolean) {
+  readonly upgradeAvailable: boolean
+
+  constructor(readonly limit: number, readonly guest: boolean, plan: SeoPlanCode = 'GUEST') {
     super('SEO article quota reached')
+    this.upgradeAvailable = !guest && (plan === 'FREE' || plan === 'LIGHT')
   }
 }
 
@@ -84,7 +87,7 @@ export async function createSeoArticleWithinLimit(args: CreateArgs, db: PrismaCl
     const key = seoArticleUsageKey(userId, now)
     const used = await getSeoArticleMonthlyUsage(tx, userId, now)
     const limit = seoMonthlyArticleLimit(plan)
-    if (limit >= 0 && used >= limit) throw new SeoArticleQuotaError(limit, false)
+    if (limit >= 0 && used >= limit) throw new SeoArticleQuotaError(limit, false, plan)
     // Use the same post-lock time for admission and creation, including at a JST month boundary.
     const article = await tx.seoArticle.create({ data: { ...articleData, userId, guestId: null, createdAt: now } })
     const job = createJob ? await tx.seoJob.create({ data: { articleId: article.id, status: 'queued', step: 'init', progress: 0 } }) : null
@@ -112,7 +115,7 @@ export async function runSeoArticleRegenerationWithinLimit<T>(args: {
     const key = seoArticleUsageKey(userId, now)
     const used = isRegeneration ? await getSeoArticleMonthlyUsage(tx, userId, now) : 0
     const limit = seoMonthlyArticleLimit(plan)
-    if (isRegeneration && limit >= 0 && used >= limit) throw new SeoArticleQuotaError(limit, false)
+    if (isRegeneration && limit >= 0 && used >= limit) throw new SeoArticleQuotaError(limit, false, plan)
     const result = await action(tx)
     if (isRegeneration) {
       await tx.systemSetting.upsert({ where: { key }, create: { key, value: String(used + 1) }, update: { value: String(used + 1) } })

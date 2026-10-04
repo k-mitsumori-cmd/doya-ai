@@ -11,7 +11,7 @@ import {
   ensureGuestId, getGuestIdFromRequest, isTrialActive, normalizeSeoPlan, setGuestCookie,
 } from '@/lib/seoAccess'
 import { createSeoArticleWithinLimit, SeoArticleQuotaError } from '@/lib/seo-article-admission'
-import { getSeoCharLimitByUserPlan } from '@/lib/pricing'
+import { getSeoCharLimitByUserPlan, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { recordServiceUsage } from '@/lib/service-usage'
 
 export const runtime = 'nodejs'
@@ -126,7 +126,8 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     if (e instanceof SeoArticleQuotaError) {
       return NextResponse.json({ success: false, code: 'SEO_ARTICLE_LIMIT',
-        error: e.guest ? '記事を生成するにはログインしてください。' : `今月の生成回数の上限に達しました（${e.limit}回/月）。プランをアップグレードすると増やせます。`,
+        error: e.guest ? '記事を生成するにはログインしてください。' : `今月の生成回数の上限に達しました（${e.limit}回/月）。${e.upgradeAvailable ? 'プランをアップグレードすると増やせます。' : '追加のご利用についてはお問い合わせください。'}`,
+        ...(!e.guest && (e.upgradeAvailable ? { upgradeUrl: '/seo/pricing' } : { contactUrl: SUPPORT_CONTACT_URL })),
       }, { status: 429 })
     }
     // バリデーションエラーの詳細を返す

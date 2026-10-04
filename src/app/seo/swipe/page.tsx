@@ -1,5 +1,7 @@
 'use client'
 
+import { seoLimitActionFromResponse, type SeoLimitAction } from '@/lib/seo-limit-action'
+
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -67,6 +69,7 @@ export default function SwipeArticlePage() {
   } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [articleLimitAction, setArticleLimitAction] = useState<SeoLimitAction>(null)
   // ユーザープラン情報
   const userPlan = useMemo(() => {
     const user: any = session?.user || null
@@ -531,6 +534,7 @@ export default function SwipeArticlePage() {
 
     setLoading(true)
     setError(null)
+    setArticleLimitAction(null)
 
     try {
       const res = await fetch('/api/swipe/test/finalize', {
@@ -547,6 +551,7 @@ export default function SwipeArticlePage() {
       const json = await res.json().catch(() => ({}))
 
       if (!res.ok || json?.error) {
+        if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') setArticleLimitAction(seoLimitActionFromResponse(json))
         throw new Error(json?.error || '記事生成に失敗しました')
       }
 
@@ -588,9 +593,7 @@ export default function SwipeArticlePage() {
             {!session?.user && error.includes('ログイン') && (
               <Link href="/auth/signin" className="mt-2 inline-block text-sm font-bold text-red-700 underline">ログインする</Link>
             )}
-            {session?.user && error.includes('今月の生成回数の上限') && (
-              <Link href="/seo/dashboard/plan" className="mt-2 inline-block text-sm font-bold text-red-700 underline">プランと30日間無料の対象条件を確認する</Link>
-            )}
+            {articleLimitAction && <Link href={articleLimitAction.href} className="mt-2 inline-block text-sm font-bold text-red-700 underline">{articleLimitAction.label}</Link>}
           </div>
         )}
 
