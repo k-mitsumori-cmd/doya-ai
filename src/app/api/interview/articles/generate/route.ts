@@ -29,6 +29,12 @@ const ARTICLE_PROVIDER_STREAM_MAX_BYTES = 8 * 1024 * 1024
 const ARTICLE_PROVIDER_EVENT_MAX_CHARS = 512 * 1024
 const ARTICLE_TEXT_MAX_CHARS = 512 * 1024
 
+class ProjectOwnerChangedError extends Error {
+  constructor(readonly transferredToUserId: string | null = null) {
+    super('Interview project owner changed during article generation')
+  }
+}
+
 function getGeminiApiKey(): string {
   const key =
     process.env.GOOGLE_GENAI_API_KEY ||
@@ -63,6 +69,7 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       let claim: ArticleClaim | null = null
       let draftSaved = false
+      let refundTransferredToUserId: string | null = null
       try {
         // ====== 認証 ======
         const { userId, plan } = await getInterviewUser()
@@ -137,11 +144,13 @@ export async function POST(req: NextRequest) {
           return
         }
 
-        const admission = await claimArticleBudget({ userId, guestId, plan })
+        const admission = await claimArticleBudget({ userId, guestId, plan, projectId })
         if (admission.state !== 'allowed') {
           controller.enqueue(sseEvent(admission.state === 'limit'
             ? { type: 'error', code: 'ARTICLE_LIMIT', message: `本日の記事生成上限（${admission.limit}回）に達しました。`,
                 ...(plan === 'PRO' || plan === 'ENTERPRISE' ? { contactUrl: SUPPORT_CONTACT_URL } : { upgradePath: '/interview/pricing' }) }
+            : admission.state === 'owner_changed'
+              ? { type: 'error', code: 'PROJECT_OWNER_CHANGED', message: 'プロジェクトの所有者が変更されました。再読み込みしてから再度お試しください。' }
             : { type: 'error', message: '利用状況を確認できません。しばらくしてから再試行してください。' }))
           controller.close()
           return
@@ -283,6 +292,17 @@ export async function POST(req: NextRequest) {
 
         // 同じプロジェクトの版番号採番と関連更新を一緒に確定する。
         const { draft, nextVersion } = await prisma.$transaction(async (tx) => {
+          // ゲスト引き継ぎ・削除と同じロックを使い、生成中に所有者が変わった
+          // プロジェクトへ古いゲスト枠の記事を書き込まない。
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${projectId}))`
+          const currentProject = await tx.interviewProject.findUnique({
+            where: { id: projectId }, select: { userId: true, guestId: true },
+          })
+          if (!currentProject || checkOwnership(currentProject, userId, guestId)) {
+            throw new ProjectOwnerChangedError(
+              !userId && guestId && currentProject?.guestId === guestId ? currentProject.userId : null
+            )
+          }
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${projectId}))`
           const maxVersion = await tx.interviewDraft.aggregate({
             where: { projectId },
@@ -334,19 +354,22 @@ export async function POST(req: NextRequest) {
         }))
 
         controller.close()
-      } catch {
+      } catch (error) {
         providerAbort.abort()
+        refundTransferredToUserId = error instanceof ProjectOwnerChangedError ? error.transferredToUserId : null
         if (!cancelled) {
           console.error('[interview] article generation failed')
           try {
-            controller.enqueue(sseEvent({ type: 'error', message: '記事生成に失敗しました。時間をおいて再試行してください。' }))
+            controller.enqueue(sseEvent(error instanceof ProjectOwnerChangedError
+              ? { type: 'error', code: 'PROJECT_OWNER_CHANGED', message: '生成中にプロジェクトの所有者が変更されました。再読み込みしてから再度お試しください。' }
+              : { type: 'error', message: '記事生成に失敗しました。時間をおいて再試行してください。' }))
           } catch {
             // controller already closed
           }
           controller.close()
         }
       } finally {
-        if (claim && !draftSaved) await refundArticleBudget(claim)
+        if (claim && !draftSaved) await refundArticleBudget(claim, refundTransferredToUserId)
       }
     },
     cancel() {

@@ -40,6 +40,15 @@ async function transferDailyBudget(tx: Prisma.TransactionClient, kind: 'article'
         ELSE ${count} END
     )::text
   `
+  // Keep the transfer date with the guest counter so an in-flight failed
+  // generation can refund the account copy only when this day's count moved.
+  if (kind === 'article') {
+    await tx.$executeRaw`
+      UPDATE "SystemSetting" SET "value" = (
+        "value"::jsonb || jsonb_build_object('transferredToUserId', ${userId}, 'transferDay', ${day})
+      )::text WHERE "key" = ${guestKey}
+    `
+  }
 }
 
 /** Claim only projects still owned by the supplied guest cookie, without moving storage objects. */

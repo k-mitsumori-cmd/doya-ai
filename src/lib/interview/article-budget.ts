@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import type { InterviewPlanCode } from './types'
 
@@ -18,16 +19,18 @@ export type ArticleClaim = { key: string; day: string }
 export type ArticleAdmission =
   | { state: 'allowed'; claim: ArticleClaim; limit: number }
   | { state: 'limit'; limit: number }
+  | { state: 'owner_changed' }
   | { state: 'unavailable' }
 
 /** Atomically reserve one article attempt across all app instances. */
-export async function claimArticleBudget(identity: { userId: string | null; guestId: string | null; plan: InterviewPlanCode }): Promise<ArticleAdmission> {
-  const subject = identity.userId ? `user:${identity.userId}` : identity.guestId ? `guest:${identity.guestId}` : null
+export async function claimArticleBudget(identity: { userId: string | null; guestId: string | null; plan: InterviewPlanCode; projectId: string }): Promise<ArticleAdmission> {
+  const { userId, guestId, projectId } = identity
+  const subject = userId ? `user:${userId}` : guestId ? `guest:${guestId}` : null
   if (!subject) return { state: 'unavailable' }
   const limit = interviewArticleDailyLimit(identity.plan)
   const key = `interview-article:v1:${createHash('sha256').update(subject).digest('hex')}`
-  try {
-    const rows = await prisma.$queryRaw<Array<{ value: string }>>`
+  const reserve = async (db: Prisma.TransactionClient | typeof prisma): Promise<ArticleAdmission> => {
+    const rows = await db.$queryRaw<Array<{ value: string }>>`
       INSERT INTO "SystemSetting" ("id", "key", "value")
       VALUES (${randomUUID()}, ${key}, jsonb_build_object(
         'day', to_char(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD'), 'count', 1
@@ -44,6 +47,21 @@ export async function claimArticleBudget(identity: { userId: string | null; gues
     if (!rows.length) return { state: 'limit', limit }
     const day = (JSON.parse(rows[0].value) as { day: string }).day
     return { state: 'allowed', claim: { key, day }, limit }
+  }
+  try {
+    if (guestId && !userId) {
+      // Guest claim uses the same lock. A reservation can only occur before its
+      // quota transfer or after an ownership recheck rejects the stale request.
+      return await prisma.$transaction(async tx => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-guest-project'), hashtext(${guestId}))`
+        const project = await tx.interviewProject.findUnique({
+          where: { id: projectId }, select: { userId: true, guestId: true },
+        })
+        if (!project || project.userId || project.guestId !== guestId) return { state: 'owner_changed' }
+        return reserve(tx)
+      }, { timeout: 20_000 })
+    }
+    return await reserve(prisma)
   } catch {
     console.error('[interview] article budget unavailable')
     return { state: 'unavailable' }
@@ -51,14 +69,24 @@ export async function claimArticleBudget(identity: { userId: string | null; gues
 }
 
 /** Refund only the same JST day's failed attempt. A DB outage fails closed. */
-export async function refundArticleBudget(claim: ArticleClaim): Promise<void> {
+export async function refundArticleBudget(claim: ArticleClaim, transferredToUserId: string | null = null): Promise<void> {
   try {
+    const accountKey = transferredToUserId
+      ? `interview-article:v1:${createHash('sha256').update(`user:${transferredToUserId}`).digest('hex')}`
+      : claim.key
     await prisma.$executeRaw`
-      UPDATE "SystemSetting" SET "value" = (
+      UPDATE "SystemSetting" AS setting SET "value" = (
         "value"::jsonb || jsonb_build_object('count', GREATEST(0, ("value"::jsonb->>'count')::integer - 1))
       )::text
-      WHERE "key" = ${claim.key} AND "value"::jsonb->>'day' = ${claim.day}
-        AND ("value"::jsonb->>'count')::integer > 0
+      WHERE setting."key" IN (${claim.key}, ${accountKey}) AND setting."value"::jsonb->>'day' = ${claim.day}
+        AND (setting."value"::jsonb->>'count')::integer > 0
+        AND (setting."key" = ${claim.key} OR EXISTS (
+          SELECT 1 FROM "SystemSetting" AS guest
+          WHERE guest."key" = ${claim.key}
+            AND guest."value"::jsonb->>'day' = ${claim.day}
+            AND guest."value"::jsonb->>'transferDay' = ${claim.day}
+            AND guest."value"::jsonb->>'transferredToUserId' = ${transferredToUserId}
+        ))
     `
   } catch {
     console.error('[interview] article budget refund unavailable')

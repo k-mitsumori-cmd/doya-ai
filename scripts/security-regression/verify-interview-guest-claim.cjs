@@ -5,13 +5,17 @@ const { load, check } = require('./load-typescript.cjs')
 const now = new Date('2026-10-02T06:00:00.000Z')
 const project = { id: 'guest-project', userId: null, guestId: 'guest-owner' }
 let processing = false, quotaValue = JSON.stringify({ usedSeconds: 300, reservedSeconds: 30 })
-let accountUpdates = 0, dailyTransfers = 0
+let accountUpdates = 0, dailyTransfers = 0, transferMarkers = 0
 const tx = {
   $executeRaw: async (parts, ...values) => {
     if (String(parts[0]).includes('INSERT INTO "SystemSetting"')) {
       dailyTransfers++
       assert(values.some(value => value === '2026-10-02'))
       assert(values.includes(dailyTransfers === 1 ? 2 : 1))
+    } else if (String(parts[0]).includes('UPDATE "SystemSetting"')) {
+      transferMarkers++
+      assert(values.includes('account-owner'))
+      assert(values.includes('2026-10-02'))
     }
     return 1
   },
@@ -76,6 +80,7 @@ const route = load('src/app/api/interview/claim-guest/route.ts', {
     assert.equal(project.userId, null)
     assert.equal(accountUpdates, 0)
     assert.equal(dailyTransfers, 0)
+    assert.equal(transferMarkers, 0)
   })
   await check('same-cookie claim transfers ownership and usage exactly once', async () => {
     processing = false
@@ -85,9 +90,11 @@ const route = load('src/app/api/interview/claim-guest/route.ts', {
     assert.deepEqual(JSON.parse(quotaValue), { usedSeconds: 420, reservedSeconds: 30 })
     assert.equal(accountUpdates, 1)
     assert.equal(dailyTransfers, 2)
+    assert.equal(transferMarkers, 1)
     assert.equal((await claim('account-owner', 'guest-owner', now)).count, 0)
     assert.equal(accountUpdates, 1)
     assert.equal(dailyTransfers, 2)
+    assert.equal(transferMarkers, 1)
   })
   await check('another account with the old cookie cannot claim the project', async () => {
     assert.equal((await claim('other-account', 'guest-owner', now)).count, 0)

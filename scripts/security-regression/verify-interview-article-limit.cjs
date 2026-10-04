@@ -30,6 +30,7 @@ assert.equal(interviewArticleDailyLimit('ENTERPRISE'), 100);
 
 let admission = { state: 'limit', limit: 5 };
 let userPlan = 'FREE';
+let asGuest = false;
 let providerCalls = 0;
 let drafts = 0;
 let refunds = 0;
@@ -42,6 +43,10 @@ let failUsageTracking = false;
 let holdProvider = false;
 let providerEntered = () => {};
 let locks = 0;
+let projectOwner = 'u1';
+let projectGuestId = null;
+let changeOwnerDuringProvider = false;
+let lastRefundTarget = null;
 let claimedIdentity;
 let recipeOwner = 'u1';
 let recipeIsTemplate = false;
@@ -49,7 +54,7 @@ let recipeIsPublic = false;
 let budgetCalls = 0;
 const prisma = {
   interviewProject: {
-    findUnique: async () => ({ id: 'p1', userId: 'u1', title: 'Test', transcriptions: [{ text: 'material' }], materials: [] }),
+    findUnique: async () => ({ id: 'p1', userId: projectOwner, guestId: projectGuestId, title: 'Test', transcriptions: [{ text: 'material' }], materials: [] }),
     update: async () => { if (failProjectUpdate) throw new Error('update failed'); return {}; },
   },
   interviewRecipe: { findUnique: async () => ({ id: 'r1', name: 'Test', editingGuidelines: '', category: 'GENERAL', userId: recipeOwner, isTemplate: recipeIsTemplate, isPublic: recipeIsPublic }), update: async () => ({}) },
@@ -74,17 +79,19 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
   'next/server': {},
   '@/lib/prisma': { prisma },
   '@/lib/interview/access': {
-    getInterviewUser: async () => ({ userId: 'u1', plan: userPlan }),
-    getGuestIdFromRequest: () => null,
-    checkOwnership: () => null,
+    getInterviewUser: async () => asGuest ? { userId: null, plan: 'GUEST' } : { userId: 'u1', plan: userPlan },
+    getGuestIdFromRequest: () => asGuest ? 'g1' : null,
+    checkOwnership: (resource, userId, guestId) => userId
+      ? resource.userId === userId ? null : { status: 404 }
+      : !resource.userId && resource.guestId === guestId ? null : { status: 404 },
     requireDatabase: () => null,
   },
   '@/lib/interview/prompts': { buildArticlePrompt: () => 'prompt' },
   '@/lib/service-usage': { recordServiceUsage: async () => { if (failUsageTracking) throw new Error('tracking failed'); } },
   '@/lib/interview/gemini-request': load('src/lib/interview/gemini-request.ts'),
   '@/lib/interview/article-budget': {
-    claimArticleBudget: async (identity) => { budgetCalls++; claimedIdentity = identity; return admission; },
-    refundArticleBudget: async () => { refunds++; },
+    claimArticleBudget: async (identity) => { assert.equal(identity.projectId, 'p1'); budgetCalls++; claimedIdentity = identity; return admission; },
+    refundArticleBudget: async (_claim, transferredToUserId) => { refunds++; lastRefundTarget = transferredToUserId; },
   },
   '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
 }, {
@@ -94,6 +101,7 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
     providerCalls++;
     assert.doesNotMatch(url, /key=/);
     assert.equal(init.headers['x-goog-api-key'], 'test-key');
+    if (changeOwnerDuringProvider) projectOwner = 'u2';
     if (holdProvider) return new Promise((_resolve, reject) => {
       providerEntered();
       init.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
@@ -108,6 +116,8 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
 
 const request = () => ({ json: async () => ({ projectId: 'p1', recipeId: 'r1' }) });
 async function events() {
+  projectOwner = asGuest ? null : 'u1';
+  projectGuestId = asGuest ? 'g1' : null;
   const res = await POST(request());
   return (await res.text()).split('\n').filter((line) => line.startsWith('data: ')).map((line) => JSON.parse(line.slice(6)));
 }
@@ -144,6 +154,11 @@ async function events() {
   assert.equal(drafts, 0);
   assert.equal(refunds, 0);
 
+  admission = { state: 'owner_changed' };
+  output = await events();
+  assert.equal(output.at(-1).code, 'PROJECT_OWNER_CHANGED');
+  assert.equal(providerCalls, 0);
+
   admission = { state: 'allowed', claim: { key: 'test', day: '2026-09-23' }, limit: 5 };
   failProvider = true;
   output = await events();
@@ -163,7 +178,7 @@ async function events() {
   assert.equal(output.at(-1).wordCount, 11);
   assert.equal(refunds, 2);
   assert.equal(drafts, 1);
-  assert.equal(locks, 1);
+  assert.equal(locks, 2);
   assert.equal(claimedIdentity.userId, 'u1');
   assert.equal(claimedIdentity.plan, 'FREE');
   failProjectUpdate = true;
@@ -202,6 +217,55 @@ async function events() {
   assert.equal(refunds, 6);
   assert.equal(drafts, 3);
   oversizedEvent = false;
+  changeOwnerDuringProvider = true;
+  const locksBeforeOwnerChange = locks;
+  output = await events();
+  assert.equal(output.at(-1).code, 'PROJECT_OWNER_CHANGED');
+  assert.equal(refunds, 7, 'The abandoned article reservation is refunded');
+  assert.equal(drafts, 3, 'An article is not saved to a transferred project');
+  assert.equal(locks, locksBeforeOwnerChange + 1, 'The lifecycle lock is acquired before rejecting the save');
+  assert.equal(lastRefundTarget, null, 'An account-to-account owner change does not refund another account');
+  changeOwnerDuringProvider = false;
+  asGuest = true;
+  recipeIsTemplate = true;
+  changeOwnerDuringProvider = true;
+  output = await events();
+  assert.equal(output.at(-1).code, 'PROJECT_OWNER_CHANGED');
+  assert.equal(claimedIdentity.guestId, 'g1');
+  assert.equal(lastRefundTarget, 'u2', 'A claimed guest attempt refunds the transferred account copy');
+  assert.equal(refunds, 8);
+  assert.equal(drafts, 3);
+  changeOwnerDuringProvider = false;
+  asGuest = false;
+  recipeIsTemplate = false;
+  let reservationLocks = 0;
+  let reservationQueries = 0;
+  let guestProjectClaimed = true;
+  let refundSql = '';
+  let refundValues = [];
+  const reservationDb = {
+    $transaction: async (fn) => fn({
+      $executeRaw: async () => { reservationLocks++; return 1; },
+      interviewProject: { findUnique: async () => ({ userId: guestProjectClaimed ? 'u2' : null, guestId: 'g1' }) },
+      $queryRaw: async () => { reservationQueries++; return [{ value: JSON.stringify({ day: '2026-10-05', count: 1 }) }]; },
+    }),
+    $executeRaw: async (parts, ...values) => { refundSql = parts.join('?'); refundValues = values; return 2; },
+  };
+  const budget = load('src/lib/interview/article-budget.ts', {
+    'node:crypto': require('node:crypto'), '@/lib/prisma': { prisma: reservationDb },
+  });
+  const guestIdentity = { userId: null, guestId: 'g1', plan: 'GUEST', projectId: 'p1' };
+  assert.equal((await budget.claimArticleBudget(guestIdentity)).state, 'owner_changed');
+  assert.equal(reservationLocks, 1);
+  assert.equal(reservationQueries, 0, 'A claimed project cannot reserve a fresh guest article attempt');
+  guestProjectClaimed = false;
+  assert.equal((await budget.claimArticleBudget(guestIdentity)).state, 'allowed');
+  assert.equal(reservationLocks, 2);
+  assert.equal(reservationQueries, 1);
+  await budget.refundArticleBudget({ key: 'guest-budget-key', day: '2026-10-05' }, 'u2');
+  assert.match(refundSql, /transferDay/);
+  assert.match(refundSql, /transferredToUserId/);
+  assert(refundValues.includes('u2'));
   let viewerId = null;
   let storedOwner = null;
   const { GET: readRecipe } = load('src/app/api/interview/recipes/[id]/route.ts', {
