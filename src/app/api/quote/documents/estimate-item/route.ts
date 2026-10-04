@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { estimateItem } from '@/lib/quote/analyze'
+import { sanitizeProductProfile } from '@/lib/quote/profile-input'
 import type { ProductProfile } from '@/lib/quote/types'
 
 export async function POST(req: NextRequest) {
@@ -15,7 +16,13 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-  const itemName = String(body?.itemName || '').trim()
+  if (!body || typeof body !== 'object' || Array.isArray(body) ||
+    typeof body.itemName !== 'string' ||
+    (body.spec != null && typeof body.spec !== 'string') ||
+    (body.productId != null && (typeof body.productId !== 'string' || body.productId.length > 128))) {
+    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
+  const itemName = body.itemName.trim()
   if (!itemName) {
     return NextResponse.json({ error: '品目名を入力してください' }, { status: 400 })
   }
@@ -29,7 +36,7 @@ export async function POST(req: NextRequest) {
       where: { id: String(body.productId), organizationId: ctx.organizationId },
     })
     if (p) {
-      profile = (p.profile as ProductProfile | null) ?? {}
+      profile = sanitizeProductProfile(p.profile) ?? {}
       productName = p.name
     }
   }
@@ -37,7 +44,7 @@ export async function POST(req: NextRequest) {
   try {
     const item = await estimateItem({
       itemName: itemName.slice(0, 120),
-      spec: body?.spec ? String(body.spec).slice(0, 300) : undefined,
+      spec: body.spec ? body.spec.slice(0, 300) : undefined,
       productName: productName || undefined,
       profile,
     })

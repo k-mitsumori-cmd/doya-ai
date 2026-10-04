@@ -113,8 +113,10 @@ export async function analyzeProduct(sourceUrl: string): Promise<ProductProfile>
     deliveryModel: String(raw?.deliveryModel || '').slice(0, 60) || undefined,
     pricingAxis: String(raw?.pricingAxis || '').slice(0, 60) || undefined,
     targetCustomer: String(raw?.targetCustomer || '').slice(0, 200) || undefined,
-    publishedPrices: (raw?.publishedPrices || []).filter((s) => typeof s === 'string').slice(0, 20),
-    optionCandidates: (raw?.optionCandidates || []).filter((s) => typeof s === 'string').slice(0, 20),
+    publishedPrices: Array.isArray(raw?.publishedPrices)
+      ? raw.publishedPrices.filter((s): s is string => typeof s === 'string').slice(0, 20).map(s => s.slice(0, 300)) : [],
+    optionCandidates: Array.isArray(raw?.optionCandidates)
+      ? raw.optionCandidates.filter((s): s is string => typeof s === 'string').slice(0, 20).map(s => s.slice(0, 300)) : [],
   }
 }
 

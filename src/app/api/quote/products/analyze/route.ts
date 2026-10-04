@@ -13,7 +13,10 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-  const rawUrl = String(body?.url || '').trim()
+  if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.url !== 'string' || body.url.length > 2048) {
+    return NextResponse.json({ error: 'URLの形式が正しくありません' }, { status: 400 })
+  }
+  const rawUrl = body.url.trim()
   if (!rawUrl) return NextResponse.json({ error: 'URLを入力してください' }, { status: 400 })
 
   let url: URL
