@@ -51,13 +51,17 @@ export async function POST(req: NextRequest) {
       note: lead.note,
       source: lead.source,
     })
-    // スコアを保存（根拠/次アクションはメモへ追記しない＝表示は都度返却）
-    const updated = await prisma.sfaLead.updateMany({ where: { id: lead.id, organizationId: ctx.organizationId, isActive: true }, data: { score: result.score } })
-    if (updated.count !== 1) {
+    // スコア保存と枠の確定を一緒に確定する。片方が失敗したら両方戻す。
+    const saved = await prisma.$transaction(async tx => {
+      const updated = await tx.sfaLead.updateMany({ where: { id: lead.id, organizationId: ctx.organizationId, isActive: true }, data: { score: result.score } })
+      if (updated.count !== 1) return false
+      await completeSfaAiUsage(reservation.id, tx)
+      return true
+    })
+    if (!saved) {
       await releaseSfaAiUsage(reservation.id)
       return NextResponse.json({ error: '対象のリードが変更されました。再読み込みしてください' }, { status: 409 })
     }
-    await completeSfaAiUsage(reservation.id)
     return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store' } })
   } catch (e: any) {
     await releaseSfaAiUsage(reservation.id).catch((releaseError) => console.error('[sfa/ai/score] quota release failed'))

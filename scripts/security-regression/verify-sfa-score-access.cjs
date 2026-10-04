@@ -9,10 +9,10 @@ const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKi
 async function run(body, lead) {
   let aiCalls = 0;
   let writes = 0;
-  const prisma = { sfaLead: {
-    findUnique: async () => lead,
-    updateMany: async () => { writes++; return { count: 1 }; },
-  } };
+  const prisma = {
+    sfaLead: { findUnique: async () => lead },
+    $transaction: async fn => fn({ sfaLead: { updateMany: async () => { writes++; return { count: 1 }; } } }),
+  };
   const deps = {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },

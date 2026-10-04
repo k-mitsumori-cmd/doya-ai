@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { jstStartOfMonthUtc } from '@/lib/plan-limit'
 import { sfaOwnerPlanTier } from './limits'
@@ -51,8 +52,8 @@ export async function reserveSfaAiUsage(organizationId: string, actorUserId: str
   throw new Error('SFA AI reservation retry exhausted')
 }
 
-export async function completeSfaAiUsage(id: string): Promise<void> {
-  const result = await prisma.generation.updateMany({ where: { id, serviceId: 'sfa', outputType: PENDING }, data: { outputType: COMPLETE } })
+export async function completeSfaAiUsage(id: string, db: Pick<Prisma.TransactionClient, 'generation'> = prisma): Promise<void> {
+  const result = await db.generation.updateMany({ where: { id, serviceId: 'sfa', outputType: PENDING }, data: { outputType: COMPLETE } })
   if (result.count !== 1) throw new Error('SFA AI reservation was not settled')
 }
 

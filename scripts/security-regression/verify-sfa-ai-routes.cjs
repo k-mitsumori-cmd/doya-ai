@@ -10,17 +10,27 @@ async function invoke(action, mode, active = true) {
       if (mode === 'db-error') throw new Error('database unavailable');
       return mode === 'limit' ? { limit: 20, used: 20 } : { id: 'reservation' };
     },
-    completeSfaAiUsage: async (id) => { assert.equal(id, 'reservation'); state.completed++; },
+    completeSfaAiUsage: async (id, tx) => {
+      assert.equal(id, 'reservation');
+      if (action === 'score') assert.ok(tx && tx.sfaLead, 'score settlement shares the lead transaction');
+      if (mode === 'settlement-error') throw new Error('settlement unavailable');
+      state.completed++;
+    },
     releaseSfaAiUsage: async (id) => { assert.equal(id, 'reservation'); state.released++; },
     sfaAiLimitResponse: (_, canManageBilling) => {
       assert.equal(canManageBilling, false);
       return Response.json({ code: 'SFA_AI_LIMIT_REACHED' }, { status: 402 });
     },
   };
-  const prisma = action === 'score' ? { sfaLead: {
-    findUnique: async () => ({ id: 'item', organizationId: 'org', isActive: active, name: 'Lead', raw: null }),
-    updateMany: async () => { state.writes++; return { count: 1 }; },
-  } } : {
+  const prisma = action === 'score' ? {
+    sfaLead: { findUnique: async () => ({ id: 'item', organizationId: 'org', isActive: active, name: 'Lead', raw: null }) },
+    $transaction: async fn => {
+      let pendingWrites = 0;
+      const result = await fn({ sfaLead: { updateMany: async () => { pendingWrites++; return { count: mode === 'lead-changed' ? 0 : 1 }; } } });
+      state.writes += mode === 'lead-changed' ? 0 : pendingWrites;
+      return result;
+    },
+  } : {
     sfaDeal: { findUnique: async () => ({ id: 'item', organizationId: 'org', isActive: active, name: 'Deal', amount: 100, probability: 50 }) },
     sfaActivity: { findMany: async () => [] },
   };
@@ -47,6 +57,10 @@ async function invoke(action, mode, active = true) {
     assert.deepEqual(await invoke(action, 'limit'), { status: 402, reserved: 1, completed: 0, released: 0, provider: 0, writes: 0 });
     assert.deepEqual(await invoke(action, 'db-error'), { status: 503, reserved: 1, completed: 0, released: 0, provider: 0, writes: 0 });
     assert.deepEqual(await invoke(action, 'provider-error'), { status: 500, reserved: 1, completed: 0, released: 1, provider: 1, writes: 0 });
+    if (action === 'score') {
+      assert.deepEqual(await invoke(action, 'settlement-error'), { status: 500, reserved: 1, completed: 0, released: 1, provider: 1, writes: 0 });
+      assert.deepEqual(await invoke(action, 'lead-changed'), { status: 409, reserved: 1, completed: 0, released: 1, provider: 1, writes: 0 });
+    }
     assert.deepEqual(await invoke(action, 'ok'), { status: 200, reserved: 1, completed: 1, released: 0, provider: 1, writes: action === 'score' ? 1 : 0 });
   }
   console.log('PASS SFA AI routes: inactive target, quota, DB failure, provider failure, success');
