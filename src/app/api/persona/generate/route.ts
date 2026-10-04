@@ -13,6 +13,7 @@ import { parsePersonaResult, PersonaResultValidationError, type PersonaResult } 
 import { recordServiceUsage } from '@/lib/service-usage'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 import { readPersonaProviderJson } from '@/lib/persona/provider-response'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 
 export const runtime = 'nodejs'
@@ -160,7 +161,7 @@ export async function POST(req: NextRequest) {
     const inputHash = createHash('sha256').update(JSON.stringify({ url, additionalInfo, serviceName, existingPersona, modifications })).digest('hex')
     const attempt = await reservePersonaProject(prisma, { userId, requestKey, inputHash, sourceUrl: url ?? null })
     if (attempt.state === 'unauthorized') return NextResponse.json({ error: '再度ログインしてください。', code: 'LOGIN_REQUIRED' }, { status: 401 })
-    if (attempt.state === 'limit') return NextResponse.json({ error: attempt.upgradeAvailable ? `本日の生成上限（${attempt.limit}回）に達しました。プロプランで上限を増やせます。` : `本日の生成上限（${attempt.limit}回）に達しました。明日0時に枠が戻ります。`, code: 'DAILY_LIMIT_REACHED', limitReached: true, isGuest: false, usedToday: attempt.used, dailyLimit: attempt.limit, resetAt: attempt.resetAt, ...(attempt.upgradeAvailable ? { upgradeUrl: '/persona/pricing' } : {}) }, { status: 429 })
+    if (attempt.state === 'limit') return NextResponse.json({ error: attempt.upgradeAvailable ? `本日の生成上限（${attempt.limit}回）に達しました。プロプランで上限を増やせます。` : `本日の生成上限（${attempt.limit}回）に達しました。明日0時に枠が戻ります。追加の利用枠はお問い合わせください。`, code: 'DAILY_LIMIT_REACHED', limitReached: true, isGuest: false, usedToday: attempt.used, dailyLimit: attempt.limit, resetAt: attempt.resetAt, ...(attempt.upgradeAvailable ? { upgradeUrl: '/persona/pricing' } : { contactUrl: SUPPORT_CONTACT_URL }) }, { status: 429 })
     if (attempt.state === 'conflict' || attempt.state === 'deleted') return NextResponse.json({ error: 'この生成要求は再利用できません。新しい生成を開始してください。', code: 'REQUEST_CONFLICT' }, { status: 409 })
     if (attempt.state === 'pending') return NextResponse.json({ error: '同じペルソナを生成中です。しばらくしてから再度お試しください。', code: 'GENERATION_PENDING' }, { status: 409 })
     if (attempt.state === 'cached') return NextResponse.json({ success: true, data: parsePersonaResult(attempt.project.data), projectId: attempt.project.id, includedImages: attempt.project.includedImages, meta: { url, isGuest: false } })

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 type Quota = { used: number; reserved: number; limit: number; remaining: number | null }
 type Usage = { planLabel: string; text: Quota; extraImages: Quota; resetAt: string }
@@ -20,7 +21,7 @@ export default function PersonaUsagePanel({ refreshKey }: { refreshKey: string }
         const response = await fetch('/api/persona/usage', { cache: 'no-store', signal: controller.signal })
         if (!response.ok) throw new Error('Usage unavailable')
         const data = await response.json()
-        if (!data?.text || !data?.extraImages || !Number.isFinite(Date.parse(data.resetAt))) throw new Error('Invalid usage')
+        if (!data?.text || !data?.extraImages || !['FREE', 'PRO'].includes(data.planLabel) || !Number.isFinite(Date.parse(data.resetAt))) throw new Error('Invalid usage')
         if (alive && !controller.signal.aborted) { setUsage(data); setFailed(false) }
       } catch {
         if (alive && !controller.signal.aborted) { setUsage(null); setFailed(true) }
@@ -40,7 +41,7 @@ export default function PersonaUsagePanel({ refreshKey }: { refreshKey: string }
         <p>追加画像・再生成：残り{usage.extraImages.remaining}枚 / {usage.extraImages.limit}枚{usage.extraImages.reserved > 0 ? `・処理中${usage.extraImages.reserved}枚は予約済み` : ''}</p>
       </div>
       <p className="mt-2 text-xs text-gray-500">付属画像は最大16枚までペルソナ1件に含まれ、追加枠を消費しません。利用枠は毎日0時（日本時間）にリセットされます。</p>
-      {(usage.text.remaining === 0 || usage.extraImages.remaining === 0) && <p className="mt-3">本日の利用枠が上限に達しました。<a href="/persona/pricing" className="ml-2 font-bold text-purple-700 underline">プランと利用枠を確認する</a></p>}
+      {(usage.text.remaining === 0 || usage.extraImages.remaining === 0) && <p className="mt-3">本日の利用枠が上限に達しました。<a href={usage.planLabel === 'PRO' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="ml-2 font-bold text-purple-700 underline">{usage.planLabel === 'PRO' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a></p>}
     </> : <p className="mt-2" role="status">{failed ? '利用状況を取得できませんでした。残り枠は未確認です。' : '利用状況を確認しています。'}{failed && <button type="button" onClick={() => setRetry(value => value + 1)} className="ml-2 text-purple-700 underline">再取得する</button>}</p>}
   </section>
 }

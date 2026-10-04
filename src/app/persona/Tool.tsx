@@ -10,6 +10,7 @@ import PersonaUsagePanel from '@/components/persona/PersonaUsagePanel'
 import PersonaBannerGenerator from '@/components/persona/PersonaBannerGenerator'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { TrialNote } from '@/components/TrialCallout'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
@@ -192,6 +193,12 @@ const FAKE_CANDIDATES = [
 
 class PersonaQuotaError extends Error {}
 
+function personaQuotaAction(data: { upgradeUrl?: unknown; contactUrl?: unknown } | null): 'pricing' | 'contact' | null {
+  if (data?.contactUrl === SUPPORT_CONTACT_URL) return 'contact'
+  if (data?.upgradeUrl === '/persona/pricing') return 'pricing'
+  return null
+}
+
 /** API エラーをユーザーフレンドリーなメッセージに変換 */
 function toFriendlyError(e: unknown, res?: Response | null): string {
   // ネットワークエラー（fetch 自体が失敗）
@@ -247,6 +254,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
   const [error, setError] = useState('')
   const [errorAction, setErrorAction] = useState<'generate' | 'modify' | null>(null)
   const [quotaNotice, setQuotaNotice] = useState<'text' | 'image' | null>(null)
+  const [quotaAction, setQuotaAction] = useState<'pricing' | 'contact' | null>(null)
   const [accessWarning, setAccessWarning] = useState('')
   const [generatedData, updateGeneratedData] = useState<GeneratedData | null>(null)
   const currentPersona = useRef<GeneratedData | null>(null)
@@ -526,7 +534,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
 
       if (!res.ok) {
         if (isCurrent() && data?.code === 'REQUEST_CONFLICT') generationAttempt.current = null
-        if (isCurrent() && data?.code === 'DAILY_LIMIT_REACHED') setQuotaNotice('text')
+        if (isCurrent() && data?.code === 'DAILY_LIMIT_REACHED') { setQuotaNotice('text'); setQuotaAction(personaQuotaAction(data)) }
         const msg =
           (data && (data.error || data.message)) ||
           (raw && raw.slice(0, 200)) ||
@@ -589,7 +597,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
 
       if (!isCurrent()) return
       if (!res.ok || !data) {
-        if (data?.code === 'DAILY_LIMIT_REACHED') setQuotaNotice('image')
+        if (data?.code === 'DAILY_LIMIT_REACHED') { setQuotaNotice('image'); setQuotaAction(personaQuotaAction(data)) }
         const message = data?.error || 'ポートレート生成に失敗しました'
         throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(message) : new Error(message)
       }
@@ -643,7 +651,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
 
       if (!isCurrent()) return
       if (!res.ok || !data?.success || typeof data?.image !== 'string' || !data.image) {
-        if (data?.code === 'DAILY_LIMIT_REACHED') setQuotaNotice('image')
+        if (data?.code === 'DAILY_LIMIT_REACHED') { setQuotaNotice('image'); setQuotaAction(personaQuotaAction(data)) }
         const message = data?.error || 'シーン画像を生成できませんでした。'
         throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(message) : new Error(message)
       }
@@ -699,7 +707,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
 
       if (!res.ok) {
         if (isCurrent() && data?.code === 'REQUEST_CONFLICT') generationAttempt.current = null
-        if (isCurrent() && data?.code === 'DAILY_LIMIT_REACHED') setQuotaNotice('text')
+        if (isCurrent() && data?.code === 'DAILY_LIMIT_REACHED') { setQuotaNotice('text'); setQuotaAction(personaQuotaAction(data)) }
         const msg = (data && (data.error || data.message)) || 'ペルソナ変更に失敗しました'
         throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(msg) : new Error(msg)
       }
@@ -887,9 +895,9 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         {quotaNotice && (
           <div role="alert" className="mb-6 rounded-xl border border-purple-300 bg-purple-50 p-4 text-sm text-purple-950">
             <p className="font-bold">{quotaNotice === 'text' ? '本日のペルソナ生成・文章変更の枠に達しました。' : '本日の追加画像・再生成の枠に達しました。'}</p>
-            <p className="mt-1">枠は毎日0時（日本時間）にリセットされます。追加で使う場合はプランをご確認ください。</p>
-            <a href="/persona/pricing" className="mt-2 inline-block font-bold text-purple-700 underline underline-offset-2">プランと利用枠を確認する</a>
-            <TrialNote className="mt-2" />
+            <p className="mt-1">枠は毎日0時（日本時間）にリセットされます。{quotaAction === 'pricing' ? '追加で使う場合はプランをご確認ください。' : quotaAction === 'contact' ? '追加の利用枠をご希望の場合はご相談ください。' : ''}</p>
+            {quotaAction && <a href={quotaAction === 'contact' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="mt-2 inline-block font-bold text-purple-700 underline underline-offset-2">{quotaAction === 'contact' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a>}
+            {quotaAction === 'pricing' && <TrialNote className="mt-2" />}
           </div>
         )}
         {/* Header */}

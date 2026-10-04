@@ -3,6 +3,7 @@ const { load } = require('./load-typescript.cjs')
 
 ;(async () => {
   let plan = 'FREE'
+  let used = 0
   let quotaReads = 0
   let created = 0
   const tx = {
@@ -15,7 +16,7 @@ const { load } = require('./load-typescript.cjs')
       create: async ({ data }) => { created++; return { id: 'job', ...data } },
     },
     personaImageUsageDay: {
-      upsert: async () => { quotaReads++; return { used: 0, reserved: 0 } },
+      upsert: async () => { quotaReads++; return { used, reserved: 0 } },
       update: async () => { quotaReads++ },
     },
   }
@@ -38,6 +39,17 @@ const { load } = require('./load-typescript.cjs')
   assert.equal(created, 1)
   console.log('PASS paid banner reservation uses extra image quota')
 
+  used = 30
+  const paidLimit = await ledger.reservePersonaImage(db, { ...input, requestKey: 'banner-2' })
+  assert.equal(paidLimit.state, 'limit')
+  assert.equal(paidLimit.upgradeAvailable, false)
+  plan = 'FREE'
+  used = 5
+  const freeLimit = await ledger.reservePersonaImage(db, { ...input, kind: 'portrait', slotKey: 'portrait', requestKey: 'portrait-1' })
+  assert.equal(freeLimit.state, 'limit')
+  assert.equal(freeLimit.upgradeAvailable, true)
+  console.log('PASS free extra image cap offers upgrade and paid cap offers contact')
+
   let providerCalls = 0
   const service = load('src/lib/persona/image-generation.ts', {
     crypto: require('node:crypto'),
@@ -46,6 +58,7 @@ const { load } = require('./load-typescript.cjs')
     '@/lib/resolve-image-model': { callGeminiImageAPI: async () => { providerCalls++ } },
     './image-ledger': { reservePersonaImage: async () => ({ state: 'plan_required' }), settlePersonaImage: async () => {} },
     './image-storage': {},
+    '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
   })
   const response = await service.generateAndSavePersonaImage(input, { contents: [] })
   const body = await response.json()

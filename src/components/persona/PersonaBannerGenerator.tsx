@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PERSONA_BANNER_SIZES } from '@/lib/persona/banner-size'
 import { TrialNote } from '@/components/TrialCallout'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 type Props = {
   projectId: string | null
@@ -19,6 +20,7 @@ export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases
   const [image, setImage] = useState(initialImage || '')
   const [error, setError] = useState('')
   const [errorCode, setErrorCode] = useState('')
+  const [quotaAction, setQuotaAction] = useState<'pricing' | 'contact' | null>(null)
   const [loading, setLoading] = useState(false)
   const pending = useRef<{ input: string; key: string } | null>(null)
   const controller = useRef<AbortController | null>(null)
@@ -35,6 +37,7 @@ export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases
     setLoading(true)
     setError('')
     setErrorCode('')
+    setQuotaAction(null)
     try {
       const response = await fetch('/api/persona/banner', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, cache: 'no-store', signal: active.signal,
@@ -45,6 +48,7 @@ export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases
       if (!response.ok) {
         if (body?.code === 'REQUEST_CONFLICT') pending.current = null
         setErrorCode(typeof body?.code === 'string' ? body.code : '')
+        setQuotaAction(body?.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : body?.upgradeUrl === '/persona/pricing' ? 'pricing' : null)
         setError(typeof body?.error === 'string' ? body.error : 'バナー画像を生成できませんでした。時間を置いて再度お試しください。')
         return
       }
@@ -85,7 +89,7 @@ export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases
       </button>
       {error && <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
         <p>{error}</p>
-        {(errorCode === 'DAILY_LIMIT_REACHED' || errorCode === 'PRO_REQUIRED') && <a href="/persona/pricing" className="mt-2 inline-block font-bold underline">プランと利用枠を確認する</a>}
+        {(errorCode === 'DAILY_LIMIT_REACHED' || errorCode === 'PRO_REQUIRED') && quotaAction && <a href={quotaAction === 'contact' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="mt-2 inline-block font-bold underline">{quotaAction === 'contact' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a>}
       </div>}
     </>}
     {image && <div className="mt-5">

@@ -25,6 +25,7 @@ function fixture(providerResponse = () => Response.json({ candidates: [{ content
     '@/lib/service-usage': { recordServiceUsage: async () => {} },
     '@/lib/operational-json': load('src/lib/operational-json.ts', {}, { TextDecoder }),
     '@/lib/persona/provider-response': load('src/lib/persona/provider-response.ts'),
+    '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
   }, {
     AbortSignal,
     process: { env: { GOOGLE_GENAI_API_KEY: 'synthetic' } },

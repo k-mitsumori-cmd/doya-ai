@@ -5,6 +5,7 @@ import { callGeminiImageAPI } from '@/lib/resolve-image-model'
 import { reservePersonaImage, settlePersonaImage } from './image-ledger'
 import { assertPersonaImageStorage, normalizePersonaImage, savePersonaImageFile, removePersonaImageFile } from './image-storage'
 import type { PersonaImageIntent } from './image-entitlements'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 type ImageKind = 'portrait' | 'scene' | 'banner'
 type ResolvedImage = {
@@ -47,7 +48,8 @@ export async function generateAndSavePersonaImage(input: ResolvedImage, requestB
   if (attempt.state === 'conflict') return error('この画像生成の要求IDは再利用できません。', 409, 'REQUEST_CONFLICT')
   if (attempt.state === 'pending') return error('この画像を生成中です。しばらくしてから再度お試しください。', 409, 'GENERATION_PENDING')
   if (attempt.state === 'limit') return NextResponse.json({ error: `本日の追加画像・再生成の上限（${attempt.limit}枚）に達しました。`,
-    code: 'DAILY_LIMIT_REACHED', limitReached: true, usedToday: attempt.used, dailyLimit: attempt.limit, resetAt: attempt.resetAt, upgradeUrl: '/persona/pricing',
+    code: 'DAILY_LIMIT_REACHED', limitReached: true, usedToday: attempt.used, dailyLimit: attempt.limit, resetAt: attempt.resetAt,
+    ...(attempt.upgradeAvailable ? { upgradeUrl: '/persona/pricing' } : { contactUrl: SUPPORT_CONTACT_URL }),
   }, { status: 429 })
   const job = attempt.job
   const success = () => NextResponse.json({ success: true, image: `/api/persona/images/${job.id}`, imageId: job.id, ...extra })

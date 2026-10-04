@@ -66,7 +66,7 @@ export async function reservePersonaImage(db: PrismaClient, input: ReserveImage,
         create: { userId: input.userId, day: usageDay }, update: {},
       })
       const used = bucket.reserved + bucket.used
-      if (used >= limit) return { state: 'limit' as const, used, limit, resetAt: new Date(usageDay.getTime() + 86400000).toISOString() }
+      if (used >= limit) return { state: 'limit' as const, used, limit, resetAt: new Date(usageDay.getTime() + 86400000).toISOString(), upgradeAvailable: !isPaidPlan(user.plan) }
       await tx.personaImageUsageDay.update({ where: { userId_day: { userId: input.userId, day: usageDay } }, data: { reserved: { increment: 1 } } })
     }
     const leaseToken = randomUUID()
