@@ -20,6 +20,14 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   }
 
   const body = await req.json().catch(() => ({}))
+  if (body?.isActive === true) {
+    const room = await prisma.aishodanRoom.findFirst({
+      where: { id: p.id, organizationId: ctx.organizationId },
+      select: { scenario: { select: { product: { select: { archivedAt: true } } } } },
+    })
+    if (!room) return NextResponse.json({ error: 'ルームが見つかりません' }, { status: 404 })
+    if (room.scenario.product.archivedAt) return NextResponse.json({ error: '保管済み商材の商談URLは再公開できません。' }, { status: 409 })
+  }
   const data: Record<string, unknown> = {}
   if ('isActive' in body) data.isActive = Boolean(body.isActive)
   if ('name' in body && String(body.name).trim()) data.name = String(body.name).trim().slice(0, 200)
@@ -32,7 +40,7 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   }
 
   const updated = await prisma.aishodanRoom.updateMany({
-    where: { id: p.id, organizationId: ctx.organizationId },
+    where: { id: p.id, organizationId: ctx.organizationId, ...((data.isActive === true) ? { scenario: { product: { archivedAt: null } } } : {}) },
     data,
   })
   if (updated.count === 0) return NextResponse.json({ error: 'ルームが見つかりません' }, { status: 404 })

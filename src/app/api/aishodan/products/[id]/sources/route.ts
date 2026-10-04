@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
   const product = await prisma.aishodanProduct.findFirst({
-    where: { id: p.id, organizationId: ctx.organizationId },
+    where: { id: p.id, organizationId: ctx.organizationId, archivedAt: null },
     select: { id: true },
   })
   if (!product) return NextResponse.json({ error: '商材が見つかりません' }, { status: 404 })

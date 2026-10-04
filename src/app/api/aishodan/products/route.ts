@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
   if (searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
     return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
   }
-  const where = { organizationId: ctx.organizationId, name: { not: PENDING_PRODUCT_NAME } }
+  const where = { organizationId: ctx.organizationId, archivedAt: null, name: { not: PENDING_PRODUCT_NAME } }
   if (cursor && !await prisma.aishodanProduct.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
     return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
   }
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   // 無料枠の上限（services.ts の「商材1件」を実際に効かせる）
   // ⚠️ クロール＋LLM生成の前に判定する。後ろに置くと費用だけ発生する。
   const checkQuota = () => assertFreeLimit('aishodanProducts', () =>
-    prisma.aishodanProduct.count({ where: { organizationId: ctx.organizationId } }), ownerUserId
+    prisma.aishodanProduct.count({ where: { organizationId: ctx.organizationId, archivedAt: null } }), ownerUserId
   )
   const quotaResponse = (checked: Awaited<ReturnType<typeof checkQuota>>) => NextResponse.json({
     error: canManageBilling ? checked.reason : `この組織の利用上限（${checked.limit}件）に達しました。利用枠の変更は組織の契約者にご相談ください。`,
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
         })
         if (pending) return { kind: 'processing' } as const
         if (quota.limit !== undefined) {
-          const used = await tx.aishodanProduct.count({ where: { organizationId: ctx.organizationId } })
+          const used = await tx.aishodanProduct.count({ where: { organizationId: ctx.organizationId, archivedAt: null } })
           if (used >= quota.limit) return { kind: 'limit' } as const
         }
         const reserved = await tx.aishodanProduct.create({

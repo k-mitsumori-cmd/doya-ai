@@ -95,9 +95,9 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
       result = await prisma.$transaction(async (tx) => {
         const currentRoom = await tx.aishodanRoom.findUnique({
           where: { id: room.id },
-          select: { isActive: true, isPreview: true, expiresAt: true, maxSessions: true, sessionCount: true },
+          select: { isActive: true, isPreview: true, expiresAt: true, maxSessions: true, sessionCount: true, scenario: { select: { product: { select: { archivedAt: true } } } } },
         })
-        if (!currentRoom?.isActive) return { kind: 'unavailable' } as const
+        if (!currentRoom?.isActive || currentRoom.scenario.product.archivedAt) return { kind: 'unavailable' } as const
         if (currentRoom.expiresAt && currentRoom.expiresAt.getTime() < Date.now()) return { kind: 'expired' } as const
         if (currentRoom.isPreview !== room.isPreview) return { kind: 'changed' } as const
         if (currentRoom.sessionCount >= currentRoom.maxSessions) return { kind: 'unavailable' } as const

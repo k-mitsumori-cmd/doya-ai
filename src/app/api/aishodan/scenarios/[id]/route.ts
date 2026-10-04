@@ -16,7 +16,7 @@ type Ctx = { params: Promise<{ id: string }> }
 async function loadOwned(scenarioId: string, organizationId: string) {
   return prisma.aishodanScenario.findFirst({
     where: { id: scenarioId, product: { organizationId } },
-    include: { product: { select: { id: true, name: true, profile: true } } },
+    include: { product: { select: { id: true, name: true, profile: true, archivedAt: true } } },
   })
 }
 
@@ -47,6 +47,7 @@ export async function PUT(req: NextRequest, ctxParam: Ctx) {
 
   const scenario = await loadOwned(p.id, ctx.organizationId)
   if (!scenario) return NextResponse.json({ error: 'シナリオが見つかりません' }, { status: 404 })
+  if (scenario.product.archivedAt) return NextResponse.json({ error: '保管済み商材のシナリオは編集できません。' }, { status: 409 })
 
   const body = await req.json().catch(() => ({}))
   const data: Record<string, unknown> = {}

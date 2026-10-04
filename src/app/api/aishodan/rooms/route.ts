@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   // 他組織のシナリオでルームを作らせない
   const scenario = await prisma.aishodanScenario.findFirst({
-    where: { id: scenarioId, product: { organizationId: ctx.organizationId } },
+    where: { id: scenarioId, product: { organizationId: ctx.organizationId, archivedAt: null } },
     include: { product: { select: { name: true } } },
   })
   if (!scenario) return NextResponse.json({ error: 'シナリオが見つかりません' }, { status: 404 })

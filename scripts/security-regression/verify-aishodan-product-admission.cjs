@@ -14,6 +14,7 @@ function matches(row, where) {
   if (where.organizationId && row.organizationId !== where.organizationId) return false
   if (where.id && row.id !== where.id) return false
   if (where.name?.not && row.name === where.name.not) return false
+  if (where.archivedAt === null && row.archivedAt) return false
   if (typeof where.name === 'string' && row.name !== where.name) return false
   if (where.createdAt?.lt && !(row.createdAt < where.createdAt.lt)) return false
   return true
@@ -97,6 +98,17 @@ const post = () => route.POST(new Request('http://offline.invalid/api/aishodan/p
     assert.equal((await response.json()).upgradeUrl, '/aishodan/pricing')
     assert.equal(crawlCalls, 1)
     assert.equal(profileCalls, 1)
+  })
+  await check('archived product keeps history while freeing the active product slot', async () => {
+    products[0].archivedAt = new Date()
+    const oldId = products[0].id
+    const listing = await route.GET(new Request('http://offline.invalid/api/aishodan/products'))
+    assert.equal((await listing.json()).total, 0)
+    const created = await post()
+    assert.equal(created.status, 200)
+    assert.equal(products.length, 2)
+    assert.equal(products[0].id, oldId)
+    assert.equal(products[1].archivedAt, undefined)
   })
   await check('failed save removes reserved product and allows retry', async () => {
     products.length = 0

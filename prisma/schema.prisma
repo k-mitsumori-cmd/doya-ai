@@ -4046,6 +4046,7 @@ model AishodanProduct {
   sourceUrl      String?
   /// 一言説明・提供価値・ICP・料金・FAQ・話してはいけないこと
   profile        Json?
+  archivedAt     DateTime?
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 

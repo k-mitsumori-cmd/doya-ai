@@ -20,7 +20,7 @@ export async function loadRoomByToken(token: string) {
       organization: { select: { id: true, name: true, retentionDays: true } },
       scenario: {
         include: {
-          product: { select: { id: true, name: true, profile: true } },
+          product: { select: { id: true, name: true, profile: true, archivedAt: true } },
         },
       },
     },
@@ -31,6 +31,7 @@ export type LoadedRoom = NonNullable<Awaited<ReturnType<typeof loadRoomByToken>>
 
 /** 商談を開始してよい部屋か */
 export function assertRoomUsable(room: LoadedRoom): { ok: true } | { ok: false; reason: string; status: number } {
+  if (room.scenario.product.archivedAt) return { ok: false, reason: 'この商談ルームは現在ご利用いただけません。', status: 403 }
   if (!room.isActive) return { ok: false, reason: 'この商談ルームは現在ご利用いただけません。', status: 403 }
   if (room.expiresAt && room.expiresAt.getTime() < Date.now()) {
     return { ok: false, reason: 'この商談ルームの公開期間は終了しました。', status: 410 }

@@ -7,7 +7,7 @@ const ts = require('typescript')
 const source = fs.readFileSync(path.join(__dirname, '../../src/app/api/aishodan/room/[token]/start/route.ts'), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 
-async function exercise({ preview = false, used = 0, ledgerUsed = 0, roomCount = 0, createFails = false, ledgerFails = false, quotaUnavailable = false, conflictOnce = false, authenticated = true, member = true } = {}) {
+async function exercise({ preview = false, used = 0, ledgerUsed = 0, roomCount = 0, createFails = false, ledgerFails = false, quotaUnavailable = false, conflictOnce = false, authenticated = true, member = true, archiveBeforeCommit = false } = {}) {
   let count = roomCount
   let usage = used
   let ledgerLifetime = ledgerUsed
@@ -34,7 +34,7 @@ async function exercise({ preview = false, used = 0, ledgerUsed = 0, roomCount =
       const tx = {
         aishodanMember: { findFirst: async () => member ? ({ id: 'membership' }) : null },
         aishodanRoom: {
-          findUnique: async () => ({ isActive: true, isPreview: preview, expiresAt: null, maxSessions: 3, sessionCount: count }),
+          findUnique: async () => ({ isActive: true, isPreview: preview, expiresAt: null, maxSessions: 3, sessionCount: count, scenario: { product: { archivedAt: archiveBeforeCommit ? new Date() : null } } }),
           updateMany: async () => { if (count >= 3) return { count: 0 }; count++; return { count: 1 } },
         },
         aishodanSession: {
@@ -80,6 +80,9 @@ async function exercise({ preview = false, used = 0, ledgerUsed = 0, roomCount =
   assert.equal(success.count, 1)
   assert.equal(success.usage, 3)
   assert.equal(success.ledgerLifetime, 3)
+  const archived = await exercise({ archiveBeforeCommit: true })
+  assert.equal(archived.status, 429)
+  assert.equal(archived.creates, 0)
 
   const realGuest = await exercise({ authenticated: false })
   assert.equal(realGuest.status, 200)

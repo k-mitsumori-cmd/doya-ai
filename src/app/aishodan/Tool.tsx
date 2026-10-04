@@ -252,21 +252,14 @@ export default function AishodanTool() {
     }
   }
 
-  /**
-   * 商材を削除する。
-   * 商談記録はサーバーで保護し、削除できる場合も失う内容を先に示す。
-   */
+  /** 商談記録がある商材は保管し、記録を残して利用枠を空ける。 */
   async function deleteProduct(prod: Product) {
-    const rooms = prod.scenarios.length > 0 ? '発行済みの商談URL' : ''
     const warn = [
-      `「${prod.name}」を削除します。`,
+      `「${prod.name}」の利用を終了します。`,
       '',
-      '次のものも一緒に消えます。元に戻せません。',
-      `・ナレッジ ${prod._count.chunks}件 / 取り込んだ ${prod._count.sources}ページ`,
-      '・シナリオ',
-      rooms && `・${rooms}（配布済みのURLは開けなくなります）`,
-      '',
-      'この商材に商談記録がある場合は削除できません。',
+      '商談記録がある場合は商材と記録を保管し、無料枠を空けます。配布済みの商談URLは利用できなくなります。',
+      '商談記録がない場合は商材・ナレッジ・シナリオを削除します。元に戻せません。',
+      `ナレッジ ${prod._count.chunks}件 / 取り込んだ ${prod._count.sources}ページ`,
     ]
       .filter(Boolean)
       .join('\n')
@@ -281,6 +274,7 @@ export default function AishodanTool() {
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d?.error || '削除できませんでした')
       await load()
+      setImportResult(d.archived ? `「${prod.name}」を保管しました。商談記録は残り、商談URLの公開は停止しました。` : `「${prod.name}」を削除しました。`)
     } catch (e) {
       notifyError(setError, e instanceof Error ? e.message : '削除できませんでした')
     } finally {
@@ -513,7 +507,7 @@ export default function AishodanTool() {
                       disabled={deletingId === p.id}
                       className="rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {deletingId === p.id ? '削除中…' : '削除'}
+                      {deletingId === p.id ? '処理中…' : '削除・保管'}
                     </button>
                     )}
                   </div>
