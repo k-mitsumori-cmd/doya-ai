@@ -6,6 +6,7 @@ const ts = require('typescript')
 const React = require('react')
 const { renderToStaticMarkup } = require('react-dom/server')
 const planUtils = require('./load-typescript.cjs').load('src/lib/plan-utils.ts')
+const { isPaidPlan } = require('./load-typescript.cjs').load('src/lib/unified-plan.ts')
 
 const accessFile = path.resolve(__dirname, '../../src/lib/adbanner/access.ts')
 const accessSource = fs.readFileSync(accessFile, 'utf8')
@@ -18,9 +19,15 @@ function findPaid(node) {
 findPaid(accessAst)
 assert.ok(paidPredicate, 'AdBanner paid-tier predicate must exist')
 const predicateJs = ts.transpileModule(`(${paidPredicate.getText(accessAst)})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
-const isPaid = vm.runInNewContext(predicateJs)
-for (const plan of ['LIGHT', 'PRO', 'ENTERPRISE', 'BUNDLE', 'STARTER']) assert.equal(isPaid(plan), true, plan)
-for (const plan of [undefined, null, 'FREE', 'GUEST', 'unknown', 'NOT_PRO', 'APPROVED']) assert.equal(isPaid(plan), false, String(plan))
+const isPaid = vm.runInNewContext(predicateJs, { isPaidPlan })
+for (const plan of ['LIGHT', 'PRO', 'ENTERPRISE', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS', 'PREMIUM']) {
+  assert.equal(isPaidPlan(plan), true, plan)
+  assert.equal(isPaid(plan), true, plan)
+}
+for (const plan of [undefined, null, 'FREE', 'GUEST', 'unknown', 'NOT_PRO', 'APPROVED']) {
+  assert.equal(isPaidPlan(plan), false, String(plan))
+  assert.equal(isPaid(plan), false, String(plan))
+}
 
 const empty = () => null
 const container = ({ children }) => React.createElement('div', null, children)

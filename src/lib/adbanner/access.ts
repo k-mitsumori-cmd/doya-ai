@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import type { AdPlanTier } from './types'
+import { isPaidPlan } from '@/lib/unified-plan'
 
 export const GUEST_COOKIE = 'adbanner_gid'
 
@@ -20,7 +21,7 @@ export interface AdIdentity {
 }
 
 function isPaid(plan?: string | null) {
-  return ['LIGHT', 'PRO', 'ENTERPRISE', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS'].includes((plan || '').toUpperCase())
+  return isPaidPlan(plan)
 }
 
 /** リクエストから利用者の識別とプランを解決 */

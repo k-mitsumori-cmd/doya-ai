@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import { getPersonaDailyLimitByUserPlan } from '@/lib/pricing'
-import { isPaidPlan } from '@/lib/unified-plan'
+import { tierFrom } from '@/lib/plan-utils'
 import { personaUsageDay } from './usage-day'
 import { personaExtraImageLimit } from './image-ledger'
 
@@ -17,7 +17,7 @@ export async function getPersonaUsage(db: PrismaClient, userId: string, now = ne
     const imagePending = await tx.personaImageJob.count({ where: { project: { userId, deletedAt: null }, usageDay: day, status: 'pending', intent: { not: 'included' }, leaseExpiresAt: { gt: now } } })
     const quota = (used: number, reserved: number, limit: number) => ({ used, reserved, limit, remaining: limit < 0 ? null : Math.max(0, limit - used - reserved) })
     return {
-      planLabel: isPaidPlan(user.plan) ? 'PRO' : 'FREE',
+      planLabel: tierFrom(user.plan),
       text: quota(text?.used ?? oldUsed, textPending, getPersonaDailyLimitByUserPlan(user.plan)),
       extraImages: quota(image?.used ?? 0, imagePending, personaExtraImageLimit(user.plan)),
       resetAt: new Date(day.getTime() + 86400000).toISOString(),

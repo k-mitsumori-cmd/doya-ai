@@ -10,11 +10,12 @@ export const UNIFIED_PRO_PRICE = 9980
 
 /**
  * 有料(プロ)プランかどうかの単一判定。User.plan を唯一の真実として全サービスで参照する。
- * FREE / GUEST（および未設定）は無料。それ以外は有料扱い。
+ * DBや外部連携の予期しない値で有料枠を開放しないため、既知の契約コードのみを認める。
  */
+const PAID_PLAN_CODES = new Set(['LIGHT', 'PRO', 'ENTERPRISE', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS', 'PREMIUM'])
+
 export function isPaidPlan(plan?: string | null): boolean {
-  const p = (plan || 'FREE').toUpperCase()
-  return p !== 'FREE' && p !== 'GUEST'
+  return PAID_PLAN_CODES.has((plan || '').trim().toUpperCase())
 }
 
 /** 統一プロプランの価格表示ラベル */
