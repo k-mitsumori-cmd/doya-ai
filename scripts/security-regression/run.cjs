@@ -75,6 +75,11 @@ if (signInCallback.error || signInCallback.status !== 0) {
   console.error('Security regression failed: verify-signin-callback.cjs');
   process.exit(1);
 }
+const signInRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-signin-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (signInRecovery.error || signInRecovery.status !== 0) {
+  console.error('Security regression failed: verify-signin-recovery.cjs');
+  process.exit(1);
+}
 const organizationBilling = spawnSync(process.execPath, [path.join(__dirname, 'verify-organization-billing.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (organizationBilling.error || organizationBilling.status !== 0) {
   console.error('Security regression failed: verify-organization-billing.cjs');

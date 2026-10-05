@@ -1,0 +1,19 @@
+{
+  "scope": "model names only; historical ER artifact is not current. Field and relation changes remain to be reconciled",
+  "previousArtifact": "docs/architecture/2026-09-16-er/data.json",
+  "previousModels": 180,
+  "currentModels": 190,
+  "added": [
+    "StripeWebhookEvent",
+    "StripeWebhookNotification",
+    "CunningRecordingLease",
+    "CunningUsageAllocation",
+    "CunningAudioWindow",
+    "PersonaImagePurgeTask",
+    "PersonaProject",
+    "PersonaImageJob",
+    "PersonaImageUsageDay",
+    "PersonaUsageDay"
+  ],
+  "removed": []
+}

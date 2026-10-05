@@ -1,0 +1,21 @@
+{
+  "unfixed": true,
+  "reports": [
+    {
+      "service": "sfa",
+      "file": "src/app/sfa/Entry.tsx",
+      "scope": "actual extracted create handler; mocked unauthorized API and rejecting SDK; no network or database access",
+      "sdkCalls": 1,
+      "creatingAfterRejectedStart": true,
+      "visibleErrors": 0
+    },
+    {
+      "service": "shodan",
+      "file": "src/app/shodan/Entry.tsx",
+      "scope": "actual extracted create handler; mocked unauthorized API and rejecting SDK; no network or database access",
+      "sdkCalls": 1,
+      "creatingAfterRejectedStart": true,
+      "visibleErrors": 0
+    }
+  ]
+}

@@ -23,5 +23,28 @@
     "jobConclusion": "cancelled",
     "executedSteps": 0,
     "failureAnnotation": "The job was not acquired by Runner of type hosted even after multiple attempts"
-  }
+  },
+  "additionalRuns": [
+    {
+      "runId": 37372309326,
+      "jobId": 111972219877,
+      "sha": "4d2850b8ec20ffec31540c137da66642bcdef549",
+      "runStatus": "completed",
+      "runConclusion": "failure",
+      "jobConclusion": "cancelled",
+      "executedSteps": 0,
+      "failureAnnotation": "The job was not acquired by Runner of type hosted even after multiple attempts"
+    },
+    {
+      "runId": 37373817977,
+      "jobId": 111977242894,
+      "sha": "71a8cc2d752c6d2b6095e6d6119e635ed7a5255d",
+      "runStatus": "completed",
+      "runConclusion": "failure",
+      "jobConclusion": "cancelled",
+      "runnerId": 0,
+      "executedSteps": 0,
+      "failureAnnotation": "The job was not acquired by Runner of type hosted even after multiple attempts"
+    }
+  ]
 }

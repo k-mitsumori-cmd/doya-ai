@@ -3,7 +3,7 @@
 import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { BarChart3, PenLine, Palette, Sparkles, Mic, FileText, Wand2 } from 'lucide-react'
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { safeSignInCallbackUrl, signInPublicIntroUrl } from '@/lib/safe-signin-callback'
@@ -11,7 +11,7 @@ import { safeSignInCallbackUrl, signInPublicIntroUrl } from '@/lib/safe-signin-c
 // エラーコードに対応するメッセージ
 const errorMessages: Record<string, string> = {
   Configuration: 'サーバー設定に問題があります。',
-  google: 'Googleログイン設定が未完了です（GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET）。運用環境の環境変数を確認してください。',
+  google: 'Googleログインを開始できませんでした。時間をおいて再試行してください。',
   AccessDenied: 'アクセスが拒否されました。',
   OAuthSignin: 'ログインを開始できませんでした。',
   OAuthCallback: 'ログイン処理に失敗しました。',
@@ -27,12 +27,42 @@ function SignInContent() {
   const introUrl = signInPublicIntroUrl(callbackUrl)
   const error = searchParams.get('error')
   const [isLoading, setIsLoading] = useState(false)
+  const [loginError, setLoginError] = useState<string | null>(null)
+  const loginInFlight = useRef(false)
+  const loginAttempt = useRef(0)
 
-  const errorMessage = error ? (errorMessages[error] || errorMessages.Default) : null
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return
+      loginAttempt.current += 1
+      loginInFlight.current = false
+      setIsLoading(false)
+      setLoginError(null)
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow)
+      loginAttempt.current += 1
+    }
+  }, [])
 
-  const handleGoogleLogin = () => {
+  const errorMessage = loginError || (error ? (errorMessages[error] || errorMessages.Default) : null)
+
+  const handleGoogleLogin = async () => {
+    if (loginInFlight.current) return
+    const attempt = ++loginAttempt.current
+    loginInFlight.current = true
+    setLoginError(null)
     setIsLoading(true)
-    signIn('google', { callbackUrl }, callbackUrl.startsWith('/hr/invite/') ? { prompt: 'select_account' } : undefined)
+    try {
+      await signIn('google', { callbackUrl }, callbackUrl.startsWith('/hr/invite/') ? { prompt: 'select_account' } : undefined)
+      // A successful OAuth start navigates away. Keep the button locked until that navigation.
+    } catch {
+      if (attempt !== loginAttempt.current) return
+      loginInFlight.current = false
+      setIsLoading(false)
+      setLoginError('ログインを開始できませんでした。もう一度お試しください。')
+    }
   }
 
   return (
@@ -152,8 +182,8 @@ function SignInContent() {
             </div>
           </div>
 
-          {error && (
-            <div className="mt-5 rounded-2xl bg-red-50 border border-red-200 text-red-800 px-4 py-3">
+          {errorMessage && (
+            <div role="alert" className="mt-5 rounded-2xl bg-red-50 border border-red-200 text-red-800 px-4 py-3">
               <p className="text-xs font-black">エラー</p>
               <p className="text-sm font-bold mt-1">{errorMessage}</p>
             </div>

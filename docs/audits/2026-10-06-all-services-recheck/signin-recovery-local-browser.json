@@ -1,0 +1,30 @@
+{
+  "scope": "Compiled actual Next app and installed NextAuth SDK; local synthetic provider/session/CSRF responses and non-JSON 502 start failure; all API forwarding and writes blocked; no external OAuth, AI, billing or user DB mutation",
+  "verificationStatus": "verified first and second failure recovery on the same mounted page",
+  "first": {
+    "alerts": [
+      "エラー\n\nログインを開始できませんでした。もう一度お試しください。"
+    ],
+    "buttons": [
+      {
+        "disabled": false,
+        "text": "Googleでログイン"
+      }
+    ]
+  },
+  "second": {
+    "alerts": [
+      "エラー\n\nログインを開始できませんでした。もう一度お試しください。"
+    ],
+    "buttons": [
+      {
+        "disabled": false,
+        "text": "Googleでログイン"
+      }
+    ],
+    "path": "/auth/signin",
+    "privateFailureExposed": false,
+    "query": "?callbackUrl=/hr/invite/synthetic"
+  },
+  "discardedEarlierAttempt": "Retry tab was closed before final response; not treated as success"
+}

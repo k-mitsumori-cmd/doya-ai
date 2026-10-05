@@ -1,0 +1,10 @@
+{
+  "deploymentId": "dpl_3ySqaTWG7w2amEQ3f8cKAa72FQjz",
+  "sha": "71a8cc2d752c6d2b6095e6d6119e635ed7a5255d",
+  "scope": "Actual production HR sign-in introduction link to public HR landing page; Google login not submitted",
+  "result": {
+    "h1": "一人ひとりの力を、\n組織の可能性に。",
+    "loginGateVisible": false,
+    "path": "/hr"
+  }
+}

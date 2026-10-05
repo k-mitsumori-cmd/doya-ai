@@ -1,0 +1,25 @@
+{
+  "observedAt": "2026-10-05T21:14:43.221Z",
+  "projectId": "prj_0HjbyDSXLIsYb4SYMfoDhpiQrVg2",
+  "environment": "production",
+  "variableMetadataUpdatedAt": 1790400961288,
+  "referenceDeploymentId": "dpl_2nGFVLhgUNkaRTPY5QsFE6Zm7JQn",
+  "referenceDeploymentSha": "4d2850b8ec20ffec31540c137da66642bcdef549",
+  "targetFingerprint": "94d3a549c62c08a4cbca36d02306fc44762248b7a5e8913774e0b97b28884c28",
+  "readOnly": "on",
+  "expected": {
+    "models": 190,
+    "columns": 2110,
+    "foreignKeyColumns": 197
+  },
+  "actualMetadata": {
+    "tables": 190,
+    "columns": 2110,
+    "foreignKeyColumns": 197
+  },
+  "missingTables": [],
+  "missingColumns": [],
+  "missingForeignKeys": [],
+  "scope": "Production DATABASE_URL fetched from current project into process memory only; metadata predates the reference Ready deployment. SQL transaction confirmed READ ONLY. Table/column/foreign-key presence only; no user rows, counters, migration or data writes. Does not verify column types, all indexes, deployed env snapshot or business transactions.",
+  "referenceDeploymentCreatedAt": 1791233482643
+}
