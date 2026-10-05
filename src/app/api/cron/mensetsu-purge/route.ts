@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { EVALUATION_STALE_MS } from '@/lib/mensetsu/types'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -56,13 +57,44 @@ export async function GET(req: NextRequest) {
   const staleLive = await prisma.mensetsuSession.findMany({
     where: { status: 'live', startedAt: { lt: staleBefore } },
     select: { id: true, _count: { select: { turns: true } } },
+    orderBy: { startedAt: 'asc' },
     take: BATCH,
   })
+  let closedStaleLive = 0
   for (const s of staleLive) {
-    await prisma.mensetsuSession.update({
-      where: { id: s.id },
-      data: { status: s._count.turns > 0 ? 'completed' : 'aborted', endedAt: now },
-    })
+    try {
+      const closed = await prisma.mensetsuSession.updateMany({
+        where: { id: s.id, status: 'live', startedAt: { lt: staleBefore } },
+        data: { status: s._count.turns > 0 ? 'completed' : 'aborted', endedAt: now },
+      })
+      closedStaleLive += closed.count
+    } catch {
+      // 1件の終了失敗で保持期限切れデータの削除まで止めない。
+      console.error('[mensetsu-purge] stale live close failed')
+    }
+  }
+
+  // 評価中に実行環境が終了した場合、翌日のcronでも再試行できる状態へ戻す。
+  // 実行中の評価と競合しないよう、開始から6分超かつ同じ更新時刻の行だけ戻す。
+  const staleEvaluationBefore = new Date(now.getTime() - EVALUATION_STALE_MS)
+  const staleEvaluations = await prisma.mensetsuSession.findMany({
+    where: { status: 'evaluating', updatedAt: { lt: staleEvaluationBefore } },
+    select: { id: true, updatedAt: true, evaluatedAt: true },
+    orderBy: { updatedAt: 'asc' },
+    take: BATCH,
+  })
+  let recoveredEvaluations = 0
+  for (const s of staleEvaluations) {
+    try {
+      const recovered = await prisma.mensetsuSession.updateMany({
+        where: { id: s.id, status: 'evaluating', updatedAt: s.updatedAt },
+        data: { status: s.evaluatedAt ? 'evaluated' : 'completed' },
+      })
+      recoveredEvaluations += recovered.count
+    } catch {
+      // 1件の復旧失敗で保存期限を過ぎた個人データの削除まで止めない。
+      console.error('[mensetsu-purge] evaluation recovery failed')
+    }
   }
 
   // 2) 保持期限を過ぎたセッションの個人データを削除
@@ -148,7 +180,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     expiredSessions: expired.count,
-    closedStaleLive: staleLive.length,
+    closedStaleLive,
+    recoveredEvaluations,
     purgedSessions,
     purgedTurns,
     storageFailures: storageFailures.length,

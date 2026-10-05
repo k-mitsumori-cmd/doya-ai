@@ -15,7 +15,11 @@ function fixture({ turns = 1, started = true, status = 'live', waitUntilFails = 
     } },
     '@/lib/prisma': { prisma: {
       mensetsuTurn: { count: async () => turns },
-      mensetsuSession: { update: async ({ data }) => { nextStatus = data.status } },
+      mensetsuSession: { updateMany: async ({ data }) => {
+        if (nextStatus) return { count: 0 }
+        nextStatus = data.status
+        return { count: 1 }
+      } },
     } },
     '@/lib/mensetsu/run-evaluation': { runEvaluation: () => { evaluationCount++; return pending } },
     '@/lib/mensetsu/public': { loadSessionByToken: async () => ({ id: 'session', status, startedAt: started ? new Date() : null }) },
@@ -47,6 +51,15 @@ function fixture({ turns = 1, started = true, status = 'live', waitUntilFails = 
     assert.equal(response.body.status, 'aborted')
     assert.equal(f.evaluationCount, 0)
     assert.equal(f.background, undefined)
+  })
+  await check('concurrent end requests start only one evaluation', async () => {
+    const f = fixture()
+    const responses = await Promise.all([f.run(), f.run()])
+    assert.equal(responses.filter((response) => response.body.status === 'completed').length, 1)
+    assert.equal(responses.filter((response) => response.body.alreadyEnded).length, 1)
+    assert.equal(f.evaluationCount, 1)
+    f.finish()
+    await f.background
   })
   await check('unavailable background context waits for evaluation before responding', async () => {
     const f = fixture({ waitUntilFails: true })

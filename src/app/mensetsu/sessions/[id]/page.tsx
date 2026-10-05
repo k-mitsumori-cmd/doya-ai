@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
+import { EVALUATION_STALE_MS } from '@/lib/mensetsu/types'
 
 const VERDICT_LABEL: Record<string, string> = {
   recommend: '推奨',
@@ -30,6 +31,7 @@ export default function MensetsuReportPage() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshError, setRefreshError] = useState(false)
   const [tab, setTab] = useState<'report' | 'transcript'>('report')
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [audioBusy, setAudioBusy] = useState(false)
@@ -107,24 +109,41 @@ export default function MensetsuReportPage() {
       const json = await res.json()
       if (!res.ok) {
         notifyError(setError, json?.error || '評価に失敗しました')
+        if (res.status === 409) {
+          const current = await fetch(`/api/mensetsu/sessions/${id}`)
+          if (current.ok) setData(await current.json())
+        }
         return
       }
       const r = await fetch(`/api/mensetsu/sessions/${id}`)
-      setData(await r.json())
+      const current = await r.json()
+      if (!r.ok || !current?.session) {
+        notifyError(setError, '評価結果を取得できませんでした。再読み込みしてください。')
+        return
+      }
+      setData(current)
+      setRefreshError(false)
+    } catch {
+      notifyError(setError, '評価結果を確認できませんでした。再読み込みしてください。')
     } finally {
       setEvaluating(false)
     }
   }, [id])
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (background = false) => {
     try {
       const res = await fetch(`/api/mensetsu/sessions/${id}`)
       const json = await res.json()
       if (!res.ok) {
-        notifyError(setError, json?.error || '取得できませんでした')
+        if (background) setRefreshError(true)
+        else notifyError(setError, json?.error || '取得できませんでした')
         return
       }
+      setRefreshError(false)
       setData(json)
+    } catch {
+      if (background) setRefreshError(true)
+      else notifyError(setError, '評価結果を取得できませんでした。再読み込みしてください。')
     } finally {
       setLoading(false)
     }
@@ -147,6 +166,12 @@ export default function MensetsuReportPage() {
     void load()
   }, [load])
 
+  useEffect(() => {
+    if (data?.session?.status !== 'evaluating') return
+    const timer = window.setInterval(() => { void load(true) }, 10000)
+    return () => window.clearInterval(timer)
+  }, [data?.session?.status, load])
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f2f6ff]">
@@ -154,7 +179,7 @@ export default function MensetsuReportPage() {
       </main>
     )
   }
-  if (error || !data?.session) {
+  if (!data?.session) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f2f6ff] px-5">
         <div className="rounded-lg bg-white p-8 text-center shadow-sm">
@@ -168,7 +193,10 @@ export default function MensetsuReportPage() {
   }
 
   const s = data.session
-  const canEvaluate = !!s.startedAt && !!s.endedAt && ['completed', 'evaluated'].includes(s.status)
+  const evaluationStale = s.status === 'evaluating' &&
+    Date.now() - new Date(s.updatedAt).getTime() >= EVALUATION_STALE_MS
+  const canEvaluate = !!s.startedAt && !!s.endedAt &&
+    (['completed', 'evaluated'].includes(s.status) || evaluationStale)
   const criteria: any[] = s.template?.criteria || []
   const scoreByCriterion = new Map<string, any>(s.scores.map((x: any) => [x.criterionId, x]))
 
@@ -186,6 +214,7 @@ export default function MensetsuReportPage() {
           {s.template.jobTitle} / {s.template.durationMin}分 /{' '}
           {s.endedAt ? new Date(s.endedAt).toLocaleString('ja-JP') : '未実施'}
         </p>
+        {error && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p>}
 
         {/* AI判定の位置づけを常時明示（C2） */}
         <div className="mt-5 rounded-lg border border-[#ffe0b2] bg-[#fff8e1] p-4">
@@ -195,7 +224,23 @@ export default function MensetsuReportPage() {
           </p>
         </div>
 
-        {!s.evaluatedAt && (
+        {s.status === 'evaluating' && (
+          <div className="mt-5 rounded-lg border border-[#dfe6f3] bg-white p-5 text-sm font-semibold text-[#425071] shadow-sm" role="status">
+            {refreshError && <p className="mb-2 text-amber-700">自動更新に失敗しました。再読み込みして状態をご確認ください。</p>}
+            {evaluationStale
+              ? '評価が中断された可能性があります。下のボタンから再試行できます。'
+              : s.evaluatedAt
+                ? '再評価中です。表示中の結果は前回の評価です。完了すると画面を更新します。'
+                : '評価中です。完了するとこの画面を更新します。'}
+            {evaluationStale && !!s.evaluatedAt && (
+              <button type="button" onClick={runEvaluate} disabled={evaluating}
+                className="mt-3 block rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-black text-white disabled:bg-[#b9cdf5]">
+                {evaluating ? '再評価中…' : '再評価する'}
+              </button>
+            )}
+          </div>
+        )}
+        {!s.evaluatedAt && s.status !== 'evaluating' && (
           <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg border border-[#dfe6f3] bg-white p-5 shadow-sm">
             <span className="rounded-full bg-[#f1f3f4] px-4 py-1.5 text-sm font-black text-[#3c4043]">
               未評価
@@ -301,7 +346,9 @@ export default function MensetsuReportPage() {
             <span className="material-symbols-outlined text-3xl text-[#8a94ad] font-medium">fact_check</span>
             <p className="mt-2 text-sm font-black text-[#0a0f3c]">まだ評価していません</p>
             <p className="mt-1 text-xs font-semibold leading-relaxed text-[#425071]">
-              {!canEvaluate
+              {s.status === 'evaluating' && !evaluationStale
+                ? '評価中です。完了するまでお待ちください。'
+                : !canEvaluate
                 ? '評価は面接が終了してから実行できます。'
                 : s.turns.length > 0
                 ? `逐語ログ${s.turns.length}件をもとに評価します。数十秒かかります。`

@@ -153,7 +153,7 @@ export default function MensetsuLivePage() {
         if (s.expired) {
           setMessage('この面接URLの有効期限が切れています。採用ご担当者にお問い合わせください。')
           setStep('unavailable')
-        } else if (s.status === 'completed' || s.status === 'evaluated') {
+        } else if (s.status === 'completed' || s.status === 'evaluating' || s.status === 'evaluated') {
           setStep('done')
         } else if (s.consented) {
           setStep('check')

@@ -35,12 +35,16 @@ export const LEVEL_LABELS: Record<MensetsuLevel, string> = {
   manager: 'マネージャー',
 }
 
+// Vercel 関数の最長300秒に、停止判定まで1分の猶予を置く。
+export const EVALUATION_STALE_MS = 6 * 60 * 1000
+
 /** セッションの状態遷移 */
 export type SessionStatus =
   | 'pending' // URL発行済み・未開始
   | 'consented' // 同意済み・機器チェック通過
   | 'live' // 面接中
   | 'completed' // 面接終了・評価待ち
+  | 'evaluating' // 評価処理中
   | 'evaluated' // 評価済み
   | 'expired' // 期限切れ
   | 'aborted' // 中断（通信断など）
@@ -50,6 +54,7 @@ export const SESSION_STATUS_LABELS: Record<SessionStatus, string> = {
   consented: '準備完了',
   live: '実施中',
   completed: '評価待ち',
+  evaluating: '評価中',
   evaluated: '評価済み',
   expired: '期限切れ',
   aborted: '中断',

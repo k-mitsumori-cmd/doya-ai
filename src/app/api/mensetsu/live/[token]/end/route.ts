@@ -19,7 +19,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const s = await loadSessionByToken(p.token)
   if (!s) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
-  if (s.status === 'evaluated' || s.status === 'completed') {
+  if (s.status === 'evaluated' || s.status === 'evaluating' || s.status === 'completed') {
     return NextResponse.json({ ok: true, alreadyEnded: true })
   }
 
@@ -37,10 +37,12 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   const turns = await prisma.mensetsuTurn.count({ where: { sessionId: s.id } })
   const next = turns > 0 ? 'completed' : 'aborted'
 
-  await prisma.mensetsuSession.update({
-    where: { id: s.id },
+  // 同時の終了通知で completed への書き戻しと自動評価を重複させない。
+  const ended = await prisma.mensetsuSession.updateMany({
+    where: { id: s.id, status: { in: ['live', 'consented'] }, startedAt: { not: null }, endedAt: null },
     data: { status: next, endedAt: new Date() },
   })
+  if (ended.count !== 1) return NextResponse.json({ ok: true, alreadyEnded: true })
 
   // 発話があるものだけ評価する。中断（aborted）は評価しない
   if (next === 'completed') {

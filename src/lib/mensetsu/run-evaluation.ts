@@ -12,7 +12,7 @@
 //    自動評価は応募者のトークン経由で走るためログインセッションが無い。
 import { prisma } from '@/lib/prisma'
 import { evaluateSession } from './evaluate'
-import { LEVEL_LABELS, type MensetsuLevel, type Rubric } from './types'
+import { EVALUATION_STALE_MS, LEVEL_LABELS, type MensetsuLevel, type Rubric } from './types'
 
 export type RunEvaluationResult =
   | { ok: true; verdict: string }
@@ -35,13 +35,39 @@ export async function runEvaluation(sessionId: string): Promise<RunEvaluationRes
     },
   })
   if (!session) return { ok: false, reason: '見つかりません', status: 404 }
-  if (!session.startedAt || !session.endedAt || !['completed', 'evaluated'].includes(session.status)) {
+  if (!session.startedAt || !session.endedAt || !['completed', 'evaluated', 'evaluating'].includes(session.status)) {
     return { ok: false, reason: '評価は面接が終了してから実行してください。', status: 409 }
   }
   if (session.turns.length === 0) {
     return { ok: false, reason: '発話ログが無いため評価できません', status: 400 }
   }
+  const now = new Date()
+  if (session.purgeAfter && session.purgeAfter <= now) {
+    return { ok: false, reason: '記録の保管期限を過ぎているため評価できません。', status: 410 }
+  }
+  if (session.status === 'evaluating' && now.getTime() - session.updatedAt.getTime() < EVALUATION_STALE_MS) {
+    return { ok: false, reason: 'この面接は評価中です。完了後に再度ご確認ください。', status: 409 }
+  }
+  const previousStatus = session.status === 'evaluating'
+    ? (session.evaluatedAt ? 'evaluated' : 'completed')
+    : session.status
+  const claimAt = new Date(Math.max(now.getTime(), session.updatedAt.getTime() + 1))
+  const claimed = await prisma.mensetsuSession.updateMany({
+    where: { id: session.id, status: session.status, updatedAt: session.updatedAt },
+    data: { status: 'evaluating', updatedAt: claimAt },
+  })
+  if (claimed.count !== 1) {
+    return { ok: false, reason: 'この面接は別の操作で評価中です。再読み込みしてください。', status: 409 }
+  }
+  const releaseClaim = async () => {
+    // 別の処理が実行権を取得済みなら、その行には触れない。
+    await prisma.mensetsuSession.updateMany({
+      where: { id: session.id, status: 'evaluating', updatedAt: claimAt },
+      data: { status: previousStatus },
+    }).catch(() => console.error('[mensetsu] 評価失敗後の状態復旧に失敗'))
+  }
 
+  try {
   const samples = await prisma.mensetsuAnswerSample.findMany({
     where: { organizationId: session.organization.id },
     take: 12,
@@ -71,9 +97,24 @@ export async function runEvaluation(sessionId: string): Promise<RunEvaluationRes
 
   const byKey = new Map(session.template.criteria.map((x) => [x.key, x.id]))
 
-  await prisma.$transaction([
-    prisma.mensetsuScore.deleteMany({ where: { sessionId: session.id } }),
-    prisma.mensetsuScore.createMany({
+  const saved = await prisma.$transaction(async (tx) => {
+    const owner = await tx.mensetsuSession.updateMany({
+      where: {
+        id: session.id, status: 'evaluating', updatedAt: claimAt,
+        OR: [{ purgeAfter: null }, { purgeAfter: { gt: new Date() } }],
+      },
+      data: {
+        status: 'evaluated',
+        verdict: result.verdict,
+        overallComment: result.overallComment,
+        candidateFeedback: result.candidateFeedback,
+        recruiterReport: result.recruiterReport,
+        evaluatedAt: new Date(),
+      },
+    })
+    if (owner.count !== 1) return false
+    await tx.mensetsuScore.deleteMany({ where: { sessionId: session.id } })
+    await tx.mensetsuScore.createMany({
       data: result.scores
         .filter((s) => byKey.has(s.criterionKey))
         .map((s) => ({
@@ -84,19 +125,17 @@ export async function runEvaluation(sessionId: string): Promise<RunEvaluationRes
           rationale: s.rationale,
           quotes: s.quotes,
         })),
-    }),
-    prisma.mensetsuSession.update({
-      where: { id: session.id },
-      data: {
-        status: 'evaluated',
-        verdict: result.verdict,
-        overallComment: result.overallComment,
-        candidateFeedback: result.candidateFeedback,
-        recruiterReport: result.recruiterReport,
-        evaluatedAt: new Date(),
-      },
-    }),
-  ])
+    })
+    return true
+  })
+  if (!saved) {
+    await releaseClaim()
+    return { ok: false, reason: '評価中に面接の状態が変わりました。再読み込みしてください。', status: 409 }
+  }
 
   return { ok: true, verdict: result.verdict }
+  } catch (error) {
+    await releaseClaim()
+    throw error
+  }
 }

@@ -58,6 +58,7 @@ const STATUS_LABEL: Record<string, string> = {
   consented: '準備完了',
   live: '実施中',
   completed: '評価待ち',
+  evaluating: '評価中',
   evaluated: '評価済み',
   expired: '期限切れ',
   aborted: '中断',

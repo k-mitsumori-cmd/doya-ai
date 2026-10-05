@@ -81,7 +81,7 @@ export function assertUsable(s: LoadedSession): { ok: true } | { ok: false; reas
   if (s.expiresAt.getTime() < Date.now()) {
     return { ok: false, reason: 'この面接URLの有効期限が切れています。', status: 410 }
   }
-  if (s.status === 'completed' || s.status === 'evaluated') {
+  if (s.status === 'completed' || s.status === 'evaluating' || s.status === 'evaluated') {
     return { ok: false, reason: 'この面接は既に終了しています。', status: 409 }
   }
   if (s.status === 'expired' || s.status === 'aborted') {
