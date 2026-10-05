@@ -576,12 +576,12 @@ hr,U04,user-experience,日次・月次・累計・同時保存件数・直近7�
 hr,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 hr,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,紹介リンクを本番補修・遷移確認済み／認証開始条件の全操作は継続確認,signin-intro-production-71a8cc2d.json; README.md
 hr,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
-hr,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
+hr,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,一部検証済み：招待先違いの切替と上限403を区別し戻り先を保持／本番承諾と役割の通し確認未完了,hr-admin-auth-regression.log; hr-admin-auth-browser.json; README.md
 hr,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
 hr,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
 hr,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,現在版での項目別通し検証待ち,
-hr,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,現在版での項目別通し検証待ち,
-hr,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,現在版での項目別通し検証待ち,
+hr,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：招待認証/参加の失敗案内、連打、旧応答、履歴復元、遷移タイマー取消／全経路・実機・本番承諾未検証,hr-admin-auth-regression.log; hr-admin-auth-browser.json; scripts/security-regression/verify-hr-admin-auth-recovery.cjs; README.md
+hr,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,一部検証済み：招待認証/参加の失敗案内、連打、旧応答、履歴復元、遷移タイマー取消／全経路・実機・本番承諾未検証,hr-admin-auth-regression.log; hr-admin-auth-browser.json; scripts/security-regression/verify-hr-admin-auth-recovery.cjs; README.md
 hr,U14,user-experience,生成途中の失敗・一部成功でも成果物を救出でき、再試行対象と追加消費が分かる。,現在版での項目別通し検証待ち,
 hr,U15,user-experience,確定済み書類・終了した評価・締めた勤怠は通常操作で意図せず書き換わらない。,現在版での項目別通し検証待ち,
 hr,U16,user-experience,残量をサーバー実績に合わせ、端末変更や再ログインで一致する。,現在版での項目別通し検証待ち,

@@ -90,6 +90,11 @@ if (serviceAuthRecovery.error || serviceAuthRecovery.status !== 0) {
   console.error('Security regression failed: verify-service-auth-recovery.cjs');
   process.exit(1);
 }
+const hrAdminAuthRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-admin-auth-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrAdminAuthRecovery.error || hrAdminAuthRecovery.status !== 0) {
+  console.error('Security regression failed: verify-hr-admin-auth-recovery.cjs');
+  process.exit(1);
+}
 const organizationBilling = spawnSync(process.execPath, [path.join(__dirname, 'verify-organization-billing.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (organizationBilling.error || organizationBilling.status !== 0) {
   console.error('Security regression failed: verify-organization-billing.cjs');

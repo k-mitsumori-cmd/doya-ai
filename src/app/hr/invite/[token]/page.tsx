@@ -3,14 +3,18 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { signIn, signOut } from 'next-auth/react'
+import { NavigationSubmissionError, startGoogleSignIn, switchGoogleAccount, useNavigationSubmission } from '@/lib/use-navigation-submission'
 
 type InviteStatus = 'loading' | 'ready' | 'accepting' | 'success' | 'error' | 'expired'
 
 export default function InviteAcceptPage() {
   const params = useParams()
-  const router = useRouter()
   const token = params?.token as string
+  return <InviteContent key={token} token={token} />
+}
+
+function InviteContent({ token }: { token: string }) {
+  const router = useRouter()
 
   const [status, setStatus] = useState<InviteStatus>('loading')
   const [orgName, setOrgName] = useState('')
@@ -20,25 +24,34 @@ export default function InviteAcceptPage() {
   const [accountAction, setAccountAction] = useState<'signIn' | 'switch' | null>(null)
   const callbackUrl = `/hr/invite/${encodeURIComponent(token || '')}`
 
+  const { busy: accountBusy, run: submitAccount } = useNavigationSubmission('ログインを開始できませんでした。もう一度お試しください。')
+  const { busy: acceptanceBusy, run: submitAcceptance } = useNavigationSubmission('招待を受諾できませんでした。もう一度お試しください。')
+
   useEffect(() => {
-    if (!token) return
+    if (!token) { setError('招待が見つかりません'); setStatus('error'); return }
+    let active = true
+    const controller = new AbortController()
     async function verifyInvite() {
       try {
-        const res = await fetch(`/api/hr/organization/invite/${token}`)
+        const res = await fetch(`/api/hr/organization/invite/${encodeURIComponent(token)}`, { cache: 'no-store', signal: controller.signal })
+        if (!active) return
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
+          if (!active) return
           if (res.status === 410 || data.expired) {
             setStatus('expired')
           } else {
-            setError(data.error || '招待の検証に失敗しました')
+            setError(typeof data.error === 'string' ? data.error : '招待の検証に失敗しました')
             setStatus('error')
           }
           return
         }
         const data = await res.json()
+        if (!active) return
         const inv = data.invitation || data
+        if (!inv || typeof inv.status !== 'string' || typeof inv.organization?.id !== 'string' || !inv.organization.id || typeof inv.organization.name !== 'string' || typeof inv.email !== 'string' || !inv.email) throw new Error('Invalid invitation response')
         setOrgName(inv.organization?.name || inv.organizationName || inv.orgName || '')
-        setInviterName(inv.inviterName || inv.invitedBy || '')
+        setInviterName(typeof inv.inviterName === 'string' ? inv.inviterName : typeof inv.invitedBy === 'string' ? inv.invitedBy : '')
         setInviteEmail(inv.email || '')
         if (inv.status === 'EXPIRED') {
           setStatus('expired')
@@ -51,38 +64,73 @@ export default function InviteAcceptPage() {
         }
         setStatus('ready')
       } catch {
+        if (!active) return
         setError('招待の検証に失敗しました')
         setStatus('error')
       }
     }
     verifyInvite()
+    return () => { active = false; controller.abort() }
   }, [token])
 
+  useEffect(() => {
+    if (status !== 'success') return
+    const timer = setTimeout(() => router.push('/hr/dashboard'), 3000)
+    return () => clearTimeout(timer)
+  }, [status, router])
+
+  useEffect(() => {
+    const restore = (event: PageTransitionEvent) => {
+      if (event.persisted) setStatus(current => current === 'accepting' ? 'ready' : current)
+    }
+    window.addEventListener('pageshow', restore)
+    return () => window.removeEventListener('pageshow', restore)
+  }, [])
+
+  const handleAccount = async () => {
+    if (!accountAction || status !== 'error') return
+    await submitAccount(async () => {
+      if (accountAction === 'switch') await switchGoogleAccount(callbackUrl)
+      else await startGoogleSignIn(callbackUrl)
+    })
+  }
+
   const handleAccept = async () => {
-    setStatus('accepting')
-    try {
-      const res = await fetch('/api/hr/organization/invite/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
+    if (status !== 'ready') return
+    await submitAcceptance(async (isCurrent) => {
+      setStatus('accepting')
+      setAccountAction(null)
+      let expired = false
+      try {
+        const res = await fetch('/api/hr/organization/invite/accept', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
+        })
+        if (!isCurrent()) return
         if (res.status === 401) {
           setAccountAction('signIn')
-        } else if (res.status === 403 && data.code === 'INVITE_EMAIL_MISMATCH') {
-          setAccountAction('switch')
+          throw new NavigationSubmissionError('招待されたメールアドレスでログインしてください。')
         }
-        throw new Error(data.error || '招待の受諾に失敗しました')
+        if (res.status === 410) {
+          expired = true
+          setStatus('expired')
+          throw new NavigationSubmissionError('招待の有効期限が切れています。管理者に再送を依頼してください。')
+        }
+        const data = await res.json()
+        if (!isCurrent()) return
+        if (!res.ok) {
+          if (res.status === 403 && data.code === 'INVITE_EMAIL_MISMATCH') setAccountAction('switch')
+          throw new NavigationSubmissionError(typeof data.error === 'string' ? data.error : '招待を受諾できませんでした。')
+        }
+        if (data.success !== true || typeof data.organization?.id !== 'string' || !data.organization.id) throw new Error('Invalid participation response')
+        setStatus('success')
+      } catch (failure) {
+        if (!isCurrent()) return
+        const message = failure instanceof NavigationSubmissionError ? failure.message : '招待を受諾できませんでした。もう一度お試しください。'
+        if (!expired) setStatus('error')
+        setError(message)
+        throw new NavigationSubmissionError(message)
       }
-      setStatus('success')
-      setTimeout(() => {
-        router.push('/hr/dashboard')
-      }, 3000)
-    } catch (e: any) {
-      setError(e.message)
-      setStatus('error')
-    }
+    })
   }
 
   return (
@@ -139,6 +187,7 @@ export default function InviteAcceptPage() {
               )}
               <motion.button
                 onClick={handleAccept}
+                disabled={acceptanceBusy}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="w-full py-4 bg-blue-600 text-white rounded-full text-lg font-bold shadow-lg shadow-blue-500/25 hover:bg-blue-700 hover:shadow-xl transition-all"
@@ -257,12 +306,11 @@ export default function InviteAcceptPage() {
               <p className="text-sm text-slate-500 mb-6">{error}</p>
               {accountAction && (
                 <button
-                  onClick={() => accountAction === 'signIn'
-                    ? signIn('google', { callbackUrl })
-                    : signOut({ callbackUrl: `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}` })}
+                  onClick={handleAccount}
+                  disabled={accountBusy}
                   className="w-full mb-3 px-6 py-3 bg-blue-600 text-white rounded-full text-sm font-bold hover:bg-blue-700 transition-all"
                 >
-                  {accountAction === 'switch' ? '別のアカウントでログイン' : 'Googleでログイン'}
+                  {accountBusy ? 'ログイン処理中…' : accountAction === 'switch' ? '別のアカウントでログイン' : 'Googleでログイン'}
                 </button>
               )}
               <button

@@ -1,0 +1,38 @@
+PASS hr: signIn failure recovers and retries a preserved safe destination
+PASS hr: switch failure recovers and retries a preserved safe destination
+PASS hr: repeated login clicks and stale failures are blocked
+PASS hr: unmounted verification ignores API/JSON failure and aborts loading
+PASS hr: route identity remounts its private or invitation state
+PASS admin: signIn failure recovers and retries a preserved safe destination
+PASS admin: switch failure recovers and retries a preserved safe destination
+PASS admin: repeated login clicks and stale failures are blocked
+PASS admin: unmounted verification ignores API/JSON failure and aborts loading
+PASS admin: route identity remounts its private or invitation state
+PASS HR: duplicate participation, restored history and old response cannot claim success
+PASS HR: malformed success and network exceptions never show acceptance or raw details
+PASS HR: successful participation schedules one redirect and unmount cancels it
+PASS HR: expiry and unrelated permission failures cannot offer account switching
+PASS HR: malformed invitation info never enables participation
+PASS Admin: only strict password authentication and allowed Google domain reveal children
+{
+  "passed": 16,
+  "scope": "actual TSX/shared hook; mocked APIs/SDK; no production writes",
+  "results": [
+    "hr: signIn failure recovers and retries a preserved safe destination",
+    "hr: switch failure recovers and retries a preserved safe destination",
+    "hr: repeated login clicks and stale failures are blocked",
+    "hr: unmounted verification ignores API/JSON failure and aborts loading",
+    "hr: route identity remounts its private or invitation state",
+    "admin: signIn failure recovers and retries a preserved safe destination",
+    "admin: switch failure recovers and retries a preserved safe destination",
+    "admin: repeated login clicks and stale failures are blocked",
+    "admin: unmounted verification ignores API/JSON failure and aborts loading",
+    "admin: route identity remounts its private or invitation state",
+    "HR: duplicate participation, restored history and old response cannot claim success",
+    "HR: malformed success and network exceptions never show acceptance or raw details",
+    "HR: successful participation schedules one redirect and unmount cancels it",
+    "HR: expiry and unrelated permission failures cannot offer account switching",
+    "HR: malformed invitation info never enables participation",
+    "Admin: only strict password authentication and allowed Google domain reveal children"
+  ]
+}

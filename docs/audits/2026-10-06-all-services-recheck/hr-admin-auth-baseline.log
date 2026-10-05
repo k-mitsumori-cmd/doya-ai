@@ -1,0 +1,11 @@
+AssertionError [ERR_ASSERTION]: SDK failure must display a safe retry error
+    at /Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-hr-admin-auth-recovery.cjs:44:69
+    at async check (/Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/load-typescript.cjs:4:30)
+    at async /Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-hr-admin-auth-recovery.cjs:39:48 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

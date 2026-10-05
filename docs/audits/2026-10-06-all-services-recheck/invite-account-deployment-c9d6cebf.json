@@ -1,0 +1,16 @@
+{
+  "sha": "c9d6cebfef5b2686e6af9e7f556f6f3cf4be33eb",
+  "mainPush": "succeeded",
+  "deploymentId": "dpl_BBpVXD3qXiHFk83bi6BLTfLdG9Bx",
+  "deploymentState": "BUILDING",
+  "ciRunId": 37381694231,
+  "ciStatus": "completed",
+  "localBuild": {
+    "session": 20635,
+    "exitCode": 0,
+    "log": "/tmp/doya-invite-account-build-20261006.log"
+  },
+  "scope": "local build and mocked/isolated regression verified; production Ready and actual OAuth/member acceptance not verified",
+  "observedAt": "2026-10-05T22:28:12.629876+00:00",
+  "ciConclusion": "success"
+}

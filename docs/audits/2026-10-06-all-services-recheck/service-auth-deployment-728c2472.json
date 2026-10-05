@@ -2,13 +2,15 @@
   "sha": "728c2472018883bfbe82cb7c3ef95bc73dbe214d",
   "mainPush": "succeeded",
   "deploymentId": "dpl_CyjKtBsjRW5YrkEcfdtcCxY7cDQ6",
-  "deploymentState": "BUILDING",
+  "deploymentState": "READY",
   "ciRunId": 37380369714,
   "ciStatus": "completed",
-  "observedAt": "2026-10-05T22:11:47.851746+00:00",
+  "observedAt": "2026-10-05T22:19:37.145200+00:00",
   "scope": "Dispatch only; real OAuth and production invitation acceptance not exercised",
   "verifiedSha": "728c2472018883bfbe82cb7c3ef95bc73dbe214d",
   "aliases": [
+    "doya-ai.vercel.app",
+    "doya-ai.surisuta.jp",
     "doya-ai-surisutas-projects.vercel.app",
     "doya-ai-git-main-surisutas-projects.vercel.app"
   ],

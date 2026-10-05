@@ -1,0 +1,41 @@
+{
+  "scope": "actual React/components/NextAuth SDK; synthetic session/APIs; router stubbed; no production writes/external OAuth",
+  "results": [
+    {
+      "service": "hr",
+      "mode": "signin",
+      "attempt": 1,
+      "snapshot": "Browser tab: 13, Title: \"Isolated HR/Admin authentication QA\", URL: \"http://127.0.0.1:34746/qa-entry.html?service=hr&mode=signin\".\n0 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34746/qa-entry.html?service=hr&mode=signin\n\t1 container root\n\t\t2 text Isolated QA — synthetic API/session; no external OAuth or production writes\n\t\t3 image 白くまキャラクター\n\t\t4 heading エラーが発生しました, Value: 2\n\t\t\t5 text エラーが発生しました\n\t\t6 text 招待されたメールアドレスでログインしてください。\n\t\t7 button Googleでログイン\n\t\t8 button ダッシュボードへ戻る\n\nThe focused UI element is 0 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34746/qa-entry.html?service=hr&mode=signin"
+    },
+    {
+      "service": "hr",
+      "mode": "signin",
+      "attempt": 2,
+      "snapshot": "Browser tab: 13, Title: \"Isolated HR/Admin authentication QA\", URL: \"http://127.0.0.1:34746/qa-entry.html?service=hr&mode=signin\".\n0 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34746/qa-entry.html?service=hr&mode=signin\n\t1 container root\n\t\t2 text Isolated QA — synthetic API/session; no external OAuth or production writes\n\t\t3 image 白くまキャラクター\n\t\t4 heading エラーが発生しました, Value: 2\n\t\t\t5 text エラーが発生しました\n\t\t6 text 招待されたメールアドレスでログインしてください。\n\t\t7 button Googleでログイン\n\t\t8 button ダッシュボードへ戻る\n\nThe focused UI element is 0 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34746/qa-entry.html?service=hr&mode=signin"
+    },
+    {
+      "service": "hr",
+      "mode": "switch",
+      "attempt": 1,
+      "snapshot": "Browser tab: 13, Title: \"Isolated HR/Admin authentication QA\", URL: \"http://127.0.0.1:34746/qa-entry.html?service=hr&mode=switch\".\n1 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34746/qa-entry.html?service=hr&mode=switch\n\t2 container root\n\t\t3 text Isolated QA — synthetic API/session; no external OAuth or production writes\n\t\t4 image 白くまキャラクター\n\t\t5 heading エラーが発生しました, Value: 2\n\t\t\t6 text エラーが発生しました\n\t\t7 text 招待先のメールアドレスでログインしてください\n\t\t8 button 別のアカウントでログイン\n\t\t9 button ダッシュボードへ戻る\n\nThe focused UI element is 1 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34746/qa-entry.html?service=hr&mode=switch"
+    },
+    {
+      "service": "hr",
+      "mode": "switch",
+      "attempt": 2,
+      "snapshot": "Browser tab: 13, Title: \"Isolated HR/Admin authentication QA\", URL: \"http://127.0.0.1:34746/qa-entry.html?service=hr&mode=switch\".\n1 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34746/qa-entry.html?service=hr&mode=switch\n\t2 container root\n\t\t3 text Isolated QA — synthetic API/session; no external OAuth or production writes\n\t\t4 image 白くまキャラクター\n\t\t5 heading エラーが発生しました, Value: 2\n\t\t\t6 text エラーが発生しました\n\t\t7 text 招待先のメールアドレスでログインしてください\n\t\t8 button 別のアカウントでログイン\n\t\t9 button ダッシュボードへ戻る\n\nThe focused UI element is 1 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34746/qa-entry.html?service=hr&mode=switch"
+    },
+    {
+      "service": "admin",
+      "mode": "switch",
+      "attempt": 1,
+      "snapshot": "Browser tab: 13, Title: \"Isolated HR/Admin authentication QA\", URL: \"http://127.0.0.1:34746/qa-entry.html?service=admin\".\n1 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34746/qa-entry.html?service=admin\n\t2 container root\n\t\t3 text Isolated QA — synthetic API/session; no external OAuth or production writes\n\t\t4 heading Google認証が必要です, Value: 1\n\t\t\t5 text Google認証が必要です\n\t\t6 container\n\t\t\t7 text 管理画面へのアクセスには\n\t\t\t8 text @ surisuta.jp  のGoogleアカウントでのログインが必要です。\n\t\t9 container\n\t\t\t10 text 現在のアカウント:  local-qa@example.invalid\n\t\t\t11 text このドメインではアクセスできません\n\t\t12 button 別のアカウントでログイン\n\t\t\t13 image\n\t\t\t14 text 別のアカウントでログイン\n\nThe focused UI element is 1 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34746/qa-entry.html?service=admin"
+    },
+    {
+      "service": "admin",
+      "mode": "switch",
+      "attempt": 2,
+      "snapshot": "Browser tab: 13, Title: \"Isolated HR/Admin authentication QA\", URL: \"http://127.0.0.1:34746/qa-entry.html?service=admin\".\n1 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34746/qa-entry.html?service=admin\n\t2 container root\n\t\t3 text Isolated QA — synthetic API/session; no external OAuth or production writes\n\t\t4 heading Google認証が必要です, Value: 1\n\t\t\t5 text Google認証が必要です\n\t\t6 container\n\t\t\t7 text 管理画面へのアクセスには\n\t\t\t8 text @ surisuta.jp  のGoogleアカウントでのログインが必要です。\n\t\t9 container\n\t\t\t10 text 現在のアカウント:  local-qa@example.invalid\n\t\t\t11 text このドメインではアクセスできません\n\t\t12 button 別のアカウントでログイン\n\t\t\t13 image\n\t\t\t14 text 別のアカウントでログイン\n\nThe focused UI element is 1 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34746/qa-entry.html?service=admin"
+    }
+  ]
+}
