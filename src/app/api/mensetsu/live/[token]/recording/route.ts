@@ -55,6 +55,21 @@ export async function PATCH(_req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '録音が確認できませんでした' }, { status: 400 })
   }
 
-  await prisma.mensetsuSession.update({ where: { id: s.id }, data: { recordingPath: path } })
+  // 録音情報は評価の入力ではない。@updatedAt を更新すると、同じ時刻で識別する
+  // 評価の実行権が失われるため、保存先だけを更新する。保持期限・同意・組織設定は
+  // 保存時にも確認し、削除cronや終了通知が先に進んだ場合に記録を復活させない。
+  const saved = await prisma.$executeRaw`
+    UPDATE mensetsu_sessions AS s SET "recordingPath" = ${path}
+    WHERE s.id = ${s.id} AND s."consentedAt" IS NOT NULL AND s."startedAt" IS NOT NULL
+      AND s.status IN ('live', 'completed', 'evaluating', 'evaluated', 'aborted')
+      AND (s."purgeAfter" IS NULL OR s."purgeAfter" > CURRENT_TIMESTAMP)
+      AND EXISTS (
+        SELECT 1 FROM mensetsu_organizations AS o
+        WHERE o.id = s."organizationId" AND o."recordAudio" = true
+      )
+  `
+  if (saved !== 1) {
+    return NextResponse.json({ error: '録音の保存対象の状態が変わりました。' }, { status: 409 })
+  }
   return NextResponse.json({ ok: true })
 }

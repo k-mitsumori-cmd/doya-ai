@@ -30,6 +30,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       id: true,
       status: true,
       startedAt: true,
+      updatedAt: true,
       _count: { select: { turns: true } },
       turns: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
     },
@@ -55,10 +56,17 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   // 発話が残っていれば評価に回せるので completed、無ければ aborted にする。
   // 一律 aborted にすると、途中まで話した面接を評価できなくなる。
   const next = s._count.turns > 0 ? 'completed' : 'aborted'
-  await prisma.mensetsuSession.update({
-    where: { id: s.id },
-    data: { status: next, endedAt: new Date() },
+  const closed = await prisma.mensetsuSession.updateMany({
+    where: {
+      id: s.id, organizationId: c.organizationId, status: s.status, updatedAt: s.updatedAt,
+      // 読み取り後に届いた回答がある場合も、実施中の面接を終了させない。
+      turns: next === 'completed'
+        ? { some: {}, none: { createdAt: { gte: new Date(Date.now() - ACTIVE_MS) } } }
+        : { none: {} },
+    },
+    data: { status: next, endedAt: new Date(), updatedAt: new Date(Math.max(Date.now(), s.updatedAt.getTime() + 1)) },
   })
+  if (closed.count !== 1) return NextResponse.json({ error: '面接の状態が変わりました。再読み込みしてください。' }, { status: 409 })
   return NextResponse.json({ ok: true, status: next })
 }
 
@@ -80,7 +88,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
   const s = await prisma.mensetsuSession.findFirst({
     where: { id: p.id, organizationId: c.organizationId },
-    select: { id: true, status: true, expiresAt: true, _count: { select: { turns: true } } },
+    select: { id: true, status: true, expiresAt: true, updatedAt: true, _count: { select: { turns: true } } },
   })
   if (!s) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   if (s.status !== 'aborted' && s.status !== 'expired') {
@@ -96,9 +104,13 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '有効期限が切れています。URLを再発行してください。' }, { status: 410 })
   }
 
-  await prisma.mensetsuSession.update({
-    where: { id: s.id },
-    data: { status: 'pending', endedAt: null, startedAt: null },
+  const restored = await prisma.mensetsuSession.updateMany({
+    where: {
+      id: s.id, organizationId: c.organizationId, status: s.status, updatedAt: s.updatedAt,
+      expiresAt: { gt: new Date() }, turns: { none: {} },
+    },
+    data: { status: 'pending', endedAt: null, startedAt: null, updatedAt: new Date(Math.max(Date.now(), s.updatedAt.getTime() + 1)) },
   })
+  if (restored.count !== 1) return NextResponse.json({ error: '面接の状態が変わりました。再読み込みしてください。' }, { status: 409 })
   return NextResponse.json({ ok: true, status: 'pending' })
 }

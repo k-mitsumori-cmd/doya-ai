@@ -68,6 +68,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     select: {
       id: true, startedAt: true, status: true, consentedAt: true,
       candidateEmail: true, expiresAt: true,
+      updatedAt: true,
     },
   })
   if (!s) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
@@ -127,10 +128,18 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '変更する内容がありません' }, { status: 400 })
   }
 
-  const session = await prisma.mensetsuSession.update({
-    where: { id: s.id },
-    data,
+  const saved = await prisma.mensetsuSession.updateMany({
+    where: {
+      id: s.id, organizationId: c.organizationId, status: s.status, updatedAt: s.updatedAt,
+      startedAt: null, endedAt: null, expiresAt: { gt: new Date() },
+    },
+    data: { ...data, updatedAt: new Date(Math.max(Date.now(), s.updatedAt.getTime() + 1)) },
+  })
+  if (saved.count !== 1) return NextResponse.json({ error: '面接の状態が変わりました。再読み込みしてください。' }, { status: 409 })
+  const session = await prisma.mensetsuSession.findFirst({
+    where: { id: s.id, organizationId: c.organizationId },
     select: { id: true, candidateName: true, candidateEmail: true, status: true },
   })
+  if (!session) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   return NextResponse.json({ session, reconsentRequired: data.consentedAt === null })
 }
