@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
 
   // ⚠️ 練習の商談は指標に混ぜない。混ぜると自分の練習で完了率や日程調整率が
   //    動いてしまい、数字が事業の実態を表さなくなる。
-  const real = { organizationId: ctx.organizationId, room: { isPreview: false } }
+  const real = { organizationId: ctx.organizationId, room: { isPreview: false },
+    AND: [{ OR: [{ purgeAfter: null }, { purgeAfter: { gt: new Date() } }] }] }
 
   const [total, evaluated, scheduled, byVerdict] = await Promise.all([
     prisma.aishodanSession.count({ where: real }),
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
     prisma.aishodanSession.count({ where: { ...real, schedulingClickedAt: { not: null } } }),
     prisma.aishodanOutcome.groupBy({
       by: ['verdict'],
-      where: { session: real },
+      where: { session: real, OR: [{ session: { status: 'evaluated' } }, { overriddenAt: { not: null } }] },
       _count: { verdict: true },
     }),
   ])

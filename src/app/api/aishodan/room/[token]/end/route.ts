@@ -12,10 +12,10 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { loadGuestSession } from '@/lib/aishodan/session'
-import { toScenarioConfig } from '@/lib/aishodan/public'
-import { evaluateSession } from '@/lib/aishodan/evaluate'
-import { postToSlackBlocks } from '@/lib/notifications'
-import { VERDICT_LABELS } from '@/lib/aishodan/types'
+import { deliverPendingCompletionNotifications, deliverPendingFailureNotifications } from '@/lib/aishodan/deliver-completion-notifications'
+import { evaluateCurrentSession } from '@/lib/aishodan/evaluate-current-session'
+import { enqueueEvaluation } from '@/lib/aishodan/evaluation-task'
+import { POST as saveTurns } from '../turn/route'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -30,131 +30,77 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
 
   // 開始していないなら何もしない（プレビューで死なせない）
   if (!s.startedAt) return NextResponse.json({ status: s.status, skipped: true })
-  // すでに終わっているなら冪等に返す
-  if (s.endedAt) return NextResponse.json({ status: s.status, alreadyEnded: true })
-
-  const guestTurns = await prisma.aishodanTurn.count({ where: { sessionId: s.id, speaker: 'guest' } })
-
-  const nextStatus = guestTurns < MIN_GUEST_TURNS ? 'aborted' : 'completed'
-  // 読取時点で未終了でも、同時要求が先に終了させる場合がある。
-  // 未終了の行を実際に更新できた1要求だけが評価と通知へ進む。
-  const claimed = await prisma.aishodanSession.updateMany({
-    where: {
-      id: s.id,
-      organizationId: s.organizationId,
-      roomId: s.roomId,
-      guestId: s.guestId,
-      status: 'live',
-      startedAt: { not: null },
-      endedAt: null,
-    },
-    data: { status: nextStatus, endedAt: new Date() },
-  })
-  if (claimed.count !== 1) {
-    const current = await prisma.aishodanSession.findFirst({
-      where: { id: s.id, organizationId: s.organizationId, roomId: s.roomId, guestId: s.guestId },
-      select: { status: true, endedAt: true },
-    })
-    if (current?.endedAt) {
-      return NextResponse.json({ status: current.status, alreadyEnded: true })
+  // 離脱通知の発話を保存してから終了を判定する。別要求の到着順に依存しない。
+  if (body.turns !== undefined) {
+    if (!Array.isArray(body.turns) || body.turns.length > 50) {
+      return NextResponse.json({ error: '終了時の発話データが正しくありません。' }, { status: 400 })
     }
-    return NextResponse.json({ error: '商談の状態が変わりました。再読み込みしてご確認ください。' }, { status: 409 })
+    if (body.turns.length > 0) {
+      const saved = await saveTurns(new NextRequest(req.url, {
+        method: 'POST', headers: req.headers,
+        body: JSON.stringify({ sessionId: s.id, turns: body.turns }),
+      }), ctxParam)
+      if (!saved.ok) return saved
+      const result = await saved.json().catch(() => null)
+      if (result?.saved !== body.turns.length) {
+        return NextResponse.json({ error: '回答の保存を確認できませんでした。保存を再試行してください。' }, { status: 409 })
+      }
+    }
   }
-  if (nextStatus === 'aborted') return NextResponse.json({ status: 'aborted' })
-
-  const cfg = toScenarioConfig(s.room.scenario)
-  const [turns, slotValues, unanswered] = await Promise.all([
-    prisma.aishodanTurn.findMany({
-      where: { sessionId: s.id },
-      orderBy: [{ startMs: 'asc' }, { ord: 'asc' }],
-      select: { speaker: true, text: true },
-    }),
-    prisma.aishodanSlotValue.findMany({ where: { sessionId: s.id }, select: { key: true, value: true } }),
-    prisma.aishodanQuestion.findMany({
-      where: { sessionId: s.id, unanswered: true },
-      select: { text: true },
-    }),
-  ])
-
-  let result
-  try {
-    result = await evaluateSession({
-      productName: s.room.scenario.product.name,
-      icp: cfg.icp,
-      slots: cfg.slots,
-      slotValues,
-      turns,
-      unansweredQuestions: unanswered.map((q) => q.text),
+  const ending = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM aishodan_sessions WHERE id = ${s.id} FOR NO KEY UPDATE`
+    const current = await tx.aishodanSession.findUnique({ where: { id: s.id } })
+    if (!current || current.organizationId !== s.organizationId || current.roomId !== s.roomId || current.guestId !== s.guestId) {
+      return { error: '商談が見つかりません。', status: 404 }
+    }
+    if (!current.startedAt) return { status: current.status, skipped: true }
+    if (!current.consentedAt) return { error: '先に同意が必要です。', status: 403 }
+    if (current.purgeAfter && current.purgeAfter.getTime() <= Date.now()) {
+      return { error: 'この商談の記録は保存期間が終了しています。', status: 410 }
+    }
+    if (current.endedAt) return { status: current.status, alreadyEnded: true }
+    if (current.status !== 'live') return { error: '商談の状態が変わりました。再読み込みしてご確認ください。', status: 409 }
+    const guestTurns = await tx.aishodanTurn.count({ where: { sessionId: s.id, speaker: 'guest' } })
+    const status = guestTurns < MIN_GUEST_TURNS ? 'aborted' : 'completed'
+    const revision = new Date(Math.max(Date.now(), current.updatedAt.getTime() + 1))
+    const claimed = await tx.aishodanSession.updateMany({
+      where: { id: current.id, organizationId: s.organizationId, roomId: s.roomId, guestId: s.guestId,
+        status: 'live', startedAt: { not: null }, endedAt: null },
+      data: { status, endedAt: new Date(), updatedAt: revision },
     })
+    if (claimed.count !== 1) return { error: '商談の状態が変わりました。再読み込みしてご確認ください。', status: 409 }
+    if (status === 'completed') await enqueueEvaluation(tx, current.id, current.organizationId, revision)
+    return { status }
+  }, { isolationLevel: 'ReadCommitted', timeout: 15000 })
+  if ('error' in ending) return NextResponse.json({ error: ending.error }, { status: ending.status as number })
+  if ('alreadyEnded' in ending || 'skipped' in ending || ending.status === 'aborted') {
+    return NextResponse.json(ending)
+  }
+
+  try {
+    const evaluated = await evaluateCurrentSession({ sessionId: s.id, organizationId: s.organizationId, notifyOnCompletion: !s.room.isPreview })
+    if (!evaluated.ok) {
+      const current = await prisma.aishodanSession.findFirst({
+        where: { id: s.id, organizationId: s.organizationId, roomId: s.roomId, guestId: s.guestId },
+        select: { status: true },
+      })
+      if (!current) return NextResponse.json({ error: '商談が見つかりません。' }, { status: 404 })
+      return NextResponse.json({ status: current.status, evaluated: false, reason: evaluated.reason })
+    }
   } catch (err) {
     // ⚠️ 評価に失敗しても商談ログは残す。completed のまま置き、後から再評価できる状態にする。
     console.error('[aishodan] evaluate failed')
-    // ⚠️ ここで黙って返すと、ホストは商談が行われたことすら知らないまま
-    //    実際の見込み客が一覧の中で放置される。判定が出ていなくても必ず通知する。
-    try {
-      // ⚠️ 練習では通知しない（成功時と同じ扱い）
-      if (s.room.isPreview) throw new Error('skip: preview')
-      await postToSlackBlocks('AI商談が完了しました（判定は失敗）', [
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: [
-              `*AI商談が完了しました*（${s.room.organization.name}）`,
-              '⚠️ 適合判定の生成に失敗しました。内容はログからご確認ください。',
-              `相手: ${s.guestCompany || '会社名未取得'} / ${s.guestName || 'お名前未取得'}`,
-              `商材: ${s.room.scenario.product.name}`,
-              s.schedulingClickedAt ? '日程調整: 予約ページを開きました' : '日程調整: 未（こちらから連絡が必要）',
-              `${process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'}/aishodan/sessions/${s.id}`,
-            ].join('\n'),
-          },
-        },
-      ])
-    } catch {
-      /* 通知の失敗で商談ログを落とさない */
+    if (!s.room.isPreview) {
+      await deliverPendingFailureNotifications(1, { sessionId: s.id, organizationId: s.organizationId })
+        .catch(() => console.error('[aishodan] failure notification remains pending'))
     }
     return NextResponse.json({ status: 'completed', evaluated: false })
   }
 
-  await prisma.aishodanOutcome.upsert({
-    where: { sessionId: s.id },
-    create: {
-      sessionId: s.id,
-      fitScore: result.fitScore,
-      verdict: result.verdict,
-      reason: result.reason,
-      summary: { ...result.summary, conditions: result.conditions } as any,
-      nextAction: result.nextAction,
-    },
-    update: {
-      fitScore: result.fitScore,
-      verdict: result.verdict,
-      reason: result.reason,
-      summary: { ...result.summary, conditions: result.conditions } as any,
-      nextAction: result.nextAction,
-    },
-  })
-  await prisma.aishodanSession.update({ where: { id: s.id }, data: { status: 'evaluated' } })
-
-  // ホストへの即時通知。商談が終わったことに気づけないと機会損失になる
-  // ⚠️ 練習では通知しない。自分の練習でSlackが鳴ると、本物の商談の通知が埋もれる。
-  try {
-    if (s.room.isPreview) throw new Error('skip: preview')
-    const lines = [
-      `*AI商談が完了しました*（${s.room.organization.name}）`,
-      `相手: ${s.guestCompany || '会社名未取得'} / ${s.guestName || 'お名前未取得'}`,
-      `商材: ${s.room.scenario.product.name}`,
-      `判定: ${VERDICT_LABELS[result.verdict]}（${result.fitScore}点）`,
-      // ⚠️ 判定スコアより、日程調整に進んだかの方が事業上の意味が大きい
-      s.schedulingClickedAt ? '日程調整: 予約ページを開きました' : '日程調整: 未（こちらから連絡が必要）',
-      result.nextAction ? `次アクション: ${result.nextAction}` : '',
-      `${process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'}/aishodan/sessions/${s.id}`,
-    ].filter(Boolean)
-    await postToSlackBlocks(lines[0], [
-      { type: 'section', text: { type: 'mrkdwn', text: lines.join('\n') } },
-    ])
-  } catch {
-    /* 通知の失敗で商談結果を落とさない */
+  // Delivery acknowledges the same durable intent used by cron recovery.
+  if (!s.room.isPreview) {
+    await deliverPendingCompletionNotifications(1, { sessionId: s.id, organizationId: s.organizationId })
+      .catch(() => console.error('[aishodan] completion notification remains pending'))
   }
 
   return NextResponse.json({

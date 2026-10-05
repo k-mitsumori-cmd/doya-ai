@@ -23,8 +23,9 @@ export async function GET(req: NextRequest) {
 
   const where = {
       organizationId: ctx.organizationId,
+      AND: [{ OR: [{ purgeAfter: null }, { purgeAfter: { gt: new Date() } }] }],
       ...(status ? { status } : {}),
-      ...(verdict ? { outcome: { verdict } } : {}),
+      ...(verdict ? { outcome: { verdict }, OR: [{ status: 'evaluated' }, { outcome: { overriddenAt: { not: null } } }] } : {}),
       ...(scope === 'real' ? { room: { isPreview: false } } : {}),
       ...(scope === 'preview' ? { room: { isPreview: true } } : {}),
   }
@@ -40,10 +41,10 @@ export async function GET(req: NextRequest) {
       id: true, guestName: true, guestCompany: true, status: true, currentPhase: true,
       startedAt: true, endedAt: true, createdAt: true, schedulingClickedAt: true,
       room: { select: { name: true, isPreview: true } },
-      outcome: { select: { fitScore: true, verdict: true } },
+      outcome: { select: { fitScore: true, verdict: true, overriddenAt: true } },
       _count: { select: { turns: true } },
     },
   }), prisma.aishodanSession.count({ where })])
-  const sessions = rows.slice(0, 200)
+  const sessions = rows.slice(0, 200).map((row) => ({ ...row, outcome: row.outcome && (row.status === 'evaluated' || row.outcome.overriddenAt) ? row.outcome : null }))
   return NextResponse.json({ sessions, total, nextCursor: rows.length > 200 ? sessions[199].id : null }, { headers: { 'Cache-Control': 'private, no-store' } })
 }

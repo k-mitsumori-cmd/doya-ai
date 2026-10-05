@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript')
+const {load,check,results}=require('./load-typescript.cjs')
+const tick=()=>new Promise(r=>setImmediate(r))
+function fixture(recovered=true){
+ const states=[],effects=[],calls=[],options=[];let cursor=0,first=true,reloads=0,recoveryCalls=0,token='room'
+ const react={useState:v=>{const i=cursor++;if(first)states[i]=v;return[states[i],next=>states[i]=typeof next==='function'?next(states[i]):next]},useRef:v=>({current:v}),useCallback:fn=>fn,useEffect:fn=>{if(first)effects.push(fn)}}
+ const jsx=(type,props,key)=>({type,props,key})
+ const room={roomName:'Synthetic',companyName:'Synthetic',productName:'Synthetic',oneLiner:null,durationMin:10,phaseNames:[],retentionDays:30,schedulingUrl:null,schedulingLabel:null}
+ const mocks={react,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'fragment'},'next/navigation':{useParams:()=>({token})},'@/components/mensetsu/Avatar':{default:()=>null},'@/components/mensetsu/Waveform':{default:()=>null},'@/lib/aishodan/transcript-outbox':{recoverTranscriptOutboxes:async token=>{assert.equal(token,'room');recoveryCalls++;return recovered}},'@/lib/aishodan/useRealtimeMeeting':{useRealtimeMeeting:o=>{options.push(o);return{state:'idle',lines:[],quickReplies:null}}}}
+ const exports={}
+ vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/m/[token]/page.tsx','utf8')+'\nexports.AishodanRoomContent = AishodanRoomContent',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports,require:n=>{if(n in mocks)return mocks[n];throw Error('Unexpected '+n)},window:{location:{reload:()=>reloads++}},fetch:async(url,init)=>{calls.push(url);return Response.json(url.endsWith('/start')?{session:{id:'session',purgeAfter:'2100-01-01T00:00:00.000Z'}}:{room})},Date,Error,console},{filename:'room-page.tsx'})
+ const render=()=>{cursor=0;const tree=exports.AishodanRoomContent({token});first=false;return tree}
+ const find=(tree,predicate)=>{if(!tree||typeof tree!=='object')return null;if(Array.isArray(tree)){for(const child of tree){const hit=find(child,predicate);if(hit)return hit}return null}if(predicate(tree))return tree;return find(tree.props?.children,predicate)}
+ return{states,calls,options,render,find,wrapper:()=>exports.default(),set token(value){token=value},mount:async()=>{render();effects[0]();await tick();await tick()},reloads:()=>reloads,recoveryCalls:()=>recoveryCalls}
+}
+;(async()=>{
+ await check('public session exposes retention without exposing contact or cookie identifiers',async()=>{const boundary=load('src/lib/aishodan/public.ts',{'@/lib/prisma':{prisma:{}}});const result=boundary.toPublicSession({id:'session',status:'pending',currentPhase:'opening',consentedAt:new Date(),startedAt:null,endedAt:null,guestName:null,purgeAfter:new Date('2100-01-01'),guestId:'PRIVATE_COOKIE',guestEmail:'PRIVATE_EMAIL'});assert.equal(result.purgeAfter,'2100-01-01T00:00:00.000Z');assert.ok(!JSON.stringify(result).includes('PRIVATE_'))})
+ await check('failed recovery blocks new consent and exposes retry without starting a session',async()=>{const f=fixture(false);await f.mount();assert.equal(f.states[0],'unavailable');assert.equal(f.calls.length,0);assert.equal(f.recoveryCalls(),1);const tree=f.render();const retry=f.find(tree,n=>n.type==='button'&&typeof n.props.onClick==='function');assert.ok(retry);retry.props.onClick();assert.equal(f.reloads(),1)})
+ await check('successful recovery proceeds to the public room only afterward',async()=>{const f=fixture(true);await f.mount();assert.equal(f.recoveryCalls(),1);assert.deepEqual(f.calls,['/api/aishodan/room/room']);assert.equal(f.states[0],'consent')})
+ await check('consent passes the authoritative retention deadline into the actual hook boundary',async()=>{const f=fixture();await f.mount();let tree=f.render();const checkbox=f.find(tree,n=>n.type==='input'&&n.props.type==='checkbox');checkbox.props.onChange({target:{checked:true}});tree=f.render();const submit=f.find(tree,n=>n.type==='button'&&n.props.children==='同意して次へ');await submit.props.onClick();f.render();assert.equal(f.states[0],'check');assert.equal(f.options.at(-1).sessionId,'session');assert.equal(f.options.at(-1).purgeAfter,'2100-01-01T00:00:00.000Z')})
+ await check('different room URL has a new keyed conversation component',async()=>{const f=fixture();const first=f.wrapper();assert.equal(first.key,'room');f.token='other';const next=f.wrapper();assert.equal(next.key,'other');assert.equal(next.props.token,'other');assert.equal(next.type,first.type)})
+ console.log(JSON.stringify({passed:results.length}))
+})().catch(error=>{console.error(error);process.exitCode=1})

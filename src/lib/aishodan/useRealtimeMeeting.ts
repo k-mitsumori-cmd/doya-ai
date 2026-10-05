@@ -16,8 +16,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { transcriptSource } from '@/lib/realtime/transcript-source'
 import { isLikelyHallucination } from '@/lib/realtime/hallucination'
+import { storeTranscriptOutbox, removeTranscriptOutbox } from '@/lib/aishodan/transcript-outbox'
 
 export interface TranscriptLine {
+  id: string
+  startMs: number
   speaker: 'ai' | 'guest'
   text: string
   at: number
@@ -37,6 +40,7 @@ interface UseRealtimeMeetingOptions {
   onEnded?: () => void
   /** マイクを使わずテキストだけで進める（マイク不許可時の自動フォールバック用） */
   textOnly?: boolean
+  purgeAfter?: string | null
 }
 
 /**
@@ -48,9 +52,11 @@ interface UseRealtimeMeetingOptions {
 //    商談で30秒の沈黙は珍しくない。止まって見えるより、待つ方を選ぶ。
 const SILENCE_NUDGE_MS = 45000
 
-export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = false }: UseRealtimeMeetingOptions) {
+export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = false, purgeAfter }: UseRealtimeMeetingOptions) {
   const [state, setState] = useState<ConnState>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [needsSaveRetry, setNeedsSaveRetry] = useState(false)
+  const [storageWarning, setStorageWarning] = useState<string | null>(null)
   const [lines, setLines] = useState<TranscriptLine[]>([])
   const [level, setLevel] = useState(0)
   const [speaking, setSpeaking] = useState(false)
@@ -92,6 +98,20 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
   const startedAtRef = useRef<number>(0)
   const pendingRef = useRef<TranscriptLine[]>([])
   const endedRef = useRef(false)
+  const flushingRef = useRef<Promise<boolean> | null>(null)
+  const outboxExpiresAtRef = useRef(0)
+  const finishRequestedRef = useRef(false)
+  const providedExpiry = purgeAfter ? Date.parse(purgeAfter) : 0
+  if (Number.isFinite(providedExpiry)) outboxExpiresAtRef.current = Math.max(outboxExpiresAtRef.current, providedExpiry)
+
+  const persistOutbox = useCallback(() => {
+    const saved = storeTranscriptOutbox({ roomToken, sessionId, expiresAt: outboxExpiresAtRef.current,
+      finishRequested: finishRequestedRef.current, turns: pendingRef.current.map(line => ({
+        id: line.id, speaker: line.speaker, text: line.text.slice(0, 8000),
+        startMs: line.startMs, phase: line.phase?.slice(0, 40) ?? null,
+      })) })
+    setStorageWarning(saved ? null : 'この端末に未保存の回答を一時保管できません。保存が完了するまで、この画面を閉じないでください。')
+  }, [roomToken, sessionId])
 
   const api = useCallback((path: string) => `/api/aishodan/room/${roomToken}/${path}`, [roomToken])
 
@@ -100,44 +120,38 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
    * ⚠️ 送信に失敗したらキューへ戻すこと。失敗時に戻さない実装だと、
    *    一瞬の通信断でその区間の発話が永久に消え、商談ログに穴があく。
    */
-  const flushTurns = useCallback(async () => {
-    const batch = pendingRef.current
-    if (batch.length === 0) return
-    pendingRef.current = []
-    const requeue = () => {
-      // 後から届いた発話より前に並ぶよう、先頭へ戻す
-      pendingRef.current = [...batch, ...pendingRef.current]
-    }
-    try {
-      const res = await fetch(api('turn'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          turns: batch.map((l) => ({
-            speaker: l.speaker,
-            text: l.text,
-            startMs: l.at - startedAtRef.current,
-            phase: l.phase ?? null,
-          })),
-        }),
-      })
-      if (!res.ok) {
-        // 4xx は投げ直しても通らないので捨てる。5xx・通信断は戻して再送。
-        if (res.status >= 500) requeue()
-        return
+  const flushTurns = useCallback((): Promise<boolean> => {
+    if (flushingRef.current) return flushingRef.current
+    const operation = Promise.resolve().then(async () => {
+      while (pendingRef.current.length > 0) {
+        const batch = pendingRef.current.slice(0, 50)
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 15000)
+        try {
+          const response = await fetch(api('turn'), {
+            method: 'POST', signal: controller.signal,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId, turns: batch.map((line) => ({
+              id: line.id, speaker: line.speaker, text: line.text,
+              startMs: line.startMs, phase: line.phase ?? null,
+            })) }),
+          })
+          if (!response.ok) return false
+          const result = await response.json().catch(() => null)
+          if (result?.saved !== batch.length) return false
+          pendingRef.current.splice(0, batch.length)
+          persistOutbox()
+        } catch {
+          return false
+        } finally {
+          clearTimeout(timeout)
+        }
       }
-      // ⚠️ サーバは1回あたり50件で切り詰める。保存件数を照合せずに成功扱いにすると、
-      //    再送で溜まった51件目以降（＝直近の発言）が黙って消える。
-      const data = await res.json().catch(() => null)
-      const saved = Number(data?.saved)
-      if (Number.isFinite(saved) && saved < batch.length) {
-        pendingRef.current = [...batch.slice(saved), ...pendingRef.current]
-      }
-    } catch {
-      requeue()
-    }
-  }, [api, sessionId])
+      return true
+    }).finally(() => { flushingRef.current = null })
+    flushingRef.current = operation
+    return operation
+  }, [api, sessionId, persistOutbox])
 
   /** 同じ音声項目・内容パートの再通知だけを除く。 */
   const recentRef = useRef<Set<string>>(new Set())
@@ -166,11 +180,14 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
 
     const startedAt = speechStartRef.current[speaker] || Date.now()
     speechStartRef.current[speaker] = 0
-    const line: TranscriptLine = { speaker, text: trimmed, at: startedAt, phase: phaseKeyRef.current }
+    const id = typeof crypto.randomUUID === 'function' ? crypto.randomUUID()
+      : Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('')
+    const line: TranscriptLine = { id, startMs: Math.max(0, startedAt - startedAtRef.current), speaker, text: trimmed, at: startedAt, phase: phaseKeyRef.current }
     setLines((prev) => [...prev, line])
     if (speaker === 'ai') setLastAiText(trimmed)
     pendingRef.current.push(line)
-  }, [])
+    persistOutbox()
+  }, [persistOutbox])
 
   const cleanup = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
@@ -194,21 +211,43 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
   const end = useCallback(async () => {
     if (endedRef.current) return
     endedRef.current = true
+    finishRequestedRef.current = true
+    persistOutbox()
     cleanup()
-    await flushTurns()
+    if (!await flushTurns()) {
+      endedRef.current = false
+      setNeedsSaveRetry(true)
+      setError('回答の保存を確認できませんでした。通信を確認し、保存を再試行してください。')
+      setState('error')
+      return
+    }
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
     try {
-      // ⚠️ 中断扱いにするかはサーバが実際の発話数で判断する。
-      //    クライアントから aborted を申告する作りにすると、離脱ビーコンと
-      //    明示終了の両方が中断を送り、成立した商談まで評価不能になる。
-      await fetch(api('end'), {
-        method: 'POST',
+      const response = await fetch(api('end'), {
+        method: 'POST', signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId }),
       })
-    } catch {}
+      const result = await response.json().catch(() => null)
+      if (!response.ok || result?.skipped || !['completed', 'evaluated', 'aborted', 'expired'].includes(result?.status)) {
+        throw new Error('completion_unconfirmed')
+      }
+    } catch {
+      endedRef.current = false
+      setNeedsSaveRetry(true)
+      setError('終了の保存を確認できませんでした。通信を確認し、保存を再試行してください。')
+      setState('error')
+      return
+    } finally {
+      clearTimeout(timeout)
+    }
+    setNeedsSaveRetry(false)
+    removeTranscriptOutbox(roomToken, sessionId)
+    setError(null)
     setState('ended')
     onEnded?.()
-  }, [api, cleanup, flushTurns, onEnded, sessionId])
+  }, [api, cleanup, flushTurns, onEnded, roomToken, sessionId, persistOutbox])
 
   /**
    * マイクのミュート切替。
@@ -350,6 +389,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
   )
 
   const start = useCallback(async () => {
+    if (needsSaveRetry) return
     // ⚠️ 再接続で start をやり直したとき、前回の送信済みフラグが残っていると
     //    AIが話し始めない。ここで必ず戻す。
     kickedOffRef.current = false
@@ -386,6 +426,8 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
       if (!res.ok || !data?.clientSecret) throw new Error(data?.error || '商談を開始できませんでした')
       clientSecret = data.clientSecret
       model = data.model
+      const expiry = Date.parse(data.purgeAfter || '')
+      if (Number.isFinite(expiry)) outboxExpiresAtRef.current = expiry
       if (data.durationMin) setDurationMin(data.durationMin)
     } catch (e: any) {
       cleanup()
@@ -571,7 +613,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
       setState('error')
       setError(e?.message || '接続に失敗しました')
     }
-  }, [api, cleanup, flushTurns, handleFunctionCall, pushLine, sessionId, textOnly])
+  }, [api, cleanup, flushTurns, handleFunctionCall, pushLine, sessionId, textOnly, needsSaveRetry])
 
   // ------------------------------------------------------------------
   // 沈黙時の助け舟
@@ -665,39 +707,33 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
       // ⚠️ bfcache へ入るだけの pagehide（persisted=true）では終了扱いにしない。
       //    スマホでホームに戻っただけで商談が終わり、復帰後に何も操作できなくなる。
       if (e.persisted) return
-      if (endedRef.current) return
       // ⚠️ 開始していないなら終了を送らない。
       //    このフックはページ表示時点でマウントされるため、「リンクを開いて
       //    眺めただけ」でもビーコンが飛び、未実施の商談が終了扱いになる。
       if (startedAtRef.current === 0) return
+      finishRequestedRef.current = true
+      persistOutbox()
       // ⚠️ endedRef は立てない。ここで立てると復帰後の正規の end() が無効化される。
       try {
-        // ⚠️ 先に未送信の発話を送る。これをせずに /end だけ撃つと、
-        //    サーバはその場で評価まで走らせるため、最後のやりとりが
-        //    逐語ログからも適合判定からも落ちる。発話が2件未満と数えられて
-        //    成立した商談が「中断」扱いになることさえある。
-        const pending = pendingRef.current
-        if (pending.length > 0) {
-          pendingRef.current = []
-          navigator.sendBeacon?.(
-            api('turn'),
-            new Blob(
-              [
-                JSON.stringify({
-                  sessionId,
-                  turns: pending.map((l) => ({
-                    speaker: l.speaker,
-                    text: l.text,
-                    startMs: l.at - startedAtRef.current,
-                    phase: l.phase ?? null,
-                  })),
-                }),
-              ],
-              { type: 'application/json' }
-            )
-          )
+        const turns = pendingRef.current.map((line) => ({
+          id: line.id, speaker: line.speaker, text: line.text,
+          startMs: line.startMs, phase: line.phase ?? null,
+        }))
+        let url = api('end')
+        let body = new Blob([JSON.stringify({ sessionId, turns })], { type: 'application/json' })
+        if (turns.length > 50 || body.size > 60000) {
+          const batch = turns.slice(0, 50)
+          do {
+            body = new Blob([JSON.stringify({ sessionId, turns: batch })], { type: 'application/json' })
+            if (body.size <= 60000) break
+            batch.pop()
+          } while (batch.length > 0)
+          if (batch.length === 0) return
+          url = api('turn')
         }
-        navigator.sendBeacon?.(api('end'), new Blob([JSON.stringify({ sessionId })], { type: 'application/json' }))
+        if (!navigator.sendBeacon?.(url, body)) {
+          void fetch(url, { method: 'POST', body, keepalive: true }).catch(() => {})
+        }
       } catch {
         /* 送れなくても離脱は止められない */
       }
@@ -707,10 +743,10 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
       window.removeEventListener('pagehide', notifyEnd)
       cleanup()
     }
-  }, [api, cleanup, sessionId])
+  }, [api, cleanup, sessionId, persistOutbox])
 
   return {
-    state, error, lines, level, speaking, listening, quickReplies,
+    state, error, needsSaveRetry, storageWarning, lines, level, speaking, listening, quickReplies,
     elapsedSec, durationMin, phaseName, remainingRequired, lastAiText,
     start, end, sendText, setMicEnabled,
     /** 相手が話してよいターンか（AIの発話中は false） */

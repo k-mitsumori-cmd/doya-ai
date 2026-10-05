@@ -19,70 +19,77 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   const s = await loadGuestSession(req, p.token, String(body?.sessionId || ''))
   if (!s) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
 
-  const usable = assertSessionUsable(s)
-  if (!usable.ok) return NextResponse.json({ error: usable.reason }, { status: usable.status })
+  const initial = s
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM aishodan_sessions WHERE id = ${initial.id} FOR NO KEY UPDATE`
+    const current = await loadGuestSession(req, p.token, initial.id, tx)
+    if (!current) return NextResponse.json({ error: '商談が見つかりません。' }, { status: 404 })
+    const s = current
+    const usable = assertSessionUsable(s, { requireStarted: true })
+    if (!usable.ok) return NextResponse.json({ error: usable.reason }, { status: usable.status })
 
-  const cfg = toScenarioConfig(s.room.scenario)
-  const intent: 'stay' | 'next' | 'end' =
-    body?.intent === 'next' ? 'next' : body?.intent === 'end' ? 'end' : 'stay'
+    const cfg = toScenarioConfig(s.room.scenario)
+    const intent: 'stay' | 'next' | 'end' =
+      body?.intent === 'next' ? 'next' : body?.intent === 'end' ? 'end' : 'stay'
 
-  const [slotValues, phaseTurnCount] = await Promise.all([
-    prisma.aishodanSlotValue.findMany({ where: { sessionId: s.id }, select: { key: true, value: true } }),
-    prisma.aishodanTurn.count({ where: { sessionId: s.id, phase: s.currentPhase, speaker: 'guest' } }),
-  ])
+    const [slotValues, phaseTurnCount] = await Promise.all([
+      tx.aishodanSlotValue.findMany({ where: { sessionId: s.id }, select: { key: true, value: true } }),
+      tx.aishodanTurn.count({ where: { sessionId: s.id, phase: s.currentPhase, speaker: 'guest' } }),
+    ])
 
-  // 「聞けた」と言えるのは値が実質空でないときだけ。
-  // 空文字を埋まった扱いにすると、ヒアリングが素通りする。
-  const filled = new Set(slotValues.filter((v) => v.value.trim().length > 0).map((v) => v.key))
-  const unfilledRequiredSlots = cfg.slots.filter((sl) => sl.required && !filled.has(sl.key))
+    // 「聞けた」と言えるのは値が実質空でないときだけ。
+    // 空文字を埋まった扱いにすると、ヒアリングが素通りする。
+    const filled = new Set(slotValues.filter((v) => v.value.trim().length > 0).map((v) => v.key))
+    const unfilledRequiredSlots = cfg.slots.filter((sl) => sl.required && !filled.has(sl.key))
 
-  const elapsedSec = s.startedAt ? Math.floor((Date.now() - s.startedAt.getTime()) / 1000) : 0
+    const elapsedSec = s.startedAt ? Math.floor((Date.now() - s.startedAt.getTime()) / 1000) : 0
 
-  const result = advance({
-    phases: cfg.phases,
-    currentPhaseKey: s.currentPhase,
-    phaseTurnCount,
-    elapsedSec,
-    durationMin: cfg.durationMin,
-    unfilledRequiredSlots,
-    intent,
-  })
-
-  if (result.phaseKey !== s.currentPhase) {
-    await prisma.aishodanSession.update({
-      where: { id: s.id },
-      data: { currentPhase: result.phaseKey },
+    const result = advance({
+      phases: cfg.phases,
+      currentPhaseKey: s.currentPhase,
+      phaseTurnCount,
+      elapsedSec,
+      durationMin: cfg.durationMin,
+      unfilledRequiredSlots,
+      intent,
     })
-  }
 
-  // 次に聞く項目のワンタップ回答候補。声で答えるのが面倒な相手向けに画面へ出す。
-  // ⚠️ 必須が残っていればそれを優先し、無ければ任意の未回答から拾う。
-  //    埋まった項目の候補を出し続けると、同じことを二度聞いているように見える。
-  // ⚠️ シナリオは**作成時点の項目定義をDBに保存**している。
-  //    choices を後から追加しても、既存シナリオには入っていないため
-  //    ボタンが1つも出ない。保存値に無ければ既定の項目から補う。
-  const fallbackChoices = new Map(DEFAULT_SLOTS.map((d) => [d.key, d.choices || []]))
-  const choicesFor = (sl: { key: string; choices?: string[] }) =>
-    sl.choices?.length ? sl.choices : fallbackChoices.get(sl.key) || []
+    if (result.phaseKey !== s.currentPhase) {
+      await tx.aishodanSession.update({
+        where: { id: s.id },
+        data: { currentPhase: result.phaseKey },
+      })
+    }
 
-  const nextSlot =
-    cfg.slots.find((sl) => sl.required && !filled.has(sl.key)) ||
-    cfg.slots.find((sl) => !filled.has(sl.key))
-  const nextChoices = nextSlot ? choicesFor(nextSlot) : []
+    // 次に聞く項目のワンタップ回答候補。声で答えるのが面倒な相手向けに画面へ出す。
+    // ⚠️ 必須が残っていればそれを優先し、無ければ任意の未回答から拾う。
+    //    埋まった項目の候補を出し続けると、同じことを二度聞いているように見える。
+    // ⚠️ シナリオは**作成時点の項目定義をDBに保存**している。
+    //    choices を後から追加しても、既存シナリオには入っていないため
+    //    ボタンが1つも出ない。保存値に無ければ既定の項目から補う。
+    const fallbackChoices = new Map(DEFAULT_SLOTS.map((d) => [d.key, d.choices || []]))
+    const choicesFor = (sl: { key: string; choices?: string[] }) =>
+      sl.choices?.length ? sl.choices : fallbackChoices.get(sl.key) || []
 
-  return NextResponse.json({
-    // 画面のワンタップ回答ボタン用
-    quick_replies: nextSlot && nextChoices.length
-      ? { slotKey: nextSlot.key, label: nextSlot.label, choices: nextChoices.slice(0, 5) }
-      : null,
-    action: result.action,
-    phase: result.phaseName,
-    // クライアントが以降の発話に添えるためのキー
-    phase_key: result.phaseKey,
-    goal: result.goal,
-    ask_next: result.askNext,
-    remaining_required: result.remainingRequired,
-    should_close: result.shouldClose,
-    remaining_min: Math.max(0, Math.round((cfg.durationMin * 60 - elapsedSec) / 60)),
-  })
+    const nextSlot =
+      cfg.slots.find((sl) => sl.required && !filled.has(sl.key)) ||
+      cfg.slots.find((sl) => !filled.has(sl.key))
+    const nextChoices = nextSlot ? choicesFor(nextSlot) : []
+
+    return NextResponse.json({
+      // 画面のワンタップ回答ボタン用
+      quick_replies: nextSlot && nextChoices.length
+        ? { slotKey: nextSlot.key, label: nextSlot.label, choices: nextChoices.slice(0, 5) }
+        : null,
+      action: result.action,
+      phase: result.phaseName,
+      // クライアントが以降の発話に添えるためのキー
+      phase_key: result.phaseKey,
+      goal: result.goal,
+      ask_next: result.askNext,
+      remaining_required: result.remainingRequired,
+      should_close: result.shouldClose,
+      remaining_min: Math.max(0, Math.round((cfg.durationMin * 60 - elapsedSec) / 60)),
+    })
+  }, { isolationLevel: 'ReadCommitted', timeout: 15000 })
 }

@@ -20,6 +20,8 @@ interface Detail {
   guestCompany: string | null
   guestEmail: string | null
   status: string
+  evaluationStatus?: 'ready' | 'manual' | 'pending' | 'retrying' | 'stopped' | 'unavailable' | null
+  hasPreviousOutcome?: boolean
   startedAt: string | null
   endedAt: string | null
   schedulingClickedAt: string | null
@@ -101,6 +103,8 @@ export default function AishodanSessionDetail() {
         return
       }
       await load()
+    } catch {
+      notifyError(setError, '判定の保存結果を確認できませんでした。画面を再読み込みしてから、判定をご確認ください。')
     } finally {
       setSaving(false)
     }
@@ -130,6 +134,8 @@ export default function AishodanSessionDetail() {
         return
       }
       await load()
+    } catch {
+      notifyError(setError, '再評価の結果を確認できませんでした。画面を再読み込みしてから、判定をご確認ください。')
     } finally {
       setSaving(false)
     }
@@ -175,6 +181,22 @@ export default function AishodanSessionDetail() {
       </header>
 
       <main className="mx-auto max-w-4xl space-y-5 px-4 py-6">
+        {d.evaluationStatus && !['ready', 'manual'].includes(d.evaluationStatus) && (
+          <section role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-950 ring-1 ring-amber-200">
+            <p className="font-bold">
+              {d.evaluationStatus === 'stopped' ? '自動判定の再試行を停止しました。'
+                : d.evaluationStatus === 'retrying' ? '判定の作成に失敗したため、自動で再試行します。'
+                : d.evaluationStatus === 'pending' ? '最新の回答で判定を作成しています。'
+                : '判定を確定できていません。'}
+            </p>
+            <p className="mt-1">
+              {d.hasPreviousOutcome && '追加の回答があるため、以前のAI判定は表示していません。'}
+              {['stopped', 'unavailable'].includes(d.evaluationStatus)
+                ? '管理者の方は、再評価するか判定を手で入力してください。'
+                : '会話の記録は保存されています。しばらくしてから画面を再読み込みしてください。'}
+            </p>
+          </section>
+        )}
         {/* 判定 */}
         {d.outcome ? (
           <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">

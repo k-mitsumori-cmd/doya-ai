@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');const{load,check,results}=require('./
 function fixture(options={}){
  const row={id:'s',organizationId:'o',roomId:'r',guestId:'g',status:'pending',startedAt:null,endedAt:null,consentedAt:new Date(),tokenIssueCount:0,room:{isActive:true,organization:{name:'Synthetic',retentionDays:30},scenario:{product:{id:'p',name:'Synthetic'}}},...options.row};
  let fetches=0,starts=0,reservations=0,reads=0,timeoutMs=0;
- function matches(where){return Object.entries(where).every(([k,v])=>v&&typeof v==='object'?('in'in v?v.in.includes(row[k]):'not'in v?row[k]!==v.not:'lt'in v?row[k]<v.lt:false):row[k]===v)}
+ function matches(where){return Object.entries(where).every(([k,v])=>k==='OR'?v.some(matches):v&&typeof v==='object'?('in'in v?v.in.includes(row[k]):'not'in v?row[k]!==v.not:'lt'in v?row[k]<v.lt:'gt'in v?row[k]>v.gt:false):v===null?row[k]==null:row[k]===v)}
  const prisma={aishodanSession:{findFirst:async()=>{reads++;return options.missingAfter&&reads>1?null:{...row,room:{...row.room}}},updateMany:async({where,data})=>{if(options.beforeReserve&&data.tokenIssueCount)options.beforeReserve(row);if(!matches(where))return{count:0};if(data.tokenIssueCount){row.tokenIssueCount++;reservations++}else{Object.assign(row,data);starts++}return{count:1}}}};
  const session=load('src/lib/aishodan/session.ts',{'@/lib/prisma':{prisma}});
  const logs=[];
@@ -26,5 +26,7 @@ function fixture(options={}){
  await check('provider failure never logs response body',async()=>{const f=fixture({providerResponse:()=>new Response('SENSITIVE_RESPONSE_BODY',{status:500})});const res=await f.run();assert.equal(res.status,502);assert.equal(JSON.stringify(f.logs).includes('SENSITIVE_RESPONSE_BODY'),false)});
  await check('oversized provider response is rejected without leaking body',async()=>{const f=fixture({providerResponse:()=>new Response('SENSITIVE_RESPONSE_BODY'.repeat(15000))});const res=await f.run();assert.equal(res.status,502);assert.equal(JSON.stringify(f.logs).includes('SENSITIVE_RESPONSE_BODY'),false)});
  await check('provider connection error is bounded and sanitized',async()=>{const f=fixture({fetchError:true});assert.equal((await f.run()).status,502);assert.equal(f.stats.fetches,1);assert.equal(f.timeoutMs,15000)});
+ await check('retention expiring during provider wait cannot be extended into a live session',async()=>{const f=fixture({duringFetch:row=>row.purgeAfter=new Date(0)});const response=await f.run();assert.equal(response.status,410);assert.equal(f.stats.starts,0);assert.equal(f.row.status,'pending');assert.equal(f.row.purgeAfter.getTime(),0);assert.ok(!(await response.text()).includes('SYNTHETIC_SECRET'))});
+ await check('retention expiring before reservation does not call the provider',async()=>{const f=fixture({beforeReserve:row=>row.purgeAfter=new Date(0)});assert.equal((await f.run()).status,410);assert.equal(f.stats.fetches,0);assert.equal(f.stats.reservations,0)});
  console.log(JSON.stringify({passed:results.length,results},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1});

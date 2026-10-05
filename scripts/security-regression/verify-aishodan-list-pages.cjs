@@ -6,6 +6,7 @@ const roomInput = load('src/lib/aishodan/room-input.ts')
 const rows = (name, count) => Array.from({ length: count }, (_, index) => ({
   id: `${name}-${String(count - index).padStart(3, '0')}`,
   organizationId: 'own-org',
+  status: 'evaluated',
   createdAt: new Date('2026-09-25T00:00:00Z'),
   isPreview: index % 2 === 0,
   outcome: { verdict: index % 2 === 0 ? 'hot' : 'cold' },
@@ -18,6 +19,7 @@ function matches(row, where) {
   if (where.isPreview !== undefined && row.isPreview !== where.isPreview) return false
   if (where.room?.isPreview !== undefined && row.isPreview !== where.room.isPreview) return false
   if (where.outcome?.verdict && row.outcome.verdict !== where.outcome.verdict) return false
+  if (where.OR && !where.OR.some(clause=>clause.status===row.status || (clause.outcome?.overriddenAt?.not===null && row.outcome?.overriddenAt))) return false
   if (where.status && row.status !== where.status) return false
   return true
 }

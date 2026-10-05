@@ -177,7 +177,7 @@ export default function AishodanSessionsPage() {
                       </>
                     ) : (
                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-500">
-                        {SESSION_STATUS_LABELS[s.status] || s.status}
+                        {s.status === 'completed' ? '判定待ち' : SESSION_STATUS_LABELS[s.status] || s.status}
                       </span>
                     )}
                   </div>

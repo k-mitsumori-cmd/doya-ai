@@ -21,6 +21,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/aishodan-evaluations",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/seo-image-purge",
       "schedule": "10 * * * *"
     },
@@ -142,6 +146,18 @@
     },
     {
       "path": "/api/cron/persona-purge",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/aishodan-notifications",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/aishodan-work-cleanup",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/aishodan-retention",
       "schedule": "*/15 * * * *"
     }
   ]

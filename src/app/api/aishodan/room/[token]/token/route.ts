@@ -54,7 +54,8 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   const sessionScope = { id: s.id, organizationId: s.organizationId, roomId: s.roomId, guestId: s.guestId }
   const MAX_ISSUES = 12
   const reserved = await prisma.aishodanSession.updateMany({
-    where: { ...sessionScope, status: { in: ['pending', 'live'] }, endedAt: null, consentedAt: { not: null }, tokenIssueCount: { lt: MAX_ISSUES } },
+    where: { ...sessionScope, status: { in: ['pending', 'live'] }, endedAt: null, consentedAt: { not: null }, tokenIssueCount: { lt: MAX_ISSUES },
+      OR: [{ purgeAfter: null }, { purgeAfter: { gt: new Date() } }] },
     data: { tokenIssueCount: { increment: 1 } },
   })
   if (reserved.count === 0) {
@@ -164,7 +165,8 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     // 保持期限は実施日から数え直す。発行時点の仮の値のままだと、
     // 同意画面で伝えた「実施から◯日間保管」と実態がずれる。
     await prisma.aishodanSession.updateMany({
-      where: { ...sessionScope, status: { in: ['pending', 'live'] }, startedAt: null, endedAt: null, consentedAt: { not: null } },
+      where: { ...sessionScope, status: { in: ['pending', 'live'] }, startedAt: null, endedAt: null, consentedAt: { not: null },
+        OR: [{ purgeAfter: null }, { purgeAfter: { gt: new Date() } }] },
       data: {
         status: 'live',
         startedAt: new Date(),
@@ -187,5 +189,6 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     expiresAt: data?.expires_at ?? null,
     model: REALTIME_MODEL,
     durationMin: cfg.durationMin,
+    purgeAfter: current.purgeAfter?.toISOString() ?? null,
   })
 }

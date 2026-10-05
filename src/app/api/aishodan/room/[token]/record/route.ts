@@ -16,36 +16,43 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   const s = await loadGuestSession(req, p.token, String(body?.sessionId || ''))
   if (!s) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
 
-  const usable = assertSessionUsable(s)
-  if (!usable.ok) return NextResponse.json({ error: usable.reason }, { status: usable.status })
+  const initial = s
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM aishodan_sessions WHERE id = ${initial.id} FOR NO KEY UPDATE`
+    const current = await loadGuestSession(req, p.token, initial.id, tx)
+    if (!current) return NextResponse.json({ error: '商談が見つかりません。' }, { status: 404 })
+    const s = current
+    const usable = assertSessionUsable(s, { requireStarted: true })
+    if (!usable.ok) return NextResponse.json({ error: usable.reason }, { status: usable.status })
 
-  const key = String(body?.key || '').trim()
-  const value = String(body?.value || '').trim()
-  if (!key || !value) return NextResponse.json({ ok: false, error: 'key と value が必要です' }, { status: 400 })
+    const key = String(body?.key || '').trim()
+    const value = String(body?.value || '').trim()
+    if (!key || !value) return NextResponse.json({ ok: false, error: 'key と value が必要です' }, { status: 400 })
 
-  // シナリオに無いキーは受け付けない。
-  // 受け入れると、集計もICP判定も参照できないゴミが溜まる。
-  const cfg = toScenarioConfig(s.room.scenario)
-  const slot = cfg.slots.find((sl) => sl.key === key)
-  if (!slot) {
-    return NextResponse.json({
-      ok: false,
-      message: `"${key}" はヒアリング項目にありません。次のいずれかを使ってください: ${cfg.slots.map((sl) => sl.key).join(', ')}`,
+    // シナリオに無いキーは受け付けない。
+    // 受け入れると、集計もICP判定も参照できないゴミが溜まる。
+    const cfg = toScenarioConfig(s.room.scenario)
+    const slot = cfg.slots.find((sl) => sl.key === key)
+    if (!slot) {
+      return NextResponse.json({
+        ok: false,
+        message: `"${key}" はヒアリング項目にありません。次のいずれかを使ってください: ${cfg.slots.map((sl) => sl.key).join(', ')}`,
+      })
+    }
+
+    await tx.aishodanSlotValue.upsert({
+      where: { sessionId_key: { sessionId: s.id, key } },
+      create: { sessionId: s.id, key, value: value.slice(0, 4000), confidence: 0.8 },
+      update: { value: value.slice(0, 4000), confidence: 0.8 },
     })
-  }
 
-  await prisma.aishodanSlotValue.upsert({
-    where: { sessionId_key: { sessionId: s.id, key } },
-    create: { sessionId: s.id, key, value: value.slice(0, 4000), confidence: 0.8 },
-    update: { value: value.slice(0, 4000), confidence: 0.8 },
-  })
+    const values = await tx.aishodanSlotValue.findMany({
+      where: { sessionId: s.id },
+      select: { key: true, value: true },
+    })
+    const filled = new Set(values.filter((v) => v.value.trim()).map((v) => v.key))
+    const remaining = cfg.slots.filter((sl) => sl.required && !filled.has(sl.key)).map((sl) => sl.label)
 
-  const values = await prisma.aishodanSlotValue.findMany({
-    where: { sessionId: s.id },
-    select: { key: true, value: true },
-  })
-  const filled = new Set(values.filter((v) => v.value.trim()).map((v) => v.key))
-  const remaining = cfg.slots.filter((sl) => sl.required && !filled.has(sl.key)).map((sl) => sl.label)
-
-  return NextResponse.json({ ok: true, recorded: slot.label, remaining_required: remaining })
+    return NextResponse.json({ ok: true, recorded: slot.label, remaining_required: remaining })
+  }, { isolationLevel: 'ReadCommitted', timeout: 15000 })
 }

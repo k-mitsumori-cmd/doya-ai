@@ -69,6 +69,7 @@ export function toPublicSession(s: {
   startedAt: Date | null
   endedAt: Date | null
   guestName: string | null
+  purgeAfter?: Date | null
 }) {
   return {
     id: s.id,
@@ -78,6 +79,7 @@ export function toPublicSession(s: {
     started: Boolean(s.startedAt),
     ended: Boolean(s.endedAt),
     guestName: s.guestName,
+    purgeAfter: s.purgeAfter?.toISOString() ?? null,
   }
 }
 

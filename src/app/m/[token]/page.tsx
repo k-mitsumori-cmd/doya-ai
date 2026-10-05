@@ -13,6 +13,7 @@ import { useParams } from 'next/navigation'
 import Avatar from '@/components/mensetsu/Avatar'
 import Waveform from '@/components/mensetsu/Waveform'
 import { useRealtimeMeeting } from '@/lib/aishodan/useRealtimeMeeting'
+import { recoverTranscriptOutboxes } from '@/lib/aishodan/transcript-outbox'
 
 interface PublicRoom {
   roomName: string
@@ -88,11 +89,15 @@ function fmt(sec: number) {
 export default function AishodanRoomPage() {
   const params = useParams<{ token: string }>()
   const token = params?.token as string
+  return <AishodanRoomContent key={token} token={token} />
+}
 
+function AishodanRoomContent({ token }: { token: string }) {
   const [step, setStep] = useState<Step>('loading')
   const [room, setRoom] = useState<PublicRoom | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string>('')
+  const [purgeAfter, setPurgeAfter] = useState<string | null>(null)
 
   const [name, setName] = useState('')
   const [company, setCompany] = useState('')
@@ -116,14 +121,27 @@ export default function AishodanRoomPage() {
   const rt = useRealtimeMeeting({
     roomToken: token,
     sessionId,
+    purgeAfter,
     onEnded: () => setStep('done'),
   })
 
   useEffect(() => {
     if (!token) return
     let alive = true
-    fetch(`/api/aishodan/room/${token}`)
+    ;(async () => {
+      const recovered = await recoverTranscriptOutboxes(token)
+      if (!recovered) {
+        if (alive) {
+          setMessage('前回の回答の保存を確認できませんでした。通信とブラウザの保存設定を確認し、再読み込みして保存を再試行してください。')
+          setStep('unavailable')
+        }
+        return null
+      }
+      if (!alive) return null
+      return fetch(`/api/aishodan/room/${token}`)
+    })()
       .then(async (r) => {
+        if (!r) return
         const d = await r.json()
         if (!alive) return
         if (!r.ok) {
@@ -157,6 +175,7 @@ export default function AishodanRoomPage() {
       const d = await r.json()
       if (!r.ok) throw new Error(d?.error || '開始できませんでした')
       setSessionId(d.session.id)
+      setPurgeAfter(typeof d.session.purgeAfter === 'string' ? d.session.purgeAfter : null)
       setStep('check')
     } catch (e) {
       setMessage(e instanceof Error ? e.message : '開始できませんでした')
@@ -233,6 +252,7 @@ export default function AishodanRoomPage() {
         <div className="max-w-md text-center">
           <span className="material-symbols-outlined text-3xl text-[#8a94ad]">link_off</span>
           <p className="mt-3 text-sm font-bold leading-relaxed text-[#0a0f3c]">{message}</p>
+          <button type="button" onClick={() => window.location.reload()} className="mt-5 rounded-lg bg-[#0066ff] px-5 py-3 text-sm font-bold text-white">再読み込みして確認する</button>
         </div>
       </main>
     )
@@ -281,6 +301,7 @@ export default function AishodanRoomPage() {
                 <li>本日の商談は、AIが担当いたします。</li>
                 <li>会話の内容はテキストとして記録され、担当者が確認いたします。</li>
                 <li>記録は{room.retentionDays}日間保管したのち削除いたします。</li>
+                <li>通信に備え、未保存の回答をこの端末に一時保管します。保存完了後に削除し、保存期限を過ぎたデータは次に画面を開いた際に削除します。</li>
                 <li>所要時間は約{room.durationMin}分です。</li>
                 <li>金額や条件の確定は、後日あらためて担当者よりご案内いたします。</li>
               </ul>
@@ -416,6 +437,8 @@ export default function AishodanRoomPage() {
         </div>
       </header>
 
+      {rt.storageWarning && <p role="status" className="shrink-0 bg-amber-50 px-4 py-2 text-xs font-bold leading-relaxed text-amber-900">{rt.storageWarning}</p>}
+
       <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4 lg:flex-row lg:items-center lg:gap-8 lg:overflow-hidden lg:p-8">
         {connecting ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3">
@@ -430,12 +453,16 @@ export default function AishodanRoomPage() {
             <p className="mt-2 max-w-sm text-sm font-bold text-[#0a0f3c]">{rt.error}</p>
             <button
               onClick={() => {
+                if (rt.needsSaveRetry) {
+                  void rt.end()
+                  return
+                }
                 startedRef.current = false
                 beginMeeting()
               }}
               className="mt-4 rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-black text-white"
             >
-              もう一度試す
+              {rt.needsSaveRetry ? '保存を再試行' : 'もう一度試す'}
             </button>
           </div>
         ) : (

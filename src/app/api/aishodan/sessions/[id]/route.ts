@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/access'
 import { toScenarioConfig } from '@/lib/aishodan/public'
+import { evaluationView } from '@/lib/aishodan/evaluation-view'
 import type { Verdict } from '@/lib/aishodan/types'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -29,7 +30,13 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
     },
   })
   if (!session) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
+  if (session.purgeAfter && session.purgeAfter.getTime() <= Date.now()) {
+    return NextResponse.json({ error: 'この商談の記録は保存期間を過ぎているため、ご覧いただけません。' },
+      { status: 410, headers: { 'Cache-Control': 'private, no-store' } })
+  }
 
+  const task = await prisma.systemSetting.findUnique({ where: { key: `aishodan-evaluation-task:v1:${session.id}` } })
+  const view = evaluationView(session, task)
   const cfg = toScenarioConfig(session.room.scenario)
   return NextResponse.json({
     session: {
@@ -56,10 +63,10 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
       questions: session.questions.map((q) => ({
         id: q.id, text: q.text, answerText: q.answerText, unanswered: q.unanswered,
       })),
-      outcome: session.outcome,
+      ...view,
       phases: cfg.phases.map((ph) => ({ key: ph.key, name: ph.name })),
     },
-  })
+  }, { headers: { 'Cache-Control': 'private, no-store' } })
 }
 
 const VERDICTS: Verdict[] = ['hot', 'warm', 'cold', 'unfit']
@@ -105,27 +112,30 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   //    （モデルID廃止・JSONパース失敗など実際に起きる）は、再評価する手段も
   //    手で判定を入れる手段も無く、本物の見込み客のデータが一覧の中で
   //    永久に判定不能のまま放置される状態だった。
-  if (!session.outcome) {
-    if (!data.verdict || !Number.isFinite(Number(data.fitScore))) {
-      return NextResponse.json(
-        { error: 'この商談はまだ判定がありません。判定と適合度をご指定ください。' },
-        { status: 400 }
-      )
+  const saved = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM aishodan_sessions WHERE id = ${session.id} FOR NO KEY UPDATE`
+    const current = await tx.aishodanSession.findUnique({ where: { id: session.id } })
+    if (!current || current.organizationId !== ctx.organizationId) return { error: '商談が見つかりません。', status: 404 }
+    if (!current.startedAt) return { error: 'この商談はまだ実施されていません。', status: 400 }
+    if (!current.consentedAt || (current.purgeAfter && current.purgeAfter.getTime() <= Date.now())) {
+      return { error: 'この商談の記録は利用できません。', status: 410 }
     }
-    const created = await prisma.aishodanOutcome.create({
-      data: {
-        sessionId: session.id,
-        fitScore: Number(data.fitScore),
-        verdict: String(data.verdict),
-        reason: '自動判定が生成できなかったため、担当者が入力しました。',
-        nextAction: (data.nextAction as string) || null,
-        overriddenBy: ctx.userId,
-        overriddenAt: new Date(),
-      },
+    const existing = await tx.aishodanOutcome.findUnique({ where: { sessionId: current.id } })
+    if (!existing && (!data.verdict || !Number.isFinite(Number(data.fitScore)))) {
+      return { error: 'この商談はまだ判定がありません。判定と適合度をご指定ください。', status: 400 }
+    }
+    const outcome = await tx.aishodanOutcome.upsert({
+      where: { sessionId: current.id },
+      create: { sessionId: current.id, fitScore: Number(data.fitScore), verdict: String(data.verdict),
+        reason: '自動判定が生成できなかったため、担当者が入力しました。', nextAction: (data.nextAction as string) || null,
+        overriddenBy: ctx.userId, overriddenAt: data.overriddenAt as Date },
+      update: data,
     })
-    return NextResponse.json({ outcome: created })
-  }
-
-  const outcome = await prisma.aishodanOutcome.update({ where: { id: session.outcome.id }, data })
-  return NextResponse.json({ outcome })
+    await tx.aishodanSession.update({ where: { id: current.id }, data: {
+      updatedAt: new Date(Math.max(Date.now(), current.updatedAt.getTime() + 1)),
+    } })
+    return { outcome }
+  }, { isolationLevel: 'ReadCommitted', timeout: 15000 })
+  if ('error' in saved) return NextResponse.json({ error: saved.error }, { status: saved.status })
+  return NextResponse.json({ outcome: saved.outcome })
 }

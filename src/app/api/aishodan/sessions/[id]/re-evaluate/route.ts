@@ -12,8 +12,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/access'
-import { toScenarioConfig } from '@/lib/aishodan/public'
-import { evaluateSession } from '@/lib/aishodan/evaluate'
+import { evaluateCurrentSession } from '@/lib/aishodan/evaluate-current-session'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -42,8 +41,8 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     return NextResponse.json({ error: '自動判定は商談が終了してから実行してください。' }, { status: 409 })
   }
   // ⚠️ 人が手で直した判定をAIで上書きしない。上書きするなら明示的に指示させる。
+  const body = await req.json().catch(() => ({}))
   if (s.outcome?.overriddenAt) {
-    const body = await req.json().catch(() => ({}))
     if (body?.overwriteManual !== true) {
       return NextResponse.json(
         { error: 'この商談の判定は担当者が手で入力しています。上書きする場合は再度お確かめください。', needsConfirm: true },
@@ -52,65 +51,19 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     }
   }
 
-  const cfg = toScenarioConfig(s.room.scenario)
-  const [turns, slotValues, unanswered] = await Promise.all([
-    prisma.aishodanTurn.findMany({
-      where: { sessionId: s.id },
-      orderBy: [{ startMs: 'asc' }, { ord: 'asc' }],
-      select: { speaker: true, text: true },
-    }),
-    prisma.aishodanSlotValue.findMany({ where: { sessionId: s.id }, select: { key: true, value: true } }),
-    prisma.aishodanQuestion.findMany({
-      where: { sessionId: s.id, unanswered: true },
-      select: { text: true },
-    }),
-  ])
-
-  if (turns.length === 0) {
-    return NextResponse.json({ error: '会話のログが無いため判定できません。' }, { status: 400 })
-  }
-
-  let result
   try {
-    result = await evaluateSession({
-      productName: s.room.scenario.product.name,
-      icp: cfg.icp,
-      slots: cfg.slots,
-      slotValues,
-      turns,
-      unansweredQuestions: unanswered.map((q) => q.text),
+    const evaluated = await evaluateCurrentSession({
+      sessionId: s.id, organizationId: ctx.organizationId,
+      expectedUpdatedAt: s.updatedAt, retryOnChange: false,
+      manualReplacement: { approved: body?.overwriteManual === true, overriddenAt: s.outcome?.overriddenAt ?? null },
     })
-  } catch (err) {
+    if (!evaluated.ok) {
+      return NextResponse.json({ error: '判定を確定できませんでした。実行中の処理や最新の商談記録をご確認のうえ、再度お試しください。', reason: evaluated.reason },
+        { status: evaluated.reason === 'empty_transcript' ? 400 : 409 })
+    }
+    return NextResponse.json({ outcome: evaluated.outcome })
+  } catch {
     console.error('[aishodan] re-evaluate failed')
-    // ⚠️ 失敗しても商談ログは触らない。手で判定を入れる経路（PATCH）が残っている
-    return NextResponse.json(
-      { error: '判定を作成できませんでした。時間をおいてもう一度お試しいただくか、判定を手で入力してください。' },
-      { status: 502 }
-    )
+    return NextResponse.json({ error: '判定を作成できませんでした。時間をおいて再度お試しいただくか、判定を手で入力してください。' }, { status: 502 })
   }
-
-  const outcome = await prisma.aishodanOutcome.upsert({
-    where: { sessionId: s.id },
-    create: {
-      sessionId: s.id,
-      fitScore: result.fitScore,
-      verdict: result.verdict,
-      reason: result.reason,
-      summary: { ...result.summary, conditions: result.conditions } as any,
-      nextAction: result.nextAction,
-    },
-    update: {
-      fitScore: result.fitScore,
-      verdict: result.verdict,
-      reason: result.reason,
-      summary: { ...result.summary, conditions: result.conditions } as any,
-      nextAction: result.nextAction,
-      // AIで作り直したので、手入力の記録は消す（誰の判断かを偽らせない）
-      overriddenBy: null,
-      overriddenAt: null,
-    },
-  })
-  await prisma.aishodanSession.update({ where: { id: s.id }, data: { status: 'evaluated' } })
-
-  return NextResponse.json({ outcome })
 }

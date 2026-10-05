@@ -24,11 +24,21 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
 
   // ⚠️ 終了後に押されることもある（お礼画面のボタン）。状態では弾かない。
   //    最初に押した時刻を残す（押し直しで上書きしない）。
-  if (!s.schedulingClickedAt) {
-    await prisma.aishodanSession.update({
-      where: { id: s.id },
-      data: { schedulingClickedAt: new Date() },
+  const result = await prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM aishodan_sessions WHERE id = ${s.id} FOR NO KEY UPDATE`
+    const current = await tx.aishodanSession.findFirst({
+      where: { id: s.id, guestId: s.guestId, room: { token: p.token } },
     })
-  }
+    if (!current) return 404
+    if (!current.consentedAt || (current.purgeAfter && current.purgeAfter.getTime() <= Date.now())) return 410
+    if (!current.schedulingClickedAt) {
+      await tx.aishodanSession.update({
+        where: { id: current.id },
+        data: { schedulingClickedAt: new Date() },
+      })
+    }
+    return 200
+  })
+  if (result !== 200) return NextResponse.json({ error: 'この商談は利用できません。' }, { status: result })
   return NextResponse.json({ ok: true })
 }

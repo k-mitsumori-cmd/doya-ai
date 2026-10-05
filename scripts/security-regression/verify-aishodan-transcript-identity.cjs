@@ -6,9 +6,10 @@ function fixture({connect=false,hallucination=false}={}){
  const refs=[],callbacks=[],calls=[];let dc
  class Peer {addTrack(){}createDataChannel(){dc={readyState:'connecting',send(){},addEventListener(){},close(){}};return dc}async createOffer(){return{sdp:'synthetic-sdp'}}async setLocalDescription(){}async setRemoteDescription(){}close(){}}
  const hook=load('src/lib/aishodan/useRealtimeMeeting.ts',{
+  '@/lib/aishodan/transcript-outbox':{storeTranscriptOutbox:()=>true,removeTranscriptOutbox:()=>true},
   react:{useRef:v=>{const r={current:v};refs.push(r);return r},useState:v=>[v,()=>{}],useEffect(){},useCallback:fn=>{callbacks.push(fn);return fn}},
   '@/lib/realtime/hallucination':{isLikelyHallucination:()=>hallucination},'@/lib/realtime/transcript-source':source,
- },{RTCPeerConnection:Peer,Audio:class{},setTimeout,clearTimeout,navigator:{mediaDevices:{getUserMedia:async()=>({getTracks:()=>[{stop(){}}]})}},fetch:async(url,options)=>{
+ },{RTCPeerConnection:Peer,Audio:class{},AbortController,crypto:require('node:crypto').webcrypto,setTimeout,clearTimeout,navigator:{mediaDevices:{getUserMedia:async()=>({getTracks:()=>[{stop(){}}]})}},fetch:async(url,options)=>{
   if(url.startsWith('https://api.openai.com/'))return{ok:true,text:async()=>'synthetic-sdp'}
   const body=JSON.parse(options.body);if(url.endsWith('/token'))return{ok:true,json:async()=>({clientSecret:'synthetic-not-valid',model:'synthetic'})}
   calls.push(body);return{ok:true,status:200,json:async()=>({saved:body.turns.length})}
@@ -16,7 +17,7 @@ function fixture({connect=false,hallucination=false}={}){
  const api=hook.useRealtimeMeeting({roomToken:'synthetic-room',sessionId:'synthetic-session'})
  if(!connect)refs[8].current={readyState:'open',send(){}}
  refs[13].current=Date.now()-1000
- return {api,refs,calls,push:callbacks[2],flush:callbacks[1],saved:()=>calls.flatMap(c=>c.turns),emit:ev=>dc.onmessage({data:JSON.stringify(ev)})}
+ return {api,refs,calls,push:callbacks[3],flush:callbacks[2],saved:()=>calls.flatMap(c=>c.turns),emit:ev=>dc.onmessage({data:JSON.stringify(ev)})}
 }
 ;(async()=>{
  await check('two intentional identical typed replies are preserved',async()=>{const f=fixture();assert.equal(f.api.sendText('はい'),true);assert.equal(f.api.sendText('はい'),true);await tick();assert.deepEqual(f.saved().map(t=>t.text),['はい','はい'])})

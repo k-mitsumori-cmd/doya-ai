@@ -434,7 +434,7 @@ export default function AishodanTool() {
         {/* 指標 */}
         {stats && stats.total > 0 && (
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Metric label="商談数" value={`${stats.total}件`} />
+            <Metric label="保存期間内の商談数" value={`${stats.total}件`} />
             <Metric label="完了率" value={`${stats.completionRate}%`} />
             <Metric label="平均所要" value={`${stats.avgMin}分`} />
             <Metric label="日程調整" value={`${stats.scheduled}件 / ${stats.schedulingRate}%`} />

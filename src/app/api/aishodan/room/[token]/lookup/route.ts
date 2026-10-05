@@ -22,61 +22,73 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   const s = await loadGuestSession(req, p.token, String(body?.sessionId || ''))
   if (!s) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
 
-  const usable = assertSessionUsable(s)
+  const usable = assertSessionUsable(s, { requireStarted: true })
   if (!usable.ok) return NextResponse.json({ error: usable.reason }, { status: usable.status })
 
   const question = String(body?.question || '').trim()
   if (!question) return NextResponse.json({ evidence: [], found: false })
 
-  const cfg = toScenarioConfig(s.room.scenario)
-  const profile = (s.room.scenario.product.profile as ProductProfile | null) ?? {}
+  try {
+    const chunks = await retrieve(s.room.scenario.product.id, question, 4)
+    return await prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM aishodan_sessions WHERE id = ${s.id} FOR NO KEY UPDATE`
+      const current = await loadGuestSession(req, p.token, s.id, tx)
+      if (!current) return NextResponse.json({ error: '商談が見つかりません。' }, { status: 404 })
+      const allowed = assertSessionUsable(current, { requireStarted: true })
+      if (!allowed.ok) return NextResponse.json({ error: allowed.reason }, { status: allowed.status })
+      if (current.room.scenario.product.id !== s.room.scenario.product.id) {
+        return NextResponse.json({ error: '商材が変更されました。もう一度お試しください。' }, { status: 409 })
+      }
+      const cfg = toScenarioConfig(current.room.scenario)
+      const profile = (current.room.scenario.product.profile as ProductProfile | null) ?? {}
 
-  // 1. 確定済みプロフィールのFAQが最上位の根拠
-  const faqHit = (profile.faq || []).find((f) => {
-    const q = f.q.replace(/\s/g, '')
-    const asked = question.replace(/\s/g, '')
-    return q.includes(asked.slice(0, 8)) || asked.includes(q.slice(0, 8))
-  })
+      // 1. 確定済みプロフィールのFAQが最上位の根拠
+      const faqHit = (profile.faq || []).find((f) => {
+        const q = f.q.replace(/\s/g, '')
+        const asked = question.replace(/\s/g, '')
+        return q.includes(asked.slice(0, 8)) || asked.includes(q.slice(0, 8))
+      })
 
-  // 2. 取り込んだ資料から検索
-  const chunks = await retrieve(s.room.scenario.product.id, question, 4)
+      const evidence: { text: string; chunkId?: string }[] = []
+      if (faqHit) evidence.push({ text: `【よくある質問】Q: ${faqHit.q}\nA: ${faqHit.a}` })
+      for (const c of chunks) {
+        evidence.push({ text: c.sourceTitle ? `【${c.sourceTitle}】\n${c.text}` : c.text, chunkId: c.id })
+      }
 
-  const evidence: string[] = []
-  const citedChunkIds: string[] = []
-  if (faqHit) evidence.push(`【よくある質問】Q: ${faqHit.q}\nA: ${faqHit.a}`)
-  for (const c of chunks) {
-    evidence.push(c.sourceTitle ? `【${c.sourceTitle}】\n${c.text}` : c.text)
-    citedChunkIds.push(c.id)
+      // 価格に触れない設定なら、価格を含む根拠は返さない。
+      // ⚠️ 指示文だけで抑えると、根拠に金額が載っている限りモデルは読み上げてしまう。
+      //    材料そのものを渡さないのが確実。
+      let filtered = evidence
+      if (cfg.guardrails.pricePolicy === 'withhold') {
+        filtered = evidence.filter((e) => !/[¥￥]|円|万円|price|プラン料金/i.test(e.text))
+      }
+
+      filtered = filtered.slice(0, 4)
+
+      const found = filtered.length > 0
+
+      // 質問は必ず記録する。答えられなかったものはナレッジ拡充の優先順位になる
+      await tx.aishodanQuestion.create({
+        data: {
+          sessionId: s.id,
+          text: question.slice(0, 2000),
+          citedChunkIds: filtered.flatMap(e => e.chunkId ? [e.chunkId] : []),
+          unanswered: !found,
+        },
+      })
+
+      return NextResponse.json({
+        found,
+        evidence: filtered.map((e) => e.text.slice(0, 1500)),
+        // モデルが根拠なしのときに何をすべきかを、戻り値でも念押しする
+        instruction: found
+          ? '上の根拠だけに基づいて答えてください。根拠に書かれていないことを足さないでください。'
+          : cfg.guardrails.noEvidenceBehavior === 'defer'
+            ? '根拠が見つかりませんでした。答えを作らず、「確認して担当者から折り返しご連絡します」と伝えてください。'
+            : '根拠が見つかりませんでした。一般論であることを明示し、断定せず簡潔に答えてください。',
+      })
+    }, { isolationLevel: 'ReadCommitted', timeout: 15000 })
+  } catch {
+    return NextResponse.json({ error: '検索結果を保存できませんでした。もう一度お試しください。' }, { status: 503 })
   }
-
-  // 価格に触れない設定なら、価格を含む根拠は返さない。
-  // ⚠️ 指示文だけで抑えると、根拠に金額が載っている限りモデルは読み上げてしまう。
-  //    材料そのものを渡さないのが確実。
-  let filtered = evidence
-  if (cfg.guardrails.pricePolicy === 'withhold') {
-    filtered = evidence.filter((e) => !/[¥￥]|円|万円|price|プラン料金/i.test(e))
-  }
-
-  const found = filtered.length > 0
-
-  // 質問は必ず記録する。答えられなかったものはナレッジ拡充の優先順位になる
-  await prisma.aishodanQuestion.create({
-    data: {
-      sessionId: s.id,
-      text: question.slice(0, 2000),
-      citedChunkIds: found ? citedChunkIds : [],
-      unanswered: !found,
-    },
-  }).catch(() => {})
-
-  return NextResponse.json({
-    found,
-    evidence: filtered.slice(0, 4).map((e) => e.slice(0, 1500)),
-    // モデルが根拠なしのときに何をすべきかを、戻り値でも念押しする
-    instruction: found
-      ? '上の根拠だけに基づいて答えてください。根拠に書かれていないことを足さないでください。'
-      : cfg.guardrails.noEvidenceBehavior === 'defer'
-        ? '根拠が見つかりませんでした。答えを作らず、「確認して担当者から折り返しご連絡します」と伝えてください。'
-        : '根拠が見つかりませんでした。一般論であることを明示し、断定せず簡潔に答えてください。',
-  })
 }

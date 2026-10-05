@@ -1,0 +1,161 @@
+{
+  "stage": "before-current-repair-deployment",
+  "deploymentId": "dpl_B1rNz5GVWSAxZHBecZgG7tro4iqv",
+  "deploymentStatus": "Ready",
+  "scope": "public landing HTTP GET only; no rendered viewport, authenticated workflow, AI or production writes",
+  "results": [
+    {
+      "id": "banner",
+      "url": "https://doya-ai.surisuta.jp/banner",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/banner",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 97290,
+      "htmlSha256": "f152e92ec5781eadab48d8417573766bc85ed923565cca5041c71936876dc55f"
+    },
+    {
+      "id": "seo",
+      "url": "https://doya-ai.surisuta.jp/seo",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/seo",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 87526,
+      "htmlSha256": "0eda83481eba4d3298a2fa8f4c42ed7a1b85c8ffe7b11fcb791c31ca35afcf65"
+    },
+    {
+      "id": "interview",
+      "url": "https://doya-ai.surisuta.jp/interview",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/interview",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 90866,
+      "htmlSha256": "270dcf6810918ee20d1a5cc48e0b1f3b9ec6c9d5ffab0e9355e4e249ad1ab5b9"
+    },
+    {
+      "id": "persona",
+      "url": "https://doya-ai.surisuta.jp/persona",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/persona",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 82982,
+      "htmlSha256": "72aab9ee43f2e0dd5df5280a75c1bfd754d2cd4f714aea1b6374565ae4f391d1"
+    },
+    {
+      "id": "hr",
+      "url": "https://doya-ai.surisuta.jp/hr",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/hr",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 99991,
+      "htmlSha256": "65dceb4193d995f8457bf7974f936a12f48e8bb505eee14fddac2dc79664648a"
+    },
+    {
+      "id": "kintai",
+      "url": "https://doya-ai.surisuta.jp/kintai",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/kintai",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 101992,
+      "htmlSha256": "0d941023790bf1241833c805f7cedee2e2ab6a9913ad6c4edc5905a20d43a73b"
+    },
+    {
+      "id": "doyalist",
+      "url": "https://doya-ai.surisuta.jp/doyalist",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/doyalist",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 83882,
+      "htmlSha256": "0b32e79e19638811250b0b2a1517e536f277980dc9263f066da31d93756f1274"
+    },
+    {
+      "id": "promane",
+      "url": "https://doya-ai.surisuta.jp/promane",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/promane",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 132260,
+      "htmlSha256": "6715bedfb7f4421b5c4508fdbe546eeadd84ad5380e8fab07e40a05b6c44d2ef"
+    },
+    {
+      "id": "doyaslide",
+      "url": "https://doya-ai.surisuta.jp/doyaslide",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/doyaslide",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 84805,
+      "htmlSha256": "b078afb02197a07c2af4cdaf1c4a3376ce3aeb74aadcb4186d01ed843a693d2a"
+    },
+    {
+      "id": "cunning",
+      "url": "https://doya-ai.surisuta.jp/cunning",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/cunning",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 84024,
+      "htmlSha256": "31125434e3382827130ca97787e30737c59c488940ef247437deb758827ae504"
+    },
+    {
+      "id": "sfa",
+      "url": "https://doya-ai.surisuta.jp/sfa",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/sfa",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 103506,
+      "htmlSha256": "f944d1825b954e227e5e027d2d16e84da2f1bf8288b49909462456ca2fb08dba"
+    },
+    {
+      "id": "shodan",
+      "url": "https://doya-ai.surisuta.jp/shodan",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/shodan",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 99129,
+      "htmlSha256": "26a187f5c30f8075ec63784c1beaf1bba1f2ed52ab291e801190ab4d993bdaf8"
+    },
+    {
+      "id": "aio",
+      "url": "https://doya-ai.surisuta.jp/aio",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/aio",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 105118,
+      "htmlSha256": "18f8156983b20e558a8ad23cc8ef82d7f68292d4c8452339ee23c3b3514f210b"
+    },
+    {
+      "id": "mensetsu",
+      "url": "https://doya-ai.surisuta.jp/mensetsu",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/mensetsu",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 99815,
+      "htmlSha256": "e8d0d729346ee756387e96dd664e0707660d243db78fa4715fe4c5f5882cf446"
+    },
+    {
+      "id": "quote",
+      "url": "https://doya-ai.surisuta.jp/quote",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/quote",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 98314,
+      "htmlSha256": "413a1a1f7022dd95d80fef47cbcbcec60a265fffcec24668b4f382508b7b76a2"
+    },
+    {
+      "id": "aishodan",
+      "url": "https://doya-ai.surisuta.jp/aishodan",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/aishodan",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 97797,
+      "htmlSha256": "998063f3ef17cce7a7e47f178d786b94612ca122e0a3e095b1dd112c6f96c266"
+    },
+    {
+      "id": "adimage",
+      "url": "https://doya-ai.surisuta.jp/adimage",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/adimage",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 101385,
+      "htmlSha256": "edd4edb7975cc01375ef0d2d4076bd8f69bfc0699ba459a79098177498267c9c"
+    }
+  ]
+}

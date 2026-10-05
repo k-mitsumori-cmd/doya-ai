@@ -202,8 +202,8 @@ export async function postPlainToSlack(text: string): Promise<void> {
  * Block Kit 形式で投稿する。
  * `text` は通知バナー／未対応クライアント向けのフォールバックなので必ず渡すこと。
  */
-export async function postToSlackBlocks(text: string, blocks: unknown[]): Promise<void> {
-  await postSlackPayload({ text, blocks })
+export async function postToSlackBlocks(text: string, blocks: unknown[], signal?: AbortSignal): Promise<void> {
+  await postSlackPayload({ text, blocks }, signal)
 }
 
 // ========================================

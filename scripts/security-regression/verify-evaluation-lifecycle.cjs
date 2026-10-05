@@ -2,19 +2,22 @@ const assert=require('node:assert/strict');
 const {load,check,results}=require('./load-typescript.cjs');
 function fixture(service,status,options={}){
  const stats={ai:0,writes:0,scoreWrites:0};
- const session={id:'s',status,startedAt:new Date(),endedAt:new Date(),updatedAt:new Date(Date.now()-1000),purgeAfter:new Date(Date.now()+86400000),turns:[{text:'Synthetic',speaker:'candidate'}],organization:{id:'o'},template:{criteria:[],questions:[]},room:{scenario:{product:{name:'Synthetic'}}},...options};
+ const session={id:'s',status,startedAt:new Date(),endedAt:new Date(),updatedAt:new Date(Date.now()-1000),purgeAfter:new Date(Date.now()+86400000),organizationId:'o',consentedAt:new Date(),turns:[{id:'turn-1',text:'Synthetic',speaker:'candidate'}],organization:{id:'o'},template:{criteria:[],questions:[]},room:{scenario:{product:{name:'Synthetic'}}},...options};
  const db={
   mensetsuSession:{findUnique:async()=>({...session}),updateMany:async({where,data})=>{if(where.status&&where.status!==session.status)return{count:0};if(where.updatedAt&&where.updatedAt.getTime()!==session.updatedAt.getTime())return{count:0};Object.assign(session,data,{updatedAt:data.updatedAt||new Date()});stats.writes++;return{count:1}}},
   mensetsuScore:{deleteMany:async()=>{stats.scoreWrites++},createMany:async()=>{stats.scoreWrites++}},
   mensetsuAnswerSample:{findMany:async()=>[]},
   mensetsuTurn:{findMany:async()=>session.turns.map(turn=>({...turn}))},
-  aishodanSession:{findFirst:async()=>session,update:async()=>{stats.writes++}},
+  aishodanSession:{findFirst:async()=>({...session}),findUnique:async()=>({...session}),update:async({data})=>{Object.assign(session,data);stats.writes++}},
   aishodanTurn:{findMany:async()=>session.turns},aishodanSlotValue:{findMany:async()=>[]},aishodanQuestion:{findMany:async()=>[]},
-  aishodanOutcome:{upsert:async()=>{stats.writes++;return{id:'outcome'}}},
+  aishodanOutcome:{findUnique:async()=>null,upsert:async()=>{stats.writes++;return{id:'outcome'}}},
+  $queryRaw:async()=>[],
   $transaction:async tasks=>typeof tasks==='function'?tasks(db):Promise.all(tasks),
  };
  const evaluateSession=async()=>{stats.ai++;if(options.aiFails)throw Error('synthetic provider failure');return{scores:[],verdict:'hold',summary:{}}};
  const mocks={'@/lib/prisma':{prisma:db},'./evaluate':{evaluateSession},'./types':{LEVEL_LABELS:{},EVALUATION_STALE_MS:360000},'next/server':{NextResponse:Response},'@/lib/aishodan/access':{getAishodanContext:async()=>({role:'manager',organizationId:'o'}),hasMinRole:()=>true,orgSlugFrom:()=> 'o'},'@/lib/aishodan/public':{toScenarioConfig:()=>({})},'@/lib/aishodan/evaluate':{evaluateSession}};
+ mocks['@/lib/aishodan/finalize-evaluation']=load('src/lib/aishodan/finalize-evaluation.ts',{'@/lib/prisma':{prisma:db},...require('./aishodan-evaluation-mocks.cjs').completionNotificationMocks()});
+ require('./aishodan-evaluation-mocks.cjs').attachEvaluationRunner(mocks);
  const api=load(service==='mensetsu'?'src/lib/mensetsu/run-evaluation.ts':'src/app/api/aishodan/sessions/[id]/re-evaluate/route.ts',mocks);
  return {stats,session,run:async()=>service==='mensetsu'?api.runEvaluation('s'):api.POST({json:async()=>({})},{params:Promise.resolve({id:'s'})})};
 }
