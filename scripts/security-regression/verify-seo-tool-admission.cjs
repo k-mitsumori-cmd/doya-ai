@@ -197,4 +197,28 @@ function database(initial) {
       assert.equal(calls, fixture.method === 'geminiGenerateJson' ? 1 : 3)
     }
   })
+
+  await check('SEO title suggestions return ten distinct choices when the provider returns none', async () => {
+    let requestedPrompt = ''
+    const api = load('src/app/api/seo/title-suggestions/route.ts', {
+      'next/server': { NextResponse: Response },
+      'next-auth': { getServerSession: async () => ({ user: { id: 'owner' } }) },
+      '@/lib/auth': { authOptions: {} },
+      zod: require('zod'),
+      '@/lib/seo-tool-admission': {
+        SeoToolRateLimitError: admission.SeoToolRateLimitError,
+        reserveSeoToolCall: async () => {},
+      },
+      '@seo/lib/gemini': {
+        GEMINI_TEXT_MODEL_DEFAULT: 'test',
+        geminiGenerateJson: async ({ prompt }) => { requestedPrompt = prompt; return { titles: [] } },
+      },
+    })
+    const response = await api.POST({ json: async () => ({ keyword: 'SEO', count: 10 }) })
+    assert.equal(response.status, 200)
+    const body = await response.json()
+    assert.equal(body.titles.length, 10)
+    assert.equal(new Set(body.titles).size, 10)
+    assert.match(requestedPrompt, /10案すべて角度を変える/)
+  })
 })().catch(error => { console.error(error); process.exitCode = 1 })
