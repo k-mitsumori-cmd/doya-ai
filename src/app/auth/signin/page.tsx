@@ -6,7 +6,7 @@ import { BarChart3, PenLine, Palette, Sparkles, Mic, FileText, Wand2 } from 'luc
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { safeSignInCallbackUrl } from '@/lib/safe-signin-callback'
+import { safeSignInCallbackUrl, signInPublicIntroUrl } from '@/lib/safe-signin-callback'
 
 // エラーコードに対応するメッセージ
 const errorMessages: Record<string, string> = {
@@ -24,6 +24,7 @@ function SignInContent() {
   const searchParams = useSearchParams()
   const callbackUrl = safeSignInCallbackUrl(searchParams.get('callbackUrl'))
   const isBannerCallback = callbackUrl === '/banner' || callbackUrl.startsWith('/banner/')
+  const introUrl = signInPublicIntroUrl(callbackUrl)
   const error = searchParams.get('error')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -180,8 +181,8 @@ function SignInContent() {
             </div>
 
             <div className="pt-6 flex items-center justify-between gap-3 flex-wrap">
-              <Link href={isBannerCallback ? '/banner/landing' : callbackUrl} className="text-sm font-black text-blue-600 hover:text-blue-700">
-                {isBannerCallback ? 'ドヤバナーAIの紹介を見る →' : 'ログインせずに試す →'}
+              <Link href={introUrl} className="text-sm font-black text-blue-600 hover:text-blue-700">
+                {isBannerCallback ? 'ドヤバナーAIの紹介を見る →' : introUrl === '/' ? 'サービス一覧を見る →' : 'サービス紹介を見る →'}
               </Link>
               <div className="text-xs text-slate-500 font-bold">
                 <a href="/terms" className="text-blue-600 hover:underline">利用規約</a>

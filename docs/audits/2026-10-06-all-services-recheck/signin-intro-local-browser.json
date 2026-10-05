@@ -1,0 +1,53 @@
+{
+  "scope": "Actual compiled Next app on local port 34541, introduction links only; no Google login, production DB changes, AI or billing",
+  "hrIntroNavigation": {
+    "path": "/hr",
+    "h1": "一人ひとりの力を、\n組織の可能性に。"
+  },
+  "results": [
+    {
+      "callback": "/doyaslide/new",
+      "links": [
+        {
+          "href": "/doyaslide",
+          "text": "サービス紹介を見る →"
+        }
+      ],
+      "path": "/auth/signin",
+      "query": "?callbackUrl=%2Fdoyaslide%2Fnew"
+    },
+    {
+      "callback": "/hr/invite/token-1",
+      "links": [
+        {
+          "href": "/hr",
+          "text": "サービス紹介を見る →"
+        }
+      ],
+      "path": "/auth/signin",
+      "query": "?callbackUrl=%2Fhr%2Finvite%2Ftoken-1"
+    },
+    {
+      "callback": "/admin/users",
+      "links": [
+        {
+          "href": "/",
+          "text": "サービス一覧を見る →"
+        }
+      ],
+      "path": "/auth/signin",
+      "query": "?callbackUrl=%2Fadmin%2Fusers"
+    },
+    {
+      "callback": "/banner/dashboard",
+      "links": [
+        {
+          "href": "/banner/landing",
+          "text": "ドヤバナーAIの紹介を見る →"
+        }
+      ],
+      "path": "/auth/signin",
+      "query": "?callbackUrl=%2Fbanner%2Fdashboard"
+    }
+  ]
+}

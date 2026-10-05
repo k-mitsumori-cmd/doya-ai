@@ -1,0 +1,25 @@
+{
+  "deploymentId": "dpl_2nGFVLhgUNkaRTPY5QsFE6Zm7JQn",
+  "sha": "4d2850b8ec20ffec31540c137da66642bcdef549",
+  "scope": "public GET and unauthenticated synthetic PATCH rejected before workspace DB access; no user session, valid member or production mutation",
+  "results": [
+    {
+      "path": "/promane",
+      "method": "GET",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/promane/pricing",
+      "method": "GET",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/api/promane/members/qa-readonly-boundary/rate",
+      "method": "PATCH",
+      "status": 401,
+      "expected": 401
+    }
+  ]
+}

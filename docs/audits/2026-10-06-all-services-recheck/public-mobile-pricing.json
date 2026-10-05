@@ -1,0 +1,194 @@
+{
+  "observedAt": "2026-10-05T21:00:51.354Z",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scope": "Rendered public pricing DOM geometry and text before FAQ expansion; no trial purchase or login submitted; not a completed billing flow or device QA",
+  "results": [
+    {
+      "serviceId": "banner",
+      "documentWidth": 390,
+      "headings": [
+        "料金プラン",
+        "プロ1つで、17サービスのプロ機能を利用。"
+      ],
+      "path": "/banner/pricing",
+      "text": "ドヤバナーAIに戻る\nPlan\n料金プラン\n\nバナー画像の月間枚数とは別に、AI相談とコピー提案は共通の日次枠を使います。無料プランは1日10回、PROは100回です。既存のLIGHT契約は30回、個別契約のEnterprise相当は1,000回です。日本時間の翌日にリセットされます。\n\n現在のプラン：ゲスト\n\nall_inclusive\n統一プラン\nプロ1つで、17サービスのプロ機能を利用。\n\nドヤAIの全ツールのプロ機能が、月々¥9,980で。個別契約も、組み合わせも不要です。\n\n単体合計 ¥169,660/月 相当\narrow_forward\n¥9,980/月\n無料プラン\n¥0\n\nまずは無料でお試し\n\nこのサービスの利用上限\n\n月15枚まで\n\ncheck\nA/B/C 3案同時生成\ncheck\n10種類の業界テンプレート\ncheck\n6種類のサイズプリセット\ncheck\nブランドカラー設定\ncheck\n高品質PNG出力\n無料ではじめる\n全サービスのプロ機能を利用\nworkspace_premium\nプロプラン\n¥9,980\n/ 月（税込）\nall_inclusive\n\n全17サービスのプロ機能が使える\n\nこのサービスの上限：月150枚まで\n\ncheck_circle\nA/B/C 3案同時生成\ncheck_circle\n10種類の業界テンプレート\ncheck_circle\n6種類のサイズプリセット\ncheck_circle\nブランドカラー設定\ncheck_circle\n高品質PNG出力\nプロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。\nbolt\nプロにアップグレード\n\nいつでも解約OK・月額のみ・追加課金なし\n\n活用事例・ロゴ掲載キャンペーン\n\n30分の取材とロゴ掲載で、6ヶ月無料。\n\nオンラインで30分ほど活用状況をうかがい、御社のロゴ・サービスロゴを 当サイトに掲載させていただける方が対象です。\n\n申し込みフォームへ\narrow_forward\n\nlock_openプロプラン1つで、この17サービスすべてのプロ機能を利用可能に\n\ncheck\nドヤバナーAI\ncheck\nドヤ記事作成\ncheck\nドヤインタビュー\ncheck\nドヤペルソナAI\ncheck\nドヤHR\ncheck\nドヤ勤怠\ncheck\nドヤリスト\ncheck\nドヤプロマネ\ncheck\nドヤスライド\ncheck\nドヤカンニング\ncheck\nドヤ営業管理\ncheck\nドヤ商談準備\ncheck\nドヤAIO\ncheck\nドヤ面接官\ncheck\nドヤ見積もりAI\ncheck\nドヤAI商談\ncheck\nドヤ広告画像AI\n統一プランの詳細を見る\narrow_forward\n\nさらに機能を拡張したい方へ\n\n生成上限の引き上げ、チームでのご利用、独自機能の追加など、 プロプランの範囲を超えるご要望は個別に承ります。\n\nmail\nお問い合わせ\nご契約中の方：プラン変更・お支払い方法の変更・解約はこちら\nおためしプランを使ってみる",
+      "width": 390
+    },
+    {
+      "serviceId": "seo",
+      "documentWidth": 390,
+      "headings": [
+        "ドヤライティングAI 料金プラン",
+        "プロ1つで、17サービスのプロ機能を利用。"
+      ],
+      "path": "/seo/pricing",
+      "text": "生成記事一覧に戻る\nプラン管理\nドヤライティングAI 料金プラン\n\n現在のプラン：ゲスト\n\nall_inclusive\n統一プラン\nプロ1つで、17サービスのプロ機能を利用。\n\nドヤAIの全ツールのプロ機能が、月々¥9,980で。個別契約も、組み合わせも不要です。\n\n単体合計 ¥169,660/月 相当\narrow_forward\n¥9,980/月\n無料プラン\n¥0\n\nまずは無料でお試し\n\nこのサービスの利用上限\n\n記事3本/月まで\n\ncheck\n参考URL解析→要点化（丸写し禁止）\ncheck\nアウトライン作成（検索意図クラスタ）\ncheck\nセクション分割生成（整合性チェック付き）\ncheck\n監査（二重チェック）と自動修正\ncheck\nバナー/図解画像生成・リンクチェック\n無料ではじめる\n全サービスのプロ機能を利用\nworkspace_premium\nプロプラン\n¥9,980\n/ 月（税込）\nall_inclusive\n\n全17サービスのプロ機能が使える\n\nこのサービスの上限：月30回まで\n\ncheck_circle\n参考URL解析→要点化（丸写し禁止）\ncheck_circle\nアウトライン作成（検索意図クラスタ）\ncheck_circle\nセクション分割生成（整合性チェック付き）\ncheck_circle\n監査（二重チェック）と自動修正\ncheck_circle\nバナー/図解画像生成・リンクチェック\nプロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。\nbolt\nプロにアップグレード\n\nいつでも解約OK・月額のみ・追加課金なし\n\n活用事例・ロゴ掲載キャンペーン\n\n30分の取材とロゴ掲載で、6ヶ月無料。\n\nオンラインで30分ほど活用状況をうかがい、御社のロゴ・サービスロゴを 当サイトに掲載させていただける方が対象です。\n\n申し込みフォームへ\narrow_forward\n\nlock_openプロプラン1つで、この17サービスすべてのプロ機能を利用可能に\n\ncheck\nドヤバナーAI\ncheck\nドヤ記事作成\ncheck\nドヤインタビュー\ncheck\nドヤペルソナAI\ncheck\nドヤHR\ncheck\nドヤ勤怠\ncheck\nドヤリスト\ncheck\nドヤプロマネ\ncheck\nドヤスライド\ncheck\nドヤカンニング\ncheck\nドヤ営業管理\ncheck\nドヤ商談準備\ncheck\nドヤAIO\ncheck\nドヤ面接官\ncheck\nドヤ見積もりAI\ncheck\nドヤAI商談\ncheck\nドヤ広告画像AI\n統一プランの詳細を見る\narrow_forward\n\nさらに機能を拡張したい方へ\n\n生成上限の引き上げ、チームでのご利用、独自機能の追加など、 プロプランの範囲を超えるご要望は個別に承ります。\n\nmail\nお問い合わせ\nご契約中の方：プラン変更・お支払い方法の変更・解約はこちら\nログインして無料プランを始める",
+      "width": 390
+    },
+    {
+      "serviceId": "interview",
+      "documentWidth": 390,
+      "headings": [
+        "ドヤインタビュー 料金プラン",
+        "プロ1つで、17サービスのプロ機能を利用。",
+        "よくあるご質問"
+      ],
+      "path": "/interview/pricing",
+      "text": "ドヤインタビュー\nドヤインタビュー 料金プラン\n\nまずは無料で。AIインタビューで魅力的なコンテンツづくりを始めましょう。 プロプランなら、ドヤAIの全サービスでプロ機能を利用できます。各サービスにはプラン別の利用上限があります。\n\nall_inclusive\n統一プラン\nプロ1つで、17サービスのプロ機能を利用。\n\nドヤAIの全ツールのプロ機能が、月々¥9,980で。個別契約も、組み合わせも不要です。\n\n単体合計 ¥169,660/月 相当\narrow_forward\n¥9,980/月\n無料プラン\n¥0\n\nまずは無料でお試し\n\nこのサービスの利用上限\n\n記事生成・再生成 合計1日5回まで\n\ncheck\n音声/動画を自動文字起こし（話者分離対応）\ncheck\n10種類の執筆スキル（Q&A/ストーリー/プレスリリース等）\ncheck\nAI記事ドラフト生成（リアルタイムストリーミング）\ncheck\n校正・校閲（誤字脱字・表記揺れ修正）\ncheck\nプラットフォーム別タイトル提案\n無料ではじめる\n全サービスのプロ機能を利用\nworkspace_premium\nプロプラン\n¥9,980\n/ 月（税込）\nall_inclusive\n\n全17サービスのプロ機能が使える\n\nこのサービスの上限：記事生成・再生成 合計1日30回まで\n\ncheck_circle\n音声/動画を自動文字起こし（話者分離対応）\ncheck_circle\n10種類の執筆スキル（Q&A/ストーリー/プレスリリース等）\ncheck_circle\nAI記事ドラフト生成（リアルタイムストリーミング）\ncheck_circle\n校正・校閲（誤字脱字・表記揺れ修正）\ncheck_circle\nプラットフォーム別タイトル提案\ncheck_circle\nプランに応じて最大5GBのファイルに対応\nプロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。\nbolt\nプロにアップグレード\n\nいつでも解約OK・月額のみ・追加課金なし\n\n活用事例・ロゴ掲載キャンペーン\n\n30分の取材とロゴ掲載で、6ヶ月無料。\n\nオンラインで30分ほど活用状況をうかがい、御社のロゴ・サービスロゴを 当サイトに掲載させていただける方が対象です。\n\n申し込みフォームへ\narrow_forward\n\nlock_openプロプラン1つで、この17サービスすべてのプロ機能を利用可能に\n\ncheck\nドヤバナーAI\ncheck\nドヤ記事作成\ncheck\nドヤインタビュー\ncheck\nドヤペルソナAI\ncheck\nドヤHR\ncheck\nドヤ勤怠\ncheck\nドヤリスト\ncheck\nドヤプロマネ\ncheck\nドヤスライド\ncheck\nドヤカンニング\ncheck\nドヤ営業管理\ncheck\nドヤ商談準備\ncheck\nドヤAIO\ncheck\nドヤ面接官\ncheck\nドヤ見積もりAI\ncheck\nドヤAI商談\ncheck\nドヤ広告画像AI\n統一プランの詳細を見る\narrow_forward\n\nさらに機能を拡張したい方へ\n\n生成上限の引き上げ、チームでのご利用、独自機能の追加など、 プロプランの範囲を超えるご要望は個別に承ります。\n\nmail\nお問い合わせ\nご契約中の方：プラン変更・お支払い方法の変更・解約はこちら\nよくあるご質問\nhelp\n無料プランでもインタビュー機能は使えますか？\n\nはい。無料プランでも基本的なインタビュー作成をお試しいただけます。利用回数や保存数には上限があり、上限はプランカードに記載しています。\n\nhelp\n記事生成の「1回」はどの操作で数えますか？\n\n記事の初回生成と、同じプロジェクトでの再生成を、それぞれ1回として数えます。プロジェクトの作成だけでは記事生成の回数を消費しません。利用枠は日本時間の毎日0時に切り替わります。\n\nhelp\nレシピの自動生成には別の上限がありますか？\n\nはい。記事生成とは別枠で、無料プランは1日5回、LIGHTは10回、PROは30回、Enterpriseは100回までです。失敗した生成は回数を返し、日本時間の毎日0時に枠が切り替わります。\n\nhelp\n校正・AI修正・翻訳などの回数はどう数えますか？\n\n記事1件につき最初の校正1回は記事生成に含まれ、プロジェクトの最初のサムネイル画像1枚は追加枠を使用しません。その後の校正とサムネイル再生成、AI修正・タイトル提案・確認候補の抽出・SNS投稿文・翻訳は共通の追加AI編集枠を各1回使用します。ゲストは1日2回、無料会員は5回、LIGHTは10回、PROは30回、Enterpriseは100回です。失敗時は回数を返し、日本時間の毎日0時に切り替わります。\n\nhelp\nプロプランの料金に含まれるものは？\n\nドヤインタビューのプロ機能に加え、ドヤAIの全サービス（SEO・バナー・ペルソナなど）がプロプランとして解放されます。1つのご契約ですべてのサービスをプロ品質でご利用いただけます。\n\nhelp\n支払い方法やプラン変更は？\n\nクレジットカードでのお支払いに対応しています。プランのアップグレード・ダウングレードはいつでも可能です。\n\nhelp\n解約はいつでもできますか？\n\nはい。いつでも解約いただけます。解約後も契約期間の終了まではプロ機能をご利用いただけます。",
+      "width": 390
+    },
+    {
+      "serviceId": "persona",
+      "documentWidth": 390,
+      "headings": [
+        "ドヤペルソナAI 料金プラン",
+        "プロ1つで、17サービスのプロ機能を利用。",
+        "よくある質問"
+      ],
+      "path": "/persona/pricing",
+      "text": "psychology\nドヤペルソナAI\nドヤペルソナAI 料金プラン\n\nターゲット顧客のペルソナをAIが瞬時に生成。 まずは無料でお試しいただき、本格活用はプロプランへ。 1つの契約でドヤマーケAIの全サービスが使えます。\n\nall_inclusive\n統一プラン\nプロ1つで、17サービスのプロ機能を利用。\n\nドヤAIの全ツールのプロ機能が、月々¥9,980で。個別契約も、組み合わせも不要です。\n\n単体合計 ¥169,660/月 相当\narrow_forward\n¥9,980/月\n無料プラン\n¥0\n\nまずは無料でお試し\n\nこのサービスの利用上限\n\n1日5回まで\n\ncheck\nAIペルソナ自動生成\ncheck\n詳細なペルソナシート出力\ncheck\n業界・商材に最適化\ncheck\nマーケティング施策に活用\n無料ではじめる\n全サービスのプロ機能を利用\nworkspace_premium\nプロプラン\n¥9,980\n/ 月（税込）\nall_inclusive\n\n全17サービスのプロ機能が使える\n\nこのサービスの上限：1日30回まで\n\ncheck_circle\nAIペルソナ自動生成\ncheck_circle\n詳細なペルソナシート出力\ncheck_circle\n業界・商材に最適化\ncheck_circle\nマーケティング施策に活用\nプロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。\nbolt\nプロにアップグレード\n\nいつでも解約OK・月額のみ・追加課金なし\n\n活用事例・ロゴ掲載キャンペーン\n\n30分の取材とロゴ掲載で、6ヶ月無料。\n\nオンラインで30分ほど活用状況をうかがい、御社のロゴ・サービスロゴを 当サイトに掲載させていただける方が対象です。\n\n申し込みフォームへ\narrow_forward\n\nlock_openプロプラン1つで、この17サービスすべてのプロ機能を利用可能に\n\ncheck\nドヤバナーAI\ncheck\nドヤ記事作成\ncheck\nドヤインタビュー\ncheck\nドヤペルソナAI\ncheck\nドヤHR\ncheck\nドヤ勤怠\ncheck\nドヤリスト\ncheck\nドヤプロマネ\ncheck\nドヤスライド\ncheck\nドヤカンニング\ncheck\nドヤ営業管理\ncheck\nドヤ商談準備\ncheck\nドヤAIO\ncheck\nドヤ面接官\ncheck\nドヤ見積もりAI\ncheck\nドヤAI商談\ncheck\nドヤ広告画像AI\n統一プランの詳細を見る\narrow_forward\n\nさらに機能を拡張したい方へ\n\n生成上限の引き上げ、チームでのご利用、独自機能の追加など、 プロプランの範囲を超えるご要望は個別に承ります。\n\nmail\nお問い合わせ\nご契約中の方：プラン変更・お支払い方法の変更・解約はこちら\nよくある質問\nhelp\nプロプランで何ができますか？\n\nペルソナ生成・文章変更を1日30回、追加画像・再生成を1日30枚までご利用いただけます。付属画像はペルソナ1件につき最大16枚まで含まれ、追加枠を消費しません。さらに、ドヤマーケAIの全サービス（SEO・バナー・インタビューなど）のプロ機能も同じ契約で解放されます。\n\nhelp\n無料プランでも使えますか？\n\nはい。ログインすると、ペルソナ生成・文章変更を1日5回、追加画像・再生成を1日5枚までお試しいただけます。付属画像はペルソナ1件につき最大16枚まで含まれます。利用枠は毎日0時（日本時間）にリセットされます。\n\nhelp\n1つの契約で他のサービスも使えますか？\n\nはい。ドヤマーケAIは統一プラン方式を採用しています。プロプランを契約すると、対象のすべてのAIサービスがプロとして使えます。サービスごとに個別契約する必要はありません。\n\nhelp\nプランはいつでも変更できますか？\n\nいつでもアップグレード・ダウングレードが可能です。契約管理ポータルから簡単に手続きいただけます。",
+      "width": 390
+    },
+    {
+      "serviceId": "hr",
+      "documentWidth": 390,
+      "headings": [
+        "料金プラン"
+      ],
+      "path": "/hr/pricing",
+      "text": "arrow_back\nダッシュボードに戻る\n料金プラン\n\nドヤHR は5名まで永久無料。プロプラン1つで、ドヤAIの全サービスのプロ機能をプラン別の上限内で利用できます。\n\n組織のプランを確認しています…",
+      "width": 390
+    },
+    {
+      "serviceId": "kintai",
+      "documentWidth": 390,
+      "headings": [
+        "ドヤ勤怠 料金プラン"
+      ],
+      "path": "/kintai/pricing",
+      "text": "ドヤ勤怠 料金プラン\n\nチームの成長に合わせて最適なプランを選択できます。\n\ncelebration\n従業員5名まで永久無料\n\n組織のプランを確認しています…",
+      "width": 390
+    },
+    {
+      "serviceId": "doyalist",
+      "documentWidth": 390,
+      "headings": [
+        "シンプルな2プラン",
+        "プロ1つで、17サービスのプロ機能を利用。"
+      ],
+      "path": "/doyalist/pricing",
+      "text": "diamond\n料金プラン\nシンプルな2プラン\n\n無料ではじめて、必要になったらプロへ。\nいつでも変更・解約可能です。\n\nall_inclusive\n統一プラン\nプロ1つで、17サービスのプロ機能を利用。\n\nドヤAIの全ツールのプロ機能が、月々¥9,980で。個別契約も、組み合わせも不要です。\n\n単体合計 ¥169,660/月 相当\narrow_forward\n¥9,980/月\n無料プラン\n¥0\n\nまずは無料でお試し\n\nこのサービスの利用上限\n\n月100社 / 営業文ツール月30回\n\ncheck\nAIによる営業リスト自動生成\ncheck\nフォーム営業文の作成ツール\ncheck\n新規開拓メール文面の作成ツール\ncheck\n荷電スクリプトの作成ツール\ncheck\nCSV/Excelエクスポート\n無料ではじめる\n全サービスのプロ機能を利用\nworkspace_premium\nプロプラン\n¥9,980\n/ 月（税込）\nall_inclusive\n\n全17サービスのプロ機能が使える\n\nこのサービスの上限：月5,000社 / 営業文ツール月500回\n\ncheck_circle\nAIによる営業リスト自動生成\ncheck_circle\nフォーム営業文の作成ツール\ncheck_circle\n新規開拓メール文面の作成ツール\ncheck_circle\n荷電スクリプトの作成ツール\ncheck_circle\nCSV/Excelエクスポート\ncheck_circle\nシンプルで使いやすいUI\nプロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。\nbolt\nプロにアップグレード\n\nいつでも解約OK・月額のみ・追加課金なし\n\n活用事例・ロゴ掲載キャンペーン\n\n30分の取材とロゴ掲載で、6ヶ月無料。\n\nオンラインで30分ほど活用状況をうかがい、御社のロゴ・サービスロゴを 当サイトに掲載させていただける方が対象です。\n\n申し込みフォームへ\narrow_forward\n\nlock_openプロプラン1つで、この17サービスすべてのプロ機能を利用可能に\n\ncheck\nドヤバナーAI\ncheck\nドヤ記事作成\ncheck\nドヤインタビュー\ncheck\nドヤペルソナAI\ncheck\nドヤHR\ncheck\nドヤ勤怠\ncheck\nドヤリスト\ncheck\nドヤプロマネ\ncheck\nドヤスライド\ncheck\nドヤカンニング\ncheck\nドヤ営業管理\ncheck\nドヤ商談準備\ncheck\nドヤAIO\ncheck\nドヤ面接官\ncheck\nドヤ見積もりAI\ncheck\nドヤAI商談\ncheck\nドヤ広告画像AI\n統一プランの詳細を見る\narrow_forward\n\nさらに機能を拡張したい方へ\n\n生成上限の引き上げ、チームでのご利用、独自機能の追加など、 プロプランの範囲を超えるご要望は個別に承ります。\n\nmail\nお問い合わせ\nご契約中の方：プラン変更・お支払い方法の変更・解約はこちら\nhelp\nよくある質問\n\nQ. プランはいつでも変更できますか?\n\nはい。いつでもアップグレード・ダウングレードが可能です。Stripeのカスタマーポータルから簡単に変更できます。\n\nQ. 月の途中で契約した場合は?\n\n日割り計算が適用されます。残日数分の料金のみご請求します。\n\nQ. 無料プランの上限を超えるとどうなりますか?\n\n月初にリセットされます。途中でPROプランに変更すれば即時に拡張上限が適用されます。\n\nQ. 他のドヤAIサービスも使えますか?\n\nPROに加入いただくと、ドヤリスト・ドヤ勤怠・ドヤバナーAI・ドヤライティングAI・ドヤインタビュー等、すべてのドヤAIサービスのPROプランをご利用いただけます（統一プラン方式）。\n\nQ. 支払い方法は?\n\nクレジットカード（Visa / Mastercard / JCB / American Express）に対応しています。Stripeで安全に処理されます。\n\nQ. 解約方法は?\n\nサブスクリプション管理からいつでも解約できます。解約後も契約期間終了まではご利用いただけます。\n\n用語について:\nドヤAI: スリスタが提供するAI SaaSプラットフォームの総称 / ドヤリスト: 営業リスト抽出・営業文作成ツール（本サービス） / ドヤ勤怠 / ドヤバナーAI / ドヤライティングAI 等: ドヤAIのサブサービス",
+      "width": 390
+    },
+    {
+      "serviceId": "promane",
+      "documentWidth": 390,
+      "headings": [
+        "ドヤプロマネ 料金プラン",
+        "プロ1つで、17サービスのプロ機能を利用。",
+        "よくあるご質問"
+      ],
+      "path": "/promane/pricing",
+      "text": "料金プラン\nドヤプロマネ 料金プラン\n\nプロジェクト管理をもっとシンプルに。まずは無料で始めて、必要になったらプロプランへ。 プロプランなら、すべてのドヤAIサービスのプロ機能をプラン別の上限内で利用できます。\n\nall_inclusive\n統一プラン\nプロ1つで、17サービスのプロ機能を利用。\n\nドヤAIの全ツールのプロ機能が、月々¥9,980で。個別契約も、組み合わせも不要です。\n\n単体合計 ¥169,660/月 相当\narrow_forward\n¥9,980/月\n無料プラン\n¥0\n\nまずは無料でお試し\n\nこのサービスの利用上限\n\n3案件まで\n\ncheck\nガントチャートで進捗ひと目\ncheck\nカンバンでタスク管理\ncheck\n時間記録→人件費自動算出\ncheck\n売上・原価・利益のリアルタイム可視化\ncheck\nクライアント/メンバー/招待管理\n無料ではじめる\n全サービスのプロ機能を利用\nworkspace_premium\nプロプラン\n¥9,980\n/ 月（税込）\nall_inclusive\n\n全17サービスのプロ機能が使える\n\nこのサービスの上限：無制限\n\ncheck_circle\nガントチャートで進捗ひと目\ncheck_circle\nカンバンでタスク管理\ncheck_circle\n時間記録→人件費自動算出\ncheck_circle\n売上・原価・利益のリアルタイム可視化\ncheck_circle\nクライアント/メンバー/招待管理\ncheck_circle\nレポートグラフ（Recharts）\nプロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。\nbolt\nプロにアップグレード\n\nいつでも解約OK・月額のみ・追加課金なし\n\n活用事例・ロゴ掲載キャンペーン\n\n30分の取材とロゴ掲載で、6ヶ月無料。\n\nオンラインで30分ほど活用状況をうかがい、御社のロゴ・サービスロゴを 当サイトに掲載させていただける方が対象です。\n\n申し込みフォームへ\narrow_forward\n\nlock_openプロプラン1つで、この17サービスすべてのプロ機能を利用可能に\n\ncheck\nドヤバナーAI\ncheck\nドヤ記事作成\ncheck\nドヤインタビュー\ncheck\nドヤペルソナAI\ncheck\nドヤHR\ncheck\nドヤ勤怠\ncheck\nドヤリスト\ncheck\nドヤプロマネ\ncheck\nドヤスライド\ncheck\nドヤカンニング\ncheck\nドヤ営業管理\ncheck\nドヤ商談準備\ncheck\nドヤAIO\ncheck\nドヤ面接官\ncheck\nドヤ見積もりAI\ncheck\nドヤAI商談\ncheck\nドヤ広告画像AI\n統一プランの詳細を見る\narrow_forward\n\nさらに機能を拡張したい方へ\n\n生成上限の引き上げ、チームでのご利用、独自機能の追加など、 プロプランの範囲を超えるご要望は個別に承ります。\n\nmail\nお問い合わせ\nご契約中の方：プラン変更・お支払い方法の変更・解約はこちら\nよくあるご質問\nhelp\n無料プランでどこまで使えますか？\n\n無料プランでも基本的なプロジェクト管理機能をお試しいただけます。チーム規模やプロジェクト数などに上限があり、上限を超える場合はプロプランへのアップグレードが必要です。\n\nhelp\nプロプランに申し込むと何が変わりますか？\n\nプロプラン（¥9,980／月）では各種上限が大幅に緩和され、ドヤプロマネのすべての機能をご利用いただけます。さらに、ドヤAIの他サービスもすべてプロ機能として解放されます。\n\nhelp\n1つの契約で他のドヤAIサービスも使えますか？\n\nはい。ドヤAIは統一プラン方式を採用しています。プロプランをご契約いただくと、ドヤプロマネだけでなく、すべてのドヤAIサービスのプロ機能をまとめてご利用いただけます。\n\nhelp\nいつでも解約できますか？\n\nはい。プロプランは月単位でご契約いただけ、いつでも解約可能です。解約後も契約期間の終了までは引き続きプロ機能をご利用いただけます。",
+      "width": 390
+    },
+    {
+      "serviceId": "doyaslide",
+      "documentWidth": 390,
+      "headings": [
+        "料金プラン",
+        "プロ1つで、17サービスのプロ機能を利用。"
+      ],
+      "path": "/doyaslide/pricing",
+      "text": "ドヤスライド\narrow_back\nプロジェクトに戻る\n料金プラン\n\n無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。\n\nall_inclusive\n統一プラン\nプロ1つで、17サービスのプロ機能を利用。\n\nドヤAIの全ツールのプロ機能が、月々¥9,980で。個別契約も、組み合わせも不要です。\n\n単体合計 ¥169,660/月 相当\narrow_forward\n¥9,980/月\n無料プラン\n¥0\n\nまずは無料でお試し\n\nこのサービスの利用上限\n\n月3プロジェクト / 20枚まで\n\ncheck\n全スライドをAI画像でド派手に生成\ncheck\n資料タイプ別に最適な構成を自動設計\ncheck\nロゴを重ねて全スライドに統一感\ncheck\nチャットでその場修正（再生成）\ncheck\nPNG / PDF / ZIP で出力\n無料ではじめる\n全サービスのプロ機能を利用\nworkspace_premium\nプロプラン\n¥9,980\n/ 月（税込）\nall_inclusive\n\n全17サービスのプロ機能が使える\n\nこのサービスの上限：月150枚 / プロジェクト無制限\n\ncheck_circle\n全スライドをAI画像でド派手に生成\ncheck_circle\n資料タイプ別に最適な構成を自動設計\ncheck_circle\nロゴを重ねて全スライドに統一感\ncheck_circle\nチャットでその場修正（再生成）\ncheck_circle\nPNG / PDF / ZIP で出力\nプロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。\nbolt\nプロにアップグレード\n\nいつでも解約OK・月額のみ・追加課金なし\n\n活用事例・ロゴ掲載キャンペーン\n\n30分の取材とロゴ掲載で、6ヶ月無料。\n\nオンラインで30分ほど活用状況をうかがい、御社のロゴ・サービスロゴを 当サイトに掲載させていただける方が対象です。\n\n申し込みフォームへ\narrow_forward\n\nlock_openプロプラン1つで、この17サービスすべてのプロ機能を利用可能に\n\ncheck\nドヤバナーAI\ncheck\nドヤ記事作成\ncheck\nドヤインタビュー\ncheck\nドヤペルソナAI\ncheck\nドヤHR\ncheck\nドヤ勤怠\ncheck\nドヤリスト\ncheck\nドヤプロマネ\ncheck\nドヤスライド\ncheck\nドヤカンニング\ncheck\nドヤ営業管理\ncheck\nドヤ商談準備\ncheck\nドヤAIO\ncheck\nドヤ面接官\ncheck\nドヤ見積もりAI\ncheck\nドヤAI商談\ncheck\nドヤ広告画像AI\n統一プランの詳細を見る\narrow_forward\n\nさらに機能を拡張したい方へ\n\n生成上限の引き上げ、チームでのご利用、独自機能の追加など、 プロプランの範囲を超えるご要望は個別に承ります。\n\nmail\nお問い合わせ\nご契約中の方：プラン変更・お支払い方法の変更・解約はこちら",
+      "width": 390
+    },
+    {
+      "serviceId": "cunning",
+      "documentWidth": 390,
+      "headings": [
+        "料金プラン",
+        "プロ1つで、17サービスのプロ機能を利用。"
+      ],
+      "path": "/cunning/pricing",
+      "text": "arrow_back\nライブに戻る\n料金プラン\n\n無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。\n\nall_inclusive\n統一プラン\nプロ1つで、17サービスのプロ機能を利用。\n\nドヤAIの全ツールのプロ機能が、月々¥9,980で。個別契約も、組み合わせも不要です。\n\n単体合計 ¥169,660/月 相当\narrow_forward\n¥9,980/月\n無料プラン\n¥0\n\nまずは無料でお試し\n\nこのサービスの利用上限\n\n月60分 / ナレッジ1個\n\ncheck\nMeet/Zoomのタブ音声をリアルタイム解析\ncheck\n相手の質問を検出して回答案を即時提示\ncheck\n要点（一言）＋話すスクリプト＋根拠を表示\ncheck\n商談モード：自社ナレッジに基づく回答\ncheck\n面接モード：応募先企業に最適化した回答\n無料ではじめる\n全サービスのプロ機能を利用\nworkspace_premium\nプロプラン\n¥9,980\n/ 月（税込）\nall_inclusive\n\n全17サービスのプロ機能が使える\n\nこのサービスの上限：月20時間 / ナレッジ無制限\n\ncheck_circle\nMeet/Zoomのタブ音声をリアルタイム解析\ncheck_circle\n相手の質問を検出して回答案を即時提示\ncheck_circle\n要点（一言）＋話すスクリプト＋根拠を表示\ncheck_circle\n商談モード：自社ナレッジに基づく回答\ncheck_circle\n面接モード：応募先企業に最適化した回答\nプロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。\nbolt\nプロにアップグレード\n\nいつでも解約OK・月額のみ・追加課金なし\n\n活用事例・ロゴ掲載キャンペーン\n\n30分の取材とロゴ掲載で、6ヶ月無料。\n\nオンラインで30分ほど活用状況をうかがい、御社のロゴ・サービスロゴを 当サイトに掲載させていただける方が対象です。\n\n申し込みフォームへ\narrow_forward\n\nlock_openプロプラン1つで、この17サービスすべてのプロ機能を利用可能に\n\ncheck\nドヤバナーAI\ncheck\nドヤ記事作成\ncheck\nドヤインタビュー\ncheck\nドヤペルソナAI\ncheck\nドヤHR\ncheck\nドヤ勤怠\ncheck\nドヤリスト\ncheck\nドヤプロマネ\ncheck\nドヤスライド\ncheck\nドヤカンニング\ncheck\nドヤ営業管理\ncheck\nドヤ商談準備\ncheck\nドヤAIO\ncheck\nドヤ面接官\ncheck\nドヤ見積もりAI\ncheck\nドヤAI商談\ncheck\nドヤ広告画像AI\n統一プランの詳細を見る\narrow_forward\n\nさらに機能を拡張したい方へ\n\n生成上限の引き上げ、チームでのご利用、独自機能の追加など、 プロプランの範囲を超えるご要望は個別に承ります。\n\nmail\nお問い合わせ\nご契約中の方：プラン変更・お支払い方法の変更・解約はこちら",
+      "width": 390
+    },
+    {
+      "serviceId": "sfa",
+      "documentWidth": 390,
+      "headings": [
+        "料金プラン"
+      ],
+      "path": "/sfa/pricing",
+      "text": "arrow_back\nダッシュボードに戻る\n料金プラン\n\n無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。\n\n組織のプランを確認しています…",
+      "width": 390
+    },
+    {
+      "serviceId": "shodan",
+      "documentWidth": 390,
+      "headings": [
+        "料金プラン",
+        "プロ1つで、17サービスのプロ機能を利用。"
+      ],
+      "path": "/shodan/pricing",
+      "text": "arrow_back\nドヤ商談準備に戻る\n料金プラン\n\n無料で毎月お試し。プロプラン1つで、ドヤAIの全サービスのプロ機能をプラン別の上限内で利用できます。\n\nall_inclusive\n統一プラン\nプロ1つで、17サービスのプロ機能を利用。\n\nドヤAIの全ツールのプロ機能が、月々¥9,980で。個別契約も、組み合わせも不要です。\n\n単体合計 ¥169,660/月 相当\narrow_forward\n¥9,980/月\n無料プラン\n¥0\n\nまずは無料でお試し\n\nこのサービスの利用上限\n\n企業調査 月5件まで（提案資料の生成はプロ）\n\ncheck\n企業URLだけで商談準備が完結\ncheck\n実従業員数・マーケ・オウンドメディアを深掘り調査\ncheck\n現状分析・課題仮説・解決策をAIが立案\ncheck\n提案資料（Markdown）まで一括生成\ncheck\n自社情報を登録して提案を最適化\n無料ではじめる\n全サービスのプロ機能を利用\nworkspace_premium\nプロプラン\n¥9,980\n/ 月（税込）\nall_inclusive\n\n全17サービスのプロ機能が使える\n\nこのサービスの上限：企業調査 月50件 / 提案資料・スライド生成 / チーム招待\n\ncheck_circle\n企業URLだけで商談準備が完結\ncheck_circle\n実従業員数・マーケ・オウンドメディアを深掘り調査\ncheck_circle\n現状分析・課題仮説・解決策をAIが立案\ncheck_circle\n提案資料（Markdown）まで一括生成\ncheck_circle\n自社情報を登録して提案を最適化\ncheck_circle\nチーム招待・組織スコープで安全に共有\nプロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。\nbolt\nプロにアップグレード\n\nいつでも解約OK・月額のみ・追加課金なし\n\n活用事例・ロゴ掲載キャンペーン\n\n30分の取材とロゴ掲載で、6ヶ月無料。\n\nオンラインで30分ほど活用状況をうかがい、御社のロゴ・サービスロゴを 当サイトに掲載させていただける方が対象です。\n\n申し込みフォームへ\narrow_forward\n\nlock_openプロプラン1つで、この17サービスすべてのプロ機能を利用可能に\n\ncheck\nドヤバナーAI\ncheck\nドヤ記事作成\ncheck\nドヤインタビュー\ncheck\nドヤペルソナAI\ncheck\nドヤHR\ncheck\nドヤ勤怠\ncheck\nドヤリスト\ncheck\nドヤプロマネ\ncheck\nドヤスライド\ncheck\nドヤカンニング\ncheck\nドヤ営業管理\ncheck\nドヤ商談準備\ncheck\nドヤAIO\ncheck\nドヤ面接官\ncheck\nドヤ見積もりAI\ncheck\nドヤAI商談\ncheck\nドヤ広告画像AI\n統一プランの詳細を見る\narrow_forward\n\nさらに機能を拡張したい方へ\n\n生成上限の引き上げ、チームでのご利用、独自機能の追加など、 プロプランの範囲を超えるご要望は個別に承ります。\n\nmail\nお問い合わせ\nご契約中の方：プラン変更・お支払い方法の変更・解約はこちら",
+      "width": 390
+    },
+    {
+      "serviceId": "aio",
+      "documentWidth": 390,
+      "headings": [
+        "料金プラン",
+        "プロ1つで、17サービスのプロ機能を利用。"
+      ],
+      "path": "/aio/pricing",
+      "text": "arrow_back\nドヤAIOに戻る\n料金プラン\n\n無料で毎月お試し。プロプラン1つで、ドヤAIの全サービスのプロ機能をプラン別の上限内で利用できます。\n\nall_inclusive\n統一プラン\nプロ1つで、17サービスのプロ機能を利用。\n\nドヤAIの全ツールのプロ機能が、月々¥9,980で。個別契約も、組み合わせも不要です。\n\n単体合計 ¥169,660/月 相当\narrow_forward\n¥9,980/月\n無料プラン\n¥0\n\nまずは無料でお試し\n\nこのサービスの利用上限\n\nプロンプト3件 / 週1回スキャン / 認知度のみ閲覧\n\ncheck\nChatGPT/Gemini/Claude/Perplexityでの言及率を測定\ncheck\nShare of Voice（競合比較）\ncheck\n引用元ドメイン・感情分析\ncheck\nプロンプト別の言及頻度（◯回中△回）\ncheck\n認知度・SoVの時系列推移\n無料ではじめる\n全サービスのプロ機能を利用\nworkspace_premium\nプロプラン\n¥9,980\n/ 月（税込）\nall_inclusive\n\n全17サービスのプロ機能が使える\n\nこのサービスの上限：スキャン 月30回 / SoV・引用元・改善アクションも閲覧 / チーム招待\n\ncheck_circle\nChatGPT/Gemini/Claude/Perplexityでの言及率を測定\ncheck_circle\nShare of Voice（競合比較）\ncheck_circle\n引用元ドメイン・感情分析\ncheck_circle\nプロンプト別の言及頻度（◯回中△回）\ncheck_circle\n認知度・SoVの時系列推移\ncheck_circle\nAEOの改善アクションを自動提案\nプロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。\nbolt\nプロにアップグレード\n\nいつでも解約OK・月額のみ・追加課金なし\n\n活用事例・ロゴ掲載キャンペーン\n\n30分の取材とロゴ掲載で、6ヶ月無料。\n\nオンラインで30分ほど活用状況をうかがい、御社のロゴ・サービスロゴを 当サイトに掲載させていただける方が対象です。\n\n申し込みフォームへ\narrow_forward\n\nlock_openプロプラン1つで、この17サービスすべてのプロ機能を利用可能に\n\ncheck\nドヤバナーAI\ncheck\nドヤ記事作成\ncheck\nドヤインタビュー\ncheck\nドヤペルソナAI\ncheck\nドヤHR\ncheck\nドヤ勤怠\ncheck\nドヤリスト\ncheck\nドヤプロマネ\ncheck\nドヤスライド\ncheck\nドヤカンニング\ncheck\nドヤ営業管理\ncheck\nドヤ商談準備\ncheck\nドヤAIO\ncheck\nドヤ面接官\ncheck\nドヤ見積もりAI\ncheck\nドヤAI商談\ncheck\nドヤ広告画像AI\n統一プランの詳細を見る\narrow_forward\n\nさらに機能を拡張したい方へ\n\n生成上限の引き上げ、チームでのご利用、独自機能の追加など、 プロプランの範囲を超えるご要望は個別に承ります。\n\nmail\nお問い合わせ\nご契約中の方：プラン変更・お支払い方法の変更・解約はこちら",
+      "width": 390
+    },
+    {
+      "serviceId": "mensetsu",
+      "documentWidth": 390,
+      "headings": [
+        "料金プラン"
+      ],
+      "path": "/mensetsu/pricing",
+      "text": "arrow_back\nドヤ面接官に戻る\n料金プラン\n\n無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。\n\n組織のプランを確認しています…",
+      "width": 390
+    },
+    {
+      "serviceId": "quote",
+      "documentWidth": 390,
+      "headings": [
+        "料金プラン"
+      ],
+      "path": "/quote/pricing",
+      "text": "arrow_back\nドヤ見積もりAIに戻る\n料金プラン\n\n無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。\n\n組織のプランを確認しています…",
+      "width": 390
+    },
+    {
+      "serviceId": "aishodan",
+      "documentWidth": 390,
+      "headings": [
+        "料金プラン"
+      ],
+      "path": "/aishodan/pricing",
+      "text": "arrow_back\nドヤAI商談に戻る\n料金プラン\n\n無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。\n\n組織のプランを確認しています…",
+      "width": 390
+    },
+    {
+      "serviceId": "adimage",
+      "documentWidth": 390,
+      "headings": [
+        "料金プラン",
+        "プロ1つで、17サービスのプロ機能を利用。"
+      ],
+      "path": "/adimage/pricing",
+      "text": "arrow_back\nドヤ広告画像AIに戻る\n料金プラン\n\n無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。\n\nall_inclusive\n統一プラン\nプロ1つで、17サービスのプロ機能を利用。\n\nドヤAIの全ツールのプロ機能が、月々¥9,980で。個別契約も、組み合わせも不要です。\n\n単体合計 ¥169,660/月 相当\narrow_forward\n¥9,980/月\n無料プラン\n¥0\n\nまずは無料でお試し\n\nこのサービスの利用上限\n\n画像1日3枚・月15枚（改善含む）/ 新規コンセプト1日5件\n\ncheck\nサービスURLからブランド情報とコピーを自動生成\ncheck\n文字を画像に描き込むフルベイク方式（合成のつぎはぎなし）\ncheck\n媒体・配置ごとの実寸に切り抜きなしで書き出し\ncheck\n描かれた文字を自動検査し、不合格なら作り直し\ncheck\nAIが実際の画像を見て採点・具体的な改善案を提示\n無料ではじめる\n全サービスのプロ機能を利用\nworkspace_premium\nプロプラン\n¥9,980\n/ 月（税込）\nall_inclusive\n\n全17サービスのプロ機能が使える\n\nこのサービスの上限：画像1日50枚・月300枚（改善含む）/ 新規コンセプト1日40件 / ZIP一括\n\ncheck_circle\nサービスURLからブランド情報とコピーを自動生成\ncheck_circle\n文字を画像に描き込むフルベイク方式（合成のつぎはぎなし）\ncheck_circle\n媒体・配置ごとの実寸に切り抜きなしで書き出し\ncheck_circle\n描かれた文字を自動検査し、不合格なら作り直し\ncheck_circle\nAIが実際の画像を見て採点・具体的な改善案を提示\ncheck_circle\nボタンひとつで改善版を再生成\ncheck_circle\n媒体別に整理したZIPで一括ダウンロード\nプロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。\nbolt\nプロにアップグレード\n\nいつでも解約OK・月額のみ・追加課金なし\n\n活用事例・ロゴ掲載キャンペーン\n\n30分の取材とロゴ掲載で、6ヶ月無料。\n\nオンラインで30分ほど活用状況をうかがい、御社のロゴ・サービスロゴを 当サイトに掲載させていただける方が対象です。\n\n申し込みフォームへ\narrow_forward\n\nlock_openプロプラン1つで、この17サービスすべてのプロ機能を利用可能に\n\ncheck\nドヤバナーAI\ncheck\nドヤ記事作成\ncheck\nドヤインタビュー\ncheck\nドヤペルソナAI\ncheck\nドヤHR\ncheck\nドヤ勤怠\ncheck\nドヤリスト\ncheck\nドヤプロマネ\ncheck\nドヤスライド\ncheck\nドヤカンニング\ncheck\nドヤ営業管理\ncheck\nドヤ商談準備\ncheck\nドヤAIO\ncheck\nドヤ面接官\ncheck\nドヤ見積もりAI\ncheck\nドヤAI商談\ncheck\nドヤ広告画像AI\n統一プランの詳細を見る\narrow_forward\n\nさらに機能を拡張したい方へ\n\n生成上限の引き上げ、チームでのご利用、独自機能の追加など、 プロプランの範囲を超えるご要望は個別に承ります。\n\nmail\nお問い合わせ\nご契約中の方：プラン変更・お支払い方法の変更・解約はこちら",
+      "width": 390
+    }
+  ]
+}

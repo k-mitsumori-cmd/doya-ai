@@ -1,0 +1,44 @@
+{
+  "deploymentId": "dpl_2nGFVLhgUNkaRTPY5QsFE6Zm7JQn",
+  "errorQuery": {
+    "environment": "production",
+    "since": "10m",
+    "level": "error",
+    "limit": 100,
+    "entries": 2
+  },
+  "classifications": [
+    {
+      "path": "/api/cron/aio-scan",
+      "status": 200,
+      "classification": "Node DEP0169 deprecation warning; no business failure count inferred"
+    },
+    {
+      "path": "/api/auth/_log",
+      "status": 200,
+      "classification": "NextAuth CLIENT_FETCH_ERROR; cause and affected user unknown; unresolved"
+    }
+  ],
+  "authWindow": {
+    "since": "2026-10-05T21:00:00Z",
+    "until": "2026-10-05T21:02:00Z",
+    "entries": 18,
+    "sessionHttp200": 17,
+    "clientErrorReports": 1
+  },
+  "currentReadOnlyChecks": [
+    {
+      "path": "/api/auth/session",
+      "status": 200,
+      "anonymousEmptySession": true
+    },
+    {
+      "path": "/api/auth/providers",
+      "status": 200,
+      "providerKeys": [
+        "google"
+      ]
+    }
+  ],
+  "scope": "no raw messages, cookies, credentials or user identifiers stored; HTTP 200 report is not proof of successful user authentication"
+}

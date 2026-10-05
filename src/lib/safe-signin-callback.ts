@@ -11,3 +11,18 @@ export function safeSignInCallbackUrl(raw: string | null): string {
     return '/seo'
   }
 }
+
+// Only public service entry pages belong on the unauthenticated introduction link.
+// The regression check compares this routing with the current public service catalog.
+const PUBLIC_INTRO_SERVICES = new Set([
+  'banner', 'seo', 'interview', 'persona', 'hr', 'kintai', 'doyalist', 'promane',
+  'doyaslide', 'cunning', 'sfa', 'shodan', 'aio', 'mensetsu', 'quote', 'aishodan', 'adimage',
+])
+
+/** Do not advertise an authenticated dashboard, invitation, or private result as a guest trial. */
+export function signInPublicIntroUrl(callbackUrl: string): string {
+  const path = new URL(safeSignInCallbackUrl(callbackUrl), CALLBACK_BASE).pathname
+  const serviceId = path.split('/')[1]
+  if (!PUBLIC_INTRO_SERVICES.has(serviceId)) return '/'
+  return serviceId === 'banner' ? '/banner/landing' : `/${serviceId}`
+}

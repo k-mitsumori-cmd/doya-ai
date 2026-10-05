@@ -1,9 +1,9 @@
 ﻿serviceId,id,category,criterion,status,evidence
 banner,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-banner,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-banner,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+banner,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+banner,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 banner,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-banner,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+banner,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 banner,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 banner,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 banner,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -85,7 +85,7 @@ banner,U01,user-experience,トップの説明、LP、料金、ヘルプ、設定
 banner,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 banner,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 banner,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-banner,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+banner,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 banner,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 banner,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 banner,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -122,10 +122,10 @@ banner,U38,user-experience,退会・保存期限前に必要なデータを持�
 banner,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 banner,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 seo,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-seo,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-seo,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+seo,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+seo,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 seo,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-seo,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+seo,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 seo,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 seo,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 seo,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -207,7 +207,7 @@ seo,U01,user-experience,トップの説明、LP、料金、ヘルプ、設定、
 seo,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 seo,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 seo,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-seo,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+seo,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 seo,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 seo,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 seo,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -244,10 +244,10 @@ seo,U38,user-experience,退会・保存期限前に必要なデータを持ち�
 seo,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 seo,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 interview,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-interview,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-interview,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+interview,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+interview,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 interview,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-interview,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+interview,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 interview,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 interview,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 interview,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -329,7 +329,7 @@ interview,U01,user-experience,トップの説明、LP、料金、ヘルプ、設
 interview,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 interview,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 interview,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-interview,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+interview,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 interview,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 interview,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 interview,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -366,10 +366,10 @@ interview,U38,user-experience,退会・保存期限前に必要なデータを�
 interview,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 interview,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 persona,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-persona,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-persona,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+persona,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+persona,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 persona,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-persona,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+persona,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 persona,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 persona,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 persona,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -451,7 +451,7 @@ persona,U01,user-experience,トップの説明、LP、料金、ヘルプ、設�
 persona,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 persona,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 persona,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-persona,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+persona,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 persona,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 persona,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 persona,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -488,10 +488,10 @@ persona,U38,user-experience,退会・保存期限前に必要なデータを持�
 persona,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 persona,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 hr,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-hr,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-hr,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+hr,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+hr,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 hr,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-hr,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+hr,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 hr,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 hr,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 hr,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -573,8 +573,8 @@ hr,U01,user-experience,トップの説明、LP、料金、ヘルプ、設定、A
 hr,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 hr,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 hr,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-hr,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
-hr,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
+hr,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+hr,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,要補修：ログイン不要と案内されたリンクがログイン案内へ戻る／ローカル修正検証中,README.md; src/app/auth/signin/page.tsx
 hr,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 hr,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
 hr,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
@@ -610,10 +610,10 @@ hr,U38,user-experience,退会・保存期限前に必要なデータを持ち出
 hr,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 hr,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 kintai,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-kintai,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-kintai,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+kintai,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+kintai,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 kintai,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-kintai,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+kintai,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 kintai,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 kintai,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 kintai,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -695,7 +695,7 @@ kintai,U01,user-experience,トップの説明、LP、料金、ヘルプ、設定
 kintai,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 kintai,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 kintai,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-kintai,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+kintai,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 kintai,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 kintai,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 kintai,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -732,10 +732,10 @@ kintai,U38,user-experience,退会・保存期限前に必要なデータを持�
 kintai,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 kintai,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 doyalist,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-doyalist,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-doyalist,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+doyalist,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+doyalist,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyalist,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-doyalist,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+doyalist,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyalist,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 doyalist,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 doyalist,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -817,7 +817,7 @@ doyalist,U01,user-experience,トップの説明、LP、料金、ヘルプ、設�
 doyalist,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 doyalist,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 doyalist,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-doyalist,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+doyalist,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyalist,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 doyalist,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 doyalist,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -854,10 +854,10 @@ doyalist,U38,user-experience,退会・保存期限前に必要なデータを持
 doyalist,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 doyalist,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 promane,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-promane,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-promane,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+promane,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+promane,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 promane,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-promane,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+promane,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 promane,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 promane,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 promane,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -939,7 +939,7 @@ promane,U01,user-experience,トップの説明、LP、料金、ヘルプ、設�
 promane,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 promane,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 promane,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-promane,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+promane,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 promane,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 promane,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 promane,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -976,10 +976,10 @@ promane,U38,user-experience,退会・保存期限前に必要なデータを持�
 promane,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 promane,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 doyaslide,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-doyaslide,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-doyaslide,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+doyaslide,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+doyaslide,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyaslide,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-doyaslide,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+doyaslide,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyaslide,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 doyaslide,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 doyaslide,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -1061,7 +1061,7 @@ doyaslide,U01,user-experience,トップの説明、LP、料金、ヘルプ、設
 doyaslide,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 doyaslide,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 doyaslide,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-doyaslide,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+doyaslide,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyaslide,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 doyaslide,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 doyaslide,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -1098,10 +1098,10 @@ doyaslide,U38,user-experience,退会・保存期限前に必要なデータを�
 doyaslide,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 doyaslide,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 cunning,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-cunning,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-cunning,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+cunning,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+cunning,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 cunning,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-cunning,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+cunning,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 cunning,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 cunning,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 cunning,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -1183,7 +1183,7 @@ cunning,U01,user-experience,トップの説明、LP、料金、ヘルプ、設�
 cunning,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 cunning,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 cunning,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-cunning,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+cunning,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 cunning,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 cunning,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 cunning,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -1220,10 +1220,10 @@ cunning,U38,user-experience,退会・保存期限前に必要なデータを持�
 cunning,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 cunning,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 sfa,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-sfa,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-sfa,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+sfa,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+sfa,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 sfa,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-sfa,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+sfa,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 sfa,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 sfa,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 sfa,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -1305,7 +1305,7 @@ sfa,U01,user-experience,トップの説明、LP、料金、ヘルプ、設定、
 sfa,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 sfa,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 sfa,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-sfa,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+sfa,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 sfa,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 sfa,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 sfa,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -1342,10 +1342,10 @@ sfa,U38,user-experience,退会・保存期限前に必要なデータを持ち�
 sfa,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 sfa,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 shodan,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-shodan,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-shodan,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+shodan,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+shodan,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 shodan,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-shodan,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+shodan,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 shodan,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 shodan,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 shodan,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -1427,7 +1427,7 @@ shodan,U01,user-experience,トップの説明、LP、料金、ヘルプ、設定
 shodan,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 shodan,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 shodan,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-shodan,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+shodan,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 shodan,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 shodan,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 shodan,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -1464,10 +1464,10 @@ shodan,U38,user-experience,退会・保存期限前に必要なデータを持�
 shodan,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 shodan,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 aio,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-aio,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-aio,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+aio,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+aio,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aio,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-aio,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+aio,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aio,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 aio,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 aio,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -1549,7 +1549,7 @@ aio,U01,user-experience,トップの説明、LP、料金、ヘルプ、設定、
 aio,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 aio,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 aio,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-aio,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+aio,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aio,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 aio,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 aio,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -1586,10 +1586,10 @@ aio,U38,user-experience,退会・保存期限前に必要なデータを持ち�
 aio,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 aio,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 mensetsu,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-mensetsu,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-mensetsu,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+mensetsu,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+mensetsu,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 mensetsu,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-mensetsu,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+mensetsu,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 mensetsu,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 mensetsu,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 mensetsu,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -1671,7 +1671,7 @@ mensetsu,U01,user-experience,トップの説明、LP、料金、ヘルプ、設�
 mensetsu,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 mensetsu,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 mensetsu,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-mensetsu,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+mensetsu,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 mensetsu,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 mensetsu,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 mensetsu,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -1708,10 +1708,10 @@ mensetsu,U38,user-experience,退会・保存期限前に必要なデータを持
 mensetsu,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 mensetsu,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 quote,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-quote,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-quote,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+quote,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+quote,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 quote,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-quote,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+quote,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 quote,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 quote,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 quote,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -1793,7 +1793,7 @@ quote,U01,user-experience,トップの説明、LP、料金、ヘルプ、設定�
 quote,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 quote,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 quote,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-quote,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+quote,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 quote,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 quote,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 quote,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -1830,10 +1830,10 @@ quote,U38,user-experience,退会・保存期限前に必要なデータを持ち
 quote,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 quote,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 aishodan,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-aishodan,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-aishodan,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+aishodan,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+aishodan,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aishodan,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-aishodan,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+aishodan,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aishodan,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 aishodan,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 aishodan,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -1915,7 +1915,7 @@ aishodan,U01,user-experience,トップの説明、LP、料金、ヘルプ、設�
 aishodan,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 aishodan,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 aishodan,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-aishodan,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+aishodan,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aishodan,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 aishodan,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 aishodan,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
@@ -1952,10 +1952,10 @@ aishodan,U38,user-experience,退会・保存期限前に必要なデータを持
 aishodan,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 aishodan,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
 adimage,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
-adimage,C002,公開・導線,LP・料金・利用画面に到達できる,現在版での項目別通し検証待ち,
-adimage,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,現在版での項目別通し検証待ち,
+adimage,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
+adimage,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 adimage,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
-adimage,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,現在版での項目別通し検証待ち,
+adimage,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 adimage,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 adimage,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
 adimage,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
@@ -2037,7 +2037,7 @@ adimage,U01,user-experience,トップの説明、LP、料金、ヘルプ、設�
 adimage,U02,user-experience,「無料」「使い放題」「無制限」の対象と例外が申込前に分かる。,現在版での項目別通し検証待ち,
 adimage,U03,user-experience,1回/1枚/1コンセプト/1分/1席/1件の意味と、再生成・修正の消費を説明する。,現在版での項目別通し検証待ち,
 adimage,U04,user-experience,日次・月次・累計・同時保存件数・直近7日間を区別し、次回復旧日時が分かる。,現在版での項目別通し検証待ち,
-adimage,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,部分確認：反映前の公開LP HTTP 200のみ,public-http-before.json; PC/スマートフォン描画とCTA操作は未確認
+adimage,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 adimage,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 adimage,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 adimage,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,

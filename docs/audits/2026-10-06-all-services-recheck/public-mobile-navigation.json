@@ -1,0 +1,800 @@
+{
+  "observedAt": "2026-10-05T20:57:20.946Z",
+  "productionSourceAtStart": "1128568e43a2598c6feab4d814208771ffbf3e06",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scope": "Rendered public LP DOM geometry and actual start-link navigation to sign-in. HR and Kintai include intermediate unauthenticated dashboards. No Google login submitted; no authenticated generation, billing or data writes tested. Some early click attempts preceded opening completion and did not navigate; final records use completed navigation.",
+  "lp": [
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/banner",
+          "text": "無料で作る"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/banner",
+          "text": "無料で作る"
+        },
+        {
+          "href": "/banner/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#banner",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/banner",
+          "text": "rocket_launch\n無料で作る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "そのアイデアを、\n目を引くバナーに。",
+      "opening": true,
+      "path": "/banner",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/seo",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/seo",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/seo/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#seo",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/seo",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "その知見を、\n読まれる記事に。",
+      "opening": true,
+      "path": "/seo",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/interview",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/interview",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/interview/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#interview",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/interview",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "語られた想いを、\n伝わる物語に。",
+      "opening": true,
+      "path": "/interview",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/persona",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/persona",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/persona/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#persona",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/persona",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "届けたい人を、\nもっと鮮明に。",
+      "opening": true,
+      "path": "/persona",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/hr/dashboard",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/hr/dashboard",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/hr/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#hr",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/hr/dashboard",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "一人ひとりの力を、\n組織の可能性に。",
+      "path": "/hr",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/kintai/dashboard",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/kintai/dashboard",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/kintai/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#kintai",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/kintai/dashboard",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "日々の時間を、\n働くゆとりへ。",
+      "path": "/kintai",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/doyalist",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/doyalist",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/doyalist/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#doyalist",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/doyalist",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "次の出会いを、\n事業の一歩に。",
+      "path": "/doyalist",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/doyaslide/new",
+          "text": "はじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/doyaslide/new",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/doyaslide/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#doyaslide",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/doyaslide/new",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "その考えを、\n伝わる資料に。",
+      "path": "/doyaslide",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/cunning",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/cunning",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/cunning/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#cunning",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/cunning",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "大切な対話に、\n頼れる知識を。",
+      "path": "/cunning",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/sfa",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/sfa",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/sfa/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#sfa",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/sfa",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "ひとつの商談を、\n次のチャンスへ。",
+      "path": "/sfa",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/promane",
+          "text": "はじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/promane",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/promane/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#promane",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/promane",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "チームの仕事を、\nひとつの流れに。",
+      "path": "/promane",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/shodan",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/shodan",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/shodan/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#shodan",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/shodan",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "会う前の準備で、\n対話は変わる。",
+      "path": "/shodan",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "#start",
+          "text": "無料で診断する"
+        },
+        {
+          "href": "#start",
+          "text": "無料で診断する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/aio",
+          "text": "ログインして診断を始める\narrow_forward"
+        },
+        {
+          "href": "/aio/pricing",
+          "text": "料金プランを見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#aio",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "#start",
+          "text": "rocket_launch\n無料で診断する"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "AIにどう映るか、\n見える戦略へ。",
+      "path": "/aio",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/mensetsu",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/mensetsu",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/mensetsu/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#mensetsu",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/mensetsu",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "一人ひとりに、\n向き合う面接を。",
+      "path": "/mensetsu",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/quote",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/quote",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/quote/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#quote",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/quote",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "仕事の価値を、\n伝わる見積に。",
+      "path": "/quote",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/aishodan",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/aishodan",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/aishodan/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#aishodan",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/aishodan",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "いつもの対話を、\n商談の一歩へ。",
+      "path": "/aishodan",
+      "width": 390
+    },
+    {
+      "ctas": [
+        {
+          "href": "/auth/signin?callbackUrl=/adimage",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/adimage",
+          "text": "無料ではじめる"
+        },
+        {
+          "href": "/adimage/pricing",
+          "text": "料金を見る"
+        },
+        {
+          "href": "/resources/doya-ai/checklist.html#adimage",
+          "text": "DOYA MARKE AI\n導入チェックリスト\n03 / STARTER KIT\n社内での検討を、スムーズに。\n\n料金・運用・確認事項を整理。\n\n資料を見る"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金・利用枠を確認する"
+        },
+        {
+          "href": "/auth/signin?callbackUrl=/adimage",
+          "text": "rocket_launch\n無料ではじめる"
+        },
+        {
+          "href": "/pricing",
+          "text": "料金プラン"
+        }
+      ],
+      "documentWidth": 390,
+      "h1": "届けたい価値を、\n目を引く一枚に。",
+      "path": "/adimage",
+      "width": 390
+    }
+  ],
+  "start": [
+    {
+      "serviceId": "banner",
+      "cta": "/auth/signin?callbackUrl=/banner",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "h1": "おかえりなさい",
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/banner",
+      "width": 390
+    },
+    {
+      "serviceId": "seo",
+      "cta": "/auth/signin?callbackUrl=/seo",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "h1": "おかえりなさい",
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/seo",
+      "width": 390
+    },
+    {
+      "serviceId": "interview",
+      "cta": "/auth/signin?callbackUrl=/interview",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "h1": "おかえりなさい",
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/interview",
+      "width": 390
+    },
+    {
+      "serviceId": "persona",
+      "cta": "/auth/signin?callbackUrl=/persona",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "h1": "おかえりなさい",
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/persona",
+      "width": 390
+    },
+    {
+      "serviceId": "hr",
+      "cta": "/hr/dashboard",
+      "documentWidth": 390,
+      "googleLoginVisible": false,
+      "path": "/hr/dashboard",
+      "query": "",
+      "width": 390,
+      "secondStep": {
+        "googleLoginVisible": true,
+        "path": "/auth/signin",
+        "query": "?callbackUrl=/hr/dashboard"
+      }
+    },
+    {
+      "serviceId": "kintai",
+      "cta": "/kintai/dashboard",
+      "documentWidth": 390,
+      "googleLoginVisible": false,
+      "path": "/kintai/dashboard",
+      "query": "",
+      "width": 390,
+      "secondStep": {
+        "googleLoginVisible": true,
+        "path": "/auth/signin",
+        "query": "?callbackUrl=/kintai/clock"
+      }
+    },
+    {
+      "serviceId": "doyalist",
+      "cta": "/auth/signin?callbackUrl=/doyalist",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/doyalist",
+      "width": 390
+    },
+    {
+      "serviceId": "promane",
+      "cta": "/auth/signin?callbackUrl=/promane",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/promane",
+      "width": 390
+    },
+    {
+      "serviceId": "doyaslide",
+      "cta": "/auth/signin?callbackUrl=/doyaslide/new",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/doyaslide/new",
+      "width": 390
+    },
+    {
+      "serviceId": "cunning",
+      "cta": "/auth/signin?callbackUrl=/cunning",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/cunning",
+      "width": 390
+    },
+    {
+      "serviceId": "sfa",
+      "cta": "/auth/signin?callbackUrl=/sfa",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/sfa",
+      "width": 390
+    },
+    {
+      "serviceId": "shodan",
+      "cta": "/auth/signin?callbackUrl=/shodan",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/shodan",
+      "width": 390
+    },
+    {
+      "serviceId": "aio",
+      "cta": "/auth/signin?callbackUrl=/aio",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/aio",
+      "width": 390
+    },
+    {
+      "serviceId": "mensetsu",
+      "cta": "/auth/signin?callbackUrl=/mensetsu",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/mensetsu",
+      "width": 390
+    },
+    {
+      "serviceId": "quote",
+      "cta": "/auth/signin?callbackUrl=/quote",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/quote",
+      "width": 390
+    },
+    {
+      "serviceId": "aishodan",
+      "cta": "/auth/signin?callbackUrl=/aishodan",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/aishodan",
+      "width": 390
+    },
+    {
+      "serviceId": "adimage",
+      "cta": "/auth/signin?callbackUrl=/adimage",
+      "documentWidth": 390,
+      "googleLoginVisible": true,
+      "path": "/auth/signin",
+      "query": "?callbackUrl=/adimage",
+      "width": 390
+    }
+  ]
+}
