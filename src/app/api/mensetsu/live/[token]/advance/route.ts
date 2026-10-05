@@ -22,6 +22,25 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   const usable = assertUsable(s)
   if (!usable.ok) return NextResponse.json({ error: usable.reason }, { status: usable.status })
+  if (s.status !== 'live' || !s.startedAt || s.endedAt) {
+    return NextResponse.json({ error: '面接を開始してから操作してください。' }, { status: 409 })
+  }
+
+  // 分岐選択を待つ間にも終了・別の進行操作が入りうる。読み取った状態からだけ進める。
+  const saveProgress = async (currentIndex: number, followUpCount: number) => {
+    const saved = await prisma.mensetsuSession.updateMany({
+      where: {
+        id: s.id, status: 'live', startedAt: { not: null }, endedAt: null,
+        consentedAt: { not: null }, expiresAt: { gt: new Date() }, updatedAt: s.updatedAt,
+      },
+      data: {
+        currentIndex, followUpCount,
+        updatedAt: new Date(Math.max(Date.now(), s.updatedAt.getTime() + 1)),
+      },
+    })
+    return saved.count === 1
+  }
+  const conflict = () => NextResponse.json({ error: '面接の状態が変わりました。現在の質問をご確認ください。' }, { status: 409 })
 
   const body = await req.json().catch(() => ({}))
   const intent = body?.intent === 'follow_up' ? 'follow_up' : 'next'
@@ -58,10 +77,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
             where: { templateId: s.templateId, ord: target },
             select: { text: true },
           })
-          await prisma.mensetsuSession.update({
-            where: { id: s.id },
-            data: { currentIndex: target, followUpCount: 0 },
-          })
+          if (!(await saveProgress(target, 0))) return conflict()
           return NextResponse.json({
             action: 'next_question',
             next_question: nq?.text ?? null,
@@ -73,10 +89,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         }
 
         if (branch.text) {
-          await prisma.mensetsuSession.update({
-            where: { id: s.id },
-            data: { followUpCount: s.followUpCount + 1 },
-          })
+          if (!(await saveProgress(s.currentIndex, s.followUpCount + 1))) return conflict()
           return NextResponse.json({
             action: 'follow_up',
             next_question: branch.text,
@@ -100,14 +113,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     questions: s.template.questions,
   })
 
-  await prisma.mensetsuSession.update({
-    where: { id: s.id },
-    data: {
-      currentIndex: result.questionOrd ?? s.currentIndex,
-      followUpCount: result.followUpCount,
-      ...(result.shouldClose ? { status: 'live' } : {}),
-    },
-  })
+  if (!(await saveProgress(result.questionOrd ?? s.currentIndex, result.followUpCount))) return conflict()
 
   return NextResponse.json({
     action: result.action,

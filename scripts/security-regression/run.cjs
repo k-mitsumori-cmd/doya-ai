@@ -960,6 +960,11 @@ if (mensetsuEvaluationRecovery.error || mensetsuEvaluationRecovery.status !== 0)
   console.error('Security regression failed: verify-mensetsu-evaluation-recovery.cjs');
   process.exit(1);
 }
+const mensetsuAdvanceAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-mensetsu-advance-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (mensetsuAdvanceAtomic.error || mensetsuAdvanceAtomic.status !== 0) {
+  console.error('Security regression failed: verify-mensetsu-advance-atomic.cjs');
+  process.exit(1);
+}
 const adminKintaiEmployeePages = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-kintai-employee-pages.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adminKintaiEmployeePages.error || adminKintaiEmployeePages.status !== 0) {
   console.error('Security regression failed: verify-admin-kintai-employee-pages.cjs');
