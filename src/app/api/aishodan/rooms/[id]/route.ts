@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/access'
+import { parseRoomExpiryDays, parseRoomMaxSessions } from '@/lib/aishodan/room-input'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -19,16 +20,25 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
 
-  const body = await req.json().catch(() => ({}))
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
   const data: Record<string, unknown> = {}
-  if ('isActive' in body) data.isActive = Boolean(body.isActive)
+  if ('isActive' in body) {
+    if (typeof body.isActive !== 'boolean') return NextResponse.json({ error: '公開状態が正しくありません' }, { status: 400 })
+    data.isActive = body.isActive
+  }
   if ('name' in body && String(body.name).trim()) data.name = String(body.name).trim().slice(0, 200)
-  if (Number.isFinite(Number(body?.maxSessions))) {
-    data.maxSessions = Math.max(1, Math.min(5000, Math.round(Number(body.maxSessions))))
+  if ('maxSessions' in body) {
+    const maxSessions = parseRoomMaxSessions(body.maxSessions)
+    if (maxSessions === null) return NextResponse.json({ error: '最大商談回数は1〜5000の整数で入力してください' }, { status: 400 })
+    data.maxSessions = maxSessions
   }
   if ('expiresInDays' in body) {
-    const d = Number(body.expiresInDays)
-    data.expiresAt = Number.isFinite(d) && d > 0 ? new Date(Date.now() + d * 24 * 60 * 60 * 1000) : null
+    const expiresAt = parseRoomExpiryDays(body.expiresInDays)
+    if (expiresAt === undefined) return NextResponse.json({ error: '有効期限の日数が正しくありません' }, { status: 400 })
+    data.expiresAt = expiresAt
   }
 
   try {

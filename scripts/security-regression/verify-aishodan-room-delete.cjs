@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
+const roomInput = load('src/lib/aishodan/room-input.ts')
 
 async function exercise({ sessions = 0, found = true, fail = false } = {}) {
   let deleted = 0
@@ -23,6 +24,7 @@ async function exercise({ sessions = 0, found = true, fail = false } = {}) {
       hasMinRole: () => true,
       orgSlugFrom: () => undefined,
     },
+    '@/lib/aishodan/room-input': roomInput,
   })
   const response = await DELETE({}, { params: Promise.resolve({ id: 'room' }) })
   return { response, deleted }

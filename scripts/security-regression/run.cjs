@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const aishodanRoomInput = spawnSync(process.execPath, [path.join(__dirname, 'verify-aishodan-room-input.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (aishodanRoomInput.error || aishodanRoomInput.status !== 0) {
+  console.error('Security regression failed: verify-aishodan-room-input.cjs');
+  process.exit(1);
+}
 const aishodanArchiveWrite = spawnSync(process.execPath, [path.join(__dirname, 'verify-aishodan-archive-write-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (aishodanArchiveWrite.error || aishodanArchiveWrite.status !== 0) {
   console.error('Security regression failed: verify-aishodan-archive-write-atomic.cjs');

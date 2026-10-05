@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 const { parseAishodanPage, appendAishodanPage } = load('src/lib/aishodan/list-pages.ts')
+const roomInput = load('src/lib/aishodan/room-input.ts')
 
 const rows = (name, count) => Array.from({ length: count }, (_, index) => ({
   id: `${name}-${String(count - index).padStart(3, '0')}`,
@@ -49,7 +50,7 @@ const routes = {
   products: load('src/app/api/aishodan/products/route.ts', { ...common,
     '@/lib/aishodan/knowledge': {}, '@/lib/aishodan/defaults': {}, '@/lib/plan-limit': {}, '@/lib/service-usage': {},
   }),
-  rooms: load('src/app/api/aishodan/rooms/route.ts', { ...common, crypto: { randomBytes: () => Buffer.alloc(24) }, '@/lib/service-usage': {} }),
+  rooms: load('src/app/api/aishodan/rooms/route.ts', { ...common, crypto: { randomBytes: () => Buffer.alloc(24) }, '@/lib/service-usage': {}, '@/lib/aishodan/room-input': roomInput }),
   sessions: load('src/app/api/aishodan/sessions/route.ts', common),
 }
 

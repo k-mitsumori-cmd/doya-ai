@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
+const roomInput = load('src/lib/aishodan/room-input.ts')
 
 const access = {
   getAishodanContext: async () => ({ organizationId: 'org', userId: 'user', role: 'owner' }),
@@ -51,6 +52,7 @@ const access = {
       const route = load('src/app/api/aishodan/rooms/[id]/route.ts', {
         'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma },
         '@/lib/aishodan/access': { ...access, hasMinRole: () => true },
+        '@/lib/aishodan/room-input': roomInput,
       })
       const response = await route.PATCH({ json: async () => ({ isActive: true }) }, { params: Promise.resolve({ id: 'room' }) })
       assert.equal(response.status, archivedAfterInitialRead ? 409 : 200)
@@ -73,6 +75,7 @@ const access = {
         crypto: { randomBytes: () => Buffer.alloc(24) }, 'next/server': { NextResponse: Response },
         '@/lib/prisma': { prisma }, '@/lib/aishodan/access': access,
         '@/lib/service-usage': { recordServiceUsage: async () => {} },
+        '@/lib/aishodan/room-input': roomInput,
       })
       const response = await route.POST({ json: async () => ({ scenarioId: 'scenario' }) })
       assert.equal(response.status, archivedAfterInitialRead ? 409 : 200)

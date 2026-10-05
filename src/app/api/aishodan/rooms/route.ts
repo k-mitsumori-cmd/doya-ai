@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAishodanContext, orgSlugFrom } from '@/lib/aishodan/access'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { parseRoomExpiryDays, parseRoomMaxSessions } from '@/lib/aishodan/room-input'
 
 export async function GET(req: NextRequest) {
   const ctx = await getAishodanContext(orgSlugFrom(req))
@@ -41,9 +42,16 @@ export async function POST(req: NextRequest) {
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
-  const body = await req.json().catch(() => ({}))
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
   const scenarioId = String(body?.scenarioId || '')
   if (!scenarioId) return NextResponse.json({ error: 'シナリオを選択してください' }, { status: 400 })
+  const maxSessions = 'maxSessions' in body ? parseRoomMaxSessions(body.maxSessions) : 500
+  if (maxSessions === null) return NextResponse.json({ error: '最大商談回数は1〜5000の整数で入力してください' }, { status: 400 })
+  const expiresAt = 'expiresInDays' in body ? parseRoomExpiryDays(body.expiresInDays) : null
+  if (expiresAt === undefined) return NextResponse.json({ error: '有効期限の日数が正しくありません' }, { status: 400 })
 
   // 他組織のシナリオでルームを作らせない
   const scenario = await prisma.aishodanScenario.findFirst({
@@ -55,7 +63,6 @@ export async function POST(req: NextRequest) {
   // ⚠️ 公開URLのトークンは推測できてはいけない。乱数から作る
   const token = randomBytes(24).toString('base64url')
 
-  const days = Number(body?.expiresInDays)
   let room
   try {
     room = await prisma.$transaction(async (tx) => {
@@ -75,10 +82,8 @@ export async function POST(req: NextRequest) {
           scenarioId: scenario.id,
           name: String(body?.name || `${scenario.product.name} 商談ルーム`).slice(0, 200),
           token,
-          expiresAt: Number.isFinite(days) && days > 0 ? new Date(Date.now() + days * 24 * 60 * 60 * 1000) : null,
-          maxSessions: Number.isFinite(Number(body?.maxSessions))
-            ? Math.max(1, Math.min(5000, Math.round(Number(body.maxSessions))))
-            : 500,
+          expiresAt,
+          maxSessions,
         },
       })
     }, { maxWait: 10000, timeout: 30000 })
