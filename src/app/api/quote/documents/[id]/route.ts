@@ -59,14 +59,29 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
-
-  for (const [field, label] of [['notes', '備考'], ['paymentTerms', '支払条件'], ['deliveryTerms', '納期']] as const) {
-    if (body?.[field] != null && String(body[field]).length > 2000) {
-      return NextResponse.json({ error: `${label}は2,000文字以内で入力してください。入力内容は保存されていません。` }, { status: 400 })
-    }
-  }
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return NextResponse.json({ error: '更新内容が不正です' }, { status: 400 })
+  }
+  for (const [field, label, max] of [
+    ['title', '件名', 200], ['clientCompany', '宛先会社名', 200], ['clientDept', '宛先部署名', 200],
+    ['clientPerson', '宛先担当者名', 200], ['notes', '備考', 2000],
+    ['paymentTerms', '支払条件', 2000], ['deliveryTerms', '納期', 2000],
+  ] as const) {
+    if (body[field] != null && (typeof body[field] !== 'string' || body[field].length > max)) {
+      return NextResponse.json({ error: `${label}は${max.toLocaleString('ja-JP')}文字以内の文字列で入力してください。入力内容は保存されていません。` }, { status: 400 })
+    }
+  }
+  if (body.items != null && !Array.isArray(body.items)) {
+    return NextResponse.json({ error: '明細の形式が正しくありません。変更は保存されていません。' }, { status: 400 })
+  }
+  if (Array.isArray(body.items) && body.items.length > 60) {
+    return NextResponse.json({ error: '明細は60行以内で入力してください。変更は保存されていません。' }, { status: 400 })
+  }
+  if (Array.isArray(body.items) && body.items.some((i: any) =>
+    !i || typeof i !== 'object' || Array.isArray(i) ||
+    ([['itemName', 200], ['spec', 1000], ['unit', 12], ['sourceRef', 1000]] as const)
+      .some(([field, max]) => i[field] != null && (typeof i[field] !== 'string' || i[field].length > max)))) {
+    return NextResponse.json({ error: '明細の文字項目は指定の文字数内で入力してください。変更は保存されていません。' }, { status: 400 })
   }
   const expiryDate = 'expiryDate' in body ? quoteExpiryDate(body.expiryDate) : undefined
   if ('expiryDate' in body && !expiryDate) {
@@ -75,7 +90,7 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   if ('discountValue' in body && quoteInteger(body.discountValue, 0, 0) === null) {
     return NextResponse.json({ error: '割引額・割引率は範囲内の整数で入力してください。変更は保存されていません。' }, { status: 400 })
   }
-  if (Array.isArray(body.items) && body.items.slice(0, 60).filter((i: any) => i && i.itemName).some((i: any) =>
+  if (Array.isArray(body.items) && body.items.filter((i: any) => i && i.itemName).some((i: any) =>
     quoteInteger(i.qty, 1, 1) === null || quoteInteger(i.unitPrice, 0, 0) === null
   )) {
     return NextResponse.json({ error: '数量と単価は範囲内の整数で入力してください。変更は保存されていません。' }, { status: 400 })
@@ -100,7 +115,7 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
       for (const f of ['title', 'clientCompany', 'clientDept', 'clientPerson', 'paymentTerms', 'deliveryTerms', 'notes'] as const) {
         if (f in body) {
           const v = body[f]
-          data[f] = v == null || String(v).trim() === '' ? null : String(v).slice(0, 2000)
+          data[f] = v == null || v.trim() === '' ? null : v
         }
       }
       if (expiryDate) data.expiryDate = expiryDate
@@ -159,20 +174,20 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
       }
       // --- 明細の差し替え ---
       if (Array.isArray(body?.items)) {
-        const items = body.items.slice(0, 60).filter((i: any) => i && i.itemName)
+        const items = body.items.filter((i: any) => i && i.itemName)
         await tx.quoteLineItem.deleteMany({ where: { documentId: existing.id } })
         await tx.quoteLineItem.createMany({
           data: items.map((i: any, idx: number) => ({
             documentId: existing.id,
             ord: idx,
-            itemName: String(i.itemName).slice(0, 200),
-            spec: i.spec ? String(i.spec).slice(0, 1000) : null,
+            itemName: i.itemName,
+            spec: i.spec || null,
             qty: quoteInteger(i.qty, 1, 1)!,
-            unit: String(i.unit || '式').slice(0, 12),
+            unit: i.unit || '式',
             unitPrice: quoteInteger(i.unitPrice, 0, 0)!,
             taxRate: Number(i.taxRate) === 8 ? 8 : 10,
             priceSource: VALID_SOURCES.includes(i.priceSource) ? i.priceSource : 'manual',
-            sourceRef: i.sourceRef ? String(i.sourceRef).slice(0, 1000) : null,
+            sourceRef: i.sourceRef || null,
             rangeMin: Number.isFinite(Number(i.rangeMin)) ? Math.round(Number(i.rangeMin)) : null,
             rangeMax: Number.isFinite(Number(i.rangeMax)) ? Math.round(Number(i.rangeMax)) : null,
           })),

@@ -108,15 +108,31 @@ export async function POST(req: NextRequest) {
   if (!quota.ok) return quotaResponse(quota)
 
   const body = await req.json().catch(() => ({}))
-
-  for (const [field, label] of [['notes', '備考'], ['paymentTerms', '支払条件'], ['deliveryTerms', '納期']] as const) {
-    if (body?.[field] != null && String(body[field]).length > 2000) {
-      return NextResponse.json({ error: `${label}は2,000文字以内で入力してください。入力内容は保存されていません。` }, { status: 400 })
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json({ error: '入力内容が正しくありません。見積書は保存されていません。' }, { status: 400 })
+  }
+  for (const [field, label, max] of [
+    ['title', '件名', 200], ['clientCompany', '宛先会社名', 200], ['clientDept', '宛先部署名', 200],
+    ['clientPerson', '宛先担当者名', 200], ['notes', '備考', 2000],
+    ['paymentTerms', '支払条件', 2000], ['deliveryTerms', '納期', 2000],
+  ] as const) {
+    if (body[field] != null && (typeof body[field] !== 'string' || body[field].length > max)) {
+      return NextResponse.json({ error: `${label}は${max.toLocaleString('ja-JP')}文字以内の文字列で入力してください。見積書は保存されていません。` }, { status: 400 })
     }
   }
-
-  const title = String(body?.title || '').trim() || 'お見積り'
-  const items: any[] = Array.isArray(body?.items) ? body.items.slice(0, 60) : []
+  const title = body.title?.trim() || 'お見積り'
+  const items: any[] = Array.isArray(body.items) ? body.items : []
+  if (body.items != null && !Array.isArray(body.items)) {
+    return NextResponse.json({ error: '明細の形式が正しくありません。見積書は保存されていません。' }, { status: 400 })
+  }
+  if (items.length > 60) {
+    return NextResponse.json({ error: '明細は60行以内で入力してください。見積書は保存されていません。' }, { status: 400 })
+  }
+  if (items.some(i => !i || typeof i !== 'object' || Array.isArray(i) ||
+    ([['itemName', 200], ['spec', 1000], ['unit', 12], ['sourceRef', 1000]] as const)
+      .some(([field, max]) => i[field] != null && (typeof i[field] !== 'string' || i[field].length > max)))) {
+    return NextResponse.json({ error: '明細の文字項目は指定の文字数内で入力してください。見積書は保存されていません。' }, { status: 400 })
+  }
   const expiryDate = body?.expiryDate == null || body.expiryDate === '' ? defaultExpiry() : quoteExpiryDate(body.expiryDate)
   if (!expiryDate) {
     return NextResponse.json({ error: '有効期限は正しい日付で入力してください。見積書は保存されていません。' }, { status: 400 })
@@ -159,25 +175,25 @@ export async function POST(req: NextRequest) {
             productId,
             quoteNo,
             title: title.slice(0, 200),
-            clientCompany: body?.clientCompany ? String(body.clientCompany).slice(0, 200) : null,
-            clientDept: body?.clientDept ? String(body.clientDept).slice(0, 200) : null,
-            clientPerson: body?.clientPerson ? String(body.clientPerson).slice(0, 200) : null,
+            clientCompany: body.clientCompany?.trim() || null,
+            clientDept: body.clientDept?.trim() || null,
+            clientPerson: body.clientPerson?.trim() || null,
             expiryDate,
-            paymentTerms: body?.paymentTerms ? String(body.paymentTerms).slice(0, 2000) : issuer?.paymentTerms ?? null,
-            deliveryTerms: body?.deliveryTerms ? String(body.deliveryTerms).slice(0, 2000) : issuer?.deliveryTerms ?? null,
-            notes: body?.notes ? String(body.notes).slice(0, 2000) : issuer?.notes ?? null,
+            paymentTerms: body.paymentTerms?.trim() || issuer?.paymentTerms || null,
+            deliveryTerms: body.deliveryTerms?.trim() || issuer?.deliveryTerms || null,
+            notes: body.notes?.trim() || issuer?.notes || null,
             lineItems: {
               create: validItems
                 .map((i, idx) => ({
                   ord: idx,
-                  itemName: String(i.itemName).slice(0, 200),
-                  spec: i.spec ? String(i.spec).slice(0, 1000) : null,
+                  itemName: i.itemName,
+                  spec: i.spec || null,
                   qty: quoteInteger(i.qty, 1, 1)!,
-                  unit: String(i.unit || '式').slice(0, 12),
+                  unit: i.unit || '式',
                   unitPrice: quoteInteger(i.unitPrice, 0, 0)!,
                   taxRate: Number(i.taxRate) === 8 ? 8 : 10,
                   priceSource: VALID_SOURCES.includes(i.priceSource) ? i.priceSource : 'manual',
-                  sourceRef: i.sourceRef ? String(i.sourceRef).slice(0, 1000) : null,
+                  sourceRef: i.sourceRef || null,
                   rangeMin: Number.isFinite(Number(i.rangeMin)) ? Math.round(Number(i.rangeMin)) : null,
                   rangeMax: Number.isFinite(Number(i.rangeMax)) ? Math.round(Number(i.rangeMax)) : null,
                 })),

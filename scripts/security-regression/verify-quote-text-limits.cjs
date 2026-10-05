@@ -39,5 +39,32 @@ function load(file,deps){const exports={};vm.runInNewContext(compile(read(file))
    results.push({method,expiryDate:value,outcome:'PASS'});
   }
  }
+ // Reject malformed text and excess line items before either endpoint writes anything.
+ for (const [name, body, valid] of [
+  ['object title', {title:{bad:true}}, false],
+  ['array client', {clientCompany:['会社']}, false],
+  ['numeric notes', {notes:123}, false],
+  ['long title', {title:'あ'.repeat(201)}, false],
+  ['object item name', {items:[{itemName:{bad:true}}]}, false],
+  ['object item spec', {items:[{itemName:'作業',spec:{bad:true}}]}, false],
+  ['long item name', {items:[{itemName:'あ'.repeat(201)}]}, false],
+  ['non-array items', {items:{bad:true}}, false],
+  ['61 items', {items:Array.from({length:61},(_,i)=>({itemName:`品目${i}`}))}, false],
+  ['valid boundaries', {title:'あ'.repeat(200),items:[{itemName:'あ'.repeat(200)}]}, true],
+ ]) {
+  let row={id:'d',status:'draft',lineItems:[]},writes=0;
+  const prisma={quoteMember:{findFirst:async()=>({role:'manager'})},quoteIssuer:{findUnique:async()=>null},quoteDocument:{count:async()=>0,create:async({data})=>{writes++;row={...row,...data,lineItems:data.lineItems.create};return row;},findFirst:async()=>row,findUnique:async()=>row,update:async({data})=>{writes++;row={...row,...data};return row;}},quoteLineItem:{deleteMany:async()=>{writes++;row.lineItems=[];},createMany:async({data})=>{writes++;row.lineItems=data;}}};
+  prisma.$transaction=async fn=>fn(prisma);
+  const deps={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'o',userId:'u',role:'manager'}),orgSlugFrom:()=> 'org',hasMinRole:()=>true},'@/lib/quote/document':{defaultExpiry:()=>new Date(),nextQuoteNo:async()=> 'Q',recalcDocument:async()=>{}},'@/lib/plan-limit':{assertFreeLimit:async()=>({ok:true,used:0,limit:3}),FREE_LIMITS:{quoteDocuments:3},jstStartOfMonthUtc:()=>new Date()},'@/lib/organization-quota-ledger':{getOrganizationQuotaUsage:async(_db,_key,_org,_period,countLive)=>countLive(),recordOrganizationQuotaUsage:async()=>{}},'@/lib/pricing':{SUPPORT_CONTACT_URL:'https://doyamarke.surisuta.jp/contact'},'@/lib/organization-billing':{getOrganizationOwnerUserId:async()=> 'u'},'@/lib/service-usage':{recordServiceUsage:async()=>{}}};
+  const create=load('src/app/api/quote/documents/route.ts',deps),update=load('src/app/api/quote/documents/[id]/route.ts',deps);
+  for(const [method,handler] of [['POST',req=>create.POST(req)],['PATCH',req=>update.PATCH(req,{params:Promise.resolve({id:'d'})})]]) {
+   writes=0;row={id:'d',status:'draft',lineItems:[]};
+   const response=await handler({json:async()=>body});
+   assert.equal(response.status,valid?200:400,`${method} ${name}`);
+   assert.equal(writes,valid?(method==='POST'?1:3):0,`${method} ${name} write count`);
+   if(valid)assert.equal(row.lineItems[0].itemName,'あ'.repeat(200));
+   results.push({method,name,outcome:'PASS'});
+  }
+ }
  console.log(JSON.stringify(results,null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;});
