@@ -1,0 +1,17 @@
+{
+  "sha": "9c40f4e707c173f98bb599757ebe5b571ef350c4",
+  "mainPush": "succeeded",
+  "deploymentId": "dpl_AV6yKiysAp2kVf113BoST6c1XhRr",
+  "deploymentState": "READY",
+  "ciRunId": 37378829754,
+  "ciStatus": "completed",
+  "scope": "same SHA production Ready and alias verified; CI offline regression/type/lint success; real authenticated flows remain unverified",
+  "aliases": [
+    "doya-ai.vercel.app",
+    "doya-ai.surisuta.jp",
+    "doya-ai-surisutas-projects.vercel.app",
+    "doya-ai-git-main-surisutas-projects.vercel.app"
+  ],
+  "ciConclusion": "success",
+  "verifiedAt": "2026-10-05T22:06:35.546345+00:00"
+}

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { signIn } from 'next-auth/react'
+import { NavigationSubmissionError, startGoogleSignIn, useNavigationSubmission } from '@/lib/use-navigation-submission'
 import { DoyaKun, sym } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
 
@@ -13,26 +13,25 @@ export default function AioScanPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>()
   const router = useRouter()
   const [url, setUrl] = useState('')
-  const [busy, setBusy] = useState(false)
+  const { busy, run: submit } = useNavigationSubmission('調査の開始に失敗しました。もう一度お試しください。')
 
   const start = async () => {
     if (!url.trim()) { toast.error('URLを入力してください'); return }
-    setBusy(true)
-    try {
+    await submit(async (isCurrent) => {
       const res = await fetch('/api/aio/quick-start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       })
+      if (!isCurrent()) return
+      if (res.status === 401) { await startGoogleSignIn(`/aio/${encodeURIComponent(orgSlug)}/scan`); return }
       const d = await res.json()
-      if (res.status === 401) { signIn('google', { callbackUrl: `/aio/${encodeURIComponent(orgSlug)}/scan` }); return }
-      if (!res.ok) throw new Error(d.error || '調査の開始に失敗しました')
+      if (!isCurrent()) return
+      if (!res.ok) throw new NavigationSubmissionError(typeof d.error === 'string' ? d.error : '調査の開始に失敗しました')
+      if (typeof d.slug !== 'string' || !d.slug) throw new Error('Invalid workspace response')
       // 返ったワークスペース（同一URLは継続／別URLは新規）へ。?scan=1 で自動スキャン＋派手な進捗表示
       router.push(`/aio/${encodeURIComponent(d.slug)}?scan=1`)
-    } catch (e: any) {
-      toast.error(e.message)
-      setBusy(false)
-    }
+    })
   }
 
   return (

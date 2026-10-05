@@ -1,0 +1,51 @@
+{
+  "scope": "actual three TSX components, React and installed NextAuth SDK; isolated synthetic session; UI mascots and router stubbed; APIs mocked or blocked; no production writes or external OAuth",
+  "results": [
+    {
+      "service": "scan",
+      "checks": [
+        {
+          "enabled": true,
+          "value": "https://example.invalid/local-qa",
+          "errorCount": 1
+        },
+        {
+          "enabled": true,
+          "value": "https://example.invalid/local-qa",
+          "errorCount": 1
+        }
+      ]
+    },
+    {
+      "service": "aio",
+      "checks": [
+        {
+          "enabled": true,
+          "inviteOrganization": true,
+          "errorCount": 1
+        },
+        {
+          "enabled": true,
+          "inviteOrganization": true,
+          "errorCount": 1
+        }
+      ]
+    },
+    {
+      "service": "shodan",
+      "checks": [
+        {
+          "enabled": true,
+          "inviteOrganization": true,
+          "errorCount": 1
+        },
+        {
+          "enabled": true,
+          "inviteOrganization": true,
+          "errorCount": 1
+        }
+      ]
+    }
+  ],
+  "discardedHarnessAttempt": "first harness had a missing component identifier; corrected before verifying UI"
+}
