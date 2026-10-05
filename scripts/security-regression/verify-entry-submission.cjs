@@ -3,6 +3,7 @@ const fs = require('node:fs')
 const vm = require('node:vm')
 const ts = require('typescript')
 const { load, check, results } = require('./load-typescript.cjs')
+const callbackHelpers=load('src/lib/safe-signin-callback.ts')
 
 function fixture(service, response, sdk = () => Promise.resolve(), authed = true) {
   const slots = [], effects = [], cleanups = [], errors = [], toastIds = [], requests = [], auth = [], navigation = []
@@ -14,7 +15,7 @@ function fixture(service, response, sdk = () => Promise.resolve(), authed = true
     useEffect(effect) { if (!mounted) effects.push(effect) },
   }
   const api = load('src/lib/use-navigation-submission.ts', {
-    react, 'react-hot-toast': { error: (value, options) => { errors.push(value); toastIds.push(options?.id) } },
+    react, '@/lib/safe-signin-callback': callbackHelpers, 'react-hot-toast': { error: (value, options) => { errors.push(value); toastIds.push(options?.id) } },
     'next-auth/react': { signIn: (...args) => { auth.push(args); return sdk(auth.length) } },
   }, { window: {
     addEventListener: (name, listener) => listeners.set(name, listener),

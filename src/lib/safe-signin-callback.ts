@@ -26,3 +26,9 @@ export function signInPublicIntroUrl(callbackUrl: string): string {
   if (!PUBLIC_INTRO_SERVICES.has(serviceId)) return '/'
   return serviceId === 'banner' ? '/banner/landing' : `/${serviceId}`
 }
+
+/** Invitations should let the person choose the account matching the recipient. */
+export function invitationSignInOptions(callbackUrl: string): { prompt: 'select_account' } | undefined {
+  const path = new URL(safeSignInCallbackUrl(callbackUrl), CALLBACK_BASE).pathname
+  return /^\/(hr|aio|shodan)\/invite\/[^/]+$/.test(path) ? { prompt: 'select_account' } : undefined
+}

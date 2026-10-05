@@ -1,0 +1,17 @@
+{
+  "sha": "a0ba7b71747b7456cf3a8ce2c40dd0b32ba56978",
+  "mainPush": "succeeded",
+  "deploymentId": "dpl_AWKVrgP4ACYiiTVJCmHMx4ckwcXe",
+  "deploymentState": "BUILDING",
+  "ciRunId": 37380905016,
+  "ciStatus": "completed",
+  "observedAt": "2026-10-05T22:18:48.622857+00:00",
+  "localBuild": {
+    "session": 63854,
+    "exitCode": 0,
+    "log": "/tmp/doya-invite-expiry-build-20261006.log"
+  },
+  "scope": "26 offline groups and isolated browser verified; production Ready and actual authenticated end-to-end flows not yet verified",
+  "ciConclusion": "success",
+  "ciJobId": 112002331113
+}

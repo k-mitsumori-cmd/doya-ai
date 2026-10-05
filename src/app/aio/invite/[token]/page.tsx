@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { NavigationSubmissionError, startGoogleSignIn, useNavigationSubmission } from '@/lib/use-navigation-submission'
+import { NavigationSubmissionError, startGoogleSignIn, switchGoogleAccount, useNavigationSubmission } from '@/lib/use-navigation-submission'
 import toast from 'react-hot-toast'
 import { BgDots, DoyaKun } from '@/components/aio/ui'
 
-type State = 'loading' | 'ready' | 'error' | 'expired'
+type State = 'loading' | 'ready' | 'error' | 'expired' | 'account-mismatch'
 
 export default function AioInvitePage() {
   const params = useParams<{ token: string }>()
@@ -46,6 +46,10 @@ function InvitationContent({ token }: { token: string }) {
       const res = await fetch(`/api/aio/invite/${encodeURIComponent(token)}`, { method: 'POST' })
       if (!isCurrent()) return
       if (res.status === 401) { await startGoogleSignIn(`/aio/invite/${encodeURIComponent(token)}`); return }
+      if (res.status === 403) {
+        setState('account-mismatch')
+        throw new NavigationSubmissionError('招待されたメールアドレスのアカウントへ切り替えてください。')
+      }
       if (res.status === 410) {
         setState('expired')
         throw new NavigationSubmissionError('招待の有効期限が切れています。招待者に再送を依頼してください。')
@@ -59,16 +63,31 @@ function InvitationContent({ token }: { token: string }) {
     })
   }
 
+  const switchAccount = async () => {
+    if (state !== 'account-mismatch') return
+    await submit(async () => { await switchGoogleAccount(`/aio/invite/${encodeURIComponent(token)}`) })
+  }
+
   return (
     <div className="min-h-screen relative bg-gradient-to-b from-purple-50 to-fuchsia-100/50 flex items-center justify-center p-6">
       <BgDots />
       <div className="relative z-10 bg-white rounded-3xl shadow-xl shadow-purple-500/10 border border-purple-100 p-8 w-full max-w-md text-center">
         <div className="flex justify-center mb-2">
-          <DoyaKun mood={state === 'error' || state === 'expired' ? 'error' : accepting ? 'jump' : 'hello'} size={110} />
+          <DoyaKun mood={state === 'error' || state === 'expired' || state === 'account-mismatch' ? 'error' : accepting ? 'jump' : 'hello'} size={110} />
         </div>
         {state === 'loading' && <p className="text-slate-400 font-bold">読み込み中…</p>}
         {state === 'expired' && <><h1 className="text-xl font-black text-slate-900">招待の有効期限が切れています</h1><p className="text-sm font-bold text-slate-400 mt-2">招待者に再送を依頼してください。</p></>}
         {state === 'error' && <><h1 className="text-xl font-black text-slate-900">招待が見つかりません</h1><p className="text-sm font-bold text-slate-400 mt-2">{errMsg}</p></>}
+        {state === 'account-mismatch' && info && (
+          <>
+            <h1 className="text-xl font-black text-slate-900">別のアカウントでログインしています</h1>
+            <p className="text-sm font-bold text-slate-500 mt-3">{info.email} 宛ての招待です。</p>
+            <p className="text-sm text-slate-500 mt-2">現在のアカウントからログアウトし、招待されたメールアドレスでログインしてください。</p>
+            <button onClick={switchAccount} disabled={accepting} className="w-full mt-6 py-4 rounded-2xl bg-purple-600 text-white font-bold disabled:opacity-50">
+              {accepting ? '切り替え中…' : '別のアカウントでログイン'}
+            </button>
+          </>
+        )}
         {state === 'ready' && info && (
           <>
             <h1 className="text-xl font-black text-slate-900">ドヤAIOへの招待</h1>

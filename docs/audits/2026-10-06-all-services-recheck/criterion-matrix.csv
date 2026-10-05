@@ -1430,7 +1430,7 @@ shodan,U04,user-experience,日次・月次・累計・同時保存件数・直�
 shodan,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 shodan,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 shodan,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
-shodan,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
+shodan,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,一部検証済み：招待先違いの切替導線・失敗再試行・招待URL保持を隔離/模擬応答で確認／本番承諾と役割の通し確認未完了,invite-account-browser.json; invite-account-regression.log; invite-account-baseline.log; README.md
 shodan,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
 shodan,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
 shodan,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,現在版での項目別通し検証待ち,
@@ -1552,7 +1552,7 @@ aio,U04,user-experience,日次・月次・累計・同時保存件数・直近7�
 aio,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォンで表示でき、終了サービスへ迷い込まない。,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aio,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 aio,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
-aio,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
+aio,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,一部検証済み：招待先違いの切替導線・失敗再試行・招待URL保持を隔離/模擬応答で確認／本番承諾と役割の通し確認未完了,invite-account-browser.json; invite-account-regression.log; invite-account-baseline.log; README.md
 aio,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
 aio,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
 aio,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,現在版での項目別通し検証待ち,

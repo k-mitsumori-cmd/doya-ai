@@ -6,7 +6,7 @@ import { BarChart3, PenLine, Palette, Sparkles, Mic, FileText, Wand2 } from 'luc
 import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { safeSignInCallbackUrl, signInPublicIntroUrl } from '@/lib/safe-signin-callback'
+import { invitationSignInOptions, safeSignInCallbackUrl, signInPublicIntroUrl } from '@/lib/safe-signin-callback'
 
 // エラーコードに対応するメッセージ
 const errorMessages: Record<string, string> = {
@@ -55,7 +55,7 @@ function SignInContent() {
     setLoginError(null)
     setIsLoading(true)
     try {
-      await signIn('google', { callbackUrl }, callbackUrl.startsWith('/hr/invite/') ? { prompt: 'select_account' } : undefined)
+      await signIn('google', { callbackUrl }, invitationSignInOptions(callbackUrl))
       // A successful OAuth start navigates away. Keep the button locked until that navigation.
     } catch {
       if (attempt !== loginAttempt.current) return

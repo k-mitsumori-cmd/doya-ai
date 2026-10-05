@@ -1,0 +1,24 @@
+{
+  "observedAt": "2026-10-05T22:17:46.304153+00:00",
+  "window": "last 30m",
+  "levelFilter": "error",
+  "limit": 100,
+  "retrievalExitCode": 0,
+  "records": [
+    {
+      "deploymentId": "dpl_FssMvwHT53xmYihAHPRwfpRG8uB7",
+      "requestPath": "/api/cron/analytics-report",
+      "responseStatusCode": 200,
+      "timestamp": 1791237625302,
+      "classification": "Node DEP0169 warning"
+    },
+    {
+      "deploymentId": "dpl_FssMvwHT53xmYihAHPRwfpRG8uB7",
+      "requestPath": "/api/cron/service-operations",
+      "responseStatusCode": 200,
+      "timestamp": 1791237014093,
+      "classification": "Node DEP0169 warning"
+    }
+  ],
+  "scope": "limited log query; HTTP200 does not prove business completion; raw text/request IDs excluded; no Cron invocation"
+}

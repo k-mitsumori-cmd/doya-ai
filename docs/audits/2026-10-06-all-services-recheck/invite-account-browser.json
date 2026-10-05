@@ -1,0 +1,25 @@
+{
+  "scope": "actual React/components/installed SDK; synthetic session/API; router and decorations stubbed; no production writes or external OAuth",
+  "results": [
+    {
+      "service": "aio",
+      "attempt": 1,
+      "snapshot": "Browser tab: 12, Title: \"Local isolated submission verification\", URL: \"http://127.0.0.1:34745/qa-entry.html?service=aio\".\n0 AXWebArea Local isolated submission verification, URL: 127.0.0.1:34745/qa-entry.html?service=aio\n\t1 container root\n\t\t2 text Local isolated submission verification — API/OAuth blocked; layout components stubbed\n\t\t3 heading 別のアカウントでログインしています, Value: 1\n\t\t\t4 text 別のアカウントでログインしています\n\t\t5 container\n\t\t\t6 text local-qa@example.invalid  宛ての招待です。\n\t\t7 text 現在のアカウントからログアウトし、招待されたメールアドレスでログインしてください。\n\t\t8 button 別のアカウントでログイン\n\nThe focused UI element is 0 AXWebArea Local isolated submission verification, URL: 127.0.0.1:34745/qa-entry.html?service=aio"
+    },
+    {
+      "service": "aio",
+      "attempt": 2,
+      "snapshot": "Browser tab: 12, Title: \"Local isolated submission verification\", URL: \"http://127.0.0.1:34745/qa-entry.html?service=aio\".\n0 AXWebArea Local isolated submission verification, URL: 127.0.0.1:34745/qa-entry.html?service=aio\n\t1 container root\n\t\t2 text Local isolated submission verification — API/OAuth blocked; layout components stubbed\n\t\t3 heading 別のアカウントでログインしています, Value: 1\n\t\t\t4 text 別のアカウントでログインしています\n\t\t5 container\n\t\t\t6 text local-qa@example.invalid  宛ての招待です。\n\t\t7 text 現在のアカウントからログアウトし、招待されたメールアドレスでログインしてください。\n\t\t8 button 別のアカウントでログイン\n\nThe focused UI element is 0 AXWebArea Local isolated submission verification, URL: 127.0.0.1:34745/qa-entry.html?service=aio"
+    },
+    {
+      "service": "shodan",
+      "attempt": 1,
+      "snapshot": "Browser tab: 12, Title: \"Local isolated submission verification\", URL: \"http://127.0.0.1:34745/qa-entry.html?service=shodan\".\n1 AXWebArea Local isolated submission verification, URL: 127.0.0.1:34745/qa-entry.html?service=shodan\n\t2 container root\n\t\t3 text Local isolated submission verification — API/OAuth blocked; layout components stubbed\n\t\t4 heading 別のアカウントでログインしています, Value: 1\n\t\t\t5 text 別のアカウントでログインしています\n\t\t6 container\n\t\t\t7 text local-qa@example.invalid  宛ての招待です。\n\t\t8 text 現在のアカウントからログアウトし、招待されたメールアドレスでログインしてください。\n\t\t9 button 別のアカウントでログイン\n\nThe focused UI element is 1 AXWebArea Local isolated submission verification, URL: 127.0.0.1:34745/qa-entry.html?service=shodan"
+    },
+    {
+      "service": "shodan",
+      "attempt": 2,
+      "snapshot": "Browser tab: 12, Title: \"Local isolated submission verification\", URL: \"http://127.0.0.1:34745/qa-entry.html?service=shodan\".\n1 AXWebArea Local isolated submission verification, URL: 127.0.0.1:34745/qa-entry.html?service=shodan\n\t2 container root\n\t\t3 text Local isolated submission verification — API/OAuth blocked; layout components stubbed\n\t\t4 heading 別のアカウントでログインしています, Value: 1\n\t\t\t5 text 別のアカウントでログインしています\n\t\t6 container\n\t\t\t7 text local-qa@example.invalid  宛ての招待です。\n\t\t8 text 現在のアカウントからログアウトし、招待されたメールアドレスでログインしてください。\n\t\t9 button 別のアカウントでログイン\n\nThe focused UI element is 1 AXWebArea Local isolated submission verification, URL: 127.0.0.1:34745/qa-entry.html?service=shodan"
+    }
+  ]
+}

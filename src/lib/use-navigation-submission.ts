@@ -1,16 +1,28 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { signIn, signOut } from 'next-auth/react'
+import { invitationSignInOptions, safeSignInCallbackUrl } from '@/lib/safe-signin-callback'
 import toast from 'react-hot-toast'
 
 export class NavigationSubmissionError extends Error {}
 
 export async function startGoogleSignIn(callbackUrl: string) {
   try {
-    await signIn('google', { callbackUrl })
+    const destination = safeSignInCallbackUrl(callbackUrl)
+    await signIn('google', { callbackUrl: destination }, invitationSignInOptions(destination))
   } catch {
     throw new NavigationSubmissionError('ログインを開始できませんでした。もう一度お試しください。')
+  }
+}
+
+// Sign out before selecting another account, to avoid linking it to the current user.
+export async function switchGoogleAccount(callbackUrl: string) {
+  try {
+    const destination = safeSignInCallbackUrl(callbackUrl)
+    await signOut({ callbackUrl: `/auth/signin?callbackUrl=${encodeURIComponent(destination)}` })
+  } catch {
+    throw new NavigationSubmissionError('アカウントの切り替えを開始できませんでした。もう一度お試しください。')
   }
 }
 
