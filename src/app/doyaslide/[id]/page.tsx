@@ -59,6 +59,7 @@ function EditorInner() {
   const [structuring, setStructuring] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
   const [savingLogoConfig, setSavingLogoConfig] = useState(false)
+  const [logoRetryPatch, setLogoRetryPatch] = useState<Record<string, string | boolean> | null>(null)
   const [chat, setChat] = useState<Record<string, { role: string; content: string }[]>>({})
   const [chatInput, setChatInput] = useState('')
   const [chatBusy, setChatBusy] = useState(false)
@@ -336,7 +337,7 @@ function EditorInner() {
     }
   }
 
-  const saveLogoConfig = async (patch: any) => {
+  const saveLogoConfig = async (patch: Record<string, string | boolean>) => {
     if (logoConfigBusyRef.current) return
     logoConfigBusyRef.current = true
     setSavingLogoConfig(true)
@@ -347,10 +348,16 @@ function EditorInner() {
         body: JSON.stringify(patch),
       })
       const data = await res.json().catch(() => ({}))
-      if (res.ok) toast.success('ロゴ設定を全スライドに反映しました')
-      else toast.error(data?.error || 'ロゴ設定の更新に失敗しました')
+      if (res.ok) {
+        setLogoRetryPatch(null)
+        toast.success('ロゴ設定を全スライドに反映しました')
+      } else {
+        setLogoRetryPatch(patch)
+        toast.error(data?.error || 'ロゴ設定の更新に失敗しました')
+      }
       await reload()
     } catch {
+      setLogoRetryPatch(patch)
       toast.error('ロゴ設定の更新結果を確認できませんでした。再読み込みしてご確認ください')
       await reload()
     } finally {
@@ -733,6 +740,16 @@ function EditorInner() {
                   背景チップ（視認性UP）
                 </label>
                 <p className="text-[11px] text-slate-400">{savingLogoConfig ? '全スライドに反映中…' : '変更すると全スライドに反映されます'}</p>
+                {logoRetryPatch && (
+                  <button
+                    type="button"
+                    disabled={savingLogoConfig}
+                    onClick={() => saveLogoConfig(logoRetryPatch)}
+                    className="w-full rounded-xl border border-amber-400 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900 disabled:opacity-50"
+                  >
+                    全スライドへの反映を再試行する
+                  </button>
+                )}
               </div>
             ) : (
               <p className="text-xs text-slate-400 font-bold">ロゴは未設定です。新規作成時にアップロードできます。</p>
