@@ -415,12 +415,13 @@ export default function QuoteTool() {
     setQuotaAction(null)
     try {
       const product = products.find((p) => p.id === selectedProduct)
+      const title = product ? `${product.name} お見積り`.slice(0, 200) : 'お見積り'
       const r = await fetch(withOrg('quote', '/api/quote/documents'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId: selectedProduct || undefined,
-          title: product ? `${product.name} お見積り` : 'お見積り',
+          title,
           clientCompany: clientCompany.trim() || undefined,
           clientPerson: clientPerson.trim() || undefined,
           items: items.map((i) => ({ ...i, unitPrice: i.unitPrice ?? 0 })),
