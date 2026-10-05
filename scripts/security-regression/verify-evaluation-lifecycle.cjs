@@ -7,6 +7,7 @@ function fixture(service,status,options={}){
   mensetsuSession:{findUnique:async()=>({...session}),updateMany:async({where,data})=>{if(where.status&&where.status!==session.status)return{count:0};if(where.updatedAt&&where.updatedAt.getTime()!==session.updatedAt.getTime())return{count:0};Object.assign(session,data,{updatedAt:data.updatedAt||new Date()});stats.writes++;return{count:1}}},
   mensetsuScore:{deleteMany:async()=>{stats.scoreWrites++},createMany:async()=>{stats.scoreWrites++}},
   mensetsuAnswerSample:{findMany:async()=>[]},
+  mensetsuTurn:{findMany:async()=>session.turns.map(turn=>({...turn}))},
   aishodanSession:{findFirst:async()=>session,update:async()=>{stats.writes++}},
   aishodanTurn:{findMany:async()=>session.turns},aishodanSlotValue:{findMany:async()=>[]},aishodanQuestion:{findMany:async()=>[]},
   aishodanOutcome:{upsert:async()=>{stats.writes++;return{id:'outcome'}}},

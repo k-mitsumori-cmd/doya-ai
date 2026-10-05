@@ -7,6 +7,9 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { loadSessionByToken } from '@/lib/mensetsu/public'
+import { waitUntil } from '@vercel/functions'
+import { runEvaluation } from '@/lib/mensetsu/run-evaluation'
+import type { Prisma } from '@prisma/client'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -48,19 +51,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const incoming = Array.isArray(body?.turns) ? body.turns.slice(0, MAX_TURNS_PER_CALL) : []
   if (incoming.length === 0) return NextResponse.json({ saved: 0 })
 
-  const last = await prisma.mensetsuTurn.findFirst({
-    where: { sessionId: s.id },
-    orderBy: { ord: 'desc' },
-    select: { ord: true },
-  })
-  let ord = (last?.ord ?? -1) + 1
-
   // ⚠️ 到着順ではなく「話し始めた時刻」で並べてから採番する。
   //    発話は読み上げ／認識が終わって初めて確定するため、到着順のままだと
   //    長い発話が後ろにずれ、逐語ログが会話の順序として読めなくなる
   //    （実際に本番で、面接官の冒頭挨拶より応募者の相槌が先に並んだ）。
   //    評価AIもこのログを根拠に読むため、順序が狂うと採点が歪む。
-  const rows = incoming
+  const rows: Prisma.MensetsuTurnCreateManyInput[] = incoming
     .filter((t: any) => t && typeof t.text === 'string' && t.text.trim())
     .map((t: any) => ({
       ...t,
@@ -75,7 +71,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     })
     .map((t: any) => ({
       sessionId: s.id,
-      ord: ord++,
+      ord: 0,
       speaker: t.speaker === 'interviewer' ? 'interviewer' : 'candidate',
       text: String(t.text).slice(0, MAX_TEXT_LEN),
       questionOrd: t.questionOrd,
@@ -84,6 +80,45 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }))
 
   if (rows.length === 0) return NextResponse.json({ saved: 0 })
-  await prisma.mensetsuTurn.createMany({ data: rows })
+  const saved = await prisma.$transaction(async (tx) => {
+    // 評価確定・終了と同じ行をロックする。採番と発話追加も同じ処理内で行う。
+    await tx.$queryRaw`SELECT id FROM mensetsu_sessions WHERE id = ${s.id} FOR NO KEY UPDATE`
+    const current = await tx.mensetsuSession.findUnique({ where: { id: s.id } })
+    if (!current) return { error: '面接が見つかりません', status: 404 }
+    if (!current.consentedAt) return { error: '同意が必要です', status: 403 }
+    if (current.purgeAfter && current.purgeAfter.getTime() <= Date.now()) return { error: 'この面接の記録は削除されています', status: 410 }
+    if (current.evaluatedAt) return { error: 'この面接は評価済みです', status: 409 }
+    if (!current.startedAt || !['live', 'completed', 'evaluating', 'aborted'].includes(current.status) ||
+        (current.endedAt && Date.now() - current.endedAt.getTime() > GRACE_MS)) {
+      return { error: 'この面接には発話を保存できません', status: 409 }
+    }
+    const last = await tx.mensetsuTurn.findFirst({
+      where: { sessionId: s.id }, orderBy: { ord: 'desc' }, select: { ord: true },
+    })
+    rows.forEach((row, index) => { row.ord = (last?.ord ?? -1) + 1 + index })
+    await tx.mensetsuTurn.createMany({ data: rows })
+    const shouldEvaluate = !!current.endedAt && ['completed', 'aborted'].includes(current.status)
+    // 評価中の実行権は保持する。評価処理自身が追加発話を照合して再評価する。
+    if (current.status !== 'evaluating') {
+      await tx.mensetsuSession.update({
+        where: { id: s.id },
+        data: {
+          ...(shouldEvaluate ? { status: 'completed' } : {}),
+          updatedAt: new Date(Math.max(Date.now(), current.updatedAt.getTime() + 1)),
+        },
+      })
+    }
+    return { shouldEvaluate }
+  }, { isolationLevel: 'ReadCommitted', timeout: 15000 })
+  if ('error' in saved) return NextResponse.json({ error: saved.error }, { status: saved.status })
+  if (saved.shouldEvaluate) {
+    const evaluation = runEvaluation(s.id).then((result) => {
+      if (!result.ok) {
+        if (result.status === 409) console.warn('[mensetsu] 追加発話後の評価は状態の変更で確定しませんでした', result.status)
+        else console.error('[mensetsu] 追加発話後の自動評価を完了できませんでした', result.status)
+      }
+    }).catch(() => console.error('[mensetsu] 追加発話後の自動評価に失敗'))
+    try { waitUntil(evaluation) } catch { await evaluation }
+  }
   return NextResponse.json({ saved: rows.length })
 }

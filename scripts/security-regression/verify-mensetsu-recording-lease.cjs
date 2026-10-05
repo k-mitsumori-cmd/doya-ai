@@ -34,6 +34,7 @@ function fixture({ duringVerify, exists = true } = {}) {
       return 1
     },
     mensetsuAnswerSample: { findMany: async () => [] },
+    mensetsuTurn: { findMany: async () => row.turns.map((turn) => ({ ...turn })) },
     mensetsuScore: { deleteMany: async () => {}, createMany: async () => {} },
     $transaction: async (callback) => callback(db),
   }

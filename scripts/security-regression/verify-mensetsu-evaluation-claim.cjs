@@ -36,6 +36,7 @@ function fixture() {
       },
     },
     mensetsuAnswerSample: { findMany: async () => [] },
+    mensetsuTurn: { findMany: async () => row.turns.map((turn) => ({ ...turn })) },
     mensetsuScore: {
       deleteMany: async () => { stats.scoreDeletes++ },
       createMany: async () => { stats.scoreCreates++ },
@@ -76,12 +77,15 @@ const answer = { scores: [], verdict: 'hold', overallComment: 'Synthetic', candi
     const f = fixture()
     const first = f.run()
     await new Promise((resolve) => setImmediate(resolve))
+    const failedLease = f.row.updatedAt.getTime()
     f.pending[0].reject(new Error('synthetic provider failure'))
     await assert.rejects(first)
     assert.equal(f.row.status, 'completed')
+    assert.ok(f.row.updatedAt.getTime() > failedLease)
     assert.equal(f.stats.scoreDeletes, 0)
     const retry = f.run()
     await new Promise((resolve) => setImmediate(resolve))
+    assert.ok(f.row.updatedAt.getTime() > failedLease)
     f.pending[1].resolve(answer)
     assert.equal((await retry).ok, true)
     assert.equal(f.stats.aiCalls, 2)

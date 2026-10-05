@@ -34,27 +34,35 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ ok: true, skipped: 'not_started' })
   }
 
-  const turns = await prisma.mensetsuTurn.count({ where: { sessionId: s.id } })
-  const next = turns > 0 ? 'completed' : 'aborted'
-
-  // 同時の終了通知で completed への書き戻しと自動評価を重複させない。
-  const ended = await prisma.mensetsuSession.updateMany({
-    where: { id: s.id, status: { in: ['live', 'consented'] }, startedAt: { not: null }, endedAt: null },
-    data: { status: next, endedAt: new Date() },
-  })
-  if (ended.count !== 1) return NextResponse.json({ ok: true, alreadyEnded: true })
+  const ended = await prisma.$transaction(async (tx) => {
+    // 発話追加と同じ行をロックし、最新の発話件数で終了状態を決める。
+    await tx.$queryRaw`SELECT id FROM mensetsu_sessions WHERE id = ${s.id} FOR NO KEY UPDATE`
+    const current = await tx.mensetsuSession.findUnique({ where: { id: s.id } })
+    if (!current || !current.startedAt || current.endedAt || !['live', 'consented'].includes(current.status)) return null
+    const turns = await tx.mensetsuTurn.count({ where: { sessionId: s.id } })
+    const next = turns > 0 ? 'completed' : 'aborted'
+    const updated = await tx.mensetsuSession.updateMany({
+      where: { id: s.id, status: current.status, startedAt: { not: null }, endedAt: null },
+      data: { status: next, endedAt: new Date() },
+    })
+    return updated.count === 1 ? next : null
+  }, { isolationLevel: 'ReadCommitted', timeout: 15000 })
+  if (!ended) return NextResponse.json({ ok: true, alreadyEnded: true })
 
   // 発話があるものだけ評価する。中断（aborted）は評価しない
-  if (next === 'completed') {
+  if (ended === 'completed') {
     // 応募者にはすぐ応答しつつ、レスポンス後も自動評価を実行し続ける。
     // 失敗時は completed のまま残り、担当者が一覧から再試行できる。
     const evaluation = runEvaluation(s.id).then((result) => {
-      if (!result.ok) console.error('[mensetsu] 自動評価を完了できませんでした', result.status)
+      if (!result.ok) {
+        if (result.status === 409) console.warn('[mensetsu] 自動評価は状態の変更で確定しませんでした', result.status)
+        else console.error('[mensetsu] 自動評価を完了できませんでした', result.status)
+      }
     }).catch(() => {
       console.error('[mensetsu] 自動評価に失敗')
     })
     try { waitUntil(evaluation) } catch { await evaluation }
   }
 
-  return NextResponse.json({ ok: true, status: next })
+  return NextResponse.json({ ok: true, status: ended })
 }

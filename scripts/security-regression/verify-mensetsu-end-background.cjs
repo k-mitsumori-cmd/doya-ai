@@ -7,20 +7,26 @@ function fixture({ turns = 1, started = true, status = 'live', waitUntilFails = 
   let background
   let nextStatus
   const pending = new Promise((resolve) => { finish = resolve })
+  const db = {
+    $queryRaw: async (strings) => { assert.match(strings.join('?'), /FOR NO KEY UPDATE/); return [{ id: 'session' }] },
+    mensetsuTurn: { count: async () => turns },
+    mensetsuSession: {
+      findUnique: async () => ({ id: 'session', status: nextStatus || status, startedAt: started ? new Date() : null, endedAt: nextStatus ? new Date() : null }),
+      updateMany: async ({ data }) => {
+        if (nextStatus) return { count: 0 }
+        nextStatus = data.status
+        return { count: 1 }
+      },
+    },
+    $transaction: async (callback) => callback(db),
+  }
   const api = load('src/app/api/mensetsu/live/[token]/end/route.ts', {
     'next/server': { NextResponse: { json: (body, options = {}) => ({ body, status: options.status || 200 }) } },
     '@vercel/functions': { waitUntil: (promise) => {
       if (waitUntilFails) throw new Error('synthetic unavailable context')
       background = promise
     } },
-    '@/lib/prisma': { prisma: {
-      mensetsuTurn: { count: async () => turns },
-      mensetsuSession: { updateMany: async ({ data }) => {
-        if (nextStatus) return { count: 0 }
-        nextStatus = data.status
-        return { count: 1 }
-      } },
-    } },
+    '@/lib/prisma': { prisma: db },
     '@/lib/mensetsu/run-evaluation': { runEvaluation: () => { evaluationCount++; return pending } },
     '@/lib/mensetsu/public': { loadSessionByToken: async () => ({ id: 'session', status, startedAt: started ? new Date() : null }) },
   })

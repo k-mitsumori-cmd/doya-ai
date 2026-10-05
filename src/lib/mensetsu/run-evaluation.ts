@@ -63,77 +63,111 @@ export async function runEvaluation(sessionId: string): Promise<RunEvaluationRes
     // 別の処理が実行権を取得済みなら、その行には触れない。
     await prisma.mensetsuSession.updateMany({
       where: { id: session.id, status: 'evaluating', updatedAt: claimAt },
-      data: { status: previousStatus },
+      data: { status: previousStatus, updatedAt: new Date(Math.max(Date.now(), claimAt.getTime() + 1)) },
     }).catch(() => console.error('[mensetsu] 評価失敗後の状態復旧に失敗'))
   }
 
   try {
-  const samples = await prisma.mensetsuAnswerSample.findMany({
-    where: { organizationId: session.organization.id },
-    take: 12,
-    orderBy: { createdAt: 'desc' },
-  })
-
-  const result = await evaluateSession({
-    jobTitle: session.template.jobTitle,
-    levelLabel: LEVEL_LABELS[(session.template.level as MensetsuLevel) || 'mid'] || '中途',
-    companyName: session.organization.name,
-    criteria: session.template.criteria.map((x) => ({
-      key: x.key,
-      name: x.name,
-      description: x.description,
-      rubric: x.rubric as unknown as Rubric,
-      weight: x.weight,
-    })),
-    questions: session.template.questions.map((q) => ({ ord: q.ord, text: q.text })),
-    turns: session.turns.map((t) => ({ speaker: t.speaker, text: t.text, questionOrd: t.questionOrd })),
-    samples: samples.map((s) => ({
-      criterionKey: s.criterionKey,
-      questionText: s.questionText,
-      answerText: s.answerText,
-      label: s.label,
-    })),
-  })
-
-  const byKey = new Map(session.template.criteria.map((x) => [x.key, x.id]))
-
-  const saved = await prisma.$transaction(async (tx) => {
-    const owner = await tx.mensetsuSession.updateMany({
-      where: {
-        id: session.id, status: 'evaluating', updatedAt: claimAt,
-        OR: [{ purgeAfter: null }, { purgeAfter: { gt: new Date() } }],
-      },
-      data: {
-        status: 'evaluated',
-        verdict: result.verdict,
-        overallComment: result.overallComment,
-        candidateFeedback: result.candidateFeedback,
-        recruiterReport: result.recruiterReport,
-        evaluatedAt: new Date(),
-      },
+    const samples = await prisma.mensetsuAnswerSample.findMany({
+      where: { organizationId: session.organization.id },
+      take: 12,
+      orderBy: { createdAt: 'desc' },
     })
-    if (owner.count !== 1) return false
-    await tx.mensetsuScore.deleteMany({ where: { sessionId: session.id } })
-    await tx.mensetsuScore.createMany({
-      data: result.scores
-        .filter((s) => byKey.has(s.criterionKey))
-        .map((s) => ({
-          sessionId: session.id,
-          criterionId: byKey.get(s.criterionKey)!,
-          score: s.score,
-          insufficient: s.insufficient,
-          rationale: s.rationale,
-          quotes: s.quotes,
+    // 追加発話が届いたら同じ実行権で順番に再評価する。古い結果は保存しない。
+    // 連続した追記で実行時間を使い切らないよう、3回または再試行開始まで180秒で止める。
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const turns = await prisma.mensetsuTurn.findMany({
+        where: { sessionId: session.id },
+        orderBy: [{ startMs: { sort: 'asc', nulls: 'last' } }, { ord: 'asc' }, { id: 'asc' }],
+      })
+      if (!turns.length) {
+        await releaseClaim()
+        return { ok: false, reason: '発話ログが無いため評価できません', status: 400 }
+      }
+      if (session.purgeAfter && session.purgeAfter.getTime() <= Date.now()) {
+        await releaseClaim()
+        return { ok: false, reason: '記録の保管期限を過ぎているため評価できません。', status: 410 }
+      }
+      const result = await evaluateSession({
+        jobTitle: session.template.jobTitle,
+        levelLabel: LEVEL_LABELS[(session.template.level as MensetsuLevel) || 'mid'] || '中途',
+        companyName: session.organization.name,
+        criteria: session.template.criteria.map((x) => ({
+          key: x.key,
+          name: x.name,
+          description: x.description,
+          rubric: x.rubric as unknown as Rubric,
+          weight: x.weight,
         })),
-    })
-    return true
-  })
-  if (!saved) {
-    await releaseClaim()
-    return { ok: false, reason: '評価中に面接の状態が変わりました。再読み込みしてください。', status: 409 }
-  }
+        questions: session.template.questions.map((q) => ({ ord: q.ord, text: q.text })),
+        turns: turns.map((t) => ({ speaker: t.speaker, text: t.text, questionOrd: t.questionOrd })),
+        samples: samples.map((s) => ({
+          criterionKey: s.criterionKey,
+          questionText: s.questionText,
+          answerText: s.answerText,
+          label: s.label,
+        })),
+      })
 
-  return { ok: true, verdict: result.verdict }
+      const byKey = new Map(session.template.criteria.map((x) => [x.key, x.id]))
+
+      const saved = await prisma.$transaction(async (tx) => {
+        // 更新で発話保存と同じ行をロックし、次の問い合わせはロック取得後の発話を見る。
+        // 更新日時を変えず、再評価中も実行権を維持する。
+        const owner = await tx.mensetsuSession.updateMany({
+          where: {
+            id: session.id, status: 'evaluating', updatedAt: claimAt,
+            OR: [{ purgeAfter: null }, { purgeAfter: { gt: new Date() } }],
+          },
+          data: { updatedAt: claimAt },
+        })
+        if (owner.count !== 1) return 'lost' as const
+        const currentTurns = await tx.mensetsuTurn.findMany({ where: { sessionId: session.id }, select: { id: true } })
+        const inputIds = new Set(turns.map((turn) => turn.id))
+        if (currentTurns.length !== turns.length || currentTurns.some((turn) => !inputIds.has(turn.id))) return 'changed' as const
+        const finalized = await tx.mensetsuSession.updateMany({
+          where: {
+            id: session.id, status: 'evaluating', updatedAt: claimAt,
+            OR: [{ purgeAfter: null }, { purgeAfter: { gt: new Date() } }],
+          },
+          data: {
+            status: 'evaluated',
+            verdict: result.verdict,
+            overallComment: result.overallComment,
+            candidateFeedback: result.candidateFeedback,
+            recruiterReport: result.recruiterReport,
+            evaluatedAt: new Date(),
+            updatedAt: new Date(Math.max(Date.now(), claimAt.getTime() + 1)),
+          },
+        })
+        if (finalized.count !== 1) return 'lost' as const
+        await tx.mensetsuScore.deleteMany({ where: { sessionId: session.id } })
+        await tx.mensetsuScore.createMany({
+          data: result.scores
+            .filter((s) => byKey.has(s.criterionKey))
+            .map((s) => ({
+              sessionId: session.id,
+              criterionId: byKey.get(s.criterionKey)!,
+              score: s.score,
+              insufficient: s.insufficient,
+              rationale: s.rationale,
+              quotes: s.quotes,
+            })),
+        })
+        return 'saved' as const
+      }, { isolationLevel: 'ReadCommitted', timeout: 15000 })
+      if (saved === 'changed' && attempt < 2 && Date.now() - now.getTime() < 180000) continue
+      if (saved !== 'saved') {
+        await releaseClaim()
+        return { ok: false, reason: saved === 'changed'
+          ? '評価中に追加の発話が届きました。最新の発話で再評価してください。'
+          : '評価中に面接の状態が変わりました。再読み込みしてください。', status: 409 }
+      }
+
+      return { ok: true, verdict: result.verdict }
+    }
+    await releaseClaim()
+    return { ok: false, reason: '最新の発話で再評価してください。', status: 409 }
   } catch (error) {
     await releaseClaim()
     throw error
