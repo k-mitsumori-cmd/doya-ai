@@ -62,10 +62,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (typeof body.note === 'string') data.note = body.note.slice(0, 5000) || null
   if (body.probability != null) {
     const probability = Number(body.probability)
-    if ((typeof body.probability !== 'number' && typeof body.probability !== 'string') || !Number.isFinite(probability)) {
-      return NextResponse.json({ error: '確度が正しくありません' }, { status: 400 })
+    if ((typeof body.probability !== 'number' && typeof body.probability !== 'string') ||
+        (typeof body.probability === 'string' && !/^\d{1,3}$/.test(body.probability)) ||
+        !Number.isInteger(probability) || probability < 0 || probability > 100) {
+      return NextResponse.json({ error: '確度は0〜100の整数で入力してください' }, { status: 400 })
     }
-    data.probability = Math.max(0, Math.min(100, Math.round(probability)))
+    data.probability = probability
   }
   // 日付系（'' はクリア）
   for (const key of ['startDate', 'expectedCloseDate'] as const) {

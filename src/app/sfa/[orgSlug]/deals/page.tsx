@@ -540,6 +540,11 @@ export default function SfaDealsPage() {
       toast.error('商談名は必須です')
       return
     }
+    const probability = Number(form.probability)
+    if (form.probability.trim() === '' || !Number.isInteger(probability) || probability < 0 || probability > 100) {
+      toast.error('確度は0〜100の整数で入力してください')
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch(`/api/sfa/deals/${detail.id}`, sfaInit(orgSlug, {
@@ -552,7 +557,7 @@ export default function SfaDealsPage() {
           contactName: form.contactName,
           startDate: form.startDate,
           expectedCloseDate: form.expectedCloseDate,
-          probability: Number(form.probability) || 0,
+          probability,
           note: form.note,
         }),
       }))
@@ -929,7 +934,7 @@ export default function SfaDealsPage() {
               </div>
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-1">確度(%)</label>
-                <input value={form.probability} onChange={(e) => setForm((f) => ({ ...f, probability: e.target.value.replace(/[^0-9]/g, '') }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
+                <input value={form.probability} inputMode="numeric" maxLength={3} onChange={(e) => setForm((f) => ({ ...f, probability: e.target.value.replace(/[^0-9]/g, '') }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
               </div>
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-1">取引先</label>

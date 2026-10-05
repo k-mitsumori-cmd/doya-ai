@@ -56,7 +56,7 @@ const ctx = { params: Promise.resolve({ id: 'deal-1' }) };
   for (const body of [null, [], { name: 123, amount: 1 }, { name: '商談', startDate: '2026-02-30' }]) {
     assert.equal((await create(request(body))).status, 400);
   }
-  for (const body of [null, [], { amount: 1, expectedCloseDate: '2026-02-30' }, { amount: 1, probability: Infinity }]) {
+  for (const body of [null, [], { amount: 1, expectedCloseDate: '2026-02-30' }, ...[Infinity, -1, 101, 0.5, '', ' ', '101', '0.5', '0x64', '1e2'].map((probability) => ({ probability }))]) {
     assert.equal((await update(request(body), ctx)).status, 400);
   }
   assert.equal((await convert(request({ dealName: 123 }), ctx)).status, 400);
@@ -69,7 +69,12 @@ const ctx = { params: Promise.resolve({ id: 'deal-1' }) };
   const updated = await update(request({ amount: '2.4' }), ctx);
   assert.equal(updated.status, 200);
   assert.equal((await updated.json()).deal.amount, 2);
+  for (const probability of [0, 100]) {
+    const response = await update(request({ probability }), ctx);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).deal.probability, probability);
+  }
   assert.equal(createWrites, 1);
-  assert.equal(updateWrites, 1);
-  console.log('PASS SFA amount inputs: malformed amounts and dates rejected before writes across create, update and conversion');
+  assert.equal(updateWrites, 3);
+  console.log('PASS SFA amount inputs: malformed amounts, dates, and probability rejected before writes across create, update and conversion');
 })().catch((error) => { console.error(error); process.exitCode = 1; });
