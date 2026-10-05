@@ -945,6 +945,11 @@ if (quoteIssuerSaveAtomic.error || quoteIssuerSaveAtomic.status !== 0) {
   console.error('Security regression failed: verify-quote-issuer-save-atomic.cjs');
   process.exit(1);
 }
+const mensetsuEndBackground = spawnSync(process.execPath, [path.join(__dirname, 'verify-mensetsu-end-background.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (mensetsuEndBackground.error || mensetsuEndBackground.status !== 0) {
+  console.error('Security regression failed: verify-mensetsu-end-background.cjs');
+  process.exit(1);
+}
 const adminKintaiEmployeePages = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-kintai-employee-pages.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adminKintaiEmployeePages.error || adminKintaiEmployeePages.status !== 0) {
   console.error('Security regression failed: verify-admin-kintai-employee-pages.cjs');

@@ -8,6 +8,7 @@ export const maxDuration = 300
 //    押し忘れると結果が出ないまま放置されるため、自動で最後まで進める（2026-08-31）。
 //    評価は数十秒かかるが、応募者のレスポンスは待たせない（awaitしない）。
 import { NextRequest, NextResponse } from 'next/server'
+import { waitUntil } from '@vercel/functions'
 import { prisma } from '@/lib/prisma'
 import { runEvaluation } from '@/lib/mensetsu/run-evaluation'
 import { loadSessionByToken } from '@/lib/mensetsu/public'
@@ -43,11 +44,14 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
 
   // 発話があるものだけ評価する。中断（aborted）は評価しない
   if (next === 'completed') {
-    // ⚠️ await しない。応募者の画面はここで返さないと終了操作が固まる。
-    //    失敗しても面接は completed のまま残り、担当者が一覧から手で評価できる。
-    void runEvaluation(s.id).catch((e) => {
+    // 応募者にはすぐ応答しつつ、レスポンス後も自動評価を実行し続ける。
+    // 失敗時は completed のまま残り、担当者が一覧から再試行できる。
+    const evaluation = runEvaluation(s.id).then((result) => {
+      if (!result.ok) console.error('[mensetsu] 自動評価を完了できませんでした', result.status)
+    }).catch(() => {
       console.error('[mensetsu] 自動評価に失敗')
     })
+    try { waitUntil(evaluation) } catch { await evaluation }
   }
 
   return NextResponse.json({ ok: true, status: next })
