@@ -10,6 +10,8 @@ import { uploadComposedImage } from '@/lib/doyaslide/storage'
 import type { LogoPosition, LogoSize } from '@/lib/doyaslide/types'
 
 type Ctx = { params: Promise<{ id: string }> }
+const LOGO_POSITIONS = ['top-right', 'top-left', 'bottom-right', 'bottom-left', 'top-center', 'bottom-center'] as const
+const LOGO_SIZES = ['S', 'M', 'L'] as const
 
 // PUT /api/doyaslide/projects/[id]/logo-config — ロゴ位置/サイズ変更 → 全スライド再合成
 // 注意: logoUrl はここでは受け付けない（SSRF防止。ロゴ設定は assets/logo アップロード経由のみ）
@@ -22,50 +24,66 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     const project = await prisma.doyaSlideProject.findFirst({ where: { id: p.id, userId } })
     if (!project) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
 
-    const body = await req.json().catch(() => ({}))
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'ロゴ設定が正しくありません' }, { status: 400 })
+    }
     const data: any = {}
-    if (body.logoPosition !== undefined) data.logoPosition = body.logoPosition
-    if (body.logoSize !== undefined) data.logoSize = body.logoSize
-    if (body.logoBackingChip !== undefined) data.logoBackingChip = !!body.logoBackingChip
+    if (body.logoPosition !== undefined) {
+      if (!LOGO_POSITIONS.includes(body.logoPosition)) return NextResponse.json({ error: 'ロゴの位置が正しくありません' }, { status: 400 })
+      data.logoPosition = body.logoPosition
+    }
+    if (body.logoSize !== undefined) {
+      if (!LOGO_SIZES.includes(body.logoSize)) return NextResponse.json({ error: 'ロゴのサイズが正しくありません' }, { status: 400 })
+      data.logoSize = body.logoSize
+    }
+    if (body.logoBackingChip !== undefined) {
+      if (typeof body.logoBackingChip !== 'boolean') return NextResponse.json({ error: '背景チップの設定が正しくありません' }, { status: 400 })
+      data.logoBackingChip = body.logoBackingChip
+    }
+    if (Object.keys(data).length === 0) return NextResponse.json({ error: '変更する設定がありません' }, { status: 400 })
+
+    const slides = project.logoUrl ? await prisma.doyaSlideSlide.findMany({
+      where: { projectId: p.id, rawImageUrl: { not: null } },
+    }) : []
+    let logoBuf: Buffer | null = null
+    if (project.logoUrl && slides.length > 0) {
+      try {
+        logoBuf = await fetchBuffer(project.logoUrl)
+      } catch {
+        return NextResponse.json({ error: 'ロゴ画像を読み込めませんでした。設定は変更されていません。' }, { status: 503 })
+      }
+    }
 
     const updated = await prisma.doyaSlideProject.update({ where: { id: p.id }, data })
 
     // 生画像があるスライドはロゴだけ再合成（ロゴは一度だけ取得して並列処理）
-    if (updated.logoUrl) {
-      const slides = await prisma.doyaSlideSlide.findMany({
-        where: { projectId: p.id, rawImageUrl: { not: null } },
-      })
-      if (slides.length > 0) {
-        try {
-          const logoBuf = await fetchBuffer(updated.logoUrl)
-          const opts = {
-            position: (updated.logoPosition as LogoPosition) || 'top-right',
-            size: (updated.logoSize as LogoSize) || 'M',
-            backingChip: updated.logoBackingChip,
-          }
-          await Promise.all(
-            slides.map(async (s) => {
-              if (!s.rawImageUrl) return
-              try {
-                const baseBuf = await fetchBuffer(s.rawImageUrl)
-                const composed = await compositeLogo(baseBuf, logoBuf, opts)
-                const imageUrl = await uploadComposedImage(userId, p.id, composed)
-                await prisma.doyaSlideSlide.update({ where: { id: s.id }, data: { imageUrl } })
-              } catch (e) {
-                console.error('[doyaslide/logo-config] recomposite failed')
-              }
-            })
-          )
-        } catch (e) {
-          console.error('[doyaslide/logo-config] logo fetch failed')
-        }
-      }
+    const opts = {
+      position: (updated.logoPosition as LogoPosition) || 'top-right',
+      size: (updated.logoSize as LogoSize) || 'M',
+      backingChip: updated.logoBackingChip,
     }
+    const outcomes = logoBuf ? await Promise.allSettled(slides.map(async (s) => {
+      if (!s.rawImageUrl) return
+      const baseBuf = await fetchBuffer(s.rawImageUrl)
+      const composed = await compositeLogo(baseBuf, logoBuf, opts)
+      const imageUrl = await uploadComposedImage(userId, p.id, composed)
+      await prisma.doyaSlideSlide.update({ where: { id: s.id }, data: { imageUrl } })
+    })) : []
+    const failedSlides = outcomes.filter((outcome) => outcome.status === 'rejected').length
 
     const result = await prisma.doyaSlideProject.findFirst({
       where: { id: p.id },
       include: { slides: { orderBy: { index: 'asc' } } },
     })
+    if (failedSlides > 0) {
+      console.error('[doyaslide/logo-config] recomposite failed', { failedSlides })
+      return NextResponse.json({
+        error: `ロゴ設定は保存されましたが、${failedSlides}枚のスライドに反映できませんでした。再度設定を保存してください。`,
+        project: result,
+        failedSlides,
+      }, { status: 503 })
+    }
     return NextResponse.json({ project: result })
   } catch (e) {
     console.error('[doyaslide/logo-config]')

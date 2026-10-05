@@ -58,6 +58,7 @@ function EditorInner() {
   const [generating, setGenerating] = useState(false)
   const [structuring, setStructuring] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
+  const [savingLogoConfig, setSavingLogoConfig] = useState(false)
   const [chat, setChat] = useState<Record<string, { role: string; content: string }[]>>({})
   const [chatInput, setChatInput] = useState('')
   const [chatBusy, setChatBusy] = useState(false)
@@ -69,6 +70,7 @@ function EditorInner() {
   const [limitMsg, setLimitMsg] = useState<string | null>(null)
   const [limitUpgradeUrl, setLimitUpgradeUrl] = useState<string | null>(null)
   const triggered = useRef(false)
+  const logoConfigBusyRef = useRef(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mountedRef = useRef(true)
   const wasGen = useRef(false)
@@ -335,16 +337,25 @@ function EditorInner() {
   }
 
   const saveLogoConfig = async (patch: any) => {
-    const res = await fetch(`/api/doyaslide/projects/${id}/logo-config`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(patch),
-    })
-    if (res.ok) {
-      toast.success('ロゴ設定を更新しました')
+    if (logoConfigBusyRef.current) return
+    logoConfigBusyRef.current = true
+    setSavingLogoConfig(true)
+    try {
+      const res = await fetch(`/api/doyaslide/projects/${id}/logo-config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) toast.success('ロゴ設定を全スライドに反映しました')
+      else toast.error(data?.error || 'ロゴ設定の更新に失敗しました')
       await reload()
-    } else {
-      toast.error('更新に失敗しました')
+    } catch {
+      toast.error('ロゴ設定の更新結果を確認できませんでした。再読み込みしてご確認ください')
+      await reload()
+    } finally {
+      logoConfigBusyRef.current = false
+      setSavingLogoConfig(false)
     }
   }
 
@@ -686,6 +697,7 @@ function EditorInner() {
                   <label className="block text-xs font-bold text-slate-500 mb-1">位置</label>
                   <select
                     value={project.logoPosition}
+                    disabled={savingLogoConfig}
                     onChange={(e) => saveLogoConfig({ logoPosition: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 rounded-xl text-sm"
                   >
@@ -700,6 +712,7 @@ function EditorInner() {
                     {['S', 'M', 'L'].map((sz) => (
                       <button
                         key={sz}
+                        disabled={savingLogoConfig}
                         onClick={() => saveLogoConfig({ logoSize: sz })}
                         className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${
                           project.logoSize === sz ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
@@ -714,11 +727,12 @@ function EditorInner() {
                   <input
                     type="checkbox"
                     checked={project.logoBackingChip}
+                    disabled={savingLogoConfig}
                     onChange={(e) => saveLogoConfig({ logoBackingChip: e.target.checked })}
                   />
                   背景チップ（視認性UP）
                 </label>
-                <p className="text-[11px] text-slate-400">変更すると全スライドに即時反映されます</p>
+                <p className="text-[11px] text-slate-400">{savingLogoConfig ? '全スライドに反映中…' : '変更すると全スライドに反映されます'}</p>
               </div>
             ) : (
               <p className="text-xs text-slate-400 font-bold">ロゴは未設定です。新規作成時にアップロードできます。</p>

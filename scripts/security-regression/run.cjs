@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const doyaslideLogoConfig = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-logo-config.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideLogoConfig.error || doyaslideLogoConfig.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-logo-config.cjs');
+  process.exit(1);
+}
 const aishodanRoomInput = spawnSync(process.execPath, [path.join(__dirname, 'verify-aishodan-room-input.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (aishodanRoomInput.error || aishodanRoomInput.status !== 0) {
   console.error('Security regression failed: verify-aishodan-room-input.cjs');
