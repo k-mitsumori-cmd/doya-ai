@@ -17,6 +17,7 @@ export interface TranscriptLine {
   speaker: 'interviewer' | 'candidate'
   text: string
   at: number
+  startMs: number
 }
 
 export type ConnState = 'idle' | 'requesting_mic' | 'connecting' | 'live' | 'ended' | 'error'
@@ -40,6 +41,13 @@ const SILENCE_NUDGE_MS = 20000
 
 /** 通信が切れたまま何分待つか。超えたら打ち切って部分評価へ回す（F1-8） */
 const DISCONNECT_GRACE_MS = 3 * 60 * 1000
+
+// transcript.doneとresponse.doneは別のevent_idを持つため、音声項目のIDを使う。
+function transcriptSource(itemId: unknown, contentIndex: unknown): string | undefined {
+  if (typeof itemId !== 'string' || !itemId) return undefined
+  const index = typeof contentIndex === 'number' && Number.isSafeInteger(contentIndex) && contentIndex >= 0 ? contentIndex : 0
+  return `${itemId}:${index}`
+}
 
 export function useRealtimeInterview({ token, onEnded, recordAudio = false }: UseRealtimeInterviewOptions) {
   const [state, setState] = useState<ConnState>('idle')
@@ -106,7 +114,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ turns: batch.map((l) => ({
               id: l.id, speaker: l.speaker, text: l.text,
-              startMs: l.at - startedAtRef.current,
+              startMs: l.startMs,
             })) }),
           })
           if (!res.ok) return false
@@ -126,8 +134,8 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     return operation
   }, [token])
 
-  /** 直近に積んだ発話。transcript イベントと response.done の二重登録を防ぐ */
-  const recentRef = useRef<{ key: string; at: number }[]>([])
+  /** 同じ音声項目・内容パートの別イベント経由の再通知だけを除く。 */
+  const recentRef = useRef<Set<string>>(new Set())
   /**
    * 各話者の「話し始めた時刻」。
    * ⚠️ 発話は読み上げ／認識が終わって初めて確定するため、確定時刻で並べると
@@ -140,29 +148,29 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     candidate: 0,
   })
 
-  const pushLine = useCallback((speaker: TranscriptLine['speaker'], text: string) => {
+  const pushLine = useCallback((speaker: TranscriptLine['speaker'], text: string, sourceId?: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
     // ⚠️ 無音・雑音に対する文字起こしの捏造を捨てる。
     //    残すと逐語ログが汚れるだけでなく、応募者が言っていないことを
     //    根拠に採点されうる。
     if (isLikelyHallucination(trimmed, speaker)) return
-    // 同じ発話が別イベント経由で二度届くことがある（保険経路との重複）。
-    // ⚠️ 直近20件で判定すると「はい」「そうですね」のような短い定型回答が
-    //    2回目以降まるごと消え、無回答として不利に採点されてしまう。
-    //    重複は必ず数百ms以内に届くので、5秒の時間窓に限定する。
-    const key = `${speaker}:${trimmed}`
-    const nowMs = Date.now()
-    recentRef.current = recentRef.current.filter((r) => nowMs - r.at < 5000)
-    if (recentRef.current.some((r) => r.key === key)) return
-    recentRef.current.push({ key, at: nowMs })
+    // 「はい」などの同じ文面を続けて答えることは正当な別発話。
+    // 文面・時間で推測せず、Realtimeのitem_idとcontent_indexで再通知だけを除く。
+    // 手入力や識別子のないイベントは、新しい発話として保持する。
+    if (sourceId) {
+      const key = `${speaker}:${sourceId}`
+      if (recentRef.current.has(key)) return
+      recentRef.current.add(key)
+    }
 
     // 開始時刻が記録されていればそれを使う（無ければ確定時刻で代用）
     const startedAt = speechStartRef.current[speaker] || Date.now()
     speechStartRef.current[speaker] = 0
     const id = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() :
       Array.from(crypto.getRandomValues(new Uint8Array(16)), (value) => value.toString(16).padStart(2, '0')).join('')
-    const line: TranscriptLine = { id, speaker, text: trimmed, at: startedAt }
+    const line: TranscriptLine = { id, speaker, text: trimmed, at: startedAt,
+      startMs: Math.max(0, startedAt - startedAtRef.current) }
     setLines((prev) => [...prev, line])
     pendingRef.current.push(line)
   }, [])
@@ -589,7 +597,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
         //    「面接官の発話が逐語ログに1件も残らない」「アバターが喋る状態にならない」
         //    という不具合が本番で起きた。以後どちらでも拾えるよう後方一致で判定する。
         if (t.endsWith('audio_transcript.done')) {
-          pushLine('interviewer', ev.transcript || '')
+          pushLine('interviewer', ev.transcript || '', transcriptSource(ev.item_id, ev.content_index))
           return
         }
         if (t.endsWith('audio.delta')) {
@@ -605,7 +613,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
         switch (t) {
           // 応募者の発話が文字起こしされた
           case 'conversation.item.input_audio_transcription.completed':
-            pushLine('candidate', ev.transcript || '')
+            pushLine('candidate', ev.transcript || '', transcriptSource(ev.item_id, ev.content_index))
             break
           case 'input_audio_buffer.speech_started':
             if (!speechStartRef.current.candidate) {
@@ -631,9 +639,9 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
             // response.done の中身から面接官の発話を拾えるようにする。
             const items = ev?.response?.output ?? []
             for (const item of items) {
-              for (const c of item?.content ?? []) {
+              for (const [contentIndex, c] of (item?.content ?? []).entries()) {
                 if (typeof c?.transcript === 'string' && c.transcript.trim()) {
-                  pushLine('interviewer', c.transcript)
+                  pushLine('interviewer', c.transcript, transcriptSource(item.id, contentIndex))
                 }
               }
             }
@@ -748,7 +756,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
       try {
         const turns = pendingRef.current.map((line) => ({
           id: line.id, speaker: line.speaker, text: line.text,
-          startMs: line.at - startedAtRef.current,
+          startMs: line.startMs,
         }))
         let url = `/api/mensetsu/live/${token}/end`
         let body = new Blob([JSON.stringify({ aborted: true, turns })], { type: 'application/json' })
