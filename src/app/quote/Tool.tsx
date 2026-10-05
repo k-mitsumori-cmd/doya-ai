@@ -45,6 +45,7 @@ const SOURCE_STYLE: Record<PriceSource, string> = {
   ai_estimate: 'bg-violet-50 text-violet-700 border-violet-200',
   unknown: 'bg-rose-50 text-rose-700 border-rose-200',
 }
+const MAX_QUOTE_ITEMS = 60
 
 export default function QuoteTool() {
   const [loading, setLoading] = useState(true)
@@ -328,7 +329,10 @@ export default function QuoteTool() {
       })
       const d = await r.json()
       if (!r.ok) throw new Error(d?.error || '生成に失敗しました')
-      setItems(d.items || [])
+      if (!Array.isArray(d.items) || d.items.length > MAX_QUOTE_ITEMS) {
+        throw new Error('品目候補の形式が正しくありません。再度お試しください。')
+      }
+      setItems(d.items)
       setRevealSeq((n) => n + 1)
     } catch (e) {
       notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
@@ -344,7 +348,7 @@ export default function QuoteTool() {
     setItems((prev) => prev.filter((_, i) => i !== idx))
   }
   function addItem() {
-    setItems((prev) => [
+    setItems((prev) => prev.length >= MAX_QUOTE_ITEMS ? prev : [
       ...prev,
       { itemName: '', spec: '', qty: 1, unit: '式', unitPrice: 0, taxRate: 10, priceSource: 'manual', sourceRef: '', rangeMin: null, rangeMax: null },
     ])
@@ -402,6 +406,10 @@ export default function QuoteTool() {
 
   async function createDocument() {
     if (items.length === 0) return
+    if (items.length > MAX_QUOTE_ITEMS) {
+      notifyError(setError, `明細は${MAX_QUOTE_ITEMS}行以内で入力してください。`)
+      return
+    }
     setCreating(true)
     setError('')
     setQuotaAction(null)
@@ -823,8 +831,8 @@ export default function QuoteTool() {
               ))}
             </div>
 
-            <button onClick={addItem} className="mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 font-semibold">
-              品目を追加
+            <button onClick={addItem} disabled={items.length >= MAX_QUOTE_ITEMS} className="mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 font-semibold disabled:cursor-not-allowed disabled:opacity-50">
+              品目を追加（{items.length} / {MAX_QUOTE_ITEMS}行）
             </button>
 
             <div className="mt-6 rounded-xl bg-slate-50 p-4">
