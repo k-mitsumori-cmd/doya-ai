@@ -1,0 +1,58 @@
+PASS scan: actual page SDK failure recovers and retries with its encoded return destination
+PASS scan: duplicates during API and SDK waiting are blocked
+PASS scan: restored history rejects old API and JSON completions
+PASS scan: old SDK failure cannot release a newer history-restored request
+PASS scan: network and invalid success bodies recover without a false success
+PASS scan: valid result preserves navigation and locks until leaving
+PASS aio: actual page SDK failure recovers and retries with its encoded return destination
+PASS aio: duplicates during API and SDK waiting are blocked
+PASS aio: restored history rejects old API and JSON completions
+PASS aio: old SDK failure cannot release a newer history-restored request
+PASS aio: network and invalid success bodies recover without a false success
+PASS aio: valid result preserves navigation and locks until leaving
+PASS shodan: actual page SDK failure recovers and retries with its encoded return destination
+PASS shodan: duplicates during API and SDK waiting are blocked
+PASS shodan: restored history rejects old API and JSON completions
+PASS shodan: old SDK failure cannot release a newer history-restored request
+PASS shodan: network and invalid success bodies recover without a false success
+PASS shodan: valid result preserves navigation and locks until leaving
+PASS aio: invitation expiring during participation stops further acceptance
+PASS aio: invitation component is keyed to token and pending read is cancelled on unmount
+PASS aio: late invitation JSON and late failure cannot update an unmounted page
+PASS aio: expired non-JSON invite and malformed invite cannot be accepted
+PASS shodan: invitation expiring during participation stops further acceptance
+PASS shodan: invitation component is keyed to token and pending read is cancelled on unmount
+PASS shodan: late invitation JSON and late failure cannot update an unmounted page
+PASS shodan: expired non-JSON invite and malformed invite cannot be accepted
+{
+  "passed": 26,
+  "scope": "actual current TSX pages and shared hook; API/SDK mocked; no production writes",
+  "results": [
+    "scan: actual page SDK failure recovers and retries with its encoded return destination",
+    "scan: duplicates during API and SDK waiting are blocked",
+    "scan: restored history rejects old API and JSON completions",
+    "scan: old SDK failure cannot release a newer history-restored request",
+    "scan: network and invalid success bodies recover without a false success",
+    "scan: valid result preserves navigation and locks until leaving",
+    "aio: actual page SDK failure recovers and retries with its encoded return destination",
+    "aio: duplicates during API and SDK waiting are blocked",
+    "aio: restored history rejects old API and JSON completions",
+    "aio: old SDK failure cannot release a newer history-restored request",
+    "aio: network and invalid success bodies recover without a false success",
+    "aio: valid result preserves navigation and locks until leaving",
+    "shodan: actual page SDK failure recovers and retries with its encoded return destination",
+    "shodan: duplicates during API and SDK waiting are blocked",
+    "shodan: restored history rejects old API and JSON completions",
+    "shodan: old SDK failure cannot release a newer history-restored request",
+    "shodan: network and invalid success bodies recover without a false success",
+    "shodan: valid result preserves navigation and locks until leaving",
+    "aio: invitation expiring during participation stops further acceptance",
+    "aio: invitation component is keyed to token and pending read is cancelled on unmount",
+    "aio: late invitation JSON and late failure cannot update an unmounted page",
+    "aio: expired non-JSON invite and malformed invite cannot be accepted",
+    "shodan: invitation expiring during participation stops further acceptance",
+    "shodan: invitation component is keyed to token and pending read is cancelled on unmount",
+    "shodan: late invitation JSON and late failure cannot update an unmounted page",
+    "shodan: expired non-JSON invite and malformed invite cannot be accepted"
+  ]
+}

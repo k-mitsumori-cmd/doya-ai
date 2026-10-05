@@ -46,6 +46,10 @@ function InvitationContent({ token }: { token: string }) {
       const res = await fetch(`/api/aio/invite/${encodeURIComponent(token)}`, { method: 'POST' })
       if (!isCurrent()) return
       if (res.status === 401) { await startGoogleSignIn(`/aio/invite/${encodeURIComponent(token)}`); return }
+      if (res.status === 410) {
+        setState('expired')
+        throw new NavigationSubmissionError('招待の有効期限が切れています。招待者に再送を依頼してください。')
+      }
       const d = await res.json()
       if (!isCurrent()) return
       if (!res.ok) throw new NavigationSubmissionError(typeof d.error === 'string' ? d.error : '参加に失敗しました')
