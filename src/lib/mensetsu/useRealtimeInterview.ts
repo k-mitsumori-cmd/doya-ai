@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { isLikelyHallucination } from '@/lib/realtime/hallucination'
 
 export interface TranscriptLine {
+  id: string
   speaker: 'interviewer' | 'candidate'
   text: string
   at: number
@@ -42,6 +43,7 @@ const DISCONNECT_GRACE_MS = 3 * 60 * 1000
 
 export function useRealtimeInterview({ token, onEnded, recordAudio = false }: UseRealtimeInterviewOptions) {
   const [state, setState] = useState<ConnState>('idle')
+  const [needsSaveRetry, setNeedsSaveRetry] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lines, setLines] = useState<TranscriptLine[]>([])
   const [level, setLevel] = useState(0)
@@ -81,6 +83,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const mixCtxRef = useRef<AudioContext | null>(null)
+  const flushingRef = useRef<Promise<boolean> | null>(null)
 
   /**
    * 逐語ログはまとめてサーバへ送る（1発話ごとに叩かない）。
@@ -89,41 +92,38 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
    *    一瞬の通信断でその区間の発話が永久に消え、実際には答えているのに
    *    評価が「情報不足」に倒れる原因になっていた。
    */
-  const flushTurns = useCallback(async () => {
-    const batch = pendingRef.current
-    if (batch.length === 0) return
-    pendingRef.current = []
-    const requeue = () => {
-      // 後から届いた発話より前に並ぶよう、先頭へ戻す
-      pendingRef.current = [...batch, ...pendingRef.current]
-    }
-    try {
-      const res = await fetch(`/api/mensetsu/live/${token}/turn`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          turns: batch.map((l) => ({
-            speaker: l.speaker,
-            text: l.text,
-            startMs: l.at - startedAtRef.current,
-          })),
-        }),
-      })
-      if (!res.ok) {
-        // 4xx は投げ直しても通らない（評価済み等）ので捨てる。5xx・通信断は戻して再送。
-        if (res.status >= 500) requeue()
-        return
+  const flushTurns = useCallback((): Promise<boolean> => {
+    // 送信中の回答もキューに保持し、同時のflush・終了は同じ送信を待つ。
+    if (flushingRef.current) return flushingRef.current
+    const operation = Promise.resolve().then(async () => {
+      while (pendingRef.current.length > 0) {
+        const batch = pendingRef.current.slice(0, 50)
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 15000)
+        try {
+          const res = await fetch(`/api/mensetsu/live/${token}/turn`, {
+            method: 'POST', signal: controller.signal,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ turns: batch.map((l) => ({
+              id: l.id, speaker: l.speaker, text: l.text,
+              startMs: l.at - startedAtRef.current,
+            })) }),
+          })
+          if (!res.ok) return false
+          const data = await res.json().catch(() => null)
+          // 保存を確認できない応答は成功扱いにせず、同じIDで再送できるよう保持する。
+          if (data?.saved !== batch.length) return false
+          pendingRef.current.splice(0, batch.length)
+        } catch {
+          return false
+        } finally {
+          clearTimeout(timeout)
+        }
       }
-      // ⚠️ サーバは1回あたり50件で切り詰める。保存件数を照合せずに成功扱いすると、
-      //    再送で溜まった51件目以降（＝直近の回答）が黙って消える。
-      const data = await res.json().catch(() => null)
-      const saved = Number(data?.saved)
-      if (Number.isFinite(saved) && saved < batch.length) {
-        pendingRef.current = [...batch.slice(saved), ...pendingRef.current]
-      }
-    } catch {
-      requeue()
-    }
+      return true
+    }).finally(() => { flushingRef.current = null })
+    flushingRef.current = operation
+    return operation
   }, [token])
 
   /** 直近に積んだ発話。transcript イベントと response.done の二重登録を防ぐ */
@@ -160,7 +160,9 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     // 開始時刻が記録されていればそれを使う（無ければ確定時刻で代用）
     const startedAt = speechStartRef.current[speaker] || Date.now()
     speechStartRef.current[speaker] = 0
-    const line: TranscriptLine = { speaker, text: trimmed, at: startedAt }
+    const id = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() :
+      Array.from(crypto.getRandomValues(new Uint8Array(16)), (value) => value.toString(16).padStart(2, '0')).join('')
+    const line: TranscriptLine = { id, speaker, text: trimmed, at: startedAt }
     setLines((prev) => [...prev, line])
     pendingRef.current.push(line)
   }, [])
@@ -241,15 +243,35 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
         })
       }
       cleanup()
-      await flushTurns()
+      const saved = await flushTurns()
+      if (!saved) {
+        endedRef.current = false
+        setNeedsSaveRetry(true)
+        setError('回答の保存を確認できませんでした。通信を確認し、保存を再試行してください。')
+        setState('error')
+        return
+      }
       if (recordAudio) await uploadRecording()
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 15000)
       try {
-        await fetch(`/api/mensetsu/live/${token}/end`, {
-          method: 'POST',
+        const response = await fetch(`/api/mensetsu/live/${token}/end`, {
+          method: 'POST', signal: controller.signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ aborted }),
         })
-      } catch {}
+        const result = await response.json().catch(() => null)
+        if (!response.ok || !result?.ok) throw new Error('completion_unconfirmed')
+      } catch {
+        endedRef.current = false
+        setNeedsSaveRetry(true)
+        setError('終了の保存を確認できませんでした。通信を確認し、保存を再試行してください。')
+        setState('error')
+        return
+      } finally {
+        clearTimeout(timeout)
+      }
+      setNeedsSaveRetry(false)
       setConnectionLost(false)
       setState('ended')
       onEnded?.()
@@ -715,7 +737,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
       //    復帰後に「終了」を押しても no-op になる（endedRef が立っているため
       //    最後の flushTurns・録音アップロード・完了画面が全て走らない）状態だった。
       if (e.persisted) return
-      if (endedRef.current) return
+      // 正規の終了処理が送信待ちでも、回答を含めた離脱通知を送る。
       // ⚠️ 面接を開始していないなら終了を送らない。
       //    このフックはページ表示時点でマウントされるため、
       //    「リンクを開いて眺めただけで閉じた」場合にも beacon が飛び、
@@ -724,8 +746,27 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
       if (startedAtRef.current === 0) return
       // ⚠️ endedRef は立てない。ここで立てると、復帰後の正規の end() が丸ごと無効化される。
       try {
-        const body = new Blob([JSON.stringify({ aborted: true })], { type: 'application/json' })
-        navigator.sendBeacon?.(`/api/mensetsu/live/${token}/end`, body)
+        const turns = pendingRef.current.map((line) => ({
+          id: line.id, speaker: line.speaker, text: line.text,
+          startMs: line.at - startedAtRef.current,
+        }))
+        let url = `/api/mensetsu/live/${token}/end`
+        let body = new Blob([JSON.stringify({ aborted: true, turns })], { type: 'application/json' })
+        // Beacon/keepaliveは本文合計64KiBが上限。超過時に回答抜きで終了を
+        // 送らず、送れる回答だけを追記する。終了はサーバーの中断回収へ委ねる。
+        if (turns.length > 50 || body.size > 60000) {
+          const batch = turns.slice(0, 50)
+          do {
+            body = new Blob([JSON.stringify({ turns: batch })], { type: 'application/json' })
+            if (body.size <= 60000) break
+            batch.pop()
+          } while (batch.length > 0)
+          if (batch.length === 0) return
+          url = `/api/mensetsu/live/${token}/turn`
+        }
+        if (!navigator.sendBeacon?.(url, body)) {
+          void fetch(url, { method: 'POST', body, keepalive: true }).catch(() => {})
+        }
       } catch {
         /* 送れなくても離脱は止められない */
       }
@@ -740,6 +781,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   return {
     state,
     error,
+    needsSaveRetry,
     lines,
     level,
     speaking,

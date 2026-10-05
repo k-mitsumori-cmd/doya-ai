@@ -9,7 +9,7 @@ function fixture(){
   $transaction:async callback=>{try{return await callback(db)}finally{locked=false}},
  };
  const api=load('src/app/api/mensetsu/live/[token]/turn/route.ts',{
-  'next/server':{NextResponse:Response},'@/lib/mensetsu/public':{loadSessionByToken:async()=>({...row})},'@/lib/prisma':{prisma:db},
+  'node:crypto': require('node:crypto'), 'next/server':{NextResponse:Response},'@/lib/mensetsu/public':{loadSessionByToken:async()=>({...row})},'@/lib/prisma':{prisma:db},
   '@vercel/functions':{waitUntil:()=>{}},'@/lib/mensetsu/run-evaluation':{runEvaluation:async()=>{throw Error('Unexpected evaluation for live transcript')}},
  });
  return{saved,run:turns=>api.POST({json:async()=>({turns})},{params:Promise.resolve({token:'t'})})};

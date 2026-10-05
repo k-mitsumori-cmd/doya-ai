@@ -65,14 +65,15 @@ function fixture({ live = false, empty = false } = {}) {
       mensetsuTurn: {
         findFirst: async () => turns.length ? { ord: Math.max(...turns.map((t) => t.ord)) } : null,
         count: async () => turns.length,
-        findMany: async ({ orderBy, select }) => {
+        findMany: async ({ orderBy, select, where }) => {
+          if (where?.id?.in) return turns.filter(t => where.id.in.includes(t.id)).map(t=>({...t}))
           if (select) return turns.map((t) => ({ id: t.id }))
           assert.ok(orderBy, 'evaluation snapshot must retain chronological ordering')
           return turns.map((t) => ({ ...t })).sort((a, b) => (a.startMs ?? Infinity) - (b.startMs ?? Infinity) || a.ord - b.ord)
         },
         createMany: async ({ data }) => {
           await hooks.beforeCreate?.()
-          turns.push(...data.map((t, i) => ({ ...t, id: `turn-${turns.length + i}` })))
+          turns.push(...data.map((t, i) => ({ ...t, id: t.id || `turn-${turns.length + i}` })))
           return { count: data.length }
         },
       },
@@ -100,23 +101,48 @@ function fixture({ live = false, empty = false } = {}) {
     './evaluate': { evaluateSession: (input) => { stats.inputs.push(input.turns.map((t) => t.text)); const p = deferred(); pending.push(p); return p.promise } },
   }, { Date: FakeDate })
   const common = {
-    'next/server': { NextResponse: { json: (body, options = {}) => ({ body, status: options.status || 200 }) } },
+    'node:crypto': require('node:crypto'), 'next/server': { NextResponse: { json: (body, options = {}) => ({ body, status: options.status || 200 }) } },
     '@/lib/prisma': { prisma: db }, '@/lib/mensetsu/public': { loadSessionByToken: async () => ({ ...row }) },
     '@/lib/mensetsu/run-evaluation': evaluation, '@vercel/functions': { waitUntil: (promise) => background.push(promise) },
   }
   const globals = { Date: FakeDate, console: { log() {}, warn: (...args) => stats.warnings.push(args[0]), error: () => { stats.errors++ } } }
   const turn = load('src/app/api/mensetsu/live/[token]/turn/route.ts', common, globals)
-  const end = load('src/app/api/mensetsu/live/[token]/end/route.ts', common, globals)
+  const end = load('src/app/api/mensetsu/live/[token]/end/route.ts', { ...common, '../turn/route': { POST: async (req,ctx) => { const response = await turn.POST(req,ctx); return { ...response, ok: response.status < 400, json: async () => response.body } } } }, globals)
   const ctx = { params: Promise.resolve({ token: 'synthetic' }) }
   return {
     row, stats, pending, hooks, background, get turns() { return turns },
     evaluate: () => evaluation.runEvaluation(row.id),
     send: (text = 'Late answer', jsonGate) => turn.POST({ json: async () => { if (jsonGate) await jsonGate.promise; return { turns: [{ speaker: 'candidate', text, startMs: 10 }] } } }, ctx),
-    end: () => end.POST({}, ctx), advance: (ms) => { clock.now += ms },
+    end: (body) => end.POST(body ? { json: async () => body } : {}, ctx), advance: (ms) => { clock.now += ms },
   }
 }
 
 ;(async () => {
+  await check('pagehide saves last answer before completing and evaluating empty interview', async () => {
+    const f=fixture({live:true,empty:true})
+    const body={aborted:true,turns:[{id:'final-answer',text:'Final answer',speaker:'candidate',startMs:50}]}
+    const response=await f.end(body)
+    assert.equal(response.status,200);assert.equal(response.body.status,'completed')
+    await tick();assert.deepEqual(f.stats.inputs,[['Final answer']]);assert.equal(f.turns.length,1)
+    assert.equal((await f.end(body)).body.alreadyEnded,true);assert.equal(f.turns.length,1)
+    f.pending[0].resolve(answer('Final report'));await Promise.all(f.background)
+  })
+  await check('pagehide transcript refusal does not end or evaluate interview', async () => {
+    const f=fixture({live:true,empty:true})
+    const response=await f.end({turns:[{id:'bad/id',text:'Answer'}]})
+    assert.equal(response.status,400);assert.equal(f.row.status,'live');assert.equal(f.stats.inputs.length,0)
+  })
+  await check('pagehide partial or malformed transcript does not end interview', async () => {
+    for (const turns of [[{id:'empty',text:''}],{bad:true},Array.from({length:51},(_,i)=>({id:`id-${i}`,text:'Answer'}))]) {
+      const f=fixture({live:true,empty:true});const response=await f.end({turns})
+      assert.ok(response.status>=400);assert.equal(f.row.status,'live');assert.equal(f.turns.length,0)
+    }
+  })
+  await check('evaluated session refuses new pagehide speech without changing report', async () => {
+    const f=fixture({live:true,empty:true});f.row.status='evaluated';f.row.evaluatedAt=new Date();f.row.overallComment='Preserved'
+    const response=await f.end({turns:[{id:'new',text:'New answer'}]})
+    assert.equal(response.status,409);assert.equal(f.turns.length,0);assert.equal(f.row.overallComment,'Preserved')
+  })
   await check('accepted late answer is included in a serial reevaluation before saving', async () => {
     const f = fixture(), run = f.evaluate()
     await tick()

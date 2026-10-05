@@ -10,6 +10,7 @@ import { loadSessionByToken } from '@/lib/mensetsu/public'
 import { waitUntil } from '@vercel/functions'
 import { runEvaluation } from '@/lib/mensetsu/run-evaluation'
 import type { Prisma } from '@prisma/client'
+import { createHash } from 'node:crypto'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -37,18 +38,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   //    書き込みを閉じるのは「評価が済んだ後」と「終了から十分に経った後」に限定する。
   //    （評価前の追記は面接中にも可能なので、ここを厳しくしても偽装は防げない）
   const GRACE_MS = 10 * 60 * 1000
-  if (s.evaluatedAt) {
-    return NextResponse.json({ error: 'この面接は評価済みです' }, { status: 409 })
-  }
-  if (s.endedAt && Date.now() - s.endedAt.getTime() > GRACE_MS) {
-    return NextResponse.json({ error: 'この面接は終了しています' }, { status: 409 })
-  }
   if (s.purgeAfter && s.purgeAfter.getTime() < Date.now()) {
     return NextResponse.json({ error: 'この面接の記録は削除されています' }, { status: 410 })
   }
 
   const body = await req.json().catch(() => ({}))
   const incoming = Array.isArray(body?.turns) ? body.turns.slice(0, MAX_TURNS_PER_CALL) : []
+  if (incoming.some((t: any) => t?.id != null && (typeof t.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(t.id)))) {
+    return NextResponse.json({ error: '発話の識別子が正しくありません' }, { status: 400 })
+  }
   if (incoming.length === 0) return NextResponse.json({ saved: 0 })
 
   // ⚠️ 到着順ではなく「話し始めた時刻」で並べてから採番する。
@@ -70,6 +68,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return av - bv
     })
     .map((t: any) => ({
+      ...(t.id == null ? {} : { id: `mt_${createHash('sha256').update(`${s.id}\0${t.id}`).digest('hex')}` }),
       sessionId: s.id,
       ord: 0,
       speaker: t.speaker === 'interviewer' ? 'interviewer' : 'candidate',
@@ -87,6 +86,27 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (!current) return { error: '面接が見つかりません', status: 404 }
     if (!current.consentedAt) return { error: '同意が必要です', status: 403 }
     if (current.purgeAfter && current.purgeAfter.getTime() <= Date.now()) return { error: 'この面接の記録は削除されています', status: 410 }
+    const identified = rows.filter((row) => row.id)
+    const existing = identified.length ? await tx.mensetsuTurn.findMany({
+      where: { sessionId: s.id, id: { in: identified.map((row) => row.id!) } },
+      select: { id: true, speaker: true, text: true, startMs: true, endMs: true, questionOrd: true },
+    }) : []
+    const seen = new Map<string, typeof rows[number] | typeof existing[number]>(existing.map((row) => [row.id, row]))
+    const additions: typeof rows = []
+    for (const row of rows) {
+      const prior = row.id ? seen.get(row.id) : undefined
+      if (prior) {
+        if (['speaker', 'text', 'startMs', 'endMs', 'questionOrd'].some((key) =>
+          prior[key as keyof typeof prior] !== row[key as keyof typeof row])) {
+          return { error: '保存済みの発話と再送された内容が一致しません', status: 409 }
+        }
+      } else {
+        additions.push(row)
+        if (row.id) seen.set(row.id, row)
+      }
+    }
+    // 応答だけが失われた再送は、評価確定後も保存済みと応答する。新規発話は追加しない。
+    if (additions.length === 0) return { shouldEvaluate: false }
     if (current.evaluatedAt) return { error: 'この面接は評価済みです', status: 409 }
     if (!current.startedAt || !['live', 'completed', 'evaluating', 'aborted'].includes(current.status) ||
         (current.endedAt && Date.now() - current.endedAt.getTime() > GRACE_MS)) {
@@ -95,8 +115,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const last = await tx.mensetsuTurn.findFirst({
       where: { sessionId: s.id }, orderBy: { ord: 'desc' }, select: { ord: true },
     })
-    rows.forEach((row, index) => { row.ord = (last?.ord ?? -1) + 1 + index })
-    await tx.mensetsuTurn.createMany({ data: rows })
+    additions.forEach((row, index) => { row.ord = (last?.ord ?? -1) + 1 + index })
+    await tx.mensetsuTurn.createMany({ data: additions })
     const shouldEvaluate = !!current.endedAt && ['completed', 'aborted'].includes(current.status)
     // 評価中の実行権は保持する。評価処理自身が追加発話を照合して再評価する。
     if (current.status !== 'evaluating') {

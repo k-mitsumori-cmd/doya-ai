@@ -490,8 +490,8 @@ export default function MensetsuLivePage() {
           <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
             <span className="material-symbols-outlined text-3xl text-[#8a94ad] font-medium">error</span>
             <p className="mt-2 max-w-sm text-sm font-bold text-[#0a0f3c]">{rt.error}</p>
-            <button onClick={beginInterview} className="mt-4 rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-black text-white">
-              もう一度試す
+            <button onClick={rt.needsSaveRetry ? () => void rt.end() : beginInterview} className="mt-4 rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-black text-white">
+              {rt.needsSaveRetry ? '保存を再試行する' : 'もう一度試す'}
             </button>
           </div>
         ) : (

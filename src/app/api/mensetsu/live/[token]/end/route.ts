@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { waitUntil } from '@vercel/functions'
 import { prisma } from '@/lib/prisma'
 import { runEvaluation } from '@/lib/mensetsu/run-evaluation'
+import { POST as saveTurns } from '../turn/route'
 import { loadSessionByToken } from '@/lib/mensetsu/public'
 
 type Ctx = { params: Promise<{ token: string }> }
@@ -19,6 +20,24 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const s = await loadSessionByToken(p.token)
   if (!s) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
+  // 離脱通知では未保存回答と終了を1リクエストに含める。
+  // 保存が確定するまで終了・評価を開始しない。通常の終了は空の回答で従来どおり。
+  let body: any = {}
+  try { if (_req.json) body = await _req.json() } catch {
+    return NextResponse.json({ error: '終了通知を読み取れませんでした' }, { status: 400 })
+  }
+  if (body?.turns != null && !Array.isArray(body.turns)) {
+    return NextResponse.json({ error: '発話の形式が正しくありません' }, { status: 400 })
+  }
+  if (Array.isArray(body?.turns) && body.turns.length > 0) {
+    if (body.turns.length > 50) return NextResponse.json({ error: '一度に保存できる発話数を超えています' }, { status: 400 })
+    const saved = await saveTurns({ json: async () => ({ turns: body.turns }) } as NextRequest, ctx)
+    if (!saved.ok) return saved
+    const confirmation = await saved.json()
+    if (confirmation.saved !== body.turns.length) {
+      return NextResponse.json({ error: 'すべての回答の保存を確認できませんでした' }, { status: 409 })
+    }
+  }
   if (s.status === 'evaluated' || s.status === 'evaluating' || s.status === 'completed') {
     return NextResponse.json({ ok: true, alreadyEnded: true })
   }

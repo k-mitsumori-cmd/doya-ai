@@ -21,6 +21,7 @@ function fixture({ turns = 1, started = true, status = 'live', waitUntilFails = 
     $transaction: async (callback) => callback(db),
   }
   const api = load('src/app/api/mensetsu/live/[token]/end/route.ts', {
+    '../turn/route': { POST: async () => { throw Error('unexpected transcript payload') } },
     'next/server': { NextResponse: { json: (body, options = {}) => ({ body, status: options.status || 200 }) } },
     '@vercel/functions': { waitUntil: (promise) => {
       if (waitUntilFails) throw new Error('synthetic unavailable context')
