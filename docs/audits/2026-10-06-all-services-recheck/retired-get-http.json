@@ -1,0 +1,203 @@
+{
+  "deploymentId": "dpl_DqB8z8ZiFs8MJQWC6eSs5MaUAF1e",
+  "sha": "b6f64ec59a42362675b05caa51bbd31bfff71a19",
+  "scope": "production unauthenticated GET only; POST/PUT/PATCH/DELETE and module source parity not covered by these HTTP probes",
+  "results": [
+    {
+      "path": "/api/adbanner/campaigns",
+      "status": 410
+    },
+    {
+      "path": "/api/adbanner/campaigns/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/adsim/projects",
+      "status": 410
+    },
+    {
+      "path": "/api/adsim/projects/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/adsim/projects/qa-retired-check/export",
+      "status": 410
+    },
+    {
+      "path": "/api/copy/brand-voice",
+      "status": 410
+    },
+    {
+      "path": "/api/copy/projects",
+      "status": 410
+    },
+    {
+      "path": "/api/copy/projects/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/interviewx/projects",
+      "status": 410
+    },
+    {
+      "path": "/api/interviewx/projects/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/interviewx/projects/qa-retired-check/drafts",
+      "status": 410
+    },
+    {
+      "path": "/api/interviewx/projects/qa-retired-check/drafts/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/interviewx/projects/qa-retired-check/export/html",
+      "status": 410
+    },
+    {
+      "path": "/api/interviewx/projects/qa-retired-check/export/markdown",
+      "status": 410
+    },
+    {
+      "path": "/api/interviewx/public/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/interviewx/public/qa-retired-check/chat/history",
+      "status": 410
+    },
+    {
+      "path": "/api/interviewx/public/qa-retired-check/status",
+      "status": 410
+    },
+    {
+      "path": "/api/interviewx/templates",
+      "status": 410
+    },
+    {
+      "path": "/api/interviewx/usage",
+      "status": 410
+    },
+    {
+      "path": "/api/lp/projects",
+      "status": 410
+    },
+    {
+      "path": "/api/lp/projects/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/lp/themes",
+      "status": 410
+    },
+    {
+      "path": "/api/movie/bgm",
+      "status": 410
+    },
+    {
+      "path": "/api/movie/projects",
+      "status": 410
+    },
+    {
+      "path": "/api/movie/projects/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/movie/render/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/movie/render/qa-retired-check/download",
+      "status": 410
+    },
+    {
+      "path": "/api/movie/templates",
+      "status": 410
+    },
+    {
+      "path": "/api/opening/animations/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/opening/projects",
+      "status": 410
+    },
+    {
+      "path": "/api/opening/projects/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/opening/usage",
+      "status": 410
+    },
+    {
+      "path": "/api/tenkai/api-key",
+      "status": 410
+    },
+    {
+      "path": "/api/tenkai/brand-voices",
+      "status": 410
+    },
+    {
+      "path": "/api/tenkai/brand-voices/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/tenkai/export",
+      "status": 410
+    },
+    {
+      "path": "/api/tenkai/health",
+      "status": 410
+    },
+    {
+      "path": "/api/tenkai/projects",
+      "status": 410
+    },
+    {
+      "path": "/api/tenkai/projects/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/tenkai/projects/qa-retired-check/outputs",
+      "status": 410
+    },
+    {
+      "path": "/api/tenkai/templates",
+      "status": 410
+    },
+    {
+      "path": "/api/tenkai/templates/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/tenkai/usage",
+      "status": 410
+    },
+    {
+      "path": "/api/voice/projects",
+      "status": 410
+    },
+    {
+      "path": "/api/voice/projects/qa-retired-check",
+      "status": 410
+    },
+    {
+      "path": "/api/voice/projects/qa-retired-check/download",
+      "status": 410
+    },
+    {
+      "path": "/api/voice/speakers",
+      "status": 410
+    },
+    {
+      "path": "/api/voice/speakers/qa-retired-check/sample",
+      "status": 410
+    },
+    {
+      "path": "/api/voice/usage",
+      "status": 410
+    }
+  ]
+}

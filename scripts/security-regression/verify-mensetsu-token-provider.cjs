@@ -32,6 +32,7 @@ function fixture(providerResponse, options = {}) {
   } };
   const publicApi = load('src/lib/mensetsu/public.ts', { '@/lib/prisma': { prisma } });
   const realtime = load('src/lib/realtime-token-response.ts');
+  const env = { OPENAI_API_KEY: 'apiKey' in options ? options.apiKey : 'synthetic-only' };
   const route = load('src/app/api/mensetsu/live/[token]/token/route.ts', {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
@@ -41,11 +42,11 @@ function fixture(providerResponse, options = {}) {
     '@/lib/realtime-token-response': realtime,
   }, {
     AbortSignal: { timeout(ms) { timeoutMs = ms; return AbortSignal.timeout(ms); } },
-    process: { env: { OPENAI_API_KEY: 'synthetic-only' } },
+    process: { env },
     console: { error: (...parts) => logs.push(parts) },
     fetch: async (_url, init) => { calls++; assert.ok(init.signal);options.duringFetch?.(session); return providerResponse(); },
   });
-  return { session, logs, get starts() { return starts; }, get calls() { return calls; }, get timeoutMs() { return timeoutMs; }, run: () => route.POST({}, { params: Promise.resolve({ token: 'long-enough-token' }) }) };
+  return { session, logs, setApiKey: value => env.OPENAI_API_KEY = value, get starts() { return starts; }, get calls() { return calls; }, get timeoutMs() { return timeoutMs; }, run: () => route.POST({}, { params: Promise.resolve({ token: 'long-enough-token' }) }) };
 }
 
 (async () => {
@@ -93,5 +94,15 @@ function fixture(providerResponse, options = {}) {
     assert.equal((await f.run()).status, 200);
     assert.equal(f.session.startedAt, first);
     assert.equal(f.starts, 0);
+  });
+  await check('Mensetsu missing provider configuration does not exhaust connection attempts', async () => {
+    const f = fixture(() => Response.json({ value: 'SYNTHETIC_SECRET' }), { apiKey: undefined });
+    for (let i = 0; i < 13; i++) assert.equal((await f.run()).status, 503);
+    assert.equal(f.session.tokenIssueCount, 0); assert.equal(f.calls, 0); assert.equal(f.starts, 0);
+    f.setApiKey('synthetic-restored'); assert.equal((await f.run()).status, 200); assert.equal(f.session.tokenIssueCount, 1); assert.equal(f.calls, 1);
+  });
+  await check('Mensetsu expired conversation does not spend a connection reservation', async () => {
+    const f = fixture(() => Response.json({ value: 'SYNTHETIC_SECRET' }), { session: { status: 'live', startedAt: new Date(Date.now() - 26 * 60000) } });
+    assert.equal((await f.run()).status, 410); assert.equal(f.session.tokenIssueCount, 0); assert.equal(f.calls, 0);
   });
 })().catch(error => { console.error(error); process.exitCode = 1; });

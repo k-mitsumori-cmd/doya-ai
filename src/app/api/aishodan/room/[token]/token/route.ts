@@ -45,6 +45,19 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
 
   const cfg = toScenarioConfig(s.room.scenario)
 
+  // 時間窓。商談の長さ＋猶予を過ぎたら発行しない
+  if (s.startedAt) {
+    const graceMs = (cfg.durationMin * 60 + 15 * 60) * 1000
+    if (Date.now() - s.startedAt.getTime() > graceMs) {
+      return NextResponse.json({ error: 'この商談の実施時間を過ぎています。' }, { status: 410 })
+    }
+  }
+
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    return NextResponse.json({ error: '音声商談の設定が未完了です（管理者にお問い合わせください）' }, { status: 503 })
+  }
+
   // --- 発行の上限 ---
   // ⚠️ ここは1回叩くごとに OPENAI_API_KEY 課金の Realtime 資格情報が1つ生まれる。
   //    上限が無いと、URLを持つ者が有効期間中いくらでも発行でき、従量課金と
@@ -67,19 +80,6 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
       { error: '接続の試行回数が上限に達しました。お手数ですが担当者までご連絡ください。' },
       { status: 429 }
     )
-  }
-
-  // 時間窓。商談の長さ＋猶予を過ぎたら発行しない
-  if (s.startedAt) {
-    const graceMs = (cfg.durationMin * 60 + 15 * 60) * 1000
-    if (Date.now() - s.startedAt.getTime() > graceMs) {
-      return NextResponse.json({ error: 'この商談の実施時間を過ぎています。' }, { status: 410 })
-    }
-  }
-
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ error: '音声商談の設定が未完了です（管理者にお問い合わせください）' }, { status: 503 })
   }
 
   // 冒頭の説明に使う資料の抜粋を少しだけ積む。全文は積まない（指示文が膨らむと守られなくなる）

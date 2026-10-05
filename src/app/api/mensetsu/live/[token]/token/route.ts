@@ -42,6 +42,11 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' }, { status: 410 })
   }
 
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    return NextResponse.json({ error: '音声面接の設定が未完了です（管理者にお問い合わせください）' }, { status: 503 })
+  }
+
   // --- 発行の上限（未認証で叩ける口なので必須）---
   // ⚠️ ここは1回叩くごとに OPENAI_API_KEY 課金の Realtime 資格情報が1つ生まれる。
   //    以前は上限も時間窓も無く、面接URLを持つ者が expiresAt までの14日間
@@ -68,11 +73,6 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
       { error: '接続の試行回数が上限に達しました。採用ご担当者にお問い合わせください。' },
       { status: 429 }
     )
-  }
-
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ error: '音声面接の設定が未完了です（管理者にお問い合わせください）' }, { status: 503 })
   }
 
   const instructions = buildInterviewerInstructions({

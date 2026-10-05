@@ -1,0 +1,129 @@
+{
+  "deploymentId": "dpl_DqB8z8ZiFs8MJQWC6eSs5MaUAF1e",
+  "sha": "b6f64ec59a42362675b05caa51bbd31bfff71a19",
+  "scope": "LP GET and unauthenticated cron GET only; no authenticated work, AI, notifications or purge manually invoked",
+  "results": [
+    {
+      "path": "/banner",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/banner",
+      "expected": 200
+    },
+    {
+      "path": "/seo",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/seo",
+      "expected": 200
+    },
+    {
+      "path": "/interview",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/interview",
+      "expected": 200
+    },
+    {
+      "path": "/persona",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/persona",
+      "expected": 200
+    },
+    {
+      "path": "/hr",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/hr",
+      "expected": 200
+    },
+    {
+      "path": "/kintai",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/kintai",
+      "expected": 200
+    },
+    {
+      "path": "/doyalist",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/doyalist",
+      "expected": 200
+    },
+    {
+      "path": "/promane",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/promane",
+      "expected": 200
+    },
+    {
+      "path": "/doyaslide",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/doyaslide",
+      "expected": 200
+    },
+    {
+      "path": "/cunning",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/cunning",
+      "expected": 200
+    },
+    {
+      "path": "/sfa",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/sfa",
+      "expected": 200
+    },
+    {
+      "path": "/shodan",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/shodan",
+      "expected": 200
+    },
+    {
+      "path": "/aio",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/aio",
+      "expected": 200
+    },
+    {
+      "path": "/mensetsu",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/mensetsu",
+      "expected": 200
+    },
+    {
+      "path": "/quote",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/quote",
+      "expected": 200
+    },
+    {
+      "path": "/aishodan",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/aishodan",
+      "expected": 200
+    },
+    {
+      "path": "/adimage",
+      "status": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/adimage",
+      "expected": 200
+    },
+    {
+      "path": "/api/cron/aishodan-evaluations",
+      "status": 401,
+      "expected": 401
+    },
+    {
+      "path": "/api/cron/aishodan-notifications",
+      "status": 401,
+      "expected": 401
+    },
+    {
+      "path": "/api/cron/aishodan-work-cleanup",
+      "status": 401,
+      "expected": 401
+    },
+    {
+      "path": "/api/cron/aishodan-retention",
+      "status": 401,
+      "expected": 401
+    }
+  ]
+}
