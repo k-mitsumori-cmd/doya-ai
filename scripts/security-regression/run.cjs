@@ -970,7 +970,7 @@ if (mensetsuConsentAtomic.error || mensetsuConsentAtomic.status !== 0) {
   console.error('Security regression failed: verify-mensetsu-consent-atomic.cjs');
   process.exit(1);
 }
-for (const file of ['verify-mensetsu-manager-state-atomic.cjs', 'verify-mensetsu-recording-lease.cjs', 'verify-mensetsu-recording-purge-queue.cjs', 'verify-mensetsu-transcript-finalization.cjs', 'verify-mensetsu-turn-idempotency.cjs', 'verify-mensetsu-client-delivery.cjs']) {
+for (const file of ['verify-mensetsu-manager-state-atomic.cjs', 'verify-mensetsu-recording-lease.cjs', 'verify-mensetsu-recording-purge-queue.cjs', 'verify-mensetsu-transcript-finalization.cjs', 'verify-mensetsu-turn-idempotency.cjs', 'verify-mensetsu-client-delivery.cjs', 'verify-aishodan-transcript-identity.cjs']) {
   const result = spawnSync(process.execPath, [path.join(__dirname, file)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) {
     console.error(`Security regression failed: ${file}`);

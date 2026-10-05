@@ -10,6 +10,7 @@
 // なぜ直結か: Vercel Serverless は WebSocket を長時間保持できない。
 // 音声をサーバ中継する構成は成立しないため、ブラウザから直接つなぐ。
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { transcriptSource } from '@/lib/realtime/transcript-source'
 import { isLikelyHallucination } from '@/lib/realtime/hallucination'
 
 export interface TranscriptLine {
@@ -41,13 +42,6 @@ const SILENCE_NUDGE_MS = 20000
 
 /** 通信が切れたまま何分待つか。超えたら打ち切って部分評価へ回す（F1-8） */
 const DISCONNECT_GRACE_MS = 3 * 60 * 1000
-
-// transcript.doneとresponse.doneは別のevent_idを持つため、音声項目のIDを使う。
-function transcriptSource(itemId: unknown, contentIndex: unknown): string | undefined {
-  if (typeof itemId !== 'string' || !itemId) return undefined
-  const index = typeof contentIndex === 'number' && Number.isSafeInteger(contentIndex) && contentIndex >= 0 ? contentIndex : 0
-  return `${itemId}:${index}`
-}
 
 export function useRealtimeInterview({ token, onEnded, recordAudio = false }: UseRealtimeInterviewOptions) {
   const [state, setState] = useState<ConnState>('idle')

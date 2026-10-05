@@ -14,6 +14,7 @@
 //    洗い出した挙動（イベント名の世代交代・ログの取りこぼし・離脱時の誤終了・
 //    発話順序の反転）をそのまま引き継いでいる。コメントの警告は消さないこと。
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { transcriptSource } from '@/lib/realtime/transcript-source'
 import { isLikelyHallucination } from '@/lib/realtime/hallucination'
 
 export interface TranscriptLine {
@@ -138,8 +139,8 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
     }
   }, [api, sessionId])
 
-  /** 直近に積んだ発話。transcript イベントと response.done の二重登録を防ぐ */
-  const recentRef = useRef<{ key: string; at: number }[]>([])
+  /** 同じ音声項目・内容パートの再通知だけを除く。 */
+  const recentRef = useRef<Set<string>>(new Set())
   /**
    * 各話者の「話し始めた時刻」。
    * ⚠️ 発話は読み上げ／認識が終わって初めて確定するため、確定時刻で並べると
@@ -148,21 +149,20 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
    */
   const speechStartRef = useRef<{ ai: number; guest: number }>({ ai: 0, guest: 0 })
 
-  const pushLine = useCallback((speaker: TranscriptLine['speaker'], text: string) => {
+  const pushLine = useCallback((speaker: TranscriptLine['speaker'], text: string, sourceId?: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
     // ⚠️ 無音・雑音に対する文字起こしの捏造を捨てる。
     //    採用すると商談ログ・スロット抽出・適合判定のすべてが汚染され、
     //    AIがその幻の発言に反応してターンを浪費する（実機で発生）。
     if (isLikelyHallucination(trimmed, speaker)) return
-    // 同じ発話が別イベント経由で二度届くことがある（保険経路との重複）。
-    // ⚠️ 件数で判定すると「はい」「なるほど」のような短い相槌が2回目以降まるごと
-    //    消える。重複は必ず数百ms以内に届くので、5秒の時間窓に限定する。
-    const key = `${speaker}:${trimmed}`
-    const nowMs = Date.now()
-    recentRef.current = recentRef.current.filter((r) => nowMs - r.at < 5000)
-    if (recentRef.current.some((r) => r.key === key)) return
-    recentRef.current.push({ key, at: nowMs })
+    // 同じ「はい」を続けて答えることは正当な別発話。文面と時間では推測しない。
+    // 手入力・識別子のないイベントは保存し、同じ音声項目の再通知だけを除く。
+    if (sourceId) {
+      const key = `${speaker}:${sourceId}`
+      if (recentRef.current.has(key)) return
+      recentRef.current.add(key)
+    }
 
     const startedAt = speechStartRef.current[speaker] || Date.now()
     speechStartRef.current[speaker] = 0
@@ -467,7 +467,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
         //    「アバターが喋る状態にならない」が本番で静かに同時発生した。
         //    以後どちらでも拾えるよう後方一致で判定する。
         if (t.endsWith('audio_transcript.done')) {
-          pushLine('ai', ev.transcript || '')
+          pushLine('ai', ev.transcript || '', transcriptSource(ev.item_id, ev.content_index))
           return
         }
         if (t.endsWith('audio.delta')) {
@@ -479,7 +479,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
 
         switch (t) {
           case 'conversation.item.input_audio_transcription.completed':
-            pushLine('guest', ev.transcript || '')
+            pushLine('guest', ev.transcript || '', transcriptSource(ev.item_id, ev.content_index))
             break
           case 'input_audio_buffer.speech_started':
             if (!speechStartRef.current.guest) speechStartRef.current.guest = Date.now()
@@ -502,8 +502,8 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
             // response.done の中身からAIの発話を拾えるようにする。
             const items = ev?.response?.output ?? []
             for (const item of items) {
-              for (const c of item?.content ?? []) {
-                if (typeof c?.transcript === 'string' && c.transcript.trim()) pushLine('ai', c.transcript)
+              for (const [contentIndex, c] of (item?.content ?? []).entries()) {
+                if (typeof c?.transcript === 'string' && c.transcript.trim()) pushLine('ai', c.transcript, transcriptSource(item.id, contentIndex))
               }
             }
             void flushTurns()

@@ -6,7 +6,7 @@ function fixture(responder=async()=>({ok:true,status:200,json:async()=>({ok:true
  const refs=[],callbacks=[],effects=[],events={},beacons=[],states=[],calls=[]
  const hook=load('src/lib/mensetsu/useRealtimeInterview.ts',{
   react:{useRef:v=>{const r={current:v};refs.push(r);return r},useState:v=>{const i=states.length;states.push(v);return [v,value=>states[i]=value]},useCallback:fn=>{callbacks.push(fn);return fn},useEffect:fn=>effects.push(fn)},
-  '@/lib/realtime/hallucination':{isLikelyHallucination:()=>false}
+  '@/lib/realtime/transcript-source':load('src/lib/realtime/transcript-source.ts'), '@/lib/realtime/hallucination':{isLikelyHallucination:()=>false}
  },{fetch:async(url,options)=>{const call={url,options,body:typeof options.body==='string'?JSON.parse(options.body):JSON.parse(await options.body.text())};calls.push(call);return responder(call)},setTimeout,clearTimeout,Blob,AbortController,crypto:require('node:crypto').webcrypto,window:{addEventListener:(key,fn)=>events[key]=fn,removeEventListener(){}},navigator:{sendBeacon:(url,body)=>{beacons.push({url,body});return beacon}}})
  const api=hook.useRealtimeInterview({token:'synthetic',recordAudio:false});refs[6].current=Date.now()-1000
  return {api,refs,states,calls,beacons,flush:callbacks[0],pushLine:callbacks[1],pagehide:()=>{effects.at(-1)();events.pagehide({persisted:false})},bfcache:()=>{effects.at(-1)();events.pagehide({persisted:true})},enqueue:n=>refs[7].current.push(...Array.from({length:n},(_,i)=>({id:`id-${i}`,speaker:'candidate',text:`Answer ${i}`,at:Date.now(),startMs:100})))}
@@ -22,7 +22,7 @@ const success=call=>({ok:true,status:200,json:async()=>call.url.endsWith('/turn'
   const refs=[],callbacks=[],saved=[];let dc
   const hooks={useRef:v=>{const r={current:v};refs.push(r);return r},useState:v=>[v,()=>{}],useCallback:fn=>{callbacks.push(fn);return fn},useEffect(){}}
   class Peer { addTrack(){} createDataChannel(){dc={readyState:'connecting',addEventListener(){},send(){},close(){}};return dc}async createOffer(){return{sdp:'synthetic-sdp'}}async setLocalDescription(){}async setRemoteDescription(){}close(){}}
-  const hook=load('src/lib/mensetsu/useRealtimeInterview.ts',{react:hooks,'@/lib/realtime/hallucination':{isLikelyHallucination:()=>false}}, {
+  const hook=load('src/lib/mensetsu/useRealtimeInterview.ts',{react:hooks,'@/lib/realtime/transcript-source':load('src/lib/realtime/transcript-source.ts'), '@/lib/realtime/hallucination':{isLikelyHallucination:()=>false}}, {
    RTCPeerConnection:Peer,Audio:class{},AbortController,crypto:require('node:crypto').webcrypto,setTimeout,clearTimeout,
    navigator:{mediaDevices:{getUserMedia:async()=>({getTracks:()=>[{stop(){}}]})}},
    fetch:async(url,opts)=>{if(url.endsWith('/token'))return{ok:true,json:async()=>({clientSecret:'synthetic-not-valid',model:'synthetic'})};if(url.startsWith('https://api.openai.com/'))return{ok:true,text:async()=>'synthetic-sdp'};const body=JSON.parse(opts.body);saved.push(...body.turns);return{ok:true,json:async()=>({saved:body.turns.length})}},
