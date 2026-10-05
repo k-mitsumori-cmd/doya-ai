@@ -23,14 +23,24 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '同意が必要です' }, { status: 400 })
   }
 
+  // 再送や別タブからの同意で、実施中の状態や初回の同意記録を戻さない。
+  if (s.consentedAt) return NextResponse.json({ session: toPublicSession(s) })
+  if (s.startedAt || s.endedAt || !['pending', 'consented'].includes(s.status)) {
+    return NextResponse.json({ error: '面接の状態が変わりました。再読み込みしてください。' }, { status: 409 })
+  }
+
   const name = String(body?.candidateName || '').trim()
 
   // ⚠️ 以前はここで「ご本人確認用メール」の照合を行っていたが、
   //    採用担当者と応募者の双方にとって手順が分かりにくく、
   //    2026-08-31 に機能ごと廃止した（DBの列は復帰の余地のため残してある）。
 
-  const updated = await prisma.mensetsuSession.update({
-    where: { id: s.id },
+  const saved = await prisma.mensetsuSession.updateMany({
+    where: {
+      id: s.id, status: { in: ['pending', 'consented'] },
+      startedAt: null, endedAt: null, consentedAt: null,
+      expiresAt: { gt: new Date() }, updatedAt: s.updatedAt,
+    },
     data: {
       status: 'consented',
       consentedAt: new Date(),
@@ -42,6 +52,16 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       ...(name ? { candidateName: name } : {}),
     },
   })
-
-  return NextResponse.json({ session: toPublicSession({ ...s, ...updated } as any) })
+  const current = await loadSessionByToken(p.token)
+  if (!current) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
+  const currentUsable = assertUsable(current)
+  if (!currentUsable.ok) return NextResponse.json({ error: currentUsable.reason }, { status: currentUsable.status })
+  if (!current.consentedAt) {
+    return NextResponse.json({ error: '面接の状態が変わりました。再読み込みしてください。' }, { status: 409 })
+  }
+  // 同時の同意リクエストが先に成功した場合も、その初回記録を返す。
+  if (saved.count !== 1 && !['consented', 'live'].includes(current.status)) {
+    return NextResponse.json({ error: '面接の状態が変わりました。再読み込みしてください。' }, { status: 409 })
+  }
+  return NextResponse.json({ session: toPublicSession(current) })
 }
