@@ -10,6 +10,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { assertUsable, loadSessionByToken } from '@/lib/mensetsu/public'
+import { trackMensetsuRecordingUpload } from '@/lib/mensetsu/recording-purge-queue'
 import { createSignedUploadUrl, recordingExists } from '@/lib/mensetsu/storage'
 
 type Ctx = { params: Promise<{ token: string }> }
@@ -32,6 +33,9 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
 
   try {
     const { signedUrl, token, path } = await createSignedUploadUrl(pathFor(s.id))
+    if (!(await trackMensetsuRecordingUpload(prisma, s.id))) {
+      return NextResponse.json({ error: '録音の保存対象の状態が変わりました。' }, { status: 409 })
+    }
     return NextResponse.json({ signedUrl, token, path })
   } catch (e: any) {
     console.error('[mensetsu/live/[token]/recording] unexpected error')

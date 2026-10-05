@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { purgeQueuedMensetsuRecordings } from '@/lib/mensetsu/recording-purge-queue'
 import { EVALUATION_STALE_MS } from '@/lib/mensetsu/types'
 
 export const runtime = 'nodejs'
@@ -170,6 +171,14 @@ export async function GET(req: NextRequest) {
 
   }
 
+  // 未登録のアップロードも独立した追跡記録から回収する。失敗時はキューを保持する。
+  let recordingPurge
+  try { recordingPurge = await purgeQueuedMensetsuRecordings(prisma, now, BATCH) } catch {
+    recordingPurge = { failed: 1, queued: null }
+  }
+
+  if (recordingPurge.failed > 0) console.error('[mensetsu-purge] tracked recording cleanup incomplete', recordingPurge.failed)
+
   const remaining = await prisma.mensetsuSession.count({
     where: {
       purgeAfter: { lt: now },
@@ -187,5 +196,6 @@ export async function GET(req: NextRequest) {
     storageFailures: storageFailures.length,
     // BATCH上限で積み残した件数。0でなければ翌日以降も削除が続く。
     remaining,
+    recordingPurge,
   })
 }

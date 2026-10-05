@@ -28,6 +28,7 @@ function fixture({ minutesOld, evaluated = false, takeover = false, liveCloseFai
     },
   }
   const api = load('src/app/api/cron/mensetsu-purge/route.ts', {
+    '@/lib/mensetsu/recording-purge-queue': { purgeQueuedMensetsuRecordings: async () => ({ processed: 0, finalized: 0, deferred: 0, failed: 0, queued: 0 }) },
     'next/server': { NextResponse: { json: (body) => ({ body }) } },
     '@/lib/prisma': { prisma: db },
     '@/lib/mensetsu/types': { EVALUATION_STALE_MS: 360000 },

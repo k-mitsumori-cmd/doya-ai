@@ -16,7 +16,8 @@ async function safe(promise, status, message) {
 ;(async () => {
   await check('Interview article retrieval never returns private database error', async () => {
     const api = load('src/app/api/interview/articles/[id]/route.ts', {
-      'next/server': server,
+      '@/lib/mensetsu/recording-purge-queue': { trackMensetsuRecordingUpload: async () => ({ processed: 0, finalized: 0, deferred: 0, failed: 0, queued: 0 }) },
+    'next/server': server,
       '@/lib/prisma': { prisma: { interviewDraft: { findUnique: failure } } },
       '@/lib/interview/access': {
         requireDatabase: () => null,
@@ -29,7 +30,8 @@ async function safe(promise, status, message) {
   })
   await check('Promane workspace listing keeps 401 and hides database errors', async () => {
     const mocks = {
-      'next/server': server,
+      '@/lib/mensetsu/recording-purge-queue': { trackMensetsuRecordingUpload: async () => ({ processed: 0, finalized: 0, deferred: 0, failed: 0, queued: 0 }) },
+    'next/server': server,
       'next-auth': { getServerSession: async () => ({ user: { id: 'owner' } }) },
       '@/lib/auth': { authOptions: {} },
       '@/lib/prisma': { prisma: { promaneMember: { findMany: failure } } },
@@ -41,7 +43,8 @@ async function safe(promise, status, message) {
   })
   await check('Mensetsu recording URL provider failure is a safe 502', async () => {
     const api = load('src/app/api/mensetsu/live/[token]/recording/route.ts', {
-      'next/server': server,
+      '@/lib/mensetsu/recording-purge-queue': { trackMensetsuRecordingUpload: async () => ({ processed: 0, finalized: 0, deferred: 0, failed: 0, queued: 0 }) },
+    'next/server': server,
       '@/lib/prisma': { prisma: {} },
       '@/lib/mensetsu/public': { loadSessionByToken: async () => ({ id: 'session', consentedAt: new Date(), organization: { recordAudio: true } }), assertUsable: () => ({ ok: true }) },
       '@/lib/mensetsu/storage': { createSignedUploadUrl: failure, recordingExists: async () => false },

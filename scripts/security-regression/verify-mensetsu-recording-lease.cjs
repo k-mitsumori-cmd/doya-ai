@@ -43,6 +43,7 @@ function fixture({ duringVerify, exists = true } = {}) {
     './evaluate': { evaluateSession: () => new Promise((resolve, reject) => pending.push({ resolve, reject })) },
   })
   const recording = load('src/app/api/mensetsu/live/[token]/recording/route.ts', {
+    '@/lib/mensetsu/recording-purge-queue': { trackMensetsuRecordingUpload: async () => { throw Error('unused POST') } },
     'next/server': { NextResponse: { json: (body, options = {}) => ({ body, status: options.status || 200 }) } },
     '@/lib/prisma': { prisma: db },
     '@/lib/mensetsu/public': { loadSessionByToken: async () => ({ ...row }), assertUsable: () => ({ ok: true }) },
