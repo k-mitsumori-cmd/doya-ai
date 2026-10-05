@@ -4,4 +4,5 @@
 *.log
 .next/
 .git/
-doya-ai/
+# Exclude only the legacy app at the repository root, not public/resources/doya-ai/.
+/doya-ai/
