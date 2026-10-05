@@ -1,0 +1,122 @@
+{
+  "scope": "actual React entry components, shared hook and installed NextAuth SDK in isolated browser harness; LP layout and router stubbed; fake session; APIs mocked or blocked; no Google OAuth or database writes",
+  "results": [
+    {
+      "service": "aio",
+      "checks": [
+        {
+          "enabled": true,
+          "values": [
+            "https://example.invalid/local-qa"
+          ],
+          "errorVisible": true,
+          "visibleErrorCount": 1
+        },
+        {
+          "enabled": true,
+          "values": [
+            "https://example.invalid/local-qa"
+          ],
+          "errorVisible": true,
+          "visibleErrorCount": 1
+        }
+      ]
+    },
+    {
+      "service": "sfa",
+      "checks": [
+        {
+          "enabled": true,
+          "values": [
+            "ローカル確認用組織",
+            "合成テスト利用者"
+          ],
+          "errorVisible": true,
+          "visibleErrorCount": 1
+        },
+        {
+          "enabled": true,
+          "values": [
+            "ローカル確認用組織",
+            "合成テスト利用者"
+          ],
+          "errorVisible": true,
+          "visibleErrorCount": 1
+        }
+      ]
+    },
+    {
+      "service": "shodan",
+      "checks": [
+        {
+          "enabled": true,
+          "values": [
+            "ローカル確認用組織",
+            "合成テスト利用者"
+          ],
+          "errorVisible": true,
+          "visibleErrorCount": 1
+        },
+        {
+          "enabled": true,
+          "values": [
+            "ローカル確認用組織",
+            "合成テスト利用者"
+          ],
+          "errorVisible": true,
+          "visibleErrorCount": 1
+        }
+      ]
+    }
+  ],
+  "earlierObservations": [
+    {
+      "service": "sfa",
+      "verifiedRetry": {
+        "enabled": true,
+        "values": [
+          "ローカル確認用組織",
+          "合成テスト利用者"
+        ],
+        "error": true
+      },
+      "earlierAttempt": "button recovered and inputs retained; toast observation was too late; not counted as complete toast verification"
+    },
+    {
+      "service": "shodan",
+      "first": {
+        "enabled": true,
+        "values": [
+          "ローカル確認用組織",
+          "合成テスト利用者"
+        ],
+        "error": true
+      },
+      "retry": {
+        "enabled": true,
+        "values": [
+          "ローカル確認用組織",
+          "合成テスト利用者"
+        ],
+        "error": false
+      }
+    },
+    {
+      "service": "aio",
+      "first": {
+        "enabled": true,
+        "values": [
+          "https://example.invalid/local-qa"
+        ],
+        "error": true
+      },
+      "retry": {
+        "enabled": true,
+        "values": [
+          "https://example.invalid/local-qa"
+        ],
+        "error": true
+      }
+    }
+  ]
+}

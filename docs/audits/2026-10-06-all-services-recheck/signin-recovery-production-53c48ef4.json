@@ -1,0 +1,17 @@
+{
+  "deploymentId": "dpl_FssMvwHT53xmYihAHPRwfpRG8uB7",
+  "sha": "53c48ef4280d4422e80b3458b84cdf76237a54f9",
+  "readyState": "READY",
+  "productionAliasVerified": true,
+  "status": 200,
+  "assetsChecked": 17,
+  "checks": [
+    {
+      "path": "/_next/static/chunks/app/auth/signin/page-a9b2ae6fb9c007e8.js?dpl=dpl_FssMvwHT53xmYihAHPRwfpRG8uB7",
+      "hasRetryMessage": true,
+      "hasHistoryRestoreListener": true,
+      "containsInternalGoogleSetupCopy": false
+    }
+  ],
+  "scope": "production anonymous HTML and served JS only; no Google OAuth, API writes, or full session recovery verification"
+}

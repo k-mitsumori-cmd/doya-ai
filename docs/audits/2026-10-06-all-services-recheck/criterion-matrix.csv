@@ -43,8 +43,8 @@ banner,C041,利用上限,チーム枠の契約者と操作ユーザーを取り�
 banner,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 banner,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 banner,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-banner,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-banner,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+banner,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+banner,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 banner,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 banner,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 banner,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -165,8 +165,8 @@ seo,C041,利用上限,チーム枠の契約者と操作ユーザーを取り違�
 seo,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 seo,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 seo,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-seo,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-seo,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+seo,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+seo,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 seo,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 seo,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 seo,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -287,8 +287,8 @@ interview,C041,利用上限,チーム枠の契約者と操作ユーザーを取�
 interview,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 interview,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 interview,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-interview,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-interview,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+interview,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+interview,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 interview,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 interview,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 interview,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -409,8 +409,8 @@ persona,C041,利用上限,チーム枠の契約者と操作ユーザーを取り
 persona,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 persona,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 persona,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-persona,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-persona,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+persona,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+persona,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 persona,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 persona,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 persona,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -531,8 +531,8 @@ hr,C041,利用上限,チーム枠の契約者と操作ユーザーを取り違�
 hr,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 hr,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 hr,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-hr,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-hr,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+hr,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+hr,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 hr,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 hr,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 hr,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -653,8 +653,8 @@ kintai,C041,利用上限,チーム枠の契約者と操作ユーザーを取り�
 kintai,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 kintai,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 kintai,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-kintai,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-kintai,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+kintai,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+kintai,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 kintai,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 kintai,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 kintai,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -775,8 +775,8 @@ doyalist,C041,利用上限,チーム枠の契約者と操作ユーザーを取�
 doyalist,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 doyalist,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 doyalist,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-doyalist,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-doyalist,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+doyalist,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+doyalist,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 doyalist,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 doyalist,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 doyalist,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -897,8 +897,8 @@ promane,C041,利用上限,チーム枠の契約者と操作ユーザーを取り
 promane,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 promane,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 promane,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-promane,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-promane,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+promane,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+promane,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 promane,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 promane,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 promane,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -1019,8 +1019,8 @@ doyaslide,C041,利用上限,チーム枠の契約者と操作ユーザーを取�
 doyaslide,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 doyaslide,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 doyaslide,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-doyaslide,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-doyaslide,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+doyaslide,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+doyaslide,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 doyaslide,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 doyaslide,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 doyaslide,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -1141,8 +1141,8 @@ cunning,C041,利用上限,チーム枠の契約者と操作ユーザーを取り
 cunning,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 cunning,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 cunning,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-cunning,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-cunning,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+cunning,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+cunning,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 cunning,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 cunning,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 cunning,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -1263,8 +1263,8 @@ sfa,C041,利用上限,チーム枠の契約者と操作ユーザーを取り違�
 sfa,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 sfa,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 sfa,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-sfa,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-sfa,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+sfa,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+sfa,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 sfa,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 sfa,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 sfa,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -1312,8 +1312,8 @@ sfa,U08,user-experience,組織作成・メンバー招待・既存組織参加�
 sfa,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
 sfa,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
 sfa,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,現在版での項目別通し検証待ち,
-sfa,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,現在版での項目別通し検証待ち,
-sfa,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,現在版での項目別通し検証待ち,
+sfa,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：入口の認証失敗・再試行・連打・履歴復元／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md
+sfa,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,一部検証済み：入口の認証失敗・再試行・連打・履歴復元／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md
 sfa,U14,user-experience,生成途中の失敗・一部成功でも成果物を救出でき、再試行対象と追加消費が分かる。,現在版での項目別通し検証待ち,
 sfa,U15,user-experience,確定済み書類・終了した評価・締めた勤怠は通常操作で意図せず書き換わらない。,現在版での項目別通し検証待ち,
 sfa,U16,user-experience,残量をサーバー実績に合わせ、端末変更や再ログインで一致する。,現在版での項目別通し検証待ち,
@@ -1385,8 +1385,8 @@ shodan,C041,利用上限,チーム枠の契約者と操作ユーザーを取り�
 shodan,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 shodan,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 shodan,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-shodan,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-shodan,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+shodan,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+shodan,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 shodan,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 shodan,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 shodan,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -1434,8 +1434,8 @@ shodan,U08,user-experience,組織作成・メンバー招待・既存組織参�
 shodan,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
 shodan,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
 shodan,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,現在版での項目別通し検証待ち,
-shodan,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,現在版での項目別通し検証待ち,
-shodan,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,現在版での項目別通し検証待ち,
+shodan,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：入口の認証失敗・再試行・連打・履歴復元／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md
+shodan,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,一部検証済み：入口の認証失敗・再試行・連打・履歴復元／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md
 shodan,U14,user-experience,生成途中の失敗・一部成功でも成果物を救出でき、再試行対象と追加消費が分かる。,現在版での項目別通し検証待ち,
 shodan,U15,user-experience,確定済み書類・終了した評価・締めた勤怠は通常操作で意図せず書き換わらない。,現在版での項目別通し検証待ち,
 shodan,U16,user-experience,残量をサーバー実績に合わせ、端末変更や再ログインで一致する。,現在版での項目別通し検証待ち,
@@ -1507,8 +1507,8 @@ aio,C041,利用上限,チーム枠の契約者と操作ユーザーを取り違�
 aio,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 aio,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 aio,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-aio,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-aio,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+aio,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+aio,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 aio,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 aio,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 aio,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -1556,8 +1556,8 @@ aio,U08,user-experience,組織作成・メンバー招待・既存組織参加�
 aio,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
 aio,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
 aio,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,現在版での項目別通し検証待ち,
-aio,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,現在版での項目別通し検証待ち,
-aio,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,現在版での項目別通し検証待ち,
+aio,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：入口の認証失敗・再試行・連打・履歴復元／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md
+aio,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,一部検証済み：入口の認証失敗・再試行・連打・履歴復元／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md
 aio,U14,user-experience,生成途中の失敗・一部成功でも成果物を救出でき、再試行対象と追加消費が分かる。,現在版での項目別通し検証待ち,
 aio,U15,user-experience,確定済み書類・終了した評価・締めた勤怠は通常操作で意図せず書き換わらない。,現在版での項目別通し検証待ち,
 aio,U16,user-experience,残量をサーバー実績に合わせ、端末変更や再ログインで一致する。,現在版での項目別通し検証待ち,
@@ -1629,8 +1629,8 @@ mensetsu,C041,利用上限,チーム枠の契約者と操作ユーザーを取�
 mensetsu,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 mensetsu,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 mensetsu,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-mensetsu,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-mensetsu,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+mensetsu,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+mensetsu,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 mensetsu,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 mensetsu,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 mensetsu,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -1751,8 +1751,8 @@ quote,C041,利用上限,チーム枠の契約者と操作ユーザーを取り�
 quote,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 quote,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 quote,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-quote,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-quote,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+quote,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+quote,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 quote,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 quote,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 quote,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -1873,8 +1873,8 @@ aishodan,C041,利用上限,チーム枠の契約者と操作ユーザーを取�
 aishodan,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 aishodan,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 aishodan,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-aishodan,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-aishodan,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+aishodan,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+aishodan,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 aishodan,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 aishodan,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 aishodan,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,
@@ -1995,8 +1995,8 @@ adimage,C041,利用上限,チーム枠の契約者と操作ユーザーを取り
 adimage,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 adimage,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 adimage,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
-adimage,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：production接続先のテーブル・列の存在一致／型・null制約未検証,production-readonly-schema.json; README.md
-adimage,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：宣言済み外部キー列の存在一致／複合一意・削除規則未検証,production-readonly-schema.json; README.md
+adimage,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
+adimage,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 adimage,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
 adimage,C048,データ・DB,同一組織内の関連付け制約が守られる,現在版での項目別通し検証待ち,
 adimage,C049,データ・DB,部署・タスク階層に循環を作れない,現在版での項目別通し検証待ち,

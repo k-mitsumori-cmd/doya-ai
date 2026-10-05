@@ -16,6 +16,14 @@
       "sdkCalls": 1,
       "creatingAfterRejectedStart": true,
       "visibleErrors": 0
+    },
+    {
+      "service": "aio",
+      "file": "src/app/aio/Entry.tsx",
+      "scope": "actual extracted start handler; mocked unauthorized API and rejecting SDK; no network or database access",
+      "sdkCalls": 1,
+      "creatingAfterRejectedStart": true,
+      "visibleErrors": 0
     }
   ]
 }

@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
-import toast from 'react-hot-toast'
+import { NavigationSubmissionError, startGoogleSignIn, useNavigationSubmission } from '@/lib/use-navigation-submission'
 import { getServiceById } from '@/lib/services'
 import {
   LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
@@ -40,7 +39,7 @@ export default function ShodanEntryPage() {
   const [phase, setPhase] = useState<'loading' | 'guest' | 'onboard'>('loading')
   const [orgName, setOrgName] = useState('')
   const [memberName, setMemberName] = useState('')
-  const [creating, setCreating] = useState(false)
+  const { busy: creating, run: submit } = useNavigationSubmission('作成に失敗しました。もう一度お試しください。')
 
   useEffect(() => {
     fetch('/api/shodan/me', { cache: 'no-store' })
@@ -58,21 +57,19 @@ export default function ShodanEntryPage() {
 
   const create = async () => {
     if (!orgName.trim() || !memberName.trim()) return
-    setCreating(true)
-    try {
+    await submit(async (isCurrent) => {
       const res = await fetch('/api/shodan/organization', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: orgName, memberName }),
       })
+      if (!isCurrent()) return
+      if (res.status === 401) { await startGoogleSignIn('/shodan'); return }
       const d = await res.json()
-      if (res.status === 401) { signIn('google', { callbackUrl: '/shodan' }); return }
-      if (!res.ok) throw new Error(d.error || '作成に失敗しました')
+      if (!isCurrent()) return
+      if (!res.ok) throw new NavigationSubmissionError(d.error || '作成に失敗しました')
       router.replace(`/shodan/${encodeURIComponent(d.organization.slug)}`)
-    } catch (e: any) {
-      toast.error(e.message)
-      setCreating(false)
-    }
+    })
   }
 
   if (phase === 'loading') {

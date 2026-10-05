@@ -1,0 +1,16 @@
+{
+  "runId": 37376803394,
+  "jobId": 111987833460,
+  "sha": "53c48ef4280d4422e80b3458b84cdf76237a54f9",
+  "status": "completed",
+  "conclusion": "success",
+  "runnerId": 1000000872,
+  "verifiedSteps": [
+    "Install dependencies",
+    "Prisma generate",
+    "Security and incident regression tests (offline)",
+    "Type check",
+    "Lint"
+  ],
+  "scope": "GitHub CI only; production deployment and actual Google OAuth remain separate"
+}

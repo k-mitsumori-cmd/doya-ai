@@ -1,0 +1,23 @@
+{
+  "observedAt": "2026-10-05T21:52:07.266Z",
+  "projectId": "prj_0HjbyDSXLIsYb4SYMfoDhpiQrVg2",
+  "environment": "production",
+  "variableMetadataUpdatedAt": 1790400961288,
+  "referenceDeploymentId": "dpl_FssMvwHT53xmYihAHPRwfpRG8uB7",
+  "referenceDeploymentSha": "53c48ef4280d4422e80b3458b84cdf76237a54f9",
+  "referenceDeploymentCreatedAt": 1791236107756,
+  "targetFingerprint": "94d3a549c62c08a4cbca36d02306fc44762248b7a5e8913774e0b97b28884c28",
+  "readOnly": "on",
+  "checkedTypes": 2110,
+  "checkedNullability": 2098,
+  "skippedArrayNullability": 12,
+  "checkedUniqueDefinitions": 277,
+  "actualUniqueIndexes": 277,
+  "typeMismatches": [],
+  "nullabilityMismatches": [],
+  "missingUniqueIndexes": [],
+  "missingTables": [],
+  "missingColumns": [],
+  "missingForeignKeys": [],
+  "scope": "Current production env variable into process memory only; READ ONLY confirmed; information_schema and pg_catalog metadata only; no customer rows or data writes. Scalar column base types, native Date/Text, non-array nullability, valid unconditional unique indexes by column set. Skips array nullability; does not check all ordinary indexes, index order, foreign-key deletion rules, deployed env snapshot, or business transactions."
+}

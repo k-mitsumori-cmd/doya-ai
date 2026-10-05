@@ -66,3 +66,31 @@ Vercelの当プロジェクトのproduction DATABASE_URLを一意に選び、値
 営業管理と商談準備の実際のcreateハンドラーを抽出し、組織作成の401と認証SDKのrejectを模擬したところ、どちらもcreating=trueのままでトースト0を再現した。`direct-signin-failure-baseline.json`。外部ネットワーク・DB呼び出しは模擬しており、本番の実ユーザー操作の再現ではない。共通ログインの補修とは別に、この2箇所は未修正の具体的課題として残す。
 
 この履歴復元を含む認証補修のコミット・main pushを行い、自動本番デプロイのReadyと同じSHAを後続確認する。pushだけでは反映完了にしない。
+
+## 認証補修のpushと追加の再現結果
+
+認証補修は `53c48ef4280d4422e80b3458b84cdf76237a54f9` でコミット、mainへのpush成功。Vercel `dpl_FssMvwHT53xmYihAHPRwfpRG8uB7` は同じSHAでBUILDING、CI `37376803394` はin_progressを確認した時点であり、まだ本番反映完了・CI成功とは扱わない。全体ローカルビルド30845は終了コード0。
+
+追加でAIOの実startハンドラーも、401とSDK rejectの模擬条件でcreating=true・表示エラー0を再現した。`direct-signin-failure-baseline.json` の3サービスは未修正課題。後続は当デプロイのReady・本番別名・公開応答を確認し、この3ハンドラーの再試行・連打・履歴復元を修正・検証する。全体監査は継続中。
+
+## AIO・営業管理・商談準備の認証復旧を補修
+
+再現した3サービスを補修。useNavigationSubmissionが送信の即時ロック、履歴復元時の解除、試行番号による旧応答の無効化、アンマウント時のイベント解除を管理する。認証開始はawaitしてSDK失敗を一般向けの再試行メッセージへ変換し、内部例外は表示しない。401は本文解析より先に判定する。元の入力値、戻り先、成功時の画面遷移、APIの利用上限メッセージは維持した。
+
+実TypeScriptのフックと現行3ハンドラーによる28項目が成功。SDK reject、JSONでない401、再試行、入力保持、通信失敗、上限エラー、正常遷移の待機、即時連打、SDK待機中の連打、履歴復元、旧API/JSON/SDK完了、アンマウントを確認。実ボタンがフックのbusyを使用することも照合した。APIとSDKは模擬応答で、本番の組織作成・課金AI生成は実行していない。元の失敗記録は履歴証拠として残す。対象ESLintとdiff check成功、全体ビルド58677は `/tmp/doya-entry-submission-build-20261006.log` で実行中。未コミット・未反映。
+
+前回の共通ログイン補修53c48ef4のCI37376803394はcompleted/success。同じSHAのジョブ111987833460がrunnerを取得し、依存導入・Prisma生成・全体回帰・型検査・Lintを成功で実行したことをAPI確認。Vercel dpl_FssMvwHT53xmYihAHPRwfpRG8uB7は本節の確認時点でBUILDING。Ready・本番別名の確認は残る。
+
+追加点検ではAIOのURL調査画面とAIO・商談準備の招待参加も、401後のSDK失敗でbusy=trueまたはacceptingのまま・トースト0になることを抽出した実ハンドラーで再現した。additional-signin-failure-baseline.json。この3経路は現在の入口3サービス修正とは別の未修正課題であり、入口の補修だけで当該サービス全経路完了にしない。
+
+入口補修の全体ビルド58677は終了コード0。ただし隔離ブラウザで同じエラー通知が重なることを追加発見したため、固定toast IDで重複を防ぐ補修を追加し、最終版の全体ビルド49915を `/tmp/doya-entry-submission-final-build-20261006.log` で再実行中。58677を最終版の合格根拠にはしない。28項目の回帰は追加補修後も成功。
+
+本番用の未認証ページはサーバー側でLPを返すため、模擬クライアントセッションだけではEntryに到達せず、本番用画面の認証後検証とはしていない。別の隔離ハーネスで実Entryコンポーネント、実React、共通フック、導入済みNextAuth SDKを使用し、LP装飾とルーターをstub、セッションを合成して検証。3サービスとも初回失敗と再試行の計6回で、入力保持・有効な送信ボタン・一般向けのエラー1件を同時確認した。entry-submission-browser.json、entry-submission-local.png、entry-submission-harness-stats.json。全APIは模擬か遮断、外部OAuth・API上流転送0。先行観測は通知を読むのが遅かった結果を成功へ流用せず、補修後に全3サービスを再実行した。実Google認証、本番組織作成、実機履歴復元、全LP装飾の証拠ではない。
+
+共通ログイン修正53c48ef4はVercel dpl_FssMvwHT53xmYihAHPRwfpRG8uB7のREADY・同じSHA・本番ドメイン別名を確認。本番未認証のログインGETは200、配信JS17チャンクのうち対象ページに再試行メッセージとpageshow/persisted処理があり、内部Google設定キーの古い案内を含まないことを確認した。signin-recovery-production-53c48ef4.json。JSの存在を実ユーザーのOAuth完了やCLIENT_FETCH_ERRORの根本原因の解消とは扱わない。隔離検証タブ・プロキシ・一時Nextサーバーは終了。
+
+## 入口3サービス補修の最終ビルドとDB制約照合
+
+通知重複防止を含む最終版の安定した全体ビルド49915は終了コード0。Prisma生成、全体回帰、型検査、Next本番ビルドまで成功。対象6ファイルのSHA-256はビルド開始時と一致、対象ESLintとdiff checkも成功。コミットとmain pushを次に行い、同じSHAのReady・本番別名・配信確認は別ゲートとする。
+
+本番DBの構造照合を追加実施した。Readyの基準は53c48ef4、production DATABASE_URLを当プロジェクトから一意に選び、値はプロセス内だけで使用、更新時刻が基準デプロイより前であることを確認。READ ONLYトランザクションでinformation_schemaとpg_catalogのみ取得し、現行190モデルの2,110列の型、配列を除く2,098列の必須・任意設定、277件の一意制約に不一致0。production-readonly-constraints.json。配列12列のNULL可否は除外。全通常インデックス・列順・FK削除規則・実業務の原子性は未検証。一意制約は有効・条件なし・式なしの一意インデックスを列集合で照合し、利用者行・DDL・更新・削除は実行していない。接続終了済み。

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import { NavigationSubmissionError, startGoogleSignIn, useNavigationSubmission } from '@/lib/use-navigation-submission'
 import { getServiceById } from '@/lib/services'
 import {
   LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
@@ -40,7 +40,7 @@ export default function AioEntryPage() {
   const [phase, setPhase] = useState<'loading' | 'ready'>('loading')
   const [authed, setAuthed] = useState(false)
   const [serviceUrl, setServiceUrl] = useState('')
-  const [creating, setCreating] = useState(false)
+  const { busy: creating, run: submit } = useNavigationSubmission('開始に失敗しました。もう一度お試しください。')
 
   useEffect(() => {
     fetch('/api/aio/me', { cache: 'no-store' })
@@ -62,23 +62,21 @@ export default function AioEntryPage() {
   // サービスURLだけで開始（裏でサービス名導出・ワークスペース・ブランド設定・監視プロンプトを自動用意）
   const start = async () => {
     if (!serviceUrl.trim()) { toast.error('URLを入力してください'); return }
-    if (!authed) { signIn('google', { callbackUrl: '/aio' }); return }
-    setCreating(true)
-    try {
+    await submit(async (isCurrent) => {
+      if (!authed) { await startGoogleSignIn('/aio'); return }
       const res = await fetch('/api/aio/quick-start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: serviceUrl }),
       })
+      if (!isCurrent()) return
+      if (res.status === 401) { await startGoogleSignIn('/aio'); return }
       const d = await res.json()
-      if (res.status === 401) { signIn('google', { callbackUrl: '/aio' }); return }
-      if (!res.ok) throw new Error(d.error || '開始に失敗しました')
+      if (!isCurrent()) return
+      if (!res.ok) throw new NavigationSubmissionError(d.error || '開始に失敗しました')
       // ?scan=1 でダッシュボード側が自動でスキャンを実行する
       router.replace(`/aio/${encodeURIComponent(d.slug)}?scan=1`)
-    } catch (e: any) {
-      toast.error(e.message)
-      setCreating(false)
-    }
+    })
   }
 
   if (phase === 'loading') {

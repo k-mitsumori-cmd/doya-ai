@@ -1,0 +1,29 @@
+{
+  "unfixed": true,
+  "reports": [
+    {
+      "service": "aio-scan",
+      "file": "src/app/aio/[orgSlug]/scan/page.tsx",
+      "scope": "actual extracted handler; mocked unauthorized JSON API and rejecting SDK; no network or database access",
+      "after": true,
+      "visibleErrors": 0,
+      "sdkCalls": 1
+    },
+    {
+      "service": "aio-invite",
+      "file": "src/app/aio/invite/[token]/page.tsx",
+      "scope": "actual extracted handler; mocked unauthorized JSON API and rejecting SDK; no network or database access",
+      "after": "accepting",
+      "visibleErrors": 0,
+      "sdkCalls": 1
+    },
+    {
+      "service": "shodan-invite",
+      "file": "src/app/shodan/invite/[token]/page.tsx",
+      "scope": "actual extracted handler; mocked unauthorized JSON API and rejecting SDK; no network or database access",
+      "after": "accepting",
+      "visibleErrors": 0,
+      "sdkCalls": 1
+    }
+  ]
+}
