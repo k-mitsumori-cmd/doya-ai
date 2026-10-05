@@ -24,6 +24,18 @@ function quoteInteger(value: unknown, fallback: number, min: number): number | n
   return Number.isSafeInteger(parsed) && parsed >= min && parsed <= 2147483647 ? parsed : null
 }
 
+function quoteTaxRate(value: unknown): 8 | 10 | null {
+  if (value == null || value === '') return 10
+  if (value === 8 || value === '8') return 8
+  if (value === 10 || value === '10') return 10
+  return null
+}
+
+function quoteOptionalRange(value: unknown): number | null | undefined {
+  if (value == null || value === '') return null
+  return quoteInteger(value, 0, 0) ?? undefined
+}
+
 function quoteExpiryDate(value: unknown): Date | null {
   if (typeof value !== 'string') return null
   const input = value.trim()
@@ -90,10 +102,15 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   if ('discountValue' in body && quoteInteger(body.discountValue, 0, 0) === null) {
     return NextResponse.json({ error: '割引額・割引率は範囲内の整数で入力してください。変更は保存されていません。' }, { status: 400 })
   }
+  if ('discountType' in body && body.discountType != null && body.discountType !== '' &&
+    body.discountType !== 'rate' && body.discountType !== 'amount') {
+    return NextResponse.json({ error: '値引き方法が正しくありません。変更は保存されていません。' }, { status: 400 })
+  }
   if (Array.isArray(body.items) && body.items.filter((i: any) => i && i.itemName).some((i: any) =>
-    quoteInteger(i.qty, 1, 1) === null || quoteInteger(i.unitPrice, 0, 0) === null
+    quoteInteger(i.qty, 1, 1) === null || quoteInteger(i.unitPrice, 0, 0) === null ||
+    quoteTaxRate(i.taxRate) === null || quoteOptionalRange(i.rangeMin) === undefined || quoteOptionalRange(i.rangeMax) === undefined
   )) {
-    return NextResponse.json({ error: '数量と単価は範囲内の整数で入力してください。変更は保存されていません。' }, { status: 400 })
+    return NextResponse.json({ error: '数量・単価・税率・相場は正しい範囲の整数で入力してください。変更は保存されていません。' }, { status: 400 })
   }
   try {
     // 判定・明細・状態・合計を同じトランザクションで扱う。
@@ -106,9 +123,15 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
       if (!actor) return NextResponse.json({ error: '組織へのアクセス権がありません。再読み込みしてください' }, { status: 403 })
       const existing = await tx.quoteDocument.findFirst({
         where: { id: p.id, organizationId: ctx.organizationId },
-        select: { id: true, status: true },
+        select: { id: true, status: true, discountType: true, discountValue: true },
       })
       if (!existing) return NextResponse.json({ error: '見積書が見つかりません' }, { status: 404 })
+
+      const effectiveDiscountType = 'discountType' in body ? body.discountType : existing.discountType
+      const effectiveDiscountValue = 'discountValue' in body ? quoteInteger(body.discountValue, 0, 0)! : existing.discountValue ?? 0
+      if (effectiveDiscountType === 'rate' && effectiveDiscountValue > 100) {
+        return NextResponse.json({ error: '割引率は100%以内で入力してください。変更は保存されていません。' }, { status: 400 })
+      }
 
       const data: Record<string, unknown> = {}
 
@@ -185,11 +208,11 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
             qty: quoteInteger(i.qty, 1, 1)!,
             unit: i.unit || '式',
             unitPrice: quoteInteger(i.unitPrice, 0, 0)!,
-            taxRate: Number(i.taxRate) === 8 ? 8 : 10,
+            taxRate: quoteTaxRate(i.taxRate)!,
             priceSource: VALID_SOURCES.includes(i.priceSource) ? i.priceSource : 'manual',
             sourceRef: i.sourceRef || null,
-            rangeMin: Number.isFinite(Number(i.rangeMin)) ? Math.round(Number(i.rangeMin)) : null,
-            rangeMax: Number.isFinite(Number(i.rangeMax)) ? Math.round(Number(i.rangeMax)) : null,
+            rangeMin: quoteOptionalRange(i.rangeMin)!,
+            rangeMax: quoteOptionalRange(i.rangeMax)!,
           })),
         })
       }

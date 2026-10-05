@@ -59,6 +59,18 @@ function quoteInteger(value: unknown, fallback: number, min: number): number | n
   return Number.isSafeInteger(parsed) && parsed >= min && parsed <= 2147483647 ? parsed : null
 }
 
+function quoteTaxRate(value: unknown): 8 | 10 | null {
+  if (value == null || value === '') return 10
+  if (value === 8 || value === '8') return 8
+  if (value === 10 || value === '10') return 10
+  return null
+}
+
+function quoteOptionalRange(value: unknown): number | null | undefined {
+  if (value == null || value === '') return null
+  return quoteInteger(value, 0, 0) ?? undefined
+}
+
 function quoteExpiryDate(value: unknown): Date | null {
   if (typeof value !== 'string') return null
   const input = value.trim()
@@ -138,8 +150,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '有効期限は正しい日付で入力してください。見積書は保存されていません。' }, { status: 400 })
   }
   const validItems = items.filter((i) => i && i.itemName)
-  if (validItems.some((i) => quoteInteger(i.qty, 1, 1) === null || quoteInteger(i.unitPrice, 0, 0) === null)) {
-    return NextResponse.json({ error: '数量と単価は範囲内の整数で入力してください。見積書は保存されていません。' }, { status: 400 })
+  if (validItems.some((i) => quoteInteger(i.qty, 1, 1) === null || quoteInteger(i.unitPrice, 0, 0) === null ||
+    quoteTaxRate(i.taxRate) === null || quoteOptionalRange(i.rangeMin) === undefined || quoteOptionalRange(i.rangeMax) === undefined)) {
+    return NextResponse.json({ error: '数量・単価・税率・相場は正しい範囲の整数で入力してください。見積書は保存されていません。' }, { status: 400 })
   }
 
   // 商材は自組織のものだけを紐付ける（他組織のIDを渡されても無視する）
@@ -191,11 +204,11 @@ export async function POST(req: NextRequest) {
                   qty: quoteInteger(i.qty, 1, 1)!,
                   unit: i.unit || '式',
                   unitPrice: quoteInteger(i.unitPrice, 0, 0)!,
-                  taxRate: Number(i.taxRate) === 8 ? 8 : 10,
+                  taxRate: quoteTaxRate(i.taxRate)!,
                   priceSource: VALID_SOURCES.includes(i.priceSource) ? i.priceSource : 'manual',
                   sourceRef: i.sourceRef || null,
-                  rangeMin: Number.isFinite(Number(i.rangeMin)) ? Math.round(Number(i.rangeMin)) : null,
-                  rangeMax: Number.isFinite(Number(i.rangeMax)) ? Math.round(Number(i.rangeMax)) : null,
+                  rangeMin: quoteOptionalRange(i.rangeMin)!,
+                  rangeMax: quoteOptionalRange(i.rangeMax)!,
                 })),
             },
           },

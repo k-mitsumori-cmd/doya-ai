@@ -28,6 +28,36 @@ function load(file,deps){const exports={};vm.runInNewContext(compile(read(file))
    const discount=await update.PATCH({json:async()=>({discountValue:1.5})},{params:Promise.resolve({id:'d'})});
    assert.equal(discount.status,400);
    results.push({case:'quote API rejects fractional, malformed and out-of-range money before write',outcome:'PASS'});
+   for(const method of ['POST','PATCH']) {
+    const handler=req=>method==='POST'?create.POST(req):update.PATCH(req,{params:Promise.resolve({id:'d'})});
+    const noRange=await handler({json:async()=>({items:[{...item,rangeMin:null,rangeMax:null}]})});
+    assert.equal(noRange.status,200,`${method} null market range`);
+    assert.equal(row.lineItems[0].rangeMin,null);
+    assert.equal(row.lineItems[0].rangeMax,null);
+    const reducedTax=await handler({json:async()=>({items:[{...item,taxRate:8}]})});
+    assert.equal(reducedTax.status,200,`${method} reduced tax`);
+    assert.equal(row.lineItems[0].taxRate,8);
+    for(const [field,value] of [['taxRate',9],['rangeMin',-1],['rangeMax',1.5],['rangeMin',{bad:true}]]) {
+     const before=JSON.stringify(row.lineItems);
+     const response=await handler({json:async()=>({items:[{...item,[field]:value}]})});
+     assert.equal(response.status,400,`${method} ${field}=${value}`);
+     assert.equal(JSON.stringify(row.lineItems),before,`${method} must preserve existing items`);
+    }
+    results.push({method,case:'null range stays null and invalid tax/range is rejected',outcome:'PASS'});
+   }
+   for(const [body,expected] of [
+    [{discountType:'bad',discountValue:10},400],
+    [{discountType:'rate',discountValue:101},400],
+    [{discountType:'rate',discountValue:100},200],
+    [{discountType:'amount',discountValue:200},200],
+    [{discountType:'rate'},400],
+   ]) {
+    const before={type:row.discountType,value:row.discountValue};
+    const response=await update.PATCH({json:async()=>body},{params:Promise.resolve({id:'d'})});
+    assert.equal(response.status,expected,JSON.stringify(body));
+    if(expected===400){assert.equal(row.discountType,before.type);assert.equal(row.discountValue,before.value);}
+   }
+   results.push({case:'invalid discount method and rates over 100 percent never change saved terms',outcome:'PASS'});
   }
  }
  // Execute the actual unit-price input callback on both editing screens.

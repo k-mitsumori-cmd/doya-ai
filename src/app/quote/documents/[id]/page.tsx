@@ -342,7 +342,7 @@ export default function QuoteDocumentPage() {
                   onChange={(e) => {
                     const raw = e.target.value.normalize('NFKC').replace(/\s/g, '')
                     const v = raw.replace(/,/g, '')
-                    if (raw && (!(/^\d+$/.test(raw) || /^\d{1,3}(,\d{3})+$/.test(raw)) || Number(v) > 2147483647)) return
+                    if (raw && (!(/^\d+$/.test(raw) || /^\d{1,3}(,\d{3})+$/.test(raw)) || Number(v) > (discountType === 'rate' ? 100 : 2147483647))) return
                     setDiscountValue(v)
                   }}
                   className="w-28 rounded-xl border-2 border-slate-200 px-3 py-2 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
