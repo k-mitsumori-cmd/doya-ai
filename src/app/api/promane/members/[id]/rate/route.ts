@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const body = await req.json().catch(() => ({}))
     const { workspaceSlug, hourlyRate } = body || {}
 
-    if (!workspaceSlug || !memberId) {
+    if (typeof workspaceSlug !== 'string' || !workspaceSlug.trim() || workspaceSlug.length > 200 || !memberId) {
       return NextResponse.json({ error: 'workspaceSlug と memberId は必須です' }, { status: 400 })
     }
 

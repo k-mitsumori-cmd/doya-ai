@@ -1,0 +1,27 @@
+{
+  "runId": 37368995625,
+  "jobId": 111961084154,
+  "sha": "b6f64ec59a42362675b05caa51bbd31bfff71a19",
+  "jobConclusion": "cancelled",
+  "runnerId": 0,
+  "executedSteps": 0,
+  "scope": "both runs completed/failure before executing code checks; hosted runner acquisition failed; not a code-test result",
+  "failureAnnotations": [
+    {
+      "level": "failure",
+      "message": "The job was not acquired by Runner of type hosted even after multiple attempts"
+    }
+  ],
+  "runStatus": "completed",
+  "runConclusion": "failure",
+  "additionalRun": {
+    "runId": 37370348001,
+    "jobId": 111965646072,
+    "sha": "1128568e43a2598c6feab4d814208771ffbf3e06",
+    "runStatus": "completed",
+    "runConclusion": "failure",
+    "jobConclusion": "cancelled",
+    "executedSteps": 0,
+    "failureAnnotation": "The job was not acquired by Runner of type hosted even after multiple attempts"
+  }
+}

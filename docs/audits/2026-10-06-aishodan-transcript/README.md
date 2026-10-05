@@ -2,7 +2,9 @@
 
 ## 現在の反映前ゲート（2026-10-06）
 
-以下の各節は発見・修正時点の履歴であり、古い「未実装」「実行中」を現在の状態と混同しない。商談の保存・評価等の修正一式は `b6f64ec59a42362675b05caa51bbd31bfff71a19` にコミットしmainへpush済み。CIと本番反映の終了確認は未完了。この後に見つかった音声接続の設定不足時の補修は別の未コミット変更。
+以下の各節は発見・修正時点の履歴であり、古い「未実装」「実行中」を現在の状態と混同しない。商談の保存・評価等の修正一式 `b6f64ec59a42362675b05caa51bbd31bfff71a19` は本番READY・本番別名への接続を確認済み。この後に見つかった商談・面接の音声接続設定不足時の補修は `1128568e43a2598c6feab4d814208771ffbf3e06` にコミットしてmainへpush済みで、本番は反映待ち。どちらのCIもqueuedを確認しており、成功とは扱わない。
+
+- 追加補修の本番デプロイ: `dpl_FfMzTuBmiKB5aBHSwNfEEMSvwFr5`、`https://doya-eqrik61g8-surisutas-projects.vercel.app`、production・BUILDING・同じSHAを確認。CIは `37370348001`。追加補修のReadyと本番別名への切り替えは未確認。
 
 - GitHub CI: `37368995625`（同じSHA・queuedを確認、成功は未確認）。Vercel: `dpl_DqB8z8ZiFs8MJQWC6eSs5MaUAF1e`、`https://doya-8d4x16j9u-surisutas-projects.vercel.app`、production・READY・本番別名 `doya-ai.surisuta.jp` をAPIで確認。定期処理の実行成功はまだ確認していない。
 
@@ -313,3 +315,19 @@
 - 追加の音声接続設定不足時の補修は、全体ビルド `20863` が終了コード0。Prisma生成・全体回帰検証・型検査・本番用ビルド成功。Lintも終了コード0。4ファイルのハッシュはビルド後も一致した。この追加補修のコミット・本番反映は次のゲートであり、先行修正のReadyと混同しない。
 - 全31定義のうち提供終了APIを持つ106ルートの142 exported functionハンドラーを抽出して実行した。提供終了フラグは実ヘルパーから解決し、本文取得・DB・fetchは呼出し時に失敗する代替を使用。142件すべて410、禁止呼出し0。代替による外部遮断・抽出した関数だけの検証であり、モジュール初期化や全本番HTTPメソッドの証拠ではない。別台帳の `retired-handler-results.json` に範囲・結果・各ファイルのハッシュを記録。APIの作業ツリーがコミット済みと一致することも確認した。
 - そのうちGETを公開している49経路は、本番で未認証GETを行い全て410を確認した（別台帳の `retired-get-http.json`）。動的IDは検証用の無関係な値を使用し、実利用者のIDを使用していない。POST・PUT・PATCH・DELETEは本番で実行していない。提供終了の全メソッドが本番で通し検証済みという意味ではない。
+
+### 本番の予定実行ログとプロマネ追加確認
+
+- Vercel observabilityのCLI手順で、2026-10-05 20:26 UTC以降を読み取り確認。20:30 UTCの商談4Cronは、先行修正 `b6f64ec5` のデプロイでそれぞれHTTP 200・BYPASSの要求ログを確認した。手動実行はしていない。未認証確認時の4件は401として別に記録されている。別台帳の `cron-runtime-after-b6f64ec5.json`。この要求ログだけでは回収・削除・通知の対象件数や利用者影響は分からない。
+- 同じ開始時刻以降・プロジェクト全体・errorレベル・上限100件で取得したエントリは0件。取得区間・フィルターの範囲での結果であり、未記録の障害や将来の無障害を証明しない。
+- プロマネの時間単価PATCHで、`workspaceSlug` の真偽だけを判定し、空白・配列・オブジェクトもORMの検索条件へ渡す不足を確認した。実ルートと合成DBによる既存回帰へ不正指定のケースを追加すると200（期待400）で失敗した。ログ `/tmp/doya-promane-rate-selector-baseline-20261006.log`。本番の変更要求や顧客データの更新は行っていない。
+- 経費APIと同じ「文字列・空白だけは拒否・200文字以内」を採用し、DBアクセスより前に400で止める。短い既存文字列・200文字境界・整数単価の範囲・owner/adminの権限は維持。11種類の不正指定ではDB検索・保存0、正常2境界は保存可を含む6検証群が成功。Lint終了コード0。
+- このプロマネ補修は未コミット・未反映。全体ビルド `19164`、`/tmp/doya-promane-rate-selector-build-20261006.log` が実行中で、対象2ファイルのハッシュは `/tmp/doya-promane-rate-selector-hashes-20261006.json` と一致。終了確認前にpushしない。商談・面接の先行修正の反映状況とは別のゲート。
+- CI `37368995625` のcheckジョブ `111961084154` はcompleted/cancelled・Runner ID 0・実行ステップ0をAPIで確認。注記は「The job was not acquired by Runner of type hosted even after multiple attempts」。コードのチェックを実行した失敗ではない。集約runの表示は取得時点でin_progressだったため、run全体が終わったと推測して再起動していない。別台帳の `ci-hosted-runner-allocation.json`。アプリ全体の正常性やCI成功を証明するものではない。
+
+### プロマネ反映前の最終ゲートとCIの確定状態
+
+- プロマネ補修の安定した全体ビルド `19164` は終了コード0を前の検証で確認済み。ログ末尾もNextビルドの経路一覧まで完了し、対象2ファイルは記録したSHA-256と再照合して一致した。Lint終了コード0・回帰6群成功と併せ、今回の反映前ゲートとする。
+- 音声接続補修 `1128568e43a2598c6feab4d814208771ffbf3e06` はVercel `dpl_FfMzTuBmiKB5aBHSwNfEEMSvwFr5` のREADY・同じSHA・本番別名をAPIで確認。無関係な検証用ルーム名への不正JSONは400、2049バイト入力は413。実セッション・資格情報・生成入力は渡していない。別台帳 `voice-config-input-after-1128568e.json`。この検証は入力境界だけで、実利用者の接続復旧を証明しない。
+- CI `37368995625` と `37370348001` は集約runもcompleted/failureになった。両checkジョブはcancelled・実行ステップ0。最新runの注記も「The job was not acquired by Runner of type hosted even after multiple attempts」。CI成功ではなく、GitHub hosted runner取得失敗として記録する。アプリのテスト結果とは区別し、CI設定を根拠なく変更しない。
+- この節の時点ではプロマネ補修は未コミット・未反映。次に対象ファイルだけをコミット・pushし、同じSHAのデプロイとCIを確認する。全サービスの利用者操作監査は引き続き未完了。

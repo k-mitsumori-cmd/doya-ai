@@ -1,0 +1,17 @@
+{
+  "deploymentId": "dpl_FfMzTuBmiKB5aBHSwNfEEMSvwFr5",
+  "sha": "1128568e43a2598c6feab4d814208771ffbf3e06",
+  "scope": "invalid/oversized token POST stops before session lookup per committed handler; no valid session, credentials, AI or generation supplied",
+  "results": [
+    {
+      "case": "invalid-json",
+      "status": 400,
+      "expected": 400
+    },
+    {
+      "case": "oversized",
+      "status": 413,
+      "expected": 413
+    }
+  ]
+}

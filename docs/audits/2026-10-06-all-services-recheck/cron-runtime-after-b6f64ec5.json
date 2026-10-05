@@ -1,0 +1,96 @@
+{
+  "sinceUtc": "2026-10-05T20:26:00Z",
+  "query": "aishodan",
+  "limit": 100,
+  "entries": 9,
+  "cronRequests": [
+    {
+      "timestamp": 1791232224154,
+      "requestPath": "/api/cron/aishodan-evaluations",
+      "requestMethod": "GET",
+      "responseStatusCode": 200,
+      "deploymentId": "dpl_DqB8z8ZiFs8MJQWC6eSs5MaUAF1e",
+      "level": "info",
+      "source": "edge-middleware",
+      "cache": "BYPASS"
+    },
+    {
+      "timestamp": 1791232221163,
+      "requestPath": "/api/cron/aishodan-work-cleanup",
+      "requestMethod": "GET",
+      "responseStatusCode": 200,
+      "deploymentId": "dpl_DqB8z8ZiFs8MJQWC6eSs5MaUAF1e",
+      "level": "info",
+      "source": "edge-middleware",
+      "cache": "BYPASS"
+    },
+    {
+      "timestamp": 1791232208132,
+      "requestPath": "/api/cron/aishodan-notifications",
+      "requestMethod": "GET",
+      "responseStatusCode": 200,
+      "deploymentId": "dpl_DqB8z8ZiFs8MJQWC6eSs5MaUAF1e",
+      "level": "info",
+      "source": "serverless",
+      "cache": "BYPASS"
+    },
+    {
+      "timestamp": 1791232207232,
+      "requestPath": "/api/cron/aishodan-retention",
+      "requestMethod": "GET",
+      "responseStatusCode": 200,
+      "deploymentId": "dpl_DqB8z8ZiFs8MJQWC6eSs5MaUAF1e",
+      "level": "info",
+      "source": "serverless",
+      "cache": "BYPASS"
+    },
+    {
+      "timestamp": 1791232117266,
+      "requestPath": "/api/cron/aishodan-retention",
+      "requestMethod": "GET",
+      "responseStatusCode": 401,
+      "deploymentId": "dpl_DqB8z8ZiFs8MJQWC6eSs5MaUAF1e",
+      "level": "info",
+      "source": "edge-middleware",
+      "cache": "MISS"
+    },
+    {
+      "timestamp": 1791232117095,
+      "requestPath": "/api/cron/aishodan-work-cleanup",
+      "requestMethod": "GET",
+      "responseStatusCode": 401,
+      "deploymentId": "dpl_DqB8z8ZiFs8MJQWC6eSs5MaUAF1e",
+      "level": "info",
+      "source": "serverless",
+      "cache": "MISS"
+    },
+    {
+      "timestamp": 1791232117065,
+      "requestPath": "/api/cron/aishodan-notifications",
+      "requestMethod": "GET",
+      "responseStatusCode": 401,
+      "deploymentId": "dpl_DqB8z8ZiFs8MJQWC6eSs5MaUAF1e",
+      "level": "info",
+      "source": "edge-middleware",
+      "cache": "MISS"
+    },
+    {
+      "timestamp": 1791232116870,
+      "requestPath": "/api/cron/aishodan-evaluations",
+      "requestMethod": "GET",
+      "responseStatusCode": 401,
+      "deploymentId": "dpl_DqB8z8ZiFs8MJQWC6eSs5MaUAF1e",
+      "level": "info",
+      "source": "edge-middleware",
+      "cache": "MISS"
+    }
+  ],
+  "observedUntilUtc": "2026-10-05T20:39:09.107810+00:00",
+  "scope": "Request status only, query aishodan, maximum 100 entries; no response body, data counts, user impact or provider completion proof",
+  "projectErrorScan": {
+    "level": "error",
+    "sinceUtc": "2026-10-05T20:26:00Z",
+    "limit": 100,
+    "retrievedEntries": 0
+  }
+}
