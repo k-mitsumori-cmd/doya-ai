@@ -1,0 +1,170 @@
+{
+  "checkedAt": "2026-10-06T17:01:06.370783+00:00",
+  "commit": "cfa921659dff49202b8290e3ec04d1a5ed8ec76e",
+  "deployment": "dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+  "pages": [
+    {
+      "path": "/banner/dashboard",
+      "status": 200,
+      "deploymentMarker": true,
+      "boundedQuotaReader": true,
+      "integerValidation": true
+    },
+    {
+      "path": "/banner/test",
+      "status": 200,
+      "deploymentMarker": true,
+      "boundedQuotaReader": true,
+      "integerValidation": true
+    },
+    {
+      "path": "/banner/dashboard/create",
+      "status": 200,
+      "deploymentMarker": true,
+      "boundedQuotaReader": true,
+      "integerValidation": true
+    },
+    {
+      "path": "/banner/dashboard/chat",
+      "status": 200,
+      "deploymentMarker": true,
+      "boundedQuotaReader": true,
+      "integerValidation": true
+    }
+  ],
+  "scripts": [
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/14291-71bccb1d25a9a803.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/14566-41ef404e67f4252a.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/16143-cafce21353c52c2e.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/21103-2b50e8b0a04c7c1f.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/22144-75b90a2988037a9d.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/22663-a587b136922ce1c8.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/3119-8b73e92af45bfdf4.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/31255-7cdfbb9b1b6474a3.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/33945-b814668700f2119d.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/35965-a828378fcb0d54ad.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/36489-33ba2dd285a1851f.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/4bd1b696-2135e4d8b8354323.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/51219-3a91dd3dd8c6a8d5.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/52619-c48a18d6f62d2371.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/57572-d3497a570861b15f.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/71708-4efdc8e9d5c66a4e.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/81356-6a0f26d1b18c3e49.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/82899-9f324d52c7cfd87e.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/84332-da9f612495216a95.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/94838-feee55775a903413.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/95223-3ba5c598ffa87780.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/99374-34f7818e7876d28a.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/banner/dashboard/chat/page-3eae5662855db412.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/banner/dashboard/create/page-d4a30e3024422c22.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/banner/dashboard/page-abfd812a7263285f.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/banner/layout-11df8efead34c1ab.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/banner/test/page-755b96e44bdf1723.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/error-8259e49cb350fc72.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/layout-d4a8581820091fa2.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/not-found-a8e4f81d84f55582.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/main-app-abf71c5d868c84e9.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/polyfills-42372ed130431b0a.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/webpack-37f7aa803a5f91fc.js?dpl=dpl_3Ryf4AUnsM8GRiQfiujng2eALLxn",
+      "status": 200
+    }
+  ],
+  "scope": "Anonymous HTML and published quota reader/integer validation code only. No authenticated generation, customer capacity reservation or device QA proof."
+}

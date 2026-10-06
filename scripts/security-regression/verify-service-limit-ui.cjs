@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('fs'),path=require('path')
 const {load,check,results}=require('./load-typescript.cjs');
 const unified=load('src/lib/unified-plan.ts');
 const {SERVICES}=load('src/lib/services.ts',{'./unified-plan':unified});
-const lib=load('src/lib/service-limit-ui.ts',{'./services':{SERVICES}},{URL,Request,CustomEvent:class{constructor(type,init){this.type=type;this.detail=init.detail}}});
+const lib=load('src/lib/service-limit-ui.ts',{'./services':{SERVICES}},{URL,Request,TextDecoder,Uint8Array,setTimeout,clearTimeout,CustomEvent:class{constructor(type,init){this.type=type;this.detail=init.detail}}});
 const {classifyServiceLimit:classify,observeServiceLimits:observe}=lib;
 const fixtureMessages=[
  ['cunning',403,'ナレッジベースは3個までです。プロにアップグレードしてください。'],

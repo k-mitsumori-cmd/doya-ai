@@ -1,0 +1,18 @@
+{
+  "passed": 12,
+  "results": [
+    "Valid quota notice preserves original identity and independently readable body",
+    "Missing Content-Length cannot bypass actual byte limit",
+    "Understated Content-Length cannot bypass actual byte limit",
+    "Declared oversize avoids cloning and never consumes original",
+    "Exactly 64 KiB of valid UTF8 JSON remains inspectable",
+    "Byte boundary counts UTF8 bytes, not characters",
+    "Stalled inspection expires without blocking fetch or original consumer",
+    "Stream failure remains optional, never a new fetch failure",
+    "Malformed JSON",
+    "Invalid UTF8",
+    "Empty body",
+    "Ignored external or successful responses never start inspection"
+  ],
+  "scope": "Actual observer and cloned response reader with synthetic bodies/deadlines only; original body identity/readability verified. No network, customer operation or provider."
+}
