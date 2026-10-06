@@ -1,0 +1,21 @@
+{
+  "passed": 15,
+  "scope": "Actual structure/logo/export and response validators with synthetic fetch/clock/state/DOM. No provider request, logo save, export upload or real download.",
+  "results": [
+    "retryStructure rejects uncertain or malformed responses without false success or an unintended next action",
+    "retryStructure accepts confirmed results and releases its lock",
+    "retryStructure retains its deadline through body reads and double activation never duplicates a request",
+    "saveLogoConfig rejects uncertain or malformed responses without false success or an unintended next action",
+    "saveLogoConfig accepts confirmed results and releases its lock",
+    "saveLogoConfig retains its deadline through body reads and double activation never duplicates a request",
+    "exportAs rejects uncertain or malformed responses without false success or an unintended next action",
+    "exportAs accepts confirmed results and releases its lock",
+    "exportAs retains its deadline through body reads and double activation never duplicates a request",
+    "structure confirmation failure prevents image generation and refresh exceptions never leave its lock held",
+    "logo partial recomposition preserves retry values and does not claim all slides were updated",
+    "export accepts only HTTPS credential-free URLs and valid filenames and counts",
+    "partial export starts a download but announces skipped images without claiming completion",
+    "declined or duplicate exports make no request and click failure removes its anchor and unlocks",
+    "structure daily operational limit is a persistent notice with no image generation or paid-plan promise"
+  ]
+}

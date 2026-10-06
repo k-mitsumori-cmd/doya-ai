@@ -1,0 +1,11 @@
+{
+  "scope": "Actual editor React markup with synthetic hook state. No browser, authenticated live operation, image fetch, database write or paid generation.",
+  "results": [
+    {
+      "mode": "daily_structure_limit",
+      "persistentAlert": true,
+      "nextDayNoticeVisible": true,
+      "contactLinkVisible": true
+    }
+  ]
+}

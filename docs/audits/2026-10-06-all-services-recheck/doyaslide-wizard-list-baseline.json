@@ -1,0 +1,37 @@
+{
+  "scope": "Actual wizard submit and project-list remove callbacks; synthetic auth/fetch/FormData/router/state. No project creation, logo upload, paid generation or deletion.",
+  "results": [
+    {
+      "scenario": "empty_structure",
+      "successClaimed": true,
+      "automaticGenerationNavigation": true,
+      "logoFailureIgnored": false,
+      "malformedProjectNavigation": false,
+      "listReloadAfterUnconfirmedDeletion": false
+    },
+    {
+      "scenario": "rejected_logo",
+      "successClaimed": true,
+      "automaticGenerationNavigation": true,
+      "logoFailureIgnored": true,
+      "malformedProjectNavigation": false,
+      "listReloadAfterUnconfirmedDeletion": false
+    },
+    {
+      "scenario": "malformed_project_id",
+      "successClaimed": true,
+      "automaticGenerationNavigation": true,
+      "logoFailureIgnored": false,
+      "malformedProjectNavigation": true,
+      "listReloadAfterUnconfirmedDeletion": false
+    },
+    {
+      "scenario": "empty_delete",
+      "successClaimed": true,
+      "automaticGenerationNavigation": false,
+      "logoFailureIgnored": false,
+      "malformedProjectNavigation": false,
+      "listReloadAfterUnconfirmedDeletion": true
+    }
+  ]
+}

@@ -96,6 +96,7 @@ function EditorInner() {
   const [projectReadError, setProjectReadError] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
   const [structuring, setStructuring] = useState(false)
+  const [structureNotice, setStructureNotice] = useState<string | null>(null)
   const [exporting, setExporting] = useState<string | null>(null)
   const [savingLogoConfig, setSavingLogoConfig] = useState(false)
   const [logoRetryPatch, setLogoRetryPatch] = useState<Record<string, string | boolean> | null>(null)
@@ -119,6 +120,8 @@ function EditorInner() {
   const projectReadsActive = useRef(0)
   const generationBusyRef = useRef(false)
   const slideMutationBusyRef = useRef(false)
+  const structureBusyRef = useRef(false)
+  const exportBusyRef = useRef(false)
   const versionsSequence = useRef(0)
   const versionsTarget = useRef<string | null>(null)
   const selectedSlideRef = useRef<string | null>(null)
@@ -330,23 +333,36 @@ function EditorInner() {
   }, [id, reload, showQuotaNotice, ensureOk])
 
   const retryStructure = async () => {
+    if (!mountedRef.current || structureBusyRef.current || generationBusyRef.current || slideMutationBusyRef.current) return
+    structureBusyRef.current = true
+    setStructureNotice(null)
     setStructuring(true)
     try {
-      const res = await fetch('/api/doyaslide/structure', {
+      const { res, data } = await readSlideResponse('/api/doyaslide/structure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: id }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || '構成の生成に失敗しました')
-      await reload()
-      toast.success('構成ができました。画像の生成を始めます')
+      }, 310000)
+      if (res.status === 429 && data?.code === 'DOYASLIDE_TEXT_DAILY_LIMIT') {
+        setStructureNotice('本日の資料構成生成の上限に達しました。明日お試しいただくか、お問い合わせください。')
+        return
+      }
+      ensureOk(res, data, '構成の生成に失敗しました。')
+      if (!validSlides(data?.slides, id) || data.slides.length === 0) throw new Error('構成の内容を確認できませんでした。')
+      const confirmed = await reload()
+      if (!confirmed || confirmed.slides.length !== data.slides.length
+        || !confirmed.slides.every((slide) => data.slides.some((result: Slide) => result.id === slide.id && result.index === slide.index && result.headline === slide.headline && result.subText === slide.subText))) {
+        throw new Error('保存された構成を確認できませんでした。')
+      }
+      if (!mountedRef.current) return
+      toast.success('構成を確認しました。画像の生成を始めます。')
       await runGenerate()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : '構成の生成に失敗しました')
-      await reload()
+    } catch {
+      if (mountedRef.current) toast.error('構成の生成結果を確認できませんでした。状態を更新してご確認ください。')
+      await reload().catch(() => {})
     } finally {
-      setStructuring(false)
+      structureBusyRef.current = false
+      if (mountedRef.current) setStructuring(false)
     }
   }
 
@@ -481,14 +497,13 @@ function EditorInner() {
     logoConfigBusyRef.current = true
     setSavingLogoConfig(true)
     try {
-      const res = await fetch(`/api/doyaslide/projects/${id}/logo-config`, {
+      const { res, data } = await readSlideResponse(`/api/doyaslide/projects/${id}/logo-config`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
-      })
-      const data = await res.json()
+      }, 310000)
       if (res.ok) {
-        if (!data?.project || data.project.id !== id || !Array.isArray(data.project.slides) || !Object.entries(patch).every(([key, value]) => data.project[key] === value)) throw new Error('ロゴ設定の更新結果を確認できませんでした')
+        if (!validProject(data?.project, id) || !Object.entries(patch).every(([key, value]) => data.project[key] === value)) throw new Error('ロゴ設定の更新結果を確認できませんでした')
         setLogoRetryPatch(null)
         toast.success('ロゴ設定を全スライドに反映しました')
       } else {
@@ -507,29 +522,34 @@ function EditorInner() {
   }
 
   const exportAs = async (fmt: 'pdf' | 'zip') => {
-    if (!project) return
+    if (!project || !mountedRef.current || exportBusyRef.current) return
     if (!allDone && !confirm('未生成のスライドがあります。完成分のみ書き出しますか？')) return
+    exportBusyRef.current = true
     setExporting(fmt)
     try {
-      // サーバはVercelの本文サイズ上限回避のため、生成物URL(JSON)を返す → URLからCDN直DL
-      const res = await fetch(`/api/doyaslide/export?projectId=${id}&format=${fmt}`, { cache: 'no-store' })
-      const d = await res.json().catch(() => ({}))
-      if (!res.ok || !d?.url) throw new Error(d?.error || '書き出しに失敗しました')
+      // Storage supplies the artifact URL; do not mistake starting a download for its completion.
+      const { res, data: d } = await readSlideResponse(`/api/doyaslide/export?projectId=${id}&format=${fmt}`, { cache: 'no-store' }, 310000)
+      if (!res.ok || typeof d?.url !== 'string' || !d.url.trim()
+        || typeof d.filename !== 'string' || !d.filename.endsWith(`.${fmt}`) || /[\\/\r\n]/.test(d.filename)
+        || !Number.isInteger(d.skipped) || d.skipped < 0) throw new Error('書き出し結果を確認できませんでした。')
+      const url = new URL(d.url)
+      if (url.protocol !== 'https:' || url.username || url.password) throw new Error('ダウンロード先を確認できませんでした。')
+      if (!mountedRef.current) return
       const a = document.createElement('a')
-      a.href = d.url
-      a.download = d.filename || `doyaslide.${fmt}`
+      a.href = url.href
+      a.download = d.filename
       document.body.appendChild(a)
-      a.click()
-      a.remove()
+      try { a.click() } finally { a.remove() }
       if (d.skipped > 0) {
-        toast(`${d.skipped}枚は画像取得に失敗したため除外しました`, { icon: '⚠️' })
+        toast(`${d.skipped}枚は画像取得に失敗したため除外しました。ダウンロードを開始しました。`)
       } else {
-        toast.success('書き出しました')
+        toast.success('ダウンロードを開始しました。')
       }
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch {
+      if (mountedRef.current) toast.error('書き出し結果を確認できませんでした。再試行してください。')
     } finally {
-      setExporting(null)
+      exportBusyRef.current = false
+      if (mountedRef.current) setExporting(null)
     }
   }
 
@@ -625,6 +645,7 @@ function EditorInner() {
           >
             {structuring ? '構成を生成中...' : '構成作成を再試行'}
           </button>
+          {structureNotice && <div role="alert" className="mt-3 text-sm text-amber-900"><p>{structureNotice}</p><Link href={SUPPORT_CONTACT_URL} className="font-bold underline">お問い合わせ</Link></div>}
           {project.status === 'structuring' && (
             <button onClick={() => reload()} className="ml-3 text-sm font-bold text-blue-700 underline">状態を更新</button>
           )}

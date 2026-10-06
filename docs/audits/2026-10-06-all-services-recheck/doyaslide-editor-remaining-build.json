@@ -1,0 +1,17 @@
+{
+  "runId": "190f15b0-205a-4c8e-af80-ac15d4662892",
+  "startedAt": "2026-10-06T04:07:05.215574+00:00",
+  "pid": 26280,
+  "sourceHashes": {
+    "src/app/doyaslide/[id]/page.tsx": "1d5d5dcebadaab6ce257154caf3a4c3c2224102358d63492951faace11606152",
+    "scripts/security-regression/verify-doyaslide-editor-remaining.cjs": "e381c60dfc9c12bc245cb587fe252e265d529507c1a73488ab5fc8432fdad9bb",
+    "scripts/security-regression/verify-save-delete-response-confirmation.cjs": "420da07fe84652043dd37977f7baab8973765b9d8c538d755b4c2912b710b783",
+    "scripts/security-regression/run.cjs": "0d57b03886577ca5b80698e7a2b79b72c280e069f1760fdfb8fdd5a7fdcee5e1"
+  },
+  "state": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T04:12:25.335634+00:00",
+  "changedSources": [],
+  "rawLogPath": "/tmp/doya-doyaslide-editor-remaining-build-20261006.log",
+  "rawLogSha256": "65605b74f38718c54d7ae7d9e8e1fa33bf1179ed26877e15552b0f6737f899da"
+}
