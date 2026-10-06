@@ -1,0 +1,24 @@
+{
+  "file": "/Users/mitsumori_katsuki/Code/09_Cursol/src/app/seo/jobs/[id]/page.tsx",
+  "scope": "Actual AST-extracted load callback; synthetic clock/fetch/refs/setters; no production requests",
+  "results": [
+    {
+      "scenario": "pending_body",
+      "bodyPendingWithoutDeadline": true,
+      "pollingHeld": true
+    },
+    {
+      "scenario": "invalid_success",
+      "readFailureNotReported": true
+    },
+    {
+      "scenario": "body_rejected",
+      "readFailureNotReported": true
+    },
+    {
+      "scenario": "fetch_rejected",
+      "timerNotReleased": true,
+      "rawDiagnosticShown": true
+    }
+  ]
+}

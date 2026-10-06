@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-06T03:16:20.039837+00:00",
+  "commit": "6c2453427e2d69d94263e21a89aa7a62185ec65d",
+  "deploymentId": "dpl_5BrizacV3TPSTyGpWGmcnteUvh7U",
+  "readyState": "BUILDING",
+  "aliases": [
+    "doya-ai-surisutas-projects.vercel.app",
+    "doya-ai-git-main-surisutas-projects.vercel.app"
+  ],
+  "ci": {
+    "conclusion": "",
+    "headSha": "6c2453427e2d69d94263e21a89aa7a62185ec65d",
+    "status": "in_progress"
+  },
+  "scope": "URL page cohort only; additional create/chat generation fixes are uncommitted."
+}

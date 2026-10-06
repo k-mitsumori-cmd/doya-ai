@@ -826,6 +826,8 @@ function buildHighCtrSampleCopies(category: string, purpose: string) {
 // ========================================
 // メインコンポーネント
 // ========================================
+class BannerApiError extends Error {}
+
 export default function BannerDashboard() {
   const { data: session, status: sessionStatus } = useSession()
   
@@ -999,7 +1001,7 @@ export default function BannerDashboard() {
 
   const safeReadJson = async (res: Response): Promise<{ ok: boolean; status: number; data: any; text: string }> => {
     const status = res.status
-    const text = await res.text().catch(() => '')
+    const text = await res.text()
     let data: any = null
     try {
       data = text ? JSON.parse(text) : null
@@ -1015,8 +1017,7 @@ export default function BannerDashboard() {
       return '送信データが大きすぎます（人物写真/ロゴを小さめにして再試行してください）'
     }
     if (status === 502 || status === 503) return 'サーバが混雑しています。少し待って再試行してください。'
-    if (t) return t.slice(0, 180)
-    return '生成に失敗しました'
+    return '生成結果を確認できませんでした。履歴を確認してから再試行してください。'
   }
 
   // ギャラリー公開（任意）
@@ -1292,10 +1293,6 @@ export default function BannerDashboard() {
     setIsGenerating(true)
     // 生成開始時に既存バナーを消さない（消すと画面が「パチパチ」しやすい）
     // 新しい結果が返ってきたタイミングで上書きする
-    setGeneratedCopies([])
-    setUsedModelDisplay(null)
-    setRefineInstruction('')
-    setRefineHistory([])
     const startedAt = Date.now()
     setGenerationStartedAt(startedAt)
 
@@ -1313,13 +1310,14 @@ export default function BannerDashboard() {
     setPredictedTotalMs(predicted)
     setPredictedRemainingMs(predicted)
 
+    let timeout: number | undefined
     try {
       // “終わらない”体感を潰す：フロント側でタイムアウト検知
       const controller = new AbortController()
       // NOTE: state の predictedTotalMs は即時反映されないので、ローカル変数 predicted を使う
       // 10枚でも待てるよう、上限はサーバ側 maxDuration(300s) に寄せる
       const timeoutMs = Math.max(90_000, Math.min(290_000, predicted + 60_000))
-      const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
+      timeout = window.setTimeout(() => controller.abort(), timeoutMs)
 
       const response = await fetch('/api/banner/generate', {
         method: 'POST',
@@ -1349,7 +1347,6 @@ export default function BannerDashboard() {
           shareProfile: shareToGallery && !isGuest ? (shareProfile ? true : false) : undefined,
         }),
       })
-      window.clearTimeout(timeout)
 
       const parsed = await safeReadJson(response)
       const data = parsed.data || {}
@@ -1370,13 +1367,17 @@ export default function BannerDashboard() {
           return
         }
         const msg = data?.error || data?.message || normalizeNonJsonApiError(parsed.status, parsed.text)
-        throw new Error(msg)
+        throw new BannerApiError(typeof msg === 'string' ? msg : '生成結果を確認できませんでした。履歴を確認してから再試行してください。')
       }
       
+      const nextBanners = Array.isArray(data.banners) ? data.banners.filter((banner: unknown) => typeof banner === 'string' && banner.startsWith('data:image/')) : []
+      if (!nextBanners.length) throw new BannerApiError('生成結果を確認できませんでした。履歴を確認してから再試行してください。')
+      setRefineInstruction('')
+      setRefineHistory([])
       setProgress(100)
       await new Promise(r => setTimeout(r, 500))
       void quota.refresh()
-      setGeneratedBanners(data.banners || [])
+      setGeneratedBanners(nextBanners)
       setGeneratedCopies(Array.isArray(data.copies) ? data.copies : [])
       setUsedModelDisplay(data.usedModelDisplay || null)
       // 生成直後は先頭を選択（プレビューが出てUXが良い & null事故を防ぐ）
@@ -1396,7 +1397,7 @@ export default function BannerDashboard() {
           setGuestUsageCount(serverUsed)
           setGuestUsage('banner', serverUsed)
         } else {
-          const genCount = Array.isArray(data?.banners) ? data.banners.length : 3
+          const genCount = nextBanners.length
           const newCount = guestUsageCount + genCount
           setGuestUsageCount(newCount)
           setGuestUsage('banner', newCount)
@@ -1406,15 +1407,16 @@ export default function BannerDashboard() {
         if (Number.isFinite(serverUsed)) {
           setUserUsageCount(serverUsed)
         } else {
-          const genCount = Array.isArray(data?.banners) ? data.banners.length : 3
+          const genCount = nextBanners.length
           const newCount = incrementUserUsage('banner', genCount)
           setUserUsageCount(newCount)
         }
       }
       
       // 部分的にエラーがあった場合は警告表示
-      if (data.error) {
-        setError(data.error)
+      const warning = typeof data.warning === 'string' ? data.warning : typeof data.error === 'string' ? data.error : ''
+      if (warning) {
+        setError(warning)
         toast.error('一部のバナー生成に失敗しました', { 
           icon: <UiIcon name="warning" size={18} />,
           duration: 5000,
@@ -1424,13 +1426,14 @@ export default function BannerDashboard() {
       }
     } catch (err: any) {
       if (err?.name === 'AbortError') {
-        setError('生成に時間がかかっています。タブは開いたまま、しばらく待つか再試行してください。')
+        setError('時間内に生成結果を確認できませんでした。履歴を確認してから再試行してください。')
         toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
       } else {
-        setError(err.message)
+        setError(err instanceof BannerApiError ? err.message : '生成結果を確認できませんでした。履歴を確認してから再試行してください。')
         toast.error('生成に失敗しました', { duration: 5000 })
       }
     } finally {
+      if (timeout !== undefined) window.clearTimeout(timeout)
       setIsGenerating(false)
     }
   }

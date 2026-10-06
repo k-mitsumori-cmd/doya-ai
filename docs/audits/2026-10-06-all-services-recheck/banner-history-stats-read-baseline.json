@@ -1,0 +1,27 @@
+{
+  "scope": "Actual AST-extracted loadHistory callbacks, synthetic fetch/clock/auth/cache/setters, no real API",
+  "results": [
+    {
+      "name": "history",
+      "scenario": "pending_body",
+      "bodyPendingWithoutDeadline": true
+    },
+    {
+      "name": "history",
+      "scenario": "invalid_items",
+      "missingItemsAcceptedAsEmpty": true,
+      "readErrorDisplayed": false
+    },
+    {
+      "name": "stats",
+      "scenario": "pending_body",
+      "bodyPendingWithoutDeadline": true
+    },
+    {
+      "name": "stats",
+      "scenario": "invalid_items",
+      "missingItemsAcceptedAsEmpty": false,
+      "readErrorDisplayed": true
+    }
+  ]
+}

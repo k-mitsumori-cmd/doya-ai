@@ -1,0 +1,18 @@
+PASS src/app/banner/dashboard/create/page.tsx rejects invalid results, transport failures and quota refusal without losing images
+PASS src/app/banner/dashboard/create/page.tsx keeps the body deadline active and preserves prior images on timeout
+PASS src/app/banner/dashboard/create/page.tsx accepts verified images and exposes partial success warnings
+PASS src/app/banner/dashboard/chat/page.tsx rejects invalid results, transport failures and quota refusal without losing images
+PASS src/app/banner/dashboard/chat/page.tsx keeps the body deadline active and preserves prior images on timeout
+PASS src/app/banner/dashboard/chat/page.tsx accepts verified images and exposes partial success warnings
+{
+  "passed": 6,
+  "scope": "Actual AST-extracted page handlers, synthetic quota/fetch/clock/setters, no DB/provider/payment requests",
+  "results": [
+    "src/app/banner/dashboard/create/page.tsx rejects invalid results, transport failures and quota refusal without losing images",
+    "src/app/banner/dashboard/create/page.tsx keeps the body deadline active and preserves prior images on timeout",
+    "src/app/banner/dashboard/create/page.tsx accepts verified images and exposes partial success warnings",
+    "src/app/banner/dashboard/chat/page.tsx rejects invalid results, transport failures and quota refusal without losing images",
+    "src/app/banner/dashboard/chat/page.tsx keeps the body deadline active and preserves prior images on timeout",
+    "src/app/banner/dashboard/chat/page.tsx accepts verified images and exposes partial success warnings"
+  ]
+}

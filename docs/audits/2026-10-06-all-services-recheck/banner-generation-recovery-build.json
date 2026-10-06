@@ -1,0 +1,17 @@
+{
+  "runId": "42910e4e-94a3-4930-b309-da1586719f18",
+  "startedAt": "2026-10-06T03:12:59.490992+00:00",
+  "pid": 4458,
+  "sourceHashes": {
+    "src/app/banner/dashboard/create/page.tsx": "725b6d40777bb385cccda6a59027a0a5684d3a06e69cf00e5ba31e8ce5589116",
+    "src/app/banner/dashboard/chat/page.tsx": "b8bd91d9bdec88f61c62d3a34d5e517a20e7d0d9fc02e8936915d5c0e249f506",
+    "scripts/security-regression/verify-banner-generation-recovery.cjs": "0f5711b383428ca2d9b57211a0aa11a2978eb916bdaacf64e5e38d3434e374ef",
+    "scripts/security-regression/run.cjs": "408a9ce6a8f5f867181e970a94ac536bfde5fed00792ba6246a4699ae42896b1"
+  },
+  "state": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T03:18:25.443054+00:00",
+  "changedSources": [],
+  "rawLogPath": "/tmp/doya-banner-generation-recovery-build-20261006.log",
+  "rawLogSha256": "0a6afc79243f61ba4f612d975e393c0a31f384557a8a55e43fcddac60f2489ca"
+}

@@ -71,7 +71,7 @@ function updateEma(prev: number, next: number, alpha = 0.25) {
 
 async function safeReadJson(res: Response): Promise<{ ok: boolean; status: number; data: any; text: string }> {
   const status = res.status
-  const text = await res.text().catch(() => '')
+  const text = await res.text()
   let data: any = null
   try {
     data = text ? JSON.parse(text) : null
@@ -87,8 +87,7 @@ function normalizeNonJsonApiError(status: number, text: string): string {
     return '送信データが大きすぎます（人物写真/ロゴを小さめにして再試行してください）'
   }
   if (status === 502 || status === 503) return 'サーバが混雑しています。少し待って再試行してください。'
-  if (t) return t.slice(0, 180)
-  return 'エラーが発生しました'
+  return '生成結果を確認できませんでした。履歴を確認してから再試行してください。'
 }
 
 async function readFileAsDataUrl(file: File): Promise<string> {
@@ -141,6 +140,8 @@ async function readAndOptimizeImage(file: File, kind: 'logo' | 'person'): Promis
   if (kind === 'logo') return await optimizeImageDataUrl(raw, { maxSide: 512, mime: 'image/png' })
   return await optimizeImageDataUrl(raw, { maxSide: 1024, mime: 'image/jpeg', quality: 0.8 })
 }
+
+class BannerApiError extends Error {}
 
 export default function BannerChatPage() {
   const { data: session } = useSession()
@@ -293,12 +294,14 @@ export default function BannerChatPage() {
     if (!proposedSpec || isGenerating) return
     if (!(await quota.check(generateCount))) return
     setIsGenerating(true)
-    setGeneratedBanners([])
-    setSelectedBannerIndex(0)
+    let timeout: number | undefined
     try {
+      const controller = new AbortController()
+      timeout = window.setTimeout(() => controller.abort(), 290_000)
       const res = await fetch('/api/banner/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           category: proposedSpec.category,
           purpose: proposedSpec.purpose,
@@ -335,16 +338,23 @@ export default function BannerChatPage() {
           setIsGenerating(false)
           return
         }
-        throw new Error(data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || '生成に失敗しました')
+        throw new BannerApiError(typeof data?.error === 'string' ? data.error : normalizeNonJsonApiError(parsed.status, parsed.text))
       }
+      const nextBanners = Array.isArray(data.banners) ? data.banners.filter((banner: unknown) => typeof banner === 'string' && banner.startsWith('data:image/')) : []
+      if (!nextBanners.length) throw new BannerApiError('生成結果を確認できませんでした。履歴を確認してから再試行してください。')
       void quota.refresh()
-      setGeneratedBanners(Array.isArray(data.banners) ? data.banners : [])
+      setGeneratedBanners(nextBanners)
       setSelectedBannerIndex(0)
       pushAssistant('生成できました。気になる案をダウンロードして使えます。')
+      if (typeof data.warning === 'string' && data.warning.trim()) {
+        pushAssistant(data.warning)
+        toast.error('生成結果と利用枚数をご確認ください')
+      }
     } catch (e: any) {
-      pushAssistant('生成に失敗しました。条件を少し変えてもう一度試してください。')
-      toast.error(e?.message || '生成に失敗しました')
+      pushAssistant('生成結果を確認できませんでした。履歴を確認してから再試行してください。')
+      toast.error(e instanceof BannerApiError ? e.message : '生成結果を確認できませんでした。履歴を確認してから再試行してください。')
     } finally {
+      if (timeout !== undefined) window.clearTimeout(timeout)
       setIsGenerating(false)
     }
   }
