@@ -1,0 +1,20 @@
+PASS saveLogoConfig rejects unconfirmed, unreadable and failed responses without claiming success
+PASS saveLogoConfig accepts the server-confirmed result and releases its busy state
+PASS deleteArticle rejects unconfirmed, unreadable and failed responses without claiming success
+PASS deleteArticle accepts the server-confirmed result and releases its busy state
+PASS logo save keeps a mismatched requested patch and handles refresh rejection without an unhandled promise
+PASS SEO deletion retains its body deadline and unknown completion never removes the visible article
+PASS declined SEO deletion makes no request
+{
+  "passed": 7,
+  "scope": "Actual AST-extracted callbacks, synthetic confirm/fetch/state/clock/reload. No real save/delete operation.",
+  "results": [
+    "saveLogoConfig rejects unconfirmed, unreadable and failed responses without claiming success",
+    "saveLogoConfig accepts the server-confirmed result and releases its busy state",
+    "deleteArticle rejects unconfirmed, unreadable and failed responses without claiming success",
+    "deleteArticle accepts the server-confirmed result and releases its busy state",
+    "logo save keeps a mismatched requested patch and handles refresh rejection without an unhandled promise",
+    "SEO deletion retains its body deadline and unknown completion never removes the visible article",
+    "declined SEO deletion makes no request"
+  ]
+}

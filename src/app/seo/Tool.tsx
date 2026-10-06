@@ -91,6 +91,8 @@ const STEP_LABELS: Record<string, string> = {
   cmp_polish: '校正中',
 }
 
+class SeoArticleDeleteError extends Error {}
+
 export default function SeoTool() {
   const router = useRouter()
   const [articles, setArticles] = useState<SeoArticleRow[]>([])
@@ -238,20 +240,25 @@ export default function SeoTool() {
     if (!confirm('この記事を削除しますか？この操作は取り消せません。')) return
     setActionError(null)
     setDeleteBusyId(articleId)
+    let timeout: number | undefined
     try {
+      const controller = new AbortController()
+      timeout = window.setTimeout(() => controller.abort(), 290_000)
       const res = await fetch(`/api/seo/articles/${articleId}`, {
         method: 'DELETE',
+        signal: controller.signal,
       })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || `削除に失敗しました (${res.status})`)
+      const json = await res.json()
+      if (!res.ok || json?.success !== true) {
+        throw new SeoArticleDeleteError(typeof json?.error === 'string' ? json.error : '削除結果を確認できませんでした。再読み込みしてご確認ください。')
       }
       // 成功: stateから該当記事を除去
       setArticles((prev) => prev.filter((a) => a.id !== articleId))
       setRefreshStep(step => step + 1)
     } catch (e: any) {
-      setActionError(e?.message || '記事の削除に失敗しました')
+      setActionError(e instanceof SeoArticleDeleteError ? e.message : '削除結果を確認できませんでした。再読み込みしてご確認ください。')
     } finally {
+      if (timeout !== undefined) window.clearTimeout(timeout)
       setDeleteBusyId(null)
     }
   }

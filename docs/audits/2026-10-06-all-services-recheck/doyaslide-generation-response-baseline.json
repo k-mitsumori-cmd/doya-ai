@@ -1,0 +1,17 @@
+{
+  "scope": "Actual AST-extracted generation and ensureOk callbacks; synthetic quota/clock/fetch/reload/state; no paid generation request",
+  "results": [
+    {
+      "scenario": "empty_generation_success",
+      "completionClaimed": true,
+      "handlerRejected": false,
+      "busyRemaining": false
+    },
+    {
+      "scenario": "final_reload_failure",
+      "completionClaimed": true,
+      "handlerRejected": true,
+      "busyRemaining": true
+    }
+  ]
+}

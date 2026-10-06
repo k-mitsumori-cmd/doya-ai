@@ -150,6 +150,11 @@ if (bannerLimitContact.error || bannerLimitContact.status !== 0) {
   console.error('Security regression failed: verify-banner-limit-contact.cjs');
   process.exit(1);
 }
+const saveDeleteResponseConfirmation = spawnSync(process.execPath, [path.join(__dirname, 'verify-save-delete-response-confirmation.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (saveDeleteResponseConfirmation.error || saveDeleteResponseConfirmation.status !== 0) {
+  console.error('Security regression failed: verify-save-delete-response-confirmation.cjs');
+  process.exit(1);
+}
 const bannerChatRefineRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-chat-refine-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerChatRefineRecovery.error || bannerChatRefineRecovery.status !== 0) {
   console.error('Security regression failed: verify-banner-chat-refine-recovery.cjs');

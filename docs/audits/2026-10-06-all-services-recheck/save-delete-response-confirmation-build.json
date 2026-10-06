@@ -1,0 +1,17 @@
+{
+  "runId": "328d8ff4-780c-40ad-a566-78c4fe46d3fa",
+  "startedAt": "2026-10-06T03:36:42.377267+00:00",
+  "pid": 13716,
+  "sourceHashes": {
+    "src/app/doyaslide/[id]/page.tsx": "b1090b9e3110e3154a38a919013e706ad237086df20309285cf5a639c704ffcc",
+    "src/app/seo/Tool.tsx": "2ea992c9f562ad92bdaeb2901765522769f51dde2cc867301b85a6701a3706c0",
+    "scripts/security-regression/verify-save-delete-response-confirmation.cjs": "4de2b7257ee05664820b7fe566f40e6bd47b5e1ebf1747ae95a7ebaaf47eef94",
+    "scripts/security-regression/run.cjs": "ee10cbbeb1ae491b6899ac8f62e4401e69e7f4808e83b9a9c985cc91bf166a74"
+  },
+  "state": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T03:41:13.727744+00:00",
+  "changedSources": [],
+  "rawLogPath": "/tmp/doya-save-delete-response-confirmation-build-20261006.log",
+  "rawLogSha256": "e93318d57e0a0d1559edc99ce614e4ff7e83ee63b27f3763d9a8beedc176ab27"
+}

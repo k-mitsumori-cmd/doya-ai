@@ -1,0 +1,14 @@
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+1 !== 0
+
+    at /Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-save-delete-response-confirmation.cjs:11:263
+    at async check (/Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/load-typescript.cjs:4:30)
+    at async /Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-save-delete-response-confirmation.cjs:11:2 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

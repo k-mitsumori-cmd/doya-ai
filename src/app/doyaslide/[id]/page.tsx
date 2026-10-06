@@ -347,19 +347,20 @@ function EditorInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
       })
-      const data = await res.json().catch(() => ({}))
+      const data = await res.json()
       if (res.ok) {
+        if (!data?.project || data.project.id !== id || !Array.isArray(data.project.slides) || !Object.entries(patch).every(([key, value]) => data.project[key] === value)) throw new Error('ロゴ設定の更新結果を確認できませんでした')
         setLogoRetryPatch(null)
         toast.success('ロゴ設定を全スライドに反映しました')
       } else {
         setLogoRetryPatch(patch)
-        toast.error(data?.error || 'ロゴ設定の更新に失敗しました')
+        toast.error(typeof data?.error === 'string' ? data.error : 'ロゴ設定の更新に失敗しました')
       }
       await reload()
     } catch {
       setLogoRetryPatch(patch)
       toast.error('ロゴ設定の更新結果を確認できませんでした。再読み込みしてご確認ください')
-      await reload()
+      await reload().catch(() => {})
     } finally {
       logoConfigBusyRef.current = false
       setSavingLogoConfig(false)

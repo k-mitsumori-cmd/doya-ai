@@ -1,14 +1,12 @@
 {
-  "checkedAt": "2026-10-06T03:28:01.771418+00:00",
+  "checkedAt": "2026-10-06T03:40:31.704365+00:00",
   "commit": "b0ea5a4dac33115f44d09ed8e7535fdb4622a214",
   "deploymentId": "dpl_3NZSFLJQqDmiRN3eZ69Z2a5A2xAW",
-  "readyState": "BUILDING",
-  "ci": [
-    {
-      "conclusion": "",
-      "databaseId": 37408957964,
-      "headSha": "b0ea5a4dac33115f44d09ed8e7535fdb4622a214",
-      "status": "in_progress"
-    }
-  ]
+  "readyState": "READY",
+  "productionDomainPresent": true,
+  "ci": {
+    "conclusion": "success",
+    "headSha": "b0ea5a4dac33115f44d09ed8e7535fdb4622a214",
+    "status": "completed"
+  }
 }

@@ -1,0 +1,30 @@
+{
+  "scope": "Actual AST-extracted reload callback, synthetic fetch/mount/state. No production project read.",
+  "results": [
+    {
+      "scenario": "unavailable",
+      "loading": false,
+      "projectMissing": false,
+      "foreignProjectAccepted": false,
+      "noReadErrorState": true
+    },
+    {
+      "scenario": "empty_success",
+      "loading": false,
+      "projectMissing": true,
+      "foreignProjectAccepted": false,
+      "noReadErrorState": true
+    },
+    {
+      "scenario": "foreign_project",
+      "loading": false,
+      "projectMissing": false,
+      "foreignProjectAccepted": true,
+      "noReadErrorState": true
+    },
+    {
+      "scenario": "pending_body",
+      "pendingWithoutAbortSignal": true
+    }
+  ]
+}
