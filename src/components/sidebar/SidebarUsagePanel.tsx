@@ -135,8 +135,8 @@ export function SidebarUsagePanel({
     }
     const focus = () => load()
     const refresh = (event: Event) => {
-      // Banner notifications originate from an actor-scoped quota response.
-      if (refreshEvent === 'banner:usage-changed' && (event as CustomEvent<{ actor?: string }>).detail?.actor !== actor) return
+      // These notifications originate from actor-scoped quota responses.
+      if ((refreshEvent === 'banner:usage-changed' || refreshEvent === 'persona:usage-changed') && (event as CustomEvent<{ actor?: string }>).detail?.actor !== actor) return
       load(true)
     }
     load()

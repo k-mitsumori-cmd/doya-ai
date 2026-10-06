@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "checks": [
+    "Usage revision updates actual sidebar",
+    "Other actor and actor-less events ignored",
+    "Exhausted quota updates both displays"
+  ],
+  "scope": "Actual StrictMode-mounted components; synthetic quota reads, no live generation or customer data."
+}

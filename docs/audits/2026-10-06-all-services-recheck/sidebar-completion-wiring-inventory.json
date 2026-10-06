@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-10-06T17:40:15.553219+00:00",
+  "scope": "Source inventory of all 9 SidebarUsagePanel consumers; full flow verification still pending per service.",
+  "consumers": [
+    {
+      "service": "banner",
+      "state": "mounted response-to-sidebar defect reproduced and patched; main pushed; new CI/READY pending",
+      "event": "banner:usage-changed"
+    },
+    {
+      "service": "persona",
+      "state": "mounted usage privacy/validation defects reproduced and patched locally; full gate running",
+      "event": "persona:usage-changed"
+    },
+    {
+      "service": "seo",
+      "state": "missing event; persistent SeoAppLayout wraps route transitions; next mounted lifecycle test required"
+    },
+    {
+      "service": "shodan",
+      "state": "missing event; organizationSlug is supplied; post-generation lifecycle requires verification"
+    },
+    {
+      "service": "quote",
+      "state": "missing event; persistent layout; organization source must be checked against first-organization API policy"
+    },
+    {
+      "service": "mensetsu",
+      "state": "missing event; persistent layout; creation and completion quota semantics require verification"
+    },
+    {
+      "service": "aishodan",
+      "state": "missing event; persistent layout; creation and completion quota semantics require verification"
+    },
+    {
+      "service": "aio",
+      "state": "event wired on runScan finally; keyed org page; event has no actor/org detail, current summary GET remains scoped",
+      "event": "aio:usage-changed"
+    },
+    {
+      "service": "adimage",
+      "state": "event wired on successful generate/regenerate with revision guard; rejection refresh needs verification",
+      "event": "adimage:generated"
+    }
+  ]
+}

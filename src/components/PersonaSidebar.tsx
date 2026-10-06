@@ -82,7 +82,7 @@ function PersonaSidebarImpl({
 
         {/* プランバナー */}
         {/* 作った数と残り。数字は /api/usage/persona から受け取るだけ */}
-        <SidebarUsagePanel service="persona" show={sessionReady && (isMobile || !isCollapsed)} />
+        <SidebarUsagePanel service="persona" show={sessionReady && (isMobile || !isCollapsed)} refreshEvent="persona:usage-changed" />
         {sessionReady && (isMobile || !isCollapsed) && (
           <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
             <div className="hidden md:block relative z-10">
