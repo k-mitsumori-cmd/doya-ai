@@ -1,0 +1,20 @@
+{
+  "runId": "bd2618df-5ccb-4e14-9d95-5e8b08a4f114",
+  "startedAt": "2026-10-06T05:25:15.093090+00:00",
+  "pid": 61416,
+  "sourceHashes": {
+    "src/lib/persona/image-response.ts": "9633e0de8f2b99c1c440ad7f84bf933f6edbaf5e8969dde8469fa8db60a56700",
+    "src/app/persona/Tool.tsx": "7b127126aed21848750f6eb01ca81a9db0efab4cce05bc48d1e26f7296a93d51",
+    "src/components/persona/PersonaBannerGenerator.tsx": "c3cfb405b162f7ae318102ded506543c9f00cb406fed6e6df3a42f652d8442f4",
+    "scripts/security-regression/verify-persona-image-response.cjs": "1ea94ded840d393efeab1811c190f08ab1b466aa6008dd6b49ac6aec16f2e71b",
+    "scripts/security-regression/verify-persona-image-callbacks.cjs": "fcd51d97f722921aa5877eda9feed4c1bea8518f079fff4bd5628051a5b80d0a",
+    "scripts/security-regression/verify-persona-scene-retry.cjs": "551807f815af0747cd64b3dc4867e3f9282ff3b37871daee03a7029b7e93fa72",
+    "scripts/security-regression/verify-persona-image-owner.cjs": "6d84c760740271530667fe9d6498a5586b0cdada5ef29bef2d13b6a3a9b7c970",
+    "scripts/security-regression/run.cjs": "26d30ccd319ca4050ada3a7044df0a56589af5964822262af504d17dcdbe2178"
+  },
+  "state": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T05:30:49.619824+00:00",
+  "changedSources": [],
+  "rawLogSha256": "da627f80976085c5db1ee2214cadef38fccd99a779d6c8106e9d7f2f7f35e817"
+}

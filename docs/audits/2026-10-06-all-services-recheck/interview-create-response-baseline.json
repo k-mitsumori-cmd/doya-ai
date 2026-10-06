@@ -1,0 +1,44 @@
+{
+  "scope": "Actual Interview creation callback with synthetic fetch/state. No real project writes.",
+  "sourceSha256": "061e052de6113d87fd18b22f78527d3c614c251d59b3d004a6a2ba59f5ce8aa6",
+  "results": [
+    {
+      "scenario": "http500-success-body",
+      "requests": 1,
+      "abortSignals": [
+        false
+      ],
+      "routes": [
+        "/interview/projects/synthetic/materials"
+      ],
+      "error": "",
+      "loading": false
+    },
+    {
+      "scenario": "missing-id",
+      "requests": 1,
+      "abortSignals": [
+        false
+      ],
+      "routes": [
+        "/interview/projects/undefined/materials"
+      ],
+      "error": "",
+      "loading": false
+    },
+    {
+      "scenario": "duplicate-pending",
+      "requests": 2,
+      "abortSignals": [
+        false,
+        false
+      ],
+      "routes": [
+        "/interview/projects/synthetic/materials",
+        "/interview/projects/synthetic/materials"
+      ],
+      "error": "",
+      "loading": false
+    }
+  ]
+}

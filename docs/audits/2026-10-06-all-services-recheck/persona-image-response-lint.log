@@ -1,0 +1,10 @@
+
+/Users/mitsumori_katsuki/Code/09_Cursol/src/app/persona/Tool.tsx
+  479:6   warning  React Hook useEffect has a missing dependency: 'handleGeneratePortrait'. Either include it or remove the dependency array                                                                                                                                                                react-hooks/exhaustive-deps
+  493:6   warning  React Hook useEffect has missing dependencies: 'handleGenerateScene' and 'sceneImages'. Either include them or remove the dependency array                                                                                                                                               react-hooks/exhaustive-deps
+  853:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/mitsumori_katsuki/Code/09_Cursol/src/components/persona/PersonaBannerGenerator.tsx
+  103:7  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+✖ 4 problems (0 errors, 4 warnings)

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { personaBrowserStorage } from '@/lib/persona/browser-storage'
 import { savePersonaRecord, savePersonaImage, savedPersonaPath } from '@/lib/persona/history-records'
+import { readPersonaImageResponse, validPersonaImageResponse, personaImageError, PersonaImageResponseError } from '@/lib/persona/image-response'
 import { includedPersonaImages } from '@/lib/persona/image-entitlements'
 import { isPersonaDisplayData, hasValidPersonaImages } from '@/lib/persona/display-data'
 import PersonaUsagePanel from '@/components/persona/PersonaUsagePanel'
@@ -568,6 +569,9 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
     if (!generatedData?.persona || currentPersona.current !== generatedData) return
     const recordId = currentRecordId.current
     if (!recordId) { setPortraitError('この履歴にはサーバーの保存情報がありません。新しくペルソナを生成してください。'); return }
+    const pendingImages = scenePending.current
+    if (pendingImages.has('portrait')) return
+    pendingImages.add('portrait')
     const intent = portraitImage ? 'regenerate' : 'included'
     if (imageAttempts.current.portrait?.projectId !== recordId || imageAttempts.current.portrait?.intent !== intent) {
       imageAttempts.current.portrait = { projectId: recordId, intent, key: crypto.randomUUID() }
@@ -581,28 +585,24 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
     setPortraitError('')
     let res: Response | null = null
     try {
-      res = await fetch('/api/persona/portrait', {
+      const reply = await readPersonaImageResponse('/api/persona/portrait', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: recordId, slotKey: 'portrait', intent, requestKey: attempt.key }),
       })
 
-      const raw = await res.text()
-      let data: any = null
-      try {
-        data = raw ? JSON.parse(raw) : null
-      } catch {
-        data = null
-      }
+      res = reply.res
+      const data = reply.data
 
       if (!isCurrent()) return
       if (!res.ok || !data) {
+        if (data?.code === 'REQUEST_CONFLICT') delete imageAttempts.current.portrait
         if (data?.code === 'DAILY_LIMIT_REACHED') { setQuotaNotice('image'); setQuotaAction(personaQuotaAction(data)) }
-        const message = data?.error || 'ポートレート生成に失敗しました'
+        const message = '本日の追加画像・再生成の上限に達しました。利用枠をご確認ください。'
         throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(message) : new Error(message)
       }
 
-      if (data.success && data.image) {
+      if (validPersonaImageResponse(data)) {
         if (intent !== 'included') setQuotaNotice(current => current === 'image' ? null : current)
         delete imageAttempts.current.portrait
         setPortraitImage(data.image)
@@ -610,11 +610,12 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
           savePersonaImage(accountStorage, recordId, generatedData, { portrait: data.image })
         } catch { setPortraitError('画像はサーバーに保存しましたが、このブラウザのコピーを更新できませんでした。保存済み履歴から開き直せます。') }
       } else {
-        throw new Error(data.error || 'ポートレート画像の取得に失敗しました')
+        throw new PersonaImageResponseError('画像の保存先を確認できませんでした。履歴を確認するか、同じ操作を再試行してください。')
       }
     } catch (e) {
-      if (isCurrent()) setPortraitError(toFriendlyError(e, res))
+      if (isCurrent()) setPortraitError(e instanceof PersonaQuotaError ? e.message : personaImageError(e, res))
     } finally {
+      pendingImages.delete('portrait')
       if (isCurrent()) setPortraitLoading(false)
     }
   }
@@ -629,8 +630,9 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
     }
     const attempt = imageAttempts.current[sceneKey]
     const requestKey = `scene:${sceneKey}`
-    if (scenePending.current.has(requestKey)) return
-    scenePending.current.add(requestKey)
+    const pendingImages = scenePending.current
+    if (pendingImages.has(requestKey)) return
+    pendingImages.add(requestKey)
     scenePrompts.current[sceneKey] = scenePrompt
     setSceneErrors(prev => ({ ...prev, [sceneKey]: '' }))
     const request = Symbol(requestKey)
@@ -639,22 +641,23 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
     setSceneLoading(prev => ({ ...prev, [sceneKey]: true }))
     let res: Response | null = null
     try {
-      res = await fetch('/api/persona/scene', {
+      const reply = await readPersonaImageResponse('/api/persona/scene', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: recordId, slotKey: sceneKey, intent, requestKey: attempt.key }),
       })
 
-      const raw = await res.text()
-      let data: any = null
-      try { data = raw ? JSON.parse(raw) : null } catch { data = null }
+      res = reply.res
+      const data = reply.data
 
       if (!isCurrent()) return
-      if (!res.ok || !data?.success || typeof data?.image !== 'string' || !data.image) {
+      if (!res.ok) {
+        if (data?.code === 'REQUEST_CONFLICT') delete imageAttempts.current[sceneKey]
         if (data?.code === 'DAILY_LIMIT_REACHED') { setQuotaNotice('image'); setQuotaAction(personaQuotaAction(data)) }
-        const message = data?.error || 'シーン画像を生成できませんでした。'
+        const message = '本日の追加画像・再生成の上限に達しました。利用枠をご確認ください。'
         throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(message) : new Error(message)
       }
+      if (!validPersonaImageResponse(data)) throw new PersonaImageResponseError('画像の保存先を確認できませんでした。履歴を確認するか、同じ操作を再試行してください。')
       if (data.image) {
         if (intent !== 'included') setQuotaNotice(current => current === 'image' ? null : current)
         delete imageAttempts.current[sceneKey]
@@ -664,10 +667,10 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         } catch { setError('画像はサーバーに保存しましたが、このブラウザのコピーを更新できませんでした。保存済み履歴から開き直せます。') }
       }
     } catch (e) {
-      if (isCurrent()) setSceneErrors(prev => isCurrent() ? { ...prev, [sceneKey]: toFriendlyError(e, res) } : prev)
+      if (isCurrent()) setSceneErrors(prev => isCurrent() ? { ...prev, [sceneKey]: (e instanceof PersonaQuotaError ? e.message : personaImageError(e, res)) } : prev)
     } finally {
+      pendingImages.delete(requestKey)
       if (isCurrent()) {
-        scenePending.current.delete(requestKey)
         setSceneLoading(prev => isCurrent() ? { ...prev, [sceneKey]: false } : prev)
       }
     }

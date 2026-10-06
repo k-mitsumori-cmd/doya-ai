@@ -512,3 +512,22 @@ withDoyaSlideProjectLockを追加し、所有者・資料IDをパラメーター
 ローカル4モデルfixtureへschema.prismaのcascade FK3件、スライド(projectId,index)一意制約、通常indexを追加し、DBカタログで存在を確認しました（doyaslide-local-fixture-constraints.json）。中間regenerateのソースを元の合格buildのSHA-256と一致するbytesで復元し、logo-configの84b3d1f5コードと組み合わせて再実行すると、旧方式で依然staleBrandingPersisted=true/200でした（doyaslide-constrained-prisma-race-baseline.json）。ロック補強版は同じ制約で10ケース合格（doyaslide-constrained-prisma-lock-results.json）。本番RLS/trigger・全カタログ・認証済み画面はこのfixtureで代替しません。再現用コードとbaselineソースJSONを保存し、検証用DBは停止済みです。
 
 ロック版の最終ゲート4130b570はexitCode0、12ソースSHA-256不変で完了しました（doyaslide-parent-lock-final-build.json/log）。全オフライン回帰・型検査・Next本番ビルド合格です。この補強範囲をmainへ反映します。全17サービスの項目別通し確認・本番E2E・追加補修は継続します。ペルソナ画像処理は/tmp候補のhelper12ケースを合成fetch/stream/時計で検証しましたが、画面の組込・回帰・本番反映は未完了です。
+
+
+## ペルソナ画像の応答・連打補修（全体ゲート実行中）
+
+実ポートレートcallbackの既存baselineでは、不正な画像オブジェクトを画面・ブラウザコピーに受け入れ、同一ターンの2回操作で2リクエストを送った。課金の二重計上はこの証拠から判断しない（サーバーに冪等処理あり）。ポートレート/シーン/バナーに共通readerを接続し、success===trueと内部画像URL、64KiB応答上限、本文読み取りを含む310秒期限とreader取消、公開文言を導入。連打を同期refで拒否し、未確定結果では前の画像と再試行キーを保持。REQUEST_CONFLICTだけは次の明示操作のキーを更新する。画像付属最大16枚と追加FREE5/PRO30枚の確定仕様は維持。
+
+実callback+実readerを使う合成通信/状態/保存/時計42ケース、reader12ケース、既存scene再試行・画像所有状態・自動復元回帰を確認。型チェック合格、lintエラー0（既存hook依存/img警告4件）。ブラウザ・実認証・実生成・DB全体のE2E証明ではない。全体ビルドと本番反映はこの時点では未完了。
+
+## 次巡の未補修：インタビュープロジェクト作成
+
+probe-interview-create-response.cjs は実page callbackを合成fetchで実行。HTTP500のsuccess本文でも遷移、IDなしprojectで/undefined/materialsへ遷移、同時2操作で2リクエストを確認。結果はinterview-create-response-baseline.json。期限がない点もsourceで確認。実プロジェクト作成やDB書込は実行していない。ペルソナの凍結ビルド中なので、この新規問題の修正は次のcohortで行う。
+
+
+ペルソナ全体ゲート runId 257cad98-57e2-449f-993f-5210de995124、exec session9785は終了コード1で終端。全体回帰とtscは成功、Next compileでENOSPC。driverの終了state書込も容量不足で失敗したため、実session終端・ログ・残存プロセスなしを根拠にstateを補記（driver自動完了記録ではない）。8sourceの凍結hashは一致。npmダウンロードキャッシュ294MiBを現物確認し、npm cache clean --force後423MiBへ復旧。しかし本番ビルドに必要な空き容量をまだ確認できず、このcohortはpushしない。元素材、node_modules、Git、他者の変更は保持。初回失敗証拠はpersona-image-response-build-enospc.json/log。
+
+
+再実行 runId bd2618df-5ccb-4e14-9d95-5e8b08a4f114 / session32312 は終了コード0、changedSources空で完了。空き容量3.2GiBへの回復を確認後、同じ8sourceでPrisma生成→全体回帰→tsc→Nextの完全ゲートを実行。初回失敗証拠を保持し、合格記録はpersona-image-response-build.json/logへ分離。現在source8個のSHA256も合格時と一致。本番はmainへのpush後、同一commitのCIとデプロイを別途確認する。
+
+ドヤスライド親行ロックcohort26db0fbaはCI37417526314成功、Vercel dpl_229kBJfYCmrVrzkVfZyWS5LHofhU READY・本番alias割当を確認。匿名GET /persona /interview /doyaslideはHTTP200。これらは実認証・実画像生成・ブラウザレイアウトの証明ではない。deployment/public-smokeの対応JSONに状態を保存。

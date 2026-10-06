@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-06T05:27:35.860070+00:00",
+  "deploymentHeadSha": "26db0fba6ae65d6a438ac89b0af6b15b58d3264d",
+  "scope": "Anonymous read-only HTML GET only. Not authenticated generation, browser layout or full service verification.",
+  "results": [
+    {
+      "path": "/persona",
+      "httpStatus": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/persona",
+      "htmlBytesRead": 82982,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/interview",
+      "httpStatus": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/interview",
+      "htmlBytesRead": 90866,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/doyaslide",
+      "httpStatus": 200,
+      "finalUrl": "https://doya-ai.surisuta.jp/doyaslide",
+      "htmlBytesRead": 84805,
+      "contentType": "text/html; charset=utf-8"
+    }
+  ]
+}

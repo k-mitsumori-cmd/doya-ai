@@ -1,0 +1,16 @@
+PASS all five automatic image timers canceled on effect cleanup
+PASS oversized model result schedules only fifteen scenes plus portrait
+PASS portrait normal
+PASS portrait modified
+PASS portrait late-error
+PASS portrait old-timer
+PASS portrait newer-request
+PASS portrait other-tab
+PASS portrait unmounted
+PASS scene normal
+PASS scene modified
+PASS scene late-error
+PASS scene old-timer
+PASS scene newer-request
+PASS scene other-tab
+PASS scene unmounted

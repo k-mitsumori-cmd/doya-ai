@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { readPersonaImageResponse, validPersonaImageResponse, personaImageError, PersonaImageResponseError } from '@/lib/persona/image-response'
 import { PERSONA_BANNER_SIZES } from '@/lib/persona/banner-size'
 import { TrialNote } from '@/components/TrialCallout'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
@@ -24,10 +25,10 @@ export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases
   const [loading, setLoading] = useState(false)
   const pending = useRef<{ input: string; key: string } | null>(null)
   const controller = useRef<AbortController | null>(null)
-  useEffect(() => () => controller.current?.abort(), [])
+  useEffect(() => () => { controller.current?.abort(); controller.current = null }, [])
 
   const generate = async () => {
-    if (!projectId || !isPaid || loading || !catchphrase.trim()) return
+    if (!projectId || !isPaid || controller.current || loading || !catchphrase.trim()) return
     const intent = image ? 'regenerate' : 'extra'
     const input = JSON.stringify({ projectId, intent, catchphrase: catchphrase.trim(), serviceName: serviceName.trim(), sizeKey })
     if (pending.current?.input !== input) pending.current = { input, key: crypto.randomUUID() }
@@ -39,27 +40,32 @@ export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases
     setErrorCode('')
     setQuotaAction(null)
     try {
-      const response = await fetch('/api/persona/banner', {
+      const reply = await readPersonaImageResponse('/api/persona/banner', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, cache: 'no-store', signal: active.signal,
         body: JSON.stringify({ projectId, requestKey, slotKey: 'banner-default', intent,
           catchphrase: catchphrase.trim(), serviceName: serviceName.trim(), sizeKey }),
       })
-      const body = await response.json().catch(() => null)
+      const response = reply.res
+      const body = reply.data
+      if (active.signal.aborted || controller.current !== active) return
       if (!response.ok) {
         if (body?.code === 'REQUEST_CONFLICT') pending.current = null
         setErrorCode(typeof body?.code === 'string' ? body.code : '')
         setQuotaAction(body?.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : body?.upgradeUrl === '/persona/pricing' ? 'pricing' : null)
-        setError(typeof body?.error === 'string' ? body.error : 'バナー画像を生成できませんでした。時間を置いて再度お試しください。')
+        setError(body?.code === 'DAILY_LIMIT_REACHED' ? '本日の追加画像・再生成の上限に達しました。利用枠をご確認ください。' : body?.code === 'PRO_REQUIRED' ? 'バナー画像生成はプロプランで利用できます。' : personaImageError(null, response))
         return
       }
-      if (typeof body?.image !== 'string' || !/^\/api\/persona\/images\/[a-zA-Z0-9_-]+$/.test(body.image)) throw new Error('画像の保存先を確認できませんでした。履歴から開き直してください。')
+      if (!validPersonaImageResponse(body)) throw new PersonaImageResponseError('画像の保存先を確認できませんでした。履歴から開き直してください。')
       pending.current = null
       setImage(body.image)
       onUsageChanged()
     } catch (cause) {
-      if (!active.signal.aborted) setError(cause instanceof Error ? cause.message : 'バナー画像を生成できませんでした。')
+      if (!active.signal.aborted && controller.current === active) setError(personaImageError(cause))
     } finally {
-      if (!active.signal.aborted) setLoading(false)
+      if (controller.current === active) {
+        controller.current = null
+        if (!active.signal.aborted) setLoading(false)
+      }
     }
   }
 

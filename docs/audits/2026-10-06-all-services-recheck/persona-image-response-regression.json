@@ -1,0 +1,21 @@
+{
+  "scope": "Actual response helper with synthetic fetch/streams/clock; no browser or provider execution.",
+  "passed": 12,
+  "results": [
+    "valid",
+    "malformed-json",
+    "object-image",
+    "truthy-success",
+    "foreign-url",
+    "headers-oversize",
+    "stream-oversize",
+    "private-fetch-error",
+    "body-error",
+    "fetch-deadline",
+    {
+      "name": "body-deadline",
+      "readerCanceled": 1
+    },
+    "already-aborted-no-fetch"
+  ]
+}

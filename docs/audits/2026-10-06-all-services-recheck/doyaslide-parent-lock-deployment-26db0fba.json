@@ -1,0 +1,21 @@
+{
+  "headSha": "26db0fba6ae65d6a438ac89b0af6b15b58d3264d",
+  "ci": {
+    "databaseId": 37417526314,
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "deployment": {
+    "id": "dpl_229kBJfYCmrVrzkVfZyWS5LHofhU",
+    "readyState": "READY",
+    "target": "production",
+    "aliasAssigned": true,
+    "alias": [
+      "doya-ai.vercel.app",
+      "doya-ai.surisuta.jp",
+      "doya-ai-surisutas-projects.vercel.app",
+      "doya-ai-git-main-surisutas-projects.vercel.app"
+    ]
+  },
+  "limits": "Deployment and CI status do not verify the authenticated full service flow."
+}
