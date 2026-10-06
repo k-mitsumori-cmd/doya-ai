@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { load, check, results } = require('./load-typescript.cjs');
 
-function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.com', conflicts = 0 } = {}) {
+function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.com', conflicts = 0, clock = Date } = {}) {
   let attempts = 0;
   let memberWrites = 0;
   let inviteWrites = 0;
@@ -48,7 +48,7 @@ function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.
         return { maxMembersPerWorkspace: max };
       },
     },
-  });
+  }, { Date: clock });
   return {
     run: () => helper.acceptPromaneInvitation({ token: 'token', userId: 'invited', email, displayName: '招待先' }),
     state: () => ({ attempts, memberWrites, inviteWrites }),
@@ -220,6 +220,27 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
     expired.invitation.expiresAt = new Date(Date.now() - 1000);
     assert.equal((await expired.run()).response.status, 410);
     assert.equal(expired.state().inviteWrites, 0);
+  });
+  await check('accepted and expiry codes match GET and admission at the exact deadline without writes', async () => {
+    const now = Date.parse('2026-10-06T01:00:00.000Z');
+    class Clock extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
+    for (const accepted of [false, true]) {
+      const f = fixture({ clock: Clock });
+      f.invitation.expiresAt = new Date(now);
+      if (accepted) f.invitation.acceptedAt = new Date(now - 1000);
+      const result = await f.run();
+      assert.equal(result.response.status, 410);
+      assert.equal(result.response.code, accepted ? 'PROMANE_INVITE_ACCEPTED' : 'PROMANE_INVITE_EXPIRED');
+      assert.equal(f.state().memberWrites, 0); assert.equal(f.state().inviteWrites, 0);
+      let writes = 0;
+      const route = load('src/app/api/promane/invite/[token]/route.ts', {
+        'next/server': { NextResponse: Response }, 'next-auth': { getServerSession: async () => null }, '@/lib/auth': { authOptions: {} },
+        '@/lib/prisma': { prisma: { promaneInvitation: { findUnique: async () => ({ ...f.invitation, workspace: { id: 'ws', name: 'Synthetic', slug: 'team' }, invitedBy: { name: null } }), update: async () => { writes++; } } } },
+        '@/lib/promane/invite-admission': { acceptPromaneInvitation: async () => { throw Error('GET must not accept'); } },
+      }, { Date: Clock });
+      const response = await route.GET({}, { params: Promise.resolve({ token: 'synthetic' }) });
+      assert.equal(response.status, 410); assert.equal((await response.json()).code, result.response.code); assert.equal(writes, 0);
+    }
   });
   await check('serialization conflict retries before admitting', async () => {
     const f = fixture({ conflicts: 1 });

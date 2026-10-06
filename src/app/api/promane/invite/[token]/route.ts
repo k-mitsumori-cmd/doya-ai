@@ -35,10 +35,10 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '招待リンクが見つかりません' }, { status: 404 })
     }
     if (invitation.acceptedAt) {
-      return NextResponse.json({ error: 'この招待は既に承諾済みです' }, { status: 410 })
+      return NextResponse.json({ error: 'この招待は既に承諾済みです', code: 'PROMANE_INVITE_ACCEPTED' }, { status: 410 })
     }
-    if (invitation.expiresAt < new Date()) {
-      return NextResponse.json({ error: '招待リンクの有効期限が切れています' }, { status: 410 })
+    if (invitation.expiresAt.getTime() <= Date.now()) {
+      return NextResponse.json({ error: '招待リンクの有効期限が切れています', code: 'PROMANE_INVITE_EXPIRED' }, { status: 410 })
     }
 
     return NextResponse.json({

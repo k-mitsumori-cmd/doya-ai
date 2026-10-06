@@ -1,0 +1,25 @@
+PASS failed OAuth start releases loading and shows a safe accessible retry message
+PASS failed start can be retried and preserves the exact local return destination
+PASS duplicate starts before rerender and during SDK waiting are ignored
+PASS successful redirect initiation stays locked until navigation leaves the page
+PASS synchronous SDK failure is recoverable too
+PASS HR invitation account selection and callback sanitization remain intact
+PASS all nine invitation services prompt for the recipient account while other routes keep normal sign-in
+PASS existing OAuth error query is still shown accessibly
+PASS restoring the page from browser history allows another OAuth start
+PASS late failure from before history restoration cannot unlock a newer attempt
+{
+  "passed": 10,
+  "results": [
+    "failed OAuth start releases loading and shows a safe accessible retry message",
+    "failed start can be retried and preserves the exact local return destination",
+    "duplicate starts before rerender and during SDK waiting are ignored",
+    "successful redirect initiation stays locked until navigation leaves the page",
+    "synchronous SDK failure is recoverable too",
+    "HR invitation account selection and callback sanitization remain intact",
+    "all nine invitation services prompt for the recipient account while other routes keep normal sign-in",
+    "existing OAuth error query is still shown accessibly",
+    "restoring the page from browser history allows another OAuth start",
+    "late failure from before history restoration cannot unlock a newer attempt"
+  ]
+}

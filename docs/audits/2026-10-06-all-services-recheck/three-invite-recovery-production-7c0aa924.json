@@ -1,0 +1,54 @@
+{
+  "observedAt": "2026-10-06T01:15:08.410Z",
+  "results": [
+    {
+      "service": "quote",
+      "htmlStatus": 200,
+      "pageScripts": [
+        "/_next/static/chunks/app/quote/invite/%5Btoken%5D/page-d94316e0ab7b8f8e.js?dpl=dpl_49UFUFZjjiWVziWduuvjjZN3yHdr"
+      ],
+      "sharedRecoveryChunks": [
+        {
+          "url": "/_next/static/chunks/app/quote/invite/%5Btoken%5D/page-d94316e0ab7b8f8e.js?dpl=dpl_49UFUFZjjiWVziWduuvjjZN3yHdr",
+          "status": 200,
+          "hasRecheck": true,
+          "hasSwitch": true,
+          "hasExpire": true
+        }
+      ]
+    },
+    {
+      "service": "mensetsu",
+      "htmlStatus": 200,
+      "pageScripts": [
+        "/_next/static/chunks/app/mensetsu/invite/%5Btoken%5D/page-49deeaf9df1ae05f.js?dpl=dpl_49UFUFZjjiWVziWduuvjjZN3yHdr"
+      ],
+      "sharedRecoveryChunks": [
+        {
+          "url": "/_next/static/chunks/app/mensetsu/invite/%5Btoken%5D/page-49deeaf9df1ae05f.js?dpl=dpl_49UFUFZjjiWVziWduuvjjZN3yHdr",
+          "status": 200,
+          "hasRecheck": true,
+          "hasSwitch": true,
+          "hasExpire": true
+        }
+      ]
+    },
+    {
+      "service": "aishodan",
+      "htmlStatus": 200,
+      "pageScripts": [
+        "/_next/static/chunks/app/aishodan/invite/%5Btoken%5D/page-4c90b6457d9f9b00.js?dpl=dpl_49UFUFZjjiWVziWduuvjjZN3yHdr"
+      ],
+      "sharedRecoveryChunks": [
+        {
+          "url": "/_next/static/chunks/app/aishodan/invite/%5Btoken%5D/page-4c90b6457d9f9b00.js?dpl=dpl_49UFUFZjjiWVziWduuvjjZN3yHdr",
+          "status": 200,
+          "hasRecheck": true,
+          "hasSwitch": true,
+          "hasExpire": true
+        }
+      ]
+    }
+  ],
+  "scope": "Read-only public HTML/JS, synthetic URL; no JS execution, invitation API or acceptance. Authenticated production flow unverified."
+}

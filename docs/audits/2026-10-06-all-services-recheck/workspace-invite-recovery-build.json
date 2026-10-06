@@ -1,0 +1,22 @@
+{
+  "session": 28554,
+  "exitCode": 0,
+  "observedAt": "2026-10-06T01:18:55.069962+00:00",
+  "log": "/tmp/doya-workspace-invite-recovery-build-final-20261006.log",
+  "sourceHashes": {
+    "src/lib/use-invitation-recovery.ts": "c67ded478b99c12249d3c1b3c4121d7c7629abc3a16737112b4de9e84983eee0",
+    "src/lib/safe-signin-callback.ts": "04b950087dc829e22360c21cccbe33546418c3e1bddb5e22b72de08190696f09",
+    "src/lib/promane/invite-admission.ts": "bc5d57963f75ba5659b7e655527bf6998e77f9a536d42ee10cb506a10fda05d8",
+    "src/app/api/promane/invite/[token]/route.ts": "acdbbdf027c42fbab5bb49dd1db89650640f13e830008b8c4d9e55be7f7e2f4c",
+    "scripts/security-regression/verify-signin-recovery.cjs": "9c2d8edc43b09f5aa480a82943462b5eb6cbf32ef7696d6e0bfb9473e5b8e3a1",
+    "scripts/security-regression/verify-workspace-invite-recovery.cjs": "3da73be93bac338ec273317bc7cd7b398e4b9c7f0d1f5f53d05fb965ba9cd0e0",
+    "scripts/security-regression/verify-promane-invite-admission.cjs": "bc2de62bd9036900f463919e94521ddcef7f68e56cb9eb15fd12c0a3849f0a93",
+    "scripts/security-regression/run.cjs": "444570f1010bbc789c63564833b98d40a9a877209c9cef96d77f19551778eae5",
+    "src/app/sfa/invite/[token]/page.tsx": "cf2aadc46aed4cc3d174824b079e2a3c4aaf111eb77422bc8f5242b53881a883",
+    "src/app/promane/invite/[token]/page.tsx": "b8cf20c69d4b3e6d947fbb895f30c427dd989ddaae29b6096f8085be10ba4395",
+    "src/app/kintai/invite/[token]/page.tsx": "65377a10514f84b3a1f618bbfdde5a18a1cc2e697695e83b12a405091bee61e9"
+  },
+  "newSyntheticGroups": 51,
+  "targetedLint": "passed",
+  "scope": "Prisma generation, all offline security regressions, tsc, Next build; no production database writes, real invitation acceptance or external OAuth"
+}

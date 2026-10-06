@@ -1,0 +1,110 @@
+{
+  "scope": "Actual pages/React/shared hook/installed SDK; synthetic invitation/auth; prior compiled CSS; router stub; no external OAuth or real membership changes",
+  "results": [
+    {
+      "service": "sfa",
+      "case": "non-JSON-401",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=sfa&mode=signin\", URL: \"http://127.0.0.1:34750/qa.html?service=sfa&mode=signin\".\n0 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=signin\n\t1 container root\n\t\t2 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t3 text ドヤ営業管理\n\t\t4 heading 招待を確認できませんでした, Value: 1\n\t\t\t9 text 招待を確認できませんでした\n\t\t10 text ログインが必要です。Googleでログインしてから、招待を受けてください。\n\t\t8 button Googleでログイン\n\t\t11 button 招待の状態を再確認\n\t\t12 link Description: ドヤ営業管理に戻る, Value: 127.0.0.1:34750/sfa\n\t\t13 container\n\t\t\t14 text ログインが必要です。Googleでログインしてから、招待を受けてください。\n\nThe focused UI element is 0 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=signin"
+    },
+    {
+      "service": "sfa",
+      "case": "SDK-failure-retry-ready",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=sfa&mode=signin\", URL: \"http://127.0.0.1:34750/qa.html?service=sfa&mode=signin\".\n0 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=signin\n\t1 container root\n\t\t2 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t3 text ドヤ営業管理\n\t\t4 heading 招待を確認できませんでした, Value: 1\n\t\t\t9 text 招待を確認できませんでした\n\t\t10 text ログインを開始できませんでした。もう一度お試しください。\n\t\t8 button Googleでログイン\n\t\t11 button 招待の状態を再確認\n\t\t12 link Description: ドヤ営業管理に戻る, Value: 127.0.0.1:34750/sfa\n\t\t13 container\n\t\t\t14 text ログインを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 0 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=signin"
+    },
+    {
+      "service": "sfa",
+      "case": "SDK-retry",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=sfa&mode=signin\", URL: \"http://127.0.0.1:34750/qa.html?service=sfa&mode=signin\".\n0 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=signin\n\t1 container root\n\t\t2 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t3 text ドヤ営業管理\n\t\t4 heading 招待を確認できませんでした, Value: 1\n\t\t\t9 text 招待を確認できませんでした\n\t\t10 text ログインを開始できませんでした。もう一度お試しください。\n\t\t8 button Googleでログイン\n\t\t11 button 招待の状態を再確認\n\t\t12 link Description: ドヤ営業管理に戻る, Value: 127.0.0.1:34750/sfa\n\t\t13 container\n\t\t\t14 text ログインを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 0 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=signin"
+    },
+    {
+      "service": "promane",
+      "case": "non-JSON-401",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=promane&mode=signin\", URL: \"http://127.0.0.1:34750/qa.html?service=promane&mode=signin\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=signin\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t10 heading 招待を確認できませんでした, Value: 1\n\t\t\t11 text 招待を確認できませんでした\n\t\t12 text ログインが必要です。Googleでログインしてから、招待を受けてください。\n\t\t9 button Googleでログイン\n\t\t13 button 招待の状態を再確認\n\t\t14 link Description: ドヤプロマネに戻る, Value: 127.0.0.1:34750/promane\n\t\t15 container\n\t\t\t16 text ログインが必要です。Googleでログインしてから、招待を受けてください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=signin"
+    },
+    {
+      "service": "promane",
+      "case": "SDK-failure-retry-ready",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=promane&mode=signin\", URL: \"http://127.0.0.1:34750/qa.html?service=promane&mode=signin\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=signin\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t10 heading 招待を確認できませんでした, Value: 1\n\t\t\t11 text 招待を確認できませんでした\n\t\t12 text ログインを開始できませんでした。もう一度お試しください。\n\t\t9 button Googleでログイン\n\t\t13 button 招待の状態を再確認\n\t\t14 link Description: ドヤプロマネに戻る, Value: 127.0.0.1:34750/promane\n\t\t15 container\n\t\t\t16 text ログインを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=signin"
+    },
+    {
+      "service": "promane",
+      "case": "SDK-retry",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=promane&mode=signin\", URL: \"http://127.0.0.1:34750/qa.html?service=promane&mode=signin\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=signin\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t10 heading 招待を確認できませんでした, Value: 1\n\t\t\t11 text 招待を確認できませんでした\n\t\t12 text ログインを開始できませんでした。もう一度お試しください。\n\t\t9 button Googleでログイン\n\t\t13 button 招待の状態を再確認\n\t\t14 link Description: ドヤプロマネに戻る, Value: 127.0.0.1:34750/promane\n\t\t15 container\n\t\t\t16 text ログインを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=signin"
+    },
+    {
+      "service": "kintai",
+      "case": "non-JSON-401",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=kintai&mode=signin\", URL: \"http://127.0.0.1:34750/qa.html?service=kintai&mode=signin\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=kintai&mode=signin\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t4 heading 招待エラー, Value: 1\n\t\t\t5 text 招待エラー\n\t\t11 text ログインが必要です。Googleでログインしてから、招待を受けてください。\n\t\t10 button Googleでログイン\n\t\t12 button 招待の状態を再確認\n\t\t13 link Description: トップに戻る, Value: 127.0.0.1:34750/kintai\n\t\t14 container\n\t\t\t15 text ログインが必要です。Googleでログインしてから、招待を受けてください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=kintai&mode=signin"
+    },
+    {
+      "service": "kintai",
+      "case": "SDK-failure-retry-ready",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=kintai&mode=signin\", URL: \"http://127.0.0.1:34750/qa.html?service=kintai&mode=signin\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=kintai&mode=signin\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t4 heading 招待エラー, Value: 1\n\t\t\t5 text 招待エラー\n\t\t11 text ログインを開始できませんでした。もう一度お試しください。\n\t\t10 button Googleでログイン\n\t\t12 button 招待の状態を再確認\n\t\t13 link Description: トップに戻る, Value: 127.0.0.1:34750/kintai\n\t\t14 container\n\t\t\t15 text ログインを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=kintai&mode=signin"
+    },
+    {
+      "service": "kintai",
+      "case": "SDK-retry",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=kintai&mode=signin\", URL: \"http://127.0.0.1:34750/qa.html?service=kintai&mode=signin\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=kintai&mode=signin\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t4 heading 招待エラー, Value: 1\n\t\t\t5 text 招待エラー\n\t\t11 text ログインを開始できませんでした。もう一度お試しください。\n\t\t10 button Googleでログイン\n\t\t12 button 招待の状態を再確認\n\t\t13 link Description: トップに戻る, Value: 127.0.0.1:34750/kintai\n\t\t14 container\n\t\t\t15 text ログインを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=kintai&mode=signin"
+    },
+    {
+      "service": "promane",
+      "case": "member-quota-owner-guidance",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=promane&mode=quota\", URL: \"http://127.0.0.1:34750/qa.html?service=promane&mode=quota\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=quota\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t4 heading 招待を確認できませんでした, Value: 1\n\t\t\t5 text 招待を確認できませんでした\n\t\t6 text メンバーの上限に達しました。利用枠の変更は契約者にご相談ください。\n\t\t7 button 招待の状態を再確認\n\t\t8 link Description: ドヤプロマネに戻る, Value: 127.0.0.1:34750/promane\n\t\t9 container\n\t\t\t10 text メンバーの上限に達しました。利用枠の変更は契約者にご相談ください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=quota"
+    },
+    {
+      "service": "sfa",
+      "case": "member-quota-owner-guidance",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=sfa&mode=quota\", URL: \"http://127.0.0.1:34750/qa.html?service=sfa&mode=quota\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=quota\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t4 text ドヤ営業管理\n\t\t5 heading 招待を確認できませんでした, Value: 1\n\t\t\t6 text 招待を確認できませんでした\n\t\t7 text メンバーの上限に達しました。利用枠の変更は契約者にご相談ください。\n\t\t8 button 招待の状態を再確認\n\t\t9 link Description: ドヤ営業管理に戻る, Value: 127.0.0.1:34750/sfa\n\t\t10 container\n\t\t\t11 text メンバーの上限に達しました。利用枠の変更は契約者にご相談ください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=quota"
+    },
+    {
+      "service": "promane",
+      "case": "already-accepted-not-expired",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=promane&mode=used\", URL: \"http://127.0.0.1:34750/qa.html?service=promane&mode=used\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=used\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t4 heading 招待を確認できませんでした, Value: 1\n\t\t\t5 text 招待を確認できませんでした\n\t\t6 text この招待は既に承諾済みです。\n\t\t7 link Description: ドヤプロマネに戻る, Value: 127.0.0.1:34750/promane\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=used"
+    },
+    {
+      "service": "sfa",
+      "case": "email-mismatch",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=sfa&mode=switch\", URL: \"http://127.0.0.1:34750/qa.html?service=sfa&mode=switch\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t4 text ドヤ営業管理\n\t\t5 heading 招待を確認できませんでした, Value: 1\n\t\t\t10 text 招待を確認できませんでした\n\t\t11 text 招待されたメールアドレスのアカウントでログインしてください。\n\t\t9 button 別のアカウントでログイン\n\t\t12 button 招待の状態を再確認\n\t\t13 link Description: ドヤ営業管理に戻る, Value: 127.0.0.1:34750/sfa\n\t\t14 container\n\t\t\t15 text 招待されたメールアドレスのアカウントでログインしてください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=switch"
+    },
+    {
+      "service": "sfa",
+      "case": "switch-failure-retry-ready",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=sfa&mode=switch\", URL: \"http://127.0.0.1:34750/qa.html?service=sfa&mode=switch\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t4 text ドヤ営業管理\n\t\t5 heading 招待を確認できませんでした, Value: 1\n\t\t\t10 text 招待を確認できませんでした\n\t\t11 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\t\t9 button 別のアカウントでログイン\n\t\t12 button 招待の状態を再確認\n\t\t13 link Description: ドヤ営業管理に戻る, Value: 127.0.0.1:34750/sfa\n\t\t14 container\n\t\t\t15 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=switch"
+    },
+    {
+      "service": "sfa",
+      "case": "switch-retry",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=sfa&mode=switch\", URL: \"http://127.0.0.1:34750/qa.html?service=sfa&mode=switch\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t4 text ドヤ営業管理\n\t\t5 heading 招待を確認できませんでした, Value: 1\n\t\t\t10 text 招待を確認できませんでした\n\t\t11 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\t\t9 button 別のアカウントでログイン\n\t\t12 button 招待の状態を再確認\n\t\t13 link Description: ドヤ営業管理に戻る, Value: 127.0.0.1:34750/sfa\n\t\t14 container\n\t\t\t15 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=sfa&mode=switch"
+    },
+    {
+      "service": "promane",
+      "case": "email-mismatch",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=promane&mode=switch\", URL: \"http://127.0.0.1:34750/qa.html?service=promane&mode=switch\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t10 heading 招待を確認できませんでした, Value: 1\n\t\t\t11 text 招待を確認できませんでした\n\t\t12 text 招待されたメールアドレスのアカウントでログインしてください。\n\t\t9 button 別のアカウントでログイン\n\t\t13 button 招待の状態を再確認\n\t\t14 link Description: ドヤプロマネに戻る, Value: 127.0.0.1:34750/promane\n\t\t15 container\n\t\t\t16 text 招待されたメールアドレスのアカウントでログインしてください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=switch"
+    },
+    {
+      "service": "promane",
+      "case": "switch-failure-retry-ready",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=promane&mode=switch\", URL: \"http://127.0.0.1:34750/qa.html?service=promane&mode=switch\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t10 heading 招待を確認できませんでした, Value: 1\n\t\t\t11 text 招待を確認できませんでした\n\t\t12 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\t\t9 button 別のアカウントでログイン\n\t\t13 button 招待の状態を再確認\n\t\t14 link Description: ドヤプロマネに戻る, Value: 127.0.0.1:34750/promane\n\t\t15 container\n\t\t\t16 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=switch"
+    },
+    {
+      "service": "promane",
+      "case": "switch-retry",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=promane&mode=switch\", URL: \"http://127.0.0.1:34750/qa.html?service=promane&mode=switch\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t10 heading 招待を確認できませんでした, Value: 1\n\t\t\t11 text 招待を確認できませんでした\n\t\t12 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\t\t9 button 別のアカウントでログイン\n\t\t13 button 招待の状態を再確認\n\t\t14 link Description: ドヤプロマネに戻る, Value: 127.0.0.1:34750/promane\n\t\t15 container\n\t\t\t16 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=promane&mode=switch"
+    },
+    {
+      "service": "kintai",
+      "case": "email-mismatch",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=kintai&mode=switch\", URL: \"http://127.0.0.1:34750/qa.html?service=kintai&mode=switch\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=kintai&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t4 heading 招待エラー, Value: 1\n\t\t\t5 text 招待エラー\n\t\t11 text 招待されたメールアドレスのアカウントでログインしてください。\n\t\t10 button 別のアカウントでログイン\n\t\t12 button 招待の状態を再確認\n\t\t13 link Description: トップに戻る, Value: 127.0.0.1:34750/kintai\n\t\t14 container\n\t\t\t15 text 招待されたメールアドレスのアカウントでログインしてください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=kintai&mode=switch"
+    },
+    {
+      "service": "kintai",
+      "case": "switch-failure-retry-ready",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=kintai&mode=switch\", URL: \"http://127.0.0.1:34750/qa.html?service=kintai&mode=switch\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=kintai&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t4 heading 招待エラー, Value: 1\n\t\t\t5 text 招待エラー\n\t\t11 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\t\t10 button 別のアカウントでログイン\n\t\t12 button 招待の状態を再確認\n\t\t13 link Description: トップに戻る, Value: 127.0.0.1:34750/kintai\n\t\t14 container\n\t\t\t15 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=kintai&mode=switch"
+    },
+    {
+      "service": "kintai",
+      "case": "switch-retry",
+      "state": "Browser tab: 18, Title: \"127.0.0.1:34750/qa.html?service=kintai&mode=switch\", URL: \"http://127.0.0.1:34750/qa.html?service=kintai&mode=switch\".\n1 AXWebArea 127.0.0.1:34750/qa.html?service=kintai&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic invitation/auth; no production writes\n\t\t4 heading 招待エラー, Value: 1\n\t\t\t5 text 招待エラー\n\t\t11 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\t\t10 button 別のアカウントでログイン\n\t\t12 button 招待の状態を再確認\n\t\t13 link Description: トップに戻る, Value: 127.0.0.1:34750/kintai\n\t\t14 container\n\t\t\t15 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34750/qa.html?service=kintai&mode=switch"
+    }
+  ]
+}

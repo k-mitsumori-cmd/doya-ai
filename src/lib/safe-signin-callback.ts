@@ -30,5 +30,5 @@ export function signInPublicIntroUrl(callbackUrl: string): string {
 /** Invitations should let the person choose the account matching the recipient. */
 export function invitationSignInOptions(callbackUrl: string): { prompt: 'select_account' } | undefined {
   const path = new URL(safeSignInCallbackUrl(callbackUrl), CALLBACK_BASE).pathname
-  return /^\/(hr|aio|shodan|quote|mensetsu|aishodan)\/invite\/[^/]+$/.test(path) ? { prompt: 'select_account' } : undefined
+  return /^\/(hr|aio|shodan|quote|mensetsu|aishodan|sfa|promane|kintai)\/invite\/[^/]+$/.test(path) ? { prompt: 'select_account' } : undefined
 }

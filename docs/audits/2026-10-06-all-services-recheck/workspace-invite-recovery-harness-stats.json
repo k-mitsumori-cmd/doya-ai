@@ -1,0 +1,12 @@
+{
+  "reads": {
+    "sfa": 3,
+    "promane": 4,
+    "kintai": 2
+  },
+  "posts": 8,
+  "signins": 6,
+  "signouts": 6,
+  "externalOAuthStarted": 0,
+  "forwardedApiCalls": 0
+}

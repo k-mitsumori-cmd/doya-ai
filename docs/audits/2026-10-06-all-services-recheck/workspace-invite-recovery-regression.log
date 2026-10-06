@@ -1,0 +1,108 @@
+PASS sfa: current page shows valid fields and uses encoded abortable no-store reads
+PASS sfa: missing token cannot get stuck loading or issue a request
+PASS sfa: failed, malformed and unsuccessful HTTP reads cannot permit participation
+PASS sfa: unresolved session disables action and handler cannot post or start OAuth
+PASS sfa: unauthenticated sign-in failure retains invitation callback and can retry
+PASS sfa: non-JSON 401 is handled before body parsing
+PASS sfa: email mismatch can switch accounts through sign-out and retry safely
+PASS sfa: non-JSON unavailable GET and POST cannot offer participation or switching
+PASS sfa: POST404/409 clears stale invitation and requires explicit recheck
+PASS sfa: network, invalid success and error HTTP with success fields never navigate
+PASS sfa: duplicate participation is blocked before first response
+PASS sfa: valid current success preserves the service destination and lock
+PASS sfa: API, JSON and failure after unmount cannot change state
+PASS sfa: history restoration rechecks and rejects late POST success
+PASS sfa: pending SDK locks all actions and stale failure after history restoration is ignored
+PASS sfa: pending recheck is aborted and late body cannot restore stale invite
+PASS promane: current page shows valid fields and uses encoded abortable no-store reads
+PASS promane: missing token cannot get stuck loading or issue a request
+PASS promane: failed, malformed and unsuccessful HTTP reads cannot permit participation
+PASS promane: unresolved session disables action and handler cannot post or start OAuth
+PASS promane: unauthenticated sign-in failure retains invitation callback and can retry
+PASS promane: non-JSON 401 is handled before body parsing
+PASS promane: email mismatch can switch accounts through sign-out and retry safely
+PASS promane: non-JSON unavailable GET and POST cannot offer participation or switching
+PASS promane: POST404/409 clears stale invitation and requires explicit recheck
+PASS promane: network, invalid success and error HTTP with success fields never navigate
+PASS promane: duplicate participation is blocked before first response
+PASS promane: valid current success preserves the service destination and lock
+PASS promane: API, JSON and failure after unmount cannot change state
+PASS promane: history restoration rechecks and rejects late POST success
+PASS promane: pending SDK locks all actions and stale failure after history restoration is ignored
+PASS promane: pending recheck is aborted and late body cannot restore stale invite
+PASS kintai: current page shows valid fields and uses encoded abortable no-store reads
+PASS kintai: missing token cannot get stuck loading or issue a request
+PASS kintai: failed, malformed and unsuccessful HTTP reads cannot permit participation
+PASS kintai: unresolved session disables action and handler cannot post or start OAuth
+PASS kintai: unauthenticated sign-in failure retains invitation callback and can retry
+PASS kintai: non-JSON 401 is handled before body parsing
+PASS kintai: email mismatch can switch accounts through sign-out and retry safely
+PASS kintai: non-JSON unavailable GET and POST cannot offer participation or switching
+PASS kintai: POST404/409 clears stale invitation and requires explicit recheck
+PASS kintai: network, invalid success and error HTTP with success fields never navigate
+PASS kintai: duplicate participation is blocked before first response
+PASS kintai: valid current success preserves the service destination and lock
+PASS kintai: API, JSON and failure after unmount cannot change state
+PASS kintai: history restoration rechecks and rejects late POST success
+PASS kintai: pending SDK locks all actions and stale failure after history restoration is ignored
+PASS kintai: pending recheck is aborted and late body cannot restore stale invite
+PASS Promane quota, disabled access and unknown 403 never offer switching
+PASS SFA member quota preserves owner guidance and never offers switching
+PASS Promane distinguishes accepted invitation from expiry for GET and POST
+{
+  "passed": 51,
+  "scope": "Actual three TSX pages, shared recovery hook and submission hook; synthetic API/auth; no external OAuth or database writes",
+  "results": [
+    "sfa: current page shows valid fields and uses encoded abortable no-store reads",
+    "sfa: missing token cannot get stuck loading or issue a request",
+    "sfa: failed, malformed and unsuccessful HTTP reads cannot permit participation",
+    "sfa: unresolved session disables action and handler cannot post or start OAuth",
+    "sfa: unauthenticated sign-in failure retains invitation callback and can retry",
+    "sfa: non-JSON 401 is handled before body parsing",
+    "sfa: email mismatch can switch accounts through sign-out and retry safely",
+    "sfa: non-JSON unavailable GET and POST cannot offer participation or switching",
+    "sfa: POST404/409 clears stale invitation and requires explicit recheck",
+    "sfa: network, invalid success and error HTTP with success fields never navigate",
+    "sfa: duplicate participation is blocked before first response",
+    "sfa: valid current success preserves the service destination and lock",
+    "sfa: API, JSON and failure after unmount cannot change state",
+    "sfa: history restoration rechecks and rejects late POST success",
+    "sfa: pending SDK locks all actions and stale failure after history restoration is ignored",
+    "sfa: pending recheck is aborted and late body cannot restore stale invite",
+    "promane: current page shows valid fields and uses encoded abortable no-store reads",
+    "promane: missing token cannot get stuck loading or issue a request",
+    "promane: failed, malformed and unsuccessful HTTP reads cannot permit participation",
+    "promane: unresolved session disables action and handler cannot post or start OAuth",
+    "promane: unauthenticated sign-in failure retains invitation callback and can retry",
+    "promane: non-JSON 401 is handled before body parsing",
+    "promane: email mismatch can switch accounts through sign-out and retry safely",
+    "promane: non-JSON unavailable GET and POST cannot offer participation or switching",
+    "promane: POST404/409 clears stale invitation and requires explicit recheck",
+    "promane: network, invalid success and error HTTP with success fields never navigate",
+    "promane: duplicate participation is blocked before first response",
+    "promane: valid current success preserves the service destination and lock",
+    "promane: API, JSON and failure after unmount cannot change state",
+    "promane: history restoration rechecks and rejects late POST success",
+    "promane: pending SDK locks all actions and stale failure after history restoration is ignored",
+    "promane: pending recheck is aborted and late body cannot restore stale invite",
+    "kintai: current page shows valid fields and uses encoded abortable no-store reads",
+    "kintai: missing token cannot get stuck loading or issue a request",
+    "kintai: failed, malformed and unsuccessful HTTP reads cannot permit participation",
+    "kintai: unresolved session disables action and handler cannot post or start OAuth",
+    "kintai: unauthenticated sign-in failure retains invitation callback and can retry",
+    "kintai: non-JSON 401 is handled before body parsing",
+    "kintai: email mismatch can switch accounts through sign-out and retry safely",
+    "kintai: non-JSON unavailable GET and POST cannot offer participation or switching",
+    "kintai: POST404/409 clears stale invitation and requires explicit recheck",
+    "kintai: network, invalid success and error HTTP with success fields never navigate",
+    "kintai: duplicate participation is blocked before first response",
+    "kintai: valid current success preserves the service destination and lock",
+    "kintai: API, JSON and failure after unmount cannot change state",
+    "kintai: history restoration rechecks and rejects late POST success",
+    "kintai: pending SDK locks all actions and stale failure after history restoration is ignored",
+    "kintai: pending recheck is aborted and late body cannot restore stale invite",
+    "Promane quota, disabled access and unknown 403 never offer switching",
+    "SFA member quota preserves owner guidance and never offers switching",
+    "Promane distinguishes accepted invitation from expiry for GET and POST"
+  ]
+}
