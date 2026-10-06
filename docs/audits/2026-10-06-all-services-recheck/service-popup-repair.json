@@ -31,12 +31,18 @@
   "production": {
     "id": "dpl_CTU4XVzS4UoyataaN9eZ5dEy7bb2",
     "url": "doya-phf7c8bdb-surisutas-projects.vercel.app",
-    "readyState": "BUILDING",
+    "readyState": "READY",
     "target": "production"
   },
   "ci": {
     "run": 37524885747,
-    "status": "in_progress"
+    "status": "completed",
+    "conclusion": "success"
   },
-  "publicationCheckedAt": "2026-10-06T20:16:26.418027+00:00"
+  "publicationCheckedAt": "2026-10-06T20:31:52.447225+00:00",
+  "anonymousBrowserProof": "service-popup-public-a1395560.json",
+  "anonymousBrowserResult": "Known marketing widget containers hidden; zero-size rects and no pointer events on /doyaslide/new. No private operation executed.",
+  "publicPublicationProof": "service-popup-publication-a1395560.json",
+  "mobileBrowserProof": "service-popup-public-a1395560-mobile.json",
+  "publicPublicationResult": "17 anonymous entry pages and 29 JS assets verified with exact deployment marker; guest APIs are private/no-store. No authenticated service operation or paid generation verified."
 }

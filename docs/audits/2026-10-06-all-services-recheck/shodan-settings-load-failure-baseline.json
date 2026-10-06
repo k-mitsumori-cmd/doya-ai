@@ -1,0 +1,41 @@
+{
+  "status": "confirmed-synthetic-data-loss-path",
+  "parent": "f0d6170154c4a99a7af07ffe1c501bff10eef06e",
+  "readFailures": 2,
+  "saveAvailableAfterReadFailure": true,
+  "syntheticWrites": 1,
+  "before": {
+    "id": "profile-a",
+    "organizationId": "synthetic-org",
+    "companyName": "Stored company",
+    "url": "https://example.invalid",
+    "description": "Stored description",
+    "valueProp": "Stored value",
+    "products": "Stored products",
+    "targetCustomer": "Stored target",
+    "pricingNote": "Stored pricing",
+    "caseStudies": "Stored cases",
+    "logoPath": null,
+    "brandColors": [
+      "#ABCDEF"
+    ]
+  },
+  "after": {
+    "id": "profile-a",
+    "organizationId": "synthetic-org",
+    "companyName": null,
+    "url": null,
+    "description": null,
+    "valueProp": null,
+    "products": null,
+    "targetCustomer": null,
+    "pricingNote": null,
+    "caseStudies": null,
+    "logoPath": null,
+    "brandColors": [
+      "#7f19e6",
+      "#f59e0b"
+    ]
+  },
+  "scope": "Actual mounted Shodan settings under StrictMode, actual shared client and actual PUT route. Synthetic failed reads and in-memory Prisma only. No live DB/provider/email/network/upload. Does not establish a customer incident."
+}

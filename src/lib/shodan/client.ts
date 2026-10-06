@@ -1,32 +1,10 @@
 // ============================================
 // ドヤ商談準備（Shodan）クライアント側 fetch ヘルパー
 // 組織slugは ?org= で渡す（URL APIがデコードするのでヘッダの非ASCII問題を回避）。
-// ※slugはASCIIのみ生成しているが、安全のため encodeURIComponent する。
+// 明示した組織scopeをURLSearchParamsで設定し、既存クエリのorgを置き換える。
 // ============================================
-function withOrg(path: string, orgSlug: string): string {
-  const sep = path.includes('?') ? '&' : '?'
-  return `${path}${sep}org=${encodeURIComponent(orgSlug)}`
-}
-
-const READ_TIMEOUT_MS = 30_000
-const WRITE_TIMEOUT_MS = 310_000 // API route maxDuration is 300 seconds.
-
-async function requestJson(path: string, orgSlug: string, init: RequestInit, timeoutMs: number) {
-  const signal = AbortSignal.timeout(timeoutMs)
-  try {
-    const res = await fetch(withOrg(path, orgSlug), { ...init, signal })
-    const data = await res.json().catch((error) => {
-      if (signal.aborted) throw error
-      return {}
-    })
-    return { res, data }
-  } catch (error) {
-    if (signal.aborted) throw new Error(timeoutMs === READ_TIMEOUT_MS
-      ? '読み込みが時間内に完了しませんでした。再試行してください。'
-      : '通信が時間内に完了しませんでした。操作履歴を確認してください。')
-    throw error
-  }
-}
+import { requestOrgJson, OrgResponseError, orgErrorMessage, orgErrorCode, orgQuotaGuidance } from '../org-client-response'
+import { confirmedOrgWrite, knownOrgWrite } from '../org-write-response'
 
 export class ShodanApiError extends Error {
   constructor(
@@ -41,9 +19,9 @@ export class ShodanApiError extends Error {
   }
 }
 
-export async function shodanGet<T = any>(path: string, orgSlug: string): Promise<T> {
-  const { res, data } = await requestJson(path, orgSlug, { cache: 'no-store' }, READ_TIMEOUT_MS)
-  if (!res.ok) throw new ShodanApiError((data as any)?.error || `取得に失敗しました (${res.status})`, res.status, (data as any)?.code)
+export async function shodanGet<T = any>(path: string, orgSlug: string, options?: { signal?: AbortSignal }): Promise<T> {
+  const { res, data } = await requestOrgJson('shodan', path, orgSlug, { signal: options?.signal })
+  if (!res.ok) throw new ShodanApiError(orgErrorMessage(data, res.status, false), res.status, orgErrorCode(data, res.status) ?? undefined)
   return data as T
 }
 
@@ -51,19 +29,30 @@ export async function shodanSend<T = any>(
   path: string,
   orgSlug: string,
   method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-  body?: unknown
+  body?: unknown,
+  options?: { signal?: AbortSignal }
 ): Promise<T> {
-  const { res, data } = await requestJson(path, orgSlug, {
+  if (!knownOrgWrite('shodan', path, method)) throw new OrgResponseError(true)
+  let payload: string | undefined
+  let submitted: unknown
+  try {
+    payload = body != null ? JSON.stringify(body) : undefined
+    submitted = payload === undefined ? undefined : JSON.parse(payload)
+  } catch { throw new OrgResponseError(true) }
+  const { res, data } = await requestOrgJson('shodan', path, orgSlug, {
     method,
+    signal: options?.signal,
     headers: { 'Content-Type': 'application/json' },
-    body: body != null ? JSON.stringify(body) : undefined,
-  }, WRITE_TIMEOUT_MS)
+    body: payload,
+  })
+  const guidance = orgQuotaGuidance(data, res.status, 'shodan')
   if (!res.ok) throw new ShodanApiError(
-    (data as any)?.error || `操作に失敗しました (${res.status})`,
+    orgErrorMessage(data, res.status, true),
     res.status,
-    (data as any)?.code,
-    (data as any)?.upgradeUrl || (data as any)?.contactUrl,
-    (data as any)?.upgradeUrl ? '料金プランを確認する' : (data as any)?.contactUrl ? '追加枠について問い合わせる' : undefined,
+    orgErrorCode(data, res.status) ?? undefined,
+    guidance.upgradeUrl ?? guidance.contactUrl,
+    guidance.upgradeUrl ? '料金プランを確認する' : guidance.contactUrl ? '追加枠について問い合わせる' : undefined,
   )
+  if (!confirmedOrgWrite('shodan', path, method, submitted, data)) throw new OrgResponseError(true, res.status)
   return data as T
 }

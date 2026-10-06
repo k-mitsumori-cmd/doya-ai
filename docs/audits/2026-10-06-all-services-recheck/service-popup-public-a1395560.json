@@ -1,0 +1,44 @@
+{
+  "checkedAt": "2026-10-06T20:31:40.703Z",
+  "url": "https://doya-ai.surisuta.jp/doyaslide/new",
+  "authenticated": false,
+  "guardStylePresent": true,
+  "button": {
+    "disabled": true,
+    "rect": {
+      "height": 52,
+      "width": 300,
+      "x": 844,
+      "y": 656
+    }
+  },
+  "widgets": [
+    {
+      "display": "none",
+      "height": 0,
+      "pointerEvents": "none",
+      "tag": "DIV",
+      "visibility": "hidden",
+      "width": 0
+    },
+    {
+      "display": "none",
+      "height": 0,
+      "pointerEvents": "none",
+      "tag": "DIV",
+      "visibility": "hidden",
+      "width": 0
+    },
+    {
+      "display": "none",
+      "height": 0,
+      "pointerEvents": "none",
+      "tag": "IFRAME",
+      "visibility": "hidden",
+      "width": 0
+    }
+  ],
+  "limits": [
+    "Anonymous page only; no generation/ad/authentication action performed."
+  ]
+}

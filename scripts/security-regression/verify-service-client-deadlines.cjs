@@ -1,28 +1,7 @@
-const assert = require('node:assert/strict');
-const { load, check } = require('./load-typescript.cjs');
-
-async function verify(file, getName, sendName) {
-  const deadlines = [];
-  let aborted = false;
-  const client = load(file, {}, {
-    AbortSignal: { timeout(ms) { deadlines.push(ms); return { get aborted() { return aborted; } }; } },
-    fetch: async (_url, init) => {
-      assert.ok(init.signal);
-      if (aborted) throw Error('synthetic timeout');
-      return Response.json({ ok: true });
-    },
-  });
-
-  assert.deepEqual(JSON.parse(JSON.stringify(await client[getName]('/api/test', 'acme'))), { ok: true });
-  assert.deepEqual(JSON.parse(JSON.stringify(await client[sendName]('/api/test', 'acme', 'POST'))), { ok: true });
-  assert.deepEqual(deadlines, [30_000, 310_000]);
-
-  aborted = true;
-  await assert.rejects(client[getName]('/api/test', 'acme'), /読み込みが時間内に完了/);
-  await assert.rejects(client[sendName]('/api/test', 'acme', 'POST'), /操作履歴を確認/);
+const assert=require('node:assert/strict'),{createOrgClient}=require('./org-client-test-loader.cjs');
+(async()=>{const checks=[];for(const service of ['aio','shodan'])for(const writing of [false,true])for(const phase of ['fetch','body']){
+ const timers=new Map();let calls=0,cancelled=0,signal;const {client}=createOrgClient(service,{setTimeout:(fn,ms)=>{timers.set(ms,fn);return ms},clearTimeout:id=>timers.delete(id),fetch:async(_url,init)=>{calls++;signal=init.signal;if(phase==='fetch')return new Promise(()=>{});return new Response(new ReadableStream({pull(){return new Promise(()=>{})},cancel(){cancelled++}}))}});
+ const promise=writing?client[service+'Send']('/api/'+service+'/members/m1','acme','DELETE'):client[service+'Get']('/api/'+service+'/members','acme');await new Promise(setImmediate);
+ const budget=writing?310000:30000;assert.equal(timers.size,1);assert.ok(timers.has(budget));timers.get(budget)();await assert.rejects(promise,writing?/操作履歴を確認/:/読み込みが時間内に完了/);assert.equal(signal.aborted,true);assert.equal(calls,1);assert.equal(timers.size,0);if(phase==='body')assert.equal(cancelled,1);checks.push(service+' '+(writing?'write':'read')+' hard deadline during '+phase);
 }
-
-(async () => {
-  await check('Shodan client bounds reads and allows full server mutation window', () => verify('src/lib/shodan/client.ts', 'shodanGet', 'shodanSend'));
-  await check('AIO client bounds reads and allows full server mutation window', () => verify('src/lib/aio/client.ts', 'aioGet', 'aioSend'));
-})().catch(error => { console.error(error); process.exitCode = 1; });
+console.log(JSON.stringify({passed:checks.length,checks,scope:'Actual service clients and shared transport; synthetic fetch/body that ignore AbortSignal. Verifies 30s/310s hard race, cancellation, timer cleanup and no retry.'},null,2));})().catch(e=>{console.error(e);process.exitCode=1});

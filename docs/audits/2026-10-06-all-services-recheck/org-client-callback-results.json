@@ -1,0 +1,18 @@
+{
+  "passed": 12,
+  "checks": [
+    "aio actual save callback refuses unconfirmed success #0",
+    "Actual prompt callback retains question draft #1",
+    "Actual scan callback rejects unknown completion #2",
+    "shodan actual save callback refuses unconfirmed success #3",
+    "aio actual save callback refuses unconfirmed success #4",
+    "Actual prompt callback retains question draft #5",
+    "Actual scan callback rejects unknown completion #6",
+    "shodan actual save callback refuses unconfirmed success #7",
+    "aio actual save callback refuses unconfirmed success #8",
+    "Actual prompt callback retains question draft #9",
+    "Actual scan callback rejects unknown completion #10",
+    "shodan actual save callback refuses unconfirmed success #11"
+  ],
+  "scope": "Actual AST-extracted save/add/runScan callbacks using actual service clients/transport/contracts; synthetic malformed and incomplete acknowledgments. No React mount, real network/provider/DB/email, or actor/org lifecycle proof."
+}

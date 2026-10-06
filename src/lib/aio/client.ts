@@ -1,32 +1,10 @@
 // ============================================
 // ドヤAIO（AI可視性・AEO）クライアント側 fetch ヘルパー
 // 組織slugは ?org= で渡す（URL APIがデコードするのでヘッダの非ASCII問題を回避）。
-// ※slugはASCIIのみ生成しているが、安全のため encodeURIComponent する。
+// 明示した組織scopeをURLSearchParamsで設定し、既存クエリのorgを置き換える。
 // ============================================
-function withOrg(path: string, orgSlug: string): string {
-  const sep = path.includes('?') ? '&' : '?'
-  return `${path}${sep}org=${encodeURIComponent(orgSlug)}`
-}
-
-const READ_TIMEOUT_MS = 30_000
-const WRITE_TIMEOUT_MS = 310_000 // API route maxDuration is 300 seconds.
-
-async function requestJson(path: string, orgSlug: string, init: RequestInit, timeoutMs: number) {
-  const signal = AbortSignal.timeout(timeoutMs)
-  try {
-    const res = await fetch(withOrg(path, orgSlug), { ...init, signal })
-    const data = await res.json().catch((error) => {
-      if (signal.aborted) throw error
-      return {}
-    })
-    return { res, data }
-  } catch (error) {
-    if (signal.aborted) throw new Error(timeoutMs === READ_TIMEOUT_MS
-      ? '読み込みが時間内に完了しませんでした。再試行してください。'
-      : '通信が時間内に完了しませんでした。操作履歴を確認してください。')
-    throw error
-  }
-}
+import { requestOrgJson, OrgResponseError, orgErrorMessage, orgErrorCode, orgQuotaGuidance } from '../org-client-response'
+import { confirmedOrgWrite, knownOrgWrite } from '../org-write-response'
 
 export class AioApiError extends Error {
   constructor(
@@ -42,9 +20,9 @@ export class AioApiError extends Error {
   }
 }
 
-export async function aioGet<T = any>(path: string, orgSlug: string): Promise<T> {
-  const { res, data } = await requestJson(path, orgSlug, { cache: 'no-store' }, READ_TIMEOUT_MS)
-  if (!res.ok) throw new Error((data as any)?.error || `取得に失敗しました (${res.status})`)
+export async function aioGet<T = any>(path: string, orgSlug: string, options?: { signal?: AbortSignal }): Promise<T> {
+  const { res, data } = await requestOrgJson('aio', path, orgSlug, { signal: options?.signal })
+  if (!res.ok) throw new AioApiError(orgErrorMessage(data, res.status, false), res.status, orgErrorCode(data, res.status))
   return data as T
 }
 
@@ -52,20 +30,31 @@ export async function aioSend<T = any>(
   path: string,
   orgSlug: string,
   method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-  body?: unknown
+  body?: unknown,
+  options?: { signal?: AbortSignal }
 ): Promise<T> {
-  const { res, data } = await requestJson(path, orgSlug, {
+  if (!knownOrgWrite('aio', path, method)) throw new OrgResponseError(true)
+  let payload: string | undefined
+  let submitted: unknown
+  try {
+    payload = body != null ? JSON.stringify(body) : undefined
+    submitted = payload === undefined ? undefined : JSON.parse(payload)
+  } catch { throw new OrgResponseError(true) }
+  const { res, data } = await requestOrgJson('aio', path, orgSlug, {
     method,
+    signal: options?.signal,
     headers: { 'Content-Type': 'application/json' },
-    body: body != null ? JSON.stringify(body) : undefined,
-  }, WRITE_TIMEOUT_MS)
+    body: payload,
+  })
+  const guidance = orgQuotaGuidance(data, res.status, 'aio')
   if (!res.ok) throw new AioApiError(
-    typeof (data as any)?.error === 'string' ? (data as any).error : `操作に失敗しました (${res.status})`,
+    orgErrorMessage(data, res.status, true),
     res.status,
-    typeof (data as any)?.code === 'string' ? (data as any).code : null,
-    typeof (data as any)?.canManageBilling === 'boolean' ? (data as any).canManageBilling : null,
-    typeof (data as any)?.upgradeUrl === 'string' ? (data as any).upgradeUrl : null,
-    typeof (data as any)?.contactUrl === 'string' ? (data as any).contactUrl : null,
+    orgErrorCode(data, res.status),
+    guidance.canManageBilling ?? null,
+    guidance.upgradeUrl ?? null,
+    guidance.contactUrl ?? null,
   )
+  if (!confirmedOrgWrite('aio', path, method, submitted, data)) throw new OrgResponseError(true, res.status)
   return data as T
 }

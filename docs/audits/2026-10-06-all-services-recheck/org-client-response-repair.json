@@ -1,0 +1,54 @@
+{
+  "checkedAt": "2026-10-06T20:30:54.119319+00:00",
+  "parent": "f0d6170154c4a99a7af07ffe1c501bff10eef06e",
+  "status": "full-gate-passed",
+  "scope": {
+    "services": [
+      "aio",
+      "shodan"
+    ],
+    "staticReadCallSites": 20,
+    "staticWriteCallSites": 17,
+    "writeEndpointContracts": 16
+  },
+  "problem": "Malformed or unconfirmed 2xx acknowledgments could mark settings, prompt addition and scan complete as successful. Abort-only deadlines did not bound body reads.",
+  "changes": [
+    "Hard 30s reads / 310s writes across fetch and body, cancellation and 8MiB actual byte bound",
+    "Fatal UTF-8 and nonempty JSON object required for success",
+    "Per-current-route write acknowledgment checks against immutable sent JSON snapshot",
+    "No automatic write retries; controlled unknown-result guidance",
+    "Sanitized definite HTTP errors and owner-aware existing quota actions retained"
+  ],
+  "evidence": {
+    "transportAndContracts": 191,
+    "actualRouteClientCombinations": 12,
+    "actualExtractedCallbacks": 12,
+    "deadlineCases": 8,
+    "gate": "docs/audits/2026-10-06-all-services-recheck/org-client-release-b1f86aab-6457-49bd-96a8-7c709baa6e07",
+    "gateSession": 41986,
+    "sourceFiles": 2601,
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T20:34:15.582532+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T20:34:17.345599+00:00"
+      }
+    ],
+    "changedSources": [],
+    "allSourceHashesRecheckedAt": "2026-10-06T20:34:36.107569+00:00"
+  },
+  "limitations": [
+    "No real database, paid provider, uploads or email used in these tests",
+    "Actual route-to-client tests cover 4 endpoint families; other write patterns use current-response fixtures",
+    "Actor/org lifecycle and unknown-write repeat UI gate remain separate work",
+    "Confirmed AIO draft edited during save can still show stale saved acknowledgment; next repair",
+    "No production reflection of this uncommitted cohort yet",
+    "Full 17-service / 2074-criterion audit remains incomplete",
+    "Actual mounted Shodan settings after failed GET can save empty defaults over synthetic stored values; shodan-settings-load-failure-baseline.json records the separate next repair."
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "passed": 12,
+  "checks": [
+    "Actual AIO PUT response accepted after server normalization and org scoping",
+    "Actual AIO validation rejection remains API error and does not write",
+    "Corrupted AIO acknowledgment cannot become success even after synthetic persistence",
+    "Actual Shodan PUT contract including normalized fields, nulls and signed logo #3",
+    "Actual Shodan PUT contract including normalized fields, nulls and signed logo #4",
+    "Actual Shodan PUT contract including normalized fields, nulls and signed logo #5",
+    "Actual Shodan validation error remains failure before persistence",
+    "Actual prompt POST trimming and category accepted",
+    "Actual prompt quota denial keeps owner upgrade action without adding a prompt",
+    "Actual scan POST accepts valid coverage including partial failure #9",
+    "Actual scan POST accepts valid coverage including partial failure #10",
+    "Actual scan quota rejection retains upgrade CTA and records no success usage"
+  ],
+  "scope": "Actual AIO profile/prompt/scan and Shodan profile routes consumed through actual clients and shared contracts. Auth, Prisma transactions, scan runner, usage and storage are synthetic; no real DB/provider/email/network calls. Other write patterns remain fixture tested."
+}

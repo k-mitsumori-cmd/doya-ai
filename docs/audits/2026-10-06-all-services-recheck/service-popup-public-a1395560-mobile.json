@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-10-06T20:32:06.679Z",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "button": {
+    "disabled": true,
+    "rect": {
+      "height": 52,
+      "width": 352.5859375,
+      "x": 16,
+      "y": 780
+    }
+  },
+  "widgets": [
+    {
+      "display": "none",
+      "height": 0,
+      "pointerEvents": "none",
+      "tag": "DIV",
+      "visibility": "hidden",
+      "width": 0
+    },
+    {
+      "display": "none",
+      "height": 0,
+      "pointerEvents": "none",
+      "tag": "DIV",
+      "visibility": "hidden",
+      "width": 0
+    },
+    {
+      "display": "none",
+      "height": 0,
+      "pointerEvents": "none",
+      "tag": "IFRAME",
+      "visibility": "hidden",
+      "width": 0
+    }
+  ]
+}
