@@ -11,7 +11,7 @@
   "production": {
     "id": "dpl_GLSeduD7eMPzTtMyu7zKaSyAr5d7",
     "url": "doya-r5rr4jo3p-surisutas-projects.vercel.app",
-    "readyState": "BUILDING",
+    "readyState": "READY",
     "target": "production"
   },
   "remaining": [
@@ -43,7 +43,9 @@
   "push": "confirmed HEAD to main, parent 20001806",
   "ci": {
     "run": 37521622304,
-    "status": "success"
+    "status": "completed",
+    "conclusion": "success"
   },
-  "publicationCheckedAt": "2026-10-06T19:55:26.439273+00:00"
+  "publicationCheckedAt": "2026-10-06T20:07:08.551378+00:00",
+  "anonymousPublicationEvidence": "cunning-lists-public-3c4bde84.json"
 }

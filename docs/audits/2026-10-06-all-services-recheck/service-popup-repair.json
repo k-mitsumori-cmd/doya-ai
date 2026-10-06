@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-06T20:05:50.245375+00:00",
+  "status": "full-gate-passed",
+  "parent": "ae7e3ea7875953711b6069988548b5305d4893fb",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/service-popup-release-0ce0a98d-9d10-4b2e-99b2-22516e956d3d",
+  "mountedCases": 124,
+  "browserCases": 8,
+  "confirmedProblem": "Production Slide guest create button was covered by known HubSpot marketing slide-in. Real browser baseline geometry showed 9048px2 overlap at 1280x720.",
+  "repair": "Registry-driven root guard for all 17 active-service workflows, signed-in service pages and shared meeting links. Actual anonymous service roots, pricing and Banner marketing pages keep CTA visibility. Only known marketing CTA containers hidden; support and internal quota/upgrade UI preserved.",
+  "additionalFinding": "Initial quoted attribute selectors were HTML-escaped by React 18 server rendering, invalidating the selector group before hydration. Actual browser fixture detected it; unquoted CSS identifier selectors now work on server render and browser with inline styles. Intermediate gate cancelled and not released.",
+  "scope": "Actual component SSR and StrictMode synthetic hooks/network; actual root AST and registry. Real browser local fixtures at 1280x720 and 390x844 with late insert, inline styles, support/quota visibility. No paid APIs or DB writes.",
+  "remaining": [
+    "Exact deployed guard and actual production guest CTA overlap recheck after deployment READY.",
+    "Authenticated private business flows, unknown external widget selectors and full all-service criteria remain unproven."
+  ],
+  "gates": [
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T20:09:22.034754+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T20:09:23.762775+00:00"
+    }
+  ],
+  "sourceFiles": 2592
+}

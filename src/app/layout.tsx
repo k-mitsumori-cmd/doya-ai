@@ -10,6 +10,10 @@ import { UserStateSignal } from '@/components/UserStateSignal'
 import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 import LogoutToastListener from '@/components/LogoutToastListener'
 import StripeSuccessSync from '@/components/StripeSuccessSync'
+import ServicePopupGuard from '@/components/ServicePopupGuard'
+import { getActiveServices } from '@/lib/services'
+
+const ACTIVE_SERVICE_PATHS = getActiveServices().map(service => service.href)
 
 // ============================================
 // ルートメタデータ（ポータル全体）
@@ -171,6 +175,7 @@ export default function RootLayout({
         {/* Google Tag Manager (noscript) */}
         <GoogleTagManagerNoScript />
         <Providers>
+          <ServicePopupGuard servicePaths={ACTIVE_SERVICE_PATHS} />
           <RuntimeErrorReporter />{children}
           {/* 改善点・要望をうかがうカード。無料プランの方に、
               1 / 5 / 20回目の利用でだけ右下に出る（判定は lib/feedback.ts） */}

@@ -5,7 +5,12 @@
   "gate": "docs/audits/2026-10-06-all-services-recheck/cunning-company-release-7c7af9e7-18a7-44ba-aaad-e9021d633c71",
   "mountedCases": 27,
   "scope": "Actual Company page, list and mutation readers and parser under StrictMode. Synthetic network/auth/timers only. Failed refresh retains both lists and all drafts; bounded read/write fetch and body, synchronous pagination/write/unauthorized guards, strict owned save acknowledgment, preserved edits during pending writes, unknown-result manual recovery, operational limit distinct from paid-plan quota, auth/ABA/unmount cancellation. Returned saved fields must match submitted fields before clearing text; edited fields remain intact.",
-  "production": "not-yet-committed",
+  "production": {
+    "id": "dpl_5L4hbefMXxEzctqAkWXGoj2Sf4W4",
+    "url": "doya-jc2slfurr-surisutas-projects.vercel.app",
+    "readyState": "READY",
+    "target": "production"
+  },
   "remaining": [
     "No durable creation request key across reloads/tabs; exactly-once not claimed.",
     "Real customer/paid analysis/provider/DB operation and authenticated browser flow not performed.",
@@ -30,5 +35,14 @@
     "reason": "Additional actual mounted probe found mismatched saved content still cleared the draft; final acknowledgment now checks returned resume/motivation and company field types."
   },
   "sourceFiles": 2590,
-  "typecheck": "passed in final full gate"
+  "typecheck": "passed in final full gate",
+  "commit": "ae7e3ea7875953711b6069988548b5305d4893fb",
+  "push": "confirmed HEAD to main; parent 3c4bde84",
+  "ci": {
+    "run": 37522973416,
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "publicationCheckedAt": "2026-10-06T20:13:57.487927+00:00",
+  "anonymousPublicationEvidence": "cunning-company-public-ae7e3ea7.json"
 }
