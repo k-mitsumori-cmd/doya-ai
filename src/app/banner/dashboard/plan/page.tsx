@@ -1,15 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, getGuestUsage } from '@/lib/pricing'
+import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { useBillingPlanResync } from '@/hooks/useBillingPlanResync'
 import { useSubscriptionManagement } from '@/hooks/useSubscriptionManagement'
+import { useBannerPlanStats } from '@/hooks/useBannerPlanStats'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import {
   ArrowUpRight,
@@ -35,15 +36,6 @@ import {
 import { AnimatePresence, motion } from 'framer-motion'
 import toast, { Toaster } from 'react-hot-toast'
 
-type HistoryItem = {
-  id: string
-  category: string
-  keyword: string
-  size: string
-  createdAt: string
-  banners: string[]
-}
-
 const ESTIMATED_TIME_SAVED_PER_BANNER_MIN = 45
 const HOURLY_DESIGNER_RATE_JPY = 3000
 
@@ -58,10 +50,11 @@ export default function BannerPlanPage() {
   const isLight = !isGuest && bannerPlanTier === 'LIGHT'
   const isPaid = !isGuest && (isLight || isPro || isEnterprise)
 
-  const [totalBanners, setTotalBanners] = useState<number | null>(null)
-  const [usageCount, setUsageCount] = useState<number | null>(null)
-  const [serverMonthlyLimit, setServerMonthlyLimit] = useState<number | null>(null)
-  const [statsError, setStatsError] = useState(false)
+  const stats = useBannerPlanStats()
+  const totalBanners = stats.data?.totalBanners ?? null
+  const usageCount = stats.data?.monthlyUsage ?? null
+  const serverMonthlyLimit = stats.data?.monthlyLimit ?? null
+  const statsError = stats.error
   const management = useSubscriptionManagement('banner')
   const isCanceling = management.busy
   const cancelScheduledAt = management.data?.hasSubscription && management.data.cancelAtPeriodEnd ? new Date(management.data.currentPeriodEnd * 1000) : null
@@ -104,63 +97,9 @@ export default function BannerPlanPage() {
     },
   })
 
-  // APIから統計情報を取得（ログインユーザーの場合）
-  useEffect(() => {
-    if (status === 'loading') return
-    
-    const loadStats = async () => {
-      setStatsError(false)
-      setUsageCount(null)
-      setTotalBanners(null)
-      setServerMonthlyLimit(null)
-      if (isGuest) {
-        // ゲストはlocalStorageから取得（月次）
-        try {
-          setTotalBanners(0)
-          const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
-          const u = getGuestUsage('banner')
-          // 月次比較（旧YYYY-MM-DD形式にも対応）
-          setUsageCount(u.date && u.date.slice(0, 7) === currentMonth ? u.count : 0)
-
-          // ゲストの累計枚数はlocalStorageから（ただしほぼ0になる）
-          const stored = localStorage.getItem('banner_history')
-          if (stored) {
-            const history = JSON.parse(stored) as HistoryItem[]
-            const total = history.reduce((acc, h) => acc + (h.banners?.length || 0), 0)
-            setTotalBanners(total)
-          }
-        } catch {
-          setUsageCount(null)
-          setTotalBanners(null)
-          setStatsError(true)
-        }
-      } else {
-        // ログインユーザーはAPIから取得
-        try {
-          const res = await fetch('/api/banner/stats')
-          if (!res.ok) throw new Error('統計の取得に失敗しました')
-          const data = await res.json()
-          if (!Number.isFinite(data.totalBanners) || !Number.isFinite(data.monthlyUsage) || !Number.isFinite(data.monthlyLimit)) {
-            throw new Error('統計の形式が正しくありません')
-          }
-          setTotalBanners(data.totalBanners)
-          setUsageCount(data.monthlyUsage)
-          setServerMonthlyLimit(data.monthlyLimit)
-        } catch {
-          setTotalBanners(null)
-          setUsageCount(null)
-          setServerMonthlyLimit(null)
-          setStatsError(true)
-        }
-      }
-    }
-    
-    loadStats()
-  }, [isGuest, status])
-
-  // ログイン時は「プラン階層」で月間上限を決める（plan文字列の揺れに強い）
-  const monthlyLimit = isGuest ? BANNER_PRICING.guestLimit : statsError ? null : serverMonthlyLimit ?? getBannerMonthlyLimitByUserPlan(bannerPlanTier)
-  const remaining = usageCount === null || monthlyLimit === null ? null : Math.max(0, monthlyLimit - usageCount)
+  const monthlyLimit = serverMonthlyLimit
+  const unlimited = monthlyLimit === -1
+  const remaining = usageCount === null || monthlyLimit === null || unlimited ? null : Math.max(0, monthlyLimit - usageCount)
 
   const savedMinutes = (totalBanners ?? 0) * ESTIMATED_TIME_SAVED_PER_BANNER_MIN
   const savedHours = Math.floor(savedMinutes / 60)
@@ -269,7 +208,7 @@ export default function BannerPlanPage() {
                       </div>
                       <h2 className="text-2xl font-black text-slate-800">{currentPlanLabel}</h2>
                       <p className="text-sm text-slate-500 mt-2 font-medium">
-                        月間上限: <span className="font-bold text-slate-800">{monthlyLimit ?? '確認できません'}</span>{monthlyLimit === null ? '' : ' 枚'} / 今月の残り: <span className="font-bold text-blue-600">{remaining ?? '確認できません'}</span>{remaining === null ? '' : ' 枚'}
+                        月間上限: <span className="font-bold text-slate-800">{unlimited ? '上限なし' : monthlyLimit ?? '確認できません'}</span>{monthlyLimit === null || unlimited ? '' : ' 枚'} / 今月の残り: <span className="font-bold text-blue-600">{unlimited ? '上限なし' : remaining ?? '確認できません'}</span>{remaining === null ? '' : ' 枚'}
                       </p>
                     </div>
 

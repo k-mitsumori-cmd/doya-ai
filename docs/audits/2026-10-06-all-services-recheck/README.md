@@ -2,6 +2,17 @@
 
 31定義・公開17サービスを対象とする。82共通項目と40利用者観点の項目を17サービスへ展開した2074行の台帳は、項目別の完了証拠が揃うまで合格にしない。過去の修正・自動検証結果は現在版の全操作成功を代替しない。
 
+## 現在の確認範囲（2026-10-07 JST）
+
+この文書の各節は作業時点の記録です。過去節の「未反映」「ゲート中」を現在の状態に読み替えず、次のコミット別記録を参照してください。2074行の台帳を一括合格にはしていません。
+
+- `31c684bb`：登録判定を実際のアカウント作成時刻に変更し、最初の処理を原子的に確保。CI成功・本番READY・17ページ/53公開JSの反映を確認済み。`registration-repair.json` / `registration-deployment-tracking-31c684bb.json` / `registration-public-31c684bb.json`。検証専用PostgreSQLの同時要求は本番DBや実通知配信の確認ではありません。
+- `cfa92165`：4バナー画面の共有上限判定を利用者切り替え・通信停止に対応。実フック13項目と応答読取10項目、全体ゲートが通過。CI成功・本番READY・4ページ/33公開JSを確認済み。`banner-quota-client-repair.json` / `banner-quota-client-deployment-tracking-cfa92165.json`。
+- `de81037a` / `74cb5e58`：共通上限案内の古い状態が復活する問題と、Content-Lengthに依存した無制限のJSON解析を補修。38項目/12項目と全体ゲートが通過しmainへpush済み。`74cb5e58`のCI成功・本番READY・17ページ/53公開JSの反映を確認済みです。`service-limit-provider-repair.json` / `service-limit-observer-repair.json` / `service-limit-observer-deployment-tracking-74cb5e58.json`。
+- バナーのプラン画面の統計：ログイン済み利用者の切り替えで以前の枚数が残る問題を実画面で再現し、統計だけを利用者・プラン単位に分離。12項目の画面検証と、既存の課金管理72項目・再同期43項目が通過。全体ゲートも通過しソース変化なし。本番反映は別途確認中です。`banner-plan-stats-baseline.json` / `banner-plan-stats-current.json` / `banner-plan-stats-repair.json`。
+
+これらは主に実コードと合成認証・応答を用いた検証です。全17サービスの認証後の実業務、実機、外部認証完了、実課金、実AI生成を確認済みとするものではありません。CLIENT_FETCH_ERRORの原因・復旧、本番DBの全制約照合など、残る要件の監査を続けます。
+
 ## 今回の公開画面検証
 
 - `public-mobile-navigation.json`：390×844pxの本番ブラウザで17LPのDOM幅を計測。全て390pxで横方向の超過を検出せず、主要開始リンクを実際に押してサービスに対応する戻り先付きログイン画面まで到達した。HR・勤怠は一度未ログインダッシュボードを経由し、表示されたログイン案内も押して確認した。スライドは `/doyaslide/new`、勤怠は `/kintai/clock` を保持。Googleログインボタンは押していない。

@@ -56,6 +56,7 @@ async function fixture(kind) {
   };
   const location = { reload: () => { if (callbackFails) throw Error('synthetic private callback error'); navigations.push('reload'); } };
   const windowMock = { location, dispatchEvent: event => { if (callbackFails) throw Error('synthetic private callback error'); events.push(event); return true; } };
+  mocks['@/hooks/useBannerPlanStats'] = component('src/hooks/useBannerPlanStats.ts', { react: React, 'next-auth/react': auth, '@/lib/billing-response-client': { readBillingResponse: async () => ({ ok: true, status: 200, data: { totalBanners: 0, monthlyUsage: 0, monthlyLimit: 150 } }) } });
   const file = kind === 'pricing' ? 'src/components/UnifiedPricingPlans.tsx' : 'src/app/banner/dashboard/plan/page.tsx';
   const exports = component(file, mocks, { window: windowMock, CustomEvent: dom.window.CustomEvent,
     localStorage: dom.window.localStorage, fetch: async url => {

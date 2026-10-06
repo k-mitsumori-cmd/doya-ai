@@ -1,0 +1,57 @@
+{
+  "checkedAt": "2026-10-06T17:14:10.897817+00:00",
+  "status": "full-local-gate-passed-not-deployed",
+  "baselineCommit": "74cb5e58569c62a5e38f0629cbf6336c2adca9aa",
+  "baseline": "banner-plan-stats-baseline.json",
+  "current": "banner-plan-stats-current.json",
+  "confirmedIssue": "Stats request did not track authenticated actor/plan changes and old responses were not cancelled or scoped. Prior account counts remained visible after a same-status actor transition.",
+  "changes": [
+    "Dedicated stats hook scopes snapshots to authentication/actor/entitlement transition",
+    "Abort cleanup and discard late previous-scope response",
+    "Readonly JSON lookup uses existing bounded response reader (35 seconds / 64 KiB)",
+    "Reject fractional, negative and unsafe usage/count values; only -1 accepted for unlimited quota",
+    "Show unknown until server counts confirmed; show unlimited quota without a negative allowance",
+    "Guest counters match disabled generation and anonymous stats API: no legacy browser history is treated as authenticated account usage"
+  ],
+  "crossChecks": {
+    "subscriptionManagement": 72,
+    "manualPlanResync": 43,
+    "focusedStats": 12
+  },
+  "limitations": [
+    "Synthetic sessions/replies; actual billing hooks tested separately with synthetic Stripe responses",
+    "No customer DB, paid generation, live billing, OAuth or device QA",
+    "12 baseline test failures are not 12 independent production defects; several depend on the missing actor refresh",
+    "All 17-service audit remains active"
+  ],
+  "sourceHashes": {
+    "src/hooks/useBannerPlanStats.ts": "135ceb3fa98e7bf4742834618d4caf0300d74c3f4724cc4e6c4fad443c7ca63f",
+    "src/app/banner/dashboard/plan/page.tsx": "5e67f5bd36a4922133235f90bf696fd759a368b8ae99693481c9cb8913e04b90",
+    "scripts/security-regression/verify-banner-plan-stats-mounted.cjs": "ae33b52dda3145083878a39ae71fda585fd35c66cfd98a39a06a18251d2f7ae3",
+    "scripts/security-regression/verify-subscription-management-mounted.cjs": "f94ca6fb7fe60abe6a9adb7731010808d4f6247b10491991fcc695a04b74056a",
+    "scripts/security-regression/verify-billing-plan-resync-mounted.cjs": "9554099ed15512796d6747e42449cf317e3ca3bab464561005b4b97cdab2fb25",
+    "scripts/security-regression/run.cjs": "85566ec8f79314fd5789dbee3096c6b52efad9e0d496be504dd7c2bf784cf61b"
+  },
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/banner-plan-stats-release-dd3d020b-f9b2-4a86-80f0-03634e11f923",
+  "releaseState": {
+    "startedAt": "2026-10-06T17:13:12.815117+00:00",
+    "pid": 38897,
+    "head": "74cb5e58569c62a5e38f0629cbf6336c2adca9aa",
+    "sourceFiles": 2561,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T17:16:26.027746+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T17:16:27.719995+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-06T17:16:28.063081+00:00"
+  }
+}
