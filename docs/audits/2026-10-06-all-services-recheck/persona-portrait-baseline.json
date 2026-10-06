@@ -1,0 +1,31 @@
+{
+  "scope": "Actual Persona portrait callback with synthetic fetch/state/storage. No provider calls or real data. Absence of an AbortSignal is observed; no browser latency claim.",
+  "sourceSha256": "27fc2329aadd7e3f7a3514df4f378f90a2463e7d6dd2ead6ea5fd8852cb85d04",
+  "results": [
+    {
+      "mode": "object_image",
+      "requests": 1,
+      "abortSignals": [
+        false
+      ],
+      "loadingWhilePending": true,
+      "finalImageType": "object",
+      "invalidImageAccepted": true,
+      "browserCopyWrites": 1,
+      "error": ""
+    },
+    {
+      "mode": "duplicate_pending",
+      "requests": 2,
+      "abortSignals": [
+        false,
+        false
+      ],
+      "loadingWhilePending": true,
+      "finalImageType": "string",
+      "invalidImageAccepted": false,
+      "browserCopyWrites": 1,
+      "error": ""
+    }
+  ]
+}

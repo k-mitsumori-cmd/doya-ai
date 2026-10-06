@@ -21,14 +21,20 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     const p = await ctx.params
 
-    const project = await prisma.doyaSlideProject.findFirst({ where: { id: p.id, userId } })
+    const project = await prisma.doyaSlideProject.findFirst({
+      where: { id: p.id, userId },
+      include: { _count: { select: { slides: { where: { status: 'generating' } } } } },
+    })
     if (!project) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+    if (['structuring', 'generating'].includes(project.status) || project._count.slides > 0) {
+      return NextResponse.json({ error: '資料を処理中のためロゴ設定を変更できません。完了後にお試しください。' }, { status: 409 })
+    }
 
     const body = await req.json().catch(() => null)
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json({ error: 'ロゴ設定が正しくありません' }, { status: 400 })
     }
-    const data: any = {}
+    const data: { logoPosition?: string; logoSize?: string; logoBackingChip?: boolean } = {}
     if (body.logoPosition !== undefined) {
       if (!LOGO_POSITIONS.includes(body.logoPosition)) return NextResponse.json({ error: 'ロゴの位置が正しくありません' }, { status: 400 })
       data.logoPosition = body.logoPosition
@@ -55,7 +61,14 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       }
     }
 
-    const updated = await prisma.doyaSlideProject.update({ where: { id: p.id }, data })
+    const updated = await prisma.doyaSlideProject.update({
+      where: {
+        id: p.id, userId, updatedAt: project.updatedAt,
+        status: { notIn: ['structuring', 'generating'] },
+        slides: { none: { status: 'generating' } },
+      },
+      data,
+    })
 
     // 生画像があるスライドはロゴだけ再合成（ロゴは一度だけ取得して並列処理）
     const opts = {
@@ -68,14 +81,29 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       const baseBuf = await fetchBuffer(s.rawImageUrl)
       const composed = await compositeLogo(baseBuf, logoBuf, opts)
       const imageUrl = await uploadComposedImage(userId, p.id, composed)
-      await prisma.doyaSlideSlide.update({ where: { id: s.id }, data: { imageUrl } })
+      // Compare both the slide and the saved branding after awaited image work.
+      await prisma.doyaSlideSlide.update({
+        where: {
+          id: s.id, projectId: p.id, version: s.version,
+          imageUrl: s.imageUrl, rawImageUrl: s.rawImageUrl, status: s.status,
+          project: {
+            userId, updatedAt: updated.updatedAt, logoUrl: updated.logoUrl,
+            status: { notIn: ['structuring', 'generating'] },
+          },
+        },
+        data: { imageUrl },
+      })
     })) : []
     const failedSlides = outcomes.filter((outcome) => outcome.status === 'rejected').length
 
     const result = await prisma.doyaSlideProject.findFirst({
-      where: { id: p.id },
+      where: { id: p.id, userId },
       include: { slides: { orderBy: { index: 'asc' } } },
     })
+    if (!result) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+    if (result.updatedAt.getTime() !== updated.updatedAt.getTime()) {
+      return NextResponse.json({ error: '資料の状態が変わりました。再読み込みしてロゴの反映状況をご確認ください。' }, { status: 409 })
+    }
     if (failedSlides > 0) {
       console.error('[doyaslide/logo-config] recomposite failed', { failedSlides })
       return NextResponse.json({
@@ -86,6 +114,9 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     }
     return NextResponse.json({ project: result })
   } catch (e) {
+    if ((e as { code?: string })?.code === 'P2025') {
+      return NextResponse.json({ error: '資料の状態が変わりました。再読み込みしてお試しください。' }, { status: 409 })
+    }
     console.error('[doyaslide/logo-config]')
     return NextResponse.json({ error: '更新に失敗しました' }, { status: 500 })
   }

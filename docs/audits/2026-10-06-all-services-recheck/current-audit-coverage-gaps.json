@@ -1,0 +1,101 @@
+{
+  "checkedAt": "2026-10-06T04:35:18.620803+00:00",
+  "head": "4b50c611747773248909af103a7082754dedee09",
+  "scope": "Current CSV coverage accounting only. Existing evidence references are not completion proof and need current-state revalidation. Does not assert all named checks are exhaustive or passing.",
+  "criteria": 2074,
+  "services": {
+    "adimage": {
+      "criteria": 122,
+      "explicitItemwisePending": 116,
+      "noEvidenceReference": 116
+    },
+    "aio": {
+      "criteria": 122,
+      "explicitItemwisePending": 112,
+      "noEvidenceReference": 112
+    },
+    "aishodan": {
+      "criteria": 122,
+      "explicitItemwisePending": 115,
+      "noEvidenceReference": 115
+    },
+    "banner": {
+      "criteria": 122,
+      "explicitItemwisePending": 108,
+      "noEvidenceReference": 108
+    },
+    "cunning": {
+      "criteria": 122,
+      "explicitItemwisePending": 116,
+      "noEvidenceReference": 116
+    },
+    "doyalist": {
+      "criteria": 122,
+      "explicitItemwisePending": 116,
+      "noEvidenceReference": 116
+    },
+    "doyaslide": {
+      "criteria": 122,
+      "explicitItemwisePending": 114,
+      "noEvidenceReference": 114
+    },
+    "hr": {
+      "criteria": 122,
+      "explicitItemwisePending": 111,
+      "noEvidenceReference": 111
+    },
+    "interview": {
+      "criteria": 122,
+      "explicitItemwisePending": 116,
+      "noEvidenceReference": 116
+    },
+    "kintai": {
+      "criteria": 122,
+      "explicitItemwisePending": 115,
+      "noEvidenceReference": 115
+    },
+    "mensetsu": {
+      "criteria": 122,
+      "explicitItemwisePending": 115,
+      "noEvidenceReference": 115
+    },
+    "persona": {
+      "criteria": 122,
+      "explicitItemwisePending": 116,
+      "noEvidenceReference": 116
+    },
+    "promane": {
+      "criteria": 122,
+      "explicitItemwisePending": 115,
+      "noEvidenceReference": 115
+    },
+    "quote": {
+      "criteria": 122,
+      "explicitItemwisePending": 115,
+      "noEvidenceReference": 115
+    },
+    "seo": {
+      "criteria": 122,
+      "explicitItemwisePending": 113,
+      "noEvidenceReference": 113
+    },
+    "sfa": {
+      "criteria": 122,
+      "explicitItemwisePending": 113,
+      "noEvidenceReference": 113
+    },
+    "shodan": {
+      "criteria": 122,
+      "explicitItemwisePending": 112,
+      "noEvidenceReference": 112
+    }
+  },
+  "completionProven": false,
+  "requiredRemaining": [
+    "All 17 services authenticated end-to-end current revision",
+    "Current-state confirmation of each matrix criterion",
+    "Real DB concurrency and business transaction checks",
+    "Exact commit deployment READY and production reflection for each new cohort",
+    "Known logo-config concurrency and truncated-image repair"
+  ]
+}

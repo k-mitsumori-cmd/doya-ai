@@ -1,0 +1,9 @@
+{
+  "scope": "Actual upload API, local synthetic truncated PNG, real Sharp, synthetic auth/Prisma/Storage. No real writes.",
+  "status": 200,
+  "uploads": 1,
+  "writes": 1,
+  "decodable": false,
+  "fullBytes": 228,
+  "truncatedBytes": 80
+}

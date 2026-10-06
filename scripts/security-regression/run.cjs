@@ -150,6 +150,16 @@ if (bannerLimitContact.error || bannerLimitContact.status !== 0) {
   console.error('Security regression failed: verify-banner-limit-contact.cjs');
   process.exit(1);
 }
+const doyaslideLogoConfigGuards = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-logo-config-guards.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideLogoConfigGuards.error || doyaslideLogoConfigGuards.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-logo-config-guards.cjs');
+  process.exit(1);
+}
+const doyaslideLogoUploadGuards = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-logo-upload-guards.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideLogoUploadGuards.error || doyaslideLogoUploadGuards.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-logo-upload-guards.cjs');
+  process.exit(1);
+}
 const doyaslideWizardListRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-wizard-list-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (doyaslideWizardListRecovery.error || doyaslideWizardListRecovery.status !== 0) {
   console.error('Security regression failed: verify-doyaslide-wizard-list-recovery.cjs');

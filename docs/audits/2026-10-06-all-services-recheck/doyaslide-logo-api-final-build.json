@@ -1,0 +1,19 @@
+{
+  "runId": "e1f12e8c-8964-4a82-b0bc-dc9f47724b7a",
+  "startedAt": "2026-10-06T04:37:01.784587+00:00",
+  "pid": 39839,
+  "sourceHashes": {
+    "src/app/api/doyaslide/assets/logo/route.ts": "7d6578a4f30e4fd92676963479d61cccb7e3efbc0adf9dd552a15f6be02f1407",
+    "src/app/api/doyaslide/projects/[id]/logo-config/route.ts": "c387ee79cc380626f9e2f2c2db6a37828ba50be447c8e7f74a3392f3a69d8952",
+    "scripts/security-regression/verify-doyaslide-logo-upload-guards.cjs": "00b3c477a12165b6a0f0b130c33205496c0925850cde167d9ccc090d7226f76c",
+    "scripts/security-regression/verify-doyaslide-logo-config-guards.cjs": "7958bb18139637261403fdea1d2a7aba541ea052da9297f7176454bf19d04dc6",
+    "scripts/security-regression/verify-doyaslide-logo-config.cjs": "f8b7ce03c6fcf63c389f32e09f6579998030fe888942c786eed61bb446f0e345",
+    "scripts/security-regression/run.cjs": "1f3c1db56d9b9044cca967c779608128ae7e43b286c6ed716b104493a78bb9f9"
+  },
+  "state": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T04:42:51.340246+00:00",
+  "changedSources": [],
+  "rawLogSha256": "30a21e377c0dbc6a18cd5d1c824c7193c639a1dd12b5dd6fe9c67a3b9928f8aa",
+  "scope": "Full offline security regression, type check and Next production build. Six frozen source hashes match. Not authenticated E2E or real database concurrency."
+}

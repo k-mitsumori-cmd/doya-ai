@@ -1,0 +1,23 @@
+{
+  "scope": "Actual regenerate/chat APIs with synthetic auth, quota, provider and Prisma. Branding changes injected during quota wait. No real DB writes, customer data, storage or paid generation.",
+  "results": [
+    {
+      "kind": "chat",
+      "status": 200,
+      "currentLogoSize": "L",
+      "generatedLogoSize": "M",
+      "oldBrandingPersisted": true,
+      "reserves": 1,
+      "releases": 0
+    },
+    {
+      "kind": "regenerate",
+      "status": 200,
+      "currentLogoSize": "L",
+      "generatedLogoSize": "M",
+      "oldBrandingPersisted": true,
+      "reserves": 1,
+      "releases": 0
+    }
+  ]
+}

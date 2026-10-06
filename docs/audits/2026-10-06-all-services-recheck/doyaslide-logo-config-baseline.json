@@ -1,0 +1,30 @@
+{
+  "scope": "Actual logo-config API with synthetic auth/Prisma/image fetch/composition/storage; state changes injected at awaited operations. No real ownership transfer, image generation or storage writes; no production data exposure claim.",
+  "results": [
+    {
+      "mode": "processing_project",
+      "status": 200,
+      "projectWrites": 1,
+      "slideWrites": 0,
+      "unownedProjectReturned": false,
+      "newerImageOverwrittenByOldBase": false
+    },
+    {
+      "mode": "owner_changes",
+      "status": 200,
+      "projectWrites": 1,
+      "slideWrites": 0,
+      "unownedProjectReturned": true,
+      "newerImageOverwrittenByOldBase": false
+    },
+    {
+      "mode": "newer_slide",
+      "status": 200,
+      "projectWrites": 1,
+      "slideWrites": 1,
+      "unownedProjectReturned": false,
+      "newerImageOverwrittenByOldBase": true
+    }
+  ],
+  "sourceHash": "73b5ca3f4081a6a0173e94e9ed011d2892f3a4cf65a35e1ab365a40146453097"
+}

@@ -4,7 +4,7 @@ const { load } = require('./load-typescript.cjs')
 function fixture({ logoFailure = false, slideFailure = false } = {}) {
   let projectWrites = 0
   let slideWrites = 0
-  let project = { id: 'project', userId: 'owner', logoUrl: 'https://storage.invalid/logo.png', logoPosition: 'top-right', logoSize: 'M', logoBackingChip: false }
+  let project = { id: 'project', userId: 'owner', status: 'completed', updatedAt: new Date('2026-10-06T00:00:00Z'), _count: { slides: 0 }, logoUrl: 'https://storage.invalid/logo.png', logoPosition: 'top-right', logoSize: 'M', logoBackingChip: false }
   const prisma = {
     doyaSlideProject: {
       findFirst: async () => project,

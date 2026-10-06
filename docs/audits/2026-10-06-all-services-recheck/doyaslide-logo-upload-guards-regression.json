@@ -1,0 +1,16 @@
+{
+  "passed": 10,
+  "scope": "Actual API module, synthetic auth/File/Prisma/storage with real local Sharp decoding. No customer data, Storage writes, real DB race or paid provider call.",
+  "results": [
+    "logo upload rejects anonymous requests before any form or storage work",
+    "invalid project IDs, MIME, SVG, empty and oversized files are rejected before storage",
+    "missing and foreign projects fail before file reads or storage uploads",
+    "project structure, bulk generation and individual-slide generation block logo uploads",
+    "real Sharp decoding rejects corrupt, mislabeled, empty-body and excessive-dimension images before upload",
+    "header-readable but truncated PNG is rejected by full pixel decoding before storage",
+    "valid PNG JPEG and WebP images attach to the unchanged owned project",
+    "standalone logo upload remains supported without a project update",
+    "deleted transferred changed and processing projects cannot be overwritten after a delayed Storage response",
+    "ownership storage and write failures return public errors and never claim a confirmed logo association"
+  ]
+}

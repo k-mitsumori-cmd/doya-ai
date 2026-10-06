@@ -1,0 +1,16 @@
+{
+  "runId": "f6ccccf5-0346-417a-85fe-462ab7c5b11d",
+  "startedAt": "2026-10-06T04:27:57.347937+00:00",
+  "pid": 35835,
+  "sourceHashes": {
+    "src/app/api/doyaslide/assets/logo/route.ts": "d63335727c1953b00d753fcf9c3436277624dbb87e29d3eff37bf6cf8a7fd5c2",
+    "scripts/security-regression/verify-doyaslide-logo-upload-guards.cjs": "dba04e235eb71b9b66ddf9d496935aa2dd77174ae4eeeaf73961e7f6befa7b95",
+    "scripts/security-regression/run.cjs": "8fb700178ee48646a251a2799772c687a29daf617d68d31b7a610056626b384a"
+  },
+  "state": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T04:35:05.720801+00:00",
+  "changedSources": [],
+  "scope": "Initial metadata-only guards gate; not the final full-decode revision. Truncated-image repair still required.",
+  "rawLogSha256": "5239f4545e5515e0492323cb8629f37ee64663b76ed746edf11d62d4e206b5b6"
+}
