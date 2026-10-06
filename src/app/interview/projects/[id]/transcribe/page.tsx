@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
@@ -57,6 +58,13 @@ export default function TranscribePage() {
   const router = useRouter()
   const projectId = params.id as string
   const materialId = searchParams.get('materialId')
+  const { data: session, status: sessionStatus } = useSession()
+  const streamContext = JSON.stringify([projectId, materialId, session?.user?.id || 'guest', sessionStatus])
+  const streamContextRef = useRef(streamContext)
+  const streamAlive = useRef(false)
+  const connectionGeneration = useRef(0)
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>()
+  const idleTimer = useRef<ReturnType<typeof setTimeout>>()
 
   const [currentStep, setCurrentStep] = useState<TranscribeStep>('init')
   const [statusMessage, setStatusMessage] = useState('接続中...')
@@ -132,125 +140,172 @@ export default function TranscribePage() {
     }
   }, [])
 
-  // SSE接続 (再接続は完全透過 — UIに影響を与えない)
   const connect = useCallback(() => {
-    if (!materialId || isCompleteRef.current) return
-
-    function scheduleReconnect() {
-      if (isCompleteRef.current || isReconnectingRef.current) return
+    if (!streamAlive.current || streamContextRef.current !== streamContext || sessionStatus === 'loading' || !materialId || isCompleteRef.current || eventSourceRef.current) return
+    const generation = ++connectionGeneration.current
+    const contextCurrent = () => streamAlive.current && streamContextRef.current === streamContext && connectionGeneration.current === generation && !isCompleteRef.current
+    const unknownResult = '文字起こしの結果を確認できませんでした。素材一覧で状態を確認してください。'
+    let eventSource: EventSource
+    try { eventSource = new EventSource('/api/interview/materials/' + encodeURIComponent(materialId) + '/transcribe-stream') }
+    catch { isCompleteRef.current = true; setErrorMessage(unknownResult); setCurrentStep('error'); return }
+    eventSourceRef.current = eventSource
+    const current = () => contextCurrent() && eventSourceRef.current === eventSource
+    const close = () => {
+      eventSource.close()
+      if (eventSourceRef.current === eventSource) {
+        eventSourceRef.current = null
+        clearTimeout(idleTimer.current)
+        idleTimer.current = undefined
+      }
+    }
+    const finishError = (message = unknownResult) => {
+      if (!current()) return
+      isCompleteRef.current = true
+      clearTimeout(reconnectTimer.current)
+      reconnectTimer.current = undefined
+      isReconnectingRef.current = false
+      setErrorMessage(message)
+      setCurrentStep('error')
+      close()
+    }
+    const scheduleReconnect = () => {
+      if (!contextCurrent() || isReconnectingRef.current) return
       isReconnectingRef.current = true
-
       const count = ++reconnectCountRef.current
-
       if (count > MAX_RECONNECT_ATTEMPTS) {
-        setErrorMessage('処理に失敗しました。もう一度お試しください。')
-        setCurrentStep('error')
+        isCompleteRef.current = true
         isReconnectingRef.current = false
+        setErrorMessage(unknownResult)
+        setCurrentStep('error')
         return
       }
-
-      // 再接続は透過的 — ステップやメッセージを変更しない
-      // analyzing のままキープすることでUIの連続性を保つ
       const delay = Math.min(RECONNECT_BASE_DELAY_MS * Math.pow(1.5, count - 1), 15000)
-
-      setTimeout(() => {
+      reconnectTimer.current = setTimeout(() => {
+        if (!contextCurrent()) return
+        reconnectTimer.current = undefined
         isReconnectingRef.current = false
         connectRef.current?.()
       }, delay)
     }
-
-    const eventSource = new EventSource(`/api/interview/materials/${materialId}/transcribe-stream`)
-    eventSourceRef.current = eventSource
-
-    eventSource.addEventListener('media', (e) => {
-      const data = JSON.parse(e.data)
+    const resetIdle = () => {
+      clearTimeout(idleTimer.current)
+      idleTimer.current = setTimeout(() => {
+        if (!current()) return
+        close()
+        scheduleReconnect()
+      }, 330000)
+    }
+    const listen = (name: string, apply: (data: any) => void) => {
+      eventSource.addEventListener(name, (event) => {
+        if (!current()) return
+        try {
+          const text = (event as MessageEvent).data
+          if (typeof text !== 'string' || text.length > 34 * 1024 * 1024) throw new Error('Invalid event')
+          const data = JSON.parse(text)
+          if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Invalid event')
+          apply(data)
+          if (current()) resetIdle()
+        } catch { finishError() }
+      })
+    }
+    listen('media', (data) => {
+      if (typeof data.url !== 'string' || !['audio', 'video'].includes(data.type) || (data.mimeType != null && typeof data.mimeType !== 'string') || (data.fileName != null && typeof data.fileName !== 'string')) throw new Error('Invalid media')
+      const url = new URL(data.url)
+      if (url.protocol !== 'https:' || url.username || url.password) throw new Error('Invalid media URL')
       setMediaInfo(data)
     })
-
-    eventSource.addEventListener('status', (e) => {
-      const data = JSON.parse(e.data)
-      // 再接続時の status イベントではステップを戻さない
-      // (例: analyzing → init に戻らないようにする)
-      const newStep = data.step as TranscribeStep
-      setCurrentStep(prev => {
-        const prevIdx = STEP_ORDER.indexOf(prev)
-        const newIdx = STEP_ORDER.indexOf(newStep)
-        // 完了・エラー以外は、進行方向のみ許可（後退しない）
-        if (prev === 'complete' || prev === 'error') return prev
-        if (reconnectCountRef.current > 0 && newIdx < prevIdx) return prev
-        return newStep
-      })
-      if (!data.reconnected) {
-        setStatusMessage(data.message)
-      }
-      if (data.reconnected) {
-        reconnectCountRef.current = 0
-      }
+    listen('status', (data) => {
+      if (!STEP_ORDER.includes(data.step) || data.step === 'complete' || typeof data.message !== 'string' || data.message.length > 500) throw new Error('Invalid status')
+      setCurrentStep(prev => reconnectCountRef.current > 0 && STEP_ORDER.indexOf(data.step) < STEP_ORDER.indexOf(prev) ? prev : data.step)
+      if (data.reconnected !== true) setStatusMessage(data.message)
+      // A resumed pending job is not evidence that retries may be reset indefinitely.
     })
-
-    eventSource.addEventListener('segment', (e) => {
-      const data = JSON.parse(e.data)
+    listen('segment', (data) => {
+      if (!Number.isSafeInteger(data.index) || data.index < 0 || typeof data.text !== 'string' || !Number.isFinite(data.start) || !Number.isFinite(data.end) || data.start < 0 || data.end < data.start || (data.speaker != null && typeof data.speaker !== 'string')) throw new Error('Invalid segment')
       setCurrentStep('streaming')
       setStatusMessage('文字起こし中...')
-      setSegments(prev => {
-        if (prev.some(s => s.index === data.index)) return prev
-        return [...prev, data]
-      })
+      setSegments(prev => prev.some(segment => segment.index === data.index) ? prev : [...prev, data])
     })
-
-    eventSource.addEventListener('complete', (e) => {
-      const data = JSON.parse(e.data)
+    listen('complete', (data) => {
+      if (typeof data.transcriptionId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(data.transcriptionId) || typeof data.fullText !== 'string' || !Number.isSafeInteger(data.totalSegments) || data.totalSegments < 0 || !Number.isFinite(data.durationSeconds) || data.durationSeconds < 0 || (data.durationMinutes != null && (!Number.isFinite(data.durationMinutes) || data.durationMinutes < 0)) || (data.projectId != null && data.projectId !== projectId)) throw new Error('Invalid completion')
       isCompleteRef.current = true
       setCurrentStep('complete')
-      setStatusMessage('文字起こし完了!')
+      setStatusMessage(data.fullText.trim() ? '文字起こし完了' : '文字起こしが完了しました。音声から文章は検出されませんでした。')
       setTranscriptionId(data.transcriptionId)
-      setDurationMinutes(data.durationMinutes)
+      setDurationMinutes(data.durationMinutes ?? null)
       setFullText(data.fullText)
+      clearTimeout(reconnectTimer.current)
+      reconnectTimer.current = undefined
       reconnectCountRef.current = 0
-      eventSource.close()
+      close()
     })
-
-    // "fail" イベント — サーバーからのエラー通知
-    // ※ "error" ではなく "fail" を使用: EventSourceのネイティブ onerror と衝突を避けるため
-    eventSource.addEventListener('fail', (e) => {
-      const data = JSON.parse(e.data)
-      if (data.retryable) {
-        eventSource.close()
-        scheduleReconnect()
-        return
-      }
-      // 非再試行エラー — 最終エラーとして表示、再接続しない
-      isCompleteRef.current = true
-      setErrorMessage(data.message || '文字起こしに失敗しました')
-      setLimitReached(data.code === 'TRANSCRIPTION_LIMIT' || data.limitExceeded === true)
+    listen('fail', (data) => {
+      const quota = data.code === 'TRANSCRIPTION_LIMIT' || data.limitExceeded === true
+      const support = data.code === 'TRANSCRIPTION_SUBMISSION_UNKNOWN'
+      if (data.retryable === true && !quota && !support) { close(); scheduleReconnect(); return }
+      setLimitReached(quota)
       setLimitAction(data.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : data.upgradePath === '/interview/pricing' ? 'pricing' : null)
-      setNeedsSupport(data.code === 'TRANSCRIPTION_SUBMISSION_UNKNOWN')
-      setCurrentStep('error')
-      eventSource.close()
+      setNeedsSupport(support)
+      finishError(support ? '送信状態を確認できません。再送せず、サポートにお問い合わせください。' : quota ? '文字起こしの上限に達しました。利用可能なプランをご確認ください。' : unknownResult)
     })
-
-    // ネイティブ接続エラー (ネットワーク切断, Vercelタイムアウト等)
-    eventSource.onerror = () => {
-      if (isCompleteRef.current) {
-        eventSource.close()
-        return
-      }
-      eventSource.close()
-      scheduleReconnect()
-    }
-
-    return () => eventSource.close()
-  }, [materialId])
+    eventSource.onerror = () => { if (!current()) return; close(); scheduleReconnect() }
+    resetIdle()
+    return close
+  }, [materialId, projectId, sessionStatus, streamContext])
 
   connectRef.current = connect
 
   useEffect(() => {
-    const cleanup = connect()
-    return () => {
-      cleanup?.()
+    streamContextRef.current = streamContext
+    streamAlive.current = true
+    isCompleteRef.current = false
+    isReconnectingRef.current = false
+    reconnectCountRef.current = 0
+    startTimeRef.current = Date.now()
+    setCurrentStep('init')
+    setStatusMessage(sessionStatus === 'loading' ? '利用情報を確認しています...' : '接続中...')
+    setElapsed(0)
+    setSegments([])
+    setErrorMessage('')
+    setLimitReached(false)
+    setLimitAction(null)
+    setNeedsSupport(false)
+    setTranscriptionId(null)
+    setDurationMinutes(null)
+    setFullText('')
+    setMediaInfo(null)
+    setActiveSegmentIndex(null)
+    setMediaCurrentTime(0)
+    setIsMediaPlaying(false)
+    const suspend = () => {
+      streamAlive.current = false
+      connectionGeneration.current++
+      clearTimeout(reconnectTimer.current)
+      clearTimeout(idleTimer.current)
+      reconnectTimer.current = undefined
+      idleTimer.current = undefined
+      isReconnectingRef.current = false
       eventSourceRef.current?.close()
+      eventSourceRef.current = null
     }
-  }, [connect])
+    const restore = () => {
+      if (streamContextRef.current !== streamContext) return
+      streamAlive.current = true
+      connectRef.current?.()
+    }
+    if (!materialId || !/^[a-zA-Z0-9_-]{1,128}$/.test(materialId)) {
+      isCompleteRef.current = true
+      setCurrentStep('error')
+      setErrorMessage('文字起こしする素材を一覧から選び直してください。')
+    } else connect()
+    window.addEventListener('pagehide', suspend)
+    window.addEventListener('pageshow', restore)
+    return () => {
+      suspend()
+      window.removeEventListener('pagehide', suspend)
+      window.removeEventListener('pageshow', restore)
+    }
+  }, [connect, materialId, sessionStatus, streamContext])
 
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60)
@@ -640,6 +695,13 @@ export default function TranscribePage() {
         </motion.div>
       )}
 
+      {currentStep === 'complete' && fullText.trim() && (
+        <section aria-label="保存済みの文字起こし全文" className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <h2 className="border-b border-slate-100 p-4 text-sm font-bold text-slate-700">保存済みの文字起こし全文</h2>
+          <div className="max-h-[500px] overflow-y-auto whitespace-pre-wrap break-words p-4 text-sm leading-relaxed text-slate-700">{fullText}</div>
+        </section>
+      )}
+
       {/* 完了カード */}
       <AnimatePresence>
         {currentStep === 'complete' && (
@@ -661,8 +723,7 @@ export default function TranscribePage() {
                 <div>
                   <h2 className="text-lg font-black text-slate-900">文字起こし完了</h2>
                   <p className="text-sm text-slate-600">
-                    {durationMinutes ? `${durationMinutes}分の音声を` : ''}
-                    {segments.length}セグメントに変換しました（{formatTime(elapsed)}）
+                    {fullText.trim() ? '保存済みの文字起こし結果を表示しています。' : '音声から文章は検出されませんでした。素材一覧で別の音声を選択できます。'}
                   </p>
                 </div>
               </div>

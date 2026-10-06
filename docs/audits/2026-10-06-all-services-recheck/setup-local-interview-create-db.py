@@ -1,0 +1,5 @@
+import tempfile,pathlib,subprocess,json,os
+root=pathlib.Path(tempfile.mkdtemp(prefix='doya-ic-qa-',dir='/tmp')).resolve();os.chmod(root,0o700);socket=root/'socket';socket.mkdir(mode=0o700);bin=pathlib.Path('/opt/homebrew/opt/postgresql@17/bin');data=root/'data'
+with (root/'init.log').open('w') as out:subprocess.run([str(bin/'initdb'),'-D',str(data),'-U','doya_qa','-A','trust','--no-locale'],stdout=out,stderr=subprocess.STDOUT,check=True)
+subprocess.run([str(bin/'pg_ctl'),'-D',str(data),'-l',str(root/'postgres.log'),'-o',"-F -c listen_addresses='' -k "+str(socket)+' -p 56474','start','-w'],check=True)
+desc={'root':str(root),'data':str(data),'socket':str(socket),'port':56474,'url':'postgresql://doya_qa@localhost:56474/postgres?host='+str(socket),'scope':'New private Unix-only PostgreSQL17 synthetic fixtures. No production connections or migration.'};pathlib.Path('/tmp/doya-local-interview-create-db-descriptor-20261006.json').write_text(json.dumps(desc,indent=2)+'\n');print(json.dumps({'started':True,'tcpListening':False}))

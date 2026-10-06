@@ -60,6 +60,7 @@ const { POST } = load('src/app/api/interview/materials/[id]/transcribe/route.ts'
     },
   },
   '@/lib/pricing': { getInterviewGuestLimits: () => ({ transcriptionMinutes: 5 }), SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
+  '@/lib/interview/transcription-legacy': { claimLegacyInterviewTranscription: async () => { throw Error('unexpected legacy admission') } },
   '@/lib/interview/media-duration': { inspectInterviewMediaDuration: async () => 200 },
   '@/lib/interview/transcription-budget': {
     reserveInterviewTranscription: async () => admission,

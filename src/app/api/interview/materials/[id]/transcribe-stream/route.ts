@@ -19,7 +19,8 @@ import { randomUUID } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership } from '@/lib/interview/access'
 import { getSignedFileUrl } from '@/lib/interview/storage'
-import { getInterviewGuestLimits, SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { claimLegacyInterviewTranscription, type LegacyTranscriptionAdmission } from '@/lib/interview/transcription-legacy'
 import { inspectInterviewMediaDuration } from '@/lib/interview/media-duration'
 import { reserveInterviewTranscription, settleInterviewTranscription, releaseInterviewTranscription } from '@/lib/interview/transcription-budget'
 import { readAssemblyJson, SUBMIT_TIMEOUT_MS, POLL_REQUEST_TIMEOUT_MS, SUBMIT_RESPONSE_MAX_BYTES, TRANSCRIPT_RESPONSE_MAX_BYTES, InterviewTranscriptionTerminalError } from '@/lib/interview/transcription'
@@ -49,6 +50,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       const encoder = new TextEncoder()
       const quotaEnabled = process.env.INTERVIEW_TRANSCRIPTION_QUOTA_ENABLED === '1'
       let budgetTranscriptionId: string | null = null
+      let legacyTranscriptionId: string | null = null
+      let legacyAdmission: LegacyTranscriptionAdmission | null = null
       let terminalFailure = false
       let ambiguousSubmission = false
 
@@ -103,22 +106,6 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           return
         }
 
-        // ゲスト上限チェック
-        if (!quotaEnabled && !userId && guestId) {
-          const guestLimits = getInterviewGuestLimits()
-          const limitSeconds = guestLimits.transcriptionMinutes * 60
-          const guestUsage = await prisma.interviewMaterial.aggregate({
-            _sum: { duration: true },
-            where: { project: { guestId }, status: 'COMPLETED' },
-          })
-          const usedSeconds = guestUsage._sum.duration || 0
-          if (usedSeconds >= limitSeconds) {
-            sendEvent('fail', { message: `ゲストユーザーは合計${guestLimits.transcriptionMinutes}分までの文字起こしが可能です。`, limitExceeded: true, upgradePath: '/interview/pricing' })
-            controller.close()
-            return
-          }
-        }
-
         const apiKey = process.env.ASSEMBLYAI_API_KEY
         if (!apiKey) {
           sendEvent('fail', { message: 'ASSEMBLYAI_API_KEY が設定されていません' })
@@ -160,6 +147,26 @@ export async function GET(req: NextRequest, ctx: Ctx) {
             return
           }
           budgetTranscriptionId = admission.transcriptionId
+        } else {
+          legacyAdmission = await claimLegacyInterviewTranscription({ userId, guestId }, { id: materialId, projectId: material.project.id, filePath: material.filePath })
+          if (legacyAdmission.state === 'limit') {
+            sendEvent('fail', { message: 'ゲストの文字起こし上限に達しました。', limitExceeded: true, upgradePath: '/interview/pricing' })
+            controller.close(); return
+          }
+          if (legacyAdmission.state === 'unavailable') {
+            sendEvent('fail', { message: '素材の状態を確認できません。素材一覧を更新してください。' })
+            controller.close(); return
+          }
+          legacyTranscriptionId = legacyAdmission.transcriptionId
+          if (legacyAdmission.state === 'completed') {
+            const completed = await prisma.interviewTranscription.findUnique({ where: { id: legacyTranscriptionId }, select: { text: true } })
+            sendEvent('complete', { transcriptionId: legacyTranscriptionId, projectId: material.project.id, totalSegments: 0, durationSeconds: material.duration || 0, durationMinutes: Math.ceil((material.duration || 0) / 60), fullText: completed?.text || '' })
+            controller.close(); return
+          }
+          if (legacyAdmission.state === 'processing' && (!legacyAdmission.externalJobId || legacyAdmission.externalJobId.startsWith('submitting:'))) {
+            sendEvent('fail', { message: '送信状態を確認できません。サポートにお問い合わせください。', code: 'TRANSCRIPTION_SUBMISSION_UNKNOWN' })
+            controller.close(); return
+          }
         }
 
         // メディア情報をクライアントに送信 (再生用)
@@ -176,7 +183,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         }
 
         // ===== 再接続チェック: 既にPROCESSINGのジョブがあるか =====
-        const existingTranscription = await prisma.interviewTranscription.findFirst({
+        const existingTranscription = legacyAdmission && 'transcriptionId' in legacyAdmission ? { id: legacyAdmission.transcriptionId, externalJobId: legacyAdmission.externalJobId } : await prisma.interviewTranscription.findFirst({
           where: { materialId, status: 'PROCESSING' },
           orderBy: { createdAt: 'desc' },
         })
@@ -192,7 +199,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           return
         }
 
-        if (existingTranscription?.externalJobId) {
+        if (existingTranscription?.externalJobId && legacyAdmission?.state !== 'started') {
           // ===== 再接続: 既存ジョブのポーリングを再開 =====
           transcription = existingTranscription
           assemblyAiId = existingTranscription.externalJobId
@@ -201,8 +208,6 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           // ===== 新規: ジョブを送信 =====
           let submissionMarker: string | null = null
 
-          // 過去ERRORを削除
-          if (!quotaEnabled) await prisma.interviewTranscription.deleteMany({ where: { materialId, status: 'ERROR' } })
 
           sendEvent('status', { step: 'init', message: '文字起こしを準備中...', elapsed: 0 })
 
@@ -222,10 +227,10 @@ export async function GET(req: NextRequest, ctx: Ctx) {
             }
             assemblyAiId = submissionMarker
           } else {
-            transcription = await prisma.interviewTranscription.create({
-              data: { projectId: material.project.id, materialId: material.id, text: '', status: 'PROCESSING', provider: null },
-            })
-            await prisma.interviewMaterial.update({ where: { id: materialId }, data: { status: 'PROCESSING' } })
+            if (!legacyAdmission || legacyAdmission.state !== 'started') throw new Error('Legacy transcription claim unavailable')
+            transcription = { id: legacyAdmission.transcriptionId }
+            submissionMarker = legacyAdmission.externalJobId
+            assemblyAiId = submissionMarker || ''
           }
 
           // 署名付きURL取得
@@ -240,7 +245,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
           // AssemblyAI にジョブ送信
           sendEvent('status', { step: 'submitting', message: 'AI音声認識エンジンに送信中...', elapsed: 0 })
-          ambiguousSubmission = quotaEnabled
+          ambiguousSubmission = true
           const submitRes = await fetch(`${ASSEMBLYAI_BASE_URL}/transcript`, {
             method: 'POST',
             headers: { Authorization: apiKey, 'Content-Type': 'application/json' },
@@ -266,17 +271,11 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           assemblyAiId = submitData.id
 
           // AssemblyAIジョブIDをDBに保存 (再接続用)
-          const saved = quotaEnabled
-            ? await prisma.interviewTranscription.updateMany({
-                where: { id: transcription.id, status: 'PROCESSING', externalJobId: submissionMarker },
-                data: { externalJobId: assemblyAiId },
-              })
-            : await prisma.interviewTranscription.update({
-                where: { id: transcription.id }, data: { externalJobId: assemblyAiId },
-              })
-          if (quotaEnabled && 'count' in saved && saved.count !== 1) {
-            throw new Error('Transcription job ID persistence failed')
-          }
+          const saved = await prisma.interviewTranscription.updateMany({
+            where: { id: transcription.id, status: 'PROCESSING', externalJobId: submissionMarker },
+            data: { externalJobId: assemblyAiId },
+          })
+          if (saved.count !== 1) throw new Error('Transcription job ID persistence failed')
           ambiguousSubmission = false
         }
 
@@ -409,12 +408,13 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         console.error('[interview] transcribe-stream error')
         if (err instanceof InterviewTranscriptionTerminalError) terminalFailure = true
 
-        if (quotaEnabled && budgetTranscriptionId) {
+        const activeTranscriptionId = budgetTranscriptionId || legacyTranscriptionId
+        if (activeTranscriptionId) {
           const completed = await prisma.interviewTranscription.findUnique({
-            where: { id: budgetTranscriptionId }, select: { status: true, text: true },
+            where: { id: activeTranscriptionId }, select: { status: true, text: true },
           }).catch(() => null)
           if (completed?.status === 'COMPLETED') {
-            sendEvent('complete', { transcriptionId: budgetTranscriptionId, projectId: null,
+            sendEvent('complete', { transcriptionId: activeTranscriptionId, projectId: null,
               totalSegments: 0, durationSeconds: 0, durationMinutes: null, fullText: completed.text })
             controller.close()
             return
@@ -427,18 +427,18 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           return
         }
 
-        if (quotaEnabled && !terminalFailure) {
+        if (activeTranscriptionId && !terminalFailure) {
           sendEvent('fail', { message: '処理の確認中に接続が途切れました。再接続して状態を確認します。', retryable: true })
           controller.close()
           return
         }
 
-        // DB のステータスをエラーに更新
-        try {
+        // Mark only this claim, and never overwrite another connection's completed result.
+        if (activeTranscriptionId) try {
           await prisma.$transaction(async tx => {
             if (quotaEnabled && budgetTranscriptionId) await releaseInterviewTranscription(tx, materialId, budgetTranscriptionId)
-            await tx.interviewMaterial.updateMany({ where: { id: materialId, status: 'PROCESSING' }, data: { status: 'ERROR', error: '文字起こしに失敗しました。時間をおいて再試行してください。' } })
-            await tx.interviewTranscription.updateMany({ where: { materialId, status: 'PROCESSING' }, data: { status: 'ERROR' } })
+            const changed = await tx.interviewTranscription.updateMany({ where: { id: activeTranscriptionId, materialId, status: 'PROCESSING' }, data: { status: 'ERROR' } })
+            if (changed.count) await tx.interviewMaterial.updateMany({ where: { id: materialId, status: 'PROCESSING' }, data: { status: 'ERROR', error: '文字起こしに失敗しました。時間をおいて再試行してください。' } })
           })
         } catch {}
 

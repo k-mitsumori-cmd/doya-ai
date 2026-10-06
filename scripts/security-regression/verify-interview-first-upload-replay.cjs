@@ -1,0 +1,33 @@
+const assert=require('node:assert/strict'),crypto=require('node:crypto');
+const {load}=require('./load-typescript.cjs');
+function fixture(guest=false){
+ const rows=new Map(),settings=new Map();let owner=guest?null:'owner',writes=0,signs=0,paths=0,queue=Promise.resolve(),failReceipt=false,failSign=false,onSign=null;
+ const project={findUnique:async()=>({id:'project',userId:owner,guestId:'guest'})};
+ const material={findUnique:async({where})=>rows.get(where.id)||null,create:async({data})=>{const row={id:'material-'+(++writes),...data};rows.set(row.id,row);return row}};
+ const tx={$executeRaw:async parts=>{assert.match(parts.join('?'),/interview-project-lifecycle/);return 1},interviewProject:project,interviewMaterial:material,
+ systemSetting:{findUnique:async({where})=>settings.has(where.key)?{value:settings.get(where.key)}:null,create:async({data})=>{if(failReceipt)throw Error('SYNTHETIC_PRIVATE');assert.equal(settings.has(data.key),false);settings.set(data.key,data.value)}}};
+ const db={...tx,$transaction:async fn=>{const prior=queue;let release;queue=new Promise(r=>release=r);await prior;const oldRows=structuredClone(rows),oldSettings=new Map(settings),oldWrites=writes;try{return await fn(tx)}catch(e){rows.clear();settings.clear();for(const[k,v]of oldRows)rows.set(k,v);for(const[k,v]of oldSettings)settings.set(k,v);writes=oldWrites;throw e}finally{release()}}};
+ const helper=load('src/lib/interview/upload-create.ts',{'node:crypto':crypto,'@/lib/prisma':{prisma:db}});
+ const api=load('src/app/api/interview/materials/upload-url/route.ts',{
+  'next/server':{NextResponse:Response},'@/lib/prisma':{prisma:db},'@/lib/interview/upload-create':helper,
+  '@/lib/interview/access':{requireDatabase:()=>null,getInterviewUser:async()=>({userId:guest?null:'owner',plan:'FREE'}),getGuestIdFromRequest:()=> 'guest',ensureGuestId:()=> 'guest',setGuestCookie(){}},
+  '@/lib/interview/storage':{ensureBucket:async()=>{},getDetectedMaxFileSize:()=>100,buildStoragePath:()=> 'path-'+(++paths),createSignedUploadUrl:async path=>{signs++;if(onSign)onSign();if(failSign){failSign=false;throw Error('SYNTHETIC_PRIVATE')}return{signedUrl:'https://example.invalid/'+path,path,token:'synthetic'}}},
+  '@/lib/interview/types':{ALLOWED_MIME_TYPES:{'audio/wav':'audio'},ALLOWED_EXTENSIONS:new Set(['wav']),getMaxFileSize:()=>100},
+  '@/lib/pricing':{getInterviewLimitsByPlan:()=>({uploadSizeLimit:100}),getInterviewGuestLimits:()=>({uploadSizeLimit:100}),SUPPORT_CONTACT_URL:'https://example.invalid/contact'},
+ });
+ const key=crypto.randomUUID();
+ return{rows,settings,key,get writes(){return writes},get signs(){return signs},setOwner:v=>owner=v,failReceipt:()=>failReceipt=true,failSign:()=>failSign=true,onSign:fn=>onSign=fn,
+ post:(body={})=>api.POST({json:async()=>({projectId:'project',fileName:'file.wav',mimeType:'audio/wav',fileSize:10,requestKey:key,...body})})};
+}
+(async()=>{const results=[];
+ for(const guest of [false,true]){const f=fixture(guest),responses=await Promise.all([f.post(),f.post()]);assert.deepEqual(responses.map(r=>r.status),[200,200]);const bodies=await Promise.all(responses.map(r=>r.json()));assert.equal(bodies[0].materialId,bodies[1].materialId);assert.equal(bodies[0].path,bodies[1].path);assert.equal(f.writes,1);assert.equal(f.settings.size,1);assert.equal((await f.post({requestKey:f.key.toUpperCase()})).status,200);assert.equal(f.writes,1);assert.equal((await f.post({fileSize:11})).status,409);assert.equal(f.writes,1);const id=bodies[0].materialId;f.rows.delete(id);assert.equal((await f.post()).status,409);assert.equal(f.writes,1);results.push((guest?'guest':'account')+' duplicate replay/input conflict/deletion tombstone');}
+ const signed=fixture();signed.failSign();const first=await signed.post();assert.equal(first.status,503);assert.ok(!(await first.text()).includes('SYNTHETIC_PRIVATE'));assert.equal(signed.writes,1);assert.equal(signed.settings.size,1);assert.equal((await signed.post()).status,200);assert.equal(signed.writes,1);results.push('unknown signing result retains receipt/material for retry');
+ const rollback=fixture();rollback.failReceipt();assert.equal((await rollback.post()).status,503);assert.equal(rollback.writes,0);assert.equal(rollback.rows.size,0);assert.equal(rollback.settings.size,0);assert.equal(rollback.signs,0);results.push('receipt insert failure rolls back material before signing');
+ for(const state of ['COMPLETED','PROCESSING']){const f=fixture();const b=await(await f.post()).json();f.rows.get(b.materialId).status=state;assert.equal((await f.post()).status,409);assert.equal(f.writes,1);results.push(state+' replay cannot overwrite');}
+ const corrupt=fixture();await corrupt.post();for(const key of corrupt.settings.keys())corrupt.settings.set(key,'invalid');assert.equal((await corrupt.post()).status,503);assert.equal(corrupt.writes,1);results.push('corrupt receipt fails closed');
+ for(const change of ['owner','deleted','completed']){const f=fixture();f.onSign(()=>{if(change==='owner')f.setOwner('foreign');else for(const[id,row]of f.rows){if(change==='deleted')f.rows.delete(id);else row.status='COMPLETED'}});const r=await f.post();assert.equal(r.status,404);assert.equal((await r.json()).signedUrl,undefined);assert.equal(f.writes,1);results.push('post-sign '+change+' race omits URL');}
+ const renew=fixture();const saved=await(await renew.post()).json();assert.equal((await renew.post({materialId:saved.materialId})).status,200);assert.equal(renew.writes,1);renew.rows.set('other',{...renew.rows.get(saved.materialId),id:'other'});assert.equal((await renew.post({materialId:'other'})).status,409);assert.equal(renew.writes,1);results.push('known renewal respects receipt material identity');
+ const legacy=fixture();legacy.rows.set('legacy',{id:'legacy',projectId:'project',status:'UPLOADED',filePath:'old/path',fileName:'file.wav',fileSize:10n,mimeType:'audio/wav',type:'audio'});assert.equal((await legacy.post({materialId:'legacy'})).status,200);assert.equal(legacy.writes,0);assert.equal(legacy.settings.size,1);results.push('existing legacy material adopts receipt without another row');
+ const invalid=fixture();for(const value of ['',{},'not-uuid'])assert.equal((await invalid.post({requestKey:value})).status,400);assert.equal(invalid.writes,0);assert.equal(invalid.signs,0);results.push('invalid operation keys rejected before material or provider');
+ console.log(JSON.stringify({passed:results.length,results,scope:'Actual API and replay helper; synthetic auth/signing/serialized rollback fixture. No real Prisma/database concurrency or storage request.'}));
+})().catch(e=>{console.error(e);process.exitCode=1});

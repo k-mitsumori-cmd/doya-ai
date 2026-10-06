@@ -1,0 +1,39 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'../..'),compile=s=>ts.transpileModule(s,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
+const file='src/app/interview/projects/[id]/materials/page.tsx',src=fs.readFileSync(path.join(root,file),'utf8'),ast=ts.createSourceFile(file,src,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let callback,reconcile;function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='startTranscription')callback=n.initializer.getText(ast);if(ts.isCallExpression(n)&&n.expression.getText(ast)==='useEffect'&&n.arguments[0]?.getText(ast).includes('for (const mat of materials)'))reconcile=n.arguments[0].getText(ast);ts.forEachChild(n,visit)}visit(ast);assert.ok(callback);assert.ok(reconcile);
+const reader=compile(fs.readFileSync(path.join(root,'src/lib/interview/creation-response.ts'),'utf8')),tick=()=>new Promise(r=>setImmediate(r));
+function fixture(){const requests=[],timers=new Map(),removals=[];let sequence=0;const state={progress:new Map(),writes:0,stale:0,refreshes:0};const exports={};
+ vm.runInNewContext(reader,{exports,Error,AbortController,TextDecoder,TextEncoder,fetch:(url,init)=>new Promise((resolve,reject)=>requests.push({url,init,resolve,reject})),setTimeout:(fn,ms)=>{timers.set(++sequence,{fn,ms});return sequence},clearTimeout:id=>timers.delete(id)});
+ const env={...exports,Error,AbortController,Map,Date,Number,encodeURIComponent,uploadsAlive:{current:true},uploadContext:'context',uploadContextRef:{current:'context'},transcriptionOperations:{current:new Map()},materials:[{id:'material',fileName:'synthetic.wav',fileSize:10}],SUPPORT_CONTACT_URL:'https://example.invalid/contact',clearTimeout(){},setTimeout:(fn,ms)=>{assert.equal(ms,5000);removals.push(fn);return removals.length},setTranscribing:fn=>{state.writes++;if(!env.uploadsAlive.current||env.uploadContextRef.current!=='context')state.stale++;state.progress=fn(state.progress)},fetchProject:async(force)=>{assert.equal(force,true);state.refreshes++;if(state.refreshFailure)throw Error('SYNTHETIC_PRIVATE')}};
+ const run=vm.runInNewContext(compile('('+callback+');'),env);return{state,env,requests,timers,removals,run:(id='material')=>run(id),cleanup(){env.uploadsAlive.current=false;for(const op of env.transcriptionOperations.current.values())op.controller?.abort()}};
+}
+const success={success:true,status:'COMPLETED',transcriptionId:'transcription',durationMinutes:2};
+(async()=>{let passed=0;
+ for(const kind of ['http500','missing-status','unknown-status','missing-id','object-id','truthy-success','private-error','invalid-json','body-deadline']){
+  const f=fixture(),pending=f.run();await f.run();assert.equal(f.requests.length,1);assert.equal([...f.timers.values()][0].ms,310000);
+  const req=f.requests[0];assert.equal(req.url,'/api/interview/materials/material/transcribe');
+  if(kind==='private-error')req.resolve(Response.json({success:false,error:'SYNTHETIC_PRIVATE'}));
+  else if(kind==='invalid-json')req.resolve(new Response('{'));
+  else if(kind==='body-deadline'){req.resolve(new Response(new ReadableStream({pull(){return new Promise(()=>{})}})));await tick();for(const t of f.timers.values())t.fn()}
+  else req.resolve(Response.json({...success,...(kind==='missing-status'?{status:undefined}:kind==='unknown-status'?{status:'UNKNOWN'}:kind==='missing-id'?{transcriptionId:undefined}:kind==='object-id'?{transcriptionId:{}}:kind==='truthy-success'?{success:1}:{})},{status:kind==='http500'?500:200}));
+  await pending;assert.equal(f.state.progress.get('material').status,'error');assert.ok(!f.state.progress.get('material').error.includes('SYNTHETIC_PRIVATE'));assert.equal(f.state.refreshes,0);assert.equal(f.timers.size,0);
+  const retry=f.run();assert.equal(f.requests.length,2);f.requests[1].resolve(Response.json(success));await retry;assert.equal(f.state.progress.get('material').status,'completed');passed++;
+ }
+ for(const status of ['PROCESSING','COMPLETED']){const f=fixture();f.state.refreshFailure=true;const pending=f.run();f.requests[0].resolve(Response.json({...success,status}));await pending;assert.equal(f.state.progress.get('material').status,status.toLowerCase());await f.run();assert.equal(f.requests.length,1);assert.equal(f.state.refreshes,1);passed++}
+ for(const httpStatus of [403,429])for(const actionUrl of ['/interview/pricing','https://example.invalid/contact','https://attacker.invalid']){const f=fixture(),pending=f.run();f.requests[0].resolve(Response.json({success:false,limitExceeded:true,actionUrl,error:'SYNTHETIC_PRIVATE'},{status:httpStatus}));await pending;const info=f.state.progress.get('material');assert.equal(info.limitReached,true);assert.equal(info.limitAction,actionUrl==='/interview/pricing'?'pricing':actionUrl==='https://example.invalid/contact'?'contact':null);assert.ok(!info.error.includes('SYNTHETIC_PRIVATE'));passed++}
+ for(const cleanup of ['abort','context']){const f=fixture(),pending=f.run();if(cleanup==='abort')f.cleanup();else f.env.uploadContextRef.current='other';f.requests[0].resolve(Response.json(success));await pending;assert.equal(f.state.stale,0);assert.equal(f.state.refreshes,0);assert.notEqual(f.state.progress.get('material').status,'completed');passed++}
+ const f=fixture(),pending=f.run();f.requests[0].resolve(Response.json(success));await pending;f.cleanup();for(const fn of f.removals)fn();assert.equal(f.state.stale,0);passed++;
+ // Execute the actual status-reconciliation effect; timers must not remove newer progress.
+ for(const scenario of ['repeat-completed','error-recovery','unmount','context-change','newer-operation']){
+  let progress=new Map([['material',{status:'processing'}]]);const timers=new Map();let sequence=0,stale=0;
+  const op={controller:null,accepted:true};const env={Map,materials:[{id:'material',transcriptionStatus:'COMPLETED',error:'SYNTHETIC_PRIVATE'}],transcriptionOperations:{current:new Map([['material',op]])},uploadsAlive:{current:true},uploadContext:'context',uploadContextRef:{current:'context'},clearTimeout:id=>timers.delete(id),setTimeout:(fn,ms)=>{assert.equal(ms,5000);timers.set(++sequence,fn);return sequence},setTranscribing:fn=>{if(!env.uploadsAlive.current||env.uploadContextRef.current!=='context')stale++;progress=fn(progress)}};
+  const effect=vm.runInNewContext(compile('('+reconcile+');'),env);effect();assert.equal(progress.get('material').status,'completed');assert.equal(timers.size,1);
+  if(scenario==='repeat-completed'){effect();assert.equal(timers.size,1)}
+  else if(scenario==='error-recovery'){env.materials[0].transcriptionStatus='ERROR';effect();assert.equal(progress.get('material').status,'error');assert.ok(!progress.get('material').error.includes('SYNTHETIC_PRIVATE'));assert.equal(op.accepted,false);assert.equal(timers.size,0);assert.equal(op.timer,undefined);env.materials[0].transcriptionStatus='COMPLETED';effect();assert.equal(progress.get('material').status,'completed');assert.equal(timers.size,1)}
+  else if(scenario==='unmount')env.uploadsAlive.current=false;
+  else if(scenario==='context-change')env.uploadContextRef.current='other';
+  else {env.transcriptionOperations.current.set('material',{controller:null,accepted:false});progress.set('material',{status:'starting'})}
+  for(const fn of timers.values())fn();assert.equal(stale,0);assert.equal(progress.has('material'),['unmount','context-change','newer-operation'].includes(scenario));if(scenario==='newer-operation')assert.equal(progress.get('material').status,'starting');passed++;
+ }
+ console.log(JSON.stringify({passed,scope:'Actual transcription callback and bounded reader with synthetic state/fetch/timers. No paid provider, production write, mounted React or browser E2E.'}));
+})().catch(e=>{console.error(e);process.exitCode=1});

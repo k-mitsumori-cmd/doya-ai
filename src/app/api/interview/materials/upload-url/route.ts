@@ -16,6 +16,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { prepareInterviewUpload, InterviewUploadReplayError } from '@/lib/interview/upload-create'
 import { getInterviewUser, getGuestIdFromRequest, ensureGuestId, setGuestCookie, requireDatabase } from '@/lib/interview/access'
 import { createSignedUploadUrl, buildStoragePath, ensureBucket, getDetectedMaxFileSize } from '@/lib/interview/storage'
 import { ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS, getMaxFileSize } from '@/lib/interview/types'
@@ -40,6 +41,14 @@ export async function POST(req: NextRequest) {
     const mimeType = body?.mimeType
     const fileSize = body?.fileSize
     const preflight = body?.preflight === true
+    const renewMaterialId = body?.materialId
+    const requestKey = body?.requestKey
+    if (requestKey !== undefined && (preflight || typeof requestKey !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestKey))) {
+      return NextResponse.json({ success: false, error: 'アップロード操作IDが不正です' }, { status: 400 })
+    }
+    if (renewMaterialId !== undefined && (preflight || typeof renewMaterialId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(renewMaterialId))) {
+      return NextResponse.json({ success: false, error: '素材IDが不正です' }, { status: 400 })
+    }
 
     // バリデーション
     if ((!preflight && (typeof projectId !== 'string' || !projectId)) || typeof fileName !== 'string' || !fileName || typeof mimeType !== 'string' || !mimeType) {
@@ -128,13 +137,33 @@ export async function POST(req: NextRequest) {
     // 上限超過で空のプロジェクト（ゲスト件数枠）を作らない。
     if (preflight) return NextResponse.json({ success: true })
 
-    // ストレージパス生成
-    const storagePath = buildStoragePath({
+    // 再試行では同じ未確定素材の保存先を使い、別素材を作らない。
+    let existingMaterial = renewMaterialId ? await prisma.interviewMaterial.findUnique({
+      where: { id: renewMaterialId },
+      select: { id: true, projectId: true, status: true, filePath: true, fileName: true, fileSize: true, mimeType: true, type: true },
+    }) : null
+    if (renewMaterialId && (!existingMaterial || existingMaterial.projectId !== projectId)) {
+      return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+    }
+    if (existingMaterial && (existingMaterial.status !== 'UPLOADED' || !existingMaterial.filePath ||
+      existingMaterial.fileName !== fileName || existingMaterial.fileSize !== BigInt(fileSize) ||
+      existingMaterial.mimeType !== mimeType || existingMaterial.type !== materialType)) {
+      return NextResponse.json({ success: false, error: '素材の状態が変更されました。プロジェクト一覧から確認してください。' }, { status: 409 })
+    }
+    let storagePath = existingMaterial?.filePath || buildStoragePath({
       userId,
       guestId: projectStorageGuestId || guestId,
       projectId,
       fileName,
     })
+
+    if (requestKey) {
+      existingMaterial = await prepareInterviewUpload({
+        projectId, type: materialType, fileName, mimeType,
+        fileSize: BigInt(fileSize), filePath: storagePath, status: 'UPLOADED',
+      }, userId, guestId, requestKey, renewMaterialId)
+      storagePath = existingMaterial.filePath!
+    }
 
     // 署名付きアップロードURL生成 (Supabase Storage)
     const uploadData = await createSignedUploadUrl(storagePath)
@@ -148,6 +177,16 @@ export async function POST(req: NextRequest) {
       if (!currentProject || (userId
         ? currentProject.userId !== userId
         : currentProject.userId !== null || currentProject.guestId !== guestId)) return null
+      if (existingMaterial) {
+        const current = await tx.interviewMaterial.findUnique({
+          where: { id: existingMaterial.id },
+          select: { id: true, projectId: true, status: true, filePath: true, fileName: true, fileSize: true, mimeType: true, type: true },
+        })
+        if (!current || current.projectId !== projectId || current.status !== 'UPLOADED' ||
+          current.filePath !== storagePath || current.fileName !== fileName ||
+          current.fileSize !== BigInt(fileSize) || current.mimeType !== mimeType || current.type !== materialType) return null
+        return current
+      }
       return tx.interviewMaterial.create({
         data: {
           projectId,
@@ -177,7 +216,10 @@ export async function POST(req: NextRequest) {
     }
 
     return res
-  } catch {
+  } catch (error) {
+    if (error instanceof InterviewUploadReplayError) {
+      return NextResponse.json({ success: false, code: error.code, error: 'このアップロード操作は再開できません。保存済みの素材を確認してください。' }, { status: 409 })
+    }
     console.error('[interview] upload-url preparation failed')
     return NextResponse.json(
       { success: false, error: 'アップロードの準備ができませんでした。しばらくしてから再度お試しください。', code: 'UPLOAD_UNAVAILABLE' },

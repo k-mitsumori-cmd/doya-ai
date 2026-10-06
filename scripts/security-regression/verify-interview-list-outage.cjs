@@ -15,6 +15,7 @@ function route(file, unavailable) {
   const mocks = {
     'next/server': { NextResponse: { json: (body, opts) => ({ body, status: opts?.status ?? 200 }) } },
     '@/lib/prisma': { prisma },
+    '@/lib/interview/project-create': { createInterviewProject: () => { throw Error('Unexpected creation in read-only outage fixture') }, interviewProjectCreationScope: () => 'synthetic', InterviewProjectCreateError: class extends Error {} },
     '@/lib/interview/thumbnail-storage': { thumbnailUrlForClient: () => null },
     '@/lib/interview/access': {
       requireDatabase: () => unavailable ? { body: { success: false, code: 'NO_DATABASE' }, status: 503 } : null,

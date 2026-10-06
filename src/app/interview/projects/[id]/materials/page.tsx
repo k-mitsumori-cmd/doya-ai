@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { readInterviewCreationResponse, InterviewCreationResponseError } from '@/lib/interview/creation-response'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
@@ -124,6 +126,14 @@ export default function MaterialsPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
+  const { data: session } = useSession()
+  const uploadContext = JSON.stringify([projectId, session?.user?.id || 'guest'])
+  const uploadContextRef = useRef(uploadContext)
+  const materialUploads = useRef<Map<string, { key: string; controller: AbortController | null; materialId?: string; signedUrl?: string; uploaded?: boolean; completed?: boolean }>>(new Map())
+  const uploadsAlive = useRef(true)
+  const transcriptionOperations = useRef<Map<string, { controller: AbortController | null; accepted: boolean; timer?: ReturnType<typeof setTimeout> }>>(new Map())
+  const materialActions = useRef<Map<string, AbortController>>(new Map())
+  const projectRead = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [materials, setMaterials] = useState<MaterialItem[]>([])
@@ -136,32 +146,63 @@ export default function MaterialsPage() {
   const [elapsedTick, setElapsedTick] = useState(0) // 経過時間更新用
   const [tipIndex, setTipIndex] = useState(0)
   const [confirmingMaterialId, setConfirmingMaterialId] = useState<string | null>(null)
+  const [materialActionError, setMaterialActionError] = useState<{ message: string; actionUrl?: string } | null>(null)
   const uploadSpeedRef = useRef<Map<string, { startTime: number; lastLoaded: number; speed: number }>>(new Map())
 
+  useEffect(() => {
+    uploadsAlive.current = true
+    uploadContextRef.current = uploadContext
+    materialUploads.current = new Map()
+    const operations = materialUploads.current
+    transcriptionOperations.current = new Map()
+    const transcriptions = transcriptionOperations.current
+    materialActions.current = new Map()
+    const actions = materialActions.current
+    setConfirmingMaterialId(null)
+    setMaterialActionError(null)
+    setTranscribing(new Map())
+    setUploads(new Map())
+    setMaterials([])
+    setProjectTitle('')
+    setProjectError(false)
+    setLoading(true)
+    return () => {
+      uploadsAlive.current = false
+      for (const operation of operations.values()) operation.controller?.abort()
+      for (const controller of actions.values()) controller.abort()
+      for (const operation of transcriptions.values()) { operation.controller?.abort(); clearTimeout(operation.timer) }
+      projectRead.current?.abort()
+    }
+  }, [uploadContext])
+
   // プロジェクトと素材一覧を取得
-  const fetchProject = useCallback(async () => {
+  const fetchProject = useCallback(async (forceRefresh: unknown = false) => {
+    if (!uploadsAlive.current || uploadContextRef.current !== uploadContext) return
+    if (projectRead.current && !projectRead.current.signal.aborted) {
+      if (forceRefresh !== true) return
+      projectRead.current.abort()
+    }
+    const active = new AbortController()
+    projectRead.current = active
+    const isCurrent = () => uploadsAlive.current && uploadContextRef.current === uploadContext && projectRead.current === active && !active.signal.aborted
     try {
-      const res = await fetch(`/api/interview/projects/${projectId}`)
-      const data = await res.json()
-      if (!res.ok || data.success !== true || !data.project || !Array.isArray(data.project.materials)) {
-        throw new Error('素材一覧を取得できません')
-      }
+      const reply = await readInterviewCreationResponse('/api/interview/projects/' + encodeURIComponent(projectId), {
+        cache: 'no-store', signal: active.signal,
+      }, '素材一覧を取得できませんでした。', 5 * 1024 * 1024)
+      if (!isCurrent()) return
+      const data = reply.data
+      if (!reply.res.ok || data?.success !== true || !data.project || !Array.isArray(data.project.materials)) throw new Error('素材一覧を取得できません')
       setProjectTitle(data.project.title)
-      setMaterials(
-        data.project.materials.map((m: any) => ({
-          ...m,
-          transcriptionStatus: data.project.transcriptions?.find(
-            (t: any) => t.materialId === m.id
-          )?.status,
-        }))
-      )
+      setMaterials(data.project.materials.map((m: any) => ({
+        ...m, transcriptionStatus: data.project.transcriptions?.find((t: any) => t.materialId === m.id)?.status,
+      })))
       setProjectError(false)
     } catch {
-      setProjectError(true)
+      if (isCurrent()) setProjectError(true)
     } finally {
-      setLoading(false)
+      if (isCurrent()) { setLoading(false); projectRead.current = null }
     }
-  }, [projectId])
+  }, [projectId, uploadContext])
 
   useEffect(() => {
     fetchProject()
@@ -172,38 +213,39 @@ export default function MaterialsPage() {
     const hasProcessing = materials.some(
       (m) => m.status === 'PROCESSING' || m.transcriptionStatus === 'PROCESSING'
     )
-    if (!hasProcessing) return
+    if (!hasProcessing && !Array.from(transcribing.values()).some((info) => info.status === 'processing')) return
 
     const interval = setInterval(fetchProject, 5000)
     return () => clearInterval(interval)
-  }, [materials, fetchProject])
+  }, [materials, transcribing, fetchProject])
 
-  // 文字起こし完了時にtranscribingから削除
+  // Refreshes must not leak provider errors or remove a newer operation's progress.
   useEffect(() => {
-    setTranscribing((prev) => {
-      let changed = false
-      const next = new Map(prev)
-      for (const [id, info] of next) {
-        const mat = materials.find((m) => m.id === id)
-        if (mat && mat.transcriptionStatus === 'COMPLETED') {
-          next.set(id, { ...info, status: 'completed' })
-          changed = true
-          // 3秒後に削除
-          setTimeout(() => {
-            setTranscribing((p) => {
-              const n = new Map(p)
-              n.delete(id)
-              return n
-            })
-          }, 3000)
-        } else if (mat && mat.transcriptionStatus === 'ERROR') {
-          next.set(id, { ...info, status: 'error', error: mat.error || '文字起こしに失敗しました' })
-          changed = true
-        }
+    for (const mat of materials) {
+      const operation = transcriptionOperations.current.get(mat.id)
+      if (!operation) continue
+      if (mat.transcriptionStatus === 'ERROR') {
+        operation.accepted = false
+        clearTimeout(operation.timer)
+        operation.timer = undefined
+        setTranscribing((prev) => {
+          const info = prev.get(mat.id)
+          if (!info || info.status === 'error') return prev
+          return new Map(prev).set(mat.id, { ...info, status: 'error', error: '文字起こしに失敗しました。素材を確認して再試行してください。' })
+        })
+      } else if (mat.transcriptionStatus === 'COMPLETED' && !operation.timer) {
+        operation.accepted = true
+        setTranscribing((prev) => {
+          const info = prev.get(mat.id)
+          return info ? new Map(prev).set(mat.id, { ...info, status: 'completed' }) : prev
+        })
+        operation.timer = setTimeout(() => {
+          if (!uploadsAlive.current || uploadContextRef.current !== uploadContext || transcriptionOperations.current.get(mat.id) !== operation) return
+          setTranscribing((prev) => { const next = new Map(prev); next.delete(mat.id); return next })
+        }, 5000)
       }
-      return changed ? next : prev
-    })
-  }, [materials])
+    }
+  }, [materials, uploadContext])
 
   // 経過時間を毎秒更新
   useEffect(() => {
@@ -267,7 +309,32 @@ export default function MaterialsPage() {
   // 直接アップロード処理 (Vercelバイパス)
   // ============================================
   const uploadFile = async (file: File) => {
-    const uploadKey = `${file.name}_${Date.now()}`
+    if (!uploadsAlive.current || uploadContextRef.current !== uploadContext) return
+    const fingerprint = JSON.stringify([uploadContext, file.name, file.size, file.type, file.lastModified])
+    let operation = materialUploads.current.get(fingerprint)
+    if (operation?.controller || operation?.completed) return
+    if (!operation) {
+      operation = { key: crypto.randomUUID(), controller: null }
+      materialUploads.current.set(fingerprint, operation)
+    }
+    const record = operation
+    const active = new AbortController()
+    record.controller = active
+    const isCurrent = () => uploadsAlive.current && uploadContextRef.current === uploadContext && record.controller === active && !active.signal.aborted
+    const uploadKey = record.key
+    const rejectPreparation = (data: any) => {
+      const messages: Record<string, string> = {
+        GUEST_UPLOAD_LIMIT: 'ゲストの容量上限に達しました。ログインして利用条件をご確認ください。',
+        PLAN_UPLOAD_LIMIT: 'プランの容量上限に達しました。利用条件をご確認ください。',
+        STORAGE_UPLOAD_LIMIT: '保存領域の容量上限を超えています。ファイルを分割または圧縮してください。',
+        UPLOAD_REQUEST_CONFLICT: 'このアップロード操作の入力が変わっています。保存済み素材をご確認ください。',
+        UPLOAD_REQUEST_UNAVAILABLE: 'このアップロード操作は再開できません。保存済み素材をご確認ください。',
+      }
+      const error: any = new InterviewCreationResponseError((typeof data?.code === 'string' && Object.hasOwn(messages, data.code) ? messages[data.code] : 'アップロードの結果を確認できませんでした。保存済み素材をご確認ください。'))
+      error.actionUrl = ['/interview/pricing', '/auth/signin?callbackUrl=/interview', SUPPORT_CONTACT_URL].includes(data?.actionUrl) ? data.actionUrl : '/interview/projects/' + encodeURIComponent(projectId) + '/materials'
+      error.actionLabel = error.actionUrl === '/interview/pricing' ? 'プランと利用条件を確認する' : error.actionUrl === SUPPORT_CONTACT_URL ? '追加の利用枠を相談する' : error.actionUrl.startsWith('/auth/') ? 'ログインして続ける' : '保存済み素材を確認する'
+      throw error
+    }
 
     setUploads((prev) => {
       const next = new Map(prev)
@@ -276,36 +343,35 @@ export default function MaterialsPage() {
     })
 
     try {
-      // Step 1: 署名付きアップロードURL取得 (API → 数KB)
-      const urlRes = await fetch('/api/interview/materials/upload-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId,
-          fileName: file.name,
-          mimeType: file.type,
-          fileSize: file.size,
-        }),
-      })
-
-      const urlData = await urlRes.json()
-      if (!urlData.success) {
-        const err: any = new Error(urlData.error || 'アップロードURL取得失敗')
-        err.actionUrl = urlData.actionUrl
-        err.actionLabel = urlData.actionLabel
-        throw err
+      if (!record.uploaded) {
+        const reply = await readInterviewCreationResponse('/api/interview/materials/upload-url', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: active.signal,
+          body: JSON.stringify({ projectId, requestKey: uploadKey, fileName: file.name, mimeType: file.type, fileSize: file.size,
+            ...(record.materialId ? { materialId: record.materialId } : {}) }),
+        }, 'アップロード準備の結果を確認できませんでした。保存済み素材をご確認ください。')
+        if (!isCurrent()) return
+        if (!reply.res.ok || reply.data?.success !== true) rejectPreparation(reply.data)
+        const { signedUrl, materialId } = reply.data
+        if (typeof materialId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(materialId) || typeof signedUrl !== 'string') throw new InterviewCreationResponseError('保存先を確認できませんでした。保存済み素材をご確認ください。')
+        let url: URL
+        try { url = new URL(signedUrl) } catch { throw new InterviewCreationResponseError('保存先を確認できませんでした。') }
+        if (url.protocol !== 'https:' || url.username || url.password || (record.materialId && record.materialId !== materialId)) throw new InterviewCreationResponseError('保存先を確認できませんでした。保存済み素材をご確認ください。')
+        record.materialId = materialId
+        record.signedUrl = signedUrl
       }
-
-      const { signedUrl, materialId } = urlData
+      if (!record.materialId || !record.signedUrl) throw new InterviewCreationResponseError('保存先を確認できませんでした。')
+      const { signedUrl, materialId } = record
 
       // Step 2: Supabase Storage へ直接PUT (リトライ付き)
       const maxRetries = 3
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      for (let attempt = 1; !record.uploaded && attempt <= maxRetries; attempt++) {
+        if (!isCurrent()) return
         try {
           await new Promise<void>((resolve, reject) => {
             const xhr = new XMLHttpRequest()
 
             xhr.upload.addEventListener('progress', (e) => {
+              if (!isCurrent()) return
               if (e.lengthComputable) {
                 const progress = Math.round((e.loaded / e.total) * 100)
                 // 速度計算
@@ -332,8 +398,7 @@ export default function MaterialsPage() {
               if (xhr.status >= 200 && xhr.status < 300) {
                 resolve()
               } else {
-                console.error('[upload] Supabase Storage error:', xhr.status, xhr.responseText)
-                reject(new Error(`Upload failed: ${xhr.status} - ${(xhr.responseText || 'Unknown error').slice(0, 200)}`))
+                reject(new Error(`Upload failed: ${xhr.status}`))
               }
             })
 
@@ -344,11 +409,20 @@ export default function MaterialsPage() {
             formData.append('cacheControl', '3600')
             formData.append('', file, file.name)
 
+            const abortUpload = () => xhr.abort()
+            active.signal.addEventListener('abort', abortUpload, { once: true })
+            xhr.addEventListener('loadend', () => active.signal.removeEventListener('abort', abortUpload))
+            xhr.timeout = 3600000
+            xhr.addEventListener('timeout', () => reject(new InterviewCreationResponseError('アップロードの完了を確認できませんでした。保存済み素材をご確認ください。')))
             xhr.open('PUT', signedUrl)
+            xhr.setRequestHeader('x-upsert', 'true')
             xhr.send(formData)
           })
+          if (!isCurrent()) return
+          record.uploaded = true
           break // 成功したらループを抜ける
         } catch (uploadErr: any) {
+          if (!isCurrent()) return
           const is5xx = /Upload failed: 5\d\d/.test(uploadErr?.message || '')
           if (is5xx && attempt < maxRetries) {
             console.warn(`[interview] Upload attempt ${attempt} failed, retrying in ${attempt * 3}s...`)
@@ -375,19 +449,14 @@ export default function MaterialsPage() {
         return next
       })
 
-      const confirmRes = await fetch('/api/interview/materials/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      if (!isCurrent()) return
+      const confirmation = await readInterviewCreationResponse('/api/interview/materials/confirm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: active.signal,
         body: JSON.stringify({ materialId }),
-      })
-
-      const confirmData = await confirmRes.json()
-      if (!confirmData.success) {
-        const err: any = new Error(confirmData.error || '確認処理に失敗')
-        err.actionUrl = confirmData.actionUrl
-        err.actionLabel = confirmData.actionLabel
-        throw err
-      }
+      }, '保存結果を確認できませんでした。保存済み素材をご確認ください。')
+      if (!isCurrent()) return
+      if (!confirmation.res.ok || confirmation.data?.success !== true) rejectPreparation(confirmation.data)
+      record.completed = true
 
       // 完了
       setUploads((prev) => {
@@ -398,7 +467,8 @@ export default function MaterialsPage() {
       })
 
       // 素材一覧を更新
-      await fetchProject()
+      await fetchProject(true)
+      if (!isCurrent()) return
 
       // 音声/動画ファイルなら自動で文字起こしを開始
       const isAudioVideo = file.type.startsWith('audio/') || file.type.startsWith('video/')
@@ -408,6 +478,7 @@ export default function MaterialsPage() {
 
       // 3秒後にアップロード表示を消す
       setTimeout(() => {
+        if (!uploadsAlive.current || uploadContextRef.current !== uploadContext) return
         setUploads((prev) => {
           const next = new Map(prev)
           next.delete(uploadKey)
@@ -415,18 +486,21 @@ export default function MaterialsPage() {
         })
       }, 3000)
     } catch (e: any) {
+      if (!isCurrent()) return
       setUploads((prev) => {
         const next = new Map(prev)
         const item = next.get(uploadKey)
         if (item) next.set(uploadKey, {
           ...item,
           status: 'error',
-          error: e.message,
-          errorActionUrl: e.actionUrl,
-          errorActionLabel: e.actionLabel,
+          error: e instanceof InterviewCreationResponseError ? e.message : '処理結果を確認できませんでした。保存済み素材をご確認ください。',
+          errorActionUrl: e.actionUrl || '/interview/projects/' + encodeURIComponent(projectId) + '/materials',
+          errorActionLabel: e.actionLabel || '保存済み素材を確認する',
         })
         return next
       })
+    } finally {
+      if (record.controller === active) record.controller = null
     }
   }
 
@@ -446,130 +520,108 @@ export default function MaterialsPage() {
     }
   }
 
-  // 文字起こし開始
+  // Keep a synchronous per-material claim until the server reports a terminal error.
   const startTranscription = async (materialId: string) => {
+    if (!uploadsAlive.current || uploadContextRef.current !== uploadContext || !/^[a-zA-Z0-9_-]{1,128}$/.test(materialId)) return
+    const previous = transcriptionOperations.current.get(materialId)
+    if (previous?.controller || previous?.accepted) return
+    clearTimeout(previous?.timer)
+    const active = new AbortController()
+    const operation = { controller: active as AbortController | null, accepted: false, timer: undefined as ReturnType<typeof setTimeout> | undefined }
+    transcriptionOperations.current.set(materialId, operation)
+    const isCurrent = () => uploadsAlive.current && uploadContextRef.current === uploadContext && transcriptionOperations.current.get(materialId) === operation && !active.signal.aborted
     const mat = materials.find((m) => m.id === materialId)
-
-    // 即座にUI更新（ボタンクリック直後にフィードバック）
-    setTranscribing((prev) => {
-      const next = new Map(prev)
-      next.set(materialId, {
-        startTime: Date.now(),
-        materialId,
-        fileName: mat?.fileName || '',
-        fileSize: mat?.fileSize || null,
-        status: 'starting',
-      })
-      return next
-    })
-
-    try {
-      const res = await fetch(`/api/interview/materials/${materialId}/transcribe`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      })
-
-      // API呼び出し後、processingに更新
+    const unknownResult = '文字起こしの結果を確認できませんでした。素材一覧を更新して状況を確認してください。'
+    const update = (changes: Partial<TranscriptionProgress>) => {
+      if (!isCurrent()) return
       setTranscribing((prev) => {
-        const next = new Map(prev)
-        const info = next.get(materialId)
-        if (info) next.set(materialId, { ...info, status: 'processing' })
-        return next
+        const info = prev.get(materialId)
+        return info ? new Map(prev).set(materialId, { ...info, ...changes }) : prev
       })
-
-      const data = await res.json()
-
-      // ゲスト制限超過
-      if (data.limitExceeded) {
-        setTranscribing((prev) => {
-          const next = new Map(prev)
-          const info = next.get(materialId)
-          if (info) next.set(materialId, { ...info, status: 'error', limitReached: true,
-            limitAction: data.actionUrl === SUPPORT_CONTACT_URL ? 'contact' : data.actionUrl === '/interview/pricing' ? 'pricing' : null,
-            error: data.error || '文字起こしの上限に達しました。プランを確認してください。' })
-          return next
-        })
+    }
+    setTranscribing((prev) => new Map(prev).set(materialId, {
+      startTime: Date.now(), materialId, fileName: mat?.fileName || '', fileSize: mat?.fileSize || null, status: 'starting',
+    }))
+    try {
+      const { res, data } = await readInterviewCreationResponse('/api/interview/materials/' + encodeURIComponent(materialId) + '/transcribe', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', signal: active.signal,
+      }, unknownResult, 65536, 310000)
+      if (!isCurrent()) return
+      if ([403, 429].includes(res.status) && data?.success === false && data?.limitExceeded === true) {
+        update({ status: 'error', limitReached: true,
+          limitAction: data.actionUrl === SUPPORT_CONTACT_URL ? 'contact' : data.actionUrl === '/interview/pricing' ? 'pricing' : null,
+          error: '文字起こしの上限に達しました。利用可能なプランをご確認ください。' })
         return
       }
-
-      if (data.success && data.status === 'PROCESSING') {
-        await fetchProject()
-        return
+      if (!res.ok || data?.success !== true || typeof data.transcriptionId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(data.transcriptionId) || !['PROCESSING', 'COMPLETED'].includes(data.status)) {
+        throw new InterviewCreationResponseError(unknownResult)
       }
-
-      if (data.success) {
-        // 完了 — durationMinutesを保持
-        setTranscribing((prev) => {
-          const next = new Map(prev)
-          const info = next.get(materialId)
-          if (info) next.set(materialId, { ...info, status: 'completed', durationMinutes: data.durationMinutes || null })
-          return next
-        })
-        await fetchProject()
-        // 5秒後に表示を消す（分数表示を確認できるよう延長）
-        setTimeout(() => {
-          setTranscribing((prev) => {
-            const next = new Map(prev)
-            next.delete(materialId)
-            return next
-          })
+      operation.accepted = true
+      update({ status: data.status === 'COMPLETED' ? 'completed' : 'processing',
+        durationMinutes: typeof data.durationMinutes === 'number' && Number.isFinite(data.durationMinutes) && data.durationMinutes >= 0 ? data.durationMinutes : null })
+      if (data.status === 'COMPLETED') {
+        operation.timer = setTimeout(() => {
+          if (!isCurrent()) return
+          setTranscribing((prev) => { const next = new Map(prev); next.delete(materialId); return next })
         }, 5000)
-      } else {
-        setTranscribing((prev) => {
-          const next = new Map(prev)
-          const info = next.get(materialId)
-          if (info) next.set(materialId, { ...info, status: 'error', error: data.error })
-          return next
-        })
       }
+      // A list refresh failure does not undo a verified transcription response.
+      try { await fetchProject(true) } catch { /* The list exposes its own retry state. */ }
     } catch {
-      setTranscribing((prev) => {
-        const next = new Map(prev)
-        const info = next.get(materialId)
-        if (info) next.set(materialId, { ...info, status: 'error', error: 'ネットワークエラー' })
-        return next
-      })
+      update({ status: 'error', error: unknownResult })
+    } finally {
+      if (transcriptionOperations.current.get(materialId) === operation) operation.controller = null
     }
   }
 
-  // 素材削除
-  const deleteMaterial = async (materialId: string) => {
-    if (!confirm('この素材を削除しますか？')) return
+  const runMaterialAction = async (mode: 'confirm' | 'delete', materialId: string) => {
+    if (!uploadsAlive.current || uploadContextRef.current !== uploadContext || materialActions.current.size || !/^[a-zA-Z0-9_-]{1,128}$/.test(materialId)) return
+    const active = new AbortController()
+    materialActions.current.set(materialId, active)
+    const isCurrent = () => uploadsAlive.current && uploadContextRef.current === uploadContext && materialActions.current.get(materialId) === active && !active.signal.aborted
+    const unknownResult = mode === 'confirm'
+      ? 'アップロードの確認結果を取得できませんでした。素材一覧を更新して状況を確認してください。'
+      : '素材の削除結果を取得できませんでした。素材一覧を更新して状況を確認してください。'
+    setMaterialActionError(null)
+    if (mode === 'confirm') setConfirmingMaterialId(materialId)
     try {
-      const response = await fetch(`/api/interview/materials/${materialId}`, { method: 'DELETE' })
-      if (!response.ok) {
-        const result = await response.json().catch(() => null)
-        alert(result?.error || '素材を削除できませんでした。時間をおいて再試行してください。')
+      const { res, data } = await readInterviewCreationResponse(mode === 'confirm' ? '/api/interview/materials/confirm' : '/api/interview/materials/' + encodeURIComponent(materialId), {
+        method: mode === 'confirm' ? 'POST' : 'DELETE', signal: active.signal,
+        ...(mode === 'confirm' ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ materialId }) } : {}),
+      }, unknownResult)
+      if (!isCurrent()) return
+      if (mode === 'confirm' && res.status === 413 && data?.success === false && data?.code === 'UPLOAD_LIMIT_REACHED') {
+        const actionUrl = data.limitSource === 'plan' && ['/auth/signin?callbackUrl=/interview', '/interview/pricing', SUPPORT_CONTACT_URL].includes(data.actionUrl) ? data.actionUrl : undefined
+        setMaterialActionError({ message: data.limitSource === 'storage' ? 'ファイルを分割または圧縮して、再度アップロードしてください。' : 'ファイル容量がプランの上限を超えています。利用可能なプランをご確認ください。', actionUrl })
+        try { await fetchProject(true) } catch { /* Preserve the verified quota reason. */ }
         return
       }
-      await fetchProject()
+      if (!res.ok || data?.success !== true || (mode === 'confirm' && (data.material?.id !== materialId || data.material?.status !== 'COMPLETED' || typeof data.material?.fileSize !== 'number' || !Number.isSafeInteger(data.material.fileSize) || data.material.fileSize < 0))) throw new InterviewCreationResponseError(unknownResult)
+      if (mode === 'confirm') {
+        setMaterials((previous) => previous.map((material) => material.id === materialId ? { ...material, status: 'COMPLETED', fileSize: data.material.fileSize } : material))
+      } else {
+        setMaterials((previous) => previous.filter((material) => material.id !== materialId))
+        const transcription = transcriptionOperations.current.get(materialId)
+        transcription?.controller?.abort()
+        clearTimeout(transcription?.timer)
+        transcriptionOperations.current.delete(materialId)
+        setTranscribing((previous) => { const next = new Map(previous); next.delete(materialId); return next })
+      }
+      try { await fetchProject(true) } catch { /* Keep the verified mutation even if the list cannot refresh. */ }
     } catch {
-      alert('通信エラーで素材を削除できませんでした。時間をおいて再試行してください。')
+      if (isCurrent()) setMaterialActionError({ message: unknownResult })
+    } finally {
+      if (isCurrent() && mode === 'confirm') setConfirmingMaterialId(null)
+      if (materialActions.current.get(materialId) === active) materialActions.current.delete(materialId)
     }
   }
 
-  const confirmPendingUpload = async (materialId: string) => {
-    if (confirmingMaterialId) return
-    setConfirmingMaterialId(materialId)
-    try {
-      const response = await fetch('/api/interview/materials/confirm', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ materialId }),
-      })
-      const result = await response.json().catch(() => null)
-      if (!response.ok || !result?.success) throw new Error(result?.error || 'アップロードを確認できませんでした')
-      setMaterials((previous) => previous.map((material) => material.id === materialId
-        ? { ...material, status: 'COMPLETED', fileSize: result.material?.fileSize ?? material.fileSize }
-        : material))
-      await fetchProject()
-    } catch (error) {
-      await fetchProject()
-      alert(error instanceof Error ? error.message : '通信エラーでアップロードを確認できませんでした')
-    } finally {
-      setConfirmingMaterialId(null)
-    }
+  const deleteMaterial = async (materialId: string) => {
+    if (!uploadsAlive.current || uploadContextRef.current !== uploadContext || materialActions.current.size) return
+    if (confirm('この素材を削除しますか？')) await runMaterialAction('delete', materialId)
   }
+
+  const confirmPendingUpload = async (materialId: string) => { await runMaterialAction('confirm', materialId) }
 
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return '—'
@@ -1209,6 +1261,13 @@ export default function MaterialsPage() {
           )}
         </div>
 
+        {materialActionError && (
+          <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <p>{materialActionError.message}</p>
+            {materialActionError.actionUrl && <a href={materialActionError.actionUrl} className="mt-2 inline-block font-bold underline">{materialActionError.actionUrl === SUPPORT_CONTACT_URL ? '容量について相談する' : materialActionError.actionUrl.startsWith('/auth/') ? 'ログインする' : 'プランと無料体験を見る'}</a>}
+            <button type="button" onClick={() => fetchProject(true)} className="ml-3 mt-2 font-bold underline">素材一覧を更新</button>
+          </div>
+        )}
         {projectError && (
           <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
             素材一覧を読み込めませんでした。表示中の素材がある場合は更新前の情報です。

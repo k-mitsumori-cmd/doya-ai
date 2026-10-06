@@ -15,7 +15,8 @@ const interviewProject = { findUnique: async () => {
 } }
 const interviewMaterial = { create: async () => { materialWrites++; return { id: 'material1' } } }
 const route = load('src/app/api/interview/materials/upload-url/route.ts', {
-  'next/server': { NextResponse: Response },
+  '@/lib/interview/upload-create': { prepareInterviewUpload: () => { throw Error('Unexpected keyed creation in legacy/renewal fixture') }, InterviewUploadReplayError: class extends Error {} },
+    'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma: {
     interviewProject,
     interviewMaterial,
@@ -78,9 +79,7 @@ const projectTx = {
     },
   },
 }
-const projects = load('src/app/api/interview/projects/route.ts', {
-  'next/server': { NextResponse: Response },
-  '@/lib/prisma': { prisma: {
+const projectDb = {
     $transaction: async (work) => {
       const previous = guestProjectQueue
       let release
@@ -88,7 +87,12 @@ const projects = load('src/app/api/interview/projects/route.ts', {
       await previous
       try { return await work(projectTx) } finally { release() }
     },
-  } },
+};
+const createHelpers = load('src/lib/interview/project-create.ts', { 'node:crypto': require('node:crypto'), '@/lib/prisma': { prisma: projectDb }, '@/lib/interview/access': { interviewGuestTotalLimit: () => 3 } });
+const projects = load('src/app/api/interview/projects/route.ts', {
+  'next/server': { NextResponse: Response },
+  '@/lib/prisma': { prisma: projectDb },
+  '@/lib/interview/project-create': createHelpers,
   '@/lib/interview/thumbnail-storage': { thumbnailUrlForClient: () => null },
   '@/lib/interview/access': {
     getInterviewUser: async () => ({ userId: null, plan: 'GUEST' }),

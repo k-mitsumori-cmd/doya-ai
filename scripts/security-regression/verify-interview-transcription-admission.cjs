@@ -17,6 +17,7 @@ const shared = {
   '@/lib/interview/access': { getInterviewUser: async () => ({ userId: 'u1', plan: userPlan }),
     getGuestIdFromRequest: () => null, checkOwnership: () => null, requireDatabase: () => null },
   '@/lib/pricing': { getInterviewGuestLimits: () => ({ transcriptionMinutes: 5 }), SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
+  '@/lib/interview/transcription-legacy': { claimLegacyInterviewTranscription: async () => { throw Error('unexpected legacy admission') } },
   '@/lib/interview/media-duration': { inspectInterviewMediaDuration: async () => { durationCalls++; return 200 } },
   '@/lib/interview/transcription-budget': { reserveInterviewTranscription: async () => admission,
     settleInterviewTranscription: async () => { throw Error('unexpected settlement') },

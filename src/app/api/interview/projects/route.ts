@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createInterviewProject, interviewProjectCreationScope, InterviewProjectCreateError } from '@/lib/interview/project-create'
 import type { Prisma } from '@prisma/client'
 import { thumbnailUrlForClient } from '@/lib/interview/thumbnail-storage'
 import {
@@ -14,7 +15,6 @@ import {
   getGuestIdFromRequest,
   ensureGuestId,
   setGuestCookie,
-  interviewGuestTotalLimit,
   requireDatabase,
 } from '@/lib/interview/access'
 
@@ -28,6 +28,13 @@ export async function GET(req: NextRequest) {
   try {
     const { userId } = await getInterviewUser()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
+    if (req.nextUrl.searchParams.get('prepareCreate') === '1') {
+      const preparedGuestId = userId ? null : guestId || ensureGuestId()
+      const response = NextResponse.json({ success: true, creationScope: interviewProjectCreationScope(userId, preparedGuestId) })
+      response.headers.set('Cache-Control', 'no-store')
+      if (preparedGuestId) setGuestCookie(response, preparedGuestId)
+      return response
+    }
 
     const statsOnly = req.nextUrl.searchParams.get('statsOnly') === '1'
     if (!userId && !guestId) {
@@ -180,11 +187,15 @@ export async function POST(req: NextRequest) {
     let guestId = !userId ? getGuestIdFromRequest(req) : null
 
     // ゲストIDがない場合は新規発行
-    if (!userId && !guestId) {
-      guestId = ensureGuestId()
-    }
+    const guestCookieMissing = !userId && !guestId
+    if (guestCookieMissing) guestId = ensureGuestId()
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ success: false, error: '入力内容を確認してください' }, { status: 400 })
+    const requestKey = body.requestKey
+    if (requestKey !== undefined && (typeof requestKey !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(requestKey))) return NextResponse.json({ success: false, error: '作成操作を確認できませんでした' }, { status: 400 })
+    if (requestKey && guestCookieMissing) return NextResponse.json({ success: false, code: 'GUEST_SESSION_REQUIRED', error: 'Cookieを有効にして、画面を開き直してください。' }, { status: 409 })
+    if (requestKey && (typeof body.creationScope !== 'string' || body.creationScope !== interviewProjectCreationScope(userId, guestId))) return NextResponse.json({ success: false, code: 'CREATION_SCOPE_CHANGED', error: '利用情報が変わりました。プロジェクト一覧を確認してから再度お試しください。' }, { status: 409 })
     const {
       title,
       intervieweeName,
@@ -216,10 +227,14 @@ export async function POST(req: NextRequest) {
       theme: ['テーマ', 500],
       purpose: ['目的', 500],
       targetAudience: ['対象読者', 200],
+      genre: ['ジャンル', 100],
+      tone: ['トーン', 100],
+      mediaType: ['メディア', 100],
     }
     for (const [key, [label, max]] of Object.entries(STR_LIMITS)) {
       const v = body[key]
-      if (v && typeof v === 'string' && v.length > max) {
+      if (v != null && typeof v !== 'string') return NextResponse.json({ success: false, error: `${label}は文字列で入力してください` }, { status: 400 })
+      if (typeof v === 'string' && v.length > max) {
         return NextResponse.json(
           { success: false, error: `${label}は${max}文字以内で入力してください` },
           { status: 400 }
@@ -260,31 +275,8 @@ export async function POST(req: NextRequest) {
         mediaType: mediaType || null,
     } satisfies Prisma.InterviewProjectUncheckedCreateInput
 
-    // 日次の記事生成枠は記事保存時に消費する。ゲストの累計件数は
-    // 同じゲストIDからの同時作成でも超過しないよう、確認と作成を直列化する。
-    const project = userId
-      ? await prisma.interviewProject.create({ data: projectData })
-      : await prisma.$transaction(async (tx) => {
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-guest-project'), hashtext(${guestId!}))`
-          const key = `interview-guest-project:v1:${guestId!}`
-          const [currentProjects, ledger] = await Promise.all([
-            tx.interviewProject.count({ where: { guestId: guestId! } }),
-            tx.systemSetting.findUnique({ where: { key }, select: { value: true } }),
-          ])
-          const historicalProjects = ledger ? Number(ledger.value) : 0
-          if (!Number.isSafeInteger(historicalProjects) || historicalProjects < 0) {
-            throw new Error('Invalid interview guest project ledger')
-          }
-          const used = Math.max(currentProjects, historicalProjects)
-          if (used >= interviewGuestTotalLimit()) return null
-          const created = await tx.interviewProject.create({ data: projectData })
-          await tx.systemSetting.upsert({
-            where: { key },
-            create: { key, value: String(used + 1) },
-            update: { value: String(used + 1) },
-          })
-          return created
-        })
+    // Creation retries do not consume article-generation quota or the guest cumulative ledger twice.
+    const project = await createInterviewProject(projectData, requestKey)
 
     if (!project) {
       return NextResponse.json(
@@ -315,6 +307,14 @@ export async function POST(req: NextRequest) {
 
     return res
   } catch (e: any) {
+    const publicCreationErrors: Record<string, string> = {
+      GUEST_SESSION_REQUIRED: '利用情報を確認できませんでした。画面を開き直してください。',
+      REQUEST_CONFLICT: '同じ作成操作の入力が変わっています。プロジェクト一覧を確認してから新しく作成してください。',
+      PROJECT_UNAVAILABLE: 'この作成操作のプロジェクトは現在開けません。一覧を確認してから新しく作成してください。',
+    }
+    if (e instanceof InterviewProjectCreateError && e.status === 409 && Object.hasOwn(publicCreationErrors, e.code)) {
+      return NextResponse.json({ success: false, code: e.code, error: publicCreationErrors[e.code] }, { status: 409 })
+    }
     console.error('[interview/projects] unexpected error')
     return NextResponse.json(
       { success: false, error: 'プロジェクト作成に失敗しました' },

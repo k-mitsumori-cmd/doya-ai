@@ -1,0 +1,14 @@
+{
+  "passed": 4,
+  "scope": "Actual API and creation helper, actual generated Prisma, both duplicate callers observed waiting on the actual advisory lock by backend PID before release, private Unix-only PostgreSQL17. Synthetic User/SystemSetting/InterviewProject scalar fixtures plus required receipt key uniqueness, project User FK and project indexes. No production DB/migrations/provider calls; complete production catalog/RLS/recipe relation not reproduced.",
+  "sourceHashes": {
+    "src/lib/interview/project-create.ts": "2232d7d84d8a71f8752f2c071e8f70ce4c98f5cad1c802ebe38989aed153050a",
+    "src/app/api/interview/projects/route.ts": "fe7387c9f0a47613e6c19abeece0ce21f1e1f87bfbafd757c53f8cb6899edcbb"
+  },
+  "results": [
+    "account simultaneous duplicate, changed input, edited result, changed owner and deletion",
+    "guest simultaneous duplicate, changed input, edited result, changed owner and deletion",
+    "distinct concurrent guest requests at cumulative cap, replay at cap, deletion cannot restore cap",
+    "actual receipt trigger failure rolls back both project and guest cumulative ledger"
+  ]
+}

@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { createInterviewProjectRequest, InterviewCreationResponseError } from '@/lib/interview/creation-response'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface ArticleTemplate {
@@ -165,36 +167,39 @@ export default function TemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<ArticleTemplate | null>(null)
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState('')
+  const [createLoginRequired, setCreateLoginRequired] = useState(false)
+  const activeTemplateCreate = useRef<AbortController | null>(null)
+  const templateCreateAttempt = useRef<{ input: string; key: string; scope: string | null } | null>(null)
+  useEffect(() => () => { activeTemplateCreate.current?.abort(); activeTemplateCreate.current = null }, [])
 
   const filteredTemplates = selectedIndustry === 'all'
     ? ARTICLE_TEMPLATES
     : ARTICLE_TEMPLATES.filter(t => t.industry === selectedIndustry)
 
   const handleCreateFromTemplate = async (template: ArticleTemplate) => {
+    if (activeTemplateCreate.current) return
+    const active = new AbortController()
+    activeTemplateCreate.current = active
+    const isCurrent = () => activeTemplateCreate.current === active && !active.signal.aborted
     setCreating(true)
     setCreateError('')
+    setCreateLoginRequired(false)
     try {
-      const res = await fetch('/api/interview/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: template.sampleTitle,
-          genre: template.genre,
-          intervieweeName: '',
-          description: template.description,
-        }),
-      })
-      const data = await res.json()
-      if (data.success && data.project?.id) {
-        router.push(`/interview/projects/${data.project.id}`)
-      } else {
-        setCreateError(data.error || 'プロジェクトの作成に失敗しました')
+      const input = JSON.stringify({ title: template.sampleTitle, genre: template.genre, intervieweeName: '', purpose: template.description })
+      if (templateCreateAttempt.current?.input !== input) templateCreateAttempt.current = { input, key: crypto.randomUUID(), scope: null }
+      const project = await createInterviewProjectRequest(JSON.parse(input), templateCreateAttempt.current, active.signal)
+      if (!isCurrent()) return
+      router.push(`/interview/projects/${encodeURIComponent(project.id)}`)
+    } catch (cause) {
+      if (isCurrent()) {
+        if (cause instanceof InterviewCreationResponseError) {
+          setCreateLoginRequired(cause.code === 'GUEST_LIMIT' || cause.code === 'AUTH_REQUIRED')
+          if (cause.code === 'CREATION_SCOPE_CHANGED') templateCreateAttempt.current = null
+        }
+        setCreateError(cause instanceof InterviewCreationResponseError ? cause.message : '作成結果を確認できませんでした。プロジェクト一覧を確認してから再試行してください。')
+        activeTemplateCreate.current = null
+        setCreating(false)
       }
-    } catch (e) {
-      console.error('Template project creation error:')
-      setCreateError('通信エラーが発生しました。もう一度お試しください。')
-    } finally {
-      setCreating(false)
     }
   }
 
@@ -357,7 +362,10 @@ export default function TemplatesPage() {
                 {createError && (
                   <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
                     <span className="material-symbols-outlined text-red-500 text-[16px]">error</span>
-                    <p className="text-sm text-red-600 font-bold">{createError}</p>
+                    <div role="alert"><p className="text-sm text-red-600 font-bold">{createError}</p>
+                    <Link href="/interview/projects" className="text-sm underline">プロジェクト一覧を確認する</Link>
+                    {createLoginRequired && <Link href="/auth/signin?callbackUrl=%2Finterview%2Ftemplates" className="ml-2 text-sm underline">ログインして続ける</Link>}
+                  </div>
                   </div>
                 )}
 

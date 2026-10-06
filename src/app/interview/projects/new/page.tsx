@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { createInterviewProjectRequest, InterviewCreationResponseError } from '@/lib/interview/creation-response'
 
 const GENRES = [
   { value: 'CASE_STUDY', label: '導入事例・ケーススタディ', icon: 'description' },
@@ -39,6 +41,10 @@ export default function NewProject() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [loginRequired, setLoginRequired] = useState(false)
+  const activeCreate = useRef<AbortController | null>(null)
+  const creationAttempt = useRef<{ input: string; key: string; scope: string | null } | null>(null)
+  useEffect(() => () => { activeCreate.current?.abort(); activeCreate.current = null }, [])
 
   const [title, setTitle] = useState('')
   const [intervieweeName, setIntervieweeName] = useState('')
@@ -51,43 +57,35 @@ export default function NewProject() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim()) {
-      setError('プロジェクト名を入力してください')
-      return
-    }
-
+    if (activeCreate.current) return
+    if (!title.trim()) { setError('プロジェクト名を入力してください'); return }
+    const active = new AbortController()
+    activeCreate.current = active
     setLoading(true)
     setError('')
-
+    setLoginRequired(false)
+    const isCurrent = () => activeCreate.current === active && !active.signal.aborted
     try {
-      const res = await fetch('/api/interview/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          intervieweeName: intervieweeName || null,
-          intervieweeRole: intervieweeRole || null,
-          intervieweeCompany: intervieweeCompany || null,
-          genre: genre || null,
-          theme: theme || null,
-          targetAudience: targetAudience || null,
-          tone,
-        }),
-      })
-
-      const data = await res.json()
-
-      if (!data.success) {
-        setError(data.error || '作成に失敗しました')
-        return
+      const input = JSON.stringify({ title: title.trim(), intervieweeName: intervieweeName || null,
+        intervieweeRole: intervieweeRole || null, intervieweeCompany: intervieweeCompany || null,
+        genre: genre || null, theme: theme || null, targetAudience: targetAudience || null, tone })
+      if (creationAttempt.current?.input !== input) creationAttempt.current = { input, key: crypto.randomUUID(), scope: null }
+      const attempt = creationAttempt.current
+      const project = await createInterviewProjectRequest(JSON.parse(input), attempt, active.signal)
+      if (!isCurrent()) return
+      const id = project.id
+      router.push(`/interview/projects/${encodeURIComponent(id)}/materials`)
+      // Keep the synchronous lock until this screen unmounts, including delayed navigation.
+    } catch (cause) {
+      if (isCurrent()) {
+        if (cause instanceof InterviewCreationResponseError) {
+          setLoginRequired(cause.code === 'GUEST_LIMIT' || cause.code === 'AUTH_REQUIRED')
+          if (cause.code === 'CREATION_SCOPE_CHANGED') creationAttempt.current = null
+        }
+        setError(cause instanceof InterviewCreationResponseError ? cause.message : '作成結果を確認できませんでした。プロジェクト一覧を確認してから同じ操作を再試行してください。')
+        activeCreate.current = null
+        setLoading(false)
       }
-
-      // 素材アップロード画面へ遷移
-      router.push(`/interview/projects/${data.project.id}/materials`)
-    } catch {
-      setError('ネットワークエラーが発生しました')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -108,6 +106,7 @@ export default function NewProject() {
       </div>
 
       <motion.form onSubmit={handleSubmit} className="space-y-6" variants={formVariants} initial="hidden" animate="show">
+        <fieldset disabled={loading} className="contents">
         {/* プロジェクト名 */}
         <div className="bg-white rounded-xl p-5 border border-slate-200">
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-900 mb-3">
@@ -117,6 +116,7 @@ export default function NewProject() {
           <input
             type="text"
             value={title}
+            maxLength={200}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="例: 山田太郎氏インタビュー記事"
             className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] outline-none transition-all"
@@ -162,6 +162,7 @@ export default function NewProject() {
               <input
                 type="text"
                 value={intervieweeName}
+            maxLength={100}
                 onChange={(e) => setIntervieweeName(e.target.value)}
                 placeholder="名前"
                 className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] transition-all"
@@ -172,6 +173,7 @@ export default function NewProject() {
               <input
                 type="text"
                 value={intervieweeCompany}
+            maxLength={100}
                 onChange={(e) => setIntervieweeCompany(e.target.value)}
                 placeholder="会社名"
                 className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] transition-all"
@@ -182,6 +184,7 @@ export default function NewProject() {
               <input
                 type="text"
                 value={intervieweeRole}
+            maxLength={100}
                 onChange={(e) => setIntervieweeRole(e.target.value)}
                 placeholder="役職"
                 className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] transition-all"
@@ -198,6 +201,7 @@ export default function NewProject() {
           </label>
           <textarea
             value={theme}
+            maxLength={500}
             onChange={(e) => setTheme(e.target.value)}
             placeholder="例: DX推進の取り組みと成果について"
             rows={2}
@@ -214,6 +218,7 @@ export default function NewProject() {
           <input
             type="text"
             value={targetAudience}
+            maxLength={200}
             onChange={(e) => setTargetAudience(e.target.value)}
             placeholder="例: IT企業の経営者・決裁者"
             className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] transition-all"
@@ -246,9 +251,11 @@ export default function NewProject() {
 
         {/* エラー */}
         {error && (
-          <div className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm border border-red-200">
+          <div role="alert" className="flex flex-wrap items-center gap-2 bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm border border-red-200">
             <span className="material-symbols-outlined text-lg">error</span>
             {error}
+            <Link href="/interview/projects" className="ml-2 underline">プロジェクト一覧を確認する</Link>
+            {loginRequired && <Link href="/auth/signin?callbackUrl=%2Finterview%2Fprojects%2Fnew" className="ml-2 underline">ログインして続ける</Link>}
           </div>
         )}
 
@@ -280,6 +287,7 @@ export default function NewProject() {
             )}
           </button>
         </div>
+      </fieldset>
       </motion.form>
     </motion.div>
   )

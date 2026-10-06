@@ -15,6 +15,7 @@ function fixture(mode) {
     },
     interviewTranscription: {
       findFirst: async () => null,
+      findUnique: async () => ({ status: 'PROCESSING', externalJobId: 'submitting:synthetic' }),
       create: async () => ({ id: 'transcription' }),
       update: async value => { writes.push(value); return {} },
       updateMany: async value => { writes.push(value); return { count: 1 } },
@@ -31,6 +32,7 @@ function fixture(mode) {
     '@/lib/interview/access': { getInterviewUser: async () => ({ userId: 'owner', plan: 'FREE' }), getGuestIdFromRequest: () => null, checkOwnership: () => null },
     '@/lib/interview/storage': { getSignedFileUrl: async () => 'https://storage.invalid/audio' },
     '@/lib/pricing': { getInterviewGuestLimits: () => ({ transcriptionMinutes: 5 }), SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
+    '@/lib/interview/transcription-legacy': { claimLegacyInterviewTranscription: async () => ({ state: 'started', transcriptionId: 'transcription', externalJobId: 'submitting:synthetic' }) },
     '@/lib/interview/media-duration': { inspectInterviewMediaDuration: async () => 60 },
     '@/lib/interview/transcription-budget': {},
     '@/lib/interview/transcription': transcription,

@@ -1,0 +1,12 @@
+{
+  "passed": 5,
+  "results": [
+    "account actual simultaneous advisory wait, single row/marker, owner recheck, job resume, completed replay, deleted material",
+    "guest actual simultaneous advisory wait, single row/marker, owner recheck, job resume, completed replay, deleted material",
+    "guest completed-duration legacy cap before row creation",
+    "legacy guest aggregate preserves completed usage on an account-claimed project",
+    "actual material update trigger failure rolls back transcription and marker"
+  ],
+  "sourceHash": "8c9d316e346c5eb01d546e18a6be83ca13117a3030331982da40e09f54275107",
+  "scope": "Actual helper, generated Prisma and private Unix-only PostgreSQL17. Both distinct caller PIDs observed waiting on project advisory lock. Synthetic scalar four-model schema with project/user/material FKs; not full catalog/RLS, real API/auth/provider or production flag verification."
+}

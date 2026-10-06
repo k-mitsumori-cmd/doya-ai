@@ -1,0 +1,10 @@
+{
+  "passed": 3,
+  "results": [
+    "account actual simultaneous wait/replay/input conflict/owner change/deletion tombstone",
+    "guest actual simultaneous wait/replay/input conflict/owner change/deletion tombstone",
+    "actual receipt trigger failure rolls back material and receipt"
+  ],
+  "sourceHash": "c08a8c94c25368a87916366631fe9fb99975237c02cac9e08d43d70531a0b37a",
+  "scope": "Actual upload replay helper, generated Prisma and private Unix-only PostgreSQL17. Both independent caller PIDs observed waiting on actual project advisory lock. Synthetic scalar User/SystemSetting/InterviewProject/InterviewMaterial tables with receipt uniqueness and project/user FKs; not full catalog/RLS, route/auth/storage signing or real provider E2E."
+}

@@ -43,6 +43,7 @@ const prisma = { interviewProject: {
 } };
 let currentUserId = 'owner';
 const { GET } = load('src/app/api/interview/projects/route.ts', {
+  '@/lib/interview/project-create': { createInterviewProject: () => { throw Error('Unexpected creation in read-only fixture') }, interviewProjectCreationScope: () => 'synthetic', InterviewProjectCreateError: class extends Error {} },
   'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
   '@/lib/prisma': { prisma },
   '@/lib/interview/thumbnail-storage': { thumbnailUrlForClient: (_id, url) => url },

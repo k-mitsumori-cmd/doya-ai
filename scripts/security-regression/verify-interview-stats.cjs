@@ -18,6 +18,7 @@ const prisma = {
   interviewMaterial: { count: async ({ where }) => { assert.equal(JSON.stringify(where.project.is), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1', userId: null })); countCalls++; return 80 } },
 }
 const route = load('src/app/api/interview/projects/route.ts', {
+  '@/lib/interview/project-create': { createInterviewProject: () => { throw Error('Unexpected creation in read-only fixture') }, interviewProjectCreationScope: () => 'synthetic', InterviewProjectCreateError: class extends Error {} },
   'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
   '@/lib/prisma': { prisma },
   '@/lib/interview/thumbnail-storage': { thumbnailUrlForClient: (_id, url) => url },

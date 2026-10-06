@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import InterviewUpsellModal from '@/components/interview/InterviewUpsellModal'
+import { createInterviewProjectRequest, readInterviewCreationResponse, InterviewCreationResponseError } from '@/lib/interview/creation-response'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 interface Project {
   id: string
@@ -97,6 +99,10 @@ export default function InterviewTool() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadSpeedRef = useRef<Map<string, { startTime: number; lastLoaded: number; speed: number }>>(new Map())
   const xhrRef = useRef<Map<string, XMLHttpRequest>>(new Map())
+  const uploadActor = String(session?.user?.id || 'guest')
+  const uploadActorRef = useRef(uploadActor)
+  const dashboardAttempts = useRef<Map<string, { uploadKey: string; creation: { key: string; scope: string | null }; controller: AbortController | null; projectId?: string; material?: { signedUrl: string; materialId: string }; uploaded?: boolean; completed?: boolean }>>(new Map())
+  const uploadsAlive = useRef(true)
 
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -105,27 +111,48 @@ export default function InterviewTool() {
   const [uploads, setUploads] = useState<Map<string, UploadingFile>>(new Map())
   const [tipIndex, setTipIndex] = useState(0)
 
+  useEffect(() => {
+    uploadsAlive.current = true
+    uploadActorRef.current = uploadActor
+    dashboardAttempts.current = new Map()
+    setUploads(new Map())
+    const attempts = dashboardAttempts.current
+    const activeXhrs = xhrRef.current
+    return () => {
+      uploadsAlive.current = false
+      for (const attempt of attempts.values()) attempt.controller?.abort()
+      for (const xhr of activeXhrs.values()) xhr.abort()
+    }
+  }, [uploadActor])
+
   // アップセルモーダル
   const [upsellOpen, setUpsellOpen] = useState(false)
   const [upsellLimitType, setUpsellLimitType] = useState<'transcription' | 'upload' | 'generation'>('generation')
   const [upsellIsGuest, setUpsellIsGuest] = useState(false)
 
-  // プロジェクト一覧取得（ログインユーザーのみ）
+  // 利用者切り替え・画面離脱後の古い一覧応答は反映しない。
   useEffect(() => {
-    if (!session?.user) {
+    const controller = new AbortController()
+    setProjects([])
+    setProjectListError(false)
+    if (uploadActor === 'guest') {
       setLoading(false)
-      return
+      return () => controller.abort()
     }
-    fetch('/api/interview/projects')
-      .then(async (response) => {
-        const data = await response.json().catch(() => null)
-        if (!response.ok || !data?.success || !Array.isArray(data.projects)) throw new Error('Project list unavailable')
+    setLoading(true)
+    void readInterviewCreationResponse('/api/interview/projects', {
+      signal: controller.signal, cache: 'no-store',
+    }, 'プロジェクト一覧を取得できませんでした。', 4 * 1024 * 1024)
+      .then(({ res, data }) => {
+        if (controller.signal.aborted) return
+        if (!res.ok || data?.success !== true || !Array.isArray(data.projects)) throw new Error('Project list unavailable')
         setProjects(data.projects)
         setProjectListError(false)
       })
-      .catch(() => setProjectListError(true))
-      .finally(() => setLoading(false))
-  }, [session])
+      .catch(() => { if (!controller.signal.aborted) setProjectListError(true) })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [uploadActor])
 
   // 豆知識サイクル — uploads.size でシンプルに判定
   const uploadsExist = uploads.size > 0
@@ -154,17 +181,30 @@ export default function InterviewTool() {
 
   // ダッシュボードからのアップロード: プロジェクト自動作成 → アップロード → 文字起こし
   const uploadFromDashboard = useCallback(async (file: File) => {
-    const uploadKey = `${file.name}_${Date.now()}`
-    const title = getProjectTitle(file)
+    if (!uploadsAlive.current || uploadActorRef.current !== uploadActor) return
+    const fingerprint = JSON.stringify([uploadActor, file.name, file.size, file.type, file.lastModified])
+    let operation = dashboardAttempts.current.get(fingerprint)
+    if (operation?.controller || operation?.completed) return
+    if (!operation) {
+      operation = { uploadKey: crypto.randomUUID(), creation: { key: crypto.randomUUID(), scope: null }, controller: null }
+      dashboardAttempts.current.set(fingerprint, operation)
+    }
+    const record = operation
+    const active = new AbortController()
+    record.controller = active
+    const isCurrent = () => uploadsAlive.current && uploadActorRef.current === uploadActor && record.controller === active && !active.signal.aborted
+    const uploadKey = record.uploadKey
+    const title = getProjectTitle(file).slice(0, 200)
     const rejectUploadPreparation = (data: { code?: string; error?: string; actionUrl?: string; actionLabel?: string }) => {
       if (data.code === 'GUEST_UPLOAD_LIMIT' || (data.code === 'PLAN_UPLOAD_LIMIT' && data.actionUrl === '/interview/pricing')) {
         setUpsellLimitType('upload')
         setUpsellIsGuest(data.code === 'GUEST_UPLOAD_LIMIT')
         setUpsellOpen(true)
       }
-      const err: any = new Error(data.error || 'アップロードURL取得失敗')
-      err.actionUrl = data.actionUrl
-      err.actionLabel = data.actionLabel
+      const publicMessages: Record<string, string> = { GUEST_UPLOAD_LIMIT: 'ゲストのアップロード容量上限に達しました。ログインして利用条件をご確認ください。', PLAN_UPLOAD_LIMIT: 'プランのアップロード容量上限に達しました。利用条件をご確認ください。', STORAGE_UPLOAD_LIMIT: '保存領域の容量上限を超えています。ファイルを分割または圧縮してください。' }
+      const err: any = new InterviewCreationResponseError(publicMessages[data.code || ''] || 'アップロード準備の結果を確認できませんでした。プロジェクト一覧から確認してください。')
+      err.actionUrl = ['/interview/pricing', '/auth/signin?callbackUrl=/interview', SUPPORT_CONTACT_URL].includes(data.actionUrl || '') ? data.actionUrl : '/interview/projects'
+      err.actionLabel = err.actionUrl === '/interview/pricing' ? 'プランと利用条件を確認する' : err.actionUrl === SUPPORT_CONTACT_URL ? '追加の利用枠を相談する' : err.actionUrl === '/interview/projects' ? 'プロジェクト一覧を確認する' : 'ログインして続ける'
       throw err
     }
 
@@ -176,26 +216,19 @@ export default function InterviewTool() {
 
     try {
       // ファイル形式と実効容量を先に確認し、上限超過で空のプロジェクトを作らない。
-      const preflightRes = await fetch('/api/interview/materials/upload-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const preflight = await readInterviewCreationResponse('/api/interview/materials/upload-url', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: active.signal,
         body: JSON.stringify({ preflight: true, fileName: file.name, mimeType: file.type, fileSize: file.size }),
-      })
-      const preflightData = await preflightRes.json()
-      if (!preflightData.success) rejectUploadPreparation(preflightData)
-
-      // Step 1: プロジェクト自動作成
-      const projectRes = await fetch('/api/interview/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title }),
-      })
-      const projectData = await projectRes.json()
-      if (!projectData.success) {
-        rejectUploadPreparation(projectData)
+      }, 'アップロードの利用条件を確認できませんでした。時間を置いて再度お試しください。')
+      if (!isCurrent()) return
+      if (!preflight.res.ok || preflight.data?.success !== true) rejectUploadPreparation(preflight.data || {})
+      // Reuse the saved project after a later upload failure; do not create another empty project.
+      if (!record.projectId) {
+        const project = await createInterviewProjectRequest({ title }, record.creation, active.signal)
+        if (!isCurrent()) return
+        record.projectId = project.id
       }
-
-      const projectId = projectData.project.id
+      const projectId = record.projectId
 
       setUploads((prev) => {
         const next = new Map(prev)
@@ -205,30 +238,36 @@ export default function InterviewTool() {
       })
 
       // Step 2: 署名付きURL取得
-      const urlRes = await fetch('/api/interview/materials/upload-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId,
-          fileName: file.name,
-          mimeType: file.type,
-          fileSize: file.size,
-        }),
-      })
-      const urlData = await urlRes.json()
-      if (!urlData.success) rejectUploadPreparation(urlData)
-
-      const { signedUrl, materialId } = urlData
+      if (!record.uploaded) {
+        const urlReply = await readInterviewCreationResponse('/api/interview/materials/upload-url', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: active.signal,
+          body: JSON.stringify({ projectId, requestKey: uploadKey, fileName: file.name, mimeType: file.type, fileSize: file.size, ...(record.material ? { materialId: record.material.materialId } : {}) }),
+        }, 'アップロード準備の結果を確認できませんでした。プロジェクト一覧から確認してください。')
+        if (!isCurrent()) return
+        const urlData = urlReply.data
+        if (!urlReply.res.ok || urlData?.success !== true) rejectUploadPreparation(urlData || {})
+        const { signedUrl, materialId } = urlData
+        if (typeof materialId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(materialId) || typeof signedUrl !== 'string') throw new InterviewCreationResponseError('アップロード先を確認できませんでした。プロジェクト一覧から確認してください。')
+        let uploadUrl: URL
+        try { uploadUrl = new URL(signedUrl) } catch { throw new InterviewCreationResponseError('アップロード先を確認できませんでした。') }
+        if (uploadUrl.protocol !== 'https:' || uploadUrl.username || uploadUrl.password) throw new InterviewCreationResponseError('アップロード先を確認できませんでした。')
+        if (record.material && record.material.materialId !== materialId) throw new InterviewCreationResponseError('保存先が変更されました。プロジェクト一覧から確認してください。')
+        record.material = { signedUrl, materialId }
+      }
+      if (!record.material) throw new InterviewCreationResponseError('アップロード先を確認できませんでした。')
+      const { signedUrl, materialId } = record.material
 
       // Step 3: Supabase Storage へ直接PUT (リトライ付き)
       const maxRetries = 3
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      for (let attempt = 1; !record.uploaded && attempt <= maxRetries; attempt++) {
+        if (!isCurrent()) return
         try {
           await new Promise<void>((resolve, reject) => {
             const xhr = new XMLHttpRequest()
             xhrRef.current.set(uploadKey, xhr)
 
             xhr.upload.addEventListener('progress', (e) => {
+              if (!isCurrent()) return
               if (e.lengthComputable) {
                 const progress = Math.round((e.loaded / e.total) * 100)
                 // 速度計算
@@ -255,8 +294,7 @@ export default function InterviewTool() {
               if (xhr.status >= 200 && xhr.status < 300) {
                 resolve()
               } else {
-                const errMsg = xhr.responseText || ''
-                reject(new Error(`Upload failed: ${xhr.status}${errMsg ? ` - ${errMsg.slice(0, 200)}` : ''}`))
+                reject(new Error(`Upload failed: ${xhr.status}`))
               }
             })
             xhr.addEventListener('error', () => reject(new Error('ネットワークエラー')))
@@ -269,12 +307,20 @@ export default function InterviewTool() {
             const formData = new FormData()
             formData.append('cacheControl', '3600')
             formData.append('', file, file.name)
+            const abortUpload = () => xhr.abort()
+            active.signal.addEventListener('abort', abortUpload, { once: true })
+            xhr.addEventListener('loadend', () => active.signal.removeEventListener('abort', abortUpload))
+            xhr.timeout = 3600000
+            xhr.addEventListener('timeout', () => reject(new InterviewCreationResponseError('アップロードの完了を確認できませんでした。プロジェクト一覧から確認してください。')))
             xhr.open('PUT', signedUrl)
             xhr.setRequestHeader('x-upsert', 'true')
             xhr.send(formData)
           })
+          if (!isCurrent()) return
+          record.uploaded = true
           break // 成功したらループを抜ける
         } catch (uploadErr: any) {
+          if (!isCurrent()) return
           const is5xx = /Upload failed: 5\d\d/.test(uploadErr?.message || '')
           if (is5xx && attempt < maxRetries) {
             console.warn(`[interview] Upload attempt ${attempt} failed, retrying in ${attempt * 3}s...`)
@@ -304,18 +350,14 @@ export default function InterviewTool() {
         return next
       })
 
-      const confirmRes = await fetch('/api/interview/materials/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      if (!isCurrent()) return
+      const confirm = await readInterviewCreationResponse('/api/interview/materials/confirm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: active.signal,
         body: JSON.stringify({ materialId }),
-      })
-      const confirmData = await confirmRes.json()
-      if (!confirmData.success) {
-        const err: any = new Error(confirmData.error || '確認処理失敗')
-        err.actionUrl = confirmData.actionUrl
-        err.actionLabel = confirmData.actionLabel
-        throw err
-      }
+      }, '素材の保存結果を確認できませんでした。プロジェクト一覧から確認してください。')
+      if (!isCurrent()) return
+      if (!confirm.res.ok || confirm.data?.success !== true) throw new InterviewCreationResponseError('素材の保存確認が完了していません。プロジェクト一覧から確認してください。')
+      record.completed = true
 
       // Step 5: 音声/動画ならリアルタイム文字起こしページへ遷移
       const isAudioVideo = file.type.startsWith('audio/') || file.type.startsWith('video/')
@@ -328,7 +370,7 @@ export default function InterviewTool() {
         })
 
         // リアルタイム文字起こしページへ遷移
-        router.push(`/interview/projects/${projectId}/transcribe?materialId=${materialId}`)
+        router.push(`/interview/projects/${encodeURIComponent(projectId)}/transcribe?materialId=${encodeURIComponent(materialId)}`)
         return
       }
 
@@ -340,16 +382,26 @@ export default function InterviewTool() {
         return next
       })
 
-      // プロジェクト一覧を更新
-      const refreshRes = await fetch('/api/interview/projects')
-      const refreshData = await refreshRes.json()
-      if (refreshRes.ok && refreshData.success && Array.isArray(refreshData.projects)) {
-        setProjects(refreshData.projects)
-        setProjectListError(false)
+      // 保存は完了済み。一覧の取得失敗をアップロード失敗に戻さない。
+      try {
+        const refresh = await readInterviewCreationResponse('/api/interview/projects', {
+          signal: active.signal,
+        }, 'プロジェクト一覧を取得できませんでした。', 4 * 1024 * 1024)
+        if (!isCurrent()) return
+        if (!refresh.res.ok || refresh.data?.success !== true || !Array.isArray(refresh.data.projects)) {
+          setProjectListError(true)
+        } else {
+          setProjects(refresh.data.projects)
+          setProjectListError(false)
+        }
+      } catch {
+        if (!isCurrent()) return
+        setProjectListError(true)
       }
 
       // 5秒後にアップロード表示を消す
       setTimeout(() => {
+        if (!uploadsAlive.current || uploadActorRef.current !== uploadActor) return
         setUploads((prev) => {
           const next = new Map(prev)
           next.delete(uploadKey)
@@ -357,6 +409,9 @@ export default function InterviewTool() {
         })
       }, 5000)
     } catch (e: any) {
+      if (!isCurrent()) return
+      if (e instanceof InterviewCreationResponseError && e.code === 'CREATION_SCOPE_CHANGED') { record.creation = { key: crypto.randomUUID(), scope: null }; record.projectId = undefined; record.material = undefined; record.uploaded = false }
+      if (e instanceof InterviewCreationResponseError && (e.code === 'GUEST_LIMIT' || e.code === 'AUTH_REQUIRED')) { Object.assign(e, { actionUrl: '/auth/signin?callbackUrl=/interview', actionLabel: 'ログインして続ける' }) }
       // キャンセル時はエラー表示せずクリーンアップのみ
       if (e.cancelled) {
         xhrRef.current.delete(uploadKey)
@@ -374,14 +429,16 @@ export default function InterviewTool() {
         if (item) next.set(uploadKey, {
           ...item,
           status: 'error',
-          error: e.message,
-          errorActionUrl: e.actionUrl,
-          errorActionLabel: e.actionLabel,
+          error: e instanceof InterviewCreationResponseError ? e.message : '処理結果を確認できませんでした。プロジェクト一覧から確認してください。',
+          errorActionUrl: e.actionUrl || `/interview/projects${record.projectId ? '/' + encodeURIComponent(record.projectId) + '/materials' : ''}`,
+          errorActionLabel: e.actionLabel || '保存されたプロジェクトを確認する',
         })
         return next
       })
+    } finally {
+      if (record.controller === active) record.controller = null
     }
-  }, [router])
+  }, [router, uploadActor])
 
   const handleFiles = (files: FileList | File[]) => {
     for (const file of Array.from(files)) {
