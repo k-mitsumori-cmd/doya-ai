@@ -1,0 +1,254 @@
+{
+  "checkedAt": "2026-10-06T16:16:19.787624+00:00",
+  "commit": "88ae1e2a3a42f578562e312eb2c0eba78221417e",
+  "deployment": "dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+  "pages": [
+    {
+      "path": "/banner/dashboard/plan",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "path": "/banner/dashboard/settings",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "path": "/seo/dashboard/plan",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "path": "/banner/pricing",
+      "status": 200,
+      "deploymentMarker": true
+    }
+  ],
+  "chunks": [
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/13251-0b33e7a86440fe2e.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/14291-71bccb1d25a9a803.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/14566-41ef404e67f4252a.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/16143-cafce21353c52c2e.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/22144-75b90a2988037a9d.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/22663-a587b136922ce1c8.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/31255-77fde989cc6bf275.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/33945-b814668700f2119d.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/36489-33ba2dd285a1851f.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/46566-eacab4f50b9115be.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/4bd1b696-2135e4d8b8354323.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/51219-3a91dd3dd8c6a8d5.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/52619-c48a18d6f62d2371.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/57572-d3497a570861b15f.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/63576-cfab44de43e83941.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/71708-4efdc8e9d5c66a4e.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/81356-b1359e1ff652042a.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/82899-9f324d52c7cfd87e.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/89421-637b6b061dfd0742.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/95223-3ba5c598ffa87780.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/99374-34f7818e7876d28a.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/banner/dashboard/plan/page-1ec48b27c4203097.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": true,
+      "unifiedCancellationMessage": true,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/banner/dashboard/settings/page-6b31b8b4294081e7.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": true,
+      "unifiedCancellationMessage": true,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/banner/layout-11df8efead34c1ab.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/banner/pricing/page-126898ac8bd3b57c.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/error-8259e49cb350fc72.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/layout-0e7c57afacba65bc.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/not-found-a8e4f81d84f55582.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/seo/dashboard/plan/page-ba393ba23f73f559.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": true,
+      "unifiedCancellationMessage": true,
+      "seoFreeLimitCopy": true
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/main-app-abf71c5d868c84e9.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/polyfills-42372ed130431b0a.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/webpack-37f7aa803a5f91fc.js?dpl=dpl_6DKt8LHRqsDtKr5uiCfTmig7ddnp",
+      "status": 200,
+      "boundedManagementMessage": false,
+      "unifiedCancellationMessage": false,
+      "seoFreeLimitCopy": false
+    }
+  ],
+  "scope": "Anonymous HTML/JS only; authenticated billing/device QA not established"
+}

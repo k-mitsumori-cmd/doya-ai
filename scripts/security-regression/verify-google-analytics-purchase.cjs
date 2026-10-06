@@ -3,7 +3,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const dom=new JSDOM('<!doctype html><div id="root"></div>',{url:'https://example.invalid/persona',runScripts:'outside-only'});global.window=dom.window;global.document=dom.window.document;global.navigator=dom.window.navigator;global.IS_REACT_ACT_ENVIRONMENT=true;
 const {createRoot}=require('react-dom/client'),calls=[];window.gtag=(...args)=>calls.push(args);
 let fixtureSession=null;const scriptProps=[];
-const mocks={'react':React,'react/jsx-runtime':require('react/jsx-runtime'),'next/script':props=>{scriptProps.push(props);return null},'next-auth/react':{useSession:()=>({data:fixtureSession})},'next/navigation':{usePathname:()=>'/persona'}};
+const mocks={'react':React,'react/jsx-runtime':require('react/jsx-runtime'),'next/script':props=>{scriptProps.push(props);return null},'next-auth/react':{useSession:()=>({data:fixtureSession,status:fixtureSession?'authenticated':'unauthenticated'})},'next/navigation':{usePathname:()=>'/persona'}};
+const {load}=require('./load-typescript.cjs');const unified=load('src/lib/unified-plan.ts');mocks['@/lib/services']=load('src/lib/services.ts',{'./unified-plan':unified});
 const exportsObject={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/components/GoogleAnalytics.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports:exportsObject,require:n=>{assert.ok(n in mocks,n);return mocks[n]},window,document,location:window.location,localStorage:window.localStorage,sessionStorage:window.sessionStorage,URLSearchParams,Date,Set,process:{env:{NEXT_PUBLIC_GA_ID:'G-SYNTHETIC'}}});
 (async()=>{const root=createRoot(document.getElementById('root'));await React.act(async()=>root.render(React.createElement(React.StrictMode,null,React.createElement(exportsObject.GoogleAnalytics))));let passed=0;
  const emit=detail=>window.dispatchEvent(new dom.window.CustomEvent('doya:checkout-verified',{detail})),purchases=()=>calls.filter(x=>x[1]==='purchase');
@@ -17,7 +18,7 @@ const exportsObject={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('sr
  window.localStorage.clear();window.sessionStorage.clear();window.gtag=undefined;fixtureSession={user:{id:'synthetic-user',firstLoginAt:new Date().toISOString()}};
  const delayedRoot=createRoot(document.getElementById('root'));await React.act(async()=>delayedRoot.render(React.createElement(React.StrictMode,null,React.createElement(exportsObject.GoogleAnalytics))));
  const early={sessionId:'cs_early',plan:'PRO',paymentStatus:'paid',amountTotal:9980,currency:'JPY',subscriptionStatus:'active'};
- emit(early);emit(early);assert.equal(window.localStorage.getItem('ga_subscription_verified_cs_early'),null);assert.equal(window.localStorage.getItem('ga_signup_sent'),null);assert.equal(window.sessionStorage.getItem('ga_login_sent'),null);assert.equal(window.sessionStorage.getItem('ga_tool_open_persona'),null);
+ emit(early);emit(early);assert.equal(window.localStorage.getItem('ga_subscription_verified_cs_early'),null);assert.equal(window.localStorage.getItem('ga_signup_sent:synthetic-user'),null);assert.equal(window.sessionStorage.getItem('ga_login_sent:synthetic-user'),null);assert.equal(window.sessionStorage.getItem('ga_tool_open:synthetic-user:persona'),null);
  await React.act(async()=>dom.window.eval(scriptProps.find(p=>p.id==='ga-gtag-init').dangerouslySetInnerHTML.__html));
  const queuedEvents=()=>Array.from(window.dataLayer||[]).filter(a=>a[0]==='event');
  assert.equal(queuedEvents().filter(a=>a[1]==='purchase').length,1);assert.equal(queuedEvents().find(a=>a[1]==='purchase')[2].value,9980);

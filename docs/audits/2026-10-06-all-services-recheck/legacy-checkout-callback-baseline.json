@@ -51,5 +51,9 @@
     }
   ],
   "nextRepair": "Bounded shared checkout mechanism with synchronous duplicate lock, actor scope, strict HTTPS destination and HTTP/schema confirmation; inspect legacy plan identifiers before integrating",
-  "scope": "Callback-level evidence only; no full mounted or live pricing flow proof"
+  "scope": "Callback-level evidence only; no full mounted or live pricing flow proof",
+  "currentImpactClassification": {
+    "evidence": "legacy-checkout-public-reachability.json",
+    "result": "Preserved dormant-source callback defects; six production entrances308to/. These are retired services, not current active checkout user flows. Do not reactivate checkout as a repair."
+  }
 }
