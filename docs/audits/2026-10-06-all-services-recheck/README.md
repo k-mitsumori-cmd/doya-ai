@@ -9,7 +9,12 @@
 - `31c684bb`：登録判定を実際のアカウント作成時刻に変更し、最初の処理を原子的に確保。CI成功・本番READY・17ページ/53公開JSの反映を確認済み。`registration-repair.json` / `registration-deployment-tracking-31c684bb.json` / `registration-public-31c684bb.json`。検証専用PostgreSQLの同時要求は本番DBや実通知配信の確認ではありません。
 - `cfa92165`：4バナー画面の共有上限判定を利用者切り替え・通信停止に対応。実フック13項目と応答読取10項目、全体ゲートが通過。CI成功・本番READY・4ページ/33公開JSを確認済み。`banner-quota-client-repair.json` / `banner-quota-client-deployment-tracking-cfa92165.json`。
 - `de81037a` / `74cb5e58`：共通上限案内の古い状態が復活する問題と、Content-Lengthに依存した無制限のJSON解析を補修。38項目/12項目と全体ゲートが通過しmainへpush済み。`74cb5e58`のCI成功・本番READY・17ページ/53公開JSの反映を確認済みです。`service-limit-provider-repair.json` / `service-limit-observer-repair.json` / `service-limit-observer-deployment-tracking-74cb5e58.json`。
-- バナーのプラン画面の統計：ログイン済み利用者の切り替えで以前の枚数が残る問題を実画面で再現し、統計だけを利用者・プラン単位に分離。12項目の画面検証と、既存の課金管理72項目・再同期43項目が通過。全体ゲートも通過しソース変化なし。本番反映は別途確認中です。`banner-plan-stats-baseline.json` / `banner-plan-stats-current.json` / `banner-plan-stats-repair.json`。
+- バナーのプラン画面の統計：ログイン済み利用者の切り替えで以前の枚数が残る問題を実画面で再現し、統計だけを利用者・プラン単位に分離。12項目の画面検証と、既存の課金管理72項目・再同期43項目が通過。全体ゲートも通過しソース変化なし。`5a2ad81a`の本番READYとプラン画面の27公開JSを確認済みです。`banner-plan-stats-public-5a2ad81a.json`。`banner-plan-stats-baseline.json` / `banner-plan-stats-current.json` / `banner-plan-stats-repair.json`。
+
+- `c5257709` / `266c7368`：共通使用状況の利用者分離・不正応答対策と、バナーの使用数更新通知を補修。いずれもCI成功・本番READY。後者の公開4画面/32JSで、前者を含むコードと通知が本番にあることを確認。`banner-sidebar-public-266c7368.json`。
+- `8dfe4ece`：ペルソナ利用枠を認証・利用者・プラン・更新単位に分離し、予約枠/残りの整合性と通信上限を検証。11項目と実サイドバー連携、全体ゲート通過・main反映・CI成功。本番READY/公開反映は追跡中です。`persona-usage-repair.json`。
+- 共通サイドバー9サービス：経路遷移後とSEO/バナー個別プラン変更時の残数更新を29項目で確認。SEOの古い二重取得を廃止し、「PROで生成し放題」を月30回の正しい案内に修正。実SEOサイドバー/共通パネル/React Contextを組み合わせた6項目と全体ゲートが通過。`sidebar-route-repair.json`。本番反映はこの節の記録時点では未確認です。
+- 次の未修正事項：インタビューの文字起こしサイドバーが処理中の予約分数を差し引かない問題を実表示で再現。2分使用・28分予約・上限30分の合成応答で「残り28分」を表示しました。`interview-usage-baseline.json`。本番データや実生成での再現を確認したものではありません。
 
 これらは主に実コードと合成認証・応答を用いた検証です。全17サービスの認証後の実業務、実機、外部認証完了、実課金、実AI生成を確認済みとするものではありません。CLIENT_FETCH_ERRORの原因・復旧、本番DBの全制約照合など、残る要件の監査を続けます。
 

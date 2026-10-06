@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-06T17:49:25.647280+00:00",
+  "commit": "266c73683540add9e7b36d6e16d4116aec21f8e6",
+  "deployment": "dpl_HjojUYiYDgTFziw7UfUCxB3ffF1D",
+  "pages": [
+    "/banner/dashboard",
+    "/banner/test",
+    "/banner/dashboard/create",
+    "/banner/dashboard/chat"
+  ],
+  "scripts": 32,
+  "checks": {
+    "pages200": true,
+    "exactDeployment": true,
+    "scripts200": true,
+    "actorScopedRefreshPublished": true,
+    "strictUsageValidationPublished": true
+  },
+  "scope": "Anonymous banner HTML and published quota notification/shared usage implementation, including inherited c525 patch. No authenticated generation or all-service UI proof."
+}

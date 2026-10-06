@@ -1,0 +1,10 @@
+{
+  "status": "reproduced",
+  "usedMinutes": 2,
+  "reservedMinutes": 28,
+  "limitMinutes": 30,
+  "actualReservableRemaining": 0,
+  "displayedRemaining": 28,
+  "lookupRequests": 1,
+  "scope": "Actual transcription usage component; synthetic valid reserved-minute response only. No live transcript or customer data."
+}

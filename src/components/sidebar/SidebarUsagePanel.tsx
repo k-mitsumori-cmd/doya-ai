@@ -10,6 +10,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
+import { usePathname } from 'next/navigation'
 import { readBillingResponse } from '@/lib/billing-response-client'
 
 interface Meter {
@@ -94,10 +95,12 @@ export function SidebarUsagePanel({
 }) {
   const requestUrl = `/api/usage/${service}${organizationSlug ? `?org=${encodeURIComponent(organizationSlug)}` : ''}`
   const { data: session, status } = useSession()
-  const user = session?.user as { id?: string; email?: string; plan?: string } | undefined
+  const pathname = usePathname()
+  const user = session?.user as { id?: string; email?: string; plan?: string; bannerPlan?: string; seoPlan?: string } | undefined
   const actor = user?.id || user?.email || ''
   const allowed = status === 'authenticated' && Boolean(actor)
-  const scope = JSON.stringify([status, actor, user?.plan, requestUrl, refreshEvent])
+  const servicePlan = service === 'banner' ? user?.bannerPlan : service === 'seo' ? user?.seoPlan : undefined
+  const scope = JSON.stringify([status, actor, user?.plan, servicePlan, pathname, requestUrl, refreshEvent])
   const epoch = useRef({ scope, version: 0 })
   if (epoch.current.scope !== scope) epoch.current = { scope, version: epoch.current.version + 1 }
   const key = JSON.stringify([scope, epoch.current.version])

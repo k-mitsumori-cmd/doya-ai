@@ -1,6 +1,6 @@
 'use client'
 
-import React, { memo, useMemo, useState, useEffect } from 'react'
+import React, { memo, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -29,6 +29,9 @@ import {
   useFreeHour,
   SidebarUsagePanel,
 } from '@/components/sidebar'
+import { SEO_PRICING } from '@/lib/pricing'
+import { higherPlan } from '@/lib/plan-utils'
+import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
 import type { SidebarProps } from '@/components/sidebar'
 
 type SeoNavItem = {
@@ -54,7 +57,7 @@ function SeoSidebarImpl({
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
   // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
-  //    表示だけを止める（fetch は止めない。Cookie認証なので未確定でも応答する）
+  //    表示を止め、使用状況の取得は共通パネルで認証状態を確認する。
   const sessionReady = sessionStatus !== 'loading'
   const { isCollapsed, showLabel, toggle } = useSidebarState({ controlledIsCollapsed, onToggle, forceExpanded, isMobile })
   const isLoggedIn = !!session?.user
@@ -63,25 +66,8 @@ function SeoSidebarImpl({
 
   // プラン判定
   const seoPlanLabel = useMemo(() => {
-    const seoPlan = String((session?.user as any)?.seoPlan || '').toUpperCase()
-    const globalPlan = String((session?.user as any)?.plan || '').toUpperCase()
-    const p = seoPlan || globalPlan || (isLoggedIn ? 'FREE' : 'GUEST')
-    if (p === 'ENTERPRISE') return 'ENTERPRISE'
-    if (p === 'PRO') return 'PRO'
-    if (p === 'LIGHT') return 'LIGHT'
-    if (p === 'FREE') return 'FREE'
-    return isLoggedIn ? 'FREE' : 'GUEST'
+    return isLoggedIn ? higherPlan((session?.user as any)?.seoPlan, (session?.user as any)?.plan) : 'GUEST'
   }, [session, isLoggedIn])
-
-  // 残り記事数
-  const [entitlements, setEntitlements] = useState<{ remaining?: { articles?: number }; limits?: { articlesPerMonth?: number } } | null>(null)
-  useEffect(() => {
-    if (!isLoggedIn) return
-    fetch('/api/seo/entitlements', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((j) => { if (j?.success) setEntitlements(j) })
-      .catch(() => {})
-  }, [isLoggedIn])
 
   // 1時間生成し放題
   const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
@@ -181,7 +167,7 @@ function SeoSidebarImpl({
           <SidebarFreeHourBanner freeHourRemainingMs={freeHourRemainingMs} isCollapsed={isCollapsed} isMobile={isMobile} />
         )}
 
-        {/* プラン案内バナー（SEO固有: entitlements表示） */}
+        {/* プラン案内バナー（使用状況は共通パネルに集約） */}
         {/* 作った数と残り。数字は /api/usage/seo から受け取るだけ */}
         <SidebarUsagePanel service="seo" show={sessionReady && (isMobile || !isCollapsed)} />
         {sessionReady && !(isFreeHourActive && freeHourRemainingMs > 0) && showLabel && (
@@ -196,36 +182,10 @@ function SeoSidebarImpl({
               <p className="text-[11px] text-white font-bold leading-relaxed mb-1">
                 現在：{seoPlanLabel === 'GUEST' ? 'ゲスト' : seoPlanLabel === 'FREE' ? '無料' : seoPlanLabel}
               </p>
-              {entitlements && (() => {
-                const remaining = entitlements.remaining?.articles
-                const limit = entitlements.limits?.articlesPerMonth
-                if (remaining === -1) return (
-                  <p className="text-[10px] text-emerald-200 font-black mb-1.5">生成し放題</p>
-                )
-                if (typeof remaining === 'number' && typeof limit === 'number' && limit > 0) {
-                  const used = limit - remaining
-                  const pct = Math.min((used / limit) * 100, 100)
-                  return (
-                    <div className="mb-1.5">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] text-emerald-100 font-black">残り{remaining}/{limit}回</span>
-                        <span className="text-[9px] text-emerald-200/60 font-bold">/ 月</span>
-                      </div>
-                      <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${remaining <= 0 ? 'bg-red-400' : pct >= 80 ? 'bg-amber-400' : 'bg-white'}`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  )
-                }
-                return null
-              })()}
               <p className="text-[10px] text-emerald-100 font-bold leading-relaxed opacity-80">
                 {seoPlanLabel === 'PRO' || seoPlanLabel === 'ENTERPRISE'
                   ? <>さらに上限UP：要相談</>
-                  : <>プロ: 月額¥9,980<TrialInlineSuffix />で生成し放題に</>}
+                  : <>プロ: 月額{UNIFIED_PRO_PRICE_LABEL}<TrialInlineSuffix />で月{SEO_PRICING.proLimit}回まで</>}
               </p>
               <Link
                 href={isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing'}

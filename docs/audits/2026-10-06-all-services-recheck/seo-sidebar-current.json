@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "checks": [
+    "Actual free upsell states PRO monthly cap with one server-owned usage display",
+    "Persistent sidebar refreshes after client route navigation",
+    "Real context update bypasses memo and replaces old actor usage",
+    "Global paid entitlement is not hidden by stale service FREE",
+    "Service-specific paid grant remains visible",
+    "Loading context hides private usage without another lookup"
+  ],
+  "usageRequests": 5,
+  "scope": "Actual memoized SEO sidebar, common panel, canonical pricing and bounded reader with real React context updates under StrictMode; synthetic read-only replies only."
+}

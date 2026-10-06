@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-06T17:47:26.874232+00:00",
+  "status": "Full build/lint gate passed; 2566 runtime inputs unchanged",
+  "fullGate": "docs/audits/2026-10-06-all-services-recheck/sidebar-route-release-cd5ffa06-2ab2-4693-a1af-d801ab25ef3a",
+  "baseline": [
+    "sidebar-route-refresh-baseline.json",
+    "seo-sidebar-baseline.json"
+  ],
+  "current": [
+    "sidebar-route-refresh-current.json",
+    "seo-sidebar-current.json"
+  ],
+  "changes": [
+    "Refresh shared private usage on route and service plan transitions, retaining transition epochs",
+    "Remove stale duplicate SEO entitlement lookup and numeric display",
+    "Replace PRO unlimited upsell with canonical monthly cap and price",
+    "Use the same higher-plan comparison for the SEO plan label"
+  ],
+  "scope": "All 9 shared-panel consumers under synthetic mounted route tests plus actual memoized SEO sidebar context integration. Same-route mutation completion in remaining services and full 17-service production flows remain unverified."
+}

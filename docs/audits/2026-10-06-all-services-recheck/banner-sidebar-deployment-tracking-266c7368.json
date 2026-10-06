@@ -1,0 +1,49 @@
+{
+  "checkedAt": "2026-10-06T17:41:01.084586+00:00",
+  "commit": "266c73683540add9e7b36d6e16d4116aec21f8e6",
+  "state": "CI success; production READY; 4 anonymous pages and 32 published JS verified",
+  "ci": {
+    "id": 37504947169,
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "deployments": [
+    {
+      "id": null,
+      "url": "doya-8n4w4mkfc-surisutas-projects.vercel.app",
+      "state": "BUILDING",
+      "target": "production"
+    }
+  ],
+  "localProof": "banner-sidebar-refresh-repair.json",
+  "precedingDeployment": {
+    "id": "dpl_2HzLpaxuDCLfv27JdtsZFqc1isTT",
+    "url": "doya-oyh114y0l-surisutas-projects.vercel.app",
+    "target": "production",
+    "readyState": "BUILDING",
+    "aliases": [
+      "doya-ai-surisutas-projects.vercel.app",
+      "doya-ai-git-main-surisutas-projects.vercel.app"
+    ],
+    "checkedAt": "2026-10-06T17:40:49.491361+00:00"
+  },
+  "next": [
+    "Verify exact-SHA CI and production READY/public bundle",
+    "Finish persona usage full gate before committing",
+    "Continue the 7 remaining shared-sidebar wiring audits and full 17-service criteria"
+  ],
+  "deployment": {
+    "id": "dpl_HjojUYiYDgTFziw7UfUCxB3ffF1D",
+    "url": "doya-8n4w4mkfc-surisutas-projects.vercel.app",
+    "target": "production",
+    "readyState": "READY",
+    "aliases": [
+      "doya-ai.vercel.app",
+      "doya-ai.surisuta.jp",
+      "doya-ai-surisutas-projects.vercel.app",
+      "doya-ai-git-main-surisutas-projects.vercel.app"
+    ],
+    "checkedAt": "2026-10-06T17:49:03.026446+00:00"
+  },
+  "publicProof": "banner-sidebar-public-266c7368.json"
+}

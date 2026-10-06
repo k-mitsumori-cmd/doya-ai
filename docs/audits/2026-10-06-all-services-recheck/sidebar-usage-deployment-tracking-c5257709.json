@@ -1,7 +1,7 @@
 {
   "checkedAt": "2026-10-06T17:36:49.663901+00:00",
   "commit": "c5257709ed06882ab64275ec9721b1e166adaa7e",
-  "state": "Pushed; CI passed; production build still in progress",
+  "state": "CI success and production READY; public shared-code publication verified in descendant 266c7368 after alias advanced",
   "localEvidence": "sidebar-usage-repair.json",
   "precedingProductionCommit": "5a2ad81aca5804723fe8901fabc5a52418866ffc",
   "precedingCi": {
@@ -28,6 +28,15 @@
   "deployment": {
     "id": "dpl_2HzLpaxuDCLfv27JdtsZFqc1isTT",
     "url": "doya-oyh114y0l-surisutas-projects.vercel.app",
-    "state": "BUILDING"
-  }
+    "target": "production",
+    "readyState": "READY",
+    "aliases": [
+      "doya-ai.vercel.app",
+      "doya-ai.surisuta.jp",
+      "doya-ai-surisutas-projects.vercel.app",
+      "doya-ai-git-main-surisutas-projects.vercel.app"
+    ],
+    "checkedAt": "2026-10-06T17:47:57.569942+00:00"
+  },
+  "inheritedPublicProof": "banner-sidebar-public-266c7368.json"
 }
