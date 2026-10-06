@@ -1,3 +1,6 @@
+// React act() requires the test runtime; this script runs in its own child process.
+// Vercel sets NODE_ENV=production for the parent build, which must stay unchanged.
+process.env.NODE_ENV = 'test';
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict'),crypto=require('node:crypto'),React=require('react'),{JSDOM}=require('jsdom');
 const root=path.resolve(__dirname,'../..'),file='src/app/interview/projects/[id]/transcribe/page.tsx',source=fs.readFileSync(path.join(root,file),'utf8');
 const dom=new JSDOM('<!doctype html><div id="root"></div>',{url:'https://example.invalid/interview/projects/project/transcribe?materialId=material'});dom.window.HTMLElement.prototype.scrollIntoView=function(){};global.window=dom.window;global.document=dom.window.document;global.navigator=dom.window.navigator;global.IS_REACT_ACT_ENVIRONMENT=true;const {createRoot}=require('react-dom/client');

@@ -1,0 +1,17 @@
+{
+  "recordedAt": "2026-10-06T09:08:01.340794+00:00",
+  "buildSession": 52683,
+  "log": "/tmp/doya-interview-production-build-fix-20261006.log",
+  "parentNodeEnv": "production",
+  "status": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T09:14:04.203120+00:00",
+  "changedSources": [],
+  "lintExitCode": 0,
+  "sourceCount": 2321,
+  "testHash": "832eec5e96c8b25374f45289be01330250d61a9a1941ad1543cb2d38bb922761",
+  "baseline": "NODE_ENV=production mounted test failed before correction; after correction10 mounted assertions pass with unchanged production parent. Full build and separate repository lint exit0.",
+  "productionWrites": false,
+  "scope": "Test child process NODE_ENV override only; source product and production env remain unchanged.",
+  "fullManifest": "/tmp/doya-interview-production-build-fix-state.json"
+}
