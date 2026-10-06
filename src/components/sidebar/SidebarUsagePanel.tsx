@@ -134,7 +134,11 @@ export function SidebarUsagePanel({
       })
     }
     const focus = () => load()
-    const refresh = () => load(true)
+    const refresh = (event: Event) => {
+      // Banner notifications originate from an actor-scoped quota response.
+      if (refreshEvent === 'banner:usage-changed' && (event as CustomEvent<{ actor?: string }>).detail?.actor !== actor) return
+      load(true)
+    }
     load()
     window.addEventListener('focus', focus)
     if (refreshEvent) window.addEventListener(refreshEvent, refresh)
@@ -144,7 +148,7 @@ export function SidebarUsagePanel({
       window.removeEventListener('focus', focus)
       if (refreshEvent) window.removeEventListener(refreshEvent, refresh)
     }
-  }, [allowed, key, requestUrl, refreshEvent])
+  }, [allowed, key, requestUrl, refreshEvent, actor])
 
   if (!show || !summary) return null
 

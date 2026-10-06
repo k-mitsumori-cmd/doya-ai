@@ -1,0 +1,7 @@
+{
+  "status": "fixed",
+  "quotaUsed": 15,
+  "sidebarStale": false,
+  "sidebarRequests": 4,
+  "scope": "Actual mounted quota hook and shared panel with current banner consumer props; synthetic successful quota refresh, not actual page generation or live account."
+}

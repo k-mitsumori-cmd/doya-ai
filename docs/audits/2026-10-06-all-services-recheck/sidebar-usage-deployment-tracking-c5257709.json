@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-06T17:36:49.663901+00:00",
+  "commit": "c5257709ed06882ab64275ec9721b1e166adaa7e",
+  "state": "Pushed; CI passed; production build still in progress",
+  "localEvidence": "sidebar-usage-repair.json",
+  "precedingProductionCommit": "5a2ad81aca5804723fe8901fabc5a52418866ffc",
+  "precedingCi": {
+    "id": 37502438451,
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "precedingDeployment": {
+    "id": "dpl_Dn4AFMaFZNwKo4VmJHReBfXdWuMc",
+    "state": "READY",
+    "publicProof": "banner-plan-stats-public-5a2ad81a.json"
+  },
+  "next": [
+    "Verify preceding READY and public plan-stats code",
+    "Push checked sidebar repair and verify exact-SHA CI/READY/public code",
+    "Verify immediate usage refresh after generation for 9 consumers",
+    "Continue all 17-service requirement/user-experience audit"
+  ],
+  "ci": {
+    "id": 37504154128,
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "deployment": {
+    "id": "dpl_2HzLpaxuDCLfv27JdtsZFqc1isTT",
+    "url": "doya-oyh114y0l-surisutas-projects.vercel.app",
+    "state": "BUILDING"
+  }
+}

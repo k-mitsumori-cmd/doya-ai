@@ -252,7 +252,7 @@ function DashboardSidebarImpl({
 
         {/* Side Banner（プラン案内） */}
         {/* 作った数と残り。数字は /api/usage/banner から受け取るだけ */}
-        <SidebarUsagePanel service="banner" show={sessionReady && (isMobile || !isCollapsed)} />
+        <SidebarUsagePanel service="banner" show={sessionReady && (isMobile || !isCollapsed)} refreshEvent="banner:usage-changed" />
         <SidebarBanner />
 
         <ToolSwitcherMenu currentService="banner" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 sm:px-4 pb-2" />

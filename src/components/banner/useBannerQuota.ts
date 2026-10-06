@@ -52,6 +52,7 @@ export function useBannerQuota(onLimit: (prompt: LimitPrompt) => void) {
         const next = parseBannerQuota(await readBannerQuotaResponse(controller.signal))
         if (!current()) return null
         setSnapshot({ key, usage: next, error: !next })
+        if (next) window.dispatchEvent(new window.CustomEvent('banner:usage-changed', { detail: { actor } }))
         return next
       } catch {
         if (current()) setSnapshot({ key, usage: null, error: true })
@@ -63,7 +64,7 @@ export function useBannerQuota(onLimit: (prompt: LimitPrompt) => void) {
     })
     pending.current = { key, controller, task }
     return task
-  }, [key, allowed])
+  }, [key, allowed, actor])
 
   useEffect(() => {
     if (!allowed) return
@@ -88,8 +89,9 @@ export function useBannerQuota(onLimit: (prompt: LimitPrompt) => void) {
       requestId.current++
       if (pending.current?.key === key) { pending.current.controller.abort(); pending.current = null }
       setSnapshot({ key, usage: next, error: false })
+      window.dispatchEvent(new window.CustomEvent('banner:usage-changed', { detail: { actor } }))
     }
-  }, [key, allowed])
+  }, [key, allowed, actor])
 
   const showLimit = useCallback((next: BannerQuota) => {
     if (mounted.current && activeKey.current === key) onLimit({ open: true, used: next.used, limit: next.limit ?? undefined })
