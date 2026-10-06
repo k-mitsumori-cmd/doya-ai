@@ -1,0 +1,131 @@
+{
+  "passed": 25,
+  "scope": "Actual AST-extracted callbacks; synthetic auth/fetch/clock/cache/refs/state. No real DB/API requests.",
+  "results": [
+    {
+      "file": "src/app/banner/gallery/page.tsx",
+      "name": "fetchPage",
+      "scenario": "pending"
+    },
+    {
+      "file": "src/app/banner/gallery/page.tsx",
+      "name": "fetchPage",
+      "scenario": "invalid"
+    },
+    {
+      "file": "src/app/banner/gallery/page.tsx",
+      "name": "fetchPage",
+      "scenario": "body_error"
+    },
+    {
+      "file": "src/app/banner/gallery/page.tsx",
+      "name": "fetchPage",
+      "scenario": "network"
+    },
+    {
+      "file": "src/app/banner/gallery/page.tsx",
+      "name": "fetchPage",
+      "scenario": "success"
+    },
+    {
+      "file": "src/app/banner/dashboard/history/page.tsx",
+      "name": "loadHistory",
+      "scenario": "pending"
+    },
+    {
+      "file": "src/app/banner/dashboard/history/page.tsx",
+      "name": "loadHistory",
+      "scenario": "invalid"
+    },
+    {
+      "file": "src/app/banner/dashboard/history/page.tsx",
+      "name": "loadHistory",
+      "scenario": "body_error"
+    },
+    {
+      "file": "src/app/banner/dashboard/history/page.tsx",
+      "name": "loadHistory",
+      "scenario": "network"
+    },
+    {
+      "file": "src/app/banner/dashboard/history/page.tsx",
+      "name": "loadHistory",
+      "scenario": "success"
+    },
+    {
+      "file": "src/app/banner/dashboard/history/page.tsx",
+      "name": "loadMore",
+      "scenario": "pending"
+    },
+    {
+      "file": "src/app/banner/dashboard/history/page.tsx",
+      "name": "loadMore",
+      "scenario": "invalid"
+    },
+    {
+      "file": "src/app/banner/dashboard/history/page.tsx",
+      "name": "loadMore",
+      "scenario": "body_error"
+    },
+    {
+      "file": "src/app/banner/dashboard/history/page.tsx",
+      "name": "loadMore",
+      "scenario": "network"
+    },
+    {
+      "file": "src/app/banner/dashboard/history/page.tsx",
+      "name": "loadMore",
+      "scenario": "success"
+    },
+    {
+      "file": "src/app/banner/dashboard/stats/page.tsx",
+      "name": "loadHistory",
+      "scenario": "pending"
+    },
+    {
+      "file": "src/app/banner/dashboard/stats/page.tsx",
+      "name": "loadHistory",
+      "scenario": "invalid"
+    },
+    {
+      "file": "src/app/banner/dashboard/stats/page.tsx",
+      "name": "loadHistory",
+      "scenario": "body_error"
+    },
+    {
+      "file": "src/app/banner/dashboard/stats/page.tsx",
+      "name": "loadHistory",
+      "scenario": "network"
+    },
+    {
+      "file": "src/app/banner/dashboard/stats/page.tsx",
+      "name": "loadHistory",
+      "scenario": "success"
+    },
+    {
+      "file": "src/app/seo/jobs/[id]/page.tsx",
+      "name": "load",
+      "scenario": "pending"
+    },
+    {
+      "file": "src/app/seo/jobs/[id]/page.tsx",
+      "name": "load",
+      "scenario": "invalid"
+    },
+    {
+      "file": "src/app/seo/jobs/[id]/page.tsx",
+      "name": "load",
+      "scenario": "body_error"
+    },
+    {
+      "file": "src/app/seo/jobs/[id]/page.tsx",
+      "name": "load",
+      "scenario": "network"
+    },
+    {
+      "file": "src/app/seo/jobs/[id]/page.tsx",
+      "name": "load",
+      "scenario": "success"
+    }
+  ]
+}

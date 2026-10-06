@@ -1,0 +1,16 @@
+AssertionError [ERR_ASSERTION]: Expected "actual" to be reference-equal to "expected":
++ actual - expected
+
++ []
+- [
+-   'data:image/png;base64,old'
+- ]
+
+    at /private/tmp/doya-verify-banner-remaining-20261006.cjs:5:688 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [],
+  expected: [Array],
+  operator: 'strictEqual',
+  diff: 'simple'
+}

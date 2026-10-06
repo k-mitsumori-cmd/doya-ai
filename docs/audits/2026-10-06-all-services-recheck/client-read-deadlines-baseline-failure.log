@@ -1,0 +1,12 @@
+AssertionError [ERR_ASSERTION]: src/app/banner/gallery/page.tsx fetchPage must retain body timer
+
+0 !== 1
+
+    at /Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-client-read-deadlines.cjs:8:383 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

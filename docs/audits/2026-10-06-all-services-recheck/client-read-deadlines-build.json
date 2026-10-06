@@ -1,0 +1,19 @@
+{
+  "runId": "747c506d-fa72-4e00-b4bb-d929837a8825",
+  "startedAt": "2026-10-06T03:20:02.160830+00:00",
+  "pid": 7504,
+  "sourceHashes": {
+    "src/app/banner/gallery/page.tsx": "9ee34a66d7c3d05a841f496e2ddee2f8ebccb5cd396656fc891f0c68ba6a5026",
+    "src/app/banner/dashboard/history/page.tsx": "a07e599b49a31451b5f75b37bb17b4b1d6d1d61b28809d75b0f99cb810b5e59f",
+    "src/app/banner/dashboard/stats/page.tsx": "becc49a8620c213b662a2b4ce2dd52b3543e09eef7cbdf90901bdc7e3103ee49",
+    "src/app/seo/jobs/[id]/page.tsx": "fa10b8cba924e9f71e32cbbd3b9a453e0521ed3245f415fe35ed5694ed5e9863",
+    "scripts/security-regression/verify-client-read-deadlines.cjs": "721c316f89dbcbc56311fefd8de7dd701baa1a7fc67d47436f5e08bef87720b6",
+    "scripts/security-regression/run.cjs": "5821ddd6523fc44b4510a55859801073eb8765c27b0ed6aff28bffecb81e7dbe"
+  },
+  "state": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T03:25:06.583501+00:00",
+  "changedSources": [],
+  "rawLogPath": "/tmp/doya-client-read-deadlines-build-20261006.log",
+  "rawLogSha256": "373995d114ef912b6b9faec2978e31040e86c0d265d14ce84beafde2cd3143fa"
+}

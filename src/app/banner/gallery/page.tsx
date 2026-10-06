@@ -199,11 +199,15 @@ export default function BannerGalleryPage() {
     if (nextCursor) qs.set('cursor', nextCursor)
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), 15_000)
-    const res = await fetch(`/api/banner/gallery?${qs.toString()}`, { signal: controller.signal })
-    window.clearTimeout(timeout)
-    const json = await res.json()
-    if (!res.ok) throw new Error(json?.error || 'ギャラリーの取得に失敗しました')
-    return json as { items: GalleryItem[]; nextCursor: string | null }
+    try {
+      const res = await fetch(`/api/banner/gallery?${qs.toString()}`, { signal: controller.signal })
+      const json = await res.json()
+      if (!res.ok) throw new Error(typeof json?.error === 'string' ? json.error : 'ギャラリーの取得に失敗しました')
+      if (!json || !Array.isArray(json.items) || !(json.nextCursor === null || typeof json.nextCursor === 'string')) throw new Error('ギャラリーの応答を確認できませんでした。再試行してください。')
+      return json as { items: GalleryItem[]; nextCursor: string | null }
+    } finally {
+      window.clearTimeout(timeout)
+    }
   }
 
   const fetchFullImage = async (id: string): Promise<string> => {

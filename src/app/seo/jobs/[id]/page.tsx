@@ -31,6 +31,8 @@ import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 import { FeatureGuide } from '@/components/FeatureGuide'
 import { EmptyState } from '@/components/EmptyState'
 
+class SeoJobReadError extends Error {}
+
 type SeoSection = {
   id: string
   index: number
@@ -412,22 +414,23 @@ export default function SeoJobPage() {
 
     if (showLoading) setLoading(true)
     setLoadError(null)
+    let t: ReturnType<typeof setTimeout> | undefined
     try {
       const controller = new AbortController()
       const timeoutMs = 12000
-      const t = setTimeout(() => controller.abort(), timeoutMs)
+      t = setTimeout(() => controller.abort(), timeoutMs)
       const res = await fetch(`/api/seo/jobs/${jobId}`, {
         cache: 'no-store',
         signal: controller.signal,
       })
-      clearTimeout(t)
-      const json = await res.json().catch(() => ({}))
+      const json = await res.json()
       if (!res.ok || json?.success === false) {
+        if ([401, 403, 404].includes(res.status)) setJob(null)
         // 404は「ジョブが存在しない」だけでなく「所有者チェックNG」でも返す（情報漏洩防止）
         // そのためUI側では分かりやすいガイドを出す
         const raw = String(json?.error || '').trim()
         if (res.status === 404 || raw === 'not found') {
-          throw new Error(
+          throw new SeoJobReadError(
             [
               'ジョブが見つかりませんでした。',
               '',
@@ -441,10 +444,11 @@ export default function SeoJobPage() {
             ].join('\n')
           )
         }
-        throw new Error(raw || `API Error: ${res.status}`)
+        throw new SeoJobReadError(raw || `API Error: ${res.status}`)
       }
 
-      const newJob = json.job || null
+      const newJob = json?.job
+      if (json?.success !== true || !newJob || newJob.id !== jobId || !Array.isArray(newJob.sections) || !newJob.article || newJob.article.id !== newJob.articleId) throw new SeoJobReadError('ジョブの応答を確認できませんでした。再読み込みしてください。')
       if (newJob) {
         setLastHeartbeatAt(Date.now())
         setJob(newJob)
@@ -533,11 +537,10 @@ export default function SeoJobPage() {
         }
       }
     } catch (e: any) {
-      if (showLoading || !jobRef.current) setJob(null)
       const msg =
         e?.name === 'AbortError'
           ? '読み込みがタイムアウトしました。再読み込みしてください。'
-          : e?.message || '読み込みに失敗しました'
+          : e instanceof SeoJobReadError ? e.message : 'ジョブを取得できませんでした。再読み込みしてください。'
       setLoadError(msg)
       pushLog({
         at: Date.now(),
@@ -545,9 +548,11 @@ export default function SeoJobPage() {
         title: '読み込みに失敗しました',
         detail: msg,
       })
+    } finally {
+      if (t !== undefined) clearTimeout(t)
+      if (showLoading) setLoading(false)
+      isPollingRef.current = false
     }
-    if (showLoading) setLoading(false)
-    isPollingRef.current = false
   }, [jobId, pushLog])
 
   const [cancelling, setCancelling] = useState(false)

@@ -189,6 +189,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
     setRequiresUpgrade(false)
     setErrorMessage(null)
     setPhase('list')
+    let timeout: number | undefined
     try {
       if (isGuest) {
         // ゲストは履歴閲覧不可（有料プラン限定）
@@ -197,10 +198,9 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
       } else {
         // ログインユーザーはAPIから取得
         const controller = new AbortController()
-        const timeout = window.setTimeout(() => controller.abort(), 15_000)
+        timeout = window.setTimeout(() => controller.abort(), 15_000)
         // まず一覧（画像なし + 最初の3枚だけthumb URL）を高速取得
         const res = await fetch('/api/banner/history?take=30&images=0', { signal: controller.signal })
-        window.clearTimeout(timeout)
         if (res.ok) {
           const data = await res.json()
           // 有料プラン限定チェック
@@ -210,7 +210,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
             setRequiresUpgrade(true)
             sessionStorage.removeItem(HISTORY_CACHE_KEY)
           } else {
-            if (!(data.nextCursor === null || typeof data.nextCursor === 'string')) throw new Error('履歴の取得位置が不正です')
+            if (!Array.isArray(data.items) || !(data.nextCursor === null || typeof data.nextCursor === 'string')) throw new Error('履歴の取得位置が不正です')
             const items = Array.isArray(data.items) ? data.items : []
             const list: HistoryItem[] = items.map((item: any) => ({
               id: item.id,
@@ -251,6 +251,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
         setErrorMessage('履歴の取得に失敗しました（再読み込み/再試行してください）')
       }
     } finally {
+      if (timeout !== undefined) window.clearTimeout(timeout)
       setIsLoaded(true)
       setIsLoading(false)
       setIsStale(false)
@@ -265,9 +266,9 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
       const controller = new AbortController()
       const timeout = window.setTimeout(() => controller.abort(), 15_000)
       let res: Response
-      try { res = await fetch(`/api/banner/history?take=30&images=0&cursor=${encodeURIComponent(nextCursor)}`, { signal: controller.signal }) }
+      let data: any
+      try { res = await fetch(`/api/banner/history?take=30&images=0&cursor=${encodeURIComponent(nextCursor)}`, { signal: controller.signal }); data = await res.json() }
       finally { window.clearTimeout(timeout) }
-      const data = await res.json()
       if (!res.ok || !Array.isArray(data.items) || !(data.nextCursor === null || typeof data.nextCursor === 'string') || data.nextCursor === nextCursor) throw new Error(data?.error || '古い履歴を読み込めませんでした')
       const page: HistoryItem[] = data.items.map((item: any) => ({
         id: item.id, category: item.category || '', keyword: item.keyword || '', size: item.size || '',

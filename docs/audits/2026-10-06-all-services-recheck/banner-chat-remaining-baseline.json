@@ -1,0 +1,37 @@
+{
+  "scope": "Actual AST-extracted remaining chat callbacks, synthetic fetch and state, no production API",
+  "results": [
+    {
+      "scenario": "invalid_chat_success",
+      "hasAbortSignal": false,
+      "images": [],
+      "input": "",
+      "assistant": [
+        "了解です。"
+      ],
+      "privateErrorShown": false
+    },
+    {
+      "scenario": "chat_network_failure",
+      "hasAbortSignal": false,
+      "images": [],
+      "input": "",
+      "assistant": [
+        "すみません、エラーが発生しました。もう一度お試しください。"
+      ],
+      "privateErrorShown": true
+    },
+    {
+      "scenario": "non_image_refine",
+      "hasAbortSignal": false,
+      "images": [
+        "data:text/html,synthetic"
+      ],
+      "input": "synthetic question",
+      "assistant": [
+        "修正できました。気になる点があれば、さらに指示して改善できます。"
+      ],
+      "privateErrorShown": false
+    }
+  ]
+}

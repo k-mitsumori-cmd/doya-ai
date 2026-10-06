@@ -130,9 +130,9 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
           const controller = new AbortController()
           const timeout = window.setTimeout(() => controller.abort(), 15_000)
           let res: Response
-          try { res = await fetch(`/api/banner/history?take=50&images=0${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, { signal: controller.signal }) }
+          let data: any
+          try { res = await fetch(`/api/banner/history?take=50&images=0${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, { signal: controller.signal }); data = await res.json() }
           finally { window.clearTimeout(timeout) }
-          const data = await res.json()
           if (!res.ok) throw new Error(data?.error || '統計の取得に失敗しました')
           if (data.requiresUpgrade) { setHistory([]); setRequiresUpgrade(true); sessionStorage.removeItem(STATS_CACHE_KEY); return }
           if (!Array.isArray(data.items) || !(data.nextCursor === null || typeof data.nextCursor === 'string')) throw new Error('履歴の応答が不正です')

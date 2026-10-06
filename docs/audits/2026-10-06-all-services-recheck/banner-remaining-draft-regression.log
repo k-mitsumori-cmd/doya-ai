@@ -1,0 +1,111 @@
+{
+  "passed": 21,
+  "scope": "Actual AST-extracted callbacks, synthetic state/quota/clock/fetch; no real provider/DB/API request",
+  "results": [
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleSend",
+      "scenario": "network"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleSend",
+      "scenario": "body_error"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleSend",
+      "scenario": "invalid"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleSend",
+      "scenario": "bad_result"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleSend",
+      "scenario": "quota"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleSend",
+      "scenario": "pending"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleSend",
+      "scenario": "success"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleRefine",
+      "scenario": "network"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleRefine",
+      "scenario": "body_error"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleRefine",
+      "scenario": "invalid"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleRefine",
+      "scenario": "bad_result"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleRefine",
+      "scenario": "quota"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleRefine",
+      "scenario": "pending"
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "name": "handleRefine",
+      "scenario": "success"
+    },
+    {
+      "file": "src/app/banner/dashboard/create/page.tsx",
+      "name": "handleRefine",
+      "scenario": "network"
+    },
+    {
+      "file": "src/app/banner/dashboard/create/page.tsx",
+      "name": "handleRefine",
+      "scenario": "body_error"
+    },
+    {
+      "file": "src/app/banner/dashboard/create/page.tsx",
+      "name": "handleRefine",
+      "scenario": "invalid"
+    },
+    {
+      "file": "src/app/banner/dashboard/create/page.tsx",
+      "name": "handleRefine",
+      "scenario": "bad_result"
+    },
+    {
+      "file": "src/app/banner/dashboard/create/page.tsx",
+      "name": "handleRefine",
+      "scenario": "quota"
+    },
+    {
+      "file": "src/app/banner/dashboard/create/page.tsx",
+      "name": "handleRefine",
+      "scenario": "pending"
+    },
+    {
+      "file": "src/app/banner/dashboard/create/page.tsx",
+      "name": "handleRefine",
+      "scenario": "success"
+    }
+  ]
+}
