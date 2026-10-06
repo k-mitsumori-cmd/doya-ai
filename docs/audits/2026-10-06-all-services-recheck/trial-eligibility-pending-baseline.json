@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-06T09:26:31.001Z",
+  "status": "unbounded_pending_request_reproduced",
+  "sourceHash": "1dc7fbf6e74f4409d4e6432f96d1b098dd15588ec2bd7ecb7a58274d6e1106c0",
+  "requests": 1,
+  "pending": 1,
+  "deadlineTimers": 0,
+  "abortSignalPresent": false,
+  "scope": "Actual fetchEligibility function with never-settling synthetic fetch. A pending response remains deduplicated with no deadline/abort; mounted user timing and current production incidence unknown. No Stripe/network/DB/checkout calls.",
+  "next": "Add a bounded response/deadline, release unknown pending entry for future retries, retain account-scoped strict eligibility and never grant trial after unknown response."
+}

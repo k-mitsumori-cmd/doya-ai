@@ -1,0 +1,52 @@
+{
+  "checkedAt": "2026-10-06T10:00:32.799556+00:00",
+  "status": "full local gates passed; commit and deployment pending",
+  "scope": "Common trial eligibility display used by pricing/paywall/upsell across services",
+  "baselineEvidence": "trial-eligibility-pending-baseline.json",
+  "repairs": [
+    "15-second request and whole-body deadline, abort and detached cancellation",
+    "Strict boolean schema, 16KiB body maximum, unavailable responses suppress claims",
+    "Pending requests deduplicated by actor and plan; confirmed values cached for 60 seconds",
+    "Unknown replies coalesced for 1 second only to prevent duplicate callout timer retries; unknown is never confirmed ineligible",
+    "Two automatic retries after 5/15 seconds, visible focus/visibility may recover",
+    "Expired confirmation hidden and refreshed in visible tabs; auth-loading/missing identity suppresses requests",
+    "Unmount and actor change remove listeners/timers and ignore stale state updates"
+  ],
+  "newlyCaughtInMountedTest": "Multiple independently scheduled callouts sent 4 retry requests instead of 2 when synthetic responses resolved between timer callbacks. One-second unknown coalescing corrected the actual source; repeated mounted test passed. This is a synthetic reproduction, customer occurrence is unknown.",
+  "checks": {
+    "moduleGroups": 10,
+    "actualTSXMountedCases": 15,
+    "existingServerTrialAndCheckoutCases": 16,
+    "targetedESLintExitCode": 0,
+    "typecheckExitCode": 0,
+    "repositoryLintExitCode": 0
+  },
+  "fullBuildStatePath": "/tmp/doya-trial-final-build-state-20261006.json",
+  "files": {
+    "src/components/TrialCallout.tsx": "4acac50c65ea01e7229268b469270e7c29078cf20fbf344eded3dac7e972eb2c",
+    "src/lib/trial-eligibility-client.ts": "4e71a5fcd83d0f5e18727da125eb71e7bc9a3c5fe900e79ea08f615a033aa909",
+    "scripts/security-regression/verify-trial-eligibility-client.cjs": "2d8aa793c5518bba5240b9392d04407f8db6ff68ed82db382d21d4f60f937c96",
+    "scripts/security-regression/verify-trial-eligibility-mounted.cjs": "15d2aac82381a242ce633afe9b8e2be432f6270abef9c076f8955876ccae869d",
+    "scripts/security-regression/run.cjs": "092cca389be9ab0513a993cda99172591ac7ef65eaf928fa2b0af6c5ca022fd0"
+  },
+  "notProven": [
+    "Actual browser pixels/devices and live NextAuth lifecycle",
+    "Real Stripe history/checkout end-to-end",
+    "All 17 service workflows, remaining criterion matrix items",
+    "Root cause of reported September server notifications"
+  ],
+  "goalComplete": false,
+  "fullBuild": {
+    "runId": "2b3ab29a-8936-411a-a95a-9441df9a082f",
+    "command": "NODE_ENV=production npm run build",
+    "sourceCount": 2530,
+    "exitCode": 0,
+    "changedSources": [],
+    "startedAt": "2026-10-06T09:58:46.268654+00:00",
+    "endedAt": "2026-10-06T10:04:09.051375+00:00",
+    "manifestPath": "/tmp/doya-trial-final-source-manifest-20261006.json",
+    "logPath": "/tmp/doya-trial-final-build-20261006.log",
+    "manifestSHA256": "72e077b7088604100603d1334a2f0fce55c801a54f8e3e935d66b2f06e7cbb55"
+  },
+  "nextFinding": "checkout-button-pending-baseline.json"
+}

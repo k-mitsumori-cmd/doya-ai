@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Gift, Sparkles } from 'lucide-react'
 import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
+import { fetchTrialEligibility } from '@/lib/trial-eligibility-client'
 
 const BRAND = '#7f19e6'
 
@@ -23,38 +24,52 @@ export const TRIAL_SUBTEXT = `期間中はいつでも解約でき、料金は�
 
 type Tone = 'light' | 'dark'
 
-// Cache only confirmed responses, scoped to account and plan. Unknown eligibility stays hidden.
-const eligibilityCache = new Map<string, { value: boolean; expires: number }>()
-const eligibilityRequests = new Map<string, Promise<boolean>>()
-function fetchEligibility(key: string): Promise<boolean> {
-  const cached = eligibilityCache.get(key)
-  if (cached && cached.expires > Date.now()) return Promise.resolve(cached.value)
-  const pending = eligibilityRequests.get(key)
-  if (pending) return pending
-  const request = fetch('/api/stripe/trial-eligibility', { cache: 'no-store' })
-    .then(async (r) => {
-      if (!r.ok) return false
-      const data = await r.json()
-      const value = data?.eligible === true
-      eligibilityCache.set(key, { value, expires: Date.now() + 60000 })
-      return value
-    })
-    .catch(() => false)
-    .finally(() => eligibilityRequests.delete(key))
-  eligibilityRequests.set(key, request)
-  return request
-}
-
 export function useTrialEligible(): boolean {
   const { data: session, status } = useSession()
   const user = session?.user as { id?: string; email?: string; plan?: string } | undefined
-  const key = status === 'loading' ? '' : status === 'authenticated' ? `${user?.id || user?.email}:${user?.plan}` : 'guest'
+  const identity = user?.id || user?.email
+  const key = status === 'loading' ? '' : status === 'authenticated' ? identity ? JSON.stringify([identity, user?.plan]) : '' : 'guest'
   const [result, setResult] = useState<{ key: string; eligible: boolean }>({ key: '', eligible: false })
   useEffect(() => {
     if (!key) return
     let mounted = true
-    fetchEligibility(key).then((eligible) => { if (mounted) setResult({ key, eligible }) })
-    return () => { mounted = false }
+    let running = false
+    let retries = 0
+    let confirmedExpiry = 0
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const visible = () => document.visibilityState !== 'hidden'
+    const run = async () => {
+      if (!mounted || running) return
+      running = true
+      clearTimeout(timer)
+      if (confirmedExpiry <= Date.now()) setResult({ key, eligible: false })
+      const confirmed = await fetchTrialEligibility(key)
+      running = false
+      if (!mounted) return
+      if (confirmed) {
+        retries = 0
+        confirmedExpiry = confirmed.expires
+        setResult({ key, eligible: confirmed.value })
+        timer = setTimeout(() => {
+          if (!mounted) return
+          setResult({ key, eligible: false })
+          if (visible()) void run()
+        }, Math.max(0, confirmed.expires - Date.now()))
+      } else if (retries < 2) {
+        const wait = ++retries === 1 ? 5_000 : 15_000
+        timer = setTimeout(() => { if (visible()) void run() }, wait)
+      }
+    }
+    const resume = () => { if (visible()) { retries = 0; void run() } }
+    void run()
+    window.addEventListener('focus', resume)
+    document.addEventListener('visibilitychange', resume)
+    return () => {
+      mounted = false
+      clearTimeout(timer)
+      window.removeEventListener('focus', resume)
+      document.removeEventListener('visibilitychange', resume)
+    }
   }, [key])
   return !!key && result.key === key && result.eligible
 }
