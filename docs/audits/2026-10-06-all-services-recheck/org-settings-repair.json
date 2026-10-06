@@ -1,0 +1,53 @@
+{
+  "checkedAt": "2026-10-06T20:49:19.804943+00:00",
+  "parent": "7775aa52bc19911282f84be304b79baec2df83ce",
+  "status": "full-gate-passed-not-yet-pushed",
+  "services": [
+    "aio",
+    "shodan"
+  ],
+  "changes": [
+    "Failed/invalid initial reads block editing and saving; explicit retry",
+    "Actor/org/epoch cancellation with same-actor draft preservation",
+    "Synchronous mutation lock and immutable save snapshots; editing during save stays unsaved",
+    "Unknown/conflict result blocks resend until explicit current-profile confirmation with draft retention",
+    "Versioned PUT locks organization row and uses monotonic updatedAt compare-and-set; legacy requests remain supported",
+    "Reject Shodan text/color overflow; preserve four colors and unchanged comma-containing AIO aliases",
+    "Synchronous draft updates for logo removal/upload and extraction application before same-frame save"
+  ],
+  "evidence": {
+    "mountedSettings": 52,
+    "versionedApi": 48,
+    "renderedLayoutCases": 12,
+    "layoutEvidence": "org-settings-browser-results.json",
+    "additionalBaselines": [
+      "org-settings-logo-baseline.log",
+      "org-settings-extraction-baseline.log"
+    ],
+    "gate": "docs/audits/2026-10-06-all-services-recheck/org-settings-release-1125efda-d2fb-4646-8297-b6db76ac32c3",
+    "gateSession": 64838,
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T20:52:05.618350+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T20:52:07.361149+00:00"
+      }
+    ],
+    "sourceFiles": 2606,
+    "changedSources": [],
+    "allSourceHashesRecheckedAt": "2026-10-06T20:52:25.508803+00:00"
+  },
+  "limitations": [
+    "No real authenticated production settings write, customer database modification, upload, provider call or email used",
+    "API concurrency fixture serializes in-memory transactions; real PostgreSQL locking and membership-revocation races are not proven",
+    "Legacy PUT omitting expectedUpdatedAt remains compatible and is not protected by compare-and-set",
+    "No durable creation/upload idempotency across reload/tabs or orphan storage cleanup added",
+    "12 visual cases cover static HTML captured from mounted synthetic states, not authenticated production interaction; latest same-frame changes are functional regressions",
+    "All 17 services / 2074 criteria remain in scope and incomplete"
+  ]
+}

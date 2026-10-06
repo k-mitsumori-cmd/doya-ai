@@ -59,9 +59,9 @@ HR・勤怠の実レイアウトでセッション更新時に下書きが消え
 
 2サービスの実呼出し37箇所（読み取り20／書き込み17）、書き込み16種の応答契約を照合。実際の保存・プロンプト追加・スキャン処理が、不正JSONのHTTP200を成功扱いする反例を得たため、共通readerと操作別の確認条件を追加しました。送信内容はJSON化時点のスナップショットと照合し、未確認の書き込みを自動再送しません。読み取り30秒／書き込み310秒はbody読取も含み、実サイズ8MiBで停止します。既存の上限到達・組織オーナー向け導線は維持します。
 
-`org-client-response-results.json`：191項目、`org-client-route-results.json`：実APIと実helperの12項目、`org-client-callback-results.json`：実画面から抽出した処理12項目。ネットワーク・DB・生成・メールは合成です。全体ゲート実行中で、この補修の本番反映はまだ確認していません。詳細は `org-client-response-repair.json`。
+`org-client-response-results.json`：191項目、`org-client-route-results.json`：実APIと実helperの12項目、`org-client-callback-results.json`：実画面から抽出した処理12項目。ネットワーク・DB・生成・メールは合成です。全体の回帰・型チェック・ビルド・lintが終了コード0、2601ソースのハッシュ不変を再確認。`7775aa52`をmainへpush済みです。CIと本番ビルドは進行中で、この補修の本番反映はまだ確認していません。詳細は `org-client-response-repair.json`。
 
-AIOの「保存中に編集した新しい下書きへ古い保存済み表示が付く」反例は、別途残っています（`aio-brand-profile-stale-save-baseline.json`）。この通信修正だけで解決済みとは扱いません。利用者／組織切り替え・重複操作・未確認操作後の再実行制御、全17サービスの認証後の実業務なども引き続き点検対象です。
+商談準備でも取得503後に空の編集画面から既存設定を空で上書きできる経路を実画面・実helper・実PUTと合成DBで再現しています（`shodan-settings-load-failure-baseline.json`）。次の補修対象は `org-settings-next-repair.md`。AIOの「保存中に編集した新しい下書きへ古い保存済み表示が付く」反例も、別途残っています（`aio-brand-profile-stale-save-baseline.json`）。この通信修正だけで解決済みとは扱いません。利用者／組織切り替え・重複操作・未確認操作後の再実行制御、全17サービスの認証後の実業務なども引き続き点検対象です。
 
 ## 現在の確認範囲（2026-10-07 JST）
 
@@ -636,3 +636,18 @@ Actual full Tool mounted 27 synthetic cases pass: synchronous duplicate lock, st
 Next confirmed issues: cunning-list-read-baseline.json proves unbounded knowledge list reads and raw network error assignment in profile/company load. slide-browser-guest-widget-overlap.json records an actual anonymous 1280x720 browser observation: a HubSpot consultation popup overlaps 9048 square pixels of the 300x52 create CTA (about 58 percent). Guest creation remains correctly disabled. Authenticated/mobile overlap remains unverified. No ad clicks, login, uploads or paid AI tests occurred. Existing anonymous style previews only return cache.
 
 Layout a748323a CI success and Vercel READY confirmed. Anonymous publication proof checks all 17 entries, 29 assets and 2 guest usage APIs, including private no-store and Cookie Vary. Initial proof parser lost duplicate Vary headers; combined all header values and reran successfully. This was a verifier issue, not a server cache defect. Authenticated wrapper/business flows remain unproven. Wizard 91f7b025 is pushed; CI/deployment pending in its tracking JSON. Full 17 services / 2074 criteria remain incomplete.
+
+
+### 組織設定の取得失敗・保存競合・下書き保護（候補、全体検証中）
+
+AIO/商談準備の初回取得失敗では編集を開かず、再試行を用意。利用者・組織・要求世代が変わると旧応答を破棄し、同じ利用者のセッション更新では下書きを保持する。保存中の追加入力を保存済みと表示せず、結果不明・409では入力を保持して保存済みの全項目を確認してから手動で再保存する。新UIは既存updatedAtによる条件更新を使う。ロゴ削除・抽出結果の適用直後の同一フレーム保存が旧値を送る2件も合成実画面で再現し、同期下書き更新へ補修した。
+
+実画面52件、実PUT/バージョン・競合48件合格。12レイアウトケースは合成状態HTMLのブラウザ確認で、認証済み本番書込の証明ではない。全体ゲート1125efdaを実行中。旧クライアントのバージョン省略PUTは互換維持のため条件更新対象外。実Postgres競合、権限剥奪との競合、実顧客操作、全17サービス2074項目の完了は未証明。根拠はorg-settings-repair.json。
+
+次巡の未補修: 商談準備の新規作成run実callbackと実通信helperで、同一フレームの2操作が2件のPOSTを送ることを合成未解決通信で確認（shodan-new-duplicate-baseline.json / probe-shodan-new-duplicate.cjs）。実生成、DB作成、重複課金は確認していない。設定cohortの固定ソースを変えず、次の補修対象とする。
+
+次巡の未補修: 商談準備のPOST応答researchがcompanyNameのみでも実helperが受理し、実findingsFrom表示関数がTypeErrorになることを確認（shodan-research-shape-baseline.json）。応答検証の全業務形状と、新規作成の連打・利用者/組織世代・取消・不明結果回復・利用枠の更新をまとめて次巡で補修する。現在の固定ゲートには含めない。
+
+次巡の未補修: 見積もりcreateDocument実callbackがHTTP200空オブジェクトを受けて/quote/documents/undefinedへ遷移し、同一フレーム2操作で2件POSTすることを合成通信で確認（quote-create-ack-baseline.json）。実見積もり作成や重複課金の証拠ではない。設定cohort後に応答・入力・利用者/組織・重複・不明結果回復を補修する。
+
+設定cohortの最終ゲート1125efdaはexec session64838が終了コード0。全体回帰・tsc・Next本番ビルド・lintが成功、2606ファイル全SHA256一致、changedSources空を確認。本番状態はorg-settings-repair.jsonのcommit/CI/productionを別途確認する。

@@ -124,6 +124,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/shodan/company-profile/route.ts', {
+      '@/lib/org-profile-version': load('src/lib/org-profile-version.ts'),
       'next/server': server,
       '@/lib/prisma': { prisma: { shodanCompanyProfile: { upsert: async () => { calls++; return { logoPath: null }; } } } },
       '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'org', role: 'owner' }), hasMinRole: () => true, orgSlugFrom: () => 'org' },

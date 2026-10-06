@@ -47,8 +47,22 @@
     "Actual route-to-client tests cover 4 endpoint families; other write patterns use current-response fixtures",
     "Actor/org lifecycle and unknown-write repeat UI gate remain separate work",
     "Confirmed AIO draft edited during save can still show stale saved acknowledgment; next repair",
-    "No production reflection of this uncommitted cohort yet",
     "Full 17-service / 2074-criterion audit remains incomplete",
     "Actual mounted Shodan settings after failed GET can save empty defaults over synthetic stored values; shodan-settings-load-failure-baseline.json records the separate next repair."
-  ]
+  ],
+  "production": {
+    "id": "dpl_6WAhTNAoqSDAMhqshCk9H4pyAj3p",
+    "url": "doya-g4mdox5tr-surisutas-projects.vercel.app",
+    "readyState": "READY",
+    "target": "production"
+  },
+  "publicationCheckedAt": "2026-10-06T20:49:19.804943+00:00",
+  "commit": "7775aa52bc19911282f84be304b79baec2df83ce",
+  "push": "confirmed HEAD to main; parent f0d61701",
+  "ci": {
+    "run": 37527516120,
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "publicationEvidence": "org-client-response-public-7775aa52.json"
 }

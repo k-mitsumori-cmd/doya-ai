@@ -1,0 +1,6 @@
+{
+  "status": "confirmed-unfixed",
+  "problem": "Nonempty but incomplete research object is accepted by actual write contract and throws in actual findings renderer",
+  "error": "TypeError",
+  "scope": "Actual shodanSend, actual contract, AST-extracted findingsFrom with synthetic response only; no production incident, real generation or DB write established."
+}

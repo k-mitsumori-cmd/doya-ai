@@ -1,5 +1,6 @@
 import { parseAioBrandProfileInput } from './aio/brand-profile-input'
 import { scanCoverageCounts } from './aio/coverage'
+import { parseOrgProfileVersion } from './org-profile-version'
 
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value)
 const id = (value: unknown): value is string => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,200}$/.test(value)
@@ -8,6 +9,15 @@ const PROFILE_FIELDS = ['companyName', 'url', 'description', 'valueProp', 'produ
 const webUrl = (value: unknown) => {
   if (typeof value !== 'string' || value.length > 8_192) return false
   try { const u = new URL(value); return !u.username && !u.password && (u.protocol === 'https:' || u.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname)) } catch { return false }
+}
+
+function versionConfirmed(input: Record<string, unknown>, profile: Record<string, unknown>) {
+  if (!Object.prototype.hasOwnProperty.call(input, 'expectedUpdatedAt')) return true
+  try {
+    const before = parseOrgProfileVersion(input)
+    const after = parseOrgProfileVersion({ expectedUpdatedAt: profile.updatedAt })
+    return after instanceof Date && (before === null || before instanceof Date && after.getTime() > before.getTime())
+  } catch { return false }
 }
 
 export function knownOrgWrite(service: 'aio' | 'shodan', path: string, method: string): boolean {
@@ -29,6 +39,7 @@ export function knownOrgWrite(service: 'aio' | 'shodan', path: string, method: s
 
 /** These contracts mirror the currently used server routes, rather than trusting a generic 2xx. */
 export function confirmedOrgWrite(service: 'aio' | 'shodan', path: string, method: string, body: unknown, data: Record<string, unknown>): boolean {
+  if (data.error !== undefined || data.code !== undefined) return false
   const pathname = new URL(path, 'https://org-client.invalid').pathname
   const prefix = `/api/${service}`
   const input = record(body) ? body : {}
@@ -43,7 +54,7 @@ export function confirmedOrgWrite(service: 'aio' | 'shodan', path: string, metho
   }
   if (service === 'aio') {
     if (pathname === prefix + '/brand-profile' && method === 'PUT') {
-      if (data.ok !== true || !record(data.profile) || !id(data.profile.id)) return false
+      if (data.ok !== true || !record(data.profile) || !id(data.profile.id) || !versionConfirmed(input, data.profile)) return false
       const profile = data.profile
       try {
         const submitted = parseAioBrandProfileInput(input)
@@ -61,7 +72,7 @@ export function confirmedOrgWrite(service: 'aio' | 'shodan', path: string, metho
     return false
   }
   if (pathname === prefix + '/company-profile' && method === 'PUT') {
-    if (data.ok !== true || !record(data.profile) || !id(data.profile.id)) return false
+    if (data.ok !== true || !record(data.profile) || !id(data.profile.id) || !versionConfirmed(input, data.profile)) return false
     const profile = data.profile
     const fieldsMatch = PROFILE_FIELDS.every(key => profile[key] === (typeof input[key] === 'string' ? input[key].trim().slice(0, 4_000) || null : null))
     const colors = Array.isArray(input.brandColors) ? input.brandColors.filter(value => typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value)).slice(0, 4) : null

@@ -65,3 +65,8 @@ URL起点で以下まで調査して仮説提案に反映する：
 - **本番DB**: 既存の `shodan_*` テーブルを使用する。スキーマを変更する際は現在のマイグレーションと本番DB状態を確認し、無条件に `prisma db push` しない。
 - 環境変数: `ANTHROPIC_API_KEY`(主) / `GOOGLE_GENAI_API_KEY`(フォールバック) / `GBIZINFO_API_TOKEN`(従業員数等) / `NEXTAUTH_URL`(招待リンク)。
 - 有料組織の提案スライドは画像生成を使用する。生成APIの実費が発生するため、検証で実際の生成を行う場合は事前に費用を確認する。
+
+
+### 組織設定の安全な読み書き（2026-10-07補修候補）
+
+設定の取得失敗・不正応答時は空フォームで保存できないようにする。保存中の入力変更は未保存と表示し、結果不明・競合時は下書きを保持して現保存値の確認後に手動再保存する。設定画面のPUTはexpectedUpdatedAtを送信し、既存updatedAt一致時だけ更新する（初回はnull）。409 PROFILE_CONFLICTは再取得を促す。バージョン省略の旧PUTは互換維持で従来動作のまま。実画面・APIの合成回帰証拠はdocs/audits/2026-10-06-all-services-recheck/org-settings-repair.json。本番反映は同JSONのデプロイ状態と区別する。

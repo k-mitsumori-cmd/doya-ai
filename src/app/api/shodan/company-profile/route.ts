@@ -4,6 +4,7 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { parseOrgProfileVersion } from '@/lib/org-profile-version'
 import { getShodanContext, hasMinRole, orgSlugFrom } from '@/lib/shodan/access'
 import { signedUrl } from '@/lib/shodan/storage'
 
@@ -27,12 +28,15 @@ export async function PUT(req: NextRequest) {
   const body = await req.json().catch(() => null)
   if (!body || typeof body !== 'object' || Array.isArray(body)
     || ![...FIELDS, 'logoPath', 'brandColors'].some((field) => Object.prototype.hasOwnProperty.call(body, field))
-    || FIELDS.some((field) => body[field] != null && typeof body[field] !== 'string')
+    || FIELDS.some((field) => body[field] != null && (typeof body[field] !== 'string' || body[field].trim().length > 4000))
     || (body.logoPath != null && typeof body.logoPath !== 'string')
-    || (body.brandColors != null && (!Array.isArray(body.brandColors)
+    || (body.brandColors != null && (!Array.isArray(body.brandColors) || body.brandColors.length > 4
       || body.brandColors.some((color: unknown) => typeof color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(color))))) {
     return NextResponse.json({ error: '自社情報の入力形式を確認してください' }, { status: 400 })
   }
+  let version: ReturnType<typeof parseOrgProfileVersion>
+  try { version = parseOrgProfileVersion(body) }
+  catch { return NextResponse.json({ error: '設定の更新日時を確認できません。再読み込みしてください。' }, { status: 400 }) }
   const data: Record<string, any> = {}
   for (const f of FIELDS) {
     const v = body[f]
@@ -46,11 +50,25 @@ export async function PUT(req: NextRequest) {
     ? body.brandColors.filter((c: any) => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c)).slice(0, 4)
     : null
 
-  const profile = await prisma.shodanCompanyProfile.upsert({
+  // New clients use compare-and-set so late/duplicate requests cannot overwrite a newer save.
+  const profile = version === undefined ? await prisma.shodanCompanyProfile.upsert({
     where: { organizationId: ctx.organizationId },
     create: { organizationId: ctx.organizationId, ...data },
     update: data,
+  }) : await prisma.$transaction(async (tx) => {
+    // Lock the organization row also when no profile exists yet.
+    await tx.$queryRaw`SELECT id FROM shodan_organizations WHERE id = ${ctx.organizationId} FOR NO KEY UPDATE`
+    const prior = await tx.shodanCompanyProfile.findUnique({ where: { organizationId: ctx.organizationId } })
+    if (version === null) {
+      if (prior) return null
+      return tx.shodanCompanyProfile.create({ data: { organizationId: ctx.organizationId, ...data } })
+    }
+    if (!prior || prior.updatedAt.getTime() !== version.getTime()) return null
+    const changed = await tx.shodanCompanyProfile.updateMany({ where: { organizationId: ctx.organizationId, updatedAt: version }, data: { ...data, updatedAt: new Date(Math.max(Date.now(), prior.updatedAt.getTime() + 1)) } })
+    if (changed.count !== 1) return null
+    return tx.shodanCompanyProfile.findUnique({ where: { organizationId: ctx.organizationId } })
   })
+  if (!profile) return NextResponse.json({ error: '他の操作で設定が更新されました。保存済みの内容を確認してから、もう一度保存してください。', code: 'PROFILE_CONFLICT' }, { status: 409 })
   const logoUrl = profile.logoPath ? await signedUrl(profile.logoPath) : null
   return NextResponse.json({ ok: true, profile: { ...profile, logoUrl } })
 }

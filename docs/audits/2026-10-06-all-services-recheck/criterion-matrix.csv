@@ -1384,7 +1384,7 @@ shodan,C040,利用上限,ゲストのCookie削除で有料原価が無制限に�
 shodan,C041,利用上限,チーム枠の契約者と操作ユーザーを取り違えない,現在版での項目別通し検証待ち,
 shodan,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 shodan,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
-shodan,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json
+shodan,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven)
 shodan,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 shodan,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 shodan,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
@@ -1403,14 +1403,14 @@ shodan,C059,入力・外部接続,外部APIのタイムアウト・再試行が�
 shodan,C060,入力・外部接続,通知先・本文に利用者入力を安全に扱う,現在版での項目別通し検証待ち,
 shodan,C061,生成・ジョブ,連打・再送に冪等性がある,現在版での項目別通し検証待ち,
 shodan,C062,生成・ジョブ,ジョブの所有者と結果取得権限を検査する,現在版での項目別通し検証待ち,
-shodan,C063,生成・ジョブ,ストリーム途中失敗を成功として表示しない,現在版での項目別通し検証待ち,org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json
+shodan,C063,生成・ジョブ,ストリーム途中失敗を成功として表示しない,現在版での項目別通し検証待ち,org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven)
 shodan,C064,生成・ジョブ,生成結果と履歴・使用量の保存が整合する,現在版での項目別通し検証待ち,
 shodan,C065,生成・ジョブ,プロセス終了時に永久処理中にならない,現在版での項目別通し検証待ち,
 shodan,C066,生成・ジョブ,再生成と編集にも上限を適用する,現在版での項目別通し検証待ち,
 shodan,C067,生成・ジョブ,公開音声ルームの同意・期限・人数を守る,現在版での項目別通し検証待ち,
 shodan,C068,生成・ジョブ,エクスポートで他人の成果物を含めない,現在版での項目別通し検証待ち,
 shodan,C069,UI・アクセシビリティ,モーダルのフォーカス・Escape・復帰が機能する,現在版での項目別通し検証待ち,
-shodan,C070,UI・アクセシビリティ,入力をエラー時に失わない,現在版での項目別通し検証待ち,org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json
+shodan,C070,UI・アクセシビリティ,入力をエラー時に失わない,現在版での項目別通し検証待ち,org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven)
 shodan,C071,UI・アクセシビリティ,上限案内が二重表示されない,現在版での項目別通し検証待ち,
 shodan,C072,UI・アクセシビリティ,有料会員に同じプランへの重複契約を促さない,現在版での項目別通し検証待ち,
 shodan,C073,UI・アクセシビリティ,APIエラーを消えるトーストだけに依存しない,現在版での項目別通し検証待ち,
@@ -1434,7 +1434,7 @@ shodan,U08,user-experience,組織作成・メンバー招待・既存組織参�
 shodan,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
 shodan,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
 shodan,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,現在版での項目別通し検証待ち,
-shodan,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：入口・招待・AIO調査の認証失敗、再試行、連打、旧応答抑止／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs; org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json
+shodan,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：入口・招待・AIO調査の認証失敗、再試行、連打、旧応答抑止／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs; org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven)
 shodan,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,一部検証済み：入口・招待・AIO調査の認証失敗、再試行、連打、旧応答抑止／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs
 shodan,U14,user-experience,生成途中の失敗・一部成功でも成果物を救出でき、再試行対象と追加消費が分かる。,現在版での項目別通し検証待ち,
 shodan,U15,user-experience,確定済み書類・終了した評価・締めた勤怠は通常操作で意図せず書き換わらない。,現在版での項目別通し検証待ち,
@@ -1506,7 +1506,7 @@ aio,C040,利用上限,ゲストのCookie削除で有料原価が無制限にな�
 aio,C041,利用上限,チーム枠の契約者と操作ユーザーを取り違えない,現在版での項目別通し検証待ち,
 aio,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
 aio,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
-aio,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json
+aio,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven)
 aio,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 aio,C046,データ・DB,必要な外部キー・複合一意制約が存在する,一部検証済み：本番DBのFK列対応・一意制約／削除規則・通常インデックス未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
 aio,C047,データ・DB,孤立したユーザー・組織参照がない,現在版での項目別通し検証待ち,
@@ -1525,14 +1525,14 @@ aio,C059,入力・外部接続,外部APIのタイムアウト・再試行が有�
 aio,C060,入力・外部接続,通知先・本文に利用者入力を安全に扱う,現在版での項目別通し検証待ち,
 aio,C061,生成・ジョブ,連打・再送に冪等性がある,現在版での項目別通し検証待ち,
 aio,C062,生成・ジョブ,ジョブの所有者と結果取得権限を検査する,現在版での項目別通し検証待ち,
-aio,C063,生成・ジョブ,ストリーム途中失敗を成功として表示しない,現在版での項目別通し検証待ち,org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json
+aio,C063,生成・ジョブ,ストリーム途中失敗を成功として表示しない,現在版での項目別通し検証待ち,org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven)
 aio,C064,生成・ジョブ,生成結果と履歴・使用量の保存が整合する,現在版での項目別通し検証待ち,
 aio,C065,生成・ジョブ,プロセス終了時に永久処理中にならない,現在版での項目別通し検証待ち,
 aio,C066,生成・ジョブ,再生成と編集にも上限を適用する,現在版での項目別通し検証待ち,
 aio,C067,生成・ジョブ,公開音声ルームの同意・期限・人数を守る,現在版での項目別通し検証待ち,
 aio,C068,生成・ジョブ,エクスポートで他人の成果物を含めない,現在版での項目別通し検証待ち,
 aio,C069,UI・アクセシビリティ,モーダルのフォーカス・Escape・復帰が機能する,現在版での項目別通し検証待ち,
-aio,C070,UI・アクセシビリティ,入力をエラー時に失わない,現在版での項目別通し検証待ち,PARTIAL brand settings local validation only: aio-brand-profile-form-mounted-results.json (7 actual mounted cases); invalid input draft retained; org-client-write-baseline.json records remaining prompt malformed-success draft loss; auth/reload/private flows unproven; org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json
+aio,C070,UI・アクセシビリティ,入力をエラー時に失わない,現在版での項目別通し検証待ち,PARTIAL brand settings local validation only: aio-brand-profile-form-mounted-results.json (7 actual mounted cases); invalid input draft retained; org-client-write-baseline.json records remaining prompt malformed-success draft loss; auth/reload/private flows unproven; org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven)
 aio,C071,UI・アクセシビリティ,上限案内が二重表示されない,現在版での項目別通し検証待ち,
 aio,C072,UI・アクセシビリティ,有料会員に同じプランへの重複契約を促さない,現在版での項目別通し検証待ち,
 aio,C073,UI・アクセシビリティ,APIエラーを消えるトーストだけに依存しない,現在版での項目別通し検証待ち,PARTIAL brand settings parser denial displayed in persistent form: aio-brand-profile-form-mounted-results.json; all other API errors and unknown-write recovery unproven
@@ -1556,7 +1556,7 @@ aio,U08,user-experience,組織作成・メンバー招待・既存組織参加�
 aio,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
 aio,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
 aio,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,現在版での項目別通し検証待ち,
-aio,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：入口・招待・AIO調査の認証失敗、再試行、連打、旧応答抑止／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs; org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json
+aio,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：入口・招待・AIO調査の認証失敗、再試行、連打、旧応答抑止／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs; org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven)
 aio,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,一部検証済み：入口・招待・AIO調査の認証失敗、再試行、連打、旧応答抑止／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs
 aio,U14,user-experience,生成途中の失敗・一部成功でも成果物を救出でき、再試行対象と追加消費が分かる。,現在版での項目別通し検証待ち,
 aio,U15,user-experience,確定済み書類・終了した評価・締めた勤怠は通常操作で意図せず書き換わらない。,現在版での項目別通し検証待ち,

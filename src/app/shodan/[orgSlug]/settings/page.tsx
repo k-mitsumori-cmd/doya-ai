@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { ShodanApiError, shodanGet, shodanSend } from '@/lib/shodan/client'
+import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
+import { readOrgProfile } from '@/lib/org-profile-view'
+import { requestOrgJson, OrgResponseError, orgErrorMessage } from '@/lib/org-client-response'
 import { DoyaKun, PageHeader, sym, type Mood } from '@/components/shodan/ui'
 import toast from 'react-hot-toast'
 
@@ -52,7 +55,20 @@ const EXTRACT_STEPS: { icon: string; mood: Mood; title: string; sub: string }[] 
 
 export default function ShodanSettingsPage() {
   const params = useParams<{ orgSlug: string }>()
-  const orgSlug = decodeURIComponent(String(params.orgSlug))
+  const orgSlug = String(params.orgSlug)
+  const guard = useOrgSettingsGuard(orgSlug)
+  const ready = useRef('')
+  const version = useRef<string | null>(null)
+  const pendingWrite = useRef(false)
+  const revision = useRef(0)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [retry, setRetry] = useState(0)
+  const [uncertain, setUncertain] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [confirmed, setConfirmed] = useState<{ profile: Record<string, unknown> | null } | null>(null)
+  const [notice, setNotice] = useState('')
+  const [operationError, setOperationError] = useState('')
+  const [extractionPreview, setExtractionPreview] = useState<{ suggested: Partial<Profile>; gaps: string[] } | null>(null)
   const [profile, setProfile] = useState<Profile>(EMPTY)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -77,71 +93,125 @@ export default function ShodanSettingsPage() {
     return () => clearInterval(t)
   }, [extracting])
 
+  const draft = useRef({ profile, brandColors, logoPath, extractUrl })
+  draft.current = { profile, brandColors, logoPath, extractUrl }
+  const flags = useRef({ loading, loadError, uncertain, checking })
+  flags.current = { loading, loadError, uncertain, checking }
+  const identity = useRef(guard.identity)
+  if (identity.current !== guard.identity) { identity.current = guard.identity; ready.current = ''; pendingWrite.current = false }
   useEffect(() => {
-    shodanGet<{ profile: any | null }>('/api/shodan/company-profile', orgSlug)
+    setSaving(false); setExtracting(false); setUploadingLogo(false); setChecking(false)
+    if (pendingWrite.current) setUncertain(true)
+  }, [guard.key])
+  useEffect(() => {
+    if (!guard.allowed || ready.current === guard.identity) return
+    const ticket = guard.begin('load')
+    if (!ticket) return
+    setLoading(true); setLoadError(null); setOperationError(''); setNotice(''); setConfirmed(null); setUncertain(false); setExtractionPreview(null)
+    shodanGet('/api/shodan/company-profile', orgSlug, { signal: ticket.signal })
       .then((d) => {
-        if (d.profile) {
-          const p = { ...EMPTY, ...Object.fromEntries(FIELDS.map((f) => [f.key, d.profile[f.key] ?? ''])) } as Profile
-          setProfile(p)
-          if (p.url) setExtractUrl(p.url)
-          if (Array.isArray(d.profile.brandColors) && d.profile.brandColors.length) {
-            setBrandColors([d.profile.brandColors[0] || '#7f19e6', d.profile.brandColors[1] || '#f59e0b'])
-          }
-          setLogoPath(d.profile.logoPath || null)
-          setLogoUrl(d.profile.logoUrl || null)
-        }
+        if (!ticket.current()) return
+        const { profile: p, version: stamp } = readOrgProfile('shodan', d)
+        const fields = { ...EMPTY, ...Object.fromEntries(FIELDS.map(f => [f.key, p?.[f.key] ?? ''])) } as Profile
+        setProfile(fields); setExtractUrl(fields.url)
+        setBrandColors(Array.isArray(p?.brandColors) && p.brandColors.length ? p.brandColors as string[] : ['#7f19e6', '#f59e0b'])
+        setLogoPath((p?.logoPath as string) || null); setLogoUrl((p?.logoUrl as string) || null)
+        version.current = stamp; ready.current = guard.identity
       })
-      .catch((e) => toast.error(e.message))
-      .finally(() => setLoading(false))
-  }, [orgSlug])
+      .catch(e => { if (ticket.current()) { setLoadError(e instanceof Error ? e.message : '自社情報を読み込めませんでした'); if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication() } })
+      .finally(() => { if (ticket.current()) setLoading(false); ticket.end() })
+    return () => ticket.end()
+  }, [guard.key, retry]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const confirmSaved = async () => {
+    if (!flags.current.uncertain) return
+    const ticket = guard.begin('mutation')
+    if (!ticket) return
+    setChecking(true)
+    try {
+      const result = readOrgProfile('shodan', await shodanGet('/api/shodan/company-profile', orgSlug, { signal: ticket.signal }))
+      if (!ticket.current()) return
+      version.current = result.version; setConfirmed({ profile: result.profile }); pendingWrite.current = false; setUncertain(false); setOperationError('')
+      setNotice('保存済みの設定を再確認しました。入力中の内容は保持しています。確認してから保存してください。')
+    } catch (e) { if (ticket.current()) { setOperationError(e instanceof Error ? e.message : '設定を確認できませんでした'); if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication() } }
+    finally { if (ticket.current()) setChecking(false); ticket.end() }
+  }
+  const canEdit = () => guard.active() && ready.current === guard.identity && !flags.current.loading && !flags.current.loadError && !flags.current.uncertain && !pendingWrite.current && !flags.current.checking
 
   const onLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canEdit()) return
     const file = e.target.files?.[0]
     if (!file) return
-    setUploadingLogo(true)
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) { setOperationError('PNG / JPG / WebP、5MB以下のファイルを選択してください。'); return }
+    const ticket = guard.begin('mutation')
+    if (!ticket) return
+    setUploadingLogo(true); setOperationError('')
     try {
       const fd = new FormData(); fd.append('file', file)
-      const r = await fetch(`/api/shodan/company-profile/logo?org=${encodeURIComponent(orgSlug)}`, { method: 'POST', body: fd })
-      const d = await r.json()
-      if (!d.ok) throw new Error(d.error || 'アップロードに失敗しました')
-      setLogoPath(d.path); setLogoUrl(d.url)
-      toast.success('ロゴをアップロードしました')
-    } catch (err: any) { toast.error(err.message) } finally { setUploadingLogo(false) }
+      const { res, data: d } = await requestOrgJson('shodan', '/api/shodan/company-profile/logo', orgSlug, { method: 'POST', body: fd, signal: ticket.signal })
+      if (!ticket.current()) return
+      if (!res.ok) throw new ShodanApiError(orgErrorMessage(d, res.status, true), res.status)
+      if (d.ok !== true || typeof d.path !== 'string' || !/^shodan\/logos\/[a-z0-9-]+\/[0-9a-fA-F-]{36}\.(png|jpg|webp)$/.test(d.path) || typeof d.url !== 'string' || !d.url.startsWith('https://')) throw new OrgResponseError(true, res.status)
+      revision.current++; draft.current = { ...draft.current, logoPath: d.path }; setLogoPath(d.path); setLogoUrl(d.url)
+      setNotice('ロゴを読み込みました。設定を保存すると反映されます。')
+    } catch (err) { if (ticket.current()) { setOperationError(err instanceof Error ? err.message : 'アップロード結果を確認できませんでした'); if (err instanceof ShodanApiError && err.status === 401) guard.rejectAuthentication() } }
+    finally { if (ticket.current()) setUploadingLogo(false); ticket.end() }
   }
 
-  const set = (k: keyof Profile, v: string) => setProfile((p) => ({ ...p, [k]: v }))
-
+  const set = (k: keyof Profile, v: string) => { if (!guard.active() || ready.current !== guard.identity) return; revision.current++; const next = { ...draft.current.profile, [k]: v }; draft.current = { ...draft.current, profile: next }; setProfile(next); setNotice('') }
+  const applyExtraction = (d: { suggested: Partial<Profile>; gaps: string[] }) => {
+    if (!canEdit()) return
+    revision.current++
+    const next = { ...draft.current.profile }
+    for (const f of FIELDS) { const v = d.suggested[f.key]; if (typeof v === 'string' && v.trim()) next[f.key] = v }
+    draft.current = { ...draft.current, profile: next }
+    setProfile(next)
+    setGaps(new Set(d.gaps)); setExtractionPreview(null)
+    setNotice('抽出結果を入力しました。内容を確認して保存してください。')
+  }
   const extract = async () => {
-    if (!extractUrl.trim()) { toast.error('自社URLを入力してください'); return }
-    setExtracting(true)
+    if (!canEdit()) return
+    if (!draft.current.extractUrl.trim()) { toast.error('自社URLを入力してください'); return }
+    const ticket = guard.begin('mutation')
+    if (!ticket) return
+    const submittedRevision = revision.current
+    setExtracting(true); setOperationError(''); setExtractionPreview(null)
     try {
-      const d = await shodanSend<{ suggested: Partial<Profile>; gaps: string[] }>(
-        '/api/shodan/company-profile/extract', orgSlug, 'POST', { url: extractUrl }
-      )
-      setProfile((p) => {
-        const next = { ...p }
-        for (const [k, v] of Object.entries(d.suggested)) {
-          if (typeof v === 'string' && v.trim()) (next as any)[k] = v
-        }
-        if (!next.url) next.url = extractUrl
-        return next
-      })
-      setGaps(new Set(d.gaps || []))
+      const d = await shodanSend<{ suggested: Partial<Profile>; gaps: string[] }>('/api/shodan/company-profile/extract', orgSlug, 'POST', { url: draft.current.extractUrl }, { signal: ticket.signal })
+      if (!ticket.current()) return
+      if (submittedRevision === revision.current) applyExtraction(d)
+      else { setExtractionPreview(d); setNotice('抽出中の変更を保持しました。抽出結果を確認してから反映できます。') }
       setExtractLimitMessage(null)
-      const gapCount = (d.gaps || []).length
-      toast.success(gapCount ? `自動入力しました。加筆推奨が${gapCount}項目あります` : '自動入力しました！')
     } catch (e) {
+      if (!ticket.current()) return
       if (e instanceof ShodanApiError && e.code === 'SHODAN_PROFILE_DAILY_LIMIT') setExtractLimitMessage(e.message)
-      else toast.error(e instanceof Error ? e.message : '自社情報の抽出に失敗しました')
-    } finally { setExtracting(false) }
+      else setOperationError(e instanceof Error ? e.message : '自社情報の抽出に失敗しました')
+      if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication()
+    } finally { if (ticket.current()) setExtracting(false); ticket.end() }
   }
 
   const save = async () => {
-    setSaving(true)
+    if (!canEdit()) return
+    const submitted = draft.current
+    if (FIELDS.some(f => submitted.profile[f.key].trim().length > 4000)) { setOperationError('各項目は4000文字以内で入力してください。内容は切り詰めずに保持しています。'); return }
+    const ticket = guard.begin('mutation')
+    if (!ticket) return
+    const submittedRevision = revision.current
+    setSaving(true); setOperationError('')
+    pendingWrite.current = true
     try {
-      await shodanSend('/api/shodan/company-profile', orgSlug, 'PUT', { ...profile, brandColors, logoPath })
-      toast.success('自社情報を保存しました')
-    } catch (e: any) { toast.error(e.message) } finally { setSaving(false) }
+      const result = await shodanSend<{ profile: Record<string, unknown> }>('/api/shodan/company-profile', orgSlug, 'PUT', { ...submitted.profile, brandColors: submitted.brandColors, logoPath: submitted.logoPath, expectedUpdatedAt: version.current }, { signal: ticket.signal })
+      if (!ticket.current()) return
+      version.current = readOrgProfile('shodan', result).version; pendingWrite.current = false; setConfirmed(null)
+      if (submittedRevision === revision.current) { toast.success('自社情報を保存しました'); setNotice('自社情報を保存しました') }
+      else setNotice('送信時の内容を保存しました。その後の変更は未保存です。')
+    } catch (e) {
+      if (!ticket.current()) return
+      const rejected = e instanceof ShodanApiError && [400, 401, 403, 404, 409, 413, 422, 429].includes(e.status)
+      pendingWrite.current = !rejected; setUncertain(!rejected || e instanceof ShodanApiError && e.status === 409)
+      setOperationError(e instanceof Error ? e.message : '保存結果を確認できませんでした')
+      if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication()
+    } finally { if (ticket.current()) setSaving(false); ticket.end() }
   }
 
   // 充足度スコア（CORE基準）
@@ -156,13 +226,26 @@ export default function ShodanSettingsPage() {
     return { score: sc, doneCount: done, mood: m, advice: a }
   }, [profile, gaps])
 
-  if (loading) return <div className="p-10 text-center"><DoyaKun mood="thinking" size={72} /><p className="mt-2 text-slate-400 font-bold">読み込み中…</p></div>
+  if (guard.requiresLogin) return <div role="alert" className="p-6"><p>ログイン情報を確認できません。再度ログインしてください。</p><a className="mt-3 inline-block font-bold underline" href={`/auth/signin?callbackUrl=${encodeURIComponent(`/shodan/${orgSlug}/settings`)}`}>ログイン情報を再確認する</a></div>
+  if (!guard.allowed || loading || !loadError && ready.current !== guard.identity) return <div className="p-10 text-center"><DoyaKun mood="thinking" size={72} /><p className="mt-2 text-slate-400 font-bold">読み込み中…</p></div>
+
+  if (loadError) return <div className="max-w-2xl mx-auto p-6"><PageHeader icon="settings" title="自社情報" />
+    <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-800">
+      <p className="font-bold">自社情報を読み込めませんでした。既存の設定を保護するため、確認できるまで編集できません。</p>
+      <p className="mt-2 text-sm">{loadError}</p>
+      <button type="button" onClick={() => setRetry(c => c + 1)} className="mt-4 font-bold underline">再試行</button>
+    </div></div>
 
   const step = EXTRACT_STEPS[stepIdx]
   const extractPct = Math.round(((stepIdx + 1) / EXTRACT_STEPS.length) * 92)
 
   return (
     <div className="p-6 md:p-8 max-w-2xl mx-auto">
+      {operationError && <p role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm text-rose-800">{operationError}</p>}
+      {confirmed && <div className="mb-4 rounded-xl border border-slate-200 p-4 text-sm"><p className="font-bold">現在保存されている内容</p><p className="mt-1">入力中の内容を保存する前に、最新の設定と照合してください。</p>{confirmed.profile ? <dl className="mt-3 space-y-2">{FIELDS.map(f => <div key={f.key}><dt className="font-bold">{f.label}</dt><dd className="whitespace-pre-wrap break-words">{String(confirmed.profile?.[f.key] || '未設定')}</dd></div>)}<div><dt className="font-bold">ブランドカラー</dt><dd>{Array.isArray(confirmed.profile.brandColors) ? confirmed.profile.brandColors.join(', ') : '未設定'}</dd></div><div><dt className="font-bold">ロゴ</dt><dd>{confirmed.profile.logoPath ? '設定済み' : '未設定'}</dd></div></dl> : <p className="mt-2">まだ保存されていません。</p>}</div>}
+      {notice && <p role="status" className="mb-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-800">{notice}</p>}
+      {uncertain && <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-950"><p>保存結果または最新の設定を確認するまで、続けて操作できません。入力内容は保持しています。</p><button type="button" disabled={checking} onClick={confirmSaved} className="mt-2 font-bold underline">{checking ? '確認中…' : '保存済みの設定を確認する'}</button></div>}
+      {extractionPreview && <div className="mb-4 rounded-xl border p-4"><details><summary>抽出結果を確認する</summary>{FIELDS.map(f => <p key={f.key} className="mt-2 whitespace-pre-wrap break-words text-sm"><strong>{f.label}</strong><br />{extractionPreview.suggested[f.key]}</p>)}</details><button type="button" onClick={() => applyExtraction(extractionPreview)} className="mt-3 font-bold underline">抽出結果を反映する</button></div>}
       {/* ▼ 自社情報 抽出中 ド派手オーバーレイ ▼ */}
       {extracting && (
         <div className="fixed inset-0 z-[80] overflow-hidden flex items-center justify-center p-4
@@ -229,10 +312,10 @@ export default function ShodanSettingsPage() {
           <div className="flex items-center gap-1.5 font-black"><span className="material-symbols-outlined">auto_awesome</span>自社URLから自動入力</div>
           <p className="text-xs font-bold text-white/80 mt-1 mb-3">URLを入れるだけで、AIが自社情報を抽出して下書きします。</p>
           <div className="flex flex-col sm:flex-row gap-2">
-            <input value={extractUrl} onChange={(e) => setExtractUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !extracting && extract()}
-              placeholder="https://自社サイト.co.jp" disabled={extracting}
+            <input value={extractUrl} onChange={(e) => { if (!guard.active() || ready.current !== guard.identity) return; revision.current++; draft.current = { ...draft.current, extractUrl: e.target.value }; setExtractUrl(e.target.value); setNotice('') }} onKeyDown={(e) => e.key === 'Enter' && !extracting && extract()}
+              aria-label="自社情報を抽出するURL" placeholder="https://自社サイト.co.jp" disabled={extracting || saving || uploadingLogo || uncertain || checking}
               className="flex-1 rounded-xl px-4 py-2.5 font-bold text-slate-800 outline-none disabled:opacity-60" />
-            <button onClick={extract} disabled={extracting}
+            <button onClick={extract} disabled={extracting || saving || uploadingLogo || uncertain || checking}
               className="px-5 py-2.5 rounded-xl bg-white text-purple-700 font-black text-sm shadow hover:-translate-y-0.5 transition-all disabled:opacity-60 whitespace-nowrap">
               {extracting ? '抽出中…' : 'AIで自動入力'}
             </button>
@@ -267,13 +350,13 @@ export default function ShodanSettingsPage() {
             <div className="flex items-center gap-3">
               <label className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-600 font-black text-sm cursor-pointer hover:border-purple-400 transition-colors">
                 {sym(uploadingLogo ? 'progress_activity' : 'upload', 18)}{uploadingLogo ? '送信中…' : logoUrl ? 'ロゴを変更' : 'ロゴをアップロード'}
-                <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onLogo} disabled={uploadingLogo} />
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onLogo} disabled={uploadingLogo || extracting || saving || uncertain || checking} />
               </label>
               {logoUrl && (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={logoUrl} alt="logo" className="h-10 w-auto max-w-[120px] object-contain rounded border border-slate-200 bg-white p-1" />
-                  <button type="button" onClick={() => { setLogoPath(null); setLogoUrl(null) }} className="text-slate-400 hover:text-rose-500" title="ロゴを外す">{sym('close', 18)}</button>
+                  <button type="button" disabled={uploadingLogo || extracting || saving || uncertain || checking} onClick={() => { if (canEdit()) { revision.current++; draft.current = { ...draft.current, logoPath: null }; setLogoPath(null); setLogoUrl(null); setNotice('ロゴを外しました。設定を保存すると反映されます。') } }} className="text-slate-400 hover:text-rose-500" title="ロゴを外す">{sym('close', 18)}</button>
                 </>
               )}
             </div>
@@ -282,10 +365,10 @@ export default function ShodanSettingsPage() {
           <div>
             <label className="block text-xs font-black text-slate-600 mb-1.5">ブランドカラー</label>
             <div className="flex items-center gap-3">
-              {[0, 1].map((i) => (
+              {Array.from({ length: Math.max(2, brandColors.length) }, (_, i) => i).map((i) => (
                 <div key={i} className="flex flex-col items-center gap-1">
-                  <input type="color" value={brandColors[i] || '#7f19e6'} onChange={(e) => setBrandColors((c) => { const n = [...c]; n[i] = e.target.value; return n })} className="w-12 h-12 rounded-lg border border-slate-200 cursor-pointer" />
-                  <span className="text-[10px] font-bold text-slate-400">{i === 0 ? 'メイン' : 'アクセント'}</span>
+                  <input type="color" aria-label={`ブランドカラー${i + 1}`} value={brandColors[i] || '#7f19e6'} onChange={(e) => { if (!guard.active() || ready.current !== guard.identity) return; revision.current++; const next = [...draft.current.brandColors]; next[i] = e.target.value; draft.current = { ...draft.current, brandColors: next }; setBrandColors(next); setNotice('') }} className="w-12 h-12 rounded-lg border border-slate-200 cursor-pointer" />
+                  <span className="text-[10px] font-bold text-slate-400">{i === 0 ? 'メイン' : i === 1 ? 'アクセント' : `追加色${i + 1}`}</span>
                 </div>
               ))}
             </div>
@@ -302,21 +385,21 @@ export default function ShodanSettingsPage() {
           return (
             <div key={f.key}>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-sm font-black text-slate-700">{f.label}</label>
+                <label htmlFor={`shodan-setting-${f.key}`} className="text-sm font-black text-slate-700">{f.label}</label>
                 {showStatus && <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>}
               </div>
               {f.textarea ? (
-                <textarea value={profile[f.key]} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder} rows={3}
+                <textarea id={`shodan-setting-${f.key}`} value={profile[f.key]} maxLength={4000} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder} rows={3}
                   className={`w-full rounded-xl border-2 px-4 py-2.5 font-bold text-sm resize-y outline-none transition-colors ${st === 'weak' ? 'border-amber-300 focus:border-amber-400 bg-amber-50/30' : 'border-slate-200 focus:border-purple-400'}`} />
               ) : (
-                <input value={profile[f.key]} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder}
+                <input id={`shodan-setting-${f.key}`} value={profile[f.key]} maxLength={4000} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder}
                   className="w-full rounded-xl border-2 border-slate-200 focus:border-purple-400 outline-none px-4 py-2.5 font-bold text-sm transition-colors" />
               )}
               {f.hint && st !== 'ok' && <p className="text-[11px] font-bold text-amber-600 mt-1 flex items-center gap-1">{sym('tips_and_updates', 14)}{f.hint}</p>}
             </div>
           )
         })}
-        <button onClick={save} disabled={saving}
+        <button onClick={save} disabled={saving || extracting || uploadingLogo || uncertain || checking}
           className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black shadow-lg shadow-purple-500/25 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
           {sym('save', 20)}{saving ? '保存中…' : '保存する'}
         </button>

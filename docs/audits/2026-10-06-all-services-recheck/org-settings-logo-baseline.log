@@ -1,0 +1,16 @@
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'beta/logo.png'
+- null
+
+    at /private/tmp/doya-org-settings-logo-probe.cjs:50:406
+    at async check (/private/tmp/doya-org-settings-logo-probe.cjs:22:90)
+    at async /private/tmp/doya-org-settings-logo-probe.cjs:50:1 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'beta/logo.png',
+  expected: null,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

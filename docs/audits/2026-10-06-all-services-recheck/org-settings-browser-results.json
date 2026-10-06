@@ -1,0 +1,230 @@
+{
+  "checkedAt": "2026-10-06T20:45:19.691Z",
+  "cases": [
+    {
+      "page": "aio-read-failure",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "state": {
+        "draftUnsaved": false,
+        "readBlocked": true,
+        "recoveryVisible": false,
+        "retryVisible": true,
+        "saveButtons": [],
+        "scrollWidth": 1280,
+        "width": 1280
+      }
+    },
+    {
+      "page": "shodan-read-failure",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "state": {
+        "draftUnsaved": false,
+        "readBlocked": true,
+        "recoveryVisible": false,
+        "retryVisible": true,
+        "saveButtons": [],
+        "scrollWidth": 1280,
+        "width": 1280
+      }
+    },
+    {
+      "page": "aio-pending-edit",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "state": {
+        "draftUnsaved": true,
+        "readBlocked": false,
+        "recoveryVisible": false,
+        "retryVisible": false,
+        "saveButtons": [
+          {
+            "disabled": false
+          }
+        ],
+        "scrollWidth": 1280,
+        "width": 1280
+      }
+    },
+    {
+      "page": "shodan-pending-edit",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "state": {
+        "draftUnsaved": true,
+        "readBlocked": false,
+        "recoveryVisible": false,
+        "retryVisible": false,
+        "saveButtons": [
+          {
+            "disabled": false
+          }
+        ],
+        "scrollWidth": 1280,
+        "width": 1280
+      }
+    },
+    {
+      "page": "aio-recovery",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "state": {
+        "draftUnsaved": false,
+        "readBlocked": false,
+        "recoveryVisible": true,
+        "retryVisible": false,
+        "saveButtons": [
+          {
+            "disabled": false
+          }
+        ],
+        "scrollWidth": 1280,
+        "width": 1280
+      }
+    },
+    {
+      "page": "shodan-recovery",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "state": {
+        "draftUnsaved": false,
+        "readBlocked": false,
+        "recoveryVisible": true,
+        "retryVisible": false,
+        "saveButtons": [
+          {
+            "disabled": false
+          }
+        ],
+        "scrollWidth": 1280,
+        "width": 1280
+      }
+    },
+    {
+      "page": "aio-read-failure",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "draftUnsaved": false,
+        "readBlocked": true,
+        "recoveryVisible": false,
+        "retryVisible": true,
+        "saveButtons": [],
+        "scrollWidth": 390,
+        "width": 390
+      }
+    },
+    {
+      "page": "shodan-read-failure",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "draftUnsaved": false,
+        "readBlocked": true,
+        "recoveryVisible": false,
+        "retryVisible": true,
+        "saveButtons": [],
+        "scrollWidth": 390,
+        "width": 390
+      }
+    },
+    {
+      "page": "aio-pending-edit",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "draftUnsaved": true,
+        "readBlocked": false,
+        "recoveryVisible": false,
+        "retryVisible": false,
+        "saveButtons": [
+          {
+            "disabled": false
+          }
+        ],
+        "scrollWidth": 390,
+        "width": 390
+      }
+    },
+    {
+      "page": "shodan-pending-edit",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "draftUnsaved": true,
+        "readBlocked": false,
+        "recoveryVisible": false,
+        "retryVisible": false,
+        "saveButtons": [
+          {
+            "disabled": false
+          }
+        ],
+        "scrollWidth": 390,
+        "width": 390
+      }
+    },
+    {
+      "page": "aio-recovery",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "draftUnsaved": false,
+        "readBlocked": false,
+        "recoveryVisible": true,
+        "retryVisible": false,
+        "saveButtons": [
+          {
+            "disabled": false
+          }
+        ],
+        "scrollWidth": 390,
+        "width": 390
+      }
+    },
+    {
+      "page": "shodan-recovery",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "draftUnsaved": false,
+        "readBlocked": false,
+        "recoveryVisible": true,
+        "retryVisible": false,
+        "saveButtons": [
+          {
+            "disabled": false
+          }
+        ],
+        "scrollWidth": 390,
+        "width": 390
+      }
+    }
+  ],
+  "scope": "Static HTML captured from actual mounted settings states with synthetic session/HTTP and existing compiled CSS. Browser verifies rendered layouts only; no browser interaction or authenticated production service proof."
+}
