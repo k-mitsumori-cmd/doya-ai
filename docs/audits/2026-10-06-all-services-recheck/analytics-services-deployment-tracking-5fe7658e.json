@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-06T16:17:59.601483+00:00",
+  "commit": "5fe7658ee961cfde3ee8aa47b35e1e89e865b2a7",
+  "state": "Exact-SHA CI success; READY production aliases;17 public paths and JS reflection confirmed",
+  "ci": {
+    "run": 37494539353,
+    "status": "completed",
+    "conclusion": "success",
+    "headSha": "5fe7658ee961cfde3ee8aa47b35e1e89e865b2a7"
+  },
+  "deployments": [
+    {
+      "url": "doya-at1dm6xxc-surisutas-projects.vercel.app",
+      "state": "BUILDING",
+      "target": "production",
+      "commit": "5fe7658ee961cfde3ee8aa47b35e1e89e865b2a7"
+    }
+  ],
+  "localEvidence": "analytics-services-repair.json",
+  "scope": "Current analytics coverage/account guard cohort only; all-service goal remains active",
+  "remaining": [
+    "Repair true new-registration classification versus firstLoginAt backfill",
+    "Continue17-service requirement matrix and user-flow audits; authenticated live billing/device/GA delivery not established"
+  ],
+  "deployment": {
+    "id": "dpl_EPfuj6s7YkhjAJxWTCBkExSx8cXu",
+    "url": "doya-at1dm6xxc-surisutas-projects.vercel.app",
+    "readyState": "READY",
+    "aliases": [
+      "doya-ai.vercel.app",
+      "doya-ai.surisuta.jp",
+      "doya-ai-surisutas-projects.vercel.app",
+      "doya-ai-git-main-surisutas-projects.vercel.app"
+    ]
+  },
+  "publicEvidence": "analytics-services-public-5fe7658e.json"
+}

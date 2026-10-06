@@ -5,6 +5,7 @@ import Script from 'next/script'
 import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
 import { getActiveServices } from '@/lib/services'
+import { isRecentRegistration } from '@/lib/registration-classification'
 
 // GA4測定ID（ドヤマーケと同一プロパティ・同一ストリーム）
 // 同一プロパティにすることで「ドヤマーケ記事 → doya-ai登録 → 課金」の
@@ -132,13 +133,10 @@ function GaEventsTrackerInner() {
     }
   }, [])
 
-  // 初回ログイン直後の登録計測は利用者ごとに一度だけ送る。
+  // DBで確認したアカウント作成日時から登録計測を判定する。
   useEffect(() => {
     if (!actor) return
-    const firstLoginAt = (session?.user as any)?.firstLoginAt
-    if (!firstLoginAt) return
-    const elapsedMs = Date.now() - new Date(firstLoginAt).getTime()
-    if (elapsedMs >= 0 && elapsedMs < 30 * 60 * 1000) {
+    if (isRecentRegistration((session?.user as any)?.createdAt)) {
       accountEventOnce('sign_up', { method: 'google' }, `ga_signup_sent:${actorKey}`, () => localStorage, sentAccountEvents.current)
     }
   }, [actor, actorKey, session, analyticsVersion])

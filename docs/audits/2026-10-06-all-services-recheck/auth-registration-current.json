@@ -1,0 +1,1 @@
+{"passed":12,"scope":"Actual auth signIn/createUser/session with atomic compare-and-set mock DB and captured notifications/enrollment. No real DB concurrency or mail delivery."}
