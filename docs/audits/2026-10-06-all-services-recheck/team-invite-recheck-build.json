@@ -1,0 +1,12 @@
+{
+  "session": 83340,
+  "exitCode": 0,
+  "observedAt": "2026-10-06T00:44:13.048966+00:00",
+  "log": "/tmp/doya-team-invite-recheck-build-20261006.log",
+  "sourceHashes": {
+    "src/app/aio/invite/[token]/page.tsx": "b4df711cc3b975bd111ec786dc795bb94f5ab6864c584f9ae12bc12d7a6d18f6",
+    "src/app/shodan/invite/[token]/page.tsx": "5e1e47c002da3d64901cdb42c3ed15df348b734fe6b6dc2f4943c8b329987588",
+    "scripts/security-regression/verify-service-auth-recovery.cjs": "13fdcd6c31e84f586239ac38233558cb1c55f475296365931e104b9265e0980d"
+  },
+  "scope": "Prisma generation, full offline security regression, tsc and Next production build passed; targeted lint passed; synthetic UI checks 43 groups and isolated browser; actual authenticated production flows unverified"
+}

@@ -1,0 +1,45 @@
+{
+  "scope": "Actual React and two source pages; synthetic GET/POST; router stub; isolated minimal styling; no OAuth/production writes",
+  "results": [
+    {
+      "service": "aio",
+      "case": "lookup-failure",
+      "state": "Browser tab: 16, Title: \"127.0.0.1:34748/qa.html?service=aio&mode=fetch-retry\", URL: \"http://127.0.0.1:34748/qa.html?service=aio&mode=fetch-retry\".\n0 AXWebArea 127.0.0.1:34748/qa.html?service=aio&mode=fetch-retry\n\t1 container root\n\t\t2 text Isolated QA: synthetic API, no production writes\n\t\t3 image ドヤくん\n\t\t4 heading 招待を確認できませんでした, Value: 1\n\t\t\t5 text 招待を確認できませんでした\n\t\t6 text Synthetic temporary failure\n\t\t7 button 招待の状態を再確認\n\nThe focused UI element is 0 AXWebArea 127.0.0.1:34748/qa.html?service=aio&mode=fetch-retry"
+    },
+    {
+      "service": "aio",
+      "case": "lookup-recovered",
+      "state": "Browser tab: 16, Title: \"127.0.0.1:34748/qa.html?service=aio&mode=fetch-retry\", URL: \"http://127.0.0.1:34748/qa.html?service=aio&mode=fetch-retry\".\n0 AXWebArea 127.0.0.1:34748/qa.html?service=aio&mode=fetch-retry\n\t1 container root\n\t\t2 text Isolated QA: synthetic API, no production writes\n\t\t3 image ドヤくん\n\t\t4 heading ドヤAIOへの招待, Value: 1\n\t\t\t5 text ドヤAIOへの招待\n\t\t6 container\n\t\t\t7 text Synthetic organization  に招待されています\n\t\t8 container\n\t\t\t9 text qa@example.invalid  宛て\n\t\t10 button 招待を受けて参加する\n\t\t11 text 招待されたメールアドレスでログインしてください。\n\nThe focused UI element is 0 AXWebArea 127.0.0.1:34748/qa.html?service=aio&mode=fetch-retry"
+    },
+    {
+      "service": "aio",
+      "case": "conflict",
+      "state": "Browser tab: 16, Title: \"127.0.0.1:34748/qa.html?service=aio&mode=conflict\", URL: \"http://127.0.0.1:34748/qa.html?service=aio&mode=conflict\".\n1 AXWebArea 127.0.0.1:34748/qa.html?service=aio&mode=conflict\n\t2 container root\n\t\t3 text Isolated QA: synthetic API, no production writes\n\t\t4 image ドヤくん\n\t\t5 heading 招待を確認できませんでした, Value: 1\n\t\t\t6 text 招待を確認できませんでした\n\t\t7 text 招待が変更されたか、既に使用されています。招待の状態を再確認してください。\n\t\t8 button 招待の状態を再確認\n\t\t9 container\n\t\t\t10 text 招待の状態を再確認してください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34748/qa.html?service=aio&mode=conflict"
+    },
+    {
+      "service": "aio",
+      "case": "conflict-rechecked-expired",
+      "state": "Browser tab: 16, Title: \"127.0.0.1:34748/qa.html?service=aio&mode=conflict\", URL: \"http://127.0.0.1:34748/qa.html?service=aio&mode=conflict\".\n1 AXWebArea 127.0.0.1:34748/qa.html?service=aio&mode=conflict\n\t2 container root\n\t\t3 text Isolated QA: synthetic API, no production writes\n\t\t4 image ドヤくん\n\t\t5 heading 招待の有効期限が切れています, Value: 1\n\t\t\t6 text 招待の有効期限が切れています\n\t\t7 text 招待者に再送を依頼してください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34748/qa.html?service=aio&mode=conflict"
+    },
+    {
+      "service": "shodan",
+      "case": "lookup-failure",
+      "state": "Browser tab: 16, Title: \"127.0.0.1:34748/qa.html?service=shodan&mode=fetch-retry\", URL: \"http://127.0.0.1:34748/qa.html?service=shodan&mode=fetch-retry\".\n1 AXWebArea 127.0.0.1:34748/qa.html?service=shodan&mode=fetch-retry\n\t2 container root\n\t\t3 text Isolated QA: synthetic API, no production writes\n\t\t4 image ドヤくん\n\t\t5 heading 招待を確認できませんでした, Value: 1\n\t\t\t6 text 招待を確認できませんでした\n\t\t7 text Synthetic temporary failure\n\t\t8 button 招待の状態を再確認\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34748/qa.html?service=shodan&mode=fetch-retry"
+    },
+    {
+      "service": "shodan",
+      "case": "lookup-recovered",
+      "state": "Browser tab: 16, Title: \"127.0.0.1:34748/qa.html?service=shodan&mode=fetch-retry\", URL: \"http://127.0.0.1:34748/qa.html?service=shodan&mode=fetch-retry\".\n1 AXWebArea 127.0.0.1:34748/qa.html?service=shodan&mode=fetch-retry\n\t2 container root\n\t\t3 text Isolated QA: synthetic API, no production writes\n\t\t4 image ドヤくん\n\t\t5 heading ドヤ商談準備への招待, Value: 1\n\t\t\t6 text ドヤ商談準備への招待\n\t\t7 container\n\t\t\t8 text Synthetic organization  に招待されています\n\t\t9 container\n\t\t\t10 text qa@example.invalid  宛て\n\t\t11 button 招待を受けて参加する\n\t\t12 text 招待されたメールアドレスでログインしてください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34748/qa.html?service=shodan&mode=fetch-retry"
+    },
+    {
+      "service": "shodan",
+      "case": "conflict",
+      "state": "Browser tab: 16, Title: \"127.0.0.1:34748/qa.html?service=shodan&mode=conflict\", URL: \"http://127.0.0.1:34748/qa.html?service=shodan&mode=conflict\".\n1 AXWebArea 127.0.0.1:34748/qa.html?service=shodan&mode=conflict\n\t2 container root\n\t\t3 text Isolated QA: synthetic API, no production writes\n\t\t4 image ドヤくん\n\t\t5 heading 招待を確認できませんでした, Value: 1\n\t\t\t6 text 招待を確認できませんでした\n\t\t7 text 招待が変更されたか、既に使用されています。招待の状態を再確認してください。\n\t\t8 button 招待の状態を再確認\n\t\t9 container\n\t\t\t10 text 招待の状態を再確認してください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34748/qa.html?service=shodan&mode=conflict"
+    },
+    {
+      "service": "shodan",
+      "case": "conflict-rechecked-expired",
+      "state": "Browser tab: 16, Title: \"127.0.0.1:34748/qa.html?service=shodan&mode=conflict\", URL: \"http://127.0.0.1:34748/qa.html?service=shodan&mode=conflict\".\n1 AXWebArea 127.0.0.1:34748/qa.html?service=shodan&mode=conflict\n\t2 container root\n\t\t3 text Isolated QA: synthetic API, no production writes\n\t\t4 image ドヤくん\n\t\t5 heading 招待の有効期限が切れています, Value: 1\n\t\t\t6 text 招待の有効期限が切れています\n\t\t7 text 招待者に再送を依頼してください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34748/qa.html?service=shodan&mode=conflict"
+    }
+  ]
+}

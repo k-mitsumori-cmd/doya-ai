@@ -1,0 +1,92 @@
+PASS account-switch helper rejects external callbacks and never starts OAuth before logout
+PASS scan: actual page SDK failure recovers and retries with its encoded return destination
+PASS scan: duplicates during API and SDK waiting are blocked
+PASS scan: restored history rejects old API and JSON completions
+PASS scan: old SDK failure cannot release a newer history-restored request
+PASS scan: network and invalid success bodies recover without a false success
+PASS scan: valid result preserves navigation and locks until leaving
+PASS aio: actual page SDK failure recovers and retries with its encoded return destination
+PASS aio: duplicates during API and SDK waiting are blocked
+PASS aio: restored history rejects old API and JSON completions
+PASS aio: old SDK failure cannot release a newer history-restored request
+PASS aio: network and invalid success bodies recover without a false success
+PASS aio: valid result preserves navigation and locks until leaving
+PASS shodan: actual page SDK failure recovers and retries with its encoded return destination
+PASS shodan: duplicates during API and SDK waiting are blocked
+PASS shodan: restored history rejects old API and JSON completions
+PASS shodan: old SDK failure cannot release a newer history-restored request
+PASS shodan: network and invalid success bodies recover without a false success
+PASS shodan: valid result preserves navigation and locks until leaving
+PASS aio: failed invite lookup can be rechecked without reloading or starting OAuth
+PASS aio: non-JSON conflict or missing invitation removes stale acceptance until rechecked
+PASS aio: still-pending invite after conflict requires a fresh explicit acceptance
+PASS aio: recheck is aborted on unmount and late data cannot restore acceptance
+PASS aio: wrong-account participation switches via sign-out and preserves the encoded invitation
+PASS aio: switching failure hides SDK details and allows retry without losing the invitation
+PASS aio: duplicate account switching is blocked and stale failures cannot unlock a newer attempt
+PASS aio: stale wrong-account response after history restoration cannot replace a successful newer invitation
+PASS aio: invitation expiring during participation stops further acceptance
+PASS aio: invitation component is keyed to token and pending read is cancelled on unmount
+PASS aio: late invitation JSON and late failure cannot update an unmounted page
+PASS aio: expired non-JSON invite and malformed invite cannot be accepted
+PASS shodan: failed invite lookup can be rechecked without reloading or starting OAuth
+PASS shodan: non-JSON conflict or missing invitation removes stale acceptance until rechecked
+PASS shodan: still-pending invite after conflict requires a fresh explicit acceptance
+PASS shodan: recheck is aborted on unmount and late data cannot restore acceptance
+PASS shodan: wrong-account participation switches via sign-out and preserves the encoded invitation
+PASS shodan: switching failure hides SDK details and allows retry without losing the invitation
+PASS shodan: duplicate account switching is blocked and stale failures cannot unlock a newer attempt
+PASS shodan: stale wrong-account response after history restoration cannot replace a successful newer invitation
+PASS shodan: invitation expiring during participation stops further acceptance
+PASS shodan: invitation component is keyed to token and pending read is cancelled on unmount
+PASS shodan: late invitation JSON and late failure cannot update an unmounted page
+PASS shodan: expired non-JSON invite and malformed invite cannot be accepted
+{
+  "passed": 43,
+  "scope": "actual current TSX pages and shared hook; API/SDK mocked; no production writes",
+  "results": [
+    "account-switch helper rejects external callbacks and never starts OAuth before logout",
+    "scan: actual page SDK failure recovers and retries with its encoded return destination",
+    "scan: duplicates during API and SDK waiting are blocked",
+    "scan: restored history rejects old API and JSON completions",
+    "scan: old SDK failure cannot release a newer history-restored request",
+    "scan: network and invalid success bodies recover without a false success",
+    "scan: valid result preserves navigation and locks until leaving",
+    "aio: actual page SDK failure recovers and retries with its encoded return destination",
+    "aio: duplicates during API and SDK waiting are blocked",
+    "aio: restored history rejects old API and JSON completions",
+    "aio: old SDK failure cannot release a newer history-restored request",
+    "aio: network and invalid success bodies recover without a false success",
+    "aio: valid result preserves navigation and locks until leaving",
+    "shodan: actual page SDK failure recovers and retries with its encoded return destination",
+    "shodan: duplicates during API and SDK waiting are blocked",
+    "shodan: restored history rejects old API and JSON completions",
+    "shodan: old SDK failure cannot release a newer history-restored request",
+    "shodan: network and invalid success bodies recover without a false success",
+    "shodan: valid result preserves navigation and locks until leaving",
+    "aio: failed invite lookup can be rechecked without reloading or starting OAuth",
+    "aio: non-JSON conflict or missing invitation removes stale acceptance until rechecked",
+    "aio: still-pending invite after conflict requires a fresh explicit acceptance",
+    "aio: recheck is aborted on unmount and late data cannot restore acceptance",
+    "aio: wrong-account participation switches via sign-out and preserves the encoded invitation",
+    "aio: switching failure hides SDK details and allows retry without losing the invitation",
+    "aio: duplicate account switching is blocked and stale failures cannot unlock a newer attempt",
+    "aio: stale wrong-account response after history restoration cannot replace a successful newer invitation",
+    "aio: invitation expiring during participation stops further acceptance",
+    "aio: invitation component is keyed to token and pending read is cancelled on unmount",
+    "aio: late invitation JSON and late failure cannot update an unmounted page",
+    "aio: expired non-JSON invite and malformed invite cannot be accepted",
+    "shodan: failed invite lookup can be rechecked without reloading or starting OAuth",
+    "shodan: non-JSON conflict or missing invitation removes stale acceptance until rechecked",
+    "shodan: still-pending invite after conflict requires a fresh explicit acceptance",
+    "shodan: recheck is aborted on unmount and late data cannot restore acceptance",
+    "shodan: wrong-account participation switches via sign-out and preserves the encoded invitation",
+    "shodan: switching failure hides SDK details and allows retry without losing the invitation",
+    "shodan: duplicate account switching is blocked and stale failures cannot unlock a newer attempt",
+    "shodan: stale wrong-account response after history restoration cannot replace a successful newer invitation",
+    "shodan: invitation expiring during participation stops further acceptance",
+    "shodan: invitation component is keyed to token and pending read is cancelled on unmount",
+    "shodan: late invitation JSON and late failure cannot update an unmounted page",
+    "shodan: expired non-JSON invite and malformed invite cannot be accepted"
+  ]
+}

@@ -19,6 +19,7 @@ function InvitationContent({ token }: { token: string }) {
   const [state, setState] = useState<State>('loading')
   const [info, setInfo] = useState<{ organizationName: string; organizationSlug: string; email: string; role: string } | null>(null)
   const [errMsg, setErrMsg] = useState('')
+  const [verificationRevision, setVerificationRevision] = useState(0)
   const { busy: accepting, run: submit } = useNavigationSubmission('参加に失敗しました。もう一度お試しください。')
 
   useEffect(() => {
@@ -38,7 +39,15 @@ function InvitationContent({ token }: { token: string }) {
       })
       .catch(() => { if (active) { setErrMsg('招待の取得に失敗しました'); setState('error') } })
     return () => { active = false; controller.abort() }
-  }, [token])
+  }, [token, verificationRevision])
+
+  const verifyAgain = () => {
+    if (state !== 'error' || accepting) return
+    setInfo(null)
+    setErrMsg('')
+    setState('loading')
+    setVerificationRevision(current => current + 1)
+  }
 
   const accept = async () => {
     if (state !== 'ready' || !info) return
@@ -53,6 +62,12 @@ function InvitationContent({ token }: { token: string }) {
       if (res.status === 410) {
         setState('expired')
         throw new NavigationSubmissionError('招待の有効期限が切れています。招待者に再送を依頼してください。')
+      }
+      if (res.status === 404 || res.status === 409) {
+        setInfo(null)
+        setErrMsg('招待が変更されたか、既に使用されています。招待の状態を再確認してください。')
+        setState('error')
+        throw new NavigationSubmissionError('招待の状態を再確認してください。')
       }
       const d = await res.json()
       if (!isCurrent()) return
@@ -77,7 +92,15 @@ function InvitationContent({ token }: { token: string }) {
         </div>
         {state === 'loading' && <p className="text-slate-400 font-bold">読み込み中…</p>}
         {state === 'expired' && <><h1 className="text-xl font-black text-slate-900">招待の有効期限が切れています</h1><p className="text-sm font-bold text-slate-400 mt-2">招待者に再送を依頼してください。</p></>}
-        {state === 'error' && <><h1 className="text-xl font-black text-slate-900">招待が見つかりません</h1><p className="text-sm font-bold text-slate-400 mt-2">{errMsg}</p></>}
+        {state === 'error' && (
+          <>
+            <h1 className="text-xl font-black text-slate-900">招待を確認できませんでした</h1>
+            <p className="text-sm font-bold text-slate-400 mt-2">{errMsg}</p>
+            <button onClick={verifyAgain} disabled={accepting} className="w-full mt-6 py-4 rounded-2xl bg-purple-600 text-white font-bold disabled:opacity-50">
+              招待の状態を再確認
+            </button>
+          </>
+        )}
         {state === 'account-mismatch' && info && (
           <>
             <h1 className="text-xl font-black text-slate-900">別のアカウントでログインしています</h1>

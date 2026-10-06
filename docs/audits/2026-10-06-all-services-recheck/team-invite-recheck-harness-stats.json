@@ -1,0 +1,11 @@
+{
+  "reads": {
+    "aio:fetch-retry": 2,
+    "aio:conflict": 2,
+    "shodan:fetch-retry": 2,
+    "shodan:conflict": 2
+  },
+  "posts": 2,
+  "externalOAuthStarted": 0,
+  "forwardedApiCalls": 0
+}

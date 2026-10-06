@@ -1,0 +1,23 @@
+PASS account-switch helper rejects external callbacks and never starts OAuth before logout
+PASS scan: actual page SDK failure recovers and retries with its encoded return destination
+PASS scan: duplicates during API and SDK waiting are blocked
+PASS scan: restored history rejects old API and JSON completions
+PASS scan: old SDK failure cannot release a newer history-restored request
+PASS scan: network and invalid success bodies recover without a false success
+PASS scan: valid result preserves navigation and locks until leaving
+PASS aio: actual page SDK failure recovers and retries with its encoded return destination
+PASS aio: duplicates during API and SDK waiting are blocked
+PASS aio: restored history rejects old API and JSON completions
+PASS aio: old SDK failure cannot release a newer history-restored request
+PASS aio: network and invalid success bodies recover without a false success
+PASS aio: valid result preserves navigation and locks until leaving
+PASS shodan: actual page SDK failure recovers and retries with its encoded return destination
+PASS shodan: duplicates during API and SDK waiting are blocked
+PASS shodan: restored history rejects old API and JSON completions
+PASS shodan: old SDK failure cannot release a newer history-restored request
+PASS shodan: network and invalid success bodies recover without a false success
+PASS shodan: valid result preserves navigation and locks until leaving
+TypeError: Cannot read properties of null (reading 'props')
+    at /Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-service-auth-recovery.cjs:40:326
+    at async check (/Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/load-typescript.cjs:4:30)
+    at async /Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-service-auth-recovery.cjs:40:3

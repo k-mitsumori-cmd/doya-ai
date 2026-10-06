@@ -180,3 +180,15 @@ HR画面のエラーには招待の状態を再確認する操作を追加。元
 取得APIもPENDINGの期限ちょうどを失効させ、期限を過ぎたACCEPTED/CANCELLEDは実状態を保持する。画面は取消済みと使用済みを区別し、管理者への再送依頼を案内する。API合成10項目と実TSX合成21項目成功へ更新（ログ添付）。隔離ブラウザでも取消済み案内と参加ボタンがないことを確認。cancelledの別プロキシ記録はhr-invite-state-cancelled-harness-stats.json。実顧客の招待取得・参加・OAuthは実行していない。
 
 最終全体ビルド11986（/tmp/doya-hr-invite-state-verified-build-20261006.log）は終了コード0。Prisma生成・全体セキュリティ回帰・型検査・Next本番ビルド成功。7ソースのSHA-256は開始時と一致。先行2103は型エラー終了2、44857と66798は途中停止であり成功根拠に使用しない。先行704a66faはVercel Ready・同じSHAと本番別名・CI成功を現在照会で確認。全17サービスの認証後通し確認・実DB競合・現行ER更新・本番通知の原因特定は未完了。
+
+## AIO・商談準備の招待再確認を補修
+
+招待GETの通信/形式エラー後に再確認を追加。POSTの404/409はJSONでない応答でも現在情報と参加ボタンを解除し、再確認するまで参加を繰り返せない。再取得でPENDINGなら明示参加を待ち、410なら再送依頼を案内する。GETのabort・token別再マウント・旧応答無効化と既存の本人切替/ログイン失敗復旧を維持。取得失敗を「招待が見つからない」と断定する見出しも修正。
+
+実TSX/フック合成43項目成功、前版439585c7の2画面では同じ新しい再確認チェックが失敗（team-invite-recheck-baseline.log）。fixtureのuseState関数更新とuseEffect依存/cleanupを実装して再取得の挙動を検証。隔離ブラウザでも両サービスのGET503→再確認→参加画面、非JSON POST409→参加解除→再確認→410表示を確認（team-invite-recheck-browser.json）。実React/ページ、合成API、最小CSS/ルータstubであり、共通レイアウト・実OAuth・実参加の証拠ではない。プロキシは上流転送なし。対象ESLint成功。最終全体ビルド83340を実行中、未コミット・未反映。
+
+APIの追加点検では、AIO/商談準備は組織ロック後の招待再読にorganizationId一致条件がなく、claim条件に再読時のrole/inviteEmailが含まれていない。通常の管理操作のロック規約と実更新経路の影響範囲を確認してから補修/競合検証する必要がある。今回のUI修正だけでAPI全競合完了としない。HR状態補修439585c7はpush成功、Vercel dpl_DTggTKNmLbMSdNbzyicnueD9iU82/CI37394907133は最後の照会時に実行中。全体監査継続。
+
+追加の横断点検：quote・mensetsu・aishodanの招待画面はGETにabort/旧token応答抑止がなく、POSTはJSON解析を401判定より前に実行し、catchなしのため通信失敗時に利用者向け復旧案内がない。エラー分岐には再確認/アカウント切替もなく、成功後のsetTimeoutにアンマウントcleanupがない。3画面を次の補修対象に記録する。GET APIはinviteオブジェクトを返すため画面のjson.inviteとは一致している（AIO/商談準備の平坦レスポンスと混同しない）。同じチーム招待でも応答契約が異なり、各APIの契約を維持して補修する必要がある。
+
+AIO・商談準備再確認補修の最終全体ビルド83340は終了コード0。Prisma生成・全体回帰・型検査・Next本番ビルド成功、3ソースSHA-256は開始時と一致。対象ESLintとdiff check成功。HR状態補修439585c7はCI成功、Vercel同じデプロイIDはまだBUILDINGのため本番反映完了としない。

@@ -1352,7 +1352,7 @@ shodan,C008,認証,期限切れセッションを拒否する,現在版での項
 shodan,C009,認証,ログアウト後に他人のキャッシュを表示しない,現在版での項目別通し検証待ち,
 shodan,C010,認証,ID欠落時のメール補完が一貫している,現在版での項目別通し検証待ち,
 shodan,C011,認証,管理画面と一般画面の認証が分離される,現在版での項目別通し検証待ち,
-shodan,C012,認証,招待トークンの期限・使い回し・失効が守られる,一部検証済み：GET410・参加POST410時の表示と操作停止を模擬応答で確認／本番期限境界・失効・使い回しの通し確認未完了,invite-expiry-browser.json; invite-expiry-regression.log; invite-expiry-baseline.log; README.md
+shodan,C012,認証,招待トークンの期限・使い回し・失効が守られる,一部検証済み：GET失敗再確認・非JSON POST404/409で参加解除・再読410で失効案内／実DB競合・本番承諾未検証,invite-expiry-browser.json; invite-expiry-regression.log; invite-expiry-baseline.log; README.md; team-invite-recheck-browser.json; team-invite-recheck-regression.log
 shodan,C013,権限・組織,他ユーザーのIDによる取得・更新・削除を拒否する,現在版での項目別通し検証待ち,
 shodan,C014,権限・組織,明示した組織が不正なら別組織へ切り替えない,現在版での項目別通し検証待ち,
 shodan,C015,権限・組織,退会済み・無効メンバーの権限を拒否する,現在版での項目別通し検証待ち,
@@ -1474,7 +1474,7 @@ aio,C008,認証,期限切れセッションを拒否する,現在版での項目
 aio,C009,認証,ログアウト後に他人のキャッシュを表示しない,現在版での項目別通し検証待ち,
 aio,C010,認証,ID欠落時のメール補完が一貫している,現在版での項目別通し検証待ち,
 aio,C011,認証,管理画面と一般画面の認証が分離される,現在版での項目別通し検証待ち,
-aio,C012,認証,招待トークンの期限・使い回し・失効が守られる,一部検証済み：GET410・参加POST410時の表示と操作停止を模擬応答で確認／本番期限境界・失効・使い回しの通し確認未完了,invite-expiry-browser.json; invite-expiry-regression.log; invite-expiry-baseline.log; README.md
+aio,C012,認証,招待トークンの期限・使い回し・失効が守られる,一部検証済み：GET失敗再確認・非JSON POST404/409で参加解除・再読410で失効案内／実DB競合・本番承諾未検証,invite-expiry-browser.json; invite-expiry-regression.log; invite-expiry-baseline.log; README.md; team-invite-recheck-browser.json; team-invite-recheck-regression.log
 aio,C013,権限・組織,他ユーザーのIDによる取得・更新・削除を拒否する,現在版での項目別通し検証待ち,
 aio,C014,権限・組織,明示した組織が不正なら別組織へ切り替えない,現在版での項目別通し検証待ち,
 aio,C015,権限・組織,退会済み・無効メンバーの権限を拒否する,現在版での項目別通し検証待ち,
