@@ -7,6 +7,8 @@ import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES, AREAS as AREA_LIST, SIZES } from '@/lib/doyalist/constants'
 import { AREA_TO_PREFECTURES } from '@/lib/doyalist/collect/prefecture-codes'
 import { KEYWORD_UNKNOWN_RESULT, parseKeywordTags, readKeywordResponse } from '@/lib/doyalist/keyword-response-client'
+import { resolveDoyalistSearchKeywords } from '@/lib/doyalist/search-keywords'
+import { parseDoyalistEstimate, type DoyalistEstimate } from '@/lib/doyalist/estimate-result'
 import { readBillingResponse } from '@/lib/billing-response-client'
 import { DOYALIST_COLLECTION_UNKNOWN, parseCollectionUsage, readCollectionResponse, validCollectionResult } from '@/lib/doyalist/collect-response-client'
 import { readDoyalistPreferences } from '@/lib/doyalist/preferences'
@@ -137,13 +139,19 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
     if (pendingKeyword.current && pendingKeyword.current.key !== keywordKey) { cancelKeyword(); setExpanding(false) }
   }, [keywordKey, cancelKeyword])
   useEffect(() => () => cancelKeyword(), [cancelKeyword])
-  const isSignedIn = Boolean(session?.user)
-
-  // 実数プレビュー
-  const [estimateLoading, setEstimateLoading] = useState(false)
-  const [estimatedCount, setEstimatedCount] = useState<number | null>(null)
-  const [estimateIsApprox, setEstimateIsApprox] = useState(false)
-  const [estimateNote, setEstimateNote] = useState<string | null>(null)
+  const isSignedIn = status === 'authenticated' && Boolean(session?.user?.id)
+  const rawSearchWords = activeTagList.length ? activeTagList.join(',') : keywords
+  const estimateWords = resolveDoyalistSearchKeywords(industry, rawSearchWords)
+  const estimateScope = JSON.stringify([isSignedIn, session?.user?.id, industry, region, estimateWords])
+  const estimateEpoch = useRef({ scope: estimateScope, version: 0 })
+  if (estimateEpoch.current.scope !== estimateScope) estimateEpoch.current = { scope: estimateScope, version: estimateEpoch.current.version + 1 }
+  const estimateKey = estimateEpoch.current.version
+  const [estimateSnapshot, setEstimateSnapshot] = useState<{ key: number; loading: boolean; result: DoyalistEstimate | null } | null>(null)
+  const currentEstimate = isSignedIn && estimateSnapshot?.key === estimateKey ? estimateSnapshot : null
+  const estimateLoading = Boolean(currentEstimate?.loading)
+  const estimatedCount = currentEstimate?.result?.estimated ?? null
+  const estimateIsApprox = currentEstimate?.result?.isApprox ?? false
+  const estimateNote = currentEstimate?.result?.note || null
 
   // Invalidate synchronously: an old response must not win between the input event and render.
   const handleKeywordChange = (v: string) => {
@@ -185,44 +193,33 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
     }
   }
 
-  // フィルタ条件変更時に実数を推定
+  // Match collection keywords, and hide previous results synchronously on scope/ABA changes.
   useEffect(() => {
-    setEstimatedCount(null)
-    setEstimateIsApprox(false)
-    setEstimateNote(null)
-    setEstimateLoading(false)
     if (!isSignedIn) return
     const ctrl = new AbortController()
+    const current = () => !ctrl.signal.aborted && estimateEpoch.current.version === estimateKey && identityEpoch.current.version === epoch
+    const unavailable = { estimated: null, isApprox: false, note: '参考件数を取得できませんでした。実際の取得件数は抽出後にご確認ください。' }
+    setEstimateSnapshot({ key: estimateKey, loading: true, result: null })
+    const words = JSON.parse(estimateScope)[4] as string[]
     const timer = setTimeout(async () => {
-      setEstimateLoading(true)
-      try {
-        const res = await fetch('/api/doyalist/estimate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ industry, region, keywords: activeTagList.length > 0 ? activeTagList : undefined }),
-          signal: ctrl.signal,
-        })
-        const data = await res.json()
-        if (ctrl.signal.aborted) return
-        if (res.ok && data?.success) {
-          setEstimatedCount(typeof data.estimated === 'number' ? data.estimated : null)
-          setEstimateIsApprox(!!data.isApprox)
-          setEstimateNote(data.note || null)
-        } else {
-          setEstimatedCount(null)
-          setEstimateNote('件数を取得できませんでした')
-        }
-      } catch {
-        if (!ctrl.signal.aborted) {
-          setEstimatedCount(null)
-          setEstimateNote('件数を取得できませんでした')
-        }
-      } finally {
-        if (!ctrl.signal.aborted) setEstimateLoading(false)
+      if (!current()) return
+      if (words.some(word => word.length > 100)) {
+        setEstimateSnapshot({ key: estimateKey, loading: false, result: unavailable }); return
       }
-    }, 400) // デバウンス
+      try {
+        const response = await readBillingResponse('/api/doyalist/estimate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ industry, region, keywords: words }),
+        }, ctrl.signal)
+        if (!current()) return
+        const result = response.ok ? parseDoyalistEstimate(response.data) : null
+        setEstimateSnapshot({ key: estimateKey, loading: false, result: result || unavailable })
+      } catch {
+        if (current()) setEstimateSnapshot({ key: estimateKey, loading: false, result: unavailable })
+      }
+    }, 400)
     return () => { clearTimeout(timer); ctrl.abort() }
-  }, [isSignedIn, industry, region, activeTagList])
+  }, [isSignedIn, estimateKey, estimateScope, industry, region, identityEpoch, epoch])
 
   const toggleTag = (tag: string) => {
     setActiveTags((prev) => {
@@ -639,7 +636,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                       </p>
                       {!estimateIsApprox && estimatedCount < count && (
                         <p className="text-[10px] text-amber-700 mt-1 font-bold inline-flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">warning</span>該当数が少ないため、実際は{estimatedCount.toLocaleString()}社程度になります
+                          <span className="material-symbols-outlined text-xs">warning</span>キーワード検索の参考件数が指定件数を下回っています。業種・規模などで絞り込んだ実際の取得数とは異なります
                         </p>
                       )}
                       {estimateNote && (

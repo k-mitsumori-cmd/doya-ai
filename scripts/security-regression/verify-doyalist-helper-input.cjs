@@ -9,7 +9,8 @@ const operationalJson = load('src/lib/operational-json.ts', {}, { TextDecoder, U
 const estimate = load('src/app/api/doyalist/estimate/route.ts', {
   'next/server': { NextResponse: Response },
   'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
-  '@/lib/auth': { authOptions: {} },
+  '@/lib/doyalist/search-keywords': load('src/lib/doyalist/search-keywords.ts'),
+    '@/lib/auth': { authOptions: {} },
   '@/lib/doyalist/collect/prefecture-codes': { resolvePrefectureCodes: (region) => region === '関東' ? ['13', '14'] : [] },
   '@/lib/operational-json': operationalJson,
   '@/lib/doyalist/collect/provider-json': {

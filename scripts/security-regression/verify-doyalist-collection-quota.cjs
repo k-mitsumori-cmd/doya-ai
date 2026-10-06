@@ -46,7 +46,8 @@ const limits = load('src/lib/doyalist/limits.ts', {
 const route = load('src/app/api/doyalist/collect/route.ts', {
   'next/server': { NextResponse: Response },
   'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
-  '@/lib/auth': { authOptions: {} },
+  '@/lib/doyalist/search-keywords': load('src/lib/doyalist/search-keywords.ts'),
+    '@/lib/auth': { authOptions: {} },
   '@/lib/prisma': { prisma },
   '@/lib/operational-json': operationalJson,
   '@/lib/doyalist/stream-json': streamJson,

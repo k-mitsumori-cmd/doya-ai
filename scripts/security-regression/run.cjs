@@ -1274,3 +1274,8 @@ for (const verifier of ['verify-doyalist-collect-client.cjs', 'verify-doyalist-c
   const result = spawnSync(process.execPath, [path.join(__dirname, verifier)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Security regression failed:', verifier); process.exit(1); }
 }
+
+const doyalistSearchConsistency = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyalist-search-consistency.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyalistSearchConsistency.error || doyalistSearchConsistency.status !== 0) {
+  console.error('Security regression failed: verify-doyalist-search-consistency.cjs'); process.exit(1);
+}

@@ -1,0 +1,20 @@
+{
+  "status": "reproduced",
+  "results": [
+    {
+      "service": "doyaslide",
+      "priorActorChildDraftPersists": true,
+      "priorActorPlanVisibleDuringTransition": true,
+      "sameActorObjectRefreshDuplicatesUsageRead": true,
+      "focusAndRouteDoNotRefreshUsage": true
+    },
+    {
+      "service": "cunning",
+      "priorActorChildDraftPersists": true,
+      "priorActorPlanVisibleDuringTransition": true,
+      "sameActorObjectRefreshDuplicatesUsageRead": true,
+      "focusAndRouteDoNotRefreshUsage": true
+    }
+  ],
+  "scope": "Actual layout components and Session/Route context under StrictMode, synthetic child draft and sidebar prop observer, mocked read-only quota. This establishes wrapper state/plan lifecycle defects, not a real customer leak or authenticated business flow test. No live API/provider/DB writes."
+}

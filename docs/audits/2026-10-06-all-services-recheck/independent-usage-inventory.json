@@ -37,7 +37,7 @@
         "src/components/doyalist/ToolForm.tsx",
         "src/app/doyalist/Tool.tsx"
       ],
-      "state": "5ee64c4f ToolForm CI success, production READY and 3 anonymous tool pages/20 JS publication confirmed; real paid generation and DB remain unverified. be94f76d main collection pushed, CI success, production build tracking. Keyword repair: 27 mounted cases plus existing callback21 cases, full 2579-source release passed unchanged, not pushed yet. Estimate criteria/types/deadline defects reproduced and remain for next repair. Layout private authenticated flow remains unverified.",
+      "state": "5ee64c4f CI success/production READY/3 tool pages and 20 JS publication confirmed. be94f76d CI success, production build tracking. 70e12d8f keyword repair pushed after full gate; CI and production build tracking. Estimate criteria/types/deadline repair: 44 mounted cases, 6 synthetic actual-API cases and unchanged 2582-source full release gate passed, not pushed yet. Private business flow remains unverified.",
       "proof": "doyalist-collect-repair.json"
     },
     {
@@ -55,7 +55,8 @@
         "src/components/doyaslide/NewDoyaSlideWizard.tsx",
         "src/app/doyaslide/projects/page.tsx"
       ],
-      "state": "Independent usage lookups located. Actor/schema/deadline and completion consistency require mounted verification."
+      "state": "Actual layout/context baseline reproduced: prior actor child draft persists, prior plan prop briefly visible, object refresh repeats read, focus/route lacks refresh. Synthetic wrapper probe only, not real customer data exposure. Repair pending.",
+      "proof": "slide-cunning-layout-baseline.json"
     },
     {
       "service": "cunning",
@@ -64,7 +65,8 @@
         "src/app/cunning/Tool.tsx",
         "src/app/cunning/live/[sessionId]/page.tsx"
       ],
-      "state": "Independent usage lookups located. Actor/schema/deadline and live-view safety require mounted verification."
+      "state": "Actual layout/context baseline reproduced: prior actor child draft persists, prior plan prop briefly visible, object refresh repeats read, focus/route lacks refresh. Synthetic wrapper probe only, not real customer data exposure. Repair pending.",
+      "proof": "slide-cunning-layout-baseline.json"
     },
     {
       "service": "sfa",

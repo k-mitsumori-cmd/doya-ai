@@ -1,0 +1,4 @@
+{
+  "passed": 6,
+  "scope": "Actual collection and estimate API routes, actual shared parser and streaming output; synthetic Prisma, auth and provider only. Checks exact keyword order and honest sampling metadata without remote provider or real DB writes."
+}

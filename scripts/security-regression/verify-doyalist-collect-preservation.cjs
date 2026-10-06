@@ -29,6 +29,7 @@ function fixture(initialCount, failure, denied) {
   const api = load('src/app/api/doyalist/collect/route.ts', {
     'next/server':{NextResponse:Response},
     'next-auth':{getServerSession:async()=>denied==='anonymous'?null:{user:{id:'user'}}},
+    '@/lib/doyalist/search-keywords': load('src/lib/doyalist/search-keywords.ts'),
     '@/lib/auth':{authOptions:{}},
     '@/lib/prisma':{prisma},
     '@/lib/operational-json':operationalJson,

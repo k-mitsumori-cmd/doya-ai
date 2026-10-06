@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { resolvePrefectureCodes } from '@/lib/doyalist/collect/prefecture-codes'
+import { resolveDoyalistSearchKeywords } from '@/lib/doyalist/search-keywords'
 import { fetchCollectionJson } from '@/lib/doyalist/collect/provider-json'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 
@@ -50,27 +51,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, estimated: null, note: 'APIキー未設定' })
     }
 
-    // 検索キーワードの決定: ユーザータグ > 業種代表語
-    const INDUSTRY_KEYWORDS: Record<string, string[]> = {
-      'IT・ソフトウェア': ['システム', 'ソフトウェア'],
-      '製造業': ['製造', '工業'],
-      '小売・EC': ['販売', '商事'],
-      '医療・介護': ['医療', '介護'],
-      '教育': ['教育', '学習'],
-      '金融・保険': ['金融', '保険'],
-      '不動産': ['不動産', '住宅'],
-      '飲食': ['食品', '飲食'],
-      '物流': ['物流', '運輸'],
-      '建設': ['建設', '建築'],
-      'コンサル': ['コンサルティング'],
-      '広告・マーケ': ['広告', 'マーケティング'],
-      '人材': ['人材', 'スタッフ'],
-      'その他': ['株式会社'],
-    }
-    const selectedKeywords = keywords?.map((keyword) => keyword.trim()).filter(Boolean).slice(0, 3) || []
-    const industryKeywords = industry && Object.prototype.hasOwnProperty.call(INDUSTRY_KEYWORDS, industry)
-      ? INDUSTRY_KEYWORDS[industry] : undefined
-    const searchKeywords = selectedKeywords.length > 0 ? selectedKeywords : industryKeywords || ['株式会社']
+    const searchKeywords = resolveDoyalistSearchKeywords(industry || '', keywords?.join(',') || '')
 
     // 都道府県コード解決（エリア指定の場合は最初の県だけサンプリング）
     const prefCodes = region && region !== '全国' ? resolvePrefectureCodes(region) : []

@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-06T19:06:44.659498+00:00",
+  "commit": "70e12d8fe598c84a8f8ef9b21eef4ede86d8f77d",
+  "push": "HEAD:main succeeded",
+  "ci": {
+    "id": 37516457064,
+    "status": "queued",
+    "url": "https://github.com/k-mitsumori-cmd/doya-ai/actions/runs/37516457064"
+  },
+  "production": {
+    "url": "doya-pjrkkz2n1-surisutas-projects.vercel.app",
+    "state": "BUILDING"
+  },
+  "localGate": "doyalist-keyword-release-2b3bcd89-6633-4e26-95dd-c1d8cbe38e5a",
+  "gateStatus": "passed",
+  "frozenSourceFiles": 2579,
+  "publishedProof": "not-yet-verified",
+  "remainingConfirmed": "doyalist-estimate-client-baseline.json"
+}
