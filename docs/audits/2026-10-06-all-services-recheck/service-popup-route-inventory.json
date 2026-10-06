@@ -1,0 +1,133 @@
+{
+  "checkedAt": "2026-10-06T19:41:28.334759+00:00",
+  "status": "inventory-only-unfixed",
+  "scope": "Static route/source inventory only. Does not prove absence of inherited/global/external GTM behavior or actual overlap in other services. Only Slide guest overlap was browser-confirmed. Existing logged-in GTM exclusion comment requires external configuration and does not enforce suppression itself.",
+  "services": [
+    {
+      "service": "banner",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/banner/guide",
+        "/banner/landing",
+        "/banner/pricing"
+      ]
+    },
+    {
+      "service": "seo",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/seo/pricing"
+      ]
+    },
+    {
+      "service": "interview",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/interview/pricing"
+      ]
+    },
+    {
+      "service": "persona",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/persona/pricing"
+      ]
+    },
+    {
+      "service": "hr",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/hr/pricing"
+      ]
+    },
+    {
+      "service": "kintai",
+      "localPopupSelectorsFoundIn": [
+        "src/app/kintai/layout.tsx"
+      ],
+      "marketingRouteCandidates": [
+        "/kintai/pricing"
+      ]
+    },
+    {
+      "service": "doyalist",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/doyalist/pricing"
+      ]
+    },
+    {
+      "service": "promane",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/promane/pricing"
+      ]
+    },
+    {
+      "service": "doyaslide",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/doyaslide/pricing"
+      ]
+    },
+    {
+      "service": "cunning",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/cunning/pricing"
+      ]
+    },
+    {
+      "service": "sfa",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/sfa/pricing"
+      ]
+    },
+    {
+      "service": "shodan",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/shodan/pricing"
+      ]
+    },
+    {
+      "service": "aio",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/aio/pricing"
+      ]
+    },
+    {
+      "service": "mensetsu",
+      "localPopupSelectorsFoundIn": [
+        "src/app/mensetsu/live/[token]/page.tsx"
+      ],
+      "marketingRouteCandidates": [
+        "/mensetsu/pricing"
+      ]
+    },
+    {
+      "service": "quote",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/quote/pricing"
+      ]
+    },
+    {
+      "service": "aishodan",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/aishodan/pricing"
+      ]
+    },
+    {
+      "service": "adimage",
+      "localPopupSelectorsFoundIn": [],
+      "marketingRouteCandidates": [
+        "/adimage/pricing"
+      ]
+    }
+  ],
+  "nextVerification": "Mounted shared guard with actual CSS and late-inserted synthetic widgets; preserve guest landing/pricing visibility. Actual production guest browser and mobile required after publication."
+}

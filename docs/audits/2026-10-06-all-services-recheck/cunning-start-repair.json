@@ -6,7 +6,12 @@
   "typecheck": "passed before final unauthorized-usage adjustment; full final gate includes tsc",
   "legacyLoadAndAllowance": "passed",
   "scope": "Actual full Cunning Tool, allowance/profile/mode modules and bounded 35s/64KiB reader under StrictMode with synthetic auth/HTTP/clock/router. Single-frame start lock, strict owned ID/mode acknowledgment, unknown-result history recovery, auth/ABA/unmount cancellation, current quota guard, isolated metadata refresh preserving selected profiles/drafts. No actual session creation, recording, paid AI, DB or customer-flow verification.",
-  "production": "not-yet-committed-or-deployed",
+  "production": {
+    "id": "dpl_AMBv9JkFvGsBe3xNqPnv6geM5xio",
+    "url": "doya-1tcrid9bq-surisutas-projects.vercel.app",
+    "readyState": "READY",
+    "target": "production"
+  },
   "remaining": "Profile/company/knowledge/session list readers remain unbounded and all-service authenticated business flows remain incomplete.",
   "remainingServerSemantics": "Session creation POST still has no durable creation idempotency key. Client avoids automatic uncertain retry, but reload/explicit new creation can produce another session; cross-tab/session-creation exactly-once is NOT claimed. Recording leases separately enforce time quota.",
   "sourceFiles": 2587,
@@ -21,5 +26,11 @@
       "exitCode": 0,
       "endedAt": "2026-10-06T19:36:28.701991+00:00"
     }
-  ]
+  ],
+  "commit": "20001806bc3fae7f478d69fc415012d8e8db8ded",
+  "ci": {
+    "run": 37520318563,
+    "status": "success"
+  },
+  "publicationCheckedAt": "2026-10-06T19:47:24.857266+00:00"
 }

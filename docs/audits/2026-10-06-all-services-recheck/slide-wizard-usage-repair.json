@@ -8,8 +8,10 @@
   "gate": "docs/audits/2026-10-06-all-services-recheck/slide-wizard-usage-release-e88aa5e0-e44b-4e10-a71a-3d96afe5fb56",
   "scope": "Strict metadata with bounded 35s/64KiB reader; unknown/invalid quota cannot create new projects; retained confirmed-project recovery, actor/ABA cancellation and input preservation. Actual mounted Wizard with synthetic network/clock/session, no real project writes, provider or DB.",
   "production": {
+    "id": "dpl_28jh6aJZ3EqHWJt7Vrv1eNJYQ9gp",
     "url": "doya-mr7r6sta0-surisutas-projects.vercel.app",
-    "state": "BUILDING"
+    "readyState": "READY",
+    "target": "production"
   },
   "additionalCandidateDefect": {
     "status": "confirmed-unfixed",
@@ -37,7 +39,8 @@
   ],
   "commit": "91f7b025ae606e2d701b4e56184f318e0a01d136",
   "ci": {
-    "id": 37519479644,
-    "status": "in_progress"
-  }
+    "run": 37519479644,
+    "status": "success"
+  },
+  "publicationCheckedAt": "2026-10-06T19:40:55.895903+00:00"
 }

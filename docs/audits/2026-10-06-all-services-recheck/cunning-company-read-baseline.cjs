@@ -1,0 +1,7 @@
+const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
+const file='src/app/cunning/company/page.tsx',source=fs.readFileSync(file,'utf8'),ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let fn;
+function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='load')fn=n.initializer.arguments[0];ts.forEachChild(n,visit)}visit(ast);assert.ok(fn);
+(async()=>{const state={setCompanies:['previous-company'],setApplicants:['previous-applicant']},context={loadVersion:{current:0},fetch:async()=>{throw Error('SYNTHETIC_PRIVATE')},Error,Promise};for(const name of new Set(source.match(/\bset[A-Z]\w*/g)))context[name]=v=>state[name]=v;
+await vm.runInNewContext(ts.transpileModule('('+fn.getText(ast)+')',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context)();
+assert.equal(state.setLoadError,'SYNTHETIC_PRIVATE');assert.equal(state.setCompanies.length,0);assert.equal(state.setApplicants.length,0);
+console.log(JSON.stringify({status:'confirmed-unfixed-separate-company-page',source:file,observed:'A failed synthetic refresh erases previous company/applicant rows and exposes the raw synthetic network error as loadError.',scope:'Actual extracted load callback, synthetic fetch/setters only. Does not claim a production outage or real diagnostic disclosure. Separate from the Tool list repair.'},null,2));})().catch(e=>{console.error(e);process.exitCode=1});

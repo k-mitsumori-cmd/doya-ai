@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-06T19:42:31.389605+00:00",
+  "status": "full-gate-passed",
+  "parent": "20001806bc3fae7f478d69fc415012d8e8db8ded",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/cunning-lists-release-2f6daa04-326f-46d2-9328-c5f791c763f7",
+  "mountedCases": 21,
+  "startRegressionCases": 27,
+  "typecheck": "passed in final full gate",
+  "targetedLint": "0 errors, 4 existing image warnings",
+  "scope": "Actual Tool with 35s/4MiB read-only list reader, bounded fetch/body including a full 50-row Japanese applicant page above 64KiB, sanitized local error recovery, no automatic retry, same-frame pagination coalescing, auth cancellation, preserving prior lists/selected profiles/note. Synthetic HTTP/timers only; no production customer session, provider call, recording, DB write or real authenticated workflow. Selected missing knowledge is now explicitly shown and creation is blocked until reselected/deselected; actual late ABA completion tested.",
+  "production": "not-yet-committed",
+  "remaining": [
+    "All 17 service private end-to-end flows remain incompletely verified; 2074-criterion matrix is not passed.",
+    "Separate Cunning company/history/knowledge pages still use older read handlers.",
+    "HubSpot popup overlap is browser-confirmed on Slide guest create, but remains unfixed; other routes only inventoried.",
+    "Cunning session creation has no durable cross-reload idempotency key."
+  ],
+  "nextRequiredTest": "Actual late old list reads are now resolved after auth ABA; no old diagnostic/row appears. Missing selected knowledge is explicitly represented, blocks direct retained callback, and permits explicit deselection.",
+  "intermediateGate": {
+    "path": "docs/audits/2026-10-06-all-services-recheck/cunning-lists-release-911a94f6-784f-4e08-ad36-c8cd7242bcd9",
+    "status": "passed-but-not-released",
+    "reason": "Actual mounted extra probe found a visible missing-knowledge selection vs submitted retained reference mismatch; repaired and rerunning fresh full gate."
+  },
+  "sourceFiles": 2589,
+  "gates": [
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T19:47:47.420768+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T19:47:49.022286+00:00"
+    }
+  ]
+}

@@ -1155,7 +1155,7 @@ cunning,C055,入力・外部接続,HTML表示で保存型XSSを防ぐ,現在版�
 cunning,C056,入力・外部接続,金額・数量・日時の異常値を拒否する,現在版での項目別通し検証待ち,
 cunning,C057,入力・外部接続,ファイル形式を拡張子だけで判断しない,現在版での項目別通し検証待ち,
 cunning,C058,入力・外部接続,ストレージの所有権・署名URL期限が守られる,現在版での項目別通し検証待ち,
-cunning,C059,入力・外部接続,外部APIのタイムアウト・再試行が有界である,現在版での項目別通し検証待ち,
+cunning,C059,入力・外部接続,外部APIのタイムアウト・再試行が有界である,現在版での項目別通し検証待ち,"PARTIAL ONLY: cunning-lists-mounted-results.json (21 actual Tool/reader synthetic cases) and cunning-lists-repair.json. Bounded list fetch/body, selected profiles/note retained on retry, missing knowledge explicitly represented, persistent local error/retry, auth/ABA/unmount cancellation. Separate company/history/knowledge/live pages and real authenticated/provider flows remain unverified; this entire criterion is NOT passed."
 cunning,C060,入力・外部接続,通知先・本文に利用者入力を安全に扱う,現在版での項目別通し検証待ち,
 cunning,C061,生成・ジョブ,連打・再送に冪等性がある,現在版での項目別通し検証待ち,
 cunning,C062,生成・ジョブ,ジョブの所有者と結果取得権限を検査する,現在版での項目別通し検証待ち,
@@ -1166,10 +1166,10 @@ cunning,C066,生成・ジョブ,再生成と編集にも上限を適用する,�
 cunning,C067,生成・ジョブ,公開音声ルームの同意・期限・人数を守る,現在版での項目別通し検証待ち,
 cunning,C068,生成・ジョブ,エクスポートで他人の成果物を含めない,現在版での項目別通し検証待ち,
 cunning,C069,UI・アクセシビリティ,モーダルのフォーカス・Escape・復帰が機能する,現在版での項目別通し検証待ち,
-cunning,C070,UI・アクセシビリティ,入力をエラー時に失わない,現在版での項目別通し検証待ち,
+cunning,C070,UI・アクセシビリティ,入力をエラー時に失わない,現在版での項目別通し検証待ち,"PARTIAL ONLY: cunning-lists-mounted-results.json (21 actual Tool/reader synthetic cases) and cunning-lists-repair.json. Bounded list fetch/body, selected profiles/note retained on retry, missing knowledge explicitly represented, persistent local error/retry, auth/ABA/unmount cancellation. Separate company/history/knowledge/live pages and real authenticated/provider flows remain unverified; this entire criterion is NOT passed."
 cunning,C071,UI・アクセシビリティ,上限案内が二重表示されない,現在版での項目別通し検証待ち,
 cunning,C072,UI・アクセシビリティ,有料会員に同じプランへの重複契約を促さない,現在版での項目別通し検証待ち,
-cunning,C073,UI・アクセシビリティ,APIエラーを消えるトーストだけに依存しない,現在版での項目別通し検証待ち,
+cunning,C073,UI・アクセシビリティ,APIエラーを消えるトーストだけに依存しない,現在版での項目別通し検証待ち,"PARTIAL ONLY: cunning-lists-mounted-results.json (21 actual Tool/reader synthetic cases) and cunning-lists-repair.json. Bounded list fetch/body, selected profiles/note retained on retry, missing knowledge explicitly represented, persistent local error/retry, auth/ABA/unmount cancellation. Separate company/history/knowledge/live pages and real authenticated/provider flows remain unverified; this entire criterion is NOT passed."
 cunning,C074,UI・アクセシビリティ,色だけに依存せずラベルと操作名を持つ,現在版での項目別通し検証待ち,
 cunning,C075,運用・リリース,本番ソースと監査対象のハッシュが一致する,現在版での項目別通し検証待ち,
 cunning,C076,運用・リリース,別作業の未公開修正を検証済みと混同しない,現在版での項目別通し検証待ち,

@@ -1,0 +1,6 @@
+{
+  "status": "confirmed-unfixed-separate-company-page",
+  "source": "src/app/cunning/company/page.tsx",
+  "observed": "A failed synthetic refresh erases previous company/applicant rows and exposes the raw synthetic network error as loadError.",
+  "scope": "Actual extracted load callback, synthetic fetch/setters only. Does not claim a production outage or real diagnostic disclosure. Separate from the Tool list repair."
+}

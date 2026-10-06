@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { readBillingResponse } from '@/lib/billing-response-client'
+import { readCunningListResponse } from '@/lib/cunning/list-response-client'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { MODES, MODE_IDS, getMode } from '@/lib/cunning/modes'
@@ -68,8 +69,11 @@ export default function CunningTool() {
   latestUsage.current = usage
   const [usageError, setUsageError] = useState(false)
   const usageRequest = useRef(0)
-  const knowledgeRequest = useRef(0)
-  const sessionsRequest = useRef(0)
+  const knowledgeAbort = useRef<AbortController | null>(null)
+  const sessionsAbort = useRef<AbortController | null>(null)
+  const profilesAbort = useRef<AbortController | null>(null)
+  const profileLists = useRef({ companies, applicants, companyCursor, applicantCursor, companyTotal, applicantTotal })
+  profileLists.current = { companies, applicants, companyCursor, applicantCursor, companyTotal, applicantTotal }
   const usageAbort = useRef<AbortController | null>(null)
   const [kbId, setKbId] = useState('')
   const [companyId, setCompanyId] = useState('')
@@ -77,35 +81,60 @@ export default function CunningTool() {
   const [personaNote, setPersonaNote] = useState('')
   const [starting, setStarting] = useState(false)
 
+  const latestKnowledge = useRef(kbs)
+  latestKnowledge.current = kbs
+  const missingKnowledge = getMode(mode).context === 'knowledge' && Boolean(kbId) && !kbs.some(row => row.id === kbId)
+  const selectedKnowledge = useRef<KB | null>(null)
+  selectedKnowledge.current = kbs.find(row => row.id === kbId) || (selectedKnowledge.current?.id === kbId ? selectedKnowledge.current : null)
+  const selectedCompany = useRef<Company | null>(null)
+  const selectedApplicant = useRef<Applicant | null>(null)
+  selectedCompany.current = companies.find(row => row.id === companyId) || (selectedCompany.current?.id === companyId ? selectedCompany.current : null)
+  selectedApplicant.current = applicants.find(row => row.id === applicantId) || (selectedApplicant.current?.id === applicantId ? selectedApplicant.current : null)
+
   const startDraft = useRef({ mode, kbId, companyId, applicantId, personaNote })
   startDraft.current = { mode, kbId, companyId, applicantId, personaNote }
 
   const def = getMode(mode)
 
-  const loadKnowledge = (request = usageRequest.current) => {
-    const listRequest = ++knowledgeRequest.current
+  const loadKnowledge = () => {
+    if (!allowed || contextRef.current !== contextKey || knowledgeAbort.current) return
+    const controller = new AbortController()
+    knowledgeAbort.current = controller
+    const current = () => mounted.current && !controller.signal.aborted && contextRef.current === contextKey
     setKbError(false)
-    void fetch('/api/cunning/knowledge', { cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('ナレッジを取得できませんでした')
-        const data = await response.json()
-        if (!Array.isArray(data.bases)) throw new Error('ナレッジの応答が不正です')
-        if (request === usageRequest.current && listRequest === knowledgeRequest.current) setKbs(data.bases)
+    void readCunningListResponse('/api/cunning/knowledge', { method: 'GET' }, controller.signal)
+      .then(response => {
+        if (!current()) return
+        const data = response.data
+        if (!response.ok || data.error !== undefined || data.code !== undefined || !Array.isArray(data.bases) ||
+          data.bases.some((row: KB) => !row || typeof row.id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(row.id) ||
+            typeof row.name !== 'string' || !row._count || !Number.isSafeInteger(row._count.chunks) || row._count.chunks < 0)) throw new Error('Invalid knowledge list')
+        latestKnowledge.current = data.bases
+        setKbs(data.bases)
       })
-      .catch(() => { if (request === usageRequest.current && listRequest === knowledgeRequest.current) setKbError(true) })
+      .catch(() => { if (current()) setKbError(true) })
+      .finally(() => { if (knowledgeAbort.current === controller) knowledgeAbort.current = null; controller.abort() })
   }
 
-  const loadSessions = (request = usageRequest.current) => {
-    const listRequest = ++sessionsRequest.current
+  const loadSessions = () => {
+    if (!allowed || contextRef.current !== contextKey || sessionsAbort.current) return
+    const controller = new AbortController()
+    sessionsAbort.current = controller
+    const current = () => mounted.current && !controller.signal.aborted && contextRef.current === contextKey
     setSessionsError(false)
-    void fetch('/api/cunning/sessions', { cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('履歴を取得できませんでした')
-        const data = await response.json()
-        if (!Array.isArray(data.sessions)) throw new Error('履歴の応答が不正です')
-        if (request === usageRequest.current && listRequest === sessionsRequest.current) setSessions(data.sessions)
+    void readCunningListResponse('/api/cunning/sessions', { method: 'GET' }, controller.signal)
+      .then(response => {
+        if (!current()) return
+        const data = response.data
+        if (!response.ok || data.error !== undefined || data.code !== undefined || !Array.isArray(data.sessions) ||
+          data.sessions.length > 50 || data.sessions.some((row: SessionRow) => !row || typeof row.id !== 'string' ||
+            !/^[a-zA-Z0-9_-]{1,128}$/.test(row.id) || typeof row.title !== 'string' || typeof row.mode !== 'string' ||
+            !Number.isSafeInteger(row.durationSec) || row.durationSec < 0 || !row._count ||
+            !Number.isSafeInteger(row._count.answers) || row._count.answers < 0)) throw new Error('Invalid session list')
+        setSessions(data.sessions)
       })
-      .catch(() => { if (request === usageRequest.current && listRequest === sessionsRequest.current) setSessionsError(true) })
+      .catch(() => { if (current()) setSessionsError(true) })
+      .finally(() => { if (sessionsAbort.current === controller) sessionsAbort.current = null; controller.abort() })
   }
 
   const refreshUsage = (request = usageRequest.current) => {
@@ -149,82 +178,90 @@ export default function CunningTool() {
     }
   }, [allowed, contextKey])
 
-  const load = () => {
-    if (!allowed || contextRef.current !== contextKey) return
-    const request = ++usageRequest.current
-    usageAbort.current?.abort()
-    usageAbort.current = null
-    setCompanies([])
-    setApplicants([])
-    setCompanyId('')
-    setApplicantId('')
-    setCompanyCursor(null)
-    setApplicantCursor(null)
-    setLoadingMoreProfiles(null)
-    loadKnowledge(request)
+  const loadProfiles = () => {
+    if (!allowed || contextRef.current !== contextKey || profilesAbort.current) return
+    const controller = new AbortController()
+    profilesAbort.current = controller
+    const current = () => mounted.current && !controller.signal.aborted && contextRef.current === contextKey
     setProfileError('')
     void Promise.all([
-      fetch('/api/cunning/company', { cache: 'no-store' }),
-      fetch('/api/cunning/profiles', { cache: 'no-store' }),
-    ]).then(async (responses) => {
-      if (responses.some((response) => !response.ok)) throw new Error('企業・プロフィールを取得できませんでした')
-      const [companiesData, applicantsData] = await Promise.all(responses.map((response) => response.json()))
-      const companyPage = parseCunningProfilePage<Company>(companiesData)
-      const applicantPage = parseCunningProfilePage<Applicant>(applicantsData)
-      if (request !== usageRequest.current) return
+      readCunningListResponse('/api/cunning/company', { method: 'GET' }, controller.signal),
+      readCunningListResponse('/api/cunning/profiles', { method: 'GET' }, controller.signal),
+    ]).then(responses => {
+      if (!current()) return
+      if (responses.some(response => !response.ok || response.data.error !== undefined || response.data.code !== undefined)) throw new Error('Invalid profile list')
+      const companyPage = parseCunningProfilePage<Company>(responses[0].data)
+      const applicantPage = parseCunningProfilePage<Applicant>(responses[1].data)
+      if (companyPage.profiles.some(row => typeof row.url !== 'string' || (row.companyName !== null && typeof row.companyName !== 'string')) ||
+        applicantPage.profiles.some(row => typeof row.name !== 'string')) throw new Error('Invalid profile fields')
       setCompanies(companyPage.profiles)
       setCompanyCursor(companyPage.nextCursor)
       setCompanyTotal(companyPage.total)
       setApplicants(applicantPage.profiles)
       setApplicantCursor(applicantPage.nextCursor)
       setApplicantTotal(applicantPage.total)
-    }).catch((error) => { if (request === usageRequest.current) setProfileError(error instanceof Error ? error.message : '一覧を取得できませんでした') })
-    loadSessions(request)
-    refreshUsage(request)
+      // A retry must not erase a valid selected reference or the user's note.
+      profileLists.current = { companies: companyPage.profiles, applicants: applicantPage.profiles, companyCursor: companyPage.nextCursor, applicantCursor: applicantPage.nextCursor, companyTotal: companyPage.total, applicantTotal: applicantPage.total }
+    }).catch(() => { if (current()) setProfileError('企業・プロフィールを取得できませんでした。時間をおいて再読み込みしてください。') })
+      .finally(() => { if (profilesAbort.current === controller) profilesAbort.current = null; controller.abort() })
   }
 
   async function loadMoreProfiles(kind: 'company' | 'profiles') {
-    const cursor = kind === 'company' ? companyCursor : applicantCursor
-    if (!cursor || loadingMoreProfiles) return
-    const request = usageRequest.current
+    if (!allowed || contextRef.current !== contextKey || !mounted.current || profilesAbort.current) return
+    const lists = profileLists.current
+    const cursor = kind === 'company' ? lists.companyCursor : lists.applicantCursor
+    if (!cursor) return
+    const controller = new AbortController()
+    profilesAbort.current = controller
+    const current = () => mounted.current && !controller.signal.aborted && contextRef.current === contextKey
     setLoadingMoreProfiles(kind)
     setProfileError('')
     try {
-      const response = await fetch(`/api/cunning/${kind}?cursor=${encodeURIComponent(cursor)}`, { cache: 'no-store' })
-      if (!response.ok) throw new Error('続きを取得できませんでした')
-      const data = await response.json()
-      if (request !== usageRequest.current) return
+      const response = await readCunningListResponse(`/api/cunning/${kind}?cursor=${encodeURIComponent(cursor)}`, { method: 'GET' }, controller.signal)
+      if (!current()) return
+      if (!response.ok || response.data.error !== undefined || response.data.code !== undefined) throw new Error('Invalid profile continuation')
       if (kind === 'company') {
-        const page = parseCunningProfilePage<Company>(data)
-        setCompanies(appendCunningProfilePage(companies, page, companyTotal))
+        const page = parseCunningProfilePage<Company>(response.data)
+        if (page.profiles.some(row => typeof row.url !== 'string' || (row.companyName !== null && typeof row.companyName !== 'string'))) throw new Error('Invalid company fields')
+        const merged = appendCunningProfilePage(lists.companies, page, lists.companyTotal)
+        profileLists.current = { ...lists, companies: merged, companyCursor: page.nextCursor }
+        setCompanies(merged)
         setCompanyCursor(page.nextCursor)
       } else {
-        const page = parseCunningProfilePage<Applicant>(data)
-        setApplicants(appendCunningProfilePage(applicants, page, applicantTotal))
+        const page = parseCunningProfilePage<Applicant>(response.data)
+        if (page.profiles.some(row => typeof row.name !== 'string')) throw new Error('Invalid applicant fields')
+        const merged = appendCunningProfilePage(lists.applicants, page, lists.applicantTotal)
+        profileLists.current = { ...lists, applicants: merged, applicantCursor: page.nextCursor }
+        setApplicants(merged)
         setApplicantCursor(page.nextCursor)
       }
-    } catch (error) {
-      if (request === usageRequest.current) setProfileError(error instanceof Error ? error.message : '続きを取得できませんでした')
+    } catch {
+      if (current()) setProfileError('続きを取得できませんでした。一覧が更新された可能性があります。再読み込みしてください。')
     } finally {
-      if (request === usageRequest.current) setLoadingMoreProfiles(null)
+      if (profilesAbort.current === controller) { profilesAbort.current = null; if (current()) setLoadingMoreProfiles(null) }
+      controller.abort()
     }
   }
-  const loadRef = useRef(load)
-  loadRef.current = load
+  const loadListsRef = useRef(() => {})
+  loadListsRef.current = () => { loadKnowledge(); loadProfiles(); loadSessions() }
   useEffect(() => {
-    const requestCounter = usageRequest
-    const knowledgeCounter = knowledgeRequest
-    const sessionsCounter = sessionsRequest
-    const controllerRef = usageAbort
-    loadRef.current()
-    return () => { requestCounter.current++; knowledgeCounter.current++; sessionsCounter.current++; controllerRef.current?.abort() }
-  }, [])
+    const refs = [knowledgeAbort, profilesAbort, sessionsAbort]
+    setLoadingMoreProfiles(null)
+    if (allowed) loadListsRef.current()
+    return () => {
+      for (const ref of refs) { ref.current?.abort(); ref.current = null }
+    }
+  }, [allowed, contextKey])
 
   const start = async () => {
     if (!allowed || contextRef.current !== contextKey || !mounted.current || startBusy.current || startUnknownRef.current || confirmedStart.current || usageAbort.current) return
     try { if (!latestUsage.current || recordingAllowance(latestUsage.current) === 0) return } catch { return }
     const draft = startDraft.current
     const selectedMode = getMode(draft.mode)
+    if (selectedMode.context === 'knowledge' && draft.kbId && !latestKnowledge.current.some(row => row.id === draft.kbId)) {
+      setStartNotice('選択したナレッジが一覧にありません。参照先を選び直してください。')
+      return
+    }
     if (draft.personaNote.length > 1000) { setStartNotice('設定は1,000文字以内で入力してください。'); return }
     const controller = new AbortController()
     startAbort.current = controller
@@ -385,6 +422,7 @@ export default function CunningTool() {
         {def.context === 'knowledge' && (
           <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
             {kbError && <div role="alert" className="mb-3 rounded-lg bg-rose-50 p-3 text-sm font-bold text-rose-700">ナレッジを取得できませんでした。<button type="button" onClick={() => loadKnowledge()} className="ml-2 underline">再読み込み</button></div>}
+            {missingKnowledge && <p role="alert" className="mb-3 text-sm font-bold text-amber-800">選択したナレッジが一覧にありません。参照先を選び直してください。</p>}
             <label className="block text-sm font-black text-slate-700 mb-2">参照ナレッジ（任意）</label>
             <select
               value={kbId}
@@ -392,6 +430,7 @@ export default function CunningTool() {
               className="w-full rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700"
             >
               <option value="">未選択（一般的な回答）</option>
+              {missingKnowledge && <option value={kbId}>{selectedKnowledge.current?.name || '選択したナレッジ'}（一覧にありません）</option>}
               {kbs.map((k) => (
                 <option key={k.id} value={k.id}>{k.name}（{k._count.chunks}件）</option>
               ))}
@@ -403,11 +442,12 @@ export default function CunningTool() {
         )}
         {def.context === 'company' && (
           <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 space-y-4">
-            {profileError && <div role="alert" className="rounded-lg bg-rose-50 p-3 text-sm font-bold text-rose-700">{profileError}<button type="button" onClick={load} className="ml-2 underline">再読み込み</button></div>}
+            {profileError && <div role="alert" className="rounded-lg bg-rose-50 p-3 text-sm font-bold text-rose-700">{profileError}<button type="button" onClick={loadProfiles} className="ml-2 underline">再読み込み</button></div>}
             <div>
               <label className="block text-sm font-black text-slate-700 mb-2">応募先企業（任意）</label>
               <select value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700">
                 <option value="">未選択</option>
+                {selectedCompany.current && !companies.some(row => row.id === companyId) && <option value={companyId}>{selectedCompany.current.companyName || selectedCompany.current.url}（選択済み）</option>}
                 {companies.map((c) => <option key={c.id} value={c.id}>{c.companyName || c.url}</option>)}
               </select>
               {companyCursor && <button type="button" onClick={() => void loadMoreProfiles('company')} disabled={loadingMoreProfiles !== null} className="mt-2 text-xs font-bold text-blue-700 underline disabled:opacity-50">{loadingMoreProfiles === 'company' ? '読み込み中…' : `企業をさらに表示（${companies.length}/${companyTotal}件）`}</button>}
@@ -416,6 +456,7 @@ export default function CunningTool() {
               <label className="block text-sm font-black text-slate-700 mb-2">応募者プロフィール（任意）</label>
               <select value={applicantId} onChange={(e) => setApplicantId(e.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700">
                 <option value="">未選択</option>
+                {selectedApplicant.current && !applicants.some(row => row.id === applicantId) && <option value={applicantId}>{selectedApplicant.current.name}（選択済み）</option>}
                 {applicants.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
               {applicantCursor && <button type="button" onClick={() => void loadMoreProfiles('profiles')} disabled={loadingMoreProfiles !== null} className="mt-2 text-xs font-bold text-blue-700 underline disabled:opacity-50">{loadingMoreProfiles === 'profiles' ? '読み込み中…' : `プロフィールをさらに表示（${applicants.length}/${applicantTotal}件）`}</button>}
@@ -471,7 +512,7 @@ export default function CunningTool() {
         </div>}
         <button
           onClick={start}
-          disabled={starting || overLimit || !usage || !allowed || loginRequired || startUnknown || Boolean(confirmedSessionId)}
+          disabled={starting || overLimit || missingKnowledge || !usage || !allowed || loginRequired || startUnknown || Boolean(confirmedSessionId)}
           className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white font-black text-lg shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all disabled:opacity-50"
         >
           {!usage ? (

@@ -1,0 +1,814 @@
+{
+  "checkedAt": "2026-10-06T19:41:53.504519+00:00",
+  "scope": "Static candidates, NOT confirmed defects. Some error classes already sanitize provider messages. Each call chain and user flow must be reviewed before changing behavior; zero matches does not establish completeness.",
+  "services": [
+    {
+      "service": "banner",
+      "candidateCount": 15,
+      "candidates": [
+        {
+          "file": "src/app/banner/dashboard/chat/page.tsx",
+          "line": 797
+        },
+        {
+          "file": "src/app/banner/dashboard/chat/page.tsx",
+          "line": 851
+        },
+        {
+          "file": "src/app/banner/dashboard/create/page.tsx",
+          "line": 998
+        },
+        {
+          "file": "src/app/banner/dashboard/create/page.tsx",
+          "line": 2206
+        },
+        {
+          "file": "src/app/banner/dashboard/history/page.tsx",
+          "line": 295
+        },
+        {
+          "file": "src/app/banner/dashboard/history/page.tsx",
+          "line": 358
+        },
+        {
+          "file": "src/app/banner/dashboard/history/page.tsx",
+          "line": 751
+        },
+        {
+          "file": "src/app/banner/dashboard/page.tsx",
+          "line": 1287
+        },
+        {
+          "file": "src/app/banner/dashboard/page.tsx",
+          "line": 3299
+        },
+        {
+          "file": "src/app/banner/gallery/page.tsx",
+          "line": 254
+        },
+        {
+          "file": "src/app/banner/gallery/page.tsx",
+          "line": 276
+        },
+        {
+          "file": "src/app/banner/gallery/page.tsx",
+          "line": 295
+        },
+        {
+          "file": "src/app/banner/gallery/page.tsx",
+          "line": 310
+        },
+        {
+          "file": "src/app/banner/test/page.tsx",
+          "line": 844
+        },
+        {
+          "file": "src/app/banner/test/page.tsx",
+          "line": 2704
+        }
+      ]
+    },
+    {
+      "service": "seo",
+      "candidateCount": 37,
+      "candidates": [
+        {
+          "file": "src/app/seo/Tool.tsx",
+          "line": 232
+        },
+        {
+          "file": "src/app/seo/articles/[id]/check/page.tsx",
+          "line": 82
+        },
+        {
+          "file": "src/app/seo/articles/[id]/check/page.tsx",
+          "line": 113
+        },
+        {
+          "file": "src/app/seo/articles/[id]/components/OutlineEditor.tsx",
+          "line": 205
+        },
+        {
+          "file": "src/app/seo/articles/[id]/components/OutlineEditor.tsx",
+          "line": 246
+        },
+        {
+          "file": "src/app/seo/articles/[id]/components/ScorePanel.tsx",
+          "line": 603
+        },
+        {
+          "file": "src/app/seo/articles/[id]/edit/page.tsx",
+          "line": 86
+        },
+        {
+          "file": "src/app/seo/articles/[id]/edit/page.tsx",
+          "line": 160
+        },
+        {
+          "file": "src/app/seo/articles/[id]/export/page.tsx",
+          "line": 63
+        },
+        {
+          "file": "src/app/seo/articles/[id]/export/page.tsx",
+          "line": 125
+        },
+        {
+          "file": "src/app/seo/articles/[id]/outline/page.tsx",
+          "line": 92
+        },
+        {
+          "file": "src/app/seo/articles/[id]/outline/page.tsx",
+          "line": 127
+        },
+        {
+          "file": "src/app/seo/articles/[id]/outline/page.tsx",
+          "line": 160
+        },
+        {
+          "file": "src/app/seo/articles/[id]/page.tsx",
+          "line": 747
+        },
+        {
+          "file": "src/app/seo/articles/[id]/page.tsx",
+          "line": 800
+        },
+        {
+          "file": "src/app/seo/articles/[id]/page.tsx",
+          "line": 944
+        },
+        {
+          "file": "src/app/seo/articles/[id]/page.tsx",
+          "line": 1000
+        },
+        {
+          "file": "src/app/seo/articles/[id]/page.tsx",
+          "line": 1021
+        },
+        {
+          "file": "src/app/seo/articles/[id]/page.tsx",
+          "line": 1107
+        },
+        {
+          "file": "src/app/seo/articles/[id]/page.tsx",
+          "line": 1132
+        },
+        {
+          "file": "src/app/seo/articles/[id]/page.tsx",
+          "line": 1164
+        },
+        {
+          "file": "src/app/seo/articles/[id]/page.tsx",
+          "line": 1204
+        },
+        {
+          "file": "src/app/seo/create/page.tsx",
+          "line": 424
+        },
+        {
+          "file": "src/app/seo/create/page.tsx",
+          "line": 518
+        },
+        {
+          "file": "src/app/seo/jobs/[id]/page.tsx",
+          "line": 573
+        },
+        {
+          "file": "src/app/seo/jobs/[id]/page.tsx",
+          "line": 605
+        },
+        {
+          "file": "src/app/seo/swipe/page.tsx",
+          "line": 282
+        },
+        {
+          "file": "src/app/seo/swipe/page.tsx",
+          "line": 460
+        },
+        {
+          "file": "src/app/seo/swipe/page.tsx",
+          "line": 520
+        },
+        {
+          "file": "src/app/seo/swipe/page.tsx",
+          "line": 561
+        },
+        {
+          "file": "src/app/seo/swipe/page.tsx",
+          "line": 907
+        },
+        {
+          "file": "src/app/seo/template/CompetitorAnalysisTab.tsx",
+          "line": 47
+        },
+        {
+          "file": "src/app/seo/template/page.tsx",
+          "line": 220
+        },
+        {
+          "file": "src/app/seo/template/page.tsx",
+          "line": 267
+        },
+        {
+          "file": "src/app/seo/template/test/CompetitorAnalysisTab.tsx",
+          "line": 47
+        },
+        {
+          "file": "src/components/seo/CompetitorAnalysisTab.tsx",
+          "line": 47
+        },
+        {
+          "file": "src/components/seo/test/CompetitorAnalysisTab.tsx",
+          "line": 47
+        }
+      ]
+    },
+    {
+      "service": "interview",
+      "candidateCount": 6,
+      "candidates": [
+        {
+          "file": "src/app/interview/projects/[id]/edit/page.tsx",
+          "line": 406
+        },
+        {
+          "file": "src/app/interview/projects/[id]/edit/page.tsx",
+          "line": 442
+        },
+        {
+          "file": "src/app/interview/projects/[id]/edit/page.tsx",
+          "line": 490
+        },
+        {
+          "file": "src/app/interview/projects/[id]/edit/page.tsx",
+          "line": 915
+        },
+        {
+          "file": "src/app/interview/projects/[id]/generate/page.tsx",
+          "line": 458
+        },
+        {
+          "file": "src/app/interview/projects/[id]/page.tsx",
+          "line": 126
+        }
+      ]
+    },
+    {
+      "service": "persona",
+      "candidateCount": 0,
+      "candidates": []
+    },
+    {
+      "service": "hr",
+      "candidateCount": 17,
+      "candidates": [
+        {
+          "file": "src/app/hr/employees/[id]/edit/page.tsx",
+          "line": 180
+        },
+        {
+          "file": "src/app/hr/employees/[id]/page.tsx",
+          "line": 99
+        },
+        {
+          "file": "src/app/hr/employees/new/page.tsx",
+          "line": 136
+        },
+        {
+          "file": "src/app/hr/evaluations/[id]/page.tsx",
+          "line": 40
+        },
+        {
+          "file": "src/app/hr/evaluations/page.tsx",
+          "line": 64
+        },
+        {
+          "file": "src/app/hr/one-on-one/[id]/page.tsx",
+          "line": 53
+        },
+        {
+          "file": "src/app/hr/one-on-one/page.tsx",
+          "line": 154
+        },
+        {
+          "file": "src/app/hr/org-chart/page.tsx",
+          "line": 52
+        },
+        {
+          "file": "src/app/hr/settings/page.tsx",
+          "line": 214
+        },
+        {
+          "file": "src/app/hr/settings/page.tsx",
+          "line": 322
+        },
+        {
+          "file": "src/app/hr/settings/page.tsx",
+          "line": 365
+        },
+        {
+          "file": "src/app/hr/settings/page.tsx",
+          "line": 409
+        },
+        {
+          "file": "src/app/hr/settings/page.tsx",
+          "line": 426
+        },
+        {
+          "file": "src/app/hr/settings/page.tsx",
+          "line": 478
+        },
+        {
+          "file": "src/components/hr/EvaluationForm.tsx",
+          "line": 173
+        },
+        {
+          "file": "src/components/hr/HrOnboarding.tsx",
+          "line": 59
+        },
+        {
+          "file": "src/components/hr/OneOnOneForm.tsx",
+          "line": 171
+        }
+      ]
+    },
+    {
+      "service": "kintai",
+      "candidateCount": 5,
+      "candidates": [
+        {
+          "file": "src/app/kintai/approvals/page.tsx",
+          "line": 113
+        },
+        {
+          "file": "src/app/kintai/approvals/page.tsx",
+          "line": 135
+        },
+        {
+          "file": "src/app/kintai/approvals/page.tsx",
+          "line": 154
+        },
+        {
+          "file": "src/app/kintai/requests/new/page.tsx",
+          "line": 112
+        },
+        {
+          "file": "src/components/kintai/KintaiOnboarding.tsx",
+          "line": 37
+        }
+      ]
+    },
+    {
+      "service": "doyalist",
+      "candidateCount": 8,
+      "candidates": [
+        {
+          "file": "src/app/doyalist/history/page.tsx",
+          "line": 93
+        },
+        {
+          "file": "src/app/doyalist/history/page.tsx",
+          "line": 120
+        },
+        {
+          "file": "src/app/doyalist/history/page.tsx",
+          "line": 155
+        },
+        {
+          "file": "src/app/doyalist/history/page.tsx",
+          "line": 178
+        },
+        {
+          "file": "src/app/doyalist/history/page.tsx",
+          "line": 196
+        },
+        {
+          "file": "src/app/doyalist/history/page.tsx",
+          "line": 211
+        },
+        {
+          "file": "src/app/doyalist/settings/page.tsx",
+          "line": 74
+        },
+        {
+          "file": "src/app/doyalist/settings/page.tsx",
+          "line": 126
+        }
+      ]
+    },
+    {
+      "service": "promane",
+      "candidateCount": 21,
+      "candidates": [
+        {
+          "file": "src/components/promane/client-actions.tsx",
+          "line": 67
+        },
+        {
+          "file": "src/components/promane/client-actions.tsx",
+          "line": 95
+        },
+        {
+          "file": "src/components/promane/create-workspace-button.tsx",
+          "line": 47
+        },
+        {
+          "file": "src/components/promane/feedback-button.tsx",
+          "line": 69
+        },
+        {
+          "file": "src/components/promane/finance-tab.tsx",
+          "line": 78
+        },
+        {
+          "file": "src/components/promane/finance-tab.tsx",
+          "line": 106
+        },
+        {
+          "file": "src/components/promane/invite-modal.tsx",
+          "line": 171
+        },
+        {
+          "file": "src/components/promane/invite-modal.tsx",
+          "line": 200
+        },
+        {
+          "file": "src/components/promane/kanban-board.tsx",
+          "line": 95
+        },
+        {
+          "file": "src/components/promane/member-list.tsx",
+          "line": 89
+        },
+        {
+          "file": "src/components/promane/project-delete-button.tsx",
+          "line": 39
+        },
+        {
+          "file": "src/components/promane/project-form.tsx",
+          "line": 73
+        },
+        {
+          "file": "src/components/promane/project-form.tsx",
+          "line": 80
+        },
+        {
+          "file": "src/components/promane/project-form.tsx",
+          "line": 98
+        },
+        {
+          "file": "src/components/promane/repair-data-button.tsx",
+          "line": 60
+        },
+        {
+          "file": "src/components/promane/task-create-form.tsx",
+          "line": 67
+        },
+        {
+          "file": "src/components/promane/task-edit-modal.tsx",
+          "line": 105
+        },
+        {
+          "file": "src/components/promane/task-edit-modal.tsx",
+          "line": 130
+        },
+        {
+          "file": "src/components/promane/timesheet-view.tsx",
+          "line": 52
+        },
+        {
+          "file": "src/components/promane/timesheet-view.tsx",
+          "line": 72
+        },
+        {
+          "file": "src/components/promane/workspace-settings-form.tsx",
+          "line": 53
+        }
+      ]
+    },
+    {
+      "service": "doyaslide",
+      "candidateCount": 1,
+      "candidates": [
+        {
+          "file": "src/components/doyaslide/NewDoyaSlideWizard.tsx",
+          "line": 308
+        }
+      ]
+    },
+    {
+      "service": "cunning",
+      "candidateCount": 14,
+      "candidates": [
+        {
+          "file": "src/app/cunning/company/page.tsx",
+          "line": 63
+        },
+        {
+          "file": "src/app/cunning/company/page.tsx",
+          "line": 89
+        },
+        {
+          "file": "src/app/cunning/company/page.tsx",
+          "line": 110
+        },
+        {
+          "file": "src/app/cunning/company/page.tsx",
+          "line": 131
+        },
+        {
+          "file": "src/app/cunning/history/[sessionId]/page.tsx",
+          "line": 88
+        },
+        {
+          "file": "src/app/cunning/history/[sessionId]/page.tsx",
+          "line": 141
+        },
+        {
+          "file": "src/app/cunning/history/page.tsx",
+          "line": 48
+        },
+        {
+          "file": "src/app/cunning/history/page.tsx",
+          "line": 75
+        },
+        {
+          "file": "src/app/cunning/knowledge/[id]/page.tsx",
+          "line": 79
+        },
+        {
+          "file": "src/app/cunning/knowledge/[id]/page.tsx",
+          "line": 92
+        },
+        {
+          "file": "src/app/cunning/knowledge/page.tsx",
+          "line": 63
+        },
+        {
+          "file": "src/app/cunning/knowledge/page.tsx",
+          "line": 85
+        },
+        {
+          "file": "src/app/cunning/knowledge/page.tsx",
+          "line": 101
+        },
+        {
+          "file": "src/app/cunning/live/[sessionId]/page.tsx",
+          "line": 1079
+        }
+      ]
+    },
+    {
+      "service": "sfa",
+      "candidateCount": 23,
+      "candidates": [
+        {
+          "file": "src/app/sfa/[orgSlug]/accounts/page.tsx",
+          "line": 106
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/activities/page.tsx",
+          "line": 69
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/activities/page.tsx",
+          "line": 91
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/contacts/page.tsx",
+          "line": 125
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/deals/page.tsx",
+          "line": 319
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/deals/page.tsx",
+          "line": 460
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/deals/page.tsx",
+          "line": 570
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/deals/page.tsx",
+          "line": 592
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/deals/page.tsx",
+          "line": 614
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/leads/page.tsx",
+          "line": 129
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/leads/page.tsx",
+          "line": 145
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/leads/page.tsx",
+          "line": 169
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/leads/page.tsx",
+          "line": 182
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/members/page.tsx",
+          "line": 87
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/members/page.tsx",
+          "line": 107
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/members/page.tsx",
+          "line": 122
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/page.tsx",
+          "line": 110
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/tasks/page.tsx",
+          "line": 62
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/tasks/page.tsx",
+          "line": 105
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/tasks/page.tsx",
+          "line": 129
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/tasks/page.tsx",
+          "line": 155
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/tasks/page.tsx",
+          "line": 179
+        },
+        {
+          "file": "src/app/sfa/[orgSlug]/tasks/page.tsx",
+          "line": 202
+        }
+      ]
+    },
+    {
+      "service": "shodan",
+      "candidateCount": 13,
+      "candidates": [
+        {
+          "file": "src/app/shodan/[orgSlug]/members/page.tsx",
+          "line": 57
+        },
+        {
+          "file": "src/app/shodan/[orgSlug]/members/page.tsx",
+          "line": 65
+        },
+        {
+          "file": "src/app/shodan/[orgSlug]/new/page.tsx",
+          "line": 87
+        },
+        {
+          "file": "src/app/shodan/[orgSlug]/new/page.tsx",
+          "line": 90
+        },
+        {
+          "file": "src/app/shodan/[orgSlug]/p/[id]/page.tsx",
+          "line": 74
+        },
+        {
+          "file": "src/app/shodan/[orgSlug]/p/[id]/slides/page.tsx",
+          "line": 56
+        },
+        {
+          "file": "src/app/shodan/[orgSlug]/p/[id]/slides/page.tsx",
+          "line": 79
+        },
+        {
+          "file": "src/app/shodan/[orgSlug]/page.tsx",
+          "line": 121
+        },
+        {
+          "file": "src/app/shodan/[orgSlug]/settings/page.tsx",
+          "line": 94
+        },
+        {
+          "file": "src/app/shodan/[orgSlug]/settings/page.tsx",
+          "line": 109
+        },
+        {
+          "file": "src/app/shodan/[orgSlug]/settings/page.tsx",
+          "line": 134
+        },
+        {
+          "file": "src/app/shodan/[orgSlug]/settings/page.tsx",
+          "line": 135
+        },
+        {
+          "file": "src/app/shodan/[orgSlug]/settings/page.tsx",
+          "line": 144
+        }
+      ]
+    },
+    {
+      "service": "aio",
+      "candidateCount": 9,
+      "candidates": [
+        {
+          "file": "src/app/aio/[orgSlug]/members/page.tsx",
+          "line": 57
+        },
+        {
+          "file": "src/app/aio/[orgSlug]/members/page.tsx",
+          "line": 65
+        },
+        {
+          "file": "src/app/aio/[orgSlug]/page.tsx",
+          "line": 88
+        },
+        {
+          "file": "src/app/aio/[orgSlug]/prompts/page.tsx",
+          "line": 42
+        },
+        {
+          "file": "src/app/aio/[orgSlug]/prompts/page.tsx",
+          "line": 65
+        },
+        {
+          "file": "src/app/aio/[orgSlug]/prompts/page.tsx",
+          "line": 66
+        },
+        {
+          "file": "src/app/aio/[orgSlug]/prompts/page.tsx",
+          "line": 73
+        },
+        {
+          "file": "src/app/aio/[orgSlug]/prompts/page.tsx",
+          "line": 77
+        },
+        {
+          "file": "src/app/aio/[orgSlug]/settings/page.tsx",
+          "line": 39
+        }
+      ]
+    },
+    {
+      "service": "mensetsu",
+      "candidateCount": 4,
+      "candidates": [
+        {
+          "file": "src/app/mensetsu/Tool.tsx",
+          "line": 180
+        },
+        {
+          "file": "src/app/mensetsu/Tool.tsx",
+          "line": 203
+        },
+        {
+          "file": "src/app/mensetsu/sessions/[id]/page.tsx",
+          "line": 80
+        },
+        {
+          "file": "src/app/mensetsu/sessions/[id]/page.tsx",
+          "line": 469
+        }
+      ]
+    },
+    {
+      "service": "quote",
+      "candidateCount": 2,
+      "candidates": [
+        {
+          "file": "src/app/quote/Tool.tsx",
+          "line": 194
+        },
+        {
+          "file": "src/app/quote/Tool.tsx",
+          "line": 214
+        }
+      ]
+    },
+    {
+      "service": "aishodan",
+      "candidateCount": 2,
+      "candidates": [
+        {
+          "file": "src/app/aishodan/sessions/page.tsx",
+          "line": 74
+        },
+        {
+          "file": "src/app/aishodan/sessions/page.tsx",
+          "line": 97
+        }
+      ]
+    },
+    {
+      "service": "adimage",
+      "candidateCount": 0,
+      "candidates": []
+    }
+  ]
+}

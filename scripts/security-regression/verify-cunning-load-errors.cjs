@@ -48,7 +48,8 @@ async function checkDetail(response) {
 async function checkToolList(name, endpoint, response) {
   const state = { items: ['previous'], error: false }
   const loader = getLoader('src/app/cunning/Tool.tsx', name, {
-    usageRequest: { current: 1 }, knowledgeRequest: { current: 0 }, sessionsRequest: { current: 0 },
+    allowed:true, contextRef:{current:'synthetic'}, contextKey:'synthetic', mounted:{current:true}, knowledgeAbort:{current:null}, sessionsAbort:{current:null}, AbortController,
+    readCunningListResponse:async(url)=>{assert.equal(url,endpoint);return {ok:response.ok,status:response.status,data:await response.json()}},
     fetch: async (url) => { assert.equal(url, endpoint); return response },
     setKbError: (value) => { state.error = value },
     setSessionsError: (value) => { state.error = value },
