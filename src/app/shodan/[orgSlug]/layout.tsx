@@ -26,7 +26,7 @@ export default async function ShodanOrgLayout(
   } = props;
 
   const p = params
-  const orgSlug = decodeURIComponent(p.orgSlug)
+  const orgSlug = p.orgSlug
 
   const ctx = await getShodanContext(orgSlug)
   // 当該組織のACTIVEメンバーでなければ入口へ（他組織は解決されない＝IDOR安全）

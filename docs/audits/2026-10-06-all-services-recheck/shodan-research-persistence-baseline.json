@@ -1,0 +1,7 @@
+{
+  "status": "confirmed-unfixed",
+  "problem": "Actual preparations API persists malformed provider research as researched before client shape rejection",
+  "httpStatus": 200,
+  "persistedStatus": "researched",
+  "scope": "Actual POST handler; synthetic auth, provider, billing and Prisma only. No actual customer data or provider call."
+}

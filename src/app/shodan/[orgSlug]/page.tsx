@@ -19,7 +19,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 
 export default function ShodanListPage() {
   const params = useParams<{ orgSlug: string }>()
-  const orgSlug = decodeURIComponent(String(params.orgSlug))
+  const orgSlug = String(params.orgSlug)
   const [items, setItems] = useState<Item[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [moreError, setMoreError] = useState<string | null>(null)

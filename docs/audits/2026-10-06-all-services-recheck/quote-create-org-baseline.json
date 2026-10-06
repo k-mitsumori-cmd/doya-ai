@@ -1,0 +1,7 @@
+{
+  "status": "confirmed-unfixed",
+  "problem": "Actual retained quote creation callback transmits old draft to newly selected organization via actual withOrg",
+  "requestOrganization": "beta",
+  "draftOrigin": "alpha",
+  "scope": "Actual AST-extracted createDocument plus full actual OrgSwitcher module; synthetic localStorage, fetch, state and window only. No real customer data, cross-tenant DB write or production incident established."
+}

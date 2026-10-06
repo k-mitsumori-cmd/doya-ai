@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 
-function fixture(initialUsed = 4, ownerPlan = 'FREE', researchResult = { companyName: 'Example' }, role = 'owner') {
+function fixture(initialUsed = 4, ownerPlan = 'FREE', researchResult = require('./shodan-research-fixture.cjs')(), role = 'owner') {
   const rows = Array.from({ length: initialUsed }, (_, i) => ({ id: `old-${i}`, status: 'researched' }))
   let chain = Promise.resolve()
   let locks = 0
@@ -43,6 +43,7 @@ function fixture(initialUsed = 4, ownerPlan = 'FREE', researchResult = { company
     '@/lib/shodan/access': { getShodanContext: async () => ({ userId: role === 'owner' ? 'owner-1' : 'member-1', organizationId: 'org-1', organizationSlug: 'org', role, memberId: 'member-1' }), orgSlugFrom: () => 'org' },
     '@/lib/shodan/billing': billing,
     '@/lib/unified-plan': { isPaidPlan: (plan) => plan !== 'FREE' && plan !== 'GUEST' },
+    '@/lib/shodan/research-response': load('src/lib/shodan/research-response.ts'),
     '@/lib/shodan/research': { researchCompany: async () => { researchCalls++; return researchResult } },
     '@/lib/shodan/types': { effectivePrepStatus: (status) => status, PREP_STALE_MS: 360000, SHODAN_MONTHLY_LIMIT: { FREE: 5, PRO: 50, ENTERPRISE: 300 } },
     '@/lib/plan-limit': { jstStartOfMonthUtc: () => new Date('2026-08-31T15:00:00Z') },
@@ -54,7 +55,7 @@ function fixture(initialUsed = 4, ownerPlan = 'FREE', researchResult = { company
 (async () => {
   await check('malformed URL input is rejected before quota or provider calls', async () => {
     const f = fixture()
-    for (const body of [null, {}, { url: 3 }, { url: [] }, { url: {} }, { url: '' }, { url: 'ftp://example.com' }]) {
+    for (const body of [null, {}, { url: 3 }, { url: [] }, { url: {} }, { url: '' }, { url: 'ftp://example.com' }, { url: 'https://name:pass@example.com' }, { url: 'https://example.com/' + 'a'.repeat(8192) }]) {
       assert.equal((await f.post(body)).status, 400)
     }
     assert.equal(f.rows.length, 4)
@@ -87,7 +88,7 @@ function fixture(initialUsed = 4, ownerPlan = 'FREE', researchResult = { company
     assert.equal(blocked.body.contactUrl, undefined)
     assert.match(blocked.body.error, /組織オーナー/)
     assert.equal(freeOwner.researchCalls, 0)
-    const paidOwner = fixture(5, 'PRO', { companyName: 'Example' }, 'member')
+    const paidOwner = fixture(5, 'PRO', require('./shodan-research-fixture.cjs')(), 'member')
     assert.equal((await paidOwner.post()).status, 200)
     assert.equal(paidOwner.researchCalls, 1)
   })

@@ -1,0 +1,16 @@
+{
+  "passed": 2,
+  "cases": [
+    {
+      "path": "/shodan/team%2520/new",
+      "orgSlug": "team%20",
+      "passed": true
+    },
+    {
+      "path": "/shodan/team%25/new",
+      "orgSlug": "team%",
+      "passed": true
+    }
+  ],
+  "scope": "Installed Next route matcher plus actual server organization layout with synthetic auth/Prisma/billing. No real organization query or rendered private business flow."
+}

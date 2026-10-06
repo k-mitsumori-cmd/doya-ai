@@ -32,6 +32,7 @@ const route = load('src/app/api/shodan/preparations/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
   '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'own-org' }), orgSlugFrom: () => 'own-org' },
+  '@/lib/shodan/research-response': load('src/lib/shodan/research-response.ts'),
   '@/lib/shodan/research': {},
   '@/lib/shodan/billing': { getShodanBilling: async () => ({ ownerUserId: 'owner', plan: 'PRO' }) },
   '@/lib/unified-plan': { isPaidPlan: () => true },

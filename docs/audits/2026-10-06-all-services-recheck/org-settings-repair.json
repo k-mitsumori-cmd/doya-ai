@@ -1,7 +1,7 @@
 {
   "checkedAt": "2026-10-06T20:49:19.804943+00:00",
   "parent": "7775aa52bc19911282f84be304b79baec2df83ce",
-  "status": "full-gate-passed-not-yet-pushed",
+  "status": "pushed-production-building",
   "services": [
     "aio",
     "shodan"
@@ -49,5 +49,25 @@
     "No durable creation/upload idempotency across reload/tabs or orphan storage cleanup added",
     "12 visual cases cover static HTML captured from mounted synthetic states, not authenticated production interaction; latest same-frame changes are functional regressions",
     "All 17 services / 2074 criteria remain in scope and incomplete"
-  ]
+  ],
+  "commit": "afd0bc774ca157ac99822f98449003eab408d640",
+  "push": "confirmed HEAD to main, terminal exit 0; parent 7775aa52",
+  "ci": {
+    "run": 37529749862,
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "production": {
+    "id": "dpl_HX4EqcFZzCTcfoYd3LCFFDd51DbG",
+    "url": "doya-cr5bs61kh-surisutas-projects.vercel.app",
+    "readyState": "BUILDING",
+    "target": "production"
+  },
+  "deploymentCheckedAt": "2026-10-06T21:04:24.014605+00:00",
+  "productionVerification": {
+    "deployment": "dpl_HX4EqcFZzCTcfoYd3LCFFDd51DbG",
+    "readyState": "READY",
+    "evidence": "org-settings-public-afd0bc77.json",
+    "scope": "17 anonymous entries, 29 assets and 2 guest usage endpoints; private settings production flow unproven"
+  }
 }

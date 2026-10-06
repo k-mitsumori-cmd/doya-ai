@@ -1,0 +1,84 @@
+{
+  "checkedAt": "2026-10-06T21:00:52.638422+00:00",
+  "parent": "afd0bc774ca157ac99822f98449003eab408d640",
+  "status": "full-gate-passed-awaiting-commit-push-and-production-verification",
+  "services": [
+    "shodan"
+  ],
+  "changes": [
+    "Synchronous create lock, immutable normalized URL, confirmed actor/org/epoch and cancellation",
+    "Strict shared research acknowledgment validation for all required screen fields before display",
+    "Unknown outcomes stop repeat create, retain URL and provide scoped history recovery; known results remain directly openable after navigation failure",
+    "Cancelled navigation timer on org/actor/auth/unmount; same actor confirmed result preserved",
+    "Successful or rejected current operations emit actor/org-scoped usage refresh; sidebar ignores foreign events",
+    "Quota denial synchronously blocks retained callbacks; distinct stopped-state text and disabled styling",
+    "Removed duplicate decoding of already-decoded Next orgSlug in Shodan routes"
+  ],
+  "limitations": [
+    "No authenticated production creation, customer DB write, paid provider, upload or email performed",
+    "Server persistent creation idempotency across reload/multiple tabs is not added; synchronous ref alone does not guarantee exactly-once",
+    "Research validator verifies shape and controlled display, not truth of generated research facts",
+    "Visual cases are static HTML from actual mounted synthetic states with decorative UI mocked and prior compiled CSS; actual production authenticated browser flow remains unproven",
+    "Shodan detail/generate/list/member flows beyond this change and quote-create-ack-baseline remain separate audit work",
+    "All 17 services / 2074 criteria remain incomplete"
+  ],
+  "additionalFinding": "Malformed research persisted as researched before client rejection; actual POST now validates before success persistence. Offline regressions and new release gate pending.",
+  "researchValidationCases": 67,
+  "newPageMountedCases": 32,
+  "gateDirectory": "docs/audits/2026-10-06-all-services-recheck/shodan-new-release-041f0b83-9907-474e-a56d-af5f1f665a86",
+  "historicalInvalidatedEvidence": {
+    "mountedNewPage": 32,
+    "researchAndActualApiClient": 26,
+    "sharedSidebarCases": 30,
+    "existingContracts": 191,
+    "settingsRegression": 52,
+    "staticLayoutCases": 12,
+    "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-new-release-b1953112-04d3-4187-a423-4142bdc935f6",
+    "gateSession": 59912,
+    "targetedTypecheckExitCode": 0,
+    "targetedLintExitCode": 0,
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T21:03:19.573897+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T21:03:21.425708+00:00"
+      }
+    ],
+    "sourceFiles": 2610,
+    "changedSources": [],
+    "allSourceHashesRecheckedAt": "2026-10-06T21:04:24.014605+00:00",
+    "installedNextMatcherActualServerLayoutCases": 2
+  },
+  "evidence": {
+    "mountedNewPage": 32,
+    "researchAndActualApiClient": 67,
+    "sharedSidebarCases": 30,
+    "existingContracts": 191,
+    "settingsRegression": 52,
+    "staticLayoutCases": 12,
+    "installedNextMatcherActualServerLayoutCases": 2,
+    "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-new-release-041f0b83-9907-474e-a56d-af5f1f665a86",
+    "fullGateStatus": "pending",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T21:15:47.381414+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T21:15:49.118990+00:00"
+      }
+    ],
+    "sourceFiles": 2610,
+    "changedSources": [],
+    "allSourceHashesRecheckedAt": "2026-10-06T21:16:32.579953+00:00"
+  },
+  "activeGateSession": 36710
+}

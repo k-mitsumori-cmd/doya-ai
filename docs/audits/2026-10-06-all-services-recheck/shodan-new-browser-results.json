@@ -1,0 +1,306 @@
+{
+  "checkedAt": "2026-10-06T21:00:01.100Z",
+  "cases": [
+    {
+      "name": "unknown",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "state": {
+        "buttons": [
+          {
+            "disabled": true,
+            "opacity": "0.5",
+            "text": "作成結果の確認が必要です"
+          }
+        ],
+        "links": [
+          {
+            "href": "/shodan/alpha",
+            "text": "商談準備一覧で作成結果を確認する"
+          },
+          {
+            "href": "/shodan/alpha/settings",
+            "text": "自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）"
+          }
+        ],
+        "scrollWidth": 1280,
+        "text": "作成結果を確認できませんでした。重ねて作成せず、商談準備一覧をご確認ください。\n\n商談準備一覧で作成結果を確認する\n商談先企業のURL\n自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）\n作成結果の確認が必要です\n\n作成結果が不明のため、新規作成を停止しています。一覧で結果をご確認ください。",
+        "width": 1280
+      }
+    },
+    {
+      "name": "free-limit",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "state": {
+        "buttons": [
+          {
+            "disabled": true,
+            "opacity": "0.5",
+            "text": "今月の上限に達しています"
+          }
+        ],
+        "links": [
+          {
+            "href": "/shodan/alpha/settings",
+            "text": "自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）"
+          },
+          {
+            "href": "/shodan/pricing?org=alpha",
+            "text": "料金プランを確認する"
+          }
+        ],
+        "scrollWidth": 1280,
+        "text": "商談先企業のURL\n自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）\n\nFree limit\n\n料金プランを確認する\n今月の上限に達しています\n\n利用枠について、上の案内をご確認ください。",
+        "width": 1280
+      }
+    },
+    {
+      "name": "paid-limit",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "state": {
+        "buttons": [
+          {
+            "disabled": true,
+            "opacity": "0.5",
+            "text": "今月の上限に達しています"
+          }
+        ],
+        "links": [
+          {
+            "href": "/shodan/alpha/settings",
+            "text": "自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）"
+          },
+          {
+            "href": "https://doyamarke.surisuta.jp/contact",
+            "text": "追加枠について問い合わせる"
+          }
+        ],
+        "scrollWidth": 1280,
+        "text": "商談先企業のURL\n自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）\n\nPaid limit\n\n追加枠について問い合わせる\n今月の上限に達しています\n\n利用枠について、上の案内をご確認ください。",
+        "width": 1280
+      }
+    },
+    {
+      "name": "member-limit",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "state": {
+        "buttons": [
+          {
+            "disabled": true,
+            "opacity": "0.5",
+            "text": "今月の上限に達しています"
+          }
+        ],
+        "links": [
+          {
+            "href": "/shodan/alpha/settings",
+            "text": "自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）"
+          }
+        ],
+        "scrollWidth": 1280,
+        "text": "商談先企業のURL\n自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）\n\nOwner consultation\n\n今月の上限に達しています\n\n利用枠について、上の案内をご確認ください。",
+        "width": 1280
+      }
+    },
+    {
+      "name": "reveal",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "state": {
+        "buttons": [],
+        "links": [
+          {
+            "href": "/shodan/alpha/p/prep-a",
+            "text": "調査結果を開く"
+          }
+        ],
+        "scrollWidth": 1280,
+        "text": "調査結果を開く\n\n企業調査が完了しました\n\n調査結果をご確認いただけます。提案資料の利用条件は結果画面でご案内します。\n\napartment\n企業名\nCompany\ngroups\n実従業員数\n確認できず\ncategory\n業種\n—\ncampaign\nマーケ施策\nサイトの取得状況が未確認\npublic\n保有サイト/メディア\nサイトの取得状況が未確認\nshare\nSNS/チャネル\nサイトの取得状況が未確認\ncampaign\nプレスリリース\n未確認",
+        "width": 1280
+      }
+    },
+    {
+      "name": "login",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "state": {
+        "buttons": [],
+        "links": [
+          {
+            "href": "/auth/signin?callbackUrl=%2Fshodan%2Falpha%2Fnew",
+            "text": "ログイン情報を再確認する"
+          }
+        ],
+        "scrollWidth": 1280,
+        "text": "ログイン情報を確認できません。再度ログインしてください。\n\nログイン情報を再確認する",
+        "width": 1280
+      }
+    },
+    {
+      "name": "unknown",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "buttons": [
+          {
+            "disabled": true,
+            "opacity": "0.5",
+            "text": "作成結果の確認が必要です"
+          }
+        ],
+        "links": [
+          {
+            "href": "/shodan/alpha",
+            "text": "商談準備一覧で作成結果を確認する"
+          },
+          {
+            "href": "/shodan/alpha/settings",
+            "text": "自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）"
+          }
+        ],
+        "scrollWidth": 390,
+        "text": "作成結果を確認できませんでした。重ねて作成せず、商談準備一覧をご確認ください。\n\n商談準備一覧で作成結果を確認する\n商談先企業のURL\n自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）\n作成結果の確認が必要です\n\n作成結果が不明のため、新規作成を停止しています。一覧で結果をご確認ください。",
+        "width": 390
+      }
+    },
+    {
+      "name": "free-limit",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "buttons": [
+          {
+            "disabled": true,
+            "opacity": "0.5",
+            "text": "今月の上限に達しています"
+          }
+        ],
+        "links": [
+          {
+            "href": "/shodan/alpha/settings",
+            "text": "自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）"
+          },
+          {
+            "href": "/shodan/pricing?org=alpha",
+            "text": "料金プランを確認する"
+          }
+        ],
+        "scrollWidth": 390,
+        "text": "商談先企業のURL\n自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）\n\nFree limit\n\n料金プランを確認する\n今月の上限に達しています\n\n利用枠について、上の案内をご確認ください。",
+        "width": 390
+      }
+    },
+    {
+      "name": "paid-limit",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "buttons": [
+          {
+            "disabled": true,
+            "opacity": "0.5",
+            "text": "今月の上限に達しています"
+          }
+        ],
+        "links": [
+          {
+            "href": "/shodan/alpha/settings",
+            "text": "自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）"
+          },
+          {
+            "href": "https://doyamarke.surisuta.jp/contact",
+            "text": "追加枠について問い合わせる"
+          }
+        ],
+        "scrollWidth": 390,
+        "text": "商談先企業のURL\n自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）\n\nPaid limit\n\n追加枠について問い合わせる\n今月の上限に達しています\n\n利用枠について、上の案内をご確認ください。",
+        "width": 390
+      }
+    },
+    {
+      "name": "member-limit",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "buttons": [
+          {
+            "disabled": true,
+            "opacity": "0.5",
+            "text": "今月の上限に達しています"
+          }
+        ],
+        "links": [
+          {
+            "href": "/shodan/alpha/settings",
+            "text": "自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）"
+          }
+        ],
+        "scrollWidth": 390,
+        "text": "商談先企業のURL\n自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）\n\nOwner consultation\n\n今月の上限に達しています\n\n利用枠について、上の案内をご確認ください。",
+        "width": 390
+      }
+    },
+    {
+      "name": "reveal",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "buttons": [],
+        "links": [
+          {
+            "href": "/shodan/alpha/p/prep-a",
+            "text": "調査結果を開く"
+          }
+        ],
+        "scrollWidth": 390,
+        "text": "調査結果を開く\n\n企業調査が完了しました\n\n調査結果をご確認いただけます。提案資料の利用条件は結果画面でご案内します。\n\napartment\n企業名\nCompany\ngroups\n実従業員数\n確認できず\ncategory\n業種\n—\ncampaign\nマーケ施策\nサイトの取得状況が未確認\npublic\n保有サイト/メディア\nサイトの取得状況が未確認\nshare\nSNS/チャネル\nサイトの取得状況が未確認\ncampaign\nプレスリリース\n未確認",
+        "width": 390
+      }
+    },
+    {
+      "name": "login",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "buttons": [],
+        "links": [
+          {
+            "href": "/auth/signin?callbackUrl=%2Fshodan%2Falpha%2Fnew",
+            "text": "ログイン情報を再確認する"
+          }
+        ],
+        "scrollWidth": 390,
+        "text": "ログイン情報を確認できません。再度ログインしてください。\n\nログイン情報を再確認する",
+        "width": 390
+      }
+    }
+  ],
+  "scope": "Final static HTML from actual mounted page synthetic states; decorative components mocked. Layout, stopped-state copy and visible recovery/limit actions only; no real session, API or external screenshot provider."
+}

@@ -59,7 +59,7 @@ function Card({ title, icon, accent, children }: { title: string; icon: string; 
 
 export default function ShodanResultPage() {
   const params = useParams<{ orgSlug: string; id: string }>()
-  const orgSlug = decodeURIComponent(String(params.orgSlug))
+  const orgSlug = String(params.orgSlug)
   const id = String(params.id)
   const router = useRouter()
   const [prep, setPrep] = useState<Prep | null>(null)

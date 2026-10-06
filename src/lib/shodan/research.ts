@@ -24,7 +24,12 @@ function extractOgImage(html: string, baseUrl: string): string | null {
   const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
     || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)
   if (!m?.[1]) return null
-  try { return new URL(m[1].trim(), baseUrl).toString() } catch { return null }
+  try {
+    const image = new URL(m[1].trim(), baseUrl)
+    // 画像の形式だけで取得済みの企業情報を失敗扱いにしない。
+    if (!['http:', 'https:'].includes(image.protocol) || image.username || image.password || image.href.length > 8192) return null
+    return image.href
+  } catch { return null }
 }
 function decodeEntities(s: string): string {
   return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')

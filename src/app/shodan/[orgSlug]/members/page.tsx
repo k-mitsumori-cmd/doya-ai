@@ -14,7 +14,7 @@ type Member = { id: string; name: string | null; role: string; status: string; i
 
 export default function ShodanMembersPage() {
   const params = useParams<{ orgSlug: string }>()
-  const orgSlug = decodeURIComponent(String(params.orgSlug))
+  const orgSlug = String(params.orgSlug)
   const [members, setMembers] = useState<Member[] | null>(null)
   const [loadError, setLoadError] = useState(false)
   const [myRole, setMyRole] = useState<ShodanRole>('member')

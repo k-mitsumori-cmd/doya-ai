@@ -8,6 +8,8 @@ import { ShodanApiError, shodanGet, shodanSend } from '@/lib/shodan/client'
 import { DoyaKun, SiteShot, PageHeader, sym } from '@/components/shodan/ui'
 import type { CompanyResearch } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
+import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
+import { readOrgProfile } from '@/lib/org-profile-view'
 
 type Phase = 'input' | 'researching' | 'reveal'
 
@@ -42,8 +44,15 @@ function findingsFrom(r: CompanyResearch) {
 
 export default function ShodanNewPage() {
   const params = useParams<{ orgSlug: string }>()
-  const orgSlug = decodeURIComponent(String(params.orgSlug))
+  const orgSlug = String(params.orgSlug)
   const router = useRouter()
+  const guard = useOrgSettingsGuard(orgSlug)
+  const [owner, setOwner] = useState(guard.identity)
+  const [unknown, setUnknown] = useState(false)
+  const [operationError, setOperationError] = useState('')
+  const [confirmedId, setConfirmedId] = useState<string | null>(null)
+  const attempt = useRef<'idle' | 'pending' | 'unknown' | 'confirmed' | 'limited'>('idle')
+  const draft = useRef('')
   const [url, setUrl] = useState('')
   const [phase, setPhase] = useState<Phase>('input')
   const [tick, setTick] = useState(0)
@@ -51,11 +60,42 @@ export default function ShodanNewPage() {
   const [limitMessage, setLimitMessage] = useState<string | null>(null)
   const [limitAction, setLimitAction] = useState<{ href: string; label: string } | null>(null)
   const [hasProfile, setHasProfile] = useState<boolean | null>(null)
-  const prepIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    shodanGet<{ profile: any }>('/api/shodan/company-profile', orgSlug).then((d) => setHasProfile(!!d.profile)).catch(() => setHasProfile(null))
-  }, [orgSlug])
+    setOwner(guard.identity); setUrl(''); draft.current = ''; setPhase('input')
+    setResearch(null); setConfirmedId(null)
+    setLimitMessage(null); setLimitAction(null); setHasProfile(null)
+    setUnknown(false); setOperationError(''); attempt.current = 'idle'
+  }, [guard.identity])
+  useEffect(() => {
+    if (attempt.current === 'pending') {
+      attempt.current = 'unknown'; setUnknown(true); setPhase('input')
+      setOperationError('作成結果を確認できませんでした。重ねて作成せず、商談準備一覧をご確認ください。')
+    }
+  }, [guard.key])
+  useEffect(() => {
+    if (!guard.allowed) return
+    const ticket = guard.begin('profile')
+    if (!ticket) return
+    shodanGet('/api/shodan/company-profile', orgSlug, { signal: ticket.signal })
+      .then(d => { if (ticket.current()) setHasProfile(readOrgProfile('shodan', d).profile !== null) })
+      .catch(e => { if (ticket.current()) { setHasProfile(null); if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication() } })
+      .finally(() => ticket.end())
+    return () => ticket.end()
+  }, [guard.key]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!guard.allowed || !confirmedId || owner !== guard.identity) return
+    const ticket = guard.begin('navigation')
+    if (!ticket) return
+    const timer = setTimeout(() => {
+      if (ticket.current()) {
+        try { router.replace(`/shodan/${encodeURIComponent(orgSlug)}/p/${confirmedId}`) }
+        catch { setOperationError('調査は完了しています。下のリンクから結果を開いてください。') }
+      }
+      ticket.end()
+    }, 3400)
+    return () => { clearTimeout(timer); ticket.end() }
+  }, [guard.key, confirmedId, owner, orgSlug, router]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 調査中のティッカー送り
   useEffect(() => {
@@ -65,49 +105,56 @@ export default function ShodanNewPage() {
     return () => clearInterval(t)
   }, [phase])
 
+  const notifyUsage = () => window.dispatchEvent(new CustomEvent('shodan:usage-changed', { detail: { actor: guard.actor, organizationSlug: orgSlug } }))
   const run = async () => {
-    if (!url.trim()) { toast.error('URLを入力してください'); return }
-    setLimitMessage(null)
-    setLimitAction(null)
-    setPhase('researching')
+    if (!guard.active() || owner !== guard.identity || attempt.current !== 'idle') return
+    const value = draft.current.trim()
+    if (!value) { toast.error('URLを入力してください'); return }
+    let target: URL
     try {
-      // フェーズ1：調査
-      const d = await shodanSend<{ id: string; status: string; research: CompanyResearch }>('/api/shodan/preparations', orgSlug, 'POST', { url })
-      prepIdRef.current = d.id
-      if (d.status === 'failed' || !d.research) throw new Error('調査に失敗しました')
-      setResearch(d.research)
-      setPhase('reveal')
-      // 会社情報の調査が完了。提案資料の組み立ては時間がかかるので“待たせず”結果ページへ。
-      // 結果ページで会社情報を即表示しつつ、提案生成は自動で継続＆進捗を派手に表示する。
-      await new Promise((r) => setTimeout(r, 3400))
-      toast.success('会社情報の調査が完了！提案資料の作成に進みます')
-      router.replace(`/shodan/${encodeURIComponent(orgSlug)}/p/${d.id}`)
-    } catch (e: any) {
+      target = new URL(/^[a-z][a-z0-9+.-]*:/i.test(value) ? value : 'https://' + value)
+      if (value.length > 8192 || !['http:', 'https:'].includes(target.protocol) || target.username || target.password) throw new Error()
+    } catch { setOperationError('有効な企業サイトのURLを入力してください。'); return }
+    const ticket = guard.begin('create')
+    if (!ticket) return
+    attempt.current = 'pending'
+    setLimitMessage(null); setLimitAction(null); setOperationError(''); setPhase('researching')
+    try {
+      const d = await shodanSend<{ id: string; status: string; research: CompanyResearch }>('/api/shodan/preparations', orgSlug, 'POST', { url: target.href }, { signal: ticket.signal })
+      if (!ticket.current()) return
+      attempt.current = 'confirmed'
+      setConfirmedId(d.id); setResearch(d.research); setPhase('reveal'); notifyUsage()
+    } catch (e) {
+      if (!ticket.current()) return
+      const definite = e instanceof ShodanApiError && ([400, 401, 403, 404, 413, 422, 429].includes(e.status) || e.status === 402 && e.code === 'LIMIT')
+      attempt.current = e instanceof ShodanApiError && e.code === 'LIMIT' && e.status === 402 ? 'limited' : definite ? 'idle' : 'unknown'
+      setUnknown(!definite); setPhase('input'); notifyUsage()
       if (e instanceof ShodanApiError && e.code === 'LIMIT') {
         setLimitMessage(e.message)
         setLimitAction(e.actionUrl && e.actionLabel ? { href: e.actionUrl, label: e.actionLabel } : null)
-      } else {
-        toast.error(e.message || '生成に失敗しました')
-      }
-      // 調査まで終わっていれば結果ページで再生成できる
-      if (prepIdRef.current && research) router.replace(`/shodan/${encodeURIComponent(orgSlug)}/p/${prepIdRef.current}`)
-      else setPhase('input')
-    }
+      } else setOperationError(definite && e instanceof Error ? e.message : '作成結果を確認できませんでした。重ねて作成せず、商談準備一覧をご確認ください。')
+      if (e instanceof ShodanApiError && e.status === 401) guard.rejectAuthentication()
+    } finally { ticket.end() }
   }
+
+  if (guard.requiresLogin) return <div role="alert" className="p-6"><p>ログイン情報を確認できません。再度ログインしてください。</p><Link className="underline" href={`/auth/signin?callbackUrl=${encodeURIComponent(`/shodan/${encodeURIComponent(orgSlug)}/new`)}`}>ログイン情報を再確認する</Link></div>
+  if (!guard.allowed || owner !== guard.identity) return <div role="status" className="p-6">認証情報を確認しています。</div>
 
   return (
     <div className="p-6 md:p-8 max-w-2xl mx-auto">
       <PageHeader icon="rocket_launch" mood="point" title="新規 商談準備" subtitle="商談先企業のURLを入れるだけ。調査→課題仮説→提案資料まで自動で作成します。" />
 
+      {operationError && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4"><p>{operationError}</p>{unknown && <Link className="mt-2 inline-block font-bold underline" href={`/shodan/${encodeURIComponent(orgSlug)}`}>商談準備一覧で作成結果を確認する</Link>}</div>}
+      {confirmedId && <Link className="mb-4 inline-block font-bold underline" href={`/shodan/${encodeURIComponent(orgSlug)}/p/${confirmedId}`}>調査結果を開く</Link>}
       <AnimatePresence mode="wait">
         {phase === 'input' && (
           <motion.div key="input" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
             className="relative rounded-3xl bg-white border border-purple-100 p-6 pt-8 shadow-sm overflow-hidden">
             <DoyaKun mood="point" size={96} className="!absolute -top-2 right-3" />
-            <label className="block text-sm font-black text-slate-700 mb-2">商談先企業のURL</label>
+            <label htmlFor="shodan-new-url" className="block text-sm font-black text-slate-700 mb-2">商談先企業のURL</label>
             <div className="flex items-center gap-2 rounded-xl border-2 border-slate-200 focus-within:border-purple-400 px-4 py-3 transition-colors bg-white">
               {sym('language', 22)}
-              <input value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && run()}
+              <input id="shodan-new-url" value={url} maxLength={8192} onChange={(e) => { if (!guard.active()) return; draft.current = e.target.value; setUrl(e.target.value) }} onKeyDown={(e) => e.key === 'Enter' && run()}
                 placeholder="例: https://www.example.co.jp" className="flex-1 font-bold outline-none" autoFocus />
             </div>
             {hasProfile === false && (
@@ -124,11 +171,11 @@ export default function ShodanNewPage() {
                 </Link>}
               </div>
             )}
-            <motion.button onClick={run} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
-              className="mt-5 w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-lg shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2">
-              {sym('bolt', 22)}この企業の商談準備をつくる
+            <motion.button data-testid="shodan-create" type="button" disabled={unknown || Boolean(limitMessage)} onClick={run} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
+              className="mt-5 w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-lg shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+              {sym('bolt', 22)}{unknown ? '作成結果の確認が必要です' : limitMessage ? '今月の上限に達しています' : 'この企業の商談準備をつくる'}
             </motion.button>
-            <p className="text-[11px] font-bold text-slate-400 mt-3 text-center">調査〜提案生成まで30秒〜2分ほど。タブを閉じずにお待ちください。</p>
+            <p className="text-[11px] font-bold text-slate-400 mt-3 text-center">{unknown ? '作成結果が不明のため、新規作成を停止しています。一覧で結果をご確認ください。' : limitMessage ? '利用枠について、上の案内をご確認ください。' : '企業調査の完了まで30秒〜2分ほど。結果を待つ間はタブを開いたままお待ちください。'}</p>
           </motion.div>
         )}
 
@@ -158,8 +205,8 @@ export default function ShodanNewPage() {
             <div className="flex items-center gap-3 mb-4">
               <DoyaKun mood="thumbsup" size={64} float={false} />
               <div>
-                <p className="font-black text-emerald-700 text-lg">調査できました！</p>
-                <p className="text-xs font-bold text-slate-400">分かった内容はこちら。続けて提案資料を作成します…</p>
+                <p className="font-black text-emerald-700 text-lg">企業調査が完了しました</p>
+                <p className="text-xs font-bold text-slate-400">調査結果をご確認いただけます。提案資料の利用条件は結果画面でご案内します。</p>
               </div>
             </div>
             <SiteShot url={research.url} ogImage={research.ogImage} className="w-full aspect-[16/9] mb-3" label={research.companyName || research.url} />

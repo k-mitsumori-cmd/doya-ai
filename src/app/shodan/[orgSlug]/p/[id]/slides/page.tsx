@@ -14,7 +14,7 @@ type Prep = { id: string; targetName: string | null; slidesJson: ProposalSlide[]
 
 export default function ShodanSlidesEditPage() {
   const params = useParams<{ orgSlug: string; id: string }>()
-  const orgSlug = decodeURIComponent(String(params.orgSlug))
+  const orgSlug = String(params.orgSlug)
   const id = String(params.id)
   const [prep, setPrep] = useState<Prep | null>(null)
   const [notFound, setNotFound] = useState(false)

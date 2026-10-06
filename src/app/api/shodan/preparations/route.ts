@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { researchCompany } from '@/lib/shodan/research'
+import { isCompanyResearch } from '@/lib/shodan/research-response'
 import { effectivePrepStatus, PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/shodan/types'
 import { jstStartOfMonthUtc } from '@/lib/plan-limit'
 import { getShodanBilling } from '@/lib/shodan/billing'
@@ -17,12 +18,13 @@ import { isPaidPlan } from '@/lib/unified-plan'
 function normalizeUrl(input: unknown): string | null {
   if (typeof input !== 'string') return null
   let s = input.trim()
-  if (!s) return null
+  if (!s || s.length > 8192) return null
   if (/^[a-z][a-z0-9+.-]*:/i.test(s) && !/^https?:\/\//i.test(s)) return null
   if (!/^https?:\/\//i.test(s)) s = 'https://' + s
   try {
     const u = new URL(s)
     if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
+    if (u.username || u.password || u.href.length > 8192) return null
     return u.toString()
   } catch {
     return null
@@ -157,6 +159,8 @@ export async function POST(req: NextRequest) {
     // フェーズ1: 深掘りリサーチのみ（提案生成は /[id]/generate で実行）。
     // リサーチ結果を即返すことで、画面に「実際に調べた内容」を表示できる。
     const research = await researchCompany(targetUrl)
+    // 不正な調査結果を保存すると、成功表示と月次枠の両方が誤って確定する。
+    if (!isCompanyResearch(research)) throw new Error('invalid company research response')
     // 企業情報を一切取得できなかった調査は成功扱いにせず、月次枠を消費しない。
     if (research.sourceStatus?.homepage === 'failed' && !research.companyName && !research.description) {
       throw new Error('company research yielded no usable facts')

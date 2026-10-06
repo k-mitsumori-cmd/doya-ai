@@ -13,7 +13,7 @@ const fixtures=[
  ['aio','/api/aio/brand-profile','PUT',profileBody,{ok:true,profile:{id:'profile',brandName:'Brand',brandUrl:null,aliases:['Alias'],competitors:[],category:'Category',market:'日本'}}],
  ['shodan','/api/shodan/members','POST',{email:'PERSON@EXAMPLE.INVALID',role:'manager'},{ok:true,emailSent:false,inviteUrl:'https://example.invalid/shodan/invite/token',member:{id:'m2',inviteEmail:'person@example.invalid',role:'manager'}}],
  ['shodan','/api/shodan/members/m2','DELETE',undefined,{ok:true}],
- ['shodan','/api/shodan/preparations','POST',{url:'https://example.invalid'},{id:'p1',status:'researched',research:{companyName:'Company'}}],
+ ['shodan','/api/shodan/preparations','POST',{url:'https://example.invalid'},{id:'p1',status:'researched',research:require('./shodan-research-fixture.cjs')()}],
  ['shodan','/api/shodan/preparations/p1/slides/generate','POST',undefined,{success:true,count:1,total:3,remaining:2}],
  ['shodan','/api/shodan/preparations/p1/generate','POST',undefined,{id:'p1',status:'done'}],
  ['shodan','/api/shodan/preparations/p1/slides/regenerate','POST',{index:0,instruction:'Example'},{success:true,data:{index:0,image:{title:'Title',role:'cover',imageUrl:'https://example.invalid/image.png'}}}],

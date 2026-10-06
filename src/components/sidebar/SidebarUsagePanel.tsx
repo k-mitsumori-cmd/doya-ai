@@ -140,6 +140,10 @@ export function SidebarUsagePanel({
     const refresh = (event: Event) => {
       // These notifications originate from actor-scoped quota responses.
       if ((refreshEvent === 'banner:usage-changed' || refreshEvent === 'persona:usage-changed') && (event as CustomEvent<{ actor?: string }>).detail?.actor !== actor) return
+      if (refreshEvent === 'shodan:usage-changed') {
+        const detail = (event as CustomEvent<{ actor?: string; organizationSlug?: string }>).detail
+        if (detail?.actor !== actor || detail.organizationSlug !== organizationSlug) return
+      }
       load(true)
     }
     load()
@@ -151,7 +155,7 @@ export function SidebarUsagePanel({
       window.removeEventListener('focus', focus)
       if (refreshEvent) window.removeEventListener(refreshEvent, refresh)
     }
-  }, [allowed, key, requestUrl, refreshEvent, actor])
+  }, [allowed, key, requestUrl, refreshEvent, actor, organizationSlug])
 
   if (!show || !summary) return null
 

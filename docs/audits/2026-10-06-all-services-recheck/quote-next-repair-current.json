@@ -1,0 +1,53 @@
+{
+  "checkedAt": "2026-10-06T21:12:28.310702+00:00",
+  "status": "confirmed-unfixed",
+  "organizationDraftScope": {
+    "status": "confirmed-unfixed",
+    "problem": "Actual retained quote creation callback transmits old draft to newly selected organization via actual withOrg",
+    "requestOrganization": "beta",
+    "draftOrigin": "alpha",
+    "scope": "Actual AST-extracted createDocument plus full actual OrgSwitcher module; synthetic localStorage, fetch, state and window only. No real customer data, cross-tenant DB write or production incident established."
+  },
+  "creationAckAndDuplicate": {
+    "status": "confirmed-unfixed",
+    "source": "src/app/quote/Tool.tsx",
+    "cases": [
+      {
+        "problem": "HTTP200 empty object redirects to undefined document",
+        "route": "/quote/documents/undefined"
+      },
+      {
+        "problem": "Same-frame createDocument calls send two POST requests",
+        "posts": 2
+      }
+    ],
+    "scope": "Actual AST-extracted createDocument; synthetic fetch/window/state only. No real quote document created, customer data, billing or email."
+  },
+  "requiredRepair": [
+    "Bind each draft to server-verified actor and organization; construct write URL from captured context, never current localStorage at dispatch",
+    "Invalidate retained callbacks/results on actor/org changes, including ABA and session refresh; reset confidential drafts on identity changes",
+    "Acquire synchronous creation lock; validate complete acknowledgement and document identifier before navigation",
+    "Preserve draft and expose scoped history recovery on unknown results; prevent duplicate blind retry",
+    "Publish usage change after confirmed scoped success and recheck owner/member paid/free limit actions",
+    "Cover actual mounted QuoteTool and server contracts, draft changes during requests, same-frame storage switch, actor/org ABA, malformed HTTP200, network deadline, delayed callbacks and multi-tab behavior"
+  ],
+  "limitations": "No actual quote/customer DB write, billing mutation or paid provider. Synchronous client guard does not establish server persistent idempotency. Full 17-service audit remains incomplete.",
+  "mountedOrgSwitchEvidence": "quote-org-mounted-baseline.json",
+  "affectedCallbacksToAudit": [
+    "load/loadMoreProducts/loadMoreDocuments",
+    "createOrg",
+    "analyze/saveProduct",
+    "suggest/estimateRow",
+    "createDocument",
+    "document detail GET/PUT/PDF link",
+    "issuer settings GET/PUT"
+  ],
+  "layoutSourceReview": {
+    "files": [
+      "src/app/quote/layout.tsx",
+      "src/components/quote/QuoteAppLayout.tsx",
+      "src/app/quote/Tool.tsx"
+    ],
+    "finding": "Server layout checks session at render; client app layout and Tool do not observe actor transitions. Authenticated mounted actor/ABA regression required; source review alone does not prove a real logout exposure."
+  }
+}

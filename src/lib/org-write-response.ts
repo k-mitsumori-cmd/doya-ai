@@ -1,3 +1,4 @@
+import { isCompanyResearch } from './shodan/research-response'
 import { parseAioBrandProfileInput } from './aio/brand-profile-input'
 import { scanCoverageCounts } from './aio/coverage'
 import { parseOrgProfileVersion } from './org-profile-version'
@@ -85,7 +86,7 @@ export function confirmedOrgWrite(service: 'aio' | 'shodan', path: string, metho
     return record(suggested) && PROFILE_FIELDS.every(key => typeof suggested[key] === 'string')
       && Array.isArray(data.gaps) && data.gaps.every(key => typeof key === 'string' && PROFILE_FIELDS.includes(key as typeof PROFILE_FIELDS[number]))
   }
-  if (pathname === prefix + '/preparations' && method === 'POST') return id(data.id) && data.status === 'researched' && record(data.research) && Object.keys(data.research).length > 0
+  if (pathname === prefix + '/preparations' && method === 'POST') return id(data.id) && data.status === 'researched' && isCompanyResearch(data.research)
   const prep = pathname.match(/^\/api\/shodan\/preparations\/([a-zA-Z0-9_-]{1,200})(\/generate|\/slides\/generate|\/slides\/regenerate)?$/)
   if (!prep) return false
   if (!prep[2] && method === 'DELETE') return data.ok === true

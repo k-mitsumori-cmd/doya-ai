@@ -48,5 +48,5 @@ export function useOrgSettingsGuard(orgSlug: string) {
   }
   const requiresLogin = status === 'unauthenticated' || status === 'authenticated' && (!actor || deniedKey === key)
   const rejectAuthentication = () => { if (context.current === key) { denied.current = key; setDeniedKey(key) } }
-  return { identity, key, allowed, active, begin, requiresLogin, rejectAuthentication }
+  return { actor, identity, key, allowed, active, begin, requiresLogin, rejectAuthentication }
 }
