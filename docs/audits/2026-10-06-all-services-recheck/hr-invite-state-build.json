@@ -1,0 +1,18 @@
+{
+  "observedAt": "2026-10-06T00:36:07.374433+00:00",
+  "session": 11986,
+  "exitCode": 0,
+  "log": "/tmp/doya-hr-invite-state-verified-build-20261006.log",
+  "sourceHashes": {
+    "src/app/api/hr/organization/invite/accept/route.ts": "fc24183151ccc2d8e54161359b6bf2e756bbb9084144cd89d737d2f577b63d06",
+    "src/app/api/hr/organization/invite/[token]/route.ts": "439a5ece767e0f7c887a6d65d51db418de24f64ddb89931ce480568cefe7c41d",
+    "src/app/hr/invite/[token]/page.tsx": "888f72b3e3b39aa688d3590ec84ceedc6a2e4397a53c9adb3eadb2b7fb64721d",
+    "scripts/security-regression/verify-hr-invite-states.cjs": "b7d36f4475fa6fb6c4212979702a9181dbb4f78cea6dd2625ec4fd94d225770e",
+    "scripts/security-regression/verify-hr-invite-identity.cjs": "7ba3734773fdcbba62ff83e99bf0f497c57b4db8ee753d9ae3be37dc868c79bf",
+    "scripts/security-regression/verify-hr-admin-auth-recovery.cjs": "27d13b055539fd761250ca20a56f113d2124c2710d6f217b42136061a6418568",
+    "scripts/security-regression/run.cjs": "4c48d73ba6f7e55f575d4a6e90d8ff7189f16cbfc4a0bd59fcd39d9c4ce97593"
+  },
+  "apiSyntheticGroups": 10,
+  "uiSyntheticGroups": 21,
+  "productionAuthenticatedQA": "not performed"
+}

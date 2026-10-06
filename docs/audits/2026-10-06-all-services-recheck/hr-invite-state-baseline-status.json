@@ -1,0 +1,40 @@
+{
+  "source": "704a66fa route from git show; synthetic clock/auth/DB; claim returns zero at exact deadline to model expiresAt > acceptedAt; added claim-binding asserts excluded for legacy replay",
+  "rows": [
+    {
+      "label": "pending-past",
+      "status": 400,
+      "code": null,
+      "created": 0,
+      "claims": 0
+    },
+    {
+      "label": "pending-at-deadline",
+      "status": 409,
+      "code": null,
+      "created": 0,
+      "claims": 1
+    },
+    {
+      "label": "stored-expired",
+      "status": 400,
+      "code": null,
+      "created": 0,
+      "claims": 0
+    },
+    {
+      "label": "accepted",
+      "status": 400,
+      "code": null,
+      "created": 0,
+      "claims": 0
+    },
+    {
+      "label": "cancelled",
+      "status": 400,
+      "code": null,
+      "created": 0,
+      "claims": 0
+    }
+  ]
+}

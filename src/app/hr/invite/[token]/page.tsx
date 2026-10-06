@@ -21,6 +21,7 @@ function InviteContent({ token }: { token: string }) {
   const [inviterName, setInviterName] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
   const [error, setError] = useState('')
+  const [verificationRevision, setVerificationRevision] = useState(0)
   const [accountAction, setAccountAction] = useState<'signIn' | 'switch' | null>(null)
   const callbackUrl = `/hr/invite/${encodeURIComponent(token || '')}`
 
@@ -58,7 +59,7 @@ function InviteContent({ token }: { token: string }) {
           return
         }
         if (inv.status !== 'PENDING') {
-          setError('この招待は既に使用済みです')
+          setError(inv.status === 'CANCELLED' ? 'この招待はキャンセルされています。管理者に再送を依頼してください。' : 'この招待は既に使用済みです')
           setStatus('error')
           return
         }
@@ -71,7 +72,7 @@ function InviteContent({ token }: { token: string }) {
     }
     verifyInvite()
     return () => { active = false; controller.abort() }
-  }, [token])
+  }, [token, verificationRevision])
 
   useEffect(() => {
     if (status !== 'success') return
@@ -86,6 +87,14 @@ function InviteContent({ token }: { token: string }) {
     window.addEventListener('pageshow', restore)
     return () => window.removeEventListener('pageshow', restore)
   }, [])
+
+  const verifyAgain = () => {
+    if (status !== 'error' || accountBusy || acceptanceBusy) return
+    setStatus('loading')
+    setAccountAction(null)
+    setError('')
+    setVerificationRevision(current => current + 1)
+  }
 
   const handleAccount = async () => {
     if (!accountAction || status !== 'error') return
@@ -313,6 +322,13 @@ function InviteContent({ token }: { token: string }) {
                   {accountBusy ? 'ログイン処理中…' : accountAction === 'switch' ? '別のアカウントでログイン' : 'Googleでログイン'}
                 </button>
               )}
+              <button
+                onClick={verifyAgain}
+                disabled={accountBusy || acceptanceBusy}
+                className="w-full mb-3 px-6 py-3 bg-blue-50 text-blue-700 rounded-full text-sm font-bold disabled:opacity-50"
+              >
+                招待の状態を再確認
+              </button>
               <button
                 onClick={() => router.push('/hr/dashboard')}
                 className="px-6 py-3 bg-slate-100 text-slate-700 rounded-full text-sm font-bold hover:bg-slate-200 transition-all"

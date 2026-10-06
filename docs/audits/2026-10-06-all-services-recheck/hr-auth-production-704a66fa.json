@@ -1,0 +1,13 @@
+{
+  "observedAt": "2026-10-05T22:39:55.779Z",
+  "pageStatus": 200,
+  "scriptCount": 24,
+  "matched": [
+    {
+      "path": "/_next/static/chunks/app/hr/invite/%5Btoken%5D/page-348e6561ca1f30ab.js?dpl=dpl_3vZHwsY8BirBGPNSLYTTtmHLTCYv",
+      "status": 200,
+      "hrRecoveryCopyPresent": true
+    }
+  ],
+  "scope": "HTML and served JS only; no browser execution, invite API, Google auth or participation POST"
+}

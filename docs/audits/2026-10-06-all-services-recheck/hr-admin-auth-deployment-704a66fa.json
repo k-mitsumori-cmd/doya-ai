@@ -1,0 +1,24 @@
+{
+  "sha": "704a66fac18e34b2442e2f1083fd5dede730f42f",
+  "mainPush": "succeeded",
+  "deploymentId": "dpl_3vZHwsY8BirBGPNSLYTTtmHLTCYv",
+  "deploymentState": "READY",
+  "ciRunId": 37382686805,
+  "ciStatus": "completed",
+  "localBuild": {
+    "session": 98731,
+    "exitCode": 0,
+    "log": "/tmp/doya-hr-admin-auth-final-build-20261006.log"
+  },
+  "scope": "Production Ready and exact SHA/alias verified; isolated UI and mocked API verified; actual authenticated flows and incident root cause unverified",
+  "observedAt": "2026-10-06T00:35:08.216981+00:00",
+  "deploymentSha": "704a66fac18e34b2442e2f1083fd5dede730f42f",
+  "aliases": [
+    "doya-ai.vercel.app",
+    "doya-ai.surisuta.jp",
+    "doya-ai-surisutas-projects.vercel.app",
+    "doya-ai-git-main-surisutas-projects.vercel.app"
+  ],
+  "ciConclusion": "success",
+  "ciSha": "704a66fac18e34b2442e2f1083fd5dede730f42f"
+}

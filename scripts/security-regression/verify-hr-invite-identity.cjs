@@ -20,7 +20,7 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
     hrOrganizationMember: { findFirst: async () => null },
     $transaction: async (fn) => fn({
       $queryRaw: async () => { locks++; return [{ id: 'org-1' }]; },
-      hrInvitation: { updateMany: async ({ where }) => {
+      hrInvitation: { findUnique: async () => invitation, updateMany: async ({ where }) => {
         claims++;
         assert.equal(where.status, 'PENDING');
         assert.equal(where.id, invitation.id);
@@ -62,7 +62,8 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
   assert.equal(r.created, 0);
 
   r = await acceptCase({ status: 'ACCEPTED' });
-  assert.equal(r.status, 400);
+  assert.equal(r.status, 409);
+  assert.equal(r.body.code, 'INVITE_UNAVAILABLE');
   assert.equal(r.created, 0);
 
   r = await acceptCase({ claimCount: 0 });

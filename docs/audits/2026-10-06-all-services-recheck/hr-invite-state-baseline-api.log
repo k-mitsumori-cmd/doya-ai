@@ -1,0 +1,14 @@
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+500 !== 400
+
+    at /Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-hr-invite-states.cjs:22:281
+    at async check (/Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/load-typescript.cjs:4:30)
+    at async /Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-hr-invite-states.cjs:22:3 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 500,
+  expected: 400,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

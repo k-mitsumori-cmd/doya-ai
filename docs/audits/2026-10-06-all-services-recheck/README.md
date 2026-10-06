@@ -154,3 +154,29 @@ HR招待はtokenで内側を再マウント、GETはURLエンコード・no-stor
 既存HR APIは期限切れを400、トランザクション内の使用済み/期限切れ競合を409で返す箇所がある。今回の410対応だけでそれら全ての期限境界の案内を完了扱いにしない。GET自体に期限切れstatus更新があるため、本番招待URLでの確認は行っていない。HRのAPI分類/期限境界・再取得案内、全サービス認証後の通し検証、ER現行版更新を継続する。
 
 HR・管理画面補修の最終全体ビルド98731は既存プロセスで終了コード0を確認。Prisma生成・全体回帰・型検査・Next本番ビルドまで成功、対象4ファイルのSHA-256は開始時と一致。対象ESLint・diff check成功。切替版c9d6cebfのCI37381694231はsuccess、Vercelは本節の照会時点で同じSHAのBUILDING。今回補修をコミット・pushし、Ready・本番別名・配信確認は別ゲートとする。全サービス監査は未完了。
+
+HR・管理画面補修は704a66fac18e34b2442e2f1083fd5dede730f42fでmain push成功。Vercel dpl_3vZHwsY8BirBGPNSLYTTtmHLTCYvは同じSHAでBUILDING、CI37382686805 in_progress。先行の切替c9d6cebfと期限切れa0ba7b71は今回のAPI照会でReady・同じSHA・本番別名を確認し証拠JSONを更新。最新補修のReadyは未確認。全サービス監査は引き続き継続する。
+
+切替版c9d6cebfの本番ログインGETは200。配信JS17チャンクから、対象ログインチャンク（dpl_BBpVXD3qXiHFk83bi6BLTfLdG9Bx）のHR/AIO/商談準備の招待判定とselect_account処理を確認した。invitation-selection-production-c9d6cebf.json。これはJS配信確認で、実OAuth完了やCLIENT_FETCH_ERRORの根本原因解消の証拠ではない。
+
+## HR招待の期限切れ・競合・再確認を補修
+
+参加APIは期限切れを410/INVITE_EXPIRED、使用済み・取消・確認不能を409/INVITE_UNAVAILABLEへ分類。期限ちょうども失効とし、既にEXPIREDの行に追加更新はしない。組織のFOR UPDATE後に招待の現在値を再読し、token・組織・MEMBER権限・宛先・状態・期限を確認してから上限判定/claimへ進む。claimのwhereにも確認したtoken/組織/権限/宛先を束ねる。claim失敗時は再読し、期限切れと取消等を区別する。期限切れ・変更・取消等でメンバー生成/監査成功を記録しない。本人確認、MEMBER限定、組織上限と既存メンバー拒否を維持。不正JSON/本文/空白・長すぎるtokenは400/INVALID_INVITATION_INPUT、DB照会前に拒否する。
+
+HR画面のエラーには招待の状態を再確認する操作を追加。元のtokenで再取得し、古い情報を操作可能のままにせず読込状態へ移す。GETが再度失敗しても再確認でき、期限切れなら参加を出さず、現在PENDINGなら改めて参加できる。新しいGETはabort/旧応答無効化を維持し、ログイン開始/アカウント切替/成功扱いを自動実行しない。
+
+実APIと合成時計/DB/認証による9項目、実TSX/フックの20項目、既存の招待本人確認・権限・claimの回帰成功。前版704a66faをgit showで別場所へ読み出すと、不正JSONが500、期限切れ・使用済みの各条件が400となることを再現（hr-invite-state-baseline-api.log、hr-invite-state-baseline-status.json）。前版画面には再確認ボタンがなく新しい検証が失敗（hr-invite-state-baseline-ui.log）。9項目には期限ちょうど、ロック待ち中の失効と上限の優先順位、取消/宛先/権限/token/組織変更、claim直前失効、正常成功を含む。合成DBの確認であり、この版で実PostgreSQL同時実行や本番参加を実行した証拠ではない。
+
+隔離実React画面で、合成503後の再確認→有効な参加画面、合成POST409後の再確認→EXPIRED表示を確認。hr-invite-state-browser.json、hr-invite-state-local.png、hr-invite-state-harness-stats.json。API/セッションは合成、共通レイアウト/ルーターは実本番環境ではない。外部OAuth・上流転送なし。確認タブとプロキシは終了。対象ESLint・diff check成功、全体ビルド2103はdoya-hr-invite-state-build-20261006.logで実行中。未コミット・未反映。
+
+先行HR/管理画面版704a66faはCI37382686805 successを確認。Vercel dpl_3vZHwsY8BirBGPNSLYTTtmHLTCYvは現在照会でBUILDINGであり、Readyとみなさない。全17サービスの監査と本番通し確認は継続する。
+
+先行全体ビルド2103は型検査でaccount.emailのnullable指摘により終了コード2。本人確認済みメールを非nullのconstへ保持し、組織ロック後の照合にもその値を使う補修後、API9項目と既存本人確認回帰を再確認成功。型指摘前のビルドは合格扱いにせず、最終版をdoya-hr-invite-state-final-build-20261006.logで再実行する。前版の期限ちょうどの再現は、旧claim条件が期限を超えないためcount=0とする合成応答で409（他の失効/使用済みは400）となる。旧版に新しいclaim条件のassertを当てた先行観測は状態分類の証拠に流用せず、旧claimに対応した再現結果へ更新した。
+
+設計図更新の前提も再確認。旧docs/architecture/2026-09-16-er/build.pyは正規表現のモデル抽出を行い、notesにはペルソナ専用モデルなしと固定説明がある。make_html.pyにも180モデル/187リレーション・2026.09.16の固定ヘッダーとペルソナGenerationだけの説明がある。9月16日時点の歴史資料は保持し、これらのスクリプトをそのまま実行して現行図にせず、DMMFと現行保存モデルに基づく新しい図/辞書を生成・検証する必要がある。旧verify.cjsはPuppeteerによるブラウザ操作なので現在のCUA専用規則下では実行していない。図更新は未完了。
+
+## HR招待状態補修の最終検証（2026-10-06）
+
+取得APIもPENDINGの期限ちょうどを失効させ、期限を過ぎたACCEPTED/CANCELLEDは実状態を保持する。画面は取消済みと使用済みを区別し、管理者への再送依頼を案内する。API合成10項目と実TSX合成21項目成功へ更新（ログ添付）。隔離ブラウザでも取消済み案内と参加ボタンがないことを確認。cancelledの別プロキシ記録はhr-invite-state-cancelled-harness-stats.json。実顧客の招待取得・参加・OAuthは実行していない。
+
+最終全体ビルド11986（/tmp/doya-hr-invite-state-verified-build-20261006.log）は終了コード0。Prisma生成・全体セキュリティ回帰・型検査・Next本番ビルド成功。7ソースのSHA-256は開始時と一致。先行2103は型エラー終了2、44857と66798は途中停止であり成功根拠に使用しない。先行704a66faはVercel Ready・同じSHAと本番別名・CI成功を現在照会で確認。全17サービスの認証後通し確認・実DB競合・現行ER更新・本番通知の原因特定は未完了。

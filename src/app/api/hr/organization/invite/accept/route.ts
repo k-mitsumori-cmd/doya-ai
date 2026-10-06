@@ -10,6 +10,7 @@ import { logAudit } from '@/lib/hr/audit'
 import { getOrgPlan, getOrgPlanLimits } from '@/lib/hr/billing'
 
 class InviteNoLongerAvailableError extends Error {}
+class InviteExpiredError extends Error {}
 
 // POST /api/hr/organization/invite/accept
 // 招待を受諾してメンバーとして参加する
@@ -21,11 +22,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { token } = body
-
-    if (!token || typeof token !== 'string') {
-      return NextResponse.json({ error: 'token is required' }, { status: 400 })
+    let body: unknown
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: '招待情報の形式が正しくありません', code: 'INVALID_INVITATION_INPUT' }, { status: 400 })
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: '招待情報の形式が正しくありません', code: 'INVALID_INVITATION_INPUT' }, { status: 400 })
+    const { token } = body as { token?: unknown }
+    if (typeof token !== 'string' || !token.trim() || token.length > 256) {
+      return NextResponse.json({ error: '有効な招待トークンが必要です', code: 'INVALID_INVITATION_INPUT' }, { status: 400 })
     }
 
     // 招待トークンを検索
@@ -41,7 +45,8 @@ export async function POST(req: NextRequest) {
     }
 
     const account = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
-    if (!account?.email || account.email.trim().toLowerCase() !== invitation.email.trim().toLowerCase()) {
+    const accountEmail = account?.email?.trim().toLowerCase()
+    if (!accountEmail || accountEmail !== invitation.email.trim().toLowerCase()) {
       return NextResponse.json({ error: '招待先のメールアドレスでログインしてください', code: 'INVITE_EMAIL_MISMATCH' }, { status: 403 })
     }
 
@@ -49,23 +54,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'この招待の権限を確認できません。管理者に再招待を依頼してください' }, { status: 403 })
     }
 
-    if (invitation.status !== 'PENDING') {
-      return NextResponse.json(
-        { error: 'この招待は既に使用済み、またはキャンセルされています' },
-        { status: 400 }
-      )
+    if (invitation.status === 'EXPIRED' || (invitation.status === 'PENDING' && invitation.expiresAt.getTime() <= Date.now())) {
+      if (invitation.status === 'PENDING') {
+        await prisma.hrInvitation.updateMany({
+          where: { id: invitation.id, status: 'PENDING', expiresAt: { lte: new Date() } },
+          data: { status: 'EXPIRED' },
+        })
+      }
+      return NextResponse.json({ error: 'この招待は有効期限が切れています', code: 'INVITE_EXPIRED' }, { status: 410 })
     }
-
-    if (new Date() > invitation.expiresAt) {
-      // 期限切れの場合はステータスを更新
-      await prisma.hrInvitation.updateMany({
-        where: { id: invitation.id, status: 'PENDING', expiresAt: { lte: new Date() } },
-        data: { status: 'EXPIRED' },
-      })
-      return NextResponse.json(
-        { error: 'この招待は有効期限が切れています' },
-        { status: 400 }
-      )
+    if (invitation.status !== 'PENDING') {
+      return NextResponse.json({ error: 'この招待は既に使用済み、またはキャンセルされています', code: 'INVITE_UNAVAILABLE' }, { status: 409 })
     }
 
     // 既にこの組織のメンバーか確認
@@ -87,6 +86,10 @@ export async function POST(req: NextRequest) {
     const admission = await prisma.$transaction(async (tx) => {
       const organizations = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${invitation.organizationId} FOR UPDATE`
       if (organizations.length === 0) throw new InviteNoLongerAvailableError()
+      const currentInvite = await tx.hrInvitation.findUnique({ where: { id: invitation.id } })
+      if (!currentInvite || currentInvite.token !== token || currentInvite.organizationId !== invitation.organizationId || currentInvite.role !== 'MEMBER' || currentInvite.email.trim().toLowerCase() !== accountEmail) throw new InviteNoLongerAvailableError()
+      if (currentInvite.status === 'EXPIRED' || (currentInvite.status === 'PENDING' && currentInvite.expiresAt.getTime() <= Date.now())) throw new InviteExpiredError()
+      if (currentInvite.status !== 'PENDING') throw new InviteNoLongerAvailableError()
       const plan = await getOrgPlan(invitation.organizationId, tx)
       const limit = getOrgPlanLimits(plan).maxMembers
       if (process.env.DOYA_DISABLE_LIMITS !== '1' && limit >= 0) {
@@ -97,10 +100,14 @@ export async function POST(req: NextRequest) {
       }
       const acceptedAt = new Date()
       const claimed = await tx.hrInvitation.updateMany({
-        where: { id: invitation.id, status: 'PENDING', expiresAt: { gt: acceptedAt } },
+        where: { id: invitation.id, token, organizationId: invitation.organizationId, role: 'MEMBER', email: currentInvite.email, status: 'PENDING', expiresAt: { gt: acceptedAt } },
         data: { status: 'ACCEPTED', acceptedAt },
       })
-      if (claimed.count !== 1) throw new InviteNoLongerAvailableError()
+      if (claimed.count !== 1) {
+        const current = await tx.hrInvitation.findUnique({ where: { id: invitation.id } })
+        if (current?.status === 'EXPIRED' || (current?.status === 'PENDING' && current.expiresAt.getTime() <= Date.now())) throw new InviteExpiredError()
+        throw new InviteNoLongerAvailableError()
+      }
       const member = await tx.hrOrganizationMember.create({
         data: {
           organizationId: invitation.organizationId,
@@ -145,8 +152,11 @@ export async function POST(req: NextRequest) {
       role: invitation.role,
     })
   } catch (e: any) {
+    if (e instanceof InviteExpiredError) {
+      return NextResponse.json({ error: 'この招待は有効期限が切れています', code: 'INVITE_EXPIRED' }, { status: 410 })
+    }
     if (e instanceof InviteNoLongerAvailableError) {
-      return NextResponse.json({ error: 'この招待は使用済み、または有効期限が切れています' }, { status: 409 })
+      return NextResponse.json({ error: 'この招待は使用済み、キャンセル済み、または確認できません。招待の状態を再確認してください。', code: 'INVITE_UNAVAILABLE' }, { status: 409 })
     }
     if (e?.code === 'P2002') {
       return NextResponse.json({ error: '既にこの組織のメンバーです' }, { status: 409 })

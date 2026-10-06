@@ -1,0 +1,10 @@
+{
+  "auth": 0,
+  "signout": 0,
+  "participations": 0,
+  "reads": {
+    "cancelled": 1
+  },
+  "externalOAuthStarted": 0,
+  "forwardedApiCalls": 0
+}

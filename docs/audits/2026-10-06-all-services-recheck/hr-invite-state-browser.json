@@ -1,0 +1,25 @@
+{
+  "scope": "actual React/HR component; synthetic API/session; router stub; no production writes",
+  "results": [
+    {
+      "mode": "fetch-retry",
+      "phase": "error",
+      "snapshot": "Browser tab: 14, Title: \"Isolated HR/Admin authentication QA\", URL: \"http://127.0.0.1:34747/qa-entry.html?service=hr&mode=fetch-retry\".\n0 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34747/qa-entry.html?service=hr&mode=fetch-retry\n\t1 container root\n\t\t2 text Isolated QA — synthetic API/session; no external OAuth or production writes\n\t\t3 image 白くまキャラクター\n\t\t4 heading エラーが発生しました, Value: 2\n\t\t\t5 text エラーが発生しました\n\t\t6 text 招待情報を読み込めませんでした。もう一度お試しください。\n\t\t7 button 招待の状態を再確認\n\t\t8 button ダッシュボードへ戻る\n\nThe focused UI element is 0 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34747/qa-entry.html?service=hr&mode=fetch-retry"
+    },
+    {
+      "mode": "fetch-retry",
+      "phase": "recovered",
+      "snapshot": "Browser tab: 14, Title: \"Isolated HR/Admin authentication QA\", URL: \"http://127.0.0.1:34747/qa-entry.html?service=hr&mode=fetch-retry\".\n0 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34747/qa-entry.html?service=hr&mode=fetch-retry\n\t1 container root\n\t\t2 text Isolated QA — synthetic API/session; no external OAuth or production writes\n\t\t3 image 白くまキャラクター\n\t\t4 heading 招待が届いています!, Value: 1\n\t\t\t5 text 招待が届いています!\n\t\t6 text 合成確認用組織\n\t\t7 container\n\t\t\t8 text 招待先:  invited@example.invalid\n\t\t9 button check_circle招待を受ける\n\t\t\t10 text check_circle\n\t\t\t11 text 招待を受ける\n\t\t12 text 受諾すると組織のメンバーとして登録されます\n\nThe focused UI element is 0 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34747/qa-entry.html?service=hr&mode=fetch-retry"
+    },
+    {
+      "mode": "conflict",
+      "phase": "rechecked-expiry",
+      "snapshot": "Browser tab: 14, Title: \"Isolated HR/Admin authentication QA\", URL: \"http://127.0.0.1:34747/qa-entry.html?service=hr&mode=conflict\".\n1 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34747/qa-entry.html?service=hr&mode=conflict\n\t2 container root\n\t\t3 text Isolated QA — synthetic API/session; no external OAuth or production writes\n\t\t4 image 白くまキャラクター\n\t\t5 heading 招待の有効期限切れ, Value: 2\n\t\t\t6 text 招待の有効期限切れ\n\t\t7 text この招待リンクは期限切れです。管理者に再送を依頼してください。\n\t\t8 button ダッシュボードへ戻る\n\nThe focused UI element is 1 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34747/qa-entry.html?service=hr&mode=conflict"
+    },
+    {
+      "mode": "cancelled",
+      "phase": "correct-reason",
+      "snapshot": "Browser tab: 15, Title: \"Isolated HR/Admin authentication QA\", URL: \"http://127.0.0.1:34747/qa-entry.html?service=hr&mode=cancelled\".\n0 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34747/qa-entry.html?service=hr&mode=cancelled\n\t1 container root\n\t\t2 text Isolated QA — synthetic API/session; no external OAuth or production writes\n\t\t3 image 白くまキャラクター\n\t\t4 heading エラーが発生しました, Value: 2\n\t\t\t5 text エラーが発生しました\n\t\t6 text この招待はキャンセルされています。管理者に再送を依頼してください。\n\t\t7 button 招待の状態を再確認\n\t\t8 button ダッシュボードへ戻る\n\nThe focused UI element is 0 AXWebArea Isolated HR/Admin authentication QA, URL: 127.0.0.1:34747/qa-entry.html?service=hr&mode=cancelled"
+    }
+  ]
+}

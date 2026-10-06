@@ -1,0 +1,23 @@
+{
+  "source": "704a66fa GET from git show; synthetic clock/DB",
+  "rows": [
+    {
+      "originalStatus": "PENDING",
+      "deadlineOffset": 0,
+      "returnedStatus": "PENDING",
+      "updates": 0
+    },
+    {
+      "originalStatus": "ACCEPTED",
+      "deadlineOffset": -1,
+      "returnedStatus": "EXPIRED",
+      "updates": 0
+    },
+    {
+      "originalStatus": "CANCELLED",
+      "deadlineOffset": -1,
+      "returnedStatus": "EXPIRED",
+      "updates": 0
+    }
+  ]
+}
