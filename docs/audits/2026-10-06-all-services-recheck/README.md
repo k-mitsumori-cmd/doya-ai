@@ -1,6 +1,6 @@
 ## 追加補修：営業リストの参考件数（候補・本番未反映）
 
-未変換の入力語を推定APIが無視し、抽出とは異なる条件の件数を表示する問題を補修。入力語/選択タグの区切りと最初の3語、業界の代替語を実抽出APIと共通化し、両APIの6合成ケースで一致を確認。不正な小数/負数/文字列真偽/オブジェクト文言を拒否し、35秒/64KiBで読取を制限。利用者/検索条件/ABAの古い応答を排除し、未確認は0件とせず、内部設定情報を利用者に出さない。「実際は○社程度」と取得数を約束する文言も修正。実画面44項目、既存の同時上限/一覧保持回帰、型チェック/対象lintは合格（既存img警告7、エラー0）。全体ゲート79601672はビルド/回帰/型チェック/lintすべて終了コード0、2582ソース不変で通過。現在の全hash一致も確認。main/CI/本番は別途追跡。実顧客DB/有料APIの試行ではありません。
+未変換の入力語を推定APIが無視し、抽出とは異なる条件の件数を表示する問題を補修。入力語/選択タグの区切りと最初の3語、業界の代替語を実抽出APIと共通化し、両APIの6合成ケースで一致を確認。不正な小数/負数/文字列真偽/オブジェクト文言を拒否し、35秒/64KiBで読取を制限。利用者/検索条件/ABAの古い応答を排除し、未確認は0件とせず、内部設定情報を利用者に出さない。「実際は○社程度」と取得数を約束する文言も修正。実画面44項目、既存の同時上限/一覧保持回帰、型チェック/対象lintは合格（既存img警告7、エラー0）。全体ゲート79601672はビルド/回帰/型チェック/lintすべて終了コード0、2582ソース不変で通過。現在の全hash一致も確認。1153efc1をmainへpush済み。CI37517219878はqueued、本番doya-dzbx1564lはBUILDINGで、READY/公開反映は未確認。実顧客DB/有料APIの試行ではありません。
 
 全サービスの巡回でドヤスライド/ドヤカンニングの実レイアウトにも、別利用者へ切り替えた時の子画面状態保持と旧プランの一時表示、同じ利用者オブジェクト更新の余分な再読取、focus/経路での確認欠落を合成再現。`slide-cunning-layout-baseline.json`。実顧客流出の確認ではなく、次の補修対象として残しています。17サービス/2074行の完了には達していません。
 
@@ -592,3 +592,12 @@ probe-interview-create-response.cjs は実page callbackを合成fetchで実行�
 再実行 runId bd2618df-5ccb-4e14-9d95-5e8b08a4f114 / session32312 は終了コード0、changedSources空で完了。空き容量3.2GiBへの回復を確認後、同じ8sourceでPrisma生成→全体回帰→tsc→Nextの完全ゲートを実行。初回失敗証拠を保持し、合格記録はpersona-image-response-build.json/logへ分離。現在source8個のSHA256も合格時と一致。本番はmainへのpush後、同一commitのCIとデプロイを別途確認する。
 
 ドヤスライド親行ロックcohort26db0fbaはCI37417526314成功、Vercel dpl_229kBJfYCmrVrzkVfZyWS5LHofhU READY・本番alias割当を確認。匿名GET /persona /interview /doyaslideはHTTP200。これらは実認証・実画像生成・ブラウザレイアウトの証明ではない。deployment/public-smokeの対応JSONに状態を保存。
+
+
+### Slide/Cunning actor and plan lifecycle candidate
+
+Actual layout StrictMode cases: 33 passed. Actual usage GET guest/auth/failure cache isolation cases: 6 passed. Typecheck passed; targeted lint 0 errors, one pre-existing img warning. Full gate running; not committed/deployed. React18 inert uses the DOM property; the fixture reflects inert and asserts hidden/inert restoration. Evidence: slide-cunning-layout-repair.json.
+
+Additional confirmed unfixed child-flow issue: actual Slide Wizard refreshUsage accepts six malformed quota/plan/error-success responses and clears the previous upper-limit warning (slide-wizard-usage-baseline.json). This does not demonstrate server quota bypass or actual customer impact. All 17 services / 2074 rows remain the full audit scope; private business flow coverage remains incomplete.
+
+Cunning Tool start baseline: actual callback sends two same-frame requests, navigates to /cunning/live/undefined for HTTP200 with session {}, and displays a raw synthetic server error on HTTP500. Confirmed-unfixed evidence: cunning-start-baseline.json. This establishes client defects; duplicate DB rows/billing and actual customer impact remain unproven. Sources stay frozen while the layout release gate runs.

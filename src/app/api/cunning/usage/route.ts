@@ -11,7 +11,7 @@ export async function GET() {
   try {
   const userId = await getUserId()
   if (!userId) {
-    return NextResponse.json({ plan: 'GUEST' }, { headers: { 'Cache-Control': 'no-store' } })
+    return NextResponse.json({ plan: 'GUEST' }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   }
   const usage = await getCunningUsage(userId)
   return NextResponse.json(

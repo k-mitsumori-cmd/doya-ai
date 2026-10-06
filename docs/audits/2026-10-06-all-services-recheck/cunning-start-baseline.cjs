@@ -1,0 +1,10 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),ts=require('typescript');
+const file='src/app/cunning/Tool.tsx',text=fs.readFileSync(file,'utf8'),ast=ts.createSourceFile(file,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let initializer;
+function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='start')initializer=n.initializer;ts.forEachChild(n,visit)}visit(ast);assert.ok(initializer);
+const js=ts.transpileModule('('+initializer.getText(ast)+')',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+function fixture(reply){const requests=[],routes=[],errors=[],state={};const fn=vm.runInNewContext(js,{usage:{remainingSeconds:60},starting:false,setStarting:v=>state.starting=v,mode:'general',def:{context:'none'},kbId:'',companyId:'',applicantId:'',personaNote:'synthetic',fetch:async(...a)=>{requests.push(a);return reply()},router:{push:v=>routes.push(v)},toast:{error:v=>errors.push(v)},load(){},showServiceLimit(){},Error});return{fn,requests,routes,errors,state}}
+(async()=>{const results=[];
+const f=fixture(()=>new Promise(()=>{}));void f.fn();void f.fn();assert.equal(f.requests.length,2);results.push({case:'same-frame duplicate start',observedRequests:f.requests.length,limitation:'Proves duplicate client requests, not duplicate database rows or billing.'});
+const g=fixture(()=>Response.json({session:{}}));await g.fn();assert.equal(g.routes[0],'/cunning/live/undefined');results.push({case:'200 missing session ID',route:g.routes[0]});
+const h=fixture(()=>Response.json({error:'SYNTHETIC_PRIVATE'},{status:500}));await h.fn();assert.equal(h.errors[0],'SYNTHETIC_PRIVATE');results.push({case:'500 server diagnostic',toast:h.errors[0]});
+console.log(JSON.stringify({status:'confirmed-unfixed',results,scope:'Actual extracted start callback, synthetic fetch/router/state/toast. No real session creation, customer data, provider or DB calls. Mounted browser behavior remains unverified.'},null,2));})().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,0 +1,99 @@
+{
+  "checkedAt": "2026-10-06T19:17:33.457824+00:00",
+  "commit": "be94f76db38a1f0789ee9ee7f0a01c070d766fb1",
+  "deployment": "dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+  "pages": [
+    {
+      "path": "/doyalist",
+      "status": 200,
+      "deploymentMarker": true,
+      "unknownOutcomeCopy": true,
+      "strictQuotaMessage": true,
+      "boundedQuotaReader": true
+    }
+  ],
+  "scripts": [
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/16143-cafce21353c52c2e.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/22144-75b90a2988037a9d.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/22663-a587b136922ce1c8.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/31255-30f12e8d8e8405b5.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/35707-42ea8cccd433e7ba.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/36489-33ba2dd285a1851f.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/4bd1b696-2135e4d8b8354323.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/52619-c48a18d6f62d2371.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/57572-d3497a570861b15f.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/71708-4efdc8e9d5c66a4e.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/81356-0cfe9a57f267b91a.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/95223-3ba5c598ffa87780.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/99374-34f7818e7876d28a.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/doyalist/page-73f2f79abc782e9a.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/error-8259e49cb350fc72.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/layout-b92ddc1947c22f1c.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/not-found-a8e4f81d84f55582.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/main-app-abf71c5d868c84e9.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/polyfills-42372ed130431b0a.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/webpack-37f7aa803a5f91fc.js?dpl=dpl_5ArX2MuBp8s2N32jSA8Kuzspbpm7",
+      "status": 200
+    }
+  ],
+  "scope": "Anonymous Doyalist entry and its published assets only. The server renders the collection Tool only for authenticated sessions; absent Tool code is unproven, not a deployment failure. Even published code does not prove private business generation or actual DB writes.",
+  "status": "passed-code-published"
+}

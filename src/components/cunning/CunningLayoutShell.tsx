@@ -4,39 +4,27 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu } from 'lucide-react'
-import { useSession } from 'next-auth/react'
+import { useActorServicePlan } from '@/components/sidebar/useActorServicePlan'
 import { Toaster } from 'react-hot-toast'
 import CunningSidebar from '@/components/cunning/CunningSidebar'
 
 export default function CunningLayoutShell({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession()
   const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [plan, setPlan] = useState<string | undefined>()
+  const account = useActorServicePlan('cunning')
+  const { plan } = account
 
-  useEffect(() => {
-    let active = true
-    setPlan(undefined)
-    if (session?.user) {
-      fetch('/api/cunning/usage', { cache: 'no-store' })
-        .then(async (response) => {
-          if (!response.ok) throw new Error('プランを確認できませんでした')
-          const data = await response.json()
-          if (typeof data.plan !== 'string') throw new Error('プランの応答が不正です')
-          if (active) setPlan(data.plan)
-        })
-        .catch(() => { if (active) setPlan(undefined) })
-    }
-    return () => { active = false }
-  }, [session])
 
   useEffect(() => {
     setMobileMenuOpen(false)
   }, [pathname])
 
+  if (account.status === 'loading' && !account.knownActor) return <div role="status" className="p-6 text-center">認証情報を確認しています。</div>
+  if (account.status === 'authenticated' && !account.actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
+
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div key={account.actorKey} className="flex h-screen bg-slate-50 overflow-hidden">
       <Toaster position="top-center" />
 
       <div className="hidden md:flex">
@@ -92,7 +80,9 @@ export default function CunningLayoutShell({ children }: { children: React.React
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">{children}</div>
+        {account.failed && <div role="alert" className="p-3 text-sm text-amber-900 bg-amber-50">プランを確認できませんでした。<button type="button" className="ml-2 underline" onClick={account.refresh}>再確認する</button></div>}
+        {account.status === 'loading' && <p role="status" className="p-3 text-sm">認証情報を確認しています。</p>}
+        <div hidden={account.status === 'loading'} ref={element => { if (element) element.inert = account.status === 'loading' }} className="flex-1 overflow-y-auto">{children}</div>
       </main>
     </div>
   )

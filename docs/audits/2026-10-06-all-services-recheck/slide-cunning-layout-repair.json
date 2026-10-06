@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-06T19:17:36.541329+00:00",
+  "status": "full-gate-passed",
+  "head": "1153efc17dc1a7b2595cb78333d36bbddc39b5e2",
+  "mountedLayoutCases": 33,
+  "actualUsageApiCases": 6,
+  "typecheck": "passed",
+  "targetedLint": "0 errors; existing img warning 1",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/slide-cunning-layout-release-90a2671d-8db0-40ae-846b-0265e12b5f18",
+  "published": "not-yet-committed-or-deployed",
+  "scope": "Two actual layout wrappers and shared metadata hook/reader; synthetic child draft/sidebar/session/router/HTTP/clock. Actual GET handlers with synthetic auth/limits. No actual customer private flow, production mutation or AI call.",
+  "remainingConfirmed": "slide-wizard-usage-baseline.json: six malformed metadata responses accepted and prior limit warning cleared; server quota bypass not demonstrated.",
+  "additionalConfirmed": "cunning-start-baseline.json: duplicate same-frame requests, missing session ID navigates to undefined, raw error toast; synthetic callback proof only",
+  "sourceFiles": 2585,
+  "gates": [
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T19:19:50.870639+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T19:19:52.739540+00:00"
+    }
+  ]
+}

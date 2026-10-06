@@ -1,0 +1,19 @@
+{
+  "status": "confirmed-unfixed",
+  "results": [
+    {
+      "case": "same-frame duplicate start",
+      "observedRequests": 2,
+      "limitation": "Proves duplicate client requests, not duplicate database rows or billing."
+    },
+    {
+      "case": "200 missing session ID",
+      "route": "/cunning/live/undefined"
+    },
+    {
+      "case": "500 server diagnostic",
+      "toast": "SYNTHETIC_PRIVATE"
+    }
+  ],
+  "scope": "Actual extracted start callback, synthetic fetch/router/state/toast. No real session creation, customer data, provider or DB calls. Mounted browser behavior remains unverified."
+}
