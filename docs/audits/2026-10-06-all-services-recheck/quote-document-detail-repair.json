@@ -37,7 +37,28 @@
     "Durable idempotency, multitab optimistic concurrency, real DB/PDF/provider/browser E2E unproven",
     "17-service 2074-criterion objective remains active"
   ],
-  "production": "not-deployed",
+  "production": {
+    "status": "deployed-anonymous-publication-passed-private-form-unproven",
+    "commit": "6e628ed14cbf24eade634f9543fd847865a247bb",
+    "commitExitCode": 0,
+    "pushExitCode": 0,
+    "ciRun": 37542133589,
+    "ci": {
+      "conclusion": "success",
+      "headSha": "6e628ed14cbf24eade634f9543fd847865a247bb",
+      "status": "completed"
+    },
+    "ciWatchSession": 85686,
+    "ciWatchExitCode": 0,
+    "deploymentId": "dpl_9UwLtKg6jDEPi8647ghTL6WnaKQe",
+    "deploymentUrl": "doya-glj0enl52-surisutas-projects.vercel.app",
+    "deploymentStatus": "READY",
+    "deploymentHeadShaVerified": "6e628ed14cbf24eade634f9543fd847865a247bb",
+    "authenticatedFlow": "unproven",
+    "anonymousProof": "quote-document-public-6e628ed1.json",
+    "anonymousVerifierSession": 33141,
+    "anonymousVerifierExitCode": 0
+  },
   "extraFixes": [
     "Force render after acknowledged ref updates so sequential status changes display actual saved state",
     "Preserve newer unsaved content when a subsequent status-only revert is acknowledged or recovered through reads",
@@ -64,5 +85,6 @@
   "releaseGateExitCode": 0,
   "sourceFreezeFiles": 2626,
   "sourceFreezeChangedSources": [],
-  "sourceFreezeReverifiedBeforeCommit": true
+  "sourceFreezeReverifiedBeforeCommit": true,
+  "lastCheckedAt": "2026-10-06T22:49:57.064077+00:00"
 }

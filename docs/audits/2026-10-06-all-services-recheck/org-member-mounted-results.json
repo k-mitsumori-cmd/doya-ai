@@ -1,0 +1,16 @@
+{
+  "cases": 40,
+  "services": [
+    {
+      "service": "quote",
+      "cases": 20,
+      "scope": "Actual mounted full settings and MemberPanel, synthetic HTTP only; no customer DB, provider or email calls."
+    },
+    {
+      "service": "aishodan",
+      "cases": 20,
+      "scope": "Actual mounted full settings and MemberPanel, synthetic HTTP only; no customer DB, provider or email calls."
+    }
+  ],
+  "limitations": "Synthetic session/HTTP only; actual mounted full settings and shared member component. No actual browser, DB, email or paid provider."
+}

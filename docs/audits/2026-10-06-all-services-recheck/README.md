@@ -700,3 +700,9 @@ Quote 3cd26ce7: CI 37539084448 success; deployment dpl_8m7Ass7nAsqopgLVbEMifzZiH
 Quote issuer a91db425: 2622 source hashes and passed build/lint gate reverified; pushed HEAD to main. CI 37540664661 and deployment dpl_DjvpAn8sEcAQAfJcb4UPjtyZdgtp tracked separately. Quote document detail candidate: actual mounted 46 cases, response contract 7 groups, route data-loss reproduction prevented. Full gate session 33714 live; quote-document-detail-repair.json records limits and remaining member operations. No full-service completion claim.
 
 Quote document candidate extended to 48 mounted cases: explicit rendering after ref changes, preservation of newer draft through confirmed-to-draft status-only changes and read recovery. These were candidate bugs found before publication, not verified production incidents. First document gate 33714 predates these source edits and is superseded; a new full gate is required after it terminates. Issuer CI 37540664661 completed successfully for a91db425; production READY/public proof still tracked separately.
+
+## 共通メンバー管理の追加補修（候補・本番未反映）
+
+Quote/AI商談の実設定画面とMemberPanelで、組織・認証更新後の古い操作と応答、同一ターンの二重操作、通信不明からの読取復旧を合成検証。両サービス計40件が合格。発行者読込による子コンポーネント破棄で招待の未確認状態が失われる問題、認証中断時の送信中表示の残留、招待成功後の一覧読込失敗でURLが隠れる問題も補修候補に含む。招待APIは非文字列・長すぎるメールをトランザクション前に拒否し、10件を合成APIで確認。全体回帰・型チェック・ビルド・lintはorg-members-current-gate.txtのプロセスで実行中。本番反映・実DB保存・実メール・複数端末の冪等性は未確認。台帳6行へ部分証拠だけ追記し、全2074項目の完了とは扱わない。
+
+AIO/商談準備の実AppLayout・メンバー画面・通信ヘルパーでは、前組織の招待完了後に現在入力が消え、前組織の一覧が表示されることを合成パラメータ遷移で再現（other-members-late-invite-baseline.json）。Nextルーターの実際のセグメント再利用を証明する検証とは区別する。次の補修対象として残す。

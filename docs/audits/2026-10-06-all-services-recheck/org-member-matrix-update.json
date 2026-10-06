@@ -1,0 +1,125 @@
+{
+  "scope": "Narrow synthetic candidate evidence only; full criteria remain unproven",
+  "changes": [
+    {
+      "service": "quote",
+      "id": "C016",
+      "before": {
+        "serviceId": "quote",
+        "id": "C016",
+        "category": "権限・組織",
+        "criterion": "一般メンバー・管理者・オーナーの操作を分ける",
+        "status": "現在版での項目別通し検証待ち",
+        "evidence": ""
+      },
+      "after": {
+        "serviceId": "quote",
+        "id": "C016",
+        "category": "権限・組織",
+        "criterion": "一般メンバー・管理者・オーナーの操作を分ける",
+        "status": "部分検証済み・本番通し検証待ち",
+        "evidence": " org-member-management-repair.json: Candidate only, not deployed. Actual full settings/MemberPanel StrictMode synthetic tests (40 total across both services) cover role downgrade, org/auth transitions, retained callbacks, same-frame double activation and unknown-result recovery. Does not establish every operation, durable multi-tab idempotency or real private persistence."
+      }
+    },
+    {
+      "service": "quote",
+      "id": "C019",
+      "before": {
+        "serviceId": "quote",
+        "id": "C019",
+        "category": "権限・組織",
+        "criterion": "組織切替中の遅延応答を破棄する",
+        "status": "現在版での項目別通し検証待ち",
+        "evidence": ""
+      },
+      "after": {
+        "serviceId": "quote",
+        "id": "C019",
+        "category": "権限・組織",
+        "criterion": "組織切替中の遅延応答を破棄する",
+        "status": "部分検証済み・本番通し検証待ち",
+        "evidence": " org-member-management-repair.json: Candidate only, not deployed. Actual full settings/MemberPanel StrictMode synthetic tests (40 total across both services) cover role downgrade, org/auth transitions, retained callbacks, same-frame double activation and unknown-result recovery. Does not establish every operation, durable multi-tab idempotency or real private persistence."
+      }
+    },
+    {
+      "service": "quote",
+      "id": "U13",
+      "before": {
+        "serviceId": "quote",
+        "id": "U13",
+        "category": "user-experience",
+        "criterion": "二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。",
+        "status": "現在版での項目別通し検証待ち",
+        "evidence": ""
+      },
+      "after": {
+        "serviceId": "quote",
+        "id": "U13",
+        "category": "user-experience",
+        "criterion": "二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。",
+        "status": "部分検証済み・本番通し検証待ち",
+        "evidence": " org-member-management-repair.json: Candidate only, not deployed. Actual full settings/MemberPanel StrictMode synthetic tests (40 total across both services) cover role downgrade, org/auth transitions, retained callbacks, same-frame double activation and unknown-result recovery. Does not establish every operation, durable multi-tab idempotency or real private persistence."
+      }
+    },
+    {
+      "service": "aishodan",
+      "id": "C016",
+      "before": {
+        "serviceId": "aishodan",
+        "id": "C016",
+        "category": "権限・組織",
+        "criterion": "一般メンバー・管理者・オーナーの操作を分ける",
+        "status": "現在版での項目別通し検証待ち",
+        "evidence": ""
+      },
+      "after": {
+        "serviceId": "aishodan",
+        "id": "C016",
+        "category": "権限・組織",
+        "criterion": "一般メンバー・管理者・オーナーの操作を分ける",
+        "status": "部分検証済み・本番通し検証待ち",
+        "evidence": " org-member-management-repair.json: Candidate only, not deployed. Actual full settings/MemberPanel StrictMode synthetic tests (40 total across both services) cover role downgrade, org/auth transitions, retained callbacks, same-frame double activation and unknown-result recovery. Does not establish every operation, durable multi-tab idempotency or real private persistence."
+      }
+    },
+    {
+      "service": "aishodan",
+      "id": "C019",
+      "before": {
+        "serviceId": "aishodan",
+        "id": "C019",
+        "category": "権限・組織",
+        "criterion": "組織切替中の遅延応答を破棄する",
+        "status": "現在版での項目別通し検証待ち",
+        "evidence": ""
+      },
+      "after": {
+        "serviceId": "aishodan",
+        "id": "C019",
+        "category": "権限・組織",
+        "criterion": "組織切替中の遅延応答を破棄する",
+        "status": "部分検証済み・本番通し検証待ち",
+        "evidence": " org-member-management-repair.json: Candidate only, not deployed. Actual full settings/MemberPanel StrictMode synthetic tests (40 total across both services) cover role downgrade, org/auth transitions, retained callbacks, same-frame double activation and unknown-result recovery. Does not establish every operation, durable multi-tab idempotency or real private persistence."
+      }
+    },
+    {
+      "service": "aishodan",
+      "id": "U13",
+      "before": {
+        "serviceId": "aishodan",
+        "id": "U13",
+        "category": "user-experience",
+        "criterion": "二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。",
+        "status": "現在版での項目別通し検証待ち",
+        "evidence": ""
+      },
+      "after": {
+        "serviceId": "aishodan",
+        "id": "U13",
+        "category": "user-experience",
+        "criterion": "二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。",
+        "status": "部分検証済み・本番通し検証待ち",
+        "evidence": " org-member-management-repair.json: Candidate only, not deployed. Actual full settings/MemberPanel StrictMode synthetic tests (40 total across both services) cover role downgrade, org/auth transitions, retained callbacks, same-frame double activation and unknown-result recovery. Does not establish every operation, durable multi-tab idempotency or real private persistence."
+      }
+    }
+  ]
+}

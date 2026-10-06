@@ -13,7 +13,7 @@ export class OrgResponseError extends Error {
 }
 
 /** Bound both fetch and streaming body; an unconfirmed write must never be silently retried. */
-export async function requestOrgJson(service: 'aio' | 'shodan' | 'quote', path: string, orgSlug: string | null, init: RequestInit = {}) {
+export async function requestOrgJson(service: 'aio' | 'shodan' | 'quote' | 'aishodan', path: string, orgSlug: string | null, init: RequestInit = {}) {
   const writing = !!init.method && init.method !== 'GET'
   const timeoutMs = writing ? ORG_WRITE_TIMEOUT_MS : ORG_READ_TIMEOUT_MS
   const outerSignal = init.signal
@@ -23,7 +23,7 @@ export async function requestOrgJson(service: 'aio' | 'shodan' | 'quote', path: 
   if (url.origin !== 'https://org-client.invalid' || !url.pathname.startsWith(`/api/${service}/`) || url.hash) throw new OrgResponseError(writing)
   // Replace any earlier org query so the explicit current scope always wins.
   if (orgSlug === null) {
-    if (service !== 'quote' || url.pathname !== '/api/quote/organizations') throw new OrgResponseError(writing)
+    if (!['quote', 'aishodan'].includes(service) || url.pathname !== `/api/${service}/organizations`) throw new OrgResponseError(writing)
     url.searchParams.delete('org')
   } else url.searchParams.set('org', orgSlug)
   const controller = new AbortController()

@@ -1,0 +1,8 @@
+{
+  "status": "reproduced-before-additional-fix",
+  "test": "cancelling latest invitation removes its displayed URL",
+  "before": "After confirmed cancellation, the visible URL still contained the previous invitation token. Mounted assertion failed.",
+  "baselineLog": "/tmp/doya-member-cancel-url-baseline.log",
+  "current": "Both quote and aishodan cancellation and observed acceptance cases pass.",
+  "scope": "Synthetic HTTP only; no actual invite or email."
+}

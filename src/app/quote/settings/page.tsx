@@ -26,17 +26,8 @@ const TEXTAREAS = [
 ] as const
 
 export default function QuoteSettingsPage() {
-  const { form, loading, loaded, saving, error, message, unknown, canEdit, scopeKey, update, load, save } = useQuoteIssuerSettings()
+  const { form, loading, loaded, saving, error, message, unknown, canEdit, update, load, save } = useQuoteIssuerSettings()
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 bg-slate-50">
-        {/* ⚠️ 規約(§4.3)ではローディングはドヤくん working */}
-        <DoyaKun mood="working" size={88} />
-        <p className="text-sm font-bold text-slate-400">読み込んでいます…</p>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
@@ -49,6 +40,7 @@ export default function QuoteSettingsPage() {
       </header>
 
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-6">
+        {loading && <DoyaKun mood="working" size={88} />}
         <h2 className="text-base font-bold text-slate-900">発行者情報</h2>
         <p className="-mt-2 text-xs font-semibold text-slate-500">見積書に印字される自社情報です。</p>
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
@@ -108,12 +100,11 @@ export default function QuoteSettingsPage() {
         </button>
 
         {/* メンバー招待。トップ（見積書一覧の上）にあったものをここへ移した。 */}
-        {loaded && <MemberPanel
-          key={scopeKey}
+        <MemberPanel
           basePath="/api/quote"
           service="quote"
           description="招待した方は、この組織の商材と見積書を扱えるようになります。"
-        />}
+        />
       </main>
     </div>
   )

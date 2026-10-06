@@ -66,7 +66,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (result.kind === 'missing') return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   if (result.kind === 'self') return NextResponse.json({ error: '自分の権限は変更できません' }, { status: 403 })
   if (result.kind === 'role') return NextResponse.json({ error: '自分より上の権限は付与できません' }, { status: 403 })
-  return NextResponse.json({ ok: true, role })
+  return NextResponse.json({ ok: true, memberId: p.id, role })
 }
 
 export async function DELETE(req: NextRequest, ctx: Ctx) {
@@ -81,5 +81,5 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   if (result.kind === 'forbidden' || result.kind === 'peer') return NextResponse.json({ error: 'このメンバーは外せません' }, { status: 403 })
   if (result.kind === 'missing') return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   if (result.kind === 'self') return NextResponse.json({ error: '自分自身は外せません' }, { status: 403 })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, memberId: p.id })
 }

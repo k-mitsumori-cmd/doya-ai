@@ -53,7 +53,7 @@ export function clearSelectedOrg(service: string): void {
   } catch {
     selectionOverride.set(key, null)
   }
-  if (service === 'quote' && typeof window.dispatchEvent === 'function') window.dispatchEvent(new window.Event('quote:organization-changed'))
+  if (['quote', 'aishodan'].includes(service) && typeof window.dispatchEvent === 'function') window.dispatchEvent(new window.Event(`${service}:organization-changed`))
 }
 
 /** Apply a confirmed selection even when browser storage is unavailable. */
@@ -62,7 +62,7 @@ export function selectOrganization(service: string, slug: string): void {
   const key = orgStorageKey(service)
   try { window.localStorage.setItem(key, slug); selectionOverride.delete(key) }
   catch { selectionOverride.set(key, slug) }
-  if (service === 'quote' && typeof window.dispatchEvent === 'function') window.dispatchEvent(new window.Event('quote:organization-changed'))
+  if (['quote', 'aishodan'].includes(service) && typeof window.dispatchEvent === 'function') window.dispatchEvent(new window.Event(`${service}:organization-changed`))
 }
 
 /** 所属組織一覧で確認できない端末保存の選択を破棄する。 */

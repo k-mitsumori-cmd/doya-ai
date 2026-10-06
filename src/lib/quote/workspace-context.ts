@@ -10,7 +10,7 @@ export class QuoteWorkspaceContext {
   private organization: string | null = null
   private deniedIdentity: string | null = null
   private operations = new Map<string, AbortController>()
-  constructor(private readonly selectedOrganization: () => string | null) {}
+  constructor(private readonly selectedOrganization: () => string | null, private readonly service: 'quote' | 'aishodan' = 'quote') {}
 
   update(identity: QuoteWorkspaceIdentity) {
     if (identity.actor !== this.identity.actor || identity.selection !== this.identity.selection || identity.status !== this.identity.status) {
@@ -58,9 +58,9 @@ export class QuoteWorkspaceContext {
         if (!current()) return null
         let url: URL
         try { url = new URL(path, 'https://quote-context.invalid') } catch { return null }
-        if (url.origin !== 'https://quote-context.invalid' || !url.pathname.startsWith('/api/quote/') || url.hash) return null
+        if (url.origin !== 'https://quote-context.invalid' || !url.pathname.startsWith(`/api/${this.service}/`) || url.hash) return null
         // The only unverified read is organization discovery. No draft may use an implicit scope.
-        if (!organization && (!bootstrap || url.pathname !== '/api/quote/organizations')) return null
+        if (!organization && (!bootstrap || url.pathname !== `/api/${this.service}/organizations`)) return null
         const scope = organization || this.identity.selection
         if (scope) url.searchParams.set('org', scope)
         else url.searchParams.delete('org')
