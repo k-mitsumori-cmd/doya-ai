@@ -1,0 +1,34 @@
+PASS project refresh preserves last confirmed data and exposes persistent errors for bad responses
+PASS definitive auth/access/missing responses clear private state without needing a response body
+PASS valid refresh restores data and keeps only a selection that exists in the confirmed project
+PASS body timeout settles refresh, releases busy accounting and preserves the confirmed output
+PASS older concurrent reads cannot overwrite a newer state or error and background polls do not overlap
+PASS unmounted refresh never applies data or error
+PASS invalid generation results never announce completion or trigger another paid batch
+PASS completion requires a matching confirmed project; failed final reload cannot retain the generation lock
+PASS generation body timeout produces a public unknown-result notice and no automatic reissue
+PASS quota rejection and partial quota results retain the upgrade notice and stop generation
+PASS stalled partial generation keeps the existing bounded retry behavior
+PASS double activation and unmount never start an extra generation request
+PASS continuing progress remains bounded to twelve batches and only requests pending slides
+PASS failed or unreadable generation HTTP responses retain outputs and public errors
+{
+  "passed": 14,
+  "scope": "Actual editor functions extracted from source; synthetic fetch/state/clock/auth responses. No real user/project writes or paid AI calls.",
+  "results": [
+    "project refresh preserves last confirmed data and exposes persistent errors for bad responses",
+    "definitive auth/access/missing responses clear private state without needing a response body",
+    "valid refresh restores data and keeps only a selection that exists in the confirmed project",
+    "body timeout settles refresh, releases busy accounting and preserves the confirmed output",
+    "older concurrent reads cannot overwrite a newer state or error and background polls do not overlap",
+    "unmounted refresh never applies data or error",
+    "invalid generation results never announce completion or trigger another paid batch",
+    "completion requires a matching confirmed project; failed final reload cannot retain the generation lock",
+    "generation body timeout produces a public unknown-result notice and no automatic reissue",
+    "quota rejection and partial quota results retain the upgrade notice and stop generation",
+    "stalled partial generation keeps the existing bounded retry behavior",
+    "double activation and unmount never start an extra generation request",
+    "continuing progress remains bounded to twelve batches and only requests pending slides",
+    "failed or unreadable generation HTTP responses retain outputs and public errors"
+  ]
+}

@@ -150,6 +150,11 @@ if (bannerLimitContact.error || bannerLimitContact.status !== 0) {
   console.error('Security regression failed: verify-banner-limit-contact.cjs');
   process.exit(1);
 }
+const doyaslideEditorRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-editor-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideEditorRecovery.error || doyaslideEditorRecovery.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-editor-recovery.cjs');
+  process.exit(1);
+}
 const saveDeleteResponseConfirmation = spawnSync(process.execPath, [path.join(__dirname, 'verify-save-delete-response-confirmation.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (saveDeleteResponseConfirmation.error || saveDeleteResponseConfirmation.status !== 0) {
   console.error('Security regression failed: verify-save-delete-response-confirmation.cjs');

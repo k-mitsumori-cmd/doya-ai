@@ -38,6 +38,44 @@ interface Version {
   createdAt: string
 }
 
+// Validate the fields used by the editor before replacing its last confirmed state.
+function validSlides(value: unknown, projectId: string): value is Slide[] {
+  if (!Array.isArray(value)) return false
+  const ids = new Set<string>()
+  const indexes = new Set<number>()
+  return value.every((s) => {
+    if (!s || typeof s !== 'object' || typeof s.id !== 'string' || !s.id || s.projectId !== projectId
+      || !Number.isInteger(s.index) || s.index < 0 || !Number.isInteger(s.version) || s.version < 1
+      || typeof s.status !== 'string'
+      || !['role', 'headline', 'subText', 'imageUrl', 'rawImageUrl', 'model'].every((key) => s[key] === null || typeof s[key] === 'string')
+      || ids.has(s.id) || indexes.has(s.index)) return false
+    ids.add(s.id)
+    indexes.add(s.index)
+    return true
+  })
+}
+
+function validProject(value: any, projectId: string): value is Project {
+  return !!value && typeof value === 'object' && value.id === projectId
+    && ['title', 'status', 'aspectRatio', 'logoPosition', 'logoSize'].every((key) => typeof value[key] === 'string')
+    && (value.logoUrl === null || typeof value.logoUrl === 'string')
+    && typeof value.logoBackingChip === 'boolean' && validSlides(value.slides, projectId)
+}
+
+async function readSlideResponse(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal })
+    // Auth and missing-project responses must clear the previous private state even if their body is unreadable.
+    if ([401, 403, 404].includes(res.status) && init.method !== 'POST') return { res, data: null }
+    const data = await res.json()
+    return { res, data }
+  } finally {
+    window.clearTimeout(timer)
+  }
+}
+
 function aspectClass(a: string) {
   if (a === 'square') return 'aspect-square'
   if (a === 'vertical') return 'aspect-[2/3]'
@@ -55,6 +93,7 @@ function EditorInner() {
   const [project, setProject] = useState<Project | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [projectReadError, setProjectReadError] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
   const [structuring, setStructuring] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
@@ -75,6 +114,9 @@ function EditorInner() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mountedRef = useRef(true)
   const wasGen = useRef(false)
+  const projectReadSequence = useRef(0)
+  const projectReadsActive = useRef(0)
+  const generationBusyRef = useRef(false)
 
   const slides = project?.slides || []
   const selected = slides.find((s) => s.id === selectedId) || slides[0] || null
@@ -102,22 +144,47 @@ function EditorInner() {
   const ensureOk = useCallback((res: Response, d: any, fallback: string) => {
     if (!res.ok) {
       showQuotaNotice(res, d)
-      throw new Error(d?.error || fallback)
+      throw new Error(typeof d?.error === 'string' ? d.error : fallback)
     }
   }, [showQuotaNotice])
 
-  const reload = useCallback(async () => {
-    const res = await fetch(`/api/doyaslide/projects/${id}`, { cache: 'no-store' })
-    if (!res.ok) {
-      setLoading(false)
+  const reload = useCallback(async (force = true): Promise<Project | null> => {
+    // Skip overlapping background polls; explicit refreshes invalidate older responses.
+    if (!force && projectReadsActive.current > 0) return null
+    const sequence = ++projectReadSequence.current
+    projectReadsActive.current++
+    const current = () => mountedRef.current && sequence === projectReadSequence.current
+    try {
+      const { res, data } = await readSlideResponse(`/api/doyaslide/projects/${id}`, { cache: 'no-store' }, 30000)
+      if (!res.ok) {
+        if (current() && [401, 403, 404].includes(res.status)) {
+          setProject(null)
+          setSelectedId(null)
+          setVersions([])
+          setChat({})
+        }
+        if (current()) setProjectReadError(res.status === 401 ? 'ログインが必要です。再ログインしてから再読み込みしてください。'
+          : res.status === 403 ? 'このプロジェクトを閲覧できません。'
+          : res.status === 404 ? 'プロジェクトが見つかりません。'
+          : 'プロジェクトを読み込めませんでした。再読み込みしてください。')
+        return null
+      }
+      if (!validProject(data?.project, id)) {
+        if (current()) setProjectReadError('プロジェクトの内容を確認できませんでした。再読み込みしてください。')
+        return null
+      }
+      if (!current()) return null
+      setProject(data.project)
+      setSelectedId((prev) => data.project.slides.some((slide: Slide) => slide.id === prev) ? prev : data.project.slides[0]?.id || null)
+      setProjectReadError(null)
+      return data.project
+    } catch {
+      if (current()) setProjectReadError('プロジェクトを読み込めませんでした。再読み込みしてください。')
       return null
+    } finally {
+      projectReadsActive.current--
+      if (current()) setLoading(false)
     }
-    const d = await res.json()
-    if (!mountedRef.current) return d.project as Project // アンマウント後はsetStateしない
-    setProject(d.project)
-    setSelectedId((prev) => prev || d.project.slides[0]?.id || null)
-    setLoading(false)
-    return d.project as Project
   }, [id])
 
   const loadVersions = useCallback((slideId: string) => {
@@ -137,26 +204,28 @@ function EditorInner() {
   }
 
   const runGenerate = useCallback(async () => {
+    if (!mountedRef.current || generationBusyRef.current) return
+    generationBusyRef.current = true
     setGenerating(true)
     setLimitMsg(null)
     setLimitUpgradeUrl(null)
     // 生成中も数秒ごとに再取得してサムネを順次反映
     stopPoll()
-    pollRef.current = setInterval(reload, 4000)
+    pollRef.current = setInterval(() => { void reload(false) }, 4000)
     try {
       // 未生成が無くなるまでバッチを自動継続（各呼び出しはサーバ側バジェット内で安全に返る）。
       // 進捗が2回連続で止まったら中断（連続エラー/レート制限/上限）。最大12回の安全上限。
       let prevRemaining = Infinity
-      let last: any = {}
+      let last: any = null
       let quotaHit = false
       let stall = 0
       for (let i = 0; i < 12; i++) {
-        const res = await fetch('/api/doyaslide/generate', {
+        const { res, data: d } = await readSlideResponse('/api/doyaslide/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ projectId: id, onlyPending: true }),
-        })
-        const d = await res.json()
+        }, 310000)
+        if (!mountedRef.current) return
         if (showQuotaNotice(res, d)) {
           // 月間上限：エラー扱いせず上限案内としてループ停止
           quotaHit = true
@@ -164,9 +233,18 @@ function EditorInner() {
           break
         }
         ensureOk(res, d, '生成に失敗しました')
+        if (!validSlides(d?.slides, id) || d.slides.length === 0
+          || !Number.isInteger(d.errorCount) || d.errorCount < 0
+          || !Number.isInteger(d.skipped) || d.skipped < 0) {
+          throw new Error('生成結果を確認できませんでした。状態を更新してから再試行してください。')
+        }
         last = d
-        await reload()
-        const remaining = (d.slides || []).filter((s: Slide) => !s.imageUrl).length
+        const confirmed = await reload()
+        if (!confirmed || confirmed.slides.length !== d.slides.length
+          || !confirmed.slides.every((slide: Slide) => d.slides.some((result: Slide) => result.id === slide.id && result.imageUrl === slide.imageUrl && result.version === slide.version))) {
+          throw new Error('生成後の状態を確認できませんでした。状態を更新してから再試行してください。')
+        }
+        const remaining = d.slides.filter((s: Slide) => !s.imageUrl).length
         if (remaining === 0) break
         if (d.skipped > 0) break // 月の上限スキップは再試行しても無駄
         if (remaining >= prevRemaining) {
@@ -176,24 +254,30 @@ function EditorInner() {
         }
         prevRemaining = remaining
       }
-      const remaining = (last.slides || []).filter((s: Slide) => !s.imageUrl).length
+      const remaining = (last?.slides || []).filter((s: Slide) => !s.imageUrl).length
       if (quotaHit) {
         toast.error('今月の生成枚数の上限に達しました')
-      } else if (last.skipped > 0) {
+      } else if (last?.skipped > 0) {
         setLimitMsg(`今月の残り枚数の都合で${last.skipped}枚はスキップしました（上限${last.limit}枚）。${last.quota?.error || ''}`)
         setLimitUpgradeUrl(last.quota?.upgradeUrl === '/doyaslide/pricing' ? last.quota.upgradeUrl : null)
         toast(`${last.skipped}枚は上限のためスキップ${last.errorCount ? `／${last.errorCount}枚は生成失敗（再生成可）` : ''}`)
-      } else if (remaining > 0) {
+      } else if (remaining > 0 || !last) {
         toast.error(`${remaining}枚が未完成です。「未生成を生成」でもう一度お試しください`)
       } else {
         toast.success('スライドが完成しました！')
       }
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch {
+      toast.error('生成が完了したか確認できませんでした。状態を更新して、未生成のスライドを確認してください。')
     } finally {
       stopPoll()
-      await reload()
-      if (mountedRef.current) setGenerating(false)
+      try {
+        if (mountedRef.current) await reload()
+      } catch {
+        // A failed final refresh must never leave the editor locked.
+      } finally {
+        generationBusyRef.current = false
+        if (mountedRef.current) setGenerating(false)
+      }
     }
   }, [id, reload, showQuotaNotice, ensureOk])
 
@@ -406,7 +490,8 @@ function EditorInner() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6 text-center">
         <img src="/character/error.png" alt="" className="w-24 h-24 object-contain" />
-        <p className="font-black text-slate-700">プロジェクトが見つかりません</p>
+        <p role="alert" className="font-black text-slate-700">{projectReadError || 'プロジェクトが見つかりません。'}</p>
+        <button onClick={() => { void reload() }} className="px-6 py-2.5 border border-[#7f19e6] text-[#7f19e6] font-bold rounded-xl">再読み込み</button>
         <Link href="/doyaslide/projects" className="px-6 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl">
           一覧に戻る
         </Link>
@@ -419,6 +504,12 @@ function EditorInner() {
 
   return (
     <div className="p-4 lg:p-6 max-w-[1400px] mx-auto">
+      {projectReadError && (
+        <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p>{projectReadError} 表示中の内容は最後に確認できたものです。</p>
+          <button onClick={() => { void reload() }} className="mt-2 font-bold underline">再読み込み</button>
+        </div>
+      )}
       {/* header */}
       <div className="flex items-center justify-between mb-3 gap-3">
         <div className="flex items-center gap-2 min-w-0">

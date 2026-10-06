@@ -1067,8 +1067,8 @@ doyaslide,U07,user-experience,入力途中にログイン・料金確認へ移�
 doyaslide,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
 doyaslide,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
 doyaslide,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
-doyaslide,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,不具合再現・修正待ち：project読込の期限欠落・無通知終了・不正応答置換,doyaslide-project-read-baseline.json; README.md
-doyaslide,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部修正・回帰7群合格：保存削除の確認。全体ビルド中／他の処理・本番E2E未完,save-delete-response-confirmation-regression.log; save-delete-response-baseline.json; doyaslide-project-read-baseline.json; README.md
+doyaslide,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,読込修正・回帰合格／全体ビルド合格・本番反映待ち：実機・本番E2E未検証,doyaslide-editor-recovery-regression.log
+doyaslide,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一括生成確認を修正・回帰合格／全体ビルド合格・本番反映待ち。個別再生成・巻戻し・チャットの確認不具合は修正待ち,doyaslide-editor-recovery-regression.log; doyaslide-editor-mutations-baseline.json
 doyaslide,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,現在版での項目別通し検証待ち,
 doyaslide,U14,user-experience,生成途中の失敗・一部成功でも成果物を救出でき、再試行対象と追加消費が分かる。,現在版での項目別通し検証待ち,
 doyaslide,U15,user-experience,確定済み書類・終了した評価・締めた勤怠は通常操作で意図せず書き換わらない。,現在版での項目別通し検証待ち,

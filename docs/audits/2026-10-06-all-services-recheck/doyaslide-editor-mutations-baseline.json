@@ -1,0 +1,45 @@
+{
+  "scope": "Actual editor callback extraction with synthetic fetch/state/reload. No production mutation or paid request. Separate pending fixes; running build sources untouched.",
+  "results": [
+    {
+      "name": "regenerate",
+      "scenario": "empty_success",
+      "successClaimed": true,
+      "inputLost": false,
+      "privateDiagnosticShown": false,
+      "previousVersionsErased": false
+    },
+    {
+      "name": "revert",
+      "scenario": "empty_success",
+      "successClaimed": true,
+      "inputLost": false,
+      "privateDiagnosticShown": false,
+      "previousVersionsErased": false
+    },
+    {
+      "name": "sendChat",
+      "scenario": "empty_success",
+      "successClaimed": true,
+      "inputLost": true,
+      "privateDiagnosticShown": false,
+      "previousVersionsErased": false
+    },
+    {
+      "name": "sendChat",
+      "scenario": "network",
+      "successClaimed": false,
+      "inputLost": true,
+      "privateDiagnosticShown": true,
+      "previousVersionsErased": false
+    },
+    {
+      "name": "loadVersions",
+      "scenario": "empty_success",
+      "successClaimed": false,
+      "inputLost": false,
+      "privateDiagnosticShown": false,
+      "previousVersionsErased": true
+    }
+  ]
+}
