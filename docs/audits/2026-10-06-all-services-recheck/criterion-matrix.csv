@@ -987,7 +987,7 @@ doyaslide,C009,認証,ログアウト後に他人のキャッシュを表示し�
 doyaslide,C010,認証,ID欠落時のメール補完が一貫している,現在版での項目別通し検証待ち,
 doyaslide,C011,認証,管理画面と一般画面の認証が分離される,現在版での項目別通し検証待ち,
 doyaslide,C012,認証,招待トークンの期限・使い回し・失効が守られる,現在版での項目別通し検証待ち,
-doyaslide,C013,権限・組織,他ユーザーのIDによる取得・更新・削除を拒否する,一部修正・合成回帰/最終全体ゲート合格：ロゴAPI所有者/状態/版条件・全画像復号。本番反映待ち／実DB並行処理・本番E2Eと他API未検証,doyaslide-logo-upload-guards-regression.json; doyaslide-logo-config-guards-regression.json; doyaslide-logo-truncated-fixed.json; README.md; doyaslide-logo-api-final-build.json
+doyaslide,C013,権限・組織,他ユーザーのIDによる取得・更新・削除を拒否する,一部補強：条件付きフィルターの実Prisma/ローカルDB競合を再現。資料行ロックで10ケース合格／全体ゲート中・本番未反映。他API/本番DB完全制約/E2E未検証,doyaslide-logo-upload-guards-regression.json; doyaslide-logo-config-guards-regression.json; doyaslide-logo-truncated-fixed.json; README.md; doyaslide-logo-api-final-build.json; doyaslide-real-prisma-race-baseline.json; doyaslide-real-prisma-parent-lock-results.json
 doyaslide,C014,権限・組織,明示した組織が不正なら別組織へ切り替えない,現在版での項目別通し検証待ち,
 doyaslide,C015,権限・組織,退会済み・無効メンバーの権限を拒否する,現在版での項目別通し検証待ち,
 doyaslide,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,

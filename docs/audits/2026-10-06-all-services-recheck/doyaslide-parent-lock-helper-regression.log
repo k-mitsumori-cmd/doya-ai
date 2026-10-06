@@ -1,0 +1,12 @@
+PASS project lock uses bound owner/project SQL before transaction work
+PASS missing or foreign project stops work and returns the existing conflict code
+PASS lock and work failures propagate and roll back without a success value
+{
+  "passed": 3,
+  "scope": "Actual project-lock helper with a synthetic transaction for SQL parameter/order/failure contracts. Actual row serialization is separately verified with local PostgreSQL/Prisma fixtures.",
+  "results": [
+    "project lock uses bound owner/project SQL before transaction work",
+    "missing or foreign project stops work and returns the existing conflict code",
+    "lock and work failures propagate and roll back without a success value"
+  ]
+}

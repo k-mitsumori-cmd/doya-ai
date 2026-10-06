@@ -1,3 +1,4 @@
+function withMockProjectLock(mocks) { const db=mocks['@/lib/prisma'].prisma; let tail=Promise.resolve(); mocks['@/lib/doyaslide/project-lock']={ withDoyaSlideProjectLock:(_id,_user,work)=>{ const next=tail.then(()=>db.$transaction ? db.$transaction(work) : work(db)); tail=next.catch(()=>{}); return next } }; return mocks }
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
 const detached = value => ({ ...value, updatedAt: new Date(value.updatedAt), _count: { ...value._count } })
@@ -11,7 +12,7 @@ function fixture(mode = 'success') {
   if (mode === 'busy_slide') project._count.slides = 1
   if (mode === 'no_logo') project.logoUrl = null
   const conflict = () => { throw Object.assign(Error('SYNTHETIC_PRIVATE'), { code: 'P2025' }) }
-  const api = load('src/app/api/doyaslide/projects/[id]/logo-config/route.ts', {
+  const api = load('src/app/api/doyaslide/projects/[id]/logo-config/route.ts', withMockProjectLock({
     'next/server': { NextResponse: Response },
     '@/lib/doyaslide/access': { getUserId: async () => mode === 'anonymous' ? null : 'owner' },
     '@/lib/prisma': { prisma: {
@@ -65,7 +66,7 @@ function fixture(mode = 'success') {
       compositeLogo: async () => Buffer.from('synthetic'),
     },
     '@/lib/doyaslide/storage': { uploadComposedImage: async () => { uploads++; return 'https://example.invalid/recomposed.png' } },
-  })
+  }))
   return { run: body => api.PUT({ json: async () => body ?? { logoSize: 'L' } }, { params: Promise.resolve({ id: 'project' }) }), stats: () => ({ uploads, projectWrites, slideWrites, imageReads }), get slide() { return slide }, get project() { return project } }
 }
 ;(async () => {

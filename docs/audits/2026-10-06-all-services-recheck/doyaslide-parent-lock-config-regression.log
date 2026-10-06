@@ -1,0 +1,22 @@
+PASS logo configuration rejects anonymous, missing and foreign projects without image or storage work
+PASS processing projects and individual generating slides reject branding changes
+PASS logo fetch failure keeps previous settings and does not expose diagnostics
+PASS owner timestamp and processing changes before saving reject stale project writes
+PASS newer image versions and generating slides cannot be overwritten by stale recomposition
+PASS owner branding and processing changes after saving stop image writes and success claims
+PASS final ownership and timestamp checks do not return an unowned or stale confirmed project
+PASS unchanged owned projects save settings and compose images, including projects with no logo
+{
+  "passed": 8,
+  "scope": "Actual API with synthetic auth/Prisma/image/Storage and injected state changes. No real DB concurrency, storage writes or paid generation. Conflicts after upload may leave unused storage assets.",
+  "results": [
+    "logo configuration rejects anonymous, missing and foreign projects without image or storage work",
+    "processing projects and individual generating slides reject branding changes",
+    "logo fetch failure keeps previous settings and does not expose diagnostics",
+    "owner timestamp and processing changes before saving reject stale project writes",
+    "newer image versions and generating slides cannot be overwritten by stale recomposition",
+    "owner branding and processing changes after saving stop image writes and success claims",
+    "final ownership and timestamp checks do not return an unowned or stale confirmed project",
+    "unchanged owned projects save settings and compose images, including projects with no logo"
+  ]
+}

@@ -4,6 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { withDoyaSlideProjectLock } from '@/lib/doyaslide/project-lock'
 import { getUserId } from '@/lib/doyaslide/access'
 import { reserveMonthlySlides, releaseMonthlySlides, quotaExceededPayload } from '@/lib/doyaslide/limits'
 import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
@@ -28,6 +29,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '画像の生成中です。完了後にお試しください。' }, { status: 409 })
     }
 
+    if (['structuring', 'generating'].includes(slide.project.status)) {
+      return NextResponse.json({ error: '資料を処理中です。完了後にお試しください。' }, { status: 409 })
+    }
+
     // 再生成も1枚分の生成クレジットを原子的に消費（並行でも上限超過しない）
     const { granted, limit, reservedMonth } = await reserveMonthlySlides(userId, 1)
     if (granted < 1) {
@@ -37,21 +42,21 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     let saved = false
     let markedGenerating = false
     try {
-      await prisma.doyaSlideSlide.update({
-        where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: slide.status },
+      await withDoyaSlideProjectLock(slide.projectId, userId, tx => tx.doyaSlideSlide.update({
+        where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: slide.status, project: { userId, updatedAt: slide.project.updatedAt, status: { notIn: ['structuring', 'generating'] } } },
         data: { status: 'generating' },
-      })
+      }))
       markedGenerating = true
       const r = await composeSlideImage(userId, slide.project as ComposeProject, slide)
       const nextVersion = (slide.version || 1) + 1
 
       // 別の再生成・履歴復元が先に保存した場合は古い内容で上書きしない。
-      const [updated] = await prisma.$transaction([
-        prisma.doyaSlideSlide.update({
-          where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: 'generating' },
+      const [updated] = await withDoyaSlideProjectLock(slide.projectId, userId, tx => Promise.all([
+        tx.doyaSlideSlide.update({
+          where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: 'generating', project: { userId, updatedAt: slide.project.updatedAt, status: { notIn: ['structuring', 'generating'] } } },
           data: { rawImageUrl: r.rawImageUrl, imageUrl: r.imageUrl, version: nextVersion, status: 'done', model: r.model },
         }),
-        prisma.doyaSlideVersion.create({
+        tx.doyaSlideVersion.create({
           data: {
             slideId: slide.id,
             version: nextVersion,
@@ -60,16 +65,19 @@ export async function POST(req: NextRequest, ctx: Ctx) {
             prompt: slide.visualPrompt,
           },
         }),
-      ])
+      ]))
       saved = true
       return NextResponse.json({ slide: updated })
     } catch (e) {
-      if (!saved) await releaseMonthlySlides(userId, 1, reservedMonth)
-      if (markedGenerating) {
-        await prisma.doyaSlideSlide.updateMany({
-          where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: 'generating' },
-          data: { status: slide.imageUrl ? 'done' : 'error' },
-        }).catch(() => {})
+      try {
+        if (!saved) await releaseMonthlySlides(userId, 1, reservedMonth)
+      } finally {
+        if (markedGenerating) {
+          await prisma.doyaSlideSlide.updateMany({
+            where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: 'generating', project: { userId } },
+            data: { status: slide.imageUrl ? 'done' : 'error' },
+          }).catch(() => {})
+        }
       }
       if ((e as { code?: string })?.code === 'P2025') {
         return NextResponse.json({ error: 'スライドが変更されました。再読み込みしてお試しください。' }, { status: 409 })

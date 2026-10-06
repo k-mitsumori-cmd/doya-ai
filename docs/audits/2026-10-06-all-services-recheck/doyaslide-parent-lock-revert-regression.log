@@ -1,0 +1,85 @@
+[
+  {
+    "name": "Revert restores generation prompt with image",
+    "outcome": "PASS",
+    "http": 200,
+    "image": "blue.png",
+    "prompt": "Blue background",
+    "expectedPrompt": "Blue background"
+  },
+  {
+    "name": "Regeneration after revert uses restored version",
+    "outcome": "PASS",
+    "http": 200,
+    "generatorInput": "Blue background",
+    "calls": 1
+  },
+  {
+    "name": "Current version remains consistent",
+    "outcome": "PASS",
+    "http": 200
+  },
+  {
+    "name": "Foreign slide",
+    "outcome": "PASS",
+    "http": 404,
+    "image": "red.png"
+  },
+  {
+    "name": "Unknown version",
+    "outcome": "PASS",
+    "http": 404,
+    "image": "red.png"
+  },
+  {
+    "name": "Missing version",
+    "outcome": "PASS",
+    "http": 400,
+    "image": "red.png"
+  },
+  {
+    "name": "Invalid version -1",
+    "outcome": "PASS",
+    "http": 400
+  },
+  {
+    "name": "Invalid version 1.5",
+    "outcome": "PASS",
+    "http": 400
+  },
+  {
+    "name": "Invalid version bad",
+    "outcome": "PASS",
+    "http": 400
+  },
+  {
+    "name": "Invalid version 0",
+    "outcome": "PASS",
+    "http": 400
+  },
+  {
+    "name": "Missing raw image does not inherit another version",
+    "outcome": "PASS",
+    "http": 200
+  },
+  {
+    "name": "Legacy missing prompt is explicit conflict",
+    "outcome": "PASS",
+    "http": 409
+  },
+  {
+    "name": "In-flight generation cannot be reverted",
+    "outcome": "PASS",
+    "http": 409
+  },
+  {
+    "name": "Restored version resets mismatched metadata and keeps sequence",
+    "outcome": "PASS",
+    "http": 200
+  },
+  {
+    "name": "Generation starts after read: conditional write refuses overwrite",
+    "outcome": "PASS",
+    "http": 409
+  }
+]

@@ -150,6 +150,11 @@ if (bannerLimitContact.error || bannerLimitContact.status !== 0) {
   console.error('Security regression failed: verify-banner-limit-contact.cjs');
   process.exit(1);
 }
+const doyaslideProjectLock = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-project-lock.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideProjectLock.error || doyaslideProjectLock.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-project-lock.cjs');
+  process.exit(1);
+}
 const doyaslideLogoConfigGuards = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-logo-config-guards.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (doyaslideLogoConfigGuards.error || doyaslideLogoConfigGuards.status !== 0) {
   console.error('Security regression failed: verify-doyaslide-logo-config-guards.cjs');

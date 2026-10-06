@@ -1,0 +1,86 @@
+{
+  "scope": "Private local fixture only. Adds the four related models' mapped cascade FKs and unique/normal indexes from current schema.prisma. Not a production migration or complete production catalog.",
+  "constraints": [
+    {
+      "name": "doyaslide_chat_messages_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "doyaslide_chat_messages_slideId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"slideId\") REFERENCES doyaslide_slides(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "name": "doyaslide_projects_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "doyaslide_slides_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "doyaslide_slides_projectId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"projectId\") REFERENCES doyaslide_projects(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "name": "doyaslide_versions_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "doyaslide_versions_slideId_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (\"slideId\") REFERENCES doyaslide_slides(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "doyaslide_chat_messages_pkey",
+      "definition": "CREATE UNIQUE INDEX doyaslide_chat_messages_pkey ON public.doyaslide_chat_messages USING btree (id)"
+    },
+    {
+      "name": "doyaslide_chat_messages_slideId_idx",
+      "definition": "CREATE INDEX \"doyaslide_chat_messages_slideId_idx\" ON public.doyaslide_chat_messages USING btree (\"slideId\")"
+    },
+    {
+      "name": "doyaslide_projects_pkey",
+      "definition": "CREATE UNIQUE INDEX doyaslide_projects_pkey ON public.doyaslide_projects USING btree (id)"
+    },
+    {
+      "name": "doyaslide_projects_userId_createdAt_idx",
+      "definition": "CREATE INDEX \"doyaslide_projects_userId_createdAt_idx\" ON public.doyaslide_projects USING btree (\"userId\", \"createdAt\")"
+    },
+    {
+      "name": "doyaslide_projects_userId_idx",
+      "definition": "CREATE INDEX \"doyaslide_projects_userId_idx\" ON public.doyaslide_projects USING btree (\"userId\")"
+    },
+    {
+      "name": "doyaslide_projects_userId_status_idx",
+      "definition": "CREATE INDEX \"doyaslide_projects_userId_status_idx\" ON public.doyaslide_projects USING btree (\"userId\", status)"
+    },
+    {
+      "name": "doyaslide_slides_pkey",
+      "definition": "CREATE UNIQUE INDEX doyaslide_slides_pkey ON public.doyaslide_slides USING btree (id)"
+    },
+    {
+      "name": "doyaslide_slides_projectId_idx",
+      "definition": "CREATE INDEX \"doyaslide_slides_projectId_idx\" ON public.doyaslide_slides USING btree (\"projectId\")"
+    },
+    {
+      "name": "doyaslide_slides_projectId_index_key",
+      "definition": "CREATE UNIQUE INDEX \"doyaslide_slides_projectId_index_key\" ON public.doyaslide_slides USING btree (\"projectId\", index)"
+    },
+    {
+      "name": "doyaslide_versions_pkey",
+      "definition": "CREATE UNIQUE INDEX doyaslide_versions_pkey ON public.doyaslide_versions USING btree (id)"
+    },
+    {
+      "name": "doyaslide_versions_slideId_idx",
+      "definition": "CREATE INDEX \"doyaslide_versions_slideId_idx\" ON public.doyaslide_versions USING btree (\"slideId\")"
+    }
+  ]
+}

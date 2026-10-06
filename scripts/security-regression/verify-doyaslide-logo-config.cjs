@@ -1,3 +1,4 @@
+function withMockProjectLock(mocks) { const db=mocks['@/lib/prisma'].prisma; let tail=Promise.resolve(); mocks['@/lib/doyaslide/project-lock']={ withDoyaSlideProjectLock:(_id,_user,work)=>{ const next=tail.then(()=>db.$transaction ? db.$transaction(work) : work(db)); tail=next.catch(()=>{}); return next } }; return mocks }
 const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
 
@@ -15,7 +16,7 @@ function fixture({ logoFailure = false, slideFailure = false } = {}) {
       update: async () => { slideWrites++ },
     },
   }
-  const route = load('src/app/api/doyaslide/projects/[id]/logo-config/route.ts', {
+  const route = load('src/app/api/doyaslide/projects/[id]/logo-config/route.ts', withMockProjectLock({
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     '@/lib/doyaslide/access': { getUserId: async () => 'owner' },
@@ -28,7 +29,7 @@ function fixture({ logoFailure = false, slideFailure = false } = {}) {
       compositeLogo: async () => Buffer.from('composed'),
     },
     '@/lib/doyaslide/storage': { uploadComposedImage: async () => 'https://storage.invalid/composed.png' },
-  })
+  }))
   return {
     run: (body) => route.PUT({ json: async () => body }, { params: Promise.resolve({ id: 'project' }) }),
     stats: () => ({ projectWrites, slideWrites }),

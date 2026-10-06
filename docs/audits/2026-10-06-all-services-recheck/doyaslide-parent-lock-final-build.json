@@ -1,0 +1,25 @@
+{
+  "runId": "4130b570-eebb-4fab-a26b-16a02e1b01ec",
+  "startedAt": "2026-10-06T05:05:03.536464+00:00",
+  "pid": 52234,
+  "sourceHashes": {
+    "src/lib/doyaslide/project-lock.ts": "4fdb8076984ece03f3ab04111387d51a559466ff4c13331f6b1fbcf2ab875a83",
+    "src/app/api/doyaslide/slides/[id]/regenerate/route.ts": "18f525f9c3f825330c5f76196148cb562eb27cf6aceabdc3a1f83adcf4a18235",
+    "src/app/api/doyaslide/slides/[id]/chat/route.ts": "8c5d7039acf531d676a471d7f6a452b67f275a40c84413b9a24ff3dfe38f87af",
+    "src/app/api/doyaslide/assets/logo/route.ts": "27a206deae32e8faf2ee74063bfc7c419c9678c57dac3ce533bbc3935cd9245d",
+    "src/app/api/doyaslide/projects/[id]/logo-config/route.ts": "0596aebf3b92cd1acfc3992e22d9e5ddae851ae00c1e82635c3e41fc266e3d75",
+    "scripts/security-regression/verify-doyaslide-regeneration-atomic.cjs": "0dd602051cefe63774e3313b598bfcbc23f70cb4bf6e80b14422e7d745da5582",
+    "scripts/security-regression/verify-doyaslide-logo-config.cjs": "55141231e057e71cabd6eff5a558f385411f53b4aae2a5b07766e4b7d65365d7",
+    "scripts/security-regression/verify-doyaslide-logo-config-guards.cjs": "d5bf95c86b2dfaf33714bb9895930944d9977bcea935237e746bf14a32d64e0e",
+    "scripts/security-regression/verify-doyaslide-logo-upload-guards.cjs": "7259f4ce53d4150da1153b517e9ceab75962d09bfbec642e1fb56f2e661e953b",
+    "scripts/security-regression/verify-doyaslide-project-lock.cjs": "2ef23b9d1a907e9f7e7547e558371369b3cc4646d17b9c156b05ecce6b083612",
+    "scripts/security-regression/run.cjs": "31ac2de63587f0a9be8a391c820704384fe66268ffa6034bb06ad1b1d4ae71e9",
+    "scripts/security-regression/verify-doyaslide-revert.cjs": "36fe6de5dbea5490c52472f88dbda99fc37bf69425fab11307667ae7e242ba41"
+  },
+  "state": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T05:10:29.647547+00:00",
+  "changedSources": [],
+  "rawLogSha256": "216bd2085125ff3e443e9039c471a0a0d60fc1e67536e99c8d97b463ee789f9c",
+  "scope": "All offline regression, type check and Next production build. Twelve source hashes unchanged; local constrained PostgreSQL/Prisma tests separately recorded. No authenticated production E2E."
+}

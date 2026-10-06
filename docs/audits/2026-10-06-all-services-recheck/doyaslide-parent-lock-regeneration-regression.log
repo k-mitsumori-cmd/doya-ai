@@ -1,0 +1,322 @@
+{
+  "scope": "Actual chat/regenerate APIs with synthetic Prisma, auth, quotas, providers and concurrent promises. No real DB concurrency or storage writes. Refund failure verifies lock cleanup, not successful credit return.",
+  "checkedResponses": 35,
+  "results": [
+    {
+      "kind": "chat",
+      "mode": "active",
+      "status": 409,
+      "generations": 0,
+      "releases": 0,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "project_busy",
+      "status": 409,
+      "generations": 0,
+      "releases": 0,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "success",
+      "status": 200,
+      "generations": 1,
+      "releases": 0,
+      "versions": 1,
+      "messages": 2
+    },
+    {
+      "kind": "chat",
+      "mode": "mark",
+      "status": 500,
+      "generations": 0,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "compose",
+      "status": 500,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "version",
+      "status": 500,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "assistant",
+      "status": 500,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "refund_fails",
+      "status": 500,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "conflict",
+      "status": 409,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "brand_before",
+      "status": 409,
+      "generations": 0,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "owner_before",
+      "status": 409,
+      "generations": 0,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "brand_during",
+      "status": 409,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "owner_during",
+      "status": 409,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "project_during",
+      "status": 409,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "success",
+      "status": 409,
+      "generations": 1,
+      "releases": 1,
+      "versions": 1,
+      "messages": 2
+    },
+    {
+      "kind": "chat",
+      "mode": "success",
+      "status": 200,
+      "generations": 1,
+      "releases": 1,
+      "versions": 1,
+      "messages": 2
+    },
+    {
+      "kind": "chat",
+      "mode": "quota",
+      "status": 403,
+      "generations": 0,
+      "releases": 0,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "active",
+      "status": 409,
+      "generations": 0,
+      "releases": 0,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "project_busy",
+      "status": 409,
+      "generations": 0,
+      "releases": 0,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "success",
+      "status": 200,
+      "generations": 1,
+      "releases": 0,
+      "versions": 1,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "mark",
+      "status": 500,
+      "generations": 0,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "compose",
+      "status": 500,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "version",
+      "status": 500,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "refund_fails",
+      "status": 500,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "conflict",
+      "status": 409,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "brand_before",
+      "status": 409,
+      "generations": 0,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "owner_before",
+      "status": 409,
+      "generations": 0,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "brand_during",
+      "status": 409,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "owner_during",
+      "status": 409,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "project_during",
+      "status": 409,
+      "generations": 1,
+      "releases": 1,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "success",
+      "status": 409,
+      "generations": 1,
+      "releases": 1,
+      "versions": 1,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "success",
+      "status": 200,
+      "generations": 1,
+      "releases": 1,
+      "versions": 1,
+      "messages": 0
+    },
+    {
+      "kind": "regenerate",
+      "mode": "quota",
+      "status": 403,
+      "generations": 0,
+      "releases": 0,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "success",
+      "status": 400,
+      "generations": 0,
+      "releases": 0,
+      "versions": 0,
+      "messages": 0
+    },
+    {
+      "kind": "chat",
+      "mode": "success",
+      "status": 400,
+      "generations": 0,
+      "releases": 0,
+      "versions": 0,
+      "messages": 0
+    }
+  ]
+}
+PASS DoyaSlide chat/regenerate: validation, atomic history, project/branding snapshot guards, exclusive chat mark, refund failures and stale-write rejection

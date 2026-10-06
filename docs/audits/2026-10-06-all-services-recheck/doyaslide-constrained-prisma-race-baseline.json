@@ -1,0 +1,12 @@
+{
+  "scope": "Current API modules and real generated Prisma against new private Unix-only PostgreSQL17 synthetic tables. Real SQL row waits observed by backend PID; no production data, provider calls or real Storage writes. Local fixture includes mapped model FKs and unique/normal indexes; production triggers/RLS and complete catalog are not reproduced.",
+  "configStatus": 503,
+  "generationStatus": 200,
+  "currentLogoSize": "L",
+  "generatedLogoSize": "M",
+  "imageUrl": "https://example.invalid/generated.png",
+  "version": 2,
+  "versions": 1,
+  "releases": 0,
+  "staleBrandingPersisted": true
+}

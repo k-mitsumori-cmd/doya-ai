@@ -4,6 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { withDoyaSlideProjectLock } from '@/lib/doyaslide/project-lock'
 import { getUserId } from '@/lib/doyaslide/access'
 import { compositeLogo, fetchBuffer } from '@/lib/doyaslide/logo'
 import { uploadComposedImage } from '@/lib/doyaslide/storage'
@@ -61,14 +62,14 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       }
     }
 
-    const updated = await prisma.doyaSlideProject.update({
+    const updated = await withDoyaSlideProjectLock(p.id, userId, tx => tx.doyaSlideProject.update({
       where: {
         id: p.id, userId, updatedAt: project.updatedAt,
         status: { notIn: ['structuring', 'generating'] },
         slides: { none: { status: 'generating' } },
       },
       data,
-    })
+    }))
 
     // 生画像があるスライドはロゴだけ再合成（ロゴは一度だけ取得して並列処理）
     const opts = {
@@ -82,7 +83,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       const composed = await compositeLogo(baseBuf, logoBuf, opts)
       const imageUrl = await uploadComposedImage(userId, p.id, composed)
       // Compare both the slide and the saved branding after awaited image work.
-      await prisma.doyaSlideSlide.update({
+      await withDoyaSlideProjectLock(p.id, userId, tx => tx.doyaSlideSlide.update({
         where: {
           id: s.id, projectId: p.id, version: s.version,
           imageUrl: s.imageUrl, rawImageUrl: s.rawImageUrl, status: s.status,
@@ -92,7 +93,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
           },
         },
         data: { imageUrl },
-      })
+      }))
     })) : []
     const failedSlides = outcomes.filter((outcome) => outcome.status === 'rejected').length
 

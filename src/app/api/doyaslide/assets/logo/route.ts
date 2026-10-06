@@ -4,6 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { withDoyaSlideProjectLock } from '@/lib/doyaslide/project-lock'
 import { getUserId } from '@/lib/doyaslide/access'
 import { uploadLogo } from '@/lib/doyaslide/storage'
 import sharp from 'sharp'
@@ -66,14 +67,14 @@ export async function POST(req: NextRequest) {
 
     if (project) {
       // The project or its processing state may have changed while Storage was responding.
-      await prisma.doyaSlideProject.update({
+      await withDoyaSlideProjectLock(project.id, userId, tx => tx.doyaSlideProject.update({
         where: {
           id: project.id, userId, updatedAt: project.updatedAt,
           status: { notIn: ['structuring', 'generating'] },
           slides: { none: { status: 'generating' } },
         },
         data: { logoUrl: url },
-      })
+      }))
     }
 
     return NextResponse.json({ url })

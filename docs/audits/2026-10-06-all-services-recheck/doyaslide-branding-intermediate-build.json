@@ -1,0 +1,16 @@
+{
+  "runId": "01a47dcd-d4c0-4357-aca9-1eb00f9efed9",
+  "startedAt": "2026-10-06T04:46:37.448039+00:00",
+  "pid": 43915,
+  "sourceHashes": {
+    "src/app/api/doyaslide/slides/[id]/regenerate/route.ts": "f60495fcad26d29976277107812ab9d90f5256ddf3cf0c697161f98166dc78eb",
+    "src/app/api/doyaslide/slides/[id]/chat/route.ts": "de7b46c8ea115233ae5ed0a4c00126e7e408eabaac1d976f6ea54d0d2f41ca99",
+    "scripts/security-regression/verify-doyaslide-regeneration-atomic.cjs": "8ec5de07a97325ce54793f53aee80a3527206991ff1df6e97ed7d75341d01da7"
+  },
+  "state": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T04:53:50.963755+00:00",
+  "changedSources": [],
+  "scope": "Intermediate conditional-filter version, full build success but real PostgreSQL race subsequently reproduced. Not approved final repair and not pushed.",
+  "rawLogSha256": "a1d8d9468057f5afd4cbdd7923eb53cea576676a34b6f977b9defcb461168016"
+}

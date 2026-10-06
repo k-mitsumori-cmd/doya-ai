@@ -4,6 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { withDoyaSlideProjectLock } from '@/lib/doyaslide/project-lock'
 import { getUserId } from '@/lib/doyaslide/access'
 import { reserveMonthlySlides, releaseMonthlySlides, quotaExceededPayload } from '@/lib/doyaslide/limits'
 import { reviseSlidePrompt } from '@/lib/doyaslide/vision'
@@ -35,6 +36,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ error: '画像の生成中です。完了後にお試しください。' }, { status: 409 })
     }
 
+    if (['structuring', 'generating'].includes(slide.project.status)) {
+      return NextResponse.json({ error: '資料を処理中です。完了後にお試しください。' }, { status: 409 })
+    }
+
     // チャット修正も再生成＝1枚分の生成クレジットを原子的に消費（並行でも上限超過しない）
     const { granted, limit, reservedMonth } = await reserveMonthlySlides(userId, 1)
     if (granted < 1) {
@@ -42,7 +47,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
 
     let saved = false
+    let markedGenerating = false
     try {
+      // Lock the exact slide and project snapshot before any provider work.
+      await withDoyaSlideProjectLock(slide.projectId, userId, tx => tx.doyaSlideSlide.update({
+        where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: slide.status, project: { userId, updatedAt: slide.project.updatedAt, status: { notIn: ['structuring', 'generating'] } } },
+        data: { status: 'generating' },
+      }))
+      markedGenerating = true
       const project = slide.project
 
       // 画像が未生成またはVision失敗時は、指示を追記した通常再生成にフォールバックする。
@@ -74,9 +86,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       const reply = '修正を反映しました！'
 
       // 画像・バージョン・対話履歴を同じトランザクションで確定する。
-      const [updated] = await prisma.$transaction([
-        prisma.doyaSlideSlide.update({
-          where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: slide.status },
+      const [updated] = await withDoyaSlideProjectLock(slide.projectId, userId, tx => Promise.all([
+        tx.doyaSlideSlide.update({
+          where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: 'generating', project: { userId, updatedAt: slide.project.updatedAt, status: { notIn: ['structuring', 'generating'] } } },
           data: {
             visualPrompt: newVisual,
             rawImageUrl: r.rawImageUrl,
@@ -86,7 +98,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
             model: r.model,
           },
         }),
-        prisma.doyaSlideVersion.create({
+        tx.doyaSlideVersion.create({
           data: {
             slideId: slide.id,
             version: nextVersion,
@@ -95,13 +107,22 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
             prompt: newVisual,
           },
         }),
-        prisma.doyaSlideChatMessage.create({ data: { slideId: slide.id, role: 'user', content: message } }),
-        prisma.doyaSlideChatMessage.create({ data: { slideId: slide.id, role: 'assistant', content: reply } }),
-      ])
+        tx.doyaSlideChatMessage.create({ data: { slideId: slide.id, role: 'user', content: message } }),
+        tx.doyaSlideChatMessage.create({ data: { slideId: slide.id, role: 'assistant', content: reply } }),
+      ]))
       saved = true
       return NextResponse.json({ slide: updated, reply })
     } catch (e) {
-      if (!saved) await releaseMonthlySlides(userId, 1, reservedMonth)
+      try {
+        if (!saved) await releaseMonthlySlides(userId, 1, reservedMonth)
+      } finally {
+        if (markedGenerating) {
+          await prisma.doyaSlideSlide.updateMany({
+            where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: 'generating', project: { userId } },
+            data: { status: slide.status },
+          }).catch(() => {})
+        }
+      }
       if ((e as { code?: string })?.code === 'P2025') {
         return NextResponse.json({ error: 'スライドが変更されました。再読み込みしてお試しください。' }, { status: 409 })
       }

@@ -478,3 +478,37 @@ chat/regenerateの実APIを合成Prisma・枠予約・画像生成で実行し�
 
 
 ロゴAPI補修の最終ゲートはexitCode0、runId e1f12e8c-8964-4a82-b0bc-dc9f47724b7a、6凍結ソースSHA-256一致で完了（doyaslide-logo-api-final-build.json/log）。全回帰・型検査・Next本番ビルド合格です。この範囲をmainへ反映します。個別生成のロゴsnapshot競合・ペルソナ画像操作・全17サービスの項目別通し検証と本番E2Eは未完了です。ウィザード修正版4b50c611の同SHAデプロイdpl_EAbEfYms7F9u4Rt318wco7knH9Rdは直近照会でREADY。READYは本番認証E2E合格とは区別します。
+
+
+## 個別画像生成の資料設定snapshot補修（ゲート中）
+
+chat/regenerateは、資料の所有者・更新日時・処理状態を開始時と画像確定時に検査します。チャットも外部処理より前に対象スライドをgeneratingへ条件付き更新し、ロゴ設定変更・履歴復元・再生成との競合を防ぎます。生成失敗時には条件付きで以前の画像を保持して処理中状態を解除し、枠の返却が例外になっても解除を実行します。所有者が変わった場合は他の所有者の状態をcleanupで変更しません。枠返却失敗のテストは返却成功まで保証するものではありません。
+
+実APIの合成Prisma/枠予約/providerで35応答を検証し、開始前・生成中の設定変更/所有者変更/資料処理開始で旧画像の上書きと履歴追加を止めること、同時2要求で生成1回・履歴1件になること、失敗時の履歴rollback・返却例外時の解除を確認しました（doyaslide-branding-guards-regression.json/log）。型検査と対象API lintも合格。実DB並行処理・実AI・本番認証E2Eは未検証。全体ゲートrunId 01a47dcd-d4c0-4357-aca9-1eb00f9efed9/session78916で3ソース凍結中です。ペルソナ画像操作の追加補修は未着手で継続します。
+
+ロゴAPI補修84b3d1f5は6ソースのコミット内容と合格ビルドのSHA-256一致を確認してmainへpush済み。CI37415101095とVercel dpl_34ZZ2BzTu1CVKtwNLfye6nAJtov2は直近照会で進行中/BUILDING（doyaslide-logo-api-deployment-84b3d1f5.json）。この版の本番反映完了は未確認です。全17サービスの完了判定は引き続き未成立です。
+
+
+## ローカル実Prisma/DBによる競合再現と追加補強
+
+検証専用PostgreSQL17を権限700の一時ディレクトリ・Unix socketのみで起動し、生成済みPrismaClientの接続先をそのsocketに明示限定しました。data_directory/current_user/inet_server_addrを検査してから合成4テーブルを用意し、APIの実モジュールを実DBへ接続しました。本番DB・本番Storage・実AIには接続していません。fixtureはscalar列と主キーを再現し、本番の全FK/index/triggerを再現するものではありません。
+
+親資料行と子画像行のSQL待機をbackend PIDで確認して解放順を制御すると、前段の条件付きフィルター版では設定Lの資料にMの生成画像が200で保存されました（doyaslide-real-prisma-race-baseline.json）。合成35応答と全体ビルドは合格していましたが、この実DB競合を検出できていません。中間ビルド01a47dcdは証拠を保存し、生成側の中間補修はpushしていません。
+
+withDoyaSlideProjectLockを追加し、所有者・資料IDをパラメーターとしてSELECT FOR UPDATEし、その後の新しいSQLで関連行の条件を確認します。画像取得・AI・Storageは短いtransactionの外で実行します。ロゴ関連2APIと個別生成/chatは資料ロックを共有し、画像・版・チャット履歴の確定は同じtransactionで行います。ロック取得前のmetadata変更、保存待機中の設定/所有者/処理状態変更、正常保存をregen/chat双方で実Prisma/DB検証して10ケース合格（doyaslide-real-prisma-parent-lock-results.json）。外部生成は合成です。所有者変更後のcleanupは新所有者の状態を変更しないため実行せず、その状態の復旧全体は保証しません。helper3群、画像アップロード10群、ロゴ設定8群、既存個別生成回帰、型検査・対象API lintも合格。全17サービスの完了にはまだ足りません。
+
+ペルソナ画像3操作の候補を/tmpに準備しましたが、検証・反映は未完了。現在の監査項目・本番認証E2E・一括生成の関連状態・実DB完全スキーマなどの残存確認は継続します。
+
+
+資料行ロック版は11ソースを凍結し、全体ゲートrunId 53d53813-6726-414e-ab05-33a798a21a7a/session50730を実行中です。ローカルDB fixtureは検証終了後に停止し、証拠と再現用ソースを保存しました。ロゴAPI先行版84b3d1f5のCI37415101095はsuccess、同SHAのVercel dpl_34ZZ2BzTu1CVKtwNLfye6nAJtov2は直近照会でBUILDINGです。DBロック版の本番反映は未実施です。
+
+
+先行ロゴAPI修正版84b3d1f5の同SHAデプロイdpl_34ZZ2BzTu1CVKtwNLfye6nAJtov2は再照会でREADY。新しいDBロック版はこのデプロイに含まれず、全体ゲートと本番反映確認を継続します。
+
+
+最初のロック版ゲート53d53813は既存verify-doyaslide-revert.cjsの新規importモック欠落でexitCode1になりました（doyaslide-parent-lock-first-gate-failure.json）。テストは巻戻しと再生成を両方ロードするため、モックのtransaction callback・資料ID/更新日時/所有者を実API仕様へ合わせました。巻戻し/再生成の既存期待値は変更せず単独回帰に合格しました。12ソースを凍結して最終ゲートrunId 4130b570-eebb-4fab-a26b-16a02e1b01ec/session71030を再実行しています。API/helperのローカル実Prisma10ケースの対象ソースは変更していません。全体ゲートが通るまでロック版はpushしません。
+
+
+ローカル4モデルfixtureへschema.prismaのcascade FK3件、スライド(projectId,index)一意制約、通常indexを追加し、DBカタログで存在を確認しました（doyaslide-local-fixture-constraints.json）。中間regenerateのソースを元の合格buildのSHA-256と一致するbytesで復元し、logo-configの84b3d1f5コードと組み合わせて再実行すると、旧方式で依然staleBrandingPersisted=true/200でした（doyaslide-constrained-prisma-race-baseline.json）。ロック補強版は同じ制約で10ケース合格（doyaslide-constrained-prisma-lock-results.json）。本番RLS/trigger・全カタログ・認証済み画面はこのfixtureで代替しません。再現用コードとbaselineソースJSONを保存し、検証用DBは停止済みです。
+
+ロック版の最終ゲート4130b570はexitCode0、12ソースSHA-256不変で完了しました（doyaslide-parent-lock-final-build.json/log）。全オフライン回帰・型検査・Next本番ビルド合格です。この補強範囲をmainへ反映します。全17サービスの項目別通し確認・本番E2E・追加補修は継続します。ペルソナ画像処理は/tmp候補のhelper12ケースを合成fetch/stream/時計で検証しましたが、画面の組込・回帰・本番反映は未完了です。
