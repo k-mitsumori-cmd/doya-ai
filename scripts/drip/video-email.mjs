@@ -4,7 +4,6 @@
 
 export const SITE = 'https://doya-ai.surisuta.jp'
 export const CONSULT_URL = 'https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1'
-export const LINE_URL = 'https://lin.ee/7KWNULn'
 
 // サービス紹介GIF（public/drip/nurture/gif/<id>.gif）。元は doyamarke-remotion-videos の pivot-search-v7
 export const SERVICES = {
@@ -75,7 +74,7 @@ const FOOT =
  * entry:
  *  kind: 'video' | 'service' | 'digest'
  *  subject, intro, title(見出し), lead[], points[], youtubeId, minutes, channel('doyamarke'|'saas'),
- *  service?: { id, text[] , cta? }, line?: { keyword, what }, outro?, thumbQuality?
+ *  service?: { id, text[] , cta? }, assist?: true（AIが伴走する無料相談への誘導）, outro?, thumbQuality?
  *  digest: videos: [{ youtubeId, title, note }]
  */
 export function renderVideoEmail(entry) {
@@ -110,11 +109,12 @@ export function renderVideoEmail(entry) {
     }
   }
 
-  if (entry.line) {
+  // 動画の内容を自社でも取り入れたい人を、無料相談へつなぐ（公式LINEのキーワード送信ではなく相談に寄せる）
+  if (entry.assist) {
     h += p(
-      `この動画の内容は資料にまとめています。<a href="${LINE_URL}" style="color:#0066ff;font-weight:700;">ドヤマーケ公式LINE</a>を友だち追加して「${esc(entry.line.keyword)}」と送ると、${esc(entry.line.what || '資料')}を受け取れます。`,
+      `「動画の内容を、自社の業務でも形にしたい」という方へ。ドヤマーケでは、AIが伴走しながら、業務の整理から導入・運用まで一緒に進めます。<a href="${CONSULT_URL}" style="color:#0066ff;font-weight:700;">無料相談</a>で、いまの状況をお聞かせください。`,
     )
-    h += subButton(LINE_URL, `公式LINEで「${entry.line.keyword}」と送る`)
+    h += subButton(CONSULT_URL, 'AIが伴走する無料相談を申し込む')
   }
 
   if (entry.service) {
