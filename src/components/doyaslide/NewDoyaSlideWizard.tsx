@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import { readBillingResponse } from '@/lib/billing-response-client'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import {
   DOC_TYPES,
@@ -71,6 +72,19 @@ function validWizardSlides(value: any, projectId: string, count: number): boolea
   })
 }
 
+function parseProjectUsage(data: Record<string, unknown>) {
+  if (data.error !== undefined || data.code !== undefined || typeof data.plan !== 'string' ||
+    !['GUEST', 'FREE', 'LIGHT', 'PRO', 'ENTERPRISE'].includes(data.plan) || data.tier !== data.plan) {
+    throw new Error('利用状況を確認できませんでした')
+  }
+  if (data.plan === 'GUEST') return { tier: 'GUEST', limit: 0, used: 0 }
+  const limit = (data.limits as { maxProjects?: unknown } | undefined)?.maxProjects
+  const used = (data.usage as { projects?: unknown } | undefined)?.projects
+  if (typeof limit !== 'number' || !Number.isSafeInteger(limit) || limit < -1 ||
+    typeof used !== 'number' || !Number.isSafeInteger(used) || used < 0) throw new Error('利用状況を確認できませんでした')
+  return { tier: data.plan, limit, used }
+}
+
 function frameClass(a: Aspect) {
   if (a === 'square') return 'aspect-square'
   if (a === 'vertical') return 'aspect-[2/3]'
@@ -79,7 +93,19 @@ function frameClass(a: Aspect) {
 
 export default function NewDoyaSlideWizard() {
   const router = useRouter()
-  const { status: authStatus } = useSession()
+  const { data: session, status: authStatus } = useSession()
+  const actor = authStatus === 'unauthenticated' ? '' : session?.user?.id || ''
+  const allowed = authStatus === 'authenticated' && Boolean(actor)
+  const usageScope = JSON.stringify([actor, authStatus, (session?.user as { plan?: string } | undefined)?.plan])
+  const usageEpoch = useRef({ scope: usageScope, version: 0 })
+  if (usageEpoch.current.scope !== usageScope) usageEpoch.current = { scope: usageScope, version: usageEpoch.current.version + 1 }
+  const usageContextKey = JSON.stringify([usageScope, usageEpoch.current.version])
+  const activeUsageContext = useRef(usageContextKey)
+  activeUsageContext.current = usageContextKey
+  const usageVerifiedRef = useRef('')
+  const usageCanCreateRef = useRef(false)
+  const usagePendingRef = useRef<AbortController | null>(null)
+  const [usageStatus, setUsageStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [title, setTitle] = useState('')
   const [titleEdited, setTitleEdited] = useState(false)
   const [docType, setDocType] = useState('proposal')
@@ -119,30 +145,52 @@ export default function NewDoyaSlideWizard() {
   }, [])
 
   const refreshUsage = useCallback(async () => {
-    const response = await fetch('/api/doyaslide/usage', { cache: 'no-store' })
-    if (!response.ok) throw new Error('利用状況を確認できませんでした')
-    const data = await response.json()
-    if (data?.tier === 'GUEST') {
-      setLoginRequired(true)
-      return
+    if (!allowed || activeUsageContext.current !== usageContextKey || usagePendingRef.current || !mountedRef.current) return
+    const controller = new AbortController()
+    usagePendingRef.current = controller
+    usageVerifiedRef.current = ''
+    usageCanCreateRef.current = false
+    setUsageStatus('loading')
+    const current = () => mountedRef.current && !controller.signal.aborted && activeUsageContext.current === usageContextKey
+    try {
+      const response = await readBillingResponse('/api/doyaslide/usage', { method: 'GET' }, controller.signal)
+      if (!current()) return
+      if (response.status === 401) setLoginRequired(true)
+      if (!response.ok) throw new Error('利用状況を確認できませんでした')
+      const data = parseProjectUsage(response.data)
+      setLoginRequired(data.tier === 'GUEST')
+      if (data.tier === 'GUEST') { setUsageStatus('error'); return }
+      if (data.limit !== -1 && data.used >= data.limit) {
+        setProjectLimitMessage(`今月のプロジェクト作成数が上限（${data.limit}件）に達しました。`)
+        setProjectUpgradeUrl(data.tier === 'FREE' ? '/doyaslide/pricing' : null)
+      } else {
+        setProjectLimitMessage(null)
+        setProjectUpgradeUrl(null)
+      }
+      usageCanCreateRef.current = data.limit === -1 || data.used < data.limit
+      usageVerifiedRef.current = usageContextKey
+      setUsageStatus('ready')
+    } catch {
+      if (current()) setUsageStatus('error')
+    } finally {
+      if (usagePendingRef.current === controller) usagePendingRef.current = null
+      controller.abort()
     }
-    const limit = data?.limits?.maxProjects
-    const used = data?.usage?.projects
-    if (typeof limit !== 'number' || typeof used !== 'number') throw new Error('利用状況を確認できませんでした')
-    setLoginRequired(false)
-    if (limit >= 0 && used >= limit) {
-      setProjectLimitMessage(`今月のプロジェクト作成数が上限（${limit}件）に達しました。`)
-      setProjectUpgradeUrl(data?.tier === 'FREE' ? '/doyaslide/pricing' : null)
-    } else {
-      setProjectLimitMessage(null)
-      setProjectUpgradeUrl(null)
-    }
-  }, [])
+  }, [allowed, usageContextKey])
 
   useEffect(() => {
-    if (authStatus !== 'authenticated') return
-    void refreshUsage().catch(() => {})
-  }, [authStatus, refreshUsage])
+    usageVerifiedRef.current = ''
+    usageCanCreateRef.current = false
+    setUsageStatus('loading')
+    if (allowed) void refreshUsage()
+    const focus = () => { void refreshUsage() }
+    if (allowed) window.addEventListener('focus', focus)
+    return () => {
+      usagePendingRef.current?.abort()
+      usagePendingRef.current = null
+      window.removeEventListener('focus', focus)
+    }
+  }, [allowed, refreshUsage])
 
   const loadPreview = (s: string): Promise<void> => {
     if (previews[s]?.length === STYLE_PREVIEW_SAMPLE_SLIDES.length || fetchedStyles.current.has(s)) return Promise.resolve()
@@ -274,6 +322,7 @@ export default function NewDoyaSlideWizard() {
 
   const submit = async () => {
     if (authStatus !== 'authenticated' || loginRequired || submitBusyRef.current || creationUnknownRef.current || !mountedRef.current) return
+    if (activeUsageContext.current !== usageContextKey || !allowed || (!createdProjectRef.current && (usageVerifiedRef.current !== usageContextKey || !usageCanCreateRef.current || projectLimitMessage))) return
     if (url.trim() && (importedUrl !== url.trim() || !importedRef)) {
       toast.error('参考URLを「取り込む」で読み込んでから作成してください。URLを使わない場合は入力欄を空にしてください。')
       return
@@ -293,8 +342,9 @@ export default function NewDoyaSlideWizard() {
         })
         if (!mountedRef.current) return
         if (res.status >= 400 && res.status < 500) creationMayHaveSucceeded = false
-        if (res.status === 401) setLoginRequired(true)
+        if (res.status === 401) { usageVerifiedRef.current = ''; usageCanCreateRef.current = false; setLoginRequired(true) }
         if (res.status === 403 && data?.code === 'LIMIT_REACHED') {
+          usageCanCreateRef.current = false
           setProjectLimitMessage(typeof data.error === 'string' ? data.error : '今月のプロジェクト作成数が上限に達しました。')
           setProjectUpgradeUrl(data?.upgradeUrl === '/doyaslide/pricing' ? data.upgradeUrl : null)
           return
@@ -731,7 +781,14 @@ export default function NewDoyaSlideWizard() {
             </div>
           </div>
         )}
-        {projectLimitMessage && (
+        {allowed && usageStatus !== 'ready' && (
+          <div role={usageStatus === 'error' ? 'alert' : 'status'} className="max-w-3xl mx-auto mb-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {usageStatus === 'error' ? '利用状況を確認できませんでした。入力内容は保持しています。' : '利用状況を確認しています。'}
+            {usageStatus === 'error' && <button type="button" onClick={() => void refreshUsage()} className="ml-2 underline">利用状況を再確認する</button>}
+            {loginRequired && <Link href="/auth/signin?callbackUrl=%2Fdoyaslide%2Fnew" className="ml-2 underline">ログインする</Link>}
+          </div>
+        )}
+        {projectLimitMessage && !loginRequired && (
           <div className="max-w-3xl mx-auto mb-2 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">
             <span>{projectLimitMessage}</span>
             <div className="flex shrink-0 items-center gap-2">
@@ -746,7 +803,7 @@ export default function NewDoyaSlideWizard() {
           </p>
           <button
             onClick={submit}
-            disabled={busy || creationResultUnknown || (Boolean(projectLimitMessage) && !recoveryProjectId) || authStatus !== 'authenticated' || loginRequired}
+            disabled={busy || creationResultUnknown || (!recoveryProjectId && (Boolean(projectLimitMessage) || usageVerifiedRef.current !== usageContextKey || usageStatus !== 'ready')) || !allowed || loginRequired}
             className="flex-1 sm:flex-none sm:min-w-[300px] flex items-center justify-center gap-2 px-8 py-3.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full text-base font-black shadow-lg shadow-blue-500/25 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60"
           >
             <span className="material-symbols-outlined">auto_awesome</span>

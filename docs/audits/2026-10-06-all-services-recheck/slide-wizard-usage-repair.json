@@ -1,0 +1,35 @@
+{
+  "status": "final-full-gate-passed",
+  "parent": "a748323a654a84dc43757ef371a4235c9af3563d",
+  "mountedCases": 24,
+  "legacyWizardRecovery": "passed",
+  "projectQuotaAtomicRegression": "passed",
+  "typecheck": "passed before final unauthorized-UI adjustment; full final gate includes tsc",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/slide-wizard-usage-release-e88aa5e0-e44b-4e10-a71a-3d96afe5fb56",
+  "scope": "Strict metadata with bounded 35s/64KiB reader; unknown/invalid quota cannot create new projects; retained confirmed-project recovery, actor/ABA cancellation and input preservation. Actual mounted Wizard with synthetic network/clock/session, no real project writes, provider or DB.",
+  "production": "not-yet-committed-or-deployed",
+  "additionalCandidateDefect": {
+    "status": "confirmed-unfixed",
+    "proof": "slide-wizard-retained-handler-baseline.log",
+    "observed": "Retained old submit handler sends one synthetic project request after fresh exhausted metadata; expected zero",
+    "sourceSha256": "652f5c7717c883fa427826639f55a7dd1861b4ced63cdf562c3eca24ac8c8c60",
+    "scope": "Actual mounted Wizard with retained React callback and synthetic HTTP. Server quota bypass or duplicate actual project not demonstrated.",
+    "repair": "Synchronous usageCanCreateRef guard, invalidated before lookup and on server denial; two additional actual mounted cases passed"
+  },
+  "releaseDecision": "Final source manifest verified; ready for scoped commit/main push",
+  "intermediateGate": "docs/audits/2026-10-06-all-services-recheck/slide-wizard-usage-release-5a4eac0d-a028-4755-ad63-d54914b3f532",
+  "intermediateGateResult": "passed but not released because additional retained-handler defect reproduced",
+  "sourceFiles": 2586,
+  "gates": [
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T19:29:59.600411+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T19:30:01.297845+00:00"
+    }
+  ]
+}

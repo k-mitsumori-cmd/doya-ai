@@ -1,0 +1,30 @@
+{
+  "passed": 24,
+  "checks": [
+    "Malformed unsupported negative quota disables creation, retains draft and offers recovery",
+    "Malformed fractional quota disables creation, retains draft and offers recovery",
+    "Malformed negative usage disables creation, retains draft and offers recovery",
+    "Malformed fractional usage disables creation, retains draft and offers recovery",
+    "Malformed unknown tier disables creation, retains draft and offers recovery",
+    "Malformed contradictory tier disables creation, retains draft and offers recovery",
+    "Malformed error success disables creation, retains draft and offers recovery",
+    "Malformed code success disables creation, retains draft and offers recovery",
+    "Malformed missing tier disables creation, retains draft and offers recovery",
+    "Malformed refresh keeps an already confirmed upper-limit explanation",
+    "Zero quota and exhausted quota block direct creation; unlimited quota stays usable",
+    "Pending fetch is bounded at 35 seconds and focus coalesces requests",
+    "Stalled body is cancelled and excessive body never enables creation",
+    "Actor ABA cancels prior response and cannot restore old quota",
+    "Same-actor session object refresh keeps draft and does not repeat metadata request",
+    "Loading, missing identity and signed-out contexts cannot start creation",
+    "Guest response offers login and never authorizes creation",
+    "Valid metadata allows one synthetic project request and keeps server denial action",
+    "Unmount aborts pending metadata and removes focus listener",
+    "Initial unconfirmed usage cannot create a project even through a retained direct callback",
+    "HTTP failure and malformed JSON show local recovery without leaking diagnostic",
+    "Unauthorized metadata offers callback login and hides stale paid-plan action",
+    "Retained old submit handler cannot use newly exhausted or unconfirmed allowance",
+    "Retained old submit handler cannot bypass a subsequent server quota denial"
+  ],
+  "scope": "Actual full Slide Wizard TSX and bounded reader under StrictMode with real Session context/constants. Synthetic HTTP/clock/router and decorative children. No actual project creation, upload, provider or DB mutation; wrapper actor draft clearing is tested separately."
+}

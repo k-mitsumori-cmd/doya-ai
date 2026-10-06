@@ -981,9 +981,9 @@ doyaslide,C003,公開・導線,主要CTAが正しいログイン後の戻り先�
 doyaslide,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
 doyaslide,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyaslide,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
-doyaslide,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
+doyaslide,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,"PARTIAL ONLY: slide-cunning-layout-mounted-results.json (33 actual-wrapper synthetic cases) and verify-slide-cunning-usage-cache.cjs (6 actual GET synthetic cases), commit a748323a. Actor/ABA child remount, no-ID metadata read guard, guest/auth/error private no-store. Authenticated customer/API business flow and browser cache across every page remain unverified; this entire criterion is NOT passed."
 doyaslide,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
-doyaslide,C009,認証,ログアウト後に他人のキャッシュを表示しない,現在版での項目別通し検証待ち,
+doyaslide,C009,認証,ログアウト後に他人のキャッシュを表示しない,現在版での項目別通し検証待ち,"PARTIAL ONLY: slide-cunning-layout-mounted-results.json (33 actual-wrapper synthetic cases) and verify-slide-cunning-usage-cache.cjs (6 actual GET synthetic cases), commit a748323a. Actor/ABA child remount, no-ID metadata read guard, guest/auth/error private no-store. Authenticated customer/API business flow and browser cache across every page remain unverified; this entire criterion is NOT passed."
 doyaslide,C010,認証,ID欠落時のメール補完が一貫している,現在版での項目別通し検証待ち,
 doyaslide,C011,認証,管理画面と一般画面の認証が分離される,現在版での項目別通し検証待ち,
 doyaslide,C012,認証,招待トークンの期限・使い回し・失効が守られる,現在版での項目別通し検証待ち,
@@ -1103,9 +1103,9 @@ cunning,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ
 cunning,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
 cunning,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 cunning,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
-cunning,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
+cunning,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,"PARTIAL ONLY: slide-cunning-layout-mounted-results.json (33 actual-wrapper synthetic cases) and verify-slide-cunning-usage-cache.cjs (6 actual GET synthetic cases), commit a748323a. Actor/ABA child remount, no-ID metadata read guard, guest/auth/error private no-store. Authenticated customer/API business flow and browser cache across every page remain unverified; this entire criterion is NOT passed."
 cunning,C008,認証,期限切れセッションを拒否する,現在版での項目別通し検証待ち,
-cunning,C009,認証,ログアウト後に他人のキャッシュを表示しない,現在版での項目別通し検証待ち,
+cunning,C009,認証,ログアウト後に他人のキャッシュを表示しない,現在版での項目別通し検証待ち,"PARTIAL ONLY: slide-cunning-layout-mounted-results.json (33 actual-wrapper synthetic cases) and verify-slide-cunning-usage-cache.cjs (6 actual GET synthetic cases), commit a748323a. Actor/ABA child remount, no-ID metadata read guard, guest/auth/error private no-store. Authenticated customer/API business flow and browser cache across every page remain unverified; this entire criterion is NOT passed."
 cunning,C010,認証,ID欠落時のメール補完が一貫している,現在版での項目別通し検証待ち,
 cunning,C011,認証,管理画面と一般画面の認証が分離される,現在版での項目別通し検証待ち,
 cunning,C012,認証,招待トークンの期限・使い回し・失効が守られる,現在版での項目別通し検証待ち,

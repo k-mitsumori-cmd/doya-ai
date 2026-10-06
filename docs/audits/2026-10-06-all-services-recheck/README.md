@@ -601,3 +601,12 @@ Actual layout StrictMode cases: 33 passed. Actual usage GET guest/auth/failure c
 Additional confirmed unfixed child-flow issue: actual Slide Wizard refreshUsage accepts six malformed quota/plan/error-success responses and clears the previous upper-limit warning (slide-wizard-usage-baseline.json). This does not demonstrate server quota bypass or actual customer impact. All 17 services / 2074 rows remain the full audit scope; private business flow coverage remains incomplete.
 
 Cunning Tool start baseline: actual callback sends two same-frame requests, navigates to /cunning/live/undefined for HTTP200 with session {}, and displays a raw synthetic server error on HTTP500. Confirmed-unfixed evidence: cunning-start-baseline.json. This establishes client defects; duplicate DB rows/billing and actual customer impact remain unproven. Sources stay frozen while the layout release gate runs.
+
+
+### Slide Wizard strict usage metadata and synchronous creation guard
+
+Candidate validates canonical matching plan/tier, safe nonnegative integer usage and quota (-1 only as unlimited sentinel), and rejects error/code in a success body. Reads are bounded at 35 seconds / 64KiB, scoped to auth/actor/plan epochs, coalesced and cancelled on teardown. Missing/invalid quota disables new creation, retains user input and prior upper-limit explanation, and exposes recovery/login actions. Confirmed-project recovery remains separate. Actual mounted Wizard with real Session context/constants/reader passes 24 cases; legacy wizard recovery and project quota atomic regressions pass. No actual production writes, uploads or AI calls were made.
+
+Intermediate full gate 5a4eac0d passed with frozen sources but was intentionally not released: an added retained-handler probe reproduced one synthetic project request after latest exhausted quota. Added usageCanCreateRef synchronously invalidates permission before lookup and on server denial; retained-handler cases now pass. Final fresh gate e88aa5e0 is running via session62142. Do not push until terminal PASS and manifest verification. Source candidate not yet committed/deployed. Cunning start baseline remains unfixed and is next; full 17-service / 2074-row scope remains incomplete.
+
+Final Slide Wizard gate e88aa5e0 completed exit0 for full security, tsc, Next build and lint; changedSources empty; all 2586 source hashes verified before commit. No source from the skipped intermediate gate is published separately.
