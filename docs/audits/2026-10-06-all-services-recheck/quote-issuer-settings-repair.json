@@ -1,0 +1,47 @@
+{
+  "checkedAt": "2026-10-06T22:26:56.876335+00:00",
+  "status": "release-gates-passed-not-deployed",
+  "baseCommit": "3cd26ce759035e56d00b9cebbba0726ab04315ac",
+  "baseline": "quote-settings-scope-baseline.json",
+  "mountedProof": "quote-settings-mounted-results.json",
+  "mountedCases": 28,
+  "apiGroups": 8,
+  "apiScript": "scripts/security-regression/verify-quote-issuer-input.cjs",
+  "typecheckExitCode": 0,
+  "targetedLintExitCode": 0,
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/quote-issuer-release-b3b89334-ec4f-4064-9f9d-e6e0a538524d",
+  "releaseSession": 1007,
+  "fixes": [
+    "Actor/verified org/epoch pinned issuer requests; abort and reject old callbacks",
+    "Same-frame current input and synchronous save lock",
+    "Exact complete issuer acknowledgement; unknown saves stop and scoped read comparison",
+    "Same actor auth refresh preserves draft, default server org change resets prior draft",
+    "Member/manager read only; server authorization rechecked transactionally",
+    "200/2000 character bounds reject rather than truncate",
+    "Private no-store Cookie-vary success responses"
+  ],
+  "remaining": [
+    "Priority actual document route race reproduced: quote-document-route-baseline.json",
+    "Actual MemberPanel mutation scope bug reproduced: quote-members-scope-baseline.json",
+    "Quote detail/PDF/root actor layout separate audit remains",
+    "Durable server operation idempotency and true browser/private persistence E2E remain",
+    "17-service 2074-criterion objective remains active; narrow candidate does not establish full completion"
+  ],
+  "production": "not-deployed",
+  "atomicApiGroups": 4,
+  "releaseGateHistory": [
+    {
+      "path": "docs/audits/2026-10-06-all-services-recheck/quote-issuer-release-7dbbb74e-6984-430c-82a8-e148ff52aca4",
+      "session": 60296,
+      "exitCode": 1,
+      "reason": "Existing atomic issuer test had no dependency mapping for new actual normalizer. Added real module mapping; preserved four authorization/transaction cases. Legacy AST-only entrypoint now invokes actual mounted Settings regressions."
+    }
+  ],
+  "lastCheckedAt": "2026-10-06T22:25:10.906286+00:00",
+  "latestTypecheck": "passed-full-build",
+  "previousGoalTurnClassification": "progress: source repair, 28 mounted cases, 8 input groups plus 4 atomic groups, two additional actual component bug reproductions; prior CI success verified",
+  "releaseGateExitCode": 0,
+  "sourceFreezeFiles": 2622,
+  "sourceFreezeChangedSources": [],
+  "sourceFreezeReverifiedBeforeCommit": true
+}

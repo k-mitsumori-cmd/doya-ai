@@ -5,18 +5,14 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getQuoteContext, hasMinRole, orgSlugFrom } from '@/lib/quote/access'
+import { normalizeQuoteIssuer } from '@/lib/quote/issuer-input'
 
 export async function GET(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
   const issuer = await prisma.quoteIssuer.findUnique({ where: { organizationId: ctx.organizationId } })
-  return NextResponse.json({ issuer })
+  return NextResponse.json({ issuer }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }
-
-const FIELDS = [
-  'companyName', 'postalCode', 'address', 'tel', 'personName',
-  'invoiceNo', 'paymentTerms', 'deliveryTerms', 'notes',
-] as const
 
 async function retryIssuerTransaction<T>(commit: () => Promise<T>): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -36,20 +32,10 @@ export async function PUT(req: NextRequest) {
   if (!hasMinRole(ctx.role, 'admin')) {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
-  const body = await req.json().catch(() => ({}))
-  if (typeof body?.companyName !== 'string' || !body.companyName.trim()) {
-    return NextResponse.json({ error: '会社名を入力してください' }, { status: 400 })
-  }
-  const companyName = body.companyName.trim()
-
-  const data: Record<string, string | null> = {}
-  for (const f of FIELDS) {
-    if (f === 'companyName') continue
-    const v = body?.[f]
-    if (v != null && typeof v !== 'string') {
-      return NextResponse.json({ error: `${f} の形式が不正です` }, { status: 400 })
-    }
-    data[f] = v == null || v.trim() === '' ? null : v.slice(0, 2000)
+  let data: ReturnType<typeof normalizeQuoteIssuer>
+  try { data = normalizeQuoteIssuer(await req.json()) }
+  catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : '発行者情報の形式が不正です' }, { status: 400 })
   }
 
   const result = await retryIssuerTransaction(() => prisma.$transaction(async tx => {
@@ -60,12 +46,12 @@ export async function PUT(req: NextRequest) {
     if (!member) return { status: 403 as const, issuer: null }
     const issuer = await tx.quoteIssuer.upsert({
       where: { organizationId: ctx.organizationId },
-      create: { organizationId: ctx.organizationId, companyName: companyName.slice(0, 200), ...data },
-      update: { companyName: companyName.slice(0, 200), ...data },
+      create: { organizationId: ctx.organizationId, ...data },
+      update: { ...data },
     })
     return { status: 200 as const, issuer }
   }, { isolationLevel: 'Serializable' }))
   if (result.status === 403) return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   const issuer = result.issuer
-  return NextResponse.json({ issuer })
+  return NextResponse.json({ issuer }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }

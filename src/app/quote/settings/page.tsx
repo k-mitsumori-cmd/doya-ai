@@ -3,13 +3,11 @@
 // ============================================
 // ドヤ見積もりAI 設定
 // ============================================
-// 発行者情報（見積書に印字される自社情報。ここが空だとPDFを出せない）とメンバー招待。
+// 発行者情報（見積書に印字される自社情報）とメンバー招待。
 
-import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
+import { useQuoteIssuerSettings } from '@/lib/quote/use-issuer-settings'
 import MemberPanel from '@/components/org/MemberPanel'
-import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
 
 const FIELDS = [
@@ -27,69 +25,8 @@ const TEXTAREAS = [
   { key: 'notes', label: '既定の備考', placeholder: '本見積書の有効期限は発行日より30日間です。' },
 ] as const
 
-type Form = Record<string, string>
-
 export default function QuoteSettingsPage() {
-  const [form, setForm] = useState<Form>({})
-  const [loading, setLoading] = useState(true)
-  const [loaded, setLoaded] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    setLoaded(false)
-    setError('')
-    setMessage('')
-    try {
-      await ensureSelectedOrg('quote')
-      const r = await fetch(withOrg('quote', '/api/quote/issuer'))
-      const d = await r.json()
-      if (!r.ok) throw new Error(d?.error || '読み込みに失敗しました')
-      if (!d || !Object.prototype.hasOwnProperty.call(d, 'issuer') ||
-          (d.issuer !== null && (typeof d.issuer !== 'object' || Array.isArray(d.issuer) || typeof d.issuer.companyName !== 'string'))) {
-        throw new Error('発行者情報を確認できませんでした')
-      }
-      const f: Form = {}
-      for (const k of [...FIELDS.map((x) => x.key), ...TEXTAREAS.map((x) => x.key)]) {
-        const value = d.issuer?.[k]
-        if (value != null && typeof value !== 'string') throw new Error('発行者情報を確認できませんでした')
-        f[k] = value ?? ''
-      }
-      setForm(f)
-      setLoaded(true)
-    } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  async function save() {
-    if (!loaded || loading || saving) return
-    setSaving(true)
-    setError('')
-    setMessage('')
-    try {
-      const r = await fetch(withOrg('quote', '/api/quote/issuer'), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const d = await r.json()
-      if (!r.ok) throw new Error(d?.error || '保存に失敗しました')
-      setMessage('保存しました')
-    } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '保存に失敗しました')
-    } finally {
-      setSaving(false)
-    }
-  }
+  const { form, loading, loaded, saving, error, message, unknown, canEdit, scopeKey, update, load, save } = useQuoteIssuerSettings()
 
   if (loading) {
     return (
@@ -115,11 +52,13 @@ export default function QuoteSettingsPage() {
         <h2 className="text-base font-bold text-slate-900">発行者情報</h2>
         <p className="-mt-2 text-xs font-semibold text-slate-500">見積書に印字される自社情報です。</p>
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
-        {!loaded && (
+        {(!loaded || unknown) && (
           <button type="button" onClick={() => void load()} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">
             発行者情報を再読み込みする
           </button>
         )}
+        {unknown && <p className="text-sm font-semibold text-amber-800">保存結果が未確認のため、再送信を停止しています。再読み込みで保存済みの情報を確認してください。</p>}
+        {loaded && !canEdit && <p className="text-sm text-slate-600">発行者情報の変更はオーナーまたは管理者にご依頼ください。</p>}
         {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">{message}</div>}
 
         <section className="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
@@ -129,9 +68,10 @@ export default function QuoteSettingsPage() {
                 {f.label}{'required' in f && f.required ? '（必須）' : ''}
               </span>
               <input
-                disabled={!loaded || saving}
+                disabled={!canEdit || saving}
+                maxLength={f.key === 'companyName' ? 200 : 2000}
                 value={form[f.key] ?? ''}
-                onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
+                onChange={(e) => update(f.key, e.target.value)}
                 placeholder={f.placeholder}
                 className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
@@ -147,9 +87,10 @@ export default function QuoteSettingsPage() {
             <label key={f.key} className="block text-sm font-semibold">
               <span className="mb-1 block text-xs font-bold text-slate-500">{f.label}</span>
               <textarea
-                disabled={!loaded || saving}
+                disabled={!canEdit || saving}
+                maxLength={2000}
                 value={form[f.key] ?? ''}
-                onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
+                onChange={(e) => update(f.key, e.target.value)}
                 placeholder={f.placeholder}
                 rows={2}
                 className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
@@ -160,18 +101,19 @@ export default function QuoteSettingsPage() {
 
         <button
           onClick={save}
-          disabled={!loaded || saving || !form.companyName?.trim()}
+          disabled={!canEdit || saving || unknown || !form.companyName?.trim()}
           className="w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
         >
           {saving ? '保存中...' : '保存する'}
         </button>
 
         {/* メンバー招待。トップ（見積書一覧の上）にあったものをここへ移した。 */}
-        <MemberPanel
+        {loaded && <MemberPanel
+          key={scopeKey}
           basePath="/api/quote"
           service="quote"
           description="招待した方は、この組織の商材と見積書を扱えるようになります。"
-        />
+        />}
       </main>
     </div>
   )

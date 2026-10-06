@@ -33,6 +33,7 @@ function fixture({ active = true, conflict = false } = {}) {
   }
   const route = load('src/app/api/quote/issuer/route.ts', {
     'next/server': { NextResponse: Response },
+    '@/lib/quote/issuer-input': load('src/lib/quote/issuer-input.ts'),
     '@/lib/prisma': { prisma },
     '@/lib/quote/access': {
       getQuoteContext: async () => ({ userId: 'u', organizationId: 'o', role: 'admin' }),

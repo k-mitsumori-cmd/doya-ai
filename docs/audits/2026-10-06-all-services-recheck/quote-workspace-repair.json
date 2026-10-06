@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-06T22:12:11.428298+00:00",
-  "status": "local-gates-passed-authorized-production-commit-prepared",
+  "checkedAt": "2026-10-06T22:12:41.010405+00:00",
+  "status": "pushed-production-ci-and-deployment-verification-pending",
   "parentCommit": "45d947c3b2b03f10c2654c5860c42604a8c0bbca",
   "implemented": [
     "Verified actor/org/epoch context binding for dashboard requests; abort and erase verified scope on transitions",
@@ -141,8 +141,29 @@
     }
   ],
   "production": {
-    "status": "not-yet-pushed",
+    "status": "deployed-anonymous-publication-passed-private-workflows-unproven",
+    "commit": "3cd26ce759035e56d00b9cebbba0726ab04315ac",
+    "parent": "45d947c3b2b03f10c2654c5860c42604a8c0bbca",
+    "commitSession": 55812,
+    "commitExitCode": 0,
+    "pushSession": 3533,
+    "pushExitCode": 0,
+    "sourceFreezeReverifiedAfterCommitBeforePush": true,
     "target": "surisutas-projects/doya-ai production",
-    "scope": "Quote dashboard/API and shared context/usage candidate batch; not full 17-service goal completion"
-  }
+    "authenticatedFlow": "unproven",
+    "ciRun": 37539084448,
+    "ciStatus": "completed-success",
+    "deploymentUrl": "doya-bx94b3mmd-surisutas-projects.vercel.app",
+    "deploymentStatus": "READY-verified-current",
+    "deploymentId": "dpl_8m7Ass7nAsqopgLVbEMifzZiHEHJ",
+    "deploymentCommitFromListMetadata": "3cd26ce759035e56d00b9cebbba0726ab04315ac",
+    "anonymousPublicVerifier": "verify-quote-workspace-public-3cd26ce7.py",
+    "ciWatchSession": 53011,
+    "ciWatchExitCode": 0,
+    "ciHeadShaVerified": "3cd26ce759035e56d00b9cebbba0726ab04315ac",
+    "anonymousPublicProof": "quote-workspace-public-3cd26ce7.json",
+    "anonymousEntryCount": 17,
+    "anonymousAssetCount": 35
+  },
+  "nextCohortEvidence": "quote-settings-scope-baseline.json"
 }

@@ -690,3 +690,9 @@ QuoteToolの全ダッシュボード要求を確認済み利用者・組織と�
 直前release gate 8d20daacは全回帰・型・Next build・全Lint終了0、2618ソース不変で通過。ただし追加実API検証でHTTPS://example.invalidがhttps://https//example.invalidへ誤変換される問題を再現したため反映を保留して補修。大文字HTTP(S)・httpで始まるスキームなしホスト名を正しく解析し、明示的FTP/fileは解析前拒否する回帰を追加し通過。更新ソースの新しいrelease gateを開始。前回passを最新ソースのpassとは扱わない。本番未反映、全サービス目標は継続。
 
 最新release gate 58edbed0は全回帰・型・Next本番build・全Lintすべて終了0、2618ソース差分0で通過し、コミット直前にも全ハッシュ一致を再確認。今回の見積もりダッシュボード／保存API／サイドバーと共通限定変更を本番反映の対象にする。実認証・実AI／顧客DBの通し、見積もり子画面等と全17サービス2074項目の最終完了は未確認で、目標は継続。
+
+発行者設定の追加補修候補（2026-10-06T22:22:28.022406+00:00）: `quote-issuer-settings-repair.json`。実Settings/フック/輸送の合成回帰20件、API8群、型・限定lint通過。全体ゲート実行中・本番未反映。実MemberPanelを含めた別回帰で旧組織の招待ハンドラーが新組織へPOSTする問題を再現し、`quote-members-scope-baseline.json`へ記録。実招待・メール・顧客DB操作なし。全17サービスの完了ではない。
+
+詳細ページ競合の追加再現（2026-10-06T22:24:01.028955+00:00）: `quote-document-route-baseline.json`。実QuoteDocumentPageの合成回帰で、route two の遅延応答が route three の表示を置き換え、保存先 three へ two の宛先が送られることを確認。優先補修対象。実顧客の文書・DBは操作していない。発行者設定の候補回帰は読み込み失敗・復旧を追加し28件に拡大。
+
+Quote 3cd26ce7: CI 37539084448 success; deployment dpl_8m7Ass7nAsqopgLVbEMifzZiHEHJ READY. quote-workspace-public-3cd26ce7.json verifies 17 anonymous entries, 35 JS assets and guest usage private caching. Actual private workflows remain unproven. Issuer settings changes are a separate unreleased candidate.
