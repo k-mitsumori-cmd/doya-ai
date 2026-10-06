@@ -24,7 +24,7 @@ export function isProposalSlides(v: unknown): v is ProposalSlide[] {
 export type Preparation = {
   id: string; targetUrl: string; targetName: string | null; status: 'processing' | 'researched' | 'done' | 'failed'; errorMessage: string | null
   research: CompanyResearch | null; analysis: CompanyAnalysis | null; proposalMarkdown: string | null
-  slidesJson: ProposalSlide[] | null; slideImages: { title: string; imageUrl: string | null; role?: string }[] | null
+  slidesJson: ProposalSlide[] | null; slideImages: { title: string; imageUrl: string | null; role?: string; imageKey?: string | null }[] | null
   createdAt: string; updatedAt: string
 }
 export function readPreparation(data: unknown, id: string): Preparation {
@@ -34,7 +34,7 @@ export function readPreparation(data: unknown, id: string): Preparation {
     || !['processing', 'researched', 'done', 'failed'].includes(p.status as string) || !date(p.createdAt) || !date(p.updatedAt)
     || !(p.research === null || isCompanyResearch(p.research)) || !(p.analysis === null || isCompanyAnalysis(p.analysis))
     || !nullableText(p.proposalMarkdown) || !(p.slidesJson === null || isProposalSlides(p.slidesJson))
-    || !(p.slideImages === null || Array.isArray(p.slideImages) && p.slideImages.length <= 500 && p.slideImages.every(s => record(s) && text(s.title) && (s.imageUrl === null || web(s.imageUrl)) && (s.role === undefined || text(s.role))))) {
+    || !(p.slideImages === null || Array.isArray(p.slideImages) && p.slideImages.length <= 500 && p.slideImages.every(s => record(s) && text(s.title) && (s.imageUrl === null || web(s.imageUrl)) && (s.role === undefined || text(s.role)) && (s.imageKey === undefined || s.imageKey === null || typeof s.imageKey === 'string' && /^[a-f0-9]{64}$/.test(s.imageKey))))) {
     throw new Error('商談準備の応答を確認できませんでした。再度読み込んでください。')
   }
   return p as Preparation

@@ -13,7 +13,9 @@ assert.equal(protocol.completeProposal({...prep,analysis:null}),false);assert.eq
  for(const bad of [{...analysis,strengths:[{}]},{...analysis,currentStateAssessment:{}},{...analysis,hypotheses:[{issue:'missing basis/impact'}]},{...analysis,solutions:[{title:'missing detail/effect'}]}]){generated=bad;await assert.rejects(()=>ai.analyzeCompany(research),/Invalid Shodan analysis/)}
 
  const route = require('./load-typescript.cjs').load('src/app/api/shodan/preparations/[id]/route.ts', {
-  'next/server': { NextResponse: Response }, '@prisma/client': { Prisma: {} },
+  'next/server': { NextResponse: Response },
+  ...require('./shodan-editor-test-helpers.cjs'),
+ '@prisma/client': { Prisma: {} },
   '@/lib/prisma': { prisma: { shodanPreparation: { findFirst: async ({where}) => {
     assert.equal(where.id,'one'); assert.equal(where.organizationId,'synthetic-org');
     return { ...prep, createdAt:new Date(prep.createdAt),updatedAt:new Date(prep.updatedAt),slideImages:[{title:'Slide',role:'cover',imagePath:'synthetic-path'}] }

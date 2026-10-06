@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T23:14:46.879237+00:00",
-  "status": "final-release-gates-passed-not-yet-pushed",
+  "status": "deployed-anonymous-publication-passed-private-flow-unproven",
   "sourceCommit": "6bd0adb1ed4ae0eed43701545b86cb451897466a",
   "source": "src/app/shodan/[orgSlug]/p/[id]/page.tsx",
   "findings": [
@@ -50,7 +50,7 @@
   "controller": "src/lib/shodan/use-preparation-detail.ts",
   "mountedScript": "scripts/security-regression/verify-shodan-detail-mounted.cjs",
   "responseScript": "scripts/security-regression/verify-shodan-detail-response.cjs",
-  "lastCheckedAt": "2026-10-06T23:39:36.653471+00:00",
+  "lastCheckedAt": "2026-10-06T23:56:27.857563+00:00",
   "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-detail-release-e5f3d966-4817-448e-88a1-f5d2ffba2270",
   "supersededFailedGate": "docs/audits/2026-10-06-all-services-recheck/shodan-detail-release-407367d6-5930-48f9-9c59-4aa3f0790713",
   "extraFixes": [
@@ -71,5 +71,29 @@
   "cancelledGate": "docs/audits/2026-10-06-all-services-recheck/shodan-detail-release-fea41c9c-3f86-4be9-bd74-5a47611e3c29",
   "cancelledSession": 64771,
   "cancelledExitCode": 143,
-  "previousGoalTurnClassification": "progress: prior turn shipped member and SlideDeck repairs after frozen full gates, reproduced additional detail failures; this turn adds scoped detail repair and regressions, confirms previous production READY/anonymous publication, finds separate editor defects."
+  "previousGoalTurnClassification": "progress: prior turn shipped member and SlideDeck repairs after frozen full gates, reproduced additional detail failures; this turn adds scoped detail repair and regressions, confirms previous production READY/anonymous publication, finds separate editor defects.",
+  "commit": "5c7bae1a63b1805ea5b9d431fe6138698c5d7823",
+  "commitSession": 4418,
+  "commitExitCode": 0,
+  "pushSession": 60046,
+  "pushExitCode": 0,
+  "sourceFreezeReverifiedAfterCommit": true,
+  "productionDeployments": [
+    {
+      "uid": "dpl_E5yAVo7tPzGYN4sj9mhgPp8v9s5b",
+      "url": "doya-e9mmkruw4-surisutas-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "commit": "5c7bae1a63b1805ea5b9d431fe6138698c5d7823"
+    }
+  ],
+  "ciRuns": [
+    {
+      "databaseId": 37547789734,
+      "headSha": "5c7bae1a63b1805ea5b9d431fe6138698c5d7823",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "publicEvidence": "shodan-detail-public-5c7bae1a.json"
 }

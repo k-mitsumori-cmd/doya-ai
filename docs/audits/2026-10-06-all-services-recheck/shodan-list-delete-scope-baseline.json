@@ -1,0 +1,15 @@
+{
+  "status": "confirmed-open",
+  "case": "Old org deletion completion corrupts current org total",
+  "deleteRequests": [
+    {
+      "url": "/api/shodan/preparations/alpha-1",
+      "scope": "alpha",
+      "method": "DELETE"
+    }
+  ],
+  "currentScope": "beta",
+  "beforeTotal": "100 / 101",
+  "afterTotal": "100 / 100",
+  "scope": "Actual mounted list with synthetic HTTP/session; no actual DB deletion or private production request."
+}

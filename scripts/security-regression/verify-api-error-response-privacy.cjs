@@ -116,6 +116,7 @@ const response = { NextResponse: Response }
 
   await check('shodan detail hides previously stored provider failure details', async () => {
     const route = load('src/app/api/shodan/preparations/[id]/route.ts', {
+      ...require('./shodan-editor-test-helpers.cjs'),
       'next/server': response,
       '@prisma/client': { Prisma: { DbNull: Symbol('DbNull') } },
       '@/lib/prisma': { prisma: { shodanPreparation: { findFirst: async () => ({ id: 'prep-1', organizationId: 'org-1', status: 'failed', errorMessage: secret, slideImages: [] }) } } },

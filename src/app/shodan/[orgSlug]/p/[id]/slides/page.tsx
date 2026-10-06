@@ -1,89 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ShodanApiError, shodanGet, shodanSend } from '@/lib/shodan/client'
+import { useSlideEditor } from '@/lib/shodan/use-slide-editor'
 import { DoyaKun, sym } from '@/components/shodan/ui'
-import type { ProposalSlide } from '@/lib/shodan/types'
-import toast from 'react-hot-toast'
-import { completeSlideImages } from '@/lib/shodan/complete-slide-images'
-
-type SlideImage = { title: string; imageUrl: string | null; role?: string }
-type Prep = { id: string; targetName: string | null; slidesJson: ProposalSlide[] | null; slideImages: SlideImage[] | null }
 
 export default function ShodanSlidesEditPage() {
   const params = useParams<{ orgSlug: string; id: string }>()
   const orgSlug = String(params.orgSlug)
   const id = String(params.id)
-  const [prep, setPrep] = useState<Prep | null>(null)
-  const [notFound, setNotFound] = useState(false)
-  const [instr, setInstr] = useState<Record<number, string>>({})
-  const [busy, setBusy] = useState<Record<number, boolean>>({})
-  const [active, setActive] = useState(0)
-  const [pdfBusy, setPdfBusy] = useState(false)
-  const [planNotice, setPlanNotice] = useState<{ message: string; href?: string; label?: string } | null>(null)
-
-  const urlToDataUrl = (url: string) => fetch(url).then((r) => {
-    if (!r.ok) throw new Error('画像の取得に失敗しました。再読み込みしてからお試しください。')
-    return r.blob()
-  }).then((b) => new Promise<string>((res, rej) => {
-    const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.onerror = rej; fr.readAsDataURL(b)
-  }))
-  const imgSize = (dataUrl: string) => new Promise<{ w: number; h: number }>((res, rej) => {
-    const im = new window.Image(); im.onload = () => res({ w: im.naturalWidth, h: im.naturalHeight }); im.onerror = () => rej(new Error('画像を読み込めませんでした。再読み込みしてからお試しください。')); im.src = dataUrl
-  })
-
-  const downloadPdf = async () => {
-    if (pdfBusy || Object.values(busy).some(Boolean)) return
-    let imgs: SlideImage[]
-    try { imgs = completeSlideImages(prep?.slidesJson, prep?.slideImages) }
-    catch (e) { toast.error((e as Error).message); return }
-    setPdfBusy(true)
-    try {
-      const { jsPDF } = await import('jspdf')
-      const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
-      const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight()
-      for (let i = 0; i < imgs.length; i++) {
-        const dataUrl = await urlToDataUrl(imgs[i].imageUrl as string)
-        const { w, h } = await imgSize(dataUrl)
-        const r = Math.min(pw / w, ph / h)
-        const dw = w * r, dh = h * r
-        if (i > 0) doc.addPage()
-        doc.addImage(dataUrl, 'PNG', (pw - dw) / 2, (ph - dh) / 2, dw, dh)
-      }
-      doc.save(`提案資料_${(prep?.targetName || 'slides').replace(/[\\/:*?"<>|]/g, '')}.pdf`)
-    } catch (e: any) { toast.error(e?.message || 'PDFの作成に失敗しました') } finally { setPdfBusy(false) }
-  }
-
-  useEffect(() => {
-    shodanGet<{ item: Prep }>(`/api/shodan/preparations/${id}`, orgSlug)
-      .then((d) => setPrep(d.item)).catch(() => setNotFound(true))
-  }, [orgSlug, id])
-
-  const regenerate = async (index: number) => {
-    setBusy((b) => ({ ...b, [index]: true }))
-    try {
-      const d = await shodanSend<{ success: boolean; data: { index: number; image: SlideImage } }>(
-        `/api/shodan/preparations/${id}/slides/regenerate`, orgSlug, 'POST', { index, instruction: instr[index] }
-      )
-      setPrep((prev) => {
-        if (!prev?.slideImages) return prev
-        const imgs = prev.slideImages.slice(); imgs[index] = d.data.image
-        return { ...prev, slideImages: imgs }
-      })
-      setPlanNotice(null)
-      toast.success('スライドを再生成しました')
-    } catch (e) {
-      if (e instanceof ShodanApiError && e.code === 'PLAN') setPlanNotice({ message: e.message, href: e.actionUrl, label: e.actionLabel })
-      else toast.error(e instanceof Error ? e.message : '再生成に失敗しました')
-    } finally { setBusy((b) => ({ ...b, [index]: false })) }
-  }
-
-  if (notFound) return <div className="p-10 text-center"><DoyaKun mood="error" size={96} /><p className="text-slate-500 font-bold mt-3">見つかりませんでした。<Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}`} className="text-purple-600 underline ml-1">戻る</Link></p></div>
+  const editor = useSlideEditor(orgSlug,id)
+  const { prep, active, regenerate, downloadPdf } = editor
+  const planNotice = editor.notice
+  const pdfBusy = editor.busy?.kind === 'pdf'
+  const busy: Record<number,boolean> = editor.busy?.kind === 'regen' ? { [editor.busy.index!]:true } : {}
+  if (editor.requiresLogin) return <div className="p-10 text-center"><p>ログイン状態をご確認ください。</p><Link href={`/auth/signin?callbackUrl=${encodeURIComponent(`/shodan/${orgSlug}/p/${id}/slides`)}`} className="underline">ログインする</Link></div>
+  if (!prep && editor.error && !editor.missing) return <div role="alert" className="p-10 text-center"><p>{editor.error}</p><button onClick={editor.load} disabled={editor.loading}>保存内容を再読み込み</button><Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${encodeURIComponent(id)}`} className="ml-4 underline">商談準備へ戻る</Link></div>
+  if (editor.missing) return <div className="p-10 text-center"><DoyaKun mood="error" size={96} /><p className="text-slate-500 font-bold mt-3">見つかりませんでした。<Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}`} className="text-purple-600 underline ml-1">戻る</Link></p></div>
   if (!prep) return <div className="p-10 text-center"><DoyaKun mood="thinking" size={88} /><p className="mt-2 text-slate-400 font-bold">読み込み中…</p></div>
 
-  const slides = prep.slideImages || []
+  const slides = (prep.slidesJson || []).map((slide,index)=>prep.slideImages?.[index] || {title:slide.title,imageUrl:null})
   const totalSlides = prep.slidesJson?.length || 0
   const readySlides = (prep.slidesJson || []).filter((_, index) => !!slides[index]?.imageUrl?.trim()).length
   const missingSlides = totalSlides - readySlides
@@ -93,6 +29,7 @@ export default function ShodanSlidesEditPage() {
     <div className="p-6 md:p-8 max-w-6xl mx-auto">
       <div className="flex items-center gap-2 text-sm font-bold text-slate-400 mb-3">
         <Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}`} className="hover:text-purple-600 flex items-center gap-1">{sym('arrow_back', 16)}商談準備へ戻る</Link>
+        <button onClick={editor.load} disabled={editor.loading || !!editor.busy} className="ml-auto hover:text-purple-600 disabled:opacity-50">保存内容を再読み込み</button>
       </div>
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <DoyaKun mood="present" size={52} float={false} />
@@ -101,13 +38,19 @@ export default function ShodanSlidesEditPage() {
           <p className="text-sm font-bold text-slate-400 mt-0.5">{prep.targetName || ''}・各スライドに指示を入れて再生成できます。</p>
         </div>
         {slides.some((s) => s.imageUrl) && (
-          <button onClick={downloadPdf} disabled={!complete || pdfBusy || Object.values(busy).some(Boolean)}
+          <button onClick={downloadPdf} disabled={!complete || !editor.canAct}
             className="inline-flex items-center gap-1.5 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-60">
             {sym(pdfBusy ? 'progress_activity' : 'picture_as_pdf', 18)}{pdfBusy ? 'PDF作成中…' : 'PDFでダウンロード'}
           </button>
         )}
       </div>
 
+      {(editor.error || editor.unknown) && <div role="alert" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        {editor.error && <p>{editor.error}</p>}
+        {editor.unknown && <p>操作結果が未確認です。表示中の内容は前回確認した保存版です。重ねて送信せず、保存内容をご確認ください。</p>}
+        <button onClick={editor.load} disabled={editor.loading || !!editor.busy} className="mt-2 underline">保存済みの結果を確認する</button>
+        {editor.canRetryReviewed && <button onClick={editor.retryAfterReview} className="ml-4 underline">確認した保存版から再生成する</button>}
+      </div>}
       {planNotice && <div role="alert" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
         <p>{planNotice.message}</p>
         {planNotice.href && planNotice.label && <Link href={planNotice.href} className="mt-2 inline-block text-purple-700 underline">{planNotice.label}</Link>}
@@ -148,11 +91,11 @@ export default function ShodanSlidesEditPage() {
             <div className="mt-3 rounded-2xl bg-white border border-slate-200 p-4">
               <p className="font-black text-slate-800 text-sm mb-2">スライド{active + 1}／{slides.length}：{slides[active]?.title}</p>
               <label className="block text-xs font-black text-slate-500 mb-1">修正の指示（例: もっと数字を大きく／背景を明るく／CTAを強調）</label>
-              <textarea value={instr[active] || ''} onChange={(e) => setInstr((s) => ({ ...s, [active]: e.target.value }))} rows={2}
+              <textarea aria-label="スライドの修正指示" value={editor.instruction(active)} onChange={(e) => editor.setInstruction(active,e.target.value)} rows={2} maxLength={500}
                 className="w-full rounded-xl border-2 border-slate-200 focus:border-purple-400 outline-none px-3 py-2 font-bold text-sm resize-y" placeholder="この指示で作り直します" />
               <div className="flex items-center gap-2 mt-2">
-                <button onClick={() => regenerate(active)} disabled={busy[active]} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm disabled:opacity-60">{sym(busy[active] ? 'progress_activity' : 'autorenew', 16)}{busy[active] ? '再生成中…' : 'この指示で再生成'}</button>
-                {slides[active]?.imageUrl && <a href={slides[active]!.imageUrl as string} target="_blank" rel="noreferrer" download className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50">{sym('download', 16)}保存</a>}
+                <button onClick={() => regenerate(active)} disabled={!editor.canAct} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm disabled:opacity-60">{sym(busy[active] ? 'progress_activity' : 'autorenew', 16)}{busy[active] ? '再生成中…' : 'この指示で再生成'}</button>
+                {editor.canAct && slides[active]?.imageUrl && <a href={slides[active]!.imageUrl as string} target="_blank" rel="noreferrer" download className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50">{sym('download', 16)}画像を開く・保存</a>}
               </div>
             </div>
           </div>
@@ -164,7 +107,7 @@ export default function ShodanSlidesEditPage() {
             </div>
             <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[calc(100vh-7rem)] pb-1 md:pr-1 -mx-0.5 px-0.5">
               {slides.map((s, i) => (
-                <button key={i} onClick={() => setActive(i)} title={`スライド${i + 1}：${s.title || ''}`}
+                <button key={i} onClick={() => editor.setActive(i)} title={`スライド${i + 1}：${s.title || ''}`}
                   className={`relative w-36 md:w-full shrink-0 rounded-lg overflow-hidden border-2 text-left transition-all ${i === active ? 'border-purple-500 ring-2 ring-purple-200 shadow-md' : 'border-slate-200 hover:border-purple-300'}`}>
                   {s.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element

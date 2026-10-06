@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T23:28:51.753546+00:00",
-  "status": "confirmed-open-not-fixed",
+  "status": "full-gate-passed-preparing-production-release",
   "sourceCommit": "28ed5de2a33bb2cf7a20b3bc23c4995037525fa3",
   "probe": "probe-shodan-slide-editor-lifecycle.cjs",
   "findings": [
@@ -30,9 +30,34 @@
     "Actual mounted synthetic regressions before full gate, release and production verification"
   ],
   "limitations": [
-    "No paid provider, actual customer DB or browser production proof.",
-    "Detail page candidate does not repair the separate editor page.",
-    "Full 17 services / 2074 criteria remain in scope."
+    "Commit/push and candidate production publication pending; full frozen build/lint gate passed.",
+    "Synthetic PDF save invocation is not actual browser/filesystem persistence proof.",
+    "Real authenticated customer workflows, production AI/storage/DB persistence and durable multi-tab behavior remain unproven.",
+    "Full 17 services / 2074 criteria remain in scope; this cohort is partial evidence only."
   ],
-  "lastCheckedAt": "2026-10-06T23:35:31.143006+00:00"
+  "lastCheckedAt": "2026-10-06T23:58:28.123262+00:00",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-slide-editor-release-54abc8e7-831b-4ffb-bfb3-97d5149b6817",
+  "releaseSession": 89145,
+  "candidateChecks": {
+    "mountedEditorCases": 34,
+    "pdfPipelineCases": 24,
+    "regenerateApiCases": 26,
+    "atomicSaveCases": 9,
+    "existingDetailMountedCases": 35,
+    "slideDeckRegression": "passed",
+    "scope": "Actual components/controller/transport/validators/PDF assembler and API with synthetic session/HTTP/browser decode/jsPDF/provider/storage/Prisma only. No private production, paid calls, customer DB writes or real filesystem download."
+  },
+  "candidateFixes": [
+    "Actor/org/document/epoch and saved-version scope; synchronous shared regeneration/PDF locks; retain newer drafts and uncertain outcomes.",
+    "Explicit reviewed retry guarded by server version comparison after preparation lease acquisition; stable opaque image key distinguishes signed URL renewal.",
+    "Missing image structure slots remain editable and atomic save fills aligned placeholders.",
+    "Bounded image fetch/stream/decode/total PDF processing; oversized response streams cancelled; no save after scope exit.",
+    "Regeneration authentication/billing/initial-read exceptions sanitized to controlled 503 response."
+  ],
+  "releaseExitCode": 0,
+  "sourceFiles": 2647,
+  "changedSources": [],
+  "sourceFreezeReverifiedBeforeCommit": true,
+  "syntheticEvidence": "shodan-slide-editor-synthetic-results.json",
+  "previousGoalTurnClassification": "progress: prior goal turn shipped scoped detail repair and reproduced editor defects; current turn fixes editor/PDF, adds API/resource regressions, confirms detail production and reproduces list lifecycle defect."
 }

@@ -103,6 +103,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/shodan/preparations/[id]/slides/regenerate/route.ts', {
+      ...require('./shodan-editor-test-helpers.cjs'),
       'next/server': server,
       '@/lib/prisma': { prisma: {
         user: { findUnique: async () => ({ plan: 'PRO' }) },

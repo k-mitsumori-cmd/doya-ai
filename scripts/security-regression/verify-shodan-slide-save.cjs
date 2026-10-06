@@ -12,5 +12,6 @@ function fixture(){const row={id:'p',organizationId:'o',slidesJson:[{title:'one'
  await check('missing or transferred parent rejects before writes',async()=>{const f=fixture(),old=plain(f.row);f.setMissing();await assert.rejects(f.save(old,[{index:0,image:{title:'new',imagePath:'new'}}]));assert.equal(f.writes,0)});
  for(const index of [-1,2,0.5])await check('invalid slot '+index,async()=>{const f=fixture();await assert.rejects(f.save(plain(f.row),[{index,image:{title:'new',imagePath:'new'}}]));assert.equal(f.writes,0)});
  await check('one conflicting batch slot prevents every batch write',async()=>{const f=fixture(),old=plain(f.row);f.row.slideImages[1].imagePath='other';await assert.rejects(f.save(old,[0,1].map(index=>({index,image:{title:'new',imagePath:'new'+index}}))));assert.equal(f.row.slideImages[0].imagePath,'old0');assert.equal(f.writes,0)});
+ await check('missing image slot fills aligned placeholders without replacing another image',async()=>{const f=fixture();f.row.slideImages=[];const old=plain(f.row);await f.save(old,[{index:1,image:{title:'two',imagePath:'new1'}}]);assert.deepEqual(f.row.slideImages,[{title:'one',imagePath:null},{title:'two',imagePath:'new1'}]);assert.equal(f.writes,1)});
  console.log(JSON.stringify({passed:results.length,results},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1});

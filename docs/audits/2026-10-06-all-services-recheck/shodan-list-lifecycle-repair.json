@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-06T23:55:42.344056+00:00",
+  "status": "confirmed-open-not-fixed",
+  "sourceCommit": "5c7bae1a63b1805ea5b9d431fe6138698c5d7823",
+  "probe": "probe-shodan-list-delete-scope.cjs",
+  "evidence": "shodan-list-delete-scope-baseline.json",
+  "finding": "Actual mounted list: alpha DELETE completion after switching to beta decrements beta total from 101 to 100; all DELETE/GET calls synthetic.",
+  "nextRequirements": [
+    "Actor/org/mount/epoch scoped list and deletion callbacks",
+    "Synchronous deletion and pagination locks; preserve uncertain deletion outcome and resolve through read without blind replay",
+    "Validate full list/status DTO and honest failure states",
+    "Mounted synthetic regression and frozen full gate before deployment"
+  ],
+  "limits": [
+    "No actual customer DB deletion or private production request",
+    "No proof of real Next segment reuse; synthetic prop scope transition reproduced mounted component behavior",
+    "All 17 services / 2074 criteria remain in scope"
+  ]
+}

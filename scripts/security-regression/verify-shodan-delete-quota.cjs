@@ -24,6 +24,7 @@ function fixture(status, leaseValue = null, updatedAt = new Date()) {
   }
   const prisma = { $transaction: async (fn) => fn(tx) }
   const route = load('src/app/api/shodan/preparations/[id]/route.ts', {
+      ...require('./shodan-editor-test-helpers.cjs'),
     'next/server': { NextResponse: { json } },
     '@prisma/client': { Prisma: { DbNull: nullToken } },
     '@/lib/prisma': { prisma },

@@ -9,6 +9,7 @@ import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { effectivePrepStatus } from '@/lib/shodan/types'
 import { shodanSlideLeaseKey } from '@/lib/shodan/slide-generation-lease'
 import { signedUrl } from '@/lib/shodan/storage'
+import { slideImageKey } from '@/lib/shodan/slide-image-identity'
 import type { StoredSlide } from '@/lib/shodan/slide-image'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   // 提案スライド画像は非公開保存のため、表示用に署名URLへ変換して返す
   const stored = (item.slideImages as unknown as StoredSlide[] | null) || []
   const slideImages = stored.length
-    ? await Promise.all(stored.map(async (s) => ({ title: s.title, role: s.role, imageUrl: await signedUrl(s.imagePath) })))
+    ? await Promise.all(stored.map(async (s) => ({ title: s.title, role: s.role, imageUrl: await signedUrl(s.imagePath), imageKey: slideImageKey(s.imagePath) })))
     : item.slideImages
   return NextResponse.json({ item: { ...item, errorMessage: item.errorMessage ? '処理に失敗しました。再度お試しください。' : null, slideImages } }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }
