@@ -10,6 +10,7 @@ import { resolveUserId } from '@/lib/mensetsu/access'
 
 type Ctx = { params: Promise<{ token: string }> }
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
+class InvitationExpired extends Error {}
 
 const ROLE_LABEL: Record<string, string> = {
   owner: 'オーナー',
@@ -38,7 +39,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const m = await load(p.token)
   if (!m) return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
-  if (m.status === 'PENDING' && m.createdAt.getTime() < Date.now() - INVITE_TTL_MS) {
+  if (m.status === 'PENDING' && m.createdAt.getTime() <= Date.now() - INVITE_TTL_MS) {
     return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
 
@@ -63,7 +64,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   if (m.status !== 'PENDING') {
     return NextResponse.json({ error: 'この招待は既に使われています' }, { status: 409 })
   }
-  if (m.createdAt.getTime() < Date.now() - INVITE_TTL_MS) {
+  if (m.createdAt.getTime() <= Date.now() - INVITE_TTL_MS) {
     return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
   try {
@@ -71,21 +72,24 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
       const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM mensetsu_organizations WHERE id = ${m.organization.id} FOR UPDATE`
       if (rows.length === 0) return 'unavailable' as const
       const invite = await tx.mensetsuMember.findUnique({ where: { id: m.id } })
-      if (!invite || invite.status !== 'PENDING' || invite.inviteToken !== p.token) return 'unavailable' as const
+      if (!invite || invite.organizationId !== m.organization.id || invite.status !== 'PENDING' || invite.inviteToken !== p.token) return 'unavailable' as const
       const now = new Date()
-      if (invite.createdAt.getTime() < now.getTime() - INVITE_TTL_MS) return 'expired' as const
+      if (invite.createdAt.getTime() <= now.getTime() - INVITE_TTL_MS) return 'expired' as const
       const account = await tx.user.findUnique({ where: { id: userId }, select: { email: true } })
       if (!invite.inviteEmail || !account?.email || account.email.trim().toLowerCase() !== invite.inviteEmail.trim().toLowerCase()) return 'mismatch' as const
       if (invite.role === 'owner') return 'unavailable' as const
       const already = await tx.mensetsuMember.findFirst({ where: { organizationId: m.organization.id, userId, status: 'ACTIVE' }, select: { id: true } })
+      if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
       if (already) {
-        await tx.mensetsuMember.deleteMany({ where: { id: invite.id, status: 'PENDING', inviteToken: p.token } })
+        await tx.mensetsuMember.deleteMany({ where: { id: invite.id, organizationId: m.organization.id, role: invite.role, inviteEmail: invite.inviteEmail, status: 'PENDING', inviteToken: p.token } })
+        if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
         return 'already' as const
       }
       const claimed = await tx.mensetsuMember.updateMany({
-        where: { id: invite.id, status: 'PENDING', inviteToken: p.token, createdAt: { gte: new Date(now.getTime() - INVITE_TTL_MS) } },
+        where: { id: invite.id, organizationId: m.organization.id, role: invite.role, inviteEmail: invite.inviteEmail, status: 'PENDING', inviteToken: p.token, createdAt: { gt: new Date(Date.now() - INVITE_TTL_MS) } },
         data: { userId, status: 'ACTIVE', acceptedAt: now, inviteToken: null },
       })
+      if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
       return claimed.count === 1 ? 'accepted' as const : 'unavailable' as const
     })
     if (result === 'mismatch') return NextResponse.json({ error: '招待先のメールアドレスでログインしてください' }, { status: 403 })
@@ -93,7 +97,8 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     if (result === 'unavailable') return NextResponse.json({ error: 'この招待は既に使用済みです' }, { status: 409 })
     if (result === 'already') return NextResponse.json({ ok: true, alreadyMember: true })
     return NextResponse.json({ ok: true, organizationName: m.organization.name })
-  } catch {
+  } catch (error) {
+    if (error instanceof InvitationExpired) return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
     return NextResponse.json({ error: '招待を承諾できませんでした。再読み込みしてください' }, { status: 409 })
   }
 }

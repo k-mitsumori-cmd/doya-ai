@@ -1,0 +1,26 @@
+PASS invalid invitation bodies return 400 before lookup or mutation
+PASS pending expiry including the exact deadline returns 410 without claiming membership
+PASS stored expiry returns 410 while accepted and cancelled invitations return 409
+PASS expiry while waiting for the organization lock takes priority over the member limit
+PASS changed, removed or consumed invitation under the organization lock is never claimed
+PASS expiry between the locked check and claim returns 410 with no member or audit
+PASS failed claim on a cancelled invitation returns 409 rather than guessing expiry
+PASS a valid organization at capacity rejects before consuming the invite
+PASS valid matching invitation preserves atomic membership creation and audit
+PASS invite lookup preserves consumed and cancelled states, and expires pending exactly at its deadline
+{
+  "passed": 10,
+  "scope": "actual API; synthetic clock/auth/transaction; not a PostgreSQL concurrency or production write test",
+  "results": [
+    "invalid invitation bodies return 400 before lookup or mutation",
+    "pending expiry including the exact deadline returns 410 without claiming membership",
+    "stored expiry returns 410 while accepted and cancelled invitations return 409",
+    "expiry while waiting for the organization lock takes priority over the member limit",
+    "changed, removed or consumed invitation under the organization lock is never claimed",
+    "expiry between the locked check and claim returns 410 with no member or audit",
+    "failed claim on a cancelled invitation returns 409 rather than guessing expiry",
+    "a valid organization at capacity rejects before consuming the invite",
+    "valid matching invitation preserves atomic membership creation and audit",
+    "invite lookup preserves consumed and cancelled states, and expires pending exactly at its deadline"
+  ]
+}

@@ -1,0 +1,203 @@
+{
+  "scope": "Previous ea6cc7f9 source with synthetic clock/DB; no production calls",
+  "results": [
+    {
+      "service": "sfa",
+      "scenario": "exact",
+      "status": 200,
+      "stats": {
+        "attempted": 1,
+        "rollbacks": 0,
+        "committed": 1
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "userId": "user",
+          "status": "ACTIVE",
+          "inviteToken": null,
+          "inviteEmail": "qa@example.invalid",
+          "role": "member",
+          "createdAt": "2026-10-04T03:00:00.000Z",
+          "employee": {
+            "email": "qa@example.invalid"
+          },
+          "organization": {
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "name": null,
+          "acceptedAt": "2026-10-06T03:00:00.000Z"
+        },
+        "oldStatus": "ACTIVE",
+        "promaneMembers": 0,
+        "acceptedAt": null
+      }
+    },
+    {
+      "service": "sfa",
+      "scenario": "claim",
+      "status": 200,
+      "stats": {
+        "attempted": 1,
+        "rollbacks": 0,
+        "committed": 1
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "userId": "user",
+          "status": "ACTIVE",
+          "inviteToken": null,
+          "inviteEmail": "qa@example.invalid",
+          "role": "member",
+          "createdAt": "2026-10-04T03:00:00.000Z",
+          "employee": {
+            "email": "qa@example.invalid"
+          },
+          "organization": {
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "name": null,
+          "acceptedAt": "2026-10-06T02:59:59.999Z"
+        },
+        "oldStatus": "ACTIVE",
+        "promaneMembers": 0,
+        "acceptedAt": null
+      }
+    },
+    {
+      "service": "kintai",
+      "scenario": "exact",
+      "status": 200,
+      "stats": {
+        "attempted": 2,
+        "rollbacks": 0,
+        "committed": 2
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "userId": "user",
+          "status": "ACTIVE",
+          "inviteToken": null,
+          "inviteEmail": "qa@example.invalid",
+          "role": "member",
+          "createdAt": "2026-10-04T03:00:00.000Z",
+          "employee": {
+            "email": "qa@example.invalid"
+          },
+          "organization": {
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "acceptedAt": "2026-10-06T03:00:00.000Z"
+        },
+        "oldStatus": "INACTIVE",
+        "promaneMembers": 0,
+        "acceptedAt": null
+      }
+    },
+    {
+      "service": "kintai",
+      "scenario": "claim",
+      "status": 200,
+      "stats": {
+        "attempted": 2,
+        "rollbacks": 0,
+        "committed": 2
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "userId": "user",
+          "status": "ACTIVE",
+          "inviteToken": null,
+          "inviteEmail": "qa@example.invalid",
+          "role": "member",
+          "createdAt": "2026-10-04T03:00:00.000Z",
+          "employee": {
+            "email": "qa@example.invalid"
+          },
+          "organization": {
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "acceptedAt": "2026-10-06T02:59:59.999Z"
+        },
+        "oldStatus": "INACTIVE",
+        "promaneMembers": 0,
+        "acceptedAt": null
+      }
+    },
+    {
+      "service": "promane",
+      "scenario": "exact",
+      "status": 410,
+      "stats": {
+        "attempted": 0,
+        "rollbacks": 0,
+        "committed": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "userId": "pending",
+          "status": "PENDING",
+          "inviteToken": "token",
+          "inviteEmail": "qa@example.invalid",
+          "role": "member",
+          "createdAt": "2026-10-04T03:00:00.000Z",
+          "employee": {
+            "email": "qa@example.invalid"
+          },
+          "organization": {
+            "name": "Synthetic",
+            "slug": "team"
+          }
+        },
+        "oldStatus": "ACTIVE",
+        "promaneMembers": 0,
+        "acceptedAt": null
+      }
+    },
+    {
+      "service": "promane",
+      "scenario": "claim",
+      "status": 200,
+      "stats": {
+        "attempted": 2,
+        "rollbacks": 0,
+        "committed": 2
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "userId": "pending",
+          "status": "PENDING",
+          "inviteToken": "token",
+          "inviteEmail": "qa@example.invalid",
+          "role": "member",
+          "createdAt": "2026-10-04T03:00:00.000Z",
+          "employee": {
+            "email": "qa@example.invalid"
+          },
+          "organization": {
+            "name": "Synthetic",
+            "slug": "team"
+          }
+        },
+        "oldStatus": "ACTIVE",
+        "promaneMembers": 1,
+        "acceptedAt": "2026-10-06T02:59:59.999Z"
+      }
+    }
+  ]
+}

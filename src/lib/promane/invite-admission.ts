@@ -15,6 +15,8 @@ type AdmissionResult =
   | { success: true; workspaceSlug: string; alreadyMember: boolean }
   | { success: false; response: AdmissionError }
 
+class InvitationExpired extends Error {}
+
 type IssueResult =
   | { success: true; invitation: { token: string; expiresAt: Date }; workspaceName: string; reused: boolean }
   | { success: false; response: AdmissionError }
@@ -138,12 +140,14 @@ export async function acceptPromaneInvitation(args: {
         const existing = await tx.promaneMember.findUnique({
           where: { workspaceId_userId: { workspaceId: invitation.workspaceId, userId: args.userId } },
         })
+        if (invitation.expiresAt.getTime() <= Date.now()) throw new InvitationExpired()
         if (existing && !existing.isActive) {
           return { success: false, response: { status: 403, error: 'ワークスペースへのアクセスが停止されています。管理者にご確認ください。' } }
         }
         if (!existing) {
           const limits = await getUserPromaneLimits(invitation.workspace.userId, tx)
           const used = await tx.promaneMember.count({ where: { workspaceId: invitation.workspaceId, isActive: true } })
+          if (invitation.expiresAt.getTime() <= Date.now()) throw new InvitationExpired()
           if (limits.maxMembersPerWorkspace >= 0 && used >= limits.maxMembersPerWorkspace) {
             return {
               success: false,
@@ -166,9 +170,12 @@ export async function acceptPromaneInvitation(args: {
           })
         }
         await tx.promaneInvitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } })
+        // Throw outside the success path so the whole membership write rolls back.
+        if (invitation.expiresAt.getTime() <= Date.now()) throw new InvitationExpired()
         return { success: true, workspaceSlug: invitation.workspace.slug, alreadyMember: !!existing }
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
     } catch (error) {
+      if (error instanceof InvitationExpired) return { success: false, response: { status: 410, error: '有効期限が切れています', code: 'PROMANE_INVITE_EXPIRED' } }
       if ((error as { code?: string })?.code !== 'P2034' || attempt === 4) throw error
     }
   }

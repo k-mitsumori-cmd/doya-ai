@@ -1,0 +1,37 @@
+PASS full quota returns a clear API error without sending an email
+PASS new invitation reserves an owner seat before any email delivery
+PASS full including pending invitations rejects before token creation
+PASS workspace owner receives owner billing guidance at the seat cap
+PASS another owner-role member is directed to the paying workspace owner
+PASS existing invitation is reused only while an active seat remains
+PASS a different role cannot silently reuse the old invitation
+PASS inactive inviter cannot create an invitation
+PASS issuance retries serialization conflict before reservation
+PASS available owner seat accepts and consumes exactly one place
+PASS full owner seat blocks before member and invitation writes
+PASS inactive membership cannot be revived by an invitation
+PASS an existing active member can consume an invitation without another seat
+PASS wrong account and expired invitation never write
+PASS accepted and expiry codes match GET and admission at the exact deadline without writes
+PASS serialization conflict retries before admitting
+{
+  "passed": 16,
+  "results": [
+    "full quota returns a clear API error without sending an email",
+    "new invitation reserves an owner seat before any email delivery",
+    "full including pending invitations rejects before token creation",
+    "workspace owner receives owner billing guidance at the seat cap",
+    "another owner-role member is directed to the paying workspace owner",
+    "existing invitation is reused only while an active seat remains",
+    "a different role cannot silently reuse the old invitation",
+    "inactive inviter cannot create an invitation",
+    "issuance retries serialization conflict before reservation",
+    "available owner seat accepts and consumes exactly one place",
+    "full owner seat blocks before member and invitation writes",
+    "inactive membership cannot be revived by an invitation",
+    "an existing active member can consume an invitation without another seat",
+    "wrong account and expired invitation never write",
+    "accepted and expiry codes match GET and admission at the exact deadline without writes",
+    "serialization conflict retries before admitting"
+  ]
+}

@@ -1,0 +1,26 @@
+PASS aio rejects unknown invite roles before saving
+PASS aio invite requires the invited account
+PASS aio expired and owner-role invites cannot be claimed
+PASS aio concurrent invites dedupe and expired invites can be replaced
+PASS aio revoked inviter cannot create or send an invite
+PASS shodan rejects unknown invite roles before saving
+PASS shodan invite requires the invited account
+PASS shodan expired and owner-role invites cannot be claimed
+PASS shodan concurrent invites dedupe and expired invites can be replaced
+PASS shodan revoked inviter cannot create or send an invite
+PASS quote rejects unknown invite roles before saving
+PASS quote invite requires the invited account
+PASS quote expired and owner-role invites cannot be claimed
+PASS quote concurrent invites dedupe and expired invites can be replaced
+PASS quote revoked inviter cannot create or send an invite
+PASS mensetsu rejects unknown invite roles before saving
+PASS mensetsu invite requires the invited account
+PASS mensetsu expired and owner-role invites cannot be claimed
+PASS mensetsu concurrent invites dedupe and expired invites can be replaced
+PASS mensetsu revoked inviter cannot create or send an invite
+PASS aishodan rejects unknown invite roles before saving
+PASS aishodan invite requires the invited account
+PASS aishodan expired and owner-role invites cannot be claimed
+PASS aishodan concurrent invites dedupe and expired invites can be replaced
+PASS aishodan revoked inviter cannot create or send an invite
+{"passed":25,"results":["aio rejects unknown invite roles before saving","aio invite requires the invited account","aio expired and owner-role invites cannot be claimed","aio concurrent invites dedupe and expired invites can be replaced","aio revoked inviter cannot create or send an invite","shodan rejects unknown invite roles before saving","shodan invite requires the invited account","shodan expired and owner-role invites cannot be claimed","shodan concurrent invites dedupe and expired invites can be replaced","shodan revoked inviter cannot create or send an invite","quote rejects unknown invite roles before saving","quote invite requires the invited account","quote expired and owner-role invites cannot be claimed","quote concurrent invites dedupe and expired invites can be replaced","quote revoked inviter cannot create or send an invite","mensetsu rejects unknown invite roles before saving","mensetsu invite requires the invited account","mensetsu expired and owner-role invites cannot be claimed","mensetsu concurrent invites dedupe and expired invites can be replaced","mensetsu revoked inviter cannot create or send an invite","aishodan rejects unknown invite roles before saving","aishodan invite requires the invited account","aishodan expired and owner-role invites cannot be claimed","aishodan concurrent invites dedupe and expired invites can be replaced","aishodan revoked inviter cannot create or send an invite"]}

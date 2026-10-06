@@ -11,12 +11,12 @@ function fixture({ email = 'invited@example.com', employee = true, existing = fa
   let transactions = 0;
   let deletions = 0;
   const tx = { kintaiMember: {
-    findFirst: async ({ where }) => rows.find((row) =>
+    findFirst: async ({ where }) => structuredClone(rows.find((row) =>
       (where.inviteToken === undefined || row.inviteToken === where.inviteToken) &&
       (where.status === undefined || row.status === where.status) &&
       (where.organizationId === undefined || row.organizationId === where.organizationId) &&
       (where.userId === undefined || row.userId === where.userId) &&
-      (where.id?.not === undefined || row.id !== where.id.not)) || null,
+      (where.id?.not === undefined || row.id !== where.id.not)) || null),
     updateMany: async ({ where, data }) => {
       if (failClaim && where.id === 'invite') throw Error('claim failed');
       const matches = rows.filter((row) =>

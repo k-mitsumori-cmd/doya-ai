@@ -227,3 +227,38 @@ HR状態版439585c7は同じSHAのVercel Readyと本番別名、CI成功を現�
 7c0aa924の見積/面接官/AI商談は公開HTMLと招待ページJSが200、再確認/切替/失効案内のコードが配信されることも確認（three-invite-recovery-production-7c0aa924.json）。合成URLのHTML/JSを読むだけで、JavaScript実行や招待APIへの要求/実参加は行っていない。
 
 最終ビルド28554は既存プロセスで終了コード0を確認。Prisma生成・全体オフライン回帰・型検査・Next本番ビルド成功、11ソースのSHA-256は開始時と一致。対象ESLintとdiff check成功。この検証済み版をコミット・main pushし、自動デプロイのReady/配信は別途確認する。
+
+営業管理/プロマネ/勤怠の補修ea6cc7f998304f1218fc2bf7dbaabeaaab6dc04aをコミット・main push成功。Vercel dpl_2TPUieCUacQf2B5ysWDkZSvqoXMQは同SHAでBUILDING、CI37398561803 in_progressを確認。次回はこの具体的なデプロイ/CIを再照会する。本番Ready/配信/実参加を完了扱いにしない。全体監査は継続。
+
+
+## 招待期限ちょうどと処理待ち中の失効を補修
+
+SFAと勤怠は48時間ちょうどを失効とする比較に変更。勤怠はv2再送トークン/旧トークンの双方に適用する。SFAのclaimもcreatedAt.gtで厳密に期限を束ね、上限判定後の参加書込前/後に再確認。既存メンバー照会中に失効した場合も参加/招待削除を行わず410。人数枠の照会中に失効した場合は上限案内より失効410を優先する。勤怠は既存メンバー照会後と旧組織無効化/claim後に再確認し、失効例外をトランザクション外で410へ分類する。プロマネも既存メンバー/人数枠照会後と参加/承諾書込後に再確認し、失効例外でロールバックする。期限前の正常処理、本人照合、上限、停止メンバー拒否、Serializable再試行を維持。認証条件・DBスキーマを変更しない。
+
+実API/helper/実SFA admissionと合成時計/DBの17項目成功（invite-deadline-regression.log）。期限1ms前/ちょうど/1ms後、照会待ち中の失効、人数上限と失効の案内順位、claim待ち中の書込ロールバック、勤怠旧組織無効化、プロマネ参加作成の失効を含む。合成トランザクションは初期状態をスナップショットし、例外時に戻すため、失効時は書込を単に数えているのではなくメンバー/旧組織/招待の保持をassertする。実PostgreSQLのロック/commitタイミング・本番承諾は未確認。処理の最後の期限確認とDBcommit間の絶対時刻まで保証するものではない。
+
+前版ea6cc7f9の4ソースを別場所へ読み出し、同じ時計/DBで具体的なPOST応答を比較（invite-deadline-baseline.json）。SFA/勤怠の期限ちょうどが200、3サービスのclaim待ち中の失効が200と再現。前版プロマネの期限ちょうどは410であり、この点を既存不具合には数えない。新しい合成検証は全体回帰ゲートに追加した。勤怠の既存fixtureはDB取得結果の独立したオブジェクトを返すようstructuredCloneへ修正し、updateManyが取得済みのtokenまで直接書換えてしまう模擬の差異を解消した。既存の本人/転送/claim失敗/再試行/再送、SFAの上限/既所属ガード、プロマネの参加/招待回帰も成功。
+
+対象Lint成功、7ソースを凍結して全体ビルド31136を実行中。未コミット・未反映。UI版ea6cc7f9は具体的なVercel dpl_2TPUieCUacQf2B5ysWDkZSvqoXMQ/CI37398561803を再照会し、最新値をworkspace-invite-recovery-deployment-ea6cc7f9.jsonへ記録。全サービス監査、本番通し確認、他の招待APIのロック後再照合、現行ER更新、CLIENT_FETCH_ERROR原因特定は未完了。
+
+
+さらに残る5招待API（AIO/商談準備/見積/面接官/AI商談）も現行ソースを横断点検した。初回GET/POSTと組織ロック後の比較が期限ちょうどを有効扱いし、claimは読取時に固定したnowをgte条件へ使う。account/既所属照会やclaim待ち中の時刻進行を再確認していない。3サービスだけの補修を全招待の修正完了にはしない。次のcohortで実API/合成時計/ロック待ち/claimを検証し、ロック後の組織/本人/権限照合も併せて点検する。今回のビルド凍結後はこの5APIを編集していない。
+
+
+## 全9招待サービスへ期限・待機中失効の点検を拡張
+
+中断後31136のハンドルはUnknown process idで、pgrep対象プロセスとビルドlogを開くlsofもなし。logは型確認中で止まり終了コード不明のため合格根拠にしない。残るAPIを補修後14ソースを凍結し最終ビルド25733へ切り替えた。観測タイムアウトだけで再起動したものではない。
+
+AIO/商談準備/見積/面接官/AI商談のGET/POST/組織ロック後比較も期限ちょうどを失効へ変更。account/既所属照会後とclaim/既所属による招待削除後に再確認し、期限例外はTx外で410へ分類し全書込をrollbackする。claimは現在時刻のgtを使い、本人確認に用いたinviteEmail/role/組織をwhereへ束ねる。ロック後再読のorganizationIdがロック対象と一致しない場合は409。既存のowner拒否・本人照合・参加/既所属の応答契約を維持。HRも人数確認後/claim前/メンバー生成後に期限確認を追加し、失効時はメンバー/招待をrollbackして成功監査を記録しない。HRの既存初期失効行をEXPIREDへ分類する仕様は維持する。
+
+追加6APIの合成38項目成功、先行3サービス17項目と合わせて55項目。team-invite-deadline-regression.log。最初のsourceフリーズ以降の補修を含む最終Lint成功。5サービスの期限直前/ちょうど、ロック・本人・既所属照会待ち、claimと招待削除待ち、組織再読不一致、確認後のrole/email/組織変更を含む。HRは人数上限と失効の順位、claim/作成待ち中の失効rollbackと監査不実行、正常成功を確認。実DBの保証を模擬結果から確定せず、本番DB同時実行は未確認のまま扱う。
+
+前版ea6cc7f9の実6APIを読み出した比較では、5サービスの期限ちょうど/claim待ち/招待削除待ち/組織再読変更/role変更、HRのclaim・メンバー作成待ちが200となることを合成DBで再現（team-invite-deadline-baseline.json）。組織/role変更は合成DBで変更を注入した検査であり、実際の管理APIで任意の組織変更ができると確認したものではない。既存team invite本人/権限/再送回帰とHR状態回帰も成功。全9サービスをこの期限点検に含めたが、全17サービス全機能の完了・本番での実承諾成功の証拠ではない。
+
+UI版ea6cc7f9は現在の照会でVercel Ready・同SHA・本番別名を確認、CI37398561803もsuccess。workspace-invite-recovery-deployment-ea6cc7f9.json。全サービス認証後の通し確認、ER更新、CLIENT_FETCH_ERROR原因特定は未完了。
+
+UI版ea6cc7f9の公開HTML/JSも3サービスで200、再確認/切替/期限案内の配信を確認（workspace-invite-recovery-production-ea6cc7f9.json）。これは合成URLを使った静的配信検証で、招待APIや実承諾は操作していない。
+
+残るSFAの既所属fast pathは参加トランザクション外でPENDING招待をdeleteManyするため、削除待ち中の失効を今回の通常claim rollbackと同一保証にはできない。確認済みは既所属照会中の失効時に削除しないところまで。SFAの再読/role・inviteEmail束ねと既所属cleanupの一体化、9サービスの招待発行/再送の期限境界（予約枠と失効判定の一致）を次の点検対象に残す。
+
+最終ビルド25733は既存プロセスで終了コード0を確認。Prisma生成・全体オフライン回帰・型検査・Next本番ビルド成功。開始時の14ソースSHA-256と一致。対象Lint・diff check成功。この最終版をコミット・main pushする。本番Ready/配信と実DB同時実行は別途確認する。

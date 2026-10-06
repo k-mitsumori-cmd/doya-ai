@@ -1,0 +1,785 @@
+{
+  "scope": "Previous ea6cc7f9 APIs with synthetic clock/transaction. No production writes or messages.",
+  "results": [
+    {
+      "service": "aio",
+      "scenario": "exact",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T04:00:00.000Z",
+          "userId": "user",
+          "name": null
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "aio",
+      "scenario": "claim",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user",
+          "name": null
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "aio",
+      "scenario": "delete",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": null,
+        "created": 0
+      }
+    },
+    {
+      "service": "aio",
+      "scenario": "changed-role",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "admin",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user",
+          "name": null
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "aio",
+      "scenario": "changed-organization",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user",
+          "name": null
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "shodan",
+      "scenario": "exact",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T04:00:00.000Z",
+          "userId": "user",
+          "name": null
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "shodan",
+      "scenario": "claim",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user",
+          "name": null
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "shodan",
+      "scenario": "delete",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": null,
+        "created": 0
+      }
+    },
+    {
+      "service": "shodan",
+      "scenario": "changed-role",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "admin",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user",
+          "name": null
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "shodan",
+      "scenario": "changed-organization",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user",
+          "name": null
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "quote",
+      "scenario": "exact",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T04:00:00.000Z",
+          "userId": "user"
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "quote",
+      "scenario": "claim",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user"
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "quote",
+      "scenario": "delete",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": null,
+        "created": 0
+      }
+    },
+    {
+      "service": "quote",
+      "scenario": "changed-role",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "admin",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user"
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "quote",
+      "scenario": "changed-organization",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user"
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "mensetsu",
+      "scenario": "exact",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T04:00:00.000Z",
+          "userId": "user"
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "mensetsu",
+      "scenario": "claim",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user"
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "mensetsu",
+      "scenario": "delete",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": null,
+        "created": 0
+      }
+    },
+    {
+      "service": "mensetsu",
+      "scenario": "changed-role",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "admin",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user"
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "mensetsu",
+      "scenario": "changed-organization",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user"
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "aishodan",
+      "scenario": "exact",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T04:00:00.000Z",
+          "userId": "user"
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "aishodan",
+      "scenario": "claim",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user"
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "aishodan",
+      "scenario": "delete",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": null,
+        "created": 0
+      }
+    },
+    {
+      "service": "aishodan",
+      "scenario": "changed-role",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "admin",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user"
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "aishodan",
+      "scenario": "changed-organization",
+      "status": 200,
+      "stats": {
+        "writes": 1,
+        "rollbacks": 0,
+        "audits": 0
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACTIVE",
+          "role": "member",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": null,
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z",
+          "userId": "user"
+        },
+        "created": 0
+      }
+    },
+    {
+      "service": "hr",
+      "scenario": "claim",
+      "status": 200,
+      "stats": {
+        "writes": 2,
+        "rollbacks": 0,
+        "audits": 1
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACCEPTED",
+          "role": "MEMBER",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": "synthetic-token-long-enough",
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z"
+        },
+        "created": 1
+      }
+    },
+    {
+      "service": "hr",
+      "scenario": "create",
+      "status": 200,
+      "stats": {
+        "writes": 2,
+        "rollbacks": 0,
+        "audits": 1
+      },
+      "state": {
+        "member": {
+          "id": "invite",
+          "organizationId": "org",
+          "organization": {
+            "id": "org",
+            "name": "Synthetic",
+            "slug": "team"
+          },
+          "status": "ACCEPTED",
+          "role": "MEMBER",
+          "token": "synthetic-token-long-enough",
+          "inviteToken": "synthetic-token-long-enough",
+          "email": "qa@example.invalid",
+          "inviteEmail": "qa@example.invalid",
+          "createdAt": "2026-10-04T04:00:00.000Z",
+          "expiresAt": "2026-10-06T04:00:00.000Z",
+          "acceptedAt": "2026-10-06T03:59:59.999Z"
+        },
+        "created": 1
+      }
+    }
+  ]
+}

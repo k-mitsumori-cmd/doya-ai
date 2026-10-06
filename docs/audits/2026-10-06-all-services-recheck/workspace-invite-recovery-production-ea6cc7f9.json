@@ -1,0 +1,45 @@
+{
+  "observedAt": "2026-10-06T01:43:31.011Z",
+  "results": [
+    {
+      "service": "sfa",
+      "htmlStatus": 200,
+      "chunks": [
+        {
+          "script": "/_next/static/chunks/app/sfa/invite/%5Btoken%5D/page-fec5afb209a814e0.js?dpl=dpl_2TPUieCUacQf2B5ysWDkZSvqoXMQ",
+          "status": 200,
+          "hasRecheck": true,
+          "hasSwitch": true,
+          "hasUnavailable": true
+        }
+      ]
+    },
+    {
+      "service": "promane",
+      "htmlStatus": 200,
+      "chunks": [
+        {
+          "script": "/_next/static/chunks/app/promane/invite/%5Btoken%5D/page-3f6292962e4ee155.js?dpl=dpl_2TPUieCUacQf2B5ysWDkZSvqoXMQ",
+          "status": 200,
+          "hasRecheck": true,
+          "hasSwitch": true,
+          "hasUnavailable": true
+        }
+      ]
+    },
+    {
+      "service": "kintai",
+      "htmlStatus": 200,
+      "chunks": [
+        {
+          "script": "/_next/static/chunks/app/kintai/invite/%5Btoken%5D/page-1456debaa709e6cc.js?dpl=dpl_2TPUieCUacQf2B5ysWDkZSvqoXMQ",
+          "status": 200,
+          "hasRecheck": true,
+          "hasSwitch": true,
+          "hasUnavailable": true
+        }
+      ]
+    }
+  ],
+  "scope": "Read-only public HTML/JS, synthetic URL; no JS execution, invitation API or acceptance. Authenticated production flow unverified."
+}

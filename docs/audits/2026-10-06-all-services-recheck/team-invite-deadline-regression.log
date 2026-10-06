@@ -1,0 +1,82 @@
+PASS aio: exact deadline expires in GET/POST without mutation
+PASS aio: 1ms before deadline remains valid
+PASS aio: expiry during lock/account/existing read never grants membership
+PASS aio: delayed claim rolls back the consumed token and active membership
+PASS aio: delayed existing-member cleanup rolls back the invitation deletion
+PASS aio: changed role/email/organization between verification and claim never grants membership
+PASS aio: a different organization after locking is rejected without claim
+PASS shodan: exact deadline expires in GET/POST without mutation
+PASS shodan: 1ms before deadline remains valid
+PASS shodan: expiry during lock/account/existing read never grants membership
+PASS shodan: delayed claim rolls back the consumed token and active membership
+PASS shodan: delayed existing-member cleanup rolls back the invitation deletion
+PASS shodan: changed role/email/organization between verification and claim never grants membership
+PASS shodan: a different organization after locking is rejected without claim
+PASS quote: exact deadline expires in GET/POST without mutation
+PASS quote: 1ms before deadline remains valid
+PASS quote: expiry during lock/account/existing read never grants membership
+PASS quote: delayed claim rolls back the consumed token and active membership
+PASS quote: delayed existing-member cleanup rolls back the invitation deletion
+PASS quote: changed role/email/organization between verification and claim never grants membership
+PASS quote: a different organization after locking is rejected without claim
+PASS mensetsu: exact deadline expires in GET/POST without mutation
+PASS mensetsu: 1ms before deadline remains valid
+PASS mensetsu: expiry during lock/account/existing read never grants membership
+PASS mensetsu: delayed claim rolls back the consumed token and active membership
+PASS mensetsu: delayed existing-member cleanup rolls back the invitation deletion
+PASS mensetsu: changed role/email/organization between verification and claim never grants membership
+PASS mensetsu: a different organization after locking is rejected without claim
+PASS aishodan: exact deadline expires in GET/POST without mutation
+PASS aishodan: 1ms before deadline remains valid
+PASS aishodan: expiry during lock/account/existing read never grants membership
+PASS aishodan: delayed claim rolls back the consumed token and active membership
+PASS aishodan: delayed existing-member cleanup rolls back the invitation deletion
+PASS aishodan: changed role/email/organization between verification and claim never grants membership
+PASS aishodan: a different organization after locking is rejected without claim
+PASS HR: expiry during seat count outranks capacity and cannot claim
+PASS HR: expiry during claim or member creation rolls back both rows and skips success audit
+PASS HR: valid invitation still claims, creates membership and records audit
+{
+  "passed": 38,
+  "scope": "Actual six APIs; synthetic clock, row lock and transactional rollback model; no production DB or email",
+  "results": [
+    "aio: exact deadline expires in GET/POST without mutation",
+    "aio: 1ms before deadline remains valid",
+    "aio: expiry during lock/account/existing read never grants membership",
+    "aio: delayed claim rolls back the consumed token and active membership",
+    "aio: delayed existing-member cleanup rolls back the invitation deletion",
+    "aio: changed role/email/organization between verification and claim never grants membership",
+    "aio: a different organization after locking is rejected without claim",
+    "shodan: exact deadline expires in GET/POST without mutation",
+    "shodan: 1ms before deadline remains valid",
+    "shodan: expiry during lock/account/existing read never grants membership",
+    "shodan: delayed claim rolls back the consumed token and active membership",
+    "shodan: delayed existing-member cleanup rolls back the invitation deletion",
+    "shodan: changed role/email/organization between verification and claim never grants membership",
+    "shodan: a different organization after locking is rejected without claim",
+    "quote: exact deadline expires in GET/POST without mutation",
+    "quote: 1ms before deadline remains valid",
+    "quote: expiry during lock/account/existing read never grants membership",
+    "quote: delayed claim rolls back the consumed token and active membership",
+    "quote: delayed existing-member cleanup rolls back the invitation deletion",
+    "quote: changed role/email/organization between verification and claim never grants membership",
+    "quote: a different organization after locking is rejected without claim",
+    "mensetsu: exact deadline expires in GET/POST without mutation",
+    "mensetsu: 1ms before deadline remains valid",
+    "mensetsu: expiry during lock/account/existing read never grants membership",
+    "mensetsu: delayed claim rolls back the consumed token and active membership",
+    "mensetsu: delayed existing-member cleanup rolls back the invitation deletion",
+    "mensetsu: changed role/email/organization between verification and claim never grants membership",
+    "mensetsu: a different organization after locking is rejected without claim",
+    "aishodan: exact deadline expires in GET/POST without mutation",
+    "aishodan: 1ms before deadline remains valid",
+    "aishodan: expiry during lock/account/existing read never grants membership",
+    "aishodan: delayed claim rolls back the consumed token and active membership",
+    "aishodan: delayed existing-member cleanup rolls back the invitation deletion",
+    "aishodan: changed role/email/organization between verification and claim never grants membership",
+    "aishodan: a different organization after locking is rejected without claim",
+    "HR: expiry during seat count outranks capacity and cannot claim",
+    "HR: expiry during claim or member creation rolls back both rows and skips success audit",
+    "HR: valid invitation still claims, creates membership and records audit"
+  ]
+}

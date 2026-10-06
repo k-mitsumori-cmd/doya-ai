@@ -12,5 +12,5 @@ export function isKintaiInviteExpired(token: string | null, createdAt: Date, now
     if (!match) return true
     issuedAt = parseInt(match[1], 36)
   }
-  return !Number.isSafeInteger(issuedAt) || issuedAt > now || now - issuedAt > INVITE_EXPIRY_MS
+  return !Number.isSafeInteger(issuedAt) || issuedAt > now || now - issuedAt >= INVITE_EXPIRY_MS
 }

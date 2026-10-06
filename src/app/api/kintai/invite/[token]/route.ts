@@ -8,6 +8,8 @@ import { prisma } from '@/lib/prisma'
 import { isKintaiInviteExpired } from '@/lib/kintai/invite-token'
 
 type Ctx = { params: Promise<{ token: string }> }
+class InvitationExpired extends Error {}
+const expiredMessage = '招待リンクの有効期限（48時間）が切れています。管理者に再招待を依頼してください。'
 
 export async function GET(req: NextRequest, ctx: Ctx) {
   try {
@@ -84,6 +86,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
           const existing = await tx.kintaiMember.findFirst({
             where: { organizationId: member.organizationId, userId, id: { not: member.id } },
           })
+          if (isKintaiInviteExpired(member.inviteToken, member.createdAt)) throw new InvitationExpired()
           if (existing) return { status: 409, error: 'このアカウントは既にこの組織に所属しています' }
 
           await tx.kintaiMember.updateMany({
@@ -95,11 +98,14 @@ export async function POST(req: NextRequest, ctx: Ctx) {
             data: { userId, status: 'ACTIVE', inviteToken: null, acceptedAt: new Date() },
           })
           if (claimed.count !== 1) throw new Error('Invitation was claimed concurrently')
+          // A delayed DB operation must not commit a transfer after expiry.
+          if (isKintaiInviteExpired(member.inviteToken, member.createdAt)) throw new InvitationExpired()
           return { status: 200, success: true, organizationId: member.organizationId, organizationName: member.organization.name }
         }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
         const { status, ...body } = result
         return NextResponse.json(body, { status })
       } catch (e: any) {
+        if (e instanceof InvitationExpired) return NextResponse.json({ error: expiredMessage }, { status: 410 })
         if (e?.code === 'P2002') return NextResponse.json({ error: 'このアカウントは既にこの組織に所属しています' }, { status: 409 })
         if (e?.code !== 'P2034' || attempt === 2) throw e
       }

@@ -10,6 +10,7 @@ import { sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
 
 type Ctx = { params: Promise<{ token: string }> }
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
+class InvitationExpired extends Error {}
 
 // GET /api/sfa/invite/[token] — 招待の検証
 export async function GET(req: NextRequest, ctx: Ctx) {
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   if (!member || member.status !== 'PENDING') {
     return NextResponse.json({ error: '招待が見つからないか、既に承諾済みです' }, { status: 404 })
   }
-  if (Date.now() - member.createdAt.getTime() > INVITE_TTL_MS) {
+  if (Date.now() - member.createdAt.getTime() >= INVITE_TTL_MS) {
     return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
   return NextResponse.json({
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!member || member.status !== 'PENDING') {
     return NextResponse.json({ error: '招待が見つからないか、既に承諾済みです' }, { status: 404 })
   }
-  if (Date.now() - member.createdAt.getTime() > INVITE_TTL_MS) {
+  if (Date.now() - member.createdAt.getTime() >= INVITE_TTL_MS) {
     return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
 
@@ -62,6 +63,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const existing = await prisma.sfaMember.findFirst({
     where: { organizationId: member.organizationId, userId, status: 'ACTIVE' },
   })
+  if (Date.now() - member.createdAt.getTime() >= INVITE_TTL_MS) {
+    return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
+  }
   if (existing) {
     // 読み取り後に別の承諾が完了しても、ACTIVE になったメンバーを削除しない。
     await prisma.sfaMember.deleteMany({
@@ -71,21 +75,30 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   }
 
   try {
-    const admitted = await withSfaAdmission(member.organizationId, { members: 1 }, (tx) => tx.sfaMember.updateMany({
-      where: {
-        id: member.id,
-        organizationId: member.organizationId,
-        status: 'PENDING',
-        inviteToken: p.token,
-        createdAt: { gte: new Date(Date.now() - INVITE_TTL_MS) },
-      },
-      data: { userId, name: userName, status: 'ACTIVE', acceptedAt: new Date(), inviteToken: null },
-    }))
-    if (admitted.limit) return sfaQuotaResponse(admitted.limit)
+    const admitted = await withSfaAdmission(member.organizationId, { members: 1 }, async (tx) => {
+      if (Date.now() - member.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
+      const claimed = await tx.sfaMember.updateMany({
+        where: {
+          id: member.id,
+          organizationId: member.organizationId,
+          status: 'PENDING',
+          inviteToken: p.token,
+          createdAt: { gt: new Date(Date.now() - INVITE_TTL_MS) },
+        },
+        data: { userId, name: userName, status: 'ACTIVE', acceptedAt: new Date(), inviteToken: null },
+      })
+      if (Date.now() - member.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
+      return claimed
+    })
+    if (admitted.limit) {
+      if (Date.now() - member.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
+      return sfaQuotaResponse(admitted.limit)
+    }
     if (admitted.created.count !== 1) {
       return NextResponse.json({ error: '招待は既に使用されたか、有効期限が切れています' }, { status: 409 })
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof InvitationExpired) return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
     return NextResponse.json({ error: '既にこの組織に所属しています' }, { status: 409 })
   }
   return NextResponse.json({ ok: true, organizationSlug: member.organization.slug })

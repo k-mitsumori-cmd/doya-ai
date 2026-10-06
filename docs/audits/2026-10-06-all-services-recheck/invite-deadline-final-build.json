@@ -1,0 +1,25 @@
+{
+  "session": 25733,
+  "exitCode": 0,
+  "observedAt": "2026-10-06T01:53:46.239436+00:00",
+  "log": "/tmp/doya-invite-deadline-final-build-20261006.log",
+  "sourceHashes": {
+    "src/app/api/sfa/invite/[token]/route.ts": "d7bf99561cde24e4bb9697522957e5d7518f59b9de8cfb859e3dd12e7157c1a9",
+    "src/app/api/kintai/invite/[token]/route.ts": "911e547ffbcc66c0664684540baa3127e41751378120c184689b3fbea9d6175c",
+    "src/lib/kintai/invite-token.ts": "27894dddd913d46e33f22870289a72e74ffa9e7655682d932993d0d7e7a8cc54",
+    "src/lib/promane/invite-admission.ts": "21b57ab263c3553557dd6e3f48c25c098d64c6e44bea11868df6b125e919d708",
+    "scripts/security-regression/verify-kintai-invite-atomic.cjs": "ccb3bd3dd477c9b368e1e8d70ee06cc68812811daea5e5ac9fa7e2bd3ede408c",
+    "scripts/security-regression/verify-invite-deadline-rollback.cjs": "fd4a225ad072be49ca8dcf5de84f7fa2f58633d7a248b44aec539cf7b533daf4",
+    "scripts/security-regression/run.cjs": "76ba2f0f6dd06bf90d850e4c63b35e8d53a36a6467e8c8a3d63486aad145ee3e",
+    "src/app/api/aio/invite/[token]/route.ts": "c63fc193e68fda4701aed8209b193905062eef3586ab2c13ad0f4d3cf17e27ec",
+    "src/app/api/shodan/invite/[token]/route.ts": "875abc1e902547e1554b3abfc1f67d434f36a51c5d39fcde8ec7b24c1409a446",
+    "src/app/api/quote/invite/[token]/route.ts": "ceea12d4c4718726c33e4318b82e094742b1e03ebd1d66b127781db49ee71a35",
+    "src/app/api/mensetsu/invite/[token]/route.ts": "413bd1cff762a3dfb351353a9fab00467d122994237bf3d7f28834371a8da600",
+    "src/app/api/aishodan/invite/[token]/route.ts": "64bd0a3e5bd99e790aed8380c714bfa64a5ddabad7ebc0352980f484fc4338ed",
+    "src/app/api/hr/organization/invite/accept/route.ts": "6483915994f9853f125683bde7b09e15ab08573edc5d860aa63b365435367f7f",
+    "scripts/security-regression/verify-team-invite-deadlines.cjs": "ca9c264b20768389e048b6e3dd1866d1490691e2a5921c121d61134a60ba78ab"
+  },
+  "syntheticGroups": 55,
+  "targetedLint": "passed",
+  "scope": "Prisma generation, all offline security regression, tsc, Next production build; real PostgreSQL concurrency and authenticated production acceptance unverified"
+}

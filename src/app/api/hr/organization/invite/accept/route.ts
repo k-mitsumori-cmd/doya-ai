@@ -96,9 +96,11 @@ export async function POST(req: NextRequest) {
         const activeMembers = await tx.hrOrganizationMember.count({
           where: { organizationId: invitation.organizationId, status: 'ACTIVE' },
         })
+        if (currentInvite.expiresAt.getTime() <= Date.now()) throw new InviteExpiredError()
         if (activeMembers >= limit) return { allowed: false as const, plan, limit }
       }
       const acceptedAt = new Date()
+      if (currentInvite.expiresAt.getTime() <= acceptedAt.getTime()) throw new InviteExpiredError()
       const claimed = await tx.hrInvitation.updateMany({
         where: { id: invitation.id, token, organizationId: invitation.organizationId, role: 'MEMBER', email: currentInvite.email, status: 'PENDING', expiresAt: { gt: acceptedAt } },
         data: { status: 'ACCEPTED', acceptedAt },
@@ -119,6 +121,7 @@ export async function POST(req: NextRequest) {
           acceptedAt,
         },
       })
+      if (currentInvite.expiresAt.getTime() <= Date.now()) throw new InviteExpiredError()
       return { allowed: true as const, member }
     })
     if (!admission.allowed) {

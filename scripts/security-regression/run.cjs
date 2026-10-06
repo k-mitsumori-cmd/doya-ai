@@ -330,6 +330,16 @@ if (sfaAdmissionRoutes.error || sfaAdmissionRoutes.status !== 0) {
   console.error('Security regression failed: verify-sfa-admission-routes.cjs');
   process.exit(1);
 }
+const invitationDeadlines = spawnSync(process.execPath, [path.join(__dirname, 'verify-invite-deadline-rollback.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (invitationDeadlines.error || invitationDeadlines.status !== 0) {
+  console.error('Security regression failed: verify-invite-deadline-rollback.cjs');
+  process.exit(1);
+}
+const teamInvitationDeadlines = spawnSync(process.execPath, [path.join(__dirname, 'verify-team-invite-deadlines.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (teamInvitationDeadlines.error || teamInvitationDeadlines.status !== 0) {
+  console.error('Security regression failed: verify-team-invite-deadlines.cjs');
+  process.exit(1);
+}
 const hrEmployeeReactivation = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-employee-reactivation.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrEmployeeReactivation.error || hrEmployeeReactivation.status !== 0) {
   console.error('Security regression failed: verify-hr-employee-reactivation.cjs');
