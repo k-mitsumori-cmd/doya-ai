@@ -4,6 +4,8 @@ import { showServiceLimit } from '@/lib/service-limit-ui'
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { readBillingResponse } from '@/lib/billing-response-client'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { MODES, MODE_IDS, getMode } from '@/lib/cunning/modes'
@@ -27,6 +29,25 @@ interface SessionRow {
 
 export default function CunningTool() {
   const router = useRouter()
+  const { data: session, status: authStatus } = useSession()
+  const actor = authStatus === 'unauthenticated' ? '' : session?.user?.id || ''
+  const allowed = authStatus === 'authenticated' && Boolean(actor)
+  const scope = JSON.stringify([actor, authStatus, (session?.user as { plan?: string } | undefined)?.plan])
+  const epoch = useRef({ scope, version: 0 })
+  if (epoch.current.scope !== scope) epoch.current = { scope, version: epoch.current.version + 1 }
+  const contextKey = JSON.stringify([scope, epoch.current.version])
+  const contextRef = useRef(contextKey)
+  contextRef.current = contextKey
+  const mounted = useRef(true)
+  const startBusy = useRef(false)
+  const startUnknownRef = useRef(false)
+  const startAbort = useRef<AbortController | null>(null)
+  const confirmedStart = useRef<string | null>(null)
+  const [startUnknown, setStartUnknown] = useState(false)
+  const [startNotice, setStartNotice] = useState<string | null>(null)
+  const [confirmedSessionId, setConfirmedSessionId] = useState<string | null>(null)
+  const [loginRequired, setLoginRequired] = useState(false)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; startAbort.current?.abort() } }, [])
   const [mode, setMode] = useState<CunningMode>('sales')
   const [kbs, setKbs] = useState<KB[]>([])
   const [kbError, setKbError] = useState(false)
@@ -40,7 +61,11 @@ export default function CunningTool() {
   const [profileError, setProfileError] = useState('')
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [sessionsError, setSessionsError] = useState(false)
-  const [usage, setUsage] = useState<any>(null)
+  const [storedUsage, setUsage] = useState<any>(null)
+  const [loadedUsageKey, setLoadedUsageKey] = useState('')
+  const usage = allowed && loadedUsageKey === contextKey ? storedUsage : null
+  const latestUsage = useRef(usage)
+  latestUsage.current = usage
   const [usageError, setUsageError] = useState(false)
   const usageRequest = useRef(0)
   const knowledgeRequest = useRef(0)
@@ -51,6 +76,9 @@ export default function CunningTool() {
   const [applicantId, setApplicantId] = useState('')
   const [personaNote, setPersonaNote] = useState('')
   const [starting, setStarting] = useState(false)
+
+  const startDraft = useRef({ mode, kbId, companyId, applicantId, personaNote })
+  startDraft.current = { mode, kbId, companyId, applicantId, personaNote }
 
   const def = getMode(mode)
 
@@ -80,9 +108,52 @@ export default function CunningTool() {
       .catch(() => { if (request === usageRequest.current && listRequest === sessionsRequest.current) setSessionsError(true) })
   }
 
+  const refreshUsage = (request = usageRequest.current) => {
+    if (!allowed || contextRef.current !== contextKey || usageAbort.current) return
+    latestUsage.current = null
+    setUsage(null)
+    setUsageError(false)
+    const controller = new AbortController()
+    usageAbort.current = controller
+    const current = () => mounted.current && !controller.signal.aborted && request === usageRequest.current && contextRef.current === contextKey
+    void readBillingResponse('/api/cunning/usage', { method: 'GET' }, controller.signal).then(response => {
+      if (!current()) return
+      const data = response.data
+      if (response.status === 401 || data.plan === 'GUEST') setLoginRequired(true)
+      if (!response.ok || data.error !== undefined || data.code !== undefined || typeof data.plan !== 'string' ||
+        !['FREE', 'LIGHT', 'PRO', 'ENTERPRISE'].includes(data.plan) || (data.tier !== undefined && data.tier !== data.plan) ||
+        typeof data.usedMinutes !== 'number' || !Number.isSafeInteger(data.usedMinutes) || data.usedMinutes < 0 ||
+        typeof data.reservedSeconds !== 'number' || !Number.isSafeInteger(data.reservedSeconds) || data.reservedSeconds < 0) throw new Error('usage unavailable')
+      recordingAllowance(data)
+      if (loginRequired) setStartNotice(null)
+      setLoginRequired(false)
+      latestUsage.current = data
+      setUsage(data)
+      setLoadedUsageKey(contextKey)
+    }).catch(() => { if (current()) setUsageError(true) }).finally(() => {
+      if (usageAbort.current === controller) usageAbort.current = null
+      controller.abort()
+    })
+  }
+  const refreshUsageRef = useRef(refreshUsage)
+  refreshUsageRef.current = refreshUsage
+  useEffect(() => {
+    if (allowed) refreshUsageRef.current()
+    const focus = () => refreshUsageRef.current()
+    if (allowed) window.addEventListener('focus', focus)
+    return () => {
+      usageAbort.current?.abort()
+      usageAbort.current = null
+      startAbort.current?.abort()
+      window.removeEventListener('focus', focus)
+    }
+  }, [allowed, contextKey])
+
   const load = () => {
+    if (!allowed || contextRef.current !== contextKey) return
     const request = ++usageRequest.current
     usageAbort.current?.abort()
+    usageAbort.current = null
     setCompanies([])
     setApplicants([])
     setCompanyId('')
@@ -109,19 +180,7 @@ export default function CunningTool() {
       setApplicantTotal(applicantPage.total)
     }).catch((error) => { if (request === usageRequest.current) setProfileError(error instanceof Error ? error.message : '一覧を取得できませんでした') })
     loadSessions(request)
-    setUsage(null)
-    setUsageError(false)
-    const controller = new AbortController()
-    usageAbort.current = controller
-    const timeout = setTimeout(() => controller.abort(), 15000)
-    fetch('/api/cunning/usage', { cache: 'no-store', signal: controller.signal }).then(async (r) => {
-      if (!r.ok) throw new Error('usage unavailable')
-      const data = await r.json()
-      recordingAllowance(data)
-      return data
-    }).then(data => { if (request === usageRequest.current) setUsage(data) })
-      .catch(() => { if (request === usageRequest.current) setUsageError(true) })
-      .finally(() => clearTimeout(timeout))
+    refreshUsage(request)
   }
 
   async function loadMoreProfiles(kind: 'company' | 'profiles') {
@@ -150,44 +209,90 @@ export default function CunningTool() {
       if (request === usageRequest.current) setLoadingMoreProfiles(null)
     }
   }
+  const loadRef = useRef(load)
+  loadRef.current = load
   useEffect(() => {
     const requestCounter = usageRequest
     const knowledgeCounter = knowledgeRequest
     const sessionsCounter = sessionsRequest
     const controllerRef = usageAbort
-    load()
+    loadRef.current()
     return () => { requestCounter.current++; knowledgeCounter.current++; sessionsCounter.current++; controllerRef.current?.abort() }
   }, [])
 
   const start = async () => {
-    if (!usage || starting || usage.remainingSeconds === 0) return
+    if (!allowed || contextRef.current !== contextKey || !mounted.current || startBusy.current || startUnknownRef.current || confirmedStart.current || usageAbort.current) return
+    try { if (!latestUsage.current || recordingAllowance(latestUsage.current) === 0) return } catch { return }
+    const draft = startDraft.current
+    const selectedMode = getMode(draft.mode)
+    if (draft.personaNote.length > 1000) { setStartNotice('設定は1,000文字以内で入力してください。'); return }
+    const controller = new AbortController()
+    startAbort.current = controller
+    startBusy.current = true
+    startUnknownRef.current = true
     setStarting(true)
+    setStartNotice(null)
+    const current = () => mounted.current && !controller.signal.aborted && contextRef.current === contextKey
     try {
-      const res = await fetch('/api/cunning/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await readBillingResponse('/api/cunning/sessions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          mode,
-          knowledgeBaseId: def.context === 'knowledge' ? kbId || null : null,
-          companyProfileId: def.context === 'company' ? companyId || null : null,
-          applicantProfileId: def.context === 'company' ? applicantId || null : null,
-          personaNote: personaNote.trim() || null,
+          mode: draft.mode,
+          knowledgeBaseId: selectedMode.context === 'knowledge' ? draft.kbId || null : null,
+          companyProfileId: selectedMode.context === 'company' ? draft.companyId || null : null,
+          applicantProfileId: selectedMode.context === 'company' ? draft.applicantId || null : null,
+          personaNote: draft.personaNote.trim() || null,
         }),
-      })
-      const d = await res.json()
-      if (res.status === 403) {
-        load()
-        if (d.code === 'LIMIT') {
-          showServiceLimit('/api/cunning/sessions', res.status, d)
-          setStarting(false)
+      }, controller.signal)
+      if (!current()) return
+      const data = response.data
+      if (!response.ok) {
+        if ([400, 401, 403, 404, 422, 429].includes(response.status)) {
+          startUnknownRef.current = false
+          if (response.status === 401) { setLoginRequired(true); setStartNotice('ログイン情報を確認できません。再度ログインしてください。'); return }
+          if (response.status === 403 && data.code === 'LIMIT') {
+            showServiceLimit('/api/cunning/sessions', response.status, {
+              code: 'LIMIT', error: '今月の利用上限に達しました。',
+              ...(data.upgradeUrl === '/cunning/pricing' ? { upgradeUrl: '/cunning/pricing' } : { contactUrl: SUPPORT_CONTACT_URL }),
+            })
+            refreshUsageRef.current()
+            setStartNotice('今月の利用上限に達しました。プラン・利用条件をご確認ください。')
+            return
+          }
+          if (response.status === 403 && data.code === 'RECORDING_RESERVED') {
+            refreshUsageRef.current()
+            setStartNotice('別の録音で利用時間を確保しています。録音の停止後に利用状況を再確認してください。')
+            return
+          }
+          setStartNotice('セッションを開始できませんでした。入力内容と選択した資料をご確認ください。')
           return
         }
+        throw new Error('Unknown creation result')
       }
-      if (!res.ok) throw new Error(d.error || 'セッションを開始できませんでした')
-      router.push(`/cunning/live/${d.session.id}`)
-    } catch (e: any) {
-      toast.error(e.message)
-      setStarting(false)
+      const created = data.session as { id?: unknown; userId?: unknown; mode?: unknown } | undefined
+      if (data.error !== undefined || data.code !== undefined || !created || typeof created.id !== 'string' ||
+        !/^[a-zA-Z0-9_-]{1,128}$/.test(created.id) || created.userId !== actor || created.mode !== draft.mode) throw new Error('Unknown creation result')
+      confirmedStart.current = created.id
+      setConfirmedSessionId(created.id)
+      startUnknownRef.current = false
+      setStartNotice('セッションを作成しました。画面が開かない場合は、作成済みセッションを開いてください。')
+      try { router.push(`/cunning/live/${created.id}`) }
+      catch { setStartNotice('セッションは作成済みです。作成済みセッションを開いてください。') }
+    } catch {
+      // A transport/body failure cannot establish whether the server already created the session.
+    } finally {
+      if (startAbort.current === controller) {
+        startAbort.current = null
+        startBusy.current = false
+        if (mounted.current) {
+          setStarting(false)
+          if (startUnknownRef.current) {
+            setStartUnknown(true)
+            setStartNotice('作成結果を確認できませんでした。作成済みセッションがある可能性があります。履歴を確認してから、新しいセッションを作成してください。')
+          }
+        }
+      }
+      controller.abort()
     }
   }
 
@@ -354,9 +459,19 @@ export default function CunningTool() {
           </div>
         </div>
 
+        {startNotice && <div role="alert" className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+          <p>{startNotice}</p>
+          <div className="mt-2 flex flex-wrap gap-3 font-bold">
+            <Link href="/cunning/history" className="underline">セッション履歴を確認する</Link>
+            {confirmedSessionId && <Link href={`/cunning/live/${confirmedSessionId}`} className="underline">作成済みセッションを開く</Link>}
+            {loginRequired && <Link href="/auth/signin?callbackUrl=%2Fcunning" className="underline">再度ログインする</Link>}
+            <Link href={SUPPORT_CONTACT_URL} className="underline">お問い合わせ</Link>
+            {startUnknown && <button type="button" disabled={starting} onClick={() => { startUnknownRef.current = false; setStartUnknown(false); setStartNotice(null) }} className="underline">履歴を確認してから新しいセッションを作成</button>}
+          </div>
+        </div>}
         <button
           onClick={start}
-          disabled={starting || overLimit || !usage}
+          disabled={starting || overLimit || !usage || !allowed || loginRequired || startUnknown || Boolean(confirmedSessionId)}
           className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white font-black text-lg shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all disabled:opacity-50"
         >
           {!usage ? (
@@ -372,7 +487,8 @@ export default function CunningTool() {
             </span>
           )}
         </button>
-        {(usageError || (overLimit && usage?.reservedSeconds > 0)) && <button type="button" onClick={load} className="mt-3 w-full rounded-xl border border-slate-300 p-3 font-bold text-slate-700">利用状況を再確認する</button>}
+        {usageError && loginRequired && <Link href="/auth/signin?callbackUrl=%2Fcunning" className="mt-3 block underline">再度ログインする</Link>}
+        {(usageError || (overLimit && usage?.reservedSeconds > 0)) && <button type="button" onClick={() => refreshUsage()} className="mt-3 w-full rounded-xl border border-slate-300 p-3 font-bold text-slate-700">利用状況を再確認する</button>}
         {overLimit && !usage?.reservedSeconds && <a href={usage?.plan === 'FREE' ? '/cunning/pricing' : SUPPORT_CONTACT_URL} className="mt-3 block w-full rounded-xl bg-violet-700 p-3 text-center font-bold text-white">{usage?.plan === 'FREE' ? 'プラン・利用条件を確認する' : '追加の利用枠を相談する'}</a>}
         <p className="text-center text-xs text-slate-400 font-bold mt-2">
           開始後、会議/配信タブの音声共有を許可してください（Chrome/Edge推奨）

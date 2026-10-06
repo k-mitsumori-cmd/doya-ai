@@ -1,0 +1,25 @@
+{
+  "status": "full-gate-passed",
+  "parent": "91f7b025ae606e2d701b4e56184f318e0a01d136",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/cunning-start-release-3f78467a-b99e-4394-9db6-2387c270d2c8",
+  "mountedCases": 27,
+  "typecheck": "passed before final unauthorized-usage adjustment; full final gate includes tsc",
+  "legacyLoadAndAllowance": "passed",
+  "scope": "Actual full Cunning Tool, allowance/profile/mode modules and bounded 35s/64KiB reader under StrictMode with synthetic auth/HTTP/clock/router. Single-frame start lock, strict owned ID/mode acknowledgment, unknown-result history recovery, auth/ABA/unmount cancellation, current quota guard, isolated metadata refresh preserving selected profiles/drafts. No actual session creation, recording, paid AI, DB or customer-flow verification.",
+  "production": "not-yet-committed-or-deployed",
+  "remaining": "Profile/company/knowledge/session list readers remain unbounded and all-service authenticated business flows remain incomplete.",
+  "remainingServerSemantics": "Session creation POST still has no durable creation idempotency key. Client avoids automatic uncertain retry, but reload/explicit new creation can produce another session; cross-tab/session-creation exactly-once is NOT claimed. Recording leases separately enforce time quota.",
+  "sourceFiles": 2587,
+  "gates": [
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T19:36:26.929987+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T19:36:28.701991+00:00"
+    }
+  ]
+}

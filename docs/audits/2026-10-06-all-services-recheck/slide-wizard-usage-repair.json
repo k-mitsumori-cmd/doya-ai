@@ -1,5 +1,5 @@
 {
-  "status": "final-full-gate-passed",
+  "status": "pushed-production-build-running",
   "parent": "a748323a654a84dc43757ef371a4235c9af3563d",
   "mountedCases": 24,
   "legacyWizardRecovery": "passed",
@@ -7,7 +7,10 @@
   "typecheck": "passed before final unauthorized-UI adjustment; full final gate includes tsc",
   "gate": "docs/audits/2026-10-06-all-services-recheck/slide-wizard-usage-release-e88aa5e0-e44b-4e10-a71a-3d96afe5fb56",
   "scope": "Strict metadata with bounded 35s/64KiB reader; unknown/invalid quota cannot create new projects; retained confirmed-project recovery, actor/ABA cancellation and input preservation. Actual mounted Wizard with synthetic network/clock/session, no real project writes, provider or DB.",
-  "production": "not-yet-committed-or-deployed",
+  "production": {
+    "url": "doya-mr7r6sta0-surisutas-projects.vercel.app",
+    "state": "BUILDING"
+  },
   "additionalCandidateDefect": {
     "status": "confirmed-unfixed",
     "proof": "slide-wizard-retained-handler-baseline.log",
@@ -31,5 +34,10 @@
       "exitCode": 0,
       "endedAt": "2026-10-06T19:30:01.297845+00:00"
     }
-  ]
+  ],
+  "commit": "91f7b025ae606e2d701b4e56184f318e0a01d136",
+  "ci": {
+    "id": 37519479644,
+    "status": "in_progress"
+  }
 }

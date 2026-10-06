@@ -1,0 +1,17 @@
+{
+  "status": "confirmed-unfixed",
+  "results": [
+    {
+      "case": "Pending knowledge read",
+      "observed": "No deadline registered; no actionable failure state. Source uses unbounded fetch/json.",
+      "scope": "Actual extracted callback with synthetic never-resolving read; no claim about production provider latency."
+    },
+    {
+      "case": "Network failure in profile/company load",
+      "observed": "Raw synthetic network Error.message assigned to visible profileError",
+      "scope": "Actual extracted load callback with synthetic fetch/setters; no actual customer or network diagnostic disclosure asserted."
+    }
+  ],
+  "source": "src/app/cunning/Tool.tsx",
+  "scope": "Read-only synthetic callback evidence only; no actual API, session, provider, recording or DB operations."
+}
