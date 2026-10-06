@@ -1,0 +1,67 @@
+{
+  "cases": 48,
+  "services": [
+    {
+      "service": "aio",
+      "cases": 24,
+      "checks": [
+        "same-frame current draft and double invite sends only once",
+        "retained invite cannot write after org",
+        "retained invite cannot write after aba",
+        "retained invite cannot write after actor",
+        "retained invite cannot write after auth",
+        "retained invite cannot write after unmount",
+        "late alpha invite cannot clear beta draft or load alpha rows",
+        "late unmounted invite performs no follow-up read",
+        "same actor auth refresh retains draft and unknown write recovery",
+        "unknown response stops retry and existing row does not confirm new invite",
+        "new matching invite read confirms state without fabricating delivery or URL",
+        "confirmed invite survives failed follow-up list",
+        "new draft survives older successful invitation",
+        "own and same-rank rows cannot be removed",
+        "retained remove rejected after organization switch before confirmation",
+        "delete double activation locked and exact target acknowledged",
+        "wrong delete acknowledgement stops resending",
+        "HTTP500 write remains unknown across authentication refresh",
+        "known validation failure permits corrected invitation",
+        "cancelled deletion confirmation performs no request",
+        "observed accepted invitation hides prior pending URL",
+        "missing own membership rejects list and blocks mutation",
+        "unauthenticated view provides login without loading forever",
+        "cancelling pending invite removes displayed URL"
+      ],
+      "scope": "Actual mounted AppLayout, member page, guard, parsers and bounded transport under StrictMode. Synthetic session/HTTP/confirmation only; no real email, DB or provider."
+    },
+    {
+      "service": "shodan",
+      "cases": 24,
+      "checks": [
+        "same-frame current draft and double invite sends only once",
+        "retained invite cannot write after org",
+        "retained invite cannot write after aba",
+        "retained invite cannot write after actor",
+        "retained invite cannot write after auth",
+        "retained invite cannot write after unmount",
+        "late alpha invite cannot clear beta draft or load alpha rows",
+        "late unmounted invite performs no follow-up read",
+        "same actor auth refresh retains draft and unknown write recovery",
+        "unknown response stops retry and existing row does not confirm new invite",
+        "new matching invite read confirms state without fabricating delivery or URL",
+        "confirmed invite survives failed follow-up list",
+        "new draft survives older successful invitation",
+        "own and same-rank rows cannot be removed",
+        "retained remove rejected after organization switch before confirmation",
+        "delete double activation locked and exact target acknowledged",
+        "wrong delete acknowledgement stops resending",
+        "HTTP500 write remains unknown across authentication refresh",
+        "known validation failure permits corrected invitation",
+        "cancelled deletion confirmation performs no request",
+        "observed accepted invitation hides prior pending URL",
+        "missing own membership rejects list and blocks mutation",
+        "unauthenticated view provides login without loading forever",
+        "cancelling pending invite removes displayed URL"
+      ],
+      "scope": "Actual mounted AppLayout, member page, guard, parsers and bounded transport under StrictMode. Synthetic session/HTTP/confirmation only; no real email, DB or provider."
+    }
+  ]
+}

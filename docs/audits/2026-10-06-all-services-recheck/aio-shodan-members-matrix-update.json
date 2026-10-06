@@ -1,0 +1,113 @@
+{
+  "scope": "Candidate partial evidence only, full criteria unproven",
+  "changes": [
+    {
+      "before": {
+        "serviceId": "shodan",
+        "id": "C016",
+        "category": "権限・組織",
+        "criterion": "一般メンバー・管理者・オーナーの操作を分ける",
+        "status": "現在版での項目別通し検証待ち",
+        "evidence": ""
+      },
+      "after": {
+        "serviceId": "shodan",
+        "id": "C016",
+        "category": "権限・組織",
+        "criterion": "一般メンバー・管理者・オーナーの操作を分ける",
+        "status": "部分検証済み・本番通し検証待ち",
+        "evidence": " aio-shodan-member-management-repair.json: Candidate only, not deployed. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven."
+      }
+    },
+    {
+      "before": {
+        "serviceId": "shodan",
+        "id": "C019",
+        "category": "権限・組織",
+        "criterion": "組織切替中の遅延応答を破棄する",
+        "status": "現在版での項目別通し検証待ち",
+        "evidence": ""
+      },
+      "after": {
+        "serviceId": "shodan",
+        "id": "C019",
+        "category": "権限・組織",
+        "criterion": "組織切替中の遅延応答を破棄する",
+        "status": "部分検証済み・本番通し検証待ち",
+        "evidence": " aio-shodan-member-management-repair.json: Candidate only, not deployed. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven."
+      }
+    },
+    {
+      "before": {
+        "serviceId": "shodan",
+        "id": "U13",
+        "category": "user-experience",
+        "criterion": "二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。",
+        "status": "一部検証済み：入口・招待・AIO調査の認証失敗、再試行、連打、旧応答抑止／全経路・別タブ・本番データ冪等性未検証",
+        "evidence": "entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs"
+      },
+      "after": {
+        "serviceId": "shodan",
+        "id": "U13",
+        "category": "user-experience",
+        "criterion": "二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。",
+        "status": "部分検証済み・本番通し検証待ち",
+        "evidence": "entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs aio-shodan-member-management-repair.json: Candidate only, not deployed. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven."
+      }
+    },
+    {
+      "before": {
+        "serviceId": "aio",
+        "id": "C016",
+        "category": "権限・組織",
+        "criterion": "一般メンバー・管理者・オーナーの操作を分ける",
+        "status": "現在版での項目別通し検証待ち",
+        "evidence": ""
+      },
+      "after": {
+        "serviceId": "aio",
+        "id": "C016",
+        "category": "権限・組織",
+        "criterion": "一般メンバー・管理者・オーナーの操作を分ける",
+        "status": "部分検証済み・本番通し検証待ち",
+        "evidence": " aio-shodan-member-management-repair.json: Candidate only, not deployed. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven."
+      }
+    },
+    {
+      "before": {
+        "serviceId": "aio",
+        "id": "C019",
+        "category": "権限・組織",
+        "criterion": "組織切替中の遅延応答を破棄する",
+        "status": "現在版での項目別通し検証待ち",
+        "evidence": ""
+      },
+      "after": {
+        "serviceId": "aio",
+        "id": "C019",
+        "category": "権限・組織",
+        "criterion": "組織切替中の遅延応答を破棄する",
+        "status": "部分検証済み・本番通し検証待ち",
+        "evidence": " aio-shodan-member-management-repair.json: Candidate only, not deployed. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven."
+      }
+    },
+    {
+      "before": {
+        "serviceId": "aio",
+        "id": "U13",
+        "category": "user-experience",
+        "criterion": "二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。",
+        "status": "一部検証済み：入口・招待・AIO調査の認証失敗、再試行、連打、旧応答抑止／全経路・別タブ・本番データ冪等性未検証",
+        "evidence": "entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs"
+      },
+      "after": {
+        "serviceId": "aio",
+        "id": "U13",
+        "category": "user-experience",
+        "criterion": "二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。",
+        "status": "部分検証済み・本番通し検証待ち",
+        "evidence": "entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs aio-shodan-member-management-repair.json: Candidate only, not deployed. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven."
+      }
+    }
+  ]
+}

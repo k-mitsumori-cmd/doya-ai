@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T22:49:12.996003+00:00",
-  "status": "release-gates-passed-not-yet-pushed",
+  "status": "pushed-ci-and-deployment-pending",
   "baseCommit": "6e628ed14cbf24eade634f9543fd847865a247bb",
   "services": [
     "quote",
@@ -25,7 +25,26 @@
     "Remove displayed invite URL after cancellation or observed acceptance; retain on unconfirmed list failure"
   ],
   "scope": "All mutation verification uses synthetic HTTP, Prisma and mail stubs. No real customer DB writes or emails. Real browser persistence and multi-tab durable idempotency remain unproven. Full 17-service/2074-criterion goal remains active.",
-  "production": "not-deployed",
+  "production": {
+    "status": "pushed-ci-and-deployment-pending",
+    "commit": "3fed1112d8773eb659372b2b913c6594bf2ff4c8",
+    "parent": "6e628ed14cbf24eade634f9543fd847865a247bb",
+    "commitSession": 70159,
+    "commitExitCode": 0,
+    "pushSession": 72983,
+    "pushExitCode": 0,
+    "sourceFreezeReverifiedAfterCommitBeforePush": true,
+    "ciRun": 37543842675,
+    "ciWatchSession": 33011,
+    "deploymentId": "dpl_ABH4XmmHoEH446VtA83YL1KkaN4C",
+    "deploymentUrl": "doya-qovo6ih6u-surisutas-projects.vercel.app",
+    "deploymentStatus": "BUILDING",
+    "deploymentCommitVerified": "3fed1112d8773eb659372b2b913c6594bf2ff4c8",
+    "authenticatedFlow": "unproven",
+    "ciStatus": "completed-success",
+    "ciHeadShaVerified": "3fed1112d8773eb659372b2b913c6594bf2ff4c8",
+    "ciWatchExitCode": 0
+  },
   "releaseSession": 7586,
   "releaseStatus": "passed",
   "lastCheckedAt": "2026-10-06T22:57:51.670301+00:00",

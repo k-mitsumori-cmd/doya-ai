@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: 'asc' },
     select: { id: true, name: true, role: true, status: true, inviteEmail: true, acceptedAt: true, createdAt: true },
   })
-  return NextResponse.json({ members, myRole: ctx.role, myMemberId: ctx.memberId }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ members, myRole: ctx.role, myMemberId: ctx.memberId }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }
 
 // POST /api/aio/members — メンバー招待（admin+）
@@ -103,5 +103,5 @@ export async function POST(req: NextRequest) {
       </div>`,
   })
 
-  return NextResponse.json({ ok: true, emailSent: delivery.success, inviteUrl: delivery.success ? undefined : link, member: { id: member.id, inviteEmail: email, role } })
+  return NextResponse.json({ ok: true, emailSent: delivery.success, inviteUrl: delivery.success ? undefined : link, member: { id: member.id, inviteEmail: email, role } }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }

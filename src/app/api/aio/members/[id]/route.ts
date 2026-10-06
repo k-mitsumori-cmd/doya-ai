@@ -79,5 +79,5 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   if (result.kind === 'self') return NextResponse.json({ error: '自分自身は削除できません' }, { status: 400 })
   if (result.kind === 'peer') return NextResponse.json({ error: '自分と同格以上のメンバーは削除できません' }, { status: 403 })
   if (result.kind !== 'deleted') return NextResponse.json({ error: 'メンバーの削除を確認できませんでした' }, { status: 409 })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, memberId: p.id })
 }

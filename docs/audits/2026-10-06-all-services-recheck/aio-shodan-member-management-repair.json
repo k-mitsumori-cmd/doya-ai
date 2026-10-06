@@ -1,0 +1,52 @@
+{
+  "checkedAt": "2026-10-06T22:56:18.114151+00:00",
+  "status": "release-gates-passed-not-yet-pushed",
+  "services": [
+    "aio",
+    "shodan"
+  ],
+  "baseline": "other-members-late-invite-baseline.json",
+  "unmountBaseline": "other-members-unmounted-invite-baseline.json",
+  "probe": "probe-other-members-late-invite.cjs",
+  "actualFindings": [
+    "Late previous-organization invitation completes by clearing current email and loading previous organization rows in reused actual AppLayout/page instance",
+    "Late invitation after actual unmount still starts previous organization read and announces global success",
+    "Current deletion buttons include current actor and same-rank members even though API rejects these operations",
+    "Mutation handlers have no synchronous operation lock or actor/organization invalidation; read sequence only guards the read started most recently"
+  ],
+  "nextContract": [
+    "Actor/org/epoch bound callback and request cancellation using existing settings guard",
+    "Synchronous same-frame invitation input snapshot and mutation lock",
+    "Strict member list including myMemberId/own ACTIVE membership; self/owner/peer restrictions before confirmation",
+    "Exact delete acknowledgement with target identity, uncertain result blocks retry and scoped list recovery",
+    "Maintain confirmed invite delivery result across read failure; hide stale URL after removal or acceptance",
+    "Same actor auth refresh preserves draft and uncertain mutation; actor/org change clears private state"
+  ],
+  "limitations": [
+    "Synthetic HTTP/session only; no actual email, invitation, DB write or paid provider",
+    "Parameter-transition probe does not prove Next router segment reuse; actual unmount side effects reproduced separately",
+    "Candidate implemented and targeted-tested; full gate and release pending",
+    "17 services and 2074 criteria remain in scope"
+  ],
+  "baseCommit": "3fed1112d8773eb659372b2b913c6594bf2ff4c8",
+  "mountedCases": 48,
+  "mountedScript": "scripts/security-regression/verify-org-team-members-mounted.cjs",
+  "contractScript": "scripts/security-regression/verify-org-team-contracts.cjs",
+  "typecheckExitCode": 0,
+  "targetedLintExitCode": 0,
+  "gate": "docs/audits/2026-10-06-all-services-recheck/aio-shodan-members-release-36538a98-9704-4d03-bb44-e9752077aae1",
+  "production": "not-deployed",
+  "lastCheckedAt": "2026-10-06T23:09:23.680584+00:00",
+  "extraFixes": [
+    "Correct AIO member page copy which described Shodan capabilities",
+    "Explicit inactive member label",
+    "Private no-store Cookie-vary successful list/invite responses"
+  ],
+  "releaseSession": 48693,
+  "releaseStatus": "passed",
+  "previousGoalTurnClassification": "progress: shared member repair committed/pushed after final frozen gate; prior document release CI/READY/anonymous proof verified; additional cancellation bug reproduced/fixed; AIO/Shodan candidate implemented and 48 actual mounted cases plus real API synthetic protocol checks passed",
+  "releaseExitCode": 0,
+  "sourceFreezeFiles": 2635,
+  "sourceFreezeChangedSources": [],
+  "sourceFreezeReverifiedBeforeCommit": true
+}

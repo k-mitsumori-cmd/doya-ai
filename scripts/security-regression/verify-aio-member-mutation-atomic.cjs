@@ -61,7 +61,8 @@ function fixture(service, action, scenario) {
     assert.deepEqual(invalid.state(), { attempts: 0, writes: 0, target: { id: 'target', organizationId: 'org', status: 'ACTIVE', role: 'member' } })
     for (const action of ['PATCH', 'DELETE']) {
       const valid = fixture(service, action)
-      assert.equal((await valid.call()).status, 200)
+      const response=await valid.call();assert.equal(response.status,200)
+      if(action==='DELETE'&&['aio','shodan'].includes(service))assert.equal((await response.json()).memberId,'target')
       assert.deepEqual({ attempts: valid.state().attempts, writes: valid.state().writes }, { attempts: 1, writes: 1 })
 
       for (const scenario of ['actor-revoked', 'target-promoted', 'unknown-target-role']) {
