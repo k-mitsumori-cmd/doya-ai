@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-06T18:21:40.499614+00:00",
+  "baseline": "doyalist-layout-session-baseline.json",
+  "mountedCases": 13,
+  "proof": "doyalist-layout-mounted-current.json",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/doyalist-layout-release-6016b376-cd3c-4c68-b6a7-3f4e7d6380ba",
+  "changes": [
+    "Keep same actor child mounted and hidden during SDK loading",
+    "New actor epoch remount prevents old input and plan resurrection",
+    "Only publish read-only plan for current actor, plan and route scope",
+    "Coalesce focus requests, abort old/unmounted reads, bound streamed body at 64KiB and total response at 35 seconds",
+    "Accept canonical tier values only and show unknown/retry on malformed or failed replies"
+  ],
+  "crosschecks": [
+    "verify-doyalist-layout-plan.cjs",
+    "verify-doyalist-usage-summary.cjs",
+    "verify-doyalist-pricing-status.cjs"
+  ],
+  "limits": [
+    "Separate ToolForm quota refresh defect reproduced and still awaiting repair",
+    "Synthetic tests do not prove private production generation or device QA",
+    "No customer mutation, paid AI, billing or email performed"
+  ]
+}

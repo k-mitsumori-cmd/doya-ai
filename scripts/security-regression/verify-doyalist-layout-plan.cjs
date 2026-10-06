@@ -20,6 +20,8 @@ const compile = (node) => ts.transpileModule(`(${node.getText(ast)})`, { compile
 async function load(response) {
   const state = { usage: { plan: { tier: 'FREE' } }, error: false }
   const loader = vm.runInNewContext(compile(nodes.get('loadUsage').arguments[0]), {
+    scopeKey: 'scope', activeScope: { current: { key: 'scope', allowed: true } }, pendingUsage: { current: null }, AbortController,
+    readBillingResponse: async () => ({ ok: response.ok, status: response.status, data: await response.json() }), setLoadedScope() {},
     usageRequest: { current: 0 }, fetch: async () => response, Error,
     setUsage: (value) => { state.usage = value },
     setUsageError: (value) => { state.error = value },

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { readBillingResponse } from '@/lib/billing-response-client'
 
 interface DoyalistLayoutProps { children: React.ReactNode }
 interface UsageData {
@@ -24,38 +25,74 @@ const NAV_ITEMS: { href: string; icon: string; label: string }[] = [
 export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname() || ''
-  const [usage, setUsage] = useState<UsageData | null>(null)
+  const isSessionLoading = status === 'loading'
+  const isSignedOut = status === 'unauthenticated'
+  const actor = isSignedOut ? '' : session?.user?.id || ''
+  const allowed = status === 'authenticated' && Boolean(actor)
+  const actorEpoch = useRef({ actor, version: 0 })
+  if (actorEpoch.current.actor !== actor) actorEpoch.current = { actor, version: actorEpoch.current.version + 1 }
+  const actorKey = JSON.stringify([actor, actorEpoch.current.version])
+  const authenticatedActor = useRef('')
+  if (allowed) authenticatedActor.current = actorKey
+  const knownActor = Boolean(actor) && authenticatedActor.current === actorKey
+  const globalPlan = (session?.user as { plan?: string } | undefined)?.plan
+  const scopeKey = JSON.stringify([actorKey, globalPlan, pathname])
+  const activeScope = useRef({ key: scopeKey, allowed })
+  activeScope.current = { key: scopeKey, allowed }
+  const [storedUsage, setUsage] = useState<UsageData | null>(null)
+  const [loadedScope, setLoadedScope] = useState('')
+  const usage = allowed && loadedScope === scopeKey ? storedUsage : null
   const [usageError, setUsageError] = useState(false)
   const usageRequest = useRef(0)
+  const pendingUsage = useRef<AbortController | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const loadUsage = useCallback(async () => {
+    if (!activeScope.current.allowed || activeScope.current.key !== scopeKey || pendingUsage.current) return
+    const controller = new AbortController()
+    pendingUsage.current = controller
     const request = ++usageRequest.current
+    const current = () => !controller.signal.aborted && request === usageRequest.current && activeScope.current.allowed && activeScope.current.key === scopeKey
+    setUsage(null)
     setUsageError(false)
     try {
-      const response = await fetch('/api/doyalist/usage', { cache: 'no-store' })
+      await Promise.resolve()
+      if (!current()) return
+      const response = await readBillingResponse('/api/doyalist/usage', { method: 'GET' }, controller.signal)
+      if (!current()) return
       if (!response.ok) throw new Error('プランを確認できませんでした')
-      const data: UsageData = await response.json()
+      const data = response.data as UsageData
       const raw = data?.plan
       const tier = typeof raw === 'object' && raw !== null ? raw.tier || raw.raw : raw
-      if (typeof tier !== 'string') throw new Error('プランの応答が不正です')
-      if (request === usageRequest.current) setUsage(data)
+      if (typeof tier !== 'string' || !['GUEST', 'FREE', 'LIGHT', 'PRO', 'ENTERPRISE'].includes(tier.toUpperCase())) throw new Error('プランの応答が不正です')
+      setUsage(data)
+      setLoadedScope(scopeKey)
     } catch {
-      if (request === usageRequest.current) {
+      if (current()) {
         setUsage(null)
         setUsageError(true)
       }
+    } finally {
+      if (pendingUsage.current === controller) pendingUsage.current = null
+      controller.abort()
     }
-  }, [])
+  }, [scopeKey])
 
   useEffect(() => {
     const requestCounter = usageRequest
-    if (session?.user) void loadUsage()
-    else { requestCounter.current++; setUsage(null); setUsageError(false) }
-    return () => { requestCounter.current++ }
-  }, [session, loadUsage])
+    if (allowed) void loadUsage()
+    else { setUsage(null); setUsageError(false) }
+    return () => { requestCounter.current++; pendingUsage.current?.abort(); pendingUsage.current = null }
+  }, [allowed, scopeKey, loadUsage])
 
-  if (status === 'loading') {
+  useEffect(() => {
+    if (!allowed) return
+    const refresh = () => { void loadUsage() }
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
+  }, [allowed, loadUsage])
+
+  if (isSessionLoading && !knownActor) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="flex flex-col items-center gap-4">
@@ -66,7 +103,9 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
     )
   }
 
-  if (!session?.user) {
+  if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
+
+  if (!session?.user || isSignedOut) {
     const callback = encodeURIComponent(pathname || '/doyalist')
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
@@ -94,7 +133,9 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
   const plan = typeof planTier === 'string' ? planTier.toUpperCase() : 'UNKNOWN'
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <>
+    {isSessionLoading && <div role="status" className="p-6 text-center">認証情報を確認しています。</div>}
+    <div key={actorKey} ref={element => { if (element) element.inert = isSessionLoading }} style={isSessionLoading ? { display: 'none' } : undefined} className="flex min-h-screen bg-slate-50">
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
@@ -140,6 +181,7 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
         <main className="flex-1 min-w-0 bg-slate-50">{children}</main>
       </div>
     </div>
+    </>
   )
 }
 

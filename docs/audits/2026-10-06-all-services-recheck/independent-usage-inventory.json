@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-06T17:59:47.175167+00:00",
+  "checkedAt": "2026-10-06T18:20:11.646013+00:00",
   "scope": "8 active services with independent usage/plan interfaces, complementing the 9 shared SidebarUsagePanel consumers. This inventory is not flow verification.",
   "services": [
     {
@@ -8,7 +8,7 @@
         "src/components/interview/InterviewSidebar.tsx",
         "src/app/api/interview/usage/route.ts"
       ],
-      "state": "Reserved-minute and actor/response repairs verified locally; full gate running. Immediate same-route completion wiring still under audit."
+      "state": "798212df CI success, production READY and 2 anonymous pages/26 JS verified; authenticated transcription flow and immediate same-route completion remain under audit."
     },
     {
       "service": "hr",
@@ -17,8 +17,8 @@
         "src/components/hr/HrSidebar.tsx",
         "src/app/api/hr/usage/route.ts"
       ],
-      "state": "Same-actor session refresh destroys a synthetic unsaved child draft; mounted baseline reproduced, not yet repaired.",
-      "proof": "hr-layout-session-refresh-baseline.json"
+      "state": "4fa6d261 scoped response and same-actor draft preservation repair passed 26 mounted cases and full gate, pushed main. CI/READY verification pending.",
+      "proof": "org-layout-repair.json"
     },
     {
       "service": "kintai",
@@ -27,8 +27,8 @@
         "src/components/kintai/KintaiSidebar.tsx",
         "src/app/api/kintai/usage/route.ts"
       ],
-      "state": "Same-actor session refresh destroys a synthetic unsaved child draft; mounted baseline reproduced, not yet repaired.",
-      "proof": "kintai-layout-session-refresh-baseline.json"
+      "state": "4fa6d261 scoped response and same-actor draft preservation repair passed 26 mounted cases and full gate, pushed main. CI/READY verification pending.",
+      "proof": "org-layout-repair.json"
     },
     {
       "service": "doyalist",
@@ -37,7 +37,8 @@
         "src/components/doyalist/ToolForm.tsx",
         "src/app/doyalist/Tool.tsx"
       ],
-      "state": "Independent usage lookups located. Current actor/schema/deadline and completion consistency require mounted verification."
+      "state": "Layout actor-plan and SDK draft defects reproduced and repaired locally in 13 mounted cases; full gate running. ToolForm same-actor FREE-to-PRO refresh leaves generation disabled despite synthetic server remaining 500; separate repair pending.",
+      "proof": "doyalist-tool-plan-refresh-baseline.json"
     },
     {
       "service": "promane",
