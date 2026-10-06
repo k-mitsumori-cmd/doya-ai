@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES, AREAS as AREA_LIST, SIZES } from '@/lib/doyalist/constants'
 import { AREA_TO_PREFECTURES } from '@/lib/doyalist/collect/prefecture-codes'
+import { readBillingResponse } from '@/lib/billing-response-client'
+import { DOYALIST_COLLECTION_UNKNOWN, parseCollectionUsage, readCollectionResponse, validCollectionResult } from '@/lib/doyalist/collect-response-client'
 import { readDoyalistPreferences } from '@/lib/doyalist/preferences'
 
 interface Company {
@@ -75,6 +77,17 @@ const PREVIEW_FIELDS: { label: string; always: boolean }[] = [
 ]
 
 export default function DoyalistTool() {
+  const { data: session, status } = useSession()
+  const actor = status === 'unauthenticated' ? '' : session?.user?.id || ''
+  const identity = useRef({ actor, version: 0, hasActor: Boolean(actor) })
+  if (identity.current.actor !== actor) identity.current = {
+    actor, version: identity.current.version + (identity.current.hasActor ? 1 : 0),
+    hasActor: identity.current.hasActor || Boolean(actor),
+  }
+  return <ScopedDoyalistTool key={identity.current.version} identityEpoch={identity} epoch={identity.current.version} />
+}
+
+function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRefObject<{ actor: string; version: number; hasActor: boolean }>; epoch: number }) {
   const { data: session, status } = useSession()
   const [industry, setIndustry] = useState('IT・ソフトウェア')
   const [area, setArea] = useState('全国')
@@ -213,97 +226,82 @@ export default function DoyalistTool() {
     return keywords
   }
 
-  const createProject = async (): Promise<string | null> => {
-    try {
-      const dateStr = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-      const projectName = `${industry}_${region}_${dateStr}`
-      const create = await fetch('/api/doyalist/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: projectName, industry, region, targetSize: size, keywords: searchKeywords() }),
-      })
-      const createdData = await create.json()
-      return createdData?.project?.id || createdData?.id || null
-    } catch (e) {
-      console.error('[doyalist] createProject')
-      return null
+  const pendingCollection = useRef<{ controller: AbortController; tid: string } | null>(null)
+  const collectionAlive = useRef(true)
+  useEffect(() => {
+    collectionAlive.current = true
+    return () => {
+      collectionAlive.current = false
+      const operation = pendingCollection.current
+      if (operation) { operation.controller.abort(); toast.dismiss(operation.tid) }
+      pendingCollection.current = null
     }
-  }
+  }, [])
 
   const handleGenerate = async () => {
-    if (!session?.user) { toast.error('ログインしてください'); return }
+    if (pendingCollection.current || identityEpoch.current.version !== epoch) return
+    if (status !== 'authenticated' || !session?.user?.id) { toast.error('ログイン状態をご確認ください'); return }
     if (!validCount) { toast.error('抽出件数は1〜10,000社で入力してください'); return }
-    setGenerating(true); setCompanies([]); setVisibleCount(PAGE_SIZE)
+    const operation = { controller: new AbortController(), tid: toast.loading('リストを抽出中...') }
+    pendingCollection.current = operation
+    const current = () => identityEpoch.current.version === epoch && collectionAlive.current && pendingCollection.current === operation && !operation.controller.signal.aborted
+    let mutationStarted = false
+    setGenerating(true)
     setErrorMsg(null); setErrorHint(null); setWarningMsg(null); setQuotaAction(null)
-    const tid = toast.loading('リストを抽出中...')
     try {
-      // 上限到達が分かっている場合は空のプロジェクトを作らずに案内する。
-      // 同時操作による使用数の変化は収集API側でも再判定する。
-      const usageRes = await fetch('/api/doyalist/usage', { cache: 'no-store' }).catch(() => null)
-      if (usageRes?.ok) {
-        const usage = await usageRes.json().catch(() => null)
-        const available = usage?.remaining?.companies
-        if (typeof available === 'number' && available >= 0 && count > available) {
-          const max = usage?.limits?.maxCompaniesPerMonth
-          const msg = available === 0
-            ? `今月の企業生成上限${typeof max === 'number' ? `（${max}社）` : ''}に達しました。`
-            : `月間上限${typeof max === 'number' ? `（${max}社）` : ''}を超えます。残り${available}社まで生成可能です。`
-          setErrorMsg(msg)
-          setErrorHint(available > 0 ? `件数を${available}社以下に変更すると、残り枠を利用できます。` : null)
-          setQuotaAction(usage?.plan?.tier === 'FREE' || usage?.plan?.tier === 'GUEST' ? 'pricing' : 'contact')
-          toast.error(msg, { id: tid, duration: 6000 })
-          return
-        }
+      const response = await readBillingResponse('/api/doyalist/usage', { method: 'GET' }, operation.controller.signal)
+      if (!current()) return
+      const usage = response.ok ? parseCollectionUsage(response.data) : null
+      if (!usage) {
+        const msg = '利用枠を確認できませんでした。時間をおいて再度お試しください。'
+        setErrorMsg(msg); toast.error(msg, { id: operation.tid }); return
       }
-      const pid = await createProject()
-      if (!pid) {
-        toast.error('準備に失敗しました', { id: tid })
-        setErrorMsg('プロジェクトの準備に失敗しました。ログイン状態をご確認ください。')
-        return
-      }
-
-      const res = await fetch('/api/doyalist/collect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId: pid, count }),
-      })
-      let data: any = null
-      try { data = await res.json() } catch { data = null }
-
-      if (!res.ok) {
-        const msg = data?.error || `リスト抽出に失敗しました（${res.status}）`
-        toast.error(msg, { id: tid, duration: 6000 })
+      if (usage.remaining >= 0 && count > usage.remaining) {
+        const msg = usage.remaining === 0 ? `今月の企業生成上限（${usage.limit}社）に達しました。`
+          : `月間上限（${usage.limit}社）を超えます。残り${usage.remaining}社まで生成可能です。`
         setErrorMsg(msg)
-        if (res.status === 403 && ['MONTHLY_LIMIT_REACHED', 'MONTHLY_REQUEST_EXCEEDS_REMAINING'].includes(data?.code)) {
-          setQuotaAction(data?.upgradeUrl === '/doyalist/pricing' ? 'pricing' : data?.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : null)
-        }
-        setErrorHint(data?.hint || (res.status === 422
-          ? 'AI変換タグの一部を OFF にする / 業界・地域を変えると改善する可能性があります'
-          : res.status === 503
-            ? '取得に時間がかかっています。件数や検索条件を絞って再試行してください。'
-          : res.status === 502
-            ? '少し時間をおいてから再試行してください（外部APIに一時的な障害の可能性）'
-            : null))
-        console.error('[doyalist/collect] error response', res.status, data)
+        setErrorHint(usage.remaining > 0 ? `件数を${usage.remaining}社以下に変更すると、残り枠を利用できます。` : null)
+        setQuotaAction(usage.tier === 'FREE' || usage.tier === 'GUEST' ? 'pricing' : 'contact')
+        toast.error(msg, { id: operation.tid, duration: 6000 }); return
+      }
+      const dateStr = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+      mutationStarted = true
+      const created = await readBillingResponse('/api/doyalist/projects', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: `${industry}_${region}_${dateStr}`, industry, region, targetSize: size, keywords: searchKeywords() }),
+      }, operation.controller.signal)
+      if (!current()) return
+      const project = created.data.project as { id?: unknown } | undefined
+      const pid = project?.id
+      if (!created.ok || created.data.success !== true || created.data.error !== undefined ||
+          typeof pid !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(pid)) throw new Error(DOYALIST_COLLECTION_UNKNOWN)
+      const responseResult = await readCollectionResponse({
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: pid, count }),
+      }, operation.controller.signal)
+      if (!current()) return
+      const { ok, status: httpStatus, data } = responseResult
+      if (!ok) {
+        const quotaRejected = httpStatus === 403 && ['MONTHLY_LIMIT_REACHED', 'MONTHLY_REQUEST_EXCEEDS_REMAINING'].includes(data.code)
+        const msg = quotaRejected ? '今月の企業生成枠を超えています。件数と利用枠をご確認ください。'
+          : httpStatus === 422 && data.code === 'no_hits' ? '該当する企業が見つかりませんでした。検索条件を緩めてお試しください。'
+          : DOYALIST_COLLECTION_UNKNOWN
+        setErrorMsg(msg); toast.error(msg, { id: operation.tid, duration: 6000 })
+        setErrorHint(quotaRejected ? null : '保存済みのプロジェクトを確認してから再操作してください。')
+        if (quotaRejected) setQuotaAction(data.upgradeUrl === '/doyalist/pricing' ? 'pricing'
+          : data.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : null)
         return
       }
-
-      const list = Array.isArray(data?.companies) ? data.companies : []
-      setCompanies(list)
-      setSavedListId(pid)
-      toast.success(`${list.length}社のリストができました`, { id: tid })
-      if (typeof data?.warning === 'string') {
-        setWarningMsg(data.warning)
-        toast(data.warning, { duration: 5000 })
-      }
-    } catch (e: any) {
-      const msg = e?.message || '通信エラーが発生しました'
-      toast.error(msg, { id: tid, duration: 6000 })
-      setErrorMsg(msg)
-      setErrorHint('ネットワーク接続を確認の上、再試行してください')
-      console.error('[doyalist/collect] exception')
+      if (!validCollectionResult(data, count)) throw new Error(DOYALIST_COLLECTION_UNKNOWN)
+      setCompanies(data.companies); setSavedListId(pid); setVisibleCount(PAGE_SIZE)
+      toast.success(`${data.companies.length}社のリストができました`, { id: operation.tid })
+      if (typeof data.warning === 'string') { setWarningMsg(data.warning); toast(data.warning, { duration: 5000 }) }
+    } catch {
+      if (!current()) return
+      const msg = mutationStarted ? DOYALIST_COLLECTION_UNKNOWN : '利用枠を確認できませんでした。時間をおいて再度お試しください。'
+      setErrorMsg(msg); toast.error(msg, { id: operation.tid, duration: 6000 })
     } finally {
-      setGenerating(false)
+      if (current()) { pendingCollection.current = null; setGenerating(false) }
+      operation.controller.abort()
     }
   }
 

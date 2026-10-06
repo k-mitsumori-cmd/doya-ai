@@ -37,8 +37,8 @@
         "src/components/doyalist/ToolForm.tsx",
         "src/app/doyalist/Tool.tsx"
       ],
-      "state": "5c9b1512 layout CI success and production READY; anonymous layout code proof unavailable because server branch omits it. ToolForm 36 mounted cases and API 13 full-history/admission cases passed locally, final full gate running. Main DoyalistTool collection callback still clears old results at quota rejection, proceeds after failed usage lookup, accepts malformed success and duplicates same-turn project/collect calls; actual baseline reproduced.",
-      "proof": "doyalist-collect-client-baseline.json"
+      "state": "5c9b1512 layout CI success/production READY; authenticated layout publication is not proven by anonymous HTML. ToolForm 5ee64c4f pushed to main after 37 mounted cases, 13 API cases and frozen 2575-source release gate; CI succeeded; production build still being tracked. Main collection candidate has 21 callback and 8 mounted cases passing, full 2578-source gate passed unchanged; not yet pushed. Keyword expansion races/invalid response handling reproduced and remain unfixed.",
+      "proof": "doyalist-collect-repair.json"
     },
     {
       "service": "promane",

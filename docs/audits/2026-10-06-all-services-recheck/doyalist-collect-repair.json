@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-06T18:58:07.012467+00:00",
+  "status": "local-release-gate-passed-not-pushed",
+  "baseCommit": "5ee64c4f22b92108c94a78f9bf35c88cd972061a",
+  "changes": [
+    "Do not clear current companies or saved project until a complete valid new response",
+    "Fail closed on malformed, unavailable or inconsistent server quota",
+    "Synchronously reserve one browser operation; isolate account epoch and abort stale operation",
+    "Validate project acknowledgement, companies and actual generated count",
+    "Bound quota/project reads to 35 seconds and 64KiB; collection read to 310 seconds and 64MiB",
+    "Unknown write outcomes require checking saved projects; no automatic retry or deletion"
+  ],
+  "evidence": {
+    "callbackCases": 21,
+    "mountedCases": 8,
+    "typecheckExitCode": 0,
+    "targetedLintErrors": 0,
+    "targetedLintExistingImgWarnings": 7,
+    "fullGate": "doyalist-collect-release-cfaf3924-9dbc-4fee-8fbd-43020264076e",
+    "fullGateStatus": "passed",
+    "unchangedSourceFiles": 2578
+  },
+  "limits": [
+    "No live provider, project creation or customer DB writes were executed",
+    "Server cancellation, rollback and idempotency are not established by browser abort",
+    "The 64MiB collection response ceiling is a browser resource bound, not proof that every possible provider output fits",
+    "Keyword expansion and estimate flows still require their own race and response audit",
+    "All 17 services and the 2074-item matrix remain incomplete"
+  ]
+}

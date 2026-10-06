@@ -1,0 +1,14 @@
+{
+  "passed": 8,
+  "checks": [
+    "Actual mounted list survives quota rejection with pricing action",
+    "Actual mounted list survives invalid output and network failure",
+    "Actual mounted callback rejects same-turn repeated clicks",
+    "Account switch aborts collection and never paints prior account result",
+    "Account ABA does not restore prior private list",
+    "Same actor SDK refresh retains generated result and draft",
+    "Unknown quota keeps previous list and makes no project",
+    "Unmount aborts ongoing collection and dismisses pending toast"
+  ],
+  "scope": "Actual mounted DoyalistTool/ScopedDoyalistTool under StrictMode, real Session context and actual bounded readers; synthetic network and clock, no live customer writes or provider requests."
+}

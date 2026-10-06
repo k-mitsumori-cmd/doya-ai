@@ -1269,3 +1269,8 @@ if (bannerProModels.error || bannerProModels.status !== 0) {
   console.error('Security regression failed: verify-banner-pro-models.cjs');
   process.exit(1);
 }
+
+for (const verifier of ['verify-doyalist-collect-client.cjs', 'verify-doyalist-collect-mounted.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, verifier)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', verifier); process.exit(1); }
+}
