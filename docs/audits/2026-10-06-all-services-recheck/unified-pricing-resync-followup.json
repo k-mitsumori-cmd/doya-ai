@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-06T14:54:58.472594+00:00",
+  "sourceSha256": "2cd89b97cdb42bf16e7d3adf753ecf433dcd48933cdfe8c3bbd443e65c688697",
+  "scope": "Static current source review of the shared pricing recovery client; no runtime or real Stripe requests yet",
+  "findings": [
+    {
+      "kind": "unbounded-wait",
+      "evidence": "resyncPlan awaits fetch and res.json without a deadline or AbortSignal"
+    },
+    {
+      "kind": "unvalidated-success",
+      "evidence": "HTTP 200 calls window.location.reload without checking ok===true or a known paid string plan"
+    },
+    {
+      "kind": "raw-diagnostic",
+      "evidence": "Non-401/404 failure displays data.error directly"
+    },
+    {
+      "kind": "stale-context",
+      "evidence": "resyncPlan does not scope pending response to actor/serviceId/planSource/canPurchase or clean it up on unmount"
+    }
+  ],
+  "status": "requires mounted reproduction and safe repair; not fixed by current CheckoutButton/StripeSuccessSync cohort"
+}

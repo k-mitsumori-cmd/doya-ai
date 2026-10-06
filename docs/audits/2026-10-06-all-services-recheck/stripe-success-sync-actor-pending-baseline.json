@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-06T13:24:03.927Z",
+  "status": "stale actor success and unbounded pending response reproduced",
+  "sourceHash": "d1cf2dc4eee8444cca098d0d95785fcd71d975859b35cf8e5766e853567247a5",
+  "requests": [
+    {
+      "url": "/api/stripe/sync",
+      "abortSignalPresent": false
+    }
+  ],
+  "deadlineTimers": 0,
+  "modalForNewActor": "PRO",
+  "updates": 1,
+  "events": [
+    {
+      "actorAtEmission": "owner-b",
+      "type": "doya:checkout-verified",
+      "detail": {
+        "sessionId": "cs_synthetic",
+        "plan": "PRO",
+        "paymentStatus": "paid",
+        "subscriptionStatus": "active"
+      }
+    },
+    {
+      "actorAtEmission": "owner-b",
+      "type": "doya:plan-updated",
+      "detail": {
+        "planTier": "PRO",
+        "source": "stripe-success-sync",
+        "at": 1791293043916
+      }
+    }
+  ],
+  "scope": "Actual full StripeSuccessSync mounted under React18 StrictMode/jsdom with synthetic session/router/API/modal. No real checkout, Stripe, DB or network. Production incidence unknown.",
+  "next": "Bind every completion to current actor/return context; bound full-response and session-update waits, preserve unknown-outcome recovery, reject stale success events and notifications."
+}

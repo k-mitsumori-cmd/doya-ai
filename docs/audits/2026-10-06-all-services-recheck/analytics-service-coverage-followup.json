@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-06T14:53:57.593Z",
+  "scope": "Current source-loaded public services versus literal analytics tool path set; source coverage only, no real analytics calls",
+  "publicServices": 17,
+  "missing": [
+    {
+      "id": "mensetsu",
+      "path": "mensetsu"
+    },
+    {
+      "id": "quote",
+      "path": "quote"
+    },
+    {
+      "id": "aishodan",
+      "path": "aishodan"
+    },
+    {
+      "id": "adimage",
+      "path": "adimage"
+    }
+  ]
+}

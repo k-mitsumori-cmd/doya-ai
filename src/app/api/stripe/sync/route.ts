@@ -142,6 +142,7 @@ export async function POST(request: NextRequest) {
       priceId: selectedPriceId,
       paymentStatus: checkout.payment_status,
       amountTotal: checkout.amount_total,
+      currency: checkout.currency,
       subscriptionStatus: selected.status,
     })
   } catch (e: any) {

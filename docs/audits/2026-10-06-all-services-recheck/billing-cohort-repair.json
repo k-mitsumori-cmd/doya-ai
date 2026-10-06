@@ -1,0 +1,69 @@
+{
+  "checkedAt": "2026-10-06T14:49:07.527772+00:00",
+  "status": "whole production build, security regressions, types and lint passed on the exact source-equivalent current remote base; ready for scoped commit, not deployed",
+  "scope": "Shared checkout button, root return verification, bounded billing response and session tasks, confirmed currency propagation and JPY purchase amount",
+  "sourceHashes": {
+    "src/components/CheckoutButton.tsx": "09baae9a74df335fda87eb62cce93d707a627912ec85e8225068feb4b302aa5d",
+    "src/components/StripeSuccessSync.tsx": "a0857b55341dce475af0310aa6fea625efb96d26e19bebfb8945ed3f219d23e5",
+    "src/components/GoogleAnalytics.tsx": "d7251a338d50d13f1fdfce26e87be7632c3508e50f23d6bbd1be9d684613d8df",
+    "src/lib/billing-response-client.ts": "37bcf03abdde567cf1a8de3d5f615148c5e87de09bce5288fb74e7990c481c8c",
+    "src/app/api/stripe/sync/route.ts": "e31f7a026b5a14df2f2e98b3fe4e07bee354a3bf5f9aa28d5b101f28f832b0d7",
+    "scripts/security-regression/run.cjs": "cc1a88ab15fb097b194d7fd6ef45955e9722c194b3922b55e01f6aed506aa35a",
+    "scripts/security-regression/verify-billing-integrity.cjs": "f7c8ea6cadba70243f403087a561d8ab865eb2e5510e1b38a8ba3c19ce397cf6",
+    "scripts/security-regression/verify-billing-response-client.cjs": "cf48b4f5b5afe91162cb7f36d8b1181c20dd684a2dfb1e1a31861dde27305773",
+    "scripts/security-regression/verify-checkout-button-mounted.cjs": "043ff16a889ece6f36eef159a93ff5fbc5f560557d3adbf2d1538e226400f5f4",
+    "scripts/security-regression/verify-stripe-success-sync-mounted.cjs": "bd570972cce8ba57bfabcff2c27dcf92c3a8452b4f135b1b3ee08d11615c1052",
+    "scripts/security-regression/verify-google-analytics-purchase.cjs": "a2b580cea9af718e83b8a966afcb740ae47a5e0d9488527e19534018d35165d3"
+  },
+  "targeted": {
+    "readerGroups": 13,
+    "checkoutMountedCases": 34,
+    "returnSyncMountedCases": 20,
+    "analyticsGroups": 10,
+    "billingIntegrityExitCode": 0,
+    "targetedESLintExitCode": 0
+  },
+  "baselineEvidence": [
+    "checkout-button-pending-baseline.json",
+    "stripe-success-sync-actor-pending-baseline.json"
+  ],
+  "releaseGate": "billing-cohort-release-summary.json",
+  "limits": [
+    "React/jsdom and synthetic APIs/auth/storage/events, not real browser authentication or real Stripe checkout/GA delivery",
+    "No production DB mutations, customer-data changes, paid provider requests or outgoing messages",
+    "17-service itemwise end-to-end audit remains incomplete; common-component tests cannot prove all service flows"
+  ],
+  "followupFindings": [
+    "Independent pricing-page contract resync clients remain to review",
+    "Analytics service-path registry and browser-user-scoped tracking guards remain to review"
+  ],
+  "priorGate": {
+    "path": "billing-release-86b4031c-324a-431d-a137-901855bd1b63/state.json",
+    "buildExit": 0,
+    "lintExit": 0,
+    "sourceDrift": [
+      "scripts/drip/video-email.mjs"
+    ],
+    "qualifiedForRelease": false
+  },
+  "readinessRepair": {
+    "baseline": "analytics-readiness-followup.json",
+    "cases": "actual inline GA initialization flushes early paid/signup/login/tool events once; no premature storage guard; blocked storage memory dedup; pending unmount discarded",
+    "externalDeliveryVerified": false
+  },
+  "isolation": {
+    "branch": "codex/billing-client-20261006",
+    "base": "4f7e239760aff8b9982e700116f48ad1574e7dab",
+    "worktree": "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006",
+    "excludedLocalCommit": "4f7e239760aff8b9982e700116f48ad1574e7dab",
+    "reason": "Concurrent main work added an unpublished drip/email feature commit; preserve it but do not publish it as part of billing repair",
+    "sourceFilesVerifiedEqual": 11,
+    "remoteNote": "Fast-forwarded isolated branch to the independently published remote commit; all 2539 tracked build/test/config sources plus new cohort files match the successful combined gate. Only billing/doc/audit files will be committed."
+  },
+  "followupEvidence": [
+    "analytics-service-coverage-followup.json",
+    "unified-pricing-resync-followup.json",
+    "unified-pricing-resync-mounted-baseline.json"
+  ],
+  "remoteMainObserved": "4f7e239760aff8b9982e700116f48ad1574e7dab"
+}

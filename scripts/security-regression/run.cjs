@@ -1,5 +1,9 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+for (const script of ['verify-billing-response-client.cjs', 'verify-checkout-button-mounted.cjs', 'verify-stripe-success-sync-mounted.cjs', 'verify-google-analytics-purchase.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
+}
 for (const script of ['verify-trial-eligibility-client.cjs', 'verify-trial-eligibility-mounted.cjs']) {
   const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }

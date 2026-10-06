@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Script from 'next/script'
 import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
@@ -18,8 +18,9 @@ declare global {
 
 function gaEvent(name: string, params?: Record<string, any>) {
   if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
-    window.gtag('event', name, params)
+    try { window.gtag('event', name, params); return true } catch { return false }
   }
+  return false
 }
 
 // ツール利用として計測する第1パスセグメント（services.tsのhrefに対応）
@@ -33,6 +34,7 @@ const TOOL_PATHS = new Set([
 function GaEventsTrackerInner() {
   const { data: session } = useSession()
   const pathname = usePathname()
+  const [analyticsVersion, setAnalyticsVersion] = useState(0)
 
   // アトリビューションCookie（Slack通知用。src/lib/attribution.ts と対）
   // - doya_attr: 初回流入元（リファラ/UTM/ランディング）30日保持・初回のみ
@@ -62,38 +64,61 @@ function GaEventsTrackerInner() {
 
   // URLパラメータは誰でも付けられるため、サーバーで契約を確認した後だけ計測する。
   useEffect(() => {
+    const pending = new Map<string, Event>()
+    const sent = new Set<string>()
     const onVerified = (event: Event) => {
-      const { sessionId, plan, paymentStatus, amountTotal, subscriptionStatus } = (
+      const { sessionId, plan, paymentStatus, amountTotal, currency, subscriptionStatus } = (
         event as CustomEvent<{
           sessionId?: string
           plan?: string
           paymentStatus?: string
           amountTotal?: number | null
+          currency?: string | null
           subscriptionStatus?: string
         }>
       ).detail || {}
-      if (!sessionId) return
+      if (typeof sessionId !== 'string' || !/^cs_[A-Za-z0-9_]{1,250}$/.test(sessionId)) return
+      if (sent.has(sessionId)) return
+      const rememberPending = () => {
+        pending.set(sessionId, event)
+        if (pending.size > 100) pending.delete(pending.keys().next().value!)
+      }
+      if (typeof window.gtag !== 'function') { rememberPending(); return }
+      const guardKey = `ga_subscription_verified_${sessionId}`
+      try { if (localStorage.getItem(guardKey)) { pending.delete(sessionId); return } } catch {}
       try {
-        const guardKey = `ga_subscription_verified_${sessionId}`
-        if (localStorage.getItem(guardKey)) return
-        gaEvent('subscription_activated', { transaction_id: sessionId, item_name: plan || 'pro' })
+        if (!gaEvent('subscription_activated', { transaction_id: sessionId, item_name: plan || 'pro' })) { rememberPending(); return }
         if (subscriptionStatus === 'trialing') {
-          gaEvent('begin_trial', { transaction_id: sessionId, item_name: plan || 'pro' })
-        } else if (paymentStatus === 'paid' && typeof amountTotal === 'number' && amountTotal > 0) {
-          gaEvent('purchase', {
+          if (!gaEvent('begin_trial', { transaction_id: sessionId, item_name: plan || 'pro' })) { rememberPending(); return }
+        } else if (paymentStatus === 'paid' && typeof amountTotal === 'number' && Number.isSafeInteger(amountTotal) && amountTotal > 0 && typeof currency === 'string' && currency.toUpperCase() === 'JPY') {
+          if (!gaEvent('purchase', {
             transaction_id: sessionId,
-            value: amountTotal / 100,
+            // JPY is zero-decimal: Stripe's amount_total is already yen.
+            value: amountTotal,
             currency: 'JPY',
             item_name: plan || 'pro',
-          })
+          })) { rememberPending(); return }
         }
-        localStorage.setItem(guardKey, '1')
+        pending.delete(sessionId)
+        sent.add(sessionId)
+        if (sent.size > 100) sent.delete(sent.values().next().value!)
+        try { localStorage.setItem(guardKey, '1') } catch {}
       } catch {
         // ストレージ不可の場合も決済反映を妨げない。
       }
     }
+    const onReady = () => {
+      if (typeof window.gtag !== 'function') return
+      setAnalyticsVersion(version => version + 1)
+      for (const event of [...pending.values()]) onVerified(event)
+    }
     window.addEventListener('doya:checkout-verified', onVerified)
-    return () => window.removeEventListener('doya:checkout-verified', onVerified)
+    window.addEventListener('doya:analytics-ready', onReady)
+    return () => {
+      pending.clear()
+      window.removeEventListener('doya:checkout-verified', onVerified)
+      window.removeEventListener('doya:analytics-ready', onReady)
+    }
   }, [])
 
   // 新規登録: 初回ログイン直後（firstLoginAtが30分以内）に一度だけ発火
@@ -104,13 +129,12 @@ function GaEventsTrackerInner() {
       if (localStorage.getItem('ga_signup_sent')) return
       const elapsedMs = Date.now() - new Date(firstLoginAt).getTime()
       if (elapsedMs >= 0 && elapsedMs < 30 * 60 * 1000) {
-        gaEvent('sign_up', { method: 'google' })
-        localStorage.setItem('ga_signup_sent', '1')
+        if (gaEvent('sign_up', { method: 'google' })) localStorage.setItem('ga_signup_sent', '1')
       }
     } catch {
       // noop
     }
-  }, [session])
+  }, [session, analyticsVersion])
 
   // ログイン: 認証済みセッションをブラウザセッションごとに1回だけ記録
   // （どの流入経路のユーザーがツールを使いに来ているかの計測用）
@@ -118,12 +142,11 @@ function GaEventsTrackerInner() {
     try {
       if (!(session?.user as any)?.id && !session?.user?.email) return
       if (sessionStorage.getItem('ga_login_sent')) return
-      gaEvent('login', { method: 'google' })
-      sessionStorage.setItem('ga_login_sent', '1')
+      if (gaEvent('login', { method: 'google' })) sessionStorage.setItem('ga_login_sent', '1')
     } catch {
       // noop
     }
-  }, [session])
+  }, [session, analyticsVersion])
 
   // ツール利用: ログイン済みユーザーがツール配下ページを開いたら、
   // ツールごとにセッション1回だけ tool_open を記録
@@ -134,12 +157,11 @@ function GaEventsTrackerInner() {
       if (!TOOL_PATHS.has(seg)) return
       const guardKey = `ga_tool_open_${seg}`
       if (sessionStorage.getItem(guardKey)) return
-      gaEvent('tool_open', { tool: seg })
-      sessionStorage.setItem(guardKey, '1')
+      if (gaEvent('tool_open', { tool: seg })) sessionStorage.setItem(guardKey, '1')
     } catch {
       // noop
     }
-  }, [session, pathname])
+  }, [session, pathname, analyticsVersion])
 
   return null
 }
@@ -161,6 +183,7 @@ export function GoogleAnalytics() {
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', '${GA_ID}');
+            window.dispatchEvent(new Event('doya:analytics-ready'));
           `,
         }}
       />

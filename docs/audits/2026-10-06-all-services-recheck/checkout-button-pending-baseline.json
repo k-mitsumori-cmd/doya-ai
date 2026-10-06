@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-06T10:01:30.157Z",
+  "status": "unbounded_checkout_wait_reproduced",
+  "sourceHash": "76582502c077a6130509e65b01352c17804cee4da764bdd3171bdc509e02d6f3",
+  "requests": [
+    {
+      "url": "/api/stripe/checkout",
+      "abortSignalPresent": false
+    }
+  ],
+  "deadlineTimers": 0,
+  "buttonDisabled": true,
+  "buttonText": "処理中...",
+  "scope": "Actual CheckoutButton TSX mounted with synthetic auth/router/fetch; fetch deliberately never resolves. No checkout, Stripe, DB or network. Production occurrence unknown.",
+  "next": "Repair with bounded response handling and lifecycle control while preserving unknown payment outcome and duplicate-subscription safeguards; never blindly retry a possibly created checkout."
+}
