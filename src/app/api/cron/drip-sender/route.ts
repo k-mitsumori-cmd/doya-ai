@@ -56,9 +56,10 @@ export async function GET(request: Request) {
     const unsubscribedUserIds = new Set(unsubscribedUsers.map(u => u.userId))
 
     // アクティブなエンロールメントを取得（配信停止ユーザーを除外）
+    // completed も対象に含める: 全通受け取った後にステップが追加されたら、続きから配信を再開する
     const enrollments = await withRetry(() => prisma.dripEnrollment.findMany({
       where: {
-        status: 'active',
+        status: { in: ['active', 'completed'] },
         userId: { notIn: unsubscribedUserIds.size > 0 ? Array.from(unsubscribedUserIds) : ['__none__'] },
       },
       include: {
@@ -109,10 +110,12 @@ export async function GET(request: Request) {
       const nextStep = sequence.steps[nextStepIndex]
       if (!nextStep) {
         // 全ステップ完了
-        await prisma.dripEnrollment.update({
-          where: { id: enrollment.id },
-          data: { status: 'completed', completedAt: now },
-        })
+        if (enrollment.status !== 'completed') {
+          await prisma.dripEnrollment.update({
+            where: { id: enrollment.id },
+            data: { status: 'completed', completedAt: now },
+          })
+        }
         continue
       }
 
@@ -127,6 +130,20 @@ export async function GET(request: Request) {
       // 配信時刻チェック（ステップの sendTime と現在時刻の比較、1時間の猶予）
       const stepTime = nextStep.sendTime || '09:00'
       if (!isTimeReady(currentTime, stepTime)) { skipped++; continue }
+
+      // 配信間隔の下限: 前回の送信から minGapHours 経っていなければ待つ。
+      // 登録から日が経った人にステップを追加・前倒ししても、期日を過ぎた分が毎時1通ずつ連続で届かないようにする
+      if (settings.minGapHours > 0) {
+        const lastSent = await prisma.dripEmailLog.findFirst({
+          where: { enrollmentId: enrollment.id, status: { not: 'failed' } },
+          orderBy: { sentAt: 'desc' },
+          select: { sentAt: true },
+        })
+        if (lastSent && now.getTime() - lastSent.sentAt.getTime() < settings.minGapHours * 3600000) {
+          skipped++
+          continue
+        }
+      }
 
       // 二重配信防止
       const existingLog = await prisma.dripEmailLog.findFirst({
@@ -240,7 +257,9 @@ export async function GET(request: Request) {
           where: { id: enrollment.id },
           data: {
             currentStep: nextStepIndex + 1,
-            ...(isLastStep ? { status: 'completed', completedAt: now } : {}),
+            ...(isLastStep
+              ? { status: 'completed', completedAt: now }
+              : { status: 'active', completedAt: null }),
           },
         })
 
@@ -295,6 +314,7 @@ interface DripSettings {
   sendWindowEnd: string
   rateLimit: number
   unsubscribeEnabled: boolean
+  minGapHours: number
 }
 
 async function getDripSettings(): Promise<DripSettings> {
@@ -312,6 +332,8 @@ async function getDripSettings(): Promise<DripSettings> {
     sendWindowEnd: (map.sendWindowEnd as string) || '21:00',
     rateLimit: (map.rateLimit as number) || 100,
     unsubscribeEnabled: map.unsubscribeEnabled !== false,
+    // 2〜3日おき配信の前提。36時間なら「翌日にもう1通」は起きず、中2日の配信は通る
+    minGapHours: typeof map.minGapHours === 'number' ? map.minGapHours : 36,
   }
 }
 

@@ -945,8 +945,9 @@ async function computeDripScheduledForDay(start: Date, end: Date): Promise<numbe
   }))
 
   // 本日まだ配信待ちのメール（次ステップの予定日が end までに到達済み・未送信）
+  // completed も含める（後からステップが追加されると drip-sender が配信を再開するため）
   const enrollments = await withRetry(() => prisma.dripEnrollment.findMany({
-    where: { status: 'active' },
+    where: { status: { in: ['active', 'completed'] } },
     select: {
       userId: true,
       currentStep: true,
