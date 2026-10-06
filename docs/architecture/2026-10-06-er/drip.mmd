@@ -1,0 +1,67 @@
+erDiagram
+    direction LR
+    User {
+        String id PK
+        String name "nullable"
+        String email UK "nullable"
+        String stripeCustomerId UK "nullable"
+        String stripeSubscriptionId UK "nullable"
+        String plan
+        DateTime createdAt
+    }
+    DripSegment {
+        String id PK
+        String name
+        String key UK
+        DateTime createdAt
+    }
+    DripTemplate {
+        String id PK
+        String name
+        DateTime createdAt
+    }
+    DripSequence {
+        String id PK
+        String name
+        String status
+        String segmentId FK "nullable"
+        DateTime createdAt
+    }
+    DripStep {
+        String id PK
+        String sequenceId FK
+        String templateId FK "nullable"
+        DateTime createdAt
+    }
+    DripEnrollment {
+        String id PK
+        String userId FK
+        String sequenceId FK
+        String status
+        DateTime createdAt
+    }
+    DripEmailLog {
+        String id PK
+        String enrollmentId FK
+        String stepId FK
+        String userId FK
+        String status
+        String trackingId UK "nullable"
+        DateTime createdAt
+    }
+    DripUnsubscribe {
+        String id PK
+        String userId FK
+    }
+    DripSetting {
+        String key PK
+    }
+    DripSegment |o..o{ DripSequence : "segmentId"
+    DripSequence ||..o{ DripStep : "sequenceId"
+    DripTemplate |o..o{ DripStep : "templateId"
+    User ||..o{ DripEnrollment : "userId"
+    DripSequence ||..o{ DripEnrollment : "sequenceId"
+    DripEnrollment ||..o{ DripEmailLog : "enrollmentId"
+    DripStep ||..o{ DripEmailLog : "stepId"
+    User ||..o{ DripEmailLog : "userId"
+    User ||..o{ DripUnsubscribe : "userId"

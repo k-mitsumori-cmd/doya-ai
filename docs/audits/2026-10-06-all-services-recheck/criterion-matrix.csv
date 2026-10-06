@@ -498,7 +498,7 @@ hr,C008,認証,期限切れセッションを拒否する,現在版での項目�
 hr,C009,認証,ログアウト後に他人のキャッシュを表示しない,現在版での項目別通し検証待ち,
 hr,C010,認証,ID欠落時のメール補完が一貫している,現在版での項目別通し検証待ち,
 hr,C011,認証,管理画面と一般画面の認証が分離される,現在版での項目別通し検証待ち,
-hr,C012,認証,招待トークンの期限・使い回し・失効が守られる,部分検証済み・本番通し検証待ち,team-invite-deadline-regression.log: 実APIの期限ちょうど/DB待ち中失効/rollbackを合成時計/DBで検証。5サービスのロック後組織とclaim時role/email/組織の照合も検証。実DB同時実行・本番参加と最後の期限確認からcommit間の保証は未確認。既存の画面復旧証拠はREADME参照。
+hr,C012,認証,招待トークンの期限・使い回し・失効が守られる,部分検証済み・本番通し検証待ち,team-invite-deadline-regression.log: 実APIの期限ちょうど/DB待ち中失効/rollbackを合成時計/DBで検証。5サービスのロック後組織とclaim時role/email/組織の照合も検証。実DB同時実行・本番参加と最後の期限確認からcommit間の保証は未確認。既存の画面復旧証拠はREADME参照。; 招待発行の読取待ち中失効: 実API/helper合成時計5グループ成功 invite-issuance-clock-regression.log。新規期限は作成時刻基準。全体ビルド50733進行中、未commit/未反映。; 全体ビルド50733 exit0/4ソースhash一致 invite-issuance-clock-build.json。実DB/実承諾は未確認。
 hr,C013,権限・組織,他ユーザーのIDによる取得・更新・削除を拒否する,現在版での項目別通し検証待ち,
 hr,C014,権限・組織,明示した組織が不正なら別組織へ切り替えない,現在版での項目別通し検証待ち,
 hr,C015,権限・組織,退会済み・無効メンバーの権限を拒否する,現在版での項目別通し検証待ち,
@@ -864,7 +864,7 @@ promane,C008,認証,期限切れセッションを拒否する,現在版での�
 promane,C009,認証,ログアウト後に他人のキャッシュを表示しない,現在版での項目別通し検証待ち,
 promane,C010,認証,ID欠落時のメール補完が一貫している,現在版での項目別通し検証待ち,
 promane,C011,認証,管理画面と一般画面の認証が分離される,現在版での項目別通し検証待ち,
-promane,C012,認証,招待トークンの期限・使い回し・失効が守られる,部分検証済み・本番通し検証待ち,workspace-invite-recovery-regression.log / browser.json: 実画面の再確認/失効/SDK復旧を合成APIで検証。invite-deadline-regression.log: 実API/helperによる期限ちょうど/DB待ち中の失効とロールバックを合成時計/DBで検証。実DB競合・本番承諾・最後の期限確認からcommit間の保証は未確認。
+promane,C012,認証,招待トークンの期限・使い回し・失効が守られる,部分検証済み・本番通し検証待ち,workspace-invite-recovery-regression.log / browser.json: 実画面の再確認/失効/SDK復旧を合成APIで検証。invite-deadline-regression.log: 実API/helperによる期限ちょうど/DB待ち中の失効とロールバックを合成時計/DBで検証。実DB競合・本番承諾・最後の期限確認からcommit間の保証は未確認。; 招待発行の読取待ち中失効: 実API/helper合成時計5グループ成功 invite-issuance-clock-regression.log。新規期限は作成時刻基準。全体ビルド50733進行中、未commit/未反映。; 全体ビルド50733 exit0/4ソースhash一致 invite-issuance-clock-build.json。実DB/実承諾は未確認。
 promane,C013,権限・組織,他ユーザーのIDによる取得・更新・削除を拒否する,現在版での項目別通し検証待ち,
 promane,C014,権限・組織,明示した組織が不正なら別組織へ切り替えない,現在版での項目別通し検証待ち,
 promane,C015,権限・組織,退会済み・無効メンバーの権限を拒否する,現在版での項目別通し検証待ち,

@@ -1,0 +1,16 @@
+PASS Promane expiry before/exact/after active wait never reuses an expired token
+PASS Promane expiry before/exact/after lookup wait never reuses an expired token
+PASS Promane expired different-role invite no longer blocks reissue; valid conflicting role remains rejected
+PASS HR expiry before/exact/after read wait distinguishes valid duplicates from expired invitations
+PASS HR newly issued expiry and email payload use creation time after organization lookup
+{
+  "passed": 5,
+  "scope": "Actual issuance code; synthetic DB/auth/clock/email only",
+  "results": [
+    "Promane expiry before/exact/after active wait never reuses an expired token",
+    "Promane expiry before/exact/after lookup wait never reuses an expired token",
+    "Promane expired different-role invite no longer blocks reissue; valid conflicting role remains rejected",
+    "HR expiry before/exact/after read wait distinguishes valid duplicates from expired invitations",
+    "HR newly issued expiry and email payload use creation time after organization lookup"
+  ]
+}

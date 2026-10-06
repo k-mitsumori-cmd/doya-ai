@@ -1,0 +1,67 @@
+erDiagram
+    direction LR
+    KintaiOrganization {
+        String id PK
+        String name
+        String slug UK
+        DateTime createdAt
+    }
+    KintaiMember {
+        String id PK
+        String organizationId FK
+        String userId
+        String status
+        String inviteToken UK "nullable"
+        DateTime createdAt
+    }
+    KintaiDepartment {
+        String id PK
+        String organizationId FK
+        String name
+        String parentId FK "nullable"
+        DateTime createdAt
+    }
+    KintaiWorkRule {
+        String id PK
+        String organizationId FK
+        String name
+        DateTime createdAt
+    }
+    KintaiEmployee {
+        String id PK
+        String organizationId
+        String memberId FK,UK
+        String departmentId FK "nullable"
+        String workRuleId FK "nullable"
+        String name
+        DateTime createdAt
+    }
+    KintaiClockRecord {
+        String id PK
+        String employeeId FK
+        DateTime createdAt
+    }
+    KintaiAttendance {
+        String id PK
+        String employeeId FK
+        String status
+        DateTime createdAt
+    }
+    KintaiRequest {
+        String id PK
+        String employeeId FK
+        String status
+        String reviewerId FK "nullable"
+        DateTime createdAt
+    }
+    KintaiOrganization ||..o{ KintaiMember : "organizationId"
+    KintaiOrganization ||..o{ KintaiDepartment : "organizationId"
+    KintaiDepartment |o..o{ KintaiDepartment : "parentId"
+    KintaiOrganization ||..o{ KintaiWorkRule : "organizationId"
+    KintaiMember ||..o| KintaiEmployee : "memberId"
+    KintaiDepartment |o..o{ KintaiEmployee : "departmentId"
+    KintaiWorkRule |o..o{ KintaiEmployee : "workRuleId"
+    KintaiEmployee ||..o{ KintaiClockRecord : "employeeId"
+    KintaiEmployee ||..o{ KintaiAttendance : "employeeId"
+    KintaiEmployee ||..o{ KintaiRequest : "employeeId"
+    KintaiEmployee |o..o{ KintaiRequest : "reviewerId"

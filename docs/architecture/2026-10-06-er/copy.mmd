@@ -1,0 +1,34 @@
+erDiagram
+    direction LR
+    User {
+        String id PK
+        String name "nullable"
+        String email UK "nullable"
+        String stripeCustomerId UK "nullable"
+        String stripeSubscriptionId UK "nullable"
+        String plan
+        DateTime createdAt
+    }
+    CopyBrandVoice {
+        String id PK
+        String userId FK
+        String name
+        DateTime createdAt
+    }
+    CopyProject {
+        String id PK
+        String userId FK "nullable"
+        String name
+        String status
+        String brandVoiceId FK "nullable"
+        DateTime createdAt
+    }
+    CopyItem {
+        String id PK
+        String projectId FK
+        DateTime createdAt
+    }
+    User ||..o{ CopyBrandVoice : "userId"
+    User |o..o{ CopyProject : "userId"
+    CopyBrandVoice |o..o{ CopyProject : "brandVoiceId"
+    CopyProject ||..o{ CopyItem : "projectId"

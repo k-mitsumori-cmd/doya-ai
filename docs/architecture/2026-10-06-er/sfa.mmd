@@ -1,0 +1,74 @@
+erDiagram
+    direction LR
+    SfaOrganization {
+        String id PK
+        String name
+        String slug UK
+        DateTime createdAt
+    }
+    SfaMember {
+        String id PK
+        String organizationId FK
+        String userId "nullable"
+        String status
+        String name "nullable"
+        String inviteToken UK "nullable"
+        DateTime createdAt
+    }
+    SfaAccount {
+        String id PK
+        String organizationId
+        String name
+        DateTime createdAt
+    }
+    SfaContact {
+        String id PK
+        String organizationId
+        String name
+        String title "nullable"
+        DateTime createdAt
+    }
+    SfaLead {
+        String id PK
+        String organizationId
+        String name
+        String status
+        DateTime createdAt
+    }
+    SfaPipeline {
+        String id PK
+        String organizationId
+        String name
+        DateTime createdAt
+    }
+    SfaStage {
+        String id PK
+        String pipelineId FK
+        String name
+    }
+    SfaDeal {
+        String id PK
+        String organizationId
+        String name
+        String status
+        DateTime createdAt
+    }
+    SfaLineItem {
+        String id PK
+        String dealId FK
+    }
+    SfaActivity {
+        String id PK
+        String organizationId
+        DateTime createdAt
+    }
+    SfaTask {
+        String id PK
+        String organizationId
+        String title
+        String status
+        DateTime createdAt
+    }
+    SfaOrganization ||..o{ SfaMember : "organizationId"
+    SfaPipeline ||..o{ SfaStage : "pipelineId"
+    SfaDeal ||..o{ SfaLineItem : "dealId"

@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-06",
+  "commit": "131db9d0c9d7ee770ad501d39c19ef78a060511c",
+  "schema_sha256": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c",
+  "services_sha256": "88041e2debc0d8f865506719031426653ebb0db4f8827e7a2bced72ac80eabeb",
+  "models": 190,
+  "relations": 197,
+  "public_services": 17,
+  "charts": 33,
+  "source": "現在のローカルPrismaスキーマとサービス定義から生成。作業ツリー変更を含む。DMMFと別途照合する。DB実レコード・本番DB構造・稼働状態の確認結果ではない。"
+}

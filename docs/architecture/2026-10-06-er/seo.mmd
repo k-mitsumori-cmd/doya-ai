@@ -1,0 +1,93 @@
+erDiagram
+    direction LR
+    User {
+        String id PK
+        String name "nullable"
+        String email UK "nullable"
+        String stripeCustomerId UK "nullable"
+        String stripeSubscriptionId UK "nullable"
+        String plan
+        DateTime createdAt
+    }
+    SeoArticle {
+        String id PK
+        String userId FK "nullable"
+        String status
+        String title
+        DateTime createdAt
+    }
+    SwipeSession {
+        String id PK
+        String sessionId UK
+        String userId FK "nullable"
+        DateTime createdAt
+    }
+    SwipeCelebrationImage {
+        String id PK
+        DateTime createdAt
+    }
+    SwipeQuestionImage {
+        String id PK
+        DateTime createdAt
+    }
+    SeoJob {
+        String id PK
+        String articleId FK
+        String status
+        DateTime createdAt
+    }
+    SeoSection {
+        String id PK
+        String articleId FK
+        String jobId FK "nullable"
+        String status
+        DateTime createdAt
+    }
+    SeoReference {
+        String id PK
+        String articleId FK
+        String title "nullable"
+        DateTime createdAt
+    }
+    SeoAuditReport {
+        String id PK
+        String articleId FK
+        String jobId FK "nullable"
+        DateTime createdAt
+    }
+    SeoUserMemo {
+        String id PK
+        String articleId FK,UK
+        DateTime createdAt
+    }
+    SeoImage {
+        String id PK
+        String articleId FK
+        String title "nullable"
+        DateTime createdAt
+    }
+    SeoLinkCheckResult {
+        String id PK
+        String articleId FK
+        DateTime createdAt
+    }
+    SeoKnowledgeItem {
+        String id PK
+        String userId FK "nullable"
+        String articleId FK "nullable"
+        String title "nullable"
+        DateTime createdAt
+    }
+    User |o..o{ SeoArticle : "userId"
+    User |o..o{ SwipeSession : "userId"
+    SeoArticle ||..o{ SeoJob : "articleId"
+    SeoArticle ||..o{ SeoSection : "articleId"
+    SeoJob |o..o{ SeoSection : "jobId"
+    SeoArticle ||..o{ SeoReference : "articleId"
+    SeoArticle ||..o{ SeoAuditReport : "articleId"
+    SeoJob |o..o{ SeoAuditReport : "jobId"
+    SeoArticle ||..o| SeoUserMemo : "articleId"
+    SeoArticle ||..o{ SeoImage : "articleId"
+    SeoArticle ||..o{ SeoLinkCheckResult : "articleId"
+    User |o..o{ SeoKnowledgeItem : "userId"
+    SeoArticle |o..o{ SeoKnowledgeItem : "articleId"

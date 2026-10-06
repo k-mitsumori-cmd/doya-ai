@@ -1,0 +1,36 @@
+erDiagram
+    direction LR
+    AdImageBrand {
+        String id PK
+        String userId "nullable"
+        String name
+        DateTime createdAt
+    }
+    AdImageCampaign {
+        String id PK
+        String brandId FK
+        String userId "nullable"
+        String name
+        DateTime createdAt
+    }
+    AdImageConcept {
+        String id PK
+        String campaignId FK
+        DateTime createdAt
+    }
+    AdImageCreative {
+        String id PK
+        String conceptId FK
+        DateTime createdAt
+    }
+    AdImageFeedback {
+        String id PK
+        String conceptId FK
+        String creativeId FK "nullable"
+        DateTime createdAt
+    }
+    AdImageBrand ||..o{ AdImageCampaign : "brandId"
+    AdImageCampaign ||..o{ AdImageConcept : "campaignId"
+    AdImageConcept ||..o{ AdImageCreative : "conceptId"
+    AdImageConcept ||..o{ AdImageFeedback : "conceptId"
+    AdImageCreative |o..o{ AdImageFeedback : "creativeId"

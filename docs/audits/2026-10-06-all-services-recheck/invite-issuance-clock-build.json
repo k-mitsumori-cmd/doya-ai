@@ -1,0 +1,23 @@
+{
+  "runId": "8d16a180-b0b3-4fe9-964b-28a7c97f28e2",
+  "startedAt": "2026-10-06T02:30:06.052382+00:00",
+  "pid": 83585,
+  "sourceHashes": {
+    "src/lib/promane/invite-admission.ts": "3c541649e76382530042854d7e7170076b08d6f3532d6a292e50cbb76b04b4df",
+    "src/app/api/hr/organization/invite/route.ts": "1d31e51f18be4381976d85d956784057a84c152841a13614e260c42b503d69af",
+    "scripts/security-regression/verify-invite-issuance-clock.cjs": "73f513d065b3fcc8a2999172672613d9738f0d9ca1a75acb113dd04089f230ed",
+    "scripts/security-regression/run.cjs": "62ed111e3675ca3dc0022c80666673c715b0212721698d1725170c5bde5c1be5"
+  },
+  "state": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T02:35:50.613771+00:00",
+  "changedSources": [],
+  "sessionId": 50733,
+  "rawLogPath": "/tmp/doya-invite-issuance-clock-build-20261006.log",
+  "rawLogSha256": "395a3007ad8fe50776b54a42103f5fc5624c3f5a5e091f5fbf6cc4a4de0e682e",
+  "storedLogNormalization": "Trailing whitespace and terminal carriage returns removed",
+  "lint": "passed: targeted Next lint, no warnings/errors",
+  "diffCheck": "passed",
+  "verifiedAt": "2026-10-06T02:36:25.504405+00:00",
+  "productionState": "not yet pushed"
+}

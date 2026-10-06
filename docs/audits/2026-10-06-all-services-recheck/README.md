@@ -292,3 +292,18 @@ HR発行も実API/合成DB/時計/送信stubで、pending招待の読取待ち�
 
 
 再試行ビルド52344/runId 2232d4ff-43a1-434c-b0ca-3874b8f02648は終了コード0。独立state finished/exitCode0/changedSources空、現在の13ソースhash一致を確認。Prisma生成・全体オフライン回帰・型検査・Next本番ビルド成功。対象Lintとdiff check成功。証拠はsfa-invite-atomic-build-success.json/log。検証版の範囲だけをcommit/main pushし、本番デプロイとCIの結果を別途照会する。プロマネ/HRの追加再現2件は未修正のまま明示し、全サービス完了にはしない。
+
+
+SFA原子参加/6サービス再送境界版131db9d0c9d7ee770ad501d39c19ef78a060511cのmain push成功。Vercel dpl_J3UJonaYzjfRfMmZWF1PmbFhSafrとCI37404211094を同SHAで確認し、現在値をsfa-invite-atomic-deployment-131db9d0.jsonへ記録。Readyと実承諾は未確認。
+
+プロマネ/HRの読取待ち中失効を補修。プロマネは重複照会・pending席数でその都度現在時刻を使い、取得後にも未失効を確認してから再利用/role競合を判定する。HRはpending取得後の未失効確認を追加。両者の新規expiresAtは作成時刻から30日/7日とし、HRメールも保存した期限を使用する。実API/helperに動く時計の回帰5グループを追加し成功（invite-issuance-clock-regression.log）。期限前/ちょうど/後、前段席数照会待ち・招待読取待ち、失効済みの旧roleによる誤拒否、HRメールと保存期限の一致を含む。従来プロマネ/HR発行回帰と対象Lint成功。すべて合成DB/認証/送信stubであり本番メール・実DB更新は行っていない。全体ゲートに追加し、次の全体ビルドで確認する。
+
+追加2件の最終全体ビルドはsession50733/独立state /tmp/doya-invite-issuance-clock-build-state-20261006.json、log /tmp/doya-invite-issuance-clock-build-20261006.logで開始。4ソースを凍結し、runId/pid/最終exitCode/hash変化を独立記録する。ビルド合格・commit・本番反映はまだ未確認。次回はこの同じsession/stateと131db9d0の同デプロイ/CIを照会する。
+
+
+現行ERをdocs/architecture/2026-10-06-erへ別版として生成し、旧2026-09-16版を保持。実getPublicServices()の17サービス、Prismaの190モデル/全2504フィールド/197宣言FKをDMMFに照合。Persona専用5モデルを正しい領域へ分類。主キー兼FKのCunningRecordingLease.sessionIdを一意とみなさず1対多としていた旧生成処理を補修し、識別関係も実線へ変更。prisma-validation.jsonでは列型・必須/任意・配列・モデル名・テーブル名・FK線/多重度・全モデル網羅をassert。DB実レコード/現本番DBとの再照合ではない。ブラウザでfile:を開く操作はURLポリシーに拒否され、迂回せず表示QAを未実施と記録。新版図の表示・全33図描画は未確認。招待修正の4ソース凍結ビルドは継続中。
+
+131db9d0のCI37404211094は現在completed/success/同SHA。本番Vercel dpl_J3UJonaYzjfRfMmZWF1PmbFhSafrはBUILDING。追加2件のビルド50733は全体回帰成功・68秒でコンパイル成功、型検査中。現在の4ソースhashは開始時と一致。終了コード0やReady未確認のため、その段階までは完了扱いにしない。
+
+
+追加2件のビルド50733/runId 8d16a180-b0b3-4fe9-964b-28a7c97f28e2は終了コード0。独立state finished/exitCode0/changedSources空、4ソースhash一致。Prisma生成・全体オフライン回帰・型検査・Next本番ビルド成功。対象Lint/diff check成功。証拠はinvite-issuance-clock-build.json/log。追加修正版をcommit/main pushする。本番Ready・実DB競合・実承諾・全サービス認証後通し確認は別途継続。新ERは構造照合成功だがブラウザ表示未確認として保存する。

@@ -1,0 +1,83 @@
+erDiagram
+    direction LR
+    MensetsuOrganization {
+        String id PK
+        String name
+        String slug UK
+        DateTime createdAt
+    }
+    MensetsuMember {
+        String id PK
+        String organizationId FK
+        String userId "nullable"
+        String status
+        String name "nullable"
+        String inviteToken UK "nullable"
+        DateTime createdAt
+    }
+    MensetsuCompanyProfile {
+        String id PK
+        String organizationId FK
+        DateTime createdAt
+    }
+    MensetsuTemplate {
+        String id PK
+        String organizationId FK
+        String profileId FK "nullable"
+        String name
+        String status
+        DateTime createdAt
+    }
+    MensetsuQuestion {
+        String id PK
+        String templateId FK
+        DateTime createdAt
+    }
+    MensetsuBranch {
+        String id PK
+        String questionId FK
+        DateTime createdAt
+    }
+    MensetsuCriterion {
+        String id PK
+        String templateId FK
+        String name
+        DateTime createdAt
+    }
+    MensetsuSession {
+        String id PK
+        String organizationId FK
+        String templateId FK
+        String token UK
+        String status
+        DateTime createdAt
+    }
+    MensetsuTurn {
+        String id PK
+        String sessionId FK
+        DateTime createdAt
+    }
+    MensetsuScore {
+        String id PK
+        String sessionId FK
+        String criterionId FK
+        DateTime createdAt
+    }
+    MensetsuAnswerSample {
+        String id PK
+        String organizationId FK
+        DateTime createdAt
+    }
+    MensetsuOrganization ||..o{ MensetsuMember : "organizationId"
+    MensetsuOrganization ||..o{ MensetsuCompanyProfile : "organizationId"
+    MensetsuOrganization ||..o{ MensetsuTemplate : "organizationId"
+    MensetsuCompanyProfile |o..o{ MensetsuTemplate : "profileId"
+    MensetsuTemplate ||..o{ MensetsuQuestion : "templateId"
+    MensetsuQuestion ||..o{ MensetsuBranch : "questionId"
+    MensetsuTemplate ||..o{ MensetsuCriterion : "templateId"
+    MensetsuOrganization ||..o{ MensetsuSession : "organizationId"
+    MensetsuTemplate ||..o{ MensetsuSession : "templateId"
+    MensetsuSession ||..o{ MensetsuTurn : "sessionId"
+    MensetsuSession ||..o{ MensetsuScore : "sessionId"
+    MensetsuCriterion ||..o{ MensetsuScore : "criterionId"
+    MensetsuOrganization ||..o{ MensetsuAnswerSample : "organizationId"

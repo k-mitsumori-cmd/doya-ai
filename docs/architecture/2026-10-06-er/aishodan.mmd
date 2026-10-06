@@ -1,0 +1,92 @@
+erDiagram
+    direction LR
+    AishodanOrganization {
+        String id PK
+        String name
+        String slug UK
+        DateTime createdAt
+    }
+    AishodanMember {
+        String id PK
+        String organizationId FK
+        String userId "nullable"
+        String status
+        String name "nullable"
+        String inviteToken UK "nullable"
+        DateTime createdAt
+    }
+    AishodanProduct {
+        String id PK
+        String organizationId FK
+        String name
+        DateTime createdAt
+    }
+    AishodanSource {
+        String id PK
+        String productId FK
+        String title "nullable"
+        DateTime createdAt
+    }
+    AishodanChunk {
+        String id PK
+        String productId FK
+        String sourceId FK
+        DateTime createdAt
+    }
+    AishodanScenario {
+        String id PK
+        String productId FK
+        String name
+        DateTime createdAt
+    }
+    AishodanRoom {
+        String id PK
+        String organizationId FK
+        String scenarioId FK
+        String name
+        String token UK
+        DateTime createdAt
+    }
+    AishodanSession {
+        String id PK
+        String organizationId FK
+        String roomId FK
+        String status
+        DateTime createdAt
+    }
+    AishodanTurn {
+        String id PK
+        String sessionId FK
+        DateTime createdAt
+    }
+    AishodanQuestion {
+        String id PK
+        String sessionId FK
+        String turnId FK "nullable"
+        DateTime createdAt
+    }
+    AishodanSlotValue {
+        String id PK
+        String sessionId FK
+        DateTime createdAt
+    }
+    AishodanOutcome {
+        String id PK
+        String sessionId FK,UK
+        DateTime createdAt
+    }
+    AishodanOrganization ||..o{ AishodanMember : "organizationId"
+    AishodanOrganization ||..o{ AishodanProduct : "organizationId"
+    AishodanProduct ||..o{ AishodanSource : "productId"
+    AishodanProduct ||..o{ AishodanChunk : "productId"
+    AishodanSource ||..o{ AishodanChunk : "sourceId"
+    AishodanProduct ||..o{ AishodanScenario : "productId"
+    AishodanOrganization ||..o{ AishodanRoom : "organizationId"
+    AishodanScenario ||..o{ AishodanRoom : "scenarioId"
+    AishodanOrganization ||..o{ AishodanSession : "organizationId"
+    AishodanRoom ||..o{ AishodanSession : "roomId"
+    AishodanSession ||..o{ AishodanTurn : "sessionId"
+    AishodanSession ||..o{ AishodanQuestion : "sessionId"
+    AishodanTurn |o..o{ AishodanQuestion : "turnId"
+    AishodanSession ||..o{ AishodanSlotValue : "sessionId"
+    AishodanSession ||..o| AishodanOutcome : "sessionId"

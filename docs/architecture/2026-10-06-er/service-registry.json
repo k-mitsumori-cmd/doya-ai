@@ -1,0 +1,250 @@
+[
+  {
+    "id": "kantan",
+    "name": "カンタンマーケAI",
+    "status": "maintenance",
+    "href": "/kantan",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "banner",
+    "name": "ドヤバナーAI",
+    "status": "active",
+    "href": "/banner",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "logo",
+    "name": "ドヤロゴ",
+    "status": "maintenance",
+    "href": "/logo",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "seo",
+    "name": "ドヤ記事作成",
+    "status": "active",
+    "href": "/seo",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "interview",
+    "name": "ドヤインタビュー",
+    "status": "active",
+    "href": "/interview",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "shindan",
+    "name": "ドヤWeb診断AI",
+    "status": "maintenance",
+    "href": "/shindan",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "persona",
+    "name": "ドヤペルソナAI",
+    "status": "active",
+    "href": "/persona",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "lp",
+    "name": "ドヤワイヤーフレーム AI",
+    "status": "coming_soon",
+    "href": "/lp",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "video",
+    "name": "ドヤ動画AI",
+    "status": "coming_soon",
+    "href": "/video",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "tenkai",
+    "name": "ドヤ展開AI",
+    "status": "coming_soon",
+    "href": "/tenkai",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "copy",
+    "name": "ドヤコピーAI",
+    "status": "coming_soon",
+    "href": "/copy",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "opening",
+    "name": "ドヤオープニングAI",
+    "status": "maintenance",
+    "href": "/opening",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "voice",
+    "name": "ドヤボイスAI",
+    "status": "coming_soon",
+    "href": "/voice",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "presentation",
+    "name": "ドヤプレゼンAI",
+    "status": "coming_soon",
+    "href": "/presentation",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "interviewx",
+    "name": "ドヤヒヤリングAI",
+    "status": "coming_soon",
+    "href": "/interviewx",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "movie",
+    "name": "ドヤムービーAI",
+    "status": "coming_soon",
+    "href": "/movie",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "adsim",
+    "name": "ドヤ広告シミュレーションAI",
+    "status": "coming_soon",
+    "href": "/adsim",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "hr",
+    "name": "ドヤHR",
+    "status": "active",
+    "href": "/hr",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "kintai",
+    "name": "ドヤ勤怠",
+    "status": "active",
+    "href": "/kintai",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "doyalist",
+    "name": "ドヤリスト",
+    "status": "active",
+    "href": "/doyalist",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "doyaslide",
+    "name": "ドヤスライド",
+    "status": "active",
+    "href": "/doyaslide",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "cunning",
+    "name": "ドヤカンニング",
+    "status": "active",
+    "href": "/cunning",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "promane",
+    "name": "ドヤプロマネ",
+    "status": "active",
+    "href": "/promane",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "sfa",
+    "name": "ドヤ営業管理",
+    "status": "active",
+    "href": "/sfa",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "shodan",
+    "name": "ドヤ商談準備",
+    "status": "active",
+    "href": "/shodan",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "aio",
+    "name": "ドヤAIO",
+    "status": "active",
+    "href": "/aio",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "adbanner",
+    "name": "ドヤ広告バナーAI",
+    "status": "active",
+    "href": "/adbanner",
+    "public": false,
+    "retired": true
+  },
+  {
+    "id": "mensetsu",
+    "name": "ドヤ面接官",
+    "status": "active",
+    "href": "/mensetsu",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "quote",
+    "name": "ドヤ見積もりAI",
+    "status": "active",
+    "href": "/quote",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "aishodan",
+    "name": "ドヤAI商談",
+    "status": "active",
+    "href": "/aishodan",
+    "public": true,
+    "retired": false
+  },
+  {
+    "id": "adimage",
+    "name": "ドヤ広告画像AI",
+    "status": "active",
+    "href": "/adimage",
+    "public": true,
+    "retired": false
+  }
+]

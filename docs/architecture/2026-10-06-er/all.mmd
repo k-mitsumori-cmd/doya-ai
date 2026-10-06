@@ -1,0 +1,1001 @@
+erDiagram
+    direction LR
+    Account {
+        String id PK
+        String userId FK
+    }
+    Session {
+        String id PK
+        String userId FK
+    }
+    VerificationToken {
+    }
+    User {
+        String id PK
+        String plan
+    }
+    UserServiceSubscription {
+        String id PK
+        String userId FK
+        String serviceId
+        String plan
+    }
+    Subscription {
+        String id PK
+        String userId FK
+    }
+    Service {
+        String id PK
+    }
+    Category {
+        String id PK
+        String serviceId
+    }
+    Template {
+        String id PK
+        String categoryId FK
+    }
+    Generation {
+        String id PK
+        String userId FK
+        String serviceId
+        String templateId FK "nullable"
+    }
+    SystemSetting {
+        String id PK
+    }
+    StripeWebhookEvent {
+        String id PK
+    }
+    StripeWebhookNotification {
+        String eventId PK
+    }
+    AdminUser {
+        String id PK
+    }
+    AdminLoginAttempt {
+        String id PK
+        String adminUserId FK "nullable"
+    }
+    AdminSession {
+        String id PK
+        String adminUserId FK
+    }
+    SeoArticle {
+        String id PK
+        String userId FK "nullable"
+    }
+    SwipeSession {
+        String id PK
+        String userId FK "nullable"
+    }
+    SwipeCelebrationImage {
+        String id PK
+    }
+    SwipeQuestionImage {
+        String id PK
+    }
+    SeoJob {
+        String id PK
+        String articleId FK
+    }
+    SeoSection {
+        String id PK
+        String articleId FK
+        String jobId FK "nullable"
+    }
+    SeoReference {
+        String id PK
+        String articleId FK
+    }
+    SeoAuditReport {
+        String id PK
+        String articleId FK
+        String jobId FK "nullable"
+    }
+    SeoUserMemo {
+        String id PK
+        String articleId FK,UK
+    }
+    SeoImage {
+        String id PK
+        String articleId FK
+    }
+    SeoLinkCheckResult {
+        String id PK
+        String articleId FK
+    }
+    SeoKnowledgeItem {
+        String id PK
+        String userId FK "nullable"
+        String articleId FK "nullable"
+    }
+    InterviewProject {
+        String id PK
+        String userId FK "nullable"
+        String recipeId FK "nullable"
+    }
+    InterviewRecipe {
+        String id PK
+        String userId FK "nullable"
+    }
+    InterviewMaterial {
+        String id PK
+        String projectId FK
+    }
+    InterviewTranscription {
+        String id PK
+        String projectId FK
+        String materialId FK "nullable"
+    }
+    InterviewReview {
+        String id PK
+        String projectId FK
+        String draftId FK "nullable"
+    }
+    InterviewDraft {
+        String id PK
+        String projectId FK
+    }
+    GuestSession {
+        String id PK
+    }
+    StrategyProject {
+        String id PK
+        String userId FK "nullable"
+    }
+    DoyamanaCategory {
+        String id PK
+    }
+    DoyamanaImage {
+        String id PK
+        String categoryId FK
+    }
+    DoyamanaUsageLog {
+        String id PK
+        String imageId FK
+        String userId "nullable"
+        String serviceId "nullable"
+    }
+    BannerTemplate {
+        String id PK
+    }
+    TenkaiProject {
+        String id PK
+        String userId FK
+    }
+    TenkaiOutput {
+        String id PK
+        String projectId FK
+        String brandVoiceId FK "nullable"
+    }
+    TenkaiBrandVoice {
+        String id PK
+        String userId FK
+    }
+    TenkaiTemplate {
+        String id PK
+        String userId FK "nullable"
+    }
+    TenkaiUsage {
+        String id PK
+        String userId FK
+    }
+    TenkaiApiKey {
+        String id PK
+        String userId FK
+    }
+    OpeningProject {
+        String id PK
+        String userId FK "nullable"
+    }
+    OpeningAnimation {
+        String id PK
+        String projectId FK
+    }
+    CopyBrandVoice {
+        String id PK
+        String userId FK
+    }
+    CopyProject {
+        String id PK
+        String userId FK "nullable"
+        String brandVoiceId FK "nullable"
+    }
+    CopyItem {
+        String id PK
+        String projectId FK
+    }
+    LpProject {
+        String id PK
+        String userId FK
+    }
+    LpSection {
+        String id PK
+        String projectId FK
+    }
+    VoiceProject {
+        String id PK
+        String userId FK
+    }
+    VoiceRecording {
+        String id PK
+        String projectId FK
+    }
+    MovieProject {
+        String id PK
+        String userId FK "nullable"
+    }
+    MovieScene {
+        String id PK
+        String projectId FK
+    }
+    MovieRenderJob {
+        String id PK
+        String projectId FK
+    }
+    InterviewXProject {
+        String id PK
+        String userId FK
+        String templateId FK "nullable"
+    }
+    InterviewXTemplate {
+        String id PK
+        String userId "nullable"
+    }
+    InterviewXQuestion {
+        String id PK
+        String projectId FK
+    }
+    InterviewXResponse {
+        String id PK
+        String projectId FK
+    }
+    InterviewXAnswer {
+        String id PK
+        String responseId FK
+        String questionId FK
+    }
+    InterviewXDraft {
+        String id PK
+        String projectId FK
+    }
+    InterviewXFeedback {
+        String id PK
+        String projectId FK
+        String draftId FK "nullable"
+    }
+    InterviewXCheck {
+        String id PK
+        String projectId FK
+        String draftId FK
+    }
+    InterviewXChatMessage {
+        String id PK
+        String responseId FK
+    }
+    DripSegment {
+        String id PK
+    }
+    DripTemplate {
+        String id PK
+    }
+    DripSequence {
+        String id PK
+        String segmentId FK "nullable"
+    }
+    DripStep {
+        String id PK
+        String sequenceId FK
+        String templateId FK "nullable"
+    }
+    DripEnrollment {
+        String id PK
+        String userId FK
+        String sequenceId FK
+    }
+    DripEmailLog {
+        String id PK
+        String enrollmentId FK
+        String stepId FK
+        String userId FK
+    }
+    DripUnsubscribe {
+        String id PK
+        String userId FK
+    }
+    DripSetting {
+        String key PK
+    }
+    AdSimProject {
+        String id PK
+        String userId FK "nullable"
+    }
+    MitsuboshiNagusamePost {
+        String id PK
+        String userId FK "nullable"
+    }
+    MitsuboshiNagusameReply {
+        String id PK
+        String postId FK
+    }
+    MitsuboshiNagusameSubscription {
+        String id PK
+        String userId FK,UK
+        String plan
+    }
+    HrOrganization {
+        String id PK
+        String plan
+    }
+    HrOrganizationMember {
+        String id PK
+        String organizationId FK
+        String userId FK
+    }
+    HrDepartment {
+        String id PK
+        String organizationId FK
+        String parentId FK "nullable"
+    }
+    HrEmployee {
+        String id PK
+        String organizationId FK
+        String departmentId FK "nullable"
+    }
+    HrEmployeeHistory {
+        String id PK
+        String employeeId FK
+    }
+    HrEvaluationPeriod {
+        String id PK
+        String organizationId FK
+    }
+    HrEvaluation {
+        String id PK
+        String periodId FK
+        String employeeId FK
+        String evaluatorId FK "nullable"
+    }
+    HrOneOnOne {
+        String id PK
+        String organizationId FK
+        String employeeId FK
+        String managerId FK
+    }
+    HrInvitation {
+        String id PK
+        String organizationId FK
+    }
+    HrAuditLog {
+        String id PK
+        String organizationId FK
+        String userId
+    }
+    KintaiOrganization {
+        String id PK
+    }
+    KintaiMember {
+        String id PK
+        String organizationId FK
+        String userId
+    }
+    KintaiDepartment {
+        String id PK
+        String organizationId FK
+        String parentId FK "nullable"
+    }
+    KintaiWorkRule {
+        String id PK
+        String organizationId FK
+    }
+    KintaiEmployee {
+        String id PK
+        String organizationId
+        String memberId FK,UK
+        String departmentId FK "nullable"
+        String workRuleId FK "nullable"
+    }
+    KintaiClockRecord {
+        String id PK
+        String employeeId FK
+    }
+    KintaiAttendance {
+        String id PK
+        String employeeId FK
+    }
+    KintaiRequest {
+        String id PK
+        String employeeId FK
+        String reviewerId FK "nullable"
+    }
+    PromaneWorkspace {
+        String id PK
+        String userId FK
+    }
+    PromaneMember {
+        String id PK
+        String workspaceId FK
+        String userId FK
+    }
+    PromaneClient {
+        String id PK
+        String workspaceId FK
+    }
+    PromaneProject {
+        String id PK
+        String workspaceId FK
+        String clientId FK "nullable"
+    }
+    PromaneTask {
+        String id PK
+        String projectId FK
+        String parentId FK "nullable"
+        String assigneeId FK "nullable"
+    }
+    PromaneTimeEntry {
+        String id PK
+        String taskId FK "nullable"
+        String projectId FK "nullable"
+        String memberId FK
+    }
+    PromaneExpense {
+        String id PK
+        String projectId FK
+    }
+    PromaneComment {
+        String id PK
+        String taskId FK
+        String memberId FK
+    }
+    PromaneInvitation {
+        String id PK
+        String workspaceId FK
+        String invitedById FK
+    }
+    DoyalistProject {
+        String id PK
+        String userId
+    }
+    DoyalistCompany {
+        String id PK
+        String projectId FK
+    }
+    DoyalistApproach {
+        String id PK
+        String projectId FK
+        String companyId FK "nullable"
+    }
+    DoyalistTemplate {
+        String id PK
+        String userId
+    }
+    DoyaSlideProject {
+        String id PK
+        String userId
+    }
+    DoyaSlideSlide {
+        String id PK
+        String projectId FK
+    }
+    DoyaSlideAsset {
+        String id PK
+        String projectId FK
+    }
+    DoyaSlideChatMessage {
+        String id PK
+        String slideId FK
+    }
+    DoyaSlideVersion {
+        String id PK
+        String slideId FK
+    }
+    CunningSession {
+        String id PK
+        String userId
+    }
+    CunningRecordingLease {
+        String sessionId PK,FK
+        String userId
+    }
+    CunningUsageAllocation {
+        String sessionId FK
+        String userId
+    }
+    CunningTranscript {
+        String id PK
+        String sessionId FK
+    }
+    CunningAudioWindow {
+        String id PK
+        String sessionId FK
+        String transcriptId FK,UK "nullable"
+    }
+    CunningAnswer {
+        String id PK
+        String sessionId FK
+        String finalTranscriptId FK,UK "nullable"
+    }
+    CunningKnowledgeBase {
+        String id PK
+        String userId
+    }
+    CunningKnowledgeChunk {
+        String id PK
+        String knowledgeBaseId FK
+    }
+    CunningCompanyProfile {
+        String id PK
+        String userId
+    }
+    CunningApplicantProfile {
+        String id PK
+        String userId
+    }
+    SfaOrganization {
+        String id PK
+    }
+    SfaMember {
+        String id PK
+        String organizationId FK
+        String userId "nullable"
+    }
+    SfaAccount {
+        String id PK
+        String organizationId
+    }
+    SfaContact {
+        String id PK
+        String organizationId
+    }
+    SfaLead {
+        String id PK
+        String organizationId
+    }
+    SfaPipeline {
+        String id PK
+        String organizationId
+    }
+    SfaStage {
+        String id PK
+        String pipelineId FK
+    }
+    SfaDeal {
+        String id PK
+        String organizationId
+    }
+    SfaLineItem {
+        String id PK
+        String dealId FK
+    }
+    SfaActivity {
+        String id PK
+        String organizationId
+    }
+    SfaTask {
+        String id PK
+        String organizationId
+    }
+    ShodanOrganization {
+        String id PK
+    }
+    ShodanMember {
+        String id PK
+        String organizationId FK
+        String userId "nullable"
+    }
+    ShodanCompanyProfile {
+        String id PK
+        String organizationId FK,UK
+    }
+    ShodanPreparation {
+        String id PK
+        String organizationId FK
+    }
+    AdBannerCampaign {
+        String id PK
+        String userId "nullable"
+    }
+    AdBannerCreative {
+        String id PK
+        String campaignId FK
+    }
+    AioOrganization {
+        String id PK
+    }
+    AioMember {
+        String id PK
+        String organizationId FK
+        String userId "nullable"
+    }
+    AioBrandProfile {
+        String id PK
+        String organizationId FK,UK
+    }
+    AioPrompt {
+        String id PK
+        String organizationId FK
+    }
+    AioScan {
+        String id PK
+        String organizationId FK
+    }
+    AioResult {
+        String id PK
+        String organizationId FK
+        String scanId FK
+        String promptId FK
+    }
+    MensetsuOrganization {
+        String id PK
+    }
+    MensetsuMember {
+        String id PK
+        String organizationId FK
+        String userId "nullable"
+    }
+    MensetsuCompanyProfile {
+        String id PK
+        String organizationId FK
+    }
+    MensetsuTemplate {
+        String id PK
+        String organizationId FK
+        String profileId FK "nullable"
+    }
+    MensetsuQuestion {
+        String id PK
+        String templateId FK
+    }
+    MensetsuBranch {
+        String id PK
+        String questionId FK
+    }
+    MensetsuCriterion {
+        String id PK
+        String templateId FK
+    }
+    MensetsuSession {
+        String id PK
+        String organizationId FK
+        String templateId FK
+    }
+    MensetsuTurn {
+        String id PK
+        String sessionId FK
+    }
+    MensetsuScore {
+        String id PK
+        String sessionId FK
+        String criterionId FK
+    }
+    MensetsuAnswerSample {
+        String id PK
+        String organizationId FK
+    }
+    QuoteOrganization {
+        String id PK
+    }
+    QuoteMember {
+        String id PK
+        String organizationId FK
+        String userId "nullable"
+    }
+    QuoteIssuer {
+        String id PK
+        String organizationId FK,UK
+    }
+    QuoteProduct {
+        String id PK
+        String organizationId FK
+    }
+    QuoteDocument {
+        String id PK
+        String organizationId FK
+        String productId FK "nullable"
+    }
+    QuoteLineItem {
+        String id PK
+        String documentId FK
+    }
+    AishodanOrganization {
+        String id PK
+    }
+    AishodanMember {
+        String id PK
+        String organizationId FK
+        String userId "nullable"
+    }
+    AishodanProduct {
+        String id PK
+        String organizationId FK
+    }
+    AishodanSource {
+        String id PK
+        String productId FK
+    }
+    AishodanChunk {
+        String id PK
+        String productId FK
+        String sourceId FK
+    }
+    AishodanScenario {
+        String id PK
+        String productId FK
+    }
+    AishodanRoom {
+        String id PK
+        String organizationId FK
+        String scenarioId FK
+    }
+    AishodanSession {
+        String id PK
+        String organizationId FK
+        String roomId FK
+    }
+    AishodanTurn {
+        String id PK
+        String sessionId FK
+    }
+    AishodanQuestion {
+        String id PK
+        String sessionId FK
+        String turnId FK "nullable"
+    }
+    AishodanSlotValue {
+        String id PK
+        String sessionId FK
+    }
+    AishodanOutcome {
+        String id PK
+        String sessionId FK,UK
+    }
+    AdImageBrand {
+        String id PK
+        String userId "nullable"
+    }
+    AdImageCampaign {
+        String id PK
+        String brandId FK
+        String userId "nullable"
+    }
+    AdImageConcept {
+        String id PK
+        String campaignId FK
+    }
+    AdImageCreative {
+        String id PK
+        String conceptId FK
+    }
+    AdImageFeedback {
+        String id PK
+        String conceptId FK
+        String creativeId FK "nullable"
+    }
+    ServiceFeedback {
+        String id PK
+        String userId FK
+        String serviceId
+    }
+    FeedbackPromptState {
+        String id PK
+        String userId FK,UK
+    }
+    CaseStudyApplication {
+        String id PK
+        String userId "nullable"
+    }
+    PersonaImagePurgeTask {
+        String projectId PK
+    }
+    PersonaProject {
+        String id PK
+        String userId FK
+    }
+    PersonaImageJob {
+        String id PK
+        String projectId FK
+    }
+    PersonaImageUsageDay {
+        String userId FK
+    }
+    PersonaUsageDay {
+        String userId FK
+    }
+    User ||..o{ Account : "userId"
+    User ||..o{ Session : "userId"
+    User ||..o{ UserServiceSubscription : "userId"
+    User ||..o{ Subscription : "userId"
+    Category ||..o{ Template : "categoryId"
+    User ||..o{ Generation : "userId"
+    Template |o..o{ Generation : "templateId"
+    AdminUser |o..o{ AdminLoginAttempt : "adminUserId"
+    AdminUser ||..o{ AdminSession : "adminUserId"
+    User |o..o{ SeoArticle : "userId"
+    User |o..o{ SwipeSession : "userId"
+    SeoArticle ||..o{ SeoJob : "articleId"
+    SeoArticle ||..o{ SeoSection : "articleId"
+    SeoJob |o..o{ SeoSection : "jobId"
+    SeoArticle ||..o{ SeoReference : "articleId"
+    SeoArticle ||..o{ SeoAuditReport : "articleId"
+    SeoJob |o..o{ SeoAuditReport : "jobId"
+    SeoArticle ||..o| SeoUserMemo : "articleId"
+    SeoArticle ||..o{ SeoImage : "articleId"
+    SeoArticle ||..o{ SeoLinkCheckResult : "articleId"
+    User |o..o{ SeoKnowledgeItem : "userId"
+    SeoArticle |o..o{ SeoKnowledgeItem : "articleId"
+    User |o..o{ InterviewProject : "userId"
+    InterviewRecipe |o..o{ InterviewProject : "recipeId"
+    User |o..o{ InterviewRecipe : "userId"
+    InterviewProject ||..o{ InterviewMaterial : "projectId"
+    InterviewProject ||..o{ InterviewTranscription : "projectId"
+    InterviewMaterial |o..o{ InterviewTranscription : "materialId"
+    InterviewProject ||..o{ InterviewReview : "projectId"
+    InterviewDraft |o..o{ InterviewReview : "draftId"
+    InterviewProject ||..o{ InterviewDraft : "projectId"
+    User |o..o{ StrategyProject : "userId"
+    DoyamanaCategory ||..o{ DoyamanaImage : "categoryId"
+    DoyamanaImage ||..o{ DoyamanaUsageLog : "imageId"
+    User ||..o{ TenkaiProject : "userId"
+    TenkaiProject ||..o{ TenkaiOutput : "projectId"
+    TenkaiBrandVoice |o..o{ TenkaiOutput : "brandVoiceId"
+    User ||..o{ TenkaiBrandVoice : "userId"
+    User |o..o{ TenkaiTemplate : "userId"
+    User ||..o{ TenkaiUsage : "userId"
+    User ||..o{ TenkaiApiKey : "userId"
+    User |o..o{ OpeningProject : "userId"
+    OpeningProject ||..o{ OpeningAnimation : "projectId"
+    User ||..o{ CopyBrandVoice : "userId"
+    User |o..o{ CopyProject : "userId"
+    CopyBrandVoice |o..o{ CopyProject : "brandVoiceId"
+    CopyProject ||..o{ CopyItem : "projectId"
+    User ||..o{ LpProject : "userId"
+    LpProject ||..o{ LpSection : "projectId"
+    User ||..o{ VoiceProject : "userId"
+    VoiceProject ||..o{ VoiceRecording : "projectId"
+    User |o..o{ MovieProject : "userId"
+    MovieProject ||..o{ MovieScene : "projectId"
+    MovieProject ||..o{ MovieRenderJob : "projectId"
+    User ||..o{ InterviewXProject : "userId"
+    InterviewXTemplate |o..o{ InterviewXProject : "templateId"
+    InterviewXProject ||..o{ InterviewXQuestion : "projectId"
+    InterviewXProject ||..o{ InterviewXResponse : "projectId"
+    InterviewXResponse ||..o{ InterviewXAnswer : "responseId"
+    InterviewXQuestion ||..o{ InterviewXAnswer : "questionId"
+    InterviewXProject ||..o{ InterviewXDraft : "projectId"
+    InterviewXProject ||..o{ InterviewXFeedback : "projectId"
+    InterviewXDraft |o..o{ InterviewXFeedback : "draftId"
+    InterviewXProject ||..o{ InterviewXCheck : "projectId"
+    InterviewXDraft ||..o{ InterviewXCheck : "draftId"
+    InterviewXResponse ||..o{ InterviewXChatMessage : "responseId"
+    DripSegment |o..o{ DripSequence : "segmentId"
+    DripSequence ||..o{ DripStep : "sequenceId"
+    DripTemplate |o..o{ DripStep : "templateId"
+    User ||..o{ DripEnrollment : "userId"
+    DripSequence ||..o{ DripEnrollment : "sequenceId"
+    DripEnrollment ||..o{ DripEmailLog : "enrollmentId"
+    DripStep ||..o{ DripEmailLog : "stepId"
+    User ||..o{ DripEmailLog : "userId"
+    User ||..o{ DripUnsubscribe : "userId"
+    User |o..o{ AdSimProject : "userId"
+    User |o..o{ MitsuboshiNagusamePost : "userId"
+    MitsuboshiNagusamePost ||..o{ MitsuboshiNagusameReply : "postId"
+    User ||..o| MitsuboshiNagusameSubscription : "userId"
+    HrOrganization ||..o{ HrOrganizationMember : "organizationId"
+    User ||..o{ HrOrganizationMember : "userId"
+    HrOrganization ||..o{ HrDepartment : "organizationId"
+    HrDepartment |o..o{ HrDepartment : "parentId"
+    HrOrganization ||..o{ HrEmployee : "organizationId"
+    HrDepartment |o..o{ HrEmployee : "departmentId"
+    HrEmployee ||..o{ HrEmployeeHistory : "employeeId"
+    HrOrganization ||..o{ HrEvaluationPeriod : "organizationId"
+    HrEvaluationPeriod ||..o{ HrEvaluation : "periodId"
+    HrEmployee ||..o{ HrEvaluation : "employeeId"
+    HrEmployee |o..o{ HrEvaluation : "evaluatorId"
+    HrOrganization ||..o{ HrOneOnOne : "organizationId"
+    HrEmployee ||..o{ HrOneOnOne : "employeeId"
+    HrEmployee ||..o{ HrOneOnOne : "managerId"
+    HrOrganization ||..o{ HrInvitation : "organizationId"
+    HrOrganization ||..o{ HrAuditLog : "organizationId"
+    KintaiOrganization ||..o{ KintaiMember : "organizationId"
+    KintaiOrganization ||..o{ KintaiDepartment : "organizationId"
+    KintaiDepartment |o..o{ KintaiDepartment : "parentId"
+    KintaiOrganization ||..o{ KintaiWorkRule : "organizationId"
+    KintaiMember ||..o| KintaiEmployee : "memberId"
+    KintaiDepartment |o..o{ KintaiEmployee : "departmentId"
+    KintaiWorkRule |o..o{ KintaiEmployee : "workRuleId"
+    KintaiEmployee ||..o{ KintaiClockRecord : "employeeId"
+    KintaiEmployee ||..o{ KintaiAttendance : "employeeId"
+    KintaiEmployee ||..o{ KintaiRequest : "employeeId"
+    KintaiEmployee |o..o{ KintaiRequest : "reviewerId"
+    User ||..o{ PromaneWorkspace : "userId"
+    PromaneWorkspace ||..o{ PromaneMember : "workspaceId"
+    User ||..o{ PromaneMember : "userId"
+    PromaneWorkspace ||..o{ PromaneClient : "workspaceId"
+    PromaneWorkspace ||..o{ PromaneProject : "workspaceId"
+    PromaneClient |o..o{ PromaneProject : "clientId"
+    PromaneProject ||..o{ PromaneTask : "projectId"
+    PromaneTask |o..o{ PromaneTask : "parentId"
+    PromaneMember |o..o{ PromaneTask : "assigneeId"
+    PromaneProject |o..o{ PromaneTimeEntry : "projectId"
+    PromaneTask |o..o{ PromaneTimeEntry : "taskId"
+    PromaneMember ||..o{ PromaneTimeEntry : "memberId"
+    PromaneProject ||..o{ PromaneExpense : "projectId"
+    PromaneTask ||..o{ PromaneComment : "taskId"
+    PromaneMember ||..o{ PromaneComment : "memberId"
+    PromaneWorkspace ||..o{ PromaneInvitation : "workspaceId"
+    User ||..o{ PromaneInvitation : "invitedById"
+    DoyalistProject ||..o{ DoyalistCompany : "projectId"
+    DoyalistProject ||..o{ DoyalistApproach : "projectId"
+    DoyalistCompany |o..o{ DoyalistApproach : "companyId"
+    DoyaSlideProject ||..o{ DoyaSlideSlide : "projectId"
+    DoyaSlideProject ||..o{ DoyaSlideAsset : "projectId"
+    DoyaSlideSlide ||..o{ DoyaSlideChatMessage : "slideId"
+    DoyaSlideSlide ||..o{ DoyaSlideVersion : "slideId"
+    CunningSession ||--o| CunningRecordingLease : "sessionId"
+    CunningSession ||--o{ CunningUsageAllocation : "sessionId"
+    CunningSession ||..o{ CunningTranscript : "sessionId"
+    CunningSession ||..o{ CunningAudioWindow : "sessionId"
+    CunningTranscript |o..o| CunningAudioWindow : "transcriptId"
+    CunningSession ||..o{ CunningAnswer : "sessionId"
+    CunningTranscript |o..o| CunningAnswer : "finalTranscriptId"
+    CunningKnowledgeBase ||..o{ CunningKnowledgeChunk : "knowledgeBaseId"
+    SfaOrganization ||..o{ SfaMember : "organizationId"
+    SfaPipeline ||..o{ SfaStage : "pipelineId"
+    SfaDeal ||..o{ SfaLineItem : "dealId"
+    ShodanOrganization ||..o{ ShodanMember : "organizationId"
+    ShodanOrganization ||..o| ShodanCompanyProfile : "organizationId"
+    ShodanOrganization ||..o{ ShodanPreparation : "organizationId"
+    AdBannerCampaign ||..o{ AdBannerCreative : "campaignId"
+    AioOrganization ||..o{ AioMember : "organizationId"
+    AioOrganization ||..o| AioBrandProfile : "organizationId"
+    AioOrganization ||..o{ AioPrompt : "organizationId"
+    AioOrganization ||..o{ AioScan : "organizationId"
+    AioOrganization ||..o{ AioResult : "organizationId"
+    AioScan ||..o{ AioResult : "scanId"
+    AioPrompt ||..o{ AioResult : "promptId"
+    MensetsuOrganization ||..o{ MensetsuMember : "organizationId"
+    MensetsuOrganization ||..o{ MensetsuCompanyProfile : "organizationId"
+    MensetsuOrganization ||..o{ MensetsuTemplate : "organizationId"
+    MensetsuCompanyProfile |o..o{ MensetsuTemplate : "profileId"
+    MensetsuTemplate ||..o{ MensetsuQuestion : "templateId"
+    MensetsuQuestion ||..o{ MensetsuBranch : "questionId"
+    MensetsuTemplate ||..o{ MensetsuCriterion : "templateId"
+    MensetsuOrganization ||..o{ MensetsuSession : "organizationId"
+    MensetsuTemplate ||..o{ MensetsuSession : "templateId"
+    MensetsuSession ||..o{ MensetsuTurn : "sessionId"
+    MensetsuSession ||..o{ MensetsuScore : "sessionId"
+    MensetsuCriterion ||..o{ MensetsuScore : "criterionId"
+    MensetsuOrganization ||..o{ MensetsuAnswerSample : "organizationId"
+    QuoteOrganization ||..o{ QuoteMember : "organizationId"
+    QuoteOrganization ||..o| QuoteIssuer : "organizationId"
+    QuoteOrganization ||..o{ QuoteProduct : "organizationId"
+    QuoteOrganization ||..o{ QuoteDocument : "organizationId"
+    QuoteProduct |o..o{ QuoteDocument : "productId"
+    QuoteDocument ||..o{ QuoteLineItem : "documentId"
+    AishodanOrganization ||..o{ AishodanMember : "organizationId"
+    AishodanOrganization ||..o{ AishodanProduct : "organizationId"
+    AishodanProduct ||..o{ AishodanSource : "productId"
+    AishodanProduct ||..o{ AishodanChunk : "productId"
+    AishodanSource ||..o{ AishodanChunk : "sourceId"
+    AishodanProduct ||..o{ AishodanScenario : "productId"
+    AishodanOrganization ||..o{ AishodanRoom : "organizationId"
+    AishodanScenario ||..o{ AishodanRoom : "scenarioId"
+    AishodanOrganization ||..o{ AishodanSession : "organizationId"
+    AishodanRoom ||..o{ AishodanSession : "roomId"
+    AishodanSession ||..o{ AishodanTurn : "sessionId"
+    AishodanSession ||..o{ AishodanQuestion : "sessionId"
+    AishodanTurn |o..o{ AishodanQuestion : "turnId"
+    AishodanSession ||..o{ AishodanSlotValue : "sessionId"
+    AishodanSession ||..o| AishodanOutcome : "sessionId"
+    AdImageBrand ||..o{ AdImageCampaign : "brandId"
+    AdImageCampaign ||..o{ AdImageConcept : "campaignId"
+    AdImageConcept ||..o{ AdImageCreative : "conceptId"
+    AdImageConcept ||..o{ AdImageFeedback : "conceptId"
+    AdImageCreative |o..o{ AdImageFeedback : "creativeId"
+    User ||..o{ ServiceFeedback : "userId"
+    User ||..o| FeedbackPromptState : "userId"
+    User ||..o{ PersonaProject : "userId"
+    PersonaProject ||..o{ PersonaImageJob : "projectId"
+    User ||--o{ PersonaImageUsageDay : "userId"
+    User ||--o{ PersonaUsageDay : "userId"

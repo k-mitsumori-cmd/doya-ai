@@ -1,0 +1,14 @@
+erDiagram
+    direction LR
+    AdBannerCampaign {
+        String id PK
+        String userId "nullable"
+        String name
+        DateTime createdAt
+    }
+    AdBannerCreative {
+        String id PK
+        String campaignId FK
+        DateTime createdAt
+    }
+    AdBannerCampaign ||..o{ AdBannerCreative : "campaignId"

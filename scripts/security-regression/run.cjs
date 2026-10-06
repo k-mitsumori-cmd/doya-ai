@@ -830,6 +830,11 @@ if (kintaiInviteIssuance.error || kintaiInviteIssuance.status !== 0) {
   console.error('Security regression failed: verify-kintai-invite-issuance.cjs');
   process.exit(1);
 }
+const inviteIssuanceClock = spawnSync(process.execPath, [path.join(__dirname, 'verify-invite-issuance-clock.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (inviteIssuanceClock.error || inviteIssuanceClock.status !== 0) {
+  console.error('Security regression failed: verify-invite-issuance-clock.cjs');
+  process.exit(1);
+}
 const hrInviteIssuance = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-invite-issuance.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrInviteIssuance.error || hrInviteIssuance.status !== 0) {
   console.error('Security regression failed: verify-hr-invite-issuance.cjs');

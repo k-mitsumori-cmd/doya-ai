@@ -55,7 +55,6 @@ export async function POST(req: NextRequest) {
     const inviteRole = HrMemberRole.MEMBER
 
     const token = randomBytes(32).toString('hex')
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     const result = await prisma.$transaction(async (tx) => {
       const organizations = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${ctx.organizationId} FOR UPDATE`
       if (organizations.length === 0) return { status: 404 as const, error: '組織が見つかりません' }
@@ -72,14 +71,14 @@ export async function POST(req: NextRequest) {
       const pendingInvite = await tx.hrInvitation.findFirst({
         where: { organizationId: ctx.organizationId, email: emailNorm, status: 'PENDING', expiresAt: { gt: new Date() } },
       })
-      if (pendingInvite) return { status: 400 as const, error: 'このメールアドレスには有効な招待が既にあります' }
+      if (pendingInvite && pendingInvite.expiresAt.getTime() > Date.now()) return { status: 400 as const, error: 'このメールアドレスには有効な招待が既にあります' }
 
       const organization = await tx.hrOrganization.findUnique({
         where: { id: ctx.organizationId }, select: { name: true },
       })
       const invitation = await tx.hrInvitation.create({
         data: { organizationId: ctx.organizationId, email: emailNorm, role: inviteRole, token,
-          invitedBy: ctx.userId, status: 'PENDING', expiresAt },
+          invitedBy: ctx.userId, status: 'PENDING', expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
       })
       return { invitation, organizationName: organization?.name || '組織' }
     })
@@ -98,7 +97,7 @@ export async function POST(req: NextRequest) {
         inviterName: user?.name || null,
         role: inviteRole,
         inviteUrl,
-        expiresAt,
+        expiresAt: invitation.expiresAt,
       })
     } catch {
       console.error('[HrInvite] Failed to send invitation email')

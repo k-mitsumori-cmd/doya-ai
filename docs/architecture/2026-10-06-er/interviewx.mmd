@@ -1,0 +1,78 @@
+erDiagram
+    direction LR
+    User {
+        String id PK
+        String name "nullable"
+        String email UK "nullable"
+        String stripeCustomerId UK "nullable"
+        String stripeSubscriptionId UK "nullable"
+        String plan
+        DateTime createdAt
+    }
+    InterviewXProject {
+        String id PK
+        String userId FK
+        String title
+        String templateId FK "nullable"
+        String status
+        String shareToken UK
+        DateTime createdAt
+    }
+    InterviewXTemplate {
+        String id PK
+        String name
+        String userId "nullable"
+        DateTime createdAt
+    }
+    InterviewXQuestion {
+        String id PK
+        String projectId FK
+        DateTime createdAt
+    }
+    InterviewXResponse {
+        String id PK
+        String projectId FK
+        String status
+    }
+    InterviewXAnswer {
+        String id PK
+        String responseId FK
+        String questionId FK
+        DateTime createdAt
+    }
+    InterviewXDraft {
+        String id PK
+        String projectId FK
+        String title "nullable"
+        String status
+        DateTime createdAt
+    }
+    InterviewXFeedback {
+        String id PK
+        String projectId FK
+        String draftId FK "nullable"
+        DateTime createdAt
+    }
+    InterviewXCheck {
+        String id PK
+        String projectId FK
+        String draftId FK
+        DateTime createdAt
+    }
+    InterviewXChatMessage {
+        String id PK
+        String responseId FK
+        DateTime createdAt
+    }
+    User ||..o{ InterviewXProject : "userId"
+    InterviewXTemplate |o..o{ InterviewXProject : "templateId"
+    InterviewXProject ||..o{ InterviewXQuestion : "projectId"
+    InterviewXProject ||..o{ InterviewXResponse : "projectId"
+    InterviewXResponse ||..o{ InterviewXAnswer : "responseId"
+    InterviewXQuestion ||..o{ InterviewXAnswer : "questionId"
+    InterviewXProject ||..o{ InterviewXDraft : "projectId"
+    InterviewXProject ||..o{ InterviewXFeedback : "projectId"
+    InterviewXDraft |o..o{ InterviewXFeedback : "draftId"
+    InterviewXProject ||..o{ InterviewXCheck : "projectId"
+    InterviewXDraft ||..o{ InterviewXCheck : "draftId"
+    InterviewXResponse ||..o{ InterviewXChatMessage : "responseId"

@@ -1,0 +1,33 @@
+erDiagram
+    direction LR
+    DoyaSlideProject {
+        String id PK
+        String userId
+        String title
+        String status
+        DateTime createdAt
+    }
+    DoyaSlideSlide {
+        String id PK
+        String projectId FK
+        String status
+    }
+    DoyaSlideAsset {
+        String id PK
+        String projectId FK
+        DateTime createdAt
+    }
+    DoyaSlideChatMessage {
+        String id PK
+        String slideId FK
+        DateTime createdAt
+    }
+    DoyaSlideVersion {
+        String id PK
+        String slideId FK
+        DateTime createdAt
+    }
+    DoyaSlideProject ||..o{ DoyaSlideSlide : "projectId"
+    DoyaSlideProject ||..o{ DoyaSlideAsset : "projectId"
+    DoyaSlideSlide ||..o{ DoyaSlideChatMessage : "slideId"
+    DoyaSlideSlide ||..o{ DoyaSlideVersion : "slideId"

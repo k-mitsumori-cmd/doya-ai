@@ -31,7 +31,6 @@ export async function issuePromaneInvitation(args: {
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       return await prisma.$transaction(async (tx) => {
-        const now = new Date()
         const inviter = await tx.promaneMember.findUnique({
           where: { workspaceId_userId: { workspaceId: args.workspaceId, userId: args.userId } },
         })
@@ -63,9 +62,9 @@ export async function issuePromaneInvitation(args: {
         })
         if (atLimit(active)) return limitResponse()
         const existingInvite = await tx.promaneInvitation.findFirst({
-          where: { workspaceId: args.workspaceId, email: args.email, acceptedAt: null, expiresAt: { gt: now } },
+          where: { workspaceId: args.workspaceId, email: args.email, acceptedAt: null, expiresAt: { gt: new Date() } },
         })
-        if (existingInvite) {
+        if (existingInvite && existingInvite.expiresAt.getTime() > Date.now()) {
           if (existingInvite.role !== args.role) {
             return {
               success: false,
@@ -85,7 +84,7 @@ export async function issuePromaneInvitation(args: {
         }
 
         const pending = await tx.promaneInvitation.count({
-          where: { workspaceId: args.workspaceId, acceptedAt: null, expiresAt: { gt: now } },
+          where: { workspaceId: args.workspaceId, acceptedAt: null, expiresAt: { gt: new Date() } },
         })
         if (atLimit(active + pending)) return limitResponse()
         const invitation = await tx.promaneInvitation.create({
@@ -95,7 +94,7 @@ export async function issuePromaneInvitation(args: {
             role: args.role,
             token: crypto.randomBytes(32).toString('hex'),
             invitedById: args.userId,
-            expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           },
           select: { token: true, expiresAt: true },
         })

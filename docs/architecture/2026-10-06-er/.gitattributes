@@ -1,0 +1,4 @@
+# Preserve the bundled Mermaid shaders and string literals byte for byte.
+mermaid.js -whitespace
+# The same vendor bundle is embedded in the offline HTML.
+index.html -whitespace

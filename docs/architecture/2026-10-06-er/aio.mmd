@@ -1,0 +1,47 @@
+erDiagram
+    direction LR
+    AioOrganization {
+        String id PK
+        String name
+        String slug UK
+        DateTime createdAt
+    }
+    AioMember {
+        String id PK
+        String organizationId FK
+        String userId "nullable"
+        String status
+        String name "nullable"
+        String inviteToken UK "nullable"
+        DateTime createdAt
+    }
+    AioBrandProfile {
+        String id PK
+        String organizationId FK,UK
+        DateTime createdAt
+    }
+    AioPrompt {
+        String id PK
+        String organizationId FK
+        DateTime createdAt
+    }
+    AioScan {
+        String id PK
+        String organizationId FK
+        String status
+        DateTime createdAt
+    }
+    AioResult {
+        String id PK
+        String organizationId FK
+        String scanId FK
+        String promptId FK
+        DateTime createdAt
+    }
+    AioOrganization ||..o{ AioMember : "organizationId"
+    AioOrganization ||..o| AioBrandProfile : "organizationId"
+    AioOrganization ||..o{ AioPrompt : "organizationId"
+    AioOrganization ||..o{ AioScan : "organizationId"
+    AioOrganization ||..o{ AioResult : "organizationId"
+    AioScan ||..o{ AioResult : "scanId"
+    AioPrompt ||..o{ AioResult : "promptId"

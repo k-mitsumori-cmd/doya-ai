@@ -1,0 +1,47 @@
+erDiagram
+    direction LR
+    QuoteOrganization {
+        String id PK
+        String name
+        String slug UK
+        DateTime createdAt
+    }
+    QuoteMember {
+        String id PK
+        String organizationId FK
+        String userId "nullable"
+        String status
+        String name "nullable"
+        String inviteToken UK "nullable"
+        DateTime createdAt
+    }
+    QuoteIssuer {
+        String id PK
+        String organizationId FK,UK
+        DateTime createdAt
+    }
+    QuoteProduct {
+        String id PK
+        String organizationId FK
+        String name
+        DateTime createdAt
+    }
+    QuoteDocument {
+        String id PK
+        String organizationId FK
+        String productId FK "nullable"
+        String title
+        String status
+        DateTime createdAt
+    }
+    QuoteLineItem {
+        String id PK
+        String documentId FK
+        DateTime createdAt
+    }
+    QuoteOrganization ||..o{ QuoteMember : "organizationId"
+    QuoteOrganization ||..o| QuoteIssuer : "organizationId"
+    QuoteOrganization ||..o{ QuoteProduct : "organizationId"
+    QuoteOrganization ||..o{ QuoteDocument : "organizationId"
+    QuoteProduct |o..o{ QuoteDocument : "productId"
+    QuoteDocument ||..o{ QuoteLineItem : "documentId"

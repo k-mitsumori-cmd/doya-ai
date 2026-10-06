@@ -1,0 +1,99 @@
+erDiagram
+    direction LR
+    User {
+        String id PK
+        String name "nullable"
+        String email UK "nullable"
+        String stripeCustomerId UK "nullable"
+        String stripeSubscriptionId UK "nullable"
+        String plan
+        DateTime createdAt
+    }
+    HrOrganization {
+        String id PK
+        String name
+        String slug UK
+        String stripeCustomerId UK "nullable"
+        String stripeSubscriptionId UK "nullable"
+        String plan
+        DateTime createdAt
+    }
+    HrOrganizationMember {
+        String id PK
+        String organizationId FK
+        String userId FK
+        String status
+        String employeeId UK "nullable"
+        DateTime createdAt
+    }
+    HrDepartment {
+        String id PK
+        String organizationId FK
+        String name
+        String parentId FK "nullable"
+        DateTime createdAt
+    }
+    HrEmployee {
+        String id PK
+        String organizationId FK
+        String departmentId FK "nullable"
+        String status
+        DateTime createdAt
+    }
+    HrEmployeeHistory {
+        String id PK
+        String employeeId FK
+        DateTime createdAt
+    }
+    HrEvaluationPeriod {
+        String id PK
+        String organizationId FK
+        String name
+        String status
+        DateTime createdAt
+    }
+    HrEvaluation {
+        String id PK
+        String periodId FK
+        String employeeId FK
+        String evaluatorId FK "nullable"
+        String status
+        DateTime createdAt
+    }
+    HrOneOnOne {
+        String id PK
+        String organizationId FK
+        String employeeId FK
+        String managerId FK
+        String status
+        DateTime createdAt
+    }
+    HrInvitation {
+        String id PK
+        String organizationId FK
+        String token UK
+        String status
+        DateTime createdAt
+    }
+    HrAuditLog {
+        String id PK
+        String organizationId FK
+        String userId
+        DateTime createdAt
+    }
+    HrOrganization ||..o{ HrOrganizationMember : "organizationId"
+    User ||..o{ HrOrganizationMember : "userId"
+    HrOrganization ||..o{ HrDepartment : "organizationId"
+    HrDepartment |o..o{ HrDepartment : "parentId"
+    HrOrganization ||..o{ HrEmployee : "organizationId"
+    HrDepartment |o..o{ HrEmployee : "departmentId"
+    HrEmployee ||..o{ HrEmployeeHistory : "employeeId"
+    HrOrganization ||..o{ HrEvaluationPeriod : "organizationId"
+    HrEvaluationPeriod ||..o{ HrEvaluation : "periodId"
+    HrEmployee ||..o{ HrEvaluation : "employeeId"
+    HrEmployee |o..o{ HrEvaluation : "evaluatorId"
+    HrOrganization ||..o{ HrOneOnOne : "organizationId"
+    HrEmployee ||..o{ HrOneOnOne : "employeeId"
+    HrEmployee ||..o{ HrOneOnOne : "managerId"
+    HrOrganization ||..o{ HrInvitation : "organizationId"
+    HrOrganization ||..o{ HrAuditLog : "organizationId"

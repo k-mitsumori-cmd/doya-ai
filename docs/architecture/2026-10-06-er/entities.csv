@@ -1,0 +1,2505 @@
+domain,model,table,field,type,attributes,schema_line
+core,Account,Account,id,String,@id @default(cuid()),18
+core,Account,Account,userId,String,,18
+core,Account,Account,type,String,,18
+core,Account,Account,provider,String,,18
+core,Account,Account,providerAccountId,String,,18
+core,Account,Account,refresh_token,String?,@db.Text,18
+core,Account,Account,access_token,String?,@db.Text,18
+core,Account,Account,expires_at,Int?,,18
+core,Account,Account,token_type,String?,,18
+core,Account,Account,scope,String?,,18
+core,Account,Account,id_token,String?,@db.Text,18
+core,Account,Account,session_state,String?,,18
+core,Account,Account,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",18
+core,Session,Session,id,String,@id @default(cuid()),37
+core,Session,Session,sessionToken,String,@unique,37
+core,Session,Session,userId,String,,37
+core,Session,Session,expires,DateTime,,37
+core,Session,Session,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",37
+core,VerificationToken,VerificationToken,identifier,String,,45
+core,VerificationToken,VerificationToken,token,String,@unique,45
+core,VerificationToken,VerificationToken,expires,DateTime,,45
+core,User,User,id,String,@id @default(cuid()),57
+core,User,User,name,String?,,57
+core,User,User,email,String?,@unique,57
+core,User,User,emailVerified,DateTime?,,57
+core,User,User,image,String?,,57
+core,User,User,role,String,"@default(""USER"") // USER | ADMIN",57
+core,User,User,accounts,Account[],,57
+core,User,User,sessions,Session[],,57
+core,User,User,serviceSubscriptions,UserServiceSubscription[],,57
+core,User,User,subscriptions,Subscription[],,57
+core,User,User,generations,Generation[],,57
+core,User,User,personaProjects,PersonaProject[],,57
+core,User,User,personaImageUsageDays,PersonaImageUsageDay[],,57
+core,User,User,personaUsageDays,PersonaUsageDay[],,57
+core,User,User,seoArticles,SeoArticle[],,57
+core,User,User,seoKnowledgeItems,SeoKnowledgeItem[],,57
+core,User,User,swipeSessions,SwipeSession[],,57
+core,User,User,interviewProjects,InterviewProject[],,57
+core,User,User,interviewRecipes,InterviewRecipe[],,57
+core,User,User,strategyProjects,StrategyProject[],,57
+core,User,User,tenkaiProjects,TenkaiProject[],,57
+core,User,User,tenkaiBrandVoices,TenkaiBrandVoice[],,57
+core,User,User,tenkaiTemplates,TenkaiTemplate[],,57
+core,User,User,tenkaiUsages,TenkaiUsage[],,57
+core,User,User,tenkaiApiKeys,TenkaiApiKey[],,57
+core,User,User,openingProjects,OpeningProject[],,57
+core,User,User,copyProjects,CopyProject[],,57
+core,User,User,copyBrandVoices,CopyBrandVoice[],,57
+core,User,User,voiceProjects,VoiceProject[],,57
+core,User,User,lpProjects,LpProject[],,57
+core,User,User,movieProjects,MovieProject[],,57
+core,User,User,interviewxProjects,InterviewXProject[],,57
+core,User,User,adSimProjects,AdSimProject[],,57
+core,User,User,mitsuboshiNagusamePosts,MitsuboshiNagusamePost[],,57
+core,User,User,mitsuboshiNagusameSubscription,MitsuboshiNagusameSubscription?,,57
+core,User,User,hrMemberships,HrOrganizationMember[],,57
+core,User,User,promaneWorkspaces,PromaneWorkspace[],,57
+core,User,User,promaneMembers,PromaneMember[],,57
+core,User,User,promaneInvitations,PromaneInvitation[],"@relation(""PromaneInvitationInvitedBy"")",57
+core,User,User,dripEnrollments,DripEnrollment[],,57
+core,User,User,dripEmailLogs,DripEmailLog[],,57
+core,User,User,dripUnsubscribes,DripUnsubscribe[],,57
+core,User,User,stripeCustomerId,String?,@unique,57
+core,User,User,stripeSubscriptionId,String?,@unique,57
+core,User,User,stripePriceId,String?,,57
+core,User,User,stripeCurrentPeriodEnd,DateTime?,,57
+core,User,User,plan,String,"@default(""FREE"") // FREE | STARTER | PRO | BUSINESS | BUNDLE",57
+core,User,User,firstLoginAt,DateTime?,,57
+core,User,User,signupService,String?,"// 登録操作を行ったサービス（例: banner, seo, portal）",57
+core,User,User,signupSource,String?,// 流入経路（例: Google検索 / ドヤマーケ / X / direct）,57
+core,User,User,createdAt,DateTime,@default(now()),57
+core,User,User,updatedAt,DateTime,@updatedAt,57
+core,User,User,serviceFeedback,ServiceFeedback[],,57
+core,User,User,feedbackPromptState,FeedbackPromptState?,,57
+core,UserServiceSubscription,UserServiceSubscription,id,String,@id @default(cuid()),164
+core,UserServiceSubscription,UserServiceSubscription,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",164
+core,UserServiceSubscription,UserServiceSubscription,userId,String,,164
+core,UserServiceSubscription,UserServiceSubscription,serviceId,String,// 'kantan' | 'banner' | 'lp' | 'video' など,164
+core,UserServiceSubscription,UserServiceSubscription,plan,String,"@default(""FREE"") // FREE | PRO | ENTERPRISE",164
+core,UserServiceSubscription,UserServiceSubscription,stripeSubscriptionId,String?,,164
+core,UserServiceSubscription,UserServiceSubscription,stripePriceId,String?,,164
+core,UserServiceSubscription,UserServiceSubscription,stripeCurrentPeriodEnd,DateTime?,,164
+core,UserServiceSubscription,UserServiceSubscription,dailyUsage,Int,@default(0),164
+core,UserServiceSubscription,UserServiceSubscription,monthlyUsage,Int,@default(0),164
+core,UserServiceSubscription,UserServiceSubscription,lastUsageReset,DateTime,@default(now()),164
+core,UserServiceSubscription,UserServiceSubscription,createdAt,DateTime,@default(now()),164
+core,UserServiceSubscription,UserServiceSubscription,updatedAt,DateTime,@updatedAt,164
+core,Subscription,Subscription,id,String,@id @default(cuid()),198
+core,Subscription,Subscription,userId,String,,198
+core,Subscription,Subscription,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",198
+core,Subscription,Subscription,stripeSubscriptionId,String,@unique,198
+core,Subscription,Subscription,stripeCustomerId,String,,198
+core,Subscription,Subscription,priceId,String?,,198
+core,Subscription,Subscription,planId,String?,"// 'kantan-pro', 'banner-starter' など",198
+core,Subscription,Subscription,status,String,"// active, canceled, past_due, etc.",198
+core,Subscription,Subscription,currentPeriodStart,DateTime,,198
+core,Subscription,Subscription,currentPeriodEnd,DateTime,,198
+core,Subscription,Subscription,cancelAtPeriodEnd,Boolean,@default(false),198
+core,Subscription,Subscription,createdAt,DateTime,@default(now()),198
+core,Subscription,Subscription,updatedAt,DateTime,@updatedAt,198
+core,Service,Service,id,String,@id @default(cuid()),226
+core,Service,Service,slug,String,"@unique // 'kantan', 'banner', 'lp', 'video'",226
+core,Service,Service,name,String,// 'カンタンドヤAI',226
+core,Service,Service,description,String?,@db.Text,226
+core,Service,Service,icon,String?,// 絵文字 or アイコン名,226
+core,Service,Service,color,String?,// グラデーションクラス,226
+core,Service,Service,freeLimit,Int,@default(3) // 無料プランの1日の上限,226
+core,Service,Service,proLimit,Int,@default(100) // プロプランの1日の上限,226
+core,Service,Service,proPrice,Int,@default(2980) // プロプラン月額（円）,226
+core,Service,Service,isActive,Boolean,@default(true),226
+core,Service,Service,isComingSoon,Boolean,@default(false),226
+core,Service,Service,order,Int,@default(0),226
+core,Service,Service,createdAt,DateTime,@default(now()),226
+core,Service,Service,updatedAt,DateTime,@updatedAt,226
+core,Category,Category,id,String,@id @default(cuid()),252
+core,Category,Category,name,String,,252
+core,Category,Category,slug,String,@unique,252
+core,Category,Category,description,String?,,252
+core,Category,Category,icon,String?,,252
+core,Category,Category,color,String?,,252
+core,Category,Category,order,Int,@default(0),252
+core,Category,Category,serviceId,String,"@default(""kantan"") // どのサービスのカテゴリか",252
+core,Category,Category,templates,Template[],,252
+core,Category,Category,createdAt,DateTime,@default(now()),252
+core,Category,Category,updatedAt,DateTime,@updatedAt,252
+core,Template,Template,id,String,@id @default(cuid()),268
+core,Template,Template,name,String,,268
+core,Template,Template,description,String,@db.Text,268
+core,Template,Template,category,Category,"@relation(fields: [categoryId], references: [id])",268
+core,Template,Template,categoryId,String,,268
+core,Template,Template,prompt,String,@db.Text,268
+core,Template,Template,inputFields,Json,"// [{name: string, label: string, type: string, required: boolean}]",268
+core,Template,Template,outputType,String,"@default(""TEXT"")",268
+core,Template,Template,isPremium,Boolean,@default(false),268
+core,Template,Template,isActive,Boolean,@default(true),268
+core,Template,Template,usageCount,Int,@default(0),268
+core,Template,Template,generations,Generation[],,268
+core,Template,Template,createdAt,DateTime,@default(now()),268
+core,Template,Template,updatedAt,DateTime,@updatedAt,268
+core,Generation,Generation,id,String,@id @default(cuid()),289
+core,Generation,Generation,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",289
+core,Generation,Generation,userId,String,,289
+core,Generation,Generation,serviceId,String,// 'kantan' | 'banner' | 'lp' など,289
+core,Generation,Generation,template,Template?,"@relation(fields: [templateId], references: [id])",289
+core,Generation,Generation,templateId,String?,,289
+core,Generation,Generation,input,Json,,289
+core,Generation,Generation,output,String,@db.Text,289
+core,Generation,Generation,outputType,String,"@default(""TEXT"") // TEXT | IMAGE | HTML など",289
+core,Generation,Generation,metadata,Json?,// サービス固有の追加情報,289
+core,Generation,Generation,isFavorite,Boolean,@default(false),289
+core,Generation,Generation,createdAt,DateTime,@default(now()),289
+core,SystemSetting,SystemSetting,id,String,@id @default(cuid()),320
+core,SystemSetting,SystemSetting,key,String,@unique,320
+core,SystemSetting,SystemSetting,value,String,@db.Text,320
+core,StripeWebhookEvent,StripeWebhookEvent,id,String,@id,327
+core,StripeWebhookEvent,StripeWebhookEvent,type,String,,327
+core,StripeWebhookEvent,StripeWebhookEvent,status,String,"@default(""processing"") // processing | processed | failed",327
+core,StripeWebhookEvent,StripeWebhookEvent,attempts,Int,@default(1),327
+core,StripeWebhookEvent,StripeWebhookEvent,firstReceivedAt,DateTime,@default(now()),327
+core,StripeWebhookEvent,StripeWebhookEvent,lastReceivedAt,DateTime,@default(now()),327
+core,StripeWebhookEvent,StripeWebhookEvent,processedAt,DateTime?,,327
+core,StripeWebhookEvent,StripeWebhookEvent,leaseExpiresAt,DateTime?,,327
+core,StripeWebhookEvent,StripeWebhookEvent,claimToken,String?,,327
+core,StripeWebhookNotification,StripeWebhookNotification,eventId,String,@id,343
+core,StripeWebhookNotification,StripeWebhookNotification,eventType,String,,343
+core,StripeWebhookNotification,StripeWebhookNotification,payload,Json,,343
+core,StripeWebhookNotification,StripeWebhookNotification,status,String,"@default(""pending"") // pending | sending | sent",343
+core,StripeWebhookNotification,StripeWebhookNotification,attempts,Int,@default(0),343
+core,StripeWebhookNotification,StripeWebhookNotification,nextAttemptAt,DateTime,@default(now()),343
+core,StripeWebhookNotification,StripeWebhookNotification,leaseExpiresAt,DateTime?,,343
+core,StripeWebhookNotification,StripeWebhookNotification,claimToken,String?,,343
+core,StripeWebhookNotification,StripeWebhookNotification,createdAt,DateTime,@default(now()),343
+core,StripeWebhookNotification,StripeWebhookNotification,updatedAt,DateTime,@updatedAt,343
+core,StripeWebhookNotification,StripeWebhookNotification,sentAt,DateTime?,,343
+core,AdminUser,AdminUser,id,String,@id @default(cuid()),363
+core,AdminUser,AdminUser,username,String,@unique,363
+core,AdminUser,AdminUser,passwordHash,String,,363
+core,AdminUser,AdminUser,email,String?,@unique,363
+core,AdminUser,AdminUser,name,String?,,363
+core,AdminUser,AdminUser,isActive,Boolean,@default(true),363
+core,AdminUser,AdminUser,lastLoginAt,DateTime?,,363
+core,AdminUser,AdminUser,totpSecret,String?,,363
+core,AdminUser,AdminUser,totpEnabled,Boolean,@default(false),363
+core,AdminUser,AdminUser,loginAttempts,AdminLoginAttempt[],,363
+core,AdminUser,AdminUser,sessions,AdminSession[],,363
+core,AdminUser,AdminUser,createdAt,DateTime,@default(now()),363
+core,AdminUser,AdminUser,updatedAt,DateTime,@updatedAt,363
+core,AdminLoginAttempt,AdminLoginAttempt,id,String,@id @default(cuid()),379
+core,AdminLoginAttempt,AdminLoginAttempt,adminUser,AdminUser?,"@relation(fields: [adminUserId], references: [id], onDelete: Cascade)",379
+core,AdminLoginAttempt,AdminLoginAttempt,adminUserId,String?,,379
+core,AdminLoginAttempt,AdminLoginAttempt,username,String,,379
+core,AdminLoginAttempt,AdminLoginAttempt,ipAddress,String?,,379
+core,AdminLoginAttempt,AdminLoginAttempt,userAgent,String?,,379
+core,AdminLoginAttempt,AdminLoginAttempt,success,Boolean,,379
+core,AdminLoginAttempt,AdminLoginAttempt,failureReason,String?,,379
+core,AdminLoginAttempt,AdminLoginAttempt,createdAt,DateTime,@default(now()),379
+core,AdminSession,AdminSession,id,String,@id @default(cuid()),395
+core,AdminSession,AdminSession,token,String,@unique,395
+core,AdminSession,AdminSession,adminUser,AdminUser,"@relation(fields: [adminUserId], references: [id], onDelete: Cascade)",395
+core,AdminSession,AdminSession,adminUserId,String,,395
+core,AdminSession,AdminSession,ipAddress,String?,,395
+core,AdminSession,AdminSession,userAgent,String?,,395
+core,AdminSession,AdminSession,expiresAt,DateTime,,395
+core,AdminSession,AdminSession,createdAt,DateTime,@default(now()),395
+seo,SeoArticle,SeoArticle,id,String,@id @default(cuid()),414
+seo,SeoArticle,SeoArticle,userId,String?,,414
+seo,SeoArticle,SeoArticle,user,User?,"@relation(fields: [userId], references: [id], onDelete: SetNull)",414
+seo,SeoArticle,SeoArticle,guestId,String?,,414
+seo,SeoArticle,SeoArticle,status,String,"@default(""DRAFT"") // DRAFT | RUNNING | DONE | ERROR",414
+seo,SeoArticle,SeoArticle,title,String,,414
+seo,SeoArticle,SeoArticle,keywords,Json,// string[],414
+seo,SeoArticle,SeoArticle,persona,String?,@db.Text,414
+seo,SeoArticle,SeoArticle,searchIntent,String?,@db.Text,414
+seo,SeoArticle,SeoArticle,targetChars,Int,@default(10000),414
+seo,SeoArticle,SeoArticle,tone,String,"@default(""丁寧"")",414
+seo,SeoArticle,SeoArticle,forbidden,Json?,// string[],414
+seo,SeoArticle,SeoArticle,referenceUrls,Json?,// string[],414
+seo,SeoArticle,SeoArticle,llmoOptions,Json?,"// {tldr:boolean, faq:boolean, glossary:boolean, comparison:boolean, quotes:boolean, templates:boolean, objections:boolean}",414
+seo,SeoArticle,SeoArticle,requestText,String?,@db.Text // ユーザーが入力した依頼内容・参考テキスト,414
+seo,SeoArticle,SeoArticle,referenceImages,Json?,"// [{name:string, dataUrl:string}] 参考画像のBase64",414
+seo,SeoArticle,SeoArticle,autoBundle,Boolean,@default(true) // 記事+図解+サムネを自動生成するか,414
+seo,SeoArticle,SeoArticle,mode,String,"@default(""standard"") // standard | comparison_research",414
+seo,SeoArticle,SeoArticle,comparisonConfig,Json?,// 比較記事設定（対象数/地域/除外条件/参照方針/テンプレ種別など）,414
+seo,SeoArticle,SeoArticle,comparisonCandidates,Json?,// 候補企業（確定リスト）,414
+seo,SeoArticle,SeoArticle,referenceInputs,Json?,// 参考記事入力（URL/ファイル/貼り付け）と抽出プレビュー,414
+seo,SeoArticle,SeoArticle,outline,String?,@db.Text,414
+seo,SeoArticle,SeoArticle,finalMarkdown,String?,@db.Text,414
+seo,SeoArticle,SeoArticle,checkResults,Json?,,414
+seo,SeoArticle,SeoArticle,createdAt,DateTime,@default(now()),414
+seo,SeoArticle,SeoArticle,updatedAt,DateTime,@updatedAt,414
+seo,SeoArticle,SeoArticle,jobs,SeoJob[],,414
+seo,SeoArticle,SeoArticle,sections,SeoSection[],,414
+seo,SeoArticle,SeoArticle,references,SeoReference[],,414
+seo,SeoArticle,SeoArticle,audits,SeoAuditReport[],,414
+seo,SeoArticle,SeoArticle,memo,SeoUserMemo?,,414
+seo,SeoArticle,SeoArticle,images,SeoImage[],,414
+seo,SeoArticle,SeoArticle,linkChecks,SeoLinkCheckResult[],,414
+seo,SeoArticle,SeoArticle,knowledgeItems,SeoKnowledgeItem[],,414
+seo,SwipeSession,SwipeSession,id,String,@id @default(cuid()),468
+seo,SwipeSession,SwipeSession,sessionId,String,@unique // UUID（フロント側で生成）,468
+seo,SwipeSession,SwipeSession,userId,String?,,468
+seo,SwipeSession,SwipeSession,user,User?,"@relation(fields: [userId], references: [id], onDelete: SetNull)",468
+seo,SwipeSession,SwipeSession,guestId,String?,// 未ログイン時の識別子,468
+seo,SwipeSession,SwipeSession,mainKeyword,String,// 最初に入力したキーワード,468
+seo,SwipeSession,SwipeSession,swipes,Json,// SwipeLog[]（スワイプログ配列）,468
+seo,SwipeSession,SwipeSession,finalConditions,Json?,"// {targetChars: number, articleType: string}",468
+seo,SwipeSession,SwipeSession,primaryInfo,Json?,"// {results: string, experience: string, opinion: string, fixedPhrase: string}",468
+seo,SwipeSession,SwipeSession,generatedArticleId,String?,// 生成された記事のID,468
+seo,SwipeSession,SwipeSession,createdAt,DateTime,@default(now()),468
+seo,SwipeSession,SwipeSession,updatedAt,DateTime,@updatedAt,468
+seo,SwipeCelebrationImage,SwipeCelebrationImage,id,String,@id @default(cuid()),489
+seo,SwipeCelebrationImage,SwipeCelebrationImage,category,String,"// カテゴリ（例: ""thanks"", ""completion"", ""article""など）",489
+seo,SwipeCelebrationImage,SwipeCelebrationImage,prompt,String,@db.Text // 生成時のプロンプト,489
+seo,SwipeCelebrationImage,SwipeCelebrationImage,imageBase64,String,@db.Text // base64エンコードされた画像データ,489
+seo,SwipeCelebrationImage,SwipeCelebrationImage,mimeType,String,"@default(""image/png"")",489
+seo,SwipeCelebrationImage,SwipeCelebrationImage,width,Int?,,489
+seo,SwipeCelebrationImage,SwipeCelebrationImage,height,Int?,,489
+seo,SwipeCelebrationImage,SwipeCelebrationImage,createdAt,DateTime,@default(now()),489
+seo,SwipeQuestionImage,SwipeQuestionImage,id,String,@id @default(cuid()),503
+seo,SwipeQuestionImage,SwipeQuestionImage,category,String,"// カテゴリ（例: ""記事の方向性"", ""記事タイプ"", ""ターゲット読者""など）",503
+seo,SwipeQuestionImage,SwipeQuestionImage,prompt,String,@db.Text // 生成時のプロンプト,503
+seo,SwipeQuestionImage,SwipeQuestionImage,imageBase64,String,@db.Text // base64エンコードされた画像データ,503
+seo,SwipeQuestionImage,SwipeQuestionImage,mimeType,String,"@default(""image/png"")",503
+seo,SwipeQuestionImage,SwipeQuestionImage,width,Int?,,503
+seo,SwipeQuestionImage,SwipeQuestionImage,height,Int?,,503
+seo,SwipeQuestionImage,SwipeQuestionImage,createdAt,DateTime,@default(now()),503
+seo,SeoJob,SeoJob,id,String,@id @default(cuid()),517
+seo,SeoJob,SeoJob,articleId,String,,517
+seo,SeoJob,SeoJob,article,SeoArticle,"@relation(fields: [articleId], references: [id], onDelete: Cascade)",517
+seo,SeoJob,SeoJob,status,String,"@default(""queued"") // queued | running | done | error",517
+seo,SeoJob,SeoJob,progress,Int,@default(0),517
+seo,SeoJob,SeoJob,step,String,"@default(""init"") // init | outline | sections | integrate | audit | done",517
+seo,SeoJob,SeoJob,error,String?,@db.Text,517
+seo,SeoJob,SeoJob,cursor,Int,@default(0) // 次に生成するセクションindex,517
+seo,SeoJob,SeoJob,meta,Json?,// 進捗ログ/各ステップのカーソル等（JSON）,517
+seo,SeoJob,SeoJob,executionToken,String?,,517
+seo,SeoJob,SeoJob,executionExpiresAt,DateTime?,,517
+seo,SeoJob,SeoJob,supersededAt,DateTime?,,517
+seo,SeoJob,SeoJob,createdAt,DateTime,@default(now()),517
+seo,SeoJob,SeoJob,updatedAt,DateTime,@updatedAt,517
+seo,SeoJob,SeoJob,startedAt,DateTime?,,517
+seo,SeoJob,SeoJob,finishedAt,DateTime?,,517
+seo,SeoJob,SeoJob,sections,SeoSection[],,517
+seo,SeoJob,SeoJob,audits,SeoAuditReport[],,517
+seo,SeoSection,SeoSection,id,String,@id @default(cuid()),547
+seo,SeoSection,SeoSection,articleId,String,,547
+seo,SeoSection,SeoSection,article,SeoArticle,"@relation(fields: [articleId], references: [id], onDelete: Cascade)",547
+seo,SeoSection,SeoSection,jobId,String?,,547
+seo,SeoSection,SeoSection,job,SeoJob?,"@relation(fields: [jobId], references: [id], onDelete: SetNull)",547
+seo,SeoSection,SeoSection,index,Int,,547
+seo,SeoSection,SeoSection,headingPath,String?,"// ""H2:... > H3:...""",547
+seo,SeoSection,SeoSection,plannedChars,Int,@default(2000),547
+seo,SeoSection,SeoSection,status,String,"@default(""pending"") // pending | generated | reviewed | error",547
+seo,SeoSection,SeoSection,prompt,String?,@db.Text,547
+seo,SeoSection,SeoSection,content,String?,@db.Text,547
+seo,SeoSection,SeoSection,consistency,String?,@db.Text,547
+seo,SeoSection,SeoSection,error,String?,@db.Text,547
+seo,SeoSection,SeoSection,createdAt,DateTime,@default(now()),547
+seo,SeoSection,SeoSection,updatedAt,DateTime,@updatedAt,547
+seo,SeoReference,SeoReference,id,String,@id @default(cuid()),573
+seo,SeoReference,SeoReference,articleId,String,,573
+seo,SeoReference,SeoReference,article,SeoArticle,"@relation(fields: [articleId], references: [id], onDelete: Cascade)",573
+seo,SeoReference,SeoReference,url,String,,573
+seo,SeoReference,SeoReference,title,String?,,573
+seo,SeoReference,SeoReference,fetchedAt,DateTime?,,573
+seo,SeoReference,SeoReference,extractedText,String?,@db.Text,573
+seo,SeoReference,SeoReference,headings,Json?,"// {h2:string[], h3:string[], faq:string[]}",573
+seo,SeoReference,SeoReference,summary,String?,@db.Text,573
+seo,SeoReference,SeoReference,insights,Json?,"// {claims:string[], structure:string[], internalLinks:string[], faq:string[]}",573
+seo,SeoReference,SeoReference,createdAt,DateTime,@default(now()),573
+seo,SeoReference,SeoReference,updatedAt,DateTime,@updatedAt,573
+seo,SeoAuditReport,SeoAuditReport,id,String,@id @default(cuid()),594
+seo,SeoAuditReport,SeoAuditReport,articleId,String,,594
+seo,SeoAuditReport,SeoAuditReport,article,SeoArticle,"@relation(fields: [articleId], references: [id], onDelete: Cascade)",594
+seo,SeoAuditReport,SeoAuditReport,jobId,String?,,594
+seo,SeoAuditReport,SeoAuditReport,job,SeoJob?,"@relation(fields: [jobId], references: [id], onDelete: SetNull)",594
+seo,SeoAuditReport,SeoAuditReport,report,String,@db.Text,594
+seo,SeoAuditReport,SeoAuditReport,createdAt,DateTime,@default(now()),594
+seo,SeoUserMemo,SeoUserMemo,id,String,@id @default(cuid()),608
+seo,SeoUserMemo,SeoUserMemo,articleId,String,@unique,608
+seo,SeoUserMemo,SeoUserMemo,article,SeoArticle,"@relation(fields: [articleId], references: [id], onDelete: Cascade)",608
+seo,SeoUserMemo,SeoUserMemo,content,String,@db.Text,608
+seo,SeoUserMemo,SeoUserMemo,createdAt,DateTime,@default(now()),608
+seo,SeoUserMemo,SeoUserMemo,updatedAt,DateTime,@updatedAt,608
+seo,SeoImage,SeoImage,id,String,@id @default(cuid()),618
+seo,SeoImage,SeoImage,articleId,String,,618
+seo,SeoImage,SeoImage,article,SeoArticle,"@relation(fields: [articleId], references: [id], onDelete: Cascade)",618
+seo,SeoImage,SeoImage,kind,String,// BANNER | DIAGRAM,618
+seo,SeoImage,SeoImage,title,String?,,618
+seo,SeoImage,SeoImage,prompt,String,@db.Text,618
+seo,SeoImage,SeoImage,description,String?,@db.Text,618
+seo,SeoImage,SeoImage,filePath,String,,618
+seo,SeoImage,SeoImage,mimeType,String,"@default(""image/png"")",618
+seo,SeoImage,SeoImage,width,Int?,,618
+seo,SeoImage,SeoImage,height,Int?,,618
+seo,SeoImage,SeoImage,createdAt,DateTime,@default(now()),618
+seo,SeoLinkCheckResult,SeoLinkCheckResult,id,String,@id @default(cuid()),638
+seo,SeoLinkCheckResult,SeoLinkCheckResult,articleId,String,,638
+seo,SeoLinkCheckResult,SeoLinkCheckResult,article,SeoArticle,"@relation(fields: [articleId], references: [id], onDelete: Cascade)",638
+seo,SeoLinkCheckResult,SeoLinkCheckResult,url,String,,638
+seo,SeoLinkCheckResult,SeoLinkCheckResult,statusCode,Int?,,638
+seo,SeoLinkCheckResult,SeoLinkCheckResult,ok,Boolean,@default(false),638
+seo,SeoLinkCheckResult,SeoLinkCheckResult,finalUrl,String?,,638
+seo,SeoLinkCheckResult,SeoLinkCheckResult,error,String?,,638
+seo,SeoLinkCheckResult,SeoLinkCheckResult,checkedAt,DateTime,@default(now()),638
+seo,SeoLinkCheckResult,SeoLinkCheckResult,createdAt,DateTime,@default(now()),638
+seo,SeoKnowledgeItem,SeoKnowledgeItem,id,String,@id @default(cuid()),656
+seo,SeoKnowledgeItem,SeoKnowledgeItem,userId,String?,,656
+seo,SeoKnowledgeItem,SeoKnowledgeItem,user,User?,"@relation(fields: [userId], references: [id], onDelete: SetNull)",656
+seo,SeoKnowledgeItem,SeoKnowledgeItem,articleId,String?,,656
+seo,SeoKnowledgeItem,SeoKnowledgeItem,article,SeoArticle?,"@relation(fields: [articleId], references: [id], onDelete: SetNull)",656
+seo,SeoKnowledgeItem,SeoKnowledgeItem,type,String,// trend | insight | prompt | internalLink | note,656
+seo,SeoKnowledgeItem,SeoKnowledgeItem,title,String?,,656
+seo,SeoKnowledgeItem,SeoKnowledgeItem,content,String,@db.Text,656
+seo,SeoKnowledgeItem,SeoKnowledgeItem,sourceUrls,Json?,// string[],656
+seo,SeoKnowledgeItem,SeoKnowledgeItem,createdAt,DateTime,@default(now()),656
+interview,InterviewProject,interview_project,id,String,@id @default(cuid()),680
+interview,InterviewProject,interview_project,userId,String?,,680
+interview,InterviewProject,interview_project,user,User?,"@relation(fields: [userId], references: [id], onDelete: SetNull)",680
+interview,InterviewProject,interview_project,guestId,String?,// 未ログイン（ゲスト）向けの識別子,680
+interview,InterviewProject,interview_project,title,String,,680
+interview,InterviewProject,interview_project,status,String,"@default(""DRAFT"") // DRAFT | PLANNING | RECORDING | TRANSCRIBING | EDITING | REVIEWING | COMPLETED",680
+interview,InterviewProject,interview_project,thumbnailUrl,String?,@db.Text // 旧base64 data URL または private Storage のマーカー,680
+interview,InterviewProject,interview_project,intervieweeName,String?,,680
+interview,InterviewProject,interview_project,intervieweeRole,String?,,680
+interview,InterviewProject,interview_project,intervieweeCompany,String?,,680
+interview,InterviewProject,interview_project,intervieweeBio,String?,@db.Text,680
+interview,InterviewProject,interview_project,genre,String?,// CASE_STUDY | PRODUCT_INTERVIEW | PERSONA_INTERVIEW | OTHER,680
+interview,InterviewProject,interview_project,theme,String?,@db.Text // 取材テーマ,680
+interview,InterviewProject,interview_project,purpose,String?,@db.Text // 目的,680
+interview,InterviewProject,interview_project,targetAudience,String?,@db.Text // 想定読者,680
+interview,InterviewProject,interview_project,tone,String?,"@default(""friendly"") // friendly | professional | casual | formal",680
+interview,InterviewProject,interview_project,mediaType,String?,// blog | news | sns | pr | other,680
+interview,InterviewProject,interview_project,recipeId,String?,,680
+interview,InterviewProject,interview_project,recipe,InterviewRecipe?,"@relation(fields: [recipeId], references: [id], onDelete: SetNull)",680
+interview,InterviewProject,interview_project,materials,InterviewMaterial[],,680
+interview,InterviewProject,interview_project,transcriptions,InterviewTranscription[],,680
+interview,InterviewProject,interview_project,outline,String?,@db.Text,680
+interview,InterviewProject,interview_project,drafts,InterviewDraft[],,680
+interview,InterviewProject,interview_project,reviews,InterviewReview[],,680
+interview,InterviewProject,interview_project,finalContent,String?,@db.Text // 最終記事,680
+interview,InterviewProject,interview_project,exportFormats,Json?,"// {word: string, markdown: string, html: string}",680
+interview,InterviewProject,interview_project,createdAt,DateTime,@default(now()),680
+interview,InterviewProject,interview_project,updatedAt,DateTime,@updatedAt,680
+interview,InterviewRecipe,interview_recipe,id,String,@id @default(cuid()),737
+interview,InterviewRecipe,interview_recipe,userId,String?,,737
+interview,InterviewRecipe,interview_recipe,user,User?,"@relation(fields: [userId], references: [id], onDelete: SetNull)",737
+interview,InterviewRecipe,interview_recipe,name,String,// レシピ名,737
+interview,InterviewRecipe,interview_recipe,description,String?,@db.Text,737
+interview,InterviewRecipe,interview_recipe,category,String?,// formal | casual | panel | technical | pr,737
+interview,InterviewRecipe,interview_recipe,proposals,Json,"// [{title: string, summary: string, questions: string[], value: string}]",737
+interview,InterviewRecipe,interview_recipe,questions,Json,// string[],737
+interview,InterviewRecipe,interview_recipe,editingGuidelines,String?,@db.Text,737
+interview,InterviewRecipe,interview_recipe,isPublic,Boolean,@default(false),737
+interview,InterviewRecipe,interview_recipe,isTemplate,Boolean,@default(false) // テンプレートとして使用可能,737
+interview,InterviewRecipe,interview_recipe,usageCount,Int,@default(0),737
+interview,InterviewRecipe,interview_recipe,projects,InterviewProject[],,737
+interview,InterviewRecipe,interview_recipe,createdAt,DateTime,@default(now()),737
+interview,InterviewRecipe,interview_recipe,updatedAt,DateTime,@updatedAt,737
+interview,InterviewMaterial,interview_material,id,String,@id @default(cuid()),773
+interview,InterviewMaterial,interview_material,projectId,String,,773
+interview,InterviewMaterial,interview_material,project,InterviewProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",773
+interview,InterviewMaterial,interview_material,type,String,// audio | video | text | pdf | image | url,773
+interview,InterviewMaterial,interview_material,transcriptions,InterviewTranscription[],,773
+interview,InterviewMaterial,interview_material,fileName,String,,773
+interview,InterviewMaterial,interview_material,filePath,String?,// サーバー上のパス,773
+interview,InterviewMaterial,interview_material,fileUrl,String?,// 外部URL,773
+interview,InterviewMaterial,interview_material,fileSize,BigInt?,// バイト数（10GBまで対応）,773
+interview,InterviewMaterial,interview_material,mimeType,String?,,773
+interview,InterviewMaterial,interview_material,duration,Int?,// 秒数（音声・動画の場合）,773
+interview,InterviewMaterial,interview_material,metadata,Json?,"// {width, height, bitrate, etc.}",773
+interview,InterviewMaterial,interview_material,status,String,"@default(""UPLOADED"") // UPLOADED | PROCESSING | COMPLETED | ERROR",773
+interview,InterviewMaterial,interview_material,error,String?,@db.Text,773
+interview,InterviewMaterial,interview_material,extractedText,String?,@db.Text,773
+interview,InterviewMaterial,interview_material,createdAt,DateTime,@default(now()),773
+interview,InterviewMaterial,interview_material,updatedAt,DateTime,@updatedAt,773
+interview,InterviewTranscription,interview_transcription,id,String,@id @default(cuid()),809
+interview,InterviewTranscription,interview_transcription,projectId,String,,809
+interview,InterviewTranscription,interview_transcription,project,InterviewProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",809
+interview,InterviewTranscription,interview_transcription,materialId,String?,,809
+interview,InterviewTranscription,interview_transcription,material,InterviewMaterial?,"@relation(fields: [materialId], references: [id], onDelete: SetNull)",809
+interview,InterviewTranscription,interview_transcription,text,String,@db.Text,809
+interview,InterviewTranscription,interview_transcription,segments,Json?,"// [{start: number, end: number, text: string, speaker?: string}]",809
+interview,InterviewTranscription,interview_transcription,summary,String?,@db.Text,809
+interview,InterviewTranscription,interview_transcription,topics,Json?,"// [{topic: string, startTime: number, endTime: number, summary: string}]",809
+interview,InterviewTranscription,interview_transcription,provider,String?,// google | whisper | deepgram | manual,809
+interview,InterviewTranscription,interview_transcription,externalJobId,String?,// AssemblyAI transcript ID (再接続用),809
+interview,InterviewTranscription,interview_transcription,confidence,Float?,// 信頼度スコア,809
+interview,InterviewTranscription,interview_transcription,status,String,"@default(""PENDING"") // PENDING | PROCESSING | COMPLETED | ERROR",809
+interview,InterviewTranscription,interview_transcription,createdAt,DateTime,@default(now()),809
+interview,InterviewTranscription,interview_transcription,updatedAt,DateTime,@updatedAt,809
+interview,InterviewReview,interview_review,id,String,@id @default(cuid()),840
+interview,InterviewReview,interview_review,projectId,String,,840
+interview,InterviewReview,interview_review,project,InterviewProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",840
+interview,InterviewReview,interview_review,draftId,String?,,840
+interview,InterviewReview,interview_review,draft,InterviewDraft?,"@relation(fields: [draftId], references: [id], onDelete: SetNull)",840
+interview,InterviewReview,interview_review,report,String,@db.Text // 校閲レポート,840
+interview,InterviewReview,interview_review,checks,Json?,"// {grammar: boolean, facts: boolean, consistency: boolean, readability: boolean}",840
+interview,InterviewReview,interview_review,score,Float?,// 0-100,840
+interview,InterviewReview,interview_review,readabilityScore,Float?,// 読みやすさスコア,840
+interview,InterviewReview,interview_review,suggestions,Json?,"// [{type: string, position: number, original: string, suggested: string, reason: string}]",840
+interview,InterviewReview,interview_review,createdAt,DateTime,@default(now()),840
+interview,InterviewDraft,interview_draft,id,String,@id @default(cuid()),868
+interview,InterviewDraft,interview_draft,projectId,String,,868
+interview,InterviewDraft,interview_draft,project,InterviewProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",868
+interview,InterviewDraft,interview_draft,version,Int,@default(1),868
+interview,InterviewDraft,interview_draft,title,String?,,868
+interview,InterviewDraft,interview_draft,lead,String?,@db.Text // リード文,868
+interview,InterviewDraft,interview_draft,content,String,@db.Text // 本文,868
+interview,InterviewDraft,interview_draft,articleType,String?,// INTERVIEW | BUSINESS_REPORT | INTERNAL_INTERVIEW | CASE_STUDY,868
+interview,InterviewDraft,interview_draft,displayFormat,String?,// QA | MONOLOGUE (Q&A形式 or 一人で喋っている形式),868
+interview,InterviewDraft,interview_draft,structure,Json?,"// [{heading: string, summary: string, quotes: string[], content: string}]",868
+interview,InterviewDraft,interview_draft,wordCount,Int?,,868
+interview,InterviewDraft,interview_draft,readingTime,Int?,// 分,868
+interview,InterviewDraft,interview_draft,seoTitle,String?,,868
+interview,InterviewDraft,interview_draft,seoDescription,String?,@db.Text,868
+interview,InterviewDraft,interview_draft,socialTitle,String?,,868
+interview,InterviewDraft,interview_draft,socialDescription,String?,@db.Text,868
+interview,InterviewDraft,interview_draft,status,String,"@default(""DRAFT"") // DRAFT | REVIEWING | APPROVED | PUBLISHED",868
+interview,InterviewDraft,interview_draft,reviews,InterviewReview[],,868
+interview,InterviewDraft,interview_draft,createdAt,DateTime,@default(now()),868
+interview,InterviewDraft,interview_draft,updatedAt,DateTime,@updatedAt,868
+core,GuestSession,guest_session,id,String,@id @default(cuid()),914
+core,GuestSession,guest_session,guestId,String,@unique // ゲストユーザーの識別子,914
+core,GuestSession,guest_session,firstAccessAt,DateTime,@default(now()),914
+core,GuestSession,guest_session,lastAccessAt,DateTime,@default(now()),914
+core,GuestSession,guest_session,transcriptionCount,Int,@default(0) // 文字起こし実行回数,914
+core,GuestSession,guest_session,createdAt,DateTime,@default(now()),914
+core,GuestSession,guest_session,updatedAt,DateTime,@updatedAt,914
+strategy,StrategyProject,strategy_project,id,String,@id @default(cuid()),939
+strategy,StrategyProject,strategy_project,userId,String?,,939
+strategy,StrategyProject,strategy_project,user,User?,"@relation(fields: [userId], references: [id], onDelete: SetNull)",939
+strategy,StrategyProject,strategy_project,guestId,String?,,939
+strategy,StrategyProject,strategy_project,serviceUrl,String?,@db.Text,939
+strategy,StrategyProject,strategy_project,businessModel,String?,@db.Text,939
+strategy,StrategyProject,strategy_project,averagePrice,String?,// 平均単価,939
+strategy,StrategyProject,strategy_project,targetCustomer,String?,@db.Text // 想定顧客,939
+strategy,StrategyProject,strategy_project,budgetRange,String?,@db.Text // 予算レンジ,939
+strategy,StrategyProject,strategy_project,salesType,String?,@db.Text // 営業体制,939
+strategy,StrategyProject,strategy_project,coreStrategy,Json?,"// {core_strategy: string, main_levers: string[]}",939
+strategy,StrategyProject,strategy_project,phases,Json?,"// [{phase_name: string, goal: string, actions: string[], kpi: string[], budget_ratio: number}]",939
+strategy,StrategyProject,strategy_project,visualizationData,Json?,"// {budget_chart: [], kpi_chart: [], phase_map: []}",939
+strategy,StrategyProject,strategy_project,externalResearch,Json?,"// {competitors: [], summary: string, patterns: []}",939
+strategy,StrategyProject,strategy_project,title,String?,,939
+strategy,StrategyProject,strategy_project,description,String?,@db.Text,939
+strategy,StrategyProject,strategy_project,status,String,"@default(""DRAFT"") // DRAFT | GENERATED | COMPLETED",939
+strategy,StrategyProject,strategy_project,createdAt,DateTime,@default(now()),939
+strategy,StrategyProject,strategy_project,updatedAt,DateTime,@updatedAt,939
+doyamana,DoyamanaCategory,doyamana_category,id,String,@id @default(cuid()),985
+doyamana,DoyamanaCategory,doyamana_category,name,String,// カテゴリ名（例: SEO系、LP系、WP系）,985
+doyamana,DoyamanaCategory,doyamana_category,slug,String,@unique // URL用スラッグ,985
+doyamana,DoyamanaCategory,doyamana_category,description,String?,@db.Text,985
+doyamana,DoyamanaCategory,doyamana_category,order,Int,@default(0) // 表示順,985
+doyamana,DoyamanaCategory,doyamana_category,isActive,Boolean,@default(true) // ON/OFF,985
+doyamana,DoyamanaCategory,doyamana_category,images,DoyamanaImage[],,985
+doyamana,DoyamanaCategory,doyamana_category,createdAt,DateTime,@default(now()),985
+doyamana,DoyamanaCategory,doyamana_category,updatedAt,DateTime,@updatedAt,985
+doyamana,DoyamanaImage,doyamana_image,id,String,@id @default(cuid()),1002
+doyamana,DoyamanaImage,doyamana_image,categoryId,String,,1002
+doyamana,DoyamanaImage,doyamana_image,category,DoyamanaCategory,"@relation(fields: [categoryId], references: [id])",1002
+doyamana,DoyamanaImage,doyamana_image,imageUrl,String,@db.Text // Supabase Storage URL or Base64,1002
+doyamana,DoyamanaImage,doyamana_image,thumbnailUrl,String?,@db.Text // サムネイル用（オプション）,1002
+doyamana,DoyamanaImage,doyamana_image,fileName,String?,// 元ファイル名,1002
+doyamana,DoyamanaImage,doyamana_image,mimeType,String,"@default(""image/png"")",1002
+doyamana,DoyamanaImage,doyamana_image,width,Int?,,1002
+doyamana,DoyamanaImage,doyamana_image,height,Int?,,1002
+doyamana,DoyamanaImage,doyamana_image,prompt,String,@db.Text // 生成プロンプト,1002
+doyamana,DoyamanaImage,doyamana_image,promptSummary,String?,// プロンプト冒頭（一覧表示用、50文字程度）,1002
+doyamana,DoyamanaImage,doyamana_image,order,Int,@default(0) // 表示順,1002
+doyamana,DoyamanaImage,doyamana_image,isActive,Boolean,@default(true) // ON/OFF,1002
+doyamana,DoyamanaImage,doyamana_image,isDeleted,Boolean,@default(false) // 論理削除,1002
+doyamana,DoyamanaImage,doyamana_image,usageCount,Int,@default(0),1002
+doyamana,DoyamanaImage,doyamana_image,usageLogs,DoyamanaUsageLog[],,1002
+doyamana,DoyamanaImage,doyamana_image,createdAt,DateTime,@default(now()),1002
+doyamana,DoyamanaImage,doyamana_image,updatedAt,DateTime,@updatedAt,1002
+doyamana,DoyamanaImage,doyamana_image,deletedAt,DateTime?,// 論理削除日時,1002
+doyamana,DoyamanaUsageLog,doyamana_usage_log,id,String,@id @default(cuid()),1042
+doyamana,DoyamanaUsageLog,doyamana_usage_log,imageId,String,,1042
+doyamana,DoyamanaUsageLog,doyamana_usage_log,image,DoyamanaImage,"@relation(fields: [imageId], references: [id], onDelete: Cascade)",1042
+doyamana,DoyamanaUsageLog,doyamana_usage_log,userId,String?,// ログインユーザーの場合,1042
+doyamana,DoyamanaUsageLog,doyamana_usage_log,guestId,String?,// ゲストの場合,1042
+doyamana,DoyamanaUsageLog,doyamana_usage_log,serviceId,String?,// どのサービスで使用されたか,1042
+doyamana,DoyamanaUsageLog,doyamana_usage_log,metadata,Json?,// 追加情報（生成パラメータ等）,1042
+doyamana,DoyamanaUsageLog,doyamana_usage_log,createdAt,DateTime,@default(now()),1042
+banner,BannerTemplate,banner_template,id,String,@id @default(cuid()),1068
+banner,BannerTemplate,banner_template,templateId,String,"@unique // 'brand-001', 'ux-001' など（コード内のID）",1068
+banner,BannerTemplate,banner_template,industry,String,,1068
+banner,BannerTemplate,banner_template,category,String,"// 'it', 'recruit', 'ec', 'beauty' など",1068
+banner,BannerTemplate,banner_template,prompt,String,@db.Text // デザイン要素のみのプロンプト,1068
+banner,BannerTemplate,banner_template,size,String,"@default(""1200x628"")",1068
+banner,BannerTemplate,banner_template,imageUrl,String?,// ヒーロー画像として表示するURL,1068
+banner,BannerTemplate,banner_template,previewUrl,String?,// サムネイル用（オプション）,1068
+banner,BannerTemplate,banner_template,isFeatured,Boolean,@default(false) // 初期表示用のヒーロー画像として使用,1068
+banner,BannerTemplate,banner_template,isActive,Boolean,@default(true),1068
+banner,BannerTemplate,banner_template,derivedStyle,String?,@db.Text,1068
+banner,BannerTemplate,banner_template,derivedComposition,String?,,1068
+banner,BannerTemplate,banner_template,derivedUsesPhoto,Boolean?,,1068
+banner,BannerTemplate,banner_template,derivedAt,DateTime?,,1068
+banner,BannerTemplate,banner_template,sortOrder,Int,@default(1000),1068
+banner,BannerTemplate,banner_template,createdAt,DateTime,@default(now()),1068
+banner,BannerTemplate,banner_template,updatedAt,DateTime,@updatedAt,1068
+tenkai,TenkaiProject,tenkai_projects,id,String,@id @default(cuid()),1116
+tenkai,TenkaiProject,tenkai_projects,userId,String,,1116
+tenkai,TenkaiProject,tenkai_projects,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1116
+tenkai,TenkaiProject,tenkai_projects,title,String,,1116
+tenkai,TenkaiProject,tenkai_projects,inputType,String,"// ""url"" | ""text"" | ""youtube"" | ""video""",1116
+tenkai,TenkaiProject,tenkai_projects,inputUrl,String?,,1116
+tenkai,TenkaiProject,tenkai_projects,inputText,String?,@db.Text,1116
+tenkai,TenkaiProject,tenkai_projects,inputVideoUrl,String?,// Supabase Storage URL,1116
+tenkai,TenkaiProject,tenkai_projects,transcript,String?,@db.Text,1116
+tenkai,TenkaiProject,tenkai_projects,analysis,Json?,// コンテンツ分析結果,1116
+tenkai,TenkaiProject,tenkai_projects,status,String,"@default(""draft"") // draft | analyzing | ready | generating | completed",1116
+tenkai,TenkaiProject,tenkai_projects,wordCount,Int?,,1116
+tenkai,TenkaiProject,tenkai_projects,language,String,"@default(""ja"")",1116
+tenkai,TenkaiProject,tenkai_projects,createdAt,DateTime,@default(now()),1116
+tenkai,TenkaiProject,tenkai_projects,updatedAt,DateTime,@updatedAt,1116
+tenkai,TenkaiProject,tenkai_projects,outputs,TenkaiOutput[],,1116
+tenkai,TenkaiOutput,tenkai_outputs,id,String,@id @default(cuid()),1140
+tenkai,TenkaiOutput,tenkai_outputs,projectId,String,,1140
+tenkai,TenkaiOutput,tenkai_outputs,project,TenkaiProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",1140
+tenkai,TenkaiOutput,tenkai_outputs,platform,String,"// ""note"" | ""blog"" | ""x"" | ""instagram"" | ""line"" | ""facebook"" | ""linkedin"" | ""newsletter"" | ""press_release""",1140
+tenkai,TenkaiOutput,tenkai_outputs,content,Json,// プラットフォーム固有のJSON構造,1140
+tenkai,TenkaiOutput,tenkai_outputs,charCount,Int?,,1140
+tenkai,TenkaiOutput,tenkai_outputs,qualityScore,Float?,// 0.0-1.0,1140
+tenkai,TenkaiOutput,tenkai_outputs,isEdited,Boolean,@default(false),1140
+tenkai,TenkaiOutput,tenkai_outputs,status,String,"@default(""pending"") // pending | generating | completed | failed",1140
+tenkai,TenkaiOutput,tenkai_outputs,tokensUsed,Int?,,1140
+tenkai,TenkaiOutput,tenkai_outputs,brandVoiceId,String?,,1140
+tenkai,TenkaiOutput,tenkai_outputs,brandVoice,TenkaiBrandVoice?,"@relation(fields: [brandVoiceId], references: [id], onDelete: SetNull)",1140
+tenkai,TenkaiOutput,tenkai_outputs,templateId,String?,,1140
+tenkai,TenkaiOutput,tenkai_outputs,feedback,String?,@db.Text // 再生成時のフィードバック,1140
+tenkai,TenkaiOutput,tenkai_outputs,version,Int,@default(1),1140
+tenkai,TenkaiOutput,tenkai_outputs,createdAt,DateTime,@default(now()),1140
+tenkai,TenkaiOutput,tenkai_outputs,updatedAt,DateTime,@updatedAt,1140
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,id,String,@id @default(cuid()),1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,userId,String,,1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,name,String,,1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,firstPerson,String,"@default(""私"")",1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,formalityLevel,Int,@default(3) // 1-5,1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,enthusiasmLevel,Int,@default(3),1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,technicalLevel,Int,@default(3),1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,humorLevel,Int,@default(2),1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,targetAudience,String?,,1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,sampleText,String?,@db.Text,1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,preferredExpressions,String[],// 好んで使う表現,1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,prohibitedWords,String[],// 禁止ワード,1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,isDefault,Boolean,@default(false),1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,createdAt,DateTime,@default(now()),1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,updatedAt,DateTime,@updatedAt,1166
+tenkai,TenkaiBrandVoice,tenkai_brand_voices,outputs,TenkaiOutput[],,1166
+tenkai,TenkaiTemplate,tenkai_templates,id,String,@id @default(cuid()),1191
+tenkai,TenkaiTemplate,tenkai_templates,userId,String?,// null = システムテンプレート,1191
+tenkai,TenkaiTemplate,tenkai_templates,user,User?,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1191
+tenkai,TenkaiTemplate,tenkai_templates,platform,String,,1191
+tenkai,TenkaiTemplate,tenkai_templates,name,String,,1191
+tenkai,TenkaiTemplate,tenkai_templates,description,String?,,1191
+tenkai,TenkaiTemplate,tenkai_templates,promptOverride,String?,@db.Text // プロンプト上書き,1191
+tenkai,TenkaiTemplate,tenkai_templates,structureHint,Json?,// 構造指定,1191
+tenkai,TenkaiTemplate,tenkai_templates,isSystem,Boolean,@default(false),1191
+tenkai,TenkaiTemplate,tenkai_templates,createdAt,DateTime,@default(now()),1191
+tenkai,TenkaiTemplate,tenkai_templates,updatedAt,DateTime,@updatedAt,1191
+tenkai,TenkaiUsage,tenkai_usage,id,String,@id @default(cuid()),1209
+tenkai,TenkaiUsage,tenkai_usage,userId,String,,1209
+tenkai,TenkaiUsage,tenkai_usage,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1209
+tenkai,TenkaiUsage,tenkai_usage,yearMonth,String,"// ""2026-02"" 形式",1209
+tenkai,TenkaiUsage,tenkai_usage,creditsUsed,Int,@default(0),1209
+tenkai,TenkaiUsage,tenkai_usage,tokensTotal,Int,@default(0),1209
+tenkai,TenkaiUsage,tenkai_usage,projectsCreated,Int,@default(0),1209
+tenkai,TenkaiUsage,tenkai_usage,createdAt,DateTime,@default(now()),1209
+tenkai,TenkaiUsage,tenkai_usage,updatedAt,DateTime,@updatedAt,1209
+tenkai,TenkaiApiKey,tenkai_api_keys,id,String,@id @default(cuid()),1225
+tenkai,TenkaiApiKey,tenkai_api_keys,userId,String,,1225
+tenkai,TenkaiApiKey,tenkai_api_keys,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1225
+tenkai,TenkaiApiKey,tenkai_api_keys,keyPrefix,String,"// ""sk-doya-xxxx"" の先頭8文字（表示用）",1225
+tenkai,TenkaiApiKey,tenkai_api_keys,keyHash,String,// SHA-256ハッシュ（認証用）,1225
+tenkai,TenkaiApiKey,tenkai_api_keys,lastUsedAt,DateTime?,,1225
+tenkai,TenkaiApiKey,tenkai_api_keys,isActive,Boolean,@default(true),1225
+tenkai,TenkaiApiKey,tenkai_api_keys,createdAt,DateTime,@default(now()),1225
+tenkai,TenkaiApiKey,tenkai_api_keys,updatedAt,DateTime,@updatedAt,1225
+opening,OpeningProject,OpeningProject,id,String,@id @default(cuid()),1245
+opening,OpeningProject,OpeningProject,userId,String?,,1245
+opening,OpeningProject,OpeningProject,user,User?,"@relation(fields: [userId], references: [id], onDelete: SetNull)",1245
+opening,OpeningProject,OpeningProject,guestId,String?,,1245
+opening,OpeningProject,OpeningProject,inputUrl,String,,1245
+opening,OpeningProject,OpeningProject,siteAnalysis,Json?,,1245
+opening,OpeningProject,OpeningProject,status,String,"@default(""ANALYZING"") // ANALYZING | READY | COMPLETED | ERROR",1245
+opening,OpeningProject,OpeningProject,metadata,Json?,,1245
+opening,OpeningProject,OpeningProject,createdAt,DateTime,@default(now()),1245
+opening,OpeningProject,OpeningProject,updatedAt,DateTime,@updatedAt,1245
+opening,OpeningProject,OpeningProject,animations,OpeningAnimation[],,1245
+opening,OpeningAnimation,OpeningAnimation,id,String,@id @default(cuid()),1267
+opening,OpeningAnimation,OpeningAnimation,projectId,String,,1267
+opening,OpeningAnimation,OpeningAnimation,project,OpeningProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",1267
+opening,OpeningAnimation,OpeningAnimation,templateId,String,,1267
+opening,OpeningAnimation,OpeningAnimation,config,Json,,1267
+opening,OpeningAnimation,OpeningAnimation,reactCode,String?,@db.Text,1267
+opening,OpeningAnimation,OpeningAnimation,isSelected,Boolean,@default(false),1267
+opening,OpeningAnimation,OpeningAnimation,isFavorite,Boolean,@default(false),1267
+opening,OpeningAnimation,OpeningAnimation,metadata,Json?,,1267
+opening,OpeningAnimation,OpeningAnimation,createdAt,DateTime,@default(now()),1267
+opening,OpeningAnimation,OpeningAnimation,updatedAt,DateTime,@updatedAt,1267
+copy,CopyBrandVoice,CopyBrandVoice,id,String,@id @default(cuid()),1292
+copy,CopyBrandVoice,CopyBrandVoice,userId,String,,1292
+copy,CopyBrandVoice,CopyBrandVoice,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1292
+copy,CopyBrandVoice,CopyBrandVoice,name,String,,1292
+copy,CopyBrandVoice,CopyBrandVoice,tone,String,@db.Text,1292
+copy,CopyBrandVoice,CopyBrandVoice,vocabulary,Json?,,1292
+copy,CopyBrandVoice,CopyBrandVoice,examples,Json?,,1292
+copy,CopyBrandVoice,CopyBrandVoice,ngWords,String[],@default([]),1292
+copy,CopyBrandVoice,CopyBrandVoice,requiredWords,String[],@default([]),1292
+copy,CopyBrandVoice,CopyBrandVoice,projects,CopyProject[],,1292
+copy,CopyBrandVoice,CopyBrandVoice,createdAt,DateTime,@default(now()),1292
+copy,CopyBrandVoice,CopyBrandVoice,updatedAt,DateTime,@updatedAt,1292
+copy,CopyProject,CopyProject,id,String,@id @default(cuid()),1312
+copy,CopyProject,CopyProject,userId,String?,,1312
+copy,CopyProject,CopyProject,user,User?,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1312
+copy,CopyProject,CopyProject,guestId,String?,,1312
+copy,CopyProject,CopyProject,name,String,,1312
+copy,CopyProject,CopyProject,status,String,"@default(""draft"")",1312
+copy,CopyProject,CopyProject,productUrl,String?,,1312
+copy,CopyProject,CopyProject,productInfo,Json?,,1312
+copy,CopyProject,CopyProject,persona,Json?,,1312
+copy,CopyProject,CopyProject,personaSource,String?,,1312
+copy,CopyProject,CopyProject,regulations,Json?,,1312
+copy,CopyProject,CopyProject,brandVoiceId,String?,,1312
+copy,CopyProject,CopyProject,brandVoice,CopyBrandVoice?,"@relation(fields: [brandVoiceId], references: [id])",1312
+copy,CopyProject,CopyProject,copies,CopyItem[],,1312
+copy,CopyProject,CopyProject,createdAt,DateTime,@default(now()),1312
+copy,CopyProject,CopyProject,updatedAt,DateTime,@updatedAt,1312
+copy,CopyItem,CopyItem,id,String,@id @default(cuid()),1338
+copy,CopyItem,CopyItem,projectId,String,,1338
+copy,CopyItem,CopyItem,project,CopyProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",1338
+copy,CopyItem,CopyItem,type,String,,1338
+copy,CopyItem,CopyItem,platform,String?,,1338
+copy,CopyItem,CopyItem,writerType,String,,1338
+copy,CopyItem,CopyItem,headline,String?,,1338
+copy,CopyItem,CopyItem,description,String?,@db.Text,1338
+copy,CopyItem,CopyItem,catchcopy,String?,,1338
+copy,CopyItem,CopyItem,hashtags,String[],@default([]),1338
+copy,CopyItem,CopyItem,cta,String?,,1338
+copy,CopyItem,CopyItem,appealAxis,String?,,1338
+copy,CopyItem,CopyItem,charCount,Int?,,1338
+copy,CopyItem,CopyItem,score,Float?,,1338
+copy,CopyItem,CopyItem,isFavorite,Boolean,@default(false),1338
+copy,CopyItem,CopyItem,revisions,Json[],@default([]),1338
+copy,CopyItem,CopyItem,createdAt,DateTime,@default(now()),1338
+lp,LpProject,lp_projects,id,String,@id @default(cuid()),1368
+lp,LpProject,lp_projects,userId,String,,1368
+lp,LpProject,lp_projects,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1368
+lp,LpProject,lp_projects,guestId,String?,,1368
+lp,LpProject,lp_projects,name,String,,1368
+lp,LpProject,lp_projects,status,String,"@default(""draft"") // draft | generating | editing | completed",1368
+lp,LpProject,lp_projects,purpose,String[],// LP目的（複数可）,1368
+lp,LpProject,lp_projects,productUrl,String?,,1368
+lp,LpProject,lp_projects,productInfo,Json?,,1368
+lp,LpProject,lp_projects,persona,Json?,,1368
+lp,LpProject,lp_projects,structures,Json?,// AI生成された3案,1368
+lp,LpProject,lp_projects,selectedStructure,Int?,// 選択された案（0-based）,1368
+lp,LpProject,lp_projects,themeId,String,"@default(""minimal"")",1368
+lp,LpProject,lp_projects,customColors,Json?,,1368
+lp,LpProject,lp_projects,customFonts,Json?,,1368
+lp,LpProject,lp_projects,sections,LpSection[],,1368
+lp,LpProject,lp_projects,htmlUrl,String?,,1368
+lp,LpProject,lp_projects,pdfUrl,String?,,1368
+lp,LpProject,lp_projects,previewUrl,String?,,1368
+lp,LpProject,lp_projects,createdAt,DateTime,@default(now()),1368
+lp,LpProject,lp_projects,updatedAt,DateTime,@updatedAt,1368
+lp,LpSection,lp_sections,id,String,@id @default(cuid()),1407
+lp,LpSection,lp_sections,projectId,String,,1407
+lp,LpSection,lp_sections,project,LpProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",1407
+lp,LpSection,lp_sections,order,Int,,1407
+lp,LpSection,lp_sections,type,String,"// ""hero"" | ""problem"" | ""solution"" | ""features"" | ""testimonial"" | ""pricing"" | ""faq"" | ""cta"" | ""footer"" 等",1407
+lp,LpSection,lp_sections,name,String,,1407
+lp,LpSection,lp_sections,purpose,String?,,1407
+lp,LpSection,lp_sections,headline,String?,,1407
+lp,LpSection,lp_sections,subheadline,String?,,1407
+lp,LpSection,lp_sections,body,String?,@db.Text,1407
+lp,LpSection,lp_sections,ctaText,String?,,1407
+lp,LpSection,lp_sections,ctaUrl,String?,,1407
+lp,LpSection,lp_sections,layout,String,"@default(""center"") // ""center"" | ""left-right"" | ""right-left"" | ""grid"" | ""cards""",1407
+lp,LpSection,lp_sections,bgColor,String?,,1407
+lp,LpSection,lp_sections,bgImage,String?,,1407
+lp,LpSection,lp_sections,items,Json?,"// [{ title, description, icon, image }]",1407
+lp,LpSection,lp_sections,revisions,Json[],@default([]),1407
+lp,LpSection,lp_sections,createdAt,DateTime,@default(now()),1407
+lp,LpSection,lp_sections,updatedAt,DateTime,@updatedAt,1407
+voice,VoiceProject,VoiceProject,id,String,@id @default(cuid()),1446
+voice,VoiceProject,VoiceProject,userId,String,,1446
+voice,VoiceProject,VoiceProject,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1446
+voice,VoiceProject,VoiceProject,guestId,String?,,1446
+voice,VoiceProject,VoiceProject,name,String,,1446
+voice,VoiceProject,VoiceProject,status,String,"@default(""draft"") // draft, generating, completed, failed",1446
+voice,VoiceProject,VoiceProject,speakerId,String,"@default(""akira"")",1446
+voice,VoiceProject,VoiceProject,speed,Float,@default(1.0) // 0.5 ~ 2.0,1446
+voice,VoiceProject,VoiceProject,pitch,Float,@default(0.0) // -10 ~ +10,1446
+voice,VoiceProject,VoiceProject,volume,Float,@default(100.0) // 0 ~ 100,1446
+voice,VoiceProject,VoiceProject,pauseLength,String,"@default(""standard"") // ""short"", ""standard"", ""long""",1446
+voice,VoiceProject,VoiceProject,emotionTone,String,"@default(""neutral"") // ""neutral"", ""bright"", ""calm"", ""serious"", ""gentle""",1446
+voice,VoiceProject,VoiceProject,inputText,String,@db.Text,1446
+voice,VoiceProject,VoiceProject,ssml,String?,@db.Text,1446
+voice,VoiceProject,VoiceProject,outputFormat,String,"@default(""mp3"") // ""mp3"", ""wav"", ""ogg"", ""m4a""",1446
+voice,VoiceProject,VoiceProject,outputUrl,String?,,1446
+voice,VoiceProject,VoiceProject,durationMs,Int?,,1446
+voice,VoiceProject,VoiceProject,fileSize,Int?,,1446
+voice,VoiceProject,VoiceProject,recordings,VoiceRecording[],,1446
+voice,VoiceProject,VoiceProject,isFavorite,Boolean,@default(false),1446
+voice,VoiceProject,VoiceProject,metadata,Json?,,1446
+voice,VoiceProject,VoiceProject,createdAt,DateTime,@default(now()),1446
+voice,VoiceProject,VoiceProject,updatedAt,DateTime,@updatedAt,1446
+voice,VoiceRecording,VoiceRecording,id,String,@id @default(cuid()),1488
+voice,VoiceRecording,VoiceRecording,projectId,String,,1488
+voice,VoiceRecording,VoiceRecording,project,VoiceProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",1488
+voice,VoiceRecording,VoiceRecording,originalUrl,String,,1488
+voice,VoiceRecording,VoiceRecording,trimmedUrl,String?,,1488
+voice,VoiceRecording,VoiceRecording,durationMs,Int,,1488
+voice,VoiceRecording,VoiceRecording,fileSize,Int,,1488
+voice,VoiceRecording,VoiceRecording,format,String,"@default(""webm"")",1488
+voice,VoiceRecording,VoiceRecording,label,String?,,1488
+voice,VoiceRecording,VoiceRecording,order,Int,@default(0),1488
+voice,VoiceRecording,VoiceRecording,createdAt,DateTime,@default(now()),1488
+movie,MovieProject,movie_projects,id,String,@id @default(cuid()),1511
+movie,MovieProject,movie_projects,userId,String?,,1511
+movie,MovieProject,movie_projects,user,User?,"@relation(fields: [userId], references: [id], onDelete: SetNull)",1511
+movie,MovieProject,movie_projects,guestId,String?,,1511
+movie,MovieProject,movie_projects,name,String,,1511
+movie,MovieProject,movie_projects,status,String,"@default(""draft"") // draft, planning, editing, rendering, completed, failed",1511
+movie,MovieProject,movie_projects,productInfo,Json?,,1511
+movie,MovieProject,movie_projects,persona,Json?,,1511
+movie,MovieProject,movie_projects,templateId,String?,,1511
+movie,MovieProject,movie_projects,aspectRatio,String,"@default(""16:9"") // ""16:9"", ""9:16"", ""1:1"", ""4:5""",1511
+movie,MovieProject,movie_projects,duration,Int,@default(15) // 秒,1511
+movie,MovieProject,movie_projects,resolution,String,"@default(""1080p"") // ""720p"", ""1080p""",1511
+movie,MovieProject,movie_projects,platform,String?,// 配信先,1511
+movie,MovieProject,movie_projects,plans,Json?,"// AI生成された3案 [{ concept, storyline, scenes }]",1511
+movie,MovieProject,movie_projects,selectedPlan,Int?,// 選択された案のインデックス,1511
+movie,MovieProject,movie_projects,scenes,MovieScene[],,1511
+movie,MovieProject,movie_projects,renderJobs,MovieRenderJob[],,1511
+movie,MovieProject,movie_projects,outputUrl,String?,// 完成動画のURL,1511
+movie,MovieProject,movie_projects,thumbnailUrl,String?,// サムネイルURL,1511
+movie,MovieProject,movie_projects,createdAt,DateTime,@default(now()),1511
+movie,MovieProject,movie_projects,updatedAt,DateTime,@updatedAt,1511
+movie,MovieScene,movie_scenes,id,String,@id @default(cuid()),1552
+movie,MovieScene,movie_scenes,projectId,String,,1552
+movie,MovieScene,movie_scenes,project,MovieProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",1552
+movie,MovieScene,movie_scenes,order,Int,// シーン順序,1552
+movie,MovieScene,movie_scenes,duration,Float,// 秒数（小数対応）,1552
+movie,MovieScene,movie_scenes,bgType,String,"@default(""image"") // ""image"", ""video"", ""color"", ""gradient""",1552
+movie,MovieScene,movie_scenes,bgValue,String?,// URL or カラーコード,1552
+movie,MovieScene,movie_scenes,bgAnimation,String?,"// ""ken-burns"", ""zoom-in"", ""none""",1552
+movie,MovieScene,movie_scenes,texts,Json?,"// [{ content, x, y, fontSize, fontFamily, color, animation, delay }]",1552
+movie,MovieScene,movie_scenes,narrationText,String?,,1552
+movie,MovieScene,movie_scenes,narrationUrl,String?,// ドヤボイスAI 生成音声のURL,1552
+movie,MovieScene,movie_scenes,transition,String,"@default(""fade"") // ""fade"", ""slide"", ""wipe"", ""zoom"", ""none""",1552
+movie,MovieScene,movie_scenes,metadata,Json?,,1552
+movie,MovieRenderJob,movie_render_jobs,id,String,@id @default(cuid()),1580
+movie,MovieRenderJob,movie_render_jobs,projectId,String,,1580
+movie,MovieRenderJob,movie_render_jobs,project,MovieProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",1580
+movie,MovieRenderJob,movie_render_jobs,status,String,"@default(""queued"") // queued, rendering, completed, failed",1580
+movie,MovieRenderJob,movie_render_jobs,progress,Int,@default(0) // 0-100,1580
+movie,MovieRenderJob,movie_render_jobs,outputUrl,String?,,1580
+movie,MovieRenderJob,movie_render_jobs,format,String,"@default(""mp4"") // ""mp4"", ""gif""",1580
+movie,MovieRenderJob,movie_render_jobs,error,String?,,1580
+movie,MovieRenderJob,movie_render_jobs,startedAt,DateTime?,,1580
+movie,MovieRenderJob,movie_render_jobs,completedAt,DateTime?,,1580
+movie,MovieRenderJob,movie_render_jobs,createdAt,DateTime,@default(now()),1580
+interviewx,InterviewXProject,interviewx_projects,id,String,@id @default(cuid()),1603
+interviewx,InterviewXProject,interviewx_projects,userId,String,,1603
+interviewx,InterviewXProject,interviewx_projects,user,User,"@relation(fields: [userId], references: [id])",1603
+interviewx,InterviewXProject,interviewx_projects,title,String,,1603
+interviewx,InterviewXProject,interviewx_projects,templateId,String?,,1603
+interviewx,InterviewXProject,interviewx_projects,template,InterviewXTemplate?,"@relation(fields: [templateId], references: [id])",1603
+interviewx,InterviewXProject,interviewx_projects,companyName,String?,,1603
+interviewx,InterviewXProject,interviewx_projects,companyUrl,String?,,1603
+interviewx,InterviewXProject,interviewx_projects,companyLogo,String?,,1603
+interviewx,InterviewXProject,interviewx_projects,brandColor,String?,"@default(""#3B82F6"")",1603
+interviewx,InterviewXProject,interviewx_projects,purpose,String?,,1603
+interviewx,InterviewXProject,interviewx_projects,targetAudience,String?,,1603
+interviewx,InterviewXProject,interviewx_projects,tone,String?,"@default(""professional"")",1603
+interviewx,InterviewXProject,interviewx_projects,articleType,String?,"@default(""CASE_STUDY"")",1603
+interviewx,InterviewXProject,interviewx_projects,hearingType,String?,"@default(""BUSINESS_MEETING"")",1603
+interviewx,InterviewXProject,interviewx_projects,wordCountTarget,Int?,@default(3000),1603
+interviewx,InterviewXProject,interviewx_projects,customInstructions,String?,@db.Text,1603
+interviewx,InterviewXProject,interviewx_projects,companyAnalysis,Json?,,1603
+interviewx,InterviewXProject,interviewx_projects,interviewMode,String,"@default(""chat"") // 'chat' fixed",1603
+interviewx,InterviewXProject,interviewx_projects,status,String,"@default(""DRAFT"")",1603
+interviewx,InterviewXProject,interviewx_projects,shareToken,String,@unique @default(cuid()),1603
+interviewx,InterviewXProject,interviewx_projects,shareUrl,String?,,1603
+interviewx,InterviewXProject,interviewx_projects,respondentEmail,String?,,1603
+interviewx,InterviewXProject,interviewx_projects,respondentName,String?,,1603
+interviewx,InterviewXProject,interviewx_projects,questions,InterviewXQuestion[],,1603
+interviewx,InterviewXProject,interviewx_projects,responses,InterviewXResponse[],,1603
+interviewx,InterviewXProject,interviewx_projects,drafts,InterviewXDraft[],,1603
+interviewx,InterviewXProject,interviewx_projects,feedbacks,InterviewXFeedback[],,1603
+interviewx,InterviewXProject,interviewx_projects,checks,InterviewXCheck[],,1603
+interviewx,InterviewXProject,interviewx_projects,createdAt,DateTime,@default(now()),1603
+interviewx,InterviewXProject,interviewx_projects,updatedAt,DateTime,@updatedAt,1603
+interviewx,InterviewXTemplate,interviewx_templates,id,String,@id @default(cuid()),1659
+interviewx,InterviewXTemplate,interviewx_templates,name,String,,1659
+interviewx,InterviewXTemplate,interviewx_templates,description,String?,@db.Text,1659
+interviewx,InterviewXTemplate,interviewx_templates,category,String,,1659
+interviewx,InterviewXTemplate,interviewx_templates,icon,String?,"@default(""📋"")",1659
+interviewx,InterviewXTemplate,interviewx_templates,defaultQuestions,Json?,,1659
+interviewx,InterviewXTemplate,interviewx_templates,promptTemplate,String?,@db.Text,1659
+interviewx,InterviewXTemplate,interviewx_templates,sampleArticle,String?,@db.Text,1659
+interviewx,InterviewXTemplate,interviewx_templates,isPreset,Boolean,@default(false),1659
+interviewx,InterviewXTemplate,interviewx_templates,isPublic,Boolean,@default(false),1659
+interviewx,InterviewXTemplate,interviewx_templates,usageCount,Int,@default(0),1659
+interviewx,InterviewXTemplate,interviewx_templates,userId,String?,,1659
+interviewx,InterviewXTemplate,interviewx_templates,projects,InterviewXProject[],,1659
+interviewx,InterviewXTemplate,interviewx_templates,createdAt,DateTime,@default(now()),1659
+interviewx,InterviewXTemplate,interviewx_templates,updatedAt,DateTime,@updatedAt,1659
+interviewx,InterviewXQuestion,interviewx_questions,id,String,@id @default(cuid()),1686
+interviewx,InterviewXQuestion,interviewx_questions,projectId,String,,1686
+interviewx,InterviewXQuestion,interviewx_questions,project,InterviewXProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",1686
+interviewx,InterviewXQuestion,interviewx_questions,text,String,,1686
+interviewx,InterviewXQuestion,interviewx_questions,description,String?,,1686
+interviewx,InterviewXQuestion,interviewx_questions,type,String,"@default(""TEXTAREA"")",1686
+interviewx,InterviewXQuestion,interviewx_questions,options,Json?,,1686
+interviewx,InterviewXQuestion,interviewx_questions,required,Boolean,@default(true),1686
+interviewx,InterviewXQuestion,interviewx_questions,order,Int,,1686
+interviewx,InterviewXQuestion,interviewx_questions,aiGenerated,Boolean,@default(true),1686
+interviewx,InterviewXQuestion,interviewx_questions,answers,InterviewXAnswer[],,1686
+interviewx,InterviewXQuestion,interviewx_questions,createdAt,DateTime,@default(now()),1686
+interviewx,InterviewXResponse,interviewx_responses,id,String,@id @default(cuid()),1708
+interviewx,InterviewXResponse,interviewx_responses,projectId,String,,1708
+interviewx,InterviewXResponse,interviewx_responses,project,InterviewXProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",1708
+interviewx,InterviewXResponse,interviewx_responses,respondentName,String?,,1708
+interviewx,InterviewXResponse,interviewx_responses,respondentEmail,String?,,1708
+interviewx,InterviewXResponse,interviewx_responses,respondentRole,String?,,1708
+interviewx,InterviewXResponse,interviewx_responses,respondentCompany,String?,,1708
+interviewx,InterviewXResponse,interviewx_responses,status,String,"@default(""IN_PROGRESS"")",1708
+interviewx,InterviewXResponse,interviewx_responses,completedAt,DateTime?,,1708
+interviewx,InterviewXResponse,interviewx_responses,ipAddress,String?,,1708
+interviewx,InterviewXResponse,interviewx_responses,userAgent,String?,,1708
+interviewx,InterviewXResponse,interviewx_responses,answers,InterviewXAnswer[],,1708
+interviewx,InterviewXResponse,interviewx_responses,chatMessages,InterviewXChatMessage[],,1708
+interviewx,InterviewXResponse,interviewx_responses,startedAt,DateTime,@default(now()),1708
+interviewx,InterviewXResponse,interviewx_responses,updatedAt,DateTime,@updatedAt,1708
+interviewx,InterviewXAnswer,interviewx_answers,id,String,@id @default(cuid()),1734
+interviewx,InterviewXAnswer,interviewx_answers,responseId,String,,1734
+interviewx,InterviewXAnswer,interviewx_answers,response,InterviewXResponse,"@relation(fields: [responseId], references: [id], onDelete: Cascade)",1734
+interviewx,InterviewXAnswer,interviewx_answers,questionId,String,,1734
+interviewx,InterviewXAnswer,interviewx_answers,question,InterviewXQuestion,"@relation(fields: [questionId], references: [id])",1734
+interviewx,InterviewXAnswer,interviewx_answers,answerText,String?,@db.Text,1734
+interviewx,InterviewXAnswer,interviewx_answers,answerValue,Json?,,1734
+interviewx,InterviewXAnswer,interviewx_answers,createdAt,DateTime,@default(now()),1734
+interviewx,InterviewXDraft,interviewx_drafts,id,String,@id @default(cuid()),1752
+interviewx,InterviewXDraft,interviewx_drafts,projectId,String,,1752
+interviewx,InterviewXDraft,interviewx_drafts,project,InterviewXProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",1752
+interviewx,InterviewXDraft,interviewx_drafts,version,Int,@default(1),1752
+interviewx,InterviewXDraft,interviewx_drafts,title,String?,,1752
+interviewx,InterviewXDraft,interviewx_drafts,lead,String?,@db.Text,1752
+interviewx,InterviewXDraft,interviewx_drafts,content,String,@db.Text,1752
+interviewx,InterviewXDraft,interviewx_drafts,structure,Json?,,1752
+interviewx,InterviewXDraft,interviewx_drafts,wordCount,Int?,,1752
+interviewx,InterviewXDraft,interviewx_drafts,readingTime,Int?,,1752
+interviewx,InterviewXDraft,interviewx_drafts,appliedFeedbacks,Json?,,1752
+interviewx,InterviewXDraft,interviewx_drafts,status,String,"@default(""DRAFT"")",1752
+interviewx,InterviewXDraft,interviewx_drafts,feedbacks,InterviewXFeedback[],,1752
+interviewx,InterviewXDraft,interviewx_drafts,checks,InterviewXCheck[],,1752
+interviewx,InterviewXDraft,interviewx_drafts,createdAt,DateTime,@default(now()),1752
+interviewx,InterviewXFeedback,interviewx_feedbacks,id,String,@id @default(cuid()),1780
+interviewx,InterviewXFeedback,interviewx_feedbacks,projectId,String,,1780
+interviewx,InterviewXFeedback,interviewx_feedbacks,project,InterviewXProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",1780
+interviewx,InterviewXFeedback,interviewx_feedbacks,draftId,String?,,1780
+interviewx,InterviewXFeedback,interviewx_feedbacks,draft,InterviewXDraft?,"@relation(fields: [draftId], references: [id])",1780
+interviewx,InterviewXFeedback,interviewx_feedbacks,authorType,String,,1780
+interviewx,InterviewXFeedback,interviewx_feedbacks,authorName,String?,,1780
+interviewx,InterviewXFeedback,interviewx_feedbacks,content,String,@db.Text,1780
+interviewx,InterviewXFeedback,interviewx_feedbacks,section,String?,,1780
+interviewx,InterviewXFeedback,interviewx_feedbacks,category,String?,,1780
+interviewx,InterviewXFeedback,interviewx_feedbacks,applied,Boolean,@default(false),1780
+interviewx,InterviewXFeedback,interviewx_feedbacks,appliedAt,DateTime?,,1780
+interviewx,InterviewXFeedback,interviewx_feedbacks,createdAt,DateTime,@default(now()),1780
+interviewx,InterviewXCheck,interviewx_checks,id,String,@id @default(cuid()),1804
+interviewx,InterviewXCheck,interviewx_checks,projectId,String,,1804
+interviewx,InterviewXCheck,interviewx_checks,project,InterviewXProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",1804
+interviewx,InterviewXCheck,interviewx_checks,draftId,String,,1804
+interviewx,InterviewXCheck,interviewx_checks,draft,InterviewXDraft,"@relation(fields: [draftId], references: [id])",1804
+interviewx,InterviewXCheck,interviewx_checks,checkType,String,,1804
+interviewx,InterviewXCheck,interviewx_checks,score,Float?,,1804
+interviewx,InterviewXCheck,interviewx_checks,passed,Boolean,@default(false),1804
+interviewx,InterviewXCheck,interviewx_checks,report,String?,@db.Text,1804
+interviewx,InterviewXCheck,interviewx_checks,suggestions,Json?,,1804
+interviewx,InterviewXCheck,interviewx_checks,createdAt,DateTime,@default(now()),1804
+interviewx,InterviewXChatMessage,interviewx_chat_messages,id,String,@id @default(cuid()),1824
+interviewx,InterviewXChatMessage,interviewx_chat_messages,responseId,String,,1824
+interviewx,InterviewXChatMessage,interviewx_chat_messages,response,InterviewXResponse,"@relation(fields: [responseId], references: [id], onDelete: Cascade)",1824
+interviewx,InterviewXChatMessage,interviewx_chat_messages,role,String,// 'interviewer' | 'respondent' | 'system',1824
+interviewx,InterviewXChatMessage,interviewx_chat_messages,content,String,@db.Text,1824
+interviewx,InterviewXChatMessage,interviewx_chat_messages,topicIndex,Int?,// 対応する質問インデックス(0始まり),1824
+interviewx,InterviewXChatMessage,interviewx_chat_messages,messageType,String?,// 'greeting'|'question'|'follow_up'|'transition'|'closing'|'answer',1824
+interviewx,InterviewXChatMessage,interviewx_chat_messages,createdAt,DateTime,@default(now()),1824
+drip,DripSegment,drip_segments,id,String,@id @default(cuid()),1847
+drip,DripSegment,drip_segments,name,String,,1847
+drip,DripSegment,drip_segments,key,String,@unique,1847
+drip,DripSegment,drip_segments,conditions,Json,"// {""type"": ""last_login_over"", ""days"": 7} etc.",1847
+drip,DripSegment,drip_segments,createdAt,DateTime,@default(now()),1847
+drip,DripSegment,drip_segments,updatedAt,DateTime,@updatedAt,1847
+drip,DripSegment,drip_segments,sequences,DripSequence[],,1847
+drip,DripTemplate,drip_templates,id,String,@id @default(cuid()),1861
+drip,DripTemplate,drip_templates,name,String,,1861
+drip,DripTemplate,drip_templates,subject,String,,1861
+drip,DripTemplate,drip_templates,bodyHtml,String,@db.Text,1861
+drip,DripTemplate,drip_templates,bodyText,String?,@db.Text,1861
+drip,DripTemplate,drip_templates,variables,Json?,// 使用する差し込み変数一覧,1861
+drip,DripTemplate,drip_templates,createdAt,DateTime,@default(now()),1861
+drip,DripTemplate,drip_templates,updatedAt,DateTime,@updatedAt,1861
+drip,DripTemplate,drip_templates,steps,DripStep[],,1861
+drip,DripSequence,drip_sequences,id,String,@id @default(cuid()),1877
+drip,DripSequence,drip_sequences,name,String,,1877
+drip,DripSequence,drip_sequences,status,String,"@default(""draft"") // draft | active | paused",1877
+drip,DripSequence,drip_sequences,segmentId,String?,,1877
+drip,DripSequence,drip_sequences,segment,DripSegment?,"@relation(fields: [segmentId], references: [id], onDelete: SetNull)",1877
+drip,DripSequence,drip_sequences,createdAt,DateTime,@default(now()),1877
+drip,DripSequence,drip_sequences,updatedAt,DateTime,@updatedAt,1877
+drip,DripSequence,drip_sequences,steps,DripStep[],,1877
+drip,DripSequence,drip_sequences,enrollments,DripEnrollment[],,1877
+drip,DripStep,drip_steps,id,String,@id @default(cuid()),1893
+drip,DripStep,drip_steps,sequenceId,String,,1893
+drip,DripStep,drip_steps,sequence,DripSequence,"@relation(fields: [sequenceId], references: [id], onDelete: Cascade)",1893
+drip,DripStep,drip_steps,sortOrder,Int,,1893
+drip,DripStep,drip_steps,dayOffset,Int,"// Day 0, Day 1, Day 3...",1893
+drip,DripStep,drip_steps,sendTime,String,"@default(""09:00"") // 配信時刻 HH:mm",1893
+drip,DripStep,drip_steps,templateId,String?,,1893
+drip,DripStep,drip_steps,template,DripTemplate?,"@relation(fields: [templateId], references: [id], onDelete: SetNull)",1893
+drip,DripStep,drip_steps,conditionType,String?,// null | not_opened | opened | not_clicked | clicked | opened_not_clicked,1893
+drip,DripStep,drip_steps,label,String,,1893
+drip,DripStep,drip_steps,createdAt,DateTime,@default(now()),1893
+drip,DripStep,drip_steps,emailLogs,DripEmailLog[],,1893
+drip,DripEnrollment,drip_enrollments,id,String,@id @default(cuid()),1913
+drip,DripEnrollment,drip_enrollments,userId,String,,1913
+drip,DripEnrollment,drip_enrollments,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1913
+drip,DripEnrollment,drip_enrollments,sequenceId,String,,1913
+drip,DripEnrollment,drip_enrollments,sequence,DripSequence,"@relation(fields: [sequenceId], references: [id], onDelete: Cascade)",1913
+drip,DripEnrollment,drip_enrollments,enrolledAt,DateTime,@default(now()),1913
+drip,DripEnrollment,drip_enrollments,currentStep,Int,@default(0),1913
+drip,DripEnrollment,drip_enrollments,status,String,"@default(""active"") // active | completed | cancelled",1913
+drip,DripEnrollment,drip_enrollments,completedAt,DateTime?,,1913
+drip,DripEnrollment,drip_enrollments,createdAt,DateTime,@default(now()),1913
+drip,DripEnrollment,drip_enrollments,emailLogs,DripEmailLog[],,1913
+drip,DripEmailLog,drip_email_logs,id,String,@id @default(cuid()),1933
+drip,DripEmailLog,drip_email_logs,enrollmentId,String,,1933
+drip,DripEmailLog,drip_email_logs,enrollment,DripEnrollment,"@relation(fields: [enrollmentId], references: [id], onDelete: Cascade)",1933
+drip,DripEmailLog,drip_email_logs,stepId,String,,1933
+drip,DripEmailLog,drip_email_logs,step,DripStep,"@relation(fields: [stepId], references: [id], onDelete: Cascade)",1933
+drip,DripEmailLog,drip_email_logs,userId,String,,1933
+drip,DripEmailLog,drip_email_logs,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1933
+drip,DripEmailLog,drip_email_logs,sequenceId,String,,1933
+drip,DripEmailLog,drip_email_logs,sentAt,DateTime,@default(now()),1933
+drip,DripEmailLog,drip_email_logs,status,String,"@default(""queued"") // queued | sent | delivered | opened | clicked | bounced | failed",1933
+drip,DripEmailLog,drip_email_logs,openedAt,DateTime?,,1933
+drip,DripEmailLog,drip_email_logs,clickedAt,DateTime?,,1933
+drip,DripEmailLog,drip_email_logs,bouncedAt,DateTime?,,1933
+drip,DripEmailLog,drip_email_logs,trackingId,String?,@unique,1933
+drip,DripEmailLog,drip_email_logs,createdAt,DateTime,@default(now()),1933
+drip,DripUnsubscribe,drip_unsubscribes,id,String,@id @default(cuid()),1958
+drip,DripUnsubscribe,drip_unsubscribes,userId,String,,1958
+drip,DripUnsubscribe,drip_unsubscribes,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1958
+drip,DripUnsubscribe,drip_unsubscribes,reason,String?,,1958
+drip,DripUnsubscribe,drip_unsubscribes,unsubscribedAt,DateTime,@default(now()),1958
+drip,DripSetting,drip_settings,key,String,@id,1970
+drip,DripSetting,drip_settings,value,Json,,1970
+adsim,AdSimProject,ad_sim_projects,id,String,@id @default(cuid()),1981
+adsim,AdSimProject,ad_sim_projects,userId,String?,,1981
+adsim,AdSimProject,ad_sim_projects,user,User?,"@relation(fields: [userId], references: [id], onDelete: Cascade)",1981
+adsim,AdSimProject,ad_sim_projects,guestId,String?,,1981
+adsim,AdSimProject,ad_sim_projects,name,String,,1981
+adsim,AdSimProject,ad_sim_projects,status,String,"@default(""draft"") // draft | generating | completed | error",1981
+adsim,AdSimProject,ad_sim_projects,clientName,String,,1981
+adsim,AdSimProject,ad_sim_projects,industry,String,,1981
+adsim,AdSimProject,ad_sim_projects,productName,String,,1981
+adsim,AdSimProject,ad_sim_projects,lpUrl,String?,,1981
+adsim,AdSimProject,ad_sim_projects,targetAudience,Json?,"// { age, gender, region, interests }",1981
+adsim,AdSimProject,ad_sim_projects,goals,String[],@default([]),1981
+adsim,AdSimProject,ad_sim_projects,periodMonths,Int,@default(3),1981
+adsim,AdSimProject,ad_sim_projects,startMonth,String?,// YYYY-MM,1981
+adsim,AdSimProject,ad_sim_projects,monthlyBudget,Int,// 円,1981
+adsim,AdSimProject,ad_sim_projects,targetCv,Int?,,1981
+adsim,AdSimProject,ad_sim_projects,targetCpa,Int?,,1981
+adsim,AdSimProject,ad_sim_projects,targetRoas,Float?,,1981
+adsim,AdSimProject,ad_sim_projects,mediaAllocation,Json,"// { google: 40, meta: 30, line: 30 }",1981
+adsim,AdSimProject,ad_sim_projects,proposerName,String?,,1981
+adsim,AdSimProject,ad_sim_projects,proposerEmail,String?,,1981
+adsim,AdSimProject,ad_sim_projects,templateId,String,"@default(""simple"")",1981
+adsim,AdSimProject,ad_sim_projects,simulationData,Json?,// 媒体別×月次の数値,1981
+adsim,AdSimProject,ad_sim_projects,proposalText,Json?,// セクション別のテキスト,1981
+adsim,AdSimProject,ad_sim_projects,chartData,Json?,// グラフ用整形済みデータ,1981
+adsim,AdSimProject,ad_sim_projects,pptxUrl,String?,,1981
+adsim,AdSimProject,ad_sim_projects,pdfUrl,String?,,1981
+adsim,AdSimProject,ad_sim_projects,excelUrl,String?,,1981
+adsim,AdSimProject,ad_sim_projects,createdAt,DateTime,@default(now()),1981
+adsim,AdSimProject,ad_sim_projects,updatedAt,DateTime,@updatedAt,1981
+external,MitsuboshiNagusamePost,mitsuboshi_nagusame_posts,id,String,@id @default(cuid()),2042
+external,MitsuboshiNagusamePost,mitsuboshi_nagusame_posts,userId,String?,,2042
+external,MitsuboshiNagusamePost,mitsuboshi_nagusame_posts,user,User?,"@relation(fields: [userId], references: [id], onDelete: Cascade)",2042
+external,MitsuboshiNagusamePost,mitsuboshi_nagusame_posts,guestId,String?,// 匿名ユーザー識別（cookie）,2042
+external,MitsuboshiNagusamePost,mitsuboshi_nagusame_posts,segment,String,"@default(""default"") // default | business | student | ...",2042
+external,MitsuboshiNagusamePost,mitsuboshi_nagusame_posts,content,String,@db.Text // ユーザー投稿（愚痴）,2042
+external,MitsuboshiNagusamePost,mitsuboshi_nagusame_posts,starsLit,Int,@default(0) // 灯った星数 = 返信されたキャラ数,2042
+external,MitsuboshiNagusamePost,mitsuboshi_nagusame_posts,safetyFlagged,Boolean,@default(false) // 危機ワード検知フラグ,2042
+external,MitsuboshiNagusamePost,mitsuboshi_nagusame_posts,createdAt,DateTime,@default(now()),2042
+external,MitsuboshiNagusamePost,mitsuboshi_nagusame_posts,replies,MitsuboshiNagusameReply[],,2042
+external,MitsuboshiNagusameReply,mitsuboshi_nagusame_replies,id,String,@id @default(cuid()),2059
+external,MitsuboshiNagusameReply,mitsuboshi_nagusame_replies,postId,String,,2059
+external,MitsuboshiNagusameReply,mitsuboshi_nagusame_replies,post,MitsuboshiNagusamePost,"@relation(fields: [postId], references: [id], onDelete: Cascade)",2059
+external,MitsuboshiNagusameReply,mitsuboshi_nagusame_replies,personaId,String,// personas/*.ts の id,2059
+external,MitsuboshiNagusameReply,mitsuboshi_nagusame_replies,personaName,String,,2059
+external,MitsuboshiNagusameReply,mitsuboshi_nagusame_replies,content,String,@db.Text,2059
+external,MitsuboshiNagusameReply,mitsuboshi_nagusame_replies,createdAt,DateTime,@default(now()),2059
+external,MitsuboshiNagusameSubscription,mitsuboshi_nagusame_subscriptions,id,String,@id @default(cuid()),2072
+external,MitsuboshiNagusameSubscription,mitsuboshi_nagusame_subscriptions,userId,String,@unique,2072
+external,MitsuboshiNagusameSubscription,mitsuboshi_nagusame_subscriptions,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",2072
+external,MitsuboshiNagusameSubscription,mitsuboshi_nagusame_subscriptions,plan,String,"@default(""free"") // free | pro",2072
+external,MitsuboshiNagusameSubscription,mitsuboshi_nagusame_subscriptions,stripeCustomerId,String?,,2072
+external,MitsuboshiNagusameSubscription,mitsuboshi_nagusame_subscriptions,stripeSubId,String?,@unique,2072
+external,MitsuboshiNagusameSubscription,mitsuboshi_nagusame_subscriptions,currentPeriodEnd,DateTime?,,2072
+external,MitsuboshiNagusameSubscription,mitsuboshi_nagusame_subscriptions,createdAt,DateTime,@default(now()),2072
+external,MitsuboshiNagusameSubscription,mitsuboshi_nagusame_subscriptions,updatedAt,DateTime,@updatedAt,2072
+hr,HrOrganization,hr_organizations,id,String,@id @default(cuid()),2090
+hr,HrOrganization,hr_organizations,name,String,,2090
+hr,HrOrganization,hr_organizations,slug,String,@unique,2090
+hr,HrOrganization,hr_organizations,logoUrl,String?,@db.Text,2090
+hr,HrOrganization,hr_organizations,industry,String?,,2090
+hr,HrOrganization,hr_organizations,size,String?,,2090
+hr,HrOrganization,hr_organizations,address,String?,@db.Text,2090
+hr,HrOrganization,hr_organizations,website,String?,,2090
+hr,HrOrganization,hr_organizations,fiscalMonth,Int,@default(4),2090
+hr,HrOrganization,hr_organizations,evaluationType,String,"@default(""MBO"")",2090
+hr,HrOrganization,hr_organizations,evaluationCycle,String,"@default(""SEMI"")",2090
+hr,HrOrganization,hr_organizations,customFields,Json?,,2090
+hr,HrOrganization,hr_organizations,stripeCustomerId,String?,@unique,2090
+hr,HrOrganization,hr_organizations,stripeSubscriptionId,String?,@unique,2090
+hr,HrOrganization,hr_organizations,stripePriceId,String?,,2090
+hr,HrOrganization,hr_organizations,stripeCurrentPeriodEnd,DateTime?,,2090
+hr,HrOrganization,hr_organizations,plan,String,"@default(""FREE"")",2090
+hr,HrOrganization,hr_organizations,aiUsageCount,Int,@default(0),2090
+hr,HrOrganization,hr_organizations,aiUsageResetAt,DateTime,@default(now()),2090
+hr,HrOrganization,hr_organizations,members,HrOrganizationMember[],,2090
+hr,HrOrganization,hr_organizations,departments,HrDepartment[],,2090
+hr,HrOrganization,hr_organizations,employees,HrEmployee[],,2090
+hr,HrOrganization,hr_organizations,evaluationPeriods,HrEvaluationPeriod[],,2090
+hr,HrOrganization,hr_organizations,oneOnOnes,HrOneOnOne[],,2090
+hr,HrOrganization,hr_organizations,invitations,HrInvitation[],,2090
+hr,HrOrganization,hr_organizations,auditLogs,HrAuditLog[],,2090
+hr,HrOrganization,hr_organizations,createdAt,DateTime,@default(now()),2090
+hr,HrOrganization,hr_organizations,updatedAt,DateTime,@updatedAt,2090
+hr,HrOrganizationMember,hr_organization_members,id,String,@id @default(cuid()),2132
+hr,HrOrganizationMember,hr_organization_members,organizationId,String,,2132
+hr,HrOrganizationMember,hr_organization_members,organization,HrOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",2132
+hr,HrOrganizationMember,hr_organization_members,userId,String,,2132
+hr,HrOrganizationMember,hr_organization_members,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",2132
+hr,HrOrganizationMember,hr_organization_members,role,String,"@default(""MEMBER"")",2132
+hr,HrOrganizationMember,hr_organization_members,invitedEmail,String?,,2132
+hr,HrOrganizationMember,hr_organization_members,invitedAt,DateTime?,,2132
+hr,HrOrganizationMember,hr_organization_members,acceptedAt,DateTime?,,2132
+hr,HrOrganizationMember,hr_organization_members,status,String,"@default(""ACTIVE"")",2132
+hr,HrOrganizationMember,hr_organization_members,employeeId,String?,@unique,2132
+hr,HrOrganizationMember,hr_organization_members,createdAt,DateTime,@default(now()),2132
+hr,HrOrganizationMember,hr_organization_members,updatedAt,DateTime,@updatedAt,2132
+hr,HrDepartment,hr_departments,id,String,@id @default(cuid()),2157
+hr,HrDepartment,hr_departments,organizationId,String,,2157
+hr,HrDepartment,hr_departments,organization,HrOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",2157
+hr,HrDepartment,hr_departments,name,String,,2157
+hr,HrDepartment,hr_departments,code,String?,,2157
+hr,HrDepartment,hr_departments,parentId,String?,,2157
+hr,HrDepartment,hr_departments,parent,HrDepartment?,"@relation(""DepartmentTree"", fields: [parentId], references: [id])",2157
+hr,HrDepartment,hr_departments,children,HrDepartment[],"@relation(""DepartmentTree"")",2157
+hr,HrDepartment,hr_departments,managerId,String?,,2157
+hr,HrDepartment,hr_departments,sortOrder,Int,@default(0),2157
+hr,HrDepartment,hr_departments,isActive,Boolean,@default(true),2157
+hr,HrDepartment,hr_departments,employees,HrEmployee[],,2157
+hr,HrDepartment,hr_departments,createdAt,DateTime,@default(now()),2157
+hr,HrDepartment,hr_departments,updatedAt,DateTime,@updatedAt,2157
+hr,HrEmployee,hr_employees,id,String,@id @default(cuid()),2182
+hr,HrEmployee,hr_employees,organizationId,String,,2182
+hr,HrEmployee,hr_employees,organization,HrOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",2182
+hr,HrEmployee,hr_employees,employeeNumber,String?,,2182
+hr,HrEmployee,hr_employees,lastName,String,,2182
+hr,HrEmployee,hr_employees,firstName,String,,2182
+hr,HrEmployee,hr_employees,lastNameKana,String?,,2182
+hr,HrEmployee,hr_employees,firstNameKana,String?,,2182
+hr,HrEmployee,hr_employees,email,String?,,2182
+hr,HrEmployee,hr_employees,phone,String?,,2182
+hr,HrEmployee,hr_employees,photoUrl,String?,@db.Text,2182
+hr,HrEmployee,hr_employees,thumbnailUrl,String?,@db.Text,2182
+hr,HrEmployee,hr_employees,departmentId,String?,,2182
+hr,HrEmployee,hr_employees,department,HrDepartment?,"@relation(fields: [departmentId], references: [id], onDelete: SetNull)",2182
+hr,HrEmployee,hr_employees,position,String?,,2182
+hr,HrEmployee,hr_employees,grade,String?,,2182
+hr,HrEmployee,hr_employees,employmentType,String,"@default(""FULL_TIME"")",2182
+hr,HrEmployee,hr_employees,hireDate,DateTime?,,2182
+hr,HrEmployee,hr_employees,resignDate,DateTime?,,2182
+hr,HrEmployee,hr_employees,status,String,"@default(""ACTIVE"")",2182
+hr,HrEmployee,hr_employees,birthDate,DateTime?,,2182
+hr,HrEmployee,hr_employees,gender,String?,,2182
+hr,HrEmployee,hr_employees,customFieldValues,Json?,,2182
+hr,HrEmployee,hr_employees,notes,String?,@db.Text,2182
+hr,HrEmployee,hr_employees,evaluations,HrEvaluation[],"@relation(""EmployeeEvaluations"")",2182
+hr,HrEmployee,hr_employees,evaluationsGiven,HrEvaluation[],"@relation(""EvaluatorRelation"")",2182
+hr,HrEmployee,hr_employees,oneOnOnesAsEmployee,HrOneOnOne[],"@relation(""EmployeeOneOnOne"")",2182
+hr,HrEmployee,hr_employees,oneOnOnesAsManager,HrOneOnOne[],"@relation(""ManagerOneOnOne"")",2182
+hr,HrEmployee,hr_employees,histories,HrEmployeeHistory[],,2182
+hr,HrEmployee,hr_employees,createdAt,DateTime,@default(now()),2182
+hr,HrEmployee,hr_employees,updatedAt,DateTime,@updatedAt,2182
+hr,HrEmployeeHistory,hr_employee_histories,id,String,@id @default(cuid()),2230
+hr,HrEmployeeHistory,hr_employee_histories,employeeId,String,,2230
+hr,HrEmployeeHistory,hr_employee_histories,employee,HrEmployee,"@relation(fields: [employeeId], references: [id], onDelete: Cascade)",2230
+hr,HrEmployeeHistory,hr_employee_histories,changeType,String,,2230
+hr,HrEmployeeHistory,hr_employee_histories,previousDepartment,String?,,2230
+hr,HrEmployeeHistory,hr_employee_histories,newDepartment,String?,,2230
+hr,HrEmployeeHistory,hr_employee_histories,previousPosition,String?,,2230
+hr,HrEmployeeHistory,hr_employee_histories,newPosition,String?,,2230
+hr,HrEmployeeHistory,hr_employee_histories,previousGrade,String?,,2230
+hr,HrEmployeeHistory,hr_employee_histories,newGrade,String?,,2230
+hr,HrEmployeeHistory,hr_employee_histories,effectiveDate,DateTime,,2230
+hr,HrEmployeeHistory,hr_employee_histories,endDate,DateTime?,,2230
+hr,HrEmployeeHistory,hr_employee_histories,reason,String?,@db.Text,2230
+hr,HrEmployeeHistory,hr_employee_histories,createdAt,DateTime,@default(now()),2230
+hr,HrEvaluationPeriod,hr_evaluation_periods,id,String,@id @default(cuid()),2254
+hr,HrEvaluationPeriod,hr_evaluation_periods,organizationId,String,,2254
+hr,HrEvaluationPeriod,hr_evaluation_periods,organization,HrOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",2254
+hr,HrEvaluationPeriod,hr_evaluation_periods,name,String,,2254
+hr,HrEvaluationPeriod,hr_evaluation_periods,startDate,DateTime,,2254
+hr,HrEvaluationPeriod,hr_evaluation_periods,endDate,DateTime,,2254
+hr,HrEvaluationPeriod,hr_evaluation_periods,status,String,"@default(""DRAFT"")",2254
+hr,HrEvaluationPeriod,hr_evaluation_periods,evaluationTemplate,Json?,,2254
+hr,HrEvaluationPeriod,hr_evaluation_periods,evaluations,HrEvaluation[],,2254
+hr,HrEvaluationPeriod,hr_evaluation_periods,createdAt,DateTime,@default(now()),2254
+hr,HrEvaluationPeriod,hr_evaluation_periods,updatedAt,DateTime,@updatedAt,2254
+hr,HrEvaluation,hr_evaluations,id,String,@id @default(cuid()),2276
+hr,HrEvaluation,hr_evaluations,periodId,String,,2276
+hr,HrEvaluation,hr_evaluations,period,HrEvaluationPeriod,"@relation(fields: [periodId], references: [id], onDelete: Cascade)",2276
+hr,HrEvaluation,hr_evaluations,employeeId,String,,2276
+hr,HrEvaluation,hr_evaluations,employee,HrEmployee,"@relation(""EmployeeEvaluations"", fields: [employeeId], references: [id], onDelete: Cascade)",2276
+hr,HrEvaluation,hr_evaluations,evaluatorId,String?,,2276
+hr,HrEvaluation,hr_evaluations,evaluator,HrEmployee?,"@relation(""EvaluatorRelation"", fields: [evaluatorId], references: [id], onDelete: SetNull)",2276
+hr,HrEvaluation,hr_evaluations,goals,Json?,,2276
+hr,HrEvaluation,hr_evaluations,competencies,Json?,,2276
+hr,HrEvaluation,hr_evaluations,selfRating,Int?,,2276
+hr,HrEvaluation,hr_evaluations,managerRating,Int?,,2276
+hr,HrEvaluation,hr_evaluations,finalRating,Int?,,2276
+hr,HrEvaluation,hr_evaluations,selfComment,String?,@db.Text,2276
+hr,HrEvaluation,hr_evaluations,managerComment,String?,@db.Text,2276
+hr,HrEvaluation,hr_evaluations,aiComment,String?,@db.Text,2276
+hr,HrEvaluation,hr_evaluations,status,String,"@default(""DRAFT"")",2276
+hr,HrEvaluation,hr_evaluations,submittedAt,DateTime?,,2276
+hr,HrEvaluation,hr_evaluations,reviewedAt,DateTime?,,2276
+hr,HrEvaluation,hr_evaluations,finalizedAt,DateTime?,,2276
+hr,HrEvaluation,hr_evaluations,createdAt,DateTime,@default(now()),2276
+hr,HrEvaluation,hr_evaluations,updatedAt,DateTime,@updatedAt,2276
+hr,HrOneOnOne,hr_one_on_ones,id,String,@id @default(cuid()),2313
+hr,HrOneOnOne,hr_one_on_ones,organizationId,String,,2313
+hr,HrOneOnOne,hr_one_on_ones,organization,HrOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",2313
+hr,HrOneOnOne,hr_one_on_ones,employeeId,String,,2313
+hr,HrOneOnOne,hr_one_on_ones,employee,HrEmployee,"@relation(""EmployeeOneOnOne"", fields: [employeeId], references: [id], onDelete: Cascade)",2313
+hr,HrOneOnOne,hr_one_on_ones,managerId,String,,2313
+hr,HrOneOnOne,hr_one_on_ones,manager,HrEmployee,"@relation(""ManagerOneOnOne"", fields: [managerId], references: [id], onDelete: Cascade)",2313
+hr,HrOneOnOne,hr_one_on_ones,scheduledAt,DateTime?,,2313
+hr,HrOneOnOne,hr_one_on_ones,conductedAt,DateTime?,,2313
+hr,HrOneOnOne,hr_one_on_ones,duration,Int?,,2313
+hr,HrOneOnOne,hr_one_on_ones,agenda,Json?,,2313
+hr,HrOneOnOne,hr_one_on_ones,managerNotes,String?,@db.Text,2313
+hr,HrOneOnOne,hr_one_on_ones,employeeNotes,String?,@db.Text,2313
+hr,HrOneOnOne,hr_one_on_ones,privateNotes,String?,@db.Text,2313
+hr,HrOneOnOne,hr_one_on_ones,aiSummary,String?,@db.Text,2313
+hr,HrOneOnOne,hr_one_on_ones,aiActionItems,Json?,,2313
+hr,HrOneOnOne,hr_one_on_ones,aiInsights,Json?,,2313
+hr,HrOneOnOne,hr_one_on_ones,status,String,"@default(""SCHEDULED"")",2313
+hr,HrOneOnOne,hr_one_on_ones,createdAt,DateTime,@default(now()),2313
+hr,HrOneOnOne,hr_one_on_ones,updatedAt,DateTime,@updatedAt,2313
+hr,HrInvitation,hr_invitations,id,String,@id @default(cuid()),2348
+hr,HrInvitation,hr_invitations,organizationId,String,,2348
+hr,HrInvitation,hr_invitations,email,String,,2348
+hr,HrInvitation,hr_invitations,role,String,"@default(""MEMBER"")",2348
+hr,HrInvitation,hr_invitations,token,String,@unique,2348
+hr,HrInvitation,hr_invitations,invitedBy,String,,2348
+hr,HrInvitation,hr_invitations,status,String,"@default(""PENDING"")",2348
+hr,HrInvitation,hr_invitations,expiresAt,DateTime,,2348
+hr,HrInvitation,hr_invitations,acceptedAt,DateTime?,,2348
+hr,HrInvitation,hr_invitations,organization,HrOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",2348
+hr,HrInvitation,hr_invitations,createdAt,DateTime,@default(now()),2348
+hr,HrAuditLog,hr_audit_logs,id,String,@id @default(cuid()),2371
+hr,HrAuditLog,hr_audit_logs,organizationId,String,,2371
+hr,HrAuditLog,hr_audit_logs,organization,HrOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",2371
+hr,HrAuditLog,hr_audit_logs,userId,String,,2371
+hr,HrAuditLog,hr_audit_logs,userName,String?,,2371
+hr,HrAuditLog,hr_audit_logs,action,String,,2371
+hr,HrAuditLog,hr_audit_logs,target,String,,2371
+hr,HrAuditLog,hr_audit_logs,targetId,String?,,2371
+hr,HrAuditLog,hr_audit_logs,details,Json?,,2371
+hr,HrAuditLog,hr_audit_logs,ipAddress,String?,,2371
+hr,HrAuditLog,hr_audit_logs,createdAt,DateTime,@default(now()),2371
+kintai,KintaiOrganization,kintai_organizations,id,String,@id @default(cuid()),2396
+kintai,KintaiOrganization,kintai_organizations,name,String,,2396
+kintai,KintaiOrganization,kintai_organizations,slug,String,@unique,2396
+kintai,KintaiOrganization,kintai_organizations,createdAt,DateTime,@default(now()),2396
+kintai,KintaiOrganization,kintai_organizations,updatedAt,DateTime,@updatedAt,2396
+kintai,KintaiOrganization,kintai_organizations,members,KintaiMember[],,2396
+kintai,KintaiOrganization,kintai_organizations,departments,KintaiDepartment[],,2396
+kintai,KintaiOrganization,kintai_organizations,workRules,KintaiWorkRule[],,2396
+kintai,KintaiMember,kintai_members,id,String,@id @default(cuid()),2410
+kintai,KintaiMember,kintai_members,organizationId,String,,2410
+kintai,KintaiMember,kintai_members,organization,KintaiOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",2410
+kintai,KintaiMember,kintai_members,userId,String,,2410
+kintai,KintaiMember,kintai_members,role,String,"@default(""employee"") // system_admin, hr_admin, manager, employee",2410
+kintai,KintaiMember,kintai_members,status,String,"@default(""ACTIVE"") // ACTIVE, PENDING, INACTIVE",2410
+kintai,KintaiMember,kintai_members,inviteToken,String?,@unique,2410
+kintai,KintaiMember,kintai_members,inviteEmail,String?,,2410
+kintai,KintaiMember,kintai_members,acceptedAt,DateTime?,,2410
+kintai,KintaiMember,kintai_members,createdAt,DateTime,@default(now()),2410
+kintai,KintaiMember,kintai_members,employee,KintaiEmployee?,,2410
+kintai,KintaiDepartment,kintai_departments,id,String,@id @default(cuid()),2428
+kintai,KintaiDepartment,kintai_departments,organizationId,String,,2428
+kintai,KintaiDepartment,kintai_departments,organization,KintaiOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",2428
+kintai,KintaiDepartment,kintai_departments,name,String,,2428
+kintai,KintaiDepartment,kintai_departments,parentId,String?,,2428
+kintai,KintaiDepartment,kintai_departments,parent,KintaiDepartment?,"@relation(""DeptHierarchy"", fields: [parentId], references: [id])",2428
+kintai,KintaiDepartment,kintai_departments,children,KintaiDepartment[],"@relation(""DeptHierarchy"")",2428
+kintai,KintaiDepartment,kintai_departments,managerId,String?,,2428
+kintai,KintaiDepartment,kintai_departments,createdAt,DateTime,@default(now()),2428
+kintai,KintaiDepartment,kintai_departments,employees,KintaiEmployee[],,2428
+kintai,KintaiWorkRule,kintai_work_rules,id,String,@id @default(cuid()),2444
+kintai,KintaiWorkRule,kintai_work_rules,organizationId,String,,2444
+kintai,KintaiWorkRule,kintai_work_rules,organization,KintaiOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",2444
+kintai,KintaiWorkRule,kintai_work_rules,name,String,,2444
+kintai,KintaiWorkRule,kintai_work_rules,workStart,String,"@default(""09:00"")",2444
+kintai,KintaiWorkRule,kintai_work_rules,workEnd,String,"@default(""18:00"")",2444
+kintai,KintaiWorkRule,kintai_work_rules,breakMinutes,Int,@default(60),2444
+kintai,KintaiWorkRule,kintai_work_rules,overtimeCalcMethod,String,"@default(""daily"") // daily, weekly, monthly",2444
+kintai,KintaiWorkRule,kintai_work_rules,flexEnabled,Boolean,@default(false),2444
+kintai,KintaiWorkRule,kintai_work_rules,coreStart,String?,,2444
+kintai,KintaiWorkRule,kintai_work_rules,coreEnd,String?,,2444
+kintai,KintaiWorkRule,kintai_work_rules,createdAt,DateTime,@default(now()),2444
+kintai,KintaiWorkRule,kintai_work_rules,employees,KintaiEmployee[],,2444
+kintai,KintaiEmployee,kintai_employees,id,String,@id @default(cuid()),2463
+kintai,KintaiEmployee,kintai_employees,organizationId,String,,2463
+kintai,KintaiEmployee,kintai_employees,memberId,String,@unique,2463
+kintai,KintaiEmployee,kintai_employees,member,KintaiMember,"@relation(fields: [memberId], references: [id], onDelete: Cascade)",2463
+kintai,KintaiEmployee,kintai_employees,departmentId,String?,,2463
+kintai,KintaiEmployee,kintai_employees,department,KintaiDepartment?,"@relation(fields: [departmentId], references: [id])",2463
+kintai,KintaiEmployee,kintai_employees,workRuleId,String?,,2463
+kintai,KintaiEmployee,kintai_employees,workRule,KintaiWorkRule?,"@relation(fields: [workRuleId], references: [id])",2463
+kintai,KintaiEmployee,kintai_employees,name,String,,2463
+kintai,KintaiEmployee,kintai_employees,nameKana,String?,,2463
+kintai,KintaiEmployee,kintai_employees,email,String,,2463
+kintai,KintaiEmployee,kintai_employees,employmentType,String,"@default(""full_time"") // full_time, part_time, contract",2463
+kintai,KintaiEmployee,kintai_employees,hireDate,DateTime?,,2463
+kintai,KintaiEmployee,kintai_employees,isActive,Boolean,@default(true),2463
+kintai,KintaiEmployee,kintai_employees,createdAt,DateTime,@default(now()),2463
+kintai,KintaiEmployee,kintai_employees,updatedAt,DateTime,@updatedAt,2463
+kintai,KintaiEmployee,kintai_employees,clockRecords,KintaiClockRecord[],,2463
+kintai,KintaiEmployee,kintai_employees,attendances,KintaiAttendance[],,2463
+kintai,KintaiEmployee,kintai_employees,requests,KintaiRequest[],"@relation(""EmployeeRequests"")",2463
+kintai,KintaiEmployee,kintai_employees,reviewed,KintaiRequest[],"@relation(""ReviewerRequests"")",2463
+kintai,KintaiClockRecord,kintai_clock_records,id,String,@id @default(cuid()),2489
+kintai,KintaiClockRecord,kintai_clock_records,employeeId,String,,2489
+kintai,KintaiClockRecord,kintai_clock_records,employee,KintaiEmployee,"@relation(fields: [employeeId], references: [id], onDelete: Cascade)",2489
+kintai,KintaiClockRecord,kintai_clock_records,type,String,"// clock_in, clock_out, break_start, break_end",2489
+kintai,KintaiClockRecord,kintai_clock_records,timestamp,DateTime,,2489
+kintai,KintaiClockRecord,kintai_clock_records,source,String,"@default(""pc"") // pc, mobile, manual",2489
+kintai,KintaiClockRecord,kintai_clock_records,latitude,Float?,,2489
+kintai,KintaiClockRecord,kintai_clock_records,longitude,Float?,,2489
+kintai,KintaiClockRecord,kintai_clock_records,ipAddress,String?,,2489
+kintai,KintaiClockRecord,kintai_clock_records,note,String?,@db.Text,2489
+kintai,KintaiClockRecord,kintai_clock_records,isModified,Boolean,@default(false),2489
+kintai,KintaiClockRecord,kintai_clock_records,originalTimestamp,DateTime?,,2489
+kintai,KintaiClockRecord,kintai_clock_records,createdAt,DateTime,@default(now()),2489
+kintai,KintaiAttendance,kintai_attendances,id,String,@id @default(cuid()),2508
+kintai,KintaiAttendance,kintai_attendances,employeeId,String,,2508
+kintai,KintaiAttendance,kintai_attendances,employee,KintaiEmployee,"@relation(fields: [employeeId], references: [id], onDelete: Cascade)",2508
+kintai,KintaiAttendance,kintai_attendances,date,DateTime,@db.Date,2508
+kintai,KintaiAttendance,kintai_attendances,clockIn,DateTime?,,2508
+kintai,KintaiAttendance,kintai_attendances,clockOut,DateTime?,,2508
+kintai,KintaiAttendance,kintai_attendances,breakMinutes,Int,@default(0),2508
+kintai,KintaiAttendance,kintai_attendances,workMinutes,Int,@default(0),2508
+kintai,KintaiAttendance,kintai_attendances,overtimeMinutes,Int,@default(0),2508
+kintai,KintaiAttendance,kintai_attendances,lateMinutes,Int,@default(0),2508
+kintai,KintaiAttendance,kintai_attendances,earlyLeaveMinutes,Int,@default(0),2508
+kintai,KintaiAttendance,kintai_attendances,nightMinutes,Int,@default(0),2508
+kintai,KintaiAttendance,kintai_attendances,holidayWork,Boolean,@default(false),2508
+kintai,KintaiAttendance,kintai_attendances,status,String,"@default(""normal"") // normal, absent, holiday, paid_leave, special_leave",2508
+kintai,KintaiAttendance,kintai_attendances,note,String?,@db.Text,2508
+kintai,KintaiAttendance,kintai_attendances,createdAt,DateTime,@default(now()),2508
+kintai,KintaiAttendance,kintai_attendances,updatedAt,DateTime,@updatedAt,2508
+kintai,KintaiRequest,kintai_requests,id,String,@id @default(cuid()),2532
+kintai,KintaiRequest,kintai_requests,employeeId,String,,2532
+kintai,KintaiRequest,kintai_requests,employee,KintaiEmployee,"@relation(""EmployeeRequests"", fields: [employeeId], references: [id], onDelete: Cascade)",2532
+kintai,KintaiRequest,kintai_requests,type,String,"// clock_fix, leave, overtime, holiday_work",2532
+kintai,KintaiRequest,kintai_requests,status,String,"@default(""pending"") // pending, approved, rejected, withdrawn",2532
+kintai,KintaiRequest,kintai_requests,details,Json,"@default(""{}"")",2532
+kintai,KintaiRequest,kintai_requests,reason,String?,@db.Text,2532
+kintai,KintaiRequest,kintai_requests,submittedAt,DateTime,@default(now()),2532
+kintai,KintaiRequest,kintai_requests,reviewedAt,DateTime?,,2532
+kintai,KintaiRequest,kintai_requests,reviewerId,String?,,2532
+kintai,KintaiRequest,kintai_requests,reviewer,KintaiEmployee?,"@relation(""ReviewerRequests"", fields: [reviewerId], references: [id])",2532
+kintai,KintaiRequest,kintai_requests,reviewerComment,String?,@db.Text,2532
+kintai,KintaiRequest,kintai_requests,createdAt,DateTime,@default(now()),2532
+promane,PromaneWorkspace,promane_workspaces,id,String,@id @default(cuid()),2555
+promane,PromaneWorkspace,promane_workspaces,userId,String,,2555
+promane,PromaneWorkspace,promane_workspaces,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",2555
+promane,PromaneWorkspace,promane_workspaces,name,String,,2555
+promane,PromaneWorkspace,promane_workspaces,slug,String,@unique,2555
+promane,PromaneWorkspace,promane_workspaces,members,PromaneMember[],,2555
+promane,PromaneWorkspace,promane_workspaces,clients,PromaneClient[],,2555
+promane,PromaneWorkspace,promane_workspaces,projects,PromaneProject[],,2555
+promane,PromaneWorkspace,promane_workspaces,invitations,PromaneInvitation[],,2555
+promane,PromaneWorkspace,promane_workspaces,createdAt,DateTime,@default(now()),2555
+promane,PromaneWorkspace,promane_workspaces,updatedAt,DateTime,@updatedAt,2555
+promane,PromaneMember,promane_members,id,String,@id @default(cuid()),2572
+promane,PromaneMember,promane_members,workspaceId,String,,2572
+promane,PromaneMember,promane_members,userId,String,,2572
+promane,PromaneMember,promane_members,role,String,"@default(""member"")",2572
+promane,PromaneMember,promane_members,displayName,String,,2572
+promane,PromaneMember,promane_members,hourlyRate,Int,@default(0),2572
+promane,PromaneMember,promane_members,isActive,Boolean,@default(true),2572
+promane,PromaneMember,promane_members,workspace,PromaneWorkspace,"@relation(fields: [workspaceId], references: [id], onDelete: Cascade)",2572
+promane,PromaneMember,promane_members,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",2572
+promane,PromaneMember,promane_members,tasks,PromaneTask[],"@relation(""PromaneTaskAssignee"")",2572
+promane,PromaneMember,promane_members,timeEntries,PromaneTimeEntry[],,2572
+promane,PromaneMember,promane_members,comments,PromaneComment[],,2572
+promane,PromaneMember,promane_members,createdAt,DateTime,@default(now()),2572
+promane,PromaneMember,promane_members,updatedAt,DateTime,@updatedAt,2572
+promane,PromaneClient,promane_clients,id,String,@id @default(cuid()),2593
+promane,PromaneClient,promane_clients,workspaceId,String,,2593
+promane,PromaneClient,promane_clients,name,String,,2593
+promane,PromaneClient,promane_clients,contactName,String?,,2593
+promane,PromaneClient,promane_clients,email,String?,,2593
+promane,PromaneClient,promane_clients,phone,String?,,2593
+promane,PromaneClient,promane_clients,address,String?,,2593
+promane,PromaneClient,promane_clients,note,String?,@db.Text,2593
+promane,PromaneClient,promane_clients,workspace,PromaneWorkspace,"@relation(fields: [workspaceId], references: [id], onDelete: Cascade)",2593
+promane,PromaneClient,promane_clients,projects,PromaneProject[],,2593
+promane,PromaneClient,promane_clients,createdAt,DateTime,@default(now()),2593
+promane,PromaneClient,promane_clients,updatedAt,DateTime,@updatedAt,2593
+promane,PromaneProject,promane_projects,id,String,@id @default(cuid()),2611
+promane,PromaneProject,promane_projects,workspaceId,String,,2611
+promane,PromaneProject,promane_projects,clientId,String?,,2611
+promane,PromaneProject,promane_projects,name,String,,2611
+promane,PromaneProject,promane_projects,description,String?,@db.Text,2611
+promane,PromaneProject,promane_projects,status,String,"@default(""draft"")",2611
+promane,PromaneProject,promane_projects,billingType,String,"@default(""fixed"")",2611
+promane,PromaneProject,promane_projects,contractAmount,Int,@default(0),2611
+promane,PromaneProject,promane_projects,monthlyAmount,Int?,,2611
+promane,PromaneProject,promane_projects,hourlyRate,Int?,,2611
+promane,PromaneProject,promane_projects,estimatedHours,Int?,,2611
+promane,PromaneProject,promane_projects,startDate,DateTime?,,2611
+promane,PromaneProject,promane_projects,endDate,DateTime?,,2611
+promane,PromaneProject,promane_projects,tags,String?,,2611
+promane,PromaneProject,promane_projects,workspace,PromaneWorkspace,"@relation(fields: [workspaceId], references: [id], onDelete: Cascade)",2611
+promane,PromaneProject,promane_projects,client,PromaneClient?,"@relation(fields: [clientId], references: [id], onDelete: SetNull)",2611
+promane,PromaneProject,promane_projects,tasks,PromaneTask[],,2611
+promane,PromaneProject,promane_projects,expenses,PromaneExpense[],,2611
+promane,PromaneProject,promane_projects,timeEntries,PromaneTimeEntry[],,2611
+promane,PromaneProject,promane_projects,createdAt,DateTime,@default(now()),2611
+promane,PromaneProject,promane_projects,updatedAt,DateTime,@updatedAt,2611
+promane,PromaneTask,promane_tasks,id,String,@id @default(cuid()),2638
+promane,PromaneTask,promane_tasks,projectId,String,,2638
+promane,PromaneTask,promane_tasks,parentId,String?,,2638
+promane,PromaneTask,promane_tasks,assigneeId,String?,,2638
+promane,PromaneTask,promane_tasks,title,String,,2638
+promane,PromaneTask,promane_tasks,description,String?,@db.Text,2638
+promane,PromaneTask,promane_tasks,status,String,"@default(""todo"")",2638
+promane,PromaneTask,promane_tasks,priority,String,"@default(""medium"")",2638
+promane,PromaneTask,promane_tasks,startDate,DateTime?,,2638
+promane,PromaneTask,promane_tasks,dueDate,DateTime?,,2638
+promane,PromaneTask,promane_tasks,order,Int,@default(0),2638
+promane,PromaneTask,promane_tasks,project,PromaneProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",2638
+promane,PromaneTask,promane_tasks,parent,PromaneTask?,"@relation(""PromaneSubTasks"", fields: [parentId], references: [id])",2638
+promane,PromaneTask,promane_tasks,children,PromaneTask[],"@relation(""PromaneSubTasks"")",2638
+promane,PromaneTask,promane_tasks,assignee,PromaneMember?,"@relation(""PromaneTaskAssignee"", fields: [assigneeId], references: [id], onDelete: SetNull)",2638
+promane,PromaneTask,promane_tasks,timeEntries,PromaneTimeEntry[],,2638
+promane,PromaneTask,promane_tasks,comments,PromaneComment[],,2638
+promane,PromaneTask,promane_tasks,createdAt,DateTime,@default(now()),2638
+promane,PromaneTask,promane_tasks,updatedAt,DateTime,@updatedAt,2638
+promane,PromaneTimeEntry,promane_time_entries,id,String,@id @default(cuid()),2663
+promane,PromaneTimeEntry,promane_time_entries,taskId,String?,,2663
+promane,PromaneTimeEntry,promane_time_entries,projectId,String?,,2663
+promane,PromaneTimeEntry,promane_time_entries,project,PromaneProject?,"@relation(fields: [projectId], references: [id], onDelete: SetNull)",2663
+promane,PromaneTimeEntry,promane_time_entries,memberId,String,,2663
+promane,PromaneTimeEntry,promane_time_entries,duration,Int,,2663
+promane,PromaneTimeEntry,promane_time_entries,hourlyRateSnapshot,Int?,// 工数登録時の時給。移行前の記録は当時値が不明なため移行時点の時給で補完する,2663
+promane,PromaneTimeEntry,promane_time_entries,date,DateTime,,2663
+promane,PromaneTimeEntry,promane_time_entries,note,String?,,2663
+promane,PromaneTimeEntry,promane_time_entries,task,PromaneTask?,"@relation(fields: [taskId], references: [id], onDelete: SetNull)",2663
+promane,PromaneTimeEntry,promane_time_entries,member,PromaneMember,"@relation(fields: [memberId], references: [id], onDelete: Cascade)",2663
+promane,PromaneTimeEntry,promane_time_entries,createdAt,DateTime,@default(now()),2663
+promane,PromaneTimeEntry,promane_time_entries,updatedAt,DateTime,@updatedAt,2663
+promane,PromaneExpense,promane_expenses,id,String,@id @default(cuid()),2683
+promane,PromaneExpense,promane_expenses,projectId,String,,2683
+promane,PromaneExpense,promane_expenses,category,String,,2683
+promane,PromaneExpense,promane_expenses,amount,Int,,2683
+promane,PromaneExpense,promane_expenses,description,String,,2683
+promane,PromaneExpense,promane_expenses,date,DateTime,,2683
+promane,PromaneExpense,promane_expenses,project,PromaneProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",2683
+promane,PromaneExpense,promane_expenses,createdAt,DateTime,@default(now()),2683
+promane,PromaneExpense,promane_expenses,updatedAt,DateTime,@updatedAt,2683
+promane,PromaneComment,promane_comments,id,String,@id @default(cuid()),2698
+promane,PromaneComment,promane_comments,taskId,String,,2698
+promane,PromaneComment,promane_comments,memberId,String,,2698
+promane,PromaneComment,promane_comments,content,String,@db.Text,2698
+promane,PromaneComment,promane_comments,task,PromaneTask,"@relation(fields: [taskId], references: [id], onDelete: Cascade)",2698
+promane,PromaneComment,promane_comments,member,PromaneMember,"@relation(fields: [memberId], references: [id], onDelete: Cascade)",2698
+promane,PromaneComment,promane_comments,createdAt,DateTime,@default(now()),2698
+promane,PromaneComment,promane_comments,updatedAt,DateTime,@updatedAt,2698
+promane,PromaneInvitation,promane_invitations,id,String,@id @default(cuid()),2716
+promane,PromaneInvitation,promane_invitations,workspaceId,String,,2716
+promane,PromaneInvitation,promane_invitations,email,String,,2716
+promane,PromaneInvitation,promane_invitations,role,String,"@default(""member"") // owner / admin / member / guest",2716
+promane,PromaneInvitation,promane_invitations,token,String,@unique,2716
+promane,PromaneInvitation,promane_invitations,invitedById,String,,2716
+promane,PromaneInvitation,promane_invitations,acceptedAt,DateTime?,,2716
+promane,PromaneInvitation,promane_invitations,expiresAt,DateTime,,2716
+promane,PromaneInvitation,promane_invitations,createdAt,DateTime,@default(now()),2716
+promane,PromaneInvitation,promane_invitations,workspace,PromaneWorkspace,"@relation(fields: [workspaceId], references: [id], onDelete: Cascade)",2716
+promane,PromaneInvitation,promane_invitations,invitedBy,User,"@relation(""PromaneInvitationInvitedBy"", fields: [invitedById], references: [id], onDelete: Cascade)",2716
+doyalist,DoyalistProject,doyalist_projects,id,String,@id @default(cuid()),2739
+doyalist,DoyalistProject,doyalist_projects,userId,String,,2739
+doyalist,DoyalistProject,doyalist_projects,name,String,,2739
+doyalist,DoyalistProject,doyalist_projects,description,String?,@db.Text,2739
+doyalist,DoyalistProject,doyalist_projects,industry,String?,,2739
+doyalist,DoyalistProject,doyalist_projects,region,String?,,2739
+doyalist,DoyalistProject,doyalist_projects,targetSize,String?,// 大企業、中小、スタートアップ等,2739
+doyalist,DoyalistProject,doyalist_projects,keywords,String?,@db.Text,2739
+doyalist,DoyalistProject,doyalist_projects,status,String,"@default(""active"") // active, archived",2739
+doyalist,DoyalistProject,doyalist_projects,createdAt,DateTime,@default(now()),2739
+doyalist,DoyalistProject,doyalist_projects,updatedAt,DateTime,@updatedAt,2739
+doyalist,DoyalistProject,doyalist_projects,companies,DoyalistCompany[],,2739
+doyalist,DoyalistProject,doyalist_projects,approaches,DoyalistApproach[],,2739
+doyalist,DoyalistCompany,doyalist_companies,id,String,@id @default(cuid()),2761
+doyalist,DoyalistCompany,doyalist_companies,projectId,String,,2761
+doyalist,DoyalistCompany,doyalist_companies,project,DoyalistProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",2761
+doyalist,DoyalistCompany,doyalist_companies,name,String,,2761
+doyalist,DoyalistCompany,doyalist_companies,website,String?,,2761
+doyalist,DoyalistCompany,doyalist_companies,industry,String?,,2761
+doyalist,DoyalistCompany,doyalist_companies,region,String?,,2761
+doyalist,DoyalistCompany,doyalist_companies,size,String?,// 従業員数規模,2761
+doyalist,DoyalistCompany,doyalist_companies,description,String?,@db.Text,2761
+doyalist,DoyalistCompany,doyalist_companies,contactEmail,String?,,2761
+doyalist,DoyalistCompany,doyalist_companies,contactPhone,String?,,2761
+doyalist,DoyalistCompany,doyalist_companies,contactPerson,String?,,2761
+doyalist,DoyalistCompany,doyalist_companies,notes,String?,@db.Text,2761
+doyalist,DoyalistCompany,doyalist_companies,enrichedData,Json?,// AI分析詳細データ,2761
+doyalist,DoyalistCompany,doyalist_companies,score,Int?,// 営業優先度スコア（0-100）,2761
+doyalist,DoyalistCompany,doyalist_companies,status,String,"@default(""new"") // new, contacted, replied, won, lost",2761
+doyalist,DoyalistCompany,doyalist_companies,source,String?,"// collected, manual, imported",2761
+doyalist,DoyalistCompany,doyalist_companies,createdAt,DateTime,@default(now()),2761
+doyalist,DoyalistCompany,doyalist_companies,updatedAt,DateTime,@updatedAt,2761
+doyalist,DoyalistCompany,doyalist_companies,approaches,DoyalistApproach[],,2761
+doyalist,DoyalistApproach,doyalist_approaches,id,String,@id @default(cuid()),2791
+doyalist,DoyalistApproach,doyalist_approaches,projectId,String,,2791
+doyalist,DoyalistApproach,doyalist_approaches,project,DoyalistProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",2791
+doyalist,DoyalistApproach,doyalist_approaches,companyId,String?,,2791
+doyalist,DoyalistApproach,doyalist_approaches,company,DoyalistCompany?,"@relation(fields: [companyId], references: [id], onDelete: SetNull)",2791
+doyalist,DoyalistApproach,doyalist_approaches,type,String,"// email, dm, phone, letter",2791
+doyalist,DoyalistApproach,doyalist_approaches,subject,String?,,2791
+doyalist,DoyalistApproach,doyalist_approaches,body,String,@db.Text,2791
+doyalist,DoyalistApproach,doyalist_approaches,templateId,String?,,2791
+doyalist,DoyalistApproach,doyalist_approaches,status,String,"@default(""draft"") // draft, sent, replied",2791
+doyalist,DoyalistApproach,doyalist_approaches,createdAt,DateTime,@default(now()),2791
+doyalist,DoyalistApproach,doyalist_approaches,updatedAt,DateTime,@updatedAt,2791
+doyalist,DoyalistTemplate,doyalist_templates,id,String,@id @default(cuid()),2811
+doyalist,DoyalistTemplate,doyalist_templates,userId,String,,2811
+doyalist,DoyalistTemplate,doyalist_templates,name,String,,2811
+doyalist,DoyalistTemplate,doyalist_templates,type,String,"// email, dm, phone, letter",2811
+doyalist,DoyalistTemplate,doyalist_templates,subject,String?,,2811
+doyalist,DoyalistTemplate,doyalist_templates,body,String,@db.Text,2811
+doyalist,DoyalistTemplate,doyalist_templates,isDefault,Boolean,@default(false),2811
+doyalist,DoyalistTemplate,doyalist_templates,createdAt,DateTime,@default(now()),2811
+doyalist,DoyalistTemplate,doyalist_templates,updatedAt,DateTime,@updatedAt,2811
+doyaslide,DoyaSlideProject,doyaslide_projects,id,String,@id @default(cuid()),2829
+doyaslide,DoyaSlideProject,doyaslide_projects,userId,String,,2829
+doyaslide,DoyaSlideProject,doyaslide_projects,title,String,,2829
+doyaslide,DoyaSlideProject,doyaslide_projects,docType,String,"@default(""proposal"") // sales/proposal/sns/seminar/recruit/pitch/internal/custom",2829
+doyaslide,DoyaSlideProject,doyaslide_projects,customBrief,String?,@db.Text // docType=custom 時の自由入力,2829
+doyaslide,DoyaSlideProject,doyaslide_projects,slideCount,Int,@default(8),2829
+doyaslide,DoyaSlideProject,doyaslide_projects,aspectRatio,String,"@default(""wide"") // wide(1536x1024) / square(1024x1024) / vertical(1024x1536)",2829
+doyaslide,DoyaSlideProject,doyaslide_projects,themeColor,String,"@default(""#7f19e6"")",2829
+doyaslide,DoyaSlideProject,doyaslide_projects,stylePreset,String,"@default(""flashy"") // flashy/luxury/pop/minimal/cyber/handwritten",2829
+doyaslide,DoyaSlideProject,doyaslide_projects,status,String,"@default(""draft"") // draft/structuring/generating/completed/error",2829
+doyaslide,DoyaSlideProject,doyaslide_projects,logoUrl,String?,,2829
+doyaslide,DoyaSlideProject,doyaslide_projects,logoPosition,String,"@default(""top-right"")",2829
+doyaslide,DoyaSlideProject,doyaslide_projects,logoSize,String,"@default(""M"") // S/M/L",2829
+doyaslide,DoyaSlideProject,doyaslide_projects,logoBackingChip,Boolean,@default(true),2829
+doyaslide,DoyaSlideProject,doyaslide_projects,createdAt,DateTime,@default(now()),2829
+doyaslide,DoyaSlideProject,doyaslide_projects,updatedAt,DateTime,@updatedAt,2829
+doyaslide,DoyaSlideProject,doyaslide_projects,slides,DoyaSlideSlide[],,2829
+doyaslide,DoyaSlideProject,doyaslide_projects,assets,DoyaSlideAsset[],,2829
+doyaslide,DoyaSlideSlide,doyaslide_slides,id,String,@id @default(cuid()),2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,projectId,String,,2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,project,DoyaSlideProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,index,Int,,2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,role,String?,// 表紙/課題/解決/実績/CTA など,2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,headline,String?,,2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,subText,String?,@db.Text,2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,visualPrompt,String,@db.Text // 画像生成用のビジュアル指示,2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,basePrompt,String?,@db.Text // 累積プロンプト（チャット修正を蓄積）,2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,rawImageUrl,String?,// ロゴ合成前,2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,imageUrl,String?,// ロゴ合成後（表示用）,2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,version,Int,@default(1),2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,status,String,"@default(""pending"") // pending/generating/done/error",2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,model,String?,// 実際に生成に使われたモデル（gpt-image-2 / nano-banana-pro-preview）,2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,versions,DoyaSlideVersion[],,2859
+doyaslide,DoyaSlideSlide,doyaslide_slides,chatMessages,DoyaSlideChatMessage[],,2859
+doyaslide,DoyaSlideAsset,doyaslide_assets,id,String,@id @default(cuid()),2883
+doyaslide,DoyaSlideAsset,doyaslide_assets,projectId,String,,2883
+doyaslide,DoyaSlideAsset,doyaslide_assets,project,DoyaSlideProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",2883
+doyaslide,DoyaSlideAsset,doyaslide_assets,type,String,"@default(""logo"")",2883
+doyaslide,DoyaSlideAsset,doyaslide_assets,fileUrl,String,,2883
+doyaslide,DoyaSlideAsset,doyaslide_assets,createdAt,DateTime,@default(now()),2883
+doyaslide,DoyaSlideChatMessage,doyaslide_chat_messages,id,String,@id @default(cuid()),2895
+doyaslide,DoyaSlideChatMessage,doyaslide_chat_messages,slideId,String,,2895
+doyaslide,DoyaSlideChatMessage,doyaslide_chat_messages,slide,DoyaSlideSlide,"@relation(fields: [slideId], references: [id], onDelete: Cascade)",2895
+doyaslide,DoyaSlideChatMessage,doyaslide_chat_messages,role,String,// user / assistant,2895
+doyaslide,DoyaSlideChatMessage,doyaslide_chat_messages,content,String,@db.Text,2895
+doyaslide,DoyaSlideChatMessage,doyaslide_chat_messages,appliedChanges,Json?,,2895
+doyaslide,DoyaSlideChatMessage,doyaslide_chat_messages,createdAt,DateTime,@default(now()),2895
+doyaslide,DoyaSlideVersion,doyaslide_versions,id,String,@id @default(cuid()),2908
+doyaslide,DoyaSlideVersion,doyaslide_versions,slideId,String,,2908
+doyaslide,DoyaSlideVersion,doyaslide_versions,slide,DoyaSlideSlide,"@relation(fields: [slideId], references: [id], onDelete: Cascade)",2908
+doyaslide,DoyaSlideVersion,doyaslide_versions,version,Int,,2908
+doyaslide,DoyaSlideVersion,doyaslide_versions,imageUrl,String,,2908
+doyaslide,DoyaSlideVersion,doyaslide_versions,rawImageUrl,String?,,2908
+doyaslide,DoyaSlideVersion,doyaslide_versions,prompt,String?,@db.Text,2908
+doyaslide,DoyaSlideVersion,doyaslide_versions,createdAt,DateTime,@default(now()),2908
+cunning,CunningSession,cunning_sessions,id,String,@id @default(cuid()),2925
+cunning,CunningSession,cunning_sessions,userId,String,,2925
+cunning,CunningSession,cunning_sessions,mode,String,"@default(""sales"") // sales（商談）/ interview（面接）",2925
+cunning,CunningSession,cunning_sessions,title,String,"@default(""無題のセッション"")",2925
+cunning,CunningSession,cunning_sessions,knowledgeBaseId,String?,// sales: 参照ナレッジ,2925
+cunning,CunningSession,cunning_sessions,companyProfileId,String?,// interview: 参照企業,2925
+cunning,CunningSession,cunning_sessions,applicantProfileId,String?,// interview: 応募者プロフィール,2925
+cunning,CunningSession,cunning_sessions,personaNote,String?,@db.Text // 任意の前提/キャラ設定（エンタメ:口調・世界観 / ビジネス:補足）,2925
+cunning,CunningSession,cunning_sessions,report,Json?,// 終了時に生成する議事録＋評価（summary/decisions/todos/score/feedback/good/improve）,2925
+cunning,CunningSession,cunning_sessions,status,String,"@default(""active"") // active / ended",2925
+cunning,CunningSession,cunning_sessions,durationSec,Int,@default(0) // 文字起こし時間（使用量計上の単位）,2925
+cunning,CunningSession,cunning_sessions,recordingVersion,Int,@default(1) // 1: legacy cumulative client; 2: server lease protocol,2925
+cunning,CunningSession,cunning_sessions,startedAt,DateTime,@default(now()),2925
+cunning,CunningSession,cunning_sessions,endedAt,DateTime?,,2925
+cunning,CunningSession,cunning_sessions,createdAt,DateTime,@default(now()),2925
+cunning,CunningSession,cunning_sessions,updatedAt,DateTime,@updatedAt,2925
+cunning,CunningSession,cunning_sessions,transcripts,CunningTranscript[],,2925
+cunning,CunningSession,cunning_sessions,answers,CunningAnswer[],,2925
+cunning,CunningSession,cunning_sessions,recordingLease,CunningRecordingLease?,,2925
+cunning,CunningSession,cunning_sessions,usageAllocations,CunningUsageAllocation[],,2925
+cunning,CunningSession,cunning_sessions,audioWindows,CunningAudioWindow[],,2925
+cunning,CunningRecordingLease,cunning_recording_leases,sessionId,String,@id,2955
+cunning,CunningRecordingLease,cunning_recording_leases,session,CunningSession,"@relation(fields: [sessionId], references: [id], onDelete: Cascade)",2955
+cunning,CunningRecordingLease,cunning_recording_leases,userId,String,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,token,String,@unique @default(uuid()),2955
+cunning,CunningRecordingLease,cunning_recording_leases,requestKey,String,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,startedAt,DateTime,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,audioProtocol,String?,// Selected atomically by the first audio admission/reservation.,2955
+cunning,CunningRecordingLease,cunning_recording_leases,settledThrough,DateTime,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,expiresAt,DateTime,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,stoppedAt,DateTime?,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,finalRemoteAcceptedAt,DateTime?,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,finalSelfAcceptedAt,DateTime?,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,finalAnswerClaimedAt,DateTime?,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,finalAnswerInputHash,String?,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,finalAnswerAttempts,Int,@default(0),2955
+cunning,CunningRecordingLease,cunning_recording_leases,finalRemoteInputHash,String?,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,finalSelfInputHash,String?,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,finalRemoteClaimedAt,DateTime?,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,finalSelfClaimedAt,DateTime?,,2955
+cunning,CunningRecordingLease,cunning_recording_leases,finalRemoteAttempts,Int,@default(0),2955
+cunning,CunningRecordingLease,cunning_recording_leases,finalSelfAttempts,Int,@default(0),2955
+cunning,CunningUsageAllocation,cunning_usage_allocations,sessionId,String,,2981
+cunning,CunningUsageAllocation,cunning_usage_allocations,session,CunningSession,"@relation(fields: [sessionId], references: [id], onDelete: Cascade)",2981
+cunning,CunningUsageAllocation,cunning_usage_allocations,userId,String,,2981
+cunning,CunningUsageAllocation,cunning_usage_allocations,monthStart,DateTime,,2981
+cunning,CunningUsageAllocation,cunning_usage_allocations,usedMs,BigInt,@default(0),2981
+cunning,CunningUsageAllocation,cunning_usage_allocations,reservedMs,BigInt,@default(0),2981
+cunning,CunningTranscript,cunning_transcripts,id,String,@id @default(cuid()),2993
+cunning,CunningTranscript,cunning_transcripts,sessionId,String,,2993
+cunning,CunningTranscript,cunning_transcripts,session,CunningSession,"@relation(fields: [sessionId], references: [id], onDelete: Cascade)",2993
+cunning,CunningTranscript,cunning_transcripts,speaker,String?,// remote（相手）/ self（自分）,2993
+cunning,CunningTranscript,cunning_transcripts,text,String,@db.Text,2993
+cunning,CunningTranscript,cunning_transcripts,isFinal,Boolean,@default(true),2993
+cunning,CunningTranscript,cunning_transcripts,audioReceivedAt,DateTime?,,2993
+cunning,CunningTranscript,cunning_transcripts,recordingFinal,Boolean,@default(false),2993
+cunning,CunningTranscript,cunning_transcripts,finalAnswer,CunningAnswer?,"@relation(""CunningFinalAnswer"")",2993
+cunning,CunningTranscript,cunning_transcripts,audioWindow,CunningAudioWindow?,,2993
+cunning,CunningTranscript,cunning_transcripts,startMs,Int?,,2993
+cunning,CunningTranscript,cunning_transcripts,endMs,Int?,,2993
+cunning,CunningTranscript,cunning_transcripts,createdAt,DateTime,@default(now()),2993
+cunning,CunningAudioWindow,cunning_audio_windows,id,String,@id @default(uuid()),3013
+cunning,CunningAudioWindow,cunning_audio_windows,sessionId,String,,3013
+cunning,CunningAudioWindow,cunning_audio_windows,session,CunningSession,"@relation(fields: [sessionId], references: [id], onDelete: Cascade)",3013
+cunning,CunningAudioWindow,cunning_audio_windows,recordingToken,String,,3013
+cunning,CunningAudioWindow,cunning_audio_windows,speaker,String,,3013
+cunning,CunningAudioWindow,cunning_audio_windows,sequence,Int,,3013
+cunning,CunningAudioWindow,cunning_audio_windows,requestKey,String,,3013
+cunning,CunningAudioWindow,cunning_audio_windows,reservedAt,DateTime,,3013
+cunning,CunningAudioWindow,cunning_audio_windows,inputHash,String?,,3013
+cunning,CunningAudioWindow,cunning_audio_windows,claimToken,String?,,3013
+cunning,CunningAudioWindow,cunning_audio_windows,claimedAt,DateTime?,,3013
+cunning,CunningAudioWindow,cunning_audio_windows,attempts,Int,@default(0),3013
+cunning,CunningAudioWindow,cunning_audio_windows,transcriptId,String?,@unique,3013
+cunning,CunningAudioWindow,cunning_audio_windows,transcript,CunningTranscript?,"@relation(fields: [transcriptId], references: [id], onDelete: Restrict)",3013
+cunning,CunningAnswer,cunning_answers,id,String,@id @default(cuid()),3034
+cunning,CunningAnswer,cunning_answers,sessionId,String,,3034
+cunning,CunningAnswer,cunning_answers,session,CunningSession,"@relation(fields: [sessionId], references: [id], onDelete: Cascade)",3034
+cunning,CunningAnswer,cunning_answers,questionText,String,@db.Text,3034
+cunning,CunningAnswer,cunning_answers,finalTranscriptId,String?,@unique,3034
+cunning,CunningAnswer,cunning_answers,finalTranscript,CunningTranscript?,"@relation(""CunningFinalAnswer"", fields: [finalTranscriptId], references: [id], onDelete: Cascade)",3034
+cunning,CunningAnswer,cunning_answers,summary,String,@db.Text // 要点（一言回答）,3034
+cunning,CunningAnswer,cunning_answers,script,String,@db.Text // 話すスクリプト,3034
+cunning,CunningAnswer,cunning_answers,sources,Json?,// 参照した根拠チップ,3034
+cunning,CunningAnswer,cunning_answers,model,String?,,3034
+cunning,CunningAnswer,cunning_answers,latencyMs,Int?,,3034
+cunning,CunningAnswer,cunning_answers,createdAt,DateTime,@default(now()),3034
+cunning,CunningKnowledgeBase,cunning_knowledge_bases,id,String,@id @default(cuid()),3052
+cunning,CunningKnowledgeBase,cunning_knowledge_bases,userId,String,,3052
+cunning,CunningKnowledgeBase,cunning_knowledge_bases,name,String,,3052
+cunning,CunningKnowledgeBase,cunning_knowledge_bases,description,String?,@db.Text,3052
+cunning,CunningKnowledgeBase,cunning_knowledge_bases,createdAt,DateTime,@default(now()),3052
+cunning,CunningKnowledgeBase,cunning_knowledge_bases,updatedAt,DateTime,@updatedAt,3052
+cunning,CunningKnowledgeBase,cunning_knowledge_bases,chunks,CunningKnowledgeChunk[],,3052
+cunning,CunningKnowledgeChunk,cunning_knowledge_chunks,id,String,@id @default(cuid()),3066
+cunning,CunningKnowledgeChunk,cunning_knowledge_chunks,knowledgeBaseId,String,,3066
+cunning,CunningKnowledgeChunk,cunning_knowledge_chunks,knowledgeBase,CunningKnowledgeBase,"@relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)",3066
+cunning,CunningKnowledgeChunk,cunning_knowledge_chunks,content,String,@db.Text,3066
+cunning,CunningKnowledgeChunk,cunning_knowledge_chunks,sourceUrl,String?,,3066
+cunning,CunningKnowledgeChunk,cunning_knowledge_chunks,sourceLabel,String?,,3066
+cunning,CunningKnowledgeChunk,cunning_knowledge_chunks,embedding,Json?,// pgvector未導入のためJSON保存（MVP）,3066
+cunning,CunningKnowledgeChunk,cunning_knowledge_chunks,createdAt,DateTime,@default(now()),3066
+cunning,CunningCompanyProfile,cunning_company_profiles,id,String,@id @default(cuid()),3080
+cunning,CunningCompanyProfile,cunning_company_profiles,userId,String,,3080
+cunning,CunningCompanyProfile,cunning_company_profiles,url,String,,3080
+cunning,CunningCompanyProfile,cunning_company_profiles,companyName,String?,,3080
+cunning,CunningCompanyProfile,cunning_company_profiles,businessSummary,String?,@db.Text,3080
+cunning,CunningCompanyProfile,cunning_company_profiles,requirements,Json?,// 求める人物像・職務内容・バリュー等,3080
+cunning,CunningCompanyProfile,cunning_company_profiles,rawText,String?,@db.Text,3080
+cunning,CunningCompanyProfile,cunning_company_profiles,createdAt,DateTime,@default(now()),3080
+cunning,CunningCompanyProfile,cunning_company_profiles,updatedAt,DateTime,@updatedAt,3080
+cunning,CunningApplicantProfile,cunning_applicant_profiles,id,String,@id @default(cuid()),3095
+cunning,CunningApplicantProfile,cunning_applicant_profiles,userId,String,,3095
+cunning,CunningApplicantProfile,cunning_applicant_profiles,name,String,"@default(""マイプロフィール"")",3095
+cunning,CunningApplicantProfile,cunning_applicant_profiles,resume,String?,@db.Text,3095
+cunning,CunningApplicantProfile,cunning_applicant_profiles,motivation,String?,@db.Text,3095
+cunning,CunningApplicantProfile,cunning_applicant_profiles,createdAt,DateTime,@default(now()),3095
+cunning,CunningApplicantProfile,cunning_applicant_profiles,updatedAt,DateTime,@updatedAt,3095
+sfa,SfaOrganization,sfa_organizations,id,String,@id @default(cuid()),3111
+sfa,SfaOrganization,sfa_organizations,name,String,,3111
+sfa,SfaOrganization,sfa_organizations,slug,String,@unique,3111
+sfa,SfaOrganization,sfa_organizations,createdAt,DateTime,@default(now()),3111
+sfa,SfaOrganization,sfa_organizations,updatedAt,DateTime,@updatedAt,3111
+sfa,SfaOrganization,sfa_organizations,members,SfaMember[],,3111
+sfa,SfaMember,sfa_members,id,String,@id @default(cuid()),3123
+sfa,SfaMember,sfa_members,organizationId,String,,3123
+sfa,SfaMember,sfa_members,organization,SfaOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3123
+sfa,SfaMember,sfa_members,userId,String?,,3123
+sfa,SfaMember,sfa_members,role,String,"@default(""member"") // owner / admin / manager / member",3123
+sfa,SfaMember,sfa_members,status,String,"@default(""ACTIVE"") // ACTIVE / PENDING / INACTIVE",3123
+sfa,SfaMember,sfa_members,name,String?,,3123
+sfa,SfaMember,sfa_members,inviteEmail,String?,,3123
+sfa,SfaMember,sfa_members,inviteToken,String?,@unique,3123
+sfa,SfaMember,sfa_members,acceptedAt,DateTime?,,3123
+sfa,SfaMember,sfa_members,createdAt,DateTime,@default(now()),3123
+sfa,SfaMember,sfa_members,updatedAt,DateTime,@updatedAt,3123
+sfa,SfaAccount,sfa_accounts,id,String,@id @default(cuid()),3143
+sfa,SfaAccount,sfa_accounts,organizationId,String,,3143
+sfa,SfaAccount,sfa_accounts,name,String,,3143
+sfa,SfaAccount,sfa_accounts,corporateNumber,String?,,3143
+sfa,SfaAccount,sfa_accounts,industry,String?,,3143
+sfa,SfaAccount,sfa_accounts,prefecture,String?,,3143
+sfa,SfaAccount,sfa_accounts,address,String?,@db.Text,3143
+sfa,SfaAccount,sfa_accounts,url,String?,,3143
+sfa,SfaAccount,sfa_accounts,employeeCount,Int?,,3143
+sfa,SfaAccount,sfa_accounts,capital,BigInt?,,3143
+sfa,SfaAccount,sfa_accounts,creditRank,String?,,3143
+sfa,SfaAccount,sfa_accounts,ownerMemberId,String?,// 自社担当,3143
+sfa,SfaAccount,sfa_accounts,tags,Json?,,3143
+sfa,SfaAccount,sfa_accounts,note,String?,@db.Text,3143
+sfa,SfaAccount,sfa_accounts,isActive,Boolean,@default(true),3143
+sfa,SfaAccount,sfa_accounts,createdAt,DateTime,@default(now()),3143
+sfa,SfaAccount,sfa_accounts,updatedAt,DateTime,@updatedAt,3143
+sfa,SfaContact,sfa_contacts,id,String,@id @default(cuid()),3167
+sfa,SfaContact,sfa_contacts,organizationId,String,,3167
+sfa,SfaContact,sfa_contacts,accountId,String?,,3167
+sfa,SfaContact,sfa_contacts,name,String,,3167
+sfa,SfaContact,sfa_contacts,nameKana,String?,,3167
+sfa,SfaContact,sfa_contacts,title,String?,,3167
+sfa,SfaContact,sfa_contacts,department,String?,,3167
+sfa,SfaContact,sfa_contacts,email,String?,,3167
+sfa,SfaContact,sfa_contacts,phone,String?,,3167
+sfa,SfaContact,sfa_contacts,isKeyPerson,Boolean,@default(false),3167
+sfa,SfaContact,sfa_contacts,note,String?,@db.Text,3167
+sfa,SfaContact,sfa_contacts,isActive,Boolean,@default(true),3167
+sfa,SfaContact,sfa_contacts,createdAt,DateTime,@default(now()),3167
+sfa,SfaContact,sfa_contacts,updatedAt,DateTime,@updatedAt,3167
+sfa,SfaLead,sfa_leads,id,String,@id @default(cuid()),3188
+sfa,SfaLead,sfa_leads,organizationId,String,,3188
+sfa,SfaLead,sfa_leads,name,String,// 企業名 or 個人,3188
+sfa,SfaLead,sfa_leads,corporateNumber,String?,,3188
+sfa,SfaLead,sfa_leads,contactName,String?,,3188
+sfa,SfaLead,sfa_leads,email,String?,,3188
+sfa,SfaLead,sfa_leads,phone,String?,,3188
+sfa,SfaLead,sfa_leads,status,String,"@default(""new"") // new/working/nurturing/qualified/converted/disqualified",3188
+sfa,SfaLead,sfa_leads,score,Int?,,3188
+sfa,SfaLead,sfa_leads,source,String,"@default(""manual"") // doyalist/csv/manual",3188
+sfa,SfaLead,sfa_leads,assigneeMemberId,String?,,3188
+sfa,SfaLead,sfa_leads,convertedAccountId,String?,,3188
+sfa,SfaLead,sfa_leads,note,String?,@db.Text,3188
+sfa,SfaLead,sfa_leads,raw,Json?,,3188
+sfa,SfaLead,sfa_leads,isActive,Boolean,@default(true),3188
+sfa,SfaLead,sfa_leads,createdAt,DateTime,@default(now()),3188
+sfa,SfaLead,sfa_leads,updatedAt,DateTime,@updatedAt,3188
+sfa,SfaPipeline,sfa_pipelines,id,String,@id @default(cuid()),3211
+sfa,SfaPipeline,sfa_pipelines,organizationId,String,,3211
+sfa,SfaPipeline,sfa_pipelines,name,String,"@default(""標準パイプライン"")",3211
+sfa,SfaPipeline,sfa_pipelines,isDefault,Boolean,@default(true),3211
+sfa,SfaPipeline,sfa_pipelines,createdAt,DateTime,@default(now()),3211
+sfa,SfaPipeline,sfa_pipelines,stages,SfaStage[],,3211
+sfa,SfaStage,sfa_stages,id,String,@id @default(cuid()),3224
+sfa,SfaStage,sfa_stages,pipelineId,String,,3224
+sfa,SfaStage,sfa_stages,pipeline,SfaPipeline,"@relation(fields: [pipelineId], references: [id], onDelete: Cascade)",3224
+sfa,SfaStage,sfa_stages,name,String,,3224
+sfa,SfaStage,sfa_stages,order,Int,,3224
+sfa,SfaStage,sfa_stages,probability,Int,@default(0),3224
+sfa,SfaStage,sfa_stages,color,String,"@default(""#22c55e"")",3224
+sfa,SfaStage,sfa_stages,isWon,Boolean,@default(false),3224
+sfa,SfaStage,sfa_stages,isLost,Boolean,@default(false),3224
+sfa,SfaDeal,sfa_deals,id,String,@id @default(cuid()),3239
+sfa,SfaDeal,sfa_deals,organizationId,String,,3239
+sfa,SfaDeal,sfa_deals,accountId,String?,,3239
+sfa,SfaDeal,sfa_deals,contactId,String?,,3239
+sfa,SfaDeal,sfa_deals,name,String,,3239
+sfa,SfaDeal,sfa_deals,amount,BigInt,@default(0),3239
+sfa,SfaDeal,sfa_deals,currency,String,"@default(""JPY"")",3239
+sfa,SfaDeal,sfa_deals,stageId,String?,,3239
+sfa,SfaDeal,sfa_deals,probability,Int,@default(0),3239
+sfa,SfaDeal,sfa_deals,startDate,DateTime?,// 商談日（開始日）。経過期間の起点に使う,3239
+sfa,SfaDeal,sfa_deals,expectedCloseDate,DateTime?,,3239
+sfa,SfaDeal,sfa_deals,contactName,String?,// 先方担当者名（フリーテキスト。担当者マスタを使わない運用向け）,3239
+sfa,SfaDeal,sfa_deals,note,String?,@db.Text // 商談メモ,3239
+sfa,SfaDeal,sfa_deals,status,String,"@default(""open"") // open/won/lost",3239
+sfa,SfaDeal,sfa_deals,wonAt,DateTime?,,3239
+sfa,SfaDeal,sfa_deals,lostAt,DateTime?,,3239
+sfa,SfaDeal,sfa_deals,lostReason,String?,,3239
+sfa,SfaDeal,sfa_deals,assigneeMemberId,String?,,3239
+sfa,SfaDeal,sfa_deals,lastActivityAt,DateTime?,,3239
+sfa,SfaDeal,sfa_deals,isActive,Boolean,@default(true),3239
+sfa,SfaDeal,sfa_deals,createdAt,DateTime,@default(now()),3239
+sfa,SfaDeal,sfa_deals,updatedAt,DateTime,@updatedAt,3239
+sfa,SfaDeal,sfa_deals,lineItems,SfaLineItem[],,3239
+sfa,SfaLineItem,sfa_line_items,id,String,@id @default(cuid()),3270
+sfa,SfaLineItem,sfa_line_items,dealId,String,,3270
+sfa,SfaLineItem,sfa_line_items,deal,SfaDeal,"@relation(fields: [dealId], references: [id], onDelete: Cascade)",3270
+sfa,SfaLineItem,sfa_line_items,productName,String,,3270
+sfa,SfaLineItem,sfa_line_items,quantity,Int,@default(1),3270
+sfa,SfaLineItem,sfa_line_items,unitPrice,BigInt,@default(0),3270
+sfa,SfaLineItem,sfa_line_items,amount,BigInt,@default(0),3270
+sfa,SfaActivity,sfa_activities,id,String,@id @default(cuid()),3283
+sfa,SfaActivity,sfa_activities,organizationId,String,,3283
+sfa,SfaActivity,sfa_activities,type,String,// call/meeting/email/note,3283
+sfa,SfaActivity,sfa_activities,accountId,String?,,3283
+sfa,SfaActivity,sfa_activities,contactId,String?,,3283
+sfa,SfaActivity,sfa_activities,dealId,String?,,3283
+sfa,SfaActivity,sfa_activities,subject,String?,,3283
+sfa,SfaActivity,sfa_activities,body,String?,@db.Text,3283
+sfa,SfaActivity,sfa_activities,occurredAt,DateTime,@default(now()),3283
+sfa,SfaActivity,sfa_activities,durationMin,Int?,,3283
+sfa,SfaActivity,sfa_activities,memberId,String?,,3283
+sfa,SfaActivity,sfa_activities,aiSummary,String?,@db.Text,3283
+sfa,SfaActivity,sfa_activities,transcriptId,String?,,3283
+sfa,SfaActivity,sfa_activities,createdAt,DateTime,@default(now()),3283
+sfa,SfaTask,sfa_tasks,id,String,@id @default(cuid()),3304
+sfa,SfaTask,sfa_tasks,organizationId,String,,3304
+sfa,SfaTask,sfa_tasks,title,String,,3304
+sfa,SfaTask,sfa_tasks,dueDate,DateTime?,,3304
+sfa,SfaTask,sfa_tasks,status,String,"@default(""open"") // open/done",3304
+sfa,SfaTask,sfa_tasks,priority,String,"@default(""normal"")",3304
+sfa,SfaTask,sfa_tasks,accountId,String?,,3304
+sfa,SfaTask,sfa_tasks,dealId,String?,,3304
+sfa,SfaTask,sfa_tasks,assigneeMemberId,String?,,3304
+sfa,SfaTask,sfa_tasks,completedAt,DateTime?,,3304
+sfa,SfaTask,sfa_tasks,createdAt,DateTime,@default(now()),3304
+sfa,SfaTask,sfa_tasks,updatedAt,DateTime,@updatedAt,3304
+shodan,ShodanOrganization,shodan_organizations,id,String,@id @default(cuid()),3327
+shodan,ShodanOrganization,shodan_organizations,name,String,,3327
+shodan,ShodanOrganization,shodan_organizations,slug,String,@unique,3327
+shodan,ShodanOrganization,shodan_organizations,createdAt,DateTime,@default(now()),3327
+shodan,ShodanOrganization,shodan_organizations,updatedAt,DateTime,@updatedAt,3327
+shodan,ShodanOrganization,shodan_organizations,members,ShodanMember[],,3327
+shodan,ShodanOrganization,shodan_organizations,profile,ShodanCompanyProfile?,,3327
+shodan,ShodanOrganization,shodan_organizations,preparations,ShodanPreparation[],,3327
+shodan,ShodanMember,shodan_members,id,String,@id @default(cuid()),3341
+shodan,ShodanMember,shodan_members,organizationId,String,,3341
+shodan,ShodanMember,shodan_members,organization,ShodanOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3341
+shodan,ShodanMember,shodan_members,userId,String?,,3341
+shodan,ShodanMember,shodan_members,role,String,"@default(""member"") // owner / admin / manager / member",3341
+shodan,ShodanMember,shodan_members,status,String,"@default(""ACTIVE"") // ACTIVE / PENDING / INACTIVE",3341
+shodan,ShodanMember,shodan_members,name,String?,,3341
+shodan,ShodanMember,shodan_members,inviteEmail,String?,,3341
+shodan,ShodanMember,shodan_members,inviteToken,String?,@unique,3341
+shodan,ShodanMember,shodan_members,acceptedAt,DateTime?,,3341
+shodan,ShodanMember,shodan_members,createdAt,DateTime,@default(now()),3341
+shodan,ShodanMember,shodan_members,updatedAt,DateTime,@updatedAt,3341
+shodan,ShodanCompanyProfile,shodan_company_profiles,id,String,@id @default(cuid()),3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,organizationId,String,@unique,3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,organization,ShodanOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,companyName,String?,// 自社名,3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,url,String?,// 自社URL,3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,description,String?,@db.Text // 事業内容,3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,valueProp,String?,@db.Text // 提供価値・強み・USP,3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,products,String?,@db.Text // 主な商材・サービス,3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,targetCustomer,String?,@db.Text // ターゲット顧客像,3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,pricingNote,String?,@db.Text // 価格帯・導入条件など,3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,caseStudies,String?,@db.Text // 導入事例・実績,3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,logoPath,String?,// 自社ロゴ（shodan非公開バケットのパス。スライドに合成）,3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,brandColors,Json?,"// ブランドカラー [""#RRGGBB"", ...]（スライドのテーマ色に反映）",3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,research,Json?,// 自社URLを解析した結果（任意）,3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,createdAt,DateTime,@default(now()),3362
+shodan,ShodanCompanyProfile,shodan_company_profiles,updatedAt,DateTime,@updatedAt,3362
+shodan,ShodanPreparation,shodan_preparations,id,String,@id @default(cuid()),3384
+shodan,ShodanPreparation,shodan_preparations,organizationId,String,,3384
+shodan,ShodanPreparation,shodan_preparations,organization,ShodanOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3384
+shodan,ShodanPreparation,shodan_preparations,createdByMemberId,String?,,3384
+shodan,ShodanPreparation,shodan_preparations,targetUrl,String,,3384
+shodan,ShodanPreparation,shodan_preparations,targetName,String?,// 解析で判明した相手企業名,3384
+shodan,ShodanPreparation,shodan_preparations,status,String,"@default(""processing"") // processing / done / failed",3384
+shodan,ShodanPreparation,shodan_preparations,errorMessage,String?,@db.Text,3384
+shodan,ShodanPreparation,shodan_preparations,research,Json?,// 深掘り調査（公開従業員数/マーケ実施状況/オウンドメディアの有無・所在 等）,3384
+shodan,ShodanPreparation,shodan_preparations,analysis,Json?,// 現状分析・課題仮説・解決策,3384
+shodan,ShodanPreparation,shodan_preparations,proposalMarkdown,String?,@db.Text // 提案資料（Markdown）,3384
+shodan,ShodanPreparation,shodan_preparations,slidesJson,Json?,// 提案スライド構成（ProposalSlide[]）,3384
+shodan,ShodanPreparation,shodan_preparations,slideImages,Json?,"// 画像スライド（[{ title, imageUrl, role }]・ドヤスライド方式でgpt-image-2生成）",3384
+shodan,ShodanPreparation,shodan_preparations,createdAt,DateTime,@default(now()),3384
+shodan,ShodanPreparation,shodan_preparations,updatedAt,DateTime,@updatedAt,3384
+adbanner,AdBannerCampaign,adbanner_campaign,id,String,@id @default(cuid()),3412
+adbanner,AdBannerCampaign,adbanner_campaign,userId,String?,// 未ログインゲストは null + guestId,3412
+adbanner,AdBannerCampaign,adbanner_campaign,guestId,String?,,3412
+adbanner,AdBannerCampaign,adbanner_campaign,name,String,,3412
+adbanner,AdBannerCampaign,adbanner_campaign,sourceUrl,String?,,3412
+adbanner,AdBannerCampaign,adbanner_campaign,serviceName,String?,,3412
+adbanner,AdBannerCampaign,adbanner_campaign,appeal,String?,@db.Text,3412
+adbanner,AdBannerCampaign,adbanner_campaign,brandColors,Json?,"// [""#7f19e6"", ...]",3412
+adbanner,AdBannerCampaign,adbanner_campaign,logoPath,String?,// Supabase Storage のロゴパス,3412
+adbanner,AdBannerCampaign,adbanner_campaign,media,String?,// meta / google / line / x ...,3412
+adbanner,AdBannerCampaign,adbanner_campaign,createdAt,DateTime,@default(now()),3412
+adbanner,AdBannerCampaign,adbanner_campaign,updatedAt,DateTime,@updatedAt,3412
+adbanner,AdBannerCampaign,adbanner_campaign,banners,AdBannerCreative[],,3412
+adbanner,AdBannerCreative,adbanner_creative,id,String,@id @default(cuid()),3433
+adbanner,AdBannerCreative,adbanner_creative,campaignId,String,,3433
+adbanner,AdBannerCreative,adbanner_creative,campaign,AdBannerCampaign,"@relation(fields: [campaignId], references: [id], onDelete: Cascade)",3433
+adbanner,AdBannerCreative,adbanner_creative,imagePath,String,// 生成画像 (Supabase Storage),3433
+adbanner,AdBannerCreative,adbanner_creative,size,String,// 1080x1080 等,3433
+adbanner,AdBannerCreative,adbanner_creative,prompt,String,@db.Text,3433
+adbanner,AdBannerCreative,adbanner_creative,variantLabel,String?,// 訴求/トーンのバリエーション,3433
+adbanner,AdBannerCreative,adbanner_creative,generation,Int,@default(1) // 改善世代 (Phase2),3433
+adbanner,AdBannerCreative,adbanner_creative,parentId,String?,// 元バナー (Phase2),3433
+adbanner,AdBannerCreative,adbanner_creative,model,String?,// 使用モデル / fallbackUsed,3433
+adbanner,AdBannerCreative,adbanner_creative,feedback,Json?,"// { visibility, appeal, cta, fit, brand, total, advice }",3433
+adbanner,AdBannerCreative,adbanner_creative,metrics,Json?,"// Phase2: { imp, click, ctr, spend, cv, cpa }",3433
+adbanner,AdBannerCreative,adbanner_creative,createdAt,DateTime,@default(now()),3433
+aio,AioOrganization,aio_organizations,id,String,@id @default(cuid()),3458
+aio,AioOrganization,aio_organizations,name,String,,3458
+aio,AioOrganization,aio_organizations,slug,String,@unique,3458
+aio,AioOrganization,aio_organizations,createdAt,DateTime,@default(now()),3458
+aio,AioOrganization,aio_organizations,updatedAt,DateTime,@updatedAt,3458
+aio,AioOrganization,aio_organizations,members,AioMember[],,3458
+aio,AioOrganization,aio_organizations,profile,AioBrandProfile?,,3458
+aio,AioOrganization,aio_organizations,prompts,AioPrompt[],,3458
+aio,AioOrganization,aio_organizations,scans,AioScan[],,3458
+aio,AioOrganization,aio_organizations,results,AioResult[],,3458
+aio,AioMember,aio_members,id,String,@id @default(cuid()),3474
+aio,AioMember,aio_members,organizationId,String,,3474
+aio,AioMember,aio_members,organization,AioOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3474
+aio,AioMember,aio_members,userId,String?,,3474
+aio,AioMember,aio_members,role,String,"@default(""member"") // owner / admin / manager / member",3474
+aio,AioMember,aio_members,status,String,"@default(""ACTIVE"") // ACTIVE / PENDING / INACTIVE",3474
+aio,AioMember,aio_members,name,String?,,3474
+aio,AioMember,aio_members,inviteEmail,String?,,3474
+aio,AioMember,aio_members,inviteToken,String?,@unique,3474
+aio,AioMember,aio_members,acceptedAt,DateTime?,,3474
+aio,AioMember,aio_members,createdAt,DateTime,@default(now()),3474
+aio,AioMember,aio_members,updatedAt,DateTime,@updatedAt,3474
+aio,AioBrandProfile,aio_brand_profiles,id,String,@id @default(cuid()),3495
+aio,AioBrandProfile,aio_brand_profiles,organizationId,String,@unique,3495
+aio,AioBrandProfile,aio_brand_profiles,organization,AioOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3495
+aio,AioBrandProfile,aio_brand_profiles,brandName,String?,// 追跡する自社ブランド名,3495
+aio,AioBrandProfile,aio_brand_profiles,brandUrl,String?,// 自社サイトURL（自社ドメイン引用率の判定に使う）,3495
+aio,AioBrandProfile,aio_brand_profiles,aliases,Json?,"// 別名・表記ゆれ [""キャリーミー"",""CARRY ME""]",3495
+aio,AioBrandProfile,aio_brand_profiles,competitors,Json?,"// 競合ブランド名 [""HiPro"",""lotsful"", ...]",3495
+aio,AioBrandProfile,aio_brand_profiles,category,String?,// カテゴリ（例: プロ人材 業務委託マッチング）,3495
+aio,AioBrandProfile,aio_brand_profiles,market,String?,// 市場・地域（例: 日本）,3495
+aio,AioBrandProfile,aio_brand_profiles,createdAt,DateTime,@default(now()),3495
+aio,AioBrandProfile,aio_brand_profiles,updatedAt,DateTime,@updatedAt,3495
+aio,AioPrompt,aio_prompts,id,String,@id @default(cuid()),3512
+aio,AioPrompt,aio_prompts,organizationId,String,,3512
+aio,AioPrompt,aio_prompts,organization,AioOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3512
+aio,AioPrompt,aio_prompts,text,String,@db.Text,3512
+aio,AioPrompt,aio_prompts,category,String?,// 任意の分類タグ,3512
+aio,AioPrompt,aio_prompts,isActive,Boolean,@default(true),3512
+aio,AioPrompt,aio_prompts,archivedAt,DateTime?,,3512
+aio,AioPrompt,aio_prompts,createdAt,DateTime,@default(now()),3512
+aio,AioPrompt,aio_prompts,updatedAt,DateTime,@updatedAt,3512
+aio,AioPrompt,aio_prompts,results,AioResult[],,3512
+aio,AioScan,aio_scans,id,String,@id @default(cuid()),3530
+aio,AioScan,aio_scans,organizationId,String,,3530
+aio,AioScan,aio_scans,organization,AioOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3530
+aio,AioScan,aio_scans,status,String,"@default(""processing"") // processing / done / failed / deleted (content removed, usage retained)",3530
+aio,AioScan,aio_scans,engines,Json?,"// 実行したエンジン [""chatgpt"",""gemini"",""claude"",""perplexity""]",3530
+aio,AioScan,aio_scans,repetitions,Int,@default(3) // 1プロンプト×1エンジンあたりの反復回数,3530
+aio,AioScan,aio_scans,errorMessage,String?,@db.Text,3530
+aio,AioScan,aio_scans,awarenessPct,Float?,// ブランド認知度（言及した割合 0-100）,3530
+aio,AioScan,aio_scans,shareOfVoice,Float?,// SoV（追跡ブランド中の自社シェア 0-100）,3530
+aio,AioScan,aio_scans,sentimentPos,Float?,// ポジ割合,3530
+aio,AioScan,aio_scans,sentimentNeu,Float?,,3530
+aio,AioScan,aio_scans,sentimentNeg,Float?,,3530
+aio,AioScan,aio_scans,ownCitationPct,Float?,// 自社ドメイン引用率,3530
+aio,AioScan,aio_scans,summary,Json?,"// { perEngine, sov[], citations[], promptBreakdown[] } 全文",3530
+aio,AioScan,aio_scans,createdAt,DateTime,@default(now()),3530
+aio,AioScan,aio_scans,updatedAt,DateTime,@updatedAt,3530
+aio,AioScan,aio_scans,results,AioResult[],,3530
+aio,AioResult,aio_results,id,String,@id @default(cuid()),3556
+aio,AioResult,aio_results,organizationId,String,,3556
+aio,AioResult,aio_results,organization,AioOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3556
+aio,AioResult,aio_results,scanId,String,,3556
+aio,AioResult,aio_results,scan,AioScan,"@relation(fields: [scanId], references: [id], onDelete: Cascade)",3556
+aio,AioResult,aio_results,promptId,String,,3556
+aio,AioResult,aio_results,prompt,AioPrompt,"@relation(fields: [promptId], references: [id], onDelete: Cascade)",3556
+aio,AioResult,aio_results,engine,String,// chatgpt / gemini / claude / perplexity,3556
+aio,AioResult,aio_results,iteration,Int,@default(0),3556
+aio,AioResult,aio_results,brandMentioned,Boolean,@default(false),3556
+aio,AioResult,aio_results,brandRank,Int?,// リスト内の自社の位置（1始まり、無ければ null）,3556
+aio,AioResult,aio_results,sentiment,String?,// positive / neutral / negative,3556
+aio,AioResult,aio_results,competitors,Json?,// この回答に出た競合名[],3556
+aio,AioResult,aio_results,citations,Json?,// 引用URL[]（Perplexity等の検索エンジン）,3556
+aio,AioResult,aio_results,answerText,String?,@db.Text // 回答本文（短縮保存）,3556
+aio,AioResult,aio_results,createdAt,DateTime,@default(now()),3556
+mensetsu,MensetsuOrganization,mensetsu_organizations,id,String,@id @default(cuid()),3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,name,String,,3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,slug,String,@unique,3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,recordVideo,Boolean,@default(false) // 映像収録（既定OFF。音声のみでも評価は成立する）,3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,recordAudio,Boolean,@default(false),3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,retentionDays,Int,@default(180) // 逐語ログ・録音の保持日数,3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,discloseToCandidate,Boolean,@default(false) // 応募者本人へのスコア開示,3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,createdAt,DateTime,@default(now()),3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,updatedAt,DateTime,@updatedAt,3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,members,MensetsuMember[],,3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,profiles,MensetsuCompanyProfile[],,3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,templates,MensetsuTemplate[],,3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,sessions,MensetsuSession[],,3585
+mensetsu,MensetsuOrganization,mensetsu_organizations,samples,MensetsuAnswerSample[],,3585
+mensetsu,MensetsuMember,mensetsu_members,id,String,@id @default(cuid()),3609
+mensetsu,MensetsuMember,mensetsu_members,organizationId,String,,3609
+mensetsu,MensetsuMember,mensetsu_members,organization,MensetsuOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3609
+mensetsu,MensetsuMember,mensetsu_members,userId,String?,,3609
+mensetsu,MensetsuMember,mensetsu_members,role,String,"@default(""member"") // owner / admin / manager / member",3609
+mensetsu,MensetsuMember,mensetsu_members,status,String,"@default(""ACTIVE"") // ACTIVE / PENDING / INACTIVE",3609
+mensetsu,MensetsuMember,mensetsu_members,name,String?,,3609
+mensetsu,MensetsuMember,mensetsu_members,inviteEmail,String?,,3609
+mensetsu,MensetsuMember,mensetsu_members,inviteToken,String?,@unique,3609
+mensetsu,MensetsuMember,mensetsu_members,acceptedAt,DateTime?,,3609
+mensetsu,MensetsuMember,mensetsu_members,createdAt,DateTime,@default(now()),3609
+mensetsu,MensetsuMember,mensetsu_members,updatedAt,DateTime,@updatedAt,3609
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,id,String,@id @default(cuid()),3630
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,organizationId,String,,3630
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,organization,MensetsuOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3630
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,sourceUrl,String,,3630
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,companyName,String?,,3630
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,business,String?,@db.Text // 事業内容,3630
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,valueProp,String?,@db.Text // 提供価値,3630
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,culture,String?,@db.Text // カルチャー・行動指針,3630
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,idealProfile,String?,@db.Text // 求める人物像,3630
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,raw,Json?,// スクレイプ原文・gBizINFO等の生データ,3630
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,createdAt,DateTime,@default(now()),3630
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,updatedAt,DateTime,@updatedAt,3630
+mensetsu,MensetsuCompanyProfile,mensetsu_company_profiles,templates,MensetsuTemplate[],,3630
+mensetsu,MensetsuTemplate,mensetsu_templates,id,String,@id @default(cuid()),3651
+mensetsu,MensetsuTemplate,mensetsu_templates,organizationId,String,,3651
+mensetsu,MensetsuTemplate,mensetsu_templates,organization,MensetsuOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3651
+mensetsu,MensetsuTemplate,mensetsu_templates,profileId,String?,,3651
+mensetsu,MensetsuTemplate,mensetsu_templates,profile,MensetsuCompanyProfile?,"@relation(fields: [profileId], references: [id], onDelete: SetNull)",3651
+mensetsu,MensetsuTemplate,mensetsu_templates,name,String,,3651
+mensetsu,MensetsuTemplate,mensetsu_templates,jobTitle,String,// 職種,3651
+mensetsu,MensetsuTemplate,mensetsu_templates,level,String,"@default(""mid"") // newgrad / mid / manager",3651
+mensetsu,MensetsuTemplate,mensetsu_templates,durationMin,Int,@default(10) // 10 / 20 / 30（既定は10分。20分は長すぎるという声を受け 2026-08-31 に変更）,3651
+mensetsu,MensetsuTemplate,mensetsu_templates,intro,String?,@db.Text // 冒頭の挨拶・進め方,3651
+mensetsu,MensetsuTemplate,mensetsu_templates,closing,String?,@db.Text,3651
+mensetsu,MensetsuTemplate,mensetsu_templates,status,String,"@default(""draft"") // draft / active / archived",3651
+mensetsu,MensetsuTemplate,mensetsu_templates,createdAt,DateTime,@default(now()),3651
+mensetsu,MensetsuTemplate,mensetsu_templates,updatedAt,DateTime,@updatedAt,3651
+mensetsu,MensetsuTemplate,mensetsu_templates,questions,MensetsuQuestion[],,3651
+mensetsu,MensetsuTemplate,mensetsu_templates,criteria,MensetsuCriterion[],,3651
+mensetsu,MensetsuTemplate,mensetsu_templates,sessions,MensetsuSession[],,3651
+mensetsu,MensetsuQuestion,mensetsu_questions,id,String,@id @default(cuid()),3675
+mensetsu,MensetsuQuestion,mensetsu_questions,templateId,String,,3675
+mensetsu,MensetsuQuestion,mensetsu_questions,template,MensetsuTemplate,"@relation(fields: [templateId], references: [id], onDelete: Cascade)",3675
+mensetsu,MensetsuQuestion,mensetsu_questions,ord,Int,,3675
+mensetsu,MensetsuQuestion,mensetsu_questions,text,String,@db.Text // 主質問（全応募者に共通）,3675
+mensetsu,MensetsuQuestion,mensetsu_questions,followUpHint,String?,@db.Text // 深掘りの方針（最大2回まで）,3675
+mensetsu,MensetsuQuestion,mensetsu_questions,targetMin,Int,@default(3) // 想定所要分,3675
+mensetsu,MensetsuQuestion,mensetsu_questions,criterionKeys,String[],@default([]) // 紐づく評価軸のkey,3675
+mensetsu,MensetsuQuestion,mensetsu_questions,branches,MensetsuBranch[],,3675
+mensetsu,MensetsuQuestion,mensetsu_questions,createdAt,DateTime,@default(now()),3675
+mensetsu,MensetsuBranch,mensetsu_branches,id,String,@id @default(cuid()),3698
+mensetsu,MensetsuBranch,mensetsu_branches,questionId,String,,3698
+mensetsu,MensetsuBranch,mensetsu_branches,question,MensetsuQuestion,"@relation(fields: [questionId], references: [id], onDelete: Cascade)",3698
+mensetsu,MensetsuBranch,mensetsu_branches,ord,Int,,3698
+mensetsu,MensetsuBranch,mensetsu_branches,label,String,,3698
+mensetsu,MensetsuBranch,mensetsu_branches,matchHint,String,@db.Text,3698
+mensetsu,MensetsuBranch,mensetsu_branches,text,String?,@db.Text,3698
+mensetsu,MensetsuBranch,mensetsu_branches,skipToOrd,Int?,,3698
+mensetsu,MensetsuBranch,mensetsu_branches,createdAt,DateTime,@default(now()),3698
+mensetsu,MensetsuCriterion,mensetsu_criteria,id,String,@id @default(cuid()),3717
+mensetsu,MensetsuCriterion,mensetsu_criteria,templateId,String,,3717
+mensetsu,MensetsuCriterion,mensetsu_criteria,template,MensetsuTemplate,"@relation(fields: [templateId], references: [id], onDelete: Cascade)",3717
+mensetsu,MensetsuCriterion,mensetsu_criteria,key,String,// 英数キー（question との紐付けに使う）,3717
+mensetsu,MensetsuCriterion,mensetsu_criteria,name,String,// 評価軸名,3717
+mensetsu,MensetsuCriterion,mensetsu_criteria,description,String?,@db.Text,3717
+mensetsu,MensetsuCriterion,mensetsu_criteria,rubric,Json,"// { ""1"": ""..."", ""2"": ""..."", ... ""5"": ""..."" }",3717
+mensetsu,MensetsuCriterion,mensetsu_criteria,weight,Int,@default(1),3717
+mensetsu,MensetsuCriterion,mensetsu_criteria,ord,Int,@default(0),3717
+mensetsu,MensetsuCriterion,mensetsu_criteria,createdAt,DateTime,@default(now()),3717
+mensetsu,MensetsuCriterion,mensetsu_criteria,scores,MensetsuScore[],,3717
+mensetsu,MensetsuSession,mensetsu_sessions,id,String,@id @default(cuid()),3737
+mensetsu,MensetsuSession,mensetsu_sessions,organizationId,String,,3737
+mensetsu,MensetsuSession,mensetsu_sessions,organization,MensetsuOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3737
+mensetsu,MensetsuSession,mensetsu_sessions,templateId,String,,3737
+mensetsu,MensetsuSession,mensetsu_sessions,template,MensetsuTemplate,"@relation(fields: [templateId], references: [id], onDelete: Cascade)",3737
+mensetsu,MensetsuSession,mensetsu_sessions,token,String,@unique // ワンタイム面接URL,3737
+mensetsu,MensetsuSession,mensetsu_sessions,candidateName,String?,,3737
+mensetsu,MensetsuSession,mensetsu_sessions,candidateEmail,String?,,3737
+mensetsu,MensetsuSession,mensetsu_sessions,expiresAt,DateTime,,3737
+mensetsu,MensetsuSession,mensetsu_sessions,status,String,"@default(""pending"") // pending / consented / live / completed / evaluated / expired / aborted",3737
+mensetsu,MensetsuSession,mensetsu_sessions,consentedAt,DateTime?,,3737
+mensetsu,MensetsuSession,mensetsu_sessions,consentIp,String?,,3737
+mensetsu,MensetsuSession,mensetsu_sessions,consentUa,String?,@db.Text,3737
+mensetsu,MensetsuSession,mensetsu_sessions,startedAt,DateTime?,,3737
+mensetsu,MensetsuSession,mensetsu_sessions,endedAt,DateTime?,,3737
+mensetsu,MensetsuSession,mensetsu_sessions,tokenIssueCount,Int,@default(0),3737
+mensetsu,MensetsuSession,mensetsu_sessions,currentIndex,Int,@default(0) // 進行中の質問index,3737
+mensetsu,MensetsuSession,mensetsu_sessions,followUpCount,Int,@default(0) // 現質問での深掘り回数,3737
+mensetsu,MensetsuSession,mensetsu_sessions,recordingPath,String?,// Supabase Storage のパス,3737
+mensetsu,MensetsuSession,mensetsu_sessions,purgeAfter,DateTime?,// 保持期限（C5のcronが削除する）,3737
+mensetsu,MensetsuSession,mensetsu_sessions,verdict,String?,// recommend / conditional / hold / reject,3737
+mensetsu,MensetsuSession,mensetsu_sessions,overallComment,String?,@db.Text,3737
+mensetsu,MensetsuSession,mensetsu_sessions,candidateFeedback,String?,@db.Text // 応募者向け（別文面）,3737
+mensetsu,MensetsuSession,mensetsu_sessions,recruiterReport,String?,@db.Text // 採用担当者向け（別文面）,3737
+mensetsu,MensetsuSession,mensetsu_sessions,evaluatedAt,DateTime?,,3737
+mensetsu,MensetsuSession,mensetsu_sessions,createdAt,DateTime,@default(now()),3737
+mensetsu,MensetsuSession,mensetsu_sessions,updatedAt,DateTime,@updatedAt,3737
+mensetsu,MensetsuSession,mensetsu_sessions,turns,MensetsuTurn[],,3737
+mensetsu,MensetsuSession,mensetsu_sessions,scores,MensetsuScore[],,3737
+mensetsu,MensetsuSession,mensetsu_sessions,hrEmployeeId,String?,,3737
+mensetsu,MensetsuSession,mensetsu_sessions,consentAttempts,Int,@default(0),3737
+mensetsu,MensetsuTurn,mensetsu_turns,id,String,@id @default(cuid()),3791
+mensetsu,MensetsuTurn,mensetsu_turns,sessionId,String,,3791
+mensetsu,MensetsuTurn,mensetsu_turns,session,MensetsuSession,"@relation(fields: [sessionId], references: [id], onDelete: Cascade)",3791
+mensetsu,MensetsuTurn,mensetsu_turns,ord,Int,,3791
+mensetsu,MensetsuTurn,mensetsu_turns,speaker,String,// interviewer / candidate,3791
+mensetsu,MensetsuTurn,mensetsu_turns,text,String,@db.Text,3791
+mensetsu,MensetsuTurn,mensetsu_turns,questionOrd,Int?,// どの主質問に紐づく発話か,3791
+mensetsu,MensetsuTurn,mensetsu_turns,startMs,Int?,,3791
+mensetsu,MensetsuTurn,mensetsu_turns,endMs,Int?,,3791
+mensetsu,MensetsuTurn,mensetsu_turns,createdAt,DateTime,@default(now()),3791
+mensetsu,MensetsuScore,mensetsu_scores,id,String,@id @default(cuid()),3807
+mensetsu,MensetsuScore,mensetsu_scores,sessionId,String,,3807
+mensetsu,MensetsuScore,mensetsu_scores,session,MensetsuSession,"@relation(fields: [sessionId], references: [id], onDelete: Cascade)",3807
+mensetsu,MensetsuScore,mensetsu_scores,criterionId,String,,3807
+mensetsu,MensetsuScore,mensetsu_scores,criterion,MensetsuCriterion,"@relation(fields: [criterionId], references: [id], onDelete: Cascade)",3807
+mensetsu,MensetsuScore,mensetsu_scores,score,Int?,// 1-5。判定不能なら null（F2-4: 推測で埋めない）,3807
+mensetsu,MensetsuScore,mensetsu_scores,insufficient,Boolean,@default(false) // 情報不足,3807
+mensetsu,MensetsuScore,mensetsu_scores,rationale,String?,@db.Text,3807
+mensetsu,MensetsuScore,mensetsu_scores,quotes,String[],@default([]) // 根拠となる応募者の発言の引用,3807
+mensetsu,MensetsuScore,mensetsu_scores,createdAt,DateTime,@default(now()),3807
+mensetsu,MensetsuAnswerSample,mensetsu_answer_samples,id,String,@id @default(cuid()),3825
+mensetsu,MensetsuAnswerSample,mensetsu_answer_samples,organizationId,String,,3825
+mensetsu,MensetsuAnswerSample,mensetsu_answer_samples,organization,MensetsuOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3825
+mensetsu,MensetsuAnswerSample,mensetsu_answer_samples,criterionKey,String,,3825
+mensetsu,MensetsuAnswerSample,mensetsu_answer_samples,questionText,String,@db.Text,3825
+mensetsu,MensetsuAnswerSample,mensetsu_answer_samples,answerText,String,@db.Text,3825
+mensetsu,MensetsuAnswerSample,mensetsu_answer_samples,label,String,// good / bad,3825
+mensetsu,MensetsuAnswerSample,mensetsu_answer_samples,note,String?,@db.Text,3825
+mensetsu,MensetsuAnswerSample,mensetsu_answer_samples,createdAt,DateTime,@default(now()),3825
+quote,QuoteOrganization,quote_organizations,id,String,@id @default(cuid()),3846
+quote,QuoteOrganization,quote_organizations,name,String,,3846
+quote,QuoteOrganization,quote_organizations,slug,String,@unique,3846
+quote,QuoteOrganization,quote_organizations,createdAt,DateTime,@default(now()),3846
+quote,QuoteOrganization,quote_organizations,updatedAt,DateTime,@updatedAt,3846
+quote,QuoteOrganization,quote_organizations,members,QuoteMember[],,3846
+quote,QuoteOrganization,quote_organizations,issuer,QuoteIssuer?,,3846
+quote,QuoteOrganization,quote_organizations,products,QuoteProduct[],,3846
+quote,QuoteOrganization,quote_organizations,documents,QuoteDocument[],,3846
+quote,QuoteMember,quote_members,id,String,@id @default(cuid()),3861
+quote,QuoteMember,quote_members,organizationId,String,,3861
+quote,QuoteMember,quote_members,organization,QuoteOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3861
+quote,QuoteMember,quote_members,userId,String?,,3861
+quote,QuoteMember,quote_members,role,String,"@default(""member"") // owner / admin / manager / member",3861
+quote,QuoteMember,quote_members,status,String,"@default(""ACTIVE"")",3861
+quote,QuoteMember,quote_members,name,String?,,3861
+quote,QuoteMember,quote_members,inviteEmail,String?,,3861
+quote,QuoteMember,quote_members,inviteToken,String?,@unique,3861
+quote,QuoteMember,quote_members,acceptedAt,DateTime?,,3861
+quote,QuoteMember,quote_members,createdAt,DateTime,@default(now()),3861
+quote,QuoteMember,quote_members,updatedAt,DateTime,@updatedAt,3861
+quote,QuoteIssuer,quote_issuers,id,String,@id @default(cuid()),3882
+quote,QuoteIssuer,quote_issuers,organizationId,String,@unique,3882
+quote,QuoteIssuer,quote_issuers,organization,QuoteOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3882
+quote,QuoteIssuer,quote_issuers,companyName,String,,3882
+quote,QuoteIssuer,quote_issuers,postalCode,String?,,3882
+quote,QuoteIssuer,quote_issuers,address,String?,,3882
+quote,QuoteIssuer,quote_issuers,tel,String?,,3882
+quote,QuoteIssuer,quote_issuers,personName,String?,,3882
+quote,QuoteIssuer,quote_issuers,invoiceNo,String?,,3882
+quote,QuoteIssuer,quote_issuers,logoPath,String?,,3882
+quote,QuoteIssuer,quote_issuers,sealPath,String?,,3882
+quote,QuoteIssuer,quote_issuers,paymentTerms,String?,@db.Text,3882
+quote,QuoteIssuer,quote_issuers,deliveryTerms,String?,@db.Text,3882
+quote,QuoteIssuer,quote_issuers,notes,String?,@db.Text,3882
+quote,QuoteIssuer,quote_issuers,createdAt,DateTime,@default(now()),3882
+quote,QuoteIssuer,quote_issuers,updatedAt,DateTime,@updatedAt,3882
+quote,QuoteProduct,quote_products,id,String,@id @default(cuid()),3906
+quote,QuoteProduct,quote_products,organizationId,String,,3906
+quote,QuoteProduct,quote_products,organization,QuoteOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3906
+quote,QuoteProduct,quote_products,name,String,,3906
+quote,QuoteProduct,quote_products,sourceUrl,String?,,3906
+quote,QuoteProduct,quote_products,profile,Json?,,3906
+quote,QuoteProduct,quote_products,createdAt,DateTime,@default(now()),3906
+quote,QuoteProduct,quote_products,updatedAt,DateTime,@updatedAt,3906
+quote,QuoteProduct,quote_products,documents,QuoteDocument[],,3906
+quote,QuoteDocument,quote_documents,id,String,@id @default(cuid()),3923
+quote,QuoteDocument,quote_documents,organizationId,String,,3923
+quote,QuoteDocument,quote_documents,organization,QuoteOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",3923
+quote,QuoteDocument,quote_documents,productId,String?,,3923
+quote,QuoteDocument,quote_documents,product,QuoteProduct?,"@relation(fields: [productId], references: [id], onDelete: SetNull)",3923
+quote,QuoteDocument,quote_documents,quoteNo,String,,3923
+quote,QuoteDocument,quote_documents,title,String,,3923
+quote,QuoteDocument,quote_documents,clientCompany,String?,,3923
+quote,QuoteDocument,quote_documents,clientDept,String?,,3923
+quote,QuoteDocument,quote_documents,clientPerson,String?,,3923
+quote,QuoteDocument,quote_documents,issueDate,DateTime,@default(now()),3923
+quote,QuoteDocument,quote_documents,expiryDate,DateTime,,3923
+quote,QuoteDocument,quote_documents,paymentTerms,String?,@db.Text,3923
+quote,QuoteDocument,quote_documents,deliveryTerms,String?,@db.Text,3923
+quote,QuoteDocument,quote_documents,notes,String?,@db.Text,3923
+quote,QuoteDocument,quote_documents,discountType,String?,,3923
+quote,QuoteDocument,quote_documents,discountValue,Int,@default(0),3923
+quote,QuoteDocument,quote_documents,status,String,"@default(""draft"")",3923
+quote,QuoteDocument,quote_documents,confirmedBy,String?,,3923
+quote,QuoteDocument,quote_documents,confirmedAt,DateTime?,,3923
+quote,QuoteDocument,quote_documents,sentAt,DateTime?,,3923
+quote,QuoteDocument,quote_documents,totalExclTax,Int,@default(0),3923
+quote,QuoteDocument,quote_documents,taxAmount,Int,@default(0),3923
+quote,QuoteDocument,quote_documents,totalInclTax,Int,@default(0),3923
+quote,QuoteDocument,quote_documents,createdAt,DateTime,@default(now()),3923
+quote,QuoteDocument,quote_documents,updatedAt,DateTime,@updatedAt,3923
+quote,QuoteDocument,quote_documents,lineItems,QuoteLineItem[],,3923
+quote,QuoteLineItem,quote_line_items,id,String,@id @default(cuid()),3968
+quote,QuoteLineItem,quote_line_items,documentId,String,,3968
+quote,QuoteLineItem,quote_line_items,document,QuoteDocument,"@relation(fields: [documentId], references: [id], onDelete: Cascade)",3968
+quote,QuoteLineItem,quote_line_items,ord,Int,,3968
+quote,QuoteLineItem,quote_line_items,itemName,String,,3968
+quote,QuoteLineItem,quote_line_items,spec,String?,@db.Text,3968
+quote,QuoteLineItem,quote_line_items,qty,Int,@default(1),3968
+quote,QuoteLineItem,quote_line_items,unit,String,"@default(""式"")",3968
+quote,QuoteLineItem,quote_line_items,unitPrice,Int,@default(0),3968
+quote,QuoteLineItem,quote_line_items,taxRate,Int,@default(10),3968
+quote,QuoteLineItem,quote_line_items,priceSource,String,"@default(""manual"")",3968
+quote,QuoteLineItem,quote_line_items,sourceRef,String?,@db.Text,3968
+quote,QuoteLineItem,quote_line_items,rangeMin,Int?,,3968
+quote,QuoteLineItem,quote_line_items,rangeMax,Int?,,3968
+quote,QuoteLineItem,quote_line_items,createdAt,DateTime,@default(now()),3968
+aishodan,AishodanOrganization,aishodan_organizations,id,String,@id @default(cuid()),4004
+aishodan,AishodanOrganization,aishodan_organizations,name,String,,4004
+aishodan,AishodanOrganization,aishodan_organizations,slug,String,@unique,4004
+aishodan,AishodanOrganization,aishodan_organizations,retentionDays,Int,@default(180),4004
+aishodan,AishodanOrganization,aishodan_organizations,createdAt,DateTime,@default(now()),4004
+aishodan,AishodanOrganization,aishodan_organizations,updatedAt,DateTime,@updatedAt,4004
+aishodan,AishodanOrganization,aishodan_organizations,members,AishodanMember[],,4004
+aishodan,AishodanOrganization,aishodan_organizations,products,AishodanProduct[],,4004
+aishodan,AishodanOrganization,aishodan_organizations,rooms,AishodanRoom[],,4004
+aishodan,AishodanOrganization,aishodan_organizations,sessions,AishodanSession[],,4004
+aishodan,AishodanMember,aishodan_members,id,String,@id @default(cuid()),4021
+aishodan,AishodanMember,aishodan_members,organizationId,String,,4021
+aishodan,AishodanMember,aishodan_members,organization,AishodanOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",4021
+aishodan,AishodanMember,aishodan_members,userId,String?,,4021
+aishodan,AishodanMember,aishodan_members,role,String,"@default(""member"")",4021
+aishodan,AishodanMember,aishodan_members,status,String,"@default(""ACTIVE"")",4021
+aishodan,AishodanMember,aishodan_members,name,String?,,4021
+aishodan,AishodanMember,aishodan_members,inviteEmail,String?,,4021
+aishodan,AishodanMember,aishodan_members,inviteToken,String?,@unique,4021
+aishodan,AishodanMember,aishodan_members,acceptedAt,DateTime?,,4021
+aishodan,AishodanMember,aishodan_members,createdAt,DateTime,@default(now()),4021
+aishodan,AishodanMember,aishodan_members,updatedAt,DateTime,@updatedAt,4021
+aishodan,AishodanProduct,aishodan_products,id,String,@id @default(cuid()),4042
+aishodan,AishodanProduct,aishodan_products,organizationId,String,,4042
+aishodan,AishodanProduct,aishodan_products,organization,AishodanOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",4042
+aishodan,AishodanProduct,aishodan_products,name,String,,4042
+aishodan,AishodanProduct,aishodan_products,sourceUrl,String?,,4042
+aishodan,AishodanProduct,aishodan_products,profile,Json?,,4042
+aishodan,AishodanProduct,aishodan_products,archivedAt,DateTime?,,4042
+aishodan,AishodanProduct,aishodan_products,createdAt,DateTime,@default(now()),4042
+aishodan,AishodanProduct,aishodan_products,updatedAt,DateTime,@updatedAt,4042
+aishodan,AishodanProduct,aishodan_products,sources,AishodanSource[],,4042
+aishodan,AishodanProduct,aishodan_products,chunks,AishodanChunk[],,4042
+aishodan,AishodanProduct,aishodan_products,scenarios,AishodanScenario[],,4042
+aishodan,AishodanSource,aishodan_sources,id,String,@id @default(cuid()),4062
+aishodan,AishodanSource,aishodan_sources,productId,String,,4062
+aishodan,AishodanSource,aishodan_sources,product,AishodanProduct,"@relation(fields: [productId], references: [id], onDelete: Cascade)",4062
+aishodan,AishodanSource,aishodan_sources,type,String,"@default(""url"")",4062
+aishodan,AishodanSource,aishodan_sources,url,String?,,4062
+aishodan,AishodanSource,aishodan_sources,title,String?,,4062
+aishodan,AishodanSource,aishodan_sources,rawText,String,@db.Text,4062
+aishodan,AishodanSource,aishodan_sources,createdAt,DateTime,@default(now()),4062
+aishodan,AishodanSource,aishodan_sources,chunks,AishodanChunk[],,4062
+aishodan,AishodanChunk,aishodan_chunks,id,String,@id @default(cuid()),4080
+aishodan,AishodanChunk,aishodan_chunks,productId,String,,4080
+aishodan,AishodanChunk,aishodan_chunks,product,AishodanProduct,"@relation(fields: [productId], references: [id], onDelete: Cascade)",4080
+aishodan,AishodanChunk,aishodan_chunks,sourceId,String,,4080
+aishodan,AishodanChunk,aishodan_chunks,source,AishodanSource,"@relation(fields: [sourceId], references: [id], onDelete: Cascade)",4080
+aishodan,AishodanChunk,aishodan_chunks,ord,Int,,4080
+aishodan,AishodanChunk,aishodan_chunks,text,String,@db.Text,4080
+aishodan,AishodanChunk,aishodan_chunks,createdAt,DateTime,@default(now()),4080
+aishodan,AishodanScenario,aishodan_scenarios,id,String,@id @default(cuid()),4096
+aishodan,AishodanScenario,aishodan_scenarios,productId,String,,4096
+aishodan,AishodanScenario,aishodan_scenarios,product,AishodanProduct,"@relation(fields: [productId], references: [id], onDelete: Cascade)",4096
+aishodan,AishodanScenario,aishodan_scenarios,name,String,,4096
+aishodan,AishodanScenario,aishodan_scenarios,phases,Json,,4096
+aishodan,AishodanScenario,aishodan_scenarios,slots,Json,,4096
+aishodan,AishodanScenario,aishodan_scenarios,icp,Json,,4096
+aishodan,AishodanScenario,aishodan_scenarios,guardrails,Json,,4096
+aishodan,AishodanScenario,aishodan_scenarios,persona,Json?,,4096
+aishodan,AishodanScenario,aishodan_scenarios,durationMin,Int,@default(10),4096
+aishodan,AishodanScenario,aishodan_scenarios,schedulingUrl,String?,,4096
+aishodan,AishodanScenario,aishodan_scenarios,schedulingLabel,String?,,4096
+aishodan,AishodanScenario,aishodan_scenarios,createdAt,DateTime,@default(now()),4096
+aishodan,AishodanScenario,aishodan_scenarios,updatedAt,DateTime,@updatedAt,4096
+aishodan,AishodanScenario,aishodan_scenarios,rooms,AishodanRoom[],,4096
+aishodan,AishodanRoom,aishodan_rooms,id,String,@id @default(cuid()),4130
+aishodan,AishodanRoom,aishodan_rooms,organizationId,String,,4130
+aishodan,AishodanRoom,aishodan_rooms,organization,AishodanOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",4130
+aishodan,AishodanRoom,aishodan_rooms,scenarioId,String,,4130
+aishodan,AishodanRoom,aishodan_rooms,scenario,AishodanScenario,"@relation(fields: [scenarioId], references: [id], onDelete: Cascade)",4130
+aishodan,AishodanRoom,aishodan_rooms,name,String,,4130
+aishodan,AishodanRoom,aishodan_rooms,token,String,@unique,4130
+aishodan,AishodanRoom,aishodan_rooms,expiresAt,DateTime?,,4130
+aishodan,AishodanRoom,aishodan_rooms,isActive,Boolean,@default(true),4130
+aishodan,AishodanRoom,aishodan_rooms,maxSessions,Int,@default(500),4130
+aishodan,AishodanRoom,aishodan_rooms,isPreview,Boolean,@default(false),4130
+aishodan,AishodanRoom,aishodan_rooms,sessionCount,Int,@default(0),4130
+aishodan,AishodanRoom,aishodan_rooms,createdAt,DateTime,@default(now()),4130
+aishodan,AishodanRoom,aishodan_rooms,updatedAt,DateTime,@updatedAt,4130
+aishodan,AishodanRoom,aishodan_rooms,sessions,AishodanSession[],,4130
+aishodan,AishodanSession,aishodan_sessions,id,String,@id @default(cuid()),4160
+aishodan,AishodanSession,aishodan_sessions,organizationId,String,,4160
+aishodan,AishodanSession,aishodan_sessions,organization,AishodanOrganization,"@relation(fields: [organizationId], references: [id], onDelete: Cascade)",4160
+aishodan,AishodanSession,aishodan_sessions,roomId,String,,4160
+aishodan,AishodanSession,aishodan_sessions,room,AishodanRoom,"@relation(fields: [roomId], references: [id], onDelete: Cascade)",4160
+aishodan,AishodanSession,aishodan_sessions,guestId,String,,4160
+aishodan,AishodanSession,aishodan_sessions,guestName,String?,,4160
+aishodan,AishodanSession,aishodan_sessions,guestCompany,String?,,4160
+aishodan,AishodanSession,aishodan_sessions,guestEmail,String?,,4160
+aishodan,AishodanSession,aishodan_sessions,status,String,"@default(""pending"")",4160
+aishodan,AishodanSession,aishodan_sessions,currentPhase,String,"@default(""opening"")",4160
+aishodan,AishodanSession,aishodan_sessions,consentedAt,DateTime?,,4160
+aishodan,AishodanSession,aishodan_sessions,startedAt,DateTime?,,4160
+aishodan,AishodanSession,aishodan_sessions,endedAt,DateTime?,,4160
+aishodan,AishodanSession,aishodan_sessions,tokenIssueCount,Int,@default(0),4160
+aishodan,AishodanSession,aishodan_sessions,referrer,String?,,4160
+aishodan,AishodanSession,aishodan_sessions,utm,Json?,,4160
+aishodan,AishodanSession,aishodan_sessions,schedulingClickedAt,DateTime?,,4160
+aishodan,AishodanSession,aishodan_sessions,purgeAfter,DateTime?,,4160
+aishodan,AishodanSession,aishodan_sessions,createdAt,DateTime,@default(now()),4160
+aishodan,AishodanSession,aishodan_sessions,updatedAt,DateTime,@updatedAt,4160
+aishodan,AishodanSession,aishodan_sessions,turns,AishodanTurn[],,4160
+aishodan,AishodanSession,aishodan_sessions,slotValues,AishodanSlotValue[],,4160
+aishodan,AishodanSession,aishodan_sessions,questions,AishodanQuestion[],,4160
+aishodan,AishodanSession,aishodan_sessions,outcome,AishodanOutcome?,,4160
+aishodan,AishodanTurn,aishodan_turns,id,String,@id @default(cuid()),4207
+aishodan,AishodanTurn,aishodan_turns,sessionId,String,,4207
+aishodan,AishodanTurn,aishodan_turns,session,AishodanSession,"@relation(fields: [sessionId], references: [id], onDelete: Cascade)",4207
+aishodan,AishodanTurn,aishodan_turns,ord,Int,,4207
+aishodan,AishodanTurn,aishodan_turns,speaker,String,,4207
+aishodan,AishodanTurn,aishodan_turns,text,String,@db.Text,4207
+aishodan,AishodanTurn,aishodan_turns,phase,String?,,4207
+aishodan,AishodanTurn,aishodan_turns,startMs,Int,@default(0),4207
+aishodan,AishodanTurn,aishodan_turns,createdAt,DateTime,@default(now()),4207
+aishodan,AishodanTurn,aishodan_turns,questions,AishodanQuestion[],,4207
+aishodan,AishodanQuestion,aishodan_questions,id,String,@id @default(cuid()),4227
+aishodan,AishodanQuestion,aishodan_questions,sessionId,String,,4227
+aishodan,AishodanQuestion,aishodan_questions,session,AishodanSession,"@relation(fields: [sessionId], references: [id], onDelete: Cascade)",4227
+aishodan,AishodanQuestion,aishodan_questions,turnId,String?,,4227
+aishodan,AishodanQuestion,aishodan_questions,turn,AishodanTurn?,"@relation(fields: [turnId], references: [id], onDelete: SetNull)",4227
+aishodan,AishodanQuestion,aishodan_questions,text,String,@db.Text,4227
+aishodan,AishodanQuestion,aishodan_questions,answerText,String?,@db.Text,4227
+aishodan,AishodanQuestion,aishodan_questions,citedChunkIds,String[],@default([]),4227
+aishodan,AishodanQuestion,aishodan_questions,unanswered,Boolean,@default(false),4227
+aishodan,AishodanQuestion,aishodan_questions,createdAt,DateTime,@default(now()),4227
+aishodan,AishodanSlotValue,aishodan_slot_values,id,String,@id @default(cuid()),4244
+aishodan,AishodanSlotValue,aishodan_slot_values,sessionId,String,,4244
+aishodan,AishodanSlotValue,aishodan_slot_values,session,AishodanSession,"@relation(fields: [sessionId], references: [id], onDelete: Cascade)",4244
+aishodan,AishodanSlotValue,aishodan_slot_values,key,String,,4244
+aishodan,AishodanSlotValue,aishodan_slot_values,value,String,@db.Text,4244
+aishodan,AishodanSlotValue,aishodan_slot_values,confidence,Float,@default(0.5),4244
+aishodan,AishodanSlotValue,aishodan_slot_values,sourceTurnId,String?,,4244
+aishodan,AishodanSlotValue,aishodan_slot_values,createdAt,DateTime,@default(now()),4244
+aishodan,AishodanSlotValue,aishodan_slot_values,updatedAt,DateTime,@updatedAt,4244
+aishodan,AishodanOutcome,aishodan_outcomes,id,String,@id @default(cuid()),4260
+aishodan,AishodanOutcome,aishodan_outcomes,sessionId,String,@unique,4260
+aishodan,AishodanOutcome,aishodan_outcomes,session,AishodanSession,"@relation(fields: [sessionId], references: [id], onDelete: Cascade)",4260
+aishodan,AishodanOutcome,aishodan_outcomes,fitScore,Int,,4260
+aishodan,AishodanOutcome,aishodan_outcomes,verdict,String,,4260
+aishodan,AishodanOutcome,aishodan_outcomes,reason,String,@db.Text,4260
+aishodan,AishodanOutcome,aishodan_outcomes,summary,Json?,,4260
+aishodan,AishodanOutcome,aishodan_outcomes,nextAction,String?,@db.Text,4260
+aishodan,AishodanOutcome,aishodan_outcomes,overriddenBy,String?,,4260
+aishodan,AishodanOutcome,aishodan_outcomes,overriddenAt,DateTime?,,4260
+aishodan,AishodanOutcome,aishodan_outcomes,createdAt,DateTime,@default(now()),4260
+aishodan,AishodanOutcome,aishodan_outcomes,updatedAt,DateTime,@updatedAt,4260
+adimage,AdImageBrand,adimage_brand,id,String,@id @default(cuid()),4289
+adimage,AdImageBrand,adimage_brand,userId,String?,,4289
+adimage,AdImageBrand,adimage_brand,guestId,String?,,4289
+adimage,AdImageBrand,adimage_brand,name,String,,4289
+adimage,AdImageBrand,adimage_brand,sourceUrl,String?,,4289
+adimage,AdImageBrand,adimage_brand,description,String?,@db.Text,4289
+adimage,AdImageBrand,adimage_brand,valueProps,Json?,,4289
+adimage,AdImageBrand,adimage_brand,colors,Json?,,4289
+adimage,AdImageBrand,adimage_brand,logoPath,String?,,4289
+adimage,AdImageBrand,adimage_brand,logoConfig,Json?,,4289
+adimage,AdImageBrand,adimage_brand,industry,String?,,4289
+adimage,AdImageBrand,adimage_brand,tone,String?,,4289
+adimage,AdImageBrand,adimage_brand,ngWords,Json?,,4289
+adimage,AdImageBrand,adimage_brand,createdAt,DateTime,@default(now()),4289
+adimage,AdImageBrand,adimage_brand,updatedAt,DateTime,@updatedAt,4289
+adimage,AdImageBrand,adimage_brand,campaigns,AdImageCampaign[],,4289
+adimage,AdImageCampaign,adimage_campaign,id,String,@id @default(cuid()),4313
+adimage,AdImageCampaign,adimage_campaign,brandId,String,,4313
+adimage,AdImageCampaign,adimage_campaign,brand,AdImageBrand,"@relation(fields: [brandId], references: [id], onDelete: Cascade)",4313
+adimage,AdImageCampaign,adimage_campaign,userId,String?,,4313
+adimage,AdImageCampaign,adimage_campaign,guestId,String?,,4313
+adimage,AdImageCampaign,adimage_campaign,name,String,,4313
+adimage,AdImageCampaign,adimage_campaign,objective,String?,,4313
+adimage,AdImageCampaign,adimage_campaign,appeal,String?,@db.Text,4313
+adimage,AdImageCampaign,adimage_campaign,placements,Json,,4313
+adimage,AdImageCampaign,adimage_campaign,createdAt,DateTime,@default(now()),4313
+adimage,AdImageCampaign,adimage_campaign,updatedAt,DateTime,@updatedAt,4313
+adimage,AdImageCampaign,adimage_campaign,concepts,AdImageConcept[],,4313
+adimage,AdImageConcept,adimage_concept,id,String,@id @default(cuid()),4334
+adimage,AdImageConcept,adimage_concept,campaignId,String,,4334
+adimage,AdImageConcept,adimage_concept,campaign,AdImageCampaign,"@relation(fields: [campaignId], references: [id], onDelete: Cascade)",4334
+adimage,AdImageConcept,adimage_concept,label,String,,4334
+adimage,AdImageConcept,adimage_concept,appealAxis,String,,4334
+adimage,AdImageConcept,adimage_concept,tone,String,,4334
+adimage,AdImageConcept,adimage_concept,copy,Json,,4334
+adimage,AdImageConcept,adimage_concept,compositionKey,String,,4334
+adimage,AdImageConcept,adimage_concept,genPaths,Json,,4334
+adimage,AdImageConcept,adimage_concept,visualPrompt,String,@db.Text,4334
+adimage,AdImageConcept,adimage_concept,designRefId,String?,,4334
+adimage,AdImageConcept,adimage_concept,designRefStyle,String?,@db.Text,4334
+adimage,AdImageConcept,adimage_concept,model,String?,,4334
+adimage,AdImageConcept,adimage_concept,generation,Int,@default(1),4334
+adimage,AdImageConcept,adimage_concept,parentId,String?,,4334
+adimage,AdImageConcept,adimage_concept,createdAt,DateTime,@default(now()),4334
+adimage,AdImageConcept,adimage_concept,creatives,AdImageCreative[],,4334
+adimage,AdImageConcept,adimage_concept,feedbacks,AdImageFeedback[],,4334
+adimage,AdImageCreative,adimage_creative,id,String,@id @default(cuid()),4366
+adimage,AdImageCreative,adimage_creative,conceptId,String,,4366
+adimage,AdImageCreative,adimage_creative,concept,AdImageConcept,"@relation(fields: [conceptId], references: [id], onDelete: Cascade)",4366
+adimage,AdImageCreative,adimage_creative,placementKey,String,,4366
+adimage,AdImageCreative,adimage_creative,size,String,,4366
+adimage,AdImageCreative,adimage_creative,genSize,String,,4366
+adimage,AdImageCreative,adimage_creative,compositionKey,String,,4366
+adimage,AdImageCreative,adimage_creative,imagePath,String,,4366
+adimage,AdImageCreative,adimage_creative,verify,Json?,,4366
+adimage,AdImageCreative,adimage_creative,inspect,Json?,,4366
+adimage,AdImageCreative,adimage_creative,createdAt,DateTime,@default(now()),4366
+adimage,AdImageCreative,adimage_creative,feedbacks,AdImageFeedback[],,4366
+adimage,AdImageFeedback,adimage_feedback,id,String,@id @default(cuid()),4390
+adimage,AdImageFeedback,adimage_feedback,conceptId,String,,4390
+adimage,AdImageFeedback,adimage_feedback,concept,AdImageConcept,"@relation(fields: [conceptId], references: [id], onDelete: Cascade)",4390
+adimage,AdImageFeedback,adimage_feedback,creativeId,String?,,4390
+adimage,AdImageFeedback,adimage_feedback,creative,AdImageCreative?,"@relation(fields: [creativeId], references: [id], onDelete: SetNull)",4390
+adimage,AdImageFeedback,adimage_feedback,source,String,,4390
+adimage,AdImageFeedback,adimage_feedback,scores,Json?,,4390
+adimage,AdImageFeedback,adimage_feedback,advice,String?,@db.Text,4390
+adimage,AdImageFeedback,adimage_feedback,directive,Json?,,4390
+adimage,AdImageFeedback,adimage_feedback,applied,Boolean,@default(false),4390
+adimage,AdImageFeedback,adimage_feedback,resultId,String?,,4390
+adimage,AdImageFeedback,adimage_feedback,createdAt,DateTime,@default(now()),4390
+core,ServiceFeedback,service_feedback,id,String,@id @default(cuid()),4417
+core,ServiceFeedback,service_feedback,userId,String,,4417
+core,ServiceFeedback,service_feedback,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",4417
+core,ServiceFeedback,service_feedback,serviceId,String,,4417
+core,ServiceFeedback,service_feedback,rating,Int?,,4417
+core,ServiceFeedback,service_feedback,text,String,@db.Text,4417
+core,ServiceFeedback,service_feedback,usageCount,Int,@default(0),4417
+core,ServiceFeedback,service_feedback,createdAt,DateTime,@default(now()),4417
+core,FeedbackPromptState,feedback_prompt_state,id,String,@id @default(cuid()),4440
+core,FeedbackPromptState,feedback_prompt_state,userId,String,@unique,4440
+core,FeedbackPromptState,feedback_prompt_state,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",4440
+core,FeedbackPromptState,feedback_prompt_state,snoozeUntil,DateTime?,,4440
+core,FeedbackPromptState,feedback_prompt_state,lastShownAt,DateTime?,,4440
+core,FeedbackPromptState,feedback_prompt_state,optedOut,Boolean,@default(false),4440
+core,FeedbackPromptState,feedback_prompt_state,createdAt,DateTime,@default(now()),4440
+core,FeedbackPromptState,feedback_prompt_state,updatedAt,DateTime,@updatedAt,4440
+core,CaseStudyApplication,case_study_application,id,String,@id @default(cuid()),4461
+core,CaseStudyApplication,case_study_application,companyName,String,,4461
+core,CaseStudyApplication,case_study_application,contactName,String,,4461
+core,CaseStudyApplication,case_study_application,email,String,,4461
+core,CaseStudyApplication,case_study_application,serviceUrl,String?,,4461
+core,CaseStudyApplication,case_study_application,usingService,String?,,4461
+core,CaseStudyApplication,case_study_application,allowLogo,Boolean,@default(true),4461
+core,CaseStudyApplication,case_study_application,allowName,Boolean,@default(true),4461
+core,CaseStudyApplication,case_study_application,preferredAt,String?,,4461
+core,CaseStudyApplication,case_study_application,note,String?,@db.Text,4461
+core,CaseStudyApplication,case_study_application,userId,String?,,4461
+core,CaseStudyApplication,case_study_application,status,String,"@default(""new"")",4461
+core,CaseStudyApplication,case_study_application,createdAt,DateTime,@default(now()),4461
+core,CaseStudyApplication,case_study_application,updatedAt,DateTime,@updatedAt,4461
+persona,PersonaImagePurgeTask,persona_image_purge_tasks,projectId,String,@id,4492
+persona,PersonaImagePurgeTask,persona_image_purge_tasks,readyAt,DateTime,,4492
+persona,PersonaImagePurgeTask,persona_image_purge_tasks,attemptedAt,DateTime?,,4492
+persona,PersonaProject,persona_projects,id,String,@id @default(uuid()),4500
+persona,PersonaProject,persona_projects,userId,String,,4500
+persona,PersonaProject,persona_projects,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",4500
+persona,PersonaProject,persona_projects,requestKey,String,,4500
+persona,PersonaProject,persona_projects,inputHash,String,,4500
+persona,PersonaProject,persona_projects,sourceUrl,String?,,4500
+persona,PersonaProject,persona_projects,status,String,"@default(""pending"")",4500
+persona,PersonaProject,persona_projects,data,Json?,,4500
+persona,PersonaProject,persona_projects,includedImages,Json?,,4500
+persona,PersonaProject,persona_projects,usageDay,DateTime,,4500
+persona,PersonaProject,persona_projects,leaseToken,String,,4500
+persona,PersonaProject,persona_projects,leaseExpiresAt,DateTime,,4500
+persona,PersonaProject,persona_projects,failureCode,String?,,4500
+persona,PersonaProject,persona_projects,createdAt,DateTime,@default(now()),4500
+persona,PersonaProject,persona_projects,updatedAt,DateTime,@updatedAt,4500
+persona,PersonaProject,persona_projects,images,PersonaImageJob[],,4500
+persona,PersonaProject,persona_projects,deletedAt,DateTime?,,4500
+persona,PersonaProject,persona_projects,imagesPurgedAt,DateTime?,,4500
+persona,PersonaProject,persona_projects,imagesPurgeAttemptedAt,DateTime?,,4500
+persona,PersonaImageJob,persona_image_jobs,id,String,@id @default(uuid()),4525
+persona,PersonaImageJob,persona_image_jobs,projectId,String,,4525
+persona,PersonaImageJob,persona_image_jobs,project,PersonaProject,"@relation(fields: [projectId], references: [id], onDelete: Cascade)",4525
+persona,PersonaImageJob,persona_image_jobs,requestKey,String,,4525
+persona,PersonaImageJob,persona_image_jobs,inputHash,String,,4525
+persona,PersonaImageJob,persona_image_jobs,slotKey,String,,4525
+persona,PersonaImageJob,persona_image_jobs,kind,String,,4525
+persona,PersonaImageJob,persona_image_jobs,intent,String,,4525
+persona,PersonaImageJob,persona_image_jobs,status,String,"@default(""pending"")",4525
+persona,PersonaImageJob,persona_image_jobs,usageDay,DateTime,,4525
+persona,PersonaImageJob,persona_image_jobs,leaseToken,String,,4525
+persona,PersonaImageJob,persona_image_jobs,leaseExpiresAt,DateTime,,4525
+persona,PersonaImageJob,persona_image_jobs,outputRef,String?,,4525
+persona,PersonaImageJob,persona_image_jobs,failureCode,String?,,4525
+persona,PersonaImageJob,persona_image_jobs,createdAt,DateTime,@default(now()),4525
+persona,PersonaImageJob,persona_image_jobs,updatedAt,DateTime,@updatedAt,4525
+persona,PersonaImageUsageDay,persona_image_usage_days,userId,String,,4547
+persona,PersonaImageUsageDay,persona_image_usage_days,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",4547
+persona,PersonaImageUsageDay,persona_image_usage_days,day,DateTime,,4547
+persona,PersonaImageUsageDay,persona_image_usage_days,reserved,Int,@default(0),4547
+persona,PersonaImageUsageDay,persona_image_usage_days,used,Int,@default(0),4547
+persona,PersonaUsageDay,persona_usage_days,userId,String,,4557
+persona,PersonaUsageDay,persona_usage_days,user,User,"@relation(fields: [userId], references: [id], onDelete: Cascade)",4557
+persona,PersonaUsageDay,persona_usage_days,day,DateTime,,4557
+persona,PersonaUsageDay,persona_usage_days,reserved,Int,@default(0),4557
+persona,PersonaUsageDay,persona_usage_days,used,Int,@default(0),4557

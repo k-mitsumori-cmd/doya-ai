@@ -1,0 +1,59 @@
+erDiagram
+    direction LR
+    User {
+        String id PK
+        String name "nullable"
+        String email UK "nullable"
+        String stripeCustomerId UK "nullable"
+        String stripeSubscriptionId UK "nullable"
+        String plan
+        DateTime createdAt
+    }
+    UserServiceSubscription {
+        String id PK
+        String userId FK
+        String serviceId
+        String plan
+        DateTime createdAt
+    }
+    Template {
+        String id PK
+        String name
+        String categoryId FK
+        DateTime createdAt
+    }
+    Generation {
+        String id PK
+        String userId FK
+        String serviceId
+        String templateId FK "nullable"
+        DateTime createdAt
+    }
+    PersonaImagePurgeTask {
+        String projectId PK
+    }
+    PersonaProject {
+        String id PK
+        String userId FK
+        String status
+        DateTime createdAt
+    }
+    PersonaImageJob {
+        String id PK
+        String projectId FK
+        String status
+        DateTime createdAt
+    }
+    PersonaImageUsageDay {
+        String userId FK
+    }
+    PersonaUsageDay {
+        String userId FK
+    }
+    User ||..o{ UserServiceSubscription : "userId"
+    User ||..o{ Generation : "userId"
+    Template |o..o{ Generation : "templateId"
+    User ||..o{ PersonaProject : "userId"
+    PersonaProject ||..o{ PersonaImageJob : "projectId"
+    User ||--o{ PersonaImageUsageDay : "userId"
+    User ||--o{ PersonaUsageDay : "userId"

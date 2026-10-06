@@ -1,0 +1,18 @@
+{
+  "models": 190,
+  "fields": 2504,
+  "declaredForeignKeys": 197,
+  "publicServices": 17,
+  "charts": 33,
+  "personaModels": [
+    "PersonaImagePurgeTask",
+    "PersonaProject",
+    "PersonaImageJob",
+    "PersonaImageUsageDay",
+    "PersonaUsageDay"
+  ],
+  "fieldsAndCardinalityMatch": true,
+  "schemaSha256": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c",
+  "browserVisualQA": "not performed: browser URL policy rejects file protocol",
+  "databaseRecords": "not inspected"
+}

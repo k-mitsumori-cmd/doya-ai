@@ -1,0 +1,32 @@
+erDiagram
+    direction LR
+    DoyalistProject {
+        String id PK
+        String userId
+        String name
+        String status
+        DateTime createdAt
+    }
+    DoyalistCompany {
+        String id PK
+        String projectId FK
+        String name
+        String status
+        DateTime createdAt
+    }
+    DoyalistApproach {
+        String id PK
+        String projectId FK
+        String companyId FK "nullable"
+        String status
+        DateTime createdAt
+    }
+    DoyalistTemplate {
+        String id PK
+        String userId
+        String name
+        DateTime createdAt
+    }
+    DoyalistProject ||..o{ DoyalistCompany : "projectId"
+    DoyalistProject ||..o{ DoyalistApproach : "projectId"
+    DoyalistCompany |o..o{ DoyalistApproach : "companyId"

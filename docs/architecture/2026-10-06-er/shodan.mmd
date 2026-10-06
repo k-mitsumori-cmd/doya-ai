@@ -1,0 +1,31 @@
+erDiagram
+    direction LR
+    ShodanOrganization {
+        String id PK
+        String name
+        String slug UK
+        DateTime createdAt
+    }
+    ShodanMember {
+        String id PK
+        String organizationId FK
+        String userId "nullable"
+        String status
+        String name "nullable"
+        String inviteToken UK "nullable"
+        DateTime createdAt
+    }
+    ShodanCompanyProfile {
+        String id PK
+        String organizationId FK,UK
+        DateTime createdAt
+    }
+    ShodanPreparation {
+        String id PK
+        String organizationId FK
+        String status
+        DateTime createdAt
+    }
+    ShodanOrganization ||..o{ ShodanMember : "organizationId"
+    ShodanOrganization ||..o| ShodanCompanyProfile : "organizationId"
+    ShodanOrganization ||..o{ ShodanPreparation : "organizationId"

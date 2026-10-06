@@ -1,0 +1,22 @@
+erDiagram
+    direction LR
+    DoyamanaCategory {
+        String id PK
+        String name
+        String slug UK
+        DateTime createdAt
+    }
+    DoyamanaImage {
+        String id PK
+        String categoryId FK
+        DateTime createdAt
+    }
+    DoyamanaUsageLog {
+        String id PK
+        String imageId FK
+        String userId "nullable"
+        String serviceId "nullable"
+        DateTime createdAt
+    }
+    DoyamanaCategory ||..o{ DoyamanaImage : "categoryId"
+    DoyamanaImage ||..o{ DoyamanaUsageLog : "imageId"

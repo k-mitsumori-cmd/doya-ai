@@ -1,0 +1,64 @@
+erDiagram
+    direction LR
+    CunningSession {
+        String id PK
+        String userId
+        String title
+        String status
+        DateTime createdAt
+    }
+    CunningRecordingLease {
+        String sessionId PK,FK
+        String userId
+        String token UK
+    }
+    CunningUsageAllocation {
+        String sessionId FK
+        String userId
+    }
+    CunningTranscript {
+        String id PK
+        String sessionId FK
+        DateTime createdAt
+    }
+    CunningAudioWindow {
+        String id PK
+        String sessionId FK
+        String transcriptId FK,UK "nullable"
+    }
+    CunningAnswer {
+        String id PK
+        String sessionId FK
+        String finalTranscriptId FK,UK "nullable"
+        DateTime createdAt
+    }
+    CunningKnowledgeBase {
+        String id PK
+        String userId
+        String name
+        DateTime createdAt
+    }
+    CunningKnowledgeChunk {
+        String id PK
+        String knowledgeBaseId FK
+        DateTime createdAt
+    }
+    CunningCompanyProfile {
+        String id PK
+        String userId
+        DateTime createdAt
+    }
+    CunningApplicantProfile {
+        String id PK
+        String userId
+        String name
+        DateTime createdAt
+    }
+    CunningSession ||--o| CunningRecordingLease : "sessionId"
+    CunningSession ||--o{ CunningUsageAllocation : "sessionId"
+    CunningSession ||..o{ CunningTranscript : "sessionId"
+    CunningSession ||..o{ CunningAudioWindow : "sessionId"
+    CunningTranscript |o..o| CunningAudioWindow : "transcriptId"
+    CunningSession ||..o{ CunningAnswer : "sessionId"
+    CunningTranscript |o..o| CunningAnswer : "finalTranscriptId"
+    CunningKnowledgeBase ||..o{ CunningKnowledgeChunk : "knowledgeBaseId"

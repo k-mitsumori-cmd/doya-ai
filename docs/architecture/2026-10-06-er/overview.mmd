@@ -1,0 +1,40 @@
+erDiagram
+    direction LR
+    Account {
+        String id PK
+        String userId FK
+    }
+    User {
+        String id PK
+        String plan
+    }
+    UserServiceSubscription {
+        String id PK
+        String userId FK
+        String serviceId
+        String plan
+    }
+    Subscription {
+        String id PK
+        String userId FK
+    }
+    Category {
+        String id PK
+        String serviceId
+    }
+    Template {
+        String id PK
+        String categoryId FK
+    }
+    Generation {
+        String id PK
+        String userId FK
+        String serviceId
+        String templateId FK "nullable"
+    }
+    User ||..o{ Account : "userId"
+    User ||..o{ UserServiceSubscription : "userId"
+    User ||..o{ Subscription : "userId"
+    Category ||..o{ Template : "categoryId"
+    User ||..o{ Generation : "userId"
+    Template |o..o{ Generation : "templateId"
