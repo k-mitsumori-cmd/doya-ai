@@ -9,6 +9,7 @@ import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { useBillingPlanResync } from '@/hooks/useBillingPlanResync'
+import { useSubscriptionManagement } from '@/hooks/useSubscriptionManagement'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import {
   ArrowUpRight,
@@ -61,10 +62,13 @@ export default function BannerPlanPage() {
   const [usageCount, setUsageCount] = useState<number | null>(null)
   const [serverMonthlyLimit, setServerMonthlyLimit] = useState<number | null>(null)
   const [statsError, setStatsError] = useState(false)
-  const [isCanceling, setIsCanceling] = useState(false)
-  const [cancelScheduledAt, setCancelScheduledAt] = useState<Date | null>(null)
-  const [cancelMode, setCancelMode] = useState<'period_end' | 'immediate' | null>(null)
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const management = useSubscriptionManagement('banner')
+  const isCanceling = management.busy
+  const cancelScheduledAt = management.data?.hasSubscription && management.data.cancelAtPeriodEnd ? new Date(management.data.currentPeriodEnd * 1000) : null
+  const cancelMode = cancelScheduledAt ? 'period_end' : null
+  const [cancelConfirmKey, setCancelConfirmKey] = useState<string | null>(null)
+  const showCancelConfirm = cancelConfirmKey === management.scopeKey
+  const setShowCancelConfirm = (show: boolean) => setCancelConfirmKey(show ? management.scopeKey : null)
   const isLoggedIn = !!session?.user?.email
 
   const formatJstDateTime = (d: Date) => {
@@ -83,87 +87,12 @@ export default function BannerPlanPage() {
   }
 
   const handleCancelSubscription = async () => {
-    setShowCancelConfirm(false)
-    if (isGuest) {
-      toast.error('ログインが必要です')
-      return
-    }
-    try {
-      setIsCanceling(true)
-      setCancelScheduledAt(null)
-      setCancelMode(null)
-      const res = await fetch('/api/stripe/subscription/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceId: 'banner', mode: 'period_end' }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || '解約に失敗しました')
-      const end = data?.currentPeriodEnd ? new Date(Number(data.currentPeriodEnd) * 1000) : null
-      if (end && !Number.isNaN(end.getTime())) {
-        setCancelScheduledAt(end)
-        setCancelMode('period_end')
-        try {
-          localStorage.setItem('banner:cancelScheduledAt', end.toISOString())
-        } catch {}
-        toast.success(`解約を受け付けました（${formatJstDateTime(end)}に停止 / 日本時間）`)
-      } else {
-        toast.success('解約を受け付けました')
-      }
-    } catch (e: any) {
-      toast.error(e?.message || '解約に失敗しました')
-    } finally {
-      setIsCanceling(false)
-    }
+    const confirmed = await management.run('cancel')
+    if (confirmed) setShowCancelConfirm(false)
   }
-
   const handleResumeSubscription = async () => {
-    setIsCanceling(true)
-    try {
-      const res = await fetch('/api/stripe/subscription/resume', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceId: 'banner' }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || '解約取り消しに失敗しました')
-      setCancelScheduledAt(null)
-      setCancelMode(null)
-      localStorage.removeItem('banner:cancelScheduledAt')
-      toast.success('解約予約を取り消しました！引き続き有料プランをご利用いただけます。')
-    } catch (err: any) {
-      toast.error(err.message || '解約取り消しに失敗しました')
-    } finally {
-      setIsCanceling(false)
-    }
+    await management.run('resume')
   }
-
-  const [subscriptionStatusError, setSubscriptionStatusError] = useState('')
-  // 停止日時はサーバーで確認できた値だけを表示する。
-  useEffect(() => {
-    setCancelMode(null)
-    setCancelScheduledAt(null)
-    setSubscriptionStatusError('')
-    if (!isLoggedIn) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/api/stripe/subscription/status?serviceId=banner', { cache: 'no-store' })
-        const json = await res.json()
-        if (!res.ok || json.ok !== true) throw new Error(json.error || '契約状態を確認できませんでした。再読み込みしてください。')
-        if (cancelled) return
-        if (json.cancelAtPeriodEnd && json.currentPeriodEnd) {
-          const date = new Date(Number(json.currentPeriodEnd) * 1000)
-          if (Number.isNaN(date.getTime())) throw new Error('停止日時を確認できませんでした。')
-          setCancelScheduledAt(date)
-          setCancelMode('period_end')
-        }
-      } catch (e: any) {
-        if (!cancelled) setSubscriptionStatusError(e?.message || '契約状態を確認できませんでした。再読み込みしてください。')
-      }
-    })()
-    return () => { cancelled = true }
-  }, [isLoggedIn, session?.user?.email])
 
   const { run: handleSyncPlan, busy: isSyncingPlan, disabled: syncDisabled, message: syncMessage } = useBillingPlanResync({
     scope: 'banner-dashboard-plan',
@@ -274,7 +203,7 @@ export default function BannerPlanPage() {
         <DashboardSidebar />
       </div>
       <Toaster position="top-center" />
-      {subscriptionStatusError && <p role="alert" className="p-4 text-red-700 bg-red-50">{subscriptionStatusError}</p>}
+      {management.message && <div role="status" className="p-4 text-slate-700 bg-slate-50"><p>{management.message}</p><button type="button" disabled={management.busy} onClick={() => void management.recheck()} className="mt-2 underline">契約状態を再確認</button></div>}
       <div className="md:pl-[240px] transition-all duration-200">
         {/* ========================================
             Header - Doya Banner Style
@@ -433,7 +362,7 @@ export default function BannerPlanPage() {
                           </p>
                           <button
                             onClick={handleResumeSubscription}
-                            disabled={isCanceling}
+                            disabled={management.disabled}
                             className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
                           >
                             {isCanceling && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -449,11 +378,11 @@ export default function BannerPlanPage() {
                     <div className="mt-3">
                       <button
                         onClick={() => setShowCancelConfirm(true)}
-                        disabled={isCanceling}
+                        disabled={management.disabled}
                         className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 font-black hover:bg-red-100 transition-colors disabled:opacity-60"
                       >
                         {isCanceling ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                        プランを解約する
+                        統一プランを解約する
                       </button>
                       <p className="mt-2 text-[11px] text-slate-500 font-bold">
                         ※ 解約は「次回更新日で停止」です（即時停止が必要な場合はお問い合わせください）
@@ -631,7 +560,7 @@ export default function BannerPlanPage() {
               </button>
               <div className="text-center">
                 <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-                <h3 className="text-2xl font-black text-slate-900 mb-2">有料プランの解約を確認</h3>
+                <h3 className="text-2xl font-black text-slate-900 mb-2">統一プランの解約を確認</h3><p className="text-sm text-slate-600 mb-3">解約は、すべての対象サービスに適用されます。</p>
                 <div className="text-left rounded-2xl bg-amber-50 border border-amber-200 p-4 mb-6 space-y-2 text-sm font-bold text-slate-700">
                   <p>この操作はバナーだけの解約ではありません。このアカウントで確認された有効な有料契約をすべて、各契約の次回更新日で解約予約します。</p>
                   <p>停止後はドヤバナーを含む統一プラン対象サービスの有料枠・有料機能が使えなくなります。無料枠での利用は続けられます。</p>
@@ -646,7 +575,7 @@ export default function BannerPlanPage() {
                   </button>
                   <button
                     onClick={handleCancelSubscription}
-                    disabled={isCanceling}
+                    disabled={management.disabled}
                     className="w-full py-3 rounded-xl bg-slate-100 text-slate-700 font-black hover:bg-slate-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isCanceling && <Loader2 className="w-4 h-4 animate-spin" />}

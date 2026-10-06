@@ -43,7 +43,7 @@ async function fixture(kind) {
   const mocks = { react: React, 'react/jsx-runtime': jsx, 'next-auth/react': auth,
     'next/link': ({ children, ...p }) => React.createElement('a', p, children),
     'next/navigation': { usePathname: () => `/${props.serviceId}/pricing` },
-    '@/hooks/useBillingPlanResync': hook, '@/components/CheckoutButton': { CheckoutButton: inert },
+    '@/hooks/useBillingPlanResync': hook, '@/hooks/useSubscriptionManagement': { useSubscriptionManagement: () => ({ data: null, busy: false, disabled: true, message: '', run: async () => null, recheck: async () => {} }) }, '@/components/CheckoutButton': { CheckoutButton: inert },
     '@/components/TrialCallout': { TrialBadge: inert, TrialNote: inert, useTrialEligible: () => null },
     '@/lib/services': services, '@/lib/plan-utils': plans, '@/lib/unified-plan': unified,
     '@/lib/pricing': { ENTERPRISE_CONTACT_MAILTO: 'mailto:synthetic@example.invalid', BANNER_PRICING: { guestLimit: 3 },

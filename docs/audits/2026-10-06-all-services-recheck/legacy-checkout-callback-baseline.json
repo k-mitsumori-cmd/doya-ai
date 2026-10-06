@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-06T16:03:51.327Z",
+  "method": "Actual extracted callbacks with synthetic fetch/location; no browser navigation or network",
+  "sourceHashes": {
+    "src/app/tenkai/pricing/page.tsx": "916338c4ad899cc6c0b5c90d4e721c16d472fb7e77c2b4cfb8b5dcf4ac419a9d",
+    "src/components/tenkai/PricingTable.tsx": "61aa349a7345db76152fa9cd785690acadff3afda753209f9db72d6100bc9bc9",
+    "src/components/interviewx/InterviewXSidebar.tsx": "43a90c546679818e856cc5d29bc2bac120f2f5439f38d140ef6d41e7b65df7ee"
+  },
+  "rows": [
+    {
+      "file": "src/app/tenkai/pricing/page.tsx",
+      "httpSuccess": true,
+      "duplicateRequests": 2,
+      "unsafeSchemeAccepted": true,
+      "httpFailureRedirected": false
+    },
+    {
+      "file": "src/app/tenkai/pricing/page.tsx",
+      "httpSuccess": false,
+      "duplicateRequests": 2,
+      "unsafeSchemeAccepted": false,
+      "httpFailureRedirected": false
+    },
+    {
+      "file": "src/components/tenkai/PricingTable.tsx",
+      "httpSuccess": true,
+      "duplicateRequests": 2,
+      "unsafeSchemeAccepted": true,
+      "httpFailureRedirected": false
+    },
+    {
+      "file": "src/components/tenkai/PricingTable.tsx",
+      "httpSuccess": false,
+      "duplicateRequests": 2,
+      "unsafeSchemeAccepted": false,
+      "httpFailureRedirected": false
+    },
+    {
+      "file": "src/components/interviewx/InterviewXSidebar.tsx",
+      "httpSuccess": true,
+      "duplicateRequests": 2,
+      "unsafeSchemeAccepted": true,
+      "httpFailureRedirected": false
+    },
+    {
+      "file": "src/components/interviewx/InterviewXSidebar.tsx",
+      "httpSuccess": false,
+      "duplicateRequests": 2,
+      "unsafeSchemeAccepted": true,
+      "httpFailureRedirected": true
+    }
+  ],
+  "nextRepair": "Bounded shared checkout mechanism with synchronous duplicate lock, actor scope, strict HTTPS destination and HTTP/schema confirmation; inspect legacy plan identifiers before integrating",
+  "scope": "Callback-level evidence only; no full mounted or live pricing flow proof"
+}

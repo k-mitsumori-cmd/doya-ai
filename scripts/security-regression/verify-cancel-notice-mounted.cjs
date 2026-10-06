@@ -26,7 +26,7 @@ async function fixture(name, options = {}) {
   const parser = load('src/lib/subscription-status-client.ts', { './billing-response-client': helper });
   const auth = { useSession: () => ({ status, data }) };
   const hook = component('src/hooks/useSubscriptionStatus.ts', { react: React, 'next-auth/react': auth,
-    '@/lib/billing-response-client': helper, '@/lib/subscription-status-client': parser });
+    '@/lib/billing-response-client': helper, '@/lib/subscription-status-client': parser }, { window: dom.window });
   const runtime = require('react/jsx-runtime'), jsx = { ...runtime };
   for (const method of ['jsx', 'jsxs']) jsx[method] = (type, p, ...args) => {
     if (type === 'button') handler = p.onClick;

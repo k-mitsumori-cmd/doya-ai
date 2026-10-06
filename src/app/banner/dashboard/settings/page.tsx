@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { User, Mail, Shield, CreditCard, LogOut, AlertTriangle, Check, Loader2, Sparkles, X, CalendarClock } from 'lucide-react'
@@ -8,17 +8,21 @@ import { Toaster, toast } from 'react-hot-toast'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan } from '@/lib/pricing'
-import { tierFrom } from '@/lib/plan-utils'
+import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { AccountSummaryCard } from '@/components/AccountSummaryCard'
+import { useSubscriptionManagement } from '@/hooks/useSubscriptionManagement'
 
 export default function SettingsPage() {
   const { data: session, status } = useSession()
-  const [isCancelling, setIsCancelling] = useState(false)
-  const [isResuming, setIsResuming] = useState(false)
-  const [cancelScheduledAt, setCancelScheduledAt] = useState<Date | null>(null)
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const management = useSubscriptionManagement('banner')
+  const isCancelling = management.busy
+  const isResuming = management.busy
+  const cancelScheduledAt = management.data?.hasSubscription && management.data.cancelAtPeriodEnd ? new Date(management.data.currentPeriodEnd * 1000) : null
+  const [cancelConfirmKey, setCancelConfirmKey] = useState<string | null>(null)
+  const showCancelConfirm = cancelConfirmKey === management.scopeKey
+  const setShowCancelConfirm = (show: boolean) => setCancelConfirmKey(show ? management.scopeKey : null)
 
   const formatJstDateTime = (d: Date) => {
     try {
@@ -36,87 +40,19 @@ export default function SettingsPage() {
   }
 
   const isLoggedIn = !!session?.user?.email
-  const bannerPlanRaw = String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
+  const bannerPlanRaw = higherPlan((session?.user as any)?.bannerPlan, (session?.user as any)?.plan)
   const bannerPlanTier = tierFrom(bannerPlanRaw)
   const isPaidUser = bannerPlanTier === 'LIGHT' || bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
   const planLabel = bannerPlanTier === 'LIGHT' ? 'ライト' : bannerPlanTier === 'ENTERPRISE' ? 'エンタープライズ' : bannerPlanTier === 'PRO' ? 'プロ' : isLoggedIn ? '無料' : 'ゲスト'
   const monthlyLimit = getBannerMonthlyLimitByUserPlan(bannerPlanTier)
 
-  const [subscriptionStatusError, setSubscriptionStatusError] = useState('')
-  // 停止日時はサーバーで確認できた値だけを表示する。
-  useEffect(() => {
-    setCancelScheduledAt(null)
-    setSubscriptionStatusError('')
-    if (!isLoggedIn) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/api/stripe/subscription/status?serviceId=banner', { cache: 'no-store' })
-        const json = await res.json()
-        if (!res.ok || json.ok !== true) throw new Error(json.error || '契約状態を確認できませんでした。再読み込みしてください。')
-        if (cancelled) return
-        if (json.cancelAtPeriodEnd && json.currentPeriodEnd) {
-          const date = new Date(Number(json.currentPeriodEnd) * 1000)
-          if (Number.isNaN(date.getTime())) throw new Error('停止日時を確認できませんでした。')
-          setCancelScheduledAt(date)
-        }
-      } catch (e: any) {
-        if (!cancelled) setSubscriptionStatusError(e?.message || '契約状態を確認できませんでした。再読み込みしてください。')
-      }
-    })()
-    return () => { cancelled = true }
-  }, [isLoggedIn, session?.user?.email])
-
   const handleCancelSubscription = async () => {
-    setShowCancelConfirm(false)
-    setIsCancelling(true)
-    setCancelScheduledAt(null)
-    try {
-      const res = await fetch('/api/stripe/subscription/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceId: 'banner' }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || '解約に失敗しました')
-      const end = data?.currentPeriodEnd ? new Date(Number(data.currentPeriodEnd) * 1000) : null
-      if (end && !Number.isNaN(end.getTime())) {
-        setCancelScheduledAt(end)
-        try {
-          localStorage.setItem('banner:cancelScheduledAt', end.toISOString())
-        } catch {}
-        toast.success(`解約を受け付けました（${formatJstDateTime(end)}に停止 / 日本時間）`)
-      } else {
-        toast.success('プランの解約をスケジュールしました。現在の請求期間終了後に無料プランに戻ります。')
-      }
-    } catch (err: any) {
-      toast.error(err.message || '解約に失敗しました')
-    } finally {
-      setIsCancelling(false)
-    }
+    const confirmed = await management.run('cancel')
+    if (confirmed) setShowCancelConfirm(false)
   }
-
   const handleResumeSubscription = async () => {
-    if (!confirm('解約をキャンセルして、プランを継続しますか？')) return
-    setIsResuming(true)
-    try {
-      const res = await fetch('/api/stripe/subscription/resume', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceId: 'banner' }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || '解約取り消しに失敗しました')
-      setCancelScheduledAt(null)
-      try {
-        localStorage.removeItem('banner:cancelScheduledAt')
-      } catch {}
-      toast.success('解約をキャンセルしました！プランは継続されます。')
-    } catch (err: any) {
-      toast.error(err.message || '解約取り消しに失敗しました')
-    } finally {
-      setIsResuming(false)
-    }
+    if (!confirm('統一プランの解約予約を取り消して、すべての対象サービスでプランを継続しますか？')) return
+    await management.run('resume')
   }
 
   if (status === 'loading') {
@@ -132,7 +68,7 @@ export default function SettingsPage() {
   return (
     <DashboardLayout>
       <Toaster position="top-center" />
-      {subscriptionStatusError && <p role="alert" className="p-4 text-red-700 bg-red-50">{subscriptionStatusError}</p>}
+      {management.message && <div role="status" className="p-4 text-slate-700 bg-slate-50"><p>{management.message}</p><button type="button" disabled={management.busy} onClick={() => void management.recheck()} className="mt-2 underline">契約状態を再確認</button></div>}
       <div className="max-w-2xl mx-auto space-y-8">
         <div>
           <h1 className="text-2xl font-black text-slate-900">設定</h1>
@@ -199,7 +135,7 @@ export default function SettingsPage() {
                 </p>
                 <button
                   onClick={handleResumeSubscription}
-                  disabled={isResuming}
+                  disabled={management.disabled}
                   className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
                   {isResuming && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -218,16 +154,16 @@ export default function SettingsPage() {
               プランの解約
             </h2>
             <p className="text-sm text-red-700 font-bold mb-4">
-              解約すると、現在の請求期間終了時に無料プランに戻ります。<br/>
+              統一統一プランを解約すると、すべての対象サービスが現在の請求期間終了時に無料プランに戻ります。<br/>
               解約後も請求期間終了まではプランの機能をご利用いただけます。
             </p>
             <button
               onClick={() => setShowCancelConfirm(true)}
-              disabled={isCancelling}
+              disabled={management.disabled}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 text-white font-black text-sm hover:bg-red-700 transition-colors disabled:opacity-50"
             >
               {isCancelling && <Loader2 className="w-4 h-4 animate-spin" />}
-              プランを解約する
+              統一プランを解約する
             </button>
           </section>
         )}
@@ -353,7 +289,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={handleCancelSubscription}
-                    disabled={isCancelling}
+                    disabled={management.disabled}
                     className="w-full py-3 rounded-2xl border border-slate-200 bg-white text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors disabled:opacity-50"
                   >
                     {isCancelling ? (
@@ -362,7 +298,7 @@ export default function SettingsPage() {
                         処理中...
                       </span>
                     ) : (
-                      'それでも解約する'
+                      '統一プランを解約する'
                     )}
                   </button>
                 </div>

@@ -6,19 +6,10 @@ import { useSession } from 'next-auth/react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ExternalLink, Loader2, RefreshCcw, Shield, Sparkles, Timer, X } from 'lucide-react'
 import { SEO_PRICING, getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
-import { tierFrom } from '@/lib/plan-utils'
+import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import SeoCancelScheduleNotice from '@/components/SeoCancelScheduleNotice'
-
-type SubStatus = {
-  ok?: boolean
-  hasSubscription?: boolean
-  cancelAtPeriodEnd?: boolean
-  currentPeriodEnd?: number
-  status?: string
-  planId?: string | null
-  error?: string
-}
+import { useSubscriptionManagement } from '@/hooks/useSubscriptionManagement'
 
 function formatRemainingDays(unixSeconds: number) {
   const end = unixSeconds * 1000
@@ -30,35 +21,23 @@ function formatRemainingDays(unixSeconds: number) {
 export default function SeoPlanPage() {
   const { data: session } = useSession()
   const isLoggedIn = !!session?.user?.email
-  const seoPlanRaw = String((session?.user as any)?.seoPlan || (isLoggedIn ? 'FREE' : 'GUEST')).toUpperCase()
+  const seoPlanRaw = isLoggedIn ? higherPlan((session?.user as any)?.seoPlan, (session?.user as any)?.plan) : 'GUEST'
   const tier = tierFrom(seoPlanRaw)
   const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
   const isFreeHourActive = isLoggedIn && isWithinFreeHour(firstLoginAt)
   const [freeHourRemainingMs, setFreeHourRemainingMs] = useState(() => getFreeHourRemainingMs(firstLoginAt))
 
-  const [sub, setSub] = useState<SubStatus | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [cancelConfirm, setCancelConfirm] = useState(false)
-  const [resumeConfirm, setResumeConfirm] = useState(false)
+  const management = useSubscriptionManagement('seo')
+  const sub = management.data?.hasSubscription ? management.data : null
+  const busy = management.busy
+  const error = management.message
+  const [cancelConfirmKey, setCancelConfirmKey] = useState<string | null>(null)
+  const [resumeConfirmKey, setResumeConfirmKey] = useState<string | null>(null)
+  const cancelConfirm = cancelConfirmKey === management.scopeKey
+  const resumeConfirm = resumeConfirmKey === management.scopeKey
+  const setCancelConfirm = (show: boolean) => setCancelConfirmKey(show ? management.scopeKey : null)
+  const setResumeConfirm = (show: boolean) => setResumeConfirmKey(show ? management.scopeKey : null)
 
-
-  async function loadStatus() {
-    if (!isLoggedIn) return
-    setError(null)
-    try {
-      const res = await fetch('/api/stripe/subscription/status?serviceId=seo', { cache: 'no-store' })
-      const json = (await res.json().catch(() => ({}))) as SubStatus
-      setSub(res.ok ? json : { error: json?.error || 'failed' })
-    } catch (e: any) {
-      setSub({ error: e?.message || 'failed' })
-    }
-  }
-
-  useEffect(() => {
-    void loadStatus()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn])
 
   useEffect(() => {
     if (!isFreeHourActive) return
@@ -90,7 +69,7 @@ export default function SeoPlanPage() {
             </Link>
             <h1 className="mt-3 text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">アカウント（ドヤライティングAI）</h1>
             <p className="mt-2 text-sm text-gray-500 font-bold">
-              プランの変更・解約・再開をここで行えます（ドヤバナーAIとは別契約です）
+              統一プランの変更・解約・再開をここで行えます。解約・再開は、すべての対象サービスに適用されます。
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -100,7 +79,7 @@ export default function SeoPlanPage() {
             </Link>
             {isLoggedIn && (
               <button
-                onClick={() => loadStatus()}
+                type="button" disabled={busy} onClick={() => void management.recheck()}
                 className="h-10 w-10 rounded-xl bg-white border border-gray-200 text-gray-700 flex items-center justify-center hover:bg-gray-50"
                 title="更新"
               >
@@ -208,6 +187,7 @@ export default function SeoPlanPage() {
                 {error && (
                   <div className="mt-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold p-4">
                     {error}
+                    <button type="button" disabled={busy} onClick={() => void management.recheck()} className="block mt-2 underline">契約状態を再確認</button>
                   </div>
                 )}
               </div>
@@ -227,7 +207,7 @@ export default function SeoPlanPage() {
                   {!sub?.cancelAtPeriodEnd && (
                     <button
                       onClick={() => setCancelConfirm(true)}
-                      disabled={busy}
+                      disabled={management.disabled}
                       className="w-full h-12 rounded-2xl bg-red-50 border border-red-100 text-red-700 font-black text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-100 transition-colors"
                     >
                       解約する（次回更新で停止）
@@ -250,7 +230,7 @@ export default function SeoPlanPage() {
                       </div>
                       <button
                         onClick={() => setResumeConfirm(true)}
-                        disabled={busy}
+                        disabled={management.disabled}
                         className="w-full h-12 rounded-2xl bg-emerald-600 text-white font-black text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 transition-colors"
                       >
                         解約をキャンセルして継続する
@@ -288,7 +268,7 @@ export default function SeoPlanPage() {
                 <Sparkles className="w-12 h-12 text-blue-600 mx-auto mb-4" />
                 <h3 className="text-2xl font-black text-slate-900 mb-2">解約すると、使える機能が制限されます</h3>
                 <p className="text-slate-600 font-bold mb-4">
-                  次回更新日以降、以下の機能が利用できなくなります。
+                  統一プランの解約はすべての対象サービスに適用されます。次回更新日以降、このサービスでは以下の制限が適用されます。
                 </p>
                 <ul className="text-left text-sm font-bold text-slate-700 space-y-2 mb-6 bg-slate-50 rounded-xl p-4">
                   <li className="flex items-start gap-2">
@@ -305,11 +285,11 @@ export default function SeoPlanPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-red-500 mt-0.5">✕</span>
-                    <span>1日の生成上限が1記事に制限</span>
+                    <span>記事作成は月{SEO_PRICING.freeLimit}回までに制限</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-red-500 mt-0.5">✕</span>
-                    <span>文字数上限が5,000字に制限</span>
+                    <span>1記事あたり{SEO_PRICING.charLimit?.free?.toLocaleString()}字までに制限</span>
                   </li>
                 </ul>
                 <p className="text-xs font-bold text-slate-500 mb-4">
@@ -317,25 +297,10 @@ export default function SeoPlanPage() {
                 </p>
                 <div className="grid gap-3">
                   <button
-                    disabled={busy}
+                    disabled={management.disabled}
                     onClick={async () => {
-                      setBusy(true)
-                      setError(null)
-                      try {
-                        const res = await fetch('/api/stripe/subscription/cancel', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ serviceId: 'seo' }),
-                        })
-                        const json = await res.json().catch(() => ({}))
-                        if (!res.ok) throw new Error(json?.error || '解約に失敗しました')
-                        await loadStatus()
-                        setCancelConfirm(false)
-                      } catch (e: any) {
-                        setError(e?.message || '解約に失敗しました')
-                      } finally {
-                        setBusy(false)
-                      }
+                      const confirmed = await management.run('cancel')
+                      if (confirmed) setCancelConfirm(false)
                     }}
                     className="h-12 rounded-2xl bg-red-600 text-white font-black text-sm hover:bg-red-700 disabled:opacity-50 inline-flex items-center justify-center gap-2"
                   >
@@ -380,29 +345,14 @@ export default function SeoPlanPage() {
                 <Sparkles className="w-12 h-12 text-emerald-600 mx-auto mb-4" />
                 <h3 className="text-2xl font-black text-slate-900 mb-2">解約予約を取り消しますか？</h3>
                 <p className="text-slate-600 font-bold mb-6">
-                  取り消すと、次回更新で停止せず継続します。
+                  統一プランの解約予約を取り消すと、すべての対象サービスで次回更新以降もプランが継続します。
                 </p>
                 <div className="grid gap-3">
                   <button
-                    disabled={busy}
+                    disabled={management.disabled}
                     onClick={async () => {
-                      setBusy(true)
-                      setError(null)
-                      try {
-                        const res = await fetch('/api/stripe/subscription/resume', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ serviceId: 'seo' }),
-                        })
-                        const json = await res.json().catch(() => ({}))
-                        if (!res.ok) throw new Error(json?.error || '再開に失敗しました')
-                        await loadStatus()
-                        setResumeConfirm(false)
-                      } catch (e: any) {
-                        setError(e?.message || '再開に失敗しました')
-                      } finally {
-                        setBusy(false)
-                      }
+                      const confirmed = await management.run('resume')
+                      if (confirmed) setResumeConfirm(false)
                     }}
                     className="h-12 rounded-2xl bg-emerald-600 text-white font-black text-sm hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center justify-center gap-2"
                   >

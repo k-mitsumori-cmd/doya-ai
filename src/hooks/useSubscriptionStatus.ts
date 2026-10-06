@@ -52,6 +52,17 @@ export function useSubscriptionStatus(serviceId: 'banner' | 'seo') {
     })
     return () => { cancelled = true; controller.abort(); if (active.current === controller) active.current = null }
   }, [key, allowed, serviceId])
+  useEffect(() => {
+    if (!allowed) return
+    const updated = (event: Event) => {
+      if ((event as CustomEvent<{ actor?: string }>).detail?.actor !== actor || context.current !== key) return
+      active.current?.abort()
+      active.current = null
+      setRevision(value => value + 1)
+    }
+    window.addEventListener('doya:subscription-updated', updated)
+    return () => window.removeEventListener('doya:subscription-updated', updated)
+  }, [allowed, actor, key])
   const visible = allowed && result?.key === key ? result : null
   const refresh = () => { if (allowed && context.current === key && !active.current) setRevision(value => value + 1) }
   return { data: visible?.data ?? null, error: visible?.error ?? null,
