@@ -1,0 +1,60 @@
+{
+  "checkedAt": "2026-10-06T15:16:24.221874+00:00",
+  "status": "whole security regressions (including 43 mounted cases), types, production build and lint passed; ready for scoped commit, not deployed",
+  "scope": "Both remaining manual sync/latest clients share bounded actor-scoped recovery; banner plan precedence follows billing invariant",
+  "sourceHashes": {
+    "src/hooks/useBillingPlanResync.ts": "de0a6fd723139abedad7e7bd9b986c329a2862e59994ed817156c99600d003a4",
+    "src/components/UnifiedPricingPlans.tsx": "1e5336e2b9ffdc77049450fbc80fbd7930050ee1628c30d07acdbbc731134722",
+    "src/app/banner/dashboard/plan/page.tsx": "670490b7d92307afc3208bb04a9fc9529bea1cd0a83bc9d8627bc2b417b67bf9",
+    "scripts/security-regression/verify-billing-plan-resync-mounted.cjs": "ffa46b120eea36e38bf351e1a0e663e6e403da27b0d9409c4218e19ab8ee01b2",
+    "scripts/security-regression/run.cjs": "b0d75ad9c4edefbb7f0960042a6fb2c14c9c30cdabb7802003ba96cff371d12b",
+    "scripts/security-regression/verify-unified-pricing-org.cjs": "b26a0cee1667076b2f21b78a9da83b193842c67098a3f820aa5f3d0f6d108b25"
+  },
+  "baseline": "unified-pricing-resync-mounted-baseline.json",
+  "targeted": "billing-plan-resync-mounted-current.json",
+  "releaseGate": "billing-plan-resync-release-summary.json",
+  "regressions": [
+    "35-second total deadline and bounded body through shared tested reader",
+    "Same-frame duplicate lock; successful pricing reload retains lock",
+    "No success for malformed or unpaid plan replies; no server diagnostic exposed",
+    "Current actor/scope/eligibility only; abort/ignore obsolete result",
+    "Auth refresh retains unconfirmed warning without auto-retry",
+    "Verified contract remains confirmed when screen update fails",
+    "Both full TSX components tested, no purchase event from manual resync",
+    "Unified PRO never downgraded by stale service FREE"
+  ],
+  "limitations": [
+    "Decorative children, stats/status endpoints, auth and payment responses synthetic; no real authenticated browser/Stripe/DB/email",
+    "Pre-fix plan precedence runtime attempt exited137 without result; recorded as source-backed finding and fixed mounted regression only",
+    "Banner cancellation/resume/status clients and analytics public-service path coverage remain follow-up items; full17-service audit incomplete"
+  ],
+  "priorFailedGate": {
+    "file": "manual-resync-release-0b90f586-0b9a-45fd-a582-28eccb6d274d/state.json",
+    "buildExit": 1,
+    "reason": "Existing organization pricing SSR test lacked new hook module mapping",
+    "fixed": "Fixture now loads actual shared hook, response helper and plan utils; existing owner/member assertions passed without weakening expected behavior"
+  },
+  "crossChecks": {
+    "organizationPricingFixturePassed": true,
+    "existingCancellationPartialRegressionPassed": true,
+    "lintErrors": 0,
+    "existingBannerImgWarning": true
+  },
+  "followupEvidence": [
+    "banner-billing-management-followup.json",
+    "billing-direct-fetch-inventory-20261007.json",
+    "analytics-service-coverage-followup.json"
+  ],
+  "wholeGate": {
+    "buildExit": 0,
+    "lintExit": 0,
+    "sourceFiles": 2542,
+    "changedSources": []
+  },
+  "publicPricingBaseline": {
+    "evidence": "all-services-pricing-public-1f1b5e8b.json",
+    "services": 17,
+    "samePath200CurrentDeployment": 17,
+    "limits": "Previous deployed billing cohort; does not prove this new manual resync repair is already deployed or authenticated flows."
+  }
+}

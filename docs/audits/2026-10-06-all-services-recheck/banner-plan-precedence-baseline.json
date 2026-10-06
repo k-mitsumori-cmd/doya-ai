@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-06T15:12:37.577745+00:00",
+  "sourceHash": "31a98ad691d06755cfe9b7e5dbc94aafb152d971de8eba0979e4f019508b06d9",
+  "finding": "The prior expression bannerPlan || plan chooses stale FREE over unified PRO; changed to shared higherPlan as billing invariant requires",
+  "evidence": "banner-plan-precedence-candidate.log",
+  "scope": "Source review and fixed mounted regression, synthetic auth/API only; pre-fix mounted observation incomplete, no production incident proven",
+  "status": "source-backed precedence defect corrected; fixed mounted regression passes",
+  "baselineRuntimeAttempt": {
+    "exitCode": 137,
+    "usableResult": false,
+    "note": "The pre-fix test attempt did not produce an authoritative result. Do not claim it as a completed mounted reproduction."
+  },
+  "currentRegression": "billing-plan-resync-mounted-current.json: unified PRO/stale service FREE suppresses free recovery"
+}

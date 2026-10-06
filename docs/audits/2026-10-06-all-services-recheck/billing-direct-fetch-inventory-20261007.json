@@ -1,0 +1,112 @@
+{
+  "checkedAt": "2026-10-06T15:19:42.464Z",
+  "scope": "AST inventory of literal direct fetch calls only; dynamic URL paths or links may not be included. This is not flow verification.",
+  "count": 15,
+  "calls": [
+    {
+      "file": "src/app/banner/dashboard/plan/page.tsx",
+      "line": 95,
+      "argument": "'/api/stripe/subscription/cancel'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/app/banner/dashboard/plan/page.tsx",
+      "line": 123,
+      "argument": "'/api/stripe/subscription/resume'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/app/banner/dashboard/plan/page.tsx",
+      "line": 151,
+      "argument": "'/api/stripe/subscription/status?serviceId=banner'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/app/banner/dashboard/settings/page.tsx",
+      "line": 54,
+      "argument": "'/api/stripe/subscription/status?serviceId=banner'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/app/banner/dashboard/settings/page.tsx",
+      "line": 75,
+      "argument": "'/api/stripe/subscription/cancel'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/app/banner/dashboard/settings/page.tsx",
+      "line": 103,
+      "argument": "'/api/stripe/subscription/resume'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/app/seo/dashboard/plan/page.tsx",
+      "line": 50,
+      "argument": "'/api/stripe/subscription/status?serviceId=seo'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/app/seo/dashboard/plan/page.tsx",
+      "line": 325,
+      "argument": "'/api/stripe/subscription/cancel'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/app/seo/dashboard/plan/page.tsx",
+      "line": 392,
+      "argument": "'/api/stripe/subscription/resume'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/app/tenkai/pricing/page.tsx",
+      "line": 144,
+      "argument": "'/api/stripe/checkout'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/components/BannerCancelScheduleNotice.tsx",
+      "line": 42,
+      "argument": "'/api/stripe/subscription/status?serviceId=banner'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/components/SeoCancelScheduleNotice.tsx",
+      "line": 42,
+      "argument": "'/api/stripe/subscription/status?serviceId=seo'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/components/interviewx/InterviewXSidebar.tsx",
+      "line": 92,
+      "argument": "'/api/stripe/checkout'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/components/tenkai/PricingTable.tsx",
+      "line": 143,
+      "argument": "'/api/stripe/checkout'",
+      "hasInitSignal": false,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    },
+    {
+      "file": "src/lib/trial-eligibility-client.ts",
+      "line": 19,
+      "argument": "'/api/stripe/trial-eligibility'",
+      "hasInitSignal": true,
+      "classification": "direct billing fetch; timeout, schema and lifecycle require individual verification"
+    }
+  ]
+}

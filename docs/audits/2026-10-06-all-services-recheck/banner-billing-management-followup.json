@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-06T15:16:24.221874+00:00",
+  "sourceHash": "670490b7d92307afc3208bb04a9fc9529bea1cd0a83bc9d8627bc2b417b67bf9",
+  "status": "source review; needs mounted reproduction and separate safe repair",
+  "findings": [
+    "Cancellation/resume await unbounded fetch/JSON and do not scope completion to current authenticated actor",
+    "Cancellation accepts HTTP success even without strict confirmation; resume may treat missing response fields as accepted",
+    "Cancellation/resume/status UI may display raw server diagnostic strings"
+  ],
+  "scope": "Source findings only; no live billing operation or customer data"
+}

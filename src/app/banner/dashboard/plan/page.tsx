@@ -5,9 +5,10 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, getGuestUsage } from '@/lib/pricing'
-import { paidTierFromSyncResult, tierFrom } from '@/lib/plan-utils'
+import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
+import { useBillingPlanResync } from '@/hooks/useBillingPlanResync'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import {
   ArrowUpRight,
@@ -48,7 +49,7 @@ const HOURLY_DESIGNER_RATE_JPY = 3000
 export default function BannerPlanPage() {
   const { data: session, status } = useSession()
   const isGuest = !session
-  const bannerPlanRaw = session ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase() : 'GUEST'
+  const bannerPlanRaw = session ? higherPlan((session.user as any)?.bannerPlan, (session.user as any)?.plan) : 'GUEST'
   const bannerPlanTier = tierFrom(bannerPlanRaw)
 
   const isEnterprise = !isGuest && bannerPlanTier === 'ENTERPRISE'
@@ -61,7 +62,6 @@ export default function BannerPlanPage() {
   const [serverMonthlyLimit, setServerMonthlyLimit] = useState<number | null>(null)
   const [statsError, setStatsError] = useState(false)
   const [isCanceling, setIsCanceling] = useState(false)
-  const [isSyncingPlan, setIsSyncingPlan] = useState(false)
   const [cancelScheduledAt, setCancelScheduledAt] = useState<Date | null>(null)
   const [cancelMode, setCancelMode] = useState<'period_end' | 'immediate' | null>(null)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
@@ -165,33 +165,15 @@ export default function BannerPlanPage() {
     return () => { cancelled = true }
   }, [isLoggedIn, session?.user?.email])
 
-  const handleSyncPlan = async () => {
-    if (isGuest) {
-      toast.error('ログインが必要です')
-      return
-    }
-    try {
-      setIsSyncingPlan(true)
-      toast.loading('Stripeの契約状況を確認中…', { id: 'plan-sync' })
-      const res = await fetch('/api/stripe/sync/latest', { method: 'POST' })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || data?.ok !== true) throw new Error(data?.error || 'プラン反映に失敗しました')
-      const syncedTier = paidTierFromSyncResult(data.plan)
-      toast.success('プランを反映しました！', { id: 'plan-sync' })
-      // 他画面へ即通知
-      try {
-        window.dispatchEvent(
-          new CustomEvent('doya:plan-updated', {
-            detail: { serviceId: 'banner', planTier: syncedTier, source: 'manual', at: Date.now() },
-          })
-        )
-      } catch {}
-    } catch (e: any) {
-      toast.error(e?.message || 'プラン反映に失敗しました', { id: 'plan-sync' })
-    } finally {
-      setIsSyncingPlan(false)
-    }
-  }
+  const { run: handleSyncPlan, busy: isSyncingPlan, disabled: syncDisabled, message: syncMessage } = useBillingPlanResync({
+    scope: 'banner-dashboard-plan',
+    enabled: !isGuest && !isPaid,
+    onVerified: syncedTier => {
+      window.dispatchEvent(new CustomEvent('doya:plan-updated', {
+        detail: { serviceId: 'banner', planTier: syncedTier, source: 'manual', at: Date.now() },
+      }))
+    },
+  })
 
   // APIから統計情報を取得（ログインユーザーの場合）
   useEffect(() => {
@@ -418,8 +400,10 @@ export default function BannerPlanPage() {
                   {!isGuest && !isPaid && (
                     <div className="mt-3">
                       <button
+                        type="button"
                         onClick={handleSyncPlan}
-                        disabled={isSyncingPlan}
+                        disabled={syncDisabled}
+                        aria-busy={isSyncingPlan}
                         className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 font-black hover:bg-slate-50 transition-colors disabled:opacity-60"
                       >
                         {isSyncingPlan ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
@@ -428,6 +412,7 @@ export default function BannerPlanPage() {
                       <p className="mt-2 text-[11px] text-slate-500 font-bold">
                         ※ 決済直後にプランへ切り替わらない場合のみ押してください（Stripe→DBを再同期します）
                       </p>
+                      {syncMessage && <p role="status" className="mt-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-950">{syncMessage}</p>}
                     </div>
                   )}
 
