@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-06T15:43:07.463434+00:00",
+  "commit": "e94b78846f46abf655390396e6902d0d21812e9c",
+  "status": "CI success; READY production aliases; four same-path public HTML200 and30 JS200 verified",
+  "ci": [
+    {
+      "conclusion": "success",
+      "databaseId": 37487157604,
+      "headSha": "e94b78846f46abf655390396e6902d0d21812e9c",
+      "status": "completed",
+      "url": "https://github.com/k-mitsumori-cmd/doya-ai/actions/runs/37487157604"
+    }
+  ],
+  "deployments": [
+    {
+      "id": "dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "url": "doya-cqtsdp9de-surisutas-projects.vercel.app",
+      "state": "READY",
+      "aliases": [
+        "doya-ai.vercel.app",
+        "doya-ai.surisuta.jp",
+        "doya-ai-surisutas-projects.vercel.app",
+        "doya-ai-git-main-surisutas-projects.vercel.app"
+      ],
+      "target": "production"
+    }
+  ],
+  "localReleaseProof": "billing-plan-resync-release-summary.json",
+  "worktree": "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006",
+  "followup": [
+    "Diagnose and fix banner cancellation/resume/status context, timeout and strict confirmation",
+    "Audit remaining15 direct billing fetch calls individually; inventory does not mark them defective",
+    "Fix analytics coverage missing4 public service paths",
+    "Full17-service requirement matrix and authenticated end-to-end checks remain incomplete"
+  ],
+  "publicEvidence": "manual-resync-public-e94b7884.json"
+}

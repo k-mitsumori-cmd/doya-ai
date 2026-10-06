@@ -1,18 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus'
 import { AlertTriangle, CalendarClock } from 'lucide-react'
-
-type StatusResponse = {
-  ok?: boolean
-  hasSubscription?: boolean
-  cancelAtPeriodEnd?: boolean
-  currentPeriodEnd?: number
-  planId?: string | null
-  status?: string
-  error?: string
-}
 
 function formatJstDateTime(d: Date) {
   try {
@@ -30,37 +19,15 @@ function formatJstDateTime(d: Date) {
 }
 
 export default function BannerCancelScheduleNotice({ className = '' }: { className?: string }) {
-  const { data: session } = useSession()
-  const isLoggedIn = !!session?.user?.email
-  const [data, setData] = useState<StatusResponse | null>(null)
-
-  useEffect(() => {
-    if (!isLoggedIn) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/api/stripe/subscription/status?serviceId=banner', { cache: 'no-store' })
-        const json = (await res.json().catch(() => ({}))) as StatusResponse
-        if (cancelled) return
-        setData(res.ok ? json : { error: json?.error || 'failed' })
-      } catch (e: any) {
-        if (cancelled) return
-        setData({ error: e?.message || 'failed' })
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [isLoggedIn])
-
-  const cancelAt = useMemo(() => {
-    if (!data?.cancelAtPeriodEnd || !data?.currentPeriodEnd) return null
-    const d = new Date(Number(data.currentPeriodEnd) * 1000)
-    if (Number.isNaN(d.getTime())) return null
-    return d
-  }, [data?.cancelAtPeriodEnd, data?.currentPeriodEnd])
-
-  if (!isLoggedIn) return null
+  const { data, error, loading, refresh } = useSubscriptionStatus('banner')
+  const cancelAt = data?.hasSubscription && data.cancelAtPeriodEnd ? new Date(data.currentPeriodEnd * 1000) : null
+  if (loading) return <p role="status" className={`rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700 ${className}`}>契約状態を確認しています…</p>
+  if (error) return (
+    <div role="status" className={`rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 ${className}`}>
+      <p>{error}</p>
+      <button type="button" disabled={loading} onClick={refresh} className="mt-2 rounded-lg border border-amber-300 bg-white px-3 py-2 font-bold">契約状態を再確認</button>
+    </div>
+  )
   if (!cancelAt) return null
 
   return (
@@ -75,7 +42,7 @@ export default function BannerCancelScheduleNotice({ className = '' }: { classNa
           </p>
           <p className="mt-1 text-[11px] font-bold text-amber-800 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 mt-[1px] flex-shrink-0" />
-            <span>停止日時まではPRO/Enterpriseの機能をご利用いただけます（次回更新日で停止）。</span>
+            <span>停止日時までは現在のプランの機能をご利用いただけます（次回更新日で停止）。</span>
           </p>
         </div>
       </div>

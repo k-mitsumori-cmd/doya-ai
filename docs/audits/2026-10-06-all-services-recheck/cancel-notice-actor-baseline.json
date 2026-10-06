@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-06T15:27:43.738Z",
+  "results": [
+    {
+      "file": "src/components/BannerCancelScheduleNotice.tsx",
+      "sourceSha256": "ceedd1462aa864965b65cd9559cee570f9734ad0f177b5278e7090a0879aef30",
+      "requestsForA": 2,
+      "requestsAfterSwitch": 2,
+      "oldScheduleVisibleForB": true,
+      "reproduced": true
+    },
+    {
+      "file": "src/components/SeoCancelScheduleNotice.tsx",
+      "sourceSha256": "fc9a2e3646f637e79cb973bad6a02a9d7617d6b7fd9df1711344ea0ab7eb2916",
+      "requestsForA": 2,
+      "requestsAfterSwitch": 2,
+      "oldScheduleVisibleForB": true,
+      "reproduced": true
+    }
+  ],
+  "scope": "Actual unmodified Banner/SeoCancelScheduleNotice full TSX mounted under React18 StrictMode/jsdom; synthetic accounts/status API only. No real account/billing data or network calls."
+}

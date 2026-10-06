@@ -1,0 +1,184 @@
+{
+  "checkedAt": "2026-10-06T15:42:43.849460+00:00",
+  "commit": null,
+  "deployment": "dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+  "pages": [
+    {
+      "path": "/banner/pricing",
+      "status": 200,
+      "url": "https://doya-ai.surisuta.jp/banner/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "path": "/banner/dashboard/plan",
+      "status": 200,
+      "url": "https://doya-ai.surisuta.jp/banner/dashboard/plan",
+      "deploymentMarker": true
+    },
+    {
+      "path": "/seo/pricing",
+      "status": 200,
+      "url": "https://doya-ai.surisuta.jp/seo/pricing",
+      "deploymentMarker": true
+    },
+    {
+      "path": "/persona/pricing",
+      "status": 200,
+      "url": "https://doya-ai.surisuta.jp/persona/pricing",
+      "deploymentMarker": true
+    }
+  ],
+  "scripts": [
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/13251-0b33e7a86440fe2e.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": true
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/14291-71bccb1d25a9a803.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/14566-41ef404e67f4252a.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/16143-cafce21353c52c2e.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/22144-75b90a2988037a9d.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/22663-a587b136922ce1c8.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/31255-c58970b59fb4fa7d.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/33945-b814668700f2119d.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/36489-33ba2dd285a1851f.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/46566-eacab4f50b9115be.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/4bd1b696-2135e4d8b8354323.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/51219-3a91dd3dd8c6a8d5.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/52619-c48a18d6f62d2371.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/57572-d3497a570861b15f.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/71708-4efdc8e9d5c66a4e.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/81356-6364f7c640ccea62.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/82899-9f324d52c7cfd87e.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/95223-3ba5c598ffa87780.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/99374-34f7818e7876d28a.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/banner/dashboard/plan/page-e93a8b8b189eb433.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/banner/layout-11df8efead34c1ab.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/banner/pricing/page-d106c43a122418cc.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/error-8259e49cb350fc72.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/layout-0e7c57afacba65bc.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/not-found-a8e4f81d84f55582.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/persona/pricing/page-cca77c08def6699b.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/app/seo/pricing/page-0a350430c945c420.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/main-app-abf71c5d868c84e9.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/polyfills-42372ed130431b0a.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    },
+    {
+      "url": "https://doya-ai.surisuta.jp/_next/static/chunks/webpack-37f7aa803a5f91fc.js?dpl=dpl_8r1Q5TCyZbFwrLqgPeby2UEA7nmD",
+      "status": 200,
+      "manualRecoveryMessage": false
+    }
+  ],
+  "scope": "Anonymous HTML and JS only; no authenticated Stripe operations"
+}
