@@ -1,0 +1,37 @@
+{
+  "scope": "Actual AST-extracted callbacks with synthetic confirm/fetch/state/toast; no real save/delete request",
+  "results": [
+    {
+      "file": "src/app/doyaslide/[id]/page.tsx",
+      "name": "saveLogoConfig",
+      "scenario": "empty_success",
+      "falseSaveConfirmation": true,
+      "articleRemovedWithoutConfirmation": false,
+      "retryDiscarded": true
+    },
+    {
+      "file": "src/app/doyaslide/[id]/page.tsx",
+      "name": "saveLogoConfig",
+      "scenario": "unreadable_success",
+      "falseSaveConfirmation": true,
+      "articleRemovedWithoutConfirmation": false,
+      "retryDiscarded": true
+    },
+    {
+      "file": "src/app/seo/Tool.tsx",
+      "name": "deleteArticle",
+      "scenario": "empty_success",
+      "falseSaveConfirmation": false,
+      "articleRemovedWithoutConfirmation": true,
+      "retryDiscarded": false
+    },
+    {
+      "file": "src/app/seo/Tool.tsx",
+      "name": "deleteArticle",
+      "scenario": "unreadable_success",
+      "falseSaveConfirmation": false,
+      "articleRemovedWithoutConfirmation": true,
+      "retryDiscarded": false
+    }
+  ]
+}

@@ -150,6 +150,11 @@ if (bannerLimitContact.error || bannerLimitContact.status !== 0) {
   console.error('Security regression failed: verify-banner-limit-contact.cjs');
   process.exit(1);
 }
+const bannerChatRefineRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-chat-refine-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerChatRefineRecovery.error || bannerChatRefineRecovery.status !== 0) {
+  console.error('Security regression failed: verify-banner-chat-refine-recovery.cjs');
+  process.exit(1);
+}
 const clientReadDeadlines = spawnSync(process.execPath, [path.join(__dirname, 'verify-client-read-deadlines.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (clientReadDeadlines.error || clientReadDeadlines.status !== 0) {
   console.error('Security regression failed: verify-client-read-deadlines.cjs');

@@ -1465,10 +1465,14 @@ export default function BannerDashboard() {
     const startedAt = Date.now()
     setRefineStartedAt(startedAt)
     setRefineElapsedSec(0)
+    let timeout: number | undefined
     try {
+      const controller = new AbortController()
+      timeout = window.setTimeout(() => controller.abort(), 290_000)
       const response = await fetch('/api/banner/refine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           originalImage,
           instruction,
@@ -1491,10 +1495,12 @@ export default function BannerDashboard() {
         })
         return
       }
-      if (!parsed.ok || !data.success) {
+      if (!parsed.ok || data.success !== true) {
         const msg = data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || '修正に失敗しました'
-        throw new Error(msg)
+        throw new BannerApiError(typeof msg === 'string' ? msg : '修正結果を確認できませんでした。再試行してください。')
       }
+
+      if (typeof data.refinedImage !== 'string' || !data.refinedImage.startsWith('data:image/')) throw new BannerApiError('修正画像が取得できませんでした')
 
       // 履歴に追加
       setRefineHistory(prev => [...prev, { 
@@ -1516,8 +1522,9 @@ export default function BannerDashboard() {
       const next = updateEma(readRefineStats() || undefined, actualMs) as SimpleEma
       writeRefineStats(next)
     } catch (err: any) {
-      toast.error(err.message)
+      toast.error(err instanceof BannerApiError ? err.message : '修正結果を確認できませんでした。履歴を確認してから再試行してください。')
     } finally {
+      if (timeout !== undefined) window.clearTimeout(timeout)
       setIsRefining(false)
       setRefineStartedAt(null)
     }

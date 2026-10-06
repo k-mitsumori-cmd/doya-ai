@@ -226,23 +226,17 @@ export default function BannerChatPage() {
   const handleSend = async () => {
     if (!canSend) return
     const text = input.trim()
-    setInput('')
-    setGeneratedBanners([])
-    setProposedSpec(null)
-    setSelectedBannerIndex(0)
-    setRefineInstruction('')
     // ロゴ/人物はチャット中に保持してOK（会話をまたいで使える）
 
-    setMessages((prev) => [
-      ...prev,
-      { id: `u-${Date.now()}`, role: 'user', content: text, createdAt: Date.now() },
-    ])
-
     setIsThinking(true)
+    let timeout: number | undefined
     try {
+      const controller = new AbortController()
+      timeout = window.setTimeout(() => controller.abort(), 290_000)
       const res = await fetch('/api/banner/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: [...messages, { id: 'tmp', role: 'user', content: text, createdAt: Date.now() }]
             .filter((m) => m.role === 'user' || m.role === 'assistant')
@@ -263,11 +257,22 @@ export default function BannerChatPage() {
         pushAssistant(data?.error || '本日のAI相談の上限に達しました。')
         return
       }
-      if (!parsed.ok) throw new Error(data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || 'AIチャットに失敗しました')
+      if (!parsed.ok) throw new BannerApiError(typeof data?.error === 'string' ? data.error : [413, 502, 503].includes(parsed.status) ? normalizeNonJsonApiError(parsed.status, parsed.text) : 'AIの返信を確認できませんでした。再試行してください。')
 
+      if (typeof data.reply !== 'string' || !data.reply.trim()) throw new BannerApiError('AIの返信を確認できませんでした。入力を確認して再試行してください。')
+      if (data.spec != null && (typeof data.spec !== 'object' || Array.isArray(data.spec) || !['purpose', 'category', 'size', 'keyword'].every((key) => typeof data.spec[key] === 'string' && data.spec[key].trim()) || (data.spec.imageDescription != null && typeof data.spec.imageDescription !== 'string') || (data.spec.brandColors != null && (!Array.isArray(data.spec.brandColors) || !data.spec.brandColors.every((color: unknown) => typeof color === 'string'))))) throw new BannerApiError('バナーの提案内容を確認できませんでした。再試行してください。')
+      setInput('')
+      setGeneratedBanners([])
+      setProposedSpec(null)
+      setSelectedBannerIndex(0)
+      setRefineInstruction('')
+      setMessages((prev) => [
+        ...prev,
+        { id: `u-${Date.now()}`, role: 'user', content: text, createdAt: Date.now() },
+      ])
       setTextLimit(null)
       setTextLimitAction(null)
-      pushAssistant(String(data.reply || '了解です。'))
+      pushAssistant(data.reply)
       if (data.spec) {
         setProposedSpec(data.spec as BannerSpec)
       } else {
@@ -284,8 +289,9 @@ export default function BannerChatPage() {
       }
     } catch (e: any) {
       pushAssistant('すみません、エラーが発生しました。もう一度お試しください。')
-      toast.error(e?.message || 'エラーが発生しました')
+      toast.error(e instanceof BannerApiError ? e.message : 'AIの返信を確認できませんでした。再試行してください。')
     } finally {
+      if (timeout !== undefined) window.clearTimeout(timeout)
       setIsThinking(false)
     }
   }
@@ -413,10 +419,14 @@ export default function BannerChatPage() {
     const originalImage = generatedBanners[idx]
     setIsRefining(true)
     const startedAt = Date.now()
+    let timeout: number | undefined
     try {
+      const controller = new AbortController()
+      timeout = window.setTimeout(() => controller.abort(), 290_000)
       const res = await fetch('/api/banner/refine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           originalImage,
           instruction,
@@ -437,9 +447,9 @@ export default function BannerChatPage() {
         })
         return
       }
-      if (!parsed.ok || !data?.success) throw new Error(data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || '修正に失敗しました')
+      if (!parsed.ok || data?.success !== true) throw new BannerApiError(typeof data?.error === 'string' ? data.error : normalizeNonJsonApiError(parsed.status, parsed.text))
       const refined = String(data.refinedImage || '')
-      if (!refined.startsWith('data:')) throw new Error('修正画像が取得できませんでした')
+      if (!refined.startsWith('data:image/')) throw new BannerApiError('修正画像が取得できませんでした')
 
       setGeneratedBanners((prev) => prev.map((b, i) => (i === idx ? refined : b)))
       void quota.refresh()
@@ -453,8 +463,9 @@ export default function BannerChatPage() {
       setPredictedRefineTotalMs(next)
     } catch (e: any) {
       pushAssistant('修正に失敗しました。指示を短くして、もう一度お試しください。')
-      toast.error(e?.message || '修正に失敗しました')
+      toast.error(e instanceof BannerApiError ? e.message : '修正結果を確認できませんでした。履歴を確認してから再試行してください。')
     } finally {
+      if (timeout !== undefined) window.clearTimeout(timeout)
       setIsRefining(false)
     }
   }

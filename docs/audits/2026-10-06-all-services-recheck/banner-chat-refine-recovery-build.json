@@ -1,0 +1,17 @@
+{
+  "runId": "840606de-d908-4520-ac35-247fe1a21bf5",
+  "startedAt": "2026-10-06T03:27:49.705797+00:00",
+  "pid": 10517,
+  "sourceHashes": {
+    "src/app/banner/dashboard/create/page.tsx": "b086ce606489112b997051c9de4deb1e60c64be190f89150a644a95adecce0a3",
+    "src/app/banner/dashboard/chat/page.tsx": "622045c61227a4159cae8281217f946f5036469d17c5e3b296d01b83f4706bf6",
+    "scripts/security-regression/verify-banner-chat-refine-recovery.cjs": "9165b18ee50e9539b68ca4975b2444d980d102223dd983257aaf5f90cc5f17ce",
+    "scripts/security-regression/run.cjs": "595e4e9641fb294faf7eb846e216ff4617aff47f3b310f0b6bf228e4d3513228"
+  },
+  "state": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T03:32:52.806298+00:00",
+  "changedSources": [],
+  "rawLogPath": "/tmp/doya-banner-chat-refine-recovery-build-20261006.log",
+  "rawLogSha256": "6ed2b1061f68fbc847933f9c0f483d66f496187231d4e437eac39412601e8244"
+}

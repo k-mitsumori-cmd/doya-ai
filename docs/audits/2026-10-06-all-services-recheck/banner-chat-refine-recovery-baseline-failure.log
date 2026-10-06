@@ -1,0 +1,16 @@
+AssertionError [ERR_ASSERTION]: Expected "actual" to be reference-equal to "expected":
++ actual - expected
+
++ []
+- [
+-   'data:image/png;base64,old'
+- ]
+
+    at /Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-banner-chat-refine-recovery.cjs:5:701 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [],
+  expected: [Array],
+  operator: 'strictEqual',
+  diff: 'simple'
+}
