@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-06T22:40:50.274010+00:00",
+  "status": "confirmed-unfixed-next-member-cohort",
+  "sourceCommit": "a91db42504fd1b2df0ab2473ada544b784f550f2",
+  "services": [
+    "quote",
+    "aishodan"
+  ],
+  "problem": "Non-string email array is coerced to valid email; synthetic invite create and mail stub occur instead of 400",
+  "probe": "probe-member-invite-input.cjs",
+  "log": "/tmp/doya-member-invite-input-baseline.log",
+  "scope": "Actual POST routes with synthetic auth/Prisma/token/mail. No actual invite or email.",
+  "requiredRepair": [
+    "String-only bounded email validation before transaction",
+    "Client current email/role snapshot; validate typed invitation acknowledgement and bound outcome reads",
+    "Preserve existing server atomic authorization tests"
+  ]
+}

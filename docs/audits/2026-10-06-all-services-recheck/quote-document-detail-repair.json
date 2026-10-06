@@ -1,0 +1,68 @@
+{
+  "checkedAt": "2026-10-06T22:40:50.273523+00:00",
+  "status": "release-gates-passed-not-deployed",
+  "baseCommit": "a91db42504fd1b2df0ab2473ada544b784f550f2",
+  "baseline": "quote-document-route-baseline.json",
+  "currentProbeLog": "/tmp/doya-quote-document-route-current.log",
+  "mountedProof": "quote-document-mounted-results.json",
+  "mountedCases": 48,
+  "responseGroups": 7,
+  "responseScript": "scripts/security-regression/verify-quote-document-response.cjs",
+  "typecheckExitCode": 0,
+  "typecheckSession": 24831,
+  "targetedLintExitCode": 0,
+  "targetedLintSession": 48446,
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/quote-document-release-fb4b5632-e0f0-4150-b35c-eba20d6ff5a7",
+  "releaseSession": 62583,
+  "repairs": [
+    "Pin verified actor/org/route/epoch for reads, edits, saves and PDF",
+    "Drop late route/org/actor responses and retained callbacks, including ABA",
+    "Current ref snapshots and synchronous mutation lock",
+    "Complete typed document/line validation and exact saved-content acknowledgement",
+    "Unknown writes stop; scoped reads reconcile confirmed stored outcomes",
+    "Retain newer edits during save and same-actor authentication refresh",
+    "Role-guided approval; sealed transitions contain status only; server authorization rechecked",
+    "PDF only after verified saved state, explicit org query, valid scope and no pending/error/draft changes",
+    "Actual row references prevent edits to regenerated replacement rows; Japanese numeric/provenance behavior preserved"
+  ],
+  "legacyProofUpdates": [
+    "AST-extracted confirm/PDF tests now use actual mounted page and hook; confirmed writes exercise actual PATCH with synthetic Prisma",
+    "Status transition direct API negative cases retained; mounted transitions exercise actual server",
+    "Existing actual unit-price input callback test retained, with actual new row argument defined"
+  ],
+  "remaining": [
+    "MemberPanel retained invite bug still unfixed, quote-members-scope-baseline.json",
+    "Shared MemberPanel same bug also reproduced in actual AIShodan Settings: aishodan-members-scope-baseline.json",
+    "Quote root layout/other child flows continue audit",
+    "Durable idempotency, multitab optimistic concurrency, real DB/PDF/provider/browser E2E unproven",
+    "17-service 2074-criterion objective remains active"
+  ],
+  "production": "not-deployed",
+  "extraFixes": [
+    "Force render after acknowledged ref updates so sequential status changes display actual saved state",
+    "Preserve newer unsaved content when a subsequent status-only revert is acknowledged or recovered through reads",
+    "State whether new input remains unsaved after saving the submitted snapshot"
+  ],
+  "extraRegression": "probe-quote-document-revert-draft.cjs",
+  "extraBaselineLog": "/tmp/doya-quote-document-revert-draft-baseline.log",
+  "extraCurrentLog": "/tmp/doya-quote-document-revert-draft-current.log",
+  "gateNote": "Fresh frozen-source gate includes all additional repairs and 48 mounted cases; publication remains pending.",
+  "releaseGateHistory": [
+    {
+      "path": "docs/audits/2026-10-06-all-services-recheck/quote-document-release-9e4689b8-9003-455a-aa62-4ee12a1881d6",
+      "session": 33714,
+      "exitCode": 1,
+      "buildExitCode": 0,
+      "lintExitCode": 0,
+      "changedSources": [
+        "scripts/security-regression/verify-quote-document-mounted.cjs",
+        "src/lib/quote/use-document-detail.ts"
+      ],
+      "reason": "Superseded after candidate sequential-save stale UI and confirm/revert draft-loss repairs. Not valid release proof."
+    }
+  ],
+  "releaseGateExitCode": 0,
+  "sourceFreezeFiles": 2626,
+  "sourceFreezeChangedSources": [],
+  "sourceFreezeReverifiedBeforeCommit": true
+}

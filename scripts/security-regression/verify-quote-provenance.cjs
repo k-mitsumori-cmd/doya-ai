@@ -64,7 +64,7 @@ function load(file,deps){const exports={};vm.runInNewContext(compile(read(file))
  for(const file of ['src/app/quote/Tool.tsx','src/app/quote/documents/[id]/page.tsx']) {
   const ast=ts.createSourceFile('p.tsx',read(file),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let callback;
   function walk(n){if(ts.isJsxAttribute(n)&&n.name.getText(ast)==='onChange'&&n.initializer?.expression){const c=n.initializer.expression.getText(ast);if(c.includes('unitPrice:')&&c.includes("sourceRef: '手入力'"))callback=c;}ts.forEachChild(n,walk);}walk(ast);assert(callback);
-  let patch;const fn=vm.runInNewContext(compile('('+callback+')'),{idx:0,updateItem:(_,p)=>patch=p});
+  let patch;const fn=vm.runInNewContext(compile('('+callback+')'),{idx:0,it:{id:'line'},updateItem:(_,p)=>patch=p});
   for(const [value,expected] of [['300',300],['３００',300],['1,500',1500]]) {
    patch=undefined;fn({target:{value}});assert.equal(patch?.unitPrice,expected);assert.equal(patch?.priceSource,'manual');assert.equal(patch?.sourceRef,'手入力');
   }

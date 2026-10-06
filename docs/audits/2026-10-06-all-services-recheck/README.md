@@ -696,3 +696,7 @@ QuoteToolの全ダッシュボード要求を確認済み利用者・組織と�
 詳細ページ競合の追加再現（2026-10-06T22:24:01.028955+00:00）: `quote-document-route-baseline.json`。実QuoteDocumentPageの合成回帰で、route two の遅延応答が route three の表示を置き換え、保存先 three へ two の宛先が送られることを確認。優先補修対象。実顧客の文書・DBは操作していない。発行者設定の候補回帰は読み込み失敗・復旧を追加し28件に拡大。
 
 Quote 3cd26ce7: CI 37539084448 success; deployment dpl_8m7Ass7nAsqopgLVbEMifzZiHEHJ READY. quote-workspace-public-3cd26ce7.json verifies 17 anonymous entries, 35 JS assets and guest usage private caching. Actual private workflows remain unproven. Issuer settings changes are a separate unreleased candidate.
+
+Quote issuer a91db425: 2622 source hashes and passed build/lint gate reverified; pushed HEAD to main. CI 37540664661 and deployment dpl_DjvpAn8sEcAQAfJcb4UPjtyZdgtp tracked separately. Quote document detail candidate: actual mounted 46 cases, response contract 7 groups, route data-loss reproduction prevented. Full gate session 33714 live; quote-document-detail-repair.json records limits and remaining member operations. No full-service completion claim.
+
+Quote document candidate extended to 48 mounted cases: explicit rendering after ref changes, preservation of newer draft through confirmed-to-draft status-only changes and read recovery. These were candidate bugs found before publication, not verified production incidents. First document gate 33714 predates these source edits and is superseded; a new full gate is required after it terminates. Issuer CI 37540664661 completed successfully for a91db425; production READY/public proof still tracked separately.

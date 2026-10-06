@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-06T22:37:15.528413+00:00",
+  "sourceCommit": "a91db42504fd1b2df0ab2473ada544b784f550f2",
+  "status": "confirmed-unfixed-next-cohort",
+  "problem": "Retained alpha invitation input is sent to beta by shared MemberPanel after actual aishodan organization selection",
+  "requestUrl": "/api/aishodan/members?org=beta",
+  "draftOrigin": "alpha",
+  "probe": "probe-aishodan-members-org-scope.cjs",
+  "baselineLog": "/tmp/doya-aishodan-members-org-baseline.log",
+  "scope": "Actual AIShodan Settings, actual shared MemberPanel, actual organization helper under StrictMode. Synthetic network/session only. No real invite/email/DB writes or customer incident.",
+  "requiredRepair": [
+    "Repair both actual MemberPanel consumers: quote and aishodan",
+    "Verified actor/org, abortable bounded reads, invalidation of retained callbacks on auth/org/ABA/unmount",
+    "Synchronous invite/role/remove locks, current input snapshot, validated acknowledgement and unknown stop/recovery",
+    "Keep both member management API server authorization/atomic tests; all mounted actions synthetic"
+  ]
+}
