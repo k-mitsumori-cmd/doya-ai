@@ -1,0 +1,18 @@
+{
+  "passed": 12,
+  "scope": "Actual wizard submit/helpers and list delete callbacks, synthetic auth/fetch/FormData/router/clock/state. No project creation, logo upload, deletion or paid AI call.",
+  "results": [
+    "wizard never enters automatic generation for bad creation, ownership, structure or uncertain network/body replies",
+    "failed, malformed or unassociated logo upload never triggers structure or generation and keeps the project for recovery",
+    "successful wizard with and without logo verifies stored structure before entering automatic generation",
+    "retry resumes the confirmed draft and never consumes another project-creation allowance",
+    "retry observes an already saved structure or an in-flight operation without reissuing generation",
+    "quota/login/daily-limit denials preserve the appropriate UI without automatic generation",
+    "each wizard request keeps its body deadline and double activation never duplicates a write",
+    "unmounted wizard stops after its current request without creating subsequent structure or navigation",
+    "project deletion needs the explicit successful server acknowledgment and retains the list on uncertainty",
+    "confirmed deletion refreshes the list and declined confirmation never issues a request",
+    "deletion body deadline and shared lock prevent duplicate or hanging deletions",
+    "unknown creation outcome prevents another project creation until the user checks the list and resets explicitly"
+  ]
+}

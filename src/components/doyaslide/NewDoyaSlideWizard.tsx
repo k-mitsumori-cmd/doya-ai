@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import {
   DOC_TYPES,
   DOC_TYPE_SAMPLES,
@@ -40,6 +41,36 @@ const GEN_STEPS = [
   { icon: 'palette', label: 'スライドを生成' },
 ]
 
+class WizardResultError extends Error {}
+
+async function readWizardResponse(url: string, init: RequestInit, timeoutMs = 310000) {
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal })
+    const data = await res.json()
+    return { res, data }
+  } finally {
+    window.clearTimeout(timer)
+  }
+}
+
+function validWizardId(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(value)
+}
+
+function validWizardSlides(value: any, projectId: string, count: number): boolean {
+  const ids = new Set<string>(), indexes = new Set<number>()
+  return Array.isArray(value) && value.length === count && value.every((slide) => {
+    if (!slide || !validWizardId(slide.id) || slide.projectId !== projectId || ids.has(slide.id)
+      || !Number.isInteger(slide.index) || slide.index < 1 || slide.index > count || indexes.has(slide.index)
+      || typeof slide.headline !== 'string' || !slide.headline.trim()
+      || typeof slide.role !== 'string' || typeof slide.subText !== 'string') return false
+    ids.add(slide.id); indexes.add(slide.index)
+    return true
+  })
+}
+
 function frameClass(a: Aspect) {
   if (a === 'square') return 'aspect-square'
   if (a === 'vertical') return 'aspect-[2/3]'
@@ -64,6 +95,14 @@ export default function NewDoyaSlideWizard() {
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [creationNotice, setCreationNotice] = useState<string | null>(null)
+  const [recoveryProjectId, setRecoveryProjectId] = useState<string | null>(null)
+  const [creationResultUnknown, setCreationResultUnknown] = useState(false)
+  const creationUnknownRef = useRef(false)
+  const submitBusyRef = useRef(false)
+  const createdProjectRef = useRef<string | null>(null)
+  const mountedRef = useRef(true)
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false } }, [])
   const [projectLimitMessage, setProjectLimitMessage] = useState<string | null>(null)
   const [projectUpgradeUrl, setProjectUpgradeUrl] = useState<string | null>(null)
   const [loginRequired, setLoginRequired] = useState(false)
@@ -234,68 +273,92 @@ export default function NewDoyaSlideWizard() {
   }
 
   const submit = async () => {
-    if (authStatus !== 'authenticated' || loginRequired) return
+    if (authStatus !== 'authenticated' || loginRequired || submitBusyRef.current || creationUnknownRef.current || !mountedRef.current) return
     if (url.trim() && (importedUrl !== url.trim() || !importedRef)) {
       toast.error('参考URLを「取り込む」で読み込んでから作成してください。URLを使わない場合は入力欄を空にしてください。')
       return
     }
-    if (!title.trim()) {
-      toast.error('テーマ（タイトル）を入力してください')
-      return
-    }
+    if (!title.trim()) { toast.error('テーマ（タイトル）を入力してください。'); return }
+    submitBusyRef.current = true
     setBusy(true)
-    let createdProjectId: string | null = null
+    setCreationNotice(null)
+    let creationMayHaveSucceeded = false
     try {
-      const pRes = await fetch('/api/doyaslide/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          docType,
-          customBrief: brief || undefined,
-          slideCount,
-          aspectRatio: aspect,
-          themeColor: color,
-          stylePreset: style,
-        }),
-      })
-      const pData = await pRes.json()
-      if (pRes.status === 401) setLoginRequired(true)
-      if (pRes.status === 403 && pData?.code === 'LIMIT_REACHED') {
-        setProjectLimitMessage(typeof pData?.error === 'string' ? pData.error : '今月のプロジェクト作成数が上限に達しました。')
-        setProjectUpgradeUrl(pData?.upgradeUrl === '/doyaslide/pricing' ? pData.upgradeUrl : null)
+      let projectId = createdProjectRef.current
+      if (!projectId) {
+        creationMayHaveSucceeded = true
+        const { res, data } = await readWizardResponse('/api/doyaslide/projects', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, docType, customBrief: brief || undefined, slideCount, aspectRatio: aspect, themeColor: color, stylePreset: style }),
+        })
+        if (!mountedRef.current) return
+        if (res.status >= 400 && res.status < 500) creationMayHaveSucceeded = false
+        if (res.status === 401) setLoginRequired(true)
+        if (res.status === 403 && data?.code === 'LIMIT_REACHED') {
+          setProjectLimitMessage(typeof data.error === 'string' ? data.error : '今月のプロジェクト作成数が上限に達しました。')
+          setProjectUpgradeUrl(data?.upgradeUrl === '/doyaslide/pricing' ? data.upgradeUrl : null)
+          return
+        }
+        if (!res.ok) throw new WizardResultError(res.status >= 500 ? '作成結果を確認できませんでした。再作成する前にプロジェクト一覧をご確認ください。' : 'プロジェクトを作成できませんでした。入力内容を確認してください。')
+        if (!validWizardId(data?.project?.id)) throw new WizardResultError('作成結果を確認できませんでした。再作成する前にプロジェクト一覧をご確認ください。')
+        projectId = data.project.id
+        createdProjectRef.current = projectId
+        creationMayHaveSucceeded = false
+        setRecoveryProjectId(projectId)
       }
-      if (!pRes.ok) throw new Error(typeof pData?.error === 'string' ? pData.error : JSON.stringify(pData?.error) || '作成に失敗しました')
-      const projectId = pData?.project?.id
-      if (!projectId) throw new Error('プロジェクトの作成に失敗しました（IDが取得できません）')
-      createdProjectId = projectId
-
+      if (!validWizardId(projectId)) throw new WizardResultError('プロジェクトIDを確認できませんでした。')
+      // Read the owned project before retrying; a prior uncertain structure request may already have finished.
+      let { res: projectRes, data: projectData } = await readWizardResponse(`/api/doyaslide/projects/${projectId}`, { cache: 'no-store' }, 30000)
+      if (!mountedRef.current) return
+      const saved = projectData?.project
+      if (!projectRes.ok || !saved || saved.id !== projectId || !Array.isArray(saved.slides)) throw new WizardResultError('作成済みプロジェクトを確認できませんでした。プロジェクト一覧をご確認ください。')
+      if (saved.slides.length > 0) {
+        if (!validWizardSlides(saved.slides, projectId, saved.slideCount)) throw new WizardResultError('作成済みの構成を確認できませんでした。プロジェクトを開いてご確認ください。')
+        router.push(`/doyaslide/${projectId}`)
+        return
+      }
+      if (saved.title !== title.trim().slice(0, 120) || saved.slideCount !== slideCount || saved.docType !== docType || saved.aspectRatio !== aspect
+        || saved.customBrief !== (brief || null) || saved.themeColor !== color || saved.stylePreset !== style) {
+        throw new WizardResultError('入力内容が作成済みプロジェクトと異なります。プロジェクトを開いてご確認いただくか、別の資料を新規作成してください。')
+      }
+      if (saved.status === 'structuring' || saved.status === 'generating') throw new WizardResultError('作成済みプロジェクトは処理中です。プロジェクトを開いて状態をご確認ください。')
       if (logoFile) {
-        const fd = new FormData()
-        fd.append('file', logoFile)
-        fd.append('projectId', projectId)
-        await fetch('/api/doyaslide/assets/logo', { method: 'POST', body: fd })
+        const fd = new FormData(); fd.append('file', logoFile); fd.append('projectId', projectId)
+        const { res: logoRes, data: logoData } = await readWizardResponse('/api/doyaslide/assets/logo', { method: 'POST', body: fd })
+        if (!mountedRef.current) return
+        if (!logoRes.ok || typeof logoData?.url !== 'string' || !logoData.url.trim()) throw new WizardResultError('ロゴを保存できませんでした。入力内容を保持しました。再試行してください。')
+        const logoUrl = new URL(logoData.url)
+        if (logoUrl.protocol !== 'https:' || logoUrl.username || logoUrl.password) throw new WizardResultError('ロゴの保存結果を確認できませんでした。')
+        const confirmedLogo = await readWizardResponse(`/api/doyaslide/projects/${projectId}`, { cache: 'no-store' }, 30000)
+        if (!confirmedLogo.res.ok || confirmedLogo.data?.project?.id !== projectId || confirmedLogo.data.project.logoUrl !== logoData.url) throw new WizardResultError('プロジェクトへのロゴ保存を確認できませんでした。再試行してください。')
       }
-
-      const sRes = await fetch('/api/doyaslide/structure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId,
-          ...(url.trim() ? { referenceText: importedRef } : {}),
-        }),
+      if (!mountedRef.current) return
+      const { res: structureRes, data: structureData } = await readWizardResponse('/api/doyaslide/structure', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId, ...(url.trim() ? { referenceText: importedRef } : {}) }),
       })
-      const sData = await sRes.json()
-      if (!sRes.ok) throw new Error(typeof sData?.error === 'string' ? sData.error : JSON.stringify(sData?.error) || '構成生成に失敗しました')
-
-      toast.success('構成ができました！画像生成に進みます')
+      if (!mountedRef.current) return
+      if (structureRes.status === 429 && structureData?.code === 'DOYASLIDE_TEXT_DAILY_LIMIT') throw new WizardResultError('本日の資料構成生成の上限に達しました。明日お試しいただくか、お問い合わせください。')
+      if (!structureRes.ok || !validWizardSlides(structureData?.slides, projectId, slideCount)) throw new WizardResultError('構成の生成結果を確認できませんでした。作成済みプロジェクトを開いてご確認ください。')
+      const confirmed = await readWizardResponse(`/api/doyaslide/projects/${projectId}`, { cache: 'no-store' }, 30000)
+      if (!confirmed.res.ok || confirmed.data?.project?.id !== projectId || !validWizardSlides(confirmed.data.project.slides, projectId, slideCount)
+        || !confirmed.data.project.slides.every((slide: any) => structureData.slides.some((result: any) => result.id === slide.id && result.index === slide.index && result.headline === slide.headline && result.subText === slide.subText))) throw new WizardResultError('保存された構成を確認できませんでした。作成済みプロジェクトを開いてご確認ください。')
+      if (!mountedRef.current) return
+      toast.success('保存された構成を確認しました。画像生成へ進みます。')
       router.push(`/doyaslide/${projectId}?generate=1`)
-    } catch (e: any) {
-      console.error('[doyaslide/new submit]')
-      const m = typeof e?.message === 'string' && e.message ? e.message : e ? String(e) : 'エラーが発生しました'
-      toast.error(m)
-      setBusy(false)
-      if (createdProjectId) router.push(`/doyaslide/${createdProjectId}`)
+    } catch (error) {
+      if (mountedRef.current) {
+        if (creationMayHaveSucceeded && !createdProjectRef.current) {
+          creationUnknownRef.current = true
+          setCreationResultUnknown(true)
+        }
+        const message = error instanceof WizardResultError ? error.message : '処理結果を確認できませんでした。入力内容を保持しました。再作成する前にプロジェクト一覧をご確認ください。'
+        setCreationNotice(message)
+        toast.error(message)
+      }
+    } finally {
+      submitBusyRef.current = false
+      if (mountedRef.current) setBusy(false)
     }
   }
 
@@ -657,6 +720,17 @@ export default function NewDoyaSlideWizard() {
 
       {/* sticky CTA */}
       <div className="fixed bottom-0 left-0 right-0 md:left-60 z-30 bg-white/85 backdrop-blur border-t border-slate-200 px-4 py-3">
+        {creationNotice && (
+          <div role="alert" className="max-w-3xl mx-auto mb-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <p>{creationNotice}</p>
+            <div className="mt-2 flex flex-wrap gap-3 font-bold">
+              {recoveryProjectId && <Link href={`/doyaslide/${recoveryProjectId}`} className="underline">作成済みプロジェクトを確認</Link>}
+              <Link href="/doyaslide/projects" className="underline">プロジェクト一覧</Link>
+              <Link href={SUPPORT_CONTACT_URL} className="underline">お問い合わせ</Link>
+              {(recoveryProjectId || creationResultUnknown) && <button disabled={busy} onClick={() => { createdProjectRef.current = null; creationUnknownRef.current = false; setCreationResultUnknown(false); setRecoveryProjectId(null); setCreationNotice(null) }} className="underline">一覧を確認してから別の資料を新規作成</button>}
+            </div>
+          </div>
+        )}
         {projectLimitMessage && (
           <div className="max-w-3xl mx-auto mb-2 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">
             <span>{projectLimitMessage}</span>
@@ -672,11 +746,11 @@ export default function NewDoyaSlideWizard() {
           </p>
           <button
             onClick={submit}
-            disabled={busy || Boolean(projectLimitMessage) || authStatus !== 'authenticated' || loginRequired}
+            disabled={busy || creationResultUnknown || (Boolean(projectLimitMessage) && !recoveryProjectId) || authStatus !== 'authenticated' || loginRequired}
             className="flex-1 sm:flex-none sm:min-w-[300px] flex items-center justify-center gap-2 px-8 py-3.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full text-base font-black shadow-lg shadow-blue-500/25 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60"
           >
             <span className="material-symbols-outlined">auto_awesome</span>
-            構成を作って画像生成へ
+            {recoveryProjectId ? '作成済み資料の処理を再試行' : '構成を作って画像生成へ'}
           </button>
         </div>
       </div>

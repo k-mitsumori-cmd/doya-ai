@@ -37,6 +37,9 @@ export default function DoyaSlideProjectsPage() {
   const [usage, setUsage] = useState<any>(null)
   const [usageError, setUsageError] = useState(false)
   const loadRequest = useRef(0)
+  const deleteBusyRef = useRef(false)
+  const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const load = useCallback(() => {
     const request = ++loadRequest.current
@@ -109,19 +112,30 @@ export default function DoyaSlideProjectsPage() {
   }
 
   const remove = async (id: string) => {
-    if (!confirm('このプロジェクトを削除しますか？')) return
+    if (deleteBusyRef.current || !confirm('このプロジェクトを削除しますか？')) return
+    deleteBusyRef.current = true
+    setDeleteBusyId(id)
+    setDeleteError(null)
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => controller.abort(), 30000)
     try {
-      const res = await fetch(`/api/doyaslide/projects/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('削除に失敗しました')
-      toast.success('削除しました')
+      const res = await fetch(`/api/doyaslide/projects/${id}`, { method: 'DELETE', signal: controller.signal })
+      const data = await res.json()
+      if (!res.ok || data?.success !== true) throw new Error('削除結果を確認できませんでした。')
+      toast.success('削除しました。')
       load()
     } catch {
-      toast.error('削除に失敗しました')
+      setDeleteError('削除結果を確認できませんでした。一覧を再読み込みして、プロジェクトが残っているかご確認ください。')
+    } finally {
+      window.clearTimeout(timer)
+      deleteBusyRef.current = false
+      setDeleteBusyId(null)
     }
   }
 
   return (
     <div className="p-6 lg:p-10 max-w-6xl mx-auto">
+      {deleteError && <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><p>{deleteError}</p><button onClick={load} className="mt-2 font-bold underline">一覧を再読み込み</button></div>}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <div>
@@ -195,6 +209,7 @@ export default function DoyaSlideProjectsPage() {
                     </Link>
                     <button
                       onClick={() => remove(p.id)}
+                      disabled={deleteBusyId !== null}
                       className="text-slate-300 hover:text-red-500 transition-colors"
                       title="削除"
                     >

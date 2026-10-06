@@ -1,0 +1,37 @@
+{
+  "scope": "Actual logo API module with synthetic auth/File/Prisma/storage. No real uploads, project writes, customer reads or provider call.",
+  "results": [
+    {
+      "scenario": "missing_project",
+      "status": 200,
+      "storageUploadBeforeOwnership": true,
+      "processingProjectLogoWrite": false,
+      "uploads": 1,
+      "writes": 0
+    },
+    {
+      "scenario": "foreign_project",
+      "status": 200,
+      "storageUploadBeforeOwnership": true,
+      "processingProjectLogoWrite": false,
+      "uploads": 1,
+      "writes": 0
+    },
+    {
+      "scenario": "generating_project",
+      "status": 200,
+      "storageUploadBeforeOwnership": false,
+      "processingProjectLogoWrite": true,
+      "uploads": 1,
+      "writes": 1
+    },
+    {
+      "scenario": "valid_draft",
+      "status": 200,
+      "storageUploadBeforeOwnership": false,
+      "processingProjectLogoWrite": false,
+      "uploads": 1,
+      "writes": 1
+    }
+  ]
+}
