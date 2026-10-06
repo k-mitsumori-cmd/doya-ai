@@ -6,9 +6,11 @@
 // ⚠️ 数字は /api/usage/[service] から受け取るだけ。ここに上限を書かないこと。
 // ⚠️ 読み込めるまで何も描かない。空の枠や 0/0 が一瞬出ると
 //    「使い切った」と誤解されるため。
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
+import { readBillingResponse } from '@/lib/billing-response-client'
 
 interface Meter {
   label: string
@@ -22,6 +24,26 @@ interface Summary {
   total: number | null
   meters: Meter[]
   planLabel: string
+}
+
+/** Treat missing/malformed allowance data as unknown, never as unlimited. */
+export function parseSidebarUsageSummary(value: unknown): Summary | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const body = value as Record<string, unknown>
+  if (body.signedIn !== true || body.error !== undefined || body.code !== undefined) return null
+  const summary = body.summary as Summary | undefined
+  const text = (v: unknown, max: number) => typeof v === 'string' && v.length > 0 && v.length <= max
+  const quantity = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= Number.MAX_SAFE_INTEGER
+  if (!summary || Array.isArray(summary) || !text(summary.title, 120) || !text(summary.unit, 16) || !text(summary.planLabel, 60) ||
+    (summary.total !== null && (!Number.isSafeInteger(summary.total) || summary.total < 0)) ||
+    !Array.isArray(summary.meters) || summary.meters.length < 1 || summary.meters.length > 8) return null
+  const labels = new Set<string>()
+  for (const meter of summary.meters) {
+    if (!meter || !text(meter.label, 60) || labels.has(meter.label) || !quantity(meter.used) ||
+      (meter.limit !== null && (!Number.isSafeInteger(meter.limit) || meter.limit < 0))) return null
+    labels.add(meter.label)
+  }
+  return summary
 }
 
 /** 「今日 1 / 3枚（あと2枚）」の1行。残りが尽きたら赤で知らせる */
@@ -71,33 +93,58 @@ export function SidebarUsagePanel({
   pricingHref?: string
 }) {
   const requestUrl = `/api/usage/${service}${organizationSlug ? `?org=${encodeURIComponent(organizationSlug)}` : ''}`
-  const [loaded, setLoaded] = useState<{ url: string; summary: Summary | null } | null>(null)
-  const summary = loaded?.url === requestUrl ? loaded.summary : null
+  const { data: session, status } = useSession()
+  const user = session?.user as { id?: string; email?: string; plan?: string } | undefined
+  const actor = user?.id || user?.email || ''
+  const allowed = status === 'authenticated' && Boolean(actor)
+  const scope = JSON.stringify([status, actor, user?.plan, requestUrl, refreshEvent])
+  const epoch = useRef({ scope, version: 0 })
+  if (epoch.current.scope !== scope) epoch.current = { scope, version: epoch.current.version + 1 }
+  const key = JSON.stringify([scope, epoch.current.version])
+  const context = useRef(key)
+  context.current = key
+  const [loaded, setLoaded] = useState<{ key: string; summary: Summary | null } | null>(null)
+  const summary = allowed && loaded?.key === key ? loaded.summary : null
 
   useEffect(() => {
+    if (!allowed) return
     let alive = true
     let sequence = 0
-    const load = () => {
-      const current = ++sequence
-      // ⚠️ useSession の status でゲートしない。Cookie認証なので未確定でも応答する
-      fetch(requestUrl, { cache: 'no-store' })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => {
-          if (alive && current === sequence) setLoaded({ url: requestUrl, summary: d?.summary || null })
-        })
-        .catch(() => {
-          if (alive && current === sequence) setLoaded({ url: requestUrl, summary: null })
-        })
+    let pending: AbortController | null = null
+    const load = (force = false) => {
+      if (!alive || context.current !== key || (pending && !force)) return
+      pending?.abort()
+      const controller = new AbortController()
+      pending = controller
+      const currentSequence = ++sequence
+      const current = () => alive && context.current === key && currentSequence === sequence && !controller.signal.aborted
+      setLoaded({ key, summary: null })
+      // StrictMode cleanup must finish before the request starts.
+      void Promise.resolve().then(async () => {
+        if (!current()) return
+        try {
+          const response = await readBillingResponse(requestUrl, { method: 'GET' }, controller.signal)
+          if (current()) setLoaded({ key, summary: response.ok ? parseSidebarUsageSummary(response.data) : null })
+        } catch {
+          if (current()) setLoaded({ key, summary: null })
+        } finally {
+          if (pending === controller) pending = null
+          controller.abort()
+        }
+      })
     }
+    const focus = () => load()
+    const refresh = () => load(true)
     load()
-    window.addEventListener('focus', load)
-    if (refreshEvent) window.addEventListener(refreshEvent, load)
+    window.addEventListener('focus', focus)
+    if (refreshEvent) window.addEventListener(refreshEvent, refresh)
     return () => {
       alive = false
-      window.removeEventListener('focus', load)
-      if (refreshEvent) window.removeEventListener(refreshEvent, load)
+      pending?.abort()
+      window.removeEventListener('focus', focus)
+      if (refreshEvent) window.removeEventListener(refreshEvent, refresh)
     }
-  }, [requestUrl, refreshEvent])
+  }, [allowed, key, requestUrl, refreshEvent])
 
   if (!show || !summary) return null
 

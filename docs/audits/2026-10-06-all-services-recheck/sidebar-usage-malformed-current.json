@@ -1,0 +1,6 @@
+{
+  "status": "no-render-error",
+  "caughtByBoundary": false,
+  "diagnosticCount": 0,
+  "scope": "Actual common panel with synthetic signed-in malformed summary; React boundary catches render failure. No live API/user incident."
+}
