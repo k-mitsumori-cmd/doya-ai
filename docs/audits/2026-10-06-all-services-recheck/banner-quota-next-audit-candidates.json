@@ -1,0 +1,15 @@
+{
+  "status": "next-audit-candidates",
+  "items": [
+    {
+      "file": "src/components/limits/ServiceLimitProvider.tsx",
+      "finding": "Notice identity uses status/actor/plan without transition epoch. Prior same-actor notice may reappear after actor returns.",
+      "evidence": "Source inspection only. Mounted reproduction pending; do not classify as runtime-confirmed yet."
+    },
+    {
+      "file": "reference/services/banner.md",
+      "finding": "Documents free 9/day and PRO 30/day, while current pricing.ts and usage-summary.ts enforce free 15/month, PRO 150/month.",
+      "evidence": "Direct current source and specification mismatch. Other service documents need matching inventory."
+    }
+  ]
+}

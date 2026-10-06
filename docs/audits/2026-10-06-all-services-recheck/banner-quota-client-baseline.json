@@ -1,0 +1,54 @@
+{
+  "passed": 5,
+  "results": [
+    {
+      "name": "Valid server count, exact boundary and over-limit prompt",
+      "passed": true
+    },
+    {
+      "name": "Invalid count cannot pass or request quota",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "Strict monthly payload rejects fractional, unsafe and unrelated meters",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ {\n+   limit: 15,\n+   used: 0.5\n+ }\n- null\n"
+    },
+    {
+      "name": "Authenticated session without identity cannot generate as guest",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "Guest remains subject to endpoint policy",
+      "passed": true
+    },
+    {
+      "name": "Old callbacks cannot restore usage after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ {\n+   limit: 15,\n+   used: 3\n+ }\n- null\n"
+    },
+    {
+      "name": "Double precheck shares one lock; actor transition releases own lock only",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "Background focus does not invalidate an in-progress generation precheck",
+      "passed": true
+    },
+    {
+      "name": "Accepted server limit supersedes a pending readonly response",
+      "passed": true
+    },
+    {
+      "name": "Malformed server response is unknown and does not permit generation",
+      "passed": true
+    }
+  ],
+  "scope": "Actual mounted hook in StrictMode; synthetic sessions and readonly responses. No generation, OAuth, billing, customer DB or network.",
+  "cases": 10,
+  "failed": 5,
+  "sourceCommit": "31c684bbc05eddf1f1494ed61c4695c9524b522d"
+}
