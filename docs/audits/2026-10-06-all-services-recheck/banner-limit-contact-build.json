@@ -1,0 +1,23 @@
+{
+  "runId": "5a6f54bb-ebc9-4de0-9e16-6e2cef178fd6",
+  "startedAt": "2026-10-06T02:42:35.508179+00:00",
+  "pid": 89463,
+  "sourceHashes": {
+    "src/components/banner/BannerLimitModal.tsx": "84d535f00b48e77e621d52d84c39bbef97cefa0241841b08d02f7a0d3517896a",
+    "scripts/security-regression/verify-banner-limit-contact.cjs": "a89bd528a41a06781e4c853215e39a6ad3e146e37fa23d26a1b27eaef412af02",
+    "scripts/security-regression/run.cjs": "073ef8cdc95be7a150a5843028a825a313e1d22b604a6249fb6c2554ac7db834"
+  },
+  "state": "finished",
+  "exitCode": 0,
+  "finishedAt": "2026-10-06T02:47:51.355166+00:00",
+  "changedSources": [],
+  "sessionId": 40435,
+  "verifiedAt": "2026-10-06T02:48:20.291020+00:00",
+  "rawLogPath": "/tmp/doya-banner-limit-contact-build-20261006.log",
+  "rawLogSha256": "17aeeaeaef3b95674b9a2ceca5834c8a5247603418c0a70e7a210e03614c4620",
+  "storedLogNormalization": "Trailing whitespace and carriage returns removed",
+  "lint": "passed: targeted Next lint, no warnings/errors",
+  "diffCheck": "passed",
+  "productionState": "not yet pushed",
+  "browserVisualQA": "not performed"
+}

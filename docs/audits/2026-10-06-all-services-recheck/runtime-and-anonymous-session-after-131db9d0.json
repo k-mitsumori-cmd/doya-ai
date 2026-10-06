@@ -1,0 +1,21 @@
+{
+  "observedAt": "2026-10-06T02:43:48.713569+00:00",
+  "environment": "production",
+  "logQuery": {
+    "since": "2026-10-06T02:20:00Z",
+    "until": "2026-10-06T02:45:00Z",
+    "level": "error",
+    "limit": 100,
+    "records": 0,
+    "cliExitCode": 0
+  },
+  "anonymousSessionGet": {
+    "status": "200",
+    "emptySession": true
+  },
+  "limitations": [
+    "No authenticated session or OAuth tested",
+    "No proof of historical CLIENT_FETCH_ERROR resolution",
+    "No user mutation or paid AI request performed"
+  ]
+}

@@ -19,7 +19,7 @@ banner,C017,権限・組織,関連IDが同一組織に属することを検査�
 banner,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
 banner,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
 banner,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
-banner,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
+banner,C021,課金,有料判定の正本と旧プラン正規化が統一される,不整合を再現・修正中（本番通し確認待ち）,; 専用modalのPRO上限CTAが相談先を捨て非販売Enterprise価格を表示: banner-limit-contact-baseline.json。描画/CTA7ケース修正成功 banner-limit-contact-regression.log、全体build40435進行中。URL画面の非販売Enterprise案内/統一PRO・bannerPlanFREEの無料表示はbanner-url-plan-baseline.jsonlで再現、未修正。合成SSR/認証/Routerで実課金や生成はなし。
 banner,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
 banner,C023,課金,解約済み・未払い・未完了から権限復活しない,現在版での項目別通し検証待ち,
 banner,C024,課金,有効契約がある場合の二重契約を防ぐ,現在版での項目別通し検証待ち,
@@ -40,7 +40,7 @@ banner,C038,利用上限,履歴削除によって消費済み枠が復活しな�
 banner,C039,利用上限,DB障害時に無制限の生成を許可しない,現在版での項目別通し検証待ち,
 banner,C040,利用上限,ゲストのCookie削除で有料原価が無制限にならない,現在版での項目別通し検証待ち,
 banner,C041,利用上限,チーム枠の契約者と操作ユーザーを取り違えない,現在版での項目別通し検証待ち,
-banner,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
+banner,C042,利用上限,全上限経路に適切な次の操作を提示する,不整合を再現・修正中（本番通し確認待ち）,; 専用modalのPRO上限CTAが相談先を捨て非販売Enterprise価格を表示: banner-limit-contact-baseline.json。描画/CTA7ケース修正成功 banner-limit-contact-regression.log、全体build40435進行中。URL画面の非販売Enterprise案内/統一PRO・bannerPlanFREEの無料表示はbanner-url-plan-baseline.jsonlで再現、未修正。合成SSR/認証/Routerで実課金や生成はなし。
 banner,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 banner,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,
 banner,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
@@ -98,8 +98,8 @@ banner,U14,user-experience,生成途中の失敗・一部成功でも成果物�
 banner,U15,user-experience,確定済み書類・終了した評価・締めた勤怠は通常操作で意図せず書き換わらない。,現在版での項目別通し検証待ち,
 banner,U16,user-experience,残量をサーバー実績に合わせ、端末変更や再ログインで一致する。,現在版での項目別通し検証待ち,
 banner,U17,user-experience,残量を超える注文を入力時点で説明し、一部生成になる場合は先に分かる。,現在版での項目別通し検証待ち,
-banner,U18,user-experience,上限到達後、入力を保ったまま利用条件・正しい契約者・相談先へ進める。,現在版での項目別通し検証待ち,
-banner,U19,user-experience,すでに有料の利用者、招待された従業員、面接の応募者に無関係な新規課金を勧めない。,現在版での項目別通し検証待ち,
+banner,U18,user-experience,上限到達後、入力を保ったまま利用条件・正しい契約者・相談先へ進める。,不整合を再現・修正中（本番通し確認待ち）,; 専用modalのPRO上限CTAが相談先を捨て非販売Enterprise価格を表示: banner-limit-contact-baseline.json。描画/CTA7ケース修正成功 banner-limit-contact-regression.log、全体build40435進行中。URL画面の非販売Enterprise案内/統一PRO・bannerPlanFREEの無料表示はbanner-url-plan-baseline.jsonlで再現、未修正。合成SSR/認証/Routerで実課金や生成はなし。
+banner,U19,user-experience,すでに有料の利用者、招待された従業員、面接の応募者に無関係な新規課金を勧めない。,不整合を再現・修正中（本番通し確認待ち）,; 専用modalのPRO上限CTAが相談先を捨て非販売Enterprise価格を表示: banner-limit-contact-baseline.json。描画/CTA7ケース修正成功 banner-limit-contact-regression.log、全体build40435進行中。URL画面の非販売Enterprise案内/統一PRO・bannerPlanFREEの無料表示はbanner-url-plan-baseline.jsonlで再現、未修正。合成SSR/認証/Routerで実課金や生成はなし。
 banner,U20,user-experience,月替わり・解約・再契約・失敗返却・削除で使用量が矛盾せず、復旧理由も説明できる。,現在版での項目別通し検証待ち,
 banner,U21,user-experience,保存期間、起算日、無料化後の扱い、削除前通知が表示と処理で一致する。,現在版での項目別通し検証待ち,
 banner,U22,user-experience,端末限定保存とアカウント保存を区別し、別端末で失われる場合は事前に分かる。,現在版での項目別通し検証待ち,

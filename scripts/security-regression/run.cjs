@@ -145,6 +145,11 @@ if (interviewRecipeBudget.error || interviewRecipeBudget.status !== 0) {
   console.error('Security regression failed: verify-interview-recipe-budget.cjs');
   process.exit(1);
 }
+const bannerLimitContact = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-limit-contact.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerLimitContact.error || bannerLimitContact.status !== 0) {
+  console.error('Security regression failed: verify-banner-limit-contact.cjs');
+  process.exit(1);
+}
 const bannerTextBudget = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-text-budget.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerTextBudget.error || bannerTextBudget.status !== 0) {
   console.error('Security regression failed: verify-banner-text-budget.cjs');

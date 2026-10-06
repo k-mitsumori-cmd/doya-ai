@@ -1,0 +1,9 @@
+{
+  "limit": 150,
+  "displayedEnterprisePrice": true,
+  "displayedEnterprisePurchase": true,
+  "serverContact": "https://doyamarke.surisuta.jp/contact",
+  "actualNavigation": [
+    "/banner/pricing"
+  ]
+}

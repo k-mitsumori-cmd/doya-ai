@@ -307,3 +307,22 @@ SFA原子参加/6サービス再送境界版131db9d0c9d7ee770ad501d39c19ef78a060
 
 
 追加2件のビルド50733/runId 8d16a180-b0b3-4fe9-964b-28a7c97f28e2は終了コード0。独立state finished/exitCode0/changedSources空、4ソースhash一致。Prisma生成・全体オフライン回帰・型検査・Next本番ビルド成功。対象Lint/diff check成功。証拠はinvite-issuance-clock-build.json/log。追加修正版をcommit/main pushする。本番Ready・実DB競合・実承諾・全サービス認証後通し確認は別途継続。新ERは構造照合成功だがブラウザ表示未確認として保存する。
+
+追加2件の修正版d01d94c1のmain push成功。同SHAのデプロイ/CIを取得しinvite-issuance-clock-deployment-d01d94c1.jsonに現在値を保存。以後はこの具体的なハンドルで継続照会する。ER表示QA、本番での招待承諾・実DB競合、全17サービスの通し確認は未完了。
+
+
+## バナーPROの上限到達導線の追加補修
+
+実BannerLimitModalのReact描画/CTAハンドラーと実pricing定義を合成Router/Trial判定で検証。現行d01d94c1ではmonthlyLimit150/サーバー相談URLを渡しても、販売停止中の月額49,800円のエンタープライズと購入案内を表示し、クリック先は/banner/pricingだった（banner-limit-contact-baseline.json）。API generateは有料枠でHIGH_USAGE_CONTACT_URLを返すが専用modalがhttps相談先を捨てていた。料金ページは実UnifiedPricingPlansの無料/PRO2プランと問い合わせ導線で、pricing.ts末尾もエンタープライズ価格を提示しない規約がある。
+
+専用modalをPRO以上またはサーバー明示の相談時に「追加の利用枠を相談する」として固定設定の相談先へ進め、料金・利用条件は補助リンクにした。購入できない上位プランの価格/枚数/無料体験を表示しない。無料枠はPRO150枚と確定eligibilityに応じた無料体験案内を維持。既存LIGHTでもサーバーが相談先を明示すれば保持し、任意外部URLは採用しない。残枠1枚で要求枚数を減らす案内も維持。実描画/実CTAによる7ケースと共通上限classifier回帰成功。対象Lint成功。OAuth/支払い/問い合わせ送信/AI生成/DB書込は行っていない。ブラウザ目視・本番反映は未確認。新回帰を全体ゲートへ追加する。
+
+
+SFA/6再送版131db9d0はVercel dpl_J3UJonaYzjfRfMmZWF1PmbFhSafrのReady・同SHA・本番別名とCI37404211094 successを確認。追加2件版d01d94c1は現在BUILDING/CI進行中。UTC02:20-02:45のproduction errorログ取得は終了0、該当レコード0。認証なしGET /api/auth/sessionの応答状況をruntime-and-anonymous-session-after-131db9d0.jsonに保存。ログなしや未認証のGET成功を、過去CLIENT_FETCH_ERROR解消・認証後全操作成功に置き換えない。
+
+バナー導線の最終全体ビルドはsession40435、runId 5a6f54bb-ebc9-4de0-9e16-6e2cef178fd6、pid89463、独立state /tmp/doya-banner-limit-contact-build-state-20261006.json、log /tmp/doya-banner-limit-contact-build-20261006.logで進行中。3ソース凍結。次回も同じsession/pid/stateを照合し、不明なまま再起動しない。未commit/未反映。
+
+
+追加点検: /banner/urlの実ページを合成session/limit状態でReact描画し、PRO150枚上限時に販売していないエンタープライズの購入案内・月1000枚の案内が残ることを再現（banner-url-plan-baseline.jsonl）。またsession.plan=PRO/bannerPlan=FREEでは、有料バッジが消えて無料バッジ・無料カードの現在表示となり、上限APIのhigherPlanによる判定と異なる。初回probeのpaidCurrent（本文にない「現在:PRO」検索）は証拠に使わず、実際の有料/無料バッジと無料カードの選択表示を使った最終ファイルだけ保存。SSRではadvanced閉・useEffect未実行なので、サイズ/枚数の実操作制限を再現済みとはしない。生成API/課金/DB/外部への要求は0。現在の3ソース凍結ビルドとは別の次回補修対象として残す。
+
+バナー専用modal版のビルド40435/runId 5a6f54bb-ebc9-4de0-9e16-6e2cef178fd6は終了コード0。独立state finished/exitCode0/changedSources空、3ソースhash一致。Prisma生成・全体オフライン回帰・型検査・Next本番ビルド成功。対象Lint/diff check成功。banner-limit-contact-build.json/logに証拠を保存。この範囲をcommit/main pushする。URL画面2件は未修正、ブラウザ目視・本番の実操作は未確認であり、全サービス監査を継続する。
