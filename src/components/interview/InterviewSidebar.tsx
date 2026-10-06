@@ -1,6 +1,6 @@
 'use client'
 
-import React, { memo, useMemo, useState, useEffect } from 'react'
+import React, { memo, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -31,6 +31,7 @@ import {
   SidebarLogoutDialog,
   useSidebarState,
 } from '@/components/sidebar'
+import { useInterviewUsage } from './useInterviewUsage'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 
 const INTERVIEW_NAV: NavItem[] = [
@@ -43,33 +44,20 @@ const INTERVIEW_NAV: NavItem[] = [
 
 // 利用分数表示コンポーネント（Interview固有）
 function UsageStats({ showLabel, isLoggedIn, planLabel, isCollapsed }: { showLabel: boolean; isLoggedIn: boolean; planLabel: string; isCollapsed: boolean }) {
-  const [usedMinutes, setUsedMinutes] = useState(0)
-  const [limitMinutes, setLimitMinutes] = useState(0)
-  const [loaded, setLoaded] = useState(false)
-
-  useEffect(() => {
-    if (!isLoggedIn) return
-    fetch('/api/interview/usage')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success) {
-          setUsedMinutes(data.usedMinutes || 0)
-          setLimitMinutes(data.limitMinutes || 0)
-          setLoaded(true)
-        }
-      })
-      .catch(() => {})
-  }, [isLoggedIn])
-
-  const pct = limitMinutes > 0 ? Math.min((usedMinutes / limitMinutes) * 100, 100) : 0
+  const { usage, failed, refresh } = useInterviewUsage()
+  const usedMinutes = usage?.usedMinutes ?? 0
+  const reservedMinutes = usage?.reservedMinutes ?? 0
+  const limitMinutes = usage?.limitMinutes ?? 0
+  const loaded = Boolean(usage)
+  const pct = limitMinutes > 0 ? Math.min(((usedMinutes + reservedMinutes) / limitMinutes) * 100, 100) : 0
   const isNearLimit = pct >= 80
-  const remainingMinutes = limitMinutes > 0 ? Math.max(limitMinutes - usedMinutes, 0) : -1
+  const remainingMinutes = limitMinutes === -1 ? -1 : Math.max(limitMinutes - usedMinutes - reservedMinutes, 0)
 
   // 折りたたみ時: コンパクトアイコン
   if (isCollapsed && !showLabel) {
     if (!isLoggedIn) return null
     return (
-      <div className="flex justify-center mb-2" title={loaded ? `残り ${remainingMinutes === -1 ? '無制限' : `${remainingMinutes}分`}` : '文字起こし利用状況'}>
+      <div className="flex justify-center mb-2" title={loaded ? `残り ${remainingMinutes === -1 ? '無制限' : `${remainingMinutes}分`}` : failed ? '利用状況は未確認です' : '文字起こし利用状況'}>
         <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center ${
           loaded && remainingMinutes === 0 ? 'bg-red-500/20' : isNearLimit ? 'bg-amber-500/20' : 'bg-white/10'
         }`}>
@@ -128,7 +116,7 @@ function UsageStats({ showLabel, isLoggedIn, planLabel, isCollapsed }: { showLab
           <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2 px-1">文字起こし利用状況</p>
           <div className="bg-white/5 rounded-xl p-3 border border-white/10 space-y-2">
             {/* 円形ゲージメーター */}
-            {loaded && limitMinutes > 0 && (
+            {loaded && limitMinutes >= 0 && (
               <div className="flex items-center gap-3">
                 <div className="relative w-20 h-20 flex-shrink-0">
                   <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
@@ -171,6 +159,7 @@ function UsageStats({ showLabel, isLoggedIn, planLabel, isCollapsed }: { showLab
                 </div>
               </div>
             )}
+            {loaded && reservedMinutes > 0 && <p className="text-[10px] text-white/70 font-bold">処理中{reservedMinutes}分は予約済みです。</p>}
             {/* 無制限の場合 */}
             {loaded && limitMinutes === -1 && (
               <div className="flex items-center gap-2 px-2 py-2">
@@ -181,13 +170,14 @@ function UsageStats({ showLabel, isLoggedIn, planLabel, isCollapsed }: { showLab
             {/* ロード中 */}
             {!loaded && (
               <div className="flex items-center justify-center py-4">
-                <span className="material-symbols-outlined text-white/30 text-sm animate-spin">sync</span>
+                {failed ? <p className="text-[10px] text-white/70">利用状況を取得できませんでした。残り枠は未確認です。<button type="button" onClick={refresh} className="ml-1 underline">再取得する</button></p>
+                  : <span className="material-symbols-outlined text-white/30 text-sm animate-spin">sync</span>}
               </div>
             )}
             {loaded && remainingMinutes === 0 && (
               <div className="flex items-center gap-1.5 text-[10px] text-red-300 font-bold">
                 <span className="material-symbols-outlined text-xs">warning</span>
-                <span>上限に達しました。プランをアップグレードしてください。</span>
+                <span>{reservedMinutes > 0 ? '処理中の予約分を含め、利用枠の上限に達しました。' : '利用枠の上限に達しました。'}<Link href={planLabel === 'PRO' || planLabel === 'ENTERPRISE' ? HIGH_USAGE_CONTACT_URL : '/interview/pricing'} className="ml-1 underline">{planLabel === 'PRO' || planLabel === 'ENTERPRISE' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</Link></span>
               </div>
             )}
           </div>

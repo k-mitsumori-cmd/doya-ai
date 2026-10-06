@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-06T17:56:40.348472+00:00",
+  "state": "Full build/lint gate passed with 2568 unchanged runtime inputs",
+  "fullGate": "docs/audits/2026-10-06-all-services-recheck/interview-usage-release-1ac3c0a8-0a57-4cf6-a8cf-cb83a9e63550",
+  "baseline": "interview-usage-baseline.json",
+  "current": "interview-usage-current.json",
+  "changes": [
+    "Deduct reserved transcription minutes from displayed remaining capacity",
+    "Scope private usage to authenticated actor, plan, service grant and current route with transition epochs",
+    "Bound read-only usage body and deadline; coalesce focus/poll reads and offer retry on unknown allowance",
+    "Treat zero as finite and only -1 as unlimited; validate all quantity fields",
+    "Expose pricing for FREE/LIGHT exhaustion and support for PRO/Enterprise"
+  ],
+  "scope": "14 actual hook/reader/usage component tests with synthetic data; no live transcription or production quota-flag verification. Same-route completion notifications still need further audit."
+}

@@ -1,0 +1,9 @@
+{
+  "status": "reproduced",
+  "sameActor": true,
+  "mounts": 2,
+  "cleanups": 1,
+  "calls": 2,
+  "draftLostAfterSessionRefresh": true,
+  "scope": "Actual mounted Kintai layout and real React session context; synthetic child draft and read-only response. No production member or Kintai record changed."
+}

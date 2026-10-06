@@ -1,0 +1,78 @@
+{
+  "checkedAt": "2026-10-06T17:59:47.175167+00:00",
+  "scope": "8 active services with independent usage/plan interfaces, complementing the 9 shared SidebarUsagePanel consumers. This inventory is not flow verification.",
+  "services": [
+    {
+      "service": "interview",
+      "sources": [
+        "src/components/interview/InterviewSidebar.tsx",
+        "src/app/api/interview/usage/route.ts"
+      ],
+      "state": "Reserved-minute and actor/response repairs verified locally; full gate running. Immediate same-route completion wiring still under audit."
+    },
+    {
+      "service": "hr",
+      "sources": [
+        "src/components/hr/HrLayout.tsx",
+        "src/components/hr/HrSidebar.tsx",
+        "src/app/api/hr/usage/route.ts"
+      ],
+      "state": "Same-actor session refresh destroys a synthetic unsaved child draft; mounted baseline reproduced, not yet repaired.",
+      "proof": "hr-layout-session-refresh-baseline.json"
+    },
+    {
+      "service": "kintai",
+      "sources": [
+        "src/components/kintai/KintaiLayout.tsx",
+        "src/components/kintai/KintaiSidebar.tsx",
+        "src/app/api/kintai/usage/route.ts"
+      ],
+      "state": "Same-actor session refresh destroys a synthetic unsaved child draft; mounted baseline reproduced, not yet repaired.",
+      "proof": "kintai-layout-session-refresh-baseline.json"
+    },
+    {
+      "service": "doyalist",
+      "sources": [
+        "src/components/doyalist/DoyalistLayout.tsx",
+        "src/components/doyalist/ToolForm.tsx",
+        "src/app/doyalist/Tool.tsx"
+      ],
+      "state": "Independent usage lookups located. Current actor/schema/deadline and completion consistency require mounted verification."
+    },
+    {
+      "service": "promane",
+      "sources": [
+        "src/components/promane/sidebar.tsx",
+        "src/app/api/promane/usage/route.ts"
+      ],
+      "state": "Usage UI consumers and workspace scope require further inventory."
+    },
+    {
+      "service": "doyaslide",
+      "sources": [
+        "src/components/doyaslide/DoyaSlideLayout.tsx",
+        "src/components/doyaslide/NewDoyaSlideWizard.tsx",
+        "src/app/doyaslide/projects/page.tsx"
+      ],
+      "state": "Independent usage lookups located. Actor/schema/deadline and completion consistency require mounted verification."
+    },
+    {
+      "service": "cunning",
+      "sources": [
+        "src/components/cunning/CunningLayoutShell.tsx",
+        "src/app/cunning/Tool.tsx",
+        "src/app/cunning/live/[sessionId]/page.tsx"
+      ],
+      "state": "Independent usage lookups located. Actor/schema/deadline and live-view safety require mounted verification."
+    },
+    {
+      "service": "sfa",
+      "sources": [
+        "src/app/sfa/Entry.tsx",
+        "src/app/sfa/[orgSlug]/layout.tsx",
+        "src/app/api/sfa/usage/route.ts"
+      ],
+      "state": "Independent organization usage lookups located. Actor/organization/schema/deadline and completion consistency require mounted verification."
+    }
+  ]
+}

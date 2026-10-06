@@ -1,0 +1,20 @@
+{
+  "passed": 14,
+  "checks": [
+    "Reserved minutes are deducted; exhausted FREE shows pricing action",
+    "PRO exhaustion shows support rather than a promised upgrade",
+    "Actor transition replaces private usage",
+    "Returning actor never restores an old count while pending",
+    "Late prior route reply cannot overwrite current route usage",
+    "Service plan change refreshes usage for the same account",
+    "Loading, guest and missing identity never retain private data",
+    "Focus coalesces in-flight reads; deadline and retry recover",
+    "Invalid quantities stay unknown, zero is finite and only -1 is unlimited",
+    "Malformed response clears previous allowance and offers retry",
+    "Unmount aborts pending read and removes listeners",
+    "Initial loading never starts a private lookup",
+    "Initial guest shows public guest allowance without private lookup",
+    "Oversized streamed body fails without publishing an allowance"
+  ],
+  "scope": "Actual usage hook, bounded stream reader and extracted real UsageStats JSX under StrictMode; synthetic sessions/routes/responses only. No paid transcription or live account."
+}

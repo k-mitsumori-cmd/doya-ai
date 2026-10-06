@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-06T17:56:45.849964+00:00",
+  "commit": "8dfe4ecec464479b42cde8eb2cff8f58fa64de9f",
+  "deployment": "dpl_2RPSa746zw57NM5Q9vyVNXswMYbL",
+  "paths": [
+    "/persona",
+    "/persona/history"
+  ],
+  "scripts": 23,
+  "checks": {
+    "pages200": true,
+    "exactDeployment": true,
+    "scripts200": true,
+    "actorUsageNotificationPublished": true,
+    "quotaConsistencyPublished": true
+  },
+  "scope": "Anonymous HTML and published quota code only; authenticated persona generation and private allowance accuracy are not verified."
+}
