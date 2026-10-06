@@ -6,7 +6,7 @@ import { ShodanApiError, shodanGet, shodanSend } from './client'
 import { completeProposal, completeSlideImages, readPreparation, type Preparation } from './preparation-response'
 
 type Kind = 'retry' | 'generate' | 'slides'
-type Pending = { kind: Kind; before: string }
+type Pending = { kind: Kind; before: string; confirmedId?: string }
 type Notice = { message: string; href?: string; label?: string }
 const fresh = () => ({ prep: null as Preparation | null, ready: '', loading: '', busy: '' as Kind | '', busyKey: '', error: '', missing: false, notice: null as Notice | null, progress: null as { done: number; total: number } | null, autoAttempted: false })
 export function usePreparationDetail(orgSlug: string, id: string) {
@@ -28,7 +28,7 @@ export function usePreparationDetail(orgSlug: string, id: string) {
       const prep = readPreparation(data, id)
       state.current.prep = prep; state.current.ready = key
       const operation = pending.current
-      if (operation && (operation.kind === 'generate' && prep.updatedAt !== operation.before && completeProposal(prep) || operation.kind === 'slides' && completeSlideImages(prep))) {
+      if (operation && !operation.confirmedId && (operation.kind === 'generate' && prep.updatedAt !== operation.before && completeProposal(prep) || operation.kind === 'slides' && completeSlideImages(prep))) {
         pending.current = null
         state.current.notice = { message: '保存済みの成果物を確認しました。現在の内容をご確認ください。' }
       }
@@ -66,8 +66,8 @@ export function usePreparationDetail(orgSlug: string, id: string) {
       if (kind === 'retry') {
         const result = await shodanSend<{ id: string }>('/api/shodan/preparations', orgSlug, 'POST', { url: snapshot.targetUrl }, { signal: ticket.signal })
         if (!ticket.current()) return
-        pending.current = null
-        state.current.notice = { message: '再生成を開始しました。' }
+        pending.current = { kind, before: snapshot.updatedAt, confirmedId: result.id }
+        state.current.notice = { message: '再生成を開始しました。', href: `/shodan/${encodeURIComponent(orgSlug)}/p/${encodeURIComponent(result.id)}`, label: '新しい商談準備を開く' }
         router.replace(`/shodan/${encodeURIComponent(orgSlug)}/p/${encodeURIComponent(result.id)}`)
       } else if (kind === 'generate') {
         await shodanSend(path + '/generate', orgSlug, 'POST', undefined, { signal: ticket.signal })
@@ -98,8 +98,8 @@ export function usePreparationDetail(orgSlug: string, id: string) {
         if (!ticket.current()) return
         const saved = readPreparation(data, id)
         if (complete && !completeSlideImages(saved)) throw new Error('スライドの保存内容を確認できませんでした。再送せず、結果をご確認ください。')
-        state.current.prep = saved; pending.current = null
-        state.current.notice = { message: complete ? '保存済みのスライドを確認しました。' : '一部のスライドが未完成です。編集画面で内容をご確認ください。' }
+        state.current.prep = saved; pending.current = { kind, before: snapshot.updatedAt, confirmedId: id }
+        state.current.notice = { message: complete ? '保存済みのスライドを確認しました。' : '一部のスライドが未完成です。編集画面で内容をご確認ください。', href: `/shodan/${encodeURIComponent(orgSlug)}/p/${encodeURIComponent(id)}/slides`, label: 'スライド編集画面を開く' }
         router.push(`/shodan/${encodeURIComponent(orgSlug)}/p/${encodeURIComponent(id)}/slides`)
       }
     } catch (error) {
@@ -121,7 +121,7 @@ export function usePreparationDetail(orgSlug: string, id: string) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prep, key])
   const isCurrent = () => current() && !!prep && state.current.prep === prep && state.current.ready === key && state.current.loading !== key && !pending.current && !(state.current.busyKey === key && state.current.busy)
-  return { prep, load, busy, unknown: !!pending.current && !busy, canAct: loaded && state.current.loading !== key && !busy && !pending.current, isCurrent,
+  return { prep, load, busy, unknown: !!pending.current && !pending.current.confirmedId && !busy, canAct: loaded && state.current.loading !== key && !busy && !pending.current, isCurrent,
     requiresLogin: guard.requiresLogin, loading: !guard.allowed || state.current.loading === key,
     error: current() ? state.current.error : '', missing: current() && state.current.missing,
     planNotice: current() ? state.current.notice : null, slidesProgress: current() ? state.current.progress : null,

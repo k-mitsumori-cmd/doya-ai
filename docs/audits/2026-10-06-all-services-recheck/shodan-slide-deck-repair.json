@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T23:13:30.503652+00:00",
-  "status": "pushed-production-verification-pending",
+  "status": "deployed-anonymous-passed-private-flow-unproven",
   "baseCommit": "6bd0adb1ed4ae0eed43701545b86cb451897466a",
   "finding": "Actual mounted SlideDeck crashes with TypeError reading undefined.type after navigating to slide 3 then replacing the deck with one slide.",
   "baselineExitCode": 1,
@@ -42,5 +42,7 @@
   "ciStatus": "completed-success",
   "ciWatchSession": 25668,
   "ciWatchExitCode": 0,
-  "ciHeadShaVerified": "28ed5de2a33bb2cf7a20b3bc23c4995037525fa3"
+  "ciHeadShaVerified": "28ed5de2a33bb2cf7a20b3bc23c4995037525fa3",
+  "deploymentStatus": "READY",
+  "anonymousPublicVerification": "shodan-slide-deck-public-28ed5de2.json"
 }

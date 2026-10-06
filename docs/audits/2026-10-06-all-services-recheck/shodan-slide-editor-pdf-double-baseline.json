@@ -1,0 +1,11 @@
+{
+  "sourceCommit": "28ed5de2a33bb2cf7a20b3bc23c4995037525fa3",
+  "mode": "pdf-same-turn",
+  "writes": [],
+  "notices": [],
+  "downloads": [
+    "提案資料_Synthetic.pdf",
+    "提案資料_Synthetic.pdf"
+  ],
+  "scope": "Actual mounted editor and AppLayout with actual bounded client and synthetic HTTP. No paid providers, DB writes or customer data. Editor source unchanged in current detail candidate."
+}

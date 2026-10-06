@@ -11,6 +11,14 @@
     {
       "evidence": "shodan-slide-editor-unmount-baseline.json",
       "actual": "Generation completion after actual unmount still announces global success."
+    },
+    {
+      "evidence": "shodan-slide-editor-pdf-unmount-baseline.json",
+      "actual": "Actual mounted PDF handler invokes save after editor unmount; PDF and image APIs are synthetic."
+    },
+    {
+      "evidence": "shodan-slide-editor-pdf-double-baseline.json",
+      "actual": "Two same-turn PDF actions each invoke save; state pdfBusy does not synchronously lock handler."
     }
   ],
   "nextRequirements": [
@@ -25,5 +33,6 @@
     "No paid provider, actual customer DB or browser production proof.",
     "Detail page candidate does not repair the separate editor page.",
     "Full 17 services / 2074 criteria remain in scope."
-  ]
+  ],
+  "lastCheckedAt": "2026-10-06T23:35:31.143006+00:00"
 }
