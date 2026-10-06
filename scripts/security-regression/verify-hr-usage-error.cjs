@@ -18,6 +18,10 @@ const js = ts.transpileModule(`(${callback.getText(ast)})`, { compilerOptions: {
 async function load(response) {
   const state = { hasOrg: true, error: false, usage: { plan: 'FREE' } }
   const loadUsage = vm.runInNewContext(js, {
+    scopeKey: 'synthetic-scope', activeScope: { current: { key: 'synthetic-scope', allowed: true } },
+    pendingUsage: { current: null }, AbortController,
+    readBillingResponse: async () => ({ ok: response.ok, status: response.status, data: await response.clone().json() }),
+    setLoadedScope() {},
     usageRequest: { current: 0 }, fetch: async () => response, Error,
     setHasOrg: (value) => { state.hasOrg = value },
     setUsageError: (value) => { state.error = value },
@@ -37,7 +41,7 @@ async function load(response) {
   const malformed = await load(Response.json({}))
   assert.equal(malformed.hasOrg, null)
   assert.equal(malformed.error, true)
-  const success = await load(Response.json({ organizationId: 'own-org', plan: 'pro', employeeCount: 7, employeeLimit: 20 }))
+  const success = await load(Response.json({ organizationId: 'own-org', plan: 'pro', employeeCount: 7, employeeLimit: 20, canManageEmployees: true }))
   assert.equal(success.hasOrg, true)
   assert.equal(success.error, false)
   assert.equal(success.usage.plan, 'pro')

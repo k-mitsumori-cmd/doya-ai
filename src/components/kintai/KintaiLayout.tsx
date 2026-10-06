@@ -3,6 +3,7 @@
 import { useSession, signOut } from 'next-auth/react'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { usePathname } from 'next/navigation'
+import { readBillingResponse } from '@/lib/billing-response-client'
 import Link from 'next/link'
 import KintaiSidebar from './KintaiSidebar'
 import KintaiOnboarding from './KintaiOnboarding'
@@ -24,10 +25,26 @@ interface UsageData {
 export default function KintaiLayout({ children }: KintaiLayoutProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname()
+  // SessionProvider.update temporarily retains its previous data while loading.
+  const isSessionLoading = status === 'loading'
+  const isSignedOut = status === 'unauthenticated'
   const [usage, setUsage] = useState<UsageData | null>(null)
   const [hasOrg, setHasOrg] = useState<boolean | null>(null)
   const [usageError, setUsageError] = useState(false)
   const usageRequest = useRef(0)
+  const actor = status === 'unauthenticated' ? '' : session?.user?.id || ''
+  const globalPlan = (session?.user as { plan?: string } | undefined)?.plan
+  const allowed = status === 'authenticated' && Boolean(actor)
+  const epoch = useRef({ actor, version: 0 })
+  if (epoch.current.actor !== actor) epoch.current = { actor, version: epoch.current.version + 1 }
+  const scopeKey = JSON.stringify([actor, epoch.current.version])
+  const activeScope = useRef({ key: scopeKey, allowed })
+  activeScope.current = { key: scopeKey, allowed }
+  const [loadedScope, setLoadedScope] = useState('')
+  const confirmedScope = useRef(loadedScope)
+  confirmedScope.current = loadedScope
+  const pendingUsage = useRef<AbortController | null>(null)
+  const knownScope = Boolean(actor) && loadedScope === scopeKey
   const previousPathname = useRef(pathname)
 
   const isLandingPage = pathname === '/kintai'
@@ -36,64 +53,76 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   const isPublicPage = isLandingPage || isPricingPage || isInvitePage
 
   const loadUsage = useCallback(async (preserveView = false) => {
+    if (!activeScope.current.allowed || activeScope.current.key !== scopeKey) return
+    pendingUsage.current?.abort()
+    const controller = new AbortController()
+    pendingUsage.current = controller
     const request = ++usageRequest.current
+    const current = () => !controller.signal.aborted && request === usageRequest.current && activeScope.current.allowed && activeScope.current.key === scopeKey
     if (!preserveView) {
       setHasOrg(null)
       setUsage(null)
       setUsageError(false)
     }
     try {
-      const response = await fetch('/api/kintai/usage', { cache: 'no-store' })
+      await Promise.resolve()
+      if (!current()) return
+      const response = await readBillingResponse('/api/kintai/usage', { method: 'GET' }, controller.signal)
+      if (!current()) return
       if (!response.ok) throw new Error('利用状況を確認できませんでした')
-      const data: UsageData = await response.json()
-      if (data.organizationId !== null && typeof data.organizationId !== 'string') throw new Error('利用状況の応答が不正です')
-      if (data.organizationId && typeof data.isActive !== 'boolean') throw new Error('従業員の状態を確認できませんでした')
-      if (request !== usageRequest.current) return
+      const data = response.data as unknown as UsageData
+      if (data.organizationId !== null && (typeof data.organizationId !== 'string' || !data.organizationId)) throw new Error('利用状況の応答が不正です')
+      if (data.organizationId && (typeof data.isActive !== 'boolean' || typeof data.plan !== 'string' || typeof data.role !== 'string')) throw new Error('従業員の状態を確認できませんでした')
       setUsage(data.organizationId ? data : null)
       setHasOrg(Boolean(data.organizationId))
       setUsageError(false)
+      setLoadedScope(scopeKey)
     } catch {
-      if (request === usageRequest.current) setUsageError(true)
+      if (current()) setUsageError(true)
+    } finally {
+      if (pendingUsage.current === controller) pendingUsage.current = null
+      controller.abort()
     }
-  }, [])
+  }, [scopeKey])
 
   useEffect(() => {
     const requestCounter = usageRequest
-    if (session?.user) {
-      void loadUsage()
-    } else if (status === 'unauthenticated') {
+    if (allowed) void loadUsage(confirmedScope.current === scopeKey)
+    else if (status === 'unauthenticated') {
       requestCounter.current++
       setUsage(null)
       setUsageError(false)
       setHasOrg(false)
     }
-    return () => { requestCounter.current++ }
-  }, [session, status, loadUsage])
+    return () => { requestCounter.current++; pendingUsage.current?.abort() }
+  }, [allowed, actor, status, globalPlan, scopeKey, loadUsage])
+
+  useEffect(() => {
+    if (!allowed) return
+    const refresh = () => { void loadUsage(confirmedScope.current === scopeKey) }
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
+  }, [allowed, scopeKey, loadUsage])
 
   useEffect(() => {
     if (previousPathname.current === pathname) return
     previousPathname.current = pathname
-    if (session?.user) void loadUsage(true)
-  }, [pathname, session?.user, loadUsage])
-
-  useEffect(() => {
-    if (!session?.user) return
-    const refresh = () => { void loadUsage(true) }
-    window.addEventListener('focus', refresh)
-    return () => window.removeEventListener('focus', refresh)
-  }, [session?.user, loadUsage])
+    if (allowed) void loadUsage(confirmedScope.current === scopeKey)
+  }, [pathname, allowed, scopeKey, loadUsage])
 
   // Public pages render children directly
   if (isPublicPage) {
     return <>{children}</>
   }
 
-  if (usageError && session?.user) {
+  if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
+
+  if (usageError && session?.user && !knownScope) {
     return <div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center"><p className="font-bold text-rose-700">勤怠情報を取得できませんでした。組織の状態は変更されていません。</p><button type="button" onClick={() => void loadUsage()} className="rounded-xl bg-[#7f19e6] px-5 py-3 font-bold text-white">再読み込み</button></div>
   }
 
   // Loading state
-  if (status === 'loading' || (session?.user && hasOrg === null)) {
+  if (!knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
@@ -111,7 +140,7 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   }
 
   // Not authenticated → redirect to landing page
-  if (!session?.user) {
+  if (!session?.user || isSignedOut) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-violet-50 p-6">
         <div className="text-center bg-white rounded-3xl border border-slate-200 shadow-2xl p-12 max-w-md">
@@ -147,8 +176,11 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   const employeeName = usage?.employeeName || session?.user?.name || 'ゲスト'
 
   return (
+    <>
+      {isSessionLoading && <div role="status" className="p-6 text-center">認証情報を確認しています。</div>}
+      {usageError && <div role="alert" className="bg-amber-50 p-3 text-center text-sm">勤怠情報を再確認できませんでした。入力内容は保持しています。<button type="button" onClick={() => void loadUsage(true)} className="ml-2 underline">再取得する</button></div>}
     <KintaiAccessContext.Provider value={{ isActive: usage?.isActive ?? null }}>
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30">
+    <div ref={element => { if (element) element.inert = isSessionLoading || usageError }} style={isSessionLoading ? { display: 'none' } : undefined} className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30">
       <KintaiSidebar role={role} employeeActive={usage?.isActive !== false} />
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Top bar */}
@@ -184,6 +216,7 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
       </div>
     </div>
     </KintaiAccessContext.Provider>
+    </>
   )
 }
 

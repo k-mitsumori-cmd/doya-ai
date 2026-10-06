@@ -35,6 +35,10 @@ async function serverFailure() {
 async function layout(response, preserveView = false) {
   const state = { usage: { organizationId: 'old' }, hasOrg: true, error: false }
   const loadUsage = callback('src/components/kintai/KintaiLayout.tsx', 'loadUsage', {
+    scopeKey: 'synthetic-scope', activeScope: { current: { key: 'synthetic-scope', allowed: true } },
+    pendingUsage: { current: null }, AbortController,
+    readBillingResponse: async () => ({ ok: response.ok, status: response.status, data: await response.clone().json() }),
+    setLoadedScope() {},
     usageRequest: { current: 0 }, fetch: async () => response,
     setUsage: (value) => { state.usage = value },
     setHasOrg: (value) => { state.hasOrg = value },

@@ -1,0 +1,9 @@
+{
+  "status": "reproduced",
+  "sdkLoadingUnmountsChild": true,
+  "draftLostAfterSameActorSdkUpdate": true,
+  "newActorSeesPriorActorProPlan": true,
+  "mounts": 2,
+  "calls": 2,
+  "scope": "Actual DoyalistLayout and React session context; synthetic draft and read-only replies. No live generation, billing, email or DB mutation."
+}
