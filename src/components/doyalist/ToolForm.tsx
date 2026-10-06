@@ -1,9 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES } from '@/lib/doyalist/constants'
+import { useApproachUsage } from './useApproachUsage'
+import { DOYALIST_UNKNOWN_RESULT, readDoyalistToolResponse, validDoyalistToolResult } from '@/lib/doyalist/tool-response-client'
 
 const CHARS = {
   point: '/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png',
@@ -41,60 +44,101 @@ const TIPS_BY_TYPE: Record<string, string[]> = {
   ],
 }
 
-export default function ToolForm({ type, title, subtitle, emoji }: Props) {
+export default function ToolForm(props: Props) {
+  const { data: session, status } = useSession()
+  const actor = status === 'unauthenticated' ? '' : session?.user?.id || ''
+  const identity = useRef({ actor, version: 0, hasActor: Boolean(actor) })
+  if (identity.current.actor !== actor) identity.current = {
+    actor, version: identity.current.version + (identity.current.hasActor ? 1 : 0),
+    hasActor: identity.current.hasActor || Boolean(actor),
+  }
+  // Preserve a draft typed before the first identity resolves; subsequent account changes clear private state.
+  return <ScopedToolForm key={identity.current.version} {...props} />
+}
+
+function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
   const [serviceInput, setServiceInput] = useState('')
   const [targetIndustry, setTargetIndustry] = useState('IT・ソフトウェア')
   const [tone, setTone] = useState('formal')
   const [generating, setGenerating] = useState(false)
-  const [result, setResult] = useState('')
-  const [limitMessage, setLimitMessage] = useState<string | null>(null)
-  const [limitAction, setLimitAction] = useState<'pricing' | 'contact' | null>(null)
+  const quota = useApproachUsage(type)
+  const quotaRef = useRef(quota)
+  quotaRef.current = quota
+  const [storedResult, setResult] = useState<{ key: string; text: string } | null>(null)
+  const [rejection, setRejection] = useState<{ key: string; action: 'pricing' | 'contact' | null } | null>(null)
+  const loginRequired = quota.status === 'unauthenticated' || (quota.status === 'authenticated' && !quota.actor)
+  const exhausted = quota.usage?.remaining === 0
+  const limitMessage = rejection?.key === quota.key ? '今月の営業文生成上限に達しました。'
+    : exhausted ? `今月の営業文生成上限（${quota.usage?.limit}回）に達しました。` : null
+  const limitAction = rejection?.key === quota.key ? rejection.action
+    : exhausted ? (quota.usage?.tier === 'FREE' || quota.usage?.tier === 'GUEST' ? 'pricing' : 'contact') : null
+  const identity = useRef({ actor: quota.actor, type, version: 0 })
+  if (identity.current.actor !== quota.actor || identity.current.type !== type) identity.current = { actor: quota.actor, type, version: identity.current.version + 1 }
+  const operationKey = JSON.stringify([quota.actor, type, identity.current.version])
+  const result = storedResult?.key === operationKey ? storedResult.text : ''
+  const activeOperationKey = useRef(operationKey)
+  activeOperationKey.current = operationKey
+  const pendingOperation = useRef<{ key: string; controller: AbortController; tid: string } | null>(null)
 
   useEffect(() => {
-    let active = true
-    fetch('/api/doyalist/usage', { cache: 'no-store' })
-      .then((response) => response.ok ? response.json() : null)
-      .then((data) => {
-        if (!active || data?.remaining?.approaches !== 0) return
-        const limit = data?.limits?.maxApproachesPerMonth
-        setLimitMessage(`今月の営業文生成上限（${limit}回）に達しました。`)
-        setLimitAction(data?.plan?.tier === 'FREE' || data?.plan?.tier === 'GUEST' ? 'pricing' : 'contact')
-      })
-      .catch(() => {})
-    return () => { active = false }
-  }, [])
+    if (quota.usage) setRejection(null)
+  }, [quota.usage])
+
+  useEffect(() => {
+    setGenerating(false)
+    return () => {
+      const pending = pendingOperation.current
+      if (pending?.key === operationKey) {
+        pending.controller.abort()
+        toast.dismiss(pending.tid)
+        pendingOperation.current = null
+      }
+    }
+  }, [operationKey])
 
   const handleGenerate = async () => {
+    if (pendingOperation.current || !quota.allowed || !quota.usage || quota.failed || limitMessage) return
     if (!serviceInput.trim()) { toast.error('サービス内容またはURLを入力してください'); return }
-    setGenerating(true); setResult(''); setLimitMessage(null); setLimitAction(null)
-    const tid = toast.loading('AIが文章を作成中...')
+    const operation = { key: operationKey, controller: new AbortController(), tid: toast.loading('AIが文章を作成中...') }
+    pendingOperation.current = operation
+    setGenerating(true)
+    const current = () => pendingOperation.current === operation && activeOperationKey.current === operation.key && !operation.controller.signal.aborted
     try {
-      const res = await fetch('/api/doyalist/tools', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const { res, data } = await readDoyalistToolResponse({
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, serviceInput, targetIndustry, tone }),
-      })
-      const data = await res.json()
+      }, operation.controller.signal)
+      if (!current()) return
       if (!res.ok) {
-        if (res.status === 403 && data?.code === 'MONTHLY_LIMIT_REACHED') {
-          setLimitMessage(data?.error || '今月の営業文生成上限に達しました。')
-          setLimitAction(data?.upgradeUrl === '/doyalist/pricing' ? 'pricing' : data?.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : null)
-        }
-        toast.error(data?.error || '生成に失敗しました', { id: tid })
+        const error = data as Record<string, unknown> | null
+        if (res.status === 403 && error?.code === 'MONTHLY_LIMIT_REACHED') {
+          setRejection({ key: quotaRef.current.key, action: error.upgradeUrl === '/doyalist/pricing' ? 'pricing' : error.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : null })
+          toast.error('今月の営業文生成上限に達しました。', { id: operation.tid })
+        } else toast.error(res.status === 401 ? '再度ログインしてから文章を生成してください。' : res.status === 400 ? '入力内容を確認してから再度お試しください。' : DOYALIST_UNKNOWN_RESULT, { id: operation.tid })
         return
       }
-      setResult(data.text || '')
-      toast.success(
-        data.savedToHistory ? '完成 & 履歴に保存しました ✓' : '完成しました（履歴保存は失敗）',
-        { id: tid }
-      )
-    } catch (e: any) {
-      toast.error(e?.message || '通信エラー', { id: tid })
-    } finally { setGenerating(false) }
+      if (!validDoyalistToolResult(data)) throw new Error(DOYALIST_UNKNOWN_RESULT)
+      setResult({ key: operation.key, text: data.text })
+      toast.success(data.savedToHistory ? '完成し、履歴に保存しました。' : '文章は完成しましたが、履歴への保存を確認できませんでした。コピーして保管してください。', { id: operation.tid })
+    } catch {
+      if (current()) toast.error(DOYALIST_UNKNOWN_RESULT, { id: operation.tid })
+    } finally {
+      if (current()) {
+        pendingOperation.current = null
+        setGenerating(false)
+        quotaRef.current.refresh()
+      }
+    }
   }
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(result).then(() => toast.success('コピーしました'))
+    if (!result) return
+    const key = operationKey
+    void navigator.clipboard.writeText(result).then(() => {
+      if (activeOperationKey.current === key) toast.success('コピーしました')
+    }).catch(() => {
+      if (activeOperationKey.current === key) toast.error('コピーできませんでした。文章を選択してコピーしてください。')
+    })
   }
 
   const isUrl = /^https?:\/\//.test(serviceInput.trim())
@@ -115,6 +159,8 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
             <p className="text-sm font-medium text-slate-500 mt-0.5">{subtitle}</p>
           </div>
         </div>
+
+        {!quota.usage && <div role={quota.failed ? 'alert' : 'status'} className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">{loginRequired ? 'ログインして文章生成を始めてください。' : quota.failed ? '利用枠を確認できませんでした。入力内容は保持しています。' : '利用枠を確認しています。'}{loginRequired ? <Link href={`/auth/signin?callbackUrl=${encodeURIComponent(`/doyalist/tools/${type}`)}`} className="ml-2 underline">ログインする</Link> : quota.failed && <button type="button" onClick={quota.refresh} className="ml-2 underline">再取得する</button>}</div>}
 
         {limitMessage && (
           <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900">
@@ -191,7 +237,7 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
 
               <button
                 onClick={handleGenerate}
-                disabled={generating || Boolean(limitMessage)}
+                disabled={generating || Boolean(limitMessage) || !quota.usage || quota.failed || !quota.allowed}
                 className="w-full py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold text-base rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {generating ? (

@@ -1,0 +1,8 @@
+{
+  "status": "reproduced",
+  "emptyResponseAnnouncedAsSuccess": true,
+  "nonStringTextAccepted": true,
+  "sameTurnRequests": 2,
+  "previousValidResultLostOnFailure": true,
+  "scope": "Actual ToolForm handleGenerate AST callback with synthetic HTTP/network/toast state. No paid provider, live generation, email or DB writes."
+}

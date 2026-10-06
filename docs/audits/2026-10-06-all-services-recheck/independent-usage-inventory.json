@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-06T18:20:11.646013+00:00",
+  "checkedAt": "2026-10-06T18:40:48.292456+00:00",
   "scope": "8 active services with independent usage/plan interfaces, complementing the 9 shared SidebarUsagePanel consumers. This inventory is not flow verification.",
   "services": [
     {
@@ -17,7 +17,7 @@
         "src/components/hr/HrSidebar.tsx",
         "src/app/api/hr/usage/route.ts"
       ],
-      "state": "4fa6d261 scoped response and same-actor draft preservation repair passed 26 mounted cases and full gate, pushed main. CI/READY verification pending.",
+      "state": "4fa6d261 CI success, production READY, anonymous 2 pages/27 JS publish proof confirmed. Mounted actor/draft cases passed; real authenticated business flows remain under audit.",
       "proof": "org-layout-repair.json"
     },
     {
@@ -27,7 +27,7 @@
         "src/components/kintai/KintaiSidebar.tsx",
         "src/app/api/kintai/usage/route.ts"
       ],
-      "state": "4fa6d261 scoped response and same-actor draft preservation repair passed 26 mounted cases and full gate, pushed main. CI/READY verification pending.",
+      "state": "4fa6d261 CI success, production READY, anonymous 2 pages/27 JS publish proof confirmed. Mounted actor/draft cases passed; real authenticated business flows remain under audit.",
       "proof": "org-layout-repair.json"
     },
     {
@@ -37,8 +37,8 @@
         "src/components/doyalist/ToolForm.tsx",
         "src/app/doyalist/Tool.tsx"
       ],
-      "state": "Layout actor-plan and SDK draft defects reproduced and repaired locally in 13 mounted cases; full gate running. ToolForm same-actor FREE-to-PRO refresh leaves generation disabled despite synthetic server remaining 500; separate repair pending.",
-      "proof": "doyalist-tool-plan-refresh-baseline.json"
+      "state": "5c9b1512 layout CI success and production READY; anonymous layout code proof unavailable because server branch omits it. ToolForm 36 mounted cases and API 13 full-history/admission cases passed locally, final full gate running. Main DoyalistTool collection callback still clears old results at quota rejection, proceeds after failed usage lookup, accepts malformed success and duplicates same-turn project/collect calls; actual baseline reproduced.",
+      "proof": "doyalist-collect-client-baseline.json"
     },
     {
       "service": "promane",

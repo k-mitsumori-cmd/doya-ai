@@ -1,0 +1,19 @@
+{
+  "passed": 13,
+  "checks": [
+    "usual",
+    "long",
+    "boundary",
+    "oversize",
+    "empty",
+    "object",
+    "model-error",
+    "save-error",
+    "quota",
+    "guest",
+    "missing-input",
+    "blank-input",
+    "compatibility"
+  ],
+  "scope": "Actual API POST, input parser and shared output validation with synthetic sessions, providers, quota and Prisma stub. Verifies full history body, boundary byte compatibility and reservation release behavior. No real database writes or paid provider call."
+}

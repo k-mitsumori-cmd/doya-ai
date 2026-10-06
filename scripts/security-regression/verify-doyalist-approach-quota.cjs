@@ -72,6 +72,7 @@ const route = load('src/app/api/doyalist/tools/route.ts', {
   '@/lib/doyalist/collect/web-scraper': { scrapeCompanyWebsite: async () => null },
   '@/lib/doyalist/limits': limits,
   '@/lib/operational-json': operationalJson,
+  '@/lib/doyalist/tool-result': load('src/lib/doyalist/tool-result.ts'),
 });
 const post = (body = { type: 'form', serviceInput: 'サービス' }) => route.POST(new Request('https://doya.test/api/doyalist/tools', {
   method: 'POST', body: JSON.stringify(body),

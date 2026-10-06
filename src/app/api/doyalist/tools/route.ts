@@ -10,6 +10,7 @@ import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { scrapeCompanyWebsite } from '@/lib/doyalist/collect/web-scraper'
 import { reserveMonthlyApproach, releaseMonthlyApproach } from '@/lib/doyalist/limits'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
+import { DOYALIST_TOOL_MAX_TEXT_LENGTH } from '@/lib/doyalist/tool-result'
 
 const TOOL_PROJECT_NAME = '__tool_history__'
 
@@ -197,6 +198,7 @@ export async function POST(req: NextRequest) {
     // URL指定の場合は実際にサイトを取得して内容を要約
     let fetchedSiteInfo: string | null = null
     const rawService = (body.serviceInput || body.myService || '').trim()
+    if (!rawService) return NextResponse.json({ error: 'サービス内容またはURLを入力してください' }, { status: 400 })
     if (/^https?:\/\//.test(rawService)) {
       try {
         const scraped = await scrapeCompanyWebsite(rawService)
@@ -239,6 +241,10 @@ export async function POST(req: NextRequest) {
       }
 
       const finalText = text.trim()
+      // Keep the response and its persisted history identical within the client protocol budget.
+      if (finalText.length > DOYALIST_TOOL_MAX_TEXT_LENGTH) {
+        return NextResponse.json({ error: '生成された文章の長さを確認できませんでした' }, { status: 502 })
+      }
       generated = true
 
       // 履歴保存（成功時はsavedToHistoryをtrueで返す。失敗してもAI生成自体は成功扱い）
@@ -257,7 +263,7 @@ export async function POST(req: NextRequest) {
             projectId,
             type: approachType,
             subject,
-            body: finalText.slice(0, 8000),
+            body: finalText,
             status: 'draft',
           },
           select: { id: true },
