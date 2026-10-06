@@ -24,12 +24,14 @@ import {
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { useQuoteUsageOrganization } from '@/lib/quote/use-usage-organization'
 
 const BASE = '/quote'
 
 function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
+  const organizationSlug = useQuoteUsageOrganization(session?.user?.id || '', sessionStatus)
   // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
   //    表示だけを止める（fetch は止めない。Cookie認証なので未確定でも応答する）
   const sessionReady = sessionStatus !== 'loading'
@@ -84,7 +86,7 @@ function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
 
           {/* プラン案内。⚠️ 金額の正本は unified-plan.ts。ここに別の数字を書かない */}
           {/* 作った数と残り。数字は /api/usage/quote から受け取るだけ */}
-          <SidebarUsagePanel service="quote" show={sessionReady && (isMobile || !isCollapsed)} pricingHref="/quote/pricing" />
+          <SidebarUsagePanel service="quote" refreshEvent="quote:usage-changed" organizationSlug={organizationSlug} show={sessionReady && (isMobile || !isCollapsed)} pricingHref="/quote/pricing" />
         </div>
 
         <ToolSwitcherMenu currentService="quote" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 sm:px-4 pb-2" />

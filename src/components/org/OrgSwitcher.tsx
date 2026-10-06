@@ -53,6 +53,16 @@ export function clearSelectedOrg(service: string): void {
   } catch {
     selectionOverride.set(key, null)
   }
+  if (service === 'quote' && typeof window.dispatchEvent === 'function') window.dispatchEvent(new window.Event('quote:organization-changed'))
+}
+
+/** Apply a confirmed selection even when browser storage is unavailable. */
+export function selectOrganization(service: string, slug: string): void {
+  if (typeof window === 'undefined' || !slug) return
+  const key = orgStorageKey(service)
+  try { window.localStorage.setItem(key, slug); selectionOverride.delete(key) }
+  catch { selectionOverride.set(key, slug) }
+  if (service === 'quote' && typeof window.dispatchEvent === 'function') window.dispatchEvent(new window.Event('quote:organization-changed'))
 }
 
 /** 所属組織一覧で確認できない端末保存の選択を破棄する。 */
@@ -110,14 +120,7 @@ export default function OrgSwitcher({ service, memberships, currentSlug, onChang
   const change = useCallback(
     (slug: string) => {
       setValue(slug)
-      const key = orgStorageKey(service)
-      try {
-        window.localStorage.setItem(key, slug)
-        selectionOverride.delete(key)
-      } catch {
-        // プライベートモード等で保存できなくても、この場の切替は成立させる。
-        selectionOverride.set(key, slug)
-      }
+      selectOrganization(service, slug)
       onChange()
     },
     [onChange, service]

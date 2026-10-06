@@ -1,7 +1,7 @@
 {
   "checkedAt": "2026-10-06T21:00:52.638422+00:00",
   "parent": "afd0bc774ca157ac99822f98449003eab408d640",
-  "status": "full-gate-passed-awaiting-commit-push-and-production-verification",
+  "status": "pushed-ci-success-production-ready-anonymous-publication-passed-private-flow-unproven",
   "services": [
     "shodan"
   ],
@@ -80,5 +80,26 @@
     "changedSources": [],
     "allSourceHashesRecheckedAt": "2026-10-06T21:16:32.579953+00:00"
   },
-  "activeGateSession": 36710
+  "activeGateSession": 36710,
+  "release": {
+    "commit": "45d947c3b2b03f10c2654c5860c42604a8c0bbca",
+    "pushTerminalExitCode": 0,
+    "checkedAt": "2026-10-06T21:39:57.594965+00:00",
+    "ci": [
+      {
+        "databaseId": 37532739144,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "45d947c3b2b03f10c2654c5860c42604a8c0bbca",
+        "url": "https://github.com/k-mitsumori-cmd/doya-ai/actions/runs/37532739144"
+      }
+    ],
+    "deployment": {
+      "id": "dpl_Eik4UDD5AxDih8EhEe2zpv998DKc",
+      "url": "doya-np1n6mim1-surisutas-projects.vercel.app",
+      "readyState": "READY",
+      "target": "production"
+    },
+    "publicVerification": "shodan-new-public-45d947c3.json"
+  }
 }

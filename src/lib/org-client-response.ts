@@ -13,16 +13,19 @@ export class OrgResponseError extends Error {
 }
 
 /** Bound both fetch and streaming body; an unconfirmed write must never be silently retried. */
-export async function requestOrgJson(service: 'aio' | 'shodan', path: string, orgSlug: string, init: RequestInit = {}) {
+export async function requestOrgJson(service: 'aio' | 'shodan' | 'quote', path: string, orgSlug: string | null, init: RequestInit = {}) {
   const writing = !!init.method && init.method !== 'GET'
   const timeoutMs = writing ? ORG_WRITE_TIMEOUT_MS : ORG_READ_TIMEOUT_MS
   const outerSignal = init.signal
-  if (outerSignal?.aborted || typeof orgSlug !== 'string' || !orgSlug) throw new OrgResponseError(writing)
+  if (outerSignal?.aborted || orgSlug !== null && (typeof orgSlug !== 'string' || !orgSlug)) throw new OrgResponseError(writing)
   let url: URL
   try { url = new URL(path, 'https://org-client.invalid') } catch { throw new OrgResponseError(writing) }
   if (url.origin !== 'https://org-client.invalid' || !url.pathname.startsWith(`/api/${service}/`) || url.hash) throw new OrgResponseError(writing)
   // Replace any earlier org query so the explicit current scope always wins.
-  url.searchParams.set('org', orgSlug)
+  if (orgSlug === null) {
+    if (service !== 'quote' || url.pathname !== '/api/quote/organizations') throw new OrgResponseError(writing)
+    url.searchParams.delete('org')
+  } else url.searchParams.set('org', orgSlug)
   const controller = new AbortController()
   let response: Response | undefined
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
@@ -93,15 +96,15 @@ export function orgErrorCode(data: Record<string, unknown>, status: number): str
   return data.code
 }
 
-export function orgQuotaGuidance(data: Record<string, unknown>, status: number, service: 'aio' | 'shodan') {
+export function orgQuotaGuidance(data: Record<string, unknown>, status: number, service: 'aio' | 'shodan' | 'quote') {
   const code = orgErrorCode(data, status)
-  if (![402, 429].includes(status) || !['LIMIT', 'PLAN'].includes(code || '')) return {}
+  if (![402, 429].includes(status) || !(service === 'quote' ? ['LIMIT_REACHED'] : ['LIMIT', 'PLAN']).includes(code || '')) return {}
   const canManageBilling = typeof data.canManageBilling === 'boolean' ? data.canManageBilling : undefined
-  if (canManageBilling === false) return { canManageBilling }
+  if (canManageBilling === false || service === 'quote' && canManageBilling !== true) return { canManageBilling }
   return { canManageBilling, upgradeUrl: orgActionUrl(data.upgradeUrl, service, 'upgrade'), contactUrl: orgActionUrl(data.contactUrl, service, 'contact') }
 }
 
-export function orgActionUrl(raw: unknown, service: 'aio' | 'shodan', kind: 'upgrade' | 'contact'): string | undefined {
+export function orgActionUrl(raw: unknown, service: 'aio' | 'shodan' | 'quote', kind: 'upgrade' | 'contact'): string | undefined {
   if (typeof raw !== 'string' || raw.length > 2_048) return undefined
   try {
     const url = new URL(raw, 'https://org-client.invalid')

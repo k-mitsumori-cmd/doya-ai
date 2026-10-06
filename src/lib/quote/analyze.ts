@@ -15,6 +15,7 @@
 import { safeFetchText, htmlToText } from '@/lib/net/safe-fetch'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { lookupMarket, marketTableForPrompt } from './market'
+import { isQuoteSuggestedItem } from './response-shape'
 import type { ProductProfile, SuggestedItem, PriceSource } from './types'
 
 const PRICE_HINTS = ['/price', '/pricing', '/plan', '/plans', '/service', '/services', '/lp', '/about']
@@ -266,7 +267,7 @@ function normalizeItem(i: any): SuggestedItem {
   if (rangeMin != null && rangeMin <= 0) rangeMin = null
   if (rangeMax != null && rangeMax <= 0) rangeMax = null
 
-  return {
+  const normalized: SuggestedItem = {
     itemName: String(i.itemName).slice(0, 120),
     spec: String(i.spec || '').slice(0, 300),
     qty: Number.isFinite(Number(i.qty)) ? Math.max(1, Math.round(Number(i.qty))) : 1,
@@ -278,21 +279,9 @@ function normalizeItem(i: any): SuggestedItem {
     rangeMin,
     rangeMax,
   }
-    return {
-      itemName: String(i.itemName).slice(0, 120),
-      spec: String(i.spec || '').slice(0, 300),
-      qty: Number.isFinite(Number(i.qty)) ? Math.max(1, Math.round(Number(i.qty))) : 1,
-      unit: String(i.unit || '式').slice(0, 12),
-      unitPrice,
-      taxRate: Number(i.taxRate) === 8 ? 8 : 10,
-      priceSource,
-      sourceRef,
-      rangeMin,
-      rangeMax,
-    }
-  }
-
-
+  if (!isQuoteSuggestedItem(normalized)) throw new Error('invalid quote item response')
+  return normalized
+}
 
 // ============================================
 // 品目名だけから、その1行の内訳・数量・単価をAIで埋める

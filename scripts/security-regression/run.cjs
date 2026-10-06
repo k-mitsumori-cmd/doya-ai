@@ -360,6 +360,10 @@ if (staticAssetUrls.error || staticAssetUrls.status !== 0) {
   console.error('Security regression failed: verify-static-asset-urls.cjs');
   process.exit(1);
 }
+for (const script of ['verify-quote-workspace-context.cjs', 'verify-quote-workspace-mounted.cjs', 'verify-quote-sidebar-mounted.cjs', 'verify-quote-response-shape.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
+}
 const quoteWriteRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-quote-write-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (quoteWriteRecovery.error || quoteWriteRecovery.status !== 0) {
   console.error('Security regression failed: verify-quote-write-recovery.cjs');

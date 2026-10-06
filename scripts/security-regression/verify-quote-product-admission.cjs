@@ -47,6 +47,7 @@ function fixture({ plan = 'FREE', actor = 'owner', lifetime = 0, monthly = 0, se
     },
   }
   const route = load('src/app/api/quote/products/route.ts', {
+    '@/lib/quote/response-shape': load('src/lib/quote/response-shape.ts'),
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     '@/lib/quote/access': { getQuoteContext: async () => ({ organizationId: 'org', userId: actor === 'owner' ? 'owner-user' : 'staff-user' }), orgSlugFrom: () => 'org' },
@@ -96,6 +97,10 @@ function fixture({ plan = 'FREE', actor = 'owner', lifetime = 0, monthly = 0, se
     assert.equal((await f.post({ name: 'ok' })).status, 403)
     assert.equal(f.state.creates, 0)
   })
+
+  await check('quote product accepted boundary values are never silently truncated',async()=>{const f=fixture({plan:'PRO'});const sourceUrl='https://example.invalid/?q='+'a'.repeat(2048-'https://example.invalid/?q='.length);const name='N'.repeat(200);const res=await f.post({name,sourceUrl,profile:{summary:'S'.repeat(600)}});assert.equal(res.status,200);assert.equal(f.state.rows[0].name,name);assert.equal(f.state.rows[0].sourceUrl,sourceUrl);assert.equal(f.state.rows[0].profile.summary.length,600)})
+  await check('quote malformed or excessive product fields reject before transaction and ledger',async()=>{const f=fixture({plan:'PRO'});for(const body of [null,[],{name:'N'.repeat(201)},{name:'N',sourceUrl:'https://example.invalid/'+ 'a'.repeat(2048)},{name:'N',sourceUrl:'https://user:pass@example.invalid/'},{name:'N',sourceUrl:'javascript:alert(1)'},{name:'N',sourceUrl:'not a URL'},{name:'N',profile:{summary:'S'.repeat(601)}},{name:'N',profile:{publishedPrices:[{}]}}])assert.equal((await f.post(body)).status,400);assert.equal(f.state.transactions,0);assert.equal(f.state.creates,0);assert.equal(f.state.writes,0)})
+  await check('quote organization boundaries reject before persistent creation',async()=>{const calls=[];const route=load('src/app/api/quote/organizations/route.ts',{'next/server':{NextResponse:Response},'@/lib/quote/access':{resolveUserId:async()=> 'u',getOrCreateOrganization:async(_u,name,memberName)=>{calls.push({name,memberName});return{slug:'org',name}},getQuoteContext:async()=>null,listMemberships:async()=>[],orgSlugFrom:()=>null}});for(const body of [{name:'N'.repeat(121)},{name:'N',memberName:'M'.repeat(81)},null,[]])assert.equal((await route.POST({json:async()=>body})).status,400);assert.equal(calls.length,0);assert.equal((await route.POST({json:async()=>({name:'N'.repeat(120),memberName:'M'.repeat(80)})})).status,200);assert.equal(calls[0].name.length,120);assert.equal(calls[0].memberName.length,80)})
   await check('quote serialization retry rereads exhausted quota', async () => {
     const f = fixture({ serializeOnce: true })
     assert.equal((await f.post({ name: '競合商材' })).status, 402)

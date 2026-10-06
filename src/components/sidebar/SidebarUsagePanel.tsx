@@ -90,7 +90,7 @@ export function SidebarUsagePanel({
   service: string
   show: boolean
   refreshEvent?: string
-  organizationSlug?: string
+  organizationSlug?: string | null
   pricingHref?: string
 }) {
   const requestUrl = `/api/usage/${service}${organizationSlug ? `?org=${encodeURIComponent(organizationSlug)}` : ''}`
@@ -98,9 +98,9 @@ export function SidebarUsagePanel({
   const pathname = usePathname()
   const user = session?.user as { id?: string; email?: string; plan?: string; bannerPlan?: string; seoPlan?: string } | undefined
   const actor = user?.id || user?.email || ''
-  const allowed = status === 'authenticated' && Boolean(actor)
+  const allowed = status === 'authenticated' && Boolean(actor) && organizationSlug !== null
   const servicePlan = service === 'banner' ? user?.bannerPlan : service === 'seo' ? user?.seoPlan : undefined
-  const scope = JSON.stringify([status, actor, user?.plan, servicePlan, pathname, requestUrl, refreshEvent])
+  const scope = JSON.stringify([status, actor, user?.plan, servicePlan, pathname, requestUrl, refreshEvent, allowed, organizationSlug])
   const epoch = useRef({ scope, version: 0 })
   if (epoch.current.scope !== scope) epoch.current = { scope, version: epoch.current.version + 1 }
   const key = JSON.stringify([scope, epoch.current.version])
@@ -140,7 +140,7 @@ export function SidebarUsagePanel({
     const refresh = (event: Event) => {
       // These notifications originate from actor-scoped quota responses.
       if ((refreshEvent === 'banner:usage-changed' || refreshEvent === 'persona:usage-changed') && (event as CustomEvent<{ actor?: string }>).detail?.actor !== actor) return
-      if (refreshEvent === 'shodan:usage-changed') {
+      if (refreshEvent === 'shodan:usage-changed' || refreshEvent === 'quote:usage-changed') {
         const detail = (event as CustomEvent<{ actor?: string; organizationSlug?: string }>).detail
         if (detail?.actor !== actor || detail.organizationSlug !== organizationSlug) return
       }

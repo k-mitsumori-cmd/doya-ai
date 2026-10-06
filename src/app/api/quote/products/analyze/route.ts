@@ -21,12 +21,15 @@ export async function POST(req: NextRequest) {
 
   let url: URL
   try {
-    url = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`)
+    url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`)
   } catch {
     return NextResponse.json({ error: 'URLの形式が正しくありません' }, { status: 400 })
   }
   if (url.protocol !== 'https:' && url.protocol !== 'http:') {
     return NextResponse.json({ error: 'httpsのURLを入力してください' }, { status: 400 })
+  }
+  if (url.username || url.password || url.toString().length > 2048) {
+    return NextResponse.json({ error: '認証情報を含まない2048文字以内のURLを入力してください' }, { status: 400 })
   }
 
   try {

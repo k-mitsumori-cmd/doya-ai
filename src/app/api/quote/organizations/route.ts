@@ -26,10 +26,12 @@ export async function POST(req: NextRequest) {
   }
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name) return NextResponse.json({ error: '組織名を入力してください' }, { status: 400 })
+  if (name.length > 120) return NextResponse.json({ error: '組織名は120文字以内で入力してください' }, { status: 400 })
   if (body.memberName != null && typeof body.memberName !== 'string') {
     return NextResponse.json({ error: '氏名の形式が正しくありません' }, { status: 400 })
   }
-  const memberName = typeof body.memberName === 'string' ? body.memberName.trim().slice(0, 80) || undefined : undefined
-  const org = await getOrCreateOrganization(userId, name.slice(0, 120), memberName)
+  const memberName = typeof body.memberName === 'string' ? body.memberName.trim() || undefined : undefined
+  if (memberName && memberName.length > 80) return NextResponse.json({ error: '氏名は80文字以内で入力してください' }, { status: 400 })
+  const org = await getOrCreateOrganization(userId, name, memberName)
   return NextResponse.json({ slug: org.slug, name: org.name })
 }

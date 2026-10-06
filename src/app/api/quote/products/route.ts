@@ -9,6 +9,7 @@ import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { FREE_LIMITS, jstStartOfMonthUtc } from '@/lib/plan-limit'
 import { getOrganizationQuotaUsage, recordOrganizationQuotaUsage } from '@/lib/organization-quota-ledger'
 import { isPaidPlan } from '@/lib/unified-plan'
+import { isQuoteProductProfile } from '@/lib/quote/response-shape'
 
 async function retryProductTransaction<T>(commit: () => Promise<T>): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -54,17 +55,26 @@ export async function POST(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
   const body = await req.json().catch(() => ({}))
-  if (typeof body?.name !== 'string' || !body.name.trim()) {
+  if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.name !== 'string' || !body.name.trim()) {
     return NextResponse.json({ error: '商材名を入力してください' }, { status: 400 })
   }
   if (body.sourceUrl != null && typeof body.sourceUrl !== 'string') {
     return NextResponse.json({ error: '商材URLの形式が正しくありません' }, { status: 400 })
   }
-  if (body.profile != null && (typeof body.profile !== 'object' || Array.isArray(body.profile))) {
+  if (body.profile != null && !isQuoteProductProfile(body.profile)) {
     return NextResponse.json({ error: '商材情報の形式が正しくありません' }, { status: 400 })
   }
   const name = body.name.trim()
-  const sourceUrl = body.sourceUrl?.trim().slice(0, 500) || null
+  if (name.length > 200) return NextResponse.json({ error: '商材名は200文字以内で入力してください' }, { status: 400 })
+  const sourceUrl = body.sourceUrl?.trim() || null
+  if (sourceUrl) {
+    try {
+      const parsed = new URL(sourceUrl)
+      if (sourceUrl.length > 2048 || !['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error()
+    } catch {
+      return NextResponse.json({ error: '商材URLは認証情報を含まない2048文字以内のHTTP(S) URLで入力してください' }, { status: 400 })
+    }
+  }
   const profile = body.profile ?? null
   const outcome = await retryProductTransaction(() => prisma.$transaction(async tx => {
     const actor = await tx.quoteMember.findFirst({
@@ -90,7 +100,7 @@ export async function POST(req: NextRequest) {
     const product = await tx.quoteProduct.create({
       data: {
         organizationId: ctx.organizationId,
-        name: name.slice(0, 200),
+        name,
         sourceUrl,
         profile: profile as any,
       },

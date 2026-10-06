@@ -1,0 +1,25 @@
+{
+  "passed": 19,
+  "checks": [
+    "No authenticated actor means no discovery or private operation",
+    "No private operation until server organization acknowledgement",
+    "Default organization discovery removes stale supplied query",
+    "Explicit discovered selection stays bound to server verified organization",
+    "Same-frame storage selection change rejects retained ticket before render",
+    "actor transition and ABA abort and invalidate old tickets",
+    "organization transition and ABA abort and invalidate old tickets",
+    "authentication transition and ABA abort and invalidate old tickets",
+    "Synchronous operation locks reject repeated begin and ending old ticket cannot unlock replacement",
+    "Invalidate cancels all operations and erases verified organization",
+    "Unsafe or wrong service path rejected: https://other.invalid/api/quote/documents",
+    "Unsafe or wrong service path rejected: //other.invalid/api/quote/documents",
+    "Unsafe or wrong service path rejected: /api/shodan/preparations",
+    "Unsafe or wrong service path rejected: /api/quote/documents#x",
+    "Unsafe or wrong service path rejected: /api/quote/../shodan/usage",
+    "Literal percent and Japanese organization identity encoded once",
+    "Same-context normal re-render keeps operation active",
+    "Retained handler cannot acquire a new actor or organization ticket using its old epoch",
+    "Server denial survives re-render and authentication loading ABA until identity changes"
+  ],
+  "scope": "Actual quote context primitive with synthetic actor, selection and controllers. QuoteTool integration, response transport, mounted flow and production behavior remain pending."
+}

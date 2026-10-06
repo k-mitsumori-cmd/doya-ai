@@ -35,6 +35,7 @@ const common = {
   },
 }
 const productRoute = load('src/app/api/quote/products/route.ts', {
+    '@/lib/quote/response-shape': load('src/lib/quote/response-shape.ts'),
   ...common,
   '@/lib/plan-limit': {},
   '@/lib/organization-quota-ledger': {},

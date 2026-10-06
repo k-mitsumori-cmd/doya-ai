@@ -9,8 +9,12 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
-import OrgSwitcher, { clearSelectedOrg, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
-import { fetchOrgJson } from '@/lib/org-fetch'
+import OrgSwitcher, { clearSelectedOrg, getSelectedOrg, selectOrganization, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
+import { useSession } from 'next-auth/react'
+import { QuoteWorkspaceContext } from '@/lib/quote/workspace-context'
+import { isQuoteProductProfile, isQuoteSuggestedItem, isQuoteProductAcknowledgement } from '@/lib/quote/response-shape'
+import { parseQuoteOrganizations } from '@/lib/quote/organization-response'
+import { requestOrgJson, OrgResponseError, orgQuotaGuidance } from '@/lib/org-client-response'
 import { appendQuoteListPage, parseQuoteListPage } from '@/lib/quote/list-pages'
 import { billableLines, calcTotals, yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource, type ProductProfile, type SuggestedItem } from '@/lib/quote/types'
@@ -20,6 +24,17 @@ import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
 import LoadingProgress from '@/components/LoadingProgress'
 import { EmptyState } from '@/components/EmptyState'
+
+// Reactの再描画前に送信されても、入力イベントで確定した最新値を使う。
+function useQuoteDraftState<T>(initial: T) {
+  const [value, setValue] = useState(initial)
+  const current = useRef(initial)
+  const update = useCallback((next: T) => {
+    current.current = next
+    setValue(next)
+  }, [])
+  return [value, update, current] as const
+}
 
 interface Product {
   id: string
@@ -48,10 +63,57 @@ const SOURCE_STYLE: Record<PriceSource, string> = {
 const MAX_QUOTE_ITEMS = 60
 
 export default function QuoteTool() {
+  const { data: session, status: authStatus } = useSession()
+  const lastActor = useRef('')
+  if (authStatus === 'authenticated') lastActor.current = session?.user?.id || ''
+  if (authStatus === 'unauthenticated') lastActor.current = ''
+  const actor = authStatus === 'loading' ? lastActor.current : session?.user?.id || ''
+  const selection = getSelectedOrg('quote')
+  const contextRef = useRef<QuoteWorkspaceContext | null>(null)
+  if (!contextRef.current) contextRef.current = new QuoteWorkspaceContext(() => getSelectedOrg('quote'))
+  const context = contextRef.current
+  const epoch = context.update({ actor, selection, status: authStatus })
+  const identity = JSON.stringify([actor, selection])
+  const draftIdentity = useRef(identity)
+  const [, forceScope] = useState(0)
+  const changeOrganization = useCallback(() => { context.invalidate(); forceScope(n => n + 1) }, [context])
+  useEffect(() => {
+    const changed = (event: StorageEvent) => { if (event.key === null || event.key === 'doya.quote.org') changeOrganization() }
+    window.addEventListener('storage', changed)
+    return () => window.removeEventListener('storage', changed)
+  }, [changeOrganization])
+  useEffect(() => { forceScope(n => n + 1); return () => context.invalidate() }, [context])
+  const fetch = useCallback(async (path: string, init: RequestInit = {}) => {
+    const bootstrap = new URL(path, 'https://quote-context.invalid').pathname === '/api/quote/organizations'
+    const ticket = context.begin((init.method || 'GET') + ' ' + path, bootstrap, epoch)
+    if (!ticket) throw new OrgResponseError(Boolean(init.method && init.method !== 'GET'))
+    try {
+      const bound = ticket.url(path)
+      if (!bound) throw new OrgResponseError(Boolean(init.method && init.method !== 'GET'))
+      const { res, data } = await requestOrgJson('quote', bound, ticket.organization || selection, { ...init, signal: ticket.signal })
+      if (res.status === 401 && ticket.current()) {
+        context.rejectAuthentication(epoch)
+        setNeedsLogin(true); setLoading(false)
+        throw new OrgResponseError(Boolean(init.method && init.method !== 'GET'), res.status)
+      }
+      if (!ticket.current()) throw new OrgResponseError(Boolean(init.method && init.method !== 'GET'))
+      return { ok: res.ok, status: res.status, json: async () => {
+        if (!context.isCurrent(epoch)) throw new OrgResponseError(Boolean(init.method && init.method !== 'GET'))
+        return data as Record<string, any>
+      } }
+    } finally { ticket.end() }
+  }, [context, epoch, selection])
+  const fetchOrgJson = useCallback(async (path: string) => {
+    const response = await fetch(path)
+    const data = await response.json()
+    if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : '組織のデータを取得できませんでした')
+    return data as Record<string, any>
+  }, [fetch])
   const [loading, setLoading] = useState(true)
   const [org, setOrg] = useState<{ slug: string; name: string; role: string } | null>(null)
-  const [orgName, setOrgName] = useState('')
+  const [orgName, setOrgName, orgNameRef] = useQuoteDraftState('')
   const [creatingOrg, setCreatingOrg] = useState(false)
+  const [organizationUncertain, setOrganizationUncertain] = useState(false)
   const creatingOrgRequest = useRef(false)
   const [memberships, setMemberships] = useState<Membership[]>([])
   /** 未ログイン。⚠️ 組織が無いのか、そもそもログインしていないのかを区別する。
@@ -73,43 +135,58 @@ export default function QuoteTool() {
   const listVersion = useRef(0)
 
   // 商材の取り込み
-  const [url, setUrl] = useState('')
+  const [url, setUrl, urlRef] = useQuoteDraftState('')
   const [analyzing, setAnalyzing] = useState(false)
-  const [draftProfile, setDraftProfile] = useState<ProductProfile | null>(null)
-  const [draftUrl, setDraftUrl] = useState('')
-  const [productName, setProductName] = useState('')
+  const [draftProfile, setDraftProfile, draftProfileRef] = useQuoteDraftState<ProductProfile | null>(null)
+  const [draftUrl, setDraftUrl, draftUrlRef] = useQuoteDraftState('')
+  const [productName, setProductName, productNameRef] = useQuoteDraftState('')
   const [savingProduct, setSavingProduct] = useState(false)
   const savingProductRequest = useRef(false)
+  const [savedProduct, setSavedProduct, savedProductRef] = useQuoteDraftState<{ id: string; name: string } | null>(null)
 
   // 品目生成
-  const [selectedProduct, setSelectedProduct] = useState<string>('')
-  const [situation, setSituation] = useState('')
-  const [budget, setBudget] = useState('')
+  const [selectedProduct, setSelectedProduct, selectedProductRef] = useQuoteDraftState<string>('')
+  const [situation, setSituation, situationRef] = useQuoteDraftState('')
+  const [budget, setBudget, budgetRef] = useQuoteDraftState('')
   const [suggesting, setSuggesting] = useState(false)
-  const [items, setItems] = useState<SuggestedItem[]>([])
-  // AIで数量・単価を埋めている行のindex（同時に複数押せるようSetで持つ）
-  const [estimating, setEstimating] = useState<Set<number>>(new Set())
+  const [items, setItemsState] = useState<SuggestedItem[]>([])
+  const itemsRef = useRef<SuggestedItem[]>([])
+  // 入力イベントの直後でも、要求・応答の照合は最新の明細を参照する。
+  const setItems = useCallback((next: SuggestedItem[] | ((previous: SuggestedItem[]) => SuggestedItem[])) => {
+    const value = typeof next === 'function' ? next(itemsRef.current) : next
+    itemsRef.current = value
+    setItemsState(value)
+  }, [])
+  // 行位置が変わっても、処理開始時の明細を追跡する。
+  const [estimating, setEstimating] = useState<Set<SuggestedItem>>(new Set())
   // 品目カードの登場演出をやり直すための世代番号。
   // ⚠️ 候補を出し直した時だけ増やす。編集のたびに増やすと key が変わって
   //    入力中の要素が作り直され、フォーカスと変換中の文字が飛ぶ。
   const [revealSeq, setRevealSeq] = useState(0)
 
   // 見積書作成
-  const [clientCompany, setClientCompany] = useState('')
-  const [clientPerson, setClientPerson] = useState('')
+  const [clientCompany, setClientCompany, clientCompanyRef] = useQuoteDraftState('')
+  const [clientPerson, setClientPerson, clientPersonRef] = useQuoteDraftState('')
   const [creating, setCreating] = useState(false)
+  const creatingDocumentRequest = useRef(false)
+  const [createdDocument, setCreatedDocument, createdDocumentRef] = useQuoteDraftState<{ id: string; quoteNo: string } | null>(null)
+  const [documentUncertain, setDocumentUncertain] = useState(false)
+  const [documentLimited, setDocumentLimited] = useState(false)
+  const documentLimitRef = useRef(false)
 
   const [error, setError] = useState('')
   const [quotaAction, setQuotaAction] = useState<{ url: string; label: string } | null>(null)
   const [productSaveUncertain, setProductSaveUncertain] = useState(false)
+  const [productLimited, setProductLimited] = useState(false)
+  const [productQuotaAction, setProductQuotaAction] = useState<{ url: string; label: string } | null>(null)
+  const productLimitRef = useRef(false)
   const [loadFailed, setLoadFailed] = useState(false)
 
   const load = useCallback(async () => {
+    if (!context.isCurrent(epoch)) return
     const version = ++listVersion.current
     setLoading(true)
-    setError('')
-    setQuotaAction(null)
-    setProductSaveUncertain(false)
+    if (!documentLimitRef.current && !productLimitRef.current) { setError(''); setQuotaAction(null) }
     setLoadFailed(false)
     setNeedsLogin(false)
     setProducts([])
@@ -123,21 +200,25 @@ export default function QuoteTool() {
     try {
       const r = await fetch('/api/quote/organizations')
       if (r.status === 401) {
-        if (listVersion.current !== version) return
+        if (listVersion.current !== version || !context.isCurrent(epoch)) return
         setNeedsLogin(true)
         return
       }
       if (!r.ok) throw new Error('組織一覧を取得できませんでした')
-      let d = await r.json()
-      const memberships = Array.isArray(d.memberships) ? d.memberships : []
+      let d = parseQuoteOrganizations(await r.json())
+      if (!context.isCurrent(epoch)) return
+      const memberships = d.memberships
+      const previousSelection = getSelectedOrg('quote')
       if (reconcileSelectedOrg('quote', memberships)) {
         const scoped = await fetch(withOrg('quote', '/api/quote/organizations'))
         if (!scoped.ok) throw new Error('選択中の組織を確認できませんでした')
-        const scopedData = await scoped.json()
+        const scopedData = parseQuoteOrganizations(await scoped.json())
         if (scopedData?.current) d = scopedData
-        else clearSelectedOrg('quote')
+        else { clearSelectedOrg('quote'); changeOrganization(); return }
       }
-      if (listVersion.current !== version) return
+      if (getSelectedOrg('quote') !== previousSelection) { changeOrganization(); return }
+      if (listVersion.current !== version || !context.isCurrent(epoch)) return
+      if (d.current && !context.verifyOrganization(epoch, d.current.slug)) throw new Error('組織を確認できませんでした')
       setOrg(d.current)
       setMemberships(memberships)
       if (d.current) {
@@ -153,7 +234,7 @@ export default function QuoteTool() {
         }
         const productRows = appendQuoteListPage([], productPage, productPage.total)
         const documentRows = appendQuoteListPage([], documentPage, documentPage.total)
-        if (listVersion.current !== version) return
+        if (listVersion.current !== version || !context.isCurrent(epoch)) return
         setProducts(productRows)
         setProductTotal(productPage.total)
         setProductCursor(productPage.nextCursor)
@@ -161,23 +242,42 @@ export default function QuoteTool() {
         setDocumentTotal(documentPage.total)
         setDocumentCursor(documentPage.nextCursor)
         setHasIssuer(Boolean(ir.issuer))
-        setSelectedProduct(productRows[0]?.id || '')
+        setSelectedProduct(productRows.some((p) => p.id === selectedProductRef.current) ? selectedProductRef.current : productRows[0]?.id || '')
       }
     } catch (e) {
-      if (listVersion.current === version) {
+      if (listVersion.current === version && context.isCurrent(epoch)) {
         setLoadFailed(true)
         notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
       }
     } finally {
-      if (listVersion.current === version) setLoading(false)
+      if (listVersion.current === version && context.isCurrent(epoch)) setLoading(false)
     }
-  }, [])
+  }, [epoch, context, changeOrganization, fetch, fetchOrgJson, setSelectedProduct, selectedProductRef])
 
   useEffect(() => {
+    if (draftIdentity.current !== identity) {
+      draftIdentity.current = identity
+      setOrgName(''); setCreatingOrg(false); setOrganizationUncertain(false); creatingOrgRequest.current = false
+      setUrl(''); setDraftProfile(null); setDraftUrl(''); setProductName('')
+      setSelectedProduct(''); setSituation(''); setBudget(''); setItems([])
+      setClientCompany(''); setClientPerson(''); setEstimating(new Set())
+      setAnalyzing(false); setSuggesting(false); setCreating(false); setSavingProduct(false)
+      creatingDocumentRequest.current = false; savingProductRequest.current = false
+      setSavedProduct(null)
+      setCreatedDocument(null); setDocumentUncertain(false); setDocumentLimited(false); documentLimitRef.current = false; setProductSaveUncertain(false); setProductLimited(false); setProductQuotaAction(null); productLimitRef.current = false
+    }
+    if (creatingDocumentRequest.current && !documentLimitRef.current && !createdDocumentRef.current) { setDocumentUncertain(true); setCreating(false) }
+    if (savingProductRequest.current && !productLimitRef.current) {
+      if (!savedProductRef.current) setProductSaveUncertain(true)
+      else savingProductRequest.current = false
+      setSavingProduct(false)
+    }
+    setAnalyzing(false); setSuggesting(false); setEstimating(new Set())
     void load()
-  }, [load])
+  }, [load, identity, setItems, setOrgName, setUrl, setDraftProfile, setDraftUrl, setProductName, setSelectedProduct, setSituation, setBudget, setClientCompany, setClientPerson, setCreatedDocument, createdDocumentRef, setSavedProduct, savedProductRef])
 
   async function loadMoreProducts() {
+    if (!context.isCurrent(epoch)) return
     if (!productCursor || loadingMoreProducts) return
     const version = listVersion.current
     setLoadingMoreProducts(true)
@@ -187,17 +287,18 @@ export default function QuoteTool() {
       const data = await fetchOrgJson(`${url}${url.includes('?') ? '&' : '?'}cursor=${encodeURIComponent(productCursor)}`)
       const page = parseQuoteListPage<Product>(data, 'products', 100)
       const merged = appendQuoteListPage(products, page, productTotal)
-      if (listVersion.current !== version) return
+      if (listVersion.current !== version || !context.isCurrent(epoch)) return
       setProducts(merged)
       setProductCursor(page.nextCursor)
     } catch (error) {
-      if (listVersion.current === version) setProductPageError(error instanceof Error ? error.message : '商材を読み込めませんでした')
+      if (listVersion.current === version && context.isCurrent(epoch)) setProductPageError(error instanceof Error ? error.message : '商材を読み込めませんでした')
     } finally {
-      if (listVersion.current === version) setLoadingMoreProducts(false)
+      if (listVersion.current === version && context.isCurrent(epoch)) setLoadingMoreProducts(false)
     }
   }
 
   async function loadMoreDocuments() {
+    if (!context.isCurrent(epoch)) return
     if (!documentCursor || loadingMoreDocuments) return
     const version = listVersion.current
     setLoadingMoreDocuments(true)
@@ -207,22 +308,26 @@ export default function QuoteTool() {
       const data = await fetchOrgJson(`${url}${url.includes('?') ? '&' : '?'}cursor=${encodeURIComponent(documentCursor)}`)
       const page = parseQuoteListPage<DocRow>(data, 'documents', 200)
       const merged = appendQuoteListPage(docs, page, documentTotal)
-      if (listVersion.current !== version) return
+      if (listVersion.current !== version || !context.isCurrent(epoch)) return
       setDocs(merged)
       setDocumentCursor(page.nextCursor)
     } catch (error) {
-      if (listVersion.current === version) setDocumentPageError(error instanceof Error ? error.message : '見積書を読み込めませんでした')
+      if (listVersion.current === version && context.isCurrent(epoch)) setDocumentPageError(error instanceof Error ? error.message : '見積書を読み込めませんでした')
     } finally {
-      if (listVersion.current === version) setLoadingMoreDocuments(false)
+      if (listVersion.current === version && context.isCurrent(epoch)) setLoadingMoreDocuments(false)
     }
   }
 
   async function createOrg() {
+    if (!context.isCurrent(epoch)) return
+    const orgName = orgNameRef.current
     if (!orgName.trim() || creatingOrgRequest.current) return
+    if (orgName.trim().length > 120) { setError('組織名は120文字以内で入力してください'); return }
     creatingOrgRequest.current = true
     setCreatingOrg(true)
     setError('')
     setQuotaAction(null)
+    let uncertain = false
     try {
       const r = await fetch(withOrg('quote', '/api/quote/organizations'), {
         method: 'POST',
@@ -231,23 +336,36 @@ export default function QuoteTool() {
       })
       if (!r.ok) {
         const data = await r.json().catch(() => null)
+        if (r.status >= 500) throw new OrgResponseError(true, r.status)
         throw new Error(data?.error || '組織を作成できませんでした')
       }
-      await load()
+      const result = await r.json()
+      if (!context.isCurrent(epoch)) return
+      if (typeof result.slug !== 'string' || !result.slug || result.slug.length > 512 || result.name !== orgName.trim()) throw new OrgResponseError(true, r.status)
+      selectOrganization('quote', result.slug)
+      changeOrganization()
     } catch (e) {
+      if (!context.isCurrent(epoch)) return
+      uncertain = e instanceof OrgResponseError
+      setOrganizationUncertain(uncertain)
       notifyError(setError, e instanceof Error ? e.message : '組織を作成できませんでした。通信状態をご確認ください')
     } finally {
-      creatingOrgRequest.current = false
-      setCreatingOrg(false)
+      if (context.isCurrent(epoch)) {
+        if (!uncertain) creatingOrgRequest.current = false
+        setCreatingOrg(false)
+      }
     }
   }
 
   async function analyze() {
+    if (!context.isCurrent(epoch)) return
+    const url = urlRef.current
     if (!url.trim()) return
+    const priorProductName = productNameRef.current
+    const priorProfile = draftProfileRef.current
     setAnalyzing(true)
     setError('')
     setQuotaAction(null)
-    setDraftProfile(null)
     try {
       const r = await fetch(withOrg('quote', '/api/quote/products/analyze'), {
         method: 'POST',
@@ -255,26 +373,46 @@ export default function QuoteTool() {
         body: JSON.stringify({ url: url.trim() }),
       })
       const d = await r.json()
+      if (!context.isCurrent(epoch)) return
       if (!r.ok) throw new Error(d?.error || '解析に失敗しました')
+      if (!isQuoteProductProfile(d.profile) || typeof d.sourceUrl !== 'string' || d.sourceUrl.length > 2048) throw new Error('解析結果の形式を確認できませんでした。元の入力は保持しています。')
+      try { const parsed = new URL(d.sourceUrl); if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error() } catch { throw new Error('解析結果のURLを確認できませんでした。元の入力は保持しています。') }
+      if (urlRef.current !== url || productNameRef.current !== priorProductName || draftProfileRef.current !== priorProfile) {
+        setError('解析中に入力が変更されたため、結果を適用しませんでした。現在の入力を保持しています。')
+        return
+      }
       setDraftProfile(d.profile)
       setDraftUrl(d.sourceUrl)
       setProductName(d.profile?.companyName || '')
     } catch (e) {
+      if (!context.isCurrent(epoch)) return
       notifyError(setError, e instanceof Error ? e.message : '解析に失敗しました')
     } finally {
-      setAnalyzing(false)
+      if (context.isCurrent(epoch)) {
+        setAnalyzing(false)
+      }
     }
   }
 
   async function saveProduct() {
+    if (!context.isCurrent(epoch)) return
+    const draftProfile = draftProfileRef.current
+    const productName = productNameRef.current
+    const draftUrl = draftUrlRef.current
+    const url = urlRef.current
     if (!draftProfile || !productName.trim() || savingProductRequest.current) return
+    if (productName.trim().length > 200) { setError('商材名は200文字以内で入力してください'); return }
     savingProductRequest.current = true
+    setSavedProduct(null)
     setSavingProduct(true)
     setError('')
     setQuotaAction(null)
     setProductSaveUncertain(false)
     let responseReceived = false
     let responseOk = false
+    let responseStatus = 0
+    let uncertain = false
+    let limited = false
     try {
       const r = await fetch(withOrg('quote', '/api/quote/products'), {
         method: 'POST',
@@ -283,30 +421,53 @@ export default function QuoteTool() {
       })
       responseReceived = true
       responseOk = r.ok
-      const d = await r.json().catch(() => null)
-      if (r.status === 402 && d?.code === 'LIMIT_REACHED' && d?.upgradeUrl === '/quote/pricing') {
-        setQuotaAction({ url: '/quote/pricing', label: 'プロプランの料金と30日間無料の対象条件を確認する' })
+      responseStatus = r.status
+      const d = await r.json()
+      if (!context.isCurrent(epoch)) return
+      if ([402, 429].includes(r.status) && d?.code === 'LIMIT_REACHED') {
+        limited = true
+        productLimitRef.current = true
+        setProductLimited(true)
+        const guidance = orgQuotaGuidance(d, r.status, 'quote')
+        if (org?.role === 'owner' && guidance.upgradeUrl) {
+          setProductQuotaAction({ url: guidance.upgradeUrl, label: 'プロプランの料金と30日間無料の対象条件を確認する' })
+        } else if (org?.role === 'owner' && guidance.contactUrl) {
+          setProductQuotaAction({ url: guidance.contactUrl, label: '追加枠を相談する' })
+        }
       }
       if (!r.ok) throw new Error(d?.error || '商材を登録できませんでした')
-      if (typeof d?.product?.id !== 'string') throw new Error('登録結果を確認できませんでした。商材一覧を再読み込みして確認してください')
-      setDraftProfile(null)
-      setUrl('')
-      setProductName('')
+      if (!isQuoteProductAcknowledgement(d.product, { name: productName, sourceUrl: draftUrl, profile: draftProfile })) throw new Error('登録内容の一致を確認できませんでした。商材一覧を再読み込みして確認してください')
+      setSavedProduct({ id: d.product.id, name: d.product.name })
+      const unchanged = draftProfileRef.current === draftProfile && productNameRef.current === productName && draftUrlRef.current === draftUrl && urlRef.current === url
+      if (unchanged) {
+        setDraftProfile(null)
+        setUrl('')
+        setProductName('')
+      }
       await load()
-      setSelectedProduct(d.product.id)
+      if (!context.isCurrent(epoch)) return
+      if (unchanged && draftProfileRef.current === null && !productNameRef.current && !urlRef.current) setSelectedProduct(d.product.id)
     } catch (e) {
-      setProductSaveUncertain(!responseReceived || responseOk)
+      if (!context.isCurrent(epoch)) return
+      uncertain = !responseReceived || responseOk || responseStatus >= 500
+      setProductSaveUncertain(uncertain)
       const message = !responseReceived
         ? '通信が切れました。保存された可能性があります。商材一覧を再読み込みしてから再試行してください'
         : e instanceof Error ? e.message : '商材を登録できませんでした'
       notifyError(setError, message)
     } finally {
-      savingProductRequest.current = false
-      setSavingProduct(false)
+      if (context.isCurrent(epoch)) {
+        if (!uncertain && !limited) savingProductRequest.current = false
+        setSavingProduct(false)
+      }
     }
   }
 
   async function suggest() {
+    if (!context.isCurrent(epoch)) return
+    const selectedProduct = selectedProductRef.current
+    const situation = situationRef.current
+    const budget = budgetRef.current
     if (!selectedProduct) return
     const rawBudget = budget.normalize('NFKC').trim().replace(/\s/g, '')
     const normalizedBudget = rawBudget.replace(/,/g, '')
@@ -314,6 +475,7 @@ export default function QuoteTool() {
       setError('想定予算は整数の円で入力してください。入力内容は変更されていません。')
       return
     }
+    const previousItems = itemsRef.current
     setSuggesting(true)
     setError('')
     setQuotaAction(null)
@@ -328,26 +490,37 @@ export default function QuoteTool() {
         }),
       })
       const d = await r.json()
+      if (!context.isCurrent(epoch)) return
       if (!r.ok) throw new Error(d?.error || '生成に失敗しました')
-      if (!Array.isArray(d.items) || d.items.length > MAX_QUOTE_ITEMS) {
+      if (!Array.isArray(d.items) || d.items.length > MAX_QUOTE_ITEMS || !d.items.every(isQuoteSuggestedItem)) {
         throw new Error('品目候補の形式が正しくありません。再度お試しください。')
+      }
+      if (itemsRef.current !== previousItems || selectedProductRef.current !== selectedProduct || situationRef.current !== situation || budgetRef.current !== budget) {
+        setError('生成中に明細が変更されたため、候補を適用しませんでした。現在の入力を保持しています。')
+        return
       }
       setItems(d.items)
       setRevealSeq((n) => n + 1)
     } catch (e) {
+      if (!context.isCurrent(epoch)) return
       notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
     } finally {
-      setSuggesting(false)
+      if (context.isCurrent(epoch)) {
+        setSuggesting(false)
+      }
     }
   }
 
   function updateItem(idx: number, patch: Partial<SuggestedItem>) {
+    if (!context.isCurrent(epoch)) return
     setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
   }
   function removeItem(idx: number) {
+    if (!context.isCurrent(epoch)) return
     setItems((prev) => prev.filter((_, i) => i !== idx))
   }
   function addItem() {
+    if (!context.isCurrent(epoch)) return
     setItems((prev) => prev.length >= MAX_QUOTE_ITEMS ? prev : [
       ...prev,
       { itemName: '', spec: '', qty: 1, unit: '式', unitPrice: 0, taxRate: 10, priceSource: 'manual', sourceRef: '', rangeMin: null, rangeMax: null },
@@ -358,13 +531,15 @@ export default function QuoteTool() {
   // ⚠️ 品目名と、人が既に手で入れた単価は上書きしない。
   //    AIボタンで人の入力を消すと、押すのが怖い機能になる。
   async function estimateRow(idx: number) {
-    const it = items[idx]
+    if (!context.isCurrent(epoch)) return
+    const selectedProduct = selectedProductRef.current
+    const it = itemsRef.current[idx]
     const name = (it?.itemName || '').trim()
     if (!name) {
       notifyError(setError, '先に品目名を入力してください')
       return
     }
-    setEstimating((prev) => new Set(prev).add(idx))
+    setEstimating((prev) => new Set(prev).add(it))
     try {
       const r = await fetch(withOrg('quote', '/api/quote/documents/estimate-item'), {
         method: 'POST',
@@ -372,25 +547,34 @@ export default function QuoteTool() {
         body: JSON.stringify({ itemName: name, spec: it.spec || undefined, productId: selectedProduct || undefined }),
       })
       const d = await r.json()
+      if (!context.isCurrent(epoch)) return
       if (!r.ok) throw new Error(d?.error || '生成に失敗しました')
-      const ai = d.item as SuggestedItem
-      updateItem(idx, {
+      if (!isQuoteSuggestedItem(d.item)) throw new Error('生成結果の形式を確認できませんでした。元の品目は保持しています。')
+      const currentIndex = itemsRef.current.indexOf(it)
+      if (currentIndex < 0 || selectedProductRef.current !== selectedProduct) {
+        setError('生成中に対象の品目が変更・削除されたため、結果を適用しませんでした。現在の入力を保持しています。')
+        return
+      }
+      const ai = d.item
+      const preservePrice = it.priceSource === 'manual' && (it.unitPrice !== null && (it.unitPrice > 0 || it.sourceRef === '手入力'))
+      updateItem(currentIndex, {
         spec: ai.spec || it.spec,
         qty: ai.qty,
         unit: ai.unit,
-        unitPrice: ai.unitPrice,
+        unitPrice: preservePrice ? it.unitPrice : ai.unitPrice,
         taxRate: ai.taxRate,
-        priceSource: ai.priceSource,
-        sourceRef: ai.sourceRef,
-        rangeMin: ai.rangeMin,
-        rangeMax: ai.rangeMax,
+        priceSource: preservePrice ? it.priceSource : ai.priceSource,
+        sourceRef: preservePrice ? it.sourceRef : ai.sourceRef,
+        rangeMin: preservePrice ? it.rangeMin : ai.rangeMin,
+        rangeMax: preservePrice ? it.rangeMax : ai.rangeMax,
       })
     } catch (e) {
+      if (!context.isCurrent(epoch)) return
       notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
     } finally {
-      setEstimating((prev) => {
+      if (context.isCurrent(epoch)) setEstimating((prev) => {
         const n = new Set(prev)
-        n.delete(idx)
+        n.delete(it)
         return n
       })
     }
@@ -405,11 +589,18 @@ export default function QuoteTool() {
   const tax = totals.taxAmount
 
   async function createDocument() {
-    if (items.length === 0) return
+    if (!context.isCurrent(epoch)) return
+    const selectedProduct = selectedProductRef.current
+    const clientCompany = clientCompanyRef.current
+    const clientPerson = clientPersonRef.current
+    const items = itemsRef.current
+    if (items.length === 0 || creatingDocumentRequest.current || documentUncertain || documentLimited || createdDocumentRef.current) return
     if (items.length > MAX_QUOTE_ITEMS) {
       notifyError(setError, `明細は${MAX_QUOTE_ITEMS}行以内で入力してください。`)
       return
     }
+    creatingDocumentRequest.current = true
+    let limited = false
     setCreating(true)
     setError('')
     setQuotaAction(null)
@@ -428,24 +619,42 @@ export default function QuoteTool() {
         }),
       })
       const d = await r.json()
+      if (!context.isCurrent(epoch)) return
       if (!r.ok) {
         if (r.status === 402 && d?.code === 'LIMIT_REACHED') {
-          if (d?.upgradeUrl === '/quote/pricing') {
-            setQuotaAction({ url: d.upgradeUrl, label: 'プロプランの料金と30日間無料の対象条件を確認する' })
-          } else if (typeof d?.contactUrl === 'string' && d.contactUrl.startsWith('https://')) {
-            setQuotaAction({ url: d.contactUrl, label: '追加枠を相談する' })
+          limited = true; documentLimitRef.current = true; setDocumentLimited(true)
+          const guidance = orgQuotaGuidance(d, r.status, 'quote')
+          if (org?.role === 'owner' && guidance.upgradeUrl) {
+            setQuotaAction({ url: guidance.upgradeUrl, label: 'プロプランの料金と30日間無料の対象条件を確認する' })
+          } else if (org?.role === 'owner' && guidance.contactUrl) {
+            setQuotaAction({ url: guidance.contactUrl, label: '追加枠を相談する' })
           }
         }
+        if (r.status >= 500) throw new OrgResponseError(true, r.status)
         throw new Error(d?.error || '作成に失敗しました')
       }
-      window.location.href = `/quote/documents/${d.id}`
+      if (typeof d.id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(d.id) || typeof d.quoteNo !== 'string' || !d.quoteNo) throw new OrgResponseError(true, r.status)
+      if (!context.isCurrent(epoch)) return
+      window.dispatchEvent(new CustomEvent('quote:usage-changed', { detail: { actor, organizationSlug: org?.slug } }))
+      if (itemsRef.current !== items || selectedProductRef.current !== selectedProduct || clientCompanyRef.current !== clientCompany || clientPersonRef.current !== clientPerson) {
+        setCreatedDocument({ id: d.id, quoteNo: d.quoteNo })
+        setCreating(false)
+        return
+      }
+      window.location.href = `/quote/documents/${encodeURIComponent(d.id)}`
     } catch (e) {
+      if (!context.isCurrent(epoch)) return
+      const uncertain = e instanceof OrgResponseError
+      setDocumentUncertain(uncertain)
+      if (!uncertain && !limited) creatingDocumentRequest.current = false
       notifyError(setError, e instanceof Error ? e.message : '作成に失敗しました')
       setCreating(false)
     }
   }
 
-  if (loading) {
+  if (authStatus === 'unauthenticated' || authStatus === 'authenticated' && !actor) return <QuoteLp />
+
+  if (loading || authStatus === 'loading' || draftIdentity.current !== identity) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 bg-slate-50">
         {/* ⚠️ 規約(§4.3)ではローディングはドヤくん working。テキストだけにしない */}
@@ -459,6 +668,7 @@ export default function QuoteTool() {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-slate-50 px-4 text-center">
         <p role="alert" className="text-sm font-bold text-rose-700">{error || '組織のデータを読み込めませんでした。'}</p>
+        {savedProduct && <p role="status" className="text-sm text-blue-900">商材「{savedProduct.name}」は保存しました。一覧を読み込めませんでした。再登録せず、再試行で一覧を確認してください。</p>}
         <button onClick={() => void load()} className="rounded-lg border border-blue-300 bg-white px-5 py-2.5 text-sm font-bold text-blue-700">再試行</button>
       </div>
     )
@@ -481,18 +691,19 @@ export default function QuoteTool() {
           </p>
           <input
             value={orgName}
-            onChange={(e) => setOrgName(e.target.value)}
+            onChange={(e) => { if (context.isCurrent(epoch)) setOrgName(e.target.value) }}
             placeholder="株式会社スリスタ"
             className="mt-5 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
           />
           {error && <p className="mt-3 text-sm text-rose-600 font-semibold">{error}</p>}
           <button
             onClick={createOrg}
-            disabled={!orgName.trim() || creatingOrg}
+            disabled={!orgName.trim() || creatingOrg || organizationUncertain}
             className="mt-4 w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
           >
-            {creatingOrg ? '作成しています…' : '組織を作成する'}
+            {creatingOrg ? '作成しています…' : organizationUncertain ? '作成結果の確認が必要です' : '組織を作成する'}
           </button>
+          {organizationUncertain && <button type="button" onClick={() => void load()} className="mt-3 block underline">組織一覧を再読み込みして確認する</button>}
         </div>
       </div>
     )
@@ -533,7 +744,7 @@ export default function QuoteTool() {
               service="quote"
               memberships={memberships}
               currentSlug={org.slug}
-              onChange={() => void load()}
+              onChange={changeOrganization}
             />
             <Link href="/quote/settings" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold">
               発行者情報
@@ -553,10 +764,11 @@ export default function QuoteTool() {
           </div>
         )}
 
+        {savedProduct && <p role="status" className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">商材「{savedProduct.name}」を保存しました。</p>}
         {error && (
           <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">
             <p>{error}</p>
-            {quotaAction && <Link href={quotaAction.url} className="mt-2 inline-block font-bold text-blue-700 underline">{quotaAction.label}</Link>}
+            {quotaAction && org?.role === 'owner' && <Link href={quotaAction.url} className="mt-2 inline-block font-bold text-blue-700 underline">{quotaAction.label}</Link>}
             {productSaveUncertain && <button type="button" onClick={() => void load()} className="mt-2 block font-bold text-blue-700 underline">商材一覧を再読み込み</button>}
           </div>
         )}
@@ -570,7 +782,7 @@ export default function QuoteTool() {
           <div className="mt-4 flex gap-2">
             <input
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => { if (context.isCurrent(epoch)) setUrl(e.target.value) }}
               placeholder="https://example.com/service"
               className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
             />
@@ -613,18 +825,26 @@ export default function QuoteTool() {
               <div className="mt-4 flex gap-2">
                 <input
                   value={productName}
-                  onChange={(e) => setProductName(e.target.value)}
+                  onChange={(e) => { if (context.isCurrent(epoch)) setProductName(e.target.value) }}
                   placeholder="商材名（例: SEOコンサルティング）"
                   className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
                 />
                 <button
                   onClick={saveProduct}
-                  disabled={!productName.trim() || savingProduct}
+                  disabled={!productName.trim() || savingProduct || productSaveUncertain || productLimited}
                   className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
                 >
-                  {savingProduct ? '保存しています…' : '商材として保存'}
+                  {savingProduct ? '保存しています…' : productLimited ? '商材登録の利用上限に達しています' : productSaveUncertain ? '保存結果の確認が必要です' : '商材として保存'}
                 </button>
               </div>
+            </div>
+          )}
+          {productLimited && (
+            <div role="alert" className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-900">
+              <p>商材登録の利用上限に達しています。入力は保持しています。</p>
+              {org?.role === 'owner' && productQuotaAction
+                ? <Link href={productQuotaAction.url} className="mt-2 inline-block underline">{productQuotaAction.label}</Link>
+                : <p className="mt-2">利用枠の変更は組織の契約者にご相談ください。</p>}
             </div>
           )}
         </section>
@@ -638,7 +858,7 @@ export default function QuoteTool() {
                 <span className="mb-1 block text-xs font-bold text-slate-500">商材</span>
                 <select
                   value={selectedProduct}
-                  onChange={(e) => setSelectedProduct(e.target.value)}
+                  onChange={(e) => { if (context.isCurrent(epoch)) setSelectedProduct(e.target.value) }}
                   className="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
                 >
                   {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -648,7 +868,7 @@ export default function QuoteTool() {
                 <span className="mb-1 block text-xs font-bold text-slate-500">想定予算（任意）</span>
                 <input
                   value={budget}
-                  onChange={(e) => setBudget(e.target.value)}
+                  onChange={(e) => { if (context.isCurrent(epoch)) setBudget(e.target.value) }}
                   placeholder="1000000"
                   inputMode="numeric"
                   className="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
@@ -658,7 +878,7 @@ export default function QuoteTool() {
                 <span className="mb-1 block text-xs font-bold text-slate-500">相手の状況（任意）</span>
                 <input
                   value={situation}
-                  onChange={(e) => setSituation(e.target.value)}
+                  onChange={(e) => { if (context.isCurrent(epoch)) setSituation(e.target.value) }}
                   placeholder="自社サイトの流入が伸び悩んでいる"
                   className="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
                 />
@@ -729,11 +949,11 @@ export default function QuoteTool() {
                       {/* 品目名を打った直後に押す想定。数量・単価・内訳をまとめて埋める */}
                       <button
                         onClick={() => void estimateRow(idx)}
-                        disabled={estimating.has(idx) || !it.itemName.trim()}
+                        disabled={estimating.has(it) || !it.itemName.trim()}
                         title={it.itemName.trim() ? '品目名から数量と単価をAIが入れます' : '先に品目名を入力してください'}
                         className="inline-flex items-center gap-1.5 rounded-lg bg-[#0066ff] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-300"
                       >
-                        {estimating.has(idx) ? (
+                        {estimating.has(it) ? (
                           <>
                             <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                             作成中
@@ -852,6 +1072,7 @@ export default function QuoteTool() {
               {items.some((i) => i.unitPrice == null && i.rangeMin != null && i.rangeMax != null) && (
                 <button
                   onClick={() => {
+                    if (!context.isCurrent(epoch)) return
                     setItems((prev) =>
                       prev.map((it) =>
                         it.unitPrice == null && it.rangeMin != null && it.rangeMax != null
@@ -881,13 +1102,13 @@ export default function QuoteTool() {
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <input
                 value={clientCompany}
-                onChange={(e) => setClientCompany(e.target.value)}
+                onChange={(e) => { if (context.isCurrent(epoch)) setClientCompany(e.target.value) }}
                 placeholder="宛先の会社名"
                 className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
               <input
                 value={clientPerson}
-                onChange={(e) => setClientPerson(e.target.value)}
+                onChange={(e) => { if (context.isCurrent(epoch)) setClientPerson(e.target.value) }}
                 placeholder="ご担当者名"
                 className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
@@ -958,12 +1179,29 @@ export default function QuoteTool() {
 
             <button
               onClick={createDocument}
-              disabled={creating || items.length === 0}
+              disabled={creating || documentUncertain || documentLimited || !!createdDocument || items.length === 0}
               className="mt-4 w-full rounded-xl bg-[#0066ff] hover:bg-[#0052cc] px-5 py-4 text-base font-black text-white shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
-              {creating ? '作成しています…' : '見積書を作成する'}
+              {creating ? '作成しています…' : createdDocument ? '送信した内容の見積書を作成しました' : documentUncertain ? '作成結果の確認が必要です' : documentLimited ? '利用上限に達しています' : '見積書を作成する'}
             </button>
-            {quotaAction && error && (
+            {createdDocument && (
+              <div role="status" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                送信した内容の見積書を作成しました。待機中に変更した入力は保持しています。
+                <Link href={`/quote/documents/${encodeURIComponent(createdDocument.id)}`} className="mt-2 block underline">作成した見積書を確認する（{createdDocument.quoteNo}）</Link>
+                <button type="button" onClick={() => {
+                  if (!context.isCurrent(epoch)) return
+                  creatingDocumentRequest.current = false
+                  setCreatedDocument(null)
+                }} className="mt-2 block underline">編集した内容で別の見積書を作成する</button>
+              </div>
+            )}
+            {documentUncertain && (
+              <div role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                作成結果を確認できませんでした。入力は保持しています。重ねて作成せず、同じ組織の見積書一覧をご確認ください。
+                <button type="button" onClick={() => void load()} className="mt-2 block underline">見積書一覧を再読み込みして確認する</button>
+              </div>
+            )}
+            {quotaAction && error && org?.role === 'owner' && (
               <div role="alert" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
                 <p>{error}</p>
                 <Link href={quotaAction.url} className="mt-2 inline-block text-blue-700 underline">{quotaAction.label}</Link>

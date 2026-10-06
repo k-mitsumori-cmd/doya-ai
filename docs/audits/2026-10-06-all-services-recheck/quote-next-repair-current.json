@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T21:12:28.310702+00:00",
-  "status": "confirmed-unfixed",
+  "status": "candidate-partly-corrected-production-counterexamples-still-unfixed",
   "organizationDraftScope": {
     "status": "confirmed-unfixed",
     "problem": "Actual retained quote creation callback transmits old draft to newly selected organization via actual withOrg",
@@ -49,5 +49,6 @@
       "src/app/quote/Tool.tsx"
     ],
     "finding": "Server layout checks session at render; client app layout and Tool do not observe actor transitions. Authenticated mounted actor/ABA regression required; source review alone does not prove a real logout exposure."
-  }
+  },
+  "candidateEvidence": "quote-workspace-repair.json"
 }
