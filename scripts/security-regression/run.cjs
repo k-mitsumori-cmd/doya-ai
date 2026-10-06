@@ -330,6 +330,11 @@ if (sfaAdmissionRoutes.error || sfaAdmissionRoutes.status !== 0) {
   console.error('Security regression failed: verify-sfa-admission-routes.cjs');
   process.exit(1);
 }
+const sfaInviteAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-invite-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaInviteAtomic.error || sfaInviteAtomic.status !== 0) {
+  console.error('Security regression failed: verify-sfa-invite-atomic.cjs');
+  process.exit(1);
+}
 const invitationDeadlines = spawnSync(process.execPath, [path.join(__dirname, 'verify-invite-deadline-rollback.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (invitationDeadlines.error || invitationDeadlines.status !== 0) {
   console.error('Security regression failed: verify-invite-deadline-rollback.cjs');

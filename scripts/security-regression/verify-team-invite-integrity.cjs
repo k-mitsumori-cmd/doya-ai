@@ -64,23 +64,23 @@ function acceptanceFixture(service, { createdAt = new Date(), role = 'member', e
   }
 }
 
-function creationFixture(service, { currentRole = 'owner' } = {}) {
+function creationFixture(service, { currentRole = 'owner', clock = Date } = {}) {
   const pending = []
   let sent = 0
   let sequence = 0
   let queue = Promise.resolve()
   const member = {
     findFirst: async ({ where }) => pending.find(row => row.inviteEmail === where.inviteEmail &&
-      (row.status === 'ACTIVE' || row.createdAt >= where.OR[1].createdAt.gte)) || null,
+      (row.status === 'ACTIVE' || row.createdAt > where.OR[1].createdAt.gt)) || null,
     deleteMany: async ({ where }) => {
       const before = pending.length
       for (let i = pending.length - 1; i >= 0; i--) {
-        if (pending[i].inviteEmail === where.inviteEmail && pending[i].status === 'PENDING' && pending[i].createdAt < where.createdAt.lt) pending.splice(i, 1)
+        if (pending[i].inviteEmail === where.inviteEmail && pending[i].status === 'PENDING' && pending[i].createdAt <= where.createdAt.lte) pending.splice(i, 1)
       }
       return { count: before - pending.length }
     },
     create: async ({ data }) => {
-      const row = { id: `invite-${++sequence}`, createdAt: new Date(), ...data }
+      const row = { id: `invite-${++sequence}`, createdAt: new clock(), ...data }
       pending.push(row)
       return row
     },
@@ -111,7 +111,7 @@ function creationFixture(service, { currentRole = 'owner' } = {}) {
     },
     [`@/lib/${service.id}/types`]: { ROLE_HIERARCHY: { owner: 4, admin: 3, manager: 2, member: 1 } },
     '@/lib/email': { sendEmail: async () => { sent++; return { success: true } } },
-  })
+  }, { Date: clock })
   return {
     pending,
     sent: () => sent,
@@ -157,6 +157,16 @@ function creationFixture(service, { currentRole = 'owner' } = {}) {
       assert.equal((await fixture.invite()).status, 200)
       assert.equal(fixture.pending.length, 1)
       assert.equal(fixture.sent(), 2)
+    })
+    await check(`${service.id} can replace an invite exactly at expiry while an unexpired invite still dedupes`, async () => {
+      const now = Date.parse('2026-10-06T04:00:00Z');
+      class Clock extends Date { constructor(...args) { super(...(args.length ? args : [now])) } static now() { return now } }
+      for (const offset of [-1, 0, 1]) {
+        const f = creationFixture(service, { clock: Clock }); assert.equal((await f.invite()).status, 200);
+        f.pending[0].createdAt = new Date(now - 48 * 60 * 60 * 1000 + offset);
+        assert.equal((await f.invite()).status, offset <= 0 ? 200 : 409);
+        assert.equal(f.pending.length, 1); assert.equal(f.sent(), offset <= 0 ? 2 : 1);
+      }
     })
     if (['aio', 'shodan', 'quote', 'mensetsu', 'aishodan'].includes(service.id)) {
       await check(`${service.id} revoked inviter cannot create or send an invite`, async () => {

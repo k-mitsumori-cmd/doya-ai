@@ -1,0 +1,115 @@
+{
+  "source": "2ac6d6c2",
+  "scope": "Actual prior route/quota. Synthetic DB where evaluator skips omitted conditions, like Prisma. No production writes.",
+  "results": [
+    {
+      "name": "cleanup-expiry",
+      "status": 200,
+      "stats": {
+        "transactions": 0,
+        "writes": 1,
+        "quotaReads": 0,
+        "rollbacks": 0
+      },
+      "state": null
+    },
+    {
+      "name": "cleanup-failure",
+      "status": 200,
+      "stats": {
+        "transactions": 0,
+        "writes": 0,
+        "quotaReads": 0,
+        "rollbacks": 0
+      },
+      "state": {
+        "id": "invite",
+        "organizationId": "org",
+        "organization": {
+          "name": "Synthetic",
+          "slug": "team"
+        },
+        "inviteToken": "token",
+        "inviteEmail": "qa@example.invalid",
+        "role": "member",
+        "status": "PENDING",
+        "createdAt": "2026-10-04T04:00:00.000Z"
+      }
+    },
+    {
+      "name": "cleanup-lost",
+      "status": 200,
+      "stats": {
+        "transactions": 0,
+        "writes": 0,
+        "quotaReads": 0,
+        "rollbacks": 0
+      },
+      "state": {
+        "id": "invite",
+        "organizationId": "org",
+        "organization": {
+          "name": "Synthetic",
+          "slug": "team"
+        },
+        "inviteToken": "token",
+        "inviteEmail": "qa@example.invalid",
+        "role": "member",
+        "status": "PENDING",
+        "createdAt": "2026-10-04T04:00:00.000Z"
+      }
+    },
+    {
+      "name": "changed-recipient",
+      "status": 200,
+      "stats": {
+        "transactions": 1,
+        "writes": 1,
+        "quotaReads": 1,
+        "rollbacks": 0
+      },
+      "state": {
+        "id": "invite",
+        "organizationId": "org",
+        "organization": {
+          "name": "Synthetic",
+          "slug": "team"
+        },
+        "inviteToken": null,
+        "inviteEmail": "other@example.invalid",
+        "role": "member",
+        "status": "ACTIVE",
+        "createdAt": "2026-10-04T04:00:00.000Z",
+        "userId": "user",
+        "name": null,
+        "acceptedAt": "2026-10-06T03:59:59.999Z"
+      }
+    },
+    {
+      "name": "changed-owner-role",
+      "status": 200,
+      "stats": {
+        "transactions": 1,
+        "writes": 1,
+        "quotaReads": 1,
+        "rollbacks": 0
+      },
+      "state": {
+        "id": "invite",
+        "organizationId": "org",
+        "organization": {
+          "name": "Synthetic",
+          "slug": "team"
+        },
+        "inviteToken": null,
+        "inviteEmail": "qa@example.invalid",
+        "role": "owner",
+        "status": "ACTIVE",
+        "createdAt": "2026-10-04T04:00:00.000Z",
+        "userId": "user",
+        "name": null,
+        "acceptedAt": "2026-10-06T03:59:59.999Z"
+      }
+    }
+  ]
+}

@@ -63,11 +63,11 @@ export async function POST(req: NextRequest) {
       if (!actor.length || rank(role) >= rank(actor[0].role)) return { kind: 'forbidden' as const }
       const cutoff = new Date(Date.now() - INVITE_TTL_MS)
       const duplicate = await tx.shodanMember.findFirst({
-        where: { organizationId: ctx.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gte: cutoff } }] },
+        where: { organizationId: ctx.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: cutoff } }] },
       })
       if (duplicate) return { kind: 'duplicate' as const, status: duplicate.status }
       await tx.shodanMember.deleteMany({
-        where: { organizationId: ctx.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lt: cutoff } },
+        where: { organizationId: ctx.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lte: cutoff } },
       })
       const member = await tx.shodanMember.create({
         data: { organizationId: ctx.organizationId, role, status: 'PENDING', inviteEmail: email, inviteToken },

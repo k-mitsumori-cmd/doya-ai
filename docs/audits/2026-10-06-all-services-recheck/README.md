@@ -262,3 +262,33 @@ UI版ea6cc7f9の公開HTML/JSも3サービスで200、再確認/切替/期限案
 残るSFAの既所属fast pathは参加トランザクション外でPENDING招待をdeleteManyするため、削除待ち中の失効を今回の通常claim rollbackと同一保証にはできない。確認済みは既所属照会中の失効時に削除しないところまで。SFAの再読/role・inviteEmail束ねと既所属cleanupの一体化、9サービスの招待発行/再送の期限境界（予約枠と失効判定の一致）を次の点検対象に残す。
 
 最終ビルド25733は既存プロセスで終了コード0を確認。Prisma生成・全体オフライン回帰・型検査・Next本番ビルド成功。開始時の14ソースSHA-256と一致。対象Lint・diff check成功。この最終版をコミット・main pushする。本番Ready/配信と実DB同時実行は別途確認する。
+
+9サービスの招待API補修2ac6d6c27a7e7163e3d7bae76d7d1fb0e707c1efをコミット・main push成功。Vercel dpl_F8JZmAiBd6VzTCin1nhfE96MU5a7は同SHAでBUILDING、CI37401520959 queuedを確認。次回は同じデプロイ/CIを照会する。Ready/配信/実DB競合/実承諾は未確認。全サービス監査は継続。
+
+
+## SFA招待参加/既所属cleanupの一体化と6サービスの再送境界
+
+SFAはSerializableの1トランザクション内で招待を再読し、token/組織/PENDING/発行可能なrole/宛先を確認する。owner/未知roleは拒否。既所属なら人数枠を使わず、条件付きdeleteManyを同じTxで実行し、失効/削除失敗/件数0を成功とせずrollback。通常参加は最新招待確認後に実checkSfaQuotaで契約者の人数枠を確認し、現在のrole/宛先/組織/token/状態/期限を束ねたclaimを行う。人数上限402・本人不一致403・状態競合409・失効410の応答契約を維持し、P2034は全再読から最大5回再試行する。削除例外を握りつぶして200を返す旧fast pathを解消。DBスキーマは変更しない。
+
+SFA/AIO/商談準備/見積/面接官/AI商談の招待発行時の重複確認をcreatedAt.gt、期限切れ置換をlteへ変更。参加APIと同じ期限ちょうど失効へそろえた。SFAのpending席数計算もgtに変更し、失効済みの招待で新しい招待枠をふさがない。各サービスの発行権限・自己より上位のrole拒否・既参加メンバーと未失効招待の重複拒否・メール配信の成功/失敗案内を維持。
+
+実SFA API/実quotaの9項目成功、既存の期限回帰17項目も成功。既所属かつ上限満杯の正常cleanup、削除待ち中失効rollback、削除失敗/件数0、不一致/状態/組織/owner/未知role変更、quota/claim待ち失効、正常参加、P2034再試行、pending席数の期限境界、SFA再送の期限前/ちょうど/後を含む。残る5サービスの実発行APIは既存本人/権限/再送/配信回帰に期限ちょうど置換のケースを追加し30項目成功。すべて合成DB/認証/時計/送信stubで、実DB同時実行や本番メール送信・招待参加は行っていない。
+
+旧2ac6d6c2のSFA実コードとの比較では、既所属cleanup中失効/削除失敗/件数0が200、Tx開始時の宛先・owner role変更も200と合成DBで再現（sfa-invite-atomic-baseline.json）。初期probeは新しいwhere条件を必須とするmockにより旧コードを正しく模擬できなかったため、Prisma同様に省略条件を無視する評価へ補正して最終比較を記録。変更注入は合成DBであり、実管理APIで任意の宛先/role変更が可能という証拠ではない。新しい回帰9項目を全体build gateへ追加。対象Lint成功、13ソースを凍結して最終ビルド14302を実行中。state/exitCodeを独立したJSONへ保存するdriverを使い、ハンドル喪失時にも現在のrunId/pid/exitを照合できるようにした。
+
+全17サービスの認証後の通し確認、実DB競合、現行ER更新、本番CLIENT_FETCH_ERROR原因は未完了。HR/プロマネ/勤怠の招待発行・再送の期限境界をこの6サービスの結果から完了扱いにしない。前回9API期限版2ac6d6c2の具体的なVercel/CI現在値はinvite-deadline-deployment-2ac6d6c2.jsonへ記録し、同じハンドルで継続照会する。
+
+追加の読取点検では、HR発行の重複条件はexpiresAt.gt（現在のnew Date）、プロマネ発行の再利用/予約数もgtだがTx冒頭の固定nowを使う。プロマネは照会待ち中に期限切れになった既存招待を再利用しないか、動く時計で追加検証が必要。勤怠の初回/再送はv2トークンに発行時刻を埋め込む方式であり、createdAt基準の6サービスの結果を流用しない。残る3サービスの発行/再送のAPI待機/状態競合を次の点検へ残す。
+
+
+最終ビルド14302/driver runId f65613d7-2fe0-4fbf-ace2-834a7d9ddcb8は終了コード1、Nextのtrace書込でENOSPC。Prisma/全体回帰/型/コンパイル/296ページ生成は通ったが最終ビルド合格にはしない。独立state JSONもfinished/exitCode1/changedSources空を確認し、log/stateをsfa-invite-atomic-build-enospc.log/jsonに保持。終了済みでbuild/回帰プロセスなし。ディスク143MiB、npmダウンロードキャッシュ859MiBを現物確認し、npm cache clean --force成功後1.2GiBの空きを確認。node_modules、Git、動画/モデルデータ、未コミットsourceは保持。今回source13ファイルは凍結時hashと一致。
+
+同じsourceで全体ビルドをretryし、session52344/独立state /tmp/doya-sfa-invite-atomic-retry-build-state-20261006.json、log /tmp/doya-sfa-invite-atomic-retry-build-20261006.logで進行中。先行runは観測タイムアウトではなくENOSPCの終了を確認して再実行している。未コミット・未反映。次回はこの具体的なsession/runId/pidとexitを照合し、結果不明のまま再起動しない。前回9API期限版2ac6d6c2は同SHAのVercel Ready/本番別名/CI37401520959 successを現在値として確認。全サービス監査は引き続き未完了。
+
+
+追加点検: プロマネ発行helperの実コードを合成時計/DBで実行し、active席数照会待ちで既存招待の期限ちょうどへ時刻を進めた。重複照会がTx冒頭のnowを使うため、失効済みtokenをsuccess/reused:trueで返すことを再現（promane-invite-issuance-clock-baseline.json）。実DB・メール送信は行っていない。修正前の再現証拠であり、対応完了ではない。現在の13ソース凍結ビルドとは別の次回修正対象とする。
+
+HR発行も実API/合成DB/時計/送信stubで、pending招待の読取待ちに期限ちょうどを迎える場合、失効済みの招待を「有効な招待が既にあります」として400で再発行を拒否することを再現（hr-invite-issuance-clock-baseline.json）。書込・送信0。本番発生頻度は未測定。プロマネと合わせて読取後の現在時刻照合を次の補修対象に追加する。
+
+
+再試行ビルド52344/runId 2232d4ff-43a1-434c-b0ca-3874b8f02648は終了コード0。独立state finished/exitCode0/changedSources空、現在の13ソースhash一致を確認。Prisma生成・全体オフライン回帰・型検査・Next本番ビルド成功。対象Lintとdiff check成功。証拠はsfa-invite-atomic-build-success.json/log。検証版の範囲だけをcommit/main pushし、本番デプロイとCIの結果を別途照会する。プロマネ/HRの追加再現2件は未修正のまま明示し、全サービス完了にはしない。

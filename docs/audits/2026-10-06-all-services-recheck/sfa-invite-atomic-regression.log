@@ -1,0 +1,24 @@
+PASS SFA already-member cleanup is transactional and bypasses a full quota
+PASS SFA expiry during cleanup restores the pending invitation
+PASS SFA cleanup failure or lost claim never reports success or exposes raw details
+PASS SFA fresh transactional invitation rejects changed recipient, organization, status, token or owner role
+PASS SFA pending invitation expires during lookup/quota/claim without retained changes
+PASS SFA normal participant quota rejects before writes and successful admission consumes exactly one token
+PASS SFA serialization conflict retries the entire fresh lookup and admission
+PASS SFA pending-seat quota includes only invites strictly newer than expiry cutoff
+PASS SFA exact-expiry reissue frees the old pending seat, replaces the invite and preserves active members
+{
+  "passed": 9,
+  "scope": "Actual SFA route and quota; synthetic transactional rollback/auth/clock, no production writes or email",
+  "results": [
+    "SFA already-member cleanup is transactional and bypasses a full quota",
+    "SFA expiry during cleanup restores the pending invitation",
+    "SFA cleanup failure or lost claim never reports success or exposes raw details",
+    "SFA fresh transactional invitation rejects changed recipient, organization, status, token or owner role",
+    "SFA pending invitation expires during lookup/quota/claim without retained changes",
+    "SFA normal participant quota rejects before writes and successful admission consumes exactly one token",
+    "SFA serialization conflict retries the entire fresh lookup and admission",
+    "SFA pending-seat quota includes only invites strictly newer than expiry cutoff",
+    "SFA exact-expiry reissue frees the old pending seat, replaces the invite and preserves active members"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "status": 400,
+  "body": {
+    "error": "このメールアドレスには有効な招待が既にあります"
+  },
+  "created": 0,
+  "sent": 0,
+  "now": 1791244801000,
+  "expiredInvite": true
+}

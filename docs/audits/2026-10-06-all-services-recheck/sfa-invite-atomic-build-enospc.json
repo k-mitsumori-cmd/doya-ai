@@ -1,0 +1,27 @@
+{
+  "runId": "f65613d7-2fe0-4fbf-ace2-834a7d9ddcb8",
+  "startedAt": "2026-10-06T01:59:27.313819+00:00",
+  "pid": 73325,
+  "sourceHashes": {
+    "src/app/api/sfa/invite/[token]/route.ts": "100250309db35df0a9e460ae74ec2dcee62156d332dc3fa3cebfc4e5c36636b0",
+    "src/app/api/sfa/members/route.ts": "37ef87c09035d61f0de752ffaf77cd1df11862802a48c120a250f2b615e1c766",
+    "src/app/api/aio/members/route.ts": "e374a76cb2c2017edbb979d6b0c9e10b92ff9dafabc4c5e27867f474dfa7ef75",
+    "src/app/api/shodan/members/route.ts": "ed820d4c020ae762963ed7dcaff2c997dae2eb9c70d456032b5691b3dac45137",
+    "src/app/api/quote/members/route.ts": "c59859525358da1b0c25ad47fc17c6d9e03d84cc5bf54f247a7bd3d8e2e3b33a",
+    "src/app/api/mensetsu/members/route.ts": "2a832179fe1b425593384b89ffd388a95060cb808450c107c2fdd021340fcc38",
+    "src/app/api/aishodan/members/route.ts": "c1d67eb63268f064a428fca7c5df0f84068675b063a5323dfec7947f2c820a22",
+    "src/lib/sfa/limits.ts": "fe2d94478d2b9dd333c8d36f9229f8ba2a851f086f4cfc9717c615e2201dd4c5",
+    "scripts/security-regression/verify-sfa-admission-routes.cjs": "a099043286c2ac8c44d41ba8ab4bb7fb328e7502e51de075fdfa8535ceac3176",
+    "scripts/security-regression/verify-team-invite-integrity.cjs": "87456e0f8f76f71c0313f25a8eba0097a996ddb3e0b56d556cde30ac62774526",
+    "scripts/security-regression/verify-team-invite-delivery.cjs": "ec2385a34f49745f3a825296adb4d4de7c6cbdff9dd09b1b91445edb5dd3c35f",
+    "scripts/security-regression/verify-sfa-invite-atomic.cjs": "f9f9059b4998e1b4a42ea2c0cd9a818d25ee7092f1e75c26092f2c01c7daf9d3",
+    "scripts/security-regression/run.cjs": "5bfe6c2a9ed26bc0f7a4f4abc2fdc9b50aef83a0c1598c6564a23613c866f410"
+  },
+  "state": "finished",
+  "exitCode": 1,
+  "completedAt": "2026-10-06T02:15:43.793205+00:00",
+  "changedSources": [],
+  "rawLogPath": "/tmp/doya-sfa-invite-atomic-final-build-20261006.log",
+  "rawLogSha256": "c4fa603e4ef7b6bdbd49b3fa77d922bc51057fae9d0d0296b473d01dc5c7e4a1",
+  "storedLogNormalization": "Trailing whitespace and terminal carriage returns removed; raw file preserved locally"
+}

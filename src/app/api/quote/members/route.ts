@@ -79,11 +79,11 @@ export async function POST(req: NextRequest) {
       if (!actor.length || ROLE_HIERARCHY[role] > ROLE_HIERARCHY[actor[0].role]) return { kind: 'forbidden' as const }
       const cutoff = new Date(Date.now() - INVITE_TTL_MS)
       const duplicate = await tx.quoteMember.findFirst({
-        where: { organizationId: c.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gte: cutoff } }] },
+        where: { organizationId: c.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: cutoff } }] },
         select: { status: true },
       })
       if (duplicate) return { kind: 'duplicate' as const, status: duplicate.status }
-      await tx.quoteMember.deleteMany({ where: { organizationId: c.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lt: cutoff } } })
+      await tx.quoteMember.deleteMany({ where: { organizationId: c.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lte: cutoff } } })
       const member = await tx.quoteMember.create({
         data: { organizationId: c.organizationId, role, status: 'PENDING', inviteEmail: email, inviteToken: token },
         select: { id: true, role: true, status: true, inviteEmail: true },

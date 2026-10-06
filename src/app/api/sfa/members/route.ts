@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   const duplicateWhere = {
     organizationId: ctx.organizationId,
     inviteEmail: email,
-    OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gte: new Date(Date.now() - INVITE_TTL_MS) } }],
+    OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: new Date(Date.now() - INVITE_TTL_MS) } }],
   }
   const existingInvite = await prisma.sfaMember.findFirst({ where: duplicateWhere })
   if (existingInvite) {
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       })
       if (dup) return { kind: 'duplicate' as const, status: dup.status }
       await tx.sfaMember.deleteMany({
-        where: { organizationId: ctx.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lt: new Date(Date.now() - INVITE_TTL_MS) } },
+        where: { organizationId: ctx.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lte: new Date(Date.now() - INVITE_TTL_MS) } },
       })
       const member = await tx.sfaMember.create({
         data: { organizationId: ctx.organizationId, role, status: 'PENDING', inviteEmail: email, inviteToken },

@@ -74,7 +74,7 @@ export async function checkSfaQuota(
           where: {
             organizationId,
             OR: options.countPendingInvites
-              ? [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) } }]
+              ? [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: new Date(Date.now() - 48 * 60 * 60 * 1000) } }]
               : [{ status: 'ACTIVE' }],
           },
         })

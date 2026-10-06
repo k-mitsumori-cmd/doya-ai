@@ -6,6 +6,7 @@ let attempted = 0;
 let emailed = 0;
 const quota = {
   withSfaAdmission: async () => ({ limit }),
+  checkSfaQuota: async () => limit,
   canManageSfaBilling: async (_, organizationId, userId) => {
     assert.equal(organizationId, 'org');
     assert.equal(userId, 'actor');
@@ -19,6 +20,7 @@ const shared = {
   '@/lib/sfa/format': { bigIntToNumber: (value) => value },
   '@/lib/sfa/limits': quota,
 };
+const transactional = prisma => ({ ...prisma, $transaction: async work => work(prisma) });
 const request = (body) => ({ url: 'http://local/api/sfa', headers: { get: () => null }, json: async () => body });
 
 (async () => {
@@ -62,21 +64,22 @@ const request = (body) => ({ url: 'http://local/api/sfa', headers: { get: () => 
     ...shared,
     'next-auth': { getServerSession: async () => ({ user: { id: 'invitee', email: 'member@example.com' } }) },
     '@/lib/auth': { authOptions: {} },
-    '@/lib/prisma': { prisma: { sfaMember: {
-      findUnique: async () => ({ id: 'invite', organizationId: 'org', organization: { slug: 'org' }, status: 'PENDING', createdAt: new Date(), inviteEmail: 'member@example.com' }),
+    '@/lib/prisma': { prisma: transactional({ sfaMember: {
+      findUnique: async () => ({ id: 'invite', organizationId: 'org', organization: { slug: 'org' }, status: 'PENDING', role: 'member', inviteToken: 'token', createdAt: new Date(), inviteEmail: 'member@example.com' }),
       findFirst: async () => null,
       updateMany: async () => { attempted++; return { count: 1 }; },
-    } } },
+    } }) },
   }).POST;
   assert.equal((await invite(request({}), { params: Promise.resolve({ token: 'token' }) })).status, 402);
   assert.equal(attempted, 0, 'blocked quota must stop every database write and usage event');
   let guardedDelete = false;
+  let deleteCount = 0;
   const alreadyMemberInvite = load('src/app/api/sfa/invite/[token]/route.ts', {
     ...shared,
     'next-auth': { getServerSession: async () => ({ user: { id: 'invitee', email: 'member@example.com' } }) },
     '@/lib/auth': { authOptions: {} },
-    '@/lib/prisma': { prisma: { sfaMember: {
-      findUnique: async () => ({ id: 'invite', organizationId: 'org', organization: { slug: 'org' }, status: 'PENDING', createdAt: new Date(), inviteEmail: 'member@example.com' }),
+    '@/lib/prisma': { prisma: transactional({ sfaMember: {
+      findUnique: async () => ({ id: 'invite', organizationId: 'org', organization: { slug: 'org' }, status: 'PENDING', role: 'member', inviteToken: 'token', createdAt: new Date(), inviteEmail: 'member@example.com' }),
       findFirst: async () => ({ id: 'already-active' }),
       delete: async () => { throw Error('must not delete by id alone'); },
       deleteMany: async ({ where }) => {
@@ -84,13 +87,16 @@ const request = (body) => ({ url: 'http://local/api/sfa', headers: { get: () => 
         assert.equal(where.status, 'PENDING');
         assert.equal(where.inviteToken, 'token');
         guardedDelete = true;
-        return { count: 0 }; // 別の承諾で既に ACTIVE になった場合
+        return { count: deleteCount }; // 別の承諾で既に ACTIVE になった場合
       },
-    } } },
+    } }) },
   }).POST;
   const already = await alreadyMemberInvite(request({}), { params: Promise.resolve({ token: 'token' }) });
-  assert.equal(already.status, 200);
-  assert.equal((await already.json()).alreadyMember, true);
+  assert.equal(already.status, 409, 'cleanup must not silently report success after a lost claim');
+  deleteCount = 1;
+  const validAlready = await alreadyMemberInvite(request({}), { params: Promise.resolve({ token: 'token' }) });
+  assert.equal(validAlready.status, 200);
+  assert.equal((await validAlready.json()).alreadyMember, true);
   assert.equal(guardedDelete, true, 'an ACTIVE member must never be removed by an outdated invitation read');
   console.log('PASS SFA admission routes: every creation path blocks at quota without writes or email');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

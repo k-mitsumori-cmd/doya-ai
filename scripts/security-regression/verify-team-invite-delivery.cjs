@@ -10,7 +10,7 @@ function fixture(service, { deliverySuccess = true, role = 'owner', currentRole 
   const prisma = {
     [model]: {
       findFirst: async () => null,
-      deleteMany: async ({ where }) => { if (expiredInvite && where.status === 'PENDING' && where.createdAt.lt instanceof Date) staleRemoved++; return { count: expiredInvite ? 1 : 0 }; },
+      deleteMany: async ({ where }) => { if (expiredInvite && where.status === 'PENDING' && where.createdAt.lte instanceof Date) staleRemoved++; return { count: expiredInvite ? 1 : 0 }; },
       create: async ({ data }) => { creations++; return { id: 'member', ...data }; },
     },
     [orgModel]: { findUnique: async () => ({ name: 'Acme' }) },

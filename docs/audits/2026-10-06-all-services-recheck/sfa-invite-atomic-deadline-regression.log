@@ -1,0 +1,40 @@
+PASS sfa: GET and POST expire at the exact deadline and after it without writes
+PASS sfa: one millisecond before expiry still admits normally
+PASS sfa: delayed existing-member read cannot admit or consume a now-expired invite
+PASS sfa: expiry while counting seats takes precedence over quota guidance
+PASS sfa: delayed claim rolls back every membership and invitation write
+PASS kintai: GET and POST expire at the exact deadline and after it without writes
+PASS kintai: one millisecond before expiry still admits normally
+PASS kintai: delayed existing-member read cannot admit or consume a now-expired invite
+PASS kintai: delayed claim rolls back every membership and invitation write
+PASS promane: GET and POST expire at the exact deadline and after it without writes
+PASS promane: one millisecond before expiry still admits normally
+PASS promane: delayed existing-member read cannot admit or consume a now-expired invite
+PASS promane: expiry while counting seats takes precedence over quota guidance
+PASS promane: delayed claim rolls back every membership and invitation write
+PASS Kintai: expiry during old-organization deactivation rolls back the transfer
+PASS Promane: expiry during member creation rolls back both membership and invitation
+PASS Kintai: timestamped reissued and legacy tokens share a strict expiry boundary
+{
+  "passed": 17,
+  "scope": "Actual API/helper/seat admission with synthetic clock and transactional rollback model; no real database or external API",
+  "results": [
+    "sfa: GET and POST expire at the exact deadline and after it without writes",
+    "sfa: one millisecond before expiry still admits normally",
+    "sfa: delayed existing-member read cannot admit or consume a now-expired invite",
+    "sfa: expiry while counting seats takes precedence over quota guidance",
+    "sfa: delayed claim rolls back every membership and invitation write",
+    "kintai: GET and POST expire at the exact deadline and after it without writes",
+    "kintai: one millisecond before expiry still admits normally",
+    "kintai: delayed existing-member read cannot admit or consume a now-expired invite",
+    "kintai: delayed claim rolls back every membership and invitation write",
+    "promane: GET and POST expire at the exact deadline and after it without writes",
+    "promane: one millisecond before expiry still admits normally",
+    "promane: delayed existing-member read cannot admit or consume a now-expired invite",
+    "promane: expiry while counting seats takes precedence over quota guidance",
+    "promane: delayed claim rolls back every membership and invitation write",
+    "Kintai: expiry during old-organization deactivation rolls back the transfer",
+    "Promane: expiry during member creation rolls back both membership and invitation",
+    "Kintai: timestamped reissued and legacy tokens share a strict expiry boundary"
+  ]
+}
