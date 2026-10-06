@@ -49,7 +49,7 @@ function SlideView({ s, idx, total }: { s: ProposalSlide; idx: number; total: nu
   )
 }
 
-export default function SlideDeck({ slides, fileBase }: { slides: ProposalSlide[]; fileBase?: string }) {
+export default function SlideDeck({ slides, fileBase, canExport }: { slides: ProposalSlide[]; fileBase?: string; canExport?: () => boolean }) {
   // A new document/version owns a new cursor, even across an A -> B -> A change.
   const currentScope = useRef({ slides, fileBase })
   if (currentScope.current.slides !== slides || currentScope.current.fileBase !== fileBase) {
@@ -80,7 +80,7 @@ export default function SlideDeck({ slides, fileBase }: { slides: ProposalSlide[
           <span className="text-sm font-black text-slate-500">{i + 1} / {slides.length}</span>
           <button onClick={next} disabled={i === slides.length - 1} className="grid place-items-center w-9 h-9 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40">{sym('chevron_right', 22)}</button>
         </div>
-        <button onClick={() => window.print()} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50">{sym('print', 16)}印刷 / PDF</button>
+        <button onClick={() => { if (currentScope.current === scope && (!canExport || canExport())) window.print() }} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50">{sym('print', 16)}印刷 / PDF</button>
       </div>
 
       {/* 表示中スライド */}

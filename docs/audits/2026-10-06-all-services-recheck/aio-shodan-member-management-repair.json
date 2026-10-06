@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T22:56:18.114151+00:00",
-  "status": "pushed-production-building",
+  "status": "deployed-anonymous-passed-private-flow-unproven",
   "services": [
     "aio",
     "shodan"
@@ -35,8 +35,8 @@
   "typecheckExitCode": 0,
   "targetedLintExitCode": 0,
   "gate": "docs/audits/2026-10-06-all-services-recheck/aio-shodan-members-release-36538a98-9704-4d03-bb44-e9752077aae1",
-  "production": "BUILDING",
-  "lastCheckedAt": "2026-10-06T23:13:30.502852+00:00",
+  "production": "READY",
+  "lastCheckedAt": "2026-10-06T23:28:30.659576+00:00",
   "extraFixes": [
     "Correct AIO member page copy which described Shodan capabilities",
     "Explicit inactive member label",
@@ -50,5 +50,9 @@
   "sourceFreezeChangedSources": [],
   "sourceFreezeReverifiedBeforeCommit": true,
   "commit": "6bd0adb1ed4ae0eed43701545b86cb451897466a",
-  "deployment": "dpl_DozPfQu34TY5vPvv1zkUcX9zY3fR"
+  "deployment": "dpl_DozPfQu34TY5vPvv1zkUcX9zY3fR",
+  "ciRun": 37545231774,
+  "ciStatus": "completed-success",
+  "ciHeadShaVerified": "6bd0adb1ed4ae0eed43701545b86cb451897466a",
+  "anonymousPublicVerification": "aio-shodan-members-public-6bd0adb1.json"
 }

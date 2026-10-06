@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-06T23:28:51.753546+00:00",
+  "status": "confirmed-open-not-fixed",
+  "sourceCommit": "28ed5de2a33bb2cf7a20b3bc23c4995037525fa3",
+  "probe": "probe-shodan-slide-editor-lifecycle.cjs",
+  "findings": [
+    {
+      "evidence": "shodan-slide-editor-double-baseline.json",
+      "actual": "Actual mounted editor sends two same-turn regeneration POST requests."
+    },
+    {
+      "evidence": "shodan-slide-editor-unmount-baseline.json",
+      "actual": "Generation completion after actual unmount still announces global success."
+    }
+  ],
+  "nextRequirements": [
+    "Validated actor/org/document-scoped reads and mutation tickets, synchronous regeneration/PDF operation locks",
+    "Latest synchronous instruction drafts and exact index/identity response acknowledgement",
+    "Preserve edits and unknown outcomes during same-actor auth refresh, no blind replay",
+    "Scoped bounded PDF image fetch/decode/assembly/save lifecycle; stop work after exit and prevent stale export",
+    "Partial image/structure alignment, active index safety, truthful 404 versus read failure and usage/upgrade guidance",
+    "Actual mounted synthetic regressions before full gate, release and production verification"
+  ],
+  "limitations": [
+    "No paid provider, actual customer DB or browser production proof.",
+    "Detail page candidate does not repair the separate editor page.",
+    "Full 17 services / 2074 criteria remain in scope."
+  ]
+}

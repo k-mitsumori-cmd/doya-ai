@@ -1,3 +1,7 @@
+for (const script of ['verify-shodan-detail-mounted.cjs', 'verify-shodan-detail-response.cjs']) {
+  const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Shodan detail regression failed:', script); process.exit(1); }
+}
 const slideDeck = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-shodan-slide-deck-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (slideDeck.error || slideDeck.status !== 0) { console.error('Shodan slide deck regression failed'); process.exit(1); }
 const { spawnSync } = require('node:child_process');

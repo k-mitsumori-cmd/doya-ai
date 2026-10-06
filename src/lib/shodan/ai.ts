@@ -6,6 +6,7 @@
 // ============================================
 import { geminiGenerateJson, geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import type { CompanyResearch, CompanyAnalysis, ProposalSlide } from './types'
+import { isCompanyAnalysis } from './preparation-response'
 
 export interface OwnCompanyProfile {
   companyName?: string | null
@@ -102,7 +103,7 @@ export async function analyzeCompany(research: CompanyResearch, own?: OwnCompany
   ].join('\n')
 
   const r = await geminiGenerateJson<CompanyAnalysis>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT }, 'ShodanAnalysis')
-  return {
+  const analysis = {
     currentStateAssessment: r?.currentStateAssessment || '',
     strengths: Array.isArray(r?.strengths) ? r!.strengths.filter(Boolean).slice(0, 6) : [],
     weaknesses: Array.isArray(r?.weaknesses) ? r!.weaknesses.filter(Boolean).slice(0, 6) : [],
@@ -111,6 +112,8 @@ export async function analyzeCompany(research: CompanyResearch, own?: OwnCompany
     talkingPoints: Array.isArray(r?.talkingPoints) ? r!.talkingPoints.filter(Boolean).slice(0, 8) : [],
     firstMessage: r?.firstMessage || '',
   }
+  if (!isCompanyAnalysis(analysis)) throw new Error('Invalid Shodan analysis response')
+  return analysis
 }
 
 /** 提案資料（Markdown）を一括生成 */

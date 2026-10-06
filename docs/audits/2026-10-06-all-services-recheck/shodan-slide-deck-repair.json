@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T23:13:30.503652+00:00",
-  "status": "release-gates-passed-not-yet-pushed",
+  "status": "pushed-production-verification-pending",
   "baseCommit": "6bd0adb1ed4ae0eed43701545b86cb451897466a",
   "finding": "Actual mounted SlideDeck crashes with TypeError reading undefined.type after navigating to slide 3 then replacing the deck with one slide.",
   "baselineExitCode": 1,
@@ -24,5 +24,23 @@
   "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-slide-deck-release-5a6695b1-b84b-43b7-a25e-b8fe9cac70ea",
   "sourceFiles": 2636,
   "changedSources": [],
-  "lastCheckedAt": "2026-10-06T23:18:19.881683+00:00"
+  "lastCheckedAt": "2026-10-06T23:19:04.431590+00:00",
+  "sourceCommit": "994b21ed",
+  "releaseCommit": "28ed5de2a33bb2cf7a20b3bc23c4995037525fa3",
+  "pushExitCode": 0,
+  "releaseSession": 93064,
+  "releaseExitCode": 0,
+  "previousGoalTurnClassification": "progress: verified frozen member repair sources and pushed; prior member production READY and anonymous proof verified; reproduced and repaired SlideDeck crash, passed frozen full gate and pushed; additionally confirmed two open detail defects with actual mounted probes",
+  "deployments": [
+    {
+      "uid": "dpl_4Dx6jiihVaNakdqoU7Qc219gBRZ8",
+      "url": "doya-pn8qadsjs-surisutas-projects.vercel.app",
+      "state": "BUILDING"
+    }
+  ],
+  "ciRun": 37545865404,
+  "ciStatus": "completed-success",
+  "ciWatchSession": 25668,
+  "ciWatchExitCode": 0,
+  "ciHeadShaVerified": "28ed5de2a33bb2cf7a20b3bc23c4995037525fa3"
 }

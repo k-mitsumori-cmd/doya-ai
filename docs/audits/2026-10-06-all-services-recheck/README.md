@@ -715,3 +715,8 @@ AIO/商談準備のメンバー管理も補修候補を実装。実AppLayout・�
 
 
 2026-10-07追加点検: AIO/Shodanメンバー補修6bd0adb1はmainへpush済み、本番READYと認証後動作の証明は別途確認。前版3fed1112はREADY・匿名17入口/37JS確認済み。Shodan SlideDeckの資料枚数減少時クラッシュを実コンポーネントで再現・補修し、全体ゲート（2636ソース不変）に合格。詳細画面では組織切替/離脱後の再生成応答・同時再送・HTTP500誤表示の未修正4件を合成検証で確認。shodan-detail-lifecycle-repair.jsonとshodan-slide-deck-repair.json参照。17サービス/2074項目の全体完了・過去本番障害の解消は未証明。
+
+
+2026-10-07詳細画面追加補修: shodan-detail-lifecycle-repair.json。認証/組織/案件/保存版に結び付けた読み書き、再送抑止、保存後再確認、部分画像の再開導線、AI応答の保存前検証を実装。実ページ34件・DTO不正19件・AI出力不正4件と実GET応答契約を合成検証。全体ゲートは新モジュールのテスト読込を修正して再実行中。AIO/Shodanメンバー6bd0adb1はCI成功・READY・匿名17入口37JS配信を確認。スライドカーソル28ed5de2はCI成功、本番READY確認待ち。別画面のスライド編集にも二重送信/離脱後通知を再現し、shodan-slide-editor-repair.jsonに未修正として記録。認証後本番通し確認と17サービス全体完了は未証明。
+
+詳細画面の最終ゲートはdocs/audits/2026-10-06-all-services-recheck/shodan-detail-release-57233f37-a2e6-43d3-b759-538b8b3d7bc0で合格。2640ソース不変、回帰/型/本番ビルド/Lintが成功。コミットと本番公開・認証後の操作確認は同一視しない。

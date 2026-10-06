@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T23:14:46.879237+00:00",
-  "status": "confirmed-open-not-fixed",
+  "status": "release-gates-passed-not-yet-pushed",
   "sourceCommit": "6bd0adb1ed4ae0eed43701545b86cb451897466a",
   "source": "src/app/shodan/[orgSlug]/p/[id]/page.tsx",
   "findings": [
@@ -39,6 +39,30 @@
   "limitations": [
     "Synthetic HTTP only; no paid provider, customer DB writes, or authenticated production reproduction.",
     "2026-09 incident causes remain unverified.",
-    "All 17 services and 2074 criteria remain in scope."
-  ]
+    "All 17 services and 2074 criteria remain in scope.",
+    "Frozen full gate passed; production release and authenticated browser verification remain separate."
+  ],
+  "candidateBaseCommit": "28ed5de2a33bb2cf7a20b3bc23c4995037525fa3",
+  "mountedCases": 34,
+  "malformedDTOCases": 19,
+  "malformedAIOutputCases": 4,
+  "actualGetProtocolVerified": true,
+  "controller": "src/lib/shodan/use-preparation-detail.ts",
+  "mountedScript": "scripts/security-regression/verify-shodan-detail-mounted.cjs",
+  "responseScript": "scripts/security-regression/verify-shodan-detail-response.cjs",
+  "lastCheckedAt": "2026-10-06T23:32:50.025750+00:00",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-detail-release-57233f37-a2e6-43d3-b759-538b8b3d7bc0",
+  "supersededFailedGate": "docs/audits/2026-10-06-all-services-recheck/shodan-detail-release-407367d6-5930-48f9-9c59-4aa3f0790713",
+  "extraFixes": [
+    "Validate actual AI analysis before persisting malformed nested output",
+    "Private no-store Cookie-vary detail DTO",
+    "Nullable failed image is valid partial state; partial deck has resume action",
+    "Snapshot-bound clipboard/download/print and post-copy notice"
+  ],
+  "releaseSession": 8383,
+  "releaseExitCode": 0,
+  "sourceFiles": 2640,
+  "changedSources": [],
+  "sourceFreezeReverifiedBeforeCommit": true,
+  "failedGateReason": "Existing source-status harness did not load newly imported actual DTO validator; updated harness to use real validator, then reran full gate after nullable-image/resume repair."
 }

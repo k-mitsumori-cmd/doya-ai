@@ -43,7 +43,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   const slideImages = stored.length
     ? await Promise.all(stored.map(async (s) => ({ title: s.title, role: s.role, imageUrl: await signedUrl(s.imagePath) })))
     : item.slideImages
-  return NextResponse.json({ item: { ...item, errorMessage: item.errorMessage ? '処理に失敗しました。再度お試しください。' : null, slideImages } }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ item: { ...item, errorMessage: item.errorMessage ? '処理に失敗しました。再度お試しください。' : null, slideImages } }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }
 
 // DELETE /api/shodan/preparations/[id]

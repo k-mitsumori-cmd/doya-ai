@@ -1,26 +1,26 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
-import { ShodanApiError, shodanGet, shodanSend } from '@/lib/shodan/client'
+import { useParams } from 'next/navigation'
+import { usePreparationDetail } from '@/lib/shodan/use-preparation-detail'
+import { completeSlideImages } from '@/lib/shodan/preparation-response'
 import Markdown from '@/components/shodan/Markdown'
 import { DoyaKun, SiteShot, type Mood } from '@/components/shodan/ui'
 import SlideDeck from '@/components/shodan/SlideDeck'
-import type { CompanyResearch, CompanyAnalysis, ProposalSlide } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
 
 const sym = (name: string, size = 18) => <span className="material-symbols-outlined" style={{ fontSize: size }}>{name}</span>
 
 // 「作成中」を飽きさせない楽しいメッセージ＆ドヤくんの表情
 const SLIDE_FUN_MSGS: { text: string; mood: import('@/components/shodan/ui').Mood }[] = [
-  { text: 'ドヤくんが構成を練っています…🤔', mood: 'thinking' },
-  { text: '配色をブランドカラーに整えています…🎨', mood: 'focus' },
-  { text: '見出しを大きく、ドヤっと強調中…💪', mood: 'point' },
-  { text: 'グラフ・図解のレイアウトを調整中…📊', mood: 'working' },
-  { text: '余白を美しく、プロ品質に…✨', mood: 'love' },
-  { text: 'CTAをしっかり目立たせています…🔥', mood: 'jump' },
-  { text: 'もうすぐ完成！最後の仕上げ中…🎁', mood: 'present' },
+  { text: 'ドヤくんが構成を練っています…', mood: 'thinking' },
+  { text: '配色をブランドカラーに整えています…', mood: 'focus' },
+  { text: '見出しを大きく、ドヤっと強調中…', mood: 'point' },
+  { text: 'グラフ・図解のレイアウトを調整中…', mood: 'working' },
+  { text: '余白を美しく、プロ品質に…', mood: 'love' },
+  { text: 'CTAをしっかり目立たせています…', mood: 'jump' },
+  { text: 'もうすぐ完成！最後の仕上げ中…', mood: 'present' },
 ]
 
 // 提案資料を「組み立て中」に順番で見せる派手なステップ（会社情報は先に出して、ここで待たせない）
@@ -31,12 +31,6 @@ const PROPOSAL_STEPS: { icon: string; mood: Mood; title: string; sub: string }[]
   { icon: 'record_voice_over', mood: 'working', title: '商談トークを準備中…', sub: '最初の一言・話す順番を用意しています' },
   { icon: 'auto_awesome', mood: 'present', title: '提案資料に清書中…', sub: 'もうすぐ完成します！' },
 ]
-
-type Prep = {
-  id: string; targetUrl: string; targetName: string | null; status: string; errorMessage: string | null
-  research: CompanyResearch | null; analysis: CompanyAnalysis | null; proposalMarkdown: string | null; slidesJson: ProposalSlide[] | null; slideImages: { title: string; imageUrl: string; role?: string }[] | null; createdAt: string
-}
-
 
 function Stat({ icon, label, value, sub }: { icon: string; label: string; value: React.ReactNode; sub?: string }) {
   return (
@@ -61,100 +55,18 @@ export default function ShodanResultPage() {
   const params = useParams<{ orgSlug: string; id: string }>()
   const orgSlug = String(params.orgSlug)
   const id = String(params.id)
-  const router = useRouter()
-  const [prep, setPrep] = useState<Prep | null>(null)
-  const [notFound, setNotFound] = useState(false)
-  const [retrying, setRetrying] = useState(false)
-  const [planNotice, setPlanNotice] = useState<{ message: string; href?: string; label?: string } | null>(null)
-  const showActionableError = (error: unknown, fallback: string) => {
-    if (error instanceof ShodanApiError && (error.code === 'PLAN' || error.code === 'LIMIT')) {
-      setPlanNotice({ message: error.message, href: error.actionUrl, label: error.actionLabel })
-      return
-    }
-    toast.error(error instanceof Error ? error.message : fallback)
-  }
-
-  // 調査中(processing)の間だけポーリングし、done/failed/researched になったら停止。
-  // stopped フラグで「初回fetchがinterval設定前に完了する競合」でも確実に止める（無限ポーリング防止）。
-  useEffect(() => {
-    let alive = true
-    let stopped = false
-    const fetchOnce = () =>
-      shodanGet<{ item: Prep }>(`/api/shodan/preparations/${id}`, orgSlug)
-        .then((d) => {
-          if (!alive) return
-          setPrep(d.item)
-          if (d.item.status !== 'processing') stopped = true
-        })
-        .catch(() => { if (alive) setNotFound(true) })
-    fetchOnce()
-    const timer = setInterval(() => {
-      if (stopped || !alive) { clearInterval(timer); return }
-      fetchOnce()
-    }, 5000)
-    return () => { alive = false; clearInterval(timer) }
-  }, [orgSlug, id])
-
-  const retry = async () => {
-    if (!prep) return
-    setRetrying(true)
-    try {
-      const d = await shodanSend<{ id: string; status: string }>('/api/shodan/preparations', orgSlug, 'POST', { url: prep.targetUrl })
-      setPlanNotice(null)
-      toast.success('再生成を開始しました')
-      router.replace(`/shodan/${encodeURIComponent(orgSlug)}/p/${d.id}`)
-    } catch (e) { showActionableError(e, '再生成に失敗しました'); setRetrying(false) }
-  }
-
-  // 提案の表示切替（スライド / 文書）
+  const detail = usePreparationDetail(orgSlug, id)
+  const { prep, retry, generate, genSlideImages, planNotice, slidesProgress } = detail
+  const retrying = detail.busy === 'retry'
+  const generating = detail.busy === 'generate'
+  const slidesBusy = detail.busy === 'slides'
   const [view, setView] = useState<'slides' | 'doc'>('slides')
-  // 画像スライド生成（ドヤスライド方式・バッチ生成を完了まで繰り返す）
-  const [slidesBusy, setSlidesBusy] = useState(false)
-  const [slidesProgress, setSlidesProgress] = useState<{ done: number; total: number } | null>(null)
   const [funMsg, setFunMsg] = useState(0)
   useEffect(() => {
     if (!slidesBusy) return
-    const t = setInterval(() => setFunMsg((m) => (m + 1) % SLIDE_FUN_MSGS.length), 2500)
-    return () => clearInterval(t)
+    const timer = setInterval(() => setFunMsg(m => (m + 1) % SLIDE_FUN_MSGS.length), 2500)
+    return () => clearInterval(timer)
   }, [slidesBusy])
-  const genSlideImages = async () => {
-    setSlidesBusy(true)
-    setSlidesProgress(null)
-    try {
-      let prevDone = -1
-      let stalls = 0
-      for (let guard = 0; guard < 14; guard++) {
-        const d = await shodanSend<{ success: boolean; count: number; total: number; remaining: number }>(`/api/shodan/preparations/${id}/slides/generate`, orgSlug, 'POST')
-        if (!d.success) throw new Error('生成に失敗しました')
-        setSlidesProgress({ done: d.count, total: d.total })
-        if (d.remaining <= 0) break
-        if (d.count <= prevDone) {
-          // 進捗なし。一時的失敗の可能性があるので1回だけ再試行し、2回連続で止まったら打ち切り（編集画面で個別再生成）
-          stalls++
-          if (stalls >= 2) break
-        } else {
-          stalls = 0
-          prevDone = d.count
-        }
-      }
-      router.push(`/shodan/${encodeURIComponent(orgSlug)}/p/${id}/slides`)
-      setPlanNotice(null)
-    } catch (e) { showActionableError(e, 'スライド生成に失敗しました'); setSlidesBusy(false) }
-  }
-  // 調査済み（提案未生成）案件から提案資料を作成
-  const [generating, setGenerating] = useState(false)
-  const generate = async () => {
-    if (!prep) return
-    setGenerating(true)
-    try {
-      const d = await shodanSend<{ id: string; status: string }>(`/api/shodan/preparations/${prep.id}/generate`, orgSlug, 'POST')
-      if (d.status !== 'done') throw new Error('提案生成に失敗しました')
-      const r = await shodanGet<{ item: Prep }>(`/api/shodan/preparations/${prep.id}`, orgSlug)
-      setPrep(r.item)
-      setPlanNotice(null)
-      toast.success('提案資料が完成しました！')
-    } catch (e) { showActionableError(e, '提案資料の生成に失敗しました'); setGenerating(false) }
-  }
 
   // 「提案資料を作成中」の楽しいステップ送り
   const [genStep, setGenStep] = useState(0)
@@ -164,24 +76,15 @@ export default function ShodanResultPage() {
     return () => clearInterval(t)
   }, [generating])
 
-  // 調査済み(researched)の案件を開いたら、提案生成を“自動で”開始（ボタンを押させず待たせない）
-  const genStartedRef = useRef(false)
-  useEffect(() => {
-    if (!prep) return
-    if (prep.status === 'researched' && !prep.proposalMarkdown && !generating && !genStartedRef.current) {
-      genStartedRef.current = true
-      generate()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prep])
-
   const copyProposal = async () => {
-    if (!prep?.proposalMarkdown) return
-    await navigator.clipboard.writeText(prep.proposalMarkdown)
-    toast.success('提案資料をコピーしました')
+    if (!detail.isCurrent() || !prep?.proposalMarkdown) return
+    try {
+      await navigator.clipboard.writeText(prep.proposalMarkdown)
+      if (detail.isCurrent()) toast.success('提案資料をコピーしました')
+    } catch { if (detail.isCurrent()) toast.error('コピーできませんでした。ブラウザの権限をご確認ください。') }
   }
   const downloadProposal = () => {
-    if (!prep?.proposalMarkdown) return
+    if (!detail.isCurrent() || !prep?.proposalMarkdown) return
     const blob = new Blob([prep.proposalMarkdown], { type: 'text/markdown;charset=utf-8' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -189,17 +92,23 @@ export default function ShodanResultPage() {
     a.click()
     URL.revokeObjectURL(a.href)
   }
-  const copyText = async (t: string) => { await navigator.clipboard.writeText(t); toast.success('コピーしました') }
+  const copyText = async (t: string) => {
+    if (!detail.isCurrent()) return
+    try { await navigator.clipboard.writeText(t); if (detail.isCurrent()) toast.success('コピーしました') }
+    catch { if (detail.isCurrent()) toast.error('コピーできませんでした。ブラウザの権限をご確認ください。') }
+  }
   const printProposal = () => {
-    if (typeof window !== 'undefined') window.print()
+    if (detail.isCurrent() && typeof window !== 'undefined') window.print()
   }
 
-  if (notFound) return (
+  if (detail.requiresLogin) return <div className="p-10 text-center"><p>ログイン状態をご確認ください。</p><Link href={`/auth/signin?callbackUrl=${encodeURIComponent(`/shodan/${orgSlug}/p/${id}`)}`} className="underline">ログインする</Link></div>
+  if (detail.missing) return (
     <div className="p-10 text-center">
       <DoyaKun mood="error" size={96} />
       <p className="text-slate-500 font-bold mt-3">商談準備が見つかりませんでした。<Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="text-purple-600 underline ml-1">一覧へ戻る</Link></p>
     </div>
   )
+  if (!prep && detail.error) return <div role="alert" className="p-10 text-center"><p>{detail.error}</p><button onClick={detail.load} disabled={detail.loading}>再読み込み</button><Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="ml-4 underline">一覧へ戻る</Link></div>
   if (!prep) return <div className="p-10 text-center"><DoyaKun mood="thinking" size={88} /><p className="mt-2 text-slate-400 font-bold">読み込み中…</p></div>
 
   const r = prep.research
@@ -210,6 +119,7 @@ export default function ShodanResultPage() {
       <style>{`@media print { aside, .shodan-no-print { display: none !important; } .shodan-print-only { display: block !important; } main { width: 100% !important; } body { background: #fff !important; } }`}</style>
       <div className="flex items-center gap-2 text-sm font-bold text-slate-400 shodan-no-print">
         <Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="hover:text-purple-600 flex items-center gap-1">{sym('arrow_back', 16)}一覧</Link>
+        <button onClick={detail.load} disabled={detail.loading || !!detail.busy} className="ml-auto hover:text-purple-600 disabled:opacity-50">保存内容を再読み込み</button>
       </div>
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -225,6 +135,12 @@ export default function ShodanResultPage() {
         </div>
       </div>
 
+      {(detail.error || detail.unknown) && <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shodan-no-print">
+        {detail.error && <p>{detail.error}</p>}
+        {detail.unknown && <p>操作結果が未確認です。表示中の内容は前回確認した保存版です。重ねて生成せず、保存済みの結果または一覧をご確認ください。</p>}
+        <button onClick={detail.load} disabled={detail.loading || !!detail.busy} className="mt-2 underline">保存済みの結果を確認する</button>
+        <Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="ml-4 underline">一覧を確認する</Link>
+      </div>}
       {planNotice && <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-bold text-amber-950 shodan-no-print">
         <p>{planNotice.message}</p>
         {planNotice.href && planNotice.label && <Link href={planNotice.href} className="mt-2 inline-block text-purple-700 underline">{planNotice.label}</Link>}
@@ -233,9 +149,9 @@ export default function ShodanResultPage() {
       {/* 完了サマリー＋成果物への素早いジャンプ */}
       {prep.status === 'done' && r && (
         <div className="flex items-center gap-2 flex-wrap rounded-2xl bg-white border border-slate-200 px-4 py-3 shodan-no-print">
-          {r.employeeCount != null && <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">👥 約{r.employeeCount}名</span>}
-          {r.marketing.snsChannels.length > 0 && <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">🔗 SNS {r.marketing.snsChannels.length}媒体</span>}
-          {r.pressReleases && r.pressReleases.length > 0 && <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">📣 PR {r.pressReleases.length}件</span>}
+          {r.employeeCount != null && <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600"> 約{r.employeeCount}名</span>}
+          {r.marketing.snsChannels.length > 0 && <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600"> SNS {r.marketing.snsChannels.length}媒体</span>}
+          {r.pressReleases && r.pressReleases.length > 0 && <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600"> PR {r.pressReleases.length}件</span>}
           <div className="flex-1" />
           {(prep.proposalMarkdown || (prep.slidesJson && prep.slidesJson.length > 0)) && (
             <button onClick={() => document.getElementById('shodan-proposal')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
@@ -259,7 +175,7 @@ export default function ShodanResultPage() {
         <div className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-700 font-bold text-sm flex-wrap">
           <DoyaKun mood="error" size={48} float={false} />
           <span className="flex-1 min-w-[180px]">生成に失敗しました。{prep.errorMessage ? `（${prep.errorMessage}）` : ''} URLを確認して再度お試しください。</span>
-          <button onClick={retry} disabled={retrying}
+          <button onClick={retry} disabled={!detail.canAct}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 text-white font-black text-xs hover:bg-rose-700 transition-colors disabled:opacity-50">
             {sym('refresh', 16)}{retrying ? '再生成中…' : '同じURLで再生成'}
           </button>
@@ -304,7 +220,7 @@ export default function ShodanResultPage() {
                   i < genStep ? 'text-emerald-300' : i === genStep ? 'text-white scale-125 bg-white/15' : 'text-white/30'}`}
                   style={{ fontSize: 17 }}>{i < genStep ? 'check_circle' : s.icon}</span>
               ))}
-              <span className="ml-auto text-xs font-black text-white/80">下に会社情報を表示中。完成し次第ここに提案が並びます ✨</span>
+              <span className="ml-auto text-xs font-black text-white/80">下に会社情報を表示中。完成し次第ここに提案が並びます </span>
             </div>
           </div>
         </div>
@@ -315,7 +231,7 @@ export default function ShodanResultPage() {
         <div className="flex items-center gap-3 rounded-2xl border border-purple-200 bg-purple-50 px-5 py-4 flex-wrap shodan-no-print">
           <DoyaKun mood="thumbsup" size={52} float={false} />
           <span className="flex-1 min-w-[180px] text-purple-800 font-bold text-sm">企業調査は完了しました。続けて提案資料を作成しましょう。</span>
-          <button onClick={generate}
+          <button onClick={generate} disabled={!detail.canAct}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-xs hover:-translate-y-0.5 transition-all">
             {sym('bolt', 16)}提案資料を作成する
           </button>
@@ -327,7 +243,7 @@ export default function ShodanResultPage() {
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-center gap-3 flex-wrap">
           <DoyaKun mood="surprise" size={48} float={false} />
           <span className="flex-1 min-w-[180px] text-amber-800 font-bold text-sm">結果が空でした。サイトが取得できなかった可能性があります。再生成をお試しください。</span>
-          <button onClick={retry} disabled={retrying}
+          <button onClick={retry} disabled={!detail.canAct}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 text-white font-black text-xs hover:bg-amber-700 transition-colors disabled:opacity-50">
             {sym('refresh', 16)}{retrying ? '再生成中…' : '再生成する'}
           </button>
@@ -417,6 +333,7 @@ export default function ShodanResultPage() {
                 ))}
               </div>
               <Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}/slides`} className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm hover:-translate-y-0.5 transition-all">{sym('edit', 16)}提案スライドを編集</Link>
+              {!completeSlideImages(prep) && <div className="mt-3"><p className="text-sm text-amber-800">未完成の画像があります。残りの画像を生成できます。</p><button onClick={genSlideImages} disabled={!detail.canAct} className="mt-2 underline disabled:opacity-50">未完成の画像を生成する</button></div>}
             </div>
           ) : slidesBusy ? (
             <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-50 border border-purple-100 p-6 text-center">
@@ -449,7 +366,7 @@ export default function ShodanResultPage() {
                 <p className="font-bold text-slate-700 text-sm">構成をもとに、提案資料をスライド画像として作成します。</p>
                 <p className="text-xs font-bold text-slate-400 mt-0.5">作成後、各スライドを修正できる編集画面に移動します。</p>
               </div>
-              <button onClick={genSlideImages}
+              <button onClick={genSlideImages} disabled={!detail.canAct}
                 className="inline-flex items-center gap-1.5 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all">
                 {sym('auto_awesome', 18)}提案資料を作成する
               </button>
@@ -544,7 +461,7 @@ export default function ShodanResultPage() {
           </div>
 
           {view === 'slides' && prep.slidesJson && prep.slidesJson.length > 0 ? (
-            <SlideDeck slides={prep.slidesJson} fileBase={prep.targetName || 'proposal'} />
+            <SlideDeck key={`${detail.prep?.id}:${detail.prep?.updatedAt}`} slides={prep.slidesJson} fileBase={prep.id} canExport={detail.isCurrent} />
           ) : prep.proposalMarkdown ? (
             <>
               <div className="flex items-center gap-2 mb-4 flex-wrap shodan-no-print">
