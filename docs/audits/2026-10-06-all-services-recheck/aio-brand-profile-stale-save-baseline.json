@@ -1,0 +1,7 @@
+{
+  "status": "confirmed-stale-save-acknowledgment",
+  "observed": "Actual settings component marks the current edited draft saved after an older valid write acknowledgment.",
+  "submittedBrandName": "Original",
+  "currentDraft": "Changed while saving",
+  "scope": "Actual component with actual parser; deferred synthetic network only. No customer DB or production incident established."
+}

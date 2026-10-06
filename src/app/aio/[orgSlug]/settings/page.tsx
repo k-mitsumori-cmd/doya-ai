@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { aioGet, aioSend } from '@/lib/aio/client'
 import { PageHeader, sym } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
+import { AIO_BRAND_TEXT_LIMITS, parseAioBrandProfileInput } from '@/lib/aio/brand-profile-input'
 
 export default function AioSettingsPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>()
@@ -49,7 +50,7 @@ export default function AioSettingsPage() {
     setSaved(false)
     try {
       const split = (s: string) => s.split(/[,、\n]/).map((x) => x.trim()).filter(Boolean)
-      await aioSend('/api/aio/brand-profile', orgSlug, 'PUT', {
+      const data = parseAioBrandProfileInput({
         brandName: form.brandName,
         brandUrl: form.brandUrl,
         aliases: split(form.aliases),
@@ -57,6 +58,7 @@ export default function AioSettingsPage() {
         category: form.category,
         market: form.market,
       })
+      await aioSend('/api/aio/brand-profile', orgSlug, 'PUT', data)
       toast.success('保存しました')
       setSaved(true)
     } catch (e: any) {
@@ -84,7 +86,7 @@ export default function AioSettingsPage() {
     <div>
       <label className="block text-sm font-black text-slate-700 mb-1">{label}</label>
       {hint && <p className="text-xs text-slate-400 font-bold mb-1">{hint}</p>}
-      <input value={form[key]} onChange={(e) => { setForm({ ...form, [key]: e.target.value }); if (saved) setSaved(false); if (error) setError(null) }} placeholder={placeholder}
+      <input value={form[key]} maxLength={key === 'aliases' || key === 'competitors' ? undefined : AIO_BRAND_TEXT_LIMITS[key]} onChange={(e) => { setForm({ ...form, [key]: e.target.value }); if (saved) setSaved(false); if (error) setError(null) }} placeholder={placeholder}
         className="w-full rounded-xl border-2 border-slate-200 focus:border-purple-400 outline-none px-4 py-2.5 font-bold transition-colors" />
     </div>
   )
@@ -95,8 +97,8 @@ export default function AioSettingsPage() {
       <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
         {field('追跡ブランド名 *', 'brandName', '例: ドヤマーケ')}
         {field('自社サイトURL', 'brandUrl', '例: https://doya-ai.surisuta.jp', '自社ドメイン引用率の判定に使います')}
-        {field('別名・表記ゆれ', 'aliases', '例: ドヤマーケAI, DoyaMarke', 'カンマ区切り')}
-        {field('競合ブランド', 'competitors', '例: 競合サービスA, 競合サービスB', 'カンマ区切り。Share of Voiceの比較対象')}
+        {field('別名・表記ゆれ', 'aliases', '例: ドヤマーケAI, DoyaMarke', 'カンマ区切り、最大30件')}
+        {field('競合ブランド', 'competitors', '例: 競合サービスA, 競合サービスB', 'カンマ区切り、最大30件。Share of Voiceの比較対象')}
         {field('カテゴリ', 'category', '例: マーケティングAI SaaS')}
         {field('市場・地域', 'market', '例: 日本')}
 

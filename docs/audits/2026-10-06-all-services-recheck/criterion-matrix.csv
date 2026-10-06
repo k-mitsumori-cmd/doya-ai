@@ -1515,7 +1515,7 @@ aio,C049,データ・DB,部署・タスク階層に循環を作れない,現在�
 aio,C050,データ・DB,採番の同時実行が衝突しない,現在版での項目別通し検証待ち,
 aio,C051,データ・DB,複数テーブル更新が途中失敗で片落ちしない,現在版での項目別通し検証待ち,
 aio,C052,データ・DB,削除・退会時の保持と匿名化の方針が定義される,現在版での項目別通し検証待ち,
-aio,C053,入力・外部接続,本文・配列・ファイル数・長さをサーバーで制限する,現在版での項目別通し検証待ち,
+aio,C053,入力・外部接続,本文・配列・ファイル数・長さをサーバーで制限する,現在版での項目別通し検証待ち,"PARTIAL brand-profile PUT only: aio-brand-profile-input-results.json (40 synthetic API/parser cases); text/list/type validation before Prisma; other AIO endpoints, raw-body/file limits and real DB unproven"
 aio,C054,入力・外部接続,URL取得で内部IP・リダイレクトSSRFを防ぐ,現在版での項目別通し検証待ち,
 aio,C055,入力・外部接続,HTML表示で保存型XSSを防ぐ,現在版での項目別通し検証待ち,
 aio,C056,入力・外部接続,金額・数量・日時の異常値を拒否する,現在版での項目別通し検証待ち,
@@ -1532,10 +1532,10 @@ aio,C066,生成・ジョブ,再生成と編集にも上限を適用する,現在
 aio,C067,生成・ジョブ,公開音声ルームの同意・期限・人数を守る,現在版での項目別通し検証待ち,
 aio,C068,生成・ジョブ,エクスポートで他人の成果物を含めない,現在版での項目別通し検証待ち,
 aio,C069,UI・アクセシビリティ,モーダルのフォーカス・Escape・復帰が機能する,現在版での項目別通し検証待ち,
-aio,C070,UI・アクセシビリティ,入力をエラー時に失わない,現在版での項目別通し検証待ち,
+aio,C070,UI・アクセシビリティ,入力をエラー時に失わない,現在版での項目別通し検証待ち,PARTIAL brand settings local validation only: aio-brand-profile-form-mounted-results.json (7 actual mounted cases); invalid input draft retained; org-client-write-baseline.json records remaining prompt malformed-success draft loss; auth/reload/private flows unproven
 aio,C071,UI・アクセシビリティ,上限案内が二重表示されない,現在版での項目別通し検証待ち,
 aio,C072,UI・アクセシビリティ,有料会員に同じプランへの重複契約を促さない,現在版での項目別通し検証待ち,
-aio,C073,UI・アクセシビリティ,APIエラーを消えるトーストだけに依存しない,現在版での項目別通し検証待ち,
+aio,C073,UI・アクセシビリティ,APIエラーを消えるトーストだけに依存しない,現在版での項目別通し検証待ち,PARTIAL brand settings parser denial displayed in persistent form: aio-brand-profile-form-mounted-results.json; all other API errors and unknown-write recovery unproven
 aio,C074,UI・アクセシビリティ,色だけに依存せずラベルと操作名を持つ,現在版での項目別通し検証待ち,
 aio,C075,運用・リリース,本番ソースと監査対象のハッシュが一致する,現在版での項目別通し検証待ち,
 aio,C076,運用・リリース,別作業の未公開修正を検証済みと混同しない,現在版での項目別通し検証待ち,

@@ -1,0 +1,16 @@
+process.env.NODE_ENV='test';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),React=require('react'),{JSDOM}=require('jsdom'),{load}=require('../../../scripts/security-regression/load-typescript.cjs');
+const dom=new JSDOM('<body></body>',{url:'https://example.invalid/aio/synthetic/settings'});global.window=dom.window;global.document=dom.window.document;global.IS_REACT_ACT_ENVIRONMENT=true;const {createRoot}=require('react-dom/client');const parser=load('src/lib/aio/brand-profile-input.ts');
+let sends=[],success=[],errors=[],inputs=new Map(),save,resolveSend;const runtime=require('react/jsx-runtime');const wrap=f=>(type,props,key)=>{if(type==='input')inputs.set(props.placeholder,props);if(type==='button'&&(props.children==='保存する'||props.children==='保存中…'))save=props.onClick;return f(type,props,key)};
+const mocks={react:React,'react/jsx-runtime':{...runtime,jsx:wrap(runtime.jsx),jsxs:wrap(runtime.jsxs)},'next/navigation':{useParams:()=>({orgSlug:'synthetic'})},'@/lib/aio/client':{aioGet:async()=>({profile:{id:'profile',brandName:'Original',brandUrl:'https://example.invalid',aliases:['Alias'],competitors:['Competitor'],category:'Category',market:'日本'}}),aioSend:async(path,org,method,data)=>{sends.push({path,org,method,data});return new Promise(resolve=>{resolveSend=resolve})}},'@/lib/aio/brand-profile-input':parser,'@/components/aio/ui':{PageHeader:()=>null,sym:()=>null},'react-hot-toast':{success:s=>success.push(s),error:s=>errors.push(s)}};
+const x={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/aio/[orgSlug]/settings/page.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports:x,require:n=>{assert.ok(n in mocks,n);return mocks[n]},Error,Array,Object,Set,Map});
+const container=document.createElement('div');document.body.append(container);const root=createRoot(container);const act=fn=>React.act(async()=>{await fn();await new Promise(setImmediate)}),checks=[];
+const edit=async(name,value)=>act(()=>inputs.get(name).onChange({target:{value}}));
+(async()=>{
+await act(()=>root.render(React.createElement(React.StrictMode,null,React.createElement(x.default))));
+let pending;await act(()=>{pending=save()});assert.equal(sends.length,1);assert.equal(sends[0].data.brandName,'Original');
+await edit('例: ドヤマーケ','Changed while saving');await act(()=>{resolveSend({ok:true,profile:{id:'profile',...sends[0].data}});return pending});
+assert.equal(container.querySelector('input').value,'Changed while saving');assert.ok(container.textContent.includes('保存しました。スキャンに反映されます。'));
+console.log(JSON.stringify({status:'confirmed-stale-save-acknowledgment',observed:'Actual settings component marks the current edited draft saved after an older valid write acknowledgment.',submittedBrandName:sends[0].data.brandName,currentDraft:container.querySelector('input').value,scope:'Actual component with actual parser; deferred synthetic network only. No customer DB or production incident established.'},null,2));
+await act(()=>root.unmount());dom.window.close();
+})().catch(e=>{console.error(e);process.exitCode=1});

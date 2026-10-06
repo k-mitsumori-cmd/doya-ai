@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-06T20:16:11.949003+00:00",
+  "parent": "a1395560d17a46334eff69279a5e97372c25a116",
+  "status": "full-gate-passed",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/aio-brand-profile-release-8e59a177-59af-4cf4-9e25-13b2f293fbfc",
+  "apiAndParserCases": 40,
+  "mountedFormCases": 7,
+  "confirmedProblem": "Malformed JSON, empty object and wrong field types previously returned 200 and upserted null/empty brand settings. Proven with actual route and synthetic Prisma only, not a confirmed production incident.",
+  "repair": "Reject malformed or invalid input before Prisma; brandName follows existing UI required rule. Apply existing text limits and 30-entry list limits without silent truncation; reject malformed/overlong list entries. Preserve omitted optional stored settings; explicit null/empty values clear optional fields. Scope remains resolved organization. Shared parser runs before client PUT; text input maxlength and list hints match server rules.",
+  "limits": {
+    "brandName": 120,
+    "brandUrl": 300,
+    "category": 200,
+    "market": 100,
+    "aliasesAndCompetitorsEach": 30,
+    "listEntryCharacters": 4000
+  },
+  "scope": "Actual GET/PUT/parser with synthetic auth and Prisma; actual settings mounted under StrictMode with real shared parser, synthetic data/network. No real DB, AI/provider or email calls.",
+  "remaining": [
+    "Actual mounted settings form marks edited draft saved after older valid acknowledgment; aio-brand-profile-stale-save-baseline.json reproduces this independent pending defect.",
+    "Shodan/AIO JSON response helpers still accept malformed success; four actual callback counterexamples recorded in org-client-write-baseline.json. This input fix does not establish confirmed persistence or response acknowledgment.",
+    "Authenticated private form flow, unknown-write retry protection, auth/org epoch cancellation and full all-service criteria remain incomplete."
+  ],
+  "gates": [
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T20:19:48.276497+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-06T20:19:50.038991+00:00"
+    }
+  ],
+  "sourceFiles": 2595
+}
