@@ -1,0 +1,33 @@
+{
+  "passed": 27,
+  "checks": [
+    "Failed refresh retains existing company/applicant list and every draft field, with local recovery",
+    "Bounded company fetch timeout offers retry",
+    "Bounded company body timeout offers retry",
+    "Bounded profiles fetch timeout offers retry",
+    "Bounded profiles body timeout offers retry",
+    "Same-frame 解析 double activation sends once and confirms success",
+    "解析 unknown network failure preserves draft and requires explicit list-confirmed reoperation",
+    "解析 write fetch/body deadline remains unknown without automatic resend",
+    "解析 success preserves edits made while request was pending",
+    "Same-frame 保存 double activation sends once and confirms success",
+    "保存 unknown network failure preserves draft and requires explicit list-confirmed reoperation",
+    "保存 write fetch/body deadline remains unknown without automatic resend",
+    "保存 success preserves edits made while request was pending",
+    "Malformed save missing ID cannot announce success or clear draft",
+    "Malformed save wrong owner cannot announce success or clear draft",
+    "Malformed save error success cannot announce success or clear draft",
+    "Mismatched returned resume never clears submitted text or announces saved success",
+    "Malformed returned company fields never announce successful registration",
+    "Known operational analysis limit and size refusal never advertise a paid plan",
+    "Unauthorized mutation offers callback login and disables even retained further-write handlers",
+    "Auth interruption aborts write, late success stays ignored, and ABA keeps result uncertain",
+    "Pagination same-frame lock and failed continuation retain prior pages",
+    "Malformed full profile fields preserve previous lists without crashing render",
+    "Loading, missing actor, guest and retained actor-ABA callbacks cannot write",
+    "Oversized declared mutation body is unconfirmed and preserves user input",
+    "Invalid URL and oversized draft block requests without silent truncation",
+    "Unmount cancels pending mutation and reads and clears deadlines"
+  ],
+  "scope": "Actual full Company page mounted under StrictMode with actual list/mutation readers and profile parser; synthetic auth/network/clock only. No real analysis, paid AI, DB write, upload or customer account. Parent layout actor remount is separately tested; reload/cross-tab exactly-once creation is not claimed."
+}
