@@ -1,0 +1,59 @@
+{
+  "scope": "17 public service source directories; textual candidates only, not proven defects",
+  "services": [
+    "banner",
+    "seo",
+    "interview",
+    "persona",
+    "hr",
+    "kintai",
+    "doyalist",
+    "promane",
+    "doyaslide",
+    "cunning",
+    "sfa",
+    "shodan",
+    "aio",
+    "mensetsu",
+    "quote",
+    "aishodan",
+    "adimage"
+  ],
+  "candidates": [
+    {
+      "service": "banner",
+      "file": "src/app/banner/gallery/page.tsx",
+      "line": 203,
+      "status": "要確認：近接した本文読取。所有タイマーとハンドラーの再現が必要",
+      "context": "window.clearTimeout(timeout)\n    const json = await res.json()\n    if (!res.ok) throw new Error(json?.error || 'ギャラリーの取得に失敗しました')\n    return json as { items: GalleryItem[]; nextCursor: string | null }\n  }\n\n  "
+    },
+    {
+      "service": "banner",
+      "file": "src/app/banner/dashboard/history/page.tsx",
+      "line": 203,
+      "status": "要確認：近接した本文読取。所有タイマーとハンドラーの再現が必要",
+      "context": "window.clearTimeout(timeout)\n        if (res.ok) {\n          const data = await res.json()\n          // 有料プラン限定チェック\n          if (data.requiresUpgrade) {\n            setHistory([])\n            setNextCursor(n"
+    },
+    {
+      "service": "banner",
+      "file": "src/app/banner/dashboard/history/page.tsx",
+      "line": 269,
+      "status": "要確認：近接した本文読取。所有タイマーとハンドラーの再現が必要",
+      "context": "window.clearTimeout(timeout) }\n      const data = await res.json()\n      if (!res.ok || !Array.isArray(data.items) || !(data.nextCursor === null || typeof data.nextCursor === 'string') || data.nextCursor === "
+    },
+    {
+      "service": "banner",
+      "file": "src/app/banner/dashboard/stats/page.tsx",
+      "line": 134,
+      "status": "要確認：近接した本文読取。所有タイマーとハンドラーの再現が必要",
+      "context": "window.clearTimeout(timeout) }\n          const data = await res.json()\n          if (!res.ok) throw new Error(data?.error || '統計の取得に失敗しました')\n          if (data.requiresUpgrade) { setHistory([]); setRequiresUp"
+    },
+    {
+      "service": "seo",
+      "file": "src/app/seo/jobs/[id]/page.tsx",
+      "line": 423,
+      "status": "要確認：近接した本文読取。所有タイマーとハンドラーの再現が必要",
+      "context": "clearTimeout(t)\n      const json = await res.json().catch(() => ({}))\n      if (!res.ok || json?.success === false) {\n        // 404は「ジョブが存在しない」だけでなく「所有者チェックNG」でも返す（情報漏洩防止）\n        // そのためUI側では分か"
+    }
+  ]
+}

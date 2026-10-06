@@ -1,0 +1,17 @@
+{
+  "runId": "9062de02-a96b-4bf8-ac3b-347e233b16de",
+  "startedAt": "2026-10-06T02:55:07.042674+00:00",
+  "pid": 94689,
+  "sourceHashes": {
+    "src/app/banner/url/page.tsx": "9b528b323063937399f38226e2e6dbfd6f25bc0172120e8826dc4248737678f8",
+    "scripts/security-regression/verify-banner-url-plan-cta.cjs": "97327f21adf4fe113e74ccd2c0e57d10b5ab6edc56d88b87580e5fc29cb26291",
+    "scripts/security-regression/run.cjs": "d07cabb8e363ac8a8d594c048402f81158c033a5e0179844bd98b0358ebdad55"
+  },
+  "state": "finished",
+  "exitCode": -15,
+  "finishedAt": "2026-10-06T02:56:39.101295+00:00",
+  "changedSources": [],
+  "rawLogPath": "/tmp/doya-banner-url-plan-cta-build-20261006.log",
+  "rawLogSha256": "5a06ae7b5e052a6fec7f95ecb45c5e34e2b4888c5bfd51d76dc825db10b7e61f",
+  "storedLogNormalization": "Trailing whitespace and trailing empty lines removed; raw log retained."
+}

@@ -1,0 +1,14 @@
+{
+  "file": "/Users/mitsumori_katsuki/Code/09_Cursol/src/app/banner/gallery/page.tsx",
+  "scope": "Executed actual AST-extracted fetchPage with synthetic fetch and clock",
+  "results": [
+    {
+      "scenario": "headers_then_pending_body",
+      "bodyPendingWithoutTimer": true
+    },
+    {
+      "scenario": "fetch_rejection",
+      "unreleasedTimer": true
+    }
+  ]
+}

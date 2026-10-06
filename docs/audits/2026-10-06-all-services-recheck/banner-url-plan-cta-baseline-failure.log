@@ -1,0 +1,18 @@
+AssertionError [ERR_ASSERTION]: PRO
+    at /Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-banner-url-plan-cta.cjs:20:51
+    at check (/Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/load-typescript.cjs:4:36)
+    at /Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-banner-url-plan-cta.cjs:18:8
+    at Object.<anonymous> (/Users/mitsumori_katsuki/Code/09_Cursol/scripts/security-regression/verify-banner-url-plan-cta.cjs:43:3)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1481:32)
+    at Module._load (node:internal/modules/cjs/loader:1300:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

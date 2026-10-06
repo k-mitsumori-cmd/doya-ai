@@ -1,0 +1,18 @@
+{
+  "results": [
+    {
+      "file": "src/app/banner/dashboard/create/page.tsx",
+      "abortedBodyReturnsSuccess": true,
+      "bodyData": null,
+      "rawDiagnosticShown": true,
+      "scope": "Executed actual AST-extracted read and error-normalization functions with synthetic Response; no real API request."
+    },
+    {
+      "file": "src/app/banner/dashboard/chat/page.tsx",
+      "abortedBodyReturnsSuccess": true,
+      "bodyData": null,
+      "rawDiagnosticShown": true,
+      "scope": "Executed actual AST-extracted read and error-normalization functions with synthetic Response; no real API request."
+    }
+  ]
+}

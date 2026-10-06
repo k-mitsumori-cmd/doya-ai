@@ -11,7 +11,8 @@ import LoadingProgress from '@/components/LoadingProgress'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import { FreeHourPopup } from '@/components/FreeHourPopup'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, ENTERPRISE_CONTACT_MAILTO, isWithinFreeHour, getBannerMaxImagesPerRequest, getBannerMonthlyLimitByUserPlan } from '@/lib/pricing'
-import { tierFrom } from '@/lib/plan-utils'
+import { higherPlan, tierFrom } from '@/lib/plan-utils'
+import { TrialNote, useTrialEligible, TRIAL_DAYS } from '@/components/TrialCallout'
 import { CheckoutButton } from '@/components/CheckoutButton'
 
 const DEFAULT_FREE_SIZE = '1080x1080'
@@ -32,18 +33,22 @@ type ApiResponse = {
   usedModelDisplay?: string
   warning?: string
   error?: string
+  upgradeUrl?: string
 }
 
 type MonthlyUsage = { monthlyLimit?: number; monthlyUsed?: number; monthlyRemaining?: number }
 
 async function safeReadJson(res: Response): Promise<{ ok: boolean; status: number; data: any; text: string }> {
   const status = res.status
-  const text = await res.text().catch(() => '')
+  const text = await res.text()
   let data: any = null
   try {
     data = text ? JSON.parse(text) : null
   } catch {
     data = null
+  }
+  if (res.ok && (!data || !Array.isArray(data.banners) || !data.banners.some((banner: unknown) => typeof banner === 'string' && banner.startsWith('data:image/')))) {
+    throw new Error('生成結果を確認できませんでした。履歴を確認してから再試行してください。')
   }
   return { ok: res.ok, status, data, text }
 }
@@ -54,8 +59,7 @@ function normalizeNonJsonApiError(status: number, text: string): string {
     return '送信データが大きすぎます（画像を小さめにして再試行してください）'
   }
   if (status === 502 || status === 503) return 'サーバが混雑しています。少し待って再試行してください。'
-  if (t) return t.slice(0, 180)
-  return '生成に失敗しました'
+  return '生成結果を確認できませんでした。履歴を確認してから再試行してください。'
 }
 
 // ページ内のクライアント処理を読み込み中も安全に表示する。
@@ -71,10 +75,11 @@ function BannerUrlAutoPageInner() {
   const { data: session } = useSession()
   const isGuest = !session
   const bannerPlan = !isGuest
-    ? String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
+    ? higherPlan((session?.user as any)?.bannerPlan, (session?.user as any)?.plan || 'FREE')
     : 'GUEST'
   const bannerPlanTier = tierFrom(bannerPlan)
   const isPaidUser = bannerPlanTier === 'LIGHT' || bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
+  const trialEligible = useTrialEligible()
   const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
   const isFreeHourActive = !isGuest && isWithinFreeHour(firstLoginAt)
   const maxCount = isFreeHourActive ? 10 : getBannerMaxImagesPerRequest(bannerPlan)
@@ -84,6 +89,7 @@ function BannerUrlAutoPageInner() {
   const [error, setError] = useState<string>('')
   const [errorType, setErrorType] = useState<'limit' | 'system' | null>(null) // エラー種別
   const [limitUsage, setLimitUsage] = useState<MonthlyUsage | null>(null)
+  const [limitContactRequested, setLimitContactRequested] = useState(false)
   const [banners, setBanners] = useState<string[]>([])
   const imageBanners = useMemo(
     () => banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/')),
@@ -128,13 +134,15 @@ function BannerUrlAutoPageInner() {
     setError('')
     setErrorType(null)
     setLimitUsage(null)
+    setLimitContactRequested(false)
     setIsGenerating(true)
     // 生成開始時に前回の結果を消さない（消すと画面が「パチパチ」しやすい）
     // 新しい結果が返ってきたタイミングで上書きする
 
+    let timeout: number | undefined
     try {
       const controller = new AbortController()
-      const timeout = window.setTimeout(() => controller.abort(), 290_000)
+      timeout = window.setTimeout(() => controller.abort(), 290_000)
 
       const res = await fetch('/api/banner/from-url', {
         method: 'POST',
@@ -148,8 +156,6 @@ function BannerUrlAutoPageInner() {
         }),
       })
 
-      window.clearTimeout(timeout)
-
       const parsed = await safeReadJson(res)
       const data = (parsed.data || {}) as ApiResponse & { code?: string; usage?: MonthlyUsage }
       if (!parsed.ok) {
@@ -162,6 +168,7 @@ function BannerUrlAutoPageInner() {
         setError(msg)
         setErrorType(isLimitError ? 'limit' : 'system')
         setLimitUsage(isLimitError ? data.usage || null : null)
+        setLimitContactRequested(isLimitError && !!HIGH_USAGE_CONTACT_URL && data.upgradeUrl === HIGH_USAGE_CONTACT_URL)
         
         if (isLimitError) {
           toast.error('今月の生成枠をご確認ください', { duration: 6000 })
@@ -185,15 +192,16 @@ function BannerUrlAutoPageInner() {
       }
     } catch (e: any) {
       if (e?.name === 'AbortError') {
-        setError('生成に時間がかかっています。タブは開いたまま、しばらく待つか再試行してください。')
+        setError('時間内に生成結果を確認できませんでした。履歴を確認してから再試行してください。')
         setErrorType('system')
         toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
       } else {
-        setError(e?.message || 'URLからの自動生成に失敗しました')
+        setError('生成結果を確認できませんでした。履歴を確認してから再試行してください。')
         setErrorType('system')
-        toast.error(e?.message?.length > 50 ? '生成に失敗しました' : (e?.message || '生成に失敗しました'), { icon: '❌', duration: 5000 })
+        toast.error('生成結果を確認できませんでした', { duration: 5000 })
       }
     } finally {
+      if (timeout !== undefined) window.clearTimeout(timeout)
       setIsGenerating(false)
     }
   }
@@ -213,11 +221,13 @@ function BannerUrlAutoPageInner() {
     setError('')
     setErrorType(null)
     setLimitUsage(null)
+    setLimitContactRequested(false)
     setIsGenerating(true)
 
+    let timeout: number | undefined
     try {
       const controller = new AbortController()
-      const timeout = window.setTimeout(() => controller.abort(), 290_000)
+      timeout = window.setTimeout(() => controller.abort(), 290_000)
 
       const res = await fetch('/api/banner/from-url', {
         method: 'POST',
@@ -231,8 +241,6 @@ function BannerUrlAutoPageInner() {
         }),
       })
 
-      window.clearTimeout(timeout)
-
       const parsed = await safeReadJson(res)
       const data = (parsed.data || {}) as ApiResponse & { code?: string; usage?: MonthlyUsage }
       if (!parsed.ok) {
@@ -244,6 +252,7 @@ function BannerUrlAutoPageInner() {
         setError(msg)
         setErrorType(isLimitError ? 'limit' : 'system')
         setLimitUsage(isLimitError ? data.usage || null : null)
+        setLimitContactRequested(isLimitError && !!HIGH_USAGE_CONTACT_URL && data.upgradeUrl === HIGH_USAGE_CONTACT_URL)
 
         if (isLimitError) {
           toast.error('今月の生成枠をご確認ください', { duration: 6000 })
@@ -257,18 +266,25 @@ function BannerUrlAutoPageInner() {
       setBannerAnalysis(String(data.bannerAnalysis || ''))
       setAnalysisJson((data.analysisJson as any) || null)
       setUsedModelDisplay(String(data.usedModelDisplay || ''))
-      toast.success('選択したデザインでバリエーションを再生成しました！', { icon: '✨' })
+      if (data.warning) {
+        setError(String(data.warning))
+        setErrorType('system')
+        toast.error('生成結果の注意事項をご確認ください', { duration: 5000 })
+      } else {
+        toast.success('選択したデザインでバリエーションを再生成しました！', { icon: '✨' })
+      }
     } catch (e: any) {
       if (e?.name === 'AbortError') {
-        setError('生成に時間がかかっています。タブは開いたまま、しばらく待つか再試行してください。')
+        setError('時間内に生成結果を確認できませんでした。履歴を確認してから再試行してください。')
         setErrorType('system')
         toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
       } else {
-        setError(e?.message || 'バリエーション再生成に失敗しました')
+        setError('生成結果を確認できませんでした。履歴を確認してから再試行してください。')
         setErrorType('system')
-        toast.error(e?.message?.length > 50 ? '再生成に失敗しました' : (e?.message || '再生成に失敗しました'), { icon: '❌', duration: 5000 })
+        toast.error('生成結果を確認できませんでした', { duration: 5000 })
       }
     } finally {
+      if (timeout !== undefined) window.clearTimeout(timeout)
       setIsGenerating(false)
     }
   }
@@ -289,8 +305,7 @@ function BannerUrlAutoPageInner() {
   const monthlyRemaining = limitUsage?.monthlyRemaining
   const inferredLimit = bannerPlanTier === 'GUEST' ? BANNER_PRICING.guestLimit : getBannerMonthlyLimitByUserPlan(bannerPlanTier)
   const effectiveLimit = limitUsage?.monthlyLimit ?? inferredLimit
-  const limitIsEnterprise = effectiveLimit >= (BANNER_PRICING.enterpriseLimit ?? 1000)
-  const limitIsPro = effectiveLimit >= BANNER_PRICING.proLimit
+  const limitContactAction = effectiveLimit >= BANNER_PRICING.proLimit || limitContactRequested
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900">
@@ -427,7 +442,7 @@ function BannerUrlAutoPageInner() {
                       {isFreeHourActive ? (
                         <span className="text-amber-600 font-black">🎉 1時間生成し放題中！ 最大10枚 / サイズ指定OK / 履歴機能も解放</span>
                       ) : (
-                        <>無料：<span className="text-slate-800">1〜3枚 / 1080×1080のみ</span>　有料：<span className="text-slate-800">1〜10枚 / サイズ指定OK</span></>
+                        <>現在のプラン：<span className="text-slate-800">1〜{maxCount}枚 / {isPaidUser ? 'サイズ指定OK' : '1080×1080のみ'}</span></>
                       )}
                     </p>
 
@@ -555,7 +570,8 @@ function BannerUrlAutoPageInner() {
                                 ログイン後の利用枠をご確認ください
                               </span>
                             </>
-                          ) : limitIsEnterprise ? (
+                          ) : limitContactAction ? (
+                            <>
                             <a
                               href={HIGH_USAGE_CONTACT_URL || 'https://doyamarke.surisuta.jp/contact'}
                               target="_blank"
@@ -564,6 +580,8 @@ function BannerUrlAutoPageInner() {
                             >
                               追加の利用枠を相談する
                             </a>
+                            <Link href="/banner/pricing" className="text-xs text-red-700 underline">料金・利用条件を確認する</Link>
+                            </>
                           ) : (
                             <>
                               <Link
@@ -571,11 +589,12 @@ function BannerUrlAutoPageInner() {
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-black rounded-lg hover:bg-blue-700 transition-colors"
                               >
                                 <Sparkles className="w-3.5 h-3.5" />
-                                {limitIsPro ? 'エンタープライズプランを確認する' : 'プランを確認する'}
+                                {trialEligible && !isPaidUser ? `${TRIAL_DAYS}日間無料の対象プランを確認する` : 'プランを確認する'}
                               </Link>
                               <span className="text-[10px] text-red-600 font-bold">
-                                {limitIsPro ? `エンタープライズプランは月${BANNER_PRICING.enterpriseLimit}枚まで` : `プロプランは月${BANNER_PRICING.proLimit}枚まで`}
+                                プロプランは月{BANNER_PRICING.proLimit}枚まで
                               </span>
+                              {!isPaidUser && <TrialNote />}
                             </>
                           )}
                         </div>

@@ -1,0 +1,21 @@
+{
+  "file": "/Users/mitsumori_katsuki/Code/09_Cursol/src/app/banner/dashboard/chat/page.tsx",
+  "scope": "Actual AST-extracted generation handler, synthetic quota/fetch/setters; no real API",
+  "results": [
+    {
+      "scenario": "invalid_success",
+      "previousImagesErased": true,
+      "successClaimed": true
+    },
+    {
+      "scenario": "aborted_body",
+      "previousImagesErased": true,
+      "successClaimed": true
+    },
+    {
+      "scenario": "quota_rejected",
+      "previousImagesErased": true,
+      "successClaimed": false
+    }
+  ]
+}

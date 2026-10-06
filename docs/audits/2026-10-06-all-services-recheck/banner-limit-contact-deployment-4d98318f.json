@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-06T03:03:39.929425+00:00",
+  "commit": "4d98318fa7a6b2d3c06c0f27a149343e89de817d",
+  "deploymentId": "dpl_4yobtrmUz5nZZRBvECkBzkBipTG4",
+  "readyState": "READY",
+  "aliases": [
+    "doya-ai.vercel.app",
+    "doya-ai.surisuta.jp",
+    "doya-ai-surisutas-projects.vercel.app",
+    "doya-ai-git-main-surisutas-projects.vercel.app"
+  ],
+  "ci": {
+    "conclusion": "success",
+    "headSha": "4d98318fa7a6b2d3c06c0f27a149343e89de817d",
+    "status": "completed"
+  },
+  "scope": "Dedicated quota modal cohort only; URL page changes are uncommitted and still under final build."
+}

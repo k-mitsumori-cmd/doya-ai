@@ -1,0 +1,26 @@
+PASS URL banner page keeps PRO and paid aliases above stale service FREE, matching server entitlement
+PASS URL banner quota sends PRO and Enterprise to support without non-sold purchase claims
+PASS URL banner preserves valid service-paid entitlement and unknown plans never unlock paid settings
+PASS URL banner free trial eligibility and guest login guidance stay distinct and retain remaining count
+PASS URL banner generation and regeneration retain explicit support action and clear it on the next failure
+PASS URL banner arbitrary external response URLs cannot replace plan guidance
+PASS URL banner body reads retain their deadline and abort preserves previous results in both handlers
+PASS URL banner invalid success envelopes, private non-JSON diagnostics and network errors never erase old images
+PASS URL banner known upstream statuses keep actionable public messages without raw body text
+PASS URL banner valid success and partial warnings update images truthfully and release timers
+{
+  "passed": 10,
+  "scope": "Actual page render and handlers; synthetic session/router/fetch, no provider, DB or payment request",
+  "results": [
+    "URL banner page keeps PRO and paid aliases above stale service FREE, matching server entitlement",
+    "URL banner quota sends PRO and Enterprise to support without non-sold purchase claims",
+    "URL banner preserves valid service-paid entitlement and unknown plans never unlock paid settings",
+    "URL banner free trial eligibility and guest login guidance stay distinct and retain remaining count",
+    "URL banner generation and regeneration retain explicit support action and clear it on the next failure",
+    "URL banner arbitrary external response URLs cannot replace plan guidance",
+    "URL banner body reads retain their deadline and abort preserves previous results in both handlers",
+    "URL banner invalid success envelopes, private non-JSON diagnostics and network errors never erase old images",
+    "URL banner known upstream statuses keep actionable public messages without raw body text",
+    "URL banner valid success and partial warnings update images truthfully and release timers"
+  ]
+}

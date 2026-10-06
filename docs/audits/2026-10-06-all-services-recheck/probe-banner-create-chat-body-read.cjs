@@ -1,0 +1,8 @@
+const fs=require('fs'),ts=require('/Users/mitsumori_katsuki/Code/09_Cursol/node_modules/typescript'),vm=require('vm'),assert=require('assert/strict');
+const root='/Users/mitsumori_katsuki/Code/09_Cursol/';
+(async()=>{const results=[];for(const file of ['src/app/banner/dashboard/create/page.tsx','src/app/banner/dashboard/chat/page.tsx']){
+ const source=fs.readFileSync(root+file,'utf8'),ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true),found={};
+ function visit(n){if(ts.isFunctionDeclaration(n)&&['safeReadJson','normalizeNonJsonApiError'].includes(n.name?.text))found[n.name.text]=n.getText(ast);if(ts.isVariableDeclaration(n)&&['safeReadJson','normalizeNonJsonApiError'].includes(n.name.getText(ast)))found[n.name.getText(ast)]='const '+n.getText(ast)+';';ts.forEachChild(n,visit);}visit(ast);
+ assert.equal(Object.keys(found).length,2);const context={};vm.runInNewContext(ts.transpileModule(Object.values(found).join('\n')+'\nglobalThis.read=safeReadJson;globalThis.normalize=normalizeNonJsonApiError;', {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
+ const parsed=await context.read({ok:true,status:200,text:async()=>{throw new DOMException('synthetic abort','AbortError')}});const rawShown=context.normalize(500,'SYNTHETIC_PRIVATE_DIAGNOSTIC').includes('SYNTHETIC_PRIVATE');assert.equal(parsed.ok,true);assert.equal(parsed.data,null);assert.equal(rawShown,true);results.push({file,abortedBodyReturnsSuccess:true,bodyData:null,rawDiagnosticShown:true,scope:'Executed actual AST-extracted read and error-normalization functions with synthetic Response; no real API request.'});
+ }console.log(JSON.stringify({results},null,2));})().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,0 +1,1871 @@
+
+> doya-ai@1.0.0 build
+> prisma generate && npm run test:security && tsc --noEmit && next build
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v5.22.0) to ./node_modules/@prisma/client in 2.64s
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Want real-time updates to your database without manual polling? Discover how with Pulse: https://pris.ly/tip-0-pulse
+
+
+> doya-ai@1.0.0 test:security
+> node scripts/security-regression/run.cjs
+
+PASS DoyaSlide logo settings reject invalid values and report incomplete recomposition
+PASS Aishodan room settings reject malformed expiry, capacity, and active state before writes
+PASS preview create writes while active
+PASS preview reuse writes while active
+PASS room reactivation writes while active
+PASS room issue writes while active
+PASS manual knowledge uses locked transaction
+PASS scenario edit commits profile and scenario together
+PASS preview create rejects archive race
+PASS preview reuse rejects archive race
+PASS room reactivation rejects archive race
+PASS room issue rejects archive race
+PASS manual knowledge rejects archive race
+PASS scenario edit rejects archive race
+PASS successful research deletion erases content but retains the monthly usage marker
+PASS failed research can be removed without consuming quota
+PASS active research and generation cannot be deleted
+PASS malformed IDs return not found before acquiring locks
+PASS deleted preparations are hidden from detail/list and still count toward the monthly cap
+PASS archiving a prompt retains its result foreign key
+PASS archived prompts do not appear in the list or consume the free slot
+PASS archived prompts cannot be edited or measured
+PASS archive field and additive SQL exist
+PASS adbanner and copy plan CTAs: guest, free, light, pro, enterprise, aliases, and stale service plans
+PASS persona usage displays the actual contract tier, including LIGHT
+PASS AdImage grants paid image quota only to recognized contract plans
+PASS plan change: no duplicate checkout, grouped portal prices, reusable configuration, current price sync
+PASS concurrent checkout requests create one Stripe session
+PASS completed checkout blocks a second session before subscription sync
+PASS different checkout entry or plan cannot create another open session
+PASS Stripe status lookup failure cannot create a second session
+PASS uncertain creation retries with persisted Stripe idempotency key
+PASS create rejects unavailable registered logo before image reservation
+PASS refine rejects unavailable registered logo before image reservation
+PASS failed logo removal keeps the selected logo and shows the server error
+PASS successful logo removal clears the selected logo
+PASS failed Shodan providers remain unknown in research and AI facts
+PASS successful empty Shodan responses are distinguished from provider failure
+PASS missing company name skips dependent providers rather than reporting no hits
+PASS Shodan never attaches the first unrelated gBizINFO company
+PASS Shodan selects only a unique normalized name or matching company site
+PASS HR month range: before JST month change
+PASS HR month range: after JST month change
+PASS HR month range: after JST year change
+PASS HR month range: leap-year February
+PASS HR dashboard counts only the current JST month
+PASS dashboard: failed request is an error, not an empty organization
+PASS dashboard: malformed success is an error, not an empty organization
+PASS evaluations: failed request is an error, not an empty organization
+PASS evaluations: malformed success is an error, not an empty organization
+PASS settings: failed request is an error, not an empty organization
+PASS settings: malformed success is an error, not an empty organization
+PASS dashboard: valid zero counts are genuinely empty
+PASS evaluations: valid empty list is distinct from an outage
+PASS settings: audit outage does not hide valid organization and departments
+PASS sign-in callback: external and protocol-relative destinations rejected; local article and banner paths retained
+PASS sign-in introduction: all current public services use public entry pages; private paths and invitations stay only in the login callback
+PASS failed OAuth start releases loading and shows a safe accessible retry message
+PASS failed start can be retried and preserves the exact local return destination
+PASS duplicate starts before rerender and during SDK waiting are ignored
+PASS successful redirect initiation stays locked until navigation leaves the page
+PASS synchronous SDK failure is recoverable too
+PASS HR invitation account selection and callback sanitization remain intact
+PASS all nine invitation services prompt for the recipient account while other routes keep normal sign-in
+PASS existing OAuth error query is still shown accessibly
+PASS restoring the page from browser history allows another OAuth start
+PASS late failure from before history restoration cannot unlock a newer attempt
+{
+  "passed": 10,
+  "results": [
+    "failed OAuth start releases loading and shows a safe accessible retry message",
+    "failed start can be retried and preserves the exact local return destination",
+    "duplicate starts before rerender and during SDK waiting are ignored",
+    "successful redirect initiation stays locked until navigation leaves the page",
+    "synchronous SDK failure is recoverable too",
+    "HR invitation account selection and callback sanitization remain intact",
+    "all nine invitation services prompt for the recipient account while other routes keep normal sign-in",
+    "existing OAuth error query is still shown accessibly",
+    "restoring the page from browser history allows another OAuth start",
+    "late failure from before history restoration cannot unlock a newer attempt"
+  ]
+}
+PASS aio: unauthorized SDK failure recovers, hides raw details and retries unchanged input
+PASS aio: network failure releases lock with safe message
+PASS aio: server business error remains visible and retryable
+PASS aio: successful creation keeps navigation lock and original input
+PASS aio: immediate duplicates and duplicates during SDK waiting create one request
+PASS aio: history restoration unlocks; stale API cannot navigate or start OAuth
+PASS aio: old SDK failure does not release a newer restored submission
+PASS aio: stale JSON completion does not navigate after history restoration
+PASS aio: unmounted request failure does not announce an obsolete error
+PASS sfa: unauthorized SDK failure recovers, hides raw details and retries unchanged input
+PASS sfa: network failure releases lock with safe message
+PASS sfa: server business error remains visible and retryable
+PASS sfa: successful creation keeps navigation lock and original input
+PASS sfa: immediate duplicates and duplicates during SDK waiting create one request
+PASS sfa: history restoration unlocks; stale API cannot navigate or start OAuth
+PASS sfa: old SDK failure does not release a newer restored submission
+PASS sfa: stale JSON completion does not navigate after history restoration
+PASS sfa: unmounted request failure does not announce an obsolete error
+PASS shodan: unauthorized SDK failure recovers, hides raw details and retries unchanged input
+PASS shodan: network failure releases lock with safe message
+PASS shodan: server business error remains visible and retryable
+PASS shodan: successful creation keeps navigation lock and original input
+PASS shodan: immediate duplicates and duplicates during SDK waiting create one request
+PASS shodan: history restoration unlocks; stale API cannot navigate or start OAuth
+PASS shodan: old SDK failure does not release a newer restored submission
+PASS shodan: stale JSON completion does not navigate after history restoration
+PASS shodan: unmounted request failure does not announce an obsolete error
+PASS aio: guest login failure is safe and does not call quick-start
+{
+  "passed": 28,
+  "scope": "actual TS hook and extracted current entry handlers; API/OAuth mocked; no production writes",
+  "results": [
+    "aio: unauthorized SDK failure recovers, hides raw details and retries unchanged input",
+    "aio: network failure releases lock with safe message",
+    "aio: server business error remains visible and retryable",
+    "aio: successful creation keeps navigation lock and original input",
+    "aio: immediate duplicates and duplicates during SDK waiting create one request",
+    "aio: history restoration unlocks; stale API cannot navigate or start OAuth",
+    "aio: old SDK failure does not release a newer restored submission",
+    "aio: stale JSON completion does not navigate after history restoration",
+    "aio: unmounted request failure does not announce an obsolete error",
+    "sfa: unauthorized SDK failure recovers, hides raw details and retries unchanged input",
+    "sfa: network failure releases lock with safe message",
+    "sfa: server business error remains visible and retryable",
+    "sfa: successful creation keeps navigation lock and original input",
+    "sfa: immediate duplicates and duplicates during SDK waiting create one request",
+    "sfa: history restoration unlocks; stale API cannot navigate or start OAuth",
+    "sfa: old SDK failure does not release a newer restored submission",
+    "sfa: stale JSON completion does not navigate after history restoration",
+    "sfa: unmounted request failure does not announce an obsolete error",
+    "shodan: unauthorized SDK failure recovers, hides raw details and retries unchanged input",
+    "shodan: network failure releases lock with safe message",
+    "shodan: server business error remains visible and retryable",
+    "shodan: successful creation keeps navigation lock and original input",
+    "shodan: immediate duplicates and duplicates during SDK waiting create one request",
+    "shodan: history restoration unlocks; stale API cannot navigate or start OAuth",
+    "shodan: old SDK failure does not release a newer restored submission",
+    "shodan: stale JSON completion does not navigate after history restoration",
+    "shodan: unmounted request failure does not announce an obsolete error",
+    "aio: guest login failure is safe and does not call quick-start"
+  ]
+}
+PASS account-switch helper rejects external callbacks and never starts OAuth before logout
+PASS scan: actual page SDK failure recovers and retries with its encoded return destination
+PASS scan: duplicates during API and SDK waiting are blocked
+PASS scan: restored history rejects old API and JSON completions
+PASS scan: old SDK failure cannot release a newer history-restored request
+PASS scan: network and invalid success bodies recover without a false success
+PASS scan: valid result preserves navigation and locks until leaving
+PASS aio: actual page SDK failure recovers and retries with its encoded return destination
+PASS aio: duplicates during API and SDK waiting are blocked
+PASS aio: restored history rejects old API and JSON completions
+PASS aio: old SDK failure cannot release a newer history-restored request
+PASS aio: network and invalid success bodies recover without a false success
+PASS aio: valid result preserves navigation and locks until leaving
+PASS shodan: actual page SDK failure recovers and retries with its encoded return destination
+PASS shodan: duplicates during API and SDK waiting are blocked
+PASS shodan: restored history rejects old API and JSON completions
+PASS shodan: old SDK failure cannot release a newer history-restored request
+PASS shodan: network and invalid success bodies recover without a false success
+PASS shodan: valid result preserves navigation and locks until leaving
+PASS aio: failed invite lookup can be rechecked without reloading or starting OAuth
+PASS aio: non-JSON conflict or missing invitation removes stale acceptance until rechecked
+PASS aio: still-pending invite after conflict requires a fresh explicit acceptance
+PASS aio: recheck is aborted on unmount and late data cannot restore acceptance
+PASS aio: wrong-account participation switches via sign-out and preserves the encoded invitation
+PASS aio: switching failure hides SDK details and allows retry without losing the invitation
+PASS aio: duplicate account switching is blocked and stale failures cannot unlock a newer attempt
+PASS aio: stale wrong-account response after history restoration cannot replace a successful newer invitation
+PASS aio: invitation expiring during participation stops further acceptance
+PASS aio: invitation component is keyed to token and pending read is cancelled on unmount
+PASS aio: late invitation JSON and late failure cannot update an unmounted page
+PASS aio: expired non-JSON invite and malformed invite cannot be accepted
+PASS shodan: failed invite lookup can be rechecked without reloading or starting OAuth
+PASS shodan: non-JSON conflict or missing invitation removes stale acceptance until rechecked
+PASS shodan: still-pending invite after conflict requires a fresh explicit acceptance
+PASS shodan: recheck is aborted on unmount and late data cannot restore acceptance
+PASS shodan: wrong-account participation switches via sign-out and preserves the encoded invitation
+PASS shodan: switching failure hides SDK details and allows retry without losing the invitation
+PASS shodan: duplicate account switching is blocked and stale failures cannot unlock a newer attempt
+PASS shodan: stale wrong-account response after history restoration cannot replace a successful newer invitation
+PASS shodan: invitation expiring during participation stops further acceptance
+PASS shodan: invitation component is keyed to token and pending read is cancelled on unmount
+PASS shodan: late invitation JSON and late failure cannot update an unmounted page
+PASS shodan: expired non-JSON invite and malformed invite cannot be accepted
+{
+  "passed": 43,
+  "scope": "actual current TSX pages and shared hook; API/SDK mocked; no production writes",
+  "results": [
+    "account-switch helper rejects external callbacks and never starts OAuth before logout",
+    "scan: actual page SDK failure recovers and retries with its encoded return destination",
+    "scan: duplicates during API and SDK waiting are blocked",
+    "scan: restored history rejects old API and JSON completions",
+    "scan: old SDK failure cannot release a newer history-restored request",
+    "scan: network and invalid success bodies recover without a false success",
+    "scan: valid result preserves navigation and locks until leaving",
+    "aio: actual page SDK failure recovers and retries with its encoded return destination",
+    "aio: duplicates during API and SDK waiting are blocked",
+    "aio: restored history rejects old API and JSON completions",
+    "aio: old SDK failure cannot release a newer history-restored request",
+    "aio: network and invalid success bodies recover without a false success",
+    "aio: valid result preserves navigation and locks until leaving",
+    "shodan: actual page SDK failure recovers and retries with its encoded return destination",
+    "shodan: duplicates during API and SDK waiting are blocked",
+    "shodan: restored history rejects old API and JSON completions",
+    "shodan: old SDK failure cannot release a newer history-restored request",
+    "shodan: network and invalid success bodies recover without a false success",
+    "shodan: valid result preserves navigation and locks until leaving",
+    "aio: failed invite lookup can be rechecked without reloading or starting OAuth",
+    "aio: non-JSON conflict or missing invitation removes stale acceptance until rechecked",
+    "aio: still-pending invite after conflict requires a fresh explicit acceptance",
+    "aio: recheck is aborted on unmount and late data cannot restore acceptance",
+    "aio: wrong-account participation switches via sign-out and preserves the encoded invitation",
+    "aio: switching failure hides SDK details and allows retry without losing the invitation",
+    "aio: duplicate account switching is blocked and stale failures cannot unlock a newer attempt",
+    "aio: stale wrong-account response after history restoration cannot replace a successful newer invitation",
+    "aio: invitation expiring during participation stops further acceptance",
+    "aio: invitation component is keyed to token and pending read is cancelled on unmount",
+    "aio: late invitation JSON and late failure cannot update an unmounted page",
+    "aio: expired non-JSON invite and malformed invite cannot be accepted",
+    "shodan: failed invite lookup can be rechecked without reloading or starting OAuth",
+    "shodan: non-JSON conflict or missing invitation removes stale acceptance until rechecked",
+    "shodan: still-pending invite after conflict requires a fresh explicit acceptance",
+    "shodan: recheck is aborted on unmount and late data cannot restore acceptance",
+    "shodan: wrong-account participation switches via sign-out and preserves the encoded invitation",
+    "shodan: switching failure hides SDK details and allows retry without losing the invitation",
+    "shodan: duplicate account switching is blocked and stale failures cannot unlock a newer attempt",
+    "shodan: stale wrong-account response after history restoration cannot replace a successful newer invitation",
+    "shodan: invitation expiring during participation stops further acceptance",
+    "shodan: invitation component is keyed to token and pending read is cancelled on unmount",
+    "shodan: late invitation JSON and late failure cannot update an unmounted page",
+    "shodan: expired non-JSON invite and malformed invite cannot be accepted"
+  ]
+}
+PASS hr: signIn failure recovers and retries a preserved safe destination
+PASS hr: switch failure recovers and retries a preserved safe destination
+PASS hr: repeated login clicks and stale failures are blocked
+PASS hr: unmounted verification ignores API/JSON failure and aborts loading
+PASS hr: route identity remounts its private or invitation state
+PASS admin: signIn failure recovers and retries a preserved safe destination
+PASS admin: switch failure recovers and retries a preserved safe destination
+PASS admin: repeated login clicks and stale failures are blocked
+PASS admin: unmounted verification ignores API/JSON failure and aborts loading
+PASS admin: route identity remounts its private or invitation state
+PASS HR: duplicate participation, restored history and old response cannot claim success
+PASS HR: malformed success and network exceptions never show acceptance or raw details
+PASS HR: successful participation schedules one redirect and unmount cancels it
+PASS HR: expiry and unrelated permission failures cannot offer account switching
+PASS HR: malformed invitation info never enables participation
+PASS HR: a temporary verification failure can be rechecked without leaving its invitation
+PASS HR: conflict recheck replaces old readiness with current expiry
+PASS HR: current pending invitation after conflict may retry participation once
+PASS HR: unmount cancels a recheck and ignores its late result
+PASS HR: cancelled and used invitations retain their actual reason and cannot be accepted
+PASS Admin: only strict password authentication and allowed Google domain reveal children
+{
+  "passed": 21,
+  "scope": "actual TSX/shared hook; mocked APIs/SDK; no production writes",
+  "results": [
+    "hr: signIn failure recovers and retries a preserved safe destination",
+    "hr: switch failure recovers and retries a preserved safe destination",
+    "hr: repeated login clicks and stale failures are blocked",
+    "hr: unmounted verification ignores API/JSON failure and aborts loading",
+    "hr: route identity remounts its private or invitation state",
+    "admin: signIn failure recovers and retries a preserved safe destination",
+    "admin: switch failure recovers and retries a preserved safe destination",
+    "admin: repeated login clicks and stale failures are blocked",
+    "admin: unmounted verification ignores API/JSON failure and aborts loading",
+    "admin: route identity remounts its private or invitation state",
+    "HR: duplicate participation, restored history and old response cannot claim success",
+    "HR: malformed success and network exceptions never show acceptance or raw details",
+    "HR: successful participation schedules one redirect and unmount cancels it",
+    "HR: expiry and unrelated permission failures cannot offer account switching",
+    "HR: malformed invitation info never enables participation",
+    "HR: a temporary verification failure can be rechecked without leaving its invitation",
+    "HR: conflict recheck replaces old readiness with current expiry",
+    "HR: current pending invitation after conflict may retry participation once",
+    "HR: unmount cancels a recheck and ignores its late result",
+    "HR: cancelled and used invitations retain their actual reason and cannot be accepted",
+    "Admin: only strict password authentication and allowed Google domain reveal children"
+  ]
+}
+PASS quote: valid invite preserves organization and role; encoded GET is abortable and no-store
+PASS quote: failed or malformed reads cannot accept and can be rechecked
+PASS quote: missing token stops loading safely without API or acceptance
+PASS quote: non-JSON 401 offers sign-in before attempting body parsing
+PASS quote: non-JSON wrong-account rejection switches through sign-out and safely retries
+PASS quote: expired GET or POST never permits acceptance or account switching
+PASS quote: missing or conflicted POST requires a fresh lookup before acceptance
+PASS quote: network rejection and invalid successful POST never show success or private details
+PASS quote: duplicate participation is synchronously blocked
+PASS quote: successful and already-member responses schedule only the service destination
+PASS quote: used invitation cannot POST
+PASS quote: API, JSON and failure arriving after unmount cannot change state
+PASS quote: recheck is aborted on unmount and late read cannot restore acceptance
+PASS quote: history restoration rereads invitation and ignores stale participation
+PASS quote: duplicate SDK calls are blocked and stale SDK failure cannot affect a restored invite
+PASS mensetsu: valid invite preserves organization and role; encoded GET is abortable and no-store
+PASS mensetsu: failed or malformed reads cannot accept and can be rechecked
+PASS mensetsu: missing token stops loading safely without API or acceptance
+PASS mensetsu: non-JSON 401 offers sign-in before attempting body parsing
+PASS mensetsu: non-JSON wrong-account rejection switches through sign-out and safely retries
+PASS mensetsu: expired GET or POST never permits acceptance or account switching
+PASS mensetsu: missing or conflicted POST requires a fresh lookup before acceptance
+PASS mensetsu: network rejection and invalid successful POST never show success or private details
+PASS mensetsu: duplicate participation is synchronously blocked
+PASS mensetsu: successful and already-member responses schedule only the service destination
+PASS mensetsu: used invitation cannot POST
+PASS mensetsu: API, JSON and failure arriving after unmount cannot change state
+PASS mensetsu: recheck is aborted on unmount and late read cannot restore acceptance
+PASS mensetsu: history restoration rereads invitation and ignores stale participation
+PASS mensetsu: duplicate SDK calls are blocked and stale SDK failure cannot affect a restored invite
+PASS aishodan: valid invite preserves organization and role; encoded GET is abortable and no-store
+PASS aishodan: failed or malformed reads cannot accept and can be rechecked
+PASS aishodan: missing token stops loading safely without API or acceptance
+PASS aishodan: non-JSON 401 offers sign-in before attempting body parsing
+PASS aishodan: non-JSON wrong-account rejection switches through sign-out and safely retries
+PASS aishodan: expired GET or POST never permits acceptance or account switching
+PASS aishodan: missing or conflicted POST requires a fresh lookup before acceptance
+PASS aishodan: network rejection and invalid successful POST never show success or private details
+PASS aishodan: duplicate participation is synchronously blocked
+PASS aishodan: successful and already-member responses schedule only the service destination
+PASS aishodan: used invitation cannot POST
+PASS aishodan: API, JSON and failure arriving after unmount cannot change state
+PASS aishodan: recheck is aborted on unmount and late read cannot restore acceptance
+PASS aishodan: history restoration rereads invitation and ignores stale participation
+PASS aishodan: duplicate SDK calls are blocked and stale SDK failure cannot affect a restored invite
+{
+  "passed": 45,
+  "scope": "Actual three TSX wrappers, shared component and hook; synthetic API/SDK/timers; no real participation, email or DB writes",
+  "results": [
+    "quote: valid invite preserves organization and role; encoded GET is abortable and no-store",
+    "quote: failed or malformed reads cannot accept and can be rechecked",
+    "quote: missing token stops loading safely without API or acceptance",
+    "quote: non-JSON 401 offers sign-in before attempting body parsing",
+    "quote: non-JSON wrong-account rejection switches through sign-out and safely retries",
+    "quote: expired GET or POST never permits acceptance or account switching",
+    "quote: missing or conflicted POST requires a fresh lookup before acceptance",
+    "quote: network rejection and invalid successful POST never show success or private details",
+    "quote: duplicate participation is synchronously blocked",
+    "quote: successful and already-member responses schedule only the service destination",
+    "quote: used invitation cannot POST",
+    "quote: API, JSON and failure arriving after unmount cannot change state",
+    "quote: recheck is aborted on unmount and late read cannot restore acceptance",
+    "quote: history restoration rereads invitation and ignores stale participation",
+    "quote: duplicate SDK calls are blocked and stale SDK failure cannot affect a restored invite",
+    "mensetsu: valid invite preserves organization and role; encoded GET is abortable and no-store",
+    "mensetsu: failed or malformed reads cannot accept and can be rechecked",
+    "mensetsu: missing token stops loading safely without API or acceptance",
+    "mensetsu: non-JSON 401 offers sign-in before attempting body parsing",
+    "mensetsu: non-JSON wrong-account rejection switches through sign-out and safely retries",
+    "mensetsu: expired GET or POST never permits acceptance or account switching",
+    "mensetsu: missing or conflicted POST requires a fresh lookup before acceptance",
+    "mensetsu: network rejection and invalid successful POST never show success or private details",
+    "mensetsu: duplicate participation is synchronously blocked",
+    "mensetsu: successful and already-member responses schedule only the service destination",
+    "mensetsu: used invitation cannot POST",
+    "mensetsu: API, JSON and failure arriving after unmount cannot change state",
+    "mensetsu: recheck is aborted on unmount and late read cannot restore acceptance",
+    "mensetsu: history restoration rereads invitation and ignores stale participation",
+    "mensetsu: duplicate SDK calls are blocked and stale SDK failure cannot affect a restored invite",
+    "aishodan: valid invite preserves organization and role; encoded GET is abortable and no-store",
+    "aishodan: failed or malformed reads cannot accept and can be rechecked",
+    "aishodan: missing token stops loading safely without API or acceptance",
+    "aishodan: non-JSON 401 offers sign-in before attempting body parsing",
+    "aishodan: non-JSON wrong-account rejection switches through sign-out and safely retries",
+    "aishodan: expired GET or POST never permits acceptance or account switching",
+    "aishodan: missing or conflicted POST requires a fresh lookup before acceptance",
+    "aishodan: network rejection and invalid successful POST never show success or private details",
+    "aishodan: duplicate participation is synchronously blocked",
+    "aishodan: successful and already-member responses schedule only the service destination",
+    "aishodan: used invitation cannot POST",
+    "aishodan: API, JSON and failure arriving after unmount cannot change state",
+    "aishodan: recheck is aborted on unmount and late read cannot restore acceptance",
+    "aishodan: history restoration rereads invitation and ignores stale participation",
+    "aishodan: duplicate SDK calls are blocked and stale SDK failure cannot affect a restored invite"
+  ]
+}
+PASS sfa: current page shows valid fields and uses encoded abortable no-store reads
+PASS sfa: missing token cannot get stuck loading or issue a request
+PASS sfa: failed, malformed and unsuccessful HTTP reads cannot permit participation
+PASS sfa: unresolved session disables action and handler cannot post or start OAuth
+PASS sfa: unauthenticated sign-in failure retains invitation callback and can retry
+PASS sfa: non-JSON 401 is handled before body parsing
+PASS sfa: email mismatch can switch accounts through sign-out and retry safely
+PASS sfa: non-JSON unavailable GET and POST cannot offer participation or switching
+PASS sfa: POST404/409 clears stale invitation and requires explicit recheck
+PASS sfa: network, invalid success and error HTTP with success fields never navigate
+PASS sfa: duplicate participation is blocked before first response
+PASS sfa: valid current success preserves the service destination and lock
+PASS sfa: API, JSON and failure after unmount cannot change state
+PASS sfa: history restoration rechecks and rejects late POST success
+PASS sfa: pending SDK locks all actions and stale failure after history restoration is ignored
+PASS sfa: pending recheck is aborted and late body cannot restore stale invite
+PASS promane: current page shows valid fields and uses encoded abortable no-store reads
+PASS promane: missing token cannot get stuck loading or issue a request
+PASS promane: failed, malformed and unsuccessful HTTP reads cannot permit participation
+PASS promane: unresolved session disables action and handler cannot post or start OAuth
+PASS promane: unauthenticated sign-in failure retains invitation callback and can retry
+PASS promane: non-JSON 401 is handled before body parsing
+PASS promane: email mismatch can switch accounts through sign-out and retry safely
+PASS promane: non-JSON unavailable GET and POST cannot offer participation or switching
+PASS promane: POST404/409 clears stale invitation and requires explicit recheck
+PASS promane: network, invalid success and error HTTP with success fields never navigate
+PASS promane: duplicate participation is blocked before first response
+PASS promane: valid current success preserves the service destination and lock
+PASS promane: API, JSON and failure after unmount cannot change state
+PASS promane: history restoration rechecks and rejects late POST success
+PASS promane: pending SDK locks all actions and stale failure after history restoration is ignored
+PASS promane: pending recheck is aborted and late body cannot restore stale invite
+PASS kintai: current page shows valid fields and uses encoded abortable no-store reads
+PASS kintai: missing token cannot get stuck loading or issue a request
+PASS kintai: failed, malformed and unsuccessful HTTP reads cannot permit participation
+PASS kintai: unresolved session disables action and handler cannot post or start OAuth
+PASS kintai: unauthenticated sign-in failure retains invitation callback and can retry
+PASS kintai: non-JSON 401 is handled before body parsing
+PASS kintai: email mismatch can switch accounts through sign-out and retry safely
+PASS kintai: non-JSON unavailable GET and POST cannot offer participation or switching
+PASS kintai: POST404/409 clears stale invitation and requires explicit recheck
+PASS kintai: network, invalid success and error HTTP with success fields never navigate
+PASS kintai: duplicate participation is blocked before first response
+PASS kintai: valid current success preserves the service destination and lock
+PASS kintai: API, JSON and failure after unmount cannot change state
+PASS kintai: history restoration rechecks and rejects late POST success
+PASS kintai: pending SDK locks all actions and stale failure after history restoration is ignored
+PASS kintai: pending recheck is aborted and late body cannot restore stale invite
+PASS Promane quota, disabled access and unknown 403 never offer switching
+PASS SFA member quota preserves owner guidance and never offers switching
+PASS Promane distinguishes accepted invitation from expiry for GET and POST
+{
+  "passed": 51,
+  "scope": "Actual three TSX pages, shared recovery hook and submission hook; synthetic API/auth; no external OAuth or database writes",
+  "results": [
+    "sfa: current page shows valid fields and uses encoded abortable no-store reads",
+    "sfa: missing token cannot get stuck loading or issue a request",
+    "sfa: failed, malformed and unsuccessful HTTP reads cannot permit participation",
+    "sfa: unresolved session disables action and handler cannot post or start OAuth",
+    "sfa: unauthenticated sign-in failure retains invitation callback and can retry",
+    "sfa: non-JSON 401 is handled before body parsing",
+    "sfa: email mismatch can switch accounts through sign-out and retry safely",
+    "sfa: non-JSON unavailable GET and POST cannot offer participation or switching",
+    "sfa: POST404/409 clears stale invitation and requires explicit recheck",
+    "sfa: network, invalid success and error HTTP with success fields never navigate",
+    "sfa: duplicate participation is blocked before first response",
+    "sfa: valid current success preserves the service destination and lock",
+    "sfa: API, JSON and failure after unmount cannot change state",
+    "sfa: history restoration rechecks and rejects late POST success",
+    "sfa: pending SDK locks all actions and stale failure after history restoration is ignored",
+    "sfa: pending recheck is aborted and late body cannot restore stale invite",
+    "promane: current page shows valid fields and uses encoded abortable no-store reads",
+    "promane: missing token cannot get stuck loading or issue a request",
+    "promane: failed, malformed and unsuccessful HTTP reads cannot permit participation",
+    "promane: unresolved session disables action and handler cannot post or start OAuth",
+    "promane: unauthenticated sign-in failure retains invitation callback and can retry",
+    "promane: non-JSON 401 is handled before body parsing",
+    "promane: email mismatch can switch accounts through sign-out and retry safely",
+    "promane: non-JSON unavailable GET and POST cannot offer participation or switching",
+    "promane: POST404/409 clears stale invitation and requires explicit recheck",
+    "promane: network, invalid success and error HTTP with success fields never navigate",
+    "promane: duplicate participation is blocked before first response",
+    "promane: valid current success preserves the service destination and lock",
+    "promane: API, JSON and failure after unmount cannot change state",
+    "promane: history restoration rechecks and rejects late POST success",
+    "promane: pending SDK locks all actions and stale failure after history restoration is ignored",
+    "promane: pending recheck is aborted and late body cannot restore stale invite",
+    "kintai: current page shows valid fields and uses encoded abortable no-store reads",
+    "kintai: missing token cannot get stuck loading or issue a request",
+    "kintai: failed, malformed and unsuccessful HTTP reads cannot permit participation",
+    "kintai: unresolved session disables action and handler cannot post or start OAuth",
+    "kintai: unauthenticated sign-in failure retains invitation callback and can retry",
+    "kintai: non-JSON 401 is handled before body parsing",
+    "kintai: email mismatch can switch accounts through sign-out and retry safely",
+    "kintai: non-JSON unavailable GET and POST cannot offer participation or switching",
+    "kintai: POST404/409 clears stale invitation and requires explicit recheck",
+    "kintai: network, invalid success and error HTTP with success fields never navigate",
+    "kintai: duplicate participation is blocked before first response",
+    "kintai: valid current success preserves the service destination and lock",
+    "kintai: API, JSON and failure after unmount cannot change state",
+    "kintai: history restoration rechecks and rejects late POST success",
+    "kintai: pending SDK locks all actions and stale failure after history restoration is ignored",
+    "kintai: pending recheck is aborted and late body cannot restore stale invite",
+    "Promane quota, disabled access and unknown 403 never offer switching",
+    "SFA member quota preserves owner guidance and never offers switching",
+    "Promane distinguishes accepted invitation from expiry for GET and POST"
+  ]
+}
+PASS invalid invitation bodies return 400 before lookup or mutation
+PASS pending expiry including the exact deadline returns 410 without claiming membership
+PASS stored expiry returns 410 while accepted and cancelled invitations return 409
+PASS expiry while waiting for the organization lock takes priority over the member limit
+PASS changed, removed or consumed invitation under the organization lock is never claimed
+PASS expiry between the locked check and claim returns 410 with no member or audit
+PASS failed claim on a cancelled invitation returns 409 rather than guessing expiry
+PASS a valid organization at capacity rejects before consuming the invite
+PASS valid matching invitation preserves atomic membership creation and audit
+PASS invite lookup preserves consumed and cancelled states, and expires pending exactly at its deadline
+{
+  "passed": 10,
+  "scope": "actual API; synthetic clock/auth/transaction; not a PostgreSQL concurrency or production write test",
+  "results": [
+    "invalid invitation bodies return 400 before lookup or mutation",
+    "pending expiry including the exact deadline returns 410 without claiming membership",
+    "stored expiry returns 410 while accepted and cancelled invitations return 409",
+    "expiry while waiting for the organization lock takes priority over the member limit",
+    "changed, removed or consumed invitation under the organization lock is never claimed",
+    "expiry between the locked check and claim returns 410 with no member or audit",
+    "failed claim on a cancelled invitation returns 409 rather than guessing expiry",
+    "a valid organization at capacity rejects before consuming the invite",
+    "valid matching invitation preserves atomic membership creation and audit",
+    "invite lookup preserves consumed and cancelled states, and expires pending exactly at its deadline"
+  ]
+}
+PASS organization billing: owner plan, scoped pricing, member quota guidance, and owner-only upgrade links
+PASS interview auxiliary limits reject before AI, included proofread blocks overlap, and failure refunds
+PASS HR evaluations can page through all records in stable order
+PASS HR evaluations reject page=abc before DB reads
+PASS HR evaluations reject page=1.5 before DB reads
+PASS HR evaluations reject page=-1 before DB reads
+PASS HR evaluations reject page=0 before DB reads
+PASS HR evaluations reject page=1000001 before DB reads
+PASS HR evaluations reject pageSize=abc before DB reads
+PASS HR evaluations reject pageSize=0 before DB reads
+PASS HR evaluations reject pageSize=1.5 before DB reads
+PASS HR evaluations reject pageSize=-1 before DB reads
+PASS HR audit log uses bounded defaults and stable order
+PASS HR audit log rejects invalid page=abc before DB read
+PASS HR audit log rejects invalid page=0 before DB read
+PASS HR audit log rejects invalid page=1.5 before DB read
+PASS HR audit log rejects invalid page=10001 before DB read
+PASS HR audit log rejects invalid page= before DB read
+PASS HR audit log rejects invalid pageSize=abc before DB read
+PASS HR audit log rejects invalid pageSize=0 before DB read
+PASS HR audit log rejects invalid pageSize=1.5 before DB read
+PASS HR audit log rejects invalid pageSize=101 before DB read
+PASS HR audit log rejects invalid pageSize= before DB read
+PASS HR audit log does not log raw exceptions
+PASS DoyaSlide project failures keep raw exceptions out of logs
+PASS DoyaSlide list pages summaries and reads only one cover per project
+PASS DoyaSlide list without a limit remains bounded
+PASS DoyaSlide list rejects limit=0 before page reads
+PASS DoyaSlide list rejects limit=31 before page reads
+PASS DoyaSlide list rejects limit=abc before page reads
+PASS DoyaSlide list rejects limit=1.5 before page reads
+PASS DoyaSlide list rejects limit=30&cursor=foreign before page reads
+Interview AI output validation passed
+PASS recipe generation limits calls before AI, refunds failure, and rejects oversized samples
+PASS Banner quota modal: actual rendering and CTA handlers; PRO/Enterprise/contact, free eligibility, legacy LIGHT, unsafe URL, remaining capacity
+PASS URL banner page keeps PRO and paid aliases above stale service FREE, matching server entitlement
+PASS URL banner quota sends PRO and Enterprise to support without non-sold purchase claims
+PASS URL banner preserves valid service-paid entitlement and unknown plans never unlock paid settings
+PASS URL banner free trial eligibility and guest login guidance stay distinct and retain remaining count
+PASS URL banner generation and regeneration retain explicit support action and clear it on the next failure
+PASS URL banner arbitrary external response URLs cannot replace plan guidance
+{
+  "passed": 6,
+  "scope": "Actual page render and handlers; synthetic session/router/fetch, no provider, DB or payment request",
+  "results": [
+    "URL banner page keeps PRO and paid aliases above stale service FREE, matching server entitlement",
+    "URL banner quota sends PRO and Enterprise to support without non-sold purchase claims",
+    "URL banner preserves valid service-paid entitlement and unknown plans never unlock paid settings",
+    "URL banner free trial eligibility and guest login guidance stay distinct and retain remaining count",
+    "URL banner generation and regeneration retain explicit support action and clear it on the next failure",
+    "URL banner arbitrary external response URLs cannot replace plan guidance"
+  ]
+}
+PASS banner chat and copy share a daily quota and reject excess calls before the provider
+PASS banner text provider body and timeout are bounded
+PASS Banner generate does not expose unexpected errors to user or alert
+PASS Banner from-url does not expose unexpected errors to user
+PASS Banner refine does not send provider details to alerts
+PASS Banner error notification finishes before returning if waitUntil is unavailable
+PASS Banner generator sanitizes unexpected provider failure
+PASS Banner generator sanitizes provider quota failure
+PASS Banner provider errors never become result text or raw logs
+PASS Error alert strips request, URL, user and stack details
+PASS Distinct incidents retain distinct dedupe signatures without raw details
+PASS Notifier failures do not log webhook or provider errors
+PASS Production API errors from isolated instances share one alert
+PASS HTTP delivery failure releases the shared claim
+PASS A failed production delivery can retry on the same instance
+PASS Fallback cooldown is cleared after failed delivery
+PASS Failed burst delivery releases the shared claim and retries
+PASS Generic alert returns delivery status and releases failed local cooldown
+PASS Missing alert webhook does not consume a local cooldown
+PASS Shared error handler never reads or forwards request bodies
+PASS Slack delivery errors never log webhook response bodies
+PASS server and client error/warning logs do not include raw exception objects, messages, or stacks
+PASS public healthcheck omits raw database errors and configured hosts
+PASS slide generation hides provider failure
+PASS slashslide generation hides provider failure
+PASS interviewx analyze-url-preview hides source errors
+PASS interviewx projects/[id]/analyze-url hides source errors
+PASS movie plan stream hides provider failure
+PASS shared Gemini chat does not include provider response bodies in errors
+PASS movie render failure stores a safe message
+PASS movie render status hides previously stored failure details
+PASS shodan detail hides previously stored provider failure details
+PASS slide vision failure does not include provider response bodies
+PASS cunning transcription preserves fallback without retaining provider response bodies
+PASS HubSpot sync failure does not include provider response bodies
+PASS email failure results and logs do not expose provider details
+PASS Banner gallery bounds and paginates public results
+PASS Banner gallery rejects invalid take=0 before list read
+PASS Banner gallery rejects invalid take=61 before list read
+PASS Banner gallery rejects invalid take=1.5 before list read
+PASS Banner gallery rejects invalid take=NaN before list read
+PASS Banner gallery rejects invalid take= before list read
+PASS Banner gallery rejects invalid cursor= before list read
+PASS Banner gallery rejects invalid cursor=%20 before list read
+PASS Banner gallery rejects invalid cursor=foreign before list read
+PASS Banner gallery failures do not log raw exceptions
+PASS Doyamana admin image creation, empty categories, edit preservation, and payload limit
+PASS Doyamana categories use live templates, custom CRUD, active filtering, and deletion guards
+PASS HubSpot sync retries failed contacts without cursor loss, overlaps timestamps, and rejects truncated fetches
+PASS Doyamana admin APIs bound reads and writes, filter unknown genres, and hide database details
+PASS DoyaSlide production errors stay private even when the debug flag is set
+PASS DoyaSlide text calls serialize at the JST daily ceiling and reset at midnight
+PASS DoyaSlide text ledger corruption fails closed
+PASS DoyaSlide URL analysis rejects the cap before fetching or calling AI
+PASS DoyaSlide structure cap releases its claim and blocks paid dependencies
+PASS DoyaSlide project update rejects invalid and unknown fields before writing
+PASS DoyaSlide project update keeps ownership checks and normalizes valid input
+PASS DoyaSlide project deletion is owner-scoped at the write
+PASS banner refine and cron errors hide internals; cron responses are private; no email sent
+PASS banner maintenance limits paid generation to five and hides provider and database details
+PASS admin template errors are private, batch size is bounded, and drip seed hides database details
+PASS active service usage responses remain private for signed-in and anonymous users
+PASS admin and banner statistics stay private and hide internal errors
+PASS Stripe error responses hide internal details and private API headers cover admin and Stripe
+PASS Shodan free limit guidance follows the server action
+PASS Shodan paid limit guidance follows the server action
+PASS concurrent employee creation counts and writes under the same organization lock
+PASS reactivation enforces the quota and foreign references never reach update
+PASS revoked employee managers cannot create an invitation or send email
+PASS employee cap action follows the organization owner and paid tier
+PASS invalid employee listing pagination is rejected before querying
+PASS revoked manager cannot create, edit, or delete a department
+PASS department parent cycle and foreign target fail before writes
+PASS in-use department cannot be deleted and valid mutations still work
+PASS revoked manager cannot create, edit, or delete a work rule
+PASS foreign work rule and occupied work rule cannot be changed
+PASS valid work rule mutations still work
+PASS static image URLs: 129 encoded references, no raw non-ASCII paths
+PASS quote organization write failure and retry
+PASS quote product write failure, duplicate-click guard and retry
+PASS SFA next-action dates follow JST and reject nonexistent dates
+PASS SFA task due dates follow JST calendar days
+PASS HR AI quota reserves atomically, resets in JST, and refunds only the reserved month
+PASS retired generic generate route cannot invoke the provider
+PASS SFA AI quota: owner plan, shared actions, concurrent boundary, settlement, release, paid tiers
+PASS SFA AI routes: inactive target, quota, DB failure, provider failure, success
+PASS SFA usage: displayed plan follows owner and selected organization
+PASS organization usage: selected org, default org, owner plan, foreign org rejection
+PASS SFA limits: owner plan, concurrent admission, conversion atomicity, pending invites, paid plan, rollback
+PASS SFA admission routes: every creation path blocks at quota without writes or email
+PASS SFA already-member cleanup is transactional and bypasses a full quota
+PASS SFA expiry during cleanup restores the pending invitation
+PASS SFA cleanup failure or lost claim never reports success or exposes raw details
+PASS SFA fresh transactional invitation rejects changed recipient, organization, status, token or owner role
+PASS SFA pending invitation expires during lookup/quota/claim without retained changes
+PASS SFA normal participant quota rejects before writes and successful admission consumes exactly one token
+PASS SFA serialization conflict retries the entire fresh lookup and admission
+PASS SFA pending-seat quota includes only invites strictly newer than expiry cutoff
+PASS SFA exact-expiry reissue frees the old pending seat, replaces the invite and preserves active members
+{
+  "passed": 9,
+  "scope": "Actual SFA route and quota; synthetic transactional rollback/auth/clock, no production writes or email",
+  "results": [
+    "SFA already-member cleanup is transactional and bypasses a full quota",
+    "SFA expiry during cleanup restores the pending invitation",
+    "SFA cleanup failure or lost claim never reports success or exposes raw details",
+    "SFA fresh transactional invitation rejects changed recipient, organization, status, token or owner role",
+    "SFA pending invitation expires during lookup/quota/claim without retained changes",
+    "SFA normal participant quota rejects before writes and successful admission consumes exactly one token",
+    "SFA serialization conflict retries the entire fresh lookup and admission",
+    "SFA pending-seat quota includes only invites strictly newer than expiry cutoff",
+    "SFA exact-expiry reissue frees the old pending seat, replaces the invite and preserves active members"
+  ]
+}
+PASS sfa: GET and POST expire at the exact deadline and after it without writes
+PASS sfa: one millisecond before expiry still admits normally
+PASS sfa: delayed existing-member read cannot admit or consume a now-expired invite
+PASS sfa: expiry while counting seats takes precedence over quota guidance
+PASS sfa: delayed claim rolls back every membership and invitation write
+PASS kintai: GET and POST expire at the exact deadline and after it without writes
+PASS kintai: one millisecond before expiry still admits normally
+PASS kintai: delayed existing-member read cannot admit or consume a now-expired invite
+PASS kintai: delayed claim rolls back every membership and invitation write
+PASS promane: GET and POST expire at the exact deadline and after it without writes
+PASS promane: one millisecond before expiry still admits normally
+PASS promane: delayed existing-member read cannot admit or consume a now-expired invite
+PASS promane: expiry while counting seats takes precedence over quota guidance
+PASS promane: delayed claim rolls back every membership and invitation write
+PASS Kintai: expiry during old-organization deactivation rolls back the transfer
+PASS Promane: expiry during member creation rolls back both membership and invitation
+PASS Kintai: timestamped reissued and legacy tokens share a strict expiry boundary
+{
+  "passed": 17,
+  "scope": "Actual API/helper/seat admission with synthetic clock and transactional rollback model; no real database or external API",
+  "results": [
+    "sfa: GET and POST expire at the exact deadline and after it without writes",
+    "sfa: one millisecond before expiry still admits normally",
+    "sfa: delayed existing-member read cannot admit or consume a now-expired invite",
+    "sfa: expiry while counting seats takes precedence over quota guidance",
+    "sfa: delayed claim rolls back every membership and invitation write",
+    "kintai: GET and POST expire at the exact deadline and after it without writes",
+    "kintai: one millisecond before expiry still admits normally",
+    "kintai: delayed existing-member read cannot admit or consume a now-expired invite",
+    "kintai: delayed claim rolls back every membership and invitation write",
+    "promane: GET and POST expire at the exact deadline and after it without writes",
+    "promane: one millisecond before expiry still admits normally",
+    "promane: delayed existing-member read cannot admit or consume a now-expired invite",
+    "promane: expiry while counting seats takes precedence over quota guidance",
+    "promane: delayed claim rolls back every membership and invitation write",
+    "Kintai: expiry during old-organization deactivation rolls back the transfer",
+    "Promane: expiry during member creation rolls back both membership and invitation",
+    "Kintai: timestamped reissued and legacy tokens share a strict expiry boundary"
+  ]
+}
+PASS aio: exact deadline expires in GET/POST without mutation
+PASS aio: 1ms before deadline remains valid
+PASS aio: expiry during lock/account/existing read never grants membership
+PASS aio: delayed claim rolls back the consumed token and active membership
+PASS aio: delayed existing-member cleanup rolls back the invitation deletion
+PASS aio: changed role/email/organization between verification and claim never grants membership
+PASS aio: a different organization after locking is rejected without claim
+PASS shodan: exact deadline expires in GET/POST without mutation
+PASS shodan: 1ms before deadline remains valid
+PASS shodan: expiry during lock/account/existing read never grants membership
+PASS shodan: delayed claim rolls back the consumed token and active membership
+PASS shodan: delayed existing-member cleanup rolls back the invitation deletion
+PASS shodan: changed role/email/organization between verification and claim never grants membership
+PASS shodan: a different organization after locking is rejected without claim
+PASS quote: exact deadline expires in GET/POST without mutation
+PASS quote: 1ms before deadline remains valid
+PASS quote: expiry during lock/account/existing read never grants membership
+PASS quote: delayed claim rolls back the consumed token and active membership
+PASS quote: delayed existing-member cleanup rolls back the invitation deletion
+PASS quote: changed role/email/organization between verification and claim never grants membership
+PASS quote: a different organization after locking is rejected without claim
+PASS mensetsu: exact deadline expires in GET/POST without mutation
+PASS mensetsu: 1ms before deadline remains valid
+PASS mensetsu: expiry during lock/account/existing read never grants membership
+PASS mensetsu: delayed claim rolls back the consumed token and active membership
+PASS mensetsu: delayed existing-member cleanup rolls back the invitation deletion
+PASS mensetsu: changed role/email/organization between verification and claim never grants membership
+PASS mensetsu: a different organization after locking is rejected without claim
+PASS aishodan: exact deadline expires in GET/POST without mutation
+PASS aishodan: 1ms before deadline remains valid
+PASS aishodan: expiry during lock/account/existing read never grants membership
+PASS aishodan: delayed claim rolls back the consumed token and active membership
+PASS aishodan: delayed existing-member cleanup rolls back the invitation deletion
+PASS aishodan: changed role/email/organization between verification and claim never grants membership
+PASS aishodan: a different organization after locking is rejected without claim
+PASS HR: expiry during seat count outranks capacity and cannot claim
+PASS HR: expiry during claim or member creation rolls back both rows and skips success audit
+PASS HR: valid invitation still claims, creates membership and records audit
+{
+  "passed": 38,
+  "scope": "Actual six APIs; synthetic clock, row lock and transactional rollback model; no production DB or email",
+  "results": [
+    "aio: exact deadline expires in GET/POST without mutation",
+    "aio: 1ms before deadline remains valid",
+    "aio: expiry during lock/account/existing read never grants membership",
+    "aio: delayed claim rolls back the consumed token and active membership",
+    "aio: delayed existing-member cleanup rolls back the invitation deletion",
+    "aio: changed role/email/organization between verification and claim never grants membership",
+    "aio: a different organization after locking is rejected without claim",
+    "shodan: exact deadline expires in GET/POST without mutation",
+    "shodan: 1ms before deadline remains valid",
+    "shodan: expiry during lock/account/existing read never grants membership",
+    "shodan: delayed claim rolls back the consumed token and active membership",
+    "shodan: delayed existing-member cleanup rolls back the invitation deletion",
+    "shodan: changed role/email/organization between verification and claim never grants membership",
+    "shodan: a different organization after locking is rejected without claim",
+    "quote: exact deadline expires in GET/POST without mutation",
+    "quote: 1ms before deadline remains valid",
+    "quote: expiry during lock/account/existing read never grants membership",
+    "quote: delayed claim rolls back the consumed token and active membership",
+    "quote: delayed existing-member cleanup rolls back the invitation deletion",
+    "quote: changed role/email/organization between verification and claim never grants membership",
+    "quote: a different organization after locking is rejected without claim",
+    "mensetsu: exact deadline expires in GET/POST without mutation",
+    "mensetsu: 1ms before deadline remains valid",
+    "mensetsu: expiry during lock/account/existing read never grants membership",
+    "mensetsu: delayed claim rolls back the consumed token and active membership",
+    "mensetsu: delayed existing-member cleanup rolls back the invitation deletion",
+    "mensetsu: changed role/email/organization between verification and claim never grants membership",
+    "mensetsu: a different organization after locking is rejected without claim",
+    "aishodan: exact deadline expires in GET/POST without mutation",
+    "aishodan: 1ms before deadline remains valid",
+    "aishodan: expiry during lock/account/existing read never grants membership",
+    "aishodan: delayed claim rolls back the consumed token and active membership",
+    "aishodan: delayed existing-member cleanup rolls back the invitation deletion",
+    "aishodan: changed role/email/organization between verification and claim never grants membership",
+    "aishodan: a different organization after locking is rejected without claim",
+    "HR: expiry during seat count outranks capacity and cannot claim",
+    "HR: expiry during claim or member creation rolls back both rows and skips success audit",
+    "HR: valid invitation still claims, creates membership and records audit"
+  ]
+}
+PASS reactivation at employee limit returns upgrade response without writes
+PASS reactivation reserves quota before update
+PASS ordinary updates and history share one transaction; invalid status is rejected
+PASS logical delete and resignation history share one transaction
+{"passed":4,"results":["reactivation at employee limit returns upgrade response without writes","reactivation reserves quota before update","ordinary updates and history share one transaction; invalid status is rejected","logical delete and resignation history share one transaction"]}
+PASS foreign and malformed employee links are rejected before writes
+PASS occupied employee link and concurrent unique conflict return 409
+PASS admin can link and unlink a same-organization employee
+PASS general member cannot link employee records
+{"passed":4,"results":["foreign and malformed employee links are rejected before writes","occupied employee link and concurrent unique conflict return 409","admin can link and unlink a same-organization employee","general member cannot link employee records"]}
+PASS generic member editing cannot grant or mutate OWNER
+PASS member update and deletion cannot affect a newly promoted owner
+PASS transfer changes exactly one owner and rejects a stale second request
+PASS transfer refuses an organization with multiple active owners
+{"passed":4,"results":["generic member editing cannot grant or mutate OWNER","member update and deletion cannot affect a newly promoted owner","transfer changes exactly one owner and rejects a stale second request","transfer refuses an organization with multiple active owners"]}
+PASS HR member mutations recheck actor and target inside the transaction; malformed input writes nothing
+PASS member list and org chart only expose own employee
+PASS member list and org chart only expose no linked employee
+PASS member cannot open another employee profile before related DB reads
+PASS member settings and membership APIs only query own account
+{"passed":4,"results":["member list and org chart only expose own employee","member list and org chart only expose no linked employee","member cannot open another employee profile before related DB reads","member settings and membership APIs only query own account"]}
+PASS HR member cannot create, edit or delete departments before DB and body reads
+{"passed":1,"results":["HR member cannot create, edit or delete departments before DB and body reads"]}
+PASS non-admin cannot create, edit, remove or set photos before any DB write
+PASS photo endpoint rejects invalid base64 and MIME, accepts a bounded PNG
+{
+  "passed": 2,
+  "results": [
+    "non-admin cannot create, edit, remove or set photos before any DB write",
+    "photo endpoint rejects invalid base64 and MIME, accepts a bounded PNG"
+  ]
+}
+PASS employee admission locks organization and blocks at its active quota
+PASS single employee writes history in the admitted transaction
+PASS CSV import reports partial success and a persistent PRO contact route
+PASS CSV import preserves quoted newlines and rejects malformed or oversized input before writes
+PASS new employee photo uploads only after admission and is attached to the saved employee
+{
+  "passed": 5,
+  "results": [
+    "employee admission locks organization and blocks at its active quota",
+    "single employee writes history in the admitted transaction",
+    "CSV import reports partial success and a persistent PRO contact route",
+    "CSV import preserves quoted newlines and rejects malformed or oversized input before writes",
+    "new employee photo uploads only after admission and is attached to the saved employee"
+  ]
+}
+PASS workspace quota is checked under the user lock before writing
+PASS paid PRO limit offers contact rather than another paid upgrade
+PASS available and unlimited plans create once inside the transaction
+PASS non-string workspace names never consume a slot
+PASS database errors do not expose internal details
+PASS invited memberships do not consume owned workspace quota
+PASS first-visit workspace creation is idempotent and never reactivates disabled access
+{
+  "passed": 7,
+  "results": [
+    "workspace quota is checked under the user lock before writing",
+    "paid PRO limit offers contact rather than another paid upgrade",
+    "available and unlimited plans create once inside the transaction",
+    "non-string workspace names never consume a slot",
+    "database errors do not expose internal details",
+    "invited memberships do not consume owned workspace quota",
+    "first-visit workspace creation is idempotent and never reactivates disabled access"
+  ]
+}
+PASS pending question set is hidden and concurrent request makes no second AI call
+PASS free cap blocks provider and returns pricing route
+PASS archived question set keeps history while freeing one active slot
+PASS provider and save failures release the reserved slot
+PASS oversized template inputs do not reach the provider
+PASS question sets without evaluation criteria are not saved
+PASS model overflow cannot exceed interview time or create invalid jumps
+PASS protected topics cannot survive in scoring or live interview guidance
+PASS verbatim candidate evidence retains a supported score
+PASS invented or interviewer-only quotes cannot support a recommendation
+PASS mixed evidence keeps only verified candidate quotes
+PASS too little candidate speech leaves a supported score but holds the verdict
+PASS a template without evaluation criteria cannot yield a recommendation
+PASS first-use Slack notice contains the action without user input summaries
+PASS pending import is hidden and another import spends no crawl or AI call
+PASS free cap rejects before crawl or AI generation and gives pricing link
+PASS archived product keeps history while freeing the active product slot
+PASS failed save removes reserved product and allows retry
+PASS Aishodan product deletion preserves existing session records
+PASS Aishodan room deletion preserves existing session records
+[mensetsu/sessions] creation failed unknown
+PASS mensetsu issue: serialized quota, paid/free response and failed insert
+[aishodan/room/start] quota unavailable
+[aishodan/room/start] create failed unknown
+[aishodan/room/start] create failed unknown
+PASS aishodan start: serialized quota, private preview cap, room reservation and session creation roll back together
+PASS deleted sessions cannot restore a consumed lifetime or monthly quota
+PASS existing rows backfill the ledger and organizations remain separate
+PASS invalid ledger fails closed
+{
+  "passed": 3,
+  "results": [
+    "deleted sessions cannot restore a consumed lifetime or monthly quota",
+    "existing rows backfill the ledger and organizations remain separate",
+    "invalid ledger fails closed"
+  ]
+}
+PASS SEO chat edit: paid foreign article is invisible and never sent to AI; owner remains functional
+PASS SEO competitor analysis: foreign article blocked; outbound URL uses safe transport before AI
+PASS SEO sections: edit and all AI actions require article ownership before provider and at write
+PASS SEO editor preview: raw HTML is escaped while Markdown formatting and safe links remain
+PASS mensetsu template: basic fields and replacement questions commit or roll back together
+PASS HR invitation: matching account required, old elevated role rejected, atomic claim, role injection ignored
+PASS aio rejects unknown invite roles before saving
+PASS aio invite requires the invited account
+PASS aio expired and owner-role invites cannot be claimed
+PASS aio concurrent invites dedupe and expired invites can be replaced
+PASS aio can replace an invite exactly at expiry while an unexpired invite still dedupes
+PASS aio revoked inviter cannot create or send an invite
+PASS shodan rejects unknown invite roles before saving
+PASS shodan invite requires the invited account
+PASS shodan expired and owner-role invites cannot be claimed
+PASS shodan concurrent invites dedupe and expired invites can be replaced
+PASS shodan can replace an invite exactly at expiry while an unexpired invite still dedupes
+PASS shodan revoked inviter cannot create or send an invite
+PASS quote rejects unknown invite roles before saving
+PASS quote invite requires the invited account
+PASS quote expired and owner-role invites cannot be claimed
+PASS quote concurrent invites dedupe and expired invites can be replaced
+PASS quote can replace an invite exactly at expiry while an unexpired invite still dedupes
+PASS quote revoked inviter cannot create or send an invite
+PASS mensetsu rejects unknown invite roles before saving
+PASS mensetsu invite requires the invited account
+PASS mensetsu expired and owner-role invites cannot be claimed
+PASS mensetsu concurrent invites dedupe and expired invites can be replaced
+PASS mensetsu can replace an invite exactly at expiry while an unexpired invite still dedupes
+PASS mensetsu revoked inviter cannot create or send an invite
+PASS aishodan rejects unknown invite roles before saving
+PASS aishodan invite requires the invited account
+PASS aishodan expired and owner-role invites cannot be claimed
+PASS aishodan concurrent invites dedupe and expired invites can be replaced
+PASS aishodan can replace an invite exactly at expiry while an unexpired invite still dedupes
+PASS aishodan revoked inviter cannot create or send an invite
+{"passed":30,"results":["aio rejects unknown invite roles before saving","aio invite requires the invited account","aio expired and owner-role invites cannot be claimed","aio concurrent invites dedupe and expired invites can be replaced","aio can replace an invite exactly at expiry while an unexpired invite still dedupes","aio revoked inviter cannot create or send an invite","shodan rejects unknown invite roles before saving","shodan invite requires the invited account","shodan expired and owner-role invites cannot be claimed","shodan concurrent invites dedupe and expired invites can be replaced","shodan can replace an invite exactly at expiry while an unexpired invite still dedupes","shodan revoked inviter cannot create or send an invite","quote rejects unknown invite roles before saving","quote invite requires the invited account","quote expired and owner-role invites cannot be claimed","quote concurrent invites dedupe and expired invites can be replaced","quote can replace an invite exactly at expiry while an unexpired invite still dedupes","quote revoked inviter cannot create or send an invite","mensetsu rejects unknown invite roles before saving","mensetsu invite requires the invited account","mensetsu expired and owner-role invites cannot be claimed","mensetsu concurrent invites dedupe and expired invites can be replaced","mensetsu can replace an invite exactly at expiry while an unexpired invite still dedupes","mensetsu revoked inviter cannot create or send an invite","aishodan rejects unknown invite roles before saving","aishodan invite requires the invited account","aishodan expired and owner-role invites cannot be claimed","aishodan concurrent invites dedupe and expired invites can be replaced","aishodan can replace an invite exactly at expiry while an unexpired invite still dedupes","aishodan revoked inviter cannot create or send an invite"]}
+PASS Quote/Aishodan/Mensetsu member update/delete recheck actor and target after concurrent changes
+PASS organization data fetch: API failures and malformed success are not treated as empty lists
+PASS aishodan session list: authorization and unavailable responses are errors, genuine empty list is distinct
+PASS organization selection: stale cross-account slug is cleared on direct entry; valid membership retained; outage preserves choice
+PASS HR billing: non-owner and mismatched identity rejected before Stripe; owner accepted
+PASS projects: outage 503 differs from valid empty 200
+PASS recipes: outage 503 differs from valid empty 200
+PASS interview settings counts all owner records beyond the 50-item list cap
+PASS Interview projects: pagination reaches 123, search and status span all pages, owner scope, malformed input rejected
+PASS interview cleanup preview is read-only, deletion is gated, bounded and rechecks inactivity
+PASS interview storage purge is durable, leased, delayed for uploads and namespace-bound
+PASS processing guest project is never partially claimed
+PASS same-cookie claim transfers ownership and usage exactly once
+PASS another account with the old cookie cannot claim the project
+PASS claimed project rejects the old anonymous cookie but accepts its account
+PASS claim endpoint rejects cross-origin and anonymous requests before mutation
+PASS interview material delete blocks active work and queues file cleanup before DB deletion
+PASS interview project update and deletion recheck owner after lifecycle lock
+PASS storage lookup uses exact object path and distinguishes missing from outage
+PASS missing or foreign guest cookie cannot confirm or inspect an object
+PASS actual oversized file is rejected and queued for durable cleanup
+PASS storage ceiling does not claim that an upgrade will help
+PASS valid file stores storage-reported size after ownership check
+PASS claim during storage lookup blocks both confirmation and over-limit purge
+PASS Interview upload rechecks ownership after signing before material write
+PASS Interview upload preflight rejects limits before creating a project or upload records
+PASS interview article: private recipe access, blocked quota before provider, failed attempt refund, atomic draft save and versioning
+PASS interview revise: oversized input rejected before provider, full accepted article preserved, empty result rejected
+PASS interview thumbnail lease blocks duplicate work and only its owner releases it
+PASS thumbnail storage uses a private project path and rejects oversized output
+PASS cached thumbnail skips provider; manual regeneration persists private image and remains owner-only
+PASS interview recipe: invalid input rejected before AI and preview stays unsaved
+PASS interview Gemini: key in header, bounded request and response, provider details never exposed
+PASS AIO limit: API code reaches client and organization owner is identified
+PASS AIO pricing keeps organization billing context and blocks member purchase path
+PASS GUEST desktop
+PASS GUEST mobile
+PASS FREE desktop
+PASS FREE mobile
+PASS LIGHT desktop
+PASS LIGHT mobile
+PASS PRO desktop
+PASS PRO mobile
+PASS ENTERPRISE desktop
+PASS ENTERPRISE mobile
+PASS BASIC desktop
+PASS BASIC mobile
+PASS STARTER desktop
+PASS STARTER mobile
+PASS BUSINESS desktop
+PASS BUSINESS mobile
+PASS BUNDLE desktop
+PASS BUNDLE mobile
+18 rendered component checks passed
+PASS organization price table uses owner plan and omits member billing controls
+PASS SEO article admission: guest blocked, monthly concurrent cap, rollback, deletion-resistant ledger, legacy trial flag cannot bypass quota
+PASS SEO regeneration: first draft job included, owner checked, failure rolled back, concurrent monthly cap, deletion-resistant ledger
+PASS SEO template and swipe routes: guest block, monthly cap, legacy trial flag excluded from admission
+PASS SEO article route: shared admission, guest/monthly limit, private-safe outage response
+PASS SEO entitlements: deletion-resistant usage, explicit outage, recent login has no unlimited trial
+PASS Kintai overnight: prior-day shift remains active, next-day clock-out recalculates workday, leave and duplicates are safe
+PASS Kintai overnight correction refreshes both the shift workday and the correction calendar day
+PASS Kintai correction admission rejects future and malformed times before saving
+PASS interview monthly usage uses JST boundary and transcription completion update
+PASS stored media duration is measured from bounded ranges and fails closed on untrusted responses
+PASS interview transcription reserves verified seconds, blocks excess, settles once and refunds failed work
+PASS interview transcription blocks excess before provider and never resubmits an uncertain job
+PASS interview transcription stores provider ID, resumes without resubmission, holds uncertain work, releases terminal failure
+PASS interview provider persists job IDs, bounds requests and bodies, resumes without resubmission
+PASS banner API blocks paid generation on quota failure/limit, refunds partial/failed output, and omits private request logs
+PASS banner quota atomically limits parallel calls, resets JST month, clamps paid count, and fails closed on DB errors
+PASS template generation enforces plan tiers, canonical prompts, quota guidance and Enterprise instructions before paid image calls
+PASS banner text APIs reject malformed and oversized input before provider calls and hide provider errors
+PASS banner diagnostic APIs require admin before DB/provider work and hide DB errors
+PASS banner template paging rejects unbounded and malformed reads before DB access
+PASS regenerated banner templates use versioned URLs and do not serve stale in-process image bytes
+PASS pricing and guide metadata use page-specific descriptions in HTML, OG, and Twitter
+PASS admin banner quota matches generation limits, JST month reset, UI, and export
+PASS admin user quotas use paid account rights, SEO ledger and authenticated reads
+PASS SEO usage summary follows the article admission ledger and highest plan grant
+PASS 17 active services, 39 distinct navigation pages exist
+PASS SFA deals: all 501 records reachable, totals include every record, foreign scope excluded, invalid cursor rejected
+PASS SFA amount inputs: malformed amounts, dates, and probability rejected before writes across create, update and conversion
+PASS SFA CRM: 501 accounts and contacts reachable, full dropdown options, search, owner-scoped account names, invalid accounts rejected
+PASS SFA create input: malformed account, contact and lead fields rejected before writes
+PASS SFA AI score: malformed, deleted and foreign leads do not invoke AI
+PASS SFA lead import: malformed payloads, invalid rows, and row limit
+PASS SFA lead CSV: quoted newlines, commas, escaped quotes, BOM, and malformed input
+PASS SFA organization: malformed input, atomic bootstrap, idempotency and retry
+PASS Shodan/AIO onboarding: validation, atomic owner creation, idempotency and slug retry
+PASS Quote/Mensetsu/Aishodan onboarding: validation, atomic owner creation, idempotency and retry
+PASS HR/Kintai onboarding: input validation, complete atomic setup, idempotency and retry
+PASS HR organization updates: input validation, fiscal month bounds, permissions and safe errors
+PASS SFA/AIO/Shodan team invites: malformed input rejected before send and delivery truth reported
+PASS DoyaSlide chat/regenerate: validation, atomic history, refund on failure, stale-write rejection
+PASS DoyaSlide batch: preflight refunds and usage count reflects completed images
+PASS active service API input types: malformed requests stop before AI calls or DB writes
+PASS Cunning knowledge: concurrent creation respects the free-plan limit
+PASS DoyaSlide projects: JST month, deleted-project ledger, and concurrent free limit
+PASS DoyaSlide monthly quota: JST rollover, concurrent reserve, period-safe refund, unlimited plan
+PASS DoyaSlide structure: input validation, one active claim, no replay deletion, retry after failure
+PASS Kintai invite: email match, no destructive merge, atomic transfer, retry and replay rejection
+PASS Kintai issuance: active guard, inactive reactivation, race guard, renewed expiry, mock delivery
+PASS Promane expiry before/exact/after active wait never reuses an expired token
+PASS Promane expiry before/exact/after lookup wait never reuses an expired token
+PASS Promane expired different-role invite no longer blocks reissue; valid conflicting role remains rejected
+PASS HR expiry before/exact/after read wait distinguishes valid duplicates from expired invitations
+PASS HR newly issued expiry and email payload use creation time after organization lookup
+{
+  "passed": 5,
+  "scope": "Actual issuance code; synthetic DB/auth/clock/email only",
+  "results": [
+    "Promane expiry before/exact/after active wait never reuses an expired token",
+    "Promane expiry before/exact/after lookup wait never reuses an expired token",
+    "Promane expired different-role invite no longer blocks reissue; valid conflicting role remains rejected",
+    "HR expiry before/exact/after read wait distinguishes valid duplicates from expired invitations",
+    "HR newly issued expiry and email payload use creation time after organization lookup"
+  ]
+}
+PASS HR invite issuance: concurrent duplicate guard, truthful delivery, escaped HTML, no token logs
+PASS Promane invitation: correct recipient, post-create failures preserve link, no provider error leak
+PASS SFA leads: all 501 reachable in score order including nulls, filtered search spans pages, foreign scope excluded
+PASS SFA activities: all 501 reachable with stable ties, scoped account/deal pages and malformed cursor rejected
+PASS SFA activity relations: foreign, inactive and malformed IDs rejected without writes
+PASS SFA activity UIs: all three views reach 501 records and preserve state after a failed continuation
+PASS SFA leads UI: 501 records reachable; failed next page preserves current list and retry cursor
+PASS SFA deals UI: all 501 reachable, DB summary retained, failed summary is not zero, failed continuation preserves page
+PASS SFA deal tasks UI: 501 deal tasks reachable; failed continuation keeps list and retry page
+PASS SFA task create: invalid date or relation rejected without writes; valid task keeps its deal
+PASS SFA CSV: 5001 accounts and deals exported, tenant scope and exact yen preserved, failures do not return completed CSV
+PASS Doyalist collection: JST month, actual source count, concurrent cap, exact created rows
+PASS Doyalist approaches: concurrent cap and history project, no paid over-limit call, deletion safety, failed-call refund
+PASS admin CSV keeps the name in one quoted cell without executing it
+PASS JSON export keeps the original name
+PASS CSV export shows paid account tier despite a stale free service row
+PASS unauthorized export does not read user records
+PASS Excel export uses valid sheet names and escapes the actual data
+PASS CSV and Excel stream every row beyond the buffered response limit
+PASS export reports initial database failure and aborts incomplete streams
+PASS CSV keeps quotes and line breaks in one cell and disarms formulas
+PASS Excel XML escapes employee text and remains parseable
+PASS invalid months, years and formats fail before querying employee data
+PASS Kintai admin history: former employees with past records remain visible, scoped managers and invalid dates
+PASS 前日開始の未退勤シフトは管理者画面でも勤務中
+PASS 翌日の退勤後は勤務中と誤表示しない
+PASS 保存済み実績の後に再出勤した場合も勤務中
+PASS 空の日付指定は今日へ置き換えない
+PASS Doyalist helpers: malformed input rejected before external APIs and safe industry fallback
+PASS Doyalist sidebar, pricing and collection admission agree for all plans and actual monthly company records
+PASS Doyalist preferences apply only valid saved extraction defaults and report storage failures
+PASS Doyalist large and empty list responses stream valid JSON in bounded chunks
+PASS Doyalist project create/update reject malformed and oversized input before writes
+PASS free banner rejected before quota and provider reservation
+PASS paid banner reservation uses extra image quota
+PASS free extra image cap offers upgrade and paid cap offers contact
+PASS free banner API returns upgrade path without provider call
+PASS saved project restores latest successful banner
+PASS HR employees: server pages all 205 records with global sort and rejects invalid sort
+PASS admin kintai organizations: bounded organization and lazy employee pages, counts, invalid input and auth
+PASS authorized project deletion is scoped to its workspace
+PASS foreign project and revoked membership cannot delete
+PASS membership revocation during a serializable delete aborts the retry
+{
+  "passed": 3,
+  "results": [
+    "authorized project deletion is scoped to its workspace",
+    "foreign project and revoked membership cannot delete",
+    "membership revocation during a serializable delete aborts the retry"
+  ]
+}
+PASS time and expense deletion commits for the current workspace
+PASS foreign records and revoked membership cannot delete
+PASS expense deletion rejects a mismatched project parameter
+PASS membership revocation on retry aborts both deletions
+PASS expense API rechecks revoked access after serialization conflicts
+PASS time, expense and rate writes recheck access after serialization conflicts
+PASS time, expense and rate writes reject foreign targets
+PASS rate API refuses a revoked actor and foreign member
+{
+  "passed": 8,
+  "results": [
+    "time and expense deletion commits for the current workspace",
+    "foreign records and revoked membership cannot delete",
+    "expense deletion rejects a mismatched project parameter",
+    "membership revocation on retry aborts both deletions",
+    "expense API rechecks revoked access after serialization conflicts",
+    "time, expense and rate writes recheck access after serialization conflicts",
+    "time, expense and rate writes reject foreign targets",
+    "rate API refuses a revoked actor and foreign member"
+  ]
+}
+PASS client actions and API accept current writable members
+PASS guest access is rejected before client writes
+PASS revocation during a conflicting client write is rechecked
+PASS foreign client cannot be updated or deleted
+{
+  "passed": 4,
+  "results": [
+    "client actions and API accept current writable members",
+    "guest access is rejected before client writes",
+    "revocation during a conflicting client write is rechecked",
+    "foreign client cannot be updated or deleted"
+  ]
+}
+PASS repair commits all six categories and reports actual counts
+PASS already corrected dates are skipped and not counted
+PASS non-admin and revoked admin cannot commit repair writes
+PASS failure in a later repair stage rolls back earlier stages
+{
+  "passed": 4,
+  "results": [
+    "repair commits all six categories and reports actual counts",
+    "already corrected dates are skipped and not counted",
+    "non-admin and revoked admin cannot commit repair writes",
+    "failure in a later repair stage rolls back earlier stages"
+  ]
+}
+PASS owner/admin settings update is scoped and commits once
+PASS member and revoked admin cannot update settings
+PASS duplicate slug returns conflict before or during update
+PASS non-string settings values are rejected without database writes
+{
+  "passed": 4,
+  "results": [
+    "owner/admin settings update is scoped and commits once",
+    "member and revoked admin cannot update settings",
+    "duplicate slug returns conflict before or during update",
+    "non-string settings values are rejected without database writes"
+  ]
+}
+PASS current admin cancels only an unaccepted workspace invitation
+PASS accepted, foreign and changed invitations are not cancelled
+PASS revocation after a serialization conflict prevents cancellation
+{
+  "passed": 3,
+  "results": [
+    "current admin cancels only an unaccepted workspace invitation",
+    "accepted, foreign and changed invitations are not cancelled",
+    "revocation after a serialization conflict prevents cancellation"
+  ]
+}
+PASS issuer save rechecks current administrator inside the transaction
+PASS revoked administrator cannot change the issuer
+PASS administrator revoked after serialization conflict cannot retry a write
+PASS non-string legal document fields are rejected before database access
+{
+  "passed": 4,
+  "results": [
+    "issuer save rechecks current administrator inside the transaction",
+    "revoked administrator cannot change the issuer",
+    "administrator revoked after serialization conflict cannot retry a write",
+    "non-string legal document fields are rejected before database access"
+  ]
+}
+PASS completed interview responds before evaluation and retains background work
+PASS empty interview does not start evaluation
+PASS concurrent end requests start only one evaluation
+PASS unavailable background context waits for evaluation before responding
+PASS unstarted interview stays available
+{
+  "passed": 5,
+  "results": [
+    "completed interview responds before evaluation and retains background work",
+    "empty interview does not start evaluation",
+    "concurrent end requests start only one evaluation",
+    "unavailable background context waits for evaluation before responding",
+    "unstarted interview stays available"
+  ]
+}
+PASS simultaneous evaluations call AI once and save one result
+PASS provider failure restores completed status and permits retry
+PASS expired ownership cannot overwrite a newer evaluation
+PASS retention expiry during AI call cannot restore private report data
+{
+  "passed": 4,
+  "results": [
+    "simultaneous evaluations call AI once and save one result",
+    "provider failure restores completed status and permits retry",
+    "expired ownership cannot overwrite a newer evaluation",
+    "retention expiry during AI call cannot restore private report data"
+  ]
+}
+PASS active evaluation is not recovered
+PASS stale evaluation recovers previous result state false
+PASS stale evaluation recovers previous result state true
+PASS cron cannot reset a newly claimed evaluation
+PASS one stale live failure does not skip evaluation recovery
+{
+  "passed": 5,
+  "results": [
+    "active evaluation is not recovered",
+    "stale evaluation recovers previous result state false",
+    "stale evaluation recovers previous result state true",
+    "cron cannot reset a newly claimed evaluation",
+    "one stale live failure does not skip evaluation recovery"
+  ]
+}
+PASS ordinary progress saves once without rewriting live status
+PASS concurrent progress requests cannot advance the same snapshot twice
+PASS late ordinary progress preserves completed
+PASS late ordinary progress preserves evaluating
+PASS late ordinary progress preserves evaluated
+PASS late ordinary progress preserves aborted
+PASS branch follow advances a live session
+PASS branch follow cannot overwrite an ended session
+PASS branch follow cannot overwrite newer progress
+PASS branch skip advances a live session
+PASS branch skip cannot overwrite an ended session
+PASS branch skip cannot overwrite newer progress
+PASS unstarted interview cannot advance
+PASS expiry during progress prevents the late write
+{
+  "passed": 14,
+  "results": [
+    "ordinary progress saves once without rewriting live status",
+    "concurrent progress requests cannot advance the same snapshot twice",
+    "late ordinary progress preserves completed",
+    "late ordinary progress preserves evaluating",
+    "late ordinary progress preserves evaluated",
+    "late ordinary progress preserves aborted",
+    "branch follow advances a live session",
+    "branch follow cannot overwrite an ended session",
+    "branch follow cannot overwrite newer progress",
+    "branch skip advances a live session",
+    "branch skip cannot overwrite an ended session",
+    "branch skip cannot overwrite newer progress",
+    "unstarted interview cannot advance",
+    "expiry during progress prevents the late write"
+  ]
+}
+PASS first explicit consent saves and returns the new public state
+PASS repeated consent preserves consented and initial evidence
+PASS repeated consent preserves live and initial evidence
+PASS simultaneous consent requests record consent once
+PASS unagreed request does not write consent
+PASS late consent cannot overwrite completed
+PASS late consent cannot overwrite evaluating
+PASS late consent cannot overwrite evaluated
+PASS late consent cannot overwrite aborted
+PASS changed candidate details are not overwritten by a stale consent request
+PASS expiration during consent prevents saving evidence
+{
+  "passed": 11,
+  "results": [
+    "first explicit consent saves and returns the new public state",
+    "repeated consent preserves consented and initial evidence",
+    "repeated consent preserves live and initial evidence",
+    "simultaneous consent requests record consent once",
+    "unagreed request does not write consent",
+    "late consent cannot overwrite completed",
+    "late consent cannot overwrite evaluating",
+    "late consent cannot overwrite evaluated",
+    "late consent cannot overwrite aborted",
+    "changed candidate details are not overwritten by a stale consent request",
+    "expiration during consent prevents saving evidence"
+  ]
+}
+PASS manager close saves matching current state
+PASS concurrent manager close saves once
+PASS manager close preserves a newer session state
+PASS manager close rejects foreign without writes
+PASS manager close rejects role without writes
+PASS manager reset saves matching current state
+PASS concurrent manager reset saves once
+PASS manager reset preserves a newer session state
+PASS manager reset rejects foreign without writes
+PASS manager reset rejects role without writes
+PASS manager edit saves matching current state
+PASS concurrent manager edit saves once
+PASS manager edit preserves a newer session state
+PASS manager edit rejects foreign without writes
+PASS manager edit rejects role without writes
+PASS close rechecks new activity before ending the interview
+PASS empty close does not abort an interview after an answer arrives
+PASS reset cannot discard an answer arriving after the initial read
+PASS reset rejects expiry during the request
+PASS edit rejects expiry during the request
+PASS candidate edit cannot revoke consent after interview start
+{
+  "passed": 21,
+  "results": [
+    "manager close saves matching current state",
+    "concurrent manager close saves once",
+    "manager close preserves a newer session state",
+    "manager close rejects foreign without writes",
+    "manager close rejects role without writes",
+    "manager reset saves matching current state",
+    "concurrent manager reset saves once",
+    "manager reset preserves a newer session state",
+    "manager reset rejects foreign without writes",
+    "manager reset rejects role without writes",
+    "manager edit saves matching current state",
+    "concurrent manager edit saves once",
+    "manager edit preserves a newer session state",
+    "manager edit rejects foreign without writes",
+    "manager edit rejects role without writes",
+    "close rechecks new activity before ending the interview",
+    "empty close does not abort an interview after an answer arrives",
+    "reset cannot discard an answer arriving after the initial read",
+    "reset rejects expiry during the request",
+    "edit rejects expiry during the request",
+    "candidate edit cannot revoke consent after interview start"
+  ]
+}
+PASS recording acknowledgment does not invalidate a running evaluation
+PASS evaluation failure still releases ownership after recording saves
+PASS recording preserves a newer lease claimed while storage verification runs
+PASS late recording acknowledgment remains valid after transition to completed
+PASS late recording acknowledgment remains valid after transition to evaluated
+PASS recording save rechecks retention expiry after storage verification
+PASS recording save rechecks purged session after storage verification
+PASS recording save rechecks consent removal after storage verification
+PASS recording save rechecks disabled recording after storage verification
+PASS recording save rechecks unstarted session after storage verification
+PASS missing uploaded recording is not registered
+PASS repeated recording acknowledgment preserves session state
+{
+  "passed": 12,
+  "results": [
+    "recording acknowledgment does not invalidate a running evaluation",
+    "evaluation failure still releases ownership after recording saves",
+    "recording preserves a newer lease claimed while storage verification runs",
+    "late recording acknowledgment remains valid after transition to completed",
+    "late recording acknowledgment remains valid after transition to evaluated",
+    "recording save rechecks retention expiry after storage verification",
+    "recording save rechecks purged session after storage verification",
+    "recording save rechecks consent removal after storage verification",
+    "recording save rechecks disabled recording after storage verification",
+    "recording save rechecks unstarted session after storage verification",
+    "missing uploaded recording is not registered",
+    "repeated recording acknowledgment preserves session state"
+  ]
+}
+PASS URL issuance records trace before response without marking audio saved or changing lease
+PASS DB tracking failure does not expose signed URL
+PASS state change during signing prevents URL exposure: revoked consent
+PASS state change during signing prevents URL exposure: unstarted
+PASS state change during signing prevents URL exposure: ended
+PASS state change during signing prevents URL exposure: audio disabled
+PASS state change during signing prevents URL exposure: expired link
+PASS state change during signing prevents URL exposure: expired retention
+PASS state change during signing prevents URL exposure: missing retention
+PASS expiry during row-lock wait cannot expose an upload URL
+PASS repeat issuance keeps one task and the longest final-check window
+PASS concurrent issuance is serialized and remains one durable task
+PASS expired registration keeps unlinked audio trace and deletes it after signing window
+PASS early deletion retains trace and final pass removes a late upload
+PASS storage error remains durable and succeeds on retry
+PASS actual cron reports an unregistered deferred recording and finalizes late upload
+PASS nonexistent upload still completes cleanup without false saved status
+PASS live retention is not eligible for deletion
+PASS extended retention reschedules without deleting audio
+PASS unknown current retention defers deletion rather than guessing policy
+PASS deleted session still permits exact previously tracked file cleanup
+PASS concurrent purge workers cannot delete the same claimed task twice
+PASS invalid or cross-session target is never deleted: other/session/interview.webm
+PASS invalid or cross-session target is never deleted: sessions/other/interview.webm
+PASS invalid or cross-session target is never deleted: sessions/session/other.webm
+PASS invalid or cross-session target is never deleted: sessions/../interview.webm
+{
+  "passed": 26,
+  "results": [
+    "URL issuance records trace before response without marking audio saved or changing lease",
+    "DB tracking failure does not expose signed URL",
+    "state change during signing prevents URL exposure: revoked consent",
+    "state change during signing prevents URL exposure: unstarted",
+    "state change during signing prevents URL exposure: ended",
+    "state change during signing prevents URL exposure: audio disabled",
+    "state change during signing prevents URL exposure: expired link",
+    "state change during signing prevents URL exposure: expired retention",
+    "state change during signing prevents URL exposure: missing retention",
+    "expiry during row-lock wait cannot expose an upload URL",
+    "repeat issuance keeps one task and the longest final-check window",
+    "concurrent issuance is serialized and remains one durable task",
+    "expired registration keeps unlinked audio trace and deletes it after signing window",
+    "early deletion retains trace and final pass removes a late upload",
+    "storage error remains durable and succeeds on retry",
+    "actual cron reports an unregistered deferred recording and finalizes late upload",
+    "nonexistent upload still completes cleanup without false saved status",
+    "live retention is not eligible for deletion",
+    "extended retention reschedules without deleting audio",
+    "unknown current retention defers deletion rather than guessing policy",
+    "deleted session still permits exact previously tracked file cleanup",
+    "concurrent purge workers cannot delete the same claimed task twice",
+    "invalid or cross-session target is never deleted: other/session/interview.webm",
+    "invalid or cross-session target is never deleted: sessions/other/interview.webm",
+    "invalid or cross-session target is never deleted: sessions/session/other.webm",
+    "invalid or cross-session target is never deleted: sessions/../interview.webm"
+  ]
+}
+PASS pagehide saves last answer before completing and evaluating empty interview
+PASS pagehide transcript refusal does not end or evaluate interview
+PASS pagehide partial or malformed transcript does not end interview
+PASS evaluated session refuses new pagehide speech without changing report
+PASS accepted late answer is included in a serial reevaluation before saving
+PASS answer arriving before AI input is loaded is included on the first attempt
+PASS continuous late answers never save a stale result and leave a retryable state
+PASS retry budget preserves all accepted speech without saving old scores
+PASS provider failure on the fresh attempt restores a retryable state
+PASS a preloaded turn request cannot append after evaluation finalizes
+PASS concurrent turn batches receive distinct consecutive ordinals
+PASS ending waits for an already saving first answer and chooses completed
+PASS first late answer after empty termination starts automatic evaluation
+PASS turn insertion rolls back when session metadata cannot be saved
+PASS retention expiry while request body arrives prevents speech resurrection
+PASS unstarted sessions cannot accept fabricated speech
+PASS retention expiry during sample lookup blocks the AI request
+PASS turn automatic evaluation conflict does not emit a server error alert
+PASS turn genuine evaluation failure remains an error
+PASS end automatic evaluation conflict does not emit a server error alert
+PASS end genuine evaluation failure remains an error
+{
+  "passed": 21,
+  "results": [
+    "pagehide saves last answer before completing and evaluating empty interview",
+    "pagehide transcript refusal does not end or evaluate interview",
+    "pagehide partial or malformed transcript does not end interview",
+    "evaluated session refuses new pagehide speech without changing report",
+    "accepted late answer is included in a serial reevaluation before saving",
+    "answer arriving before AI input is loaded is included on the first attempt",
+    "continuous late answers never save a stale result and leave a retryable state",
+    "retry budget preserves all accepted speech without saving old scores",
+    "provider failure on the fresh attempt restores a retryable state",
+    "a preloaded turn request cannot append after evaluation finalizes",
+    "concurrent turn batches receive distinct consecutive ordinals",
+    "ending waits for an already saving first answer and chooses completed",
+    "first late answer after empty termination starts automatic evaluation",
+    "turn insertion rolls back when session metadata cannot be saved",
+    "retention expiry while request body arrives prevents speech resurrection",
+    "unstarted sessions cannot accept fabricated speech",
+    "retention expiry during sample lookup blocks the AI request",
+    "turn automatic evaluation conflict does not emit a server error alert",
+    "turn genuine evaluation failure remains an error",
+    "end automatic evaluation conflict does not emit a server error alert",
+    "end genuine evaluation failure remains an error"
+  ]
+}
+PASS lost response retry acknowledges one stored answer without advancing session timestamp
+PASS concurrent retries allocate only one answer
+PASS mixed retry and new answer append only the new ordinal
+PASS repeated same ID in one batch is acknowledged but inserted once
+PASS same ID with different text is rejected without inserting other new answers
+PASS conflicting same ID within first batch is rejected atomically
+PASS reused ID cannot change speaker
+PASS reused ID cannot change startMs
+PASS reused ID cannot change endMs
+PASS reused ID cannot change questionOrd
+PASS evaluated session acknowledges already saved retry but rejects new speech
+PASS expired grace acknowledges old ID but does not add new answer
+PASS expired retention does not acknowledge or restore speech
+PASS revoked consent does not acknowledge old transcript
+PASS same client ID in two sessions creates distinct storage IDs
+PASS malformed client ID rejected
+PASS malformed client ID rejected 123
+PASS malformed client ID rejected aaaaaaaaaaaaaaa
+PASS malformed client ID rejected bad/id
+PASS older clients without IDs retain append behavior
+PASS failed storage can retry same ID without losing the answer
+{
+  "passed": 21,
+  "results": [
+    "lost response retry acknowledges one stored answer without advancing session timestamp",
+    "concurrent retries allocate only one answer",
+    "mixed retry and new answer append only the new ordinal",
+    "repeated same ID in one batch is acknowledged but inserted once",
+    "same ID with different text is rejected without inserting other new answers",
+    "conflicting same ID within first batch is rejected atomically",
+    "reused ID cannot change speaker",
+    "reused ID cannot change startMs",
+    "reused ID cannot change endMs",
+    "reused ID cannot change questionOrd",
+    "evaluated session acknowledges already saved retry but rejects new speech",
+    "expired grace acknowledges old ID but does not add new answer",
+    "expired retention does not acknowledge or restore speech",
+    "revoked consent does not acknowledge old transcript",
+    "same client ID in two sessions creates distinct storage IDs",
+    "malformed client ID rejected ",
+    "malformed client ID rejected 123",
+    "malformed client ID rejected aaaaaaaaaaaaaaa",
+    "malformed client ID rejected bad/id",
+    "older clients without IDs retain append behavior",
+    "failed storage can retry same ID without losing the answer"
+  ]
+}
+PASS two intentional identical typed answers are both preserved
+PASS distinct audio items retain identical short answers
+PASS transcript and response fallback with same item identity produce one answer
+PASS separate content parts in same item are not discarded
+PASS unidentified transcript is preserved rather than guessed duplicate
+PASS real realtime handlers deduplicate fallback across event versions and preserve distinct answers
+PASS restart cannot alter timestamp of an unacknowledged identified answer
+PASS normal end drains all 151 answers in bounded sequential batches
+PASS end waits for existing upload and drains newly arriving speech
+PASS concurrent flush callers share one upload
+PASS failed final upload keeps its ID and does not signal completion
+PASS lost response retries exactly the same speech identifier
+PASS unconfirmed saved count preserves queue null
+PASS unconfirmed saved count preserves queue {"saved":0}
+PASS unconfirmed saved count preserves queue {"saved":2}
+PASS unconfirmed saved count preserves queue {"saved":"1"}
+PASS client refusal leaves answer available rather than silently discarding it
+PASS failed end acknowledgement offers retry without resending confirmed answers
+PASS pagehide bundles pending speech into end before browser destruction
+PASS pagehide during in-flight normal end retains stable retry ID
+PASS beacon rejection tries keepalive with identical answer payload
+PASS oversized pagehide payload saves bounded speech without sending premature end
+PASS byte limit handles multi-byte transcript and avoids oversized end
+PASS bfcache and unstarted views do not end an interview
+PASS actual text input receives stable crypto ID before initial send
+{
+  "passed": 25,
+  "results": [
+    "two intentional identical typed answers are both preserved",
+    "distinct audio items retain identical short answers",
+    "transcript and response fallback with same item identity produce one answer",
+    "separate content parts in same item are not discarded",
+    "unidentified transcript is preserved rather than guessed duplicate",
+    "real realtime handlers deduplicate fallback across event versions and preserve distinct answers",
+    "restart cannot alter timestamp of an unacknowledged identified answer",
+    "normal end drains all 151 answers in bounded sequential batches",
+    "end waits for existing upload and drains newly arriving speech",
+    "concurrent flush callers share one upload",
+    "failed final upload keeps its ID and does not signal completion",
+    "lost response retries exactly the same speech identifier",
+    "unconfirmed saved count preserves queue null",
+    "unconfirmed saved count preserves queue {\"saved\":0}",
+    "unconfirmed saved count preserves queue {\"saved\":2}",
+    "unconfirmed saved count preserves queue {\"saved\":\"1\"}",
+    "client refusal leaves answer available rather than silently discarding it",
+    "failed end acknowledgement offers retry without resending confirmed answers",
+    "pagehide bundles pending speech into end before browser destruction",
+    "pagehide during in-flight normal end retains stable retry ID",
+    "beacon rejection tries keepalive with identical answer payload",
+    "oversized pagehide payload saves bounded speech without sending premature end",
+    "byte limit handles multi-byte transcript and avoids oversized end",
+    "bfcache and unstarted views do not end an interview",
+    "actual text input receives stable crypto ID before initial send"
+  ]
+}
+PASS two intentional identical typed replies are preserved
+PASS separate audio items with same words are preserved
+PASS same audio content delivered twice is stored once
+PASS distinct parts of one audio item remain distinct
+PASS unknown identity does not justify deleting a repeated answer
+PASS speaker identity and captured phase are preserved
+PASS empty notification does not suppress later valid transcript for same item
+PASS hallucination filter remains active before identity is recorded
+PASS actual event handlers deduplicate fallback while preserving repeated guest answers
+PASS malformed explicit indices cannot merge independent answers into part zero
+PASS legacy missing index still deduplicates matching first content part
+{
+  "passed": 11,
+  "results": [
+    "two intentional identical typed replies are preserved",
+    "separate audio items with same words are preserved",
+    "same audio content delivered twice is stored once",
+    "distinct parts of one audio item remain distinct",
+    "unknown identity does not justify deleting a repeated answer",
+    "speaker identity and captured phase are preserved",
+    "empty notification does not suppress later valid transcript for same item",
+    "hallucination filter remains active before identity is recorded",
+    "actual event handlers deduplicate fallback while preserving repeated guest answers",
+    "malformed explicit indices cannot merge independent answers into part zero",
+    "legacy missing index still deduplicates matching first content part"
+  ]
+}
+PASS lost response retry acknowledges one stored answer
+PASS concurrent duplicate requests insert only once
+PASS concurrent distinct requests have distinct ordinals
+PASS mixed retry and new speech acknowledges both
+PASS same words under different IDs remain separate
+PASS repeated ID within a batch inserted once
+PASS conflicting retry text rejected without partial writes
+PASS conflicting retry speaker rejected without partial writes
+PASS conflicting retry startMs rejected without partial writes
+PASS conflicting retry phase rejected without partial writes
+PASS conflicting ID within first batch rejected atomically
+PASS invalid ID rejected
+PASS invalid ID rejected 123
+PASS invalid ID rejected aaaaaaaaaaaa
+PASS invalid ID rejected bad/id
+PASS legacy clients retain append and phase fallback
+PASS unknown phase remains stable for identified retry after advancement
+PASS IDs scoped to session
+PASS revoked consent blocks retry
+PASS expired retention blocks writes and retry
+PASS failed transaction preserves retryability
+PASS 50-item admission reports only accepted items
+PASS late answer marks AI outcome stale and queues new revision
+PASS late answer preserves manual decision while queuing record review
+PASS non-recordable status blocks writes pending
+PASS non-recordable status blocks writes expired
+PASS non-recordable status blocks writes unknown
+PASS unstarted session cannot acquire transcript records
+PASS terminal state without end time blocks new records completed
+PASS terminal state without end time blocks new records evaluated
+PASS terminal state without end time blocks new records aborted
+PASS live state with end time blocks inconsistent writes
+PASS ended session acknowledges already saved speech without another revision or task
+{
+  "passed": 33,
+  "results": [
+    "lost response retry acknowledges one stored answer",
+    "concurrent duplicate requests insert only once",
+    "concurrent distinct requests have distinct ordinals",
+    "mixed retry and new speech acknowledges both",
+    "same words under different IDs remain separate",
+    "repeated ID within a batch inserted once",
+    "conflicting retry text rejected without partial writes",
+    "conflicting retry speaker rejected without partial writes",
+    "conflicting retry startMs rejected without partial writes",
+    "conflicting retry phase rejected without partial writes",
+    "conflicting ID within first batch rejected atomically",
+    "invalid ID rejected ",
+    "invalid ID rejected 123",
+    "invalid ID rejected aaaaaaaaaaaa",
+    "invalid ID rejected bad/id",
+    "legacy clients retain append and phase fallback",
+    "unknown phase remains stable for identified retry after advancement",
+    "IDs scoped to session",
+    "revoked consent blocks retry",
+    "expired retention blocks writes and retry",
+    "failed transaction preserves retryability",
+    "50-item admission reports only accepted items",
+    "late answer marks AI outcome stale and queues new revision",
+    "late answer preserves manual decision while queuing record review",
+    "non-recordable status blocks writes pending",
+    "non-recordable status blocks writes expired",
+    "non-recordable status blocks writes unknown",
+    "unstarted session cannot acquire transcript records",
+    "terminal state without end time blocks new records completed",
+    "terminal state without end time blocks new records evaluated",
+    "terminal state without end time blocks new records aborted",
+    "live state with end time blocks inconsistent writes",
+    "ended session acknowledges already saved speech without another revision or task"
+  ]
+}
+PASS 51 pending turns drain in two batches before ending
+PASS concurrent flush and end await same in-flight request
+PASS new answers queued while sending drain before ending
+PASS failed transcript response 400 retains queue and avoids completion
+PASS failed transcript response 429 retains queue and avoids completion
+PASS failed transcript response 503 retains queue and avoids completion
+PASS lost response retries stable IDs and timestamps
+PASS unconfirmed saved count undefined retains full batch
+PASS unconfirmed saved count 0 retains full batch
+PASS unconfirmed saved count 1 retains full batch
+PASS unconfirmed saved count 2 retains full batch
+PASS unconfirmed saved count 3 retains full batch
+PASS end error retains retry state without false completion
+PASS unconfirmed end body {"status":"live"} does not finish
+PASS unconfirmed end body {"status":"pending","skipped":true} does not finish
+PASS unconfirmed end body {} does not finish
+PASS unconfirmed end body null does not finish
+PASS duplicate end actions produce one completion
+PASS separate replies have unique valid IDs and retain phase
+PASS pagehide bundles all pending answers into one end request without clearing queue
+PASS rejected beacon uses keepalive and retains answers
+PASS pagehide while normal end is saving includes in-flight answers
+PASS excess answers use bounded turn request without premature end
+PASS oversized payload stays below beacon budget without ending
+PASS bfcache and unstarted page do not end meeting
+{
+  "passed": 25,
+  "results": [
+    "51 pending turns drain in two batches before ending",
+    "concurrent flush and end await same in-flight request",
+    "new answers queued while sending drain before ending",
+    "failed transcript response 400 retains queue and avoids completion",
+    "failed transcript response 429 retains queue and avoids completion",
+    "failed transcript response 503 retains queue and avoids completion",
+    "lost response retries stable IDs and timestamps",
+    "unconfirmed saved count undefined retains full batch",
+    "unconfirmed saved count 0 retains full batch",
+    "unconfirmed saved count 1 retains full batch",
+    "unconfirmed saved count 2 retains full batch",
+    "unconfirmed saved count 3 retains full batch",
+    "end error retains retry state without false completion",
+    "unconfirmed end body {\"status\":\"live\"} does not finish",
+    "unconfirmed end body {\"status\":\"pending\",\"skipped\":true} does not finish",
+    "unconfirmed end body {} does not finish",
+    "unconfirmed end body null does not finish",
+    "duplicate end actions produce one completion",
+    "separate replies have unique valid IDs and retain phase",
+    "pagehide bundles all pending answers into one end request without clearing queue",
+    "rejected beacon uses keepalive and retains answers",
+    "pagehide while normal end is saving includes in-flight answers",
+    "excess answers use bounded turn request without premature end",
+    "oversized payload stays below beacon budget without ending",
+    "bfcache and unstarted page do not end meeting"
+  ]
+}
+PASS bundled end saves final replies before count and evaluation with cookie preserved
+PASS lost end response retry does not duplicate speech or evaluation
+PASS failed transcript transaction does not end meeting or evaluate
+PASS invalid bundled payload does not end null
+PASS invalid bundled payload does not end {}
+PASS invalid bundled payload does not end 51
+PASS partial transcript admission refuses completion
+PASS invalid transcript identifier refuses completion
+{
+  "passed": 8,
+  "results": [
+    "bundled end saves final replies before count and evaluation with cookie preserved",
+    "lost end response retry does not duplicate speech or evaluation",
+    "failed transcript transaction does not end meeting or evaluate",
+    "invalid bundled payload does not end null",
+    "invalid bundled payload does not end {}",
+    "invalid bundled payload does not end 51",
+    "partial transcript admission refuses completion",
+    "invalid transcript identifier refuses completion"
+  ]
+}
+PASS new speech during evaluation prevents stale outcome persistence
+PASS session revision changed during evaluation prevents persistence
+PASS manual outcome entered during evaluation is not overwritten
+PASS consent revoked during evaluation prevents persistence
+PASS expired retention during evaluation prevents persistence
+PASS changed session status during evaluation prevents persistence
+PASS unchanged transcript and revision persist result
+PASS one late answer triggers reevaluation using latest full transcript
+{
+  "passed": 8,
+  "results": [
+    "new speech during evaluation prevents stale outcome persistence",
+    "session revision changed during evaluation prevents persistence",
+    "manual outcome entered during evaluation is not overwritten",
+    "consent revoked during evaluation prevents persistence",
+    "expired retention during evaluation prevents persistence",
+    "changed session status during evaluation prevents persistence",
+    "unchanged transcript and revision persist result",
+    "one late answer triggers reevaluation using latest full transcript"
+  ]
+}
+PASS normal reevaluation atomically stores outcome
+PASS manual decision during AI generation wins
+PASS manual replacement requires approval before AI work
+PASS approved replacement of unchanged manual decision clears manual attribution
+PASS approval does not authorize overwriting a newer manual decision
+PASS concurrent manual creation uses latest outcome instead of duplicate create
+PASS new speech during reevaluation rejects old result
+PASS concurrent reevaluations of one revision cannot both commit
+PASS manual input cannot restore expired records
+PASS manual creation still requires score and verdict
+PASS provider failure releases execution right for a later retry
+PASS recovery skips persisted report but explicit manager reevaluation remains available
+PASS recovery evaluates a completed session with a stale previous report
+PASS recovery does not indefinitely defer unusable record purgeAfter
+PASS recovery does not indefinitely defer unusable record consentedAt
+PASS recovery does not indefinitely defer unusable record status
+PASS recovery does not indefinitely defer unusable record organizationId
+PASS recovery does not indefinitely defer unusable record startedAt
+PASS recovery does not indefinitely defer unusable record endedAt
+PASS automatic provider failure keeps one durable failure notification then success removes it
+PASS manual reevaluation failure does not create automatic notice
+{
+  "passed": 21,
+  "results": [
+    "normal reevaluation atomically stores outcome",
+    "manual decision during AI generation wins",
+    "manual replacement requires approval before AI work",
+    "approved replacement of unchanged manual decision clears manual attribution",
+    "approval does not authorize overwriting a newer manual decision",
+    "concurrent manual creation uses latest outcome instead of duplicate create",
+    "new speech during reevaluation rejects old result",
+    "concurrent reevaluations of one revision cannot both commit",
+    "manual input cannot restore expired records",
+    "manual creation still requires score and verdict",
+    "provider failure releases execution right for a later retry",
+    "recovery skips persisted report but explicit manager reevaluation remains available",
+    "recovery evaluates a completed session with a stale previous report",
+    "recovery does not indefinitely defer unusable record purgeAfter",
+    "recovery does not indefinitely defer unusable record consentedAt",
+    "recovery does not indefinitely defer unusable record status",
+    "recovery does not indefinitely defer unusable record organizationId",
+    "recovery does not indefinitely defer unusable record startedAt",
+    "recovery does not indefinitely defer unusable record endedAt",
+    "automatic provider failure keeps one durable failure notification then success removes it",
+    "manual reevaluation failure does not create automatic notice"
+  ]
+}
+PASS end waits for earlier answer save before counting completion
+PASS end-first serialization recovers aborted status when late answers complete the conversation
+PASS consent revoked before end lock is checked fresh
+PASS retention expires before end lock is checked fresh
+PASS ownership changed before end lock rejects without ending
+PASS state changed before end lock cannot be revived
+{
+  "passed": 6,
+  "results": [
+    "end waits for earlier answer save before counting completion",
+    "end-first serialization recovers aborted status when late answers complete the conversation",
+    "consent revoked before end lock is checked fresh",
+    "retention expires before end lock is checked fresh",
+    "ownership changed before end lock rejects without ending",
+    "state changed before end lock cannot be revived"
+  ]
+}
+PASS 20 concurrent acquisitions grant exactly one execution right
+PASS active lease blocks a second worker
+PASS normal release permits new acquisition
+PASS expired worker can be replaced but cannot delete its replacement
+PASS replaced worker cannot commit an outcome
+PASS expired lease cannot commit even if value still matches
+PASS active owning worker commits once
+PASS malformed lease is not silently replaced
+PASS foreign organization cannot claim
+PASS unusable status live cannot claim
+PASS unusable status pending cannot claim
+PASS unusable status aborted cannot claim
+PASS unusable status expired cannot claim
