@@ -1,0 +1,15 @@
+{
+  "baseCommit": "3fed1112d8773eb659372b2b913c6594bf2ff4c8",
+  "mode": "failed-read",
+  "previousVisible": true,
+  "currentOrg": "alpha",
+  "currentId": "one",
+  "writes": [],
+  "reads": [
+    "/api/shodan/preparations/one?org=alpha",
+    "/api/shodan/preparations/one?org=alpha"
+  ],
+  "notices": [],
+  "navigation": [],
+  "scope": "Actual mounted ShodanAppLayout/detail page with actual bounded HTTP client; synthetic parameters/router/API only. No real provider, quota reservation or DB write. Parameter transition does not prove Next router segment reuse; unmount is executed separately."
+}

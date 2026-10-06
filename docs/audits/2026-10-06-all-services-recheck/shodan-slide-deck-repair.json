@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-06T23:13:30.503652+00:00",
+  "status": "release-gates-passed-not-yet-pushed",
+  "baseCommit": "6bd0adb1ed4ae0eed43701545b86cb451897466a",
+  "finding": "Actual mounted SlideDeck crashes with TypeError reading undefined.type after navigating to slide 3 then replacing the deck with one slide.",
+  "baselineExitCode": 1,
+  "baselineError": "TypeError: Cannot read properties of undefined (reading type)",
+  "fix": "Document/version bound cursor; current selection derived safely during render, same-turn functional navigation and stale callback suppression.",
+  "regression": "scripts/security-regression/verify-shodan-slide-deck-mounted.cjs",
+  "groups": [
+    "shrink while viewing last slide",
+    "new deck resets to first",
+    "same-turn navigation",
+    "document identity change",
+    "retained old callback",
+    "empty deck",
+    "restore one slide"
+  ],
+  "limitations": [
+    "Actual React component with synthetic slides in StrictMode/jsdom; not real browser QA or authenticated persistence.",
+    "Full 17 services / 2074 criteria remain in scope.",
+    "Shodan detail retry unmount/route lifecycle defects remain open; this repair does not resolve them."
+  ],
+  "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-slide-deck-release-5a6695b1-b84b-43b7-a25e-b8fe9cac70ea",
+  "sourceFiles": 2636,
+  "changedSources": [],
+  "lastCheckedAt": "2026-10-06T23:18:19.881683+00:00"
+}

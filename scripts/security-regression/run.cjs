@@ -1,3 +1,5 @@
+const slideDeck = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-shodan-slide-deck-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (slideDeck.error || slideDeck.status !== 0) { console.error('Shodan slide deck regression failed'); process.exit(1); }
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 for (const script of ['verify-auth-registration.cjs', 'verify-registration-classification.cjs', 'verify-subscription-mutation-client.cjs', 'verify-subscription-management-mounted.cjs', 'verify-subscription-status-client.cjs', 'verify-cancel-notice-mounted.cjs', 'verify-billing-plan-resync-mounted.cjs', 'verify-billing-response-client.cjs', 'verify-checkout-button-mounted.cjs', 'verify-stripe-success-sync-mounted.cjs', 'verify-google-analytics-purchase.cjs', 'verify-google-analytics-services.cjs']) {

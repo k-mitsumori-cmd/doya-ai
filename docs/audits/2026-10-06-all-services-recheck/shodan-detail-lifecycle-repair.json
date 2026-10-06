@@ -1,0 +1,44 @@
+{
+  "checkedAt": "2026-10-06T23:14:46.879237+00:00",
+  "status": "confirmed-open-not-fixed",
+  "sourceCommit": "6bd0adb1ed4ae0eed43701545b86cb451897466a",
+  "source": "src/app/shodan/[orgSlug]/p/[id]/page.tsx",
+  "findings": [
+    {
+      "id": "stale-scope",
+      "evidence": "shodan-detail-stale-retry-baseline.json",
+      "actual": "Previous target URL is submitted to current different org during parameter transition.",
+      "scopeLimitation": "Synthetic reused page; actual Next segment reuse unproven."
+    },
+    {
+      "id": "unmounted-navigation",
+      "evidence": "shodan-detail-unmounted-retry-baseline.json",
+      "actual": "Actual unmount followed by old POST completion still navigates and announces success."
+    },
+    {
+      "id": "same-turn-duplicate",
+      "evidence": "shodan-detail-double-retry-baseline.json",
+      "actual": "Two synchronous retry actions start two POST requests."
+    },
+    {
+      "id": "false-missing",
+      "evidence": "shodan-detail-failed-read-baseline.json",
+      "actual": "HTTP 500 read is rendered as missing preparation."
+    }
+  ],
+  "nextRepairRequirements": [
+    "Bind reads, all mutation callbacks, clipboard/export and navigation to authenticated actor/org/preparation/epoch; abort and ignore late results after change or unmount.",
+    "Validate the complete preparation DTO before enabling actions and exporting. Distinguish 404 from retryable server/network/protocol failures.",
+    "Non-overlapping bounded polling only during processing; explicit retry after read failure.",
+    "One synchronous mutation lock across retry, proposal generation and slide generation; no repeated submission after uncertain outcomes.",
+    "Recover uncertain generation via scoped validated snapshot and version; recover unknown new preparation through history rather than resubmitting.",
+    "Preserve existing researched-to-proposal automatic behavior and server billing/role authorization; ensure old auto-generation state cannot affect new document.",
+    "Stop slide batch chain after unmount/auth/scope transition; never claim complete for partial slides.",
+    "Actual mounted tests for actor/org/id/ABA/auth refresh/unmount, held requests, same-turn double actions, malformed DTO, 404/500 and uncertain result recovery."
+  ],
+  "limitations": [
+    "Synthetic HTTP only; no paid provider, customer DB writes, or authenticated production reproduction.",
+    "2026-09 incident causes remain unverified.",
+    "All 17 services and 2074 criteria remain in scope."
+  ]
+}

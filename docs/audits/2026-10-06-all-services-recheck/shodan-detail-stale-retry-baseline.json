@@ -1,0 +1,20 @@
+{
+  "baseCommit": "3fed1112d8773eb659372b2b913c6594bf2ff4c8",
+  "previousVisible": true,
+  "currentOrg": "beta",
+  "currentId": "two",
+  "writes": [
+    {
+      "url": "/api/shodan/preparations?org=beta",
+      "body": {
+        "url": "https://alpha-private.example.invalid"
+      }
+    }
+  ],
+  "reads": [
+    "/api/shodan/preparations/one?org=alpha",
+    "/api/shodan/preparations/one?org=alpha",
+    "/api/shodan/preparations/two?org=beta"
+  ],
+  "scope": "Actual mounted ShodanAppLayout/detail page with actual bounded HTTP client and synthetic parameter transition. No real paid provider, quota reservation or DB write. Does not prove actual Next router segment reuse."
+}

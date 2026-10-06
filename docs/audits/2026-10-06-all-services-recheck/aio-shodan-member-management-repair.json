@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T22:56:18.114151+00:00",
-  "status": "release-gates-passed-not-yet-pushed",
+  "status": "pushed-production-building",
   "services": [
     "aio",
     "shodan"
@@ -25,8 +25,8 @@
   "limitations": [
     "Synthetic HTTP/session only; no actual email, invitation, DB write or paid provider",
     "Parameter-transition probe does not prove Next router segment reuse; actual unmount side effects reproduced separately",
-    "Candidate implemented and targeted-tested; full gate and release pending",
-    "17 services and 2074 criteria remain in scope"
+    "17 services and 2074 criteria remain in scope",
+    "Frozen full gate passed and main push confirmed; production READY and authenticated UI verification remain separate."
   ],
   "baseCommit": "3fed1112d8773eb659372b2b913c6594bf2ff4c8",
   "mountedCases": 48,
@@ -35,8 +35,8 @@
   "typecheckExitCode": 0,
   "targetedLintExitCode": 0,
   "gate": "docs/audits/2026-10-06-all-services-recheck/aio-shodan-members-release-36538a98-9704-4d03-bb44-e9752077aae1",
-  "production": "not-deployed",
-  "lastCheckedAt": "2026-10-06T23:09:23.680584+00:00",
+  "production": "BUILDING",
+  "lastCheckedAt": "2026-10-06T23:13:30.502852+00:00",
   "extraFixes": [
     "Correct AIO member page copy which described Shodan capabilities",
     "Explicit inactive member label",
@@ -48,5 +48,7 @@
   "releaseExitCode": 0,
   "sourceFreezeFiles": 2635,
   "sourceFreezeChangedSources": [],
-  "sourceFreezeReverifiedBeforeCommit": true
+  "sourceFreezeReverifiedBeforeCommit": true,
+  "commit": "6bd0adb1ed4ae0eed43701545b86cb451897466a",
+  "deployment": "dpl_DozPfQu34TY5vPvv1zkUcX9zY3fR"
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ProposalSlide } from '@/lib/shodan/types'
 
 const sym = (name: string, size = 18) => <span className="material-symbols-outlined" style={{ fontSize: size }}>{name}</span>
@@ -50,10 +50,26 @@ function SlideView({ s, idx, total }: { s: ProposalSlide; idx: number; total: nu
 }
 
 export default function SlideDeck({ slides, fileBase }: { slides: ProposalSlide[]; fileBase?: string }) {
-  const [i, setI] = useState(0)
+  // A new document/version owns a new cursor, even across an A -> B -> A change.
+  const currentScope = useRef({ slides, fileBase })
+  if (currentScope.current.slides !== slides || currentScope.current.fileBase !== fileBase) {
+    currentScope.current = { slides, fileBase }
+  }
+  const scope = currentScope.current
+  const [selection, setSelection] = useState({ scope, index: 0 })
+  const i = selection.scope === scope ? Math.min(selection.index, Math.max(0, slides.length - 1)) : 0
+  const select = (index: number | ((previous: number) => number)) => {
+    if (currentScope.current !== scope) return
+    setSelection(previous => {
+      if (currentScope.current !== scope) return previous
+      const cursor = previous.scope === scope ? previous.index : 0
+      const requested = typeof index === 'function' ? index(cursor) : index
+      return { scope, index: Math.max(0, Math.min(slides.length - 1, requested)) }
+    })
+  }
   if (!slides.length) return null
-  const prev = () => setI((v) => Math.max(0, v - 1))
-  const next = () => setI((v) => Math.min(slides.length - 1, v + 1))
+  const prev = () => select(v => v - 1)
+  const next = () => select(v => v + 1)
 
   return (
     <div>
@@ -73,7 +89,7 @@ export default function SlideDeck({ slides, fileBase }: { slides: ProposalSlide[
       {/* サムネイル */}
       <div className="shodan-no-print mt-3 flex gap-2 overflow-x-auto pb-1">
         {slides.map((s, idx) => (
-          <button key={idx} onClick={() => setI(idx)}
+          <button key={idx} onClick={() => select(idx)}
             className={`shrink-0 w-28 aspect-[16/9] rounded-lg border-2 text-left p-2 overflow-hidden transition-all ${idx === i ? 'border-purple-500 ring-2 ring-purple-200' : 'border-slate-200 hover:border-purple-300'}`}>
             <div className="text-[8px] font-black text-purple-500">{idx + 1}</div>
             <div className="text-[9px] font-bold text-slate-600 leading-tight line-clamp-3">{s.title}</div>
