@@ -1,0 +1,22 @@
+{
+  "passed": 16,
+  "scope": "Actual AST-extracted editor mutation/history/read functions; synthetic fetch/state/clock/project. No real history writes or paid AI calls.",
+  "results": [
+    "regenerate requires a valid slide acknowledgment and a matching confirmed refresh",
+    "regenerate succeeds only after confirmation and releases its lock",
+    "regenerate bounds response-body waiting and never automatically repeats an uncertain write",
+    "revert requires a valid slide acknowledgment and a matching confirmed refresh",
+    "revert succeeds only after confirmation and releases its lock",
+    "revert bounds response-body waiting and never automatically repeats an uncertain write",
+    "sendChat requires a valid slide acknowledgment and a matching confirmed refresh",
+    "sendChat succeeds only after confirmation and releases its lock",
+    "sendChat bounds response-body waiting and never automatically repeats an uncertain write",
+    "quota rejection preserves its upgrade notice and chat draft",
+    "revert verifies the selected history image and rejects unavailable or stale histories before issuing a write",
+    "history refresh preserves confirmed same-slide history on unconfirmed responses",
+    "history accepts valid empty data and clears private data on definitive access failure",
+    "history body deadline and out-of-order selection reads never overwrite another slide history",
+    "a chat success never clears a newer draft and unmounted operations do not append messages",
+    "different slide mutations share the same lock and off-selection history refresh leaves the current history intact"
+  ]
+}

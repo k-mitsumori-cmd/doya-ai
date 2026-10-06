@@ -104,6 +104,7 @@ function EditorInner() {
   const [chatBusy, setChatBusy] = useState(false)
   const [busySlide, setBusySlide] = useState<string | null>(null)
   const [versions, setVersions] = useState<Version[]>([])
+  const [versionsError, setVersionsError] = useState<string | null>(null)
   const [celebrate, setCelebrate] = useState(false)
   const [funIdx, setFunIdx] = useState(0)
   const [genElapsed, setGenElapsed] = useState(0)
@@ -117,9 +118,14 @@ function EditorInner() {
   const projectReadSequence = useRef(0)
   const projectReadsActive = useRef(0)
   const generationBusyRef = useRef(false)
+  const slideMutationBusyRef = useRef(false)
+  const versionsSequence = useRef(0)
+  const versionsTarget = useRef<string | null>(null)
+  const selectedSlideRef = useRef<string | null>(null)
 
   const slides = project?.slides || []
   const selected = slides.find((s) => s.id === selectedId) || slides[0] || null
+  selectedSlideRef.current = selected?.id || null
   const doneCount = slides.filter((s) => s.imageUrl).length
   const total = slides.length
   const allDone = total > 0 && doneCount === total
@@ -187,14 +193,56 @@ function EditorInner() {
     }
   }, [id])
 
-  const loadVersions = useCallback((slideId: string) => {
-    fetch(`/api/doyaslide/slides/${slideId}/revert`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => {
-        if (mountedRef.current) setVersions(d.versions || [])
-      })
-      .catch(() => {})
+  const loadVersions = useCallback(async (slideId: string) => {
+    if (!mountedRef.current || selectedSlideRef.current !== slideId) return
+    const sequence = ++versionsSequence.current
+    const changedSlide = versionsTarget.current !== slideId
+    versionsTarget.current = slideId
+    if (changedSlide && mountedRef.current) {
+      setVersions([])
+      setVersionsError(null)
+    }
+    const current = () => mountedRef.current && sequence === versionsSequence.current && selectedSlideRef.current === slideId
+    try {
+      const { res, data } = await readSlideResponse(`/api/doyaslide/slides/${slideId}/revert`, { cache: 'no-store' }, 30000)
+      if (!res.ok) {
+        if (current() && [401, 403, 404].includes(res.status)) setVersions([])
+        throw new Error('履歴を読み込めませんでした。')
+      }
+      const seen = new Set<number>()
+      if (!Array.isArray(data?.versions) || !data.versions.every((v: any) => {
+        if (!v || typeof v.id !== 'string' || !v.id || v.slideId !== slideId
+          || !Number.isInteger(v.version) || v.version < 1 || seen.has(v.version)
+          || typeof v.imageUrl !== 'string' || !v.imageUrl
+          || typeof v.createdAt !== 'string' || !Number.isFinite(Date.parse(v.createdAt))) return false
+        seen.add(v.version)
+        return true
+      })) throw new Error('履歴の内容を確認できませんでした。')
+      if (current()) {
+        setVersions(data.versions)
+        setVersionsError(null)
+      }
+    } catch {
+      if (current()) setVersionsError('履歴を確認できませんでした。再読み込みしてください。')
+    }
   }, [])
+
+  const performSlideMutation = async (slideId: string, url: string, body?: Record<string, unknown>) => {
+    const { res, data } = await readSlideResponse(url, {
+      method: 'POST',
+      ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
+    }, 310000)
+    ensureOk(res, data, '更新に失敗しました。')
+    if (!validSlides([data?.slide], id) || data.slide.id !== slideId || !data.slide.imageUrl || data.slide.status !== 'done') {
+      throw new Error('更新結果を確認できませんでした。')
+    }
+    const confirmed = await reload()
+    const saved = confirmed?.slides.find((slide) => slide.id === slideId)
+    if (!saved || saved.imageUrl !== data.slide.imageUrl || saved.rawImageUrl !== data.slide.rawImageUrl || saved.version !== data.slide.version) {
+      throw new Error('更新後の状態を確認できませんでした。')
+    }
+    return data
+  }
 
   const stopPoll = () => {
     if (pollRef.current) {
@@ -204,7 +252,7 @@ function EditorInner() {
   }
 
   const runGenerate = useCallback(async () => {
-    if (!mountedRef.current || generationBusyRef.current) return
+    if (!mountedRef.current || generationBusyRef.current || slideMutationBusyRef.current) return
     generationBusyRef.current = true
     setGenerating(true)
     setLimitMsg(null)
@@ -323,7 +371,7 @@ function EditorInner() {
   useEffect(() => {
     if (selected) loadVersions(selected.id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId])
+  }, [selected?.id])
 
   // 生成中の楽しいメッセージ回し
   useEffect(() => {
@@ -355,69 +403,76 @@ function EditorInner() {
   }, [generating])
 
   const regenerate = async (slideId: string) => {
+    if (!mountedRef.current || slideMutationBusyRef.current || generationBusyRef.current) return
+    slideMutationBusyRef.current = true
     setBusySlide(slideId)
     try {
-      const res = await fetch(`/api/doyaslide/slides/${slideId}/regenerate`, { method: 'POST' })
-      const d = await res.json()
-      ensureOk(res, d, '再生成に失敗しました')
+      await performSlideMutation(slideId, `/api/doyaslide/slides/${slideId}/regenerate`)
+      if (!mountedRef.current) return
       setLimitMsg(null)
       setLimitUpgradeUrl(null)
-      toast.success('再生成しました')
-      await reload()
-      loadVersions(slideId)
-    } catch (e: any) {
-      toast.error(e.message)
+      toast.success('再生成しました。')
+      void loadVersions(slideId)
+    } catch {
+      if (mountedRef.current) toast.error('再生成の結果を確認できませんでした。状態を更新してご確認ください。')
+      await reload().catch(() => {})
     } finally {
-      setBusySlide(null)
+      slideMutationBusyRef.current = false
+      if (mountedRef.current) setBusySlide(null)
     }
   }
 
   const revert = async (version: number) => {
-    if (!selected) return
+    if (!selected || !mountedRef.current || slideMutationBusyRef.current || generationBusyRef.current) return
+    const sid = selected.id
+    const target = versions.find((v) => v.version === version)
+    if (!target || versionsTarget.current !== sid || versionsError) {
+      toast.error('復元する履歴を確認できません。履歴を再読み込みしてください。')
+      return
+    }
+    slideMutationBusyRef.current = true
+    setBusySlide(sid)
     try {
-      const res = await fetch(`/api/doyaslide/slides/${selected.id}/revert`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ version }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        throw new Error(data?.error || '巻き戻しに失敗しました')
-      }
-      toast.success(`v${version} に戻しました`)
-      await reload()
-      loadVersions(selected.id)
-    } catch (e: any) {
-      toast.error(e.message)
+      const data = await performSlideMutation(sid, `/api/doyaslide/slides/${sid}/revert`, { version })
+      if (data.slide.imageUrl !== target.imageUrl) throw new Error('復元結果を確認できませんでした。')
+      if (!mountedRef.current) return
+      toast.success(`v${version} に戻しました。`)
+      void loadVersions(sid)
+    } catch {
+      if (mountedRef.current) toast.error('巻き戻しの結果を確認できませんでした。状態を更新してご確認ください。')
+      await reload().catch(() => {})
+    } finally {
+      slideMutationBusyRef.current = false
+      if (mountedRef.current) setBusySlide(null)
     }
   }
 
   const sendChat = async () => {
-    if (!selected || !chatInput.trim()) return
+    if (!selected || !chatInput.trim() || !mountedRef.current || slideMutationBusyRef.current || generationBusyRef.current) return
     const msg = chatInput.trim()
     const sid = selected.id
-    setChat((c) => ({ ...c, [sid]: [...(c[sid] || []), { role: 'user', content: msg }] }))
-    setChatInput('')
+    slideMutationBusyRef.current = true
     setChatBusy(true)
+    setBusySlide(sid)
     try {
-      const res = await fetch(`/api/doyaslide/slides/${sid}/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg }),
-      })
-      const d = await res.json()
-      ensureOk(res, d, '修正に失敗しました')
+      const data = await performSlideMutation(sid, `/api/doyaslide/slides/${sid}/chat`, { message: msg })
+      if (typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('修正の回答を確認できませんでした。')
+      if (!mountedRef.current) return
       setLimitMsg(null)
       setLimitUpgradeUrl(null)
-      setChat((c) => ({ ...c, [sid]: [...(c[sid] || []), { role: 'assistant', content: d.reply || '修正しました' }] }))
-      toast.success('✨ 修正を反映しました')
-      await reload()
-      loadVersions(sid)
-    } catch (e: any) {
-      toast.error(e.message)
-      setChat((c) => ({ ...c, [sid]: [...(c[sid] || []), { role: 'assistant', content: 'エラー: ' + e.message }] }))
+      setChat((c) => ({ ...c, [sid]: [...(c[sid] || []), { role: 'user', content: msg }, { role: 'assistant', content: data.reply }] }))
+      setChatInput((current) => current.trim() === msg ? '' : current)
+      toast.success('修正を反映しました。')
+      void loadVersions(sid)
+    } catch {
+      if (mountedRef.current) toast.error('修正結果を確認できませんでした。入力内容を保持しました。状態を更新してご確認ください。')
+      await reload().catch(() => {})
     } finally {
-      setChatBusy(false)
+      slideMutationBusyRef.current = false
+      if (mountedRef.current) {
+        setChatBusy(false)
+        setBusySlide(null)
+      }
     }
   }
 
@@ -547,7 +602,7 @@ function EditorInner() {
           ) : (
             <button
               onClick={runGenerate}
-              disabled={generating || total === 0}
+              disabled={generating || busySlide !== null || total === 0}
               className="inline-flex items-center gap-1 px-5 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black text-sm shadow hover:shadow-lg transition-all disabled:opacity-60"
             >
               <span className={`material-symbols-outlined text-lg ${generating ? 'animate-spin' : ''}`}>
@@ -692,7 +747,7 @@ function EditorInner() {
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                 <button
                   onClick={() => regenerate(selected.id)}
-                  disabled={busySlide === selected.id || generating}
+                  disabled={busySlide !== null || generating}
                   className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-white text-slate-700 font-bold text-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
                 >
                   <span className={`material-symbols-outlined text-lg ${busySlide === selected.id ? 'animate-spin' : ''}`}>
@@ -750,16 +805,22 @@ function EditorInner() {
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !chatBusy && sendChat()}
                 placeholder="修正を入力..."
-                disabled={chatBusy || !selected}
+                disabled={chatBusy || busySlide !== null || generating || !selected}
                 className="flex-1 px-3 py-2 bg-slate-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
-              <button onClick={sendChat} disabled={chatBusy || !selected} className="px-3 py-2 rounded-xl bg-blue-600 text-white disabled:opacity-50">
+              <button onClick={sendChat} disabled={chatBusy || busySlide !== null || generating || !selected} className="px-3 py-2 rounded-xl bg-blue-600 text-white disabled:opacity-50">
                 <span className="material-symbols-outlined text-lg">send</span>
               </button>
             </div>
           </div>
 
           {/* version history */}
+          {versionsError && (
+            <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <p>{versionsError}</p>
+              <button disabled={!selected} onClick={() => { if (selected) void loadVersions(selected.id) }} className="mt-2 font-bold underline">履歴を再読み込み</button>
+            </div>
+          )}
           {versions.length > 1 && (
             <div className="bg-white rounded-2xl shadow-sm p-4">
               <p className="font-black text-slate-800 text-sm mb-3 flex items-center gap-1">
@@ -771,6 +832,7 @@ function EditorInner() {
                   <button
                     key={v.id}
                     onClick={() => revert(v.version)}
+                    disabled={busySlide !== null || generating || !!versionsError}
                     className="flex-shrink-0 w-16 rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-400 relative"
                     title={`v${v.version} に戻す`}
                   >

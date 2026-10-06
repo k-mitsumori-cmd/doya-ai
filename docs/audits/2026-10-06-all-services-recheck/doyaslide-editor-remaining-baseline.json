@@ -1,0 +1,22 @@
+{
+  "scope": "Actual callbacks in synthetic fetch/DOM/clock/state; no real generation, logo write or export. Remaining defects separate from running frozen build.",
+  "results": [
+    {
+      "name": "retryStructure",
+      "successClaimed": true,
+      "unconfirmedStructureTriggeredGeneration": true,
+      "invalidDownloadUrlAccepted": false
+    },
+    {
+      "name": "saveLogoConfig",
+      "pendingWithoutAbortSignal": true,
+      "busyRemaining": true
+    },
+    {
+      "name": "exportAs",
+      "successClaimed": true,
+      "unconfirmedStructureTriggeredGeneration": false,
+      "invalidDownloadUrlAccepted": true
+    }
+  ]
+}

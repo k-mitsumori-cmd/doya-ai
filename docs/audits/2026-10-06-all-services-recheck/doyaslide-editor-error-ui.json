@@ -1,0 +1,23 @@
+{
+  "scope": "Actual editor React markup with synthetic hook state. No browser, authenticated live operation, image fetch, database write or paid generation.",
+  "results": [
+    {
+      "mode": "initial_read_error",
+      "persistentAlert": true,
+      "retryVisible": true,
+      "cachedProjectRetained": false
+    },
+    {
+      "mode": "cached_read_error",
+      "persistentAlert": true,
+      "retryVisible": true,
+      "cachedProjectRetained": true
+    },
+    {
+      "mode": "history_read_error",
+      "persistentAlert": true,
+      "retryVisible": true,
+      "cachedProjectRetained": false
+    }
+  ]
+}

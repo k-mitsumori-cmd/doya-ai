@@ -20,7 +20,7 @@ function fixture(handler, fetcher, overrideReload) {
   const timers = new Map(), success = [], errors = [], requests = [];
   let timerId = 0, pollCallback, pollCleared = false;
   const toast = m => errors.push(m); toast.error = m => errors.push(m); toast.success = m => success.push(m);
-  const context = { id: 'synthetic', AbortController, mountedRef: { current: true }, projectReadSequence: { current: 0 }, projectReadsActive: { current: 0 }, generationBusyRef: { current: false }, pollRef: { current: null }, toast,
+  const context = { id: 'synthetic', AbortController, mountedRef: { current: true }, projectReadSequence: { current: 0 }, projectReadsActive: { current: 0 }, generationBusyRef: { current: false }, slideMutationBusyRef: { current: false }, pollRef: { current: null }, toast,
     showQuotaNotice: (res, d) => { if (res.status !== 403 || d?.code !== 'LIMIT_REACHED') return false; state.limitMsg = d.error; state.limitUpgradeUrl = d.upgradeUrl === '/doyaslide/pricing' ? d.upgradeUrl : null; return true; },
     setInterval: fn => { pollCallback = fn; return 1; }, stopPoll: () => { pollCleared = true; },
     window: { setTimeout: (fn, ms) => { timers.set(++timerId, { fn, ms }); return timerId; }, clearTimeout: id => timers.delete(id) },
