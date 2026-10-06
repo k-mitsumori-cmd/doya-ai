@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES, AREAS as AREA_LIST, SIZES } from '@/lib/doyalist/constants'
 import { AREA_TO_PREFECTURES } from '@/lib/doyalist/collect/prefecture-codes'
+import { KEYWORD_UNKNOWN_RESULT, parseKeywordTags, readKeywordResponse } from '@/lib/doyalist/keyword-response-client'
 import { readBillingResponse } from '@/lib/billing-response-client'
 import { DOYALIST_COLLECTION_UNKNOWN, parseCollectionUsage, readCollectionResponse, validCollectionResult } from '@/lib/doyalist/collect-response-client'
 import { readDoyalistPreferences } from '@/lib/doyalist/preferences'
@@ -117,9 +118,25 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
 
   // AI変換タグ
   const [expanding, setExpanding] = useState(false)
-  const [aiTags, setAiTags] = useState<string[]>([])
+  const keywordEpoch = useRef({ keywords, industry, version: 0 })
+  if (keywordEpoch.current.keywords !== keywords || keywordEpoch.current.industry !== industry) {
+    keywordEpoch.current = { keywords, industry, version: keywordEpoch.current.version + 1 }
+  }
+  const keywordKey = keywordEpoch.current.version
+  const [storedTags, setStoredTags] = useState<{ key: number; tags: string[] } | null>(null)
+  const aiTags = storedTags?.key === keywordKey ? storedTags.tags : []
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
-  const activeTagList = useMemo(() => Array.from(activeTags), [activeTags])
+  const activeTagList = useMemo(() => storedTags?.key === keywordKey ? Array.from(activeTags) : [], [activeTags, storedTags, keywordKey])
+  const pendingKeyword = useRef<{ key: number; controller: AbortController; tid: string } | null>(null)
+  const cancelKeyword = useCallback(() => {
+    const operation = pendingKeyword.current
+    if (operation) { operation.controller.abort(); toast.dismiss(operation.tid) }
+    pendingKeyword.current = null
+  }, [])
+  useEffect(() => {
+    if (pendingKeyword.current && pendingKeyword.current.key !== keywordKey) { cancelKeyword(); setExpanding(false) }
+  }, [keywordKey, cancelKeyword])
+  useEffect(() => () => cancelKeyword(), [cancelKeyword])
   const isSignedIn = Boolean(session?.user)
 
   // 実数プレビュー
@@ -128,39 +145,43 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
   const [estimateIsApprox, setEstimateIsApprox] = useState(false)
   const [estimateNote, setEstimateNote] = useState<string | null>(null)
 
-  // キーワード入力時にタグをリセット
+  // Invalidate synchronously: an old response must not win between the input event and render.
   const handleKeywordChange = (v: string) => {
-    setKeywords(v)
-    setAiTags([])
-    setActiveTags(new Set())
+    if (v !== keywordEpoch.current.keywords) keywordEpoch.current = { ...keywordEpoch.current, keywords: v, version: keywordEpoch.current.version + 1 }
+    cancelKeyword(); setExpanding(false)
+    setKeywords(v); setStoredTags(null); setActiveTags(new Set())
+  }
+
+  const handleIndustryChange = (value: string) => {
+    if (value !== keywordEpoch.current.industry) keywordEpoch.current = { ...keywordEpoch.current, industry: value, version: keywordEpoch.current.version + 1 }
+    cancelKeyword(); setExpanding(false)
+    setIndustry(value); setStoredTags(null); setActiveTags(new Set())
   }
 
   const handleExpandKeyword = async () => {
-    if (!keywords.trim()) {
-      toast.error('キーワードを入力してください')
-      return
-    }
+    if (pendingKeyword.current || identityEpoch.current.version !== epoch || keywordEpoch.current.version !== keywordKey) return
+    if (status !== 'authenticated' || !session?.user?.id) { toast.error('ログイン状態をご確認ください'); return }
+    if (!keywords.trim()) { toast.error('キーワードを入力してください'); return }
+    if (keywords.length > 1000) { toast.error('キーワードは1,000文字以内で入力してください'); return }
+    const operation = { key: keywordKey, controller: new AbortController(), tid: toast.loading('AIが検索ワードに変換中...') }
+    pendingKeyword.current = operation
+    const current = () => pendingKeyword.current === operation && !operation.controller.signal.aborted &&
+      identityEpoch.current.version === epoch && keywordEpoch.current.version === operation.key
     setExpanding(true)
-    const tid = toast.loading('AIが検索ワードに変換中...')
     try {
-      const res = await fetch('/api/doyalist/expand-keywords', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword: keywords, industry }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        toast.error(data?.error || '変換に失敗しました', { id: tid })
-        return
-      }
-      const tags: string[] = data.tags || []
-      setAiTags(tags)
-      setActiveTags(new Set(tags))
-      toast.success(`${tags.length}個のタグに変換しました`, { id: tid })
-    } catch (e: any) {
-      toast.error(e?.message || '通信エラー', { id: tid })
+      const response = await readKeywordResponse({
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keyword: keywords, industry }),
+      }, operation.controller.signal)
+      if (!current()) return
+      const tags = response.ok ? parseKeywordTags(response.data) : null
+      if (!tags) throw new Error(KEYWORD_UNKNOWN_RESULT)
+      setStoredTags({ key: operation.key, tags }); setActiveTags(new Set(tags))
+      toast.success(`${tags.length}個のタグに変換しました`, { id: operation.tid })
+    } catch {
+      if (current()) toast.error(KEYWORD_UNKNOWN_RESULT, { id: operation.tid })
     } finally {
-      setExpanding(false)
+      if (current()) { pendingKeyword.current = null; setExpanding(false) }
+      operation.controller.abort()
     }
   }
 
@@ -221,7 +242,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
 
   // 検索に使うキーワード: AIタグ（選択中）優先 → ユーザー入力 → なし
   const searchKeywords = (): string => {
-    const selectedTags = Array.from(activeTags)
+    const selectedTags = activeTagList
     if (selectedTags.length > 0) return selectedTags.join(',')
     return keywords
   }
@@ -417,7 +438,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label={<><span className="material-symbols-outlined align-middle text-base mr-1">apartment</span>業界</>} value={industry} onChange={setIndustry} options={INDUSTRIES} />
+                <Field label={<><span className="material-symbols-outlined align-middle text-base mr-1">apartment</span>業界</>} value={industry} onChange={handleIndustryChange} options={INDUSTRIES} />
                 <Field label={<><span className="material-symbols-outlined align-middle text-base mr-1">map</span>エリア</>} value={area} onChange={handleAreaChange} options={AREAS} />
                 <Field label={<><span className="material-symbols-outlined align-middle text-base mr-1">groups</span>企業規模</>} value={size} onChange={setSize} options={SIZES} />
               </div>

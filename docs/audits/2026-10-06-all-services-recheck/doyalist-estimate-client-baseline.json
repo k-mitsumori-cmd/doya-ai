@@ -1,0 +1,7 @@
+{
+  "status": "reproduced",
+  "rawKeywordOmittedFromEstimateButUsedForCollection": true,
+  "fractionalCountAndTruthyStringApproxAccepted": true,
+  "stalledEstimateHasNoBrowserDeadline": true,
+  "scope": "Actual mounted production Tool with real Session context and synthetic HTTP/clock. No remote provider or DB writes."
+}

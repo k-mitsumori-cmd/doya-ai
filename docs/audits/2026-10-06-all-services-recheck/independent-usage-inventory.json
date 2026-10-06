@@ -37,7 +37,7 @@
         "src/components/doyalist/ToolForm.tsx",
         "src/app/doyalist/Tool.tsx"
       ],
-      "state": "5c9b1512 layout CI success/production READY; authenticated layout publication is not proven by anonymous HTML. ToolForm 5ee64c4f pushed to main after 37 mounted cases, 13 API cases and frozen 2575-source release gate; CI succeeded; production build still being tracked. Main collection candidate has 21 callback and 8 mounted cases passing, full 2578-source gate passed unchanged; not yet pushed. Keyword expansion races/invalid response handling reproduced and remain unfixed.",
+      "state": "5ee64c4f ToolForm CI success, production READY and 3 anonymous tool pages/20 JS publication confirmed; real paid generation and DB remain unverified. be94f76d main collection pushed, CI success, production build tracking. Keyword repair: 27 mounted cases plus existing callback21 cases, full 2579-source release passed unchanged, not pushed yet. Estimate criteria/types/deadline defects reproduced and remain for next repair. Layout private authenticated flow remains unverified.",
       "proof": "doyalist-collect-repair.json"
     },
     {

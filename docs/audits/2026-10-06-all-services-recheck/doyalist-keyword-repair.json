@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-06T19:03:50.064298+00:00",
+  "status": "local-release-passed-not-pushed",
+  "baseCommit": "be94f76db38a1f0789ee9ee7f0a01c070d766fb1",
+  "changes": [
+    "Synchronous operation lock shared by button and Enter",
+    "Input and industry epochs invalidate late responses including ABA and same-turn edits",
+    "Account epoch and unmount cancel stale work and dismiss loading toast",
+    "Require explicit success and 1-8 valid nonempty tags of at most 20 characters; normalize duplicate keys",
+    "Keep valid same-context tags on failed or malformed response",
+    "65-second fetch/body deadline and 64KiB streamed bound; no raw exception messages",
+    "Do not cancel legitimate same-actor SDK refresh; no automatic retry of provider POST"
+  ],
+  "evidence": {
+    "mountedCases": 27,
+    "existingCollectionCallbackCases": 21,
+    "typecheckExitCode": 0,
+    "targetedLintErrors": 0,
+    "existingImgWarnings": 7,
+    "fullGate": "doyalist-keyword-release-2b3bcd89-6633-4e26-95dd-c1d8cbe38e5a",
+    "fullGateStatus": "passed",
+    "unchangedSourceFiles": 2579
+  },
+  "limits": [
+    "Synthetic network and clock only: no real AI/provider/project/DB mutations",
+    "Browser abort does not establish provider cancellation or refund",
+    "Estimate criteria/response/deadline defects reproduced and remain for the next repair",
+    "17-service/2074-item full audit is not complete"
+  ]
+}
