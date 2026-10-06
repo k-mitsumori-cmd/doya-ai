@@ -1,0 +1,96 @@
+PASS quote: valid invite preserves organization and role; encoded GET is abortable and no-store
+PASS quote: failed or malformed reads cannot accept and can be rechecked
+PASS quote: missing token stops loading safely without API or acceptance
+PASS quote: non-JSON 401 offers sign-in before attempting body parsing
+PASS quote: non-JSON wrong-account rejection switches through sign-out and safely retries
+PASS quote: expired GET or POST never permits acceptance or account switching
+PASS quote: missing or conflicted POST requires a fresh lookup before acceptance
+PASS quote: network rejection and invalid successful POST never show success or private details
+PASS quote: duplicate participation is synchronously blocked
+PASS quote: successful and already-member responses schedule only the service destination
+PASS quote: used invitation cannot POST
+PASS quote: API, JSON and failure arriving after unmount cannot change state
+PASS quote: recheck is aborted on unmount and late read cannot restore acceptance
+PASS quote: history restoration rereads invitation and ignores stale participation
+PASS quote: duplicate SDK calls are blocked and stale SDK failure cannot affect a restored invite
+PASS mensetsu: valid invite preserves organization and role; encoded GET is abortable and no-store
+PASS mensetsu: failed or malformed reads cannot accept and can be rechecked
+PASS mensetsu: missing token stops loading safely without API or acceptance
+PASS mensetsu: non-JSON 401 offers sign-in before attempting body parsing
+PASS mensetsu: non-JSON wrong-account rejection switches through sign-out and safely retries
+PASS mensetsu: expired GET or POST never permits acceptance or account switching
+PASS mensetsu: missing or conflicted POST requires a fresh lookup before acceptance
+PASS mensetsu: network rejection and invalid successful POST never show success or private details
+PASS mensetsu: duplicate participation is synchronously blocked
+PASS mensetsu: successful and already-member responses schedule only the service destination
+PASS mensetsu: used invitation cannot POST
+PASS mensetsu: API, JSON and failure arriving after unmount cannot change state
+PASS mensetsu: recheck is aborted on unmount and late read cannot restore acceptance
+PASS mensetsu: history restoration rereads invitation and ignores stale participation
+PASS mensetsu: duplicate SDK calls are blocked and stale SDK failure cannot affect a restored invite
+PASS aishodan: valid invite preserves organization and role; encoded GET is abortable and no-store
+PASS aishodan: failed or malformed reads cannot accept and can be rechecked
+PASS aishodan: missing token stops loading safely without API or acceptance
+PASS aishodan: non-JSON 401 offers sign-in before attempting body parsing
+PASS aishodan: non-JSON wrong-account rejection switches through sign-out and safely retries
+PASS aishodan: expired GET or POST never permits acceptance or account switching
+PASS aishodan: missing or conflicted POST requires a fresh lookup before acceptance
+PASS aishodan: network rejection and invalid successful POST never show success or private details
+PASS aishodan: duplicate participation is synchronously blocked
+PASS aishodan: successful and already-member responses schedule only the service destination
+PASS aishodan: used invitation cannot POST
+PASS aishodan: API, JSON and failure arriving after unmount cannot change state
+PASS aishodan: recheck is aborted on unmount and late read cannot restore acceptance
+PASS aishodan: history restoration rereads invitation and ignores stale participation
+PASS aishodan: duplicate SDK calls are blocked and stale SDK failure cannot affect a restored invite
+{
+  "passed": 45,
+  "scope": "Actual three TSX wrappers, shared component and hook; synthetic API/SDK/timers; no real participation, email or DB writes",
+  "results": [
+    "quote: valid invite preserves organization and role; encoded GET is abortable and no-store",
+    "quote: failed or malformed reads cannot accept and can be rechecked",
+    "quote: missing token stops loading safely without API or acceptance",
+    "quote: non-JSON 401 offers sign-in before attempting body parsing",
+    "quote: non-JSON wrong-account rejection switches through sign-out and safely retries",
+    "quote: expired GET or POST never permits acceptance or account switching",
+    "quote: missing or conflicted POST requires a fresh lookup before acceptance",
+    "quote: network rejection and invalid successful POST never show success or private details",
+    "quote: duplicate participation is synchronously blocked",
+    "quote: successful and already-member responses schedule only the service destination",
+    "quote: used invitation cannot POST",
+    "quote: API, JSON and failure arriving after unmount cannot change state",
+    "quote: recheck is aborted on unmount and late read cannot restore acceptance",
+    "quote: history restoration rereads invitation and ignores stale participation",
+    "quote: duplicate SDK calls are blocked and stale SDK failure cannot affect a restored invite",
+    "mensetsu: valid invite preserves organization and role; encoded GET is abortable and no-store",
+    "mensetsu: failed or malformed reads cannot accept and can be rechecked",
+    "mensetsu: missing token stops loading safely without API or acceptance",
+    "mensetsu: non-JSON 401 offers sign-in before attempting body parsing",
+    "mensetsu: non-JSON wrong-account rejection switches through sign-out and safely retries",
+    "mensetsu: expired GET or POST never permits acceptance or account switching",
+    "mensetsu: missing or conflicted POST requires a fresh lookup before acceptance",
+    "mensetsu: network rejection and invalid successful POST never show success or private details",
+    "mensetsu: duplicate participation is synchronously blocked",
+    "mensetsu: successful and already-member responses schedule only the service destination",
+    "mensetsu: used invitation cannot POST",
+    "mensetsu: API, JSON and failure arriving after unmount cannot change state",
+    "mensetsu: recheck is aborted on unmount and late read cannot restore acceptance",
+    "mensetsu: history restoration rereads invitation and ignores stale participation",
+    "mensetsu: duplicate SDK calls are blocked and stale SDK failure cannot affect a restored invite",
+    "aishodan: valid invite preserves organization and role; encoded GET is abortable and no-store",
+    "aishodan: failed or malformed reads cannot accept and can be rechecked",
+    "aishodan: missing token stops loading safely without API or acceptance",
+    "aishodan: non-JSON 401 offers sign-in before attempting body parsing",
+    "aishodan: non-JSON wrong-account rejection switches through sign-out and safely retries",
+    "aishodan: expired GET or POST never permits acceptance or account switching",
+    "aishodan: missing or conflicted POST requires a fresh lookup before acceptance",
+    "aishodan: network rejection and invalid successful POST never show success or private details",
+    "aishodan: duplicate participation is synchronously blocked",
+    "aishodan: successful and already-member responses schedule only the service destination",
+    "aishodan: used invitation cannot POST",
+    "aishodan: API, JSON and failure arriving after unmount cannot change state",
+    "aishodan: recheck is aborted on unmount and late read cannot restore acceptance",
+    "aishodan: history restoration rereads invitation and ignores stale participation",
+    "aishodan: duplicate SDK calls are blocked and stale SDK failure cannot affect a restored invite"
+  ]
+}

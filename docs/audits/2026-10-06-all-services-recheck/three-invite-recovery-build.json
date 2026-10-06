@@ -1,0 +1,21 @@
+{
+  "session": 52060,
+  "exitCode": 0,
+  "observedAt": "2026-10-06T00:55:35.941822+00:00",
+  "log": "/tmp/doya-three-invite-recovery-build-20261006.log",
+  "sourceHashes": {
+    "src/components/OrganizationInvitePage.tsx": "656973c9ca05b9b12930382479e5c656edb060d3f624f723fec29ee19fe77c3e",
+    "src/lib/safe-signin-callback.ts": "d10677ec09e16ff2054ce38c6bb17034d13b88fb4c7520290e072fe1966b1e8c",
+    "scripts/security-regression/verify-signin-recovery.cjs": "31c5b9ca5ee306943f03d375cd696031e0f196fb288d0e0a7320df8434916bc9",
+    "scripts/security-regression/verify-organization-invite-recovery.cjs": "7391ca7345a943508e1a46ce67ef66026312f749225f7b25e5321522e79547ed",
+    "scripts/security-regression/run.cjs": "8cb0084eab8014779035a5a2a00004700b541dbf57bceb5f4981dd2890b32de3",
+    "src/app/quote/invite/[token]/page.tsx": "ef3efc0313783ff6d23643556845adb00736288d9673fd409e8324d5103b3e7b",
+    "src/app/mensetsu/invite/[token]/page.tsx": "8d31ce6791acb31cffcc96dedb4085a70797027d73d4c820a6f4b1f577d714db",
+    "src/app/aishodan/invite/[token]/page.tsx": "04958462618a7e3b2a86a238940515f3a4560f16ae3ac44c5c43b20c348269c7"
+  },
+  "newSyntheticGroups": 45,
+  "signInGroups": 10,
+  "existingServiceAuthGroups": 43,
+  "targetedLint": "passed",
+  "scope": "Prisma generation, full offline security regression, tsc and Next build succeeded; authenticated production participation unverified"
+}

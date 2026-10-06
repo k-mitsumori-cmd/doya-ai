@@ -1,0 +1,24 @@
+{
+  "sha": "d0e8bc21bd2d08b55b27cdba153ef5f1938e8cc8",
+  "mainPush": "succeeded",
+  "deploymentId": "dpl_9eZEQbRFKwqfsMHvEFcWqDYmKuqw",
+  "deploymentState": "BUILDING",
+  "ci": {
+    "conclusion": "",
+    "databaseId": 37395578244,
+    "headSha": "d0e8bc21bd2d08b55b27cdba153ef5f1938e8cc8",
+    "status": "in_progress"
+  },
+  "observedAt": "2026-10-06T00:55:04.297748+00:00",
+  "localBuildSession": 83340,
+  "localBuildExitCode": 0,
+  "productionAuthenticatedQA": "not performed",
+  "deploymentSha": "d0e8bc21bd2d08b55b27cdba153ef5f1938e8cc8",
+  "aliases": [
+    "doya-ai-surisutas-projects.vercel.app",
+    "doya-ai-git-main-surisutas-projects.vercel.app"
+  ],
+  "ciStatus": "completed",
+  "ciConclusion": "success",
+  "ciSha": "d0e8bc21bd2d08b55b27cdba153ef5f1938e8cc8"
+}

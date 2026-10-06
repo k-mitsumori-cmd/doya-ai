@@ -1,0 +1,95 @@
+{
+  "scope": "Actual three pages/shared component/React/installed NextAuth SDK; synthetic API and authentication; prior local compiled CSS; router stub; no external OAuth or participation",
+  "results": [
+    {
+      "service": "quote",
+      "case": "non-JSON-401",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=quote&mode=signin\", URL: \"http://127.0.0.1:34749/qa.html?service=quote&mode=signin\".\n0 AXWebArea 127.0.0.1:34749/qa.html?service=quote&mode=signin\n\t1 container root\n\t\t2 text Isolated QA: synthetic API/auth, no production writes\n\t\t3 container\n\t\t\t4 text ドヤ見積もりAI\n\t\t\t5 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t6 text 招待を確認できませんでした\n\t\t\t7 text ログインが必要です。Googleでログインしてから、招待を受けてください。\n\t\t\t8 button Googleでログイン\n\t\t\t9 button 招待の状態を再確認\n\t\t10 container\n\t\t\t11 text ログインが必要です。Googleでログインしてから、招待を受けてください。\n\nThe focused UI element is 0 AXWebArea 127.0.0.1:34749/qa.html?service=quote&mode=signin"
+    },
+    {
+      "service": "quote",
+      "case": "SDK-failure-retry-ready",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=quote&mode=signin\", URL: \"http://127.0.0.1:34749/qa.html?service=quote&mode=signin\".\n0 AXWebArea 127.0.0.1:34749/qa.html?service=quote&mode=signin\n\t1 container root\n\t\t2 text Isolated QA: synthetic API/auth, no production writes\n\t\t3 container\n\t\t\t4 text ドヤ見積もりAI\n\t\t\t5 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t6 text 招待を確認できませんでした\n\t\t\t7 text ログインを開始できませんでした。もう一度お試しください。\n\t\t\t8 button Googleでログイン\n\t\t\t9 button 招待の状態を再確認\n\t\t10 container\n\t\t\t11 text ログインを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 0 AXWebArea 127.0.0.1:34749/qa.html?service=quote&mode=signin"
+    },
+    {
+      "service": "quote",
+      "case": "SDK-second-failure-stays-retryable",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=quote&mode=signin\", URL: \"http://127.0.0.1:34749/qa.html?service=quote&mode=signin\".\n0 AXWebArea 127.0.0.1:34749/qa.html?service=quote&mode=signin\n\t1 container root\n\t\t2 text Isolated QA: synthetic API/auth, no production writes\n\t\t3 container\n\t\t\t4 text ドヤ見積もりAI\n\t\t\t5 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t6 text 招待を確認できませんでした\n\t\t\t7 text ログインを開始できませんでした。もう一度お試しください。\n\t\t\t8 button Googleでログイン\n\t\t\t9 button 招待の状態を再確認\n\t\t10 container\n\t\t\t11 text ログインを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 0 AXWebArea 127.0.0.1:34749/qa.html?service=quote&mode=signin"
+    },
+    {
+      "service": "mensetsu",
+      "case": "non-JSON-401",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=mensetsu&mode=signin\", URL: \"http://127.0.0.1:34749/qa.html?service=mensetsu&mode=signin\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=mensetsu&mode=signin\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤ面接官\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text ログインが必要です。Googleでログインしてから、招待を受けてください。\n\t\t\t9 button Googleでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text ログインが必要です。Googleでログインしてから、招待を受けてください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=mensetsu&mode=signin"
+    },
+    {
+      "service": "mensetsu",
+      "case": "SDK-failure-retry-ready",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=mensetsu&mode=signin\", URL: \"http://127.0.0.1:34749/qa.html?service=mensetsu&mode=signin\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=mensetsu&mode=signin\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤ面接官\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text ログインを開始できませんでした。もう一度お試しください。\n\t\t\t9 button Googleでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text ログインを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=mensetsu&mode=signin"
+    },
+    {
+      "service": "mensetsu",
+      "case": "SDK-second-failure-stays-retryable",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=mensetsu&mode=signin\", URL: \"http://127.0.0.1:34749/qa.html?service=mensetsu&mode=signin\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=mensetsu&mode=signin\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤ面接官\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text ログインを開始できませんでした。もう一度お試しください。\n\t\t\t9 button Googleでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text ログインを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=mensetsu&mode=signin"
+    },
+    {
+      "service": "aishodan",
+      "case": "non-JSON-401",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=aishodan&mode=signin\", URL: \"http://127.0.0.1:34749/qa.html?service=aishodan&mode=signin\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=aishodan&mode=signin\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤAI商談\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text ログインが必要です。Googleでログインしてから、招待を受けてください。\n\t\t\t9 button Googleでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text ログインが必要です。Googleでログインしてから、招待を受けてください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=aishodan&mode=signin"
+    },
+    {
+      "service": "aishodan",
+      "case": "SDK-failure-retry-ready",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=aishodan&mode=signin\", URL: \"http://127.0.0.1:34749/qa.html?service=aishodan&mode=signin\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=aishodan&mode=signin\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤAI商談\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text ログインを開始できませんでした。もう一度お試しください。\n\t\t\t9 button Googleでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text ログインを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=aishodan&mode=signin"
+    },
+    {
+      "service": "aishodan",
+      "case": "SDK-second-failure-stays-retryable",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=aishodan&mode=signin\", URL: \"http://127.0.0.1:34749/qa.html?service=aishodan&mode=signin\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=aishodan&mode=signin\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤAI商談\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text ログインを開始できませんでした。もう一度お試しください。\n\t\t\t9 button Googleでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text ログインを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=aishodan&mode=signin"
+    },
+    {
+      "service": "quote",
+      "case": "non-JSON-403",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=quote&mode=switch\", URL: \"http://127.0.0.1:34749/qa.html?service=quote&mode=switch\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=quote&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤ見積もりAI\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text 招待されたメールアドレスのアカウントでログインしてください。\n\t\t\t9 button 別のアカウントでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text 招待されたメールアドレスのアカウントでログインしてください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=quote&mode=switch"
+    },
+    {
+      "service": "quote",
+      "case": "switch-failure-retry-ready",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=quote&mode=switch\", URL: \"http://127.0.0.1:34749/qa.html?service=quote&mode=switch\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=quote&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤ見積もりAI\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\t\t\t9 button 別のアカウントでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=quote&mode=switch"
+    },
+    {
+      "service": "quote",
+      "case": "switch-second-failure-stays-retryable",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=quote&mode=switch\", URL: \"http://127.0.0.1:34749/qa.html?service=quote&mode=switch\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=quote&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤ見積もりAI\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\t\t\t9 button 別のアカウントでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=quote&mode=switch"
+    },
+    {
+      "service": "mensetsu",
+      "case": "non-JSON-403",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=mensetsu&mode=switch\", URL: \"http://127.0.0.1:34749/qa.html?service=mensetsu&mode=switch\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=mensetsu&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤ面接官\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text 招待されたメールアドレスのアカウントでログインしてください。\n\t\t\t9 button 別のアカウントでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text 招待されたメールアドレスのアカウントでログインしてください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=mensetsu&mode=switch"
+    },
+    {
+      "service": "mensetsu",
+      "case": "switch-failure-retry-ready",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=mensetsu&mode=switch\", URL: \"http://127.0.0.1:34749/qa.html?service=mensetsu&mode=switch\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=mensetsu&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤ面接官\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\t\t\t9 button 別のアカウントでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=mensetsu&mode=switch"
+    },
+    {
+      "service": "mensetsu",
+      "case": "switch-second-failure-stays-retryable",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=mensetsu&mode=switch\", URL: \"http://127.0.0.1:34749/qa.html?service=mensetsu&mode=switch\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=mensetsu&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤ面接官\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\t\t\t9 button 別のアカウントでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=mensetsu&mode=switch"
+    },
+    {
+      "service": "aishodan",
+      "case": "non-JSON-403",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=aishodan&mode=switch\", URL: \"http://127.0.0.1:34749/qa.html?service=aishodan&mode=switch\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=aishodan&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤAI商談\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text 招待されたメールアドレスのアカウントでログインしてください。\n\t\t\t9 button 別のアカウントでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text 招待されたメールアドレスのアカウントでログインしてください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=aishodan&mode=switch"
+    },
+    {
+      "service": "aishodan",
+      "case": "switch-failure-retry-ready",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=aishodan&mode=switch\", URL: \"http://127.0.0.1:34749/qa.html?service=aishodan&mode=switch\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=aishodan&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤAI商談\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\t\t\t9 button 別のアカウントでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=aishodan&mode=switch"
+    },
+    {
+      "service": "aishodan",
+      "case": "switch-second-failure-stays-retryable",
+      "state": "Browser tab: 17, Title: \"127.0.0.1:34749/qa.html?service=aishodan&mode=switch\", URL: \"http://127.0.0.1:34749/qa.html?service=aishodan&mode=switch\".\n1 AXWebArea 127.0.0.1:34749/qa.html?service=aishodan&mode=switch\n\t2 container root\n\t\t3 text Isolated QA: synthetic API/auth, no production writes\n\t\t4 container\n\t\t\t5 text ドヤAI商談\n\t\t\t6 heading 招待を確認できませんでした, Value: 1\n\t\t\t\t7 text 招待を確認できませんでした\n\t\t\t8 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\t\t\t9 button 別のアカウントでログイン\n\t\t\t10 button 招待の状態を再確認\n\t\t11 container\n\t\t\t12 text アカウントの切り替えを開始できませんでした。もう一度お試しください。\n\nThe focused UI element is 1 AXWebArea 127.0.0.1:34749/qa.html?service=aishodan&mode=switch"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "reads": {
+    "quote": 2,
+    "mensetsu": 2,
+    "aishodan": 2
+  },
+  "posts": 6,
+  "signins": 6,
+  "signouts": 6,
+  "externalOAuthStarted": 0,
+  "forwardedApiCalls": 0
+}

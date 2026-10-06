@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-10-06T00:54:18.104Z",
+  "htmlStatus": 200,
+  "scriptStatus": 200,
+  "script": "/_next/static/chunks/app/hr/invite/%5Btoken%5D/page-55038c28409b15b2.js?dpl=dpl_DTggTKNmLbMSdNbzyicnueD9iU82",
+  "hasRecheck": true,
+  "hasCancelledReason": true,
+  "scope": "Read-only public HTML/JS; no browser execution, invitation API GET or acceptance; not authenticated end-to-end verification"
+}

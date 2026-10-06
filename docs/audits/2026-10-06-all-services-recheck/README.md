@@ -192,3 +192,17 @@ APIの追加点検では、AIO/商談準備は組織ロック後の招待再読�
 追加の横断点検：quote・mensetsu・aishodanの招待画面はGETにabort/旧token応答抑止がなく、POSTはJSON解析を401判定より前に実行し、catchなしのため通信失敗時に利用者向け復旧案内がない。エラー分岐には再確認/アカウント切替もなく、成功後のsetTimeoutにアンマウントcleanupがない。3画面を次の補修対象に記録する。GET APIはinviteオブジェクトを返すため画面のjson.inviteとは一致している（AIO/商談準備の平坦レスポンスと混同しない）。同じチーム招待でも応答契約が異なり、各APIの契約を維持して補修する必要がある。
 
 AIO・商談準備再確認補修の最終全体ビルド83340は終了コード0。Prisma生成・全体回帰・型検査・Next本番ビルド成功、3ソースSHA-256は開始時と一致。対象ESLintとdiff check成功。HR状態補修439585c7はCI成功、Vercel同じデプロイIDはまだBUILDINGのため本番反映完了としない。
+
+## 見積もり・面接官・AI商談の招待復旧を補修
+
+3画面はOrganizationInvitePageで同じ招待応答契約（GET invite、POST ok===true）に沿った処理を共有。token別key、URLエンコード、GET no-store/abort/現在試行判定、厳密な表示情報検証、不正成功の拒否を追加した。非JSONでも401を先に判定して明示ログイン導線を、現行APIで本人不一致を示す403には切替導線を出す。切替は先にsignOut、同じ招待URLを保持して共通ログインへ戻る。ログインのselect_accountはこの3サービスも対象とし、通常ルートのログインは変更しない。招待先メールはGETで公開しない既存契約を維持。組織名・権限・利用説明とサービス名は旧画面の内容を保持。
+
+POST404/409や通信/JSON失敗後は古い参加情報を解除し再確認を案内。期限切れ410は再送依頼とし、参加や切替を出さない。成功/既存メンバーのok===trueだけで成功表示・1200msのサービス遷移を行い、アンマウント/履歴復元でタイマーを解除。履歴復元時に再取得し、過去のAPI/SDK完了を反映しない。参加/認証の即時ロックと失敗解除、安全なエラー文を共有する。表示エラーとトーストの両方を維持し、装飾アイコンはaria-hidden。
+
+実3ラッパー+共通TSX/フック合成45項目、共通signin合成10項目、既存AIO/商談準備/調査画面43項目成功。最終ESLint成功。旧d0e8bc21のラッパーを別場所に読み出すと新しいtoken別keyの回帰チェックで失敗（three-invite-recovery-baseline.log）。APIの本人/上限/claim実装は今回変更していない。実PostgreSQL競合、全17サービスの認証後通し確認、現在ER更新は未完了。
+
+隔離ブラウザは実React・3画面・共通TSX・導入済みNextAuth SDKと前回ビルドCSSで各サービスの非JSON401/403→明示ログイン/切替→SDK失敗→再試行を確認。合成POST6回、合成signin6回・signout6回、外部OAuthと上流転送0。API/認証は合成、ルータstub、アプリ共通レイアウト/本番認証完了の確認ではない。記録はthree-invite-recovery-browser.json、three-invite-recovery-harness-stats.json、three-invite-recovery-local.png。タブとプロキシは終了。最終全体ビルド52060を実行中。
+
+HR状態版439585c7は同じSHAのVercel Readyと本番別名、CI成功を現在照会で確認。public HTML/JSも再確認・取消案内のコードが配信されることを確認（hr-invite-state-production-439585c7.json）。AIO/商談準備版d0e8bc21はCI成功、本番BUILDINGが現在の照会値。HTML/JS確認は招待APIや実承諾の確認を代替しない。
+
+見積もり・面接官・AI商談の最終全体ビルド52060は終了コード0。Prisma生成・全体回帰・型検査・Next本番ビルド成功、開始時の8ソースSHA-256と一致。対象ESLint・diff check成功。監査表はこの補修で確認した招待期限/状態のC012だけを部分検証に更新し、他ユーザーIDの取得/更新/削除C013は補修根拠がないため未検証を維持。全サービスの監査は継続。
