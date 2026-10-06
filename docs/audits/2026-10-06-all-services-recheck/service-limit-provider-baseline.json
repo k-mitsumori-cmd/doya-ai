@@ -1,0 +1,180 @@
+{
+  "cases": 38,
+  "passed": 19,
+  "failed": 19,
+  "results": [
+    {
+      "name": "banner recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "banner old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "seo recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "seo old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "interview recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "interview old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "persona recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "persona old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "hr recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "hr old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "kintai recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "kintai old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "doyalist recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "doyalist old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "promane recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "promane old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "doyaslide recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "doyaslide old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "cunning recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "cunning old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "sfa recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "sfa old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "shodan recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "shodan old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "aio recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "aio old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "mensetsu recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "mensetsu old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "quote recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "quote old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "aishodan recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "aishodan old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "adimage recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "adimage old notice never returns after alpha beta alpha",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "Late previous-account quota response does not show for new account",
+      "passed": true
+    },
+    {
+      "name": "FREE PRO FREE transitions do not revive an old free notice",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "Guest login logout transitions do not revive old login prompt",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "Explicit quota event remains usable; Escape dismisses and restores focus",
+      "passed": true
+    }
+  ],
+  "scope": "Actual global provider, classifier and fetch observer mounted in StrictMode; synthetic sessions and quota replies across 17 active service IDs. No authenticated live service operations, trial eligibility API, generation, billing or customer data.",
+  "sourceCommit": "cfa921659dff49202b8290e3ec04d1a5ed8ec76e"
+}

@@ -10,7 +10,10 @@ import { tierFrom } from '@/lib/plan-utils'
 
 export default function ServiceLimitProvider() {
   const { data: session, status } = useSession()
-  const key = status + ':' + ((session?.user as any)?.id || session?.user?.email || '') + ':' + ((session?.user as any)?.plan || '')
+  const scope = JSON.stringify([status, (session?.user as any)?.id || session?.user?.email || '', (session?.user as any)?.plan || ''])
+  const epoch = useRef({ scope, version: 0 })
+  if (epoch.current.scope !== scope) epoch.current = { scope, version: epoch.current.version + 1 }
+  const key = JSON.stringify([scope, epoch.current.version])
   const account = useRef(key); account.current = key
   const [notice, setNotice] = useState<{ key: string; limit: ServiceLimit } | null>(null)
   const limit = notice?.key === key ? notice.limit : null

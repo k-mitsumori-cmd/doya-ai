@@ -1,0 +1,66 @@
+{
+  "checkedAt": "2026-10-06T16:52:12.259988+00:00",
+  "status": "full-local-gate-passed-not-deployed",
+  "baselineCommit": "cfa921659dff49202b8290e3ec04d1a5ed8ec76e",
+  "baseline": "service-limit-provider-baseline.json",
+  "current": "service-limit-provider-current.json",
+  "confirmedIssue": "Previously displayed allowance dialogs revived after returning to a prior account, plan or guest state.",
+  "baselineResult": {
+    "cases": 38,
+    "passed": 19,
+    "failed": 19
+  },
+  "currentResult": {
+    "cases": 38,
+    "passed": 38,
+    "failed": 0
+  },
+  "changes": [
+    "Scope notice and delayed observers to each authentication transition; returning to the same actor does not revive earlier state"
+  ],
+  "testEnvironmentCorrection": "A failed DOM/null assertion attempted to inspect a large React DOM graph and the process was killed. Boolean assertions and a single provider compilation resolved this; no application change claimed from test process failure.",
+  "limitations": [
+    "Synthetic sessions and quota responses; 17 service IDs through actual global provider and classifier",
+    "No authenticated live 17-service end-to-end flow, real trial eligibility, paid generation or DB writes",
+    "Scope does not yet include navigation/organization transitions without auth change",
+    "Full goal remains active"
+  ],
+  "sourceHashes": {
+    "src/components/limits/ServiceLimitProvider.tsx": "f6d5f9978cbfdf6faadf8a2207de3e7c0830fb352aa83ae98a619fc037e0c9e6",
+    "scripts/security-regression/verify-service-limit-provider-mounted.cjs": "f53cae673ac9890a3fabd54397903e1edbc3aef0c18e067cf2be3dce573ec42e",
+    "scripts/security-regression/run.cjs": "c1d5357cddf54370139e742dbc9adc2c0aaf5e32d316e995fac614b60f50eff9"
+  },
+  "documentationRepair": {
+    "file": "reference/services/banner.md",
+    "change": "Corrected daily/image allowance to actual monthly allowances; separated legacy tiers from current unified subscription offer and image from AI-text limits",
+    "sha256": "26edbe39da3f49a6ff5aee283585867fb12285f5df813e7bd86f5d5f0b50e04f",
+    "evidence": [
+      "src/lib/pricing.ts",
+      "src/lib/usage-summary.ts",
+      "src/app/banner/pricing/page.tsx",
+      "src/lib/unified-plan.ts"
+    ]
+  },
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/service-limit-provider-release-6eeb6aa6-c905-4c38-ab30-8db5d090b28f",
+  "releaseState": {
+    "startedAt": "2026-10-06T16:51:40.408384+00:00",
+    "pid": 36322,
+    "head": "cfa921659dff49202b8290e3ec04d1a5ed8ec76e",
+    "sourceFiles": 2558,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T16:54:52.946109+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-06T16:54:54.631645+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-06T16:54:54.910285+00:00"
+  }
+}
