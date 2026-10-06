@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import InterviewUpsellModal from '@/components/interview/InterviewUpsellModal'
 import { createInterviewProjectRequest, readInterviewCreationResponse, InterviewCreationResponseError } from '@/lib/interview/creation-response'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { findInterviewUploadAttempt } from '@/lib/interview/upload-attempt'
 
 interface Project {
   id: string
@@ -93,14 +94,17 @@ const UPLOAD_TIPS = [
 const FLOATING_ICONS = ['mic', 'description', 'auto_awesome', 'movie', 'music_note', 'lightbulb', 'bolt', 'local_fire_department', 'rocket_launch', 'favorite']
 
 export default function InterviewTool() {
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
   const router = useRouter()
   const userName = (session?.user?.name || '').split(' ')[0] || 'ゲスト'
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadSpeedRef = useRef<Map<string, { startTime: number; lastLoaded: number; speed: number }>>(new Map())
   const xhrRef = useRef<Map<string, XMLHttpRequest>>(new Map())
-  const uploadActor = String(session?.user?.id || 'guest')
+  const resolvedActor = String(session?.user?.id || 'guest')
+  const lastResolvedActor = useRef(resolvedActor)
+  const uploadActor = sessionStatus === 'loading' ? lastResolvedActor.current : resolvedActor
   const uploadActorRef = useRef(uploadActor)
+  const uploadLifecycle = useRef(new AbortController())
   const dashboardAttempts = useRef<Map<string, { uploadKey: string; creation: { key: string; scope: string | null }; controller: AbortController | null; projectId?: string; material?: { signedUrl: string; materialId: string }; uploaded?: boolean; completed?: boolean }>>(new Map())
   const uploadsAlive = useRef(true)
 
@@ -109,21 +113,41 @@ export default function InterviewTool() {
   const [projectListError, setProjectListError] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [uploads, setUploads] = useState<Map<string, UploadingFile>>(new Map())
+  const [comparingCount, setComparingCount] = useState(0)
   const [tipIndex, setTipIndex] = useState(0)
 
   useEffect(() => {
     uploadsAlive.current = true
     uploadActorRef.current = uploadActor
+    uploadLifecycle.current = new AbortController()
+    const lifecycle = uploadLifecycle.current
     dashboardAttempts.current = new Map()
     setUploads(new Map())
+    setComparingCount(0)
     const attempts = dashboardAttempts.current
     const activeXhrs = xhrRef.current
     return () => {
       uploadsAlive.current = false
+      lifecycle.abort()
+      uploadLifecycle.current.abort()
       for (const attempt of attempts.values()) attempt.controller?.abort()
       for (const xhr of activeXhrs.values()) xhr.abort()
     }
   }, [uploadActor])
+
+  useEffect(() => {
+    if (sessionStatus !== 'loading') lastResolvedActor.current = resolvedActor
+    if (sessionStatus === 'loading') {
+      uploadLifecycle.current.abort()
+      for (const attempt of dashboardAttempts.current.values()) attempt.controller?.abort()
+      setComparingCount(0)
+      setUploads(prev => new Map(Array.from(prev, ([key, item]) => [key,
+        item.status === 'done' || item.status === 'error' ? item : { ...item, status: 'error' as const,
+          error: '利用情報を再確認しています。確認後に再試行してください。',
+          errorActionUrl: '/interview/projects', errorActionLabel: '保存されたプロジェクトを確認する' },
+      ])))
+    } else if (uploadLifecycle.current.signal.aborted) uploadLifecycle.current = new AbortController()
+  }, [sessionStatus, resolvedActor, uploadActor])
 
   // アップセルモーダル
   const [upsellOpen, setUpsellOpen] = useState(false)
@@ -135,6 +159,10 @@ export default function InterviewTool() {
     const controller = new AbortController()
     setProjects([])
     setProjectListError(false)
+    if (uploadActor === 'loading' || sessionStatus === 'loading') {
+      setLoading(true)
+      return () => controller.abort()
+    }
     if (uploadActor === 'guest') {
       setLoading(false)
       return () => controller.abort()
@@ -152,10 +180,10 @@ export default function InterviewTool() {
       .catch(() => { if (!controller.signal.aborted) setProjectListError(true) })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
-  }, [uploadActor])
+  }, [uploadActor, sessionStatus])
 
   // 豆知識サイクル — uploads.size でシンプルに判定
-  const uploadsExist = uploads.size > 0
+  const uploadsExist = uploads.size > 0 || comparingCount > 0
 
   useEffect(() => {
     if (!uploadsExist) return
@@ -181,14 +209,28 @@ export default function InterviewTool() {
 
   // ダッシュボードからのアップロード: プロジェクト自動作成 → アップロード → 文字起こし
   const uploadFromDashboard = useCallback(async (file: File) => {
-    if (!uploadsAlive.current || uploadActorRef.current !== uploadActor) return
-    const fingerprint = JSON.stringify([uploadActor, file.name, file.size, file.type, file.lastModified])
-    let operation = dashboardAttempts.current.get(fingerprint)
-    if (operation?.controller || operation?.completed) return
-    if (!operation) {
-      operation = { uploadKey: crypto.randomUUID(), creation: { key: crypto.randomUUID(), scope: null }, controller: null }
-      dashboardAttempts.current.set(fingerprint, operation)
+    if (sessionStatus === 'loading' || uploadActor === 'loading' || !uploadsAlive.current || uploadActorRef.current !== uploadActor) return
+    const lifecycle = uploadLifecycle.current
+    let operation: (typeof dashboardAttempts.current extends Map<string, infer T> ? T : never)
+    try {
+      const found = findInterviewUploadAttempt(file, dashboardAttempts.current, () => ({
+        uploadKey: crypto.randomUUID(), creation: { key: crypto.randomUUID(), scope: null }, controller: null,
+      }), lifecycle.signal)
+      if ('then' in found) {
+        setComparingCount(count => count + 1)
+        try { operation = await found } finally {
+          if (uploadsAlive.current && uploadActorRef.current === uploadActor && uploadLifecycle.current === lifecycle && !lifecycle.signal.aborted) setComparingCount(count => Math.max(0, count - 1))
+        }
+      } else operation = found
+    } catch {
+      if (uploadsAlive.current && uploadActorRef.current === uploadActor && uploadLifecycle.current === lifecycle && !lifecycle.signal.aborted) {
+        setUploads(prev => new Map(prev).set(crypto.randomUUID(), { file, progress: 0, status: 'error',
+          error: 'ファイルの内容を確認できませんでした。再試行してください。' }))
+      }
+      return
     }
+    if (!uploadsAlive.current || uploadActorRef.current !== uploadActor || uploadLifecycle.current !== lifecycle || lifecycle.signal.aborted) return
+    if (operation?.controller || operation?.completed) return
     const record = operation
     const active = new AbortController()
     record.controller = active
@@ -438,7 +480,7 @@ export default function InterviewTool() {
     } finally {
       if (record.controller === active) record.controller = null
     }
-  }, [router, uploadActor])
+  }, [router, uploadActor, sessionStatus])
 
   const handleFiles = (files: FileList | File[]) => {
     for (const file of Array.from(files)) {
@@ -526,12 +568,15 @@ export default function InterviewTool() {
         transition={{ delay: 0.3, duration: 0.5 }}
       >
         <div className="p-4 sm:p-8 md:p-12">
+          {sessionStatus === 'loading' && <p role="status" className="mb-4 text-sm text-slate-600">利用情報を確認しています。確認後にファイルを選択できます。</p>}
+          {comparingCount > 0 && <p role="status" className="mb-4 text-sm text-slate-600">同じ名前のファイルの内容を確認しています。大きなファイルは時間がかかる場合があります。</p>}
           {/* Drop Zone */}
           <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+            onDragOver={(e) => { e.preventDefault(); if (sessionStatus !== 'loading') setDragOver(true) }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => { if (sessionStatus !== 'loading') fileInputRef.current?.click() }}
+            aria-disabled={sessionStatus === 'loading'}
             className={`border-2 border-dashed rounded-xl flex flex-col items-center justify-center py-8 sm:py-14 px-4 sm:px-6 transition-all cursor-pointer group ${
               dragOver
                 ? 'border-[#7f19e6] bg-[#7f19e6]/10 scale-[1.01]'
@@ -542,6 +587,7 @@ export default function InterviewTool() {
               ref={fileInputRef}
               type="file"
               multiple
+              disabled={sessionStatus === 'loading'}
               accept=".mp3,.wav,.m4a,.ogg,.webm,.flac,.mp4,.mov,.avi,.pdf,.txt,.docx,.jpg,.jpeg,.png,.webp"
               onChange={(e) => {
                 if (e.target.files) handleFiles(e.target.files)

@@ -1,5 +1,9 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const uploadAttempt = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-upload-attempt.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (uploadAttempt.error || uploadAttempt.status !== 0) { console.error('Security regression failed: verify-interview-upload-attempt.cjs'); process.exit(1); }
+const uploadMounted = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-upload-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (uploadMounted.error || uploadMounted.status !== 0) { console.error('Security regression failed: verify-interview-upload-mounted.cjs'); process.exit(1); }
 for (const script of ['verify-interview-project-create.cjs', 'verify-interview-create-client.cjs', 'verify-interview-additional-create-clients.cjs', 'verify-interview-dashboard-list.cjs', 'verify-interview-upload-url-renewal.cjs', 'verify-interview-first-upload-replay.cjs', 'verify-interview-material-upload-client.cjs', 'verify-interview-transcription-client.cjs', 'verify-interview-legacy-transcription.cjs', 'verify-interview-stream-client.cjs', 'verify-interview-stream-mounted.cjs', 'verify-interview-material-actions-client.cjs']) {
   const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }

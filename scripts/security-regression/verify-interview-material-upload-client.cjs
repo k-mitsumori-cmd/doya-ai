@@ -2,13 +2,14 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=r
 const root=path.resolve(__dirname,'../..'),compile=s=>ts.transpileModule(s,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const file='src/app/interview/projects/[id]/materials/page.tsx',src=fs.readFileSync(path.join(root,file),'utf8'),ast=ts.createSourceFile(file,src,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 function extract(name){let source;function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)===name)source=(ts.isCallExpression(n.initializer)?n.initializer.arguments[0]:n.initializer).getText(ast);ts.forEachChild(n,visit)}visit(ast);assert.ok(source);return compile('('+source+');')}
+const {findInterviewUploadAttempt}=require('./load-typescript.cjs').load('src/lib/interview/upload-attempt.ts',{}, {AbortController,setTimeout,clearTimeout});
 const reader=compile(fs.readFileSync(path.join(root,'src/lib/interview/creation-response.ts'),'utf8')),tick=()=>new Promise(r=>setImmediate(r));
 const fileInput={name:'synthetic.pdf',size:10,type:'application/pdf',lastModified:1},signed={success:true,materialId:'material',signedUrl:'https://example.invalid/old'};
 function fixture(options={}){
  const requests=[],timers=new Map(),removalTimers=[];let timer=0;
  const state={uploads:new Map(),projectError:false,loading:true,materials:[],title:'',xhrCalls:0,urls:[],transcriptions:[],staleWrites:0};
  const exports={};vm.runInNewContext(reader,{exports,Error,AbortController,TextDecoder,TextEncoder,fetch:(url,init)=>new Promise((resolve,reject)=>requests.push({url,init,body:init.body?JSON.parse(init.body):null,resolve,reject})),setTimeout:fn=>{timers.set(++timer,fn);return timer},clearTimeout:id=>timers.delete(id)});
- const env={...exports,crypto:require('node:crypto'),AbortController,URL,Map,Date,Error,console:{warn(){}},projectId:'project',uploadContext:'context',uploadContextRef:{current:'context'},uploadsAlive:{current:true},materialUploads:{current:new Map()},projectRead:{current:null},uploadSpeedRef:{current:new Map()},SUPPORT_CONTACT_URL:'https://example.invalid/contact',
+ const env={...exports,findInterviewUploadAttempt,uploadLifecycle:{current:new AbortController()},setComparingCount(){},sessionStatus:'authenticated',crypto:require('node:crypto'),AbortController,URL,Map,Date,Error,console:{warn(){}},projectId:'project',uploadContext:'context',uploadContextRef:{current:'context'},uploadsAlive:{current:true},materialUploads:{current:new Map()},projectRead:{current:null},uploadSpeedRef:{current:new Map()},SUPPORT_CONTACT_URL:'https://example.invalid/contact',
  setUploads:fn=>{if(!env.uploadsAlive.current)state.staleWrites++;state.uploads=fn(state.uploads)},setProjectTitle:v=>state.title=v,setMaterials:v=>state.materials=v,setProjectError:v=>state.projectError=v,setLoading:v=>state.loading=v,startTranscription:id=>state.transcriptions.push(id),
  setTimeout:(fn,ms)=>{assert.equal(ms,3000);removalTimers.push(fn)},FormData:class{append(){}},
  XMLHttpRequest:class{constructor(){this.status=options.statuses?.shift()||200;this.listeners={};this.upload={addEventListener(){}}}addEventListener(k,fn){this.listeners[k]=fn}open(method,url){assert.equal(method,'PUT');state.urls.push(url)}setRequestHeader(){}send(){state.xhrCalls++;options.beforeLoad?.(env);this.listeners.load();this.listeners.loadend?.()}abort(){this.listeners.abort?.();this.listeners.loadend?.()}},
@@ -20,6 +21,7 @@ function fixture(options={}){
 async function next(f){await tick();return f.requests.at(-1)}
 async function finish(f){const confirm=await next(f);assert.equal(confirm.url,'/api/interview/materials/confirm');confirm.resolve(Response.json({success:true}));const refresh=await next(f);assert.equal(refresh.url,'/api/interview/projects/project');refresh.resolve(Response.json({success:true,project:{title:'saved',materials:[]}}))}
 (async()=>{let passed=0;
+ const loading=fixture();loading.env.sessionStatus='loading';await loading.run();await loading.env.fetchProject();assert.equal(loading.requests.length,0);passed++;
  for(const kind of ['http500','missing-id','object-id','invalid-json','private-error','http-url','credential-url','constructor-code','body-deadline']){
   const f=fixture(),first=f.run();await f.run();assert.equal(f.requests.length,1);const req=f.requests[0],key=req.body.requestKey;assert.match(key,/^[0-9a-f-]{36}$/i);
   if(kind==='private-error')req.reject(Error('SYNTHETIC_PRIVATE'));

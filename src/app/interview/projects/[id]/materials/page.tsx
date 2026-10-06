@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { readInterviewCreationResponse, InterviewCreationResponseError } from '@/lib/interview/creation-response'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { findInterviewUploadAttempt } from '@/lib/interview/upload-attempt'
 
 // ============================================
 // プラン別のファイルサイズ上限に対応した直接アップロードUI
@@ -126,9 +127,13 @@ export default function MaterialsPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
-  const { data: session } = useSession()
-  const uploadContext = JSON.stringify([projectId, session?.user?.id || 'guest'])
+  const { data: session, status: sessionStatus } = useSession()
+  const resolvedActor = String(session?.user?.id || 'guest')
+  const lastResolvedActor = useRef(resolvedActor)
+  const uploadActor = sessionStatus === 'loading' ? lastResolvedActor.current : resolvedActor
+  const uploadContext = JSON.stringify([projectId, uploadActor])
   const uploadContextRef = useRef(uploadContext)
+  const uploadLifecycle = useRef(new AbortController())
   const materialUploads = useRef<Map<string, { key: string; controller: AbortController | null; materialId?: string; signedUrl?: string; uploaded?: boolean; completed?: boolean }>>(new Map())
   const uploadsAlive = useRef(true)
   const transcriptionOperations = useRef<Map<string, { controller: AbortController | null; accepted: boolean; timer?: ReturnType<typeof setTimeout> }>>(new Map())
@@ -138,6 +143,7 @@ export default function MaterialsPage() {
 
   const [materials, setMaterials] = useState<MaterialItem[]>([])
   const [uploads, setUploads] = useState<Map<string, UploadingFile>>(new Map())
+  const [comparingCount, setComparingCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [projectError, setProjectError] = useState(false)
   const [projectTitle, setProjectTitle] = useState('')
@@ -152,6 +158,8 @@ export default function MaterialsPage() {
   useEffect(() => {
     uploadsAlive.current = true
     uploadContextRef.current = uploadContext
+    uploadLifecycle.current = new AbortController()
+    const lifecycle = uploadLifecycle.current
     materialUploads.current = new Map()
     const operations = materialUploads.current
     transcriptionOperations.current = new Map()
@@ -162,12 +170,15 @@ export default function MaterialsPage() {
     setMaterialActionError(null)
     setTranscribing(new Map())
     setUploads(new Map())
+    setComparingCount(0)
     setMaterials([])
     setProjectTitle('')
     setProjectError(false)
     setLoading(true)
     return () => {
       uploadsAlive.current = false
+      lifecycle.abort()
+      uploadLifecycle.current.abort()
       for (const operation of operations.values()) operation.controller?.abort()
       for (const controller of actions.values()) controller.abort()
       for (const operation of transcriptions.values()) { operation.controller?.abort(); clearTimeout(operation.timer) }
@@ -175,9 +186,30 @@ export default function MaterialsPage() {
     }
   }, [uploadContext])
 
+  useEffect(() => {
+    if (sessionStatus !== 'loading') lastResolvedActor.current = resolvedActor
+    if (sessionStatus === 'loading') {
+      uploadLifecycle.current.abort()
+      for (const operation of materialUploads.current.values()) operation.controller?.abort()
+      for (const operation of transcriptionOperations.current.values()) operation.controller?.abort()
+      for (const controller of materialActions.current.values()) controller.abort()
+      projectRead.current?.abort()
+      setComparingCount(0)
+      setConfirmingMaterialId(null)
+      setLoading(true)
+      setMaterials([])
+      setProjectTitle('')
+      setUploads(prev => new Map(Array.from(prev, ([key, item]) => [key,
+        item.status === 'done' || item.status === 'error' ? item : { ...item, status: 'error' as const,
+          error: '利用情報を再確認しています。確認後に再試行してください。',
+          errorActionUrl: '/interview/projects/' + encodeURIComponent(projectId) + '/materials', errorActionLabel: '保存済み素材を確認する' },
+      ])))
+    } else if (uploadLifecycle.current.signal.aborted) uploadLifecycle.current = new AbortController()
+  }, [sessionStatus, resolvedActor, uploadContext, projectId])
+
   // プロジェクトと素材一覧を取得
   const fetchProject = useCallback(async (forceRefresh: unknown = false) => {
-    if (!uploadsAlive.current || uploadContextRef.current !== uploadContext) return
+    if (sessionStatus === 'loading' || !uploadsAlive.current || uploadContextRef.current !== uploadContext) return
     if (projectRead.current && !projectRead.current.signal.aborted) {
       if (forceRefresh !== true) return
       projectRead.current.abort()
@@ -202,7 +234,7 @@ export default function MaterialsPage() {
     } finally {
       if (isCurrent()) { setLoading(false); projectRead.current = null }
     }
-  }, [projectId, uploadContext])
+  }, [projectId, uploadContext, sessionStatus])
 
   useEffect(() => {
     fetchProject()
@@ -264,14 +296,14 @@ export default function MaterialsPage() {
     const hasActive = Array.from(uploads.values()).some(
       (u) => u.status === 'uploading' || u.status === 'confirming'
     )
-    if (!hasActive) return
+    if (!hasActive && comparingCount === 0) return
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault()
       e.returnValue = ''
     }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
-  }, [uploads])
+  }, [uploads, comparingCount])
 
   // 豆知識のサイクル
   useEffect(() => {
@@ -309,14 +341,28 @@ export default function MaterialsPage() {
   // 直接アップロード処理 (Vercelバイパス)
   // ============================================
   const uploadFile = async (file: File) => {
-    if (!uploadsAlive.current || uploadContextRef.current !== uploadContext) return
-    const fingerprint = JSON.stringify([uploadContext, file.name, file.size, file.type, file.lastModified])
-    let operation = materialUploads.current.get(fingerprint)
-    if (operation?.controller || operation?.completed) return
-    if (!operation) {
-      operation = { key: crypto.randomUUID(), controller: null }
-      materialUploads.current.set(fingerprint, operation)
+    if (sessionStatus === 'loading' || !uploadsAlive.current || uploadContextRef.current !== uploadContext) return
+    const lifecycle = uploadLifecycle.current
+    let operation: (typeof materialUploads.current extends Map<string, infer T> ? T : never)
+    try {
+      const found = findInterviewUploadAttempt(file, materialUploads.current, () => ({
+        key: crypto.randomUUID(), controller: null,
+      }), lifecycle.signal)
+      if ('then' in found) {
+        setComparingCount(count => count + 1)
+        try { operation = await found } finally {
+          if (uploadsAlive.current && uploadContextRef.current === uploadContext && uploadLifecycle.current === lifecycle && !lifecycle.signal.aborted) setComparingCount(count => Math.max(0, count - 1))
+        }
+      } else operation = found
+    } catch {
+      if (uploadsAlive.current && uploadContextRef.current === uploadContext && uploadLifecycle.current === lifecycle && !lifecycle.signal.aborted) {
+        setUploads(prev => new Map(prev).set(crypto.randomUUID(), { file, progress: 0, status: 'error',
+          error: 'ファイルの内容を確認できませんでした。再試行してください。' }))
+      }
+      return
     }
+    if (!uploadsAlive.current || uploadContextRef.current !== uploadContext || uploadLifecycle.current !== lifecycle || lifecycle.signal.aborted) return
+    if (operation?.controller || operation?.completed) return
     const record = operation
     const active = new AbortController()
     record.controller = active
@@ -522,7 +568,7 @@ export default function MaterialsPage() {
 
   // Keep a synchronous per-material claim until the server reports a terminal error.
   const startTranscription = async (materialId: string) => {
-    if (!uploadsAlive.current || uploadContextRef.current !== uploadContext || !/^[a-zA-Z0-9_-]{1,128}$/.test(materialId)) return
+    if (sessionStatus === 'loading' || !uploadsAlive.current || uploadContextRef.current !== uploadContext || !/^[a-zA-Z0-9_-]{1,128}$/.test(materialId)) return
     const previous = transcriptionOperations.current.get(materialId)
     if (previous?.controller || previous?.accepted) return
     clearTimeout(previous?.timer)
@@ -575,7 +621,7 @@ export default function MaterialsPage() {
   }
 
   const runMaterialAction = async (mode: 'confirm' | 'delete', materialId: string) => {
-    if (!uploadsAlive.current || uploadContextRef.current !== uploadContext || materialActions.current.size || !/^[a-zA-Z0-9_-]{1,128}$/.test(materialId)) return
+    if (sessionStatus === 'loading' || !uploadsAlive.current || uploadContextRef.current !== uploadContext || materialActions.current.size || !/^[a-zA-Z0-9_-]{1,128}$/.test(materialId)) return
     const active = new AbortController()
     materialActions.current.set(materialId, active)
     const isCurrent = () => uploadsAlive.current && uploadContextRef.current === uploadContext && materialActions.current.get(materialId) === active && !active.signal.aborted
@@ -731,12 +777,15 @@ export default function MaterialsPage() {
         animate="show"
       >
         <div className="p-5 sm:p-8 md:p-12">
+          {sessionStatus === 'loading' && <p role="status" className="mb-4 text-sm text-slate-600">利用情報を確認しています。確認後にファイルを選択できます。</p>}
+          {comparingCount > 0 && <p role="status" className="mb-4 text-sm text-slate-600">同じ名前のファイルの内容を確認しています。大きなファイルは時間がかかる場合があります。</p>}
           {/* ドラッグ&ドロップゾーン */}
           <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+            onDragOver={(e) => { e.preventDefault(); if (sessionStatus !== 'loading') setDragOver(true) }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => { if (sessionStatus !== 'loading') fileInputRef.current?.click() }}
+            aria-disabled={sessionStatus === 'loading'}
             className={`relative border-2 border-dashed flex flex-col items-center justify-center py-12 sm:py-16 md:py-20 px-4 sm:px-6 transition-all group cursor-pointer rounded-2xl overflow-hidden ${
               dragOver
                 ? 'border-[#7f19e6] bg-[#7f19e6]/10 scale-[1.01]'
@@ -774,6 +823,7 @@ export default function MaterialsPage() {
               ref={fileInputRef}
               type="file"
               multiple
+              disabled={sessionStatus === 'loading'}
               accept=".mp3,.wav,.m4a,.ogg,.webm,.flac,.mp4,.mov,.avi,.pdf,.txt,.docx,.jpg,.jpeg,.png,.webp"
               onChange={(e) => {
                 if (e.target.files) handleFiles(e.target.files)
@@ -800,7 +850,7 @@ export default function MaterialsPage() {
             </motion.div>
 
             <h3 className="relative z-10 text-xl font-black mb-2 text-slate-900">
-              {dragOver ? 'ここにドロップ！' : 'ファイルをドラッグ&ドロップ'}
+              {sessionStatus === 'loading' ? '利用情報を確認しています' : dragOver ? 'ここにドロップ！' : 'ファイルをドラッグ&ドロップ'}
             </h3>
             <p className="relative z-10 text-slate-500 text-sm mb-4">または下のボタンから選択（1件の上限: ゲスト100MB・無料500MB・LIGHT 1GB・PRO 2GB・Enterprise 5GB。ストレージ設定によって小さくなる場合があります）</p>
 

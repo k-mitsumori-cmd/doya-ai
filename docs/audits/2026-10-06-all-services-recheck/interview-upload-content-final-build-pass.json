@@ -1,0 +1,26 @@
+{
+  "runId": "4d8a613f-9ddc-4d68-8eab-4d21b87974a5",
+  "startedAt": "2026-10-06T09:38:11.499261+00:00",
+  "finishedAt": "2026-10-06T09:44:51.686027+00:00",
+  "state": "finished",
+  "exitCode": 0,
+  "changedSources": [],
+  "nodeEnv": "production",
+  "sourceCount": 2324,
+  "candidateHashes": {
+    "src/lib/interview/upload-attempt.ts": "2f03209b62efc2e4a8bf57a39c8d7d63b538ee158e642cb3664674cba69ed2e8",
+    "src/app/interview/Tool.tsx": "4ca56bad3ed84954530152b5c1841b257b1de0bb394b2176c768cb2e5590c55c",
+    "src/app/interview/projects/[id]/materials/page.tsx": "188dff56a4d56b76f28be31d17e38e10710db5ed31e5fbd1c34bc2543ca6f1f5",
+    "scripts/security-regression/run.cjs": "7b1556346cfa098562e8c1b3e7018b16bdae14e1c84bc1ef085ec5bcd65c7584",
+    "scripts/security-regression/verify-interview-additional-create-clients.cjs": "40e5357204e9be11e852ef1b469f0fe3906e743e371aebbe4aa4ecda8f21df9d",
+    "scripts/security-regression/verify-interview-material-upload-client.cjs": "0ba73ca85adc7869039cc1c33c8e577846d72186e533034080496e0912e723cd",
+    "scripts/security-regression/verify-interview-material-actions-client.cjs": "19adf6fe205362386f7b113f5601336cf81f542896b9fbe2b23433b836ff0c14",
+    "scripts/security-regression/verify-interview-transcription-client.cjs": "4133e6af84354d520c3374286733817d28185850b202ff66abfe67c5468ff75c",
+    "scripts/security-regression/verify-interview-dashboard-list.cjs": "0fcbac7c24d71568f78ee64dcb395c99e8966d7cbeff198d637bfe1afec2a889",
+    "scripts/security-regression/verify-interview-upload-attempt.cjs": "6a3e3c5891cd5443a349c2e784f08811e3ab0927fb71d2d6178318de032a02f4",
+    "scripts/security-regression/verify-interview-upload-mounted.cjs": "565f3d59f52d2852acd9222cef58d63ac528413b3dafadb9f93edb0483a75431"
+  },
+  "fullManifestSha256": "d821ae05d347162c28e420fe32f59d517537f5fabb7e0876dbd5685b3ba6bad4",
+  "fullManifestPath": "/tmp/doya-interview-upload-content-final-build-state-20261006.json",
+  "lintExitCode": 0
+}

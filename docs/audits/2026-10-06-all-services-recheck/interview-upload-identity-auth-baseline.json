@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-06T09:08:58.101Z",
+  "status": "reproduced_synthetic_callback_gaps",
+  "results": [
+    {
+      "page": "dashboard",
+      "sameMetadataDifferentContentsIgnored": true,
+      "authLoadingCallbackStartsRequest": true,
+      "sourceHash": "4511280c7cf362ab75e8b102279fa4d49d73fbf8fe909a9e6a3148cffe3d5f1a"
+    },
+    {
+      "page": "materials",
+      "sameMetadataDifferentContentsIgnored": true,
+      "authLoadingCallbackStartsRequest": true,
+      "sourceHash": "e00c46fccc1da7ab8e921edf2159c8a81cae848e98ffa95a6b693c3b01d46317"
+    }
+  ],
+  "scope": "Actual callbacks reused from regression fixtures with distinct native File contents, synthetic fetch/state. Auth-loading status unused in callbacks; mounted browser timing and customer incidence unknown. No DB/storage/provider requests.",
+  "next": "Fix content-aware attempt identity and auth readiness before uploads, preserving same-file uncertain retries."
+}

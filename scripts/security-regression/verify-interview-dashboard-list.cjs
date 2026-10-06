@@ -6,7 +6,7 @@ const reader=compile(fs.readFileSync(path.join(root,'src/lib/interview/creation-
 function fixture(actor='owner'){
  const requests=[],timers=new Map(),state={projects:[{id:'old'}],error:true,loading:false};let t=0;const exports={};
  vm.runInNewContext(reader,{exports,Error,AbortController,TextDecoder,TextEncoder,fetch:(url,init)=>new Promise((resolve,reject)=>requests.push({url,init,resolve,reject})),setTimeout:fn=>{timers.set(++t,fn);return t},clearTimeout:id=>timers.delete(id)});
- const run=vm.runInNewContext(compile('('+effect+');'),{...exports,AbortController,Error,Array,uploadActor:actor,setProjects:v=>state.projects=v,setProjectListError:v=>state.error=v,setLoading:v=>state.loading=v});
+ const run=vm.runInNewContext(compile('('+effect+');'),{...exports,AbortController,Error,Array,uploadActor:actor,sessionStatus:actor==='loading'?'loading':'authenticated',setProjects:v=>state.projects=v,setProjectListError:v=>state.error=v,setLoading:v=>state.loading=v});
  return{requests,timers,state,cleanup:run()};
 }
 (async()=>{let passed=0;
@@ -22,6 +22,7 @@ function fixture(actor='owner'){
   if(kind==='success')f.requests[0].resolve(Response.json({success:true,projects:[{id:'other-owner'}]}));else f.requests[0].reject(Error('private'));
   await tick();await tick();assert.equal(JSON.stringify(f.state),snapshot);assert.equal(f.timers.size,0);passed++;
  }
+ const loading=fixture('loading');assert.equal(loading.requests.length,0);assert.equal(loading.state.projects.length,0);assert.equal(loading.state.loading,true);passed++;
  const guest=fixture('guest');assert.equal(guest.requests.length,0);assert.equal(guest.state.projects.length,0);assert.equal(guest.state.loading,false);assert.equal(guest.state.error,false);passed++;
  console.log(JSON.stringify({passed,scope:'Actual dashboard list effect and bounded reader; synthetic fetch/state/timer. Cleanup simulates actor change/unmount; no browser/auth/database E2E.'}));
 })().catch(e=>{console.error(e);process.exitCode=1});
