@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-07T06:13:52.273694+00:00",
+  "status": "full-frozen-security-type-lint-build-and-private-postgres-passed-release-pending",
+  "baseline": "sfa-export-lifecycle-baseline.json",
+  "required": [
+    "Read each CSV batch and its account/stage labels inside a short transaction with a fresh same-user/same-org active membership share lock; membership changes use the matching row lock. Do not hold a transaction for an entire network download.",
+    "Load the initial export boundary under the same fresh authority; keep finite ascending cursor and creation-time boundary, org scoping and formula escaping.",
+    "After revocation, stop before the next private page read and fail the stream; do not return a complete-looking truncated success. Previously delivered bytes cannot be revoked.",
+    "Mark CSV and all handled error responses private/no-store/Vary Cookie; handle context lookup failure within sanitized catch.",
+    "Stop future reads after request abort/stream cancellation, including cancellation during an awaited batch.",
+    "Regression: account/deal >500 rows, formula escaping, related lookup isolation, empty export, initial DB error, later DB error, revocation before initial read and between batches, cancellation and cache headers. Retain existing all-row regression.",
+    "Verify real private PostgreSQL membership-lock ordering separately; synthetic mocks cannot prove locking. Full security/type/lint/build and exact release/public read-only checks before deployment."
+  ],
+  "boundaries": [
+    "No production customer DB writes or migrations",
+    "No provider calls or emails",
+    "Do not claim authenticated production download proven from anonymous checks"
+  ],
+  "evidence": [
+    "scripts/security-regression/verify-sfa-export-all.cjs",
+    "sfa-export-postgres-results.json",
+    "sfa-export-postgres-supervisor.json"
+  ],
+  "remaining": [
+    "Allowlisted commit/push, exactCI/READY/public checks",
+    "Authenticated browser download and remaining17-service criteria unverified"
+  ],
+  "verificationCorrection": "Initial PG process exit0 without results did not prove completion. Added20s deadline and supervisor requires3 completed cases, current timestamp and matching source hashes. Private server timezoneUTC; verified500-row first page and real membership lock waits. Only final evidenceValid=true run is accepted."
+}

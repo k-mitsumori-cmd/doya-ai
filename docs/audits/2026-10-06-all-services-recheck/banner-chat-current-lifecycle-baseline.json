@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-07T06:19:38.375Z",
+  "status": "confirmed-follow-up-gaps-not-repaired",
+  "sameFrameRequests": 2,
+  "newerDraftAfterCompletion": "",
+  "findings": [
+    "Two calls from the same rendered callback start two paid chat requests before state rerenders; no synchronous admission fence.",
+    "A successful delayed reply unconditionally clears newer unsent input and existing generated banners."
+  ],
+  "sourceHash": "622045c61227a4159cae8281217f946f5036469d17c5e3b296d01b83f4706bf6",
+  "scope": "Actual AST-extracted current callback with synthetic pending fetch/state, not a mounted browser or real provider. Existing timeout/error validation repairs are present; old remaining-baseline flags are stale. No production/customer/provider request."
+}

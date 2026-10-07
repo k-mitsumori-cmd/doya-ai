@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T06:20:33.004735+00:00",
+  "status": "current-callback-baseline-reproduced-repair-pending",
+  "evidence": [
+    "banner-chat-current-lifecycle-baseline.json",
+    "scripts/security-regression/verify-banner-chat-refine-recovery.cjs"
+  ],
+  "verifiedExisting": "24 offline callback timeout/error/refine response cases pass. Prior remaining-baseline lacks current timeout/error repairs and must not be treated as current.",
+  "required": [
+    "Audit send/generate/refine together: shared synchronous admission prevents same-frame overlapping operations before React rerenders.",
+    "Track actor/auth readiness and mounted operation identity; abort/cancel timers on actor changes and unmount; stale result cannot replace another actor data.",
+    "Track draft revisions including A-B-A; success may clear only the submitted unchanged draft, not newer input or unrelated newer output.",
+    "Bound body parsing and response shape/image decoding; retain uncertain results and actionable recovery without automatic duplicate paid requests.",
+    "Inspect server text reservation/recovery/idempotency policy; client-only fence does not prove cross-tab or network-retry exactly-once. Preserve paid-call approval boundary during tests.",
+    "Mount actual React page with synthetic auth/API to prove same-frame send/refine/generate, draft changes, stale response, unmount, storage/response failures and quota guidance. Existing AST tests alone do not prove React lifecycle.",
+    "Full frozen security/type/lint/build, allowlisted release and exact deployment/read-only checks. No customer/provider calls."
+  ],
+  "scope": "Banner AI consultation and related generation/refinement; full17-service audit remains active"
+}

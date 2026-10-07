@@ -13,7 +13,8 @@ function fixture(type, count, failure = null) {
     expectedCloseDate: null, updatedAt: createdAt,
   }));
   rows.push({ ...rows[0], id: 'foreign', organizationId: 'org-2', name: 'foreign-secret' });
-  let pageCalls = 0;
+  let pageCalls = 0, actorActive = failure !== 'revoked-first', lockChecks = 0;
+  const controller = new AbortController();
   const model = {
     findFirst: async ({ where }) => {
       assert.equal(where.organizationId, 'org-1');
@@ -28,6 +29,8 @@ function fixture(type, count, failure = null) {
       assert(where.createdAt.lte instanceof Date);
       assert.equal(orderBy.id, 'asc');
       assert.equal(take, 500);
+      if (failure === 'revoke' && pageCalls === 1) actorActive = false;
+      if (failure === 'abort' && pageCalls === 1) controller.abort();
       return rows.filter((row) => row.organizationId === 'org-1'
         && row.id <= where.id.lte && (!where.id.gt || row.id > where.id.gt)).slice(0, take);
     },
@@ -45,12 +48,17 @@ function fixture(type, count, failure = null) {
       return [{ id: 'stage-1', name: '商談中' }];
     } },
   };
+  prisma.$transaction = async (run, options) => { assert.equal(options.isolationLevel, 'ReadCommitted'); return run(prisma); };
+  prisma.$queryRaw = async () => { lockChecks++; return [{id:'member-1'}]; };
+  prisma.sfaMember = {findFirst:async () => actorActive ? {id:'member-1'} : null};
+  const authority = load('src/lib/sfa/mutation-authority.ts', {});
   const { GET } = load('src/app/api/sfa/export/route.ts', {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
-    '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1' }), orgSlugFrom: () => null },
+    '@/lib/sfa/mutation-authority': authority,
+    '@/lib/sfa/access': { getSfaContext: async () => { if (failure === 'context') throw new Error('private-secret'); return failure === 'guest' ? null : { organizationId: 'org-1', userId:'actor-1', memberId:'member-1' }; }, orgSlugFrom: () => null },
   }, { TextEncoder, ReadableStream });
-  return { GET: () => GET({ url: `http://local/api/sfa/export?type=${type}` }), getPageCalls: () => pageCalls };
+  return { GET: () => GET({ url: `http://local/api/sfa/export?type=${type}`, signal: controller.signal }), getPageCalls: () => pageCalls, getLockChecks: () => lockChecks };
 }
 
 (async () => {
@@ -58,6 +66,8 @@ function fixture(type, count, failure = null) {
     const f = fixture(type, 5001);
     const response = await f.GET();
     assert.equal(response.status, 200);
+    assert.match(response.headers.get('cache-control'), /private.*no-store/);
+    assert.match(response.headers.get('vary'), /Cookie/);
     assert.match(response.headers.get('content-disposition'), /sfa_(accounts|deals)\.csv/);
     const bytes = new Uint8Array(await response.arrayBuffer());
     assert.deepEqual(Array.from(bytes.slice(0, 3)), [239, 187, 191], 'UTF-8 BOM is present');
@@ -72,6 +82,7 @@ function fixture(type, count, failure = null) {
       assert(csv.includes('商談中'));
     }
     assert.equal(f.getPageCalls(), 11);
+    assert.equal(f.getLockChecks(), 12, "Boundary and every batch require fresh authority");
   }
   for (const type of ['accounts', 'deals']) {
     const firstFailure = fixture(type, 501, 'first');
@@ -79,7 +90,35 @@ function fixture(type, count, failure = null) {
     const laterFailure = fixture(type, 501, 'later');
     const response = await laterFailure.GET();
     assert.equal(response.status, 200);
+    assert.match(response.headers.get('cache-control'), /private.*no-store/);
+    assert.match(response.headers.get('vary'), /Cookie/);
     await assert.rejects(response.text(), /CSV出力を完了できませんでした/, 'Later failure aborts the download');
+  }
+  for (const type of ['accounts', 'deals']) {
+    const revoked = fixture(type, 501, 'revoke');
+    const response = await revoked.GET();
+    assert.equal(response.status, 200);
+    await assert.rejects(response.text(), /CSV出力を完了できませんでした/);
+    assert.equal(revoked.getPageCalls(), 1, 'Revocation stops before second private page read');
+    const initial = fixture(type, 501, 'revoked-first');
+    assert.equal((await initial.GET()).status, 403);
+    assert.equal(initial.getPageCalls(), 0);
+    const aborted = fixture(type, 501, 'abort');
+    assert.equal((await aborted.GET()).status, 503);
+    assert.equal(aborted.getPageCalls(), 1);
+    const cancelled = fixture(type, 2001);
+    const download = await cancelled.GET();
+    await download.body.cancel();
+    const pages = cancelled.getPageCalls();
+    await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal(cancelled.getPageCalls(), pages, 'Cancelled stream does not read future pages');
+  }
+  for (const [failure, status] of [['guest', 401], ['context', 503]]) {
+    const response = await fixture('accounts', 1, failure).GET();
+    assert.equal(response.status, status);
+    assert.match(response.headers.get('cache-control'), /private.*no-store/);
+    assert.match(response.headers.get('vary'), /Cookie/);
+    assert(!(await response.text()).includes('private-secret'));
   }
   const empty = await fixture('accounts', 0).GET();
   assert.equal((await empty.text()).trimEnd().split('\r\n').length, 1);

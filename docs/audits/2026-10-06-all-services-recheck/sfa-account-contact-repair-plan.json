@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-07T06:04:03.021585+00:00",
-  "status": "local-frozen-build-security-type-lint-passed-release-pending",
+  "status": "released-exact-ci-ready-and-anonymous-publication-passed-private-flows-unproven",
   "scope": "SFA accounts/contacts server and mounted pages",
   "confirmed": [
     "Account/contact requests ignore operationId and create duplicates.",
@@ -49,8 +49,14 @@
     "Frozen 2705-source manifest unchanged; full build/security/type and lint exited0"
   ],
   "remaining": [
-    "Exact allowlisted commit/push, exactCI/READY and public asset/API verification",
-    "Authenticated actual browser/customer/provider flows and all remaining criteria across17services remain unverified"
+    "Authenticated actual browser/customer flows, roles policy and other17-service criteria remain unverified"
   ],
-  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/sfa-crm-release-9b772ea7-6ef1-4c45-b2ab-99f0747b5d0c"
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/sfa-crm-release-9b772ea7-6ef1-4c45-b2ab-99f0747b5d0c",
+  "release": {
+    "commit": "4d3e7f007be3323650dc97e92fd98987e67730de",
+    "ciRun": 37580253174,
+    "deployment": "dpl_8TJJu7WBukXhBzSjwpstSKbcT2y2",
+    "anonymousEntries": 17,
+    "assets": 49
+  }
 }
