@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-10-07T01:00:39.392898+00:00",
+  "pid": 62257,
+  "head": "0200977e081365aa8114a3ca0454475b60462777",
+  "sourceFiles": 2661,
+  "status": "superseded-not-validation-evidence",
+  "gates": [],
+  "reason": "Actual candidate helper accepted an empty lock followed by a newly visible row. Reject empty actor/relation/task lock results, add 10 regression cases, and freeze a new candidate.",
+  "endedAt": "2026-10-07T01:03:11.405495+00:00"
+}

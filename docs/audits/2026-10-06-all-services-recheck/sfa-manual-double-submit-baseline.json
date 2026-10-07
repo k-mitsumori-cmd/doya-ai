@@ -1,0 +1,55 @@
+{
+  "cases": 7,
+  "results": [
+    {
+      "page": "tasks",
+      "field": "input[placeholder^=\"やること\"]",
+      "sameFramePostCount": 2,
+      "status": "confirmed-open",
+      "noticeCount": 2
+    },
+    {
+      "page": "tasks",
+      "field": "input[placeholder^=\"活動内容\"]",
+      "sameFramePostCount": 2,
+      "status": "confirmed-open",
+      "noticeCount": 2
+    },
+    {
+      "page": "activities",
+      "field": "input[placeholder^=\"件名\"]",
+      "sameFramePostCount": 2,
+      "status": "confirmed-open",
+      "noticeCount": 2
+    },
+    {
+      "page": "activities",
+      "field": "textarea",
+      "sameFramePostCount": 2,
+      "status": "confirmed-open",
+      "noticeCount": 2
+    },
+    {
+      "page": "dashboard",
+      "field": "input[placeholder^=\"例: A社\"]",
+      "sameFramePostCount": 1,
+      "status": "guard-present",
+      "noticeCount": 0
+    },
+    {
+      "page": "deals",
+      "field": "input[placeholder^=\"やること\"]",
+      "sameFramePostCount": 2,
+      "status": "confirmed-open",
+      "noticeCount": 0
+    },
+    {
+      "page": "deals",
+      "field": "input[placeholder^=\"活動内容\"]",
+      "sameFramePostCount": 2,
+      "status": "confirmed-open",
+      "noticeCount": 0
+    }
+  ],
+  "scope": "Actual four SFA pages and actual shared client/date/summary helpers, synthetic held successful POST only. Confirms six same-frame duplicate submission paths and dashboard single-submit guard; no real API/DB/provider or private production operation."
+}

@@ -1,3 +1,4 @@
+const { withSfaAuthority } = require('./sfa-authority-fixture.cjs');
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 let saved = [], relationReads = 0, transactions = 0;
@@ -10,8 +11,8 @@ const mocks = {
   'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma },
   '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org', memberId: 'member' }), orgSlugFrom: () => 'org' },
 };
-const task = load('src/app/api/sfa/tasks/route.ts', mocks);
-const activity = load('src/app/api/sfa/activities/route.ts', mocks);
+const task = load('src/app/api/sfa/tasks/route.ts', withSfaAuthority(mocks));
+const activity = load('src/app/api/sfa/activities/route.ts', withSfaAuthority(mocks));
 const req = body => ({ json: async () => body });
 (async () => {
   let cases = 0;

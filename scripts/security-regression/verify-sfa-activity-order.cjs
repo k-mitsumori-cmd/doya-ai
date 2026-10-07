@@ -1,3 +1,4 @@
+const { withSfaAuthority } = require('./sfa-authority-fixture.cjs');
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript');
 const source=fs.readFileSync(path.join(__dirname,'../../src/app/api/sfa/activities/route.ts'),'utf8');
 const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
@@ -13,7 +14,7 @@ for(const c of cases){
   if(matches)latest=new Date(data.lastActivityAt);return {count:matches?1:0};
  }}};
  const prisma={sfaDeal:{findUnique:async({where})=>where.id==='deal'?{organizationId:'org',isActive:true}:null},$transaction:fn=>{const result=queue.then(async()=>{const saved={latest,activities:[...activities]};try{return await fn(tx)}catch(e){latest=saved.latest;activities=saved.activities;rollbacks++;throw e}});queue=result.catch(()=>{});return result}};
- const deps={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/sfa/access':{getSfaContext:async()=>({organizationId:'org',memberId:'member'}),orgSlugFrom:()=> 'org'}};
+ const deps=withSfaAuthority({'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/sfa/access':{getSfaContext:async()=>({organizationId:'org',memberId:'member'}),orgSlugFrom:()=> 'org'}});
  const exported={};vm.runInNewContext(code,{exports:exported,Date,URL,require:n=>{if(n in deps)return deps[n];throw Error(n)}});
  const responses=await Promise.all(c.dates.map(day=>exported.POST({json:async()=>({subject:'synthetic',dealId:c.noDeal?undefined:'deal',occurredAt:iso(String(day).padStart(2,'0'))})})));
  const expected=c.fail||c.noDeal?initial:new Date(Math.max(initial?new Date(initial).getTime():-Infinity,...c.dates.map(n=>new Date(iso(String(n).padStart(2,'0'))).getTime()))).toISOString();

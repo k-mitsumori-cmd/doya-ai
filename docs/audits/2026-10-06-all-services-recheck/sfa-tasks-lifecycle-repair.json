@@ -8,7 +8,8 @@
     "sfa-activity-late-create-baseline.json",
     "sfa-activity-double-create-baseline.json",
     "sfa-stale-mutation-authority-baseline.json",
-    "sfa-bulk-failure-baseline.json"
+    "sfa-bulk-failure-baseline.json",
+    "sfa-manual-double-submit-baseline.json"
   ],
   "findings": [
     "Actual task and activity creation both allow two same-frame POSTs.",
@@ -40,7 +41,7 @@
     "Cover all four consumers including AI suggested bulk tasks and deal timeline, not only standalone tasks page."
   ],
   "inputRepair": {
-    "status": "full-gate-passed-commit-pending",
+    "status": "pushed-ci-production-verification-pending",
     "cases": 65,
     "evidence": "sfa-input-preservation-results.json",
     "gate": "docs/audits/2026-10-06-all-services-recheck/sfa-input-preservation-release-7a66f0dc-f4bc-420b-9373-80101ae5f9cc",
@@ -58,13 +59,61 @@
     "fullGateExitCode": 0,
     "sourceFiles": 2658,
     "changedSources": [],
-    "updatedAt": "2026-10-07T00:54:56.746090+00:00"
+    "updatedAt": "2026-10-07T00:54:56.746090+00:00",
+    "commit": "0200977e081365aa8114a3ca0454475b60462777",
+    "pushExitCode": 0,
+    "sourceFreezeReverifiedAfterCommit": true,
+    "ciRuns": [
+      {
+        "databaseId": 37554454155,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "0200977e081365aa8114a3ca0454475b60462777"
+      }
+    ],
+    "productionDeployments": [
+      {
+        "uid": "dpl_BTitV7mwkcouR5Frkb2xU6NsqhyQ",
+        "url": "doya-p8zgduufy-surisutas-projects.vercel.app",
+        "state": "BUILDING",
+        "target": "production",
+        "commit": "0200977e081365aa8114a3ca0454475b60462777"
+      }
+    ]
   },
-  "updatedAt": "2026-10-07T00:46:37.206674+00:00",
+  "updatedAt": "2026-10-07T01:08:36.833106+00:00",
   "relatedCollectionInputLoss": {
     "status": "repaired-local-full-gate-passed-production-pending",
     "cases": 17,
     "evidence": "sfa-collection-input-loss-baseline.json",
-    "scope": "Account/contact/lead creation silently truncates 17 user input fields. Task/activity input repair does not resolve these collection routes."
-  }
+    "scope": "Account/contact/lead creation truncation repaired in 0200977e with task/activity validators. Collection update paths, other client lifecycle and real DB/private production remain unverified."
+  },
+  "mutationAuthorityRepair": {
+    "status": "full-gate-local-postgres-passed-commit-pending",
+    "gate": "docs/audits/2026-10-06-all-services-recheck/sfa-mutation-authority-release-f4d44ff6-3742-4808-900d-585ecacd7bbb",
+    "evidence": "sfa-mutation-authority-results.json",
+    "repairs": [
+      "All four task/activity mutations recheck ACTIVE actor identity and allowed sales role inside transaction, holding membership FOR SHARE against concurrent removal/demotion.",
+      "Related account/deal/contact ownership and active state checked inside the write after row locks; deal locked exclusively up front to avoid share-lock upgrades while updating lastActivityAt.",
+      "Task changes/deletion read their current row under FOR UPDATE after actor check; stale initial context cannot authorize write.",
+      "Private no-store Cookie headers for handled JSON responses of task/activity routes and sanitized write failures."
+    ],
+    "limits": [
+      "71 stateful synthetic authority cases and 8 actual local PostgreSQL/Prisma lock/concurrency cases passed. Production database concurrency, external authentication and private production operation remain unverified.",
+      "Client actor/org scope, durable creation receipts, unknown-write recovery, optimistic versions and bulk candidate preservation remain open.",
+      "All 17 services / 2074 criteria remain incomplete."
+    ],
+    "supersededGate": "docs/audits/2026-10-06-all-services-recheck/sfa-mutation-authority-release-98b166ea-3d4e-4e83-897f-9665ff68040d",
+    "supersededReason": "Empty lock followed by new snapshot accepted; fixed actor, related and task lock row checks and added 10 regression cases.",
+    "emptyLockEvidence": "sfa-actor-empty-lock-baseline.json",
+    "cases": 71,
+    "fullGateExitCode": 0,
+    "sourceFreezeReverifiedBeforeCommit": true,
+    "sourceFiles": 2661,
+    "changedSources": [],
+    "localPostgresEvidence": "sfa-authority-postgres-results.json",
+    "localPostgresCases": 8,
+    "localPostgresSupervisor": "sfa-authority-postgres-supervisor.json"
+  },
+  "manualDoubleSubmissionScope": "Actual four pages checked with held synthetic POST: six manual handlers submit twice; dashboard has a single-submit ref guard. Actor/org scope and persistent recovery remain separate requirements."
 }

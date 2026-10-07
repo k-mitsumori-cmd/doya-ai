@@ -1,9 +1,10 @@
+const { withSfaAuthority } = require('./sfa-authority-fixture.cjs');
 const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
 const {load:loadModule,check,results}=require('./load-typescript.cjs');
-function api(rows){return loadModule('src/app/api/sfa/tasks/route.ts',{
+function api(rows){return loadModule('src/app/api/sfa/tasks/route.ts',withSfaAuthority({
  'next/server':{NextResponse:Response},'@/lib/sfa/access':{getSfaContext:async()=>({organizationId:'org'}),orgSlugFrom:()=>null},
  '@/lib/prisma':{prisma:{sfaTask:{findMany:async({where,orderBy,skip,take})=>rows.filter(r=>r.organizationId===where.organizationId&&(!where.dealId||r.dealId===where.dealId)).sort((a,b)=>{for(const order of orderBy){const [k,d]=Object.entries(order)[0];if(a[k]===b[k])continue;return (a[k]<b[k]?-1:1)*(d==='asc'?1:-1)}return 0}).slice(skip,skip+take)},sfaDeal:{findMany:async()=>[]}}},
-});}
+}));}
 const source=fs.readFileSync('src/app/sfa/[orgSlug]/tasks/page.tsx','utf8'),ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let code;
 function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='load')code=n.initializer.arguments[0].getText(ast);ts.forEachChild(n,visit)}visit(ast);
 function ui(fetch){const state={tasks:[],page:0,more:false,error:null,loading:false};const fn=vm.runInNewContext(ts.transpileModule('('+code+')',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,{ready:true,orgSlug:'org',Error,fetch,sfaInit:()=>({}),loadSequenceRef:{current:0},setTasks:f=>state.tasks=f(state.tasks),setLoadedPage:v=>state.page=v,setHasMore:v=>state.more=v,setListError:v=>state.error=v,setListLoading:v=>state.loading=v});return{fn,state};}

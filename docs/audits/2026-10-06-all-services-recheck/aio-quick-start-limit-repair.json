@@ -1,5 +1,5 @@
 {
-  "status": "pushed-ci-production-verification-pending",
+  "status": "deployed-anonymous-publication-verified-private-workflows-unproven",
   "sourceCommit": "67f520e1823cf40fc8220f65a3633f5d0175098f",
   "evidence": [
     "aio-quick-start-prompt-cap-baseline.json",
@@ -40,9 +40,12 @@
     {
       "uid": "dpl_7PQ2BEoFb7TvspKrAmDN2ygJYQq2",
       "url": "doya-9i07bmduw-surisutas-projects.vercel.app",
-      "state": "BUILDING",
+      "state": "READY",
       "target": "production",
       "commit": "96d214e696a52e1393a7dbe8ac13d6f8e39bfa30"
     }
-  ]
+  ],
+  "publicationEvidence": "aio-seed-shodan-public-96d214e6.json",
+  "publicVerificationExitCode": 0,
+  "productionCheckedAt": "2026-10-07T01:01:57.674088+00:00"
 }

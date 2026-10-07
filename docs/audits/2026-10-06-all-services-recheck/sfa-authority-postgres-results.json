@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-07T01:07:56.210Z",
+  "passed": 8,
+  "results": [
+    {
+      "name": "task-create waits and denies committed revocation",
+      "status": 403
+    },
+    {
+      "name": "task-update waits and denies committed revocation",
+      "status": 403
+    },
+    {
+      "name": "task-delete waits and denies committed revocation",
+      "status": 403
+    },
+    {
+      "name": "activity-create waits and denies committed revocation",
+      "status": 403
+    },
+    {
+      "name": "authorized write holds membership until commit; later revocation waits",
+      "status": 200
+    },
+    {
+      "name": "activity waits for deal lock and rejects freshly deactivated relation",
+      "status": 400
+    },
+    {
+      "name": "20 concurrent legacy toggles serialized without lost updates",
+      "requests": 20,
+      "successes": 20
+    },
+    {
+      "name": "12 concurrent same-deal activities commit without share-lock upgrade deadlocks; latest date retained",
+      "requests": 12,
+      "successes": 12
+    }
+  ],
+  "lockWaitObservations": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "sourceHashes": {
+    "src/lib/sfa/mutation-authority.ts": "1310ba745586b9373620f9a73520a9ecc915a392d4f73a9c5a191642906bb3ba",
+    "src/app/api/sfa/tasks/route.ts": "199da242c9e215b091b417a9c9d6c95cfaa033c43d06be870f2f91c15953bac1",
+    "src/app/api/sfa/tasks/[id]/route.ts": "66775223192fa8e74b73133d755a4260a6ad69f09646f8bfb43e72d5b2c91dc5",
+    "src/app/api/sfa/activities/route.ts": "0714a07342c87f5333d58ccb4e8977abf14dab5ff96fa760b92e292047ebd0aa"
+  },
+  "scope": "Actual API handlers, actual helper and generated PrismaClient against a fresh private Unix-socket-only PostgreSQL17 instance with synthetic tables/data. Real lock waits, concurrent execution, commits and rollbacks; schema/FK completeness, production concurrency, external auth/provider and client lifecycle are not proven."
+}

@@ -1,0 +1,6 @@
+{
+  "status": "candidate-lock-gap-confirmed",
+  "emptyLockAccepted": true,
+  "subsequentMembershipReads": 1,
+  "scope": "Actual candidate helper, synthetic empty row-lock result followed by newly visible membership. No DB/customer write. Guard must reject an empty lock result before a later snapshot can authorize an unlocked actor."
+}

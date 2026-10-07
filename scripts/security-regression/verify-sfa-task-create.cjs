@@ -1,3 +1,4 @@
+const { withSfaAuthority } = require('./sfa-authority-fixture.cjs');
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
@@ -10,11 +11,11 @@ const prisma = {
   } },
   sfaTask: { create: async ({ data }) => { writes++; return { id: `task-${writes}`, ...data }; } },
 };
-const { POST } = load('src/app/api/sfa/tasks/route.ts', {
+const { POST } = load('src/app/api/sfa/tasks/route.ts', withSfaAuthority({
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
   '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId: 'member-1' }), orgSlugFrom: () => null },
-});
+}));
 const request = (body) => ({ json: async () => body });
 
 (async () => {
