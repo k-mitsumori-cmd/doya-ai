@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T02:27:58.974Z",
+  "findings": 3,
+  "results": [
+    "Same-frame conversion callback sends two POSTs without operation ID; server conditional claim separately prevents duplicate business conversion",
+    "Malformed successful payload with no account/deal still announces both created",
+    "Extracted old-scope callback has no actor/org/mount guard and can issue global toast after delayed reply; full real Next routing impact remains unproven",
+    "Unknown response loss permits blind new POST without read recovery or retained operation metadata"
+  ],
+  "sourceHash": "9c8e182f9c5e0e9db783a7a49bdb58c70bd4a38d9bfa196c72311c84eb2f9a2a",
+  "scope": "Actual extracted convert callback from TypeScript AST with synthetic confirmation/network/toast only; not mounted full page or real Next router, no production/customer writes. No claim of duplicate database rows.",
+  "sourceObservations": 1,
+  "resultClassification": [
+    "verified-behavior",
+    "verified-behavior",
+    "source-gap-real-routing-impact-unproven",
+    "verified-behavior"
+  ]
+}

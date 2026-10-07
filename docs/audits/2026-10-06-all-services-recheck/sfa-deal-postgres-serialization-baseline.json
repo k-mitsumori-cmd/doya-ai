@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-07T02:20:59.438964+00:00",
+  "observed": "Actual PostgreSQL concurrent actor revocation yielded HTTP500 instead of expected403. Prisma raw SELECT FOR SHARE raised P2010 with SQLSTATE40001. Existing withSfaAdmission only retried P2034.",
+  "attempts": [
+    {
+      "privateFolder": "/tmp/doya-sfa-authority-a73d7536",
+      "probeExitCode": 1,
+      "stopExitCode": 0
+    },
+    {
+      "startedAt": "2026-10-07T02:20:39.934986+00:00",
+      "pid": 78979,
+      "privateFolder": "/tmp/doya-sfa-authority-7527926b",
+      "status": "failed",
+      "probeExitCode": 1,
+      "stopExitCode": 0,
+      "endedAt": "2026-10-07T02:20:41.530158+00:00"
+    }
+  ],
+  "scope": "Local isolated PostgreSQL synthetic schema; no production writes.",
+  "snapshotCancellationFinding": {
+    "observed": "Actual Serializable create began before cancellation, saw stale snapshot, attempted duplicate receipt and raised P2002; returned500 instead of409. Must roll back and retry the whole creation transaction, then observe cancelled receipt.",
+    "supervisor": {
+      "startedAt": "2026-10-07T02:20:59.487865+00:00",
+      "pid": 79081,
+      "privateFolder": "/tmp/doya-sfa-authority-554e8c87",
+      "status": "failed",
+      "probeExitCode": 1,
+      "stopExitCode": 0,
+      "endedAt": "2026-10-07T02:21:01.052346+00:00"
+    }
+  }
+}

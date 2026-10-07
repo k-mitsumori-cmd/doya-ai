@@ -16,27 +16,25 @@ const createPrisma = {
   sfaStage: { findFirst: async () => null },
   sfaDeal: { create: async ({ data }) => { createWrites++; return { id: 'deal-1', ...data }; } },
 };
+const { dealDeps } = require('./sfa-deal-test-deps.cjs');
 const common = {
+  ...dealDeps(createPrisma),
   'next/server': { NextResponse: Response },
   '@/lib/sfa/amount': amount,
   '@/lib/sfa/format': format,
   '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId: 'member-1', userId: 'user-1' }), orgSlugFrom: () => null },
-  '@/lib/sfa/limits': { withSfaAdmission: async (_org, _requested, create) => ({ created: await create(createPrisma) }), sfaQuotaResponse: () => Response.json({}, { status: 402 }) },
+  '@/lib/sfa/limits': { withSfaAdmission: async (_org, _requested, create) => ({ created: await create(createPrisma) }), checkSfaQuota: async () => null, sfaQuotaResponse: () => Response.json({}, { status: 402 }) },
 };
 const create = load('src/app/api/sfa/deals/route.ts', {
   ...common,
   '@/lib/prisma': { prisma: createPrisma },
   '@/lib/service-usage': { recordServiceUsage: async () => {} },
 }).POST;
-const update = load('src/app/api/sfa/deals/[id]/route.ts', {
-  ...common,
-  '@/lib/prisma': { prisma: {
-    sfaDeal: {
-      findUnique: async () => ({ id: 'deal-1', organizationId: 'org-1', isActive: true }),
-      update: async ({ data }) => { updateWrites++; return { id: 'deal-1', ...data }; },
-    },
-  } },
-}).PATCH;
+const updatePrisma = { sfaDeal: {
+  findUnique: async () => ({ id: 'deal-1', organizationId: 'org-1', isActive: true }),
+  update: async ({ data }) => { updateWrites++; return { id: 'deal-1', ...data }; },
+} };
+const update = load('src/app/api/sfa/deals/[id]/route.ts', { ...common, ...dealDeps(updatePrisma), '@/lib/prisma': { prisma: updatePrisma } }).PATCH;
 const convert = load('src/app/api/sfa/leads/[id]/convert/route.ts', {
   ...common,
   '@/lib/prisma': { prisma: {

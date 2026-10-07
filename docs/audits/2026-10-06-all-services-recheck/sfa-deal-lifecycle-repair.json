@@ -1,0 +1,93 @@
+{
+  "checkedAt": "2026-10-07T02:30:17.290366+00:00",
+  "status": "full-gate-passed-production-pending",
+  "baseCommit": "c9aee67545a237de8e86ab512ebb4f3d4ea1eb8d",
+  "baselineEvidence": [
+    "sfa-deal-create-lifecycle-baseline.json",
+    "sfa-deal-api-lifecycle-baseline.json",
+    "sfa-deal-create-api-baseline.json",
+    "sfa-deal-postgres-serialization-baseline.json"
+  ],
+  "changes": [
+    "Fresh ACTIVE actor membership and owned active deal/related account/stage locks within writes; reject stale expectedUpdatedAt and keep monotonic versions.",
+    "UUID creation receipt, recovery GET and cancellation DELETE; replay before quota, creation receipt and quota within one Serializable transaction; only fresh creation records usage. Soft-deleted targets retain receipt and cannot resurrect.",
+    "Strict non-truncating text/date/related-ID/field validation. Existing documented amount rounding is preserved; client no longer converts malformed amount to zero or strips characters.",
+    "Stage outcome transitions clear opposite timestamps, preserve same-outcome closed date and never move lastActivityAt backwards. Historical customer rows are not bulk modified.",
+    "Whole-transaction retries recognize model serialization errors and raw SQLSTATE40001/40P01; only receipt key conflict in an explicitly opted-in Serializable create retries the whole operation. Bounded5 attempts; unrelated unique/SQL errors do not retry.",
+    "Actual deal page uses shared bounded transport, actor/org/epoch guards, synchronous lanes and metadata-only recovery. All create/edit/stage consumers adopted; no optimistic unconfirmed stage move.",
+    "Draft revision and modal epochs retain newer input; same-actor authentication loading retains forms. Stage/edit operations send expectedUpdatedAt. Unknown outcome remains fenced until current state is confirmed or uncommitted creation is atomically cancelled."
+  ],
+  "targetedResults": {
+    "actualApiSynthetic": 19,
+    "actualMountedReactSynthetic": 13,
+    "actualLocalPostgres": 11,
+    "actualPostgresLockObservations": 3,
+    "priorTaskActivityMounted": 49,
+    "priorTaskActivityReceiptSynthetic": 64,
+    "typecheckExitCode": 0,
+    "targetedEslintExitCode": 0
+  },
+  "evidence": [
+    "sfa-deal-mutation-results.json",
+    "sfa-deal-client-results.json",
+    "sfa-deal-postgres-results.json",
+    "sfa-deal-postgres-supervisor.json",
+    "sfa-client-mounted-results.json",
+    "sfa-cancellation-results.json"
+  ],
+  "fullGate": "docs/audits/2026-10-06-all-services-recheck/sfa-deal-lifecycle-release-71f4ffc1-2167-44f4-a84c-a9358f24ce80",
+  "fullGateSession": 63436,
+  "limitations": [
+    "No production DB/customer/provider/billing writes. Local PG schema and auth are synthetic; complete production FK behavior not proven.",
+    "Mounted fixture mocks Next navigation/auth/API; actual browser, drag interactions and private production persistence remain unproven.",
+    "Legacy clients omitting operation/version remain explicitly supported; distinct new UUIDs from separate tabs/devices remain separate intent. Metadata does not survive closing the tab.",
+    "A concurrent mutable list may change during pagination; no snapshot completeness guarantee.",
+    "Historical contradictory outcome timestamps are not bulk corrected; display accepts legacy nullable dates while newly created/stage-changed outcomes must be coherent.",
+    "Other SFA accounts/contacts/leads/conversion/settings/provider lifecycle and all17 services/2074 criteria remain incomplete."
+  ],
+  "openPolicyQuestion": {
+    "status": "asked-user-pending",
+    "spec": "reference/services/sfa.md section9: deal PATCH/DELETE 担当/manager+",
+    "implementation": "Fresh ACTIVE same-organization member validation currently permits all four member roles. Record-assignee ownership is not enforced.",
+    "question": "Restrict to assigned member + owner/admin/manager, or retain collaborative all-ACTIVE-member access?",
+    "scope": "Do not claim role/record ownership audit complete. Current cohort improves freshness/organization isolation without silently deciding this policy."
+  },
+  "nextConfirmedConversionFinding": {
+    "status": "confirmed-not-repaired",
+    "findings": 5,
+    "evidence": "sfa-lead-conversion-lifecycle-baseline.json",
+    "probe": "probe-sfa-lead-conversion-lifecycle.cjs",
+    "required": [
+      "Fresh actor lock and fresh owned active lead snapshot inside conversion transaction.",
+      "Retain conditional conversion claim and prevent stale input copy, no duplicate conversion regression.",
+      "Use shared locked stage outcome logic and non-truncating explicit conversion input.",
+      "Recover exact account/deal pair after uncertain result without blind retry or arbitrary existing deal selection.",
+      "Audit actual leads UI draft, busy/duplicate, actor/org epoch and result handling; actual PG concurrency and scoped recovery."
+    ],
+    "clientEvidence": "sfa-lead-conversion-client-baseline.json",
+    "clientVerifiedBehaviors": 3,
+    "clientSourceGaps": 1
+  },
+  "fullGateResult": {
+    "startedAt": "2026-10-07T02:23:52.640996+00:00",
+    "pid": 79594,
+    "head": "c9aee67545a237de8e86ab512ebb4f3d4ea1eb8d",
+    "sourceFiles": 2675,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-07T02:29:20.464886+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-07T02:29:22.729940+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-07T02:29:23.180604+00:00"
+  },
+  "sourceFreezeReverifiedBeforeCommit": true
+}

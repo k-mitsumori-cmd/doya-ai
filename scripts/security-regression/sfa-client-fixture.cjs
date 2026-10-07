@@ -9,12 +9,12 @@ const act = fn => React.act(async () => { await fn(); for (let i = 0; i < 12; i+
 const props = e => e[Object.keys(e).find(k => k.startsWith('__reactProps$'))];
 const stamp = '2026-10-07T00:00:00.000Z';
 const stage = { id: 'stage', name: '提案', order: 1, probability: 50, color: '#123456', isWon: false, isLost: false };
-const makeDeal = id => ({ id, name: 'Synthetic ' + id, amount: 100, stageId: 'stage', probability: 50, accountId: null, accountName: null, contactName: null, note: null, status: 'open', startDate: null, expectedCloseDate: null, wonAt: null, lostAt: null, lastActivityAt: null, openTaskCount: 0 });
+const makeDeal = id => ({ id, createdAt: stamp, updatedAt: stamp, lostReason: null, name: 'Synthetic ' + id, amount: 100, stageId: 'stage', probability: 50, accountId: null, accountName: null, contactName: null, note: null, status: 'open', startDate: null, expectedCloseDate: null, wonAt: null, lostAt: null, lastActivityAt: null, openTaskCount: 0 });
 const makeTask = (input = {}, id = 'task') => ({ id, title: 'Synthetic task', status: 'open', dueDate: null, dealId: null, createdAt: stamp, updatedAt: stamp, dealName: null, ...input });
 async function fixture(page, options = {}) {
   if (!options.keepStorage) window.sessionStorage.clear();
   let actor = 'actor-a', status = 'authenticated', orgSlug = 'alpha', component, currentHook;
-  const writes = [], requests = [], notices = [], receipts = new Map(), tasks = options.tasks || [];
+  const writes = [], requests = [], notices = [], receipts = new Map(), tasks = options.tasks || [], deals = [makeDeal('deal-a'), makeDeal('deal-b')];
   let writeReply, readReply, failStorage = false, timeout = false, recoveries = 0;
   const session = () => ({ status, data: status === 'unauthenticated' ? null : { user: { id: actor, plan: 'FREE' } } });
   const taskData = body => makeTask({ ...body, title: body.title?.trim() || 'Synthetic task', dueDate: body.dueDate ? new Date(body.dueDate).toISOString() : null, dealId: body.dealId || null }, 'task-' + writes.length);
@@ -29,26 +29,37 @@ async function fixture(page, options = {}) {
       if (pathname.endsWith('/next-action')) return Response.json({ nextAction: 'Synthetic next action', reason: '', risk: '', tasks: [{ title: 'First candidate', dueDate: null }, { title: 'Second candidate', dueDate: null }] });
       if (init.method === 'DELETE' && url.searchParams.has('operationId')) {
         recoveries++; const saved = receipts.get(url.searchParams.get('operationId'));
-        return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'cancelled', [pathname.endsWith('/tasks') ? 'task' : 'activity']: null });
+        return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'cancelled', [pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
+      }
+      if (init.method === 'PATCH' && pathname.startsWith('/api/sfa/deals/')) {
+        const original = deals.find(d => pathname.endsWith('/' + d.id));
+        const row = { ...original, ...request.body, amount: request.body.amount === undefined ? original.amount : Math.round(Number(request.body.amount)), updatedAt: '2026-10-07T00:00:00.001Z' };
+        for (const k of ['accountId', 'contactName', 'note']) if (k in request.body) row[k] = request.body[k] || null;
+        for (const k of ['startDate', 'expectedCloseDate']) if (k in request.body) row[k] = request.body[k] ? new Date(request.body[k]).toISOString() : null;
+        if ('probability' in request.body) row.probability = Number(request.body.probability);
+        deals.splice(deals.indexOf(original), 1, row);
+        return Response.json({ deal: row });
       }
       if (init.method === 'PATCH') {
         const original = tasks.find(t => pathname.endsWith('/' + t.id));
         return Response.json({ task: { ...original, ...request.body, updatedAt: '2026-10-07T00:00:00.001Z' } });
       }
       if (init.method === 'DELETE') return Response.json({ ok: true });
-      const kind = pathname.endsWith('/tasks') ? 'task' : 'activity';
-      const row = kind === 'task' ? taskData(request.body) : activityData(request.body);
+      const kind = pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity';
+      const row = kind === 'task' ? taskData(request.body) : kind === 'deal' ? { ...makeDeal('deal-' + writes.length), name: request.body.name.trim(), amount: Number(request.body.amount), accountId: request.body.accountId || null, startDate: request.body.startDate ? new Date(request.body.startDate).toISOString() : stamp } : activityData(request.body);
+      if (kind === 'deal') deals.push(row);
       receipts.set(request.body.operationId, { kind, row });
       return Response.json({ [kind]: row });
     }
     if (readReply) { const result = await readReply(request); if (result) return result; }
     if (url.searchParams.has('operationId')) {
       const saved = receipts.get(url.searchParams.get('operationId'));
-      return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'missing', [pathname.endsWith('/tasks') ? 'task' : 'activity']: null });
+      return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'missing', [pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
     }
+    if (pathname.startsWith('/api/sfa/deals/')) { const row = deals.find(d => pathname.endsWith('/' + d.id)); return Response.json({ state: row ? 'found' : 'missing', deal: row || null }); }
     if (pathname.startsWith('/api/sfa/tasks/')) return Response.json({ state: 'found', task: tasks.find(t => pathname.endsWith('/' + t.id)) || null });
     if (pathname === '/api/sfa/summary') return Response.json({ summary: { totalCount: 2, openCount: 2, staleCount: 0, openTaskCount: 0, openTotal: '200', weighted: '100', wonTotal: '0' } });
-    if (pathname === '/api/sfa/deals') return Response.json({ stages: [stage], deals: [makeDeal('deal-a'), makeDeal('deal-b')], nextCursor: null, totalCount: 2, stageSummary: [{ stageId: 'stage', count: 2, total: '200' }] });
+    if (pathname === '/api/sfa/deals') return Response.json({ stages: [stage], deals, nextCursor: null, totalCount: 2, stageSummary: [{ stageId: 'stage', count: 2, total: '200' }] });
     if (pathname === '/api/sfa/accounts') return Response.json({ accounts: [], nextCursor: null });
     if (pathname === '/api/sfa/tasks') return Response.json({ tasks: tasks.filter(t => !url.searchParams.has('dealId') || t.dealId === url.searchParams.get('dealId')), page: Number(url.searchParams.get('page') || 1), hasMore: false });
     if (pathname === '/api/sfa/activities') return Response.json({ activities: [], nextCursor: null, totalCount: 0 });
@@ -107,4 +118,4 @@ async function fixture(page, options = {}) {
     close: async () => { await act(() => root.unmount()); container.remove(); },
   };
 }
-module.exports = { fixture, deferred, act, props, makeTask, stamp };
+module.exports = { fixture, deferred, act, props, makeTask, makeDeal, stamp };

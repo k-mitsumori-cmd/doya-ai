@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback, useRef, type PointerEvent as ReactPointerEvent } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { sfaInit, withOrg, fetchAllSfaAccounts } from '@/lib/sfa/client'
-import { sfaJson, SfaClientRejection, isSfaClientTask, isSfaClientActivity, type SfaClientTask } from '@/lib/sfa/client-response'
+import { withOrg, fetchAllSfaAccounts } from '@/lib/sfa/client'
+import { sfaJson, SfaClientRejection, isSfaClientTask, isSfaClientActivity, type SfaClientTask, isSfaClientDeal, type SfaClientDeal } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
 import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
@@ -13,22 +13,8 @@ import type { ActivityType } from '@/lib/sfa/types'
 import { isSfaSummary, summaryYen, type SfaSummary } from '@/lib/sfa/summary'
 
 interface Stage { id: string; name: string; order: number; probability: number; color: string; isWon: boolean; isLost: boolean }
-interface Deal {
-  id: string
-  name: string
-  amount: number
-  stageId: string | null
-  probability: number
-  accountId: string | null
+interface Deal extends SfaClientDeal {
   accountName: string | null
-  contactName: string | null
-  note: string | null
-  status: string
-  startDate: string | null
-  expectedCloseDate: string | null
-  wonAt: string | null
-  lostAt: string | null
-  lastActivityAt: string | null
   openTaskCount: number
 }
 interface Account { id: string; name: string }
@@ -46,8 +32,8 @@ interface DealPage {
 function isDealPage(value: unknown): value is DealPage {
   if (!value || typeof value !== 'object') return false
   const page = value as Partial<DealPage>
-  return Array.isArray(page.stages) && Array.isArray(page.deals)
-    && page.deals.every((deal) => deal && Number.isSafeInteger(deal.openTaskCount) && deal.openTaskCount >= 0)
+  return Array.isArray(page.stages) && page.stages.every(stage => stage && typeof stage.id === 'string' && typeof stage.name === 'string' && Number.isInteger(stage.order) && Number.isInteger(stage.probability) && stage.probability >= 0 && stage.probability <= 100 && typeof stage.color === 'string' && typeof stage.isWon === 'boolean' && typeof stage.isLost === 'boolean' && !(stage.isWon && stage.isLost)) && Array.isArray(page.deals)
+    && page.deals.every((deal) => isSfaClientDeal(deal) && (deal.accountName === null || typeof deal.accountName === 'string') && Number.isSafeInteger(deal.openTaskCount) && deal.openTaskCount >= 0)
     && (page.nextCursor === null || typeof page.nextCursor === 'string')
     && Number.isSafeInteger(page.totalCount) && (page.totalCount as number) >= 0
     && Array.isArray(page.stageSummary)
@@ -129,6 +115,8 @@ export default function SfaDealsPage() {
   const [accountId, setAccountId] = useState('')
   const [startDate, setStartDate] = useState(() => toDateInput(new Date()))
   const [busy, setBusy] = useState(false)
+  const createDraft = useSfaDraftSnapshot([name, amount, accountId, startDate, open])
+  const previousIdentity = useRef(mutations.identity)
 
   const load = useCallback(() => {
     if (!ready || !mutations.active()) return
@@ -141,10 +129,8 @@ export default function SfaDealsPage() {
     setDealsError(false)
     setSummaryError(false)
     setSummary(null)
-    fetch('/api/sfa/deals', sfaInit(orgSlug, { signal: controller.signal }))
-      .then(async (r) => {
-        if (!r.ok) throw new Error('商談の取得に失敗しました')
-        const d = await r.json()
+    sfaJson('/api/sfa/deals', orgSlug, { signal: controller.signal })
+      .then((d) => {
         if (!isDealPage(d)) throw new Error('商談の応答形式が不正です')
         return d
       })
@@ -156,10 +142,8 @@ export default function SfaDealsPage() {
       })
       .catch(() => { if (!controller.signal.aborted && mutations.active()) setDealsError(true) })
       .finally(() => { if (!controller.signal.aborted && mutations.active()) setDealsLoading(false) })
-    fetch('/api/sfa/summary', sfaInit(orgSlug, { signal: controller.signal }))
-      .then(async (r) => {
-        if (!r.ok) throw new Error('商談集計の取得に失敗しました')
-        const data = await r.json()
+    sfaJson('/api/sfa/summary', orgSlug, { signal: controller.signal })
+      .then((data) => {
         if (!isSfaSummary(data.summary)) throw new Error('商談集計の応答形式が不正です')
         return data.summary
       })
@@ -174,10 +158,8 @@ export default function SfaDealsPage() {
     moreDealsRequest.current = controller
     setLoadingMore(true)
     setDealsError(false)
-    fetch(`/api/sfa/deals?cursor=${encodeURIComponent(nextCursor)}`, sfaInit(orgSlug, { signal: controller.signal }))
-      .then(async (r) => {
-        if (!r.ok) throw new Error('商談の続きの取得に失敗しました')
-        const data = await r.json()
+    sfaJson(`/api/sfa/deals?cursor=${encodeURIComponent(nextCursor)}`, orgSlug, { signal: controller.signal })
+      .then((data) => {
         if (!isDealPage(data)) throw new Error('商談の応答形式が不正です')
         return data
       })
@@ -298,10 +280,12 @@ export default function SfaDealsPage() {
     setSummaryError(false)
     setTasks([])
     setAccounts([])
-    setAccountId('')
-    setForm((current) => ({ ...current, accountId: '' }))
-    setOpen(false)
-    setDetail(null)
+    if (previousIdentity.current !== mutations.identity) {
+      previousIdentity.current = mutations.identity
+      setName(''); setAmount(''); setAccountId(''); setStartDate(toDateInput(new Date()))
+      setForm({ name: '', amount: '', accountId: '', contactName: '', startDate: '', expectedCloseDate: '', probability: '', note: '' })
+      setOpen(false); setDetail(null); ++detailEpoch.current
+    }
     setDealsLoading(true)
     load()
     loadTasks()
@@ -318,41 +302,26 @@ export default function SfaDealsPage() {
   }, [ready, orgSlug, load, loadTasks, loadAccounts, mutations.key])
 
   const create = async () => {
-    if (!name.trim()) return
+    if (!name.trim() || !mutations.active() || mutations.creationBlocked('deal')) return
+    const revision = createDraft.current.revision
     setBusy(true)
-    try {
-      const res = await fetch('/api/sfa/deals', sfaInit(orgSlug, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, amount: Number(amount) || 0, accountId: accountId || null, startDate: startDate || null }),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
+    const row = await mutations.create('deal', 'create-deal', { name, amount: amount || '0', accountId: accountId || null, ...(startDate ? { startDate } : {}) })
+    if (!mutations.active()) return
+    setBusy(false)
+    if (!row) return
+    if (createDraft.current.revision === revision) {
       setName(''); setAmount(''); setAccountId(''); setStartDate(toDateInput(new Date())); setOpen(false)
-      toast.success('商談を追加しました')
-      load()
-    } catch (e: any) {
-      toast.error(e.message)
-    } finally {
-      setBusy(false)
     }
+    toast.success('商談を追加しました')
+    load()
   }
 
   const moveStage = async (deal: Deal, stageId: string) => {
-    // 楽観更新
-    setDeals((prev) => prev.map((x) => (x.id === deal.id ? { ...x, stageId } : x)))
-    try {
-      const res = await fetch(`/api/sfa/deals/${deal.id}`, sfaInit(orgSlug, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stageId }),
-      }))
-      if (!res.ok) throw new Error()
-      load()
-    } catch {
-      toast.error('移動に失敗しました')
-      load()
-    }
+    if (!mutations.active() || deal.stageId === stageId || mutations.blocked('deal:' + deal.id)) return
+    const row = await mutations.mutateDeal(deal, { stageId })
+    if (!row || !mutations.active()) return
+    // Keep the confirmed board until the versioned write succeeds.
+    load()
   }
 
   // ============ ポインタベースのドラッグ&ドロップ（マウス + タッチ対応） ============
@@ -507,13 +476,14 @@ export default function SfaDealsPage() {
   const [newTaskDue, setNewTaskDue] = useState('')
   const [taskBusy, setTaskBusy] = useState(false)
   detailRef.current = detail?.id || null
+  const editDraft = useSfaDraftSnapshot([form, detail?.id])
   const taskDraft = useSfaDraftSnapshot([newTaskTitle, newTaskDue, detail?.id])
   const activityDraft = useSfaDraftSnapshot([actType, actSubject, detail?.id])
-  const closeDetail = () => { ++detailEpoch.current; detailRef.current = null; detailTasksRequest.current?.abort(); activitiesRequest.current?.abort(); setDetail(null); setTaskBusy(false); setActBusy(false) }
-  useEffect(() => { setTaskBusy(false); setActBusy(false); setAiAdding(false); ++aiEpoch.current; setAiModal(null); aiRequest.current?.abort(); aiRequest.current = null; return () => { aiRequest.current?.abort() } }, [mutations.key])
+  const closeDetail = () => { ++detailEpoch.current; detailRef.current = null; detailTasksRequest.current?.abort(); activitiesRequest.current?.abort(); setDetail(null); setTaskBusy(false); setActBusy(false); setSaving(false) }
+  useEffect(() => { setBusy(false); setSaving(false); setTaskBusy(false); setActBusy(false); setAiAdding(false); ++detailEpoch.current; ++aiEpoch.current; setAiModal(null); aiRequest.current?.abort(); aiRequest.current = null; return () => { aiRequest.current?.abort() } }, [mutations.key])
 
   const openDetail = (d: Deal) => {
-    ++detailEpoch.current; detailRef.current = d.id; setTaskBusy(false); setActBusy(false)
+    ++detailEpoch.current; detailRef.current = d.id; setTaskBusy(false); setActBusy(false); setSaving(false)
     setDetail(d)
     setForm({
       name: d.name,
@@ -541,42 +511,22 @@ export default function SfaDealsPage() {
   }
 
   const saveDetail = async () => {
-    if (!detail) return
-    if (!form.name.trim()) {
-      toast.error('商談名は必須です')
-      return
-    }
-    const probability = Number(form.probability)
-    if (form.probability.trim() === '' || !Number.isInteger(probability) || probability < 0 || probability > 100) {
-      toast.error('確度は0〜100の整数で入力してください')
-      return
-    }
+    if (!detail || !mutations.active() || mutations.blocked('deal:' + detail.id)) return
+    const epoch = detailEpoch.current, revision = editDraft.current.revision
     setSaving(true)
-    try {
-      const res = await fetch(`/api/sfa/deals/${detail.id}`, sfaInit(orgSlug, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name,
-          amount: Number(form.amount) || 0,
-          accountId: form.accountId, // '' で解除
-          contactName: form.contactName,
-          startDate: form.startDate,
-          expectedCloseDate: form.expectedCloseDate,
-          probability,
-          note: form.note,
-        }),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      toast.success('保存しました')
-      setDetail(null)
-      load()
-    } catch (e: any) {
-      toast.error(e.message)
-    } finally {
-      setSaving(false)
-    }
+    const row = await mutations.mutateDeal(detail, {
+      name: form.name, amount: form.amount || '0', accountId: form.accountId, contactName: form.contactName,
+      startDate: form.startDate, expectedCloseDate: form.expectedCloseDate, probability: form.probability, note: form.note,
+    })
+    if (!mutations.active()) return
+    if (detailEpoch.current === epoch) setSaving(false)
+    if (!row) return
+    load()
+    if (detailEpoch.current !== epoch) return
+    // A newer draft keeps its fields and receives only the confirmed baseline version.
+    setDetail(current => current?.id === row.id ? { ...current, ...row } : current)
+    if (editDraft.current.revision === revision) closeDetail()
+    toast.success('保存しました')
   }
 
   const addDetailTask = async () => {
@@ -665,7 +615,7 @@ export default function SfaDealsPage() {
           </div>
           <div>
             <label className="block text-xs font-black text-slate-500 mb-1">金額(円)</label>
-            <input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))} placeholder="1000000" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1000000" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
           </div>
           <div>
             <label className="block text-xs font-black text-slate-500 mb-1">取引先</label>
@@ -679,7 +629,7 @@ export default function SfaDealsPage() {
             <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
           </div>
           <div className="sm:col-span-4">
-            <button onClick={create} disabled={busy} className="px-5 py-2.5 rounded-xl bg-green-600 text-white font-black disabled:opacity-50">{busy ? '追加中…' : '追加する'}</button>
+            <button onClick={create} disabled={busy || !ready || mutations.creationBlocked('deal')} className="px-5 py-2.5 rounded-xl bg-green-600 text-white font-black disabled:opacity-50">{busy ? '追加中…' : '追加する'}</button>
           </div>
         </div>
       )}
@@ -786,6 +736,7 @@ export default function SfaDealsPage() {
                         <select
                           data-no-drag
                           value={d.stageId || ''}
+                          disabled={!ready || mutations.blocked('deal:' + d.id)}
                           onChange={(e) => moveStage(d, e.target.value)}
                           className="mt-2 w-full text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1.5 bg-slate-50"
                         >
@@ -924,11 +875,11 @@ export default function SfaDealsPage() {
               </div>
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-1">金額(円)</label>
-                <input value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value.replace(/[^0-9]/g, '') }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
+                <input value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
               </div>
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-1">確度(%)</label>
-                <input value={form.probability} inputMode="numeric" maxLength={3} onChange={(e) => setForm((f) => ({ ...f, probability: e.target.value.replace(/[^0-9]/g, '') }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
+                <input value={form.probability} inputMode="numeric" maxLength={3} onChange={(e) => setForm((f) => ({ ...f, probability: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
               </div>
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-1">取引先</label>
@@ -954,7 +905,7 @@ export default function SfaDealsPage() {
                 <textarea value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} rows={3} placeholder="商談の状況・先方の要望など" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
               </div>
             </div>
-            <button onClick={saveDetail} disabled={saving} className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-lime-600 text-white font-black disabled:opacity-50 mb-6">
+            <button onClick={saveDetail} disabled={saving || !ready || mutations.blocked('deal:' + detail.id)} className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-lime-600 text-white font-black disabled:opacity-50 mb-6">
               {saving ? '保存中…' : '保存する'}
             </button>
 

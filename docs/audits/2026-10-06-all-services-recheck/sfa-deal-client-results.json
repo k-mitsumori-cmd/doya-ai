@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T02:27:32.923Z",
+  "passed": 13,
+  "cases": [
+    "Same-frame create submits one UUID and never clears a newer draft",
+    "Late old-organization success cannot close current form or announce success",
+    "Overlong rejected creation preserves draft and persistent failure",
+    "Blank amount is explicit zero; invalid amount is preserved and sent for validation",
+    "Unknown creation fences retry; missing read cannot unlock; cancellation permits new UUID",
+    "Unknown malformed response retains input and recovery metadata",
+    "Unknown wrong-fields response retains input and recovery metadata",
+    "Unknown deadline response retains input and recovery metadata",
+    "Denied browser storage prevents creation send",
+    "Same-actor authentication loading preserves create draft and rehydrates unknown operation",
+    "Detail save includes expected version and preserves newer form changes",
+    "Stale detail rejection keeps modal and input; no false success",
+    "Stage selection never optimistically changes confirmed board and sends one versioned write"
+  ],
+  "sourceHashes": {
+    "src/app/sfa/[orgSlug]/deals/page.tsx": "87fe3cbe6f3fdcb63e3331baa611090a5394d87c2e1ef91d7fb1985d39eb112f",
+    "src/lib/sfa/use-client-mutations.ts": "1b06132dfd8418e96ab1c1c84b0a8b7015b255b5a76fc36319045bc4c82873a1",
+    "src/lib/sfa/client-response.ts": "129ad214c6beda62201d2387f28bef0f567f5277968319b69bd429bfb561171f",
+    "src/components/sfa/MutationRecovery.tsx": "c0599360eb12fed38ffb1090ce16c27d524db2dfaaab95e6802a6be127a7b619",
+    "scripts/security-regression/sfa-client-fixture.cjs": "2ffad60d8314ceed3f6d78821a6aa0d712aa39a79c9f4ca259a49f6ea74a7308"
+  },
+  "scope": "Actual deal page, shared mutation/recovery/session guard and bounded transport mounted in StrictMode. Synthetic browser DOM/navigation/auth/API; not real Next routing/private production/customer writes."
+}

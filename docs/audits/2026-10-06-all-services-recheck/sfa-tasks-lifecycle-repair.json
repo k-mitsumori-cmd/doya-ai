@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-07T00:30:13.078066+00:00",
-  "status": "partially-repaired-client-cohort-full-gate-passed-production-pending",
+  "status": "partially-repaired-task-activity-published-deal-cohort-local-gate-running",
   "sourceCommit": "e1e4a38d76c4f5c49dcdc949c93a87dc51e0b6f7",
   "evidence": [
     "sfa-task-late-create-baseline.json",
@@ -83,7 +83,7 @@
     "publicationEvidence": "sfa-input-public-0200977e.json",
     "publicVerificationExitCode": 0
   },
-  "updatedAt": "2026-10-07T02:07:51.649735+00:00",
+  "updatedAt": "2026-10-07T02:24:36.388584+00:00",
   "relatedCollectionInputLoss": {
     "status": "repaired-local-full-gate-passed-production-pending",
     "cases": 17,
@@ -251,7 +251,7 @@
     "gate": "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-b6ba9b86-045e-4cec-b62d-9affffdb8891"
   },
   "clientLifecycleRepair": {
-    "status": "full-gate-passed-production-pending",
+    "status": "deployed-anonymous-publication-verified-private-workflows-unproven",
     "consumerFiles": [
       "src/app/sfa/[orgSlug]/tasks/page.tsx",
       "src/app/sfa/[orgSlug]/page.tsx",
@@ -322,7 +322,21 @@
       "changedSources": [],
       "endedAt": "2026-10-07T02:07:23.665359+00:00"
     },
-    "sourceFreezeReverifiedBeforeCommit": true
+    "sourceFreezeReverifiedBeforeCommit": true,
+    "commit": "c9aee67545a237de8e86ab512ebb4f3d4ea1eb8d",
+    "pushExitCode": 0,
+    "sourceFreezeReverifiedAfterCommit": true,
+    "ciRun": 37560531150,
+    "productionDeployment": {
+      "id": "dpl_52MFz71ps622HajSR5zXMwDkhyNi",
+      "url": "doya-ekbbpiwce-surisutas-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "commit": "c9aee67545a237de8e86ab512ebb4f3d4ea1eb8d"
+    },
+    "ciConclusion": "success",
+    "publicVerificationExitCode": 0,
+    "publicationEvidence": "sfa-client-public-c9aee675.json"
   },
   "findingsAreHistoricalBaseline": true,
   "nextConfirmedDealLifecycleFinding": {
@@ -340,6 +354,17 @@
       "PATCH/DELETE fresh actor, active same-org deal and related account/stage locks with expectedUpdatedAt. Add updatedAt to board/DTO; monotonic versions and readonly recovery.",
       "Strict nontruncating input, exact BigInt amount and preserved unrelated fields. Won/lost transitions clear opposite timestamp consistently.",
       "Full deal create/edit/stage UI adoption, bounded read/write transport, actor/org/detail/drag epoch, persistent result recovery and latest draft retention; mounted independent fixture + actual PG race checks."
-    ]
+    ],
+    "createApiBaseline": {
+      "evidence": "sfa-deal-create-api-baseline.json",
+      "probe": "probe-sfa-deal-create-api.cjs",
+      "confirmedFindings": 2,
+      "findings": [
+        "Actual POST/admission creates after synthetic actor revocation following context resolution.",
+        "Same operationId is ignored by actual deal POST; concurrent fixture calls commit two rows."
+      ],
+      "scope": "Actual handlers/helper with synthetic Prisma only. No customer writes or actual PostgreSQL scheduling proof."
+    },
+    "repairEvidence": "sfa-deal-lifecycle-repair.json"
   }
 }

@@ -31,6 +31,7 @@ const request = (body) => ({ url: 'http://local/api/sfa', headers: { get: () => 
   assert.equal((await account(request({ name: '会社' }))).status, 402);
 
   const deal = load('src/app/api/sfa/deals/route.ts', {
+    ...require('./sfa-deal-test-deps.cjs').dealDeps(),
     ...shared,
     '@/lib/prisma': { prisma: { sfaStage: { findFirst: async () => null }, sfaDeal: { create: async () => { attempted++; } } } },
     '@/lib/sfa/amount': { parseSfaAmount: () => 0n },

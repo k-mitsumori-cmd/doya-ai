@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client'
 import type { SfaContext } from './types'
 import { SfaMutationError } from './mutation-authority'
 
-type Kind = 'task' | 'activity'
+type Kind = 'task' | 'activity' | 'deal'
+export class SfaReceiptRaceError extends Error { readonly code = 'SFA_RECEIPT_RACE' }
 type Scope = Pick<SfaContext, 'userId' | 'organizationId'>
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
@@ -38,6 +39,7 @@ async function lockedReceipt(tx: Prisma.TransactionClient, key: string) {
 export async function createSfaOnce<T extends { id: string }>(
   tx: Prisma.TransactionClient, ctx: Scope, kind: Kind, operationId: string | undefined,
   input: unknown, find: (id: string) => Promise<T | null>, create: () => Promise<T>,
+  options: { retrySerializableRace?: boolean } = {},
 ): Promise<T> {
   if (!operationId) return create()
   const key = receiptKey(ctx, kind, operationId), inputHash = hash(input)
@@ -51,7 +53,15 @@ export async function createSfaOnce<T extends { id: string }>(
     return row
   }
   const row = await create()
-  await tx.systemSetting.create({ data: { key, value: JSON.stringify({ version: 1, id: row.id, inputHash }) } })
+  try {
+    await tx.systemSetting.create({ data: { key, value: JSON.stringify({ version: 1, id: row.id, inputHash }) } })
+  } catch (error) {
+    const failure = error as { code?: string; meta?: { target?: unknown } }
+    // A Serializable snapshot may predate a cancellation committed before our
+    // advisory lock. Only a receipt-key conflict can trigger a fresh transaction.
+    if (options.retrySerializableRace && failure?.code === 'P2002' && Array.isArray(failure.meta?.target) && failure.meta.target.length === 1 && failure.meta.target[0] === 'key') throw new SfaReceiptRaceError('保存操作の競合を再確認します。')
+    throw error
+  }
   // Do not delete receipts when the business row is deleted: replay must never resurrect it.
   return row
 }

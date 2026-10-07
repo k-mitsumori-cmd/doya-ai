@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-07T02:10:36.259Z",
+  "findings": 2,
+  "results": [
+    {
+      "name": "Actual deal POST and admission helper create after context actor is revoked",
+      "status": 200,
+      "writes": 1
+    },
+    {
+      "name": "Deal POST ignores same operationId and commits two creations",
+      "statuses": [
+        200,
+        200
+      ],
+      "writes": 2
+    }
+  ],
+  "sourceHash": "f0c3bd30463afdbfc98adc7a03d67d14dbc4d8e40e9a35c33e1638b702e1bff7",
+  "scope": "Actual POST handler, actual amount parser and actual Serializable admission wrapper, synthetic Prisma transaction/auth/usage. Proves missing fresh actor validation and unused operationId; does not prove real PostgreSQL scheduling, provider behavior or production impact. No customer writes or network."
+}

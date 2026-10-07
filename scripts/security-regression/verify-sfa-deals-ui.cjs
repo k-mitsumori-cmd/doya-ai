@@ -21,14 +21,15 @@ const { isSfaSummary } = load('src/lib/sfa/summary.ts');
 const summary = { totalCount: 501, openCount: 501, staleCount: 0, openTaskCount: 0, openTotal: '1000000', weighted: '500000', wonTotal: '0' };
 
 function ui({ failSummary = false, failContinuation = false } = {}) {
-  const rows = Array.from({ length: 501 }, (_, index) => ({ id: String(index), stageId: 'stage-1', amount: 1, status: 'open', openTaskCount: 0 }));
+  const { isSfaClientDeal } = load('src/lib/sfa/client-response.ts', { '@/lib/org-client-response': {}, './task-date': {} });
+  const rows = Array.from({ length: 501 }, (_, index) => ({ id: String(index), stageId: 'stage-1', amount: 1, status: 'open', name: 'Synthetic', probability: 50, accountId: null, accountName: null, contactName: null, note: null, lostReason: null, startDate: null, expectedCloseDate: null, wonAt: null, lostAt: null, lastActivityAt: null, createdAt: '2026-10-07T00:00:00.000Z', updatedAt: '2026-10-07T00:00:00.000Z', openTaskCount: 0 }));
   const context = {
     mutations: { active: () => true },
     ready: true, orgSlug: 'org-1', nextCursor: null, dealsLoading: false, loadingMore: false,
     stages: [], deals: [], totalCount: 0, stageSummary: [], summary: null,
     dealsError: false, summaryError: false,
     dealsRequest: { current: null }, moreDealsRequest: { current: null },
-    AbortController, Response, Set, encodeURIComponent, isSfaSummary,
+    AbortController, Response, Set, encodeURIComponent, isSfaSummary, isSfaClientDeal,
     sfaInit: (_slug, options) => options,
     fetch: async (url) => {
       if (url === '/api/sfa/summary') {
@@ -38,13 +39,14 @@ function ui({ failSummary = false, failContinuation = false } = {}) {
       if (cursor && failContinuation) return Response.json({ error: 'offline' }, { status: 503 });
       const start = cursor ? Number(cursor) : 0;
       return Response.json({
-        stages: [{ id: 'stage-1' }], deals: rows.slice(start, start + 100),
+        stages: [{ id: 'stage-1', name: 'Stage', order: 1, probability: 50, color: '#123456', isWon: false, isLost: false }], deals: rows.slice(start, start + 100),
         nextCursor: start + 100 < rows.length ? String(start + 100) : null,
         totalCount: rows.length,
         stageSummary: [{ stageId: 'stage-1', count: rows.length, total: '1000000' }],
       });
     },
   };
+  context.sfaJson = async (url) => { const r = await context.fetch(url); if (!r.ok) throw Error('Synthetic unavailable'); return r.json(); };
   for (const key of ['Stages', 'Deals', 'NextCursor', 'TotalCount', 'StageSummary', 'Summary',
     'DealsLoading', 'DealsError', 'SummaryError', 'LoadingMore']) {
     const property = key[0].toLowerCase() + key.slice(1);

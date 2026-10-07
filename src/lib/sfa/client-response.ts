@@ -55,3 +55,39 @@ export function activityWriteMatches(row: SfaClientActivity, body: Record<string
     && row.body === (typeof body.body === 'string' ? body.body.trim() || null : null)
     && row.dealId === (body.dealId || null)
 }
+
+export interface SfaClientDeal {
+  id: string; name: string; amount: number; stageId: string | null; probability: number; accountId: string | null
+  contactName: string | null; note: string | null; lostReason: string | null; status: 'open' | 'won' | 'lost'
+  startDate: string | null; expectedCloseDate: string | null; wonAt: string | null; lostAt: string | null
+  lastActivityAt: string | null; createdAt: string; updatedAt: string
+}
+export function isSfaClientDeal(v: unknown): v is SfaClientDeal {
+  if (!record(v) || !sfaClientId(v.id) || typeof v.name !== 'string' || !v.name.trim() || v.name.length > 200
+    || !Number.isSafeInteger(v.amount) || (v.amount as number) < 0 || !nullableId(v.stageId) || !nullableId(v.accountId)
+    || !Number.isInteger(v.probability) || (v.probability as number) < 0 || (v.probability as number) > 100
+    || !text(v.contactName, 100) || !text(v.note, 5000) || !text(v.lostReason, 300)
+    || !['open', 'won', 'lost'].includes(String(v.status)) || !sfaClientDate(v.createdAt) || !sfaClientDate(v.updatedAt)
+    || !['startDate', 'expectedCloseDate', 'wonAt', 'lostAt', 'lastActivityAt'].every(k => v[k] === null || sfaClientDate(v[k]))) return false
+  return true
+}
+export function dealWriteMatches(row: SfaClientDeal, body: Record<string, unknown>, before?: SfaClientDeal) {
+  if ((!before || body.stageId !== undefined) && (row.status === 'open' ? row.wonAt !== null || row.lostAt !== null : row.status === 'won' ? !row.wonAt || row.lostAt !== null : !row.lostAt || row.wonAt !== null)) return false
+  if (before && (row.id !== before.id || row.createdAt !== before.createdAt || row.updatedAt <= before.updatedAt)) return false
+  for (const key of ['name', 'accountId', 'contactName', 'note', 'lostReason', 'stageId'] as const) {
+    if (body[key] !== undefined) {
+      const value = key === 'name' || key === 'contactName' ? String(body[key] ?? '').trim() : body[key]
+      if (row[key] !== (value || null)) return false
+    } else if (before && row[key] !== before[key]) return false
+  }
+  if (body.amount !== undefined ? row.amount !== Math.round(Number(body.amount)) : before && row.amount !== before.amount) return false
+  for (const key of ['startDate', 'expectedCloseDate'] as const) {
+    if (body[key] !== undefined) { if (body[key] ? jstDateKey(row[key]) !== jstDateKey(String(body[key])) : row[key] !== null) return false }
+    else if (before && row[key] !== before[key]) return false
+  }
+  if (body.stageId === undefined) {
+    if (body.probability !== undefined && row.probability !== Number(body.probability)) return false
+    if (before && (row.status !== before.status || row.wonAt !== before.wonAt || row.lostAt !== before.lostAt || body.probability === undefined && row.probability !== before.probability)) return false
+  }
+  return true
+}

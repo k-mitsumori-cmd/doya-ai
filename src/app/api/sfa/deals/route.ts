@@ -7,14 +7,32 @@ import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom, ensurePipeline } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
-import { parseSfaAmount } from '@/lib/sfa/amount'
+import { dealBody, lockDealStage, dealStageChange } from '@/lib/sfa/deal-mutation'
+import { createSfaOnce, recoverSfaCreation, cancelSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
+import { lockSfaMutationActor, lockSfaRelation, SfaMutationError } from '@/lib/sfa/mutation-authority'
 import { recordServiceUsage } from '@/lib/service-usage'
-import { canManageSfaBilling, sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
+import { canManageSfaBilling, sfaQuotaResponse, withSfaAdmission, checkSfaQuota, type SfaQuotaExceeded } from '@/lib/sfa/limits'
+
+const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+class DealQuotaError extends Error { constructor(readonly limit: SfaQuotaExceeded, readonly billing: boolean) { super('Deal quota exceeded') } }
 
 // GET /api/sfa/deals — カンバン用に「ステージ一覧 + 商談一覧（取引先名つき）」を返す
 export async function GET(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, 401)
+
+  const operations = new URL(req.url).searchParams.getAll('operationId')
+  if (operations.length) {
+    try {
+      if (operations.length !== 1) throw new SfaMutationError(400, '操作情報が重複しています。')
+      const operationId = sfaOperationId(operations[0])!
+      const recovery = await prisma.$transaction(async tx => {
+        await lockSfaMutationActor(tx, ctx)
+        return recoverSfaCreation(tx, ctx, 'deal', operationId, id => tx.sfaDeal.findFirst({ where: { id, organizationId: ctx.organizationId, isActive: true } }))
+      })
+      return json(bigIntToNumber({ state: recovery.state, deal: recovery.row }))
+    } catch (error) { return json({ error: error instanceof SfaMutationError ? error.message : '保存結果を確認できませんでした。' }, error instanceof SfaMutationError ? error.status : 500) }
+  }
 
   const pageSize = 100
   const rawCursor = new URL(req.url).searchParams.get('cursor')
@@ -30,7 +48,7 @@ export async function GET(req: NextRequest) {
       if (Number.isNaN(updatedAt.getTime()) || updatedAt.toISOString() !== decoded.updatedAt) throw new Error('Invalid date')
       cursor = { updatedAt, id: decoded.id }
     } catch {
-      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+      return json({ error: 'ページ指定が正しくありません' }, 400)
     }
   }
 
@@ -87,96 +105,63 @@ export async function GET(req: NextRequest) {
       totalCount: stageGroups.reduce((sum, row) => sum + row._count._all, 0),
       stageSummary: stageGroups.map((row) => ({ stageId: row.stageId, count: row._count._all, total: (row._sum.amount ?? 0n).toString() })),
     },
-    { headers: { 'Cache-Control': 'no-store' } }
+    { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } }
   )
 }
 
-// POST /api/sfa/deals — 商談作成
+// POST /api/sfa/deals — actor authority, replay receipt and quota are committed together.
 export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
-  const parsedBody = await req.json().catch(() => null)
-  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
-    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
-  }
-  const body = parsedBody as Record<string, unknown>
-  const name = typeof body.name === 'string' ? body.name.trim() : ''
-  if (!name) return NextResponse.json({ error: '商談名は必須です' }, { status: 400 })
-  if (body.stageId != null && typeof body.stageId !== 'string') {
-    return NextResponse.json({ error: 'ステージの指定が正しくありません' }, { status: 400 })
-  }
-  if (body.accountId != null && typeof body.accountId !== 'string') {
-    return NextResponse.json({ error: '取引先の指定が正しくありません' }, { status: 400 })
-  }
-  const amount = body.amount === undefined || body.amount === '' ? 0n : parseSfaAmount(body.amount)
-  if (amount === null) return NextResponse.json({ error: '金額は0以上の有効な数値で入力してください' }, { status: 400 })
-
-  // ステージ所有確認（指定が無ければ先頭ステージ）
-  let stageId = (body.stageId as string | undefined)?.trim() || null
-  let probability = 0
-  let status: 'open' | 'won' | 'lost' = 'open'
-  const stage = stageId
-    ? await prisma.sfaStage.findUnique({ where: { id: stageId }, include: { pipeline: true } })
-    : await prisma.sfaStage.findFirst({
-        where: { pipeline: { organizationId: ctx.organizationId } },
-        orderBy: { order: 'asc' },
-        include: { pipeline: true },
-      })
-  if (stage && stage.pipeline.organizationId === ctx.organizationId) {
-    stageId = stage.id
-    probability = stage.probability
-    status = stage.isWon ? 'won' : stage.isLost ? 'lost' : 'open'
-  } else {
-    if (stageId) return NextResponse.json({ error: '不正なステージです' }, { status: 400 })
-    stageId = null
-  }
-
-  // 取引先所有確認
-  const accountId = typeof body.accountId === 'string' ? body.accountId.trim() || null : null
-  if (accountId) {
-    const acc = await prisma.sfaAccount.findFirst({ where: { id: accountId, organizationId: ctx.organizationId, isActive: true }, select: { id: true } })
-    if (!acc) return NextResponse.json({ error: '選択した取引先が見つかりません。再読み込みして選び直してください。' }, { status: 400 })
-  }
-
-  // 商談日（開始日）。未指定なら作成日を起点にする
-  let startDate = new Date()
-  if (body.startDate != null && body.startDate !== '') {
-    if (typeof body.startDate !== 'string') return NextResponse.json({ error: '商談日が正しくありません' }, { status: 400 })
-    const day = body.startDate.match(/^\d{4}-\d{2}-\d{2}(?=$|T)/)?.[0]
-    const parsedDay = day ? new Date(`${day}T00:00:00.000Z`) : null
-    const parsedDate = new Date(body.startDate)
-    if (!parsedDay || Number.isNaN(parsedDay.getTime()) || parsedDay.toISOString().slice(0, 10) !== day || Number.isNaN(parsedDate.getTime())) {
-      return NextResponse.json({ error: '商談日が正しくありません' }, { status: 400 })
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, 401)
+  try {
+    const { body, data } = dealBody(await req.json().catch(() => null), true)
+    const operationId = sfaOperationId(body.operationId)
+    const admitted = await withSfaAdmission(ctx.organizationId, {}, async tx => {
+      await lockSfaMutationActor(tx, ctx)
+      let created = false
+      const deal = await createSfaOnce(tx, ctx, 'deal', operationId,
+        { name: data.name, amount: data.amount!.toString(), accountId: data.accountId || null, stageId: data.stageId || null, startDate: data.startDate?.toISOString() || null },
+        id => tx.sfaDeal.findFirst({ where: { id, organizationId: ctx.organizationId, isActive: true } }), async () => {
+          // Replays are resolved before quota: a full organization may still recover its committed creation.
+          const limit = await checkSfaQuota(tx, ctx.organizationId, { deals: 1 })
+          if (limit) throw new DealQuotaError(limit, await canManageSfaBilling(tx, ctx.organizationId, ctx.userId))
+          const accountId = data.accountId ? await lockSfaRelation(tx, ctx, 'sfaAccount', data.accountId) : null
+          const stage = await lockDealStage(tx, ctx, data.stageId || null)
+          const now = new Date()
+          created = true
+          return tx.sfaDeal.create({ data: {
+            organizationId: ctx.organizationId, name: data.name!, amount: data.amount!, accountId,
+            assigneeMemberId: ctx.memberId, startDate: data.startDate ?? now,
+            ...(stage ? dealStageChange(stage) : { stageId: null, probability: 0, status: 'open', wonAt: null, lostAt: null, lastActivityAt: now }),
+          } })
+        }, { retrySerializableRace: true })
+      return { deal, created }
+    })
+    if (admitted.limit) throw new DealQuotaError(admitted.limit, false)
+    if (admitted.created.created) await recordServiceUsage({ userId: ctx.userId, serviceId: 'sfa', action: '商談作成', summary: data.name, metadata: { organizationId: ctx.organizationId } })
+    return json({ deal: bigIntToNumber(admitted.created.deal) })
+  } catch (error) {
+    if (error instanceof DealQuotaError) {
+      const response = sfaQuotaResponse(error.limit, error.billing)
+      response.headers.set('Cache-Control', 'private, no-store'); response.headers.set('Vary', 'Cookie')
+      return response
     }
-    startDate = parsedDate
+    return json({ error: error instanceof SfaMutationError ? error.message : '保存結果を確認できませんでした。一覧をご確認ください。' }, error instanceof SfaMutationError ? error.status : 500)
   }
+}
 
-  const now = new Date()
-  const admitted = await withSfaAdmission(ctx.organizationId, { deals: 1 }, (tx) => tx.sfaDeal.create({
-    data: {
-      organizationId: ctx.organizationId,
-      name: name.slice(0, 200),
-      amount,
-      stageId,
-      probability,
-      accountId,
-      assigneeMemberId: ctx.memberId,
-      status,
-      wonAt: status === 'won' ? now : null,
-      lostAt: status === 'lost' ? now : null,
-      startDate,
-      lastActivityAt: now,
-    },
-  }))
-  if (admitted.limit) return sfaQuotaResponse(admitted.limit, await canManageSfaBilling(prisma, ctx.organizationId, ctx.userId))
-  const deal = admitted.created
-  await recordServiceUsage({
-    userId: ctx.userId,
-    serviceId: 'sfa',
-    action: '商談作成',
-    summary: name,
-    metadata: { organizationId: ctx.organizationId },
-  })
-
-  return NextResponse.json({ deal: bigIntToNumber(deal) })
+// Cancels a missing creation receipt; never deletes an existing business deal.
+export async function DELETE(req: NextRequest) {
+  const ctx = await getSfaContext(orgSlugFrom(req))
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, 401)
+  try {
+    const operations = new URL(req.url).searchParams.getAll('operationId')
+    if (operations.length !== 1) throw new SfaMutationError(400, '操作情報が正しくありません。')
+    const operationId = sfaOperationId(operations[0])!
+    const recovery = await prisma.$transaction(async tx => {
+      await lockSfaMutationActor(tx, ctx)
+      return cancelSfaCreation(tx, ctx, 'deal', operationId, id => tx.sfaDeal.findFirst({ where: { id, organizationId: ctx.organizationId, isActive: true } }))
+    })
+    return json(bigIntToNumber({ state: recovery.state, deal: recovery.row }))
+  } catch (error) { return json({ error: error instanceof SfaMutationError ? error.message : '取り消し結果を確認できませんでした。' }, error instanceof SfaMutationError ? error.status : 500) }
 }

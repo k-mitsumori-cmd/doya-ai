@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-07T02:22:32.701Z",
+  "passed": 11,
+  "cases": [
+    "12 real Serializable concurrent replays return one deal and one receipt",
+    "Concurrent same-version PATCH commits one and rejects one stale update",
+    "Creation observes real membership lock wait and denies committed revocation",
+    "Creation holds actual receipt lock; later cancellation returns found without deleting",
+    "Committed cancellation fences late original creation",
+    "Cancellation after initial Serializable snapshot still fences original creation",
+    "Two real concurrent last-slot creations admit one and reject one without orphan receipt",
+    "Actual persisted stage outcomes preserve same-result timestamp and clear opposite outcomes",
+    "Actual receipt constraint failure rolls back business creation; same operation may succeed later",
+    "Soft-deleted actual deal keeps receipt and cannot be resurrected by replay/cancellation",
+    "Actual PATCH waits for membership revocation and refuses write"
+  ],
+  "lockWaitObservations": [
+    1,
+    1,
+    1
+  ],
+  "sourceHashes": {
+    "src/app/api/sfa/deals/route.ts": "85a9ce07bc0a8dad753cbc3610936e70704995bf5e70f6e8b3863cecd87f5969",
+    "src/app/api/sfa/deals/[id]/route.ts": "eb097d6b0bf33c7add692f4c4df152bc7a9d91d99788984cf04aac5844c33f62",
+    "src/lib/sfa/deal-mutation.ts": "772689c0ae1888c78878429db9b9d7e418060812ce8b96452a50591f47339131",
+    "src/lib/sfa/creation-receipt.ts": "e15b196aa4822768d919b3cdd5b874b39084f8591eea45ea6d3b82d4017490cd",
+    "src/lib/sfa/limits.ts": "5f8b9101d14b49ba57293801e780909c2464ed52b1f5ad9ee9aa2998f4c2d8b6"
+  },
+  "scope": "Actual handlers/helpers and generated Prisma against private Unix-socket-only PostgreSQL17 synthetic schema/data. Real Serializable snapshots, Lock waits, commits and conflicts; no production DB, provider, complete production schema/FK or private browser proof."
+}

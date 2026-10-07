@@ -59,6 +59,7 @@ async function verifyCount(count) {
     } },
   };
   const { GET } = load('src/app/api/sfa/deals/route.ts', {
+    ...require('./sfa-deal-test-deps.cjs').dealDeps(),
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1' }), orgSlugFrom: () => null, ensurePipeline: async () => [{ id: 'stage-1' }] },
