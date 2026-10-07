@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import type { ActivityType } from '@/lib/sfa/types'
+import { createSfaOnce, recoverSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
 import { lockSfaMutationActor, lockSfaRelation, SfaMutationError } from '@/lib/sfa/mutation-authority'
 
 const json = (body: unknown, options: { status?: number; headers?: Record<string, string> } = {}) =>
@@ -19,6 +20,20 @@ const PAGE_SIZE = 200
 export async function GET(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+
+  const rawOperationId = (req.nextUrl || new URL(req.url)).searchParams.get('operationId')
+  if (rawOperationId !== null) {
+    try {
+      const operationId = sfaOperationId(rawOperationId)!
+      const recovery = await prisma.$transaction(async tx => {
+        await lockSfaMutationActor(tx, ctx)
+        return recoverSfaCreation(tx, ctx, 'activity', operationId, id => tx.sfaActivity.findFirst({ where: { id, organizationId: ctx.organizationId } }))
+      })
+      return json({ state: recovery.state, activity: recovery.row })
+    } catch (error) {
+      return json({ error: error instanceof SfaMutationError ? error.message : '保存結果を確認できませんでした。一覧をご確認ください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
+    }
+  }
 
   const url = new URL(req.url)
   const accountId = url.searchParams.get('accountId')?.trim()
@@ -116,38 +131,44 @@ export async function POST(req: NextRequest) {
   const requestedContactId = (body.contactId as string | undefined)?.trim() || null
 
   try {
+    const operationId = sfaOperationId(body.operationId)
     const activity = await prisma.$transaction(async (tx) => {
       await lockSfaMutationActor(tx, ctx)
-      // Keep a fixed related-row lock order across activity writes.
-      const accountId = requestedAccountId ? await lockSfaRelation(tx, ctx, 'sfaAccount', requestedAccountId) : null
-      const dealId = requestedDealId ? await lockSfaRelation(tx, ctx, 'sfaDeal', requestedDealId) : null
-      const contactId = requestedContactId ? await lockSfaRelation(tx, ctx, 'sfaContact', requestedContactId) : null
-      const created = await tx.sfaActivity.create({
-        data: {
-          organizationId: ctx.organizationId,
-          type,
-          subject: subject || null,
-          body: bodyText || null,
-          accountId,
-          dealId,
-          contactId,
-          occurredAt,
-          memberId: ctx.memberId,
-        },
-      })
-
-      // 条件付き更新により、古い活動や更新順の逆転で最終活動日を戻さない。
-      if (dealId) {
-        await tx.sfaDeal.updateMany({
-          where: {
-            id: dealId,
+      return createSfaOnce(tx, ctx, 'activity', operationId,
+        { type, subject: subject || null, body: bodyText || null, accountId: requestedAccountId,
+          dealId: requestedDealId, contactId: requestedContactId, occurredAt: 'occurredAt' in body ? occurredAt.toISOString() : null },
+        id => tx.sfaActivity.findFirst({ where: { id, organizationId: ctx.organizationId } }), async () => {
+        // Keep a fixed related-row lock order across activity writes.
+        const accountId = requestedAccountId ? await lockSfaRelation(tx, ctx, 'sfaAccount', requestedAccountId) : null
+        const dealId = requestedDealId ? await lockSfaRelation(tx, ctx, 'sfaDeal', requestedDealId) : null
+        const contactId = requestedContactId ? await lockSfaRelation(tx, ctx, 'sfaContact', requestedContactId) : null
+        const created = await tx.sfaActivity.create({
+          data: {
             organizationId: ctx.organizationId,
-            OR: [{ lastActivityAt: null }, { lastActivityAt: { lt: occurredAt } }],
+            type,
+            subject: subject || null,
+            body: bodyText || null,
+            accountId,
+            dealId,
+            contactId,
+            occurredAt,
+            memberId: ctx.memberId,
           },
-          data: { lastActivityAt: occurredAt },
         })
-      }
-      return created
+
+        // 条件付き更新により、古い活動や更新順の逆転で最終活動日を戻さない。
+        if (dealId) {
+          await tx.sfaDeal.updateMany({
+            where: {
+              id: dealId,
+              organizationId: ctx.organizationId,
+              OR: [{ lastActivityAt: null }, { lastActivityAt: { lt: occurredAt } }],
+            },
+            data: { lastActivityAt: occurredAt },
+          })
+        }
+        return created
+      })
     })
 
     return json({ activity })

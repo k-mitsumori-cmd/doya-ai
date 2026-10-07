@@ -5,6 +5,7 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
+import { createSfaOnce, recoverSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
 import { lockSfaMutationActor, lockSfaRelation, SfaMutationError } from '@/lib/sfa/mutation-authority'
 
 const json = (body: unknown, options: { status?: number; headers?: Record<string, string> } = {}) =>
@@ -14,6 +15,20 @@ const json = (body: unknown, options: { status?: number; headers?: Record<string
 export async function GET(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+
+  const rawOperationId = (req.nextUrl || new URL(req.url)).searchParams.get('operationId')
+  if (rawOperationId !== null) {
+    try {
+      const operationId = sfaOperationId(rawOperationId)!
+      const recovery = await prisma.$transaction(async tx => {
+        await lockSfaMutationActor(tx, ctx)
+        return recoverSfaCreation(tx, ctx, 'task', operationId, id => tx.sfaTask.findFirst({ where: { id, organizationId: ctx.organizationId }, select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true } }))
+      })
+      return json({ state: recovery.state, task: recovery.row })
+    } catch (error) {
+      return json({ error: error instanceof SfaMutationError ? error.message : '保存結果を確認できませんでした。一覧をご確認ください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
+    }
+  }
 
   const page = Number(req.nextUrl?.searchParams.get('page') || '1')
   if (!Number.isSafeInteger(page) || page < 1 || page > 1000000) {
@@ -80,12 +95,17 @@ export async function POST(req: NextRequest) {
   }
   const requestedDealId = typeof body.dealId === 'string' ? body.dealId.trim() || null : null
   try {
+    const operationId = sfaOperationId(body.operationId)
     const task = await prisma.$transaction(async tx => {
       await lockSfaMutationActor(tx, ctx)
-      const dealId = requestedDealId ? await lockSfaRelation(tx, ctx, 'sfaDeal', requestedDealId) : null
-      return tx.sfaTask.create({
-        data: { organizationId: ctx.organizationId, title, dueDate, dealId, assigneeMemberId: ctx.memberId },
-        select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true },
+      return createSfaOnce(tx, ctx, 'task', operationId,
+        { title, dueDate: dueDate?.toISOString() || null, dealId: requestedDealId },
+        id => tx.sfaTask.findFirst({ where: { id, organizationId: ctx.organizationId }, select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true } }), async () => {
+        const dealId = requestedDealId ? await lockSfaRelation(tx, ctx, 'sfaDeal', requestedDealId) : null
+        return tx.sfaTask.create({
+          data: { organizationId: ctx.organizationId, title, dueDate, dealId, assigneeMemberId: ctx.memberId },
+          select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true },
+        })
       })
     })
     return json({ task })

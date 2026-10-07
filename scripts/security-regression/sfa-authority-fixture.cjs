@@ -4,6 +4,7 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 const authority = load('src/lib/sfa/mutation-authority.ts');
+const receipts = load('src/lib/sfa/creation-receipt.ts', { 'node:crypto': require('node:crypto'), './mutation-authority': authority });
 function withSfaAuthority(deps) {
   const prisma = deps['@/lib/prisma'].prisma, access = deps['@/lib/sfa/access'];
   let ctx;
@@ -26,6 +27,7 @@ function withSfaAuthority(deps) {
   };
   return { ...deps,
     '@/lib/sfa/mutation-authority': authority,
+    '@/lib/sfa/creation-receipt': receipts,
     '@/lib/sfa/access': { ...access, getSfaContext: async (...args) => {
       const result = await access.getSfaContext(...args);
       ctx = result ? { userId: 'synthetic-user', memberId: 'synthetic-member', role: 'member', ...result } : null;

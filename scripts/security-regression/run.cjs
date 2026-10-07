@@ -979,6 +979,11 @@ if (sfaDealTasksUi.error || sfaDealTasksUi.status !== 0) {
   console.error('Security regression failed: verify-sfa-deal-tasks-ui.cjs');
   process.exit(1);
 }
+const sfaCreationReceipts = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-creation-receipts.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaCreationReceipts.error || sfaCreationReceipts.status !== 0) {
+  console.error('Security regression failed: verify-sfa-creation-receipts.cjs');
+  process.exit(1);
+}
 const sfaMutationAuthority = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-mutation-authority.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaMutationAuthority.error || sfaMutationAuthority.status !== 0) {
   console.error('Security regression failed: verify-sfa-mutation-authority.cjs');

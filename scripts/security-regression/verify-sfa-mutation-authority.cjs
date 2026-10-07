@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 const authority = load('src/lib/sfa/mutation-authority.ts');
+const receipts = load('src/lib/sfa/creation-receipt.ts', { 'node:crypto': require('node:crypto'), './mutation-authority': authority });
 const ctx = { userId: 'user', memberId: 'member', organizationId: 'org', organizationSlug: 'alpha', role: 'owner' };
 const definitions = {
   'task-create': ['src/app/api/sfa/tasks/route.ts', 'POST', { title: '作業' }],
@@ -59,7 +60,7 @@ function fixture(options = {}) {
       try { return await fn(tx); } catch (e) { Object.assign(state, snapshot); throw e; } finally { inTransaction = false; }
     }); queue = running.catch(() => {}); return running;
   } };
-  const mocks = { 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/sfa/mutation-authority': authority,
+  const mocks = { 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/sfa/mutation-authority': authority, '@/lib/sfa/creation-receipt': receipts,
     '@/lib/sfa/access': { getSfaContext: async () => options.noSession ? null : ({ ...ctx }), orgSlugFrom: () => 'alpha' } };
   const routes = Object.fromEntries(Object.entries(definitions).map(([name, [file]]) => [name, load(file, mocks)]));
   return { state, invoke: (name, body) => {
