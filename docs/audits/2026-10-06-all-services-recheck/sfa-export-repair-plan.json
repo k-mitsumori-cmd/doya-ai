@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-07T06:13:52.273694+00:00",
-  "status": "full-frozen-security-type-lint-build-and-private-postgres-passed-release-pending",
+  "status": "released-exact-ci-ready-and-anonymous-publication-passed-private-download-unproven",
   "baseline": "sfa-export-lifecycle-baseline.json",
   "required": [
     "Read each CSV batch and its account/stage labels inside a short transaction with a fresh same-user/same-org active membership share lock; membership changes use the matching row lock. Do not hold a transaction for an entire network download.",
@@ -22,8 +22,15 @@
     "sfa-export-postgres-supervisor.json"
   ],
   "remaining": [
-    "Allowlisted commit/push, exactCI/READY/public checks",
-    "Authenticated browser download and remaining17-service criteria unverified"
+    "Authenticated actual browser download/customer flows and remaining17-service criteria unverified"
   ],
-  "verificationCorrection": "Initial PG process exit0 without results did not prove completion. Added20s deadline and supervisor requires3 completed cases, current timestamp and matching source hashes. Private server timezoneUTC; verified500-row first page and real membership lock waits. Only final evidenceValid=true run is accepted."
+  "verificationCorrection": "Initial PG process exit0 without results did not prove completion. Added20s deadline and supervisor requires3 completed cases, current timestamp and matching source hashes. Private server timezoneUTC; verified500-row first page and real membership lock waits. Only final evidenceValid=true run is accepted.",
+  "release": {
+    "commit": "83b28447bf5c1792959479bc5bd7975cbbd75ccb",
+    "ciRun": 37581509278,
+    "ciConclusion": "success",
+    "deployment": "dpl_5N4h3Xs1DRYPy1m8BZULSPJKht2Q",
+    "url": "doya-ejb8xki3v-surisutas-projects.vercel.app",
+    "anonymousEvidence": "sfa-export-public.json"
+  }
 }

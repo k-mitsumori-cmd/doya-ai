@@ -1,9 +1,11 @@
 {
   "checkedAt": "2026-10-07T06:20:33.004735+00:00",
-  "status": "current-callback-baseline-reproduced-repair-pending",
+  "status": "client-local-frozen-full-gate-passed-not-deployed-server-recovery-pending",
   "evidence": [
     "banner-chat-current-lifecycle-baseline.json",
-    "scripts/security-regression/verify-banner-chat-refine-recovery.cjs"
+    "scripts/security-regression/verify-banner-chat-refine-recovery.cjs",
+    "banner-chat-mounted-results.json",
+    "banner-refine-operation-baseline.json"
   ],
   "verifiedExisting": "24 offline callback timeout/error/refine response cases pass. Prior remaining-baseline lacks current timeout/error repairs and must not be treated as current.",
   "required": [
@@ -15,5 +17,21 @@
     "Mount actual React page with synthetic auth/API to prove same-frame send/refine/generate, draft changes, stale response, unmount, storage/response failures and quota guidance. Existing AST tests alone do not prove React lifecycle.",
     "Full frozen security/type/lint/build, allowlisted release and exact deployment/read-only checks. No customer/provider calls."
   ],
-  "scope": "Banner AI consultation and related generation/refinement; full17-service audit remains active"
+  "scope": "Banner AI consultation and related generation/refinement; full17-service audit remains active",
+  "clientChanges": [
+    "One synchronous request lane across chat/generate/refine acquired before quota awaits",
+    "Scope epochs and keyed actor workspace, timer/abort cleanup on authentication changes and unmount, stale-render callback rejection",
+    "Revision-based preservation of newer and A-B-A chat input; existing images retained across new conversation",
+    "Refinement uses generated image specification, not a newer ungenerated proposal",
+    "Auth readiness and guest sign-in guidance; local file selection versions and stale-actor suppression",
+    "Refine transport failure guidance no longer promises history recovery that the current server does not implement"
+  ],
+  "remaining": [
+    "Full frozen build/security/type/lint and exact release/publication checks",
+    "Server/cross-tab idempotency and uncertain-result recovery investigation",
+    "Bounded full image response reading and actual decoded image validation",
+    "Authenticated real browser/provider interactions and all other17-service criteria remain unverified",
+    "Create-page refine non-JSON error still uses shared generation history fallback; correct and recheck before release"
+  ],
+  "fullGateFailure": "First frozen gate stopped on an AST unit fixture missing newly referenced isThinking/isRefining/operations bindings. Updated fixture bindings; preserved existing assertions;6 generation and24 callback groups plus13 mounted cases pass. New full gate required."
 }

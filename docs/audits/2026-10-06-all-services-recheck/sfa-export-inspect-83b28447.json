@@ -1,0 +1,8 @@
+{
+  "checkedAt": "2026-10-07T06:38:53.392007+00:00",
+  "id": "dpl_5N4h3Xs1DRYPy1m8BZULSPJKht2Q",
+  "url": "doya-ejb8xki3v-surisutas-projects.vercel.app",
+  "readyState": "READY",
+  "commit": "83b28447bf5c1792959479bc5bd7975cbbd75ccb",
+  "evidence": "Exact SHA from vercel list matching URL; vercel inspect --logs ended status Ready and Deployment completed; public HTML deployment marker and private export401headers checked. /tmp/doya-export-build-current.log"
+}

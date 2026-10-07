@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import BannerLimitModal from '@/components/banner/BannerLimitModal'
 import { useBannerQuota } from '@/components/banner/useBannerQuota'
+import { useBannerRequestFence } from '@/lib/banner/use-request-fence'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 import { getBannerMaxImagesPerRequest } from '@/lib/pricing'
 
@@ -145,6 +146,13 @@ class BannerApiError extends Error {}
 
 export default function BannerChatPage() {
   const { data: session } = useSession()
+  const actor = String(session?.user?.id || '')
+  return <BannerChatWorkspace key={actor || 'guest'} />
+}
+
+function BannerChatWorkspace() {
+  const { data: session, status } = useSession()
+  const operations = useBannerRequestFence(status, String(session?.user?.id || ''))
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [logoImage, setLogoImage] = useState<string | null>(null)
   const [logoFileName, setLogoFileName] = useState('')
@@ -161,6 +169,11 @@ export default function BannerChatPage() {
     },
   ])
   const [input, setInput] = useState('')
+  const inputRevision = useRef(0)
+  const renderedInputRevision = inputRevision.current
+  const changeInput = (value: string) => { inputRevision.current++; setInput(value) }
+  const logoRevision = useRef(0)
+  const personRevision = useRef(0)
   const [suggestedInputs, setSuggestedInputs] = useState<string[]>([
     '用途はSNS広告（Instagram）です。サイズは1080×1080でお願いします。',
     'キャッチコピーは「初回20%OFF」にします。CTAは「今すぐチェック」でお願いします。',
@@ -175,6 +188,7 @@ export default function BannerChatPage() {
   const quota = useBannerQuota(setLimitModal)
   const [isRefining, setIsRefining] = useState(false)
   const [proposedSpec, setProposedSpec] = useState<BannerSpec | null>(null)
+  const [generatedSpec, setGeneratedSpec] = useState<BannerSpec | null>(null)
   const [generatedBanners, setGeneratedBanners] = useState<string[]>([])
   const [selectedBannerIndex, setSelectedBannerIndex] = useState(0)
   const [refineInstruction, setRefineInstruction] = useState('')
@@ -186,6 +200,12 @@ export default function BannerChatPage() {
   const [refineTipIndex, setRefineTipIndex] = useState(0)
   const [refinePhaseIndex, setRefinePhaseIndex] = useState(0)
 
+  useEffect(() => {
+    setIsThinking(false)
+    setIsGenerating(false)
+    setIsRefining(false)
+  }, [status])
+
   const endRef = useRef<HTMLDivElement | null>(null)
   const refinePanelRef = useRef<HTMLDivElement | null>(null)
 
@@ -193,7 +213,7 @@ export default function BannerChatPage() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length, generatedBanners.length, proposedSpec?.keyword])
 
-  const canSend = input.trim().length > 0 && !isThinking && !isGenerating && !isRefining
+  const canSend = operations.allowed && input.trim().length > 0 && !isThinking && !isGenerating && !isRefining
 
   const bannerPlan = session
     ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase()
@@ -224,19 +244,19 @@ export default function BannerChatPage() {
   }
 
   const handleSend = async () => {
-    if (!canSend) return
+    if (!canSend || inputRevision.current !== renderedInputRevision) return
+    const operation = operations.begin()
+    if (!operation) return
+    const revision = inputRevision.current
     const text = input.trim()
     // ロゴ/人物はチャット中に保持してOK（会話をまたいで使える）
 
     setIsThinking(true)
-    let timeout: number | undefined
     try {
-      const controller = new AbortController()
-      timeout = window.setTimeout(() => controller.abort(), 290_000)
       const res = await fetch('/api/banner/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
+        signal: operation.signal,
         body: JSON.stringify({
           messages: [...messages, { id: 'tmp', role: 'user', content: text, createdAt: Date.now() }]
             .filter((m) => m.role === 'user' || m.role === 'assistant')
@@ -245,6 +265,7 @@ export default function BannerChatPage() {
         }),
       })
       const parsed = await safeReadJson(res)
+      if (!operation.current()) return
       const data = parsed.data || {}
       if (parsed.status === 429 && data?.code === 'DAILY_TEXT_LIMIT_REACHED') {
         const limit = Number(data?.usage?.dailyLimit)
@@ -261,11 +282,7 @@ export default function BannerChatPage() {
 
       if (typeof data.reply !== 'string' || !data.reply.trim()) throw new BannerApiError('AIの返信を確認できませんでした。入力を確認して再試行してください。')
       if (data.spec != null && (typeof data.spec !== 'object' || Array.isArray(data.spec) || !['purpose', 'category', 'size', 'keyword'].every((key) => typeof data.spec[key] === 'string' && data.spec[key].trim()) || (data.spec.imageDescription != null && typeof data.spec.imageDescription !== 'string') || (data.spec.brandColors != null && (!Array.isArray(data.spec.brandColors) || !data.spec.brandColors.every((color: unknown) => typeof color === 'string'))))) throw new BannerApiError('バナーの提案内容を確認できませんでした。再試行してください。')
-      setInput('')
-      setGeneratedBanners([])
-      setProposedSpec(null)
-      setSelectedBannerIndex(0)
-      setRefineInstruction('')
+      if (inputRevision.current === revision) { inputRevision.current++; setInput('') }
       setMessages((prev) => [
         ...prev,
         { id: `u-${Date.now()}`, role: 'user', content: text, createdAt: Date.now() },
@@ -288,26 +305,26 @@ export default function BannerChatPage() {
         )
       }
     } catch (e: any) {
+      if (!operation.current()) return
       pushAssistant('すみません、エラーが発生しました。もう一度お試しください。')
       toast.error(e instanceof BannerApiError ? e.message : 'AIの返信を確認できませんでした。再試行してください。')
     } finally {
-      if (timeout !== undefined) window.clearTimeout(timeout)
-      setIsThinking(false)
+      if (operation.current()) setIsThinking(false)
+      operation.finish()
     }
   }
 
   const handleGenerate = async () => {
-    if (!proposedSpec || isGenerating) return
-    if (!(await quota.check(generateCount))) return
+    if (!proposedSpec || isThinking || isGenerating || isRefining) return
+    const operation = operations.begin()
+    if (!operation) return
     setIsGenerating(true)
-    let timeout: number | undefined
     try {
-      const controller = new AbortController()
-      timeout = window.setTimeout(() => controller.abort(), 290_000)
+      if (!(await quota.check(generateCount)) || !operation.current()) return
       const res = await fetch('/api/banner/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
+        signal: operation.signal,
         body: JSON.stringify({
           category: proposedSpec.category,
           purpose: proposedSpec.purpose,
@@ -329,6 +346,7 @@ export default function BannerChatPage() {
         }),
       })
       const parsed = await safeReadJson(res)
+      if (!operation.current()) return
       const data = parsed.data || {}
       if (!parsed.ok) {
         // 上限到達はエラーではなくアップグレードの分岐点。モーダルで受け止める。
@@ -341,7 +359,6 @@ export default function BannerChatPage() {
             message: data?.error,
             upgradeUrl: data?.upgradeUrl,
           })
-          setIsGenerating(false)
           return
         }
         throw new BannerApiError(typeof data?.error === 'string' ? data.error : normalizeNonJsonApiError(parsed.status, parsed.text))
@@ -350,6 +367,7 @@ export default function BannerChatPage() {
       if (!nextBanners.length) throw new BannerApiError('生成結果を確認できませんでした。履歴を確認してから再試行してください。')
       void quota.refresh()
       setGeneratedBanners(nextBanners)
+      setGeneratedSpec(proposedSpec)
       setSelectedBannerIndex(0)
       pushAssistant('生成できました。気になる案をダウンロードして使えます。')
       if (typeof data.warning === 'string' && data.warning.trim()) {
@@ -357,16 +375,17 @@ export default function BannerChatPage() {
         toast.error('生成結果と利用枚数をご確認ください')
       }
     } catch (e: any) {
+      if (!operation.current()) return
       pushAssistant('生成結果を確認できませんでした。履歴を確認してから再試行してください。')
       toast.error(e instanceof BannerApiError ? e.message : '生成結果を確認できませんでした。履歴を確認してから再試行してください。')
     } finally {
-      if (timeout !== undefined) window.clearTimeout(timeout)
-      setIsGenerating(false)
+      if (operation.current()) setIsGenerating(false)
+      operation.finish()
     }
   }
 
   const canRefine =
-    generatedBanners.length > 0 &&
+    operations.allowed && generatedBanners.length > 0 &&
     !isThinking &&
     !isGenerating &&
     !isRefining &&
@@ -414,27 +433,27 @@ export default function BannerChatPage() {
 
   const handleRefine = async () => {
     if (!canRefine) return
+    const operation = operations.begin()
+    if (!operation) return
     const instruction = refineInstruction.trim()
     const idx = selectedBannerIndex
     const originalImage = generatedBanners[idx]
     setIsRefining(true)
     const startedAt = Date.now()
-    let timeout: number | undefined
     try {
-      const controller = new AbortController()
-      timeout = window.setTimeout(() => controller.abort(), 290_000)
       const res = await fetch('/api/banner/refine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
+        signal: operation.signal,
         body: JSON.stringify({
           originalImage,
           instruction,
-          category: proposedSpec?.category,
-          size: proposedSpec?.size,
+          category: generatedSpec?.category,
+          size: generatedSpec?.size,
         }),
       })
       const parsed = await safeReadJson(res)
+      if (!operation.current()) return
       const data = parsed.data || {}
       if (parsed.status === 429 && data?.code === 'MONTHLY_LIMIT_REACHED') {
         quota.acceptLimit(data?.usage)
@@ -447,11 +466,11 @@ export default function BannerChatPage() {
         })
         return
       }
-      if (!parsed.ok || data?.success !== true) throw new BannerApiError(typeof data?.error === 'string' ? data.error : normalizeNonJsonApiError(parsed.status, parsed.text))
+      if (!parsed.ok || data?.success !== true) throw new BannerApiError(typeof data?.error === 'string' ? data.error : [413, 502, 503].includes(parsed.status) ? normalizeNonJsonApiError(parsed.status, parsed.text) : '修正結果を受け取れませんでした。生成枠が消費されている可能性があります。利用枚数をご確認ください。')
       const refined = String(data.refinedImage || '')
       if (!refined.startsWith('data:image/')) throw new BannerApiError('修正画像が取得できませんでした')
 
-      setGeneratedBanners((prev) => prev.map((b, i) => (i === idx ? refined : b)))
+      setGeneratedBanners((prev) => prev.map((b, i) => (i === idx && b === originalImage ? refined : b)))
       void quota.refresh()
       pushAssistant('修正できました。気になる点があれば、さらに指示して改善できます。')
       toast.success('AIで修正しました')
@@ -462,11 +481,12 @@ export default function BannerChatPage() {
       writeRefineEmaMs(next)
       setPredictedRefineTotalMs(next)
     } catch (e: any) {
-      pushAssistant('修正に失敗しました。指示を短くして、もう一度お試しください。')
-      toast.error(e instanceof BannerApiError ? e.message : '修正結果を確認できませんでした。履歴を確認してから再試行してください。')
+      if (!operation.current()) return
+      pushAssistant('修正結果を受け取れませんでした。生成枠が消費されている可能性があります。利用枚数をご確認ください。')
+      toast.error(e instanceof BannerApiError ? e.message : '修正結果を受け取れませんでした。生成枠が消費されている可能性があります。利用枚数をご確認ください。')
     } finally {
-      if (timeout !== undefined) window.clearTimeout(timeout)
-      setIsRefining(false)
+      if (operation.current()) setIsRefining(false)
+      operation.finish()
     }
   }
 
@@ -587,6 +607,9 @@ export default function BannerChatPage() {
         </header>
 
         <div className="max-w-6xl mx-auto px-2 sm:px-6 py-2 sm:py-8">
+          {!operations.allowed && <div role="status" className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm">
+            {status === 'loading' ? 'ログイン状態を確認しています。' : <>AI相談・画像生成を利用するにはログインしてください。<Link className="ml-2 font-bold underline" href="/auth/signin?callbackUrl=%2Fbanner%2Fdashboard%2Fchat">ログインする</Link></>}
+          </div>}
           <BannerQuotaNotice quota={quota} />
 
           <div className="grid lg:grid-cols-[1fr_360px] gap-4">
@@ -639,7 +662,7 @@ export default function BannerChatPage() {
                 <div className="relative">
                   <textarea
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={(e) => changeInput(e.target.value)}
                     maxLength={2000}
                     placeholder="バナーの要件を入力..."
                     rows={2}
@@ -654,6 +677,7 @@ export default function BannerChatPage() {
                   />
                   <button
                     onClick={handleSend}
+                    aria-label="AI相談を送信"
                     disabled={!canSend}
                     className="absolute right-2 sm:right-3 bottom-3 sm:bottom-4 w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 text-white rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 disabled:shadow-none transition-all"
                   >
@@ -674,7 +698,7 @@ export default function BannerChatPage() {
                       <button
                         key={`${i}-${s}`}
                         type="button"
-                        onClick={() => setInput(s)}
+                        onClick={() => changeInput(s)}
                         title={s}
                         className="group text-left w-full px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-blue-300 transition-colors shadow-sm"
                       >
@@ -759,6 +783,7 @@ export default function BannerChatPage() {
                                 <button
                                   type="button"
                                   onClick={() => {
+                                    logoRevision.current++
                                     setLogoImage(null)
                                     setLogoFileName('')
                                     toast('ロゴを解除しました')
@@ -787,13 +812,16 @@ export default function BannerChatPage() {
                                     onChange={async (e) => {
                                       const f = e.target.files?.[0]
                                       e.target.value = ''
-                                      if (!f) return
+                                      if (!f || !operations.active()) return
+                                      const revision = ++logoRevision.current
                                       try {
                                         const url = await readAndOptimizeImage(f, 'logo')
+                                        if (!operations.active() || logoRevision.current !== revision) return
                                         setLogoImage(url)
                                         setLogoFileName(f.name)
                                         toast.success('ロゴを設定しました')
                                       } catch (err: any) {
+                                        if (!operations.active() || logoRevision.current !== revision) return
                                         toast.error(err?.message || 'ロゴの設定に失敗しました')
                                       }
                                     }}
@@ -811,6 +839,7 @@ export default function BannerChatPage() {
                                 <button
                                   type="button"
                                   onClick={() => {
+                                    personRevision.current++
                                     setPersonImages([])
                                     setPersonFileNames([])
                                     toast('人物写真を解除しました')
@@ -841,13 +870,16 @@ export default function BannerChatPage() {
                                     onChange={async (e) => {
                                       const f = e.currentTarget.files?.[0] || null
                                       e.currentTarget.value = ''
-                                      if (!f) return
+                                      if (!f || !operations.active()) return
+                                      const revision = ++personRevision.current
                                       try {
                                         const url = await readAndOptimizeImage(f, 'person')
+                                        if (!operations.active() || personRevision.current !== revision) return
                                         setPersonImages([url])
                                         setPersonFileNames([f.name])
                                         toast.success('人物写真を設定しました')
                                       } catch (err: any) {
+                                        if (!operations.active() || personRevision.current !== revision) return
                                         toast.error(err?.message || '人物写真の追加に失敗しました')
                                       }
                                     }}
@@ -901,7 +933,7 @@ export default function BannerChatPage() {
 
                       <button
                         onClick={handleGenerate}
-                        disabled={isThinking || isGenerating || quota.checking}
+                        disabled={!operations.allowed || isThinking || isGenerating || isRefining || quota.checking}
                         className="w-full px-6 py-5 rounded-2xl bg-blue-600 text-white font-black text-sm shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
                       >
                         <Sparkles className="w-5 h-5" />

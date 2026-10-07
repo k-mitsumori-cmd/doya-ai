@@ -1,3 +1,5 @@
+const bannerChat = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-chat-lifecycle-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerChat.error || bannerChat.status !== 0) { console.error('Banner chat mounted regression failed'); process.exit(1); }
 const crmClient = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-sfa-crm-client.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (crmClient.error || crmClient.status !== 0) { console.error('SFA CRM client regression failed'); process.exit(1); }
 const crmRecords = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-sfa-crm-record-mutation.cjs')], { stdio: 'inherit', timeout: 60000 });

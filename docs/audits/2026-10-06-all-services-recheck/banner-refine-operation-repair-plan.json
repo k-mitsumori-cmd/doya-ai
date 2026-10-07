@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-07T06:38:17.079587+00:00",
+  "status": "reproduced-operation-recovery-repair-pending",
+  "evidence": "banner-refine-operation-baseline.json",
+  "required": [
+    "Canonical actor-scoped operation UUID and normalized payload fingerprint; reject key reuse for another payload. Apply across both refine callers and chat/generate follow-up paths.",
+    "Durable pending operation admission and monthly quota reservation atomically; one provider invocation per operation even across parallel workers, retries, tabs or client remount. Do not hold SQL transaction while provider runs.",
+    "Persist validated refined image as private Generation plus completed operation receipt atomically before returning success. Preserve original image/history; no automatic gallery publish.",
+    "GET operation recovery must authenticate same actor and return only private/no-store/VaryCookie response. Unknown/pending cannot auto-retry provider.",
+    "Release quota exactly once only for proven failure; completion/persistence failures must not erase evidence or blindly re-run/charge provider. Pending crash state needs honest recovery guidance.",
+    "Client durable metadata-only pending intent, explicit recovery UI; preserve newer drafts and actor isolation; do not store large image/secret content in session storage.",
+    "Actual synthetic route and mounted-page cases plus private PostgreSQL concurrent reservation/completion/replay/rollback/revoked actor tests, full build/security/type/lint and exact release verification.",
+    "Bound request input/image decoding/dimensions before quota/provider, and bound provider and client response body; never validate image by prefix alone."
+  ],
+  "boundaries": [
+    "No paid provider calls during tests",
+    "No customer production DB writes/migrations",
+    "No email/notification sends in tests",
+    "All17services and2074criteria remain scope"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-07T06:37:50.313Z",
+  "passed": 13,
+  "cases": [
+    "same rendered send sends once, retains newer draft and rejects stale rendered callback",
+    "A-B-A draft changes are retained",
+    "actor switch aborts request, remounts private state and rejects retained actor callback",
+    "auth refresh blocks loading, then permits fresh submission without stuck busy state",
+    "generation acquires shared lane before quota await; duplicate generation and concurrent chat rejected",
+    "new consultation keeps existing generated images",
+    "refinement shares lane and uses source image specification after a newer proposal",
+    "late response across auth refresh cannot clear newer busy state or publish stale content",
+    "daily quota keeps draft and shows validated pricing CTA",
+    "malformed success preserves draft and saved image",
+    "deadline aborts transport, clears timer, retains draft and allows deliberate retry",
+    "unmount aborts transport and ignores completion",
+    "guest submission is blocked with explicit sign-in link"
+  ],
+  "sourceHashes": {
+    "src/app/banner/dashboard/chat/page.tsx": "0f3ed8e2c50d0e96b982558c8bdee5620284252153a3301acd4ac921e6b732eb",
+    "src/lib/banner/use-request-fence.ts": "eae19a7930bac64ec958c66fdf8a22d4eae1e1d7f2e65ea1b7738a55d201877f"
+  },
+  "scope": "Actual BannerChatPage, keyed workspace and request fence mounted under React18 StrictMode/jsdom. Synthetic auth/API/quota/UI dependencies; no paid AI, customer DB or production calls. Image decode, cross-tab/server idempotency and real browser/provider flows remain unproven."
+}

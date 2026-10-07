@@ -1522,7 +1522,7 @@ export default function BannerDashboard() {
       const next = updateEma(readRefineStats() || undefined, actualMs) as SimpleEma
       writeRefineStats(next)
     } catch (err: any) {
-      toast.error(err instanceof BannerApiError ? err.message : '修正結果を確認できませんでした。履歴を確認してから再試行してください。')
+      toast.error(err instanceof BannerApiError ? err.message : '修正結果を受け取れませんでした。生成枠が消費されている可能性があります。利用枚数をご確認ください。')
     } finally {
       if (timeout !== undefined) window.clearTimeout(timeout)
       setIsRefining(false)
