@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-07T16:11:43.040093+00:00",
+  "status": "frozen26gates-passed-ready-for-reviewed-commit-push",
+  "baseline": "docs/audits/2026-10-06-all-services-recheck/additional-private-storage-baseline.json",
+  "baselinePassed": 7,
+  "baselineFailed": 49,
+  "confirmed": [
+    "AdBanner upload/read/sign do not establish current private bucket metadata",
+    "Mensetsu recording upload/sign/direct-upload do not establish current private bucket metadata",
+    "Actual Shodan generate/regenerate routes invoke simulated provider and save no-logo output when a registered logo signing returns null; 2 regressions reproduced, 4 valid/no-logo controls pass."
+  ],
+  "sourceReviewFollowups": [
+    "Movie, Voice, Tenkai cached/existence-only checks",
+    "Interview cache and automatic bucket updates",
+    "HR employee photos intentionally stored publicly: review ownership-bound delivery and migration compatibility before changes",
+    "Shodan slide generate/regenerate build brand.logoUrl from signedUrl; registered logo signing returning null can still silently produce no-logo output. Verify failure-before-provider behavior."
+  ],
+  "sourceHashes": {
+    "src/lib/adbanner/storage.ts": "8625355c959a209d8bce544527fd6786733a57c76a6f14fa7f4cf6532d24b4a5",
+    "src/lib/mensetsu/storage.ts": "cddcffdc6aa0eafd152a34fd469a17cd470b9642b99595332bc65cc4d5170f88",
+    "src/lib/movie/storage.ts": "92c61c04887fd1396a3f0279de41f8fdb7f19f0e669bf784395368c9dab6685f",
+    "src/lib/voice/storage.ts": "598af6af813e10e3861da315b3e50d2df9eb0b1406a398b8b46faf08cf1aad7b",
+    "src/lib/tenkai/storage.ts": "57cb4985106e672e9caee4307e6f0441105cf1a45e2deca0847e20377c7e9ce9",
+    "src/lib/interview/storage.ts": "c294249531578f72997b765cb583f3c1c8f3d0c978687fd045aa203ddfde1601",
+    "src/lib/hr/storage.ts": "61d86c7af33dbfdea8a588c3bd61af089ab0f1dc33960b793b373227f0aef4b0"
+  },
+  "scope": "Offline source and simulated storage findings only; production settings, historical objects, customer exposure and migration safety remain unverified. No customer records or storage settings changed.",
+  "logoBaseline": "docs/audits/2026-10-06-all-services-recheck/shodan-logo-preflight-baseline.json",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/additional-private-storage-release-68a19ebc-ea15-454e-81cb-753a7beabf77",
+  "gateStatus": "passed"
+}

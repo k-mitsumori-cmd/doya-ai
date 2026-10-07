@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-10-07T16:08:58.961Z",
+  "passed": 4,
+  "cases": [
+    {
+      "kind": "generate",
+      "mode": "no-logo"
+    },
+    {
+      "kind": "generate",
+      "mode": "valid-logo"
+    },
+    {
+      "kind": "regenerate",
+      "mode": "no-logo"
+    },
+    {
+      "kind": "regenerate",
+      "mode": "valid-logo"
+    }
+  ],
+  "failures": [
+    {
+      "kind": "generate",
+      "mode": "unavailable-logo",
+      "error": "Registered logo unavailable but provider invoked\n\n1 !== 0\n",
+      "providers": 1,
+      "saves": 1,
+      "releases": 1
+    },
+    {
+      "kind": "regenerate",
+      "mode": "unavailable-logo",
+      "error": "Registered logo unavailable but provider invoked\n\n1 !== 0\n",
+      "providers": 1,
+      "saves": 1,
+      "releases": 1
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/shodan/preparations/[id]/slides/generate/route.ts": "0196aed9080d0490ff75941fc9f28b0fbc3ff862ab77810e3c33637314a92f8d",
+    "src/app/api/shodan/preparations/[id]/slides/regenerate/route.ts": "c7e7060182c5fe2ce9fc186d4a85860e0283a2f38bd4136e8e41517abd367821"
+  },
+  "scope": "Actual routes and validators; synthetic identity/DB/lease/storage/provider. No paid provider, customer DB or production storage."
+}

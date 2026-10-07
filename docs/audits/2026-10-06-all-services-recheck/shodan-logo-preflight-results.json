@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-10-07T16:12:15.822Z",
+  "passed": 6,
+  "cases": [
+    {
+      "kind": "generate",
+      "mode": "no-logo"
+    },
+    {
+      "kind": "generate",
+      "mode": "valid-logo"
+    },
+    {
+      "kind": "generate",
+      "mode": "unavailable-logo"
+    },
+    {
+      "kind": "regenerate",
+      "mode": "no-logo"
+    },
+    {
+      "kind": "regenerate",
+      "mode": "valid-logo"
+    },
+    {
+      "kind": "regenerate",
+      "mode": "unavailable-logo"
+    }
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/shodan/preparations/[id]/slides/generate/route.ts": "07bda6a7752d31779652edc7a4913b20c957cc836977e5b647fc3190cbd5e97e",
+    "src/app/api/shodan/preparations/[id]/slides/regenerate/route.ts": "ca2497c962801c8a7263ff3cedda166cfa29a339de1055e25aa764f1f4f755b1"
+  },
+  "scope": "Actual routes and validators; synthetic identity/DB/lease/storage/provider. No paid provider, customer DB or production storage."
+}

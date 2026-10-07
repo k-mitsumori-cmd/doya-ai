@@ -62,6 +62,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       brandColors: (profile?.brandColors as string[] | null) || undefined,
       logoUrl: profile?.logoPath ? await signedUrl(profile.logoPath) : null,
     }
+    if (profile?.logoPath && !brand.logoUrl) {
+      return NextResponse.json({ error: '登録済みロゴを読み込めませんでした。ロゴを確認してから再度お試しください。', code: 'LOGO_UNAVAILABLE' }, { status: 503 })
+    }
 
     const todo = images.map((im, i) => (im.imagePath ? -1 : i)).filter((i) => i >= 0)
     // 1リクエスト最大2枚を並列生成。クライアントは remaining が尽きるまで再呼び出しして全枚数を埋める。

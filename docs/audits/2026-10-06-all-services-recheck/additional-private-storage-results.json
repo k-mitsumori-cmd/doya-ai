@@ -1,0 +1,333 @@
+{
+  "checkedAt": "2026-10-07T16:12:15.620Z",
+  "passed": 64,
+  "cases": [
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "private"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "public"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "private"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "public"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "public"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "private"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "public"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "private"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "public"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "public"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "public"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "recordingExists",
+      "scenario": "private"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "recordingExists",
+      "scenario": "public"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "recordingExists",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "recordingExists",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "recordingExists",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "recordingExists",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "recordingExists",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "recordingExists",
+      "scenario": "missing-create-failed"
+    }
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/lib/adbanner/storage.ts": "e7a78e2152ffab08aecfc2a3f3222cc0b0e42cc570c3ec0ca8510c088871119a",
+    "src/lib/mensetsu/storage.ts": "b53433a5b80eaed75819645f148901eb2995541aab740a8f911fc91fd298f12e",
+    "src/lib/private-storage-bucket.ts": "91200a12a8f9babbe44225c39265539409b157ddb2da3059617e4f9823f43744"
+  },
+  "scope": "Actual AdBanner/Mensetsu storage modules with synthetic Supabase object/metadata adapter. Misconfiguration and warm-cache privacy change probes; not actual production bucket state or customer exposure evidence."
+}

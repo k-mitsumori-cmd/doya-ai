@@ -3,18 +3,11 @@
 // interview の Supabase 管理クライアントを再利用し、専用バケットに保存。
 // ============================================
 import { getSupabaseAdmin } from '@/lib/interview/storage'
+import { ensurePrivateImageBucket } from '@/lib/private-storage-bucket'
 
 const BUCKET = process.env.ADBANNER_STORAGE_BUCKET || 'adbanner'
-let _ready = false
-
 async function ensureBucket() {
-  if (_ready) return
-  const supabase = getSupabaseAdmin()
-  const { data } = await supabase.storage.getBucket(BUCKET)
-  if (!data) {
-    await supabase.storage.createBucket(BUCKET, { public: false, fileSizeLimit: 26214400 }).catch(() => {})
-  }
-  _ready = true
+  await ensurePrivateImageBucket(getSupabaseAdmin().storage, BUCKET, 26214400)
 }
 
 /** PNGバッファを保存してパスを返す */
@@ -39,6 +32,7 @@ export async function uploadFile(path: string, buffer: Buffer, contentType: stri
 export async function signedUrl(path: string, expiresSec = 3600): Promise<string | null> {
   if (!path) return null
   try {
+    await ensureBucket()
     const supabase = getSupabaseAdmin()
     const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, expiresSec)
     return data?.signedUrl || null
@@ -49,6 +43,7 @@ export async function signedUrl(path: string, expiresSec = 3600): Promise<string
 
 export async function downloadBuffer(path: string): Promise<Buffer | null> {
   try {
+    await ensureBucket()
     const supabase = getSupabaseAdmin()
     const { data } = await supabase.storage.from(BUCKET).download(path)
     if (!data) return null

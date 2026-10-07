@@ -1,0 +1,342 @@
+{
+  "checkedAt": "2026-10-07T16:06:38.147Z",
+  "passed": 7,
+  "cases": [
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "private"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "private"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "private"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "private"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "private"
+    }
+  ],
+  "failures": [
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "missing-created-private",
+      "error": "Expected values to be strictly equal:\n\n1 !== 2\n"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "missing-created-public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadPng",
+      "scenario": "missing-create-failed",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "missing-created-private",
+      "error": "Expected values to be strictly equal:\n\n1 !== 2\n"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "missing-created-public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "uploadFile",
+      "scenario": "missing-create-failed",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "missing-created-private",
+      "error": "Expected values to be strictly equal:\n\n0 !== 1\n"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "missing-created-public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "signedUrl",
+      "scenario": "missing-create-failed",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "missing-created-private",
+      "error": "Expected values to be strictly equal:\n\n0 !== 1\n"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "missing-created-public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "adbanner",
+      "operation": "downloadBuffer",
+      "scenario": "missing-create-failed",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "missing-created-private",
+      "error": "Expected values to be strictly equal:\n\n1 !== 2\n"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "missing-created-public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "uploadRecording",
+      "scenario": "missing-create-failed",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "missing-created-private",
+      "error": "Expected values to be strictly equal:\n\n0 !== 1\n"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "missing-created-public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "signedRecordingUrl",
+      "scenario": "missing-create-failed",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "metadata-error",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "missing-created-private",
+      "error": "Expected values to be strictly equal:\n\n1 !== 2\n"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "missing-created-public",
+      "error": "Unsafe bucket operation succeeded"
+    },
+    {
+      "service": "mensetsu",
+      "operation": "createSignedUploadUrl",
+      "scenario": "missing-create-failed",
+      "error": "Unsafe bucket operation succeeded"
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/adbanner/storage.ts": "8625355c959a209d8bce544527fd6786733a57c76a6f14fa7f4cf6532d24b4a5",
+    "src/lib/mensetsu/storage.ts": "cddcffdc6aa0eafd152a34fd469a17cd470b9642b99595332bc65cc4d5170f88"
+  },
+  "scope": "Actual AdBanner/Mensetsu storage modules with synthetic Supabase object/metadata adapter. Misconfiguration and warm-cache privacy change probes; not actual production bucket state or customer exposure evidence."
+}
