@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
   try {
     return await exportConcept(req, ctxParam)
   } catch {
-    return NextResponse.json({ error: '一括ダウンロードの準備に失敗しました。時間をおいて再試行してください。' }, { status: 502, headers: { 'Cache-Control': 'no-store' } })
+    return NextResponse.json({ error: '一括ダウンロードの準備に失敗しました。時間をおいて再試行してください。' }, { status: 502, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   }
 }
 
@@ -31,13 +31,19 @@ async function exportConcept(req: NextRequest, ctxParam: Ctx) {
   if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
 
   const concept = await prisma.adImageConcept.findFirst({
-    where: { id: p.id, campaign: where },
+    where: { id: p.id, campaign: { ...where, brand: where } },
     include: { creatives: true, campaign: { select: { brand: { select: { name: true } } } } },
   })
   if (!concept) return NextResponse.json({ error: 'コンセプトが見つかりません' }, { status: 404 })
   if (concept.creatives.length === 0) {
     return NextResponse.json({ error: 'ダウンロードできる画像がありません' }, { status: 400 })
   }
+
+  const unchanged = async () => {
+    const current = await prisma.adImageConcept.findFirst({ where: { id: p.id, campaign: { ...where, brand: where } }, include: { creatives: true } })
+    return current && current.campaignId === concept.campaignId && current.generation === concept.generation && current.creatives.length === concept.creatives.length && concept.creatives.every(row => current.creatives.some(saved => saved.id === row.id && saved.imagePath === row.imagePath))
+  }
+  const changed = () => NextResponse.json({ error: 'ダウンロード対象が変更されています。履歴を再読み込みしてください。' }, { status: 409, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 
   // 画像を先に全部取ってから固める（ストリーム途中で失敗すると壊れたZIPが届く）
   const files: Array<{ name: string; buf: Buffer }> = []
@@ -78,12 +84,14 @@ async function exportConcept(req: NextRequest, ctxParam: Ctx) {
       totalCount: concept.creatives.length,
       availableCount: files.length,
       missingCount: missing.length,
-    }, { status: 502, headers: { 'Cache-Control': 'no-store' } })
+    }, { status: 502, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   }
   if (missing.length > 0) {
     const notice = `一部の画像のみを保存しています。\n対象${concept.creatives.length}枚 / 保存${files.length}枚 / 取得失敗${missing.length}枚\n\n取得できなかった画像：\n${missing.join('\n')}\n\n履歴画面から再試行できます。\n`
     files.push({ name: '取得できなかった画像.txt', buf: Buffer.from(notice, 'utf8') })
   }
+
+  if (!await unchanged()) return changed()
 
   const zip = await new Promise<Buffer>((resolve, reject) => {
     const archive = archiver('zip', { zlib: { level: 6 } })
@@ -95,6 +103,8 @@ async function exportConcept(req: NextRequest, ctxParam: Ctx) {
     void archive.finalize().catch(reject)
   })
 
+  if (!await unchanged()) return changed()
+
   // ⚠️ ファイル名に日本語が入ると環境によって壊れる。ASCIIのフォールバックと RFC5987 の両方を出す
   const asciiName = `adimage_${concept.id}${missing.length ? '_partial' : ''}.zip`
   const utf8Name = encodeURIComponent(`${concept.campaign.brand.name}_広告画像_${concept.label}${missing.length ? '_一部のみ' : ''}.zip`)
@@ -105,7 +115,7 @@ async function exportConcept(req: NextRequest, ctxParam: Ctx) {
       'X-Export-Missing-Count': String(missing.length),
       'X-Export-Image-Count': String(concept.creatives.length - missing.length),
       'Content-Disposition': `attachment; filename="${asciiName}"; filename*=UTF-8''${utf8Name}`,
-      'Cache-Control': 'no-store',
+      'Cache-Control': 'private, no-store', Vary: 'Cookie',
     },
   })
 }

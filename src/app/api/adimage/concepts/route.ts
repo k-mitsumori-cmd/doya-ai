@@ -27,6 +27,10 @@ import { downloadBuffer, signedUrl } from '@/lib/adimage/storage'
 import type { AdCopy, BrandProfile } from '@/lib/adimage/types'
 
 export async function GET(req: NextRequest) {
+  try { return await listConcepts(req) }
+  catch { return NextResponse.json({ error: '履歴を取得できませんでした。時間をおいて再試行してください。' }, { status: 503, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } }) }
+}
+async function listConcepts(req: NextRequest) {
   const identity = await getIdentity(req)
   // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
   const auth = requireUser(identity)
@@ -38,13 +42,13 @@ export async function GET(req: NextRequest) {
   if (new URL(req.url).searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
     return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
   }
-  if (cursor && !await prisma.adImageConcept.findFirst({ where: { id: cursor, campaign: where }, select: { id: true } })) {
+  if (cursor && !await prisma.adImageConcept.findFirst({ where: { id: cursor, campaign: { ...where, brand: where } }, select: { id: true } })) {
     return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
   }
 
   const [rows, total] = await Promise.all([
     prisma.adImageConcept.findMany({
-      where: { campaign: where },
+      where: { campaign: { ...where, brand: where } },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: 21,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -53,7 +57,7 @@ export async function GET(req: NextRequest) {
         campaign: { select: { id: true, name: true, brand: { select: { name: true } } } },
       },
     }),
-    prisma.adImageConcept.count({ where: { campaign: where } }),
+    prisma.adImageConcept.count({ where: { campaign: { ...where, brand: where } } }),
   ])
   const concepts = rows.slice(0, 20)
 
@@ -81,8 +85,15 @@ export async function GET(req: NextRequest) {
     }))
   )
 
+  // Signing awaits storage. Never return stale private rows after their ownership or image objects changed.
+  const current = await prisma.adImageConcept.findMany({ where: { id: { in: concepts.map(row => row.id) }, campaign: { ...where, brand: where } }, select: { id: true, campaignId: true, generation: true, creatives: { select: { id: true, imagePath: true } } } })
+  if (concepts.some(row => {
+    const saved = current.find(item => item.id === row.id)
+    return !saved || saved.campaignId !== row.campaignId || saved.generation !== row.generation || saved.creatives.length !== row.creatives.length || row.creatives.some(creative => !saved.creatives.some(item => item.id === creative.id && item.imagePath === creative.imagePath))
+  })) return NextResponse.json({ error: '履歴の対象が変更されています。再読み込みしてください。' }, { status: 409, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+
   return NextResponse.json({ concepts: withUrls, total, nextCursor: rows.length > 20 ? concepts[19].id : null }, {
-    headers: { 'Cache-Control': 'private, no-store' },
+    headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' },
   })
 }
 

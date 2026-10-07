@@ -15,6 +15,8 @@ const prisma = { adImageConcept: {
   findFirst: async ({ where }) => records.find((row) => row.id === where.id && row.ownerId === where.campaign.userId) || null,
   findMany: async ({ where, orderBy, take, cursor }) => {
     assert.equal(where.campaign.userId, 'owner')
+    assert.equal(where.campaign.brand.userId, 'owner')
+    if(where.id?.in)return records.filter(row=>where.id.in.includes(row.id)&&row.ownerId===where.campaign.userId)
     assert.equal(take, 21)
     assert.deepEqual(JSON.parse(JSON.stringify(orderBy)), [{ createdAt: 'desc' }, { id: 'desc' }])
     const start = cursor ? records.findIndex((row) => row.id === cursor.id) + 1 : 0

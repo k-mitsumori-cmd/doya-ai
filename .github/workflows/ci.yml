@@ -54,6 +54,12 @@ jobs:
       - name: AdImage logo API workspace recovery (private Unix socket, synthetic providers)
         run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-logo-api-postgres-supervise.py
 
+      - name: AdImage result scope after storage signing (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-result-scope-postgres-supervise.py
+
+      - name: AdImage history and ZIP scope after storage awaits (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-read-scope-postgres-supervise.py
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

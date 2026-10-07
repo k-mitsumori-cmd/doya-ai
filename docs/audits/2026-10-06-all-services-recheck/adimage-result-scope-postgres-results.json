@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-07T15:05:24.476Z",
+  "passed": 5,
+  "cases": [
+    "generate: campaign ownership transfer during URL signing hides saved workspace without regeneration",
+    "refine: campaign ownership transfer during URL signing hides saved workspace without regeneration",
+    "refine: previous-owner change during signing hides stale workspace",
+    "generate: current-path change during signing hides stale workspace",
+    "refine: previous-path change during signing hides stale workspace"
+  ],
+  "sourceHashes": {
+    "src/lib/adimage/image-operation-http.ts": "5db9ee9593f68d89ed51ddca418764139890355abbd1be65d9a7329f7db13658",
+    "src/lib/adimage/image-operation.ts": "f2f8ad526eef6b83f81929d4d3c02a4ce6b294b46a5c7cc872e8e4c88b596371"
+  },
+  "scope": "Actual recovery API/result formatter + actual Prisma/private PostgreSQL. Synthetic provider and storage signing; ownership changed during await of signer, no production/customer/paid provider calls."
+}

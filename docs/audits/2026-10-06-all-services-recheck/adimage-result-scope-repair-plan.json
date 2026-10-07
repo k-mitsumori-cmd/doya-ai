@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-07T15:05:02.375668+00:00",
+  "status": "frozen16gates-passed-ready-for-reviewed-commit-push",
+  "baseline": "adimage-result-scope-baseline.json",
+  "repaired": [
+    "Revalidate durable operation receipt/current ownership after awaiting storage signatures",
+    "Re-read current and before-image scopes and exact stored image paths/generation after signing; reject changed or foreign comparison records",
+    "No provider regeneration/refund on unavailable recovery; private metadata-only response",
+    "History scopes both campaign and brand ownership before initial query and revalidates returned rows/image paths after signing",
+    "ZIP scopes both campaign and brand ownership, revalidates source images after download and after archive creation before returning bytes"
+  ],
+  "evidence": {
+    "privatePostgreSQL": 5,
+    "report": "adimage-result-scope-postgres-results.json",
+    "supervisor": "adimage-result-scope-postgres-supervisor.json",
+    "sessionTerminal0": 57024,
+    "existingApi27SessionTerminal0": 60373,
+    "unitFeedbackHttp6": "passed",
+    "historyAndZipPrivatePostgreSQL": {
+      "passed": 8,
+      "report": "adimage-read-scope-postgres-results.json",
+      "supervisor": "adimage-read-scope-postgres-supervisor.json",
+      "sessionTerminal0": 40541,
+      "scope": "Actual routes/Prisma/PG/archiver;501-row pagination and archive contents checked, synthetic auth/storage"
+    }
+  },
+  "gate": "docs/audits/2026-10-06-all-services-recheck/adimage-result-scope-release-cf855063-4279-4104-95c2-a3e9efc3bf12",
+  "scope": "Local fix only. Prior logo release f9033bde is separately under exact CI/Vercel observation. All17 service audit remains active.",
+  "additionalBaseline": "adimage-read-scope-baseline.json",
+  "priorFailedGate": {
+    "path": "docs/audits/2026-10-06-all-services-recheck/adimage-result-scope-release-63943c91-301e-414d-a2d4-8c453f0a40ab",
+    "sessionTerminal1": 21716,
+    "reason": "Feedback boundary fixture final read lost campaign where clause; corrected and actual related-record33 pass"
+  },
+  "gateSession": 7413,
+  "gateStatus": "passed"
+}

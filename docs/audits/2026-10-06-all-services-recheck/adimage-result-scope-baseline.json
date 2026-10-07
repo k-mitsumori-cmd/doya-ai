@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-07T14:53:40.320273+00:00",
+  "commit": "f9033bdec24fce0bc62b90cc59cb48f4712abddf",
+  "finding": "Image recovery result formatter does not recheck current ownership after awaiting storage signing; actual private PostgreSQL campaign transfer during signer returns completed workspace instead of unavailable",
+  "reproduced": true,
+  "baselineSessionTerminal1": 90369,
+  "baselineLog": "AssertionError [ERR_ASSERTION]: Owner revoked during signing must hide completed workspace\n+ actual - expected\n\n+ 'completed'\n- 'unavailable'\n\n    at /Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-adimage-result-scope-postgres.cjs:6:309 {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 'completed',\n  expected: 'unavailable',\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n",
+  "scope": "Actual recovery API/core/Prisma on isolated Unix-socket PostgreSQL; synthetic provider/storage. No evidence of production exploitation or customer impact.",
+  "additionalComparisonBaseline": {
+    "sessionTerminal1": 23264,
+    "finding": "Revalidating current output ownership alone does not hide before-images moved to another owner while signer awaited",
+    "log": "PASS generate: campaign ownership transfer during URL signing hides saved workspace without regeneration\nPASS refine: campaign ownership transfer during URL signing hides saved workspace without regeneration\nAssertionError [ERR_ASSERTION]: previous-owner during signing must hide stale workspace\n+ actual - expected\n\n+ 'completed'\n- 'unavailable'\n\n    at /Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-adimage-result-scope-postgres.cjs:7:786 {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 'completed',\n  expected: 'unavailable',\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n"
+  }
+}

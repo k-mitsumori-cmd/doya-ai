@@ -80,6 +80,14 @@ export async function adImageOperationReply(input: AdImageOperationInput, result
     return { id: cr.id, placementKey: cr.placementKey, placementName: p?.name || cr.placementKey, media: p?.media || '', size: cr.size, verify: cr.verify, url }
   }
   const [creatives, previousCreatives] = await raceTimeout('adimage result URLs', 15000, Promise.all([Promise.all(concept.creatives.map(creativeDto)), Promise.all((previous?.creatives || []).map(creativeDto))]))
+  // Storage signing awaits external work. Revalidate current ownership and receipt availability before returning private data.
+  if ((await recoverAdImageOperation(input)).state !== 'completed') return privateAdImageReply({ ...metadata, state: 'unavailable' })
+  const shown = [concept, ...(previous ? [previous] : [])]
+  const currentImages = await prisma.adImageConcept.findMany({ where: { id: { in: shown.map(row => row.id) }, campaignId: concept.campaignId, campaign: { userId: input.actor, brand: { userId: input.actor } } }, select: { id: true, generation: true, creatives: { select: { id: true, imagePath: true } } } })
+  if (shown.some(row => {
+    const current = currentImages.find(saved => saved.id === row.id)
+    return !current || current.generation !== row.generation || current.creatives.length !== row.creatives.length || row.creatives.some(creative => !current.creatives.some(saved => saved.id === creative.id && saved.imagePath === creative.imagePath))
+  })) return privateAdImageReply({ ...metadata, state: 'unavailable' })
   return privateAdImageReply({ ...metadata, ...feedbackResult, state: 'completed', conceptId: concept.id, campaignId: concept.campaignId, copy: concept.copy, generation: concept.generation, creatives, previousCreatives, previousGeneration: previous?.generation ?? null, appliedDirectives: receipt.appliedDirectives, failedPlacements: receipt.failedPlacements, needsReview: creatives.some(c => Boolean((c.verify as { needsReview?: boolean } | null)?.needsReview)) })
 }
 export async function readAdImageOperation(req: NextRequest, cancelMissing: boolean) {

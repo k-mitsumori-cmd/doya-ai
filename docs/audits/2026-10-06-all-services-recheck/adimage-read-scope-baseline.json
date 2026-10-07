@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-07T14:59:55.257Z",
+  "passed": 0,
+  "cases": [],
+  "failures": [
+    {
+      "name": "History initially foreign brand never signs or returns its concepts",
+      "error": "Foreign brand concepts returned: 2"
+    },
+    {
+      "name": "History ownership change during signing omits private results",
+      "error": "Revoked concepts returned: 2"
+    },
+    {
+      "name": "ZIP initially foreign brand rejects before storage download",
+      "error": "Foreign export returned status 200\n\n200 !== 404\n"
+    },
+    {
+      "name": "ZIP ownership change during download never returns archive bytes",
+      "error": "Revoked export returned ZIP bytes"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/adimage/concepts/route.ts": "3a044c9e5a9851974dc2fecb3dcbcd2f06db648cf3e26eb785d7f3d3a0cc1c5d",
+    "src/app/api/adimage/concepts/[id]/export/route.ts": "ffb9b0bf3eeb41028e207f8d36ff7611062ef73cdf3b7688c092cb048589b7fd"
+  },
+  "scope": "Actual history and ZIP handlers, actual Prisma/private Unix-socket PostgreSQL and real local archiver. Synthetic storage bytes/signing and identity/providers; no production/customer data, external provider or mail.",
+  "baselineSessionTerminal1": 79851
+}
