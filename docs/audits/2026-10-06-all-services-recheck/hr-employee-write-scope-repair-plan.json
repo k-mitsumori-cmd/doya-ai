@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-07T16:43:49.484120+00:00",
+  "status": "frozen33gates-passed-ready-for-reviewed-commit-push",
+  "baseline": "docs/audits/2026-10-06-all-services-recheck/hr-employee-write-scope-postgres-baseline.json",
+  "baselinePassed": 2,
+  "baselineFailed": 8,
+  "repairs": [
+    "Scope active original admin/owner membership and organization in the conditional write",
+    "Reject a changed server-read version and bump timestamp monotonically",
+    "Employee changes and history are committed in one transaction or rolled back",
+    "Final saved employee read checks original active membership again",
+    "Repeated logical delete preserves original resignation date and one history entry"
+  ],
+  "followups": [
+    "Add client expectedUpdatedAt to prevent stale page drafts overwriting sequential newer saves",
+    "Validate photo reference URLs and review cross-organization attachment attempts",
+    "Review 5MB multipart upload against platform body limit and source photo validation",
+    "Historical public photo objects remain uninspected/unchanged"
+  ],
+  "scope": "Actual isolated PostgreSQL and existing offline tests. No customer DB/photo/provider/production settings changed.",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/hr-employee-write-scope-release-4bf059f6-d250-49f3-bbe8-470916f9be81",
+  "previousFailedGate": "docs/audits/2026-10-06-all-services-recheck/hr-photo-write-scope-release-8efdc762-7783-4900-9734-78f6e540003b",
+  "productionApplied": false,
+  "gateStatus": "passed"
+}

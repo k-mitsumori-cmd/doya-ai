@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-07T16:43:49.483952+00:00",
+  "status": "frozen33gates-passed-ready-for-reviewed-commit-push",
+  "baseline": "docs/audits/2026-10-06-all-services-recheck/hr-photo-write-scope-baseline.json",
+  "sourceHashes": {
+    "src/app/api/hr/employees/[id]/photo/route.ts": "6d30e0c6be48e0f7278d3a6d376b00f2d35962d6e9d611affafc16d20eacf1f1"
+  },
+  "repairsRequired": [
+    "Conditional photo update verifies original organization, original active admin/owner membership and initial updatedAt atomically",
+    "Same-version concurrent photo updates must not overwrite each other",
+    "Return private sanitized conflict without pretending save succeeded",
+    "Review employee PATCH/DELETE for equivalent stale authority and write-version races",
+    "Review HR upload5MB UI against platform request payload boundary"
+  ],
+  "scope": "Actual route and synthetic DB scope changes; no real customer photo writes, migration, external provider or production settings.",
+  "candidate": "docs/audits/2026-10-06-all-services-recheck/hr-photo-write-candidate/src/app/api/hr/employees/[id]/photo/route.ts",
+  "candidateResults": "docs/audits/2026-10-06-all-services-recheck/hr-photo-write-scope-results.json",
+  "productionApplied": false,
+  "gate": "docs/audits/2026-10-06-all-services-recheck/hr-employee-write-scope-release-4bf059f6-d250-49f3-bbe8-470916f9be81",
+  "previousFailedGate": "docs/audits/2026-10-06-all-services-recheck/hr-photo-write-scope-release-8efdc762-7783-4900-9734-78f6e540003b",
+  "gateStatus": "passed"
+}

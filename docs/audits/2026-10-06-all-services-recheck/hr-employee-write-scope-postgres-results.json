@@ -1,0 +1,64 @@
+{
+  "checkedAt": "2026-10-07T16:44:22.251Z",
+  "passed": 13,
+  "cases": [
+    {
+      "method": "PATCH",
+      "scenario": "owner"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "membership-revoked"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "employee-moved"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "role-demoted"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "version-changed"
+    },
+    {
+      "method": "DELETE",
+      "scenario": "owner"
+    },
+    {
+      "method": "DELETE",
+      "scenario": "membership-revoked"
+    },
+    {
+      "method": "DELETE",
+      "scenario": "employee-moved"
+    },
+    {
+      "method": "DELETE",
+      "scenario": "role-demoted"
+    },
+    {
+      "method": "DELETE",
+      "scenario": "version-changed"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "same-version-concurrent"
+    },
+    {
+      "method": "DELETE",
+      "scenario": "same-version-concurrent"
+    },
+    {
+      "method": "DELETE",
+      "scenario": "repeat-delete"
+    }
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/hr/employees/[id]/route.ts": "e09022b19f112603c9e132a6f9e3ca95cbfe44371eb06502ed98964a04892921",
+    "src/lib/hr/access.ts": "b73222e91e900b774b7716ca3caacfa7305e6742fa2f7f6ac761027bf9dd0598"
+  },
+  "scope": "Actual employee PATCH/DELETE/HR authority, Prisma and private Unix-socket PostgreSQL with organization/history FK. Scope mutation after initial employee read, before transaction. No customer data/provider/production writes."
+}

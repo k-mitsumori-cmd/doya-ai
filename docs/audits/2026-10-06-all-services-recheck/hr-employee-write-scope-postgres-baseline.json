@@ -1,0 +1,61 @@
+{
+  "checkedAt": "2026-10-07T16:38:31.748Z",
+  "passed": 2,
+  "cases": [
+    {
+      "method": "PATCH",
+      "scenario": "owner"
+    },
+    {
+      "method": "DELETE",
+      "scenario": "owner"
+    }
+  ],
+  "failures": [
+    {
+      "method": "PATCH",
+      "scenario": "membership-revoked",
+      "error": "Stale authority/write was accepted: 200"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "employee-moved",
+      "error": "Stale authority/write was accepted: 200"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "role-demoted",
+      "error": "Stale authority/write was accepted: 200"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "version-changed",
+      "error": "Stale authority/write was accepted: 200"
+    },
+    {
+      "method": "DELETE",
+      "scenario": "membership-revoked",
+      "error": "Stale authority/write was accepted: 200"
+    },
+    {
+      "method": "DELETE",
+      "scenario": "employee-moved",
+      "error": "Stale authority/write was accepted: 200"
+    },
+    {
+      "method": "DELETE",
+      "scenario": "role-demoted",
+      "error": "Stale authority/write was accepted: 200"
+    },
+    {
+      "method": "DELETE",
+      "scenario": "version-changed",
+      "error": "Stale authority/write was accepted: 200"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/employees/[id]/route.ts": "24bcc362e9ffafdafb072595ce83c32aca5fe5ff283ef383d77a56b18a42aa8e",
+    "src/lib/hr/access.ts": "b73222e91e900b774b7716ca3caacfa7305e6742fa2f7f6ac761027bf9dd0598"
+  },
+  "scope": "Actual employee PATCH/DELETE/HR authority, Prisma and private Unix-socket PostgreSQL with organization/history FK. Scope mutation after initial employee read, before transaction. No customer data/provider/production writes."
+}

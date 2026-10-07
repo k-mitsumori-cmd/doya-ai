@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-07T16:44:21.077Z",
+  "passed": 6,
+  "cases": [
+    "owner",
+    "membership-revoked-after-read",
+    "employee-moved-after-read",
+    "role-demoted-after-read",
+    "version-changed-after-read",
+    "same-version-concurrent"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/hr/employees/[id]/photo/route.ts": "0fd5295b79c9c4b4d3b167f909ce0850aafea40634893de723c92a39d076ae9d",
+    "src/lib/hr/access.ts": "b73222e91e900b774b7716ca3caacfa7305e6742fa2f7f6ac761027bf9dd0598",
+    "src/lib/hr/types.ts": "1fee619f546a9b7740209f209322fbbec321b96855ca65e2bd3089e5d4e8a137",
+    "src/lib/hr/constants.ts": "2280c865057d4229eb650729e0e2d7f962b1e542acbca192e587ccc0eb66265c"
+  },
+  "scope": "Actual photo route, HR authority module, Prisma and isolated Unix-socket PostgreSQL with organization FK. Synthetic identity and PNG only. Real conditional-update concurrency: one same-version writer wins. Candidate file explicitly hashed until applied. No customer DB/provider/production writes."
+}

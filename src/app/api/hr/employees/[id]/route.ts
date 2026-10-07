@@ -16,6 +16,21 @@ import { getOneOnOneReadWhere, getOneOnOneViewer, filterOneOnOneFields } from '@
 
 type Ctx = { params: Promise<{ id: string }> }
 
+class EmployeeWriteConflict extends Error {}
+const privateWriteHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+function employeeWriteScope(id: string, actor: { organizationId: string; memberId: string; userId: string }, existing: { updatedAt: Date }, sessionUserId: string) {
+  if (!actor.memberId || actor.userId !== sessionUserId || !(existing.updatedAt instanceof Date) || !Number.isFinite(existing.updatedAt.getTime())) throw new EmployeeWriteConflict()
+  return {
+    id, organizationId: actor.organizationId, updatedAt: existing.updatedAt,
+    organization: { members: { some: {
+      id: actor.memberId, userId: actor.userId, organizationId: actor.organizationId,
+      status: 'ACTIVE', role: { in: [HrMemberRole.OWNER, HrMemberRole.ADMIN] },
+    } } },
+  }
+}
+const writeConflictResponse = () => NextResponse.json({ error: '従業員情報または権限が更新されています。再読み込みしてからお試しください。', code: 'EMPLOYEE_WRITE_CONFLICT' }, { status: 409, headers: privateWriteHeaders })
+
+
 export async function GET(req: NextRequest, ctx: Ctx) {
   try {
     const hrCtx = await getHrContext()
@@ -152,6 +167,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const gradeChanged = grade !== undefined && grade !== existing.grade
 
     const persist = async (tx: Prisma.TransactionClient) => {
+      const scope = employeeWriteScope(id, hrCtx, existing, (session?.user as any).id)
+      const changed = await tx.hrEmployee.updateMany({
+        where: scope,
+        data: { ...data, updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) },
+      })
+      if (changed.count !== 1) throw new EmployeeWriteConflict()
       if (deptChanged || posChanged || gradeChanged) {
         let newDeptName: string | null = null
         if (deptChanged && departmentId) {
@@ -180,11 +201,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
           },
         })
       }
-      return tx.hrEmployee.update({
-        where: { id },
-        data,
+      const current = await tx.hrEmployee.findFirst({
+        where: { id, organizationId: hrCtx.organizationId, organization: scope.organization },
         include: { department: { select: { id: true, name: true, code: true } } },
       })
+      if (!current) throw new EmployeeWriteConflict()
+      return current
     }
 
     const reactivating = status === EmployeeStatus.ACTIVE && existing.status !== EmployeeStatus.ACTIVE
@@ -202,8 +224,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
     const updated = admission.value
 
-    return NextResponse.json({ success: true, employee: updated })
+    return NextResponse.json({ success: true, employee: updated }, { headers: privateWriteHeaders })
   } catch (e: any) {
+    if (e instanceof EmployeeWriteConflict) return writeConflictResponse()
     console.error('[hr/employees PATCH]')
     return NextResponse.json(
       { error: '従業員情報を更新できませんでした' },
@@ -238,10 +261,17 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.hrEmployee.update({
-        where: { id },
-        data: { status: 'RESIGNED', resignDate: new Date() },
+      const scope = employeeWriteScope(id, hrCtx, existing, (session?.user as any).id)
+      if (existing.status === EmployeeStatus.RESIGNED) {
+        const current = await tx.hrEmployee.findFirst({ where: scope, select: { id: true } })
+        if (!current) throw new EmployeeWriteConflict()
+        return
+      }
+      const changed = await tx.hrEmployee.updateMany({
+        where: scope,
+        data: { status: 'RESIGNED', resignDate: new Date(), updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) },
       })
+      if (changed.count !== 1) throw new EmployeeWriteConflict()
       await tx.hrEmployeeHistory.create({
         data: {
           employeeId: id,
@@ -252,8 +282,9 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       })
     })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true }, { headers: privateWriteHeaders })
   } catch (e: any) {
+    if (e instanceof EmployeeWriteConflict) return writeConflictResponse()
     console.error('[hr/employees DELETE]')
     return NextResponse.json(
       { error: '従業員情報を削除できませんでした' },

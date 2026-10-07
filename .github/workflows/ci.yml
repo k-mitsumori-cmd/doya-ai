@@ -102,6 +102,15 @@ jobs:
       - name: HR employee photo authority after download (offline)
         run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-private-photo-read.cjs
 
+      - name: HR legacy photo conditional writes (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-photo-write-scope.cjs
+
+      - name: HR legacy photo write concurrency (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/hr-photo-write-scope-postgres-supervise.py
+
+      - name: HR employee writes and history concurrency (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/hr-employee-write-scope-postgres-supervise.py
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 
