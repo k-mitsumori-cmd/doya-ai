@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
+import { validateKintaiWorkRuleInput, validateKintaiWorkRuleSchedule } from '@/lib/kintai/work-rule-input'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
 import { useKintaiWorkRuleCreation } from '@/lib/kintai/use-work-rule-creation'
 
@@ -122,6 +123,8 @@ export default function SettingsPage() {
     if (!currentAccess() || !canManage || saveLock.current) return
     if (editing && (typeof editing.revision !== 'string' || !/^[a-f0-9]{64}$/.test(editing.revision))) { alert('最新の就業ルールを読み込み直してください。入力内容は保存されていません。'); return }
     if (!form.name.trim()) { alert('ルール名を入力してください'); return }
+    const inputError = validateKintaiWorkRuleInput(form) || validateKintaiWorkRuleSchedule(form)
+    if (inputError) { alert(inputError); return }
     const version = formVersion.current
     const current = () => mounted.current && formVersion.current === version && currentAccess()
     const attempt = {}
@@ -376,7 +379,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">休憩 (分)</label>
-                  <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="number" value={form.breakMinutes} onChange={(e) => setForm({ ...form, breakMinutes: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" />
+                  <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="number" min={0} max={1440} step={1} value={form.breakMinutes} onChange={(e) => setForm({ ...form, breakMinutes: Number(e.target.value) })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" />
                 </div>
               </div>
 

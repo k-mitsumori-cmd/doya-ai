@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
-import { validateKintaiWorkRuleInput } from '@/lib/kintai/work-rule-input'
+import { validateKintaiWorkRuleInput, validateKintaiWorkRuleSchedule } from '@/lib/kintai/work-rule-input'
 import { workRuleExpectedRevision, assertKintaiWorkRuleRevision, advanceKintaiWorkRuleRevision, KintaiWorkRuleRevisionError } from '@/lib/kintai/work-rule-revision'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -39,6 +39,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       })
       if (!existing) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
       await assertKintaiWorkRuleRevision(tx, existing, expectedRevision)
+      const scheduleError = validateKintaiWorkRuleSchedule({ ...existing, ...body })
+      if (scheduleError) return NextResponse.json({ error: scheduleError }, { status: 400 })
       const rule = await tx.kintaiWorkRule.update({
         where: { id: p.id },
         data: {

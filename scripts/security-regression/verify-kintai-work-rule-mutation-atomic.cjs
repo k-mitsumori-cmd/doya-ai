@@ -5,7 +5,7 @@ const revision = load('src/lib/kintai/work-rule-revision.ts', {'node:crypto': re
 const manager = load('src/lib/kintai/manager-admission.ts')
 
 function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
-  const rows = new Map([['rule', { id: 'rule', organizationId: 'org', name: 'Standard' }]])
+  const rows = new Map([['rule', { id: 'rule', organizationId: 'org', name: 'Standard', workStart:'09:00',workEnd:'18:00',breakMinutes:60 }]])
   const order = []
   const receipts = new Map()
   let writes = 0

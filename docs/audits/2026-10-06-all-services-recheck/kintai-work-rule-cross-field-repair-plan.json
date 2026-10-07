@@ -1,0 +1,53 @@
+{
+  "checkedAt": "2026-10-07T18:49:24.872997+00:00",
+  "status": "frozen50gates-passed-ready-for-reviewed-commit-push",
+  "baseline": "kintai-work-rule-cross-field-postgres-baseline.json",
+  "candidate": "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-cross-field-candidate",
+  "productionApplied": false,
+  "rootApplied": true,
+  "observed": "9-18 schedule accepted break1440 and ordinary 480-minute work computed entirely as overtime480",
+  "scope": "Synthetic actual API + isolated PostgreSQL + actual attendance calculation. No customer data changes.",
+  "repairs": [
+    "Reject rest longer than complete work window",
+    "Merge PATCH values with locked existing row before checking",
+    "Preserve overnight wrap and equal endpoints zero duration convention"
+  ],
+  "remaining": [
+    "Production release and verification",
+    "No automatic change to existing customer schedules; existing affected rows unexamined"
+  ],
+  "evidence": {
+    "baseline": "kintai-work-rule-cross-field-postgres-baseline.json",
+    "candidate": "kintai-work-rule-cross-field-candidate-results.json",
+    "candidateSupervisor": "kintai-work-rule-cross-field-candidate-supervisor.json",
+    "boundaries": {
+      "file": "kintai-work-rule-cross-field-boundaries-results.json",
+      "passed": 14,
+      "supervisor": "kintai-work-rule-cross-field-boundaries-supervisor.json"
+    },
+    "typecheck": {
+      "exitCode": 0,
+      "log": "kintai-work-rule-cross-field-candidate-typecheck.log"
+    },
+    "mountedReact": {
+      "passed": 21,
+      "file": "kintai-settings-revision-mounted-results.json"
+    },
+    "nativeChrome": {
+      "passed": 12,
+      "file": "kintai-settings-revision-native-results.json",
+      "scope": "Actual root TSX, actual input validator, creation hook and identity guard, fresh root-built CSS in native Chrome with synthetic HTTP. Invalid rest blocked before POST/metadata; correction, conflict and creation recovery tested. Latest mobile unknown-result screenshot visually inspected; authenticated production E2E remains unverified."
+    },
+    "rootTypecheck": {
+      "exitCode": 0,
+      "log": "kintai-work-rule-cross-field-root-typecheck.log"
+    },
+    "frozenRootGate": {
+      "passed": 50,
+      "changedSources": [],
+      "gate": "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-cross-field-release-e0e5384f-d55b-48ef-bbdf-516bbe804367"
+    }
+  },
+  "gate": "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-cross-field-release-e0e5384f-d55b-48ef-bbdf-516bbe804367",
+  "gateStatus": "passed"
+}

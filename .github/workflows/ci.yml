@@ -156,6 +156,9 @@ jobs:
       - name: Kintai work-rule concurrent edit revisions (private Unix socket)
         run: python3 docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-revision-postgres-supervise.py
 
+      - name: Kintai rest and work-window boundaries (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-cross-field-boundaries-supervise.py
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

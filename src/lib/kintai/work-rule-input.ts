@@ -13,3 +13,14 @@ export function validateKintaiWorkRuleInput(body: Record<string, unknown>): stri
   if (body.flexEnabled !== undefined && typeof body.flexEnabled !== 'boolean') return 'フレックス設定を正しく指定してください。'
   return null
 }
+
+/** Validate the complete persisted schedule, including omitted PATCH values. */
+export function validateKintaiWorkRuleSchedule(rule: { workStart: string; workEnd: string; breakMinutes: number }): string | null {
+  const inputError = validateKintaiWorkRuleInput(rule)
+  if (inputError) return inputError
+  const minutes = (time: string) => { const [h, m] = time.split(':').map(Number); return h * 60 + m }
+  const start = minutes(rule.workStart), end = minutes(rule.workEnd)
+  const duration = end < start ? end + 1440 - start : end - start
+  if (rule.breakMinutes > duration) return '休憩時間は始業から終業までの時間以内で指定してください。'
+  return null
+}

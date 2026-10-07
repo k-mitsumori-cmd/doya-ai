@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T18:42:04.851Z",
+  "expected": 1,
+  "passed": 0,
+  "cases": [],
+  "observed": {
+    "postStatus": 201,
+    "storedBreakMinutes": 1440,
+    "attendance": {
+      "clockIn": "2026-10-01T00:00:00.000Z",
+      "clockOut": "2026-10-01T09:00:00.000Z",
+      "breakMinutes": 60,
+      "workMinutes": 480,
+      "overtimeMinutes": 480,
+      "lateMinutes": 0,
+      "earlyLeaveMinutes": 0,
+      "nightMinutes": 0
+    }
+  },
+  "sourceHashes": {
+    "src/app/api/kintai/work-rules/route.ts": "2ad1016c32a4d949f5ee972d94f09376308795de4d6ee58b6f9c0e72a738f0ed",
+    "src/lib/kintai/work-rule-input.ts": "3ceba2508906b90ddae79281ae1ea8326c5039deab9ee61a5f9480a138057ec3",
+    "src/lib/kintai/attendance.ts": "bd25e9dd95a9ab5afdb08f75f5ef2c2fedcb0ebcb56a6fee6cd7135daf933ee6"
+  },
+  "scope": "Synthetic local PostgreSQL actual POST and attendance calculator. No customer data or provider calls."
+}

@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
-import { validateKintaiWorkRuleInput } from '@/lib/kintai/work-rule-input'
+import { validateKintaiWorkRuleInput, validateKintaiWorkRuleSchedule } from '@/lib/kintai/work-rule-input'
 import { withKintaiWorkRuleRevision, withKintaiWorkRuleRevisions, advanceKintaiWorkRuleRevision, KintaiWorkRuleRevisionError } from '@/lib/kintai/work-rule-revision'
 import { createKintaiWorkRuleOnce, kintaiWorkRuleOperationId, KintaiWorkRuleOperationError } from '@/lib/kintai/work-rule-operation'
 
@@ -56,6 +56,8 @@ export async function POST(req: NextRequest) {
         breakMinutes: body.breakMinutes ?? 60, overtimeCalcMethod: body.overtimeCalcMethod || 'daily',
         flexEnabled: body.flexEnabled || false, coreStart: body.coreStart || null, coreEnd: body.coreEnd || null,
       }
+      const scheduleError = validateKintaiWorkRuleSchedule(data)
+      if (scheduleError) return NextResponse.json({ error: scheduleError }, { status: 400 })
       const rule = await createKintaiWorkRuleOnce(tx, ctx, operationId, data,
         async id => { const row = await tx.kintaiWorkRule.findFirst({ where: { id, organizationId: ctx.organizationId } }); return row ? withKintaiWorkRuleRevision(tx, row) : null },
         async () => advanceKintaiWorkRuleRevision(tx, await tx.kintaiWorkRule.create({ data })))

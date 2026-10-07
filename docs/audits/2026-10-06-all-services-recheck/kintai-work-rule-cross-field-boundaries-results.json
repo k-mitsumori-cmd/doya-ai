@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-07T18:50:06.337Z",
+  "passed": 14,
+  "expected": 14,
+  "cases": [
+    "day rest above window rejected",
+    "overnight rest above window rejected",
+    "day exact full rest accepted",
+    "overnight exact full rest accepted",
+    "equal endpoints zero rest accepted",
+    "equal endpoints positive rest rejected",
+    "omitted POST rest default checked",
+    "normal defaults retained",
+    "PATCH excess rest leaves row and generation unchanged",
+    "PATCH omitted break checked against existing value",
+    "PATCH existing times merged with rest-only update",
+    "PATCH overnight end change checked with existing start",
+    "PATCH simultaneous rest and window repair succeeds",
+    "legacy impossible schedule requires correction before unrelated write"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/kintai/work-rules/route.ts": "b6cf0bb4d1ccc30c857cc9ed55e9fde3c20562476d8f79bb99d39708910cce19",
+    "src/app/api/kintai/work-rules/[id]/route.ts": "9dd6d7be53f4b8d3de36cbc78551e67d0835ec6cb282f3c8db50f96e8b9135f1",
+    "src/app/api/kintai/work-rules/operations/[operationId]/route.ts": "3d802ed019ede2ae6f3b11ba784f9c4108dc171c8787030540df3cb6884c2a53",
+    "src/lib/kintai/work-rule-revision.ts": "aab3dbc7e41c5c469b211866db74889d4c31ef4ee7f5a9af2f8c02483a497973",
+    "src/lib/kintai/work-rule-operation.ts": "02874b8c2351d4a170cff25eefc8c7af10ed4cb74c3517e4e363f2e459e8832d",
+    "src/lib/kintai/work-rule-input.ts": "c0072f730545d046541038daf3baeb8bf46ad3d6aaf03a0f0d5cebb4ef9422c0",
+    "src/lib/kintai/manager-admission.ts": "8d93a0b7ff71b1158f2c2739187b2a9a3649ac9bb2171271546a060d78f67d59",
+    "src/lib/kintai/employee-admission.ts": "b53980fcb978167a6a60a17f1d0ecb22ce47c84ec71faabdb610b51a93d6580b",
+    "src/app/kintai/settings/page.tsx": "4c63216dd6c518af54ed64ea255b639b23de8eaa384279639f44905945b9a76a"
+  },
+  "scope": "Actual versioned API candidates, current authority/creation helpers and Prisma in isolated Unix-socket PostgreSQL. Stale forms, concurrent writers, ABA, deletion and real database-trigger rollback tested. Mocked session only. Frontend integration/type/build/production are separate checks."
+}
