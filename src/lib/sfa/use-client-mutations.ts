@@ -3,21 +3,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
 import { OrgResponseError } from '@/lib/org-client-response'
-import { activityWriteMatches, isSfaClientActivity, isSfaClientTask, sfaClientId, sfaJson, SfaClientRejection, taskWriteMatches, type SfaClientTask, isSfaClientDeal, dealWriteMatches, type SfaClientDeal } from './client-response'
+import { activityWriteMatches, isSfaClientActivity, isSfaClientTask, sfaClientId, sfaJson, SfaClientRejection, taskWriteMatches, type SfaClientTask, isSfaClientDeal, dealWriteMatches, type SfaClientDeal, isSfaClientConversion, conversionWriteMatches } from './client-response'
 
-type Kind = 'task' | 'activity' | 'deal'
+type Kind = 'task' | 'activity' | 'deal' | 'conversion'
 export interface SfaPendingOperation {
-  lane: string; kind: Kind; operationId?: string; targetId?: string
+  lane: string; kind: Kind; operationId?: string; targetId?: string; leadId?: string
 }
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
 const validPending = (v: unknown): v is SfaPendingOperation => {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return false
   const p = v as SfaPendingOperation
-  return typeof p.lane === 'string' && /^[a-zA-Z0-9:_-]{1,200}$/.test(p.lane) && ['task', 'activity', 'deal'].includes(p.kind)
+  return typeof p.lane === 'string' && /^[a-zA-Z0-9:_-]{1,200}$/.test(p.lane) && ['task', 'activity', 'deal', 'conversion'].includes(p.kind)
+    && (p.kind === 'conversion' ? sfaClientId(p.leadId) && p.lane === 'conversion:' + p.leadId : p.leadId === undefined)
     && (typeof p.operationId === 'string' && UUID.test(p.operationId) && p.targetId === undefined
       || p.operationId === undefined && ['task', 'deal'].includes(p.kind) && sfaClientId(p.targetId))
 }
-const collection = (kind: Kind) => kind === 'task' ? '/api/sfa/tasks' : kind === 'deal' ? '/api/sfa/deals' : '/api/sfa/activities'
+const collection = (kind: Exclude<Kind, 'conversion'>) => kind === 'task' ? '/api/sfa/tasks' : kind === 'deal' ? '/api/sfa/deals' : '/api/sfa/activities'
 
 /** Tracks revisions, including edits made while an earlier snapshot is being saved. */
 export function useSfaDraftSnapshot(value: unknown) {
@@ -101,7 +102,7 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
     }
   }
   const creationBlocked = (kind: Kind) => [...entries.current.values()].some(entry => entry.operationId && entry.kind === kind)
-  const create = (kind: Kind, lane: string, body: Record<string, unknown>) => {
+  const create = (kind: Exclude<Kind, 'conversion'>, lane: string, body: Record<string, unknown>) => {
     if (!guard.active() || creationBlocked(kind)) return Promise.resolve(null)
     let operationId: string
     try { operationId = crypto.randomUUID() } catch { message.current = '操作情報を作成できませんでした。画面を開き直してください。'; publish(); return Promise.resolve(null) }
@@ -111,6 +112,18 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
       const row = data[kind]
       if (!(kind === 'task' ? isSfaClientTask(row) && taskWriteMatches(row, body) : kind === 'deal' ? isSfaClientDeal(row) && dealWriteMatches(row, body) : isSfaClientActivity(row) && activityWriteMatches(row, body))) throw new OrgResponseError(true, 200)
       return row
+    })
+  }
+  const convertLead = (leadId: string, body: Record<string, unknown>) => {
+    if (!guard.active() || !sfaClientId(leadId) || creationBlocked('conversion')) return Promise.resolve(null)
+    let operationId: string
+    try { operationId = crypto.randomUUID() } catch { message.current = '操作情報を作成できませんでした。画面を開き直してください。'; publish(); return Promise.resolve(null) }
+    return run({ lane: 'conversion:' + leadId, kind: 'conversion', operationId, leadId }, async signal => {
+      const data = await sfaJson('/api/sfa/leads/' + encodeURIComponent(leadId) + '/convert', orgSlug, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, operationId }), signal,
+      })
+      if (data.ok !== true || !isSfaClientConversion(data, leadId) || !conversionWriteMatches(data, body)) throw new OrgResponseError(true, 200)
+      return data
     })
   }
   const mutateTask = (task: SfaClientTask, patch: Record<string, unknown> | null) => run({ lane: 'task:' + task.id, kind: 'task', targetId: task.id }, async signal => {
@@ -134,11 +147,11 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
     if (!operation) return
     running.current.add(entry.lane); publish()
     try {
-      const path = entry.operationId ? collection(entry.kind) + '?operationId=' + encodeURIComponent(entry.operationId) : collection(entry.kind) + '/' + encodeURIComponent(entry.targetId!) + (entry.kind === 'deal' ? '?recovery=1' : '')
+      const path = entry.kind === 'conversion' ? '/api/sfa/leads/' + encodeURIComponent(entry.leadId!) + '/convert?operationId=' + encodeURIComponent(entry.operationId!) : entry.operationId ? collection(entry.kind) + '?operationId=' + encodeURIComponent(entry.operationId) : collection(entry.kind) + '/' + encodeURIComponent(entry.targetId!) + (entry.kind === 'deal' ? '?recovery=1' : '')
       const data = await sfaJson(path, orgSlug, { signal: operation.signal, method: cancel && entry.operationId ? 'DELETE' : 'GET' })
       if (!operation.current()) return
       const row = data[entry.kind]
-      if (data.state === 'found' && (entry.kind === 'task' ? isSfaClientTask(row) && (!entry.targetId || row.id === entry.targetId) : entry.kind === 'deal' ? isSfaClientDeal(row) && (!entry.targetId || row.id === entry.targetId) : isSfaClientActivity(row))) {
+      if (data.state === 'found' && (entry.kind === 'conversion' ? isSfaClientConversion(row, entry.leadId!) : entry.kind === 'task' ? isSfaClientTask(row) && (!entry.targetId || row.id === entry.targetId) : entry.kind === 'deal' ? isSfaClientDeal(row) && (!entry.targetId || row.id === entry.targetId) : isSfaClientActivity(row))) {
         forget(entry)
         message.current = '保存済みの現在の状態を確認しました。一覧を更新しました。入力欄の内容は保持しています。同じ内容を重ねて送信しないでください。'
         recovered.current(entry, String(data.state))
@@ -158,6 +171,6 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
     }
   }
   const current: { pending: SfaPendingOperation[]; message: string; busy: string[] } = view.key === guard.key ? view : { pending: [], message: '', busy: [] }
-  return { key: guard.key, identity: guard.identity, allowed: guard.allowed, active: guard.active, create, mutateTask, mutateDeal, recover,
+  return { key: guard.key, identity: guard.identity, allowed: guard.allowed, active: guard.active, create, convertLead, mutateTask, mutateDeal, recover,
     pending: current.pending, message: current.message, busy: current.busy, creationBlocked, blocked: (lane: string) => guard.active() && scope.current === guard.key && entries.current.has(lane), requiresLogin: guard.requiresLogin }
 }

@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-07T02:30:17.290366+00:00",
-  "status": "full-gate-passed-production-pending",
+  "checkedAt": "2026-10-07T03:44:55.684820+00:00",
+  "status": "production-ready-ci-success-anonymous-publication-verified-private-flows-unproven",
   "baseCommit": "c9aee67545a237de8e86ab512ebb4f3d4ea1eb8d",
   "baselineEvidence": [
     "sfa-deal-create-lifecycle-baseline.json",
@@ -53,7 +53,7 @@
     "scope": "Do not claim role/record ownership audit complete. Current cohort improves freshness/organization isolation without silently deciding this policy."
   },
   "nextConfirmedConversionFinding": {
-    "status": "confirmed-not-repaired",
+    "status": "local-backend-repaired-ui-postgres-release-pending",
     "findings": 5,
     "evidence": "sfa-lead-conversion-lifecycle-baseline.json",
     "probe": "probe-sfa-lead-conversion-lifecycle.cjs",
@@ -66,7 +66,9 @@
     ],
     "clientEvidence": "sfa-lead-conversion-client-baseline.json",
     "clientVerifiedBehaviors": 3,
-    "clientSourceGaps": 1
+    "clientSourceGaps": 1,
+    "inputDesignNote": "Current lead POST and CSV import both cap contactName at80; the baseline100-character case is historical/legacy data, not the current create contract. Conversion must preserve the source lead and provide an explicit editable conversion field for legacy long names, without silent truncation or an uneditable dead end. Default deal name suffix can exceed200. Audit raw industry/prefecture/url and legacy propagation without silent loss.",
+    "repairEvidence": "sfa-lead-conversion-repair.json"
   },
   "fullGateResult": {
     "startedAt": "2026-10-07T02:23:52.640996+00:00",
@@ -89,5 +91,22 @@
     "changedSources": [],
     "endedAt": "2026-10-07T02:29:23.180604+00:00"
   },
-  "sourceFreezeReverifiedBeforeCommit": true
+  "sourceFreezeReverifiedBeforeCommit": true,
+  "commit": "9d611e843b6f488259e45270c203c5533b811bfc",
+  "pushExitCode": 0,
+  "sourceFreezeReverifiedAfterCommit": true,
+  "ciRun": {
+    "id": 37562322998,
+    "headSha": "9d611e843b6f488259e45270c203c5533b811bfc",
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "productionDeployment": {
+    "id": "dpl_9vq7aFK4maJJdSTyZLj5XrtT7erF",
+    "url": "doya-ha7kdla5o-surisutas-projects.vercel.app",
+    "readyState": "READY",
+    "target": "production",
+    "publicEvidence": "sfa-deal-public-9d611e84.json",
+    "scope": "Anonymous read-only HTML/assets, guest usage and unauthenticated SFA 401 responses only. Uses a synthetic org slug; no authenticated browser or DB write. Does not prove authenticated wrapper/child behavior, private customer flows, actual AI generation, DB persistence or browser interaction. If alias advanced, absent old marker is not itself a bug."
+  }
 }

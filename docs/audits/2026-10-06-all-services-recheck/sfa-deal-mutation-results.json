@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T02:27:31.393Z",
+  "checkedAt": "2026-10-07T04:01:23.723Z",
   "passed": 19,
   "cases": [
     "20 deal replays create once, usage once and full-quota replay still returns committed row",
@@ -26,7 +26,7 @@
     "src/app/api/sfa/deals/route.ts": "85a9ce07bc0a8dad753cbc3610936e70704995bf5e70f6e8b3863cecd87f5969",
     "src/app/api/sfa/deals/[id]/route.ts": "eb097d6b0bf33c7add692f4c4df152bc7a9d91d99788984cf04aac5844c33f62",
     "src/lib/sfa/deal-mutation.ts": "772689c0ae1888c78878429db9b9d7e418060812ce8b96452a50591f47339131",
-    "src/lib/sfa/creation-receipt.ts": "e15b196aa4822768d919b3cdd5b874b39084f8591eea45ea6d3b82d4017490cd",
+    "src/lib/sfa/creation-receipt.ts": "7c66784078e0dd73e9a55f6b4294325204f29e5add8db8bbbaad8734f501a2b3",
     "src/lib/sfa/mutation-authority.ts": "1310ba745586b9373620f9a73520a9ecc915a392d4f73a9c5a191642906bb3ba",
     "src/lib/sfa/limits.ts": "5f8b9101d14b49ba57293801e780909c2464ed52b1f5ad9ee9aa2998f4c2d8b6"
   },

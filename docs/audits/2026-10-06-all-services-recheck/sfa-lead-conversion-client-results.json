@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-07T04:01:26.992Z",
+  "passed": 18,
+  "cases": [
+    "Same-frame conversion submits one UUID and expected source version",
+    "Newer conversion draft survives earlier successful submission and cannot convert twice",
+    "A-to-B-to-A draft edits remain a newer revision after submission",
+    "Late old-organization success does not close or announce in current organization",
+    "Late old-actor success cannot announce or clear another actor draft",
+    "Legacy long contact can be reviewed and replaced without shortening silently",
+    "Maximum-length source account name remains intact in suggested deal and account fields",
+    "Invalid amount and overlong explicit deal name prevent sending and preserve input",
+    "Known stale-version rejection keeps draft and offers current-list return",
+    "Uncertain result fences retries; missing recovery keeps fence; cancellation permits a new UUID",
+    "Unknown empty-success preserves draft and operation record",
+    "Unknown wrong-pair preserves draft and operation record",
+    "Unknown wrong-name preserves draft and operation record",
+    "Unknown deadline preserves draft and operation record",
+    "Read-only exact conversion recovery keeps draft and disables already committed conversion",
+    "Same-actor authentication refresh keeps draft and restores pending metadata",
+    "Browser storage denial prevents conversion request",
+    "Malformed lead page never exposes conversion control"
+  ],
+  "sourceHashes": {
+    "src/app/sfa/[orgSlug]/leads/page.tsx": "a2d2ffcf0a9d52c93b0f74671b98d9871ddb5c6bbe4bf356ec3324f3475592a3",
+    "src/components/sfa/LeadConversionForm.tsx": "7f417e371f1e0b0cabab40ef606fe8d17f0d641767f6a151b15bdf1a9f12ae6f",
+    "src/components/sfa/MutationRecovery.tsx": "564ae4e45a11437f7f094b974d799fe23b55d766e0718522a09b6ef7f80bfcb1",
+    "src/lib/sfa/use-client-mutations.ts": "ed57220685579c149ece3c136567a7712ca73cef219cee04147730ff2e4de566",
+    "src/lib/sfa/client-response.ts": "db7b3af6416c11001c265d104be837ff06acf50e3559c627ef20eae7d9466ec7",
+    "scripts/security-regression/sfa-client-fixture.cjs": "ffbfc010e475da3640b32b145c26d53320fc7ad38af38c042e4d8437296f759b"
+  },
+  "scope": "Actual leads page/form/shared mutation recovery/actor-org guard/bounded transport mounted under StrictMode; synthetic DOM, auth, routing and network. No real browser, PostgreSQL, customer data or paid provider calls."
+}

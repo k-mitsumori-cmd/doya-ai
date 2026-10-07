@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client'
 import type { SfaContext } from './types'
 import { SfaMutationError } from './mutation-authority'
 
-type Kind = 'task' | 'activity' | 'deal'
+type Kind = 'task' | 'activity' | 'deal' | `conversion:${string}`
 export class SfaReceiptRaceError extends Error { readonly code = 'SFA_RECEIPT_RACE' }
 type Scope = Pick<SfaContext, 'userId' | 'organizationId'>
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i

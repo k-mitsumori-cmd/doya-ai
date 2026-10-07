@@ -11,9 +11,11 @@ const stamp = '2026-10-07T00:00:00.000Z';
 const stage = { id: 'stage', name: '提案', order: 1, probability: 50, color: '#123456', isWon: false, isLost: false };
 const makeDeal = id => ({ id, createdAt: stamp, updatedAt: stamp, lostReason: null, name: 'Synthetic ' + id, amount: 100, stageId: 'stage', probability: 50, accountId: null, accountName: null, contactName: null, note: null, status: 'open', startDate: null, expectedCloseDate: null, wonAt: null, lostAt: null, lastActivityAt: null, openTaskCount: 0 });
 const makeTask = (input = {}, id = 'task') => ({ id, title: 'Synthetic task', status: 'open', dueDate: null, dealId: null, createdAt: stamp, updatedAt: stamp, dealName: null, ...input });
+const makeLead = (input = {}) => ({ id: 'lead-a', name: 'Synthetic lead', contactName: 'Contact', corporateNumber: null, email: null, phone: null, note: null, raw: {}, status: 'new', score: null, source: 'manual', convertedAccountId: null, updatedAt: stamp, ...input });
 async function fixture(page, options = {}) {
   if (!options.keepStorage) window.sessionStorage.clear();
   let actor = 'actor-a', status = 'authenticated', orgSlug = 'alpha', component, currentHook;
+  const leads = options.leads || [makeLead()];
   const writes = [], requests = [], notices = [], receipts = new Map(), tasks = options.tasks || [], deals = [makeDeal('deal-a'), makeDeal('deal-b')];
   let writeReply, readReply, failStorage = false, timeout = false, recoveries = 0;
   const session = () => ({ status, data: status === 'unauthenticated' ? null : { user: { id: actor, plan: 'FREE' } } });
@@ -29,7 +31,15 @@ async function fixture(page, options = {}) {
       if (pathname.endsWith('/next-action')) return Response.json({ nextAction: 'Synthetic next action', reason: '', risk: '', tasks: [{ title: 'First candidate', dueDate: null }, { title: 'Second candidate', dueDate: null }] });
       if (init.method === 'DELETE' && url.searchParams.has('operationId')) {
         recoveries++; const saved = receipts.get(url.searchParams.get('operationId'));
-        return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'cancelled', [pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
+        return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'cancelled', [pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
+      }
+      if (pathname.endsWith('/convert') && init.method === 'POST') {
+        const leadId = pathname.split('/').at(-2), body = request.body;
+        const account = { id: 'converted-account', organizationId: 'organization', isActive: true, name: body.accountName, corporateNumber: body.corporateNumber || null, industry: body.industry || null, prefecture: body.prefecture || null, url: body.url || null, note: body.note || null, createdAt: stamp, updatedAt: stamp };
+        const row = { id: 'converted-deal', leadId, account, deal: { ...makeDeal('converted-deal'), organizationId: 'organization', isActive: true, accountId: account.id, name: body.dealName, amount: Number(body.amount) } };
+        receipts.set(body.operationId, { kind: 'conversion', row });
+        const lead = leads.find(l => l.id === leadId); if (lead) { lead.status = 'converted'; lead.convertedAccountId = account.id; }
+        return Response.json({ ok: true, ...row });
       }
       if (init.method === 'PATCH' && pathname.startsWith('/api/sfa/deals/')) {
         const original = deals.find(d => pathname.endsWith('/' + d.id));
@@ -45,7 +55,7 @@ async function fixture(page, options = {}) {
         return Response.json({ task: { ...original, ...request.body, updatedAt: '2026-10-07T00:00:00.001Z' } });
       }
       if (init.method === 'DELETE') return Response.json({ ok: true });
-      const kind = pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity';
+      const kind = pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity';
       const row = kind === 'task' ? taskData(request.body) : kind === 'deal' ? { ...makeDeal('deal-' + writes.length), name: request.body.name.trim(), amount: Number(request.body.amount), accountId: request.body.accountId || null, startDate: request.body.startDate ? new Date(request.body.startDate).toISOString() : stamp } : activityData(request.body);
       if (kind === 'deal') deals.push(row);
       receipts.set(request.body.operationId, { kind, row });
@@ -54,10 +64,11 @@ async function fixture(page, options = {}) {
     if (readReply) { const result = await readReply(request); if (result) return result; }
     if (url.searchParams.has('operationId')) {
       const saved = receipts.get(url.searchParams.get('operationId'));
-      return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'missing', [pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
+      return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'missing', [pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
     }
     if (pathname.startsWith('/api/sfa/deals/')) { const row = deals.find(d => pathname.endsWith('/' + d.id)); return Response.json({ state: row ? 'found' : 'missing', deal: row || null }); }
     if (pathname.startsWith('/api/sfa/tasks/')) return Response.json({ state: 'found', task: tasks.find(t => pathname.endsWith('/' + t.id)) || null });
+    if (pathname === '/api/sfa/leads') return Response.json({ leads, totalCount: leads.length, nextCursor: null });
     if (pathname === '/api/sfa/summary') return Response.json({ summary: { totalCount: 2, openCount: 2, staleCount: 0, openTaskCount: 0, openTotal: '200', weighted: '100', wonTotal: '0' } });
     if (pathname === '/api/sfa/deals') return Response.json({ stages: [stage], deals, nextCursor: null, totalCount: 2, stageSummary: [{ stageId: 'stage', count: 2, total: '200' }] });
     if (pathname === '/api/sfa/accounts') return Response.json({ accounts: [], nextCursor: null });
@@ -118,4 +129,4 @@ async function fixture(page, options = {}) {
     close: async () => { await act(() => root.unmount()); container.remove(); },
   };
 }
-module.exports = { fixture, deferred, act, props, makeTask, makeDeal, stamp };
+module.exports = { fixture, deferred, act, props, makeTask, makeDeal, makeLead, stamp };

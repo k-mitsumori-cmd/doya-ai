@@ -91,3 +91,26 @@ export function dealWriteMatches(row: SfaClientDeal, body: Record<string, unknow
   }
   return true
 }
+
+
+export interface SfaClientConversion {
+  id: string; leadId: string; account: { id: string; name: string; organizationId: string; isActive: boolean; [key: string]: unknown }; deal: SfaClientDeal
+}
+export function isSfaClientConversion(v: unknown, leadId: string): v is SfaClientConversion {
+  if (!record(v) || v.leadId !== leadId || !sfaClientId(v.id) || !record(v.account) || !isSfaClientDeal(v.deal)) return false
+  const account = v.account, deal = v.deal as unknown as Record<string, unknown>
+  return v.id === deal.id && sfaClientId(account.id) && deal.accountId === account.id
+    && account.isActive === true && deal.isActive === true && sfaClientId(account.organizationId) && deal.organizationId === account.organizationId
+    && typeof account.name === 'string' && !!account.name.trim() && account.name.length <= 200
+    && [['corporateNumber', 20], ['industry', 80], ['prefecture', 40], ['url', 300], ['note', 2000]].every(([key, max]) => text(account[String(key)], Number(max)))
+    && sfaClientDate(account.createdAt) && sfaClientDate(account.updatedAt)
+}
+export function conversionWriteMatches(row: SfaClientConversion, body: Record<string, unknown>) {
+  if (!dealWriteMatches(row.deal, { name: body.dealName, amount: body.amount })) return false
+  for (const key of ['accountName', 'corporateNumber', 'industry', 'prefecture', 'url', 'note']) {
+    if (body[key] === undefined) continue
+    const expected = typeof body[key] === 'string' ? body[key].trim() || null : null
+    if (row.account[key === 'accountName' ? 'name' : key] !== expected) return false
+  }
+  return true
+}

@@ -1,0 +1,92 @@
+{
+  "checkedAt": "2026-10-07T03:58:12.446899+00:00",
+  "status": "full-gate-passed-ready-to-commit",
+  "baseCommit": "9d611e843b6f488259e45270c203c5533b811bfc",
+  "changes": [
+    "Fresh actor authority and locked active lead reread inside Serializable admission transaction.",
+    "Source version conflict check before conversion; original source text retained.",
+    "Receipt keyed by actor/org/lead/operation, replay before quota, exact account/deal pair recovery.",
+    "Cancellation fences late arrivals without deleting business records.",
+    "Strict typed bounded conversion overrides, no silent truncation, maximum-length account name retained in default deal name.",
+    "Shared locked stage outcome logic for won/lost/open.",
+    "Private no-store and Vary Cookie responses including errors/quota."
+  ],
+  "targetedApiEvidence": "sfa-lead-conversion-results.json",
+  "apiCases": 15,
+  "otherChecks": [
+    "TypeScript noEmit exit0",
+    "ESLint changed source exit0",
+    "Legacy conversion 11 cases pass (serialized synthetic concurrency, not PostgreSQL)",
+    "Admission routes pass without writes or email",
+    "Amount input regression pass"
+  ],
+  "remaining": [
+    "Commit/push allowlisted changes.",
+    "Verify exact new SHA CI/deployment/public responses.",
+    "Continue five confirmed lead CRUD/import findings and all remaining service criteria.",
+    "Authenticated production browser and remaining provider flows remain unverified."
+  ],
+  "limitations": [
+    "Local repair not yet deployed.",
+    "Mounted UI uses synthetic navigation/auth/API; PostgreSQL schema is isolated and synthetic.",
+    "Record-edit policy remains pending; current ACTIVE-member scope preserved.",
+    "Entire 17-service/2074-criterion goal remains incomplete."
+  ],
+  "clientEvidence": "sfa-lead-conversion-client-results.json",
+  "clientCases": 18,
+  "postgresEvidence": "sfa-lead-conversion-postgres-results.json",
+  "postgresCases": 12,
+  "postgresSupervisor": "sfa-lead-conversion-postgres-supervisor.json",
+  "fullGate": "docs/audits/2026-10-06-all-services-recheck/sfa-lead-conversion-release-ae01c48f-0fe2-4844-9377-d5355e213026",
+  "sourceArtifactsMatchFrozenManifest": [
+    {
+      "artifact": "sfa-lead-conversion-results.json",
+      "passed": 15,
+      "sourceHashesMatchFreeze": true
+    },
+    {
+      "artifact": "sfa-lead-conversion-client-results.json",
+      "passed": 18,
+      "sourceHashesMatchFreeze": true
+    },
+    {
+      "artifact": "sfa-lead-conversion-postgres-results.json",
+      "passed": 12,
+      "sourceHashesMatchFreeze": true
+    }
+  ],
+  "nextConfirmedLeadCrudFindings": {
+    "status": "confirmed-not-repaired",
+    "findings": 5,
+    "evidence": "sfa-lead-crud-lifecycle-baseline.json",
+    "probe": "probe-sfa-lead-crud-lifecycle.cjs"
+  },
+  "fullGateResult": {
+    "startedAt": "2026-10-07T03:58:13.022811+00:00",
+    "pid": 86219,
+    "head": "9d611e843b6f488259e45270c203c5533b811bfc",
+    "sourceFiles": 2679,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-07T04:03:00.974966+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-07T04:03:03.051088+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-07T04:03:03.477561+00:00"
+  },
+  "sourceFreezeReverifiedBeforeCommit": true,
+  "relatedRegression": {
+    "taskActivityMounted": 49,
+    "taskActivityReceiptApi": 64,
+    "dealMounted": 13,
+    "legacyConversionModes": 11
+  }
+}

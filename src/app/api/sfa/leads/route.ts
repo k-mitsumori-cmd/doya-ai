@@ -9,20 +9,26 @@ import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 import type { LeadStatus } from '@/lib/sfa/types'
 
+const json = (body: unknown, init: ResponseInit = {}) => {
+  const headers = new Headers(init.headers)
+  headers.set('Cache-Control', 'private, no-store'); headers.set('Vary', 'Cookie')
+  return NextResponse.json(body, { ...init, headers })
+}
+
 const LEAD_STATUSES: LeadStatus[] = ['new', 'working', 'nurturing', 'qualified', 'converted', 'disqualified']
 const LEAD_SOURCES = ['doyalist', 'csv', 'manual']
 
 // GET /api/sfa/leads — リード一覧（status/q フィルタ）
 export async function GET(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
   const url = new URL(req.url)
   const status = url.searchParams.get('status')?.trim() || ''
   const q = url.searchParams.get('q')?.trim() || ''
   const rawCursor = url.searchParams.get('cursor') || ''
   if ((status && !(LEAD_STATUSES as string[]).includes(status)) || q.length > 100 || rawCursor.length > 512) {
-    return NextResponse.json({ error: '検索条件が正しくありません' }, { status: 400 })
+    return json({ error: '検索条件が正しくありません' }, { status: 400 })
   }
 
   let cursor: { score: number | null; updatedAt: Date; id: string } | null = null
@@ -35,7 +41,7 @@ export async function GET(req: NextRequest) {
       if (Number.isNaN(updatedAt.getTime()) || updatedAt.toISOString() !== decoded.updatedAt) throw new Error('Invalid date')
       cursor = { score: decoded.score, updatedAt, id: decoded.id }
     } catch {
-      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+      return json({ error: 'ページ指定が正しくありません' }, { status: 400 })
     }
   }
 
@@ -69,7 +75,7 @@ export async function GET(req: NextRequest) {
   ])
   const leads = rows.slice(0, 200)
   const last = leads[leads.length - 1]
-  return NextResponse.json({
+  return json({
     leads: bigIntToNumber(leads),
     totalCount,
     nextCursor: rows.length > 200 && last
@@ -81,11 +87,11 @@ export async function GET(req: NextRequest) {
 // POST /api/sfa/leads — リード手動作成
 export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
   const parsedBody = await req.json().catch(() => null)
   if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
-    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    return json({ error: '入力内容が正しくありません' }, { status: 400 })
   }
   const body = parsedBody as Record<string, unknown>
   const textLimits: Array<[string, string, number]> = [
@@ -99,16 +105,16 @@ export async function POST(req: NextRequest) {
   for (const [key, label, maximum] of textLimits) {
     const value = body[key]
     if (typeof value === 'string' && (key === 'name' ? value.trim() : value).length > maximum) {
-      return NextResponse.json({ error: `${label}は${maximum}文字以内で入力してください` }, { status: 400 })
+      return json({ error: `${label}は${maximum}文字以内で入力してください` }, { status: 400 })
     }
   }
   const name = typeof body.name === 'string' ? body.name.trim() : ''
-  if (!name) return NextResponse.json({ error: '企業名/氏名は必須です' }, { status: 400 })
+  if (!name) return json({ error: '企業名/氏名は必須です' }, { status: 400 })
   if (['corporateNumber', 'contactName', 'email', 'phone', 'note'].some((key) => body[key] != null && typeof body[key] !== 'string')) {
-    return NextResponse.json({ error: '入力項目の形式が正しくありません' }, { status: 400 })
+    return json({ error: '入力項目の形式が正しくありません' }, { status: 400 })
   }
   if (body.source != null && (typeof body.source !== 'string' || !LEAD_SOURCES.includes(body.source))) {
-    return NextResponse.json({ error: '流入元が正しくありません' }, { status: 400 })
+    return json({ error: '流入元が正しくありません' }, { status: 400 })
   }
 
   const source = typeof body.source === 'string' ? body.source : 'manual'
@@ -127,5 +133,5 @@ export async function POST(req: NextRequest) {
       assigneeMemberId: ctx.memberId,
     },
   })
-  return NextResponse.json({ lead: bigIntToNumber(lead) })
+  return json({ lead: bigIntToNumber(lead) })
 }

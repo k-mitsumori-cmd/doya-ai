@@ -19,6 +19,9 @@ function fixture(fail = false) {
     nextCursor: '200', moreLoading: false, moreError: false, leads: all.slice(0, 200),
     filter: 'all', q: '', orgSlug: 'org-1', requestVersion: { current: 1 },
     URLSearchParams, Set,
+    // Pagination-only fixture; mounted conversion tests separately exercise actual row validation.
+    mutations: { active: () => true },
+    isLeadPage: data => Array.isArray(data.leads),
     sfaInit: (_slug, init) => init,
     fetch: async (url) => {
       const cursor = new URL(url, 'http://local').searchParams.get('cursor');
@@ -27,6 +30,7 @@ function fixture(fail = false) {
       return Response.json({ leads: all.slice(start, start + 200), nextCursor: start + 200 < all.length ? String(start + 200) : null });
     },
   };
+  context.sfaJson = async url => { const response = await context.fetch(url); if (!response.ok) throw Error('Synthetic page failure'); return response.json(); };
   for (const key of ['Leads', 'NextCursor', 'MoreLoading', 'MoreError']) {
     const prop = key[0].toLowerCase() + key.slice(1);
     context['set' + key] = (value) => { context[prop] = typeof value === 'function' ? value(context[prop]) : value; };

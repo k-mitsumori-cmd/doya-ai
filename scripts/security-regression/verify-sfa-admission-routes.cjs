@@ -40,6 +40,7 @@ const request = (body) => ({ url: 'http://local/api/sfa', headers: { get: () => 
   assert.equal((await deal(request({ name: '商談' }))).status, 402);
 
   const convert = load('src/app/api/sfa/leads/[id]/convert/route.ts', {
+    ...require('./sfa-deal-test-deps.cjs').dealDeps(),
     ...shared,
     '@/lib/prisma': { prisma: {
       sfaLead: { findUnique: async () => ({ id: 'lead', organizationId: 'org', isActive: true, status: 'new', convertedAccountId: null }) },

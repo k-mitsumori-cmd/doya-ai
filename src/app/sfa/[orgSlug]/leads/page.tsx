@@ -6,9 +6,13 @@ import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
 import { parseLeadCsv } from '@/lib/sfa/lead-csv'
 import { LEAD_STATUS_LABEL } from '@/lib/sfa/constants'
+import { sfaJson, sfaClientId, sfaClientDate } from '@/lib/sfa/client-response'
+import { useSfaClientMutations } from '@/lib/sfa/use-client-mutations'
+import MutationRecovery from '@/components/sfa/MutationRecovery'
+import LeadConversionForm, { type ConversionLead } from '@/components/sfa/LeadConversionForm'
 import type { LeadStatus } from '@/lib/sfa/types'
 
-interface Lead {
+interface Lead extends ConversionLead {
   id: string
   name: string
   contactName: string | null
@@ -19,6 +23,17 @@ interface Lead {
   source: string
   note: string | null
   convertedAccountId: string | null
+}
+
+function isLeadPage(data: Record<string, unknown>): data is Record<string, unknown> & { leads: Lead[]; totalCount: number; nextCursor: string | null } {
+  return Array.isArray(data.leads) && data.leads.every(l => l && typeof l === 'object' && sfaClientId(l.id)
+    && typeof l.name === 'string' && l.name.length <= 10000 && typeof l.source === 'string'
+    && STATUS_ORDER.includes(l.status) && sfaClientDate(l.updatedAt)
+    && ['contactName', 'email', 'phone', 'corporateNumber', 'note'].every(k => l[k] === null || typeof l[k] === 'string' && l[k].length <= 10000)
+    && (l.convertedAccountId === null || sfaClientId(l.convertedAccountId))
+    && (l.score === null || Number.isInteger(l.score) && l.score >= 0 && l.score <= 100))
+    && Number.isSafeInteger(data.totalCount) && (data.totalCount as number) >= 0
+    && (data.nextCursor === null || typeof data.nextCursor === 'string' && data.nextCursor.length <= 512)
 }
 
 const STATUS_ORDER: LeadStatus[] = ['new', 'working', 'nurturing', 'qualified', 'converted', 'disqualified']
@@ -37,7 +52,15 @@ const scoreColor = (s: number | null) =>
 
 export default function SfaLeadsPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
-  const ready = !!orgSlug
+  const mutations = useSfaClientMutations(orgSlug, (pending, state) => {
+    if (pending.kind === 'conversion' && state === 'found') setRecoveredConversion({ leadId: pending.leadId!, identity: mutations.identity })
+    load(filter, q)
+  })
+  const [recoveredConversion, setRecoveredConversion] = useState<{ leadId: string; identity: string } | null>(null)
+  const [listKey, setListKey] = useState('')
+  const ready = mutations.allowed
+  const currentList = ready && listKey === mutations.key
+  const [conversion, setConversion] = useState<{ lead: Lead; identity: string } | null>(null)
   const [leads, setLeads] = useState<Lead[]>([])
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [totalCount, setTotalCount] = useState(0)
@@ -58,7 +81,7 @@ export default function SfaLeadsPage() {
   const [scoringId, setScoringId] = useState<string | null>(null)
 
   const load = useCallback((status: LeadStatus | 'all' = 'all', query = '') => {
-    if (!ready) return
+    if (!ready || !mutations.active()) return
     const version = ++requestVersion.current
     listRequest.current?.abort()
     const controller = new AbortController()
@@ -71,25 +94,27 @@ export default function SfaLeadsPage() {
     const params = new URLSearchParams()
     if (status !== 'all') params.set('status', status)
     if (query.trim()) params.set('q', query.trim())
-    fetch(`/api/sfa/leads?${params}`, sfaInit(orgSlug, { signal: controller.signal }))
-      .then(async (response) => {
-        const data = await response.json().catch(() => null)
-        if (!response.ok || !Array.isArray(data?.leads)) throw new Error('リードを読み込めませんでした')
-        if (version !== requestVersion.current) return
+    sfaJson(`/api/sfa/leads?${params}`, orgSlug, { signal: controller.signal })
+      .then((data) => {
+        if (!isLeadPage(data)) throw new Error('リードを読み込めませんでした')
+        if (version !== requestVersion.current || controller.signal.aborted || !mutations.active()) return
+        setListKey(mutations.key)
         setLeads(data.leads)
-        setNextCursor(data.nextCursor || null)
-        setTotalCount(data.totalCount || 0)
+        setNextCursor(data.nextCursor)
+        setTotalCount(data.totalCount)
       })
-      .catch(() => { if (version === requestVersion.current) setListError(true) })
-      .finally(() => { if (version === requestVersion.current) setLoading(false) })
-  }, [ready, orgSlug])
+      .catch(() => { if (version === requestVersion.current && !controller.signal.aborted && mutations.active()) { setListKey(mutations.key); setListError(true) } })
+      .finally(() => { if (version === requestVersion.current && !controller.signal.aborted && mutations.active()) setLoading(false) })
+    // Capture actor/org epoch for this request; old callbacks must stay inactive.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, orgSlug, mutations.key])
   useEffect(() => {
     const timer = setTimeout(() => load(filter, q), q ? 200 : 0)
     return () => { clearTimeout(timer); listRequest.current?.abort() }
   }, [load, filter, q])
 
   const loadMore = async () => {
-    if (!nextCursor || moreLoading) return
+    if (!nextCursor || moreLoading || !mutations.active()) return
     const version = requestVersion.current
     setMoreLoading(true)
     setMoreError(false)
@@ -97,24 +122,23 @@ export default function SfaLeadsPage() {
     if (filter !== 'all') params.set('status', filter)
     if (q.trim()) params.set('q', q.trim())
     try {
-      const response = await fetch(`/api/sfa/leads?${params}`, sfaInit(orgSlug))
-      const data = await response.json().catch(() => null)
-      if (!response.ok || !Array.isArray(data?.leads)) throw new Error('追加のリードを読み込めませんでした')
-      if (version !== requestVersion.current) return
+      const data = await sfaJson(`/api/sfa/leads?${params}`, orgSlug)
+      if (!isLeadPage(data)) throw new Error('追加のリードを読み込めませんでした')
+      if (version !== requestVersion.current || !mutations.active()) return
       setLeads((current) => {
         const ids = new Set(current.map((lead) => lead.id))
         return [...current, ...data.leads.filter((lead: Lead) => !ids.has(lead.id))]
       })
-      setNextCursor(data.nextCursor || null)
+      setNextCursor(data.nextCursor)
     } catch {
-      if (version === requestVersion.current) setMoreError(true)
+      if (version === requestVersion.current && mutations.active()) setMoreError(true)
     } finally {
-      if (version === requestVersion.current) setMoreLoading(false)
+      if (version === requestVersion.current && mutations.active()) setMoreLoading(false)
     }
   }
 
   const create = async () => {
-    if (!name.trim()) return
+    if (!name.trim() || !mutations.active()) return
     setBusy(true)
     try {
       const res = await fetch('/api/sfa/leads', sfaInit(orgSlug, {
@@ -123,13 +147,15 @@ export default function SfaLeadsPage() {
       }))
       const d = await res.json()
       if (!res.ok) throw new Error(d.error)
+      if (!mutations.active()) return
       setName(''); setContactName(''); setOpen(false)
       toast.success('リードを追加しました')
       load(filter, q)
-    } catch (e: any) { toast.error(e.message) } finally { setBusy(false) }
+    } catch (e: any) { if (mutations.active()) toast.error(e.message) } finally { if (mutations.active()) setBusy(false) }
   }
 
   const doImport = async () => {
+    if (!mutations.active()) return
     try {
       const rows = parseLeadCsv(csv)
       setBusy(true)
@@ -139,24 +165,26 @@ export default function SfaLeadsPage() {
       }))
       const d = await res.json()
       if (!res.ok) throw new Error(d.error)
+      if (!mutations.active()) return
       toast.success(`${d.imported}件を取り込みました${d.skipped ? `（${d.skipped}件スキップ）` : ''}`)
       setCsv(''); setImportOpen(false)
       load(filter, q)
-    } catch (e: any) { toast.error(e.message) } finally { setBusy(false) }
+    } catch (e: any) { if (mutations.active()) toast.error(e.message) } finally { if (mutations.active()) setBusy(false) }
   }
 
   const setStatus = async (lead: Lead, status: LeadStatus) => {
-    setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, status } : l)))
+    if (!mutations.active() || mutations.blocked('conversion:' + lead.id)) return
     try {
       const response = await fetch(`/api/sfa/leads/${lead.id}`, sfaInit(orgSlug, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
       }))
       if (!response.ok) throw new Error('状態を更新できませんでした')
-      load(filter, q)
-    } catch { toast.error('状態を更新できませんでした'); load(filter, q) }
+      if (mutations.active()) load(filter, q)
+    } catch { if (mutations.active()) { toast.error('状態を更新できませんでした'); load(filter, q) } }
   }
 
   const scoreLead = async (lead: Lead) => {
+    if (!mutations.active() || mutations.blocked('conversion:' + lead.id)) return
     setScoringId(lead.id)
     try {
       const res = await fetch('/api/sfa/ai/score', sfaInit(orgSlug, {
@@ -164,22 +192,15 @@ export default function SfaLeadsPage() {
       }))
       const d = await res.json()
       if (!res.ok) throw new Error(d.error)
+      if (!mutations.active()) return
       load(filter, q)
       toast.success(`AIスコア ${d.score}点：${d.nextAction || d.reason}`, { duration: 6000 })
-    } catch (e: any) { toast.error(e.message) } finally { setScoringId(null) }
+    } catch (e: any) { if (mutations.active()) toast.error(e.message) } finally { if (mutations.active()) setScoringId(null) }
   }
 
-  const convert = async (lead: Lead) => {
-    if (!confirm(`「${lead.name}」を取引先＋商談に転換しますか？`)) return
-    try {
-      const res = await fetch(`/api/sfa/leads/${lead.id}/convert`, sfaInit(orgSlug, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      toast.success('取引先＋商談を作成しました')
-      load(filter, q)
-    } catch (e: any) { toast.error(e.message) }
+  const convert = (lead: Lead) => {
+    if (!mutations.active() || mutations.creationBlocked('conversion')) return
+    setConversion({ lead, identity: mutations.identity })
   }
 
   return (
@@ -198,6 +219,11 @@ export default function SfaLeadsPage() {
           </button>
         </div>
       </div>
+
+      <MutationRecovery mutations={mutations} />
+      {conversion && conversion.identity === mutations.identity && <LeadConversionForm key={conversion.lead.id + mutations.identity} lead={conversion.lead} mutations={mutations} recovered={recoveredConversion?.leadId === conversion.lead.id && recoveredConversion.identity === mutations.identity}
+        onClose={() => { setConversion(null); load(filter, q) }}
+        onConverted={() => { if (mutations.active()) { toast.success('取引先・商談を作成しました'); load(filter, q) } }} />}
 
       {open && (
         <div className="bg-white rounded-2xl shadow-sm p-5 mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -230,9 +256,9 @@ export default function SfaLeadsPage() {
       </div>
 
       {loading && <p className="mb-3 text-sm text-slate-500">リードを読み込み中です...</p>}
-      {listError && <div role="alert" className="mb-3 text-sm text-red-700">リードを読み込めませんでした。<button type="button" onClick={() => load(filter, q)} className="ml-2 underline">再試行</button></div>}
-      {!loading && !listError && <p className="mb-3 text-xs text-slate-500">{totalCount}件中{leads.length}件を表示</p>}
-      {!loading && !listError && <div className="space-y-2">
+      {currentList && listError && <div role="alert" className="mb-3 text-sm text-red-700">リードを読み込めませんでした。<button type="button" onClick={() => load(filter, q)} className="ml-2 underline">再試行</button></div>}
+      {currentList && !loading && !listError && <p className="mb-3 text-xs text-slate-500">{totalCount}件中{leads.length}件を表示</p>}
+      {currentList && !loading && !listError && <div className="space-y-2">
         {leads.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-slate-400 font-bold">{q || filter !== 'all' ? '条件に一致するリードがありません。検索条件を変更してください。' : 'リードがありません。「リード追加」か「CSV取込」から始めましょう。'}</div>
         ) : (
@@ -255,13 +281,13 @@ export default function SfaLeadsPage() {
                       <span className="material-symbols-outlined text-[14px]">auto_awesome</span>{scoringId === l.id ? 'AI判定中…' : 'AIスコア'}
                     </button>
                     {l.status !== 'converted' && !l.convertedAccountId ? (
-                      <button onClick={() => convert(l)} className="text-xs font-black text-green-700 hover:underline flex items-center gap-0.5">
+                      <button onClick={() => convert(l)} disabled={!ready || mutations.creationBlocked('conversion')} className="text-xs font-black text-green-700 hover:underline flex items-center gap-0.5">
                         <span className="material-symbols-outlined text-[14px]">swap_horiz</span>取引先に転換
                       </button>
                     ) : (
                       <span className="text-xs font-bold text-slate-400">転換済</span>
                     )}
-                    <select value={l.status} disabled={l.status === 'converted' || !!l.convertedAccountId} onChange={(e) => setStatus(l, e.target.value as LeadStatus)} className="ml-auto text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1 bg-slate-50 disabled:opacity-60">
+                    <select value={l.status} disabled={!ready || mutations.blocked('conversion:' + l.id) || l.status === 'converted' || !!l.convertedAccountId} onChange={(e) => setStatus(l, e.target.value as LeadStatus)} className="ml-auto text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1 bg-slate-50 disabled:opacity-60">
                       {STATUS_ORDER.filter((s) => s !== 'converted' || l.status === 'converted').map((s) => <option key={s} value={s}>{LEAD_STATUS_LABEL[s]}</option>)}
                     </select>
                   </div>
@@ -271,7 +297,7 @@ export default function SfaLeadsPage() {
           ))
         )}
       </div>}
-      {!loading && !listError && nextCursor && <div className="mt-4 text-center">
+      {currentList && !loading && !listError && nextCursor && <div className="mt-4 text-center">
         <button type="button" onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-green-700 disabled:opacity-50">{moreLoading ? '読み込み中...' : 'さらに表示'}</button>
         {moreError && <p role="alert" className="mt-2 text-sm text-red-700">追加のリードを読み込めませんでした。再度お試しください。</p>}
       </div>}

@@ -20,7 +20,7 @@ function dealDeps(db = {}) {
     const row = await db.sfaDeal.findUnique({ where: { id: where.id } });
     return row && row.organizationId === where.organizationId && row.isActive !== false ? { isActive: true, updatedAt: new Date('2026-10-07T00:00:00.000Z'), ...row } : null;
   };
-  return { '@/lib/sfa/deal-mutation': helper, '@/lib/sfa/mutation-authority': authority,
+  return { '@/lib/sfa/lead-conversion': load('src/lib/sfa/lead-conversion.ts', { './amount': amount, './deal-mutation': helper, './mutation-authority': authority }), '@/lib/sfa/deal-mutation': helper, '@/lib/sfa/mutation-authority': authority,
     '@/lib/sfa/creation-receipt': load('src/lib/sfa/creation-receipt.ts', { 'node:crypto': crypto, './mutation-authority': authority }) };
 }
 module.exports = { dealDeps };
