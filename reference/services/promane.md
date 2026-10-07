@@ -172,3 +172,12 @@ updateProjectもSerializableで既存値取得・検証・保存を行い、P203
 Production DB update 2026-09-23: migration219 applied after local backup; all three existing time entries now have projectId and postflight found no missing schema. Code rollout/owner billing checks remain pending. Evidence: docs/audits/2026-09-23-history-order/production-app-schema-report.json.
 
 Latest production status 2026-09-23: code deployment `dpl_4VYkNiY94VqpJHtuJoSSY2NuTi18` is live; public route and unauthenticated boundary passed. Signed-in time-entry, project ownership and billing scenarios still require production-like end-to-end validation.
+
+
+### 作業時間登録の二重送信・通信断への対応
+
+作業時間の新規登録には送信ごとの操作IDを必須とし、記録本体と操作の保存結果を同じトランザクションで保存する。同じ操作ID・同じ入力の再送は元の記録を返し、入力が変わった再送や取り消し済み操作は登録しない。削除済み記録を再送で復活させない。登録・保存状態確認の直前に、有効なワークスペースメンバーの変更権限を再確認する。
+
+画面は同時送信を防ぎ、ワークスペース・メンバーごとに操作IDだけを端末へ保存する。作業内容は端末保存しない。保存結果が不明な場合は新規登録を止め、「保存状態を確認」または「未完了の送信を取り消す」を案内する。取り消しは未保存の操作を無効化し、保存済みの作業時間は削除しない。応答が45秒以内に確認できない場合も、保存失敗と断定せず確認待ちとして扱う。安全な端末保存やタブ間の排他制御を利用できない環境では、登録を開始せず案内を表示する。
+
+一般メンバーが同じ組織の他メンバーの記録を扱える既存仕様については、別途方針確認中。この二重登録対策ではその権限仕様を変更しない。

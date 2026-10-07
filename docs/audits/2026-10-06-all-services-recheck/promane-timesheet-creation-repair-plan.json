@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-07T20:13:34.652087+00:00",
+  "status": "frozen62gates-passed-ready-for-reviewed-commit-push",
+  "rootApplied": true,
+  "productionApplied": false,
+  "baseline": "promane-timesheet-double-submit-baseline.json",
+  "finding": "Two actual onSubmit calls before rerender each invoke createTimeEntry with60minutes; both resolve success and refresh, doubling potential labor cost to120minutes.",
+  "required": [
+    "Synchronous duplicate-submit fence before server action call",
+    "Durable operation identifier and atomic server creation receipt to cover retry/remount/lost acknowledgement",
+    "Scoped saved-result recovery and cancellation fence instead of blind resend",
+    "Actual PostgreSQL duplicate/race/rollback/deleted-row tests plus mounted/native/type/full frozen gate",
+    "Reviewed production release and verification"
+  ],
+  "scope": "All service audit remains17services2074criteria; this is one additional confirmed defect.",
+  "candidateEvidence": {
+    "helper": "promane-time-creation-helper-postgres-results.json",
+    "actualAction": "promane-time-creation-action-postgres-results.json",
+    "supervisor": "promane-time-creation-action-postgres-supervisor.json",
+    "typecheckLog": "promane-time-creation-candidate-typecheck.log",
+    "candidateRoot": "promane-timesheet-creation-candidate",
+    "countsAreIndependentSuites": true,
+    "limitations": "Actual candidate view + hook with deferred synthetic actions verified; helper16 and actual server actions12 independently verified in isolated PostgreSQL. Native browser, combined database-linked UI, existing regression adaptation, full frozen release and production remain pending. Coworker permission policy remains unanswered.",
+    "clientHook": "promane-time-creation-client-mounted-results.json",
+    "actualView": "promane-timesheet-creation-mounted-results.json"
+  },
+  "clientBehavior": [
+    "Synchronous same-frame guard",
+    "Metadata-only durable operation identity scoped to workspace/member",
+    "Web Locks serialize same-origin tab preparation; unavailable locks fail before write",
+    "Unknown writes survive remount and block blind resend",
+    "Explicit server read or cancellation fences delayed writes before new operation",
+    "45second response deadline retains unknown fence; late response never unlocks UI",
+    "Old workspace callbacks do not modify current screen"
+  ],
+  "gate": "docs/audits/2026-10-06-all-services-recheck/promane-timesheet-creation-release-92bc0e74-d94e-4288-a0b1-c8b756aec94e",
+  "nativeReview": {
+    "report": "promane-timesheet-creation-native-results.json",
+    "passed": 5,
+    "viewports": [
+      1280,
+      390
+    ],
+    "visuallyReviewed": true,
+    "findingRepaired": "Mobile date input clipped by four-column layout; now two columns with full-width date/note. Header wraps without clipped labels.",
+    "limitation": "Synthetic HTTP action transport; authenticated production and combined real Next/DB UI E2E not yet verified."
+  },
+  "previousFailedGate": {
+    "path": "docs/audits/2026-10-06-all-services-recheck/promane-timesheet-creation-release-e8adf0de-f3df-46ee-b382-74d20ad752f1",
+    "cause": "Existing dynamic action-loader access suite lacked new ./time-entry-creation dependency mock; actual test module adapter updated, all111 checks passed without relaxing assertions",
+    "failedAt": "build/security-regression",
+    "retained": true
+  },
+  "gateStatus": "passed"
+}

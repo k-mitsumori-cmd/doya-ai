@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-07T20:19:36.257Z",
+  "expected": 12,
+  "passed": 12,
+  "cases": [
+    "StrictMode same-frame submits call actual creation lane once",
+    "lost acknowledgement survives remount and only recovers saved row",
+    "missing recovery retains fence without blind resubmit",
+    "explicit server cancellation unlocks a new operation identity",
+    "foreign or mismatched acknowledgement cannot report success",
+    "storage persistence failure sends no server action",
+    "corrupt operation metadata fails closed without overwrite",
+    "scope change ignores delayed old save acknowledgement",
+    "two mounted tabs serialize metadata and do not send distinct duplicates",
+    "failed recovery keeps operation and original write fence",
+    "unresponsive action times out to durable unknown and late success cannot unlock",
+    "missing Web Locks fails before server write"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/use-time-entry-creation.ts": "ecb6ea01a39390e1ac564dd8da0f5b9213de8b1f9d54183f1d04aec9c6051c38"
+  },
+  "scope": "Actual candidate React hook in StrictMode, real localStorage and serialized synthetic Web Locks; deferred synthetic server-action responses. Actual TimesheetView, native browser, PostgreSQL-linked UI and production not covered."
+}

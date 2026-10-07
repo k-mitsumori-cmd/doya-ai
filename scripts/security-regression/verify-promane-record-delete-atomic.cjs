@@ -1,3 +1,4 @@
+const {timeCreation,adaptTimePrisma,operationId}=require('./promane-time-creation-fixture.cjs');
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
 
@@ -46,8 +47,8 @@ function fixture({ active = true, foreign = false, projectId = 'p', revokeDuring
     },
   }
   const actions = load('src/lib/promane/actions-time-entries.ts', {
-    './time-input': load('src/lib/promane/time-input.ts'),
-    '@/lib/prisma': { prisma },
+    './time-entry-creation':timeCreation,'./time-input': load('src/lib/promane/time-input.ts'),
+    '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
     '@/lib/promane/auth': {
       requirePromaneAuthAction: async () => ({ userId: 'u' }),
       requireWritableWorkspace: async () => ({ id: 'w' }),
@@ -90,7 +91,7 @@ function apiFixture() {
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
     '@/lib/auth': {},
-    '@/lib/prisma': { prisma },
+    '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
   })
   return {
     post: () => api.POST({ json: async () => ({ workspaceSlug: 'ws', projectId: 'p', category: 'travel', amount: 100, description: 'Taxi', date: '2026-09-01' }) }),
@@ -133,8 +134,8 @@ function actionWriteFixture({ revokeDuringCommit = false, foreignTarget = false 
     promaneExpense: { create: async ({ data }) => { writes++; return data } },
   }
   const actions = load('src/lib/promane/actions-time-entries.ts', {
-    './time-input': load('src/lib/promane/time-input.ts'),
-    '@/lib/prisma': { prisma },
+    './time-entry-creation':timeCreation,'./time-input': load('src/lib/promane/time-input.ts'),
+    '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
     '@/lib/promane/auth': {
       requirePromaneAuthAction: async () => ({ userId: 'u' }),
       requireWritableWorkspace: async () => ({ id: 'w' }),
@@ -142,7 +143,7 @@ function actionWriteFixture({ revokeDuringCommit = false, foreignTarget = false 
     'next/cache': { revalidatePath() {} },
   })
   return {
-    time: () => actions.createTimeEntry('ws', { memberId: 'm', duration: 60, date: '2026-09-01' }),
+    time: () => actions.createTimeEntry('ws', { operationId, memberId: 'm', duration: 60, date: '2026-09-01' }),
     expense: () => actions.createExpense('ws', { projectId: 'p', category: 'travel', amount: 100, description: 'Taxi', date: '2026-09-01' }),
     rate: () => actions.updateMemberRate('ws', 'm', 3000),
     state: () => ({ attempts, writes, committed }),
@@ -180,7 +181,7 @@ function rateApiFixture({ foreignTarget = false } = {}) {
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
     '@/lib/auth': {},
-    '@/lib/prisma': { prisma },
+    '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
   })
   return {
     run: () => api.PATCH({ json: async () => ({ workspaceSlug: 'ws', hourlyRate: 3000 }) }, { params: Promise.resolve({ id: 'm' }) }),

@@ -176,6 +176,17 @@ jobs:
       - name: Quote explicit editing resume (offline)
         run: node docs/audits/2026-10-06-all-services-recheck/verify-quote-document-unknown-resume-mounted.cjs
 
+      - name: Promane time creation receipts (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-time-creation-helper-postgres-supervise.py
+
+      - name: Promane time creation server actions (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-time-creation-action-postgres-supervise.py
+
+      - name: Promane time creation recovery and duplicate submits (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-time-creation-client-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-timesheet-creation-mounted.cjs
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

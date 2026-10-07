@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-07T19:48:26.296Z",
+  "sameFrameSubmits": 2,
+  "serverActionRequests": 2,
+  "totalRecordedMinutesIfBothAccepted": 120,
+  "refreshes": 2,
+  "successToasts": 2,
+  "sourceHashes": {
+    "src/components/promane/timesheet-view.tsx": "1dca4a6e49c7dcce52620edfff6a3b45e12e05dffda38f4ceb44031f68dc7a49"
+  },
+  "scope": "Actual mounted TimesheetView and real FormData/input parser in React StrictMode, synthetic deferred action calls only. Two same-frame submits call create twice and double potential labor cost. No customer/provider/production operations."
+}
