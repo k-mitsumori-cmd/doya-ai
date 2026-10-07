@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-07T19:41:24.532813+00:00",
+  "status": "frozen57gates-passed-ready-for-reviewed-commit-push",
+  "rootApplied": true,
+  "productionApplied": false,
+  "candidate": "docs/audits/2026-10-06-all-services-recheck/quote-document-unknown-resume-candidate",
+  "baseline": "quote-document-unknown-resume-baseline.json",
+  "mounted": "quote-document-unknown-resume-mounted-results.json",
+  "passed": 4,
+  "remaining": [
+    "Finish unchanged57gate build/types/security/lint/native",
+    "Reviewed exact-file commit/push, CI, READY and publication verification",
+    "Remaining all-service criteria and authenticated E2E"
+  ],
+  "safety": "No automatic resend. Explicit resume requires successful scoped read and uses current server revision for a later user-initiated save.",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/quote-document-unknown-resume-release-f59265df-7d07-443e-a99d-1facc96fd5fd",
+  "gateSession": 42023,
+  "postgres": {
+    "passed": 2,
+    "file": "quote-document-unknown-resume-postgres-results.json"
+  },
+  "legacyMounted": {
+    "passed": 48,
+    "log": "/tmp/doya-quote-unknown-resume-legacy-mounted.log"
+  },
+  "native": {
+    "passed": 6,
+    "file": "quote-document-revision-native-results.json",
+    "freshBuildRepeat": "scheduled in57gate"
+  },
+  "gateStatus": "passed"
+}

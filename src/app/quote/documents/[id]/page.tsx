@@ -97,7 +97,14 @@ export default function QuoteDocumentPage() {
 
       <main className="mx-auto max-w-4xl space-y-5 px-4 py-6">
         {message && <p role="status" className="text-sm font-semibold text-emerald-700">{message}</p>}
-        {unknown && <div role="status" className="text-sm font-semibold text-amber-800">保存結果が未確認のため再送信を停止しています。<button onClick={() => void load()} className="ml-2 underline">再読み込みして確認する</button></div>}
+        {unknown && <div role="status" className="space-y-2 text-sm font-semibold text-amber-800">
+          <p>保存結果が未確認のため再送信を停止しています。</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <button onClick={() => void load()} className="underline">再読み込みして確認する</button>
+            <button onClick={() => void load(true)} className="underline">最新内容を読み込んで編集を再開</button>
+          </div>
+          <p className="text-xs font-normal">入力内容は保持します。保存は内容をご確認後に操作してください。</p>
+        </div>}
         {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}{!unknown && <button onClick={() => void load()} className="ml-2 underline">保存済みの見積書を再読み込みする</button>}</div>}
         {pdfUnavailable && (
           <p id="quote-pdf-status" role="status" className="text-sm font-semibold text-amber-800">

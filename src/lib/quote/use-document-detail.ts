@@ -44,7 +44,7 @@ export function useQuoteDocumentDetail(id: string | undefined) {
     redraw(n=>n+1)
     return()=>{window.removeEventListener('quote:organization-changed',changed);window.removeEventListener('storage',storage);context.invalidate()}
   },[context,changed])
-  const load=useCallback(async()=>{
+  const load=useCallback(async(resumeEditing = false)=>{
     if (!id||!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) {setLoading(false);setError('見積書のURLを確認してください');return}
     const ticket=context.begin('document-read',true,epoch)
     if(!ticket)return
@@ -68,6 +68,9 @@ export function useQuoteDocumentDetail(id: string | undefined) {
       if(recovered){
         if(state.current.revision===pending.current?.revision&&!pending.current.preserveDraft)state.current.dirty=false
         pending.current=null;setMessage('保存済みの見積書を確認しました')
+      } else if (resumeEditing && pending.current) {
+        pending.current=null
+        setMessage('最新の保存状態を読み込みました。入力内容をご確認のうえ保存してください。')
       }
       if(!state.current.dirty)state.current.draft=quoteDraftFromDocument(doc)
       state.current.dirty=!quoteDocumentDraftMatches(doc,state.current.draft)

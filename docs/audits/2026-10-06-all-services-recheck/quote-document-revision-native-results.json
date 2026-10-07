@@ -1,22 +1,24 @@
 {
-  "checkedAt": "2026-10-07T19:37:38.503Z",
-  "passed": 4,
+  "checkedAt": "2026-10-07T19:46:21.507Z",
+  "passed": 6,
   "cases": [
     "Native detail renders revision-bearing document and PDF link",
     "Native save sends displayed revision and advances PDF link with acknowledgement",
     "Native conflict preserves input and removes PDF action",
-    "Native unchanged acknowledgement blocks blind duplicate save"
+    "Native unchanged acknowledgement blocks blind duplicate save",
+    "Native explicit resume reads current state without automatic save",
+    "Native resumed save uses displayed version after explicit user action"
   ],
   "sourceHashes": {
     "src/components/org/OrgSwitcher.tsx": "0dfc4c9d5eb53aa9904af2c6e708deb5968c76fcfd76df0abe868f006b8b477e",
-    "src/lib/quote/use-document-detail.ts": "66260b772be9cf7d513efa9e99e68956011261554d2ef851fe3450baf107a922",
+    "src/lib/quote/use-document-detail.ts": "f1e9373bad8ea384d694b1856ed0ae1381626b9105f7fc66827633dd13cfa6cc",
     "src/lib/quote/document-response.ts": "5dbb7d279990f4feddf1d383f210be6c9302725426b89f8a1f0a5df00c3af827",
     "src/lib/quote/workspace-context.ts": "fb24f209301791baebbe0b545d4b29233129cd323b3ef9e816d8aac6c0b81dd1",
     "src/lib/quote/organization-response.ts": "9304b77f18cfc55fd1a428e627b56a78dbe4a5fe80d62dd237af7edf22879231",
     "src/lib/org-client-response.ts": "2d9eb3631fd973162588dc4efc563c07358fb527d63851067357ba1bfe66b21e",
     "src/lib/quote/money.ts": "fa7063d9f7200ad03be960c8dd99de75b2c542fac6674d8ab6305c975da95fcf",
     "src/lib/quote/types.ts": "be2233724402a9f90c1fb58858253ad55f259cff4b8cef81bd20c9e58f55c9c6",
-    "src/app/quote/documents/[id]/page.tsx": "d7e4cbce2408978118a1902b0cb67c35ea6753dc4d2da3c5d324f5e52af4eb7c"
+    "src/app/quote/documents/[id]/page.tsx": "8e4063faeacd5ba68e078c320e8520a4301a44761b4206efaff1e11b8f2133de"
   },
   "cssHash": "6635aee603484e0c4c70365f891308bf21fecb47bcf98f9959c1b0b2819ae5b3",
   "chrome": "Chrome/155.0.8059.39",
