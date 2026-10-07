@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-07T00:07:11.073843+00:00",
-  "status": "candidate-frozen-full-gate-passed-not-pushed",
+  "status": "pushed-ci-production-verification-pending",
   "sourceCommit": "38a74a2d3f256a86438565a32ed092d0d0e38f4b",
   "probe": "probe-aio-prompts-lifecycle.cjs",
   "evidence": [
@@ -48,11 +48,12 @@
   "supersededGateExitCode": 1,
   "supersededGateAdditionalReason": "Legacy AST test extracted removed prompt add page closure. Migrated that portion to actual mounted controller cases preserving all three malformed/incomplete acknowledgment variants. Other AST save/scan tests retained.",
   "additionalConfirmedFinding": {
-    "status": "confirmed-open-not-fixed",
+    "status": "repaired-local-full-gate-passed-production-pending",
     "evidence": "aio-quick-start-prompt-cap-baseline.json",
-    "finding": "Quick-start persists up to eight initial prompts without applying the documented free three-prompt limit. Separate repair required without deleting existing customer data."
+    "finding": "Quick-start persists up to eight initial prompts without applying the documented free three-prompt limit. Separate repair required without deleting existing customer data.",
+    "repairEvidence": "aio-quick-start-limit-repair.json"
   },
-  "updatedAt": "2026-10-07T00:34:04.112016+00:00",
+  "updatedAt": "2026-10-07T00:36:33.325720+00:00",
   "activeGateSession": 89235,
   "additionalScopeFindings": [
     "sfa-tasks-lifecycle-repair.json",
@@ -62,5 +63,29 @@
   "releaseExitCode": 0,
   "sourceFreezeReverifiedBeforeCommit": true,
   "sourceFiles": 2656,
-  "changedSources": []
+  "changedSources": [],
+  "commit": "67f520e1823cf40fc8220f65a3633f5d0175098f",
+  "commitSession": 14734,
+  "commitExitCode": 0,
+  "pushSession": 18726,
+  "pushExitCode": 0,
+  "sourceFreezeReverifiedAfterCommit": true,
+  "productionDeployments": [
+    {
+      "uid": "dpl_6RP7SD6LxfBoT1apkPNK8cKzVo1x",
+      "url": "doya-j4zg65xzx-surisutas-projects.vercel.app",
+      "state": "BUILDING",
+      "target": "production",
+      "commit": "67f520e1823cf40fc8220f65a3633f5d0175098f"
+    }
+  ],
+  "ciRuns": [
+    {
+      "databaseId": 37552839102,
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "67f520e1823cf40fc8220f65a3633f5d0175098f"
+    }
+  ],
+  "ciWatchExitCode": 0
 }

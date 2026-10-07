@@ -62,7 +62,7 @@ const access = {
         },
       }),
     }
-    const route = load('src/app/api/aio/prompts/route.ts', {
+    const route = load('src/app/api/aio/prompts/route.ts', { '@/lib/aio/types': load('src/lib/aio/types.ts'),
       'next/server': { NextResponse: { json } }, '@/lib/prisma': { prisma }, '@/lib/aio/access': access, '@/lib/aio/prompt-mutation': helper, '@/lib/org-profile-version': version,
       '@/lib/aio/billing': { getAioBilling: async () => ({ plan: 'FREE' }) },
       '@/lib/unified-plan': { isPaidPlan: () => false },

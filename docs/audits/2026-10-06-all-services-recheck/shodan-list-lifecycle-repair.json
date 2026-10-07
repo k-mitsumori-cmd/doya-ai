@@ -41,9 +41,10 @@
   "candidateMountedCases": 31,
   "remainingUserExperienceReview": [
     {
-      "status": "confirmed-open-synthetic",
+      "status": "repaired-local-full-gate-passed-production-pending",
       "finding": "researched is a stable operation-waiting state but existing status label says 作成中. Reproduce actual idle list and change to an accurate label in the next UX cohort; current lifecycle release does not claim this resolved.",
-      "evidence": "shodan-researched-list-label-baseline.json"
+      "evidence": "shodan-researched-list-label-baseline.json",
+      "repairEvidence": "shodan-label-mounted-results.json"
     }
   ],
   "releaseExitCode": 0,

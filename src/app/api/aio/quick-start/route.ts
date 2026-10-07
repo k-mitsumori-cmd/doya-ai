@@ -6,6 +6,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getAioBilling } from '@/lib/aio/billing'
+import { isPaidPlan } from '@/lib/unified-plan'
+import { AIO_FREE_PROMPT_LIMIT } from '@/lib/aio/types'
 import { createAioOrganization } from '@/lib/aio/access'
 import { suggestBrandSetup, deriveBrandFromUrl, normalizeUrl } from '@/lib/aio/suggest'
 
@@ -83,9 +86,15 @@ export async function POST(req: NextRequest) {
       await tx.aioBrandProfile.create({
         data: { organizationId: created.id, brandName: brandName.slice(0, 120), brandUrl: url, category: setup.category, aliases: aliasesData, competitors: competitorsData },
       })
-      if (setup.prompts.length) {
+      // Apply the same contract as manual registration inside the organization/owner
+      // transaction. A downgrade while suggestions run cannot seed paid capacity.
+      const billing = await getAioBilling(tx, created.id)
+      if (!billing) throw new Error('Organization billing unavailable')
+      const questions = Array.from(new Set(setup.prompts.map(text => text.trim().slice(0, 500)).filter(Boolean)))
+      const prompts = isPaidPlan(billing.plan) ? questions : questions.slice(0, AIO_FREE_PROMPT_LIMIT)
+      if (prompts.length) {
         await tx.aioPrompt.createMany({
-          data: setup.prompts.map((text) => ({ organizationId: created.id, text: text.slice(0, 500), isActive: true })),
+          data: prompts.map((text) => ({ organizationId: created.id, text, isActive: true })),
         })
       }
     })

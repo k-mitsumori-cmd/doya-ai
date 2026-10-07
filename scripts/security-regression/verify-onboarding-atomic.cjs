@@ -106,6 +106,9 @@ function fixture(service, { failMember = false, conflictOnce = false, existingSl
   const sequence = [];
   const saved = { profiles: [], prompts: [] };
   const quickStartRoute = load('src/app/api/aio/quick-start/route.ts', {
+    '@/lib/aio/billing': { getAioBilling: async () => ({ plan: 'FREE' }) },
+    '@/lib/unified-plan': load('src/lib/unified-plan.ts'),
+    '@/lib/aio/types': load('src/lib/aio/types.ts'),
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => ({ user: { id: 'user', name: 'Owner' } }) },
     '@/lib/auth': { authOptions: {} },

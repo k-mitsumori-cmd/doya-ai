@@ -7,7 +7,7 @@ import { DoyaKun, sym } from '@/components/shodan/ui'
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   processing: { label: '調査中', cls: 'bg-amber-100 text-amber-700' },
-  researched: { label: '作成中', cls: 'bg-sky-100 text-sky-700' },
+  researched: { label: '調査済み', cls: 'bg-sky-100 text-sky-700' },
   done: { label: '完了', cls: 'bg-emerald-100 text-emerald-700' },
   failed: { label: '失敗', cls: 'bg-rose-100 text-rose-700' },
 }

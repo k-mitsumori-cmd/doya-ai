@@ -10,7 +10,8 @@
   ],
   "findings": [
     "Actual task and activity creation both allow two same-frame POSTs.",
-    "Late alpha task/activity creation clears beta draft, shows global success and reloads alpha rows into beta scope."
+    "Late alpha task/activity creation clears beta draft, shows global success and reloads alpha rows into beta scope.",
+    "Task title and activity subject/body silently truncated; invalid activity type/date silently replaced with note/server time (actual API synthetic proof)."
   ],
   "nextRequirements": [
     "Actor/org/epoch scoped reads and mutation controllers, persistent scoped results, shared synchronous operation guards",
@@ -20,5 +21,18 @@
   "limits": [
     "Synthetic real-page scope transition, not proof of real Next segment reuse; no real customer writes, paid provider or DB operation.",
     "All 17 services / 2074 criteria remain incomplete."
+  ],
+  "inputEvidence": "sfa-input-normalization-baseline.json",
+  "consumerInventory": [
+    "src/app/sfa/[orgSlug]/tasks/page.tsx",
+    "src/app/sfa/[orgSlug]/page.tsx",
+    "src/app/sfa/[orgSlug]/deals/page.tsx",
+    "src/app/sfa/[orgSlug]/activities/page.tsx"
+  ],
+  "repairDesignConstraints": [
+    "SFA active members are sales staff and may use task/activity mutations; do not impose AIO manager-only policy.",
+    "SFA tasks are hard-deleted. Creation receipts must survive deletion, so a deterministic task ID alone is insufficient to prevent resurrection. Existing SystemSetting transaction receipt pattern is available (interview project-create).",
+    "Fresh ACTIVE membership held against removal in each mutation transaction; validate task/related IDs by organization at commit; version task mutations and preserve legacy compatibility deliberately.",
+    "Cover all four consumers including AI suggested bulk tasks and deal timeline, not only standalone tasks page."
   ]
 }

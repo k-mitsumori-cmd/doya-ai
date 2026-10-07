@@ -1,0 +1,30 @@
+{
+  "status": "full-gate-passed-explicit-allowlist",
+  "files": [
+    "src/lib/aio/types.ts",
+    "src/app/api/aio/prompts/route.ts",
+    "src/app/api/aio/quick-start/route.ts",
+    "src/app/shodan/[orgSlug]/page.tsx",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-aio-prompt-archive.cjs",
+    "scripts/security-regression/verify-aio-prompts-mutation.cjs",
+    "scripts/security-regression/verify-aio-quota.cjs",
+    "scripts/security-regression/verify-onboarding-atomic.cjs",
+    "scripts/security-regression/verify-org-client-route-contracts.cjs",
+    "scripts/security-regression/verify-shodan-list-mounted.cjs",
+    "scripts/security-regression/verify-aio-quick-start-prompt-limit.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/aio-quick-start-limit-repair.json",
+    "docs/audits/2026-10-06-all-services-recheck/aio-quick-start-limit-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/shodan-label-mounted-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/aio-seed-shodan-label-current-gate.txt",
+    "docs/audits/2026-10-06-all-services-recheck/aio-prompts-lifecycle-repair.json",
+    "docs/audits/2026-10-06-all-services-recheck/shodan-list-lifecycle-repair.json",
+    "docs/audits/2026-10-06-all-services-recheck/sfa-tasks-lifecycle-repair.json",
+    "docs/audits/2026-10-06-all-services-recheck/probe-sfa-input-normalization.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/sfa-input-normalization-baseline.json",
+    "docs/audits/2026-10-06-all-services-recheck/production-error-log-sample-20261007.json",
+    "docs/audits/2026-10-06-all-services-recheck/aio-seed-shodan-label-release-8c5b4e12-a160-421e-a403-145b0a27cf5f/state.json",
+    "docs/audits/2026-10-06-all-services-recheck/aio-seed-shodan-label-release-8c5b4e12-a160-421e-a403-145b0a27cf5f/source-manifest.json",
+    "docs/audits/2026-10-06-all-services-recheck/aio-seed-shodan-label-release-8c5b4e12-a160-421e-a403-145b0a27cf5f/supervise.py"
+  ]
+}

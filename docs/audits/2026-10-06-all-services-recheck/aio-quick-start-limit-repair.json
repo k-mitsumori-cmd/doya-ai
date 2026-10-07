@@ -1,0 +1,28 @@
+{
+  "status": "full-gate-passed-commit-pending",
+  "sourceCommit": "67f520e1823cf40fc8220f65a3633f5d0175098f",
+  "evidence": [
+    "aio-quick-start-prompt-cap-baseline.json",
+    "aio-quick-start-limit-results.json",
+    "shodan-label-mounted-results.json"
+  ],
+  "repairs": [
+    "Initial prompt count uses the same shared free limit as manual registration and fresh unique organization owner billing inside the creation transaction.",
+    "Known paid plans retain generated initial questions; unknown plans receive only the free capacity. Billing missing/ambiguous rolls back new organization, owner and profile.",
+    "Generated blank/duplicate questions normalized before registration; existing workspace data is reused unchanged.",
+    "Stable researched list state accurately displays 調査済み instead of 作成中."
+  ],
+  "gate": "docs/audits/2026-10-06-all-services-recheck/aio-seed-shodan-label-release-8c5b4e12-a160-421e-a403-145b0a27cf5f",
+  "previousGoalTurnClassification": "progress: shipped AIO scoped prompt lifecycle after full frozen gates; reproduced SFA task/activity creation defects, initial prompt cap mismatch, and Shodan label defect.",
+  "remainingScope": [
+    "Quick-start concurrent workspace cap, host reuse and paid suggestion request admission remain unverified; no claim that all quick-start lifecycle defects are fixed.",
+    "SFA task/activity lifecycle confirmed open and queued for repair.",
+    "No real DB concurrency, customer writes, paid provider calls or authenticated production QA performed.",
+    "All 17 services / 2074 criteria remain incomplete."
+  ],
+  "gateExitCode": 0,
+  "sourceFreezeReverifiedBeforeCommit": true,
+  "sourceFiles": 2657,
+  "changedSources": [],
+  "updatedAt": "2026-10-07T00:45:30.792534+00:00"
+}

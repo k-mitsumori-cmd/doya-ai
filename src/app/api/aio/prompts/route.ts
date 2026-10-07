@@ -9,7 +9,7 @@ import { getAioBilling } from '@/lib/aio/billing'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { lockPromptActor, promptBody, promptIdForOperation, promptOperationId } from '@/lib/aio/prompt-mutation'
 
-const FREE_PROMPT_LIMIT = 3
+import { AIO_FREE_PROMPT_LIMIT } from '@/lib/aio/types'
 const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers })
 
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       if (!billing) return { kind: 'billing' } as const
       if (!isPaidPlan(billing.plan)) {
         const count = await tx.aioPrompt.count({ where: { organizationId: ctx.organizationId, archivedAt: null } })
-        if (count >= FREE_PROMPT_LIMIT) return { kind: 'limit', role: actor.role } as const
+        if (count >= AIO_FREE_PROMPT_LIMIT) return { kind: 'limit', role: actor.role } as const
       }
       const prompt = await tx.aioPrompt.create({ data: { ...(id ? { id } : {}), organizationId: ctx.organizationId, text, category: category || null } })
       return { kind: 'created', prompt } as const
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     if (result.kind === 'forbidden') return json({ error: '編集権限を確認できません。再読み込みしてください' }, 403)
     if (result.kind === 'archived' || result.kind === 'changed') return json({ error: 'この操作で追加した質問は既に変更または保管されています。一覧を確認してください', code: 'OPERATION_CHANGED' }, 409)
     if (result.kind === 'billing') return json({ error: '組織の契約情報を確認できません。組織オーナーにお問い合わせください。', code: 'BILLING_OWNER' }, 409)
-    if (result.kind === 'limit') return json({ error: `無料プランは監視プロンプト${FREE_PROMPT_LIMIT}件までです。組織オーナーのプランをアップグレードしてください。`, code: 'LIMIT', canManageBilling: result.role === 'owner', ...(result.role === 'owner' ? { upgradeUrl: '/aio/pricing' } : {}) }, 402)
+    if (result.kind === 'limit') return json({ error: `無料プランは監視プロンプト${AIO_FREE_PROMPT_LIMIT}件までです。組織オーナーのプランをアップグレードしてください。`, code: 'LIMIT', canManageBilling: result.role === 'owner', ...(result.role === 'owner' ? { upgradeUrl: '/aio/pricing' } : {}) }, 402)
     return json({ ok: true, prompt: result.prompt, ...(operationId ? { operationId } : {}) })
   } catch { return json({ error: '追加結果を確認できませんでした。一覧または操作結果を確認してください', code: 'WRITE_UNCONFIRMED' }, 503) }
 }
