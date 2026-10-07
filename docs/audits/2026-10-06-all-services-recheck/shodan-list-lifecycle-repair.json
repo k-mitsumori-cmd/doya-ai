@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T23:55:42.344056+00:00",
-  "status": "confirmed-open-not-fixed",
+  "status": "full-gate-passed-preparing-production-release",
   "sourceCommit": "5c7bae1a63b1805ea5b9d431fe6138698c5d7823",
   "probe": "probe-shodan-list-delete-scope.cjs",
   "evidence": "shodan-list-delete-scope-baseline.json",
@@ -12,8 +12,42 @@
     "Mounted synthetic regression and frozen full gate before deployment"
   ],
   "limits": [
-    "No actual customer DB deletion or private production request",
-    "No proof of real Next segment reuse; synthetic prop scope transition reproduced mounted component behavior",
-    "All 17 services / 2074 criteria remain in scope"
-  ]
+    "Frozen local full gate passed; commit/push and candidate production verification pending.",
+    "Synthetic actual components/API only; no real customer delete, DB writes, paid provider or private production request.",
+    "All 17 services / 2074 criteria remain in scope; whole criteria and authenticated production proof remain incomplete."
+  ],
+  "lastCheckedAt": "2026-10-07T00:16:09.800644+00:00",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-list-release-3c2352e4-c93c-4ea8-be1f-c20354b9efb3",
+  "releaseSession": 66759,
+  "syntheticEvidence": "shodan-list-synthetic-results.json",
+  "candidateFixes": [
+    "Actor/org/epoch/saved-list scoped operations with same-frame lock shared by load, continuation, status polling and deletion.",
+    "Deletion carries expectedUpdatedAt and server checks it under row lock before erasing; omitted legacy body remains supported.",
+    "Acknowledged deletion and unknown result are distinct; fresh scoped list plus target watch permits explicit retry without blind replay, even when target is beyond first page.",
+    "Full list/watch DTO, IDs, URL, dates, private no-store Cookie headers and sanitized list/delete exceptions.",
+    "StrictMode cleanup releases stale operation lock; same-actor auth refresh preserves unknown operation; profile read failure remains unknown."
+  ],
+  "extraCandidateFinding": {
+    "checkedAt": "2026-10-07T00:08:03.212612+00:00",
+    "scope": "Synthetic actual mounted page/controller/transport",
+    "actual": "While status poll is held, deletion button remains enabled but shared operation lane drops its action; late scoped data protection still works.",
+    "evidence": "/tmp/doya-shodan-list-poll-action-probe.log",
+    "requiredFix": "Show busy state during poll and disable actions. Add mounted regression and rerun fresh frozen gate after current process terminates."
+  },
+  "supersededPassedGate": "docs/audits/2026-10-06-all-services-recheck/shodan-list-release-dc8b6980-3d03-45f2-b8b8-f615882cfe27",
+  "supersededGateReason": "Pre-publication mounted probe found poll-held actions looked enabled despite shared lane rejecting clicks. Added visible busy state and regression; prior gate does not prove updated source.",
+  "supersededSession": 91380,
+  "supersededExitCode": 0,
+  "candidateMountedCases": 31,
+  "remainingUserExperienceReview": [
+    {
+      "status": "source-triage-unverified",
+      "finding": "researched is a stable operation-waiting state but existing status label says 作成中. Reproduce actual idle list and change to an accurate label in the next UX cohort; current lifecycle release does not claim this resolved."
+    }
+  ],
+  "releaseExitCode": 0,
+  "sourceFiles": 2651,
+  "changedSources": [],
+  "sourceFreezeReverifiedBeforeCommit": true,
+  "previousGoalTurnClassification": "progress: prior goal turn shipped slide editor/PDF fixes after frozen gate and reproduced list issue; current turn repairs list/delete/poll and confirms prior production, reproduces AIO issues."
 }

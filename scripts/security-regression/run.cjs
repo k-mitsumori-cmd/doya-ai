@@ -1,4 +1,4 @@
-for (const script of ['verify-shodan-detail-mounted.cjs', 'verify-shodan-detail-response.cjs', 'verify-shodan-slide-editor-mounted.cjs', 'verify-shodan-slide-regenerate-contract.cjs']) {
+for (const script of ['verify-shodan-detail-mounted.cjs', 'verify-shodan-detail-response.cjs', 'verify-shodan-slide-editor-mounted.cjs', 'verify-shodan-slide-regenerate-contract.cjs', 'verify-shodan-list-mounted.cjs', 'verify-shodan-list-response.cjs']) {
   const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Shodan detail regression failed:', script); process.exit(1); }
 }

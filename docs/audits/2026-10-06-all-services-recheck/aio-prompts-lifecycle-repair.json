@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-07T00:07:11.073843+00:00",
+  "status": "confirmed-open-not-fixed",
+  "sourceCommit": "38a74a2d3f256a86438565a32ed092d0d0e38f4b",
+  "probe": "probe-aio-prompts-lifecycle.cjs",
+  "evidence": [
+    "aio-prompts-late-add-baseline.json",
+    "aio-prompts-double-add-baseline.json",
+    "aio-prompts-member-quota-baseline.json"
+  ],
+  "findings": [
+    "Same-frame addition sends two POST requests.",
+    "After organization switch, prior addition clears new org draft, announces global success and reloads prior org prompts into current page.",
+    "Actual LIMIT response with canManageBilling=false still exposes pricing upgrade link; owner guidance is not respected by prompt quota UI."
+  ],
+  "nextRequirements": [
+    "Actor/org/epoch-scoped full DTO list and prompt mutation callbacks",
+    "Synchronous add/toggle/archive lock and preserve latest draft",
+    "Explicit read recovery for uncertain writes, no blind replay",
+    "Correct billing guidance respecting organization ownership",
+    "Actual mounted synthetic regressions, frozen full gate and production verification"
+  ],
+  "limits": [
+    "Synthetic React page/AppLayout/transport scope transition only; not proof of real Next segment reuse.",
+    "No real customer write, DB access, paid provider, archive or production mutation.",
+    "All 17 services and 2074 criteria remain in scope."
+  ]
+}

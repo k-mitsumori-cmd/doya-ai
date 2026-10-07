@@ -33,8 +33,15 @@ function normalizeUrl(input: unknown): string | null {
 
 // GET /api/shodan/preparations — 一覧（成果物本文は含めず軽量に）
 export async function GET(req: NextRequest) {
+  try { return await listPreparations(req) }
+  catch {
+    console.error('[shodan/preparations/list] unavailable')
+    return NextResponse.json({ error: '商談準備一覧を読み込めませんでした。時間をおいて再度お試しください。' }, { status: 503, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+  }
+}
+async function listPreparations(req: NextRequest) {
   const ctx = await getShodanContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   const { searchParams } = new URL(req.url)
   const select = { id: true, targetUrl: true, targetName: true, status: true, createdAt: true, updatedAt: true } as const
   const where = { organizationId: ctx.organizationId, status: { not: 'deleted' } }
@@ -42,18 +49,18 @@ export async function GET(req: NextRequest) {
   if (searchParams.has('watch')) {
     const ids = watch?.split(',') || []
     if (!ids.length || ids.length > 100 || ids.some((id) => !id || id.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(id))) {
-      return NextResponse.json({ error: '更新対象が正しくありません' }, { status: 400 })
+      return NextResponse.json({ error: '更新対象が正しくありません' }, { status: 400, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
     }
     const rows = await prisma.shodanPreparation.findMany({ where: { ...where, id: { in: ids } }, select })
     const items = rows.map((row) => ({ ...row, status: effectivePrepStatus(row.status, row.updatedAt) }))
-    return NextResponse.json({ items }, { headers: { 'Cache-Control': 'private, no-store' } })
+    return NextResponse.json({ items }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   }
   const cursor = searchParams.get('cursor')
   if (searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
-    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   }
   if (cursor && !await prisma.shodanPreparation.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
-    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   }
   const [rows, total] = await Promise.all([
     prisma.shodanPreparation.findMany({
@@ -70,7 +77,7 @@ export async function GET(req: NextRequest) {
     items,
     total,
     nextCursor: rows.length > 100 ? items[items.length - 1].id : null,
-  }, { headers: { 'Cache-Control': 'private, no-store' } })
+  }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }
 
 // POST /api/shodan/preparations — URLを起点に「リサーチ→分析→提案」を一括実行

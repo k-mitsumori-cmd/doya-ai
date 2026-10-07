@@ -1,0 +1,6 @@
+{
+  "status": "confirmed-open",
+  "case": "LIMIT canManageBilling=false still shows pricing upgrade link to non-owner",
+  "pricingLink": "/aio/pricing?org=alpha",
+  "scope": "Actual prompt page/AppLayout/bounded client; synthetic 402, no billing change."
+}

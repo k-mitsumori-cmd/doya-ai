@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-07T00:08:53.953626+00:00",
+  "status": "confirmed-candidate-issue",
+  "sourceHash": "52dec8d84222c9858922332230dde12456095c49858b058fd9dc8b1eaabc8200",
+  "sourceFile": "src/lib/shodan/use-preparation-list.ts",
+  "actualDeleteButtonDisabled": false,
+  "expectedDeleteButtonDisabled": true,
+  "operation": "Hold synthetic processing-status response and render actual list; shared transport lane blocks delete while button remains enabled.",
+  "scope": "Actual mounted page/controller/transport; no customer DB or production mutation. Candidate issue must be fixed before publication.",
+  "precedingMountedCasesPassed": 30
+}

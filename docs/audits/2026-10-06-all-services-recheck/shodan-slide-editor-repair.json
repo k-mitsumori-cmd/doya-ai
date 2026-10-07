@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T23:28:51.753546+00:00",
-  "status": "full-gate-passed-preparing-production-release",
+  "status": "deployed-anonymous-publication-passed-private-flow-unproven",
   "sourceCommit": "28ed5de2a33bb2cf7a20b3bc23c4995037525fa3",
   "probe": "probe-shodan-slide-editor-lifecycle.cjs",
   "findings": [
@@ -30,12 +30,12 @@
     "Actual mounted synthetic regressions before full gate, release and production verification"
   ],
   "limitations": [
-    "Commit/push and candidate production publication pending; full frozen build/lint gate passed.",
+    "Local frozen gate, CI success, exact commit production READY and anonymous publication passed. Authenticated private editor and actual download persistence remain unproven.",
     "Synthetic PDF save invocation is not actual browser/filesystem persistence proof.",
     "Real authenticated customer workflows, production AI/storage/DB persistence and durable multi-tab behavior remain unproven.",
     "Full 17 services / 2074 criteria remain in scope; this cohort is partial evidence only."
   ],
-  "lastCheckedAt": "2026-10-06T23:58:28.123262+00:00",
+  "lastCheckedAt": "2026-10-07T00:14:48.455413+00:00",
   "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-slide-editor-release-54abc8e7-831b-4ffb-bfb3-97d5149b6817",
   "releaseSession": 89145,
   "candidateChecks": {
@@ -59,5 +59,31 @@
   "changedSources": [],
   "sourceFreezeReverifiedBeforeCommit": true,
   "syntheticEvidence": "shodan-slide-editor-synthetic-results.json",
-  "previousGoalTurnClassification": "progress: prior goal turn shipped scoped detail repair and reproduced editor defects; current turn fixes editor/PDF, adds API/resource regressions, confirms detail production and reproduces list lifecycle defect."
+  "previousGoalTurnClassification": "progress: prior goal turn shipped scoped detail repair and reproduced editor defects; current turn fixes editor/PDF, adds API/resource regressions, confirms detail production and reproduces list lifecycle defect.",
+  "commit": "38a74a2d3f256a86438565a32ed092d0d0e38f4b",
+  "commitSession": 12584,
+  "commitExitCode": 0,
+  "pushSession": 52441,
+  "pushExitCode": 0,
+  "sourceFreezeReverifiedAfterCommit": true,
+  "ciRuns": [
+    {
+      "databaseId": 37549478378,
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "38a74a2d3f256a86438565a32ed092d0d0e38f4b"
+    }
+  ],
+  "ciWatchSession": 97681,
+  "productionDeployments": [
+    {
+      "uid": "dpl_AtHAbBaRmf1KNmUB524qidjWXNAJ",
+      "url": "doya-rm6g17h9x-surisutas-projects.vercel.app",
+      "state": "READY",
+      "target": "production",
+      "commit": "38a74a2d3f256a86438565a32ed092d0d0e38f4b"
+    }
+  ],
+  "ciWatchExitCode": 0,
+  "publicEvidence": "shodan-slide-editor-public-38a74a2d.json"
 }
