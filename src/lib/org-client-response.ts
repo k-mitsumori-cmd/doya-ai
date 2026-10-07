@@ -13,7 +13,7 @@ export class OrgResponseError extends Error {
 }
 
 /** Bound both fetch and streaming body; an unconfirmed write must never be silently retried. */
-export async function requestOrgJson(service: 'aio' | 'shodan' | 'quote' | 'aishodan', path: string, orgSlug: string | null, init: RequestInit = {}) {
+export async function requestOrgJson(service: 'aio' | 'shodan' | 'quote' | 'aishodan' | 'sfa', path: string, orgSlug: string | null, init: RequestInit = {}) {
   const writing = !!init.method && init.method !== 'GET'
   const timeoutMs = writing ? ORG_WRITE_TIMEOUT_MS : ORG_READ_TIMEOUT_MS
   const outerSignal = init.signal

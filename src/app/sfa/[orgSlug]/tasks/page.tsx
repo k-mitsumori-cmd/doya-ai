@@ -3,20 +3,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { sfaInit } from '@/lib/sfa/client'
+import { sfaJson, isSfaClientTask, isSfaClientActivity, type SfaClientTask } from '@/lib/sfa/client-response'
+import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
+import MutationRecovery from '@/components/sfa/MutationRecovery'
 import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
 
-interface Task {
-  id: string
-  title: string
-  status: string
-  dueDate: string | null
-  dealId: string | null
-  dealName: string | null
-  createdAt: string
-}
+type Task = SfaClientTask
 
 interface SfaActivityRow {
   id: string
@@ -30,41 +24,47 @@ const isOverdue = (t: Task) => t.status !== 'done' && isJstOverdue(t.dueDate)
 
 export default function SfaTasksPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
-  const ready = !!orgSlug
+  const mutations = useSfaClientMutations(orgSlug, () => { void load(); void loadActs() })
+  const ready = mutations.allowed
   const [tasks, setTasks] = useState<Task[]>([])
   const [title, setTitle] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [busy, setBusy] = useState(false)
-  const pendingRef = useRef(new Set<string>())
-  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
   const [loadedPage, setLoadedPage] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [listLoading, setListLoading] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
   const loadSequenceRef = useRef(0)
+  const listRequest = useRef<AbortController | null>(null)
+  const taskDraft = useSfaDraftSnapshot([title, dueDate])
+  useEffect(() => { setBusy(false); setActBusy(false); return () => listRequest.current?.abort() }, [mutations.key])
 
   const load = useCallback(async (page = 1) => {
-    if (!ready) return
+    if (!ready || !mutations.active()) return
+    listRequest.current?.abort()
+    const controller = new AbortController()
+    listRequest.current = controller
     const sequence = ++loadSequenceRef.current
     setListLoading(true)
     setListError(null)
     try {
-      const res = await fetch(`/api/sfa/tasks?page=${page}`, sfaInit(orgSlug))
-      const data = await res.json()
-      if (!res.ok || !Array.isArray(data.tasks) || data.page !== page || typeof data.hasMore !== 'boolean') {
-        throw new Error(data.error || 'タスク一覧を取得できませんでした')
+      const data = await sfaJson(`/api/sfa/tasks?page=${page}`, orgSlug, { signal: controller.signal })
+      if (!Array.isArray(data.tasks) || !data.tasks.every(isSfaClientTask) || data.page !== page || typeof data.hasMore !== 'boolean') {
+        throw new Error( 'タスク一覧を取得できませんでした')
       }
-      if (sequence !== loadSequenceRef.current) return
-      setTasks(prev => page === 1 ? data.tasks : [...prev, ...data.tasks.filter((t: Task) => !prev.some(p => p.id === t.id))])
+      if (sequence !== loadSequenceRef.current || !mutations.active()) return
+      const rows = data.tasks
+      setTasks(prev => page === 1 ? rows : [...prev, ...rows.filter((t: Task) => !prev.some(p => p.id === t.id))])
       setLoadedPage(page)
       setHasMore(data.hasMore)
     } catch (error) {
-      if (sequence === loadSequenceRef.current) setListError(error instanceof Error ? error.message : 'タスク一覧を取得できませんでした')
+      if (sequence === loadSequenceRef.current && mutations.active()) setListError(error instanceof Error ? error.message : 'タスク一覧を取得できませんでした')
     } finally {
-      if (sequence === loadSequenceRef.current) setListLoading(false)
+      if (sequence === loadSequenceRef.current && mutations.active()) setListLoading(false)
     }
-  }, [ready, orgSlug])
-  useEffect(() => { setTasks([]); setLoadedPage(0); setHasMore(false); load(); return () => { ++loadSequenceRef.current } }, [load])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, orgSlug, mutations.key])
+  useEffect(() => { setTasks([]); setLoadedPage(0); setHasMore(false); load(); return () => { listRequest.current?.abort() } }, [load])
 
   // ===== 活動タイムライン（活動ページをタスクに統合） =====
   const [acts, setActs] = useState<SfaActivityRow[]>([])
@@ -77,9 +77,10 @@ export default function SfaTasksPage() {
   const [actsError, setActsError] = useState<string | null>(null)
   const [actsRetryCursor, setActsRetryCursor] = useState<string | null>(null)
   const actsRequest = useRef<AbortController | null>(null)
+  const activityDraft = useSfaDraftSnapshot([actType, actSubject])
 
   const loadActs = useCallback(async (cursor?: string) => {
-    if (!ready) return
+    if (!ready || !mutations.active()) return
     actsRequest.current?.abort()
     const controller = new AbortController()
     actsRequest.current = controller
@@ -87,49 +88,42 @@ export default function SfaTasksPage() {
     setActsError(null)
     try {
       const url = cursor ? `/api/sfa/activities?cursor=${encodeURIComponent(cursor)}` : '/api/sfa/activities'
-      const res = await fetch(url, sfaInit(orgSlug, { signal: controller.signal }))
-      const data = await res.json()
-      if (!res.ok || !Array.isArray(data.activities) || typeof data.totalCount !== 'number' ||
+      const data = await sfaJson(url, orgSlug, { signal: controller.signal })
+      if (!Array.isArray(data.activities) || !data.activities.every(isSfaClientActivity) || typeof data.totalCount !== 'number' ||
           !(data.nextCursor === null || typeof data.nextCursor === 'string')) {
-        throw new Error(data.error || '活動を取得できませんでした')
+        throw new Error( '活動を取得できませんでした')
       }
-      if (controller.signal.aborted) return
+      if (controller.signal.aborted || !mutations.active()) return
+      const rows = data.activities
       setActs((previous) => cursor
-        ? [...previous, ...data.activities.filter((activity: SfaActivityRow) => !previous.some((item) => item.id === activity.id))]
-        : data.activities)
+        ? [...previous, ...rows.filter((activity: SfaActivityRow) => !previous.some((item) => item.id === activity.id))]
+        : rows)
       setActsCursor(data.nextCursor)
       setActsTotal(data.totalCount)
       setActsRetryCursor(null)
     } catch (error) {
-      if (!controller.signal.aborted) {
+      if (!controller.signal.aborted && mutations.active()) {
         setActsError(error instanceof Error ? error.message : '活動を取得できませんでした')
         setActsRetryCursor(cursor || null)
       }
     } finally {
-      if (!controller.signal.aborted) setActsLoading(false)
+      if (!controller.signal.aborted && mutations.active()) setActsLoading(false)
     }
-  }, [ready, orgSlug])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, orgSlug, mutations.key])
   useEffect(() => { loadActs(); return () => { actsRequest.current?.abort() } }, [loadActs])
 
   const addActivity = async () => {
-    if (!actSubject.trim()) return
+    if (!actSubject.trim() || !mutations.active() || mutations.creationBlocked('activity')) return
+    const revision = activityDraft.current.revision
     setActBusy(true)
-    try {
-      const res = await fetch('/api/sfa/activities', sfaInit(orgSlug, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: actType, subject: actSubject }),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      setActSubject('')
-      toast.success('活動を記録しました')
-      loadActs()
-    } catch (e: any) {
-      toast.error(e.message)
-    } finally {
-      setActBusy(false)
-    }
+    const row = await mutations.create('activity', 'tasks:activity', { type: actType, subject: actSubject })
+    if (!mutations.active()) return
+    setActBusy(false)
+    if (!row) return
+    if (activityDraft.current.revision === revision) setActSubject('')
+    toast.success('活動を記録しました')
+    void loadActs()
   }
 
   const fmtActDate = (iso: string) => {
@@ -138,49 +132,24 @@ export default function SfaTasksPage() {
   }
 
   const create = async () => {
-    if (!title.trim()) return
+    if (!title.trim() || !mutations.active() || mutations.creationBlocked('task')) return
+    const revision = taskDraft.current.revision
     setBusy(true)
-    try {
-      const res = await fetch('/api/sfa/tasks', sfaInit(orgSlug, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, dueDate: dueDate || null }),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      setTitle(''); setDueDate('')
-      toast.success('タスクを追加しました')
-      load()
-    } catch (e: any) {
-      toast.error(e.message)
-    } finally {
-      setBusy(false)
-    }
+    const row = await mutations.create('task', 'tasks:create', { title, dueDate: dueDate || null })
+    if (!mutations.active()) return
+    setBusy(false)
+    if (!row) return
+    if (taskDraft.current.revision === revision) { setTitle(''); setDueDate('') }
+    toast.success('タスクを追加しました')
+    void load()
   }
 
   const updateTask = async (t: Task, patch: { status?: string; dueDate?: string }) => {
-    if (pendingRef.current.has(t.id)) return
-    pendingRef.current.add(t.id)
-    setPendingIds(new Set(pendingRef.current))
-    try {
-      const res = await fetch(`/api/sfa/tasks/${t.id}`, sfaInit(orgSlug, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
-      }))
-      const result = await res.json().catch(() => null)
-      if (!res.ok) throw new Error(result?.error || '更新に失敗しました')
-      const updated = result?.task
-      if (!updated || updated.id !== t.id || !['open', 'done'].includes(updated.status) ||
-          !(updated.dueDate === null || (typeof updated.dueDate === 'string' && Number.isFinite(new Date(updated.dueDate).getTime())))) {
-        throw new Error('更新結果を確認できませんでした。再読み込みして状態をご確認ください。')
-      }
-      setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, ...updated } : x))
-      load()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : '更新結果を確認できませんでした。再読み込みして状態をご確認ください。')
-    } finally {
-      pendingRef.current.delete(t.id)
-      setPendingIds(new Set(pendingRef.current))
-    }
+    const result = await mutations.mutateTask(t, patch)
+    if (!result || !mutations.active()) return
+    ++loadSequenceRef.current; listRequest.current?.abort()
+    setTasks(prev => prev.map(x => x.id === t.id ? { ...x, ...(result.task as Task) } : x))
+    void load()
   }
 
   const toggle = async (t: Task) => {
@@ -188,22 +157,11 @@ export default function SfaTasksPage() {
   }
 
   const remove = async (t: Task) => {
-    if (pendingRef.current.has(t.id)) return
-    pendingRef.current.add(t.id)
-    setPendingIds(new Set(pendingRef.current))
-    try {
-      const res = await fetch(`/api/sfa/tasks/${t.id}`, sfaInit(orgSlug, { method: 'DELETE' }))
-      const result = await res.json().catch(() => null)
-      if (!res.ok) throw new Error(result?.error || '削除に失敗しました')
-      if (result?.ok !== true) throw new Error('削除結果を確認できませんでした。再読み込みして状態をご確認ください。')
-      setTasks((prev) => prev.filter((x) => x.id !== t.id))
-      load()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : '削除結果を確認できませんでした。再読み込みして状態をご確認ください。')
-    } finally {
-      pendingRef.current.delete(t.id)
-      setPendingIds(new Set(pendingRef.current))
-    }
+    const result = await mutations.mutateTask(t, null)
+    if (!result || !mutations.active()) return
+    ++loadSequenceRef.current; listRequest.current?.abort()
+    setTasks(prev => prev.filter(x => x.id !== t.id))
+    void load()
   }
 
   // 期日のインライン変更（'' でクリア）
@@ -223,7 +181,7 @@ export default function SfaTasksPage() {
     <div key={t.id} className="bg-white rounded-xl shadow-sm p-3.5 flex items-center gap-3">
       <button
         onClick={() => toggle(t)}
-        disabled={pendingIds.has(t.id)}
+        disabled={mutations.blocked('task:' + t.id)}
         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
           t.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-500'
         }`}
@@ -243,7 +201,7 @@ export default function SfaTasksPage() {
       </div>
       <input
         type="date"
-        disabled={pendingIds.has(t.id)}
+        disabled={mutations.blocked('task:' + t.id)}
         value={toDateInput(t.dueDate)}
         onChange={(e) => changeDue(t, e.target.value)}
         title="締め切り日"
@@ -251,7 +209,7 @@ export default function SfaTasksPage() {
           isOverdue(t) ? 'border-red-300 text-red-600 bg-red-50' : 'border-slate-200 text-slate-600'
         }`}
       />
-      <button onClick={() => remove(t)} disabled={pendingIds.has(t.id)} aria-busy={pendingIds.has(t.id)} aria-label="タスクを削除" className="text-slate-300 hover:text-red-500 flex-shrink-0 disabled:opacity-40">
+      <button onClick={() => remove(t)} disabled={mutations.blocked('task:' + t.id)} aria-busy={mutations.blocked('task:' + t.id)} aria-label="タスクを削除" className="text-slate-300 hover:text-red-500 flex-shrink-0 disabled:opacity-40">
         <span className="material-symbols-outlined text-[20px]">delete</span>
       </button>
     </div>
@@ -259,6 +217,7 @@ export default function SfaTasksPage() {
 
   return (
     <div className="p-6 lg:p-10 max-w-3xl mx-auto">
+      <MutationRecovery mutations={mutations} />
       <div className="mb-6">
         <h1 className="text-2xl font-black text-slate-900">タスク・活動</h1>
         <p className="text-slate-500 font-bold text-sm">やること・期日と、活動の記録をまとめて管理</p>
@@ -268,12 +227,12 @@ export default function SfaTasksPage() {
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && create()}
+          onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && create()}
           placeholder="やることを入力（例: 見積を送る）"
           className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold"
         />
         <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="rounded-xl border border-slate-200 px-3 py-2.5 font-bold text-sm" />
-        <button onClick={create} disabled={busy} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-lime-600 text-white font-black disabled:opacity-50 whitespace-nowrap">追加</button>
+        <button onClick={create} disabled={busy || mutations.creationBlocked('task') || !ready} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-lime-600 text-white font-black disabled:opacity-50 whitespace-nowrap">追加</button>
       </div>
 
       <div className="space-y-2">
@@ -313,11 +272,11 @@ export default function SfaTasksPage() {
           <input
             value={actSubject}
             onChange={(e) => setActSubject(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addActivity()}
+            onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && addActivity()}
             placeholder="活動内容を入力（例: 株式会社サンプルへ初回ヒアリング）"
             className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold"
           />
-          <button onClick={addActivity} disabled={actBusy || !actSubject.trim()} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-lime-600 text-white font-black disabled:opacity-50 whitespace-nowrap">記録</button>
+          <button onClick={addActivity} disabled={actBusy || mutations.creationBlocked('activity') || !ready || !actSubject.trim()} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-lime-600 text-white font-black disabled:opacity-50 whitespace-nowrap">記録</button>
         </div>
 
         <div className="space-y-2">

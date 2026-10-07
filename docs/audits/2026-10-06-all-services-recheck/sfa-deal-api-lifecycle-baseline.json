@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-07T02:01:19.977Z",
+  "findings": 6,
+  "results": [
+    {
+      "name": "patch still writes after synthetic authority revocation following context resolution",
+      "status": 200
+    },
+    {
+      "name": "remove still writes after synthetic authority revocation following context resolution",
+      "status": 200
+    },
+    {
+      "name": "Same expectedUpdatedAt is ignored and both deal writes succeed",
+      "statuses": [
+        200,
+        200
+      ]
+    },
+    {
+      "name": "Soft-deleted deal still accepts PATCH and reports success"
+    },
+    {
+      "name": "Won to lost stage transition retains wonAt together with new lostAt"
+    },
+    {
+      "name": "Deal edit silently truncates submitted name to 200 characters"
+    }
+  ],
+  "sourceHash": "213adb6d91af3f0f9833aa4a3fc07ef82f7d77316d54e32ffe46611d554aadd1",
+  "scope": "Actual deal PATCH/DELETE handlers with independent stateful synthetic Prisma and context revocation; no actual PG scheduling, live session or production writes. Separately unresolved business-deal lifecycle; current task/activity cohort is not a complete SFA repair."
+}

@@ -5,7 +5,7 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
-import { createSfaOnce, recoverSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
+import { createSfaOnce, recoverSfaCreation, cancelSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
 import { lockSfaMutationActor, lockSfaRelation, SfaMutationError } from '@/lib/sfa/mutation-authority'
 
 const json = (body: unknown, options: { status?: number; headers?: Record<string, string> } = {}) =>
@@ -111,5 +111,23 @@ export async function POST(req: NextRequest) {
     return json({ task })
   } catch (error) {
     return json({ error: error instanceof SfaMutationError ? error.message : '保存結果を確認できませんでした。一覧をご確認ください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
+  }
+}
+
+// Cancels only the creation operation receipt, never the task/activity itself.
+export async function DELETE(req: NextRequest) {
+  const ctx = await getSfaContext(orgSlugFrom(req))
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  try {
+    const params = (req.nextUrl || new URL(req.url)).searchParams
+    if (params.getAll('operationId').length !== 1) throw new SfaMutationError(400, '操作情報が正しくありません。')
+    const operationId = sfaOperationId(params.get('operationId'))!
+    const recovery = await prisma.$transaction(async tx => {
+      await lockSfaMutationActor(tx, ctx)
+      return cancelSfaCreation(tx, ctx, 'task', operationId, id => tx.sfaTask.findFirst({ where: { id, organizationId: ctx.organizationId }, select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true } }))
+    })
+    return json({ state: recovery.state, task: recovery.row })
+  } catch (error) {
+    return json({ error: error instanceof SfaMutationError ? error.message : '操作の取り消し結果を確認できませんでした。もう一度確認してください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
   }
 }

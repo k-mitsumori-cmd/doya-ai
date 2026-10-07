@@ -2,8 +2,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
+const { load } = require('./load-typescript.cjs');
 
-const all = Array.from({ length: 501 }, (_, index) => ({ id: String(index), occurredAt: '2026-09-24T00:00:00.000Z' }));
+const all = Array.from({ length: 501 }, (_, index) => ({ id: String(index), occurredAt: '2026-09-24T00:00:00.000Z', type: 'note', subject: null, body: null, dealId: 'deal-1' }));
 function callbackSource(path, name) {
   const source = fs.readFileSync(path, 'utf8');
   const ast = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -22,6 +23,7 @@ function callbackSource(path, name) {
 async function verify(path, name, config) {
   const code = callbackSource(path, name);
   const state = {
+    mutations: { key: 'fixture', active: () => true }, detailRef: { current: 'deal-1' },
     ready: true, orgSlug: 'org-1',
     activities: [], acts: [], detailActs: [],
     nextCursor: null, actsCursor: null, activitiesCursor: null,
@@ -47,6 +49,9 @@ async function verify(path, name, config) {
   for (const [setter, field] of Object.entries(config.setters)) {
     state[setter] = (value) => { state[field] = typeof value === 'function' ? value(state[field]) : value; };
   }
+  const org = load('src/lib/org-client-response.ts', {}, { fetch: (...args) => state.fetch(...args), AbortController, setTimeout, clearTimeout, TextDecoder, Uint8Array });
+  const response = load('src/lib/sfa/client-response.ts', { '@/lib/org-client-response': org, './task-date': load('src/lib/sfa/task-date.ts') });
+  state.sfaJson=response.sfaJson;state.isSfaClientActivity=response.isSfaClientActivity;
   vm.createContext(state);
   vm.runInContext(code, state);
   const call = (cursor) => config.deal ? state[name]('deal-1', cursor) : state[name](cursor);

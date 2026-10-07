@@ -3,13 +3,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import toast from 'react-hot-toast'
-import { sfaInit } from '@/lib/sfa/client'
+import { sfaJson, isSfaClientTask, type SfaClientTask } from '@/lib/sfa/client-response'
+import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
+import MutationRecovery from '@/components/sfa/MutationRecovery'
 import { jstDateKey } from '@/lib/sfa/task-date'
 import { isSfaSummary, summaryYen, type SfaSummary } from '@/lib/sfa/summary'
 import { Character } from '@/components/promane/character'
 
-interface Task { id: string; title: string; status: string; dueDate: string | null }
+type Task = SfaClientTask
 
 const STALE_DAYS = 14
 const yen = summaryYen
@@ -20,7 +21,8 @@ export default function SfaDashboard() {
 }
 
 function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
-  const ready = !!orgSlug
+  const mutations = useSfaClientMutations(orgSlug, () => { loadTasks(); setRetry(n => n + 1) })
+  const ready = mutations.allowed
   const base = `/sfa/${orgSlug}`
   const [summary, setSummary] = useState<SfaSummary | null>(null)
   const [summaryError, setSummaryError] = useState('')
@@ -32,49 +34,49 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
   const alive = useRef(true)
   const taskSequence = useRef(0)
   const taskRequest = useRef<AbortController | null>(null)
-  const adding = useRef(false)
-  const pending = useRef(new Set<string>())
-  const [pendingIds, setPendingIds] = useState(new Set<string>())
-  useEffect(() => { alive.current = true; return () => { alive.current = false; taskSequence.current++; taskRequest.current?.abort() } }, [])
+  useEffect(() => { alive.current = true; return () => { alive.current = false; taskRequest.current?.abort() } }, [])
   useEffect(() => {
-    if (!ready) return
+    if (!ready || !mutations.active()) return
     let active = true
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 15000)
     setSummaryLoading(true)
     setSummaryError('')
-    fetch('/api/sfa/summary', sfaInit(orgSlug, { signal: controller.signal }))
-      .then(async r => {
-        const d = await r.json()
-        if (!r.ok || !isSfaSummary(d.summary)) throw new Error('営業状況を取得できませんでした。')
-        if (active) setSummary(d.summary)
-      }).catch(() => { if (active) setSummaryError('営業状況を取得できませんでした。再試行してください。') })
-      .finally(() => { clearTimeout(timer); if (active) setSummaryLoading(false) })
+    sfaJson('/api/sfa/summary', orgSlug, { signal: controller.signal })
+      .then(d => {
+        if (!isSfaSummary(d.summary)) throw new Error('営業状況を取得できませんでした。')
+        if (active && mutations.active()) setSummary(d.summary)
+      }).catch(() => { if (active && mutations.active()) setSummaryError('営業状況を取得できませんでした。再試行してください。') })
+      .finally(() => { clearTimeout(timer); if (active && mutations.active()) setSummaryLoading(false) })
     return () => { active = false; controller.abort(); clearTimeout(timer) }
-  }, [ready, orgSlug, retry])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, orgSlug, retry, mutations.key])
   const [tasks, setTasks] = useState<Task[]>([])
   const [newTask, setNewTask] = useState('')
   const [busy, setBusy] = useState(false)
+  const draft = useSfaDraftSnapshot(newTask)
+  useEffect(() => { setBusy(false); setTasks([]); setTasksLoaded(false); setSummary(null) }, [mutations.key])
 
   const loadTasks = useCallback(() => {
-    if (!ready) return
+    if (!ready || !mutations.active()) return
     const sequence = ++taskSequence.current
     taskRequest.current?.abort()
     const controller = new AbortController()
     taskRequest.current = controller
     const timer = setTimeout(() => controller.abort(), 15000)
     setTaskError('')
-    fetch('/api/sfa/tasks', sfaInit(orgSlug, { signal: controller.signal })).then(async r => {
-      const d = await r.json()
-      if (!r.ok || !Array.isArray(d.tasks)) throw new Error('タスク取得失敗')
-      if (alive.current && sequence === taskSequence.current) { setTasks(d.tasks); setHasMoreTasks(d.hasMore === true); setTasksLoaded(true) }
-    }).catch(() => { if (alive.current && sequence === taskSequence.current) setTaskError('タスクを取得できませんでした。再試行してください。') }).finally(() => clearTimeout(timer))
-  }, [ready, orgSlug])
+    sfaJson('/api/sfa/tasks', orgSlug, { signal: controller.signal }).then(d => {
+      if (!Array.isArray(d.tasks) || !d.tasks.every(isSfaClientTask) || typeof d.hasMore !== 'boolean') throw new Error('タスク取得失敗')
+      if (alive.current && mutations.active() && sequence === taskSequence.current) { setTasks(d.tasks); setHasMoreTasks(d.hasMore === true); setTasksLoaded(true) }
+    }).catch(() => { if (alive.current && mutations.active() && sequence === taskSequence.current) setTaskError('タスクを取得できませんでした。再試行してください。') }).finally(() => clearTimeout(timer))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, orgSlug, mutations.key])
 
   useEffect(() => {
-    if (!ready) return
+    if (!ready || !mutations.active()) return
     loadTasks()
-  }, [ready, orgSlug, loadTasks])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, orgSlug, loadTasks, mutations.key])
 
   const staleCount = summary?.staleCount || 0
   const openTaskCount = summary?.openTaskCount
@@ -91,52 +93,24 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
   })()
 
   const addTask = async () => {
-    if (!newTask.trim() || adding.current) return
-    adding.current = true
+    if (!newTask.trim() || !mutations.active() || mutations.creationBlocked('task')) return
+    const revision = draft.current.revision
     setBusy(true)
-    try {
-      const res = await fetch('/api/sfa/tasks', sfaInit(orgSlug, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTask }),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      if (!alive.current) return
-      setNewTask('')
-      setRetry(n => n + 1)
-      loadTasks()
-    } catch (e: any) {
-      if (alive.current) toast.error(e.message)
-    } finally {
-      adding.current = false
-      if (alive.current) setBusy(false)
-    }
+    const row = await mutations.create('task', 'dashboard:create', { title: newTask })
+    if (!mutations.active()) return
+    setBusy(false)
+    if (!row) return
+    if (draft.current.revision === revision) setNewTask('')
+    setRetry(n => n + 1)
+    loadTasks()
   }
 
   const toggleTask = async (t: Task) => {
-    if (pending.current.has(t.id)) return
-    pending.current.add(t.id)
-    setPendingIds(new Set(pending.current))
-    const next = t.status === 'done' ? 'open' : 'done'
-    try {
-      const res = await fetch(`/api/sfa/tasks/${t.id}`, sfaInit(orgSlug, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: next }),
-      }))
-      if (!res.ok) throw new Error('タスクを更新できませんでした。再試行してください。')
-      if (!alive.current) return
-      // A list request started before this write must not restore the old status.
-      taskSequence.current++
-      taskRequest.current?.abort()
-      setTasks(prev => prev.map(x => x.id === t.id ? { ...x, status: next } : x))
-      setRetry(n => n + 1)
-    } catch {
-      if (alive.current) toast.error('タスクを更新できませんでした。再試行してください。')
-    } finally {
-      pending.current.delete(t.id)
-      if (alive.current) setPendingIds(new Set(pending.current))
-    }
+    const result = await mutations.mutateTask(t, { status: t.status === 'done' ? 'open' : 'done' })
+    if (!result || !mutations.active()) return
+    taskRequest.current?.abort()
+    setTasks(prev => prev.map(x => x.id === t.id ? { ...x, ...(result.task as Task) } : x))
+    setRetry(n => n + 1)
   }
 
   const fmtDue = (s: string | null) => {
@@ -152,6 +126,7 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
   return (
     <div className="min-h-full bg-gradient-to-b from-[#F0FDF4] to-slate-50">
       <div className="p-6 lg:p-10 max-w-5xl mx-auto">
+        <MutationRecovery mutations={mutations} />
         <div className="flex items-center gap-3 mb-5">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-lime-600 flex items-center justify-center text-2xl shadow-lg shadow-green-500/30">
             📈
@@ -207,11 +182,11 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
               <input
                 value={newTask}
                 onChange={(e) => setNewTask(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addTask()}
+                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && addTask()}
                 placeholder="例: A社に見積を送る"
                 className="flex-1 rounded-xl border border-slate-200 px-3 py-2 font-bold text-sm"
               />
-              <button onClick={addTask} disabled={busy} className="px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50">
+              <button onClick={addTask} disabled={busy || mutations.creationBlocked('task') || !ready} className="px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50">
                 追加
               </button>
             </div>
@@ -227,8 +202,8 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
                   <button
                     key={t.id}
                     onClick={() => toggleTask(t)}
-                    disabled={pendingIds.has(t.id)}
-                    aria-busy={pendingIds.has(t.id)}
+                    disabled={mutations.blocked('task:' + t.id)}
+                    aria-busy={mutations.blocked('task:' + t.id)}
                     className="w-full flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left"
                   >
                     <span className={`material-symbols-outlined text-[20px] ${done ? 'text-green-600' : 'text-slate-300'}`}>

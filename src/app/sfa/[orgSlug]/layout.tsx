@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { usePathname, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, TrendingUp } from 'lucide-react'
 import { Toaster } from 'react-hot-toast'
 import SfaSidebar from '@/components/sfa/SfaSidebar'
-import { sfaInit } from '@/lib/sfa/client'
+import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
+import { sfaJson } from '@/lib/sfa/client-response'
 
 interface Membership { slug: string; name: string; role: string }
 
@@ -14,32 +15,28 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname()
   const params = useParams()
   const orgSlug = (params.orgSlug as string) || ''
+  const guard = useOrgSettingsGuard(orgSlug)
+  const [usageKey, setUsageKey] = useState('')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [plan, setPlan] = useState<string | undefined>()
   const [memberships, setMemberships] = useState<Membership[]>([])
 
-  // プラン/所属ワークスペースを取得（認証はCookieでサーバ側が処理するため orgSlug だけで実行）。
-  // クライアントの useSession status に依存させない＝statusがloadingでも確実に取得・反映する。
   useEffect(() => {
-    if (!orgSlug) return
-    let active = true
-    setPlan(undefined)
-    setMemberships([])
-    fetch('/api/sfa/usage', sfaInit(orgSlug))
-      .then(async (response) => {
-        if (!response.ok) throw new Error('プランを確認できませんでした')
-        return response.json()
-      })
-      .then((d) => {
-        if (!active) return
-        setPlan(typeof d.plan === 'string' ? d.plan : undefined)
-        setMemberships(Array.isArray(d.memberships) ? d.memberships : [])
-      })
-      .catch(() => { if (active) setPlan(undefined) })
-    // ※ クライアント側の自動リダイレクトは行わない（認証/スコープは各APIが401で強制）。
-    return () => { active = false }
-  }, [orgSlug])
+    if (!guard.allowed) return
+    const operation = guard.begin('usage')
+    if (!operation) return
+    setPlan(undefined); setMemberships([]); setUsageKey('')
+    sfaJson('/api/sfa/usage', orgSlug, { signal: operation.signal }).then(d => {
+      if (!operation.current()) return
+      if (typeof d.plan !== 'string' || !Array.isArray(d.memberships) || !d.memberships.every(m => m && typeof m === 'object' && typeof m.slug === 'string' && typeof m.name === 'string' && typeof m.role === 'string')) throw new Error()
+      setPlan(d.plan); setMemberships(d.memberships as Membership[]); setUsageKey(guard.key)
+    }).catch(() => { if (operation.current()) { setPlan(undefined); setMemberships([]) } }).finally(operation.end)
+    return operation.end
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guard.key, guard.allowed, orgSlug])
+  const currentPlan = guard.allowed && usageKey === guard.key ? plan : undefined
+  const currentMemberships = guard.allowed && usageKey === guard.key ? memberships : []
 
   useEffect(() => {
     setMobileMenuOpen(false)
@@ -49,7 +46,7 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Toaster position="top-center" />
       <div className="hidden md:flex">
-        <SfaSidebar isCollapsed={sidebarCollapsed} onToggle={(c) => setSidebarCollapsed(c)} plan={plan} orgSlug={orgSlug} memberships={memberships} />
+        <SfaSidebar isCollapsed={sidebarCollapsed} onToggle={(c) => setSidebarCollapsed(c)} plan={currentPlan} orgSlug={orgSlug} memberships={currentMemberships} />
       </div>
       <div className="hidden md:block flex-shrink-0 transition-[width] duration-200" style={{ width: sidebarCollapsed ? 72 : 240 }} aria-hidden />
 
@@ -61,7 +58,7 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ duration: 0.2, ease: 'easeOut' }} className="fixed inset-y-0 left-0 z-50 md:hidden">
-            <SfaSidebar forceExpanded isMobile onToggle={() => setMobileMenuOpen(false)} plan={plan} orgSlug={orgSlug} memberships={memberships} />
+            <SfaSidebar forceExpanded isMobile onToggle={() => setMobileMenuOpen(false)} plan={currentPlan} orgSlug={orgSlug} memberships={currentMemberships} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -76,7 +73,10 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
             <span className="text-base sm:text-lg font-bold text-slate-900 whitespace-nowrap">ドヤ営業管理</span>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">{children}</div>
+        <div className="flex-1 overflow-y-auto">
+          {!guard.allowed && <p role="status" className="p-6">{guard.requiresLogin ? '再度ログインしてください。' : 'ログイン状態を確認しています。'}</p>}
+          <div hidden={!guard.allowed}><Fragment key={guard.identity}>{children}</Fragment></div>
+        </div>
       </main>
     </div>
   )

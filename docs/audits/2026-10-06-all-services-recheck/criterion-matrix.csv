@@ -1237,7 +1237,7 @@ sfa,C015,権限・組織,退会済み・無効メンバーの権限を拒否す�
 sfa,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 sfa,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 sfa,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-sfa,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
+sfa,C019,権限・組織,組織切替中の遅延応答を破棄する,部分補修・SFAタスク/活動4画面49合成・作成/取消64合成・29ローカルPostgreSQL検証合格／全体ゲート合格・本番反映待ち・実機/他経路/本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）; sfa-client-mounted-results.json; sfa-cancellation-results.json; sfa-client-postgres-results.json; sfa-tasks-lifecycle-repair.json
 sfa,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 sfa,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 sfa,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -1279,7 +1279,7 @@ sfa,C057,入力・外部接続,ファイル形式を拡張子だけで判断し�
 sfa,C058,入力・外部接続,ストレージの所有権・署名URL期限が守られる,現在版での項目別通し検証待ち,
 sfa,C059,入力・外部接続,外部APIのタイムアウト・再試行が有界である,現在版での項目別通し検証待ち,
 sfa,C060,入力・外部接続,通知先・本文に利用者入力を安全に扱う,現在版での項目別通し検証待ち,
-sfa,C061,生成・ジョブ,連打・再送に冪等性がある,部分補修・作成APIの40合成/14ローカルPostgreSQL検証合格・画面対応/更新版条件/本番未検証,operationId付きタスク・活動作成の永続記録と復旧GET。各12同時再送で1件のみ、削除後の再送も復活なし。旧画面はoperationId未対応のため二重登録問題は未解消。sfa-creation-receipt-results.json; sfa-receipt-postgres-results.json; sfa-manual-double-submit-baseline.json
+sfa,C061,生成・ジョブ,連打・再送に冪等性がある,部分補修・SFAタスク/活動4画面49合成・作成/取消64合成・29ローカルPostgreSQL検証合格／全体ゲート合格・本番反映待ち・実機/他経路/本番通し未検証,operationId付きタスク・活動作成の永続記録と復旧GET。各12同時再送で1件のみ、削除後の再送も復活なし。旧ベースラインでは画面がoperationId未対応。今回タスク/活動4画面を対応済み。商談作成・別タブ/端末の別操作は未解消・未検証。sfa-creation-receipt-results.json; sfa-receipt-postgres-results.json; sfa-manual-double-submit-baseline.json; sfa-client-mounted-results.json; sfa-cancellation-results.json; sfa-client-postgres-results.json; sfa-tasks-lifecycle-repair.json
 sfa,C062,生成・ジョブ,ジョブの所有者と結果取得権限を検査する,現在版での項目別通し検証待ち,
 sfa,C063,生成・ジョブ,ストリーム途中失敗を成功として表示しない,現在版での項目別通し検証待ち,
 sfa,C064,生成・ジョブ,生成結果と履歴・使用量の保存が整合する,現在版での項目別通し検証待ち,
@@ -1288,7 +1288,7 @@ sfa,C066,生成・ジョブ,再生成と編集にも上限を適用する,現在
 sfa,C067,生成・ジョブ,公開音声ルームの同意・期限・人数を守る,現在版での項目別通し検証待ち,
 sfa,C068,生成・ジョブ,エクスポートで他人の成果物を含めない,現在版での項目別通し検証待ち,
 sfa,C069,UI・アクセシビリティ,モーダルのフォーカス・Escape・復帰が機能する,現在版での項目別通し検証待ち,
-sfa,C070,UI・アクセシビリティ,入力をエラー時に失わない,入力消失を実画面合成環境で再現・未補修/本番通し検証待ち,実画面でタスク/活動の旧応答による草稿消失、実商談画面でAI一括登録400時の候補消失を再現・未補修。sfa-task-late-create-baseline.json; sfa-activity-late-create-baseline.json; sfa-bulk-failure-baseline.json
+sfa,C070,UI・アクセシビリティ,入力をエラー時に失わない,部分補修・SFAタスク/活動4画面49合成・作成/取消64合成・29ローカルPostgreSQL検証合格／全体ゲート合格・本番反映待ち・実機/他経路/本番通し未検証,過去ベースラインで草稿消失・AI候補消失を再現。今回4画面を補修し合成検証合格、実機/本番通し未検証。sfa-task-late-create-baseline.json; sfa-activity-late-create-baseline.json; sfa-bulk-failure-baseline.json; sfa-client-mounted-results.json; sfa-cancellation-results.json; sfa-client-postgres-results.json; sfa-tasks-lifecycle-repair.json
 sfa,C071,UI・アクセシビリティ,上限案内が二重表示されない,現在版での項目別通し検証待ち,
 sfa,C072,UI・アクセシビリティ,有料会員に同じプランへの重複契約を促さない,現在版での項目別通し検証待ち,
 sfa,C073,UI・アクセシビリティ,APIエラーを消えるトーストだけに依存しない,現在版での項目別通し検証待ち,
@@ -1312,9 +1312,9 @@ sfa,U08,user-experience,組織作成・メンバー招待・既存組織参加�
 sfa,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,部分補修/合成検証済み・全経路/本番通し検証待ち,タスク/活動/取引先/担当者/リードPOSTの文字上限と明示日時・種別を65合成ケースで部分補修。全体ゲート中。他登録/更新/AI/本番通しは未検証。sfa-input-preservation-results.json; sfa-collection-input-loss-baseline.json
 sfa,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
 sfa,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,現在版での項目別通し検証待ち,
-sfa,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：入口の認証失敗・再試行・連打・履歴復元／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md
-sfa,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,部分補修・作成APIの40合成/14ローカルPostgreSQL検証合格・画面対応/更新版条件/本番未検証,operationId付きタスク・活動作成の永続記録と復旧GET。各12同時再送で1件のみ、削除後の再送も復活なし。旧画面はoperationId未対応のため二重登録問題は未解消。sfa-creation-receipt-results.json; sfa-receipt-postgres-results.json; sfa-manual-double-submit-baseline.json
-sfa,U14,user-experience,生成途中の失敗・一部成功でも成果物を救出でき、再試行対象と追加消費が分かる。,現在版での項目別通し検証待ち,
+sfa,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,部分補修・SFAタスク/活動4画面49合成・作成/取消64合成・29ローカルPostgreSQL検証合格／全体ゲート合格・本番反映待ち・実機/他経路/本番通し未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; sfa-client-mounted-results.json; sfa-cancellation-results.json; sfa-client-postgres-results.json; sfa-tasks-lifecycle-repair.json
+sfa,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,部分補修・SFAタスク/活動4画面49合成・作成/取消64合成・29ローカルPostgreSQL検証合格／全体ゲート合格・本番反映待ち・実機/他経路/本番通し未検証,operationId付きタスク・活動作成の永続記録と復旧GET。各12同時再送で1件のみ、削除後の再送も復活なし。旧ベースラインでは画面がoperationId未対応。今回タスク/活動4画面を対応済み。商談作成・別タブ/端末の別操作は未解消・未検証。sfa-creation-receipt-results.json; sfa-receipt-postgres-results.json; sfa-manual-double-submit-baseline.json; sfa-client-mounted-results.json; sfa-cancellation-results.json; sfa-client-postgres-results.json; sfa-tasks-lifecycle-repair.json
+sfa,U14,user-experience,生成途中の失敗・一部成功でも成果物を救出でき、再試行対象と追加消費が分かる。,部分補修・SFAタスク/活動4画面49合成・作成/取消64合成・29ローカルPostgreSQL検証合格／全体ゲート合格・本番反映待ち・実機/他経路/本番通し未検証,; sfa-client-mounted-results.json; sfa-cancellation-results.json; sfa-client-postgres-results.json; sfa-tasks-lifecycle-repair.json
 sfa,U15,user-experience,確定済み書類・終了した評価・締めた勤怠は通常操作で意図せず書き換わらない。,現在版での項目別通し検証待ち,
 sfa,U16,user-experience,残量をサーバー実績に合わせ、端末変更や再ログインで一致する。,現在版での項目別通し検証待ち,
 sfa,U17,user-experience,残量を超える注文を入力時点で説明し、一部生成になる場合は先に分かる。,現在版での項目別通し検証待ち,
@@ -1329,7 +1329,7 @@ sfa,U25,user-experience,履歴削除、素材削除、プロジェクト削除�
 sfa,U26,user-experience,個人用/組織用/公開の境界と、URLを知るだけで見られる範囲が分かる。,現在版での項目別通し検証待ち,
 sfa,U27,user-experience,「閲覧のみ」のゲストは編集できず、一般社員は他人の人事情報を勝手に見られない。,現在版での項目別通し検証待ち,
 sfa,U28,user-experience,別組織のURLで別の作業場所へ黙って移動せず、現在の組織が常に分かる。,現在版での項目別通し検証待ち,
-sfa,U29,user-experience,ログアウト・アカウント切替・共有PCで前利用者のキャッシュが表示されない。,現在版での項目別通し検証待ち,
+sfa,U29,user-experience,ログアウト・アカウント切替・共有PCで前利用者のキャッシュが表示されない。,部分補修・SFAタスク/活動4画面49合成・作成/取消64合成・29ローカルPostgreSQL検証合格／全体ゲート合格・本番反映待ち・実機/他経路/本番通し未検証,; sfa-client-mounted-results.json; sfa-cancellation-results.json; sfa-client-postgres-results.json; sfa-tasks-lifecycle-repair.json
 sfa,U30,user-experience,招待取消・権限変更・録音同意撤回・共有URL失効が利用者の期待どおり反映される。,現在版での項目別通し検証待ち,
 sfa,U31,user-experience,初回限定30日体験と通常無料枠を区別し、終了後の料金・更新条件が分かる。,現在版での項目別通し検証待ち,
 sfa,U32,user-experience,契約直後に全対象サービスへ反映し、未反映時は二重申込ではなく復旧へ誘導する。,現在版での項目別通し検証待ち,

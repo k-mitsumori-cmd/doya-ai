@@ -1,0 +1,76 @@
+{
+  "passed": 14,
+  "results": [
+    {
+      "operation": "toggle",
+      "mode": "success",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "toggle",
+      "mode": "500",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "toggle",
+      "mode": "network",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "toggle",
+      "mode": "malformed",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "toggle",
+      "mode": "wrong-id",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "toggle",
+      "mode": "duplicate",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "toggle",
+      "mode": "retry",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "changeDue",
+      "mode": "success",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "changeDue",
+      "mode": "500",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "changeDue",
+      "mode": "network",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "changeDue",
+      "mode": "malformed",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "changeDue",
+      "mode": "wrong-id",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "changeDue",
+      "mode": "duplicate",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "changeDue",
+      "mode": "retry",
+      "outcome": "PASS"
+    }
+  ],
+  "scope": "Actual tasks page, shared hook, bounded transport and complete DTO parsers mounted under StrictMode; synthetic auth/API. Replaces old callback mocks that allowed blind retry after unknown writes; all prior response/failure/duplicate/retention modes retained, with read-only recovery and expected versions."
+}

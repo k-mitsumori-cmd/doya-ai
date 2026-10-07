@@ -3,7 +3,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { sfaInit } from '@/lib/sfa/client'
+import { sfaJson, isSfaClientActivity } from '@/lib/sfa/client-response'
+import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
+import MutationRecovery from '@/components/sfa/MutationRecovery'
 import { ACTIVITY_TYPE_LABEL, ACTIVITY_TYPE_ICON } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
 
@@ -29,7 +31,8 @@ const fmtDateTime = (d: string) => {
 
 export default function SfaActivitiesPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
-  const ready = !!orgSlug
+  const mutations = useSfaClientMutations(orgSlug, () => { void load() })
+  const ready = mutations.allowed
   const [activities, setActivities] = useState<Activity[]>([])
   const [type, setType] = useState<ActivityType>('note')
   const [subject, setSubject] = useState('')
@@ -40,10 +43,12 @@ export default function SfaActivitiesPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [retryCursor, setRetryCursor] = useState<string | null>(null)
+  const draft = useSfaDraftSnapshot([type, subject, body])
+  useEffect(() => { setBusy(false); setActivities([]); setNextCursor(null); setTotalCount(0) }, [mutations.key])
   const requestRef = useRef<AbortController | null>(null)
 
   const load = useCallback(async (cursor?: string) => {
-    if (!ready) return
+    if (!ready || !mutations.active()) return
     requestRef.current?.abort()
     const controller = new AbortController()
     requestRef.current = controller
@@ -51,48 +56,47 @@ export default function SfaActivitiesPage() {
     setLoadError(null)
     try {
       const url = cursor ? `/api/sfa/activities?cursor=${encodeURIComponent(cursor)}` : '/api/sfa/activities'
-      const res = await fetch(url, sfaInit(orgSlug, { signal: controller.signal }))
-      const data = await res.json()
-      if (!res.ok || !Array.isArray(data.activities) || typeof data.totalCount !== 'number' ||
+      const data = await sfaJson(url, orgSlug, { signal: controller.signal })
+      if (!Array.isArray(data.activities) || !data.activities.every(isSfaClientActivity) || typeof data.totalCount !== 'number' ||
           !(data.nextCursor === null || typeof data.nextCursor === 'string')) {
-        throw new Error(data.error || '活動を取得できませんでした')
+        throw new Error( '活動を取得できませんでした')
       }
-      if (controller.signal.aborted) return
+      if (controller.signal.aborted || !mutations.active()) return
+      const rows = data.activities
       setActivities((previous) => cursor
-        ? [...previous, ...data.activities.filter((activity: Activity) => !previous.some((item) => item.id === activity.id))]
-        : data.activities)
+        ? [...previous, ...rows.filter((activity: Activity) => !previous.some((item) => item.id === activity.id))]
+        : rows)
       setNextCursor(data.nextCursor)
       setTotalCount(data.totalCount)
       setRetryCursor(null)
     } catch (error) {
-      if (!controller.signal.aborted) {
+      if (!controller.signal.aborted && mutations.active()) {
         setLoadError(error instanceof Error ? error.message : '活動を取得できませんでした')
         setRetryCursor(cursor || null)
       }
     } finally {
-      if (!controller.signal.aborted) setLoading(false)
+      if (!controller.signal.aborted && mutations.active()) setLoading(false)
     }
-  }, [ready, orgSlug])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, orgSlug, mutations.key])
   useEffect(() => { load(); return () => { requestRef.current?.abort() } }, [load])
 
   const create = async () => {
-    if (!subject.trim() && !body.trim()) return
+    if ((!subject.trim() && !body.trim()) || !mutations.active() || mutations.creationBlocked('activity')) return
+    const revision = draft.current.revision
     setBusy(true)
-    try {
-      const res = await fetch('/api/sfa/activities', sfaInit(orgSlug, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, subject, body }),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      setSubject(''); setBody('')
-      toast.success('活動を記録しました')
-      load()
-    } catch (e: any) { toast.error(e.message) } finally { setBusy(false) }
+    const row = await mutations.create('activity', 'activities:create', { type, subject, body })
+    if (!mutations.active()) return
+    setBusy(false)
+    if (!row) return
+    if (draft.current.revision === revision) { setSubject(''); setBody('') }
+    toast.success('活動を記録しました')
+    void load()
   }
 
   return (
     <div className="p-6 lg:p-10 max-w-3xl mx-auto">
+      <MutationRecovery mutations={mutations} />
       <div className="mb-6">
         <h1 className="text-2xl font-black text-slate-900">活動タイムライン</h1>
         <p className="text-slate-500 font-bold text-sm">電話・商談・メール・メモを時系列で記録</p>
@@ -109,7 +113,7 @@ export default function SfaActivitiesPage() {
         </div>
         <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="件名（例: 定例MTG / 折り返し電話）" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 font-bold mb-2" />
         <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={2} placeholder="メモ・要点（任意）" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm" />
-        <button onClick={create} disabled={busy} className="mt-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-lime-600 text-white font-black disabled:opacity-50">{busy ? '記録中…' : '記録する'}</button>
+        <button onClick={create} disabled={busy || mutations.creationBlocked('activity') || !ready} className="mt-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-lime-600 text-white font-black disabled:opacity-50">{busy ? '記録中…' : '記録する'}</button>
       </div>
 
       {/* タイムライン */}

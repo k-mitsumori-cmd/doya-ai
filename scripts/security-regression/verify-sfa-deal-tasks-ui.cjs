@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
+const { load } = require('./load-typescript.cjs');
 
 const source = fs.readFileSync('src/app/sfa/[orgSlug]/deals/page.tsx', 'utf8');
 const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -13,8 +14,9 @@ function visit(node) {
 visit(ast);
 assert(callback, 'Deal detail must load tasks independently of the board preview');
 
-const all = Array.from({ length: 501 }, (_, index) => ({ id: String(index), dealId: 'deal-1', status: 'open' }));
+const all = Array.from({ length: 501 }, (_, index) => ({ id: String(index), dealId: 'deal-1', status: 'open', title: 'Synthetic task', dueDate: null, createdAt: '2026-10-07T00:00:00.000Z', updatedAt: '2026-10-07T00:00:00.000Z' }));
 const state = {
+  mutations: { active: () => true }, detailRef: { current: 'deal-1' },
   ready: true, orgSlug: 'org-1', detailTasks: [], detailTasksPage: 0,
   detailTasksHasMore: false, detailTasksLoading: false, detailTasksError: false, detailTasksRetryPage: 1,
   detailTasksRequest: { current: null }, failOnce: false,
@@ -34,6 +36,9 @@ for (const [setter, field] of Object.entries({
   setDetailTasksHasMore: 'detailTasksHasMore', setDetailTasksLoading: 'detailTasksLoading',
   setDetailTasksError: 'detailTasksError', setDetailTasksRetryPage: 'detailTasksRetryPage',
 })) state[setter] = (value) => { state[field] = typeof value === 'function' ? value(state[field]) : value; };
+const org = load('src/lib/org-client-response.ts', {}, { fetch: (...args) => state.fetch(...args), AbortController, setTimeout, clearTimeout, TextDecoder, Uint8Array });
+const response = load('src/lib/sfa/client-response.ts', { '@/lib/org-client-response': org, './task-date': load('src/lib/sfa/task-date.ts') });
+state.sfaJson = response.sfaJson; state.isSfaClientTask = response.isSfaClientTask;
 vm.createContext(state);
 const code = ts.transpileModule(`this.loadDetailTasks = ${callback};`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 vm.runInContext(code, state);

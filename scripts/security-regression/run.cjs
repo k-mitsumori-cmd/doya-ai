@@ -979,6 +979,11 @@ if (sfaDealTasksUi.error || sfaDealTasksUi.status !== 0) {
   console.error('Security regression failed: verify-sfa-deal-tasks-ui.cjs');
   process.exit(1);
 }
+const sfaClientLifecycle = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-client-lifecycle.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaClientLifecycle.error || sfaClientLifecycle.status !== 0) {
+  console.error('Security regression failed: verify-sfa-client-lifecycle.cjs');
+  process.exit(1);
+}
 const sfaTaskVersions = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-task-versions.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaTaskVersions.error || sfaTaskVersions.status !== 0) {
   console.error('Security regression failed: verify-sfa-task-versions.cjs');

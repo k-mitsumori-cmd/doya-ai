@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-07T00:30:13.078066+00:00",
-  "status": "confirmed-open-not-fixed",
+  "status": "partially-repaired-client-cohort-full-gate-passed-production-pending",
   "sourceCommit": "e1e4a38d76c4f5c49dcdc949c93a87dc51e0b6f7",
   "evidence": [
     "sfa-task-late-create-baseline.json",
@@ -83,7 +83,7 @@
     "publicationEvidence": "sfa-input-public-0200977e.json",
     "publicVerificationExitCode": 0
   },
-  "updatedAt": "2026-10-07T01:38:35.973549+00:00",
+  "updatedAt": "2026-10-07T02:07:51.649735+00:00",
   "relatedCollectionInputLoss": {
     "status": "repaired-local-full-gate-passed-production-pending",
     "cases": 17,
@@ -141,7 +141,7 @@
     "publicVerificationExitCode": 0
   },
   "manualDoubleSubmissionScope": "Actual four pages checked with held synthetic POST: six manual handlers submit twice; dashboard has a single-submit ref guard. Actor/org scope and persistent recovery remain separate requirements.",
-  "previousGoalTurnClassification": "progress: shipped SFA task version/recovery after 31 synthetic/17 local PostgreSQL cases and full gate; verified 528d authority publication; reproduced and repaired global quota navigation plus SFA pricing scope, 87 current mounted cases (28 baseline failures), full expanded gate running. All four SFA consumer migration and full 17-service audit remain incomplete.",
+  "previousGoalTurnClassification": "Progress: shipped 4bdd and 9c, verified current source; this turn integrates all four task/activity consumers and cancellation receipts, with 48 mounted, 64 receipt and 29 actual PostgreSQL cases. Full release gate currently running; not complete.",
   "nextRepairContract": [
     "Retain current ACTIVE-member policy and fresh membership locks in all next task/activity transactions.",
     "Creation request UUID bound to user/org/kind with durable SystemSetting receipt; task hard deletion must never allow a creation replay to resurrect a row. Reject changed payload reuse and corrupted receipts.",
@@ -239,12 +239,107 @@
         "target": "production",
         "commit": "4bdd9da5d63872a3d19dc2612ba784e227ad3696"
       }
-    ]
+    ],
+    "releaseStatus": "4bdd exact SHA CI success and Vercel READY; latest public alias is 9c; historical 4bdd marker absence after alias advancement would not indicate failure."
   },
   "relatedGlobalQuotaNavigationFinding": {
-    "status": "full-local-gate-passed-not-yet-pushed",
+    "status": "pushed-ci-production-verification-pending",
     "evidence": "service-limit-navigation-baseline.json",
     "impact": "Global quota provider retains current actor but ignores navigation/org transitions; old SFA alpha quota can show a beta pricing CTA. Synthetic actual mounted provider evidence, private production unproven.",
-    "currentEvidence": "service-limit-navigation-current.json"
+    "currentEvidence": "service-limit-navigation-current.json",
+    "commit": "9c8308a9dde221e745f246c387d9e3a47121bcc2",
+    "gate": "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-b6ba9b86-045e-4cec-b62d-9affffdb8891"
+  },
+  "clientLifecycleRepair": {
+    "status": "full-gate-passed-production-pending",
+    "consumerFiles": [
+      "src/app/sfa/[orgSlug]/tasks/page.tsx",
+      "src/app/sfa/[orgSlug]/page.tsx",
+      "src/app/sfa/[orgSlug]/deals/page.tsx",
+      "src/app/sfa/[orgSlug]/activities/page.tsx",
+      "src/app/sfa/[orgSlug]/layout.tsx"
+    ],
+    "evidence": [
+      "sfa-client-mounted-results.json",
+      "sfa-cancellation-results.json",
+      "sfa-client-postgres-results.json",
+      "sfa-client-postgres-supervisor.json",
+      "sfa-client-delete-mounted-results.json",
+      "sfa-client-update-mounted-results.json"
+    ],
+    "changes": [
+      "All four task/activity consumers use actual shared guard, bounded stream transport, complete used DTO validation, synchronous write lanes and UUID creation receipts. PATCH sends explicit status/fields and expectedUpdatedAt; DELETE sends expectedUpdatedAt query.",
+      "Unconfirmed creations fence all same-kind create forms in that actor/organization. sessionStorage retains operation metadata only, never customer titles, activity bodies or drafts. Scope-separated hydration permits read-only recovery after remount/reload.",
+      "GET missing does not release creation fence. Atomic cancellation receipt takes fresh actor lock then receipt advisory lock and permanently rejects a late original POST. Existing committed business rows are returned, never deleted. Unavailable created rows preserve receipt and fence.",
+      "Manual success clears only unchanged rendered draft revision; current actor/org/epoch and detail-modal epoch must still match. IME Enter does not submit.",
+      "AI bulk removes only confirmed candidates, stops at rejected/unknown response, retains remainder and reports only nonzero confirmed counts. Recovery found removes committed candidate; cancellation preserves candidate for explicit new attempt.",
+      "Layout retains same-actor draft while session loads and hides children; actor/org identity change resets subtree. Usage/sidebar values render only for current guard epoch.",
+      "Recognized SFA AI quota rejection relies on shared owner-aware quota UI and suppresses a second error toast. Global quota provider itself verified in prior 87 mounted cases and published 9c."
+    ],
+    "targetedResults": {
+      "mountedActualReactSynthetic": 49,
+      "actualApiSyntheticReceipts": 64,
+      "actualLocalPostgres": 29,
+      "typecheckExitCode": 0,
+      "targetedEslintExitCode": 0,
+      "additionalTaskDeleteMounted": 8,
+      "additionalTaskUpdateMounted": 14
+    },
+    "fullGate": "sfa-client-lifecycle-release-846754f1-da54-4180-8e3b-dc51ff08b0d1",
+    "limitations": [
+      "Mounted tests use mocked Next navigation/auth and synthetic API; no real Next router/browser or private production interaction proven.",
+      "Isolated actual PostgreSQL schema uses synthetic tables and data; no production DB mutation, migration, provider or paid AI calls.",
+      "Different browser tabs/devices may intentionally start distinct UUIDs; no claim of draft equivalence or cross-tab duplicate intent detection.",
+      "Closing a browser tab loses sessionStorage metadata; no full browser-restart recovery claim. Writes are still idempotent per operation, but a new operation from another tab is a separate intent.",
+      "Other SFA business routes (deal creation/edit/stage drag, accounts/contacts/leads/settings and AI-provider outcome/cost recovery) remain separately unaudited for full lifecycle.",
+      "All 17 services / 2074 criteria remain incomplete."
+    ],
+    "priorGate": {
+      "directory": "sfa-client-lifecycle-release-e01e6691-cbeb-4c10-bf07-bb93fb53871d",
+      "status": "failed",
+      "buildExitCode": 1,
+      "reason": "Legacy extracted-callback fixtures lacked shared guard/transport and full DTOs; migrated fixture scaffolds and replaced update/delete callback mocks with actual mounted page+hook tests. All prior response, failure, duplicate, retention and pagination cases retained; unknown retry now explicitly requires readonly recovery.",
+      "changedSourcesDuringGate": []
+    },
+    "fullGateResult": {
+      "startedAt": "2026-10-07T01:59:19.915718+00:00",
+      "pid": 74923,
+      "head": "9c8308a9dde221e745f246c387d9e3a47121bcc2",
+      "sourceFiles": 2670,
+      "status": "passed",
+      "gates": [
+        {
+          "name": "build",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T02:07:21.226447+00:00"
+        },
+        {
+          "name": "lint",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T02:07:23.470865+00:00"
+        }
+      ],
+      "changedSources": [],
+      "endedAt": "2026-10-07T02:07:23.665359+00:00"
+    },
+    "sourceFreezeReverifiedBeforeCommit": true
+  },
+  "findingsAreHistoricalBaseline": true,
+  "nextConfirmedDealLifecycleFinding": {
+    "status": "confirmed-open-not-fixed",
+    "evidence": "sfa-deal-create-lifecycle-baseline.json",
+    "probe": "probe-sfa-deal-create-lifecycle.cjs",
+    "findings": 2,
+    "priority": "next-cohort-after-current-task-activity-gate",
+    "scope": "Actual mounted deal creation sends two same-frame POSTs without UUID. Retained component old-org success also clears newer draft and emits global toast; actual production layout remount mitigates state reuse, so private Next/router draft loss not asserted. Deal create/edit/stage and fresh authority/version/idempotency require coherent server/client repair, not a cosmetic button-only patch.",
+    "apiEvidence": "sfa-deal-api-lifecycle-baseline.json",
+    "apiProbe": "probe-sfa-deal-api-lifecycle.cjs",
+    "apiFindings": 6,
+    "nextRequiredInvariants": [
+      "Deal creation UUID receipts inside quota admission and fresh ACTIVE member transaction; normalized payload hashes and cancellation receipts; no second count/usage on replay.",
+      "PATCH/DELETE fresh actor, active same-org deal and related account/stage locks with expectedUpdatedAt. Add updatedAt to board/DTO; monotonic versions and readonly recovery.",
+      "Strict nontruncating input, exact BigInt amount and preserved unrelated fields. Won/lost transitions clear opposite timestamp consistently.",
+      "Full deal create/edit/stage UI adoption, bounded read/write transport, actor/org/detail/drag epoch, persistent result recovery and latest draft retention; mounted independent fixture + actual PG race checks."
+    ]
   }
 }

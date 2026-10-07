@@ -16,7 +16,7 @@ function fixture() {
   };
   for (const [model, map] of [['sfaTask', state.tasks], ['sfaActivity', state.activities]]) tx[model] = {
     findFirst: async ({ where }) => { const r = map.get(where.id); return r?.organizationId === where.organizationId ? r : null; },
-    create: async ({ data }) => { state.creates++; const row = { id: `row-${state.creates}`, ...data }; map.set(row.id, row); return row; },
+    create: async ({ data }) => { if (state.beforeCreate) await state.beforeCreate(); state.creates++; const row = { id: `row-${state.creates}`, ...data }; map.set(row.id, row); return row; },
   };
   const prisma = { $transaction: fn => {
     const run = queue.then(async () => {
@@ -32,6 +32,7 @@ function fixture() {
   const routes = { task: load('src/app/api/sfa/tasks/route.ts', mocks), activity: load('src/app/api/sfa/activities/route.ts', mocks) };
   return { state, scope: patch => { ctx = ctx && { ...ctx, ...patch }; }, revoke: () => { active = false; }, logout: () => { ctx = null; },
     post: (kind, body) => routes[kind].POST({ json: async () => body }),
+    cancel: (kind, op = uuid) => routes[kind].DELETE({ url: 'https://example.test/api?operationId=' + encodeURIComponent(op) }),
     recover: (kind, op = uuid) => routes[kind].GET({ url: 'https://example.test/api?operationId=' + encodeURIComponent(op) }),
   };
 }
@@ -40,6 +41,44 @@ function fixture() {
   const check = async (name, fn) => { await fn(); cases.push(name); };
   for (const kind of ['task','activity']) {
     const body = kind === 'task' ? { title: ' 見積を送る ', operationId: uuid } : { subject: ' 面談 ', operationId: uuid };
+    await check(kind + ' cancellation fences a create arriving later and recovery remains cancelled', async () => {
+      const f=fixture(); const c=await f.cancel(kind); assert.equal(c.status,200); assert.equal((await c.json()).state,'cancelled');
+      assert.equal(c.headers.get('cache-control'),'private, no-store'); assert.equal((await f.post(kind,body)).status,409);
+      assert.equal((await (await f.recover(kind)).json()).state,'cancelled'); assert.equal((await (await f.cancel(kind)).json()).state,'cancelled');
+      assert.equal(f.state.creates,0); assert.equal(f.state.receiptWrites,1);
+    });
+    await check(kind + ' missing read does not fence delayed creation', async () => {
+      const f=fixture(); assert.equal((await (await f.recover(kind)).json()).state,'missing'); assert.equal((await f.post(kind,body)).status,200); assert.equal(f.state.creates,1);
+    });
+    await check(kind + ' create wins cancellation race without business deletion', async () => {
+      const f=fixture(); let entered, release; const ready=new Promise(r=>entered=r), gate=new Promise(r=>release=r); f.state.beforeCreate=async()=>{entered();await gate};
+      const posting=f.post(kind,body); await ready; const cancelling=f.cancel(kind); release(); const [p,c]=await Promise.all([posting,cancelling]); assert.equal(p.status,200); assert.equal(c.status,200);
+      assert.equal((await c.json()).state,'found'); assert.equal(f.state.creates,1); assert.equal(f.state[kind==='task'?'tasks':'activities'].size,1);
+    });
+    await check(kind + ' cancellation wins concurrent create and never creates a row', async () => {
+      const f=fixture(); const [c,p]=await Promise.all([f.cancel(kind),f.post(kind,body)]); assert.equal((await c.json()).state,'cancelled'); assert.equal(p.status,409); assert.equal(f.state.creates,0);
+    });
+    await check(kind + ' cancellation receipt failure rolls back and permits original operation', async () => {
+      const f=fixture(); f.state.failReceipt=true; assert.equal((await f.cancel(kind)).status,500); assert.equal(f.state.receipts.size,0);
+      f.state.failReceipt=false; assert.equal((await f.post(kind,body)).status,200);
+    });
+    await check(kind + ' cancellation of deleted created target does not erase its receipt or resurrect it', async () => {
+      const f=fixture(); await f.post(kind,body); f.state[kind==='task'?'tasks':'activities'].clear(); assert.equal((await (await f.cancel(kind)).json()).state,'unavailable');
+      assert.equal((await f.post(kind,body)).status,409); assert.equal(f.state.receiptWrites,1);
+    });
+    await check(kind + ' cancellation is actor and organization scoped', async () => {
+      const f=fixture(); await f.cancel(kind); f.scope({userId:'other'}); assert.equal((await f.post(kind,body)).status,200);
+      f.scope({organizationId:'other-org'}); assert.equal((await f.post(kind,body)).status,200); assert.equal(f.state.creates,2);
+    });
+    await check(kind + ' revoked actor cannot cancel', async () => {
+      const f=fixture(); f.revoke(); assert.equal((await f.cancel(kind)).status,403); assert.equal(f.state.receiptWrites,0);
+    });
+    await check(kind + ' signed out actor cannot cancel', async () => {
+      const f=fixture(); f.logout(); assert.equal((await f.cancel(kind)).status,401); assert.equal(f.state.receiptWrites,0);
+    });
+    for (const op of ['', 'invalid', 'null']) await check(kind + ' invalid cancellation operation '+op, async () => {
+      const f=fixture(); assert.equal((await f.cancel(kind,op)).status,400); assert.equal(f.state.receiptWrites,0);
+    });
     for (const bad of [null, '', 'not-a-uuid', 17, uuid.replace('-4a67-', '-7a67-')]) await check(kind + ' invalid operation rejected ' + JSON.stringify(bad), async () => {
       const f = fixture(), r = await f.post(kind, { ...body, operationId: bad }); assert.equal(r.status,400); assert.equal(f.state.creates,0);
     });

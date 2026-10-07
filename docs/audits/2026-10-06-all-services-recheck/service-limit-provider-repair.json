@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T16:52:12.259988+00:00",
-  "status": "navigation-repair-full-local-gate-passed-not-yet-pushed",
+  "status": "navigation-repair-pushed-ci-production-verification-pending",
   "baselineCommit": "cfa921659dff49202b8290e3ec04d1a5ed8ec76e",
   "baseline": "service-limit-provider-baseline.json",
   "current": "service-limit-provider-current.json",
@@ -64,7 +64,7 @@
     "endedAt": "2026-10-06T16:54:54.910285+00:00"
   },
   "navigationScopeFinding": {
-    "status": "full-local-gate-passed-not-yet-pushed",
+    "status": "deployed-exact-sha-ready-anonymous-publication-passed-private-flow-unproven",
     "baselineEvidence": "service-limit-navigation-baseline.json",
     "probe": "probe-service-limit-navigation.cjs",
     "cases": 3,
@@ -99,7 +99,26 @@
     "fullGateExitCode": 0,
     "sourceFreezeReverifiedBeforeCommit": true,
     "sourceFiles": 2664,
-    "changedSources": []
+    "changedSources": [],
+    "commit": "9c8308a9dde221e745f246c387d9e3a47121bcc2",
+    "pushExitCode": 0,
+    "sourceFreezeReverifiedAfterCommit": true,
+    "ciRuns": [
+      {
+        "id": 37558142000,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "9c8308a9dde221e745f246c387d9e3a47121bcc2"
+      }
+    ],
+    "productionDeployments": [
+      {
+        "id": "dpl_GoEDfyS1r9SMMuQLMNzSKaMqx577",
+        "state": "READY",
+        "sha": "9c8308a9dde221e745f246c387d9e3a47121bcc2"
+      }
+    ],
+    "publicEvidence": "service-limit-navigation-public-9c8308a9.json"
   },
   "priorStatusBeforeNavigationRepair": "full-local-gate-passed-not-deployed"
 }

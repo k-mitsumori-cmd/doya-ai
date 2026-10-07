@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback, useRef, type PointerEvent as ReactPoi
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { sfaInit, withOrg, fetchAllSfaAccounts } from '@/lib/sfa/client'
+import { sfaJson, SfaClientRejection, isSfaClientTask, isSfaClientActivity, type SfaClientTask } from '@/lib/sfa/client-response'
+import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
+import MutationRecovery from '@/components/sfa/MutationRecovery'
 import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
@@ -29,9 +32,9 @@ interface Deal {
   openTaskCount: number
 }
 interface Account { id: string; name: string }
-interface Task { id: string; title: string; status: string; dueDate: string | null; dealId: string | null }
+type Task = SfaClientTask
 interface SfaActivityRow { id: string; type: string; subject: string | null; body: string | null; occurredAt: string }
-interface AiTaskCandidate { title: string; dueDate: string | null; checked: boolean }
+interface AiTaskCandidate { id: string; title: string; dueDate: string | null; checked: boolean }
 interface DealPage {
   stages: Stage[]
   deals: Deal[]
@@ -77,7 +80,17 @@ const elapsedLabel = (d: Deal): string | null => {
 
 export default function SfaDealsPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
-  const ready = !!orgSlug
+  const mutations = useSfaClientMutations(orgSlug, (pending, state) => {
+    if (state === 'found' && pending.lane.startsWith('ai-task:')) setAiModal(m => m && ({ ...m, candidates: m.candidates.filter(c => 'ai-task:' + c.id !== pending.lane) }))
+    loadTasks(); load()
+    if (detailRef.current) { void loadDetailTasks(detailRef.current); void loadActivities(detailRef.current) }
+  })
+  const ready = mutations.allowed
+  const detailRef = useRef<string | null>(null)
+  const detailEpoch = useRef(0)
+  const aiEpoch = useRef(0)
+  const aiRequest = useRef<AbortController | null>(null)
+  const bulkRunning = useRef(false)
   const [stages, setStages] = useState<Stage[]>([])
   const [deals, setDeals] = useState<Deal[]>([])
   const [nextCursor, setNextCursor] = useState<string | null>(null)
@@ -118,7 +131,7 @@ export default function SfaDealsPage() {
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(() => {
-    if (!ready) return
+    if (!ready || !mutations.active()) return
     dealsRequest.current?.abort()
     moreDealsRequest.current?.abort()
     const controller = new AbortController()
@@ -136,13 +149,13 @@ export default function SfaDealsPage() {
         return d
       })
       .then((d) => {
-        if (!controller.signal.aborted) {
+        if (!controller.signal.aborted && mutations.active()) {
           setStages(d.stages); setDeals(d.deals); setNextCursor(d.nextCursor)
           setTotalCount(d.totalCount); setStageSummary(d.stageSummary)
         }
       })
-      .catch(() => { if (!controller.signal.aborted) setDealsError(true) })
-      .finally(() => { if (!controller.signal.aborted) setDealsLoading(false) })
+      .catch(() => { if (!controller.signal.aborted && mutations.active()) setDealsError(true) })
+      .finally(() => { if (!controller.signal.aborted && mutations.active()) setDealsLoading(false) })
     fetch('/api/sfa/summary', sfaInit(orgSlug, { signal: controller.signal }))
       .then(async (r) => {
         if (!r.ok) throw new Error('商談集計の取得に失敗しました')
@@ -150,11 +163,12 @@ export default function SfaDealsPage() {
         if (!isSfaSummary(data.summary)) throw new Error('商談集計の応答形式が不正です')
         return data.summary
       })
-      .then((data) => { if (!controller.signal.aborted) setSummary(data) })
-      .catch(() => { if (!controller.signal.aborted) setSummaryError(true) })
-  }, [ready, orgSlug])
+      .then((data) => { if (!controller.signal.aborted && mutations.active()) setSummary(data) })
+      .catch(() => { if (!controller.signal.aborted && mutations.active()) setSummaryError(true) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, orgSlug, mutations.key])
   const loadMore = useCallback(() => {
-    if (!ready || !nextCursor || dealsLoading || loadingMore) return
+    if (!ready || !mutations.active() || !nextCursor || dealsLoading || loadingMore) return
     moreDealsRequest.current?.abort()
     const controller = new AbortController()
     moreDealsRequest.current = controller
@@ -168,7 +182,7 @@ export default function SfaDealsPage() {
         return data
       })
       .then((data) => {
-        if (controller.signal.aborted) return
+        if (controller.signal.aborted || !mutations.active()) return
         setDeals((current) => {
           const seen = new Set(current.map((deal) => deal.id))
           return [...current, ...data.deals.filter((deal) => !seen.has(deal.id))]
@@ -177,27 +191,27 @@ export default function SfaDealsPage() {
         setTotalCount(data.totalCount)
         setStageSummary(data.stageSummary)
       })
-      .catch(() => { if (!controller.signal.aborted) setDealsError(true) })
-      .finally(() => { if (!controller.signal.aborted) setLoadingMore(false) })
-  }, [ready, nextCursor, dealsLoading, loadingMore, orgSlug])
+      .catch(() => { if (!controller.signal.aborted && mutations.active()) setDealsError(true) })
+      .finally(() => { if (!controller.signal.aborted && mutations.active()) setLoadingMore(false) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, nextCursor, dealsLoading, loadingMore, orgSlug, mutations.key])
   const loadTasks = useCallback(() => {
-    if (!ready) return
+    if (!ready || !mutations.active()) return
     tasksRequest.current?.abort()
     const controller = new AbortController()
     tasksRequest.current = controller
     setTasksError(false)
-    fetch('/api/sfa/tasks', sfaInit(orgSlug, { signal: controller.signal }))
-      .then(async (r) => {
-        if (!r.ok) throw new Error('タスクの取得に失敗しました')
-        const d = await r.json()
-        if (!Array.isArray(d.tasks)) throw new Error('タスクの応答形式が不正です')
+    sfaJson('/api/sfa/tasks', orgSlug, { signal: controller.signal })
+      .then(d => {
+        if (!Array.isArray(d.tasks) || !d.tasks.every(isSfaClientTask)) throw new Error('タスクの応答形式が不正です')
         return d as { tasks: Task[] }
       })
-      .then((d) => { if (!controller.signal.aborted) setTasks(d.tasks) })
-      .catch(() => { if (!controller.signal.aborted) setTasksError(true) })
-  }, [ready, orgSlug])
+      .then((d) => { if (!controller.signal.aborted && mutations.active()) setTasks(d.tasks) })
+      .catch(() => { if (!controller.signal.aborted && mutations.active()) setTasksError(true) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, orgSlug, mutations.key])
   const loadDetailTasks = useCallback(async (dealId: string, page = 1) => {
-    if (!ready) return
+    if (!ready || !mutations.active()) return
     detailTasksRequest.current?.abort()
     const controller = new AbortController()
     detailTasksRequest.current = controller
@@ -205,40 +219,42 @@ export default function SfaDealsPage() {
     setDetailTasksError(false)
     try {
       const path = `/api/sfa/tasks?dealId=${encodeURIComponent(dealId)}&page=${page}`
-      const response = await fetch(path, sfaInit(orgSlug, { signal: controller.signal }))
-      const data = await response.json()
-      if (!response.ok || !Array.isArray(data.tasks) || data.page !== page || typeof data.hasMore !== 'boolean' ||
+      const data = await sfaJson(path, orgSlug, { signal: controller.signal })
+      if (!Array.isArray(data.tasks) || !data.tasks.every(isSfaClientTask) || data.page !== page || typeof data.hasMore !== 'boolean' ||
           !data.tasks.every((task: Task) => task.dealId === dealId)) {
-        throw new Error(data.error || '商談のタスクを取得できませんでした')
+        throw new Error( '商談のタスクを取得できませんでした')
       }
-      if (controller.signal.aborted) return
+      if (controller.signal.aborted || !mutations.active() || detailRef.current !== dealId) return
+      const rows = data.tasks
       setDetailTasks((current) => page === 1
-        ? data.tasks
-        : [...current, ...data.tasks.filter((task: Task) => !current.some((item) => item.id === task.id))])
+        ? rows
+        : [...current, ...rows.filter((task: Task) => !current.some((item) => item.id === task.id))])
       setDetailTasksPage(page)
       setDetailTasksHasMore(data.hasMore)
       setDetailTasksRetryPage(1)
     } catch {
-      if (!controller.signal.aborted) {
+      if (!controller.signal.aborted && mutations.active()) {
         setDetailTasksError(true)
         setDetailTasksRetryPage(page)
       }
     } finally {
-      if (!controller.signal.aborted) setDetailTasksLoading(false)
+      if (!controller.signal.aborted && mutations.active()) setDetailTasksLoading(false)
     }
-  }, [ready, orgSlug])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, orgSlug, mutations.key])
   const loadAccounts = useCallback(() => {
-    if (!ready) return
+    if (!ready || !mutations.active()) return
     accountsRequest.current?.abort()
     const controller = new AbortController()
     accountsRequest.current = controller
     setAccountsError(false)
     setAccountsLoading(true)
     fetchAllSfaAccounts(orgSlug, controller.signal)
-      .then((all) => { if (!controller.signal.aborted) setAccounts(all) })
-      .catch(() => { if (!controller.signal.aborted) setAccountsError(true) })
-      .finally(() => { if (!controller.signal.aborted) setAccountsLoading(false) })
-  }, [ready, orgSlug])
+      .then((all) => { if (!controller.signal.aborted && mutations.active()) setAccounts(all) })
+      .catch(() => { if (!controller.signal.aborted && mutations.active()) setAccountsError(true) })
+      .finally(() => { if (!controller.signal.aborted && mutations.active()) setAccountsLoading(false) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, orgSlug, mutations.key])
   const loadActivities = useCallback((dealId: string, cursor?: string) => {
     activitiesRequest.current?.abort()
     const controller = new AbortController()
@@ -246,16 +262,14 @@ export default function SfaDealsPage() {
     setActivitiesLoading(true)
     setActivitiesError(false)
     const path = `/api/sfa/activities?dealId=${encodeURIComponent(dealId)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`
-    return fetch(withOrg(path, orgSlug), sfaInit(orgSlug, { signal: controller.signal }))
-      .then(async (r) => {
-        if (!r.ok) throw new Error('活動の取得に失敗しました')
-        const d = await r.json()
-        if (!Array.isArray(d.activities) || typeof d.totalCount !== 'number' ||
+    return sfaJson(path, orgSlug, { signal: controller.signal })
+      .then(d => {
+        if (!Array.isArray(d.activities) || !d.activities.every(isSfaClientActivity) || typeof d.totalCount !== 'number' ||
             !(d.nextCursor === null || typeof d.nextCursor === 'string')) throw new Error('活動の応答形式が不正です')
         return d as { activities: SfaActivityRow[]; totalCount: number; nextCursor: string | null }
       })
       .then((d) => {
-        if (controller.signal.aborted) return
+        if (controller.signal.aborted || !mutations.active() || detailRef.current !== dealId) return
         setDetailActs((previous) => cursor
           ? [...previous, ...d.activities.filter((activity) => !previous.some((item) => item.id === activity.id))]
           : d.activities)
@@ -264,15 +278,16 @@ export default function SfaDealsPage() {
         setActivitiesRetryCursor(null)
       })
       .catch(() => {
-        if (!controller.signal.aborted) {
+        if (!controller.signal.aborted && mutations.active()) {
           setActivitiesError(true)
           setActivitiesRetryCursor(cursor || null)
         }
       })
-      .finally(() => { if (!controller.signal.aborted) setActivitiesLoading(false) })
-  }, [orgSlug])
+      .finally(() => { if (!controller.signal.aborted && mutations.active()) setActivitiesLoading(false) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgSlug, mutations.key])
   useEffect(() => {
-    if (!ready) return
+    if (!ready || !mutations.active()) return
     setStages([])
     setDeals([])
     setLoadingMore(false)
@@ -299,7 +314,8 @@ export default function SfaDealsPage() {
       accountsRequest.current?.abort()
       activitiesRequest.current?.abort()
     }
-  }, [ready, orgSlug, load, loadTasks, loadAccounts])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, orgSlug, load, loadTasks, loadAccounts, mutations.key])
 
   const create = async () => {
     if (!name.trim()) return
@@ -410,22 +426,13 @@ export default function SfaDealsPage() {
   const tasksOf = (dealId: string) => tasks.filter((t) => t.dealId === dealId && t.status !== 'done')
 
   const toggleTask = async (t: Task) => {
-    setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: x.status === 'done' ? 'open' : 'done' } : x)))
-    try {
-      const res = await fetch(`/api/sfa/tasks/${t.id}`, sfaInit(orgSlug, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      }))
-      if (!res.ok) throw new Error()
-      loadTasks()
-      if (detail?.id === t.dealId) loadDetailTasks(detail.id)
-      load()
-    } catch {
-      toast.error('更新に失敗しました')
-      loadTasks()
-      if (detail?.id === t.dealId) loadDetailTasks(detail.id)
-    }
+    const result = await mutations.mutateTask(t, { status: t.status === 'done' ? 'open' : 'done' })
+    if (!result || !mutations.active()) return
+    tasksRequest.current?.abort(); detailTasksRequest.current?.abort()
+    setTasks(prev => prev.map(x => x.id === t.id ? { ...x, ...(result.task as Task) } : x))
+    setDetailTasks(prev => prev.map(x => x.id === t.id ? { ...x, ...(result.task as Task) } : x))
+    loadTasks(); load()
+    if (detailRef.current === t.dealId && t.dealId) void loadDetailTasks(t.dealId)
   }
 
   // ============ AI次アクション（提案 + タスク候補の選択追加） ============
@@ -440,56 +447,49 @@ export default function SfaDealsPage() {
   const [aiAdding, setAiAdding] = useState(false)
 
   const aiNextAction = async (deal: Deal) => {
+    if (!mutations.active() || aiRequest.current) return
+    const controller = new AbortController()
+    aiRequest.current = controller
+    const epoch = ++aiEpoch.current
     setAiDealId(deal.id)
     try {
-      const res = await fetch('/api/sfa/ai/next-action', sfaInit(orgSlug, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId: deal.id }),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      setAiModal({
-        deal,
-        nextAction: d.nextAction || '',
-        reason: d.reason || '',
-        risk: d.risk || '',
-        candidates: (d.tasks || []).map((t: { title: string; dueDate: string | null }) => ({ ...t, checked: true })),
-      })
-    } catch (e: any) {
-      toast.error(e.message)
+      const d = await sfaJson('/api/sfa/ai/next-action', orgSlug, { method: 'POST', signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dealId: deal.id }) })
+      if (!mutations.active() || controller.signal.aborted || aiEpoch.current !== epoch) return
+      if (![d.nextAction, d.reason, d.risk].every(v => typeof v === 'string') || !Array.isArray(d.tasks) || d.tasks.length > 20 ||
+        !d.tasks.every(t => t && typeof t.title === 'string' && t.title.trim() && t.title.length <= 200 && (t.dueDate === null || typeof t.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.dueDate) && jstDateKey(t.dueDate) === t.dueDate))) throw new Error('提案の応答を確認できませんでした。')
+      setAiModal({ deal, nextAction: d.nextAction as string, reason: d.reason as string, risk: d.risk as string,
+        candidates: d.tasks.map(t => ({ ...t, id: crypto.randomUUID(), checked: true })) })
+    } catch (error) {
+      if (mutations.active() && !controller.signal.aborted && aiEpoch.current === epoch && !(error instanceof SfaClientRejection && error.status === 402 && ['SFA_AI_LIMIT_REACHED', 'SFA_LIMIT_REACHED'].includes(error.code || ''))) toast.error(error instanceof Error ? error.message : '提案を取得できませんでした。')
     } finally {
-      setAiDealId(null)
+      if (aiRequest.current === controller) aiRequest.current = null
+      if (mutations.active() && aiEpoch.current === epoch) setAiDealId(null)
     }
   }
-
+  const closeAi = () => { ++aiEpoch.current; setAiModal(null); setAiAdding(false) }
   const addCheckedTasks = async () => {
-    if (!aiModal) return
-    const checked = aiModal.candidates.filter((c) => c.checked && c.title.trim())
-    if (checked.length === 0) {
-      toast.error('追加するタスクにチェックを入れてください')
-      return
-    }
+    if (!aiModal || !mutations.active() || bulkRunning.current) return
+    const checked = aiModal.candidates.filter(c => c.checked && c.title.trim())
+    if (!checked.length) { toast.error('追加するタスクにチェックを入れてください'); return }
+    const epoch = aiEpoch.current
+    bulkRunning.current = true
     setAiAdding(true)
+    let accepted = 0
     try {
-      let ok = 0
-      for (const c of checked) {
-        const res = await fetch('/api/sfa/tasks', sfaInit(orgSlug, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: c.title, dueDate: c.dueDate || null, dealId: aiModal.deal.id }),
-        }))
-        if (res.ok) ok++
+      for (const candidate of checked) {
+        if (!mutations.active() || aiEpoch.current !== epoch) break
+        const row = await mutations.create('task', 'ai-task:' + candidate.id, { title: candidate.title, dueDate: candidate.dueDate || null, dealId: aiModal.deal.id })
+        if (!mutations.active() || aiEpoch.current !== epoch) break
+        if (!row) break
+        accepted++
+        setAiModal(m => m && ({ ...m, candidates: m.candidates.filter(c => c.id !== candidate.id) }))
       }
-      toast.success(`タスクを${ok}件追加しました`)
-      setAiModal(null)
-      loadTasks()
-      if (detail?.id === aiModal.deal.id) loadDetailTasks(detail.id)
-      load()
-    } catch {
-      toast.error('追加に失敗しました')
+      if (!mutations.active() || aiEpoch.current !== epoch) return
+      if (accepted) { toast.success(`タスクを${accepted}件追加しました`); loadTasks(); load(); if (detailRef.current === aiModal.deal.id) void loadDetailTasks(aiModal.deal.id) }
     } finally {
-      setAiAdding(false)
+      bulkRunning.current = false
+      if (mutations.active() && aiEpoch.current === epoch) setAiAdding(false)
     }
   }
 
@@ -506,8 +506,14 @@ export default function SfaDealsPage() {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskDue, setNewTaskDue] = useState('')
   const [taskBusy, setTaskBusy] = useState(false)
+  detailRef.current = detail?.id || null
+  const taskDraft = useSfaDraftSnapshot([newTaskTitle, newTaskDue, detail?.id])
+  const activityDraft = useSfaDraftSnapshot([actType, actSubject, detail?.id])
+  const closeDetail = () => { ++detailEpoch.current; detailRef.current = null; detailTasksRequest.current?.abort(); activitiesRequest.current?.abort(); setDetail(null); setTaskBusy(false); setActBusy(false) }
+  useEffect(() => { setTaskBusy(false); setActBusy(false); setAiAdding(false); ++aiEpoch.current; setAiModal(null); aiRequest.current?.abort(); aiRequest.current = null; return () => { aiRequest.current?.abort() } }, [mutations.key])
 
   const openDetail = (d: Deal) => {
+    ++detailEpoch.current; detailRef.current = d.id; setTaskBusy(false); setActBusy(false)
     setDetail(d)
     setForm({
       name: d.name,
@@ -574,47 +580,31 @@ export default function SfaDealsPage() {
   }
 
   const addDetailTask = async () => {
-    if (!detail || !newTaskTitle.trim()) return
+    if (!detail || !newTaskTitle.trim() || !mutations.active() || mutations.creationBlocked('task')) return
+    const epoch = detailEpoch.current, revision = taskDraft.current.revision, dealId = detail.id
     setTaskBusy(true)
-    try {
-      const res = await fetch('/api/sfa/tasks', sfaInit(orgSlug, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTaskTitle, dueDate: newTaskDue || null, dealId: detail.id }),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      setNewTaskTitle(''); setNewTaskDue('')
-      loadTasks()
-      loadDetailTasks(detail.id)
-      load()
-    } catch (e: any) {
-      toast.error(e.message)
-    } finally {
-      setTaskBusy(false)
-    }
+    const row = await mutations.create('task', 'deal-task:' + dealId, { title: newTaskTitle, dueDate: newTaskDue || null, dealId })
+    if (!mutations.active()) return
+    if (detailEpoch.current === epoch) setTaskBusy(false)
+    if (!row) return
+    loadTasks(); load()
+    if (detailEpoch.current !== epoch || detailRef.current !== dealId) return
+    if (taskDraft.current.revision === revision) { setNewTaskTitle(''); setNewTaskDue('') }
+    void loadDetailTasks(dealId)
   }
 
   const addActivity = async () => {
-    if (!detail || !actSubject.trim()) return
+    if (!detail || !actSubject.trim() || !mutations.active() || mutations.creationBlocked('activity')) return
+    const epoch = detailEpoch.current, revision = activityDraft.current.revision, dealId = detail.id
     setActBusy(true)
-    try {
-      const res = await fetch('/api/sfa/activities', sfaInit(orgSlug, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: actType, subject: actSubject, dealId: detail.id }),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      setActSubject('')
-      // タイムライン再取得 + 一覧の lastActivityAt 反映
-      loadActivities(detail.id)
-      load()
-    } catch (e: any) {
-      toast.error(e.message)
-    } finally {
-      setActBusy(false)
-    }
+    const row = await mutations.create('activity', 'deal-activity:' + dealId, { type: actType, subject: actSubject, dealId })
+    if (!mutations.active()) return
+    if (detailEpoch.current === epoch) setActBusy(false)
+    if (!row) return
+    load()
+    if (detailEpoch.current !== epoch || detailRef.current !== dealId) return
+    if (activityDraft.current.revision === revision) setActSubject('')
+    void loadActivities(dealId)
   }
 
   const isStale = (d: Deal) =>
@@ -630,6 +620,7 @@ export default function SfaDealsPage() {
 
   return (
     <div className="p-4 lg:p-6">
+      <MutationRecovery mutations={mutations} />
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-black text-slate-900">商談パイプライン</h1>
@@ -772,7 +763,7 @@ export default function SfaDealsPage() {
                             {previewTasks.map((t) => (
                               <div key={t.id} className="flex items-center gap-1.5">
                                 <button
-                                  onClick={() => toggleTask(t)}
+                                  disabled={mutations.blocked('task:' + t.id) || !ready} onClick={() => toggleTask(t)}
                                   className="w-4 h-4 rounded border-2 border-slate-300 hover:border-green-500 flex-shrink-0 flex items-center justify-center"
                                   title="完了にする"
                                 />
@@ -850,8 +841,9 @@ export default function SfaDealsPage() {
 
       {/* ===== AI次アクション モーダル（提案 + タスク候補をチェックして追加） ===== */}
       {aiModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setAiModal(null)}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeAi}>
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+            <MutationRecovery mutations={mutations} />
             <div className="flex items-start justify-between gap-2 mb-4">
               <div>
                 <p className="text-[11px] font-black text-[#7f19e6] flex items-center gap-1">
@@ -859,7 +851,7 @@ export default function SfaDealsPage() {
                 </p>
                 <h2 className="text-lg font-black text-slate-900 leading-snug">{aiModal.deal.name}</h2>
               </div>
-              <button onClick={() => setAiModal(null)} className="text-slate-300 hover:text-slate-500">
+              <button onClick={closeAi} className="text-slate-300 hover:text-slate-500">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
@@ -879,9 +871,9 @@ export default function SfaDealsPage() {
                 <p className="text-xs font-black text-slate-500 mb-2">タスク候補（チェックしたものを追加・期日は変更できます）</p>
                 <div className="space-y-2 mb-4">
                   {aiModal.candidates.map((c, i) => (
-                    <div key={i} className={`flex items-center gap-2.5 rounded-xl border-2 p-2.5 transition-colors ${c.checked ? 'border-green-400 bg-green-50/50' : 'border-slate-200'}`}>
+                    <div key={c.id} className={`flex items-center gap-2.5 rounded-xl border-2 p-2.5 transition-colors ${c.checked ? 'border-green-400 bg-green-50/50' : 'border-slate-200'}`}>
                       <button
-                        onClick={() => setAiModal((m) => m && ({ ...m, candidates: m.candidates.map((x, j) => (j === i ? { ...x, checked: !x.checked } : x)) }))}
+                        disabled={aiAdding} onClick={() => setAiModal((m) => m && ({ ...m, candidates: m.candidates.map((x, j) => (j === i ? { ...x, checked: !x.checked } : x)) }))}
                         className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${c.checked ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`}
                       >
                         {c.checked && <span className="material-symbols-outlined text-[16px]">check</span>}
@@ -890,6 +882,7 @@ export default function SfaDealsPage() {
                       <input
                         type="date"
                         value={c.dueDate || ''}
+                        disabled={aiAdding}
                         onChange={(e) => setAiModal((m) => m && ({ ...m, candidates: m.candidates.map((x, j) => (j === i ? { ...x, dueDate: e.target.value || null } : x)) }))}
                         className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-bold flex-shrink-0 w-[8.5rem]"
                       />
@@ -913,11 +906,12 @@ export default function SfaDealsPage() {
 
       {/* ===== 商談詳細モーダル（プロパティ編集 + タスク + 活動タイムライン） ===== */}
       {detail && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setDetail(null)}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeDetail}>
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+            <MutationRecovery mutations={mutations} />
             <div className="flex items-start justify-between gap-2 mb-4">
               <h2 className="text-lg font-black text-slate-900">商談の詳細</h2>
-              <button onClick={() => setDetail(null)} className="text-slate-300 hover:text-slate-500">
+              <button onClick={closeDetail} className="text-slate-300 hover:text-slate-500">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
@@ -973,12 +967,12 @@ export default function SfaDealsPage() {
                 <input
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addDetailTask()}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && addDetailTask()}
                   placeholder="やることを入力（例: 見積を送る）"
                   className="flex-1 rounded-xl border border-slate-200 px-3 py-2 font-bold text-sm"
                 />
                 <input type="date" value={newTaskDue} onChange={(e) => setNewTaskDue(e.target.value)} className="rounded-xl border border-slate-200 px-2 py-2 font-bold text-xs w-[8.5rem]" />
-                <button onClick={addDetailTask} disabled={taskBusy || !newTaskTitle.trim()} className="px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50">追加</button>
+                <button onClick={addDetailTask} disabled={taskBusy || mutations.creationBlocked('task') || !ready || !newTaskTitle.trim()} className="px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50">追加</button>
               </div>
               <div className="space-y-1.5">
                 {detailTasksError && <p role="alert" className="text-xs font-bold text-red-700">商談のタスクを読み込めませんでした。<button type="button" onClick={() => loadDetailTasks(detail.id, detailTasksRetryPage)} className="underline">再試行</button></p>}
@@ -987,7 +981,7 @@ export default function SfaDealsPage() {
                 {detailTasks.map((t) => (
                   <div key={t.id} className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2">
                     <button
-                      onClick={() => toggleTask(t)}
+                      disabled={mutations.blocked('task:' + t.id) || !ready} onClick={() => toggleTask(t)}
                       className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${t.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-500'}`}
                     >
                       {t.status === 'done' && <span className="material-symbols-outlined text-[14px]">check</span>}
@@ -1019,11 +1013,11 @@ export default function SfaDealsPage() {
                 <input
                   value={actSubject}
                   onChange={(e) => setActSubject(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addActivity()}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && addActivity()}
                   placeholder="活動内容を入力（例: 初回ヒアリング実施）"
                   className="flex-1 rounded-xl border border-slate-200 px-3 py-2 font-bold text-sm"
                 />
-                <button onClick={addActivity} disabled={actBusy || !actSubject.trim()} className="px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50">追加</button>
+                <button onClick={addActivity} disabled={actBusy || mutations.creationBlocked('activity') || !ready || !actSubject.trim()} className="px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50">追加</button>
               </div>
               <div className="space-y-1.5">
                 {activitiesError && (

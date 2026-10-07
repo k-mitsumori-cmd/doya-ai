@@ -1,0 +1,130 @@
+{
+  "checkedAt": "2026-10-07T01:52:26.658Z",
+  "passed": 29,
+  "results": [
+    {
+      "name": "task-create waits and denies committed revocation",
+      "status": 403
+    },
+    {
+      "name": "task-update waits and denies committed revocation",
+      "status": 403
+    },
+    {
+      "name": "task-delete waits and denies committed revocation",
+      "status": 403
+    },
+    {
+      "name": "activity-create waits and denies committed revocation",
+      "status": 403
+    },
+    {
+      "name": "authorized write holds membership until commit; later revocation waits",
+      "status": 200
+    },
+    {
+      "name": "activity waits for deal lock and rejects freshly deactivated relation",
+      "status": 400
+    },
+    {
+      "name": "20 concurrent legacy toggles serialized without lost updates",
+      "requests": 20,
+      "successes": 20
+    },
+    {
+      "name": "12 concurrent same-deal activities commit without share-lock upgrade deadlocks; latest date retained",
+      "requests": 12,
+      "successes": 12
+    },
+    {
+      "name": "task 12 concurrent operation replays create exactly one row and receipt",
+      "requests": 12
+    },
+    {
+      "name": "task changed input conflicts and hard-deleted row cannot be resurrected"
+    },
+    {
+      "name": "activity 12 concurrent operation replays create exactly one row and receipt",
+      "requests": 12
+    },
+    {
+      "name": "activity changed input conflicts and hard-deleted row cannot be resurrected"
+    },
+    {
+      "name": "read-only recovery waits for in-flight creation receipt commit",
+      "lockWaitObserved": true
+    },
+    {
+      "name": "receipt insert failure rolls back actual task insertion"
+    },
+    {
+      "name": "12 actual same-version writes have one winner; stale delete denied; current delete and read recovery confirmed"
+    },
+    {
+      "name": "actual timestamp versions increase by millisecond even when prior timestamp is in future"
+    },
+    {
+      "name": "read-only task recovery waits for actual update lock and returns committed value"
+    },
+    {
+      "name": "task missing read then atomic cancellation blocks later original create; repeated cancellation is idempotent"
+    },
+    {
+      "name": "task real cancellation advisory lock wins; delayed create waits then rejects without business write"
+    },
+    {
+      "name": "task real create advisory lock wins; cancellation waits then returns committed row without deleting it"
+    },
+    {
+      "name": "task cancellation preserves unavailable creation receipt; no deleted row resurrection"
+    },
+    {
+      "name": "task cancellation waits for actual actor revocation and denies without receipt write"
+    },
+    {
+      "name": "task real cancellation receipt failure rolls back and leaves original operation usable"
+    },
+    {
+      "name": "activity missing read then atomic cancellation blocks later original create; repeated cancellation is idempotent"
+    },
+    {
+      "name": "activity real cancellation advisory lock wins; delayed create waits then rejects without business write"
+    },
+    {
+      "name": "activity real create advisory lock wins; cancellation waits then returns committed row without deleting it"
+    },
+    {
+      "name": "activity cancellation preserves unavailable creation receipt; no deleted row resurrection"
+    },
+    {
+      "name": "activity cancellation waits for actual actor revocation and denies without receipt write"
+    },
+    {
+      "name": "activity real cancellation receipt failure rolls back and leaves original operation usable"
+    }
+  ],
+  "lockWaitObservations": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "sourceHashes": {
+    "src/lib/sfa/mutation-authority.ts": "1310ba745586b9373620f9a73520a9ecc915a392d4f73a9c5a191642906bb3ba",
+    "src/lib/sfa/creation-receipt.ts": "0da200e6e3aefd205bf9df668b7a3060d194717674bf2008053b5ce279a911d3",
+    "src/app/api/sfa/tasks/route.ts": "d21fb4e0d992a3a32720e70decb470ec1cb2619f48ef328487f3cad58de7b273",
+    "src/app/api/sfa/tasks/[id]/route.ts": "240319dfe3b340c10a5d9ef70d1053145f8656365b1f77d8bbbd7c65fd87ae64",
+    "src/app/api/sfa/activities/route.ts": "c82904660f399c873ca55e7354a53db06eafb2bdaf6854a98d9ef5dc257117b9"
+  },
+  "scope": "Actual API handlers, actual helper and generated PrismaClient against a fresh private Unix-socket-only PostgreSQL17 instance with synthetic tables/data. Real lock waits, concurrent execution, commits and rollbacks; schema/FK completeness, production concurrency, external auth/provider and client lifecycle are not proven."
+}
