@@ -14,7 +14,7 @@ import sharp from 'sharp'
 import { generateImageWithFallback } from '@/lib/image-generator'
 import { buildImagePrompt } from './prompt'
 import { isAcceptable, retryHint, verifyCreative } from './verify'
-import { uploadPng } from './storage'
+import { assertPrivateStorage, uploadPng } from './storage'
 import { overlayLogo, type LogoConfig } from './logo'
 import type { CompositionKey, Placement } from './placements'
 import type { AdCopy, BrandProfile, VerifyResult } from './types'
@@ -77,6 +77,7 @@ function aspectLabel(p: Placement): string {
 }
 
 export async function generateBaked(input: GenerateInput): Promise<GenerateResult> {
+  await assertPrivateStorage()
   const { brand, copy, tone, placement, composition, extraDirectives = [], pathPrefix, customPrompt, designRefPrompt, designRefColors } = input
   const genSize = `${placement.genW}x${placement.genH}`
 

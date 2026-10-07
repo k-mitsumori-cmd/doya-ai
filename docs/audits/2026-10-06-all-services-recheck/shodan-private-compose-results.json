@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-07T16:04:48.199Z",
+  "passed": 5,
+  "cases": [
+    "public-no-logo-preserved",
+    "public-logo-preserved",
+    "no-logo",
+    "with-logo",
+    "logo-fetch-failure"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/lib/shodan/slide-image.ts": "f677fc48c65d676700e5cc72096588b85cd80fc762c20792558371bea6dd28f6",
+    "src/lib/doyaslide/generate.ts": "91cde37c3fb7f89135facc8ec382ac0e01668a1e371d601a13c8ea326dd77205",
+    "src/lib/doyaslide/storage.ts": "2a6fd2eecafb6a8e992e948a7ce18cfefd21e6bd03082393e9a2fda9605bc0b0"
+  },
+  "scope": "Actual Shodan image pipeline, actual shared DoyaSlide composer and actual public storage module. Synthetic image provider/normalization/logo fetch/composition and Supabase adapter. No actual production data/provider/storage network. Public intermediate is a source/runtime behavior proof, not measured customer exposure."
+}

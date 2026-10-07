@@ -1,0 +1,253 @@
+{
+  "checkedAt": "2026-10-07T16:04:47.764Z",
+  "passed": 48,
+  "cases": [
+    {
+      "service": "adimage",
+      "operation": "uploadPng",
+      "scenario": "private"
+    },
+    {
+      "service": "adimage",
+      "operation": "uploadPng",
+      "scenario": "public"
+    },
+    {
+      "service": "adimage",
+      "operation": "uploadPng",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "adimage",
+      "operation": "uploadPng",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "adimage",
+      "operation": "uploadPng",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "adimage",
+      "operation": "uploadPng",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "adimage",
+      "operation": "uploadPng",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "adimage",
+      "operation": "uploadPng",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "adimage",
+      "operation": "signedUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "adimage",
+      "operation": "signedUrl",
+      "scenario": "public"
+    },
+    {
+      "service": "adimage",
+      "operation": "signedUrl",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "adimage",
+      "operation": "signedUrl",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "adimage",
+      "operation": "signedUrl",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "adimage",
+      "operation": "signedUrl",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "adimage",
+      "operation": "signedUrl",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "adimage",
+      "operation": "signedUrl",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "adimage",
+      "operation": "downloadBuffer",
+      "scenario": "private"
+    },
+    {
+      "service": "adimage",
+      "operation": "downloadBuffer",
+      "scenario": "public"
+    },
+    {
+      "service": "adimage",
+      "operation": "downloadBuffer",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "adimage",
+      "operation": "downloadBuffer",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "adimage",
+      "operation": "downloadBuffer",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "adimage",
+      "operation": "downloadBuffer",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "adimage",
+      "operation": "downloadBuffer",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "adimage",
+      "operation": "downloadBuffer",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadPng",
+      "scenario": "private"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadPng",
+      "scenario": "public"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadPng",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadPng",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadPng",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadPng",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadPng",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadPng",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadFile",
+      "scenario": "private"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadFile",
+      "scenario": "public"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadFile",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadFile",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadFile",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadFile",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadFile",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "shodan",
+      "operation": "uploadFile",
+      "scenario": "missing-create-failed"
+    },
+    {
+      "service": "shodan",
+      "operation": "signedUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "shodan",
+      "operation": "signedUrl",
+      "scenario": "public"
+    },
+    {
+      "service": "shodan",
+      "operation": "signedUrl",
+      "scenario": "metadata-error"
+    },
+    {
+      "service": "shodan",
+      "operation": "signedUrl",
+      "scenario": "privacy-changed-after-warmup"
+    },
+    {
+      "service": "shodan",
+      "operation": "signedUrl",
+      "scenario": "unknown-privacy"
+    },
+    {
+      "service": "shodan",
+      "operation": "signedUrl",
+      "scenario": "missing-created-private"
+    },
+    {
+      "service": "shodan",
+      "operation": "signedUrl",
+      "scenario": "missing-created-public"
+    },
+    {
+      "service": "shodan",
+      "operation": "signedUrl",
+      "scenario": "missing-create-failed"
+    }
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/lib/adimage/storage.ts": "21daa1ffd3470c62645b526b3878afaa770516d2762302d95b54c4662a761279",
+    "src/lib/shodan/storage.ts": "8c48a0233d8741a89826dbcaf05501e844096e6f2392f416070cca39af8d71e9",
+    "src/lib/private-storage-bucket.ts": "91200a12a8f9babbe44225c39265539409b157ddb2da3059617e4f9823f43744"
+  },
+  "scope": "Actual AdImage/Shodan storage modules with synthetic Supabase object/metadata adapter. Misconfiguration and warm-cache privacy change probes; not actual production bucket state or customer exposure evidence."
+}

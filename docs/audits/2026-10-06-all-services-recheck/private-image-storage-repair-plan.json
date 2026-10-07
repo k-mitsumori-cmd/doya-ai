@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-07T16:04:55.543727+00:00",
+  "status": "frozen24gates-passed-ready-for-reviewed-commit-push",
+  "sourceCommit": "2d81675904b8632b54eb8b9d9b40279cc0655608",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/private-image-storage-release-8901f5ae-89cd-4c5d-90d5-6121402bea88",
+  "repairs": [
+    "Recheck exact nonpublic bucket metadata on every AdImage/Shodan object operation, with15second bound; verify provisioning by re-read",
+    "Preflight private storage before simulated paid generation, reject unsafe bucket before provider",
+    "Shodan uses private pixels renderer and direct private upload, no public DoyaSlide intermediate; logo failure does not silently remove registered logo",
+    "Preserve public DoyaSlide generation and logo/publicURL behavior",
+    "Company profile private GET compares returned content and brand colors as well as timestamps; same-millisecond edits are rejected deterministically"
+  ],
+  "scope": "Future image generation/read pipeline only. Historical public Shodan intermediates and actual production bucket configuration have not been inspected or changed. Global17-service audit remains active.",
+  "previousFailedGate": "docs/audits/2026-10-06-all-services-recheck/private-image-storage-release-4d429672-3d67-45d0-a71a-edb3554e7192",
+  "gateStatus": "passed"
+}

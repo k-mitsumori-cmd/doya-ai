@@ -75,6 +75,15 @@ jobs:
       - name: Shodan private profile after signing (private Unix socket)
         run: python3 docs/audits/2026-10-06-all-services-recheck/shodan-profile-read-postgres-supervise.py
 
+      - name: Private image bucket metadata policy (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-private-image-bucket-policy.cjs
+
+      - name: Private image provider preflight (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-private-image-preflight.cjs
+
+      - name: Shodan private pixels and public DoyaSlide compatibility (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-shodan-private-compose.cjs
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

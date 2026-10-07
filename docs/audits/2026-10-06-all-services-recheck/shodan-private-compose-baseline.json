@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-10-07T15:55:16.106Z",
+  "passed": 0,
+  "cases": [],
+  "failures": [
+    {
+      "scenario": "no-logo",
+      "error": "Private proposal persisted into public DoyaSlide bucket\n\n1 !== 0\n",
+      "publicWrites": 1,
+      "privateWrites": 1,
+      "providerCalls": 1
+    },
+    {
+      "scenario": "with-logo",
+      "error": "Private proposal persisted into public DoyaSlide bucket\n\n2 !== 0\n",
+      "publicWrites": 2,
+      "privateWrites": 1,
+      "providerCalls": 1
+    },
+    {
+      "scenario": "logo-fetch-failure",
+      "error": "Private proposal persisted into public DoyaSlide bucket\n\n1 !== 0\n",
+      "publicWrites": 1,
+      "privateWrites": 1,
+      "providerCalls": 1
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/shodan/slide-image.ts": "bb4f9128d17d3378ec0c6c3f178e00a0383f232a4858747fb6d2b64c26864b1a",
+    "src/lib/doyaslide/generate.ts": "acf97d8d929bfb1013bf7daeb1f30fa169f1ca87ec1de0fcbd391cc8e1ceb66b",
+    "src/lib/doyaslide/storage.ts": "2a6fd2eecafb6a8e992e948a7ce18cfefd21e6bd03082393e9a2fda9605bc0b0"
+  },
+  "scope": "Actual Shodan image pipeline, actual shared DoyaSlide composer and actual public storage module. Synthetic image provider/normalization/logo fetch/composition and Supabase adapter. No actual production data/provider/storage network. Public intermediate is a source/runtime behavior proof, not measured customer exposure.",
+  "sourceCommit": "2d81675904b8632b54eb8b9d9b40279cc0655608"
+}

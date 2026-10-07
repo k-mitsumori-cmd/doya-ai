@@ -30,7 +30,9 @@ export async function GET(req: NextRequest) {
       where: { id: profile.id, organizationId: ctx.organizationId, organization: { members: { some: member } } },
     })
     if (!current) return NextResponse.json({ error: '自社情報が見つからないか、閲覧権限が変更されています。一覧を更新してください。' }, { status: 404, headers: privateReadHeaders })
-    if (current.updatedAt.getTime() !== profile.updatedAt.getTime() || current.logoPath !== profile.logoPath) {
+    if (current.updatedAt.getTime() !== profile.updatedAt.getTime() || current.logoPath !== profile.logoPath
+      || FIELDS.some((field) => current[field] !== profile[field])
+      || JSON.stringify(current.brandColors) !== JSON.stringify(profile.brandColors)) {
       return NextResponse.json({ error: '自社情報が更新されています。再読み込みしてからお試しください。' }, { status: 409, headers: privateReadHeaders })
     }
     return NextResponse.json({ profile: { ...current, logoUrl } }, { headers: privateReadHeaders })

@@ -3,10 +3,9 @@
 // 既存の slidesJson(構成テキスト) を1枚絵のスライド画像へ。gpt-image-2（composeSlideImage）。
 // 生成画像は shodan 非公開バケットへ保存し、配信は署名URL（機密性確保）。
 // ============================================
-import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
-import { fetchBuffer } from '@/lib/doyaslide/logo'
+import { composePrivateSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
 import { raceTimeout } from '@/lib/fetch-timeout'
-import { uploadPng } from './storage'
+import { assertPrivateStorage, uploadPng } from './storage'
 import type { ProposalSlide } from './types'
 
 // DBに保存する形（imagePath は非公開バケット内パス。失敗時 null）
@@ -84,15 +83,15 @@ function visualPromptFor(slide: ProposalSlide, index: number): string {
 
 /** 1スライドを画像生成し、shodan非公開バケットへ保存してパスを返す */
 export async function generateSlideImage(
-  userId: string,
+  _userId: string,
   prepId: string,
   slide: ProposalSlide,
   index: number,
   opts?: { extra?: string; brand?: SlideBrand }
 ): Promise<StoredSlide> {
+  await raceTimeout('privateImageStorage', 25000, assertPrivateStorage())
   const role = roleFromType(slide.type)
-  const res = await composeSlideImage(
-    userId,
+  const res = await composePrivateSlideImage(
     shodanProject(prepId, opts?.brand),
     {
       index: index + 1,
@@ -103,8 +102,8 @@ export async function generateSlideImage(
     },
     opts?.extra
   )
-  // 生成結果（doyaslideの公開URL）を取得し、shodan非公開バケットへ再保存（各I/Oはタイムアウトで保護＝ハング防止）
-  const buf = await fetchBuffer(res.imageUrl)
+  // 公開オブジェクトを作らず、生成した画像データを直接非公開保存へ渡す。
+  const buf = res.buffer
   const path = `shodan/slides/${prepId}/${index}-${Date.now()}.png`
   await raceTimeout('uploadSlide', 25000, uploadPng(path, buf))
   return { title: slide.title, imagePath: path, role }

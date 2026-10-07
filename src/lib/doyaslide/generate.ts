@@ -39,15 +39,9 @@ export interface ComposeResult {
   fallbackUsed: boolean
 }
 
-/** 1スライドを生成して（ロゴがあれば）合成し、URLを返す */
-export async function composeSlideImage(
-  userId: string,
-  project: ComposeProject,
-  slide: ComposeSlide,
-  extraInstruction?: string,
-  // 修正フロー用: Visionが作った完全プロンプトをそのまま使う（buildImagePromptを通さない）
-  promptOverride?: string
-): Promise<ComposeResult> {
+async function generateSlideSource(
+  project: ComposeProject, slide: ComposeSlide, extraInstruction?: string, promptOverride?: string
+) {
   const size = ASPECT_TO_SIZE[(project.aspectRatio as AspectRatio)] || ASPECT_TO_SIZE.wide
   const hasLogo = !!project.logoUrl
   const logoPos = (project.logoPosition as LogoPosition) || 'top-right'
@@ -79,6 +73,43 @@ export async function composeSlideImage(
 
   const img = await generateImageWithFallback({ prompt, size, quality: 'medium' })
   const normalized = await normalizeGeneratedSlide(img.base64, img.mimeType, project.aspectRatio)
+
+  return { img, normalized }
+}
+
+/** Render a private slide without creating a public object or public URL. */
+export async function composePrivateSlideImage(
+  project: ComposeProject, slide: ComposeSlide, extraInstruction?: string
+): Promise<{ buffer: Buffer; model: string; fallbackUsed: boolean }> {
+  const { img, normalized } = await generateSlideSource(project, slide, extraInstruction)
+  let buffer = normalized.buffer
+  if (project.logoUrl) {
+    try {
+      const timeoutMs = Number(process.env.DOYA_UPLOAD_TIMEOUT_MS) || 30000
+      const logo = await raceTimeout('fetchPrivateLogo', timeoutMs, fetchBuffer(project.logoUrl))
+      buffer = await compositeLogo(buffer, logo, {
+        position: (project.logoPosition as LogoPosition) || 'top-right',
+        size: (project.logoSize as LogoSize) || 'M',
+        backingChip: project.logoBackingChip,
+      })
+    } catch {
+      throw new Error('登録済みロゴを反映できませんでした。ロゴを確認してから再度お試しください。')
+    }
+  }
+  return { buffer, model: img.model, fallbackUsed: img.fallbackUsed }
+}
+
+/** 1スライドを生成して（ロゴがあれば）合成し、URLを返す */
+export async function composeSlideImage(
+  userId: string,
+  project: ComposeProject,
+  slide: ComposeSlide,
+  extraInstruction?: string,
+  // 修正フロー用: Visionが作った完全プロンプトをそのまま使う（buildImagePromptを通さない）
+  promptOverride?: string
+): Promise<ComposeResult> {
+  const { img, normalized } = await generateSlideSource(project, slide, extraInstruction, promptOverride)
+  const hasLogo = !!project.logoUrl
 
   // I/O は全てタイムアウトで保護（無いと接続滞留でワーカーが無限ブロック→関数強制終了→凍結）
   const UPLOAD_TIMEOUT_MS = Number(process.env.DOYA_UPLOAD_TIMEOUT_MS) || 30000

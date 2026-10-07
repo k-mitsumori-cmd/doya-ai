@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-07T16:00:13.121194+00:00",
+  "status": "locally-repaired-targeted-tests-passed-frozen24gate-pending",
+  "sources": [
+    "src/lib/adimage/storage.ts",
+    "src/lib/shodan/storage.ts"
+  ],
+  "finding": "Public bucket, bucket metadata error and privacy changed after cached warmup allow object upload/read/sign. Actual production bucket settings not inspected.",
+  "nextRepair": "Verify nonpublic bucket metadata before each object operation, including Shodan signing. Fail safely without object API calls on public/unknown/error; retain deliberate private bucket provisioning and benign concurrent already-exists case only after verified re-read. Test private/missing/error/public/cached-change behavior without network.",
+  "scope": "Synthetic Supabase metadata/object adapter and actual modules, no production exposure evidence",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/private-image-storage-release-4d429672-3d67-45d0-a71a-edb3554e7192"
+}
