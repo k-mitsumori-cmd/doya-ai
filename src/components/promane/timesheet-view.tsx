@@ -2,7 +2,7 @@
 
 import { parsePromaneDuration, parsePromaneWorkDate, promaneToday, formatPromaneWorkDate } from "@/lib/promane/time-input";
 import { useTimeEntryCreation } from "@/lib/promane/use-time-entry-creation";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteTimeEntry } from "@/lib/promane/actions-time-entries";
 import { Button } from "@/components/promane/ui/button";
@@ -29,6 +29,11 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects, tota
   const loading = creation.status === "saving" || creation.status === "checking";
   const [selectedProject, setSelectedProject] = useState("");
   const { confirm, ConfirmDialog } = useConfirm();
+  useEffect(() => {
+    setShowForm(false);
+    setSelectedProject('');
+    submission.current = false;
+  }, [creation.scopeKey]);
   const selectedProjectTasks = projects.find((p) => p.id === selectedProject)?.tasks || [];
 
 

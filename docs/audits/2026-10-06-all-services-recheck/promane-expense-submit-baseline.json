@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-07T20:16:04.929Z",
+  "expected": 2,
+  "passed": 2,
+  "cases": [
+    {
+      "finding": "same-frame double submit calls POST twice",
+      "requests": 2,
+      "amountPerRequest": 10000,
+      "potentialDuplicatedAmount": 20000,
+      "successToasts": 2,
+      "refreshes": 2
+    },
+    {
+      "finding": "malformed HTTP200 acknowledgement accepted without saved expense",
+      "responseBody": {},
+      "successToasts": 1,
+      "refreshes": 1
+    }
+  ],
+  "sourceHashes": {
+    "src/components/promane/finance-tab.tsx": "090068021938b0805f8631dcd12f803e867c47b4e4522b181f4902d10499f43c"
+  },
+  "scope": "Actual mounted FinanceTab and input parser in React StrictMode/real FormData; deferred synthetic fetch responses. Confirms client duplicate and invalid-acknowledgement behavior, not actual duplicate DB writes or production/customer impact."
+}

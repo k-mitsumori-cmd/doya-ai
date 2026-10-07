@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T20:46:56.735Z",
+  "expected": 15,
+  "passed": 15,
+  "cases": [
+    "StrictMode same-frame submits call actual creation lane once",
+    "lost acknowledgement survives remount and only recovers saved row",
+    "missing recovery retains fence without blind resubmit",
+    "explicit server cancellation unlocks a new operation identity",
+    "foreign or mismatched acknowledgement cannot report success",
+    "storage persistence failure sends no server action",
+    "corrupt operation metadata fails closed without overwrite",
+    "scope change ignores delayed old save acknowledgement",
+    "two mounted tabs serialize metadata and do not send distinct duplicates",
+    "failed recovery keeps operation and original write fence",
+    "unresponsive action times out to durable unknown and late success cannot unlock",
+    "missing Web Locks fails before server write",
+    "HTTP200 incomplete or false acknowledgement retains pending operation",
+    "account changes isolate pending operation and reject stale screen callbacks",
+    "anonymous browser cannot start an expense request"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/use-expense-creation.ts": "f0074cfdc7b9c89296390b0287b00d2056c496b7d8cabba38da27bbd8082d155"
+  },
+  "scope": "Actual candidate React hook in StrictMode, real localStorage and serialized synthetic Web Locks; deferred synthetic HTTP responses and session. Actual FinanceTab, native browser, PostgreSQL-linked UI and production not covered."
+}

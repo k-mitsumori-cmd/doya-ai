@@ -1,3 +1,5 @@
+import type { Prisma } from '@prisma/client'
+import { createPromaneExpenseOnce, recoverPromaneExpense, promaneExpenseOperationId, isPromaneExpenseReceiptConflict, PromaneExpenseCreationError } from '@/lib/promane/expense-creation'
 import { parsePromaneExpense, PromaneExpenseInputError } from '@/lib/promane/time-input'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,50 +21,97 @@ async function retryExpenseTransaction<T>(commit: () => Promise<T>): Promise<T> 
   throw new Error('経費を保存できませんでした')
 }
 
-/**
- * POST /api/promane/expenses
- * Body: { workspaceSlug, projectId, category, amount, description, date }
- */
+class ExpenseAccessError extends Error { constructor(readonly status: number, message: string) { super(message) } }
+
+async function scopedOperation<T>(workspaceSlug: string, projectId: string, userId: string,
+  work: (tx: Prisma.TransactionClient, workspaceId: string) => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.$transaction(async tx => {
+        const workspace = await tx.promaneWorkspace.findFirst({
+          where: { slug: workspaceSlug, members: { some: { userId, isActive: true, role: { in: ['owner','admin','member'] } } } }, select: { id: true },
+        });
+        if (!workspace) throw new ExpenseAccessError(403, 'ワークスペースにアクセスできません');
+        const actors = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM promane_members
+          WHERE "workspaceId"=${workspace.id} AND "userId"=${userId} AND "isActive"=true
+            AND role IN ('owner','admin','member') FOR UPDATE`;
+        if (actors.length !== 1) throw new ExpenseAccessError(403, 'ワークスペースの変更権限がありません');
+        const project = await tx.promaneProject.findFirst({ where: { id: projectId, workspaceId: workspace.id }, select: { id: true } });
+        if (!project) throw new ExpenseAccessError(404, 'プロジェクトが見つかりません');
+        return work(tx, workspace.id);
+      }, { isolationLevel: 'Serializable' });
+    } catch (error) { if (!isPromaneExpenseReceiptConflict(error) || attempt === 2) throw error; }
+  }
+  throw new Error('保存状態を確認できません');
+}
+function validSelector(value: unknown): value is string { return typeof value === 'string' && !!value.trim() && value.length <= 200; }
+function operationFailure(error: unknown) {
+  if (error instanceof ExpenseAccessError) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: error.status },
+    );
+  }
+  if (error instanceof PromaneExpenseInputError) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 400 },
+    );
+  }
+  if (error instanceof PromaneExpenseCreationError) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 409 },
+    );
+  }
+  console.error('[promane/expenses] operation failed');
+  return NextResponse.json({ error: '保存状態を確認できません。再登録せず、保存状態を確認してください。' }, { status: 500 });
+}
+
+/** POST creates one operation, or fences an explicitly cancelled missing operation. */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    const userId = (session?.user as any)?.id as string | undefined
-    if (!userId) {
-      return NextResponse.json({ error: 'ログインセッションが切れています' }, { status: 401 })
+    const session = await getServerSession(authOptions), userId = (session?.user as any)?.id as string | undefined;
+    if (!userId) return NextResponse.json({ error: 'ログインセッションが切れています' }, { status: 401 });
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: '経費の入力を確認してください' }, { status: 400 });
+    const { workspaceSlug, projectId, action } = body;
+    if (!validSelector(workspaceSlug) || !validSelector(projectId) || (action !== undefined && action !== 'cancel')) return NextResponse.json({ error: '送信情報を確認してください' }, { status: 400 });
+    let operationId: string;
+    try { operationId = promaneExpenseOperationId(body.operationId); }
+    catch { return NextResponse.json({ error: '送信情報を確認してください' }, { status: 400 }); }
+    if (action === 'cancel') {
+      const result = await scopedOperation(workspaceSlug, projectId, userId, (tx, workspaceId) =>
+        recoverPromaneExpense(tx, { workspaceId, userId }, operationId,
+          id => tx.promaneExpense.findFirst({ where: { id, projectId, project: { workspaceId } } }), true));
+      return NextResponse.json(result);
     }
+    const validated = parsePromaneExpense(body);
+    const expense = await scopedOperation(workspaceSlug, projectId, userId, (tx, workspaceId) =>
+      createPromaneExpenseOnce(tx, { workspaceId, userId }, operationId, validated,
+        id => tx.promaneExpense.findFirst({ where: { id, projectId, project: { workspaceId } } }),
+        () => tx.promaneExpense.create({ data: validated })));
+    return NextResponse.json({ success: true, expense });
+  } catch (error) { return operationFailure(error); }
+}
 
-    const body = await req.json().catch(() => ({}))
-    const { workspaceSlug, projectId } = body || {}
-
-    if (typeof workspaceSlug !== 'string' || !workspaceSlug.trim() || workspaceSlug.length > 200) {
-      return NextResponse.json({ error: 'workspaceSlug と projectId は必須です' }, { status: 400 })
-    }
-
-    const validated = parsePromaneExpense(body)
-
-    const result = await retryExpenseTransaction(() => prisma.$transaction(async tx => {
-      const workspace = await tx.promaneWorkspace.findFirst({
-        where: { slug: workspaceSlug, members: { some: { userId, isActive: true, role: { in: ['owner', 'admin', 'member'] } } } },
-        select: { id: true },
-      })
-      if (!workspace) return { status: 403 as const, error: 'ワークスペースにアクセスできません' }
-      const project = await tx.promaneProject.findFirst({
-        where: { id: projectId, workspaceId: workspace.id },
-        select: { id: true },
-      })
-      if (!project) return { status: 404 as const, error: 'プロジェクトが見つかりません' }
-      const expense = await tx.promaneExpense.create({ data: validated })
-      return { status: 200 as const, expense }
-    }, { isolationLevel: 'Serializable' }))
-    if (result.status !== 200) return NextResponse.json({ error: result.error }, { status: result.status })
-    return NextResponse.json({ success: true, expense: result.expense })
-  } catch (e: any) {
-    if (!(e instanceof PromaneExpenseInputError)) console.error('[promane/expenses][POST] failed')
-    return NextResponse.json(
-      { error: e instanceof PromaneExpenseInputError ? e.message : '経費の追加に失敗しました。時間をおいて再試行してください。' },
-      { status: e instanceof PromaneExpenseInputError ? 400 : 500 }
-    )
-  }
+/** GET recovers only the caller's operation within the requested workspace and project. */
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions), userId = (session?.user as any)?.id as string | undefined;
+    if (!userId) return NextResponse.json({ error: 'ログインセッションが切れています' }, { status: 401 });
+    const query = req.nextUrl.searchParams;
+    if (['workspaceSlug','projectId','operationId'].some(key => query.getAll(key).length !== 1)) return NextResponse.json({ error: '確認対象を指定してください' }, { status: 400 });
+    const workspaceSlug = query.get('workspaceSlug'), projectId = query.get('projectId');
+    if (!validSelector(workspaceSlug) || !validSelector(projectId)) return NextResponse.json({ error: '確認対象を指定してください' }, { status: 400 });
+    let operationId: string;
+    try { operationId = promaneExpenseOperationId(query.get('operationId')); }
+    catch { return NextResponse.json({ error: '送信情報を確認してください' }, { status: 400 }); }
+    const result = await scopedOperation(workspaceSlug, projectId, userId, (tx, workspaceId) =>
+      recoverPromaneExpense(tx, { workspaceId, userId }, operationId,
+        id => tx.promaneExpense.findFirst({ where: { id, projectId, project: { workspaceId } } })));
+    return NextResponse.json(result);
+  } catch (error) { return operationFailure(error); }
 }
 
 /**

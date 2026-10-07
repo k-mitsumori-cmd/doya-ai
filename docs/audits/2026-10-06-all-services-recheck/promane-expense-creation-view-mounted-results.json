@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T20:46:57.139Z",
+  "expected": 2,
+  "passed": 2,
+  "cases": [
+    {
+      "finding": "same-frame double submit now sends one operation",
+      "requests": 1,
+      "amountPerRequest": 10000,
+      "successToasts": 1,
+      "refreshes": 1
+    },
+    {
+      "finding": "malformed HTTP200 acknowledgement retains durable unknown fence",
+      "responseBody": {},
+      "successToasts": 0,
+      "refreshes": 0
+    }
+  ],
+  "sourceHashes": {
+    "src/components/promane/finance-tab.tsx": "bd2a0f2195e055aab3b2e62f90efef7ec91a350bd90ba9b0abdfd55ba3f9ea6a",
+    "src/lib/promane/use-expense-creation.ts": "f0074cfdc7b9c89296390b0287b00d2056c496b7d8cabba38da27bbd8082d155",
+    "src/lib/promane/time-input.ts": "d1c85c52013a1b5ebdcc59e6f0d3dde6720c44af1c14903df0faf0f429c3499a"
+  },
+  "scope": "Actual mounted FinanceTab and input parser in React StrictMode/real FormData; deferred synthetic fetch responses. Actual candidate hook and FinanceTab now prevent same-frame duplication and reject empty HTTP200 acknowledgements. Synthetic HTTP/session, not real Next/database-linked UI or production/customer impact."
+}

@@ -1,4 +1,4 @@
-const {timeCreation,adaptTimePrisma,operationId}=require('./promane-time-creation-fixture.cjs');
+const {timeCreation,expenseCreation,adaptTimePrisma,operationId}=require('./promane-time-creation-fixture.cjs');
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
 
@@ -47,7 +47,7 @@ function fixture({ active = true, foreign = false, projectId = 'p', revokeDuring
     },
   }
   const actions = load('src/lib/promane/actions-time-entries.ts', {
-    './time-entry-creation':timeCreation,'./time-input': load('src/lib/promane/time-input.ts'),
+    './time-entry-creation':timeCreation,'./expense-creation':expenseCreation,'./time-input': load('src/lib/promane/time-input.ts'),
     '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
     '@/lib/promane/auth': {
       requirePromaneAuthAction: async () => ({ userId: 'u' }),
@@ -80,6 +80,7 @@ function apiFixture() {
       return result
     },
     promaneWorkspace: { findFirst: async () => active ? { id: 'w' } : null },
+    promaneMember: { findFirst: async () => active ? { id: 'actor' } : null },
     promaneProject: { findFirst: async () => ({ id: 'p' }) },
     promaneExpense: {
       create: async ({ data }) => { writes++; return data },
@@ -87,14 +88,14 @@ function apiFixture() {
     },
   }
   const api = load('src/app/api/promane/expenses/route.ts', {
-    '@/lib/promane/time-input': load('src/lib/promane/time-input.ts'),
+    '@/lib/promane/expense-creation':expenseCreation,'@/lib/promane/time-input': load('src/lib/promane/time-input.ts'),
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
     '@/lib/auth': {},
     '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
   })
   return {
-    post: () => api.POST({ json: async () => ({ workspaceSlug: 'ws', projectId: 'p', category: 'travel', amount: 100, description: 'Taxi', date: '2026-09-01' }) }),
+    post: () => api.POST({ json: async () => ({ operationId, workspaceSlug: 'ws', projectId: 'p', category: 'travel', amount: 100, description: 'Taxi', date: '2026-09-01' }) }),
     delete: () => api.DELETE({ nextUrl: new URL('https://example.test/api/promane/expenses?workspaceSlug=ws&id=expense') }),
     state: () => ({ attempts, writes, committed }),
   }
@@ -134,7 +135,7 @@ function actionWriteFixture({ revokeDuringCommit = false, foreignTarget = false 
     promaneExpense: { create: async ({ data }) => { writes++; return data } },
   }
   const actions = load('src/lib/promane/actions-time-entries.ts', {
-    './time-entry-creation':timeCreation,'./time-input': load('src/lib/promane/time-input.ts'),
+    './time-entry-creation':timeCreation,'./expense-creation':expenseCreation,'./time-input': load('src/lib/promane/time-input.ts'),
     '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
     '@/lib/promane/auth': {
       requirePromaneAuthAction: async () => ({ userId: 'u' }),
@@ -144,7 +145,7 @@ function actionWriteFixture({ revokeDuringCommit = false, foreignTarget = false 
   })
   return {
     time: () => actions.createTimeEntry('ws', { operationId, memberId: 'm', duration: 60, date: '2026-09-01' }),
-    expense: () => actions.createExpense('ws', { projectId: 'p', category: 'travel', amount: 100, description: 'Taxi', date: '2026-09-01' }),
+    expense: () => actions.createExpense('ws', { operationId, projectId: 'p', category: 'travel', amount: 100, description: 'Taxi', date: '2026-09-01' }),
     rate: () => actions.updateMemberRate('ws', 'm', 3000),
     state: () => ({ attempts, writes, committed }),
   }
@@ -224,7 +225,8 @@ function rateApiFixture({ foreignTarget = false } = {}) {
       const f = apiFixture()
       const response = await f[method]()
       assert.equal(response.status, 403)
-      assert.deepEqual(f.state(), { attempts: 2, writes: 1, committed: true })
+      // POST now aborts the denied transaction; DELETE still returns its denial from the transaction.
+      assert.deepEqual(f.state(), { attempts: 2, writes: 1, committed: method === 'delete' })
     }
   })
   await check('time, expense and rate writes recheck access after serialization conflicts', async () => {

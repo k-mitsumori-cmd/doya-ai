@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-07T20:34:59.362Z",
+  "previousMemberDraftStillVisible": true,
+  "requests": 0,
+  "sourceHashes": {
+    "src/components/promane/timesheet-view.tsx": "40bceb45be172baedd9b74737ca4f31f71e26350740a019e050607cd44eaeaa5"
+  },
+  "scope": "Actual mounted TimesheetView and real hook; synthetic member-prop change retains previous member form content. Does not prove actual Next/authenticated-account navigation or production-user impact."
+}

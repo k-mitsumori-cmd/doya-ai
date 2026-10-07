@@ -1,4 +1,4 @@
-const {timeCreation}=require('./promane-time-creation-fixture.cjs');
+const {timeCreation,expenseCreation}=require('./promane-time-creation-fixture.cjs');
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript');
 function load(file,deps){const exported={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:exported,Date,require:n=>{if(n in deps)return deps[n];throw Error(n)}});return exported}
 (async()=>{const results=[];const files=fs.readdirSync(path.join(__dirname,'../../src/lib/promane')).filter(f=>f.startsWith('actions-'));
@@ -7,7 +7,7 @@ for(const mode of ['inactive','missing','anonymous','foreign-slug','active-contr
  const prisma=new Proxy({$transaction:async function(fn,options){if(options.isolationLevel!=='Serializable')throw Error('Missing serializable transaction');return fn(this)},promaneMember:{findFirst:async()=>({id:'actor'})},promaneWorkspace:{findFirst:async({where})=>{workspaceQueries++;const member=where.members.some;return mode!=='missing'&&where.slug==='target'&&(member.userId===undefined||member.userId==='user')&&(member.isActive===undefined||member.isActive===(mode!=='inactive'))?{id:'workspace',slug:'target',members:[{userId:'user',isActive:true,role:mode==='guest'?'guest':mode==='unknown-role'?'unknown':mode==='member-repair'?'member':'owner'}]}:null}},promaneClient:{create:async({data})=>{writes++;return {id:'client',...data}}}},{get:(t,k)=>{if(k in t)return t[k];unexpected++;throw Error('Unexpected database model '+String(k))}});
  const auth=load('src/lib/promane/auth.ts',{'next-auth':{getServerSession:async()=>mode==='anonymous'?null:{user:{id:'user'}}},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma},'next/navigation':{redirect:()=>{throw Error('Unexpected redirect')}},crypto:require('node:crypto')});
  for(const file of files){
-  const actions=load('src/lib/promane/'+file,{'./time-entry-creation':timeCreation,'./time-input':load('src/lib/promane/time-input.ts',{}),'@/lib/prisma':{prisma},'@/lib/promane/auth':auth,'next/cache':{revalidatePath:()=>{}},'@/lib/promane/limits':{getUserPromaneLimits:()=>{throw Error('Unexpected limit lookup')},countUserProjects:()=>{throw Error('Unexpected count')}}});
+  const actions=load('src/lib/promane/'+file,{'./time-entry-creation':timeCreation,'./expense-creation':expenseCreation,'./time-input':load('src/lib/promane/time-input.ts',{}),'@/lib/prisma':{prisma},'@/lib/promane/auth':auth,'next/cache':{revalidatePath:()=>{}},'@/lib/promane/limits':{getUserPromaneLimits:()=>{throw Error('Unexpected limit lookup')},countUserProjects:()=>{throw Error('Unexpected count')}}});
   for(const [name,fn] of Object.entries(actions)){
    if(mode==='active-control'&&name!=='createClient')continue;
    if(mode==='member-repair'&&!name.startsWith('repairInvalid'))continue;
