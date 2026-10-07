@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-07T10:25:57.573Z",
+  "passed": 5,
+  "cases": [
+    "Native Chrome persistent socket loss after synthetic save keeps UUID and blocks another generation",
+    "Native reload restores metadata without repeating analyze or generation",
+    "390px second tab shares actor intent through native localStorage and blocks competing operations",
+    "GET recovery and explicit acknowledgment clear one operation and propagate native storage event without provider replay",
+    "Native refinement recovery shows before/after images and preserves newer unsent draft without another generation"
+  ],
+  "chrome": "Chrome/155.0.8059.39",
+  "persistentLossHttpAttempts": 5,
+  "syntheticGenerations": 3,
+  "sourceHashes": {
+    "src/lib/adimage/operation-client.ts": "2e92ca7dfdc327d3fbc83473d3fa2dfb9aa28c0a350dccb158ce94f263e16e0e",
+    "src/lib/adimage/use-operation-recovery.ts": "7124e7f71caf46afdc15e20e9b331dfff7b3770d794d86fbdcefe33fb39ccddb",
+    "src/app/adimage/Tool.tsx": "5d75cae44b4ab22677d850af915c9b5d0d1c4d80e2eb805ba127629d5d44d6ed"
+  },
+  "cssHash": "665cfb1175de9e10d014b7d96d99a9582f25eaa93fc8d4fedd34be38cf3a6b66",
+  "scope": "Actual Tool/hook/reader in native Chrome, real local HTTP/socket loss/localStorage/Web Locks and two tabs at1280/390px. Synthetic backend and artwork; decorative LP/export/loading components mocked. CSS loaded from local .next build; source/CSS hashes are recorded separately. No real auth, paid provider, customer DB or production process kill."
+}

@@ -8,6 +8,9 @@
 // 中心的な体験は「URLだけで始まること」なので、他の入力は全て任意にする。
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useSession } from 'next-auth/react'
+import { useAdImageRecovery } from '@/lib/adimage/use-operation-recovery'
+import type { AdImageResult } from '@/lib/adimage/operation-client'
 import { Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { APPEAL_LABELS, type AdCopy, type AppealAxis, type BrandProfile, type RefineDirective } from '@/lib/adimage/types'
@@ -58,6 +61,9 @@ type Step = 'input' | 'concepts' | 'result'
 const REFS_PAGE_SIZE = 30
 
 export default function AdImageTool() {
+  const { data: session, status: authStatus } = useSession()
+  const actor = (session?.user as { id?: string } | undefined)?.id || ''
+  const operation = useAdImageRecovery(authStatus, actor)
   const [step, setStep] = useState<Step>('input')
   const [error, setError] = useState('')
   const [limitAction, setLimitAction] = useState<'pricing' | 'contact' | null>(null)
@@ -146,6 +152,43 @@ export default function AdImageTool() {
   const [note, setNote] = useState('')
   const [refining, setRefining] = useState(false)
 
+  const appliedResult = useRef('')
+  const applyImageResult = useCallback((d: AdImageResult) => {
+    if (d.state !== 'completed' || appliedResult.current === d.operationId) return
+    appliedResult.current = d.operationId
+    setError(''); setLimitAction(null)
+    setConceptId(d.conceptId!)
+    setPreviousCreatives(d.previousCreatives!)
+    setPreviousGeneration(d.previousGeneration!)
+    setCreatives(d.creatives!)
+    setNeedsReview(d.needsReview!)
+    setFailedPlacements(d.failedPlacements!)
+    setGeneration(d.generation!)
+    setScores(null); setAdvice(''); setDirectives([])
+    // Recovery must preserve newer unsent refinement input.
+    setScoring(false)
+    setStep('result')
+    window.dispatchEvent(new Event('adimage:generated'))
+  }, [])
+  useEffect(() => { if (operation.result) applyImageResult(operation.result) }, [operation.result, applyImageResult])
+  const actorScope = JSON.stringify([authStatus, actor])
+  const [visibleScope, setVisibleScope] = useState(actorScope)
+  const previousActorScope = useRef(actorScope)
+  if (previousActorScope.current !== actorScope) {
+    previousActorScope.current = actorScope
+    imageOperation.current.revision += 1
+    imageOperation.current.busy = false
+  }
+  useEffect(() => {
+    setVisibleScope(actorScope)
+    setNeedsLogin(false)
+    appliedResult.current = ''
+    setConceptId(''); setCreatives([]); setPreviousCreatives([]); setPreviousGeneration(null)
+    setScores(null); setAdvice(''); setDirectives([]); setGenerating(false); setRefining(false); setScoring(false)
+    setBrandId(''); setBrand(null); setDrafts([]); setCopy({ headline: '', sub: '', cta: '' }); setStep('input')
+    setLogoName(''); setUrl(''); setManualText(''); setAppeal(''); setCustomPrompt(''); setError(''); setLimitAction(null)
+  }, [actorScope])
+
   useEffect(() => {
     fetch('/api/adimage/placements')
       .then((r) => r.json())
@@ -164,7 +207,7 @@ export default function AdImageTool() {
   const [needsLogin, setNeedsLogin] = useState(false)
 
   const analyze = useCallback(async () => {
-    if (!url.trim()) return
+    if (!url.trim() || operation.blocked || imageOperation.current.busy) return
     if (useManualText && manualText.trim().length < 50) {
       setLimitAction(null)
       setError('サービスの説明を50文字以上で入力してください。')
@@ -200,7 +243,7 @@ export default function AdImageTool() {
     } finally {
       setAnalyzing(false)
     }
-  }, [appeal, url, useManualText, manualText])
+  }, [appeal, url, useManualText, manualText, operation.blocked])
 
   async function uploadLogo(file: File) {
     if (!brandId) return
@@ -303,7 +346,7 @@ export default function AdImageTool() {
   }
 
   const generate = useCallback(async () => {
-    if (!brandId || chosen.length === 0 || imageOperation.current.busy) return
+    if (!brandId || chosen.length === 0 || imageOperation.current.busy || operation.blocked) return
     const revision = ++imageOperation.current.revision
     imageOperation.current.busy = true
     const isCurrent = () => imageOperation.current.revision === revision
@@ -316,10 +359,7 @@ export default function AdImageTool() {
     setDirectives([])
     try {
       const draft = drafts[selected]
-      const r = await fetch('/api/adimage/concepts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const d = await operation.submit('generate', brandId, {
           brandId,
           copy,
           placements: chosen,
@@ -330,36 +370,23 @@ export default function AdImageTool() {
           appealAxis: draft?.appealAxis,
           tone: draft?.tone,
           appeal: appeal.trim() || undefined,
-        }),
-      })
-      const d = await r.json()
-      if (!isCurrent()) return
-      if (!r.ok) {
-        if (d?.limitReached === true) setLimitAction(d?.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : d?.upgradeUrl === '/adimage/pricing' ? 'pricing' : null)
-        throw new Error(d?.error || '生成に失敗しました')
+        }, new AbortController().signal)
+      if (!isCurrent() || !d) return
+      if (d.state === 'limit') {
+        setLimitAction(d.contactUrl ? 'contact' : d.upgradeUrl ? 'pricing' : null)
+        setError(d.error || '利用枠の上限に達しました。')
+        return
       }
-      setConceptId(d.conceptId)
-      setCreatives(d.creatives || [])
-      setNeedsReview(Boolean(d.needsReview))
-      setFailedPlacements(d.failedPlacements || [])
-      setGeneration(1)
-      setStep('result')
-      // 新しく作り直したので、前回との比較は消す
-      setPreviousCreatives([])
-      setPreviousGeneration(null)
-      setJustFinished(true)
-      window.setTimeout(() => { if (isCurrent()) setJustFinished(false) }, 6000)
-      // サイドバーの残枚数を取り直させる（画面は移動しないので合図が要る）
-      window.dispatchEvent(new Event('adimage:generated'))
+      applyImageResult(d)
     } catch (e) {
       if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
     } finally {
       if (isCurrent()) { imageOperation.current.busy = false; setGenerating(false) }
     }
-  }, [appeal, brandId, chosen, copy, customPrompt, designRefId, drafts, selected, variations])
+  }, [appeal, brandId, chosen, copy, customPrompt, designRefId, drafts, selected, variations, operation, applyImageResult])
 
   const runFeedback = useCallback(async () => {
-    if (!conceptId || imageOperation.current.busy) return
+    if (!conceptId || imageOperation.current.busy || operation.blocked) return
     const revision = imageOperation.current.revision
     const feedback = ++imageOperation.current.feedback
     const isCurrent = () => imageOperation.current.revision === revision && imageOperation.current.feedback === feedback
@@ -384,10 +411,10 @@ export default function AdImageTool() {
     } finally {
       if (isCurrent()) setScoring(false)
     }
-  }, [conceptId, note, selectedChips])
+  }, [conceptId, note, selectedChips, operation.blocked])
 
   const refine = useCallback(async () => {
-    if (!conceptId || imageOperation.current.busy) return
+    if (!conceptId || imageOperation.current.busy || operation.blocked) return
     const revision = ++imageOperation.current.revision
     imageOperation.current.busy = true
     const isCurrent = () => imageOperation.current.revision === revision
@@ -396,38 +423,20 @@ export default function AdImageTool() {
     setError('')
     setLimitAction(null)
     try {
-      const r = await fetch(`/api/adimage/concepts/${conceptId}/refine`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chips: selectedChips, note: note.trim() || undefined }),
-      })
-      const d = await r.json()
-      if (!isCurrent()) return
-      if (!r.ok) {
-        if (d?.limitReached === true) setLimitAction(d?.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : d?.upgradeUrl === '/adimage/pricing' ? 'pricing' : null)
-        throw new Error(d?.error || '改善に失敗しました')
+      const d = await operation.submit('refine', conceptId, { chips: selectedChips, note: note.trim() || undefined }, new AbortController().signal)
+      if (!isCurrent() || !d) return
+      if (d.state === 'limit') {
+        setLimitAction(d.contactUrl ? 'contact' : d.upgradeUrl ? 'pricing' : null)
+        setError(d.error || '利用枠の上限に達しました。')
+        return
       }
-      setConceptId(d.conceptId)
-      // ⚠️ setCreatives より先に入れる。順序を逆にすると一瞬だけ前後が同じに見える
-      setPreviousCreatives(d.previousCreatives || [])
-      setPreviousGeneration(typeof d.previousGeneration === 'number' ? d.previousGeneration : null)
-      setCreatives(d.creatives || [])
-      setNeedsReview(Boolean(d.needsReview))
-      setFailedPlacements(d.failedPlacements || [])
-      setGeneration(d.generation)
-      setScores(null)
-      setAdvice('')
-      setDirectives([])
-      setSelectedChips([])
-      setNote('')
-      // 改善でも枚数は増える
-      window.dispatchEvent(new Event('adimage:generated'))
+      applyImageResult(d)
     } catch (e) {
       if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '改善に失敗しました')
     } finally {
       if (isCurrent()) { imageOperation.current.busy = false; setRefining(false) }
     }
-  }, [conceptId, note, selectedChips])
+  }, [conceptId, note, selectedChips, operation, applyImageResult])
 
   const byMedia = placements.reduce<Record<string, PlacementRow[]>>((acc, p) => {
     ;(acc[p.media] = acc[p.media] || []).push(p)
@@ -436,9 +445,11 @@ export default function AdImageTool() {
 
   // ⚠️ 未ログインの方にはLPを見せる。以前は「ログインが必要です」の小さな箱だけで、
   //    何をするサービスなのか説明する面がどこにも無かった。
-  if (needsLogin) {
+  if (needsLogin || authStatus === 'unauthenticated') {
     return <AdImageLp />
   }
+
+  if (authStatus === 'loading' || visibleScope !== actorScope) return <p className="p-6 text-sm text-slate-600">ログイン情報を確認しています。</p>
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
@@ -482,6 +493,15 @@ export default function AdImageTool() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+        {(operation.intent || operation.message) && <section aria-label="画像生成の結果確認" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">
+          <p role="status">{operation.message || (operation.result?.state === 'completed' ? '保存済みの画像を表示しました。内容を確認してから次の操作へ進んでください。' : '前の操作の保存結果を確認してください。新しい生成はまだ開始できません。')}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" disabled={operation.busy} onClick={() => void operation.recover()} className="rounded-lg bg-slate-900 px-4 py-2 font-bold text-white disabled:opacity-50">{operation.busy ? '確認中...' : '保存結果を確認'}</button>
+            {operation.result?.state === 'missing' && <button type="button" disabled={operation.busy} onClick={() => void operation.recover(true)} className="rounded-lg border border-slate-400 px-4 py-2">未受付の操作を終了</button>}
+            {operation.result && ['completed', 'failed', 'cancelled', 'unavailable', 'limit'].includes(operation.result.state) && <button type="button" disabled={operation.busy} onClick={() => { if (operation.acknowledge(operation.result?.operationId)) { setError(''); setLimitAction(null) } }} className="rounded-lg border border-slate-400 px-4 py-2">{operation.result.state === 'completed' ? '結果を確認しました' : 'この操作を閉じる'}</button>}
+          </div>
+        </section>}
+
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">
           <p>{error}</p>
           {limitAction && <Link
@@ -518,7 +538,7 @@ export default function AdImageTool() {
             />
             <button
               onClick={analyze}
-              disabled={analyzing || !url.trim()}
+              disabled={analyzing || operation.blocked || !url.trim()}
               className="rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
               {analyzing ? '読み取り中...' : '広告コピーを作る'}
@@ -817,7 +837,7 @@ export default function AdImageTool() {
 
             <button
               onClick={generate}
-              disabled={generating || refining || chosen.length === 0 || !copy.headline || !copy.cta}
+              disabled={operation.blocked || generating || refining || chosen.length === 0 || !copy.headline || !copy.cta}
               className="mt-5 w-full rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
               {generating
@@ -1096,7 +1116,7 @@ export default function AdImageTool() {
 
               <button
                 onClick={refine}
-                disabled={refining || generating || (selectedChips.length === 0 && !note.trim() && directives.length === 0)}
+                disabled={operation.blocked || refining || generating || (selectedChips.length === 0 && !note.trim() && directives.length === 0)}
                 className="mt-5 w-full rounded-2xl bg-[#0066ff] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-[#0052cc] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:translate-y-0 sm:text-xl"
               >
                 {refining ? '作り直し中…（1〜2分かかります）' : 'この内容で作り直す'}

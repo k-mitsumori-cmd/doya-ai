@@ -29,7 +29,8 @@ const route = load('src/app/api/adimage/concepts/route.ts', {
   'next/server': { NextResponse: Response },
   sharp: {},
   '@/lib/prisma': { prisma },
-  '@/lib/adimage/image-budget': {},
+  '@/lib/adimage/image-operation': {},
+  '@/lib/adimage/image-operation-http': {},
   '@/lib/adimage/access': {
     getIdentity: async () => ({ userId: 'owner' }),
     requireUser: () => ({ ok: true }),

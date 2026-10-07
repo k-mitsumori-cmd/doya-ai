@@ -1,3 +1,4 @@
+const {connect,request:operationRequest}=require('./adimage-operation-http-fixture.cjs');
 const assert=require('node:assert/strict'),{load,check}=require('./load-typescript.cjs');let logs=[];
 const unified=load('src/lib/unified-plan.ts'),services=load('src/lib/services.ts',{'./unified-plan':unified}),ui=load('src/lib/service-limit-ui.ts',{'./services':services});
 function fixture(today,month,concepts,at='2026-09-20T02:58:19Z'){const RealDate=Date;class FixedDate extends Date{constructor(...a){super(...(a.length?a:[at]))}static now(){return +new RealDate(at)}};
@@ -15,8 +16,9 @@ for(const kind of ['generate','refine'])await check(kind+' route returns diagnos
  mocks['@/lib/adimage/placements']={findPlacement:key=>({key}),groupByGenSize:()=>[{}],DEFAULT_PLACEMENT_KEYS:[]};
  mocks['@/lib/adimage/copy']={normalizeCopy:x=>x};mocks['@/lib/adimage/feedback']={REFINE_CHIPS:[]};mocks['@/lib/adimage/generate']={generateBaked:async()=>{generated++}};
  for(const model of Object.values(database))model.create=async()=>{writes++;throw Error('write forbidden')};
- const api=load(file,mocks);const response=await api.POST({json:async()=>({brandId:'brand',copy:{headline:'synthetic',cta:'synthetic'},placements:['p0','p1','p2','p3','p4'],note:'synthetic'})},{params:Promise.resolve({id:'c'})});
- const body=await response.json();assert.equal(response.status,429);assert.equal(body.code,'DAILY_IMAGE_LIMIT');assert.equal(body.upgradeUrl,'/adimage/pricing');assert.equal(body.usage.requested,5);assert.equal(response.headers.get('cache-control'),'no-store');assert.match(body.diagnosticId,/^[a-f0-9]{24}$/);assert.equal(generated,0);assert.equal(writes,0);assert(!JSON.stringify(body).includes('private-user-id'));assert.equal(quotaOptions?.checkConceptLimit,kind==='refine'?false:undefined);
+ connect(mocks,async(_input,_body,requested)=>({state:'limit',quota:await mocks['@/lib/adimage/access'].assertQuota(identity,requested,kind==='refine'?{checkConceptLimit:false}:undefined)}));
+ const api=load(file,mocks);const response=await api.POST(operationRequest(kind==='generate'?{brandId:'brand',copy:{headline:'synthetic',cta:'synthetic'},placements:['p0','p1','p2','p3','p4']}:{note:'synthetic'}),{params:Promise.resolve({id:'c'})});
+ const body=await response.json();assert.equal(response.status,429);assert.equal(body.code,'DAILY_IMAGE_LIMIT');assert.equal(body.upgradeUrl,'/adimage/pricing');assert.equal(body.usage.requested,5);assert.equal(response.headers.get('cache-control'),'private, no-store');assert.match(body.diagnosticId,/^[a-f0-9]{24}$/);assert.equal(generated,0);assert.equal(writes,0);assert(!JSON.stringify(body).includes('private-user-id'));assert.equal(quotaOptions?.checkConceptLimit,kind==='refine'?false:undefined);
 });
 for(const kind of ['generate','refine'])await check(kind+' atomic reservation denial blocks image provider',async()=>{
  const fs=require('fs'),ts=require('typescript');const file=kind==='generate'?'src/app/api/adimage/concepts/route.ts':'src/app/api/adimage/concepts/[id]/refine/route.ts';
@@ -27,8 +29,9 @@ for(const kind of ['generate','refine'])await check(kind+' atomic reservation de
  mocks['@/lib/adimage/image-budget']={claimImageBudget:async()=>{claimed++;return{ok:false,reason:'quota reached',code:'DAILY_IMAGE_LIMIT',usage:{requested:1}}},releaseImageBudget:async()=>{throw Error('no reservation')},settleImageBudget:async()=>{writes++}};
  mocks['@/lib/adimage/placements']={findPlacement:key=>({key}),groupByGenSize:()=>[{placements:[{key:'p1'}]}],DEFAULT_PLACEMENT_KEYS:['p1']};
  mocks['@/lib/adimage/copy']={normalizeCopy:x=>x};mocks['@/lib/adimage/feedback']={REFINE_CHIPS:[]};mocks['@/lib/adimage/generate']={generateBaked:async()=>{generated++}};
- const api=load(file,mocks),res=await api.POST({json:async()=>({brandId:'brand',copy:{headline:'h',cta:'c'},placements:['p1'],note:'revise'})},{params:Promise.resolve({id:'c'})});
- assert.equal(res.status,429);assert.equal((await res.json()).code,'DAILY_IMAGE_LIMIT');assert.equal(res.headers.get('cache-control'),'no-store');assert.equal(claimed,1);assert.equal(generated,0);assert.equal(writes,0);
+ connect(mocks,async()=>{claimed++;return{state:'limit',quota:{ok:false,reason:'quota reached',code:'DAILY_IMAGE_LIMIT',usage:{requested:1}}}});
+ const api=load(file,mocks),res=await api.POST(operationRequest(kind==='generate'?{brandId:'brand',copy:{headline:'h',cta:'c'},placements:['p1']}:{note:'revise'}),{params:Promise.resolve({id:'c'})});
+ assert.equal(res.status,429);assert.equal((await res.json()).code,'DAILY_IMAGE_LIMIT');assert.equal(res.headers.get('cache-control'),'private, no-store');assert.equal(claimed,1);assert.equal(generated,0);assert.equal(writes,0);
 });
 await check('refinement ignores new-concept cap but still consumes image allowance',async()=>{
  const identity={userId:'u',guestId:null,plan:'PRO'};

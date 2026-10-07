@@ -1,0 +1,41 @@
+{
+  "checkedAt": "2026-10-07T10:20:59.009Z",
+  "passed": 29,
+  "cases": [
+    "Nine simultaneous identical UUIDs admit once; quota is reserved once",
+    "Competing actor UUID is busy without another reservation",
+    "Same UUID changed immutable input is rejected",
+    "Atomic settlement replays without second saved output or quota use",
+    "Output callback failure rolls back output and settlement; explicit failure refunds once",
+    "Expired late worker is rejected after refund and terminal state commit",
+    "Missing UUID cancellation fences delayed POST without usage",
+    "Quota-rejected UUID remains cancelled after quota is released",
+    "Changed source before admission cannot reserve quota",
+    "Changed branding fences save without creating output",
+    "Deleted source pending operation expires and refunds, never recreates data",
+    "Deleted completed result stays charged and is unavailable on recovery/replay",
+    "Refinement binds original parent and produces one child version only",
+    "Foreign target admission fences UUID without quota, even after later ownership transfer",
+    "Old-day expired slot cannot refund an unrelated new-day usage",
+    "Ownership transfer hides completed results without restoring consumed quota",
+    "Locked canonical account plan admits paid amount despite stale caller assumptions",
+    "Commit acknowledgement loss replays saved result without a second write",
+    "Invalid UUID rejects before any operation or quota write",
+    "Partial output retains only saved image usage and original concept charge",
+    "Mismatch between produced images and actual stored creatives rolls back",
+    "Wrong parent generation is rejected atomically",
+    "Deleted creative in completed concept is unavailable and never recreated",
+    "Recovery cannot substitute a different kind or target for saved UUID",
+    "New-month usage cannot be refunded by an old-month expired operation",
+    "Inconsistent pending counters refuse guessed refunds and preserve receipt",
+    "Missing-result UUID is fenced before later target creation",
+    "Cancelling a currently pending operation cannot release its reservation",
+    "Refinement cannot save a child under another campaign even with matching parent ID"
+  ],
+  "sourceHashes": {
+    "src/lib/adimage/image-operation.ts": "158c050d434dde0abbf9c862d399ab173164135f803d32996f05dd22a0afd6ff",
+    "src/lib/adimage/image-budget.ts": "e7ae852ee4c5b462a077dcf3e5779dfc5999c59033a9b5c85f55fc85d87567d6",
+    "src/lib/adimage/access.ts": "f871a79bd698e79cd3c4b8e1071b69747be12bc56fddee129ec97239f1ce14a9"
+  },
+  "scope": "Actual operation helper, budget, canonical plan classifier, Prisma/private PostgreSQL with foreign keys. Synthetic stored image paths only. Generate/refine and recovery routes integrated separately; client not yet integrated. No provider/customer DB."
+}

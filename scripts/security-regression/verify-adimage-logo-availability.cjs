@@ -1,3 +1,4 @@
+const {connect,request:operationRequest}=require('./adimage-operation-http-fixture.cjs')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const vm = require('node:vm')
@@ -42,10 +43,11 @@ async function exercise(kind, logoPath, downloaded) {
   mocks['@/lib/adimage/feedback'] = { REFINE_CHIPS: [] }
   mocks['@/lib/adimage/generate'] = { generateBaked: async () => { generations++ } }
   mocks['@/lib/adimage/storage'] = { downloadBuffer: async () => { reads++; return downloaded } }
+  connect(mocks, async () => { claims++; throw Error('unexpected claim') })
   const route = load(file, mocks)
-  const response = await route.POST({ json: async () => ({
-    brandId: 'brand', copy: { headline: 'Headline', cta: 'CTA' }, placements: ['square'], note: '改善',
-  }) }, { params: Promise.resolve({ id: 'concept' }) })
+  const response = await route.POST(operationRequest(kind === 'create' ? {
+    brandId: 'brand', copy: { headline: 'Headline', cta: 'CTA' }, placements: ['square'],
+  } : { note: '改善' }), { params: Promise.resolve({ id: 'concept' }) })
   return { response, claims, campaigns, generations, reads }
 }
 

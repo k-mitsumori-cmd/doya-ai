@@ -1,0 +1,81 @@
+{
+  "status": "final-frozen6gates-passed2760unchanged; release-prepared-not-pushed",
+  "criteria": [
+    "adimage C061",
+    "adimage C064"
+  ],
+  "baseline": "adimage-lost-ack-baseline.json",
+  "probe": "probe-adimage-lost-ack.cjs",
+  "finding": "Actual generate/refine client handler unlocks after response loss; identical retry body has no operationId. Actual budget helper admits fresh random reservation; synthetic committed output+lost ack then explicit retry yields2saved writes/2images for identical inputs. This is boundary evidence only, not full route/native/provider proof.",
+  "requirements": [
+    "Implement durable UUID admission/settlement/recovery and expand actual PostgreSQL concurrency/crash/day/month tests",
+    "Persist actor-scoped UUID intent before provider admission; bind immutable input and quota/output settlement",
+    "GET saved result without provider replay; fence unknown/late workers and cross-tab/account transitions",
+    "Cover generate and refine, partial placement failures, signed URL failure after saved result, original month/day refunds, deletion/privacy",
+    "Run actual mounted/native UI, full frozen gates, commit/CI/READY and public check; preserve all17services2074criteria"
+  ],
+  "boundaries": [
+    "No paid provider calls",
+    "No customer DB mutations or migration",
+    "Do not infer refund from aggregate usage or conflate network failure with failed generation"
+  ],
+  "checkedAt": "2026-10-07T10:26:46.738805+00:00",
+  "routeBaseline": "adimage-route-lost-ack-baseline.json",
+  "routeProbe": "probe-adimage-route-lost-ack.cjs",
+  "routeFinding": "Historical original-route baseline reproduces duplicate usage. Current generated/refined POST and actual GET/DELETE route are wired; private PostgreSQL API27 proves saved-result replay without another provider call or charge. Tool now sends persisted UUID via actual recovery hook; mounted13/6 passed. Native/browser and final release gates remain incomplete.",
+  "privatePostgresEvidence": "adimage-operation-postgres-results.json",
+  "privatePostgresSupervisor": "adimage-operation-postgres-supervisor.json",
+  "privatePostgresCases": 2,
+  "privatePostgresStopExitCode": 0,
+  "design": "adimage-operation-recovery-design.md",
+  "progress": {
+    "implementation": [
+      "Short serializable transaction joins durable UUID admission with original image/concept budget reservation",
+      "Atomic owned output/count/parent-generation validation, settlement and immutable completed receipt",
+      "15minute expiry commits owned refund and terminal state before rejecting late workers",
+      "Same UUID concurrent admission/replay, busy competing UUID, cancellation and quota/unavailable tombstones",
+      "Canonical locked User.plan; source snapshot ownership/branding fences; deleted outputs unavailable without quota restoration",
+      "Budget counters refuse inconsistent pending balances rather than silently guessing refund",
+      "Generate/refine POST replay durable receipts before source reads and quota admission; missing UUID gets409 reload guidance",
+      "Bound streamed request32KiB/15s, private safe response DTO256KiB, signed URL deadline15s; GET/DELETE never invokes provider",
+      "Refinement directives and feedback application commit with output/receipt; cross-campaign child rejected",
+      "Actor-scoped metadata-only localStorage intent before POST; Web Locks; auth ABA revision fence; bounded strict response reader",
+      "Full Tool explicit GET recovery, missing-only DELETE fence and terminal acknowledgment; generation/refinement stay blocked until acknowledgment",
+      "Preserve newer unsent refinement input during recovered-result application; hide prior actor private results and clear scoped state on authentication transitions"
+    ],
+    "helperSource": "src/lib/adimage/image-operation.ts",
+    "helperEvidence": "adimage-operation-helper-postgres-results.json",
+    "helperCases": 29,
+    "localChecks": "adimage-operation-local-checks.json",
+    "ciRegistration": "Prepared private PostgreSQL helper29 and actual API27 workflow steps; not committed or run remotely",
+    "productionBugResolved": false,
+    "codePublished": false,
+    "next": "Allowlist commit/push and exact remote Linux CI/READY/public verification; then feedback admission cohort",
+    "remaining": [
+      "Final frozen gate and native check with final compiled stylesheet",
+      "Explicit allowlist commit/push and exact remote Linux CI/READY/public verification",
+      "Authenticated production/provider/process-kill E2E not proven; no customer DB writes or paid calls",
+      "All17services2074criteria;1859exactpending and all partial rows remain incomplete"
+    ],
+    "apiEvidence": "adimage-operation-api-postgres-results.json",
+    "apiSupervisor": "adimage-operation-api-postgres-supervisor.json",
+    "apiCases": 27,
+    "mountedHookCases": 13,
+    "mountedToolCases": 6,
+    "mountedHookEvidence": "adimage-operation-recovery-mounted-results.json",
+    "mountedToolEvidence": "adimage-operation-tool-mounted-results.json",
+    "fullGate": {
+      "folder": "adimage-operation-release-52b78145-2214-4ec2-8ff8-9a2bbef127cf",
+      "sessionId": 21635,
+      "status": "passed",
+      "supersedes": "adimage-operation-release-b0040a6c-fec7-48c3-86dd-649db17484b8",
+      "supersededReason": "All commands passed but two source files changed after start; not a passing frozen gate",
+      "sourceFiles": 2760,
+      "changedSources": []
+    },
+    "nativeEvidence": "adimage-operation-native-results.json",
+    "nativeCases": 5,
+    "visualReview": "Desktop1280/mobile390 screenshots inspected. Found stale English fetch error after recovery; sanitized hook exception and cleared error after applied result, then all mounted/native cases passed again.",
+    "nextFeedbackFinding": "adimage-feedback-admission-baseline.json: actual full feedback route admits10identical synthetic provider calls and10writes; separate unfixed cohort, no paid calls/customer DB"
+  }
+}

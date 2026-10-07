@@ -12,8 +12,9 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import sharp from 'sharp'
 import { prisma } from '@/lib/prisma'
-import { assertQuota, ensureGuestId, getIdentity, GUEST_COOKIE, ownerWhere, requireUser } from '@/lib/adimage/access'
-import { claimImageBudget, releaseImageBudget, settleImageBudget } from '@/lib/adimage/image-budget'
+import { getIdentity, ownerWhere, requireUser } from '@/lib/adimage/access'
+import { adImageTargetHash, beginAdImageOperation, failAdImageOperation, recoverAdImageOperation, settleAdImageOperation } from '@/lib/adimage/image-operation'
+import { adImageOperationBody, adImageOperationErrorReply, adImageOperationReply, adImagePostInput, readAdImagePostBody } from '@/lib/adimage/image-operation-http'
 import type { CompositionKey } from '@/lib/adimage/placements'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { DEFAULT_PLACEMENT_KEYS, findPlacement, groupByGenSize } from '@/lib/adimage/placements'
@@ -132,16 +133,20 @@ function buildDesignRef(t: {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function generate(req: NextRequest) {
   const base = await getIdentity(req)
   // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
   const auth = requireUser(base)
   if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
-  const { identity, newGuestId } = ensureGuestId(base)
+  const identity = base
   const where = ownerWhere(identity)
   if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
 
-  const body = await req.json().catch(() => ({}))
+  const body = await readAdImagePostBody(req, 'generate')
+  const input = adImagePostInput(identity.userId, 'generate', body.brandId, body.operationId)
+  const immutableBody = adImageOperationBody(body)
+  const prior = await recoverAdImageOperation(input, false, immutableBody)
+  if (prior.state !== 'missing') return adImageOperationReply(input, prior)
 
   const requestedVariations = Math.max(1, Math.min(3, Math.trunc(Number(body?.variations)) || 1))
 
@@ -152,10 +157,11 @@ export async function POST(req: NextRequest) {
   const brandRow = await prisma.adImageBrand.findFirst({ where: { id: brandId, ...where } })
   if (!brandRow) return NextResponse.json({ error: 'ブランドが見つかりません' }, { status: 404 })
 
+  const suppliedCopy = body.copy && typeof body.copy === 'object' && !Array.isArray(body.copy) ? body.copy as Record<string, unknown> : {}
   const copy: AdCopy = normalizeCopy({
-    headline: String(body?.copy?.headline || ''),
-    sub: String(body?.copy?.sub || ''),
-    cta: String(body?.copy?.cta || ''),
+    headline: String(suppliedCopy.headline || ''),
+    sub: String(suppliedCopy.sub || ''),
+    cta: String(suppliedCopy.cta || ''),
   })
   if (!copy.headline || !copy.cta) {
     return NextResponse.json({ error: '大見出しとCTAは必須です' }, { status: 400 })
@@ -170,15 +176,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '配置を選択してください' }, { status: 400 })
   }
 
-  // ⚠️ 枚数の枠は**生成を始める前に**見る。走らせてから弾くと課金だけ発生する。
-  // ⚠️ 数えるのは検証後の placementKeys。以前は body.placements.length で数えていたため、
-  //    placements を空配列で送ると requestedImages=0 で枠を素通りし、
-  //    そのあと既定の配置（3件）×パターン数ぶん実際に生成・課金されていた。
-  const quota = await assertQuota(identity, placementKeys.length * requestedVariations)
-  if (!quota.ok) {
-    const { ok: _ok, reason, ...details } = quota
-    return NextResponse.json({ error: reason, ...details }, { status: 429, headers: { 'Cache-Control': 'no-store' } })
-  }
   // 登録済みロゴが欠けている場合、ロゴなし画像を作って生成枠を消費しない。
   const logoBuf = brandRow.logoPath ? await downloadBuffer(brandRow.logoPath).catch(() => null) : null
   if (brandRow.logoPath && !logoBuf) {
@@ -187,12 +184,8 @@ export async function POST(req: NextRequest) {
   const logo = logoBuf
     ? { buffer: logoBuf, config: ((brandRow.logoConfig as LogoConfig | null) ?? DEFAULT_LOGO_CONFIG) }
     : null
-  const claim = await claimImageBudget(identity, placementKeys.length * requestedVariations, true)
-  if (!claim.ok) {
-    const { ok: _ok, reason, ...details } = claim
-    return NextResponse.json({ error: reason, ...details }, { status: 429, headers: { 'Cache-Control': 'no-store' } })
-  }
-  const reservation = claim.reservation
+  const admission = await beginAdImageOperation(input, immutableBody, placementKeys.length * requestedVariations, adImageTargetHash('generate', brandRow))
+  if (admission.state !== 'started') return adImageOperationReply(input, admission)
   let budgetSettled = false
   try {
 
@@ -367,7 +360,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const concept = await settleImageBudget(reservation, creativeRows.length, (tx) => tx.adImageConcept.create({
+  const receipt = await settleAdImageOperation(input, creativeRows.length, failedPlacements, (tx) => tx.adImageConcept.create({
     data: {
       campaignId: campaign.id,
       label: String(body?.label || 'コンセプト').slice(0, 120),
@@ -389,47 +382,21 @@ export async function POST(req: NextRequest) {
   }))
   budgetSettled = true
 
-  const creatives = await Promise.all(
-    concept.creatives.map(async (cr) => ({
-      id: cr.id,
-      placementKey: cr.placementKey,
-      placementName: findPlacement(cr.placementKey)?.name ?? cr.placementKey,
-      media: findPlacement(cr.placementKey)?.media ?? '',
-      size: cr.size,
-      verify: cr.verify,
-      url: await signedUrl(cr.imagePath),
-    }))
-  )
-
-  // ⚠️ ゲストは userId が無いので記録されない（recordServiceUsage 側で弾かれる）
   void recordServiceUsage({
-    userId: identity.userId,
-    serviceId: 'adimage',
-    action: '広告画像を生成',
-    summary: `${brand.name} / ${copy.headline}`,
-    count: creatives.length,
+    userId: identity.userId, serviceId: 'adimage', action: '広告画像を生成',
+    summary: `${brand.name} / ${copy.headline}`, count: creativeRows.length,
   })
-
-  const res = NextResponse.json({
-    conceptId: concept.id,
-    campaignId: campaign.id,
-    copy,
-    creatives,
-    // 2回リトライしても検査に通らなかったものは「要確認」として明示する。黙って出さない
-    needsReview: creatives.some((c) => (c.verify as any)?.needsReview),
-    // ⚠️ 作れなかった配置は必ず返す。黙って短い結果を返すと、
-    //    利用者は入稿の直前まで欠落に気づけない。
-    failedPlacements,
-  })
-  if (newGuestId) {
-    res.cookies.set(GUEST_COOKIE, newGuestId, {
-      httpOnly: true, sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/', maxAge: 60 * 60 * 24 * 180,
-    })
-  }
-  return res
+  return adImageOperationReply(input, { state: receipt.phase, receipt })
   } finally {
-    if (!budgetSettled) await releaseImageBudget(reservation)
+    if (!budgetSettled) await failAdImageOperation(input)
   }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const response = await generate(req)
+    response.headers.set("Cache-Control", "private, no-store")
+    response.headers.set("Vary", "Cookie")
+    return response
+  } catch (error) { return adImageOperationErrorReply(error) }
 }

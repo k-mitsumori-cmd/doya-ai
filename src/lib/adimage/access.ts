@@ -54,7 +54,7 @@ export interface AdImageIdentity {
   plan: AdImagePlan
 }
 
-function isPaid(plan?: string | null) {
+export function isPaid(plan?: string | null) {
   const p = (plan || '').trim().toUpperCase()
   return ['LIGHT', 'PRO', 'ENTERPRISE', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS', 'PREMIUM'].includes(p)
 }

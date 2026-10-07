@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-07T10:22:48.468Z",
+  "passed": 6,
+  "cases": [
+    "Full Tool saves intent before POST and requires result acknowledgment before another generation",
+    "Full Tool lost generation response recovers saved image through GET without new provider POST",
+    "Full Tool remount restores metadata and result without another analyze or generation",
+    "Full Tool refinement binds parent and retains before/after images after lost acknowledgment",
+    "Full Tool blocks duplicate clicks while POST remains active",
+    "Full Tool account change hides prior private results and fences held reply"
+  ],
+  "sourceHashes": {
+    "src/app/adimage/Tool.tsx": "5d75cae44b4ab22677d850af915c9b5d0d1c4d80e2eb805ba127629d5d44d6ed",
+    "src/lib/adimage/use-operation-recovery.ts": "7124e7f71caf46afdc15e20e9b331dfff7b3770d794d86fbdcefe33fb39ccddb",
+    "src/lib/adimage/operation-client.ts": "2e92ca7dfdc327d3fbc83473d3fa2dfb9aa28c0a350dccb158ce94f263e16e0e"
+  },
+  "scope": "Actual full Tool and actual hook/client React18 StrictMode. Synthetic network, sessions, and locks. No native browser, real provider, customer DB or production."
+}

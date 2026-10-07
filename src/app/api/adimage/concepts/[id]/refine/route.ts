@@ -9,19 +9,20 @@ export const maxDuration = 300
 import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { assertQuota, getIdentity, ownerWhere, requireUser } from '@/lib/adimage/access'
-import { claimImageBudget, releaseImageBudget, settleImageBudget } from '@/lib/adimage/image-budget'
+import { getIdentity, ownerWhere, requireUser } from '@/lib/adimage/access'
+import { adImageTargetHash, beginAdImageOperation, failAdImageOperation, recoverAdImageOperation, settleAdImageOperation, validAdImageDirectives } from '@/lib/adimage/image-operation'
+import { adImageOperationBody, adImageOperationErrorReply, adImageOperationReply, adImagePostInput, readAdImagePostBody } from '@/lib/adimage/image-operation-http'
 import { directivesToPromptLines, REFINE_CHIPS } from '@/lib/adimage/feedback'
 import { extractRefPalette } from '@/lib/adimage/ref-palette'
 import { exportToSize, generateBaked } from '@/lib/adimage/generate'
 import { DEFAULT_LOGO_CONFIG, type LogoConfig } from '@/lib/adimage/logo'
-import { findPlacement, groupByGenSize } from '@/lib/adimage/placements'
-import { downloadBuffer, signedUrl } from '@/lib/adimage/storage'
+import { groupByGenSize } from '@/lib/adimage/placements'
+import { downloadBuffer } from '@/lib/adimage/storage'
 import type { AdCopy, BrandProfile, RefineDirective } from '@/lib/adimage/types'
 
 type Ctx = { params: Promise<{ id: string }> }
 
-export async function POST(req: NextRequest, ctxParam: Ctx) {
+async function refine(req: NextRequest, ctxParam: Ctx) {
   const p = await ctxParam.params
   const identity = await getIdentity(req)
   // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
@@ -29,6 +30,12 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
   const where = ownerWhere(identity)
   if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
+
+  const body = await readAdImagePostBody(req, 'refine')
+  const input = adImagePostInput(identity.userId, 'refine', p.id, body.operationId)
+  const immutableBody = adImageOperationBody(body)
+  const prior = await recoverAdImageOperation(input, false, immutableBody)
+  if (prior.state !== 'missing') return adImageOperationReply(input, prior)
 
   const concept = await prisma.adImageConcept.findFirst({
     where: { id: p.id, campaign: where },
@@ -40,7 +47,6 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   })
   if (!concept) return NextResponse.json({ error: 'コンセプトが見つかりません' }, { status: 404 })
 
-  const body = await req.json().catch(() => ({}))
 
   // 改善指示の出どころ: 直近のフィードバック ＋ 今回押されたチップ
   const stored: RefineDirective[] = Array.isArray(concept.feedbacks[0]?.directive)
@@ -57,7 +63,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     : []
 
   const directives = [...chipDirectives, ...note, ...stored].slice(0, 5)
-  if (directives.length === 0) {
+  if (directives.length === 0 || !validAdImageDirectives(directives)) {
     return NextResponse.json({ error: '改善したい点を選択してください' }, { status: 400 })
   }
 
@@ -79,14 +85,6 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   const placementKeys = [...new Set(concept.creatives.map((c) => c.placementKey))]
   const groups = groupByGenSize(placementKeys)
 
-  // ⚠️ 枠の判定は**実際に作る枚数**で行う。既定の1枚で見ていたため、
-  //    残り2枚の人が改善を押すと3枚以上作れて上限を超えていた。
-  //    生成を始める前に見ること（走らせてから弾くと課金だけ発生する）。
-  const quota = await assertQuota(identity, placementKeys.length, { checkConceptLimit: false })
-  if (!quota.ok) {
-    const { ok: _ok, reason, ...details } = quota
-    return NextResponse.json({ error: reason, ...details }, { status: 429, headers: { 'Cache-Control': 'no-store' } })
-  }
   // 登録済みロゴが欠けている場合、ロゴなし画像を作って生成枠を消費しない。
   const logoBuf = brandRow.logoPath ? await downloadBuffer(brandRow.logoPath).catch(() => null) : null
   if (brandRow.logoPath && !logoBuf) {
@@ -95,12 +93,8 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   const logo = logoBuf
     ? { buffer: logoBuf, config: ((brandRow.logoConfig as LogoConfig | null) ?? DEFAULT_LOGO_CONFIG) }
     : null
-  const claim = await claimImageBudget(identity, placementKeys.length, false)
-  if (!claim.ok) {
-    const { ok: _ok, reason, ...details } = claim
-    return NextResponse.json({ error: reason, ...details }, { status: 429, headers: { 'Cache-Control': 'no-store' } })
-  }
-  const reservation = claim.reservation
+  const admission = await beginAdImageOperation(input, immutableBody, placementKeys.length, adImageTargetHash('refine', concept))
+  if (admission.state !== 'started') return adImageOperationReply(input, admission)
   let budgetSettled = false
   try {
   // ⚠️ 世代番号だけでパスを決めると、同じ親コンセプトから2回改善したときに
@@ -202,7 +196,8 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     )
   }
 
-  const next = await settleImageBudget(reservation, creativeRows.length, (tx) => tx.adImageConcept.create({
+  const receipt = await settleAdImageOperation(input, creativeRows.length, failedPlacements, async (tx) => {
+    const next = await tx.adImageConcept.create({
     data: {
       campaignId: concept.campaignId,
       label: `${concept.label}（改善${concept.generation}）`,
@@ -221,54 +216,25 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
       creatives: { create: creativeRows },
     },
     include: { creatives: true },
-  }))
+  })
+    if (concept.feedbacks[0]) {
+      await tx.adImageFeedback.updateMany({ where: { id: concept.feedbacks[0].id, conceptId: concept.id }, data: { applied: true, resultId: next.id } })
+    }
+    return next
+  }, directives)
   budgetSettled = true
 
-  // どの指示から生まれたかを記録する（効果を後から検証するため）
-  if (concept.feedbacks[0]) {
-    await prisma.adImageFeedback.update({
-      where: { id: concept.feedbacks[0].id },
-      data: { applied: true, resultId: next.id },
-    }).catch(() => {})
-  }
-
-  const creatives = await Promise.all(
-    next.creatives.map(async (cr) => ({
-      id: cr.id,
-      placementKey: cr.placementKey,
-      placementName: findPlacement(cr.placementKey)?.name ?? cr.placementKey,
-      media: findPlacement(cr.placementKey)?.media ?? '',
-      size: cr.size,
-      verify: cr.verify,
-      url: await signedUrl(cr.imagePath),
-    }))
-  )
-
-  // ⚠️ 改善前の画像も返す。返さないと画面から元が消えてしまい、
-  //    良くなったのか悪くなったのかを判断できない（2026-09-02の指摘）。
-  const previousCreatives = await Promise.all(
-    (concept.creatives || []).map(async (cr: any) => ({
-      id: cr.id,
-      placementKey: cr.placementKey,
-      placementName: findPlacement(cr.placementKey)?.name ?? cr.placementKey,
-      media: findPlacement(cr.placementKey)?.media ?? '',
-      size: cr.size,
-      verify: cr.verify,
-      url: await signedUrl(cr.imagePath),
-    }))
-  )
-
-  return NextResponse.json({
-    conceptId: next.id,
-    generation: next.generation,
-    appliedDirectives: directives,
-    creatives,
-    previousCreatives,
-    previousGeneration: concept.generation,
-    needsReview: creatives.some((c) => (c.verify as any)?.needsReview),
-    failedPlacements,
-  })
+  return adImageOperationReply(input, { state: receipt.phase, receipt })
   } finally {
-    if (!budgetSettled) await releaseImageBudget(reservation)
+    if (!budgetSettled) await failAdImageOperation(input)
   }
+}
+
+export async function POST(req: NextRequest, ctx: Ctx) {
+  try {
+    const response = await refine(req, ctx)
+    response.headers.set("Cache-Control", "private, no-store")
+    response.headers.set("Vary", "Cookie")
+    return response
+  } catch (error) { return adImageOperationErrorReply(error) }
 }

@@ -31,6 +31,12 @@ jobs:
       - name: DoyaSlide operation regression (private Unix socket, synthetic providers)
         run: python3 docs/audits/2026-10-06-all-services-recheck/doyaslide-operation-postgres-supervise.py
 
+      - name: AdImage operation regression (private Unix socket, synthetic stored images)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-operation-helper-postgres-supervise.py
+
+      - name: AdImage API recovery regression (private Unix socket, synthetic providers)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-operation-api-postgres-supervise.py
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 
