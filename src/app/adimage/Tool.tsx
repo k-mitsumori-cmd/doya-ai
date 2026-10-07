@@ -458,6 +458,15 @@ export default function AdImageTool() {
 
   if (authStatus === 'loading' || visibleScope !== actorScope) return <p className="p-6 text-sm text-slate-600">ログイン情報を確認しています。</p>
 
+  if (operation.authRequired) return (
+    <div className="mx-auto max-w-xl space-y-4 p-6">
+      <p role="status" className="text-sm text-slate-700">{operation.message}</p>
+      <p className="text-sm text-slate-600">操作情報はこのブラウザに保持しています。再ログイン後に保存結果を確認してください。処理は自動で再実行されません。</p>
+      <Link href="/auth/signin?callbackUrl=/adimage" className="inline-block rounded-lg bg-lime-700 px-4 py-2 text-white">ログインして結果を確認</Link>
+      <button type="button" disabled={operation.busy} onClick={() => { void operation.recover() }} className="block rounded-lg border border-slate-300 px-4 py-2 disabled:opacity-50">保存結果を確認</button>
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}

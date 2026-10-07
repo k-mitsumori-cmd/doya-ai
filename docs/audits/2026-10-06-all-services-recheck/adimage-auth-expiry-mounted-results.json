@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T13:54:31.912Z",
+  "passed": 7,
+  "cases": [
+    "analyze POST401 retains intent, hides private UI, and recovers by GET without replay",
+    "generate POST401 retains intent, hides private UI, and recovers by GET without replay",
+    "refine POST401 retains intent, hides private UI, and recovers by GET without replay",
+    "feedback POST401 retains intent, hides private UI, and recovers by GET without replay",
+    "GET401 clears previously accepted result; restored browser GET requires explicit acknowledgment",
+    "DELETE401 retains missing intent until verified cancellation and acknowledgment",
+    "Late old actor401 cannot require login for a different actor or returned actor epoch"
+  ],
+  "sourceHashes": {
+    "src/app/adimage/Tool.tsx": "49706aff9734afd39462903cc2a4095767168ce50ad48a3674ea195e68f14e72",
+    "src/lib/adimage/use-operation-recovery.ts": "9c5707d3bed76e28acae25047e96a41f88a5a0a5179fe615ff8343a8f3cbb1c6",
+    "src/lib/adimage/operation-client.ts": "cafddf0aa6871ee08bca9f81e70d64a38fa559eee44a8962a358afb8ad788a1a"
+  },
+  "scope": "Actual Tool/hook/client React18 StrictMode; synthetic HTTP/session. No real OAuth, provider, production customer data or native-browser claim."
+}

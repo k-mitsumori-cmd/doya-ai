@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-07T13:43:59.367Z",
+  "passed": 1,
+  "scenario": "Authenticated client status with server401 on analyze and GET recovery",
+  "finding": "The actual Tool keeps the durable intent and does not repeat POST (correct), but replaces server401 login guidance with generic saved-result guidance; GET repeats401 with no local reauthentication guidance. Global site header and real login navigation are outside this fixture.",
+  "calls": [
+    {
+      "url": "/api/adimage/placements",
+      "method": "GET"
+    },
+    {
+      "url": "/api/adimage/placements",
+      "method": "GET"
+    },
+    {
+      "url": "/api/adimage/analyze",
+      "method": "POST"
+    },
+    {
+      "url": "/api/adimage/operations?operationId=7e9c7a37-0d07-4418-8a57-a6bc0d211773&targetId=analysis&kind=analyze",
+      "method": "GET"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/adimage/Tool.tsx": "b02bed0b03e5a394e6581374c44c6bbcc4f7d8e3dadd89e5418ef63d81c74615",
+    "src/lib/adimage/use-operation-recovery.ts": "45aa451440c93205e83e9ac6c6e4f8a57b66d51a7882efe76d9ac2156978af4b",
+    "src/lib/adimage/operation-client.ts": "cafddf0aa6871ee08bca9f81e70d64a38fa559eee44a8962a358afb8ad788a1a"
+  },
+  "scope": "Actual full Tool/hook/reader under React18StrictMode, synthetic status/session/HTTP401. No actual session expiration, provider or customer data."
+}

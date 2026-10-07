@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-10-07T13:53:17.858084+00:00",
+  "status": "frozen10gates-passed-ready-for-reviewed-commit-push",
+  "finding": "Actual Tool authenticated client plus server401 discarded reauthentication guidance; retained intent correctly. Baseline reproduced before repair.",
+  "baseline": "adimage-auth-expiry-mounted-baseline.json",
+  "source": [
+    "src/lib/adimage/use-operation-recovery.ts",
+    "src/app/adimage/Tool.tsx"
+  ],
+  "repair": [
+    "Handle401 before DTO reader and cancel body without waiting",
+    "Retain intent and clear accepted result; prevent acknowledgment and POST until validated GET",
+    "Fence auth by actor/status epoch and exact UUID",
+    "Dedicated signin link with canonical callback, recovery action, and hidden prior private content"
+  ],
+  "evidence": {
+    "mounted": {
+      "passed": 7,
+      "report": "adimage-auth-expiry-mounted-results.json"
+    },
+    "native": {
+      "passed": 2,
+      "report": "adimage-auth-expiry-native-results.json",
+      "scope": "Actual Chrome UI/storage/local HTTP, synthetic signin/session, no real OAuth"
+    },
+    "regressions": {
+      "tool": 10,
+      "hook": 13,
+      "analysisTool": 5
+    },
+    "gate": "docs/audits/2026-10-06-all-services-recheck/adimage-auth-expiry-release-6d2e2f6d-42d1-4702-963b-51253ae94e37",
+    "gateSession": 24462,
+    "gateStatus": "passed2783-no-source-change"
+  },
+  "remaining": [
+    "Frozen build/types/security/lint and fresh native CSS verification",
+    "Commit/push only allowed files after source snapshot validation",
+    "Exact CI/deployment/public checks",
+    "Authenticated production and all remaining17service criteria"
+  ],
+  "boundaries": [
+    "No customer DB, paid AI, notifications, migration or real OAuth mutation",
+    "All17 services2074 criteria remain scope; no all-services completion claim"
+  ]
+}

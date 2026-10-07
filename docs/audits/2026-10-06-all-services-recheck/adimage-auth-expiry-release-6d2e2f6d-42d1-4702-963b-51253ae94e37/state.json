@@ -1,0 +1,61 @@
+{
+  "startedAt": "2026-10-07T13:52:26.129198+00:00",
+  "pid": 9276,
+  "head": "a97c8fcde175f0cba0d93e1d41df5f8b8d4f628b",
+  "sourceFiles": 2783,
+  "status": "passed",
+  "gates": [
+    {
+      "name": "private-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T13:52:27.904569+00:00"
+    },
+    {
+      "name": "adimage-helper-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T13:52:29.656623+00:00"
+    },
+    {
+      "name": "adimage-api-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T13:52:31.854874+00:00"
+    },
+    {
+      "name": "adimage-feedback-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T13:52:33.919960+00:00"
+    },
+    {
+      "name": "analysis-budget-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T13:52:35.370195+00:00"
+    },
+    {
+      "name": "analysis-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T13:52:40.019773+00:00"
+    },
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T13:57:20.032337+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T13:57:21.899516+00:00"
+    },
+    {
+      "name": "auth-native-chrome",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T13:57:30.172829+00:00"
+    },
+    {
+      "name": "native-chrome",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T13:57:38.365420+00:00"
+    }
+  ],
+  "changedSources": [],
+  "endedAt": "2026-10-07T13:57:38.740782+00:00"
+}
