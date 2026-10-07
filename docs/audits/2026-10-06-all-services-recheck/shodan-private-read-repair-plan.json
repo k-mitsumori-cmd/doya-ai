@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-07T15:38:32.442925+00:00",
+  "status": "frozen21gates-passed-ready-for-reviewed-commit-push",
+  "source": "src/app/api/shodan/preparations/[id]/route.ts",
+  "findings": [
+    "Actual DELETE completes during signing but GET returns pre-deletion full preparation",
+    "ACTIVE membership revoked during signing but GET returns private results",
+    "Preparation moved to another org during signing but original org GET returns private results",
+    "Stored slide path changed during signing but GET returns old signed URL"
+  ],
+  "nextRepair": "Revalidate exact current preparation version/nondeleted organization scope and exact original ACTIVE actor/member inside final owned query after signatures; metadata-only conflict/denial on mismatch; retain normal complete/partial results and timeout recovery",
+  "scope": "No production/customer impact claim; pending source fix and regression gates",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-private-read-release-1f0d9eb1-eda5-4311-a9cc-2945ff12abbf",
+  "repair": [
+    "Final preparation query scopes original ACTIVE member and organization after signing",
+    "Reject deleted/revoked/moved preparations without private item; reject changed timestamp or slide image snapshot with409",
+    "Reload timeout recovery row and current version after conditional update to preserve legitimate failed-status recovery",
+    "Sanitize unexpected read/signing failure with private503"
+  ],
+  "priorFailedGate": {
+    "gate": "docs/audits/2026-10-06-all-services-recheck/shodan-private-read-release-c57e59e0-eaec-4252-bdb7-21cabce38a26",
+    "sessionTerminal1": 25666,
+    "reason": "Legacy privacy fixture omitted actual updatedAt required by final current-row read; fixture corrected, original privacy assertions retained and13passed"
+  },
+  "interruptedGate": {
+    "path": "docs/audits/2026-10-06-all-services-recheck/shodan-private-read-release-b3bfeb28-74c3-4c1b-b299-9ca23f1c7a27",
+    "sessionTerminal1": 33230,
+    "reason": "ENOSPC while saving gate state; stopped synthetic PostgreSQL30folders and regenerable .next/cache cleaned, reports/server logs retained; failed/incomplete gate not treated as passed"
+  },
+  "gateStatus": "passed"
+}

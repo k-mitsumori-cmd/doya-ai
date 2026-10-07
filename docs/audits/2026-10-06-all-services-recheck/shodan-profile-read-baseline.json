@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T15:41:19.786Z",
+  "passed": 1,
+  "cases": [
+    "owner"
+  ],
+  "failures": [
+    {
+      "scenario": "membership-revoked-during-signing",
+      "error": "Old private company profile returned after membership-revoked-during-signing"
+    },
+    {
+      "scenario": "profile-deleted-during-signing",
+      "error": "Old private company profile returned after profile-deleted-during-signing"
+    },
+    {
+      "scenario": "logo-replaced-during-signing",
+      "error": "Old private company profile returned after logo-replaced-during-signing"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/shodan/company-profile/route.ts": "6f20dfa25ae32e808d0a8e029902085ab93343461f59dc22cf75a10df81656ad"
+  },
+  "scope": "Actual company-profile GET/access/Prisma/private Unix-socket PostgreSQL. Synthetic identity/storage signatures. No customer DB/provider/mail.",
+  "sourceCommit": "9187cace1b3c77ce0e55af96f5dbd8aa37e5ed8f"
+}

@@ -69,6 +69,12 @@ jobs:
       - name: SEO image ownership after download and thumbnail (private Unix socket)
         run: python3 docs/audits/2026-10-06-all-services-recheck/seo-image-read-postgres-supervise.py
 
+      - name: Shodan private preparation after signing (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/shodan-private-read-postgres-supervise.py
+
+      - name: Shodan private profile after signing (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/shodan-profile-read-postgres-supervise.py
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

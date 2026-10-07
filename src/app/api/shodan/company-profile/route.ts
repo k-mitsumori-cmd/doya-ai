@@ -11,12 +11,32 @@ import { signedUrl } from '@/lib/shodan/storage'
 const FIELDS = ['companyName', 'url', 'description', 'valueProp', 'products', 'targetCustomer', 'pricingNote', 'caseStudies'] as const
 
 // GET /api/shodan/company-profile — 自社情報の取得（ロゴは署名URLを付与）
+const privateReadHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+
 export async function GET(req: NextRequest) {
-  const ctx = await getShodanContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
-  const profile = await prisma.shodanCompanyProfile.findUnique({ where: { organizationId: ctx.organizationId } })
-  const logoUrl = profile?.logoPath ? await signedUrl(profile.logoPath) : null
-  return NextResponse.json({ profile: profile ? { ...profile, logoUrl } : null }, { headers: { 'Cache-Control': 'no-store' } })
+  try {
+    const ctx = await getShodanContext(orgSlugFrom(req))
+    if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401, headers: privateReadHeaders })
+    const profile = await prisma.shodanCompanyProfile.findUnique({ where: { organizationId: ctx.organizationId } })
+    const logoUrl = profile?.logoPath ? await signedUrl(profile.logoPath) : null
+    const member = { id: ctx.memberId, organizationId: ctx.organizationId, userId: ctx.userId, status: 'ACTIVE' }
+    if (!profile) {
+      const currentMember = await prisma.shodanMember.findFirst({ where: member, select: { id: true } })
+      if (!currentMember) return NextResponse.json({ error: '閲覧権限が変更されています。一覧を更新してください。' }, { status: 404, headers: privateReadHeaders })
+      return NextResponse.json({ profile: null }, { headers: privateReadHeaders })
+    }
+    // ロゴの署名URL取得後に、現在のプロフィールと元の所属権限を確認する。
+    const current = await prisma.shodanCompanyProfile.findFirst({
+      where: { id: profile.id, organizationId: ctx.organizationId, organization: { members: { some: member } } },
+    })
+    if (!current) return NextResponse.json({ error: '自社情報が見つからないか、閲覧権限が変更されています。一覧を更新してください。' }, { status: 404, headers: privateReadHeaders })
+    if (current.updatedAt.getTime() !== profile.updatedAt.getTime() || current.logoPath !== profile.logoPath) {
+      return NextResponse.json({ error: '自社情報が更新されています。再読み込みしてからお試しください。' }, { status: 409, headers: privateReadHeaders })
+    }
+    return NextResponse.json({ profile: { ...current, logoUrl } }, { headers: privateReadHeaders })
+  } catch {
+    return NextResponse.json({ error: '自社情報を読み込めませんでした。時間をおいて再度お試しください。' }, { status: 503, headers: privateReadHeaders })
+  }
 }
 
 // PUT /api/shodan/company-profile — 自社情報の登録/更新（manager+）
