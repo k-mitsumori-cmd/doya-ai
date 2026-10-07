@@ -1,0 +1,74 @@
+{
+  "checkedAt": "2026-10-07T21:55:00.047213+00:00",
+  "status": "frozen85gates-passed-ready-for-reviewed-commit-push",
+  "scope": "Promane project create/update operations; preserve owner-scoped plan gates and optimistic revision checks",
+  "evidence": [
+    "promane-project-submit-baseline.json",
+    "promane-project-creation-baseline-postgres-results.json",
+    "promane-project-creation-baseline-postgres-supervisor.json",
+    "promane-project-limit-boundary-postgres-results.json",
+    "promane-project-limit-boundary-postgres-supervisor.json"
+  ],
+  "confirmed": [
+    "same-frame creation sends two actions",
+    "actual isolated PostgreSQL persists duplicate projects for retry/concurrent identical actions under synthetic unlimited entitlement",
+    "empty create acknowledgement navigates to undefined project",
+    "null synthetic update acknowledgement reports success",
+    "Actual FREE final-slot successful save is misreported as LIMIT on acknowledgement-loss retry; original project is not recovered"
+  ],
+  "conditional": [
+    "same-mounted project prop switch retains uncontrolled draft; actual Next remount not proven"
+  ],
+  "requirements": [
+    "Explicit operation identity and actor binding; task-style atomic creation receipt/recovery/cancel; distinct intended operations remain distinct",
+    "Keep plan gating per workspace contract owner, billing-manager guidance and limits under concurrency",
+    "Strict complete saved acknowledgement before success/navigation; unknown response retains draft and blocks automatic resubmission",
+    "Keep optimistic update revision semantics, add loss-of-acknowledgement recovery without overwriting newer project changes",
+    "Scope in-memory drafts and persisted operation metadata across account/workspace/project/create-update modes",
+    "Exact current input/amount/date/status/billing validation preserved; no text truncation",
+    "PostgreSQL race/rollback/cancellation/limit/foreign-client tests, mounted forms/native browser, full gate, CI/READY/public confirmation",
+    "Persist rejected/declined operations as terminal outcomes before clearing pending state, so delayed requests cannot create after upgrade; do not confuse final-slot replay with a new limit denial",
+    "Update recovery must distinguish original applied revision from later superseding edits, preserving newer changes and avoiding blind retry"
+  ],
+  "boundaries": [
+    "No production/customer data writes or migrations",
+    "No provider spending/email/invites"
+  ],
+  "goalScope": "All17services2074criteria remains active; local subset cannot prove completion",
+  "preserveVerifiedBehavior": [
+    "Actual FREE final-slot parallel writes admit only one project under Serializable retry",
+    "Actual plan limits count all owner workspaces and ignore unrelated owner projects",
+    "Invited PRO staff cannot bypass FREE owner contract cap and receives owner-contact guidance",
+    "Contract owner receives billing-management guidance",
+    "Actual PRO entitlement allows unlimited projects"
+  ],
+  "candidateHelper": "promane-project-operation-candidate/src/lib/promane/project-operation.ts",
+  "candidateHelperEvidence": [
+    "promane-project-operation-helper-postgres-results.json",
+    "promane-project-operation-helper-postgres-supervisor.json"
+  ],
+  "candidateHelperCases": 19,
+  "candidateStatus": "installed-five-files-in-root",
+  "nextCandidateWork": "Run exact85gate including full build/security/typecheck/lint/native without source edits. Review exact allowlist, commit/push only after pass, then independent CI/READY/public checks. Actual authenticated Next transport and all17service full matrix remain pending.",
+  "candidateInput": "promane-project-operation-candidate/src/lib/promane/project-input.ts",
+  "candidateInputEvidence": "promane-project-input-results.json",
+  "candidateInputCases": 12,
+  "candidateTypecheck": "promane-project-candidate-typecheck.json",
+  "candidateActions": "promane-project-operation-candidate/src/lib/promane/actions-projects.ts",
+  "candidateHook": "promane-project-operation-candidate/src/lib/promane/use-project-operation.ts",
+  "candidateForm": "promane-project-operation-candidate/src/components/promane/project-form.tsx",
+  "candidateActionsEvidence": "promane-project-operation-actions-postgres-results.json",
+  "candidateHookEvidence": "promane-project-operation-mounted-results.json",
+  "candidateFormEvidence": "promane-project-operation-view-mounted-results.json",
+  "rootDedicated": {
+    "postgres": 28,
+    "hook": 23,
+    "form": 9,
+    "input": 12,
+    "native": 9,
+    "typecheck": "previous-pass-before-final-retry-message-and-import-cleanup",
+    "existingFixtureChecks": "all targeted passed; permission123, numeric6, related33, update6, delete3, repair10, text4,date4,quota7"
+  },
+  "gate": "docs/audits/2026-10-06-all-services-recheck/promane-project-operation-release-059f3bc5-a0ef-4098-911a-b6c1c57f214c",
+  "gateStatus": "passed"
+}

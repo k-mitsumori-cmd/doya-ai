@@ -1,3 +1,4 @@
+const {projectDependencies,adaptProjectPrisma,businessActions}=require('./promane-project-operation-fixture.cjs');
 const assert = require('node:assert/strict');
 const { load, check, results } = require('./load-typescript.cjs');
 
@@ -26,8 +27,9 @@ function fixture({ conflicts = 0, used = 2, max = 3, member = true, otherError =
     },
   };
   const actions = load('src/lib/promane/actions-projects.ts', {
+    ...projectDependencies,
     './time-input': load('src/lib/promane/time-input.ts'),
-    '@/lib/prisma': { prisma },
+    '@/lib/prisma': { prisma: adaptProjectPrisma(prisma) },
     '@/lib/promane/auth': {
       requirePromaneAuthAction: async () => ({ userId: actor }),
       requireWritableWorkspace: async () => ({ id: 'w', userId: 'owner' }),
@@ -35,19 +37,19 @@ function fixture({ conflicts = 0, used = 2, max = 3, member = true, otherError =
     '@/lib/promane/limits': {
       getUserPromaneLimits: async (userId, db) => {
         assert.equal(userId, 'owner', 'the workspace owner pays for projects');
-        assert.equal(db, tx);
+        assert.equal(db.promaneMember, tx.promaneMember);
         return { maxProjects: max };
       },
       countUserProjects: async (userId, db) => {
         assert.equal(userId, 'owner', 'invited workspaces do not consume the owner quota');
-        assert.equal(db, tx);
+        assert.equal(db.promaneMember, tx.promaneMember);
         reads++;
         return used;
       },
     },
     'next/cache': { revalidatePath() {} },
   });
-  return { run: () => actions.createProject('w', { name: 'P' }), state: () => ({ attempts, writes, reads }) };
+  return { run: () => businessActions(actions,actor).createProject('w', { name: 'P' }), state: () => ({ attempts, writes, reads }) };
 }
 
 (async () => {

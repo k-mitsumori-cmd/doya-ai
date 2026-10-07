@@ -196,6 +196,15 @@ jobs:
       - name: Promane client creation and input consistency (private Unix socket)
         run: python3 docs/audits/2026-10-06-all-services-recheck/promane-client-creation-postgres-supervise.py
 
+      - name: Promane project operations and owner limits (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-project-operation-actions-postgres-supervise.py
+
+      - name: Promane project input and recovery UI (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-project-input.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-project-operation-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-project-operation-view-mounted.cjs
+
       - name: Promane task creation recovery (private Unix socket)
         run: python3 docs/audits/2026-10-06-all-services-recheck/promane-task-creation-postgres-supervise.py
 

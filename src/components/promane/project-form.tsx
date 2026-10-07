@@ -1,10 +1,11 @@
 "use client";
 
 import { parsePromaneIntegerInput, parsePromaneWorkDate, validatePromaneProjectText } from "@/lib/promane/time-input";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { showServiceLimit } from "@/lib/service-limit-ui";
-import { createProject, updateProject } from "@/lib/promane/actions-projects";
+import { useProjectOperation } from '@/lib/promane/use-project-operation';
+import { useConfirm } from '@/components/promane/confirm-dialog';
 import { Button } from "@/components/promane/ui/button";
 import { Input } from "@/components/promane/ui/input";
 import { Label } from "@/components/promane/ui/label";
@@ -44,12 +45,37 @@ export function ProjectForm({
   project?: ProjectData;
 }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const operation = useProjectOperation(workspaceSlug, project?.id ?? null);
+  const loading = operation.status === 'saving' || operation.status === 'checking';
+  const submitting = useRef(false);
+  const { confirm, ConfirmDialog } = useConfirm();
+  useEffect(() => {
+    setError(null); setBillingType(project?.billingType || 'fixed'); submitting.current = false;
+    // Reset drafts only when the actor/workspace/project changes, not on a background revision refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [operation.scopeKey]);
+
+  function finish(result: Awaited<ReturnType<typeof operation.save>>) {
+    if (!result) return;
+    if (result.state === 'rejected') {
+      if (result.code === 'LIMIT') showServiceLimit('/api/promane/projects', 403, result);
+      setError(result.error);
+      return;
+    }
+    if (result.state === 'saved' || result.state === 'superseded') {
+      toast.success(result.state === 'superseded' ? '保存後に別の編集がありました。最新版を表示します' : project ? 'プロジェクトを更新しました' : 'プロジェクトを作成しました', {
+        icon: <Image src="/character/success.png" alt="" width={28} height={28} unoptimized />,
+      });
+      router.push(`/promane/${workspaceSlug}/projects/${result.entry.id}`);
+      router.refresh();
+    }
+  }
   const [billingType, setBillingType] = useState(project?.billingType || "fixed");
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submitting.current || operation.status !== 'ready') return;
     setError(null);
 
     const form = new FormData(e.currentTarget);
@@ -97,11 +123,10 @@ export function ProjectForm({
     try { validatePromaneProjectText(data) }
     catch (error) { setError(error instanceof Error ? error.message : "入力を確認してください"); return; }
 
-    setLoading(true);
+    submitting.current = true;
     try {
-      if (project) {
-        await updateProject(workspaceSlug, project.id, {
-          ...data,
+      const result = project
+        ? await operation.save({ ...data,
           expectedUpdatedAt: new Date(project.updatedAt).toISOString(),
           clientId: data.clientId ?? null,
           description: data.description ?? null,
@@ -109,31 +134,17 @@ export function ProjectForm({
           startDate: data.startDate ?? null,
           endDate: data.endDate ?? null,
           tags: data.tags ?? null,
+        })
+        : await operation.save({ ...data,
+          clientId: data.clientId ?? null, description: data.description ?? null,
+          monthlyAmount: data.monthlyAmount ?? null, hourlyRate: data.hourlyRate ?? null,
+          estimatedHours: data.estimatedHours ?? null, startDate: data.startDate ?? null,
+          endDate: data.endDate ?? null, tags: data.tags ?? null,
         });
-        toast.success("プロジェクトを更新しました", {
-          icon: <Image src="/character/success.png" alt="" width={28} height={28} unoptimized />,
-        });
-        router.push(`/promane/${workspaceSlug}/projects/${project.id}`);
-      } else {
-        const created = await createProject(workspaceSlug, data);
-        if ("error" in created) { showServiceLimit("/api/promane/projects", 403, created); setError(created.error); return; }
-        toast.success("プロジェクトを作成しました", {
-          icon: <Image src="/character/jump.png" alt="" width={28} height={28} unoptimized />,
-        });
-        router.push(`/promane/${workspaceSlug}/projects/${created.id}`);
-      }
-      router.refresh();
-    } catch (e: any) {
-      const msg = e?.message || "保存に失敗しました";
-      setError(msg);
-      toast.error(msg, {
-        icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
-        duration: 6000,
-      });
-      console.error("[promane/project] save failed");
-    } finally {
-      setLoading(false);
-    }
+      finish(result);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '保存状態を確認してください');
+    } finally { submitting.current = false; }
   }
 
   const formatDate = (d: Date | null) => d ? new Date(d).toISOString().split("T")[0] : "";
@@ -147,7 +158,18 @@ export function ProjectForm({
             <p className="text-[13px] font-black text-rose-700">{error}</p>
           </div>
         )}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {operation.message && <div role="status" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+          <p>{operation.message}</p>
+          {(operation.status === 'unknown' || operation.status === 'blocked') && <div className="mt-3 flex flex-wrap gap-3">
+            <Button disabled={loading} onClick={async () => finish(await operation.recover())}>保存状態を確認</Button>
+            <Button disabled={loading} onClick={async () => {
+              if (!await confirm({title: '未完了の送信を取り消す', message: '未保存の送信が後から反映されないようにします。保存済みの案件は削除しません。', confirmLabel: '取り消す', tone: 'danger'})) return;
+              finish(await operation.recover(true));
+            }}>未完了の送信を取り消す</Button>
+          </div>}
+        </div>}
+        <form key={operation.scopeKey} onSubmit={handleSubmit} className="space-y-4">
+          <fieldset disabled={operation.status !== 'ready'} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">案件名 *</Label>
             <Input id="name" name="name" defaultValue={project?.name} required />
@@ -251,7 +273,9 @@ export function ProjectForm({
               キャンセル
             </Button>
           </div>
+          </fieldset>
         </form>
+        <ConfirmDialog />
       </CardContent>
     </Card>
   );

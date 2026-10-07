@@ -1,15 +1,10 @@
 "use server";
 
-import { parsePromaneWorkDate, validatePromaneInteger, validatePromaneProjectText } from "./time-input";
+import { parsePromaneWorkDate } from "@/lib/promane/time-input";
 import { prisma } from "@/lib/prisma";
 import { requirePromaneAuthAction, requireWritableWorkspace } from "@/lib/promane/auth";
 import { getUserPromaneLimits, countUserProjects } from "@/lib/promane/limits";
 import { revalidatePath } from "next/cache";
-
-/** 数値バリデーション: 0以上の整数を保証 */
-function validateAmount(value: number | undefined | null, fieldName: string): number {
-  return validatePromaneInteger(value === undefined ? 0 : value, fieldName);
-}
 
 /** 日付バリデーション: startDate <= endDate */
 function validateDates(
@@ -39,186 +34,107 @@ async function retryProjectTransaction<T>(commit: () => Promise<T>): Promise<T> 
 
 const STALE_PROJECT_ERROR = '別の画面で案件が更新されています。入力を保管してから最新版を開き直してください';
 
-export async function createProject(workspaceSlug: string, data: {
-  name: string;
-  clientId?: string;
-  description?: string;
-  status?: string;
-  billingType?: string;
-  contractAmount?: number;
-  monthlyAmount?: number;
-  hourlyRate?: number;
-  estimatedHours?: number;
-  startDate?: string;
-  endDate?: string;
-  tags?: string;
-}) {
-  const { userId } = await requirePromaneAuthAction();
+import type { Prisma } from '@prisma/client';
+import { parsePromaneProjectInput, type PromaneProjectInput, type PromaneProjectPatch } from './project-input';
+import { runPromaneProjectOnce, recoverPromaneProjectOperation, promaneProjectOperationId, isPromaneProjectReceiptConflict, type PromaneProjectOperationScope } from './project-operation';
+
+async function lockProjectWriter(tx: Prisma.TransactionClient, workspaceId: string, userId: string) {
+  const members = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM promane_members
+    WHERE "workspaceId"=${workspaceId} AND "userId"=${userId} AND "isActive"=true
+      AND role IN ('owner','admin','member') FOR UPDATE`;
+  if (members.length !== 1) throw new Error('ワークスペースの変更権限がありません');
+}
+async function retryProjectOperation<T>(work: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { return await work(); }
+    catch (error) {
+      if (!isPromaneProjectReceiptConflict(error)) throw error;
+      if (attempt === 2) throw new Error('同時に案件が変更されました。少し待って保存状態を確認してください');
+    }
+  }
+  throw new Error('保存状態を確認できません');
+}
+function projectDates(input: {startDate?: string | null; endDate?: string | null}) {
+  return {
+    ...(input.startDate !== undefined && {startDate: input.startDate ? parsePromaneWorkDate(input.startDate) : null}),
+    ...(input.endDate !== undefined && {endDate: input.endDate ? parsePromaneWorkDate(input.endDate) : null}),
+  };
+}
+async function requireProjectClient(tx: Prisma.TransactionClient, workspaceId: string, clientId: string | null | undefined) {
+  if (clientId && !await tx.promaneClient.findFirst({where: {id: clientId, workspaceId}, select: {id: true}})) throw new Error('取引先がワークスペースに存在しません');
+}
+function refreshProject(workspaceSlug: string, id?: string) {
+  if (id) revalidatePath(`/promane/${workspaceSlug}/projects/${id}`);
+  revalidatePath(`/promane/${workspaceSlug}/projects`);
+  revalidatePath(`/promane/${workspaceSlug}`);
+}
+export async function createProject(workspaceSlug: string, data: Partial<PromaneProjectInput> & {name: string; operationId: string; expectedUserId: string}) {
+  const {userId} = await requirePromaneAuthAction();
+  if (data.expectedUserId !== userId) throw new Error('ログインする利用者が変わりました。保存状態を確認してください');
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
   if (!workspace.userId) throw new Error('ワークスペースの契約者を確認できません');
-
-  validatePromaneProjectText(data);
-
-  const contractAmount = validateAmount(data.contractAmount, "契約金額");
-  const monthlyAmount = data.monthlyAmount != null ? validateAmount(data.monthlyAmount, "月額") : null;
-  const hourlyRate = data.hourlyRate != null ? validateAmount(data.hourlyRate, "時給") : null;
-  const estimatedHours = data.estimatedHours != null ? validateAmount(data.estimatedHours, "見積工数") : null;
-  const { startDate, endDate } = validateDates(data.startDate, data.endDate);
-
-  const commit = () => prisma.$transaction(async (tx) => {
-    const member = await tx.promaneMember.findFirst({
-      where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin', 'member'] } },
-      select: { id: true },
-    });
-    if (!member) throw new Error('ワークスペースの変更権限がありません');
-    if (data.clientId) {
-      const client = await tx.promaneClient.findFirst({
-        where: { id: data.clientId, workspaceId: workspace.id }, select: { id: true },
+  const operationId = promaneProjectOperationId(data.operationId), input = parsePromaneProjectInput(data);
+  const result = await retryProjectOperation(() => prisma.$transaction(async tx => {
+    await lockProjectWriter(tx, workspace.id, userId);
+    return runPromaneProjectOnce(tx, {workspaceId: workspace.id, userId, mode: 'create', projectId: null}, operationId, input,
+      id => tx.promaneProject.findFirst({where: {id, workspaceId: workspace.id}}), async () => {
+        await requireProjectClient(tx, workspace.id, input.clientId);
+        const limits = await getUserPromaneLimits(workspace.userId, tx);
+        const canManageBilling = userId === workspace.userId;
+        if (limits.maxProjects === 0) return {state: 'rejected', code: 'LIMIT', canManageBilling,
+          error: canManageBilling ? '現在のプランではプロジェクトを作成できません。プランをご確認ください' : '現在の契約ではプロジェクトを作成できません。ワークスペースの契約者にご相談ください'};
+        if (limits.maxProjects > 0 && await countUserProjects(workspace.userId, tx) >= limits.maxProjects) {
+          const guidance = canManageBilling ? 'プランをご確認ください' : '利用枠の変更はワークスペースの契約者にご相談ください';
+          return {state: 'rejected', code: 'LIMIT', canManageBilling, error: `プラン上限 (${limits.maxProjects}件) に達しました。${guidance}`};
+        }
+        return {state: 'saved', entry: await tx.promaneProject.create({data: {...input, ...projectDates(input), workspaceId: workspace.id}})};
       });
-      if (!client) throw new Error("取引先がワークスペースに存在しません");
-    }
-
-    // プラン上限チェック (ドヤAI共通)
-    const limits = await getUserPromaneLimits(workspace.userId, tx);
-    const canManageBilling = userId === workspace.userId;
-    if (limits.maxProjects === 0) {
-      return { error: canManageBilling
-        ? "現在のプランではプロジェクトを作成できません。プランをご確認ください"
-        : "現在の契約ではプロジェクトを作成できません。ワークスペースの契約者にご相談ください",
-        code: "LIMIT" as const, canManageBilling };
-    }
-    if (limits.maxProjects > 0) {
-      const current = await countUserProjects(workspace.userId, tx);
-      if (current >= limits.maxProjects) {
-        const guidance = userId === workspace.userId
-          ? 'プランをご確認ください'
-          : '利用枠の変更はワークスペースの契約者にご相談ください';
-        return { error: `プラン上限 (${limits.maxProjects}件) に達しました。${guidance}`, code: "LIMIT" as const, canManageBilling };
-      }
-    }
-
-    return tx.promaneProject.create({
-      data: {
-        workspaceId: workspace.id,
-        name: data.name.trim(),
-        clientId: data.clientId || null,
-        description: data.description || null,
-        status: data.status || "draft",
-        billingType: data.billingType || "fixed",
-        contractAmount,
-        monthlyAmount,
-        hourlyRate,
-        estimatedHours,
-        startDate,
-        endDate,
-        tags: data.tags || null,
-      },
-    });
-
-  }, { isolationLevel: 'Serializable' });
-  const project = await retryProjectTransaction(commit);
-  if ('error' in project) return project;
-
-  revalidatePath(`/promane/${workspaceSlug}/projects`);
-  revalidatePath(`/promane/${workspaceSlug}`);
-  return project;
+  }, {isolationLevel: 'Serializable'}));
+  if (result.state !== 'rejected') refreshProject(workspaceSlug, result.entry.id);
+  return result;
 }
-
-export async function updateProject(workspaceSlug: string, projectId: string, data: {
-  expectedUpdatedAt: string;
-  name?: string;
-  clientId?: string | null;
-  description?: string | null;
-  status?: string;
-  billingType?: string;
-  contractAmount?: number;
-  monthlyAmount?: number | null;
-  hourlyRate?: number | null;
-  estimatedHours?: number | null;
-  startDate?: string | null;
-  endDate?: string | null;
-  tags?: string | null;
-}) {
-  const { userId } = await requirePromaneAuthAction();
+export async function updateProject(workspaceSlug: string, projectId: string, data: PromaneProjectPatch & {operationId: string; expectedUserId: string}) {
+  const {userId} = await requirePromaneAuthAction();
+  if (data.expectedUserId !== userId) throw new Error('ログインする利用者が変わりました。保存状態を確認してください');
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
-
-  validatePromaneProjectText(data, true);
-  if (typeof data.expectedUpdatedAt !== 'string') {
-    throw new Error('案件の更新情報がありません。入力を保管してから画面を開き直してください');
-  }
-  const expectedUpdatedAt = new Date(data.expectedUpdatedAt);
-  if (!Number.isFinite(expectedUpdatedAt.getTime()) ||
-      expectedUpdatedAt.toISOString() !== data.expectedUpdatedAt) {
-    throw new Error('案件の更新情報がありません。入力を保管してから画面を開き直してください');
-  }
-
-  const project = await retryProjectTransaction(() => prisma.$transaction(async (tx) => {
-    const member = await tx.promaneMember.findFirst({
-      where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ['owner', 'admin', 'member'] } },
-      select: { id: true },
-    });
-    if (!member) throw new Error('ワークスペースの変更権限がありません');
-    // 既存値で部分更新の整合性チェック
-    const existing = await tx.promaneProject.findFirst({
-      where: { id: projectId, workspaceId: workspace.id },
-      select: { startDate: true, endDate: true, updatedAt: true },
-    });
-    if (!existing) throw new Error("プロジェクトが見つかりません");
-    if (existing.updatedAt.getTime() !== expectedUpdatedAt.getTime()) {
-      throw new Error(STALE_PROJECT_ERROR);
-    }
-
-    if (data.clientId) {
-      const client = await tx.promaneClient.findFirst({
-        where: { id: data.clientId, workspaceId: workspace.id }, select: { id: true },
+  if (typeof projectId !== 'string' || !projectId || projectId.length > 200) throw new Error('案件を指定してください');
+  const operationId = promaneProjectOperationId(data.operationId), input = parsePromaneProjectInput(data, true);
+  const result = await retryProjectOperation(() => prisma.$transaction(async tx => {
+    await lockProjectWriter(tx, workspace.id, userId);
+    return runPromaneProjectOnce(tx, {workspaceId: workspace.id, userId, mode: 'update', projectId}, operationId, input,
+      id => tx.promaneProject.findFirst({where: {id, workspaceId: workspace.id}}), async () => {
+        const existing = await tx.promaneProject.findFirst({where: {id: projectId, workspaceId: workspace.id}});
+        if (!existing) throw new Error('プロジェクトが見つかりません');
+        const expected = new Date(input.expectedUpdatedAt);
+        if (+existing.updatedAt !== +expected) return {state: 'rejected', code: 'STALE_PROJECT', error: STALE_PROJECT_ERROR};
+        await requireProjectClient(tx, workspace.id, input.clientId);
+        validateDates(input.startDate === undefined ? existing.startDate : input.startDate, input.endDate === undefined ? existing.endDate : input.endDate);
+        const {expectedUpdatedAt: _revision, ...patch} = input;
+        try {
+          const entry = await tx.promaneProject.update({where: {id: projectId, workspaceId: workspace.id, updatedAt: expected},
+            data: {...patch, ...projectDates(patch), updatedAt: new Date(Math.max(Date.now(), +expected + 1))}});
+          return {state: 'saved', entry};
+        } catch (error) {
+          // P2025 has no failed SQL statement; a missing conditional match can safely record a terminal stale result.
+          if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') return {state: 'rejected', code: 'STALE_PROJECT', error: STALE_PROJECT_ERROR};
+          throw error;
+        }
       });
-      if (!client) throw new Error("取引先がワークスペースに存在しません");
-    }
-
-    if (data.contractAmount !== undefined) validateAmount(data.contractAmount, "契約金額");
-    if (data.monthlyAmount !== undefined && data.monthlyAmount !== null) validateAmount(data.monthlyAmount, "月額");
-    if (data.hourlyRate !== undefined && data.hourlyRate !== null) validateAmount(data.hourlyRate, "時給");
-    if (data.estimatedHours !== undefined && data.estimatedHours !== null) validateAmount(data.estimatedHours, "見積工数");
-
-    let validatedDates: { startDate: Date | null; endDate: Date | null } | undefined;
-    if (data.startDate !== undefined || data.endDate !== undefined) {
-      const finalStart = data.startDate !== undefined ? data.startDate : existing.startDate;
-      const finalEnd = data.endDate !== undefined ? data.endDate : existing.endDate;
-      validatedDates = validateDates(finalStart, finalEnd);
-    }
-
-    try {
-      return await tx.promaneProject.update({
-        where: { id: projectId, workspaceId: workspace.id, updatedAt: expectedUpdatedAt },
-        data: {
-          updatedAt: new Date(Math.max(Date.now(), expectedUpdatedAt.getTime() + 1)),
-        ...(data.name !== undefined && { name: data.name.trim() }),
-        ...(data.clientId !== undefined && { clientId: data.clientId || null }),
-        ...(data.description !== undefined && { description: data.description || null }),
-        ...(data.status !== undefined && { status: data.status }),
-        ...(data.billingType !== undefined && { billingType: data.billingType }),
-        ...(data.contractAmount !== undefined && { contractAmount: validateAmount(data.contractAmount, "契約金額") }),
-        ...(data.monthlyAmount !== undefined && { monthlyAmount: data.monthlyAmount }),
-        ...(data.hourlyRate !== undefined && { hourlyRate: data.hourlyRate }),
-        ...(data.estimatedHours !== undefined && { estimatedHours: data.estimatedHours }),
-        ...(data.startDate !== undefined && { startDate: validatedDates!.startDate }),
-        ...(data.endDate !== undefined && { endDate: validatedDates!.endDate }),
-          ...(data.tags !== undefined && { tags: data.tags || null }),
-        },
-      });
-    } catch (error) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
-        throw new Error(STALE_PROJECT_ERROR);
-      }
-      throw error;
-    }
-
-  }, { isolationLevel: 'Serializable' }));
-
-  revalidatePath(`/promane/${workspaceSlug}/projects/${projectId}`);
-  revalidatePath(`/promane/${workspaceSlug}/projects`);
-  revalidatePath(`/promane/${workspaceSlug}`);
-  return project;
+  }, {isolationLevel: 'Serializable'}));
+  if (result.state !== 'rejected') refreshProject(workspaceSlug, projectId);
+  return result;
+}
+export async function recoverProjectOperation(workspaceSlug: string, mode: 'create' | 'update', projectId: string | null, operation: string, cancelIfMissing = false, expectedUserId = '') {
+  const {userId} = await requirePromaneAuthAction();
+  if (expectedUserId !== userId) throw new Error('ログインする利用者が変わりました。保存状態を確認してください');
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
+  if (typeof cancelIfMissing !== 'boolean' || !['create','update'].includes(mode) || (mode === 'create' ? projectId !== null : typeof projectId !== 'string' || !projectId || projectId.length > 200)) throw new Error('確認対象を指定してください');
+  const scope = {workspaceId: workspace.id, userId, mode, projectId} as PromaneProjectOperationScope;
+  const operationId = promaneProjectOperationId(operation);
+  return retryProjectOperation(() => prisma.$transaction(async tx => {
+    await lockProjectWriter(tx, workspace.id, userId);
+    return recoverPromaneProjectOperation(tx, scope, operationId, id => tx.promaneProject.findFirst({where: {id, workspaceId: workspace.id}}), cancelIfMissing);
+  }, {isolationLevel: 'Serializable'}));
 }
 
 export async function deleteProject(workspaceSlug: string, projectId: string) {

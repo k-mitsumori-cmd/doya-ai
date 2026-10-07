@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-07T21:38:28.984Z",
+  "expected": 4,
+  "passed": 4,
+  "cases": [
+    {
+      "finding": "same-frame project creation sends two identical actions",
+      "actionCalls": 2,
+      "successToasts": 2
+    },
+    {
+      "finding": "empty create acknowledgement reports success and navigates to undefined project",
+      "path": "/promane/synthetic/projects/undefined"
+    },
+    {
+      "finding": "null update acknowledgement still reports success and leaves form",
+      "successToasts": 1
+    },
+    {
+      "finding": "same-mounted project change submits prior uncontrolled draft under new project ID",
+      "conditional": "Actual Next navigation remount behavior not established"
+    }
+  ],
+  "sourceHashes": {
+    "src/components/promane/project-form.tsx": "b47b6c496fd834c9e10ea43cf34504b80c4d9afaf3bd3f86f3a9c8b09681df64"
+  },
+  "scope": "Actual ProjectForm in React StrictMode, real FormData, synthetic actions/navigation and select shells. Does not establish database duplicates, real Next transport, authenticated production impact or production remount behavior."
+}

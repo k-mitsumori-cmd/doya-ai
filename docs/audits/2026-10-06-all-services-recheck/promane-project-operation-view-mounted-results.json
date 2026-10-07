@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-07T23:12:53.137Z",
+  "expected": 9,
+  "passed": 9,
+  "cases": [
+    "same-frame form submission creates once and navigates only on validated acknowledgement",
+    "empty create acknowledgement preserves draft and offers recovery without success",
+    "null update acknowledgement preserves draft and does not navigate",
+    "same-mounted project switch resets uncontrolled input to new project",
+    "terminal LIMIT preserves entered name and opens correct upgrade guidance",
+    "explicit cancel keeps draft and permits new intentional operation",
+    "saved recovery navigates once and performs no extra create",
+    "account switch clears private draft and pending UI belongs to new actor",
+    "superseded update recovery opens latest without overwriting"
+  ],
+  "sourceHashes": {
+    "./src/components/promane/project-form.tsx": "6e39a570f47cb6fc71088d45943d82d66dc88b342a9962e3ac78704687e5b748",
+    "./src/lib/promane/use-project-operation.ts": "0fe136526bdee96d64e925c52291d0063a28d3325a718e0217b29945be9f94c0",
+    "./src/lib/promane/project-input.ts": "79f15cb72f8322f2f3c3e600824191cb18fea64b4e1a191b5271d12bef17b521"
+  },
+  "scope": "Actual selected ProjectForm/hook/parser in React StrictMode with real FormData/localStorage, synthetic Web Locks/actions/session/navigation/select shells. sourceHashes identify root or candidate; native and actual Next transport not covered."
+}

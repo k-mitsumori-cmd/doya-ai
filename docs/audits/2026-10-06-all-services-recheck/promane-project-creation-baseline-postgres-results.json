@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-07T21:38:48.479Z",
+  "expected": 2,
+  "passed": 2,
+  "cases": [
+    {
+      "finding": "resending identical action after losing acknowledgement creates another persisted row",
+      "rows": 2
+    },
+    {
+      "finding": "concurrent identical actions commit two rows despite Serializable transaction retries",
+      "additionalRows": 2
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/promane/actions-projects.ts": "00e185f9d07fff895bb3f6d6ddeb064abe556e1a95c2be642cb5dd1aa6c33b83",
+    "src/components/promane/project-form.tsx": "b47b6c496fd834c9e10ea43cf34504b80c4d9afaf3bd3f86f3a9c8b09681df64"
+  },
+  "scope": "Actual createProject action and actual isolated Unix-socket PostgreSQL transactions; synthetic auth/workspace/member and unlimited plan entitlement. No production/customer writes. Identical input may intentionally mean separate projects; missing operation identity prevents distinguishing retry from a new intended project. Fixture tables have scalar constraints, not full production foreign-key topology."
+}

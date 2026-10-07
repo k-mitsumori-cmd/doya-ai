@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-07T23:17:54.874Z",
+  "expected": 9,
+  "passed": 9,
+  "cases": [
+    "Native same-frame submit creates one project and navigates once",
+    "Uncertain native save preserves text and disables real controls",
+    "Native reload recovers exact operation without another create",
+    "Actual confirmation cancellation keeps entered project draft",
+    "Native terminal limit preserves draft and surfaces owner guidance",
+    "Empty acknowledgement cannot trigger success navigation",
+    "Actual shared project fields/recovery fit390 and320px without horizontal overflow",
+    "Committed-deleted project recovery unlocks without extra write",
+    "Native actor switch resets prior private project draft"
+  ],
+  "sourceHashes": {
+    "./src/lib/promane/use-project-operation.ts": "0fe136526bdee96d64e925c52291d0063a28d3325a718e0217b29945be9f94c0",
+    "./src/lib/promane/project-input.ts": "79f15cb72f8322f2f3c3e600824191cb18fea64b4e1a191b5271d12bef17b521",
+    "src/lib/promane/time-input.ts": "d1c85c52013a1b5ebdcc59e6f0d3dde6720c44af1c14903df0faf0f429c3499a",
+    "src/components/promane/confirm-dialog.tsx": "05cd204469fb380c69650e89c430d4dd627a828aa1e6e666dc49fd2e96f74c89",
+    "./src/components/promane/project-form.tsx": "6e39a570f47cb6fc71088d45943d82d66dc88b342a9962e3ac78704687e5b748",
+    "src/components/promane/ui/button.tsx": "88b8543c1ed16d0811bdbf37fb1b5b7fd7cbae1bd8f6a710282ce8c1318ff117",
+    "src/components/promane/ui/input.tsx": "406c012a2e8a86c46816e92b503a15a981d5115d6ad125b48c64b3a734db72ec",
+    "src/components/promane/ui/select.tsx": "b71cdff64fd84392d95224be997c207bc4901b4e5bc1f1db852435bddf38e6a7",
+    "src/components/promane/ui/label.tsx": "2e901f9b1b6d86662d2edd92bb5ad49746dab2973a83c21e6e501e4b2016f78a",
+    "src/components/promane/ui/textarea.tsx": "6eaa0dd0e032078b88b485e7c5bc0ba1bc8020b5910d076fb275c074fd2dfaa0",
+    "src/components/promane/ui/card.tsx": "c378807641eb2e223f809a66ff5fd1235ecc0560999d7c8f3648080e98c52337"
+  },
+  "scope": "Native Chrome actual selected ProjectForm/hook/parser/shared controls/confirmation/Web Locks/localStorage. sourceHashes identify root or candidate. Synthetic localhost action transport/session/navigation/limit handler; authenticated Next/PostgreSQL-linked UI and production not covered."
+}
