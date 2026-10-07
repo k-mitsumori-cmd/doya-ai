@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-07T14:47:50.849Z",
+  "passed": 11,
+  "cases": [
+    "Logo upload saves scoped metadata before multipart POST and requires explicit acknowledgment",
+    "Lost upload response and remount GET restore editing context with no second AI or upload",
+    "GET confirmation preserves newer unsent copy in the same open editor",
+    "Lost logo removal and remount restore cleared logo and editing context by GET",
+    "Result-stage logo recovery restores owned image, scores, source and unsent refinement note without AI replay",
+    "Refined result-stage recovery restores both generations and newer open-editor note is preserved",
+    "Malformed logo acknowledgement keeps operation fenced until validated GET",
+    "Same-frame duplicate logo selection sends only one upload",
+    "Late logo acknowledgment is fenced across actor ABA; explicit current GET restores it",
+    "Logo401 retains UUID and provides canonical login action without automatic replay",
+    "Malformed restored copy is rejected instead of replacing private editor values"
+  ],
+  "sourceHashes": {
+    "src/app/adimage/Tool.tsx": "8777fffb004a70c04a98f6836438a2a42fe72f341b9f76c3d072d2bcc7ca0312",
+    "src/lib/adimage/use-operation-recovery.ts": "2382b442cf20ad23900e772bf35751b89f5a764f74ad7305c541c7bf7b572d3f",
+    "src/lib/adimage/operation-client.ts": "b055f4656e75e0e98ddcaaa20c75fdf2d99842071f26a1b7269068bd39970b98",
+    "src/lib/adimage/logo-context.ts": "b1821760907235b73f02a7f856a180098506f68c983980ac1d0ee1085aa99fcb"
+  },
+  "scope": "Actual full Tool/hook/strict reader/context guard React18 StrictMode, real jsdom FormData/File/events; synthetic server/session. Covers copy and generated/refined image/feedback stages with synthetic server data. Actual workspace API/DB ownership and native real-endpoint E2E remain separate required evidence. No real provider/customer data/production."
+}

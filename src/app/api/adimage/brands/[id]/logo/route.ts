@@ -8,86 +8,72 @@ export const maxDuration = 300
 // ⚠️ ロゴは本サービスで唯一「合成」する要素。
 //    画像生成AIにロゴを描かせると形状・字間・色が必ず変わるため。
 import sharp from 'sharp'
+import { createHash } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { getIdentity, ownerWhere, requireUser } from '@/lib/adimage/access'
+import { getIdentity, requireUser } from '@/lib/adimage/access'
 import { uploadPng } from '@/lib/adimage/storage'
-import { DEFAULT_LOGO_CONFIG, type LogoConfig, type LogoPosition } from '@/lib/adimage/logo'
+import { AdImageLogoError, readAdImageLogoForm, readAdImageLogoRemovalContext } from '@/lib/adimage/logo-input'
+import { adImageLogoReply } from '@/lib/adimage/logo-operation-http'
+import { beginAdImageLogo, finishAdImageLogo, failAdImageLogo, type AdImageLogoOperation } from '@/lib/adimage/logo-operation'
 
 type Ctx = { params: Promise<{ id: string }> }
-
-const POSITIONS: LogoPosition[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center-top']
-
-/** ⚠️ Vercel の本文上限（4.5MB）に当たらないよう、受け取る側でも制限する */
-const MAX_BYTES = 3 * 1024 * 1024
+const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+function failure(error: unknown) {
+  return NextResponse.json({ error: error instanceof AdImageLogoError ? error.message : 'ロゴの保存状態を確認できませんでした。時間をおいて状態を確認してください。' }, { status: error instanceof AdImageLogoError ? error.status : 503, headers })
+}
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = await ctxParam.params
-  const identity = await getIdentity(req)
-  // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
-  const auth = requireUser(identity)
-  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
-  const where = ownerWhere(identity)
-  if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
-
-  // ⚠️ id だけで引かない（所有者条件と併用）
-  const brand = await prisma.adImageBrand.findFirst({ where: { id: p.id, ...where }, select: { id: true } })
-  if (!brand) return NextResponse.json({ error: 'ブランドが見つかりません' }, { status: 404 })
-
-  const form = await req.formData().catch(() => null)
-  const file = form?.get('file')
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: 'ロゴ画像を選択してください' }, { status: 400 })
-  }
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: 'ロゴ画像は3MB以下にしてください' }, { status: 413 })
-  }
-
-  const raw = Buffer.from(await file.arrayBuffer())
-  let png: Buffer
+  let operation: AdImageLogoOperation | undefined
+  let admitted = false
   try {
-    // 透過を保ったままPNGへ正規化する。壊れた画像はここで弾ける。
-    png = await sharp(raw).png().toBuffer()
-  } catch {
-    return NextResponse.json({ error: '画像として読み取れませんでした' }, { status: 400 })
-  }
-
-  const posRaw = String(form?.get('pos') || '')
-  const config: LogoConfig = {
-    pos: POSITIONS.includes(posRaw as LogoPosition) ? (posRaw as LogoPosition) : DEFAULT_LOGO_CONFIG.pos,
-    maxWidthPct: Number.isFinite(Number(form?.get('maxWidthPct')))
-      ? Math.max(5, Math.min(50, Number(form?.get('maxWidthPct'))))
-      : DEFAULT_LOGO_CONFIG.maxWidthPct,
-    paddingPct: Number.isFinite(Number(form?.get('paddingPct')))
-      ? Math.max(0, Math.min(15, Number(form?.get('paddingPct'))))
-      : DEFAULT_LOGO_CONFIG.paddingPct,
-  }
-
-  const path = `${identity.userId || identity.guestId}/brand_${brand.id}/logo.png`
-  await uploadPng(path, png)
-  await prisma.adImageBrand.update({
-    where: { id: brand.id },
-    data: { logoPath: path, logoConfig: config as any },
-  })
-
-  return NextResponse.json({ ok: true, config })
+    const identity = await getIdentity(req)
+    const auth = requireUser(identity)
+    if (!auth.ok || !identity.userId) return NextResponse.json({ error: '再ログインしてください。' }, { status: 401, headers })
+    const p = await ctxParam.params
+    const operationId = req.headers.get('X-AdImage-Operation-Id')
+    if (!operationId) throw new AdImageLogoError(409, '画面を更新してから操作してください。')
+    operation = { actor: identity.userId, targetId: p.id, operationId, kind: 'logo-upload' }
+    const { file, config, context } = await readAdImageLogoForm(req)
+    const raw = Buffer.from(await file.arrayBuffer())
+    const name = file.name.trim().slice(0, 200) || 'ロゴ画像'
+    const inputHash = createHash('sha256').update(raw).update(JSON.stringify([config, name, context || null])).digest('hex')
+    const begin = await beginAdImageLogo(operation, inputHash, config, name, context)
+    if (!begin.admitted) return await adImageLogoReply(operation, begin.value)
+    admitted = true
+    let png: Buffer
+    try {
+      const image = sharp(raw, { limitInputPixels: 16_000_000, animated: false, pages: 1 })
+      const metadata = await image.metadata()
+      if (!metadata.width || !metadata.height || metadata.width > 8192 || metadata.height > 8192) throw new Error()
+      png = await image.rotate().png().toBuffer()
+      if (png.byteLength > 12 * 1024 * 1024) throw new Error()
+    } catch { throw new AdImageLogoError(400, '画像を読み取れないか、画像サイズが大きすぎます。縦横8192px以内・1600万画素以下の画像を選択してください。') }
+    // Every upload gets a new immutable object. A failed/stale DB update cannot overwrite a referenced logo.
+    await uploadPng(begin.receipt.path!, png)
+    const result = await finishAdImageLogo(operation)
+    return await adImageLogoReply(operation, result)
+  } catch (error) { return failure(error) }
+  finally { if (admitted && operation) await failAdImageLogo(operation).catch(() => {}) }
 }
 
 export async function DELETE(req: NextRequest, ctxParam: Ctx) {
-  const p = await ctxParam.params
-  const identity = await getIdentity(req)
-  // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
-  const auth = requireUser(identity)
-  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
-  const where = ownerWhere(identity)
-  if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
-
-  // ⚠️ 画像の実体は消さない（過去に生成したクリエイティブの再現性を残す）。
-  //    参照だけ外すことで「以後は載せない」を実現する。
-  const updated = await prisma.adImageBrand.updateMany({
-    where: { id: p.id, ...where },
-    data: { logoPath: null },
-  })
-  if (updated.count === 0) return NextResponse.json({ error: 'ブランドが見つかりません' }, { status: 404 })
-  return NextResponse.json({ ok: true })
+  let operation: AdImageLogoOperation | undefined
+  let admitted = false
+  try {
+    const identity = await getIdentity(req)
+    const auth = requireUser(identity)
+    if (!auth.ok || !identity.userId) return NextResponse.json({ error: '再ログインしてください。' }, { status: 401, headers })
+    const p = await ctxParam.params
+    const operationId = req.headers.get('X-AdImage-Operation-Id')
+    if (!operationId) throw new AdImageLogoError(409, '画面を更新してから操作してください。')
+    operation = { actor: identity.userId, targetId: p.id, operationId, kind: 'logo-remove' }
+    const context = await readAdImageLogoRemovalContext(req)
+    const begin = await beginAdImageLogo(operation, createHash('sha256').update('remove-logo').update(JSON.stringify(context || null)).digest('hex'), null, null, context)
+    if (!begin.admitted) return await adImageLogoReply(operation, begin.value)
+    admitted = true
+    // Referenced historical objects are retained; only this current owned brand reference is removed.
+    const result = await finishAdImageLogo(operation)
+    return await adImageLogoReply(operation, result)
+  } catch (error) { return failure(error) }
+  finally { if (admitted && operation) await failAdImageLogo(operation).catch(() => {}) }
 }

@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T14:47:50.205Z",
+  "passed": 15,
+  "cases": [
+    "Client file+pos uses declared22%/4% defaults; explicit zero padding remains zero",
+    "Duplicate, unknown, malformed and out-of-range settings fail instead of coercing/clamping",
+    "Actual streamed multipart retains defaults and rejects declared and actual body excess",
+    "Aborted/stalled multipart cancels reader without waiting for body completion",
+    "Actual route with real Sharp saves defaults and publishes a new object path each upload",
+    "Upload transfer does not publish stale logo or leak internal failure",
+    "Upload change does not publish stale logo or leak internal failure",
+    "Upload delete-actor does not publish stale logo or leak internal failure",
+    "Upload error does not publish stale logo or leak internal failure",
+    "Actual Sharp rejects oversized logo dimensions before any storage or DB mutation",
+    "Delete publishes only owned version and preserves stored object bytes",
+    "Same operation replay and ten concurrent requests publish one immutable object only",
+    "Lost commit acknowledgement preserves saved receipt and retry never uploads again",
+    "Missing cancellation fences delayed POST and changed-body replay fails safely",
+    "Completed result becomes unavailable after owner transfer or later brand change"
+  ],
+  "sourceHashes": {
+    "src/app/api/adimage/brands/[id]/logo/route.ts": "9b8eb62c4056f5e4ec8a71dcc1e9d3f3b0376a748c84618f9390da34b6de5825",
+    "src/lib/adimage/logo-input.ts": "eb202b0c7e89b2435fb41197da851ca161ae6025562abeb2b03084d682e00c20",
+    "src/lib/adimage/logo-operation.ts": "d08913c7d568c05276605d7cd0f5bc83ffe2868d7ced8c5016fc5e3f567fd425"
+  },
+  "scope": "Actual route/input/mutation code, real Request/FormData/File/Sharp, synthetic serialized DB/storage. No real row locks/transaction rollback, customer data, provider or production. Durable receipt/ten callers/lost-commit are synthetic serialized schedules; actual private PostgreSQL row locks, full Tool/native restoration and shared real image admission still required."
+}

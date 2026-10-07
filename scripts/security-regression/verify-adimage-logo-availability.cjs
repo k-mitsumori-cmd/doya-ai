@@ -1,7 +1,8 @@
 const {connect,request:operationRequest}=require('./adimage-operation-http-fixture.cjs')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
-const vm = require('node:vm')
+const path = require('node:path')
+const { createRequire } = require('node:module')
 const ts = require('typescript')
 const { load, check } = require('./load-typescript.cjs')
 
@@ -51,26 +52,26 @@ async function exercise(kind, logoPath, downloaded) {
   return { response, claims, campaigns, generations, reads }
 }
 
-function logoRemoval(response) {
-  const file = 'src/app/adimage/Tool.tsx'
-  const ast = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
-  let source
-  function visit(node) {
-    if (ts.isFunctionDeclaration(node) && node.name?.text === 'removeLogo') source = node.getText(ast)
-    ts.forEachChild(node, visit)
-  }
-  visit(ast)
-  assert.ok(source)
-  const state = { logoName: 'brand.png', busy: false, error: '' }
-  const env = {
-    brandId: 'brand', imageOperation: { current: { revision: 0, busy: false } }, operation: { blocked: false }, fetch: async () => response,
-    setLogoBusy: (value) => { state.busy = value },
-    setLogoName: (value) => { state.logoName = value },
-    setError: (value) => { state.error = value },
-    notifyError: (setError, message) => setError(message),
-  }
-  const code = ts.transpileModule(`(${source})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
-  return { removeLogo: vm.runInNewContext(code, env), state }
+async function logoRemoval(fail) {
+  const file='scripts/security-regression/verify-adimage-operation-tool-mounted.cjs'
+  const prefix=fs.readFileSync(file,'utf8').split('\n(async()=>{')[0]
+  const f=new Function('require','__dirname',prefix+'\nreturn {mount,close,act,prepare,click,client,dom,host:()=>host,reset:()=>{receipts=new Map();mode="success";calls=[];dom.window.localStorage.clear()},setNetwork:v=>network=v,original:network};')(createRequire(path.resolve(file)),path.dirname(path.resolve(file)))
+  try {
+    f.reset()
+    let deletes=0
+    f.setNetwork(async c=>{
+      if(!c.url.endsWith('/logo'))return f.original(c)
+      const intent=f.client.readAdImageIntent('actor-a')
+      if(c.init.method==='DELETE'){deletes++;if(fail)return Response.json({error:'Synthetic internal failure'},{status:503})}
+      return Response.json({operationId:intent.operationId,kind:intent.kind,targetId:intent.targetId,state:'completed',brandId:intent.targetId,logoName:c.init.method==='DELETE'?null:'brand.png',logoConfig:c.init.method==='DELETE'?null:{pos:'bottom-right',maxWidthPct:22,paddingPct:4}})
+    })
+    await f.mount();await f.prepare()
+    await f.act(()=>{const el=f.host().querySelector('input[type="file"]');Object.defineProperty(el,'files',{value:[new f.dom.window.File(['synthetic'],'brand.png',{type:'image/png'})],configurable:true});el.dispatchEvent(new f.dom.window.Event('change',{bubbles:true}))})
+    assert(f.host().textContent.includes('brand.png'));await f.click('結果を確認しました');await f.click('ロゴを外す')
+    assert.equal(deletes,1)
+    if(fail){assert(f.host().textContent.includes('brand.png'));assert(f.host().textContent.includes('保存結果を確認'));assert(!f.host().textContent.includes('Synthetic internal failure'));assert.equal(f.client.readAdImageIntent('actor-a').kind,'logo-remove')}
+    else {assert(!f.host().textContent.includes('brand.png'));assert(f.host().textContent.includes('結果を確認しました'));assert.equal(f.client.readAdImageIntent('actor-a').kind,'logo-remove')}
+  } finally {await f.close()}
 }
 
 ;(async () => {
@@ -85,18 +86,6 @@ function logoRemoval(response) {
       assert.equal(result.generations, 0)
     })
   }
-  await check('failed logo removal keeps the selected logo and shows the server error', async () => {
-    const { removeLogo, state } = logoRemoval(Response.json({ error: '削除できません' }, { status: 503 }))
-    await removeLogo()
-    assert.equal(state.logoName, 'brand.png')
-    assert.equal(state.error, '削除できません')
-    assert.equal(state.busy, false)
-  })
-  await check('successful logo removal clears the selected logo', async () => {
-    const { removeLogo, state } = logoRemoval(Response.json({ ok: true }))
-    await removeLogo()
-    assert.equal(state.logoName, '')
-    assert.equal(state.error, '')
-    assert.equal(state.busy, false)
-  })
+  await check('failed logo removal preserves selected logo and durable result-confirmation fence',()=>logoRemoval(true))
+  await check('validated successful removal clears selected logo and requires acknowledgment',()=>logoRemoval(false))
 })().catch((error) => { console.error(error); process.exitCode = 1 })

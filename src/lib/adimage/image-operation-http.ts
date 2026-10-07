@@ -9,8 +9,8 @@ import { adImageTargetHash, AdImageOperationError, recoverAdImageOperation, type
 type Result = Awaited<ReturnType<typeof recoverAdImageOperation>> | Awaited<ReturnType<typeof beginAdImageOperation>>
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
 const identifier = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v)
-export function privateAdImageReply(body: unknown, status = 200) {
-  if (Buffer.byteLength(JSON.stringify(body)) > 256 * 1024) throw new AdImageOperationError(502, 'RESULT_TOO_LARGE', '結果を確認できません。再生成せず保存結果を確認してください。')
+export function privateAdImageReply(body: unknown, status = 200, maxBytes = 256 * 1024) {
+  if (Buffer.byteLength(JSON.stringify(body)) > maxBytes) throw new AdImageOperationError(502, 'RESULT_TOO_LARGE', '結果を確認できません。再生成せず保存結果を確認してください。')
   return NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie', 'X-Content-Type-Options': 'nosniff' } })
 }
 export function adImageOperationErrorReply(error: unknown) {
@@ -87,6 +87,18 @@ export async function readAdImageOperation(req: NextRequest, cancelMissing: bool
     const identity = await getIdentity(req)
     if (!identity.userId) return privateAdImageReply({ error: 'ログインが必要です。' }, 401)
     const params = req.nextUrl.searchParams, allowed = new Set(['operationId', 'kind', 'targetId'])
+    if (['logo-upload', 'logo-remove'].includes(params.get('kind') || '')) {
+      if ([...params.keys()].some(k => !allowed.has(k) || params.getAll(k).length !== 1)) throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
+      const { recoverAdImageLogo, AdImageLogoError } = await import('./logo-operation')
+      try {
+        const value = await recoverAdImageLogo({ actor: identity.userId, operationId: params.get('operationId') || '', targetId: params.get('targetId') || '', kind: params.get('kind') as 'logo-upload' | 'logo-remove' }, cancelMissing)
+        const { adImageLogoReply } = await import('./logo-operation-http')
+        return await adImageLogoReply({ actor: identity.userId, operationId: params.get('operationId') || '', targetId: params.get('targetId') || '', kind: params.get('kind') as 'logo-upload' | 'logo-remove' }, value)
+      } catch (error) {
+        if (error instanceof AdImageLogoError) return privateAdImageReply({ error: error.message }, error.status)
+        throw error
+      }
+    }
     if ([...params.keys()].some(k => !allowed.has(k) || params.getAll(k).length !== 1) || !['generate', 'refine', 'feedback', 'analyze'].includes(params.get('kind') || '')) throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
     const input = adImagePostInput(identity.userId, params.get('kind') as AdImageOperationInput['kind'], params.get('targetId'), params.get('operationId'))
     return await adImageOperationReply(input, await recoverAdImageOperation(input, cancelMissing))

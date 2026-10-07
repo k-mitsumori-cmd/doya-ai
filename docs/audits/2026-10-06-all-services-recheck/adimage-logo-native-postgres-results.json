@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-07T14:50:57.080Z",
+  "passed": 3,
+  "cases": [
+    "Native desktop result-stage multipart/socket loss/reload restores owned DB image, stored scores and private unsent editor context through actual logo API without provider/upload replay",
+    "Native mobile DELETE/socket loss/reload restores whole owned workspace through actual API and clears only logo reference",
+    "Native refined workspace recovery reads both owned generations and exact feedback from private PostgreSQL without replay"
+  ],
+  "chrome": "Chrome/155.0.8059.39",
+  "logoAttempts": 13,
+  "uploads": 2,
+  "signs": 28,
+  "analyzes": 1,
+  "generates": 2,
+  "feedbacks": 2,
+  "sourceHashes": {
+    "src/lib/adimage/types.ts": "639c974cda7ab38d3628ec0e250d4465ae84049e3763741df38c0813cdfb3c7c",
+    "src/lib/adimage/analysis-result.ts": "5bc0d3ae198c5099a892d7303d840a3f06b6d58fd7b8c1aab1fcf32000aeb920",
+    "src/lib/adimage/logo-context.ts": "b1821760907235b73f02a7f856a180098506f68c983980ac1d0ee1085aa99fcb",
+    "src/lib/adimage/operation-client.ts": "b055f4656e75e0e98ddcaaa20c75fdf2d99842071f26a1b7269068bd39970b98",
+    "src/lib/adimage/use-operation-recovery.ts": "2382b442cf20ad23900e772bf35751b89f5a764f74ad7305c541c7bf7b572d3f",
+    "src/app/adimage/Tool.tsx": "8777fffb004a70c04a98f6836438a2a42fe72f341b9f76c3d072d2bcc7ca0312",
+    "src/app/api/adimage/brands/[id]/logo/route.ts": "9b8eb62c4056f5e4ec8a71dcc1e9d3f3b0376a748c84618f9390da34b6de5825",
+    "src/lib/adimage/logo-input.ts": "eb202b0c7e89b2435fb41197da851ca161ae6025562abeb2b03084d682e00c20",
+    "src/lib/adimage/logo-operation.ts": "d08913c7d568c05276605d7cd0f5bc83ffe2868d7ced8c5016fc5e3f567fd425",
+    "src/lib/adimage/logo-operation-http.ts": "b31e3b238e232a9745f55a2771d98d94bc18d37acb2e90bb18c69c06d9f49dc5",
+    "src/lib/adimage/image-operation.ts": "f2f8ad526eef6b83f81929d4d3c02a4ce6b294b46a5c7cc872e8e4c88b596371",
+    "src/lib/adimage/image-operation-http.ts": "48ac5a2acddd0db62f23468ba6b5e1b364c007687b4ae5535537b5788b09a8cb"
+  },
+  "cssHash": "6635aee603484e0c4c70365f891308bf21fecb47bcf98f9959c1b0b2819ae5b3",
+  "scope": "Actual Chrome Tool/hook/reader -> local HTTP/socket loss -> actual logo and operations API -> real private Unix-socket PostgreSQL/Prisma/Sharp. Synthetic auth, storage upload/signatures, image generation setup and feedback setup; no actual paid providers/customer data/production. Current CSS from prior build recorded, generated and refined before/after workspaces covered."
+}

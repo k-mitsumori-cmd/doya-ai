@@ -48,6 +48,12 @@ jobs:
           DOYA_ANALYSIS_NATIVE_CHROME: '0'
         run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-analysis-postgres-supervise.py
 
+      - name: AdImage logo lifecycle regression (private Unix socket, synthetic storage)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-logo-postgres-supervise.py
+
+      - name: AdImage logo API workspace recovery (private Unix socket, synthetic providers)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-logo-api-postgres-supervise.py
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

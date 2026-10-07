@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useSession } from 'next-auth/react'
 import { useAdImageRecovery } from '@/lib/adimage/use-operation-recovery'
+import type { AdImageLogoContext } from '@/lib/adimage/logo-context'
 import type { AdImageResult } from '@/lib/adimage/operation-client'
 import { Sparkles } from 'lucide-react'
 import Link from 'next/link'
@@ -152,6 +153,10 @@ export default function AdImageTool() {
   const [note, setNote] = useState('')
   const [refining, setRefining] = useState(false)
 
+  const imageResultReference = useRef<AdImageLogoContext['imageOperation']>(undefined)
+  const feedbackResultReference = useRef<string | undefined>(undefined)
+  const currentBrandId = useRef(brandId)
+  currentBrandId.current = brandId
   const appliedResult = useRef('')
   const applyImageResult = useCallback((d: AdImageResult) => {
     if (d.kind === 'analyze' && d.state === 'failed') {
@@ -162,12 +167,42 @@ export default function AdImageTool() {
     if (d.state !== 'completed' || appliedResult.current === d.operationId) return
     appliedResult.current = d.operationId
     setError(''); setLimitAction(null)
+    if (d.kind === 'logo-upload' || d.kind === 'logo-remove') {
+      setLogoName(d.logoName || '')
+      if (currentBrandId.current !== d.brandId && d.logoConfig) setLogoPos(d.logoConfig.pos)
+      // Restore after reload; keep newer unsent editor changes on an already open brand.
+      if (d.logoContext && currentBrandId.current !== d.brandId) {
+        setBrandId(d.brandId!); setBrand(d.logoContext.brand); setDrafts(d.logoContext.concepts)
+        setSelected(d.logoContext.selected); setCopy(d.logoContext.copy); setChosen(d.logoContext.placements)
+        const context = d.logoContext
+        setUrl(context.url || ''); setUseManualText(context.useManualText || false); setManualText(context.manualText || '')
+        setAppeal(context.appeal || ''); setCustomPrompt(context.customPrompt || ''); setDesignRefId(context.designRefId || '')
+        setVariations(context.variations || 1); setNote(context.note || ''); setSelectedChips(context.chips || [])
+        if (!d.logoConfig && context.logoPos) setLogoPos(context.logoPos)
+        imageResultReference.current = context.imageOperation
+        feedbackResultReference.current = d.workspaceFeedback?.feedbackId
+        if (d.workspace) {
+          const workspace = d.workspace
+          setConceptId(workspace.conceptId!); setCreatives(workspace.creatives!); setPreviousCreatives(workspace.previousCreatives!)
+          setPreviousGeneration(workspace.previousGeneration!); setGeneration(workspace.generation!); setNeedsReview(workspace.needsReview!); setFailedPlacements(workspace.failedPlacements!)
+          setScores(d.workspaceFeedback?.scores || null); setAdvice(d.workspaceFeedback?.advice || ''); setDirectives(d.workspaceFeedback?.directives || [])
+          setStep('result')
+        } else setStep('concepts')
+        if (d.workspaceState === 'unavailable') setError('ロゴの保存は確認できましたが、以前の画像は削除されたか対象が変更されています。')
+        else if (d.workspaceFeedbackUnavailable) setError('ロゴと画像は復元しましたが、以前の採点結果を確認できませんでした。')
+      }
+      setLogoBusy(false)
+      return
+    }
     if (d.kind === 'analyze') {
+      imageResultReference.current = undefined; feedbackResultReference.current = undefined
       setBrandId(d.brandId!); setBrand(d.brand!); setDrafts(d.concepts!); setSelected(0); setCopy(d.concepts![0].copy)
       setConceptId(''); setCreatives([]); setPreviousCreatives([]); setPreviousGeneration(null); setScores(null); setAdvice(''); setDirectives([])
       setLogoName(''); setStep('concepts'); setAnalyzing(false)
       return
     }
+    if (d.kind === 'generate' || d.kind === 'refine') { imageResultReference.current = { operationId: d.operationId, kind: d.kind, targetId: d.targetId }; feedbackResultReference.current = undefined }
+    else if (d.kind === 'feedback') feedbackResultReference.current = d.feedbackId
     setConceptId(d.conceptId!)
     setPreviousCreatives(d.previousCreatives!)
     setPreviousGeneration(d.previousGeneration!)
@@ -198,6 +233,7 @@ export default function AdImageTool() {
     setNeedsLogin(false)
     setAnalyzing(false); setLogoBusy(false)
     appliedResult.current = ''
+    imageResultReference.current = undefined; feedbackResultReference.current = undefined
     setConceptId(''); setCreatives([]); setPreviousCreatives([]); setPreviousGeneration(null)
     setScores(null); setAdvice(''); setDirectives([]); setGenerating(false); setRefining(false); setScoring(false)
     setBrandId(''); setBrand(null); setDrafts([]); setCopy({ headline: '', sub: '', cta: '' }); setStep('input')
@@ -259,14 +295,9 @@ export default function AdImageTool() {
     setError('')
     setLimitAction(null)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('pos', logoPos)
-      const r = await fetch(`/api/adimage/brands/${brandId}/logo`, { method: 'POST', body: fd })
-      const d = await r.json()
-      if (!isCurrent()) return
-      if (!r.ok) throw new Error(d?.error || 'ロゴを登録できませんでした')
-      setLogoName(file.name)
+      const d = await operation.submit('logo-upload', brandId, { file, pos: logoPos, context: { brand, concepts: drafts, selected, copy, placements: chosen, url, useManualText, manualText, appeal, customPrompt, designRefId, variations, note, chips: selectedChips, logoPos, ...(imageResultReference.current ? { imageOperation: imageResultReference.current } : {}), ...(feedbackResultReference.current ? { feedbackId: feedbackResultReference.current } : {}) } }, new AbortController().signal)
+      if (!isCurrent() || !d) return
+      applyImageResult(d)
     } catch (e) {
       if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : 'ロゴを登録できませんでした')
     } finally {
@@ -281,14 +312,9 @@ export default function AdImageTool() {
     const isCurrent = () => imageOperation.current.revision === revision
     setLogoBusy(true)
     try {
-      const response = await fetch(`/api/adimage/brands/${brandId}/logo`, { method: 'DELETE' })
-      if (!isCurrent()) return
-      if (!response.ok) {
-        const result = await response.json().catch(() => null)
-        throw new Error(result?.error || 'ロゴを外せませんでした')
-      }
-      if (!isCurrent()) return
-      setLogoName('')
+      const d = await operation.submit('logo-remove', brandId, { context: { brand, concepts: drafts, selected, copy, placements: chosen, url, useManualText, manualText, appeal, customPrompt, designRefId, variations, note, chips: selectedChips, logoPos, ...(imageResultReference.current ? { imageOperation: imageResultReference.current } : {}), ...(feedbackResultReference.current ? { feedbackId: feedbackResultReference.current } : {}) } }, new AbortController().signal)
+      if (!isCurrent() || !d) return
+      applyImageResult(d)
     } catch (e) {
       if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : 'ロゴを外せませんでした')
     } finally {
@@ -509,7 +535,7 @@ export default function AdImageTool() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-        {(operation.intent || operation.message) && <section aria-label={operation.intent?.kind === 'analyze' ? '解析の結果確認' : operation.intent?.kind === 'feedback' ? '採点の結果確認' : '画像生成の結果確認'} className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">
+        {(operation.intent || operation.message) && <section aria-label={operation.intent?.kind.startsWith('logo-') ? 'ロゴ保存の結果確認' : operation.intent?.kind === 'analyze' ? '解析の結果確認' : operation.intent?.kind === 'feedback' ? '採点の結果確認' : '画像生成の結果確認'} className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">
           <p role="status">{operation.message || (operation.result?.state === 'completed' ? '保存済みの結果を表示しました。内容を確認してから次の操作へ進んでください。' : '前の操作の保存結果を確認してください。新しい生成はまだ開始できません。')}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" disabled={operation.busy} onClick={() => void operation.recover()} className="rounded-lg bg-slate-900 px-4 py-2 font-bold text-white disabled:opacity-50">{operation.busy ? '確認中...' : '保存結果を確認'}</button>

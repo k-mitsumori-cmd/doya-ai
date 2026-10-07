@@ -14,7 +14,7 @@ const target=k=>k==='generate'?'brand':'original'
 async function reset(){
  budget=await makeBudget();await db.adImageConcept.update({where:{id:'original'},data:{copy:{headline:'Synthetic',sub:'',cta:'View'}}});await db.$executeRawUnsafe(`INSERT INTO "User"(id,plan) VALUES ('budget-user','FREE'),('other','FREE') ON CONFLICT(id) DO UPDATE SET plan='FREE'`)
  generated=0;signFailure=false;providerFailure=false;actor='budget-user';providerWait=null;providerStarted=null
- core=load('src/lib/adimage/image-operation.ts',{'node:crypto':crypto,'@/lib/prisma':{prisma:db},'./access':actualAccess,'./image-budget':budget})
+ core=load('src/lib/adimage/image-operation.ts',{'node:crypto':crypto,'@/lib/prisma':{prisma:db},'./access':actualAccess,'./image-budget':budget,'./logo-operation':require('../../../scripts/security-regression/adimage-logo-operation-fixture.cjs').makeAdImageLogoOperationFixture(budget,()=>core)})
  const access={getIdentity:async()=>({userId:actor,guestId:null,plan:'FREE'}),requireUser:i=>({ok:!!i.userId,reason:'Login required'}),ownerWhere:i=>i.userId?{userId:i.userId}:null}
  const storage={downloadBuffer:async()=>null,signedUrl:async p=>{if(signFailure==='null')return null;if(signFailure)throw Error('SENSITIVE synthetic signing error');return 'https://local.test/'+p}}
  const placement={key:'square',name:'Synthetic square',w:1024,h:1024}

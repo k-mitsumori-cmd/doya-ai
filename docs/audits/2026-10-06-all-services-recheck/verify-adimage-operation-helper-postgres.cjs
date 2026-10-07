@@ -7,7 +7,7 @@ const input={actor:'budget-user',targetId:'brand',kind:'generate',operationId:'1
 const next={...input,operationId:'10000000-0000-4000-8000-000000000002'}
 let budget,core
 const record=async(name,work)=>{await reset();await work();cases.push(name);console.log('PASS',name)}
-const mocks=()=>({'node:crypto':crypto,'@/lib/prisma':{prisma:db},'./access':access,'./image-budget':budget})
+const mocks=()=>({'node:crypto':crypto,'@/lib/prisma':{prisma:db},'./access':access,'./image-budget':budget,'./logo-operation':require('../../../scripts/security-regression/adimage-logo-operation-fixture.cjs').makeAdImageLogoOperationFixture(budget,()=>core)})
 const access=load('src/lib/adimage/access.ts',{'crypto':crypto,'next-auth':{getServerSession:async()=>null},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db}})
 async function reset(){
  budget=await makeBudget();await db.$executeRawUnsafe(`INSERT INTO "User"(id,plan) VALUES ('budget-user','FREE'),('other','FREE') ON CONFLICT(id) DO UPDATE SET plan='FREE'`)

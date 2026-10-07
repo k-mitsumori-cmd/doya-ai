@@ -93,7 +93,17 @@ export function useAdImageRecovery(status: string, actor: string) {
     const timer = window.setTimeout(() => controller.abort(), 315000)
     setBusy(true)
     try {
-      const response = await fetchAdImageOperation(kind === 'analyze' ? '/api/adimage/analyze' : kind === 'generate' ? '/api/adimage/concepts' : `/api/adimage/concepts/${encodeURIComponent(targetId)}/${kind === 'feedback' ? 'feedback' : 'refine'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, operationId: saved.operationId }) }, controller.signal)
+      const logo = kind === 'logo-upload' || kind === 'logo-remove'
+      const headers: Record<string, string> = logo ? { 'X-AdImage-Operation-Id': saved.operationId } : { 'Content-Type': 'application/json' }
+      let payload: BodyInit | undefined
+      if (logo) {
+        const form = new FormData()
+        if (kind === 'logo-upload') { form.set('file', body.file as File); form.set('pos', String(body.pos)) }
+        if (body.context) form.set('context', JSON.stringify(body.context))
+        payload = form
+      } else if (!logo) payload = JSON.stringify({ ...body, operationId: saved.operationId })
+      const url = logo ? `/api/adimage/brands/${encodeURIComponent(targetId)}/logo` : kind === 'analyze' ? '/api/adimage/analyze' : kind === 'generate' ? '/api/adimage/concepts' : `/api/adimage/concepts/${encodeURIComponent(targetId)}/${kind === 'feedback' ? 'feedback' : 'refine'}`
+      const response = await fetchAdImageOperation(url, { method: kind === 'logo-remove' ? 'DELETE' : 'POST', headers, ...(payload !== undefined ? { body: payload } : {}) }, controller.signal)
       if (response.status === 401) { requireLogin(saved, response); return null }
       const value = await readAdImageOperationResponse(response, saved, controller.signal)
       if (!current()) return null

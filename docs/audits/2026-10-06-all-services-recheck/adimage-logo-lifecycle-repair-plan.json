@@ -1,0 +1,149 @@
+{
+  "checkedAt": "2026-10-07T14:39:51.439251+00:00",
+  "status": "frozen14gates-passed-ready-for-reviewed-commit-push",
+  "baseline": "adimage-logo-lifecycle-baseline.json",
+  "repaired": [
+    "Omitted width/padding preserve declared22%/4% defaults; strict duplicate/numeric/position validation",
+    "Immutable randomUUID object paths preserve previously referenced bytes after stale/failed DBupdate",
+    "Fresh User and brand lock plus owned updatedAt CAS prevent stale/foreign publication; timestamps monotonic",
+    "Multipart declared+actual byte/read deadline/abort limits; bounded image pixels/dimensions/PNG output; safe private errors",
+    "Durable peractor UUID/hash receipt+single-active logo admission; shared User lock with actual image operation guard",
+    "Atomic logo reference+receipt settlement, cancel-before-arrival, lease expiry and lost commit acknowledgment recovery",
+    "Operations GET/DELETE dispatch logo kinds with owner/current-version result availability and private response headers",
+    "Actual Tool uses common durable intent, WebLocks, bounded transport and strict logo DTO for upload/removal; logo401 shares reauthentication guidance",
+    "Private bounded copy-stage editor context persists server-side and restores by GET after reload, browser storage metadata only",
+    "Validated recovery preserves newer unsent copy on same open editor instead of overwriting with submitted snapshot",
+    "Bounded server-side recovery context now preserves source/manual text, appeal, prompt, reference, variations, note/chips and logo position",
+    "Owned saved generation/refinement and matching feedback restore via fresh image signatures, with exact brand checks before and after storage awaits",
+    "Cross-brand campaign move during URL signing returns unavailable without private editor context or workspace"
+  ],
+  "source": [
+    "src/app/api/adimage/brands/[id]/logo/route.ts",
+    "src/lib/adimage/logo-input.ts",
+    "src/lib/adimage/logo-operation.ts",
+    "src/lib/adimage/image-operation.ts",
+    "src/lib/adimage/image-operation-http.ts",
+    "src/lib/adimage/logo-context.ts",
+    "src/lib/adimage/operation-client.ts",
+    "src/lib/adimage/use-operation-recovery.ts",
+    "src/app/adimage/Tool.tsx",
+    "src/lib/adimage/logo-operation-http.ts"
+  ],
+  "localEvidence": {
+    "actualRouteRealSharpSyntheticDB": {
+      "passed": 15,
+      "report": "adimage-logo-lifecycle-results.json"
+    },
+    "actualPrivatePostgreSQL": {
+      "passed": 15,
+      "report": "adimage-logo-postgres-results.json",
+      "supervisor": "adimage-logo-postgres-supervisor.json",
+      "sessionTerminal0": 57997,
+      "stopExitCode": 0
+    },
+    "sharedImageHelperPostgreSQL": {
+      "passed": 29,
+      "report": "adimage-operation-helper-postgres-results.json",
+      "supervisor": "adimage-operation-helper-postgres-supervisor.json",
+      "sessionTerminal0": 54906,
+      "stopExitCode": 0
+    },
+    "targetedEslint": "exit0",
+    "tscCurrentSession": 73443,
+    "actualToolMounted": {
+      "passed": 11,
+      "report": "adimage-logo-tool-mounted-results.json",
+      "scope": "Actual StrictMode Tool/hook/reader/context; synthetic session/API; copy, generated and refined result-stage restoration"
+    },
+    "nativeChrome": {
+      "passed": 3,
+      "report": "adimage-logo-native-results.json",
+      "sessionTerminal0": 28059,
+      "uniqueUploads": 1,
+      "uniqueDeletes": 1,
+      "httpAttempts": 10,
+      "analyzes": 1,
+      "scope": "Actual local multipart/socket loss/WebLocks/storage/two tabs, synthetic backend/auth, prior build CSS recorded. Not actual API/storage/PG E2E"
+    },
+    "regressions": {
+      "fullTool": 10,
+      "auxActor": 6,
+      "authExpiry": 7
+    },
+    "tscCurrentSessionTerminal0": 84816,
+    "actualLogoApiPrivatePostgreSQL": {
+      "passed": 10,
+      "report": "adimage-logo-api-postgres-results.json",
+      "supervisor": "adimage-logo-api-postgres-supervisor.json",
+      "sessionTerminal0": 69666,
+      "scope": "Actual logo POST/DELETE/operations and reader with real private PostgreSQL; synthetic identity/storage/image setup, no native browser"
+    },
+    "operation-apiCurrentPrivatePostgreSQL": {
+      "passed": 27,
+      "sessionTerminal0": 94856,
+      "report": "adimage-operation-api-postgres-results.json",
+      "supervisor": "adimage-operation-api-postgres-supervisor.json"
+    },
+    "feedbackCurrentPrivatePostgreSQL": {
+      "passed": 25,
+      "sessionTerminal0": 52432,
+      "report": "adimage-feedback-postgres-results.json",
+      "supervisor": "adimage-feedback-postgres-supervisor.json"
+    },
+    "analysisCurrentPrivatePostgreSQL": {
+      "passed": 18,
+      "sessionTerminal0": 42803,
+      "report": "adimage-analysis-postgres-results.json",
+      "supervisor": "adimage-analysis-postgres-supervisor.json"
+    },
+    "obsoleteCombinedFixtureAttempt": {
+      "sessionTerminal1": 69918,
+      "supervisor": "adimage-operation-postgres-supervisor.json",
+      "failure": "Unmocked @/lib/adimage/image-operation in obsolete combined fixture; does not replace current helper29/API27 evidence",
+      "stopExitCode": 0
+    },
+    "nativeActualApiPrivatePostgreSQL": {
+      "passed": 3,
+      "report": "adimage-logo-native-postgres-results.json",
+      "supervisor": "adimage-logo-native-postgres-supervisor.json",
+      "sessionTerminal0": 91418,
+      "scope": "Actual native Chrome fullTool/hook/reader HTTP socket loss -> actual logo/operations API -> private PostgreSQL/Prisma/Sharp; generated and refined before/after plus stored feedback; synthetic auth/storage/provider setup"
+    },
+    "logoAvailabilityRegression": {
+      "passed": 4,
+      "scope": "Actual generation/refinement routes reject unavailable logo before reservation, actual mounted Tool/hook preserves failed removal and validates successful removal",
+      "script": "scripts/security-regression/verify-adimage-logo-availability.cjs"
+    }
+  },
+  "requiredBeforeRelease": [
+    "Full frozen14gate build/security/types/lint and native fresh CSS currently running, then reviewed exact commit/CI/deployment/public checks"
+  ],
+  "boundaries": [
+    "No real customer DB/storage writes, paid AI, mail or migrations",
+    "Do not claim mocked transactions prove actual row-lock concurrency",
+    "No whole-service completion claim"
+  ],
+  "removedTemporaryFile": "Unused preliminary logo-mutation.ts was superseded by durable logo-operation.ts and removed; it was untracked task-created source, never released",
+  "releaseGate": {
+    "path": "docs/audits/2026-10-06-all-services-recheck/adimage-logo-lifecycle-release-b2ee2a51-79b1-4089-8eb1-7973856a2dba",
+    "status": "passed",
+    "session": 24917
+  },
+  "priorFailedGates": [
+    {
+      "path": "docs/audits/2026-10-06-all-services-recheck/adimage-logo-lifecycle-release-d86260cf-ea38-42fa-a73e-50b4ae561ada",
+      "sessionTerminal1": 15560,
+      "reason": "Legacy extracted removeLogo test lacked new context/operation dependencies"
+    },
+    {
+      "path": "docs/audits/2026-10-06-all-services-recheck/adimage-logo-lifecycle-release-2ee4749d-c6c4-445f-b1f7-c6c29ef1141d",
+      "sessionTerminal1": 89267,
+      "reason": "New mounted fixture missing receipt map initialization; fixture corrected and targeted4 passed"
+    },
+    {
+      "path": "docs/audits/2026-10-06-all-services-recheck/adimage-logo-lifecycle-release-25b69a5a-f69b-4b77-8ffc-070b04c00779",
+      "sessionTerminal1": 65987,
+      "reason": "Legacy extracted applyImageResult callback lacked new image/feedback reference refs; fixture supplemented, unchanged15 assertions passed"
+    }
+  ]
+}

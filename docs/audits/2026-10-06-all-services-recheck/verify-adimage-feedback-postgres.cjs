@@ -19,7 +19,7 @@ async function reset(){
    if(lostCommit&&result?.phase==='completed'){lostCommit=false;throw Error('Synthetic lost commit acknowledgment')}
    return result
  }}
- core=load('src/lib/adimage/image-operation.ts',{'node:crypto':crypto,'./access':actualAccess,'./image-budget':transactional})
+ core=load('src/lib/adimage/image-operation.ts',{'node:crypto':crypto,'./access':actualAccess,'./image-budget':transactional,'./logo-operation':require('../../../scripts/security-regression/adimage-logo-operation-fixture.cjs').makeAdImageLogoOperationFixture(transactional,()=>core)})
  const access={getIdentity:async()=>({userId:actor,guestId:null,plan:'FREE'}),requireUser:i=>({ok:!!i.userId,reason:'Login required'}),ownerWhere:i=>i.userId?{userId:i.userId}:null}
  const feedback=load('src/lib/adimage/feedback.ts',{'./vision':{visionJson:async()=>{calls++;providerStarted?.();if(providerWait)await providerWait;if(providerFailure)throw Error('PRIVATE synthetic provider error');return malformed?{}:valid()}}})
  const input=load('src/lib/adimage/feedback-input.ts',{'./feedback':feedback},globals)

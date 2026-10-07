@@ -130,6 +130,16 @@ async function available(tx: Tx, r: Receipt) {
   const saved = await tx.adImageConcept.findFirst({ where: { id: r.conceptId, campaign: { userId: r.actor, brand: { userId: r.actor } } }, select: { _count: { select: { creatives: true } } } })
   return saved?._count.creatives === r.produced
 }
+/** Caller holds the User lock; logo changes must not alter a running AI input. */
+export async function hasActiveAdImageOperation(tx: Tx, actor: string) {
+  const active = await tx.systemSetting.findUnique({ where: { key: activeKey(actor) }, select: { value: true } })
+  if (!active) return false
+  if (!/^adimage-operation:v1:[a-f0-9]{64}$/.test(active.value)) throw new AdImageOperationError(409, 'INVALID_RECEIPT', '操作情報を確認できません。')
+  const running = await read(tx, active.value, actor)
+  if (!running) throw new AdImageOperationError(409, 'INVALID_RECEIPT', '前の操作の保存結果を確認してください。')
+  return (await expire(tx, running))?.phase === 'pending'
+}
+
 export async function beginAdImageOperation(supplied: AdImageOperationInput, body: Record<string, unknown>, requested: number, sourceHash: string): Promise<{ state: 'started'; receipt: Receipt } | { state: 'busy' | 'unavailable' } | { state: Receipt['phase']; receipt: Receipt } | { state: 'limit'; quota: AdImageQuotaDenied }> {
   const input = normalized(supplied)
   if (!/^[a-f0-9]{64}$/.test(sourceHash) || !body || typeof body !== 'object' || Array.isArray(body) || Buffer.byteLength(JSON.stringify(body)) > (input.kind === 'analyze' ? 65536 : 32768)) throw new AdImageOperationError(400, 'INVALID_OPERATION', '入力内容を確認してください。')
@@ -143,6 +153,8 @@ export async function beginAdImageOperation(supplied: AdImageOperationInput, bod
       if (prior.phase !== 'cancelled' && prior.inputHash !== inputHash) throw new AdImageOperationError(409, 'INPUT_CHANGED', '同じ操作の入力が変わっています。保存結果を確認してください。')
       return await available(tx, prior) ? { state: prior.phase, receipt: prior } : { state: 'unavailable' as const }
     }
+    const { hasActiveAdImageLogo } = await import('./logo-operation')
+    if (await hasActiveAdImageLogo(tx, input.actor)) return { state: 'busy' as const }
     const pointer = await tx.systemSetting.findUnique({ where: { key: activeKey(input.actor) }, select: { value: true } })
     if (pointer) {
       if (!/^adimage-operation:v1:[a-f0-9]{64}$/.test(pointer.value)) throw new AdImageOperationError(409, 'INVALID_RECEIPT', '操作情報を確認できません。')

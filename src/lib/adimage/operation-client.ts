@@ -1,12 +1,14 @@
+import type { LogoConfig } from './logo'
+import type { AdImageLogoContext } from './logo-context'
 import type { AdCopy, RefineDirective, FeedbackScores, BrandProfile, ConceptDraft } from './types'
-export type AdImageIntent = { version: 1; operationId: string; kind: 'generate' | 'refine' | 'feedback' | 'analyze'; targetId: string; createdAt: string }
+export type AdImageIntent = { version: 1; operationId: string; kind: 'generate' | 'refine' | 'feedback' | 'analyze' | 'logo-upload' | 'logo-remove'; targetId: string; createdAt: string }
 export type AdImageCreative = { id: string; placementKey: string; placementName: string; media: string; size: string; url: string; verify: { ocrMatch?: boolean; needsReview?: boolean; extraText?: string[]; safeAreaOk?: boolean } | null }
-export type AdImageResult = { operationId: string; kind: AdImageIntent['kind']; targetId: string; state: 'completed' | 'pending' | 'busy' | 'missing' | 'failed' | 'cancelled' | 'unavailable' | 'limit'; conceptId?: string; campaignId?: string; copy?: AdCopy; generation?: number; creatives?: AdImageCreative[]; previousCreatives?: AdImageCreative[]; previousGeneration?: number | null; appliedDirectives?: RefineDirective[]; failedPlacements?: string[]; needsReview?: boolean; error?: string; code?: string; upgradeUrl?: string; contactUrl?: string; limitReached?: boolean; feedbackId?: string; creativeId?: string; scores?: FeedbackScores; advice?: string; directives?: RefineDirective[]; brandId?: string; brand?: BrandProfile; concepts?: Array<ConceptDraft & { warnings: string[] }>; canUseManualInput?: boolean }
+export type AdImageResult = { workspaceState?: 'completed' | 'unavailable'; workspace?: AdImageResult; workspaceFeedback?: { feedbackId: string; creativeId: string; scores: FeedbackScores; advice: string; directives: RefineDirective[] }; workspaceFeedbackUnavailable?: boolean; logoName?: string | null; logoConfig?: LogoConfig | null; logoContext?: AdImageLogoContext; operationId: string; kind: AdImageIntent['kind']; targetId: string; state: 'completed' | 'pending' | 'busy' | 'missing' | 'failed' | 'cancelled' | 'unavailable' | 'limit'; conceptId?: string; campaignId?: string; copy?: AdCopy; generation?: number; creatives?: AdImageCreative[]; previousCreatives?: AdImageCreative[]; previousGeneration?: number | null; appliedDirectives?: RefineDirective[]; failedPlacements?: string[]; needsReview?: boolean; error?: string; code?: string; upgradeUrl?: string; contactUrl?: string; limitReached?: boolean; feedbackId?: string; creativeId?: string; scores?: FeedbackScores; advice?: string; directives?: RefineDirective[]; brandId?: string; brand?: BrandProfile; concepts?: Array<ConceptDraft & { warnings: string[] }>; canUseManualInput?: boolean }
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
 const identifier = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v)
 const key = (actor: string) => 'adimage-intent:v1:' + encodeURIComponent(actor)
 const guidance = '処理結果を確認できません。再生成せず「保存結果を確認」を押してください。'
-function validIntent(v: AdImageIntent) { return v && v.version === 1 && typeof v.operationId === 'string' && uuid.test(v.operationId) && ['generate', 'refine', 'feedback', 'analyze'].includes(v.kind) && (v.kind !== 'analyze' || v.targetId === 'analysis') && identifier(v.targetId) && typeof v.createdAt === 'string' && Number.isFinite(Date.parse(v.createdAt)) && Object.keys(v).every(k => ['version', 'operationId', 'kind', 'targetId', 'createdAt'].includes(k)) }
+function validIntent(v: AdImageIntent) { return v && v.version === 1 && typeof v.operationId === 'string' && uuid.test(v.operationId) && ['generate', 'refine', 'feedback', 'analyze', 'logo-upload', 'logo-remove'].includes(v.kind) && (v.kind !== 'analyze' || v.targetId === 'analysis') && identifier(v.targetId) && typeof v.createdAt === 'string' && Number.isFinite(Date.parse(v.createdAt)) && Object.keys(v).every(k => ['version', 'operationId', 'kind', 'targetId', 'createdAt'].includes(k)) }
 export function readAdImageIntent(actor: string): AdImageIntent | null {
   if (!identifier(actor)) throw new Error('ログイン情報を確認してください。')
   const raw = localStorage.getItem(key(actor)); if (raw === null) return null
@@ -37,26 +39,52 @@ export async function readAdImageOperationResponse(response: Response, intent: A
   try {
     const stopped = new Promise<never>((_, reject) => { abort = () => reject(new Error(guidance)); signal.addEventListener('abort', abort, { once: true }); if (signal.aborted) abort(); timer = setTimeout(abort, 30000) })
     const reading = (async () => {
-      if (!response.body || Number(response.headers.get('content-length')) > 256 * 1024) throw new Error(guidance)
+      const maxBytes = intent.kind.startsWith('logo-') ? 512 * 1024 : 256 * 1024
+      if (!response.body || Number(response.headers.get('content-length')) > maxBytes) throw new Error(guidance)
       reader = response.body.getReader(); const chunks: Uint8Array[] = []; let size = 0
-      while (true) { const part = await reader.read(); if (part.done) break; size += part.value.byteLength; if (size > 256 * 1024) throw new Error(guidance); chunks.push(part.value) }
+      while (true) { const part = await reader.read(); if (part.done) break; size += part.value.byteLength; if (size > maxBytes) throw new Error(guidance); chunks.push(part.value) }
       const bytes = new Uint8Array(size); let offset = 0; for (const c of chunks) { bytes.set(c, offset); offset += c.byteLength }
       const d: AdImageResult = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes))
       if (!d || typeof d !== 'object' || Array.isArray(d) || d.operationId !== intent.operationId || d.kind !== intent.kind || d.targetId !== intent.targetId || !['completed', 'pending', 'busy', 'missing', 'failed', 'cancelled', 'unavailable', 'limit'].includes(d.state)) throw new Error(guidance)
       const expected = d.state === 'limit' ? 429 : ['pending', 'busy'].includes(d.state) ? 202 : 200
       if (response.status !== expected) throw new Error(guidance)
       if (d.state === 'limit') {
-        if (intent.kind === 'feedback') throw new Error(guidance)
+        if (['feedback', 'logo-upload', 'logo-remove'].includes(intent.kind)) throw new Error(guidance)
         if (typeof d.error !== 'string' || d.error.length > 4000 || typeof d.code !== 'string' || !(intent.kind === 'analyze' ? ['ANALYSIS_DAILY_LIMIT'] : ['REQUEST_IMAGE_LIMIT', 'DAILY_IMAGE_LIMIT', 'MONTHLY_IMAGE_LIMIT', 'DAILY_CONCEPT_LIMIT']).includes(d.code) || (d.upgradeUrl !== undefined && d.upgradeUrl !== '/adimage/pricing') || (d.contactUrl !== undefined && d.contactUrl !== 'https://doyamarke.surisuta.jp/contact')) throw new Error(guidance)
         return d
       }
       if (d.state !== 'completed') {
-        if (d.creatives !== undefined || d.conceptId !== undefined || d.previousCreatives !== undefined || d.feedbackId !== undefined || d.scores !== undefined || d.advice !== undefined || d.directives !== undefined || d.brandId !== undefined || d.brand !== undefined || d.concepts !== undefined) throw new Error(guidance)
+        if (d.workspace !== undefined || d.workspaceState !== undefined || d.workspaceFeedback !== undefined || d.workspaceFeedbackUnavailable !== undefined || d.logoName !== undefined || d.logoConfig !== undefined || d.logoContext !== undefined || d.creatives !== undefined || d.conceptId !== undefined || d.previousCreatives !== undefined || d.feedbackId !== undefined || d.scores !== undefined || d.advice !== undefined || d.directives !== undefined || d.brandId !== undefined || d.brand !== undefined || d.concepts !== undefined) throw new Error(guidance)
         if (intent.kind === 'analyze' && (d.error !== undefined || d.code !== undefined || d.canUseManualInput !== undefined)) {
           if (d.state !== 'failed' || typeof d.error !== 'string' || !d.error.trim() || d.error.length > 1000 || !['WEBSITE_UNREADABLE', 'ANALYSIS_FAILED', 'COPY_FAILED'].includes(d.code || '') || (d.canUseManualInput !== undefined && (d.canUseManualInput !== true || d.code !== 'WEBSITE_UNREADABLE'))) throw new Error(guidance)
         }
         return d
       }
+      if (intent.kind === 'logo-upload' || intent.kind === 'logo-remove') {
+        if (d.brandId !== intent.targetId || Object.keys(d).some(key => !['operationId', 'kind', 'targetId', 'state', 'brandId', 'logoName', 'logoConfig', 'logoContext', 'workspace', 'workspaceState', 'workspaceFeedback', 'workspaceFeedbackUnavailable'].includes(key))) throw new Error(guidance)
+        if (intent.kind === 'logo-remove') { if (d.logoName !== null || d.logoConfig !== null) throw new Error(guidance) }
+        else if (typeof d.logoName !== 'string' || !d.logoName.trim() || d.logoName.length > 200 || !d.logoConfig || !['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center-top'].includes(d.logoConfig.pos) || !Number.isFinite(d.logoConfig.maxWidthPct) || d.logoConfig.maxWidthPct < 5 || d.logoConfig.maxWidthPct > 50 || !Number.isFinite(d.logoConfig.paddingPct) || d.logoConfig.paddingPct < 0 || d.logoConfig.paddingPct > 15) throw new Error(guidance)
+        if (d.logoContext !== undefined) {
+          const { validAdImageLogoContext } = await import('./logo-context')
+          if (!validAdImageLogoContext(d.logoContext)) throw new Error(guidance)
+        }
+        if (d.workspaceState !== undefined && !['completed', 'unavailable'].includes(d.workspaceState)) throw new Error(guidance)
+        if (d.workspaceState === 'completed') {
+          const reference = d.logoContext?.imageOperation
+          if (!reference || !d.workspace || !['generate', 'refine'].includes(d.workspace.kind) || d.workspace.state !== 'completed') throw new Error(guidance)
+          await readAdImageOperationResponse(new Response(JSON.stringify(d.workspace), { headers: { 'Content-Type': 'application/json' } }), { ...reference, version: 1, createdAt: intent.createdAt }, signal)
+          if (d.workspaceFeedback) {
+            const feedback = d.workspaceFeedback
+            if (feedback.feedbackId !== d.logoContext?.feedbackId || !identifier(feedback.feedbackId) || !d.workspace.creatives?.some(row => row.id === feedback.creativeId)) throw new Error(guidance)
+            const scores = feedback.scores
+            const keys = ['visibility', 'appeal', 'cta', 'fit', 'brand'] as const
+            if (!scores || keys.some(key => !Number.isInteger(scores[key]) || scores[key] < 1 || scores[key] > 5) || scores.total !== keys.reduce((sum, key) => sum + scores[key], 0) || typeof feedback.advice !== 'string' || !feedback.advice.trim() || feedback.advice.length > 1000 || !Array.isArray(feedback.directives) || feedback.directives.length > 3 || feedback.directives.some(row => !row || !['copy', 'color', 'layout', 'contrast', 'visual'].includes(row.target) || typeof row.instruction !== 'string' || !row.instruction.trim() || row.instruction.length > 500 || typeof row.reason !== 'string' || !row.reason.trim() || row.reason.length > 500)) throw new Error(guidance)
+          }
+          if (d.workspaceFeedbackUnavailable !== undefined && (d.workspaceFeedbackUnavailable !== true || d.workspaceFeedback || !d.logoContext?.feedbackId)) throw new Error(guidance)
+        } else if (d.workspace || d.workspaceFeedback || d.workspaceFeedbackUnavailable !== undefined) throw new Error(guidance)
+        return d
+      }
+      if (d.workspace !== undefined || d.workspaceState !== undefined || d.workspaceFeedback !== undefined || d.workspaceFeedbackUnavailable !== undefined || d.logoName !== undefined || d.logoConfig !== undefined || d.logoContext !== undefined) throw new Error(guidance)
       if (intent.kind === 'analyze') {
         const { validAdImageAnalysisOutput } = await import('./analysis-result')
         if (!identifier(d.brandId) || !validAdImageAnalysisOutput({ brand: d.brand, concepts: d.concepts }) || ['conceptId', 'creatives', 'previousCreatives', 'feedbackId', 'scores', 'directives', 'analysisLease', 'receipt', 'inputHash'].some(k => k in d)) throw new Error(guidance)
