@@ -56,6 +56,8 @@ function fixture(kind, { changed = false, revoke = false, failSecond = false, co
   }
   const actions = load(`src/lib/promane/actions-${kind === 'task' ? 'tasks' : 'projects'}.ts`, {
     './time-input': load('src/lib/promane/time-input.ts'),
+    './task-creation': load('src/lib/promane/task-creation.ts', {'node:crypto':require('node:crypto')}),
+    './task-input': load('src/lib/promane/task-input.ts', {'./time-input':load('src/lib/promane/time-input.ts')}),
     '@/lib/prisma': { prisma },
     '@/lib/promane/auth': {
       requirePromaneAuthAction: async () => ({ userId: 'u' }),

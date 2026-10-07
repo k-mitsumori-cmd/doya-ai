@@ -1,0 +1,86 @@
+{
+  "checkedAt": "2026-10-07T21:49:42.496Z",
+  "expected": 12,
+  "passed": 12,
+  "cases": [
+    {
+      "kind": "client",
+      "scenario": "terminal",
+      "status": "ready",
+      "metadataRetained": false
+    },
+    {
+      "kind": "client",
+      "scenario": "invalid-entry",
+      "status": "unknown",
+      "metadataRetained": true
+    },
+    {
+      "kind": "client",
+      "scenario": "missing",
+      "status": "unknown",
+      "metadataRetained": true
+    },
+    {
+      "kind": "expense",
+      "scenario": "terminal",
+      "status": "ready",
+      "metadataRetained": false
+    },
+    {
+      "kind": "expense",
+      "scenario": "invalid-entry",
+      "status": "unknown",
+      "metadataRetained": true
+    },
+    {
+      "kind": "expense",
+      "scenario": "missing",
+      "status": "unknown",
+      "metadataRetained": true
+    },
+    {
+      "kind": "task",
+      "scenario": "terminal",
+      "status": "ready",
+      "metadataRetained": false
+    },
+    {
+      "kind": "task",
+      "scenario": "invalid-entry",
+      "status": "unknown",
+      "metadataRetained": true
+    },
+    {
+      "kind": "task",
+      "scenario": "missing",
+      "status": "unknown",
+      "metadataRetained": true
+    },
+    {
+      "kind": "time",
+      "scenario": "terminal",
+      "status": "ready",
+      "metadataRetained": false
+    },
+    {
+      "kind": "time",
+      "scenario": "invalid-entry",
+      "status": "unknown",
+      "metadataRetained": true
+    },
+    {
+      "kind": "time",
+      "scenario": "missing",
+      "status": "unknown",
+      "metadataRetained": true
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/promane/use-client-creation.ts": "8370a37cf86d46d9cafb67ac7a1776bd4250cb9c3c231b3ddc64cc15a98a9a5d",
+    "src/lib/promane/use-expense-creation.ts": "64948cbf59b89f587ee8fee177690dd7da3759f0588ba684c3f1288447f7791e",
+    "src/lib/promane/use-task-creation.ts": "49d87decf0e2f60ac41b70b207a844b0063aac39cafbd294734d4e338cb45f56",
+    "src/lib/promane/use-time-entry-creation.ts": "41b5f8d7482fa6bb49d13c3024548d7373c97fd1fa4e8553543525b5109d4be4"
+  },
+  "scope": "Four actual creation React hooks with real localStorage in StrictMode; synthetic session/transport and serialized lock adapter. Existing separate PostgreSQL suites prove committed-deleted receipt is unavailable and replay never recreates it. No production/customer writes or actual authenticated Next transport."
+}

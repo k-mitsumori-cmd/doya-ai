@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { createTask } from "@/lib/promane/actions-tasks";
+import { useEffect, useRef, useState } from "react";
+import { useTaskCreation } from '@/lib/promane/use-task-creation';
+import { parsePromaneTaskCreate } from '@/lib/promane/task-input';
+import { useConfirm } from '@/components/promane/confirm-dialog';
 import { Button } from "@/components/promane/ui/button";
 import { Input } from "@/components/promane/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/promane/ui/select";
@@ -25,31 +27,21 @@ export function TaskCreateForm({
   const [priority, setPriority] = useState("medium");
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [loading, setLoading] = useState(false);
+  const creation = useTaskCreation(workspaceSlug, projectId);
+  const loading = creation.status === 'saving' || creation.status === 'checking';
+  const submitting = useRef(false);
+  const { confirm, ConfirmDialog } = useConfirm();
+  function clearDraft() { setTitle(''); setAssigneeId(''); setPriority('medium'); setStartDate(''); setDueDate(''); }
+  useEffect(() => { clearDraft(); submitting.current = false; setJustAdded(false); }, [creation.scopeKey]);
   const [justAdded, setJustAdded] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return;
-
-    // クライアント側でも日付チェック（即時フィードバック）
-    if (startDate && dueDate && new Date(dueDate) < new Date(startDate)) {
-      toast.error("終了日は開始日以降を指定してください", {
-        icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
-      });
-      return;
-    }
-
-    setLoading(true);
+    if (!title.trim() || submitting.current || creation.status !== 'ready') return;
+    submitting.current = true;
     try {
-      await createTask(workspaceSlug, {
-        projectId,
-        title: title.trim(),
-        assigneeId: assigneeId || undefined,
-        priority,
-        startDate: startDate || undefined,
-        dueDate: dueDate || undefined,
-      });
+      const input = parsePromaneTaskCreate({ projectId, title, assigneeId, priority, startDate, dueDate });
+      if (!await creation.save(input)) return;
 
       toast.success(`「${title.trim()}」を追加したよ！`, {
         icon: <Image src="/character/thumbsup.png" alt="" width={28} height={28} unoptimized />,
@@ -69,7 +61,7 @@ export function TaskCreateForm({
         duration: 5000,
       });
     } finally {
-      setLoading(false);
+      submitting.current = false;
     }
   }
 
@@ -79,8 +71,20 @@ export function TaskCreateForm({
         <Image src="/character/point.png" alt="" width={32} height={32} className="drop-shadow-sm" unoptimized />
         <span className="text-[16px] font-black text-gray-800">タスクを追加しよう！</span>
       </div>
+      {creation.message && <div role="status" className="mb-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
+        <p>{creation.message}</p>
+        {(creation.status === 'unknown' || creation.status === 'blocked') && <div className="flex flex-wrap gap-3 mt-3">
+          <Button disabled={loading} onClick={async () => { if (await creation.recover() === 'found') { clearDraft(); router.refresh(); } }}>保存状態を確認</Button>
+          <Button disabled={loading} onClick={async () => {
+            if (!await confirm({ title: '未完了の送信を取り消す', message: '未保存の送信が後から登録されないようにします。保存済みのタスクは削除しません。', confirmLabel: '取り消す', tone: 'danger' })) return;
+            if (await creation.recover(true) === 'found') { clearDraft(); router.refresh(); }
+          }}>未完了の送信を取り消す</Button>
+        </div>}
+      </div>}
       <form onSubmit={handleSubmit} className="space-y-3">
+        <fieldset disabled={creation.status !== 'ready'} className="space-y-3">
         <Input
+          aria-label="タスク名"
           placeholder="✏️ タスク名を入力..."
           maxLength={200}
           value={title}
@@ -113,13 +117,13 @@ export function TaskCreateForm({
           </Select>
 
           <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 h-11 ring-1 ring-gray-200">
-            <span className="text-[13px] font-bold text-gray-500">📅 開始</span>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8 w-[130px] border-0 bg-transparent text-[14px] font-bold p-0 focus:ring-0" />
+            <span className="shrink-0 whitespace-nowrap text-[13px] font-bold text-gray-500">📅 開始</span>
+            <Input aria-label="開始日" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8 w-[130px] border-0 bg-transparent text-[14px] font-bold p-0 focus:ring-0" />
           </div>
 
           <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 h-11 ring-1 ring-gray-200">
-            <span className="text-[13px] font-bold text-gray-500">🏁 終了</span>
-            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-8 w-[130px] border-0 bg-transparent text-[14px] font-bold p-0 focus:ring-0" />
+            <span className="shrink-0 whitespace-nowrap text-[13px] font-bold text-gray-500">🏁 終了</span>
+            <Input aria-label="終了日" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-8 w-[130px] border-0 bg-transparent text-[14px] font-bold p-0 focus:ring-0" />
           </div>
 
           <Button
@@ -131,7 +135,9 @@ export function TaskCreateForm({
             追加！
           </Button>
         </div>
+        </fieldset>
       </form>
+      <ConfirmDialog />
     </div>
   );
 }

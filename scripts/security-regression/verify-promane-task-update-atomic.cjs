@@ -1,3 +1,5 @@
+const {adaptTimePrisma,operationId}=require('./promane-time-creation-fixture.cjs');
+const taskCreation=require('./load-typescript.cjs').load('src/lib/promane/task-creation.ts',{'node:crypto':require('node:crypto')});
 const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
 const timeInput = load('src/lib/promane/time-input.ts')
@@ -35,7 +37,9 @@ function fixture({ conflict = false, member = true } = {}) {
   }
   const actions = load('src/lib/promane/actions-tasks.ts', {
     './time-input': timeInput,
-    '@/lib/prisma': { prisma },
+    './task-creation': taskCreation,
+    './task-input': load('src/lib/promane/task-input.ts',{'./time-input':timeInput}),
+    '@/lib/prisma': { prisma:adaptTimePrisma(prisma) },
     '@/lib/promane/auth': {
       requirePromaneAuthAction: async () => ({ userId: 'user' }),
       requireWritableWorkspace: async () => ({ id: 'workspace' }),
@@ -43,7 +47,7 @@ function fixture({ conflict = false, member = true } = {}) {
     'next/cache': { revalidatePath() {} },
   })
   return {
-    create: data => actions.createTask('workspace', { projectId: 'project', title: 'Task', ...data }),
+    create: data => actions.createTask('workspace', { operationId, expectedUserId:'user', projectId: 'project', title: 'Task', ...data }),
     update: patch => actions.updateTask('workspace', 'task', patch),
     move: (status, order) => actions.moveTask('workspace', 'task', status, order),
     state: () => ({ attempts, writes, row }),

@@ -94,7 +94,7 @@ export function useTimeEntryCreation(workspaceSlug: string, memberId: string) {
       return false;
     } finally { if (current()) scope.busy = false; }
   }
-  async function recover(cancelIfMissing = false): Promise<'found' | 'cancelled' | null> {
+  async function recover(cancelIfMissing = false): Promise<'found' | 'cancelled' | 'unavailable' | null> {
     if (!current() || scope.busy) return null;
     scope.busy = true;
     show('checking', '保存状態を確認しています。');
@@ -106,6 +106,14 @@ export function useTimeEntryCreation(workspaceSlug: string, memberId: string) {
         await clear(operationId);
         if (!current()) return null;
         show('ready', '保存済みの記録が見つかりました。再登録はしていません。'); return 'found';
+      }
+      // A committed receipt with no remaining row still fences every delayed replay.
+      // Finish only this known terminal operation; a missing receipt must stay pending.
+      if (result.state === 'unavailable' && result.entry === null) {
+        await clear(operationId);
+        if (!current()) return null;
+        show('ready', '送信は完了済みですが、記録は現在開けません。入力を確認して新しく登録できます。');
+        return 'unavailable';
       }
       if (result.state === 'cancelled' && result.entry === null) {
         await clear(operationId);

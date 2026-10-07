@@ -1,0 +1,58 @@
+{
+  "checkedAt": "2026-10-07T21:49:17.059297+00:00",
+  "status": "frozen80gates-passed-ready-for-reviewed-commit-push",
+  "baselineEvidence": [
+    "promane-task-submit-baseline.json",
+    "promane-task-creation-baseline-postgres-results.json",
+    "promane-task-creation-baseline-postgres-supervisor.json"
+  ],
+  "confirmed": [
+    "Actual same-frame UI submission calls createTask twice",
+    "Actual isolated PostgreSQL persists duplicate rows for replay and concurrent actions",
+    "Empty synthetic action acknowledgement accepted as success and draft cleared"
+  ],
+  "conditionalFinding": "Same-mounted project prop change retains draft. Real Next page remount behavior not proven; do not claim production cross-project impact.",
+  "requiredRepair": [
+    "Durable operation identity scoped to authenticated user/workspace/project; atomic receipt and task row",
+    "Fresh writable actor and project/assignee/parent authorization; retain transaction retries",
+    "Strict create input and complete acknowledgement checks",
+    "Read-only scoped recovery and explicit missing-operation cancellation fencing delayed original action",
+    "No automatic resubmission; synchronous UI fence plus cross-tab locks and timeout/late-result fencing",
+    "Metadata-only persisted pending operation; preserve in-memory unsaved input until confirmed save; clear private drafts across account/workspace/project changes",
+    "Preserve plan limits, sorting, dates, role semantics and both gantt/kanban callers",
+    "Meaningful real isolated PostgreSQL rollback/race/deletion/recovery tests, mounted UI and native browser checks, full release gate, exact reviewed commit/push, CI/READY/read-only public proof"
+  ],
+  "boundaries": [
+    "No customer DB writes or migrations",
+    "No paid providers or email/invites",
+    "Do not silently deduplicate identical text: distinct operation IDs must create distinct intended tasks"
+  ],
+  "goalScope": "All17services2074criteria remains active; this cohort cannot prove service-wide completion",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/promane-task-creation-release-b9421a96-4672-47b9-ac65-c6828df40534",
+  "gateSession": 20897,
+  "gateCount": 80,
+  "rootImplemented": true,
+  "production": false,
+  "verified": {
+    "postgres": 21,
+    "hookMounted": 17,
+    "formMounted": 6,
+    "native": 9,
+    "authority": 117,
+    "typecheck": "passed-before-full-gate",
+    "unavailableRecoveryMounted": 12
+  },
+  "unverified": [
+    "Full79gate still running",
+    "CI/deployment/publication not yet started",
+    "Actual authenticated Next browser-to-PostgreSQL transport and production task operations not verified"
+  ],
+  "additionalObservation": "Date labels corrected to single readable line; task/date inputs now have accessible names. New native check added.",
+  "previousGate": "docs/audits/2026-10-06-all-services-recheck/promane-task-creation-release-e2bf4ab4-470d-42ee-a769-94aa4dd64c48",
+  "previousGateStatus": "failed-build-existing-dynamic-task-project-repair-fixture-missing-task-module",
+  "fixtureRepair": "Related-records and dynamic task/project repair fixtures import real helper/parser. All10 administrative repair, foreign-link, role and rollback assertions retained.",
+  "securityPreflightSession": 35580,
+  "securityPreflightStatus": "passed-before-added-terminal-recovery",
+  "additionalRecoveryRepair": "All4actualhooks reproduce committed-deleted pending dead end; terminal unavailable/null now clears only completed operation metadata and preserves draft. Missing receipt and invalid response retain fence. Twelve mounted cases passed; native task case added.",
+  "gateStatus": "passed"
+}

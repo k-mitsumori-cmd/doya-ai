@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-07T21:49:41.066Z",
+  "expected": 21,
+  "passed": 21,
+  "cases": [
+    "same operation replay returns one committed task",
+    "concurrent same operation commits exactly one task",
+    "distinct operations preserve intentionally identical tasks",
+    "changed input on replay is rejected",
+    "read missing neither creates task nor receipt",
+    "explicit cancel fences delayed original save",
+    "cancel saved recovers task without removing it",
+    "deleted task is unavailable and never resurrected",
+    "receipt isolated between projects in same workspace",
+    "receipt isolated between users and workspaces",
+    "inactive actors cannot create recover or cancel",
+    "viewer actors cannot create recover or cancel",
+    "anonymous denied before operation access",
+    "foreign project assignee and parent cannot be linked",
+    "input type text and actual calendar boundaries reject before writes",
+    "exact text date and linked fields preserved",
+    "receipt insert failure rolls back task atomically",
+    "corrupt receipt blocks without replacing saved task",
+    "concurrent cancellation and create settle to one terminal state",
+    "stale browser actor cannot save recover or cancel under changed authenticated account",
+    "task sort order continues existing lane"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/actions-tasks.ts": "0574083a3f73ede3ec076e8a5e72d1400fb9e285c69f93bbdee8de96183be43e",
+    "src/lib/promane/task-input.ts": "8670b7167cf8dd46ee4c512fed78a49a1f19526f6a1e54535b26ceb93d312b5c",
+    "src/lib/promane/task-creation.ts": "5c530579886d74bc99cb296b35529371c8796765d8ba74b9a3700bc6ee0572fe"
+  },
+  "scope": "Actual task actions/helper/input with isolated Unix-socket PostgreSQL, task project/assignee/parent foreign keys, synthetic auth and data. No production/customer/provider writes; not real Next browser action transport."
+}

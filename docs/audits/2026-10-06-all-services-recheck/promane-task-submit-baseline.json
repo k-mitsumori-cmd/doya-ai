@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T21:26:09.229Z",
+  "expected": 3,
+  "passed": 3,
+  "cases": [
+    {
+      "finding": "same-frame submit invokes createTask twice with identical input",
+      "actionCalls": 2,
+      "successToasts": 2,
+      "refreshes": 2
+    },
+    {
+      "finding": "empty resolved action acknowledgement displays success and discards task draft",
+      "acknowledgement": {},
+      "successToasts": 1,
+      "clearedDraft": true
+    },
+    {
+      "finding": "same-mounted project change retains previous task draft and sends it to new project",
+      "submittedProject": "synthetic-project-b"
+    }
+  ],
+  "sourceHashes": {
+    "src/components/promane/task-create-form.tsx": "ae098bbce1bb2eada92bbb220e4e3816feb42616d8dc93bca38fff3b22ac4d02"
+  },
+  "scope": "Actual TaskCreateForm mounted in React StrictMode with controlled input state. Synthetic action/navigation and select shells. Establishes UI behavior, not database duplicates, Next transport, production impact or whether the real page remounts on project navigation."
+}
