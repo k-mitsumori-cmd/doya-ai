@@ -87,8 +87,12 @@ export async function withAdImageBudgetTransaction<T>(fn: (tx: Tx) => Promise<T>
     try {
       return await prisma.$transaction(fn, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
     } catch (error) {
-      const code = (error as { code?: string })?.code
-      if ((code !== 'P2034' && !(retryUnique && code === 'P2002')) || attempt === 4) throw error
+      const failure = error as { code?: string; meta?: { code?: string } }
+      // PostgreSQL serialization/deadlock errors from raw queries are P2010,
+      // whereas ORM mutations report P2034. Both abort the entire transaction.
+      const retryTransaction = failure?.code === 'P2034'
+        || (failure?.code === 'P2010' && ['40001', '40P01'].includes(failure.meta?.code || ''))
+      if ((!retryTransaction && !(retryUnique && failure?.code === 'P2002')) || attempt === 4) throw error
     }
   }
   throw new Error('AdImage budget retry exhausted')

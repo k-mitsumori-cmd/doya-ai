@@ -40,6 +40,14 @@ jobs:
       - name: AdImage feedback recovery regression (private Unix socket, synthetic vision)
         run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-feedback-postgres-supervise.py
 
+      - name: AdImage analysis budget regression (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-analysis-budget-postgres-supervise.py
+
+      - name: AdImage analysis recovery regression (private Unix socket, synthetic providers)
+        env:
+          DOYA_ANALYSIS_NATIVE_CHROME: '0'
+        run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-analysis-postgres-supervise.py
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

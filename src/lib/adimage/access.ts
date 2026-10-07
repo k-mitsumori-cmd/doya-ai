@@ -161,10 +161,10 @@ export function limitMessage(
 export interface AdImageQuotaDenied {
   ok: false
   reason: string
-  code: 'REQUEST_IMAGE_LIMIT' | 'DAILY_IMAGE_LIMIT' | 'MONTHLY_IMAGE_LIMIT' | 'DAILY_CONCEPT_LIMIT'
+  code: 'REQUEST_IMAGE_LIMIT' | 'DAILY_IMAGE_LIMIT' | 'MONTHLY_IMAGE_LIMIT' | 'DAILY_CONCEPT_LIMIT' | 'ANALYSIS_DAILY_LIMIT'
   limitReached: boolean
   diagnosticId: string
-  usage: { period: 'request' | 'day' | 'month'; unit: 'image' | 'concept'; limit: number; used: number; requested: number }
+  usage: { period: 'request' | 'day' | 'month'; unit: 'image' | 'concept' | 'analysis'; limit: number; used: number; requested: number }
   resetAt: string | null
   upgradeUrl?: string
   contactUrl?: string

@@ -1,12 +1,14 @@
 import { createHash } from 'node:crypto'
 import type { Prisma } from '@prisma/client'
 import type { RefineDirective } from './types'
-import { isPaid, type AdImageQuotaDenied } from './access'
+import type { AnalysisLease } from './analysis-budget'
+import type { AdImageAnalysisOutput } from './analysis-result'
+import { isPaid, quotaDenied, type AdImageQuotaDenied } from './access'
 import { claimImageBudgetInTransaction, settleImageBudgetInTransaction, releaseImageBudgetInTransaction, withAdImageBudgetTransaction, type ImageBudgetReservation } from './image-budget'
 
 type Tx = Prisma.TransactionClient
-export type AdImageOperationInput = { actor: string; operationId: string; kind: 'generate' | 'refine' | 'feedback'; targetId: string }
-type Receipt = AdImageOperationInput & { version: 1; phase: 'pending' | 'completed' | 'failed' | 'cancelled'; inputHash: string; targetHash: string; startedAt: string; reservation: ImageBudgetReservation | null; conceptId: string | null; produced: number; failedPlacements: string[]; appliedDirectives: RefineDirective[]; feedbackId?: string; creativeId?: string }
+export type AdImageOperationInput = { actor: string; operationId: string; kind: 'generate' | 'refine' | 'feedback' | 'analyze'; targetId: string }
+type Receipt = AdImageOperationInput & { version: 1; phase: 'pending' | 'completed' | 'failed' | 'cancelled'; inputHash: string; targetHash: string; startedAt: string; reservation: ImageBudgetReservation | null; conceptId: string | null; produced: number; failedPlacements: string[]; appliedDirectives: RefineDirective[]; feedbackId?: string; creativeId?: string; analysisLease?: AnalysisLease; analysisResult?: AdImageAnalysisOutput; brandId?: string; analysisFailure?: { error: string; code: 'WEBSITE_UNREADABLE' | 'ANALYSIS_FAILED' | 'COPY_FAILED'; canUseManualInput?: boolean } }
 export const ADIMAGE_OPERATION_LEASE_MS = 15 * 60 * 1000
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
 const identifier = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v)
@@ -19,7 +21,7 @@ function stable(value: unknown): unknown {
 }
 const hash = (v: unknown) => createHash('sha256').update(JSON.stringify(stable(v))).digest('hex')
 function normalized(input: AdImageOperationInput) {
-  if (!identifier(input.actor) || !identifier(input.targetId) || typeof input.operationId !== 'string' || !uuid.test(input.operationId) || !['generate', 'refine', 'feedback'].includes(input.kind)) throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
+  if (!identifier(input.actor) || !identifier(input.targetId) || typeof input.operationId !== 'string' || !uuid.test(input.operationId) || !['generate', 'refine', 'feedback', 'analyze'].includes(input.kind) || (input.kind === 'analyze' && input.targetId !== 'analysis')) throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
   return { ...input, operationId: input.operationId.toLowerCase() }
 }
 const receiptKey = (r: AdImageOperationInput) => 'adimage-operation:v1:' + hash([r.actor, r.operationId.toLowerCase()])
@@ -33,14 +35,20 @@ function parse(value: string): Receipt {
     const r: Receipt = JSON.parse(value)
     normalized(r)
     if (r.version !== 1 || !['pending', 'completed', 'failed', 'cancelled'].includes(r.phase) || !/^[a-f0-9]{64}$/.test(r.inputHash) || !/^[a-f0-9]{64}$/.test(r.targetHash) || typeof r.startedAt !== 'string' || !Number.isFinite(Date.parse(r.startedAt))
-      || !Number.isSafeInteger(r.produced) || r.produced < 0 || r.produced > 10 || (r.kind === 'feedback' ? r.produced !== 0 : ((r.phase === 'completed') !== (r.produced > 0)))
-      || (r.conceptId !== null && !identifier(r.conceptId)) || ((r.phase === 'completed') !== Boolean(r.conceptId)) || !Array.isArray(r.failedPlacements) || r.failedPlacements.length > 10 || r.failedPlacements.some(x => typeof x !== 'string' || x.length > 160)) throw new Error()
+      || !Number.isSafeInteger(r.produced) || r.produced < 0 || r.produced > 10 || (['feedback', 'analyze'].includes(r.kind) ? r.produced !== 0 : ((r.phase === 'completed') !== (r.produced > 0)))
+      || (r.conceptId !== null && !identifier(r.conceptId)) || (r.kind === 'analyze' ? r.conceptId !== null : ((r.phase === 'completed') !== Boolean(r.conceptId))) || !Array.isArray(r.failedPlacements) || r.failedPlacements.length > 10 || r.failedPlacements.some(x => typeof x !== 'string' || x.length > 160)) throw new Error()
     if (!validAdImageDirectives(r.appliedDirectives)) throw new Error()
-    if (r.phase === 'pending' && r.kind !== 'feedback' && !r.reservation) throw new Error()
+    if (r.phase === 'pending' && !['feedback', 'analyze'].includes(r.kind) && !r.reservation) throw new Error()
     if (r.reservation && (r.reservation.key !== 'adimage-image:v1:' + createHash('sha256').update(r.actor).digest('hex') || !uuid.test(r.reservation.token) || !Number.isSafeInteger(r.reservation.requested) || r.reservation.requested < 1 || r.reservation.requested > 10 || r.produced > r.reservation.requested)) throw new Error()
     if (r.kind === 'feedback' && (r.reservation !== null || r.failedPlacements.length !== 0 || r.appliedDirectives.length !== 0 || (r.phase === 'pending' && !identifier(r.creativeId)) || (r.phase !== 'completed' && r.feedbackId !== undefined) || (r.creativeId !== undefined && !identifier(r.creativeId)) || (r.phase === 'completed' && (!identifier(r.feedbackId) || !identifier(r.creativeId) || r.conceptId !== r.targetId)))) throw new Error()
     if (r.kind !== 'feedback' && (r.feedbackId !== undefined || r.creativeId !== undefined)) throw new Error()
-    if (r.phase === 'completed' && r.kind !== 'feedback' && (!r.reservation || r.failedPlacements.length !== r.reservation.requested - r.produced)) throw new Error()
+    if (r.phase === 'completed' && !['feedback', 'analyze'].includes(r.kind) && (!r.reservation || r.failedPlacements.length !== r.reservation.requested - r.produced)) throw new Error()
+    if (r.kind === 'analyze') {
+      if (r.reservation !== null || r.failedPlacements.length || r.appliedDirectives.length || (r.phase === 'completed' ? !identifier(r.brandId) || !r.analysisResult : r.brandId !== undefined || r.analysisResult !== undefined)) throw new Error()
+      if (r.phase === 'pending' && !r.analysisLease) throw new Error()
+      if (r.analysisLease && (r.analysisLease.key !== 'adimage-analysis:v1:' + createHash('sha256').update(r.actor).digest('hex') || !uuid.test(r.analysisLease.token))) throw new Error()
+      if (r.analysisFailure && (r.phase !== 'failed' || !['WEBSITE_UNREADABLE', 'ANALYSIS_FAILED', 'COPY_FAILED'].includes(r.analysisFailure.code) || typeof r.analysisFailure.error !== 'string' || !r.analysisFailure.error.trim() || r.analysisFailure.error.length > 1000 || (r.analysisFailure.canUseManualInput !== undefined && r.analysisFailure.canUseManualInput !== true))) throw new Error()
+    } else if (r.analysisLease !== undefined || r.analysisResult !== undefined || r.brandId !== undefined || r.analysisFailure !== undefined) throw new Error()
     return r
   } catch { throw new AdImageOperationError(409, 'INVALID_RECEIPT', '操作情報を確認できません。再生成せずお問い合わせください。') }
 }
@@ -49,10 +57,18 @@ async function read(tx: Tx, key: string, actor: string) {
   if (!row) return null
   const r = parse(row.value)
   if (r.actor !== actor || receiptKey(r) !== key) throw new AdImageOperationError(409, 'INVALID_RECEIPT', '操作情報を確認できません。')
+  await validateAnalysis(r)
   return r
+}
+async function validateAnalysis(r: Receipt) {
+  if (r.kind === 'analyze' && r.phase === 'completed') {
+    const { validAdImageAnalysisOutput } = await import('./analysis-result')
+    if (!validAdImageAnalysisOutput(r.analysisResult)) throw new AdImageOperationError(409, 'INVALID_RECEIPT', '保存された解析結果を確認できません。')
+  }
 }
 async function save(tx: Tx, r: Receipt) {
   parse(JSON.stringify(r))
+  await validateAnalysis(r)
   const key = receiptKey(r), value = JSON.stringify(r)
   await tx.systemSetting.upsert({ where: { key }, create: { key, value }, update: { value } })
 }
@@ -62,7 +78,7 @@ async function lockActor(tx: Tx, actor: string) {
 }
 /** Compare the exact source used by the worker with the current owned source. */
 export function adImageTargetHash(kind: AdImageOperationInput['kind'], target: unknown) {
-  if (kind === 'generate') return hash(target)
+  if (kind === 'generate' || kind === 'analyze') return hash(target)
   const r = target as { creatives?: Array<{ id: string }> }
   const { feedbacks: _feedbacks, ...feedbackSource } = r as typeof r & { feedbacks?: unknown }
   return hash({ ...(kind === 'feedback' ? feedbackSource : r), creatives: [...(r.creatives || [])].sort((a, b) => a.id.localeCompare(b.id)) })
@@ -82,6 +98,10 @@ async function target(tx: Tx, input: AdImageOperationInput) {
 }
 async function close(tx: Tx, r: Receipt, phase: 'failed' | 'completed', conceptId: string | null = null, failedPlacements: string[] = [], produced = 0, appliedDirectives: RefineDirective[] = [], feedbackId?: string) {
   if (r.phase !== 'pending') return r
+  if (phase === 'failed' && r.kind === 'analyze' && r.analysisLease) {
+    const { finishAnalysisBudgetInTransaction } = await import('./analysis-budget')
+    await finishAnalysisBudgetInTransaction(tx, r.analysisLease, false)
+  }
   if (phase === 'failed' && r.reservation) await releaseImageBudgetInTransaction(tx, r.reservation)
   const result = { ...r, phase, conceptId, failedPlacements, produced, appliedDirectives, ...(feedbackId ? { feedbackId } : {}) }
   await save(tx, result)
@@ -89,13 +109,18 @@ async function close(tx: Tx, r: Receipt, phase: 'failed' | 'completed', conceptI
   return result
 }
 async function expire(tx: Tx, r: Receipt | null) {
-  if (r?.phase === 'pending' && Date.now() - Date.parse(r.startedAt) >= ADIMAGE_OPERATION_LEASE_MS) return close(tx, r, 'failed')
+  if (r?.phase === 'pending' && Date.now() - Date.parse(r.startedAt) >= (r.kind === 'analyze' ? 330000 : ADIMAGE_OPERATION_LEASE_MS)) return close(tx, r, 'failed')
   return r
 }
 function bind(r: Receipt, input: AdImageOperationInput) {
   if (r.kind !== input.kind || r.targetId !== input.targetId) throw new AdImageOperationError(409, 'INPUT_CHANGED', '操作対象が変わっています。保存結果を確認してください。')
 }
 async function available(tx: Tx, r: Receipt) {
+  if (r.kind === 'analyze' && r.phase === 'completed') {
+    await tx.$queryRaw`SELECT id FROM adimage_brand WHERE id = ${r.brandId!} AND "userId" = ${r.actor} FOR UPDATE`
+    const brand = await tx.adImageBrand.findFirst({ where: { id: r.brandId, userId: r.actor } })
+    return Boolean(brand && hash(brand) === r.targetHash)
+  }
   if (!r.conceptId) return true
   if (r.kind === 'feedback') {
     const current = await target(tx, r)
@@ -107,7 +132,7 @@ async function available(tx: Tx, r: Receipt) {
 }
 export async function beginAdImageOperation(supplied: AdImageOperationInput, body: Record<string, unknown>, requested: number, sourceHash: string): Promise<{ state: 'started'; receipt: Receipt } | { state: 'busy' | 'unavailable' } | { state: Receipt['phase']; receipt: Receipt } | { state: 'limit'; quota: AdImageQuotaDenied }> {
   const input = normalized(supplied)
-  if (!/^[a-f0-9]{64}$/.test(sourceHash) || !body || typeof body !== 'object' || Array.isArray(body) || Buffer.byteLength(JSON.stringify(body)) > 32768) throw new AdImageOperationError(400, 'INVALID_OPERATION', '入力内容を確認してください。')
+  if (!/^[a-f0-9]{64}$/.test(sourceHash) || !body || typeof body !== 'object' || Array.isArray(body) || Buffer.byteLength(JSON.stringify(body)) > (input.kind === 'analyze' ? 65536 : 32768)) throw new AdImageOperationError(400, 'INVALID_OPERATION', '入力内容を確認してください。')
   const inputHash = hash(body)
   return withAdImageBudgetTransaction(async tx => {
     const actor = await lockActor(tx, input.actor)
@@ -124,6 +149,17 @@ export async function beginAdImageOperation(supplied: AdImageOperationInput, bod
       const running = await read(tx, pointer.value, input.actor)
       if (!running) throw new AdImageOperationError(409, 'INVALID_RECEIPT', '操作情報を確認できません。')
       if ((await expire(tx, running))?.phase === 'pending') return { state: 'busy' as const }
+    }
+    if (input.kind === 'analyze') {
+      if (requested !== 0 || sourceHash !== inputHash) throw new AdImageOperationError(400, 'INVALID_OPERATION', '解析内容を確認してください。')
+      const { claimAnalysisBudgetInTransaction } = await import('./analysis-budget')
+      const claim = await claimAnalysisBudgetInTransaction(tx, input.actor)
+      if (!claim.ok && claim.reason !== 'limit') return { state: claim.reason === 'busy' ? 'busy' as const : 'unavailable' as const }
+      const receipt: Receipt = { ...input, version: 1, phase: claim.ok ? 'pending' : 'cancelled', inputHash, targetHash: sourceHash, startedAt: new Date().toISOString(), reservation: null, conceptId: null, produced: 0, failedPlacements: [], appliedDirectives: [], ...(claim.ok ? { analysisLease: claim.lease } : {}) }
+      await save(tx, receipt)
+      if (!claim.ok) return { state: 'limit' as const, quota: quotaDenied('本日のブランド解析の上限に達しました。明日またご利用ください。', 'ANALYSIS_DAILY_LIMIT', claim.plan!, { period: 'day', unit: 'analysis', limit: claim.limit!, used: claim.used!, requested: 1 }) }
+      await tx.systemSetting.upsert({ where: { key: activeKey(input.actor) }, create: { key: activeKey(input.actor), value: receiptKey(input) }, update: { value: receiptKey(input) } })
+      return { state: 'started' as const, receipt }
     }
     const current = await target(tx, input)
     if (!current) {
@@ -149,7 +185,7 @@ export async function beginAdImageOperation(supplied: AdImageOperationInput, bod
 export async function settleAdImageOperation(inputValue: AdImageOperationInput, produced: number, failedPlacements: string[], write: (tx: Tx) => Promise<{ id: string }>, appliedDirectives: RefineDirective[] = []) {
   if (!validAdImageDirectives(appliedDirectives)) throw new AdImageOperationError(400, 'INVALID_DIRECTIVES', '改善指示の内容を確認してください。')
   const input = normalized(inputValue)
-  if (input.kind === 'feedback') throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
+  if (input.kind === 'feedback' || input.kind === 'analyze') throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
   const result = await withAdImageBudgetTransaction(async tx => {
     if (!await lockActor(tx, input.actor)) return null
     const r = await expire(tx, await read(tx, receiptKey(input), input.actor))
@@ -217,4 +253,51 @@ export async function settleAdImageFeedbackOperation(value: AdImageOperationInpu
   })
   if (!result) throw new AdImageOperationError(409, 'OPERATION_EXPIRED', '採点の保存期限が切れたか、対象が削除されています。保存結果を確認してください。')
   return result
+}
+
+/** Provider work is outside the transaction. Brand, validated drafts, receipt and
+ * attempt finalization commit together, or none of them do. */
+export async function settleAdImageAnalysisOperation(value: AdImageOperationInput, output: AdImageAnalysisOutput, write: (tx: Tx) => Promise<{ id: string }>) {
+  const input = normalized(value)
+  const { validAdImageAnalysisOutput } = await import('./analysis-result')
+  if (input.kind !== 'analyze' || !validAdImageAnalysisOutput(output)) throw new AdImageOperationError(502, 'INVALID_RESULT', '解析結果を確認できません。')
+  const result = await withAdImageBudgetTransaction(async tx => {
+    if (!await lockActor(tx, input.actor)) return null
+    const r = await expire(tx, await read(tx, receiptKey(input), input.actor))
+    if (!r) return null
+    bind(r, input)
+    if (r.phase === 'completed') return await available(tx, r) ? r : null
+    if (r.phase !== 'pending' || !r.analysisLease) return null
+    const { finishAnalysisBudgetInTransaction } = await import('./analysis-budget')
+    if (!await finishAnalysisBudgetInTransaction(tx, r.analysisLease, false)) return close(tx, r, 'failed')
+    const saved = await write(tx)
+    if (!identifier(saved.id)) throw new AdImageOperationError(502, 'INVALID_RESULT', '解析の保存結果を確認できません。')
+    const brand = await tx.adImageBrand.findFirst({ where: { id: saved.id, userId: input.actor } })
+    if (!brand) throw new AdImageOperationError(409, 'INVALID_RESULT', '解析の保存先を確認できません。')
+    const receipt: Receipt = { ...r, phase: 'completed', brandId: brand.id, analysisResult: output, targetHash: hash(brand) }
+    await save(tx, receipt)
+    await tx.systemSetting.deleteMany({ where: { key: activeKey(input.actor), value: receiptKey(input) } })
+    return receipt
+  })
+  if (!result || result.phase !== 'completed') throw new AdImageOperationError(409, 'OPERATION_EXPIRED', '解析の保存期限が切れています。保存結果を確認してください。')
+  return result
+}
+export async function failAdImageAnalysisOperation(value: AdImageOperationInput, refund: boolean, failure: NonNullable<Receipt['analysisFailure']>) {
+  const input = normalized(value)
+  if (input.kind !== 'analyze') throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
+  return withAdImageBudgetTransaction(async tx => {
+    if (!await lockActor(tx, input.actor)) return { state: 'unavailable' as const }
+    const r = await read(tx, receiptKey(input), input.actor)
+    if (!r) return { state: 'missing' as const }
+    bind(r, input)
+    if (r.phase !== 'pending') return { state: r.phase, receipt: r }
+    if (r.analysisLease) {
+      const { finishAnalysisBudgetInTransaction } = await import('./analysis-budget')
+      await finishAnalysisBudgetInTransaction(tx, r.analysisLease, refund && failure.code === 'WEBSITE_UNREADABLE')
+    }
+    const receipt: Receipt = { ...r, phase: 'failed', analysisFailure: failure }
+    await save(tx, receipt)
+    await tx.systemSetting.deleteMany({ where: { key: activeKey(input.actor), value: receiptKey(input) } })
+    return { state: 'failed' as const, receipt }
+  })
 }

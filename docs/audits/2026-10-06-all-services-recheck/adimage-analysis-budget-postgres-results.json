@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T13:24:43.972Z",
+  "passed": 14,
+  "cases": [
+    "Admission and operation receipt roll back together",
+    "Ten concurrent serializable admissions consume one attempt",
+    "Canonical locked plan retains FREE20 and paid160 limits",
+    "Brand insert, completed receipt and budget finalization roll back together",
+    "Successful atomic completion retains one consumed attempt and clears lease",
+    "Source rejection refunds exactly once",
+    "Expired worker cannot finalize or refund even before replacement admission",
+    "Lease expiry uses wall clock even when transaction started before the deadline",
+    "Old lease cannot release or refund a replacement attempt",
+    "JST period rollover resets attempts after an expired prior lease",
+    "Missing actor cannot create a budget record",
+    "Database uncertainty propagates and rolls back receipt instead of partially admitting",
+    "Malformed counters cannot silently reset usage or admit paid work",
+    "User plan remains locked until admission transaction commits"
+  ],
+  "sourceHashes": {
+    "src/lib/adimage/analysis-budget.ts": "c9118122c58722fcfda76d9d21244236529709a5c2ca53e751fd76f3cfb9405e",
+    "src/lib/adimage/access.ts": "4d9c96c98dcccac02d1a4e1478ce009daeb394de5f32428752150283b75139d3",
+    "src/lib/adimage/image-budget.ts": "773dae01f781e5b3a54f8751ccbee876a3b49005e34840b41ed61ee8bb168d23"
+  },
+  "scope": "Actual analysis budget transaction helpers and locked User.plan, Prisma/private Unix-only PostgreSQL. Synthetic brand and receipt writes verify atomic primitives. Durable analyze operation and HTTP/client recovery are not yet connected or proved. No production DB/provider calls."
+}

@@ -101,7 +101,12 @@ export async function generateConcepts(input: GenerateCopyInput): Promise<Concep
 
   const valid = Object.keys(APPEAL_LABELS) as AppealAxis[]
 
-  return (raw?.concepts || [])
+  if (!raw || !Array.isArray(raw.concepts) || raw.concepts.some(c => !c || typeof c !== 'object' || !c.copy || typeof c.copy !== 'object'
+    || typeof c.copy.headline !== 'string' || typeof c.copy.cta !== 'string' || (c.copy.sub !== undefined && typeof c.copy.sub !== 'string')
+    || (c.label !== undefined && typeof c.label !== 'string') || (c.tone !== undefined && typeof c.tone !== 'string')
+    || (c.appealAxis !== undefined && !valid.includes(c.appealAxis)))) throw new Error('Invalid concept analysis output')
+
+  return raw.concepts
     .filter((c) => c && c.copy && c.copy.headline)
     .slice(0, count)
     .map((c) => ({

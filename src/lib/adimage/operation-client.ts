@@ -1,12 +1,12 @@
-import type { AdCopy, RefineDirective, FeedbackScores } from './types'
-export type AdImageIntent = { version: 1; operationId: string; kind: 'generate' | 'refine' | 'feedback'; targetId: string; createdAt: string }
+import type { AdCopy, RefineDirective, FeedbackScores, BrandProfile, ConceptDraft } from './types'
+export type AdImageIntent = { version: 1; operationId: string; kind: 'generate' | 'refine' | 'feedback' | 'analyze'; targetId: string; createdAt: string }
 export type AdImageCreative = { id: string; placementKey: string; placementName: string; media: string; size: string; url: string; verify: { ocrMatch?: boolean; needsReview?: boolean; extraText?: string[]; safeAreaOk?: boolean } | null }
-export type AdImageResult = { operationId: string; kind: AdImageIntent['kind']; targetId: string; state: 'completed' | 'pending' | 'busy' | 'missing' | 'failed' | 'cancelled' | 'unavailable' | 'limit'; conceptId?: string; campaignId?: string; copy?: AdCopy; generation?: number; creatives?: AdImageCreative[]; previousCreatives?: AdImageCreative[]; previousGeneration?: number | null; appliedDirectives?: RefineDirective[]; failedPlacements?: string[]; needsReview?: boolean; error?: string; code?: string; upgradeUrl?: string; contactUrl?: string; limitReached?: boolean; feedbackId?: string; creativeId?: string; scores?: FeedbackScores; advice?: string; directives?: RefineDirective[] }
+export type AdImageResult = { operationId: string; kind: AdImageIntent['kind']; targetId: string; state: 'completed' | 'pending' | 'busy' | 'missing' | 'failed' | 'cancelled' | 'unavailable' | 'limit'; conceptId?: string; campaignId?: string; copy?: AdCopy; generation?: number; creatives?: AdImageCreative[]; previousCreatives?: AdImageCreative[]; previousGeneration?: number | null; appliedDirectives?: RefineDirective[]; failedPlacements?: string[]; needsReview?: boolean; error?: string; code?: string; upgradeUrl?: string; contactUrl?: string; limitReached?: boolean; feedbackId?: string; creativeId?: string; scores?: FeedbackScores; advice?: string; directives?: RefineDirective[]; brandId?: string; brand?: BrandProfile; concepts?: Array<ConceptDraft & { warnings: string[] }>; canUseManualInput?: boolean }
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
 const identifier = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v)
 const key = (actor: string) => 'adimage-intent:v1:' + encodeURIComponent(actor)
 const guidance = '処理結果を確認できません。再生成せず「保存結果を確認」を押してください。'
-function validIntent(v: AdImageIntent) { return v && v.version === 1 && typeof v.operationId === 'string' && uuid.test(v.operationId) && ['generate', 'refine', 'feedback'].includes(v.kind) && identifier(v.targetId) && typeof v.createdAt === 'string' && Number.isFinite(Date.parse(v.createdAt)) && Object.keys(v).every(k => ['version', 'operationId', 'kind', 'targetId', 'createdAt'].includes(k)) }
+function validIntent(v: AdImageIntent) { return v && v.version === 1 && typeof v.operationId === 'string' && uuid.test(v.operationId) && ['generate', 'refine', 'feedback', 'analyze'].includes(v.kind) && (v.kind !== 'analyze' || v.targetId === 'analysis') && identifier(v.targetId) && typeof v.createdAt === 'string' && Number.isFinite(Date.parse(v.createdAt)) && Object.keys(v).every(k => ['version', 'operationId', 'kind', 'targetId', 'createdAt'].includes(k)) }
 export function readAdImageIntent(actor: string): AdImageIntent | null {
   if (!identifier(actor)) throw new Error('ログイン情報を確認してください。')
   const raw = localStorage.getItem(key(actor)); if (raw === null) return null
@@ -47,10 +47,23 @@ export async function readAdImageOperationResponse(response: Response, intent: A
       if (response.status !== expected) throw new Error(guidance)
       if (d.state === 'limit') {
         if (intent.kind === 'feedback') throw new Error(guidance)
-        if (typeof d.error !== 'string' || d.error.length > 4000 || typeof d.code !== 'string' || !['REQUEST_IMAGE_LIMIT', 'DAILY_IMAGE_LIMIT', 'MONTHLY_IMAGE_LIMIT', 'DAILY_CONCEPT_LIMIT'].includes(d.code) || (d.upgradeUrl !== undefined && d.upgradeUrl !== '/adimage/pricing') || (d.contactUrl !== undefined && d.contactUrl !== 'https://doyamarke.surisuta.jp/contact')) throw new Error(guidance)
+        if (typeof d.error !== 'string' || d.error.length > 4000 || typeof d.code !== 'string' || !(intent.kind === 'analyze' ? ['ANALYSIS_DAILY_LIMIT'] : ['REQUEST_IMAGE_LIMIT', 'DAILY_IMAGE_LIMIT', 'MONTHLY_IMAGE_LIMIT', 'DAILY_CONCEPT_LIMIT']).includes(d.code) || (d.upgradeUrl !== undefined && d.upgradeUrl !== '/adimage/pricing') || (d.contactUrl !== undefined && d.contactUrl !== 'https://doyamarke.surisuta.jp/contact')) throw new Error(guidance)
         return d
       }
-      if (d.state !== 'completed') { if (d.creatives !== undefined || d.conceptId !== undefined || d.previousCreatives !== undefined || d.feedbackId !== undefined || d.scores !== undefined || d.advice !== undefined || d.directives !== undefined) throw new Error(guidance); return d }
+      if (d.state !== 'completed') {
+        if (d.creatives !== undefined || d.conceptId !== undefined || d.previousCreatives !== undefined || d.feedbackId !== undefined || d.scores !== undefined || d.advice !== undefined || d.directives !== undefined || d.brandId !== undefined || d.brand !== undefined || d.concepts !== undefined) throw new Error(guidance)
+        if (intent.kind === 'analyze' && (d.error !== undefined || d.code !== undefined || d.canUseManualInput !== undefined)) {
+          if (d.state !== 'failed' || typeof d.error !== 'string' || !d.error.trim() || d.error.length > 1000 || !['WEBSITE_UNREADABLE', 'ANALYSIS_FAILED', 'COPY_FAILED'].includes(d.code || '') || (d.canUseManualInput !== undefined && (d.canUseManualInput !== true || d.code !== 'WEBSITE_UNREADABLE'))) throw new Error(guidance)
+        }
+        return d
+      }
+      if (intent.kind === 'analyze') {
+        const { validAdImageAnalysisOutput } = await import('./analysis-result')
+        if (!identifier(d.brandId) || !validAdImageAnalysisOutput({ brand: d.brand, concepts: d.concepts }) || ['conceptId', 'creatives', 'previousCreatives', 'feedbackId', 'scores', 'directives', 'analysisLease', 'receipt', 'inputHash'].some(k => k in d)) throw new Error(guidance)
+        return d
+      }
+      if (d.brandId !== undefined || d.brand !== undefined || d.concepts !== undefined || d.canUseManualInput !== undefined) throw new Error(guidance)
+
       const validVerification = (v: unknown) => {
         if (v === null) return true
         if (!v || typeof v !== 'object' || Array.isArray(v)) return false

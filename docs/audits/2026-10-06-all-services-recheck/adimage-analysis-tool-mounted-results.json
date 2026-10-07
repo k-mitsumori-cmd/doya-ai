@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-07T13:26:34.984Z",
+  "passed": 5,
+  "cases": [
+    "Analysis lost response persists metadata only and never resubmits automatically",
+    "Malformed completed analysis remains fenced instead of applying untrusted copy",
+    "Confirmed source failure offers manual description and requires explicit close before new work",
+    "Analysis daily cap retains structured upgrade guidance and no new automatic POST",
+    "Account switch and return keep old analysis intent recoverable without replay"
+  ],
+  "sourceHashes": {
+    "src/app/adimage/Tool.tsx": "b02bed0b03e5a394e6581374c44c6bbcc4f7d8e3dadd89e5418ef63d81c74615",
+    "src/lib/adimage/operation-client.ts": "cafddf0aa6871ee08bca9f81e70d64a38fa559eee44a8962a358afb8ad788a1a",
+    "src/lib/adimage/use-operation-recovery.ts": "45aa451440c93205e83e9ac6c6e4f8a57b66d51a7882efe76d9ac2156978af4b",
+    "src/lib/adimage/analysis-result.ts": "5bc0d3ae198c5099a892d7303d840a3f06b6d58fd7b8c1aab1fcf32000aeb920"
+  },
+  "scope": "Actual full Tool, actual recovery hook/reader and output validator under React18 StrictMode. Synthetic network/session/Web Locks. No real provider or production DB; native automatic POST retry proved separately by private PostgreSQL fixture."
+}

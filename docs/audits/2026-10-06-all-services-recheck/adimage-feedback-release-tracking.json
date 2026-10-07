@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-07T11:24:51.940280+00:00",
+  "commit": "4945e35e20f4b31e22e8ee46469e0d716bc7a71a",
+  "commitExitCode": 0,
+  "commitSession": 32604,
+  "sourceSnapshotRecheckedAfterCommit": true,
+  "pushExitCode": 0,
+  "pushSession": 59029,
+  "ci": {
+    "id": 37612271962,
+    "conclusion": "success",
+    "headSha": "4945e35e20f4b31e22e8ee46469e0d716bc7a71a",
+    "status": "completed"
+  },
+  "deployment": {
+    "id": "dpl_A6DrWkahdzRnEBbJDiJCsMqctTbD",
+    "url": "doya-iixw7vw5l-surisutas-projects.vercel.app",
+    "target": "production",
+    "readyState": "READY",
+    "commit": "4945e35e20f4b31e22e8ee46469e0d716bc7a71a"
+  },
+  "publicVerification": "passed",
+  "scope": "Frozen feedback cohort only; all-services completion remains unproven.",
+  "observerPid": 2032,
+  "observerStartedAt": "2026-10-07T11:14:04.269666+00:00",
+  "observerStatus": "passed",
+  "publicVerificationExitCode": 0,
+  "observerEndedAt": "2026-10-07T11:24:59.627035+00:00"
+}

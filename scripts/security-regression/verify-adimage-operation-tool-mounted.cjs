@@ -7,10 +7,11 @@ const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{p
 let network,calls=[],imageMode='good',status='authenticated',actor='actor-a',view;
 class FakeImage {set src(value){if(!value)return;queueMicrotask(()=>{this.naturalWidth=imageMode==='oversize'?9000:320;this.naturalHeight=50;if(imageMode==='bad')this.onerror?.();else if(imageMode==='good'||imageMode==='oversize')this.onload?.()})}}
 let lockTail=Promise.resolve();const navigator={locks:{request:(_name,fn)=>{const next=lockTail.then(fn);lockTail=next.catch(()=>{});return next}}};
-const globals={window:dom.window,document:dom.window.document,localStorage:dom.window.localStorage,crypto,navigator,Image:FakeImage,AbortController,Response,URL,URLSearchParams,Date,Map,Set,Error,TextDecoder,Uint8Array,console,setTimeout,clearTimeout,fetch:async(url,init)=>{const c={url,init:init||{},body:init?.body?JSON.parse(init.body):null};calls.push(c);return network(c)}};
+const globals={window:dom.window,document:dom.window.document,localStorage:dom.window.localStorage,crypto,navigator,Image:FakeImage,AbortController,Response,URL,URLSearchParams,Date,Map,Set,Error,TextDecoder,TextEncoder,Uint8Array,console,setTimeout,clearTimeout,fetch:async(url,init)=>{const c={url,init:init||{},body:init?.body?JSON.parse(init.body):null};calls.push(c);return network(c)}};
 function load(file,mocks,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports,require:n=>{if(n in mocks)return mocks[n];throw Error('Unmocked '+n)},...globals,...extra},{filename:file});return exports}
 
-const client=load('src/lib/adimage/operation-client.ts',{}),hook=load('src/lib/adimage/use-operation-recovery.ts',{react:React,'./operation-client':client});
+const analysisOutput=load('src/lib/adimage/analysis-result.ts',{'./types':load('src/lib/adimage/types.ts',{})});
+const client=load('src/lib/adimage/operation-client.ts',{'./analysis-result':analysisOutput}),hook=load('src/lib/adimage/use-operation-recovery.ts',{react:React,'./operation-client':client});
 const nil=()=>null;
 const Tool=load('src/app/adimage/Tool.tsx',{'react':React,'react/jsx-runtime':require('react/jsx-runtime'),'next-auth/react':{useSession:()=>({status,data:{user:{id:actor}}})},'@/lib/adimage/use-operation-recovery':hook,'@/lib/adimage/operation-client':client,'lucide-react':{Sparkles:nil},'next/link':({href,children,...props})=>React.createElement('a',{href,...props},children),'@/lib/adimage/types':{APPEAL_LABELS:{benefit:'Benefit'}},'./Lp':nil,'@/components/adimage/ExportDownload':nil,'@/lib/ui/notify':{notifyError:(set,message)=>set(message)},'@/components/LoadingProgress':nil},{Event:dom.window.Event}).default;
 let root,host,receipts,mode,held;
@@ -20,7 +21,7 @@ const dto=(id,kind='generate',targetId='brand')=>kind==='feedback'?({...dto(id,'
 network=async c=>{
  if(c.url==='/api/adimage/placements')return Response.json({placements:[{key:'square',name:'Square',media:'Test',size:'1024x1024'}],defaults:['square'],chips:[],unsupported:[]});
  if(c.url.startsWith('/api/adimage/design-refs'))return Response.json({items:[],matched:0});
- if(c.url==='/api/adimage/analyze')return Response.json({brandId:'brand',brand:{name:'Synthetic brand',colors:['#0066ff']},concepts:[{label:'Synthetic',appealAxis:'benefit',tone:'plain',copy,warnings:[]}]});
+ if(c.url==='/api/adimage/analyze'){const value={operationId:c.body.operationId,kind:'analyze',targetId:'analysis',state:'completed',brandId:'brand',brand:{name:'Synthetic brand',valueProps:[],colors:['#0066ff']},concepts:[{label:'Synthetic',appealAxis:'benefit',tone:'plain',copy,warnings:[]}]};receipts.set(c.body.operationId,value);return Response.json(value)}
  if(c.url.startsWith('/api/adimage/operations?')){const q=new URL(c.url,'https://local.test').searchParams;return Response.json(receipts.get(q.get('operationId'))||{operationId:q.get('operationId'),kind:q.get('kind'),targetId:q.get('targetId'),state:c.init.method==='DELETE'?'cancelled':'missing'})}
  if(c.url==='/api/adimage/concepts'||c.url.endsWith('/refine')||c.url.endsWith('/feedback')){
   const saved=client.readAdImageIntent(actor);assert.equal(saved.operationId,c.body.operationId);assert(!JSON.stringify(saved).includes('Synthetic'));
@@ -36,7 +37,7 @@ const close=async()=>{if(root){await act(()=>root.unmount());root=null;host.remo
 const button=t=>[...host.querySelectorAll('button')].find(b=>b.textContent.includes(t));
 const click=async t=>{const b=button(t);assert(b,'Missing button '+t);await act(()=>b.click())};
 const input=(placeholder,value)=>{const el=host.querySelector('input[placeholder="'+placeholder+'"]');assert(el);Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}))};
-const prepare=async()=>{await act(()=>input('https://example.com','https://synthetic.test'));await click('広告コピーを作る');assert(button('広告画像を作る'))};
+const prepare=async()=>{await act(()=>input('https://example.com','https://synthetic.test'));await click('広告コピーを作る');assert(button('広告画像を作る'));await click('結果を確認しました')};
 const count=()=>calls.filter(c=>c.url==='/api/adimage/concepts'||c.url.endsWith('/refine')).length;
 const cases=[];const test=async(name,work)=>{await close();localStorage.clear();calls=[];receipts=new Map();status='authenticated';actor='actor-a';mode='success';await mount();await work();cases.push(name);console.log('PASS '+name)};
 (async()=>{

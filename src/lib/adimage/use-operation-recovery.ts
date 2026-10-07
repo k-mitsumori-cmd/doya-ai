@@ -77,7 +77,7 @@ export function useAdImageRecovery(status: string, actor: string) {
     const timer = window.setTimeout(() => controller.abort(), 315000)
     setBusy(true)
     try {
-      const response = await fetchAdImageOperation(kind === 'generate' ? '/api/adimage/concepts' : `/api/adimage/concepts/${encodeURIComponent(targetId)}/${kind === 'feedback' ? 'feedback' : 'refine'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, operationId: saved.operationId }) }, controller.signal)
+      const response = await fetchAdImageOperation(kind === 'analyze' ? '/api/adimage/analyze' : kind === 'generate' ? '/api/adimage/concepts' : `/api/adimage/concepts/${encodeURIComponent(targetId)}/${kind === 'feedback' ? 'feedback' : 'refine'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, operationId: saved.operationId }) }, controller.signal)
       const value = await readAdImageOperationResponse(response, saved, controller.signal)
       if (!current()) return null
       if (readAdImageIntent(actor)?.operationId !== saved.operationId) { sync(); return null }

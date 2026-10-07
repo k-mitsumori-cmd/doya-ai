@@ -154,9 +154,20 @@ export default function AdImageTool() {
 
   const appliedResult = useRef('')
   const applyImageResult = useCallback((d: AdImageResult) => {
+    if (d.kind === 'analyze' && d.state === 'failed') {
+      setError(d.error || '解析が完了しませんでした。この操作を閉じてから再度お試しください。')
+      if (d.canUseManualInput) setUseManualText(true)
+      return
+    }
     if (d.state !== 'completed' || appliedResult.current === d.operationId) return
     appliedResult.current = d.operationId
     setError(''); setLimitAction(null)
+    if (d.kind === 'analyze') {
+      setBrandId(d.brandId!); setBrand(d.brand!); setDrafts(d.concepts!); setSelected(0); setCopy(d.concepts![0].copy)
+      setConceptId(''); setCreatives([]); setPreviousCreatives([]); setPreviousGeneration(null); setScores(null); setAdvice(''); setDirectives([])
+      setLogoName(''); setStep('concepts'); setAnalyzing(false)
+      return
+    }
     setConceptId(d.conceptId!)
     setPreviousCreatives(d.previousCreatives!)
     setPreviousGeneration(d.previousGeneration!)
@@ -223,36 +234,21 @@ export default function AdImageTool() {
     setAnalyzing(true)
     setError('')
     setLimitAction(null)
+    const controller = new AbortController()
     try {
-      const r = await fetch('/api/adimage/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim(), appeal: appeal.trim() || undefined, ...(useManualText ? { manualText: manualText.trim() } : {}) }),
-      })
-      if (!isCurrent()) return
-      if (r.status === 401) {
-        setNeedsLogin(true)
-        return
+      const d = await operation.submit('analyze', 'analysis', { url: url.trim(), ...(appeal.trim() ? { appeal: appeal.trim() } : {}), ...(useManualText ? { manualText: manualText.trim() } : {}) }, controller.signal)
+      if (!isCurrent() || !d) return
+      if (d.state === 'limit') {
+        setLimitAction(d.contactUrl ? 'contact' : d.upgradeUrl ? 'pricing' : null); setError(d.error || '本日の解析上限に達しました。')
       }
-      const d = await r.json()
-      if (!isCurrent()) return
-      if (!r.ok && d?.canUseManualInput) setUseManualText(true)
-      if (!r.ok) {
-        if (d?.limitReached === true) setLimitAction(d?.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : d?.upgradeUrl === '/adimage/pricing' ? 'pricing' : null)
-        throw new Error(d?.error || '解析に失敗しました')
-      }
-      setBrandId(d.brandId)
-      setBrand(d.brand)
-      setDrafts(d.concepts || [])
-      setSelected(0)
-      if (d.concepts?.[0]) setCopy(d.concepts[0].copy)
-      setStep('concepts')
+      applyImageResult(d)
     } catch (e) {
       if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '解析に失敗しました')
     } finally {
+      controller.abort()
       if (isCurrent()) { imageOperation.current.busy = false; setAnalyzing(false) }
     }
-  }, [appeal, url, useManualText, manualText, operation.blocked])
+  }, [appeal, url, useManualText, manualText, operation, applyImageResult])
 
   async function uploadLogo(file: File) {
     if (!brandId || imageOperation.current.busy || operation.blocked) return
@@ -504,7 +500,7 @@ export default function AdImageTool() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-        {(operation.intent || operation.message) && <section aria-label={operation.intent?.kind === 'feedback' ? '採点の結果確認' : '画像生成の結果確認'} className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">
+        {(operation.intent || operation.message) && <section aria-label={operation.intent?.kind === 'analyze' ? '解析の結果確認' : operation.intent?.kind === 'feedback' ? '採点の結果確認' : '画像生成の結果確認'} className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">
           <p role="status">{operation.message || (operation.result?.state === 'completed' ? '保存済みの結果を表示しました。内容を確認してから次の操作へ進んでください。' : '前の操作の保存結果を確認してください。新しい生成はまだ開始できません。')}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" disabled={operation.busy} onClick={() => void operation.recover()} className="rounded-lg bg-slate-900 px-4 py-2 font-bold text-white disabled:opacity-50">{operation.busy ? '確認中...' : '保存結果を確認'}</button>

@@ -52,8 +52,15 @@ export async function adImageOperationReply(input: AdImageOperationInput, result
   const metadata = { operationId: input.operationId, kind: input.kind, targetId: input.targetId }
   if (result.state === 'started') throw new AdImageOperationError(500, 'INVALID_STATE', '処理結果を確認できません。')
   if (result.state === 'limit') { const { ok: _ok, reason, ...quota } = result.quota; return privateAdImageReply({ ...metadata, state: 'limit', error: reason, ...quota }, 429) }
-  if (result.state !== 'completed' || !('receipt' in result)) return privateAdImageReply({ ...metadata, state: result.state }, result.state === 'pending' || result.state === 'busy' ? 202 : 200)
+  if (result.state !== 'completed' || !('receipt' in result)) return privateAdImageReply({ ...metadata, state: result.state, ...(input.kind === 'analyze' && 'receipt' in result && result.state === 'failed' ? result.receipt.analysisFailure : {}) }, result.state === 'pending' || result.state === 'busy' ? 202 : 200)
   const receipt = result.receipt
+  if (input.kind === 'analyze') {
+    const brand = await prisma.adImageBrand.findFirst({ where: { id: receipt.brandId, userId: input.actor } })
+    if (!brand || adImageTargetHash('analyze', brand) !== receipt.targetHash) return privateAdImageReply({ ...metadata, state: 'unavailable' })
+    const { validAdImageAnalysisOutput } = await import('./analysis-result')
+    if (!validAdImageAnalysisOutput(receipt.analysisResult)) throw new AdImageOperationError(409, 'INVALID_RECEIPT', '保存された解析結果を確認できません。')
+    return privateAdImageReply({ ...metadata, state: 'completed', brandId: receipt.brandId, ...receipt.analysisResult })
+  }
   const concept = await prisma.adImageConcept.findFirst({ where: { id: receipt.conceptId!, campaign: { userId: input.actor, brand: { userId: input.actor } } }, include: { creatives: true, ...(input.kind === 'feedback' ? { campaign: { include: { brand: true } } } : {}) } })
   if (!concept || (input.kind === 'feedback' ? adImageTargetHash('feedback', concept) !== receipt.targetHash : concept.creatives.length !== receipt.produced)) return privateAdImageReply({ ...metadata, state: 'unavailable' })
   let feedbackResult: Record<string, unknown> = {}
@@ -80,7 +87,7 @@ export async function readAdImageOperation(req: NextRequest, cancelMissing: bool
     const identity = await getIdentity(req)
     if (!identity.userId) return privateAdImageReply({ error: 'ログインが必要です。' }, 401)
     const params = req.nextUrl.searchParams, allowed = new Set(['operationId', 'kind', 'targetId'])
-    if ([...params.keys()].some(k => !allowed.has(k) || params.getAll(k).length !== 1) || !['generate', 'refine', 'feedback'].includes(params.get('kind') || '')) throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
+    if ([...params.keys()].some(k => !allowed.has(k) || params.getAll(k).length !== 1) || !['generate', 'refine', 'feedback', 'analyze'].includes(params.get('kind') || '')) throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
     const input = adImagePostInput(identity.userId, params.get('kind') as AdImageOperationInput['kind'], params.get('targetId'), params.get('operationId'))
     return await adImageOperationReply(input, await recoverAdImageOperation(input, cancelMissing))
   } catch (error) { return adImageOperationErrorReply(error) }

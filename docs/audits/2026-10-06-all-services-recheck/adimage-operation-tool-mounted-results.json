@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T11:03:25.466Z",
+  "checkedAt": "2026-10-07T13:26:37.399Z",
   "passed": 10,
   "cases": [
     "Full Tool saves intent before POST and requires result acknowledgment before another generation",
@@ -14,9 +14,9 @@
     "Full Tool feedback old authenticated actor response never appears for the next actor"
   ],
   "sourceHashes": {
-    "src/app/adimage/Tool.tsx": "aa09112bf2b7b1c017faabfaedd068d58ba94f1aac259df6b66cefcb2786e8de",
-    "src/lib/adimage/use-operation-recovery.ts": "7d162d1d9484249aee5a74002108ac666b1adab5805ddc742a50fee9a613e69d",
-    "src/lib/adimage/operation-client.ts": "20340a6d14e00a181576acc4adc8a674c70078bf59723e5a1ce3c4bbaf266f45"
+    "src/app/adimage/Tool.tsx": "b02bed0b03e5a394e6581374c44c6bbcc4f7d8e3dadd89e5418ef63d81c74615",
+    "src/lib/adimage/use-operation-recovery.ts": "45aa451440c93205e83e9ac6c6e4f8a57b66d51a7882efe76d9ac2156978af4b",
+    "src/lib/adimage/operation-client.ts": "cafddf0aa6871ee08bca9f81e70d64a38fa559eee44a8962a358afb8ad788a1a"
   },
   "scope": "Actual full Tool and actual hook/client React18 StrictMode. Synthetic network, sessions, and locks. No native browser, real provider, customer DB or production."
 }
