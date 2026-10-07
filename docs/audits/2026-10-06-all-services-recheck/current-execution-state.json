@@ -1,0 +1,156 @@
+{
+  "checkedAt": "2026-10-07T06:05:17.892817+00:00",
+  "goalStatus": "active-not-complete",
+  "scope": "17 services /2074 criteria",
+  "scoreRelease": {
+    "commit": "1574f271a669a520aa6a678ecd5c8b1d3afc4f02",
+    "ciRun": 37574824146,
+    "ciWatchSession": 14072,
+    "ciWatchLog": "/tmp/doya-score-ci-watch.log",
+    "deployment": "dpl_CfyuSWWKKV6W8Jng7ndVFd65ucud",
+    "url": "doya-11ivh20fz-surisutas-projects.vercel.app",
+    "lastObservedState": "READY",
+    "publicVerification": "anonymous-publication-passed-private-form-unproven",
+    "gate": "sfa-score-release-312b4083-10ab-4a8b-8d1c-7930c5667c68",
+    "gateStatus": "passed-build-security-types-lint-no-source-change-at-commit-push",
+    "ci": "success"
+  },
+  "localNextAction": {
+    "source": [
+      "src/lib/sfa/ai.ts",
+      "scripts/security-regression/run.cjs",
+      "scripts/security-regression/verify-sfa-next-action-result.cjs"
+    ],
+    "implemented": "Durable receipt/reservation/result protocol, fresh actor, scoped client recovery, strict model output and score/next-action legacy name guard.",
+    "tests": "model32/API24/client21/privatePostgreSQL10; shared49/deal13 and scoreAPI24/client21/PG10 regressions; all private PG servers stopped0",
+    "notCommitted": false,
+    "notDeployed": false,
+    "stillRequired": "Authenticated private flow and all other service criteria",
+    "releaseGate": "docs/audits/2026-10-06-all-services-recheck/sfa-next-action-release-e4727c52-6f52-44d9-bb78-776e0606d8f6",
+    "gateSession": 55896,
+    "releaseCommit": "f09ef81ca5f643018015e2e3c265dd48d4c7807b",
+    "ciRun": 37576609179,
+    "ciWatchSession": 30659,
+    "deployment": "dpl_2LDAhdvReThR9zQHeWJfxGPXyRvo",
+    "url": "doya-r3x0b38fk-surisutas-projects.vercel.app",
+    "gateStatus": "passed2697-no-source-change-at-commit-push",
+    "ci": "success",
+    "deploymentState": "READY",
+    "publicVerification": "anonymous-publication-passed-private-form-unproven"
+  },
+  "next": [
+    "Commit/push authorized allowlist after verified current manifest; exactCI/READY/publication checks",
+    "Repair chat duplicate operation and uncertain provider retry baseline; then remaining service criteria"
+  ],
+  "boundaries": [
+    "No customer DB/migrations/emails/invites/paid providers",
+    "No subagents",
+    "Preserve unrelated dirty docs",
+    "No goal completion until whole scope proved"
+  ],
+  "followingCohort": {
+    "scope": "SFA accounts/contacts CRUD and client recovery",
+    "findings": 5,
+    "evidence": "sfa-account-contact-lifecycle-baseline.json",
+    "status": "released; see currentCrmRelease evidence",
+    "notes": "Same operationId duplicate rows, stale actor write, contact relation inactive race reproduced with actual handlers and synthetic DB schedules.",
+    "helper": "src/lib/sfa/crm-record-mutation.ts",
+    "helperCases": 27,
+    "clientFindings": 6,
+    "clientEvidence": "sfa-crm-client-baseline.json",
+    "localSourceChanges": [
+      "src/lib/sfa/crm-record-mutation.ts",
+      "src/lib/sfa/creation-receipt.ts",
+      "scripts/security-regression/verify-sfa-crm-record-mutation.cjs"
+    ],
+    "fullSecuritySession": null,
+    "fullSecurityLog": "current frozen gate build.log; previous /tmp/doya-crm-full-security-retry.log is prior source only",
+    "priorFullSecurity": "88398 terminal0 before client/UI edits; not evidence for current frozen source",
+    "mountedCases": 51,
+    "postgresCases": 19,
+    "postgresStopped": 0,
+    "gateSession": null,
+    "gate": "docs/audits/2026-10-06-all-services-recheck/sfa-crm-release-9b772ea7-6ef1-4c45-b2ab-99f0747b5d0c",
+    "remaining": "Authenticated private flow and remaining service criteria",
+    "releaseAllowlist": "docs/audits/2026-10-06-all-services-recheck/sfa-crm-release-file-list.json",
+    "lastObservedGate": "terminal passed; obsolete running-session pointer removed"
+  },
+  "updatedAt": "2026-10-07T07:21:59.744295+00:00",
+  "currentCrmRelease": {
+    "commit": "4d3e7f007be3323650dc97e92fd98987e67730de",
+    "mainPush": "succeeded",
+    "ciRun": 37580253174,
+    "ciStatus": "success",
+    "deploymentUrl": "doya-cv4swlc9b-surisutas-projects.vercel.app",
+    "deploymentId": "dpl_8TJJu7WBukXhBzSjwpstSKbcT2y2",
+    "deploymentStatus": "READY",
+    "localGate": "passed",
+    "anonymousCheck": "17 entries49assets and private401passed"
+  },
+  "currentExportRepair": {
+    "commit": "83b28447bf5c1792959479bc5bd7975cbbd75ccb",
+    "push": "succeeded",
+    "ciRun": 37581509278,
+    "ciStatus": "success",
+    "deploymentUrl": "doya-ejb8xki3v-surisutas-projects.vercel.app",
+    "deploymentStatus": "READY",
+    "fullGate": "passed",
+    "privatePostgres": "3 cases with verified result timestamp/source hashes and500row batch; stopExitCode0",
+    "publicVerification": "pending",
+    "deploymentId": "dpl_5N4h3Xs1DRYPy1m8BZULSPJKht2Q"
+  },
+  "scopeCounts": {
+    "services": 17,
+    "criteria": 2074,
+    "itemByItemUnverified": 1895
+  },
+  "nextRepair": {
+    "status": "refine full gate passed; release prepared; chat operation baseline confirmed",
+    "productionCommit": "83b28447bf5c1792959479bc5bd7975cbbd75ccb"
+  },
+  "currentBannerClientRepair": {
+    "scope": "chat shared lane, drafts, actor lifecycle and refine failure guidance",
+    "mountedCases": 13,
+    "callbacksCases": 24,
+    "generationCases": 6,
+    "gate": "docs/audits/2026-10-06-all-services-recheck/banner-chat-release-ed07d06b-2b6b-425a-8d3d-9bd0f54b8787",
+    "session": 88228,
+    "sourceState": "d8350a05 client-only checkpoint committed, not pushed; integrated create/chat/recovery sources uncommitted",
+    "firstGate": "failed due missing AST fixture bindings; corrected preserving assertions",
+    "localCommit": "d8350a05",
+    "fullGate": "passed",
+    "push": "not performed; integrated server/API/UX release pending"
+  },
+  "currentBannerOperationRepair": {
+    "source": [
+      "src/lib/banner/refine-operation.ts",
+      "src/lib/banner/refine-input.ts",
+      "src/app/api/banner/refine/route.ts"
+    ],
+    "privatePostgres": "24 cases passed with current6source hashes, evidenceValid true, stopExitCode0",
+    "inputCases": "9 groups actual sharp/stream/abort validation passed",
+    "targetedRegression": "model5, error boundary7, private cron errors, callbacks24, mounted chat13 passed",
+    "typecheck": "terminal0 current source",
+    "eslint": "terminal0 API/input/helper",
+    "state": "integrated source uncommitted; prepared release; not pushed",
+    "remainingPlan": "banner-refine-operation-repair-plan.json",
+    "mounted": "actual chat13/create7/recovery12 passed; synthetic API/decode-events/locks",
+    "fullGate": {
+      "folder": "docs/audits/2026-10-06-all-services-recheck/banner-refine-release-283f98a9-4d1a-4606-913a-8664592dd84a",
+      "session": 7877,
+      "status": "passed",
+      "sourceFiles": 2716,
+      "changedSources": []
+    },
+    "nativeBrowser": "5 current-source native helper checks passed; authenticated production unverified"
+  },
+  "followingBannerChatRepair": {
+    "evidence": "banner-chat-operation-current-baseline.json",
+    "status": "reproduced-unfixed",
+    "findings": [
+      "Same UUID two POSTs =>two admissions/two provider calls",
+      "Network uncertainty =>three model attempts for one admitted call",
+      "503=>six provider invocations for one admitted budget unit"
+    ]
+  }
+}

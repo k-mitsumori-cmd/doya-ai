@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-07T07:16:22.919Z",
+  "passed": 7,
+  "cases": [
+    "actual create refine shares synchronous lane and persists metadata-only UUID before one POST",
+    "confirmed saved result allows deliberate next refinement",
+    "another selected banner has no undo entry from previous banner",
+    "refinement completion preserves A-B-A newer draft",
+    "actual create remount recovers saved image in separate panel without requiring original in-memory image",
+    "actor switch remounts private create inputs and excludes previous actor recovery",
+    "generation shares lane before quota await and drops completion across actor change"
+  ],
+  "sourceHashes": {
+    "src/app/banner/dashboard/create/page.tsx": "aa599767fefb675b7f656f39ea8d679ca0ed349f99daa668ea2c6f8ab7fdbcc3",
+    "src/lib/banner/use-request-fence.ts": "68ac588b04fd1e6583fdb2ad0ffee526cc5c05e0afa1057a939461a86b976989",
+    "src/lib/banner/refine-client.ts": "d79ad7c071c7daa29baa6c186e8763ccd1765fb54e4d6385628c6970d59917d5",
+    "src/lib/banner/use-refine-recovery.ts": "3fd033a272826d0c8b12f2969ee5e3df0c1c858bfb42d86e3b94acf326211fbf",
+    "src/components/banner/BannerRefineRecovery.tsx": "c323f78beaa6c2ff0a3cb47c47c4f4953f870cdd82a9dfd89e9b591597a23ea0"
+  },
+  "scope": "Actual create page and recovery hook/client/panel under React18 StrictMode/jsdom; synthetic auth/quota/API/Image decode events/locks. No customer DB or paid providers; native browser/deployment E2E unproven."
+}

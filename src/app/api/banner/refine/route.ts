@@ -1,36 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { waitUntil } from '@vercel/functions'
+import { randomUUID } from 'node:crypto'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import sharp from 'sharp'
 import { sendErrorNotification } from '@/lib/notifications'
 import { resolveImageModel } from '@/lib/resolve-image-model'
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
-import { reserveBannerMonthlyImages, releaseBannerMonthlyImages, type BannerReservation, type BannerQuotaUsage } from '@/lib/banner/monthly-quota'
+import { bannerHistoryCutoff } from '@/lib/banner/history-access'
+import { readBannerRefineInput, compressBannerRefineInput, normalizeBannerRefineOutput } from '@/lib/banner/refine-input'
+import { BannerOperationError, bannerRefineOperationId, bannerRefineFingerprint, beginBannerRefinement, completeBannerRefinement, failBannerRefinement, recoverBannerRefinement, cancelMissingBannerRefinement } from '@/lib/banner/refine-operation'
 
-/** 画像を1024x1024以内に縮小してAPIに送れるサイズにする（nanobanner.tsの巨大バンドル回避） */
-async function compressForApi(dataUrl: string): Promise<string> {
-  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
-  if (!m) return dataUrl
-  const buf = Buffer.from(m[2], 'base64')
-  const compressed = await sharp(buf)
-    .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
-    .png({ compressionLevel: 9 })
-    .toBuffer()
-  return `data:image/png;base64,${compressed.toString('base64')}`
-}
-
-// ========================================
-// バナー修正API
-// ========================================
-// POST /api/banner/refine
-// 修正指示に基づいて「元画像 + 指示」で画像を修正（再生成）
-// Nano Banana Pro（Gemini 3 Pro Image）+ Google AI Studio APIキー
-// 参考: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
-
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 const REFINE_TIMEOUT_MS = 170_000
 const REFINE_IMAGE_RESPONSE_MAX_BYTES = 32 * 1024 * 1024
+const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+function json(value: Record<string, unknown>, status = 200) { return NextResponse.json(value, { status, headers: privateHeaders }) }
+function getApiKey(): string {
+  const key = process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.NANOBANNER_API_KEY
+  if (!key) throw new Error('Banner image configuration unavailable')
+  return key
+}
 
 async function readGeminiRefineResponse(res: Response, maxBytes: number): Promise<string> {
   if (Number(res.headers.get('content-length')) > maxBytes) {
@@ -56,199 +48,98 @@ async function readGeminiRefineResponse(res: Response, maxBytes: number): Promis
   }
 }
 
-interface RefineRequest {
-  originalImage: string
-  instruction: string
-  category?: string
-  size?: string
+
+function savedResult(operationId: string, generation: { id: string; output: string } | null) {
+  if (!generation) return json({ success: false, state: 'unavailable', code: 'REFINE_RESULT_UNAVAILABLE', operationId, error: '保存結果は保存期間外か、削除されています。この操作は再実行されません。' }, 410)
+  return json({ success: true, state: 'completed', operationId, generationId: generation.id, refinedImage: generation.output })
 }
-
-interface RefineResponse {
-  success: boolean
-  refinedImage?: string
-  error?: string
-  message?: string
-  code?: string
-  usage?: BannerQuotaUsage
-  upgradeUrl?: string
-}
-
-function getApiKey(): string {
-  const apiKey = 
-    process.env.GOOGLE_GENAI_API_KEY || 
-    process.env.GOOGLE_AI_API_KEY || 
-    process.env.GEMINI_API_KEY ||
-    process.env.NANOBANNER_API_KEY
-
-  if (!apiKey) throw new Error('GOOGLE_GENAI_API_KEY が設定されていません')
-  return apiKey
-}
-
-function parseDataUrl(dataUrl: string): { mimeType: string; data: string } {
-  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
-  if (!m) throw new Error('originalImage の形式が不正です（data URLを期待）')
-  return { mimeType: m[1], data: m[2] }
-}
-
-async function enforceExactSizePng(dataUrl: string, size?: string): Promise<string> {
-  const [w, h] = (size || '').split('x').map((v) => Number(v))
-  if (!w || !h) return dataUrl
-  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
-  if (!m) return dataUrl
-  const base64 = m[2]
-  const input = Buffer.from(base64, 'base64')
-
-  // まずはメタデータ確認（すでに一致なら何もしない）
-  try {
-    const meta = await sharp(input).metadata()
-    if (meta?.width === w && meta?.height === h) return dataUrl
-  } catch {
-    // 継続
-  }
-
-  // NOTE:
-  // - padding/letterbox は禁止（上下の帯が出る）なので、最終的に cover で揃える
-  // - その代わり、プロンプト側で「文字は安全余白に収める」を強制してクリップを避ける
-  const out = await sharp(input)
-    .resize(w, h, { fit: 'cover', position: 'centre' })
-    .png({ compressionLevel: 9 })
-    .toBuffer()
-  return `data:image/png;base64,${out.toString('base64')}`
-}
-
-export async function POST(request: NextRequest): Promise<NextResponse<RefineResponse>> {
-  let reservation: BannerReservation | null = null
-  let charged = false
+async function readOperation(request: NextRequest, cancel: boolean) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = session?.user?.id
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
-    }
+    if (!session?.user?.id) return json({ success: false, error: 'ログインが必要です。' }, 401)
+    const operationId = bannerRefineOperationId(new URL(request.url).searchParams.get('operationId'))
+    const cutoff = await bannerHistoryCutoff(session.user.id, session.user.firstLoginAt)
+    const result = cancel
+      ? await cancelMissingBannerRefinement(session.user.id, operationId, cutoff)
+      : await recoverBannerRefinement(session.user.id, operationId, cutoff)
+    if (result.state === 'completed') return savedResult(operationId, result.generation)
+    return json({ success: false, state: result.state, operationId })
+  } catch (error) {
+    return json({ success: false, error: error instanceof BannerOperationError ? error.message : '修正結果を確認できませんでした。再生成せず、時間をおいて確認してください。' }, error instanceof BannerOperationError ? error.status : 503)
+  }
+}
+export async function GET(request: NextRequest) { return readOperation(request, false) }
+export async function DELETE(request: NextRequest) { return readOperation(request, true) }
 
-    const body: RefineRequest = await request.json()
-    const { originalImage, instruction, category, size } = body
-
-    if (!instruction || instruction.trim().length < 3) {
-      return NextResponse.json({
-        success: false,
-        error: '修正指示を入力してください（3文字以上）',
-      }, { status: 400 })
-    }
-
-    if (!originalImage || typeof originalImage !== 'string') {
-      return NextResponse.json({
-        success: false,
-        error: '元画像が見つかりません。生成結果から選択してください。',
-      }, { status: 400 })
-    }
-
+export async function POST(request: NextRequest) {
+  let operation: { userId: string; operationId: string; inputHash: string; cutoff: Date | null } | null = null
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) return json({ success: false, error: 'ログインが必要です。' }, 401)
+    const input = await readBannerRefineInput(request)
+    // Older open tabs receive a server operation ID and durable history as well.
+    // New clients persist their UUID before sending; only those can recover a lost response by UUID.
+    const operationId = input.operationId ?? randomUUID()
+    const compressed = await compressBannerRefineInput(input.originalImage)
+    const inputHash = bannerRefineFingerprint(input)
+    const cutoff = await bannerHistoryCutoff(session.user.id, session.user.firstLoginAt)
+    const admission = await beginBannerRefinement(session.user.id, operationId, inputHash, cutoff, process.env.DOYA_DISABLE_LIMITS === '1')
+    if (admission.state === 'completed') return savedResult(operationId, admission.generation)
+    if (admission.state === 'pending') return json({ success: false, state: 'pending', code: 'REFINE_PENDING', operationId, error: 'この修正は処理中か、保存結果の確認が必要です。再生成せず保存結果を確認してください。' }, 202)
+    if (admission.state === 'failed' || admission.state === 'cancelled') return json({ success: false, state: admission.state, code: 'REFINE_NOT_RESTARTED', operationId, error: 'この操作は再実行されません。結果を確認してから、新しい操作として修正してください。' }, 409)
+    if (admission.state === 'limit') return json({ success: false, code: 'MONTHLY_LIMIT_REACHED', usage: admission.usage, upgradeUrl: admission.plan === 'FREE' ? '/banner/pricing' : (HIGH_USAGE_CONTACT_URL || '/banner/pricing'), error: '今月の生成上限に達しました。利用枠をご確認ください。' }, 429)
+    operation = { userId: session.user.id, operationId, inputHash, cutoff }
     const apiKey = getApiKey()
-    const compressed = await compressForApi(originalImage)
-    const img = parseDataUrl(compressed)
-
-    if (process.env.DOYA_DISABLE_LIMITS !== '1') {
-      let claim
-      try { claim = await reserveBannerMonthlyImages(userId, 1) }
-      catch {
-        console.error('Banner refine quota reservation unavailable')
-        return NextResponse.json({ success: false, error: '生成枠を確認できませんでした。時間をおいて再試行してください。' }, { status: 503 })
+    const models = await resolveImageModel(apiKey)
+    const deadline = Date.now() + REFINE_TIMEOUT_MS
+    const image = /^data:([^;]+);base64,(.+)$/.exec(compressed)
+    if (!image || !models.length) throw new Error('Banner image preparation unavailable')
+    for (let index = 0; index < models.length; index++) {
+      const remaining = deadline - Date.now()
+      if (remaining <= 0) throw new Error('Banner image deadline exceeded')
+      const response = await fetch(`${GEMINI_API_BASE}/models/${models[index]}:generateContent`, {
+        method: 'POST', signal: AbortSignal.timeout(remaining),
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify({ contents: [{ parts: [{ inlineData: { mimeType: image[1], data: image[2] } }, { text: createEditPrompt(input.instruction, input.category, input.size) }] }], generationConfig: { responseModalities: ['IMAGE'] } }),
+      })
+      // Only a definitive model-not-found rejection may use the configured Pro fallback.
+      // Never repeat an uncertain network request or a request that returned image data.
+      if (response.status === 404 && index + 1 < models.length) { void response.body?.cancel().catch(() => {}); continue }
+      if (!response.ok) { void response.body?.cancel().catch(() => {}); throw new Error('Banner image provider rejected request') }
+      const data = JSON.parse(await readGeminiRefineResponse(response, REFINE_IMAGE_RESPONSE_MAX_BYTES))
+      const parts = data?.candidates?.[0]?.content?.parts
+      const part = Array.isArray(parts) ? parts.find((value: { inlineData?: { data?: unknown } }) => typeof value?.inlineData?.data === 'string') : null
+      if (!part || typeof part.inlineData.mimeType !== 'string') throw new Error('Banner image result unavailable')
+      const refined = await normalizeBannerRefineOutput(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`, input.size)
+      // Retry only the same in-memory image persistence, never the provider request.
+      let lastSaveError: unknown
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try { return savedResult(operationId, await completeBannerRefinement(session.user.id, operationId, inputHash, refined, input)) }
+        catch (error) { lastSaveError = error }
       }
-      if (claim.state === 'limit') {
-        const paid = claim.plan !== 'FREE'
-        return NextResponse.json({
-          success: false,
-          error: paid ? '今月の生成上限に達しました。追加の生成枠についてご相談ください。' : '今月の生成上限に達しました。プランをご確認ください。',
-          code: 'MONTHLY_LIMIT_REACHED',
-          usage: claim.usage,
-          upgradeUrl: paid ? (HIGH_USAGE_CONTACT_URL || '/banner/pricing') : '/banner/pricing',
-        }, { status: 429 })
-      }
-      reservation = claim.reservation
+      throw lastSaveError
     }
-
-    const prompt = createEditPrompt(instruction, category, size)
-    // 設定エイリアスは公式の Nano Banana Pro モデルIDに解決する。
-    // 未対応モデルはここで拒否し、画像品質の異なるモデルへ黙って落とさない。
-    const modelsToTry = await resolveImageModel(apiKey)
-    let lastError: any = null
-
-    for (const model of modelsToTry) {
+    throw new Error('Banner image provider unavailable')
+  } catch (error) {
+    if (!operation && error instanceof BannerOperationError) return json({ success: false, error: error.message }, error.status)
+    let state = 'pending'
+    if (operation) {
       try {
-        const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
-
-        const requestBody: any = {
-          contents: [
-            {
-              parts: [
-                { inlineData: { mimeType: img.mimeType, data: img.data } },
-                { text: prompt },
-              ],
-            },
-          ],
-          generationConfig: {
-            // 編集時はサイズがブレやすいので、画像のみを要求しつつプロンプトでピクセル指定を厳守
-            responseModalities: ['IMAGE'],
-          },
+        // This locked transaction refunds only if neither a completed receipt nor
+        // a persisted result exists. An unavailable database leaves the outcome unknown.
+        state = await failBannerRefinement(operation.userId, operation.operationId, operation.inputHash)
+        if (state === 'completed') {
+          const recovered = await recoverBannerRefinement(operation.userId, operation.operationId, operation.cutoff)
+          if (recovered.state === 'completed') return savedResult(operation.operationId, recovered.generation)
         }
-
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          signal: AbortSignal.timeout(REFINE_TIMEOUT_MS),
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey,
-          },
-          body: JSON.stringify(requestBody),
-        })
-
-        if (!response.ok) {
-          void response.body?.cancel().catch(() => {})
-          console.error('Nano Banana Pro refine request failed:', response.status)
-          throw new Error(`Image provider status: ${response.status}`)
-        }
-
-        const data = JSON.parse(await readGeminiRefineResponse(response, REFINE_IMAGE_RESPONSE_MAX_BYTES))
-
-        const parts = data?.candidates?.[0]?.content?.parts
-        const imgPart = Array.isArray(parts) ? parts.find((p: any) => p?.inlineData?.data) : null
-        if (!imgPart?.inlineData?.data) throw new Error('画像が生成されませんでした')
-        const mimeType = imgPart.inlineData.mimeType || 'image/png'
-        const refinedImageRaw = `data:${mimeType};base64,${imgPart.inlineData.data}`
-        const refinedImage = await enforceExactSizePng(refinedImageRaw, size)
-
-        const result = NextResponse.json({
-          success: true,
-          refinedImage,
-          message: `Nano Banana Pro で画像を修正しました（model: ${model}${model === modelsToTry[0] ? '' : ' / fallback'}）`,
-        })
-        charged = true
-        return result
-      } catch (e: any) {
-        lastError = e
-        continue
       }
+      catch { console.warn('Banner refine failure transition unconfirmed') }
     }
-
-    throw lastError || new Error('バナーの再生成に失敗しました')
-
-  } catch {
-    console.warn('Banner refine failed')
-    const notification = sendErrorNotification({
-      errorMessage: 'Banner refine failed',
-      pathname: '/api/banner/refine',
-      requestMethod: 'POST',
-      timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
-    })
-    try { waitUntil(notification) } catch { await notification }
-    return NextResponse.json({
-      success: false,
-      error: 'バナーの再生成に失敗しました',
-    }, { status: 500 })
-  } finally {
-    if (reservation && !charged) {
-      await releaseBannerMonthlyImages(reservation, 1).catch(() => console.error('Banner refine quota release failed'))
-    }
+    try {
+    const notification = sendErrorNotification({ errorMessage: 'Banner refine failed', pathname: '/api/banner/refine', requestMethod: 'POST', timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) })
+    try { waitUntil(notification) } catch { await notification.catch(() => {}) }
+    } catch { console.warn('Banner refine notification unavailable') }
+    return json({ success: false, ...(operation ? { operationId: operation.operationId, state, code: state === 'failed' ? 'REFINE_FAILED' : 'REFINE_UNCONFIRMED' } : {}), error: operation ? '修正結果を確認できませんでした。再生成せず保存結果を確認してください。' : 'バナーの修正を開始できませんでした。時間をおいて再試行してください。' }, operation ? 503 : 500)
   }
 }
 

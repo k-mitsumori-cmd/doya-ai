@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-07T07:19:46.793Z",
+  "findings": [
+    {
+      "mode": "duplicate",
+      "admissions": 2,
+      "providerCalls": 2,
+      "statuses": [
+        200,
+        200
+      ],
+      "finding": "Same operationId ignored: parallel delivery causes two budget admissions and provider calls"
+    },
+    {
+      "mode": "uncertain",
+      "admissions": 1,
+      "providerCalls": 3,
+      "statuses": [
+        500
+      ],
+      "finding": "Uncertain network outcome automatically retries across3 models"
+    },
+    {
+      "mode": "server503",
+      "admissions": 1,
+      "providerCalls": 6,
+      "statuses": [
+        500
+      ],
+      "finding": "503 automatically invokes provider6 times for one provider-call budget unit"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/banner/chat/route.ts": "2a8cb5262682c7274bc447aac987cbc505cc7689186625a04d2c9fe56d6d3300"
+  },
+  "scope": "Actual POST and callGemini with synthetic session/provider/budget; no paid or customer DB. Confirmed baseline gap, not repaired by refine release."
+}

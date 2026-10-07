@@ -23,6 +23,9 @@ import { UiIcon, type UiIconName } from '@/components/icons'
 import BannerLimitModal from '@/components/banner/BannerLimitModal'
 import { useBannerQuota } from '@/components/banner/useBannerQuota'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
+import { useBannerRequestFence } from '@/lib/banner/use-request-fence'
+import { useBannerRefineRecovery } from '@/lib/banner/use-refine-recovery'
+import BannerRefineRecovery from '@/components/banner/BannerRefineRecovery'
 // AIバナーコーチ機能は廃止
 
 // ========================================
@@ -829,7 +832,14 @@ function buildHighCtrSampleCopies(category: string, purpose: string) {
 class BannerApiError extends Error {}
 
 export default function BannerDashboard() {
+  const { data: session } = useSession()
+  return <BannerDashboardWorkspace key={String(session?.user?.id || 'guest')} />
+}
+
+function BannerDashboardWorkspace() {
   const { data: session, status: sessionStatus } = useSession()
+  const operations = useBannerRequestFence(sessionStatus, String(session?.user?.id || ''), true)
+  const refineRecovery = useBannerRefineRecovery(sessionStatus, String(session?.user?.id || ''))
   
   // State
   const [purpose, setPurpose] = useState('sns_ad')
@@ -845,6 +855,7 @@ export default function BannerDashboard() {
   
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedBanners, setGeneratedBanners] = useState<string[]>([])
+  const [generatedSpec, setGeneratedSpec] = useState<{ category: string; size: string } | null>(null)
   const [generatedCopies, setGeneratedCopies] = useState<
     { variant: 'A' | 'B' | 'C'; headline: string; subhead: string; cta: string }[]
   >([])
@@ -861,8 +872,11 @@ export default function BannerDashboard() {
   
   // 修正機能
   const [refineInstruction, setRefineInstruction] = useState('')
+  const refineDraftRevision = useRef(0)
+  const changeRefineInstruction = (value: string) => { refineDraftRevision.current++; setRefineInstruction(value) }
+  useEffect(() => { setIsRefining(false); setRefineStartedAt(null); setIsGenerating(false) }, [sessionStatus])
   const [isRefining, setIsRefining] = useState(false)
-  const [refineHistory, setRefineHistory] = useState<{ instruction: string; image: string }[]>([])
+  const [refineHistory, setRefineHistory] = useState<{ instruction: string; image: string; index: number; refined: string }[]>([])
   const [refineStartedAt, setRefineStartedAt] = useState<number | null>(null)
   const [refineElapsedSec, setRefineElapsedSec] = useState(0)
   const [refinePredictedTotalMs, setRefinePredictedTotalMs] = useState<number>(DEFAULT_REFINE_PREDICT_MS)
@@ -1088,7 +1102,7 @@ export default function BannerDashboard() {
     parseInt(customWidth) >= 100 && parseInt(customWidth) <= 4096 &&
     parseInt(customHeight) >= 100 && parseInt(customHeight) <= 4096
   )
-  const canGenerate = category && keyword.trim() && (isGuest ? remainingCount > 0 : true) && isValidCustomSize
+  const canGenerate = operations.allowed && !isGenerating && !isRefining && category && keyword.trim() && (isGuest ? remainingCount > 0 : true) && isValidCustomSize
 
   const sizeInfo = useMemo(() => {
     const [wStr, hStr] = effectiveSize.split('x')
@@ -1287,42 +1301,36 @@ export default function BannerDashboard() {
 
   const handleGenerate = async () => {
     if (!canGenerate) return
-
-    setError('')
-    if (!(await quota.check(generateCount))) return
-    setIsGenerating(true)
-    // 生成開始時に既存バナーを消さない（消すと画面が「パチパチ」しやすい）
-    // 新しい結果が返ってきたタイミングで上書きする
+    const operation = operations.begin()
+    if (!operation) return
     const startedAt = Date.now()
-    setGenerationStartedAt(startedAt)
-
-    // 予測時間（平均/EMA）を読み込み
-    const stats = readGenStats()
-    const byPurpose = stats.byPurpose?.[purpose]
-    const base = byPurpose?.emaMs || stats.global?.emaMs || DEFAULT_PREDICT_MS
-    // サイズが大きいほど時間が伸びる傾向があるので軽く補正
-    const [wStr, hStr] = effectiveSize.split('x')
-    const px = safeNumber(wStr, 1080) * safeNumber(hStr, 1080)
-    const scale = clamp(px / (1080 * 1080), 0.6, 3.0)
-    // 生成枚数に応じて時間をスケール（基準: デフォルト3枚）
-    const countScale = clamp(generateCount / 3, 0.7, 4.0)
-    const predicted = clampMs(base * (0.85 + 0.15 * scale) * countScale, 8_000, 600_000)
-    setPredictedTotalMs(predicted)
-    setPredictedRemainingMs(predicted)
-
-    let timeout: number | undefined
+    const draftRevision = refineDraftRevision.current
     try {
-      // “終わらない”体感を潰す：フロント側でタイムアウト検知
-      const controller = new AbortController()
-      // NOTE: state の predictedTotalMs は即時反映されないので、ローカル変数 predicted を使う
-      // 10枚でも待てるよう、上限はサーバ側 maxDuration(300s) に寄せる
-      const timeoutMs = Math.max(90_000, Math.min(290_000, predicted + 60_000))
-      timeout = window.setTimeout(() => controller.abort(), timeoutMs)
+      setError('')
+      if (!(await quota.check(generateCount)) || !operation.current()) return
+      setIsGenerating(true)
+      // 生成開始時に既存バナーを消さない（消すと画面が「パチパチ」しやすい）
+      // 新しい結果が返ってきたタイミングで上書きする
+      setGenerationStartedAt(startedAt)
+
+      // 予測時間（平均/EMA）を読み込み
+      const stats = readGenStats()
+      const byPurpose = stats.byPurpose?.[purpose]
+      const base = byPurpose?.emaMs || stats.global?.emaMs || DEFAULT_PREDICT_MS
+      // サイズが大きいほど時間が伸びる傾向があるので軽く補正
+      const [wStr, hStr] = effectiveSize.split('x')
+      const px = safeNumber(wStr, 1080) * safeNumber(hStr, 1080)
+      const scale = clamp(px / (1080 * 1080), 0.6, 3.0)
+      // 生成枚数に応じて時間をスケール（基準: デフォルト3枚）
+      const countScale = clamp(generateCount / 3, 0.7, 4.0)
+      const predicted = clampMs(base * (0.85 + 0.15 * scale) * countScale, 8_000, 600_000)
+      setPredictedTotalMs(predicted)
+      setPredictedRemainingMs(predicted)
 
       const response = await fetch('/api/banner/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
+        signal: operation.signal,
         body: JSON.stringify({
           category,
           keyword: keyword.trim(),
@@ -1349,6 +1357,7 @@ export default function BannerDashboard() {
       })
 
       const parsed = await safeReadJson(response)
+      if (!operation.current()) return
       const data = parsed.data || {}
       if (!parsed.ok) {
         // ⚠️ 上限到達はエラーではなく「一番アップグレードに近い瞬間」。
@@ -1372,12 +1381,14 @@ export default function BannerDashboard() {
       
       const nextBanners = Array.isArray(data.banners) ? data.banners.filter((banner: unknown) => typeof banner === 'string' && banner.startsWith('data:image/')) : []
       if (!nextBanners.length) throw new BannerApiError('生成結果を確認できませんでした。履歴を確認してから再試行してください。')
-      setRefineInstruction('')
+      if (refineDraftRevision.current === draftRevision) setRefineInstruction('')
       setRefineHistory([])
       setProgress(100)
       await new Promise(r => setTimeout(r, 500))
+      if (!operation.current()) return
       void quota.refresh()
       setGeneratedBanners(nextBanners)
+      setGeneratedSpec({ category, size: effectiveSize })
       setGeneratedCopies(Array.isArray(data.copies) ? data.copies : [])
       setUsedModelDisplay(data.usedModelDisplay || null)
       // 生成直後は先頭を選択（プレビューが出てUXが良い & null事故を防ぐ）
@@ -1425,6 +1436,7 @@ export default function BannerDashboard() {
         toast.success('バナーが完成しました！')
       }
     } catch (err: any) {
+      if (!operation.current()) return
       if (err?.name === 'AbortError') {
         setError('時間内に生成結果を確認できませんでした。履歴を確認してから再試行してください。')
         toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
@@ -1433,8 +1445,8 @@ export default function BannerDashboard() {
         toast.error('生成に失敗しました', { duration: 5000 })
       }
     } finally {
-      if (timeout !== undefined) window.clearTimeout(timeout)
-      setIsGenerating(false)
+      if (operation.current()) setIsGenerating(false)
+      operation.finish()
     }
   }
 
@@ -1455,9 +1467,13 @@ export default function BannerDashboard() {
 
   // 画像修正ハンドラー（外部から指示文を渡して実行もできる）
   const handleRefine = async (overrideInstruction?: string) => {
-    if (selectedBanner === null) return
+    if (selectedBanner === null || isGenerating || isRefining || refineRecovery.blocked) return
     const instruction = (overrideInstruction ?? refineInstruction).trim()
-    if (!instruction) return
+    if (instruction.length < 3) return
+    const operation = operations.begin()
+    if (!operation) return
+    const draftRevision = refineDraftRevision.current
+    const index = selectedBanner
 
     const originalImage = generatedBanners[selectedBanner]
     
@@ -1465,26 +1481,10 @@ export default function BannerDashboard() {
     const startedAt = Date.now()
     setRefineStartedAt(startedAt)
     setRefineElapsedSec(0)
-    let timeout: number | undefined
     try {
-      const controller = new AbortController()
-      timeout = window.setTimeout(() => controller.abort(), 290_000)
-      const response = await fetch('/api/banner/refine', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          originalImage,
-          instruction,
-          category,
-          size: effectiveSize,
-        }),
-      })
-
-      const parsed = await safeReadJson(response)
-      const data = parsed.data || {}
-      
-      if (parsed.status === 429 && data?.code === 'MONTHLY_LIMIT_REACHED') {
+      const data = await refineRecovery.submit({ originalImage, instruction, category: generatedSpec?.category, size: generatedSpec?.size }, operation.signal)
+      if (!operation.current() || !data) return
+      if (data.state === 'limit') {
         quota.acceptLimit(data?.usage)
         setLimitModal({
           open: true,
@@ -1495,26 +1495,22 @@ export default function BannerDashboard() {
         })
         return
       }
-      if (!parsed.ok || data.success !== true) {
-        const msg = data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || '修正に失敗しました'
-        throw new BannerApiError(typeof msg === 'string' ? msg : '修正結果を確認できませんでした。再試行してください。')
-      }
+      if (data.state !== 'completed') throw new BannerApiError('修正結果の確認が必要です。画面の「修正結果を確認」から確認してください。')
 
       if (typeof data.refinedImage !== 'string' || !data.refinedImage.startsWith('data:image/')) throw new BannerApiError('修正画像が取得できませんでした')
 
+      const refined = data.refinedImage
       // 履歴に追加
       setRefineHistory(prev => [...prev, { 
         instruction, 
-        image: originalImage 
+        image: originalImage, index, refined
       }])
       
       // バナーを更新
-      const newBanners = [...generatedBanners]
-      newBanners[selectedBanner] = data.refinedImage
-      setGeneratedBanners(newBanners)
+      setGeneratedBanners(prev => prev.map((image, i) => i === index && image === originalImage ? refined : image))
       void quota.refresh()
       
-      setRefineInstruction('')
+      if (refineDraftRevision.current === draftRevision) setRefineInstruction('')
       toast.success('バナーを修正しました！')
 
       // 修正時間を保存（次回以降の予測に使用）
@@ -1522,23 +1518,21 @@ export default function BannerDashboard() {
       const next = updateEma(readRefineStats() || undefined, actualMs) as SimpleEma
       writeRefineStats(next)
     } catch (err: any) {
+      if (!operation.current()) return
       toast.error(err instanceof BannerApiError ? err.message : '修正結果を受け取れませんでした。生成枠が消費されている可能性があります。利用枚数をご確認ください。')
     } finally {
-      if (timeout !== undefined) window.clearTimeout(timeout)
-      setIsRefining(false)
-      setRefineStartedAt(null)
+      if (operation.current()) { setIsRefining(false); setRefineStartedAt(null) }
+      operation.finish()
     }
   }
 
   // 修正を元に戻す
   const handleUndoRefine = () => {
-    if (selectedBanner === null || refineHistory.length === 0) return
-    
-    const lastHistory = refineHistory[refineHistory.length - 1]
-    const newBanners = [...generatedBanners]
-    newBanners[selectedBanner] = lastHistory.image
-    setGeneratedBanners(newBanners)
-    setRefineHistory(prev => prev.slice(0, -1))
+    if (selectedBanner === null || isRefining || isGenerating) return
+    const lastHistory = [...refineHistory].reverse().find(entry => entry.index === selectedBanner && generatedBanners[selectedBanner] === entry.refined)
+    if (!lastHistory) return
+    setGeneratedBanners(previous => previous.map((image, index) => index === lastHistory.index && image === lastHistory.refined ? lastHistory.image : image))
+    setRefineHistory(previous => previous.filter(entry => entry !== lastHistory))
     toast.success('元に戻しました')
   }
 
@@ -1553,6 +1547,7 @@ export default function BannerDashboard() {
 
         {/* 月次上限のアップセルモーダル（429 / MONTHLY_LIMIT_REACHED） */}
         <BannerQuotaNotice quota={quota} />
+        <BannerRefineRecovery recovery={refineRecovery} />
         <BannerLimitModal
           isOpen={limitModal.open}
           onClose={() => setLimitModal({ open: false })}
@@ -2568,7 +2563,7 @@ export default function BannerDashboard() {
                               ) : null}
                             </div>
                             <div className="flex gap-2">
-                              {refineHistory.length > 0 && (
+                              {refineHistory.some(entry => entry.index === selectedBanner) && (
                                 <button
                                   onClick={handleUndoRefine}
                                   className="flex items-center gap-1 px-2 py-1.5 bg-gray-100 text-gray-500 rounded-lg text-xs hover:bg-gray-200 hover:text-gray-700 transition-colors"
@@ -2652,11 +2647,11 @@ export default function BannerDashboard() {
                               </div>
                             </div>
 
-                            {refineHistory.length > 0 && (
+                            {refineHistory.some(entry => entry.index === selectedBanner) && (
                               <div className="mb-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
                                 <div className="text-[11px] font-bold text-gray-500 mb-1">直近の編集履歴</div>
                                 <div className="space-y-1">
-                                  {refineHistory.slice(-3).reverse().map((h, idx) => (
+                                  {refineHistory.filter(entry => entry.index === selectedBanner).slice(-3).reverse().map((h, idx) => (
                                     <div key={`${h.instruction}-${idx}`} className="text-xs text-gray-700 font-semibold">
                                       - {h.instruction}
                                     </div>
@@ -2668,7 +2663,7 @@ export default function BannerDashboard() {
                             <div className="relative">
                               <textarea
                                 value={refineInstruction}
-                                onChange={(e) => setRefineInstruction(e.target.value)}
+                                onChange={(e) => changeRefineInstruction(e.target.value)}
                                 placeholder="例: 上下の余白をなくして、文字を枠内に収めつつ大きく。医療っぽく清潔感のある写真に寄せて。"
                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none text-sm pr-12"
                                 rows={2}
@@ -2676,8 +2671,9 @@ export default function BannerDashboard() {
                                 disabled={isRefining}
                               />
                               <button
+                                aria-label="AIでバナー画像を修正"
                                 onClick={() => handleRefine()}
-                                disabled={isRefining || !refineInstruction.trim()}
+                                disabled={isRefining || isGenerating || refineRecovery.blocked || refineInstruction.trim().length < 3}
                                 className="absolute right-2 bottom-2 w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-600 rounded-lg flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {isRefining ? (
@@ -2698,7 +2694,7 @@ export default function BannerDashboard() {
                               ].map((suggestion) => (
                                 <button
                                   key={suggestion}
-                                  onClick={() => setRefineInstruction(suggestion)}
+                                  onClick={() => changeRefineInstruction(suggestion)}
                                   className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 text-xs rounded-md transition-colors font-semibold"
                                 >
                                   {suggestion}

@@ -105,13 +105,17 @@ function fixture(initial = null, accountPlan = 'FREE') {
   const root = path.resolve(__dirname, '../..')
   for (const route of ['generate', 'from-url', 'test/generate', 'refine']) {
     const source = fs.readFileSync(path.join(root, 'src/app/api/banner', route, 'route.ts'), 'utf8')
-    assert(source.includes('reserveBannerMonthlyImages('), `${route} must reserve before paid image generation`)
-    assert(source.includes('releaseBannerMonthlyImages('), `${route} must return unused reservations`)
+    const quotaOwner = route === 'refine' ? fs.readFileSync(path.join(root, 'src/lib/banner/refine-operation.ts'), 'utf8') : source
+    assert(quotaOwner.includes('reserveBannerMonthlyImages('), `${route} must reserve before paid image generation`)
+    assert(quotaOwner.includes('releaseBannerMonthlyImages('), `${route} must return unused reservations`)
     assert(!/monthlyUsage:\s*\{\s*increment:/.test(source), `${route} must not charge after generation`)
     if (route === 'refine') {
-      assert(source.indexOf('reserveBannerMonthlyImages(') < source.indexOf('resolveImageModel(apiKey)'), 'refine must reserve before calling Gemini')
+      assert(source.indexOf('await beginBannerRefinement(') < source.indexOf('resolveImageModel(apiKey)'), 'refine must commit operation admission before calling Gemini')
+      assert(quotaOwner.indexOf('await reserveBannerMonthlyImages(') < quotaOwner.indexOf('await tx.systemSetting.create('), 'refine receipt and quota must be admitted in the same transaction')
       assert(source.includes("code: 'MONTHLY_LIMIT_REACHED'"), 'refine must report the monthly limit')
-      assert(source.includes('if (reservation && !charged)'), 'failed refinement must refund its reservation')
+      assert(source.includes('await failBannerRefinement('), 'failed refinement must verify its durable outcome before refund')
+      assert(quotaOwner.indexOf("if (saved.state !== 'pending') return saved.state") < quotaOwner.indexOf('await releaseBannerMonthlyImages('), 'only pending refinement may release its reservation')
+      assert(quotaOwner.indexOf('if (persisted) throw') < quotaOwner.indexOf('await releaseBannerMonthlyImages('), 'persisted image must prevent refund even with inconsistent receipt')
     }
   }
   for (const page of ['dashboard/page.tsx', 'test/page.tsx']) {

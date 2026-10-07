@@ -1,0 +1,10 @@
+PASS normalized text and canonical UUID keep exact original raster
+PASS bad JSON, unknown fields, nulls and invalid explicit UUID fail before admission
+PASS size constraints apply to request and standalone output normalization
+PASS declared and streamed body limits refuse oversized input
+PASS invalid UTF8 is refused
+PASS aborted and stalled streams terminate and cancel their reader
+PASS actual decoder rejects SVG, MIME mismatch, noncanonical base64 and fake PNG
+PASS oversized image dimensions fail even with a tiny compressed payload
+PASS valid input compresses within bounds and output decodes to requested PNG size
+Banner refine input: 9 groups passed (actual sharp decoder, no provider or database calls)

@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-07T07:16:23.377Z",
+  "passed": 12,
+  "cases": [
+    "metadata is saved before POST; same-frame and cross-instance new intents cannot duplicate",
+    "lost response survives remount; explicit GET recovers without POST or overwriting another image",
+    "missing operation requires server DELETE fence before clearing; pending cannot be cleared",
+    "quota429 clears only unadmitted matching intent and retains typed usage/CTA",
+    "wrong operation echo, malformed success, invalid image and body errors retain durable intent",
+    "actor change and auth A-B-A abort late response and isolate private results",
+    "unmount aborts transport while preserving pending metadata for a new mount",
+    "corrupted or unavailable storage blocks network; guest and stale retained callbacks do too",
+    "other tab storage updates block submits and clear obsolete displayed result",
+    "storage write failure and absent Web Locks never invoke provider",
+    "response capacity, invalid UTF8 and aborted streaming are bounded and retain intent",
+    "stalled body and image decoding terminate at independent deadlines"
+  ],
+  "sourceHashes": {
+    "src/lib/banner/refine-client.ts": "d79ad7c071c7daa29baa6c186e8763ccd1765fb54e4d6385628c6970d59917d5",
+    "src/lib/banner/use-refine-recovery.ts": "3fd033a272826d0c8b12f2969ee5e3df0c1c858bfb42d86e3b94acf326211fbf",
+    "src/components/banner/BannerRefineRecovery.tsx": "c323f78beaa6c2ff0a3cb47c47c4f4953f870cdd82a9dfd89e9b591597a23ea0"
+  },
+  "scope": "Actual hook/client/recovery panel mounted in React18 StrictMode/jsdom. Synthetic provider/API/Image decode event/locks; no real network/provider/customer DB. Native browser image decode, full create/chat pages and cross-process Web Locks remain unverified."
+}

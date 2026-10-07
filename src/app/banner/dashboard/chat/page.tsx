@@ -11,6 +11,8 @@ import toast from 'react-hot-toast'
 import BannerLimitModal from '@/components/banner/BannerLimitModal'
 import { useBannerQuota } from '@/components/banner/useBannerQuota'
 import { useBannerRequestFence } from '@/lib/banner/use-request-fence'
+import { useBannerRefineRecovery } from '@/lib/banner/use-refine-recovery'
+import BannerRefineRecovery from '@/components/banner/BannerRefineRecovery'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 import { getBannerMaxImagesPerRequest } from '@/lib/pricing'
 
@@ -153,6 +155,7 @@ export default function BannerChatPage() {
 function BannerChatWorkspace() {
   const { data: session, status } = useSession()
   const operations = useBannerRequestFence(status, String(session?.user?.id || ''))
+  const refineRecovery = useBannerRefineRecovery(status, String(session?.user?.id || ''))
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [logoImage, setLogoImage] = useState<string | null>(null)
   const [logoFileName, setLogoFileName] = useState('')
@@ -385,7 +388,7 @@ function BannerChatWorkspace() {
   }
 
   const canRefine =
-    operations.allowed && generatedBanners.length > 0 &&
+    operations.allowed && !refineRecovery.blocked && generatedBanners.length > 0 &&
     !isThinking &&
     !isGenerating &&
     !isRefining &&
@@ -441,21 +444,9 @@ function BannerChatWorkspace() {
     setIsRefining(true)
     const startedAt = Date.now()
     try {
-      const res = await fetch('/api/banner/refine', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: operation.signal,
-        body: JSON.stringify({
-          originalImage,
-          instruction,
-          category: generatedSpec?.category,
-          size: generatedSpec?.size,
-        }),
-      })
-      const parsed = await safeReadJson(res)
-      if (!operation.current()) return
-      const data = parsed.data || {}
-      if (parsed.status === 429 && data?.code === 'MONTHLY_LIMIT_REACHED') {
+      const data = await refineRecovery.submit({ originalImage, instruction, category: generatedSpec?.category, size: generatedSpec?.size }, operation.signal)
+      if (!operation.current() || !data) return
+      if (data.state === 'limit') {
         quota.acceptLimit(data?.usage)
         setLimitModal({
           open: true,
@@ -466,7 +457,7 @@ function BannerChatWorkspace() {
         })
         return
       }
-      if (!parsed.ok || data?.success !== true) throw new BannerApiError(typeof data?.error === 'string' ? data.error : [413, 502, 503].includes(parsed.status) ? normalizeNonJsonApiError(parsed.status, parsed.text) : '修正結果を受け取れませんでした。生成枠が消費されている可能性があります。利用枚数をご確認ください。')
+      if (data.state !== 'completed') throw new BannerApiError('修正結果の確認が必要です。画面の「修正結果を確認」から確認してください。')
       const refined = String(data.refinedImage || '')
       if (!refined.startsWith('data:image/')) throw new BannerApiError('修正画像が取得できませんでした')
 
@@ -514,6 +505,7 @@ function BannerChatWorkspace() {
         message={limitModal.message}
         upgradeUrl={limitModal.upgradeUrl}
       />
+      <BannerRefineRecovery recovery={refineRecovery} />
       {/* デスクトップのみサイドバー表示 */}
       <div className="hidden md:block">
         <DashboardSidebar />

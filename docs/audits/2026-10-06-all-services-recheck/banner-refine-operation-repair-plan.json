@@ -1,7 +1,16 @@
 {
-  "checkedAt": "2026-10-07T06:38:17.079587+00:00",
-  "status": "reproduced-operation-recovery-repair-pending",
-  "evidence": "banner-refine-operation-baseline.json",
+  "checkedAt": "2026-10-07T07:21:59.744295+00:00",
+  "status": "API-and-both-pages-local-full-gate-passed-release-prepared",
+  "evidence": [
+    "banner-refine-operation-baseline.json",
+    "banner-refine-operation-postgres-results.json",
+    "banner-refine-operation-postgres-supervisor.json",
+    "banner-refine-input-results.log",
+    "banner-refine-recovery-mounted-results.json",
+    "banner-create-mounted-results.json",
+    "banner-chat-mounted-results.json",
+    "banner-refine-native-browser.json"
+  ],
   "required": [
     "Canonical actor-scoped operation UUID and normalized payload fingerprint; reject key reuse for another payload. Apply across both refine callers and chat/generate follow-up paths.",
     "Durable pending operation admission and monthly quota reservation atomically; one provider invocation per operation even across parallel workers, retries, tabs or client remount. Do not hold SQL transaction while provider runs.",
@@ -17,5 +26,39 @@
     "No customer production DB writes/migrations",
     "No email/notification sends in tests",
     "All17services and2074criteria remain scope"
-  ]
+  ],
+  "implemented": [
+    "Canonical actor-scoped UUID and payload fingerprint",
+    "User row share lock then operation advisory lock; pending receipt and quota reserve committed atomically",
+    "Private Generation and completion receipt committed atomically; completion replay does not reserve/provider again",
+    "Proven failure transition refunds once; pending cannot be speculatively refunded",
+    "Missing-operation cancellation fences delayed admission; existing pending work remains pending",
+    "Recovery scoped to actor and caller-provided retention cutoff",
+    "Actual POST/GET/DELETE use operation receipt and private Generation, enforce private/no-store/VaryCookie",
+    "Bounded request and provider image decoding using actual sharp, strict field/UUID/dimension limits before admission",
+    "Only definitive404 permits configured Pro endpoint fallback; no uncertain provider retry",
+    "Same in-memory image persistence retries up to3, then authoritative locked result check: completed recovers, proven absent fails/refunds once, unverifiable stays pending",
+    "Refund validates persisted subscription belongs to same actor and banner service",
+    "Both chat and create use actor-scoped metadata-only operationId saved under browser Web Lock before POST; same operation never automatically resubmitted",
+    "Mounted recovery panel GET/DELETE confirmation and download; explicit confirmation before new refinement; unverified outcome retains intent",
+    "Client bounded33MiB response, strict operationId/generationId/state, PNG Image decode events and dimension caps; response/body/decode deadlines",
+    "Create shares generation/refinement lane before quota await and preserves A-B-A new draft; operation guard uses committed render revision to survive React no-op rendering",
+    "Create image source spec captured on generation; undo constrained to original index and matching refined image",
+    "Accept mobile320x50 preset while bounding dimensions/pixels"
+  ],
+  "remaining": [
+    "Commit/push exact allowlist and verify exact CI/READY/publication",
+    "Authenticated production flow remains unverified; native fixture proves helper only",
+    "Repair banner chat duplicate operation and uncertain provider retries reproduced in banner-chat-operation-current-baseline.json",
+    "Continue generation server idempotency and all17-service/2074criterion audit"
+  ],
+  "boundary": "Full frozen build/security/types/lint passed current2716sourcefiles; current-source PG24/chat13/create7/recovery12/input9/native5 evidence verified. Release not pushed yet. No real provider or customer DB writes.",
+  "fullGate": {
+    "folder": "docs/audits/2026-10-06-all-services-recheck/banner-refine-release-283f98a9-4d1a-4606-913a-8664592dd84a",
+    "session": 7877,
+    "status": "passed",
+    "sourceFiles": 2716,
+    "changedSources": []
+  },
+  "nativeBrowser": "5 current-source checks passed; actual Image, response bound, abort and two same-origin Web Locks frames; authenticated production still unverified"
 }

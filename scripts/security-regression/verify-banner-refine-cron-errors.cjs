@@ -7,6 +7,7 @@ const secret = 'PRIVATE_PROVIDER_OR_DATABASE_DETAIL'
 ;(async () => {
   let notifications = 0
   const refine = load('src/app/api/banner/refine/route.ts', {
+    ...require('./banner-refine-test-deps.cjs').refineModules,
     '@vercel/functions': { waitUntil: () => {} },
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => { throw new Error(secret) } },

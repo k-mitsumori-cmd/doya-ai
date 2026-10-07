@@ -1,3 +1,9 @@
+const bannerCreate = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-create-lifecycle-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerCreate.error || bannerCreate.status !== 0) { console.error('Banner create mounted regression failed'); process.exit(1); }
+const refineRecovery = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-refine-recovery-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (refineRecovery.error || refineRecovery.status !== 0) { console.error('Banner refine recovery regression failed'); process.exit(1); }
+const refineInput = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-refine-input.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (refineInput.error || refineInput.status !== 0) { console.error('Banner refine input regression failed'); process.exit(1); }
 const bannerChat = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-chat-lifecycle-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerChat.error || bannerChat.status !== 0) { console.error('Banner chat mounted regression failed'); process.exit(1); }
 const crmClient = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-sfa-crm-client.cjs')], { stdio: 'inherit', timeout: 60000 });

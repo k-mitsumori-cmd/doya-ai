@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-07T07:13:55.293Z",
+  "passed": 24,
+  "cases": [
+    "12 parallel same UUID admissions reserve exactly one image",
+    "UUID reused for changed input refuses without another quota reservation",
+    "parallel completion stores one private Generation/receipt; replay/recovery reuse it without refund",
+    "parallel proven-failure transitions refund once and same operation never auto-restarts",
+    "cancellation fences delayed admission even after its older actor read",
+    "pending work cannot be cancelled/refunded speculatively; another actor cannot recover it",
+    "receipt insert failure rolls back quota reservation",
+    "completion failure rolls back image and retains pending reservation; saving can retry without provider",
+    "different operation UUIDs at14/15 admit one and never exceed monthly limit",
+    "expired or deleted completed result never re-admits the operation",
+    "corrupt reservation fails closed across admission/recovery/failure/cancel without refund",
+    "old operation refund cannot subtract from a reset usage period",
+    "deleted actor with stale session cannot admit/recover/refund/cancel existing receipt",
+    "persisted image with inconsistent pending receipt never refunds or erases result",
+    "receipt pointing at another actor subscription cannot refund that actor usage",
+    "actual POST admits one of9 concurrent requests; POST/GET/DELETE reuse same saved private result",
+    "actual POST rejects invalid input/raster before quota, receipt, provider or alert",
+    "actual provider500 never falls back; failure refunds once and old UUID refuses retry",
+    "actual definite404 may select second Pro endpoint under one reservation",
+    "actual completion rollback retries only persistence, then authoritative no-result refund; no provider repeat",
+    "actual route recovers successful commit after lost DB acknowledgement without provider repeat or refund",
+    "actual unavailable failure verification preserves pending evidence/quota and forbids provider replay",
+    "actual guest/other actor/expired result recovery never exposes or regenerates private image",
+    "actual DELETE missing-operation fence prevents delayed POST admission"
+  ],
+  "lockWaitObservations": [],
+  "sourceHashes": {
+    "src/lib/banner/refine-operation.ts": "c71e1649dd2db4739ae7df6404203bb9c66f6dc89a8ebc194f42470d1387ce12",
+    "src/lib/banner/monthly-quota.ts": "624c2c31d1392cac4a379d3391831cbe921b1dcd77db47e2348e5be8e4369641",
+    "src/lib/pricing.ts": "37386582610f4d2792cd2a1984a047edcae9f31ad753f30b2808470ec98b91c1",
+    "src/lib/plan-utils.ts": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86",
+    "src/lib/banner/refine-input.ts": "16f7083a2903b207b053723f35f776ce28b40814a9a0c1e443297c2290bd5f87",
+    "src/app/api/banner/refine/route.ts": "e577b8f5cd6d5d23d18fde6fcdd97216638993c981f169eb1ed8be8e62dfcbf9"
+  },
+  "scope": "Actual route, input decoder, operation helper and monthly quota/pricing with Prisma against isolated Unix-socket-only PostgreSQL synthetic schema. Synthetic session, provider and telemetry. No real provider or customer DB calls. Mounted UI integration and authenticated production flows remain unproven."
+}
