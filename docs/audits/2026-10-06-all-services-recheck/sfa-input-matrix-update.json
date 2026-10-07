@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-10-07T00:51:40.500902+00:00",
+  "rows": 2074,
+  "services": 17,
+  "perService": {
+    "banner": 122,
+    "seo": 122,
+    "interview": 122,
+    "persona": 122,
+    "hr": 122,
+    "kintai": 122,
+    "doyalist": 122,
+    "promane": 122,
+    "doyaslide": 122,
+    "cunning": 122,
+    "sfa": 122,
+    "shodan": 122,
+    "aio": 122,
+    "mensetsu": 122,
+    "quote": 122,
+    "aishodan": 122,
+    "adimage": 122
+  },
+  "updatedRows": [
+    [
+      "aio",
+      "C033"
+    ],
+    [
+      "shodan",
+      "U11"
+    ],
+    [
+      "sfa",
+      "U09"
+    ],
+    [
+      "sfa",
+      "C070"
+    ]
+  ],
+  "scope": "Evidence added only to relevant partial criteria; no criterion marked complete; original 2074 requirements retained."
+}

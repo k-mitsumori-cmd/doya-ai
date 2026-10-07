@@ -6,12 +6,16 @@
     "sfa-task-late-create-baseline.json",
     "sfa-task-double-create-baseline.json",
     "sfa-activity-late-create-baseline.json",
-    "sfa-activity-double-create-baseline.json"
+    "sfa-activity-double-create-baseline.json",
+    "sfa-stale-mutation-authority-baseline.json",
+    "sfa-bulk-failure-baseline.json"
   ],
   "findings": [
     "Actual task and activity creation both allow two same-frame POSTs.",
     "Late alpha task/activity creation clears beta draft, shows global success and reloads alpha rows into beta scope.",
-    "Task title and activity subject/body silently truncated; invalid activity type/date silently replaced with note/server time (actual API synthetic proof)."
+    "Task title and activity subject/body silently truncated; invalid activity type/date silently replaced with note/server time (actual API synthetic proof).",
+    "Actual task create/update/delete and activity create commit after synthetic membership revocation between context validation and write. Fresh locked membership must be checked inside mutation transaction.",
+    "Actual mounted deal AI candidate bulk registration closes the proposal and reports success (0 tasks) when task POST returns 400; unsuccessful candidates are lost. Repair must preserve failed/uncertain candidates without blind retries."
   ],
   "nextRequirements": [
     "Actor/org/epoch scoped reads and mutation controllers, persistent scoped results, shared synchronous operation guards",
@@ -34,5 +38,33 @@
     "SFA tasks are hard-deleted. Creation receipts must survive deletion, so a deterministic task ID alone is insufficient to prevent resurrection. Existing SystemSetting transaction receipt pattern is available (interview project-create).",
     "Fresh ACTIVE membership held against removal in each mutation transaction; validate task/related IDs by organization at commit; version task mutations and preserve legacy compatibility deliberately.",
     "Cover all four consumers including AI suggested bulk tasks and deal timeline, not only standalone tasks page."
-  ]
+  ],
+  "inputRepair": {
+    "status": "full-gate-passed-commit-pending",
+    "cases": 65,
+    "evidence": "sfa-input-preservation-results.json",
+    "gate": "docs/audits/2026-10-06-all-services-recheck/sfa-input-preservation-release-7a66f0dc-f4bc-420b-9373-80101ae5f9cc",
+    "scope": "Reject overlong task titles and activity subjects/bodies, invalid explicit activity type/date and malformed JSON before reads/writes. Existing four consumer paths share these POST routes. SFA lifecycle, versioning, replay and scope findings remain open.",
+    "supersededGate": "docs/audits/2026-10-06-all-services-recheck/sfa-input-preservation-release-055b80ea-b68c-474c-8e7f-45a3864c7083",
+    "supersededReason": "Test runner insertion incorrectly passed two filenames to path.join, creating a nonexistent path. Corrected to separate independently checked subprocesses; baseline full gate correctly failed, not accepted.",
+    "expansionReason": "New actual-route proof shows silent truncation in 17 account/contact/lead fields; expand same input-preservation repair rather than leave related creation paths lossy.",
+    "supersededExpandedGate": "docs/audits/2026-10-06-all-services-recheck/sfa-input-preservation-release-24d28e1c-84c5-4687-886a-1c8343a64897",
+    "manualDraftRetention": {
+      "cases": 7,
+      "evidence": "sfa-manual-draft-retention-results.json",
+      "scope": "Actual four page consumers and actual task/activity POST validators, synthetic auth/transport; overlong rejection retains manual draft. Other lifecycle/AI bulk remains open."
+    },
+    "sourceFreezeReverifiedBeforeCommit": true,
+    "fullGateExitCode": 0,
+    "sourceFiles": 2658,
+    "changedSources": [],
+    "updatedAt": "2026-10-07T00:54:56.746090+00:00"
+  },
+  "updatedAt": "2026-10-07T00:46:37.206674+00:00",
+  "relatedCollectionInputLoss": {
+    "status": "repaired-local-full-gate-passed-production-pending",
+    "cases": 17,
+    "evidence": "sfa-collection-input-loss-baseline.json",
+    "scope": "Account/contact/lead creation silently truncates 17 user input fields. Task/activity input repair does not resolve these collection routes."
+  }
 }

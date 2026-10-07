@@ -73,6 +73,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
   }
   const body = parsedBody as Record<string, unknown>
+  const textLimits: Array<[string, string, number]> = [
+    ['name', '会社名', 200],
+    ['industry', '業種', 80],
+    ['prefecture', '都道府県', 40],
+    ['url', 'URL', 300],
+    ['note', 'メモ', 2000],
+  ]
+  for (const [key, label, maximum] of textLimits) {
+    const value = body[key]
+    if (typeof value === 'string' && (key === 'name' ? value.trim() : value).length > maximum) {
+      return NextResponse.json({ error: `${label}は${maximum}文字以内で入力してください` }, { status: 400 })
+    }
+  }
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name) return NextResponse.json({ error: '会社名は必須です' }, { status: 400 })
   if (['industry', 'prefecture', 'url', 'note'].some((key) => body[key] != null && typeof body[key] !== 'string')) {
@@ -82,11 +95,11 @@ export async function POST(req: NextRequest) {
   const admitted = await withSfaAdmission(ctx.organizationId, { accounts: 1 }, (tx) => tx.sfaAccount.create({
     data: {
       organizationId: ctx.organizationId,
-      name: name.slice(0, 200),
-      industry: (body.industry as string | undefined)?.slice(0, 80) || null,
-      prefecture: (body.prefecture as string | undefined)?.slice(0, 40) || null,
-      url: (body.url as string | undefined)?.slice(0, 300) || null,
-      note: (body.note as string | undefined)?.slice(0, 2000) || null,
+      name,
+      industry: (body.industry as string | undefined) || null,
+      prefecture: (body.prefecture as string | undefined) || null,
+      url: (body.url as string | undefined) || null,
+      note: (body.note as string | undefined) || null,
       ownerMemberId: ctx.memberId,
     },
   }))

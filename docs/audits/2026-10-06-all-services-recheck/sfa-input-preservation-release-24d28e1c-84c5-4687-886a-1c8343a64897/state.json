@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-10-07T00:48:05.333077+00:00",
+  "pid": 58641,
+  "head": "96d214e696a52e1393a7dbe8ac13d6f8e39bfa30",
+  "sourceFiles": 2658,
+  "status": "superseded-cancelled-not-validation-evidence",
+  "gates": [],
+  "reason": "New confirmed loss in 17 related account/contact/lead fields requires expanded source/tests. Cancel only this owned supervisor tree; new freeze required.",
+  "endedAt": "2026-10-07T00:50:05.996898+00:00"
+}

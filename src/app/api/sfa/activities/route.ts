@@ -67,9 +67,15 @@ export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
-  const parsedBody = await req.json().catch(() => ({}))
-  const body = parsedBody && typeof parsedBody === 'object' && !Array.isArray(parsedBody) ? parsedBody : {}
-  const type = (ACTIVITY_TYPES as string[]).includes(body.type) ? (body.type as ActivityType) : 'note'
+  const parsedBody = await req.json().catch(() => null)
+  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
+  const body = parsedBody as Record<string, unknown>
+  if ('type' in body && (typeof body.type !== 'string' || !(ACTIVITY_TYPES as string[]).includes(body.type))) {
+    return NextResponse.json({ error: '活動の種類を選び直してください' }, { status: 400 })
+  }
+  const type: ActivityType = 'type' in body ? body.type as ActivityType : 'note'
   if ((body.subject != null && typeof body.subject !== 'string') || (body.body != null && typeof body.body !== 'string')) {
     return NextResponse.json({ error: '内容の形式が正しくありません' }, { status: 400 })
   }
@@ -77,6 +83,24 @@ export async function POST(req: NextRequest) {
   const bodyText = (body.body as string | undefined)?.trim()
   if (!subject && !bodyText) {
     return NextResponse.json({ error: '内容を入力してください' }, { status: 400 })
+  }
+
+  if ((subject?.length || 0) > 200 || (bodyText?.length || 0) > 4000) {
+    return NextResponse.json({ error: '件名は200文字以内、本文は4000文字以内で入力してください' }, { status: 400 })
+  }
+
+  // Reject an explicitly invalid time instead of recording it as the current time.
+  let occurredAt = new Date()
+  if ('occurredAt' in body) {
+    const value = body.occurredAt
+    const format = /^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,3})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d))?$/
+    const day = typeof value === 'string' ? value.slice(0, 10) : ''
+    const calendarDay = new Date(`${day}T00:00:00.000Z`)
+    const parsed = typeof value === 'string' ? new Date(value) : null
+    if (typeof value !== 'string' || !format.test(value) || !Number.isFinite(calendarDay.getTime()) || calendarDay.toISOString().slice(0, 10) !== day || !parsed || !Number.isFinite(parsed.getTime())) {
+      return NextResponse.json({ error: '活動日時には有効な日付を入力してください' }, { status: 400 })
+    }
+    occurredAt = parsed
   }
 
   const relatedFields = [body.accountId, body.dealId, body.contactId]
@@ -102,20 +126,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '関連先が見つかりません。画面を更新してもう一度お試しください。' }, { status: 400 })
   }
 
-  let occurredAt = new Date()
-  if (typeof body.occurredAt === 'string' && body.occurredAt) {
-    const d = new Date(body.occurredAt)
-    if (!isNaN(d.getTime())) occurredAt = d
-  }
-
   try {
     const activity = await prisma.$transaction(async (tx) => {
       const created = await tx.sfaActivity.create({
         data: {
           organizationId: ctx.organizationId,
           type,
-          subject: subject?.slice(0, 200) || null,
-          body: bodyText?.slice(0, 4000) || null,
+          subject: subject || null,
+          body: bodyText || null,
           accountId,
           dealId,
           contactId,

@@ -1,0 +1,4 @@
+{
+  "passed": 65,
+  "scope": "Actual SFA task/activity/account/contact/lead POST routes with synthetic auth, Prisma and account admission. Exact boundary content and explicit timestamps preserved; invalid inputs rejected before all reads/writes. Does not verify client lifecycle, real database, production or concurrency."
+}

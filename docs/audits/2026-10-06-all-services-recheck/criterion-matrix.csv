@@ -1288,7 +1288,7 @@ sfa,C066,生成・ジョブ,再生成と編集にも上限を適用する,現在
 sfa,C067,生成・ジョブ,公開音声ルームの同意・期限・人数を守る,現在版での項目別通し検証待ち,
 sfa,C068,生成・ジョブ,エクスポートで他人の成果物を含めない,現在版での項目別通し検証待ち,
 sfa,C069,UI・アクセシビリティ,モーダルのフォーカス・Escape・復帰が機能する,現在版での項目別通し検証待ち,
-sfa,C070,UI・アクセシビリティ,入力をエラー時に失わない,現在版での項目別通し検証待ち,
+sfa,C070,UI・アクセシビリティ,入力をエラー時に失わない,入力消失を実画面合成環境で再現・未補修/本番通し検証待ち,実画面でタスク/活動の旧応答による草稿消失、実商談画面でAI一括登録400時の候補消失を再現・未補修。sfa-task-late-create-baseline.json; sfa-activity-late-create-baseline.json; sfa-bulk-failure-baseline.json
 sfa,C071,UI・アクセシビリティ,上限案内が二重表示されない,現在版での項目別通し検証待ち,
 sfa,C072,UI・アクセシビリティ,有料会員に同じプランへの重複契約を促さない,現在版での項目別通し検証待ち,
 sfa,C073,UI・アクセシビリティ,APIエラーを消えるトーストだけに依存しない,現在版での項目別通し検証待ち,
@@ -1309,7 +1309,7 @@ sfa,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォン�
 sfa,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 sfa,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 sfa,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,現在版での項目別通し検証待ち,
-sfa,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
+sfa,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,部分補修/合成検証済み・全経路/本番通し検証待ち,タスク/活動/取引先/担当者/リードPOSTの文字上限と明示日時・種別を65合成ケースで部分補修。全体ゲート中。他登録/更新/AI/本番通しは未検証。sfa-input-preservation-results.json; sfa-collection-input-loss-baseline.json
 sfa,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
 sfa,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,現在版での項目別通し検証待ち,
 sfa,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：入口の認証失敗・再試行・連打・履歴復元／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md
@@ -1433,7 +1433,7 @@ shodan,U07,user-experience,入力途中にログイン・料金確認へ移動�
 shodan,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,一部検証済み：招待先違いの切替導線・失敗再試行・招待URL保持を隔離/模擬応答で確認／本番承諾と役割の通し確認未完了,invite-account-browser.json; invite-account-regression.log; invite-account-baseline.log; README.md
 shodan,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
 shodan,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
-shodan,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,現在版での項目別通し検証待ち,
+shodan,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,部分補修/合成検証済み・全経路/本番通し検証待ち,researched一覧を調査済みと表示する実画面32ケース合格・全体ゲート合格/main送信済み。進行状態全経路と本番認証通しは未検証。shodan-label-mounted-results.json
 shodan,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：入口・招待・AIO調査の認証失敗、再試行、連打、旧応答抑止／全経路・別タブ・本番データ冪等性未検証,"entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs; org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven); shodan-new-repair.json (32 mounted / 26 research+API / 30 shared sidebar / 12 static layout; whole criterion and private production unproven) shodan-detail-lifecycle-repair.json (candidate: 35 actual mounted cases, 19 DTO negatives, 4 AI negatives, actual GET protocol; full gate and production verification pending) shodan-list-lifecycle-repair.json (candidate: 31 mounted cases, 14 DTO/list API, 15 deletion API, 4 pagination groups; full gate/publication/authenticated full criterion unproven)"
 shodan,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,部分検証済み・本番通し検証待ち,"entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs aio-shodan-member-management-repair.json: Member repair deployed at 6bd0adb1, CI success/READY/anonymous 17-entry publication proven; authenticated production flow unproven. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven. shodan-detail-lifecycle-repair.json (candidate: 35 actual mounted cases, 19 DTO negatives, 4 AI negatives, actual GET protocol; full gate and production verification pending) shodan-slide-editor-repair.json (historical reproduction; candidate scoped repair now passes 34 mounted, 24 bounded PDF, 26 regeneration API and 9 atomic-save synthetic cases; full gate/publication/private browser flow pending) shodan-list-lifecycle-repair.json (candidate: 31 mounted cases, 14 DTO/list API, 15 deletion API, 4 pagination groups; full gate/publication/authenticated full criterion unproven)"
 shodan,U14,user-experience,生成途中の失敗・一部成功でも成果物を救出でき、再試行対象と追加消費が分かる。,現在版での項目別通し検証待ち,
@@ -1495,7 +1495,7 @@ aio,C029,課金,決済失敗時に再申込不要と案内する,現在版での
 aio,C030,課金,手動付与した有料権限が誤って失われない,現在版での項目別通し検証待ち,
 aio,C031,利用上限,料金ページの数値・単位・期間がAPIと一致する,現在版での項目別通し検証待ち,
 aio,C032,利用上限,表示残数とサーバー実使用数が一致する,現在版での項目別通し検証待ち,
-aio,C033,利用上限,上限0と上限直前と超過時を正しく扱う,現在版での項目別通し検証待ち,
+aio,C033,利用上限,上限0と上限直前と超過時を正しく扱う,部分補修/合成検証済み・全経路/本番通し検証待ち,AIO初回質問登録は無料3件・有料・候補生成中のダウングレード・不明契約・既存保持を12ケースで補修検証。全体ゲート合格/main送信済み。本番認証通しと他上限経路は未検証。aio-quick-start-limit-results.json; aio-quick-start-limit-repair.json
 aio,C034,利用上限,同時リクエストでも上限を超えない,現在版での項目別通し検証待ち,"; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
 aio,C035,利用上限,利用枠を予約してから従量課金APIを呼ぶ,現在版での項目別通し検証待ち,
 aio,C036,利用上限,生成失敗・中断時の予約を過不足なく戻す,現在版での項目別通し検証待ち,

@@ -88,6 +88,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
   }
   const body = parsedBody as Record<string, unknown>
+  const textLimits: Array<[string, string, number]> = [
+    ['name', '企業名・氏名', 200],
+    ['corporateNumber', '法人番号', 20],
+    ['contactName', '担当者名', 80],
+    ['email', 'メールアドレス', 200],
+    ['phone', '電話番号', 40],
+    ['note', 'メモ', 2000],
+  ]
+  for (const [key, label, maximum] of textLimits) {
+    const value = body[key]
+    if (typeof value === 'string' && (key === 'name' ? value.trim() : value).length > maximum) {
+      return NextResponse.json({ error: `${label}は${maximum}文字以内で入力してください` }, { status: 400 })
+    }
+  }
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name) return NextResponse.json({ error: '企業名/氏名は必須です' }, { status: 400 })
   if (['corporateNumber', 'contactName', 'email', 'phone', 'note'].some((key) => body[key] != null && typeof body[key] !== 'string')) {
@@ -102,12 +116,12 @@ export async function POST(req: NextRequest) {
   const lead = await prisma.sfaLead.create({
     data: {
       organizationId: ctx.organizationId,
-      name: name.slice(0, 200),
-      corporateNumber: (body.corporateNumber as string | undefined)?.slice(0, 20) || null,
-      contactName: (body.contactName as string | undefined)?.slice(0, 80) || null,
-      email: (body.email as string | undefined)?.slice(0, 200) || null,
-      phone: (body.phone as string | undefined)?.slice(0, 40) || null,
-      note: (body.note as string | undefined)?.slice(0, 2000) || null,
+      name,
+      corporateNumber: (body.corporateNumber as string | undefined) || null,
+      contactName: (body.contactName as string | undefined) || null,
+      email: (body.email as string | undefined) || null,
+      phone: (body.phone as string | undefined) || null,
+      note: (body.note as string | undefined) || null,
       source,
       status: 'new',
       assigneeMemberId: ctx.memberId,

@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   }
   const body = parsedBody as Record<string, unknown>
   const title = typeof body.title === 'string' ? body.title.trim() : ''
-  if (!title) return NextResponse.json({ error: 'タスク名は必須です' }, { status: 400 })
+  if (!title || title.length > 200) return NextResponse.json({ error: 'タスク名は1〜200文字で入力してください' }, { status: 400 })
 
   let dueDate: Date | null = null
   if (body.dueDate != null && body.dueDate !== '') {
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
   }
 
   const task = await prisma.sfaTask.create({
-    data: { organizationId: ctx.organizationId, title: title.slice(0, 200), dueDate, dealId, assigneeMemberId: ctx.memberId },
+    data: { organizationId: ctx.organizationId, title, dueDate, dealId, assigneeMemberId: ctx.memberId },
     select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true },
   })
   return NextResponse.json({ task })

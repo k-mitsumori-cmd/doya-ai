@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-07T00:07:11.073843+00:00",
-  "status": "pushed-ci-production-verification-pending",
+  "status": "deployed-anonymous-publication-verified-private-workflows-unproven",
   "sourceCommit": "38a74a2d3f256a86438565a32ed092d0d0e38f4b",
   "probe": "probe-aio-prompts-lifecycle.cjs",
   "evidence": [
@@ -74,7 +74,7 @@
     {
       "uid": "dpl_6RP7SD6LxfBoT1apkPNK8cKzVo1x",
       "url": "doya-j4zg65xzx-surisutas-projects.vercel.app",
-      "state": "BUILDING",
+      "state": "READY",
       "target": "production",
       "commit": "67f520e1823cf40fc8220f65a3633f5d0175098f"
     }
@@ -87,5 +87,8 @@
       "headSha": "67f520e1823cf40fc8220f65a3633f5d0175098f"
     }
   ],
-  "ciWatchExitCode": 0
+  "ciWatchExitCode": 0,
+  "publicationEvidence": "aio-prompts-public-67f520e1.json",
+  "publicVerificationExitCode": 0,
+  "productionCheckedAt": "2026-10-07T00:52:35.618453+00:00"
 }

@@ -1,5 +1,5 @@
 {
-  "status": "full-gate-passed-commit-pending",
+  "status": "pushed-ci-production-verification-pending",
   "sourceCommit": "67f520e1823cf40fc8220f65a3633f5d0175098f",
   "evidence": [
     "aio-quick-start-prompt-cap-baseline.json",
@@ -24,5 +24,25 @@
   "sourceFreezeReverifiedBeforeCommit": true,
   "sourceFiles": 2657,
   "changedSources": [],
-  "updatedAt": "2026-10-07T00:45:30.792534+00:00"
+  "updatedAt": "2026-10-07T00:45:30.792534+00:00",
+  "commit": "96d214e696a52e1393a7dbe8ac13d6f8e39bfa30",
+  "pushExitCode": 0,
+  "sourceFreezeReverifiedAfterCommit": true,
+  "ciRuns": [
+    {
+      "databaseId": 37553658430,
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "96d214e696a52e1393a7dbe8ac13d6f8e39bfa30"
+    }
+  ],
+  "productionDeployments": [
+    {
+      "uid": "dpl_7PQ2BEoFb7TvspKrAmDN2ygJYQq2",
+      "url": "doya-9i07bmduw-surisutas-projects.vercel.app",
+      "state": "BUILDING",
+      "target": "production",
+      "commit": "96d214e696a52e1393a7dbe8ac13d6f8e39bfa30"
+    }
+  ]
 }

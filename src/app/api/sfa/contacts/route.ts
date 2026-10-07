@@ -78,6 +78,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
   }
   const body = parsedBody as Record<string, unknown>
+  const textLimits: Array<[string, string, number]> = [
+    ['name', '氏名', 80],
+    ['title', '役職', 80],
+    ['department', '部署', 80],
+    ['email', 'メールアドレス', 200],
+    ['phone', '電話番号', 40],
+    ['note', 'メモ', 2000],
+  ]
+  for (const [key, label, maximum] of textLimits) {
+    const value = body[key]
+    if (typeof value === 'string' && (key === 'name' ? value.trim() : value).length > maximum) {
+      return NextResponse.json({ error: `${label}は${maximum}文字以内で入力してください` }, { status: 400 })
+    }
+  }
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name) return NextResponse.json({ error: '氏名は必須です' }, { status: 400 })
   if (['accountId', 'title', 'department', 'email', 'phone', 'note'].some((key) => body[key] != null && typeof body[key] !== 'string') ||
@@ -98,13 +112,13 @@ export async function POST(req: NextRequest) {
     data: {
       organizationId: ctx.organizationId,
       accountId,
-      name: name.slice(0, 80),
-      title: (body.title as string | undefined)?.slice(0, 80) || null,
-      department: (body.department as string | undefined)?.slice(0, 80) || null,
-      email: (body.email as string | undefined)?.slice(0, 200) || null,
-      phone: (body.phone as string | undefined)?.slice(0, 40) || null,
+      name,
+      title: (body.title as string | undefined) || null,
+      department: (body.department as string | undefined) || null,
+      email: (body.email as string | undefined) || null,
+      phone: (body.phone as string | undefined) || null,
       isKeyPerson: body.isKeyPerson === true,
-      note: (body.note as string | undefined)?.slice(0, 2000) || null,
+      note: (body.note as string | undefined) || null,
     },
   })
   return NextResponse.json({ contact })
