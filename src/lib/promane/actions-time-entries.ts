@@ -81,6 +81,7 @@ export async function createTimeEntry(workspaceSlug: string, data: {
 
   const operationId = promaneTimeOperationId(data.operationId);
   if (data.note !== undefined && typeof data.note !== "string") throw new Error("メモを確認してください");
+  if (data.note !== undefined && data.note.length > 1000) throw new Error("メモは1,000文字以内で入力してください");
   const duration = validatePromaneMinutes(data.duration);
   const workDate = parsePromaneWorkDate(data.date);
   if (!data.memberId) throw new Error("memberIdは必須です");
@@ -89,7 +90,7 @@ export async function createTimeEntry(workspaceSlug: string, data: {
     await lockWritableActor(tx, workspace.id, userId);
     const scope = { workspaceId: workspace.id, userId };
     const input = { memberId: data.memberId, duration, date: workDate.toISOString(),
-      projectId: data.projectId || null, taskId: data.taskId || null, note: data.note?.slice(0, 1000) || null };
+      projectId: data.projectId || null, taskId: data.taskId || null, note: data.note || null };
     return createPromaneTimeEntryOnce(tx, scope, operationId, input,
       id => tx.promaneTimeEntry.findFirst({ where: { id, member: { workspaceId: workspace.id } } }),
       async () => {
@@ -123,7 +124,7 @@ export async function createTimeEntry(workspaceSlug: string, data: {
             duration,
             hourlyRateSnapshot: member.hourlyRate,
             date: workDate,
-            note: data.note?.slice(0, 1000) || null,
+            note: data.note || null,
           },
         });
       });

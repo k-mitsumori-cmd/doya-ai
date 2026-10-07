@@ -79,7 +79,7 @@ export function useTimeEntryCreation(workspaceSlug: string, memberId: string) {
       const entry = await withDeadline(createTimeEntry(workspaceSlug, { ...input, operationId: prepared.operationId }));
       const savedDate = entry?.date instanceof Date ? entry.date.toISOString() : String(entry?.date);
       if (!validEntry(entry, memberId) || entry.duration !== input.duration || savedDate !== `${input.date}T00:00:00.000Z`
-        || entry.taskId !== (input.taskId || null) || entry.note !== (input.note?.slice(0, 1000) || null)
+        || entry.taskId !== (input.taskId || null) || entry.note !== (input.note || null)
         || (input.projectId && entry.projectId !== input.projectId)) throw new Error(uncertain);
       await clear(prepared.operationId);
       if (!current()) return false;

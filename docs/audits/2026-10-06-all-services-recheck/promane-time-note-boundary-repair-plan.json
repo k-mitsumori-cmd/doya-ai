@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-07T20:57:50.404409+00:00",
+  "status": "frozen70gates-passed-ready-for-reviewed-commit-push",
+  "rootApplied": true,
+  "productionApplied": false,
+  "baseline": "promane-time-note-truncation-baseline.json",
+  "required": [
+    "Enforce existing1000character note boundary explicitly before any write; do not silently truncate",
+    "Matching form maxlength and pre-submit validation with useful message and preserved draft",
+    "Require acknowledgement matches the exact submitted note, removing slice-based acceptance",
+    "Private PostgreSQL and mounted boundary tests including1000accepted1001rejected, durable-operation recovery compatibility",
+    "Full release gate and reviewed production release after current frozen expense cohort"
+  ],
+  "scope": "Time-note boundary repair only; PostgreSQL, mounted form and client proofs rerun on integrated root. Full-service and authenticated production E2E remain unverified.",
+  "candidateRoot": "promane-time-note-boundary-candidate",
+  "candidatePostgres": "promane-time-note-boundary-postgres-results.json",
+  "candidateMounted": "promane-time-note-boundary-mounted-results.json",
+  "candidateStatus": "isolated-postgres4-mounted-form-boundaries-and-hookack2-passed",
+  "candidateClient": "promane-time-note-boundary-client-results.json",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/promane-time-note-boundary-release-ace25355-e36a-4810-ad8b-eec9cfb16ee9",
+  "gateSession": 37173,
+  "gateStatus": "passed"
+}

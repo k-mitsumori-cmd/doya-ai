@@ -46,13 +46,15 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects, tota
       const duration = parsePromaneDuration(form.get("hours"), form.get("minutes"));
       const date = String(form.get("date") || "");
       parsePromaneWorkDate(date);
+      const note = String(form.get("note") || "");
+      if (note.length > 1000) throw new Error("メモは1,000文字以内で入力してください");
       const saved = await creation.save({
         projectId: selectedProject || undefined,
         taskId: (form.get("taskId") as string) || undefined,
         memberId,
         duration,
         date,
-        note: (form.get("note") as string) || undefined,
+        note: note || undefined,
       });
       if (!saved) return;
       toast.success("作業時間を記録したよ！");
@@ -158,7 +160,7 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects, tota
               </div>
               <div className="col-span-2 sm:col-span-1">
                 <Label htmlFor={`${inputId}-note`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">📝 メモ</Label>
-                <Input id={`${inputId}-note`} name="note" placeholder="作業内容" className="h-12 rounded-2xl font-bold bg-gray-50" />
+                <Input id={`${inputId}-note`} name="note" maxLength={1000} placeholder="作業内容（1,000文字以内）" className="h-12 rounded-2xl font-bold bg-gray-50" />
               </div>
             </div>
             <Button type="submit" disabled={creation.status !== "ready"} className="rounded-full h-12 px-8 font-black text-[15px] shadow-md hover:scale-[1.02] active:scale-95 transition-all">

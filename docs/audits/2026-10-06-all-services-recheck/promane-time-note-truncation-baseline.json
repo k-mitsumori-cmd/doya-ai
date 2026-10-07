@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T20:40:23.486Z",
+  "expected": 1,
+  "passed": 1,
+  "cases": [
+    {
+      "finding": "1001character note accepted but final character silently discarded",
+      "submittedCharacters": 1001,
+      "returnedCharacters": 1000,
+      "storedCharacters": 1000
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/promane/actions-time-entries.ts": "f1af973bd4d72db3b8faed8f41fcf2c6c369aaa07f27ce306e52971f606c3457",
+    "src/lib/promane/time-input.ts": "d1c85c52013a1b5ebdcc59e6f0d3dde6720c44af1c14903df0faf0f429c3499a",
+    "src/components/promane/timesheet-view.tsx": "5a15cd63cbf101feecc1cc8e9a351336412c448f797d223eed3caef3a11c0f66"
+  },
+  "scope": "Actual createTimeEntry server action and real isolated Unix-socket PostgreSQL, synthetic authentication/workspace/member. No production/customer/provider operations or observed user impact."
+}

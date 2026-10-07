@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T20:55:56.651Z",
+  "sameFrameSubmits": 2,
+  "serverActionRequests": 1,
+  "totalRecordedMinutesIfBothAccepted": 60,
+  "refreshes": 1,
+  "successToasts": 1,
+  "sourceHashes": {
+    "src/components/promane/timesheet-view.tsx": "e145961ba588b884ba966706629b5b3b1293cfca2ccae3f66604b62e64b786fd",
+    "src/lib/promane/use-time-entry-creation.ts": "3263d754ad306c3167a47267f2f6a25999a5901c7973560b623bbb21585d8f34",
+    "src/lib/promane/time-input.ts": "d1c85c52013a1b5ebdcc59e6f0d3dde6720c44af1c14903df0faf0f429c3499a"
+  },
+  "noteBoundaryChecks": [
+    "HTML maxLength1000",
+    "1001rejected before request and metadata with draft retained",
+    "1000exactly submitted"
+  ],
+  "scope": "Actual mounted TimesheetView and real FormData/input parser in React StrictMode, synthetic deferred action calls only. Two same-frame submits now invoke one create through actual candidate hook and one success/refresh, verified local operation metadata removal. Native/PostgreSQL-linked UI and production not covered. No customer/provider/production operations."
+}

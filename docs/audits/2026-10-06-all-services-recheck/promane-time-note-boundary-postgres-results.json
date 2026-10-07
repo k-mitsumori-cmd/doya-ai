@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-07T20:55:56.133Z",
+  "expected": 4,
+  "passed": 4,
+  "cases": [
+    "1000characters preserved exactly and same-operation replay remains one row",
+    "1001characters rejected before row receipt or revalidation",
+    "1000Japanese characters persist and recover exactly",
+    "over-limit rejection remains compatible with cancellation fencing"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/actions-time-entries.ts": "332ca85f84842a448ceb1acd88576d57945394adf8a791ceca594b23c1581dd0",
+    "src/lib/promane/time-input.ts": "d1c85c52013a1b5ebdcc59e6f0d3dde6720c44af1c14903df0faf0f429c3499a",
+    "src/components/promane/timesheet-view.tsx": "e145961ba588b884ba966706629b5b3b1293cfca2ccae3f66604b62e64b786fd",
+    "src/lib/promane/use-time-entry-creation.ts": "3263d754ad306c3167a47267f2f6a25999a5901c7973560b623bbb21585d8f34"
+  },
+  "scope": "Actual server action with real isolated Unix-socket PostgreSQL; synthetic auth/workspace. Candidate overlay when DOYA_TEST_BASELINE is set. No production writes or provider calls."
+}
