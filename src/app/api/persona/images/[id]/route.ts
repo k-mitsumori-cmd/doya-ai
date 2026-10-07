@@ -20,6 +20,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: '画像が見つかりません。' }, { status: 404, headers })
     }
     const buffer = await readPersonaImageFile(job.outputRef)
+    // ストレージ取得中の削除・権限変更・画像差し替えを反映してから返す。
+    const current = await prisma.personaImageJob.findFirst({
+      where: {
+        id: job.id, projectId: job.projectId, leaseToken: job.leaseToken, outputRef: job.outputRef,
+        status: 'succeeded', project: { userId: session.user.id, deletedAt: null, status: 'succeeded' },
+      },
+      select: { id: true },
+    })
+    if (!current) return NextResponse.json({ error: '画像が見つかりません。' }, { status: 404, headers })
     return new NextResponse(new Uint8Array(buffer), { headers: { ...headers, 'Content-Type': 'image/png', 'Content-Disposition': 'inline; filename="persona.png"' } })
   } catch {
     return NextResponse.json({ error: '画像を読み込めませんでした。再度お試しください。' }, { status: 503, headers })

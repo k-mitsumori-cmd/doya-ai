@@ -1,0 +1,67 @@
+{
+  "checkedAt": "2026-10-07T15:31:49.660Z",
+  "passed": 14,
+  "cases": [
+    {
+      "thumb": false,
+      "scenario": "owner"
+    },
+    {
+      "thumb": false,
+      "scenario": "article-deleted-during-download"
+    },
+    {
+      "thumb": false,
+      "scenario": "owner-change-during-download"
+    },
+    {
+      "thumb": false,
+      "scenario": "path-change-during-download"
+    },
+    {
+      "thumb": false,
+      "scenario": "guest-claimed-during-download"
+    },
+    {
+      "thumb": false,
+      "scenario": "guest-owner"
+    },
+    {
+      "thumb": true,
+      "scenario": "owner"
+    },
+    {
+      "thumb": true,
+      "scenario": "article-deleted-during-download"
+    },
+    {
+      "thumb": true,
+      "scenario": "owner-change-during-download"
+    },
+    {
+      "thumb": true,
+      "scenario": "path-change-during-download"
+    },
+    {
+      "thumb": true,
+      "scenario": "guest-claimed-during-download"
+    },
+    {
+      "thumb": true,
+      "scenario": "guest-owner"
+    },
+    {
+      "thumb": true,
+      "scenario": "article-deleted-during-thumbnail"
+    },
+    {
+      "thumb": true,
+      "scenario": "path-changed-during-thumbnail"
+    }
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/seo/images/[id]/route.ts": "e656a4afea1a30479cb3acf9f7caa91c7052f49c5783bf14c2ff266162dd92c9"
+  },
+  "scope": "Actual SEO image GET, Prisma/private Unix-socket PostgreSQL/foreign keys and real Sharp full/thumbnail conversion. Synthetic bootstrap/session/storage. No customer DB or paid calls."
+}

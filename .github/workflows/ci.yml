@@ -63,6 +63,12 @@ jobs:
       - name: AdImage route ownership regression
         run: python3 docs/audits/2026-10-06-all-services-recheck/adimage-route-scope-postgres-supervise.py
 
+      - name: Persona image ownership after download (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/persona-image-read-postgres-supervise.py
+
+      - name: SEO image ownership after download and thumbnail (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/seo-image-read-postgres-supervise.py
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

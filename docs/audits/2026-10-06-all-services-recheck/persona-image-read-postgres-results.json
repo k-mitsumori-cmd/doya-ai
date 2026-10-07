@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T15:31:48.463Z",
+  "passed": 7,
+  "cases": [
+    "owner",
+    "delete-during-download",
+    "owner-change-during-download",
+    "path-change-during-download",
+    "failed-job-during-download",
+    "deleted-job-during-download",
+    "failed-project-during-download"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/persona/images/[id]/route.ts": "a5b912531035150d9f9bcaca216ae147fc131e415fa104266a04cce8d8f427f7",
+    "src/lib/persona/image-ledger.ts": "c67d9ac60c0c000a5bfdcf4017ceaec40ffc28f88b86486a33d6202faf919519"
+  },
+  "scope": "Actual persona image GET, actual deletePersonaProject, actual Prisma/private Unix-socket PostgreSQL and foreign keys. Synthetic session/storage bytes. No customer DB or paid provider."
+}
