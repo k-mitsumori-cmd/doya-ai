@@ -56,6 +56,7 @@ const mocks = {
   '@/lib/sfa/format': { bigIntToNumber: (value) => value },
   '@/lib/sfa/limits': { withSfaAdmission: async () => { throw Error('GET must not admit quota') }, checkSfaQuota: async () => null, sfaQuotaResponse: () => Response.json({}, { status: 402 }) },
 };
+Object.assign(mocks, require('./sfa-crm-test-deps.cjs').crmDeps(prisma, mocks));
 const accountGet = load('src/app/api/sfa/accounts/route.ts', mocks).GET;
 const contactGet = load('src/app/api/sfa/contacts/route.ts', mocks).GET;
 
@@ -122,19 +123,20 @@ async function collect(get, type, params, expected) {
     '@/lib/service-usage': { recordServiceUsage: async () => {} },
     '@/lib/sfa/limits': { withSfaAdmission: async (_org, _requested, create) => ({ created: await create(writePrisma) }), checkSfaQuota: async () => null, sfaQuotaResponse: () => Response.json({}, { status: 402 }) },
   };
+  Object.assign(writeMocks, require('./sfa-crm-test-deps.cjs').crmDeps(writePrisma, writeMocks));
   const createContact = load('src/app/api/sfa/contacts/route.ts', writeMocks).POST;
   const createDeal = load('src/app/api/sfa/deals/route.ts', writeMocks).POST;
   const updateDeal = load('src/app/api/sfa/deals/[id]/route.ts', writeMocks).PATCH;
   const ctx = { params: Promise.resolve({ id: 'deal' }) };
   for (const accountId of ['foreign', 'inactive', 'missing']) {
-    const request = () => ({ json: async () => ({ name: 'テスト', accountId }) });
-    assert.equal((await createContact(request())).status, 400);
+    const request = (creating = false) => ({ json: async () => ({ name: 'テスト', accountId, ...(creating ? { operationId: '10000000-0000-4000-8000-000000000001' } : {}) }) });
+    assert.equal((await createContact(request(true))).status, 400);
     assert.equal((await createDeal(request())).status, 400);
     assert.equal((await updateDeal(request(), ctx)).status, 400);
   }
   assert.equal(writes.length, 0, 'Invalid accounts cannot be silently discarded or written');
-  const validRequest = () => ({ json: async () => ({ name: 'テスト', accountId: 'valid' }) });
-  assert.equal((await createContact(validRequest())).status, 200);
+  const validRequest = (creating = false) => ({ json: async () => ({ name: 'テスト', accountId: 'valid', ...(creating ? { operationId: '10000000-0000-4000-8000-000000000001' } : {}) }) });
+  assert.equal((await createContact(validRequest(true))).status, 200);
   assert.equal((await createDeal(validRequest())).status, 200);
   assert.equal((await updateDeal(validRequest(), ctx)).status, 200);
   assert(writes.every(([, data]) => data.accountId === 'valid'));

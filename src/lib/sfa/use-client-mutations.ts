@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
 import { OrgResponseError } from '@/lib/org-client-response'
-import { activityWriteMatches, isSfaClientActivity, isSfaClientTask, sfaClientId, sfaJson, SfaClientRejection, taskWriteMatches, type SfaClientTask, isSfaClientDeal, dealWriteMatches, type SfaClientDeal, isSfaClientConversion, conversionWriteMatches, isSfaClientLead, leadWriteMatches, type SfaClientLead, isSfaClientLeadImport, isSfaClientScore, isSfaClientNextAction } from './client-response'
+import { activityWriteMatches, isSfaClientActivity, isSfaClientTask, sfaClientId, sfaJson, SfaClientRejection, taskWriteMatches, type SfaClientTask, isSfaClientDeal, dealWriteMatches, type SfaClientDeal, isSfaClientConversion, conversionWriteMatches, isSfaClientLead, leadWriteMatches, type SfaClientLead, isSfaClientLeadImport, isSfaClientScore, isSfaClientNextAction, isSfaClientAccount, isSfaClientContact, crmWriteMatches, sfaClientDate, type SfaClientAccount, type SfaClientContact } from './client-response'
 
-type Kind = 'task' | 'activity' | 'deal' | 'conversion' | 'lead' | 'import' | 'score' | 'next-action'
+type Kind = 'task' | 'activity' | 'deal' | 'conversion' | 'lead' | 'import' | 'score' | 'next-action' | 'account' | 'contact'
 export interface SfaPendingOperation {
   lane: string; kind: Kind; operationId?: string; targetId?: string; leadId?: string; dealId?: string
 }
@@ -13,13 +13,13 @@ const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{1
 const validPending = (v: unknown): v is SfaPendingOperation => {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return false
   const p = v as SfaPendingOperation
-  return typeof p.lane === 'string' && /^[a-zA-Z0-9:_-]{1,200}$/.test(p.lane) && ['task', 'activity', 'deal', 'conversion', 'lead', 'import', 'score', 'next-action'].includes(p.kind)
+  return typeof p.lane === 'string' && /^[a-zA-Z0-9:_-]{1,200}$/.test(p.lane) && ['task', 'activity', 'deal', 'conversion', 'lead', 'import', 'score', 'next-action', 'account', 'contact'].includes(p.kind)
     && (p.kind === 'next-action' ? sfaClientId(p.dealId) && p.lane === 'next-action:' + p.dealId : p.dealId === undefined)
     && (['conversion', 'score'].includes(p.kind) ? sfaClientId(p.leadId) && p.lane === p.kind + ':' + p.leadId : p.leadId === undefined)
     && (typeof p.operationId === 'string' && UUID.test(p.operationId) && p.targetId === undefined
-      || p.operationId === undefined && ['task', 'deal', 'lead'].includes(p.kind) && sfaClientId(p.targetId))
+      || p.operationId === undefined && ['task', 'deal', 'lead', 'account', 'contact'].includes(p.kind) && sfaClientId(p.targetId))
 }
-const collection = (kind: Exclude<Kind, 'conversion' | 'score' | 'next-action'>) => kind === 'lead' ? '/api/sfa/leads' : kind === 'import' ? '/api/sfa/leads/import' : kind === 'task' ? '/api/sfa/tasks' : kind === 'deal' ? '/api/sfa/deals' : '/api/sfa/activities'
+const collection = (kind: Exclude<Kind, 'conversion' | 'score' | 'next-action'>) => kind === 'account' ? '/api/sfa/accounts' : kind === 'contact' ? '/api/sfa/contacts' : kind === 'lead' ? '/api/sfa/leads' : kind === 'import' ? '/api/sfa/leads/import' : kind === 'task' ? '/api/sfa/tasks' : kind === 'deal' ? '/api/sfa/deals' : '/api/sfa/activities'
 
 /** Tracks revisions, including edits made while an earlier snapshot is being saved. */
 export function useSfaDraftSnapshot(value: unknown) {
@@ -35,19 +35,20 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
   const prefix = 'doya:sfa:pending:v1:' + encodeURIComponent(guard.identity) + ':'
   const entries = useRef(new Map<string, SfaPendingOperation>())
   const scope = useRef('')
-  const [view, setView] = useState<{ key: string; pending: SfaPendingOperation[]; message: string; busy: string[] }>({ key: '', pending: [], message: '', busy: [] })
+  const [view, setView] = useState<{ key: string; pending: SfaPendingOperation[]; message: string; busy: string[]; upgradeHref: string | null }>({ key: '', pending: [], message: '', busy: [], upgradeHref: null })
   const recovered = useRef(onRecovered)
   recovered.current = onRecovered
   const running = useRef(new Set<string>())
   const message = useRef('')
+  const upgradeHref = useRef<string | null>(null)
   const publish = () => {
-    if (guard.active()) setView({ key: guard.key, pending: [...entries.current.values()], message: message.current, busy: [...running.current] })
+    if (guard.active()) setView({ key: guard.key, pending: [...entries.current.values()], message: message.current, busy: [...running.current], upgradeHref: upgradeHref.current })
   }
   useEffect(() => {
     scope.current = guard.key
     entries.current = new Map()
     running.current = new Set()
-    message.current = ''
+    message.current = ''; upgradeHref.current = null
     if (!guard.allowed) return
     try {
       if (sessionStorage.length > 10_000) throw new Error()
@@ -82,7 +83,7 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
       persisted = true
       entries.current.set(entry.lane, entry)
       running.current.add(entry.lane)
-      message.current = ''
+      message.current = ''; upgradeHref.current = null
       publish()
       const result = await work(operation.signal)
       if (!operation.current()) return null
@@ -94,6 +95,7 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
         try { forget(entry) } catch { /* Keep recovery available when storage cannot be cleared. */ }
         if (error.status === 401) guard.rejectAuthentication()
       }
+      upgradeHref.current = error instanceof SfaClientRejection && error.upgradeUrl === '/sfa/pricing' ? '/sfa/pricing?org=' + encodeURIComponent(orgSlug) : null
       message.current = !persisted ? '操作記録を保存できないため、送信しませんでした。ブラウザの保存領域をご確認ください。'
         : error instanceof Error ? error.message : '保存結果を確認できませんでした。保存結果を確認してください。'
       return null
@@ -115,7 +117,7 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
         if (data.ok !== true || !Array.isArray(body.rows) || !isSfaClientLeadImport(row, operationId, body.rows.length)) throw new OrgResponseError(true, 200)
         return row
       }
-      if (!(kind === 'lead' ? isSfaClientLead(row) && leadWriteMatches(row, body) : kind === 'task' ? isSfaClientTask(row) && taskWriteMatches(row, body) : kind === 'deal' ? isSfaClientDeal(row) && dealWriteMatches(row, body) : isSfaClientActivity(row) && activityWriteMatches(row, body))) throw new OrgResponseError(true, 200)
+      if (!(kind === 'account' ? isSfaClientAccount(row) && crmWriteMatches(kind, row, body) : kind === 'contact' ? isSfaClientContact(row) && crmWriteMatches(kind, row, body) : kind === 'lead' ? isSfaClientLead(row) && leadWriteMatches(row, body) : kind === 'task' ? isSfaClientTask(row) && taskWriteMatches(row, body) : kind === 'deal' ? isSfaClientDeal(row) && dealWriteMatches(row, body) : isSfaClientActivity(row) && activityWriteMatches(row, body))) throw new OrgResponseError(true, 200)
       return row
     })
   }
@@ -174,6 +176,17 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
     if (!isSfaClientLead(data.lead) || !leadWriteMatches(data.lead, patch, lead)) throw new OrgResponseError(true, 200)
     return data.lead
   })
+  const mutateCrm = (kind: 'account' | 'contact', row: SfaClientAccount | SfaClientContact, patch: Record<string, unknown> | null) => run({ lane: kind + ':' + row.id, kind, targetId: row.id }, async signal => {
+    const base = collection(kind) + '/' + encodeURIComponent(row.id)
+    const data = await sfaJson(patch ? base : base + '?expectedUpdatedAt=' + encodeURIComponent(row.updatedAt), orgSlug, {
+      method: patch ? 'PATCH' : 'DELETE', signal,
+      ...(patch ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...patch, expectedUpdatedAt: row.updatedAt }) } : {}),
+    })
+    const saved = data[kind]
+    if (patch ? !(kind === 'account' ? isSfaClientAccount(saved) && crmWriteMatches(kind, saved, patch, row) : isSfaClientContact(saved) && crmWriteMatches(kind, saved, patch, row))
+      : data.ok !== true || data.id !== row.id || !sfaClientDate(data.updatedAt) || data.updatedAt <= row.updatedAt) throw new OrgResponseError(true, 200)
+    return data
+  })
   const recover = async (entry: SfaPendingOperation, cancel = false) => {
     if (!guard.active() || scope.current !== guard.key || entries.current.get(entry.lane) !== entry || running.current.has(entry.lane)) return
     const operation = guard.begin('recover:' + entry.lane)
@@ -184,7 +197,7 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
       const data = await sfaJson(path, orgSlug, { signal: operation.signal, method: cancel && entry.operationId ? 'DELETE' : 'GET' })
       if (!operation.current()) return
       const row = entry.kind === 'next-action' ? data.suggestion : data[entry.kind]
-      if (data.state === 'found' && (entry.kind === 'next-action' ? isSfaClientNextAction(row, entry.dealId!, entry.operationId!) : entry.kind === 'score' ? isSfaClientScore(row, entry.leadId!, entry.operationId!) : entry.kind === 'conversion' ? isSfaClientConversion(row, entry.leadId!) : entry.kind === 'import' ? isSfaClientLeadImport(row, entry.operationId!) : entry.kind === 'lead' ? isSfaClientLead(row) && (!entry.targetId || row.id === entry.targetId) : entry.kind === 'task' ? isSfaClientTask(row) && (!entry.targetId || row.id === entry.targetId) : entry.kind === 'deal' ? isSfaClientDeal(row) && (!entry.targetId || row.id === entry.targetId) : isSfaClientActivity(row))) {
+      if (data.state === 'found' && (entry.kind === 'next-action' ? isSfaClientNextAction(row, entry.dealId!, entry.operationId!) : entry.kind === 'score' ? isSfaClientScore(row, entry.leadId!, entry.operationId!) : entry.kind === 'conversion' ? isSfaClientConversion(row, entry.leadId!) : entry.kind === 'import' ? isSfaClientLeadImport(row, entry.operationId!) : entry.kind === 'account' ? isSfaClientAccount(row) && (!entry.targetId || row.id === entry.targetId) : entry.kind === 'contact' ? isSfaClientContact(row) && (!entry.targetId || row.id === entry.targetId) : entry.kind === 'lead' ? isSfaClientLead(row) && (!entry.targetId || row.id === entry.targetId) : entry.kind === 'task' ? isSfaClientTask(row) && (!entry.targetId || row.id === entry.targetId) : entry.kind === 'deal' ? isSfaClientDeal(row) && (!entry.targetId || row.id === entry.targetId) : isSfaClientActivity(row))) {
         forget(entry)
         message.current = (entry.kind === 'import' && isSfaClientLeadImport(row, entry.operationId!) ? `取込記録を確認しました。${row.imported}件取込、${row.skipped}件スキップ${row.skipped ? `（データ位置: ${row.skippedRows.join('、')}）` : ''}。` : '') + '保存済みの現在の状態を確認しました。一覧を更新しました。入力欄の内容は保持しています。同じ内容を重ねて送信しないでください。'
         recovered.current(entry, String(data.state), row)
@@ -213,7 +226,7 @@ export function useSfaClientMutations(orgSlug: string, onRecovered: (pending: Sf
       operation.end()
     }
   }
-  const current: { pending: SfaPendingOperation[]; message: string; busy: string[] } = view.key === guard.key ? view : { pending: [], message: '', busy: [] }
-  return { key: guard.key, identity: guard.identity, allowed: guard.allowed, active: guard.active, create, convertLead, scoreLead, nextAction, mutateTask, mutateDeal, mutateLead, recover,
-    pending: current.pending, message: current.message, busy: current.busy, creationBlocked, blocked: (lane: string) => guard.active() && scope.current === guard.key && entries.current.has(lane), requiresLogin: guard.requiresLogin }
+  const current: { pending: SfaPendingOperation[]; message: string; busy: string[]; upgradeHref: string | null } = view.key === guard.key ? view : { pending: [], message: '', busy: [], upgradeHref: null }
+  return { key: guard.key, identity: guard.identity, allowed: guard.allowed, active: guard.active, create, convertLead, scoreLead, nextAction, mutateTask, mutateDeal, mutateLead, mutateCrm, recover,
+    pending: current.pending, message: current.message, busy: current.busy, upgradeHref: current.upgradeHref, creationBlocked, blocked: (lane: string) => guard.active() && scope.current === guard.key && entries.current.has(lane), requiresLogin: guard.requiresLogin }
 }

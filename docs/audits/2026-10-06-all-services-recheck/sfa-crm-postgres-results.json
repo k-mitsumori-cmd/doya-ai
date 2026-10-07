@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-10-07T06:02:23.364Z",
+  "passed": 19,
+  "cases": [
+    "account:12 concurrent same UUID creations commit one row/receipt",
+    "account:same reviewed version admits one PATCH; stale DELETE refuses",
+    "account:create/PATCH/DELETE/recovery/cancel wait for revoked actor and refuse",
+    "account:cancellation after old Serializable snapshot fences delayed create",
+    "account:cancel waits behind receipt and preserves committed business row",
+    "account:real receipt constraint failure rolls back business insert",
+    "account:deleted record cannot be recreated by replay",
+    "contact:12 concurrent same UUID creations commit one row/receipt",
+    "contact:same reviewed version admits one PATCH; stale DELETE refuses",
+    "contact:create/PATCH/DELETE/recovery/cancel wait for revoked actor and refuse",
+    "contact:cancellation after old Serializable snapshot fences delayed create",
+    "contact:cancel waits behind receipt and preserves committed business row",
+    "contact:real receipt constraint failure rolls back business insert",
+    "contact:deleted record cannot be recreated by replay",
+    "account:concurrent different UUID at49 admits one, never exceeds50, and winning UUID replays at capacity",
+    "contact:create waits for account deactivation and rejects without receipt",
+    "account:linked active contact prevents delete; inactive history remains",
+    "contact:linked active deal prevents deletion without changing history",
+    "contact:explicit reviewed unlink preserves live deal/name/note/amount and then permits contact soft delete"
+  ],
+  "lockWaitObservations": [
+    5,
+    1,
+    5,
+    1,
+    1
+  ],
+  "sourceHashes": {
+    "src/lib/sfa/crm-record-mutation.ts": "a6700a5dc57b51430d68726a256dde9c12b45cb6206d8372468a8f1aca51894a",
+    "src/lib/sfa/crm-record-http.ts": "8df2e8f1d55737b2e6df114f2f305370f5ca7e2bcc1ff32c85b1e006f321cd68",
+    "src/lib/sfa/creation-receipt.ts": "30c3bbc63e837855cdc6f7025eebf15b7a8a4a55834dfb317e9152201a140c96",
+    "src/lib/sfa/limits.ts": "5f8b9101d14b49ba57293801e780909c2464ed52b1f5ad9ee9aa2998f4c2d8b6",
+    "src/lib/sfa/deal-mutation.ts": "47f1491b25ca2d6ebf5d581311e9b1253a29633b6b0dcc1b3da04eecb898e9e1",
+    "src/app/api/sfa/deals/[id]/route.ts": "fe53b700176303f011d307f1f887b61e5417f6d57c1b01f61b49976d555face9",
+    "src/app/api/sfa/accounts/route.ts": "ffaf5ad4487b1bf45868ff5870b757f8be756e93bdd4c70df18f077fe0cbca15",
+    "src/app/api/sfa/accounts/[id]/route.ts": "62d3027357df83aa59b34fc7b523e615f7708318af1b7f11ac5cb0ab37377504",
+    "src/app/api/sfa/contacts/route.ts": "23c2e7690ff1577162ff7c45392e640cfe929bd4ff32a0f04f4b1d005b310bde",
+    "src/app/api/sfa/contacts/[id]/route.ts": "862a4f3e4322f255a8f71ffa427a95a2697fa478f38664136ed23e69d078c2ac"
+  },
+  "scope": "Actual CRM handlers/helpers and Prisma against Unix-socket-only private PostgreSQL17 synthetic schema/data. Real Serializable snapshots, quota, row/advisory lock scheduling and rollback. Does not prove production FK/schema completeness or authenticated real-browser interactions."
+}

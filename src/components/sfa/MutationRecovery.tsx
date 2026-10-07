@@ -7,8 +7,9 @@ export default function MutationRecovery({ mutations }: { mutations: ReturnType<
   if (!mutations.message && !mutations.pending.length) return null
   return <div role="status" aria-live="polite" className="my-3 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
     {mutations.message && <p>{mutations.message}</p>}
+    {mutations.upgradeHref && <a href={mutations.upgradeHref} className="inline-block rounded border border-amber-400 px-3 py-2 font-bold">プランと利用枠を確認</a>}
     {mutations.pending.map(entry => <div key={entry.lane} className="flex flex-wrap items-center gap-2">
-      <span>{entry.kind === 'next-action' ? 'AI提案' : entry.kind === 'score' ? 'AI判定' : entry.kind === 'conversion' ? 'リード転換' : entry.kind === 'lead' ? 'リード' : entry.kind === 'import' ? 'CSV取込' : entry.kind === 'task' ? 'タスク' : entry.kind === 'deal' ? '商談' : '活動'}の操作結果を確認しています。</span>
+      <span>{entry.kind === 'next-action' ? 'AI提案' : entry.kind === 'score' ? 'AI判定' : entry.kind === 'conversion' ? 'リード転換' : entry.kind === 'lead' ? 'リード' : entry.kind === 'import' ? 'CSV取込' : entry.kind === 'account' ? '取引先' : entry.kind === 'contact' ? '担当者' : entry.kind === 'task' ? 'タスク' : entry.kind === 'deal' ? '商談' : '活動'}の操作結果を確認しています。</span>
       <button type="button" disabled={mutations.busy.includes(entry.lane)} onClick={() => void mutations.recover(entry)} className="rounded border border-amber-400 px-3 py-1 disabled:opacity-50">保存結果を確認</button>
       {entry.operationId && <button type="button" disabled={mutations.busy.includes(entry.lane)} onClick={() => void mutations.recover(entry, true)} className="rounded border border-amber-400 px-3 py-1 disabled:opacity-50">未保存ならこの操作を取り消す</button>}
     </div>)}

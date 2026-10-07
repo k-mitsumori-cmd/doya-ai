@@ -7,9 +7,9 @@ export function dealBody(value: unknown, create = false) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new SfaMutationError(400, '入力内容が正しくありません。')
   const body = value as Record<string, unknown>
   const fields = create ? ['name', 'amount', 'accountId', 'stageId', 'startDate', 'operationId']
-    : ['name', 'amount', 'accountId', 'stageId', 'startDate', 'expectedCloseDate', 'probability', 'contactName', 'note', 'lostReason', 'expectedUpdatedAt']
+    : ['name', 'amount', 'accountId', 'stageId', 'startDate', 'expectedCloseDate', 'probability', 'contactName', 'contactId', 'note', 'lostReason', 'expectedUpdatedAt']
   if (Object.keys(body).some(key => !fields.includes(key))) throw new SfaMutationError(400, '保存できない項目が含まれています。')
-  const data: { name?: string; amount?: bigint; contactName?: string | null; note?: string | null; lostReason?: string | null; probability?: number; startDate?: Date | null; expectedCloseDate?: Date | null; accountId?: string | null; stageId?: string | null } = {}
+  const data: { name?: string; amount?: bigint; contactName?: string | null; contactId?: null; note?: string | null; lostReason?: string | null; probability?: number; startDate?: Date | null; expectedCloseDate?: Date | null; accountId?: string | null; stageId?: string | null } = {}
   if (create || 'name' in body) {
     if (typeof body.name !== 'string' || !body.name.trim() || body.name.trim().length > 200) throw new SfaMutationError(400, '商談名は1〜200文字で入力してください。')
     data.name = body.name.trim()
@@ -26,6 +26,10 @@ export function dealBody(value: unknown, create = false) {
     const text = typeof value === 'string' ? key === 'contactName' ? value.trim() : value : null
     if (text && text.length > max) throw new SfaMutationError(400, `${label}は${max}文字以内で入力してください。`)
     data[key] = text || null
+  }
+  if ('contactId' in body) {
+    if (body.contactId !== null) throw new SfaMutationError(400, '担当者の紐づけ解除には明示的な解除操作が必要です。')
+    data.contactId = null
   }
   if ('probability' in body) {
     const value = body.probability

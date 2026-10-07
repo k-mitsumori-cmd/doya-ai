@@ -29,13 +29,13 @@ export function isSfaClientActivity(v: unknown): v is SfaClientActivity {
     && text(v.subject, 200) && text(v.body, 4_000) && sfaClientDate(v.occurredAt) && nullableId(v.dealId)
 }
 export class SfaClientRejection extends Error {
-  constructor(readonly status: number, message: string, readonly code: string | null = null) { super(message); this.name = 'SfaClientRejection' }
+  constructor(readonly status: number, message: string, readonly code: string | null = null, readonly upgradeUrl: string | null = null) { super(message); this.name = 'SfaClientRejection' }
 }
 export async function sfaJson(path: string, orgSlug: string, init: RequestInit = {}) {
   const result = await requestOrgJson('sfa', path, orgSlug, init)
   if (!result.res.ok) {
     if (result.res.status >= 500) throw new OrgResponseError(!!init.method && init.method !== 'GET', result.res.status)
-    throw new SfaClientRejection(result.res.status, orgErrorMessage(result.data, result.res.status, !!init.method && init.method !== 'GET'), typeof result.data.code === 'string' && /^[A-Z0-9_]{1,80}$/.test(result.data.code) ? result.data.code : null)
+    throw new SfaClientRejection(result.res.status, orgErrorMessage(result.data, result.res.status, !!init.method && init.method !== 'GET'), typeof result.data.code === 'string' && /^[A-Z0-9_]{1,80}$/.test(result.data.code) ? result.data.code : null, result.res.status === 402 && result.data.code === 'SFA_LIMIT_REACHED' && result.data.canManageBilling === true && result.data.upgradeUrl === '/sfa/pricing' ? '/sfa/pricing' : null)
   }
   if (result.data.error !== undefined || result.data.code !== undefined) throw new OrgResponseError(!!init.method && init.method !== 'GET', result.res.status)
   return result.data
@@ -58,7 +58,7 @@ export function activityWriteMatches(row: SfaClientActivity, body: Record<string
 
 export interface SfaClientDeal {
   id: string; name: string; amount: number; stageId: string | null; probability: number; accountId: string | null
-  contactName: string | null; note: string | null; lostReason: string | null; status: 'open' | 'won' | 'lost'
+  contactId?: string | null; contactName: string | null; note: string | null; lostReason: string | null; status: 'open' | 'won' | 'lost'
   startDate: string | null; expectedCloseDate: string | null; wonAt: string | null; lostAt: string | null
   lastActivityAt: string | null; createdAt: string; updatedAt: string
 }
@@ -66,7 +66,7 @@ export function isSfaClientDeal(v: unknown): v is SfaClientDeal {
   if (!record(v) || !sfaClientId(v.id) || typeof v.name !== 'string' || !v.name.trim() || v.name.length > 200
     || !Number.isSafeInteger(v.amount) || (v.amount as number) < 0 || !nullableId(v.stageId) || !nullableId(v.accountId)
     || !Number.isInteger(v.probability) || (v.probability as number) < 0 || (v.probability as number) > 100
-    || !text(v.contactName, 100) || !text(v.note, 5000) || !text(v.lostReason, 300)
+    || v.contactId !== undefined && !nullableId(v.contactId) || !text(v.contactName, 100) || !text(v.note, 5000) || !text(v.lostReason, 300)
     || !['open', 'won', 'lost'].includes(String(v.status)) || !sfaClientDate(v.createdAt) || !sfaClientDate(v.updatedAt)
     || !['startDate', 'expectedCloseDate', 'wonAt', 'lostAt', 'lastActivityAt'].every(k => v[k] === null || sfaClientDate(v[k]))) return false
   return true
@@ -74,6 +74,7 @@ export function isSfaClientDeal(v: unknown): v is SfaClientDeal {
 export function dealWriteMatches(row: SfaClientDeal, body: Record<string, unknown>, before?: SfaClientDeal) {
   if ((!before || body.stageId !== undefined) && (row.status === 'open' ? row.wonAt !== null || row.lostAt !== null : row.status === 'won' ? !row.wonAt || row.lostAt !== null : !row.lostAt || row.wonAt !== null)) return false
   if (before && (row.id !== before.id || row.createdAt !== before.createdAt || row.updatedAt <= before.updatedAt)) return false
+  if (body.contactId !== undefined ? row.contactId !== body.contactId : before && row.contactId !== before.contactId) return false
   for (const key of ['name', 'accountId', 'contactName', 'note', 'lostReason', 'stageId'] as const) {
     if (body[key] !== undefined) {
       const value = key === 'name' || key === 'contactName' ? String(body[key] ?? '').trim() : body[key]
@@ -165,4 +166,46 @@ export function isSfaClientNextAction(v: unknown, dealId: string, operationId: s
     && ['nextAction', 'reason', 'risk'].every(k => typeof v[k] === 'string' && (v[k] as string).length <= 2000 && (k === 'risk' || !!(v[k] as string).trim()))
     && Array.isArray(v.tasks) && v.tasks.length <= 4 && v.tasks.every(t => record(t) && typeof t.title === 'string' && !!t.title.trim() && t.title.length <= 200
       && (t.dueDate === null || typeof t.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.dueDate) && Number.isFinite(new Date(t.dueDate + 'T00:00:00Z').getTime()) && new Date(t.dueDate + 'T00:00:00Z').toISOString().slice(0, 10) === t.dueDate))
+}
+
+
+export interface SfaClientAccount {
+  id: string; name: string; industry: string | null; prefecture: string | null; url: string | null; note: string | null
+  createdAt: string; updatedAt: string
+}
+export interface SfaClientContact {
+  id: string; name: string; accountId: string | null; title: string | null; department: string | null
+  email: string | null; phone: string | null; note: string | null; isKeyPerson: boolean; accountName?: string | null
+  createdAt: string; updatedAt: string
+}
+// Existing long values remain readable for correction; writes use current field bounds.
+export function isSfaClientAccount(v: unknown): v is SfaClientAccount {
+  return record(v) && sfaClientId(v.id) && typeof v.name === 'string' && !!v.name.trim() && v.name.length <= 10000
+    && ['industry', 'prefecture', 'url', 'note'].every(k => text(v[k], 10000))
+    && sfaClientDate(v.createdAt) && sfaClientDate(v.updatedAt)
+}
+export function isSfaClientContact(v: unknown): v is SfaClientContact {
+  return record(v) && sfaClientId(v.id) && typeof v.name === 'string' && !!v.name.trim() && v.name.length <= 10000
+    && nullableId(v.accountId) && typeof v.isKeyPerson === 'boolean'
+    && ['title', 'department', 'email', 'phone', 'note'].every(k => text(v[k], 10000))
+    && (v.accountName === undefined || text(v.accountName, 10000)) && sfaClientDate(v.createdAt) && sfaClientDate(v.updatedAt)
+}
+export function crmWriteMatches(kind: 'account' | 'contact', row: SfaClientAccount | SfaClientContact, body: Record<string, unknown>, before?: SfaClientAccount | SfaClientContact) {
+  if (before && (row.id !== before.id || row.createdAt !== before.createdAt || row.updatedAt <= before.updatedAt)) return false
+  const actual = row as unknown as Record<string, unknown>, previous = before as unknown as Record<string, unknown> | undefined
+  const fields = kind === 'account' ? ['name', 'industry', 'prefecture', 'url', 'note'] : ['name', 'accountId', 'title', 'department', 'email', 'phone', 'note', 'isKeyPerson']
+  return fields.every(key => {
+    if (body[key] !== undefined) {
+      const value = typeof body[key] === 'string' ? (key === 'note' ? body[key] : body[key].trim()) : body[key]
+      return actual[key] === (key === 'isKeyPerson' ? value : value || null)
+    }
+    return actual[key] === (previous ? previous[key] : key === 'isKeyPerson' ? false : null)
+  })
+}
+export function isSfaCrmPage(data: Record<string, unknown>, kind: 'account' | 'contact'): data is Record<string, unknown> & { accounts?: SfaClientAccount[]; contacts?: SfaClientContact[]; totalCount: number; nextCursor: string | null } {
+  const rows = data[kind + 's']
+  return Array.isArray(rows) && rows.length <= 200 && rows.every(kind === 'account' ? isSfaClientAccount : isSfaClientContact)
+    && new Set(rows.map(r => r.id)).size === rows.length
+    && Number.isSafeInteger(data.totalCount) && (data.totalCount as number) >= rows.length
+    && (data.nextCursor === null || typeof data.nextCursor === 'string' && data.nextCursor.length > 0 && data.nextCursor.length <= 512)
 }

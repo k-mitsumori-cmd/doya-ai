@@ -42,6 +42,7 @@ export async function PATCH(req: NextRequest, context: Ctx) {
   try {
     const { body, data } = dealBody(await req.json().catch(() => null))
     const expected = dealVersion(body.expectedUpdatedAt)
+    if (data.contactId === null && !expected) throw new SfaMutationError(400, '担当者の紐づけを解除する前に、商談の更新日時を確認してください。')
     const deal = await prisma.$transaction(async tx => {
       await lockSfaMutationActor(tx, c)
       // Shared related-row order: account, stage, deal. Related changes remain locked until commit.

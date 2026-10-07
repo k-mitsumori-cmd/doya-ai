@@ -2,20 +2,24 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 
+import { crmJson, crmError, crmRecovery, crmCreate, crmCancel } from '@/lib/sfa/crm-record-http'
+
 // GET /api/sfa/contacts — 担当者一覧（accountId/q で絞り込み可・取引先名つき）
 export async function GET(req: NextRequest) {
+  try {
   const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  if (!ctx) return crmJson({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
   const url = new URL(req.url)
+  if (url.searchParams.has('operationId')) return await crmRecovery(req, ctx, 'contact')
   const accountId = url.searchParams.get('accountId')?.trim()
   const q = url.searchParams.get('q')?.trim() || ''
-  if (q.length > 100) return NextResponse.json({ error: '検索条件が長すぎます' }, { status: 400 })
+  if (q.length > 100) return crmJson({ error: '検索条件が長すぎます' }, { status: 400 })
 
   let cursor: { updatedAt: Date; id: string } | null = null
   const rawCursor = url.searchParams.get('cursor')
@@ -28,7 +32,7 @@ export async function GET(req: NextRequest) {
       if (Number.isNaN(updatedAt.getTime()) || updatedAt.toISOString() !== decoded.updatedAt) throw new Error('Invalid date')
       cursor = { updatedAt, id: decoded.id }
     } catch {
-      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+      return crmJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
     }
   }
 
@@ -59,67 +63,16 @@ export async function GET(req: NextRequest) {
   const withName = contacts.map((c) => ({ ...c, accountName: c.accountId ? accMap[c.accountId] || null : null }))
 
   const last = contacts[contacts.length - 1]
-  return NextResponse.json({
+  return crmJson({
     contacts: withName,
     totalCount,
     nextCursor: rows.length > 200 && last
       ? Buffer.from(JSON.stringify({ updatedAt: last.updatedAt.toISOString(), id: last.id })).toString('base64url')
       : null,
   }, { headers: { 'Cache-Control': 'no-store' } })
+  } catch (error) { return crmError(error) }
 }
 
-// POST /api/sfa/contacts — 担当者作成
-export async function POST(req: NextRequest) {
-  const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
-  const parsedBody = await req.json().catch(() => null)
-  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
-    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
-  }
-  const body = parsedBody as Record<string, unknown>
-  const textLimits: Array<[string, string, number]> = [
-    ['name', '氏名', 80],
-    ['title', '役職', 80],
-    ['department', '部署', 80],
-    ['email', 'メールアドレス', 200],
-    ['phone', '電話番号', 40],
-    ['note', 'メモ', 2000],
-  ]
-  for (const [key, label, maximum] of textLimits) {
-    const value = body[key]
-    if (typeof value === 'string' && (key === 'name' ? value.trim() : value).length > maximum) {
-      return NextResponse.json({ error: `${label}は${maximum}文字以内で入力してください` }, { status: 400 })
-    }
-  }
-  const name = typeof body.name === 'string' ? body.name.trim() : ''
-  if (!name) return NextResponse.json({ error: '氏名は必須です' }, { status: 400 })
-  if (['accountId', 'title', 'department', 'email', 'phone', 'note'].some((key) => body[key] != null && typeof body[key] !== 'string') ||
-      (body.isKeyPerson != null && typeof body.isKeyPerson !== 'boolean')) {
-    return NextResponse.json({ error: '入力項目の形式が正しくありません' }, { status: 400 })
-  }
-
-  // 取引先指定があれば所有確認（IDOR対策）
-  let accountId: string | null = null
-  if (typeof body.accountId === 'string' && body.accountId.trim()) {
-    const requestedId = body.accountId.trim()
-    const acc = await prisma.sfaAccount.findFirst({ where: { id: requestedId, organizationId: ctx.organizationId, isActive: true }, select: { id: true } })
-    if (!acc) return NextResponse.json({ error: '選択した取引先が見つかりません。再読み込みして選び直してください。' }, { status: 400 })
-    accountId = acc.id
-  }
-
-  const contact = await prisma.sfaContact.create({
-    data: {
-      organizationId: ctx.organizationId,
-      accountId,
-      name,
-      title: (body.title as string | undefined) || null,
-      department: (body.department as string | undefined) || null,
-      email: (body.email as string | undefined) || null,
-      phone: (body.phone as string | undefined) || null,
-      isKeyPerson: body.isKeyPerson === true,
-      note: (body.note as string | undefined) || null,
-    },
-  })
-  return NextResponse.json({ contact })
-}
+export async function POST(req: NextRequest) { return crmCreate(req, 'contact') }
+export async function DELETE(req: NextRequest) { return crmCancel(req, 'contact') }

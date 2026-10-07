@@ -9,14 +9,17 @@ const act = fn => React.act(async () => { await fn(); for (let i = 0; i < 12; i+
 const props = e => e[Object.keys(e).find(k => k.startsWith('__reactProps$'))];
 const stamp = '2026-10-07T00:00:00.000Z';
 const stage = { id: 'stage', name: '提案', order: 1, probability: 50, color: '#123456', isWon: false, isLost: false };
-const makeDeal = id => ({ id, createdAt: stamp, updatedAt: stamp, lostReason: null, name: 'Synthetic ' + id, amount: 100, stageId: 'stage', probability: 50, accountId: null, accountName: null, contactName: null, note: null, status: 'open', startDate: null, expectedCloseDate: null, wonAt: null, lostAt: null, lastActivityAt: null, openTaskCount: 0 });
+const makeDeal = id => ({ id, createdAt: stamp, updatedAt: stamp, lostReason: null, name: 'Synthetic ' + id, amount: 100, stageId: 'stage', probability: 50, accountId: null, accountName: null, contactId: null, contactName: null, note: null, status: 'open', startDate: null, expectedCloseDate: null, wonAt: null, lostAt: null, lastActivityAt: null, openTaskCount: 0 });
 const makeTask = (input = {}, id = 'task') => ({ id, title: 'Synthetic task', status: 'open', dueDate: null, dealId: null, createdAt: stamp, updatedAt: stamp, dealName: null, ...input });
 const makeLead = (input = {}) => ({ id: 'lead-a', name: 'Synthetic lead', contactName: 'Contact', corporateNumber: null, email: null, phone: null, note: null, raw: {}, status: 'new', score: null, source: 'manual', convertedAccountId: null, updatedAt: stamp, ...input });
+const makeAccount = (input = {}) => ({ id: 'account-a', name: 'Synthetic account', industry: null, prefecture: null, url: null, note: null, createdAt: stamp, updatedAt: stamp, ...input });
+const makeContact = (input = {}) => ({ id: 'contact-a', name: 'Synthetic contact', accountId: null, title: null, department: null, email: null, phone: null, note: null, isKeyPerson: false, accountName: null, createdAt: stamp, updatedAt: stamp, ...input });
 async function fixture(page, options = {}) {
   if (!options.keepStorage) window.sessionStorage.clear();
   let actor = 'actor-a', status = 'authenticated', orgSlug = 'alpha', component, currentHook;
   const leads = options.leads || [makeLead()];
-  const writes = [], requests = [], notices = [], receipts = new Map(), tasks = options.tasks || [], deals = [makeDeal('deal-a'), makeDeal('deal-b')];
+  const accounts = structuredClone(options.accounts || []), contacts = structuredClone(options.contacts || []);
+  const writes = [], requests = [], notices = [], receipts = new Map(), tasks = options.tasks || [], deals = structuredClone(options.deals || [makeDeal('deal-a'), makeDeal('deal-b')]);
   let writeReply, readReply, failStorage = false, timeout = false, recoveries = 0;
   const session = () => ({ status, data: status === 'unauthenticated' ? null : { user: { id: actor, plan: 'FREE' } } });
   const taskData = body => makeTask({ ...body, title: body.title?.trim() || 'Synthetic task', dueDate: body.dueDate ? new Date(body.dueDate).toISOString() : null, dealId: body.dealId || null }, 'task-' + writes.length);
@@ -33,9 +36,22 @@ async function fixture(page, options = {}) {
         const row = { id: request.body.operationId, dealId: source.id, dealName: source.name, sourceUpdatedAt: request.body.expectedUpdatedAt, startedAt: stamp, nextAction: 'Synthetic next action', reason: 'Synthetic reason', risk: '', tasks: [{ title: 'First candidate', dueDate: null }, { title: 'Second candidate', dueDate: null }] };
         receipts.set(row.id, { kind: 'suggestion', row }); return Response.json({ state: 'found', suggestion: row });
       }
+      const crmKind = pathname.startsWith('/api/sfa/accounts') ? 'account' : pathname.startsWith('/api/sfa/contacts') ? 'contact' : null;
+      if (crmKind && init.method === 'POST') {
+        const row = crmKind === 'account' ? makeAccount({ id: 'account-' + writes.length }) : makeContact({ id: 'contact-' + writes.length });
+        for (const key of Object.keys(row)) if (key in request.body) row[key] = typeof request.body[key] === 'string' ? (key === 'note' ? request.body[key] : request.body[key].trim()) || null : request.body[key];
+        (crmKind === 'account' ? accounts : contacts).push(row); receipts.set(request.body.operationId, { kind: crmKind, row }); return Response.json({ [crmKind]: row });
+      }
+      if (crmKind && !url.searchParams.has('operationId') && ['PATCH', 'DELETE'].includes(init.method)) {
+        const rows = crmKind === 'account' ? accounts : contacts, index = rows.findIndex(r => pathname.endsWith('/' + r.id));
+        assert.ok(index >= 0); const original = rows[index], updatedAt = new Date(new Date(original.updatedAt).getTime() + 1).toISOString();
+        if (init.method === 'DELETE') { rows.splice(index, 1); return Response.json({ ok: true, id: original.id, updatedAt }); }
+        const row = { ...original, ...request.body, updatedAt }; for (const key of Object.keys(request.body)) if (typeof row[key] === 'string') row[key] = (key === 'note' ? row[key] : row[key].trim()) || null;
+        rows[index] = row; return Response.json({ [crmKind]: row });
+      }
       if (init.method === 'DELETE' && url.searchParams.has('operationId')) {
         recoveries++; const saved = receipts.get(url.searchParams.get('operationId'));
-        return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'cancelled', [pathname.endsWith('/next-action') ? 'suggestion' : pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/ai/score') ? 'score' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
+        return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'cancelled', [pathname.endsWith('/next-action') ? 'suggestion' : pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/ai/score') ? 'score' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/accounts') ? 'account' : pathname.endsWith('/contacts') ? 'contact' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
       }
       if (pathname.endsWith('/convert') && init.method === 'POST') {
         const leadId = pathname.split('/').at(-2), body = request.body;
@@ -81,7 +97,7 @@ async function fixture(page, options = {}) {
         return Response.json({ task: { ...original, ...request.body, updatedAt: '2026-10-07T00:00:00.001Z' } });
       }
       if (init.method === 'DELETE') return Response.json({ ok: true });
-      const kind = pathname.endsWith('/next-action') ? 'suggestion' : pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/ai/score') ? 'score' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity';
+      const kind = pathname.endsWith('/next-action') ? 'suggestion' : pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/ai/score') ? 'score' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/accounts') ? 'account' : pathname.endsWith('/contacts') ? 'contact' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity';
       const row = kind === 'task' ? taskData(request.body) : kind === 'deal' ? { ...makeDeal('deal-' + writes.length), name: request.body.name.trim(), amount: Number(request.body.amount), accountId: request.body.accountId || null, startDate: request.body.startDate ? new Date(request.body.startDate).toISOString() : stamp } : activityData(request.body);
       if (kind === 'deal') deals.push(row);
       receipts.set(request.body.operationId, { kind, row });
@@ -90,7 +106,7 @@ async function fixture(page, options = {}) {
     if (readReply) { const result = await readReply(request); if (result) return result; }
     if (url.searchParams.has('operationId')) {
       const saved = receipts.get(url.searchParams.get('operationId'));
-      return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'missing', [pathname.endsWith('/next-action') ? 'suggestion' : pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/ai/score') ? 'score' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
+      return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'missing', [pathname.endsWith('/next-action') ? 'suggestion' : pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/ai/score') ? 'score' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/accounts') ? 'account' : pathname.endsWith('/contacts') ? 'contact' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
     }
     if (pathname.startsWith('/api/sfa/deals/')) { const row = deals.find(d => pathname.endsWith('/' + d.id)); return Response.json({ state: row ? 'found' : 'missing', deal: row || null }); }
     if (pathname.startsWith('/api/sfa/tasks/')) return Response.json({ state: 'found', task: tasks.find(t => pathname.endsWith('/' + t.id)) || null });
@@ -98,7 +114,9 @@ async function fixture(page, options = {}) {
     if (pathname === '/api/sfa/leads') return Response.json({ leads, totalCount: leads.length, nextCursor: null });
     if (pathname === '/api/sfa/summary') return Response.json({ summary: { totalCount: 2, openCount: 2, staleCount: 0, openTaskCount: 0, openTotal: '200', weighted: '100', wonTotal: '0' } });
     if (pathname === '/api/sfa/deals') return Response.json({ stages: [stage], deals, nextCursor: null, totalCount: 2, stageSummary: [{ stageId: 'stage', count: 2, total: '200' }] });
-    if (pathname === '/api/sfa/accounts') return Response.json({ accounts: [], nextCursor: null });
+    if (pathname === '/api/sfa/accounts') return Response.json({ accounts: url.searchParams.has('options') ? accounts.map(({id,name,updatedAt}) => ({id,name,updatedAt})) : accounts, totalCount: accounts.length, nextCursor: null });
+    if (pathname === '/api/sfa/contacts') return Response.json({ contacts, totalCount: contacts.length, nextCursor: null });
+    if (pathname.startsWith('/api/sfa/accounts/') || pathname.startsWith('/api/sfa/contacts/')) { const kind = pathname.startsWith('/api/sfa/accounts/') ? 'account' : 'contact', row = (kind === 'account' ? accounts : contacts).find(r => pathname.endsWith('/' + r.id)); return Response.json({ state: row ? 'found' : 'missing', [kind]: row || null }); }
     if (pathname === '/api/sfa/tasks') return Response.json({ tasks: tasks.filter(t => !url.searchParams.has('dealId') || t.dealId === url.searchParams.get('dealId')), page: Number(url.searchParams.get('page') || 1), hasMore: false });
     if (pathname === '/api/sfa/activities') return Response.json({ activities: [], nextCursor: null, totalCount: 0 });
     if (pathname === '/api/sfa/usage') return Response.json({ plan: 'FREE', memberships: [{ slug: orgSlug, name: 'Synthetic workspace', role: 'member' }] });
@@ -156,4 +174,4 @@ async function fixture(page, options = {}) {
     close: async () => { await act(() => root.unmount()); container.remove(); },
   };
 }
-module.exports = { fixture, deferred, act, props, makeTask, makeDeal, makeLead, stamp };
+module.exports = { fixture, deferred, act, props, makeTask, makeDeal, makeLead, makeAccount, makeContact, stamp };

@@ -55,19 +55,22 @@ const req = body => ({ json: async () => body });
     let collectionSaved = [], admissions = 0;
     const model = { accounts: 'sfaAccount', contacts: 'sfaContact', leads: 'sfaLead' }[collection];
     const collectionPrisma = { [model]: { create: async ({ data }) => { collectionSaved.push(data); return { id: 'synthetic', ...data }; } } };
-    const route = load(`src/app/api/sfa/${collection}/route.ts`, {
+    const collectionMocks = {
       ...require('./sfa-lead-test-deps.cjs').leadDeps(collectionPrisma),
       ...mocks, '@/lib/prisma': { prisma: collectionPrisma },
       '@/lib/sfa/format': load('src/lib/sfa/format.ts'),
       '@/lib/sfa/limits': { withSfaAdmission: async (_org, _counts, create) => { admissions++; return { created: await create(collectionPrisma) }; } },
-    });
+    };
+    if (collection !== 'leads') Object.assign(collectionMocks, require('./sfa-crm-test-deps.cjs').crmDeps(collectionPrisma, collectionMocks));
+    const route = load(`src/app/api/sfa/${collection}/route.ts`, collectionMocks);
+    const collectionReq = body => req(collection === 'leads' ? body : { ...body, operationId: require('node:crypto').randomUUID() });
     for (const [field, limit] of Object.entries(fields)) {
       const before = [collectionSaved.length, admissions];
-      const failure = await route.POST(req({ name: 'synthetic', [field]: 'x'.repeat(limit + 1) }));
+      const failure = await route.POST(collectionReq({ name: 'synthetic', [field]: 'x'.repeat(limit + 1) }));
       assert.equal(failure.status, 400, `${collection}.${field} rejects excess`);
       assert.deepEqual([collectionSaved.length, admissions], before, 'invalid inputs must stop before admission and writes'); cases++;
       const value = 'x'.repeat(limit);
-      assert.equal((await route.POST(req({ name: 'synthetic', [field]: value }))).status, 200);
+      assert.equal((await route.POST(collectionReq({ name: 'synthetic', [field]: value }))).status, 200);
       assert.equal(collectionSaved.at(-1)[field], value, `${collection}.${field} boundary content must be stored intact`); cases++;
     }
   }

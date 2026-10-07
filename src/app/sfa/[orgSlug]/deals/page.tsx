@@ -283,7 +283,7 @@ export default function SfaDealsPage() {
     if (previousIdentity.current !== mutations.identity) {
       previousIdentity.current = mutations.identity
       setName(''); setAmount(''); setAccountId(''); setStartDate(toDateInput(new Date()))
-      setForm({ name: '', amount: '', accountId: '', contactName: '', startDate: '', expectedCloseDate: '', probability: '', note: '' })
+      setForm({ name: '', amount: '', accountId: '', contactName: '', startDate: '', expectedCloseDate: '', probability: '', note: '', detachContact: false })
       setOpen(false); setDetail(null); ++detailEpoch.current
     }
     setDealsLoading(true)
@@ -454,7 +454,7 @@ export default function SfaDealsPage() {
   // ============ 商談詳細モーダル ============
   const [detail, setDetail] = useState<Deal | null>(null)
   const [form, setForm] = useState({
-    name: '', amount: '', accountId: '', contactName: '', startDate: '', expectedCloseDate: '', probability: '', note: '',
+    name: '', amount: '', accountId: '', contactName: '', startDate: '', expectedCloseDate: '', probability: '', note: '', detachContact: false,
   })
   const [saving, setSaving] = useState(false)
   const [detailActs, setDetailActs] = useState<SfaActivityRow[]>([])
@@ -483,7 +483,7 @@ export default function SfaDealsPage() {
       startDate: isoToDateInput(d.startDate),
       expectedCloseDate: isoToDateInput(d.expectedCloseDate),
       probability: String(d.probability ?? 0),
-      note: d.note || '',
+      note: d.note || '', detachContact: false,
     })
     setDetailActs([])
     setActivitiesCursor(null)
@@ -506,7 +506,7 @@ export default function SfaDealsPage() {
     setSaving(true)
     const row = await mutations.mutateDeal(detail, {
       name: form.name, amount: form.amount || '0', accountId: form.accountId, contactName: form.contactName,
-      startDate: form.startDate, expectedCloseDate: form.expectedCloseDate, probability: form.probability, note: form.note,
+      startDate: form.startDate, expectedCloseDate: form.expectedCloseDate, probability: form.probability, note: form.note, ...(form.detachContact ? { contactId: null } : {}),
     })
     if (!mutations.active()) return
     if (detailEpoch.current === epoch) setSaving(false)
@@ -883,6 +883,10 @@ export default function SfaDealsPage() {
                 <label className="block text-xs font-black text-slate-500 mb-1">先方担当者名</label>
                 <input value={form.contactName} onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))} placeholder="例: 山田様（営業部長）" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
               </div>
+              {detail.contactId && <label className="sm:col-span-2 flex items-start gap-2 text-sm text-slate-600">
+                <input type="checkbox" aria-label="担当者レコードとの紐づけを解除" checked={form.detachContact} onChange={e => setForm(f => ({ ...f, detachContact: e.target.checked }))} />
+                <span>担当者レコードとの紐づけを解除（担当者名と商談は保持します）。「保存する」で確定します。</span>
+              </label>}
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-1">商談日</label>
                 <input type="date" value={form.startDate} onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />

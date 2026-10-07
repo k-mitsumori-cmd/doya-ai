@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-07T05:29:31.213568+00:00",
-  "status": "full-frozen-security-type-build-lint-passed-not-deployed",
+  "checkedAt": "2026-10-07T05:46:28.705911+00:00",
+  "status": "released-ci-ready-anonymous-publication-passed-private-flow-unproven",
   "scope": "Next-action generation and recovery, not task creation already covered by shared durable task operations.",
   "required": [
     "Reject empty/non-string/oversized model fields before completing quota; preserve tested JST date normalization and valid empty risk.",
@@ -32,15 +32,13 @@
     "score client21/API24/PG10 regressions including new legacy-name guard"
   ],
   "remaining": [
-    "Full frozen security/type/build/lint gate and source hash match",
-    "Allowlisted commit/push; exactSHA CI/READY/public checks",
-    "Authenticated private real-browser/provider and remaining all-service criteria"
+    "Authenticated private real-browser/provider and all remaining service criteria"
   ],
   "remainingLifecycleReconfirmed": true,
   "legacyNameFollowUp": {
     "baseline": "Score name10001: POST200, recovery409,provider1 before repair.",
     "fix": "Reject empty/blank/name>10000 before quota/provider in both score and next-action.",
-    "deployed": false
+    "deployed": true
   },
   "releaseGate": "docs/audits/2026-10-06-all-services-recheck/sfa-next-action-release-e4727c52-6f52-44d9-bb78-776e0606d8f6",
   "fullGate": {
@@ -48,5 +46,14 @@
     "lint": 0,
     "sourceFiles": 2697,
     "changedSources": []
+  },
+  "release": {
+    "commit": "f09ef81ca5f643018015e2e3c265dd48d4c7807b",
+    "ciRun": 37576609179,
+    "deployment": "dpl_2LDAhdvReThR9zQHeWJfxGPXyRvo",
+    "url": "doya-r3x0b38fk-surisutas-projects.vercel.app",
+    "ci": "success",
+    "deploymentState": "READY",
+    "publicVerification": "anonymous-publication-passed-private-form-unproven"
   }
 }

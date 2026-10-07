@@ -18,10 +18,11 @@ const mocks = {
   '@/lib/sfa/format': { bigIntToNumber: (value) => value },
   '@/lib/sfa/limits': { withSfaAdmission: async (_org, _requested, create) => ({ created: await create(prisma) }), sfaQuotaResponse: () => Response.json({ error: 'limit' }, { status: 402 }) },
 };
+Object.assign(mocks, require('./sfa-crm-test-deps.cjs').crmDeps(prisma, mocks));
 const createAccount = load('src/app/api/sfa/accounts/route.ts', mocks).POST;
 const createContact = load('src/app/api/sfa/contacts/route.ts', mocks).POST;
 const createLead = load('src/app/api/sfa/leads/route.ts', mocks).POST;
-const request = (body) => ({ json: async () => body });
+const request = (body) => ({ json: async () => body && typeof body === 'object' && !Array.isArray(body) ? { operationId: '10000000-0000-4000-8000-000000000001', ...body } : body });
 
 (async () => {
   for (const body of [null, [], { name: 123 }, { name: '会社', industry: 123 }, { name: '会社', note: {} }]) {

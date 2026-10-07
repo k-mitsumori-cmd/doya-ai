@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-10-07T06:03:21.053Z",
+  "passed": 27,
+  "cases": [
+    "account strict types, fields, operation UUID and required version",
+    "account repeated UUID creates once and recovery/cancellation preserve saved row",
+    "account changed input or deleted row cannot replay or resurrect",
+    "account revoked actor cannot create, recover or fence cancellation",
+    "account cancellation before arrival and receipt failure prevent business rows",
+    "account scoped versioned edit and soft delete retain unrelated fields",
+    "account actor and organization isolate operation recovery and mutations",
+    "contact strict types, fields, operation UUID and required version",
+    "contact repeated UUID creates once and recovery/cancellation preserve saved row",
+    "contact changed input or deleted row cannot replay or resurrect",
+    "contact revoked actor cannot create, recover or fence cancellation",
+    "contact cancellation before arrival and receipt failure prevent business rows",
+    "contact scoped versioned edit and soft delete retain unrelated fields",
+    "contact actor and organization isolate operation recovery and mutations",
+    "account quota checked only after receipt replay, at50 capacity",
+    "contact relation rejects foreign/inactive account inside transaction and can detach",
+    "account delete refuses active contacts/deals and never removes linked rows",
+    "contact delete refuses active deal reference and preserves record",
+    "account actual HTTP create replay recovery and cancellation",
+    "account actual HTTP rejects malformed body and ambiguous recovery",
+    "account actual HTTP detail versioned edit soft delete and missing recovery",
+    "account actual HTTP auth loss and private exception sanitization",
+    "contact actual HTTP create replay recovery and cancellation",
+    "contact actual HTTP rejects malformed body and ambiguous recovery",
+    "contact actual HTTP detail versioned edit soft delete and missing recovery",
+    "contact actual HTTP auth loss and private exception sanitization",
+    "account actual HTTP quota and owner guidance remain private"
+  ],
+  "sourceHashes": {
+    "src/lib/sfa/crm-record-mutation.ts": "a6700a5dc57b51430d68726a256dde9c12b45cb6206d8372468a8f1aca51894a",
+    "src/lib/sfa/creation-receipt.ts": "30c3bbc63e837855cdc6f7025eebf15b7a8a4a55834dfb317e9152201a140c96",
+    "src/lib/sfa/crm-record-http.ts": "8df2e8f1d55737b2e6df114f2f305370f5ca7e2bcc1ff32c85b1e006f321cd68",
+    "src/app/api/sfa/accounts/route.ts": "ffaf5ad4487b1bf45868ff5870b757f8be756e93bdd4c70df18f077fe0cbca15",
+    "src/app/api/sfa/contacts/route.ts": "23c2e7690ff1577162ff7c45392e640cfe929bd4ff32a0f04f4b1d005b310bde",
+    "src/app/api/sfa/accounts/[id]/route.ts": "62d3027357df83aa59b34fc7b523e615f7708318af1b7f11ac5cb0ab37377504",
+    "src/app/api/sfa/contacts/[id]/route.ts": "862a4f3e4322f255a8f71ffa427a95a2697fa478f38664136ed23e69d078c2ac"
+  },
+  "scope": "Actual record parser/create/recovery/mutation/authority/quota/receipt helpers; synthetic serialized Prisma fixture/rollback. Actual collection/detail handlers connected and tested; UI not connected. Not real PostgreSQL/production/customer writes."
+}

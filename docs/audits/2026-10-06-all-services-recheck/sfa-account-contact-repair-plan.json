@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-07T05:28:40.406280+00:00",
-  "status": "planned-not-implemented",
+  "checkedAt": "2026-10-07T06:04:03.021585+00:00",
+  "status": "local-frozen-build-security-type-lint-passed-release-pending",
   "scope": "SFA accounts/contacts server and mounted pages",
   "confirmed": [
     "Account/contact requests ignore operationId and create duplicates.",
@@ -22,7 +22,9 @@
     "Synthetic actual API and mounted component cases, actual private PostgreSQL races/rollback, full frozen build/security/type/lint, allowlisted push, exactCI/READY/anonymous-public verification. Authenticated customer/provider flows remain unverified until actually checked."
   ],
   "evidence": [
-    "sfa-account-contact-lifecycle-baseline.json"
+    "sfa-account-contact-lifecycle-baseline.json",
+    "sfa-crm-client-baseline.json",
+    "sfa-crm-record-helper-results.json"
   ],
   "boundaries": [
     "No customer DB writes/migrations",
@@ -30,5 +32,25 @@
     "No paid AI/provider calls",
     "Do not widen read/write roles beyond current ACTIVE-member service behavior",
     "No subagents"
-  ]
+  ],
+  "localChanges": [
+    "Strict bounded body/fields, required operation UUID and reviewed update version",
+    "Atomic fresh actor/receipt/quota/relation/create and conditional recovery/cancellation",
+    "Versioned edits, soft delete, and refusing deletes with active linked records",
+    "18 helper cases passed with synthetic Prisma rollback; TypeScript and ESLint passed",
+    "Collection POST/GET recovery/DELETE fence and detail GET/PATCH/soft DELETE connected with private/no-store/VaryCookie and sanitized failures",
+    "27 actual helper/HTTP cases, legacy malformed-input/pagination501/quota regressions passed; typecheck and touched-source ESLint passed",
+    "65 input-preservation boundary cases passed using actual CRM helper/HTTP fixture; invalid content still stops before quota admission and writes",
+    "Shared strict account/contact DTO/write-match validation, durable creation metadata, bounded transport and row mutation/recovery connected",
+    "Common scoped CRM pages with create/edit/confirmed soft delete, strict list/pagination/options, newer-draft retention, explicit discard and latest-list review controls",
+    "Quota CTA validates backend billing-owner boolean and exact local pricing path; nonowners and unsafe URLs do not get billing link",
+    "Actual deal detail explicitly clears contactId only on user-selected unlink/save; reviewed version required; name/note/amount/live deal retained",
+    "51 mounted CRM/deal cases and19 actual private PostgreSQL cases passed; PG stopExitCode0; existing shared49/deal13/conversion/score/next-action client regressions passed before final unlink addition (frozen gate reruns all)",
+    "Frozen 2705-source manifest unchanged; full build/security/type and lint exited0"
+  ],
+  "remaining": [
+    "Exact allowlisted commit/push, exactCI/READY and public asset/API verification",
+    "Authenticated actual browser/customer/provider flows and all remaining criteria across17services remain unverified"
+  ],
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/sfa-crm-release-9b772ea7-6ef1-4c45-b2ab-99f0747b5d0c"
 }
