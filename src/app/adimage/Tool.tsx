@@ -164,11 +164,14 @@ export default function AdImageTool() {
     setNeedsReview(d.needsReview!)
     setFailedPlacements(d.failedPlacements!)
     setGeneration(d.generation!)
-    setScores(null); setAdvice(''); setDirectives([])
+    setScores(d.kind === 'feedback' ? d.scores! : null)
+    setAdvice(d.kind === 'feedback' ? d.advice! : '')
+    setDirectives(d.kind === 'feedback' ? d.directives! : [])
+    if (d.kind === 'feedback') setFeedbackSeq(n => n + 1)
     // Recovery must preserve newer unsent refinement input.
     setScoring(false)
     setStep('result')
-    window.dispatchEvent(new Event('adimage:generated'))
+    if (d.kind !== 'feedback') window.dispatchEvent(new Event('adimage:generated'))
   }, [])
   useEffect(() => { if (operation.result) applyImageResult(operation.result) }, [operation.result, applyImageResult])
   const actorScope = JSON.stringify([authStatus, actor])
@@ -182,6 +185,7 @@ export default function AdImageTool() {
   useEffect(() => {
     setVisibleScope(actorScope)
     setNeedsLogin(false)
+    setAnalyzing(false); setLogoBusy(false)
     appliedResult.current = ''
     setConceptId(''); setCreatives([]); setPreviousCreatives([]); setPreviousGeneration(null)
     setScores(null); setAdvice(''); setDirectives([]); setGenerating(false); setRefining(false); setScoring(false)
@@ -213,6 +217,9 @@ export default function AdImageTool() {
       setError('サービスの説明を50文字以上で入力してください。')
       return
     }
+    const revision = ++imageOperation.current.revision
+    imageOperation.current.busy = true
+    const isCurrent = () => imageOperation.current.revision === revision
     setAnalyzing(true)
     setError('')
     setLimitAction(null)
@@ -222,11 +229,13 @@ export default function AdImageTool() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim(), appeal: appeal.trim() || undefined, ...(useManualText ? { manualText: manualText.trim() } : {}) }),
       })
+      if (!isCurrent()) return
       if (r.status === 401) {
         setNeedsLogin(true)
         return
       }
       const d = await r.json()
+      if (!isCurrent()) return
       if (!r.ok && d?.canUseManualInput) setUseManualText(true)
       if (!r.ok) {
         if (d?.limitReached === true) setLimitAction(d?.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : d?.upgradeUrl === '/adimage/pricing' ? 'pricing' : null)
@@ -239,14 +248,17 @@ export default function AdImageTool() {
       if (d.concepts?.[0]) setCopy(d.concepts[0].copy)
       setStep('concepts')
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '解析に失敗しました')
+      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '解析に失敗しました')
     } finally {
-      setAnalyzing(false)
+      if (isCurrent()) { imageOperation.current.busy = false; setAnalyzing(false) }
     }
   }, [appeal, url, useManualText, manualText, operation.blocked])
 
   async function uploadLogo(file: File) {
-    if (!brandId) return
+    if (!brandId || imageOperation.current.busy || operation.blocked) return
+    const revision = ++imageOperation.current.revision
+    imageOperation.current.busy = true
+    const isCurrent = () => imageOperation.current.revision === revision
     setLogoBusy(true)
     setError('')
     setLimitAction(null)
@@ -256,29 +268,35 @@ export default function AdImageTool() {
       fd.append('pos', logoPos)
       const r = await fetch(`/api/adimage/brands/${brandId}/logo`, { method: 'POST', body: fd })
       const d = await r.json()
+      if (!isCurrent()) return
       if (!r.ok) throw new Error(d?.error || 'ロゴを登録できませんでした')
       setLogoName(file.name)
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : 'ロゴを登録できませんでした')
+      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : 'ロゴを登録できませんでした')
     } finally {
-      setLogoBusy(false)
+      if (isCurrent()) { imageOperation.current.busy = false; setLogoBusy(false) }
     }
   }
 
   async function removeLogo() {
-    if (!brandId) return
+    if (!brandId || imageOperation.current.busy || operation.blocked) return
+    const revision = ++imageOperation.current.revision
+    imageOperation.current.busy = true
+    const isCurrent = () => imageOperation.current.revision === revision
     setLogoBusy(true)
     try {
       const response = await fetch(`/api/adimage/brands/${brandId}/logo`, { method: 'DELETE' })
+      if (!isCurrent()) return
       if (!response.ok) {
         const result = await response.json().catch(() => null)
         throw new Error(result?.error || 'ロゴを外せませんでした')
       }
+      if (!isCurrent()) return
       setLogoName('')
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : 'ロゴを外せませんでした')
+      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : 'ロゴを外せませんでした')
     } finally {
-      setLogoBusy(false)
+      if (isCurrent()) { imageOperation.current.busy = false; setLogoBusy(false) }
     }
   }
 
@@ -386,32 +404,25 @@ export default function AdImageTool() {
   }, [appeal, brandId, chosen, copy, customPrompt, designRefId, drafts, selected, variations, operation, applyImageResult])
 
   const runFeedback = useCallback(async () => {
-    if (!conceptId || imageOperation.current.busy || operation.blocked) return
-    const revision = imageOperation.current.revision
+    const creativeId = creatives[0]?.id
+    if (!conceptId || !creativeId || imageOperation.current.busy || operation.blocked) return
+    const revision = ++imageOperation.current.revision
+    imageOperation.current.busy = true
     const feedback = ++imageOperation.current.feedback
     const isCurrent = () => imageOperation.current.revision === revision && imageOperation.current.feedback === feedback
     setScoring(true)
     setError('')
     setLimitAction(null)
     try {
-      const r = await fetch(`/api/adimage/concepts/${conceptId}/feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chips: selectedChips, note: note.trim() || undefined }),
-      })
-      const d = await r.json()
-      if (!isCurrent()) return
-      if (!r.ok) throw new Error(d?.error || '採点に失敗しました')
-      setScores(d.scores)
-      setAdvice(d.advice)
-      setFeedbackSeq((n) => n + 1)
-      setDirectives(d.directives || [])
+      const d = await operation.submit('feedback', conceptId, { creativeId, chips: selectedChips, note: note.trim() || undefined }, new AbortController().signal)
+      if (!isCurrent() || !d) return
+      applyImageResult(d)
     } catch (e) {
-      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '採点に失敗しました')
+      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '採点の保存結果を確認してください。')
     } finally {
-      if (isCurrent()) setScoring(false)
+      if (isCurrent()) { imageOperation.current.busy = false; setScoring(false) }
     }
-  }, [conceptId, note, selectedChips, operation.blocked])
+  }, [conceptId, creatives, note, selectedChips, operation, applyImageResult])
 
   const refine = useCallback(async () => {
     if (!conceptId || imageOperation.current.busy || operation.blocked) return
@@ -493,8 +504,8 @@ export default function AdImageTool() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-        {(operation.intent || operation.message) && <section aria-label="画像生成の結果確認" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">
-          <p role="status">{operation.message || (operation.result?.state === 'completed' ? '保存済みの画像を表示しました。内容を確認してから次の操作へ進んでください。' : '前の操作の保存結果を確認してください。新しい生成はまだ開始できません。')}</p>
+        {(operation.intent || operation.message) && <section aria-label={operation.intent?.kind === 'feedback' ? '採点の結果確認' : '画像生成の結果確認'} className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">
+          <p role="status">{operation.message || (operation.result?.state === 'completed' ? '保存済みの結果を表示しました。内容を確認してから次の操作へ進んでください。' : '前の操作の保存結果を確認してください。新しい生成はまだ開始できません。')}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" disabled={operation.busy} onClick={() => void operation.recover()} className="rounded-lg bg-slate-900 px-4 py-2 font-bold text-white disabled:opacity-50">{operation.busy ? '確認中...' : '保存結果を確認'}</button>
             {operation.result?.state === 'missing' && <button type="button" disabled={operation.busy} onClick={() => void operation.recover(true)} className="rounded-lg border border-slate-400 px-4 py-2">未受付の操作を終了</button>}
@@ -538,7 +549,7 @@ export default function AdImageTool() {
             />
             <button
               onClick={analyze}
-              disabled={analyzing || operation.blocked || !url.trim()}
+              disabled={analyzing || logoBusy || generating || refining || scoring || operation.blocked || !url.trim()}
               className="rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
               {analyzing ? '読み取り中...' : '広告コピーを作る'}
@@ -633,7 +644,7 @@ export default function AdImageTool() {
                 <input
                   type="file"
                   accept="image/*"
-                  disabled={logoBusy}
+                  disabled={logoBusy || analyzing || generating || refining || scoring || operation.blocked}
                   onChange={(e) => {
                     const f = e.target.files?.[0]
                     if (f) void uploadLogo(f)
@@ -658,7 +669,7 @@ export default function AdImageTool() {
               {logoName && (
                 <button
                   onClick={removeLogo}
-                  disabled={logoBusy}
+                  disabled={logoBusy || analyzing || generating || refining || scoring || operation.blocked}
                   className="rounded-lg border border-slate-300 px-3 py-2.5 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0 font-semibold"
                 >
                   ロゴを外す
@@ -837,7 +848,7 @@ export default function AdImageTool() {
 
             <button
               onClick={generate}
-              disabled={operation.blocked || generating || refining || chosen.length === 0 || !copy.headline || !copy.cta}
+              disabled={operation.blocked || analyzing || logoBusy || generating || refining || scoring || chosen.length === 0 || !copy.headline || !copy.cta}
               className="mt-5 w-full rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
               {generating
@@ -983,7 +994,7 @@ export default function AdImageTool() {
             <div className="mt-8 border-t border-slate-100 pt-6">
               <button
                 onClick={runFeedback}
-                disabled={scoring || generating || refining}
+                disabled={scoring || analyzing || logoBusy || generating || refining || operation.blocked}
                 /* ⚠️ 常時アニメーションだと、押した後に動いているのかが分からない。
                      待機中は止めて落ち着かせ、処理中だけ虹色を流す。 */
                 className={`w-full rounded-2xl px-6 py-6 text-center text-xl font-black text-white shadow-xl transition hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:hover:translate-y-0 sm:text-2xl ${
@@ -1116,7 +1127,7 @@ export default function AdImageTool() {
 
               <button
                 onClick={refine}
-                disabled={operation.blocked || refining || generating || (selectedChips.length === 0 && !note.trim() && directives.length === 0)}
+                disabled={operation.blocked || analyzing || logoBusy || scoring || refining || generating || (selectedChips.length === 0 && !note.trim() && directives.length === 0)}
                 className="mt-5 w-full rounded-2xl bg-[#0066ff] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-[#0052cc] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:translate-y-0 sm:text-xl"
               >
                 {refining ? '作り直し中…（1〜2分かかります）' : 'この内容で作り直す'}

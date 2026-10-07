@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-07T11:03:24.069Z",
+  "passed": 6,
+  "cases": [
+    "Analyze old actor success never mutates the next authenticated actor UI",
+    "Analyze old actor error never mutates the next authenticated actor UI",
+    "Analyze ABA account switch fences old response and keeps newer analysis busy until its own response",
+    "Analyze same-frame duplicate click invokes only one request",
+    "Logo upload old actor acknowledgment cannot display the old filename for the new actor",
+    "Old logo deletion cannot clear a newly authenticated actor logo filename"
+  ],
+  "sourceHashes": {
+    "src/app/adimage/Tool.tsx": "aa09112bf2b7b1c017faabfaedd068d58ba94f1aac259df6b66cefcb2786e8de",
+    "src/lib/adimage/operation-client.ts": "20340a6d14e00a181576acc4adc8a674c70078bf59723e5a1ce3c4bbaf266f45",
+    "src/lib/adimage/use-operation-recovery.ts": "7d162d1d9484249aee5a74002108ac666b1adab5805ddc742a50fee9a613e69d"
+  },
+  "scope": "Actual full Tool/hook/client in React18 StrictMode with synthetic session/network/logo files. Covers actor/ABA response fencing and synchronous analysis admission, not durable analysis result recovery or real logo writes/providers."
+}

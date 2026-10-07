@@ -1,0 +1,138 @@
+{
+  "checkedAt": "2026-10-07T10:44:01.068063+00:00",
+  "commit": "5c1cdac5ec024a5215a7ef3626126a2aed124aaa",
+  "deployment": "dpl_A8ev2mdAb6ZqEPqqmHm4onggsv1q",
+  "entries": [
+    {
+      "service": "banner",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "seo",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "interview",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "persona",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "hr",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "kintai",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "doyalist",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "promane",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "doyaslide",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "cunning",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "sfa",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "shodan",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "aio",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "mensetsu",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "quote",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "aishodan",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "adimage",
+      "status": 200,
+      "deploymentMarker": true
+    }
+  ],
+  "pages": [
+    {
+      "path": "/adimage",
+      "status": 200,
+      "deploymentMarker": true,
+      "recoveryMarkers": {
+        "adimage-intent:v1:": true,
+        "保存結果を確認": true,
+        "結果を確認しました": true
+      },
+      "recoveryLabel": true
+    }
+  ],
+  "assetCount": 21,
+  "assetStatuses": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "guestRecovery": {
+    "status": 401,
+    "success": null,
+    "hasImage": false,
+    "cacheControl": "private, no-store",
+    "varyCookie": true
+  },
+  "scope": "Anonymous read-only public HTML/assets and unauthenticated operation GET only. Presence of deployed recovery code is not authenticated execution, provider or customer data E2E.",
+  "passed": true
+}

@@ -63,7 +63,7 @@ function logoRemoval(response) {
   assert.ok(source)
   const state = { logoName: 'brand.png', busy: false, error: '' }
   const env = {
-    brandId: 'brand', fetch: async () => response,
+    brandId: 'brand', imageOperation: { current: { revision: 0, busy: false } }, operation: { blocked: false }, fetch: async () => response,
     setLogoBusy: (value) => { state.busy = value },
     setLogoName: (value) => { state.logoName = value },
     setError: (value) => { state.error = value },

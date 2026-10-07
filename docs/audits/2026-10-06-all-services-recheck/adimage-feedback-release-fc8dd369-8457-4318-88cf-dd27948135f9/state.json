@@ -1,0 +1,48 @@
+{
+  "startedAt": "2026-10-07T10:51:51.105425+00:00",
+  "pid": 97180,
+  "head": "5c1cdac5ec024a5215a7ef3626126a2aed124aaa",
+  "sourceFiles": 2768,
+  "status": "failed",
+  "gates": [
+    {
+      "name": "private-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:51:52.992300+00:00"
+    },
+    {
+      "name": "adimage-helper-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:51:54.809462+00:00"
+    },
+    {
+      "name": "adimage-api-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:51:56.970552+00:00"
+    },
+    {
+      "name": "adimage-feedback-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:51:59.137553+00:00"
+    },
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:56:25.257227+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:56:27.229886+00:00"
+    },
+    {
+      "name": "native-chrome",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T10:56:35.908899+00:00"
+    }
+  ],
+  "changedSources": [
+    "src/app/adimage/Tool.tsx"
+  ],
+  "endedAt": "2026-10-07T10:56:36.352613+00:00"
+}

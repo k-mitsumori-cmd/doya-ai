@@ -4,7 +4,7 @@ import { getIdentity } from './access'
 import { signedUrl } from './storage'
 import { findPlacement } from './placements'
 import { raceTimeout } from '@/lib/fetch-timeout'
-import { AdImageOperationError, recoverAdImageOperation, type AdImageOperationInput, type beginAdImageOperation } from './image-operation'
+import { adImageTargetHash, AdImageOperationError, recoverAdImageOperation, type AdImageOperationInput, type beginAdImageOperation } from './image-operation'
 
 type Result = Awaited<ReturnType<typeof recoverAdImageOperation>> | Awaited<ReturnType<typeof beginAdImageOperation>>
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
@@ -54,9 +54,17 @@ export async function adImageOperationReply(input: AdImageOperationInput, result
   if (result.state === 'limit') { const { ok: _ok, reason, ...quota } = result.quota; return privateAdImageReply({ ...metadata, state: 'limit', error: reason, ...quota }, 429) }
   if (result.state !== 'completed' || !('receipt' in result)) return privateAdImageReply({ ...metadata, state: result.state }, result.state === 'pending' || result.state === 'busy' ? 202 : 200)
   const receipt = result.receipt
-  const concept = await prisma.adImageConcept.findFirst({ where: { id: receipt.conceptId!, campaign: { userId: input.actor, brand: { userId: input.actor } } }, include: { creatives: true } })
-  if (!concept || concept.creatives.length !== receipt.produced) return privateAdImageReply({ ...metadata, state: 'unavailable' })
-  const previous = input.kind === 'refine' ? await prisma.adImageConcept.findFirst({ where: { id: input.targetId, campaignId: concept.campaignId, campaign: { userId: input.actor, brand: { userId: input.actor } } }, include: { creatives: true } }) : null
+  const concept = await prisma.adImageConcept.findFirst({ where: { id: receipt.conceptId!, campaign: { userId: input.actor, brand: { userId: input.actor } } }, include: { creatives: true, ...(input.kind === 'feedback' ? { campaign: { include: { brand: true } } } : {}) } })
+  if (!concept || (input.kind === 'feedback' ? adImageTargetHash('feedback', concept) !== receipt.targetHash : concept.creatives.length !== receipt.produced)) return privateAdImageReply({ ...metadata, state: 'unavailable' })
+  let feedbackResult: Record<string, unknown> = {}
+  if (input.kind === 'feedback') {
+    const feedback = await prisma.adImageFeedback.findFirst({ where: { id: receipt.feedbackId, conceptId: receipt.conceptId!, creativeId: receipt.creativeId, concept: { campaign: { userId: input.actor, brand: { userId: input.actor } } }, creative: { conceptId: input.targetId } }, select: { id: true, creativeId: true, scores: true, advice: true, directive: true } })
+    if (!feedback) return privateAdImageReply({ ...metadata, state: 'unavailable' })
+    const { parseAdImageFeedback } = await import('./feedback')
+    feedbackResult = { feedbackId: feedback.id, creativeId: feedback.creativeId, ...parseAdImageFeedback({ scores: feedback.scores, advice: feedback.advice, directives: feedback.directive }) }
+  }
+  const previousId = input.kind === 'refine' ? input.targetId : input.kind === 'feedback' ? concept.parentId : null
+  const previous = previousId ? await prisma.adImageConcept.findFirst({ where: { id: previousId, campaignId: concept.campaignId, campaign: { userId: input.actor, brand: { userId: input.actor } } }, include: { creatives: true } }) : null
   const creativeDto = async (cr: (typeof concept.creatives)[number]) => {
     const url = await signedUrl(cr.imagePath)
     try { const parsed = new URL(url || ''); if (!url || url.length > 8192 || !['https:', 'http:'].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error() }
@@ -65,14 +73,14 @@ export async function adImageOperationReply(input: AdImageOperationInput, result
     return { id: cr.id, placementKey: cr.placementKey, placementName: p?.name || cr.placementKey, media: p?.media || '', size: cr.size, verify: cr.verify, url }
   }
   const [creatives, previousCreatives] = await raceTimeout('adimage result URLs', 15000, Promise.all([Promise.all(concept.creatives.map(creativeDto)), Promise.all((previous?.creatives || []).map(creativeDto))]))
-  return privateAdImageReply({ ...metadata, state: 'completed', conceptId: concept.id, campaignId: concept.campaignId, copy: concept.copy, generation: concept.generation, creatives, previousCreatives, previousGeneration: previous?.generation ?? null, appliedDirectives: receipt.appliedDirectives, failedPlacements: receipt.failedPlacements, needsReview: creatives.some(c => Boolean((c.verify as { needsReview?: boolean } | null)?.needsReview)) })
+  return privateAdImageReply({ ...metadata, ...feedbackResult, state: 'completed', conceptId: concept.id, campaignId: concept.campaignId, copy: concept.copy, generation: concept.generation, creatives, previousCreatives, previousGeneration: previous?.generation ?? null, appliedDirectives: receipt.appliedDirectives, failedPlacements: receipt.failedPlacements, needsReview: creatives.some(c => Boolean((c.verify as { needsReview?: boolean } | null)?.needsReview)) })
 }
 export async function readAdImageOperation(req: NextRequest, cancelMissing: boolean) {
   try {
     const identity = await getIdentity(req)
     if (!identity.userId) return privateAdImageReply({ error: 'ログインが必要です。' }, 401)
     const params = req.nextUrl.searchParams, allowed = new Set(['operationId', 'kind', 'targetId'])
-    if ([...params.keys()].some(k => !allowed.has(k) || params.getAll(k).length !== 1) || !['generate', 'refine'].includes(params.get('kind') || '')) throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
+    if ([...params.keys()].some(k => !allowed.has(k) || params.getAll(k).length !== 1) || !['generate', 'refine', 'feedback'].includes(params.get('kind') || '')) throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
     const input = adImagePostInput(identity.userId, params.get('kind') as AdImageOperationInput['kind'], params.get('targetId'), params.get('operationId'))
     return await adImageOperationReply(input, await recoverAdImageOperation(input, cancelMissing))
   } catch (error) { return adImageOperationErrorReply(error) }

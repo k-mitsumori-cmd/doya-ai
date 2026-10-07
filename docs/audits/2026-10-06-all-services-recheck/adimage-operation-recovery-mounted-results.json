@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T10:22:47.958Z",
+  "checkedAt": "2026-10-07T11:03:24.606Z",
   "passed": 13,
   "cases": [
     "metadata persists before POST and two mounted callers cannot duplicate generation",
@@ -17,8 +17,8 @@
     "missing Web Locks rejects before POST without discarding an existing operation"
   ],
   "sourceHashes": {
-    "src/lib/adimage/operation-client.ts": "2e92ca7dfdc327d3fbc83473d3fa2dfb9aa28c0a350dccb158ce94f263e16e0e",
-    "src/lib/adimage/use-operation-recovery.ts": "7124e7f71caf46afdc15e20e9b331dfff7b3770d794d86fbdcefe33fb39ccddb"
+    "src/lib/adimage/operation-client.ts": "20340a6d14e00a181576acc4adc8a674c70078bf59723e5a1ce3c4bbaf266f45",
+    "src/lib/adimage/use-operation-recovery.ts": "7d162d1d9484249aee5a74002108ac666b1adab5805ddc742a50fee9a613e69d"
   },
   "scope": "Actual client/hook React18 StrictMode; synthetic network/auth/locks. Full Tool, native browser, cross-process locks and production are not proven."
 }

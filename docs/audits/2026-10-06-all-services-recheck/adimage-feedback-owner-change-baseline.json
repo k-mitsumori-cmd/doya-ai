@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-07T10:36:03.184Z",
+  "finding": "Ownership lost while vision evaluation runs is not checked again before feedback creation. Actual route saves and returns success after loss in the synthetic ownership-change fixture.",
+  "status": 200,
+  "syntheticProviderCalls": 1,
+  "ownedConceptReads": 1,
+  "writesAfterOwnershipLoss": 1,
+  "sourceHashes": {
+    "src/app/api/adimage/concepts/[id]/feedback/route.ts": "39168857793bbfaaa01ead6f161640d8a3d9b385161a51a8e3eedc3d1b1dc9d4",
+    "src/lib/adimage/feedback-input.ts": "a55b005abdc38327d9bb004ecb3335883e375e1dfbfb9b9d531731e4a3c028b9"
+  },
+  "scope": "Actual complete route; synthetic identity/provider/storage/Prisma. Does not prove a customer incident or database race schedule. No real provider call or customer database write. Unfixed; requires ownership/source lock in atomic feedback receipt completion."
+}

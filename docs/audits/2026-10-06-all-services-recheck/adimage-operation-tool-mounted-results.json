@@ -1,18 +1,22 @@
 {
-  "checkedAt": "2026-10-07T10:22:48.468Z",
-  "passed": 6,
+  "checkedAt": "2026-10-07T11:03:25.466Z",
+  "passed": 10,
   "cases": [
     "Full Tool saves intent before POST and requires result acknowledgment before another generation",
     "Full Tool lost generation response recovers saved image through GET without new provider POST",
     "Full Tool remount restores metadata and result without another analyze or generation",
     "Full Tool refinement binds parent and retains before/after images after lost acknowledgment",
     "Full Tool blocks duplicate clicks while POST remains active",
-    "Full Tool account change hides prior private results and fences held reply"
+    "Full Tool account change hides prior private results and fences held reply",
+    "Full Tool feedback persists metadata before POST and synchronously blocks duplicate scoring and image generation",
+    "Full Tool feedback lost response and reload recover scores and image through GET without another POST",
+    "Full Tool feedback recovery retains a newer unsent refinement note",
+    "Full Tool feedback old authenticated actor response never appears for the next actor"
   ],
   "sourceHashes": {
-    "src/app/adimage/Tool.tsx": "5d75cae44b4ab22677d850af915c9b5d0d1c4d80e2eb805ba127629d5d44d6ed",
-    "src/lib/adimage/use-operation-recovery.ts": "7124e7f71caf46afdc15e20e9b331dfff7b3770d794d86fbdcefe33fb39ccddb",
-    "src/lib/adimage/operation-client.ts": "2e92ca7dfdc327d3fbc83473d3fa2dfb9aa28c0a350dccb158ce94f263e16e0e"
+    "src/app/adimage/Tool.tsx": "aa09112bf2b7b1c017faabfaedd068d58ba94f1aac259df6b66cefcb2786e8de",
+    "src/lib/adimage/use-operation-recovery.ts": "7d162d1d9484249aee5a74002108ac666b1adab5805ddc742a50fee9a613e69d",
+    "src/lib/adimage/operation-client.ts": "20340a6d14e00a181576acc4adc8a674c70078bf59723e5a1ce3c4bbaf266f45"
   },
   "scope": "Actual full Tool and actual hook/client React18 StrictMode. Synthetic network, sessions, and locks. No native browser, real provider, customer DB or production."
 }

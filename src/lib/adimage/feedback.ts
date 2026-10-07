@@ -28,24 +28,52 @@ export interface FeedbackResult {
   directives: RefineDirective[]
 }
 
-interface RawFeedback {
-  scores: Partial<FeedbackScores>
-  advice: string
-  directives: Array<{ target: string; instruction: string; reason: string }>
+const TARGETS: RefineDirective['target'][] = ['copy', 'color', 'layout', 'contrast', 'visual']
+const SCORE_KEYS = ['visibility', 'appeal', 'cta', 'fit', 'brand'] as const
+
+function invalidFeedback(): never {
+  throw new Error('画像の採点結果を読み取れませんでした')
 }
 
-const TARGETS: RefineDirective['target'][] = ['copy', 'color', 'layout', 'contrast', 'visual']
+function record(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return invalidFeedback()
+  return value as Record<string, unknown>
+}
 
-function clampScore(n: unknown): number {
-  const v = Number(n)
-  if (!Number.isFinite(v)) return 3
-  return Math.max(1, Math.min(5, Math.round(v)))
+function feedbackText(value: unknown, max: number): string {
+  if (typeof value !== 'string' || value.length > max || !value.trim()) return invalidFeedback()
+  return value.trim()
+}
+
+/** 欠落した採点を平均点で補わず、保存前にモデル応答全体を検証する。 */
+export function parseAdImageFeedback(value: unknown): FeedbackResult {
+  const raw = record(value)
+  const suppliedScores = record(raw.scores)
+  const scores: FeedbackScores = { visibility: 0, appeal: 0, cta: 0, fit: 0, brand: 0, total: 0 }
+  for (const key of SCORE_KEYS) {
+    const score = suppliedScores[key]
+    if (typeof score !== 'number' || !Number.isInteger(score) || score < 1 || score > 5) return invalidFeedback()
+    scores[key] = score
+    scores.total += score
+  }
+  if (!Array.isArray(raw.directives) || raw.directives.length > 3) return invalidFeedback()
+  const directives = raw.directives.map((value): RefineDirective => {
+    const directive = record(value)
+    const target = directive.target
+    if (typeof target !== 'string' || !TARGETS.includes(target as RefineDirective['target'])) return invalidFeedback()
+    return {
+      target: target as RefineDirective['target'],
+      instruction: feedbackText(directive.instruction, 500),
+      reason: feedbackText(directive.reason, 500),
+    }
+  })
+  return { scores, advice: feedbackText(raw.advice, 1000), directives }
 }
 
 export async function evaluateCreative(input: FeedbackInput): Promise<FeedbackResult> {
   const { pngBase64, copy, brandName, placementName, userRequests = [] } = input
 
-  const raw = await visionJson<RawFeedback>({
+  const raw = await visionJson<unknown>({
     pngBase64,
     maxTokens: 1600,
     prompt: [
@@ -86,28 +114,7 @@ export async function evaluateCreative(input: FeedbackInput): Promise<FeedbackRe
       .join('\n'),
   })
 
-  const s = raw?.scores || {}
-  const scores: FeedbackScores = {
-    visibility: clampScore(s.visibility),
-    appeal: clampScore(s.appeal),
-    cta: clampScore(s.cta),
-    fit: clampScore(s.fit),
-    brand: clampScore(s.brand),
-    total: 0,
-  }
-  // 合計はモデルに出させずコードで計算する（内訳と合計が食い違うのを防ぐ）
-  scores.total = scores.visibility + scores.appeal + scores.cta + scores.fit + scores.brand
-
-  const directives: RefineDirective[] = (raw?.directives || [])
-    .filter((d) => d && d.instruction)
-    .slice(0, 3)
-    .map((d) => ({
-      target: TARGETS.includes(d.target as any) ? (d.target as RefineDirective['target']) : 'visual',
-      instruction: String(d.instruction).slice(0, 500),
-      reason: String(d.reason || '').slice(0, 500),
-    }))
-
-  return { scores, advice: String(raw?.advice || '').slice(0, 1000), directives }
+  return parseAdImageFeedback(raw)
 }
 
 /** ユーザーがボタンひとつで押せる改善チップ */

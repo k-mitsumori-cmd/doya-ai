@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T10:54:28.730123+00:00",
+  "commit": "5c1cdac5ec024a5215a7ef3626126a2aed124aaa",
+  "push": "origin HEAD:main succeeded",
+  "ciRun": 37607507625,
+  "ciStatus": "completed",
+  "ciWatchSession": 86197,
+  "ciWatchLog": "/tmp/doya-adimage-ci-watch.log",
+  "deploymentId": "dpl_A8ev2mdAb6ZqEPqqmHm4onggsv1q",
+  "deploymentUrl": "doya-cy4rwlf6t-surisutas-projects.vercel.app",
+  "deploymentLastObservedState": "READY",
+  "gate": "adimage-operation-release-52b78145-2214-4ec2-8ff8-9a2bbef127cf",
+  "gateStatus": "passed6commands2760unchangedSources",
+  "anonymousPublicCheck": {
+    "report": "adimage-operation-public.json",
+    "passed": true,
+    "entries": 17,
+    "assets": 21,
+    "guestRecoveryStatus": 401
+  },
+  "next": "Generation/refinement release confirmed. Feedback cohort is local and not deployed; actor change during analyze has been independently reproduced and remains unfixed.",
+  "scope": "Exact5c1commit is READY and anonymous public checks pass. This is not authenticated production/provider/process-kill recovery proof or full17service completion.",
+  "ciConclusion": "success",
+  "ciHeadSha": "5c1cdac5ec024a5215a7ef3626126a2aed124aaa",
+  "deploymentCommitVerified": "5c1cdac5ec024a5215a7ef3626126a2aed124aaa"
+}

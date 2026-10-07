@@ -51,7 +51,7 @@ export function useAdImageRecovery(status: string, actor: string) {
     setIntent(saved)
     accepted.current = value
     setResult(value)
-    setMessage(value.state === 'limit' ? '利用枠の上限に達しました。プランを確認するか、この操作を閉じてください。' : value.state === 'busy' ? '別の画像生成処理が進んでいます。新しい生成はせず、時間をおいて保存結果を確認してください。' : value.state === 'pending' ? '生成は処理中か、結果の確認が必要です。新しい生成を開始せず、時間をおいて結果を確認してください。' : value.state === 'missing' ? 'まだ受付記録がありません。通信中の可能性があるため「未受付の操作を終了」で確認してから次に進んでください。' : value.state === 'failed' ? 'この生成は失敗が確認されました。操作を閉じて、新しい生成を始められます。' : value.state === 'cancelled' ? '未受付の操作を終了しました。操作を閉じて、新しい生成を始められます。' : value.state === 'unavailable' ? '生成結果は保存期間外か、削除されています。この操作は再実行されません。' : '')
+    setMessage(value.state === 'limit' ? '利用枠の上限に達しました。プランを確認するか、この操作を閉じてください。' : value.state === 'busy' ? '別の処理が進んでいます。新しい操作はせず、時間をおいて保存結果を確認してください。' : value.state === 'pending' ? '処理中か、結果の確認が必要です。新しい操作を開始せず、時間をおいて結果を確認してください。' : value.state === 'missing' ? 'まだ受付記録がありません。通信中の可能性があるため「未受付の操作を終了」で確認してから次に進んでください。' : value.state === 'failed' ? 'この操作は失敗が確認されました。操作を閉じて、新しい操作を始められます。' : value.state === 'cancelled' ? '未受付の操作を終了しました。操作を閉じて、新しい操作を始められます。' : value.state === 'unavailable' ? '結果は削除されたか、対象が変更されています。この操作は再実行されません。' : '')
   }
   const submit = async (kind: AdImageIntent['kind'], targetId: string, body: Record<string, unknown>, signal: AbortSignal) => {
     if (!allowed || !current() || pending.current) throw new Error('ログイン状態と前の生成結果を確認してください。')
@@ -77,7 +77,7 @@ export function useAdImageRecovery(status: string, actor: string) {
     const timer = window.setTimeout(() => controller.abort(), 315000)
     setBusy(true)
     try {
-      const response = await fetchAdImageOperation(kind === 'generate' ? '/api/adimage/concepts' : `/api/adimage/concepts/${encodeURIComponent(targetId)}/refine`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, operationId: saved.operationId }) }, controller.signal)
+      const response = await fetchAdImageOperation(kind === 'generate' ? '/api/adimage/concepts' : `/api/adimage/concepts/${encodeURIComponent(targetId)}/${kind === 'feedback' ? 'feedback' : 'refine'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, operationId: saved.operationId }) }, controller.signal)
       const value = await readAdImageOperationResponse(response, saved, controller.signal)
       if (!current()) return null
       if (readAdImageIntent(actor)?.operationId !== saved.operationId) { sync(); return null }

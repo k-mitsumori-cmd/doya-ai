@@ -1,5 +1,5 @@
 {
-  "status": "final-frozen6gates-passed2760unchanged; release-prepared-not-pushed",
+  "status": "Generation/refinement commit5c1 READY; CI and anonymous public proof passed; authenticated/provider/process-kill proof remains incomplete",
   "criteria": [
     "adimage C061",
     "adimage C064"
@@ -19,7 +19,7 @@
     "No customer DB mutations or migration",
     "Do not infer refund from aggregate usage or conflate network failure with failed generation"
   ],
-  "checkedAt": "2026-10-07T10:26:46.738805+00:00",
+  "checkedAt": "2026-10-07T10:28:25.569981+00:00",
   "routeBaseline": "adimage-route-lost-ack-baseline.json",
   "routeProbe": "probe-adimage-route-lost-ack.cjs",
   "routeFinding": "Historical original-route baseline reproduces duplicate usage. Current generated/refined POST and actual GET/DELETE route are wired; private PostgreSQL API27 proves saved-result replay without another provider call or charge. Tool now sends persisted UUID via actual recovery hook; mounted13/6 passed. Native/browser and final release gates remain incomplete.",
@@ -50,7 +50,7 @@
     "ciRegistration": "Prepared private PostgreSQL helper29 and actual API27 workflow steps; not committed or run remotely",
     "productionBugResolved": false,
     "codePublished": false,
-    "next": "Allowlist commit/push and exact remote Linux CI/READY/public verification; then feedback admission cohort",
+    "next": "Poll same CI watch handle and inspect exact deployment; confirm exact commit via list; run verify-adimage-operation-public.py only afterREADY, then continue feedback cohort",
     "remaining": [
       "Final frozen gate and native check with final compiled stylesheet",
       "Explicit allowlist commit/push and exact remote Linux CI/READY/public verification",
@@ -76,6 +76,50 @@
     "nativeEvidence": "adimage-operation-native-results.json",
     "nativeCases": 5,
     "visualReview": "Desktop1280/mobile390 screenshots inspected. Found stale English fetch error after recovery; sanitized hook exception and cleared error after applied result, then all mounted/native cases passed again.",
-    "nextFeedbackFinding": "adimage-feedback-admission-baseline.json: actual full feedback route admits10identical synthetic provider calls and10writes; separate unfixed cohort, no paid calls/customer DB"
+    "nextFeedbackFinding": "adimage-feedback-admission-baseline.json: actual full feedback route admits10identical synthetic provider calls and10writes; separate unfixed cohort, no paid calls/customer DB",
+    "release": {
+      "checkedAt": "2026-10-07T10:28:25.569981+00:00",
+      "commit": "5c1cdac5ec024a5215a7ef3626126a2aed124aaa",
+      "push": "origin HEAD:main succeeded",
+      "ciRun": 37607507625,
+      "ciStatus": "in_progress",
+      "ciWatchSession": 86197,
+      "ciWatchLog": "/tmp/doya-adimage-ci-watch.log",
+      "deploymentId": "dpl_A8ev2mdAb6ZqEPqqmHm4onggsv1q",
+      "deploymentUrl": "doya-cy4rwlf6t-surisutas-projects.vercel.app",
+      "deploymentLastObservedState": "BUILDING",
+      "gate": "adimage-operation-release-52b78145-2214-4ec2-8ff8-9a2bbef127cf",
+      "gateStatus": "passed6commands2760unchangedSources",
+      "anonymousPublicCheck": "pending-until-READY",
+      "next": "Poll same CI watch handle and inspect exact deployment; confirm exact commit via list; run verify-adimage-operation-public.py only afterREADY, then continue feedback cohort",
+      "scope": "Release in progress, not a production recovery-success claim. No authenticated production/provider/process-kill proof; whole17services2074criteria goal remains active."
+    }
+  },
+  "codePublished": true,
+  "releaseCurrent": {
+    "checkedAt": "2026-10-07T10:54:28.730123+00:00",
+    "commit": "5c1cdac5ec024a5215a7ef3626126a2aed124aaa",
+    "push": "origin HEAD:main succeeded",
+    "ciRun": 37607507625,
+    "ciStatus": "completed",
+    "ciWatchSession": 86197,
+    "ciWatchLog": "/tmp/doya-adimage-ci-watch.log",
+    "deploymentId": "dpl_A8ev2mdAb6ZqEPqqmHm4onggsv1q",
+    "deploymentUrl": "doya-cy4rwlf6t-surisutas-projects.vercel.app",
+    "deploymentLastObservedState": "READY",
+    "gate": "adimage-operation-release-52b78145-2214-4ec2-8ff8-9a2bbef127cf",
+    "gateStatus": "passed6commands2760unchangedSources",
+    "anonymousPublicCheck": {
+      "report": "adimage-operation-public.json",
+      "passed": true,
+      "entries": 17,
+      "assets": 21,
+      "guestRecoveryStatus": 401
+    },
+    "next": "Generation/refinement release confirmed. Feedback cohort is local and not deployed; actor change during analyze has been independently reproduced and remains unfixed.",
+    "scope": "Exact5c1commit is READY and anonymous public checks pass. This is not authenticated production/provider/process-kill recovery proof or full17service completion.",
+    "ciConclusion": "success",
+    "ciHeadSha": "5c1cdac5ec024a5215a7ef3626126a2aed124aaa",
+    "deploymentCommitVerified": "5c1cdac5ec024a5215a7ef3626126a2aed124aaa"
   }
 }

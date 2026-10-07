@@ -1,12 +1,12 @@
-import type { AdCopy, RefineDirective } from './types'
-export type AdImageIntent = { version: 1; operationId: string; kind: 'generate' | 'refine'; targetId: string; createdAt: string }
+import type { AdCopy, RefineDirective, FeedbackScores } from './types'
+export type AdImageIntent = { version: 1; operationId: string; kind: 'generate' | 'refine' | 'feedback'; targetId: string; createdAt: string }
 export type AdImageCreative = { id: string; placementKey: string; placementName: string; media: string; size: string; url: string; verify: { ocrMatch?: boolean; needsReview?: boolean; extraText?: string[]; safeAreaOk?: boolean } | null }
-export type AdImageResult = { operationId: string; kind: AdImageIntent['kind']; targetId: string; state: 'completed' | 'pending' | 'busy' | 'missing' | 'failed' | 'cancelled' | 'unavailable' | 'limit'; conceptId?: string; campaignId?: string; copy?: AdCopy; generation?: number; creatives?: AdImageCreative[]; previousCreatives?: AdImageCreative[]; previousGeneration?: number | null; appliedDirectives?: RefineDirective[]; failedPlacements?: string[]; needsReview?: boolean; error?: string; code?: string; upgradeUrl?: string; contactUrl?: string; limitReached?: boolean }
+export type AdImageResult = { operationId: string; kind: AdImageIntent['kind']; targetId: string; state: 'completed' | 'pending' | 'busy' | 'missing' | 'failed' | 'cancelled' | 'unavailable' | 'limit'; conceptId?: string; campaignId?: string; copy?: AdCopy; generation?: number; creatives?: AdImageCreative[]; previousCreatives?: AdImageCreative[]; previousGeneration?: number | null; appliedDirectives?: RefineDirective[]; failedPlacements?: string[]; needsReview?: boolean; error?: string; code?: string; upgradeUrl?: string; contactUrl?: string; limitReached?: boolean; feedbackId?: string; creativeId?: string; scores?: FeedbackScores; advice?: string; directives?: RefineDirective[] }
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
 const identifier = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v)
 const key = (actor: string) => 'adimage-intent:v1:' + encodeURIComponent(actor)
 const guidance = '処理結果を確認できません。再生成せず「保存結果を確認」を押してください。'
-function validIntent(v: AdImageIntent) { return v && v.version === 1 && typeof v.operationId === 'string' && uuid.test(v.operationId) && ['generate', 'refine'].includes(v.kind) && identifier(v.targetId) && typeof v.createdAt === 'string' && Number.isFinite(Date.parse(v.createdAt)) && Object.keys(v).every(k => ['version', 'operationId', 'kind', 'targetId', 'createdAt'].includes(k)) }
+function validIntent(v: AdImageIntent) { return v && v.version === 1 && typeof v.operationId === 'string' && uuid.test(v.operationId) && ['generate', 'refine', 'feedback'].includes(v.kind) && identifier(v.targetId) && typeof v.createdAt === 'string' && Number.isFinite(Date.parse(v.createdAt)) && Object.keys(v).every(k => ['version', 'operationId', 'kind', 'targetId', 'createdAt'].includes(k)) }
 export function readAdImageIntent(actor: string): AdImageIntent | null {
   if (!identifier(actor)) throw new Error('ログイン情報を確認してください。')
   const raw = localStorage.getItem(key(actor)); if (raw === null) return null
@@ -46,10 +46,11 @@ export async function readAdImageOperationResponse(response: Response, intent: A
       const expected = d.state === 'limit' ? 429 : ['pending', 'busy'].includes(d.state) ? 202 : 200
       if (response.status !== expected) throw new Error(guidance)
       if (d.state === 'limit') {
+        if (intent.kind === 'feedback') throw new Error(guidance)
         if (typeof d.error !== 'string' || d.error.length > 4000 || typeof d.code !== 'string' || !['REQUEST_IMAGE_LIMIT', 'DAILY_IMAGE_LIMIT', 'MONTHLY_IMAGE_LIMIT', 'DAILY_CONCEPT_LIMIT'].includes(d.code) || (d.upgradeUrl !== undefined && d.upgradeUrl !== '/adimage/pricing') || (d.contactUrl !== undefined && d.contactUrl !== 'https://doyamarke.surisuta.jp/contact')) throw new Error(guidance)
         return d
       }
-      if (d.state !== 'completed') { if (d.creatives !== undefined || d.conceptId !== undefined || d.previousCreatives !== undefined) throw new Error(guidance); return d }
+      if (d.state !== 'completed') { if (d.creatives !== undefined || d.conceptId !== undefined || d.previousCreatives !== undefined || d.feedbackId !== undefined || d.scores !== undefined || d.advice !== undefined || d.directives !== undefined) throw new Error(guidance); return d }
       const validVerification = (v: unknown) => {
         if (v === null) return true
         if (!v || typeof v !== 'object' || Array.isArray(v)) return false
@@ -71,7 +72,14 @@ export async function readAdImageOperationResponse(response: Response, intent: A
       if (!Array.isArray(d.appliedDirectives) || d.appliedDirectives.length > 5 || !d.appliedDirectives.every(v => v && ['copy', 'color', 'layout', 'contrast', 'visual'].includes(v.target) && typeof v.instruction === 'string' && v.instruction.length <= 20000 && typeof v.reason === 'string' && v.reason.length <= 4000)) throw new Error(guidance)
       if (intent.kind === 'generate' && (d.generation !== 1 || d.previousGeneration !== null || d.previousCreatives.length || d.appliedDirectives.length)) throw new Error(guidance)
       if (intent.kind === 'refine' && (d.generation! < 2 || (d.previousGeneration !== null && (!Number.isSafeInteger(d.previousGeneration) || d.previousGeneration! !== d.generation! - 1)))) throw new Error(guidance)
-      if (intent.kind === 'refine' && d.previousGeneration === null && d.previousCreatives.length) throw new Error(guidance)
+      if ((intent.kind === 'refine' || intent.kind === 'feedback') && d.previousGeneration === null && d.previousCreatives.length) throw new Error(guidance)
+      if (intent.kind === 'feedback') {
+        if (d.conceptId !== intent.targetId || !identifier(d.feedbackId) || !identifier(d.creativeId) || !d.creatives.some(c => c.id === d.creativeId) || d.appliedDirectives.length || (d.previousGeneration !== null && (!Number.isSafeInteger(d.previousGeneration) || d.previousGeneration! < 1 || d.previousGeneration !== d.generation! - 1))) throw new Error(guidance)
+        if (!d.scores || typeof d.scores !== 'object' || Array.isArray(d.scores)) throw new Error(guidance)
+        const values = ['visibility', 'appeal', 'cta', 'fit', 'brand'].map(k => (d.scores as unknown as Record<string, unknown>)[k])
+        if (values.some(v => typeof v !== 'number' || !Number.isInteger(v) || v < 1 || v > 5) || d.scores.total !== values.reduce<number>((sum, v) => sum + Number(v), 0)) throw new Error(guidance)
+        if (typeof d.advice !== 'string' || !d.advice.trim() || d.advice.length > 1000 || !Array.isArray(d.directives) || d.directives.length > 3 || !d.directives.every(v => v && ['copy', 'color', 'layout', 'contrast', 'visual'].includes(v.target) && typeof v.instruction === 'string' && v.instruction.trim() && v.instruction.length <= 500 && typeof v.reason === 'string' && v.reason.trim() && v.reason.length <= 500)) throw new Error(guidance)
+      } else if (d.feedbackId !== undefined || d.scores !== undefined || d.advice !== undefined || d.directives !== undefined) throw new Error(guidance)
       return d
     })()
     return await Promise.race([reading, stopped])

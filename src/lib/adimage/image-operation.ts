@@ -5,8 +5,8 @@ import { isPaid, type AdImageQuotaDenied } from './access'
 import { claimImageBudgetInTransaction, settleImageBudgetInTransaction, releaseImageBudgetInTransaction, withAdImageBudgetTransaction, type ImageBudgetReservation } from './image-budget'
 
 type Tx = Prisma.TransactionClient
-export type AdImageOperationInput = { actor: string; operationId: string; kind: 'generate' | 'refine'; targetId: string }
-type Receipt = AdImageOperationInput & { version: 1; phase: 'pending' | 'completed' | 'failed' | 'cancelled'; inputHash: string; targetHash: string; startedAt: string; reservation: ImageBudgetReservation | null; conceptId: string | null; produced: number; failedPlacements: string[]; appliedDirectives: RefineDirective[] }
+export type AdImageOperationInput = { actor: string; operationId: string; kind: 'generate' | 'refine' | 'feedback'; targetId: string }
+type Receipt = AdImageOperationInput & { version: 1; phase: 'pending' | 'completed' | 'failed' | 'cancelled'; inputHash: string; targetHash: string; startedAt: string; reservation: ImageBudgetReservation | null; conceptId: string | null; produced: number; failedPlacements: string[]; appliedDirectives: RefineDirective[]; feedbackId?: string; creativeId?: string }
 export const ADIMAGE_OPERATION_LEASE_MS = 15 * 60 * 1000
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
 const identifier = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v)
@@ -19,7 +19,7 @@ function stable(value: unknown): unknown {
 }
 const hash = (v: unknown) => createHash('sha256').update(JSON.stringify(stable(v))).digest('hex')
 function normalized(input: AdImageOperationInput) {
-  if (!identifier(input.actor) || !identifier(input.targetId) || typeof input.operationId !== 'string' || !uuid.test(input.operationId) || !['generate', 'refine'].includes(input.kind)) throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
+  if (!identifier(input.actor) || !identifier(input.targetId) || typeof input.operationId !== 'string' || !uuid.test(input.operationId) || !['generate', 'refine', 'feedback'].includes(input.kind)) throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
   return { ...input, operationId: input.operationId.toLowerCase() }
 }
 const receiptKey = (r: AdImageOperationInput) => 'adimage-operation:v1:' + hash([r.actor, r.operationId.toLowerCase()])
@@ -33,12 +33,14 @@ function parse(value: string): Receipt {
     const r: Receipt = JSON.parse(value)
     normalized(r)
     if (r.version !== 1 || !['pending', 'completed', 'failed', 'cancelled'].includes(r.phase) || !/^[a-f0-9]{64}$/.test(r.inputHash) || !/^[a-f0-9]{64}$/.test(r.targetHash) || typeof r.startedAt !== 'string' || !Number.isFinite(Date.parse(r.startedAt))
-      || !Number.isSafeInteger(r.produced) || r.produced < 0 || r.produced > 10 || ((r.phase === 'completed') !== (r.produced > 0))
+      || !Number.isSafeInteger(r.produced) || r.produced < 0 || r.produced > 10 || (r.kind === 'feedback' ? r.produced !== 0 : ((r.phase === 'completed') !== (r.produced > 0)))
       || (r.conceptId !== null && !identifier(r.conceptId)) || ((r.phase === 'completed') !== Boolean(r.conceptId)) || !Array.isArray(r.failedPlacements) || r.failedPlacements.length > 10 || r.failedPlacements.some(x => typeof x !== 'string' || x.length > 160)) throw new Error()
     if (!validAdImageDirectives(r.appliedDirectives)) throw new Error()
-    if (r.phase === 'pending' && !r.reservation) throw new Error()
+    if (r.phase === 'pending' && r.kind !== 'feedback' && !r.reservation) throw new Error()
     if (r.reservation && (r.reservation.key !== 'adimage-image:v1:' + createHash('sha256').update(r.actor).digest('hex') || !uuid.test(r.reservation.token) || !Number.isSafeInteger(r.reservation.requested) || r.reservation.requested < 1 || r.reservation.requested > 10 || r.produced > r.reservation.requested)) throw new Error()
-    if (r.phase === 'completed' && (!r.reservation || r.failedPlacements.length !== r.reservation.requested - r.produced)) throw new Error()
+    if (r.kind === 'feedback' && (r.reservation !== null || r.failedPlacements.length !== 0 || r.appliedDirectives.length !== 0 || (r.phase === 'pending' && !identifier(r.creativeId)) || (r.phase !== 'completed' && r.feedbackId !== undefined) || (r.creativeId !== undefined && !identifier(r.creativeId)) || (r.phase === 'completed' && (!identifier(r.feedbackId) || !identifier(r.creativeId) || r.conceptId !== r.targetId)))) throw new Error()
+    if (r.kind !== 'feedback' && (r.feedbackId !== undefined || r.creativeId !== undefined)) throw new Error()
+    if (r.phase === 'completed' && r.kind !== 'feedback' && (!r.reservation || r.failedPlacements.length !== r.reservation.requested - r.produced)) throw new Error()
     return r
   } catch { throw new AdImageOperationError(409, 'INVALID_RECEIPT', '操作情報を確認できません。再生成せずお問い合わせください。') }
 }
@@ -62,7 +64,8 @@ async function lockActor(tx: Tx, actor: string) {
 export function adImageTargetHash(kind: AdImageOperationInput['kind'], target: unknown) {
   if (kind === 'generate') return hash(target)
   const r = target as { creatives?: Array<{ id: string }> }
-  return hash({ ...r, creatives: [...(r.creatives || [])].sort((a, b) => a.id.localeCompare(b.id)) })
+  const { feedbacks: _feedbacks, ...feedbackSource } = r as typeof r & { feedbacks?: unknown }
+  return hash({ ...(kind === 'feedback' ? feedbackSource : r), creatives: [...(r.creatives || [])].sort((a, b) => a.id.localeCompare(b.id)) })
 }
 async function target(tx: Tx, input: AdImageOperationInput) {
   if (input.kind === 'generate') {
@@ -74,12 +77,13 @@ async function target(tx: Tx, input: AdImageOperationInput) {
   await tx.$queryRaw`SELECT id FROM adimage_campaign WHERE id = ${parent.campaignId} AND "userId" = ${input.actor} FOR UPDATE`
   await tx.$queryRaw`SELECT b.id FROM adimage_brand b JOIN adimage_campaign c ON c."brandId" = b.id WHERE c.id = ${parent.campaignId} AND b."userId" = ${input.actor} FOR UPDATE OF b`
   await tx.$queryRaw`SELECT id FROM adimage_concept WHERE id = ${input.targetId} FOR UPDATE`
+  await tx.$queryRaw`SELECT id FROM adimage_creative WHERE "conceptId" = ${input.targetId} ORDER BY id FOR UPDATE`
   return tx.adImageConcept.findFirst({ where: { id: input.targetId, campaign: { userId: input.actor, brand: { userId: input.actor } } }, include: { creatives: true, campaign: { include: { brand: true } }, feedbacks: { orderBy: { createdAt: 'desc' }, take: 1 } } })
 }
-async function close(tx: Tx, r: Receipt, phase: 'failed' | 'completed', conceptId: string | null = null, failedPlacements: string[] = [], produced = 0, appliedDirectives: RefineDirective[] = []) {
+async function close(tx: Tx, r: Receipt, phase: 'failed' | 'completed', conceptId: string | null = null, failedPlacements: string[] = [], produced = 0, appliedDirectives: RefineDirective[] = [], feedbackId?: string) {
   if (r.phase !== 'pending') return r
   if (phase === 'failed' && r.reservation) await releaseImageBudgetInTransaction(tx, r.reservation)
-  const result = { ...r, phase, conceptId, failedPlacements, produced, appliedDirectives }
+  const result = { ...r, phase, conceptId, failedPlacements, produced, appliedDirectives, ...(feedbackId ? { feedbackId } : {}) }
   await save(tx, result)
   await tx.systemSetting.deleteMany({ where: { key: activeKey(r.actor), value: receiptKey(r) } })
   return result
@@ -93,6 +97,11 @@ function bind(r: Receipt, input: AdImageOperationInput) {
 }
 async function available(tx: Tx, r: Receipt) {
   if (!r.conceptId) return true
+  if (r.kind === 'feedback') {
+    const current = await target(tx, r)
+    if (!current || adImageTargetHash('feedback', current) !== r.targetHash) return false
+    return Boolean(await tx.adImageFeedback.findFirst({ where: { id: r.feedbackId, conceptId: r.targetId, creativeId: r.creativeId, concept: { campaign: { userId: r.actor, brand: { userId: r.actor } } }, creative: { conceptId: r.targetId } }, select: { id: true } }))
+  }
   const saved = await tx.adImageConcept.findFirst({ where: { id: r.conceptId, campaign: { userId: r.actor, brand: { userId: r.actor } } }, select: { _count: { select: { creatives: true } } } })
   return saved?._count.creatives === r.produced
 }
@@ -122,6 +131,13 @@ export async function beginAdImageOperation(supplied: AdImageOperationInput, bod
       return { state: 'unavailable' as const }
     }
     if (adImageTargetHash(input.kind, current) !== sourceHash) throw new AdImageOperationError(409, 'TARGET_CHANGED', '元の情報が変わりました。画面を更新して内容を確認してください。')
+    if (input.kind === 'feedback') {
+      if (requested !== 0 || !identifier(body.creativeId) || !('creatives' in current) || !current.creatives.some(c => c.id === body.creativeId)) throw new AdImageOperationError(400, 'INVALID_OPERATION', '採点対象を確認してください。')
+      const receipt: Receipt = { ...input, version: 1, phase: 'pending', inputHash, targetHash: sourceHash, startedAt: new Date().toISOString(), reservation: null, conceptId: null, produced: 0, failedPlacements: [], appliedDirectives: [], creativeId: body.creativeId }
+      await save(tx, receipt)
+      await tx.systemSetting.upsert({ where: { key: activeKey(input.actor) }, create: { key: activeKey(input.actor), value: receiptKey(input) }, update: { value: receiptKey(input) } })
+      return { state: 'started' as const, receipt }
+    }
     const claim = await claimImageBudgetInTransaction(tx, { userId: input.actor, guestId: null, plan: isPaid(actor.plan) ? 'PRO' : 'FREE' }, requested, input.kind === 'generate')
     const receipt: Receipt = { ...input, version: 1, phase: claim.ok ? 'pending' : 'cancelled', inputHash, targetHash: sourceHash, startedAt: new Date().toISOString(), reservation: claim.ok ? claim.reservation : null, conceptId: null, produced: 0, failedPlacements: [], appliedDirectives: [] }
     await save(tx, receipt)
@@ -133,6 +149,7 @@ export async function beginAdImageOperation(supplied: AdImageOperationInput, bod
 export async function settleAdImageOperation(inputValue: AdImageOperationInput, produced: number, failedPlacements: string[], write: (tx: Tx) => Promise<{ id: string }>, appliedDirectives: RefineDirective[] = []) {
   if (!validAdImageDirectives(appliedDirectives)) throw new AdImageOperationError(400, 'INVALID_DIRECTIVES', '改善指示の内容を確認してください。')
   const input = normalized(inputValue)
+  if (input.kind === 'feedback') throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
   const result = await withAdImageBudgetTransaction(async tx => {
     if (!await lockActor(tx, input.actor)) return null
     const r = await expire(tx, await read(tx, receiptKey(input), input.actor))
@@ -174,4 +191,30 @@ export async function recoverAdImageOperation(value: AdImageOperationInput, canc
     await save(tx, receipt)
     return { state: 'cancelled' as const, receipt }
   }, true)
+}
+
+/** Vision runs outside the transaction; only this short completion may write its result. */
+export async function settleAdImageFeedbackOperation(value: AdImageOperationInput, write: (tx: Tx, creativeId: string) => Promise<{ id: string }>) {
+  const input = normalized(value)
+  if (input.kind !== 'feedback') throw new AdImageOperationError(400, 'INVALID_OPERATION', '操作内容を確認してください。')
+  const result = await withAdImageBudgetTransaction(async tx => {
+    if (!await lockActor(tx, input.actor)) return null
+    const r = await expire(tx, await read(tx, receiptKey(input), input.actor))
+    if (!r) throw new AdImageOperationError(409, 'OPERATION_UNAVAILABLE', '採点の操作を確認できません。')
+    bind(r, input)
+    if (r.phase === 'completed') return await available(tx, r) ? r : null
+    if (r.phase !== 'pending' || !r.creativeId) return null
+    const current = await target(tx, input)
+    if (!current || adImageTargetHash('feedback', current) !== r.targetHash) throw new AdImageOperationError(409, 'TARGET_CHANGED', '採点対象が変わりました。保存結果を確認してください。')
+    // Child rows are independently mutable; lock the exact creative before checking it.
+    await tx.$queryRaw`SELECT id FROM adimage_creative WHERE id = ${r.creativeId} AND "conceptId" = ${input.targetId} FOR UPDATE`
+    if (!await tx.adImageCreative.findFirst({ where: { id: r.creativeId, conceptId: input.targetId }, select: { id: true } })) throw new AdImageOperationError(409, 'TARGET_CHANGED', '採点対象が変更されています。')
+    const saved = await write(tx, r.creativeId)
+    if (!identifier(saved.id)) throw new AdImageOperationError(502, 'INVALID_RESULT', '採点の保存結果を確認できません。')
+    const owned = await tx.adImageFeedback.findFirst({ where: { id: saved.id, conceptId: input.targetId, creativeId: r.creativeId, concept: { campaign: { userId: input.actor, brand: { userId: input.actor } } } }, select: { id: true } })
+    if (!owned) throw new AdImageOperationError(409, 'INVALID_RESULT', '採点の保存先を確認できません。')
+    return close(tx, r, 'completed', input.targetId, [], 0, [], saved.id)
+  })
+  if (!result) throw new AdImageOperationError(409, 'OPERATION_EXPIRED', '採点の保存期限が切れたか、対象が削除されています。保存結果を確認してください。')
+  return result
 }

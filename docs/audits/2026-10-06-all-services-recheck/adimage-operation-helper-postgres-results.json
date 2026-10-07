@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T10:20:59.009Z",
+  "checkedAt": "2026-10-07T11:01:16.982Z",
   "passed": 29,
   "cases": [
     "Nine simultaneous identical UUIDs admit once; quota is reserved once",
@@ -33,7 +33,7 @@
     "Refinement cannot save a child under another campaign even with matching parent ID"
   ],
   "sourceHashes": {
-    "src/lib/adimage/image-operation.ts": "158c050d434dde0abbf9c862d399ab173164135f803d32996f05dd22a0afd6ff",
+    "src/lib/adimage/image-operation.ts": "2c58e86ab050fb6f64b4700b7e878ad01231cfba646f4c5687a5a08e645cd46c",
     "src/lib/adimage/image-budget.ts": "e7ae852ee4c5b462a077dcf3e5779dfc5999c59033a9b5c85f55fc85d87567d6",
     "src/lib/adimage/access.ts": "f871a79bd698e79cd3c4b8e1071b69747be12bc56fddee129ec97239f1ce14a9"
   },

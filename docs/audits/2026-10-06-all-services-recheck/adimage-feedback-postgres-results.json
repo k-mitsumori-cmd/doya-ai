@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-07T11:01:21.218Z",
+  "passed": 25,
+  "cases": [
+    "Ten simultaneous identical feedback POSTs invoke vision and save exactly once without image usage",
+    "Saved feedback survives response signing loss; actual client parses GET and POST replay without vision",
+    "Competing feedback UUID is busy while same UUID is pending",
+    "Feedback and image generation share the active actor fence in both directions",
+    "Feedback and refinement share the active actor fence",
+    "Changed immutable note is rejected before a second provider or storage download",
+    "campaignOwner change during vision rejects the atomic feedback save",
+    "brandOwner change during vision rejects the atomic feedback save",
+    "copy change during vision rejects the atomic feedback save",
+    "imagePath change during vision rejects the atomic feedback save",
+    "brandName change during vision rejects the atomic feedback save",
+    "Feedback insert and completion receipt roll back together",
+    "Lost transaction acknowledgement preserves one completed feedback and replay never repeats vision",
+    "Expired pending feedback rejects late worker after terminal state commits",
+    "Missing operation DELETE fences delayed POST without vision or usage",
+    "Provider failure never retries vision for the same UUID",
+    "Malformed provider scores are never persisted as default grades",
+    "feedbackDelete after completion hides saved result and never repeats vision",
+    "creativeDelete after completion hides saved result and never repeats vision",
+    "sourceChange after completion hides saved result and never repeats vision",
+    "ownerTransfer after completion hides saved result and never repeats vision",
+    "Foreign actor and anonymous recovery expose no feedback",
+    "Exhausted image budget does not charge or prevent a feedback evaluation",
+    "Missing operation ID requires reload and cannot fall back to an untracked evaluation",
+    "Feedback on a refined concept preserves the before/after comparison on recovery"
+  ],
+  "sourceHashes": {
+    "src/lib/adimage/image-operation.ts": "2c58e86ab050fb6f64b4700b7e878ad01231cfba646f4c5687a5a08e645cd46c",
+    "src/lib/adimage/image-operation-http.ts": "62e055bf64cd88ce32f56dc3e24235dc18b81be9acef174d65c5092ad67ab7f6",
+    "src/lib/adimage/feedback.ts": "8b9b8598e92b24b9042da1cda21f111ea519af8f650ad17d9060b881b289e5cf",
+    "src/lib/adimage/feedback-input.ts": "67d03e98ec576d75161e62de69b536d877aa4b556e57b770dc9189dca0203a7e",
+    "src/lib/adimage/operation-client.ts": "20340a6d14e00a181576acc4adc8a674c70078bf59723e5a1ce3c4bbaf266f45",
+    "src/app/api/adimage/concepts/[id]/feedback/route.ts": "d31e1d4f60724d667c3ede202894bb9d08d5035759ef1245eb968b38b163e44b"
+  },
+  "scope": "Actual feedback POST, operation GET/DELETE, shared operation helper, budget, feedback parser, client result reader, Prisma/private Unix-only PostgreSQL with concept and creative feedback foreign keys. Synthetic identity/storage/signing/vision. No production database or paid API. Does not prove browser or process-kill recovery."
+}

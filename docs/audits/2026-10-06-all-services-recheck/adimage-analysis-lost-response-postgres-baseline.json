@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-07T11:04:52.973Z",
+  "passed": 1,
+  "cases": [
+    "Native Chrome lost response after actual saved analysis admits duplicate stored brand/provider work"
+  ],
+  "firstFetch": {
+    "status": 200,
+    "ok": true
+  },
+  "nativeAutomaticAttempts": 2,
+  "manualRetry": null,
+  "totalHttpAttempts": 2,
+  "storedBrands": 2,
+  "syntheticBrandCalls": 2,
+  "syntheticCopyCalls": 2,
+  "chargedAnalysisAttempts": 2,
+  "chrome": "Chrome/155.0.8059.39",
+  "sourceHashes": {
+    "src/app/api/adimage/analyze/route.ts": "fec1878bba8101be612f04e22f6dfd041d0d0079e5d63bbc4383e1e55e985bed",
+    "src/lib/adimage/analysis-budget.ts": "20e1fb7dbba425d294d2ef461f09969db4a7240958e9a4dfc50733e3b63ee999",
+    "src/lib/operational-json.ts": "84dd4a01b6a1c7c3878d6a64e9cebfc4c85414ea3d88d95e9070595a01a58884"
+  },
+  "scope": "Actual analyze route + streamed JSON parser + actual analysis budget + Prisma/private Unix-only PostgreSQL. Native Chrome POST to real local HTTP server; first response socket destroyed after route saved brand and released lease. Synthetic identity/source/AI only, no paid API/customer DB. This demonstrates lost-response replay duplication, not a confirmed production incident."
+}
