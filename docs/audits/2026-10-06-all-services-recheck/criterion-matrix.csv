@@ -1477,11 +1477,11 @@ aio,C011,認証,管理画面と一般画面の認証が分離される,現在版
 aio,C012,認証,招待トークンの期限・使い回し・失効が守られる,部分検証済み・本番通し検証待ち,team-invite-deadline-regression.log: 実APIの期限ちょうど/DB待ち中失効/rollbackを合成時計/DBで検証。5サービスのロック後組織とclaim時role/email/組織の照合も検証。実DB同時実行・本番参加と最後の期限確認からcommit間の保証は未確認。既存の画面復旧証拠はREADME参照。 invite-issuance-boundary-regression.log / sfa-invite-atomic-regression.log: 期限ちょうどの再送を合成時計で検証。SFAは既所属cleanupと最新の招待確認をTxへ一体化、失敗/失効/競合でrollback。実DB同時実行・本番承諾は未確認。
 aio,C013,権限・組織,他ユーザーのIDによる取得・更新・削除を拒否する,現在版での項目別通し検証待ち,
 aio,C014,権限・組織,明示した組織が不正なら別組織へ切り替えない,現在版での項目別通し検証待ち,
-aio,C015,権限・組織,退会済み・無効メンバーの権限を拒否する,現在版での項目別通し検証待ち,
+aio,C015,権限・組織,退会済み・無効メンバーの権限を拒否する,現在版での項目別通し検証待ち,"; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
 aio,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,部分検証済み・本番通し検証待ち," aio-shodan-member-management-repair.json: Member repair deployed at 6bd0adb1, CI success/READY/anonymous 17-entry publication proven; authenticated production flow unproven. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven."
 aio,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 aio,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-aio,C019,権限・組織,組織切替中の遅延応答を破棄する,部分検証済み・本番通し検証待ち," aio-shodan-member-management-repair.json: Member repair deployed at 6bd0adb1, CI success/READY/anonymous 17-entry publication proven; authenticated production flow unproven. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven."
+aio,C019,権限・組織,組織切替中の遅延応答を破棄する,部分検証済み・本番通し検証待ち," aio-shodan-member-management-repair.json: Member repair deployed at 6bd0adb1, CI success/READY/anonymous 17-entry publication proven; authenticated production flow unproven. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven.; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
 aio,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 aio,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 aio,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -1496,7 +1496,7 @@ aio,C030,課金,手動付与した有料権限が誤って失われない,現在
 aio,C031,利用上限,料金ページの数値・単位・期間がAPIと一致する,現在版での項目別通し検証待ち,
 aio,C032,利用上限,表示残数とサーバー実使用数が一致する,現在版での項目別通し検証待ち,
 aio,C033,利用上限,上限0と上限直前と超過時を正しく扱う,現在版での項目別通し検証待ち,
-aio,C034,利用上限,同時リクエストでも上限を超えない,現在版での項目別通し検証待ち,
+aio,C034,利用上限,同時リクエストでも上限を超えない,現在版での項目別通し検証待ち,"; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
 aio,C035,利用上限,利用枠を予約してから従量課金APIを呼ぶ,現在版での項目別通し検証待ち,
 aio,C036,利用上限,生成失敗・中断時の予約を過不足なく戻す,現在版での項目別通し検証待ち,
 aio,C037,利用上限,月次・日次境界のタイムゾーンが統一される,現在版での項目別通し検証待ち,
@@ -1504,7 +1504,7 @@ aio,C038,利用上限,履歴削除によって消費済み枠が復活しない,
 aio,C039,利用上限,DB障害時に無制限の生成を許可しない,現在版での項目別通し検証待ち,
 aio,C040,利用上限,ゲストのCookie削除で有料原価が無制限にならない,現在版での項目別通し検証待ち,
 aio,C041,利用上限,チーム枠の契約者と操作ユーザーを取り違えない,現在版での項目別通し検証待ち,
-aio,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,
+aio,C042,利用上限,全上限経路に適切な次の操作を提示する,現在版での項目別通し検証待ち,"; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
 aio,C043,利用上限,無料体験対象外に無料を約束しない,現在版での項目別通し検証待ち,
 aio,C044,利用上限,混雑・サイズ超過・認証エラーを課金誘導しない,現在版での項目別通し検証待ち,org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven)
 aio,C045,データ・DB,モデルのテーブル・列・null制約が実DBと一致する,一部検証済み：本番DBの列存在・型・非配列の必須設定／配列NULL・業務整合性未検証,production-readonly-schema.json; production-readonly-constraints.json; README.md
@@ -1523,7 +1523,7 @@ aio,C057,入力・外部接続,ファイル形式を拡張子だけで判断し�
 aio,C058,入力・外部接続,ストレージの所有権・署名URL期限が守られる,現在版での項目別通し検証待ち,
 aio,C059,入力・外部接続,外部APIのタイムアウト・再試行が有界である,現在版での項目別通し検証待ち,
 aio,C060,入力・外部接続,通知先・本文に利用者入力を安全に扱う,現在版での項目別通し検証待ち,
-aio,C061,生成・ジョブ,連打・再送に冪等性がある,現在版での項目別通し検証待ち,
+aio,C061,生成・ジョブ,連打・再送に冪等性がある,現在版での項目別通し検証待ち,"; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
 aio,C062,生成・ジョブ,ジョブの所有者と結果取得権限を検査する,現在版での項目別通し検証待ち,
 aio,C063,生成・ジョブ,ストリーム途中失敗を成功として表示しない,現在版での項目別通し検証待ち,org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven)
 aio,C064,生成・ジョブ,生成結果と履歴・使用量の保存が整合する,現在版での項目別通し検証待ち,
@@ -1532,10 +1532,10 @@ aio,C066,生成・ジョブ,再生成と編集にも上限を適用する,現在
 aio,C067,生成・ジョブ,公開音声ルームの同意・期限・人数を守る,現在版での項目別通し検証待ち,
 aio,C068,生成・ジョブ,エクスポートで他人の成果物を含めない,現在版での項目別通し検証待ち,
 aio,C069,UI・アクセシビリティ,モーダルのフォーカス・Escape・復帰が機能する,現在版での項目別通し検証待ち,
-aio,C070,UI・アクセシビリティ,入力をエラー時に失わない,現在版での項目別通し検証待ち,PARTIAL brand settings local validation only: aio-brand-profile-form-mounted-results.json (7 actual mounted cases); invalid input draft retained; org-client-write-baseline.json records remaining prompt malformed-success draft loss; auth/reload/private flows unproven; org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven)
-aio,C071,UI・アクセシビリティ,上限案内が二重表示されない,現在版での項目別通し検証待ち,
+aio,C070,UI・アクセシビリティ,入力をエラー時に失わない,現在版での項目別通し検証待ち,"PARTIAL brand settings local validation only: aio-brand-profile-form-mounted-results.json (7 actual mounted cases); invalid input draft retained; org-client-write-baseline.json records remaining prompt malformed-success draft loss; auth/reload/private flows unproven; org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven); PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
+aio,C071,UI・アクセシビリティ,上限案内が二重表示されない,現在版での項目別通し検証待ち,"; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
 aio,C072,UI・アクセシビリティ,有料会員に同じプランへの重複契約を促さない,現在版での項目別通し検証待ち,
-aio,C073,UI・アクセシビリティ,APIエラーを消えるトーストだけに依存しない,現在版での項目別通し検証待ち,PARTIAL brand settings parser denial displayed in persistent form: aio-brand-profile-form-mounted-results.json; all other API errors and unknown-write recovery unproven
+aio,C073,UI・アクセシビリティ,APIエラーを消えるトーストだけに依存しない,現在版での項目別通し検証待ち,"PARTIAL brand settings parser denial displayed in persistent form: aio-brand-profile-form-mounted-results.json; all other API errors and unknown-write recovery unproven; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
 aio,C074,UI・アクセシビリティ,色だけに依存せずラベルと操作名を持つ,現在版での項目別通し検証待ち,
 aio,C075,運用・リリース,本番ソースと監査対象のハッシュが一致する,現在版での項目別通し検証待ち,
 aio,C076,運用・リリース,別作業の未公開修正を検証済みと混同しない,現在版での項目別通し検証待ち,
@@ -1553,16 +1553,16 @@ aio,U05,user-experience,公開LP/料金/主要CTAがPC・スマートフォン�
 aio,U06,user-experience,ログイン必須か、無料体験の開始条件は何かが入力前に分かる。,現在版での項目別通し検証待ち,
 aio,U07,user-experience,入力途中にログイン・料金確認へ移動しても内容が消えない。,現在版での項目別通し検証待ち,
 aio,U08,user-experience,組織作成・メンバー招待・既存組織参加の順序と役割が分かる。,一部検証済み：招待先違いの切替導線・失敗再試行・招待URL保持を隔離/模擬応答で確認／本番承諾と役割の通し確認未完了,invite-account-browser.json; invite-account-regression.log; invite-account-baseline.log; README.md
-aio,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,
+aio,U09,user-experience,URL・ファイル形式/容量・数値・必須項目を実処理前に検証し、入力を別の意味へ黙って変えない。,現在版での項目別通し検証待ち,"; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
 aio,U10,user-experience,マイク・録音・タブ共有・対応ブラウザ・スマホ対応の条件を開始前に説明する。,現在版での項目別通し検証待ち,
 aio,U11,user-experience,開始・進行中・完了・失敗・中止の状態を区別し、いつ待ちをやめてよいか分かる。,現在版での項目別通し検証待ち,
-aio,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：入口・招待・AIO調査の認証失敗、再試行、連打、旧応答抑止／全経路・別タブ・本番データ冪等性未検証,entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs; org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven)
-aio,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,部分検証済み・本番通し検証待ち,"entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs aio-shodan-member-management-repair.json: Member repair deployed at 6bd0adb1, CI success/READY/anonymous 17-entry publication proven; authenticated production flow unproven. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven."
+aio,U12,user-experience,通信失敗を「0件」「保存済み」「ダウンロード済み」と表示しない。,一部検証済み：入口・招待・AIO調査の認証失敗、再試行、連打、旧応答抑止／全経路・別タブ・本番データ冪等性未検証,"entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs; org-client-response-repair.json; org-client-response-results.json; org-client-route-results.json; org-client-callback-results.json; org-settings-repair.json (52 mounted / 48 versioned API synthetic cases; private production and whole criterion unproven); PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
+aio,U13,user-experience,二重クリック・再読込・戻る・別タブで、二重作成や二重消費を起こさない。,部分検証済み・本番通し検証待ち,"entry-submission-browser.json; scripts/security-regression/verify-entry-submission.cjs; additional-signin-failure-baseline.json; README.md; service-auth-browser.json; scripts/security-regression/verify-service-auth-recovery.cjs aio-shodan-member-management-repair.json: Member repair deployed at 6bd0adb1, CI success/READY/anonymous 17-entry publication proven; authenticated production flow unproven. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven.; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
 aio,U14,user-experience,生成途中の失敗・一部成功でも成果物を救出でき、再試行対象と追加消費が分かる。,現在版での項目別通し検証待ち,
 aio,U15,user-experience,確定済み書類・終了した評価・締めた勤怠は通常操作で意図せず書き換わらない。,現在版での項目別通し検証待ち,
 aio,U16,user-experience,残量をサーバー実績に合わせ、端末変更や再ログインで一致する。,現在版での項目別通し検証待ち,
 aio,U17,user-experience,残量を超える注文を入力時点で説明し、一部生成になる場合は先に分かる。,現在版での項目別通し検証待ち,
-aio,U18,user-experience,上限到達後、入力を保ったまま利用条件・正しい契約者・相談先へ進める。,現在版での項目別通し検証待ち,
+aio,U18,user-experience,上限到達後、入力を保ったまま利用条件・正しい契約者・相談先へ進める。,現在版での項目別通し検証待ち,"; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
 aio,U19,user-experience,すでに有料の利用者、招待された従業員、面接の応募者に無関係な新規課金を勧めない。,現在版での項目別通し検証待ち,
 aio,U20,user-experience,月替わり・解約・再契約・失敗返却・削除で使用量が矛盾せず、復旧理由も説明できる。,現在版での項目別通し検証待ち,
 aio,U21,user-experience,保存期間、起算日、無料化後の扱い、削除前通知が表示と処理で一致する。,現在版での項目別通し検証待ち,
@@ -1573,8 +1573,8 @@ aio,U25,user-experience,履歴削除、素材削除、プロジェクト削除�
 aio,U26,user-experience,個人用/組織用/公開の境界と、URLを知るだけで見られる範囲が分かる。,現在版での項目別通し検証待ち,
 aio,U27,user-experience,「閲覧のみ」のゲストは編集できず、一般社員は他人の人事情報を勝手に見られない。,現在版での項目別通し検証待ち,
 aio,U28,user-experience,別組織のURLで別の作業場所へ黙って移動せず、現在の組織が常に分かる。,現在版での項目別通し検証待ち,
-aio,U29,user-experience,ログアウト・アカウント切替・共有PCで前利用者のキャッシュが表示されない。,現在版での項目別通し検証待ち,
-aio,U30,user-experience,招待取消・権限変更・録音同意撤回・共有URL失効が利用者の期待どおり反映される。,現在版での項目別通し検証待ち,
+aio,U29,user-experience,ログアウト・アカウント切替・共有PCで前利用者のキャッシュが表示されない。,現在版での項目別通し検証待ち,"; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
+aio,U30,user-experience,招待取消・権限変更・録音同意撤回・共有URL失効が利用者の期待どおり反映される。,現在版での項目別通し検証待ち,"; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
 aio,U31,user-experience,初回限定30日体験と通常無料枠を区別し、終了後の料金・更新条件が分かる。,現在版での項目別通し検証待ち,
 aio,U32,user-experience,契約直後に全対象サービスへ反映し、未反映時は二重申込ではなく復旧へ誘導する。,現在版での項目別通し検証待ち,
 aio,U33,user-experience,個人の課金・OWNERの課金・チーム席の意味を全サービスで説明し、払っても解決しない案内をしない。,現在版での項目別通し検証待ち,

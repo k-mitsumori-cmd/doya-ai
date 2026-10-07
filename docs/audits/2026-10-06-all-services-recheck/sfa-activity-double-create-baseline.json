@@ -1,0 +1,6 @@
+{
+  "status": "confirmed-open",
+  "case": "activity same-frame double create",
+  "writes": 2,
+  "scope": "Actual task page and sfaInit/date helper, synthetic transport. No DB/customer write or paid provider."
+}

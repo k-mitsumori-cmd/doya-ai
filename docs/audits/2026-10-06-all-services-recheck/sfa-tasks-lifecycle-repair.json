@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-07T00:30:13.078066+00:00",
+  "status": "confirmed-open-not-fixed",
+  "sourceCommit": "e1e4a38d76c4f5c49dcdc949c93a87dc51e0b6f7",
+  "evidence": [
+    "sfa-task-late-create-baseline.json",
+    "sfa-task-double-create-baseline.json",
+    "sfa-activity-late-create-baseline.json",
+    "sfa-activity-double-create-baseline.json"
+  ],
+  "findings": [
+    "Actual task and activity creation both allow two same-frame POSTs.",
+    "Late alpha task/activity creation clears beta draft, shows global success and reloads alpha rows into beta scope."
+  ],
+  "nextRequirements": [
+    "Actor/org/epoch scoped reads and mutation controllers, persistent scoped results, shared synchronous operation guards",
+    "Creation replay protection and read recovery for uncertain outcomes, bounded full DTO transport, versioned task changes/deletions",
+    "Actual mounted and atomic API synthetic regression, frozen full gates, production verification"
+  ],
+  "limits": [
+    "Synthetic real-page scope transition, not proof of real Next segment reuse; no real customer writes, paid provider or DB operation.",
+    "All 17 services / 2074 criteria remain incomplete."
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-07T00:07:11.073843+00:00",
-  "status": "confirmed-open-not-fixed",
+  "status": "candidate-frozen-full-gate-passed-not-pushed",
   "sourceCommit": "38a74a2d3f256a86438565a32ed092d0d0e38f4b",
   "probe": "probe-aio-prompts-lifecycle.cjs",
   "evidence": [
@@ -24,5 +24,43 @@
     "Synthetic React page/AppLayout/transport scope transition only; not proof of real Next segment reuse.",
     "No real customer write, DB access, paid provider, archive or production mutation.",
     "All 17 services and 2074 criteria remain in scope."
-  ]
+  ],
+  "candidateMountedCases": 35,
+  "candidateApiCases": 28,
+  "previousGoalTurnClassification": "progress: verified requested media replacement; resumed goal, repaired AIO prompt lifecycle and APIs, confirmed prior Shodan CI success.",
+  "candidateScope": [
+    "Actor/org/epoch scoped prompt list and mutations, synchronous shared lane, latest draft preservation, IME-safe Enter, read-only member controls",
+    "Stable actor/org operation IDs for creation replay and archived receipt recovery, fresh locked membership, atomic org cap serialization",
+    "Optional row versions for toggle/archive, monotonic updatedAt, strict input and full DTO checks, private no-store Cookie headers and paged list",
+    "Unknown-write recovery and same-operation retry, owner-only quota/trial component, persistent scoped error/notice"
+  ],
+  "remainingLimits": [
+    "No real DB concurrency, customer write, paid provider, authenticated production operation or full browser/device QA performed.",
+    "Unknown operations retained within mounted controller and same-actor auth refresh; full page reload / navigation persistence remains unverified.",
+    "Legacy unpaged GET retained for dashboard; dashboard lifecycle and complete DTO validation require further audit.",
+    "All 17 services / 2074 criteria remain incomplete."
+  ],
+  "supersededGateReason": "Final quota UX review found repeated quota error in two alerts. Removed duplicate, tightened mounted assertion. This in-flight gate is invalidated by source change and cannot prove updated source.",
+  "supersededGate": "aio-prompts-release-d353f291-f929-4840-a23f-35d31811b700",
+  "supersededSession": 47045,
+  "gate": "aio-prompts-release-f090302b-d909-4866-9aff-8204a847f4db",
+  "gateSession": 89235,
+  "supersededGateExitCode": 1,
+  "supersededGateAdditionalReason": "Legacy AST test extracted removed prompt add page closure. Migrated that portion to actual mounted controller cases preserving all three malformed/incomplete acknowledgment variants. Other AST save/scan tests retained.",
+  "additionalConfirmedFinding": {
+    "status": "confirmed-open-not-fixed",
+    "evidence": "aio-quick-start-prompt-cap-baseline.json",
+    "finding": "Quick-start persists up to eight initial prompts without applying the documented free three-prompt limit. Separate repair required without deleting existing customer data."
+  },
+  "updatedAt": "2026-10-07T00:34:04.112016+00:00",
+  "activeGateSession": 89235,
+  "additionalScopeFindings": [
+    "sfa-tasks-lifecycle-repair.json",
+    "shodan-researched-list-label-baseline.json",
+    "aio-quick-start-prompt-cap-baseline.json"
+  ],
+  "releaseExitCode": 0,
+  "sourceFreezeReverifiedBeforeCommit": true,
+  "sourceFiles": 2656,
+  "changedSources": []
 }

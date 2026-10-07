@@ -1,0 +1,19 @@
+{
+  "startedAt": "2026-10-07T00:27:36.852934+00:00",
+  "pid": 47878,
+  "head": "e1e4a38d76c4f5c49dcdc949c93a87dc51e0b6f7",
+  "sourceFiles": 2656,
+  "status": "failed",
+  "gates": [
+    {
+      "name": "build",
+      "exitCode": 1,
+      "endedAt": "2026-10-07T00:29:16.811737+00:00"
+    }
+  ],
+  "changedSources": [
+    "scripts/security-regression/verify-aio-prompts-mounted.cjs",
+    "src/lib/aio/use-prompts.ts"
+  ],
+  "endedAt": "2026-10-07T00:29:17.207666+00:00"
+}
