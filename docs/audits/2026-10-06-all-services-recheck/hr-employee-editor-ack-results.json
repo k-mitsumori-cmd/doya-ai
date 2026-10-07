@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-07T17:07:08.119Z",
+  "passed": 4,
+  "cases": [
+    "missing-employee",
+    "wrong-employee",
+    "false-success",
+    "valid-acknowledgement"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/hr/employees/[id]/edit/page.tsx": "7f8d3d8304c0f73a16996fd8d37c76a9bfde649deefa31f792619a336281b0ab"
+  },
+  "scope": "Mounted actual editor and synthetic 200 PATCH responses; malformed/wrong employee/false success and valid saved-version acknowledgement. No production operations."
+}

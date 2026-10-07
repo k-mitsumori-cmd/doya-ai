@@ -219,6 +219,15 @@ export default function EditEmployeePage() {
         if (!isCurrent()) return
         throw new Error(err.error || '更新に失敗しました')
       }
+      const acknowledgement = await res.json().catch(() => null)
+      if (!isCurrent()) return
+      const saved = acknowledgement?.employee
+      const savedAt = typeof saved?.updatedAt === 'string' ? new Date(saved.updatedAt) : null
+      if (acknowledgement?.success !== true || saved?.id !== id || !savedAt
+        || !Number.isFinite(savedAt.getTime()) || savedAt.toISOString() !== saved.updatedAt
+        || savedAt.getTime() <= new Date(loadedVersion.updatedAt).getTime()) {
+        throw new Error('保存結果を確認できませんでした。再読み込みして最新の従業員情報をご確認ください。')
+      }
       toast.success('従業員情報を更新しました')
       router.push(`/hr/employees/${id}`)
     } catch (err: any) {

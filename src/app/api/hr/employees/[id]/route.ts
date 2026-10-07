@@ -148,6 +148,20 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '在籍状態の指定が正しくありません' }, { status: 400 })
     }
 
+    for (const field of ['photoUrl', 'thumbnailUrl'] as const) {
+      const value = body[field]
+      if (value === undefined || value === null || value === '') continue
+      // Existing legacy photos may be retained, but newly assigned photos must be private and in this organization.
+      if (typeof value !== 'string') {
+        return NextResponse.json({ error: '写真の指定が正しくありません。' }, { status: 400, headers: privateWriteHeaders })
+      }
+      if (value === existing[field]) continue
+      const match = /^\/api\/hr\/photos\/([A-Za-z0-9_-]{1,128})\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/.exec(value)
+      if (!match || match[1] !== hrCtx.organizationId) {
+        return NextResponse.json({ error: 'この組織にアップロードした写真を指定してください。' }, { status: 400, headers: privateWriteHeaders })
+      }
+    }
+
     const data: Record<string, any> = {}
     if (employeeNumber !== undefined) data.employeeNumber = employeeNumber
     if (lastName !== undefined) data.lastName = lastName

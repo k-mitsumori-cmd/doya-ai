@@ -1,0 +1,8 @@
+{
+  "status": "source-applied-targeted-passed-frozen39gate-running",
+  "baseline": "docs/audits/2026-10-06-all-services-recheck/hr-employee-editor-ack-baseline.json",
+  "candidate": "docs/audits/2026-10-06-all-services-recheck/hr-employee-editor-ack-candidate",
+  "productionApplied": false,
+  "scope": "Acknowledgement validation only. Durable operation recovery and identity transitions remain pending.",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/hr-photo-reference-ack-release-4584987c-6d1b-4397-b27b-af12fb387eeb"
+}
