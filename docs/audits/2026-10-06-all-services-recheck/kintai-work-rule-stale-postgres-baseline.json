@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-07T18:16:03.148Z",
+  "passed": false,
+  "firstStatus": 200,
+  "staleSecondStatus": 200,
+  "expectedSecondStatus": 409,
+  "firstManagersSavedNameRetained": false,
+  "finalName": "Original Rule",
+  "finalBreakMinutes": 45,
+  "sourceHashes": {
+    "src/app/api/kintai/work-rules/[id]/route.ts": "1a778b4a15d4fa2bff553f71841eeaa1963b83688fcc005993f4f92d46bae1ac",
+    "src/app/kintai/settings/page.tsx": "41d64c3040e27ca541f9c91f9374e13a8e7cce62a630a98b222f42fc1a75042f",
+    "src/lib/kintai/manager-admission.ts": "8d93a0b7ff71b1158f2c2739187b2a9a3649ac9bb2171271546a060d78f67d59",
+    "src/lib/kintai/employee-admission.ts": "b53980fcb978167a6a60a17f1d0ecb22ce47c84ec71faabdb610b51a93d6580b"
+  },
+  "scope": "Actual PATCH route, real actor/org locks and isolated PostgreSQL. Two authorized managers loaded the same original form snapshot; second saves it after first commits. No customer operations. This diagnoses stale-edit lost updates, separate from creation idempotency."
+}

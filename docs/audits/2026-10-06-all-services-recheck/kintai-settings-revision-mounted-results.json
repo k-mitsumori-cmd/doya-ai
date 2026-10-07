@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-07T18:36:41.355Z",
+  "passed": 18,
+  "expected": 18,
+  "cases": [
+    "PATCH sends the revision shown in editor",
+    "PATCH conflict preserves unsaved draft",
+    "PATCH acknowledgement must advance revision",
+    "DELETE sends displayed revision and conflict keeps confirmation",
+    "missing displayed revision blocks PATCH without network",
+    "missing displayed revision blocks DELETE without network",
+    "night rule renders eight hours",
+    "late old PATCH cannot close newer editor",
+    "malformed PATCH success preserves draft",
+    "wrong PATCH row acknowledgement preserves draft",
+    "same-turn duplicate create blocked and valid ack closes form",
+    "lost create acknowledgement cannot manually resubmit; recovery closes draft",
+    "remount restores unknown operation and explicit cancellation enables new create",
+    "pending save disables all eight form controls",
+    "late DELETE preserves a different confirmation",
+    "false DELETE acknowledgement preserves confirmation",
+    "role downgrade disables existing edit and prevents PATCH",
+    "actor switch hides prior form and late create acknowledgement"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/kintai/settings/page.tsx": "8ced5f4f9a87c618b1791a63477c43590b519fcf2329e26ee70496d178ced424",
+    "src/lib/kintai/use-work-rule-creation.ts": "bf4cabf440e78f861d729fe1afa16cacef200354e8ca0d0f2801c9235d9f4f93",
+    "src/lib/use-org-settings-guard.ts": "1bce53be67941dcde0f6cc5e423ae2781db108385ee527abedc4c0f50cef5647"
+  },
+  "scope": "Actual mounted settings TSX, actual creation hook and actor/org guard; synthetic API/session/access provider. Save/recovery/remount/cancellation and role/actor transitions. Parent layout, native UI and production authenticated E2E remain separate checks."
+}

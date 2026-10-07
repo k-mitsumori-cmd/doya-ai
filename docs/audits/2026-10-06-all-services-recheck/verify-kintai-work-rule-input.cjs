@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict')
 const { load, check } = require('../../../scripts/security-regression/load-typescript.cjs')
 
+const revision = load('src/lib/kintai/work-rule-revision.ts', {'node:crypto': require('node:crypto')})
 const manager = load('src/lib/kintai/manager-admission.ts')
 
 function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
@@ -10,7 +11,7 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
   let writes = 0
   const tx = {
     $executeRaw: async () => 1,
-    systemSetting: { findUnique: async ({where}) => receipts.get(where.key) || null, create: async ({data}) => { receipts.set(data.key,data); return data } },
+    systemSetting: { upsert: async ({where,create,update}) => { const data=receipts.has(where.key)?{...receipts.get(where.key),...update}:create;receipts.set(where.key,data);return data }, findUnique: async ({where}) => receipts.get(where.key) || null, create: async ({data}) => { receipts.set(data.key,data); return data } },
     $queryRaw: async () => { order.push('actor'); return [{ role: actorRole, status: 'ACTIVE', isActive: true }] },
     kintaiWorkRule: {
       findFirst: async ({ where }) => rows.get(where.id)?.organizationId === where.organizationId ? rows.get(where.id) : null,
@@ -22,6 +23,7 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
   }
   const prisma = { $transaction: async work => work(tx) }
   const deps = {
+    '@/lib/kintai/work-rule-revision': revision,
     '@/lib/kintai/work-rule-operation': load('src/lib/kintai/work-rule-operation.ts', {'node:crypto': require('node:crypto')}),
     '@/lib/kintai/work-rule-input': load('src/lib/kintai/work-rule-input.ts'),
     'next/server': { NextResponse: Response },
@@ -35,9 +37,10 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
   }
   const list = load('src/app/api/kintai/work-rules/route.ts', deps)
   const item = load('src/app/api/kintai/work-rules/[id]/route.ts', deps)
-  const request = body => ({ url: 'https://example.invalid/api/kintai/work-rules', json: async () => ({ operationId:'10000000-0000-4000-8000-000000000001', organizationId:'org', ...body }) })
+  const request = (body,id='rule') => ({ url: 'https://example.invalid/api/kintai/work-rules', json: async () => ({ operationId:'10000000-0000-4000-8000-000000000001', organizationId:'org', expectedRevision:(await revision.withKintaiWorkRuleRevision(tx,rows.get(id)||rows.get('rule'))).revision, ...body }) })
   const context = id => ({ params: Promise.resolve({ id }) })
-  return { list, item, request, context, rows, order, get writes() { return writes } }
+  const deleteRequest = async (id='rule') => ({url:'https://example.invalid/api/kintai/work-rules/'+id+'?organizationId=org&expectedRevision='+(await revision.withKintaiWorkRuleRevision(tx,rows.get(id)||rows.get('rule'))).revision})
+  return { deleteRequest, list, item, request, context, rows, order, get writes() { return writes } }
 }
 
 const fs=require('node:fs'),crypto=require('node:crypto'),path=require('node:path'),cases=[],failures=[];

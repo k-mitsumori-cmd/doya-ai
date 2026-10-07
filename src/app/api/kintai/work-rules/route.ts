@@ -8,6 +8,7 @@ import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 import { validateKintaiWorkRuleInput } from '@/lib/kintai/work-rule-input'
+import { withKintaiWorkRuleRevision, withKintaiWorkRuleRevisions, advanceKintaiWorkRuleRevision, KintaiWorkRuleRevisionError } from '@/lib/kintai/work-rule-revision'
 import { createKintaiWorkRuleOnce, kintaiWorkRuleOperationId, KintaiWorkRuleOperationError } from '@/lib/kintai/work-rule-operation'
 
 export async function GET() {
@@ -21,8 +22,9 @@ export async function GET() {
       orderBy: { name: 'asc' },
     })
 
-    return NextResponse.json({ rules, organizationId: ctx.organizationId })
+    return NextResponse.json({ rules: await withKintaiWorkRuleRevisions(prisma, rules), organizationId: ctx.organizationId })
   } catch (e) {
+    if (e instanceof KintaiWorkRuleRevisionError) return NextResponse.json({ error: e.message }, { status: e.status })
     console.error('[kintai/work-rules GET]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
@@ -55,12 +57,12 @@ export async function POST(req: NextRequest) {
         flexEnabled: body.flexEnabled || false, coreStart: body.coreStart || null, coreEnd: body.coreEnd || null,
       }
       const rule = await createKintaiWorkRuleOnce(tx, ctx, operationId, data,
-        id => tx.kintaiWorkRule.findFirst({ where: { id, organizationId: ctx.organizationId } }),
-        () => tx.kintaiWorkRule.create({ data }))
+        async id => { const row = await tx.kintaiWorkRule.findFirst({ where: { id, organizationId: ctx.organizationId } }); return row ? withKintaiWorkRuleRevision(tx, row) : null },
+        async () => advanceKintaiWorkRuleRevision(tx, await tx.kintaiWorkRule.create({ data })))
       return NextResponse.json({ rule, operationId }, { status: 201 })
     })
   } catch (e) {
-    if (e instanceof KintaiWorkRuleOperationError) return NextResponse.json({ error: e.message }, { status: e.status })
+    if (e instanceof KintaiWorkRuleOperationError || e instanceof KintaiWorkRuleRevisionError) return NextResponse.json({ error: e.message }, { status: e.status })
     console.error('[kintai/work-rules POST]')
     return NextResponse.json({ error: '作成に失敗しました' }, { status: 500 })
   }

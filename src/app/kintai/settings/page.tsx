@@ -120,6 +120,7 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     if (!currentAccess() || !canManage || saveLock.current) return
+    if (editing && (typeof editing.revision !== 'string' || !/^[a-f0-9]{64}$/.test(editing.revision))) { alert('最新の就業ルールを読み込み直してください。入力内容は保存されていません。'); return }
     if (!form.name.trim()) { alert('ルール名を入力してください'); return }
     const version = formVersion.current
     const current = () => mounted.current && formVersion.current === version && currentAccess()
@@ -134,12 +135,13 @@ export default function SettingsPage() {
       }
       const url = editing ? `/api/kintai/work-rules/${editing.id}` : '/api/kintai/work-rules'
       const method = editing ? 'PATCH' : 'POST'
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, organizationId }) })
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, organizationId, expectedRevision: editing.revision }) })
       if (!current()) return
       const data = await res.json().catch(() => null)
       if (!current()) return
       if (!res.ok) { alert(data?.error || '保存に失敗しました'); return }
       if (!data?.rule || typeof data.rule.id !== 'string' || !data.rule.id
+        || typeof data.rule.revision !== 'string' || !/^[a-f0-9]{64}$/.test(data.rule.revision) || data.rule.revision === editing.revision
         || data.rule.organizationId !== organizationId || data.rule.name !== form.name || (editing && data.rule.id !== editing.id)) {
         alert('保存結果を確認できませんでした。再読み込みして最新のルールをご確認ください。')
         return
@@ -162,13 +164,14 @@ export default function SettingsPage() {
 
   const handleDelete = async () => {
     if (!currentAccess() || !canManage || !showDeleteConfirm || deleteLock.current) return
+    if (typeof showDeleteConfirm.revision !== 'string' || !/^[a-f0-9]{64}$/.test(showDeleteConfirm.revision)) { alert('最新の就業ルールを読み込み直してください。削除は行っていません。'); return }
     const version = deleteVersion.current
     const current = () => mounted.current && deleteVersion.current === version && currentAccess()
     const attempt = {}
     deleteLock.current = attempt
     setDeleting(true)
     try {
-      const res = await fetch(`/api/kintai/work-rules/${showDeleteConfirm.id}?organizationId=${encodeURIComponent(organizationId)}`, { method: 'DELETE' })
+      const res = await fetch(`/api/kintai/work-rules/${showDeleteConfirm.id}?organizationId=${encodeURIComponent(organizationId)}&expectedRevision=${encodeURIComponent(showDeleteConfirm.revision)}`, { method: 'DELETE' })
       if (!current()) return
       const data = await res.json().catch(() => null)
       if (!current()) return
