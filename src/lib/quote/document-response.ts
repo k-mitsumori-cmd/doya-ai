@@ -3,7 +3,7 @@ export interface QuoteDetailLine {
   priceSource: string; sourceRef: string | null; rangeMin: number | null; rangeMax: number | null
 }
 export interface QuoteDetailDocument {
-  id: string; quoteNo: string; title: string | null; status: string; clientCompany: string | null; clientDept: string | null; clientPerson: string | null
+  id: string; revision: string; quoteNo: string; title: string | null; status: string; clientCompany: string | null; clientDept: string | null; clientPerson: string | null
   issueDate: string; expiryDate: string; paymentTerms: string | null; deliveryTerms: string | null; notes: string | null
   discountType: string | null; discountValue: number; totalExclTax: number; taxAmount: number; totalInclTax: number; lineItems: QuoteDetailLine[]
 }
@@ -25,7 +25,7 @@ export function isQuoteDetailLine(v: unknown): v is QuoteDetailLine {
     && !(typeof v.rangeMin === 'number' && typeof v.rangeMax === 'number' && v.rangeMin > v.rangeMax)
 }
 export function parseQuoteDetailDocument(v: unknown, id: string): QuoteDetailDocument {
-  if (!record(v) || !safeId(v.id) || v.id !== id || !text(v.quoteNo,200) || !v.quoteNo || !nullableText(v.title,200)
+  if (!record(v) || typeof v.revision !== 'string' || !/^[a-f0-9]{64}$/.test(v.revision) || !safeId(v.id) || v.id !== id || !text(v.quoteNo,200) || !v.quoteNo || !nullableText(v.title,200)
       || !['draft','confirmed','sent'].includes(v.status as string)
       || ![v.issueDate,v.expiryDate].every(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(d) && Number.isFinite(Date.parse(d)))
       || !['clientCompany','clientDept','clientPerson'].every(f => nullableText(v[f],200))
@@ -42,22 +42,24 @@ export function quoteDraftFromDocument(doc: QuoteDetailDocument): QuoteDetailDra
     discountValue:doc.discountValue?String(doc.discountValue):'', notes:doc.notes||'', paymentTerms:doc.paymentTerms||'', deliveryTerms:doc.deliveryTerms||'' }
 }
 export function quoteDocumentWrite(doc: QuoteDetailDocument, draft: QuoteDetailDraft, status?: string) {
+  if (!/^[a-f0-9]{64}$/.test(doc.revision)) throw new Error('見積書の版を確認できません。最新の内容を読み込み直してください。')
   if (status !== undefined && !['draft','confirmed','sent'].includes(status)) throw new Error('承認状態を確認してください')
   if (doc.status !== 'draft') {
     if (!status || !['draft','sent'].includes(status)) throw new Error('下書きに戻してから編集してください')
-    return { status }
+    return { status, expectedRevision:doc.revision }
   }
   if (!text(draft.clientCompany,200) || !text(draft.clientPerson,200) || !['notes','paymentTerms','deliveryTerms'].every(f=>text(draft[f as keyof QuoteDetailDraft],2000))
       || !['','rate','amount'].includes(draft.discountType) || draft.discountValue && !/^\d+$/.test(draft.discountValue)
       || !integer(Number(draft.discountValue||0)) || draft.discountType==='rate' && Number(draft.discountValue)>100
       || draft.items.length>60 || !draft.items.every(isQuoteDetailLine)) throw new Error('入力内容・文字数・金額を確認してください。変更は保存されていません。')
-  return { clientCompany:draft.clientCompany, clientPerson:draft.clientPerson, discountType:draft.discountType||null, discountValue:Number(draft.discountValue||0),
+  return { expectedRevision:doc.revision, clientCompany:draft.clientCompany, clientPerson:draft.clientPerson, discountType:draft.discountType||null, discountValue:Number(draft.discountValue||0),
     notes:draft.notes, paymentTerms:draft.paymentTerms, deliveryTerms:draft.deliveryTerms,
     items:draft.items.map(({itemName,spec,qty,unit,unitPrice,taxRate,priceSource,sourceRef,rangeMin,rangeMax})=>({itemName,spec,qty,unit,unitPrice,taxRate,priceSource,sourceRef,rangeMin,rangeMax})),
     ...(status ? {status}:{}),
   }
 }
-export function isQuoteDocumentWriteAcknowledgement(doc: QuoteDetailDocument, sent: ReturnType<typeof quoteDocumentWrite>) {
+export function isQuoteDocumentWriteAcknowledgement(doc: QuoteDetailDocument, sent: ReturnType<typeof quoteDocumentWrite>, requireAdvancedRevision = true) {
+  if (requireAdvancedRevision && (!/^[a-f0-9]{64}$/.test(doc.revision) || doc.revision === sent.expectedRevision)) return false
   if (doc.status !== ('status' in sent && sent.status || 'draft')) return false
   if (!('items' in sent) || !sent.items) return true
   for (const field of ['clientCompany','clientPerson','notes','paymentTerms','deliveryTerms'] as const) {
@@ -78,6 +80,6 @@ export function isQuoteDocumentWriteAcknowledgement(doc: QuoteDetailDocument, se
 export function quoteDocumentDraftMatches(doc: QuoteDetailDocument, draft: QuoteDetailDraft) {
   try {
     const editable = { ...doc, status: 'draft' }
-    return isQuoteDocumentWriteAcknowledgement(editable, quoteDocumentWrite(editable, draft))
+    return isQuoteDocumentWriteAcknowledgement(editable, quoteDocumentWrite(editable, draft), false)
   } catch { return false }
 }

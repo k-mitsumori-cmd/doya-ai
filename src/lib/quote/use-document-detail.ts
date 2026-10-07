@@ -110,7 +110,7 @@ export function useQuoteDocumentDetail(id: string | undefined) {
   const currentDoc=loaded?state.current.doc:null
   const unknown=!!pending.current&&!saving
   const pdfUrl=loaded&&ready&&currentDoc&&!saving&&!pending.current&&!state.current.dirty&&!error
-    ? `/api/quote/documents/${encodeURIComponent(currentDoc.id)}/pdf?org=${encodeURIComponent(ready.slug)}`:null
+    ? `/api/quote/documents/${encodeURIComponent(currentDoc.id)}/pdf?org=${encodeURIComponent(ready.slug)}&expectedRevision=${encodeURIComponent(currentDoc.revision)}`:null
   return {
     doc:currentDoc,issuer:loaded?state.current.issuer:null,...state.current.draft,
     loading:status==='loading'||status==='authenticated'&&loading&&!loaded,saving,unknown,

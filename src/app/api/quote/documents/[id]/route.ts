@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getQuoteContext, hasMinRole, orgSlugFrom } from '@/lib/quote/access'
 import { recalcDocument } from '@/lib/quote/document'
+import { quoteExpectedRevision, withQuoteDocumentRevision, advanceQuoteDocumentRevision, assertQuoteDocumentRevision, lockQuoteDocumentActor, isQuoteDocumentWriteConflict, QuoteDocumentRevisionError } from '@/lib/quote/document-revision'
 import type { PriceSource } from '@/lib/quote/types'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
   if (!doc) return NextResponse.json({ error: '見積書が見つかりません' }, { status: 404 })
 
   const issuer = await prisma.quoteIssuer.findUnique({ where: { organizationId: ctx.organizationId } })
-  return NextResponse.json({ document: doc, issuer })
+  try { return NextResponse.json({ document: await withQuoteDocumentRevision(prisma, doc), issuer }) } catch (e) { if(e instanceof QuoteDocumentRevisionError) return NextResponse.json({error:e.message},{status:e.status}); throw e }
 }
 
 export async function PATCH(req: NextRequest, ctxParam: Ctx) {
@@ -70,10 +71,11 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
-  const body = await req.json().catch(() => ({}))
+  const body = await req.json().catch(() => null)
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return NextResponse.json({ error: '更新内容が不正です' }, { status: 400 })
   }
+  if ('title' in body && (typeof body.title !== 'string' || !body.title.trim())) return NextResponse.json({ error: '件名を200文字以内で入力してください。変更は保存されていません。' }, { status: 400 })
   for (const [field, label, max] of [
     ['title', '件名', 200], ['clientCompany', '宛先会社名', 200], ['clientDept', '宛先部署名', 200],
     ['clientPerson', '宛先担当者名', 200], ['notes', '備考', 2000],
@@ -113,20 +115,19 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
     return NextResponse.json({ error: '数量・単価・税率・相場は正しい範囲の整数で入力してください。変更は保存されていません。' }, { status: 400 })
   }
   try {
+    const expectedRevision = quoteExpectedRevision(body.expectedRevision)
     // 判定・明細・状態・合計を同じトランザクションで扱う。
     // 同時の確定と編集は直列化し、競合時には再確認を求める。
     return await prisma.$transaction(async (tx) => {
-      const actor = await tx.quoteMember.findFirst({
-        where: { organizationId: ctx.organizationId, userId: ctx.userId, status: 'ACTIVE' },
-        select: { role: true },
-      })
+      const actor = await lockQuoteDocumentActor(tx,ctx,p.id)
       if (!actor) return NextResponse.json({ error: '組織へのアクセス権がありません。再読み込みしてください' }, { status: 403 })
       const existing = await tx.quoteDocument.findFirst({
         where: { id: p.id, organizationId: ctx.organizationId },
-        select: { id: true, status: true, discountType: true, discountValue: true },
+        include: { lineItems: {orderBy:{ord:'asc'}} },
       })
       if (!existing) return NextResponse.json({ error: '見積書が見つかりません' }, { status: 404 })
 
+      await assertQuoteDocumentRevision(tx,existing,expectedRevision)
       const effectiveDiscountType = 'discountType' in body ? body.discountType : existing.discountType
       const effectiveDiscountValue = 'discountValue' in body ? quoteInteger(body.discountValue, 0, 0)! : existing.discountValue ?? 0
       if (effectiveDiscountType === 'rate' && effectiveDiscountValue > 100) {
@@ -191,7 +192,7 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
       const nextStatus = typeof data.status === 'string' ? (data.status as string) : existing.status
       const touchesAmounts =
         Array.isArray(body?.items) || 'discountType' in body || 'discountValue' in body
-      const touchesContent = touchesAmounts || Object.keys(body).some((key) => key !== 'status')
+      const touchesContent = touchesAmounts || Object.keys(body).some((key) => key !== 'status' && key !== 'expectedRevision')
       if (touchesContent && existing.status !== 'draft' && nextStatus !== 'draft') {
         return NextResponse.json({ error: '確定済みの見積書は変更できません。いったん下書きに戻してから編集してください。' }, { status: 409 })
       }
@@ -226,13 +227,15 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
         where: { id: existing.id },
         include: { lineItems: { orderBy: { ord: 'asc' } } },
       })
-      return NextResponse.json({ document: updated })
+      if (!updated) throw new Error('Saved document unavailable')
+      return NextResponse.json({ document: await advanceQuoteDocumentRevision(tx,updated) })
     }, { isolationLevel: 'Serializable' })
   } catch (error) {
+    if (error instanceof QuoteDocumentRevisionError) return NextResponse.json({error:error.message},{status:error.status})
     if (error && typeof error === 'object' && 'code' in error && error.code === 'QUOTE_TOTAL_OUT_OF_RANGE') {
       return NextResponse.json({ error: '見積金額の合計が保存可能な上限を超えています。数量・単価を見直してください。変更は保存されていません。' }, { status: 400 })
     }
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2034') {
+    if (isQuoteDocumentWriteConflict(error)) {
       return NextResponse.json({ error: '別の操作と更新が重なりました。再読み込みして内容を確認してから保存してください。' }, { status: 409 })
     }
     return NextResponse.json({ error: '見積書を保存できませんでした。再読み込みして状態をご確認ください。' }, { status: 500 })
@@ -247,14 +250,17 @@ export async function DELETE(req: NextRequest, ctxParam: Ctx) {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
   try {
+    const versions = new URL(req.url).searchParams.getAll('expectedRevision')
+    if(versions.length > 1) return NextResponse.json({error:'見積書の版の指定が正しくありません。'},{status:400})
+    const expectedRevision = quoteExpectedRevision(versions[0])
     return await prisma.$transaction(async tx => {
-      const actor = await tx.quoteMember.findFirst({
-        where: { organizationId: ctx.organizationId, userId: ctx.userId, status: 'ACTIVE' },
-        select: { role: true },
-      })
+      const actor = await lockQuoteDocumentActor(tx,ctx,p.id)
       if (!actor || !hasMinRole(actor.role, 'manager')) {
         return NextResponse.json({ error: '見積書を削除する権限がありません。再読み込みしてください' }, { status: 403 })
       }
+      const existing = await tx.quoteDocument.findFirst({where:{id:p.id,organizationId:ctx.organizationId},include:{lineItems:{orderBy:{ord:'asc'}}}})
+      if(!existing) return NextResponse.json({error:'見積書が見つかりません'},{status:404})
+      await assertQuoteDocumentRevision(tx,existing,expectedRevision)
       const deleted = await tx.quoteDocument.deleteMany({
         where: { id: p.id, organizationId: ctx.organizationId },
       })
@@ -262,7 +268,8 @@ export async function DELETE(req: NextRequest, ctxParam: Ctx) {
       return NextResponse.json({ ok: true })
     }, { isolationLevel: 'Serializable' })
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2034') {
+    if (error instanceof QuoteDocumentRevisionError) return NextResponse.json({error:error.message},{status:error.status})
+    if (isQuoteDocumentWriteConflict(error)) {
       return NextResponse.json({ error: '別の操作と削除が重なりました。再読み込みして状態を確認してください。' }, { status: 409 })
     }
     return NextResponse.json({ error: '見積書を削除できませんでした。再読み込みして状態をご確認ください。' }, { status: 500 })

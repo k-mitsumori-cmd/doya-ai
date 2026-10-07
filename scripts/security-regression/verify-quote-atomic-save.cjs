@@ -26,9 +26,9 @@ function moduleAt(file,deps) {
   const prisma={$transaction:async(fn,options)=>{transactions++;assert.equal(options.isolationLevel,'Serializable');active=true;const snapshot=structuredClone(row);try {const res=await fn(tx);if(fault==='commit')throw Object.assign(Error('conflict'),{code:'P2034'});return res;}catch(e){row=snapshot;throw e;}finally{active=false;}}};
   const money=moduleAt('src/lib/quote/money.ts',{});
   const document=moduleAt('src/lib/quote/document.ts',{'@/lib/prisma':{prisma},'./money':money});
-  const api=moduleAt('src/app/api/quote/documents/[id]/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/quote/document':document,'@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'o',userId:'u',role:'manager'}),hasMinRole:()=>true,orgSlugFrom:()=> 'org'}});
+  const api=moduleAt('src/app/api/quote/documents/[id]/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/quote/document-revision':require('./quote-revision-fixture.cjs'),'@/lib/quote/document':document,'@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'o',userId:'u',role:'manager'}),hasMinRole:()=>true,orgSlugFrom:()=> 'org'}});
   const body={status:'confirmed',notes:'new',items:[{itemName:'new',qty:2,unitPrice:200,taxRate:10,priceSource:'manual'},{itemName:'pending',qty:1,unitPrice:999,taxRate:10,priceSource:'unknown'}]};
-  const res=await api.PATCH({json:async()=>fault==='null'?null:body},{params:Promise.resolve({id:'d'})});
+  const res=await api.PATCH({json:async()=>fault==='null'?null:{...body,expectedRevision:'a'.repeat(64)}},{params:Promise.resolve({id:'d'})});
   if(fault==='none') {assert.equal(res.status,200);assert.equal(row.status,'confirmed');assert.equal(row.notes,'new');assert.equal(row.lineItems.length,2);assert.equal(row.totalExclTax,400);assert.equal(row.taxAmount,40);assert.equal(row.totalInclTax,440);assert.equal((await res.json()).document.totalInclTax,440);}
   else {assert.equal(res.status,{confirmed:409,foreign:404,null:400,commit:409}[fault]||500);assert.deepEqual(row,before);if(['confirmed','foreign','null'].includes(fault))assert.equal(writes,0);}
   if(fault==='null')assert.equal(transactions,0);

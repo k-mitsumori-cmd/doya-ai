@@ -29,6 +29,7 @@ function fixture({ actorRole = 'manager', status = 'draft', conflict = false, fo
   const route = load('src/app/api/quote/documents/[id]/route.ts', {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
+    '@/lib/quote/document-revision': require('./quote-revision-fixture.cjs'),
     '@/lib/quote/access': {
       getQuoteContext: async () => ({ organizationId: 'org', userId: 'user', role: 'manager' }),
       hasMinRole: (role, minimum) => minimum === 'manager' && ['manager', 'admin', 'owner'].includes(role),
@@ -37,7 +38,7 @@ function fixture({ actorRole = 'manager', status = 'draft', conflict = false, fo
     '@/lib/quote/document': { recalcDocument: async () => {} },
   })
   const params = { params: Promise.resolve({ id: 'doc' }) }
-  return { state, patch: body => route.PATCH({ json: async () => body }, params), remove: () => route.DELETE({}, params) }
+  return { state, patch: body => route.PATCH({ json: async () => ({...body,expectedRevision:'a'.repeat(64)}) }, params), remove: () => route.DELETE({url:'https://local.test/?expectedRevision='+ 'a'.repeat(64)}, params) }
 }
 
 ;(async () => {
@@ -62,7 +63,7 @@ function fixture({ actorRole = 'manager', status = 'draft', conflict = false, fo
     assert.equal(f.state.deletes, 1)
     const foreign = fixture({ foreign: true })
     assert.equal((await foreign.remove()).status, 404)
-    assert.equal(foreign.state.deletes, 1)
+    assert.equal(foreign.state.deletes, 0)
   })
   await check('quote delete serialization conflict asks for reload without write', async () => {
     const f = fixture({ conflict: true })

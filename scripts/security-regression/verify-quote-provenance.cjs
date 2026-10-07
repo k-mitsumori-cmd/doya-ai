@@ -8,11 +8,11 @@ function load(file,deps){const exports={};vm.runInNewContext(compile(read(file))
   let row={id:'d',status:'draft',lineItems:[]};
   const prisma={quoteMember:{findFirst:async()=>({role:'manager'})},quoteIssuer:{findUnique:async()=>null},quoteDocument:{count:async()=>0,create:async({data})=>{row={...row,...data,lineItems:data.lineItems.create};return row;},findFirst:async()=>row,findUnique:async()=>row,update:async({data})=>row={...row,...data}},quoteLineItem:{deleteMany:async()=>{row.lineItems=[];},createMany:async({data})=>{row.lineItems=data;}}};
   prisma.$transaction=async fn=>fn(prisma);
-  const deps={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'o',userId:'u',role:'manager'}),orgSlugFrom:()=> 'org',hasMinRole:()=>true},'@/lib/quote/document':{defaultExpiry:()=>new Date(),nextQuoteNo:async()=> 'Q',recalcDocument:async()=>{}},'@/lib/plan-limit':{assertFreeLimit:async()=>({ok:true,used:0,limit:3}),FREE_LIMITS:{quoteDocuments:3},jstStartOfMonthUtc:()=>new Date()},'@/lib/organization-quota-ledger':{getOrganizationQuotaUsage:async(_db,_key,_org,_period,countLive)=>countLive(),recordOrganizationQuotaUsage:async()=>{}},'@/lib/pricing':{SUPPORT_CONTACT_URL:'https://doyamarke.surisuta.jp/contact'},'@/lib/organization-billing':{getOrganizationOwnerUserId:async()=> 'u'},'@/lib/service-usage':{recordServiceUsage:async()=>{}}};
+  const deps={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/quote/document-revision':require('./quote-revision-fixture.cjs'),'@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'o',userId:'u',role:'manager'}),orgSlugFrom:()=> 'org',hasMinRole:()=>true},'@/lib/quote/document':{defaultExpiry:()=>new Date(),nextQuoteNo:async()=> 'Q',recalcDocument:async()=>{}},'@/lib/plan-limit':{assertFreeLimit:async()=>({ok:true,used:0,limit:3}),FREE_LIMITS:{quoteDocuments:3},jstStartOfMonthUtc:()=>new Date()},'@/lib/organization-quota-ledger':{getOrganizationQuotaUsage:async(_db,_key,_org,_period,countLive)=>countLive(),recordOrganizationQuotaUsage:async()=>{}},'@/lib/pricing':{SUPPORT_CONTACT_URL:'https://doyamarke.surisuta.jp/contact'},'@/lib/organization-billing':{getOrganizationOwnerUserId:async()=> 'u'},'@/lib/service-usage':{recordServiceUsage:async()=>{}}};
   const create=load('src/app/api/quote/documents/route.ts',deps),update=load('src/app/api/quote/documents/[id]/route.ts',deps);
   const item={itemName:'Synthetic work',qty:2,unitPrice:100,taxRate:10,priceSource:source,sourceRef:'2 days x 100',rangeMin:100,rangeMax:300};
   for(const method of ['POST','PATCH']) {
-   const req={json:async()=>({items:[item]})};const response=method==='POST'?await create.POST(req):await update.PATCH(req,{params:Promise.resolve({id:'d'})});
+   const req={json:async()=>({expectedRevision:'a'.repeat(64),items:[item]})};const response=method==='POST'?await create.POST(req):await update.PATCH(req,{params:Promise.resolve({id:'d'})});
    assert.equal(response.status,200);const saved=row.lineItems[0];assert.equal(saved.priceSource,source==='invalid'?'manual':source);assert.equal(saved.sourceRef,item.sourceRef);assert.equal(saved.rangeMin,100);assert.equal(saved.rangeMax,300);
    results.push({method,source,savedSource:saved.priceSource,outcome:'PASS'});
   }
@@ -20,26 +20,26 @@ function load(file,deps){const exports={};vm.runInNewContext(compile(read(file))
    for(const [field,value] of [['qty',1.5],['qty','１,５'],['unitPrice',1.5],['unitPrice','1,5'],['unitPrice',2147483648]]) {
     const before=JSON.stringify(row.lineItems);
     for(const [method,handler] of [['POST',req=>create.POST(req)],['PATCH',req=>update.PATCH(req,{params:Promise.resolve({id:'d'})})]]) {
-     const response=await handler({json:async()=>({items:[{...item,[field]:value}]})});
+     const response=await handler({json:async()=>({expectedRevision:'a'.repeat(64),items:[{...item,[field]:value}]})});
      assert.equal(response.status,400,`${method} ${field}=${value}`);
      assert.equal(JSON.stringify(row.lineItems),before,`${method} must not replace saved items`);
     }
    }
-   const discount=await update.PATCH({json:async()=>({discountValue:1.5})},{params:Promise.resolve({id:'d'})});
+   const discount=await update.PATCH({json:async()=>({expectedRevision:'a'.repeat(64),discountValue:1.5})},{params:Promise.resolve({id:'d'})});
    assert.equal(discount.status,400);
    results.push({case:'quote API rejects fractional, malformed and out-of-range money before write',outcome:'PASS'});
    for(const method of ['POST','PATCH']) {
     const handler=req=>method==='POST'?create.POST(req):update.PATCH(req,{params:Promise.resolve({id:'d'})});
-    const noRange=await handler({json:async()=>({items:[{...item,rangeMin:null,rangeMax:null}]})});
+    const noRange=await handler({json:async()=>({expectedRevision:'a'.repeat(64),items:[{...item,rangeMin:null,rangeMax:null}]})});
     assert.equal(noRange.status,200,`${method} null market range`);
     assert.equal(row.lineItems[0].rangeMin,null);
     assert.equal(row.lineItems[0].rangeMax,null);
-    const reducedTax=await handler({json:async()=>({items:[{...item,taxRate:8}]})});
+    const reducedTax=await handler({json:async()=>({expectedRevision:'a'.repeat(64),items:[{...item,taxRate:8}]})});
     assert.equal(reducedTax.status,200,`${method} reduced tax`);
     assert.equal(row.lineItems[0].taxRate,8);
     for(const [field,value] of [['taxRate',9],['rangeMin',-1],['rangeMax',1.5],['rangeMin',{bad:true}]]) {
      const before=JSON.stringify(row.lineItems);
-     const response=await handler({json:async()=>({items:[{...item,[field]:value}]})});
+     const response=await handler({json:async()=>({expectedRevision:'a'.repeat(64),items:[{...item,[field]:value}]})});
      assert.equal(response.status,400,`${method} ${field}=${value}`);
      assert.equal(JSON.stringify(row.lineItems),before,`${method} must preserve existing items`);
     }
@@ -53,7 +53,7 @@ function load(file,deps){const exports={};vm.runInNewContext(compile(read(file))
     [{discountType:'rate'},400],
    ]) {
     const before={type:row.discountType,value:row.discountValue};
-    const response=await update.PATCH({json:async()=>body},{params:Promise.resolve({id:'d'})});
+    const response=await update.PATCH({json:async()=>({expectedRevision:'a'.repeat(64),...body,expectedRevision:'a'.repeat(64)})},{params:Promise.resolve({id:'d'})});
     assert.equal(response.status,expected,JSON.stringify(body));
     if(expected===400){assert.equal(row.discountType,before.type);assert.equal(row.discountValue,before.value);}
    }

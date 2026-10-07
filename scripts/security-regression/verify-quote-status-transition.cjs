@@ -25,12 +25,12 @@ if (mounted.error || mounted.status !== 0) process.exit(1);
       quoteLineItem: {deleteMany:async()=>{writes++;},createMany:async()=>{writes++;}},
       $transaction:async fn=>fn(prisma),
     };
-    const deps = {'next/server':{NextResponse:Response}, '@/lib/prisma':{prisma},
+    const deps = {'next/server':{NextResponse:Response}, '@/lib/prisma':{prisma},'@/lib/quote/document-revision':require('./quote-revision-fixture.cjs'),
       '@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'o',userId:'u',role}),hasMinRole:()=>role==='manager',orgSlugFrom:()=> 'org'},
       '@/lib/quote/document':{recalcDocument:async()=>{}}};
     const exported = {};
     vm.runInNewContext(compile(read('src/app/api/quote/documents/[id]/route.ts')), {exports:exported,require:n=>{assert(n in deps,n);return deps[n];}});
-    const response = await exported.PATCH({json:async()=>body},{params:Promise.resolve({id:'d'})});
+    const response = await exported.PATCH({json:async()=>({...body,expectedRevision:'a'.repeat(64)})},{params:Promise.resolve({id:'d'})});
     assert.equal(response.status,expected);
     assert.equal(writes,0);
     results.push({status,body,role,outcome:'PASS'});

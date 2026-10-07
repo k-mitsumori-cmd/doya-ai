@@ -7,6 +7,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
+import { quoteExpectedRevision, assertQuoteDocumentRevision, QuoteDocumentRevisionError } from '@/lib/quote/document-revision'
 import { generateQuotePdf } from '@/lib/quote/pdf'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -15,6 +16,16 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
   const p = await ctxParam.params
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+
+  let expectedRevision: string
+  try {
+    const versions = new URL(req.url).searchParams.getAll('expectedRevision')
+    if (versions.length > 1) return NextResponse.json({ error: '見積書の版の指定が正しくありません。' }, { status: 400, headers: { 'Cache-Control': 'private, no-store' } })
+    expectedRevision = quoteExpectedRevision(versions[0])
+  } catch (error) {
+    if (error instanceof QuoteDocumentRevisionError) return NextResponse.json({ error: error.message }, { status: error.status, headers: { 'Cache-Control': 'private, no-store' } })
+    throw error
+  }
 
   const doc = await prisma.quoteDocument.findFirst({
     where: { id: p.id, organizationId: ctx.organizationId },
@@ -28,6 +39,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
   const issuer = await prisma.quoteIssuer.findUnique({ where: { organizationId: ctx.organizationId } })
 
   try {
+    await assertQuoteDocumentRevision(prisma, doc, expectedRevision)
     const pdf = await generateQuotePdf({
       quoteNo: doc.quoteNo,
       title: doc.title,
@@ -74,6 +86,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
       },
     })
   } catch (err) {
+    if (err instanceof QuoteDocumentRevisionError) return NextResponse.json({ error: err.message }, { status: err.status, headers: { 'Cache-Control': 'private, no-store' } })
     console.error('[quote] pdf failed')
     return NextResponse.json({ error: 'PDFの生成に失敗しました' }, { status: 500 })
   }
