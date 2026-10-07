@@ -38,7 +38,7 @@ async function refine(req: NextRequest, ctxParam: Ctx) {
   if (prior.state !== 'missing') return adImageOperationReply(input, prior)
 
   const concept = await prisma.adImageConcept.findFirst({
-    where: { id: p.id, campaign: where },
+    where: { id: p.id, campaign: { ...where, brand: where } },
     include: {
       creatives: true,
       campaign: { include: { brand: true } },

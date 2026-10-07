@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-07T15:21:42.240Z",
+  "passed": 1,
+  "cases": [
+    "Owned design references keep matching public templates"
+  ],
+  "failures": [
+    {
+      "name": "Refine foreign brand rejects before any logo storage read or provider call",
+      "error": "Expected values to be strictly equal:\n\n200 !== 404\n"
+    },
+    {
+      "name": "Design references clear private industry matching after ownership transfer during template await",
+      "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ [\n+   '美容・コスメ',\n+   'ナチュラル・オーガニック'\n+ ]\n- []\n"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/adimage/concepts/[id]/refine/route.ts": "c36d81c9951164e99313282aaaaaf6749b53ccb194695736bb4e4c8d9d6cec95",
+    "src/app/api/adimage/design-refs/route.ts": "64139fcf7aad029460e8600eb5a0f09a8ee7c1040335a6e3a8075d68bf1e0245"
+  },
+  "scope": "Actual route handlers and Prisma/private Unix-socket PostgreSQL for ownership; synthetic public template inventory, identity, logo bytes and providers. No customer data or paid calls.",
+  "refineObserved": {
+    "status": 200,
+    "state": "unavailable",
+    "logoStorageReads": 1,
+    "providerCalls": 0,
+    "chargedUsage": null
+  },
+  "sourceCommit": "26e6545c92689f0763c5478efbc8a744488a6451"
+}
