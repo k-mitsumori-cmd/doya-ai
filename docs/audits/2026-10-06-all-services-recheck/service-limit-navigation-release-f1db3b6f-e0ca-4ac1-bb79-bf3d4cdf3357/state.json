@@ -1,0 +1,11 @@
+{
+  "startedAt": "2026-10-07T01:30:01.235784+00:00",
+  "pid": 68623,
+  "head": "4bdd9da5d63872a3d19dc2612ba784e227ad3696",
+  "sourceFiles": 2664,
+  "status": "superseded",
+  "gates": [],
+  "supersededAt": "2026-10-07T01:35:10.311184+00:00",
+  "supersededEvidence": "service-limit-navigation-superseded-gate.json",
+  "outerExecExitCode": 241
+}

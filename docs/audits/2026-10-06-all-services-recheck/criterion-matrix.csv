@@ -17,7 +17,7 @@ banner,C015,権限・組織,退会済み・無効メンバーの権限を拒否�
 banner,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 banner,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 banner,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-banner,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+banner,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 banner,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 banner,C021,課金,有料判定の正本と旧プラン正規化が統一される,不整合を再現・修正中（本番通し確認待ち）,; 専用modalのPRO上限CTAが相談先を捨て非販売Enterprise価格を表示: banner-limit-contact-baseline.json。描画/CTA7ケース修正成功 banner-limit-contact-regression.log、全体build40435進行中。URL画面の非販売Enterprise案内/統一PRO・bannerPlanFREEの無料表示はbanner-url-plan-baseline.jsonlで再現、未修正。合成SSR/認証/Routerで実課金や生成はなし。
 banner,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -139,7 +139,7 @@ seo,C015,権限・組織,退会済み・無効メンバーの権限を拒否す�
 seo,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 seo,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 seo,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-seo,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+seo,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 seo,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 seo,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 seo,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -261,7 +261,7 @@ interview,C015,権限・組織,退会済み・無効メンバーの権限を拒�
 interview,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 interview,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 interview,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-interview,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+interview,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 interview,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 interview,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 interview,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -383,7 +383,7 @@ persona,C015,権限・組織,退会済み・無効メンバーの権限を拒否
 persona,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 persona,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 persona,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-persona,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+persona,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 persona,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 persona,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 persona,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -505,7 +505,7 @@ hr,C015,権限・組織,退会済み・無効メンバーの権限を拒否す�
 hr,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 hr,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 hr,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-hr,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+hr,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 hr,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 hr,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 hr,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -627,7 +627,7 @@ kintai,C015,権限・組織,退会済み・無効メンバーの権限を拒否�
 kintai,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 kintai,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 kintai,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-kintai,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+kintai,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 kintai,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 kintai,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 kintai,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -749,7 +749,7 @@ doyalist,C015,権限・組織,退会済み・無効メンバーの権限を拒�
 doyalist,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 doyalist,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 doyalist,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-doyalist,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+doyalist,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 doyalist,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 doyalist,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 doyalist,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -871,7 +871,7 @@ promane,C015,権限・組織,退会済み・無効メンバーの権限を拒否
 promane,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 promane,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 promane,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-promane,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+promane,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 promane,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 promane,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 promane,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -993,7 +993,7 @@ doyaslide,C015,権限・組織,退会済み・無効メンバーの権限を拒�
 doyaslide,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 doyaslide,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 doyaslide,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-doyaslide,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+doyaslide,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 doyaslide,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 doyaslide,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 doyaslide,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -1115,7 +1115,7 @@ cunning,C015,権限・組織,退会済み・無効メンバーの権限を拒否
 cunning,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 cunning,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 cunning,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-cunning,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+cunning,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 cunning,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 cunning,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 cunning,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -1237,7 +1237,7 @@ sfa,C015,権限・組織,退会済み・無効メンバーの権限を拒否す�
 sfa,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 sfa,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 sfa,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-sfa,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+sfa,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 sfa,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 sfa,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 sfa,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -1359,7 +1359,7 @@ shodan,C015,権限・組織,退会済み・無効メンバーの権限を拒否�
 shodan,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,部分検証済み・本番通し検証待ち," aio-shodan-member-management-repair.json: Member repair deployed at 6bd0adb1, CI success/READY/anonymous 17-entry publication proven; authenticated production flow unproven. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven."
 shodan,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 shodan,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-shodan,C019,権限・組織,組織切替中の遅延応答を破棄する,部分検証済み・本番通し検証待ち," aio-shodan-member-management-repair.json: Member repair deployed at 6bd0adb1, CI success/READY/anonymous 17-entry publication proven; authenticated production flow unproven. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven. shodan-detail-lifecycle-repair.json (candidate: 35 actual mounted cases, 19 DTO negatives, 4 AI negatives, actual GET protocol; full gate and production verification pending) shodan-slide-editor-repair.json (separate editor regeneration/PDF double submit and post-unmount effects confirmed open; not fixed) shodan-list-lifecycle-repair.json (candidate: 31 mounted cases, 14 DTO/list API, 15 deletion API, 4 pagination groups; full gate/publication/authenticated full criterion unproven)"
+shodan,C019,権限・組織,組織切替中の遅延応答を破棄する,部分検証済み・本番通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証," aio-shodan-member-management-repair.json: Member repair deployed at 6bd0adb1, CI success/READY/anonymous 17-entry publication proven; authenticated production flow unproven. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven. shodan-detail-lifecycle-repair.json (candidate: 35 actual mounted cases, 19 DTO negatives, 4 AI negatives, actual GET protocol; full gate and production verification pending) shodan-slide-editor-repair.json (separate editor regeneration/PDF double submit and post-unmount effects confirmed open; not fixed) shodan-list-lifecycle-repair.json (candidate: 31 mounted cases, 14 DTO/list API, 15 deletion API, 4 pagination groups; full gate/publication/authenticated full criterion unproven); service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）"
 shodan,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 shodan,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 shodan,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -1481,7 +1481,7 @@ aio,C015,権限・組織,退会済み・無効メンバーの権限を拒否す�
 aio,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,部分検証済み・本番通し検証待ち," aio-shodan-member-management-repair.json: Member repair deployed at 6bd0adb1, CI success/READY/anonymous 17-entry publication proven; authenticated production flow unproven. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven."
 aio,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 aio,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-aio,C019,権限・組織,組織切替中の遅延応答を破棄する,部分検証済み・本番通し検証待ち," aio-shodan-member-management-repair.json: Member repair deployed at 6bd0adb1, CI success/READY/anonymous 17-entry publication proven; authenticated production flow unproven. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven.; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven."
+aio,C019,権限・組織,組織切替中の遅延応答を破棄する,部分検証済み・本番通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証," aio-shodan-member-management-repair.json: Member repair deployed at 6bd0adb1, CI success/READY/anonymous 17-entry publication proven; authenticated production flow unproven. 48 actual mounted AppLayout/member-page synthetic cases across both services verify actor/org/ABA/unmount guards, same-frame operation lock, own/peer restrictions, uncertain-result read recovery and cancellation/acceptance URL behavior. Real DB/browser persistence and durable multi-tab idempotency remain unproven.; PARTIAL prompt lifecycle candidate: aio-prompts-lifecycle-repair.json (35 mounted / 28 API synthetic cases). Full gate, production/private workflows and full criterion remain unproven.; service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）"
 aio,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 aio,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 aio,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -1603,7 +1603,7 @@ mensetsu,C015,権限・組織,退会済み・無効メンバーの権限を拒�
 mensetsu,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 mensetsu,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 mensetsu,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-mensetsu,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+mensetsu,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 mensetsu,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 mensetsu,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 mensetsu,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -1725,7 +1725,7 @@ quote,C015,権限・組織,退会済み・無効メンバーの権限を拒否�
 quote,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,部分検証済み・本番通し検証待ち," org-member-management-repair.json: Candidate only, not deployed. Actual full settings/MemberPanel StrictMode synthetic tests (40 total across both services) cover role downgrade, org/auth transitions, retained callbacks, same-frame double activation and unknown-result recovery. Does not establish every operation, durable multi-tab idempotency or real private persistence."
 quote,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 quote,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-quote,C019,権限・組織,組織切替中の遅延応答を破棄する,部分検証済み・本番通し検証待ち," org-member-management-repair.json: Candidate only, not deployed. Actual full settings/MemberPanel StrictMode synthetic tests (40 total across both services) cover role downgrade, org/auth transitions, retained callbacks, same-frame double activation and unknown-result recovery. Does not establish every operation, durable multi-tab idempotency or real private persistence."
+quote,C019,権限・組織,組織切替中の遅延応答を破棄する,部分検証済み・本番通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証," org-member-management-repair.json: Candidate only, not deployed. Actual full settings/MemberPanel StrictMode synthetic tests (40 total across both services) cover role downgrade, org/auth transitions, retained callbacks, same-frame double activation and unknown-result recovery. Does not establish every operation, durable multi-tab idempotency or real private persistence.; service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）"
 quote,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 quote,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 quote,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -1847,7 +1847,7 @@ aishodan,C015,権限・組織,退会済み・無効メンバーの権限を拒�
 aishodan,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,部分検証済み・本番通し検証待ち," org-member-management-repair.json: Candidate only, not deployed. Actual full settings/MemberPanel StrictMode synthetic tests (40 total across both services) cover role downgrade, org/auth transitions, retained callbacks, same-frame double activation and unknown-result recovery. Does not establish every operation, durable multi-tab idempotency or real private persistence."
 aishodan,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 aishodan,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-aishodan,C019,権限・組織,組織切替中の遅延応答を破棄する,部分検証済み・本番通し検証待ち," org-member-management-repair.json: Candidate only, not deployed. Actual full settings/MemberPanel StrictMode synthetic tests (40 total across both services) cover role downgrade, org/auth transitions, retained callbacks, same-frame double activation and unknown-result recovery. Does not establish every operation, durable multi-tab idempotency or real private persistence."
+aishodan,C019,権限・組織,組織切替中の遅延応答を破棄する,部分検証済み・本番通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証," org-member-management-repair.json: Candidate only, not deployed. Actual full settings/MemberPanel StrictMode synthetic tests (40 total across both services) cover role downgrade, org/auth transitions, retained callbacks, same-frame double activation and unknown-result recovery. Does not establish every operation, durable multi-tab idempotency or real private persistence.; service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）"
 aishodan,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 aishodan,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 aishodan,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,
@@ -1969,7 +1969,7 @@ adimage,C015,権限・組織,退会済み・無効メンバーの権限を拒否
 adimage,C016,権限・組織,一般メンバー・管理者・オーナーの操作を分ける,現在版での項目別通し検証待ち,
 adimage,C017,権限・組織,関連IDが同一組織に属することを検査する,現在版での項目別通し検証待ち,
 adimage,C018,権限・組織,自己評価・上長評価・最終評価の列権限を分ける,現在版での項目別通し検証待ち,
-adimage,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち,
+adimage,C019,権限・組織,組織切替中の遅延応答を破棄する,現在版での項目別通し検証待ち／共通上限案内の画面・クエリ切替は87合成画面検証合格、他応答・実機・本番通し未検証,service-limit-navigation-current.json; service-limit-navigation-comparison-baseline.json（Nextナビゲーションはモック、明示イベントの遅延元は別途監査）
 adimage,C020,権限・組織,共有URLから秘密情報や内部指示が漏れない,現在版での項目別通し検証待ち,
 adimage,C021,課金,有料判定の正本と旧プラン正規化が統一される,現在版での項目別通し検証待ち,
 adimage,C022,課金,決済セッションの所有者を検証する,現在版での項目別通し検証待ち,

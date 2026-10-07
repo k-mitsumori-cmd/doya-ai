@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-06T16:52:12.259988+00:00",
-  "status": "full-local-gate-passed-not-deployed",
+  "status": "navigation-repair-full-local-gate-passed-not-yet-pushed",
   "baselineCommit": "cfa921659dff49202b8290e3ec04d1a5ed8ec76e",
   "baseline": "service-limit-provider-baseline.json",
   "current": "service-limit-provider-current.json",
@@ -64,11 +64,42 @@
     "endedAt": "2026-10-06T16:54:54.910285+00:00"
   },
   "navigationScopeFinding": {
-    "status": "confirmed-open",
+    "status": "full-local-gate-passed-not-yet-pushed",
     "baselineEvidence": "service-limit-navigation-baseline.json",
     "probe": "probe-service-limit-navigation.cjs",
     "cases": 3,
     "scope": "Actual global provider/classifier/fetch observer in StrictMode with synthetic session/quota and history navigation + explicit render. Confirms stale quota and wrong-org CTA across same-account navigation. Actual Next router transitions and private production behavior unproven.",
-    "nextRepair": "Bind global quota notice and asynchronous observer to route/organization navigation epochs, preserve owner-only CTA and original response, test all 17 service IDs plus delayed and round-trip cases."
-  }
+    "nextRepair": "Bind global quota notice and asynchronous observer to route/organization navigation epochs, preserve owner-only CTA and original response, test all 17 service IDs plus delayed and round-trip cases.",
+    "baselineComparison": "service-limit-navigation-comparison-baseline.json",
+    "baselineFailed": 28,
+    "currentEvidence": "service-limit-navigation-current.json",
+    "currentPassed": 87,
+    "gate": "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-b6ba9b86-045e-4cec-b62d-9affffdb8891",
+    "changes": [
+      "Navigation pathname and full query included in authentication scope epoch; old notice never revived after navigation round trip.",
+      "Current Next navigation hooks invalidate late previous-view fetch quota observers; all 17 active service IDs tested.",
+      "Only ServiceLimitProvider wrapped in root Suspense, retaining application content during quota-hook suspension.",
+      "SFA pricing uses query org; reserved invite route never becomes organization scope; Unicode/path/query values encoded once."
+    ],
+    "limits": [
+      "Actual provider/classifier/observer and root boundary mounted in StrictMode, synthetic sessions/replies and mocked Next navigation hooks. Actual Next browser navigation, trial eligibility API, billing and private production operations remain unproven.",
+      "Explicit showServiceLimit event callers in Promane project form and Cunning live flows require separate late-callback lifecycle review; current synchronous events remain supported.",
+      "Does not repair all SFA draft/write lifecycle issues or complete 17-service audit."
+    ],
+    "reactQualityReview": [
+      "Hooks remain unconditional, pathname/query derive a primitive key, previous epoch renders no stale notice.",
+      "Effect cleanup and active key both guard delayed clones; original fetch/response behavior preserved.",
+      "Existing dialog focus, Escape and restoration tests retained; only optional quota UI suspends, application children remain rendered."
+    ],
+    "nextDocumentation": "https://nextjs.org/docs/15/app/api-reference/functions/use-search-params",
+    "supersededGate": "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-f1db3b6f-e0ca-4ac1-bb79-bf3d4cdf3357",
+    "supersededReason": "Additional actual mounted proof: reserved pricing/invite routes misinterpreted as SFA organization slug; expanded same repair before accepting full gate.",
+    "supersededGateEvidence": "service-limit-navigation-superseded-gate.json",
+    "pricingBaseline": "service-limit-sfa-pricing-baseline.json",
+    "fullGateExitCode": 0,
+    "sourceFreezeReverifiedBeforeCommit": true,
+    "sourceFiles": 2664,
+    "changedSources": []
+  },
+  "priorStatusBeforeNavigationRepair": "full-local-gate-passed-not-deployed"
 }

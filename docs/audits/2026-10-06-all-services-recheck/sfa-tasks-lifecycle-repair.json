@@ -83,7 +83,7 @@
     "publicationEvidence": "sfa-input-public-0200977e.json",
     "publicVerificationExitCode": 0
   },
-  "updatedAt": "2026-10-07T01:27:37.257542+00:00",
+  "updatedAt": "2026-10-07T01:38:35.973549+00:00",
   "relatedCollectionInputLoss": {
     "status": "repaired-local-full-gate-passed-production-pending",
     "cases": 17,
@@ -141,17 +141,18 @@
     "publicVerificationExitCode": 0
   },
   "manualDoubleSubmissionScope": "Actual four pages checked with held synthetic POST: six manual handlers submit twice; dashboard has a single-submit ref guard. Actor/org scope and persistent recovery remain separate requirements.",
-  "previousGoalTurnClassification": "progress: shipped task/activity durable creation receipt and read-only recovery after 40 synthetic cases, 14 actual isolated PostgreSQL cases and frozen full build/lint; CI and production build started. Full four-consumer lifecycle and 17-service audit remain incomplete.",
+  "previousGoalTurnClassification": "progress: shipped SFA task version/recovery after 31 synthetic/17 local PostgreSQL cases and full gate; verified 528d authority publication; reproduced and repaired global quota navigation plus SFA pricing scope, 87 current mounted cases (28 baseline failures), full expanded gate running. All four SFA consumer migration and full 17-service audit remain incomplete.",
   "nextRepairContract": [
     "Retain current ACTIVE-member policy and fresh membership locks in all next task/activity transactions.",
     "Creation request UUID bound to user/org/kind with durable SystemSetting receipt; task hard deletion must never allow a creation replay to resurrect a row. Reject changed payload reuse and corrupted receipts.",
     "Task updatedAt DTO and version conditions; recover uncertain creates/changes/deletions with read-only authoritative results instead of blind replay.",
     "Actor/org/epoch scoped bounded clients and persistent scoped notices across all four consumers, including AI bulk; preserve latest drafts and failed/uncertain candidates; no global success on rejected/unknown response.",
     "AIO/shared org response transport is bounded but current helper contracts cover only aio/shodan; extend deliberately for SFA routes and quota guidance rather than bypass existing validation.",
-    "Do not claim entire SFA or 17-service audit complete from this authority cohort."
+    "Do not claim entire SFA or 17-service audit complete from this authority cohort.",
+    "Unknown-write recovery: GET missing proves no committed receipt at that lock snapshot, not cancellation of a request that has not reached the receipt lock. Never issue a new UUID after missing alone. Preserve/retry exact same operation or atomically consume a cancellation receipt before unlocking for a new create; if persisting pending state, scope to actor/org and avoid exposing old-user private drafts. Implement together with all four client consumers, not as another claimed lifecycle completion."
   ],
   "creationReceiptRepair": {
-    "status": "pushed-ci-production-verification-pending",
+    "status": "deployed-anonymous-publication-verified-private-workflows-unproven",
     "syntheticCases": 40,
     "syntheticEvidence": "sfa-creation-receipt-results.json",
     "localPostgresCases": 14,
@@ -176,8 +177,8 @@
     "ciRuns": [
       {
         "databaseId": 37556538552,
-        "status": "in_progress",
-        "conclusion": "",
+        "status": "completed",
+        "conclusion": "success",
         "headSha": "f7f69af69d4647a8995f232aa0cce77bcb24658f"
       }
     ],
@@ -185,14 +186,16 @@
       {
         "uid": "dpl_DTKvs9hGiCMQWJ4RMgwYzLU4n6yB",
         "url": "doya-gl261fxto-surisutas-projects.vercel.app",
-        "state": "BUILDING",
+        "state": "READY",
         "target": "production",
         "commit": "f7f69af69d4647a8995f232aa0cce77bcb24658f"
       }
-    ]
+    ],
+    "publicationEvidence": "sfa-receipt-public-f7f69af6.json",
+    "publicVerificationExitCode": 0
   },
   "taskVersionRepair": {
-    "status": "local-full-gate-passed-not-yet-pushed",
+    "status": "ci-passed-production-verification-pending",
     "gate": "docs/audits/2026-10-06-all-services-recheck/sfa-task-version-release-660e2cc6-7024-4d43-b8d3-52ffd8505214",
     "syntheticCases": 31,
     "syntheticEvidence": "sfa-task-version-results.json",
@@ -216,11 +219,32 @@
     "fullGateExitCode": 0,
     "sourceFreezeReverifiedBeforeCommit": true,
     "sourceFiles": 2664,
-    "changedSources": []
+    "changedSources": [],
+    "commit": "4bdd9da5d63872a3d19dc2612ba784e227ad3696",
+    "pushExitCode": 0,
+    "sourceFreezeReverifiedAfterCommit": true,
+    "ciRuns": [
+      {
+        "databaseId": 37557223994,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "4bdd9da5d63872a3d19dc2612ba784e227ad3696"
+      }
+    ],
+    "productionDeployments": [
+      {
+        "uid": "dpl_6uc8J8qAvcganx3siA4NfFuwxPpN",
+        "url": "doya-60imm66jd-surisutas-projects.vercel.app",
+        "state": "BUILDING",
+        "target": "production",
+        "commit": "4bdd9da5d63872a3d19dc2612ba784e227ad3696"
+      }
+    ]
   },
   "relatedGlobalQuotaNavigationFinding": {
-    "status": "confirmed-open",
+    "status": "full-local-gate-passed-not-yet-pushed",
     "evidence": "service-limit-navigation-baseline.json",
-    "impact": "Global quota provider retains current actor but ignores navigation/org transitions; old SFA alpha quota can show a beta pricing CTA. Synthetic actual mounted provider evidence, private production unproven."
+    "impact": "Global quota provider retains current actor but ignores navigation/org transitions; old SFA alpha quota can show a beta pricing CTA. Synthetic actual mounted provider evidence, private production unproven.",
+    "currentEvidence": "service-limit-navigation-current.json"
   }
 }

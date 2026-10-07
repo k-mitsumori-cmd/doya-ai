@@ -1,0 +1,13 @@
+{
+  "gate": "docs/audits/2026-10-06-all-services-recheck/service-limit-navigation-release-f1db3b6f-e0ca-4ac1-bb79-bf3d4cdf3357",
+  "status": "superseded",
+  "checkedAt": "2026-10-07T01:33:16.688903+00:00",
+  "reason": "New actual mounted provider evidence: reserved /sfa/pricing and /sfa/invite segments treated as organization slugs, including pricing?org=alpha becoming org=pricing. Expand same repair and rerun frozen gate after correcting current CTA scope. Not restarted due to elapsed time.",
+  "evidence": "service-limit-sfa-pricing-baseline.json",
+  "ownedTerminatedPids": [
+    68623,
+    68625,
+    68635,
+    69578
+  ]
+}
