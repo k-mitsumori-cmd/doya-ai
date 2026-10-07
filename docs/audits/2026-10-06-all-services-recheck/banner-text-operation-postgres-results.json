@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-10-07T07:46:06.958Z",
+  "passed": 23,
+  "cases": [
+    "12 parallel same operation admissions reserve one shared daily budget unit",
+    "changed payload under same operation refuses without extra quota",
+    "parallel completion/replay/recovery keep one private result without another admission",
+    "actor and chat/copy namespaces isolate private results",
+    "parallel terminal failure remains counted once and same UUID cannot restart",
+    "cancel missing operation fences delayed admission without budget charge",
+    "pending provider operation cannot be speculatively cancelled or refunded",
+    "receipt persistence failure rolls back shared daily quota reservation",
+    "failed result save preserves pending receipt; saving same in-memory response requires no provider/quota repeat",
+    "chat and copy different operations concurrently share the same daily10 limit",
+    "deleted actor with stale session cannot admit/recover/complete/fail old operation",
+    "corrupt receipt fails closed without resetting usage or recreating operation",
+    "copy result contract matches actual suggestions DTO and rejects empty result",
+    "actual chat API duplicate: one provider/one quota; durable result/recovery/private response verified",
+    "actual chat API network: one provider/one quota; durable result/recovery/private response verified",
+    "actual chat API saveFailure: one provider/one quota; durable result/recovery/private response verified",
+    "actual chat API commitLost: one provider/one quota; durable result/recovery/private response verified",
+    "actual chat API invalidResult: one provider/one quota; durable result/recovery/private response verified",
+    "actual copy API duplicate: one provider/one quota; durable result/recovery/private response verified",
+    "actual copy API network: one provider/one quota; durable result/recovery/private response verified",
+    "actual copy API saveFailure: one provider/one quota; durable result/recovery/private response verified",
+    "actual copy API commitLost: one provider/one quota; durable result/recovery/private response verified",
+    "actual copy API invalidResult: one provider/one quota; durable result/recovery/private response verified"
+  ],
+  "sourceHashes": {
+    "src/lib/banner/text-operation.ts": "75faa4e60e431e8d59a3361726c121a6f62467cf4fb635f146928f4e66883ed0",
+    "src/lib/banner/text-budget.ts": "b329871ba245dce76a5fef1befcae653c3b4fd5f6e30094f801181712a3a4cc8",
+    "src/lib/plan-utils.ts": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86",
+    "src/lib/banner/text-http.ts": "2e5cc9637a6828264e69b8d41b30d127a788f894cbe20425d24f192b37a78497",
+    "src/lib/banner/text-answer.ts": "ba637e3dd135a9578d7a10d63f64978451a4e09e01f51032587eb35567556f5f",
+    "src/app/api/banner/chat/route.ts": "484bdcdd3a55ee4d80a42daf86d89cec2ebbabe8f327e6ff2e364018ede96511",
+    "src/app/api/banner/copy/route.ts": "c102018fcb6a17eb6851df680687ad3bf121f8c5e6bb2a0e1b839835162690b3"
+  },
+  "scope": "Actual text operation/budget helper, Prisma and isolated Unix-socket-only PostgreSQL synthetic schema. Actual chat/copy POST/GET/DELETE and answer orchestration included with synthetic session/provider. UI integration unverified. No customer DB or paid provider calls."
+}

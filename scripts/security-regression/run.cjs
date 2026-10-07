@@ -1,3 +1,13 @@
+const textResult = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-result.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (textResult.error || textResult.status !== 0) { console.error('Banner text result regression failed'); process.exit(1); }
+const textBody = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-body.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (textBody.error || textBody.status !== 0) { console.error('Banner text body regression failed'); process.exit(1); }
+const textRecoveryMounted = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-recovery-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (textRecoveryMounted.error || textRecoveryMounted.status !== 0) { console.error('Banner text recovery mounted regression failed'); process.exit(1); }
+const textRouteProvider = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-route-provider.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (textRouteProvider.error || textRouteProvider.status !== 0) { console.error('Banner text route provider regression failed'); process.exit(1); }
+const textAnswer = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-answer.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (textAnswer.error || textAnswer.status !== 0) { console.error('Banner text answer regression failed'); process.exit(1); }
 const bannerCreate = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-create-lifecycle-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerCreate.error || bannerCreate.status !== 0) { console.error('Banner create mounted regression failed'); process.exit(1); }
 const refineRecovery = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-refine-recovery-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });

@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-07T07:44:50.584Z",
+  "cases": [
+    {
+      "kind": "chat",
+      "providerCalls": 1,
+      "saveAttempts": 3,
+      "terminalFailureTransitions": 0,
+      "status": 202,
+      "state": "pending",
+      "finding": "Invalid output is definitively rejected before DB write, but HTTP retries save and leaves receipt pending; no recoverable result or terminal acknowledgement"
+    },
+    {
+      "kind": "copy",
+      "providerCalls": 1,
+      "saveAttempts": 3,
+      "terminalFailureTransitions": 0,
+      "status": 202,
+      "state": "pending",
+      "finding": "Invalid output is definitively rejected before DB write, but HTTP retries save and leaves receipt pending; no recoverable result or terminal acknowledgement"
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/banner/text-http.ts": "4e26cf8c81d4c7a2ad6520a4017d42d42b9ccd83b2907a1d79e4e2df477cea34",
+    "src/lib/banner/text-operation.ts": "ee919b16268bee371198babe7b8601067cede268d4605e57a396ea62bb9d557f"
+  },
+  "scope": "Actual HTTP orchestration and actual result validation; synthetic admission/recovery/generate response; no DB/provider/network"
+}

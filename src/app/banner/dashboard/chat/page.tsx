@@ -11,6 +11,8 @@ import toast from 'react-hot-toast'
 import BannerLimitModal from '@/components/banner/BannerLimitModal'
 import { useBannerQuota } from '@/components/banner/useBannerQuota'
 import { useBannerRequestFence } from '@/lib/banner/use-request-fence'
+import { useBannerTextRecovery } from '@/lib/banner/use-text-recovery'
+import BannerTextRecovery from '@/components/banner/BannerTextRecovery'
 import { useBannerRefineRecovery } from '@/lib/banner/use-refine-recovery'
 import BannerRefineRecovery from '@/components/banner/BannerRefineRecovery'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
@@ -156,6 +158,7 @@ function BannerChatWorkspace() {
   const { data: session, status } = useSession()
   const operations = useBannerRequestFence(status, String(session?.user?.id || ''))
   const refineRecovery = useBannerRefineRecovery(status, String(session?.user?.id || ''))
+  const textRecovery = useBannerTextRecovery(status, String(session?.user?.id || ''), 'chat')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [logoImage, setLogoImage] = useState<string | null>(null)
   const [logoFileName, setLogoFileName] = useState('')
@@ -216,7 +219,7 @@ function BannerChatWorkspace() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length, generatedBanners.length, proposedSpec?.keyword])
 
-  const canSend = operations.allowed && input.trim().length > 0 && !isThinking && !isGenerating && !isRefining
+  const canSend = operations.allowed && !textRecovery.blocked && input.trim().length > 0 && !isThinking && !isGenerating && !isRefining
 
   const bannerPlan = session
     ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase()
@@ -256,21 +259,14 @@ function BannerChatWorkspace() {
 
     setIsThinking(true)
     try {
-      const res = await fetch('/api/banner/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: operation.signal,
-        body: JSON.stringify({
-          messages: [...messages, { id: 'tmp', role: 'user', content: text, createdAt: Date.now() }]
-            .filter((m) => m.role === 'user' || m.role === 'assistant')
-            .slice(-12)
-            .map((m) => ({ role: m.role, content: m.content })),
-        }),
-      })
-      const parsed = await safeReadJson(res)
-      if (!operation.current()) return
-      const data = parsed.data || {}
-      if (parsed.status === 429 && data?.code === 'DAILY_TEXT_LIMIT_REACHED') {
+      const data = await textRecovery.submit({
+        messages: [...messages, { id: 'tmp', role: 'user', content: text, createdAt: Date.now() }]
+          .filter((m) => m.role === 'user' || m.role === 'assistant')
+          .slice(-12)
+          .map((m) => ({ role: m.role, content: m.content })),
+      }, operation.signal)
+      if (!operation.current() || !data) return
+      if (data.state === 'limit' && data.code === 'DAILY_TEXT_LIMIT_REACHED') {
         const limit = Number(data?.usage?.dailyLimit)
         setTextLimit(Number.isFinite(limit) && limit > 0 ? limit : null)
         setTextLimitAction(typeof data?.upgradeUrl === 'string' && data.upgradeUrl === '/banner/pricing'
@@ -281,10 +277,9 @@ function BannerChatWorkspace() {
         pushAssistant(data?.error || '本日のAI相談の上限に達しました。')
         return
       }
-      if (!parsed.ok) throw new BannerApiError(typeof data?.error === 'string' ? data.error : [413, 502, 503].includes(parsed.status) ? normalizeNonJsonApiError(parsed.status, parsed.text) : 'AIの返信を確認できませんでした。再試行してください。')
+      if (data.state !== 'completed') return
 
       if (typeof data.reply !== 'string' || !data.reply.trim()) throw new BannerApiError('AIの返信を確認できませんでした。入力を確認して再試行してください。')
-      if (data.spec != null && (typeof data.spec !== 'object' || Array.isArray(data.spec) || !['purpose', 'category', 'size', 'keyword'].every((key) => typeof data.spec[key] === 'string' && data.spec[key].trim()) || (data.spec.imageDescription != null && typeof data.spec.imageDescription !== 'string') || (data.spec.brandColors != null && (!Array.isArray(data.spec.brandColors) || !data.spec.brandColors.every((color: unknown) => typeof color === 'string'))))) throw new BannerApiError('バナーの提案内容を確認できませんでした。再試行してください。')
       if (inputRevision.current === revision) { inputRevision.current++; setInput('') }
       setMessages((prev) => [
         ...prev,
@@ -293,6 +288,7 @@ function BannerChatWorkspace() {
       setTextLimit(null)
       setTextLimitAction(null)
       pushAssistant(data.reply)
+      textRecovery.acknowledge(data.operationId)
       if (data.spec) {
         setProposedSpec(data.spec as BannerSpec)
       } else {
@@ -309,8 +305,7 @@ function BannerChatWorkspace() {
       }
     } catch (e: any) {
       if (!operation.current()) return
-      pushAssistant('すみません、エラーが発生しました。もう一度お試しください。')
-      toast.error(e instanceof BannerApiError ? e.message : 'AIの返信を確認できませんでした。再試行してください。')
+      toast.error(e instanceof BannerApiError ? e.message : 'AIの返信を確認できませんでした。「AI返信の結果を確認」で保存結果をご確認ください。')
     } finally {
       if (operation.current()) setIsThinking(false)
       operation.finish()
@@ -506,6 +501,12 @@ function BannerChatWorkspace() {
         upgradeUrl={limitModal.upgradeUrl}
       />
       <BannerRefineRecovery recovery={refineRecovery} />
+      <BannerTextRecovery recovery={textRecovery} onApply={(value) => {
+        if (value.reply) pushAssistant(value.reply)
+        if (value.spec) setProposedSpec(value.spec)
+        if (value.suggestions?.length) setSuggestedInputs(value.suggestions.slice(0, 8))
+        textRecovery.acknowledge(value.operationId)
+      }} />
       {/* デスクトップのみサイドバー表示 */}
       <div className="hidden md:block">
         <DashboardSidebar />

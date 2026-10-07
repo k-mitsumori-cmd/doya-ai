@@ -1,5 +1,5 @@
 ﻿serviceId,id,category,criterion,status,evidence
-banner,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+banner,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 banner,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 banner,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 banner,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -121,7 +121,7 @@ banner,U37,user-experience,退会時に自分だけでなく共同作業者の�
 banner,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 banner,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 banner,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-seo,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+seo,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 seo,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 seo,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 seo,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -243,7 +243,7 @@ seo,U37,user-experience,退会時に自分だけでなく共同作業者のデ�
 seo,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 seo,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 seo,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-interview,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+interview,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 interview,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 interview,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 interview,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -365,7 +365,7 @@ interview,U37,user-experience,退会時に自分だけでなく共同作業者�
 interview,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 interview,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 interview,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-persona,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+persona,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 persona,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 persona,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 persona,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -487,7 +487,7 @@ persona,U37,user-experience,退会時に自分だけでなく共同作業者の�
 persona,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 persona,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 persona,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-hr,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+hr,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 hr,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 hr,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 hr,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -609,7 +609,7 @@ hr,U37,user-experience,退会時に自分だけでなく共同作業者のデー
 hr,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 hr,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 hr,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-kintai,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+kintai,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 kintai,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 kintai,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 kintai,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -731,7 +731,7 @@ kintai,U37,user-experience,退会時に自分だけでなく共同作業者の�
 kintai,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 kintai,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 kintai,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-doyalist,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+doyalist,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 doyalist,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyalist,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyalist,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -853,7 +853,7 @@ doyalist,U37,user-experience,退会時に自分だけでなく共同作業者の
 doyalist,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 doyalist,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 doyalist,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-promane,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+promane,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 promane,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 promane,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 promane,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -975,7 +975,7 @@ promane,U37,user-experience,退会時に自分だけでなく共同作業者の�
 promane,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 promane,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 promane,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-doyaslide,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+doyaslide,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 doyaslide,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyaslide,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyaslide,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -1097,7 +1097,7 @@ doyaslide,U37,user-experience,退会時に自分だけでなく共同作業者�
 doyaslide,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 doyaslide,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 doyaslide,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-cunning,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+cunning,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 cunning,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 cunning,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 cunning,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -1219,7 +1219,7 @@ cunning,U37,user-experience,退会時に自分だけでなく共同作業者の�
 cunning,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 cunning,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 cunning,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-sfa,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+sfa,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 sfa,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 sfa,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 sfa,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -1341,7 +1341,7 @@ sfa,U37,user-experience,退会時に自分だけでなく共同作業者のデ�
 sfa,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 sfa,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 sfa,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-shodan,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+shodan,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 shodan,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 shodan,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 shodan,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -1463,7 +1463,7 @@ shodan,U37,user-experience,退会時に自分だけでなく共同作業者の�
 shodan,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 shodan,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 shodan,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-aio,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+aio,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 aio,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aio,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aio,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -1585,7 +1585,7 @@ aio,U37,user-experience,退会時に自分だけでなく共同作業者のデ�
 aio,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 aio,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 aio,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-mensetsu,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+mensetsu,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 mensetsu,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 mensetsu,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 mensetsu,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -1707,7 +1707,7 @@ mensetsu,U37,user-experience,退会時に自分だけでなく共同作業者の
 mensetsu,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 mensetsu,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 mensetsu,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-quote,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+quote,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 quote,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 quote,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 quote,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -1829,7 +1829,7 @@ quote,U37,user-experience,退会時に自分だけでなく共同作業者のデ
 quote,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 quote,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 quote,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-aishodan,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+aishodan,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 aishodan,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aishodan,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aishodan,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
@@ -1951,7 +1951,7 @@ aishodan,U37,user-experience,退会時に自分だけでなく共同作業者の
 aishodan,U38,user-experience,退会・保存期限前に必要なデータを持ち出せる。,現在版での項目別通し検証待ち,
 aishodan,U39,user-experience,準備中・利用不可機能は操作前に分かり、スマホでも理由を読める。,現在版での項目別通し検証待ち,
 aishodan,U40,user-experience,困った時の問い合わせ先と、伝えるべきエラー情報を分かりやすく表示する。,現在版での項目別通し検証待ち,
-adimage,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,現在版での項目別通し検証待ち,
+adimage,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 adimage,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 adimage,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 adimage,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,

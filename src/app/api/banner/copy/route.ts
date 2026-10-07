@@ -1,10 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { reserveBannerTextCall, bannerTextLimitPayload } from '@/lib/banner/text-budget'
-import { requestBannerTextProvider } from '@/lib/banner/provider-response'
+import { privateBannerTextJson, runBannerTextOperation, readBannerTextOperation, readBannerTextBody } from '@/lib/banner/text-http'
+import { requestBannerTextAnswer } from '@/lib/banner/text-answer'
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 function getPrimaryTextModel(): string {
   return (
     process.env.DOYA_BANNER_TEXT_MODEL ||
@@ -103,90 +102,24 @@ function parseSuggestionsFallback(raw: string): string[] {
 }
 
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
-  // Gemini 3系のみ使用（Gemini 2.5以下は使用しない）
-  // 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
-  // gemini-3-flash-preview は無料枠あり
   const models = [getPrimaryTextModel(), 'gemini-pro-latest', 'gemini-3-flash-preview', GEMINI_FALLBACK_MODEL]
-    .filter((v, i, a) => a.indexOf(v) === i) // 重複除去
-  let lastError: string | null = null
-
-  for (const model of models) {
-    try {
-      const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
-      
-      // JSONモード（responseMimeType）はモデル/タイミングで弾かれることがあるため、
-      // まずJSONモード→失敗したら自動で通常モードにフォールバックして安定性を上げる
-      const buildBody = (jsonMode: boolean) => ({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 800,
-          topP: 0.95,
-          topK: 40,
-          ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
-        },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-        ],
-      })
-
-      const attempt = (jsonMode: boolean) =>
-        requestBannerTextProvider(`${endpoint}?key=${apiKey}`, buildBody(jsonMode))
-
-      // 502/503 が出ることがあるため軽いリトライ
-      let res = await attempt(true)
-      if (res.status === 502 || res.status === 503) {
-        await new Promise((r) => setTimeout(r, 700))
-        res = await attempt(true)
-      }
-
-      if (!res.ok) {
-        const t = res.text
-        // JSONモードが弾かれたら通常モードで再試行
-        if (
-          res.status === 400 &&
-          (t.includes('responseMimeType') || t.includes('response_mime_type') || t.includes('INVALID_ARGUMENT'))
-        ) {
-          let retry = await attempt(false)
-          if (retry.status === 502 || retry.status === 503) {
-            await new Promise((r) => setTimeout(r, 700))
-            retry = await attempt(false)
-          }
-          if (retry.ok) {
-            const json = JSON.parse(retry.text)
-            const text = Array.isArray(json?.candidates?.[0]?.content?.parts)
-              ? json.candidates[0].content.parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
-              : ''
-            if (text) return text
-          } else {
-            const t2 = retry.text
-            lastError = `Gemini ${model} error (retry): ${retry.status} - ${t2.substring(0, 600)}`
-            continue
-          }
-        }
-        lastError = `Gemini ${model} error: ${res.status} - ${t.substring(0, 600)}`
-        continue
-      }
-
-      const json = JSON.parse(res.text)
-      const text = Array.isArray(json?.candidates?.[0]?.content?.parts)
-        ? json.candidates[0].content.parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
-        : ''
-      if (!text) {
-        lastError = `Gemini ${model} returned empty`
-        continue
-      }
-      return text
-    } catch (e: any) {
-      lastError = `Gemini ${model} failed: ${e?.message || e}`
-      continue
-    }
-  }
-
-  throw new Error(lastError || 'Gemini failed')
+  const buildBody = (jsonMode: boolean) => ({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 800,
+      topP: 0.95,
+      topK: 40,
+      ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+    },
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+    ],
+  })
+  return requestBannerTextAnswer(models, apiKey, buildBody)
 }
 
 /**
@@ -478,24 +411,26 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateBannerTextJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     const apiKey = getGeminiKey()
     if (!apiKey) {
-      return NextResponse.json(
+      return privateBannerTextJson(
         { error: 'AIコピー用のAPIキーが設定されていません（GOOGLE_AI_API_KEY / GEMINI_API_KEY / GOOGLE_GENAI_API_KEY）。' },
         { status: 503 }
       )
     }
 
-    const rawBody = await req.text()
+    const incoming = await readBannerTextBody(req, 8192)
+    if (!incoming.ok) return incoming.response
+    const rawBody = incoming.text
     if (Buffer.byteLength(rawBody, 'utf8') > 8_192) {
-      return NextResponse.json({ error: '入力が長すぎます。' }, { status: 413 })
+      return privateBannerTextJson({ error: '入力が長すぎます。' }, { status: 413 })
     }
     let body: unknown
     try { body = JSON.parse(rawBody) }
-    catch { return NextResponse.json({ error: '入力形式が正しくありません。' }, { status: 400 }) }
+    catch { return privateBannerTextJson({ error: '入力形式が正しくありません。' }, { status: 400 }) }
     const input = body as Partial<CopyRequest> | null
     if (!input || typeof input !== 'object' || Array.isArray(input) ||
       typeof input.category !== 'string' || input.category.length > 32 ||
@@ -503,18 +438,11 @@ export async function POST(req: NextRequest) {
       (input.base !== undefined && (typeof input.base !== 'string' || input.base.length > 2000)) ||
       (input.companyName !== undefined && (typeof input.companyName !== 'string' || input.companyName.length > 120)) ||
       (input.target !== undefined && (typeof input.target !== 'string' || input.target.length > 500))) {
-      return NextResponse.json({ error: '入力内容を確認してください。' }, { status: 400 })
+      return privateBannerTextJson({ error: '入力内容を確認してください。' }, { status: 400 })
     }
     const bodyValidated = input as CopyRequest
     const prompt = buildCopyPrompt(bodyValidated)
-    let admission
-    try { admission = await reserveBannerTextCall(session.user.id) }
-    catch {
-      return NextResponse.json({ error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503 })
-    }
-    if (admission.state === 'limit') {
-      return NextResponse.json(bannerTextLimitPayload(admission.usage, admission.upgradeAvailable), { status: 429 })
-    }
+    return runBannerTextOperation(session.user.id, 'copy', (body as { operationId?: unknown }).operationId, prompt, async () => {
     const raw = await callGemini(prompt, apiKey)
     const parsed = extractJsonObject(raw)
     const itemsRaw = Array.isArray((parsed as any)?.items) ? (parsed as any).items : []
@@ -534,18 +462,31 @@ export async function POST(req: NextRequest) {
     }
 
     if (suggestions.length === 0) {
-      return NextResponse.json(
+      return privateBannerTextJson(
         { error: 'AIの出力を解析できませんでした。もう一度お試しください。' },
         { status: 502 }
       )
     }
 
-    return NextResponse.json({ suggestions })
+    return privateBannerTextJson({ suggestions })
+    })
   } catch (e: any) {
     console.error('Banner copy failed:')
-    return NextResponse.json(
+    return privateBannerTextJson(
       { error: 'AIコピー生成に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }
 }
+
+async function recovery(req: NextRequest, cancelMissing = false) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) return privateBannerTextJson({ error: 'ログインが必要です。' }, { status: 401 })
+    return readBannerTextOperation(session.user.id, 'copy', req, cancelMissing)
+  } catch {
+    return privateBannerTextJson({ error: 'ログイン状態を確認できません。時間をおいてお試しください。' }, { status: 503 })
+  }
+}
+export async function GET(req: NextRequest) { return recovery(req) }
+export async function DELETE(req: NextRequest) { return recovery(req, true) }

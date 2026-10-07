@@ -39,8 +39,9 @@
     "publicVerification": "anonymous-publication-passed-private-form-unproven"
   },
   "next": [
-    "Commit/push authorized allowlist after verified current manifest; exactCI/READY/publication checks",
-    "Repair chat duplicate operation and uncertain provider retry baseline; then remaining service criteria"
+    "Commit exact41file release allowlist and push authorized main",
+    "Observe exact commit CI and deployment READY then anonymous public check",
+    "Continue all17/2074criteria; partial catalog evidence is not full operations verification"
   ],
   "boundaries": [
     "No customer DB/migrations/emails/invites/paid providers",
@@ -75,7 +76,7 @@
     "releaseAllowlist": "docs/audits/2026-10-06-all-services-recheck/sfa-crm-release-file-list.json",
     "lastObservedGate": "terminal passed; obsolete running-session pointer removed"
   },
-  "updatedAt": "2026-10-07T07:21:59.744295+00:00",
+  "updatedAt": "2026-10-07T07:52:17.265102+00:00",
   "currentCrmRelease": {
     "commit": "4d3e7f007be3323650dc97e92fd98987e67730de",
     "mainPush": "succeeded",
@@ -102,7 +103,8 @@
   "scopeCounts": {
     "services": 17,
     "criteria": 2074,
-    "itemByItemUnverified": 1895
+    "itemByItemUnverified": 1878,
+    "countMeaning": "Exact pending-status rows only; partial-evidence rows also require remaining verification, not complete"
   },
   "nextRepair": {
     "status": "refine full gate passed; release prepared; chat operation baseline confirmed",
@@ -132,7 +134,7 @@
     "targetedRegression": "model5, error boundary7, private cron errors, callbacks24, mounted chat13 passed",
     "typecheck": "terminal0 current source",
     "eslint": "terminal0 API/input/helper",
-    "state": "integrated source uncommitted; prepared release; not pushed",
+    "state": "committed and pushed; CI/deployment in progress, not yet READY/public verified",
     "remainingPlan": "banner-refine-operation-repair-plan.json",
     "mounted": "actual chat13/create7/recovery12 passed; synthetic API/decode-events/locks",
     "fullGate": {
@@ -142,15 +144,52 @@
       "sourceFiles": 2716,
       "changedSources": []
     },
-    "nativeBrowser": "5 current-source native helper checks passed; authenticated production unverified"
+    "nativeBrowser": "5 current-source native helper checks passed; authenticated production unverified",
+    "commit": "d2888f6f49940faf2e28f0ed84d00b5d043d6831",
+    "push": "succeeded",
+    "ciRun": 37586923514,
+    "ciWatchSession": 72926,
+    "deploymentUrl": "doya-jzl8g1beo-surisutas-projects.vercel.app",
+    "deploymentState": "READY",
+    "deploymentId": "dpl_EYLCF5L4Ewr1DccLW1F8aq7GPVZS",
+    "ciStatus": "success",
+    "publicVerification": "17 service entries29assets/create+chat recovery bundle and anonymous private401 passed; authenticated provider flow unverified"
   },
   "followingBannerChatRepair": {
     "evidence": "banner-chat-operation-current-baseline.json",
-    "status": "reproduced-unfixed",
+    "status": "full-local-gate-passed-release-prepared",
     "findings": [
       "Same UUID two POSTs =>two admissions/two provider calls",
       "Network uncertainty =>three model attempts for one admitted call",
       "503=>six provider invocations for one admitted budget unit"
-    ]
+    ],
+    "progress": {
+      "privatePostgresCases": 23,
+      "mountedChatCases": 13,
+      "mountedRecoveryCases": 12,
+      "bodyCases": 6,
+      "providerHelperCases": 14,
+      "actualRouteProviderCases": 8,
+      "typecheck": "exit0",
+      "eslint": "0errors5imagewarnings",
+      "gate": "docs/audits/2026-10-06-all-services-recheck/banner-text-operation-release-fa7e32e9-aba7-492d-93d2-e0a50abc7a74",
+      "session": null,
+      "remaining": [
+        "Full frozen security/build/lint gate",
+        "Review and release allowlist; commit/push/CI/READY/public verification",
+        "Remaining services/2074criteria and authenticated live flows"
+      ],
+      "firstGate": "failed: AST callback fixture lacked new textRecovery dependency; fixed fixture preserving24 cases; current full gate running",
+      "resultValidationCases": 14,
+      "invalidAnswer": "reproduced permanent pending; repaired definite output rejection to failed before save; synthetic actual helper14+PG23 passed",
+      "fullGate": "passed2728files-no-source-change"
+    }
+  },
+  "catalogCheck": {
+    "sourceServices": 17,
+    "retiredExcluded": 14,
+    "publicEntryConsistency": "home/sitemap/llms17 matched",
+    "evidence": "service-catalog-current.json",
+    "matrix": "17 C001 rows partial only"
   }
 }

@@ -1,12 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { reserveBannerTextCall, bannerTextLimitPayload } from '@/lib/banner/text-budget'
-import { requestBannerTextProvider } from '@/lib/banner/provider-response'
+import { privateBannerTextJson, runBannerTextOperation, readBannerTextOperation, readBannerTextBody } from '@/lib/banner/text-http'
+import { requestBannerTextAnswer } from '@/lib/banner/text-answer'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 /**
  * テキスト生成モデルの優先順位
@@ -329,127 +328,63 @@ async function callGemini(messages: ChatMessage[], apiKey: string): Promise<stri
     })
   }
 
-  const models = getTextModels()
-  let lastError: string | null = null
-
-  for (const model of models) {
-    try {
-      const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
-      const buildBody = (jsonMode: boolean) => ({
-        contents,
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 1000,
-          topP: 0.9,
-          topK: 40,
-          ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
-        },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-        ],
-      })
-
-      const attempt = (jsonMode: boolean) =>
-        requestBannerTextProvider(`${endpoint}?key=${apiKey}`, buildBody(jsonMode))
-
-      let res = await attempt(true)
-      if (res.status === 502 || res.status === 503) {
-        await new Promise((r) => setTimeout(r, 700))
-        res = await attempt(true)
-      }
-
-      if (!res.ok) {
-        const t = res.text
-        // JSONモードが弾かれたら通常モードで再試行
-        if (
-          res.status === 400 &&
-          (t.includes('responseMimeType') || t.includes('response_mime_type') || t.includes('INVALID_ARGUMENT'))
-        ) {
-          let retry = await attempt(false)
-          if (retry.status === 502 || retry.status === 503) {
-            await new Promise((r) => setTimeout(r, 700))
-            retry = await attempt(false)
-          }
-          if (retry.ok) {
-            const json = JSON.parse(retry.text)
-            const text = json?.candidates?.[0]?.content?.parts
-              ?.map((p: any) => (p?.text ? String(p.text) : ''))
-              .join('\n')
-              .trim()
-            if (text) return text
-          } else {
-            const t2 = retry.text
-            lastError = `Gemini ${model} error (retry): ${retry.status} - ${t2.substring(0, 240)}`
-            continue
-          }
-        }
-        lastError = `Gemini ${model} error: ${res.status} - ${t.substring(0, 240)}`
-        continue
-      }
-
-      const json = JSON.parse(res.text)
-      const text = json?.candidates?.[0]?.content?.parts?.map((p: any) => (p?.text ? String(p.text) : '')).join('\n').trim()
-      if (!text) {
-        lastError = `Gemini ${model} returned empty text`
-        continue
-      }
-      return text
-    } catch (e: any) {
-      lastError = `Gemini ${model} failed: ${e?.message || e}`
-      continue
-    }
-  }
-
-  throw new Error(lastError || 'Gemini failed')
+  const buildBody = (jsonMode: boolean) => ({
+    contents,
+    generationConfig: {
+      temperature: 0.4,
+      maxOutputTokens: 1000,
+      topP: 0.9,
+      topK: 40,
+      ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+    },
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+    ],
+  })
+  return requestBannerTextAnswer(getTextModels(), apiKey, buildBody)
 }
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateBannerTextJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     const apiKey = getGeminiKey()
     if (!apiKey) {
-      return NextResponse.json(
+      return privateBannerTextJson(
         { error: 'AIチャット用のAPIキーが設定されていません（GOOGLE_AI_API_KEY / GEMINI_API_KEY / GOOGLE_GENAI_API_KEY）。' },
         { status: 503 }
       )
     }
 
-    const rawBody = await req.text()
+    const incoming = await readBannerTextBody(req, 32768)
+    if (!incoming.ok) return incoming.response
+    const rawBody = incoming.text
     if (Buffer.byteLength(rawBody, 'utf8') > 32_768) {
-      return NextResponse.json({ error: '会話が長すぎます。新しい会話でお試しください。' }, { status: 413 })
+      return privateBannerTextJson({ error: '会話が長すぎます。新しい会話でお試しください。' }, { status: 413 })
     }
     let body: unknown
     try { body = JSON.parse(rawBody) }
-    catch { return NextResponse.json({ error: '入力形式が正しくありません。' }, { status: 400 }) }
+    catch { return privateBannerTextJson({ error: '入力形式が正しくありません。' }, { status: 400 }) }
     const candidate = body && typeof body === 'object' ? (body as { messages?: unknown }).messages : undefined
     if (!Array.isArray(candidate) || candidate.length === 0 || candidate.length > 12 ||
       candidate.some((message) => !message || typeof message !== 'object' ||
         !['user', 'assistant'].includes(message.role) ||
         typeof message.content !== 'string' || !message.content.trim() || message.content.length > 2000) ||
       candidate[candidate.length - 1].role !== 'user') {
-      return NextResponse.json(
+      return privateBannerTextJson(
         { error: '会話の内容が正しくありません。入力を確認してください。' },
         { status: 400 }
       )
     }
     const messages = candidate as ChatMessage[]
 
-    let admission
-    try { admission = await reserveBannerTextCall(session.user.id) }
-    catch {
-      return NextResponse.json({ error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503 })
-    }
-    if (admission.state === 'limit') {
-      return NextResponse.json(bannerTextLimitPayload(admission.usage, admission.upgradeAvailable), { status: 429 })
-    }
-
+    return runBannerTextOperation(session.user.id, 'chat', (body as { operationId?: unknown }).operationId, messages, async () => {
     const rawText = await callGemini(messages, apiKey)
     const parsed = extractJsonObject(rawText)
     const contextText = messages
@@ -461,7 +396,7 @@ export async function POST(req: NextRequest) {
     if (!parsed || typeof parsed !== 'object') {
       const reply = ensureQuestionEnding('いいですね。バナーに載せるキャッチコピーと、使いたい写真/イメージはどんな感じにしますか？')
       const suggestions = buildSuggestedUserMessages({ questionText: reply, contextText })
-      return NextResponse.json({
+      return privateBannerTextJson({
         needsMoreInfo: true,
         questions: ['キャッチコピー案と、写真/イメージの希望を教えてください。'],
         reply,
@@ -474,7 +409,7 @@ export async function POST(req: NextRequest) {
     const coerced = coerceSpec(parsed)
     if (coerced.needsMoreInfo) {
       const qs = coerced.questions || []
-      return NextResponse.json({
+      return privateBannerTextJson({
         needsMoreInfo: true,
         questions: qs,
         reply: ensureQuestionEnding(parsed.reply || `キャッチコピー案はどうしますか？`),
@@ -489,7 +424,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    return NextResponse.json({
+    return privateBannerTextJson({
       needsMoreInfo: false,
       questions: null,
       reply: ensureQuestionEnding(parsed.reply || '承知しました。次に、バナーに入れるキャッチコピーはどうしますか？'),
@@ -501,11 +436,24 @@ export async function POST(req: NextRequest) {
         contextText,
       }),
     })
+    })
   } catch (e: any) {
     console.error('Banner chat failed:')
-    return NextResponse.json(
+    return privateBannerTextJson(
       { error: 'AIチャット処理に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }
 }
+
+async function recovery(req: NextRequest, cancelMissing = false) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) return privateBannerTextJson({ error: 'ログインが必要です。' }, { status: 401 })
+    return readBannerTextOperation(session.user.id, 'chat', req, cancelMissing)
+  } catch {
+    return privateBannerTextJson({ error: 'ログイン状態を確認できません。時間をおいてお試しください。' }, { status: 503 })
+  }
+}
+export async function GET(req: NextRequest) { return recovery(req) }
+export async function DELETE(req: NextRequest) { return recovery(req, true) }
