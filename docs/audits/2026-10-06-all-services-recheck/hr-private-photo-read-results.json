@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T16:29:01.566Z",
+  "passed": 15,
+  "cases": [
+    "owner",
+    "member-read",
+    "anonymous",
+    "wrong-org",
+    "bad-path",
+    "unattached",
+    "missing-object",
+    "membership-revoked",
+    "membership-revoked-at-final-query",
+    "photo-detached",
+    "employee-replaced",
+    "storage-error",
+    "database-error",
+    "context-error",
+    "png-mime"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/hr/photos/[...path]/route.ts": "9557f37cc240f2ec7265ee0ab8be2628e1dfce4717276251b5abc0d28ed374f0"
+  },
+  "scope": "Actual route, synthetic HR context/Prisma/storage with mutations during download. Includes foreign org, missing link, revoked membership and changed attachment. Candidate source explicitly identified until applied. No real DB, customer photos or production writes."
+}

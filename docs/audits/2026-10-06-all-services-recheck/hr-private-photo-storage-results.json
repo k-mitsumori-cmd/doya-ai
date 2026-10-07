@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T16:29:01.379Z",
+  "passed": 8,
+  "cases": [
+    "private",
+    "public",
+    "metadata-error",
+    "privacy-changed-after-warmup",
+    "unknown-privacy",
+    "missing-created-private",
+    "missing-created-public",
+    "missing-create-failed"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/lib/hr/storage.ts": "323ff1237a21c5f2556c9feab7f4c8f88389042b160d1109bb75150ef82371d2"
+  },
+  "scope": "Actual HR storage module with synthetic Supabase adapter; no production bucket, customer photos or data writes. Existing public HR photo links remain uninspected and unchanged."
+}

@@ -19,7 +19,7 @@ const MAX_SIZE = 5 * 1024 * 1024 // 5MB
 
 /**
  * POST /api/hr/upload
- * 従業員の顔写真をアップロードし、公開URLを返す。
+ * 従業員の顔写真を非公開保存し、組織権限を確認する表示URLを返す。
  * FormData: { file: File }  →  { url: string }
  * 権限: ADMIN 以上（従業員情報の編集権限と同等）
  */

@@ -4,8 +4,9 @@ const { load, check } = require('./load-typescript.cjs')
 let infoResult = { data: { size: 123, contentType: 'audio/wav' }, error: null }
 let inspectedPath = ''
 const storage = load('src/lib/interview/storage.ts', {
+  '@/lib/private-storage-bucket': load('src/lib/private-storage-bucket.ts', { '@/lib/fetch-timeout': load('src/lib/fetch-timeout.ts', {}, { setTimeout, clearTimeout, AbortController }) }),
   'node:crypto': { randomUUID: () => 'test-uuid' },
-  '@supabase/supabase-js': { createClient: () => ({ storage: { from: () => ({
+  '@supabase/supabase-js': { createClient: () => ({ storage: { getBucket: async () => ({ data: { public: false }, error: null }), from: () => ({
     info: async (path) => { inspectedPath = path; return infoResult },
   }) } }) },
 }, { process: { env: { SUPABASE_URL: 'https://storage.example.test', SUPABASE_SERVICE_ROLE_KEY: 'test-key' } } })

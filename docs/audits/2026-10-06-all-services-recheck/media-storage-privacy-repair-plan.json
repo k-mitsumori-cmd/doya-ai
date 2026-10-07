@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-07T16:28:25.174057+00:00",
+  "status": "frozen30gates-passed-ready-for-reviewed-commit-push",
+  "baseline": "docs/audits/2026-10-06-all-services-recheck/media-storage-privacy-baseline.json",
+  "services": [
+    "movie",
+    "voice",
+    "tenkai",
+    "interview"
+  ],
+  "scope": "All callable source paths are in audit scope, including coming-soon service routes. Synthetic metadata/object APIs; no claim of actual production public configuration or customer exposure. Existing public objects and production bucket settings unchanged.",
+  "repairsRequired": [
+    "Confirm current private metadata before every upload/read/sign, not just cached existence",
+    "Retain existing per-service upload limits and playback behavior",
+    "Do not automatically convert a public production bucket as an incidental read effect",
+    "Preserve deletion/retention recovery and existing large-file direct-upload flow"
+  ],
+  "sourceHashes": {
+    "src/lib/movie/storage.ts": "92c61c04887fd1396a3f0279de41f8fdb7f19f0e669bf784395368c9dab6685f",
+    "src/lib/voice/storage.ts": "598af6af813e10e3861da315b3e50d2df9eb0b1406a398b8b46faf08cf1aad7b",
+    "src/lib/tenkai/storage.ts": "57cb4985106e672e9caee4307e6f0441105cf1a45e2deca0847e20377c7e9ce9",
+    "src/lib/interview/storage.ts": "c294249531578f72997b765cb583f3c1c8f3d0c978687fd045aa203ddfde1601"
+  },
+  "productionApplied": false,
+  "gate": "docs/audits/2026-10-06-all-services-recheck/media-storage-privacy-release-8654d861-2217-40ac-8717-312d5b7bfcd7",
+  "previousFailedGate": "docs/audits/2026-10-06-all-services-recheck/media-storage-privacy-release-3181a0de-7e41-44fd-a6f0-7ed89f38300f",
+  "gateStatus": "passed"
+}

@@ -1,10 +1,11 @@
 // ============================================
 // ドヤHR - 従業員写真ストレージ (Supabase Storage)
 // ============================================
-// 従業員の顔写真を Supabase Storage の公開バケットに保存し、公開URLを返す。
-// 公開URLにしている理由: 一覧/詳細/組織図で <img> として長期表示するため
-// （署名付きURLは期限切れで画像が壊れる）。パスはランダムUUIDで推測困難にする。
+// 新しい従業員写真は非公開バケットへ保存し、組織権限を確認する同一オリジンAPIで表示する。
+// 既存の公開バケットとその保存済みURLは、この変更では移行・変更しない。
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { ensurePrivateImageBucket } from '@/lib/private-storage-bucket'
+import { raceTimeout } from '@/lib/fetch-timeout'
 
 let _supabase: SupabaseClient | null = null
 function getSupabase() {
@@ -17,18 +18,22 @@ function getSupabase() {
   return _supabase
 }
 
-const BUCKET = 'hr-photos'
+const BUCKET = process.env.HR_PHOTO_STORAGE_BUCKET || 'hr-photos-private'
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024
+
+function photoPath(path: string): string {
+  if (!/^[A-Za-z0-9_-]{1,128}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/.test(path)) {
+    throw new Error('写真の保存先が不正です')
+  }
+  return path
+}
 
 async function ensureBucket() {
-  const { data: buckets } = await getSupabase().storage.listBuckets()
-  const exists = buckets?.some((b) => b.name === BUCKET)
-  if (!exists) {
-    await getSupabase().storage.createBucket(BUCKET, { public: true })
-  }
+  await ensurePrivateImageBucket(getSupabase().storage, BUCKET, MAX_PHOTO_BYTES)
 }
 
 /**
- * 従業員写真をアップロードして公開URLを返す
+ * 従業員写真を非公開保存し、権限確認付きの表示URLを返す
  * @param buffer 画像バイナリ
  * @param path 保存パス（例: `${organizationId}/${uuid}.jpg`）
  * @param contentType 画像のMIMEタイプ
@@ -38,6 +43,8 @@ export async function uploadHrPhoto(
   path: string,
   contentType: string
 ): Promise<string> {
+  photoPath(path)
+  if (!buffer.length || buffer.length > MAX_PHOTO_BYTES) throw new Error('写真は5MB以下で指定してください')
   await ensureBucket()
 
   const { error } = await getSupabase()
@@ -46,7 +53,17 @@ export async function uploadHrPhoto(
 
   if (error) throw new Error('Supabase upload error')
 
-  const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(path)
-  if (!data?.publicUrl) throw new Error('公開URLの生成に失敗しました')
-  return data.publicUrl
+  return `/api/hr/photos/${path}`
+}
+
+/** Only call after checking the organization and an employee's attached photo URL. */
+export async function downloadHrPhoto(path: string): Promise<Buffer | null> {
+  photoPath(path)
+  await ensureBucket()
+  const { data, error } = await raceTimeout('downloadHrPhoto', 20000, getSupabase().storage.from(BUCKET).download(path))
+  if (error || !data) return null
+  if (data.size > MAX_PHOTO_BYTES) throw new Error('写真のサイズを確認できませんでした')
+  const buffer = Buffer.from(await raceTimeout('readHrPhoto', 10000, data.arrayBuffer()))
+  if (!buffer.length || buffer.length > MAX_PHOTO_BYTES) throw new Error('写真のサイズを確認できませんでした')
+  return buffer
 }

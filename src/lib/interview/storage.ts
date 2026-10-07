@@ -11,11 +11,11 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
+import { ensurePrivateImageBucket } from '@/lib/private-storage-bucket'
 
 export const BUCKET_NAME = process.env.INTERVIEW_STORAGE_BUCKET || 'interview-materials'
 
 let _client: SupabaseClient | null = null
-let _bucketReady = false
 let _detectedMaxBytes = 0 // 検出されたプラン上限 (バイト)
 
 /**
@@ -41,21 +41,18 @@ export function getSupabaseAdmin(): SupabaseClient {
 
 /**
  * ストレージバケットを確保 (なければ作成) + プラン上限を自動検出して設定
- * 初回のみ実行し、以降はキャッシュ
+ * 毎回非公開設定と既存の上限を確認し、未設定の上限だけを検出する
  */
 export async function ensureBucket(): Promise<void> {
-  if (_bucketReady) return
   const supabase = getSupabaseAdmin()
-
-  const { data } = await supabase.storage.getBucket(BUCKET_NAME)
-  if (!data) {
-    const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
-      public: false,
-    })
-    if (error && !error.message?.includes('already exists')) {
-      throw new Error('保存先を準備できませんでした')
-    }
+  const bucket = await ensurePrivateImageBucket(supabase.storage, BUCKET_NAME)
+  // Preserve an existing configured cap and observe changes across warm invocations.
+  const configuredLimit = bucket.file_size_limit
+  if (typeof configuredLimit === 'number' && Number.isSafeInteger(configuredLimit) && configuredLimit > 0) {
+    _detectedMaxBytes = Math.min(configuredLimit, 5 * 1024 * 1024 * 1024)
+    return
   }
+  _detectedMaxBytes = 0
 
   // プラン上限を自動検出: 大きい値から試して最大値を設定
   // Free=50MB, Pro=5GB, Enterprise=50GB
@@ -82,7 +79,7 @@ export async function ensureBucket(): Promise<void> {
     throw new Error('Bucket のファイルサイズ上限を確認できませんでした')
   }
 
-  _bucketReady = true
+  await ensurePrivateImageBucket(supabase.storage, BUCKET_NAME)
 }
 
 /**
@@ -126,6 +123,7 @@ export async function getSignedFileUrl(
   expiresInSeconds = 3600
 ): Promise<string> {
   const supabase = getSupabaseAdmin()
+  await ensurePrivateImageBucket(supabase.storage, BUCKET_NAME)
 
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)
@@ -145,6 +143,7 @@ export async function getFileMetadata(
   storagePath: string
 ): Promise<{ size: number; mimeType: string } | null> {
   const supabase = getSupabaseAdmin()
+  await ensurePrivateImageBucket(supabase.storage, BUCKET_NAME)
   // 部分一致の一覧検索では、似た名前の別ファイルを誤認し得る。
   const { data: file, error } = await supabase.storage.from(BUCKET_NAME).info(storagePath)
   if (error?.status === 404) return null
@@ -180,7 +179,7 @@ export async function purgeInterviewProjectStorageBatch(prefix: string): Promise
   }
   const bucket = getSupabaseAdmin().storage
   const { data: details, error: bucketError } = await bucket.getBucket(BUCKET_NAME)
-  if (bucketError || !details || details.public) throw new Error('非公開バケットを確認できません')
+  if (bucketError || !details || details.public !== false) throw new Error('非公開バケットを確認できません')
   const files = bucket.from(BUCKET_NAME)
   const { data, error } = await files.list(prefix, { limit: 100, offset: 0 })
   if (error || !data) throw new Error('ストレージ一覧を取得できません')

@@ -1,0 +1,67 @@
+{
+  "checkedAt": "2026-10-07T16:23:17.259Z",
+  "passed": 0,
+  "cases": [],
+  "failures": [
+    {
+      "scenario": "private",
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'https://local.test/public/face.jpg'\n- '/api/hr/photos/org/10000000-0000-4000-8000-000000000001.jpg'\n",
+      "uploads": 1,
+      "publicUrls": 1,
+      "creates": 0
+    },
+    {
+      "scenario": "public",
+      "error": "Unsafe employee photo upload allowed",
+      "uploads": 1,
+      "publicUrls": 1,
+      "creates": 0
+    },
+    {
+      "scenario": "metadata-error",
+      "error": "Unsafe employee photo upload allowed",
+      "uploads": 1,
+      "publicUrls": 1,
+      "creates": 0
+    },
+    {
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe employee photo upload allowed",
+      "uploads": 1,
+      "publicUrls": 1,
+      "creates": 0
+    },
+    {
+      "scenario": "unknown-privacy",
+      "error": "Unsafe employee photo upload allowed",
+      "uploads": 1,
+      "publicUrls": 1,
+      "creates": 0
+    },
+    {
+      "scenario": "missing-created-private",
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'https://local.test/public/face.jpg'\n- '/api/hr/photos/org/10000000-0000-4000-8000-000000000001.jpg'\n",
+      "uploads": 1,
+      "publicUrls": 1,
+      "creates": 0
+    },
+    {
+      "scenario": "missing-created-public",
+      "error": "Unsafe employee photo upload allowed",
+      "uploads": 1,
+      "publicUrls": 1,
+      "creates": 0
+    },
+    {
+      "scenario": "missing-create-failed",
+      "error": "Unsafe employee photo upload allowed",
+      "uploads": 1,
+      "publicUrls": 1,
+      "creates": 0
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/hr/storage.ts": "61d86c7af33dbfdea8a588c3bd61af089ab0f1dc33960b793b373227f0aef4b0"
+  },
+  "scope": "Actual HR storage module with synthetic Supabase adapter; no production bucket, customer photos or data writes. Existing public HR photo links remain uninspected and unchanged."
+}

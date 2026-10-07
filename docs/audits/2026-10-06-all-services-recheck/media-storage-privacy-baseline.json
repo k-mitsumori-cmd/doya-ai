@@ -1,0 +1,375 @@
+{
+  "checkedAt": "2026-10-07T16:14:13.810Z",
+  "passed": 8,
+  "cases": [
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "private"
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "private"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "private"
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "private"
+    }
+  ],
+  "failures": [
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "public",
+      "error": "Unsafe storage operation accepted",
+      "calls": 2,
+      "checks": 1,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "metadata-error",
+      "error": "Unsafe storage operation accepted",
+      "calls": 2,
+      "checks": 1,
+      "creates": 1,
+      "updates": 0
+    },
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe storage operation accepted",
+      "calls": 2,
+      "checks": 2,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "movie",
+      "operation": "uploadMovieFile",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe storage operation accepted",
+      "calls": 2,
+      "checks": 1,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "public",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "metadata-error",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "movie",
+      "operation": "getSignedMovieUrl",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "public",
+      "error": "Unsafe storage operation accepted",
+      "calls": 2,
+      "checks": 1,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "metadata-error",
+      "error": "Unsafe storage operation accepted",
+      "calls": 2,
+      "checks": 1,
+      "creates": 1,
+      "updates": 0
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe storage operation accepted",
+      "calls": 2,
+      "checks": 1,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "voice",
+      "operation": "uploadVoiceAudio",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe storage operation accepted",
+      "calls": 2,
+      "checks": 1,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "public",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 1,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "metadata-error",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 1,
+      "creates": 1,
+      "updates": 0
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 1,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "tenkai",
+      "operation": "getUploadSignedUrl",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 1,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "public",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "metadata-error",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "tenkai",
+      "operation": "getDownloadSignedUrl",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "public",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 1,
+      "creates": 0,
+      "updates": 1
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "metadata-error",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 1,
+      "creates": 1,
+      "updates": 1
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 1,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "interview",
+      "operation": "createSignedUploadUrl",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 1,
+      "creates": 0,
+      "updates": 1
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "public",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "metadata-error",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "interview",
+      "operation": "getSignedFileUrl",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "public",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "metadata-error",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "privacy-changed-after-warmup",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    },
+    {
+      "service": "interview",
+      "operation": "getFileMetadata",
+      "scenario": "unknown-privacy",
+      "error": "Unsafe storage operation accepted",
+      "calls": 1,
+      "checks": 0,
+      "creates": 0,
+      "updates": 0
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/movie/storage.ts": "92c61c04887fd1396a3f0279de41f8fdb7f19f0e669bf784395368c9dab6685f",
+    "src/lib/voice/storage.ts": "598af6af813e10e3861da315b3e50d2df9eb0b1406a398b8b46faf08cf1aad7b",
+    "src/lib/tenkai/storage.ts": "57cb4985106e672e9caee4307e6f0441105cf1a45e2deca0847e20377c7e9ce9",
+    "src/lib/interview/storage.ts": "c294249531578f72997b765cb583f3c1c8f3d0c978687fd045aa203ddfde1601"
+  },
+  "scope": "Actual Movie/Voice/Tenkai/Interview storage modules; synthetic Supabase metadata and object APIs. No production configuration, provider calls, customer data or storage writes."
+}

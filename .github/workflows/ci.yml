@@ -90,6 +90,18 @@ jobs:
       - name: Shodan registered logo preflight (offline)
         run: node docs/audits/2026-10-06-all-services-recheck/verify-shodan-logo-preflight.cjs
 
+      - name: Media storage privacy across all service states (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-media-storage-privacy.cjs
+
+      - name: Interview existing storage capacity compatibility (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-interview-storage-limits.cjs
+
+      - name: HR private employee photo storage (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-private-photo-storage.cjs
+
+      - name: HR employee photo authority after download (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-private-photo-read.cjs
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

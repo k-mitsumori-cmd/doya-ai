@@ -3,6 +3,7 @@
 // ============================================
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { ensurePrivateImageBucket } from '@/lib/private-storage-bucket'
 
 const BUCKET_NAME = process.env.VOICE_STORAGE_BUCKET || 'voice-audio'
 const MIME_MAP: Record<string, string> = {
@@ -13,7 +14,6 @@ const MIME_MAP: Record<string, string> = {
 }
 
 let _client: SupabaseClient | null = null
-let _bucketReady = false
 
 function getSupabaseAdmin(): SupabaseClient {
   if (_client) return _client
@@ -32,19 +32,7 @@ function getSupabaseAdmin(): SupabaseClient {
 }
 
 async function ensureBucket(): Promise<void> {
-  if (_bucketReady) return
-  const supabase = getSupabaseAdmin()
-
-  const { data } = await supabase.storage.getBucket(BUCKET_NAME)
-  if (!data) {
-    const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
-      public: false,
-    })
-    if (error && !error.message?.includes('already exists')) {
-      throw new Error('保存先を準備できませんでした')
-    }
-  }
-  _bucketReady = true
+  await ensurePrivateImageBucket(getSupabaseAdmin().storage, BUCKET_NAME)
 }
 
 /**

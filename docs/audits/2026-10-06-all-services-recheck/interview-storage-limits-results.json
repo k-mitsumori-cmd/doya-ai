@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-07T16:29:01.180Z",
+  "passed": 6,
+  "cases": [
+    "existing50MB",
+    "existing500MB",
+    "existing2GB",
+    "cap-decreased-after-warmup",
+    "negotiate-unconfigured",
+    "negotiation-fails"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/lib/interview/storage.ts": "e9ac900746b051a0af0484eaa318b2768dbd8cd9b2e5501b817bad1ba57c7f13",
+    "src/lib/private-storage-bucket.ts": "8e1d02af013f4667cda3cb10527b727951a2472387eec1f777138195633f9c5f"
+  },
+  "scope": "Actual storage and timeout helper; synthetic bucket configuration and plan errors. Existing caps preserved, warm changes observed, unconfigured limit negotiated only after private metadata verification, with the SDK-required private flag. No production settings or customer data."
+}
