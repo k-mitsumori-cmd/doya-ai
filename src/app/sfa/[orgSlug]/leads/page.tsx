@@ -3,10 +3,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { sfaInit } from '@/lib/sfa/client'
 import { parseLeadCsv } from '@/lib/sfa/lead-csv'
 import { LEAD_STATUS_LABEL } from '@/lib/sfa/constants'
-import { sfaJson, sfaClientId, sfaClientDate, isSfaClientLeadImport } from '@/lib/sfa/client-response'
+import { sfaJson, sfaClientId, sfaClientDate, isSfaClientLeadImport, isSfaClientScore, type SfaClientScore } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
 import LeadConversionForm, { type ConversionLead } from '@/components/sfa/LeadConversionForm'
@@ -53,7 +52,8 @@ const scoreColor = (s: number | null) =>
 export default function SfaLeadsPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
   const reload = useRef<() => void>(() => {})
-  const mutations = useSfaClientMutations(orgSlug, (pending, state) => {
+  const mutations = useSfaClientMutations(orgSlug, (pending, state, row) => {
+    if (pending.kind === 'score' && state === 'found' && isSfaClientScore(row, pending.leadId!, pending.operationId!)) setScoreResult({ value: row, identity: mutations.identity })
     if (pending.kind === 'conversion' && state === 'found') setRecoveredConversion({ leadId: pending.leadId!, identity: mutations.identity })
     reload.current()
   })
@@ -84,7 +84,7 @@ export default function SfaLeadsPage() {
   const importDraft = useSfaDraftSnapshot([csv, importOpen])
   const creating = mutations.busy.includes('lead:create')
   const importing = mutations.busy.includes('lead-import:create')
-  const [scoringId, setScoringId] = useState<string | null>(null)
+  const [scoreResult, setScoreResult] = useState<{ value: SfaClientScore; identity: string } | null>(null)
 
   const load = useCallback((status: LeadStatus | 'all' = 'all', query = '') => {
     if (!ready || !mutations.active()) return
@@ -181,18 +181,11 @@ export default function SfaLeadsPage() {
   }
 
   const scoreLead = async (lead: Lead) => {
-    if (!mutations.active() || mutations.blocked('conversion:' + lead.id)) return
-    setScoringId(lead.id)
-    try {
-      const res = await fetch('/api/sfa/ai/score', sfaInit(orgSlug, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ leadId: lead.id }),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      if (!mutations.active()) return
-      reload.current()
-      toast.success(`AIスコア ${d.score}点：${d.nextAction || d.reason}`, { duration: 6000 })
-    } catch (e: any) { if (mutations.active()) toast.error(e.message) } finally { if (mutations.active()) setScoringId(null) }
+    if (!mutations.active() || mutations.blocked('conversion:' + lead.id) || mutations.blocked('lead:' + lead.id)) return
+    const result = await mutations.scoreLead(lead)
+    if (!result || !mutations.active()) return
+    setScoreResult({ value: result, identity: mutations.identity })
+    reload.current()
   }
 
   const convert = (lead: Lead) => {
@@ -218,6 +211,13 @@ export default function SfaLeadsPage() {
       </div>
 
       <MutationRecovery mutations={mutations} />
+      {ready && scoreResult && scoreResult.identity === mutations.identity && <section aria-label="保存済みのAI判定結果" className="mb-4 break-words rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+        <h2 className="font-bold">保存済みのAI判定結果：{scoreResult.value.leadName}（{scoreResult.value.score}点）</h2>
+        <p className="mt-2 whitespace-pre-wrap">{scoreResult.value.reason}</p>
+        <p className="mt-2 whitespace-pre-wrap">次の行動：{scoreResult.value.nextAction}</p>
+        <p className="mt-2 text-xs">実行時点の情報に基づく判定です。その後の変更は含まれません。</p>
+        <button type="button" onClick={() => setScoreResult(null)} className="mt-2 underline">判定結果を閉じる</button>
+      </section>}
       {formError && <p role="alert" className="mb-3 text-sm text-amber-800">{formError}</p>}
       {importResult && <p role="status" className="mb-3 text-sm text-green-800">{importResult}</p>}
       {conversion && conversion.identity === mutations.identity && <LeadConversionForm key={conversion.lead.id + mutations.identity} lead={conversion.lead} mutations={mutations} recovered={recoveredConversion?.leadId === conversion.lead.id && recoveredConversion.identity === mutations.identity}
@@ -276,8 +276,8 @@ export default function SfaLeadsPage() {
                   </div>
                   {l.contactName && <p className="text-xs font-bold text-slate-400 mt-0.5">{l.contactName}</p>}
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <button onClick={() => scoreLead(l)} disabled={scoringId === l.id} className="text-xs font-black text-[#7f19e6] hover:underline flex items-center gap-0.5 disabled:opacity-50">
-                      <span className="material-symbols-outlined text-[14px]">auto_awesome</span>{scoringId === l.id ? 'AI判定中…' : 'AIスコア'}
+                    <button onClick={() => scoreLead(l)} disabled={!ready || mutations.creationBlocked('score') || mutations.blocked('lead:' + l.id) || mutations.blocked('conversion:' + l.id)} className="text-xs font-black text-[#7f19e6] hover:underline flex items-center gap-0.5 disabled:opacity-50">
+                      <span className="material-symbols-outlined text-[14px]">auto_awesome</span>{mutations.busy.includes('score:' + l.id) ? 'AI判定中…' : 'AIスコア'}
                     </button>
                     {l.status !== 'converted' && !l.convertedAccountId ? (
                       <button onClick={() => convert(l)} disabled={!ready || mutations.creationBlocked('conversion') || mutations.blocked('lead:' + l.id)} className="text-xs font-black text-green-700 hover:underline flex items-center gap-0.5">

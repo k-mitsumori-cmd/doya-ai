@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-07T05:06:10.982Z",
+  "passed": 3,
+  "cases": [
+    "Nonowner gets owner guidance without own upgrade action",
+    "Verified billing owner gets SFA upgrade guidance",
+    "Unknown failure never becomes an upgrade advertisement"
+  ],
+  "sourceHashes": {
+    "src/lib/service-limit-ui.ts": "6fe543af3fa87ff9233c35e3f39371b99e2f7efd9353c2e97763046ad29665f2",
+    "src/lib/services.ts": "88041e2debc0d8f865506719031426653ebb0db4f8827e7a2bced72ac80eabeb"
+  },
+  "scope": "Actual shared limit classifier and service registry; no browser modal, real checkout or network."
+}

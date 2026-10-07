@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-07T04:35:01.266859+00:00",
-  "status": "full-frozen-gates-passed-commit-push-pending",
+  "checkedAt": "2026-10-07T04:54:16.742672+00:00",
+  "status": "committed-pushed-ci-success-production-ready-anonymous-publication-verified",
   "baseCommit": "33737e13b3c9e967cc4ade37ae42b22fb6095426",
   "baseline": "sfa-lead-crud-lifecycle-baseline.json",
   "apiEvidence": "sfa-lead-crud-results.json",
@@ -25,13 +25,11 @@
     "5 additional StrictMode edge cases passed: late old-org import, unknown status recovery, unchanged version rejection, latest filter reload, known CSV input rejection."
   ],
   "remaining": [
-    "Commit/push allowlisted verified sources.",
-    "Exact SHA CI/deployment/publication checks after push.",
     "Authenticated real-browser end-to-end remains unverified.",
     "Continue remaining all17/2074 criteria; SFA edit-role policy pending."
   ],
   "limitations": [
-    "This CRUD cohort is local, not deployed.",
+    "CRUD cohort is deployed; anonymous HTML/JS/API privacy checks passed. Authenticated customer writes and human real-browser QA remain unverified.",
     "Mounted DOM tests do not prove real-browser behavior.",
     "PostgreSQL fixture is isolated minimal schema, not customer production schema.",
     "AI score/native provider client path remains a separate unverified cohort; no paid API called.",
@@ -69,5 +67,15 @@
     ],
     "changedSources": [],
     "endedAt": "2026-10-07T04:34:41.984059+00:00"
+  },
+  "commit": "6956f5b641f97289f0b346dda2e4501ccaeadba0",
+  "productionTracking": {
+    "ciRun": 37572173923,
+    "ci": "completed",
+    "deployment": "dpl_633fQfNFM7yYVGtWad6QLwNjT3ao",
+    "url": "doya-bah2uz0j0-surisutas-projects.vercel.app",
+    "state": "READY",
+    "ciConclusion": "success",
+    "publicEvidence": "sfa-lead-crud-public.json"
   }
 }

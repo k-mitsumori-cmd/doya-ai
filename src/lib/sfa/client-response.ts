@@ -144,3 +144,13 @@ export function isSfaClientLeadImport(v: unknown, operationId: string, rowCount?
   return total <= 500 && (rowCount === undefined || rowCount === total) && Array.isArray(v.skippedRows) && v.skippedRows.length === v.skipped
     && new Set(v.skippedRows).size === v.skippedRows.length && v.skippedRows.every(n => Number.isInteger(n) && n >= 1 && n <= total)
 }
+
+export interface SfaClientScore {
+  id: string; leadId: string; leadName: string; score: number; reason: string; nextAction: string; sourceUpdatedAt: string; leadUpdatedAt: string
+}
+export function isSfaClientScore(v: unknown, leadId: string, operationId: string): v is SfaClientScore {
+  return record(v) && v.id === operationId && v.leadId === leadId && typeof v.leadName === 'string' && !!v.leadName.trim() && v.leadName.length <= 10000 && Number.isInteger(v.score) && (v.score as number) >= 0 && (v.score as number) <= 100
+    && typeof v.reason === 'string' && !!v.reason.trim() && v.reason.length <= 2000
+    && typeof v.nextAction === 'string' && !!v.nextAction.trim() && v.nextAction.length <= 2000
+    && sfaClientDate(v.sourceUpdatedAt) && sfaClientDate(v.leadUpdatedAt) && v.leadUpdatedAt > v.sourceUpdatedAt
+}

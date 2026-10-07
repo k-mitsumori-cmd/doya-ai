@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-10-07T05:06:09.270Z",
+  "passed": 23,
+  "cases": [
+    "Invalid body, version, UUID and ID reject before provider/reservation",
+    "Revoked actor blocks POST, GET and cancellation",
+    "Foreign, deleted or stale source rejects before reservation",
+    "Actual monthly boundary returns owner guidance before provider",
+    "Provider exception marks failed and refunds without private diagnostic",
+    "Quota reservation outage cannot invoke provider or leave an operation claim",
+    "Unauthenticated POST and recovery endpoints reject before reservation",
+    "Escaped maximum legacy source and bounded result remain recoverable",
+    "Successful score persists exact result, version, allowance and recovery",
+    "Ten same-operation requests reserve and invoke provider once",
+    "Cancellation before arrival fences UUID without reservation",
+    "Running provider cannot be claimed as cancelled or duplicated",
+    "Intervening source edit prevents score overwrite and refunds pending quota",
+    "Revocation during provider prevents settlement but cleanup refunds",
+    "Malformed result and provider error cannot fabricate0 or complete quota",
+    "Result receipt failure rolls back score and settled allowance",
+    "Reservation claim receipt failure rolls back quota before provider",
+    "Quota settlement failure rolls back score then refunds",
+    "Unknown cleanup returns503 and leaves pending receipt for recovery",
+    "Expired pending operation refunds without new provider and fences late settlement",
+    "Changed version cannot reuse operation and deleted lead cannot reveal saved result",
+    "Actor and organization isolate operation recovery",
+    "Duplicate query and all responses enforce private no-store"
+  ],
+  "sourceHashes": {
+    "src/lib/sfa/score-operation.ts": "5a98ee5640226a1b1ffef165e7dccbb2123797af803e4a11b19e1147ed3bac78",
+    "src/app/api/sfa/ai/score/route.ts": "d8b8f814587cbd18624dd81eb4a85f3f076e249bf0eb3fb4b85ee5a90827eef2",
+    "src/lib/sfa/ai-limit.ts": "657edd9d5835d5dd5b79967b4263745202ac61c54c0839678c3f69814edfe555",
+    "src/lib/sfa/lead-score-result.ts": "efc548a4bb4f04ff5a7e73ab288c0145f2a87b99b5b49755379df48c4fd778d3"
+  },
+  "scope": "Actual route and operation/authority/quota/parser helpers; stateful synthetic serialized transactions with rollback and mocked provider. Not PostgreSQL scheduling, production or browser proof."
+}

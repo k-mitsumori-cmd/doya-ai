@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-07T05:03:43.926Z",
+  "status": "confirmed-gaps-not-repaired",
+  "results": [
+    "Empty model object becomes an empty apparent success, allowing handler to complete quota.",
+    "Non-string model fields pass server helper; mounted client rejects them only after handler completes quota.",
+    "Model text has no server length bound."
+  ],
+  "sourceHash": "9436731e46e7fc504eb5da9a1e56d7bb3382fb561c713c5ab93ef8ff1c7db077",
+  "scope": "Actual suggestNextAction with synthetic model output. Quota consequence traced in actual route; no live provider or customer writes."
+}

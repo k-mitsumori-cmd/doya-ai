@@ -6,66 +6,57 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { scoreLead } from '@/lib/sfa/ai'
-import { reserveSfaAiUsage, completeSfaAiUsage, releaseSfaAiUsage, sfaAiLimitResponse } from '@/lib/sfa/ai-limit'
+import { sfaAiLimitResponse } from '@/lib/sfa/ai-limit'
 import { canManageSfaBilling } from '@/lib/sfa/limits'
+import { SfaMutationError } from '@/lib/sfa/mutation-authority'
+import { scoreOperationInput, claimLeadScore, settleLeadScore, failLeadScore, recoverLeadScore } from '@/lib/sfa/score-operation'
 
-// POST /api/sfa/ai/score — リードのAIスコアリング（受注確度0-100＋根拠＋次アクション）
-// body: { leadId }
+const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+const failure = (e: unknown) => json({ error: e instanceof SfaMutationError ? e.message : 'AI操作の結果を確認できませんでした。保存結果をご確認ください。' }, e instanceof SfaMutationError ? e.status : 500)
+
 export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
-  if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
-
-  const body = await req.json().catch(() => null)
-  const leadId = body && typeof body === 'object' && !Array.isArray(body) && typeof body.leadId === 'string'
-    ? body.leadId.trim()
-    : ''
-  if (!leadId) return NextResponse.json({ error: 'leadId は必須です' }, { status: 400 })
-
-  // IDOR対策：ID直指定の後に organizationId 一致を確認
-  const lead = await prisma.sfaLead.findUnique({ where: { id: leadId } })
-  if (!lead || lead.organizationId !== ctx.organizationId || !lead.isActive) {
-    return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-  }
-
-  // gBizINFO等の属性は raw に入りうるので拾う
-  const raw = (lead.raw as Record<string, unknown> | null) || {}
-  const num = (v: unknown) => (typeof v === 'number' ? v : typeof v === 'string' && v.trim() && !isNaN(Number(v)) ? Number(v) : null)
-
-  let reservation: Awaited<ReturnType<typeof reserveSfaAiUsage>>
+  if (!ctx) return json({ error: 'ログイン/組織が必要です。' }, 401)
   try {
-    reservation = await reserveSfaAiUsage(ctx.organizationId, ctx.userId, 'score')
-  } catch (e) {
-    console.error('[sfa/ai/score] quota reservation failed')
-    return NextResponse.json({ error: '利用状況を確認できません。しばらくしてから再試行してください' }, { status: 503 })
-  }
-  if ('limit' in reservation) return sfaAiLimitResponse(reservation, await canManageSfaBilling(prisma, ctx.organizationId, ctx.userId))
-
-  try {
-    const result = await scoreLead({
-      name: lead.name,
-      industry: (raw.industry as string) || null,
-      prefecture: (raw.prefecture as string) || null,
-      employeeCount: num(raw.employeeCount ?? raw.employee_number),
-      capital: num(raw.capital ?? raw.capital_stock),
-      status: lead.status,
-      note: lead.note,
-      source: lead.source,
-    })
-    // スコア保存と枠の確定を一緒に確定する。片方が失敗したら両方戻す。
-    const saved = await prisma.$transaction(async tx => {
-      const updated = await tx.sfaLead.updateMany({ where: { id: lead.id, organizationId: ctx.organizationId, isActive: true }, data: { score: result.score } })
-      if (updated.count !== 1) return false
-      await completeSfaAiUsage(reservation.id, tx)
-      return true
-    })
-    if (!saved) {
-      await releaseSfaAiUsage(reservation.id)
-      return NextResponse.json({ error: '対象のリードが変更されました。再読み込みしてください' }, { status: 409 })
+    const input = scoreOperationInput(await req.json().catch(() => null))
+    const claim = await claimLeadScore(ctx, input)
+    if (claim.quota) {
+      const response = sfaAiLimitResponse(claim.quota, await canManageSfaBilling(prisma, ctx.organizationId, ctx.userId))
+      response.headers.set('Cache-Control', 'private, no-store'); response.headers.set('Vary', 'Cookie')
+      return response
     }
-    return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store' } })
-  } catch (e: any) {
-    await releaseSfaAiUsage(reservation.id).catch((releaseError) => console.error('[sfa/ai/score] quota release failed'))
-    console.error('[sfa/ai/score]')
-    return NextResponse.json({ error: 'スコアリングに失敗しました' }, { status: 500 })
-  }
+    if (claim.outcome) {
+      if (claim.outcome.state === 'found') return json(claim.outcome)
+      if (claim.outcome.state === 'pending') return json(claim.outcome, 202)
+      throw new SfaMutationError(409, 'このAI操作は完了できません。保存結果を確認してから新しく実行してください。')
+    }
+    if (!claim.claimed) throw new Error('Missing score claim')
+    const { lead, reservationId } = claim.claimed
+    try {
+      const raw = lead.raw && typeof lead.raw === 'object' && !Array.isArray(lead.raw) ? lead.raw as Record<string, unknown> : {}
+      const number = (v: unknown) => (typeof v === 'number' || typeof v === 'string' && v.trim()) && Number.isFinite(Number(v)) ? Number(v) : null
+      const text = (v: unknown) => typeof v === 'string' ? v : null
+      const result = await scoreLead({ name: lead.name, industry: text(raw.industry), prefecture: text(raw.prefecture),
+        employeeCount: number(raw.employeeCount ?? raw.employee_number), capital: number(raw.capital ?? raw.capital_stock),
+        status: lead.status, note: lead.note, source: lead.source })
+      const saved = await settleLeadScore(ctx, input, reservationId, result)
+      return json({ state: 'found', score: saved })
+    } catch (error) {
+      // If cleanup is uncertain, retain the client's recovery fence rather than claim a safe retry.
+      try { await failLeadScore(ctx, input, reservationId) } catch { return json({ error: 'AI操作の結果を確認できませんでした。保存結果をご確認ください。' }, 503) }
+      return failure(error)
+    }
+  } catch (error) { return failure(error) }
 }
+async function recover(req: NextRequest, cancel: boolean) {
+  const ctx = await getSfaContext(orgSlugFrom(req))
+  if (!ctx) return json({ error: 'ログイン/組織が必要です。' }, 401)
+  try {
+    const params = new URL(req.url).searchParams, leads = params.getAll('leadId'), operations = params.getAll('operationId')
+    if (leads.length !== 1 || operations.length !== 1) throw new SfaMutationError(400, 'リードと操作情報を指定してください。')
+    return json(await recoverLeadScore(ctx, leads[0], operations[0], cancel))
+  } catch (error) { return failure(error) }
+}
+export async function GET(req: NextRequest) { return recover(req, false) }
+// Fences only an operation not yet claimed. A running provider request is never reported as cancelled.
+export async function DELETE(req: NextRequest) { return recover(req, true) }

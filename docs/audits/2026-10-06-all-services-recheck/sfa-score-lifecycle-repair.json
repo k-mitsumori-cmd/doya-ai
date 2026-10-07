@@ -1,0 +1,64 @@
+{
+  "checkedAt": "2026-10-07T05:07:50.054893+00:00",
+  "status": "full-frozen-build-security-type-lint-passed-not-deployed",
+  "baseCommit": "6956f5b641f97289f0b346dda2e4501ccaeadba0",
+  "changes": [
+    "Strict bounded score parser rejects missing, malformed, out-of-range and fractional score/model text rather than fabricating0 or clamping. Valid0 remains valid.",
+    "Extracted quota-in-transaction helper permits future durable operation claim and reservation in one transaction; existing default reservation caller retained.",
+    "Pending allowance release can use caller transaction, preserving standalone behavior.",
+    "Durable actor/org/lead/UUID claim and quota reservation share Serializable transaction; provider runs without database locks.",
+    "Versioned settlement atomically writes score, monotonic updatedAt, allowance completion and recoverable result.",
+    "Fresh actor authorization before admission/recovery/settlement; internal cleanup only refunds pending quota after revocation.",
+    "Cancellation fences an unclaimed UUID; running provider remains pending. Expired receipt refunds and forbids late settlement.",
+    "Bounded score client with durable metadata, recovery across reload/auth changes, no repeated generation, scoped saved result display and existing shared quota guidance.",
+    "Long source names and model text wrap in the saved score panel.",
+    "Pending recovery message avoids asserting live provider state. Completed receipt with unavailable lead releases client fence without replaying provider or undoing completed quota."
+  ],
+  "checks": [
+    "23 actual scoreLead/parser cases with mocked Gemini passed.",
+    "Existing actual quota reservation regression passed after extraction.",
+    "Existing score/next-action route rejection, quota, provider error and settlement rollback scenarios passed.",
+    "Actual next-action JST date regression retained and passed.",
+    "TypeScript noEmit and changed-source ESLint exit0.",
+    "Actual PostgreSQL10 synthetic-schema cases passed; private server stopped0.",
+    "Mounted score client21 cases passed, plus existing shared49/deal13/conversion18/CRUD14+5 regressions.",
+    "Shared score quota classifier3 cases passed; no real modal pixels or checkout proof.",
+    "Full frozen build (security regressions, tsc, Next build) and lint exit0;2692 source files unchanged."
+  ],
+  "remaining": [
+    "Allowlisted commit/push and exact SHA CI/deployment/public verification.",
+    "Authenticated real-browser/provider flows remain unverified.",
+    "Continue remaining SFA next-action/account/contact and all17/2074 service criteria; pending record edit-role policy preserved."
+  ],
+  "apiCases": 23,
+  "apiCasesEvidence": "sfa-score-operation-results.json",
+  "mountedCases": 21,
+  "mountedCasesEvidence": "sfa-score-client-results.json",
+  "postgresCases": 10,
+  "postgresCasesEvidence": "sfa-score-postgres-results.json",
+  "quotaGuideCases": 3,
+  "quotaGuideCasesEvidence": "sfa-score-quota-guidance-results.json",
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/sfa-score-release-312b4083-10ab-4a8b-8d1c-7930c5667c68",
+  "supersededGates": [
+    {
+      "folder": "docs/audits/2026-10-06-all-services-recheck/sfa-score-release-fc6f866f-372f-4723-9b7d-71660de5d849",
+      "status": "interrupted-for-source-correction",
+      "reason": "Saved result panel wrapping before release; mounted20/typecheck/lint passed again."
+    },
+    {
+      "folder": "docs/audits/2026-10-06-all-services-recheck/sfa-score-release-d2def691-6308-4d6d-8ad3-7325eb83a577",
+      "status": "interrupted-for-source-correction",
+      "reason": "Pending receipt wording must not assert live provider progress."
+    }
+  ],
+  "nextActionFindings": {
+    "lifecycle": 2,
+    "modelValidation": 3,
+    "status": "confirmed-not-repaired",
+    "evidence": [
+      "sfa-next-action-lifecycle-baseline.json",
+      "sfa-next-action-result-baseline.json",
+      "sfa-next-action-repair-plan.json"
+    ]
+  }
+}

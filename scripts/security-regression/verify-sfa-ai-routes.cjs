@@ -52,7 +52,8 @@ async function invoke(action, mode, active = true) {
 }
 
 (async () => {
-  for (const action of ['score', 'next-action']) {
+  // Score now has a durable operation protocol, tested through actual helpers in verify-sfa-score-operation.cjs.
+  for (const action of ['next-action']) {
     assert.deepEqual(await invoke(action, 'ok', false), { status: 404, reserved: 0, completed: 0, released: 0, provider: 0, writes: 0 });
     assert.deepEqual(await invoke(action, 'limit'), { status: 402, reserved: 1, completed: 0, released: 0, provider: 0, writes: 0 });
     assert.deepEqual(await invoke(action, 'db-error'), { status: 503, reserved: 1, completed: 0, released: 0, provider: 0, writes: 0 });
@@ -63,5 +64,5 @@ async function invoke(action, mode, active = true) {
     }
     assert.deepEqual(await invoke(action, 'ok'), { status: 200, reserved: 1, completed: 1, released: 0, provider: 1, writes: action === 'score' ? 1 : 0 });
   }
-  console.log('PASS SFA AI routes: inactive target, quota, DB failure, provider failure, success');
+  console.log('PASS SFA next-action route: inactive target, quota, DB failure, provider failure, success; durable score protocol covered separately');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

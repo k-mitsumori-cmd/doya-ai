@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T05:04:49.701788+00:00",
+  "status": "planned-not-implemented",
+  "scope": "Next-action generation and recovery, not task creation already covered by shared durable task operations.",
+  "required": [
+    "Reject empty/non-string/oversized model fields before completing quota; preserve tested JST date normalization and valid empty risk.",
+    "Use actor/org/deal/UUID receipt: reserve quota and pending receipt atomically, fresh actor before provider, external provider outside DB locks.",
+    "Snapshot current owned active deal/version and org-scoped related account, stage and activities. Retained result describes execution-time data; do not imply it reflects later edits. Decide explicitly whether intervening changes conflict or preserve labelled historical snapshot.",
+    "Persist validated suggestion and quota completion in same transaction. Replay/recovery must not invoke provider.",
+    "Pending lease expiry refunds only its own pending allowance and prevents late completion. Completed suggestion remains recoverable without another quota charge.",
+    "Cancellation fences unclaimed UUID only; do not imply an executing provider can be cancelled.",
+    "Integrate shared durable client metadata, actor/org epoch and malformed/unknown response fences. Recovery displays original suggestion and preserves existing safe task selection/creation behavior.",
+    "Test same UUID, different UUID/version, actor removal, deleted/foreign deal, input changes, related data changes, pending recovery, expiry and late provider, receipt/write failure and cleanup uncertainty. Real private PostgreSQL concurrency is separate from synthetic fixtures.",
+    "Full frozen security/type/build/lint gate; exact allowlisted commit; main push; exact CI/SHA/READY; anonymous public checks. Authenticated real provider/customer flows stay explicitly unverified."
+  ],
+  "evidence": [
+    "sfa-next-action-lifecycle-baseline.json",
+    "sfa-next-action-result-baseline.json"
+  ],
+  "boundaries": [
+    "No paid provider calls",
+    "No production customer DB changes/migrations",
+    "No email/invite dispatch",
+    "Preserve pending edit-role policy"
+  ]
+}

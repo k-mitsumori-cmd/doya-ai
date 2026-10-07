@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-07T05:06:08.826Z",
+  "passed": 23,
+  "cases": [
+    "Malformed result 0 rejects without fabricating or clamping a score",
+    "Malformed result 1 rejects without fabricating or clamping a score",
+    "Malformed result 2 rejects without fabricating or clamping a score",
+    "Malformed result 3 rejects without fabricating or clamping a score",
+    "Malformed result 4 rejects without fabricating or clamping a score",
+    "Malformed result 5 rejects without fabricating or clamping a score",
+    "Malformed result 6 rejects without fabricating or clamping a score",
+    "Malformed result 7 rejects without fabricating or clamping a score",
+    "Malformed result 8 rejects without fabricating or clamping a score",
+    "Malformed result 9 rejects without fabricating or clamping a score",
+    "Malformed result 10 rejects without fabricating or clamping a score",
+    "Malformed result 11 rejects without fabricating or clamping a score",
+    "Malformed result 12 rejects without fabricating or clamping a score",
+    "Malformed result 13 rejects without fabricating or clamping a score",
+    "Malformed result 14 rejects without fabricating or clamping a score",
+    "Malformed result 15 rejects without fabricating or clamping a score",
+    "Malformed result 16 rejects without fabricating or clamping a score",
+    "Malformed result 17 rejects without fabricating or clamping a score",
+    "Malformed result 18 rejects without fabricating or clamping a score",
+    "Malformed result 19 rejects without fabricating or clamping a score",
+    "Valid score 0 retains exact value and bounded strings",
+    "Valid score 70 retains exact value and bounded strings",
+    "Valid score 100 retains exact value and bounded strings"
+  ],
+  "sourceHashes": {
+    "src/lib/sfa/ai.ts": "9436731e46e7fc504eb5da9a1e56d7bb3382fb561c713c5ab93ef8ff1c7db077",
+    "src/lib/sfa/lead-score-result.ts": "efc548a4bb4f04ff5a7e73ab288c0145f2a87b99b5b49755379df48c4fd778d3"
+  },
+  "scope": "Actual scoreLead and parser; mocked Gemini output only. No paid provider, customer data, network or production."
+}

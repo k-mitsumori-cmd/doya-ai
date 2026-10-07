@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T04:52:19.751Z",
+  "passed": 10,
+  "cases": [
+    "12 real concurrent identical operations call provider once; pending callers finish while provider holds no transaction",
+    "Two distinct operations on same source version settle once and refund stale loser under real row lock/Serializable retries",
+    "Intervening actual lead edit prevents old score persistence and refunds pending allowance",
+    "Claim waits behind actual actor revocation and rejects before provider/reservation",
+    "Revocation during provider blocks settlement; internal cleanup releases only pending allowance",
+    "Actual result receipt constraint failure rolls back score and completed allowance together",
+    "Claim receipt constraint failure rolls back quota reservation before provider",
+    "Cancellation after initial snapshot fences late claim across real P2002/Serializable retry",
+    "Expired pending operation refunds; late provider result cannot settle after recovery",
+    "Real concurrent distinct claims at19/20 allow one provider call without exceeding monthly allowance"
+  ],
+  "lockWaitObservations": [
+    1
+  ],
+  "sourceHashes": {
+    "src/lib/sfa/score-operation.ts": "5a98ee5640226a1b1ffef165e7dccbb2123797af803e4a11b19e1147ed3bac78",
+    "src/app/api/sfa/ai/score/route.ts": "d8b8f814587cbd18624dd81eb4a85f3f076e249bf0eb3fb4b85ee5a90827eef2",
+    "src/lib/sfa/ai-limit.ts": "657edd9d5835d5dd5b79967b4263745202ac61c54c0839678c3f69814edfe555",
+    "src/lib/sfa/lead-score-result.ts": "efc548a4bb4f04ff5a7e73ab288c0145f2a87b99b5b49755379df48c4fd778d3",
+    "src/lib/sfa/limits.ts": "5f8b9101d14b49ba57293801e780909c2464ed52b1f5ad9ee9aa2998f4c2d8b6"
+  },
+  "scope": "Actual handlers/helpers/Prisma against private Unix-socket PostgreSQL17 synthetic minimal schema. Real Serializable snapshots, row/advisory locks and rollback. Mocked provider only; no customer data, production DB, full production schema/FK or real browser proof."
+}

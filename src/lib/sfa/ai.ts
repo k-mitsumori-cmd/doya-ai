@@ -3,6 +3,8 @@
 // テキスト生成は @seo/lib/gemini（既定は GEMINI_TEXT_MODEL_DEFAULT、JSONはgeminiGenerateJson）。
 // ============================================
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { parseLeadScoreResult, type LeadScoreResult } from './lead-score-result'
+export type { LeadScoreResult } from './lead-score-result'
 
 export interface LeadScoreInput {
   name: string
@@ -13,12 +15,6 @@ export interface LeadScoreInput {
   status?: string | null
   note?: string | null
   source?: string | null
-}
-
-export interface LeadScoreResult {
-  score: number // 0-100（受注確度）
-  reason: string // スコアの根拠（1〜2文）
-  nextAction: string // 推奨する次の一手
 }
 
 /** リードスコアリング：企業属性から受注確度を0-100で推定し、根拠＋次アクションを返す。 */
@@ -52,11 +48,7 @@ export async function scoreLead(input: LeadScoreInput): Promise<LeadScoreResult>
     { prompt, model: GEMINI_TEXT_MODEL_DEFAULT },
     'SfaLeadScore'
   )
-  return {
-    score: typeof r?.score === 'number' ? Math.max(0, Math.min(100, Math.round(r.score))) : 0,
-    reason: r?.reason || '',
-    nextAction: r?.nextAction || '',
-  }
+  return parseLeadScoreResult(r)
 }
 
 export interface NextActionInput {

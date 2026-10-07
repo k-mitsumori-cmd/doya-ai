@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-10-07T04:58:01.048071+00:00",
+  "pid": 6596,
+  "head": "6956f5b641f97289f0b346dda2e4501ccaeadba0",
+  "sourceFiles": 2692,
+  "status": "interrupted-for-source-correction",
+  "gates": [],
+  "reason": "Pending receipt is not proof of a live provider; clarify unresolved outcome wording before release.",
+  "endedAt": "2026-10-07T04:58:37.906490+00:00"
+}

@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-07T05:06:10.801Z",
+  "passed": 21,
+  "cases": [
+    "Same-frame score clicks send one durable UUID and reviewed version",
+    "Unknown score stops repeat generation and read-only recovery displays saved attempt",
+    "Pending server response stays fenced; cancellation never claims running operation cancelled",
+    "Missing receipt remains fenced and cancelled pre-arrival operation can restart with new UUID",
+    "Failed server attempt recovery unlocks with refunded pending allowance guidance",
+    "Malformed wrong-operation cannot display success or remove recovery fence",
+    "Malformed wrong-lead cannot display success or remove recovery fence",
+    "Malformed missing-name cannot display success or remove recovery fence",
+    "Malformed fractional cannot display success or remove recovery fence",
+    "Malformed invalid-text cannot display success or remove recovery fence",
+    "Malformed stale-version cannot display success or remove recovery fence",
+    "Late previous actor response cannot display private score result",
+    "Late previous organization response cannot announce or reload old organization",
+    "Verified score result hides after actor change",
+    "Auth loading hides saved private result and same actor can resume viewing without generation",
+    "Recognized quota rejection keeps source and has owner guidance without extra error toast",
+    "Storage denial prevents paid provider request",
+    "Completed attempt for unavailable lead does not block all other score actions",
+    "Score deadline retains recovery fence and never automatically regenerates",
+    "Remounted page restores score metadata and recovers result without POST",
+    "Authentication refresh keeps same-actor score recovery without automatic provider retry"
+  ],
+  "sourceHashes": {
+    "src/app/sfa/[orgSlug]/leads/page.tsx": "0777fd7f1ea6d4614e4bfe71874c8cc663cdd94bf3b7283a315afec27e20f241",
+    "src/lib/sfa/use-client-mutations.ts": "bc3c820d2067f055e5f5a783726b116387a9d0f56a926625367baf9dc836a80c",
+    "src/lib/sfa/client-response.ts": "cbbfd4a6640b359906eba56cc57fab6ec1057601796847d32bc50daffc556e6e",
+    "src/components/sfa/MutationRecovery.tsx": "526af394d64b1e50d9d3382668398f49e210dac2e5edea532eca2dd02661a96e"
+  },
+  "scope": "Actual leads page/shared mutation recovery/transport/guard mounted StrictMode, synthetic DOM/router/auth/API; quota local guidance only, global modal and real browser/provider not proven."
+}
