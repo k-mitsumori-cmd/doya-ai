@@ -39,10 +39,8 @@
     "publicVerification": "anonymous-publication-passed-private-form-unproven"
   },
   "next": [
-    "Commit/push exact banner-operation-lease allowlist after hash/staged review",
-    "Track exact CI and Vercel deployment; public check only after READY",
-    "Implement DoyaSlide batch/regenerate/chat durable operation recovery from reproduced baseline",
-    "Continue remaining all17services2074criteria; goal not complete"
+    "Commit/push current validated DoyaSlide recovery repair; exact CI/READY/public verification",
+    "Continue all17services2074criteria;1859 exactpending and all partial rows incomplete"
   ],
   "boundaries": [
     "No customer DB/migrations/emails/invites/paid providers",
@@ -265,11 +263,73 @@
     }
   },
   "nextDoyaSlideRecoveryRepair": {
-    "status": "reproduced-not-repaired",
+    "status": "all-local-gates-passed; commit-and-release-next; not-released",
     "evidence": "doyaslide-stale-reservation-baseline.json",
     "finding": "Stale process reserved full free20 images but0completed; resume checks quota before stale reclamation, returns403twice with0provider/0writes; no durable per-operation reservation ownership exists",
     "requirement": "Atomic durable reservation with owned outstanding balance and result settlement; expiry fences late workers and releases only failed/unstarted matching-period amounts once. Never guess-refund existing aggregate usage. Include batch/regenerate/chat flows and deletion/actor/month reset/concurrent quota tests.",
-    "next": "Finish current frozen gate before changing source; then implement integrated DoyaSlide operation ledger and explicit recovery UX.",
-    "additionalFinding": "Actual single-slide regenerate/chat routes both return409generating after30minutes with completed project; no expiry recovery in either path."
+    "next": "Collect current frozen gate then review allowlisted changes for commit/push and exact CI/READY/public verification",
+    "additionalFinding": "Actual single-slide regenerate/chat routes both return409generating after30minutes with completed project; no expiry recovery in either path.",
+    "source": "src/lib/doyaslide/generation-operation.ts",
+    "privatePostgresCases": 55,
+    "privatePostgresEvidence": "doyaslide-operation-postgres-results.json",
+    "privatePostgresStopExitCode": 0,
+    "sourceChecks": "PrivatePG55, full security suite, tsc, production Next build, lint all terminal0; unchanged2745source manifest.",
+    "remaining": [
+      "Collect current frozen gate: privatePostgres55/security/type/build/lint and unchanged2745source hashes",
+      "Review explicit allowlist then commit/push; verify Linux CI, Vercel READY, exact deployment public assets and anonymous endpoints",
+      "Authenticated production verification and real provider/process-kill remain separate; no paid provider/customer DB action authorized",
+      "Legacy untracked generating rows require explicit reconciliation/support; never guess aggregate refunds",
+      "Continue all17services2074criteria, including1859exactpending rows and all partial rows"
+    ],
+    "sources": [
+      "src/lib/doyaslide/generation-operation.ts",
+      "src/lib/doyaslide/generation-worker.ts",
+      "src/app/api/doyaslide/operations/route.ts"
+    ],
+    "actualRecoveryApiEvidence": "Private PostgreSQL55cases and11current source hashes; includes actual unified/legacy routes, delayed rejection fencing, owned refunds and revert→regeneration.",
+    "productionBugResolved": false,
+    "ciRegression": "Worker5 orchestration groups, actual React hook11/fullpage7, handlers46; private PostgreSQL55 registered in CI; Linux execution pending.",
+    "securityRun": {
+      "sessionId": 22106,
+      "log": "doyaslide-operation-editor-security.log",
+      "status": "terminal0; source edits occurred during run, and reset-token fix afterwards; no frozen-gate claim"
+    },
+    "priorSecurityRun": {
+      "sessionId": 4209,
+      "status": "terminal0; predates full editor changes"
+    },
+    "mountedEvidence": {
+      "hookAndPanel": "doyaslide-operation-recovery-mounted-results.json",
+      "hookCases": 11,
+      "fullEditor": "doyaslide-operation-editor-mounted-results.json",
+      "fullEditorCases": 7,
+      "handlerCases": "mutation16/read-generation15/structure-logo-export15 with actual response reader and explicit hook fixture boundary"
+    },
+    "apiCoverage": "Actual batch/regenerate/chat legacy bindings and unified POST/GET/DELETE share actor/project/kind/UUID receipt. Missing-UUID old requests reject with reload guidance and zero provider/quota writes.",
+    "ciCoverage": "Private PostgreSQL55case probe registered in .github/workflows/ci.yml; portable initdb discovery prepared. Local macOS passed; Linux GitHub runner not yet exercised.",
+    "nativeBrowser": {
+      "status": "passed",
+      "evidence": "doyaslide-operation-native-results.json",
+      "cases": 5,
+      "visualCheck": "Latest desktop and390px mobile screenshots inspected; header actions and completion badge fit after responsive repair. Synthetic slide index0 is a fixture, not actual production data.",
+      "scope": "Actual editor/hook/storage/readers, native Chrome WebLocks/localStorage/HTTP; synthetic backend/provider only."
+    },
+    "frozenGate": {
+      "path": "docs/audits/2026-10-06-all-services-recheck/doyaslide-operation-release-704ddac9-122f-4eb3-afcd-3a7d617d3447",
+      "status": "passed",
+      "evidence": "state.json",
+      "sourceFiles": 2745,
+      "changedSources": []
+    }
+  },
+  "doyaslideRecoveryTurnClassification": {
+    "classification": "progress",
+    "checkedAt": "2026-10-07T09:19:32.914608+00:00",
+    "evidence": [
+      "doyaslide-operation-native-results.json",
+      "doyaslide-operation-native-mobile.png",
+      "doyaslide-operation-postgres-results.json"
+    ],
+    "note": "NativeChrome5 and current frozen gate passed; staged explicit DoyaSlide allowlist only. Goal remains active."
   }
 }

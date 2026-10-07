@@ -7,6 +7,9 @@ import toast from 'react-hot-toast'
 import { LOGO_POSITIONS, estimateGenSeconds, formatDuration } from '@/lib/doyaslide/constants'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import SlideImage from '@/components/doyaslide/SlideImage'
+import { useSession } from 'next-auth/react'
+import { useDoyaSlideRecovery } from '@/lib/doyaslide/use-operation-recovery'
+import DoyaSlideOperationRecovery from '@/components/doyaslide/DoyaSlideOperationRecovery'
 
 interface Slide {
   id: string
@@ -64,15 +67,24 @@ function validProject(value: any, projectId: string): value is Project {
 
 async function readSlideResponse(url: string, init: RequestInit, timeoutMs: number) {
   const controller = new AbortController()
-  const timer = window.setTimeout(() => controller.abort(), timeoutMs)
+  let timer: number | undefined
   try {
-    const res = await fetch(url, { ...init, signal: controller.signal })
-    // Auth and missing-project responses must clear the previous private state even if their body is unreadable.
-    if ([401, 403, 404].includes(res.status) && init.method !== 'POST') return { res, data: null }
-    const data = await res.json()
-    return { res, data }
+    const stopped = new Promise<never>((_, reject) => {
+      timer = window.setTimeout(() => {
+        controller.abort()
+        reject(new Error('通信がタイムアウトしました。保存結果を確認してください。'))
+      }, timeoutMs)
+    })
+    const reading = (async () => {
+      const res = await fetch(url, { ...init, signal: controller.signal })
+      // Definitive access failures clear private state even with unreadable bodies.
+      if ([401, 403, 404].includes(res.status) && init.method !== 'POST') return { res, data: null }
+      return { res, data: await res.json() }
+    })()
+    // Abort alone cannot bound a transport/body reader that ignores its signal.
+    return await Promise.race([reading, stopped])
   } finally {
-    window.clearTimeout(timer)
+    if (timer !== undefined) window.clearTimeout(timer)
   }
 }
 
@@ -89,6 +101,8 @@ function EditorInner() {
   const router = useRouter()
   const search = useSearchParams()
   const id = params?.id as string
+  const { data: session, status: authStatus } = useSession()
+  const operation = useDoyaSlideRecovery(authStatus, (session?.user as { id?: string } | undefined)?.id || '', id)
 
   const [project, setProject] = useState<Project | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -231,6 +245,22 @@ function EditorInner() {
   }, [])
 
   const performSlideMutation = async (slideId: string, url: string, body?: Record<string, unknown>) => {
+    if (url.endsWith('/regenerate') || url.endsWith('/chat')) {
+      const kind = url.endsWith('/chat') ? 'chat' : 'regenerate'
+      const result = await operation.submit(kind, body || {}, new AbortController().signal, slideId)
+      if (!result || !mountedRef.current) throw new Error('操作が中断されました。')
+      if (result.state === 'limit') {
+        showQuotaNotice({ status: 403 } as Response, result)
+        throw new Error('今月の生成上限に達しました。')
+      }
+      if (result.state !== 'completed' || result.results?.length !== 1) throw new Error('保存結果を確認してください。')
+      const confirmed = await reload()
+      const saved = confirmed?.slides.find(slide => slide.id === slideId)
+      const output = result.results[0]
+      if (!saved || saved.id !== output.slideId || saved.imageUrl !== output.imageUrl || saved.rawImageUrl !== output.rawImageUrl || saved.version !== output.version) throw new Error('保存結果を確認してください。')
+      if (!operation.acknowledge(result.operationId)) throw new Error('操作情報を更新できません。')
+      return { slide: saved, reply: kind === 'chat' ? '修正を反映しました。' : undefined }
+    }
     const { res, data } = await readSlideResponse(url, {
       method: 'POST',
       ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
@@ -255,7 +285,7 @@ function EditorInner() {
   }
 
   const runGenerate = useCallback(async () => {
-    if (!mountedRef.current || generationBusyRef.current || slideMutationBusyRef.current) return
+    if (!mountedRef.current || generationBusyRef.current || slideMutationBusyRef.current || operation.blocked) return
     generationBusyRef.current = true
     setGenerating(true)
     setLimitMsg(null)
@@ -271,32 +301,33 @@ function EditorInner() {
       let quotaHit = false
       let stall = 0
       for (let i = 0; i < 12; i++) {
-        const { res, data: d } = await readSlideResponse('/api/doyaslide/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ projectId: id, onlyPending: true }),
-        }, 310000)
+        const result = await operation.submit('batch', { onlyPending: true }, new AbortController().signal)
         if (!mountedRef.current) return
-        if (showQuotaNotice(res, d)) {
+        if (!result) throw new Error('操作が中断されました。')
+        if (result.state === 'limit' && showQuotaNotice({ status: 403 } as Response, result)) {
           // 月間上限：エラー扱いせず上限案内としてループ停止
           quotaHit = true
           await reload()
           break
         }
-        ensureOk(res, d, '生成に失敗しました')
+        if (!['completed', 'empty'].includes(result.state)) throw new Error('保存結果を確認してください。')
+        const confirmed = await reload()
+        if (!confirmed || !(result.results || []).every(output => confirmed.slides.some(slide => slide.id === output.slideId && slide.imageUrl === output.imageUrl && slide.rawImageUrl === output.rawImageUrl && slide.version === output.version))) throw new Error('保存結果を確認してください。')
+        if (!operation.acknowledge(result.operationId)) throw new Error('操作情報を更新できません。')
+        const d = { ...result, slides: confirmed.slides, errorCount: result.errorCount || 0, skipped: result.skipped || 0 }
         if (!validSlides(d?.slides, id) || d.slides.length === 0
           || !Number.isInteger(d.errorCount) || d.errorCount < 0
           || !Number.isInteger(d.skipped) || d.skipped < 0) {
           throw new Error('生成結果を確認できませんでした。状態を更新してから再試行してください。')
         }
         last = d
-        const confirmed = await reload()
         if (!confirmed || confirmed.slides.length !== d.slides.length
           || !confirmed.slides.every((slide: Slide) => d.slides.some((result: Slide) => result.id === slide.id && result.imageUrl === slide.imageUrl && result.version === slide.version))) {
           throw new Error('生成後の状態を確認できませんでした。状態を更新してから再試行してください。')
         }
         const remaining = d.slides.filter((s: Slide) => !s.imageUrl).length
         if (remaining === 0) break
+        if (d.errorCount > 0) break // Failed AI calls require a new explicit user action.
         if (d.skipped > 0) break // 月の上限スキップは再試行しても無駄
         if (remaining >= prevRemaining) {
           if (++stall >= 2) break // 2回連続で進捗が無ければ中断（一時的失敗は1回リトライ）
@@ -330,7 +361,7 @@ function EditorInner() {
         if (mountedRef.current) setGenerating(false)
       }
     }
-  }, [id, reload, showQuotaNotice, ensureOk])
+  }, [id, reload, showQuotaNotice, operation])
 
   const retryStructure = async () => {
     if (!mountedRef.current || structureBusyRef.current || generationBusyRef.current || slideMutationBusyRef.current) return
@@ -367,6 +398,7 @@ function EditorInner() {
   }
 
   useEffect(() => {
+    mountedRef.current = true
     ;(async () => {
       const p = await reload()
       if (!p) return
@@ -419,7 +451,7 @@ function EditorInner() {
   }, [generating])
 
   const regenerate = async (slideId: string) => {
-    if (!mountedRef.current || slideMutationBusyRef.current || generationBusyRef.current) return
+    if (!mountedRef.current || slideMutationBusyRef.current || generationBusyRef.current || operation.blocked) return
     slideMutationBusyRef.current = true
     setBusySlide(slideId)
     try {
@@ -464,7 +496,7 @@ function EditorInner() {
   }
 
   const sendChat = async () => {
-    if (!selected || !chatInput.trim() || !mountedRef.current || slideMutationBusyRef.current || generationBusyRef.current) return
+    if (!selected || !chatInput.trim() || !mountedRef.current || slideMutationBusyRef.current || generationBusyRef.current || operation.blocked) return
     const msg = chatInput.trim()
     const sid = selected.id
     slideMutationBusyRef.current = true
@@ -579,6 +611,20 @@ function EditorInner() {
 
   return (
     <div className="p-4 lg:p-6 max-w-[1400px] mx-auto">
+      <DoyaSlideOperationRecovery recovery={operation} onConfirm={async () => {
+        const result = operation.result
+        if (!result) return
+        const confirmed = await reload()
+        if (!mountedRef.current) return
+        if (result.state === 'completed' && !confirmed) {
+          toast.error('現在の資料を確認できません。状態を再読み込みしてください。')
+          return
+        }
+        // The recovery API verifies that these exact saved versions still exist.
+        // A newer current image must not prevent closing an older saved operation.
+        const newer = result.state === 'completed' && !result.results?.every(output => confirmed?.slides.some(slide => slide.id === output.slideId && slide.imageUrl === output.imageUrl && slide.rawImageUrl === output.rawImageUrl && slide.version === output.version))
+        if (operation.acknowledge(result.operationId) && newer) toast('保存結果は履歴に残っています。現在表示中の版は変更していません。')
+      }} />
       {projectReadError && (
         <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <p>{projectReadError} 表示中の内容は最後に確認できたものです。</p>
@@ -586,14 +632,14 @@ function EditorInner() {
         </div>
       )}
       {/* header */}
-      <div className="flex items-center justify-between mb-3 gap-3">
+      <div className="flex flex-wrap items-center justify-between mb-3 gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <Link href="/doyaslide/projects" className="text-slate-400 hover:text-slate-700">
             <span className="material-symbols-outlined">arrow_back</span>
           </Link>
           <h1 className="text-xl font-black text-slate-900 truncate">{project.title}</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <button
             onClick={() => exportAs('pdf')}
             disabled={exporting !== null || total === 0}
@@ -615,14 +661,14 @@ function EditorInner() {
             ZIP
           </button>
           {allDone ? (
-            <span className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-emerald-50 text-emerald-600 font-black text-sm">
+            <span className="inline-flex whitespace-nowrap items-center gap-1 px-4 py-2 rounded-full bg-emerald-50 text-emerald-600 font-black text-sm">
               <span className="material-symbols-outlined text-lg">check_circle</span>
               全スライド完成
             </span>
           ) : (
             <button
               onClick={runGenerate}
-              disabled={generating || busySlide !== null || total === 0}
+              disabled={generating || busySlide !== null || total === 0 || operation.blocked}
               className="inline-flex items-center gap-1 px-5 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black text-sm shadow hover:shadow-lg transition-all disabled:opacity-60"
             >
               <span className={`material-symbols-outlined text-lg ${generating ? 'animate-spin' : ''}`}>
@@ -768,7 +814,7 @@ function EditorInner() {
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                 <button
                   onClick={() => regenerate(selected.id)}
-                  disabled={busySlide !== null || generating}
+                  disabled={busySlide !== null || generating || operation.blocked}
                   className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-white text-slate-700 font-bold text-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
                 >
                   <span className={`material-symbols-outlined text-lg ${busySlide === selected.id ? 'animate-spin' : ''}`}>
@@ -829,7 +875,7 @@ function EditorInner() {
                 disabled={chatBusy || busySlide !== null || generating || !selected}
                 className="flex-1 px-3 py-2 bg-slate-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
-              <button onClick={sendChat} disabled={chatBusy || busySlide !== null || generating || !selected} className="px-3 py-2 rounded-xl bg-blue-600 text-white disabled:opacity-50">
+              <button onClick={sendChat} disabled={chatBusy || busySlide !== null || generating || !selected || operation.blocked} className="px-3 py-2 rounded-xl bg-blue-600 text-white disabled:opacity-50">
                 <span className="material-symbols-outlined text-lg">send</span>
               </button>
             </div>

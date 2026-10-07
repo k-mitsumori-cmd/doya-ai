@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-07T09:19:01.304Z",
+  "passed": 11,
+  "cases": [
+    "metadata persists before POST and two mounted callers cannot duplicate generation",
+    "network loss keeps intent across remount and recovery uses GET without generating",
+    "pending cannot acknowledge; missing requires DELETE fence before closing and a new UUID",
+    "auth A-loading-A and A-B-A fence late responses and preserve only scoped metadata",
+    "corrupt storage and stale guest callbacks cannot invoke provider",
+    "storage replacement clears obsolete result and old acknowledgment cannot consume another intent",
+    "failed storage removal cannot acknowledge completed operation or permit a new generation",
+    "quota guidance closes only rejected intent and retains safe pricing link",
+    "wrong operation/project/slide or malformed saved result keeps intent and blocks next AI",
+    "oversized UTF8 and stalled/aborted responses are bounded without clearing intent",
+    "abort terminates a non-cooperating fetch while metadata remains recoverable"
+  ],
+  "sourceHashes": {
+    "src/lib/doyaslide/operation-client.ts": "a243b6ca820f29c040baae2bbecef49c9d6fe7d857d84b8b16156f04d4c54a6d",
+    "src/lib/doyaslide/use-operation-recovery.ts": "c6d2b0fb8eb12ff268e2b5a341b81bf84aa20139632864842a960e027021e0bf",
+    "src/components/doyaslide/DoyaSlideOperationRecovery.tsx": "2a33f7d6b86463876b675ff9a1c0625ebf8c67add8b2c876b060994bb55755df"
+  },
+  "scope": "Actual client/hook/panel React18 StrictMode; synthetic network/auth/locks. Full editor, native browser, cross-process locks and production are not proven."
+}

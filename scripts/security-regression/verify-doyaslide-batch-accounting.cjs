@@ -1,76 +1,11 @@
-const assert = require('node:assert/strict');
-const { load } = require('./load-typescript.cjs');
-
-function fixture(mode) {
-  const slides = [
-    { id: 'a', index: 1, version: 1, visualPrompt: 'A', imageUrl: null, status: 'pending' },
-    { id: 'b', index: 2, version: 1, visualPrompt: 'B', imageUrl: null, status: 'pending' },
-  ];
-  let released = 0;
-  let reserved = 0;
-  let generated = 0;
-  let usageCount = null;
-  if (mode === 'active-slide') slides[0].status = 'generating';
-  const lazy = (fn) => ({
-    then: (resolve, reject) => Promise.resolve().then(fn).then(resolve, reject),
-    catch: (reject) => Promise.resolve().then(fn).catch(reject),
-  });
-  const prisma = {
-    doyaSlideProject: {
-      findFirst: async () => ({ id: 'project', title: 'Test', status: mode === 'pending-reset' || mode === 'active-project' ? 'generating' : 'draft', updatedAt: new Date(mode === 'pending-reset' ? Date.now() - 7 * 60 * 1000 : Date.now()), slides }),
-      update: async ({ data }) => {
-        if (mode === 'project-start' && data.status === 'generating') throw Error('project start failed');
-        return data;
-      },
-    },
-    doyaSlideSlide: {
-      updateMany: async () => { if (mode === 'pending-reset') throw Error('reset failed'); return { count: 0 }; },
-      update: ({ where, data }) => lazy(() => { Object.assign(slides.find((slide) => slide.id === where.id), data); return data; }),
-      findMany: async () => slides,
-    },
-    doyaSlideVersion: { create: ({ data }) => lazy(() => data) },
-    $transaction: async (operations) => Promise.all(operations),
-  };
-  const api = load('src/app/api/doyaslide/generate/route.ts', {
-    'next/server': { NextResponse: Response },
-    '@/lib/prisma': { prisma },
-    '@/lib/doyaslide/access': { getUserId: async () => 'user' },
-    '@/lib/service-usage': { recordServiceUsage: async ({ count }) => { usageCount = count; } },
-    '@/lib/doyaslide/limits': {
-      reserveMonthlySlides: async () => { reserved++; return { granted: 2, limit: 20 }; },
-      releaseMonthlySlides: async (_, count) => { released += count; },
-      quotaExceededPayload: () => ({ error: 'quota', code: 'LIMIT_REACHED', limit: 20, upgradeUrl: '/doyaslide/pricing' }),
-    },
-    '@/lib/doyaslide/generate': { composeSlideImage: async (_, __, slide) => {
-      generated++;
-      if (mode === 'one-failed' && slide.id === 'b') throw Error('image failed');
-      return { imageUrl: `${slide.id}.png`, rawImageUrl: `${slide.id}-raw.png`, model: 'mock' };
-    } },
-  });
-  return { post: () => api.POST({ json: async () => ({ projectId: 'project' }) }), get reserved() { return reserved; }, get released() { return released; }, get generated() { return generated; }, get usageCount() { return usageCount; } };
-}
-
-(async () => {
-  for (const mode of ['active-project', 'active-slide']) {
-    const f = fixture(mode);
-    assert.equal((await f.post()).status, 409, mode);
-    assert.equal(f.reserved, 0, mode);
-  }
-  for (const mode of ['project-start', 'pending-reset']) {
-    const f = fixture(mode);
-    assert.equal((await f.post()).status, 500);
-    assert.equal(f.released, 2, mode);
-    assert.equal(f.generated, 0, mode);
-  }
-  const partial = fixture('one-failed');
-  const response = await partial.post();
-  assert.equal(response.status, 200);
-  assert.equal((await response.json()).errorCount, 1);
-  assert.equal(partial.released, 1);
-  assert.equal(partial.usageCount, 1);
-  const normal = fixture('success');
-  assert.equal((await normal.post()).status, 200);
-  assert.equal(normal.released, 0);
-  assert.equal(normal.usageCount, 2);
-  console.log('PASS DoyaSlide batch: preflight refunds and usage count reflects completed images');
-})().catch((error) => { console.error(error); process.exitCode = 1; });
+// Atomic reservation/partial refunds/crash recovery moved to the actual private
+// PostgreSQL operation probe executed by CI. This suite checks the legacy boundary.
+const assert=require('node:assert/strict'),fixture=require('./doyaslide-http-fixture.cjs')
+const operationId='10000000-0000-4000-8000-000000000001'
+;(async()=>{
+ for(const body of [undefined,{}, {projectId:'project'}]){const f=fixture('batch'),r=await f.post(body);assert.equal(r.status,409);assert.equal((await r.json()).code,'OPERATION_REQUIRED');assert.equal(f.calls.operations.length,0)}
+ for(const body of [{operationId:12,projectId:'project'},{operationId,projectId:'project',kind:'chat'},'{', 'x'.repeat(16385)]){const f=fixture('batch'),r=await f.post(body);assert([400,413].includes(r.status));assert.equal(f.calls.operations.length,0)}
+ const f=fixture('batch');assert.equal((await f.post({operationId,projectId:'project',onlyPending:true})).status,200);assert.equal(f.calls.operations.length,1);assert.deepEqual(JSON.parse(JSON.stringify(f.calls.operations[0])),{operationId,projectId:'project',onlyPending:true,actor:'actor',kind:'batch'});assert.equal(f.route.maxDuration,300)
+ for(const mode of ['anonymous','limit','outage','conflict']){const f=fixture('batch',mode),r=await f.post({operationId,projectId:'project'}),body=await r.json();assert.equal(r.status,{anonymous:401,limit:403,outage:503,conflict:409}[mode]);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.equal(r.headers.get('vary'),'Cookie');assert(!JSON.stringify(body).includes('Synthetic private'));if(mode==='limit')assert.equal(body.upgradeUrl,'/doyaslide/pricing')}
+ console.log('PASS legacy batch admission/strict body/UUID/private errors; actual quota and partial-settlement atomicity are checked by private PostgreSQL CI')
+})().catch(e=>{console.error(e);process.exitCode=1})

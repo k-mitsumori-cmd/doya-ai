@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-07T09:19:01.783Z",
+  "passed": 7,
+  "cases": [
+    "full editor regenerate uses durable operation and confirms saved project before success",
+    "same-frame double regenerate sends one operation and leaves no extra version",
+    "lost response blocks new AI; explicit recovery and confirmation close without provider replay",
+    "recovered older saved version can close without replacing a newer current image",
+    "chat retains a newer draft across lost response and explicit recovery never appends duplicate chat",
+    "partial batch never automatically retries failed AI slots and does not claim completion",
+    "full editor quota rejection preserves draft and displays verified persistent pricing link"
+  ],
+  "sourceHashes": {
+    "src/app/doyaslide/[id]/page.tsx": "31470278f6c3bdf4c071cbd4013d585c77f834f7926d895333ca1bff8acc7c94",
+    "src/lib/doyaslide/operation-client.ts": "a243b6ca820f29c040baae2bbecef49c9d6fe7d857d84b8b16156f04d4c54a6d",
+    "src/lib/doyaslide/use-operation-recovery.ts": "c6d2b0fb8eb12ff268e2b5a341b81bf84aa20139632864842a960e027021e0bf",
+    "src/components/doyaslide/DoyaSlideOperationRecovery.tsx": "2a33f7d6b86463876b675ff9a1c0625ebf8c67add8b2c876b060994bb55755df"
+  },
+  "scope": "Actual full editor and actual client/hook/panel under React18 StrictMode with synthetic session/network/locks; no real provider, customer DB or production. Native browser and cross-process Web Locks remain unproven."
+}

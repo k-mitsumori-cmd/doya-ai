@@ -1039,7 +1039,7 @@ doyaslide,C061,生成・ジョブ,連打・再送に冪等性がある,現在版
 doyaslide,C062,生成・ジョブ,ジョブの所有者と結果取得権限を検査する,現在版での項目別通し検証待ち,
 doyaslide,C063,生成・ジョブ,ストリーム途中失敗を成功として表示しない,現在版での項目別通し検証待ち,
 doyaslide,C064,生成・ジョブ,生成結果と履歴・使用量の保存が整合する,現在版での項目別通し検証待ち,
-doyaslide,C065,生成・ジョブ,プロセス終了時に永久処理中にならない,不具合再現・未修正：生成前予約の後に停止すると、出力0件でも20/20使用のまま再開が403で拒否される／実際の本番停止・履歴の復旧は未検証,doyaslide-stale-reservation-baseline.json; probe-doyaslide-stale-reservation.cjs
+doyaslide,C065,生成・ジョブ,プロセス終了時に永久処理中にならない,部分検証・本番未反映：操作記録と15分の期限で遅延保存を拒否し未保存分のみ返却する実装を全生成APIと画面へ接続／隔離DB55・復旧導線11・全画面7・Chrome5ケース合格／旧記録・本番停止復旧・実プロバイダーは未検証,doyaslide-stale-reservation-baseline.json; doyaslide-operation-postgres-results.json; doyaslide-operation-recovery-mounted-results.json; doyaslide-operation-editor-mounted-results.json; doyaslide-operation-native-results.json; doyaslide-operation-recovery-repair-plan.json
 doyaslide,C066,生成・ジョブ,再生成と編集にも上限を適用する,現在版での項目別通し検証待ち,
 doyaslide,C067,生成・ジョブ,公開音声ルームの同意・期限・人数を守る,現在版での項目別通し検証待ち,
 doyaslide,C068,生成・ジョブ,エクスポートで他人の成果物を含めない,現在版での項目別通し検証待ち,

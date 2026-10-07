@@ -1,5 +1,5 @@
 {
-  "status": "reproduced-not-repaired",
+  "status": "all-four-API-and-editor-integrated-local-55PG; frozen-gate-running; native-Chrome-retry-observed-recovery-QA-pending; not-released",
   "baseline": "doyaslide-stale-reservation-baseline.json",
   "paths": [
     "/api/doyaslide/generate",
@@ -8,7 +8,10 @@
   ],
   "confirmed": [
     "Stale batch with20reserved/0outputs returns403 twice before any recovery",
-    "Stale single regenerate and chat both return409 after30minutes without recovery"
+    "Stale single regenerate and chat both return409 after30minutes without recovery",
+    "Empty and quota-rejected UUIDs lacked durable fences; delayed duplicates could later generate after targets/reset changed. Locally repaired and actual PG verified.",
+    "Legacy reserveMonthlySlides advanced lastUsageReset during ordinary same-month usage; actual PG reproduced2remaining versus expected1. Reset token now stable for same-month admission; actual PG verifies expected1 and preserves genuine administrative reset fencing.",
+    "Editor AbortController-only reads could hang on non-cooperating fetch/body. Promise race added and tested; operation fetch abort also settles without transport cooperation."
   ],
   "implementationRequirements": [
     "Persist actor/project/kind/operation UUID and fingerprint with quota reservation in one short locked transaction; no provider work in DB transaction",
@@ -32,5 +35,78 @@
     "No customer DB migration or cleanup",
     "No other worktree edits or staging",
     "All17services2074criteria retained; this is a new cohort, not the full task"
-  ]
+  ],
+  "progress": {
+    "status": "all-local-gates-passed; commit-and-release-next; not-released",
+    "evidence": "doyaslide-stale-reservation-baseline.json",
+    "finding": "Stale process reserved full free20 images but0completed; resume checks quota before stale reclamation, returns403twice with0provider/0writes; no durable per-operation reservation ownership exists",
+    "requirement": "Atomic durable reservation with owned outstanding balance and result settlement; expiry fences late workers and releases only failed/unstarted matching-period amounts once. Never guess-refund existing aggregate usage. Include batch/regenerate/chat flows and deletion/actor/month reset/concurrent quota tests.",
+    "next": "Collect current frozen gate then review allowlisted changes for commit/push and exact CI/READY/public verification",
+    "additionalFinding": "Actual single-slide regenerate/chat routes both return409generating after30minutes with completed project; no expiry recovery in either path.",
+    "source": "src/lib/doyaslide/generation-operation.ts",
+    "privatePostgresCases": 55,
+    "privatePostgresEvidence": "doyaslide-operation-postgres-results.json",
+    "privatePostgresStopExitCode": 0,
+    "sourceChecks": "PrivatePG55, full security suite, tsc, production Next build, lint all terminal0; unchanged2745source manifest.",
+    "remaining": [
+      "Collect current frozen gate: privatePostgres55/security/type/build/lint and unchanged2745source hashes",
+      "Review explicit allowlist then commit/push; verify Linux CI, Vercel READY, exact deployment public assets and anonymous endpoints",
+      "Authenticated production verification and real provider/process-kill remain separate; no paid provider/customer DB action authorized",
+      "Legacy untracked generating rows require explicit reconciliation/support; never guess aggregate refunds",
+      "Continue all17services2074criteria, including1859exactpending rows and all partial rows"
+    ],
+    "sources": [
+      "src/lib/doyaslide/generation-operation.ts",
+      "src/lib/doyaslide/generation-worker.ts",
+      "src/app/api/doyaslide/operations/route.ts"
+    ],
+    "actualRecoveryApiEvidence": "Private PostgreSQL55cases and11current source hashes; includes actual unified/legacy routes, delayed rejection fencing, owned refunds and revert→regeneration.",
+    "productionBugResolved": false,
+    "ciRegression": "Worker5 orchestration groups, actual React hook11/fullpage7, handlers46; private PostgreSQL55 registered in CI; Linux execution pending.",
+    "securityRun": {
+      "sessionId": 22106,
+      "log": "doyaslide-operation-editor-security.log",
+      "status": "terminal0; source edits occurred during run, and reset-token fix afterwards; no frozen-gate claim"
+    },
+    "priorSecurityRun": {
+      "sessionId": 4209,
+      "status": "terminal0; predates full editor changes"
+    },
+    "mountedEvidence": {
+      "hookAndPanel": "doyaslide-operation-recovery-mounted-results.json",
+      "hookCases": 11,
+      "fullEditor": "doyaslide-operation-editor-mounted-results.json",
+      "fullEditorCases": 7,
+      "handlerCases": "mutation16/read-generation15/structure-logo-export15 with actual response reader and explicit hook fixture boundary"
+    },
+    "apiCoverage": "Actual batch/regenerate/chat legacy bindings and unified POST/GET/DELETE share actor/project/kind/UUID receipt. Missing-UUID old requests reject with reload guidance and zero provider/quota writes.",
+    "ciCoverage": "Private PostgreSQL55case probe registered in .github/workflows/ci.yml; portable initdb discovery prepared. Local macOS passed; Linux GitHub runner not yet exercised.",
+    "nativeBrowser": {
+      "status": "passed",
+      "evidence": "doyaslide-operation-native-results.json",
+      "cases": 5,
+      "visualCheck": "Latest desktop and390px mobile screenshots inspected; header actions and completion badge fit after responsive repair. Synthetic slide index0 is a fixture, not actual production data.",
+      "scope": "Actual editor/hook/storage/readers, native Chrome WebLocks/localStorage/HTTP; synthetic backend/provider only."
+    },
+    "frozenGate": {
+      "path": "docs/audits/2026-10-06-all-services-recheck/doyaslide-operation-release-704ddac9-122f-4eb3-afcd-3a7d617d3447",
+      "status": "passed",
+      "evidence": "state.json",
+      "sourceFiles": 2745,
+      "changedSources": []
+    }
+  },
+  "sourceHashes": {
+    "src/lib/doyaslide/generation-operation.ts": "bf5da92af8039110b51b8de8b3fd4fa80aa35dfb1759ab25efa5fcea4982a0cd",
+    "src/lib/doyaslide/limits.ts": "72ddb3f3ccaa2f2aa573989309eb7c4c2b50ad6268d88acf5f3d27078591c918",
+    "src/lib/plan-utils.ts": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86",
+    "src/app/api/doyaslide/operations/route.ts": "894e90bd2fe9820a59adceff3918d1c4ac4c14bbc6d3a32e1ee1a961a22ee702",
+    "src/lib/doyaslide/generation-worker.ts": "1118b60d3dce4d9661aa830bce34b55611105e439a69084932058efb0ad81d82",
+    "src/lib/doyaslide/generation-http.ts": "948610a5f119bb43aee84eceb8138af0273b4dfba2157f5d9c6fde860b1bd549",
+    "src/app/api/doyaslide/generate/route.ts": "31af633566ad232edfa2387b0399d097290c23faf359802a21cd3550160b5848",
+    "src/app/api/doyaslide/slides/[id]/regenerate/route.ts": "82e4dfc2d40540ccd16eec640c323329d77413011daa94f47363081226dd6044",
+    "src/app/api/doyaslide/slides/[id]/chat/route.ts": "be182b52110f2dba03f3e30e96feec574968d3162748a93b33ec67c4e737a4b9",
+    "src/app/api/doyaslide/slides/[id]/revert/route.ts": "4ee119efcfd9eda3bcb49eeaf498f4dda80f20eaa249e90ae34a90601f433dd1",
+    "src/lib/doyaslide/project-lock.ts": "4fdb8076984ece03f3ab04111387d51a559466ff4c13331f6b1fbcf2ab875a83"
+  }
 }

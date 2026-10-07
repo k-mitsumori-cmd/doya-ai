@@ -12,7 +12,7 @@ function visit(n) {
 }
 visit(ast);
 for (const n of names) assert.ok(parts[n], 'missing actual source function ' + n);
-function slide(imageUrl = null, index = 0) { return { id: 's' + index, projectId: 'synthetic', index, role: null, headline: null, subText: null, imageUrl, rawImageUrl: null, status: imageUrl ? 'done' : 'pending', version: 1, model: null }; }
+function slide(imageUrl = null, index = 0) { return { id: 's' + index, projectId: 'synthetic', index, role: null, headline: null, subText: null, imageUrl, rawImageUrl: imageUrl, status: imageUrl ? 'done' : 'pending', version: 1, model: imageUrl ? 'synthetic' : null }; }
 function project(slides = [slide()]) { return { id: 'synthetic', title: 'synthetic', status: 'completed', aspectRatio: 'landscape', logoUrl: null, logoPosition: 'top-right', logoSize: 'M', logoBackingChip: false, slides }; }
 const immediate = () => new Promise(r => setImmediate(r));
 function fixture(handler, fetcher, overrideReload) {
@@ -30,6 +30,7 @@ function fixture(handler, fetcher, overrideReload) {
   if (overrideReload) context.reload = overrideReload;
   vm.runInNewContext(ts.transpileModule(Object.entries(parts).filter(([name]) => !overrideReload || name !== 'reload').map(([, code]) => code).join('\n') + '\nglobalThis.run=' + handler + ';', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
   if (overrideReload) context.reload = overrideReload;
+  require('./doyaslide-editor-operation-fixture.cjs')(context);
   return { run: (...args) => context.run(...args), context, state, timers, success, errors, requests, fire: ms => { for (const [id, t] of [...timers]) if (t.ms === ms) { timers.delete(id); t.fn(); } }, poll: () => pollCallback(), pollCleared: () => pollCleared };
 }
 function response(data, status = 200) { return { ok: status >= 200 && status < 300, status, json: async () => data }; }
@@ -62,7 +63,7 @@ function response(data, status = 200) { return { ok: status >= 200 && status < 3
   await check('invalid generation results never announce completion or trigger another paid batch', async () => {
     const good = { slides: [slide('https://example.invalid/done.png')], errorCount: 0, skipped: 0 };
     for (const data of [{}, null, { ...good, slides: [] }, { ...good, errorCount: '0' }, { ...good, slides: [{ ...good.slides[0], projectId: 'foreign' }] }]) {
-      const f = fixture('runGenerate', async url => url.endsWith('/generate') ? response(data) : response({ project: project(good.slides) })); await f.run(); assert.equal(f.success.length, 0); assert.equal(f.requests.filter(r => r.url.endsWith('/generate')).length, 1); assert.equal(f.state.generating, false); assert.equal(f.context.generationBusyRef.current, false); assert.equal(f.timers.size, 0); assert.ok(f.errors.length);
+      const f = fixture('runGenerate', async url => url.endsWith('/operations') ? response(data) : response({ project: project(good.slides) })); await f.run(); assert.equal(f.success.length, 0); assert.equal(f.requests.filter(r => r.url.endsWith('/operations')).length, 1); assert.equal(f.state.generating, false); assert.equal(f.context.generationBusyRef.current, false); assert.equal(f.timers.size, 0); assert.ok(f.errors.length);
     }
   });
   await check('completion requires a matching confirmed project; failed final reload cannot retain the generation lock', async () => {
@@ -70,16 +71,23 @@ function response(data, status = 200) { return { ok: status >= 200 && status < 3
     for (const mode of ['success', 'refresh_null', 'refresh_mismatch', 'final_throw']) { let reads = 0; const f = fixture('runGenerate', async () => response(good), async () => { reads++; if (mode === 'final_throw' && reads >= 2) throw Error('SYNTHETIC_PRIVATE'); return mode === 'refresh_null' ? null : project(mode === 'refresh_mismatch' ? [slide()] : good.slides); }); await f.run(); assert.equal(f.success.length, mode === 'success' || mode === 'final_throw' ? 1 : 0, mode); assert.equal(f.state.generating, false); assert.equal(f.context.generationBusyRef.current, false); assert.equal(f.pollCleared(), true); assert.equal(f.timers.size, 0); }
   });
   await check('generation body timeout produces a public unknown-result notice and no automatic reissue', async () => {
-    const f = fixture('runGenerate', async (url, init) => url.endsWith('/generate') ? { ok: true, status: 200, json: () => new Promise((resolve, reject) => init.signal.addEventListener('abort', () => reject(Error('SYNTHETIC_PRIVATE')), { once: true })) } : response({ project: project() })); const p = f.run(); await immediate(); f.fire(310000); await p; assert.equal(f.success.length, 0); assert.equal(f.state.generating, false); assert.equal(f.requests.filter(r => r.url.endsWith('/generate')).length, 1); assert.doesNotMatch(f.errors.join(), /SYNTHETIC_PRIVATE/); assert.equal(f.timers.size, 0);
+    const f = fixture('runGenerate', async (url, init) => url.endsWith('/operations') ? { ok: true, status: 200, json: () => new Promise((resolve, reject) => init.signal.addEventListener('abort', () => reject(Error('SYNTHETIC_PRIVATE')), { once: true })) } : response({ project: project() })); const p = f.run(); await immediate(); f.fire(310000); await p; assert.equal(f.success.length, 0); assert.equal(f.state.generating, false); assert.equal(f.requests.filter(r => r.url.endsWith('/operations')).length, 1); assert.doesNotMatch(f.errors.join(), /SYNTHETIC_PRIVATE/); assert.equal(f.timers.size, 0);
+  });
+  await check('non-cooperating headers or JSON still time out and late responses never replace confirmed state', async () => {
+    for(const phase of ['headers','body']) {
+      let release;const pending=new Promise(resolve=>release=resolve);
+      const f=fixture('reload',async()=>phase==='headers'?pending:{ok:true,status:200,json:()=>pending});const old=f.state.project;const run=f.run();await immediate();f.fire(30000);await run;assert.equal(f.state.project,old);assert.equal(f.timers.size,0);assert.equal(f.context.projectReadsActive.current,0);
+      release(phase==='headers'?response({project:project()}):{project:project()});await immediate();assert.equal(f.state.project,old);
+    }
   });
   await check('quota rejection and partial quota results retain the upgrade notice and stop generation', async () => {
-    for (const partial of [false, true]) { const data = partial ? { slides: [slide(), slide('https://example.invalid/done.png', 1)], errorCount: 0, skipped: 1, limit: 10, quota: { upgradeUrl: '/doyaslide/pricing' } } : { code: 'LIMIT_REACHED', error: '上限です', upgradeUrl: '/doyaslide/pricing' }; const f = fixture('runGenerate', async () => response(data, partial ? 200 : 403), async () => project(data.slides || [slide()])); await f.run(); assert.equal(f.success.length, 0); assert.equal(f.state.limitUpgradeUrl, '/doyaslide/pricing'); assert.ok(f.state.limitMsg); assert.equal(f.requests.length, 1); assert.equal(f.state.generating, false); }
+    for (const partial of [false, true]) { const data = partial ? { slides: [slide(), slide('https://example.invalid/done.png', 1)], errorCount: 0, skipped: 1, limit: 20, quota: { upgradeUrl: '/doyaslide/pricing' } } : { code: 'LIMIT_REACHED', limit: 20, error: '上限です', upgradeUrl: '/doyaslide/pricing' }; const f = fixture('runGenerate', async () => response(data, partial ? 200 : 403), async () => project(data.slides || [slide()])); await f.run(); assert.equal(f.success.length, 0); assert.equal(f.state.limitUpgradeUrl, '/doyaslide/pricing'); assert.ok(f.state.limitMsg); assert.equal(f.requests.length, 1); assert.equal(f.state.generating, false); }
   });
-  await check('stalled partial generation keeps the existing bounded retry behavior', async () => { const d = { slides: [slide()], errorCount: 1, skipped: 0 }; const f = fixture('runGenerate', async () => response(d), async () => project(d.slides)); await f.run(); assert.equal(f.requests.length, 3); assert.equal(f.success.length, 0); assert.equal(f.state.generating, false); });
+  await check('failed partial generation requires explicit new action instead of automatic AI retry', async () => { const d = { slides: [slide()], errorCount: 1, skipped: 0 }; const f = fixture('runGenerate', async () => response(d), async () => project(d.slides)); await f.run(); assert.equal(f.requests.length, 1); assert.equal(f.success.length, 0); assert.equal(f.state.generating, false); });
   await check('double activation and unmount never start an extra generation request', async () => { let release; const good = { slides: [slide()], errorCount: 0, skipped: 0 }; const f = fixture('runGenerate', async () => ({ ok: true, status: 200, json: () => new Promise(resolve => release = resolve) }), async () => project()); const p = f.run(); await immediate(); await f.run(); assert.equal(f.requests.length, 1); f.context.mountedRef.current = false; release(good); await p; assert.equal(f.requests.length, 1); assert.equal(f.context.generationBusyRef.current, false); });
   await check('continuing progress remains bounded to twelve batches and only requests pending slides', async () => {
     let batch = 0, last;
-    const f = fixture('runGenerate', async (_, init) => { assert.deepEqual(JSON.parse(init.body), { projectId: 'synthetic', onlyPending: true }); batch++; last = Array.from({ length: 14 }, (_, i) => slide(i < batch ? 'https://example.invalid/done.png' : null, i)); return response({ slides: last, errorCount: 0, skipped: 0 }); }, async () => project(last));
+    const f = fixture('runGenerate', async (_, init) => { const payload=JSON.parse(init.body); assert.equal(payload.projectId,'synthetic'); assert.equal(payload.onlyPending,true); assert.equal(payload.kind,'batch'); assert.match(payload.operationId,/^[a-f0-9-]{36}$/); batch++; last = Array.from({ length: 14 }, (_, i) => slide(i < batch ? 'https://example.invalid/done.png' : null, i)); return response({ slides: last, errorCount: 0, skipped: 0 }); }, async () => project(last));
     await f.run(); assert.equal(batch, 12); assert.equal(f.success.length, 0); assert.equal(f.state.generating, false); assert.match(f.errors.join(), /2枚が未完成/);
   });
   await check('failed or unreadable generation HTTP responses retain outputs and public errors', async () => {

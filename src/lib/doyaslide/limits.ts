@@ -104,7 +104,9 @@ export async function reserveMonthlySlides(
       })
     } else if (!isSameMonth(existing.lastUsageReset, now) || existing.monthlyUsage !== current || granted > 0) {
       await tx.userServiceSubscription.update({
-        where, data: { monthlyUsage: current + granted, lastUsageReset: now },
+        // Normal usage does not reset the period. Durable operations use this
+        // exact token to distinguish their reservation from a later reset.
+        where, data: { monthlyUsage: current + granted, lastUsageReset: isSameMonth(existing.lastUsageReset, now) ? existing.lastUsageReset : now },
       })
     }
     return { granted, limit, reservedMonth: monthStart(now) }

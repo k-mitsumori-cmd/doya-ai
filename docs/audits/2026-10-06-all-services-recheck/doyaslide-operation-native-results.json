@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-07T09:14:16.155Z",
+  "passed": 5,
+  "cases": [
+    "native Chrome socket loss after synthetic commit preserves metadata and disables another generation",
+    "native browser reload restores pending operation without provider POST",
+    "second native browser tab sees shared actor/project intent and blocks competing generation at390px",
+    "native browser explicit GET recovery and acknowledgment consume operation once without another provider request",
+    "storage event releases second tab only after acknowledgment; explicit new UUID generates one additional synthetic version"
+  ],
+  "chrome": "Chrome/155.0.8059.39",
+  "persistentLossHttpAttempts": 5,
+  "syntheticGenerations": 2,
+  "sourceHashes": {
+    "src/lib/doyaslide/operation-client.ts": "a243b6ca820f29c040baae2bbecef49c9d6fe7d857d84b8b16156f04d4c54a6d",
+    "src/lib/doyaslide/use-operation-recovery.ts": "c6d2b0fb8eb12ff268e2b5a341b81bf84aa20139632864842a960e027021e0bf",
+    "src/components/doyaslide/DoyaSlideOperationRecovery.tsx": "2a33f7d6b86463876b675ff9a1c0625ebf8c67add8b2c876b060994bb55755df",
+    "src/app/doyaslide/[id]/page.tsx": "31470278f6c3bdf4c071cbd4013d585c77f834f7926d895333ca1bff8acc7c94"
+  },
+  "scope": "Actual editor, hook, storage and reader transpiled into native Chrome with native HTTP/Web Locks/localStorage; synthetic backend and slide only. Stylesheet captured from current local build. No paid provider/customer DB/production auth. Cross-process locks and production process kill remain unverified."
+}

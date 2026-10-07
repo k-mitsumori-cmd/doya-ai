@@ -920,6 +920,14 @@ if (doyaslideBatchAccounting.error || doyaslideBatchAccounting.status !== 0) {
   console.error('Security regression failed: verify-doyaslide-batch-accounting.cjs');
   process.exit(1);
 }
+const doyaslideOperationWorker = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-operation-worker.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideOperationWorker.error || doyaslideOperationWorker.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-operation-worker.cjs'); process.exit(1);
+}
+for (const verifier of ['verify-doyaslide-operation-recovery-mounted.cjs', 'verify-doyaslide-operation-editor-mounted.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, verifier)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', verifier); process.exit(1); }
+}
 const serviceInputTypes = spawnSync(process.execPath, [path.join(__dirname, 'verify-service-input-types.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (serviceInputTypes.error || serviceInputTypes.status !== 0) {
   console.error('Security regression failed: verify-service-input-types.cjs');

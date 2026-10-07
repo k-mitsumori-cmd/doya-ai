@@ -1,0 +1,26 @@
+{
+  "startedAt": "2026-10-07T09:17:51.093125+00:00",
+  "pid": 85565,
+  "head": "8a467ba59ec1f1761364c7497a9cc68b2201aa5f",
+  "sourceFiles": 2745,
+  "status": "passed",
+  "gates": [
+    {
+      "name": "private-postgres",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T09:17:53.120337+00:00"
+    },
+    {
+      "name": "build",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T09:22:50.270843+00:00"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "endedAt": "2026-10-07T09:22:52.480342+00:00"
+    }
+  ],
+  "changedSources": [],
+  "endedAt": "2026-10-07T09:22:52.957440+00:00"
+}

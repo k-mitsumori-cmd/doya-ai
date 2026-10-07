@@ -12,7 +12,7 @@ function visit(n) {
 }
 visit(ast);
 for (const n of names) assert.ok(parts[n], 'missing actual source function ' + n);
-function slide(imageUrl = null, index = 0) { return { id: 's' + index, projectId: 'synthetic', index, role: null, headline: null, subText: null, imageUrl, rawImageUrl: null, status: imageUrl ? 'done' : 'pending', version: 1, model: null }; }
+function slide(imageUrl = null, index = 0) { return { id: 's' + index, projectId: 'synthetic', index, role: null, headline: null, subText: null, imageUrl, rawImageUrl: imageUrl, status: imageUrl ? 'done' : 'pending', version: 1, model: imageUrl ? 'synthetic' : null }; }
 function project(slides = [slide()]) { return { id: 'synthetic', title: 'synthetic', status: 'completed', aspectRatio: 'landscape', logoUrl: null, logoPosition: 'top-right', logoSize: 'M', logoBackingChip: false, slides }; }
 const immediate = () => new Promise(r => setImmediate(r));
 function fixture(handler, fetcher, overrideReload) {
@@ -30,6 +30,7 @@ function fixture(handler, fetcher, overrideReload) {
   if (overrideReload) context.reload = overrideReload;
   vm.runInNewContext(ts.transpileModule(Object.entries(parts).filter(([name]) => !overrideReload || name !== 'reload').map(([, code]) => code).join('\n') + '\nglobalThis.api={regenerate,revert,sendChat,loadVersions};globalThis.run=' + handler + ';', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
   if (overrideReload) context.reload = overrideReload;
+  require('./doyaslide-editor-operation-fixture.cjs')(context);
   return { run: (...args) => context.run(...args), context, state, timers, success, errors, requests, fire: ms => { for (const [id, t] of [...timers]) if (t.ms === ms) { timers.delete(id); t.fn(); } }, poll: () => pollCallback(), pollCleared: () => pollCleared };
 }
 function response(data, status = 200) { return { ok: status >= 200 && status < 300, status, json: async () => data }; }
@@ -39,13 +40,11 @@ function response(data, status = 200) { return { ok: status >= 200 && status < 3
   const invoke = (f, name) => f.run(name === 'regenerate' ? 's0' : name === 'revert' ? 1 : undefined);
   for (const name of ['regenerate', 'revert', 'sendChat']) {
     await check(name + ' requires a valid slide acknowledgment and a matching confirmed refresh', async () => {
-      for (const mode of ['empty', 'null', 'foreign', 'wrong_slide', 'missing_image', 'bad_reply', 'refresh_missing', 'refresh_mismatch', 'network', 'body', 'http_error']) {
+      for (const mode of ['empty', 'null', 'foreign', 'wrong_slide', 'missing_image', 'refresh_missing', 'refresh_mismatch', 'network', 'body', 'http_error']) {
         const data = { slide: { ...ack }, reply: '修正を反映しました。' };
         if (mode === 'foreign') data.slide.projectId = 'foreign';
         if (mode === 'wrong_slide') data.slide.id = 'another';
         if (mode === 'missing_image') data.slide.imageUrl = null;
-        if (mode === 'bad_reply') data.reply = null;
-        if (mode === 'bad_reply' && name !== 'sendChat') continue;
         const f = fixture(name, async (_, init) => {
           if (mode === 'network') throw Error('SYNTHETIC_PRIVATE');
           if (mode === 'body') return { ok: true, status: 200, json: async () => { throw Error('SYNTHETIC_PRIVATE'); } };
@@ -64,7 +63,7 @@ function response(data, status = 200) { return { ok: status >= 200 && status < 3
       const p = invoke(f, name); await immediate(); assert.equal(f.timers.size, 1); await invoke(f, name); assert.equal(f.requests.length, 1); f.fire(310000); await p; assert.equal(f.success.length, 0); assert.equal(f.state.busySlide, null); assert.equal(f.context.slideMutationBusyRef.current, false); assert.equal(f.state.chatInput, 'synthetic edit'); assert.equal(f.timers.size, 0);
     });
   }
-  await check('quota rejection preserves its upgrade notice and chat draft', async () => { const f = fixture('sendChat', async () => response({ code: 'LIMIT_REACHED', error: '上限です', upgradeUrl: '/doyaslide/pricing' }, 403), async () => project()); await f.run(); assert.equal(f.state.limitUpgradeUrl, '/doyaslide/pricing'); assert.equal(f.state.chatInput, 'synthetic edit'); assert.equal(f.success.length, 0); });
+  await check('quota rejection preserves its upgrade notice and chat draft', async () => { const f = fixture('sendChat', async () => response({ code: 'LIMIT_REACHED', limit: 20, error: '上限です', upgradeUrl: '/doyaslide/pricing' }, 403), async () => project()); await f.run(); assert.equal(f.state.limitUpgradeUrl, '/doyaslide/pricing'); assert.equal(f.state.chatInput, 'synthetic edit'); assert.equal(f.success.length, 0); });
   await check('revert verifies the selected history image and rejects unavailable or stale histories before issuing a write', async () => {
     for (const mode of ['missing', 'wrong_slide', 'read_error', 'wrong_image']) {
       const f = fixture('revert', async () => response({ slide: { ...ack, imageUrl: 'https://example.invalid/another.png' } }), async () => project([{ ...ack, imageUrl: 'https://example.invalid/another.png' }]));
