@@ -9,7 +9,7 @@ const prisma = {
 };
 const mocks = {
   'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma },
-  '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org', memberId: 'member' }), orgSlugFrom: () => 'org' },
+  '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org', memberId: 'member', userId: 'actor' }), orgSlugFrom: () => 'org' },
 };
 const task = load('src/app/api/sfa/tasks/route.ts', withSfaAuthority(mocks));
 const activity = load('src/app/api/sfa/activities/route.ts', withSfaAuthority(mocks));
@@ -56,6 +56,7 @@ const req = body => ({ json: async () => body });
     const model = { accounts: 'sfaAccount', contacts: 'sfaContact', leads: 'sfaLead' }[collection];
     const collectionPrisma = { [model]: { create: async ({ data }) => { collectionSaved.push(data); return { id: 'synthetic', ...data }; } } };
     const route = load(`src/app/api/sfa/${collection}/route.ts`, {
+      ...require('./sfa-lead-test-deps.cjs').leadDeps(collectionPrisma),
       ...mocks, '@/lib/prisma': { prisma: collectionPrisma },
       '@/lib/sfa/format': load('src/lib/sfa/format.ts'),
       '@/lib/sfa/limits': { withSfaAdmission: async (_org, _counts, create) => { admissions++; return { created: await create(collectionPrisma) }; } },

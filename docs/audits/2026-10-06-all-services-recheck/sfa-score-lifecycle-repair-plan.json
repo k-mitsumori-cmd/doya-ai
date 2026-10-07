@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-07T04:33:25.711833+00:00",
+  "status": "planned-not-implemented",
+  "baseline": "sfa-score-lifecycle-baseline.json",
+  "requirements": [
+    "Reject unknown/oversized IDs and require the reviewed canonical lead version.",
+    "Revalidate ACTIVE actor and owned active lead before quota reservation; repeat authority and source-version validation before score settlement.",
+    "Claim actor/org/lead/operation identity atomically with quota reservation; repeat requests must not call provider or consume twice.",
+    "Do not hold database locks during external AI call.",
+    "Persist bounded validated score/reason/action result and quota settlement atomically; stale or failed work must not overwrite new lead state.",
+    "Read-only actor-scoped recovery must rescue completed result after response loss without generating again.",
+    "Unknown provider outcome remains fenced; cancellation only fences not-yet-started operations and never claims that an in-flight provider was cancelled.",
+    "Timeout/orphan policy must exceed maxDuration and prevent late settlement; refunds release pending allowance only.",
+    "Client uses bounded validated transport, synchronous lane and durable metadata, actor/org epochs and shared quota guide including correct billing owner.",
+    "Validate model JSON instead of converting missing score to0 or accepting nonstring rationale.",
+    "Actual handler/helper, mounted client and isolated PostgreSQL race/rollback tests; no paid provider invocation.",
+    "Run full frozen gate and exact SHA deployment/public verification before calling released."
+  ],
+  "scope": "Separate from current lead CRUD/import release. No source implementation or provider call in this design artifact. Existing next-action helper callers must preserve their behavior until separately verified."
+}

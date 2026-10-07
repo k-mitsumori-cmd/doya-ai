@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-07T04:28:24.465360+00:00",
+  "rows": 2074,
+  "updatedSfaCriteria": [
+    "C015",
+    "C051",
+    "C070",
+    "U09",
+    "U12",
+    "U14",
+    "U30"
+  ],
+  "status": "partial-local-gates-running-not-complete",
+  "unresolved": "AI score lifecycle, remaining SFA and all17 criteria remain incomplete; authenticated browser review absent."
+}

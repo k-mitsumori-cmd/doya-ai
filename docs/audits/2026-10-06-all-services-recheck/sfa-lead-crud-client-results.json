@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T04:32:52.702Z",
+  "passed": 14,
+  "cases": [
+    "Same-frame manual create submits one durable UUID",
+    "Manual A-B-A edits remain a newer draft",
+    "Oversized manual fields stay visible without sending",
+    "Unknown create fences resubmission and recovered exact lead unlocks",
+    "Unknown result survives remount; missing recovery remains fenced",
+    "Cancellation fences old UUID and next manual save gets new UUID",
+    "Same-frame CSV import sends one operation and reports skipped positions",
+    "Import preserves newer CSV after previous import succeeds",
+    "Malformed import result cannot announce success or unlock",
+    "Unknown import recovers original batch counts without another import",
+    "Status PATCH uses reviewed version and synchronous row lane",
+    "Stale status rejection does not show false success",
+    "Late old-actor creation cannot clear current draft or announce",
+    "Storage failure prevents import network write"
+  ],
+  "sourceHashes": {
+    "src/lib/sfa/client-response.ts": "20becc7fa936eda6f8d385e08587fa91a0fb977a889272cae835ab58701a7732",
+    "src/lib/sfa/use-client-mutations.ts": "1f012ad2742ba1936627bf06b092a41636cad5df23a78f4a4eeb478501c8a1fb",
+    "src/components/sfa/MutationRecovery.tsx": "4295345d7e4d56945f7d17f6283767f1bcf941f42eceb4268b891094ccb132c5",
+    "src/app/sfa/[orgSlug]/leads/page.tsx": "d082dc593225d9d131d1ba08cae6d56526574e4b839b7e0f63a597b9115fb99f"
+  },
+  "scope": "Actual leads page/shared hook/transport/guard mounted in StrictMode with synthetic DOM/auth/router/network. No paid provider or customer DB calls."
+}

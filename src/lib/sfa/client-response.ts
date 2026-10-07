@@ -114,3 +114,33 @@ export function conversionWriteMatches(row: SfaClientConversion, body: Record<st
   }
   return true
 }
+
+export interface SfaClientLead {
+  id: string; name: string; corporateNumber: string | null; contactName: string | null; email: string | null
+  phone: string | null; note: string | null; source: string; status: string; score: number | null
+  convertedAccountId: string | null; updatedAt: string
+}
+/** Legacy values stay visible for review; writes enforce the current, tighter field limits. */
+export function isSfaClientLead(v: unknown): v is SfaClientLead {
+  return record(v) && sfaClientId(v.id) && typeof v.name === 'string' && !!v.name.trim() && v.name.length <= 10000
+    && typeof v.source === 'string' && v.source.length <= 100 && ['new', 'working', 'nurturing', 'qualified', 'converted', 'disqualified'].includes(String(v.status))
+    && ['corporateNumber', 'contactName', 'email', 'phone', 'note'].every(k => text(v[k], 10000))
+    && nullableId(v.convertedAccountId) && sfaClientDate(v.updatedAt)
+    && (v.score === null || Number.isInteger(v.score) && (v.score as number) >= 0 && (v.score as number) <= 100)
+}
+export function leadWriteMatches(row: SfaClientLead, body: Record<string, unknown>, before?: SfaClientLead) {
+  if (before && (row.id !== before.id || row.updatedAt <= before.updatedAt || row.name !== before.name || row.source !== before.source || row.corporateNumber !== before.corporateNumber || row.convertedAccountId !== before.convertedAccountId)) return false
+  for (const k of ['contactName', 'email', 'phone', 'note'] as const) {
+    if (body[k] !== undefined ? row[k] !== (body[k] || null) : row[k] !== (before ? before[k] : null)) return false
+  }
+  if (before) return row.status === (body.status ?? before.status) && row.score === (body.score === undefined ? before.score : body.score === null ? null : Math.round(Number(body.score)))
+  return row.name === String(body.name).trim() && row.source === (body.source || 'manual') && row.corporateNumber === (body.corporateNumber || null)
+    && row.status === 'new' && row.score === null && row.convertedAccountId === null
+}
+export interface SfaClientLeadImport { id: string; imported: number; skipped: number; skippedRows: number[] }
+export function isSfaClientLeadImport(v: unknown, operationId: string, rowCount?: number): v is SfaClientLeadImport {
+  if (!record(v) || v.id !== operationId || !Number.isInteger(v.imported) || (v.imported as number) < 1 || !Number.isInteger(v.skipped) || (v.skipped as number) < 0) return false
+  const total = (v.imported as number) + (v.skipped as number)
+  return total <= 500 && (rowCount === undefined || rowCount === total) && Array.isArray(v.skippedRows) && v.skippedRows.length === v.skipped
+    && new Set(v.skippedRows).size === v.skippedRows.length && v.skippedRows.every(n => Number.isInteger(n) && n >= 1 && n <= total)
+}

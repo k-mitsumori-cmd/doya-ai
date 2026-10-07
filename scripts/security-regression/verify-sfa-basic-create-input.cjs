@@ -11,9 +11,10 @@ const prisma = {
   sfaLead: { create: async ({ data }) => { writes.push(['lead', data]); return { id: 'lead-1', ...data }; } },
 };
 const mocks = {
+  ...require('./sfa-lead-test-deps.cjs').leadDeps(prisma),
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
-  '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId: 'member-1' }), orgSlugFrom: () => null },
+  '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId: 'member-1', userId: 'actor' }), orgSlugFrom: () => null },
   '@/lib/sfa/format': { bigIntToNumber: (value) => value },
   '@/lib/sfa/limits': { withSfaAdmission: async (_org, _requested, create) => ({ created: await create(prisma) }), sfaQuotaResponse: () => Response.json({ error: 'limit' }, { status: 402 }) },
 };

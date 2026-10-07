@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-07T04:27:52.428Z",
+  "status": "confirmed-handler-gaps-not-repaired",
+  "findings": 3,
+  "results": [
+    "An AI result based on the old note commits after a synthetic intervening note/version edit. Actual handler has no expectedUpdatedAt match at settlement.",
+    "Actual score handler lacks fresh mutation-actor validation before provider call or settlement; synthetic context-revocation scenario still calls the mocked provider and commits. Reservation authority requires separate actual-helper investigation.",
+    "Repeated identical score requests both call the mocked provider and settle. No request operation identity/recovery protocol in this handler; actual reservation and PostgreSQL races remain unproven."
+  ],
+  "sourceHash": "7bddc1c34b0e13265d0972e5e34ed311d57a85ce6b5596d92ddc9ad7fcc5b8b0",
+  "scope": "Actual score handler; synthetic context, Prisma, reservation and provider. No external provider/network, customer data or actual PostgreSQL schedule."
+}

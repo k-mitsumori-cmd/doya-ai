@@ -40,6 +40,7 @@ const prisma = { sfaLead: {
   count: async ({ where }) => rows.filter((row) => matches(row, where)).length,
 } };
 const { GET } = load('src/app/api/sfa/leads/route.ts', {
+  ...require('./sfa-lead-test-deps.cjs').leadDeps(prisma),
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
   '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1' }), orgSlugFrom: () => null },

@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-07T04:32:51.184Z",
+  "passed": 22,
+  "cases": [
+    "Fresh actor authority rejects all create/update/delete and recovery methods",
+    "Creation replay and scoped recovery return one exact lead",
+    "Creation cancelled before arrival cannot be replayed; cancellation never deletes existing lead",
+    "Changed creation input cannot reuse an operation ID",
+    "Deleted creation keeps its receipt and cannot resurrect data",
+    "Versioned PATCH rejects stale edit and preserves newest row",
+    "Concurrent same-version PATCH has one accepted write under serialized synthetic transactions",
+    "Versioned DELETE refuses stale state, then logically deletes only the reviewed row",
+    "Missing review version cannot bypass PATCH or DELETE conflict protection",
+    "Conversion invariants reject fabricated conversion and converted status rollback",
+    "Overlong PATCH fields reject unchanged rather than truncate",
+    "Malformed metadata, IDs, version and duplicate version query reject before mutation",
+    "Foreign or inactive row is inaccessible for PATCH, DELETE and detail recovery",
+    "Receipt persistence failure rolls back manual creation",
+    "Import accepts valid rows and explicitly reports skipped missing-name positions",
+    "Whole import rejects overlong or malformed optional field without partial insert",
+    "Import replay creates one batch and exact recovery checks its owned active row set",
+    "Cancelled import blocks late arrival and never deletes committed batch",
+    "Unavailable batch and changed input cannot replay or recreate deleted rows",
+    "Partial insertion, result marker failure and receipt failure all roll back entire import",
+    "Actor and organization isolate manual and batch recovery receipts",
+    "All handled errors and successes are private; unknown failures never expose diagnostics"
+  ],
+  "sourceHashes": {
+    "src/app/api/sfa/leads/route.ts": "4f8a887b3b6a34560d78c6cc123aa01d5aaad00b1f44b4862e193ad84f40f9a4",
+    "src/app/api/sfa/leads/[id]/route.ts": "cb50dda81c788066326f1194f344d1c07b19dac3129545a7c050da87cf2624ac",
+    "src/app/api/sfa/leads/import/route.ts": "4dcc0a193f8b7e61a77da636e524991e41fc5ea611065e6e79488ac87950c316",
+    "src/lib/sfa/lead-mutation.ts": "76d8cdf62128b8f679c2fad4f1a0959d6cfe0e06fd0687399877a87b48dedfb0",
+    "src/lib/sfa/lead-import.ts": "d986d153c0bf990df40dc9309e9f3b7eb9b0411742d30880c325abecdbfa4cff",
+    "src/lib/sfa/creation-receipt.ts": "6a9e1363eb8f98a947ec70279c7f095906bd41bb679e270a8c4209402d5bb0ee"
+  },
+  "scope": "Actual manual create/detail PATCH/DELETE/recovery/import handlers and shared authority/receipt/validation/Serializable admission helpers, synthetic Prisma transactions with rollback and serialized scheduling. Not actual PostgreSQL concurrency, mounted UI or production/customer/provider writes."
+}

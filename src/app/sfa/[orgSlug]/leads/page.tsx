@@ -6,8 +6,8 @@ import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
 import { parseLeadCsv } from '@/lib/sfa/lead-csv'
 import { LEAD_STATUS_LABEL } from '@/lib/sfa/constants'
-import { sfaJson, sfaClientId, sfaClientDate } from '@/lib/sfa/client-response'
-import { useSfaClientMutations } from '@/lib/sfa/use-client-mutations'
+import { sfaJson, sfaClientId, sfaClientDate, isSfaClientLeadImport } from '@/lib/sfa/client-response'
+import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
 import LeadConversionForm, { type ConversionLead } from '@/components/sfa/LeadConversionForm'
 import type { LeadStatus } from '@/lib/sfa/types'
@@ -52,9 +52,10 @@ const scoreColor = (s: number | null) =>
 
 export default function SfaLeadsPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
+  const reload = useRef<() => void>(() => {})
   const mutations = useSfaClientMutations(orgSlug, (pending, state) => {
     if (pending.kind === 'conversion' && state === 'found') setRecoveredConversion({ leadId: pending.leadId!, identity: mutations.identity })
-    load(filter, q)
+    reload.current()
   })
   const [recoveredConversion, setRecoveredConversion] = useState<{ leadId: string; identity: string } | null>(null)
   const [listKey, setListKey] = useState('')
@@ -77,7 +78,12 @@ export default function SfaLeadsPage() {
   const [csv, setCsv] = useState('')
   const [name, setName] = useState('')
   const [contactName, setContactName] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [formError, setFormError] = useState('')
+  const [importResult, setImportResult] = useState('')
+  const createDraft = useSfaDraftSnapshot([name, contactName, open])
+  const importDraft = useSfaDraftSnapshot([csv, importOpen])
+  const creating = mutations.busy.includes('lead:create')
+  const importing = mutations.busy.includes('lead-import:create')
   const [scoringId, setScoringId] = useState<string | null>(null)
 
   const load = useCallback((status: LeadStatus | 'all' = 'all', query = '') => {
@@ -108,6 +114,7 @@ export default function SfaLeadsPage() {
     // Capture actor/org epoch for this request; old callbacks must stay inactive.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, orgSlug, mutations.key])
+  reload.current = () => load(filter, q)
   useEffect(() => {
     const timer = setTimeout(() => load(filter, q), q ? 200 : 0)
     return () => { clearTimeout(timer); listRequest.current?.abort() }
@@ -138,49 +145,39 @@ export default function SfaLeadsPage() {
   }
 
   const create = async () => {
-    if (!name.trim() || !mutations.active()) return
-    setBusy(true)
-    try {
-      const res = await fetch('/api/sfa/leads', sfaInit(orgSlug, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, contactName }),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      if (!mutations.active()) return
-      setName(''); setContactName(''); setOpen(false)
-      toast.success('リードを追加しました')
-      load(filter, q)
-    } catch (e: any) { if (mutations.active()) toast.error(e.message) } finally { if (mutations.active()) setBusy(false) }
+    if (!mutations.active() || mutations.creationBlocked('lead')) return
+    if (!name.trim() || name.trim().length > 200 || contactName.length > 80) {
+      setFormError('企業名・氏名は1〜200文字、担当者名は80文字以内で入力してください。'); return
+    }
+    const revision = createDraft.current.revision
+    setFormError('')
+    const row = await mutations.create('lead', 'lead:create', { name, contactName })
+    if (!row || !mutations.active()) return
+    if (createDraft.current.revision === revision) { setName(''); setContactName(''); setOpen(false) }
+    else setFormError('リードを追加しました。送信後に変更した入力は保持しています。同じ内容を重ねて送信しないでください。')
+    toast.success('リードを追加しました')
+    reload.current()
   }
 
   const doImport = async () => {
-    if (!mutations.active()) return
-    try {
-      const rows = parseLeadCsv(csv)
-      setBusy(true)
-      const res = await fetch('/api/sfa/leads/import', sfaInit(orgSlug, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: 'csv', rows }),
-      }))
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      if (!mutations.active()) return
-      toast.success(`${d.imported}件を取り込みました${d.skipped ? `（${d.skipped}件スキップ）` : ''}`)
-      setCsv(''); setImportOpen(false)
-      load(filter, q)
-    } catch (e: any) { if (mutations.active()) toast.error(e.message) } finally { if (mutations.active()) setBusy(false) }
+    if (!mutations.active() || mutations.creationBlocked('import')) return
+    let rows: ReturnType<typeof parseLeadCsv>
+    try { rows = parseLeadCsv(csv) } catch (error) { setFormError(error instanceof Error ? error.message : 'CSVを確認してください。'); return }
+    const revision = importDraft.current.revision
+    setFormError(''); setImportResult('')
+    const result = await mutations.create('import', 'lead-import:create', { source: 'csv', rows })
+    if (!result || !mutations.active() || typeof result !== 'object' || !('id' in result) || typeof result.id !== 'string' || !isSfaClientLeadImport(result, result.id, rows.length)) return
+    setImportResult(`${result.imported}件を取り込みました。${result.skipped}件スキップ${result.skipped ? `（ヘッダを除くデータ位置: ${result.skippedRows.join('、')}。企業名のない行は取り込んでいません）` : ''}。`)
+    if (importDraft.current.revision === revision) { setCsv(''); setImportOpen(false) }
+    else setFormError('送信後に変更したCSVは保持しています。同じ内容を重ねて送信しないでください。')
+    toast.success(`${result.imported}件を取り込みました`)
+    reload.current()
   }
 
   const setStatus = async (lead: Lead, status: LeadStatus) => {
-    if (!mutations.active() || mutations.blocked('conversion:' + lead.id)) return
-    try {
-      const response = await fetch(`/api/sfa/leads/${lead.id}`, sfaInit(orgSlug, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
-      }))
-      if (!response.ok) throw new Error('状態を更新できませんでした')
-      if (mutations.active()) load(filter, q)
-    } catch { if (mutations.active()) { toast.error('状態を更新できませんでした'); load(filter, q) } }
+    if (!mutations.active() || mutations.blocked('conversion:' + lead.id) || mutations.blocked('lead:' + lead.id)) return
+    const row = await mutations.mutateLead(lead, { status })
+    if (mutations.active()) { if (row) toast.success('状態を更新しました'); reload.current() }
   }
 
   const scoreLead = async (lead: Lead) => {
@@ -193,7 +190,7 @@ export default function SfaLeadsPage() {
       const d = await res.json()
       if (!res.ok) throw new Error(d.error)
       if (!mutations.active()) return
-      load(filter, q)
+      reload.current()
       toast.success(`AIスコア ${d.score}点：${d.nextAction || d.reason}`, { duration: 6000 })
     } catch (e: any) { if (mutations.active()) toast.error(e.message) } finally { if (mutations.active()) setScoringId(null) }
   }
@@ -221,15 +218,17 @@ export default function SfaLeadsPage() {
       </div>
 
       <MutationRecovery mutations={mutations} />
+      {formError && <p role="alert" className="mb-3 text-sm text-amber-800">{formError}</p>}
+      {importResult && <p role="status" className="mb-3 text-sm text-green-800">{importResult}</p>}
       {conversion && conversion.identity === mutations.identity && <LeadConversionForm key={conversion.lead.id + mutations.identity} lead={conversion.lead} mutations={mutations} recovered={recoveredConversion?.leadId === conversion.lead.id && recoveredConversion.identity === mutations.identity}
-        onClose={() => { setConversion(null); load(filter, q) }}
-        onConverted={() => { if (mutations.active()) { toast.success('取引先・商談を作成しました'); load(filter, q) } }} />}
+        onClose={() => { setConversion(null); reload.current() }}
+        onConverted={() => { if (mutations.active()) { toast.success('取引先・商談を作成しました'); reload.current() } }} />}
 
       {open && (
         <div className="bg-white rounded-2xl shadow-sm p-5 mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="企業名/氏名（必須）" className="rounded-xl border border-slate-200 px-4 py-3 font-bold" />
-          <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="担当者名" className="rounded-xl border border-slate-200 px-4 py-3 font-bold" />
-          <button onClick={create} disabled={busy} className="sm:col-span-2 px-5 py-2.5 rounded-xl bg-green-600 text-white font-black disabled:opacity-50">{busy ? '追加中…' : '追加する'}</button>
+          <input aria-label="企業名・氏名" value={name} onChange={(e) => setName(e.target.value)} placeholder="企業名/氏名（必須）" className="rounded-xl border border-slate-200 px-4 py-3 font-bold" />
+          <input aria-label="リード担当者名" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="担当者名" className="rounded-xl border border-slate-200 px-4 py-3 font-bold" />
+          <button onClick={create} disabled={!ready || mutations.creationBlocked('lead')} className="sm:col-span-2 px-5 py-2.5 rounded-xl bg-green-600 text-white font-black disabled:opacity-50">{creating ? '追加中…' : '追加する'}</button>
         </div>
       )}
 
@@ -237,8 +236,8 @@ export default function SfaLeadsPage() {
         <div className="bg-white rounded-2xl shadow-sm p-5 mb-4">
           <p className="text-sm font-black text-slate-700 mb-1">CSV取込（ドヤリストの出力形式に対応）</p>
           <p className="text-[11px] font-bold text-slate-400 mb-2">1行目にヘッダ（例: <code>name,corporateNumber,prefecture,url,phone,representative</code>）。日本語ヘッダ（企業名/法人番号/都道府県/URL/電話番号/代表者）も可。</p>
-          <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={6} placeholder={'name,prefecture,url\n株式会社サンプル,東京都,https://example.com'} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-mono text-xs" />
-          <button onClick={doImport} disabled={busy} className="mt-2 px-5 py-2.5 rounded-xl bg-green-600 text-white font-black disabled:opacity-50">{busy ? '取込中…' : '取り込む'}</button>
+          <textarea aria-label="取込CSV" value={csv} onChange={(e) => setCsv(e.target.value)} rows={6} placeholder={'name,prefecture,url\n株式会社サンプル,東京都,https://example.com'} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-mono text-xs" />
+          <button onClick={doImport} disabled={!ready || mutations.creationBlocked('import')} className="mt-2 px-5 py-2.5 rounded-xl bg-green-600 text-white font-black disabled:opacity-50">{importing ? '取込中…' : '取り込む'}</button>
         </div>
       )}
 
@@ -281,13 +280,13 @@ export default function SfaLeadsPage() {
                       <span className="material-symbols-outlined text-[14px]">auto_awesome</span>{scoringId === l.id ? 'AI判定中…' : 'AIスコア'}
                     </button>
                     {l.status !== 'converted' && !l.convertedAccountId ? (
-                      <button onClick={() => convert(l)} disabled={!ready || mutations.creationBlocked('conversion')} className="text-xs font-black text-green-700 hover:underline flex items-center gap-0.5">
+                      <button onClick={() => convert(l)} disabled={!ready || mutations.creationBlocked('conversion') || mutations.blocked('lead:' + l.id)} className="text-xs font-black text-green-700 hover:underline flex items-center gap-0.5">
                         <span className="material-symbols-outlined text-[14px]">swap_horiz</span>取引先に転換
                       </button>
                     ) : (
                       <span className="text-xs font-bold text-slate-400">転換済</span>
                     )}
-                    <select value={l.status} disabled={!ready || mutations.blocked('conversion:' + l.id) || l.status === 'converted' || !!l.convertedAccountId} onChange={(e) => setStatus(l, e.target.value as LeadStatus)} className="ml-auto text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1 bg-slate-50 disabled:opacity-60">
+                    <select value={l.status} disabled={!ready || mutations.blocked('lead:' + l.id) || mutations.blocked('conversion:' + l.id) || l.status === 'converted' || !!l.convertedAccountId} onChange={(e) => setStatus(l, e.target.value as LeadStatus)} className="ml-auto text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1 bg-slate-50 disabled:opacity-60">
                       {STATUS_ORDER.filter((s) => s !== 'converted' || l.status === 'converted').map((s) => <option key={s} value={s}>{LEAD_STATUS_LABEL[s]}</option>)}
                     </select>
                   </div>

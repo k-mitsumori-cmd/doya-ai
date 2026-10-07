@@ -6,91 +6,68 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
-import type { LeadStatus } from '@/lib/sfa/types'
+import { lockSfaMutationActor, SfaMutationError } from '@/lib/sfa/mutation-authority'
+import { leadId, leadInput, lockLead, assertLeadVersion, nextLeadVersion } from '@/lib/sfa/lead-mutation'
+import { dealVersion } from '@/lib/sfa/deal-mutation'
+import { withSfaAdmission } from '@/lib/sfa/limits'
 
 type Ctx = { params: Promise<{ id: string }> }
+const json = (body: unknown, status = 200) => NextResponse.json(bigIntToNumber(body), { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+const fail = (error: unknown) => json({ error: error instanceof SfaMutationError ? error.message : '操作結果を確認できませんでした。一覧をご確認ください。' }, error instanceof SfaMutationError ? error.status : 500)
 
-const LEAD_STATUSES: LeadStatus[] = ['new', 'working', 'nurturing', 'qualified', 'converted', 'disqualified']
-
-async function owned(orgId: string, id: string) {
-  const l = await prisma.sfaLead.findUnique({ where: { id } })
-  return l && l.organizationId === orgId && l.isActive ? l : null
+// Recovery reports current presence only; absence does not identify the actor who deleted it.
+export async function GET(req: NextRequest, ctx: Ctx) {
+  const c = await getSfaContext(orgSlugFrom(req))
+  if (!c) return json({ error: 'ログインが必要です' }, 401)
+  try {
+    const id = leadId((await ctx.params).id)
+    const lead = await prisma.$transaction(async tx => { await lockSfaMutationActor(tx, c); return lockLead(tx, c, id, false) })
+    return json({ state: lead ? 'found' : 'missing', lead })
+  } catch (error) { return fail(error) }
 }
-
-// PATCH /api/sfa/leads/[id] — ステータス/担当/メモ/スコアの更新（ホワイトリスト検証）
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   const c = await getSfaContext(orgSlugFrom(req))
-  if (!c) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
-  const p = await ctx.params
-  const lead = await owned(c.organizationId, p.id)
-  if (!lead) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-
-  const parsedBody = await req.json().catch(() => null)
-  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
-    return NextResponse.json({ error: '更新内容が正しくありません' }, { status: 400 })
-  }
-  const body = parsedBody as Record<string, unknown>
-  const allowed = ['status', 'note', 'contactName', 'email', 'phone', 'score']
-  if (Object.keys(body).length === 0 || Object.keys(body).some((key) => !allowed.includes(key))) {
-    return NextResponse.json({ error: '更新できない項目が含まれています' }, { status: 400 })
-  }
-  const data: any = {}
-  if ('status' in body) {
-    if (typeof body.status !== 'string' || !(LEAD_STATUSES as string[]).includes(body.status)) {
-      return NextResponse.json({ error: '状態が正しくありません' }, { status: 400 })
-    }
-    if (body.status === 'converted' && lead.status !== 'converted') {
-      return NextResponse.json({ error: '転換済への変更は「取引先に転換」から行ってください' }, { status: 400 })
-    }
-    if ((lead.status === 'converted' || lead.convertedAccountId) && body.status !== 'converted') {
-      return NextResponse.json({ error: '転換済のリードは状態を戻せません' }, { status: 409 })
-    }
-    data.status = body.status
-  }
-  for (const [key, limit] of [['note', 2000], ['contactName', 80], ['email', 200], ['phone', 40]] as const) {
-    if (key in body) {
-      if (body[key] !== null && typeof body[key] !== 'string') {
-        return NextResponse.json({ error: '入力項目の形式が正しくありません' }, { status: 400 })
-      }
-      data[key] = typeof body[key] === 'string' ? body[key].slice(0, limit) : null
-    }
-  }
-  if ('score' in body) {
-    if (body.score === null) {
-      data.score = null
-    } else {
-      const score = Number(body.score)
-      if ((typeof body.score !== 'number' && typeof body.score !== 'string') || (typeof body.score === 'string' && !body.score.trim()) || !Number.isFinite(score) || score < 0 || score > 100) {
-        return NextResponse.json({ error: 'スコアは0〜100で入力してください' }, { status: 400 })
-      }
-      data.score = Math.round(score)
-    }
-  }
-
-  // 転換処理と競合しても、通常更新から転換済の状態を巻き戻さない。
-  const changed = await prisma.sfaLead.updateMany({
-    where: {
-      id: lead.id,
-      organizationId: c.organizationId,
-      isActive: true,
-      ...(data.status !== undefined && data.status !== 'converted'
-        ? { status: { not: 'converted' }, convertedAccountId: null }
-        : {}),
-    },
-    data,
-  })
-  if (changed.count !== 1) return NextResponse.json({ error: '状態が変更されました。再読み込みしてください' }, { status: 409 })
-  const updated = await prisma.sfaLead.findUniqueOrThrow({ where: { id: lead.id } })
-  return NextResponse.json({ lead: bigIntToNumber(updated) })
+  if (!c) return json({ error: 'ログインが必要です' }, 401)
+  try {
+    const id = leadId((await ctx.params).id)
+    const { data, expectedUpdatedAt } = leadInput(await req.json().catch(() => null))
+    const result = await withSfaAdmission(c.organizationId, {}, async tx => {
+      await lockSfaMutationActor(tx, c)
+      const lead = await lockLead(tx, c, id)
+      if (!lead) throw new SfaMutationError(404, 'リードが見つかりません。')
+      assertLeadVersion(expectedUpdatedAt, lead.updatedAt)
+      if (data.status === 'converted' && lead.status !== 'converted') throw new SfaMutationError(400, '転換済への変更は「取引先に転換」から行ってください。')
+      if (data.status !== undefined && data.status !== 'converted' && (lead.status === 'converted' || lead.convertedAccountId)) throw new SfaMutationError(409, '転換済のリードは状態を戻せません。')
+      const changed = await tx.sfaLead.updateMany({
+        where: { id, organizationId: c.organizationId, isActive: true,
+          ...(data.status !== undefined && data.status !== 'converted' ? { status: { not: 'converted' }, convertedAccountId: null } : {}),
+          ...(expectedUpdatedAt ? { updatedAt: expectedUpdatedAt } : {}),
+        }, data: { ...data, updatedAt: nextLeadVersion(lead.updatedAt) },
+      })
+      if (changed.count !== 1) throw new SfaMutationError(409, 'リードの状態が変わっています。一覧を確認してください。')
+      return tx.sfaLead.findFirstOrThrow({ where: { id, organizationId: c.organizationId, isActive: true } })
+    })
+    if (result.limit) throw new Error('Unexpected lead admission limit')
+    return json({ lead: result.created })
+  } catch (error) { return fail(error) }
 }
-
-// DELETE /api/sfa/leads/[id] — 論理削除（除外とは別。一覧から消す）
 export async function DELETE(req: NextRequest, ctx: Ctx) {
   const c = await getSfaContext(orgSlugFrom(req))
-  if (!c) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
-  const p = await ctx.params
-  const lead = await owned(c.organizationId, p.id)
-  if (!lead) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-  await prisma.sfaLead.update({ where: { id: lead.id }, data: { isActive: false } })
-  return NextResponse.json({ ok: true })
+  if (!c) return json({ error: 'ログインが必要です' }, 401)
+  try {
+    const id = leadId((await ctx.params).id)
+    const versions = new URL(req.url).searchParams.getAll('expectedUpdatedAt')
+    if (versions.length !== 1) throw new SfaMutationError(400, '更新日時を確認できません。画面を再読み込みしてから操作してください。')
+    const expected = dealVersion(versions.length ? versions[0] : undefined)
+    const result = await withSfaAdmission(c.organizationId, {}, async tx => {
+      await lockSfaMutationActor(tx, c)
+      const lead = await lockLead(tx, c, id)
+      if (!lead) throw new SfaMutationError(404, 'リードが見つかりません。')
+      assertLeadVersion(expected, lead.updatedAt)
+      await tx.sfaLead.update({ where: { id }, data: { isActive: false, updatedAt: nextLeadVersion(lead.updatedAt) } })
+      return { ok: true }
+    })
+    if (result.limit) throw new Error('Unexpected lead admission limit')
+    return json(result.created)
+  } catch (error) { return fail(error) }
 }

@@ -1,0 +1,73 @@
+{
+  "checkedAt": "2026-10-07T04:35:01.266859+00:00",
+  "status": "full-frozen-gates-passed-commit-push-pending",
+  "baseCommit": "33737e13b3c9e967cc4ade37ae42b22fb6095426",
+  "baseline": "sfa-lead-crud-lifecycle-baseline.json",
+  "apiEvidence": "sfa-lead-crud-results.json",
+  "apiCases": 22,
+  "changes": [
+    "Fresh actor authority and locked owned active row for manual create/PATCH/DELETE and all operation recovery.",
+    "Canonical version checks and monotonic updatedAt prevent stale edits/deletes; conversion status invariant retained.",
+    "Manual lead receipt replay and cancellation never duplicate, delete or resurrect a business row.",
+    "Strict nontruncating input checks for edit/import; CSV overlong or malformed optional fields reject the whole import before any writes and identify data position.",
+    "Import creates rows, scoped result marker and receipt in one transaction; exact batch recovery verifies original active owned row IDs.",
+    "All handled errors and mutation/recovery responses private no-store/Vary Cookie.",
+    "Shared durable manual-create and import operation IDs, bounded validated responses and recovery fencing across remounts.",
+    "Newer manual and CSV drafts preserved including A-B-A edits; skipped CSV data positions visible.",
+    "Status PATCH sends required reviewed version, synchronous row lane; list reload uses latest filters."
+  ],
+  "checks": [
+    "22 actual route/helper tests with synthetic rollback.",
+    "14 StrictMode mounted client tests with synthetic network/auth/router/DOM.",
+    "10 isolated real PostgreSQL scheduling, revocation, stale-write, cancellation and rollback tests; probe0/stop0.",
+    "Shared 49 client lifecycle, 13 deal and 18 conversion mounted regressions passed.",
+    "TypeScript and changed source ESLint exit0.",
+    "5 additional StrictMode edge cases passed: late old-org import, unknown status recovery, unchanged version rejection, latest filter reload, known CSV input rejection."
+  ],
+  "remaining": [
+    "Commit/push allowlisted verified sources.",
+    "Exact SHA CI/deployment/publication checks after push.",
+    "Authenticated real-browser end-to-end remains unverified.",
+    "Continue remaining all17/2074 criteria; SFA edit-role policy pending."
+  ],
+  "limitations": [
+    "This CRUD cohort is local, not deployed.",
+    "Mounted DOM tests do not prove real-browser behavior.",
+    "PostgreSQL fixture is isolated minimal schema, not customer production schema.",
+    "AI score/native provider client path remains a separate unverified cohort; no paid API called.",
+    "Existing ACTIVE-member policy preserved pending user decision.",
+    "All17 services/2074 criteria remain incomplete."
+  ],
+  "mountedCases": 14,
+  "postgresCases": 10,
+  "mountedEvidence": "sfa-lead-crud-client-results.json",
+  "postgresEvidence": "sfa-lead-crud-postgres-results.json",
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/sfa-lead-crud-release-11ebb0a3-c31e-454c-a895-c03a9ea00f66",
+  "failedGate": {
+    "folder": "sfa-lead-crud-release-7a52cef1-d63b-4c12-b786-31b9c8e322c6",
+    "reason": "Legacy input preservation fixture did not load new lead mutation dependencies. Source snapshot unchanged. Required dependencies and actor identity added; all boundary assertions retained and targeted test passed before new full gate."
+  },
+  "mountedEdgeCases": 5,
+  "mountedEdgeEvidence": "sfa-lead-crud-client-edges-results.json",
+  "fullGate": {
+    "startedAt": "2026-10-07T04:28:54.308301+00:00",
+    "pid": 94955,
+    "head": "33737e13b3c9e967cc4ade37ae42b22fb6095426",
+    "sourceFiles": 2685,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-07T04:34:39.330179+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-07T04:34:41.521650+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-07T04:34:41.984059+00:00"
+  }
+}

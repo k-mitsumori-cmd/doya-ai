@@ -1319,7 +1319,7 @@ if (doyalistSearchConsistency.error || doyalistSearchConsistency.status !== 0) {
   console.error('Security regression failed: verify-doyalist-search-consistency.cjs'); process.exit(1);
 }
 
-for (const verifier of ['verify-sfa-deal-mutations.cjs', 'verify-sfa-deal-client.cjs', 'verify-sfa-admission-retry.cjs', 'verify-sfa-lead-conversion.cjs', 'verify-sfa-lead-conversion-client.cjs']) {
+for (const verifier of ['verify-sfa-deal-mutations.cjs', 'verify-sfa-deal-client.cjs', 'verify-sfa-admission-retry.cjs', 'verify-sfa-lead-conversion.cjs', 'verify-sfa-lead-conversion-client.cjs', 'verify-sfa-lead-crud.cjs', 'verify-sfa-lead-crud-client.cjs']) {
   const result = spawnSync(process.execPath, [path.join(__dirname, verifier)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Security regression failed:', verifier); process.exit(1); }
 }

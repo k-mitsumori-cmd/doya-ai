@@ -31,7 +31,7 @@ async function fixture(page, options = {}) {
       if (pathname.endsWith('/next-action')) return Response.json({ nextAction: 'Synthetic next action', reason: '', risk: '', tasks: [{ title: 'First candidate', dueDate: null }, { title: 'Second candidate', dueDate: null }] });
       if (init.method === 'DELETE' && url.searchParams.has('operationId')) {
         recoveries++; const saved = receipts.get(url.searchParams.get('operationId'));
-        return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'cancelled', [pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
+        return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'cancelled', [pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
       }
       if (pathname.endsWith('/convert') && init.method === 'POST') {
         const leadId = pathname.split('/').at(-2), body = request.body;
@@ -40,6 +40,22 @@ async function fixture(page, options = {}) {
         receipts.set(body.operationId, { kind: 'conversion', row });
         const lead = leads.find(l => l.id === leadId); if (lead) { lead.status = 'converted'; lead.convertedAccountId = account.id; }
         return Response.json({ ok: true, ...row });
+      }
+      if (pathname === '/api/sfa/leads/import' && init.method === 'POST') {
+        const rows = request.body.rows, skippedRows = rows.flatMap((r, i) => r.name?.trim() ? [] : [i + 1]);
+        const row = { id: request.body.operationId, imported: rows.length - skippedRows.length, skipped: skippedRows.length, skippedRows };
+        receipts.set(row.id, { kind: 'import', row });
+        return Response.json({ ok: true, ...row });
+      }
+      if (pathname === '/api/sfa/leads' && init.method === 'POST') {
+        const row = makeLead({ ...request.body, id: 'lead-' + writes.length, name: request.body.name.trim(), contactName: request.body.contactName || null });
+        receipts.set(request.body.operationId, { kind: 'lead', row }); leads.push(row);
+        return Response.json({ lead: row });
+      }
+      if (init.method === 'PATCH' && pathname.startsWith('/api/sfa/leads/')) {
+        const original = leads.find(l => pathname.endsWith('/' + l.id));
+        const row = { ...original, ...request.body, updatedAt: '2026-10-07T00:00:00.001Z' };
+        leads.splice(leads.indexOf(original), 1, row); return Response.json({ lead: row });
       }
       if (init.method === 'PATCH' && pathname.startsWith('/api/sfa/deals/')) {
         const original = deals.find(d => pathname.endsWith('/' + d.id));
@@ -55,7 +71,7 @@ async function fixture(page, options = {}) {
         return Response.json({ task: { ...original, ...request.body, updatedAt: '2026-10-07T00:00:00.001Z' } });
       }
       if (init.method === 'DELETE') return Response.json({ ok: true });
-      const kind = pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity';
+      const kind = pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity';
       const row = kind === 'task' ? taskData(request.body) : kind === 'deal' ? { ...makeDeal('deal-' + writes.length), name: request.body.name.trim(), amount: Number(request.body.amount), accountId: request.body.accountId || null, startDate: request.body.startDate ? new Date(request.body.startDate).toISOString() : stamp } : activityData(request.body);
       if (kind === 'deal') deals.push(row);
       receipts.set(request.body.operationId, { kind, row });
@@ -64,10 +80,11 @@ async function fixture(page, options = {}) {
     if (readReply) { const result = await readReply(request); if (result) return result; }
     if (url.searchParams.has('operationId')) {
       const saved = receipts.get(url.searchParams.get('operationId'));
-      return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'missing', [pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
+      return Response.json(saved ? { state: 'found', [saved.kind]: saved.row } : { state: 'missing', [pathname.endsWith('/convert') ? 'conversion' : pathname.endsWith('/leads/import') ? 'import' : pathname.endsWith('/leads') ? 'lead' : pathname.endsWith('/tasks') ? 'task' : pathname.endsWith('/deals') ? 'deal' : 'activity']: null });
     }
     if (pathname.startsWith('/api/sfa/deals/')) { const row = deals.find(d => pathname.endsWith('/' + d.id)); return Response.json({ state: row ? 'found' : 'missing', deal: row || null }); }
     if (pathname.startsWith('/api/sfa/tasks/')) return Response.json({ state: 'found', task: tasks.find(t => pathname.endsWith('/' + t.id)) || null });
+    if (pathname.startsWith('/api/sfa/leads/')) { const row = leads.find(l => pathname.endsWith('/' + l.id)); return Response.json({ state: row ? 'found' : 'missing', lead: row || null }); }
     if (pathname === '/api/sfa/leads') return Response.json({ leads, totalCount: leads.length, nextCursor: null });
     if (pathname === '/api/sfa/summary') return Response.json({ summary: { totalCount: 2, openCount: 2, staleCount: 0, openTaskCount: 0, openTotal: '200', weighted: '100', wonTotal: '0' } });
     if (pathname === '/api/sfa/deals') return Response.json({ stages: [stage], deals, nextCursor: null, totalCount: 2, stageSummary: [{ stageId: 'stage', count: 2, total: '200' }] });

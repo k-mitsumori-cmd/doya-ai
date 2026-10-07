@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-07T04:31:21.410Z",
+  "passed": 5,
+  "cases": [
+    "Old organization import result cannot clear current CSV or announce",
+    "Unknown status PATCH remains fenced until current row GET confirms",
+    "Unchanged status response is not treated as successful versioned write",
+    "Late creation reload uses latest selected filter",
+    "Known CSV validation rejection retains full input without unknown receipt"
+  ],
+  "sourceHashes": {
+    "src/app/sfa/[orgSlug]/leads/page.tsx": "d082dc593225d9d131d1ba08cae6d56526574e4b839b7e0f63a597b9115fb99f",
+    "src/lib/sfa/use-client-mutations.ts": "1f012ad2742ba1936627bf06b092a41636cad5df23a78f4a4eeb478501c8a1fb",
+    "src/lib/sfa/client-response.ts": "20becc7fa936eda6f8d385e08587fa91a0fb977a889272cae835ab58701a7732"
+  },
+  "scope": "Actual page/hook/transport/guard in StrictMode synthetic DOM/auth/router/network; no customer data or provider calls."
+}

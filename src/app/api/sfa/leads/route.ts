@@ -7,6 +7,10 @@ import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
+import { leadInput } from '@/lib/sfa/lead-mutation'
+import { createSfaOnce, recoverSfaCreation, cancelSfaCreation, sfaOperationId } from '@/lib/sfa/creation-receipt'
+import { lockSfaMutationActor, SfaMutationError } from '@/lib/sfa/mutation-authority'
+import { withSfaAdmission } from '@/lib/sfa/limits'
 import type { LeadStatus } from '@/lib/sfa/types'
 
 const json = (body: unknown, init: ResponseInit = {}) => {
@@ -16,7 +20,6 @@ const json = (body: unknown, init: ResponseInit = {}) => {
 }
 
 const LEAD_STATUSES: LeadStatus[] = ['new', 'working', 'nurturing', 'qualified', 'converted', 'disqualified']
-const LEAD_SOURCES = ['doyalist', 'csv', 'manual']
 
 // GET /api/sfa/leads — リード一覧（status/q フィルタ）
 export async function GET(req: NextRequest) {
@@ -24,6 +27,7 @@ export async function GET(req: NextRequest) {
   if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
   const url = new URL(req.url)
+  if (url.searchParams.has('operationId')) return recoverLead(req, ctx, false)
   const status = url.searchParams.get('status')?.trim() || ''
   const q = url.searchParams.get('q')?.trim() || ''
   const rawCursor = url.searchParams.get('cursor') || ''
@@ -84,54 +88,43 @@ export async function GET(req: NextRequest) {
   }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
-// POST /api/sfa/leads — リード手動作成
+// POST /api/sfa/leads — authority, business row and durable receipt commit together.
 export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
-
-  const parsedBody = await req.json().catch(() => null)
-  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
-    return json({ error: '入力内容が正しくありません' }, { status: 400 })
-  }
-  const body = parsedBody as Record<string, unknown>
-  const textLimits: Array<[string, string, number]> = [
-    ['name', '企業名・氏名', 200],
-    ['corporateNumber', '法人番号', 20],
-    ['contactName', '担当者名', 80],
-    ['email', 'メールアドレス', 200],
-    ['phone', '電話番号', 40],
-    ['note', 'メモ', 2000],
-  ]
-  for (const [key, label, maximum] of textLimits) {
-    const value = body[key]
-    if (typeof value === 'string' && (key === 'name' ? value.trim() : value).length > maximum) {
-      return json({ error: `${label}は${maximum}文字以内で入力してください` }, { status: 400 })
-    }
-  }
-  const name = typeof body.name === 'string' ? body.name.trim() : ''
-  if (!name) return json({ error: '企業名/氏名は必須です' }, { status: 400 })
-  if (['corporateNumber', 'contactName', 'email', 'phone', 'note'].some((key) => body[key] != null && typeof body[key] !== 'string')) {
-    return json({ error: '入力項目の形式が正しくありません' }, { status: 400 })
-  }
-  if (body.source != null && (typeof body.source !== 'string' || !LEAD_SOURCES.includes(body.source))) {
-    return json({ error: '流入元が正しくありません' }, { status: 400 })
-  }
-
-  const source = typeof body.source === 'string' ? body.source : 'manual'
-
-  const lead = await prisma.sfaLead.create({
-    data: {
-      organizationId: ctx.organizationId,
-      name,
-      corporateNumber: (body.corporateNumber as string | undefined) || null,
-      contactName: (body.contactName as string | undefined) || null,
-      email: (body.email as string | undefined) || null,
-      phone: (body.phone as string | undefined) || null,
-      note: (body.note as string | undefined) || null,
-      source,
-      status: 'new',
-      assigneeMemberId: ctx.memberId,
-    },
-  })
-  return json({ lead: bigIntToNumber(lead) })
+  try {
+    const { body, data } = leadInput(await req.json().catch(() => null), true)
+    const operationId = sfaOperationId(body.operationId)
+    const result = await withSfaAdmission(ctx.organizationId, {}, async tx => {
+      await lockSfaMutationActor(tx, ctx)
+      return createSfaOnce(tx, ctx, 'lead', operationId, data,
+        id => tx.sfaLead.findFirst({ where: { id, organizationId: ctx.organizationId, isActive: true } }),
+        () => tx.sfaLead.create({ data: { ...data, name: data.name!, organizationId: ctx.organizationId, assigneeMemberId: ctx.memberId, status: 'new' } }),
+        { retrySerializableRace: true })
+    })
+    if (result.limit) throw new Error('Unexpected lead admission limit')
+    return json({ lead: bigIntToNumber(result.created) })
+  } catch (error) { return leadError(error) }
+}
+function leadError(error: unknown) {
+  return json({ error: error instanceof SfaMutationError ? error.message : '保存結果を確認できませんでした。一覧をご確認ください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
+}
+async function recoverLead(req: NextRequest, ctx: NonNullable<Awaited<ReturnType<typeof getSfaContext>>>, cancel: boolean) {
+  try {
+    const operations = new URL(req.url).searchParams.getAll('operationId')
+    if (operations.length !== 1) throw new SfaMutationError(400, '操作情報を指定してください。')
+    const operationId = sfaOperationId(operations[0])!
+    const result = await prisma.$transaction(async tx => {
+      await lockSfaMutationActor(tx, ctx)
+      const find = (id: string) => tx.sfaLead.findFirst({ where: { id, organizationId: ctx.organizationId, isActive: true } })
+      return cancel ? cancelSfaCreation(tx, ctx, 'lead', operationId, find) : recoverSfaCreation(tx, ctx, 'lead', operationId, find)
+    })
+    return json(bigIntToNumber({ state: result.state, lead: result.row }))
+  } catch (error) { return leadError(error) }
+}
+// Only fences an uncommitted creation. Never deletes a business lead.
+export async function DELETE(req: NextRequest) {
+  const ctx = await getSfaContext(orgSlugFrom(req))
+  if (!ctx) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  return recoverLead(req, ctx, true)
 }

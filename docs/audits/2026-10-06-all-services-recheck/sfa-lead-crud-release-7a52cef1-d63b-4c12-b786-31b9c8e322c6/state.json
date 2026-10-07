@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-10-07T04:27:07.833710+00:00",
+  "pid": 94292,
+  "head": "33737e13b3c9e967cc4ade37ae42b22fb6095426",
+  "sourceFiles": 2685,
+  "status": "failed",
+  "gates": [
+    {
+      "name": "build",
+      "exitCode": 1,
+      "endedAt": "2026-10-07T04:28:20.739512+00:00"
+    }
+  ],
+  "changedSources": [],
+  "endedAt": "2026-10-07T04:28:21.185152+00:00"
+}
