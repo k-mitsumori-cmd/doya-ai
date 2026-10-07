@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       const operationId = sfaOperationId(rawOperationId)!
       const recovery = await prisma.$transaction(async tx => {
         await lockSfaMutationActor(tx, ctx)
-        return recoverSfaCreation(tx, ctx, 'task', operationId, id => tx.sfaTask.findFirst({ where: { id, organizationId: ctx.organizationId }, select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true } }))
+        return recoverSfaCreation(tx, ctx, 'task', operationId, id => tx.sfaTask.findFirst({ where: { id, organizationId: ctx.organizationId }, select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true } }))
       })
       return json({ state: recovery.state, task: recovery.row })
     } catch (error) {
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     orderBy: [{ status: 'desc' }, { dueDate: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }],
     skip: (page - 1) * pageSize,
     take: pageSize + 1,
-    select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true },
+    select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true },
   })
   const tasks = rows.slice(0, pageSize)
 
@@ -100,11 +100,11 @@ export async function POST(req: NextRequest) {
       await lockSfaMutationActor(tx, ctx)
       return createSfaOnce(tx, ctx, 'task', operationId,
         { title, dueDate: dueDate?.toISOString() || null, dealId: requestedDealId },
-        id => tx.sfaTask.findFirst({ where: { id, organizationId: ctx.organizationId }, select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true } }), async () => {
+        id => tx.sfaTask.findFirst({ where: { id, organizationId: ctx.organizationId }, select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true } }), async () => {
         const dealId = requestedDealId ? await lockSfaRelation(tx, ctx, 'sfaDeal', requestedDealId) : null
         return tx.sfaTask.create({
           data: { organizationId: ctx.organizationId, title, dueDate, dealId, assigneeMemberId: ctx.memberId },
-          select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true },
+          select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true },
         })
       })
     })

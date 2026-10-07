@@ -4,6 +4,7 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { lockSfaMutationActor, SfaMutationError } from '@/lib/sfa/mutation-authority'
 
@@ -12,6 +13,37 @@ const json = (body: unknown, options: { status?: number; headers?: Record<string
 
 type Ctx = { params: Promise<{ id: string }> }
 
+const taskSelect = { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true } as const
+function expectedVersion(value: unknown): Date | undefined {
+  if (value === undefined) return undefined
+  const date = typeof value === 'string' && value.length === 24 ? new Date(value) : null
+  if (!date || !Number.isFinite(date.getTime()) || date.toISOString() !== value) throw new SfaMutationError(400, '更新日時を確認できません。一覧を再読み込みしてください。')
+  return date
+}
+function assertVersion(expected: Date | undefined, actual: Date) {
+  if (expected && expected.getTime() !== actual.getTime()) throw new SfaMutationError(409, 'タスクが別の操作で変更されました。一覧を確認してから操作してください。')
+}
+
+// Read-only recovery for uncertain updates/deletion. A missing or foreign task
+// is never evidence of this actor's deletion; the client must label it as absent.
+export async function GET(req: NextRequest, ctx: Ctx) {
+  const c = await getSfaContext(orgSlugFrom(req))
+  if (!c) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  const { id } = await ctx.params
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) return json({ error: 'タスクの指定が正しくありません' }, { status: 400 })
+  try {
+    const task = await prisma.$transaction(async tx => {
+      await lockSfaMutationActor(tx, c)
+      const locked = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_tasks WHERE id = ${id} AND "organizationId" = ${c.organizationId} FOR SHARE`
+      if (!locked.some(row => row.id === id)) return null
+      return tx.sfaTask.findFirst({ where: { id, organizationId: c.organizationId }, select: taskSelect })
+    })
+    return json({ state: task ? 'found' : 'missing', task })
+  } catch (error) {
+    return json({ error: error instanceof SfaMutationError ? error.message : '保存状態を確認できませんでした。再度読み込んでください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
+  }
+}
+
 // PATCH /api/sfa/tasks/[id] — 完了/未完了トグル + 期日/タイトル編集
 // 旧画面との互換: 空のJSONオブジェクトのみ完了トグル。status指定は明示値へ更新。
 // dueDate / title を渡したときはそのフィールドだけ更新し、status は明示時のみ変更する。
@@ -19,15 +51,23 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const c = await getSfaContext(orgSlugFrom(req))
   if (!c) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   const p = await ctx.params
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(p.id)) return json({ error: 'タスクの指定が正しくありません' }, { status: 400 })
 
   const body = await req.json().catch(() => null)
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return json({ error: '更新内容が不正です' }, { status: 400 })
   }
-  if (Object.keys(body).some((key) => !['title', 'dueDate', 'status'].includes(key))) {
+  if (Object.keys(body).some((key) => !['title', 'dueDate', 'status', 'expectedUpdatedAt'].includes(key))) {
     return json({ error: '更新できない項目が含まれています' }, { status: 400 })
   }
-  const data: any = {}
+  let expected: Date | undefined
+  try { expected = expectedVersion(body.expectedUpdatedAt) } catch (error) {
+    return json({ error: error instanceof SfaMutationError ? error.message : '更新日時が正しくありません' }, { status: 400 })
+  }
+  if ('expectedUpdatedAt' in body && !['title', 'dueDate', 'status'].some(key => key in body)) {
+    return json({ error: '更新する内容を指定してください' }, { status: 400 })
+  }
+  const data: Prisma.SfaTaskUncheckedUpdateInput = {}
   if ('title' in body) {
     if (typeof body.title !== 'string' || !body.title.trim() || body.title.trim().length > 200) {
       return json({ error: 'タイトルは1〜200文字で入力してください' }, { status: 400 })
@@ -59,6 +99,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (!locked.some(row => row.id === p.id)) throw new SfaMutationError(404, 'タスクが見つかりません')
       const task = await tx.sfaTask.findUnique({ where: { id: p.id } })
       if (!task || task.organizationId !== c.organizationId) throw new SfaMutationError(404, 'タスクが見つかりません')
+      assertVersion(expected, task.updatedAt)
       // 旧画面の空JSONだけはトグル互換を維持。不正入力をトグルへ読み替えない。
       if ('status' in body || Object.keys(body).length === 0) {
         const nextStatus = body.status ?? (task.status === 'done' ? 'open' : 'done')
@@ -68,16 +109,18 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         }
       }
 
+      // Even changes in the same millisecond get a distinct version.
+      data.updatedAt = new Date(Math.max(Date.now(), task.updatedAt.getTime() + 1))
       const updated = await tx.sfaTask.update({
         where: { id: task.id },
         data,
-        select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true },
+        select: taskSelect,
       })
       return updated
     })
     return json({ task: updated })
   } catch (error) {
-    return json({ error: error instanceof SfaMutationError ? error.message : '更新結果を確認できませんでした。一覧をご確認ください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
+    return json({ error: error instanceof SfaMutationError ? error.message : '更新結果を確認できませんでした。一覧をご確認ください。', ...(error instanceof SfaMutationError && error.status === 409 ? { code: 'VERSION_CONFLICT' } : {}) }, { status: error instanceof SfaMutationError ? error.status : 500 })
   }
 }
 
@@ -86,18 +129,23 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   const c = await getSfaContext(orgSlugFrom(req))
   if (!c) return json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   const p = await ctx.params
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(p.id)) return json({ error: 'タスクの指定が正しくありません' }, { status: 400 })
 
   try {
+    const versions = req.nextUrl.searchParams.getAll('expectedUpdatedAt')
+    if (versions.length > 1) throw new SfaMutationError(400, '更新日時が重複しています。一覧を再読み込みしてください。')
+    const expected = expectedVersion(versions[0])
     await prisma.$transaction(async tx => {
       await lockSfaMutationActor(tx, c)
       const locked = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM sfa_tasks WHERE id = ${p.id} AND "organizationId" = ${c.organizationId} FOR UPDATE`
       if (!locked.some(row => row.id === p.id)) throw new SfaMutationError(404, 'タスクが見つかりません')
       const task = await tx.sfaTask.findUnique({ where: { id: p.id } })
       if (!task || task.organizationId !== c.organizationId) throw new SfaMutationError(404, 'タスクが見つかりません')
+      assertVersion(expected, task.updatedAt)
       await tx.sfaTask.delete({ where: { id: task.id } })
     })
     return json({ ok: true })
   } catch (error) {
-    return json({ error: error instanceof SfaMutationError ? error.message : '削除結果を確認できませんでした。一覧をご確認ください。' }, { status: error instanceof SfaMutationError ? error.status : 500 })
+    return json({ error: error instanceof SfaMutationError ? error.message : '削除結果を確認できませんでした。一覧をご確認ください。', ...(error instanceof SfaMutationError && error.status === 409 ? { code: 'VERSION_CONFLICT' } : {}) }, { status: error instanceof SfaMutationError ? error.status : 500 })
   }
 }

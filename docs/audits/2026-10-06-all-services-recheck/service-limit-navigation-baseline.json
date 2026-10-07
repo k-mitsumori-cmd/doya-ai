@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T01:25:56.533Z",
+  "confirmedCases": 3,
+  "results": [
+    {
+      "case": "shown-before-navigation",
+      "oldOrgQuotaVisibleAfterNavigation": true,
+      "currentPath": "/sfa/beta/deals",
+      "action": "/sfa/pricing?org=beta"
+    },
+    {
+      "case": "late-old-organization",
+      "oldOrgQuotaVisibleAfterNavigation": true,
+      "currentPath": "/sfa/beta/deals",
+      "action": "/sfa/pricing?org=beta"
+    },
+    {
+      "case": "late-round-trip",
+      "oldOrgQuotaVisibleAfterNavigation": true,
+      "currentPath": "/sfa/alpha/deals",
+      "action": "/sfa/pricing?org=alpha"
+    }
+  ],
+  "sourceHash": "f6d5f9978cbfdf6faadf8a2207de3e7c0830fb352aa83ae98a619fc037e0c9e6",
+  "scope": "Actual global provider/classifier/fetch observer in StrictMode with synthetic session/quota and history navigation + explicit render. Confirms stale quota and wrong-org CTA across same-account navigation. Actual Next router transitions and private production behavior unproven."
+}

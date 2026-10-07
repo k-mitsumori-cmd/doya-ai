@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-07T01:24:10.396983+00:00",
+  "passed": true,
+  "results": [
+    {
+      "route": "tasks",
+      "status": 401,
+      "hasError": true,
+      "cacheControl": "private, no-store",
+      "varyCookie": true
+    },
+    {
+      "route": "activities",
+      "status": 401,
+      "hasError": true,
+      "cacheControl": "private, no-store",
+      "varyCookie": true
+    }
+  ],
+  "scope": "Two anonymous read-only SFA list GETs. 401 and private no-store Cookie verified. Does not prove authenticated actions, data persistence, production races, deployment identity or client lifecycle."
+}

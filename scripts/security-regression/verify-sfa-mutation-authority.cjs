@@ -12,7 +12,7 @@ const definitions = {
 function fixture(options = {}) {
   const state = {
     actor: { id: 'member', userId: 'user', organizationId: 'org', status: 'ACTIVE', role: 'member', ...options.actor },
-    task: { id: 'task', title: '元の作業', organizationId: options.foreignTask ? 'foreign' : 'org', status: 'open', dueDate: null, completedAt: null },
+    task: { id: 'task', title: '元の作業', organizationId: options.foreignTask ? 'foreign' : 'org', status: 'open', dueDate: null, completedAt: null, updatedAt: new Date('2026-10-01T00:00:00.000Z') },
     relation: { id: 'related', organizationId: 'org', isActive: true, ...options.relation },
     createdTasks: [], activities: [], updates: 0, deletes: 0, queries: [], membershipReads: 0, transactions: 0,
   };
@@ -65,7 +65,7 @@ function fixture(options = {}) {
   const routes = Object.fromEntries(Object.entries(definitions).map(([name, [file]]) => [name, load(file, mocks)]));
   return { state, invoke: (name, body) => {
     const [, method, defaults] = definitions[name];
-    return routes[name][method]({ json: async () => body || defaults }, { params: Promise.resolve({ id: 'task' }) }).then(response => {
+    return routes[name][method]({ json: async () => body || defaults, nextUrl: new URL('https://example.test/api') }, { params: Promise.resolve({ id: 'task' }) }).then(response => {
       assert.equal(response.headers.get('cache-control'), 'private, no-store');
       assert.equal(response.headers.get('vary'), 'Cookie'); return response;
     });
