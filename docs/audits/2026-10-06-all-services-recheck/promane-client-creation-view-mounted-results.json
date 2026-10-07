@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-07T21:19:35.755Z",
+  "expected": 3,
+  "passed": 3,
+  "cases": [
+    {
+      "finding": "same-frame double submit now sends one operation",
+      "requests": 1,
+      "successToasts": 1,
+      "refreshes": 1
+    },
+    {
+      "finding": "malformed HTTP200 acknowledgement retains durable unknown fence",
+      "responseBody": {},
+      "successToasts": 0,
+      "refreshes": 0
+    },
+    {
+      "finding": "account change closes old draft and prevents old private input visibility",
+      "requests": 0
+    }
+  ],
+  "sourceHashes": {
+    "src/components/promane/client-actions.tsx": "92cd09fa940fa78b6607f67e9e1a8859041dc28afbbe01701df9a7f798defc30",
+    "src/lib/promane/use-client-creation.ts": "161ce1a259ce020357773641edf3a6a6b07242a578f2619cc88352eb808b1d29",
+    "src/lib/promane/client-input.ts": "d114edd0fdc3bf16b7a4aa416b7e1cf38bb85d957bba6c4a96a49f0dbcb926f4"
+  },
+  "scope": "Actual mounted ClientActions and input parser in React StrictMode/real FormData; deferred synthetic fetch responses. Actual candidate hook and ClientActions with stateful dialog shell prevent same-frame duplication, reject empty acknowledgements, and close old-account draft. Synthetic HTTP/session, not real Next/database-linked UI or production/customer impact."
+}

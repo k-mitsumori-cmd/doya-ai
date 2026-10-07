@@ -193,6 +193,14 @@ jobs:
           node docs/audits/2026-10-06-all-services-recheck/verify-promane-time-note-boundary-mounted.cjs
           node docs/audits/2026-10-06-all-services-recheck/verify-promane-time-note-boundary-client.cjs
 
+      - name: Promane client creation and input consistency (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-client-creation-postgres-supervise.py
+
+      - name: Promane client recovery and context drafts (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-client-creation-client-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-promane-client-creation-view-mounted.cjs
+
       - name: Promane expense creation API and server action receipts (private Unix socket)
         run: python3 docs/audits/2026-10-06-all-services-recheck/promane-expense-creation-postgres-supervise.py
 

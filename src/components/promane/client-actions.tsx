@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/promane/ui/button";
 import { Input } from "@/components/promane/ui/input";
@@ -11,6 +11,11 @@ import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useConfirm } from "@/components/promane/confirm-dialog";
+
+import { useClientCreation } from '@/lib/promane/use-client-creation';
+import { parsePromaneClientCreate } from '@/lib/promane/client-input';
+
+const emptyClientDraft = () => ({ name: '', contactName: '', email: '', phone: '' });
 
 type ClientItem = {
   id: string;
@@ -26,48 +31,37 @@ type ClientItem = {
 export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: string; clients: ClientItem[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [draft, setDraft] = useState(emptyClientDraft);
+  const creation = useClientCreation(workspaceSlug);
+  const loading = creation.status === 'saving' || creation.status === 'checking';
+  const submission = useRef(false);
+  const inputId = useId();
+  useEffect(() => { setOpen(false); setDraft(emptyClientDraft()); submission.current = false; }, [creation.scopeKey]);
   const { confirm, ConfirmDialog } = useConfirm();
+
+  function rememberDraft(form: HTMLFormElement) {
+    const data = new FormData(form);
+    const next = { name: String(data.get('name') || ''), contactName: String(data.get('contactName') || ''),
+      email: String(data.get('email') || ''), phone: String(data.get('phone') || '') };
+    setDraft(next);
+    return next;
+  }
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
-    const form = new FormData(e.currentTarget);
-    const name = (form.get("name") as string)?.trim();
-    if (!name) {
-      toast.error("会社名は必須です");
-      setLoading(false);
-      return;
-    }
+    if (submission.current || creation.status !== 'ready') return;
+    submission.current = true;
+    const inputDraft = rememberDraft(e.currentTarget);
     try {
-      // Server Action → API ルートに変更（Server Components render エラー回避）
-      const res = await fetch("/api/promane/clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceSlug,
-          name,
-          contactName: (form.get("contactName") as string) || undefined,
-          email: (form.get("email") as string) || undefined,
-          phone: (form.get("phone") as string) || undefined,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg = data?.error || `追加に失敗しました（HTTP ${res.status}）`;
-        toast.error(msg, { duration: 6000 });
-        console.error("[promane/client] create failed", res.status, data);
-        return;
-      }
-      toast.success("顧客を追加しました！", { duration: 3000 });
+      const input = parsePromaneClientCreate(inputDraft);
+      if (!await creation.save(input)) return;
+      toast.success('顧客を追加しました！', { duration: 3000 });
+      setDraft(emptyClientDraft());
       setOpen(false);
       router.refresh();
-    } catch (e: any) {
-      console.error("[promane/client] create exception");
-      toast.error(e?.message || "通信エラーが発生しました", { duration: 6000 });
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '入力内容を確認してください', { duration: 6000 });
+    } finally { submission.current = false; }
   }
 
   async function handleDelete(clientId: string, name: string) {
@@ -84,7 +78,7 @@ export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: strin
         method: "DELETE",
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
+      if (!res.ok || data?.success !== true) {
         toast.error(data?.error || "削除に失敗しました");
         return;
       }
@@ -96,19 +90,36 @@ export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: strin
     }
   }
 
+  const recoveryPanel = creation.message ? (
+        <div role="status" className="mb-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
+          <p>{creation.message}</p>
+          {(creation.status === 'unknown' || creation.status === 'blocked') && (
+            <div className="flex flex-wrap gap-3 mt-3">
+              <Button disabled={loading} onClick={async () => { if (await creation.recover() === 'found') { setDraft(emptyClientDraft()); setOpen(false); router.refresh(); } }}>保存状態を確認</Button>
+              <Button disabled={loading} onClick={async () => {
+                const ok = await confirm({ title: '未完了の送信を取り消す', message: '未保存の送信が後から登録されないようにします。保存済みの顧客は削除しません。', confirmLabel: '取り消す', tone: 'danger' });
+                if (!ok) return;
+                if (await creation.recover(true) === 'found') { setDraft(emptyClientDraft()); setOpen(false); router.refresh(); }
+              }}>未完了の送信を取り消す</Button>
+            </div>
+          )}
+        </div>
+  ) : null;
+
   return (
     <>
+      {!open && recoveryPanel}
       <div className="mb-6 animate-slide-up stagger-1">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger
             render={
-              <Button className="rounded-full h-12 px-7 text-[15px] font-black shadow-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 hover:scale-105 active:scale-95 transition-all">
+              <Button disabled={creation.status !== 'ready'} className="rounded-full h-12 px-7 text-[15px] font-black shadow-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 hover:scale-105 active:scale-95 transition-all">
                 <Plus className="mr-2 h-5 w-5" />
                 顧客を追加
               </Button>
             }
           />
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 <div className="flex items-center gap-2">
@@ -117,28 +128,31 @@ export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: strin
                 </div>
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4 mt-2">
+      {open && recoveryPanel}
+            <form onChange={e => { rememberDraft(e.currentTarget); }} onSubmit={handleCreate} className="space-y-4 mt-2">
+              <fieldset disabled={creation.status !== 'ready'} className="space-y-4">
               <div>
-                <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">🏢 会社名</Label>
-                <Input name="name" required className="h-12 rounded-2xl text-[15px] font-bold bg-gray-50" placeholder="株式会社〇〇" />
+                <Label htmlFor={`${inputId}-name`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">🏢 会社名</Label>
+                <Input id={`${inputId}-name`} name="name" defaultValue={draft.name} maxLength={200} required className="h-12 rounded-2xl text-[15px] font-bold bg-gray-50" placeholder="株式会社〇〇" />
               </div>
               <div>
-                <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">👤 担当者名</Label>
-                <Input name="contactName" className="h-12 rounded-2xl text-[15px] font-bold bg-gray-50" placeholder="田中太郎" />
+                <Label htmlFor={`${inputId}-contactName`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">👤 担当者名</Label>
+                <Input id={`${inputId}-contactName`} name="contactName" defaultValue={draft.contactName} className="h-12 rounded-2xl text-[15px] font-bold bg-gray-50" placeholder="田中太郎" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">📧 メール</Label>
-                  <Input name="email" type="email" className="h-12 rounded-2xl text-[14px] font-bold bg-gray-50" />
+                  <Label htmlFor={`${inputId}-email`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">📧 メール</Label>
+                  <Input id={`${inputId}-email`} name="email" defaultValue={draft.email} type="email" className="h-12 rounded-2xl text-[14px] font-bold bg-gray-50" />
                 </div>
                 <div>
-                  <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">📱 電話</Label>
-                  <Input name="phone" className="h-12 rounded-2xl text-[14px] font-bold bg-gray-50" />
+                  <Label htmlFor={`${inputId}-phone`} className="text-[13px] font-bold text-gray-500 mb-1.5 block">📱 電話</Label>
+                  <Input id={`${inputId}-phone`} name="phone" defaultValue={draft.phone} className="h-12 rounded-2xl text-[14px] font-bold bg-gray-50" />
                 </div>
               </div>
               <Button type="submit" disabled={loading} className="w-full h-12 rounded-full font-black text-[15px] shadow-md hover:scale-[1.02] active:scale-95 transition-all">
                 {loading ? "追加中..." : "追加する！ ✨"}
               </Button>
+              </fieldset>
             </form>
           </DialogContent>
         </Dialog>

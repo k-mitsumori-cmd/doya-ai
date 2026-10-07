@@ -1,5 +1,8 @@
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
+const { adaptTimePrisma, operationId } = require('./promane-time-creation-fixture.cjs')
+const clientCreation = load('src/lib/promane/client-creation.ts', { 'node:crypto': require('node:crypto') })
+const clientInput = load('src/lib/promane/client-input.ts')
 
 function fixture({ role = 'member', revokeDuringCommit = false, foreign = false } = {}) {
   let currentRole = role
@@ -30,7 +33,8 @@ function fixture({ role = 'member', revokeDuringCommit = false, foreign = false 
     },
   }
   const actions = load('src/lib/promane/actions-clients.ts', {
-    '@/lib/prisma': { prisma },
+    './client-creation': clientCreation, './client-input': clientInput,
+    '@/lib/prisma': { prisma: adaptTimePrisma(prisma) },
     '@/lib/promane/auth': {
       requirePromaneAuthAction: async () => ({ userId: 'u' }),
       requireWritableWorkspace: async () => ({ id: 'w' }),
@@ -38,16 +42,17 @@ function fixture({ role = 'member', revokeDuringCommit = false, foreign = false 
     'next/cache': { revalidatePath() {} },
   })
   const api = load('src/app/api/promane/clients/route.ts', {
+    '@/lib/promane/client-creation': clientCreation, '@/lib/promane/client-input': clientInput,
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
     '@/lib/auth': {},
-    '@/lib/prisma': { prisma },
+    '@/lib/prisma': { prisma: adaptTimePrisma(prisma) },
   })
   return {
-    create: () => actions.createClient('ws', { name: '会社' }),
+    create: () => actions.createClient('ws', { operationId, name: '会社' }),
     update: () => actions.updateClient('ws', 'client', { name: '更新後' }),
     delete: () => actions.deleteClient('ws', 'client'),
-    apiPost: () => api.POST({ json: async () => ({ workspaceSlug: 'ws', name: '会社' }) }),
+    apiPost: () => api.POST({ json: async () => ({ operationId, workspaceSlug: 'ws', name: '会社' }) }),
     apiDelete: () => api.DELETE({ nextUrl: new URL('https://example.test/api/promane/clients?workspaceSlug=ws&id=client') }),
     state: () => ({ attempts, writes, committed }),
   }
@@ -67,7 +72,7 @@ function fixture({ role = 'member', revokeDuringCommit = false, foreign = false 
       const f = fixture({ role: 'guest' })
       if (method.startsWith('api')) assert.equal((await f[method]()).status, 403)
       else await assert.rejects(f[method](), /変更権限がありません/)
-      assert.deepEqual(f.state(), { attempts: 1, writes: 0, committed: method.startsWith('api') })
+      assert.deepEqual(f.state(), { attempts: 1, writes: 0, committed: method === 'apiDelete' })
     }
   })
   await check('revocation during a conflicting client write is rechecked', async () => {
@@ -75,7 +80,7 @@ function fixture({ role = 'member', revokeDuringCommit = false, foreign = false 
       const f = fixture({ revokeDuringCommit: true })
       if (method.startsWith('api')) assert.equal((await f[method]()).status, 403)
       else await assert.rejects(f[method](), /変更権限がありません/)
-      assert.deepEqual(f.state(), { attempts: 2, writes: 1, committed: method.startsWith('api') })
+      assert.deepEqual(f.state(), { attempts: 2, writes: 1, committed: method === 'apiDelete' })
     }
   })
   await check('foreign client cannot be updated or deleted', async () => {

@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-07T21:19:34.840Z",
+  "expected": 20,
+  "passed": 20,
+  "cases": [
+    "API replay returns original client and does not create twice",
+    "concurrent same-operation API requests create only one row",
+    "same operation changed input returns409 without overwriting original",
+    "read missing creates no client or receipt",
+    "explicit missing cancellation fences a delayed create",
+    "cancelling committed operation recovers original without deleting it",
+    "deleted client cannot be resurrected by replay",
+    "workspace and user receipt scopes do not expose another client",
+    "viewer and inactive membership deny read create and cancel",
+    "anonymous create and recovery return401",
+    "malformed operation selectors rejected before persistent work",
+    "create API and action reject malformed fields before rows and receipts",
+    "company200 note5000 and Japanese content persist in full",
+    "update rejects malformed company email type and note without modifying saved client",
+    "update normalizes company and optional empty fields while preserving full note",
+    "API and server action replay share one original receipt",
+    "mixed concurrent API and action submissions persist one client",
+    "receipt storage failure rolls back both API and action client rows",
+    "corrupt durable receipt rejects without creating a replacement",
+    "create and cancellation race cannot produce untracked duplicate"
+  ],
+  "sourceHashes": {
+    "src/app/api/promane/clients/route.ts": "c2505719733616a8a862735f3e3638614d26e593a146dcac556f56059381e80d",
+    "src/lib/promane/actions-clients.ts": "d1f68323a67f7e75b0a80abc4f90e07581af1c9f0d3a6aaa09fdf343938245c4",
+    "src/lib/promane/client-input.ts": "d114edd0fdc3bf16b7a4aa416b7e1cf38bb85d957bba6c4a96a49f0dbcb926f4",
+    "src/lib/promane/client-creation.ts": "f2aa282bf1367926063e65747fc4f78254f59bc11996f8a5e047cde10e9656e1"
+  },
+  "scope": "Actual candidate API and server actions with isolated Unix-socket PostgreSQL, synthetic auth/workspace/client data. No production/customer writes/provider calls or real Next/browser transport."
+}
