@@ -8,6 +8,7 @@ import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 import { validateKintaiWorkRuleInput } from '@/lib/kintai/work-rule-input'
+import { createKintaiWorkRuleOnce, kintaiWorkRuleOperationId, KintaiWorkRuleOperationError } from '@/lib/kintai/work-rule-operation'
 
 export async function GET() {
   try {
@@ -20,7 +21,7 @@ export async function GET() {
       orderBy: { name: 'asc' },
     })
 
-    return NextResponse.json({ rules })
+    return NextResponse.json({ rules, organizationId: ctx.organizationId })
   } catch (e) {
     console.error('[kintai/work-rules GET]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
@@ -34,33 +35,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
     }
     const inputError = validateKintaiWorkRuleInput(body)
     if (inputError) return NextResponse.json({ error: inputError }, { status: 400 })
+    const operationId = kintaiWorkRuleOperationId(body.operationId)
+    if (body.organizationId !== ctx.organizationId) return NextResponse.json({ error: '組織が切り替わっています。最新の画面を開き直してください。' }, { status: 409 })
     return await prisma.$transaction(async (tx) => {
       await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
       if (!(await lockCurrentKintaiManager(tx, ctx))) {
         return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       }
-      const rule = await tx.kintaiWorkRule.create({
-        data: {
-          organizationId: ctx.organizationId,
-          name: body.name || '新規ルール',
-          workStart: body.workStart || '09:00',
-          workEnd: body.workEnd || '18:00',
-          breakMinutes: body.breakMinutes ?? 60,
-          overtimeCalcMethod: body.overtimeCalcMethod || 'daily',
-          flexEnabled: body.flexEnabled || false,
-          coreStart: body.coreStart || null,
-          coreEnd: body.coreEnd || null,
-        },
-      })
-      return NextResponse.json({ rule }, { status: 201 })
+      const data = {
+        organizationId: ctx.organizationId,
+        name: body.name || '新規ルール', workStart: body.workStart || '09:00', workEnd: body.workEnd || '18:00',
+        breakMinutes: body.breakMinutes ?? 60, overtimeCalcMethod: body.overtimeCalcMethod || 'daily',
+        flexEnabled: body.flexEnabled || false, coreStart: body.coreStart || null, coreEnd: body.coreEnd || null,
+      }
+      const rule = await createKintaiWorkRuleOnce(tx, ctx, operationId, data,
+        id => tx.kintaiWorkRule.findFirst({ where: { id, organizationId: ctx.organizationId } }),
+        () => tx.kintaiWorkRule.create({ data }))
+      return NextResponse.json({ rule, operationId }, { status: 201 })
     })
   } catch (e) {
+    if (e instanceof KintaiWorkRuleOperationError) return NextResponse.json({ error: e.message }, { status: e.status })
     console.error('[kintai/work-rules POST]')
     return NextResponse.json({ error: '作成に失敗しました' }, { status: 500 })
   }

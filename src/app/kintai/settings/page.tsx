@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
+import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
+import { useKintaiWorkRuleCreation } from '@/lib/kintai/use-work-rule-creation'
 
 function computeSchedulePreview(workStart: string, workEnd: string, breakMinutes: number): string {
   if (!workStart || !workEnd) return ''
@@ -27,6 +29,18 @@ function computeSchedulePreview(workStart: string, workEnd: string, breakMinutes
 }
 
 export default function SettingsPage() {
+  const access = useKintaiAccess()
+  const organizationId = access.organizationId || ''
+  const ready = Boolean(access.ready && access.actorId && organizationId && access.isActive !== false)
+  const canManage = access.role === 'hr_admin' || access.role === 'system_admin'
+  const identity = JSON.stringify([access.actorId || '', organizationId])
+  const signature = JSON.stringify([identity, ready, canManage])
+  const accessEpoch = useRef({ signature, version: 0 })
+  if (accessEpoch.current.signature !== signature) accessEpoch.current = { signature, version: accessEpoch.current.version + 1 }
+  const accessVersion = accessEpoch.current.version
+  const accessKey = JSON.stringify([signature, accessVersion])
+  const currentAccess = () => ready && accessEpoch.current.version === accessVersion
+
   const [rules, setRules] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -43,7 +57,13 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
 
+  const creation = useKintaiWorkRuleCreation(organizationId, ready && canManage, (state) => {
+    if (state === 'found' && !editing) { formVersion.current += 1; setShowForm(false) }
+    void fetchRules()
+  })
+
   const fetchRules = async () => {
+    if (!currentAccess()) return
     const version = ++requestVersion.current
     setLoading(true)
     setLoadError(false)
@@ -52,22 +72,28 @@ export default function SettingsPage() {
       const response = await fetch('/api/kintai/work-rules', { cache: 'no-store' })
       if (!response.ok) throw new Error('Failed to fetch work rules')
       const data = await response.json()
-      if (!Array.isArray(data?.rules)) throw new Error('Invalid work rules response')
-      if (version === requestVersion.current) setRules(data.rules)
+      if (data?.organizationId !== organizationId || !Array.isArray(data?.rules)) throw new Error('Invalid work rules response')
+      if (version === requestVersion.current && currentAccess()) setRules(data.rules)
     } catch {
-      if (version === requestVersion.current) setLoadError(true)
+      if (version === requestVersion.current && currentAccess()) setLoadError(true)
     } finally {
-      if (version === requestVersion.current) setLoading(false)
+      if (version === requestVersion.current && currentAccess()) setLoading(false)
     }
   }
 
   useEffect(() => {
     mounted.current = true
+    saveLock.current = null; deleteLock.current = null; setSaving(false); setDeleting(false)
     void fetchRules()
     return () => { mounted.current = false; deleteVersion.current += 1; formVersion.current += 1; requestVersion.current += 1 }
-  }, [])
+  // Every actor/org/readiness generation owns its reads and response callbacks.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessKey])
+
+  useEffect(() => { setShowForm(false); setEditing(null); setShowDeleteConfirm(null) }, [identity])
 
   const openCreate = () => {
+    if (!currentAccess() || !canManage || creation.blocked) return
     formVersion.current += 1
     saveLock.current = null
     setSaving(false)
@@ -77,6 +103,7 @@ export default function SettingsPage() {
   }
 
   const openEdit = (rule: any) => {
+    if (!currentAccess() || !canManage) return
     formVersion.current += 1
     saveLock.current = null
     setSaving(false)
@@ -92,23 +119,28 @@ export default function SettingsPage() {
   const closeForm = () => { formVersion.current += 1; setShowForm(false) }
 
   const handleSave = async () => {
-    if (saveLock.current) return
+    if (!currentAccess() || !canManage || saveLock.current) return
     if (!form.name.trim()) { alert('ルール名を入力してください'); return }
     const version = formVersion.current
-    const current = () => mounted.current && formVersion.current === version
+    const current = () => mounted.current && formVersion.current === version && currentAccess()
     const attempt = {}
     saveLock.current = attempt
     setSaving(true)
     try {
+      if (!editing) {
+        const row = await creation.create(form)
+        if (!row || !current()) return
+        setShowForm(false); void fetchRules(); return
+      }
       const url = editing ? `/api/kintai/work-rules/${editing.id}` : '/api/kintai/work-rules'
       const method = editing ? 'PATCH' : 'POST'
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, organizationId }) })
       if (!current()) return
       const data = await res.json().catch(() => null)
       if (!current()) return
       if (!res.ok) { alert(data?.error || '保存に失敗しました'); return }
       if (!data?.rule || typeof data.rule.id !== 'string' || !data.rule.id
-        || data.rule.name !== form.name || (editing && data.rule.id !== editing.id)) {
+        || data.rule.organizationId !== organizationId || data.rule.name !== form.name || (editing && data.rule.id !== editing.id)) {
         alert('保存結果を確認できませんでした。再読み込みして最新のルールをご確認ください。')
         return
       }
@@ -120,6 +152,7 @@ export default function SettingsPage() {
   }
 
   const openDelete = (rule: any) => {
+    if (!currentAccess() || !canManage) return
     deleteVersion.current += 1
     deleteLock.current = null
     setDeleting(false)
@@ -128,14 +161,14 @@ export default function SettingsPage() {
   const closeDelete = () => { deleteVersion.current += 1; setShowDeleteConfirm(null) }
 
   const handleDelete = async () => {
-    if (!showDeleteConfirm || deleteLock.current) return
+    if (!currentAccess() || !canManage || !showDeleteConfirm || deleteLock.current) return
     const version = deleteVersion.current
-    const current = () => mounted.current && deleteVersion.current === version
+    const current = () => mounted.current && deleteVersion.current === version && currentAccess()
     const attempt = {}
     deleteLock.current = attempt
     setDeleting(true)
     try {
-      const res = await fetch(`/api/kintai/work-rules/${showDeleteConfirm.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/kintai/work-rules/${showDeleteConfirm.id}?organizationId=${encodeURIComponent(organizationId)}`, { method: 'DELETE' })
       if (!current()) return
       const data = await res.json().catch(() => null)
       if (!current()) return
@@ -152,6 +185,18 @@ export default function SettingsPage() {
 
   const preview = useMemo(() => computeSchedulePreview(form.workStart, form.workEnd, form.breakMinutes), [form.workStart, form.workEnd, form.breakMinutes])
 
+  const recoveryPanel = (creation.message || creation.pending) && (
+          <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3 text-sm text-slate-700">
+            <p>{creation.message || '保存結果を確認してください。自動で再保存は行いません。'}</p>
+            {creation.pending && <div className="flex flex-wrap gap-2">
+              <button type="button" disabled={creation.busy} onClick={() => void creation.recover()} className="rounded-lg bg-[#7f19e6] px-3 py-2 text-white disabled:opacity-50">保存結果を確認</button>
+              <button type="button" disabled={creation.busy} onClick={() => void creation.recover(true)} className="rounded-lg border border-slate-300 px-3 py-2 disabled:opacity-50">未完了の操作を取り消す</button>
+            </div>}
+          </div>
+        )
+
+  if (!ready) return <div role="status" className="p-6 text-center">勤怠情報を確認しています。</div>
+
   return (
     <>
 
@@ -165,7 +210,7 @@ export default function SettingsPage() {
               <p className="text-xs text-slate-500">勤務時間やフレックスを設定しよう</p>
             </div>
           </div>
-          <button onClick={openCreate} disabled={loading || loadError} className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20 disabled:opacity-50">
+          <button onClick={openCreate} disabled={loading || loadError || creation.blocked} className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20 disabled:opacity-50">
             <span className="material-symbols-outlined text-lg">add</span>ルールを追加
           </button>
         </div>
@@ -175,6 +220,8 @@ export default function SettingsPage() {
           <img src="/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png" alt="" width={40} height={40} className="bear-wiggle shrink-0" />
           <p className="text-sm text-slate-600">就業ルールは従業員に割り当てて使用します。複数のルールを作成して、異なる勤務形態に対応できます。</p>
         </div>
+
+        {(!showForm || editing) && recoveryPanel}
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
@@ -227,10 +274,10 @@ export default function SettingsPage() {
                       )}
                     </div>
                     <div className="flex gap-0.5 ml-2 shrink-0">
-                      <button onClick={() => openEdit(rule)} className="p-1.5 text-slate-400 hover:text-[#7f19e6] hover:bg-purple-50 rounded-lg transition-colors">
+                      <button disabled={!canManage} onClick={() => openEdit(rule)} className="p-1.5 text-slate-400 hover:text-[#7f19e6] hover:bg-purple-50 rounded-lg transition-colors">
                         <span className="material-symbols-outlined text-lg">edit</span>
                       </button>
-                      <button onClick={() => openDelete(rule)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                      <button disabled={!canManage} onClick={() => openDelete(rule)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                         <span className="material-symbols-outlined text-lg">delete</span>
                       </button>
                     </div>
@@ -309,7 +356,7 @@ export default function SettingsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">ルール名 <span className="text-red-500">*</span></label>
-                <input disabled={saving} type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" placeholder="例: 標準 (9:00-18:00)" />
               </div>
 
@@ -320,13 +367,13 @@ export default function SettingsPage() {
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="block text-sm font-medium text-slate-700 mb-1">始業</label>
-                    <input disabled={saving} type="time" value={form.workStart} onChange={(e) => setForm({ ...form, workStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" /></div>
+                    <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.workStart} onChange={(e) => setForm({ ...form, workStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" /></div>
                   <div><label className="block text-sm font-medium text-slate-700 mb-1">終業</label>
-                    <input disabled={saving} type="time" value={form.workEnd} onChange={(e) => setForm({ ...form, workEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" /></div>
+                    <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.workEnd} onChange={(e) => setForm({ ...form, workEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" /></div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">休憩 (分)</label>
-                  <input disabled={saving} type="number" value={form.breakMinutes} onChange={(e) => setForm({ ...form, breakMinutes: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" />
+                  <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="number" value={form.breakMinutes} onChange={(e) => setForm({ ...form, breakMinutes: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" />
                 </div>
               </div>
 
@@ -337,20 +384,20 @@ export default function SettingsPage() {
                 </h3>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">残業計算方法</label>
-                  <select disabled={saving} value={form.overtimeCalcMethod} onChange={(e) => setForm({ ...form, overtimeCalcMethod: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white">
+                  <select disabled={!canManage || saving || (!editing && Boolean(creation.pending))} value={form.overtimeCalcMethod} onChange={(e) => setForm({ ...form, overtimeCalcMethod: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white">
                     <option value="daily">日次</option><option value="weekly">週次</option><option value="monthly">月次</option>
                   </select>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input disabled={saving} type="checkbox" checked={form.flexEnabled} onChange={(e) => setForm({ ...form, flexEnabled: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-[#7f19e6] focus:ring-[#7f19e6]" />
+                  <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="checkbox" checked={form.flexEnabled} onChange={(e) => setForm({ ...form, flexEnabled: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-[#7f19e6] focus:ring-[#7f19e6]" />
                   <span className="text-sm font-medium text-slate-700">フレックスタイム制</span>
                 </label>
                 {form.flexEnabled && (
                   <div className="grid grid-cols-2 gap-3 bg-[#7f19e6]/5 rounded-lg p-3">
                     <div><label className="block text-sm font-medium text-slate-700 mb-1">コア開始</label>
-                      <input disabled={saving} type="time" value={form.coreStart} onChange={(e) => setForm({ ...form, coreStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white" /></div>
+                      <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.coreStart} onChange={(e) => setForm({ ...form, coreStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white" /></div>
                     <div><label className="block text-sm font-medium text-slate-700 mb-1">コア終了</label>
-                      <input disabled={saving} type="time" value={form.coreEnd} onChange={(e) => setForm({ ...form, coreEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white" /></div>
+                      <input disabled={!canManage || saving || (!editing && Boolean(creation.pending))} type="time" value={form.coreEnd} onChange={(e) => setForm({ ...form, coreEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white" /></div>
                   </div>
                 )}
               </div>
@@ -365,9 +412,11 @@ export default function SettingsPage() {
                 </div>
               )}
 
+              {!editing && recoveryPanel}
+
               <div className="flex gap-3 pt-2">
                 <button onClick={closeForm} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
-                <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors disabled:opacity-50">
+                <button onClick={handleSave} disabled={!canManage || saving || (!editing && creation.blocked)} className="flex-1 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors disabled:opacity-50">
                   {saving ? '保存中...' : '保存'}
                 </button>
               </div>
@@ -397,7 +446,7 @@ export default function SettingsPage() {
               </div>
               <div className="flex gap-3">
                 <button onClick={closeDelete} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
-                <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50">
+                <button onClick={handleDelete} disabled={!canManage || deleting} className="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50">
                   {deleting ? '削除中...' : '削除する'}
                 </button>
               </div>

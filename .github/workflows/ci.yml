@@ -135,8 +135,8 @@ jobs:
       - name: Kintai work-rule input validation (private Unix socket)
         run: python3 docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-input-postgres-supervise.py
 
-      - name: Kintai settings save and overnight display (offline)
-        run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-settings-mounted.cjs
+      - name: Kintai settings creation recovery and editor lifecycle (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-settings-operation-mounted.cjs
 
       - name: Kintai schedule preview boundaries (offline)
         run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-schedule-preview.cjs
@@ -144,11 +144,14 @@ jobs:
       - name: Kintai settings and attendance consistency (offline)
         run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-schedule-consistency.cjs
 
-      - name: Kintai settings edits during save (offline)
-        run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-settings-save-edit.cjs
+      - name: Kintai creation metadata and identity transitions (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-work-rule-creation-mounted.cjs
 
-      - name: Kintai settings delete response lifecycle (offline)
-        run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-settings-delete-mounted.cjs
+      - name: Kintai access context propagation (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-kintai-access-provider-mounted.cjs
+
+      - name: Kintai work-rule creation receipts (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-operation-postgres-supervise.py
 
       - name: Security and incident regression tests (offline)
         run: npm run test:security

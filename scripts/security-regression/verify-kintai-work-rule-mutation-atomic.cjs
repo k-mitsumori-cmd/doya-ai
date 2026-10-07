@@ -6,8 +6,11 @@ const manager = load('src/lib/kintai/manager-admission.ts')
 function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
   const rows = new Map([['rule', { id: 'rule', organizationId: 'org', name: 'Standard' }]])
   const order = []
+  const receipts = new Map()
   let writes = 0
   const tx = {
+    $executeRaw: async () => 1,
+    systemSetting: { findUnique: async ({where}) => receipts.get(where.key) || null, create: async ({data}) => { receipts.set(data.key,data); return data } },
     $queryRaw: async () => { order.push('actor'); return [{ role: actorRole, status: 'ACTIVE', isActive: true }] },
     kintaiWorkRule: {
       findFirst: async ({ where }) => rows.get(where.id)?.organizationId === where.organizationId ? rows.get(where.id) : null,
@@ -19,6 +22,7 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
   }
   const prisma = { $transaction: async work => work(tx) }
   const deps = {
+    '@/lib/kintai/work-rule-operation': load('src/lib/kintai/work-rule-operation.ts', {'node:crypto': require('node:crypto')}),
     '@/lib/kintai/work-rule-input': load('src/lib/kintai/work-rule-input.ts'),
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
@@ -31,7 +35,7 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
   }
   const list = load('src/app/api/kintai/work-rules/route.ts', deps)
   const item = load('src/app/api/kintai/work-rules/[id]/route.ts', deps)
-  const request = body => ({ json: async () => body })
+  const request = body => ({ url: 'https://example.invalid/api/kintai/work-rules', json: async () => ({ operationId:'10000000-0000-4000-8000-000000000001', organizationId:'org', ...body }) })
   const context = id => ({ params: Promise.resolve({ id }) })
   return { list, item, request, context, rows, order, get writes() { return writes } }
 }
@@ -41,7 +45,7 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
     const f = fixture({ actorRole: 'employee' })
     assert.equal((await f.list.POST(f.request({ name: 'New' }))).status, 403)
     assert.equal((await f.item.PATCH(f.request({ name: 'Changed' }), f.context('rule'))).status, 403)
-    assert.equal((await f.item.DELETE({}, f.context('rule'))).status, 403)
+    assert.equal((await f.item.DELETE({url:'https://example.invalid/api/kintai/work-rules/rule'}, f.context('rule'))).status, 403)
     assert.equal(f.writes, 0)
     assert.deepEqual(f.order, ['organization', 'actor', 'organization', 'actor', 'organization', 'actor'])
   })
@@ -49,8 +53,8 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
   await check('foreign work rule and occupied work rule cannot be changed', async () => {
     const f = fixture({ employeeCount: 1 })
     assert.equal((await f.item.PATCH(f.request({ name: 'Changed' }), f.context('foreign'))).status, 404)
-    assert.equal((await f.item.DELETE({}, f.context('foreign'))).status, 404)
-    assert.equal((await f.item.DELETE({}, f.context('rule'))).status, 400)
+    assert.equal((await f.item.DELETE({url:'https://example.invalid/api/kintai/work-rules/rule'}, f.context('foreign'))).status, 404)
+    assert.equal((await f.item.DELETE({url:'https://example.invalid/api/kintai/work-rules/rule'}, f.context('rule'))).status, 400)
     assert.equal(f.writes, 0)
   })
 
@@ -58,7 +62,7 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
     const f = fixture()
     assert.equal((await f.list.POST(f.request({ name: 'New' }))).status, 201)
     assert.equal((await f.item.PATCH(f.request({ name: 'Updated' }), f.context('new'))).status, 200)
-    assert.equal((await f.item.DELETE({}, f.context('new'))).status, 200)
+    assert.equal((await f.item.DELETE({url:'https://example.invalid/api/kintai/work-rules/rule'}, f.context('new'))).status, 200)
     assert.equal(f.writes, 3)
   })
 })().catch(error => { console.error(error); process.exitCode = 1 })

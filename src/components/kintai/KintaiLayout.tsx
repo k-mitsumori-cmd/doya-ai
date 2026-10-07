@@ -179,7 +179,7 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
     <>
       {isSessionLoading && <div role="status" className="p-6 text-center">認証情報を確認しています。</div>}
       {usageError && <div role="alert" className="bg-amber-50 p-3 text-center text-sm">勤怠情報を再確認できませんでした。入力内容は保持しています。<button type="button" onClick={() => void loadUsage(true)} className="ml-2 underline">再取得する</button></div>}
-    <KintaiAccessContext.Provider value={{ isActive: usage?.isActive ?? null }}>
+    <KintaiAccessContext.Provider value={{ isActive: usage?.isActive ?? null, organizationId: knownScope ? usage?.organizationId : null, actorId: actor, role, ready: allowed && knownScope && !isSessionLoading && !usageError }}>
     <div ref={element => { if (element) element.inert = isSessionLoading || usageError }} style={isSessionLoading ? { display: 'none' } : undefined} className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30">
       <KintaiSidebar role={role} employeeActive={usage?.isActive !== false} />
       <div className="flex-1 min-w-0 flex flex-col">

@@ -20,10 +20,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     const p = await ctx.params
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
     }
+    if (body.organizationId !== undefined && body.organizationId !== kctx.organizationId) return NextResponse.json({ error: '組織が切り替わっています。最新の画面を開き直してください。' }, { status: 409 })
     const inputError = validateKintaiWorkRuleInput(body)
     if (inputError) return NextResponse.json({ error: inputError }, { status: 400 })
     return await prisma.$transaction(async (tx) => {
@@ -65,6 +66,8 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     const p = await ctx.params
 
+    const expectedOrganizations = new URL(req.url).searchParams.getAll('organizationId')
+    if (expectedOrganizations.length > 1 || expectedOrganizations.length === 1 && expectedOrganizations[0] !== kctx.organizationId) return NextResponse.json({ error: '組織が切り替わっています。最新の画面を開き直してください。' }, { status: 409 })
     return await prisma.$transaction(async (tx) => {
       await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
       if (!(await lockCurrentKintaiManager(tx, kctx))) {

@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T18:19:56.112Z",
+  "passed": 8,
+  "cases": [
+    "Native 1280px night duration and chart boundaries, no horizontal overflow",
+    "Native 390px night duration and chart boundaries, no horizontal overflow",
+    "Native overnight preview labels next day",
+    "Native zero break preview omits nonexistent rest interval",
+    "Native valid PATCH acknowledgement closes editor and refreshes synthetic list",
+    "Native lost create acknowledgement retains draft and fences input",
+    "Native reload restores unknown operation without repeat POST",
+    "Native saved-result recovery restores creation without duplicate"
+  ],
+  "chrome": "Chrome/155.0.8059.39",
+  "sourceHashes": {
+    "src/app/kintai/settings/page.tsx": "41d64c3040e27ca541f9c91f9374e13a8e7cce62a630a98b222f42fc1a75042f",
+    "src/lib/kintai/use-work-rule-creation.ts": "bf4cabf440e78f861d729fe1afa16cacef200354e8ca0d0f2801c9235d9f4f93",
+    "src/lib/use-org-settings-guard.ts": "1bce53be67941dcde0f6cc5e423ae2781db108385ee527abedc4c0f50cef5647"
+  },
+  "verifierHash": "b6bab4ec5b42bddb2512643d4e21e016eac261d12c57a2b48509d08ef45eeea1",
+  "cssHash": "6635aee603484e0c4c70365f891308bf21fecb47bcf98f9959c1b0b2819ae5b3",
+  "syntheticWrites": {
+    "patches": 1,
+    "posts": 1
+  },
+  "scope": "Actual settings TSX, creation hook and identity guard in native Chrome with synthetic local HTTP. Current local .next CSS hashes recorded; candidate source may precede build. Synthetic PATCH and committed-but-unacknowledged POST/recovery only. No customer/auth/provider/production operations. Screenshots require visual review separately."
+}
