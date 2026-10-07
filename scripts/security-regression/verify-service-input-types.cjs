@@ -43,20 +43,9 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
     await checkRoute('Cunning company analyze', route.POST, [null, { url: [] }, { url: 42 }, { url: 'ftp://example.com' }, { url: 'not-a-url' }, { url: 'https://example.com/' + 'a'.repeat(2050) }], { url: 'https://example.com' }, () => calls);
   }
   {
-    let calls = 0;
-    const route = load('src/app/api/sfa/ai/next-action/route.ts', {
-      'next/server': server,
-      '@/lib/prisma': { prisma: {
-        sfaDeal: { findUnique: async () => ({ id: 'deal', organizationId: 'org', isActive: true, name: 'Deal', amount: 100, probability: 50 }) },
-        sfaActivity: { findMany: async () => [] },
-      } },
-      '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org' }), orgSlugFrom: () => 'org' },
-      '@/lib/sfa/ai': { suggestNextAction: async () => { calls++; return { action: 'Follow up' }; } },
-      '@/lib/sfa/ai-limit': { reserveSfaAiUsage: async () => ({ id: 'reservation' }), completeSfaAiUsage: async () => {}, releaseSfaAiUsage: async () => {} },
-      '@/lib/sfa/limits': { canManageSfaBilling: async () => { throw Error('No quota was reached'); } },
-      '@/lib/sfa/constants': { ACTIVITY_TYPE_LABEL: {} },
-    });
-    await checkRoute('SFA next action', route.POST, [null, { dealId: {} }, { dealId: 42 }], { dealId: 'deal' }, () => calls);
+    const { fixture, op, stamp } = require('./sfa-next-action-api-fixture.cjs');
+    const f = fixture();
+    await checkRoute('SFA next action', req => req.json().then(body => f.call('POST', body)), [null, { dealId: {} }, { dealId: 42 }], { dealId: 'deal', operationId: op, expectedUpdatedAt: stamp }, f.calls);
   }
   {
     let calls = 0;

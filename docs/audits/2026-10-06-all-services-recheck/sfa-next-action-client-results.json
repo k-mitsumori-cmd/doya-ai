@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T05:27:26.503Z",
+  "checkedAt": "2026-10-07T05:27:29.428Z",
   "passed": 21,
   "cases": [
     "Same-frame score clicks send one durable UUID and reviewed version",
@@ -10,7 +10,7 @@
     "Malformed wrong-operation cannot display success or remove recovery fence",
     "Malformed wrong-lead cannot display success or remove recovery fence",
     "Malformed missing-name cannot display success or remove recovery fence",
-    "Malformed fractional cannot display success or remove recovery fence",
+    "Malformed invalid-tasks cannot display success or remove recovery fence",
     "Malformed invalid-text cannot display success or remove recovery fence",
     "Malformed stale-version cannot display success or remove recovery fence",
     "Late previous actor response cannot display private score result",
@@ -25,7 +25,7 @@
     "Authentication refresh keeps same-actor score recovery without automatic provider retry"
   ],
   "sourceHashes": {
-    "src/app/sfa/[orgSlug]/leads/page.tsx": "0777fd7f1ea6d4614e4bfe71874c8cc663cdd94bf3b7283a315afec27e20f241",
+    "src/app/sfa/[orgSlug]/deals/page.tsx": "6d0cd0bfadaa30dd0c66e7a24b23fc08a52b3c3e2aea2613b03b47f224bc731c",
     "src/lib/sfa/use-client-mutations.ts": "e0ebd1858fb5633508ea4eee77e164ca6050532a686e688e83c3b317cc46a26e",
     "src/lib/sfa/client-response.ts": "cdc0dcf7fd86b04a8a66d185061f3df024ab14372fb0b64f35525df1351a545d",
     "src/components/sfa/MutationRecovery.tsx": "96d9934f286a980dbe78437a1f16aeaf04df6bce1684300efac22789438aca15"

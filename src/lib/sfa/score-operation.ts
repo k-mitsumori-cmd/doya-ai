@@ -80,6 +80,7 @@ export async function claimLeadScore(c: SfaContext, input: ReturnType<typeof sco
     }
     const lead = await lockLead(tx, c, input.leadId, false)
     if (!lead) throw new SfaMutationError(404, 'リードが見つかりません。')
+    if (typeof lead.name !== 'string' || !lead.name.trim() || lead.name.length > 10000) throw new SfaMutationError(409, 'リード名を確認できません。リード名を修正してから実行してください。')
     assertLeadVersion(new Date(input.expectedUpdatedAt), lead.updatedAt)
     const quota = await reserveSfaAiUsageInTransaction(tx, c.organizationId, c.userId, 'score')
     if ('limit' in quota) return { quota }

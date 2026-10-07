@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef, type PointerEvent as ReactPoi
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { withOrg, fetchAllSfaAccounts } from '@/lib/sfa/client'
-import { sfaJson, SfaClientRejection, isSfaClientTask, isSfaClientActivity, type SfaClientTask, isSfaClientDeal, type SfaClientDeal } from '@/lib/sfa/client-response'
+import { sfaJson, SfaClientRejection, isSfaClientTask, isSfaClientActivity, type SfaClientTask, isSfaClientDeal, type SfaClientDeal, type SfaClientNextAction } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
 import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
@@ -66,7 +66,8 @@ const elapsedLabel = (d: Deal): string | null => {
 
 export default function SfaDealsPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
-  const mutations = useSfaClientMutations(orgSlug, (pending, state) => {
+  const mutations = useSfaClientMutations(orgSlug, (pending, state, row) => {
+    if (pending.kind === 'next-action' && state === 'found') showAi(row as SfaClientNextAction)
     if (state === 'found' && pending.lane.startsWith('ai-task:')) setAiModal(m => m && ({ ...m, candidates: m.candidates.filter(c => 'ai-task:' + c.id !== pending.lane) }))
     loadTasks(); load()
     if (detailRef.current) { void loadDetailTasks(detailRef.current); void loadActivities(detailRef.current) }
@@ -75,7 +76,6 @@ export default function SfaDealsPage() {
   const detailRef = useRef<string | null>(null)
   const detailEpoch = useRef(0)
   const aiEpoch = useRef(0)
-  const aiRequest = useRef<AbortController | null>(null)
   const bulkRunning = useRef(false)
   const [stages, setStages] = useState<Stage[]>([])
   const [deals, setDeals] = useState<Deal[]>([])
@@ -405,9 +405,10 @@ export default function SfaDealsPage() {
   }
 
   // ============ AI次アクション（提案 + タスク候補の選択追加） ============
-  const [aiDealId, setAiDealId] = useState<string | null>(null) // ローディング中の商談
+  const aiDealId = mutations.busy.find(lane => lane.startsWith('next-action:'))?.slice('next-action:'.length)
   const [aiModal, setAiModal] = useState<{
-    deal: Deal
+    identity: string
+    deal: Pick<Deal, 'id' | 'name'>
     nextAction: string
     reason: string
     risk: string
@@ -415,26 +416,14 @@ export default function SfaDealsPage() {
   } | null>(null)
   const [aiAdding, setAiAdding] = useState(false)
 
+  const showAi = (suggestion: SfaClientNextAction) => setAiModal({ identity: mutations.identity,
+    deal: { id: suggestion.dealId, name: suggestion.dealName }, nextAction: suggestion.nextAction, reason: suggestion.reason, risk: suggestion.risk,
+    candidates: suggestion.tasks.map((t, i) => ({ ...t, id: suggestion.id + ':' + i, checked: true })) })
   const aiNextAction = async (deal: Deal) => {
-    if (!mutations.active() || aiRequest.current) return
-    const controller = new AbortController()
-    aiRequest.current = controller
-    const epoch = ++aiEpoch.current
-    setAiDealId(deal.id)
-    try {
-      const d = await sfaJson('/api/sfa/ai/next-action', orgSlug, { method: 'POST', signal: controller.signal,
-        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dealId: deal.id }) })
-      if (!mutations.active() || controller.signal.aborted || aiEpoch.current !== epoch) return
-      if (![d.nextAction, d.reason, d.risk].every(v => typeof v === 'string') || !Array.isArray(d.tasks) || d.tasks.length > 20 ||
-        !d.tasks.every(t => t && typeof t.title === 'string' && t.title.trim() && t.title.length <= 200 && (t.dueDate === null || typeof t.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.dueDate) && jstDateKey(t.dueDate) === t.dueDate))) throw new Error('提案の応答を確認できませんでした。')
-      setAiModal({ deal, nextAction: d.nextAction as string, reason: d.reason as string, risk: d.risk as string,
-        candidates: d.tasks.map(t => ({ ...t, id: crypto.randomUUID(), checked: true })) })
-    } catch (error) {
-      if (mutations.active() && !controller.signal.aborted && aiEpoch.current === epoch && !(error instanceof SfaClientRejection && error.status === 402 && ['SFA_AI_LIMIT_REACHED', 'SFA_LIMIT_REACHED'].includes(error.code || ''))) toast.error(error instanceof Error ? error.message : '提案を取得できませんでした。')
-    } finally {
-      if (aiRequest.current === controller) aiRequest.current = null
-      if (mutations.active() && aiEpoch.current === epoch) setAiDealId(null)
-    }
+    if (!mutations.active()) return
+    const epoch = aiEpoch.current
+    const suggestion = await mutations.nextAction(deal)
+    if (suggestion && mutations.active() && aiEpoch.current === epoch) showAi(suggestion)
   }
   const closeAi = () => { ++aiEpoch.current; setAiModal(null); setAiAdding(false) }
   const addCheckedTasks = async () => {
@@ -476,11 +465,12 @@ export default function SfaDealsPage() {
   const [newTaskDue, setNewTaskDue] = useState('')
   const [taskBusy, setTaskBusy] = useState(false)
   detailRef.current = detail?.id || null
+  useEffect(() => { setAiModal(m => m?.identity === mutations.identity ? m : null) }, [mutations.identity])
   const editDraft = useSfaDraftSnapshot([form, detail?.id])
   const taskDraft = useSfaDraftSnapshot([newTaskTitle, newTaskDue, detail?.id])
   const activityDraft = useSfaDraftSnapshot([actType, actSubject, detail?.id])
   const closeDetail = () => { ++detailEpoch.current; detailRef.current = null; detailTasksRequest.current?.abort(); activitiesRequest.current?.abort(); setDetail(null); setTaskBusy(false); setActBusy(false); setSaving(false) }
-  useEffect(() => { setBusy(false); setSaving(false); setTaskBusy(false); setActBusy(false); setAiAdding(false); ++detailEpoch.current; ++aiEpoch.current; setAiModal(null); aiRequest.current?.abort(); aiRequest.current = null; return () => { aiRequest.current?.abort() } }, [mutations.key])
+  useEffect(() => { setBusy(false); setSaving(false); setTaskBusy(false); setActBusy(false); setAiAdding(false); ++detailEpoch.current; ++aiEpoch.current; }, [mutations.key])
 
   const openDetail = (d: Deal) => {
     ++detailEpoch.current; detailRef.current = d.id; setTaskBusy(false); setActBusy(false); setSaving(false)
@@ -746,7 +736,7 @@ export default function SfaDealsPage() {
                         <button
                           data-no-drag
                           onClick={() => aiNextAction(d)}
-                          disabled={aiDealId === d.id}
+                          disabled={!!aiDealId || mutations.creationBlocked('next-action')}
                           className="mt-1.5 w-full text-[11px] font-black text-[#7f19e6] hover:bg-purple-50 rounded-lg py-1.5 flex items-center justify-center gap-0.5 disabled:opacity-50"
                         >
                           <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
@@ -791,15 +781,16 @@ export default function SfaDealsPage() {
       )}
 
       {/* ===== AI次アクション モーダル（提案 + タスク候補をチェックして追加） ===== */}
-      {aiModal && (
+      {ready && aiModal && aiModal.identity === mutations.identity && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeAi}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label="保存済みのAI次アクション" className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6 break-words" onClick={(e) => e.stopPropagation()}>
             <MutationRecovery mutations={mutations} />
             <div className="flex items-start justify-between gap-2 mb-4">
               <div>
                 <p className="text-[11px] font-black text-[#7f19e6] flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">auto_awesome</span>AI次アクション
+                  <span className="material-symbols-outlined text-[16px]">auto_awesome</span>保存済みのAI次アクション
                 </p>
+                <p className="text-xs text-slate-500">実行時点の情報による提案です。その後の変更は含まれません。</p>
                 <h2 className="text-lg font-black text-slate-900 leading-snug">{aiModal.deal.name}</h2>
               </div>
               <button onClick={closeAi} className="text-slate-300 hover:text-slate-500">
@@ -808,12 +799,12 @@ export default function SfaDealsPage() {
             </div>
 
             <div className="rounded-2xl bg-purple-50 p-4 mb-3">
-              <p className="font-black text-slate-800 text-sm">💡 {aiModal.nextAction}</p>
+              <p className="font-black text-slate-800 text-sm">{aiModal.nextAction}</p>
               {aiModal.reason && <p className="text-xs font-bold text-slate-500 mt-1">{aiModal.reason}</p>}
             </div>
             {aiModal.risk && (
               <div className="rounded-2xl bg-red-50 p-3 mb-3">
-                <p className="text-xs font-black text-red-600">⚠️ {aiModal.risk}</p>
+                <p className="text-xs font-black text-red-600">{aiModal.risk}</p>
               </div>
             )}
 

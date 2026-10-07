@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T05:27:24.881Z",
+  "checkedAt": "2026-10-07T05:27:27.452Z",
   "passed": 24,
   "cases": [
     "Invalid body, version, UUID and ID reject before provider/reservation",
@@ -10,28 +10,28 @@
     "Quota reservation outage cannot invoke provider or leave an operation claim",
     "Unauthenticated POST and recovery endpoints reject before reservation",
     "Escaped maximum legacy source and bounded result remain recoverable",
-    "Successful score persists exact result, version, allowance and recovery",
+    "Successful suggestion persists exact snapshot and allowance without changing deal",
     "Ten same-operation requests reserve and invoke provider once",
     "Cancellation before arrival fences UUID without reservation",
     "Running provider cannot be claimed as cancelled or duplicated",
-    "Intervening source edit prevents score overwrite and refunds pending quota",
+    "Intervening source edit prevents stale suggestion and refunds pending quota",
     "Revocation during provider prevents settlement but cleanup refunds",
     "Malformed result and provider error cannot fabricate0 or complete quota",
-    "Result receipt failure rolls back score and settled allowance",
+    "Result receipt failure rolls back suggestion and settled allowance",
     "Reservation claim receipt failure rolls back quota before provider",
-    "Quota settlement failure rolls back score then refunds",
+    "Quota settlement failure rolls back suggestion then refunds",
     "Unknown cleanup returns503 and leaves pending receipt for recovery",
     "Expired pending operation refunds without new provider and fences late settlement",
     "Changed version cannot reuse operation and deleted lead cannot reveal saved result",
     "Actor and organization isolate operation recovery",
     "Duplicate query and all responses enforce private no-store",
-    "Unsupported legacy lead name rejects before paid provider or quota"
+    "Unsupported legacy deal name rejects before paid provider or quota"
   ],
   "sourceHashes": {
-    "src/lib/sfa/score-operation.ts": "01f347139f70bdb85961b057560be714fce7974bcc32e129aef89f6dc2977806",
-    "src/app/api/sfa/ai/score/route.ts": "d8b8f814587cbd18624dd81eb4a85f3f076e249bf0eb3fb4b85ee5a90827eef2",
+    "src/lib/sfa/next-action-operation.ts": "39f68c2066c7338a256278769c99b889f25af7424790301ccd1f51439fb8b202",
+    "src/app/api/sfa/ai/next-action/route.ts": "595950f338ee11f95a6c3f664ac43db65543be8433e2e9fe83a4be6768872443",
     "src/lib/sfa/ai-limit.ts": "657edd9d5835d5dd5b79967b4263745202ac61c54c0839678c3f69814edfe555",
-    "src/lib/sfa/lead-score-result.ts": "efc548a4bb4f04ff5a7e73ab288c0145f2a87b99b5b49755379df48c4fd778d3"
+    "src/lib/sfa/ai.ts": "6302e696efb8db5270a067324fa074ee751ce1b86fbfc5e09479da7692d509b8"
   },
   "scope": "Actual route and operation/authority/quota/parser helpers; stateful synthetic serialized transactions with rollback and mocked provider. Not PostgreSQL scheduling, production or browser proof."
 }

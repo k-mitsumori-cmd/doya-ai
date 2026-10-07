@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-07T05:04:49.701788+00:00",
-  "status": "planned-not-implemented",
+  "checkedAt": "2026-10-07T05:29:31.213568+00:00",
+  "status": "full-frozen-security-type-build-lint-passed-not-deployed",
   "scope": "Next-action generation and recovery, not task creation already covered by shared durable task operations.",
   "required": [
     "Reject empty/non-string/oversized model fields before completing quota; preserve tested JST date normalization and valid empty risk.",
@@ -22,5 +22,31 @@
     "No production customer DB changes/migrations",
     "No email/invite dispatch",
     "Preserve pending edit-role policy"
-  ]
+  ],
+  "localChecks": [
+    "32 model validation/route cases",
+    "24 durable API cases",
+    "21 mounted client cases",
+    "10 actual private PostgreSQL concurrency/rollback cases; stopped0",
+    "shared49 and deal13 regressions",
+    "score client21/API24/PG10 regressions including new legacy-name guard"
+  ],
+  "remaining": [
+    "Full frozen security/type/build/lint gate and source hash match",
+    "Allowlisted commit/push; exactSHA CI/READY/public checks",
+    "Authenticated private real-browser/provider and remaining all-service criteria"
+  ],
+  "remainingLifecycleReconfirmed": true,
+  "legacyNameFollowUp": {
+    "baseline": "Score name10001: POST200, recovery409,provider1 before repair.",
+    "fix": "Reject empty/blank/name>10000 before quota/provider in both score and next-action.",
+    "deployed": false
+  },
+  "releaseGate": "docs/audits/2026-10-06-all-services-recheck/sfa-next-action-release-e4727c52-6f52-44d9-bb78-776e0606d8f6",
+  "fullGate": {
+    "build": 0,
+    "lint": 0,
+    "sourceFiles": 2697,
+    "changedSources": []
+  }
 }

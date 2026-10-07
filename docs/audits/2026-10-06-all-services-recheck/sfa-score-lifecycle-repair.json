@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-07T05:07:50.054893+00:00",
-  "status": "full-frozen-build-security-type-lint-passed-not-deployed",
+  "checkedAt": "2026-10-07T05:24:17.970884+00:00",
+  "status": "deployed-ci-success-anonymous-publication-verified-private-flow-unproven",
   "baseCommit": "6956f5b641f97289f0b346dda2e4501ccaeadba0",
   "changes": [
     "Strict bounded score parser rejects missing, malformed, out-of-range and fractional score/model text rather than fabricating0 or clamping. Valid0 remains valid.",
@@ -26,9 +26,9 @@
     "Full frozen build (security regressions, tsc, Next build) and lint exit0;2692 source files unchanged."
   ],
   "remaining": [
-    "Allowlisted commit/push and exact SHA CI/deployment/public verification.",
     "Authenticated real-browser/provider flows remain unverified.",
-    "Continue remaining SFA next-action/account/contact and all17/2074 service criteria; pending record edit-role policy preserved."
+    "Legacy name guard follow-up locally repaired in next-action cohort; not in score release.",
+    "Continue next-action/account/contact and all17/2074 criteria."
   ],
   "apiCases": 23,
   "apiCasesEvidence": "sfa-score-operation-results.json",
@@ -60,5 +60,15 @@
       "sfa-next-action-result-baseline.json",
       "sfa-next-action-repair-plan.json"
     ]
-  }
+  },
+  "release": {
+    "commit": "1574f271a669a520aa6a678ecd5c8b1d3afc4f02",
+    "ciRun": 37574824146,
+    "deployment": "dpl_CfyuSWWKKV6W8Jng7ndVFd65ucud",
+    "url": "doya-11ivh20fz-surisutas-projects.vercel.app",
+    "ci": "success",
+    "deploymentState": "READY",
+    "publicEvidence": "sfa-score-public.json"
+  },
+  "localNextCohortNote": "Next-action validation now differs in worktree; its local changes are not part of score release commit. Frozen gate proves score commit at commit/push time."
 }

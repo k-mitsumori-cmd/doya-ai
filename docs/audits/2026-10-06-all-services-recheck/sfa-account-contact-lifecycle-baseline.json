@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-07T05:25:49.396Z",
+  "status": "confirmed-handler-gaps-not-repaired",
+  "findings": [
+    "accounts: same operationId is ignored; two requests create two rows.",
+    "accounts: actor is not revalidated after context snapshot before creation.",
+    "contacts: same operationId is ignored; two requests create two rows.",
+    "contacts: actor is not revalidated after context snapshot before creation.",
+    "contacts: account can become inactive between ownership lookup and contact creation; no relation lock/revalidation."
+  ],
+  "sourceHashes": {
+    "src/app/api/sfa/accounts/route.ts": "5e8e0c05a3e7cfe30c28131ecd5402cdfba39a3f94df4bd836226c07fba12928",
+    "src/app/api/sfa/contacts/route.ts": "dd5b1c871f91390a164503261efb2bcb0c29a50d4946e14de87cda0b6f9c197a"
+  },
+  "scope": "Actual handlers and account quota helper with synthetic context/Prisma schedules. No real database concurrency, customer writes or authenticated browser proof."
+}

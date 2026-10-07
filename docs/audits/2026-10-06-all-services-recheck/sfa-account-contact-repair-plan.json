@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-07T05:28:40.406280+00:00",
+  "status": "planned-not-implemented",
+  "scope": "SFA accounts/contacts server and mounted pages",
+  "confirmed": [
+    "Account/contact requests ignore operationId and create duplicates.",
+    "Fresh actor authority is not held through create.",
+    "Contact relation can become inactive between lookup and create.",
+    "Pages allow repeated same-frame submissions; successful late responses clear drafts without actor/org/version checks.",
+    "Normal records have no exposed edit/delete route or UI; users cannot correct mistaken input."
+  ],
+  "required": [
+    "Add account/contact kinds to durable creation receipts; atomically fresh actor, receipt, relation validation, quota and create. Replay must work at capacity and never resurrect inactive rows.",
+    "Keep quota keyed to actual billing owner, check account admission inside new-create callback after receipt replay; contacts have no separate declared plan count.",
+    "GET and conditional cancellation recover only same actor/org/UUID. All handled responses private/no-store/VaryCookie; sanitized failures.",
+    "Expose versioned PATCH and soft DELETE with authoritative row locks and monotonically increasing updatedAt. Scope every record/related lookup to org and active state.",
+    "Account delete must not strand active contacts/deals: refuse with actionable message until linked active records are detached/handled. Preserve historical activity rows and unrelated fields.",
+    "Contact delete must not strand active deal.contactId references; refuse or explicitly handle per verified current relation policy. Do not silently delete related records.",
+    "Shared bounded transport, durable metadata/session guard, DTO/write-match validators; block same-frame duplicates and unknown retries; preserve in-flight edited form snapshot and actor/org isolation.",
+    "Bounded, scoped list reads with strict row/page/cursor validation; correct query changes and pagination; retain retry and account-options behavior.",
+    "Create/edit/delete controls with Japanese guidance and required confirmations; preserve current ACTIVE-member edit scope pending separately asked policy. No automatic invites/email.",
+    "Synthetic actual API and mounted component cases, actual private PostgreSQL races/rollback, full frozen build/security/type/lint, allowlisted push, exactCI/READY/anonymous-public verification. Authenticated customer/provider flows remain unverified until actually checked."
+  ],
+  "evidence": [
+    "sfa-account-contact-lifecycle-baseline.json"
+  ],
+  "boundaries": [
+    "No customer DB writes/migrations",
+    "No email/invite sends",
+    "No paid AI/provider calls",
+    "Do not widen read/write roles beyond current ACTIVE-member service behavior",
+    "No subagents"
+  ]
+}

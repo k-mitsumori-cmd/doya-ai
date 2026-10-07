@@ -114,26 +114,32 @@ export async function suggestNextAction(input: NextActionInput, now = new Date()
     { prompt, model: GEMINI_TEXT_MODEL_DEFAULT },
     'SfaNextAction'
   )
-  // タスク候補のサニタイズ（型崩れ・過去日・件数超過をここで吸収）
-  const tasks: NextActionTaskCandidate[] = Array.isArray(r?.tasks)
-    ? r.tasks
-        .filter((t): t is NextActionTaskCandidate => !!t && typeof (t as any).title === 'string' && !!(t as any).title.trim())
-        .slice(0, 4)
-        .map((t) => {
-          let due: string | null = null
-          if (typeof t.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.dueDate)) {
-            const parsed = new Date(`${t.dueDate}T00:00:00Z`)
-            if (!Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === t.dueDate) {
-              due = t.dueDate < todayStr ? todayStr : t.dueDate // 過去日は日本時間の今日に丸める
-            }
-          }
-          return { title: t.title.trim().slice(0, 100), dueDate: due }
-        })
-    : []
-  return {
-    nextAction: r?.nextAction || '',
-    reason: r?.reason || '',
-    risk: r?.risk || '',
-    tasks,
+  return parseNextActionResult(r, todayStr)
+}
+
+/** Malformed model output is a failed attempt, before quota is completed. */
+export function parseNextActionResult(value: unknown, todayStr: string): NextActionResult {
+  const fail = () => { throw new Error('AI提案の形式を確認できませんでした。') }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return fail()
+  const r = value as Record<string, unknown>
+  if (r.error !== undefined || r.code !== undefined) return fail()
+  for (const key of ['nextAction', 'reason', 'risk'] as const) {
+    if (typeof r[key] !== 'string' || r[key].length > 2000 || key !== 'risk' && !r[key].trim()) return fail()
   }
+  if (!Array.isArray(r.tasks) || r.tasks.length > 4) return fail()
+  const tasks = r.tasks.map((task: unknown): NextActionTaskCandidate => {
+    if (!task || typeof task !== 'object' || Array.isArray(task)) return fail()
+    const t = task as Record<string, unknown>
+    if (typeof t.title !== 'string' || !t.title.trim() || t.title.length > 200) return fail()
+    if (t.dueDate !== null && typeof t.dueDate !== 'string') return fail()
+    let due: string | null = null
+    if (typeof t.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.dueDate)) {
+      const parsed = new Date(t.dueDate + 'T00:00:00Z')
+      if (Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === t.dueDate) {
+        due = t.dueDate < todayStr ? todayStr : t.dueDate
+      }
+    }
+    return { title: t.title.trim(), dueDate: due }
+  })
+  return { nextAction: (r.nextAction as string).trim(), reason: (r.reason as string).trim(), risk: (r.risk as string).trim(), tasks }
 }

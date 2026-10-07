@@ -154,3 +154,15 @@ export function isSfaClientScore(v: unknown, leadId: string, operationId: string
     && typeof v.nextAction === 'string' && !!v.nextAction.trim() && v.nextAction.length <= 2000
     && sfaClientDate(v.sourceUpdatedAt) && sfaClientDate(v.leadUpdatedAt) && v.leadUpdatedAt > v.sourceUpdatedAt
 }
+
+export interface SfaClientNextAction {
+  id: string; dealId: string; dealName: string; sourceUpdatedAt: string; startedAt: string
+  nextAction: string; reason: string; risk: string; tasks: { title: string; dueDate: string | null }[]
+}
+export function isSfaClientNextAction(v: unknown, dealId: string, operationId: string): v is SfaClientNextAction {
+  return record(v) && v.id === operationId && v.dealId === dealId && typeof v.dealName === 'string' && !!v.dealName.trim() && v.dealName.length <= 10000
+    && sfaClientDate(v.sourceUpdatedAt) && sfaClientDate(v.startedAt)
+    && ['nextAction', 'reason', 'risk'].every(k => typeof v[k] === 'string' && (v[k] as string).length <= 2000 && (k === 'risk' || !!(v[k] as string).trim()))
+    && Array.isArray(v.tasks) && v.tasks.length <= 4 && v.tasks.every(t => record(t) && typeof t.title === 'string' && !!t.title.trim() && t.title.length <= 200
+      && (t.dueDate === null || typeof t.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.dueDate) && Number.isFinite(new Date(t.dueDate + 'T00:00:00Z').getTime()) && new Date(t.dueDate + 'T00:00:00Z').toISOString().slice(0, 10) === t.dueDate))
+}
