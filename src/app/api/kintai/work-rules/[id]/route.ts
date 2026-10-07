@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
 import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
+import { validateKintaiWorkRuleInput } from '@/lib/kintai/work-rule-input'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -23,6 +24,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
     }
+    const inputError = validateKintaiWorkRuleInput(body)
+    if (inputError) return NextResponse.json({ error: inputError }, { status: 400 })
     return await prisma.$transaction(async (tx) => {
       await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
       if (!(await lockCurrentKintaiManager(tx, kctx))) {

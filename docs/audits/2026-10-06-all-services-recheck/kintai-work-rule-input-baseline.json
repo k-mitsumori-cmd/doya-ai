@@ -1,0 +1,117 @@
+{
+  "checkedAt": "2026-10-07T17:08:16.246Z",
+  "passed": 6,
+  "cases": [
+    {
+      "method": "POST",
+      "scenario": "day"
+    },
+    {
+      "method": "POST",
+      "scenario": "night"
+    },
+    {
+      "method": "POST",
+      "scenario": "defaults"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "day"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "night"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "defaults"
+    }
+  ],
+  "failures": [
+    {
+      "method": "POST",
+      "scenario": "negative-break",
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "excessive-break",
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "fractional-break",
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-hour",
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-minute",
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-method",
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-flex-type",
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-time-type",
+      "error": "Expected values to be strictly equal:\n\n201 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "negative-break",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "excessive-break",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "fractional-break",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-hour",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-minute",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-method",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-flex-type",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-time-type",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/kintai/work-rules/route.ts": "dca72debee45c61cb01125c9efe24aad6cd17bca56b8949578aa881b78ce47eb",
+    "src/app/api/kintai/work-rules/[id]/route.ts": "8faf68d88498b749d07cd51139430f2514c47408d63d8d054e24e7d0ff4380a6"
+  },
+  "scope": "Actual POST/PATCH and real manager-admission helper with synthetic transaction sink. Valid day/night/default behavior; invalid inputs must fail before writes. Real PostgreSQL types and attendance downstream impact not covered."
+}

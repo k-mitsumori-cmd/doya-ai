@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-07T17:10:58.600024+00:00",
+  "status": "frozen41gates-passed-ready-for-reviewed-commit-push",
+  "baseline": "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-input-postgres-baseline.json",
+  "candidate": "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-input-candidate",
+  "repairs": [
+    "Validate explicit HH:MM times and optional core times",
+    "Require integer break minutes0through1440",
+    "Require supported overtime method and boolean flex setting",
+    "Preserve omitted POST defaults and PATCH fields, including valid overnight schedule"
+  ],
+  "productionApplied": false,
+  "remaining": [
+    "UI save/draft/identity lifecycle and stale work-rule edits",
+    "Cross-field schedule/break duration policy and core time policy need separate validation",
+    "Real downstream attendance regression and production-authenticated settings flow unverified"
+  ],
+  "scope": "Actual isolated PostgreSQL/Prisma/row-lock helper tests; no production data writes",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/kintai-work-rule-input-release-58aaa99f-db59-49b4-85bd-d9e180448399",
+  "gateStatus": "passed"
+}

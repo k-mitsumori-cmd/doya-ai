@@ -1,0 +1,173 @@
+{
+  "checkedAt": "2026-10-07T17:14:30.058Z",
+  "passed": 40,
+  "cases": [
+    {
+      "method": "POST",
+      "scenario": "negative-break"
+    },
+    {
+      "method": "POST",
+      "scenario": "excessive-break"
+    },
+    {
+      "method": "POST",
+      "scenario": "fractional-break"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-hour"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-minute"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-method"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-flex-type"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-time-type"
+    },
+    {
+      "method": "POST",
+      "scenario": "day"
+    },
+    {
+      "method": "POST",
+      "scenario": "night"
+    },
+    {
+      "method": "POST",
+      "scenario": "defaults"
+    },
+    {
+      "method": "POST",
+      "scenario": "blank-name"
+    },
+    {
+      "method": "POST",
+      "scenario": "long-name"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-core"
+    },
+    {
+      "method": "POST",
+      "scenario": "clear-core"
+    },
+    {
+      "method": "POST",
+      "scenario": "valid-core"
+    },
+    {
+      "method": "POST",
+      "scenario": "break-string"
+    },
+    {
+      "method": "POST",
+      "scenario": "valid-flex"
+    },
+    {
+      "method": "POST",
+      "scenario": "noncanonical-time"
+    },
+    {
+      "method": "POST",
+      "scenario": "invalid-name-type"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "negative-break"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "excessive-break"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "fractional-break"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-hour"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-minute"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-method"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-flex-type"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-time-type"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "day"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "night"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "defaults"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "blank-name"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "long-name"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-core"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "clear-core"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "valid-core"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "break-string"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "valid-flex"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "noncanonical-time"
+    },
+    {
+      "method": "PATCH",
+      "scenario": "invalid-name-type"
+    }
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/kintai/work-rules/route.ts": "159f6591b5cdee4fe2795b209a6f62a4e4d685e736bf05171980a2af46821e1c",
+    "src/app/api/kintai/work-rules/[id]/route.ts": "790e7976089c4fae529ce38d20491fa14ba5b4696647d86ab2274fea281802e9",
+    "src/lib/kintai/work-rule-input.ts": "3ceba2508906b90ddae79281ae1ea8326c5039deab9ee61a5f9480a138057ec3"
+  },
+  "scope": "Actual POST/PATCH and real manager-admission helper with synthetic transaction sink. Valid day/night/default behavior; invalid inputs must fail before writes. Real PostgreSQL types and attendance downstream impact not covered."
+}

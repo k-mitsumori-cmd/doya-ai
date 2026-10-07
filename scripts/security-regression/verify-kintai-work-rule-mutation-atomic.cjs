@@ -19,6 +19,7 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
   }
   const prisma = { $transaction: async work => work(tx) }
   const deps = {
+    '@/lib/kintai/work-rule-input': load('src/lib/kintai/work-rule-input.ts'),
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     '@/lib/kintai/access': {
