@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-07T16:59:33.414Z",
+  "passed": 4,
+  "cases": [
+    {
+      "scenario": "stale-editor"
+    },
+    {
+      "scenario": "invalid-version"
+    },
+    {
+      "scenario": "matching-version"
+    },
+    {
+      "scenario": "legacy-client"
+    }
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/hr/employees/[id]/route.ts": "0eddad1f8736d3058a1811a3ad35ff7469ffcc9965070c1e7c8dc6af49dce54f",
+    "src/lib/hr/access.ts": "b73222e91e900b774b7716ca3caacfa7305e6742fa2f7f6ac761027bf9dd0598"
+  },
+  "scope": "Actual HR PATCH and Prisma in isolated PostgreSQL; sequential stale draft, malformed version, matching version and legacy compatibility. No customer data or production mutation."
+}

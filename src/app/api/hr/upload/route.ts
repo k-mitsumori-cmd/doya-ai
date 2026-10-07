@@ -4,6 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
+import sharp from 'sharp'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { uploadHrPhoto } from '@/lib/hr/storage'
@@ -46,14 +47,26 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-    if (file.size > MAX_SIZE) {
+    if (file.size === 0 || file.size > MAX_SIZE) {
       return NextResponse.json(
         { error: '画像サイズは5MB以下にしてください' },
         { status: 400 }
       )
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const source = Buffer.from(await file.arrayBuffer())
+    let buffer: Buffer
+    try {
+      const image = sharp(source, { limitInputPixels: 40_000_000, failOn: 'warning' })
+      const metadata = await image.metadata()
+      const expectedFormat = ext === 'jpg' ? 'jpeg' : ext
+      if (metadata.format !== expectedFormat) throw new Error('Image format mismatch')
+      // Decode and re-encode before storage; MIME labels alone do not establish image validity.
+      buffer = await image.rotate().toBuffer()
+      if (!buffer.length || buffer.length > MAX_SIZE) throw new Error('Decoded image exceeds limit')
+    } catch {
+      return NextResponse.json({ error: '画像を読み込めませんでした。正しいJPG・PNG・WebPを指定してください。' }, { status: 400 })
+    }
     // 組織スコープのパス + ランダムUUIDで推測困難に
     const path = `${ctx.organizationId}/${randomUUID()}.${ext}`
     const url = await uploadHrPhoto(buffer, path, file.type)

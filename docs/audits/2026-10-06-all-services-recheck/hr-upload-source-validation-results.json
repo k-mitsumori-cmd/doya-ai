@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-07T16:59:34.654Z",
+  "cases": [
+    "text-as-png",
+    "empty-png",
+    "jpeg-as-png",
+    "corrupted-png",
+    "valid-png",
+    "valid-jpeg",
+    "valid-webp"
+  ],
+  "passed": 7,
+  "failures": [],
+  "sourceHashes": {
+    "src/app/api/hr/upload/route.ts": "2fcc8c204cc418f7c1066b80098fae583c7dfd6173bad7e27ae634a14d0f04e3"
+  },
+  "scope": "Actual upload route; real File and FormData; synthetic admin and storage sink; no actual provider/storage/production writes."
+}

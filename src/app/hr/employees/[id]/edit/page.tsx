@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -59,6 +59,12 @@ export default function EditEmployeePage() {
   const router = useRouter()
   const id = params?.id as string
 
+  const submitLock = useRef<object | null>(null)
+  const currentId = useRef(id)
+  currentId.current = id
+  const editScope = useRef({ id, active: true })
+  const photoRead = useRef(0)
+  const [loadedVersion, setLoadedVersion] = useState<{ id: string; updatedAt: string } | null>(null)
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -85,18 +91,40 @@ export default function EditEmployeePage() {
 
   useEffect(() => {
     if (!id) return
+    editScope.current.active = false
+    const scope = { id, active: true }
+    editScope.current = scope
+    photoRead.current += 1
+    submitLock.current = null
+    setSaving(false)
+    let active = true
+    const controller = new AbortController()
+    setLoading(true)
+    setNotFound(false)
+    setLoadedVersion(null)
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setDepartments([])
     async function load() {
       try {
         const [empRes, deptRes] = await Promise.all([
-          fetch(`/api/hr/employees/${id}`),
-          fetch('/api/hr/departments'),
+          fetch(`/api/hr/employees/${id}`, { signal: controller.signal, cache: 'no-store' }),
+          fetch('/api/hr/departments', { signal: controller.signal, cache: 'no-store' }),
         ])
+        if (!active) return
         if (!empRes.ok) {
           setNotFound(true)
           return
         }
         const data = await empRes.json()
         const e = data.employee ?? data
+        if (!active) return
+        const version = typeof e.updatedAt === 'string' ? new Date(e.updatedAt) : null
+        if (e.id !== id || !version || !Number.isFinite(version.getTime()) || version.toISOString() !== e.updatedAt) {
+          setNotFound(true)
+          return
+        }
+        setLoadedVersion({ id, updatedAt: e.updatedAt })
         setForm({
           lastName: e.lastName ?? '',
           firstName: e.firstName ?? '',
@@ -116,15 +144,17 @@ export default function EditEmployeePage() {
         setPhotoUrl(e.photoUrl ?? '')
         if (deptRes.ok) {
           const dd = await deptRes.json()
+          if (!active) return
           setDepartments(dd.flat ?? dd.departments ?? [])
         }
       } catch {
-        setNotFound(true)
+        if (active) setNotFound(true)
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
     load()
+    return () => { active = false; scope.active = false; controller.abort() }
   }, [id])
 
   const update = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
@@ -132,13 +162,18 @@ export default function EditEmployeePage() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const scope = editScope.current
+    const sequence = ++photoRead.current
     setPhotoFile(file)
     const reader = new FileReader()
-    reader.onload = (ev) => setPhotoPreview(ev.target?.result as string)
+    reader.onload = (ev) => {
+      if (scope.active && editScope.current === scope && currentId.current === scope.id && photoRead.current === sequence) setPhotoPreview(ev.target?.result as string)
+    }
     reader.readAsDataURL(file)
   }
 
   const removePhoto = () => {
+    photoRead.current += 1
     setPhotoFile(null)
     setPhotoPreview(null)
     setPhotoUrl('')
@@ -146,10 +181,15 @@ export default function EditEmployeePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (submitLock.current || !loadedVersion || loadedVersion.id !== id) return
     if (!form.lastName || !form.firstName) {
       toast.error('姓名は必須項目です')
       return
     }
+    const scope = editScope.current
+    const isCurrent = () => scope.active && editScope.current === scope && currentId.current === scope.id
+    const attempt = {}
+    submitLock.current = attempt
     setSaving(true)
     try {
       // 新しい写真があれば先にアップロードしてURLを取得
@@ -158,32 +198,40 @@ export default function EditEmployeePage() {
         const fd = new FormData()
         fd.append('file', photoFile)
         const up = await fetch('/api/hr/upload', { method: 'POST', body: fd })
+        if (!isCurrent()) return
         if (!up.ok) {
           const ed = await up.json().catch(() => ({}))
           throw new Error(ed.error || '写真のアップロードに失敗しました')
         }
         finalPhotoUrl = (await up.json()).url
+        if (!isCurrent()) return
       }
 
+      if (!isCurrent()) return
       const res = await fetch(`/api/hr/employees/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, photoUrl: finalPhotoUrl }),
+        body: JSON.stringify({ ...form, photoUrl: finalPhotoUrl, expectedUpdatedAt: loadedVersion.updatedAt }),
       })
+      if (!isCurrent()) return
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
+        if (!isCurrent()) return
         throw new Error(err.error || '更新に失敗しました')
       }
       toast.success('従業員情報を更新しました')
       router.push(`/hr/employees/${id}`)
     } catch (err: any) {
-      toast.error(err.message)
+      if (isCurrent()) toast.error(err.message)
     } finally {
-      setSaving(false)
+      if (submitLock.current === attempt) {
+        submitLock.current = null
+        if (isCurrent()) setSaving(false)
+      }
     }
   }
 
-  if (loading) {
+  if (loading || (!notFound && loadedVersion?.id !== id)) {
     return (
       <div className="p-6 lg:p-10 max-w-3xl mx-auto">
         <div className="animate-pulse space-y-4">

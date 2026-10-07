@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-07T16:49:24.538Z",
+  "passed": 2,
+  "cases": [
+    {
+      "scenario": "matching-version"
+    },
+    {
+      "scenario": "legacy-client"
+    }
+  ],
+  "failures": [
+    {
+      "scenario": "stale-editor",
+      "error": "Stale editor was allowed to overwrite a newer save\n\n200 !== 409\n"
+    },
+    {
+      "scenario": "invalid-version",
+      "error": "Expected values to be strictly equal:\n\n200 !== 400\n"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/employees/[id]/route.ts": "e09022b19f112603c9e132a6f9e3ca95cbfe44371eb06502ed98964a04892921",
+    "src/lib/hr/access.ts": "b73222e91e900b774b7716ca3caacfa7305e6742fa2f7f6ac761027bf9dd0598"
+  },
+  "scope": "Actual HR PATCH and Prisma in isolated PostgreSQL; sequential stale draft, malformed version, matching version and legacy compatibility. No customer data or production mutation."
+}

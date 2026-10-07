@@ -111,6 +111,18 @@ jobs:
       - name: HR employee writes and history concurrency (private Unix socket)
         run: python3 docs/audits/2026-10-06-all-services-recheck/hr-employee-write-scope-postgres-supervise.py
 
+      - name: HR employee stale editor versions (private Unix socket)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/hr-employee-editor-version-postgres-supervise.py
+
+      - name: HR employee editor conflicts and route lifecycle (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-mounted.cjs
+
+      - name: HR employee editor deferred callbacks (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-lifecycle.cjs
+
+      - name: HR photo content validation (offline)
+        run: node docs/audits/2026-10-06-all-services-recheck/verify-hr-upload-source-validation.cjs
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

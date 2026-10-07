@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-07T16:59:00.759160+00:00",
+  "status": "source-applied-seven-targeted-checks-passed-frozen37gate-running",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/hr-employee-editor-safety-release-357508dc-32e4-433f-83a0-e0e56c9e9e76",
+  "baseline": "docs/audits/2026-10-06-all-services-recheck/hr-upload-source-validation-baseline.json",
+  "repairs": [
+    "Reject empty image before storage",
+    "Decode image content with actual sharp; check format matches MIME; cap input pixels at 40 million",
+    "Re-encode decoded image before private storage and verify output still satisfies existing5MB cap"
+  ],
+  "productionApplied": false,
+  "followups": [
+    "Platform multipart request body boundary remains unresolved",
+    "Actual private bucket and authenticated customer upload remain unverified",
+    "Storage authority after awaiting file bytes remains audit followup"
+  ]
+}

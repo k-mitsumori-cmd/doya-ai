@@ -114,6 +114,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
     }
+    if (Object.prototype.hasOwnProperty.call(body, 'expectedUpdatedAt')) {
+      const value = body.expectedUpdatedAt
+      const expected = typeof value === 'string' && value.length === 24 ? new Date(value) : null
+      if (!expected || !Number.isFinite(expected.getTime()) || expected.toISOString() !== value) {
+        return NextResponse.json({ error: '更新日時を確認できません。再読み込みしてください。' }, { status: 400, headers: privateWriteHeaders })
+      }
+      if (expected.getTime() !== existing.updatedAt.getTime()) return writeConflictResponse()
+    }
     const {
       employeeNumber,
       lastName,

@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-07T16:59:34.443Z",
+  "passed": 3,
+  "cases": [
+    "late save response has no navigation after route change",
+    "old photo read cannot populate another employee",
+    "upload response cannot start employee write after route change"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/hr/employees/[id]/edit/page.tsx": "a8ab346f564608ba83d8ae086dd65da19056082a609e93782e801a4f2f2f3fbe"
+  },
+  "scope": "Mounted actual page with deferred synthetic PATCH/upload/FileReader responses across employee route transitions. No customer data/provider or production writes."
+}
