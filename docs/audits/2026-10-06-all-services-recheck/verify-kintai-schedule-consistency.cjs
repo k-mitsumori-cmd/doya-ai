@@ -1,0 +1,12 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto'),ts=require('typescript'),{load}=require('../../../scripts/security-regression/load-typescript.cjs');
+const file=process.env.DOYA_SETTINGS_SOURCE||'src/app/kintai/settings/page.tsx',source=fs.readFileSync(file,'utf8'),context={};
+vm.runInNewContext(ts.transpileModule(source.slice(source.indexOf('function computeSchedulePreview('),source.indexOf('export default function SettingsPage')),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
+const {calculateDailyAttendance:calc}=load('src/lib/kintai/attendance.ts');
+const day=new Date('2026-09-20T00:00:00+09:00'),cases=[];
+for(const [start,end,minutes] of [['09:00','17:00',0],['22:00','06:00',0],['23:45','00:15',0],['09:00','18:00',60],['09:00','09:00',0],['00:00','00:00',0]]){
+ const parse=t=>t.split(':').reduce((h,m)=>Number(h)*60+Number(m)),s=parse(start),e=parse(end)+(parse(end)<s?1440:0),duration=e-s;
+ const record=(type,t)=>({type,timestamp:new Date(+day+t*60000)}),events=[record('clock_in',s)];if(minutes){const mid=s+Math.floor((duration-minutes)/2);events.push(record('break_start',mid),record('break_end',mid+minutes))}events.push(record('clock_out',e));
+ const attendance=calc(events,{workStart:start,workEnd:end,breakMinutes:minutes},day),preview=context.computeSchedulePreview(start,end,minutes),expectedWork=duration-minutes;
+ const passed=attendance.workMinutes===expectedWork&&attendance.overtimeMinutes===0&&(expectedWork===0?preview==='':preview.endsWith(`${Math.floor(expectedWork/60)}時間${expectedWork%60?`${expectedWork%60}分`:''}`));cases.push({start,end,minutes,preview,workMinutes:attendance.workMinutes,overtimeMinutes:attendance.overtimeMinutes,passed});
+}
+const result={checkedAt:new Date().toISOString(),passed:cases.filter(c=>c.passed).length,cases,sourceHashes:Object.fromEntries([file,'src/lib/kintai/attendance.ts'].map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')])),scope:'Actual preview and actual attendance calculator; same-time endpoints preserve existing zero-duration semantics. Explicit 24h shift representation is not implemented.'};fs.writeFileSync(process.env.DOYA_CONSISTENCY_RESULT||'docs/audits/2026-10-06-all-services-recheck/kintai-schedule-consistency-results.json',JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result));assert(cases.every(c=>c.passed),'Settings and attendance disagree');

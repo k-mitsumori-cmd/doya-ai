@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-07T17:43:27.388Z",
+  "passed": 5,
+  "cases": [
+    "Native 1280px night duration and chart boundaries, no horizontal overflow",
+    "Native 390px night duration and chart boundaries, no horizontal overflow",
+    "Native overnight preview labels next day",
+    "Native zero break preview omits nonexistent rest interval",
+    "Native valid PATCH acknowledgement closes editor and refreshes synthetic list"
+  ],
+  "chrome": "Chrome/155.0.8059.39",
+  "sourceHashes": {
+    "src/app/kintai/settings/page.tsx": "a7ee0fdfc03adaebf50b4a0e7fcd20f1969b217f818cb98e42ace5da395f2659"
+  },
+  "verifierHash": "9510b050a6db45dea5a32018acf095d7021fbb6363c4e65e6d1d42dfaba30d82",
+  "cssHash": "6635aee603484e0c4c70365f891308bf21fecb47bcf98f9959c1b0b2819ae5b3",
+  "syntheticWrites": 1,
+  "scope": "Actual settings TSX in native Chrome with real local HTTP and .next compiled CSS. Synthetic work rules/PATCH only; no real auth, customer DB or production writes. Screenshots require human/model visual review separately."
+}

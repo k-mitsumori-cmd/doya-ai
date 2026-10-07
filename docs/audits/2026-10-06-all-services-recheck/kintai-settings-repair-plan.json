@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-07T17:32:30.057599+00:00",
+  "status": "frozen47gates-passed-ready-for-reviewed-commit-push",
+  "baseline": "docs/audits/2026-10-06-all-services-recheck/kintai-settings-mounted-baseline.json",
+  "candidate": "docs/audits/2026-10-06-all-services-recheck/kintai-settings-candidate",
+  "repairs": [
+    "Compute overnight duration across midnight and render nonnegative24-hour bar segments",
+    "Bind save responses to editor generation and mounted lifetime",
+    "Validate saved rule acknowledgement before closing form",
+    "Synchronous save lock scoped to each edit generation",
+    "Scope delete responses to confirmation generation and mounted lifetime",
+    "Require success:true deletion acknowledgement and synchronous delete lock",
+    "Zero-minute break preview omits nonexistent break segment;9 dedicated rendering cases passed",
+    "Preserve zero-duration interpretation for equal shift endpoints, matching actual attendance calculator",
+    "Disable form inputs/selects during pending save to prevent acknowledgement discarding newer unsaved input"
+  ],
+  "productionApplied": false,
+  "remaining": [
+    "Lost create acknowledgement still reproduces duplicates on manual retry; durable recovery required",
+    "Identity/organization transitions and stale rule edits not verified",
+    "Full authenticated/browser/provider E2E remains pending"
+  ],
+  "deleteBaseline": "docs/audits/2026-10-06-all-services-recheck/kintai-settings-delete-mounted-baseline.json",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/kintai-settings-release-c2b134ca-95e7-491a-8088-4ba91dcc5f31",
+  "gateStatus": "passed"
+}

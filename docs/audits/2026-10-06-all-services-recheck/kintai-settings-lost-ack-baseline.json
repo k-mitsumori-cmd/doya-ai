@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-07T17:31:17.315Z",
+  "passed": false,
+  "serverRows": 2,
+  "postCount": 2,
+  "alerts": [
+    "保存結果を確認できませんでした。再読み込みして最新のルールをご確認ください。"
+  ],
+  "sourceHash": "8bc680b6563c38371960cf0ed1ba00809c5da1d54f377914a5097df0c73af3df",
+  "scope": "Actual React settings page; synthetic server commits POST then loses acknowledgement. Manual save retry must not create a duplicate. No production data or providers."
+}

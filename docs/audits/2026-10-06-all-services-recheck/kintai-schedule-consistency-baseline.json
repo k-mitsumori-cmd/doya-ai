@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-10-07T17:32:03.490Z",
+  "passed": 4,
+  "cases": [
+    {
+      "start": "09:00",
+      "end": "17:00",
+      "minutes": 0,
+      "preview": "09:00 - 17:00 勤務 = 8時間",
+      "workMinutes": 480,
+      "overtimeMinutes": 0,
+      "passed": true
+    },
+    {
+      "start": "22:00",
+      "end": "06:00",
+      "minutes": 0,
+      "preview": "22:00 - 翌日06:00 勤務 = 8時間",
+      "workMinutes": 480,
+      "overtimeMinutes": 0,
+      "passed": true
+    },
+    {
+      "start": "23:45",
+      "end": "00:15",
+      "minutes": 0,
+      "preview": "23:45 - 翌日00:15 勤務 = 0時間30分",
+      "workMinutes": 30,
+      "overtimeMinutes": 0,
+      "passed": true
+    },
+    {
+      "start": "09:00",
+      "end": "18:00",
+      "minutes": 60,
+      "preview": "09:00 - 13:00 勤務 → 13:00 - 14:00 休憩 → 14:00 - 18:00 勤務 = 8時間",
+      "workMinutes": 480,
+      "overtimeMinutes": 0,
+      "passed": true
+    },
+    {
+      "start": "09:00",
+      "end": "09:00",
+      "minutes": 0,
+      "preview": "09:00 - 翌日09:00 勤務 = 24時間",
+      "workMinutes": 0,
+      "overtimeMinutes": 0,
+      "passed": false
+    },
+    {
+      "start": "00:00",
+      "end": "00:00",
+      "minutes": 0,
+      "preview": "00:00 - 翌日00:00 勤務 = 24時間",
+      "workMinutes": 0,
+      "overtimeMinutes": 0,
+      "passed": false
+    }
+  ],
+  "sourceHashes": {
+    "src/app/kintai/settings/page.tsx": "8bc680b6563c38371960cf0ed1ba00809c5da1d54f377914a5097df0c73af3df",
+    "src/lib/kintai/attendance.ts": "bd25e9dd95a9ab5afdb08f75f5ef2c2fedcb0ebcb56a6fee6cd7135daf933ee6"
+  },
+  "scope": "Actual preview and actual attendance calculator; same-time endpoints preserve existing zero-duration semantics. Explicit 24h shift representation is not implemented."
+}

@@ -1,0 +1,62 @@
+{
+  "checkedAt": "2026-10-07T17:29:21.045Z",
+  "passed": 5,
+  "cases": [
+    {
+      "name": "day without break",
+      "expected": "09:00 - 17:00 勤務 = 8時間",
+      "actual": "09:00 - 13:00 勤務 → 13:00 - 13:00 休憩 → 13:00 - 17:00 勤務 = 8時間",
+      "passed": false
+    },
+    {
+      "name": "night without break",
+      "expected": "22:00 - 翌日06:00 勤務 = 8時間",
+      "actual": "22:00 - 翌日02:00 勤務 → 翌日02:00 - 翌日02:00 休憩 → 翌日02:00 - 翌日06:00 勤務 = 8時間",
+      "passed": false
+    },
+    {
+      "name": "short shift without break",
+      "expected": "23:45 - 翌日00:15 勤務 = 0時間30分",
+      "actual": "23:45 - 翌日00:00 勤務 → 翌日00:00 - 翌日00:00 休憩 → 翌日00:00 - 翌日00:15 勤務 = 0時間30分",
+      "passed": false
+    },
+    {
+      "name": "day with break",
+      "expected": "09:00 - 13:00 勤務 → 13:00 - 14:00 休憩 → 14:00 - 18:00 勤務 = 8時間",
+      "actual": "09:00 - 13:00 勤務 → 13:00 - 14:00 休憩 → 14:00 - 18:00 勤務 = 8時間",
+      "passed": true
+    },
+    {
+      "name": "night with next day break",
+      "expected": "22:00 - 翌日02:00 勤務 → 翌日02:00 - 翌日03:00 休憩 → 翌日03:00 - 翌日07:00 勤務 = 8時間",
+      "actual": "22:00 - 翌日02:00 勤務 → 翌日02:00 - 翌日03:00 休憩 → 翌日03:00 - 翌日07:00 勤務 = 8時間",
+      "passed": true
+    },
+    {
+      "name": "break crossing midnight",
+      "expected": "20:00 - 23:30 勤務 → 23:30 - 翌日00:30 休憩 → 翌日00:30 - 翌日04:00 勤務 = 7時間",
+      "actual": "20:00 - 23:30 勤務 → 23:30 - 翌日00:30 休憩 → 翌日00:30 - 翌日04:00 勤務 = 7時間",
+      "passed": true
+    },
+    {
+      "name": "24h shift",
+      "expected": "09:00 - 翌日09:00 勤務 = 24時間",
+      "actual": "09:00 - 21:00 勤務 → 21:00 - 21:00 休憩 → 21:00 - 翌日09:00 勤務 = 24時間",
+      "passed": false
+    },
+    {
+      "name": "empty time",
+      "expected": "",
+      "actual": "",
+      "passed": true
+    },
+    {
+      "name": "no working time",
+      "expected": "",
+      "actual": "",
+      "passed": true
+    }
+  ],
+  "sourceHash": "9843ee39980fade399793e06db8f23390bac863fad249aad0d28cffcefcb706b",
+  "scope": "Actual TSX preview function; day/night/minute/zero-break rendering. No database or provider calls."
+}

@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-07T17:38:30.903Z",
+  "passed": 2,
+  "cases": [
+    "late delete response preserves another rule confirmation",
+    "false delete acknowledgement preserves confirmation"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/kintai/settings/page.tsx": "a7ee0fdfc03adaebf50b4a0e7fcd20f1969b217f818cb98e42ace5da395f2659"
+  },
+  "scope": "Actual settings page, synthetic rule list/deferred DELETE; no production deletion."
+}

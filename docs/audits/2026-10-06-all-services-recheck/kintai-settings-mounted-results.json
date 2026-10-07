@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-07T17:38:30.521Z",
+  "passed": 6,
+  "cases": [
+    "night rule shows8 hours",
+    "late save preserves newer draft",
+    "malformed acknowledgement preserves draft",
+    "same-turn duplicate creation is blocked",
+    "valid saved rule acknowledgement closes form",
+    "wrong saved rule acknowledgement preserves editing form"
+  ],
+  "failures": [],
+  "sourceHashes": {
+    "src/app/kintai/settings/page.tsx": "a7ee0fdfc03adaebf50b4a0e7fcd20f1969b217f818cb98e42ace5da395f2659"
+  },
+  "scope": "Actual React settings page in jsdom; synthetic night rule and deferred saves. No production operations."
+}

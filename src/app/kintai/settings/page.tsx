@@ -6,23 +6,24 @@ function computeSchedulePreview(workStart: string, workEnd: string, breakMinutes
   if (!workStart || !workEnd) return ''
   const [sh, sm] = workStart.split(':').map(Number)
   const [eh, em] = workEnd.split(':').map(Number)
-  const totalMinutes = (eh * 60 + em) - (sh * 60 + sm)
-  if (totalMinutes <= 0) return ''
+  const elapsed = (eh * 60 + em) - (sh * 60 + sm)
+  const totalMinutes = elapsed < 0 ? elapsed + 1440 : elapsed
   const workMinutes = totalMinutes - breakMinutes
   if (workMinutes <= 0) return ''
 
   const halfWork = Math.floor(workMinutes / 2)
   const breakStartMin = sh * 60 + sm + halfWork
   const breakEndMin = breakStartMin + breakMinutes
-  const bsH = String(Math.floor(breakStartMin / 60)).padStart(2, '0')
+  const bsH = (breakStartMin >= 1440 ? '翌日' : '') + String(Math.floor(breakStartMin / 60) % 24).padStart(2, '0')
   const bsM = String(breakStartMin % 60).padStart(2, '0')
-  const beH = String(Math.floor(breakEndMin / 60)).padStart(2, '0')
+  const beH = (breakEndMin >= 1440 ? '翌日' : '') + String(Math.floor(breakEndMin / 60) % 24).padStart(2, '0')
   const beM = String(breakEndMin % 60).padStart(2, '0')
 
   const workH = Math.floor(workMinutes / 60)
   const workM = workMinutes % 60
+  if (breakMinutes === 0) return `${workStart} - ${elapsed < 0 ? '翌日' : ''}${workEnd} 勤務 = ${workH}時間${workM > 0 ? `${workM}分` : ''}`
 
-  return `${workStart} - ${bsH}:${bsM} 勤務 → ${bsH}:${bsM} - ${beH}:${beM} 休憩 → ${beH}:${beM} - ${workEnd} 勤務 = ${workH}時間${workM > 0 ? `${workM}分` : ''}`
+  return `${workStart} - ${bsH}:${bsM} 勤務 → ${bsH}:${bsM} - ${beH}:${beM} 休憩 → ${beH}:${beM} - ${elapsed < 0 ? '翌日' : ''}${workEnd} 勤務 = ${workH}時間${workM > 0 ? `${workM}分` : ''}`
 }
 
 export default function SettingsPage() {
@@ -30,6 +31,11 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const requestVersion = useRef(0)
+  const formVersion = useRef(0)
+  const mounted = useRef(false)
+  const saveLock = useRef<object | null>(null)
+  const deleteVersion = useRef(0)
+  const deleteLock = useRef<object | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState({ name: '', workStart: '09:00', workEnd: '18:00', breakMinutes: 60, overtimeCalcMethod: 'daily', flexEnabled: false, coreStart: '', coreEnd: '' })
@@ -56,17 +62,24 @@ export default function SettingsPage() {
   }
 
   useEffect(() => {
+    mounted.current = true
     void fetchRules()
-    return () => { requestVersion.current += 1 }
+    return () => { mounted.current = false; deleteVersion.current += 1; formVersion.current += 1; requestVersion.current += 1 }
   }, [])
 
   const openCreate = () => {
+    formVersion.current += 1
+    saveLock.current = null
+    setSaving(false)
     setEditing(null)
     setForm({ name: '', workStart: '09:00', workEnd: '18:00', breakMinutes: 60, overtimeCalcMethod: 'daily', flexEnabled: false, coreStart: '', coreEnd: '' })
     setShowForm(true)
   }
 
   const openEdit = (rule: any) => {
+    formVersion.current += 1
+    saveLock.current = null
+    setSaving(false)
     setEditing(rule)
     setForm({
       name: rule.name, workStart: rule.workStart, workEnd: rule.workEnd,
@@ -76,28 +89,63 @@ export default function SettingsPage() {
     setShowForm(true)
   }
 
+  const closeForm = () => { formVersion.current += 1; setShowForm(false) }
+
   const handleSave = async () => {
+    if (saveLock.current) return
     if (!form.name.trim()) { alert('ルール名を入力してください'); return }
+    const version = formVersion.current
+    const current = () => mounted.current && formVersion.current === version
+    const attempt = {}
+    saveLock.current = attempt
     setSaving(true)
     try {
       const url = editing ? `/api/kintai/work-rules/${editing.id}` : '/api/kintai/work-rules'
       const method = editing ? 'PATCH' : 'POST'
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
-      if (!res.ok) { const d = await res.json(); alert(d.error || '保存に失敗しました'); return }
+      if (!current()) return
+      const data = await res.json().catch(() => null)
+      if (!current()) return
+      if (!res.ok) { alert(data?.error || '保存に失敗しました'); return }
+      if (!data?.rule || typeof data.rule.id !== 'string' || !data.rule.id
+        || data.rule.name !== form.name || (editing && data.rule.id !== editing.id)) {
+        alert('保存結果を確認できませんでした。再読み込みして最新のルールをご確認ください。')
+        return
+      }
       setShowForm(false)
       void fetchRules()
-    } catch { alert('通信エラー') } finally { setSaving(false) }
+    } catch { if (current()) alert('保存結果を確認できませんでした。再読み込みして最新のルールをご確認ください。') } finally {
+      if (saveLock.current === attempt) { saveLock.current = null; if (current()) setSaving(false) }
+    }
   }
 
+  const openDelete = (rule: any) => {
+    deleteVersion.current += 1
+    deleteLock.current = null
+    setDeleting(false)
+    setShowDeleteConfirm(rule)
+  }
+  const closeDelete = () => { deleteVersion.current += 1; setShowDeleteConfirm(null) }
+
   const handleDelete = async () => {
-    if (!showDeleteConfirm) return
+    if (!showDeleteConfirm || deleteLock.current) return
+    const version = deleteVersion.current
+    const current = () => mounted.current && deleteVersion.current === version
+    const attempt = {}
+    deleteLock.current = attempt
     setDeleting(true)
     try {
       const res = await fetch(`/api/kintai/work-rules/${showDeleteConfirm.id}`, { method: 'DELETE' })
-      if (!res.ok) { const d = await res.json(); alert(d.error || '削除に失敗しました'); return }
+      if (!current()) return
+      const data = await res.json().catch(() => null)
+      if (!current()) return
+      if (!res.ok) { alert(data?.error || '削除に失敗しました'); return }
+      if (data?.success !== true) { alert('削除結果を確認できませんでした。再読み込みして最新のルールをご確認ください。'); return }
       setShowDeleteConfirm(null)
       void fetchRules()
-    } catch { alert('通信エラー') } finally { setDeleting(false) }
+    } catch { if (current()) alert('削除結果を確認できませんでした。再読み込みして最新のルールをご確認ください。') } finally {
+      if (deleteLock.current === attempt) { deleteLock.current = null; if (current()) setDeleting(false) }
+    }
   }
 
   const OT_LABELS: Record<string, string> = { daily: '日次', weekly: '週次', monthly: '月次' }
@@ -152,17 +200,19 @@ export default function SettingsPage() {
             {rules.map((rule) => {
               const [sh, sm] = (rule.workStart || '09:00').split(':').map(Number)
               const [eh, em] = (rule.workEnd || '18:00').split(':').map(Number)
-              const totalMin = (eh * 60 + em) - (sh * 60 + sm)
+              const elapsed = (eh * 60 + em) - (sh * 60 + sm)
+              const overnight = elapsed < 0
+              const totalMin = overnight ? elapsed + 1440 : elapsed
               const workMin = totalMin - (rule.breakMinutes || 0)
               const workH = Math.floor(workMin / 60)
               const workM = workMin % 60
               const barStart = sh * 60 + sm
               const barEnd = eh * 60 + em
-              const rangeStart = 6 * 60
-              const rangeEnd = 22 * 60
-              const rangeTotal = rangeEnd - rangeStart
-              const barLeftPct = Math.max(0, ((barStart - rangeStart) / rangeTotal) * 100)
-              const barWidthPct = Math.min(100 - barLeftPct, ((barEnd - barStart) / rangeTotal) * 100)
+              const barLeftPct = (barStart / 1440) * 100
+              const barEndPct = (barEnd / 1440) * 100
+              const segments = overnight
+                ? [{ left: 0, width: barEndPct }, { left: barLeftPct, width: 100 - barLeftPct }]
+                : [{ left: barLeftPct, width: barEndPct - barLeftPct }]
 
               return (
                 <div key={rule.id} className="bg-white rounded-2xl border-2 border-slate-200 shadow-md p-6 hover:shadow-xl hover:border-purple-300 transition-all">
@@ -180,7 +230,7 @@ export default function SettingsPage() {
                       <button onClick={() => openEdit(rule)} className="p-1.5 text-slate-400 hover:text-[#7f19e6] hover:bg-purple-50 rounded-lg transition-colors">
                         <span className="material-symbols-outlined text-lg">edit</span>
                       </button>
-                      <button onClick={() => setShowDeleteConfirm(rule)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                      <button onClick={() => openDelete(rule)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                         <span className="material-symbols-outlined text-lg">delete</span>
                       </button>
                     </div>
@@ -202,12 +252,12 @@ export default function SettingsPage() {
 
                     {/* Visual hours bar */}
                     <div className="relative h-8 bg-slate-100 rounded-full overflow-hidden">
-                      <div
+                      {segments.map((segment, index) => <div key={index}
                         className="absolute top-0 bottom-0 bg-gradient-to-r from-[#7f19e6]/40 to-[#7f19e6]/60 rounded-full"
-                        style={{ left: `${barLeftPct}%`, width: `${barWidthPct}%` }}
-                      />
+                        style={{ left: `${segment.left}%`, width: `${Math.max(0, segment.width)}%` }}
+                      />)}
                       <span className="absolute text-xs font-black text-[#7f19e6] top-1/2 -translate-y-1/2" style={{ left: `${Math.max(3, barLeftPct - 2)}%` }}>{rule.workStart}</span>
-                      <span className="absolute text-xs font-black text-[#7f19e6] top-1/2 -translate-y-1/2" style={{ left: `${Math.min(92, barLeftPct + barWidthPct + 1)}%` }}>{rule.workEnd}</span>
+                      <span className="absolute text-xs font-black text-[#7f19e6] top-1/2 -translate-y-1/2" style={{ left: `${Math.min(92, barEndPct + 1)}%` }}>{rule.workEnd}</span>
                     </div>
 
                     {/* Break */}
@@ -245,21 +295,21 @@ export default function SettingsPage() {
         )}
 
         {showForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowForm(false)}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={closeForm}>
             <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md mx-4 space-y-5 max-h-[90vh] overflow-y-auto fade-in-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <img src="/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png" alt="" width={40} height={40} className="bear-wiggle" />
                   <h2 className="text-lg font-bold text-slate-800">{editing ? 'ルールを編集' : 'ルールを追加'}</h2>
                 </div>
-                <button onClick={() => setShowForm(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+                <button onClick={closeForm} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
                   <span className="material-symbols-outlined">close</span>
                 </button>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">ルール名 <span className="text-red-500">*</span></label>
-                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                <input disabled={saving} type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" placeholder="例: 標準 (9:00-18:00)" />
               </div>
 
@@ -270,13 +320,13 @@ export default function SettingsPage() {
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="block text-sm font-medium text-slate-700 mb-1">始業</label>
-                    <input type="time" value={form.workStart} onChange={(e) => setForm({ ...form, workStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" /></div>
+                    <input disabled={saving} type="time" value={form.workStart} onChange={(e) => setForm({ ...form, workStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" /></div>
                   <div><label className="block text-sm font-medium text-slate-700 mb-1">終業</label>
-                    <input type="time" value={form.workEnd} onChange={(e) => setForm({ ...form, workEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" /></div>
+                    <input disabled={saving} type="time" value={form.workEnd} onChange={(e) => setForm({ ...form, workEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" /></div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">休憩 (分)</label>
-                  <input type="number" value={form.breakMinutes} onChange={(e) => setForm({ ...form, breakMinutes: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" />
+                  <input disabled={saving} type="number" value={form.breakMinutes} onChange={(e) => setForm({ ...form, breakMinutes: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]" />
                 </div>
               </div>
 
@@ -287,20 +337,20 @@ export default function SettingsPage() {
                 </h3>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">残業計算方法</label>
-                  <select value={form.overtimeCalcMethod} onChange={(e) => setForm({ ...form, overtimeCalcMethod: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white">
+                  <select disabled={saving} value={form.overtimeCalcMethod} onChange={(e) => setForm({ ...form, overtimeCalcMethod: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white">
                     <option value="daily">日次</option><option value="weekly">週次</option><option value="monthly">月次</option>
                   </select>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={form.flexEnabled} onChange={(e) => setForm({ ...form, flexEnabled: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-[#7f19e6] focus:ring-[#7f19e6]" />
+                  <input disabled={saving} type="checkbox" checked={form.flexEnabled} onChange={(e) => setForm({ ...form, flexEnabled: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-[#7f19e6] focus:ring-[#7f19e6]" />
                   <span className="text-sm font-medium text-slate-700">フレックスタイム制</span>
                 </label>
                 {form.flexEnabled && (
                   <div className="grid grid-cols-2 gap-3 bg-[#7f19e6]/5 rounded-lg p-3">
                     <div><label className="block text-sm font-medium text-slate-700 mb-1">コア開始</label>
-                      <input type="time" value={form.coreStart} onChange={(e) => setForm({ ...form, coreStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white" /></div>
+                      <input disabled={saving} type="time" value={form.coreStart} onChange={(e) => setForm({ ...form, coreStart: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white" /></div>
                     <div><label className="block text-sm font-medium text-slate-700 mb-1">コア終了</label>
-                      <input type="time" value={form.coreEnd} onChange={(e) => setForm({ ...form, coreEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white" /></div>
+                      <input disabled={saving} type="time" value={form.coreEnd} onChange={(e) => setForm({ ...form, coreEnd: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white" /></div>
                   </div>
                 )}
               </div>
@@ -316,7 +366,7 @@ export default function SettingsPage() {
               )}
 
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
+                <button onClick={closeForm} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
                 <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors disabled:opacity-50">
                   {saving ? '保存中...' : '保存'}
                 </button>
@@ -327,7 +377,7 @@ export default function SettingsPage() {
 
         {/* Delete confirmation dialog */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(null)}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={closeDelete}>
             <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-3">
                 <img src="/kintai/characters/surprise_%E9%A9%9A%E3%81%8D.png" alt="" width={56} height={56} className="bear-wiggle" />
@@ -346,7 +396,7 @@ export default function SettingsPage() {
                 <p className="text-xs text-slate-400">この操作は元に戻せません。</p>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
+                <button onClick={closeDelete} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
                 <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50">
                   {deleting ? '削除中...' : '削除する'}
                 </button>
