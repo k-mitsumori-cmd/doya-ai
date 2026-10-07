@@ -280,6 +280,7 @@ function BannerChatWorkspace() {
       if (data.state !== 'completed') return
 
       if (typeof data.reply !== 'string' || !data.reply.trim()) throw new BannerApiError('AIの返信を確認できませんでした。入力を確認して再試行してください。')
+      if (!textRecovery.acknowledge(data.operationId)) return
       if (inputRevision.current === revision) { inputRevision.current++; setInput('') }
       setMessages((prev) => [
         ...prev,
@@ -288,7 +289,6 @@ function BannerChatWorkspace() {
       setTextLimit(null)
       setTextLimitAction(null)
       pushAssistant(data.reply)
-      textRecovery.acknowledge(data.operationId)
       if (data.spec) {
         setProposedSpec(data.spec as BannerSpec)
       } else {
@@ -502,10 +502,10 @@ function BannerChatWorkspace() {
       />
       <BannerRefineRecovery recovery={refineRecovery} />
       <BannerTextRecovery recovery={textRecovery} onApply={(value) => {
+        if (!textRecovery.acknowledge(value.operationId)) return
         if (value.reply) pushAssistant(value.reply)
         if (value.spec) setProposedSpec(value.spec)
         if (value.suggestions?.length) setSuggestedInputs(value.suggestions.slice(0, 8))
-        textRecovery.acknowledge(value.operationId)
       }} />
       {/* デスクトップのみサイドバー表示 */}
       <div className="hidden md:block">

@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-10-07T08:14:22.945Z",
+  "outcomes": [
+    {
+      "status": 403,
+      "code": "LIMIT_REACHED"
+    },
+    {
+      "status": 403,
+      "code": "LIMIT_REACHED"
+    }
+  ],
+  "staleSingleOutcomes": [
+    {
+      "kind": "regenerate",
+      "status": 409,
+      "message": "画像の生成中です。完了後にお試しください。"
+    },
+    {
+      "kind": "chat",
+      "status": 409,
+      "message": "画像の生成中です。完了後にお試しください。"
+    }
+  ],
+  "providerCalls": 0,
+  "writes": 0,
+  "pendingProjectMinutes": 30,
+  "usage": 20,
+  "completedSlides": 0,
+  "finding": "If a process terminates after reserving20 and before generating/refunding any slides, the stale project cannot recover: retry attempts quota admission first and returns LIMIT_REACHED forever this month. Reservation ownership/remaining amount are not durably recorded for reclamation.",
+  "additionalFinding": "Single slide regenerate/chat routes reject generating status without any expiry check, even30minutes after termination and with project completed.",
+  "scope": "Actual batch/single generation routes and actual quota helper/plan normalization with synthetic killed-process state. No real provider, customer DB, production mutation or actual process termination.",
+  "sourceHashes": {
+    "src/app/api/doyaslide/generate/route.ts": "adf9cea6f08fbf1481fa68fd1d19c593ee630ebf365e0c416f31ab53aafe5962",
+    "src/lib/doyaslide/limits.ts": "e1e8800280611d81d939baeff534180e75364819a947ef84bd369757a0dfeb69",
+    "src/app/api/doyaslide/slides/[id]/regenerate/route.ts": "18f525f9c3f825330c5f76196148cb562eb27cf6aceabdc3a1f83adcf4a18235",
+    "src/app/api/doyaslide/slides/[id]/chat/route.ts": "8c5d7039acf531d676a471d7f6a452b67f275a40c84413b9a24ff3dfe38f87af"
+  }
+}

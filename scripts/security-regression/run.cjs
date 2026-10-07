@@ -1,3 +1,7 @@
+const operationLease = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-operation-lease.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (operationLease.status !== 0) process.exit(operationLease.status || 1);
+const textApplyMounted = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-apply-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (textApplyMounted.error || textApplyMounted.status !== 0) { console.error('Banner text apply mounted regression failed'); process.exit(1); }
 const textResult = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-result.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (textResult.error || textResult.status !== 0) { console.error('Banner text result regression failed'); process.exit(1); }
 const textBody = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-body.cjs')], { stdio: 'inherit', timeout: 60000 });

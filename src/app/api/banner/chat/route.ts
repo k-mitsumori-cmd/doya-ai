@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { privateBannerTextJson, runBannerTextOperation, readBannerTextOperation, readBannerTextBody } from '@/lib/banner/text-http'
 import { requestBannerTextAnswer } from '@/lib/banner/text-answer'
 
+export const maxDuration = 300
+
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 
 

@@ -45,6 +45,24 @@ const base='docs/audits/2026-10-06-all-services-recheck/';
   await helper.beginBannerTextOperation('actor','copy',id,hash,prisma);await helper.completeBannerTextOperation('actor','copy',id,hash,{suggestions:['有効な提案']},prisma);assert.equal((await helper.recoverBannerTextOperation('actor','copy',id,false,prisma)).result.suggestions[0],'有効な提案');await assert.rejects(helper.completeBannerTextOperation('actor','copy',id,hash,{suggestions:[]},prisma),e=>e.status===503);results.push('copy result contract matches actual suggestions DTO and rejects empty result');
  }
 
+ const age=async(kind,milliseconds)=>{const key='banner-text-operation:v1:'+helper.bannerTextFingerprint(['actor',kind,id]);const row=await prisma.systemSetting.findUnique({where:{key}});const receipt=JSON.parse(row.value);receipt.startedAt=new Date(Date.now()-milliseconds).toISOString();await prisma.systemSetting.update({where:{key},data:{value:JSON.stringify(receipt)}})};
+ for(const kind of ['chat','copy']){
+  const answer=kind==='chat'?payload:{suggestions:['期限前の回答']};
+  for(const entry of ['recover','cancel','begin','complete']){
+   await reset();await helper.beginBannerTextOperation('actor',kind,id,hash,prisma);await age(kind,helper.BANNER_TEXT_OPERATION_LEASE_MS+60000);
+   if(entry==='complete')await assert.rejects(helper.completeBannerTextOperation('actor',kind,id,hash,answer,prisma),e=>e.status===409);
+   else if(entry==='begin')assert.equal((await helper.beginBannerTextOperation('actor',kind,id,hash,prisma)).state,'failed');
+   else assert.equal((await helper.recoverBannerTextOperation('actor',kind,id,entry==='cancel',prisma)).state,'failed');
+   assert.equal((await helper.recoverBannerTextOperation('actor',kind,id,false,prisma)).state,'failed');
+   await assert.rejects(helper.completeBannerTextOperation('actor',kind,id,hash,answer,prisma),e=>e.status===409);
+   assert.equal((await helper.beginBannerTextOperation('actor',kind,id,hash,prisma)).state,'failed');assert.equal(await used(),1);
+   results.push(`${kind} expired ${entry} commits terminal failure; no late result, repeated admission or quota refund`);
+  }
+  await reset();await helper.beginBannerTextOperation('actor',kind,id,hash,prisma);await age(kind,helper.BANNER_TEXT_OPERATION_LEASE_MS-60000);
+  assert.equal((await helper.recoverBannerTextOperation('actor',kind,id,true,prisma)).state,'pending');await helper.completeBannerTextOperation('actor',kind,id,hash,answer,prisma);await age(kind,helper.BANNER_TEXT_OPERATION_LEASE_MS+60000);assert.equal((await helper.recoverBannerTextOperation('actor',kind,id,false,prisma)).state,'completed');assert.equal(await used(),1);results.push(`${kind} unexpired work stays pending and committed old results remain recoverable`);
+  await reset();await helper.beginBannerTextOperation('actor',kind,id,hash,prisma);await age(kind,helper.BANNER_TEXT_OPERATION_LEASE_MS+60000);
+  const outcomes=await Promise.allSettled([helper.completeBannerTextOperation('actor',kind,id,hash,answer,prisma),...Array.from({length:6},()=>helper.recoverBannerTextOperation('actor',kind,id,false,prisma))]);assert.equal(outcomes[0].status,'rejected');assert(outcomes.slice(1).every(o=>o.status==='fulfilled'&&o.value.state==='failed'));assert.equal(await used(),1);results.push(`${kind} concurrent expired completion and recovery share a durable failure fence`);
+ }
  for (const kind of ['chat','copy']) for (const mode of ['duplicate','network','saveFailure','commitLost','invalidResult']) {
   await reset();let calls=0,actor='actor',lost=false;
   const operation={...helper,completeBannerTextOperation:async(...args)=>{const result=await helper.completeBannerTextOperation(...args);if(mode==='commitLost'&&!lost){lost=true;throw Error('Synthetic lost commit acknowledgement')}return result}};
@@ -66,11 +84,11 @@ const base='docs/audits/2026-10-06-all-services-recheck/';
   }else if(mode==='network'||mode==='invalidResult'){
    assert.equal(responses[0].status,mode==='network'?500:502);assert.equal((await route.POST(req())).status,409);assert.equal((await route.GET(recovery())).status,409);assert.equal(calls,1);assert.equal(await used(),1);
   }else if(mode==='saveFailure'){
-   assert.equal(responses[0].status,202);assert.equal((await route.POST(req())).status,202);assert.equal((await route.DELETE(recovery())).status,202);assert.equal(calls,1);assert.equal(await used(),1);await prisma.$executeRawUnsafe('ALTER TABLE "SystemSetting" DROP CONSTRAINT reject_api_result');
+   assert.equal(responses[0].status,202);assert.equal((await route.POST(req())).status,202);assert.equal((await route.DELETE(recovery())).status,202);assert.equal(calls,1);assert.equal(await used(),1);await prisma.$executeRawUnsafe('ALTER TABLE "SystemSetting" DROP CONSTRAINT reject_api_result');await age(kind,helper.BANNER_TEXT_OPERATION_LEASE_MS+60000);for(const response of [await route.GET(recovery()),await route.DELETE(recovery()),await route.POST(req())]){assert.equal(response.status,409);assert.equal((await response.json()).state,'failed')}assert.equal(calls,1);assert.equal(await used(),1);results.push(`actual ${kind} stale save-failure GET/DELETE/POST expose terminal failure without provider or quota repeat`);
   }else{
    assert.equal(responses[0].status,200);assert.equal((await route.GET(recovery())).status,200);assert.equal(calls,1);assert.equal(await used(),1);
   }
   results.push(`actual ${kind} API ${mode}: one provider/one quota; durable result/recovery/private response verified`);
  }
- assert.equal(results.length,23);const files=['src/lib/banner/text-operation.ts','src/lib/banner/text-budget.ts','src/lib/plan-utils.ts','src/lib/banner/text-http.ts','src/lib/banner/text-answer.ts','src/app/api/banner/chat/route.ts','src/app/api/banner/copy/route.ts'];fs.writeFileSync(base+'banner-text-operation-postgres-results.json',JSON.stringify({checkedAt:new Date().toISOString(),passed:results.length,cases:results,sourceHashes:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')])),scope:'Actual text operation/budget helper, Prisma and isolated Unix-socket-only PostgreSQL synthetic schema. Actual chat/copy POST/GET/DELETE and answer orchestration included with synthetic session/provider. UI integration unverified. No customer DB or paid provider calls.'},null,2)+'\n');console.log(JSON.stringify({passed:results.length,cases:results}));
+ assert.equal(results.length,37);const files=['src/lib/banner/text-operation.ts','src/lib/banner/text-budget.ts','src/lib/plan-utils.ts','src/lib/banner/text-http.ts','src/lib/banner/text-answer.ts','src/app/api/banner/chat/route.ts','src/app/api/banner/copy/route.ts'];fs.writeFileSync(base+'banner-text-operation-postgres-results.json',JSON.stringify({checkedAt:new Date().toISOString(),passed:results.length,cases:results,sourceHashes:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')])),scope:'Actual text operation/budget helper, Prisma and isolated Unix-socket-only PostgreSQL synthetic schema. Actual chat/copy POST/GET/DELETE and answer orchestration included with synthetic session/provider. UI integration unverified. No customer DB or paid provider calls.'},null,2)+'\n');console.log(JSON.stringify({passed:results.length,cases:results}));
  }finally{clearTimeout(deadline);await prisma.$disconnect()}})().catch(e=>{console.error(e);process.exitCode=1});

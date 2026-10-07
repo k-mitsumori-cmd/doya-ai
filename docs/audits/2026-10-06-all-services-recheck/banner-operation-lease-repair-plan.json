@@ -1,0 +1,55 @@
+{
+  "updatedAt": "2026-10-07T08:11:48.829918+00:00",
+  "status": "full-gate-passed-ready-for-exact-allowlist-release",
+  "scope": [
+    "Banner chat/copy/refine pending receipt lease",
+    "Chat saved result single-consumption repair"
+  ],
+  "finding": "Process termination leaves receipt pending indefinitely; browser fences new operations until terminal acknowledgment. No expiry previously existed.",
+  "repair": {
+    "leaseMs": 900000,
+    "routeMaxDurationSeconds": 300,
+    "lock": "Existing actor/op advisory transaction lock",
+    "lateCompletion": "Expired transition is committed before rejection outside transaction; later save is fenced",
+    "textBudget": "Admission remains counted once; same UUID never readmits or reinvokes provider",
+    "refineBudget": "Expire only pending/no-generation receipt; validate subscription actor and service, release matching period reservation once atomically",
+    "completed": "Never expires or refunds completed receipts; image retention still applies",
+    "storage": "Apply updates conversation only after durable matching-intent consumption succeeds"
+  },
+  "tests": {
+    "deterministicBoundaryAndRollback": 21,
+    "privatePostgresText": 37,
+    "privatePostgresRefine": 32,
+    "mountedTextRecovery": 13,
+    "mountedApply": 5,
+    "privateServersStopped": true
+  },
+  "gate": "docs/audits/2026-10-06-all-services-recheck/banner-operation-lease-release-35bfa718-8c54-41b6-9752-445221e54f92",
+  "limitations": [
+    "Synthetic provider/session data; no paid calls/customer production DB writes",
+    "Authenticated production process-kill and other service C065 paths unverified",
+    "Full17service2074criteria audit remains incomplete"
+  ],
+  "nextCohort": "doyaslide-operation-recovery-repair-plan.json (3routes baseline reproduced)",
+  "fullGate": {
+    "startedAt": "2026-10-07T08:11:55.171907+00:00",
+    "pid": 72784,
+    "head": "f24bf52ec5583a661e9bf4e527e756af11de64f2",
+    "sourceFiles": 2730,
+    "status": "passed",
+    "gates": [
+      {
+        "name": "build",
+        "exitCode": 0,
+        "endedAt": "2026-10-07T08:16:51.824347+00:00"
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "endedAt": "2026-10-07T08:16:53.812979+00:00"
+      }
+    ],
+    "changedSources": [],
+    "endedAt": "2026-10-07T08:16:54.270610+00:00"
+  }
+}

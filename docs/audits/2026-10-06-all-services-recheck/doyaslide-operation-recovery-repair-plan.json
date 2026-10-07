@@ -1,0 +1,36 @@
+{
+  "status": "reproduced-not-repaired",
+  "baseline": "doyaslide-stale-reservation-baseline.json",
+  "paths": [
+    "/api/doyaslide/generate",
+    "/api/doyaslide/slides/[id]/regenerate",
+    "/api/doyaslide/slides/[id]/chat"
+  ],
+  "confirmed": [
+    "Stale batch with20reserved/0outputs returns403 twice before any recovery",
+    "Stale single regenerate and chat both return409 after30minutes without recovery"
+  ],
+  "implementationRequirements": [
+    "Persist actor/project/kind/operation UUID and fingerprint with quota reservation in one short locked transaction; no provider work in DB transaction",
+    "Persist per-slide outstanding/settled counters and resulting image version together; no lost-ack double settlement or speculative refund",
+    "Use bounded worker lease exceeding route runtime; recovery closes expired worker and fences all late saves",
+    "Refund only outstanding amounts owned by this operation and its original month; once-only atomic terminal transition",
+    "GET recovery must not invoke provider; duplicate POST UUID must replay prior state/result and never readmit; DELETE may fence only missing unadmitted intent",
+    "Client must persist operation intent before provider POST, isolate actor/auth epochs, retain current draft, prevent competing tabs, require explicit acknowledgment before new UUID",
+    "Integrate batch, regenerate and chat clients; cover partial batch continuation without hidden extra charges",
+    "Never estimate old untracked reservation from aggregate monthly usage: historical rows may include other valid generations and deleted histories. Preserve unknown state and offer actionable recovery/support rather than fabricated refund or success"
+  ],
+  "requiredEvidence": [
+    "Actual route and locked quota concurrency in isolated PostgreSQL",
+    "Crash after reservation/before first output/after partial output/after successful commit before response",
+    "Expiry/late-completion race, replay, duplicate request, another actor, deleted actor/project, original/new month refund, failed receipt save rollback",
+    "React StrictMode mounted full page plus explicit recovery/new UUID, cross-tab and stale actor callbacks",
+    "Frozen security/type/build/lint; exact commit CI READY and anonymous public evidence; authenticated production still separately verified"
+  ],
+  "boundaries": [
+    "No paid provider calls",
+    "No customer DB migration or cleanup",
+    "No other worktree edits or staging",
+    "All17services2074criteria retained; this is a new cohort, not the full task"
+  ]
+}

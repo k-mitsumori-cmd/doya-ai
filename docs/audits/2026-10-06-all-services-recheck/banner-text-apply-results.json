@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-07T08:11:58.995Z",
+  "baseline": false,
+  "passed": 5,
+  "cases": [
+    {
+      "case": "same rendered result applied twice",
+      "occurrences": 1,
+      "finding": "one result is consumed once"
+    },
+    {
+      "case": "storage removal fails",
+      "occurrences": 1,
+      "finding": "stored preview and draft retained; no conversation mutation"
+    },
+    {
+      "case": "retained apply after auth refresh",
+      "occurrences": 0,
+      "finding": "old callback rejected"
+    },
+    {
+      "case": "other tab replaces intent",
+      "occurrences": 0,
+      "finding": "changed intent prevents stale result application"
+    },
+    {
+      "case": "immediate POST success with storage failure then explicit recovery apply",
+      "occurrences": 1,
+      "finding": "draft and preview retained until receipt consumption succeeds; no duplicate conversation entry"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/banner/dashboard/chat/page.tsx": "d47785f3066f7575de0d1063d3c4a61f5c7138e4c44cc08db949319da0088728",
+    "src/lib/banner/use-text-recovery.ts": "2ab195543d2792269cdcd9db1216436f354dd554a0848e44efd5bb0d138c805b",
+    "src/components/banner/BannerTextRecovery.tsx": "b299236a8d0032834f3117e9168f1f7213ccbc0febd1ebbe853b55e3a1a73a20"
+  },
+  "scope": "Actual mounted BannerChatPage and text hook/client/panel, React18 StrictMode/jsdom; synthetic auth/GET response/localStorage faults. No paid provider/customer DB/production mutation."
+}

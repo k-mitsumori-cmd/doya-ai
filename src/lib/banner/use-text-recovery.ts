@@ -108,10 +108,17 @@ export function useBannerTextRecovery(status: string, actor: string, kind: 'chat
     } catch { if (current()) setMessage('保存結果を確認できませんでした。新しいAI返信は送信せず、時間をおいてもう一度確認してください。') }
     finally { window.clearTimeout(timer); controller.abort(); if (pending.current === controller) pending.current = null; if (current()) setBusy(false) }
   }
-  const acknowledge = (operationId?: string) => {
-    if (!current() || !allowed || pending.current || !operationId || accepted.current?.operationId !== operationId || !['completed', 'failed', 'cancelled'].includes(accepted.current.state)) return
-    try { clearBannerTextIntent(storageActor, operationId); setIntent(readBannerTextIntent(storageActor)); accepted.current = null; setResult(null); setMessage('') }
-    catch { setMessage('操作情報を更新できません。新しいAI返信は開始せずお問い合わせください。') }
+  const acknowledge = (operationId?: string): boolean => {
+    if (!current() || !allowed || pending.current || !operationId || accepted.current?.operationId !== operationId || !['completed', 'failed', 'cancelled'].includes(accepted.current.state)) return false
+    try {
+      if (readBannerTextIntent(storageActor)?.operationId !== operationId) { sync(); return false }
+      clearBannerTextIntent(storageActor, operationId)
+      setIntent(readBannerTextIntent(storageActor))
+      accepted.current = null
+      setResult(null)
+      setMessage('')
+      return true
+    } catch { setMessage('操作情報を更新できません。新しいAI返信は開始せずお問い合わせください。'); return false }
   }
   return { intent, result, message, busy, blocked: !allowed || Boolean(intent) || Boolean(message) || busy, submit, recover, acknowledge }
 }

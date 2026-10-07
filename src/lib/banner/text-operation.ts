@@ -10,6 +10,14 @@ type Receipt = { version: 1; inputHash: string; state: 'pending' | 'completed' |
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const HEX = /^[a-f0-9]{64}$/
 const MAX_RESULT_BYTES = 65536
+// Longer than the 300-second route lifetime; expired workers may never publish a result.
+export const BANNER_TEXT_OPERATION_LEASE_MS = 15 * 60 * 1000
+async function expirePending(tx: Prisma.TransactionClient, key: string, saved: Receipt | null): Promise<Receipt | null> {
+  if (!saved || saved.state !== 'pending' || Date.now() - Date.parse(saved.startedAt) < BANNER_TEXT_OPERATION_LEASE_MS) return saved
+  const expired: Receipt = { ...saved, state: 'failed' }
+  await tx.systemSetting.update({ where: { key }, data: { value: JSON.stringify(expired) } })
+  return expired
+}
 export class BannerTextOperationError extends Error { constructor(public status: number, message: string) { super(message) } }
 export function bannerTextOperationId(value: unknown): string {
   if (typeof value !== 'string' || !UUID.test(value)) throw new BannerTextOperationError(400, '操作情報を確認できません。画面を開き直してください。')
@@ -64,7 +72,7 @@ export async function beginBannerTextOperation(actor: string, kind: BannerTextKi
   const key = keyFor(actor, kind, operationId)
   if (!HEX.test(inputHash)) throw new BannerTextOperationError(400, '入力内容を確認できません。')
   return db.$transaction(async tx => {
-    const saved = await lock(tx, actor, key, kind)
+    const saved = await expirePending(tx, key, await lock(tx, actor, key, kind))
     if (saved) {
       if (saved.state === 'cancelled') return { state: 'cancelled' as const }
       if (saved.inputHash !== inputHash) throw new BannerTextOperationError(409, '同じ操作の入力内容が変わっています。保存結果を確認してください。')
@@ -81,13 +89,17 @@ export async function beginBannerTextOperation(actor: string, kind: BannerTextKi
 export async function completeBannerTextOperation(actor: string, kind: BannerTextKind, operationId: string, inputHash: string, result: Payload, db: Db = prisma) {
   const key = keyFor(actor, kind, operationId)
   if (!isValidBannerTextResult(result, kind) || Buffer.byteLength(JSON.stringify(result), 'utf8') > MAX_RESULT_BYTES) throw new BannerTextOperationError(503, 'AIの回答を保存できませんでした。')
-  return db.$transaction(async tx => {
+  const outcome = await db.$transaction(async tx => {
     const saved = await lock(tx, actor, key, kind)
     if (!saved || saved.inputHash !== inputHash || !['pending', 'completed'].includes(saved.state)) throw new BannerTextOperationError(409, '保存対象の操作を確認できません。')
-    if (saved.state === 'completed') return saved.result!
+    if (saved.state === 'completed') return { result: saved.result! }
+    if ((await expirePending(tx, key, saved))?.state === 'failed') return { expired: true as const }
     await tx.systemSetting.update({ where: { key }, data: { value: JSON.stringify({ ...saved, state: 'completed', result }) } })
-    return result
+    return { result }
   }, transactionOptions)
+  // Throw after commit so the terminal receipt survives a late worker's rejection.
+  if ('expired' in outcome) throw new BannerTextOperationError(409, '処理の有効期限が切れました。保存結果を確認してから新しい操作を開始してください。')
+  return outcome.result
 }
 /** A text operation remains counted once. Never erase a pending/failed receipt to retry a provider. */
 export async function failBannerTextOperation(actor: string, kind: BannerTextKind, operationId: string, inputHash: string, db: Db = prisma) {
@@ -103,7 +115,7 @@ export async function failBannerTextOperation(actor: string, kind: BannerTextKin
 export async function recoverBannerTextOperation(actor: string, kind: BannerTextKind, operationId: string, cancelMissing = false, db: Db = prisma) {
   const key = keyFor(actor, kind, operationId)
   return db.$transaction(async tx => {
-    const saved = await lock(tx, actor, key, kind)
+    const saved = await expirePending(tx, key, await lock(tx, actor, key, kind))
     if (saved) return saved
     if (!cancelMissing) return { state: 'missing' as const, result: null }
     const receipt: Receipt = { version: 1, inputHash: '0'.repeat(64), state: 'cancelled', startedAt: new Date().toISOString(), result: null }

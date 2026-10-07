@@ -2,7 +2,7 @@
 banner,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 banner,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 banner,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-banner,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+banner,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 banner,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 banner,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 banner,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -63,7 +63,7 @@ banner,C061,生成・ジョブ,連打・再送に冪等性がある,現在版で
 banner,C062,生成・ジョブ,ジョブの所有者と結果取得権限を検査する,現在版での項目別通し検証待ち,
 banner,C063,生成・ジョブ,ストリーム途中失敗を成功として表示しない,現在版での項目別通し検証待ち,
 banner,C064,生成・ジョブ,生成結果と履歴・使用量の保存が整合する,現在版での項目別通し検証待ち,
-banner,C065,生成・ジョブ,プロセス終了時に永久処理中にならない,現在版での項目別通し検証待ち,
+banner,C065,生成・ジョブ,プロセス終了時に永久処理中にならない,不具合再現・修正中：chat/copy/refineの期限なしpendingを15分で終端化、遅延保存を拒否／他の生成経路・実際の本番プロセス停止は未検証,banner-text-stale-pending-baseline.json; verify-banner-operation-lease.cjs; banner-text-operation-postgres-results.json; banner-refine-operation-postgres-results.json
 banner,C066,生成・ジョブ,再生成と編集にも上限を適用する,現在版での項目別通し検証待ち,
 banner,C067,生成・ジョブ,公開音声ルームの同意・期限・人数を守る,現在版での項目別通し検証待ち,
 banner,C068,生成・ジョブ,エクスポートで他人の成果物を含めない,現在版での項目別通し検証待ち,
@@ -124,7 +124,7 @@ banner,U40,user-experience,困った時の問い合わせ先と、伝えるべ�
 seo,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 seo,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 seo,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-seo,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+seo,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 seo,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 seo,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 seo,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -246,7 +246,7 @@ seo,U40,user-experience,困った時の問い合わせ先と、伝えるべき�
 interview,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 interview,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 interview,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-interview,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+interview,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 interview,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 interview,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 interview,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -368,7 +368,7 @@ interview,U40,user-experience,困った時の問い合わせ先と、伝える�
 persona,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 persona,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 persona,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-persona,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+persona,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 persona,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 persona,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 persona,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -490,7 +490,7 @@ persona,U40,user-experience,困った時の問い合わせ先と、伝えるべ�
 hr,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 hr,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 hr,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-hr,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+hr,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 hr,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 hr,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 hr,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -612,7 +612,7 @@ hr,U40,user-experience,困った時の問い合わせ先と、伝えるべきエ
 kintai,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 kintai,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 kintai,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-kintai,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+kintai,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 kintai,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 kintai,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 kintai,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -734,7 +734,7 @@ kintai,U40,user-experience,困った時の問い合わせ先と、伝えるべ�
 doyalist,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 doyalist,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyalist,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-doyalist,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+doyalist,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 doyalist,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyalist,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 doyalist,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -856,7 +856,7 @@ doyalist,U40,user-experience,困った時の問い合わせ先と、伝えるべ
 promane,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 promane,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 promane,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-promane,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+promane,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 promane,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 promane,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 promane,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -978,7 +978,7 @@ promane,U40,user-experience,困った時の問い合わせ先と、伝えるべ�
 doyaslide,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 doyaslide,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyaslide,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-doyaslide,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+doyaslide,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 doyaslide,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 doyaslide,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 doyaslide,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,"PARTIAL ONLY: slide-cunning-layout-mounted-results.json (33 actual-wrapper synthetic cases) and verify-slide-cunning-usage-cache.cjs (6 actual GET synthetic cases), commit a748323a. Actor/ABA child remount, no-ID metadata read guard, guest/auth/error private no-store. Authenticated customer/API business flow and browser cache across every page remain unverified; this entire criterion is NOT passed."
@@ -1039,7 +1039,7 @@ doyaslide,C061,生成・ジョブ,連打・再送に冪等性がある,現在版
 doyaslide,C062,生成・ジョブ,ジョブの所有者と結果取得権限を検査する,現在版での項目別通し検証待ち,
 doyaslide,C063,生成・ジョブ,ストリーム途中失敗を成功として表示しない,現在版での項目別通し検証待ち,
 doyaslide,C064,生成・ジョブ,生成結果と履歴・使用量の保存が整合する,現在版での項目別通し検証待ち,
-doyaslide,C065,生成・ジョブ,プロセス終了時に永久処理中にならない,現在版での項目別通し検証待ち,
+doyaslide,C065,生成・ジョブ,プロセス終了時に永久処理中にならない,不具合再現・未修正：生成前予約の後に停止すると、出力0件でも20/20使用のまま再開が403で拒否される／実際の本番停止・履歴の復旧は未検証,doyaslide-stale-reservation-baseline.json; probe-doyaslide-stale-reservation.cjs
 doyaslide,C066,生成・ジョブ,再生成と編集にも上限を適用する,現在版での項目別通し検証待ち,
 doyaslide,C067,生成・ジョブ,公開音声ルームの同意・期限・人数を守る,現在版での項目別通し検証待ち,
 doyaslide,C068,生成・ジョブ,エクスポートで他人の成果物を含めない,現在版での項目別通し検証待ち,
@@ -1100,7 +1100,7 @@ doyaslide,U40,user-experience,困った時の問い合わせ先と、伝える�
 cunning,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 cunning,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 cunning,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-cunning,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+cunning,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 cunning,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 cunning,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 cunning,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,"PARTIAL ONLY: slide-cunning-layout-mounted-results.json (33 actual-wrapper synthetic cases) and verify-slide-cunning-usage-cache.cjs (6 actual GET synthetic cases), commit a748323a. Actor/ABA child remount, no-ID metadata read guard, guest/auth/error private no-store. Authenticated customer/API business flow and browser cache across every page remain unverified; this entire criterion is NOT passed."
@@ -1222,7 +1222,7 @@ cunning,U40,user-experience,困った時の問い合わせ先と、伝えるべ�
 sfa,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 sfa,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 sfa,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-sfa,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+sfa,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 sfa,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 sfa,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 sfa,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -1344,7 +1344,7 @@ sfa,U40,user-experience,困った時の問い合わせ先と、伝えるべき�
 shodan,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 shodan,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 shodan,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-shodan,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+shodan,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 shodan,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 shodan,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち," shodan-detail-lifecycle-repair.json (candidate: 35 actual mounted cases, 19 DTO negatives, 4 AI negatives, actual GET protocol; full gate and production verification pending)"
 shodan,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -1466,7 +1466,7 @@ shodan,U40,user-experience,困った時の問い合わせ先と、伝えるべ�
 aio,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 aio,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aio,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-aio,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+aio,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 aio,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aio,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 aio,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -1588,7 +1588,7 @@ aio,U40,user-experience,困った時の問い合わせ先と、伝えるべき�
 mensetsu,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 mensetsu,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 mensetsu,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-mensetsu,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+mensetsu,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 mensetsu,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 mensetsu,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 mensetsu,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -1710,7 +1710,7 @@ mensetsu,U40,user-experience,困った時の問い合わせ先と、伝えるべ
 quote,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 quote,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 quote,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-quote,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+quote,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 quote,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 quote,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 quote,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -1832,7 +1832,7 @@ quote,U40,user-experience,困った時の問い合わせ先と、伝えるべき
 aishodan,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 aishodan,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aishodan,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-aishodan,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+aishodan,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 aishodan,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 aishodan,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 aishodan,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,
@@ -1954,7 +1954,7 @@ aishodan,U40,user-experience,困った時の問い合わせ先と、伝えるべ
 adimage,C001,公開・導線,定義と公開一覧と終了済み一覧が一致する,部分検証済み：正本の公開・稼働17件一致と終了14件除外、本番トップ・sitemap・llmsの17導線一致／終了API・認証後導線は別途検証,service-catalog-current.json; verify-service-catalog-current.cjs
 adimage,C002,公開・導線,LP・料金・利用画面に到達できる,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 adimage,C003,公開・導線,主要CTAが正しいログイン後の戻り先へ遷移する,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
-adimage,C004,公開・導線,終了APIが実生成・課金を受け付けない,現在版での項目別通し検証待ち,
+adimage,C004,公開・導線,終了APIが実生成・課金を受け付けない,部分検証済み：共通の終了14サービス配下＋既知の旧別名111ルート147処理で入口410を実フラグ評価／モジュール初期化・未発見別名・本番API通しは未検証,retired-route-entry-current.json; verify-retired-route-entry-current.cjs
 adimage,C005,公開・導線,スマートフォンで横はみ出し・操作不能がない,一部検証済み：公開LP・料金390px計測とログイン前導線／認証後・実機未検証,public-mobile-navigation.json; public-mobile-pricing.json; README.md
 adimage,C006,公開・導線,空状態・読込中・失敗状態が表示される,現在版での項目別通し検証待ち,
 adimage,C007,認証,未ログインで私有データを取得・変更できない,現在版での項目別通し検証待ち,

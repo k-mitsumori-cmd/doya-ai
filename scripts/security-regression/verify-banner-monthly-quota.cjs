@@ -114,7 +114,7 @@ function fixture(initial = null, accountPlan = 'FREE') {
       assert(quotaOwner.indexOf('await reserveBannerMonthlyImages(') < quotaOwner.indexOf('await tx.systemSetting.create('), 'refine receipt and quota must be admitted in the same transaction')
       assert(source.includes("code: 'MONTHLY_LIMIT_REACHED'"), 'refine must report the monthly limit')
       assert(source.includes('await failBannerRefinement('), 'failed refinement must verify its durable outcome before refund')
-      assert(quotaOwner.indexOf("if (saved.state !== 'pending') return saved.state") < quotaOwner.indexOf('await releaseBannerMonthlyImages('), 'only pending refinement may release its reservation')
+      assert(quotaOwner.indexOf("if (saved.state !== 'pending') return saved") < quotaOwner.indexOf('await releaseBannerMonthlyImages('), 'only pending refinement may release its reservation')
       assert(quotaOwner.indexOf('if (persisted) throw') < quotaOwner.indexOf('await releaseBannerMonthlyImages('), 'persisted image must prevent refund even with inconsistent receipt')
     }
   }

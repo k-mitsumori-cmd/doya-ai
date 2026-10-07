@@ -1,0 +1,92 @@
+{
+  "checkedAt": "2026-10-07T07:59:05.785795+00:00",
+  "changes": [
+    {
+      "serviceId": "banner",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "seo",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "interview",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "persona",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "hr",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "kintai",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "doyalist",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "promane",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "doyaslide",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "cunning",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "sfa",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "shodan",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "aio",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "mensetsu",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "quote",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "aishodan",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    },
+    {
+      "serviceId": "adimage",
+      "id": "C004",
+      "previousStatus": "現在版での項目別通し検証待ち"
+    }
+  ],
+  "rows": 2074,
+  "scope": "Partial shared retirement entry coverage only; no completed criteria claim"
+}

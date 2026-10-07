@@ -39,9 +39,10 @@
     "publicVerification": "anonymous-publication-passed-private-form-unproven"
   },
   "next": [
-    "Commit exact41file release allowlist and push authorized main",
-    "Observe exact commit CI and deployment READY then anonymous public check",
-    "Continue all17/2074criteria; partial catalog evidence is not full operations verification"
+    "Commit/push exact banner-operation-lease allowlist after hash/staged review",
+    "Track exact CI and Vercel deployment; public check only after READY",
+    "Implement DoyaSlide batch/regenerate/chat durable operation recovery from reproduced baseline",
+    "Continue remaining all17services2074criteria; goal not complete"
   ],
   "boundaries": [
     "No customer DB/migrations/emails/invites/paid providers",
@@ -76,7 +77,7 @@
     "releaseAllowlist": "docs/audits/2026-10-06-all-services-recheck/sfa-crm-release-file-list.json",
     "lastObservedGate": "terminal passed; obsolete running-session pointer removed"
   },
-  "updatedAt": "2026-10-07T07:52:17.265102+00:00",
+  "updatedAt": "2026-10-07T08:13:21.555481+00:00",
   "currentCrmRelease": {
     "commit": "4d3e7f007be3323650dc97e92fd98987e67730de",
     "mainPush": "succeeded",
@@ -103,7 +104,7 @@
   "scopeCounts": {
     "services": 17,
     "criteria": 2074,
-    "itemByItemUnverified": 1878,
+    "itemByItemUnverified": 1859,
     "countMeaning": "Exact pending-status rows only; partial-evidence rows also require remaining verification, not complete"
   },
   "nextRepair": {
@@ -157,7 +158,7 @@
   },
   "followingBannerChatRepair": {
     "evidence": "banner-chat-operation-current-baseline.json",
-    "status": "full-local-gate-passed-release-prepared",
+    "status": "released-anonymous-public-verified",
     "findings": [
       "Same UUID two POSTs =>two admissions/two provider calls",
       "Network uncertainty =>three model attempts for one admitted call",
@@ -183,7 +184,16 @@
       "resultValidationCases": 14,
       "invalidAnswer": "reproduced permanent pending; repaired definite output rejection to failed before save; synthetic actual helper14+PG23 passed",
       "fullGate": "passed2728files-no-source-change"
-    }
+    },
+    "commit": "f24bf52ec5583a661e9bf4e527e756af11de64f2",
+    "push": "succeeded",
+    "ciRun": 37590060910,
+    "ciWatchSession": null,
+    "ciStatus": "success",
+    "deployment": "dpl_GE25vzuT7nvtqBaqGPKefRAUYBp7",
+    "deploymentUrl": "doya-4umrm5i0t-surisutas-projects.vercel.app",
+    "deploymentState": "READY",
+    "publicVerification": "17 public entries27assets, chat recovery markers and unauthenticated chat/copy401 private/no-store/Cookie verified; authenticated live flow unproven"
   },
   "catalogCheck": {
     "sourceServices": 17,
@@ -191,5 +201,75 @@
     "publicEntryConsistency": "home/sitemap/llms17 matched",
     "evidence": "service-catalog-current.json",
     "matrix": "17 C001 rows partial only"
+  },
+  "followingBannerTextApplyRepair": {
+    "status": "local-repaired-full-gate-passed-not-released",
+    "baseline": "banner-text-apply-baseline.json",
+    "baselineCases": 4,
+    "actualMountedCases": 5,
+    "regressionResults": "banner-text-apply-results.json",
+    "otherChecks": "chat13/hook12/callbacks24/typecheck passed",
+    "gate": "banner-text-apply-release-85705241-6d1c-4e38-9c82-8603f891a216",
+    "session": null,
+    "findings": [
+      "same-render double application duplicates reply",
+      "storage failure changed conversation before acknowledgement",
+      "auth refresh retained callback applies stale reply",
+      "replaced cross-tab intent still permitted stale reply"
+    ],
+    "repair": "acknowledge validates current actor/lifecycle and stored UUID, returns consumption result; apply and immediate success update conversation only after consumption succeeds",
+    "gateStatus": "passed2729files-no-source-change"
+  },
+  "retiredEntryCheck": {
+    "retiredServiceIds": 14,
+    "routeFiles": 111,
+    "httpHandlers": 147,
+    "unclassifiedPrefixes": 0,
+    "scope": "Actual constants and AST-extracted guard prefix; no deployed API/module-init proof",
+    "evidence": "retired-route-entry-current.json"
+  },
+  "bannerOperationLeaseRepair": {
+    "status": "full-gate-passed-not-yet-committed",
+    "criterion": "Banner C065 (partial: chat/copy/refine only)",
+    "baseline": "banner-text-stale-pending-baseline.json",
+    "repair": "15minute pending lease exceeds route maxDuration300; recovery/admission/save fence closes operation; text remains counted once, refinement refunds only locked unmatched-result reservation in its original period; completed results immutable",
+    "tests": "21 deterministic boundary/rollback; textPG37/refinePG32 current hashes and stop0; mountedText13 including expired clear/new UUID; mountedApply5",
+    "remaining": [
+      "Mounted expired recovery/new-operation workflow",
+      "Frozen full build/security/lint",
+      "Commit/push CI READY public check",
+      "All17services2074criteria including other C065paths"
+    ],
+    "gate": "banner-operation-lease-release-35bfa718-8c54-41b6-9752-445221e54f92",
+    "session": null,
+    "fullGate": {
+      "startedAt": "2026-10-07T08:11:55.171907+00:00",
+      "pid": 72784,
+      "head": "f24bf52ec5583a661e9bf4e527e756af11de64f2",
+      "sourceFiles": 2730,
+      "status": "passed",
+      "gates": [
+        {
+          "name": "build",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T08:16:51.824347+00:00"
+        },
+        {
+          "name": "lint",
+          "exitCode": 0,
+          "endedAt": "2026-10-07T08:16:53.812979+00:00"
+        }
+      ],
+      "changedSources": [],
+      "endedAt": "2026-10-07T08:16:54.270610+00:00"
+    }
+  },
+  "nextDoyaSlideRecoveryRepair": {
+    "status": "reproduced-not-repaired",
+    "evidence": "doyaslide-stale-reservation-baseline.json",
+    "finding": "Stale process reserved full free20 images but0completed; resume checks quota before stale reclamation, returns403twice with0provider/0writes; no durable per-operation reservation ownership exists",
+    "requirement": "Atomic durable reservation with owned outstanding balance and result settlement; expiry fences late workers and releases only failed/unstarted matching-period amounts once. Never guess-refund existing aggregate usage. Include batch/regenerate/chat flows and deletion/actor/month reset/concurrent quota tests.",
+    "next": "Finish current frozen gate before changing source; then implement integrated DoyaSlide operation ledger and explicit recovery UX.",
+    "additionalFinding": "Actual single-slide regenerate/chat routes both return409generating after30minutes with completed project; no expiry recovery in either path."
   }
 }

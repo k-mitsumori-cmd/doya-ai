@@ -1,10 +1,11 @@
 {
-  "checkedAt": "2026-10-07T07:47:13.245Z",
-  "passed": 12,
+  "checkedAt": "2026-10-07T08:11:59.927Z",
+  "passed": 13,
   "cases": [
     "metadata is saved before POST; same-frame and cross-instance new intents cannot duplicate",
     "lost response survives remount; explicit GET recovers without POST or overwriting current conversation/draft",
     "missing operation requires server DELETE fence before clearing; pending cannot be cleared",
+    "expired pending recovery becomes acknowledgeable and only a deliberate new submission uses a new UUID",
     "quota429 clears only unadmitted matching intent and retains typed usage/CTA",
     "wrong operation echo, malformed success/spec and body errors retain durable intent",
     "actor change and auth A-B-A abort late response and isolate private results",
@@ -17,7 +18,7 @@
   ],
   "sourceHashes": {
     "src/lib/banner/text-client.ts": "f1dcb3861a6ee7f1376d7415bb04a9818b0f01e92cea3210950ce312b6c32632",
-    "src/lib/banner/use-text-recovery.ts": "7951e44182237be6305ed5998e4131d7dfbf6881b9494a65d6bea5858e81dd46",
+    "src/lib/banner/use-text-recovery.ts": "2ab195543d2792269cdcd9db1216436f354dd554a0848e44efd5bb0d138c805b",
     "src/components/banner/BannerTextRecovery.tsx": "b299236a8d0032834f3117e9168f1f7213ccbc0febd1ebbe853b55e3a1a73a20"
   },
   "scope": "Actual text hook/client/recovery panel mounted in React18 StrictMode/jsdom. Synthetic API/auth/locks; no paid provider/customer DB. Full chat page has separate mounted regression. Native browser and cross-process locks unverified."

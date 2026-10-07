@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { privateBannerTextJson, runBannerTextOperation, readBannerTextOperation, readBannerTextBody } from '@/lib/banner/text-http'
 import { requestBannerTextAnswer } from '@/lib/banner/text-answer'
 
+export const maxDuration = 300
+
 function getPrimaryTextModel(): string {
   return (
     process.env.DOYA_BANNER_TEXT_MODEL ||

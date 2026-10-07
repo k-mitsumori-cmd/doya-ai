@@ -1,7 +1,14 @@
 {
-  "checkedAt": "2026-10-07T07:13:55.293Z",
-  "passed": 24,
+  "checkedAt": "2026-10-07T08:11:25.610Z",
+  "passed": 32,
   "cases": [
+    "expired refinement recover commits failure and exactly one refund; stale save rejected",
+    "expired refinement cancel commits failure and exactly one refund; stale save rejected",
+    "expired refinement begin commits failure and exactly one refund; stale save rejected",
+    "expired refinement complete commits failure and exactly one refund; stale save rejected",
+    "live refinement stays pending; old completed receipt preserves image and consumed quota",
+    "expired refinement completion/recovery race fences late save and refunds once",
+    "expired old reservation never refunds usage from a newer reset period",
     "12 parallel same UUID admissions reserve exactly one image",
     "UUID reused for changed input refuses without another quota reservation",
     "parallel completion stores one private Generation/receipt; replay/recovery reuse it without refund",
@@ -24,12 +31,13 @@
     "actual completion rollback retries only persistence, then authoritative no-result refund; no provider repeat",
     "actual route recovers successful commit after lost DB acknowledgement without provider repeat or refund",
     "actual unavailable failure verification preserves pending evidence/quota and forbids provider replay",
+    "actual stale refinement GET/DELETE/POST close pending state with one refund and no provider retry",
     "actual guest/other actor/expired result recovery never exposes or regenerates private image",
     "actual DELETE missing-operation fence prevents delayed POST admission"
   ],
   "lockWaitObservations": [],
   "sourceHashes": {
-    "src/lib/banner/refine-operation.ts": "c71e1649dd2db4739ae7df6404203bb9c66f6dc89a8ebc194f42470d1387ce12",
+    "src/lib/banner/refine-operation.ts": "ffb487146ab153531f0818c44ff12a51b9a1ed6dc228ae379ca36a2633bbe3da",
     "src/lib/banner/monthly-quota.ts": "624c2c31d1392cac4a379d3391831cbe921b1dcd77db47e2348e5be8e4369641",
     "src/lib/pricing.ts": "37386582610f4d2792cd2a1984a047edcae9f31ad753f30b2808470ec98b91c1",
     "src/lib/plan-utils.ts": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86",

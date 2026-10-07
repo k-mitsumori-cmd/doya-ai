@@ -7,6 +7,8 @@ type Db = Pick<typeof prisma, '$transaction'>
 type Input = { originalImage: string; instruction: string; category?: string; size?: string }
 type Receipt = { version: 1; inputHash: string; state: 'pending' | 'completed' | 'failed' | 'cancelled'; startedAt: string; reservation: (Omit<BannerReservation, 'lastUsageReset'> & { lastUsageReset: string }) | null; generationId: string | null }
 export class BannerOperationError extends Error { constructor(public status: number, message: string) { super(message) } }
+// Longer than maxDuration=300; the receipt lock fences every later save.
+export const BANNER_REFINE_OPERATION_LEASE_MS = 15 * 60 * 1000
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 export function bannerRefineOperationId(value: unknown): string {
@@ -40,11 +42,27 @@ async function result(tx: Prisma.TransactionClient, userId: string, saved: Recei
   if (saved.state !== 'completed' || !saved.generationId || !cutoff) return null
   return tx.generation.findFirst({ where: { id: saved.generationId, userId, serviceId: 'banner', outputType: 'IMAGE', createdAt: { gte: cutoff } }, select: { id: true, output: true, createdAt: true } })
 }
+async function terminalizePending(tx: Prisma.TransactionClient, userId: string, key: string, saved: Receipt): Promise<Receipt> {
+  if (saved.state !== 'pending') return saved
+  const persisted = await tx.generation.findFirst({ where: { id: 'banner-refine-' + hash(key), userId, serviceId: 'banner' }, select: { id: true } })
+  if (persisted) throw new BannerOperationError(409, '保存結果の整合性を確認できません。再生成せずお問い合わせください。')
+  if (saved.reservation) {
+    const subscription = await tx.userServiceSubscription.findUnique({ where: { id: saved.reservation.id }, select: { userId: true, serviceId: true } })
+    if (subscription && (subscription.userId !== userId || subscription.serviceId !== 'banner')) throw new BannerOperationError(409, '操作の利用枠記録を確認できません。再生成せずお問い合わせください。')
+    await releaseBannerMonthlyImages({ ...saved.reservation, lastUsageReset: new Date(saved.reservation.lastUsageReset) }, 1, tx)
+  }
+  await tx.systemSetting.update({ where: { key }, data: { value: JSON.stringify({ ...saved, state: 'failed', reservation: null }) } })
+  return { ...saved, state: 'failed', reservation: null }
+}
+async function expirePending(tx: Prisma.TransactionClient, userId: string, key: string, saved: Receipt | null): Promise<Receipt | null> {
+  if (!saved || saved.state !== 'pending' || Date.now() - Date.parse(saved.startedAt) < BANNER_REFINE_OPERATION_LEASE_MS) return saved
+  return terminalizePending(tx, userId, key, saved)
+}
 export async function beginBannerRefinement(userId: string, operationId: string, inputHash: string, cutoff: Date | null, disableLimits = false, db: Db = prisma) {
   const key = keyFor(userId, operationId)
   if (!/^[a-f0-9]{64}$/.test(inputHash)) throw new BannerOperationError(400, '修正内容を確認できません。')
   return db.$transaction(async tx => {
-    const saved = await lock(tx, userId, key)
+    const saved = await expirePending(tx, userId, key, await lock(tx, userId, key))
     if (saved) {
       if (saved.state === 'cancelled') return { state: 'cancelled' as const }
       if (saved.inputHash !== inputHash) throw new BannerOperationError(409, '同じ操作の入力が変わっています。保存結果を確認してください。')
@@ -62,14 +80,17 @@ export async function beginBannerRefinement(userId: string, operationId: string,
 export async function completeBannerRefinement(userId: string, operationId: string, inputHash: string, image: string, input: Omit<Input, 'originalImage'>, db: Db = prisma) {
   const key = keyFor(userId, operationId)
   if (!image.startsWith('data:image/png;base64,') || image.length > 32 * 1024 * 1024) throw new BannerOperationError(503, '修正画像を保存できませんでした。')
-  return db.$transaction(async tx => {
+  const outcome = await db.$transaction(async tx => {
     const saved = await lock(tx, userId, key)
     if (!saved || saved.inputHash !== inputHash || (saved.state !== 'pending' && saved.state !== 'completed')) throw new BannerOperationError(409, '保存対象の操作を確認できません。')
-    if (saved.state === 'completed') return result(tx, userId, saved, new Date(0))
+    if (saved.state === 'completed') return { generation: await result(tx, userId, saved, new Date(0)) }
+    if ((await expirePending(tx, userId, key, saved))?.state === 'failed') return { expired: true as const }
     const generation = await tx.generation.create({ data: { id: 'banner-refine-' + hash(key), userId, serviceId: 'banner', outputType: 'IMAGE', output: image, input: { instruction: input.instruction, keyword: input.instruction, category: input.category ?? 'other', size: input.size ?? '', kind: 'refine' }, metadata: { batchId: operationId, operationId, kind: 'refine', shared: false, pattern: 'A', inputHash } }, select: { id: true, output: true, createdAt: true } })
     await tx.systemSetting.update({ where: { key }, data: { value: JSON.stringify({ ...saved, state: 'completed', generationId: generation.id }) } })
-    return generation
+    return { generation }
   }, { isolationLevel: 'ReadCommitted', maxWait: 10000, timeout: 30000 })
+  if ('expired' in outcome) throw new BannerOperationError(409, '処理の有効期限が切れました。保存結果を確認してから新しい操作を開始してください。')
+  return outcome.generation
 }
 export async function failBannerRefinement(userId: string, operationId: string, inputHash: string, db: Db = prisma) {
   const key = keyFor(userId, operationId)
@@ -77,21 +98,14 @@ export async function failBannerRefinement(userId: string, operationId: string, 
     const saved = await lock(tx, userId, key)
     if (!saved || saved.inputHash !== inputHash) throw new BannerOperationError(409, '操作を確認できません。')
     if (saved.state !== 'pending') return saved.state
-    const persisted = await tx.generation.findFirst({ where: { id: 'banner-refine-' + hash(key), userId, serviceId: 'banner' }, select: { id: true } })
-    if (persisted) throw new BannerOperationError(409, '保存結果の整合性を確認できません。再生成せずお問い合わせください。')
-    if (saved.reservation) {
-      const subscription = await tx.userServiceSubscription.findUnique({ where: { id: saved.reservation.id }, select: { userId: true, serviceId: true } })
-      if (subscription && (subscription.userId !== userId || subscription.serviceId !== 'banner')) throw new BannerOperationError(409, '操作の利用枠記録を確認できません。再生成せずお問い合わせください。')
-      await releaseBannerMonthlyImages({ ...saved.reservation, lastUsageReset: new Date(saved.reservation.lastUsageReset) }, 1, tx)
-    }
-    await tx.systemSetting.update({ where: { key }, data: { value: JSON.stringify({ ...saved, state: 'failed', reservation: null }) } })
+    await terminalizePending(tx, userId, key, saved)
     return 'failed' as const
   }, { isolationLevel: 'ReadCommitted', maxWait: 10000, timeout: 30000 })
 }
 export async function recoverBannerRefinement(userId: string, operationId: string, cutoff: Date | null, db: Db = prisma) {
   const key = keyFor(userId, operationId)
   return db.$transaction(async tx => {
-    const saved = await lock(tx, userId, key)
+    const saved = await expirePending(tx, userId, key, await lock(tx, userId, key))
     if (!saved) return { state: 'missing' as const, generation: null }
     if (saved.state === 'completed') return { state: 'completed' as const, generation: await result(tx, userId, saved, cutoff) }
     return { state: saved.state, generation: null }
@@ -102,7 +116,7 @@ export async function recoverBannerRefinement(userId: string, operationId: strin
 export async function cancelMissingBannerRefinement(userId: string, operationId: string, cutoff: Date | null, db: Db = prisma) {
   const key = keyFor(userId, operationId)
   return db.$transaction(async tx => {
-    const saved = await lock(tx, userId, key)
+    const saved = await expirePending(tx, userId, key, await lock(tx, userId, key))
     if (saved) {
       if (saved.state === 'completed') return { state: 'completed' as const, generation: await result(tx, userId, saved, cutoff) }
       return { state: saved.state, generation: null }

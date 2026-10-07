@@ -1,0 +1,150 @@
+{
+  "checkedAt": "2026-10-07T08:07:26.763232+00:00",
+  "commit": "f24bf52ec5583a661e9bf4e527e756af11de64f2",
+  "deployment": "dpl_GE25vzuT7nvtqBaqGPKefRAUYBp7",
+  "entries": [
+    {
+      "service": "banner",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "seo",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "interview",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "persona",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "hr",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "kintai",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "doyalist",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "promane",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "doyaslide",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "cunning",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "sfa",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "shodan",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "aio",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "mensetsu",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "quote",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "aishodan",
+      "status": 200,
+      "deploymentMarker": true
+    },
+    {
+      "service": "adimage",
+      "status": 200,
+      "deploymentMarker": true
+    }
+  ],
+  "pages": [
+    {
+      "path": "/banner/dashboard/chat",
+      "status": 200,
+      "deploymentMarker": true,
+      "recoveryMarkers": {
+        "banner-text-intent:v1:": true,
+        "AI返信の結果を確認": true,
+        "保存済みのAI返信": true
+      },
+      "textRecoveryAction": true
+    }
+  ],
+  "assetCount": 27,
+  "assetStatuses": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "guestRecovery": {
+    "status": 401,
+    "success": null,
+    "hasImage": false,
+    "cacheControl": "private, no-store",
+    "varyCookie": true
+  },
+  "guestCopyRecovery": {
+    "status": 401,
+    "hasResult": false,
+    "cacheControl": "private, no-store",
+    "varyCookie": true
+  },
+  "scope": "Anonymous read-only public HTML/assets and unauthenticated operation GET only. Presence of deployed recovery code is not authenticated execution, provider or customer data E2E.",
+  "passed": true
+}
