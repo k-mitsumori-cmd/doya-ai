@@ -70,7 +70,7 @@ function countColors(text: string, found: Map<string, number>, weight = 1): void
  *    その結果、抽出が0件になり既定色（#0066ff＝こちらのブランド色）に落ちて、
  *    他社サイトを読んでもドヤAIの青が使われていた（2026-09-02）。
  */
-async function extractColors(html: string, base: URL): Promise<string[]> {
+export async function extractColors(html: string, base: URL): Promise<string[]> {
   const found = new Map<string, number>()
 
   const theme = html.match(/<meta[^>]+name=["']theme-color["'][^>]+content=["']([^"']+)["']/i)

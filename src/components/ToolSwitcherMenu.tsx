@@ -16,6 +16,7 @@ import {
   Image,
   LayoutGrid,
   Megaphone,
+  MessageCircleQuestion,
   MessagesSquare,
   Mic,
   Presentation,
@@ -77,6 +78,7 @@ const SERVICE_ICON_MAP: Record<string, ServiceMapping> = {
   quote:     { icon: Receipt,     iconBg: 'from-emerald-600 to-teal-600',   hoverBg: 'hover:bg-emerald-50' },
   aishodan:  { icon: MessagesSquare,   iconBg: 'from-orange-500 to-rose-500',    hoverBg: 'hover:bg-orange-50' },
   mensetsu:  { icon: UserCheck,   iconBg: 'from-blue-600 to-indigo-700',    hoverBg: 'hover:bg-blue-50' },
+  asklink:   { icon: MessageCircleQuestion, iconBg: 'from-[#0066ff] to-[#0a0f3c]', hoverBg: 'hover:bg-blue-50' },
 }
 
 const FALLBACK_MAPPING: ServiceMapping = {

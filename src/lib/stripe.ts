@@ -226,6 +226,7 @@ export const ALL_SERVICE_IDS = [
   // 以下は services.ts にあるのに伝播先から漏れていたサービス（2026-08 追加）
   'kintai', 'doyalist', 'cunning', 'promane', 'sfa', 'shodan',
   'aio', 'adbanner', 'mensetsu', 'quote', 'aishodan', 'adimage',
+  'asklink',
 ] as const
 
 // ========================================

@@ -18,6 +18,7 @@ const APP_ONLY_PREFIXES = [
   '/kintai/dashboard', '/kintai/departments', '/kintai/employees',
   '/kintai/requests', '/kintai/settings', '/kintai/invite',
   '/adimage/history',
+  '/asklink/history',
   '/opening/dashboard',
   '/tenkai/projects',
   '/aio/invite', '/sfa/invite', '/shodan/invite', '/promane/invite',

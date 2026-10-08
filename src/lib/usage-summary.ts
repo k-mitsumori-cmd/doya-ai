@@ -208,6 +208,26 @@ export async function getUsageSummary(
       }
     }
 
+    case 'asklink': {
+      // ⚠️ 上限は plan-limit.ts の asklinkRuns が正本。数え方も asklink/access.ts と同じ
+      //    （無料は累計・有料は月次。1回＝リンク2本＋バナー3枚）
+      const tier = String(plan || '').toUpperCase() === 'ENTERPRISE' ? 'ENTERPRISE' : isPaidPlan(plan) ? 'PRO' : 'FREE'
+      const [total, month] = await Promise.all([
+        prisma.askLinkRun.count({ where: { userId } }),
+        prisma.askLinkRun.count({ where: { userId, createdAt: { gte: jstStartOfMonthUtc() } } }),
+      ])
+      return {
+        title: '作った質問リンク',
+        unit: '回',
+        total,
+        planLabel,
+        meters:
+          tier === 'FREE'
+            ? [{ label: '無料枠', used: total, limit: FREE_LIMITS.asklinkRuns }]
+            : [{ label: '今月', used: month, limit: (tier === 'ENTERPRISE' ? ENTERPRISE_MONTHLY_LIMITS : PRO_MONTHLY_LIMITS).asklinkRuns }],
+      }
+    }
+
     case 'banner': {
       // 生成予約と同じく、統一プランとサービス個別付与の上位を採用する。
       const sub = await prisma.userServiceSubscription.findUnique({

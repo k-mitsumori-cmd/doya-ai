@@ -36,6 +36,8 @@ export const FREE_LIMITS = {
   mensetsuTemplates: 1,
   /** 面接の発行件数（累計） */
   mensetsuSessions: 3,
+  /** 質問リンクの作成回数（累計）。1回＝リンク2本＋バナー画像3枚 */
+  asklinkRuns: 3,
 } as const
 
 /**
@@ -54,6 +56,8 @@ export const PRO_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   // 置き場所を作るだけで実費が出ない
   aishodanProducts: null,
   mensetsuTemplates: null,
+  // 1回で画像3枚（作り直し込みで最大9枚）。画像生成の従量課金が直接効く
+  asklinkRuns: 30,
 }
 
 /** ENTERPRISE の月次上限。個別契約のため広めに取るが、無制限にはしない */
@@ -64,6 +68,7 @@ export const ENTERPRISE_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   quoteProducts: null,
   aishodanProducts: null,
   mensetsuTemplates: null,
+  asklinkRuns: 100,
 }
 
 export type FreeLimitKey = keyof typeof FREE_LIMITS
@@ -107,8 +112,10 @@ export function jstStartOfMonthUtc(now = new Date()): Date {
   return new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1, 0, 0, 0) - 9 * 3600_000)
 }
 
+export type PlanTier = 'FREE' | 'PRO' | 'ENTERPRISE'
+
 /** 指定ユーザーのプラン区分。未ログイン・不明は FREE 扱い */
-async function planTierOf(userId: string | null | undefined): Promise<'FREE' | 'PRO' | 'ENTERPRISE'> {
+export async function planTierOf(userId: string | null | undefined): Promise<'FREE' | 'PRO' | 'ENTERPRISE'> {
   if (!userId) return 'FREE'
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } })
   if (String(user?.plan || '').toUpperCase() === 'ENTERPRISE') return 'ENTERPRISE'
@@ -131,8 +138,20 @@ export async function assertFreeLimit(
   ownerUserId: string | null,
   countSince?: (since: Date) => Promise<number>
 ): Promise<QuotaResult> {
-  const tier = await planTierOf(ownerUserId)
+  return assertLimitForTier(key, await planTierOf(ownerUserId), countUsed, countSince)
+}
 
+/**
+ * プラン区分が分かっているときの判定（assertFreeLimit の本体）。
+ * ⚠️ トランザクションの中で数えるときはこちらを使い、プラン区分はトランザクションの**外**で引くこと。
+ *    中で別クライアントの問い合わせをすると、接続数が1のプールでは自分が握った接続を待って固まる。
+ */
+export async function assertLimitForTier(
+  key: FreeLimitKey,
+  tier: PlanTier,
+  countUsed: () => Promise<number>,
+  countSince?: (since: Date) => Promise<number>
+): Promise<QuotaResult> {
   if (tier !== 'FREE') {
     const table = tier === 'ENTERPRISE' ? ENTERPRISE_MONTHLY_LIMITS : PRO_MONTHLY_LIMITS
     const monthly = table[key]
