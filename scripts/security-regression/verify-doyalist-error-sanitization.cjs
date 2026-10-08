@@ -37,12 +37,14 @@ async function expectSafe(promise, expected) {
   assert(!JSON.stringify(data).includes(secret))
 }
 ;(async () => {
-  await check('Doyalist project list and creation keep database errors private', async () => {
+  await check('Doyalist project list keeps database errors private and legacy creation stops before writes', async () => {
     const api = route('src/app/api/doyalist/projects/route.ts', {
       doyalistProject: { findMany: failure, create: failure },
     })
     await expectSafe(api.GET(), 'プロジェクトの取得に失敗しました')
-    await expectSafe(api.POST(request({ name: 'valid' })), 'プロジェクトの作成に失敗しました')
+    const denied = await api.POST(request({ name: 'valid' }))
+    assert.equal(denied.status, 409)
+    assert.equal((await denied.json()).code, 'OPERATION_REQUIRED')
   })
   await check('Doyalist project list pages histories larger than the response limit', async () => {
     const projects = Array.from({ length: 5001 }, (_, index) => ({

@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-08T05:15:55.182Z",
+  "expected": 7,
+  "passed": 7,
+  "cases": [
+    "Actual Next server authenticates private database session and hydrates Tool without automatic mutation",
+    "Actual Next explicit double click prepares one owned project through real API and acknowledges one synthetic completion",
+    "Actual Next lost completion body leaves committed private rows and blocks new extraction",
+    "Actual Next reload uses real authenticated recovery API and restores exact saved companies without another collection",
+    "Actual Next ready receipt never auto-resumes and real cancellation API confirms terminal state before clearing storage",
+    "Actual Next immediate cancel reaches real API while POST is held, retains reservation until worker exit and prevents late company insert",
+    "Actual Next revoked private session rejects new preparation without orphan project writes"
+  ],
+  "sourceHashes": {
+    "src/app/doyalist/Tool.tsx": "77237d973c2dbcec0862767201a2da0193d4ac8f3d3c399dfe38ee7d99e887a0",
+    "src/app/doyalist/page.tsx": "5b3907a3f2756f2a0d8da5052a482b35ceacd6d3a73a06c77fc1d7a8b3f880a4",
+    "src/app/doyalist/layout.tsx": "1d4f889ddf0a4cc7f2873dcd60eb1ad9b60a38e5ed7f2331ac611cb9efdaba72",
+    "src/app/api/doyalist/operations/route.ts": "e90758a21eadbeb2f3a0592621a3e1188f2af8e0c60a1e9dcfb026ceb4e6c24b",
+    "src/lib/doyalist/extraction-operation.ts": "64f0a24a33d7fd88aee92ee3c8f05cb8a407f302816dc37e59924586ab41b889",
+    "src/lib/doyalist/extraction-response.ts": "c22f01dccf18de55819ccf667007e763f6a90d629bbbe4947408fe01d341ae89",
+    "src/lib/doyalist/extraction-intent-client.ts": "191476ec993787a9c1b6a229cd0633827cb41f4c16a9af3e544b71622ebac467",
+    "src/lib/doyalist/collect-response-client.ts": "50d0896e2a99cc0f7350e5bc8d6f1f94734446e42569513a49dca3922f8f9e6f",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyalist-next-extraction.cjs": "df4e2228bcb3391037e6dbfff55daa6e7ea1981f74198299dd267000ea1e15fd"
+  },
+  "buildId": "R6iKAIYZ8iZS1dGt1uSbu",
+  "scope": "Actual copied Next production build, native Chrome hydration/Web Locks/storage/reload, real database sessions and preparation/recovery/cancel APIs with private PostgreSQL. Collection completion only is intercepted and produced by actual receipt helper with synthetic companies; collect handler/provider integration has separate API26 evidence. No production/customer data/provider/network access."
+}

@@ -7,7 +7,6 @@ import type { Prisma } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { getUserDoyalistLimits } from '@/lib/doyalist/limits'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 import { MAX_DOYALIST_PROJECT_BODY_BYTES, parseDoyalistProjectInput } from '@/lib/doyalist/project-input'
 import { streamDoyalistJsonIterable } from '@/lib/doyalist/stream-json'
@@ -163,40 +162,12 @@ export async function POST(req: NextRequest) {
     const input = parseDoyalistProjectInput(body, 'create')
     if (!input.ok) return NextResponse.json({ error: input.error }, { status: 400 })
 
-    // プラン上限チェック
-    const limits = await getUserDoyalistLimits(userId)
-    if (limits.maxProjects === 0) {
-      return NextResponse.json(
-        { error: '現在のプランではプロジェクトを作成できません' },
-        { status: 403 }
-      )
-    }
-    if (limits.maxProjects > 0) {
-      const current = await prisma.doyalistProject.count({
-        where: { userId, status: { not: 'archived' } },
-      })
-      if (current >= limits.maxProjects) {
-        return NextResponse.json(
-          { error: `プラン上限（${limits.maxProjects}件）に達しました。プランをアップグレードしてください` },
-          { status: 403 }
-        )
-      }
-    }
-
-    const project = await prisma.doyalistProject.create({
-      data: {
-        userId,
-        name: input.data.name!,
-        description: input.data.description || null,
-        industry: input.data.industry || null,
-        region: input.data.region || null,
-        targetSize: input.data.targetSize || null,
-        keywords: input.data.keywords || null,
-        status: 'active',
-      },
-    })
-
-    return NextResponse.json({ success: true, project })
+    // A stale tab has no durable operation identity. Reject before creating an
+    // orphan project; the current client prepares project+receipt atomically.
+    return NextResponse.json({
+      error: '画面を更新して、前の抽出の保存状況を確認してから操作してください。',
+      code: 'OPERATION_REQUIRED',
+    }, { status: 409, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   } catch {
     console.error('[doyalist/projects][POST] failed')
     return NextResponse.json(

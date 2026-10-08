@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-08T05:11:08.357Z",
+  "expected": 19,
+  "passed": 19,
+  "cases": [
+    "Project creation and same UUID replay commit one project",
+    "Changed input under same UUID conflicts without new project",
+    "Concurrent start admits one worker",
+    "Completion/acknowledgement replay inserts and counts once",
+    "Held capacity blocks competing extraction and worker failure releases it",
+    "Cancellation holds reservation until worker exits and fences its save",
+    "Cancellation before dispatch prevents delayed project creation",
+    "Failed save transaction rolls back company and keeps recoverable reservation",
+    "Different actor cannot read original receipt",
+    "Archived project blocks late company save",
+    "Corrupted receipt fails closed before further work",
+    "Expired worker cannot save or hold capacity forever",
+    "JST month rollover rechecks held capacity before saving old-month work",
+    "Plan downgrade clamps to fresh remaining capacity and explains partial save",
+    "Uncounted company source is rejected and rolled back",
+    "Missing saved result fails recovery without starting another worker",
+    "Parallel reservations at exact monthly capacity both succeed and next is blocked",
+    "Foreign project cannot be prepared under another actors operation",
+    "Consumed monthly capacity is a terminal quota limit rather than temporary busy"
+  ],
+  "sourceHashes": {
+    "src/lib/doyalist/extraction-operation.ts": "64f0a24a33d7fd88aee92ee3c8f05cb8a407f302816dc37e59924586ab41b889",
+    "src/lib/doyalist/limits.ts": "0a75e1ae7a0d45f40a841a9a379114fddbbd2e9d9fc98293da807cb8d4c715a6",
+    "src/lib/plan-utils.ts": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86",
+    "src/lib/doyalist/project-input.ts": "df4060fe055166f6a3ee20eaf7e7d51fe610f566c375a0ac0114fdfc794a4800",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyalist-extraction-helper-postgres.cjs": "09d12cd90177f853c5fd112c3290a989775c9e0920de68cd6254ca060f055e20"
+  },
+  "scope": "Actual operation helper/current limits/Prisma/private Unix PostgreSQL with synthetic users/companies. Not connected to API/UI and not production or real collection-provider evidence."
+}

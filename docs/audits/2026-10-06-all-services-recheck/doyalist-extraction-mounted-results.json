@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-08T05:09:29.098Z",
+  "expected": 8,
+  "passed": 8,
+  "checks": [
+    "New extraction prepares and collects once then clears metadata",
+    "Same turn repeated clicks cannot dispatch multiple mutations",
+    "Unknown collection response keeps intent and disables fresh generation",
+    "Reload metadata recovers by GET and never automatically POSTs",
+    "Explicit resume uses saved project and count without creating again",
+    "Cancel a recovered operation clears only after server confirms terminal",
+    "Unknown response later recovers committed result via GET only",
+    "Actor switch aborts old collection and excludes late private result"
+  ],
+  "sourceHashes": {
+    "src/app/doyalist/Tool.tsx": "77237d973c2dbcec0862767201a2da0193d4ac8f3d3c399dfe38ee7d99e887a0",
+    "src/lib/doyalist/extraction-intent-client.ts": "191476ec993787a9c1b6a229cd0633827cb41f4c16a9af3e544b71622ebac467",
+    "src/lib/doyalist/collect-response-client.ts": "50d0896e2a99cc0f7350e5bc8d6f1f94734446e42569513a49dca3922f8f9e6f",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyalist-extraction-mounted.cjs": "a9db922a17bdc95e31c4d036574e0bf1ab8f5800ed70727a063abd77051bf792"
+  },
+  "scope": "Actual mounted Tool under StrictMode and actual bounded transport/persistence; JSDOM storage, synthetic network and lock scheduler. Not native Web Locks, actual browser, API integration or production evidence."
+}

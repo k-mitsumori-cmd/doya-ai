@@ -7,7 +7,9 @@ function fixture(initialCount, failure, denied) {
   let project = {id:'project',userId:'user',industry:'IT',region:'全国'};
   let companies = Array.from({length:initialCount},(_,i)=>({id:'old'+i,name:'Existing '+i}));
   let approaches = initialCount ? [{id:'approach',body:'Keep existing draft'}] : [];
-  let mode = failure, calls = 0, writes = 0;
+  let mode = failure, calls = 0, writes = 0, serial = 1;
+  const receipts = new Map();
+  const operationId = () => '50000000-0000-4000-8000-' + String(serial).padStart(12, '0');
   const companyStore = {
     count:async()=>companies.length,
     createManyAndReturn:async({data})=>{
@@ -26,7 +28,38 @@ function fixture(initialCount, failure, denied) {
     doyalistCompany:companyStore,
     $transaction:async(operation)=>operation({$queryRaw:async()=>[{id:'user'}],doyalistCompany:companyStore}),
   };
+  class ExtractionError extends Error {}
+  const operations = {
+    DoyalistExtractionError: ExtractionError,
+    beginDoyalistExtraction: async identity => {
+      const existing = receipts.get(identity.operationId)
+      if (existing) return existing
+      const r = { operationId: identity.operationId, projectId: identity.projectId, count: identity.count,
+        state: denied === 'quota' ? 'failed' : 'started', code: denied === 'quota' ? 'MONTHLY_LIMIT_REACHED' : null }
+      receipts.set(identity.operationId, r); return r
+    },
+    recoverDoyalistExtraction: async identity => receipts.get(identity.operationId),
+    failDoyalistExtraction: async (identity, db, now, code = 'GENERATION_FAILED') => {
+      const r = receipts.get(identity.operationId); r.state = 'failed'; r.code = code; return r
+    },
+    completeDoyalistExtraction: async (identity, save) => {
+      const r = receipts.get(identity.operationId)
+      const result = await save({ doyalistCompany: companyStore }, r.projectId, r.count)
+      r.ids = result.ids; r.state = 'completed'; r.code = null; return r
+    },
+  }
+  const operationResponse = async identity => {
+    const r = receipts.get(identity.operationId)
+    if (r.state === 'completed') {
+      const rows = companies.filter(c => r.ids.includes(c.id))
+      return streamJson.streamDoyalistJsonArray({ success: true, generated: rows.length, state: r.state }, 'companies', rows)
+    }
+    return Response.json({ success: false, state: r.state, code: r.code }, { status: r.code === 'MONTHLY_LIMIT_REACHED' ? 403 :
+      r.code === 'no_hits' ? 422 : r.code === 'collection_timeout' ? 503 : r.code === 'api_error' ? 502 : 200 })
+  }
   const api = load('src/app/api/doyalist/collect/route.ts', {
+    '@/lib/doyalist/extraction-operation':operations,
+    '@/lib/doyalist/extraction-response':{doyalistOperationResponse:operationResponse},
     'next/server':{NextResponse:Response},
     'next-auth':{getServerSession:async()=>denied==='anonymous'?null:{user:{id:'user'}}},
     '@/lib/doyalist/search-keywords': load('src/lib/doyalist/search-keywords.ts'),
@@ -47,8 +80,8 @@ function fixture(initialCount, failure, denied) {
   });
   return {
     state:()=>({project,companies,approaches,calls,writes}),
-    retry:()=>{mode=null;},
-    post:(body={projectId:'project',count:1})=>api.POST(new Request('https://doya.test/api/doyalist/collect',{method:'POST',body:JSON.stringify(body)})),
+    retry:()=>{mode=null;serial++;},
+    post:(body={projectId:'project',count:1})=>api.POST(new Request('https://doya.test/api/doyalist/collect',{method:'POST',body:JSON.stringify({operationId:operationId(),...body})})),
   };
 }
 (async()=>{

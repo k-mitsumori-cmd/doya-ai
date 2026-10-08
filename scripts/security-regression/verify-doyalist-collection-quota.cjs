@@ -10,9 +10,7 @@ const companies = [
 let nextId = 1;
 let plan = 'FREE';
 let lockTail = Promise.resolve();
-let collectorCalls = 0;
-let releaseCollectors;
-const collectorsReady = new Promise((resolve) => { releaseCollectors = resolve; });
+
 const companyStore = {
   count: async ({ where }) => companies.filter((row) =>
     row.createdAt >= where.createdAt.gte && where.OR.some((condition) =>
@@ -43,63 +41,19 @@ const limits = load('src/lib/doyalist/limits.ts', {
   '@/lib/prisma': { prisma },
   '@/lib/plan-utils': { tierFrom: (value) => value },
 });
-const route = load('src/app/api/doyalist/collect/route.ts', {
-  'next/server': { NextResponse: Response },
-  'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
-  '@/lib/doyalist/search-keywords': load('src/lib/doyalist/search-keywords.ts'),
-    '@/lib/auth': { authOptions: {} },
-  '@/lib/prisma': { prisma },
-  '@/lib/operational-json': operationalJson,
-  '@/lib/doyalist/stream-json': streamJson,
-  '@/lib/doyalist/limits': limits,
-  '@/lib/doyalist/collect': {
-    collectCompaniesDetailed: async ({ maxResults }) => {
-      collectorCalls++;
-      if (collectorCalls === 2) releaseCollectors();
-      await collectorsReady;
-      return {
-        apiOk: true,
-        companies: Array.from({ length: maxResults }, (_, index) => ({ companyName: `企業${collectorCalls}-${index}`, source: 'gbizinfo' })),
-      };
-    },
-  },
-});
-const post = () => route.POST(new Request('https://doya.test/api/doyalist/collect', {
-  method: 'POST', body: JSON.stringify({ projectId: 'project-1', count: 70 }),
-}));
-
 (async () => {
   assert.equal(limits.monthStart(new Date('2026-09-30T14:59:59Z')).toISOString(), '2026-08-31T15:00:00.000Z');
   assert.equal(limits.monthStart(new Date('2026-09-30T15:00:00Z')).toISOString(), '2026-09-30T15:00:00.000Z');
-  assert.ok(limits.monthlyCompanyWhere('user').OR.some((condition) => condition.source?.contains === 'gbizinfo'), 'merged source variants must count');
-  assert.equal(await limits.countMonthlyCompanies('user'), 0, 'old and manual rows must not consume this month’s collection quota');
-  const responses = await Promise.all([post(), post()]);
-  assert.deepEqual(responses.map((response) => response.status), [200, 200]);
-  const payloads = await Promise.all(responses.map((response) => response.json()));
-  assert.deepEqual(payloads.map((payload) => payload.generated), [70, 30]);
-  assert.equal(await limits.countMonthlyCompanies('user'), 100, 'actual gbizinfo rows must count toward the quota');
-  assert.match(payloads[1].warning, /残り枠/);
-  assert.equal(collectorCalls, 2);
-  const removed = companies.pop();
-  const partial = await post();
-  assert.equal(partial.status, 403);
-  const partialBody = await partial.json();
-  assert.equal(partialBody.code, 'MONTHLY_REQUEST_EXCEEDS_REMAINING');
-  assert.equal(partialBody.upgradeUrl, '/doyalist/pricing');
-  companies.push(removed);
-  const exhausted = await post();
-  assert.equal(exhausted.status, 403);
-  const exhaustedBody = await exhausted.json();
-  assert.equal(exhaustedBody.code, 'MONTHLY_LIMIT_REACHED');
-  assert.equal(exhaustedBody.upgradeUrl, '/doyalist/pricing');
-  assert.equal(collectorCalls, 2, 'both quota errors must stop before external collection');
-  plan = 'PRO';
-  companies.push(...Array.from({ length: 4900 }, () => ({ source: 'gbizinfo', createdAt: new Date() })));
-  const paidDenied = await post();
-  assert.equal(paidDenied.status, 403);
-  const paidBody = await paidDenied.json();
-  assert.equal(paidBody.contactUrl, 'https://doyamarke.surisuta.jp/contact');
-  assert.equal(paidBody.upgradeUrl, undefined);
-  assert.equal(collectorCalls, 2, 'paid users over quota must not call collection providers');
-  console.log('PASS Doyalist collection: JST month, actual source count, concurrent cap, exact created rows');
-})().catch((error) => { console.error(error); process.exitCode = 1; });
+  assert.ok(limits.monthlyCompanyWhere('user').OR.some(condition => condition.source?.contains === 'gbizinfo'));
+  assert.equal(await limits.countMonthlyCompanies('user'), 0, 'old and manual rows do not consume current month quota');
+  companies.push({source:'gbizinfo+synthetic',createdAt:new Date()},{source:'corporate_number',createdAt:new Date()});
+  assert.equal(await limits.countMonthlyCompanies('user'),2,'recognized source variants count');
+  // Reservation, save, replay and quota actions require the actual transaction
+  // helper and database. A second mock of the quota algorithm cannot prove them.
+  const {spawnSync}=require('node:child_process');
+  for(const name of ['doyalist-extraction-helper-postgres-supervise.py','doyalist-operation-route-postgres-supervise.py']){
+    const p=spawnSync('python3',['docs/audits/2026-10-06-all-services-recheck/'+name],{stdio:'inherit',timeout:55000});
+    assert.equal(p.status,0,name+' private PostgreSQL regression must pass');
+  }
+  console.log('PASS Doyalist collection: JST/source ledger plus actual isolated PostgreSQL reservations, exact saves, replay and plan actions');
+})().catch(error=>{console.error(error);process.exitCode=1});

@@ -31,7 +31,7 @@ export function validCollectionResult(value: unknown, requested: number): boolea
 }
 
 /** Allow large streamed company lists; cancellation never proves server rollback. */
-export async function readCollectionResponse(init: RequestInit, signal: AbortSignal) {
+export async function readCollectionResponse(init: RequestInit, signal: AbortSignal, url = '/api/doyalist/collect') {
   const controller = new AbortController()
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
   let rejectStop: (error: Error) => void = () => {}
@@ -42,7 +42,7 @@ export async function readCollectionResponse(init: RequestInit, signal: AbortSig
   try {
     if (signal.aborted) { cancel(); return await stop }
     return await Promise.race([stop, (async () => {
-      const res = await fetch('/api/doyalist/collect', { ...init, cache: 'no-store', signal: controller.signal })
+      const res = await fetch(url, { ...init, cache: 'no-store', signal: controller.signal })
       const maxBytes = 64 * 1024 * 1024
       if (controller.signal.aborted || !res.body || Number(res.headers.get('content-length')) > maxBytes) throw new Error(DOYALIST_COLLECTION_UNKNOWN)
       reader = res.body.getReader()

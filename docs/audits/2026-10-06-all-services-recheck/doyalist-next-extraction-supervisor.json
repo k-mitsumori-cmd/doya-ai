@@ -1,0 +1,17 @@
+{
+  "startedAt": "2026-10-08T05:15:42.992323+00:00",
+  "pid": 94952,
+  "privateFolder": "/tmp/doya-sfa-authority-55404a0f",
+  "appFolder": "/tmp/doya-sfa-authority-55404a0f/app",
+  "origin": "http://127.0.0.1:54095",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-release-3f469018-9d7c-4ff0-948f-f7b7dbede630",
+  "status": "passed",
+  "scope": "Actual built Next server with actual auth session adapter and isolated full-schema PostgreSQL; synthetic users/sessions. No provider credentials or production data; outbound network blocked.",
+  "probeExitCode": 0,
+  "evidenceValid": true,
+  "serverExitCode": 0,
+  "stopExitCode": 0,
+  "postStopStatusExitCode": 3,
+  "privateFolderRemoved": true,
+  "endedAt": "2026-10-08T05:15:56.756291+00:00"
+}

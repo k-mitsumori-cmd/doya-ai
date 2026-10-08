@@ -7,13 +7,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { collectCompaniesDetailed } from '@/lib/doyalist/collect'
+import { beginDoyalistExtraction, completeDoyalistExtraction, recoverDoyalistExtraction, failDoyalistExtraction, DoyalistExtractionError } from '@/lib/doyalist/extraction-operation'
+import { doyalistOperationResponse } from '@/lib/doyalist/extraction-response'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 import { resolveDoyalistSearchKeywords } from '@/lib/doyalist/search-keywords'
-import { streamDoyalistJsonArray } from '@/lib/doyalist/stream-json'
 import {
   getUserDoyalistLimits,
-  countMonthlyCompanies,
-  monthlyCompanyWhere,
 } from '@/lib/doyalist/limits'
 
 /**
@@ -23,6 +22,8 @@ import {
  * Body: { projectId: string, count: number }
  */
 export async function POST(req: NextRequest) {
+  let worker: { userId: string; operationId: string } | undefined
+  let cancel: (() => void) | undefined
   try {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
@@ -39,7 +40,10 @@ export async function POST(req: NextRequest) {
       }
       throw error
     }
-    const { projectId } = body
+    const { projectId, operationId } = body
+    if (typeof operationId !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(operationId)) {
+      return NextResponse.json({ error: '画面を更新して、保存結果を確認してから操作してください。', code: 'OPERATION_REQUIRED' }, { status: 409 })
+    }
     const requestedCount = body.count === undefined ? 10 : body.count
     if (typeof projectId !== 'string' || !projectId.trim() || projectId.length > 128
       || typeof requestedCount !== 'number' || !Number.isSafeInteger(requestedCount) || requestedCount < 1) {
@@ -63,25 +67,17 @@ export async function POST(req: NextRequest) {
     const quotaAction = limits.tier === 'FREE' || limits.tier === 'GUEST'
       ? { upgradeUrl: '/doyalist/pricing' }
       : { contactUrl: 'https://doyamarke.surisuta.jp/contact' }
-    if (limits.maxCompaniesPerMonth === 0) {
-      return NextResponse.json(
-        { error: '現在のプランでは企業生成を利用できません', code: 'MONTHLY_LIMIT_REACHED', ...quotaAction },
-        { status: 403 }
-      )
-    }
-    if (limits.maxCompaniesPerMonth > 0) {
-      const used = await countMonthlyCompanies(userId)
-      if (used + count > limits.maxCompaniesPerMonth) {
-        const available = Math.max(0, limits.maxCompaniesPerMonth - used)
-        return NextResponse.json(
-          {
-            error: `月間上限（${limits.maxCompaniesPerMonth}社）を超えます。残り${available}社まで生成可能です`,
-            code: available === 0 ? 'MONTHLY_LIMIT_REACHED' : 'MONTHLY_REQUEST_EXCEEDS_REMAINING',
-            ...quotaAction,
-          },
-          { status: 403 }
-        )
-      }
+    const identity = { userId, operationId }
+    const admission = await beginDoyalistExtraction({ ...identity, projectId, count, selection: project })
+    if (admission.state === 'busy') return NextResponse.json({ success: false, operationId: admission.operationId, projectId, state: 'busy', count, generated: 0 }, { status: 202, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+    if (admission.state !== 'started') return await doyalistOperationResponse(identity, quotaAction)
+    worker = identity
+    cancel = () => { void recoverDoyalistExtraction(identity, true).catch(() => { console.error('[doyalist/collect] Cancellation acknowledgement failed') }) }
+    req.signal.addEventListener('abort', cancel, { once: true })
+    if (req.signal.aborted) {
+      await recoverDoyalistExtraction(identity, true)
+      await failDoyalistExtraction(identity)
+      return await doyalistOperationResponse(identity, quotaAction)
     }
 
     const industry = project.industry || ''
@@ -104,39 +100,16 @@ export async function POST(req: NextRequest) {
         enrichLimit: Math.min(count, 10000),
       })
     } catch {
+      await failDoyalistExtraction(identity, undefined, undefined, 'api_error')
       console.error('[doyalist/collect] Collection provider failed')
-      // 再収集先には既存企業・アプローチがあり得るため、失敗で削除しない。
-      return NextResponse.json(
-        { error: '企業データの取得に失敗しました。しばらく経ってから再試行してください。' },
-        { status: 502 }
-      )
+      return await doyalistOperationResponse(identity, quotaAction)
     }
 
     const collected = collectedResult.companies
-
     if (collected.length === 0) {
-      // 0件は検索結果であり、既存プロジェクトを削除する指示ではない。
-      // APIが応答していたかどうかで原因を区別
-      if (collectedResult.budgetExhausted) {
-        return NextResponse.json(
-          { error: '企業データの取得が時間内に完了しませんでした。時間をおいて再試行してください。', code: 'collection_timeout' },
-          { status: 503 }
-        )
-      }
-      if (!collectedResult.apiOk) {
-        return NextResponse.json(
-          { error: '企業データAPIから応答がありませんでした。時間をおいて再試行してください。', code: 'api_error' },
-          { status: 502 }
-        )
-      }
-      return NextResponse.json(
-        {
-          error: '該当する企業が見つかりませんでした。キーワードや業界・地域の絞り込みを緩めてお試しください。',
-          code: 'no_hits',
-          hint: 'AIキーワード変換ボタンで検索ワードを増やすとヒット数が増えやすくなります',
-        },
-        { status: 422 }
-      )
+      await failDoyalistExtraction(identity, undefined, undefined,
+        collectedResult.budgetExhausted ? 'collection_timeout' : !collectedResult.apiOk ? 'api_error' : 'no_hits')
+      return await doyalistOperationResponse(identity, quotaAction)
     }
 
     // 業種名のサニタイズ: 数字のみ・空・"指定なし"はAPIの実態にないので無効扱い
@@ -182,42 +155,26 @@ export async function POST(req: NextRequest) {
         source: c.source,
       }
     })
-    // 外部API取得中に他のリクエストが枠を使うため、保存時にも利用者行をロックして再判定する。
-    const { created, quotaClamped } = limits.maxCompaniesPerMonth < 0
-      ? { created: await prisma.doyalistCompany.createManyAndReturn({ data: rows }), quotaClamped: false }
-      : await prisma.$transaction(async (tx) => {
-        const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
-        if (users.length === 0) throw new Error('ユーザーが見つかりません')
-        const used = await tx.doyalistCompany.count({ where: monthlyCompanyWhere(userId) })
-        const remaining = Math.max(0, limits.maxCompaniesPerMonth - used)
-        const saving = rows.slice(0, remaining)
-        if (saving.length === 0) return { created: [], quotaClamped: true }
-        const created = await tx.doyalistCompany.createManyAndReturn({ data: saving })
-        return { created, quotaClamped: saving.length < rows.length }
-      })
-    if (created.length === 0) {
-      return NextResponse.json(
-        { error: `月間上限（${limits.maxCompaniesPerMonth}社）に達しました。${limits.tier === 'FREE' ? 'プロにアップグレードすると枠が広がります。' : '追加枠をご希望の場合はお問い合わせください。'}`, code: 'MONTHLY_LIMIT_REACHED', ...quotaAction },
-        { status: 403 }
-      )
+    await completeDoyalistExtraction(identity, async (tx, ownedProjectId, allowed) => {
+      const created = await tx.doyalistCompany.createManyAndReturn({ data: rows.slice(0, allowed).map(row => ({ ...row, projectId: ownedProjectId })) })
+      const warnings = [
+        wasClamped ? `1回のリクエストでは最大${MAX_COUNT_PER_REQUEST}社まで生成可能です。${requestedCount}社のリクエストを${count}社に調整しました。` : null,
+        collectedResult.budgetExhausted ? `取得に時間がかかったため、取得できた${created.length}社を保存しました。再収集の前に保存済みの一覧をご確認ください。` : null,
+      ].filter(Boolean).join(' ')
+      return { ids: created.map(row => row.id), warning: warnings || undefined }
+    })
+    return await doyalistOperationResponse(identity, quotaAction)
+  } catch (error) {
+    if (worker) {
+      try { await failDoyalistExtraction(worker) } catch { console.error('[doyalist/collect] Worker acknowledgement failed') }
     }
-
-    const warnings = [
-      wasClamped ? `1回のリクエストでは最大${MAX_COUNT_PER_REQUEST}社まで生成可能です。${requestedCount}社のリクエストを${count}社に調整しました。` : null,
-      quotaClamped ? `同時に進んだ生成との兼ね合いで、今月の残り枠に合わせて${created.length}社を保存しました。` : null,
-      collectedResult.budgetExhausted ? `取得に時間がかかったため、取得できた${created.length}社を保存しました。再収集の前に保存済みの一覧をご確認ください。` : null,
-    ].filter((message): message is string => Boolean(message))
-
-    return streamDoyalistJsonArray({
-      success: true,
-      generated: created.length,
-      ...(warnings.length > 0 ? { warning: warnings.join(' ') } : {}),
-    }, 'companies', created)
-  } catch {
+    if (error instanceof DoyalistExtractionError) return NextResponse.json({ error: '抽出の保存状況を確認できません。新しく抽出せず、保存結果を確認してください。', code: error.code }, { status: error.status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
     console.error('[doyalist/collect][POST] failed')
     return NextResponse.json(
       { error: '企業生成に失敗しました' },
       { status: 500 }
     )
+  } finally {
+    if (cancel) req.signal.removeEventListener('abort', cancel)
   }
 }

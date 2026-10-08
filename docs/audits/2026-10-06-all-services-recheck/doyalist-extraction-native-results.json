@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-08T05:09:35.443Z",
+  "expected": 9,
+  "passed": 9,
+  "cases": [
+    "Native page open uses real Web Locks support and never auto-generates",
+    "Native double click dispatches one project receipt and one collection, then clears acknowledged metadata",
+    "Native lost acknowledgement keeps metadata-only UUID and blocks fresh generation",
+    "Native reload recovers committed companies using GET without duplicate provider POST",
+    "Native simultaneous tabs share one UUID under Web Locks and start one collection",
+    "Native cross-tab completion clears shared intent without dispatching a second collection",
+    "Native ready receipt reload waits for explicit resume and preserves saved project/count",
+    "Native actor ABA excludes prior private list and restores original UUID through GET only",
+    "Native immediate cancellation interrupts pending POST, retains UUID through cancelling and clears only after worker terminal acknowledgement"
+  ],
+  "sourceHashes": {
+    "src/app/doyalist/Tool.tsx": "77237d973c2dbcec0862767201a2da0193d4ac8f3d3c399dfe38ee7d99e887a0",
+    "src/lib/doyalist/constants.ts": "3a9025e2f3c93f589690ee169a51f905a03738f0e9ccd4da09b7f25230b41fa0",
+    "src/lib/doyalist/collect/prefecture-codes.ts": "d835452a6d69670e8929ade1a5f1f0a96679c464c25ea6684cbb6f7558845bf5",
+    "src/lib/doyalist/keyword-response-client.ts": "62051747a635b9b624fdab17ad227a1e1335b6d75a7b4c5ec6be6a30d1bbd9b7",
+    "src/lib/doyalist/search-keywords.ts": "5247d6740d562cdea4793977b6cfa54ea2e71b5f0edfd2abd7edd5066902f754",
+    "src/lib/doyalist/estimate-result.ts": "79ae6f7ddf34f0f915c7dff9b1d390a9aa9dc6dc30d35b2ea3586dae1fb40eb7",
+    "src/lib/doyalist/collect-response-client.ts": "50d0896e2a99cc0f7350e5bc8d6f1f94734446e42569513a49dca3922f8f9e6f",
+    "src/lib/doyalist/preferences.ts": "2bd68801d2a386bcbb7751066709b8784347647f364feddbdc01ad4d80ba183e",
+    "src/lib/doyalist/extraction-intent-client.ts": "191476ec993787a9c1b6a229cd0633827cb41f4c16a9af3e544b71622ebac467",
+    "src/lib/billing-response-client.ts": "37bcf03abdde567cf1a8de3d5f615148c5e87de09bce5288fb74e7990c481c8c",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyalist-extraction-native.cjs": "52506757a1cc4a2be82aa504de872dc5370631c5933cfb142063ebc8c9477eb7"
+  },
+  "scope": "Actual Tool and browser persistence/readers under StrictMode with native Chrome HTTP/fetch/abort/Web Locks/localStorage/storage events/reload/two tabs. Synthetic auth/framework/API receipt state, no actual Next hydration/database/provider/production evidence."
+}

@@ -11,6 +11,7 @@ import { resolveDoyalistSearchKeywords } from '@/lib/doyalist/search-keywords'
 import { parseDoyalistEstimate, type DoyalistEstimate } from '@/lib/doyalist/estimate-result'
 import { readBillingResponse } from '@/lib/billing-response-client'
 import { DOYALIST_COLLECTION_UNKNOWN, parseCollectionUsage, readCollectionResponse, validCollectionResult } from '@/lib/doyalist/collect-response-client'
+import { readExtractionIntent, claimExtractionIntent, clearExtractionIntent, type ExtractionIntent } from '@/lib/doyalist/extraction-intent-client'
 import { readDoyalistPreferences } from '@/lib/doyalist/preferences'
 
 interface Company {
@@ -256,72 +257,136 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
     }
   }, [])
 
-  const handleGenerate = async () => {
+  const [extractionIntent, setExtractionIntent] = useState<ExtractionIntent | null>(null)
+  const [intentReady, setIntentReady] = useState(false)
+  const [extractionState, setExtractionState] = useState('unknown')
+  const [extractionProject, setExtractionProject] = useState<string | null>(null)
+  const recoveryAction = useRef<() => void>(() => {})
+  const cancellationDispatch = useRef(false)
+
+  const runExtraction = async (mode: 'new' | 'recover' | 'resume' | 'cancel') => {
     if (pendingCollection.current || identityEpoch.current.version !== epoch) return
-    if (status !== 'authenticated' || !session?.user?.id) { toast.error('ログイン状態をご確認ください'); return }
-    if (!validCount) { toast.error('抽出件数は1〜10,000社で入力してください'); return }
-    const operation = { controller: new AbortController(), tid: toast.loading('リストを抽出中...') }
+    const actor = session?.user?.id
+    if (status !== 'authenticated' || !actor) { toast.error('ログイン状態をご確認ください'); return }
+    if (mode === 'new' && (!intentReady || !validCount)) return
+    const scope = { actor }
+    const operation = { controller: new AbortController(), tid: toast.loading(mode === 'new' || mode === 'resume' ? 'リストを抽出中...' : '保存状況を確認中...') }
     pendingCollection.current = operation
     const current = () => identityEpoch.current.version === epoch && collectionAlive.current && pendingCollection.current === operation && !operation.controller.signal.aborted
-    let mutationStarted = false
     setGenerating(true)
     setErrorMsg(null); setErrorHint(null); setWarningMsg(null); setQuotaAction(null)
     try {
-      const response = await readBillingResponse('/api/doyalist/usage', { method: 'GET' }, operation.controller.signal)
-      if (!current()) return
-      const usage = response.ok ? parseCollectionUsage(response.data) : null
-      if (!usage) {
-        const msg = '利用枠を確認できませんでした。時間をおいて再度お試しください。'
-        setErrorMsg(msg); toast.error(msg, { id: operation.tid }); return
+      let intent = readExtractionIntent(scope)
+      let created = false
+      if (mode === 'new' && !intent) {
+        const response = await readBillingResponse('/api/doyalist/usage', { method: 'GET' }, operation.controller.signal)
+        if (!current()) return
+        const usage = response.ok ? parseCollectionUsage(response.data) : null
+        if (!usage) throw new Error('利用枠を確認できませんでした。時間をおいて再度お試しください。')
+        if (usage.remaining >= 0 && count > usage.remaining) {
+          const msg = usage.remaining === 0 ? `今月の企業生成上限（${usage.limit}社）に達しました。` : `月間上限（${usage.limit}社）を超えます。残り${usage.remaining}社まで生成可能です。`
+          setErrorMsg(msg); setErrorHint(usage.remaining > 0 ? `件数を${usage.remaining}社以下に変更すると、残り枠を利用できます。` : null)
+          setQuotaAction(usage.tier === 'FREE' || usage.tier === 'GUEST' ? 'pricing' : 'contact')
+          toast.error(msg, { id: operation.tid }); return
+        }
+        const claimed = await claimExtractionIntent(scope, count, operation.controller.signal)
+        intent = claimed.intent; created = claimed.created
       }
-      if (usage.remaining >= 0 && count > usage.remaining) {
-        const msg = usage.remaining === 0 ? `今月の企業生成上限（${usage.limit}社）に達しました。`
-          : `月間上限（${usage.limit}社）を超えます。残り${usage.remaining}社まで生成可能です。`
-        setErrorMsg(msg)
-        setErrorHint(usage.remaining > 0 ? `件数を${usage.remaining}社以下に変更すると、残り枠を利用できます。` : null)
-        setQuotaAction(usage.tier === 'FREE' || usage.tier === 'GUEST' ? 'pricing' : 'contact')
-        toast.error(msg, { id: operation.tid, duration: 6000 }); return
+      if (!current()) return
+      if (!intent) { setExtractionIntent(null); setIntentReady(true); toast.dismiss(operation.tid); return }
+      setExtractionIntent(intent)
+      let pid: string | null = null
+      if (created) {
+        const dateStr = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+        const prepared = await readBillingResponse('/api/doyalist/operations', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ operationId: intent.operationId, count: intent.count,
+            project: { name: `${industry}_${region}_${dateStr}`, industry, region, targetSize: size, keywords: searchKeywords() } }),
+        }, operation.controller.signal)
+        if (!current()) return
+        const ready = prepared.data.operation as Record<string, unknown> | undefined
+        if (!prepared.ok || prepared.data.success !== true || ready?.operationId !== intent.operationId || ready?.state !== 'ready' || ready?.count !== intent.count ||
+            typeof ready.projectId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(ready.projectId)) throw new Error(DOYALIST_COLLECTION_UNKNOWN)
+        pid = ready.projectId
       }
-      const dateStr = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-      mutationStarted = true
-      const created = await readBillingResponse('/api/doyalist/projects', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: `${industry}_${region}_${dateStr}`, industry, region, targetSize: size, keywords: searchKeywords() }),
-      }, operation.controller.signal)
-      if (!current()) return
-      const project = created.data.project as { id?: unknown } | undefined
-      const pid = project?.id
-      if (!created.ok || created.data.success !== true || created.data.error !== undefined ||
-          typeof pid !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(pid)) throw new Error(DOYALIST_COLLECTION_UNKNOWN)
-      const responseResult = await readCollectionResponse({
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: pid, count }),
-      }, operation.controller.signal)
-      if (!current()) return
-      const { ok, status: httpStatus, data } = responseResult
-      if (!ok) {
-        const quotaRejected = httpStatus === 403 && ['MONTHLY_LIMIT_REACHED', 'MONTHLY_REQUEST_EXCEEDS_REMAINING'].includes(data.code)
-        const msg = quotaRejected ? '今月の企業生成枠を超えています。件数と利用枠をご確認ください。'
-          : httpStatus === 422 && data.code === 'no_hits' ? '該当する企業が見つかりませんでした。検索条件を緩めてお試しください。'
-          : DOYALIST_COLLECTION_UNKNOWN
-        setErrorMsg(msg); toast.error(msg, { id: operation.tid, duration: 6000 })
-        setErrorHint(quotaRejected ? null : '保存済みのプロジェクトを確認してから再操作してください。')
-        if (quotaRejected) setQuotaAction(data.upgradeUrl === '/doyalist/pricing' ? 'pricing'
-          : data.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : null)
-        return
+      if (mode === 'resume') {
+        // Explicit resume always rechecks the receipt; it cannot recreate a project.
+        const checked = await readCollectionResponse({ method: 'GET' }, operation.controller.signal, '/api/doyalist/operations?operationId=' + intent.operationId)
+        if (!current()) return
+        if (checked.ok && checked.data.state === 'ready' && checked.data.operationId === intent.operationId && checked.data.count === intent.count &&
+            typeof checked.data.projectId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(checked.data.projectId)) pid = checked.data.projectId
       }
-      if (!validCollectionResult(data, count)) throw new Error(DOYALIST_COLLECTION_UNKNOWN)
-      setCompanies(data.companies); setSavedListId(pid); setVisibleCount(PAGE_SIZE)
-      toast.success(`${data.companies.length}社のリストができました`, { id: operation.tid })
-      if (typeof data.warning === 'string') { setWarningMsg(data.warning); toast(data.warning, { duration: 5000 }) }
-    } catch {
+      const result = pid ? await readCollectionResponse({ method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operationId: intent.operationId, projectId: pid, count: intent.count }) }, operation.controller.signal)
+        : await readCollectionResponse(mode === 'cancel' ? { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operationId: intent.operationId }) }
+          : { method: 'GET' }, operation.controller.signal, '/api/doyalist/operations' + (mode === 'cancel' ? '' : '?operationId=' + intent.operationId))
+      if (!current() || readExtractionIntent(scope)?.operationId !== intent.operationId) return
+      const { data } = result
+      if (data.operationId !== intent.operationId || !['missing', 'ready', 'pending', 'cancelling', 'completed', 'failed', 'cancelled', 'busy'].includes(data.state) ||
+          (data.state !== 'missing' && data.count !== intent.count && !(data.state === 'cancelled' && data.count === 0)) ||
+          (data.projectId !== null && (typeof data.projectId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(data.projectId)))) throw new Error(DOYALIST_COLLECTION_UNKNOWN)
+      setExtractionState(data.state); setExtractionProject(data.projectId)
+      if (data.state === 'completed') {
+        if (!result.ok || !data.projectId || !validCollectionResult(data, intent.count)) throw new Error(DOYALIST_COLLECTION_UNKNOWN)
+        setCompanies(data.companies); setSavedListId(data.projectId); setVisibleCount(PAGE_SIZE)
+        if (typeof data.warning === 'string') setWarningMsg(data.warning)
+        await clearExtractionIntent(scope, intent.operationId, operation.controller.signal)
+        if (!current()) return
+        setExtractionIntent(null); setIntentReady(true)
+        toast.success(`${data.generated}社の保存済みリストを確認しました`, { id: operation.tid }); return
+      }
+      if (mode === 'cancel' && ['failed', 'cancelled'].includes(data.state)) {
+        await clearExtractionIntent(scope, intent.operationId, operation.controller.signal)
+        if (!current()) return
+        setExtractionIntent(null); setIntentReady(true); toast.success('前の操作を終了しました', { id: operation.tid }); return
+      }
+      if (data.state === 'failed' && ['no_hits', 'api_error', 'collection_timeout'].includes(data.code)) {
+        setErrorMsg(data.code === 'no_hits' ? '該当する企業が見つかりませんでした。検索条件を緩めてお試しください。' : data.code === 'collection_timeout' ? '企業データの取得が時間内に完了しませんでした。時間をおいてお試しください。' : '企業データAPIから応答がありませんでした。時間をおいてお試しください。')
+      }
+      const quota = result.status === 403 && ['MONTHLY_LIMIT_REACHED', 'MONTHLY_REQUEST_EXCEEDS_REMAINING'].includes(data.code)
+      if (quota) {
+        setErrorMsg('今月の企業生成枠を超えています。件数と利用枠をご確認ください。')
+        setQuotaAction(data.upgradeUrl === '/doyalist/pricing' ? 'pricing' : data.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : null)
+      }
+      toast.dismiss(operation.tid)
+    } catch (error) {
       if (!current()) return
-      const msg = mutationStarted ? DOYALIST_COLLECTION_UNKNOWN : '利用枠を確認できませんでした。時間をおいて再度お試しください。'
+      const msg = error instanceof Error ? error.message : DOYALIST_COLLECTION_UNKNOWN
       setErrorMsg(msg); toast.error(msg, { id: operation.tid, duration: 6000 })
     } finally {
       if (current()) { pendingCollection.current = null; setGenerating(false) }
       operation.controller.abort()
     }
   }
+  const handleCancelExtraction = () => {
+    if (cancellationDispatch.current || identityEpoch.current.version !== epoch) return
+    const pending = pendingCollection.current
+    if (pending) {
+      // Client abort does not prove rollback. Preserve the UUID and ask the
+      // server to fence delayed preparation/save before clearing anything.
+      pending.controller.abort(); toast.dismiss(pending.tid)
+      pendingCollection.current = null
+    }
+    cancellationDispatch.current = true
+    void runExtraction('cancel').finally(() => { cancellationDispatch.current = false })
+  }
+  recoveryAction.current = () => { void runExtraction('recover') }
+  useEffect(() => {
+    const actor = session?.user?.id
+    if (status !== 'authenticated' || !actor) { setIntentReady(false); return }
+    const load = () => {
+      try {
+        const intent = readExtractionIntent({ actor })
+        setExtractionIntent(intent); setExtractionState('unknown'); setIntentReady(true)
+        if (intent) recoveryAction.current()
+      } catch { setIntentReady(false); setErrorMsg('保存された抽出情報を確認できません。新しく抽出せずお問い合わせください。') }
+    }
+    load()
+    const sync = (event: StorageEvent) => { if (event.key === null || event.key === 'doyalist-extraction-intent:v1:' + actor) load() }
+    window.addEventListener('storage', sync)
+    return () => window.removeEventListener('storage', sync)
+  }, [session?.user?.id, status])
+  const handleGenerate = () => { void runExtraction('new') }
 
   const downloadCSV = () => savedListId && (window.location.href = `/api/doyalist/export?projectId=${savedListId}&format=csv`)
   const downloadExcel = () => savedListId && (window.location.href = `/api/doyalist/export?projectId=${savedListId}&format=excel`)
@@ -566,7 +631,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
 
               <button
                 onClick={handleGenerate}
-                disabled={generating || !validCount}
+                disabled={generating || !validCount || !intentReady || Boolean(extractionIntent)}
                 className="w-full py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold text-base rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {generating ? (
@@ -575,6 +640,19 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                   <><img src={CHARS.jump} alt="" className="w-6 h-6" />リストを抽出する</>
                 )}
               </button>
+
+              {extractionIntent && (
+                <div role="status" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                  <p className="font-bold">前の抽出操作を確認してください（{extractionIntent.count}社）</p>
+                  <p className="mt-1">{extractionState === 'ready' ? 'プロジェクトは保存済みです。続けると、この操作の企業抽出を開始します。' : extractionState === 'pending' ? '抽出処理が進行中です。新しく抽出せず、保存状況を確認してください。' : extractionState === 'cancelling' ? '終了処理中です。処理の停止が確認できるまでお待ちください。' : extractionState === 'busy' ? '別の抽出が利用枠を一時確保しています。完了後にこの操作を続けられます。' : extractionState === 'failed' || extractionState === 'cancelled' ? 'この抽出は終了しました。操作を終了すると、新しい条件で抽出できます。' : '通信が途切れても、保存状況を確認してから次の操作に進めます。'}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button disabled={generating} onClick={() => void runExtraction('recover')} className="rounded-lg bg-white px-3 py-2 font-bold disabled:opacity-50">保存状況を確認</button>
+                    {(extractionState === 'ready' || extractionState === 'busy') && <button disabled={generating} onClick={() => void runExtraction('resume')} className="rounded-lg bg-cyan-700 px-3 py-2 font-bold text-white disabled:opacity-50">この抽出を続ける</button>}
+                    <button disabled={generating && cancellationDispatch.current} onClick={handleCancelExtraction} className="rounded-lg bg-white px-3 py-2 font-bold disabled:opacity-50">この操作を終了</button>
+                    {extractionProject && <Link href="/doyalist/history" className="px-3 py-2 underline">保存済みの履歴を見る</Link>}
+                  </div>
+                </div>
+              )}
 
               {warningMsg && (
                 <div role="status" className="mt-3 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3">
