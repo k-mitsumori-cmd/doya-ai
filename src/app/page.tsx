@@ -24,18 +24,19 @@ export default function HomePage() {
       <section className="doya-home-hero doya-home-cinematic">
         <div className="doya-home-composition">
           <div className="doya-home-copy">
-            <span className="doya-eyebrow">
+            {/* 指名検索の受け皿: h1 はサイト名。キャッチコピーは見た目だけ大見出し */}
+            <h1 className="doya-eyebrow">
               <Sparkles size={16} />
-              制作・営業・業務管理を支える17のAIツール
-            </span>
-            <h1>
+              ドヤAI｜制作・営業・業務管理を支える17のAIツール
+            </h1>
+            <div className="doya-home-title">
               その仕事、
               <br />
               <em>
                 <span>ドヤくんと</span>
                 <span>やってみよう。</span>
               </em>
-            </h1>
+            </div>
             <p>
               バナーも、記事も、商談準備も。
               <br />

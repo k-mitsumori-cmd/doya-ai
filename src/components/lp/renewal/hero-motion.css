@@ -28,13 +28,13 @@
   z-index: 2;
   padding: 12px 0 36px;
 }
-.doya-home-cinematic h1 {
+.doya-home-cinematic .doya-home-title {
   font-size: clamp(42px, 4.5vw, 65px);
   line-height: 1.36;
   margin: 26px 0 0;
   letter-spacing: -0.06em;
 }
-.doya-home-cinematic h1 em span {
+.doya-home-cinematic .doya-home-title em span {
   display: block;
 }
 .doya-home-cinematic .doya-home-copy > p {
@@ -72,7 +72,7 @@
 .doya-hero-copy > * {
   animation: doya-copy-arrive 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.doya-home-copy h1,
+.doya-home-copy .doya-home-title,
 .doya-hero-copy h1 {
   animation-delay: 0.08s;
 }
@@ -84,7 +84,7 @@
 .doya-hero-copy .doya-actions {
   animation-delay: 0.24s;
 }
-.doya-home-copy h1 em,
+.doya-home-copy .doya-home-title em,
 .doya-hero-copy h1 em {
   background: linear-gradient(
     105deg,
@@ -715,7 +715,7 @@
   .doya-home-cinematic {
     padding-inline: 30px;
   }
-  .doya-home-cinematic h1 {
+  .doya-home-cinematic .doya-home-title {
     font-size: 48px;
   }
   .doya-scene-output {
@@ -751,10 +751,10 @@
   .doya-home-copy {
     padding: 0;
   }
-  .doya-home-cinematic h1 {
+  .doya-home-cinematic .doya-home-title {
     font-size: 52px;
   }
-  .doya-home-cinematic h1 em span {
+  .doya-home-cinematic .doya-home-title em span {
     display: inline;
   }
   .doya-home-cinematic .doya-home-copy > p {
@@ -787,12 +787,12 @@
   .doya-home-cinematic .doya-eyebrow svg {
     width: 13px;
   }
-  .doya-home-cinematic h1 {
+  .doya-home-cinematic .doya-home-title {
     font-size: 39px;
     margin-top: 20px;
     line-height: 1.35;
   }
-  .doya-home-cinematic h1 em span {
+  .doya-home-cinematic .doya-home-title em span {
     display: block;
   }
   .doya-home-cinematic .doya-home-copy > p {
@@ -927,7 +927,7 @@
   .doya-home-cinematic {
     padding-inline: 16px;
   }
-  .doya-home-cinematic h1 {
+  .doya-home-cinematic .doya-home-title {
     font-size: 34px;
   }
   .doya-home-cinematic .doya-eyebrow {
@@ -1003,7 +1003,7 @@
 }
 
 /* Keep the gradient on a block so multi-line Japanese text paints in every browser. */
-.doya-home-cinematic h1 em {
+.doya-home-cinematic .doya-home-title em {
   display: block;
 }
 @media (min-width: 1001px) {
@@ -1023,7 +1023,7 @@
   z-index: 5;
 }
 @media (max-width: 600px) {
-  .doya-home-cinematic h1 {
+  .doya-home-cinematic .doya-home-title {
     font-size: 35px;
   }
   .doya-home-cinematic .doya-secondary {
@@ -1055,7 +1055,7 @@
   }
 }
 @media (max-width: 360px) {
-  .doya-home-cinematic h1 {
+  .doya-home-cinematic .doya-home-title {
     font-size: 32px;
   }
   .doya-team-arrival {
