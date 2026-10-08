@@ -11,6 +11,7 @@
 // 再契約者はトライアル対象外なので、TrialBadge / TrialNote 側で自動的に非表示になる。
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Check, X, Rocket, CalendarClock } from 'lucide-react'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
@@ -39,6 +40,19 @@ export default function BannerLimitModal({
   message,
   upgradeUrl,
 }: BannerLimitModalProps) {
+  const { data: session, status } = useSession()
+  const user = session?.user as { id?: string; email?: string; plan?: string; bannerPlan?: string } | undefined
+  const actor = user?.id || user?.email || ''
+  const scope = JSON.stringify([status, actor, user?.plan, user?.bannerPlan])
+  const knownSession = status !== 'loading' && (status !== 'authenticated' || Boolean(actor))
+  // An open notice belongs to the session/plan that opened it. Invalidate it
+  // synchronously on changes, including alpha -> beta -> alpha and loading.
+  // Only a new explicit closed -> open transition may show another notice.
+  const notice = useRef({ scope, wasOpen: false, valid: false, notified: false })
+  if (!isOpen) notice.current = { scope, wasOpen: false, valid: false, notified: false }
+  else if (!notice.current.wasOpen) notice.current = { scope, wasOpen: true, valid: knownSession, notified: false }
+  else if (notice.current.scope !== scope) notice.current = { ...notice.current, scope, valid: false }
+  const visible = isOpen && knownSession && notice.current.valid
   const router = useRouter()
   const trialEligible = useTrialEligible()
 
@@ -46,10 +60,16 @@ export default function BannerLimitModal({
   const returnFocus = useRef<HTMLElement | null>(null)
   const close = useRef(onClose)
   close.current = onClose
+  useEffect(() => {
+    if (isOpen && !visible && !notice.current.notified) {
+      notice.current.notified = true
+      close.current()
+    }
+  }, [isOpen, visible, scope])
 
   // Remember the trigger before an async quota check disables it and moves focus to body.
   useEffect(() => {
-    if (isOpen) return
+    if (visible) return
     const remember = () => {
       const element = document.activeElement
       if (element instanceof HTMLElement && element !== document.body) returnFocus.current = element
@@ -57,11 +77,11 @@ export default function BannerLimitModal({
     remember()
     document.addEventListener('focusin', remember)
     return () => document.removeEventListener('focusin', remember)
-  }, [isOpen])
+  }, [visible])
 
   // ESC and keyboard focus remain inside the modal.
   useEffect(() => {
-    if (!isOpen) return
+    if (!visible) return
     const previous = returnFocus.current || document.activeElement as HTMLElement | null
     panel.current?.focus()
     const handler = (e: KeyboardEvent) => {
@@ -75,9 +95,9 @@ export default function BannerLimitModal({
     }
     window.addEventListener('keydown', handler)
     return () => { window.removeEventListener('keydown', handler); previous?.focus() }
-  }, [isOpen])
+  }, [visible])
 
-  if (!isOpen) return null
+  if (!visible) return null
 
   const isEnterprise = (monthlyLimit ?? 0) >= (BANNER_PRICING.enterpriseLimit ?? 1000)
   const isPro = !isEnterprise && (monthlyLimit ?? 0) >= BANNER_PRICING.proLimit

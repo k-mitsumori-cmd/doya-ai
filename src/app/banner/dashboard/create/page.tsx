@@ -1363,14 +1363,7 @@ function BannerDashboardWorkspace() {
         // ⚠️ 上限到達はエラーではなく「一番アップグレードに近い瞬間」。
         //    赤いトーストで流さず、プランと初月無料を出すモーダルで受け止める。
         if (parsed.status === 429 && data?.code === 'MONTHLY_LIMIT_REACHED') {
-          quota.acceptLimit(data?.usage)
-          setLimitModal({
-            open: true,
-            used: data?.usage?.monthlyUsed,
-            limit: data?.usage?.monthlyLimit,
-            message: data?.error,
-            upgradeUrl: data?.upgradeUrl,
-          })
+          quota.reportLimit(data)
           setIsGenerating(false)
           setProgress(0)
           return
@@ -1485,14 +1478,7 @@ function BannerDashboardWorkspace() {
       const data = await refineRecovery.submit({ originalImage, instruction, category: generatedSpec?.category, size: generatedSpec?.size }, operation.signal)
       if (!operation.current() || !data) return
       if (data.state === 'limit') {
-        quota.acceptLimit(data?.usage)
-        setLimitModal({
-          open: true,
-          used: data?.usage?.monthlyUsed,
-          limit: data?.usage?.monthlyLimit,
-          message: data?.error,
-          upgradeUrl: data?.upgradeUrl,
-        })
+        quota.reportLimit(data)
         return
       }
       if (data.state !== 'completed') throw new BannerApiError('修正結果の確認が必要です。画面の「修正結果を確認」から確認してください。')

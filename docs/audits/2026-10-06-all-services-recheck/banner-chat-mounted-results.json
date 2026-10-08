@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T07:47:16.727Z",
+  "checkedAt": "2026-10-08T07:10:53.662Z",
   "passed": 13,
   "cases": [
     "same rendered send sends once, retains newer draft and rejects stale rendered callback",
@@ -17,13 +17,13 @@
     "guest submission is blocked with explicit sign-in link"
   ],
   "sourceHashes": {
-    "src/app/banner/dashboard/chat/page.tsx": "009651473ee0e6bc47335a435de2cdec7e261d265a7a7f59d0d010775625741c",
+    "src/app/banner/dashboard/chat/page.tsx": "e21e5de44f2fdadf3c287710434db9e5e26e7a7234ae01c9d8388e83d788acf1",
     "src/lib/banner/use-request-fence.ts": "68ac588b04fd1e6583fdb2ad0ffee526cc5c05e0afa1057a939461a86b976989",
     "src/lib/banner/refine-client.ts": "d79ad7c071c7daa29baa6c186e8763ccd1765fb54e4d6385628c6970d59917d5",
     "src/lib/banner/use-refine-recovery.ts": "3fd033a272826d0c8b12f2969ee5e3df0c1c858bfb42d86e3b94acf326211fbf",
     "src/components/banner/BannerRefineRecovery.tsx": "c323f78beaa6c2ff0a3cb47c47c4f4953f870cdd82a9dfd89e9b591597a23ea0",
     "src/lib/banner/text-client.ts": "f1dcb3861a6ee7f1376d7415bb04a9818b0f01e92cea3210950ce312b6c32632",
-    "src/lib/banner/use-text-recovery.ts": "7951e44182237be6305ed5998e4131d7dfbf6881b9494a65d6bea5858e81dd46",
+    "src/lib/banner/use-text-recovery.ts": "2ab195543d2792269cdcd9db1216436f354dd554a0848e44efd5bb0d138c805b",
     "src/components/banner/BannerTextRecovery.tsx": "b299236a8d0032834f3117e9168f1f7213ccbc0febd1ebbe853b55e3a1a73a20"
   },
   "scope": "Actual BannerChatPage, keyed workspace and request fence mounted under React18 StrictMode/jsdom. Actual refinement recovery hook/client/panel; synthetic auth/API/quota/Image decode events/locks/UI dependencies; no paid AI, customer DB or production calls. Image decode, cross-tab/server idempotency and real browser/provider flows remain unproven."

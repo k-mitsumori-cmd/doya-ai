@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-08T07:13:04.582Z",
+  "expected": 17,
+  "passed": 17,
+  "cases": [
+    "Valid server count, exact boundary and over-limit prompt",
+    "Invalid count cannot pass or request quota",
+    "Strict monthly payload rejects fractional, unsafe and unrelated meters",
+    "Authenticated session without identity cannot generate as guest",
+    "Guest remains subject to endpoint policy",
+    "Old callbacks cannot restore usage after alpha beta alpha",
+    "Double precheck shares one lock; actor transition releases own lock only",
+    "Background focus does not invalidate an in-progress generation precheck",
+    "Accepted server limit supersedes a pending readonly response",
+    "Late old check cannot unlock a newer actor check",
+    "Unmounted callbacks cannot fetch or open prompts",
+    "Unlimited usage permits a valid count without upsell",
+    "Malformed server response is unknown and does not permit generation",
+    "Current server rejection reports validated usage and action",
+    "Late server rejection cannot cross actor ABA",
+    "Plan and per-service plan transitions invalidate captured monthly response",
+    "Loading and unmounted rejection callbacks do not open notices"
+  ],
+  "sourceHashes": {
+    "src/components/banner/useBannerQuota.ts": "4d895eb469378984083d8ce9c6bb7cf82df5c1caf150ffdbace0fe6c5a285f3b",
+    "src/lib/banner-quota-response-client.ts": "7c7e189642a62d8fb88b4635b5286b31a9c32f0a3c456b48f74b99af59c63931",
+    "scripts/security-regression/verify-banner-quota-client.cjs": "d0b7621bafd390fad6ff5f4d3f7bd5f547255dc988aeb3b3549194df8394dd4d"
+  },
+  "scope": "Actual mounted quota hook in StrictMode; synthetic session and readonly response. No provider or customer data."
+}

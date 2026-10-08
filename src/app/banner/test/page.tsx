@@ -9,6 +9,7 @@ import DashboardSidebar from '@/components/DashboardSidebar'
 import Image from 'next/image'
 import BannerLimitModal from '@/components/banner/BannerLimitModal'
 import { useBannerQuota } from '@/components/banner/useBannerQuota'
+import { useBannerRequestFence } from '@/lib/banner/use-request-fence'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 import { getBannerTemplateTier } from '@/lib/banner/template-access'
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
@@ -104,21 +105,36 @@ const PLAN_LIMITS = {
 }
 
 export default function BannerTestPage() {
+  const { data: session } = useSession()
+  const user = session?.user as { id?: string; email?: string } | undefined
+  const actor = user?.id || user?.email || 'guest'
   return (
     <Suspense fallback={null}>
-      <BannerTestPageInner />
+      <BannerTestPageInner key={actor} />
     </Suspense>
   )
 }
 
 function BannerTestPageInner() {
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
   const [templates, setTemplates] = useState<BannerTemplate[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<BannerTemplate | null>(null)
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [limitModal, setLimitModal] = useState<{ open: boolean; used?: number; limit?: number; message?: string; upgradeUrl?: string }>({ open: false })
   const quota = useBannerQuota(setLimitModal)
+  const operations = useBannerRequestFence(sessionStatus, String(session?.user?.id || session?.user?.email || ''))
+  const completionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    setIsGenerating(false)
+    setIsEditing(false)
+    setShowGenerationModal(false)
+    setGenerationComplete(false)
+    return () => {
+      if (completionTimer.current !== null) clearTimeout(completionTimer.current)
+      completionTimer.current = null
+    }
+  }, [sessionStatus, session?.user?.id, session?.user?.email])
   const [generatedBanners, setGeneratedBanners] = useState<GeneratedBanner[]>([])
   const [selectedBanner, setSelectedBanner] = useState<GeneratedBanner | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -742,6 +758,12 @@ function BannerTestPageInner() {
 
   // バナー生成
   const handleGenerate = async () => {
+    if (sessionStatus === 'loading') return
+    if (!session) {
+      window.location.assign('/auth/signin?callbackUrl=%2Fbanner%2Ftest')
+      return
+    }
+
     if (!selectedTemplate) {
       toast.error('テンプレートを選択してください')
       return
@@ -752,23 +774,32 @@ function BannerTestPageInner() {
       return
     }
 
-    if (!(await quota.check(generateCount))) return
-    setIsGenerating(true)
-    setGeneratedBanners([])
-    setGenerationProgress(0)
-    setLoadingMessage(LOADING_MESSAGES[0])
-    setShowGenerationModal(true)
+    const operation = operations.begin()
+    if (!operation) return
+    if (completionTimer.current !== null) clearTimeout(completionTimer.current)
+    completionTimer.current = null
+    setShowGenerationModal(false)
     setGenerationComplete(false)
-    
-    // ローディングメッセージを定期的に更新
-    let messageIndex = 0
-    const messageInterval = setInterval(() => {
-      messageIndex = (messageIndex + 1) % LOADING_MESSAGES.length
-      setLoadingMessage(LOADING_MESSAGES[messageIndex])
-      setGenerationProgress(prev => Math.min(prev + Math.random() * 15, 90))
-    }, 3000)
-
+    let messageInterval: ReturnType<typeof setInterval> | undefined
+    const stopMessages = () => { if (messageInterval !== undefined) clearInterval(messageInterval) }
+    operation.signal.addEventListener('abort', stopMessages, { once: true })
     try {
+      if (!(await quota.check(generateCount)) || !operation.current()) return
+      setIsGenerating(true)
+      setGeneratedBanners([])
+      setGenerationProgress(0)
+      setLoadingMessage(LOADING_MESSAGES[0])
+      setShowGenerationModal(true)
+      setGenerationComplete(false)
+    
+      // ローディングメッセージを定期的に更新
+      let messageIndex = 0
+      messageInterval = setInterval(() => {
+        messageIndex = (messageIndex + 1) % LOADING_MESSAGES.length
+        setLoadingMessage(LOADING_MESSAGES[messageIndex])
+        setGenerationProgress(prev => Math.min(prev + Math.random() * 15, 90))
+      }, 3000)
+
       // サイズ文字列を生成（プリセットのみ使用）
       const finalWidth = selectedSize.width
       const finalHeight = selectedSize.height
@@ -778,6 +809,7 @@ function BannerTestPageInner() {
       // 選択したテンプレートのスタイルを維持するため、basePromptとtemplateImageUrlを渡す
       const res = await fetch('/api/banner/test/generate', {
         method: 'POST',
+        signal: operation.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template: selectedTemplate.category,
@@ -798,18 +830,16 @@ function BannerTestPageInner() {
       })
 
       const result = await res.json()
+      if (!operation.current()) return
+      if (operation.signal.aborted) throw new Error('生成の応答を確認できませんでした。履歴を確認してから再試行してください。')
 
       if (!res.ok) {
         // 上限到達はエラーではなくアップグレードの分岐点。モーダルで受け止める。
         if (res.status === 429 && result?.code === 'MONTHLY_LIMIT_REACHED') {
-          quota.acceptLimit(result?.usage)
-          setLimitModal({
-            open: true,
-            used: result?.usage?.monthlyUsed,
-            limit: result?.usage?.monthlyLimit,
-            message: result?.error,
-            upgradeUrl: result?.upgradeUrl,
-          })
+          quota.reportLimit(result)
+          setShowGenerationModal(false)
+          setGenerationProgress(0)
+          setLoadingMessage('')
           setIsGenerating(false)
           return
         }
@@ -831,7 +861,9 @@ function BannerTestPageInner() {
         clearInterval(messageInterval)
         
         // 完了演出を3秒表示してからモーダルを閉じる
-        setTimeout(() => {
+        completionTimer.current = setTimeout(() => {
+          if (!operations.active()) return
+          completionTimer.current = null
           setShowGenerationModal(false)
           setIsGenerating(false)
           setGenerationComplete(false)
@@ -840,6 +872,7 @@ function BannerTestPageInner() {
         throw new Error('バナーが生成されませんでした')
       }
     } catch (err: any) {
+      if (!operation.current()) return
       console.error('Generate error:')
       toast.error(err.message || '生成に失敗しました')
       setShowGenerationModal(false)
@@ -847,6 +880,10 @@ function BannerTestPageInner() {
       setIsGenerating(false)
       setGenerationProgress(0)
       setLoadingMessage('')
+    } finally {
+      stopMessages()
+      operation.signal.removeEventListener('abort', stopMessages)
+      operation.finish()
     }
   }
 
@@ -2655,12 +2692,15 @@ function BannerTestPageInner() {
                         return
                       }
                       
-                      if (!(await quota.check(1))) return
+                      const operation = operations.begin()
+                      if (!operation) return
                       setIsEditing(true)
                       try {
+                        if (!(await quota.check(1)) || !operation.current()) return
                         // 修正APIを呼び出し
                         const res = await fetch('/api/banner/test/generate', {
                           method: 'POST',
+                          signal: operation.signal,
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                             template: selectedTemplate?.category || 'it',
@@ -2674,10 +2714,11 @@ function BannerTestPageInner() {
                         })
                         
                         const result = await res.json()
+                        if (!operation.current()) return
+                        if (operation.signal.aborted) throw new Error('修正の応答を確認できませんでした。履歴を確認してから再試行してください。')
                         if (!res.ok) {
                           if (res.status === 429 && result?.code === 'MONTHLY_LIMIT_REACHED') {
-                            quota.acceptLimit(result?.usage)
-                            setLimitModal({ open: true, used: result?.usage?.monthlyUsed, limit: result?.usage?.monthlyLimit, message: result?.error, upgradeUrl: result?.upgradeUrl })
+                            quota.reportLimit(result)
                             return
                           }
                           throw new Error(result.error || '修正に失敗しました')
@@ -2700,10 +2741,12 @@ function BannerTestPageInner() {
                           throw new Error(result.error || '修正に失敗しました')
                         }
                       } catch (err: any) {
+                        if (!operation.current()) return
                         console.error('Edit error:')
                         toast.error(err.message || '修正に失敗しました')
                       } finally {
-                        setIsEditing(false)
+                        if (operation.current()) setIsEditing(false)
+                        operation.finish()
                       }
                     }}
                     disabled={isEditing || quota.checking || !editPrompt.trim()}

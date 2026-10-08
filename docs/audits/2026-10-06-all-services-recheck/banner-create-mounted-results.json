@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T07:16:22.919Z",
+  "checkedAt": "2026-10-08T07:10:52.427Z",
   "passed": 7,
   "cases": [
     "actual create refine shares synchronous lane and persists metadata-only UUID before one POST",
@@ -11,7 +11,7 @@
     "generation shares lane before quota await and drops completion across actor change"
   ],
   "sourceHashes": {
-    "src/app/banner/dashboard/create/page.tsx": "aa599767fefb675b7f656f39ea8d679ca0ed349f99daa668ea2c6f8ab7fdbcc3",
+    "src/app/banner/dashboard/create/page.tsx": "72a651708b923988788d63785a005a2e0a677f18a699e2130099b52afcd1e089",
     "src/lib/banner/use-request-fence.ts": "68ac588b04fd1e6583fdb2ad0ffee526cc5c05e0afa1057a939461a86b976989",
     "src/lib/banner/refine-client.ts": "d79ad7c071c7daa29baa6c186e8763ccd1765fb54e4d6385628c6970d59917d5",
     "src/lib/banner/use-refine-recovery.ts": "3fd033a272826d0c8b12f2969ee5e3df0c1c858bfb42d86e3b94acf326211fbf",

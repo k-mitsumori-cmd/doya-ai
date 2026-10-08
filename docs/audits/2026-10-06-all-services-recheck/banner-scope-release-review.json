@@ -1,0 +1,163 @@
+{
+  "checkedAt": "2026-10-08T07:20:04.993396+00:00",
+  "status": "six-production-diffs-reviewed-fresh142-passed-local-compiled-markers-passed",
+  "productionFiles": [
+    "src/app/banner/dashboard/chat/page.tsx",
+    "src/app/banner/dashboard/create/page.tsx",
+    "src/app/banner/dashboard/page.tsx",
+    "src/app/banner/test/page.tsx",
+    "src/components/banner/BannerLimitModal.tsx",
+    "src/components/banner/useBannerQuota.ts"
+  ],
+  "productionHashes": {
+    "src/app/banner/dashboard/chat/page.tsx": "e21e5de44f2fdadf3c287710434db9e5e26e7a7234ae01c9d8388e83d788acf1",
+    "src/app/banner/dashboard/create/page.tsx": "72a651708b923988788d63785a005a2e0a677f18a699e2130099b52afcd1e089",
+    "src/app/banner/dashboard/page.tsx": "f3954070f9ac7c61cfedd55823764d4165237f112526f17576f6648aa217fb8f",
+    "src/app/banner/test/page.tsx": "0bd712b5c3d027a007348dc9ecaf3889bffb86b582e4373f27abd3af7471589c",
+    "src/components/banner/BannerLimitModal.tsx": "65444b2c801eb163303aa4c64e1ca6d7a1bb1379f04cdc06e310cc62e4a739ca",
+    "src/components/banner/useBannerQuota.ts": "4d895eb469378984083d8ce9c6bb7cf82df5c1caf150ffdbace0fe6c5a285f3b"
+  },
+  "reviewed": [
+    "Six complete production diffs: actor-keyed legacy workspace, shared main/edit request fence, scope-bound monthly rejection reporter across four screens, modal session/plan invalidation and keyboard/focus cleanup.",
+    "Legacy timer cleanup on success/error/limit/abort/unmount; auth refresh clears busy state; a new generation clears an earlier completion timer.",
+    "Mandatory existing tests retain assertions and only extend synthetic session/quota interfaces; new mounted regressions mandatory in security runner. Hook17 includes current response, actor ABA, unified/per-service plan changes, loading and unmount.",
+    "Release publisher checks exact142 unchanged source snapshot, fresh7 reports and source hashes, exact staged allowlist, unchanged HEAD/remote main, prior083d3f88 CI/READY/public success; no force push.",
+    "Read-only public verifier preserves duplicate Vary headers; live anonymous usage API emits separate framework Vary and Cookie lines with private,no-store. No generation/provider/customer writes."
+  ],
+  "targetedEvidence": {
+    "legacy22": "banner-legacy-actor-integrated-results.json",
+    "modal13": "banner-limit-modal-scope-integrated-results.json",
+    "quota17": "banner-quota-client-scope-integrated-results.json",
+    "native9": "banner-limit-modal-scope-native-results.json",
+    "typeCheck": "tsc --noEmit --incremental false exit0"
+  },
+  "limitations": [
+    "Production publication and exact deployment verification pending",
+    "Actual customer OAuth/plan switch, provider, quota writes remain unverified",
+    "Full17services2074 audit remains incomplete"
+  ],
+  "currentProduction": "083d3f88 published and readonly public verified; new six-source banner repair not published",
+  "compiledMarkerProof": {
+    "/banner/dashboard/page": {
+      "checks": {
+        "reportLimit": true,
+        "wasOpen": true,
+        "notified": true,
+        "生成の応答を確認できませんでした。履歴を確認してから再試行してください。": true,
+        "修正の応答を確認できませんでした。履歴を確認してから再試行してください。": true
+      },
+      "assets": {
+        "static/chunks/webpack-e546c97c43e06541.js": "41ddb705bfb4fef9e49e03ccae0f9963ff9d6586a4e5ee769b2b7c7a3d9001f1",
+        "static/chunks/7dfea3db-21b83f9a70557214.js": "3ac580648f3dd25d57c4f0f1e1ee9c9959aad26db0891492043f27473a568cb7",
+        "static/chunks/67986-1824f2b98b384f29.js": "49dfe570db1ab9dab8f3314fbff0ab0e4e3014bf1888e154e7af1ef4f49dbcb9",
+        "static/chunks/main-app-25c785a8eedc2b45.js": "d8ba031d4c8914690554c7f7e5a91ed6e0b8d5c0f66abdd7209264588e4b3caf",
+        "static/chunks/36816-dd859538b8edf3ac.js": "cc9a4ecfa19cd5cafce60ef91687cf9c5f7b522d4f55b9c23619464172ece5a9",
+        "static/chunks/78950-7bb22ffd14ad58cd.js": "e2568eeeb049e4cb3323c7f3574e2c01cebc1e0f2151c0a22575bb2abf7bdf27",
+        "static/chunks/92438-345ef7ea98ecda7e.js": "fcc8c11acf399a67e32d295684e2ff98d870aa08202f5a97fce85224234fa9cb",
+        "static/chunks/72075-84f0e7567a169a3e.js": "7dba30994dee8e82cda451eaa3b23c78ec6a10576debd26203a1f228c385acca",
+        "static/chunks/85945-b1658f7e213a3acb.js": "8abd1cf5447d72739b7446a24882b15ace1140fa6d030504d0c5aaf589d2fb94",
+        "static/chunks/46332-42d84f2e9c53b313.js": "64a0fd5898f1136c3c006ab5ac3059b7fbfcfb42850dff0302951c4d53c08779",
+        "static/chunks/21747-68e43d353ec556ca.js": "f9ddaf075decf407cd908ec34e76f1c863ffd12a8cc5d1a9749e427d17754e03",
+        "static/chunks/58746-b1dfa18ee786844f.js": "42c9c2973d765fb50e8c6aa57a6272d146ef214a6a5982f8fd3f2ecb2e7ed663",
+        "static/chunks/25148-0301a12f0550b9ed.js": "8f86bbb4a89a35942cfc879258ce3e53945a4b198cfe6110046f8599fda61f51",
+        "static/chunks/72527-a1c4a5318eab614c.js": "92cecebd60257ceac9dd38214d937f18b6f5169f504081e36ad14779014d8929",
+        "static/chunks/62044-a2aba522b8ca062f.js": "bc5ec005a1b8bf7fc05ef401f078dfd630e1d3c4f983d60e64df02a2abb85462",
+        "static/chunks/4313-bcbd9b79cc06b682.js": "3000953d9c8d7b3aecabd951d36b9e434da848492ff6c216924466eb609d3578",
+        "static/chunks/34138-d2b6238c41a3a3fc.js": "12936b02a0590e0ee43dd1fd2ebbcbc02095399fd6e41d4729473e2ce0a15a72",
+        "static/chunks/96504-583cc3fa925ec4c1.js": "bf58b6f8c4e950a35287cf897573122f313f4840e2ca039a7145bd236b7a1e08",
+        "static/chunks/app/banner/dashboard/page-448b1177332be3c0.js": "f1aef385b6270fe27cf218d5a1a675e7ef5852211b24286d09b2797fdda425d0"
+      }
+    },
+    "/banner/test/page": {
+      "checks": {
+        "reportLimit": true,
+        "wasOpen": true,
+        "notified": true,
+        "生成の応答を確認できませんでした。履歴を確認してから再試行してください。": true,
+        "修正の応答を確認できませんでした。履歴を確認してから再試行してください。": true
+      },
+      "assets": {
+        "static/chunks/webpack-e546c97c43e06541.js": "41ddb705bfb4fef9e49e03ccae0f9963ff9d6586a4e5ee769b2b7c7a3d9001f1",
+        "static/chunks/7dfea3db-21b83f9a70557214.js": "3ac580648f3dd25d57c4f0f1e1ee9c9959aad26db0891492043f27473a568cb7",
+        "static/chunks/67986-1824f2b98b384f29.js": "49dfe570db1ab9dab8f3314fbff0ab0e4e3014bf1888e154e7af1ef4f49dbcb9",
+        "static/chunks/main-app-25c785a8eedc2b45.js": "d8ba031d4c8914690554c7f7e5a91ed6e0b8d5c0f66abdd7209264588e4b3caf",
+        "static/chunks/36816-dd859538b8edf3ac.js": "cc9a4ecfa19cd5cafce60ef91687cf9c5f7b522d4f55b9c23619464172ece5a9",
+        "static/chunks/78950-7bb22ffd14ad58cd.js": "e2568eeeb049e4cb3323c7f3574e2c01cebc1e0f2151c0a22575bb2abf7bdf27",
+        "static/chunks/92438-345ef7ea98ecda7e.js": "fcc8c11acf399a67e32d295684e2ff98d870aa08202f5a97fce85224234fa9cb",
+        "static/chunks/72075-84f0e7567a169a3e.js": "7dba30994dee8e82cda451eaa3b23c78ec6a10576debd26203a1f228c385acca",
+        "static/chunks/85945-b1658f7e213a3acb.js": "8abd1cf5447d72739b7446a24882b15ace1140fa6d030504d0c5aaf589d2fb94",
+        "static/chunks/46332-42d84f2e9c53b313.js": "64a0fd5898f1136c3c006ab5ac3059b7fbfcfb42850dff0302951c4d53c08779",
+        "static/chunks/21747-68e43d353ec556ca.js": "f9ddaf075decf407cd908ec34e76f1c863ffd12a8cc5d1a9749e427d17754e03",
+        "static/chunks/58746-b1dfa18ee786844f.js": "42c9c2973d765fb50e8c6aa57a6272d146ef214a6a5982f8fd3f2ecb2e7ed663",
+        "static/chunks/25148-0301a12f0550b9ed.js": "8f86bbb4a89a35942cfc879258ce3e53945a4b198cfe6110046f8599fda61f51",
+        "static/chunks/72527-a1c4a5318eab614c.js": "92cecebd60257ceac9dd38214d937f18b6f5169f504081e36ad14779014d8929",
+        "static/chunks/62044-a2aba522b8ca062f.js": "bc5ec005a1b8bf7fc05ef401f078dfd630e1d3c4f983d60e64df02a2abb85462",
+        "static/chunks/4313-bcbd9b79cc06b682.js": "3000953d9c8d7b3aecabd951d36b9e434da848492ff6c216924466eb609d3578",
+        "static/chunks/34138-d2b6238c41a3a3fc.js": "12936b02a0590e0ee43dd1fd2ebbcbc02095399fd6e41d4729473e2ce0a15a72",
+        "static/chunks/app/banner/test/page-020a41dabaa6be5f.js": "8e5a8b2b20255f72cd21a21e42f690c8cca9c0da89a66cd2f797643c65e1b0a7"
+      }
+    },
+    "/banner/dashboard/create/page": {
+      "checks": {
+        "reportLimit": true,
+        "wasOpen": true,
+        "notified": true
+      },
+      "assets": {
+        "static/chunks/webpack-e546c97c43e06541.js": "41ddb705bfb4fef9e49e03ccae0f9963ff9d6586a4e5ee769b2b7c7a3d9001f1",
+        "static/chunks/7dfea3db-21b83f9a70557214.js": "3ac580648f3dd25d57c4f0f1e1ee9c9959aad26db0891492043f27473a568cb7",
+        "static/chunks/67986-1824f2b98b384f29.js": "49dfe570db1ab9dab8f3314fbff0ab0e4e3014bf1888e154e7af1ef4f49dbcb9",
+        "static/chunks/main-app-25c785a8eedc2b45.js": "d8ba031d4c8914690554c7f7e5a91ed6e0b8d5c0f66abdd7209264588e4b3caf",
+        "static/chunks/36816-dd859538b8edf3ac.js": "cc9a4ecfa19cd5cafce60ef91687cf9c5f7b522d4f55b9c23619464172ece5a9",
+        "static/chunks/78950-7bb22ffd14ad58cd.js": "e2568eeeb049e4cb3323c7f3574e2c01cebc1e0f2151c0a22575bb2abf7bdf27",
+        "static/chunks/92438-345ef7ea98ecda7e.js": "fcc8c11acf399a67e32d295684e2ff98d870aa08202f5a97fce85224234fa9cb",
+        "static/chunks/72075-84f0e7567a169a3e.js": "7dba30994dee8e82cda451eaa3b23c78ec6a10576debd26203a1f228c385acca",
+        "static/chunks/85945-b1658f7e213a3acb.js": "8abd1cf5447d72739b7446a24882b15ace1140fa6d030504d0c5aaf589d2fb94",
+        "static/chunks/46332-42d84f2e9c53b313.js": "64a0fd5898f1136c3c006ab5ac3059b7fbfcfb42850dff0302951c4d53c08779",
+        "static/chunks/72499-5fef962fbd053b9a.js": "973e2fc9f0e3f8d5cce54e1a92d5391aad3cd19bf84bf826a958365a3f3b51e6",
+        "static/chunks/58746-b1dfa18ee786844f.js": "42c9c2973d765fb50e8c6aa57a6272d146ef214a6a5982f8fd3f2ecb2e7ed663",
+        "static/chunks/25148-0301a12f0550b9ed.js": "8f86bbb4a89a35942cfc879258ce3e53945a4b198cfe6110046f8599fda61f51",
+        "static/chunks/72527-a1c4a5318eab614c.js": "92cecebd60257ceac9dd38214d937f18b6f5169f504081e36ad14779014d8929",
+        "static/chunks/62044-a2aba522b8ca062f.js": "bc5ec005a1b8bf7fc05ef401f078dfd630e1d3c4f983d60e64df02a2abb85462",
+        "static/chunks/4313-bcbd9b79cc06b682.js": "3000953d9c8d7b3aecabd951d36b9e434da848492ff6c216924466eb609d3578",
+        "static/chunks/34138-d2b6238c41a3a3fc.js": "12936b02a0590e0ee43dd1fd2ebbcbc02095399fd6e41d4729473e2ce0a15a72",
+        "static/chunks/58009-2042c13b17b3505e.js": "4bd407be51adc86af791ca438ce633daf9b9ec2a83b5b4603d1481368c46c414",
+        "static/chunks/app/banner/dashboard/create/page-8874dcf77f4c6c5b.js": "7f4ff763dce811b879493f7bf42015b6648fa8e10c3d62faff770dfda89e6470"
+      }
+    },
+    "/banner/dashboard/chat/page": {
+      "checks": {
+        "reportLimit": true,
+        "wasOpen": true,
+        "notified": true
+      },
+      "assets": {
+        "static/chunks/webpack-e546c97c43e06541.js": "41ddb705bfb4fef9e49e03ccae0f9963ff9d6586a4e5ee769b2b7c7a3d9001f1",
+        "static/chunks/7dfea3db-21b83f9a70557214.js": "3ac580648f3dd25d57c4f0f1e1ee9c9959aad26db0891492043f27473a568cb7",
+        "static/chunks/67986-1824f2b98b384f29.js": "49dfe570db1ab9dab8f3314fbff0ab0e4e3014bf1888e154e7af1ef4f49dbcb9",
+        "static/chunks/main-app-25c785a8eedc2b45.js": "d8ba031d4c8914690554c7f7e5a91ed6e0b8d5c0f66abdd7209264588e4b3caf",
+        "static/chunks/36816-dd859538b8edf3ac.js": "cc9a4ecfa19cd5cafce60ef91687cf9c5f7b522d4f55b9c23619464172ece5a9",
+        "static/chunks/78950-7bb22ffd14ad58cd.js": "e2568eeeb049e4cb3323c7f3574e2c01cebc1e0f2151c0a22575bb2abf7bdf27",
+        "static/chunks/92438-345ef7ea98ecda7e.js": "fcc8c11acf399a67e32d295684e2ff98d870aa08202f5a97fce85224234fa9cb",
+        "static/chunks/72075-84f0e7567a169a3e.js": "7dba30994dee8e82cda451eaa3b23c78ec6a10576debd26203a1f228c385acca",
+        "static/chunks/85945-b1658f7e213a3acb.js": "8abd1cf5447d72739b7446a24882b15ace1140fa6d030504d0c5aaf589d2fb94",
+        "static/chunks/46332-42d84f2e9c53b313.js": "64a0fd5898f1136c3c006ab5ac3059b7fbfcfb42850dff0302951c4d53c08779",
+        "static/chunks/15863-78168ab29bec1286.js": "acde847186a348973953f3c890cbd3a087530965c3359b4ef01884d2ef4f737d",
+        "static/chunks/58746-b1dfa18ee786844f.js": "42c9c2973d765fb50e8c6aa57a6272d146ef214a6a5982f8fd3f2ecb2e7ed663",
+        "static/chunks/25148-0301a12f0550b9ed.js": "8f86bbb4a89a35942cfc879258ce3e53945a4b198cfe6110046f8599fda61f51",
+        "static/chunks/72527-a1c4a5318eab614c.js": "92cecebd60257ceac9dd38214d937f18b6f5169f504081e36ad14779014d8929",
+        "static/chunks/62044-a2aba522b8ca062f.js": "bc5ec005a1b8bf7fc05ef401f078dfd630e1d3c4f983d60e64df02a2abb85462",
+        "static/chunks/4313-bcbd9b79cc06b682.js": "3000953d9c8d7b3aecabd951d36b9e434da848492ff6c216924466eb609d3578",
+        "static/chunks/34138-d2b6238c41a3a3fc.js": "12936b02a0590e0ee43dd1fd2ebbcbc02095399fd6e41d4729473e2ce0a15a72",
+        "static/chunks/58009-2042c13b17b3505e.js": "4bd407be51adc86af791ca438ce633daf9b9ec2a83b5b4603d1481368c46c414",
+        "static/chunks/app/banner/dashboard/chat/page-2e5fe8237d058fab.js": "6d6e11ddeb037037c9a2487825c27b2dcc9994bc9b9b0518eeaab2c55eee3569"
+      }
+    }
+  },
+  "gate": {
+    "path": "docs/audits/2026-10-06-all-services-recheck/banner-scope-release-2106149d-303f-44cd-b679-b59757de6938",
+    "status": "passed",
+    "count": 142,
+    "changedSources": []
+  }
+}

@@ -93,6 +93,23 @@ export function useBannerQuota(onLimit: (prompt: LimitPrompt) => void) {
     }
   }, [key, allowed, actor])
 
+  const reportLimit = useCallback((data: any) => {
+    // API handlers can outlive a session/plan. A raw parent setter cannot
+    // distinguish a current response from one belonging to an earlier scope.
+    if (!mounted.current || !allowed || activeKey.current !== key) return false
+    acceptLimit(data?.usage)
+    const used = data?.usage?.monthlyUsed
+    const limit = data?.usage?.monthlyLimit
+    onLimit({
+      open: true,
+      used: Number.isSafeInteger(used) && used >= 0 ? used : undefined,
+      limit: Number.isSafeInteger(limit) && limit >= 0 ? limit : undefined,
+      message: typeof data?.error === 'string' ? data.error : undefined,
+      upgradeUrl: typeof data?.upgradeUrl === 'string' ? data.upgradeUrl : undefined,
+    })
+    return true
+  }, [key, allowed, acceptLimit, onLimit])
+
   const showLimit = useCallback((next: BannerQuota) => {
     if (mounted.current && activeKey.current === key) onLimit({ open: true, used: next.used, limit: next.limit ?? undefined })
   }, [key, onLimit])
@@ -119,5 +136,5 @@ export function useBannerQuota(onLimit: (prompt: LimitPrompt) => void) {
       }
     }
   }
-  return { usage, error, checking, signedIn, refresh, acceptLimit, check, showLimit }
+  return { usage, error, checking, signedIn, refresh, acceptLimit, reportLimit, check, showLimit }
 }

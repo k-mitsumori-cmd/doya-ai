@@ -1,0 +1,104 @@
+{
+  "checkedAt": "2026-10-08T07:10:47.895Z",
+  "sourceRoot": "integrated",
+  "sourceHashes": {
+    "src/app/banner/dashboard/page.tsx": "f3954070f9ac7c61cfedd55823764d4165237f112526f17576f6648aa217fb8f",
+    "src/app/banner/test/page.tsx": "0bd712b5c3d027a007348dc9ecaf3889bffb86b582e4373f27abd3af7471589c",
+    "src/lib/banner/use-request-fence.ts": "68ac588b04fd1e6583fdb2ad0ffee526cc5c05e0afa1057a939461a86b976989",
+    "scripts/security-regression/verify-banner-legacy-actor-mounted.cjs": "618e9978683c7b17b91f985ddc3efdafe9758c06497b325f4bc2fb17d89a83bc"
+  },
+  "passed": 22,
+  "expected": 22,
+  "observations": [
+    {
+      "name": "dashboard: current actor generation succeeds",
+      "passed": true
+    },
+    {
+      "name": "dashboard: account switch removes previous generated images",
+      "passed": true
+    },
+    {
+      "name": "dashboard: account switch removes previous input",
+      "passed": true
+    },
+    {
+      "name": "dashboard: retained old-account generate handler cannot submit",
+      "passed": true
+    },
+    {
+      "name": "dashboard: account switch aborts old generation transport",
+      "passed": true
+    },
+    {
+      "name": "dashboard: late old-account quota response cannot open modal",
+      "passed": true
+    },
+    {
+      "name": "dashboard: quota rejection and unmount remove progress intervals",
+      "passed": true
+    },
+    {
+      "name": "dashboard: duplicate edit and overlapping generation share one lane",
+      "passed": true
+    },
+    {
+      "name": "dashboard: edit account switch aborts old transport",
+      "passed": true
+    },
+    {
+      "name": "dashboard: late edit cannot restore private result or edit instructions",
+      "passed": true
+    },
+    {
+      "name": "dashboard: late old edit cannot show success toast",
+      "passed": true
+    },
+    {
+      "name": "test: current actor generation succeeds",
+      "passed": true
+    },
+    {
+      "name": "test: account switch removes previous generated images",
+      "passed": true
+    },
+    {
+      "name": "test: account switch removes previous input",
+      "passed": true
+    },
+    {
+      "name": "test: retained old-account generate handler cannot submit",
+      "passed": true
+    },
+    {
+      "name": "test: account switch aborts old generation transport",
+      "passed": true
+    },
+    {
+      "name": "test: late old-account quota response cannot open modal",
+      "passed": true
+    },
+    {
+      "name": "test: quota rejection and unmount remove progress intervals",
+      "passed": true
+    },
+    {
+      "name": "test: duplicate edit and overlapping generation share one lane",
+      "passed": true
+    },
+    {
+      "name": "test: edit account switch aborts old transport",
+      "passed": true
+    },
+    {
+      "name": "test: late edit cannot restore private result or edit instructions",
+      "passed": true
+    },
+    {
+      "name": "test: late old edit cannot show success toast",
+      "passed": true
+    }
+  ],
+  "violations": [],
+  "scope": "Actual dashboard/test pages mounted in StrictMode, their real handlers and UI state. Synthetic auth/template/quota/provider response/dependencies; completion animation shortened. No real provider, customer data or network."
+}

@@ -1,3 +1,5 @@
+const bannerScopeChecks = ['verify-banner-limit-modal-scope-mounted.cjs','verify-banner-legacy-actor-mounted.cjs'];
+for (const file of bannerScopeChecks) { const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname,file)], {stdio:'inherit',timeout:60000}); if(result.error || result.status!==0) process.exit(result.status || 1); }
 const roleChecks = ['verify-membership-known-roles.cjs', 'verify-membership-invitation-roles.cjs'];
 for (const file of roleChecks) { const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(result.error || result.status!==0) process.exit(result.status || 1); }
 const operationLease = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-operation-lease.cjs')], { stdio: 'inherit', timeout: 60000 });

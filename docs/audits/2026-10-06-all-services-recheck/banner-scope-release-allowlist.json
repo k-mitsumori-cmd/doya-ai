@@ -1,0 +1,69 @@
+{
+  "files": [
+    "docs/audits/2026-10-06-all-services-recheck/banner-chat-mounted-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/banner-create-mounted-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/banner-legacy-actor-integrated-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/banner-limit-modal-scope-integrated-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/banner-limit-modal-scope-native-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/banner-quota-client-scope-integrated-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/banner-scope-current-gate.txt",
+    "docs/audits/2026-10-06-all-services-recheck/banner-scope-integrated-files.json",
+    "docs/audits/2026-10-06-all-services-recheck/banner-scope-release-2106149d-303f-44cd-b679-b59757de6938/source-manifest.json",
+    "docs/audits/2026-10-06-all-services-recheck/banner-scope-release-2106149d-303f-44cd-b679-b59757de6938/state.json",
+    "docs/audits/2026-10-06-all-services-recheck/banner-scope-release-2106149d-303f-44cd-b679-b59757de6938/supervise.py",
+    "docs/audits/2026-10-06-all-services-recheck/banner-scope-release-allowlist.json",
+    "docs/audits/2026-10-06-all-services-recheck/banner-scope-release-observe.py",
+    "docs/audits/2026-10-06-all-services-recheck/banner-scope-release-review.json",
+    "docs/audits/2026-10-06-all-services-recheck/banner-text-apply-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/publish-banner-scope.py",
+    "docs/audits/2026-10-06-all-services-recheck/verify-banner-limit-modal-scope-native.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-banner-scope-public.py",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-banner-chat-lifecycle-mounted.cjs",
+    "scripts/security-regression/verify-banner-create-lifecycle-mounted.cjs",
+    "scripts/security-regression/verify-banner-legacy-actor-mounted.cjs",
+    "scripts/security-regression/verify-banner-limit-contact.cjs",
+    "scripts/security-regression/verify-banner-limit-modal-scope-mounted.cjs",
+    "scripts/security-regression/verify-banner-quota-client.cjs",
+    "scripts/security-regression/verify-banner-text-apply-mounted.cjs",
+    "src/app/banner/dashboard/chat/page.tsx",
+    "src/app/banner/dashboard/create/page.tsx",
+    "src/app/banner/dashboard/page.tsx",
+    "src/app/banner/test/page.tsx",
+    "src/components/banner/BannerLimitModal.tsx",
+    "src/components/banner/useBannerQuota.ts"
+  ],
+  "reports": [
+    [
+      "banner-limit-modal-scope-integrated-results.json",
+      13
+    ],
+    [
+      "banner-legacy-actor-integrated-results.json",
+      22
+    ],
+    [
+      "banner-quota-client-scope-integrated-results.json",
+      17
+    ],
+    [
+      "banner-limit-modal-scope-native-results.json",
+      9
+    ],
+    [
+      "banner-create-mounted-results.json",
+      7
+    ],
+    [
+      "banner-chat-mounted-results.json",
+      13
+    ],
+    [
+      "banner-text-apply-results.json",
+      5
+    ]
+  ],
+  "releaseReady": true,
+  "pendingReason": null,
+  "note": "Exact six production files, mandatory regressions and release evidence only. Full17services2074 goal remains active; no unrelated dirty audit files staged."
+}

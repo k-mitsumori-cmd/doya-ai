@@ -1,0 +1,95 @@
+{
+  "checkedAt": "2026-10-08T07:10:47.224Z",
+  "source": "src/components/banner/BannerLimitModal.tsx",
+  "sourceHash": "65444b2c801eb163303aa4c64e1ca6d7a1bb1379f04cdc06e310cc62e4a739ca",
+  "passed": 13,
+  "expected": 13,
+  "violations": [],
+  "observations": [
+    {
+      "name": "Current PRO quota opens with contact action",
+      "expectedVisible": true,
+      "actualVisible": true,
+      "text": "今月の150枚を使い切りました作成済みのバナーは引き続きご利用いただけます。生成枠は来月1日にリセットされます。今月の使用状況150 / 150 枚来月1日にリセットされます追加の利用枠を相談する料金・利用条件を確認する後で",
+      "closes": 0
+    },
+    {
+      "name": "Switch actor alpha to beta hides previous 150/150 contact notice",
+      "expectedVisible": false,
+      "actualVisible": false,
+      "text": "",
+      "closes": 1
+    },
+    {
+      "name": "Switch actor beta back to alpha cannot revive stale notice",
+      "expectedVisible": false,
+      "actualVisible": false,
+      "text": "",
+      "closes": 1
+    },
+    {
+      "name": "New explicit notice may reopen for current account",
+      "expectedVisible": true,
+      "actualVisible": true,
+      "text": "今月の150枚を使い切りました作成済みのバナーは引き続きご利用いただけます。生成枠は来月1日にリセットされます。今月の使用状況150 / 150 枚来月1日にリセットされます追加の利用枠を相談する料金・利用条件を確認する後で",
+      "closes": 1
+    },
+    {
+      "name": "Same actor plan change hides previous PRO notice",
+      "expectedVisible": false,
+      "actualVisible": false,
+      "text": "",
+      "closes": 2
+    },
+    {
+      "name": "Fresh FREE quota shows upgrade action",
+      "expectedVisible": true,
+      "actualVisible": true,
+      "text": "今月の15枚を使い切りました作成済みのバナーは引き続きご利用いただけます。生成枠は来月1日にリセットされます。今月の使用状況15 / 15 枚来月1日にリセットされますPRO月150枚まで生成syntheticプランをアップグレード後で",
+      "closes": 2
+    },
+    {
+      "name": "Session loading hides stale notice and releases focus trap",
+      "expectedVisible": false,
+      "actualVisible": false,
+      "text": "",
+      "closes": 3
+    },
+    {
+      "name": "Loading-to-authenticated cannot revive stale notice",
+      "expectedVisible": false,
+      "actualVisible": false,
+      "text": "",
+      "closes": 3
+    },
+    {
+      "name": "Explicit guest notice remains available",
+      "expectedVisible": true,
+      "actualVisible": true,
+      "text": "今月の15枚を使い切りました作成済みのバナーは引き続きご利用いただけます。生成枠は来月1日にリセットされます。今月の使用状況15 / 15 枚来月1日にリセットされますPRO月150枚まで生成syntheticプランをアップグレード後で",
+      "closes": 3
+    },
+    {
+      "name": "Authenticated session without identity cannot show old usage",
+      "expectedVisible": false,
+      "actualVisible": false,
+      "text": "",
+      "closes": 4
+    }
+  ],
+  "keyboard": [
+    {
+      "name": "Tab cycles within open dialog",
+      "passed": true
+    },
+    {
+      "name": "Invalidating scope restores trigger focus",
+      "passed": true
+    },
+    {
+      "name": "Hidden notice removes its Escape listener",
+      "passed": true
+    }
+  ],
+  "scope": "Actual modal mounted under React StrictMode/JSDOM with parent open state retained; synthetic auth/router/pricing/trial/motion. No real auth, billing, provider or customer data."
+}
