@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-08T02:45:15.331Z",
+  "expected": 15,
+  "passed": 15,
+  "cases": [
+    "Same UUID POST replay and GET recover the bounded saved proposal without extra work",
+    "Eight concurrent identical HTTP operations admit exactly one provider and attempt",
+    "Changed URL on same UUID rejects before external work and preserves result",
+    "Explicit second UUID cannot start while another operation is pending",
+    "Cancel before delayed POST creates a tombstone and consumes no attempt",
+    "Cancel pending operation fences late provider settlement and allows explicit new UUID",
+    "Failed scrape remains counted and same UUID never retries scrape",
+    "Provider failure saves bounded fallback once and truthful AI state",
+    "Empty source text produces durable failed state instead of invalid success",
+    "Operational ceiling returns 429 without scraping or provider calls and replays ceiling",
+    "Another actor cannot recover or cancel the first actor saved output",
+    "Anonymous POST GET DELETE reject before writes or external work",
+    "Legacy missing UUID is fenced and invalid inputs never reserve budget",
+    "Settlement outage returns unknown without leaking exception and retry never starts provider again",
+    "Oversized and invalid UTF8 request bodies reject before any durable write"
+  ],
+  "sourceHashes": {
+    "src/app/api/doyaslide/analyze/route.ts": "b2e1d6ad3abf1fa8dc93a9d9ce2b132933a2a7f455874d2f2c48e7d581d9ebfe",
+    "src/lib/doyaslide/text-budget.ts": "3b13bbebd945e3c14e63e4ae724ac2fdbaa801783bf204e98d959ed68c396a3a",
+    "src/lib/doyaslide/url-analysis-operation.ts": "801a83283f7abe0100f47722031451b6fb5883e1ec3bb96ec0f9e0fc7931a1c7",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-route-postgres.cjs": "c905e9dafc8f935c293c63a86ddc40b990311047ca1944eea1e29d0bc4891878"
+  },
+  "scope": "Actual POST/GET/DELETE + durable operation + actual budget on private Unix-socket PostgreSQL. Synthetic auth/scraper/provider; no production/customer database, external generation or browser claim."
+}

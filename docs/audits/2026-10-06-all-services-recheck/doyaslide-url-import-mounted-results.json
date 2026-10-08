@@ -1,0 +1,41 @@
+{
+  "checkedAt": "2026-10-08T02:45:12.045Z",
+  "expected": 25,
+  "passed": 25,
+  "cases": [
+    "Same-frame duplicate callbacks admit exactly one POST and persist metadata first",
+    "Stalled header deadline retains intent, blocks new POST and permits GET recovery",
+    "Stalled body deadline cancels reader and retains pending identity",
+    "Manual title and brief survive late completed proposal while source imports",
+    "Title ABA edit is preserved independently while untouched brief imports",
+    "Brief-only edits preserve brief while untouched title imports",
+    "Changed URL ABA cancels transport and cannot automatically apply stale proposal",
+    "Actor ABA fences late output and restores pending metadata instead of resending",
+    "Failed refresh retains previously imported source and current manual draft",
+    "Malformed missing title keeps draft and pending identity",
+    "Malformed oversized title keeps draft and pending identity",
+    "Malformed oversized brief keeps draft and pending identity",
+    "Malformed empty source keeps draft and pending identity",
+    "Malformed missing AI state keeps draft and pending identity",
+    "Malformed error result keeps draft and pending identity",
+    "Operational ceiling is terminal and offers manual continuation without success",
+    "Expired login retains intent and blocks project creation",
+    "Invalid URL and signed-out retained callback never send POST or create metadata",
+    "Unmount cancels transport but retains recovery identity without another POST",
+    "Reload finds existing intent; GET does not overwrite draft until explicit adoption",
+    "Recovered different URL preserves current URL and edits until user explicitly adopts",
+    "Missing receipt never causes automatic POST; DELETE confirms tombstone before new intent",
+    "Completed receipt cannot be cancelled silently; explicit discard preserves draft",
+    "Another tab replacing stored identity fences delayed completed response before draft application",
+    "Cancel during active POST is available, coalesces same-frame clicks and fences late completion"
+  ],
+  "sourceHashes": {
+    "src/components/doyaslide/NewDoyaSlideWizard.tsx": "b51a1eb444d463073df309f0aab0ed839494d8533dc0ae2b5845e534029bebfd",
+    "src/lib/doyaslide/url-analysis-client.ts": "e9b6619205cb97c54dae3c83e87b58350eee3c31a6e338cde3eb806dab6832b2",
+    "src/lib/doyaslide/url-analysis-intent-client.ts": "9072873b93337e7060b0f7918f971d2d0e83374f003fb6b2fdfe0ada0365b83a",
+    "src/lib/doyaslide/url-analysis-operation-client.ts": "3ce832293cb60c195091607acf3b3634508c40e87c4d0474133827b283fdef4a",
+    "scripts/security-regression/verify-slide-wizard-usage-mounted.cjs": "431af916f7047ab9d29870083d130fa714dfb86b87f94fa28a0144cbdd6c8a51",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-import-mounted.cjs": "a5e84bf1a63f8fde65e3c7a25b18cd7fb79ab6bda7681d799840352edd2669ab"
+  },
+  "scope": "Actual full mounted StrictMode Wizard and durable metadata/transport helpers. Synthetic shared storage/locks/HTTP/timers; no native-browser Web Locks, external provider, production/customer DB or deployed authenticated flow claim."
+}

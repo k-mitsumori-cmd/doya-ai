@@ -258,6 +258,14 @@ jobs:
           node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-hook-mounted.cjs
           node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-wizard-mounted.cjs
 
+      - name: DoyaSlide URL import safety (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-analysis-transport.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-analysis-route.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-intent-client.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-operation-transport.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-import-mounted.cjs
+
       - name: Type check
         run: npx tsc --noEmit
 

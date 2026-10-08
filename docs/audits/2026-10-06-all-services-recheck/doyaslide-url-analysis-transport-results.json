@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-08T02:45:09.786Z",
+  "expected": 19,
+  "passed": 19,
+  "cases": [
+    "Valid complete response returns exact typed proposal and releases transport",
+    "Reject or classify exact operational cap without trusting server diagnostic",
+    "Reject or classify expired auth without trusting server diagnostic",
+    "Reject or classify scrape rejection without trusting server diagnostic",
+    "Reject or classify other429 without trusting server diagnostic",
+    "Reject or classify server error without trusting server diagnostic",
+    "Reject or classify title too long without trusting server diagnostic",
+    "Reject or classify brief too long without trusting server diagnostic",
+    "Reject or classify source too long without trusting server diagnostic",
+    "Reject or classify empty source without trusting server diagnostic",
+    "Reject or classify missing AI flag without trusting server diagnostic",
+    "Reject or classify error success without trusting server diagnostic",
+    "Reject or classify array response without trusting server diagnostic",
+    "Malformed JSON and excessive announced body fail closed",
+    "Oversized streamed UTF8 body is cancelled",
+    "Abort-ignoring header stall has one310second deadline and no resend",
+    "Stalled body is cancelled by the header-to-body deadline",
+    "Parent cancellation bounds noncooperative transport and suppresses late result",
+    "Invalid URL or pre-aborted signal never invokes fetch"
+  ],
+  "sourceHashes": {
+    "src/lib/doyaslide/url-analysis-client.ts": "e9b6619205cb97c54dae3c83e87b58350eee3c31a6e338cde3eb806dab6832b2",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-analysis-transport.cjs": "a9c1ee002c7c8d7c1b7d709ec13fbaffee55d51fda752e7d1e04d0b81eb4bcbe"
+  },
+  "scope": "Actual reader with native Response/ReadableStream/AbortController, synthetic fetch/clock. No provider/network/DB/customer writes."
+}

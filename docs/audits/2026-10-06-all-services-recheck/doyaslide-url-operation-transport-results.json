@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-10-08T02:45:12.712Z",
+  "expected": 26,
+  "passed": 26,
+  "cases": [
+    "Owned validated completed HTTP 200",
+    "Owned validated pending HTTP 202",
+    "Owned validated failed HTTP 400",
+    "Owned validated cancelled HTTP 200",
+    "Owned validated missing HTTP 200",
+    "Owned validated busy HTTP 409",
+    "Owned validated failed HTTP 429",
+    "POST sends persisted UUID and GET DELETE send no URL or request body",
+    "Reject wrong identity",
+    "Reject wrong status",
+    "Reject unreserved success",
+    "Reject private URL",
+    "Reject oversized title",
+    "Reject empty source",
+    "Reject failed result",
+    "Reject cap reserved",
+    "Reject unexpected field",
+    "Reject pending missing URL",
+    "Reject unknown state",
+    "Reject terminal leaked error",
+    "Anonymous expiry is login; unowned server failures remain unknown",
+    "Malformed announced oversized and invalid UTF8 bodies fail closed",
+    "Streamed excess is cancelled without trusting content length",
+    "Header stall is bounded at POST310s or recovery30s with no automatic resend",
+    "Stalled chunked response shares deadline and cancels reader",
+    "Parent abort fences late response and preabort never starts a request"
+  ],
+  "sourceHashes": {
+    "src/lib/doyaslide/url-analysis-operation-client.ts": "3ce832293cb60c195091607acf3b3634508c40e87c4d0474133827b283fdef4a",
+    "src/lib/doyaslide/url-analysis-client.ts": "e9b6619205cb97c54dae3c83e87b58350eee3c31a6e338cde3eb806dab6832b2",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-operation-transport.cjs": "f9760da7d3ae0345e9426725eeff7926d781ce4d9e088a10e96fcf24dfed81bc"
+  },
+  "scope": "Actual durable-protocol client, native Response/ReadableStream and synthetic fetch/timers. No mounted/native-browser/production or provider claim."
+}

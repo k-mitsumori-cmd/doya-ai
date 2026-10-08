@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-08T02:19:02.584Z",
+  "status": "confirmed-durable-replay-gap",
+  "expected": 3,
+  "passed": 3,
+  "cases": [
+    "Identical analysis POST with the same supplied operationId executes provider and reserves daily budget twice; operationId is currently ignored",
+    "Five concurrent identical operationIds admit five synthetic analyses and reserve five attempts atomically",
+    "Reusing supplied operationId for changed URL is admitted without input fingerprint rejection"
+  ],
+  "sourceHashes": {
+    "src/app/api/doyaslide/analyze/route.ts": "0c0e792c63b3311d0836f50ab5c22522da58cb800119274acf7b549918651bc7",
+    "src/lib/doyaslide/text-budget.ts": "050b753d64cdb0832c8d983324a6c3e516645365687db3961d84bf9762846e4c",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-replay-baseline-postgres.cjs": "3435f7e99fdea1d4c004a78293a603c30e6a83459cbfe075356c9dc3de7d7ae2"
+  },
+  "scope": "Actual analyze POST and daily budget helper on private Unix-socket PostgreSQL with synthetic auth/scraper/provider. Demonstrates missing operation identity protocol; no real provider, production/customer DB writes or claim that different explicit manual analysis intents should be free."
+}

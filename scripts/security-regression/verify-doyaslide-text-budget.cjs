@@ -13,9 +13,11 @@ function database(initial) {
   let tail = Promise.resolve()
   const tx = {
     $executeRaw: async () => {},
+    $queryRaw: async () => [{id: 'owner'}],
     systemSetting: {
       findUnique: async ({ where }) => rows.has(where.key) ? { value: rows.get(where.key) } : null,
       upsert: async ({ where, create, update }) => rows.set(where.key, rows.has(where.key) ? update.value : create.value),
+      deleteMany: async ({where}) => { if(rows.get(where.key) === where.value) rows.delete(where.key); return {count: 1} },
     },
   }
   return { rows, $transaction: async callback => {
@@ -53,35 +55,35 @@ function database(initial) {
   await check('DoyaSlide URL analysis rejects the cap before fetching or calling AI', async () => {
     let fetches = 0
     let modelCalls = 0
-    let reserves = 0
-    let limited = true
+    const db = database([[budget.doyaSlideTextUsageKey('owner', 'url-analysis'), new Date(Date.now()+9*3600000).toISOString().slice(0,10)+':50']])
+    const operation = load('src/lib/doyaslide/url-analysis-operation.ts', {
+      'node:crypto': require('node:crypto'), '@/lib/prisma': { prisma: db },
+      './text-budget': budget,
+    })
     const api = load('src/app/api/doyaslide/analyze/route.ts', {
       'next/server': { NextResponse: Response },
       '@/lib/doyaslide/access': { getUserId: async () => 'owner' },
-      '@/lib/doyaslide/text-budget': {
-        DoyaSlideTextLimitError: budget.DoyaSlideTextLimitError,
-        reserveDoyaSlideTextCall: async (userId, tool) => {
-          assert.equal(userId, 'owner')
-          assert.equal(tool, 'url-analysis')
-          reserves++
-          if (limited) throw new budget.DoyaSlideTextLimitError(50)
-        },
-      },
+      '@/lib/doyaslide/url-analysis-operation': operation,
       '@/lib/doyaslide/scrape': { scrapeUrlText: async () => { fetches++; return { title: 'Example', description: 'Summary', text: 'Content' } } },
       '@/lib/doyaslide/prompts': { buildAnalyzePrompt: () => 'prompt' },
       '@seo/lib/gemini': { GEMINI_TEXT_MODEL_DEFAULT: 'mock', geminiGenerateJson: async () => { modelCalls++; return { title: 'AI title', brief: 'AI brief' } } },
-    })
-    assert.equal((await api.POST({ json: async () => ({ url: 42 }) })).status, 400)
-    assert.equal((await api.POST({ json: async () => ({ url: 'ftp://example.com' }) })).status, 400)
-    assert.equal((await api.POST({ json: async () => ({ url: 'https://example.com/' + 'a'.repeat(2050) }) })).status, 400)
-    assert.equal(reserves, 0)
-    const blocked = await api.POST({ json: async () => ({ url: 'https://example.com' }) })
+    }, { TextDecoder })
+    let sequence = 0
+    const post = url => api.POST(new Request('https://example.invalid/api/doyaslide/analyze', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({url, operationId: '10000000-0000-4000-8000-'+String(++sequence).padStart(12,'0') }),
+    }))
+    assert.equal((await post(42)).status, 400)
+    assert.equal((await post('ftp://example.com')).status, 400)
+    assert.equal((await post('https://example.com/' + 'a'.repeat(2050))).status, 400)
+    assert.equal(db.rows.size, 1)
+    const blocked = await post('https://example.com')
     assert.equal(blocked.status, 429)
     assert.equal((await blocked.json()).code, 'DOYASLIDE_TEXT_DAILY_LIMIT')
     assert.equal(fetches, 0)
     assert.equal(modelCalls, 0)
-    limited = false
-    assert.equal((await api.POST({ json: async () => ({ url: 'https://example.com' }) })).status, 200)
+    db.rows.delete(budget.doyaSlideTextUsageKey('owner','url-analysis'))
+    assert.equal((await post('https://example.com')).status, 200)
     assert.equal(fetches, 1)
     assert.equal(modelCalls, 1)
   })

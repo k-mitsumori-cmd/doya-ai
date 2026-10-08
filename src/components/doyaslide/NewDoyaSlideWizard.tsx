@@ -9,6 +9,9 @@ import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { readBillingResponse } from '@/lib/billing-response-client'
 import { useStylePreviews } from '@/lib/doyaslide/use-style-previews'
+import { UrlAnalysisError, validAnalysisUrl } from '@/lib/doyaslide/url-analysis-client'
+import { claimUrlAnalysisIntent, clearUrlAnalysisIntent, readUrlAnalysisIntent } from '@/lib/doyaslide/url-analysis-intent-client'
+import { fetchUrlAnalysisOperation, type UrlAnalysisSavedResult } from '@/lib/doyaslide/url-analysis-operation-client'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import {
   DOC_TYPES,
@@ -116,6 +119,35 @@ export default function NewDoyaSlideWizard() {
   const [urlBusy, setUrlBusy] = useState(false)
   const [importedRef, setImportedRef] = useState('')
   const [importedUrl, setImportedUrl] = useState('')
+  const [urlNotice, setUrlNotice] = useState('')
+  const [urlPending, setUrlPending] = useState(false)
+  const [urlSavedResult, setUrlSavedResult] = useState<UrlAnalysisSavedResult | null>(null)
+  const urlRequestRef = useRef<AbortController | null>(null)
+  const urlCancelRef = useRef<AbortController | null>(null)
+  const urlDraftRef = useRef({ url, title, brief, importedUrl })
+  urlDraftRef.current = { url, title, brief, importedUrl }
+  const urlEditRevision = useRef({ title: 0, brief: 0 })
+  useEffect(() => {
+    setUrlBusy(false); setUrlNotice(''); setUrlSavedResult(null); setUrlPending(false)
+    const syncIntent = () => {
+      if (!allowed || activeUsageContext.current !== usageContextKey) return
+      try {
+        const pending = readUrlAnalysisIntent(actor)
+        setUrlPending(!!pending)
+        if (pending) setUrlNotice('前のURL取り込みの操作情報があります。「取り込み結果を確認」で結果を確認してください。新しい解析は開始しません。')
+      } catch {
+        setUrlPending(true)
+        setUrlNotice('保存された取り込み情報を確認できません。新しい解析をせず、お問い合わせください。')
+      }
+    }
+    syncIntent()
+    window.addEventListener('focus', syncIntent)
+    window.addEventListener('storage', syncIntent)
+    return () => {
+      urlRequestRef.current?.abort(); urlRequestRef.current = null
+      window.removeEventListener('focus', syncIntent); window.removeEventListener('storage', syncIntent)
+    }
+  }, [actor, allowed, usageContextKey])
   const [slideCount, setSlideCount] = useState(8)
   const [aspect, setAspect] = useState<Aspect>('wide')
   const [style, setStyle] = useState('corporate')
@@ -209,6 +241,7 @@ export default function NewDoyaSlideWizard() {
   }, [busy])
 
   const onDocType = (v: string) => {
+    urlEditRevision.current.title++
     setDocType(v)
     const dt = DOC_TYPES.find((d) => d.value === v)
     if (dt) {
@@ -221,49 +254,114 @@ export default function NewDoyaSlideWizard() {
   const fillSample = () => {
     const s = DOC_TYPE_SAMPLES[docType as keyof typeof DOC_TYPE_SAMPLES]
     if (!s) return
+    urlEditRevision.current.title++; urlEditRevision.current.brief++
     setTitle(s.title)
     setBrief(s.brief)
     setTitleEdited(false)
     toast.success('サンプルを入力しました')
   }
 
-  const importUrl = async () => {
-    const requestedUrl = url.trim()
-    if (!requestedUrl) {
-      toast.error('URLを入力してください')
+  const runUrlOperation = async (action: 'start' | 'recover' | 'cancel' | 'adopt' | 'discard') => {
+    if (!mountedRef.current || !allowed || activeUsageContext.current !== usageContextKey || urlRequestRef.current) return
+    const draft = urlDraftRef.current
+    const requestedUrl = draft.url.trim()
+    if (action === 'start' && !validAnalysisUrl(requestedUrl)) {
+      setUrlNotice('httpまたはhttpsのURLを入力してください。認証情報を含むURLは使用できません。')
       return
     }
-    setImportedRef('')
-    setImportedUrl('')
+    const controller = new AbortController()
+    urlRequestRef.current = controller
+    if (action === 'cancel') urlCancelRef.current = controller
+    const revision = { ...urlEditRevision.current }
+    const current = () => mountedRef.current && !controller.signal.aborted && urlRequestRef.current === controller
+      && activeUsageContext.current === usageContextKey
     setUrlBusy(true)
+    setUrlNotice(action === 'start' ? 'URLを取り込み中です。資料のタイトルと内容は編集できます。' : '保存された取り込み結果を確認しています。新しい解析は開始しません。')
     try {
-      const res = await fetch('/api/doyaslide/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: requestedUrl }),
-      })
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error || '取り込みに失敗しました')
-      if (typeof d.referenceText !== 'string' || !d.referenceText.trim()) {
-        throw new Error('URLの本文を取得できませんでした。別のURLをお試しいただくか、URLを削除して内容を直接入力してください。')
+      let intent = readUrlAnalysisIntent(actor)
+      let created = false
+      if (action === 'start') {
+        const claim = await claimUrlAnalysisIntent(actor, controller.signal)
+        intent = claim.intent; created = claim.created
       }
-      const replacingImportedUrl = !!importedUrl && importedUrl !== requestedUrl
-      setTitle(d.title || (replacingImportedUrl ? '' : title))
-      setBrief(d.brief || (replacingImportedUrl ? '' : brief))
-      setImportedRef(d.referenceText)
-      setImportedUrl(requestedUrl)
-      setTitleEdited(true)
-      if (d.aiAnalyzed) {
-        toast.success('URLの内容を取り込み、AIで資料案を作成しました')
+      if (!current()) return
+      if (!intent) { setUrlPending(false); setUrlSavedResult(null); setUrlNotice('確認待ちの取り込みはありません。'); return }
+      setUrlPending(true)
+      if (action === 'adopt' || action === 'discard') {
+        const saved = urlSavedResult
+        if (!saved || saved.operationId !== intent.operationId || saved.state !== 'completed' || !saved.result || !saved.sourceUrl) throw new Error('Saved result changed')
+        if (action === 'adopt') {
+          // Explicit adoption may restore a different URL; it never runs automatically after reload.
+          setUrl(saved.sourceUrl); setTitle(saved.result.title); setBrief(saved.result.brief)
+          urlEditRevision.current.title++; urlEditRevision.current.brief++
+          setImportedRef(saved.result.referenceText); setImportedUrl(saved.sourceUrl); setTitleEdited(true)
+        }
+        await clearUrlAnalysisIntent(actor, intent.operationId, controller.signal)
+        if (!current()) return
+        setUrlPending(false); setUrlSavedResult(null)
+        setUrlNotice(action === 'adopt' ? '保存済みのURL・タイトル・説明を取り込みました。内容をご確認ください。' : '保存結果を使わずに操作を終了しました。次に「取り込む」を押すと新しい解析として枠を使用します。')
+        return
+      }
+      const operation = await fetchUrlAnalysisOperation(intent, created ? 'POST' : action === 'cancel' ? 'DELETE' : 'GET', controller.signal, created ? requestedUrl : undefined)
+      if (!current()) return
+      if (readUrlAnalysisIntent(actor)?.operationId !== intent.operationId) {
+        setUrlPending(!!readUrlAnalysisIntent(actor)); setUrlSavedResult(null)
+        setUrlNotice('別の画面で取り込み操作が更新されました。現在の入力は変更していません。結果を再確認してください。')
+        return
+      }
+      if (operation.state === 'completed' && operation.result && operation.sourceUrl) {
+        setUrlSavedResult(operation)
+        if (created && urlDraftRef.current.url.trim() === requestedUrl && operation.sourceUrl === requestedUrl) {
+          const replacingImportedUrl = !!draft.importedUrl && draft.importedUrl !== requestedUrl
+          const editedTitle = urlEditRevision.current.title !== revision.title
+          const editedBrief = urlEditRevision.current.brief !== revision.brief
+          if (!editedTitle) setTitle(operation.result.title || (replacingImportedUrl ? '' : draft.title))
+          if (!editedBrief) setBrief(operation.result.brief || (replacingImportedUrl ? '' : draft.brief))
+          setImportedRef(operation.result.referenceText); setImportedUrl(requestedUrl); setTitleEdited(true)
+          await clearUrlAnalysisIntent(actor, intent.operationId, controller.signal)
+          if (!current()) return
+          setUrlPending(false); setUrlSavedResult(null)
+          setUrlNotice((operation.result.aiAnalyzed ? 'URLの内容を取り込み、AIで資料案を作成しました。' : 'URL本文を取り込みました。AI提案は利用できなかったため、タイトルと説明をご確認ください。')
+            + (editedTitle || editedBrief ? '待機中に編集した項目はそのまま残しました。' : ''))
+        } else {
+          setUrlNotice('前の解析は完了しています。現在の入力は変更していません。「保存結果を取り込む」を押すと、URL・タイトル・説明を保存結果に置き換えます。')
+        }
+      } else if (operation.state === 'failed' || operation.state === 'cancelled') {
+        await clearUrlAnalysisIntent(actor, intent.operationId, controller.signal)
+        if (!current()) return
+        setUrlPending(false); setUrlSavedResult(null)
+        setUrlNotice(operation.code === 'DOYASLIDE_TEXT_DAILY_LIMIT'
+          ? '本日の参考URL解析の運用上限に達しました。明日お試しいただくか、URLを削除して内容を直接入力してください。'
+          : operation.state === 'cancelled' ? 'この取り込みは取り消しました。開始済みの解析枠は戻りません。次の取り込みは新しい解析になります。'
+          : 'このURL解析は終了しましたが、結果を取得できませんでした。開始済みの解析枠は戻りません。別のURLを試すか、内容を直接入力してください。')
       } else {
-        toast('URL本文を取り込みました。AI提案は利用できなかったため、タイトルと説明をご確認ください。')
+        setUrlSavedResult(null)
+        setUrlNotice(operation.state === 'missing' ? '取り込みの受付を確認できません。新しい解析は開始せず、結果を再確認するか「取り込みを取消」を押してください。'
+          : operation.state === 'busy' ? '別のURL解析が処理中です。新しい解析は開始していません。時間をおいて結果を確認してください。'
+          : 'URL解析は処理中です。再解析せず「取り込み結果を確認」で結果を確認してください。')
       }
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (error) {
+      if (!current()) return
+      const kind = error instanceof UrlAnalysisError ? error.kind : 'unknown'
+      if (kind === 'login') setLoginRequired(true)
+      try { setUrlPending(!!readUrlAnalysisIntent(actor)) } catch { setUrlPending(true) }
+      setUrlNotice(kind === 'login' ? 'ログインの有効期限を確認してください。入力内容と操作情報は保持しています。'
+        : kind === 'failure' ? 'URLまたは操作情報を確認してください。新しい解析を始める前に、前の取り込み結果を確認してください。'
+        : '取り込み結果を確認できませんでした。新しい解析は開始せず「取り込み結果を確認」を押してください。入力内容は保持しています。')
     } finally {
-      setUrlBusy(false)
+      if (urlCancelRef.current === controller) urlCancelRef.current = null
+      if (urlRequestRef.current === controller) { urlRequestRef.current = null; if (mountedRef.current && activeUsageContext.current === usageContextKey) setUrlBusy(false) }
+      controller.abort()
     }
   }
+  const cancelUrlOperation = () => {
+    // Stop observing first; DELETE durably fences the original operation even if it continues on the server.
+    if (!allowed || activeUsageContext.current !== usageContextKey || !mountedRef.current) return
+    if (urlCancelRef.current && !urlCancelRef.current.signal.aborted) return
+    urlRequestRef.current?.abort(); urlRequestRef.current = null
+    return runUrlOperation('cancel')
+  }
+  const importUrl = () => runUrlOperation('start')
 
   const onLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -466,6 +564,7 @@ export default function NewDoyaSlideWizard() {
           <input
             value={title}
             onChange={(e) => {
+              urlEditRevision.current.title++
               setTitle(e.target.value)
               setTitleEdited(true)
             }}
@@ -480,7 +579,7 @@ export default function NewDoyaSlideWizard() {
           </div>
           <textarea
             value={brief}
-            onChange={(e) => setBrief(e.target.value)}
+            onChange={(e) => { urlEditRevision.current.brief++; setBrief(e.target.value) }}
             maxLength={20000}
             placeholder={
               'ここに「誰に・何を・どう伝えたいか」をたっぷり書いてください。\n例) 対象は中小企業の経営者。導入で月20時間の工数削減ができること、料金プラン、導入事例を入れたい。最後は無料相談に誘導。\n\n※ 箇条書きでもOK。たくさん書くほど、いいスライドになります！'
@@ -498,6 +597,7 @@ export default function NewDoyaSlideWizard() {
               <input
                 value={url}
                 onChange={(e) => {
+                  urlRequestRef.current?.abort(); urlRequestRef.current = null; setUrlBusy(false); setUrlNotice('')
                   setUrl(e.target.value)
                   setImportedRef('')
                 }}
@@ -507,7 +607,7 @@ export default function NewDoyaSlideWizard() {
               />
               <button
                 onClick={importUrl}
-                disabled={urlBusy}
+                disabled={urlBusy || !allowed || urlPending}
                 className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60 whitespace-nowrap inline-flex items-center gap-1 active:scale-95 transition"
               >
                 <span className={`material-symbols-outlined text-base ${urlBusy ? 'animate-spin' : ''}`}>
@@ -516,6 +616,16 @@ export default function NewDoyaSlideWizard() {
                 取り込む
               </button>
             </div>
+            {urlPending && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button type="button" disabled={urlBusy || !allowed} onClick={() => runUrlOperation('recover')} className="rounded-lg border border-blue-300 px-3 py-2 text-xs font-bold text-blue-800 disabled:opacity-60">取り込み結果を確認</button>
+                {urlSavedResult ? <>
+                  <button type="button" disabled={urlBusy || !allowed} onClick={() => runUrlOperation('adopt')} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-60">保存結果を取り込む</button>
+                  <button type="button" disabled={urlBusy || !allowed} onClick={() => runUrlOperation('discard')} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-60">保存結果を使わず終了</button>
+                </> : <button type="button" disabled={!allowed} onClick={cancelUrlOperation} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-60">取り込みを取消</button>}
+              </div>
+            )}
+            {urlNotice && <p role="status" className="mt-2 text-xs font-bold text-blue-800">{urlNotice}</p>}
             {url.trim() && importedUrl === url.trim() && importedRef && (
               <p role="status" className="mt-2 text-xs font-bold text-emerald-700">参考URLの本文を取り込み済みです。</p>
             )}

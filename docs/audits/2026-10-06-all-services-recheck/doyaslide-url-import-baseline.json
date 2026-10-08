@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-08T02:06:10.665Z",
+  "status": "confirmed-repair-required",
+  "confirmed": 3,
+  "cases": [
+    "Same-frame duplicate URL import callbacks send two analysis POSTs for one URL",
+    "Pending URL import has neither client abort signal nor registered deadline; import control stays disabled after available deadlines expire",
+    "Late URL import response overwrites title edited while request was in flight"
+  ],
+  "sourceHashes": {
+    "src/components/doyaslide/NewDoyaSlideWizard.tsx": "c400281e140670524788a9c557a221a08c3de4ae77781719f49fb185de0c1228",
+    "src/app/api/doyaslide/analyze/route.ts": "dd2f88c6e11c01ea75b9d68c40891565e1c848fa2fc56c9643465ffdcd4acffe",
+    "scripts/security-regression/verify-slide-wizard-usage-mounted.cjs": "f36a1fc50493085a17d20d7da9c2f2636a8c863d2ce5b18437ccecfd1f8ea182",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-import-baseline.cjs": "0e6be260f13f20c963cf535504d9282717ec73e7a60565e12930f2786e094c95"
+  },
+  "scope": "Actual full Wizard/preview hook/reader under StrictMode with existing fixture plus synthetic analysis route adapter. No actual analysis HTTP, provider, budget or customer/production DB mutation. Confirms client duplicate sends and stale title overwrite; deadline finding is absence of cancellation/deadline in synthetic mounted transport."
+}

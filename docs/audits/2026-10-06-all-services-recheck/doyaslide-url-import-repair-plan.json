@@ -1,0 +1,140 @@
+{
+  "checkedAt": "2026-10-08T02:48:33.061880+00:00",
+  "status": "frozen106-and-local-native13-passed-ready-for-reviewed-commit-push",
+  "baseline": "doyaslide-url-import-baseline.json",
+  "findings": [
+    "Two same-frame import sends for one intent",
+    "No client cancellation or deadline for pending import",
+    "Late analysis response overwrites manually edited title"
+  ],
+  "scope": "Actual mounted Wizard with synthetic analysis transport; no provider/customer writes",
+  "next": [
+    "Observe live frozen106 session1357; supplementary native\u2192actual API\u2192PG8 separately passed on matching source hashes",
+    "After all106 gates pass, review exact44-file allowlist and publish once",
+    "Verify exact commit CI, production READY and anonymous public markers/auth401",
+    "Continue all17-service requirement matrix; do not mark broad goal complete"
+  ],
+  "productionFiles": [
+    "src/components/doyaslide/NewDoyaSlideWizard.tsx",
+    "src/lib/doyaslide/url-analysis-client.ts",
+    "src/app/api/doyaslide/analyze/route.ts",
+    "src/lib/doyaslide/text-budget.ts",
+    "src/lib/doyaslide/url-analysis-operation.ts",
+    "src/lib/doyaslide/url-analysis-intent-client.ts",
+    "src/lib/doyaslide/url-analysis-operation-client.ts"
+  ],
+  "checks": {
+    "mounted": 25,
+    "transport": 19,
+    "apiRoute": 6,
+    "existingUsage": 24,
+    "existingPreviewWizard": 7,
+    "typecheckExitCode": 0,
+    "native": 13
+  },
+  "limitations": [
+    "No production/customer DB writes or real provider generation",
+    "Mounted and native flows use synthetic HTTP/auth/provider; actual private PostgreSQL route/helper verification is separate",
+    "Fresh full frozen106 gate and reviewed commit/push/deployment remain pending",
+    "All17-service criterion matrix remains incomplete"
+  ],
+  "gate": "docs/audits/2026-10-06-all-services-recheck/doyaslide-url-import-release-f6b20230-979f-4767-b254-5ce6748068a8",
+  "gateStatus": "running106",
+  "native": {
+    "expected": 13,
+    "passed": 13,
+    "scope": "Actual Chrome Web Locks/localStorage and localhost HTTP; synthetic durable API/provider/auth; no deployed authenticated claim"
+  },
+  "serverCrossTabIdempotency": "Actual private PostgreSQL POST/GET/DELETE now proves durable same-UUID execution/budget protection. Browser cross-tab protocol is not yet integrated or verified.",
+  "gateSession": 1357,
+  "remainingReplayAudit": {
+    "status": "wizard-integrated-local-mount-and-native-tab-reload-verified; comprehensive-gate-running",
+    "sourceFacts": [
+      "Actual route requires UUID and atomically saves receipt and operational attempt",
+      "Current Wizard uses metadata-only shared intent and durable POST/GET/DELETE client",
+      "Same-frame and real native simultaneous tabs admit one POST",
+      "Reload/lost acknowledgement use GET and require explicit saved-result adoption",
+      "Scope/identity change fences late result before draft application"
+    ],
+    "requiredEvidence": [
+      "One intent across delayed acknowledgement/reload/tabs executes provider and reserves budget once",
+      "Explicit new analysis intent can refresh source and consumes one new attempt",
+      "Actor/URL mismatches and cancelled delayed sends cannot adopt another result",
+      "Client persists only operation metadata; URL/draft/source content stays out of local storage",
+      "Private isolated PostgreSQL and synthetic providers before production; no production/customer writes"
+    ],
+    "nextDecision": "Require unchanged full106 gate before reviewed exact release"
+  },
+  "serverReplayBaseline": {
+    "report": "doyaslide-url-replay-baseline-postgres-results.json",
+    "supervisor": "doyaslide-url-replay-baseline-postgres-supervisor.json",
+    "expected": 3,
+    "passed": 3,
+    "stopExitCode": 0
+  },
+  "durableRepairRequirements": [
+    "Actor-bound UUID receipt with input fingerprint and terminal saved/failed/cancelled state",
+    "Receipt admission and daily attempt reservation in one transaction; failed attempts still count as current policy",
+    "No provider repeat for same admitted UUID after lost acknowledgement, timeout or reload",
+    "Metadata-only local intent shared across tabs under Web Locks; never persist URL, draft or scraped text in localStorage",
+    "Owned read-only result recovery and explicit cancellation fence delayed original sends",
+    "Expired operation fences late settlement; no inferred refund of operational attempt counts",
+    "Current draft survives pending recovery; returned proposal cannot replace edited fields or different source without explicit action",
+    "Legacy clients without identity must receive truthful refresh/recovery guidance before external work, rather than silently bypassing new guard",
+    "Isolated PostgreSQL atomicity/concurrency and mounted/native actual client proof; final full gate before reviewed release"
+  ],
+  "durableStageChecks": {
+    "helperPostgres": {
+      "report": "doyaslide-url-operation-postgres-results.json",
+      "passed": 26,
+      "scope": "Actual helper+ledger, private Unix socket PostgreSQL"
+    },
+    "apiPostgres": {
+      "report": "doyaslide-url-route-postgres-results.json",
+      "passed": 15,
+      "scope": "Actual POST GET DELETE+helper+ledger, private PG, synthetic auth/scraper/provider"
+    },
+    "metadataClient": {
+      "report": "doyaslide-url-intent-client-results.json",
+      "passed": 14,
+      "scope": "Actual client, synthetic queued locks/storage/timers; no native browser claim"
+    },
+    "operationTransport": {
+      "report": "doyaslide-url-operation-transport-results.json",
+      "passed": 26,
+      "scope": "Actual protocol client, native Response streams, synthetic fetch/timers"
+    },
+    "routeOffline": {
+      "report": "doyaslide-url-analysis-route-results.json",
+      "passed": 6
+    },
+    "existingTextBudget": {
+      "command": "node scripts/security-regression/verify-doyaslide-text-budget.cjs",
+      "passed": 4
+    },
+    "typecheck": {
+      "command": "npx tsc --noEmit",
+      "exitCode": 0
+    },
+    "nativeActualApiPostgres": {
+      "report": "doyaslide-url-native-api-postgres-results.json",
+      "supervisor": "doyaslide-url-native-api-postgres-supervisor.json",
+      "passed": 8,
+      "sourceHashCount": 14,
+      "terminalExitCode": 0,
+      "scope": "Native Chrome actual Wizard + metadata/Web Locks + durable transport -> localhost HTTP -> actual analyze POST/GET/DELETE -> actual helper and budget -> private Unix-socket PostgreSQL -> native UI. Synthetic auth/scraper/provider and NextResponse=Response; not a native Next server/auth-cookie test. Client timeout shortened40ms only for timeout case. No real provider or production/customer DB writes.",
+      "cleanupFixtureFirstAttempt": "A fixture finally-block scope error was fixed; failed initial fixture was terminated, PG stopped and evidence archived; accepted proof is a fresh rerun with exit0"
+    }
+  },
+  "gateHistory": {
+    "initialClientPhase102": "historical passed; not used for new durable protocol publication",
+    "durableProtocolFirst106": {
+      "gate": "doyaslide-url-import-release-7a1c7936-2b9a-4280-a611-80505ad9f924",
+      "status": "failed",
+      "failure": "verify-service-input-types.cjs still mocked old analyze dependency; adapted native Request and UUID boundary; invalid URL types400 maintained",
+      "additionalRepair": "Active POST cancellation now accessible; cancellation double-click coalescing and late-result fence verified"
+    }
+  },
+  "nextGateStatus": "passed106-unchanged",
+  "publicationStatus": "ready-not-yet-pushed"
+}

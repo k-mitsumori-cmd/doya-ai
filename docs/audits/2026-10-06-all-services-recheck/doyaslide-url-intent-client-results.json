@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-08T02:45:12.300Z",
+  "expected": 14,
+  "passed": 14,
+  "cases": [
+    "Ten concurrent claimants share one UUID and exactly one creation",
+    "Reloaded reader returns durable identity without creating a new intent",
+    "Actors have isolated storage and cannot clear another actors intent",
+    "Clear exact identity permits a deliberate subsequent fresh UUID",
+    "Only version UUID and creation time are persisted, with no URL or draft fields",
+    "Malformed or expanded persisted metadata fails closed without replacement",
+    "Denied and silently ignored browser writes prevent a newly confirmed intent",
+    "Silently ignored removal retains the previous operation and reports failure",
+    "Missing Web Locks fails closed without writing storage",
+    "Pre-aborted caller cannot claim or clear metadata",
+    "Noncooperative lock acquisition ends at the finite deadline",
+    "Delayed lock callback after deadline cannot write an intent",
+    "Parent cancellation fences a subsequently delivered lock callback",
+    "Invalid actor and stale UUID cannot mutate current metadata"
+  ],
+  "sourceHashes": {
+    "src/lib/doyaslide/url-analysis-intent-client.ts": "9072873b93337e7060b0f7918f971d2d0e83374f003fb6b2fdfe0ada0365b83a",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-intent-client.cjs": "58fd699376b77e20271e5164a71e7006cb4f29633ffcd21a7f5754af8c5727cc"
+  },
+  "scope": "Actual metadata client with synthetic shared storage/queued lock and hostile timer callbacks. No browser-native Web Locks, mounted wizard, provider, DB or deployment claim."
+}

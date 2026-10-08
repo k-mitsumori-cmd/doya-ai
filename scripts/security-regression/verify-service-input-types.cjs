@@ -24,11 +24,18 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
       'next/server': server,
       '@seo/lib/gemini': { geminiGenerateJson: async () => ({ title: 'Title', brief: 'Brief' }), GEMINI_TEXT_MODEL_DEFAULT: 'mock' },
       '@/lib/doyaslide/access': { getUserId: async () => 'user' },
-      '@/lib/doyaslide/text-budget': { reserveDoyaSlideTextCall: async () => {} },
+      '@/lib/doyaslide/url-analysis-operation': {
+        UrlAnalysisOperationError: class extends Error {},
+        beginUrlAnalysisOperation: async () => ({state: 'started'}),
+        settleUrlAnalysisOperation: async (input,result) => ({operationId: input.operationId,state: 'completed',sourceUrl:input.url,result,reserved:true,code:null}),
+      },
       '@/lib/doyaslide/scrape': { scrapeUrlText: async () => { calls++; return { title: 'Title', description: 'Brief', text: 'Text' }; } },
       '@/lib/doyaslide/prompts': { buildAnalyzePrompt: () => 'prompt' },
-    });
-    await checkRoute('DoyaSlide analyze', route.POST, [null, { url: {} }, { url: 42 }], { url: 'https://example.com' }, () => calls);
+    }, { TextDecoder });
+    await checkRoute('DoyaSlide analyze', async req => {
+      const body=await req.json();
+      return route.POST(new Request('https://example.invalid/api/doyaslide/analyze', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body&&typeof body==='object'?{...body,operationId:'10000000-0000-4000-8000-000000000001'}:body)}));
+    }, [null, { url: {} }, { url: 42 }], { url: 'https://example.com' }, () => calls);
   }
   {
     let calls = 0;
