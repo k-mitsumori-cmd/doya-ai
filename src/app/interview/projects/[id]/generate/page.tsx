@@ -3,7 +3,17 @@
 import { useState, useEffect, useRef, ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { readArticleInput, ArticleInputError } from '@/lib/interview/article-input-client'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { ArticleStreamError, readArticleGeneration } from '@/lib/interview/article-stream-client'
+import { getArticleActorScope, readArticleOperation, ArticleProtocolError, type ArticleIntentScope, type ArticleOperationView } from '@/lib/interview/article-operation-client'
+import { readArticleIntent, claimArticleIntent, clearArticleIntent, type ArticleIntent } from '@/lib/interview/article-intent-client'
+
+function articleFailureGuidance(error: unknown): string {
+  return error instanceof ArticleStreamError || error instanceof ArticleProtocolError || error instanceof ArticleInputError
+    ? error.message : '処理状況を確認できません。新しく生成せず、結果を再確認してください。'
+}
 
 // ── Inline formatting ──
 function renderInline(text: string): ReactNode {
@@ -292,13 +302,24 @@ function ScoreGauge({ score, size = 160, strokeWidth = 14 }: { score: number; si
 
 
 export default function GeneratePage() {
+  const { data: session, status: authStatus } = useSession()
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
   const projectId = params.id as string
   const recipeId = searchParams.get('recipeId') || ''
   const displayFormat = searchParams.get('displayFormat') || 'MONOLOGUE'
-  const customInstructions = searchParams.get('instructions') || ''
+  const selectionId = searchParams.get('selectionId') || ''
+  const legacyInstructions = searchParams.has('instructions')
+  const inputRequired = legacyInstructions || searchParams.get('inputRequired') === '1'
+
+  // Remove legacy private query values while retaining an explicit re-selection requirement.
+  useEffect(() => {
+    if (legacyInstructions) {
+      const query = new URLSearchParams({ recipeId, displayFormat, inputRequired: '1' })
+      router.replace(`/interview/projects/${projectId}/generate?${query}`)
+    }
+  }, [legacyInstructions, recipeId, displayFormat, projectId, router])
 
   // recipeId が未指定の場合はスキル選択ページへリダイレクト
   useEffect(() => {
@@ -323,6 +344,36 @@ export default function GeneratePage() {
   const contentRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const inFlightRef = useRef(false)
+  const activeRef = useRef(false)
+  const [recovery, setRecovery] = useState<{ scope: ArticleIntentScope; intent: ArticleIntent; view: ArticleOperationView | null } | null>(null)
+  const recoveryRef = useRef<typeof recovery>(null)
+  const [storageRevision, setStorageRevision] = useState(0)
+  const [operationBusy, setOperationBusy] = useState(false)
+  const cancelRef = useRef(false)
+  const contextKey = JSON.stringify([storageRevision, authStatus, session?.user?.id || null, projectId, recipeId, displayFormat, selectionId, inputRequired])
+  const contextRef = useRef(contextKey)
+  contextRef.current = contextKey
+
+  useEffect(() => {
+    activeRef.current = true
+    return () => {
+      activeRef.current = false
+      abortRef.current?.abort()
+      abortRef.current = null
+      inFlightRef.current = false
+    }
+  }, [contextKey])
+
+  useEffect(() => {
+    const changed = (event: StorageEvent) => {
+      const entry = recoveryRef.current
+      if (!entry) return
+      const key = 'interview-article-intent:v1:' + entry.scope.actorScope + ':' + encodeURIComponent(entry.scope.projectId)
+      if (event.key === null || event.key === key) setStorageRevision(value => value + 1)
+    }
+    window.addEventListener('storage', changed)
+    return () => window.removeEventListener('storage', changed)
+  }, [])
 
   // Auto-scroll
   useEffect(() => {
@@ -331,150 +382,156 @@ export default function GeneratePage() {
     }
   }, [generatedText, status])
 
-  const startGeneration = async () => {
-    if (inFlightRef.current) return
-    if (!recipeId) {
-      setError('スキルが選択されていません。前の画面に戻ってスキルを選択してください。')
-      setStatus('error')
-      return
-    }
-    inFlightRef.current = true
-
-    setStatus('generating')
-    setGeneratedText('')
-    setError('')
+  const remember = (value: typeof recovery) => { recoveryRef.current = value; setRecovery(value) }
+  const applyOperation = (view: ArticleOperationView) => {
+    const current = recoveryRef.current
+    if (!current || current.intent.operationId !== view.operationId || current.scope.actorScope !== view.actorScope) return
+    remember({ ...current, view })
     setLimitAction(null)
-    setProviderConfigurationError(false)
-    setProgress('接続中...')
-    setThumbnailUrl(null)
-    setShowCelebration(false)
-    setProofScore(null)
-
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    try {
-      const res = await fetch('/api/interview/articles/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId,
-          recipeId,
-          displayFormat,
-          customInstructions: customInstructions || undefined,
-        }),
-        signal: controller.signal,
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || `HTTP ${res.status}`)
-      }
-
-      const reader = res.body?.getReader()
-      if (!reader) throw new Error('ストリーム読み取り失敗')
-
-      const decoder = new TextDecoder()
-      let buffer = ''
-      let receivedDone = false
-      let receivedError = false
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const jsonStr = line.slice(6).trim()
-          if (!jsonStr) continue
-
-          try {
-            const event = JSON.parse(jsonStr)
-            switch (event.type) {
-              case 'progress':
-                setProgress(event.step)
-                break
-              case 'chunk':
-                setGeneratedText((prev) => prev + event.text)
-                break
-              case 'done': {
-                receivedDone = true
-                const eid = event.draftId
-                setDraftId(eid)
-                setWordCount(event.wordCount)
-                setStatus('done')
-                setShowCelebration(true)
-
-                // Auto-generate header image
-                fetch(`/api/interview/projects/${projectId}/thumbnail`, { method: 'POST' })
-                  .then(r => r.json())
-                  .then(data => {
-                    if (data.success && data.thumbnailUrl) setThumbnailUrl(data.thumbnailUrl)
-                  })
-                  .catch(() => {})
-
-                // Auto-run proofread for score
-                if (eid) {
-                  setProofScoreLoading(true)
-                  fetch(`/api/interview/articles/${eid}/proofread`, { method: 'POST' })
-                    .then(r => r.json())
-                    .then(data => {
-                      if (data.success && data.score !== undefined) setProofScore(data.score)
-                    })
-                    .catch(() => {})
-                    .finally(() => setProofScoreLoading(false))
-                }
-                break
-              }
-              case 'error':
-                receivedError = true
-                setError(event.message)
-                setLimitAction(event.code === 'ARTICLE_LIMIT'
-                  ? event.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : event.upgradePath === '/interview/pricing' ? 'pricing' : null
-                  : null)
-                setProviderConfigurationError(event.code === 'ARTICLE_PROVIDER_CONFIGURATION')
-                setStatus('error')
-                break
-            }
-          } catch {
-            // parse failure — ignore
-          }
-        }
-      }
-
-      if (!receivedDone && !receivedError) {
-        throw new Error('記事生成が途中で終了しました。再試行してください。')
-      }
-    } catch (e: any) {
-      if (e.name === 'AbortError') {
-        setStatus('idle')
-        setProgress('キャンセルされました')
-        return
-      }
-      setError(e.message || '記事生成に失敗しました')
+    if (view.state === 'completed' && view.result) {
+      setDraftId(view.result.draftId); setWordCount(view.result.wordCount); setStatus('done'); setError('')
+      setProgress('保存済みの記事を確認しました。エディタから記事を開けます。')
+    } else if (view.state === 'failed') {
       setStatus('error')
-    } finally {
-      inFlightRef.current = false
+      setError(view.code === 'ARTICLE_LIMIT' ? `本日の記事生成上限（${view.limit}回）に達しました。` : '前の生成は完了しませんでした。保存済みの記事を確認してから、新しい生成を開始できます。')
+      setLimitAction(view.code === 'ARTICLE_LIMIT' ? view.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : view.upgradePath === '/interview/pricing' ? 'pricing' : null : null)
+    } else {
+      setStatus('idle'); setError('')
+      setProgress(view.state === 'cancelled' ? '前の生成は取り消されました。'
+        : view.state === 'cancelling' ? '取消処理中です。元の処理が停止するまで新しい生成は開始できません。'
+        : view.state === 'missing' ? '保存結果はまだ確認できません。新しく生成せず、結果を再確認するか、この処理を取り消してください。'
+        : '前の記事生成を処理中です。結果を再確認してください。')
     }
   }
-
-  const cancelGeneration = () => { abortRef.current?.abort() }
-
-  useEffect(() => {
-    if (recipeId && status === 'idle') {
-      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
-      if (navigation?.type === 'reload') {
-        setProgress('ページを再読み込みしました。再生成する場合はボタンを押してください。')
+  const owns = (controller: AbortController, key: string) => activeRef.current && contextRef.current === key && abortRef.current === controller && !controller.signal.aborted
+  const sameIntent = (scope: ArticleIntentScope, intent: ArticleIntent) => {
+    try { return readArticleIntent(scope)?.operationId === intent.operationId } catch { return false }
+  }
+  const selectedInstructions = (scope: ArticleIntentScope) => {
+    if (inputRequired) throw new ArticleInputError()
+    return selectionId ? readArticleInput(scope, selectionId, recipeId, displayFormat) : ''
+  }
+  const startGeneration = async () => {
+    if (inFlightRef.current || !activeRef.current || authStatus === 'loading') return
+    if (!recipeId) { setError('スキルを選択してください。'); setStatus('error'); return }
+    inFlightRef.current = true; setOperationBusy(true)
+    abortRef.current?.abort()
+    const controller = new AbortController(); abortRef.current = controller
+    const current = () => owns(controller, contextKey)
+    try {
+      const scope = await getArticleActorScope(projectId, controller.signal)
+      if (!current()) return
+      const customInstructions = selectedInstructions(scope)
+      const { intent, created } = await claimArticleIntent(scope, controller.signal)
+      if (!current()) return
+      remember({ scope, intent, view: null })
+      const canApply = () => current() && sameIntent(scope, intent)
+      if (!created) {
+        const view = await readArticleOperation(scope, intent.operationId, 'GET', controller.signal)
+        if (canApply()) applyOperation(view)
         return
       }
-      startGeneration()
+      setStatus('generating'); setGeneratedText(''); setError(''); setLimitAction(null)
+      setProviderConfigurationError(false); setProgress('接続中...'); setThumbnailUrl(null)
+      setShowCelebration(false); setProofScore(null); setProofScoreLoading(false)
+      await readArticleGeneration({ projectId, recipeId, displayFormat, customInstructions: customInstructions || undefined, operationId: intent.operationId, actorScope: scope.actorScope }, controller.signal, event => {
+        if (!canApply()) return
+        switch (event.type) {
+          case 'operation': applyOperation(event.operation); break
+          case 'progress': setProgress(event.step); break
+          case 'chunk': setGeneratedText(prev => prev + event.text); break
+          case 'error':
+            setError(event.message); setStatus('error')
+            setProviderConfigurationError(event.code === 'ARTICLE_PROVIDER_CONFIGURATION')
+            break
+          case 'done': {
+            const eid = event.draftId
+            applyOperation({ operationId: intent.operationId, actorScope: scope.actorScope, state: 'completed', result: { draftId: eid, wordCount: event.wordCount, version: event.version }, code: null, limit: null })
+            setShowCelebration(true)
+            // Only a fresh, acknowledged generation runs these follow-ups.
+            // Restoring an existing receipt never invokes either AI endpoint.
+            fetch(`/api/interview/projects/${projectId}/thumbnail`, { method: 'POST', signal: controller.signal })
+              .then(r => r.ok ? r.json() : null)
+              .then(data => { if (canApply() && data?.success && typeof data.thumbnailUrl === 'string') setThumbnailUrl(data.thumbnailUrl) })
+              .catch(() => {})
+            setProofScoreLoading(true)
+            fetch(`/api/interview/articles/${eid}/proofread`, { method: 'POST', signal: controller.signal })
+              .then(r => r.ok ? r.json() : null)
+              .then(data => { if (canApply() && data?.success && typeof data.score === 'number' && Number.isFinite(data.score) && data.score >= 0 && data.score <= 100) setProofScore(data.score) })
+              .catch(() => {})
+              .finally(() => { if (canApply()) setProofScoreLoading(false) })
+            break
+          }
+        }
+      })
+    } catch (error: unknown) {
+      if (!current()) return
+      setError(articleFailureGuidance(error))
+      setStatus('error')
+    } finally {
+      if (abortRef.current === controller) { inFlightRef.current = false; if (activeRef.current) setOperationBusy(false) }
     }
+  }
+  const recoverGeneration = async (cancel = false) => {
+    const entry = recoveryRef.current
+    if (!entry || (cancel ? cancelRef.current : inFlightRef.current)) return
+    if (cancel) cancelRef.current = true
+    abortRef.current?.abort()
+    const controller = new AbortController(); abortRef.current = controller
+    inFlightRef.current = true; setOperationBusy(true)
+    try {
+      const fresh = await getArticleActorScope(projectId, controller.signal)
+      if (fresh.actorScope !== entry.scope.actorScope || !owns(controller, contextKey) || !sameIntent(entry.scope, entry.intent)) return
+      const view = await readArticleOperation(entry.scope, entry.intent.operationId, cancel ? 'DELETE' : 'GET', controller.signal)
+      if (owns(controller, contextKey) && sameIntent(entry.scope, entry.intent)) applyOperation(view)
+    } catch (error: unknown) {
+      if (owns(controller, contextKey)) { setError(articleFailureGuidance(error)); setStatus('error') }
+    } finally {
+      if (abortRef.current === controller) { inFlightRef.current = false; if (activeRef.current) setOperationBusy(false) }
+      if (cancel) cancelRef.current = false
+    }
+  }
+  const cancelGeneration = () => { void recoverGeneration(true) }
+  const restartGeneration = async () => {
+    const entry = recoveryRef.current
+    if (!entry || inFlightRef.current || !entry.view || !['completed', 'failed', 'cancelled'].includes(entry.view.state)) return
+    inFlightRef.current = true; setOperationBusy(true)
+    abortRef.current?.abort()
+    const controller = new AbortController(); abortRef.current = controller
+    try {
+      const scope = await getArticleActorScope(projectId, controller.signal)
+      if (scope.actorScope !== entry.scope.actorScope || !owns(controller, contextKey)) return
+      selectedInstructions(scope)
+      const view = await readArticleOperation(scope, entry.intent.operationId, 'GET', controller.signal)
+      if (!owns(controller, contextKey) || !['completed', 'failed', 'cancelled'].includes(view.state)) return
+      await clearArticleIntent(scope, entry.intent.operationId, controller.signal)
+      if (!owns(controller, contextKey)) return
+      remember(null); inFlightRef.current = false
+      void startGeneration()
+    } catch (error: unknown) { if (owns(controller, contextKey)) { setError(articleFailureGuidance(error)); setStatus('error') } }
+    finally { if (abortRef.current === controller) { inFlightRef.current = false; setOperationBusy(false) } }
+  }
+
+  useEffect(() => {
+    const controller = new AbortController()
+    abortRef.current = controller
+    const current = () => owns(controller, contextKey)
+    remember(null); setError(''); setGeneratedText(''); setDraftId(null); setWordCount(0); setStatus('idle'); setLimitAction(null)
+    setThumbnailUrl(null); setProofScore(null); setProofScoreLoading(false); setShowCelebration(false)
+    setProviderConfigurationError(false); setMobileDrawerOpen(false); setOperationBusy(false)
+    setProgress('開始ボタンを押すと記事生成を1回使用します。')
+    // Opening, returning to or reloading this page never creates an article.
+    if (authStatus !== 'loading') void getArticleActorScope(projectId, controller.signal).then(async scope => {
+      if (!current()) return
+      const intent = readArticleIntent(scope)
+      if (!intent) return
+      remember({ scope, intent, view: null })
+      const view = await readArticleOperation(scope, intent.operationId, 'GET', controller.signal)
+      if (current() && sameIntent(scope, intent)) applyOperation(view)
+    }).catch(error => { if (current()) { setError(articleFailureGuidance(error)); setStatus('error') } })
+    return () => { controller.abort() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [contextKey])
 
   const progressPercent = status === 'done' ? 100 : status === 'generating' ? 75 : 0
 
@@ -519,13 +576,13 @@ export default function GeneratePage() {
                   <span>AI記事生成</span>
                 </div>
                 <h3 className="text-xl font-bold tracking-tight mb-1 text-slate-900">
-                  {status === 'done' ? '記事が完成しました' : '記事を生成中'}
+                  {status === 'done' ? '記事が完成しました' : status === 'generating' ? '記事を生成中' : '記事生成の確認'}
                 </h3>
                 <p className="text-slate-500 text-sm">
                   {status === 'generating' && (progress || 'AI記事を生成中...')}
                   {status === 'done' && `完了 — ${wordCount.toLocaleString()}文字`}
                   {status === 'error' && 'エラーが発生しました'}
-                  {status === 'idle' && '準備中...'}
+                  {status === 'idle' && '開始前の確認'}
                 </p>
               </div>
               <div className="mb-8">
@@ -544,7 +601,7 @@ export default function GeneratePage() {
                 </div>
                 <div className="space-y-6">
                   {[
-                    { label: '文字起こし解析', stepStatus: 'completed' },
+                    { label: '文字起こし解析', stepStatus: status === 'idle' ? 'pending' : 'completed' },
                     { label: '構成マッピング', stepStatus: status === 'idle' ? 'pending' : 'completed' },
                     { label: 'コンテンツ執筆', stepStatus: status === 'generating' ? 'active' : status === 'done' ? 'completed' : 'pending' },
                     { label: '最終仕上げ', stepStatus: status === 'done' ? 'completed' : 'pending' },
@@ -610,13 +667,13 @@ export default function GeneratePage() {
               <span>AI記事生成</span>
             </div>
             <h3 className="text-xl font-bold tracking-tight mb-1 text-slate-900">
-              {status === 'done' ? '記事が完成しました' : '記事を生成中'}
+              {status === 'done' ? '記事が完成しました' : status === 'generating' ? '記事を生成中' : '記事生成の確認'}
             </h3>
             <p className="text-slate-500 text-sm">
               {status === 'generating' && (progress || 'AI記事を生成中...')}
               {status === 'done' && `完了 — ${wordCount.toLocaleString()}文字`}
               {status === 'error' && 'エラーが発生しました'}
-              {status === 'idle' && '準備中...'}
+              {status === 'idle' && '開始前の確認'}
             </p>
           </div>
 
@@ -639,7 +696,7 @@ export default function GeneratePage() {
             {/* Stepper */}
             <div className="space-y-6">
               {[
-                { label: '文字起こし解析', stepStatus: 'completed' },
+                { label: '文字起こし解析', stepStatus: status === 'idle' ? 'pending' : 'completed' },
                 { label: '構成マッピング', stepStatus: status === 'idle' ? 'pending' : 'completed' },
                 { label: 'コンテンツ執筆', stepStatus: status === 'generating' ? 'active' : status === 'done' ? 'completed' : 'pending' },
                 { label: '最終仕上げ', stepStatus: status === 'done' ? 'completed' : 'pending' },
@@ -699,8 +756,23 @@ export default function GeneratePage() {
 
         {/* ── Main Canvas ── */}
         <main className="flex-1 p-3 sm:p-6 md:p-8 pb-24 md:pb-8 overflow-y-auto relative" ref={contentRef}>
+          {recovery && (
+            <div className="max-w-[850px] mx-auto bg-white rounded-xl px-5 py-4 text-sm border border-blue-200 mb-6 space-y-3" role="status">
+              <p>{progress || '前の記事生成の結果を確認してください。'}</p>
+              <div className="flex flex-wrap gap-3">
+                <button disabled={operationBusy} onClick={() => void recoverGeneration()} className="px-4 py-2 rounded-lg bg-blue-100 disabled:opacity-50">生成結果を再確認</button>
+                {!recovery.view || ['pending', 'cancelling', 'missing', 'busy'].includes(recovery.view.state) ? (
+                  <button disabled={cancelRef.current} onClick={cancelGeneration} className="px-4 py-2 rounded-lg bg-slate-100">前の生成を取り消す</button>
+                ) : (
+                  <button disabled={operationBusy} onClick={() => void restartGeneration()} className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50">新しい記事を生成（1回使用）</button>
+                )}
+                {recovery.view?.result && <a href={`/interview/projects/${projectId}/edit?draftId=${recovery.view.result.draftId}`} className="px-4 py-2 rounded-lg bg-blue-100">保存済みの記事を開く</a>}
+                <a href={`/interview/projects/${projectId}`} className="px-4 py-2 rounded-lg bg-slate-100">記事一覧を確認</a>
+              </div>
+            </div>
+          )}
           {/* Error display */}
-          {status === 'idle' && recipeId && (
+          {status === 'idle' && recipeId && !recovery && (
             <div className="max-w-[850px] mx-auto bg-white rounded-xl px-5 py-4 text-sm border border-blue-200 mb-6 flex flex-wrap items-center justify-between gap-3">
               <p className="text-slate-700">{progress || '記事生成の準備ができました。'}</p>
               <button onClick={startGeneration} className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">
@@ -716,6 +788,7 @@ export default function GeneratePage() {
                   <p className="font-medium mb-1">エラーが発生しました</p>
                   <p className="text-red-500">{error}</p>
                   {limitAction && <a href={limitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="mt-3 inline-block font-semibold text-blue-700 underline">{limitAction === 'contact' ? '追加枠を相談する' : 'プランを見る'}</a>}
+                  <a href={`/interview/projects/${projectId}/skill`} className="mt-3 mr-4 inline-block font-semibold text-blue-700 underline">スキル選択に戻る</a>
                   {providerConfigurationError && <a href={SUPPORT_CONTACT_URL} target="_blank" rel="noreferrer" className="mt-3 inline-block font-semibold text-blue-700 underline">サポートに問い合わせる</a>}
                 </div>
               </div>
@@ -848,7 +921,7 @@ export default function GeneratePage() {
                   {status === 'generating' && (progress || 'AI記事を生成中...')}
                   {status === 'done' && `完了 — ${wordCount.toLocaleString()}文字`}
                   {status === 'error' && 'エラーが発生しました'}
-                  {status === 'idle' && '準備中...'}
+                  {status === 'idle' && '開始前の確認'}
                 </span>
               </div>
               <div className="w-full h-1.5 bg-blue-50 rounded-full overflow-hidden">

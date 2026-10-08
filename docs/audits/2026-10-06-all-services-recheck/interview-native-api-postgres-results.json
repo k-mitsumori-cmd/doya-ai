@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-10-08T04:11:50.234Z",
+  "expected": 9,
+  "passed": 9,
+  "cases": [
+    "Native actual selection/handoff -> actual POST/helper/private PG: exact input, one UUID, one quota, one saved draft, one set of follow-ups",
+    "Native reload recovers actual saved PG draft with no provider or usage replay; missing private handoff preserves old receipt",
+    "Actual API ownership rejects foreign account recovery without writes; original account restores by GET",
+    "Lost actual transaction acknowledgement recovers committed draft and counted quota by GET without another provider or follow-up",
+    "Native second-tab DELETE holds actual reservation until worker poll aborts provider, then refunds once without saving draft or duplicate POST",
+    "Actual FREE five explicit generations count five; sixth returns persistent native pricing cap before provider and draft write",
+    "Actual stored quota rejection survives native reload through GET without resending generation",
+    "Malformed actual quota JSON rolls admission back; native UI retains unknown intent and never automatically regenerates",
+    "Actual guest cookie parser and legacy native handoff preserve two-article policy without charging malformed account ledger"
+  ],
+  "providers": 8,
+  "http": {
+    "posts": 11,
+    "gets": 50,
+    "deletes": 1
+  },
+  "sourceHashes": {
+    "src/app/interview/projects/[id]/generate/page.tsx": "6a9e3146cc38af0aa9ef248d4da31e99f9588dbc8295355e14297cac91176579",
+    "src/app/interview/projects/[id]/skill/page.tsx": "e8f8c51375194f71ea75385943af632df924820d014532ba742e2f36be8711f5",
+    "src/app/interview/projects/[id]/recipe/page.tsx": "f892988c8dacfcb8ba6c4730139e60b62f226b3ac8e290f50d89376464a19e36",
+    "src/lib/interview/article-input-client.ts": "017b22eb9feeec24f48295af393de4495507631f85f1cf776c0ae66f38feda7d",
+    "src/lib/interview/use-article-input-navigation.ts": "ecc4a320fc18d7cc37c069fd8e0c79cfaf30e34f3236a11e2faf64268f318c8f",
+    "src/lib/interview/article-operation-client.ts": "95fa4bc8d2f0b8a446d5c5644c56032e79ef84ef1cd960f06960042c7809b564",
+    "src/lib/interview/article-intent-client.ts": "4d8976a2b0c0e6a037a01f7d57efc6da0f7286d5c4800421d3c80e3e51184bc1",
+    "src/lib/interview/article-stream-client.ts": "41578f7ec17e8ec7609e9d95029539d65d5e67b0068585e373b97dd8b683f15d",
+    "src/app/api/interview/articles/generate/route.ts": "3af157c649827926f4faaebccb1451ebdad30dc259a7d5c488223b6378466128",
+    "src/lib/interview/article-operation.ts": "a15bc3970235077fcca216f19cde5c41d925958544e474f00a5caef61b1c030a",
+    "src/lib/interview/article-budget.ts": "2ed544e20f6316e689dcd7713c4aa146b974b45a152486b3770cbc150ef351cc",
+    "src/lib/interview/access.ts": "6636478ea96697be077f24f73e140e89787530aa2b22e04b4be9b7a814fd9032",
+    "src/lib/operational-json.ts": "84dd4a01b6a1c7c3878d6a64e9cebfc4c85414ea3d88d95e9070595a01a58884",
+    "src/lib/interview/gemini-request.ts": "5721ed946f39a11d1591da293914a1f23dfb5e69af7e0bdeb9cfbc7519582b04",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-input-navigation-native.cjs": "76c31fcb230f2e849b943c56f2d62030922adc8c06291d7f7b981b55a91b0068",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-article-route-postgres.cjs": "574afbbe0adfc32046f4601495ca5fcc41f20660a42740af98799d0ac1ee1305",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-native-api-postgres.cjs": "4fb7bd6db72dff10fc955944f95bd90b43b0ab8a2c5e9276e3fc7adcf985e1bf"
+  },
+  "scope": "Native Chrome actual selection/generation/handoff/intent/protocol/stream -> real localhost streaming HTTP -> actual article POST/GET/DELETE/access/helper/budget -> actual ORM draft/project/recipe updates on private Unix PostgreSQL. Synthetic session/provider/prompt/metrics/aux APIs/router/motion, native two-second cancellation poll. Simplified DMMF schema with actual FK; not native Next bundle/hydration/auth session, real provider or production/customer DB proof."
+}

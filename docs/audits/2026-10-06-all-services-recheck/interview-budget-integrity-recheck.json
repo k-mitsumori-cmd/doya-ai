@@ -1,0 +1,69 @@
+{
+  "checkedAt": "2026-10-08T04:00:08.924654+00:00",
+  "status": "local-not-released",
+  "fixes": [
+    "Validate existing article budget JSON, actual calendar date, nonnegative integer count, SQL integer range and complete guest-transfer markers under the counter row lock",
+    "Reserve/refund entry points always use a transaction so row validation and counter mutation share the same lock",
+    "Guest article/aux daily budget transfer validates both source and account counter under row locks, rejects overflow and rolls back ownership and usage together"
+  ],
+  "confirmedBaselines": [
+    "interview-budget-corruption-negative-baseline/interview-budget-corruption-postgres.log",
+    "interview-budget-corruption-transfer-baseline/interview-budget-corruption-postgres.log"
+  ],
+  "fixtureFailure": "interview-budget-corruption-fixture-read-failure records a read of unseeded required columns in minimal schema. Corrected to selecting only userId; assertions unchanged. Not a production defect.",
+  "currentPostgresProofs": [
+    {
+      "report": "interview-article-operation-postgres-results.json",
+      "passed": 30,
+      "supervisor": "interview-article-operation-postgres-supervisor.json",
+      "sourceHashesCurrent": true,
+      "clusterStoppedRemoved": true,
+      "scope": "Actual durable article helper, transaction budget/refund and guest-claim transfer with private Unix-socket PostgreSQL. Minimal tables and synthetic draft write callback, no actual generation route, provider, client durable recovery, Next server, customer or production data."
+    },
+    {
+      "report": "interview-article-route-postgres-results.json",
+      "passed": 21,
+      "supervisor": "interview-article-route-postgres-supervisor.json",
+      "sourceHashesCurrent": true,
+      "clusterStoppedRemoved": true,
+      "scope": "Actual POST/GET/DELETE route, durable helper, budget, ownership and guest-cookie parser on private Unix PostgreSQL. Actual ORM draft/project/recipe writes with synthetic session/provider/prompts/metrics and controlled cancellation poll ticks. Native Request/Response SSE; not native Next server/auth cookies/browser durable client, external provider, production/customer data."
+    },
+    {
+      "report": "interview-budget-corruption-postgres-results.json",
+      "passed": 14,
+      "supervisor": "interview-budget-corruption-postgres-supervisor.json",
+      "sourceHashesCurrent": true,
+      "clusterStoppedRemoved": true,
+      "scope": "Actual helper/reservation SQL in private Unix PostgreSQL with malformed stored quota values. No provider, customer DB, production data or native browser."
+    },
+    {
+      "report": "interview-native-api-postgres-results.json",
+      "passed": 9,
+      "supervisor": "interview-native-api-postgres-supervisor.json",
+      "sourceHashesCurrent": true,
+      "clusterStoppedRemoved": true,
+      "scope": "Native Chrome actual selection/generation/handoff/intent/protocol/stream -> real localhost streaming HTTP -> actual article POST/GET/DELETE/access/helper/budget -> actual ORM draft/project/recipe updates on private Unix PostgreSQL. Synthetic session/provider/prompt/metrics/aux APIs/router/motion, native two-second cancellation poll. Simplified DMMF schema with actual FK; not native Next bundle/hydration/auth session, real provider or production/customer DB proof."
+    }
+  ],
+  "focusedSecurity": {
+    "articleLimitExitCode": 0,
+    "guestClaimExitCode": 0
+  },
+  "lint": {
+    "exitCode": 0,
+    "warnings": 0
+  },
+  "typecheck": {
+    "session": 21824,
+    "exitCode": 0
+  },
+  "priorFullSecurity": {
+    "session": 54936,
+    "exitCode": 0,
+    "limitation": "Completed before final budget/guest-claim edits; does not prove latest source. Fresh117 frozen gate includes full build/security."
+  },
+  "gatePrepared": "docs/audits/2026-10-06-all-services-recheck/interview-generation-release-cf9ee60c-0005-4247-bbc5-5bf42799fcee",
+  "gateStatus": "running",
+  "wholeGoal": "All17services2074criteria remain incomplete; not zero-defect or production reflection claim.",
+  "gateSession": 18203
+}

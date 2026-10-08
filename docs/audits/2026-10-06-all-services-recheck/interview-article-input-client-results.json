@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-08T04:11:16.629Z",
+  "passed": 17,
+  "expected": 17,
+  "cases": [
+    "Exact instructions survive repeated same actor project recipe format reads",
+    "Handoff token contains only a fresh UUID and no private text",
+    "Different actor cannot read or discard the original selection",
+    "Different project cannot read or discard the original selection",
+    "Changed recipe or format cannot silently reuse previous instructions",
+    "Reloaded module fails explicitly instead of returning blank instructions",
+    "Expiry at one hour requires reselection without fallback",
+    "Memory bound rejects a new selection without evicting active instructions",
+    "Expired selections release bounded memory for new navigation",
+    "Empty instructions remain an intentional valid selection",
+    "Instruction length is bounded at the same 20000 character contract",
+    "Invalid scope identifiers and formats fail before storing anything",
+    "Invalid or unknown selection UUID never returns private data",
+    "Invalid or colliding UUID cannot overwrite the first selection",
+    "Only the producing scope can discard a failed navigation",
+    "Caller mutation of the supplied scope cannot change stored ownership",
+    "SSR cannot retain user input in shared server module memory"
+  ],
+  "sourceHashes": {
+    "src/lib/interview/article-input-client.ts": "017b22eb9feeec24f48295af393de4495507631f85f1cf776c0ae66f38feda7d",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-article-input-client.cjs": "ee775d56bb8745f129644cf816a43050d982acb5b2ae4c057fd384722b204e4e"
+  },
+  "scope": "Actual in-memory handoff module with synthetic clock and UUID, forbidden storage proxies. Not native browser reload, SPA bundle identity, mounted navigation or actual API/DB proof."
+}

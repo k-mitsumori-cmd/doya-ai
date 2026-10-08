@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-08T04:11:31.056Z",
+  "expected": 8,
+  "passed": 8,
+  "cases": [
+    "Native current selection -> SPA generation: private input absent from URL and no automatic generation",
+    "Native explicit double click and duplicate terminal: one UUID POST, exact body input, one set of follow-ups, metadata-only storage",
+    "Native reload restores saved article; lost memory blocks regeneration visibly and retains previous receipt",
+    "Native new tab/reload-style missing handoff fails before generation and provides reselection",
+    "Native legacy selection uses the same private in-memory handoff and exact generation body",
+    "Native actor switch clears previous header and cannot reuse another actors private selection",
+    "Native actor ABA restores original saved receipt through GET without generation or AI follow-ups",
+    "Native legacy private query is removed and remains explicitly blocked until reselection"
+  ],
+  "sourceHashes": {
+    "src/app/interview/projects/[id]/generate/page.tsx": "6a9e3146cc38af0aa9ef248d4da31e99f9588dbc8295355e14297cac91176579",
+    "src/app/interview/projects/[id]/skill/page.tsx": "e8f8c51375194f71ea75385943af632df924820d014532ba742e2f36be8711f5",
+    "src/app/interview/projects/[id]/recipe/page.tsx": "f892988c8dacfcb8ba6c4730139e60b62f226b3ac8e290f50d89376464a19e36",
+    "src/lib/interview/article-input-client.ts": "017b22eb9feeec24f48295af393de4495507631f85f1cf776c0ae66f38feda7d",
+    "src/lib/interview/use-article-input-navigation.ts": "ecc4a320fc18d7cc37c069fd8e0c79cfaf30e34f3236a11e2faf64268f318c8f",
+    "src/lib/interview/article-operation-client.ts": "95fa4bc8d2f0b8a446d5c5644c56032e79ef84ef1cd960f06960042c7809b564",
+    "src/lib/interview/article-intent-client.ts": "4d8976a2b0c0e6a037a01f7d57efc6da0f7286d5c4800421d3c80e3e51184bc1",
+    "src/lib/interview/article-stream-client.ts": "41578f7ec17e8ec7609e9d95029539d65d5e67b0068585e373b97dd8b683f15d",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-input-navigation-native.cjs": "76c31fcb230f2e849b943c56f2d62030922adc8c06291d7f7b981b55a91b0068"
+  },
+  "scope": "Native Chrome actual selection, generation, navigation hook, in-memory handoff, metadata, protocol and stream modules under StrictMode with real HTTP/fetch/UTF8/native Web Locks/localStorage/history/reload. Synthetic auth/router/motion/API receipts/provider. CommonJS fixture registry retains one shared module in SPA; not actual Next bundle/hydration/auth or actual route/database quota proof. No production/customer DB or paid calls."
+}

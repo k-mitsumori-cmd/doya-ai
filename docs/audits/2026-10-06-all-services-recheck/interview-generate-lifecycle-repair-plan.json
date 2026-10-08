@@ -1,0 +1,251 @@
+{
+  "checkedAt": "2026-10-08T04:22:29.513939+00:00",
+  "status": "frozen118-unchanged-and-actual-next6-passed-ready-for-reviewed-publication",
+  "baseline": "interview-generate-lifecycle-baseline.json",
+  "scope": "Actual mounted client lifecycle defects; no actual provider or DB impact claim",
+  "confirmed": [
+    {
+      "issue": "Component unmount does not abort the pending article response; late completion starts thumbnail and proofread POST",
+      "evidenceCases": [
+        0,
+        4
+      ]
+    },
+    {
+      "issue": "Same project remount under navigate classification starts another article POST without durable operation identity",
+      "evidenceCases": [
+        1
+      ],
+      "limitation": "Native browser history and actual server ledger impact still need proof"
+    },
+    {
+      "issue": "Duplicate SSE done event starts thumbnail and proofread twice each",
+      "evidenceCases": [
+        3
+      ]
+    }
+  ],
+  "positiveControl": "Reload navigation classification does suppress the initial article POST",
+  "sourceReviewCandidates": [
+    {
+      "issue": "Custom instructions are included in URL query from current skill and legacy recipe pages",
+      "state": "Confirmed actual mounted navigation serialization on both pages; no third-party exposure claim"
+    },
+    {
+      "issue": "Clickable custom skill cards do nothing in current and legacy pages",
+      "state": "Confirmed actual mounted DOM click on both pages"
+    },
+    {
+      "issue": "Project API503 is displayed as transcription not completed",
+      "state": "Confirmed actual mounted current skill page with synthetic API503"
+    }
+  ],
+  "requiredRepairs": [
+    "Cancel owned pending client transport on unmount, actor/project/draft changes; no late automatic AI calls",
+    "Validate/bound SSE header/body/event stream and terminal acknowledgement before side effects",
+    "At most one follow-up for one accepted completed draft; no replay on duplicate events or stale callback",
+    "Persist only operation metadata and recover saved article rather than automatically regenerate after lost acknowledgement/remount",
+    "Actual native navigation and private PostgreSQL route/provider-count proof before no-duplicate or quota claims",
+    "Preserve user-approved article generation/regeneration counts; do not redefine distinct explicit regeneration as free",
+    "Verify new and legacy navigation preserves draft without leaking freeform instructions into URLs; provide meaningful custom skill action",
+    "Fresh unchanged comprehensive gate and exact reviewed release; keep full17-service matrix incomplete until verified"
+  ],
+  "productionWrites": false,
+  "skillNavigationBaseline": {
+    "report": "interview-skill-navigation-baseline.json",
+    "passed": 5,
+    "scope": "Actual full mounted current skill and legacy recipe TSX under React StrictMode with native DOM click, synthetic recipes/project HTTP and captured router.push. No real navigation, logged private data, provider, production/customer DB or third-party URL access claim."
+  },
+  "clientRepair": {
+    "files": [
+      "src/lib/interview/article-stream-client.ts",
+      "src/app/interview/projects/[id]/generate/page.tsx"
+    ],
+    "transportEvidence": "interview-article-stream-client-results.json",
+    "transportCases": 24,
+    "mountedEvidence": "interview-generate-lifecycle-mounted-results.json",
+    "mountedCases": 10,
+    "implemented": [
+      "Bounded310second headers/body deadline; UTF8/body/event/text validation; exactly first validated terminal event",
+      "Context-owned request cancellation on unmount/project/input changes; suppress late callbacks and automatic follow-ups",
+      "StrictMode effect probe deferred before generation admission",
+      "Preserve validated pricing/contact quota actions; unknown save outcome tells user to inspect saved articles"
+    ],
+    "notProven": [
+      "Native browser history and auth account changes",
+      "Same-project remount durable replay and cross-tab duplicate suppression",
+      "Atomic operation receipt and article quota reservation/save/refund",
+      "Private PostgreSQL exact route integration",
+      "All17-service completion, full fresh build/security gate and production interview reflection"
+    ],
+    "lint": {
+      "exitCode": 0,
+      "scope": "Only changed GeneratePage and article stream client",
+      "warnings": "Existing page font-display/custom-font and img warnings remain; no lint errors"
+    },
+    "nativeSession": 99154,
+    "typecheckSession": 53132,
+    "nativeEvidence": "interview-generate-lifecycle-native-results.json",
+    "nativeCases": 6,
+    "nativeSessionExitCode": 0,
+    "articleLimitRegression": {
+      "command": "node scripts/security-regression/verify-interview-article-limit.cjs",
+      "exitCode": 0,
+      "scope": "Existing synthetic API regression only; no private PG or provider proof"
+    },
+    "typecheck": {
+      "command": "npx tsc --noEmit --incremental false",
+      "session": 53132,
+      "exitCode": 0,
+      "endedAt": "2026-10-08T03:07:42.227338+00:00"
+    }
+  },
+  "durableHelperRepair": {
+    "files": [
+      "src/lib/interview/article-operation.ts",
+      "src/lib/interview/article-budget.ts"
+    ],
+    "evidence": "interview-article-operation-postgres-results.json",
+    "supervisor": "interview-article-operation-postgres-supervisor.json",
+    "passed": 30,
+    "scope": "Actual helpers and actual guest-claim transfer in private Unix PostgreSQL; synthetic draft-save callback and simplified schema. Not actual generation route or durable client integration.",
+    "invariants": [
+      "Actor/project/UUID receipt; exact input fingerprint; one active generation per project",
+      "Atomic budget reservation and pending receipt, atomic draft callback and completion receipt",
+      "Pending cancellation enters cancelling and holds active pointer/quota until worker stops or lease expires",
+      "Terminal failure/refund exactly once; old guest cleanup after actual account transfer refunds both copied ledgers",
+      "Late completion after cancellation/expiry cannot write a draft; strict matching of actual saved draft before completion",
+      "Receipt/admission/refund write failures roll back atomically"
+    ],
+    "cleanup": {
+      "stopExitCode": 0,
+      "postStopStatusExitCode": 3,
+      "privateFolderRemoved": true
+    },
+    "remaining": [
+      "Strict ledger candidate verification",
+      "Actual Next bundle/navigation/auth and full frozen gate",
+      "Exact reviewed release and public verification",
+      "Full17service2074criterion audit"
+    ],
+    "typecheckSession": 16384,
+    "typecheckLatestSourceNotYetProven": true,
+    "lint": {
+      "exitCode": 0,
+      "log": "/tmp/doya-interview-operation-lint.log"
+    },
+    "typecheckInitialPass": {
+      "session": 16384,
+      "exitCode": 0,
+      "limitation": "Started before final cancelling-state change; fresh unchanged comprehensive gate still required"
+    }
+  },
+  "generationRouteRepair": {
+    "file": "src/app/api/interview/articles/generate/route.ts",
+    "report": "interview-article-route-postgres-results.json",
+    "supervisor": "interview-article-route-postgres-supervisor.json",
+    "passed": 21,
+    "implemented": [
+      "Bounded128KiB input and actor/project/UUID admission before provider; legacy no-UUID requests409 before usage",
+      "Owned private no-store GET/DELETE and opaque actor-scope handshake; saved-draft ownership/existence recheck",
+      "Atomic draft/version/project/recipe updates and operation completion; replay never generates again",
+      "Cross-tab cancellation polling stops worker and provider before terminal refund; cancellation holds active reservation until worker cleanup",
+      "Malformed provider JSON and UTF8 fail closed rather than saving partial text"
+    ],
+    "verification": [
+      "21 actual route/helper/ORM cases on private Unix PostgreSQL including lost commit ack, cancelled worker, cap, guest, rollback, deleted draft",
+      "Existing security article limit regression exit0 after UUID/native Request and helper fixture update",
+      "Focused route lint exit0"
+    ],
+    "cleanup": {
+      "stopExitCode": 0,
+      "postStopStatusExitCode": 3,
+      "privateFolderRemoved": true
+    },
+    "typecheckSession": 52607,
+    "typecheckState": "session60171 terminal0 for route/helper/client; later selection edits require current session41187",
+    "typecheckFreshAfterLastParserChangeNotYetProven": false,
+    "releaseBlockedUntil": [
+      "Strict ledger candidate verification",
+      "Actual Next bundle/navigation/auth and full frozen gate",
+      "Exact reviewed release and public verification",
+      "Full17service2074criterion audit"
+    ]
+  },
+  "currentClientIntegration": {
+    "checkedAt": "2026-10-08T03:49:06.264589+00:00",
+    "status": "local-not-released",
+    "privateInputReport": "interview-private-input-handoff-recheck.json",
+    "currentSourceVerifiedChecks": [
+      {
+        "report": "interview-article-recovery-mounted-results.json",
+        "passed": 24,
+        "changedSources": [],
+        "scope": "Actual full GeneratePage, protocol, stream and metadata modules mounted under StrictMode; native DOM/Response/AbortController and synthetic queued locks/shared storage/server/session/router/motion. Not native browser/history, Next auth, actual route or DB quota/provider proof."
+      },
+      {
+        "report": "interview-article-stream-client-results.json",
+        "passed": 30,
+        "changedSources": [],
+        "scope": "Actual client reader with native Response streams, UTF8 and AbortController; controlled timers/fetch. Not UI, native browser, server receipt, provider or database verification."
+      },
+      {
+        "report": "interview-article-operation-client-results.json",
+        "passed": 25,
+        "changedSources": [],
+        "scope": "Actual actor handshake and operation response reader with native Request/Response/body streams; synthetic fetch/timers. Not UI, native history, Next server, database, provider or production proof."
+      },
+      {
+        "report": "interview-article-intent-client-results.json",
+        "passed": 15,
+        "changedSources": [],
+        "scope": "Actual metadata client with synthetic shared storage/queued lock and hostile timer callbacks. No browser-native Web Locks, mounted wizard, provider, DB or deployment claim."
+      },
+      {
+        "report": "interview-skill-selection-recovery-results.json",
+        "passed": 18,
+        "changedSources": [],
+        "scope": "Actual full current and legacy selection TSX under StrictMode/JSDOM with native DOM, Response, AbortController; synthetic session/fetch/router/NextLink. Does not prove browser navigation, private input handoff, provider/DB or production behavior."
+      },
+      {
+        "report": "interview-article-input-client-results.json",
+        "passed": 17,
+        "changedSources": [],
+        "scope": "Actual in-memory handoff module with synthetic clock and UUID, forbidden storage proxies. Not native browser reload, SPA bundle identity, mounted navigation or actual API/DB proof."
+      },
+      {
+        "report": "interview-input-navigation-native-results.json",
+        "passed": 8,
+        "changedSources": [],
+        "scope": "Native Chrome actual selection, generation, navigation hook, in-memory handoff, metadata, protocol and stream modules under StrictMode with real HTTP/fetch/UTF8/native Web Locks/localStorage/history/reload. Synthetic auth/router/motion/API receipts/provider. CommonJS fixture registry retains one shared module in SPA; not actual Next bundle/hydration/auth or actual route/database quota proof. No production/customer DB or paid calls."
+      }
+    ],
+    "remaining": [
+      "Strict ledger candidate verification",
+      "Actual Next bundle/navigation/auth and full frozen gate",
+      "Exact reviewed release and public verification",
+      "Full17service2074criterion audit"
+    ],
+    "historicalEvidence": "Earlier auto-POST mounted/native fixtures are superseded and must not be used as current passing source proof.",
+    "nativeApiPostgres": {
+      "report": "interview-native-api-postgres-results.json",
+      "supervisor": "interview-native-api-postgres-supervisor.json",
+      "passed": 9,
+      "sourceHashes": 17,
+      "terminalExitCode": 0,
+      "privateClusterStopped": true,
+      "privateClusterRemoved": true,
+      "scope": "Native Chrome actual selection/generation/handoff/intent/protocol/stream -> real localhost streaming HTTP -> actual article POST/GET/DELETE/access/helper/budget -> actual ORM draft/project/recipe updates on private Unix PostgreSQL. Synthetic session/provider/prompt/metrics/aux APIs/router/motion, native two-second cancellation poll. Simplified DMMF schema with actual FK; not native Next bundle/hydration/auth session, real provider or production/customer DB proof."
+    }
+  },
+  "gate": "docs/audits/2026-10-06-all-services-recheck/interview-generation-release-ab51afde-2c99-4b62-952e-a44453222087",
+  "gateStatus": "passed118-unchanged",
+  "actualNextHandoff": {
+    "report": "interview-next-handoff-results.json",
+    "passed": 6,
+    "serverStopped": true
+  },
+  "publicationStatus": "not-yet-committed-or-pushed",
+  "full17Service2074AuditComplete": false,
+  "next": "Publish exact Interview allowlist; observe exact commit CI/production READY and public proof. Then repair confirmed Doyalist unknown-write collection duplication."
+}

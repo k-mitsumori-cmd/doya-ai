@@ -1,0 +1,87 @@
+{
+  "checkedAt": "2026-10-08T03:49:06.264589+00:00",
+  "status": "local-only-not-released",
+  "checks": [
+    {
+      "report": "interview-article-recovery-mounted-results.json",
+      "passed": 24,
+      "changedSources": [],
+      "scope": "Actual full GeneratePage, protocol, stream and metadata modules mounted under StrictMode; native DOM/Response/AbortController and synthetic queued locks/shared storage/server/session/router/motion. Not native browser/history, Next auth, actual route or DB quota/provider proof."
+    },
+    {
+      "report": "interview-article-stream-client-results.json",
+      "passed": 30,
+      "changedSources": [],
+      "scope": "Actual client reader with native Response streams, UTF8 and AbortController; controlled timers/fetch. Not UI, native browser, server receipt, provider or database verification."
+    },
+    {
+      "report": "interview-article-operation-client-results.json",
+      "passed": 25,
+      "changedSources": [],
+      "scope": "Actual actor handshake and operation response reader with native Request/Response/body streams; synthetic fetch/timers. Not UI, native history, Next server, database, provider or production proof."
+    },
+    {
+      "report": "interview-article-intent-client-results.json",
+      "passed": 15,
+      "changedSources": [],
+      "scope": "Actual metadata client with synthetic shared storage/queued lock and hostile timer callbacks. No browser-native Web Locks, mounted wizard, provider, DB or deployment claim."
+    },
+    {
+      "report": "interview-skill-selection-recovery-results.json",
+      "passed": 18,
+      "changedSources": [],
+      "scope": "Actual full current and legacy selection TSX under StrictMode/JSDOM with native DOM, Response, AbortController; synthetic session/fetch/router/NextLink. Does not prove browser navigation, private input handoff, provider/DB or production behavior."
+    },
+    {
+      "report": "interview-article-input-client-results.json",
+      "passed": 17,
+      "changedSources": [],
+      "scope": "Actual in-memory handoff module with synthetic clock and UUID, forbidden storage proxies. Not native browser reload, SPA bundle identity, mounted navigation or actual API/DB proof."
+    },
+    {
+      "report": "interview-input-navigation-native-results.json",
+      "passed": 8,
+      "changedSources": [],
+      "scope": "Native Chrome actual selection, generation, navigation hook, in-memory handoff, metadata, protocol and stream modules under StrictMode with real HTTP/fetch/UTF8/native Web Locks/localStorage/history/reload. Synthetic auth/router/motion/API receipts/provider. CommonJS fixture registry retains one shared module in SPA; not actual Next bundle/hydration/auth or actual route/database quota proof. No production/customer DB or paid calls."
+    }
+  ],
+  "totalCases": 137,
+  "repair": [
+    "Current and legacy selection pass private instructions only via bounded one-hour in-memory UUID entry bound to server-issued opaque actor scope, project, recipe and display format",
+    "Selection navigation performs only owned GET; duplicate clicks, editing, actor/project changes and unmount fence stale handshake",
+    "GeneratePage validates exact memory selection before claiming intent/POST, missing input never becomes blank instructions",
+    "Reload can recover saved receipt without memory input; explicit regeneration validates input before clearing old operation identity",
+    "Legacy private query is scrubbed while retaining inputRequired flag and generation block",
+    "Restart input failures now render error with reselection link while retaining old saved article and receipt"
+  ],
+  "baselineDistinction": {
+    "interview-private-input-fixture-button-failure.log": "Fixture-only button selector omitted Material Symbols icon text; selector fixed. Not a production defect.",
+    "interview-private-input-restart-error-baseline.log": "Confirmed new restart handoff error was set while completed UI hid it; fixed by rendering error status while preserving recovery state."
+  },
+  "lint": {
+    "exitCode": 0,
+    "warnings": 3,
+    "log": "/tmp/doya-interview-private-input-lint.log"
+  },
+  "typecheck": {
+    "session": 42843,
+    "exitCode": 0,
+    "scope": "Current production source including all final handoff edits"
+  },
+  "remaining": [
+    "Strict article usage ledger data validation candidate",
+    "Actual Next bundle/navigation/auth behavior; full fresh frozen build/security gate",
+    "Reviewed production release with CI/READY/public checks",
+    "All17services2074criteria incomplete"
+  ],
+  "nativeApiPostgres": {
+    "report": "interview-native-api-postgres-results.json",
+    "supervisor": "interview-native-api-postgres-supervisor.json",
+    "passed": 9,
+    "sourceHashes": 17,
+    "terminalExitCode": 0,
+    "privateClusterStopped": true,
+    "privateClusterRemoved": true,
+    "scope": "Native Chrome actual selection/generation/handoff/intent/protocol/stream -> real localhost streaming HTTP -> actual article POST/GET/DELETE/access/helper/budget -> actual ORM draft/project/recipe updates on private Unix PostgreSQL. Synthetic session/provider/prompt/metrics/aux APIs/router/motion, native two-second cancellation poll. Simplified DMMF schema with actual FK; not native Next bundle/hydration/auth session, real provider or production/customer DB proof."
+  }
+}

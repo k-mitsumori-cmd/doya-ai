@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-08T04:11:15.316Z",
+  "expected": 25,
+  "passed": 25,
+  "cases": [
+    "Handshake binds opaque actor identity and project without POST or body",
+    "Validated completed  response is accepted",
+    "Validated pending  response is accepted",
+    "Validated cancelling  response is accepted",
+    "Validated cancelled  response is accepted",
+    "Validated missing  response is accepted",
+    "Validated busy  response is accepted",
+    "Validated failed GENERATION_FAILED response is accepted",
+    "Validated failed OPERATION_EXPIRED response is accepted",
+    "Validated failed ARTICLE_LIMIT response is accepted",
+    "Reject wrong actor without following arbitrary data",
+    "Reject wrong operation without following arbitrary data",
+    "Reject wrong status without following arbitrary data",
+    "Reject unsafe draft without following arbitrary data",
+    "Reject missing version without following arbitrary data",
+    "Reject negative count without following arbitrary data",
+    "Reject extra field without following arbitrary data",
+    "Reject wrong cap links without following arbitrary data",
+    "DELETE sends only owned identity in query and preserves first-party contact cap",
+    "401 is login while arbitrary server diagnostics remain unknown",
+    "Body length, UTF8 and JSON bounds fail closed",
+    "Header stall deadline bounds noncooperative fetch without retry",
+    "Body stall deadline cancels reader and does not retry",
+    "Parent abort prevents late response acceptance",
+    "Malformed or pre-aborted intent never invokes transport"
+  ],
+  "sourceHashes": {
+    "src/lib/interview/article-operation-client.ts": "95fa4bc8d2f0b8a446d5c5644c56032e79ef84ef1cd960f06960042c7809b564",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-article-operation-client.cjs": "92500b79d3b8bd70927d33859a36cc962f6c1053777e206dbb013df3cf568453"
+  },
+  "scope": "Actual actor handshake and operation response reader with native Request/Response/body streams; synthetic fetch/timers. Not UI, native history, Next server, database, provider or production proof."
+}

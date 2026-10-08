@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { useArticleInputNavigation } from '@/lib/interview/use-article-input-navigation'
 
 interface Recipe {
   id: string
@@ -76,38 +77,43 @@ export default function SkillSelectionPage() {
   const [displayFormat, setDisplayFormat] = useState('MONOLOGUE')
   const [filterCategory, setFilterCategory] = useState<string | null>(null)
   const [transcriptionReady, setTranscriptionReady] = useState<boolean | null>(null)
+  const [projectError, setProjectError] = useState(false)
 
   const isGuest = sessionStatus !== 'loading' && !session?.user
 
   useEffect(() => {
-    if (isGuest) return
-    // プロジェクトの文字起こし状況を確認
-    fetch(`/api/interview/projects/${projectId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success && data.project) {
-          const hasCompleted = data.project.transcriptions?.some(
-            (t: any) => t.status === 'COMPLETED'
-          )
-          setTranscriptionReady(!!hasCompleted)
-        } else {
-          setTranscriptionReady(false)
-        }
-      })
-      .catch(() => setTranscriptionReady(false))
-  }, [projectId, isGuest])
+    const controller = new AbortController()
+    let current = true
+    setTranscriptionReady(null); setProjectError(false)
+    setSelectedId(null); setCustomInstructions(''); setDisplayFormat('MONOLOGUE')
+    if (sessionStatus === 'authenticated' && session?.user?.id) {
+      void fetch(`/api/interview/projects/${projectId}`, { signal: controller.signal, cache: 'no-store' })
+        .then(async response => {
+          const data = await response.json().catch(() => null)
+          if (!response.ok || !data?.success || !data.project || !Array.isArray(data.project.transcriptions)) throw new Error('Project unavailable')
+          if (current) setTranscriptionReady(data.project.transcriptions.some((t: { status?: unknown } | null) => t?.status === 'COMPLETED'))
+        })
+        .catch(() => { if (current) setProjectError(true) })
+    }
+    return () => { current = false; controller.abort() }
+  }, [projectId, sessionStatus, session?.user?.id])
 
   useEffect(() => {
-    if (isGuest) return
-    fetch('/api/interview/recipes')
-      .then(async (response) => {
-        const data = await response.json().catch(() => null)
-        if (!response.ok || !data?.success || !Array.isArray(data.recipes)) throw new Error('Skill list unavailable')
-        setRecipes(data.recipes)
-      })
-      .catch(() => setListError(true))
-      .finally(() => setLoading(false))
-  }, [isGuest])
+    const controller = new AbortController()
+    let current = true
+    setRecipes([]); setLoading(true); setListError(false); setFilterCategory(null)
+    if (sessionStatus === 'authenticated' && session?.user?.id) {
+      void fetch('/api/interview/recipes', { signal: controller.signal, cache: 'no-store' })
+        .then(async response => {
+          const data = await response.json().catch(() => null)
+          if (!response.ok || !data?.success || !Array.isArray(data.recipes)) throw new Error('Skill list unavailable')
+          if (current) setRecipes(data.recipes)
+        })
+        .catch(() => { if (current) setListError(true) })
+        .finally(() => { if (current) setLoading(false) })
+    }
+    return () => { current = false; controller.abort() }
+  }, [projectId, sessionStatus, session?.user?.id])
 
   const categories = [...new Set(recipes.map((r) => r.category).filter(Boolean))]
   const filtered = filterCategory
@@ -116,16 +122,12 @@ export default function SkillSelectionPage() {
 
   const selectedRecipe = recipes.find((r) => r.id === selectedId)
 
-  const handleGenerate = () => {
-    if (!selectedId) return
-    // クエリパラメータで渡す
-    const params = new URLSearchParams({
-      recipeId: selectedId,
-      displayFormat,
-      ...(customInstructions ? { instructions: customInstructions } : {}),
-    })
-    router.push(`/interview/projects/${projectId}/generate?${params}`)
-  }
+  const { prepareArticle, busy: navigationBusy, error: navigationError } = useArticleInputNavigation({
+    projectId, recipeId: selectedId || '', displayFormat, customInstructions,
+    actorId: session?.user?.id || null, authStatus: sessionStatus,
+  })
+  const handleGenerate = () => { void prepareArticle() }
+
 
   // ゲストユーザーはスキル選択不可 — ログインを促す
   if (isGuest) {
@@ -151,6 +153,17 @@ export default function SkillSelectionPage() {
           </Link>
         </div>
       </motion.div>
+    )
+  }
+
+  if (projectError) {
+    return (
+      <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+        <h2 className="font-bold">プロジェクトを確認できませんでした</h2>
+        <p className="mt-2">通信状態とログイン状態を確認してから、もう一度読み込んでください。</p>
+        <button type="button" onClick={() => window.location.reload()} className="mt-3 font-bold underline">再読み込み</button>
+        <Link href="/interview/projects" className="ml-4 font-bold underline">プロジェクト一覧へ戻る</Link>
+      </div>
     )
   }
 
@@ -263,10 +276,10 @@ export default function SkillSelectionPage() {
           ) : (
             <motion.div className="grid grid-cols-1 md:grid-cols-2 gap-4" variants={containerVariants} initial="hidden" animate="show">
               {/* Custom Skill Card */}
-              <div className="group relative p-5 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#7f19e6]/50 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-3 bg-white/40">
+              <Link href="/interview/skills" className="group relative p-5 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#7f19e6]/50 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-3 bg-white/40">
                 <span className="material-symbols-outlined text-slate-400 text-3xl">add_circle</span>
                 <h3 className="font-bold text-lg text-slate-600">カスタムスキル</h3>
-              </div>
+              </Link>
 
               {/* Recipe Cards */}
               {filtered.map((recipe) => {
@@ -399,13 +412,14 @@ export default function SkillSelectionPage() {
               )}
             </div>
             <div className="p-4 sm:p-6 border-t border-slate-100 bg-slate-50/30">
+              {navigationError && <p role="alert" className="mb-3 text-sm text-red-600">{navigationError}</p>}
               <button
                 onClick={handleGenerate}
-                disabled={!selectedId}
+                disabled={!selectedId || navigationBusy}
                 className="w-full py-3.5 sm:py-4 bg-[#7f19e6] text-white rounded-xl font-bold text-base sm:text-lg shadow-2xl hover:shadow-lg hover:shadow-[#7f19e6]/20 transition-all flex items-center justify-center gap-2 sm:gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined">rocket_launch</span>
-                AI記事を生成する
+                {navigationBusy ? '生成内容を確認中...' : '生成内容を確認'}
               </button>
               <p className="text-center text-[11px] text-slate-500 mt-4 uppercase tracking-wider font-semibold">
                 推定時間: 2-3分

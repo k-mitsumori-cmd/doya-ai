@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-08T04:22:29.513939+00:00",
+  "status": "source-review-gates118-and-actual-next6-passed",
+  "sourceReview": [
+    "Browser opening/reload performs owned GET only; explicit start reserves UUID then POST",
+    "Private instructions use bounded TTL memory, actor/project/recipe/format binding, no URL or persistent storage",
+    "Abort/context/intent fencing surrounds all generation and follow-up application",
+    "One durable receipt/active pointer and quota reservation commit; completion callback/receipt commit together",
+    "Cancelled worker keeps reservation until it stops; no provider overlap after early refund",
+    "Guest transfer and refund use shared locks; invalid daily counters reject transaction",
+    "Provider requires STOP; abnormal/missing/conflicting terminal or text after terminal never saves draft",
+    "Remote main LP changes fast-forwarded without overlaps"
+  ],
+  "reviewLimitations": [
+    "Actual Next handoff6 uses synthetic browser auth session/API responses; server API/DB verified separately in privatePG/nativeAPI probes",
+    "Authenticated production flow and real provider not exercised",
+    "Full17service2074 audit incomplete; Doyalist lost acknowledgement replay is a confirmed pending repair"
+  ],
+  "gate": "docs/audits/2026-10-06-all-services-recheck/interview-generation-release-ab51afde-2c99-4b62-952e-a44453222087",
+  "sourceHashes": {
+    "src/app/api/interview/articles/generate/route.ts": "3af157c649827926f4faaebccb1451ebdad30dc259a7d5c488223b6378466128",
+    "src/app/interview/projects/[id]/generate/page.tsx": "6a9e3146cc38af0aa9ef248d4da31e99f9588dbc8295355e14297cac91176579",
+    "src/lib/interview/use-article-input-navigation.ts": "ecc4a320fc18d7cc37c069fd8e0c79cfaf30e34f3236a11e2faf64268f318c8f",
+    "src/lib/interview/article-input-client.ts": "017b22eb9feeec24f48295af393de4495507631f85f1cf776c0ae66f38feda7d",
+    "src/lib/interview/article-operation.ts": "a15bc3970235077fcca216f19cde5c41d925958544e474f00a5caef61b1c030a",
+    "src/lib/interview/article-budget.ts": "2ed544e20f6316e689dcd7713c4aa146b974b45a152486b3770cbc150ef351cc",
+    "src/lib/interview/guest-claim.ts": "52135b00e9401b410f12fd545f1ce1ac996974159cfe3634d29aabd750950b39"
+  },
+  "actualNextHandoff": "interview-next-handoff-results.json"
+}

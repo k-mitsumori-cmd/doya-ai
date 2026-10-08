@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-08T04:15:22.827149+00:00",
+  "integratedBaseCommit": "3ea936ec0f333029c205b1452e696cfdc1cf531f",
+  "ciRun": 37724678346,
+  "ciConclusion": "success",
+  "deployment": {
+    "id": "dpl_HJYY2RkoYs22ZZnD7NySJZSSsJUx",
+    "url": "doya-qrhgcl7hi-surisutas-projects.vercel.app",
+    "readyState": "READY",
+    "target": "production"
+  },
+  "interviewRepairPublished": false
+}

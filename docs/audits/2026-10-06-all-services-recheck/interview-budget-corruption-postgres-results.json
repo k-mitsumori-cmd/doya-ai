@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-08T04:11:37.084Z",
+  "expected": 14,
+  "passed": 14,
+  "cases": [
+    "Reject negative count without changing quota, receipt or active pointer",
+    "Reject numeric string without changing quota, receipt or active pointer",
+    "Reject missing count without changing quota, receipt or active pointer",
+    "Reject null count without changing quota, receipt or active pointer",
+    "Reject fractional count without changing quota, receipt or active pointer",
+    "Reject invalid date without changing quota, receipt or active pointer",
+    "Reject negative historical count without changing quota, receipt or active pointer",
+    "Reject missing day without changing quota, receipt or active pointer",
+    "Reject array ledger without changing quota, receipt or active pointer",
+    "Reject incomplete transfer marker without changing quota, receipt or active pointer",
+    "Guest article transfer rejects corrupt account ledger atomically",
+    "Guest article transfer rejects corrupt guest-day ledger atomically",
+    "Guest aux transfer rejects corrupt account ledger atomically",
+    "Guest aux transfer rejects corrupt guest-day ledger atomically"
+  ],
+  "sourceHashes": {
+    "src/lib/interview/article-operation.ts": "a15bc3970235077fcca216f19cde5c41d925958544e474f00a5caef61b1c030a",
+    "src/lib/interview/article-budget.ts": "2ed544e20f6316e689dcd7713c4aa146b974b45a152486b3770cbc150ef351cc",
+    "src/lib/interview/guest-claim.ts": "52135b00e9401b410f12fd545f1ce1ac996974159cfe3634d29aabd750950b39",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-article-operation-postgres.cjs": "c43f2a4de7883f8894d37fe814b6c84a07014b58fd18d9758064c568ae434a0b",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-budget-corruption-postgres.cjs": "d011f2af6b518264619c373be66e384c19feb69d59a1cb8105d1bd8aeb89b9dd"
+  },
+  "scope": "Actual helper/reservation SQL in private Unix PostgreSQL with malformed stored quota values. No provider, customer DB, production data or native browser."
+}

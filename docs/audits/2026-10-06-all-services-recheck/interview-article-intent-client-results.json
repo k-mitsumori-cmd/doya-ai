@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-08T04:11:16.006Z",
+  "expected": 15,
+  "passed": 15,
+  "cases": [
+    "Ten concurrent claimants share one UUID and exactly one creation",
+    "Reloaded reader returns durable identity without creating a new intent",
+    "Actors have isolated storage and cannot clear another actors intent",
+    "Clear exact identity permits a deliberate subsequent fresh UUID",
+    "Only version UUID and creation time are persisted, with no URL or draft fields",
+    "Malformed or expanded persisted metadata fails closed without replacement",
+    "Denied and silently ignored browser writes prevent a newly confirmed intent",
+    "Silently ignored removal retains the previous operation and reports failure",
+    "Missing Web Locks fails closed without writing storage",
+    "Pre-aborted caller cannot claim or clear metadata",
+    "Noncooperative lock acquisition ends at the finite deadline",
+    "Delayed lock callback after deadline cannot write an intent",
+    "Parent cancellation fences a subsequently delivered lock callback",
+    "Invalid actor and stale UUID cannot mutate current metadata",
+    "One actor has separate metadata for different projects"
+  ],
+  "sourceHashes": {
+    "src/lib/interview/article-intent-client.ts": "4d8976a2b0c0e6a037a01f7d57efc6da0f7286d5c4800421d3c80e3e51184bc1",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-article-intent-client.cjs": "039c1eb659a0cf2d3009934e80beefc6ed13970e9a4c27fdb9c842821cecebed"
+  },
+  "scope": "Actual metadata client with synthetic shared storage/queued lock and hostile timer callbacks. No browser-native Web Locks, mounted wizard, provider, DB or deployment claim."
+}

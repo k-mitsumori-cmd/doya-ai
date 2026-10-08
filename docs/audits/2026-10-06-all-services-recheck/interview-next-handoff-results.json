@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-08T04:22:02.942Z",
+  "expected": 6,
+  "passed": 6,
+  "cases": [
+    "Actual Next skill route -> generate route: shared private input handoff and no automatic POST",
+    "Actual Next skill explicit generation sends exact private input without persistent storage",
+    "Actual Next skill reload recovers receipt and lost memory blocks new generation",
+    "Actual Next recipe route -> generate route: shared private input handoff and no automatic POST",
+    "Actual Next recipe explicit generation sends exact private input without persistent storage",
+    "Actual Next recipe reload recovers receipt and lost memory blocks new generation"
+  ],
+  "sourceHashes": {
+    "src/app/interview/projects/[id]/skill/page.tsx": "e8f8c51375194f71ea75385943af632df924820d014532ba742e2f36be8711f5",
+    "src/app/interview/projects/[id]/recipe/page.tsx": "f892988c8dacfcb8ba6c4730139e60b62f226b3ac8e290f50d89376464a19e36",
+    "src/app/interview/projects/[id]/generate/page.tsx": "6a9e3146cc38af0aa9ef248d4da31e99f9588dbc8295355e14297cac91176579",
+    "src/lib/interview/use-article-input-navigation.ts": "ecc4a320fc18d7cc37c069fd8e0c79cfaf30e34f3236a11e2faf64268f318c8f",
+    "src/lib/interview/article-input-client.ts": "017b22eb9feeec24f48295af393de4495507631f85f1cf776c0ae66f38feda7d",
+    "src/lib/interview/article-intent-client.ts": "4d8976a2b0c0e6a037a01f7d57efc6da0f7286d5c4800421d3c80e3e51184bc1",
+    "src/lib/interview/article-operation-client.ts": "95fa4bc8d2f0b8a446d5c5644c56032e79ef84ef1cd960f06960042c7809b564",
+    "src/lib/interview/article-stream-client.ts": "41578f7ec17e8ec7609e9d95029539d65d5e67b0068585e373b97dd8b683f15d",
+    "docs/audits/2026-10-06-all-services-recheck/verify-interview-next-handoff.cjs": "49107e12375e93a071ef58b172a0031259f01c8d3ccf2a4bbb69bb4eed2d2bea"
+  },
+  "buildId": "rUw5a8xr2TCYvBJS7pD-o",
+  "scope": "Actual local Next production build, native Chrome, real Next router/RSC/client chunks and hydration; intercepted synthetic browser auth session and all API responses. Server has no session/customer DB. No actual quota/provider/server API or production verification claim."
+}

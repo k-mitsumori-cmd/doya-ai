@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useArticleInputNavigation } from '@/lib/interview/use-article-input-navigation'
+import { useSession } from 'next-auth/react'
 
 interface Recipe {
   id: string
@@ -43,6 +46,7 @@ export default function RecipeSelectionPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
+  const { data: session, status: sessionStatus } = useSession()
 
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)
@@ -53,15 +57,23 @@ export default function RecipeSelectionPage() {
   const [filterCategory, setFilterCategory] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/interview/recipes')
-      .then(async (response) => {
-        const data = await response.json().catch(() => null)
-        if (!response.ok || !data?.success || !Array.isArray(data.recipes)) throw new Error('Recipe list unavailable')
-        setRecipes(data.recipes)
-      })
-      .catch(() => setListError(true))
-      .finally(() => setLoading(false))
-  }, [])
+    const controller = new AbortController()
+    let current = true
+    setRecipes([]); setLoading(true); setListError(false); setSelectedId(null)
+    setCustomInstructions(''); setDisplayFormat('MONOLOGUE'); setFilterCategory(null)
+    // The legacy route still supports an identified guest through the existing API.
+    if (sessionStatus !== 'loading') {
+      void fetch('/api/interview/recipes', { signal: controller.signal, cache: 'no-store' })
+        .then(async response => {
+          const data = await response.json().catch(() => null)
+          if (!response.ok || !data?.success || !Array.isArray(data.recipes)) throw new Error('Recipe list unavailable')
+          if (current) setRecipes(data.recipes)
+        })
+        .catch(() => { if (current) setListError(true) })
+        .finally(() => { if (current) setLoading(false) })
+    }
+    return () => { current = false; controller.abort() }
+  }, [projectId, sessionStatus, session?.user?.id])
 
   const categories = [...new Set(recipes.map((r) => r.category).filter(Boolean))]
   const filtered = filterCategory
@@ -70,16 +82,12 @@ export default function RecipeSelectionPage() {
 
   const selectedRecipe = recipes.find((r) => r.id === selectedId)
 
-  const handleGenerate = () => {
-    if (!selectedId) return
-    // クエリパラメータで渡す
-    const params = new URLSearchParams({
-      recipeId: selectedId,
-      displayFormat,
-      ...(customInstructions ? { instructions: customInstructions } : {}),
-    })
-    router.push(`/interview/projects/${projectId}/generate?${params}`)
-  }
+  const { prepareArticle, busy: navigationBusy, error: navigationError } = useArticleInputNavigation({
+    projectId, recipeId: selectedId || '', displayFormat, customInstructions,
+    actorId: session?.user?.id || null, authStatus: sessionStatus,
+  })
+  const handleGenerate = () => { void prepareArticle() }
+
 
   return (
     <div className="space-y-8">
@@ -150,10 +158,10 @@ export default function RecipeSelectionPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Custom Recipe Card */}
-              <div className="group relative p-5 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#7f19e6]/50 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-3 bg-white/40">
+              <Link href="/interview/skills" className="group relative p-5 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#7f19e6]/50 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-3 bg-white/40">
                 <span className="material-symbols-outlined text-slate-400 text-3xl">add_circle</span>
                 <h3 className="font-bold text-lg text-slate-600">カスタムスキル</h3>
-              </div>
+              </Link>
 
               {/* Recipe Cards */}
               {filtered.map((recipe) => {
@@ -278,13 +286,14 @@ export default function RecipeSelectionPage() {
               )}
             </div>
             <div className="p-6 border-t border-slate-100 bg-slate-50/30">
+              {navigationError && <p role="alert" className="mb-3 text-sm text-red-600">{navigationError}</p>}
               <button
                 onClick={handleGenerate}
-                disabled={!selectedId}
+                disabled={!selectedId || navigationBusy}
                 className="w-full py-4 bg-[#7f19e6] text-white rounded-xl font-bold text-lg shadow-2xl hover:shadow-lg hover:shadow-[#7f19e6]/20 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined">rocket_launch</span>
-                AI記事を生成する
+                {navigationBusy ? '生成内容を確認中...' : '生成内容を確認'}
               </button>
               <p className="text-center text-[11px] text-slate-500 mt-4 uppercase tracking-wider font-semibold">
                 推定時間: 2-3分
