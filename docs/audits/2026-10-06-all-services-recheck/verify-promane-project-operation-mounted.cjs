@@ -5,7 +5,7 @@ const base='docs/audits/2026-10-06-all-services-recheck/',dom=new JSDOM('<body/>
 let calls=[],recoveries=[],createImpl,recoverImpl,fastDeadline=false,deadlineFirer;const locks=new Map();const navigator={locks:{request(key,work){const before=locks.get(key)||Promise.resolve();const run=before.then(work);locks.set(key,run.catch(()=>{}));return run}}};
 const candidate=(process.env.DOYA_PROJECT_SOURCE_ROOT||'.')+'/src/lib/promane/';
 const projectInput=load(candidate+'project-input.ts',{'@/lib/promane/time-input':load('src/lib/promane/time-input.ts')});
-const api=load(candidate+'use-project-operation.ts',{'./project-input':projectInput,'./actions-projects':{
+const api=load(candidate+'use-project-operation.ts',{'./pending-scope-migration':{initializePromanePendingScope:async()=>false},'next-auth/react':{useSession:()=>({data:{user:{id:'legacy-fixture-user'}},status:'authenticated'})},'./project-input':projectInput,'./actions-projects':{
  createProject:async(slug,data)=>{calls.push({slug,data});return overrideResponse?overrideBody:createImpl(slug,data)},
  updateProject:async(slug,id,data)=>{calls.push({slug,id,data});return overrideResponse?overrideBody:createImpl(slug,data)},
  recoverProjectOperation:async(slug,mode,project,operation,cancel,expectedUserId)=>{const args=[slug,operation,cancel];recoveries.push({...args,mode,project,expectedUserId});return recoverImpl(...args)}

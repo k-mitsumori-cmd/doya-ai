@@ -1,0 +1,15 @@
+{
+  "startedAt": "2026-10-08T00:15:15.262308+00:00",
+  "pid": 4913,
+  "privateFolder": "/tmp/doya-sfa-authority-9255bec7",
+  "appFolder": "/tmp/doya-sfa-authority-9255bec7/app",
+  "origin": "http://127.0.0.1:50562",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-release-ddee2249-208c-46a8-ba07-68271e82cdb5",
+  "status": "passed",
+  "scope": "Actual built Next server with actual auth session adapter and isolated full-schema PostgreSQL; synthetic users/sessions. No provider credentials or production data; outbound network blocked.",
+  "probeExitCode": 0,
+  "evidenceValid": true,
+  "serverExitCode": 0,
+  "stopExitCode": 0,
+  "endedAt": "2026-10-08T00:15:41.250383+00:00"
+}

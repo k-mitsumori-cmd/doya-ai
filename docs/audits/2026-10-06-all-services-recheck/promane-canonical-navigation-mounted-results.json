@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-10-08T00:54:30.247Z",
+  "expected": 20,
+  "passed": 20,
+  "cases": [
+    "task: missing or unsafe canonical URL keeps pending receipt: undefined",
+    "task: missing or unsafe canonical URL keeps pending receipt: https://evil.invalid",
+    "task: missing or unsafe canonical URL keeps pending receipt: ../wrong",
+    "task: valid recovered canonical URL is available synchronously to the original open form",
+    "task: acknowledged create also retains current canonical URL",
+    "expense: missing or unsafe canonical URL keeps pending receipt: undefined",
+    "expense: missing or unsafe canonical URL keeps pending receipt: https://evil.invalid",
+    "expense: missing or unsafe canonical URL keeps pending receipt: ../wrong",
+    "expense: valid recovered canonical URL is available synchronously to the original open form",
+    "expense: acknowledged create also retains current canonical URL",
+    "client: missing or unsafe canonical URL keeps pending receipt: undefined",
+    "client: missing or unsafe canonical URL keeps pending receipt: https://evil.invalid",
+    "client: missing or unsafe canonical URL keeps pending receipt: ../wrong",
+    "client: valid recovered canonical URL is available synchronously to the original open form",
+    "client: acknowledged create also retains current canonical URL",
+    "time: missing or unsafe canonical URL keeps pending receipt: undefined",
+    "time: missing or unsafe canonical URL keeps pending receipt: https://evil.invalid",
+    "time: missing or unsafe canonical URL keeps pending receipt: ../wrong",
+    "time: valid recovered canonical URL is available synchronously to the original open form",
+    "time: acknowledged create also retains current canonical URL"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/use-task-creation.ts": "7b5fa9a7229140594235b16dee3bac0469f10b5c9877560d186691ce2a78a290",
+    "src/lib/promane/use-expense-creation.ts": "2581a9eb7ece3550634e4415a45783cff049eea7377fc197ab856b5b722274f3",
+    "src/lib/promane/use-client-creation.ts": "d432b5bd4604060c37a702233e7f738f81dcf2dddbb0fa7a30eebac86dea120d",
+    "src/lib/promane/use-time-entry-creation.ts": "15e3ddbf8c12d7c4a900fc9a55b9b5c369a9ba18584b9093aa80447dc95dbb89",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-canonical-navigation-mounted.cjs": "63483453b9796fe188e7884ed5cdc8331fca0415cd99c8bf05a90857e62da64e"
+  },
+  "scope": "Actual four hooks in React StrictMode with real client migration helper, synthetic auth/server transport. Invalid canonical acknowledgements retain fence; successful recovery/create exposes current workspace URL. Native navigation validated separately."
+}

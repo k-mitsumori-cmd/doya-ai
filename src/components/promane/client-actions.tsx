@@ -28,11 +28,16 @@ type ClientItem = {
   activeCount: number;
 };
 
-export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: string; clients: ClientItem[] }) {
+export function ClientActions({ workspaceSlug, workspaceId, clients }: { workspaceSlug: string; workspaceId: string; clients: ClientItem[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(emptyClientDraft);
-  const creation = useClientCreation(workspaceSlug);
+  const creation = useClientCreation(workspaceSlug, workspaceId);
+  function refreshCreated() {
+    const slug = creation.getWorkspaceSlug?.() || workspaceSlug;
+    if (slug !== workspaceSlug) router.replace(`/promane/${encodeURIComponent(slug)}/clients`);
+    else router.refresh();
+  }
   const loading = creation.status === 'saving' || creation.status === 'checking';
   const submission = useRef(false);
   const inputId = useId();
@@ -58,7 +63,7 @@ export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: strin
       toast.success('顧客を追加しました！', { duration: 3000 });
       setDraft(emptyClientDraft());
       setOpen(false);
-      router.refresh();
+      refreshCreated();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '入力内容を確認してください', { duration: 6000 });
     } finally { submission.current = false; }
@@ -95,11 +100,11 @@ export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: strin
           <p>{creation.message}</p>
           {(creation.status === 'unknown' || creation.status === 'blocked') && (
             <div className="flex flex-wrap gap-3 mt-3">
-              <Button disabled={loading} onClick={async () => { if (await creation.recover() === 'found') { setDraft(emptyClientDraft()); setOpen(false); router.refresh(); } }}>保存状態を確認</Button>
+              <Button disabled={loading} onClick={async () => { if (await creation.recover() === 'found') { setDraft(emptyClientDraft()); setOpen(false); refreshCreated(); } }}>保存状態を確認</Button>
               <Button disabled={loading} onClick={async () => {
                 const ok = await confirm({ title: '未完了の送信を取り消す', message: '未保存の送信が後から登録されないようにします。保存済みの顧客は削除しません。', confirmLabel: '取り消す', tone: 'danger' });
                 if (!ok) return;
-                if (await creation.recover(true) === 'found') { setDraft(emptyClientDraft()); setOpen(false); router.refresh(); }
+                if (await creation.recover(true) === 'found') { setDraft(emptyClientDraft()); setOpen(false); refreshCreated(); }
               }}>未完了の送信を取り消す</Button>
             </div>
           )}

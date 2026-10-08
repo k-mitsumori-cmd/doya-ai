@@ -10,7 +10,7 @@ let calls = [], successes = [], refreshes = 0, implementation, recoverImpl;
 let actorId='staff'; const locks=new Map();
 const taskInput=load('src/lib/promane/task-input.ts',{'./time-input':load('src/lib/promane/time-input.ts')});
 const actionMocks={createTask:async(...args)=>{calls.push(args);return implementation(...args)},recoverTaskCreation:async(...args)=>recoverImpl(...args)};
-const hook=load('src/lib/promane/use-task-creation.ts',{'react':React,'./task-input':taskInput,'./actions-tasks':actionMocks,'next-auth/react':{useSession:()=>({data:{user:{id:actorId}},status:'authenticated'})}}, {window:dom.window,navigator:{locks:{request(key,work){const run=(locks.get(key)||Promise.resolve()).then(work);locks.set(key,run.catch(()=>{}));return run}}},crypto:crypto.webcrypto,setTimeout,clearTimeout});
+const hook=load('src/lib/promane/use-task-creation.ts',{'./pending-scope-migration':{initializePromanePendingScope:async()=>false},'next-auth/react':{useSession:()=>({data:{user:{id:'legacy-fixture-user'}},status:'authenticated'})},'react':React,'./task-input':taskInput,'./actions-tasks':actionMocks,'next-auth/react':{useSession:()=>({data:{user:{id:actorId}},status:'authenticated'})}}, {window:dom.window,navigator:{locks:{request(key,work){const run=(locks.get(key)||Promise.resolve()).then(work);locks.set(key,run.catch(()=>{}));return run}}},crypto:crypto.webcrypto,setTimeout,clearTimeout});
 const saved=data=>({...data,id:'synthetic-task',startDate:data.startDate?new Date(data.startDate+'T00:00:00.000Z'):null,dueDate:data.dueDate?new Date(data.dueDate+'T00:00:00.000Z'):null});
 const Noop = () => null;
 const element = tag => ({ children, ...props }) => React.createElement(tag, props, children);

@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-08T00:15:40.365Z",
+  "expected": 13,
+  "passed": 13,
+  "cases": [
+    "Actual Next authenticated SSR and session adapter read synthetic full-schema account",
+    "Actual browser same-frame create reaches Next and PostgreSQL once with owner membership",
+    "Actual committed create response loss recovers through authenticated Next API without duplicate",
+    "Actual browser confirmation cancellation fences delayed original request in PostgreSQL",
+    "Two actual Next settings tabs preserve later saved revision and reject stale overwrite",
+    "Actual Next slug rename response loss recovers by immutable workspace ID and navigates to current slug",
+    "Actual FREE ownership cap shows pricing in native UI without consuming another workspace",
+    "Actual Next cross-owner concurrent slug claims commit one and terminally decline the other",
+    "Actual Next create recovery hides workspace metadata after active membership revocation",
+    "Actual Next revoked manager cannot change an existing workspace",
+    "Actual Next rejects stale actor binding before workspace write",
+    "Actual Next anonymous request cannot create a workspace",
+    "Actual Next database session expiry rejects writes without affecting another valid session"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/workspace-operation.ts": "19ff4b3dcf0167d8841e7ede41b32c370667a32d5e2dc002eb9bf196b433cb92",
+    "src/lib/promane/workspace-input.ts": "459cb71604c1a6a6c3255fe3bb5e073cef8f66d582cd906762a2f1c6bd0b6343",
+    "src/lib/promane/workspace-mutations.ts": "db9a72a3698ae597a149a22445f1a30c52db39c5860bacf2f60cb746636c2b25",
+    "src/lib/promane/workspace-response.ts": "dd9cd41c35f05c1df06cb334b07063eccedbbf69d8c8e4b8959695cd7fe117fc",
+    "src/lib/promane/use-workspace-operation.ts": "ece56857121d5c41ea6a097b37fd847c45129e0ec81a10c9710c983679cfef10",
+    "src/components/promane/create-workspace-button.tsx": "ef97ed250fcf3dda27719c9906a1a674589c11f106e0eaebb0b7415aa7033e47",
+    "src/components/promane/workspace-settings-form.tsx": "e73eaf0e9dad2294f0bfa4c1dd0192efd182fc0acfbd302caec9e8afeacf9b00",
+    "src/components/promane/workspace-operation-notice.tsx": "bc09a4e6beb381d22baaa3e1defee046abfec78d52e006d549cf22f5e2eee5b9",
+    "src/app/api/promane/workspaces/create/route.ts": "6d3c296779b58355a32f4847cf42b660cfe6f1da2a5800c641d319eedb1a2d9f",
+    "src/app/api/promane/workspaces/[id]/route.ts": "bc89e7513d57f2a07b994e6d6aa3169fdfbfa9c35805f1efc7452f7c2e99efec",
+    "src/app/api/promane/workspaces/recover/route.ts": "e96780a650ce5ec7cd34faa23d86abdabdf3c6c2a135d743c2f67f7917238876",
+    "src/app/promane/[workspaceSlug]/settings/page.tsx": "8f146be206335a814a2176c32ad2650f5aa046ef88662ec3f76376a7e29101cf",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-workspace-next-e2e.cjs": "6aacd4cb3c877948e551c47afeee9e16bea47ad744bafd942df87c02aa992013",
+    "docs/audits/2026-10-06-all-services-recheck/promane-workspace-next-e2e-supervise.py": "f0ba68193fd5e6e13e2a97327ee5ee6bc4a64d59c8b3a82d481134f3fe010ec9",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-mutable-slug-next-baseline.cjs": "feb7ccee018dd4582c8867962f5cb214e1420be4fe843a3910938679b1f9b7ca"
+  },
+  "scope": "Actual frozen Next production build, actual NextAuth database sessions, native Chrome and isolated full-schema PostgreSQL. Synthetic account/session records seeded directly to avoid OAuth/signup events. Transport failure injected before dispatch or after real server commit; backend external networking blocked. No production/customer DB, real OAuth/provider/notification or deployed authenticated transport verified."
+}

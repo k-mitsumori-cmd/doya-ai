@@ -14,10 +14,11 @@ import Image from "next/image";
 
 export function TaskCreateForm({
   workspaceSlug,
+  workspaceId,
   projectId,
   members,
 }: {
-  workspaceSlug: string;
+  workspaceSlug: string; workspaceId: string;
   projectId: string;
   members: { id: string; displayName: string }[];
 }) {
@@ -27,7 +28,12 @@ export function TaskCreateForm({
   const [priority, setPriority] = useState("medium");
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const creation = useTaskCreation(workspaceSlug, projectId);
+  const creation = useTaskCreation(workspaceSlug, projectId, workspaceId);
+  function refreshCreated() {
+    const slug = creation.getWorkspaceSlug?.() || workspaceSlug;
+    if (slug !== workspaceSlug) router.replace(`/promane/${encodeURIComponent(slug)}/projects/${encodeURIComponent(projectId)}`);
+    else router.refresh();
+  }
   const loading = creation.status === 'saving' || creation.status === 'checking';
   const submitting = useRef(false);
   const { confirm, ConfirmDialog } = useConfirm();
@@ -54,7 +60,7 @@ export function TaskCreateForm({
       setDueDate("");
       setJustAdded(true);
       setTimeout(() => setJustAdded(false), 600);
-      router.refresh();
+      refreshCreated();
     } catch (e: any) {
       toast.error(e?.message || "タスク追加に失敗しました", {
         icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
@@ -74,10 +80,10 @@ export function TaskCreateForm({
       {creation.message && <div role="status" className="mb-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
         <p>{creation.message}</p>
         {(creation.status === 'unknown' || creation.status === 'blocked') && <div className="flex flex-wrap gap-3 mt-3">
-          <Button disabled={loading} onClick={async () => { if (await creation.recover() === 'found') { clearDraft(); router.refresh(); } }}>保存状態を確認</Button>
+          <Button disabled={loading} onClick={async () => { if (await creation.recover() === 'found') { clearDraft(); refreshCreated(); } }}>保存状態を確認</Button>
           <Button disabled={loading} onClick={async () => {
             if (!await confirm({ title: '未完了の送信を取り消す', message: '未保存の送信が後から登録されないようにします。保存済みのタスクは削除しません。', confirmLabel: '取り消す', tone: 'danger' })) return;
-            if (await creation.recover(true) === 'found') { clearDraft(); router.refresh(); }
+            if (await creation.recover(true) === 'found') { clearDraft(); refreshCreated(); }
           }}>未完了の送信を取り消す</Button>
         </div>}
       </div>}

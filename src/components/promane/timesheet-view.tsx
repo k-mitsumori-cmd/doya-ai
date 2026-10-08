@@ -18,14 +18,19 @@ import { useConfirm } from "@/components/promane/confirm-dialog";
 type EntryItem = { id: string; taskId: string | null; duration: number; date: string; note: string | null; taskTitle: string | null; projectName: string | null };
 type ProjectWithTasks = { id: string; name: string; tasks: { id: string; title: string }[] };
 
-export function TimesheetView({ workspaceSlug, memberId, entries, projects, totalCount, totalMinutes, periodLabel }: {
-  workspaceSlug: string; memberId: string; entries: EntryItem[]; projects: ProjectWithTasks[]; totalCount: number; totalMinutes: number; periodLabel: string;
+export function TimesheetView({ workspaceSlug, workspaceId, memberId, entries, projects, totalCount, totalMinutes, periodLabel }: {
+  workspaceSlug: string; workspaceId: string; memberId: string; entries: EntryItem[]; projects: ProjectWithTasks[]; totalCount: number; totalMinutes: number; periodLabel: string;
 }) {
   const router = useRouter();
   const inputId = useId();
   const [showForm, setShowForm] = useState(false);
-  const creation = useTimeEntryCreation(workspaceSlug, memberId);
+  const creation = useTimeEntryCreation(workspaceSlug, memberId, workspaceId);
   const submission = useRef(false);
+  function refreshCreated() {
+    const slug = creation.getWorkspaceSlug?.() || workspaceSlug;
+    if (slug !== workspaceSlug) router.replace(`/promane/${encodeURIComponent(slug)}/timesheet`);
+    else router.refresh();
+  }
   const loading = creation.status === "saving" || creation.status === "checking";
   const [selectedProject, setSelectedProject] = useState("");
   const { confirm, ConfirmDialog } = useConfirm();
@@ -59,7 +64,7 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects, tota
       if (!saved) return;
       toast.success("作業時間を記録したよ！");
       setShowForm(false);
-      router.refresh();
+      refreshCreated();
     } catch (e: any) {
       console.error("[promane/time] create exception");
       toast.error(e?.message || "記録に失敗しました", { duration: 6000 });
@@ -104,14 +109,14 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects, tota
       {creation.message && (
         <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 mb-4 text-sm text-gray-800">
           <p>{creation.message}</p>
-          {(creation.status === 'unknown' || creation.status === 'checking') && (
+          {(creation.status === 'unknown' || creation.status === 'checking' || creation.status === 'blocked') && (
             <div className="flex flex-wrap gap-3 mt-3">
-              <Button disabled={loading} onClick={async () => { if (await creation.recover() === 'found') { setShowForm(false); router.refresh(); } }}>保存状態を確認</Button>
+              <Button disabled={loading} onClick={async () => { if (await creation.recover() === 'found') { setShowForm(false); refreshCreated(); } }}>保存状態を確認</Button>
               <Button disabled={loading} onClick={async () => {
                 const ok = await confirm({ title: '未完了の送信を取り消す', message: '未保存の送信が後から登録されないようにします。保存済みの記録は削除しません。', confirmLabel: '取り消す', tone: 'danger' });
                 if (!ok) return;
                 const result = await creation.recover(true);
-                if (result === 'found') { setShowForm(false); router.refresh(); }
+                if (result === 'found') { setShowForm(false); refreshCreated(); }
               }}>未完了の送信を取り消す</Button>
             </div>
           )}

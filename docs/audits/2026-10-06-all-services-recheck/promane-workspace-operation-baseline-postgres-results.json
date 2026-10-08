@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-07T23:14:51.298Z",
+  "expected": 4,
+  "passed": 4,
+  "cases": [
+    "PRO identical creation retries persist two distinct workspaces and owner memberships",
+    "PRO concurrent identical creation persists duplicate workspaces despite user lock",
+    "FREE successful final-slot creation retry reports cap instead of recovering saved workspace",
+    "settings stale revision is ignored and overwrites later saved name"
+  ],
+  "sourceHashes": {
+    "src/app/api/promane/workspaces/create/route.ts": "f1d40c3e95ae67f34ae5d0f4cac1c503cc6c9665bf5adc9d26425becae1ea997",
+    "src/app/api/promane/workspaces/[id]/route.ts": "f0f271f52dbe77b0ab846e1729262b7587d8c56726343adc13b59c8194e91a28",
+    "src/lib/promane/limits.ts": "8cd3825a73688bd4cf77c52946981297ea6b687b36460e62b5c5b5687f975d0b",
+    "src/lib/plan-utils.ts": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86"
+  },
+  "scope": "Actual root workspace HTTP handlers/limits/plan normalization and isolated Unix-socket PostgreSQL; synthetic session and no-op usage notification. No production writes or authenticated browser transport. Duplicate creation and stale edit overwrite confirmed."
+}

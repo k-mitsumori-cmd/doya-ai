@@ -76,8 +76,13 @@ export async function getCurrentMember(workspaceId: string, userId: string) {
 }
 
 /** Server Action用。閲覧用の所属確認と、更新・管理の権限確認を分離する。 */
-export async function requireWritableWorkspace(slug: string, userId: string, adminOnly = false) {
-  const workspace = await getWorkspaceBySlug(slug, userId)
+export async function requireWritableWorkspace(slug: string, userId: string, adminOnly = false, workspaceId?: string) {
+  // A supplied immutable operation ID never falls back to a mutable/reused slug.
+  if (workspaceId !== undefined && (typeof workspaceId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(workspaceId))) throw new Error('ワークスペースを確認してください');
+  const workspace = workspaceId === undefined ? await getWorkspaceBySlug(slug, userId) : await prisma.promaneWorkspace.findFirst({
+    where: { id: workspaceId, members: { some: { userId, isActive: true } } },
+    include: { members: { where: { userId, isActive: true } } },
+  })
   if (!workspace) throw new Error('ワークスペースにアクセスできません')
   const member = workspace.members.find((m) => m.userId === userId && m.isActive)
   const allowedRoles = adminOnly ? ['owner', 'admin'] : ['owner', 'admin', 'member']

@@ -57,7 +57,7 @@ export default async function EditProjectPage({
       </Link>
       <h1 className="text-[28px] font-black text-gray-900 mb-1">プロジェクトを編集</h1>
       <p className="text-[13px] font-bold text-gray-400 mb-6">{project.name}</p>
-      <ProjectForm workspaceSlug={workspaceSlug} clients={clients} project={projectData} />
+      <ProjectForm workspaceSlug={workspaceSlug} workspaceId={workspace.id} clients={clients} project={projectData} />
     </div>
   )
 }

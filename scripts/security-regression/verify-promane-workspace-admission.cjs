@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
+const { workspaceApi } = require('./promane-workspace-operation-fixture.cjs')
 
 function fixture({ tier = 'FREE', used = 0, named = 'Team', fail = false } = {}) {
   let writes = 0
@@ -11,24 +12,17 @@ function fixture({ tier = 'FREE', used = 0, named = 'Team', fail = false } = {})
     promaneWorkspace: { create: async ({ data }) => {
       if (fail) throw Error('PRIVATE_DB_DETAIL')
       writes++
-      return { id: 'w', slug: data.slug, name: data.name }
+      return { id: 'w', slug: data.slug, name: data.name, userId: 'u', updatedAt: new Date('2026-09-30T00:00:00.000Z') }
     } },
   }
   const prisma = { $transaction: async fn => fn(tx) }
-  const api = load('src/app/api/promane/workspaces/create/route.ts', {
-    'next/server': { NextResponse: Response },
-    'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
-    '@/lib/auth': { authOptions: {} },
-    '@/lib/prisma': { prisma },
-    '@/lib/promane/limits': {
-      getUserPromaneLimits: async (id, db) => { assert.equal(id, 'u'); assert.equal(db, tx); assert.ok(locks > 0); return { tier, maxWorkspaces } },
-      countUserWorkspaces: async (id, db) => { assert.equal(id, 'u'); assert.equal(db, tx); return used },
-    },
-    '@/lib/service-usage': { recordServiceUsage: async () => {} },
-    crypto: require('node:crypto'),
-  })
+  const fixtureApi = workspaceApi({ prisma, limits: {
+    getUserPromaneLimits: async (id, db) => { assert.equal(id, 'u'); assert.equal(db.user, tx.user); assert.ok(locks > 0); return { tier, maxWorkspaces } },
+    countUserWorkspaces: async (id, db) => { assert.equal(id, 'u'); assert.equal(db.promaneWorkspace, tx.promaneWorkspace); return used },
+  } })
+  const api = fixtureApi.create
   return { run: async () => {
-    const response = await api.POST({ json: async () => ({ name: named }) })
+    const response = await api.POST({ json: async () => ({ name: named, ...fixtureApi.intent() }) })
     return { status: response.status, body: await response.json() }
   }, state: () => ({ writes, locks }) }
 }

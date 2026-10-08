@@ -63,7 +63,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
           {canEdit ? '名前とスラッグ (URL) を編集できます' : '編集は owner/admin のみ可能です'}
         </p>
         <WorkspaceSettingsForm
-          workspace={{ id: workspace.id, name: workspace.name, slug: workspace.slug }}
+          workspace={{ id: workspace.id, name: workspace.name, slug: workspace.slug, updatedAt: workspace.updatedAt.toISOString() }}
           canEdit={canEdit}
           currentSlug={workspaceSlug}
         />

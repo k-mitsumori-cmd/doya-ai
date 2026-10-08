@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-08T01:17:11.699Z",
+  "expected": 20,
+  "passed": 20,
+  "cases": [
+    "StrictMode same frame sends one actor-bound POST and clears only after complete ack",
+    "lost response survives remount as metadata only and recovery sends no new create",
+    "missing recovery retains fence until explicit cancellation acknowledgement",
+    "partial contradictory and wrong owner acknowledgements retain unknown fence",
+    "storage persistence failure sends no HTTP request",
+    "corrupt metadata cannot be overwritten or sent",
+    "two mounted tabs share Web Lock and cannot send duplicate requests",
+    "workspace ID change ignores delayed old edit acknowledgement",
+    "account change isolates pending and ignores old acknowledgement",
+    "anonymous session and missing Web Locks never send",
+    "deadline failure and late success preserve durable unknown state",
+    "invalid local name sends no request or metadata and accepted name100 matches normalized ack",
+    "valid 403 limit outcome surfaces safe upgrade guidance and clears terminal intent",
+    "invalid external or contradictory limit guidance retains unknown fence",
+    "HTTP 500 HTML invalid JSON and auth-context errors cannot clear pending",
+    "update uses canonical workspace ID and rejects foreign or mismatched revision ack",
+    "canonical ID keeps recovery available after server slug rename and remount",
+    "terminal stale and slug conflict declines preserve messages without pretending saved",
+    "unavailable recovery clears terminal metadata without reporting saved",
+    "failed recovery retains intent and prevents blind new write"
+  ],
+  "sourceHashes": {
+    "./src/lib/promane/workspace-input.ts": "459cb71604c1a6a6c3255fe3bb5e073cef8f66d582cd906762a2f1c6bd0b6343",
+    "./src/lib/promane/use-workspace-operation.ts": "ece56857121d5c41ea6a097b37fd847c45129e0ec81a10c9710c983679cfef10"
+  },
+  "scope": "Actual candidate workspace hook/input in React StrictMode with real localStorage; synthetic Web Locks, fetch responses, authenticated session and deadline. Full UI/native Next transport not covered."
+}

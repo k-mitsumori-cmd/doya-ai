@@ -40,6 +40,7 @@ export default async function TimesheetPage({ params, searchParams }: { params: 
       </form>
       <TimesheetView
         workspaceSlug={workspaceSlug}
+        workspaceId={result.workspaceId}
         memberId={result.memberId}
         totalCount={result.totalCount}
         totalMinutes={result.totalMinutes}

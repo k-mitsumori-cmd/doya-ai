@@ -165,6 +165,7 @@ export default async function ProjectDetailPage({
         <TabsContent value="gantt" className="mt-5 space-y-4">
           <TaskCreateForm
             workspaceSlug={workspaceSlug}
+            workspaceId={workspace.id}
             projectId={projectId}
             members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
           />
@@ -190,6 +191,7 @@ export default async function ProjectDetailPage({
         <TabsContent value="kanban" className="mt-5 space-y-4">
           <TaskCreateForm
             workspaceSlug={workspaceSlug}
+            workspaceId={workspace.id}
             projectId={projectId}
             members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
           />
@@ -215,6 +217,7 @@ export default async function ProjectDetailPage({
         <TabsContent value="finance" className="mt-5">
           <FinanceTab
             workspaceSlug={workspaceSlug}
+            workspaceId={workspace.id}
             projectId={projectId}
             laborCost={laborCost}
             totalMinutes={totalMinutes}

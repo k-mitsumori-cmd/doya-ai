@@ -48,9 +48,12 @@ function parse(value: string): Receipt {
   if (row.state !== 'saved' || typeof row.id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(row.id) || !canonicalDate(row.appliedUpdatedAt)) throw new PromaneProjectOperationError('保存記録の形式を確認できません。');
   return { state: 'saved', id: row.id, inputHash: row.inputHash, appliedUpdatedAt: row.appliedUpdatedAt };
 }
-async function locked(tx: Store, key: string) {
+async function locked(tx: Store, key: string, userId: string, operation: string) {
+  const globalKey = 'promane-legacy-cancel:v1:' + hash(['project', userId, promaneProjectOperationId(operation)]);
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('promane-legacy-cancel:v1'), hashtext(${globalKey}))`;
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('promane-project:v1'), hashtext(${key}))`;
-  return tx.systemSetting.findUnique({ where: { key }, select: { value: true } });
+  const receipt = await tx.systemSetting.findUnique({ where: { key }, select: { value: true } });
+  return receipt || tx.systemSetting.findUnique({ where: { key: globalKey }, select: { value: true } });
 }
 async function record(tx: Store, key: string, value: Receipt) {
   try { await tx.systemSetting.create({ data: { key, value: JSON.stringify({ version: 1, ...value }) } }); }
@@ -68,7 +71,7 @@ export async function runPromaneProjectOnce<T extends Row>(
   tx: Store, scope: PromaneProjectOperationScope, operation: string, input: unknown,
   find: (id: string) => Promise<T | null>, work: () => Promise<{ state: 'saved'; entry: T } | PromaneProjectRejection>,
 ): Promise<PromaneProjectSaved<T> | PromaneProjectRejection> {
-  const key = keyFor(scope, operation), inputHash = hash(input), existing = await locked(tx, key);
+  const key = keyFor(scope, operation), inputHash = hash(input), existing = await locked(tx, key, scope.userId, operation);
   if (existing) {
     const saved = parse(existing.value);
     if (saved.state === 'cancelled') throw new PromaneProjectOperationError('この送信は取り消されています。');
@@ -97,7 +100,7 @@ export async function runPromaneProjectOnce<T extends Row>(
 export async function recoverPromaneProjectOperation<T extends Row>(
   tx: Store, scope: PromaneProjectOperationScope, operation: string, find: (id: string) => Promise<T | null>, cancelIfMissing = false,
 ): Promise<PromaneProjectSaved<T> | PromaneProjectRejection | { state: 'missing' | 'cancelled' | 'unavailable'; entry: null }> {
-  const key = keyFor(scope, operation), existing = await locked(tx, key);
+  const key = keyFor(scope, operation), existing = await locked(tx, key, scope.userId, operation);
   if (!existing) {
     if (!cancelIfMissing) return { state: 'missing', entry: null };
     await record(tx, key, { state: 'cancelled' });

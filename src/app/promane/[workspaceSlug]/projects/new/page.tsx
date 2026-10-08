@@ -21,7 +21,7 @@ export default async function NewProjectPage({
   return (
     <div className="p-6">
       <h1 className="mb-6 text-2xl font-bold">新規プロジェクト作成</h1>
-      <ProjectForm workspaceSlug={workspaceSlug} clients={clients} />
+      <ProjectForm workspaceSlug={workspaceSlug} workspaceId={workspace.id} clients={clients} />
     </div>
   );
 }

@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-08T01:24:37.159Z",
+  "expected": 5,
+  "passed": 5,
+  "cases": [
+    "Actual Next renamed URL reopens canonical pending fence and recovers one project",
+    "Actual Next legacy v1 saved receipt binds original workspace and migrates without duplication",
+    "Actual Next explicit legacy cancellation fences delayed old-URL Server Action even after slug reuse",
+    "Actual Next project original open tab recovers current canonical URL without duplicate create",
+    "Actual Next project original open form saves once after rename and follows canonical URL"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/use-project-operation.ts": "a20cb1ed3dc509ab7f48ce78cc1dd2f86ed933aea6a3a3cee33a462d0fe107f4",
+    "src/lib/promane/actions-projects.ts": "82159c3a179443f0226e02d41dbe70f1780c6d1ba0384c42dc350bf1bf143412",
+    "src/lib/promane/project-operation.ts": "2fe5743ba685c8052215e69555eda8d377f23ededa2280f83894d88adf6ccffb",
+    "src/lib/promane/auth.ts": "c941d2f3c6cbc949c0e9e564b93d9de391daf24e966317e09866e1c3818f8c9a",
+    "src/lib/promane/legacy-pending-scope.ts": "41e586dd81ec265d43cb09b487d600258522c1daa018b595ea40652d665b8654",
+    "src/lib/promane/pending-scope-migration.ts": "13ace32b42d3ec565ec352cc9795e6444f6f969c45aa7f92ae811b85ad89a0bb",
+    "docs/audits/2026-10-06-all-services-recheck/verify-promane-canonical-scope-next-current.cjs": "9786b895c237955b87257226cd323e5cc2d387768b0d5f3aa630994e0802194e"
+  },
+  "scope": "Actual authenticated local Next production build/native Chrome/full-schema private PostgreSQL. Synthetic auth session seeded directly. Lost acknowledgements and before-dispatch drop injected; actual Next actions, workspace PATCH, legacy resolver/cancellation and delayed original request. Other four families covered by separate actual-module PG/mounted checks, not native here. No production/customer writes."
+}

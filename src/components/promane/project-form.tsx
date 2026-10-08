@@ -37,15 +37,16 @@ type ProjectData = {
 
 export function ProjectForm({
   workspaceSlug,
+  workspaceId,
   clients,
   project,
 }: {
-  workspaceSlug: string;
+  workspaceSlug: string; workspaceId: string;
   clients: Client[];
   project?: ProjectData;
 }) {
   const router = useRouter();
-  const operation = useProjectOperation(workspaceSlug, project?.id ?? null);
+  const operation = useProjectOperation(workspaceSlug, project?.id ?? null, workspaceId);
   const loading = operation.status === 'saving' || operation.status === 'checking';
   const submitting = useRef(false);
   const { confirm, ConfirmDialog } = useConfirm();
@@ -66,7 +67,7 @@ export function ProjectForm({
       toast.success(result.state === 'superseded' ? '保存後に別の編集がありました。最新版を表示します' : project ? 'プロジェクトを更新しました' : 'プロジェクトを作成しました', {
         icon: <Image src="/character/success.png" alt="" width={28} height={28} unoptimized />,
       });
-      router.push(`/promane/${workspaceSlug}/projects/${result.entry.id}`);
+      router.push(`/promane/${result.workspaceSlug || workspaceSlug}/projects/${result.entry.id}`);
       router.refresh();
     }
   }

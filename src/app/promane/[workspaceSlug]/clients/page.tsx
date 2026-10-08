@@ -25,7 +25,7 @@ export default async function ClientsPage({ params }: { params: Promise<{ worksp
           <p className="text-[15px] text-gray-400 font-bold">大切なお客様を管理 💛 {clients.length}社</p>
         </div>
       </div>
-      <ClientActions workspaceSlug={workspaceSlug} clients={clients.map((c) => ({
+      <ClientActions workspaceSlug={workspaceSlug} workspaceId={workspace.id} clients={clients.map((c) => ({
         ...c,
         totalRevenue: c.projects.reduce((sum, p) => sum + p.contractAmount, 0),
         projectCount: c.projects.length,

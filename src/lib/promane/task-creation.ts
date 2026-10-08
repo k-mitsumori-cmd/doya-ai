@@ -27,9 +27,14 @@ function parseReceipt(value: string): { state: 'cancelled' } | { state: 'created
   }
   return { state: 'created', id: row.id, inputHash: row.inputHash }
 }
-async function lockedReceipt(tx: Store, key: string) {
+async function lockedReceipt(tx: Store, key: string, userId: string, operationId: string) {
+  // Serialize delayed legacy writes against an explicit actor-wide cancellation.
+  const globalKey = 'promane-legacy-cancel:v1:' + hash(['task', userId, promaneTaskOperationId(operationId)])
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('promane-legacy-cancel:v1'), hashtext(${globalKey}))`
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('promane-task:v1'), hashtext(${key}))`
-  return tx.systemSetting.findUnique({ where: { key }, select: { value: true } })
+  const receipt = await tx.systemSetting.findUnique({ where: { key }, select: { value: true } })
+  // A saved local receipt takes precedence: cancellation never erases committed data.
+  return receipt || tx.systemSetting.findUnique({ where: { key: globalKey }, select: { value: true } })
 }
 async function recordReceipt(tx: Store, key: string, value: string) {
   try { await tx.systemSetting.create({ data: { key, value } }) }
@@ -46,7 +51,7 @@ export async function createPromaneTaskOnce<T extends { id: string }>(
   find: (id: string) => Promise<T | null>, create: () => Promise<T>,
 ): Promise<T> {
   const key = receiptKey(scope, operationId), inputHash = hash(input)
-  const receipt = await lockedReceipt(tx, key)
+  const receipt = await lockedReceipt(tx, key, scope.userId, operationId)
   if (receipt) {
     const saved = parseReceipt(receipt.value)
     if (saved.state === 'cancelled') throw new PromaneTaskCreationError('この送信は取り消されています。入力を確認して新しく記録してください。')
@@ -64,7 +69,7 @@ export async function recoverPromaneTask<T>(
   tx: Store, scope: PromaneTaskCreationScope, operationId: string, find: (id: string) => Promise<T | null>, cancelIfMissing = false,
 ): Promise<{ state: 'found'; entry: T } | { state: 'missing' | 'cancelled' | 'unavailable'; entry: null }> {
   const key = receiptKey(scope, operationId)
-  const receipt = await lockedReceipt(tx, key)
+  const receipt = await lockedReceipt(tx, key, scope.userId, operationId)
   if (receipt) {
     const saved = parseReceipt(receipt.value)
     if (saved.state === 'cancelled') return { state: 'cancelled', entry: null }

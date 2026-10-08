@@ -53,9 +53,10 @@ async function lockWritableActor(tx: Prisma.TransactionClient, workspaceId: stri
   if (rows.length !== 1) throw new Error('ワークスペースの変更権限がありません');
 }
 
-export async function recoverTimeEntry(workspaceSlug: string, operationId: string, cancelIfMissing = false) {
+export async function recoverTimeEntry(workspaceSlug: string, operationId: string, cancelIfMissing = false, workspaceId?: string, expectedUserId?: string) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
+  if (expectedUserId !== undefined && expectedUserId !== userId) throw new Error('ログインする利用者が変わりました。保存状態を確認してください');
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId, false, workspaceId);
   const id = promaneTimeOperationId(operationId);
   if (typeof cancelIfMissing !== 'boolean') throw new Error('確認方法が不正です');
   const result = await retryTimeCreationTransaction(() => prisma.$transaction(async tx => {
@@ -63,12 +64,13 @@ export async function recoverTimeEntry(workspaceSlug: string, operationId: strin
     return recoverPromaneTimeEntry(tx, { workspaceId: workspace.id, userId }, id,
       entryId => tx.promaneTimeEntry.findFirst({ where: { id: entryId, member: { workspaceId: workspace.id } } }), cancelIfMissing);
   }, { isolationLevel: 'Serializable' }));
-  if (result.state === 'found') revalidatePath(`/promane/${workspaceSlug}/timesheet`);
-  return result;
+  // A stale action URL must not render its old route before the client follows the canonical result.
+  if (result.state === 'found' && (!workspaceId || workspaceSlug === workspace.slug)) revalidatePath(`/promane/${workspaceId ? workspace.slug : workspaceSlug}/timesheet`);
+  return { ...result, ...(workspaceId ? { workspaceSlug: workspace.slug } : {}) };
 }
 
 export async function createTimeEntry(workspaceSlug: string, data: {
-  operationId: string;
+  operationId: string; workspaceId?: string; expectedUserId?: string;
   taskId?: string;
   projectId?: string;
   memberId: string;
@@ -77,7 +79,8 @@ export async function createTimeEntry(workspaceSlug: string, data: {
   note?: string;
 }) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
+  if (data.expectedUserId !== undefined && data.expectedUserId !== userId) throw new Error('ログインする利用者が変わりました。保存状態を確認してください');
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId, false, data.workspaceId);
 
   const operationId = promaneTimeOperationId(data.operationId);
   if (data.note !== undefined && typeof data.note !== "string") throw new Error("メモを確認してください");
@@ -130,8 +133,8 @@ export async function createTimeEntry(workspaceSlug: string, data: {
       });
   }, { isolationLevel: 'Serializable' }));
 
-  revalidatePath(`/promane/${workspaceSlug}/timesheet`);
-  return entry;
+  if (!data.workspaceId || workspaceSlug === workspace.slug) revalidatePath(`/promane/${data.workspaceId ? workspace.slug : workspaceSlug}/timesheet`);
+  return { ...entry, ...(data.workspaceId ? { workspaceSlug: workspace.slug } : {}) };
 }
 
 export async function deleteTimeEntry(workspaceSlug: string, entryId: string) {

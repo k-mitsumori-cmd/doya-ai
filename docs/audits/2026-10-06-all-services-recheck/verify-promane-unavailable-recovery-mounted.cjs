@@ -6,13 +6,13 @@ const {createRoot}=require('react-dom/client');
 const baseline=process.env.DOYA_UNAVAILABLE_BASELINE==='1',base='docs/audits/2026-10-06-all-services-recheck/';
 let result,latest,lock=Promise.resolve(),calls=0;
 const globals={window:dom.window,navigator:{locks:{request(_key,work){const next=lock.then(work);lock=next.catch(()=>{});return next}}},crypto:crypto.webcrypto,setTimeout,clearTimeout,URLSearchParams,fetch:async()=>{calls++;return Response.json(result)}};
-const common={react:React,'next-auth/react':{useSession:()=>({data:{user:{id:'staff'}},status:'authenticated'})}};
+const common={'./pending-scope-migration':{initializePromanePendingScope:async()=>false},react:React,'next-auth/react':{useSession:()=>({data:{user:{id:'staff'}},status:'authenticated'})}};
 const clientInput=load('src/lib/promane/client-input.ts'),taskInput=load('src/lib/promane/task-input.ts',{'./time-input':load('src/lib/promane/time-input.ts')});
 const modules={
- client:load('src/lib/promane/use-client-creation.ts',{...common,'./client-input':clientInput},globals),
+ client:load('src/lib/promane/use-client-creation.ts',{'./pending-scope-migration':{initializePromanePendingScope:async()=>false},'next-auth/react':{useSession:()=>({data:{user:{id:'legacy-fixture-user'}},status:'authenticated'})},...common,'./client-input':clientInput},globals),
  expense:load('src/lib/promane/use-expense-creation.ts',common,globals),
- task:load('src/lib/promane/use-task-creation.ts',{...common,'./task-input':taskInput,'./actions-tasks':{createTask(){throw Error('Unexpected create')},recoverTaskCreation:async()=>{calls++;return result}}},globals),
- time:load('src/lib/promane/use-time-entry-creation.ts',{...common,'@/lib/promane/actions-time-entries':{createTimeEntry(){throw Error('Unexpected create')},recoverTimeEntry:async()=>{calls++;return result}}},globals),
+ task:load('src/lib/promane/use-task-creation.ts',{'./pending-scope-migration':{initializePromanePendingScope:async()=>false},'next-auth/react':{useSession:()=>({data:{user:{id:'legacy-fixture-user'}},status:'authenticated'})},...common,'./task-input':taskInput,'./actions-tasks':{createTask(){throw Error('Unexpected create')},recoverTaskCreation:async()=>{calls++;return result}}},globals),
+ time:load('src/lib/promane/use-time-entry-creation.ts',{'./pending-scope-migration':{initializePromanePendingScope:async()=>false},'next-auth/react':{useSession:()=>({data:{user:{id:'legacy-fixture-user'}},status:'authenticated'})},...common,'@/lib/promane/actions-time-entries':{createTimeEntry(){throw Error('Unexpected create')},recoverTimeEntry:async()=>{calls++;return result}}},globals),
 };
 const specs=[['client','useClientCreation',['synthetic'],'promane-client-pending:v1:synthetic:staff'],['expense','useExpenseCreation',['synthetic','project'],'promane-expense-pending:v1:synthetic:project:staff'],['task','useTaskCreation',['synthetic','project'],'promane-task-pending:v1:synthetic:project:staff'],['time','useTimeEntryCreation',['synthetic','member'],'promane-time-pending:v1:synthetic:member']];
 const act=fn=>React.act(async()=>{await fn();for(let i=0;i<5;i++)await new Promise(setImmediate)});

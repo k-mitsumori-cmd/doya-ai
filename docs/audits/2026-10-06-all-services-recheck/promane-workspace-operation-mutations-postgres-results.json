@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-10-08T01:17:09.999Z",
+  "expected": 28,
+  "passed": 28,
+  "cases": [
+    "actual create replay saves one workspace owner membership and receipt",
+    "actual concurrent identical intents save one workspace",
+    "distinct create intents remain independent",
+    "FREE successful final slot retry recovers original instead of reporting cap",
+    "FREE actual cap and terminal guidance persist through later plan upgrade",
+    "LIGHT actual cap and terminal guidance persist through later plan upgrade",
+    "PRO actual cap and terminal guidance persist through later plan upgrade",
+    "ENTERPRISE permits workspaces beyond PRO cap",
+    "FREE concurrent distinct intents cannot overrun final slot",
+    "invited workspace does not consume ownership allowance",
+    "create input actor and operation metadata fail without writes",
+    "deleted account cannot create or recover",
+    "missing read is read only and explicit cancel fences delayed create",
+    "saved create cancellation recovers and deleted workspace never resurrects",
+    "revoked creator cannot recover workspace metadata or replay saved create",
+    "owner update replay preserves revision and settings",
+    "stale edit decline remains terminal and preserves later input",
+    "later update recovered by canonical workspace ID as superseded after slug rename",
+    "concurrent different edits cannot overwrite same revision",
+    "admin may edit but regular member and foreign account cannot edit or recover",
+    "revoked manager cannot replay or recover a saved update on existing target",
+    "deleted update target returns only unavailable and cannot be recreated",
+    "cancel missing update fences later write without changing settings",
+    "slug collision is terminal and cannot silently retry after slug becomes available",
+    "concurrent unique slug claims preserve both workspaces and record loser decline",
+    "invalid patch revision slug and empty change do not write receipts",
+    "receipt insert failure rolls back create membership and update",
+    "changed payload corrupt receipt and invalid recovery scope fail closed"
+  ],
+  "sourceHashes": {
+    "./src/lib/promane/workspace-operation.ts": "19ff4b3dcf0167d8841e7ede41b32c370667a32d5e2dc002eb9bf196b433cb92",
+    "./src/lib/promane/workspace-input.ts": "459cb71604c1a6a6c3255fe3bb5e073cef8f66d582cd906762a2f1c6bd0b6343",
+    "./src/lib/promane/workspace-mutations.ts": "db9a72a3698ae597a149a22445f1a30c52db39c5860bacf2f60cb746636c2b25",
+    "src/lib/promane/limits.ts": "8cd3825a73688bd4cf77c52946981297ea6b687b36460e62b5c5b5687f975d0b",
+    "src/lib/plan-utils.ts": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86"
+  },
+  "scope": "Actual candidate workspace mutation/helper/input plus actual root limits/plan normalization and isolated PostgreSQL with account/workspace/member foreign keys. Direct business calls; HTTP wrappers/authenticated browser transport and production writes not covered."
+}

@@ -1,0 +1,137 @@
+{
+  "checkedAt": "2026-10-08T01:15:59.513893+00:00",
+  "status": "frozen94-and-actual-next34-and-navigation20-passed-ready-for-reviewed-commit-push",
+  "head": "223fbfb7bdb3cd6df4f74e13c0517909d7ae07a7",
+  "productionFiles": [
+    "src/app/api/promane/clients/route.ts",
+    "src/app/api/promane/expenses/route.ts",
+    "src/app/promane/[workspaceSlug]/clients/page.tsx",
+    "src/app/promane/[workspaceSlug]/projects/[projectId]/edit/page.tsx",
+    "src/app/promane/[workspaceSlug]/projects/[projectId]/page.tsx",
+    "src/app/promane/[workspaceSlug]/projects/new/page.tsx",
+    "src/app/promane/[workspaceSlug]/timesheet/page.tsx",
+    "src/components/promane/client-actions.tsx",
+    "src/components/promane/finance-tab.tsx",
+    "src/components/promane/project-form.tsx",
+    "src/components/promane/task-create-form.tsx",
+    "src/components/promane/timesheet-view.tsx",
+    "src/lib/promane/actions-projects.ts",
+    "src/lib/promane/actions-tasks.ts",
+    "src/lib/promane/actions-time-entries.ts",
+    "src/lib/promane/auth.ts",
+    "src/lib/promane/client-creation.ts",
+    "src/lib/promane/expense-creation.ts",
+    "src/lib/promane/legacy-pending-scope.ts",
+    "src/lib/promane/pending-scope-migration.ts",
+    "src/lib/promane/project-operation.ts",
+    "src/lib/promane/task-creation.ts",
+    "src/lib/promane/time-entry-creation.ts",
+    "src/lib/promane/timesheet-read.ts",
+    "src/lib/promane/use-client-creation.ts",
+    "src/lib/promane/use-expense-creation.ts",
+    "src/lib/promane/use-project-operation.ts",
+    "src/lib/promane/use-task-creation.ts",
+    "src/lib/promane/use-time-entry-creation.ts"
+  ],
+  "sourceHashes": {
+    "src/app/api/promane/clients/route.ts": "4da0231a6f972dcb50d6aa78f2ef44c3524b296fa9911a891f8391f630e1856a",
+    "src/app/api/promane/expenses/route.ts": "4963640e74b6936fd9f6b84dacf410fd31073a3e214236eb5a6005ab51c9f58d",
+    "src/app/promane/[workspaceSlug]/clients/page.tsx": "c69eaa1a66378561d10aef0c5b56360132a8fbdbb66d7cac74b28cef5d7a185d",
+    "src/app/promane/[workspaceSlug]/projects/[projectId]/edit/page.tsx": "41e813577a19bbf4e23c9dab8ab82e0c9c903dc5f17759ace13e1de1c02320d5",
+    "src/app/promane/[workspaceSlug]/projects/[projectId]/page.tsx": "e9257ab8fe8f02e45c8c12289c24aa30bee091645448785c8c3c9c7b7ed3aba1",
+    "src/app/promane/[workspaceSlug]/projects/new/page.tsx": "dd47a0fdc8932b4100ecba49af6c515198d7926946eb31322b226fe7993490a6",
+    "src/app/promane/[workspaceSlug]/timesheet/page.tsx": "8432299e0b22a85f6a8a177c18de35745d91866a2c2b1c3809c4dc4ed3a4f7f9",
+    "src/components/promane/client-actions.tsx": "92904944e7399fc8fda999e4d4e7856956bcd863d94a6fbab16f18f2f552f1af",
+    "src/components/promane/finance-tab.tsx": "d6eed2fdf86b561cb5fb1a82bede38eee217b7ba0661b31fb52ce907a92e5838",
+    "src/components/promane/project-form.tsx": "97e9afdaee70460d9b28f22574156b1f1a6b6ee3b47115a2b66357c43e504f31",
+    "src/components/promane/task-create-form.tsx": "a1f540bd077e17b7ea527459fb43f636ecd19206fab5fd6795b7d5fa7c2354d8",
+    "src/components/promane/timesheet-view.tsx": "cbdeb3c5fd83112c391a15a3c28532e23835dbb7e62caad876509d8f2983425e",
+    "src/lib/promane/actions-projects.ts": "23cf02e3e05cbfd0eaf4822639f11bd7b8d53749a226a6f4fba62c91e784702e",
+    "src/lib/promane/actions-tasks.ts": "2f445c2f59f6da4347f78a04e8bb32d5294af11c1dec51f71bd50f6c87106e7d",
+    "src/lib/promane/actions-time-entries.ts": "361d08575a2d3fde2d076623f301a39ab8c77e67eec8bbcf8efeeffab2252ad0",
+    "src/lib/promane/auth.ts": "c941d2f3c6cbc949c0e9e564b93d9de391daf24e966317e09866e1c3818f8c9a",
+    "src/lib/promane/client-creation.ts": "2fa8f9d2d8c91a72e2969f537cf0e40635035b08eabc20f86a889fc0a7143f0e",
+    "src/lib/promane/expense-creation.ts": "b19748e92e729dfcd75314d74e29ede823f026b6456d1d4db168d863c36beb8e",
+    "src/lib/promane/legacy-pending-scope.ts": "41e586dd81ec265d43cb09b487d600258522c1daa018b595ea40652d665b8654",
+    "src/lib/promane/pending-scope-migration.ts": "13ace32b42d3ec565ec352cc9795e6444f6f969c45aa7f92ae811b85ad89a0bb",
+    "src/lib/promane/project-operation.ts": "2fe5743ba685c8052215e69555eda8d377f23ededa2280f83894d88adf6ccffb",
+    "src/lib/promane/task-creation.ts": "e84eecd5da412962d3c64ef90e3769ae7fa7f66038eaa56ef255ced3dd0e78b1",
+    "src/lib/promane/time-entry-creation.ts": "24b375563e6a8fdd079ab5be57098c43fee4f4e5a89117452e77666b1225365d",
+    "src/lib/promane/timesheet-read.ts": "6f6ebeedb6b360f11699121c9a648e5ec024f647b24b0fe08903b7c0effbfe06",
+    "src/lib/promane/use-client-creation.ts": "f8326e6eeb2bbef168743f1c244d401590b9e4fac92056722176086d5384957b",
+    "src/lib/promane/use-expense-creation.ts": "8fbdb0ac722a67ac485d103e71c835f2c00cf9d73eff354827f9edb655a4b2b3",
+    "src/lib/promane/use-project-operation.ts": "a20cb1ed3dc509ab7f48ce78cc1dd2f86ed933aea6a3a3cee33a462d0fe107f4",
+    "src/lib/promane/use-task-creation.ts": "f73b4a1b3f8371e33917c3bef8e11292e9435634c0d01e065bf1d77aba17b877",
+    "src/lib/promane/use-time-entry-creation.ts": "b5db0f7d238f9d2b9c23e6031fb10d7c5ea2eac7da936c37a8b7a4de0f11cdf4"
+  },
+  "verified": [
+    {
+      "evidence": "docs/audits/2026-10-06-all-services-recheck/promane-canonical-scope-mounted-results.json",
+      "passed": 30,
+      "scope": "Actual five hooks mounted in React StrictMode with real localStorage, synthetic auth/Web Locks/transport. New v2 scope plus unresolved v1 explicit cancellation with actual client migration helper. Auth/actions/transport synthetic; real Next native still pending."
+    },
+    {
+      "evidence": "docs/audits/2026-10-06-all-services-recheck/promane-pending-scope-migration-results.json",
+      "passed": 60,
+      "scope": "Actual client migration helper and real localStorage with synthetic server binding resolver/Web Locks. Missing legacy receipts stay blocked until explicit successful server fencing; server resolution/cancellation transport is synthetic here."
+    },
+    {
+      "evidence": "docs/audits/2026-10-06-all-services-recheck/promane-canonical-scope-postgres-results.json",
+      "passed": 32,
+      "scope": "Actual five mutation/recovery modules and auth workspace resolver, actual legacy receipt resolver, isolated Unix-socket PostgreSQL. Synthetic authenticated session and Next cache/Response adapters; no Next HTTP/native browser/production data."
+    }
+  ],
+  "typecheck": {
+    "session": 83876,
+    "exitCode": 0
+  },
+  "lint": {
+    "session": 80894,
+    "exitCode": 0,
+    "existingWarnings": true
+  },
+  "privatePostgres": {
+    "session": 80894,
+    "status": "passed",
+    "stopped": true
+  },
+  "remaining": [
+    "Poll exact authenticated Next supervisor session35099. Frozen94 gate passed unchanged; do not edit production source during E2E.",
+    "Investigate and fix any authenticated Next24 findings, then repeat frozen checks if production source changes.",
+    "All four additional native families are now included in prepared 8-case actual Next verifier; results pending.",
+    "Exact reviewed commit/push, matching CI/READY/public proof after release validation",
+    "Continue all17service2074criterion audit; this cohort is not whole-service completion"
+  ],
+  "publication": "Held; prior 91 gate and Next13 prove earlier workspace snapshot only. Canonical source changes require fresh full gate.",
+  "legacyCancellation": {
+    "status": "implemented",
+    "scope": "Actor/family/UUID advisory lock and global terminal receipt; all five helpers consult it after preserving existing local receipts. Previously processed inactive own receipts reported unavailable, never falsely cancelled. No business-row deletion or production data mutation."
+  },
+  "currentGate": "docs/audits/2026-10-06-all-services-recheck/promane-canonical-operation-release-3bc76258-e420-415d-b6a7-3193eda9fc5c",
+  "securityRegression": {
+    "session": 28226,
+    "terminalExitCode": 0,
+    "scope": "Offline existing suite; fresh full gate repeats checks against final frozen snapshot."
+  },
+  "previousGate": {
+    "path": "docs/audits/2026-10-06-all-services-recheck/promane-canonical-operation-release-fa6f498b-2d2c-4a82-a7cf-013d838b5cfe",
+    "session": 47455,
+    "terminalExitCode": 1,
+    "cause": "74th gate failed because legacy-signature project view fixture did not declare new migration import. Added inert unused legacy-path adapter without removing assertions; standalone original6 cases passed; fresh94 gate required."
+  },
+  "authenticatedNext": {
+    "session": 35099,
+    "status": "running",
+    "supervisor": "promane-registration-next-e2e-supervise.py",
+    "expectedWorkspaceCases": 13,
+    "expectedProjectCases": 3,
+    "expectedOtherFamilyCases": 8,
+    "scope": "Actual Next/Chrome/full-schema private PG, new URL and original open-tab recovery; no production data or outbound provider operations."
+  },
+  "openTabBaseline": "docs/audits/2026-10-06-all-services-recheck/promane-registration-open-tab-next-baseline.json",
+  "authenticatedNextStatus": "previous-build-expanded28-pass-but-original24-exposed-intermittent-time-route-failure",
+  "productionReflection": "not-deployed",
+  "authenticatedNextSession": 84226,
+  "authenticatedNextExpected": 34,
+  "gateStatus": "passed"
+}

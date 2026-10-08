@@ -68,10 +68,10 @@ function refreshProject(workspaceSlug: string, id?: string) {
   revalidatePath(`/promane/${workspaceSlug}/projects`);
   revalidatePath(`/promane/${workspaceSlug}`);
 }
-export async function createProject(workspaceSlug: string, data: Partial<PromaneProjectInput> & {name: string; operationId: string; expectedUserId: string}) {
+export async function createProject(workspaceSlug: string, data: Partial<PromaneProjectInput> & {name: string; operationId: string; expectedUserId: string; workspaceId?: string}) {
   const {userId} = await requirePromaneAuthAction();
   if (data.expectedUserId !== userId) throw new Error('ログインする利用者が変わりました。保存状態を確認してください');
-  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId, false, data.workspaceId);
   if (!workspace.userId) throw new Error('ワークスペースの契約者を確認できません');
   const operationId = promaneProjectOperationId(data.operationId), input = parsePromaneProjectInput(data);
   const result = await retryProjectOperation(() => prisma.$transaction(async tx => {
@@ -90,13 +90,13 @@ export async function createProject(workspaceSlug: string, data: Partial<Promane
         return {state: 'saved', entry: await tx.promaneProject.create({data: {...input, ...projectDates(input), workspaceId: workspace.id}})};
       });
   }, {isolationLevel: 'Serializable'}));
-  if (result.state !== 'rejected') refreshProject(workspaceSlug, result.entry.id);
-  return result;
+  if (result.state !== 'rejected' && (!data.workspaceId || workspaceSlug === workspace.slug)) refreshProject(workspace.slug, result.entry.id);
+  return { ...result, workspaceSlug: workspace.slug };
 }
-export async function updateProject(workspaceSlug: string, projectId: string, data: PromaneProjectPatch & {operationId: string; expectedUserId: string}) {
+export async function updateProject(workspaceSlug: string, projectId: string, data: PromaneProjectPatch & {operationId: string; expectedUserId: string; workspaceId?: string}) {
   const {userId} = await requirePromaneAuthAction();
   if (data.expectedUserId !== userId) throw new Error('ログインする利用者が変わりました。保存状態を確認してください');
-  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId, false, data.workspaceId);
   if (typeof projectId !== 'string' || !projectId || projectId.length > 200) throw new Error('案件を指定してください');
   const operationId = promaneProjectOperationId(data.operationId), input = parsePromaneProjectInput(data, true);
   const result = await retryProjectOperation(() => prisma.$transaction(async tx => {
@@ -121,20 +121,21 @@ export async function updateProject(workspaceSlug: string, projectId: string, da
         }
       });
   }, {isolationLevel: 'Serializable'}));
-  if (result.state !== 'rejected') refreshProject(workspaceSlug, projectId);
-  return result;
+  if (result.state !== 'rejected' && (!data.workspaceId || workspaceSlug === workspace.slug)) refreshProject(workspace.slug, projectId);
+  return { ...result, workspaceSlug: workspace.slug };
 }
-export async function recoverProjectOperation(workspaceSlug: string, mode: 'create' | 'update', projectId: string | null, operation: string, cancelIfMissing = false, expectedUserId = '') {
+export async function recoverProjectOperation(workspaceSlug: string, mode: 'create' | 'update', projectId: string | null, operation: string, cancelIfMissing = false, expectedUserId = '', workspaceId?: string) {
   const {userId} = await requirePromaneAuthAction();
   if (expectedUserId !== userId) throw new Error('ログインする利用者が変わりました。保存状態を確認してください');
-  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId, false, workspaceId);
   if (typeof cancelIfMissing !== 'boolean' || !['create','update'].includes(mode) || (mode === 'create' ? projectId !== null : typeof projectId !== 'string' || !projectId || projectId.length > 200)) throw new Error('確認対象を指定してください');
   const scope = {workspaceId: workspace.id, userId, mode, projectId} as PromaneProjectOperationScope;
   const operationId = promaneProjectOperationId(operation);
-  return retryProjectOperation(() => prisma.$transaction(async tx => {
+  const result = await retryProjectOperation(() => prisma.$transaction(async tx => {
     await lockProjectWriter(tx, workspace.id, userId);
     return recoverPromaneProjectOperation(tx, scope, operationId, id => tx.promaneProject.findFirst({where: {id, workspaceId: workspace.id}}), cancelIfMissing);
   }, {isolationLevel: 'Serializable'}));
+  return { ...result, workspaceSlug: workspace.slug };
 }
 
 export async function deleteProject(workspaceSlug: string, projectId: string) {

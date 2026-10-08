@@ -86,13 +86,13 @@ function validateDates(
 }
 
 export async function createTask(workspaceSlug: string, data: {
-  operationId: string; expectedUserId: string; projectId: string; title: string;
+  operationId: string; expectedUserId: string; workspaceId?: string; projectId: string; title: string;
   description?: string | null; status?: string; priority?: string;
   assigneeId?: string | null; parentId?: string | null; startDate?: string | null; dueDate?: string | null;
 }) {
   const { userId } = await requirePromaneAuthAction();
   if (data.expectedUserId !== userId) throw new Error('ログインする利用者が変わりました。保存状態を確認してください');
-  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId, false, data.workspaceId);
   const operationId = promaneTaskOperationId(data.operationId);
   const input = parsePromaneTaskCreate(data);
   const task = await retryTaskCreation(() => prisma.$transaction(async tx => {
@@ -110,24 +110,25 @@ export async function createTask(workspaceSlug: string, data: {
           order: (maxOrder._max.order ?? -1) + 1 } });
       });
   }, { isolationLevel: 'Serializable' }));
-  revalidatePath(`/promane/${workspaceSlug}/projects/${input.projectId}`);
-  return task;
+  if (!data.workspaceId || workspaceSlug === workspace.slug) revalidatePath(`/promane/${data.workspaceId ? workspace.slug : workspaceSlug}/projects/${input.projectId}`);
+  return { ...task, ...(data.workspaceId ? { workspaceSlug: workspace.slug } : {}) };
 }
 
 /** Read recovery never creates a task. Explicit cancellation fences a delayed missing operation. */
-export async function recoverTaskCreation(workspaceSlug: string, projectId: string, operation: string, cancelIfMissing = false, expectedUserId = '') {
+export async function recoverTaskCreation(workspaceSlug: string, projectId: string, operation: string, cancelIfMissing = false, expectedUserId = '', workspaceId?: string) {
   const { userId } = await requirePromaneAuthAction();
   if (expectedUserId !== userId) throw new Error('ログインする利用者が変わりました。保存状態を確認してください');
-  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId, false, workspaceId);
   const operationId = promaneTaskOperationId(operation);
   if (typeof projectId !== 'string' || !projectId.trim() || projectId.length > 200 || typeof cancelIfMissing !== 'boolean') throw new Error('確認対象を指定してください');
-  return retryTaskCreation(() => prisma.$transaction(async tx => {
+  const result = await retryTaskCreation(() => prisma.$transaction(async tx => {
     await lockTaskWriter(tx, workspace.id, userId);
     const project = await tx.promaneProject.findFirst({ where: { id: projectId, workspaceId: workspace.id }, select: { id: true } });
     if (!project) throw new Error('プロジェクトが見つかりません');
     return recoverPromaneTask(tx, { workspaceId: workspace.id, userId, projectId }, operationId,
       id => tx.promaneTask.findFirst({ where: { id, projectId } }), cancelIfMissing);
   }, { isolationLevel: 'Serializable' }));
+  return { ...result, ...(workspaceId ? { workspaceSlug: workspace.slug } : {}) };
 }
 
 export async function updateTask(workspaceSlug: string, taskId: string, data: {

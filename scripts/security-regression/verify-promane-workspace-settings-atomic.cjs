@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
+const { workspaceApi } = require('./promane-workspace-operation-fixture.cjs')
 
 function fixture({ role = 'admin', revokeOnConflict = false, duplicate = false, uniqueConflict = false } = {}) {
   let currentRole = role
@@ -11,18 +12,21 @@ function fixture({ role = 'admin', revokeOnConflict = false, duplicate = false, 
       assert.equal(options.isolationLevel, 'Serializable')
       attempts++
       const before = writes
+      let row = { id: 'w', name: '旧名', slug: 'old', userId: 'u', updatedAt: new Date('2026-09-30T00:00:00.000Z') }
       const result = await fn({
+        $queryRaw: async strings => strings.join('').includes('promane_members') ? (['owner','admin'].includes(currentRole) ? [{ id: 'actor' }] : []) : [{ id: 'u' }],
         promaneMember: { findFirst: async ({ where }) => where.role.in.includes(currentRole) ? { id: 'actor' } : null },
         promaneWorkspace: {
+          findUnique: async () => row,
           findFirst: async ({ where }) => {
             assert.equal(where.NOT.id, 'w')
             return duplicate ? { id: 'other' } : null
           },
-          update: async ({ where, data }) => {
+          updateMany: async ({ where, data }) => {
             assert.equal(where.id, 'w')
             writes++
-            if (uniqueConflict) throw Object.assign(new Error('duplicate'), { code: 'P2002' })
-            return { id: 'w', name: data.name || '旧名', slug: data.slug || 'old' }
+            if (uniqueConflict) throw Object.assign(new Error('duplicate'), { code: 'P2002', meta: { target: ['slug'] } })
+            row = { ...row, ...data }; return { count: 1 }
           },
         },
       })
@@ -34,14 +38,10 @@ function fixture({ role = 'admin', revokeOnConflict = false, duplicate = false, 
       return result
     },
   }
-  const api = load('src/app/api/promane/workspaces/[id]/route.ts', {
-    'next/server': { NextResponse: Response },
-    'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
-    '@/lib/auth': {},
-    '@/lib/prisma': { prisma },
-  })
+  const fixtureApi = workspaceApi({ prisma })
+  const api = fixtureApi.settings
   return {
-    run: body => api.PATCH({ json: async () => body }, { params: Promise.resolve({ id: 'w' }) }),
+    run: body => api.PATCH({ json: async () => ({ ...body, ...fixtureApi.intent(), expectedUpdatedAt: '2026-09-30T00:00:00.000Z' }) }, { params: Promise.resolve({ id: 'w' }) }),
     state: () => ({ attempts, writes, committedWrites }),
   }
 }

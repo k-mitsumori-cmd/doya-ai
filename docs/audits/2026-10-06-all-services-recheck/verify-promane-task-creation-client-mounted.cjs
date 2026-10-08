@@ -4,7 +4,7 @@ let actorId='staff-user',overrideResponse=false,overrideBody;
 const base='docs/audits/2026-10-06-all-services-recheck/',dom=new JSDOM('<body/>',{url:'https://example.invalid'});global.window=dom.window;global.document=dom.window.document;global.IS_REACT_ACT_ENVIRONMENT=true;const {createRoot}=require('react-dom/client');
 let calls=[],recoveries=[],createImpl,recoverImpl,fastDeadline=false,deadlineFirer;const locks=new Map();const navigator={locks:{request(key,work){const before=locks.get(key)||Promise.resolve();const run=before.then(work);locks.set(key,run.catch(()=>{}));return run}}};
 const taskInput=load('src/lib/promane/task-input.ts',{'./time-input':load('src/lib/promane/time-input.ts')});
-const api=load('src/lib/promane/use-task-creation.ts',{'./task-input':taskInput,'./actions-tasks':{
+const api=load('src/lib/promane/use-task-creation.ts',{'./pending-scope-migration':{initializePromanePendingScope:async()=>false},'next-auth/react':{useSession:()=>({data:{user:{id:'legacy-fixture-user'}},status:'authenticated'})},'./task-input':taskInput,'./actions-tasks':{
  createTask:async(slug,data)=>{calls.push({slug,data});return overrideResponse?overrideBody:createImpl(slug,data)},
  recoverTaskCreation:async(slug,project,operation,cancel)=>{const args=[slug,operation,cancel];recoveries.push(args);return recoverImpl(...args)}
 },'react':React,'next-auth/react':{useSession:()=>({data:actorId?{user:{id:actorId}}:null,status:actorId?'authenticated':'unauthenticated'})}},{window:dom.window,navigator,crypto:crypto.webcrypto,URLSearchParams,setTimeout:(fn,ms)=>{if(fastDeadline){deadlineFirer=fn;return {synthetic:true}}return setTimeout(fn,ms)},clearTimeout:t=>{if(!t?.synthetic)clearTimeout(t)}});

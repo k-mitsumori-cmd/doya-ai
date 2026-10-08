@@ -32,13 +32,14 @@ type MemberStat = {
 
 export function FinanceTab({
   workspaceSlug,
+  workspaceId,
   projectId,
   laborCost,
   totalMinutes,
   expenses,
   members,
 }: {
-  workspaceSlug: string;
+  workspaceSlug: string; workspaceId: string;
   projectId: string;
   laborCost: number;
   totalMinutes: number;
@@ -48,8 +49,13 @@ export function FinanceTab({
   const router = useRouter();
   const inputId = useId();
   const [showForm, setShowForm] = useState(false);
-  const creation = useExpenseCreation(workspaceSlug, projectId);
+  const creation = useExpenseCreation(workspaceSlug, projectId, workspaceId);
   const submission = useRef(false);
+  function refreshCreated() {
+    const slug = creation.getWorkspaceSlug?.() || workspaceSlug;
+    if (slug !== workspaceSlug) router.replace(`/promane/${encodeURIComponent(slug)}/projects/${encodeURIComponent(projectId)}`);
+    else router.refresh();
+  }
   const loading = creation.status === "saving" || creation.status === "checking";
   const { confirm, ConfirmDialog } = useConfirm();
   useEffect(() => {
@@ -68,7 +74,7 @@ export function FinanceTab({
       if (!saved) return;
       toast.success("経費を登録しました");
       setShowForm(false);
-      router.refresh();
+      refreshCreated();
     } catch (e: any) {
       console.error("[promane/expense] create exception");
       toast.error(e?.message || "通信エラーが発生しました");
@@ -156,13 +162,13 @@ export function FinanceTab({
           {creation.message && (
             <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 mb-3 text-sm text-gray-800">
               <p>{creation.message}</p>
-              {(creation.status === 'unknown' || creation.status === 'checking') && (
+              {(creation.status === 'unknown' || creation.status === 'checking' || creation.status === 'blocked') && (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  <Button disabled={loading} onClick={async () => { if (await creation.recover() === 'found') { setShowForm(false); router.refresh(); } }}>保存状態を確認</Button>
+                  <Button disabled={loading} onClick={async () => { if (await creation.recover() === 'found') { setShowForm(false); refreshCreated(); } }}>保存状態を確認</Button>
                   <Button disabled={loading} onClick={async () => {
                     const ok = await confirm({ title: '未完了の送信を取り消す', message: '未保存の経費が後から登録されないようにします。保存済みの経費は削除しません。', confirmLabel: '取り消す', tone: 'danger' });
                     if (!ok) return;
-                    if (await creation.recover(true) === 'found') { setShowForm(false); router.refresh(); }
+                    if (await creation.recover(true) === 'found') { setShowForm(false); refreshCreated(); }
                   }}>未完了の送信を取り消す</Button>
                 </div>
               )}

@@ -39,5 +39,5 @@ export async function readTimesheet(db: Prisma.TransactionClient, userId: string
   const last = entries.at(-1)
   const nextCursor = rows.length > 50 && last ? Buffer.from(JSON.stringify({ v: 1, month: query.month, id: last.id, date: last.date.toISOString(), memberId: member.id })).toString('base64url') : null
   const projects = await db.promaneProject.findMany({ where: { workspaceId: member.workspaceId }, select: { id: true, name: true, tasks: { select: { id: true, title: true } } }, orderBy: { name: 'asc' } })
-  return { memberId: member.id, entries, projects, nextCursor, totalCount: totals._count._all, totalMinutes: totals._sum.duration ?? 0 }
+  return { workspaceId: member.workspaceId, memberId: member.id, entries, projects, nextCursor, totalCount: totals._count._all, totalMinutes: totals._sum.duration ?? 0 }
 }

@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { initializePromanePendingScope } from './pending-scope-migration';
 import { useSession } from 'next-auth/react';
 
 import { parsePromaneProjectInput, type PromaneProjectInput, type PromaneProjectPatch } from './project-input';
 import { createProject, updateProject, recoverProjectOperation } from './actions-projects';
 type Input = PromaneProjectInput | PromaneProjectPatch;
-type Outcome = { state: 'saved' | 'superseded'; entry: { id: string }; appliedUpdatedAt: string }
+type Outcome = { workspaceSlug?: string; state: 'saved' | 'superseded'; entry: { id: string }; appliedUpdatedAt: string }
   | { state: 'rejected'; code: 'LIMIT'; error: string; canManageBilling: boolean }
   | { state: 'rejected'; code: 'STALE_PROJECT'; error: string }
   | { state: 'cancelled' | 'unavailable'; entry: null };
@@ -33,7 +34,7 @@ async function withDeadline<T>(work: Promise<T>): Promise<T> {
     })]);
   } finally { if (timer !== undefined) clearTimeout(timer); }
 }
-function outcome(value: unknown, projectId: string | null): Outcome | null {
+function outcome(value: unknown, projectId: string | null, canonical = false): Outcome | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
   if (raw.state === 'rejected') {
@@ -44,6 +45,7 @@ function outcome(value: unknown, projectId: string | null): Outcome | null {
   }
   if ((raw.state === 'cancelled' || raw.state === 'unavailable') && raw.entry === null) return {state: raw.state, entry: null};
   if (raw.state !== 'saved' && raw.state !== 'superseded') return null;
+  if (canonical && (typeof raw.workspaceSlug !== 'string' || !/^[a-z0-9][a-z0-9-]{2,49}$/.test(raw.workspaceSlug))) return null;
   if (!raw.entry || typeof raw.entry !== 'object' || Array.isArray(raw.entry)) return null;
   const entry = raw.entry as Record<string, unknown>;
   if (typeof entry.id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(entry.id) || (projectId !== null && entry.id !== projectId)) return null;
@@ -57,7 +59,7 @@ function outcome(value: unknown, projectId: string | null): Outcome | null {
     const date = (v: unknown) => { if (v === null) return null; const text=iso(v); if (!/^\d{4}-\d{2}-\d{2}T00:00:00\.000Z$/.test(text)) throw new Error(uncertain); return text.slice(0,10); };
     const normalized = parsePromaneProjectInput({...entry,startDate:date(entry.startDate),endDate:date(entry.endDate)});
     for (const key of fields.filter(key=>key!=='startDate'&&key!=='endDate')) if (normalized[key as keyof PromaneProjectInput] !== entry[key]) return null;
-    return {state: raw.state, entry: entry as {id:string}, appliedUpdatedAt};
+    return {state: raw.state, entry: entry as {id:string}, appliedUpdatedAt, ...(canonical ? {workspaceSlug: raw.workspaceSlug as string} : {})};
   } catch { return null; }
 }
 function matches(entry: {id:string}, input: Input): boolean {
@@ -70,23 +72,31 @@ function matches(entry: {id:string}, input: Input): boolean {
 }
 
 /** Persist only operation metadata. Unknown writes must be recovered or fenced before a new submission. */
-export function useProjectOperation(workspaceSlug: string, projectId: string | null) {
+export function useProjectOperation(workspaceSlug: string, projectId: string | null, workspaceId?: string) {
   const { data: session, status: sessionStatus } = useSession();
   const actor = session?.user as { id?: unknown } | undefined;
   const userId = sessionStatus === 'authenticated' && typeof actor?.id === 'string' && actor.id ? actor.id : null;
-  const key = `promane-project-pending:v1:${encodeURIComponent(workspaceSlug)}:${projectId === null ? 'create' : 'update:' + encodeURIComponent(projectId)}:${encodeURIComponent(userId || '')}`;
+  const key = `promane-project-pending:${workspaceId ? "v2" : "v1"}:${encodeURIComponent(workspaceId || workspaceSlug)}:${projectId === null ? 'create' : 'update:' + encodeURIComponent(projectId)}:${encodeURIComponent(userId || '')}`;
   const scopeRef = useRef({ key, busy: false, active: true });
   if (scopeRef.current.key !== key) scopeRef.current = { key, busy: false, active: true };
   const scope = scopeRef.current;
   const [view, setView] = useState<{ key: string; status: Status; message: string }>({ key, status: 'blocked', message: '保存状態を確認しています。' });
   const current = () => scopeRef.current === scope && scope.active;
   const show = (status: Status, message: string) => { if (current()) setView({ key, status, message }); };
+  async function initializeScope(cancelUnresolved = false) {
+    if (workspaceId && userId) return initializePromanePendingScope(key, {family:'project',workspaceId,userId,entityId:projectId,mode:projectId === null ? 'create' : 'update'}, cancelUnresolved);
+    return false;
+  }
   useEffect(() => {
     scope.active = true;
     scope.busy = false;
     if (!userId) { show('blocked', 'ログイン状態を確認してください。'); return () => { scope.active = false; scope.busy = true; }; }
-    try { const pending = read(key); show(pending ? 'unknown' : 'ready', pending ? uncertain : ''); }
-    catch { show('blocked', '送信記録を読み取れません。案件の一覧を確認してください。'); }
+    const initialize = async () => {
+      await initializeScope();
+      if (!current()) return;
+      const pending = read(key); show(pending ? 'unknown' : 'ready', pending ? uncertain : '');
+    };
+    void initialize().catch(error => { if (current()) show('blocked', error instanceof Error && error.message.startsWith('旧版') ? error.message : '送信記録を読み取れません。案件の一覧を確認してください。'); });
     return () => { scope.active = false; scope.busy = true; };
     // Each scope owns its callbacks; a previous workspace must never update the new screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -107,6 +117,8 @@ export function useProjectOperation(workspaceSlug: string, projectId: string | n
     show('saving', '記録中です。');
     let sent = false;
     try {
+      await initializeScope();
+      if (!current()) return null;
       const prepared = await locked(key, () => {
         const existing = read(key);
         if (existing) return { existing: true, operationId: existing };
@@ -120,9 +132,9 @@ export function useProjectOperation(workspaceSlug: string, projectId: string | n
       if (prepared.existing) { show('unknown', uncertain); return null; }
       sent = true;
       const raw = projectId === null
-        ? await withDeadline(createProject(workspaceSlug, {...input as PromaneProjectInput, operationId: prepared.operationId, expectedUserId: userId}))
-        : await withDeadline(updateProject(workspaceSlug, projectId, {...input as PromaneProjectPatch, operationId: prepared.operationId, expectedUserId: userId}));
-      const result = outcome(raw, projectId);
+        ? await withDeadline(createProject(workspaceSlug, {...input as PromaneProjectInput, operationId: prepared.operationId, expectedUserId: userId, workspaceId}))
+        : await withDeadline(updateProject(workspaceSlug, projectId, {...input as PromaneProjectPatch, operationId: prepared.operationId, expectedUserId: userId, workspaceId}));
+      const result = outcome(raw, projectId, !!workspaceId);
       if (!result || result.state === 'cancelled' || result.state === 'unavailable') throw new Error(uncertain);
       if (result.state === 'saved' && !matches(result.entry, input)) throw new Error(uncertain);
       await clear(prepared.operationId);
@@ -143,10 +155,15 @@ export function useProjectOperation(workspaceSlug: string, projectId: string | n
     scope.busy = true;
     show('checking', '保存状態を確認しています。');
     try {
+      const legacyResolution = await initializeScope(cancelIfMissing);
+      if (!current()) return null;
       const operationId = read(key);
-      if (!operationId) { show('ready', '未確認の送信はありません。'); return null; }
-      const raw = await withDeadline(recoverProjectOperation(workspaceSlug, projectId === null ? 'create' : 'update', projectId, operationId, cancelIfMissing, userId));
-      const result = outcome(raw, projectId);
+      if (!operationId) {
+        show('ready', legacyResolution === 'unavailable' ? '旧版の送信は処理済みですが、現在の権限では結果を開けません。保存済みの一覧を確認してください。' : legacyResolution ? '旧版の未完了の送信を取り消しました。保存済みのデータは削除していません。' : '未確認の送信はありません。');
+        return legacyResolution ? {state:legacyResolution,entry:null} : null;
+      }
+      const raw = await withDeadline(recoverProjectOperation(workspaceSlug, projectId === null ? 'create' : 'update', projectId, operationId, cancelIfMissing, userId, workspaceId));
+      const result = outcome(raw, projectId, !!workspaceId);
       if (result) {
         await clear(operationId);
         if (!current()) return null;

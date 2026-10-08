@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-08T01:17:08.786Z",
+  "expected": 15,
+  "passed": 15,
+  "cases": [
+    "same operation replay returns one workspace and owner membership",
+    "concurrent replay commits one workspace and receipt",
+    "distinct intended operations preserve independent workspace creation",
+    "changed payload cannot reuse saved operation",
+    "read missing performs no writes and explicit cancellation fences delayed create",
+    "saved cancellation recovers without deleting workspace",
+    "deleted committed workspace stays unavailable without resurrection",
+    "terminal upgrade decline persists despite later available allowance",
+    "terminal enterprise contact guidance survives recovery",
+    "invalid external upgrade target cannot become a committed decline",
+    "saved update replay does not repeat revision write",
+    "later workspace edit is preserved and recovered as superseded",
+    "user and target modes isolate operation receipts",
+    "receipt failure atomically rolls back workspace and nested owner membership",
+    "corrupt receipt malformed UUID and invalid create target fail closed"
+  ],
+  "sourceHashes": {
+    "./src/lib/promane/workspace-operation.ts": "19ff4b3dcf0167d8841e7ede41b32c370667a32d5e2dc002eb9bf196b433cb92"
+  },
+  "scope": "Candidate workspace receipt helper and actual isolated PostgreSQL only, synthetic caller authorization and business callbacks. Actual workspace handlers/limits/UI not integrated or covered."
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { initializePromanePendingScope } from './pending-scope-migration';
 import { useSession } from 'next-auth/react';
 
 import { parsePromaneClientCreate, type PromaneClientCreate } from './client-input';
@@ -49,23 +50,37 @@ async function request(url: string, body?: unknown): Promise<unknown> {
 }
 
 /** Persist only operation metadata. Unknown writes must be recovered or fenced before a new submission. */
-export function useClientCreation(workspaceSlug: string) {
+export function useClientCreation(workspaceSlug: string, workspaceId?: string) {
   const { data: session, status: sessionStatus } = useSession();
   const actor = session?.user as { id?: unknown } | undefined;
   const userId = sessionStatus === 'authenticated' && typeof actor?.id === 'string' && actor.id ? actor.id : null;
-  const key = `promane-client-pending:v1:${encodeURIComponent(workspaceSlug)}:${encodeURIComponent(userId || '')}`;
-  const scopeRef = useRef({ key, busy: false, active: true });
-  if (scopeRef.current.key !== key) scopeRef.current = { key, busy: false, active: true };
+  const key = `promane-client-pending:${workspaceId ? "v2" : "v1"}:${encodeURIComponent(workspaceId || workspaceSlug)}:${encodeURIComponent(userId || '')}`;
+  const scopeRef = useRef({ key, busy: false, active: true, workspaceSlug });
+  if (scopeRef.current.key !== key) scopeRef.current = { key, busy: false, active: true, workspaceSlug };
   const scope = scopeRef.current;
   const [view, setView] = useState<{ key: string; status: Status; message: string }>({ key, status: 'blocked', message: '保存状態を確認しています。' });
   const current = () => scopeRef.current === scope && scope.active;
   const show = (status: Status, message: string) => { if (current()) setView({ key, status, message }); };
+  function rememberWorkspace(value: unknown) {
+    if (!workspaceId) return;
+    const slug = value && typeof value === 'object' && 'workspaceSlug' in value ? value.workspaceSlug : null;
+    if (typeof slug !== 'string' || !/^[a-z0-9][a-z0-9-]{2,49}$/.test(slug)) throw new Error(uncertain);
+    scope.workspaceSlug = slug;
+  }
+  async function initializeScope(cancelUnresolved = false) {
+    if (workspaceId && userId) return initializePromanePendingScope(key, {family:'client',workspaceId,userId,entityId:null,mode:'create'}, cancelUnresolved);
+    return false;
+  }
   useEffect(() => {
     scope.active = true;
     scope.busy = false;
     if (!userId) { show('blocked', 'ログイン状態を確認してください。'); return () => { scope.active = false; scope.busy = true; }; }
-    try { const pending = read(key); show(pending ? 'unknown' : 'ready', pending ? uncertain : ''); }
-    catch { show('blocked', '送信記録を読み取れません。顧客情報の一覧を確認してください。'); }
+    const initialize = async () => {
+      await initializeScope();
+      if (!current()) return;
+      const pending = read(key); show(pending ? 'unknown' : 'ready', pending ? uncertain : '');
+    };
+    void initialize().catch(error => { if (current()) show('blocked', error instanceof Error && error.message.startsWith('旧版') ? error.message : '送信記録を読み取れません。顧客情報の一覧を確認してください。'); });
     return () => { scope.active = false; scope.busy = true; };
     // Each scope owns its callbacks; a previous workspace must never update the new screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,6 +101,8 @@ export function useClientCreation(workspaceSlug: string) {
     show('saving', '記録中です。');
     let sent = false;
     try {
+      await initializeScope();
+      if (!current()) return false;
       const prepared = await locked(key, () => {
         const existing = read(key);
         if (existing) return { existing: true, operationId: existing };
@@ -98,11 +115,12 @@ export function useClientCreation(workspaceSlug: string) {
       if (!current()) return false;
       if (prepared.existing) { show('unknown', uncertain); return false; }
       sent = true;
-      const result = await withDeadline(request('/api/promane/clients', { ...input, workspaceSlug, operationId: prepared.operationId }));
+      const result = await withDeadline(request('/api/promane/clients', { ...input, workspaceSlug, workspaceId, expectedUserId: userId, operationId: prepared.operationId }));
       if (!result || typeof result !== 'object' || !('success' in result) || result.success !== true || !('client' in result)) throw new Error(uncertain);
       const entry = result.client;
       if (!validEntry(entry) || entry.name !== input.name
         || (['contactName','email','phone','address','note'] as const).some(field => entry[field] !== (input[field] ?? null))) throw new Error(uncertain);
+      rememberWorkspace(entry);
       await clear(prepared.operationId);
       if (!current()) return false;
       show('ready', '顧客を保存しました。');
@@ -121,15 +139,22 @@ export function useClientCreation(workspaceSlug: string) {
     scope.busy = true;
     show('checking', '保存状態を確認しています。');
     try {
+      const legacyResolution = await initializeScope(cancelIfMissing);
+      if (!current()) return null;
       const operationId = read(key);
-      if (!operationId) { show('ready', '未確認の送信はありません。'); return null; }
+      if (!operationId) {
+        show('ready', legacyResolution === 'unavailable' ? '旧版の送信は処理済みですが、現在の権限では結果を開けません。保存済みの一覧を確認してください。' : legacyResolution ? '旧版の未完了の送信を取り消しました。保存済みのデータは削除していません。' : '未確認の送信はありません。');
+        return legacyResolution || null;
+      }
       const query = new URLSearchParams({ workspaceSlug, operationId });
+      if (workspaceId) { query.set('workspaceId', workspaceId); if (userId) query.set('expectedUserId', userId); }
       const raw = await withDeadline(cancelIfMissing
-        ? request('/api/promane/clients', { workspaceSlug, operationId, action: 'cancel' })
+        ? request('/api/promane/clients', { workspaceSlug, workspaceId, expectedUserId: userId, operationId, action: 'cancel' })
         : request('/api/promane/clients?' + query));
       if (!raw || typeof raw !== 'object' || !('state' in raw) || !('entry' in raw)) throw new Error(uncertain);
       const result = raw;
       if (result.state === 'found' && validEntry(result.entry)) {
+        rememberWorkspace(result);
         await clear(operationId);
         if (!current()) return null;
         show('ready', '保存済みの記録が見つかりました。再登録はしていません。'); return 'found';
@@ -154,5 +179,5 @@ export function useClientCreation(workspaceSlug: string) {
     finally { if (current()) scope.busy = false; }
     return null;
   }
-  return { scopeKey: key, status: view.key === key ? view.status : 'blocked' as Status, message: view.key === key ? view.message : '保存状態を確認しています。', save, recover };
+  return { getWorkspaceSlug: () => scope.workspaceSlug, scopeKey: key, status: view.key === key ? view.status : 'blocked' as Status, message: view.key === key ? view.message : '保存状態を確認しています。', save, recover };
 }
