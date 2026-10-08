@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-08T05:32:57.329678+00:00",
+  "cause": "Hosting build invoked PostgreSQL audit fixtures excluded by .vercelignore /docs/; python missing-file stopped offline security regression before Next build.",
+  "failedDeployment": {
+    "id": "dpl_GM7NMsZzm3oL3Cju85wD1tafWrj1",
+    "url": "doya-hglb4r2wh-surisutas-projects.vercel.app",
+    "readyState": "ERROR",
+    "commit": "0f1224d9221063fd11b2baad039e36f87e657bad",
+    "target": "production"
+  },
+  "ci": {
+    "conclusion": "success",
+    "databaseId": 37731687849,
+    "headSha": "0f1224d9221063fd11b2baad039e36f87e657bad",
+    "status": "completed"
+  },
+  "repair": "Keep source/monthly accounting offline in hosting build; move real DB reservation and API replay checks to explicit mandatory CI jobs and retain full local124 release gate.",
+  "publicReflection": "Not confirmed; failed release is not published.",
+  "coverage": "Packaging test passed without docs/PG; current full gate running.",
+  "observerRepair": "Valid ERROR/CANCELED inspect JSON accepted despite nonzero exit; corrected observer terminated1 with ERROR, rather than repeating transient failures."
+}

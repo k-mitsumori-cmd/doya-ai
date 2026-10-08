@@ -249,6 +249,12 @@ jobs:
           node docs/audits/2026-10-06-all-services-recheck/verify-promane-canonical-scope-mounted.cjs
           node docs/audits/2026-10-06-all-services-recheck/verify-promane-pending-scope-migration.cjs
 
+      - name: Doyalist extraction reservation and quota (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-helper-postgres-supervise.py
+
+      - name: Doyalist API recovery and exact monthly capacity (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/doyalist-operation-route-postgres-supervise.py
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

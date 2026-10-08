@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-08T05:30:11.211608+00:00",
+  "exitCode": 0,
+  "stdout": "PASS Doyalist monthly JST/source accounting; database reservations and replay run as separate mandatory CI steps\n",
+  "stderr": "",
+  "docsPresent": false,
+  "postgresInPath": false,
+  "sourceHashes": {
+    "scripts/security-regression/verify-doyalist-collection-quota.cjs": "caddef23cb93ebc5e81b56a8275d6efcf7b76829cfd76fcb88d6e30bc2acd25b",
+    "scripts/security-regression/load-typescript.cjs": "fd38a12ff81485335d48040e03b92e5011943805bbcf62cf657572df41e39a0a",
+    "src/lib/operational-json.ts": "84dd4a01b6a1c7c3878d6a64e9cebfc4c85414ea3d88d95e9070595a01a58884",
+    "src/lib/doyalist/stream-json.ts": "f2000f7b04a3b3e8192918cc25ae70626cc56145383d1de44018fec277749ba0",
+    "src/lib/doyalist/limits.ts": "0a75e1ae7a0d45f40a841a9a379114fddbbd2e9d9fc98293da807cb8d4c715a6"
+  },
+  "scope": "Isolated hosting-like source subset without docs or PostgreSQL; only monthly offline accounting check, DB reservations remain mandatory separate gates."
+}

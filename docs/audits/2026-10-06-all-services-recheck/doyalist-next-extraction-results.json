@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-08T05:15:55.182Z",
+  "checkedAt": "2026-10-08T05:35:35.247Z",
   "expected": 7,
   "passed": 7,
   "cases": [
@@ -22,6 +22,6 @@
     "src/lib/doyalist/collect-response-client.ts": "50d0896e2a99cc0f7350e5bc8d6f1f94734446e42569513a49dca3922f8f9e6f",
     "docs/audits/2026-10-06-all-services-recheck/verify-doyalist-next-extraction.cjs": "df4e2228bcb3391037e6dbfff55daa6e7ea1981f74198299dd267000ea1e15fd"
   },
-  "buildId": "R6iKAIYZ8iZS1dGt1uSbu",
+  "buildId": "0e4iP8TlbTJ_soOqf6rgo",
   "scope": "Actual copied Next production build, native Chrome hydration/Web Locks/storage/reload, real database sessions and preparation/recovery/cancel APIs with private PostgreSQL. Collection completion only is intercepted and produced by actual receipt helper with synthetic companies; collect handler/provider integration has separate API26 evidence. No production/customer data/provider/network access."
 }

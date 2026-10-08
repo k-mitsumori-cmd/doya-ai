@@ -1,0 +1,26 @@
+{
+  "scope": "Hosting build separation only; no AIO candidates or production schema changes",
+  "files": [
+    ".github/workflows/ci.yml",
+    "scripts/security-regression/verify-doyalist-collection-quota.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-release-observe.py",
+    "docs/audits/2026-10-06-all-services-recheck/publish-doyalist-hosting-buildfix.py",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-hosting-buildfix-allowlist.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-hosting-buildfix-review.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-failed-deployment.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-hosting-quota-packaging-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-current-gate.txt",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-release-fa13f997-cbf5-48e5-92e4-1bd9a53d7d93/supervise.py",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-release-fa13f997-cbf5-48e5-92e4-1bd9a53d7d93/state.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-release-fa13f997-cbf5-48e5-92e4-1bd9a53d7d93/source-manifest.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-helper-postgres-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-operation-route-postgres-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-mounted-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-cancel-mounted-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-native-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-next-extraction-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-extraction-helper-postgres-supervisor.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-operation-route-postgres-supervisor.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyalist-next-extraction-supervisor.json"
+  ]
+}

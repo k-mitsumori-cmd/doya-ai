@@ -48,12 +48,8 @@ const limits = load('src/lib/doyalist/limits.ts', {
   assert.equal(await limits.countMonthlyCompanies('user'), 0, 'old and manual rows do not consume current month quota');
   companies.push({source:'gbizinfo+synthetic',createdAt:new Date()},{source:'corporate_number',createdAt:new Date()});
   assert.equal(await limits.countMonthlyCompanies('user'),2,'recognized source variants count');
-  // Reservation, save, replay and quota actions require the actual transaction
-  // helper and database. A second mock of the quota algorithm cannot prove them.
-  const {spawnSync}=require('node:child_process');
-  for(const name of ['doyalist-extraction-helper-postgres-supervise.py','doyalist-operation-route-postgres-supervise.py']){
-    const p=spawnSync('python3',['docs/audits/2026-10-06-all-services-recheck/'+name],{stdio:'inherit',timeout:55000});
-    assert.equal(p.status,0,name+' private PostgreSQL regression must pass');
-  }
-  console.log('PASS Doyalist collection: JST/source ledger plus actual isolated PostgreSQL reservations, exact saves, replay and plan actions');
+  // PostgreSQL admission/replay coverage is mandatory in CI and the release gate.
+  // The hosting build contains offline regressions only: it has neither audit
+  // fixtures nor PostgreSQL binaries. Do not silently skip a DB test here.
+  console.log('PASS Doyalist monthly JST/source accounting; database reservations and replay run as separate mandatory CI steps');
 })().catch(error=>{console.error(error);process.exitCode=1});
