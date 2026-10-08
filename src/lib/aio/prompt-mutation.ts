@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { Prisma } from '@prisma/client'
-import type { AioContext } from './types'
+import type { AioContext } from '@/lib/aio/types'
 
 export function promptOperationId(value: unknown): string {
   if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) throw new Error('Invalid operation ID')
@@ -14,8 +14,11 @@ export function promptIdForOperation(ctx: Pick<AioContext, 'organizationId' | 'u
 }
 
 export async function lockPromptActor(tx: Prisma.TransactionClient, ctx: AioContext) {
-  // Member mutations acquire FOR UPDATE on these rows. Hold the actor before the
-  // organization lock, so removal/demotion cannot race with a committed prompt write.
+  // All organization-scoped writes take the organization before the member.
+  // Invites and scan admission use this order too; reversing it can deadlock.
+  const organizations = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM aio_organizations
+    WHERE id = ${ctx.organizationId} FOR NO KEY UPDATE`
+  if (organizations.length !== 1) return null
   await tx.$queryRaw`SELECT id FROM aio_members WHERE id = ${ctx.memberId} AND "organizationId" = ${ctx.organizationId} FOR SHARE`
   return tx.aioMember.findFirst({
     where: { id: ctx.memberId, organizationId: ctx.organizationId, userId: ctx.userId, status: 'ACTIVE', role: { in: ['owner', 'admin', 'manager'] } },

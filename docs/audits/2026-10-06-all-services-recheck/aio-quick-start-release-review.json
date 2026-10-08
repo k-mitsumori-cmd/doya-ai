@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-08T05:57:48.637815+00:00",
+  "scope": "12 production AIO files, direct tldts dependency, regression fixtures, mandatory CI DB probes and bounded release evidence",
+  "gate": "passed133 unchanged snapshot",
+  "changedSourceCount": 39,
+  "allowlistCount": 62,
+  "productionSchemaChanges": false,
+  "coverage": [
+    "operation18/API18/scanactor9/lockorder1 private DB",
+    "hook23/view6/native10/actualNext11",
+    "suffix fallback16 with actual parser",
+    "full offline security/type/build/lint and prior service regressions"
+  ],
+  "limits": [
+    "No real provider generation or authenticated customer production E2E",
+    "Separate known-role repair candidate not included",
+    "Full17services2074 matrix still active"
+  ],
+  "reviewedBehaviors": [
+    "actor-scoped UUID leases; aliases; cap20; cancel tombstones; atomic receipt and workspace commit",
+    "metadata persisted before POST; GET recovery; no silent scan on recovered result",
+    "organization-first/member-second lock order",
+    "fresh ACTIVE known actor before manual scan",
+    "FREE3 questions and current owner paid plan",
+    "private no-store Vary Cookie responses"
+  ]
+}

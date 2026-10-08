@@ -1,0 +1,17 @@
+{
+  "startedAt": "2026-10-08T05:55:38.832526+00:00",
+  "pid": 7829,
+  "privateFolder": "/tmp/doya-sfa-authority-4e835fcd",
+  "appFolder": "/tmp/doya-sfa-authority-4e835fcd/app",
+  "origin": "http://127.0.0.1:56992",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/aio-quick-start-release-be8f56a0-933b-4127-b6a6-8fcf82e954b4",
+  "status": "passed",
+  "scope": "Actual built Next server with actual auth session adapter and isolated full-schema PostgreSQL; synthetic users/sessions. No provider credentials or production data; outbound network blocked.",
+  "probeExitCode": 0,
+  "evidenceValid": true,
+  "serverExitCode": 0,
+  "stopExitCode": 0,
+  "postStopStatusExitCode": 3,
+  "privateFolderRemoved": true,
+  "endedAt": "2026-10-08T05:55:49.771941+00:00"
+}

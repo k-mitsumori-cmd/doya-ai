@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { NavigationSubmissionError, startGoogleSignIn, useNavigationSubmission } from '@/lib/use-navigation-submission'
+import { startGoogleSignIn } from '@/lib/use-navigation-submission'
+import { useAioQuickStart } from '@/lib/aio/use-quick-start'
+import { AioQuickStartStatus } from '@/components/aio/quick-start-status'
 import { DoyaKun, sym } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
 
@@ -13,25 +15,16 @@ export default function AioScanPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>()
   const router = useRouter()
   const [url, setUrl] = useState('')
-  const { busy, run: submit } = useNavigationSubmission('調査の開始に失敗しました。もう一度お試しください。')
-
+  const flow = useAioQuickStart({
+    url,
+    onComplete: (slug, autoScan) => router.push(`/aio/${encodeURIComponent(slug)}${autoScan ? '?scan=1' : ''}`),
+    onSignIn: () => startGoogleSignIn(`/aio/${encodeURIComponent(orgSlug)}/scan`),
+  })
+  const busy = !!flow.view?.busy
   const start = async () => {
+    if (flow.disabled) return
     if (!url.trim()) { toast.error('URLを入力してください'); return }
-    await submit(async (isCurrent) => {
-      const res = await fetch('/api/aio/quick-start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      })
-      if (!isCurrent()) return
-      if (res.status === 401) { await startGoogleSignIn(`/aio/${encodeURIComponent(orgSlug)}/scan`); return }
-      const d = await res.json()
-      if (!isCurrent()) return
-      if (!res.ok) throw new NavigationSubmissionError(typeof d.error === 'string' ? d.error : '調査の開始に失敗しました')
-      if (typeof d.slug !== 'string' || !d.slug) throw new Error('Invalid workspace response')
-      // 返ったワークスペース（同一URLは継続／別URLは新規）へ。?scan=1 で自動スキャン＋派手な進捗表示
-      router.push(`/aio/${encodeURIComponent(d.slug)}?scan=1`)
-    })
+    await flow.start()
   }
 
   return (
@@ -43,17 +36,18 @@ export default function AioScanPage() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-xl shadow-purple-500/10 border border-purple-100 p-5">
-        <label className="block text-sm font-black text-slate-700 mb-2">サービスのURL <span className="text-purple-600">*</span></label>
+        <label htmlFor="aio-scan-service-url" className="block text-sm font-black text-slate-700 mb-2">サービスのURL <span className="text-purple-600">*</span></label>
         <div className="flex flex-col sm:flex-row gap-2">
-          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="例: https://doya-ai.surisuta.jp"
+          <input id="aio-scan-service-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="例: https://doya-ai.surisuta.jp"
             inputMode="url" autoFocus
-            onKeyDown={(e) => e.key === 'Enter' && start()}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); void start() } }}
             className="flex-1 rounded-xl border-2 border-slate-200 focus:border-purple-600 outline-none px-4 py-3 font-bold transition-colors" />
-          <button onClick={start} disabled={busy}
+          <button onClick={start} disabled={flow.disabled}
             className="shrink-0 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black shadow-lg shadow-purple-500/30 hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.97]">
             {sym(busy ? 'hourglass_top' : 'rocket_launch')}{busy ? '準備中…' : '調査を開始'}
           </button>
         </div>
+        <AioQuickStartStatus flow={flow} />
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <span className="text-xs font-bold text-slate-400">例:</span>
           {EXAMPLES.map((ex) => (

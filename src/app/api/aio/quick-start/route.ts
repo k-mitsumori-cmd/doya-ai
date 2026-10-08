@@ -2,6 +2,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
+import { createHash } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -9,99 +10,75 @@ import { prisma } from '@/lib/prisma'
 import { getAioBilling } from '@/lib/aio/billing'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { AIO_FREE_PROMPT_LIMIT } from '@/lib/aio/types'
-import { createAioOrganization } from '@/lib/aio/access'
+import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
+import { beginAioQuickStart, recoverAioQuickStart, finishAioQuickStart, failAioQuickStart, AioStartError } from '@/lib/aio/quick-start-operation'
 import { suggestBrandSetup, deriveBrandFromUrl, normalizeUrl } from '@/lib/aio/suggest'
 
-// 1ユーザーが作成できるワークスペース数の上限（量産・AI生成コスト暴発の防止）。
-const MAX_ORGS_PER_USER = 20
-
-// 同一サイト判定用にホスト名を正規化（www除去・小文字）。失敗時は空文字。
-function hostnameOf(u: string): string {
-  try {
-    return new URL(u).hostname.toLowerCase().replace(/^www\./, '')
-  } catch {
-    return ''
-  }
+const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+type Identity = { userId: string; operationId: string }
+function response(operation: Awaited<ReturnType<typeof recoverAioQuickStart>>) {
+  const quota = operation.code === 'WORKSPACE_LIMIT'
+  const error = quota ? '登録できるワークスペースの上限（20件）に達しました。不要なワークスペースを整理してください。'
+    : operation.code === 'EXPIRED' ? '開始処理の実行期限を超過しました。保存状況を確認してから、改めて開始してください。'
+    : operation.code === 'GENERATION_FAILED' ? '開始処理に失敗しました。入力内容を確認してから、改めて開始してください。' : null
+  return NextResponse.json({ ...operation, success: operation.state === 'completed', ...(error ? { error } : {}) }, {
+    status: quota ? 402 : operation.code === 'EXPIRED' ? 503 : operation.code === 'GENERATION_FAILED' ? 502
+      : ['pending', 'cancelling', 'busy'].includes(operation.state) ? 202 : 200, headers,
+  })
 }
-
-// POST /api/aio/quick-start — 「サービスURL」だけで開始する入口（サービス名はURLから自動導出）。
-// 組織作成を意識させず、裏でワークスペース＋ブランド設定＋AI生成の監視プロンプトを用意し、
-// 返した slug のダッシュボードへ遷移してそのままスキャンできる状態にする。
-export async function POST(req: NextRequest) {
+async function handle(req: NextRequest, method: 'GET' | 'POST' | 'DELETE') {
+  let worker: (Identity & { leaseToken: string }) | undefined
   try {
     const session = await getServerSession(authOptions)
-    let userId = (session?.user as any)?.id as string | undefined
-    if (!userId && session?.user?.email) {
-      const u = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } })
-      userId = u?.id
-    }
-    if (!userId) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
-
-    const body = await req.json().catch(() => null)
-    if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
-    }
-    const url = normalizeUrl(typeof body.url === 'string' ? body.url : '')
-    if (!url) return NextResponse.json({ error: '有効なURLを入力してください' }, { status: 400 })
-    const host = hostnameOf(url)
-
-    // 1) 同じサイト(ホスト名)の既存ワークスペースがあれば再利用＝定点観測の継続。
-    //    末尾スラッシュ/パス/http差で別物にならないようホスト名で照合する。
-    const memberships = await prisma.aioMember.findMany({
-      where: { userId, status: 'ACTIVE' },
-      include: { organization: { include: { profile: { select: { brandUrl: true } } } } },
-      orderBy: { createdAt: 'desc' },
-    })
-    const matched = memberships.find((m) => {
-      const bu = m.organization.profile?.brandUrl
-      return !!bu && hostnameOf(bu) === host
-    })?.organization
-
-    // 既存サイトの再観測なら、外部fetch/AI生成をやり直さず即返す（再スキャンは ?scan=1 で実行・高速）
-    if (matched) {
-      return NextResponse.json({ organizationId: matched.id, slug: matched.slug })
-    }
-
-    // 新規作成の入口でのワークスペース量産防止（1ユーザーあたり上限）。
-    // ホストを変えるたびに外部fetch+Gemini生成が走るため、未抑制だとAI生成コスト・テーブル肥大の入口になる。
-    if (memberships.length >= MAX_ORGS_PER_USER) {
-      return NextResponse.json(
-        { error: `登録できるワークスペースの上限（${MAX_ORGS_PER_USER}件）に達しました。不要なワークスペースを整理してください。`, code: 'LIMIT' },
-        { status: 402 }
-      )
-    }
-
-    // 2) 新規: URLからサービス名を自動導出（サイトタイトル→AI整形、失敗時はドメイン名）
+    let userId = session?.user?.id
+    if (!userId && session?.user?.email) userId = (await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } }))?.id
+    if (!userId) return NextResponse.json({ error: '認証が必要です' }, { status: 401, headers })
+    const body = method === 'GET' ? null : await readOperationalJson(req, 8192)
+    const operationId = method === 'GET' ? req.nextUrl.searchParams.get('operationId') : body?.operationId
+    if (typeof operationId !== 'string') return NextResponse.json({ error: '画面を更新して保存状況を確認してください。', code: 'OPERATION_REQUIRED' }, { status: 409, headers })
+    const identity = { userId, operationId }
+    if (method !== 'POST') return response(await recoverAioQuickStart(identity, method === 'DELETE'))
+    if (typeof body?.url !== 'string' || body.url.length > 2048) return NextResponse.json({ error: '有効なURLを入力してください' }, { status: 400, headers })
+    const url = normalizeUrl(body.url)
+    if (!url) return NextResponse.json({ error: '有効なURLを入力してください' }, { status: 400, headers })
+    const admission = await beginAioQuickStart({ ...identity, url })
+    if (admission.state !== 'started') return response(admission)
+    if (!('leaseToken' in admission) || !admission.leaseToken) throw new AioStartError('INVALID_RECEIPT')
+    worker = { ...identity, leaseToken: admission.leaseToken }
     const derived = await deriveBrandFromUrl(url)
-    const brandName = derived.brandName
-    const memberName = typeof session?.user?.name === 'string' ? session.user.name.trim() || 'オーナー' : 'オーナー'
-
-    // 3) AIでカテゴリ・別名・競合・監視プロンプトを生成。保存前に完了させる。
+    const brandName = derived.brandName.trim().slice(0, 120)
+    if (!brandName) throw new AioStartError('INVALID_BRAND', 400)
+    // A cancellation while site/title derivation ran must not start the next AI stage.
+    const current = await recoverAioQuickStart(identity)
+    if (current.state === 'cancelling') return response(await failAioQuickStart(worker))
+    if (current.state !== 'pending') return response(current)
     const setup = await suggestBrandSetup({ brandName, url })
-
-    // 4) 新規ワークスペースと初期設定を一括保存し、途中失敗時に空の組織を残さない。
-    const aliasesData = setup.aliases.length ? (setup.aliases as any) : undefined
-    const competitorsData = setup.competitors.length ? (setup.competitors as any) : undefined
-    const org = await createAioOrganization(userId, brandName.slice(0, 120), memberName.slice(0, 80), async (tx, created) => {
-      await tx.aioBrandProfile.create({
-        data: { organizationId: created.id, brandName: brandName.slice(0, 120), brandUrl: url, category: setup.category, aliases: aliasesData, competitors: competitorsData },
-      })
-      // Apply the same contract as manual registration inside the organization/owner
-      // transaction. A downgrade while suggestions run cannot seed paid capacity.
-      const billing = await getAioBilling(tx, created.id)
+    const memberName = (session?.user?.name?.trim() || 'オーナー').slice(0, 80)
+    const operation = await finishAioQuickStart(worker, async tx => {
+      const slug = 'aio-' + createHash('sha256').update(JSON.stringify([userId, operationId])).digest('hex').slice(0, 32)
+      const organization = await tx.aioOrganization.create({ data: { name: brandName, slug } })
+      await tx.aioMember.create({ data: { organizationId: organization.id, userId, name: memberName, role: 'owner', status: 'ACTIVE', acceptedAt: new Date() } })
+      await tx.aioBrandProfile.create({ data: { organizationId: organization.id, brandName, brandUrl: url,
+        category: setup.category, ...(setup.aliases.length ? { aliases: setup.aliases } : {}), ...(setup.competitors.length ? { competitors: setup.competitors } : {}) } })
+      const billing = await getAioBilling(tx, organization.id)
       if (!billing) throw new Error('Organization billing unavailable')
       const questions = Array.from(new Set(setup.prompts.map(text => text.trim().slice(0, 500)).filter(Boolean)))
       const prompts = isPaidPlan(billing.plan) ? questions : questions.slice(0, AIO_FREE_PROMPT_LIMIT)
-      if (prompts.length) {
-        await tx.aioPrompt.createMany({
-          data: prompts.map((text) => ({ organizationId: created.id, text, isActive: true })),
-        })
-      }
+      if (prompts.length) await tx.aioPrompt.createMany({ data: prompts.map(text => ({ organizationId: organization.id, text, isActive: true })) })
+      return organization
     })
-
-    return NextResponse.json({ organizationId: org.id, slug: org.slug })
-  } catch (e: any) {
+    return response(operation)
+  } catch (error) {
+    if (worker) {
+      try { const operation = await failAioQuickStart(worker); if (operation.state === 'cancelled') return response(operation) }
+      catch { console.error('[aio/quick-start] Failure acknowledgement unavailable') }
+    }
+    if (error instanceof OperationalBodyError) return NextResponse.json({ error: '入力形式またはサイズを確認してください' }, { status: error.status, headers })
+    if (error instanceof AioStartError) return NextResponse.json({ error: '開始処理の保存状況を確認してください。', code: error.code }, { status: error.status, headers })
     console.error('[aio/quick-start]')
-    return NextResponse.json({ error: '開始処理に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: '保存状況を確認できません。新しく開始せず、保存状況を確認してください。' }, { status: 500, headers })
   }
 }
+export const POST = (req: NextRequest) => handle(req, 'POST')
+export const GET = (req: NextRequest) => handle(req, 'GET')
+export const DELETE = (req: NextRequest) => handle(req, 'DELETE')

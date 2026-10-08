@@ -71,9 +71,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const requested: EngineId[] | undefined = Array.isArray(body.engines) ? body.engines : undefined
 
-  const result = await runAndPersistScan(ctx.organizationId, { engines: requested })
+  const result = await runAndPersistScan(ctx.organizationId, { engines: requested, actor: ctx })
 
   if (result.status === 'failed') {
+    if (result.code === 'FORBIDDEN') return NextResponse.json({ error: result.error, code: result.code }, { status: 403, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
     if (result.code === 'PROMPT_LIMIT') return NextResponse.json({ error: result.error, code: result.code }, { status: 400 })
     if (result.code === 'LIMIT') {
       const canManageBilling = ctx.role === 'owner'

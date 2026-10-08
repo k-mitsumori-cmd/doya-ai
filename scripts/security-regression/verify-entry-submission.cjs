@@ -55,7 +55,8 @@ const unauthorized = () => ({ status: 401, json: () => { throw Error('401 body m
 const success = () => ({ status: 200, ok: true, json: async () => ({ slug: '組織 名', organization: { slug: '組織 名' } }) })
 
 ;(async () => {
-  for (const service of ['aio', 'sfa', 'shodan']) {
+  // AIO's durable recovery is exercised by mandatory actual React hook/view and native tests.
+  for (const service of ['sfa', 'shodan']) {
     await check(`${service}: unauthorized SDK failure recovers, hides raw details and retries unchanged input`, async () => {
       const f = fixture(service, unauthorized, () => Promise.reject(Error('PRIVATE_SDK_DETAILS')))
       await f.run()
@@ -179,14 +180,6 @@ const success = () => ({ status: 200, ok: true, json: async () => ({ slug: '組�
       assert.equal(f.listeners.size, 0)
     })
   }
-  await check('aio: guest login failure is safe and does not call quick-start', async () => {
-    const f = fixture('aio', success, () => Promise.reject(Error('PRIVATE_GUEST_DETAILS')), false)
-    await f.run()
-    assert.equal(f.busy(), false)
-    assert.equal(f.requests.length, 0)
-    assert.equal(f.auth.length, 1)
-    assert.ok(!f.errors.join().includes('PRIVATE_GUEST_DETAILS'))
-    f.unmount()
-  })
+  // AIO guest SDK failures and absence of provider POST are covered by its actual mounted hook suite.
   console.log(JSON.stringify({ passed: results.length, scope: 'actual TS hook and extracted current entry handlers; API/OAuth mocked; no production writes', results }, null, 2))
 })().catch(error => { console.error(error); process.exitCode = 1 })

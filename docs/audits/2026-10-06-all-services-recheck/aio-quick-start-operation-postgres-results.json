@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-08T05:49:24.469Z",
+  "expected": 18,
+  "passed": 18,
+  "cases": [
+    "Concurrent same UUID admits exactly one provider worker",
+    "Concurrent same host aliases separate UUIDs to one durable worker/result",
+    "Lost completion acknowledgment replay never creates second workspace",
+    "Exact19 plus parallel different hosts reserves only one slot",
+    "Held slot is busy, then explicit resume starts after failure releases it",
+    "Existing same-host workspace reused at20 without worker",
+    "HTTP/www/path equivalents reuse same-host workspace",
+    "Changed host under same UUID is rejected before admission",
+    "Cancel before preparation tombstone fences late request",
+    "Alias cancellation retains slot until legitimate worker terminates",
+    "Expired worker cannot save or disturb replacement worker",
+    "Wrong worker token fails before completion or failure release",
+    "Failed initialization rolls back workspace/member/profile and retains receipt",
+    "Foreign actor cannot recover or finish original receipt",
+    "Missing saved workspace returns410 without creating replacement",
+    "Another creation of same-host during provider work is reused at commit",
+    "Fresh committed count at20 blocks pending save without orphan workspace",
+    "Corrupted durable receipt fails closed before workspace mutation"
+  ],
+  "sourceHashes": {
+    "src/lib/aio/quick-start-operation.ts": "28975e7c0cfabd34d932b77f2a9ec426060826ac575c46fc4bf1e886b44d7360",
+    "docs/audits/2026-10-06-all-services-recheck/verify-aio-quick-start-operation-postgres.cjs": "a904b779d2ae6f597dc9e74b34ce55b44115e740edf9eff066c81788b741b24e"
+  },
+  "scope": "Candidate operation helper/actual Prisma/private Unix PostgreSQL with synthetic users/workspaces. No API/browser/provider integration and not production evidence. Does not prove all workspace writers or client operation persistence."
+}

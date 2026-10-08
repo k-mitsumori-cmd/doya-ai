@@ -1,0 +1,79 @@
+{
+  "checkedAt": "2026-10-08T05:49:52.057Z",
+  "status": "integrated-passed",
+  "passed": 16,
+  "cases": [
+    {
+      "url": "https://example.com",
+      "brandName": "example"
+    },
+    {
+      "url": "https://example.co.jp",
+      "brandName": "example"
+    },
+    {
+      "url": "https://app.example.co.jp",
+      "brandName": "example"
+    },
+    {
+      "url": "https://example.com.au",
+      "brandName": "example"
+    },
+    {
+      "url": "https://www.example.co.uk",
+      "brandName": "example"
+    },
+    {
+      "url": "https://example.or.jp",
+      "brandName": "example"
+    },
+    {
+      "url": "https://example.ne.jp",
+      "brandName": "example"
+    },
+    {
+      "url": "https://example.ac.jp",
+      "brandName": "example"
+    },
+    {
+      "url": "https://example.jp",
+      "brandName": "example"
+    },
+    {
+      "url": "https://my-service.ai",
+      "brandName": "my service"
+    },
+    {
+      "url": "https://www.sample.github.io",
+      "brandName": "sample"
+    },
+    {
+      "url": "https://sample.pages.dev",
+      "brandName": "sample"
+    },
+    {
+      "url": "https://例え.jp",
+      "brandName": "例え"
+    },
+    {
+      "url": "https://xn--r8jz45g.jp",
+      "brandName": "例え"
+    },
+    {
+      "url": "https://sample.invalid",
+      "brandName": "sample"
+    },
+    {
+      "url": "not-a-valid-url",
+      "brandName": "not-a-valid-url"
+    }
+  ],
+  "source": "src/lib/aio/suggest.ts",
+  "sourceHash": "e1a782473f80f7526923dfc5619091c5e40a28757a445a4f594e041fb0b819a1",
+  "dependency": {
+    "name": "tldts",
+    "version": "7.0.23",
+    "declared": "7.0.23"
+  },
+  "scope": "Actual integrated fallback and derive/setup helpers with real installed public suffix parser. HTML/model deliberately unavailable, no actual fetch/AI/customer DB. Local integration; production publication not yet proven."
+}

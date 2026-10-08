@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-08T05:49:25.858Z",
+  "expected": 18,
+  "passed": 18,
+  "cases": [
+    "Fresh owner \"FREE\" initial questions preserve plan contract",
+    "Fresh owner \"LIGHT\" initial questions preserve plan contract",
+    "Fresh owner \"PRO\" initial questions preserve plan contract",
+    "Fresh owner \"ENTERPRISE\" initial questions preserve plan contract",
+    "Fresh owner \"UNKNOWN\" initial questions preserve plan contract",
+    "Fresh owner \"\" initial questions preserve plan contract",
+    "Lost acknowledgment POST replay and GET reuse one workspace/provider",
+    "Parallel same-host requests share one provider and recover same result",
+    "19 workspaces plus simultaneous sites never exceed20 or start extra provider",
+    "Cancel during derivation blocks suggestion, save and late POST replay",
+    "Cancellation before preparation fences later POST without provider",
+    "Initializer failure rolls back all rows and reload remains failed without regeneration",
+    "Downgrade during suggestions seeds only fresh FREE allowance",
+    "Full20 existing same-host reuses workspace with no AI",
+    "All anonymous endpoints reject before writes and provider",
+    "Stale client without operation UUID rejects before external work",
+    "Oversized body and invalid URL reject before receipt/provider",
+    "Another actor cannot recover committed result"
+  ],
+  "sourceHashes": {
+    "src/lib/aio/quick-start-operation.ts": "28975e7c0cfabd34d932b77f2a9ec426060826ac575c46fc4bf1e886b44d7360",
+    "src/app/api/aio/quick-start/route.ts": "ac24731343dd957ad335a6f215efcd0d68e414c40b12d182fc425c72f2575241",
+    "src/lib/aio/billing.ts": "d78dfd363b8e40d9f5d04f94d61083a68974b1143c4ad9ac374783b6206cb023",
+    "src/lib/unified-plan.ts": "b15b8773e24358283e89d20601c63cdf55248bdec9945d92c296c3e647d7ef80",
+    "src/lib/operational-json.ts": "84dd4a01b6a1c7c3878d6a64e9cebfc4c85414ea3d88d95e9070595a01a58884",
+    "docs/audits/2026-10-06-all-services-recheck/verify-aio-quick-start-api-postgres.cjs": "79a181022c7a1d1aac896f848a013eedefaa9333eeba60017c751084f2a25e57"
+  },
+  "scope": "Candidate real API/helper, current billing/plan/input modules, actual Prisma/private Unix PostgreSQL. Auth/website/AI outputs synthetic, no browser/Next build/production proof. Candidate only, not integrated."
+}

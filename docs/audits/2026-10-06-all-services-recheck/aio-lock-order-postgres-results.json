@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-08T05:49:28.600Z",
+  "passed": 1,
+  "cases": [
+    "organization-first prompt helper and actual invite both complete under overlapping admission"
+  ],
+  "errors": [],
+  "inviteStatus": 200,
+  "syntheticEmailCalls": 1,
+  "candidateSourceHash": "758d937999b19c9d5f5f2b0ea529e288b19bb23cfce9c01ad121b94d1d2428ad",
+  "sourceHashes": {
+    "src/lib/aio/prompt-mutation.ts": "758d937999b19c9d5f5f2b0ea529e288b19bb23cfce9c01ad121b94d1d2428ad",
+    "src/app/api/aio/prompts/route.ts": "90d15503241e16c3793105daa15c56ccdccbc546f89e71da0c3a64170c6153d8",
+    "src/app/api/aio/members/route.ts": "d592c92f8347ae01edd1314e6a640dd9486fbcc1360e0926c55b1ae40c486c29",
+    "docs/audits/2026-10-06-all-services-recheck/verify-aio-lock-order-postgres.cjs": "1a491159fe6be4612219a169a8f042d14e7e00850b609ac2ecb76bf99b6cac88"
+  },
+  "scope": "Actual prompt actor helper plus its route organization-lock SQL and actual invite route in isolated Unix PostgreSQL. Auth and email stubbed; no outbound email or production DB. Production occurrence unknown."
+}

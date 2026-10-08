@@ -24,7 +24,7 @@ const crmClient = require('node:child_process').spawnSync(process.execPath, [req
 if (crmClient.error || crmClient.status !== 0) { console.error('SFA CRM client regression failed'); process.exit(1); }
 const crmRecords = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-sfa-crm-record-mutation.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (crmRecords.error || crmRecords.status !== 0) { console.error('SFA CRM record regression failed'); process.exit(1); }
-for (const script of ['verify-aio-quick-start-prompt-limit.cjs', 'verify-aio-prompts-mutation.cjs', 'verify-aio-prompts-mounted.cjs']) {
+for (const script of ['verify-aio-domain-brand-fallback.cjs','verify-aio-quick-start-hook-mounted.cjs','verify-aio-quick-start-view-mounted.cjs','verify-aio-quick-start-prompt-limit.cjs', 'verify-aio-prompts-mutation.cjs', 'verify-aio-prompts-mounted.cjs']) {
   const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('AIO prompts regression failed:', script); process.exit(1); }
 }

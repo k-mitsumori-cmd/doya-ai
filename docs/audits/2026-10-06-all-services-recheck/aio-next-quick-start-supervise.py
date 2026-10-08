@@ -1,5 +1,5 @@
 import pathlib,os,subprocess,uuid,json,datetime,shutil,socket,time,urllib.request,hashlib
-root=pathlib.Path.cwd();base=root/'docs/audits/2026-10-06-all-services-recheck';gate=pathlib.Path((pathlib.Path(os.environ.get('DOYA_FROZEN_GATE_POINTER',str(base/'doyalist-extraction-current-gate.txt')))).read_text().strip());stateGate=json.loads((gate/'state.json').read_text());assert stateGate['status'] in ['running','passed'] and any(x['name']=='build' and x['exitCode']==0 for x in stateGate['gates']),'Run only after the frozen build succeeds'
+root=pathlib.Path.cwd();base=root/'docs/audits/2026-10-06-all-services-recheck';gate=pathlib.Path((base/'aio-quick-start-current-gate.txt').read_text().strip());stateGate=json.loads((gate/'state.json').read_text());assert stateGate['status'] in ['running','passed'] and any(x['name']=='build' and x['exitCode']==0 for x in stateGate['gates']),'Run only after the frozen build succeeds'
 manifest=json.loads((gate/'source-manifest.json').read_text());assert all(pathlib.Path(name).is_file() and hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()==value for name,value in manifest.items()),'Frozen source changed'
 pg=pathlib.Path('/opt/homebrew/opt/postgresql@17/bin');folder=pathlib.Path('/tmp')/('doya-sfa-authority-'+uuid.uuid4().hex[:8]);folder.mkdir(mode=0o700);(folder/'socket').mkdir(mode=0o700);app=folder/'app';app.mkdir();(app/'prisma').mkdir();shutil.copy2(root/'prisma/schema.prisma',app/'prisma/schema.prisma');shutil.copy2(root/'package.json',app/'package.json');(app/'node_modules').symlink_to(root/'node_modules',target_is_directory=True);(app/'public').symlink_to(root/'public',target_is_directory=True)
 shutil.copytree(root/'.next',app/'.next',ignore=lambda p,names: {'cache'} if pathlib.Path(p)==root/'.next' else set());assert not any(app.glob('.env*'))
@@ -7,7 +7,7 @@ guard=folder/'network-guard.cjs';guard.write_text("""const fs=require('node:fs')
 with socket.socket() as probe:probe.bind(('127.0.0.1',0));httpPort=probe.getsockname()[1]
 port=56481;url='postgresql://doya_sfa@localhost:'+str(port)+'/postgres?host='+str(folder/'socket')+'&sslmode=disable&pgbouncer=false&connection_limit=3';origin='http://127.0.0.1:'+str(httpPort)
 env={'PATH':os.environ['PATH'],'LANG':'en_US.UTF-8','NODE_ENV':'production','DATABASE_URL':url,'DIRECT_URL':url,'NEXTAUTH_URL':origin,'NEXTAUTH_SECRET':'synthetic-local-secret-'+uuid.uuid4().hex,'NEXT_TELEMETRY_DISABLED':'1','DOYA_E2E_ORIGIN':origin,'DOYA_E2E_NETWORK_LOG':str(folder/'blocked-network.log'),'DOYA_E2E_APP':str(app),'NODE_OPTIONS':'--require '+str(guard)}
-state={'startedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),'pid':os.getpid(),'privateFolder':str(folder),'appFolder':str(app),'origin':origin,'gate':str(gate),'status':'running','scope':'Actual built Next server with actual auth session adapter and isolated full-schema PostgreSQL; synthetic users/sessions. No provider credentials or production data; outbound network blocked.'};report=base/'doyalist-next-extraction-supervisor.json';report.write_text(json.dumps(state,indent=2)+'\n');started=False;server=None;log=None
+state={'startedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),'pid':os.getpid(),'privateFolder':str(folder),'appFolder':str(app),'origin':origin,'gate':str(gate),'status':'running','scope':'Actual built Next server with actual auth session adapter and isolated full-schema PostgreSQL; synthetic users/sessions. No provider credentials or production data; outbound network blocked.'};report=base/'aio-next-quick-start-supervisor.json';report.write_text(json.dumps(state,indent=2)+'\n');started=False;server=None;log=None
 try:
  with (folder/'init.log').open('w') as out:subprocess.run([str(pg/'initdb'),'-D',str(folder/'data'),'-U','doya_sfa','--auth=trust','--no-locale','--encoding=UTF8'],env=env,stdout=out,stderr=subprocess.STDOUT,check=True)
  subprocess.run([str(pg/'pg_ctl'),'-D',str(folder/'data'),'-o',"-k "+str(folder/'socket')+" -h '' -p "+str(port)+" -F -c timezone=UTC",'-l',str(folder/'server.log'),'-w','start'],env=env,stdout=subprocess.DEVNULL,check=True);started=True
@@ -20,8 +20,8 @@ try:
     if response.status==200:break
   except Exception:time.sleep(.5)
  else:raise RuntimeError('Isolated Next server not ready')
- with (base/'doyalist-next-extraction.log').open('w') as out:child=subprocess.run(['node',str(base/'verify-doyalist-next-extraction.cjs')],cwd=root,env=env,stdout=out,stderr=subprocess.STDOUT,timeout=240)
- evidence=base/'doyalist-next-extraction-results.json';proof=json.loads(evidence.read_text()) if evidence.exists() else {};valid=proof.get('expected')==7 and proof.get('passed')==7 and len(proof.get('cases',[]))==7 and proof.get('checkedAt','')>=state['startedAt'] and len(proof.get('sourceHashes',{}))==9 and all(pathlib.Path(name).is_file() and hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()==value for name,value in proof.get('sourceHashes',{}).items()) and all(pathlib.Path(name).is_file() and hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()==value for name,value in manifest.items());state.update(probeExitCode=child.returncode,evidenceValid=valid,status='passed' if child.returncode==0 and valid else 'failed')
+ with (base/'aio-next-quick-start.log').open('w') as out:child=subprocess.run(['node',str(base/'verify-aio-next-quick-start.cjs')],cwd=root,env=env,stdout=out,stderr=subprocess.STDOUT,timeout=240)
+ evidence=base/'aio-next-quick-start-results.json';proof=json.loads(evidence.read_text()) if evidence.exists() else {};valid=proof.get('expected')==11 and proof.get('passed')==11 and len(proof.get('cases',[]))==11 and proof.get('checkedAt','')>=state['startedAt'] and len(proof.get('sourceHashes',{}))==13 and all(pathlib.Path(name).is_file() and hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()==value for name,value in proof.get('sourceHashes',{}).items()) and all(pathlib.Path(name).is_file() and hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()==value for name,value in manifest.items());state.update(probeExitCode=child.returncode,evidenceValid=valid,status='passed' if child.returncode==0 and valid else 'failed')
 except BaseException as error:
  state.update(status='failed',exceptionType=type(error).__name__)
  raise
@@ -36,7 +36,7 @@ finally:
  if started and state.get('stopExitCode')==0:
   status=subprocess.run([str(pg/'pg_ctl'),'-D',str(folder/'data'),'status'],env=env,stdout=subprocess.DEVNULL);state['postStopStatusExitCode']=status.returncode
  for name in ['next-server.log','schema.log','blocked-network.log']:
-  if (folder/name).exists():shutil.copy2(folder/name,base/('doyalist-next-extraction-'+name))
+  if (folder/name).exists():shutil.copy2(folder/name,base/('aio-next-quick-start-'+name))
  if state.get('stopExitCode')==0 and state.get('postStopStatusExitCode')==3:
   shutil.rmtree(folder);state['privateFolderRemoved']=not folder.exists()
  state['endedAt']=datetime.datetime.now(datetime.timezone.utc).isoformat();report.write_text(json.dumps(state,indent=2)+'\n');print(json.dumps(state))

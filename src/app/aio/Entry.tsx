@@ -1,16 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { NavigationSubmissionError, startGoogleSignIn, useNavigationSubmission } from '@/lib/use-navigation-submission'
+import { startGoogleSignIn } from '@/lib/use-navigation-submission'
+import { useSession } from 'next-auth/react'
+import { readBillingResponse } from '@/lib/billing-response-client'
+import { useAioQuickStart } from '@/lib/aio/use-quick-start'
+import { AioQuickStartStatus } from '@/components/aio/quick-start-status'
 import { getServiceById } from '@/lib/services'
 import {
   LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
   DoyaKun, Sym, type ShowcaseRow,
 } from '@/components/lp'
-import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
-import { AioSovMock, AioEnginesMock, AioCitationsMock } from './mocks'
+import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from '@/app/aio/lp-data'
+import { AioSovMock, AioEnginesMock, AioCitationsMock } from '@/app/aio/mocks'
 
 const SVC = getServiceById('aio')!
 
@@ -40,43 +44,45 @@ export default function AioEntryPage() {
   const [phase, setPhase] = useState<'loading' | 'ready'>('loading')
   const [authed, setAuthed] = useState(false)
   const [serviceUrl, setServiceUrl] = useState('')
-  const { busy: creating, run: submit } = useNavigationSubmission('開始に失敗しました。もう一度お試しください。')
+  const { data: session, status } = useSession()
+  const actor = status === 'authenticated' ? session?.user?.id || '' : ''
+  const identity = useRef({ actor, status, version: 0 })
+  if (identity.current.actor !== actor || identity.current.status !== status) identity.current = { actor, status, version: identity.current.version + 1 }
+  const flow = useAioQuickStart({
+    url: serviceUrl,
+    onComplete: (slug, autoScan) => router.replace(`/aio/${encodeURIComponent(slug)}${autoScan ? '?scan=1' : ''}`),
+    onSignIn: () => startGoogleSignIn('/aio'),
+  })
+  const creating = !!flow.view?.busy
 
   useEffect(() => {
-    fetch('/api/aio/me', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => {
-        setAuthed(!!d?.authenticated)
-        // memberships は作成順(昇順)なので末尾が最新ワークスペース
-        const ms = d?.memberships as { slug: string }[] | undefined
-        if (d?.authenticated && ms?.length) {
-          // 既存ユーザーは「URL AI調査」を最初の画面に。入力欄のある /scan へ直行（ダッシュボードはサイドバーから）
-          router.replace(`/aio/${encodeURIComponent(ms[ms.length - 1].slug)}/scan`)
-          return // 遷移中はローディング表示のまま（入口フォームをちらつかせない）
+    if (status === 'loading') return
+    const controller = new AbortController()
+    const version = identity.current.version
+    const current = () => !controller.signal.aborted && identity.current.version === version
+    setPhase('loading')
+    setAuthed(status === 'authenticated')
+    void readBillingResponse('/api/aio/me', { method: 'GET' }, controller.signal)
+      .then(({ ok, data }) => {
+        if (!current()) return
+        if (!ok || typeof data.authenticated !== 'boolean' || !Array.isArray(data.memberships)) throw new Error('Invalid workspace response')
+        const memberships = data.memberships
+        if (data.authenticated && memberships.length) {
+          const last = memberships[memberships.length - 1]
+          if (!last || typeof last !== 'object' || typeof last.slug !== 'string' || !last.slug || last.slug.length > 180 || /[\s/\\?#\u0000-\u001f\u007f]/.test(last.slug)) throw new Error('Invalid workspace slug')
+          // The destination also recovers the saved operation with GET only.
+          router.replace(`/aio/${encodeURIComponent(last.slug)}/scan`)
         }
         setPhase('ready')
       })
-      .catch(() => setPhase('ready'))
-  }, [router])
+      .catch(() => { if (current()) setPhase('ready') })
+    return () => controller.abort()
+  }, [router, actor, status])
 
-  // サービスURLだけで開始（裏でサービス名導出・ワークスペース・ブランド設定・監視プロンプトを自動用意）
   const start = async () => {
+    if (flow.disabled) return
     if (!serviceUrl.trim()) { toast.error('URLを入力してください'); return }
-    await submit(async (isCurrent) => {
-      if (!authed) { await startGoogleSignIn('/aio'); return }
-      const res = await fetch('/api/aio/quick-start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: serviceUrl }),
-      })
-      if (!isCurrent()) return
-      if (res.status === 401) { await startGoogleSignIn('/aio'); return }
-      const d = await res.json()
-      if (!isCurrent()) return
-      if (!res.ok) throw new NavigationSubmissionError(d.error || '開始に失敗しました')
-      // ?scan=1 でダッシュボード側が自動でスキャンを実行する
-      router.replace(`/aio/${encodeURIComponent(d.slug)}?scan=1`)
-    })
+    await flow.start()
   }
 
   if (phase === 'loading') {
@@ -111,19 +117,19 @@ export default function AioEntryPage() {
         <div className="max-w-xl mx-auto px-5">
           <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-5 sm:p-6"
             style={{ boxShadow: '0 18px 48px rgba(0,102,255,0.12)' }}>
-            <label className="block text-left text-sm font-black text-slate-700 mb-2">分析したいサービスのURL</label>
+            <label htmlFor="aio-entry-service-url" className="block text-left text-sm font-black text-slate-700 mb-2">分析したいサービスのURL</label>
             <div className="flex flex-col sm:flex-row gap-2">
-              <input
+              <input id="aio-entry-service-url"
                 value={serviceUrl}
                 onChange={(e) => setServiceUrl(e.target.value)}
                 placeholder="例: https://doya-ai.surisuta.jp"
                 inputMode="url"
-                onKeyDown={(e) => e.key === 'Enter' && start()}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); void start() } }}
                 className="flex-1 rounded-xl border-2 border-slate-200 focus:border-[color:var(--lp-accent)] outline-none px-4 py-3 font-bold transition-colors"
               />
               <button
                 onClick={start}
-                disabled={creating}
+                disabled={flow.disabled}
                 className="shrink-0 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-black shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50 active:scale-[0.97]"
                 style={{ background: 'linear-gradient(135deg, #0066ff, var(--lp-accent))', boxShadow: '0 10px 24px rgba(0,102,255,0.28)' }}
               >
@@ -131,6 +137,7 @@ export default function AioEntryPage() {
                 {creating ? '判定中…' : '調べる'}
               </button>
             </div>
+            <AioQuickStartStatus flow={flow} />
             <p className="text-left text-xs font-bold text-slate-400 mt-2">
               {authed
                 ? 'URLを入れて「調べる」を押すと、AIが自動でセットアップしてスキャンします。'

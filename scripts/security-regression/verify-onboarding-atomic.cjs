@@ -113,26 +113,37 @@ function fixture(service, { failMember = false, conflictOnce = false, existingSl
     'next-auth': { getServerSession: async () => ({ user: { id: 'user', name: 'Owner' } }) },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma: { aioMember: { findMany: async () => [] } } },
-    '@/lib/aio/access': { createAioOrganization: async (_user, _brand, _member, initialize) => {
-      sequence.push('create');
-      const org = { id: 'org', slug: 'acme' };
-      await initialize({
-        aioBrandProfile: { create: async ({ data }) => { saved.profiles.push(data); } },
-        aioPrompt: { createMany: async ({ data }) => { saved.prompts.push(...data); } },
-      }, org);
-      return org;
-    } },
+    'node:crypto': require('node:crypto'),
+    '@/lib/operational-json': load('src/lib/operational-json.ts', {}, { TextDecoder, Uint8Array }),
+    '@/lib/aio/quick-start-operation': {
+      AioStartError: class extends Error {},
+      beginAioQuickStart: async () => ({ state: 'started', leaseToken: 'synthetic' }),
+      recoverAioQuickStart: async () => ({ state: 'pending' }),
+      failAioQuickStart: async () => ({ state: 'failed' }),
+      finishAioQuickStart: async (_worker, initialize) => {
+        const org = await initialize({
+          aioOrganization: { create: async ({ data }) => { sequence.push('create'); return { id: 'org', ...data }; } },
+          aioMember: { create: async () => ({}) },
+          aioBrandProfile: { create: async ({ data }) => { saved.profiles.push(data); } },
+          aioPrompt: { createMany: async ({ data }) => { saved.prompts.push(...data); } },
+        });
+        return { state: 'completed', organizationId: org.id, slug: org.slug };
+      },
+    },
     '@/lib/aio/suggest': {
       normalizeUrl: (value) => typeof value === 'string' && value.startsWith('https://') ? value : null,
       deriveBrandFromUrl: async () => { sequence.push('derive'); return { brandName: 'Acme' }; },
       suggestBrandSetup: async () => { sequence.push('suggest'); return { category: 'SaaS', aliases: [], competitors: [], prompts: ['比較したい'] }; },
     },
   });
-  for (const body of [null, [], {}, { url: {} }]) {
-    assert.equal((await quickStartRoute.POST({ json: async () => body })).status, 400);
+  const uuid = '80000000-0000-4000-8000-000000000001';
+  const request = body => new Request('https://example.invalid/api/aio/quick-start', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  for (const body of [null, [], { operationId: uuid }, { operationId: uuid, url: {} }]) {
+    assert.equal((await quickStartRoute.POST(request(body))).status, 400);
     assert.equal(sequence.length, 0);
   }
-  assert.equal((await quickStartRoute.POST({ json: async () => ({ url: 'https://example.com' }) })).status, 200);
+  assert.equal((await quickStartRoute.POST(request({ url: 'https://example.com' }))).status, 409);
+  assert.equal((await quickStartRoute.POST(request({ operationId: uuid, url: 'https://example.com' }))).status, 200);
   assert.deepEqual(sequence, ['derive', 'suggest', 'create']);
   assert.equal(saved.profiles[0].brandUrl, 'https://example.com');
   assert.equal(saved.prompts.length, 1);

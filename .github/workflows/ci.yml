@@ -255,6 +255,18 @@ jobs:
       - name: Doyalist API recovery and exact monthly capacity (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/doyalist-operation-route-postgres-supervise.py
 
+      - name: AIO quick-start reservations and replay (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/aio-quick-start-operation-postgres-supervise.py
+
+      - name: AIO quick-start API and plan initialization (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/aio-quick-start-api-postgres-supervise.py
+
+      - name: AIO scan admission fresh actor (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/aio-scan-admission-actor-postgres-supervise.py
+
+      - name: AIO prompt and invite lock ordering (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/aio-lock-order-postgres-supervise.py
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-08T05:49:54.460Z",
+  "passed": 23,
+  "expected": 23,
+  "checks": [
+    "StrictMode fresh open never POSTs; same-frame click dispatches once then clears metadata",
+    "Unknown response retains UUID and host hash without URL/path/token and fences retries",
+    "Seeded reload uses GET only and requires explicit same-host resume",
+    "Wrong-host resume cannot dispatch a new provider POST",
+    "Recovered completion opens saved workspace explicitly without another automatic scan",
+    "Server-confirmed cancellation alone clears retained UUID",
+    "Immediate cancel interrupts client wait and sends independent DELETE; late success cannot navigate",
+    "Actor ABA aborts old wait and restores original UUID through GET only",
+    "Corrupt metadata fails closed before provider",
+    "Storage denial blocks mutation before network",
+    "POST deadline is310seconds and preserves uncertain intent",
+    "Wrong operation success never navigates or clears metadata",
+    "Oversized success response retains unknown operation",
+    "Busy receipt remains fenced without navigation until explicit later retry",
+    "Expired authentication retains intent and exposes explicit login recovery",
+    "Rendered recovered result opens only through explicit button and never automatically scans",
+    "Rendered immediate cancel remains available during POST and dispatches exactly one DELETE",
+    "Anonymous failed login shows persistent recovery and dispatches no provider mutation",
+    "Login deadline releases UI without claiming authentication or dispatching POST",
+    "Late login failure from previous actor cannot overwrite current actor state",
+    "Persisted history restoration recovers through GET and fences late POST success",
+    "History restoration excludes old login failure from a newer explicit login wait",
+    "Unmount aborts client wait; late server completion cannot navigate or erase UUID"
+  ],
+  "sourceHashes": {
+    "src/lib/aio/use-quick-start.ts": "b9e47569037aea8dc1283dbb9e87b15bf4aa6fd51218d2f410efd70653611c91",
+    "src/lib/aio/quick-start-intent-client.ts": "383b83958db7a5322387faa683d834c9ea89137a1132bcf33659991823c22da5",
+    "src/lib/aio/quick-start-response-client.ts": "6a722c2c76753bca98a5af3a92f10101753e99e42fc5c785a6818108cd79cacf",
+    "scripts/security-regression/verify-aio-quick-start-hook-mounted.cjs": "82b8241c3abaaa9b59cbea2694b445d33177ee8c66545cde2e356c1f2e27c749",
+    "src/components/aio/quick-start-status.tsx": "59449f27a3c6b3ff45185562cbc7e5a7ec574e349f72f276b1ba6868c8bdfd0b"
+  },
+  "scope": "Actual integrated hook under mounted React StrictMode, real bounded reader and metadata helper; JSDOM storage and synthetic fetch/WebLocks. No native browser/API/Next/production proof."
+}
