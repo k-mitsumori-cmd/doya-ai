@@ -15,7 +15,7 @@ class InvitationExpired extends Error {}
 export async function GET(req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const member = await prisma.shodanMember.findUnique({ where: { inviteToken: p.token }, include: { organization: true } })
-  if (!member || member.status !== 'PENDING') {
+  if (!member || member.status !== 'PENDING' || !['admin', 'manager', 'member'].includes(member.role)) {
     return NextResponse.json({ error: '招待が見つからないか、既に承諾済みです' }, { status: 404 })
   }
   if (Date.now() - member.createdAt.getTime() >= INVITE_TTL_MS) {
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
   const member = await prisma.shodanMember.findUnique({ where: { inviteToken: p.token }, include: { organization: true } })
-  if (!member || member.status !== 'PENDING') {
+  if (!member || member.status !== 'PENDING' || !['admin', 'manager', 'member'].includes(member.role)) {
     return NextResponse.json({ error: '招待が見つからないか、既に承諾済みです' }, { status: 404 })
   }
   if (Date.now() - member.createdAt.getTime() >= INVITE_TTL_MS) {
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       if (invite.createdAt.getTime() <= now.getTime() - INVITE_TTL_MS) return 'expired' as const
       const account = await tx.user.findUnique({ where: { id: userId }, select: { email: true } })
       if (!invite.inviteEmail || !account?.email || account.email.trim().toLowerCase() !== invite.inviteEmail.trim().toLowerCase()) return 'mismatch' as const
-      if (invite.role === 'owner') return 'unavailable' as const
+      if (!['admin', 'manager', 'member'].includes(invite.role)) return 'unavailable' as const
       const existing = await tx.shodanMember.findFirst({ where: { organizationId: member.organizationId, userId, status: 'ACTIVE' } })
       if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
       if (existing) {

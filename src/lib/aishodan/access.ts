@@ -15,6 +15,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLE_HIERARCHY, hasMinRole, type AishodanContext, type AishodanRole } from './types'
 
+const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
+
 export { hasMinRole, ROLE_HIERARCHY }
 
 /** リクエストから対象組織(slug)を取り出す。クエリ ?org= 優先、無ければヘッダ x-aishodan-org */
@@ -60,7 +62,7 @@ export async function getAishodanContext(orgSlug?: string): Promise<AishodanCont
 
   let membership = orgSlug
     ? await prisma.aishodanMember.findFirst({
-        where: { userId, status: 'ACTIVE', organization: { slug: orgSlug } },
+        where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES }, organization: { slug: orgSlug } },
         include: { organization: true },
       })
     : null
@@ -80,12 +82,12 @@ export async function getAishodanContext(orgSlug?: string): Promise<AishodanCont
   }
   if (!membership) {
     membership = await prisma.aishodanMember.findFirst({
-      where: { userId, status: 'ACTIVE' },
+      where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
       include: { organization: true },
       orderBy: { createdAt: 'asc' },
     })
   }
-  if (!membership) return null
+  if (!membership || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null
 
   return {
     userId,
@@ -101,7 +103,7 @@ export async function listMemberships(): Promise<{ slug: string; name: string; r
   const userId = await resolveUserId()
   if (!userId) return []
   const memberships = await prisma.aishodanMember.findMany({
-    where: { userId, status: 'ACTIVE' },
+    where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
     include: { organization: true },
     orderBy: { createdAt: 'asc' },
   })
@@ -118,9 +120,10 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
     try {
       return await prisma.$transaction(async (tx) => {
         const existing = await tx.aishodanMember.findFirst({
-          where: { userId, status: 'ACTIVE' }, include: { organization: true },
+          where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } }, include: { organization: true },
         })
         if (existing) return existing.organization
+        if (await tx.aishodanMember.findFirst({ where: { userId, status: 'ACTIVE' }, select: { id: true } })) throw Object.assign(new Error('組織の権限を確認できません。管理者に確認してください。'), { code: 'INVALID_MEMBERSHIP_ROLE' })
 
         const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
         const dup = await tx.aishodanOrganization.findUnique({ where: { slug: base } })

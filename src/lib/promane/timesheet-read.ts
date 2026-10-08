@@ -23,7 +23,7 @@ export function parseTimesheetQuery(params: { month?: string | string[]; cursor?
 }
 
 export async function readTimesheet(db: Prisma.TransactionClient, userId: string, workspaceSlug: string, query: ReturnType<typeof parseTimesheetQuery>) {
-  const member = await db.promaneMember.findFirst({ where: { userId, isActive: true, workspace: { slug: workspaceSlug } }, select: { id: true, workspaceId: true } })
+  const member = await db.promaneMember.findFirst({ where: { userId, isActive: true, role: { in: ['owner', 'admin', 'member', 'guest'] }, workspace: { slug: workspaceSlug } }, select: { id: true, workspaceId: true } })
   if (!member) return null
   if (query.cursor && query.cursor.memberId !== member.id) throw new Error('Invalid cursor')
   const where = { memberId: member.id, ...(query.range ? { date: query.range } : {}) }

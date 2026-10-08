@@ -6,7 +6,7 @@ function fixture(service, { offset = -1, delayAt = '', full = false, existing = 
   let now = deadline + offset, attempted = 0, rollbacks = 0, committed = 0;
   class Clock extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
   const delay = stage => { if (delayAt === stage) now = deadline; };
-  const member = { id: 'invite', organizationId: 'org', userId: 'pending', status: 'PENDING', inviteToken: 'token', inviteEmail: 'qa@example.invalid', role: 'member', createdAt: new Date(deadline - ttl), employee: { email: 'qa@example.invalid' }, organization: { name: 'Synthetic', slug: 'team' } };
+  const member = { id: 'invite', organizationId: 'org', userId: 'pending', status: 'PENDING', inviteToken: 'token', inviteEmail: 'qa@example.invalid', role: service === 'kintai' ? 'employee' : 'member', createdAt: new Date(deadline - ttl), employee: { email: 'qa@example.invalid' }, organization: { name: 'Synthetic', slug: 'team' } };
   const invitation = { id: 'invite', token: 'token', workspaceId: 'org', email: 'qa@example.invalid', role: 'member', expiresAt: new Date(deadline), acceptedAt: null, invitedBy: { name: null }, workspace: { id: 'org', name: 'Synthetic', slug: 'team', userId: 'owner' } };
   let state = { member: structuredClone(member), oldStatus: 'ACTIVE', promaneMembers: 0, acceptedAt: null };
   const membership = {

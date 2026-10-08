@@ -9,6 +9,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLE_HIERARCHY, type AioContext, type AioRole } from './types'
 
+const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
+
 /** リクエストから対象ワークスペース(slug)を取り出す。クエリ ?org= 優先、無ければヘッダ x-aio-org */
 export function orgSlugFrom(req: NextRequest): string | undefined {
   try {
@@ -48,7 +50,7 @@ export async function getAioContext(orgSlug?: string): Promise<AioContext | null
 
   let membership = orgSlug
     ? await prisma.aioMember.findFirst({
-        where: { userId, status: 'ACTIVE', organization: { slug: orgSlug } },
+        where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES }, organization: { slug: orgSlug } },
         include: { organization: true },
       })
     : null
@@ -56,12 +58,12 @@ export async function getAioContext(orgSlug?: string): Promise<AioContext | null
   if (orgSlug && !membership) return null
   if (!membership) {
     membership = await prisma.aioMember.findFirst({
-      where: { userId, status: 'ACTIVE' },
+      where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
       include: { organization: true },
       orderBy: { createdAt: 'desc' },
     })
   }
-  if (!membership) return null
+  if (!membership || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null
 
   return {
     userId,
@@ -75,7 +77,7 @@ export async function getAioContext(orgSlug?: string): Promise<AioContext | null
 /** 指定ユーザーが所属する全ワークスペース（userId既知の場合。セッション再解決を避ける） */
 export async function listMembershipsFor(userId: string): Promise<{ slug: string; name: string; role: AioRole }[]> {
   const memberships = await prisma.aioMember.findMany({
-    where: { userId, status: 'ACTIVE' },
+    where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
     include: { organization: true },
     orderBy: { createdAt: 'asc' },
   })
@@ -87,7 +89,7 @@ export async function listMemberships(): Promise<{ slug: string; name: string; r
   const userId = await resolveUserId()
   if (!userId) return []
   const memberships = await prisma.aioMember.findMany({
-    where: { userId, status: 'ACTIVE' },
+    where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
     include: { organization: true },
     orderBy: { createdAt: 'asc' },
   })
@@ -99,7 +101,7 @@ export async function listMemberships(): Promise<{ slug: string; name: string; r
 }
 
 export function hasMinRole(currentRole: string, minRole: AioRole): boolean {
-  return (ROLE_HIERARCHY[currentRole] ?? 0) >= (ROLE_HIERARCHY[minRole] ?? 0)
+  return Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, currentRole) && Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, minRole) && ROLE_HIERARCHY[currentRole] >= ROLE_HIERARCHY[minRole]
 }
 
 /** 初回オンボーディング：組織＋オーナーを作成（冪等） */
@@ -108,10 +110,11 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
     try {
       return await prisma.$transaction(async (tx) => {
         const existing = await tx.aioMember.findFirst({
-          where: { userId, status: 'ACTIVE' },
+          where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
           include: { organization: true },
         })
         if (existing) return existing.organization
+        if (await tx.aioMember.findFirst({ where: { userId, status: 'ACTIVE' }, select: { id: true } })) throw Object.assign(new Error('組織の権限を確認できません。管理者に確認してください。'), { code: 'INVALID_MEMBERSHIP_ROLE' })
 
         const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
         const dup = await tx.aioOrganization.findUnique({ where: { slug: base } })

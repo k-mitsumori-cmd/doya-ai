@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       },
     })
 
-    if (!invitation) {
+    if (!invitation || !['admin', 'member', 'guest'].includes(invitation.role)) {
       return NextResponse.json({ error: '招待リンクが見つかりません' }, { status: 404 })
     }
     if (invitation.acceptedAt) {

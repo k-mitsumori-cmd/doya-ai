@@ -3,6 +3,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { KintaiMemberRole, KintaiContext, ROLE_HIERARCHY } from './types'
 
+const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
+
 export async function getKintaiContext(): Promise<KintaiContext | null> {
   const session = await getServerSession(authOptions)
   let userId = (session?.user as any)?.id as string | undefined
@@ -16,11 +18,11 @@ export async function getKintaiContext(): Promise<KintaiContext | null> {
   if (!userId) return null
 
   const membership = await prisma.kintaiMember.findFirst({
-    where: { userId, status: 'ACTIVE' },
+    where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
     include: { employee: true },
     orderBy: { createdAt: 'desc' },
   })
-  if (!membership || !membership.employee) return null
+  if (!membership || !membership.employee || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null
 
   return {
     userId,
@@ -34,7 +36,7 @@ export async function getKintaiContext(): Promise<KintaiContext | null> {
 }
 
 export function hasMinRole(currentRole: string, minRole: KintaiMemberRole): boolean {
-  return (ROLE_HIERARCHY[currentRole] ?? 0) >= (ROLE_HIERARCHY[minRole] ?? 0)
+  return Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, currentRole) && Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, minRole) && ROLE_HIERARCHY[currentRole] >= ROLE_HIERARCHY[minRole]
 }
 
 export async function getOrCreateOrganization(
@@ -47,10 +49,11 @@ export async function getOrCreateOrganization(
     try {
       return await prisma.$transaction(async (tx) => {
         const existing = await tx.kintaiMember.findFirst({
-          where: { userId, status: 'ACTIVE' },
+          where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
           include: { organization: true },
         })
         if (existing) return existing.organization
+        if (await tx.kintaiMember.findFirst({ where: { userId, status: 'ACTIVE' }, select: { id: true } })) throw Object.assign(new Error('組織の権限を確認できません。管理者に確認してください。'), { code: 'INVALID_MEMBERSHIP_ROLE' })
 
         const base = orgName.toLowerCase().replace(/[^a-z0-9　-鿿]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
         const existingSlug = await tx.kintaiOrganization.findUnique({ where: { slug: base } })

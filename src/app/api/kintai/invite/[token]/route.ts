@@ -9,6 +9,7 @@ import { isKintaiInviteExpired } from '@/lib/kintai/invite-token'
 
 type Ctx = { params: Promise<{ token: string }> }
 class InvitationExpired extends Error {}
+const allowedInviteRoles = ['system_admin', 'hr_admin', 'manager', 'employee']
 const expiredMessage = '招待リンクの有効期限（48時間）が切れています。管理者に再招待を依頼してください。'
 
 export async function GET(req: NextRequest, ctx: Ctx) {
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         organization: { select: { name: true } },
       },
     })
-    if (!member) {
+    if (!member || !allowedInviteRoles.includes(member.role)) {
       return NextResponse.json({ error: '無効または期限切れの招待リンクです' }, { status: 404 })
     }
 
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
             where: { inviteToken: p.token, status: 'PENDING' },
             include: { organization: { select: { name: true } }, employee: { select: { email: true } } },
           })
-          if (!member) return { status: 404, error: '無効または期限切れの招待リンクです' }
+          if (!member || !allowedInviteRoles.includes(member.role)) return { status: 404, error: '無効または期限切れの招待リンクです' }
           if (isKintaiInviteExpired(member.inviteToken, member.createdAt)) {
             return { status: 410, error: '招待リンクの有効期限（48時間）が切れています。管理者に再招待を依頼してください。' }
           }

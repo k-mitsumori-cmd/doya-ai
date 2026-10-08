@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, organization: org })
   } catch (e) {
+    if (e instanceof Error && 'code' in e && e.code === 'INVALID_MEMBERSHIP_ROLE') return NextResponse.json({ error: '組織の権限を確認できません。管理者に確認してください。', code: 'INVALID_MEMBERSHIP_ROLE' }, { status: 403 })
     console.error('[hr/organization] Error:')
     return NextResponse.json({ error: '組織の作成に失敗しました' }, { status: 500 })
   }
@@ -55,7 +56,7 @@ export async function GET() {
     }
 
     const memberships = await prisma.hrOrganizationMember.findMany({
-      where: { userId, status: 'ACTIVE' },
+      where: { userId, status: 'ACTIVE', role: { in: Object.values(HrMemberRole) } },
       include: {
         organization: {
           include: {

@@ -1,0 +1,250 @@
+{
+  "checkedAt": "2026-10-08T06:47:49.974Z",
+  "passed": 56,
+  "cases": [
+    "kintai system_admin GET",
+    "kintai system_admin POST",
+    "kintai hr_admin GET",
+    "kintai hr_admin POST",
+    "kintai manager GET",
+    "kintai manager POST",
+    "kintai employee GET",
+    "kintai employee POST",
+    "kintai owner GET",
+    "kintai owner POST",
+    "kintai __UNRECOGNIZED__ GET",
+    "kintai __UNRECOGNIZED__ POST",
+    "kintai  GET",
+    "kintai  POST",
+    "kintai constructor GET",
+    "kintai constructor POST",
+    "promane admin",
+    "promane member",
+    "promane guest",
+    "promane owner",
+    "promane __UNRECOGNIZED__",
+    "promane ",
+    "promane constructor",
+    "promane admin ",
+    "promane read owner",
+    "promane current member owner",
+    "promane onboarding owner",
+    "promane writable guest/unknown control owner",
+    "promane read admin",
+    "promane current member admin",
+    "promane onboarding admin",
+    "promane writable guest/unknown control admin",
+    "promane read member",
+    "promane current member member",
+    "promane onboarding member",
+    "promane writable guest/unknown control member",
+    "promane read guest",
+    "promane current member guest",
+    "promane onboarding guest",
+    "promane writable guest/unknown control guest",
+    "promane read __UNRECOGNIZED__",
+    "promane current member __UNRECOGNIZED__",
+    "promane onboarding __UNRECOGNIZED__",
+    "promane writable guest/unknown control __UNRECOGNIZED__",
+    "promane read ",
+    "promane current member ",
+    "promane onboarding ",
+    "promane writable guest/unknown control ",
+    "promane read constructor",
+    "promane current member constructor",
+    "promane onboarding constructor",
+    "promane writable guest/unknown control constructor",
+    "promane read admin ",
+    "promane current member admin ",
+    "promane onboarding admin ",
+    "promane writable guest/unknown control admin "
+  ],
+  "observations": [
+    {
+      "service": "kintai",
+      "role": "system_admin",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING",
+      "priorStatus": "ACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "system_admin",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE",
+      "priorStatus": "INACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "hr_admin",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING",
+      "priorStatus": "ACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "hr_admin",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE",
+      "priorStatus": "INACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "manager",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING",
+      "priorStatus": "ACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "manager",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE",
+      "priorStatus": "INACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "employee",
+      "mode": "GET",
+      "status": 200,
+      "savedStatus": "PENDING",
+      "priorStatus": "ACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "employee",
+      "mode": "POST",
+      "status": 200,
+      "savedStatus": "ACTIVE",
+      "priorStatus": "INACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "owner",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING",
+      "priorStatus": "ACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "owner",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING",
+      "priorStatus": "ACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "__UNRECOGNIZED__",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING",
+      "priorStatus": "ACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "__UNRECOGNIZED__",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING",
+      "priorStatus": "ACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING",
+      "priorStatus": "ACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING",
+      "priorStatus": "ACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "constructor",
+      "mode": "GET",
+      "status": 404,
+      "savedStatus": "PENDING",
+      "priorStatus": "ACTIVE"
+    },
+    {
+      "service": "kintai",
+      "role": "constructor",
+      "mode": "POST",
+      "status": 404,
+      "savedStatus": "PENDING",
+      "priorStatus": "ACTIVE"
+    },
+    {
+      "service": "promane",
+      "role": "admin",
+      "status": 200,
+      "memberCreated": true
+    },
+    {
+      "service": "promane",
+      "role": "member",
+      "status": 200,
+      "memberCreated": true
+    },
+    {
+      "service": "promane",
+      "role": "guest",
+      "status": 200,
+      "memberCreated": true
+    },
+    {
+      "service": "promane",
+      "role": "owner",
+      "status": 404,
+      "memberCreated": false
+    },
+    {
+      "service": "promane",
+      "role": "__UNRECOGNIZED__",
+      "status": 404,
+      "memberCreated": false
+    },
+    {
+      "service": "promane",
+      "role": "",
+      "status": 404,
+      "memberCreated": false
+    },
+    {
+      "service": "promane",
+      "role": "constructor",
+      "status": 404,
+      "memberCreated": false
+    },
+    {
+      "service": "promane",
+      "role": "admin ",
+      "status": 404,
+      "memberCreated": false
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/kintai/invite/[token]/route.ts": "e4c2f5e9cbdef6c74632e517d17c53ecda094ef892fda2dcaa6919969566b9e5",
+    "src/lib/promane/invite-admission.ts": "687b7136a3fbd28c90ca55c133d5795985b6be0ac9f968d3acac5ac01cd2b90a",
+    "src/lib/promane/auth.ts": "7a7af29b85e20e4a4472d8908c436797511be0ca767d83ec08f46fa7f14e3909",
+    "src/lib/kintai/invite-token.ts": "27894dddd913d46e33f22870289a72e74ffa9e7655682d932993d0d7e7a8cc54",
+    "docs/audits/2026-10-06-all-services-recheck/verify-membership-additional-invite-integrated-postgres.cjs": "fe75e26ddaf8d1d42f96b5f1ca7fede40272a51b43bf2b225320527803e812e1",
+    "prisma/schema.prisma": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c"
+  },
+  "candidateHashes": {},
+  "scope": "Actual Kintai invitation API and Promane acceptance helper, real Prisma/private PostgreSQL transactions and stored before/after rows. Synthetic auth and Promane plan limits; DMMF scalar tables without foreign keys. No emails/providers/customer data; production invalid roles remain unknown."
+}

@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-10-08T06:45:35.144384+00:00",
+  "failedGate": "docs/audits/2026-10-06-all-services-recheck/membership-role-release-95825b2a-98cd-4033-b258-744f00e5b9d8",
+  "failedGateIndex": 100,
+  "failure": "provider counter 6 !== baseline5 during five-article cap check",
+  "diagnosis": "Test may observe quota reservation and prior completion text before provider invocation/draft commit of fifth admitted attempt. Counters are not a completion barrier. Added actual saved draft count to account and guest completion waits. Provider-before/after rejection assertions unchanged. Production source not modified.",
+  "diagnosticRecheck": "Account provider6 ->6, posts6 ->7, used5 ->5, drafts5 ->5 on corrected actual Chrome/HTTP/privatePG run; all9 passed.",
+  "newGate": "docs/audits/2026-10-06-all-services-recheck/membership-role-release-24618244-78d7-4385-b872-7fa8892936a9",
+  "status": "fresh141-starting"
+}

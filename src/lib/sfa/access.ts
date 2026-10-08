@@ -8,6 +8,8 @@ import { prisma } from '@/lib/prisma'
 import { ROLE_HIERARCHY, type SfaContext, type SfaRole } from './types'
 import { DEFAULT_STAGES } from './constants'
 
+const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
+
 /** リクエストから対象ワークスペース(slug)を取り出す。クエリ ?org= 優先、無ければヘッダ x-sfa-org */
 export function orgSlugFrom(req: NextRequest): string | undefined {
   try {
@@ -50,7 +52,7 @@ export async function getSfaContext(orgSlug?: string): Promise<SfaContext | null
   // いずれも userId でスコープしているため、他人の組織は決して解決されない（IDOR安全）。
   let membership = orgSlug
     ? await prisma.sfaMember.findFirst({
-        where: { userId, status: 'ACTIVE', organization: { slug: orgSlug } },
+        where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES }, organization: { slug: orgSlug } },
         include: { organization: true },
       })
     : null
@@ -58,12 +60,12 @@ export async function getSfaContext(orgSlug?: string): Promise<SfaContext | null
   if (orgSlug && !membership) return null
   if (!membership) {
     membership = await prisma.sfaMember.findFirst({
-      where: { userId, status: 'ACTIVE' },
+      where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
       include: { organization: true },
       orderBy: { createdAt: 'desc' },
     })
   }
-  if (!membership) return null
+  if (!membership || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null
 
   return {
     userId,
@@ -79,7 +81,7 @@ export async function listMemberships(): Promise<{ slug: string; name: string; r
   const userId = await resolveUserId()
   if (!userId) return []
   const memberships = await prisma.sfaMember.findMany({
-    where: { userId, status: 'ACTIVE' },
+    where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
     include: { organization: true },
     orderBy: { createdAt: 'asc' },
   })
@@ -91,7 +93,7 @@ export async function listMemberships(): Promise<{ slug: string; name: string; r
 }
 
 export function hasMinRole(currentRole: string, minRole: SfaRole): boolean {
-  return (ROLE_HIERARCHY[currentRole] ?? 0) >= (ROLE_HIERARCHY[minRole] ?? 0)
+  return Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, currentRole) && Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, minRole) && ROLE_HIERARCHY[currentRole] >= ROLE_HIERARCHY[minRole]
 }
 
 /** 初回オンボーディング：組織＋オーナー＋既定パイプライン＋サンプルデータを作成（冪等） */
@@ -102,10 +104,11 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
     try {
       return await prisma.$transaction(async (tx) => {
         const existing = await tx.sfaMember.findFirst({
-          where: { userId, status: 'ACTIVE' },
+          where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
           include: { organization: true },
         })
         if (existing) return existing.organization
+        if (await tx.sfaMember.findFirst({ where: { userId, status: 'ACTIVE' }, select: { id: true } })) throw Object.assign(new Error('組織の権限を確認できません。管理者に確認してください。'), { code: 'INVALID_MEMBERSHIP_ROLE' })
 
         // slugはASCIIのみ（URL/HTTPヘッダ安全）。日本語社名は org-<timestamp> にフォールバック。
         const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`

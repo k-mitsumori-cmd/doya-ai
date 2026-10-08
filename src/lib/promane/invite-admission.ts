@@ -121,7 +121,7 @@ export async function acceptPromaneInvitation(args: {
           where: { token: args.token },
           include: { workspace: { select: { id: true, slug: true, userId: true } } },
         })
-        if (!invitation) return { success: false, response: { status: 404, error: '招待リンクが見つかりません' } }
+        if (!invitation || !['admin', 'member', 'guest'].includes(invitation.role)) return { success: false, response: { status: 404, error: '招待リンクが見つかりません' } }
         if (invitation.acceptedAt) return { success: false, response: { status: 410, error: '既に承諾済みです', code: 'PROMANE_INVITE_ACCEPTED' } }
         if (invitation.expiresAt.getTime() <= Date.now()) return { success: false, response: { status: 410, error: '有効期限が切れています', code: 'PROMANE_INVITE_EXPIRED' } }
         if (!args.email || args.email.toLowerCase() !== invitation.email.toLowerCase()) {

@@ -1,0 +1,671 @@
+{
+  "checkedAt": "2026-10-08T06:47:55.677Z",
+  "passed": 80,
+  "observations": [
+    {
+      "service": "aio",
+      "role": "member",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "aio",
+      "role": "manager",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "aio",
+      "role": "admin",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "aio",
+      "role": "owner",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "aio",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "aio",
+      "role": "",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "aio",
+      "role": "admin ",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "aio",
+      "role": "__proto__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "aio",
+      "role": "constructor",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "aio",
+      "role": "toString",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "sfa",
+      "role": "member",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "sfa",
+      "role": "manager",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "sfa",
+      "role": "admin",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "sfa",
+      "role": "owner",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "sfa",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "sfa",
+      "role": "",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "sfa",
+      "role": "admin ",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "sfa",
+      "role": "__proto__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "sfa",
+      "role": "constructor",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "sfa",
+      "role": "toString",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "shodan",
+      "role": "member",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "shodan",
+      "role": "manager",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "shodan",
+      "role": "admin",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "shodan",
+      "role": "owner",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "shodan",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "shodan",
+      "role": "",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "shodan",
+      "role": "admin ",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "shodan",
+      "role": "__proto__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "shodan",
+      "role": "constructor",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "shodan",
+      "role": "toString",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "quote",
+      "role": "owner",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "quote",
+      "role": "admin",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "quote",
+      "role": "manager",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "quote",
+      "role": "member",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "quote",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "quote",
+      "role": "",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "quote",
+      "role": "admin ",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "quote",
+      "role": "__proto__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "quote",
+      "role": "constructor",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "quote",
+      "role": "toString",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "mensetsu",
+      "role": "owner",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "mensetsu",
+      "role": "admin",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "mensetsu",
+      "role": "manager",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "mensetsu",
+      "role": "member",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "mensetsu",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "mensetsu",
+      "role": "",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "mensetsu",
+      "role": "admin ",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "mensetsu",
+      "role": "__proto__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "mensetsu",
+      "role": "constructor",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "mensetsu",
+      "role": "toString",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "aishodan",
+      "role": "owner",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "aishodan",
+      "role": "admin",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "aishodan",
+      "role": "manager",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "aishodan",
+      "role": "member",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": true
+    },
+    {
+      "service": "aishodan",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "aishodan",
+      "role": "",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "aishodan",
+      "role": "admin ",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "aishodan",
+      "role": "__proto__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "aishodan",
+      "role": "constructor",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "aishodan",
+      "role": "toString",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": false
+    },
+    {
+      "service": "hr",
+      "role": "OWNER",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": null
+    },
+    {
+      "service": "hr",
+      "role": "ADMIN",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": null
+    },
+    {
+      "service": "hr",
+      "role": "MANAGER",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": null
+    },
+    {
+      "service": "hr",
+      "role": "MEMBER",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": null
+    },
+    {
+      "service": "hr",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": null
+    },
+    {
+      "service": "hr",
+      "role": "",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": null
+    },
+    {
+      "service": "hr",
+      "role": "admin ",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": null
+    },
+    {
+      "service": "hr",
+      "role": "__proto__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": null
+    },
+    {
+      "service": "hr",
+      "role": "constructor",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": null
+    },
+    {
+      "service": "hr",
+      "role": "toString",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": null
+    },
+    {
+      "service": "kintai",
+      "role": "employee",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": null
+    },
+    {
+      "service": "kintai",
+      "role": "manager",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": null
+    },
+    {
+      "service": "kintai",
+      "role": "hr_admin",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": null
+    },
+    {
+      "service": "kintai",
+      "role": "system_admin",
+      "known": true,
+      "contextGranted": true,
+      "minimumRolePermitted": true,
+      "listedUnknown": null
+    },
+    {
+      "service": "kintai",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": null
+    },
+    {
+      "service": "kintai",
+      "role": "",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": null
+    },
+    {
+      "service": "kintai",
+      "role": "admin ",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": null
+    },
+    {
+      "service": "kintai",
+      "role": "__proto__",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": null
+    },
+    {
+      "service": "kintai",
+      "role": "constructor",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": null
+    },
+    {
+      "service": "kintai",
+      "role": "toString",
+      "known": false,
+      "contextGranted": false,
+      "minimumRolePermitted": false,
+      "listedUnknown": null
+    }
+  ],
+  "unknownContexts": 0,
+  "unknownMinimumRolePermits": 0,
+  "sourceHashes": {
+    "src/lib/aio/types.ts": "12bfa0f70e875bd21838b25e49343021cd96babaf4b3c73793827b88e32f4e10",
+    "src/lib/aio/access.ts": "800b35fc876910c5cf41a01c66cec4dc7592bf5d7822183d44d1dc7d5cc4062b",
+    "src/lib/sfa/types.ts": "dc8a677b6f9b43cce2f0a807cd9be734af3c5e9059c1f38a8203fa12a398983a",
+    "src/lib/sfa/access.ts": "dfe2d95ed798f05974ccb3696e41aaf5add29359d509e50d50a20678511faf41",
+    "src/lib/sfa/constants.ts": "3bcc6ad502ee87cb98a6f042ed348334042049cdf384b6a96e4c411c93063a08",
+    "src/lib/shodan/types.ts": "5cf89bd2f27e9da8f324a30e301b0cce27b8850c056b8c28311d3ab7665f7a86",
+    "src/lib/shodan/access.ts": "e1b56c3529aa6bd11b209825f09e88baa0327b7ee6fce0a32f36cbf3e2c0a654",
+    "src/lib/quote/types.ts": "dab0056ee533e7b44235f6affac133a4c123191c45b8c0022470d4811c78f018",
+    "src/lib/quote/access.ts": "533090029769dccb4ceb6ea88fe1761bbeee4efc3330101aabb7d1716b643279",
+    "src/lib/mensetsu/types.ts": "4be6b62aa8761c952027ebaa720d56c75c6e87046896249bf31750e23d2d6330",
+    "src/lib/mensetsu/access.ts": "1fccfb693652c80d5f30575d703ff68928d0181e4aac7a97af6d56cfd11c7405",
+    "src/lib/aishodan/types.ts": "08d866873da7f6b8f2b8fd5aa3ee97addd9b2810779096ed8c7c4998e4949cf5",
+    "src/lib/aishodan/access.ts": "c20c17e6b48dcb6ba7d0c93c01a41d9a007bc643032b06acb0bc0dc2d79c3c3c",
+    "src/lib/hr/types.ts": "1fee619f546a9b7740209f209322fbbec321b96855ca65e2bd3089e5d4e8a137",
+    "src/lib/hr/access.ts": "4ea515d387ad715eeffd36a038c0c841aa0d2d5e9c740816a44f4ecf4c017176",
+    "src/lib/hr/constants.ts": "2280c865057d4229eb650729e0e2d7f962b1e542acbca192e587ccc0eb66265c",
+    "src/lib/kintai/types.ts": "3c912a716c0570a0ce7a9b09555763e5ed1a89c5d02cee1efb8c7ec782224822",
+    "src/lib/kintai/access.ts": "ee199f906c08b7aa9c512260aede437d6be07b0a142f038c3f03aa9fe3a28c05",
+    "src/lib/kintai/constants.ts": "d77aab2db96f18687b84b99f130b76f350fd79fe090269d4b6804732a98196ac",
+    "scripts/security-regression/verify-membership-known-roles.cjs": "98a963178a8e94f2fae9321061af6a7f75e8923f50747a4cec692fa30226dda3"
+  },
+  "scope": "Candidate8 service access/types modules with synthetic session and role-filter-aware Prisma responses. Demonstrates behavior if an ACTIVE stored membership has an unknown role; no evidence such production rows exist, no DB/provider/network or customer reads."
+}

@@ -267,6 +267,24 @@ jobs:
       - name: AIO prompt and invite lock ordering (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/aio-lock-order-postgres-supervise.py
 
+      - name: membership-known-role (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/membership-known-role-integrated-postgres-supervise.py
+
+      - name: membership-aio-operation (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/membership-aio-operation-integrated-postgres-supervise.py
+
+      - name: membership-invitation-role (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/membership-invitation-role-integrated-postgres-supervise.py
+
+      - name: Kintai and Promane invitation roles (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/membership-additional-invite-integrated-postgres-supervise.py
+
+      - name: Promane read and receipt role boundaries (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/promane-known-read-receipt-role-integrated-postgres-supervise.py
+
+      - name: Organization onboarding and HR role boundaries (private Unix PostgreSQL)
+        run: python3 docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-postgres-supervise.py
+
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 

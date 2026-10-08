@@ -20,7 +20,7 @@ export async function GET() {
     }
 
     const memberships = await prisma.promaneMember.findMany({
-      where: { userId, isActive: true },
+      where: { userId, isActive: true, role: { in: ['owner', 'admin', 'member', 'guest'] } },
       include: {
         workspace: {
           select: {

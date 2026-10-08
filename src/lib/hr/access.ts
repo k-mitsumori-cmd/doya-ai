@@ -4,16 +4,18 @@ import { prisma } from '@/lib/prisma'
 import { HrMemberRole, HrContext } from './types'
 import { ROLE_HIERARCHY } from './constants'
 
+const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
+
 export async function getHrContext(): Promise<HrContext | null> {
   const session = await getServerSession(authOptions)
   const userId = (session?.user as any)?.id as string | undefined
   if (!userId) return null
 
   const membership = await prisma.hrOrganizationMember.findFirst({
-    where: { userId, status: 'ACTIVE' },
+    where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
     orderBy: { createdAt: 'desc' },
   })
-  if (!membership) return null
+  if (!membership || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null
 
   return {
     userId,
@@ -32,7 +34,7 @@ export function requireRole(
 }
 
 export function hasMinRole(currentRole: string, minRole: HrMemberRole): boolean {
-  return (ROLE_HIERARCHY[currentRole] ?? 0) >= (ROLE_HIERARCHY[minRole] ?? 0)
+  return Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, currentRole) && Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, minRole) && ROLE_HIERARCHY[currentRole] >= ROLE_HIERARCHY[minRole]
 }
 
 export async function getOrCreateOrganization(
@@ -44,9 +46,10 @@ export async function getOrCreateOrganization(
     try {
       return await prisma.$transaction(async (tx) => {
         const existing = await tx.hrOrganizationMember.findFirst({
-          where: { userId, status: 'ACTIVE' }, include: { organization: true },
+          where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } }, include: { organization: true },
         })
         if (existing) return existing.organization
+        if (await tx.hrOrganizationMember.findFirst({ where: { userId, status: 'ACTIVE' }, select: { id: true } })) throw Object.assign(new Error('組織の権限を確認できません。管理者に確認してください。'), { code: 'INVALID_MEMBERSHIP_ROLE' })
 
         const base = options?.slug || orgName.toLowerCase().replace(/[^a-z0-9　-鿿]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
         const existingSlug = await tx.hrOrganization.findUnique({ where: { slug: base } })

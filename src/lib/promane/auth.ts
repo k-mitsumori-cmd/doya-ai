@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import crypto from 'crypto'
 
+const VALID_MEMBER_ROLES = ['owner', 'admin', 'member', 'guest']
+
 /**
  * ページ用: 未ログインなら /auth/signin にリダイレクト
  * ⚠️ callbackUrl を必ず付ける。付けないと signin 側の既定('/seo')が効いて
@@ -35,7 +37,7 @@ export async function getOrCreateWorkspace(userId: string) {
     if (users.length === 0) throw new Error('Promane account not found')
 
     const membership = await tx.promaneMember.findFirst({
-      where: { userId, isActive: true },
+      where: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } },
       include: { workspace: true },
       orderBy: { createdAt: 'asc' },
     })
@@ -61,17 +63,17 @@ export async function getWorkspaceBySlug(slug: string, userId: string) {
   return prisma.promaneWorkspace.findFirst({
     where: {
       slug,
-      members: { some: { userId, isActive: true } },
+      members: { some: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } } },
     },
     include: {
-      members: { where: { userId, isActive: true } },
+      members: { where: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } } },
     },
   })
 }
 
 export async function getCurrentMember(workspaceId: string, userId: string) {
   return prisma.promaneMember.findUnique({
-    where: { workspaceId_userId: { workspaceId, userId } },
+    where: { workspaceId_userId: { workspaceId, userId }, role: { in: VALID_MEMBER_ROLES } },
   })
 }
 
@@ -80,8 +82,8 @@ export async function requireWritableWorkspace(slug: string, userId: string, adm
   // A supplied immutable operation ID never falls back to a mutable/reused slug.
   if (workspaceId !== undefined && (typeof workspaceId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(workspaceId))) throw new Error('ワークスペースを確認してください');
   const workspace = workspaceId === undefined ? await getWorkspaceBySlug(slug, userId) : await prisma.promaneWorkspace.findFirst({
-    where: { id: workspaceId, members: { some: { userId, isActive: true } } },
-    include: { members: { where: { userId, isActive: true } } },
+    where: { id: workspaceId, members: { some: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } } } },
+    include: { members: { where: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } } } },
   })
   if (!workspace) throw new Error('ワークスペースにアクセスできません')
   const member = workspace.members.find((m) => m.userId === userId && m.isActive)

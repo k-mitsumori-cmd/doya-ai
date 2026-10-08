@@ -1,0 +1,741 @@
+{
+  "checkedAt": "2026-10-08T06:47:53.305Z",
+  "passed": 195,
+  "cases": [
+    "aio onboarding \"member\"",
+    "aio HTTP \"member\"",
+    "aio onboarding \"manager\"",
+    "aio HTTP \"manager\"",
+    "aio onboarding \"admin\"",
+    "aio HTTP \"admin\"",
+    "aio onboarding \"owner\"",
+    "aio HTTP \"owner\"",
+    "aio onboarding \"__UNRECOGNIZED__\"",
+    "aio HTTP \"__UNRECOGNIZED__\"",
+    "aio onboarding \"\"",
+    "aio HTTP \"\"",
+    "aio onboarding \"constructor\"",
+    "aio HTTP \"constructor\"",
+    "aio onboarding \"admin \"",
+    "aio HTTP \"admin \"",
+    "aio onboarding null",
+    "aio HTTP null",
+    "aio mixed-valid-and-unknown",
+    "aio inactive-known",
+    "aio foreign-known",
+    "aio coded error never echoes internal message",
+    "aio anonymous HTTP401",
+    "sfa onboarding \"member\"",
+    "sfa HTTP \"member\"",
+    "sfa onboarding \"manager\"",
+    "sfa HTTP \"manager\"",
+    "sfa onboarding \"admin\"",
+    "sfa HTTP \"admin\"",
+    "sfa onboarding \"owner\"",
+    "sfa HTTP \"owner\"",
+    "sfa onboarding \"__UNRECOGNIZED__\"",
+    "sfa HTTP \"__UNRECOGNIZED__\"",
+    "sfa onboarding \"\"",
+    "sfa HTTP \"\"",
+    "sfa onboarding \"constructor\"",
+    "sfa HTTP \"constructor\"",
+    "sfa onboarding \"admin \"",
+    "sfa HTTP \"admin \"",
+    "sfa onboarding null",
+    "sfa HTTP null",
+    "sfa mixed-valid-and-unknown",
+    "sfa inactive-known",
+    "sfa foreign-known",
+    "sfa coded error never echoes internal message",
+    "sfa anonymous HTTP401",
+    "shodan onboarding \"member\"",
+    "shodan HTTP \"member\"",
+    "shodan onboarding \"manager\"",
+    "shodan HTTP \"manager\"",
+    "shodan onboarding \"admin\"",
+    "shodan HTTP \"admin\"",
+    "shodan onboarding \"owner\"",
+    "shodan HTTP \"owner\"",
+    "shodan onboarding \"__UNRECOGNIZED__\"",
+    "shodan HTTP \"__UNRECOGNIZED__\"",
+    "shodan onboarding \"\"",
+    "shodan HTTP \"\"",
+    "shodan onboarding \"constructor\"",
+    "shodan HTTP \"constructor\"",
+    "shodan onboarding \"admin \"",
+    "shodan HTTP \"admin \"",
+    "shodan onboarding null",
+    "shodan HTTP null",
+    "shodan mixed-valid-and-unknown",
+    "shodan inactive-known",
+    "shodan foreign-known",
+    "shodan coded error never echoes internal message",
+    "shodan anonymous HTTP401",
+    "quote onboarding \"owner\"",
+    "quote HTTP \"owner\"",
+    "quote onboarding \"admin\"",
+    "quote HTTP \"admin\"",
+    "quote onboarding \"manager\"",
+    "quote HTTP \"manager\"",
+    "quote onboarding \"member\"",
+    "quote HTTP \"member\"",
+    "quote onboarding \"__UNRECOGNIZED__\"",
+    "quote HTTP \"__UNRECOGNIZED__\"",
+    "quote onboarding \"\"",
+    "quote HTTP \"\"",
+    "quote onboarding \"constructor\"",
+    "quote HTTP \"constructor\"",
+    "quote onboarding \"admin \"",
+    "quote HTTP \"admin \"",
+    "quote onboarding null",
+    "quote HTTP null",
+    "quote mixed-valid-and-unknown",
+    "quote inactive-known",
+    "quote foreign-known",
+    "quote coded error never echoes internal message",
+    "quote anonymous HTTP401",
+    "mensetsu onboarding \"owner\"",
+    "mensetsu HTTP \"owner\"",
+    "mensetsu onboarding \"admin\"",
+    "mensetsu HTTP \"admin\"",
+    "mensetsu onboarding \"manager\"",
+    "mensetsu HTTP \"manager\"",
+    "mensetsu onboarding \"member\"",
+    "mensetsu HTTP \"member\"",
+    "mensetsu onboarding \"__UNRECOGNIZED__\"",
+    "mensetsu HTTP \"__UNRECOGNIZED__\"",
+    "mensetsu onboarding \"\"",
+    "mensetsu HTTP \"\"",
+    "mensetsu onboarding \"constructor\"",
+    "mensetsu HTTP \"constructor\"",
+    "mensetsu onboarding \"admin \"",
+    "mensetsu HTTP \"admin \"",
+    "mensetsu onboarding null",
+    "mensetsu HTTP null",
+    "mensetsu mixed-valid-and-unknown",
+    "mensetsu inactive-known",
+    "mensetsu foreign-known",
+    "mensetsu coded error never echoes internal message",
+    "mensetsu anonymous HTTP401",
+    "aishodan onboarding \"owner\"",
+    "aishodan HTTP \"owner\"",
+    "aishodan onboarding \"admin\"",
+    "aishodan HTTP \"admin\"",
+    "aishodan onboarding \"manager\"",
+    "aishodan HTTP \"manager\"",
+    "aishodan onboarding \"member\"",
+    "aishodan HTTP \"member\"",
+    "aishodan onboarding \"__UNRECOGNIZED__\"",
+    "aishodan HTTP \"__UNRECOGNIZED__\"",
+    "aishodan onboarding \"\"",
+    "aishodan HTTP \"\"",
+    "aishodan onboarding \"constructor\"",
+    "aishodan HTTP \"constructor\"",
+    "aishodan onboarding \"admin \"",
+    "aishodan HTTP \"admin \"",
+    "aishodan onboarding null",
+    "aishodan HTTP null",
+    "aishodan mixed-valid-and-unknown",
+    "aishodan inactive-known",
+    "aishodan foreign-known",
+    "aishodan coded error never echoes internal message",
+    "aishodan anonymous HTTP401",
+    "hr onboarding \"OWNER\"",
+    "hr HTTP \"OWNER\"",
+    "hr onboarding \"ADMIN\"",
+    "hr HTTP \"ADMIN\"",
+    "hr onboarding \"MANAGER\"",
+    "hr HTTP \"MANAGER\"",
+    "hr onboarding \"MEMBER\"",
+    "hr HTTP \"MEMBER\"",
+    "hr onboarding \"__UNRECOGNIZED__\"",
+    "hr HTTP \"__UNRECOGNIZED__\"",
+    "hr onboarding \"\"",
+    "hr HTTP \"\"",
+    "hr onboarding \"constructor\"",
+    "hr HTTP \"constructor\"",
+    "hr onboarding \"admin \"",
+    "hr HTTP \"admin \"",
+    "hr onboarding null",
+    "hr HTTP null",
+    "hr mixed-valid-and-unknown",
+    "hr inactive-known",
+    "hr foreign-known",
+    "HR organization GET {\"role\":\"OWNER\"}",
+    "HR organization GET {\"role\":\"ADMIN\"}",
+    "HR organization GET {\"role\":\"MANAGER\"}",
+    "HR organization GET {\"role\":\"MEMBER\"}",
+    "HR organization GET {\"role\":\"__UNRECOGNIZED__\"}",
+    "HR organization GET {\"role\":\"\"}",
+    "HR organization GET {\"role\":\"constructor\"}",
+    "HR organization GET {\"role\":\"ADMIN \"}",
+    "HR organization GET {\"role\":\"OWNER\",\"inactive\":true}",
+    "HR organization GET {\"role\":\"OWNER\",\"foreign\":true}",
+    "HR anonymous GET401",
+    "hr coded error never echoes internal message",
+    "hr anonymous HTTP401",
+    "kintai onboarding \"employee\"",
+    "kintai HTTP \"employee\"",
+    "kintai onboarding \"manager\"",
+    "kintai HTTP \"manager\"",
+    "kintai onboarding \"hr_admin\"",
+    "kintai HTTP \"hr_admin\"",
+    "kintai onboarding \"system_admin\"",
+    "kintai HTTP \"system_admin\"",
+    "kintai onboarding \"__UNRECOGNIZED__\"",
+    "kintai HTTP \"__UNRECOGNIZED__\"",
+    "kintai onboarding \"\"",
+    "kintai HTTP \"\"",
+    "kintai onboarding \"constructor\"",
+    "kintai HTTP \"constructor\"",
+    "kintai onboarding \"admin \"",
+    "kintai HTTP \"admin \"",
+    "kintai onboarding null",
+    "kintai HTTP null",
+    "kintai mixed-valid-and-unknown",
+    "kintai inactive-known",
+    "kintai foreign-known",
+    "kintai coded error never echoes internal message",
+    "kintai anonymous HTTP401"
+  ],
+  "observations": [
+    {
+      "service": "aio",
+      "role": "member",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "aio",
+      "role": "manager",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "aio",
+      "role": "admin",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "aio",
+      "role": "owner",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "aio",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "aio",
+      "role": "",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "aio",
+      "role": "constructor",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "aio",
+      "role": "admin ",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "aio",
+      "role": null,
+      "known": false,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "sfa",
+      "role": "member",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "sfa",
+      "role": "manager",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "sfa",
+      "role": "admin",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "sfa",
+      "role": "owner",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "sfa",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "sfa",
+      "role": "",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "sfa",
+      "role": "constructor",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "sfa",
+      "role": "admin ",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "sfa",
+      "role": null,
+      "known": false,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "shodan",
+      "role": "member",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "shodan",
+      "role": "manager",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "shodan",
+      "role": "admin",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "shodan",
+      "role": "owner",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "shodan",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "shodan",
+      "role": "",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "shodan",
+      "role": "constructor",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "shodan",
+      "role": "admin ",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "shodan",
+      "role": null,
+      "known": false,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "quote",
+      "role": "owner",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "quote",
+      "role": "admin",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "quote",
+      "role": "manager",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "quote",
+      "role": "member",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "quote",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "quote",
+      "role": "",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "quote",
+      "role": "constructor",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "quote",
+      "role": "admin ",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "quote",
+      "role": null,
+      "known": false,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "mensetsu",
+      "role": "owner",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "mensetsu",
+      "role": "admin",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "mensetsu",
+      "role": "manager",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "mensetsu",
+      "role": "member",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "mensetsu",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "mensetsu",
+      "role": "",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "mensetsu",
+      "role": "constructor",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "mensetsu",
+      "role": "admin ",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "mensetsu",
+      "role": null,
+      "known": false,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "aishodan",
+      "role": "owner",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "aishodan",
+      "role": "admin",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "aishodan",
+      "role": "manager",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "aishodan",
+      "role": "member",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "aishodan",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "aishodan",
+      "role": "",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "aishodan",
+      "role": "constructor",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "aishodan",
+      "role": "admin ",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "aishodan",
+      "role": null,
+      "known": false,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "hr",
+      "role": "OWNER",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "hr",
+      "role": "ADMIN",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "hr",
+      "role": "MANAGER",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "hr",
+      "role": "MEMBER",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "hr",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "hr",
+      "role": "",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "hr",
+      "role": "constructor",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "hr",
+      "role": "admin ",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "hr",
+      "role": null,
+      "known": false,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "kintai",
+      "role": "employee",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "kintai",
+      "role": "manager",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "kintai",
+      "role": "hr_admin",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "kintai",
+      "role": "system_admin",
+      "known": true,
+      "blocked": false,
+      "organizationCount": 1
+    },
+    {
+      "service": "kintai",
+      "role": "__UNRECOGNIZED__",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "kintai",
+      "role": "",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "kintai",
+      "role": "constructor",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "kintai",
+      "role": "admin ",
+      "known": false,
+      "blocked": true,
+      "organizationCount": 1
+    },
+    {
+      "service": "kintai",
+      "role": null,
+      "known": false,
+      "blocked": false,
+      "organizationCount": 1
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/aio/types.ts": "12bfa0f70e875bd21838b25e49343021cd96babaf4b3c73793827b88e32f4e10",
+    "src/lib/aio/access.ts": "800b35fc876910c5cf41a01c66cec4dc7592bf5d7822183d44d1dc7d5cc4062b",
+    "src/app/api/aio/organization/route.ts": "805fffad3562862f2a4b5fce8fb347cbc1058c892cc1cd8089ce67cbc56e83fc",
+    "src/lib/sfa/types.ts": "dc8a677b6f9b43cce2f0a807cd9be734af3c5e9059c1f38a8203fa12a398983a",
+    "src/lib/sfa/access.ts": "dfe2d95ed798f05974ccb3696e41aaf5add29359d509e50d50a20678511faf41",
+    "src/lib/sfa/constants.ts": "3bcc6ad502ee87cb98a6f042ed348334042049cdf384b6a96e4c411c93063a08",
+    "src/app/api/sfa/organization/route.ts": "5a4d84708898c6d863085541be9e133f91fc695722bcf21f3b5dd8f252f003ac",
+    "src/lib/shodan/types.ts": "5cf89bd2f27e9da8f324a30e301b0cce27b8850c056b8c28311d3ab7665f7a86",
+    "src/lib/shodan/access.ts": "e1b56c3529aa6bd11b209825f09e88baa0327b7ee6fce0a32f36cbf3e2c0a654",
+    "src/app/api/shodan/organization/route.ts": "df0a96d4c36aea7ba707f994e77a6f0ac4554e2483da7336b3fcaafff4b76049",
+    "src/lib/quote/types.ts": "dab0056ee533e7b44235f6affac133a4c123191c45b8c0022470d4811c78f018",
+    "src/lib/quote/access.ts": "533090029769dccb4ceb6ea88fe1761bbeee4efc3330101aabb7d1716b643279",
+    "src/app/api/quote/organizations/route.ts": "a8fa2c43830c5c7757e46530c15fc3f56419b2fee44d71434b105fc9bf003261",
+    "src/lib/mensetsu/types.ts": "4be6b62aa8761c952027ebaa720d56c75c6e87046896249bf31750e23d2d6330",
+    "src/lib/mensetsu/access.ts": "1fccfb693652c80d5f30575d703ff68928d0181e4aac7a97af6d56cfd11c7405",
+    "src/app/api/mensetsu/organizations/route.ts": "7f67d3e787a4da822a821af6f6c555ea5a872bdb59d499f0c239c6d9e9db6841",
+    "src/lib/aishodan/types.ts": "08d866873da7f6b8f2b8fd5aa3ee97addd9b2810779096ed8c7c4998e4949cf5",
+    "src/lib/aishodan/access.ts": "c20c17e6b48dcb6ba7d0c93c01a41d9a007bc643032b06acb0bc0dc2d79c3c3c",
+    "src/app/api/aishodan/organizations/route.ts": "055b95ac2edbbf687cbf4e3f6b1f78aff73433ea60a87f5920d1ee6a924889f2",
+    "src/lib/hr/types.ts": "1fee619f546a9b7740209f209322fbbec321b96855ca65e2bd3089e5d4e8a137",
+    "src/lib/hr/access.ts": "4ea515d387ad715eeffd36a038c0c841aa0d2d5e9c740816a44f4ecf4c017176",
+    "src/lib/hr/constants.ts": "2280c865057d4229eb650729e0e2d7f962b1e542acbca192e587ccc0eb66265c",
+    "src/app/api/hr/organization/route.ts": "aa62653384a141a9a864a753ff982ac7c4487f0c4ed35fb991bc06585659de2b",
+    "src/lib/kintai/types.ts": "3c912a716c0570a0ce7a9b09555763e5ed1a89c5d02cee1efb8c7ec782224822",
+    "src/lib/kintai/access.ts": "ee199f906c08b7aa9c512260aede437d6be07b0a142f038c3f03aa9fe3a28c05",
+    "src/lib/kintai/constants.ts": "d77aab2db96f18687b84b99f130b76f350fd79fe090269d4b6804732a98196ac",
+    "src/app/api/kintai/organization/route.ts": "b64494e55520d3ccaa18d108c3a1c41e7660eabd97ba9d61e591cb965d4f655d",
+    "docs/audits/2026-10-06-all-services-recheck/verify-membership-onboarding-role-integrated-postgres.cjs": "5872d4eade12870ae2681686f8cb465e62edb78e6b3bd7769d41ebad9a27809f",
+    "prisma/schema.prisma": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c"
+  },
+  "candidateHashes": {},
+  "schemaConstraints": "Scalar types, required columns, single and composite uniqueness; no foreign keys",
+  "scope": "Actual eight service onboarding functions and private Unix PostgreSQL synthetic rows. Invalid-role-only memberships must not silently create replacement organizations. Production invalid-role presence unproven."
+}

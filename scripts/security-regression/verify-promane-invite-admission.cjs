@@ -111,6 +111,8 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
 }
 
 (async () => {
+  for (const role of ['admin','member','guest']) { const f=fixture(); f.invitation.role=role; assert.equal((await f.run()).success,true); }
+  for (const role of ['owner','__UNRECOGNIZED__','','constructor','admin ']) { const f=fixture(); f.invitation.role=role; const r=await f.run(); assert.equal(r.success,false); assert.equal(r.response.status,404); assert.equal(f.state().memberWrites,0); assert.equal(f.state().inviteWrites,0); }
   await check('full quota returns a clear API error without sending an email', async () => {
     let deliveries = 0;
     const route = load('src/app/api/promane/invite/route.ts', {

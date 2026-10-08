@@ -1,3 +1,5 @@
+const roleChecks = ['verify-membership-known-roles.cjs', 'verify-membership-invitation-roles.cjs'];
+for (const file of roleChecks) { const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(result.error || result.status!==0) process.exit(result.status || 1); }
 const operationLease = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-operation-lease.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (operationLease.status !== 0) process.exit(operationLease.status || 1);
 const textApplyMounted = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-banner-text-apply-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });

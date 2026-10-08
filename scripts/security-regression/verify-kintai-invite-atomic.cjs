@@ -2,9 +2,9 @@ const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 const tokenHelpers = load('src/lib/kintai/invite-token.ts', {}, { crypto: require('node:crypto').webcrypto });
 
-function fixture({ email = 'invited@example.com', employee = true, existing = false, failClaim = false, conflictOnce = false, token = 'token', createdAt = new Date() } = {}) {
+function fixture({ role = 'employee', email = 'invited@example.com', employee = true, existing = false, failClaim = false, conflictOnce = false, token = 'token', createdAt = new Date() } = {}) {
   let rows = [
-    { id: 'invite', organizationId: 'org', userId: 'pending', status: 'PENDING', inviteToken: token, inviteEmail: 'invited@example.com', createdAt, employee: employee ? { email: 'invited@example.com' } : null, organization: { name: 'Acme' } },
+    { id: 'invite', organizationId: 'org', userId: 'pending', status: 'PENDING', role, inviteToken: token, inviteEmail: 'invited@example.com', createdAt, employee: employee ? { email: 'invited@example.com' } : null, organization: { name: 'Acme' } },
     { id: 'old', organizationId: 'other', userId: 'user', status: 'ACTIVE' },
   ];
   if (existing) rows.push({ id: 'existing', organizationId: 'org', userId: 'user', status: 'ACTIVE', employee: { email } });
@@ -52,6 +52,8 @@ function fixture({ email = 'invited@example.com', employee = true, existing = fa
 }
 
 (async () => {
+  for (const role of ['system_admin','hr_admin','manager','employee']) { const f=fixture({role}); assert.equal((await f.post()).status,200); }
+  for (const role of ['owner','__UNRECOGNIZED__','','constructor','employee ']) { const f=fixture({role}); assert.equal((await f.post()).status,404); assert.equal(f.rows.find(r=>r.id==='old').status,'ACTIVE'); assert.equal(f.rows.find(r=>r.id==='invite').status,'PENDING'); }
   const normal = fixture();
   assert.equal((await normal.post()).status, 200);
   assert.equal(normal.rows.find((row) => row.id === 'old').status, 'INACTIVE');

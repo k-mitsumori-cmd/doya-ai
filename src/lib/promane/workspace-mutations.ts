@@ -47,7 +47,7 @@ export async function createPromaneWorkspaceOperation(userId: string, body: unkn
   return transaction(async tx=>{
     await lockAccount(tx,userId);
     return runPromaneWorkspaceOnce(tx,{userId,mode:'create',workspaceId:null},operationId,input,
-      id=>tx.promaneWorkspace.findFirst({where:{id,userId,members:{some:{userId,isActive:true}}},select}),async()=>{
+      id=>tx.promaneWorkspace.findFirst({where:{id,userId,members:{some:{userId,isActive:true,role:{in:['owner','admin','member','guest']}}}},select}),async()=>{
         const limits=await getUserPromaneLimits(userId,tx), current=await countUserWorkspaces(userId,tx);
         if (limits.maxWorkspaces>=0 && current>=limits.maxWorkspaces) {
           const upgrade=limits.tier==='FREE'||limits.tier==='LIGHT';
@@ -94,6 +94,6 @@ export async function recoverPromaneWorkspaceMutation(userId: string, body: unkn
       // Existing targets always require current manager authority. A deleted target may only expose this user's operation outcome.
       if (existing) await lockManager(tx,userId,scope.workspaceId);
     }
-    return recoverPromaneWorkspaceOperation(tx,scope,operationId,id=>tx.promaneWorkspace.findFirst({where:scope.mode==='create'?{id,userId,members:{some:{userId,isActive:true}}}:{id:scope.workspaceId,AND:{id}},select}),data.cancelIfMissing as boolean);
+    return recoverPromaneWorkspaceOperation(tx,scope,operationId,id=>tx.promaneWorkspace.findFirst({where:scope.mode==='create'?{id,userId,members:{some:{userId,isActive:true,role:{in:['owner','admin','member','guest']}}}}:{id:scope.workspaceId,AND:{id}},select}),data.cancelIfMissing as boolean);
   });
 }

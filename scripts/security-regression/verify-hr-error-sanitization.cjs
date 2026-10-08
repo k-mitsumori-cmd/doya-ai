@@ -55,6 +55,16 @@ async function expectSafe(promise, expected) {
     })
     await expectSafe(api.GET(), 'Failed')
   })
+  await check('HR denied onboarding returns fixed403 without echoing a coded private exception', async () => {
+    const api = load('src/app/api/hr/organization/route.ts', {
+      'next/server': server, 'next-auth': { getServerSession: async () => ({user:{id:'synthetic'}}) }, '@/lib/auth': {},
+      '@prisma/client': {}, '@/lib/prisma': {}, '@/lib/hr/types': {},
+      '@/lib/hr/access': { getOrCreateOrganization: async () => { throw Object.assign(new Error(secret),{code:'INVALID_MEMBERSHIP_ROLE'}) } },
+    })
+    const response = await api.POST({json:async()=>({name:'Synthetic'})}); assert.equal(response.status,403)
+    const body=await response.json(); assert.equal(body.error,'組織の権限を確認できません。管理者に確認してください。')
+    assert.equal(body.code,'INVALID_MEMBERSHIP_ROLE'); assert(!JSON.stringify(body).includes(secret))
+  })
   await check('HR API 500 handlers never interpolate exception messages', async () => {
     let checked = 0
     function visit(dir) { for (const item of fs.readdirSync(dir, { withFileTypes: true })) {

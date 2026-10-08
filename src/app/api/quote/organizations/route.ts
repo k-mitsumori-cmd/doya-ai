@@ -32,6 +32,11 @@ export async function POST(req: NextRequest) {
   }
   const memberName = typeof body.memberName === 'string' ? body.memberName.trim() || undefined : undefined
   if (memberName && memberName.length > 80) return NextResponse.json({ error: '氏名は80文字以内で入力してください' }, { status: 400 })
-  const org = await getOrCreateOrganization(userId, name, memberName)
-  return NextResponse.json({ slug: org.slug, name: org.name })
+  try {
+    const org = await getOrCreateOrganization(userId, name, memberName)
+    return NextResponse.json({ slug: org.slug, name: org.name })
+  } catch (e) {
+    if (e instanceof Error && 'code' in e && e.code === 'INVALID_MEMBERSHIP_ROLE') return NextResponse.json({ error: '組織の権限を確認できません。管理者に確認してください。', code: 'INVALID_MEMBERSHIP_ROLE' }, { status: 403 })
+    throw e
+  }
 }

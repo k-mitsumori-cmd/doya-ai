@@ -33,7 +33,7 @@ export default async function PromaneEntryPage({
 
   // 自分が所属する全ワークスペースを取得
   const memberships = await prisma.promaneMember.findMany({
-    where: { userId, isActive: true },
+    where: { userId, isActive: true, role: { in: ['owner', 'admin', 'member', 'guest'] } },
     include: {
       workspace: {
         select: {
@@ -53,6 +53,7 @@ export default async function PromaneEntryPage({
     pendingInvites = await prisma.promaneInvitation.findMany({
       where: {
         email: userEmail,
+        role: { in: ['admin', 'member', 'guest'] },
         acceptedAt: null,
         expiresAt: { gt: new Date() },
       },

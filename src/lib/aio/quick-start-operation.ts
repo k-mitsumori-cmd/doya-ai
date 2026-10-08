@@ -8,6 +8,7 @@ type Receipt = Identity & { version: 1; hostHash: string; phase: Phase; at: stri
 type Db = Pick<typeof prisma, '$transaction'>
 export const AIO_QUICK_START_LEASE_MS = 10 * 60 * 1000
 export const AIO_MAX_WORKSPACES = 20
+const knownMemberRole = (role: string) => ['owner', 'admin', 'manager', 'member'].includes(role)
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
 const id = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v)
 const hash = (v: string) => createHash('sha256').update(v).digest('hex')
@@ -93,7 +94,7 @@ async function result(tx: Prisma.TransactionClient, i: Identity, r: Receipt | nu
   let slug: string | null = null
   if (r?.phase === 'completed') {
     const member = await tx.aioMember.findFirst({ where: { organizationId: r.organizationId!, userId: i.userId, status: 'ACTIVE' }, include: { organization: { include: { profile: true } } } })
-    if (!member || !matchesBrandUrl(member.organization.profile?.brandUrl, r.hostHash)) throw new AioStartError('RESULT_UNAVAILABLE', 410)
+    if (!member || !knownMemberRole(member.role) || !matchesBrandUrl(member.organization.profile?.brandUrl, r.hostHash)) throw new AioStartError('RESULT_UNAVAILABLE', 410)
     slug = member.organization.slug
   }
   return { operationId: i.operationId, state: state || r?.phase || 'missing', organizationId: r?.organizationId || null, slug, code: r?.code || null }
@@ -123,7 +124,7 @@ export async function beginAioQuickStart(input: Identity & { url: string }, db: 
     if (r && r.phase !== 'ready') return result(tx, i, await canonical(tx, r, now))
     r ||= { ...i, version: 1, hostHash, phase: 'ready', at: now.toISOString(), token: null, organizationId: null, linkedId: null, code: null }
     const rows = await memberships(tx, i.userId)
-    const matched = rows.find(m => matchesBrandUrl(m.organization.profile?.brandUrl, hostHash))
+    const matched = rows.find(m => knownMemberRole(m.role) && matchesBrandUrl(m.organization.profile?.brandUrl, hostHash))
     if (matched) {
       r = { ...r, phase: 'completed', organizationId: matched.organizationId }
       await write(tx, r); return result(tx, i, r)
@@ -170,7 +171,7 @@ export async function finishAioQuickStart(input: Identity & { leaseToken: string
     if (r.phase !== 'pending') return result(tx, i, r)
     if (r.token !== input.leaseToken) throw new AioStartError('LEASE_CHANGED')
     const rows = await memberships(tx, i.userId)
-    const matched = rows.find(m => matchesBrandUrl(m.organization.profile?.brandUrl, r!.hostHash))
+    const matched = rows.find(m => knownMemberRole(m.role) && matchesBrandUrl(m.organization.profile?.brandUrl, r!.hostHash))
     if (!matched && rows.length + await held(tx, i, now, i.operationId) >= AIO_MAX_WORKSPACES) return result(tx, i, await terminal(tx, r, 'failed', 'WORKSPACE_LIMIT'))
     const organization = matched?.organization || await save(tx)
     r = { ...r, phase: 'completed', organizationId: organization.id, token: null }
