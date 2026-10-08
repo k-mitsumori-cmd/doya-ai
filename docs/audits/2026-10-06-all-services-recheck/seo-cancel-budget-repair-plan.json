@@ -1,0 +1,34 @@
+{
+  "status": "integrated-and-verified",
+  "rootApplied": true,
+  "published": false,
+  "baseline": "seo-cancel-budget-baseline.json",
+  "operationalLimitPerActorJstDay": 100,
+  "invariants": [
+    "only new missing-operation fence uses daily operational pool",
+    "GET never reserves budget",
+    "existing cancelled/found/unavailable receipts remain readable at cap",
+    "new article monthly plan allowance unchanged",
+    "budget and fence save in same transaction",
+    "JST day sampled after actor lock",
+    "known429 retains browser intent and offers reset guidance; no upsell"
+  ],
+  "pending": [
+    "reviewed exact release and public verification"
+  ],
+  "proofs": {
+    "baseline23": 19,
+    "helperOverlay23": 23,
+    "mountedOverlay51": 51,
+    "APIOverlay11": 11,
+    "realPostgres13": 13,
+    "PGCleanStop": true,
+    "nativeSession": 56961,
+    "typesSession": 94336,
+    "full150": 150,
+    "fullSourcesUnchanged": true,
+    "realNext19": 19,
+    "NextPGCleanStop": true,
+    "nativeIntegrated15": 15
+  }
+}

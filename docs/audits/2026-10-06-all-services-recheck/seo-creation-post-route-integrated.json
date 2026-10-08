@@ -1,0 +1,52 @@
+{
+  "checkedAt": "2026-10-08T15:31:36.101Z",
+  "expected": 10,
+  "passed": 10,
+  "cases": [
+    {
+      "name": "All original legacy guest/monthly/plan-action/outage assertions retained",
+      "passed": true
+    },
+    {
+      "name": "Invalid explicit operation rejected before admission: null",
+      "passed": true
+    },
+    {
+      "name": "Invalid explicit operation rejected before admission: {}",
+      "passed": true
+    },
+    {
+      "name": "Invalid explicit operation rejected before admission: \"\"",
+      "passed": true
+    },
+    {
+      "name": "Invalid explicit operation rejected before admission: \"AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAAx\"",
+      "passed": true
+    },
+    {
+      "name": "New operation propagates normalized ID and tracks once",
+      "passed": true
+    },
+    {
+      "name": "Replay skips duplicate usage tracking",
+      "passed": true
+    },
+    {
+      "name": "Receipt conflict is explicit409 with private response",
+      "passed": true
+    },
+    {
+      "name": "Draft operation retains null job contract",
+      "passed": true
+    },
+    {
+      "name": "Legacy omitted operation remains supported",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/seo/articles/route.ts": "0c2ed76ff587e36b100eeb1b36ea0f3bf7103e018b32f3aa2c26ee7b704b5827",
+    "src/lib/seo-article-admission.ts": "5f1de94d636eca7bc46361eccf67e010d4ddaa0e67c3512b1df84b9da86ff8b9"
+  },
+  "scope": "Actual selected POST route and actual operation ID parser; original legacy assertions retained; synthetic admission/session/usage only. Atomic actual PostgreSQL tested separately. No browser/provider/production writes."
+}

@@ -1,0 +1,12 @@
+{
+  "startedAt": "2026-10-08T15:24:53.604100+00:00",
+  "pid": 26124,
+  "privateFolder": "/tmp/doya-sfa-authority-81ea0184",
+  "status": "passed",
+  "probeExitCode": 0,
+  "evidenceValid": true,
+  "stopExitCode": 0,
+  "postStopStatusExitCode": 3,
+  "privateFolderRemoved": true,
+  "endedAt": "2026-10-08T15:24:56.491344+00:00"
+}

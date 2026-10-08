@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-10-08T15:24:56.219Z",
+  "expected": 13,
+  "passed": 13,
+  "cases": [
+    {
+      "name": "Actual advisory lock serializes concurrent same-operation creates into one charge",
+      "passed": true
+    },
+    {
+      "name": "Full monthly quota can still replay and recover its original operation",
+      "passed": true
+    },
+    {
+      "name": "Actual PostgreSQL rollback preserves zero article job and usage on receipt failure",
+      "passed": true
+    },
+    {
+      "name": "Actual lock makes recovery observe an in-flight commit",
+      "passed": true
+    },
+    {
+      "name": "Cancelled operation cannot be created by late POST and new UUID remains usable",
+      "passed": true
+    },
+    {
+      "name": "Same operation ID never exposes or charges another user",
+      "passed": true
+    },
+    {
+      "name": "Deleted committed article stays unavailable; replay cannot restore it or refund usage",
+      "passed": true
+    },
+    {
+      "name": "Input conflict does not add rows jobs or usage",
+      "passed": true
+    },
+    {
+      "name": "Actual actor lock permits only one of five new fences when99 daily cancellations used",
+      "passed": true
+    },
+    {
+      "name": "Existing cancelled/found recovery and article creation remain available at cancellation capacity",
+      "passed": true
+    },
+    {
+      "name": "Actual fence persistence failure rolls back cancellation budget and fence together",
+      "passed": true
+    },
+    {
+      "name": "Malformed persisted cancellation budget is private-safe fail closed",
+      "passed": true
+    },
+    {
+      "name": "Expired JST cancellation budget resets while monthly article allowance is unchanged",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/seo-article-admission.ts": "5f1de94d636eca7bc46361eccf67e010d4ddaa0e67c3512b1df84b9da86ff8b9",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-seo-creation-receipt-postgres.cjs": "acce2756d012f6e092e5410f919c69221747c7d17a858bb502023bffa01110a9",
+    "prisma/schema.prisma": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c"
+  },
+  "scope": "Actual overlay admission/recovery with real Prisma/PostgreSQL transaction and advisory locks in fresh Unix-only database. Synthetic users/rows only; no customer, production, provider or UI execution."
+}

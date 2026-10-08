@@ -1,0 +1,57 @@
+{
+  "checkedAt": "2026-10-08T15:29:33.552Z",
+  "expected": 11,
+  "passed": 11,
+  "cases": [
+    {
+      "scenario": "anonymous",
+      "passed": true
+    },
+    {
+      "scenario": "missing-id",
+      "passed": true
+    },
+    {
+      "scenario": "invalid-id",
+      "passed": true
+    },
+    {
+      "scenario": "duplicate-id",
+      "passed": true
+    },
+    {
+      "scenario": "found",
+      "passed": true
+    },
+    {
+      "scenario": "missing",
+      "passed": true
+    },
+    {
+      "scenario": "unavailable",
+      "passed": true
+    },
+    {
+      "scenario": "cancelled",
+      "passed": true
+    },
+    {
+      "scenario": "cancel",
+      "passed": true
+    },
+    {
+      "scenario": "failure",
+      "passed": true
+    },
+    {
+      "scenario": "rate-limit",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/seo/article-operation/route.ts": "a9544fca23f2dd31d68087a5b0aff8e79027a9f21d64062bc5cd2db3e7327028",
+    "src/lib/seo-article-admission.ts": "5f1de94d636eca7bc46361eccf67e010d4ddaa0e67c3512b1df84b9da86ff8b9",
+    "src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0"
+  },
+  "scope": "Actual GET/DELETE recovery API and actual operation-ID parser/private JSON helper; synthetic authentication, schema checks and recovery outcomes. No actual PostgreSQL, HTTP server, providers or production."
+}

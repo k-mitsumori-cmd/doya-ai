@@ -10,7 +10,7 @@ import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import {
   ensureGuestId, getGuestIdFromRequest, isTrialActive, normalizeSeoPlan, setGuestCookie,
 } from '@/lib/seoAccess'
-import { createSeoArticleWithinLimit, SeoArticleQuotaError } from '@/lib/seo-article-admission'
+import { createSeoArticleWithinLimit, SeoArticleQuotaError, SeoArticleOperationError, seoArticleOperationId } from '@/lib/seo-article-admission'
 import { getSeoCharLimitByUserPlan, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { recordServiceUsage } from '@/lib/service-usage'
 
@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
     if (!userId && !guestId) guestId = ensureGuestId()
 
     const body = await req.json()
+    const operationId = seoArticleOperationId(body?.operationId)
     const input = SeoCreateArticleInputSchema.parse(body)
     const createJob = body?.createJob !== false
 
@@ -81,7 +82,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { article, job } = await createSeoArticleWithinLimit({
+    const { article, job, replayed } = await createSeoArticleWithinLimit({
+      operationId,
       userId: userId || null, guestId, plan, createJob,
       articleData: {
         status: createJob ? 'RUNNING' : 'DRAFT',
@@ -106,7 +108,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    await recordServiceUsage({
+    if (!replayed) await recordServiceUsage({
       userId,
       serviceId: 'seo',
       action: createJob ? '記事生成ジョブ開始' : '記事作成（下書き）',
@@ -124,6 +126,9 @@ export async function POST(req: NextRequest) {
     if (!userId && guestId) setGuestCookie(res, guestId)
     return res
   } catch (e: any) {
+    if (e instanceof SeoArticleOperationError) {
+      return NextResponse.json({ success: false, code: 'SEO_CREATION_OPERATION_CONFLICT', error: e.message }, { status: e.status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+    }
     if (e instanceof SeoArticleQuotaError) {
       return NextResponse.json({ success: false, code: 'SEO_ARTICLE_LIMIT',
         error: e.guest ? '記事を生成するにはログインしてください。' : `今月の生成回数の上限に達しました（${e.limit}回/月）。${e.upgradeAvailable ? 'プランをアップグレードすると増やせます。' : '追加のご利用についてはお問い合わせください。'}`,

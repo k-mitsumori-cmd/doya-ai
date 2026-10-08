@@ -1,0 +1,220 @@
+{
+  "checkedAt": "2026-10-08T15:29:36.588Z",
+  "source": "src/app/seo/template/page.tsx",
+  "sourceHash": "6e0046f58b8a58c7b7b28d77113f4f7d02744ddf9e40c0e3b43c582a3287ba25",
+  "expected": 51,
+  "passed": 51,
+  "cases": [
+    {
+      "name": "Changing account hides old remaining allowance and requests current usage",
+      "passed": true
+    },
+    {
+      "name": "Late alpha entitlement cannot appear on beta screen",
+      "passed": true
+    },
+    {
+      "name": "Account switch clears previous private keyword draft",
+      "passed": true
+    },
+    {
+      "name": "Late title candidates cannot enter a different account workspace",
+      "passed": true
+    },
+    {
+      "name": "Rapid repeated title action starts only one provider-facing request",
+      "passed": true
+    },
+    {
+      "name": "Same account auth refresh retains draft and hides controls until authenticated",
+      "passed": true
+    },
+    {
+      "name": "Plan change hides an earlier quota snapshot and requests fresh allowance",
+      "passed": true
+    },
+    {
+      "name": "Late title response cannot survive FREE PRO FREE transition",
+      "passed": true
+    },
+    {
+      "name": "Malformed entitlement cannot show a fabricated remaining allowance",
+      "passed": true
+    },
+    {
+      "name": "Valid current title response renders candidates",
+      "passed": true
+    },
+    {
+      "name": "Retained title callback from an old render cannot start a request",
+      "passed": true
+    },
+    {
+      "name": "Rapid create callbacks send one creation and follow validated current job",
+      "passed": true
+    },
+    {
+      "name": "Late previous actor creation cannot redirect the new actor",
+      "passed": true
+    },
+    {
+      "name": "Auth refresh during creation keeps draft and blocks ambiguous resubmission",
+      "passed": true
+    },
+    {
+      "name": "Recognized quota rejection leaves draft available without ambiguous-write latch",
+      "passed": true
+    },
+    {
+      "name": "Unknown server failure keeps history guidance and blocks duplicate creation",
+      "passed": true
+    },
+    {
+      "name": "Malformed success with unsafe identifier never redirects and remains uncertain",
+      "passed": true
+    },
+    {
+      "name": "Unmounted title request cannot update or redirect",
+      "passed": true
+    },
+    {
+      "name": "Saved article survives navigation failure and cannot be created twice",
+      "passed": true
+    },
+    {
+      "name": "Draft-only creation links to the validated saved article",
+      "passed": true
+    },
+    {
+      "name": "Failed title transport shows Japanese retry guidance",
+      "passed": true
+    },
+    {
+      "name": "Guest draft can be prepared but generation has a visible login action",
+      "passed": true
+    },
+    {
+      "name": "Authenticated session without identity cannot keep a private workspace",
+      "passed": true
+    },
+    {
+      "name": "Late creation after unmount cannot redirect or submit again",
+      "passed": true
+    },
+    {
+      "name": "Title completion never overwrites a manually edited title",
+      "passed": true
+    },
+    {
+      "name": "Changed keyword makes an earlier title result stale",
+      "passed": true
+    },
+    {
+      "name": "Keyword ABA does not revive an earlier title response",
+      "passed": true
+    },
+    {
+      "name": "Object-valued title candidates are rejected rather than displayed as text",
+      "passed": true
+    },
+    {
+      "name": "Ambiguous creation survives same-account remount before another identical submission",
+      "passed": true
+    },
+    {
+      "name": "Plan downgrade cannot submit a previously selected out-of-plan character count",
+      "passed": true
+    },
+    {
+      "name": "Operation ID is saved before the creation request and sent in its body",
+      "passed": true
+    },
+    {
+      "name": "Remount uses read-only recovery and opens original saved destination without another POST",
+      "passed": true
+    },
+    {
+      "name": "Missing receipt keeps generation blocked until explicit cancellation acknowledgement",
+      "passed": true
+    },
+    {
+      "name": "Malformed recovery stays blocked: wrong-operation",
+      "passed": true
+    },
+    {
+      "name": "Malformed recovery stays blocked: unsafe-id",
+      "passed": true
+    },
+    {
+      "name": "Malformed recovery stays blocked: contradictory-missing",
+      "passed": true
+    },
+    {
+      "name": "Malformed recovery stays blocked: http503-found",
+      "passed": true
+    },
+    {
+      "name": "Malformed recovery stays blocked: http202-found",
+      "passed": true
+    },
+    {
+      "name": "Malformed recovery stays blocked: unknown-state",
+      "passed": true
+    },
+    {
+      "name": "Malformed recovery stays blocked: extra-fields",
+      "passed": true
+    },
+    {
+      "name": "Pending creation intent is isolated from another account workspace",
+      "passed": true
+    },
+    {
+      "name": "Late recovered result cannot appear after another account or actor ABA",
+      "passed": true
+    },
+    {
+      "name": "Storage write failure prevents any creation request",
+      "passed": true
+    },
+    {
+      "name": "Corrupt saved operation disables generation without automatic retry",
+      "passed": true
+    },
+    {
+      "name": "Unavailable browser locks prevent creation instead of using an unsafe fallback",
+      "passed": true
+    },
+    {
+      "name": "Another tab intent blocks creation even before its storage event arrives",
+      "passed": true
+    },
+    {
+      "name": "Focus refresh adopts another tab pending intent",
+      "passed": true
+    },
+    {
+      "name": "Repeated recovery callbacks send one read-only request",
+      "passed": true
+    },
+    {
+      "name": "Failed quota intent cleanup retains pending record and blocks another POST",
+      "passed": true
+    },
+    {
+      "name": "Unavailable saved result can be acknowledged without reusing its operation",
+      "passed": true
+    },
+    {
+      "name": "Cancellation operational429 retains missing intent and shows JST reset guidance without exposing raw errors",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/app/seo/template/page.tsx": "6e0046f58b8a58c7b7b28d77113f4f7d02744ddf9e40c0e3b43c582a3287ba25",
+    "src/lib/use-seo-creation-recovery.ts": "5c6e35e8d0fb1580d2d55426fcc3bd7e482199e69c42981a3147b0e3b5e9b84d",
+    "src/lib/seo-template-requests.ts": "937add991f9fe649f6af109bd65a74a276cf82b6491e3aede8b7240f8d08bcb5",
+    "src/lib/billing-response-client.ts": "37bcf03abdde567cf1a8de3d5f615148c5e87de09bce5288fb74e7990c481c8c"
+  },
+  "scope": "Actual SEO template page and actual catalog mounted with synthetic auth/fetch/navigation/motion. No live auth/provider/customer writes; tests entitlement/draft/title/create lifecycle, response validation and recovery guidance."
+}

@@ -1,0 +1,90 @@
+{
+  "checkedAt": "2026-10-08T15:42:46.105146+00:00",
+  "releaseReady": true,
+  "files": [
+    "docs/audits/2026-10-06-all-services-recheck/prepare-seo-durable-release.py",
+    "docs/audits/2026-10-06-all-services-recheck/publish-seo-durable.py",
+    "docs/audits/2026-10-06-all-services-recheck/seo-cancel-budget-repair-plan.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-creation-post-route-integrated.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-creation-receipt-integrated-postgres-supervise.py",
+    "docs/audits/2026-10-06-all-services-recheck/seo-creation-receipt-integrated-postgres-supervisor.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-creation-receipt-integrated.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-creation-receipt-postgres-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-creation-recovery-api-integrated.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-current-gate.txt",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-integration-review.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-next-after-gate.py",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-next-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-next-supervise.py",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-next-supervisor.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-release-a60f5652-bc93-4e9f-9e75-4e014bfd80ff/source-manifest.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-release-a60f5652-bc93-4e9f-9e75-4e014bfd80ff/state.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-release-a60f5652-bc93-4e9f-9e75-4e014bfd80ff/supervise.py",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-release-allowlist.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-release-observe.py",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-release-review.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-template-durable-mounted-integrated.json",
+    "docs/audits/2026-10-06-all-services-recheck/seo-template-durable-native-integrated.json",
+    "docs/audits/2026-10-06-all-services-recheck/verify-seo-creation-receipt-postgres.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-seo-durable-next.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-seo-durable-public.py",
+    "docs/audits/2026-10-06-all-services-recheck/verify-seo-template-actor-native.cjs",
+    "reference/11-billing-spec.md",
+    "reference/services/seo.md",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-seo-create-route-admission.cjs",
+    "scripts/security-regression/verify-seo-creation-receipt.cjs",
+    "scripts/security-regression/verify-seo-creation-recovery-api.cjs",
+    "scripts/security-regression/verify-seo-template-actor-mounted.cjs",
+    "src/app/api/seo/article-operation/route.ts",
+    "src/app/api/seo/articles/route.ts",
+    "src/app/seo/template/page.tsx",
+    "src/lib/seo-article-admission.ts",
+    "src/lib/use-seo-creation-recovery.ts"
+  ],
+  "requiredPrimaryFiles": [
+    "src/lib/seo-article-admission.ts",
+    "src/lib/use-seo-creation-recovery.ts",
+    "src/app/api/seo/articles/route.ts",
+    "src/app/api/seo/article-operation/route.ts",
+    "src/app/seo/template/page.tsx",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-seo-create-route-admission.cjs",
+    "scripts/security-regression/verify-seo-template-actor-mounted.cjs",
+    "scripts/security-regression/verify-seo-creation-receipt.cjs",
+    "scripts/security-regression/verify-seo-creation-recovery-api.cjs",
+    "reference/services/seo.md",
+    "reference/11-billing-spec.md"
+  ],
+  "reports": [
+    [
+      "seo-creation-receipt-integrated.json",
+      23
+    ],
+    [
+      "seo-creation-recovery-api-integrated.json",
+      11
+    ],
+    [
+      "seo-creation-post-route-integrated.json",
+      10
+    ],
+    [
+      "seo-template-durable-mounted-integrated.json",
+      51
+    ],
+    [
+      "seo-template-durable-native-integrated.json",
+      15
+    ],
+    [
+      "seo-creation-receipt-postgres-results.json",
+      13
+    ],
+    [
+      "seo-durable-next-results.json",
+      19
+    ]
+  ],
+  "scope": "SEO durable creation/recovery and downgrade only. Original monthly quota/legacy APIs, schema and dependencies preserved; original28 mounted cases retained in51. Native15, real transaction13 and actual Next19 required. No production/customer data writes or paid provider generation. Full17-service2074 audit remains active."
+}

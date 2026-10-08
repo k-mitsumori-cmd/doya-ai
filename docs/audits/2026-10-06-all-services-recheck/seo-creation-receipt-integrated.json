@@ -1,0 +1,102 @@
+{
+  "checkedAt": "2026-10-08T15:29:33.215Z",
+  "expected": 23,
+  "passed": 23,
+  "cases": [
+    {
+      "name": "Repeated operation returns original article/job and increments ledger once",
+      "passed": true
+    },
+    {
+      "name": "Concurrent same operation creates one article and job",
+      "passed": true
+    },
+    {
+      "name": "Quota exhausted still recovers and replays saved operation without another charge",
+      "passed": true
+    },
+    {
+      "name": "Changed creation input conflicts instead of accepting old result",
+      "passed": true
+    },
+    {
+      "name": "Equivalent object property order uses same fingerprint",
+      "passed": true
+    },
+    {
+      "name": "Same UUID is scoped to actor and recovery cannot expose other actor",
+      "passed": true
+    },
+    {
+      "name": "Receipt persistence failure rolls back article job and usage",
+      "passed": true
+    },
+    {
+      "name": "Related write failure rolls back receipt and usage",
+      "passed": true
+    },
+    {
+      "name": "Missing recovery alone is read only",
+      "passed": true
+    },
+    {
+      "name": "Cancel missing operation fences a delayed original POST",
+      "passed": true
+    },
+    {
+      "name": "Cancellation of committed operation returns saved article rather than deleting it",
+      "passed": true
+    },
+    {
+      "name": "Recovery waits for in-flight creation to commit",
+      "passed": true
+    },
+    {
+      "name": "Deleted article remains unavailable and cannot be resurrected",
+      "passed": true
+    },
+    {
+      "name": "Moved article cannot be recovered by former owner",
+      "passed": true
+    },
+    {
+      "name": "Deleted job does not silently create a replacement job",
+      "passed": true
+    },
+    {
+      "name": "Malformed receipt blocks replay and recovery",
+      "passed": true
+    },
+    {
+      "name": "Explicit invalid operation never falls back to non-idempotent creation",
+      "passed": true
+    },
+    {
+      "name": "Legacy callers without operation preserve monthly quota enforcement",
+      "passed": true
+    },
+    {
+      "name": "Only100 new missing-operation fences per actor JST day;101st denied without another record",
+      "passed": true
+    },
+    {
+      "name": "Existing fences and found articles recover even at cancellation cap; new articles use only monthly quota",
+      "passed": true
+    },
+    {
+      "name": "Corrupt cancellation budget fails closed without recording a fence",
+      "passed": true
+    },
+    {
+      "name": "Fence persistence failure rolls back its cancellation budget reservation",
+      "passed": true
+    },
+    {
+      "name": "Cancellation operation limit resets at JST midnight",
+      "passed": true
+    }
+  ],
+  "source": "src/lib/seo-article-admission.ts",
+  "sourceHash": "5f1de94d636eca7bc46361eccf67e010d4ddaa0e67c3512b1df84b9da86ff8b9",
+  "scope": "Actual admission/recovery helper on selected overlay; stateful serialized synthetic transactions with rollback. No PostgreSQL lock proof, HTTP, mounted client, production or provider execution yet."
+}

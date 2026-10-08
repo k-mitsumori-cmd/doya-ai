@@ -14,6 +14,7 @@ import {
 import { useSession } from 'next-auth/react'
 import { Toaster, toast } from 'react-hot-toast'
 import { useSeoTemplateRequests } from '@/lib/seo-template-requests'
+import { useSeoCreationRecovery } from '@/lib/use-seo-creation-recovery'
 import { BillingResponseError, readBillingResponse } from '@/lib/billing-response-client'
 
 const ARTICLE_TYPES = [
@@ -137,6 +138,7 @@ function SeoTemplateWorkspace() {
   const actor = session?.user?.id || session?.user?.email || ''
   const planScope = JSON.stringify([(session?.user as any)?.plan, (session?.user as any)?.seoPlan])
   const requests = useSeoTemplateRequests(status, actor, planScope)
+  const recovery = useSeoCreationRecovery(status, actor)
 
   // カテゴリ & テンプレート選択
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
@@ -222,6 +224,9 @@ function SeoTemplateWorkspace() {
     return 'FREE'
   }, [session, isLoggedIn])
   const charLimit = entitlements?.trial?.active ? CHAR_LIMITS.PRO : CHAR_LIMITS[userPlan] || 10000
+  useEffect(() => {
+    setTargetChars(current => Math.min(current, charLimit))
+  }, [charLimit])
 
   // テンプレート選択時に値セット
   const handleSelectTemplate = useCallback((template: ArticleTemplate) => {
@@ -273,8 +278,39 @@ function SeoTemplateWorkspace() {
     } finally { if (operation.current()) setTitleLoading(false); operation.finish() }
   }
 
+  async function handleRecovery(cancel = false) {
+    const operation = requests.begin()
+    if (!operation) return
+    try {
+      const result = await recovery.recover(cancel, operation.signal)
+      if (!operation.current() || !result) return
+      setError(null)
+      if (result.state !== 'missing') { createUnresolved.current = false; setCreationUncertain(false) }
+      if (result.state === 'found') {
+        const destination = result.jobId ? `/seo/jobs/${result.jobId}?auto=1` : `/seo/articles/${result.articleId}`
+        confirmedDestination.current = destination
+        setCreatedDestination(destination)
+      }
+    } finally { operation.finish() }
+  }
+  async function closeRecoveredOperation() {
+    const operation = requests.begin()
+    if (!operation || !recovery.intent) { operation?.finish(); return }
+    try {
+      if (await recovery.acknowledge(recovery.intent.operationId) && operation.current()) {
+        createUnresolved.current = false; setCreationUncertain(false)
+        confirmedDestination.current = null; setCreatedDestination(null)
+        setError(null); setLoading(false); setStep(1)
+      }
+    } finally { operation.finish() }
+  }
+
   async function handleGenerate() {
-    if (loading || creationUncertain || createUnresolved.current || confirmedDestination.current || !selectedTemplate) return
+    if (loading || creationUncertain || createUnresolved.current || confirmedDestination.current || !selectedTemplate || !recovery.ready || recovery.intent) return
+    if (targetChars > charLimit) {
+      setError(`現在のプランでは${charLimit.toLocaleString()}字まで作成できます。文字数を確認してください。`)
+      return
+    }
     const operation = requests.begin()
     if (!operation) return
     setLoading(true)
@@ -299,12 +335,14 @@ function SeoTemplateWorkspace() {
 
       const forbidden = constraints.trim().split(/[,、\n]/).map((s) => s.trim()).filter(Boolean)
 
+      const intent = await recovery.begin(operation.signal)
+      if (!operation.current()) return
       createUnresolved.current = true
       const res = await readBillingResponse('/api/seo/articles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: finalTitle, keywords: [mainKeyword, ...related], persona, tone: toneMap[tone] || '丁寧',
+          operationId: intent.operationId, title: finalTitle, keywords: [mainKeyword, ...related], persona, tone: toneMap[tone] || '丁寧',
           targetChars, searchIntent: seoIntent, referenceUrls,
           forbidden: forbidden.length > 0 ? forbidden : undefined,
           llmoOptions: { tldr: true, conclusionFirst: true, faq: true, glossary: false, comparison: isComparisonMode, quotes: true, templates: false, objections: false },
@@ -314,7 +352,11 @@ function SeoTemplateWorkspace() {
       if (!operation.current()) return
       const json = res.data
       if (!res.ok) {
-        if ([400, 401, 403, 404, 422, 429].includes(res.status)) createUnresolved.current = false
+        if ([400, 401, 403, 404, 422, 429].includes(res.status)) {
+          createUnresolved.current = false
+          await recovery.clearKnown(intent.operationId)
+          if (!operation.current()) return
+        }
         throw new Error(typeof json?.error === 'string' ? json.error : '生成の応答を確認できませんでした。記事一覧をご確認ください。')
       }
       const jobId = json.jobId
@@ -322,6 +364,7 @@ function SeoTemplateWorkspace() {
       if (json.success !== true || typeof articleId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(articleId) ||
         (jobId !== null && (typeof jobId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(jobId)))) throw new Error('生成の応答を確認できませんでした。記事一覧をご確認ください。')
       createUnresolved.current = false
+      recovery.acceptCreated(intent.operationId, articleId, jobId)
       const destination = jobId ? `/seo/jobs/${jobId}?auto=1` : `/seo/articles/${articleId}`
       confirmedDestination.current = destination
       setCreatedDestination(destination)
@@ -346,6 +389,14 @@ function SeoTemplateWorkspace() {
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <Toaster position="top-center" />
+      {(recovery.intent || recovery.message) && <section aria-label="前回の記事作成" className="m-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+        <p className="font-bold">前回の記事作成の結果を確認してください</p>
+        <p role="status">{recovery.message || '二重作成を避けるため、新しく作成せず前回の結果を確認してください。'}</p>
+        {recovery.intent && <button type="button" disabled={!requests.allowed || recovery.busy || loading} onClick={() => handleRecovery(false)}>作成結果を確認</button>}
+        {recovery.result?.state === 'missing' && <button type="button" disabled={!requests.allowed || recovery.busy || loading} onClick={() => handleRecovery(true)}>未受付の操作を終了</button>}
+        {recovery.result && ['found', 'cancelled', 'unavailable'].includes(recovery.result.state) && <button type="button" disabled={!requests.allowed || recovery.busy || loading} onClick={closeRecoveredOperation}>確認して新しい記事作成へ進む</button>}
+        <Link href="/seo/articles" className="ml-2 underline">記事一覧を確認</Link>
+      </section>}
       {creationUncertain && <p role="alert" className="p-4 text-amber-900">作成結果の確認が必要です。<Link href="/seo/articles" className="ml-2 underline">記事一覧で保存状況を確認する</Link></p>}
       {createdDestination && <p role="status" className="p-4 text-emerald-900">記事を作成しました。<Link href={createdDestination} className="ml-2 underline">作成済みの記事を開く</Link></p>}
       <fieldset disabled={loading || creationUncertain || Boolean(createdDestination)} className="m-0 min-w-0 border-0 p-0">
@@ -928,7 +979,7 @@ function SeoTemplateWorkspace() {
                       次へ <ArrowRight className="w-4 h-4" />
                     </button>
                   ) : (
-                    <button type="button" onClick={handleGenerate} disabled={!requests.allowed || Boolean(createdDestination) || creationUncertain || titleLoading || loading || !canProceed}
+                    <button type="button" onClick={handleGenerate} disabled={!requests.allowed || !recovery.ready || Boolean(recovery.intent) || Boolean(createdDestination) || creationUncertain || titleLoading || loading || !canProceed}
                       className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-black shadow-lg shadow-blue-500/30 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
                       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}

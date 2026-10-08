@@ -1,0 +1,96 @@
+{
+  "checkedAt": "2026-10-08T15:41:38.292Z",
+  "expected": 19,
+  "passed": 19,
+  "cases": [
+    {
+      "name": "Anonymous recovery is private401",
+      "passed": true
+    },
+    {
+      "name": "Invalid recovery ID is private400",
+      "passed": true
+    },
+    {
+      "name": "Actual authenticated POST saves article job receipt monthly usage and records one usage log",
+      "passed": true
+    },
+    {
+      "name": "Actual recovery reads original destination without modifying receipts",
+      "passed": true
+    },
+    {
+      "name": "Actual HTTP replay adds no article job monthly charge or usage log",
+      "passed": true
+    },
+    {
+      "name": "Changed input conflicts without extra charge",
+      "passed": true
+    },
+    {
+      "name": "Another actor cannot recover original article",
+      "passed": true
+    },
+    {
+      "name": "Same UUID for another actor creates only its own article",
+      "passed": true
+    },
+    {
+      "name": "Existing FREE monthly3 quota still denies a fourth new operation",
+      "passed": true
+    },
+    {
+      "name": "Full quota still permits original replay without charge",
+      "passed": true
+    },
+    {
+      "name": "Explicit cancellation of a committed operation preserves saved article",
+      "passed": true
+    },
+    {
+      "name": "Missing GET is read only",
+      "passed": true
+    },
+    {
+      "name": "Explicit missing cancellation writes a fence without charging",
+      "passed": true
+    },
+    {
+      "name": "Late original HTTP POST cannot cross cancellation fence",
+      "passed": true
+    },
+    {
+      "name": "Invalid explicit operation ID cannot fall back to ordinary creation",
+      "passed": true
+    },
+    {
+      "name": "Deleted committed article remains unavailable without resurrection or refund",
+      "passed": true
+    },
+    {
+      "name": "Revoked session cannot recover original article",
+      "passed": true
+    },
+    {
+      "name": "Repeated operation query key is rejected",
+      "passed": true
+    },
+    {
+      "name": "Operational cancellation100 limit preserves existing recovery and ordinary monthly article allowance",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/seo-article-admission.ts": "5f1de94d636eca7bc46361eccf67e010d4ddaa0e67c3512b1df84b9da86ff8b9",
+    "src/lib/use-seo-creation-recovery.ts": "5c6e35e8d0fb1580d2d55426fcc3bd7e482199e69c42981a3147b0e3b5e9b84d",
+    "src/app/api/seo/articles/route.ts": "0c2ed76ff587e36b100eeb1b36ea0f3bf7103e018b32f3aa2c26ee7b704b5827",
+    "src/app/api/seo/article-operation/route.ts": "a9544fca23f2dd31d68087a5b0aff8e79027a9f21d64062bc5cd2db3e7327028",
+    "src/app/seo/template/page.tsx": "6e0046f58b8a58c7b7b28d77113f4f7d02744ddf9e40c0e3b43c582a3287ba25",
+    "src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0",
+    "src/lib/auth.ts": "de0c865e7d82c818377ee9cfcaf75c99b7bda572ccbeffc16fd6eed5ce7a2be7",
+    "prisma/schema.prisma": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c",
+    "docs/audits/2026-10-06-all-services-recheck/verify-seo-durable-next.cjs": "1444ee71b7f5944abd7a839cd6a17273d0e44f73e929f43ace511ef30e1c37be",
+    "docs/audits/2026-10-06-all-services-recheck/seo-durable-next-supervise.py": "b93fe4f8e7a115b3e6cd1c1a39b81900b6287cbf1d9346305ed664242b16948f"
+  },
+  "scope": "Actual built Next HTTP/auth/Prisma with isolated Unix-only full-schema PostgreSQL. Synthetic users, sessions, article creation, recovery, replay, monthly quota, cancellation and session revocation; no paid provider execution, production/customer DB or real OAuth/browser."
+}

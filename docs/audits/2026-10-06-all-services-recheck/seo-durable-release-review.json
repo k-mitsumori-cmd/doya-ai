@@ -1,0 +1,83 @@
+{
+  "checkedAt": "2026-10-08T15:42:46.105146+00:00",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/seo-durable-release-a60f5652-bc93-4e9f-9e75-4e014bfd80ff",
+  "reviewStatus": "full150-and-actualNext19-passed-awaiting-exact-publish",
+  "productionFiles": [
+    "src/lib/seo-article-admission.ts",
+    "src/lib/use-seo-creation-recovery.ts",
+    "src/app/api/seo/articles/route.ts",
+    "src/app/api/seo/article-operation/route.ts",
+    "src/app/seo/template/page.tsx"
+  ],
+  "regressionFiles": [
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-seo-create-route-admission.cjs",
+    "scripts/security-regression/verify-seo-template-actor-mounted.cjs",
+    "scripts/security-regression/verify-seo-creation-receipt.cjs",
+    "scripts/security-regression/verify-seo-creation-recovery-api.cjs"
+  ],
+  "requiredPrimaryFiles": [
+    "src/lib/seo-article-admission.ts",
+    "src/lib/use-seo-creation-recovery.ts",
+    "src/app/api/seo/articles/route.ts",
+    "src/app/api/seo/article-operation/route.ts",
+    "src/app/seo/template/page.tsx",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-seo-create-route-admission.cjs",
+    "scripts/security-regression/verify-seo-template-actor-mounted.cjs",
+    "scripts/security-regression/verify-seo-creation-receipt.cjs",
+    "scripts/security-regression/verify-seo-creation-recovery-api.cjs",
+    "reference/services/seo.md",
+    "reference/11-billing-spec.md"
+  ],
+  "sourceHashes": {
+    "src/lib/seo-article-admission.ts": "5f1de94d636eca7bc46361eccf67e010d4ddaa0e67c3512b1df84b9da86ff8b9",
+    "src/lib/use-seo-creation-recovery.ts": "5c6e35e8d0fb1580d2d55426fcc3bd7e482199e69c42981a3147b0e3b5e9b84d",
+    "src/app/api/seo/articles/route.ts": "0c2ed76ff587e36b100eeb1b36ea0f3bf7103e018b32f3aa2c26ee7b704b5827",
+    "src/app/api/seo/article-operation/route.ts": "a9544fca23f2dd31d68087a5b0aff8e79027a9f21d64062bc5cd2db3e7327028",
+    "src/app/seo/template/page.tsx": "6e0046f58b8a58c7b7b28d77113f4f7d02744ddf9e40c0e3b43c582a3287ba25",
+    "scripts/security-regression/run.cjs": "c00b0da63bf9626ae2e6366ba4e5204bf2ad717c4442debcc37d3e1c14d5c311",
+    "scripts/security-regression/verify-seo-create-route-admission.cjs": "3ab022b1eddcc2576a5e705f077cc43020c65ad8cf1eaf074876a9e8b479723b",
+    "scripts/security-regression/verify-seo-template-actor-mounted.cjs": "9b3d06398cb643b440d4c07cd63f7b9c9e4e1745aeebdefcd92f634df34947c0",
+    "scripts/security-regression/verify-seo-creation-receipt.cjs": "630865d505768194074f347059e6c41c5091169bf7f5e0a956004ba1fc454819",
+    "scripts/security-regression/verify-seo-creation-recovery-api.cjs": "d853dcf23bf2c7d15ac7d799e1c52c907bc269c4337e590db51c446e9705b488",
+    "reference/services/seo.md": "148156dc25d6a75d95fd40251c4d2ffd33460f206834827e95257deb07fb2a12",
+    "reference/11-billing-spec.md": "4c72c2fecaecd0755c25f0d09a5cf22daf80fa5065153fe340e8ae34ba7924b7"
+  },
+  "compiledMarkerProof": {
+    "checks": {
+      "full150": true,
+      "frozenSourcesUnchanged": true,
+      "actualNext19": true,
+      "isolatedDatabasesStoppedAndRemoved": true,
+      "twoBuiltApiEntries": true,
+      "durableReceiptServer": true,
+      "durableRecoveryClient": true
+    },
+    "apiEntries": [
+      {
+        "route": "/api/seo/articles",
+        "file": ".next/server/app/api/seo/articles/route.js",
+        "hash": "8a32ea0c37276bded0bcd200ec4bfac23332ddb36b163906e1da92d777c02de9"
+      },
+      {
+        "route": "/api/seo/article-operation",
+        "file": ".next/server/app/api/seo/article-operation/route.js",
+        "hash": "60f3cd0f904c41486052a1056b909e34f9f23aea35e1edb44b4fd07a716c34c1"
+      }
+    ],
+    "assets": {
+      ".next/server/app/api/seo/articles/route.js": "8a32ea0c37276bded0bcd200ec4bfac23332ddb36b163906e1da92d777c02de9",
+      ".next/server/app/api/seo/article-operation/route.js": "60f3cd0f904c41486052a1056b909e34f9f23aea35e1edb44b4fd07a716c34c1",
+      ".next/static/chunks/app/seo/template/page-53ce1a7ceaaa7753.js": "66868e5ee73d21f8fa25b853abc56e0ee6e808c1ce2cf1fa05ebff2fbe539180"
+    },
+    "serverMarkerAssets": [
+      ".next/server/app/api/seo/articles/route.js",
+      ".next/server/app/api/seo/article-operation/route.js"
+    ],
+    "clientMarkerAssets": [
+      ".next/static/chunks/app/seo/template/page-53ce1a7ceaaa7753.js"
+    ]
+  },
+  "scope": "SEO durable creation/recovery and downgrade only. Original monthly quota/legacy APIs, schema and dependencies preserved; original28 mounted cases retained in51. Native15, real transaction13 and actual Next19 required. No production/customer data writes or paid provider generation. Full17-service2074 audit remains active."
+}
