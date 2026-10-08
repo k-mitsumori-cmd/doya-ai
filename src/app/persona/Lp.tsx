@@ -23,7 +23,7 @@ export default function PersonaLp() {
   return (
     <LpShell serviceName={SVC.name} icon="groups" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
       <ProductHero
-        eyebrow="ドヤマーケAI"
+        eyebrow="ドヤAI"
         title="「誰に向けて作るか」を、"
         highlight="施策に使える1枚に。"
         subtitle="商材と業界を入れるだけで、年齢・職種・課題・情報収集の仕方まで、施策に使える粒度のペルソナが出ます。"

@@ -23,7 +23,7 @@ export default function SeoLp() {
   return (
     <LpShell serviceName={SVC.name} icon="article" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
       <ProductHero
-        eyebrow="ドヤマーケAI"
+        eyebrow="ドヤAI"
         title="検索意図から組み立てて、"
         highlight="筋の通る長文へ。"
         subtitle="キーワードと参考URLを入れると、検索意図に沿ったアウトラインを作り、章ごとに整合性を確かめながら書き上げます。"

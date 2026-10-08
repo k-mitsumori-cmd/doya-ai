@@ -256,7 +256,7 @@ export default function LpInputPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="例: ドヤマーケAI"
+                    placeholder="例: ドヤAI"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full bg-lp-bg border border-lp-primary/30 rounded-lg px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-lp-primary focus:ring-1 focus:ring-lp-primary"

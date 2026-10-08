@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ slug:
   const raw = params.slug?.[0]?.replace(/\.(png|jpg|jpeg)$/i, '') || 'portal'
   const svc = getServiceById(raw)
 
-  const title = svc?.name || 'ドヤマーケAI'
+  const title = svc?.name || 'ドヤAI'
   const subtitle = svc?.description || 'AIで、ビジネスの“ドヤれる”をつくる。'
   // 背景素材ありは右カラムが狭く、4つだとフッターに被るので2つに絞る
   const featureCount = svc && OG_BG_SERVICES.has(svc.id) ? 2 : 4
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ slug:
             padding: '10px 22px', borderRadius: '999px', background: 'rgba(255,255,255,0.16)',
             color: 'white', fontSize: '26px', fontWeight: 700,
           }}>
-            ドヤマーケAI
+            ドヤAI
           </div>
 
           <div style={{ fontSize: bgUrl ? '62px' : '76px', fontWeight: 800, color: 'white', marginBottom: '18px', letterSpacing: '-0.02em', textShadow: '0 4px 24px rgba(0,0,0,0.35)' }}>

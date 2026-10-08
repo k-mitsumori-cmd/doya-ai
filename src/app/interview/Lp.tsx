@@ -21,7 +21,7 @@ export default function InterviewLp() {
   return (
     <LpShell serviceName={SVC.name} icon="record_voice_over" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
       <ProductHero
-        eyebrow="ドヤマーケAI"
+        eyebrow="ドヤAI"
         title="取材の録音から、"
         highlight="記事の形まで。"
         subtitle="音声をアップロードすると、話者を分けて文字に起こし、載せる媒体に合わせた記事のドラフトまで作ります。"

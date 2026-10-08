@@ -5,15 +5,15 @@ import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
 
 // ⚠️ 募集ページなので検索には出す。canonical はこのパスで固定する。
 export const metadata: Metadata = {
-  title: { absolute: '活用事例・ロゴ掲載キャンペーン｜6ヶ月無料 | ドヤマーケAI' },
+  title: { absolute: '活用事例・ロゴ掲載キャンペーン｜6ヶ月無料 | ドヤAI' },
   description:
-    '30分ほどのオンライン取材と、企業ロゴ・サービスロゴの掲載にご協力いただいた方に、ドヤマーケAIのプロプランを6ヶ月無料でご提供します。',
+    '30分ほどのオンライン取材と、企業ロゴ・サービスロゴの掲載にご協力いただいた方に、ドヤAIのプロプランを6ヶ月無料でご提供します。',
   alternates: { canonical: '/campaign/case-study' },
   openGraph: {
     type: 'website',
     locale: 'ja_JP',
     url: 'https://doya-ai.surisuta.jp/campaign/case-study',
-    siteName: 'ドヤマーケAI',
+    siteName: 'ドヤAI',
     title: '活用事例・ロゴ掲載キャンペーン｜6ヶ月無料',
     description:
       '30分ほどのオンライン取材と、ロゴ掲載にご協力いただいた方にプロプランを6ヶ月無料でご提供します。',
@@ -31,7 +31,7 @@ export default function CaseStudyCampaignPage() {
   return (
     <main className="min-h-screen bg-slate-50 pb-20">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
-        <Link href="/" className="text-xs font-bold text-slate-500 hover:underline">← ドヤマーケAI</Link>
+        <Link href="/" className="text-xs font-bold text-slate-500 hover:underline">← ドヤAI</Link>
 
         <span className="mt-6 inline-flex items-center rounded-full bg-[#0066ff]/10 px-3 py-1 text-xs font-black tracking-wide text-[#0066ff]">
           活用事例・ロゴ掲載キャンペーン
@@ -42,7 +42,7 @@ export default function CaseStudyCampaignPage() {
           プロプランが<span className="text-[#0066ff]">6ヶ月無料</span>。
         </h1>
         <p className="mt-4 text-sm font-semibold leading-relaxed text-slate-600 sm:text-base">
-          ドヤマーケAIをどう使っていただいているかを、オンラインで30分ほどうかがわせてください。
+          ドヤAIをどう使っていただいているかを、オンラインで30分ほどうかがわせてください。
           あわせて御社のロゴ・サービスロゴを当サイトに掲載させていただける方に、
           プロプラン（通常 {UNIFIED_PRO_PRICE_LABEL}/月）を6ヶ月無料でご提供します。
         </p>

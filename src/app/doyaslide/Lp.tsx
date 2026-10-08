@@ -15,7 +15,7 @@ const ROWS: ShowcaseRow[] = [
 
 export default function DoyaSlideLp() {
   return <LpShell serviceName={SVC.name} icon="view_carousel" ctaHref={CTA} accent={ACCENT}>
-    <ProductHero eyebrow="ドヤマーケAI" title="テーマを入れたら、" highlight="全ページができている。" subtitle="構成からビジュアルまで、プレゼン資料を全ページ画像で生成。ページ単位の修正とPDF書き出しまで一つの画面で進められます。" note="無料プランで月3プロジェクト・20枚まで。" ctaHref={CTA} ctaLabel="無料ではじめる" subCtaHref="/doyaslide/pricing" subCtaLabel="料金を見る" image={{ src: '/doyaslide/hero.webp', alt: 'ドヤスライドの生成済みページ一覧画面' }} visual={<MockWindow title={SVC.name}><DoyaSlideDeckMock /></MockWindow>} />
+    <ProductHero eyebrow="ドヤAI" title="テーマを入れたら、" highlight="全ページができている。" subtitle="構成からビジュアルまで、プレゼン資料を全ページ画像で生成。ページ単位の修正とPDF書き出しまで一つの画面で進められます。" note="無料プランで月3プロジェクト・20枚まで。" ctaHref={CTA} ctaLabel="無料ではじめる" subCtaHref="/doyaslide/pricing" subCtaLabel="料金を見る" image={{ src: '/doyaslide/hero.webp', alt: 'ドヤスライドの生成済みページ一覧画面' }} visual={<MockWindow title={SVC.name}><DoyaSlideDeckMock /></MockWindow>} />
     <UseCases title="こんな場面のためのものです" items={SVC.useCases || []} />
     <FeatureShowcase title="構成もデザインも、一つの流れで" lead="白紙のページを一枚ずつ整える作業を減らします。" rows={ROWS} />
     <HowItWorks title="3ステップで書き出しまで" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />}  />

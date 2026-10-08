@@ -23,7 +23,7 @@ export default function DoyalistLp() {
   return (
     <LpShell serviceName={SVC.name} icon="list_alt" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
       <ProductHero
-        eyebrow="ドヤマーケAI"
+        eyebrow="ドヤAI"
         title="営業リストを作って、"
         highlight="送る文面まで。"
         subtitle="条件を決めるだけで法人情報から企業リストを作り、フォーム営業文・メール・電話スクリプトまで用意できます。"

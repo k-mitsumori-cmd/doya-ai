@@ -902,7 +902,7 @@ export const HIGH_USAGE_CONTACT_URL =
 //    提示することになり、特定商取引法ページの記載（無料 / プロ¥9,980）とも矛盾する。
 //    枠を復活させるときは、必ず特商法ページと同時に更新すること。
 export const ENTERPRISE_CONTACT_MAILTO =
-  'mailto:info@surisuta.jp?subject=' + encodeURIComponent('ドヤマーケAI 機能拡張のご相談')
+  'mailto:info@surisuta.jp?subject=' + encodeURIComponent('ドヤAI 機能拡張のご相談')
 
 // 改善要望/不具合/問い合わせ導線（アプリ内から共通で利用）
 export const SUPPORT_CONTACT_URL =
