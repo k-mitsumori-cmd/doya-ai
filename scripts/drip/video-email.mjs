@@ -67,8 +67,8 @@ const FOOT =
   p('最後までお読みいただき、ありがとうございました。') +
   p('ドヤマーケ編集部　三森（ミツモリ）') +
   p('株式会社スリスタ') +
-  p('ドヤマーケAI：https://doya-ai.surisuta.jp/　／　ドヤマーケ（実行支援）：https://doyamarke.surisuta.jp/lp/doyamarke') +
-  `<tr><td style="padding:4px 28px;"><div style="font-size:12px;color:#9aa4b2;">※本メールはドヤマーケAIにご登録いただいた方へお送りしています。</div></td></tr><tr><td style="padding:18px 28px 26px;"><div style="border-top:1px solid #eef1f6;"></div></td></tr></table></td></tr></table></body></html>`
+  p('ドヤAI：https://doya-ai.surisuta.jp/　／　ドヤマーケ（実行支援）：https://doyamarke.surisuta.jp/lp/doyamarke') +
+  `<tr><td style="padding:4px 28px;"><div style="font-size:12px;color:#9aa4b2;">※本メールはドヤAIにご登録いただいた方へお送りしています。</div></td></tr><tr><td style="padding:18px 28px 26px;"><div style="border-top:1px solid #eef1f6;"></div></td></tr></table></td></tr></table></body></html>`
 
 /**
  * entry:
