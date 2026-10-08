@@ -1,9 +1,10 @@
+const privateApiResponse = require('./load-typescript.cjs').load('src/lib/private-api-response.ts', { 'next/server': { NextResponse: Response } });
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
 
 const ranks = { MEMBER: 1, MANAGER: 2, ADMIN: 3, OWNER: 4 }
 const hasMinRole = (role, minimum) => (ranks[role] || 0) >= ranks[minimum]
-const next = { 'next/server': { NextResponse: Response } }
+const next = { '@/lib/private-api-response': privateApiResponse, 'next/server': { NextResponse: Response } }
 
 ;(async () => {
   for (const employeeId of ['own', null]) {

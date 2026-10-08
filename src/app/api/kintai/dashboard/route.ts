@@ -2,7 +2,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextResponse } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext } from '@/lib/kintai/access'
 import { getClockStatusFromRecords as getClockStatus } from '@/lib/kintai/format'
@@ -12,7 +12,7 @@ export async function GET() {
   try {
     const ctx = await getKintaiContext()
     if (!ctx) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+      return privateApiJson({ error: '認証が必要です' }, { status: 401 })
     }
 
     const now = new Date()
@@ -59,7 +59,7 @@ export async function GET() {
       totalLateCount: monthAttendances.filter((a) => a.status === 'late' || a.lateMinutes > 0).length,
     }
 
-    return NextResponse.json({
+    return privateApiJson({
       employee,
       clockStatus,
       todayRecords,
@@ -69,6 +69,6 @@ export async function GET() {
     })
   } catch {
     console.error('[kintai/dashboard] failed')
-    return NextResponse.json({ error: 'ダッシュボードの取得に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: 'ダッシュボードの取得に失敗しました' }, { status: 500 })
   }
 }

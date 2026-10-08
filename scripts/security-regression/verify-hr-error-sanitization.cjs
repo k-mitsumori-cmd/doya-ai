@@ -1,3 +1,4 @@
+const privateApiResponse = require('./load-typescript.cjs').load('src/lib/private-api-response.ts', { 'next/server': { NextResponse: Response } });
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
@@ -18,7 +19,7 @@ async function expectSafe(promise, expected) {
 ;(async () => {
   await check('HR employee list retains 401 but never returns private database error', async () => {
     const mocks = {
-      'next/server': server,
+      '@/lib/private-api-response': privateApiResponse, 'next/server': server,
       'next-auth': {}, '@/lib/auth': {},
       '@/lib/prisma': { prisma: { hrEmployee: { findMany: failure, count: async () => 0 } } },
       '@/lib/hr/access': { getHrContext: async () => ctx, hasMinRole: () => true },
@@ -33,7 +34,7 @@ async function expectSafe(promise, expected) {
   })
   await check('HR organization member list does not return private database error', async () => {
     const api = load('src/app/api/hr/organization/members/route.ts', {
-      'next/server': server,
+      '@/lib/private-api-response': privateApiResponse, 'next/server': server,
       '@/lib/prisma': { prisma: { hrOrganizationMember: { findMany: failure } } },
       '@/lib/hr/access': { getHrContext: async () => ctx, hasMinRole: () => true },
     })
@@ -41,7 +42,7 @@ async function expectSafe(promise, expected) {
   })
   await check('HR dashboard does not return private database error', async () => {
     const api = load('src/app/api/hr/dashboard/route.ts', {
-      'next/server': server,
+      '@/lib/private-api-response': privateApiResponse, 'next/server': server,
       '@/lib/prisma': { prisma: {
         hrOrganization: { findUnique: failure }, hrEmployee: { count: async () => 0 },
         hrDepartment: { count: async () => 0 }, hrEvaluationPeriod: { findMany: async () => [] },
@@ -57,7 +58,7 @@ async function expectSafe(promise, expected) {
   })
   await check('HR denied onboarding returns fixed403 without echoing a coded private exception', async () => {
     const api = load('src/app/api/hr/organization/route.ts', {
-      'next/server': server, 'next-auth': { getServerSession: async () => ({user:{id:'synthetic'}}) }, '@/lib/auth': {},
+      '@/lib/private-api-response': privateApiResponse, 'next/server': server, 'next-auth': { getServerSession: async () => ({user:{id:'synthetic'}}) }, '@/lib/auth': {},
       '@prisma/client': {}, '@/lib/prisma': {}, '@/lib/hr/types': {},
       '@/lib/hr/access': { getOrCreateOrganization: async () => { throw Object.assign(new Error(secret),{code:'INVALID_MEMBERSHIP_ROLE'}) } },
     })

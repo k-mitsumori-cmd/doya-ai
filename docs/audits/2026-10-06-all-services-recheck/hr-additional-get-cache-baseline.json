@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-08T08:26:23.398Z",
+  "expected": 6,
+  "behaviorPassed": 6,
+  "passed": 0,
+  "cases": [
+    {
+      "file": "src/app/api/hr/organization/route.ts",
+      "mode": "allowed",
+      "behaviorPassed": true,
+      "privateNoStore": false,
+      "error": "Personalized GET must prohibit cache storage"
+    },
+    {
+      "file": "src/app/api/hr/organization/route.ts",
+      "mode": "denied",
+      "behaviorPassed": true,
+      "privateNoStore": false,
+      "error": "Personalized GET must prohibit cache storage"
+    },
+    {
+      "file": "src/app/api/hr/organization/route.ts",
+      "mode": "failure",
+      "behaviorPassed": true,
+      "privateNoStore": false,
+      "error": "Personalized GET must prohibit cache storage"
+    },
+    {
+      "file": "src/app/api/hr/settings/route.ts",
+      "mode": "allowed",
+      "behaviorPassed": true,
+      "privateNoStore": false,
+      "error": "Personalized GET must prohibit cache storage"
+    },
+    {
+      "file": "src/app/api/hr/settings/route.ts",
+      "mode": "denied",
+      "behaviorPassed": true,
+      "privateNoStore": false,
+      "error": "Personalized GET must prohibit cache storage"
+    },
+    {
+      "file": "src/app/api/hr/settings/route.ts",
+      "mode": "failure",
+      "behaviorPassed": true,
+      "privateNoStore": false,
+      "error": "Personalized GET must prohibit cache storage"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/organization/route.ts": "aa62653384a141a9a864a753ff982ac7c4487f0c4ed35fb991bc06585659de2b",
+    "src/app/api/hr/settings/route.ts": "d1263681b890d26ed9e202adc4d42a5d8620aa4e2fa99fbf476e5079785f6532"
+  },
+  "scope": "Actual HR organization/settings GET handlers; synthetic auth and DB read boundaries. Read scope and non-admin member filter checked. No customer/production requests, writes or cache leakage demonstrated. Cache policy baseline only."
+}

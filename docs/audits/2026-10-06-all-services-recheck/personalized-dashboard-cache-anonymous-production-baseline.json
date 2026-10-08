@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-08T08:18:00.247206+00:00",
+  "rows": [
+    {
+      "path": "/api/hr/dashboard",
+      "status": 401,
+      "genericAuthErrorOnly": true,
+      "headers": {
+        "cache-control": "public, max-age=0, must-revalidate",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "age": "0",
+        "x-vercel-cache": "MISS"
+      }
+    },
+    {
+      "path": "/api/kintai/dashboard",
+      "status": 401,
+      "genericAuthErrorOnly": true,
+      "headers": {
+        "cache-control": "public, max-age=0, must-revalidate",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "age": "0",
+        "x-vercel-cache": "MISS"
+      }
+    }
+  ],
+  "scope": "Two anonymous no-cookie GETs; source context helpers inspected and return before DB operations when unauthenticated. No customer data, generation, provider, DB or production writes; no cache exposure proved."
+}

@@ -1,0 +1,72 @@
+{
+  "scope": "Four personalized GET cache constructors plus shared helper;17 root production/regression files and1 existing isolated PG fixture. All existing assertions retained; nine existing root fixtures load the actual shared helper.",
+  "productionFiles": [
+    "src/app/api/hr/dashboard/route.ts",
+    "src/app/api/hr/organization/route.ts",
+    "src/app/api/hr/settings/route.ts",
+    "src/app/api/kintai/dashboard/route.ts",
+    "src/lib/private-api-response.ts"
+  ],
+  "gate": "docs/audits/2026-10-06-all-services-recheck/dashboard-cache-release-8479b373-751b-44a8-96fe-a60acd0d4a69",
+  "compiledMarkerProof": {
+    "checkedAt": "2026-10-08T14:40:38.425760+00:00",
+    "checks": {
+      "full149": true,
+      "frozenSourcesUnchanged": true,
+      "actualNext17": true,
+      "privatePostgresStoppedAndRemoved": true,
+      "fourBuiltApiEntries": true,
+      "compiledPrivateCachePolicy": true
+    },
+    "apiEntries": [
+      {
+        "route": "/api/hr/dashboard",
+        "file": ".next/server/app/api/hr/dashboard/route.js",
+        "hash": "5e407d0a5758268c93f33a0bb3b3e3d559834ea0db557c7085f7cd5205d19877"
+      },
+      {
+        "route": "/api/hr/organization",
+        "file": ".next/server/app/api/hr/organization/route.js",
+        "hash": "b48033f2fcebc66832ff165d6933da7315e21e16b2d296a56d55599311a300ee"
+      },
+      {
+        "route": "/api/hr/settings",
+        "file": ".next/server/app/api/hr/settings/route.js",
+        "hash": "3ff2cb4ebf2e6516b5a4f33dc743d40c3f3248e6a6fbd43aed2e9acb109dd551"
+      },
+      {
+        "route": "/api/kintai/dashboard",
+        "file": ".next/server/app/api/kintai/dashboard/route.js",
+        "hash": "276b59dfd80ad3ac09ff19cc6df3761987d3bd03fdefec8825e759d92e5e03d7"
+      }
+    ],
+    "assets": {
+      ".next/server/app/api/hr/dashboard/route.js": "5e407d0a5758268c93f33a0bb3b3e3d559834ea0db557c7085f7cd5205d19877",
+      ".next/server/app/api/hr/organization/route.js": "b48033f2fcebc66832ff165d6933da7315e21e16b2d296a56d55599311a300ee",
+      ".next/server/app/api/hr/settings/route.js": "3ff2cb4ebf2e6516b5a4f33dc743d40c3f3248e6a6fbd43aed2e9acb109dd551",
+      ".next/server/app/api/kintai/dashboard/route.js": "276b59dfd80ad3ac09ff19cc6df3761987d3bd03fdefec8825e759d92e5e03d7",
+      ".next/server/chunks/90438.js": "de22846204b622bd4ba5bb7e95659cb5aac14aaa54ddbb3a7d8edd1c272be9bf",
+      ".next/server/chunks/74494.js": "9eeafb1e06f86d2c0c0814c6db31c6be9f744f5f9f3aea0d899e36534c28649e",
+      ".next/server/chunks/34174.js": "b9e074d023755ce065a515992180dd6e815a931572dafa010432c5a56f23a764",
+      ".next/server/chunks/52593.js": "defc94b92f0d3292de52e98eadec953824dd71a1d8c31498461e657ed38f108f",
+      ".next/server/chunks/37626.js": "6b6b4b2de3182bb68e4733ddc819d8a5bb3207dd45bb309a539ecc68cadb8c9d"
+    },
+    "helperMarkerAssets": [
+      ".next/server/chunks/90438.js",
+      ".next/server/chunks/74494.js",
+      ".next/server/chunks/34174.js",
+      ".next/server/chunks/52593.js",
+      ".next/server/chunks/37626.js"
+    ],
+    "scope": "Actual four built API entries hashed; cache-policy markers in compiled server chunks. Actual Next17 tests prove route behavior; marker search alone is not treated as route execution or production verification."
+  },
+  "reviewStatus": "reviewed-release-approved-within-user-production-scope",
+  "businessInvariant": "Four source bodies normalized only by import and NextResponse.json->privateApiJson are byte-identical to HEAD; organization POST/PATCH and settings PUT unchanged. Verified before148 started.",
+  "limits": [
+    "No actual production OAuth/customer cache or provider execution",
+    "17 services2074 criteria and187 GET audit remain incomplete",
+    "No observed customer cache exposure"
+  ],
+  "reviewedAt": "2026-10-08T14:41:01.165524+00:00",
+  "fixtureReview": "All nine existing root fixtures and one isolated PG fixture only add actual private JSON helper dependency. Original assertions preserved. Two mandatory new cache suites and strengthened actual Next full-row snapshot checks pass."
+}

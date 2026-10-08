@@ -1,3 +1,7 @@
+const personalizedDashboardCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-personalized-dashboard-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (personalizedDashboardCache.status !== 0) process.exit(personalizedDashboardCache.status || 1);
+const hrAdditionalGetCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-hr-additional-get-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrAdditionalGetCache.status !== 0) process.exit(hrAdditionalGetCache.status || 1);
 const seoTemplateScope = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-seo-template-actor-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (seoTemplateScope.error || seoTemplateScope.status !== 0) process.exit(seoTemplateScope.status || 1);
 const bannerScopeChecks = ['verify-banner-limit-modal-scope-mounted.cjs','verify-banner-legacy-actor-mounted.cjs'];

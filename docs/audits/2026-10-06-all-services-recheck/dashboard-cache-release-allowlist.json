@@ -1,0 +1,61 @@
+{
+  "files": [
+    "docs/audits/2026-10-06-all-services-recheck/dashboard-cache-current-gate.txt",
+    "docs/audits/2026-10-06-all-services-recheck/dashboard-cache-release-allowlist.json",
+    "docs/audits/2026-10-06-all-services-recheck/dashboard-cache-release-8479b373-751b-44a8-96fe-a60acd0d4a69/source-manifest.json",
+    "docs/audits/2026-10-06-all-services-recheck/dashboard-cache-release-8479b373-751b-44a8-96fe-a60acd0d4a69/state.json",
+    "docs/audits/2026-10-06-all-services-recheck/dashboard-cache-release-8479b373-751b-44a8-96fe-a60acd0d4a69/supervise.py",
+    "docs/audits/2026-10-06-all-services-recheck/dashboard-cache-release-observe.py",
+    "docs/audits/2026-10-06-all-services-recheck/dashboard-cache-release-review.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-additional-get-cache-baseline.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-additional-get-cache-integrated.json",
+    "docs/audits/2026-10-06-all-services-recheck/hr-additional-get-cache-overlay.json",
+    "docs/audits/2026-10-06-all-services-recheck/personalized-cache-next-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/personalized-cache-next-supervise.py",
+    "docs/audits/2026-10-06-all-services-recheck/personalized-cache-next-supervisor.json",
+    "docs/audits/2026-10-06-all-services-recheck/personalized-dashboard-cache-anonymous-production-baseline.json",
+    "docs/audits/2026-10-06-all-services-recheck/personalized-dashboard-cache-baseline.json",
+    "docs/audits/2026-10-06-all-services-recheck/personalized-dashboard-cache-expanded-overlay-typecheck.json",
+    "docs/audits/2026-10-06-all-services-recheck/personalized-dashboard-cache-integrated-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/personalized-dashboard-cache-overlay-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/publish-dashboard-cache.py",
+    "docs/audits/2026-10-06-all-services-recheck/verify-dashboard-cache-public.py",
+    "docs/audits/2026-10-06-all-services-recheck/verify-membership-onboarding-role-integrated-postgres.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-personalized-cache-next.cjs",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-hr-additional-get-cache.cjs",
+    "scripts/security-regression/verify-hr-employee-reads.cjs",
+    "scripts/security-regression/verify-hr-error-sanitization.cjs",
+    "scripts/security-regression/verify-hr-kintai-onboarding.cjs",
+    "scripts/security-regression/verify-hr-one-on-one-month.cjs",
+    "scripts/security-regression/verify-hr-organization-updates.cjs",
+    "scripts/security-regression/verify-kintai-overnight.cjs",
+    "scripts/security-regression/verify-kintai-read-only.cjs",
+    "scripts/security-regression/verify-personalized-dashboard-cache.cjs",
+    "src/app/api/hr/dashboard/route.ts",
+    "src/app/api/hr/organization/route.ts",
+    "src/app/api/hr/settings/route.ts",
+    "src/app/api/kintai/dashboard/route.ts",
+    "src/lib/private-api-response.ts",
+    "scripts/security-regression/verify-hr-evaluation-related-reads.cjs",
+    "scripts/security-regression/verify-hr-one-on-one-related.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/prepare-dashboard-cache-compiled-proof.py"
+  ],
+  "reports": [
+    [
+      "personalized-dashboard-cache-integrated-results.json",
+      9
+    ],
+    [
+      "hr-additional-get-cache-integrated.json",
+      6
+    ],
+    [
+      "personalized-cache-next-results.json",
+      17
+    ]
+  ],
+  "releaseReady": true,
+  "pendingReason": null,
+  "note": "Exact5 production files plus required actual-helper fixture updates and evidence only. No quota/model or production DB changes.17-service2074 goal remains active."
+}

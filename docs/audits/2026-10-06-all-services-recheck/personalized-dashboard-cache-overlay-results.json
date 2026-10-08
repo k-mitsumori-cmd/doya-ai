@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-08T08:27:10.066Z",
+  "expected": 9,
+  "passed": 9,
+  "cases": [
+    {
+      "service": "hr",
+      "mode": "allowed",
+      "passed": true
+    },
+    {
+      "service": "hr",
+      "mode": "denied",
+      "passed": true
+    },
+    {
+      "service": "hr",
+      "mode": "failure",
+      "passed": true
+    },
+    {
+      "service": "kintai",
+      "mode": "allowed",
+      "passed": true
+    },
+    {
+      "service": "kintai",
+      "mode": "denied",
+      "passed": true
+    },
+    {
+      "service": "kintai",
+      "mode": "failure",
+      "passed": true
+    },
+    {
+      "name": "preserve retry and correlation headers",
+      "passed": true
+    },
+    {
+      "name": "preserve existing Vary dimensions",
+      "passed": true
+    },
+    {
+      "name": "replace public cache and retain Cookie once",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/dashboard/route.ts": "30c3ca9bf5a3ce626867dd2ce5da9fe0169264fdfc8964c2b7a0cf759a6a3260",
+    "src/app/api/kintai/dashboard/route.ts": "9385a7a9beb32fa973cad7347d97394d930e1f72f2218d204a708ff21fe99b64",
+    "src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0"
+  },
+  "scope": "Actual HR/Kintai dashboard GET handlers with synthetic context, permission helpers and database read boundaries. Successful body includes synthetic private organization/employee; denied/failure makes zero DB calls. No actual customer, browser cache, production or DB writes; no leak demonstrated."
+}

@@ -2,7 +2,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextResponse } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { getEvaluationReadWhere } from '@/lib/hr/evaluation-access'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
@@ -14,7 +14,7 @@ export async function GET() {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const evaluationWhere = await getEvaluationReadWhere(ctx)
@@ -78,7 +78,7 @@ export async function GET() {
       status: o.status,
     }))
 
-    return NextResponse.json({
+    return privateApiJson({
       orgName: org?.name || '',
       canManageEmployees: hasMinRole(ctx.role, HrMemberRole.ADMIN),
       canCreatePeriods: hasMinRole(ctx.role, HrMemberRole.ADMIN),
@@ -91,6 +91,6 @@ export async function GET() {
     })
   } catch (e: any) {
     console.error('[hr/dashboard] unexpected error')
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    return privateApiJson({ error: 'Failed' }, { status: 500 })
   }
 }

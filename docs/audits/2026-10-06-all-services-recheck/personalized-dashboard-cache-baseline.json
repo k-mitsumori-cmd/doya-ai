@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-10-08T08:09:11.676Z",
+  "expected": 6,
+  "passed": 0,
+  "cases": [
+    {
+      "service": "hr",
+      "mode": "allowed",
+      "passed": false,
+      "error": "Personalized response must prohibit cache storage"
+    },
+    {
+      "service": "hr",
+      "mode": "denied",
+      "passed": false,
+      "error": "Personalized response must prohibit cache storage"
+    },
+    {
+      "service": "hr",
+      "mode": "failure",
+      "passed": false,
+      "error": "Personalized response must prohibit cache storage"
+    },
+    {
+      "service": "kintai",
+      "mode": "allowed",
+      "passed": false,
+      "error": "Personalized response must prohibit cache storage"
+    },
+    {
+      "service": "kintai",
+      "mode": "denied",
+      "passed": false,
+      "error": "Personalized response must prohibit cache storage"
+    },
+    {
+      "service": "kintai",
+      "mode": "failure",
+      "passed": false,
+      "error": "Personalized response must prohibit cache storage"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/dashboard/route.ts": "a88ff1d16638f84f567b9356997eb883c4ee590141e76ccfcb7b50e98460030b",
+    "src/app/api/kintai/dashboard/route.ts": "52983c30c855200df638064bcede280a172e48d48ec56b603bdaa410860dd081"
+  },
+  "scope": "Actual HR/Kintai dashboard GET handlers with synthetic context, permission helpers and database read boundaries. Successful body includes synthetic private organization/employee; denied/failure makes zero DB calls. No actual customer, browser cache, production or DB writes; no leak demonstrated."
+}

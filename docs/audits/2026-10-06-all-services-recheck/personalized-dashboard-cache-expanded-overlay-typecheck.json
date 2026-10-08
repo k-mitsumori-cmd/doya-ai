@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-08T08:28:03.030548+00:00",
+  "exitCode": 0,
+  "diagnostics": "",
+  "sourceHashes": {
+    "src/app/api/hr/dashboard/route.ts": "30c3ca9bf5a3ce626867dd2ce5da9fe0169264fdfc8964c2b7a0cf759a6a3260",
+    "src/app/api/hr/organization/route.ts": "828bae7a72ec4bb0fd0873a3aa1112e739ef83164f8c58795ce1441b9c053e22",
+    "src/app/api/hr/settings/route.ts": "b7d132d1688cea4747a7d765408e5c327e3b004fdb880881e53eb1e70dd04fbd",
+    "src/app/api/kintai/dashboard/route.ts": "9385a7a9beb32fa973cad7347d97394d930e1f72f2218d204a708ff21fe99b64",
+    "src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0"
+  },
+  "scope": "Whole-root TypeScript plus five candidate overlay files; no root build concurrently and no production edits."
+}

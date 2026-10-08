@@ -3,13 +3,14 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 
 export async function GET() {
   try {
     const ctx = await getHrContext()
-    if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!ctx) return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
 
     const org = await prisma.hrOrganization.findUnique({
       where: { id: ctx.organizationId },
@@ -34,7 +35,7 @@ export async function GET() {
       joinedAt: m.acceptedAt?.toISOString() || m.createdAt.toISOString(),
     }))
 
-    return NextResponse.json({
+    return privateApiJson({
       settings: {
         id: org?.id,
         name: org?.name || '',
@@ -51,7 +52,7 @@ export async function GET() {
     })
   } catch (e) {
     console.error('[hr/settings GET]')
-    return NextResponse.json({ error: '設定の取得に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '設定の取得に失敗しました' }, { status: 500 })
   }
 }
 

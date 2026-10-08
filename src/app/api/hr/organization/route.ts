@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { getServerSession } from 'next-auth'
 import { Prisma } from '@prisma/client'
 import { authOptions } from '@/lib/auth'
@@ -52,7 +53,7 @@ export async function GET() {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const memberships = await prisma.hrOrganizationMember.findMany({
@@ -79,10 +80,10 @@ export async function GET() {
       memberId: m.id,
     }))
 
-    return NextResponse.json({ success: true, organizations })
+    return privateApiJson({ success: true, organizations })
   } catch (e) {
     console.error('[hr/organization GET]')
-    return NextResponse.json({ error: '組織情報の取得に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '組織情報の取得に失敗しました' }, { status: 500 })
   }
 }
 
