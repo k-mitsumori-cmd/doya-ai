@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-08T08:15:43.856Z",
+  "expected": 9,
+  "passed": 9,
+  "cases": [
+    "Current FREE allowance appears on real DOM",
+    "Native typed private draft and old quota disappear on actor change",
+    "Same actor auth refresh hides then restores intact draft",
+    "Native repeated title click sends one request",
+    "Late title response cannot appear for another actor",
+    "Native title editing survives delayed title response",
+    "Late creation response cannot redirect new actor",
+    "Unknown write outcome offers history and prevents duplicate submit",
+    "Validated current creation follows actual job route"
+  ],
+  "errors": [],
+  "sourceHashes": {
+    "src/app/seo/template/page.tsx": "a59fd6f79a6dabfee379d4fdad4825334ecac16f868ce7982ea89b560027d009",
+    "src/lib/seo-template-requests.ts": "937add991f9fe649f6af109bd65a74a276cf82b6491e3aede8b7240f8d08bcb5",
+    "src/lib/billing-response-client.ts": "37bcf03abdde567cf1a8de3d5f615148c5e87de09bce5288fb74e7990c481c8c"
+  },
+  "scope": "Actual page/catalog/request fence/response reader in native Chrome on loopback with synthetic auth, fetch API, navigation, motion and icons. Native typing/clicks checked; no Next router, real OAuth/provider, production or customer DB."
+}

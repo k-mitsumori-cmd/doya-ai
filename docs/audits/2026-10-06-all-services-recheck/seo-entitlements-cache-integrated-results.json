@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-10-08T08:10:00.524Z",
+  "expected": 9,
+  "passed": 9,
+  "cases": [
+    {
+      "name": "guest without cookie",
+      "passed": true
+    },
+    {
+      "name": "guest with existing cookie",
+      "passed": true
+    },
+    {
+      "name": "FREE exhausted",
+      "passed": true
+    },
+    {
+      "name": "LIGHT partly used",
+      "passed": true
+    },
+    {
+      "name": "PRO partly used",
+      "passed": true
+    },
+    {
+      "name": "ENTERPRISE partly used",
+      "passed": true
+    },
+    {
+      "name": "schema unavailable",
+      "passed": true
+    },
+    {
+      "name": "authentication unavailable",
+      "passed": true
+    },
+    {
+      "name": "usage unavailable",
+      "passed": true
+    }
+  ],
+  "source": "src/app/api/seo/entitlements/route.ts",
+  "sourceHash": "f8a8f971bc494973635f4e66fa27df3d885d8c9b2ba151fbc9465f493808c54d",
+  "scope": "Actual entitlement route, pricing and access helpers with synthetic auth/usage/schema boundaries. Checks private cache policy on guest/FREE/LIGHT/PRO/ENTERPRISE success and503 schema/auth/usage paths, plus existing ledger response/outage/recent-login invariants. No production/customer writes."
+}

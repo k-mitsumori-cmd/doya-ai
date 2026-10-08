@@ -15,7 +15,10 @@ export default function ServiceLimitProvider() {
   const searchParams = useSearchParams()
   // Query-scoped organizations (quote/aishodan) must transition just like path-scoped ones.
   const navigation = JSON.stringify([pathname, searchParams?.toString() || ''])
-  const scope = JSON.stringify([status, (session?.user as any)?.id || session?.user?.email || '', (session?.user as any)?.plan || '', navigation])
+  const user = session?.user as (Record<string, unknown> & { id?: string; email?: string }) | undefined
+  // Session callback exposes these independent service entitlements alongside the unified plan.
+  const servicePlans = ['bannerPlan', 'seoPlan', 'kantanPlan', 'interviewPlan', 'openingPlan', 'doyalistPlan', 'kintaiPlan'].map(field => user?.[field] || '')
+  const scope = JSON.stringify([status, user?.id || user?.email || '', user?.plan || '', servicePlans, navigation])
   const epoch = useRef({ scope, version: 0 })
   if (epoch.current.scope !== scope) epoch.current = { scope, version: epoch.current.version + 1 }
   const key = JSON.stringify([scope, epoch.current.version])

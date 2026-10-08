@@ -17,6 +17,8 @@ import {
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+
 export async function GET(_req: NextRequest) {
   try {
     await ensureSeoSchema()
@@ -83,9 +85,9 @@ export async function GET(_req: NextRequest) {
       // チャット修正は当面「画像と同じ条件」に揃える（=PRO/ENT or trial）
       canUseChatEdit: imagesAllowed,
       canUseSeoImages: imagesAllowed,
-    })
+    }, { headers: PRIVATE_HEADERS })
   } catch {
     console.error('[seo entitlements] failed')
-    return NextResponse.json({ success: false, error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503 })
+    return NextResponse.json({ success: false, error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503, headers: PRIVATE_HEADERS })
   }
 }

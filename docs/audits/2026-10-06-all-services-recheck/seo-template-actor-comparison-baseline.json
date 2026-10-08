@@ -1,0 +1,152 @@
+{
+  "checkedAt": "2026-10-08T07:45:47.655Z",
+  "source": "src/app/seo/template/page.tsx",
+  "sourceHash": "7d9927ec2beb04b943e3003c8f12242b499539617740d13f94fdf25a25e28633",
+  "expected": 28,
+  "passed": 3,
+  "cases": [
+    {
+      "name": "Changing account hides old remaining allowance and requests current usage",
+      "passed": false,
+      "error": "Previous account remaining allowance still visible\n\ntrue !== false\n"
+    },
+    {
+      "name": "Late alpha entitlement cannot appear on beta screen",
+      "passed": false,
+      "error": "Previous account remaining allowance still visible\n\ntrue !== false\n"
+    },
+    {
+      "name": "Account switch clears previous private keyword draft",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(![...host.querySelectorAll('input')].some(e=>e.value==='PRIVATE_ALPHA_KEYWORD'))\n"
+    },
+    {
+      "name": "Late title candidates cannot enter a different account workspace",
+      "passed": false,
+      "error": "Old actor title result rendered on new account\n\ntrue !== false\n"
+    },
+    {
+      "name": "Rapid repeated title action starts only one provider-facing request",
+      "passed": false,
+      "error": "Same captured action sent duplicate requests\n\n2 !== 1\n"
+    },
+    {
+      "name": "Same account auth refresh retains draft and hides controls until authenticated",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(host.querySelector('[hidden]'))\n"
+    },
+    {
+      "name": "Plan change hides an earlier quota snapshot and requests fresh allowance",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "Late title response cannot survive FREE PRO FREE transition",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "Malformed entitlement cannot show a fabricated remaining allowance",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "Valid current title response renders candidates",
+      "passed": true
+    },
+    {
+      "name": "Retained title callback from an old render cannot start a request",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\n2 !== 1\n"
+    },
+    {
+      "name": "Rapid create callbacks send one creation and follow validated current job",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\n2 !== 1\n"
+    },
+    {
+      "name": "Late previous actor creation cannot redirect the new actor",
+      "passed": false,
+      "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ [\n+   '/seo/jobs/old_job?auto=1'\n+ ]\n- []\n"
+    },
+    {
+      "name": "Auth refresh during creation keeps draft and blocks ambiguous resubmission",
+      "passed": false,
+      "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ [\n+   '/seo/jobs/old_job?auto=1'\n+ ]\n- []\n"
+    },
+    {
+      "name": "Recognized quota rejection leaves draft available without ambiguous-write latch",
+      "passed": true
+    },
+    {
+      "name": "Unknown server failure keeps history guidance and blocks duplicate creation",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\nfalse !== true\n"
+    },
+    {
+      "name": "Malformed success with unsafe identifier never redirects and remains uncertain",
+      "passed": false,
+      "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ [\n+   '/seo/jobs///outside.invalid?auto=1'\n+ ]\n- []\n"
+    },
+    {
+      "name": "Unmounted title request cannot update or redirect",
+      "passed": true
+    },
+    {
+      "name": "Saved article survives navigation failure and cannot be created twice",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(host.querySelector('a[href=\"/seo/jobs/saved_job?auto=1\"]'))\n"
+    },
+    {
+      "name": "Draft-only creation links to the validated saved article",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok(host.querySelector('a[href=\"/seo/articles/saved_article\"]'))\n"
+    },
+    {
+      "name": "Failed title transport shows Japanese retry guidance",
+      "passed": false,
+      "error": "The input did not match the regular expression /タイトル候補の応答を確認できませんでした/. Input:\n\n'SEO記事をかんたん作成テンプレートを選んで、3ステップでSEO記事を完成残り2/3回/ 月リセット入門・解説カスタマイズ可能変更📖選択中のテンプレートChatGPTの使い方 完全ガイド初心者でもわかるように、基礎から活用術まで網羅的に解説する記事123Step 1: キーワード・タイトル・記事タイプ主キーワード *上位表示したい検索キーワードを入力記事タイトル *AIでタイトル生成Synthetic network failure重要一次情報（経験・訴求ポイント）ここが入るほど「あなたにしか書けない記事」になります記事タイプ比較記事複数の製品やサービスを比較HowTo記事手順や方法を解説解説記事概念や仕組みを詳しく説明事例記事導入事例や成功例を紹介ランキング記事おすすめ順に紹介次へ '\n"
+    },
+    {
+      "name": "Guest draft can be prepared but generation has a visible login action",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\nfalse !== true\n"
+    },
+    {
+      "name": "Authenticated session without identity cannot keep a private workspace",
+      "passed": false,
+      "error": "Missing authenticated identity must remove editable private inputs"
+    },
+    {
+      "name": "Late creation after unmount cannot redirect or submit again",
+      "passed": false,
+      "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ [\n+   '/seo/jobs/late_job?auto=1'\n+ ]\n- []\n"
+    },
+    {
+      "name": "Title completion never overwrites a manually edited title",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'GENERATED_TITLE'\n- 'MY_MANUAL_TITLE'\n"
+    },
+    {
+      "name": "Changed keyword makes an earlier title result stale",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "Keyword ABA does not revive an earlier title response",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "name": "Object-valued title candidates are rejected rather than displayed as text",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/seo/template/page.tsx": "7d9927ec2beb04b943e3003c8f12242b499539617740d13f94fdf25a25e28633",
+    "src/lib/seo-template-requests.ts": "937add991f9fe649f6af109bd65a74a276cf82b6491e3aede8b7240f8d08bcb5",
+    "src/lib/billing-response-client.ts": "37bcf03abdde567cf1a8de3d5f615148c5e87de09bce5288fb74e7990c481c8c"
+  },
+  "scope": "Actual SEO template page and actual catalog mounted with synthetic auth/fetch/navigation/motion. No live auth/provider/customer writes; tests only account entitlement/draft transitions."
+}

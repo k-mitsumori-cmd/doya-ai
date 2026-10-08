@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { categories, allTemplates } from './data'
@@ -13,6 +13,8 @@ import {
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Toaster, toast } from 'react-hot-toast'
+import { useSeoTemplateRequests } from '@/lib/seo-template-requests'
+import { BillingResponseError, readBillingResponse } from '@/lib/billing-response-client'
 
 const ARTICLE_TYPES = [
   { id: 'comparison', label: '比較記事', desc: '複数の製品やサービスを比較', icon: BarChart3 },
@@ -118,8 +120,23 @@ function parseUrlListText(text: string, max: number) {
 }
 
 export default function SeoTestPage() {
+  const { data: session, status } = useSession()
+  const actor = session?.user?.id || session?.user?.email || ''
+  if (status === 'authenticated' && !actor) return <p role="alert">ログイン情報を確認できません。<Link href="/auth/signin">再度ログインする</Link></p>
+  return <>
+    {status === 'loading' && <p role="status">認証情報を確認しています。</p>}
+    <div hidden={status === 'loading'} ref={element => { if (element) element.inert = status === 'loading' }}>
+      <SeoTemplateWorkspace key={JSON.stringify([Boolean(actor), actor])} />
+    </div>
+  </>
+}
+
+function SeoTemplateWorkspace() {
   const router = useRouter()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
+  const actor = session?.user?.id || session?.user?.email || ''
+  const planScope = JSON.stringify([(session?.user as any)?.plan, (session?.user as any)?.seoPlan])
+  const requests = useSeoTemplateRequests(status, actor, planScope)
 
   // カテゴリ & テンプレート選択
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
@@ -153,23 +170,49 @@ export default function SeoTestPage() {
   // 状態
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const createUnresolved = useRef(false)
+  const [creationUncertain, setCreationUncertain] = useState(false)
+  const confirmedDestination = useRef<string | null>(null)
+  const [createdDestination, setCreatedDestination] = useState<string | null>(null)
+  const currentTitle = useRef(articleTitle)
+  currentTitle.current = articleTitle
+  const titleInputKey = JSON.stringify([mainKeyword.trim(), articleType, targetChars, tone])
+  const titleInputEpoch = useRef({ key: titleInputKey, version: 0 })
+  if (titleInputEpoch.current.key !== titleInputKey) titleInputEpoch.current = { key: titleInputKey, version: titleInputEpoch.current.version + 1 }
 
   // entitlements（残り記事数）
-  const [entitlements, setEntitlements] = useState<{ remaining?: { articles?: number }; limits?: { articlesPerMonth?: number }; plan?: string; trial?: { active?: boolean } } | null>(null)
-  const [entitlementError, setEntitlementError] = useState(false)
+  type Entitlements = { remaining?: { articles?: number }; limits?: { articlesPerMonth?: number }; plan?: string; trial?: { active?: boolean } }
+  const [entitlementSnapshot, setEntitlementSnapshot] = useState<{ key: string; data: Entitlements } | null>(null)
+  const entitlements = entitlementSnapshot?.key === requests.key ? entitlementSnapshot.data : null
+  const [entitlementErrorKey, setEntitlementErrorKey] = useState<string | null>(null)
+  const entitlementError = entitlementErrorKey === requests.key
   const [entitlementRetry, setEntitlementRetry] = useState(0)
   useEffect(() => {
     let active = true
-    setEntitlements(null)
-    setEntitlementError(false)
-    fetch('/api/seo/entitlements', { cache: 'no-store' })
-      .then((r) => { if (!r.ok) throw new Error('利用状況を確認できません'); return r.json() })
-      .then((j) => { if (!j?.success) throw new Error('利用状況を確認できません'); if (active) setEntitlements(j) })
-      .catch(() => { if (active) setEntitlementError(true) })
-    return () => { active = false }
-  }, [entitlementRetry])
+    const controller = new AbortController()
+    setEntitlementSnapshot(null)
+    setEntitlementErrorKey(null)
+    setTitleLoading(false)
+    setLoading(false)
+    if (createUnresolved.current) setCreationUncertain(true)
+    if (status === 'loading') return () => { active = false; controller.abort() }
+    readBillingResponse('/api/seo/entitlements', { method: 'GET' }, controller.signal)
+      .then(({ ok, data }) => {
+        const remaining = (data.remaining as any)?.articles
+        const limit = (data.limits as any)?.articlesPerMonth
+        if (!ok || data.success !== true || typeof data.isLoggedIn !== 'boolean' || data.isLoggedIn !== (status === 'authenticated') ||
+          !['GUEST', 'FREE', 'LIGHT', 'PRO', 'ENTERPRISE'].includes(String(data.plan)) ||
+          !Number.isSafeInteger(remaining) || !Number.isSafeInteger(limit) ||
+          !((remaining >= 0 && limit >= 0 && remaining <= limit) || (remaining === -1 && limit === -1 && (data.trial as any)?.active === true))) throw new Error('利用状況を確認できません')
+        if (active && requests.active()) setEntitlementSnapshot({ key: requests.key, data: data as Entitlements })
+      })
+      .catch(() => { if (active && requests.active()) setEntitlementErrorKey(requests.key) })
+    return () => { active = false; controller.abort() }
+    // The versioned key includes status, actor, plan and transitions back to earlier values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entitlementRetry, requests.key])
 
-  const isLoggedIn = !!session?.user?.email
+  const isLoggedIn = status === 'authenticated' && Boolean(actor)
   const userPlan = useMemo(() => {
     if (!isLoggedIn) return 'GUEST'
     const p = String((session?.user as any)?.seoPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
@@ -201,28 +244,39 @@ export default function SeoTestPage() {
     if (titleLoading) return
     const kw = mainKeyword.trim()
     if (kw.length < 2) return
+    const operation = requests.begin()
+    if (!operation) return
+    const inputVersion = titleInputEpoch.current.version
     setTitleLoading(true)
     setTitleError(null)
     try {
-      const res = await fetch('/api/seo/title-suggestions', {
+      const res = await readBillingResponse('/api/seo/title-suggestions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ keyword: kw, articleType, targetChars, tone, count: 6 }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || 'タイトル生成に失敗しました')
-      const list = Array.isArray(json?.titles) ? (json.titles as string[]) : []
-      const uniq = Array.from(new Set(list.map((s) => String(s || '').trim()).filter(Boolean))).slice(0, 6)
+      }, operation.signal)
+      if (!operation.current()) return
+      if (titleInputEpoch.current.version !== inputVersion) {
+        setTitleError('タイトル生成中に条件が変わりました。新しい条件でもう一度お試しください。')
+        return
+      }
+      const json = res.data
+      if (!res.ok || json?.success !== true) throw new Error(typeof json?.error === 'string' ? json.error : 'タイトル生成に失敗しました')
+      if (!Array.isArray(json.titles) || json.titles.some(value => typeof value !== 'string' || value.length > 1000)) throw new Error('タイトル候補の形式を確認できませんでした。もう一度お試しください。')
+      const uniq = Array.from(new Set((json.titles as string[]).map(s => s.trim()).filter(Boolean))).slice(0, 6)
       if (!uniq.length) throw new Error('タイトル候補を生成できませんでした')
       setTitleCandidates(uniq)
-      if (!articleTitle.trim()) { setArticleTitle(uniq[0]); setTitleSelected(0) }
+      if (!currentTitle.current.trim()) { setArticleTitle(uniq[0]); setTitleSelected(0) }
     } catch (e: any) {
-      setTitleError(e?.message || 'タイトル候補の生成に失敗しました')
-    } finally { setTitleLoading(false) }
+      if (!operation.current()) return
+      setTitleError(e instanceof BillingResponseError ? 'タイトル候補の応答を確認できませんでした。もう一度お試しください。' : e?.message || 'タイトル候補の生成に失敗しました')
+    } finally { if (operation.current()) setTitleLoading(false); operation.finish() }
   }
 
   async function handleGenerate() {
-    if (loading || !selectedTemplate) return
+    if (loading || creationUncertain || createUnresolved.current || confirmedDestination.current || !selectedTemplate) return
+    const operation = requests.begin()
+    if (!operation) return
     setLoading(true)
     setError(null)
     try {
@@ -245,7 +299,8 @@ export default function SeoTestPage() {
 
       const forbidden = constraints.trim().split(/[,、\n]/).map((s) => s.trim()).filter(Boolean)
 
-      const res = await fetch('/api/seo/articles', {
+      createUnresolved.current = true
+      const res = await readBillingResponse('/api/seo/articles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -255,18 +310,28 @@ export default function SeoTestPage() {
           llmoOptions: { tldr: true, conclusionFirst: true, faq: true, glossary: false, comparison: isComparisonMode, quotes: true, templates: false, objections: false },
           autoBundle: true, createJob: true, requestText: requestText || undefined, mode, comparisonConfig,
         }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || `エラーが発生しました (${res.status})`)
-      const jobId = json.jobId || json.job?.id
-      const articleId = json.articleId || json.article?.id
-      if (jobId) router.push(`/seo/jobs/${jobId}?auto=1`)
-      else if (articleId) router.push(`/seo/articles/${articleId}`)
-      else router.push('/seo')
+      }, operation.signal)
+      if (!operation.current()) return
+      const json = res.data
+      if (!res.ok) {
+        if ([400, 401, 403, 404, 422, 429].includes(res.status)) createUnresolved.current = false
+        throw new Error(typeof json?.error === 'string' ? json.error : '生成の応答を確認できませんでした。記事一覧をご確認ください。')
+      }
+      const jobId = json.jobId
+      const articleId = json.articleId
+      if (json.success !== true || typeof articleId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(articleId) ||
+        (jobId !== null && (typeof jobId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(jobId)))) throw new Error('生成の応答を確認できませんでした。記事一覧をご確認ください。')
+      createUnresolved.current = false
+      const destination = jobId ? `/seo/jobs/${jobId}?auto=1` : `/seo/articles/${articleId}`
+      confirmedDestination.current = destination
+      setCreatedDestination(destination)
+      router.push(destination)
     } catch (e: any) {
-      setError(e?.message || '生成に失敗しました')
+      if (!operation.current()) return
+      setCreationUncertain(createUnresolved.current)
+      setError(confirmedDestination.current ? '記事は保存済みです。下のリンクから作成済みの記事を開いてください。' : createUnresolved.current ? '作成結果を確認できませんでした。二重作成を避けるため、記事一覧で保存状況をご確認ください。' : e?.message || '生成に失敗しました')
       setLoading(false)
-    }
+    } finally { operation.finish() }
   }
 
   const canProceed = useMemo(() => {
@@ -281,6 +346,9 @@ export default function SeoTestPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <Toaster position="top-center" />
+      {creationUncertain && <p role="alert" className="p-4 text-amber-900">作成結果の確認が必要です。<Link href="/seo/articles" className="ml-2 underline">記事一覧で保存状況を確認する</Link></p>}
+      {createdDestination && <p role="status" className="p-4 text-emerald-900">記事を作成しました。<Link href={createdDestination} className="ml-2 underline">作成済みの記事を開く</Link></p>}
+      <fieldset disabled={loading || creationUncertain || Boolean(createdDestination)} className="m-0 min-w-0 border-0 p-0">
 
       {/* ヘッダー */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
@@ -644,7 +712,7 @@ export default function SeoTestPage() {
                           <div className="flex items-center justify-between mb-2">
                             <label className="text-base font-black text-slate-800">記事タイトル <span className="text-red-500">*</span></label>
                             <button
-                              type="button" onClick={generateTitleCandidates} disabled={titleLoading || mainKeyword.trim().length < 2}
+                              type="button" onClick={generateTitleCandidates} disabled={!requests.allowed || Boolean(createdDestination) || loading || titleLoading || mainKeyword.trim().length < 2}
                               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-blue-600 text-white text-xs font-black shadow-sm hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                             >
                               {titleLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
@@ -860,7 +928,7 @@ export default function SeoTestPage() {
                       次へ <ArrowRight className="w-4 h-4" />
                     </button>
                   ) : (
-                    <button type="button" onClick={handleGenerate} disabled={loading || !canProceed}
+                    <button type="button" onClick={handleGenerate} disabled={!requests.allowed || Boolean(createdDestination) || creationUncertain || titleLoading || loading || !canProceed}
                       className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-black shadow-lg shadow-blue-500/30 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
                       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
@@ -868,11 +936,13 @@ export default function SeoTestPage() {
                     </button>
                   )}
                 </div>
+                {status === 'unauthenticated' && <p className="mt-3 text-sm text-slate-600">タイトル候補と記事の生成にはログインが必要です。<Link href="/auth/signin?callbackUrl=%2Fseo%2Ftemplate" className="ml-2 underline">ログインして続ける</Link></p>}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+      </fieldset>
     </div>
   )
 }

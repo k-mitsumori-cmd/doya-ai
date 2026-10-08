@@ -1,0 +1,476 @@
+{
+  "checkedAt": "2026-10-08T08:11:16.626Z",
+  "expected": 115,
+  "passed": 115,
+  "cases": [
+    {
+      "name": "banner recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "banner old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "seo recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "seo old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "interview recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "interview old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "persona recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "persona old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "hr recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "hr old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "kintai recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "kintai old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "doyalist recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "doyalist old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "promane recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "promane old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "doyaslide recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "doyaslide old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "cunning recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "cunning old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "sfa recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "sfa old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "shodan recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "shodan old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "aio recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "aio old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "mensetsu recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "mensetsu old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "quote recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "quote old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "aishodan recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "aishodan old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "adimage recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "adimage old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "banner navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "banner new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "seo navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "seo new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "interview navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "interview new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "persona navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "persona new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "hr navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "hr new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "kintai navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "kintai new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "doyalist navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "doyalist new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "promane navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "promane new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "doyaslide navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "doyaslide new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "cunning navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "cunning new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "sfa navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "sfa new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "shodan navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "shodan new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "aio navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "aio new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "mensetsu navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "mensetsu new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "quote navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "quote new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "aishodan navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "aishodan new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "adimage navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "adimage new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "Late quota suppressed across path organization",
+      "passed": true
+    },
+    {
+      "name": "Late quota suppressed across path organization round trip",
+      "passed": true
+    },
+    {
+      "name": "Late quota suppressed across query organization",
+      "passed": true
+    },
+    {
+      "name": "Late quota suppressed across query organization round trip",
+      "passed": true
+    },
+    {
+      "name": "Late quota suppressed across service navigation",
+      "passed": true
+    },
+    {
+      "name": "Path organization keeps current billing owner action",
+      "passed": true
+    },
+    {
+      "name": "SFA pricing scope follows actual route /sfa/pricing?org=alpha",
+      "passed": true
+    },
+    {
+      "name": "SFA pricing scope follows actual route /sfa/pricing/?org=alpha",
+      "passed": true
+    },
+    {
+      "name": "SFA pricing scope follows actual route /sfa/%E6%97%A5%E6%9C%AC%E8%AA%9E/deals",
+      "passed": true
+    },
+    {
+      "name": "SFA pricing scope follows actual route /sfa/pricing",
+      "passed": true
+    },
+    {
+      "name": "SFA pricing scope follows actual route /sfa/invite/synthetic-token",
+      "passed": true
+    },
+    {
+      "name": "SFA pricing scope follows actual route /sfa/pricing?org=%E6%97%A5%E6%9C%AC%E8%AA%9E%26scope%3D%E5%88%A5%E7%B5%84%E7%B9%94",
+      "passed": true
+    },
+    {
+      "name": "Current non-owner never receives pricing action",
+      "passed": true
+    },
+    {
+      "name": "Query organization notice hides immediately on query-only navigation",
+      "passed": true
+    },
+    {
+      "name": "Late previous-account quota response does not show for new account",
+      "passed": true
+    },
+    {
+      "name": "FREE PRO FREE transitions do not revive an old free notice",
+      "passed": true
+    },
+    {
+      "name": "Guest login logout transitions do not revive old login prompt",
+      "passed": true
+    },
+    {
+      "name": "Explicit quota event remains usable; Escape dismisses and restores focus",
+      "passed": true
+    },
+    {
+      "name": "Actual root boundary keeps application rendered while quota navigation hooks suspend",
+      "passed": true
+    },
+    {
+      "name": "bannerPlan change hides current notice immediately",
+      "passed": true
+    },
+    {
+      "name": "bannerPlan round trip never revives previous notice",
+      "passed": true
+    },
+    {
+      "name": "bannerPlan delayed earlier response is rejected through plan ABA",
+      "passed": true
+    },
+    {
+      "name": "bannerPlan new current plan still receives a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "seoPlan change hides current notice immediately",
+      "passed": true
+    },
+    {
+      "name": "seoPlan round trip never revives previous notice",
+      "passed": true
+    },
+    {
+      "name": "seoPlan delayed earlier response is rejected through plan ABA",
+      "passed": true
+    },
+    {
+      "name": "seoPlan new current plan still receives a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "kantanPlan change hides current notice immediately",
+      "passed": true
+    },
+    {
+      "name": "kantanPlan round trip never revives previous notice",
+      "passed": true
+    },
+    {
+      "name": "kantanPlan delayed earlier response is rejected through plan ABA",
+      "passed": true
+    },
+    {
+      "name": "kantanPlan new current plan still receives a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "interviewPlan change hides current notice immediately",
+      "passed": true
+    },
+    {
+      "name": "interviewPlan round trip never revives previous notice",
+      "passed": true
+    },
+    {
+      "name": "interviewPlan delayed earlier response is rejected through plan ABA",
+      "passed": true
+    },
+    {
+      "name": "interviewPlan new current plan still receives a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "openingPlan change hides current notice immediately",
+      "passed": true
+    },
+    {
+      "name": "openingPlan round trip never revives previous notice",
+      "passed": true
+    },
+    {
+      "name": "openingPlan delayed earlier response is rejected through plan ABA",
+      "passed": true
+    },
+    {
+      "name": "openingPlan new current plan still receives a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "doyalistPlan change hides current notice immediately",
+      "passed": true
+    },
+    {
+      "name": "doyalistPlan round trip never revives previous notice",
+      "passed": true
+    },
+    {
+      "name": "doyalistPlan delayed earlier response is rejected through plan ABA",
+      "passed": true
+    },
+    {
+      "name": "doyalistPlan new current plan still receives a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "kintaiPlan change hides current notice immediately",
+      "passed": true
+    },
+    {
+      "name": "kintaiPlan round trip never revives previous notice",
+      "passed": true
+    },
+    {
+      "name": "kintaiPlan delayed earlier response is rejected through plan ABA",
+      "passed": true
+    },
+    {
+      "name": "kintaiPlan new current plan still receives a fresh quota action",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/components/limits/ServiceLimitProvider.tsx": "80fffd613d05d070f329734372a91b843a6653166a478a4debb15ef36b439af8",
+    "src/components/Providers.tsx": "ad65db076b6298637d58ea9057a0b9e7493f1e8d141edde71f6f912d6f891f2b",
+    "src/lib/service-limit-ui.ts": "6fe543af3fa87ff9233c35e3f39371b99e2f7efd9353c2e97763046ad29665f2",
+    "src/lib/services.ts": "88041e2debc0d8f865506719031426653ebb0db4f8827e7a2bced72ac80eabeb",
+    "src/lib/unified-plan.ts": "b15b8773e24358283e89d20601c63cdf55248bdec9945d92c296c3e647d7ef80",
+    "src/lib/plan-utils.ts": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86"
+  },
+  "scope": "Actual shared provider/classifier/fetch observer and root Suspense boundary mounted with synthetic sessions/quota replies and mocked Next navigation/trial eligibility;17 active service IDs, path/query/actor/unified-plan transitions and all7 actual independent session service-plan transitions including delayed/ABA replies. Actual Next/browser/customer/provider operations remain unverified."
+}

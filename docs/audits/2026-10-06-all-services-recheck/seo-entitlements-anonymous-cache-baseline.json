@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-08T07:58:11.784761+00:00",
+  "path": "/api/seo/entitlements",
+  "status": 200,
+  "isLoggedIn": false,
+  "plan": "GUEST",
+  "remaining": {
+    "articles": 0
+  },
+  "limits": {
+    "articlesPerMonth": 0,
+    "articlesTotalGuest": 0,
+    "imagesAllowed": false
+  },
+  "headers": {
+    "cache-control": "public, max-age=0, must-revalidate",
+    "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "age": "0",
+    "x-vercel-cache": "MISS"
+  },
+  "scope": "Anonymous no-cookie GET only. ensureSeoSchema verified current source uses read-only information_schema query; no customer account, provider/generation or DB mutations."
+}
