@@ -353,6 +353,23 @@ export const adimageTheme: SidebarTheme = {
   zapColor: 'text-lime-300 fill-lime-300',
 }
 
+/** ドヤAI質問リンク — ブランドブルー（#0066ff。LP の ACCENT と揃える） */
+export const asklinkTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-[#0066ff] via-blue-700 to-[#0a0f3c]',
+  navText: 'text-blue-100/75',
+  navTextIcon: 'text-blue-200/75',
+  sectionText: 'text-blue-200/55',
+  toggleText: 'text-blue-700',
+  toggleHover: 'hover:bg-blue-50',
+  brandingText: 'text-blue-100/35',
+  profileBg: 'bg-blue-950/30',
+  avatarBg: 'bg-blue-600',
+  loginText: 'text-blue-700',
+  loginHover: 'hover:bg-blue-50',
+  aiBubbleBg: 'bg-blue-600',
+  zapColor: 'text-sky-300 fill-sky-300',
+}
+
 /** ドヤ面接官 — ブルー（採用・信頼） */
 export const mensetsuTheme: SidebarTheme = {
   bgGradient: 'bg-gradient-to-b from-blue-700 via-blue-800 to-indigo-900',

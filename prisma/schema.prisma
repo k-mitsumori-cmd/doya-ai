@@ -4563,3 +4563,61 @@ model PersonaUsageDay {
   @@id([userId, day])
   @@map("persona_usage_days")
 }
+
+// ============================================================
+// ドヤAI質問リンク（asklink）— 仕様: reference/services/asklink.md
+// ------------------------------------------------------------
+// サイトURL1つから「AIに聞く」リンク2本とポップアップ用バナー3枚を作る。
+// ⚠️ userId でスコープする（ログイン必須）。他人の結果は findFirst({ id, userId }) で弾く。
+// ⚠️ 利用枠の単位は run。作成時に1件として数える（失敗・削除しても戻さない。読み取り不能は行を作らない）。
+// ============================================================
+model AskLinkRun {
+  id               String   @id @default(cuid())
+  userId           String
+  sourceUrl        String
+  /// 'b2b' | 'b2c'（利用者が切り替え可能）
+  audience         String   @default("b2b")
+  /// AIが判定した ToB/ToC（切り替え前の値）
+  detectedAudience String   @default("b2b")
+  /// 抽出結果（会社名・サービス内容・強み・対象顧客・各種URL・色）。'manual' のときは手入力
+  site             Json
+  /// サイト上で実際に見つかったURLの集合。質問文中のURLはこの中にしか置けない
+  allowedUrls      Json
+  /// 'site' | 'manual'
+  source           String   @default("site")
+  /// 質問リンク2本 [{ key, buttonLabel, question, url, check }]
+  links            Json?
+  /// バナーの文言（見出し・小見出し・吹き出し3つ）
+  bannerCopy       Json?
+  /// ToB/ToC 切り替え等によるリンク再生成の回数（乱用防止）
+  linkGenerations  Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  banners AskLinkBanner[]
+
+  @@index([userId, createdAt])
+  @@map("asklink_run")
+}
+
+model AskLinkBanner {
+  id          String     @id @default(cuid())
+  runId       String
+  run         AskLinkRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  /// 'landscape' | 'square' | 'portrait'
+  kind        String
+  /// Storage のパス（署名URLは都度発行）
+  imagePath   String?
+  /// 'pending' | 'done' | 'failed'
+  status      String     @default("pending")
+  /// OCR照合の結果 { ok, needsReview, missing[], detectedText? }
+  verify      Json?
+  model       String?
+  /// 生成を実行した回数（作り直しの上限判定）
+  generations Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([runId, kind])
+  @@map("asklink_banner")
+}

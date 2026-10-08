@@ -1627,6 +1627,52 @@ export const SERVICES: Service[] = [
     // 開発中の間は NEW ではなく BETA を出す（上の badge）
     isNew: true,
   },
+
+  // ----------------------------------------
+  // ドヤAI質問リンク（AskLink）
+  // 仕様: reference/services/asklink.md
+  // ----------------------------------------
+  {
+    id: 'asklink',
+    name: 'ドヤAI質問リンク',
+    shortName: '質問リンク',
+    description: 'サイトのURLを入れるだけで、ChatGPTに質問が届く「AIに聞く」リンクとポップアップ用バナーができます。',
+    longDescription:
+      '自社サイトのURLを1つ入力すると、サイトの内容と主要ページを読み取り、訪問者がそのままChatGPTに相談できる「AIに聞く」リンクを2本と、ボタン付きのポップアップ用バナー画像を3サイズ作ります。質問文はサイトに合わせて、訪問者本人の言葉として自然に読める形で作られ、文中のURLはサイト上で実際に確認できたものだけが入ります。リンクと画像はワンクリックでコピーでき、HubSpotなどのポップアップツールに貼るだけで設置が終わります。開発もチャットボットの導入も要りません。',
+    // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
+    icon: '',
+    color: 'blue',
+    gradient: 'from-[#0066ff] to-[#0a0f3c]',
+    bgGradient: 'from-blue-50 to-sky-50',
+    href: '/asklink',
+    dashboardHref: '/asklink',
+    pricingHref: '/asklink/pricing',
+    guideHref: '/asklink',
+    features: [
+      'URLを入れるだけでサイトの内容と主要ページを読み取り',
+      'ChatGPTに質問が届く「AIに聞く」リンクを2本作成',
+      'ToB / ToC を判定し、質問の内容を切り替え',
+      '質問文のURLはサイトで確認できたものだけ（機械チェック）',
+      'ボタン付きポップアップバナーを横長・正方形・縦長の3サイズで作成',
+      'URL・質問文・画像・設置用HTMLをワンクリックでコピー',
+    ],
+    useCases: [
+      'チャットボットを入れずに、訪問者の相談の入口を置きたい',
+      '無料相談の前に、訪問者に準備を済ませてきてほしい',
+      'ポップアップに置く「AIに聞く」ボタンをすぐに用意したい',
+    ],
+    // ⚠️ 回数の正本は plan-limit.ts の asklinkRuns。ここを変えたら両方直す
+    pricing: {
+      free: { name: '無料プラン', limit: '3回まで（1回＝リンク2本＋バナー3枚）', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '月30回まで作成できます', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+    },
+    // 開発中。UNLISTED_SERVICE_IDS に入れ、LP は noindex
+    status: 'coming_soon',
+    badge: 'BETA',
+    category: 'web',
+    order: 32,
+    requiresAuth: true,
+  },
 ]
 
 // ============================================
@@ -1678,7 +1724,7 @@ export const RETIRED_SERVICE_IDS = new Set([
 // トップ・sitemap・llms.txt・公開LP（/all-in-one）からは消えるが、
 // ログイン後のツール切替・サイドバーの他サービス一覧・直リンクでは従来どおり使える。
 // 公開する時はここから id を外し、各 layout.tsx の noindex も一緒に外すこと。
-export const UNLISTED_SERVICE_IDS = new Set<string>([]) // 2026-09-07: 全17サービスLP公開
+export const UNLISTED_SERVICE_IDS = new Set<string>(['asklink']) // 2026-09-07: 全17サービスLP公開 / 2026-10-08: asklink は開発中
 
 // 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中。
 // トップページ・sitemap・llms.txt・公開LP がこのリストを参照するため、
