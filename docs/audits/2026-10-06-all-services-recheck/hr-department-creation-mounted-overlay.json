@@ -1,0 +1,109 @@
+{
+  "checkedAt": "2026-10-08T18:19:12.075Z",
+  "expected": 24,
+  "passed": 24,
+  "cases": [
+    {
+      "scenario": "intent is durable before POST; confirmed result prevents new operation until explicit acknowledgment",
+      "passed": true
+    },
+    {
+      "scenario": "lost acknowledgment survives reload and GET-only recovery finds result without a second POST",
+      "passed": true
+    },
+    {
+      "scenario": "same-event duplicate create sends one POST",
+      "passed": true
+    },
+    {
+      "scenario": "explicit retry uses immutable saved input and same operation after missing receipt",
+      "passed": true
+    },
+    {
+      "scenario": "retry is unavailable until GET confirms not_received",
+      "passed": true
+    },
+    {
+      "scenario": "cancellation records DELETE fence and keeps pending until acknowledgment",
+      "passed": true
+    },
+    {
+      "scenario": "cancellation racing a committed create displays created and retains acknowledgment",
+      "passed": true
+    },
+    {
+      "scenario": "deleted result cannot retry or resurrect; explicit acknowledgment can end pending",
+      "passed": true
+    },
+    {
+      "scenario": "malformed200 keeps intent and does not confirm creation",
+      "passed": true
+    },
+    {
+      "scenario": "wrong organization success cannot enter result",
+      "passed": true
+    },
+    {
+      "scenario": "unknown recovery state cannot be accepted or acknowledged",
+      "passed": true
+    },
+    {
+      "scenario": "storage write failure sends no POST",
+      "passed": true
+    },
+    {
+      "scenario": "missing Web Locks sends no POST or unsafe local operation",
+      "passed": true
+    },
+    {
+      "scenario": "actor ABA prevents old result and old finalizer from clearing a newer pending request",
+      "passed": true
+    },
+    {
+      "scenario": "organization change hides previous private input and result",
+      "passed": true
+    },
+    {
+      "scenario": "auth loading hides intent and makes no private recovery or create request",
+      "passed": true
+    },
+    {
+      "scenario": "two mounted tabs contend on the same durable intent; only one POST",
+      "passed": true
+    },
+    {
+      "scenario": "late response cannot accept or erase a replaced storage intent",
+      "passed": true
+    },
+    {
+      "scenario": "fetch deadline leaves durable pending and never retries POST automatically",
+      "passed": true
+    },
+    {
+      "scenario": "body deadline covers a response whose JSON never finishes",
+      "passed": true
+    },
+    {
+      "scenario": "unmount aborts request while preserving recovery intent",
+      "passed": true
+    },
+    {
+      "scenario": "corrupt local operation fails closed without POST or deletion",
+      "passed": true
+    },
+    {
+      "scenario": "failed storage removal cannot forget an acknowledged created result",
+      "passed": true
+    },
+    {
+      "scenario": "401 offers login recovery; focus cannot silently erase the login requirement",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/lib/hr/department-settings-client.ts": "5b945103fb69dc8e28d0e03681dd07a60c8c8cf5f9f68acf5c06143e2cfab157",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/lib/hr/use-department-creation.ts": "8b67409f2648cc2e19386b9895592dc2ba4e3b17193a6f462dfa7b88eed4e234",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-creation-mounted.cjs": "881c85577a0f58d9a0aa597b81b276c81b9764837f434e14b02f092a57d2abd9"
+  },
+  "scope": "Actual durable creation hook/parser mounted under React StrictMode with actual JSDOM storage, serialized synthetic Web Locks, controlled35s fetch/body deadlines and synthetic HTTP. Source overlay only. API/SQL independently require realPG74 and actualNext; full settings/native/browser and production integration are not claimed. No provider, email or production/customer DB writes."
+}

@@ -1,8 +1,8 @@
 {
-  "checkedAt": "2026-10-08T17:33:37.029726+00:00",
-  "status": "root-integrated-awaiting-fresh-full163-and-actualNext53",
+  "checkedAt": "2026-10-08T17:50:36.239472+00:00",
+  "status": "exact757-CI-success-READY-public-passed",
   "rootApplied": true,
-  "deployed": false,
+  "deployed": true,
   "productionFiles": [
     "src/lib/hr/department-input.ts",
     "src/lib/hr/department-mutation.ts",
@@ -33,7 +33,11 @@
       "cache": 3
     },
     "wholeRootVirtualTypes": true,
-    "cleanIsolatedPostgresShutdown": true
+    "cleanIsolatedPostgresShutdown": true,
+    "fullFrozenGates": 163,
+    "original156RetainedInOrder": true,
+    "actualNextCases": 53,
+    "frozenSourceChanges": []
   },
   "preparedActualNext": {
     "file": "verify-hr-department-input-next.cjs",
@@ -66,5 +70,26 @@
     "hr-department-settings-repair-plan.json",
     "hr-department-operation-repair-plan.json",
     "hr-department-read-repair-plan.json"
-  ]
+  ],
+  "commit": "757cbf1176077cdae38c956a409dcc565920521a",
+  "pushed": true,
+  "productionVerified": true,
+  "releaseEvidence": {
+    "tracking": "hr-department-input-release-tracking.json",
+    "commit": "757cbf1176077cdae38c956a409dcc565920521a",
+    "ci": {
+      "conclusion": "success",
+      "databaseId": 37817635857,
+      "headSha": "757cbf1176077cdae38c956a409dcc565920521a",
+      "status": "completed"
+    },
+    "deployment": {
+      "id": "dpl_5qKT6JJdFRCPAhbrArMfxXPvHwJo",
+      "url": "doya-dhdzd38rn-surisutas-projects.vercel.app",
+      "readyState": "READY",
+      "commit": "757cbf1176077cdae38c956a409dcc565920521a",
+      "target": "production"
+    },
+    "publicVerificationExitCode": 0
+  }
 }

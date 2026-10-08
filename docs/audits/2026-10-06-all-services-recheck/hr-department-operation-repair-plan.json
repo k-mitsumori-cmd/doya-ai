@@ -1,0 +1,132 @@
+{
+  "checkedAt": "2026-10-08T18:10:35.993399+00:00",
+  "status": "root-integrated-fresh-full176-running",
+  "rootApplied": true,
+  "deployed": false,
+  "productionFiles": [
+    "src/lib/hr/department-operation.ts",
+    "src/app/api/hr/departments/route.ts",
+    "src/app/api/hr/department-operation/route.ts",
+    "src/lib/hr/department-settings-client.ts",
+    "src/lib/hr/use-department-creation.ts",
+    "src/app/hr/settings/page.tsx"
+  ],
+  "overlay": "hr-department-operation-repair-overlay",
+  "prerequisite": "Current root HR department input/concurrency full163 and own release verification",
+  "repair": "Optional immutable operation UUID and expected organization; durable actor/org-keyed receipt in existing HrAuditLog, atomic with department creation under organization/member locks. Read-only exact-operation GET recovery. DELETE cancellation fence serializes with delayed create. Deleted department returns deleted/410 and cannot resurrect. Original legacy POST remains compatible; caller must opt in.",
+  "schemaChange": false,
+  "verification": {
+    "realPostgresCases": 74,
+    "original47InputConcurrencyCasesRetained": true,
+    "newOperationCases": 24,
+    "bothCancellationCreateWaitLocksActuallyObserved": true,
+    "cleanIsolatedPostgresShutdown": true,
+    "scope": "Actual API/helpers/full-schema Unix-only PostgreSQL with synthetic sessions; no production or customer writes",
+    "virtualTypeFiles": 6,
+    "virtualTypesPassed": true,
+    "scopedDepartmentReadCases": 3,
+    "fullPageMountedCases": 31,
+    "durableHookMountedCases": 24,
+    "transportCases": 9,
+    "proofReports": {
+      "hr-department-settings-durable-mounted-overlay.json": {
+        "checkedAt": "2026-10-08T17:49:33.165Z",
+        "expected": 18,
+        "passed": 18
+      },
+      "hr-department-creation-mounted-overlay.json": {
+        "checkedAt": "2026-10-08T17:49:32.997Z",
+        "expected": 24,
+        "passed": 24
+      },
+      "hr-department-settings-transport-overlay.json": {
+        "checkedAt": "2026-10-08T17:50:02.788Z",
+        "expected": 9,
+        "passed": 9
+      },
+      "hr-department-operation-overlay-typecheck.json": {
+        "checkedAt": "2026-10-08T17:49:59.561Z",
+        "passed": true
+      },
+      "hr-department-operation-postgres.json": {
+        "checkedAt": "2026-10-08T17:44:44.741Z",
+        "expected": 74,
+        "passed": 74
+      }
+    },
+    "nativeBrowserCases": 8,
+    "nativeBrowserReport": "hr-department-settings-durable-native-overlay.json",
+    "originalLoaderCases": 9,
+    "actorRepairProofReports": {
+      "hr-department-settings-durable-mounted-overlay.json": {
+        "checkedAt": "2026-10-08T17:58:00.101Z",
+        "expected": 27,
+        "passed": 27
+      },
+      "hr-department-settings-durable-native-overlay.json": {
+        "checkedAt": "2026-10-08T17:58:07.944Z",
+        "expected": 8,
+        "passed": 8
+      },
+      "hr-department-operation-overlay-typecheck.json": {
+        "checkedAt": "2026-10-08T17:58:46.383Z",
+        "passed": true
+      },
+      "hr-department-settings-legacy-load-overlay.json": {
+        "checkedAt": "2026-10-08T17:58:42.139Z",
+        "expected": 9,
+        "passed": 9
+      }
+    },
+    "currentProofReports": {
+      "hr-department-settings-durable-mounted-overlay.json": {
+        "checkedAt": "2026-10-08T18:04:03.538Z",
+        "expected": 31,
+        "passed": 31
+      },
+      "hr-department-settings-durable-native-overlay.json": {
+        "checkedAt": "2026-10-08T18:01:24.807Z",
+        "expected": 8,
+        "passed": 8
+      },
+      "hr-department-operation-overlay-typecheck.json": {
+        "checkedAt": "2026-10-08T18:01:58.081Z",
+        "passed": true
+      }
+    },
+    "isolatedActualNextCases": 68,
+    "isolatedActualNextStatus": "passed-clean-server-and-PG-shutdown",
+    "legacyRelated": 33,
+    "legacyAccess": 1,
+    "legacyInput": 6,
+    "legacyCache": 3,
+    "original163RetainedExactlyInOrder": true
+  },
+  "userFlowBaseline": [
+    "hr-department-settings-baseline.json",
+    "hr-department-settings-response-loss-baseline.json",
+    "hr-department-response-loss-postgres-baseline.json"
+  ],
+  "pending": [
+    "Finish same live full176 session39882 including fresh integrated actualNext68; inspect any actual failure without weakening original gates",
+    "Exact reviewed commit/push, CI success, READY and prepared anonymous public verifier; no production mutations",
+    "Deep5000 department read repair and full17-service audit remain incomplete"
+  ],
+  "scope": "Separate candidate from running input163 frozen source. Overall17services2074criteria188GET audit remains incomplete; new operationGET is candidate-only and must be inventoried on integration.",
+  "additionalFinding": {
+    "report": "hr-settings-actor-retention-native-baseline.json",
+    "productionOccurrence": "not verified",
+    "releaseBlocking": true,
+    "status": "candidate repaired; expanded integration/release verification remains"
+  },
+  "candidateBuild": {
+    "status": "running",
+    "pid": 75797,
+    "app": "/tmp/doya-hr-operation-build-395ea14c/app",
+    "startedAt": "2026-10-08T18:03:33.349122+00:00",
+    "session": 22686
+  },
+  "currentGate": "docs/audits/2026-10-06-all-services-recheck/hr-department-operation-release-08915923-b8ae-459b-9b48-e55ec70cca9f",
+  "gateSession": 39882,
+  "gatePid": 76582
+}

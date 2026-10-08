@@ -1,0 +1,78 @@
+{
+  "checkedAt": "2026-10-08T18:10:35.993399+00:00",
+  "status": "root-integrated-fresh-full176-running",
+  "rootApplied": true,
+  "baseline": "hr-settings-actor-retention-native-baseline.json",
+  "requirements": [
+    "Hide all previous actor organization/member/audit/form data during auth loading, unauthenticated state and actor changes",
+    "Reload settings and scoped department data for new authenticated actor; reject stale responses including actor ABA",
+    "Abort pending reads and guard all settings/member/invite/ownership/deletion async callbacks, notifications and finalizers across scope changes",
+    "Clear private draft/token/link/member-search state and derived authority across scope transitions",
+    "Preserve original initial loader tests and durable operation pending recovery semantics; new actor cannot access old stored operation",
+    "Verify mounted/native auth transitions, overlapping old/new requests, actual Next/session and full frozen gate before release"
+  ],
+  "scope": "Actual candidate full page native reproduction; no production data exposure occurrence claimed. Prior6-case native durable proof alone cannot support release.",
+  "deployed": false,
+  "repair": "Keyed authenticated actor scope remounts all private settings state. Auth loading/unauthenticated renders no organization form. Scoped35s reads/writes abort on unmount, reject stale response/body, guard notifications and avoid old-scope follow-up requests; member role/remove catch abort errors. Clipboard fallback stops after unmount.",
+  "verification": {
+    "hr-department-settings-durable-mounted-overlay.json": {
+      "checkedAt": "2026-10-08T17:58:00.101Z",
+      "expected": 27,
+      "passed": 27
+    },
+    "hr-department-settings-durable-native-overlay.json": {
+      "checkedAt": "2026-10-08T17:58:07.944Z",
+      "expected": 8,
+      "passed": 8
+    },
+    "hr-department-operation-overlay-typecheck.json": {
+      "checkedAt": "2026-10-08T17:58:46.383Z",
+      "passed": true
+    },
+    "hr-department-settings-legacy-load-overlay.json": {
+      "checkedAt": "2026-10-08T17:58:42.139Z",
+      "expected": 9,
+      "passed": 9
+    },
+    "currentProofReports": {
+      "hr-department-settings-durable-mounted-overlay.json": {
+        "checkedAt": "2026-10-08T18:04:03.538Z",
+        "expected": 31,
+        "passed": 31
+      },
+      "hr-department-settings-durable-native-overlay.json": {
+        "checkedAt": "2026-10-08T18:01:24.807Z",
+        "expected": 8,
+        "passed": 8
+      },
+      "hr-department-operation-overlay-typecheck.json": {
+        "checkedAt": "2026-10-08T18:01:58.081Z",
+        "passed": true
+      }
+    },
+    "fullPageMountedCases": 31,
+    "nativeBrowserCases": 8,
+    "isolatedActualNextCases": 68,
+    "isolatedActualNextStatus": "passed-clean-server-and-PG-shutdown",
+    "legacyRelated": 33,
+    "legacyAccess": 1,
+    "legacyInput": 6,
+    "legacyCache": 3,
+    "original163RetainedExactlyInOrder": true
+  },
+  "pending": [
+    "Finish same live full176 session39882 including fresh integrated actualNext68; inspect any actual failure without weakening original gates",
+    "Exact reviewed commit/push, CI success, READY and prepared anonymous public verifier; no production mutations",
+    "Deep5000 department read repair and full17-service audit remain incomplete"
+  ],
+  "candidateBuild": {
+    "status": "running",
+    "pid": 75797,
+    "app": "/tmp/doya-hr-operation-build-395ea14c/app",
+    "startedAt": "2026-10-08T18:03:33.349122+00:00",
+    "session": 22686
+  },
+  "currentGate": "docs/audits/2026-10-06-all-services-recheck/hr-department-operation-release-08915923-b8ae-459b-9b48-e55ec70cca9f",
+  "gateSession": 39882,
+  "gatePid": 76582
+}

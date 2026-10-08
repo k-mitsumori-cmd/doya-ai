@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-10-08T18:19:12.231Z",
+  "expected": 9,
+  "passed": 9,
+  "cases": [
+    {
+      "name": "GET preserves status and body with no-store and a single request",
+      "passed": true
+    },
+    {
+      "name": "DELETE preserves status and body with no-store and a single request",
+      "passed": true
+    },
+    {
+      "name": "fetch deadline aborts and never retries DELETE",
+      "passed": true
+    },
+    {
+      "name": "body deadline aborts and never retries DELETE",
+      "passed": true
+    },
+    {
+      "name": "parent abort interrupts pending body and removes parent listener",
+      "passed": true
+    },
+    {
+      "name": "already aborted parent sends no request",
+      "passed": true
+    },
+    {
+      "name": "invalid JSON rejects without retry",
+      "passed": true
+    },
+    {
+      "name": "network rejection rejects without retry",
+      "passed": true
+    },
+    {
+      "name": "non-success HTTP status remains available to caller",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay/src/lib/hr/department-settings-client.ts": "5b945103fb69dc8e28d0e03681dd07a60c8c8cf5f9f68acf5c06143e2cfab157",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-transport.cjs": "32019d4662237738f3d6f5d2d55f4df844aed862575efd1e6e47c74e7b670391"
+  },
+  "scope": "Actual candidate transport with controlled timers and synthetic fetch. Fetch and body deadlines, caller abort, no blind DELETE retries, cleanup and HTTP/JSON handling. No production requests."
+}

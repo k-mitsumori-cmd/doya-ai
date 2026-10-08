@@ -1,0 +1,69 @@
+{
+  "checkedAt": "2026-10-08T18:20:01.688830+00:00",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/hr-department-operation-release-08915923-b8ae-459b-9b48-e55ec70cca9f",
+  "reviewStatus": "full176-and-integratedNext68-passed-awaiting-exact-publish",
+  "productionFiles": [
+    "src/app/api/hr/department-operation/route.ts",
+    "src/app/api/hr/departments/route.ts",
+    "src/app/hr/settings/page.tsx",
+    "src/lib/hr/department-operation.ts",
+    "src/lib/hr/department-settings-client.ts",
+    "src/lib/hr/use-department-creation.ts"
+  ],
+  "regressionFiles": [
+    "scripts/security-regression/verify-hr-department-access.cjs",
+    "scripts/security-regression/verify-hr-department-input.cjs",
+    "scripts/security-regression/verify-hr-department-operation.cjs",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs",
+    "scripts/security-regression/verify-hr-load-error-ui.cjs",
+    "scripts/security-regression/verify-related-records.cjs",
+    "scripts/security-regression/run.cjs"
+  ],
+  "requiredPrimaryFiles": [
+    "src/app/api/hr/department-operation/route.ts",
+    "src/app/api/hr/departments/route.ts",
+    "src/app/hr/settings/page.tsx",
+    "src/lib/hr/department-operation.ts",
+    "src/lib/hr/department-settings-client.ts",
+    "src/lib/hr/use-department-creation.ts",
+    "scripts/security-regression/verify-hr-department-access.cjs",
+    "scripts/security-regression/verify-hr-department-input.cjs",
+    "scripts/security-regression/verify-hr-department-operation.cjs",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs",
+    "scripts/security-regression/verify-hr-load-error-ui.cjs",
+    "scripts/security-regression/verify-related-records.cjs",
+    "scripts/security-regression/run.cjs"
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/department-operation/route.ts": "2feabe0b4344177ea446de48f32dadf5ad73ead6d13ba043f8dfe3e4c39d8b71",
+    "src/app/api/hr/departments/route.ts": "10c38c62958527fa206ac9df8bcc7568579803faa4fb05aa35c018a7d5124ee8",
+    "src/app/hr/settings/page.tsx": "333a158d99205b4367e98305a65a691c717b67aa6d55278dd03f61468e98fb09",
+    "src/lib/hr/department-operation.ts": "04a8423447da228a050d10cc6eee0bf947991e74bc6b465280605e8d43bc6529",
+    "src/lib/hr/department-settings-client.ts": "5b945103fb69dc8e28d0e03681dd07a60c8c8cf5f9f68acf5c06143e2cfab157",
+    "src/lib/hr/use-department-creation.ts": "8b67409f2648cc2e19386b9895592dc2ba4e3b17193a6f462dfa7b88eed4e234",
+    "scripts/security-regression/verify-hr-department-access.cjs": "6f1ad684b35e7e6862f42d4562a145c23fac4de0c5e89ae54e82e86c6f9e5b10",
+    "scripts/security-regression/verify-hr-department-input.cjs": "1f5c8a3d0c16da7ac0031b1755159339eb04c023773cce00f099aa44e1230c33",
+    "scripts/security-regression/verify-hr-department-operation.cjs": "bb6eac9daa8236839c99ea2f59c9d55c758ddc85a3af4ac1a1f42c03ab7c3619",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs": "ee60f0f6681a1283d2a5b7742d9fabe0c8ac554c77c65601e1e62f49d9804d93",
+    "scripts/security-regression/verify-hr-load-error-ui.cjs": "38962677a181bc84ccf0ecceade8de323958ae894cb65621c3f3197a1fd87a8b",
+    "scripts/security-regression/verify-related-records.cjs": "5f06f9c8c9663e811f28d0220d62d395abca3f6a79b58c05d91673e7341f7629",
+    "scripts/security-regression/run.cjs": "3ab958a445907cdb6214a0c7f06aabcbb0663bc93bb6b7c0ce954bf41873558f"
+  },
+  "compiledMarkerProof": {
+    "checks": {
+      "full176": true,
+      "original163Preserved": true,
+      "frozenSourcesUnchanged": true,
+      "integratedNext68": true,
+      "isolatedDatabaseStoppedAndRemoved": true,
+      "durableServerAndSettingsCompiled": true
+    },
+    "assets": {
+      ".next/server/app/api/hr/departments/route.js": "80fece83d3ff4afc0680b410e49652ff222970694462616cfab22aabb550cec8",
+      ".next/server/app/api/hr/department-operation/route.js": "33a8a6d7941ecb33a741c438445d014f49c11c18c8c41f4f3ef1dabb43b8c6d7",
+      ".next/server/chunks/28481.js": "eb489adf9c56e9792c6a03a53cc53203562a11525a6237a41d0ab013e819d284",
+      ".next/static/chunks/app/hr/settings/page-d21d66d2d876e11d.js": "10bf5456fd62b61d42455c939814a12293bf66954deef0dd1c7ad60448f81629"
+    }
+  },
+  "scope": "Durable HR department creation receipt/recovery/cancellation; actor-scoped settings request/notification lifetime; accurate clipboard success. Source6 and regression7; full176 preserves original163, actualNext68, realPG74, mounted31/native8/hook24/transport9/types6. No schema/dependency/production customer/provider changes. Deep5000 department read and full17service2074criteria original188+newGET=189 audit remain incomplete."
+}

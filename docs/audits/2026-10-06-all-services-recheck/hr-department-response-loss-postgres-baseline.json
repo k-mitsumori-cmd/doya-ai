@@ -1,0 +1,249 @@
+{
+  "defectsReproduced": 1,
+  "repairStatus": "unresolved-durable-create-operation-needed",
+  "checkedAt": "2026-10-08T17:20:44.707Z",
+  "expected": 48,
+  "passed": 48,
+  "cases": [
+    {
+      "name": "Concurrent opposite parent changes serialize and reject the cycle",
+      "passed": true,
+      "statuses": [
+        200,
+        400
+      ]
+    },
+    {
+      "name": "Authorized active employee remains in actual org-chart response",
+      "passed": true
+    },
+    {
+      "name": "Stale administrator context cannot write after role downgrade",
+      "passed": true
+    },
+    {
+      "name": "Creation retains valid same-organization parent",
+      "passed": true
+    },
+    {
+      "name": "Delete cannot detach an employee from its department",
+      "passed": true
+    },
+    {
+      "name": "Empty leaf department can still be deleted",
+      "passed": true
+    },
+    {
+      "name": "Concurrent duplicate code creation gives one success and one known rejection",
+      "passed": true
+    },
+    {
+      "name": "Foreign organization department cannot be mutated",
+      "passed": true
+    },
+    {
+      "name": "Inactive membership is rejected after context was obtained",
+      "passed": true
+    },
+    {
+      "name": "Unknown stored role fails closed despite stale admin context",
+      "passed": true
+    },
+    {
+      "name": "Delete-first row lock makes concurrent employee assignment fail atomically without detaching the employee",
+      "passed": true,
+      "actualRowLockObserved": true
+    },
+    {
+      "name": "Assignment-first foreign-key lock makes delete wait and then reject a department containing the employee",
+      "passed": true,
+      "actualRowLockObserved": true
+    },
+    {
+      "name": "PATCH rejects invalid input 0 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 0 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH rejects invalid input 1 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 1 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH rejects invalid input 2 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 2 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH rejects invalid input 3 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 3 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH rejects invalid input 4 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 4 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH rejects invalid input 5 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 5 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH rejects invalid input 6 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 6 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH rejects invalid input 7 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 7 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH rejects invalid input 8 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 8 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH rejects invalid input 9 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 9 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH rejects invalid input 10 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 10 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH rejects invalid input 11 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 11 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH rejects invalid input 12 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "POST rejects invalid input 12 before domain writes",
+      "passed": true,
+      "domainRowsUnchanged": true
+    },
+    {
+      "name": "PATCH malformed JSON is a safe400 rather than500",
+      "passed": true
+    },
+    {
+      "name": "POST malformed JSON is a safe400 rather than500",
+      "passed": true
+    },
+    {
+      "name": "Actual unique constraint on duplicate PATCH code becomes useful400 without writes",
+      "passed": true
+    },
+    {
+      "name": "Valid long Unicode name and zero order remain accepted by actual POST/DB",
+      "passed": true
+    },
+    {
+      "name": "Valid PATCH preserves nullable links, false and minimum Int order without arbitrary name cap",
+      "passed": true
+    },
+    {
+      "name": "Maximum Prisma Int order and Japanese name remain valid",
+      "passed": true
+    },
+    {
+      "name": "Existing empty PATCH compatibility is retained",
+      "passed": true
+    },
+    {
+      "name": "Anonymous PATCH is rejected before parsing or mutation",
+      "passed": true
+    },
+    {
+      "name": "Anonymous POST is rejected before parsing or mutation",
+      "passed": true
+    },
+    {
+      "name": "Identical create after discarded successful response persists a second department: durable operation identity is absent",
+      "passed": true,
+      "defectReproduced": true,
+      "actualDatabaseRowsAdded": 2
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/hr/department-input.ts": "c8cad10c6d271c3c9ff075c9e0066d65e3a48d1af44a586a01f2efd8ca85890c",
+    "src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0",
+    "scripts/security-regression/load-typescript.cjs": "fd38a12ff81485335d48040e03b92e5011943805bbcf62cf657572df41e39a0a",
+    "docs/audits/2026-10-06-all-services-recheck/hr-department-response-loss-postgres-supervise.py": "39c41f9447255a2aaf29ccfb704cccf85bcf7e6ad5f0403b1647dadb9dba6676",
+    "src/app/api/hr/departments/[id]/route.ts": "0673b9338b845a0488df3a97624eb09d84bd8db71643641a69c0bd7462370d0c",
+    "src/lib/department-integrity.ts": "6f709deb570c4b17df571d9e1c92ed80f594400e4987c002e802dde8daec37a1",
+    "src/app/api/hr/org-chart/route.ts": "0e4c3c2057b547eac64935070c39efa908167e855a3367506d47824ea0844b41",
+    "prisma/schema.prisma": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-response-loss-postgres.cjs": "3ba5025d11d4adeceb778d627b05010afe89497fbbc3dca56a84883d44aa9cf2",
+    "src/lib/hr/department-mutation.ts": "bc75490965e859a89450b540cebac07bdea3126fd978dac8ed870849629771a8",
+    "src/app/api/hr/departments/route.ts": "bbdbdc6a094959fee8786f16f54e5c93cd922f6e3882c0a7c45315a8c04f1c01"
+  },
+  "scope": "Additional baseline reproduces duplicate durable rows on identical POST replay after discarded first response; it is a server-level response-loss model, not a real network fault or customer occurrence. All original47 cases retained. Actual HR department PATCH/POST/DELETE/GET and transaction helper against isolated full-schema Unix-only PostgreSQL. Synthetic authenticated context; real organization-row blocker makes both parent mutations contend before validation. Checks cycle exclusion, employee visibility, stale/inactive/unknown role, duplicate-code concurrency, foreign organization scope and delete integrity including both concurrent employee-assignment/delete interleavings with actual pg_stat_activity lock-wait evidence. Original12 cases retained plus35 input/compatibility/authorization cases including real unique constraint rejection and valid1200-character name. No production/customer/provider writes. Root not integrated; full frozen build/Next/browser/release remains required."
+}

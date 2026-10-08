@@ -1,0 +1,127 @@
+{
+  "checkedAt": "2026-10-08T18:08:14.619000+00:00",
+  "rootApplied": true,
+  "deployed": false,
+  "head": "757cbf1176077cdae38c956a409dcc565920521a",
+  "productionFiles": [
+    "src/app/api/hr/department-operation/route.ts",
+    "src/app/api/hr/departments/route.ts",
+    "src/app/hr/settings/page.tsx",
+    "src/lib/hr/department-operation.ts",
+    "src/lib/hr/department-settings-client.ts",
+    "src/lib/hr/use-department-creation.ts"
+  ],
+  "regressionFiles": [
+    "scripts/security-regression/verify-hr-department-access.cjs",
+    "scripts/security-regression/verify-hr-department-input.cjs",
+    "scripts/security-regression/verify-hr-department-operation.cjs",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs",
+    "scripts/security-regression/verify-hr-load-error-ui.cjs",
+    "scripts/security-regression/verify-related-records.cjs",
+    "scripts/security-regression/run.cjs"
+  ],
+  "oldGate": "docs/audits/2026-10-06-all-services-recheck/hr-department-input-release-73d6952b-e5c4-4e40-8e9d-e9c43adc4cf0",
+  "newGate": "docs/audits/2026-10-06-all-services-recheck/hr-department-operation-release-08915923-b8ae-459b-9b48-e55ec70cca9f",
+  "original163RetainedExactlyInOrder": true,
+  "expected": 176,
+  "added": [
+    [
+      "hr-department-operation-realPG74",
+      [
+        "python3",
+        "docs/audits/2026-10-06-all-services-recheck/hr-department-operation-postgres-supervise.py"
+      ]
+    ],
+    [
+      "hr-department-settings-mounted31",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-durable-mounted.cjs"
+      ]
+    ],
+    [
+      "hr-department-creation-mounted24",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-creation-mounted.cjs"
+      ]
+    ],
+    [
+      "hr-department-transport9",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-transport.cjs"
+      ]
+    ],
+    [
+      "hr-department-native8",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-durable-native.cjs"
+      ]
+    ],
+    [
+      "hr-department-operation-types6",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-operation-overlay-types.cjs"
+      ]
+    ],
+    [
+      "hr-department-operation-legacy-related",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-operation-legacy.cjs",
+        "related"
+      ]
+    ],
+    [
+      "hr-department-operation-legacy-access",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-operation-legacy.cjs",
+        "access"
+      ]
+    ],
+    [
+      "hr-department-operation-legacy-validation",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-operation-legacy.cjs",
+        "validation"
+      ]
+    ],
+    [
+      "hr-department-operation-legacy-cache",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-operation-legacy.cjs",
+        "cache"
+      ]
+    ],
+    [
+      "hr-department-settings-loader9",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-legacy-load.cjs"
+      ]
+    ],
+    [
+      "hr-department-operation-mandatory12",
+      [
+        "node",
+        "scripts/security-regression/verify-hr-department-operation.cjs"
+      ]
+    ],
+    [
+      "hr-department-operation-actualNext68",
+      [
+        "env",
+        "DOYA_USE_INTEGRATED_NEXT=1",
+        "python3",
+        "docs/audits/2026-10-06-all-services-recheck/hr-department-operation-next-supervise.py"
+      ]
+    ]
+  ],
+  "scope": "Local integration only. Fresh full176, exact release and public verification remain required. No schema/customer/provider mutations."
+}

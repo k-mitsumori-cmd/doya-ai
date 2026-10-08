@@ -2,11 +2,14 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const vm = require('node:vm')
 const ts = require('typescript')
-const { check, load } = require('./load-typescript.cjs')
+const path = require('node:path')
+process.env.DOYA_TEST_BASELINE = path.resolve('docs/audits/2026-10-06-all-services-recheck/hr-department-operation-repair-overlay')
+const { check, load, results } = require('../../../scripts/security-regression/load-typescript.cjs')
 const { parseSettingsDepartmentList } = load('src/lib/hr/department-settings-client.ts')
 
 function extract(file, functionName) {
-  const source = fs.readFileSync(file, 'utf8')
+  const candidate = path.join(process.env.DOYA_TEST_BASELINE, file)
+  const source = fs.readFileSync(fs.existsSync(candidate) ? candidate : file, 'utf8')
   const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   let code
   function visit(node) {
@@ -100,4 +103,6 @@ function run(code, response) {
     assert.equal(state.departments.length, 0)
     assert.equal(state.auditLogsError, true)
   })
+  assert.equal(results.length,9)
+  fs.writeFileSync(path.join(__dirname,'hr-department-settings-legacy-load-overlay.json'), JSON.stringify({checkedAt:new Date().toISOString(),passed:9,expected:9,cases:results,scope:'Original9 initial loader assertions retained; candidate settings source, actual parser and explicit synthetic organization metadata adapter. Other two pages unchanged. No production runtime claim.'},null,2)+'\n')
 })().catch(error => { console.error(error); process.exitCode = 1 })

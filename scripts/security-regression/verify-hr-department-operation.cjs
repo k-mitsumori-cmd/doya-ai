@@ -1,0 +1,21 @@
+const assert=require('node:assert/strict'),crypto=require('node:crypto');
+const {load,check,results}=require('./load-typescript.cjs');
+const operation=load('src/lib/hr/department-operation.ts',{'node:crypto':crypto});
+const id='12345678-1234-4234-8234-123456789abc',ctx={organizationId:'synthetic-org',userId:'synthetic-user'},input={name:'営業部',code:null,sortOrder:0};
+const fingerprint=operation.departmentCreationFingerprint(input),key='hr-dept-create-v1:'+crypto.createHash('sha256').update(JSON.stringify([ctx.organizationId,ctx.userId,id])).digest('hex');
+const department={id:'synthetic-dept',name:input.name,code:null,parentId:null,managerId:null,sortOrder:0,isActive:true};
+const receipt=()=>({id:key,organizationId:ctx.organizationId,userId:ctx.userId,action:'DEPARTMENT_CREATED',targetId:department.id,details:{version:1,operationId:id,state:'created',fingerprint,department:{...department}}});
+const transaction=(record,exists=true)=>({hrAuditLog:{findUnique:async query=>{assert.equal(query.where.id,key);return record}},hrDepartment:{findFirst:async query=>{assert.equal(query.where.organizationId,ctx.organizationId);assert.equal(query.where.id,department.id);return exists?{id:department.id}:null}}});
+(async()=>{
+ await check('Legacy request without operation headers remains opt-out',()=>assert.equal(operation.readDepartmentOperation(new Request('https://example.invalid')),null));
+ await check('Valid operation and organization headers opt in exactly',()=>{const r=operation.readDepartmentOperation(new Request('https://example.invalid',{headers:{'X-HR-Department-Operation':id,'X-HR-Organization-Id':ctx.organizationId}}));assert.equal(r.operationId,id);assert.equal(r.organizationId,ctx.organizationId)});
+ for(const headers of [{'X-HR-Department-Operation':id},{'X-HR-Organization-Id':ctx.organizationId},{'X-HR-Department-Operation':'malformed','X-HR-Organization-Id':ctx.organizationId}])await check('Incomplete or malformed operation headers fail closed '+JSON.stringify(headers),()=>assert.equal(operation.readDepartmentOperation(new Request('https://example.invalid',{headers})),false));
+ await check('Unknown receipt is not_received without creating data',async()=>assert.equal((await operation.readDepartmentCreationReceipt(transaction(null),ctx,id,fingerprint)).state,'not_received'));
+ await check('Created receipt returns immutable snapshot scoped to organization and actor',async()=>{const r=await operation.readDepartmentCreationReceipt(transaction(receipt()),ctx,id,fingerprint);assert.equal(r.state,'created');assert.equal(r.department.name,input.name)});
+ await check('Changed retry payload conflicts with saved receipt',async()=>{await assert.rejects(operation.readDepartmentCreationReceipt(transaction(receipt()),ctx,id,operation.departmentCreationFingerprint({...input,name:'Changed'})),error=>error instanceof operation.DepartmentOperationConflict)});
+ await check('Deleted department cannot be resurrected by receipt recovery',async()=>assert.equal((await operation.readDepartmentCreationReceipt(transaction(receipt(),false),ctx,id,fingerprint)).state,'deleted'));
+ await check('Cancellation receipt remains canceled',async()=>{const r=receipt();r.action='DEPARTMENT_CREATE_CANCELED';r.details.state='canceled';assert.equal((await operation.readDepartmentCreationReceipt(transaction(r),ctx,id)).state,'canceled')});
+ await check('Wrong actor receipt fails closed',async()=>{const r=receipt();r.userId='other-user';await assert.rejects(operation.readDepartmentCreationReceipt(transaction(r),ctx,id),/Invalid department receipt/)});
+ await check('Malformed saved department snapshot fails closed',async()=>{const r=receipt();r.details.department.name={private:'marker'};await assert.rejects(operation.readDepartmentCreationReceipt(transaction(r),ctx,id),/Invalid department receipt/)});
+ assert.equal(results.length,12);console.log(JSON.stringify({expected:12,passed:12,cases:results}));
+})().catch(error=>{console.error(error);process.exitCode=1});
