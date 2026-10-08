@@ -4,7 +4,7 @@ import { SITE_CONFIG, SITE_ALTERNATE_NAMES } from '@/lib/seo'
 // 統一プラン（無料 / プロ ¥9,980）の共通料金ページ。
 // ルートlayoutの title をそのまま継承するとトップページと同一 title になるため、固有titleを持たせる。
 export const metadata: Metadata = {
-  // absolute でルートlayoutの template（` | ドヤマーケAI`）の二重付与を防ぐ
+  // absolute でルートlayoutの template（` | ドヤAI`）の二重付与を防ぐ
   title: { absolute: `料金プラン｜${SITE_CONFIG.name}` },
   description: `${SITE_CONFIG.name}の料金プラン。無料プランで試せて、プロプラン（月額9,980円）なら記事生成・広告バナー・営業リスト・人事・勤怠・SFA・資料作成まで全ツールのプロ機能をプラン別の上限内で利用できます。`,
   keywords: [SITE_CONFIG.name, ...SITE_ALTERNATE_NAMES, `${SITE_CONFIG.name} 料金`, '料金プラン', '統一プラン', 'AI SaaS 料金'],

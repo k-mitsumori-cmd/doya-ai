@@ -15,7 +15,7 @@ export function GET() {
   const comingSoon = services.filter(s => s.status === 'coming_soon')
 
   const lines: string[] = [
-    '# ドヤマーケAI',
+    '# ドヤAI',
     '',
     '> 株式会社スリスタが運営するAI SaaSサービス群。記事生成・広告バナー・営業リスト・人事・勤怠・SFA・資料作成など、マーケティングと業務を支援するAIツールを1つのアカウントで利用できます。無料プランと、全ツールが使えるプロプラン（月額9,980円）の統一プラン方式です。',
     '',

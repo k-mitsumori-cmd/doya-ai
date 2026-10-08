@@ -41,7 +41,7 @@ export default function AishodanLp() {
   return (
     <LpShell serviceName={SVC.name} icon="forum" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
       <ProductHero
-        eyebrow="ドヤマーケAI"
+        eyebrow="ドヤAI"
         title="問い合わせが来た瞬間に、"
         highlight="商談が始まる。"
         subtitle="AIが音声で一次商談を進め、ヒアリング項目と適合度まで残します。見込み客はURLを開くだけ、ログインは要りません。"

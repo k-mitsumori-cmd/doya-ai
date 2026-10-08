@@ -8,7 +8,7 @@ import PlanUpdatedListener from '@/components/PlanUpdatedListener'
 // ドヤバナーAI メタデータ
 // ============================================
 // 正本は services.ts。title は「ドヤバナーAI｜…」で始まり、
-// ルートlayoutのtemplateで末尾に「| ドヤマーケAI」が付く。
+// ルートlayoutのtemplateで末尾に「| ドヤAI」が付く。
 // 配下のページ（/banner/pricing 等）は各自 metadata を持ち、
 // このLPと同じ title を継承しない（指名検索の受け皿をLPに寄せるため）。
 export const metadata: Metadata = buildServiceMetadata('banner', {

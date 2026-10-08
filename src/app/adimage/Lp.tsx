@@ -42,7 +42,7 @@ export default function AdImageLp() {
   return (
     <LpShell serviceName={SVC.name} icon="wallpaper" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
       <ProductHero
-        eyebrow="ドヤマーケAI"
+        eyebrow="ドヤAI"
         title="URLを貼るだけで、"
         highlight="入稿できる広告画像。"
         subtitle="媒体・配置ごとにサイズの揃った広告画像が出ます。文字は画像に描き込み済みで、そのまま入稿できます。"

@@ -15,7 +15,7 @@ import { ServiceDirectory } from "@/components/lp/renewal/Renewal";
 export default function HomePage() {
   return (
     <LpShell
-      serviceName="ドヤマーケAI"
+      serviceName="ドヤAI"
       icon="workspaces"
       ctaHref="/#doya-services"
       ctaLabel="サービスを選ぶ"

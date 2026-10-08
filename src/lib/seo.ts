@@ -7,9 +7,9 @@ import { SEO_PRICING, BANNER_PRICING, KANTAN_PRICING, PERSONA_PRICING } from './
 import { getServiceById } from './services'
 
 export const SITE_CONFIG = {
-  name: 'ドヤマーケAI',
-  tagline: 'ドヤマーケAIのサービス群',
-  description: 'ドヤマーケAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などをキャラクターと一緒に試せるAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉の運営文脈から生まれています。',
+  name: 'ドヤAI',
+  tagline: 'ドヤAIのサービス群',
+  description: 'ドヤAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などをキャラクターと一緒に試せるAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉の運営文脈から生まれています。',
   // 末尾スラッシュは定義時に一度だけ除去（url を使う全箇所＝org url / service url / OG url の二重スラッシュを防ぐ）
   // 既定は本番ドメイン（NEXT_PUBLIC_APP_URL 未設定でも canonical/OG が vercel.app に化けないように）
   url: (process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp').replace(/\/+$/, ''),
@@ -21,9 +21,9 @@ export const SITE_CONFIG = {
 
 // サイト名の表記ゆれ（指名検索の受け皿）。
 // 検索されうる別表記を構造化データの alternateName で明示し、
-// 「ドヤAI」「doya ai」等でもこのサイトが同一エンティティとして認識されるようにする。
+// 旧称「ドヤマーケAI」（2026-10 にドヤAIへ改称）や「doya ai」等でもこのサイトが同一エンティティとして認識されるようにする。
 export const SITE_ALTERNATE_NAMES = [
-  'ドヤAI',
+  'ドヤマーケAI',
   'ドヤ マーケAI',
   'ドヤマーケ AI',
   'Doya Marke AI',
@@ -84,9 +84,9 @@ function withoutTrailingSlash(url: string) {
 export const SERVICE_SEO = {
   // ポータル
   portal: {
-    title: 'ドヤマーケAI | AI SaaSサービス群',
-    description: 'ドヤマーケAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などを束ねたAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉が運営しています。',
-    keywords: ['ドヤマーケAI', 'ドヤマーケ', 'SaaSは死にましぇん', '株式会社スリスタ', '三森捷暉', 'AI SaaS', '記事生成', 'バナー作成', '営業支援', '人事AI', '勤怠管理', 'SFA'],
+    title: 'ドヤAI | AI SaaSサービス群',
+    description: 'ドヤAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などを束ねたAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉が運営しています。',
+    keywords: ['ドヤAI', 'ドヤマーケ', 'SaaSは死にましぇん', '株式会社スリスタ', '三森捷暉', 'AI SaaS', '記事生成', 'バナー作成', '営業支援', '人事AI', '勤怠管理', 'SFA'],
     ogImage: '/og/portal.png',
   },
   
@@ -247,8 +247,8 @@ export const SERVICE_SEO = {
 
   // 管理画面
   admin: {
-    title: '管理画面 | ドヤマーケAI',
-    description: 'ドヤマーケAIの管理画面。ユーザー管理、統計、設定などを一元管理。',
+    title: '管理画面 | ドヤAI',
+    description: 'ドヤAIの管理画面。ユーザー管理、統計、設定などを一元管理。',
     ogImage: '/og/portal.png',
   },
   
@@ -263,8 +263,8 @@ export const SERVICE_SEO = {
   // 認証
   auth: {
     signin: {
-      title: 'ログイン | ドヤマーケAI',
-      description: 'Googleアカウントでログインして、すべてのドヤマーケAIサービスをご利用ください。',
+      title: 'ログイン | ドヤAI',
+      description: 'Googleアカウントでログインして、すべてのドヤAIサービスをご利用ください。',
     },
   },
 }
@@ -276,7 +276,7 @@ export function generateOrganizationSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'ドヤマーケAI',
+    name: 'ドヤAI',
     alternateName: SITE_ALTERNATE_NAMES,
     url: SITE_CONFIG.url,
     logo: `${baseUrl}/logo.png`,
@@ -420,7 +420,7 @@ export function generatePageTitle(title: string, suffix = true): string {
 export function buildServiceMetadata(
   serviceId: string,
   opts?: {
-    /** タイトルの説明部（既定は service.description の要約）。root templateで ` | ドヤマーケAI` が付く */
+    /** タイトルの説明部（既定は service.description の要約）。root templateで ` | ドヤAI` が付く */
     tagline?: string
     keywords?: string[]
     /** OG画像パス（既定は動的OGルート /og/{id}） */
@@ -519,7 +519,7 @@ export function buildServiceSubMetadata(
   const description =
     opts?.description || sectionDescription ||
     (kind === 'pricing'
-      ? `${svc.name}の料金プラン。無料プランで試せて、プロプラン（月額9,980円）ならドヤマーケAIの全ツールでプロ機能を利用できます。各サービスに利用上限があります。`
+      ? `${svc.name}の料金プラン。無料プランで試せて、プロプラン（月額9,980円）ならドヤAIの全ツールでプロ機能を利用できます。各サービスに利用上限があります。`
       : kind === 'guide'
         ? `${svc.name}の使い方ガイド。基本の流れとコツを解説します。`
         : `${svc.name}の管理画面です。`)

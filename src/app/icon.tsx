@@ -1,5 +1,5 @@
 // ============================================
-// Site Icon (App Router) — ドヤマーケAI 公式ブランドアイコン
+// Site Icon (App Router) — ドヤAI 公式ブランドアイコン
 // ============================================
 // 素材の正本: reference/generated-assets/2026-08-19-p0-v1/brand-icon/master.svg
 // favicon / 汎用アイコン（512px）

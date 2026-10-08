@@ -122,7 +122,7 @@ function SignInContent() {
               <>
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 text-xs font-black tracking-wide">
                   <Sparkles className="w-4 h-4 text-blue-300" />
-                  ドヤマーケAI
+                  ドヤAI
                 </div>
 
                 <h2 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight">

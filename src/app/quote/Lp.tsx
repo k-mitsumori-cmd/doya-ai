@@ -52,7 +52,7 @@ export default function QuoteLp() {
   return (
     <LpShell serviceName={SVC.name} icon="receipt_long" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
       <ProductHero
-        eyebrow="ドヤマーケAI"
+        eyebrow="ドヤAI"
         title="「概算いくら？」に、"
         highlight="その場で紙を出す。"
         subtitle="サービスURLを入れるだけで、相場つきの見積もり品目が並びます。商談中に単価を調整して、そのまま日本語のPDFへ。"

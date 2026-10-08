@@ -146,9 +146,9 @@ export function RenewalHero(props: {
         <div className="doya-hero-copy">
           <span className="doya-eyebrow">
             <Sparkles size={16} />
-            {props.eyebrow && props.eyebrow !== "ドヤマーケAI"
+            {props.eyebrow && props.eyebrow !== "ドヤAI"
               ? props.eyebrow
-              : service?.name || "ドヤマーケAI"}
+              : service?.name || "ドヤAI"}
           </span>
           <h1>
             {props.title}
@@ -411,7 +411,7 @@ export function ResourcePack() {
             <span className="doya-eyebrow">STARTER KIT</span>
             <h2>すぐわかる、3点セット。</h2>
             <p>
-              {service?.name || "ドヤマーケAI"}
+              {service?.name || "ドヤAI"}
               を検討するための資料です。登録せずにご覧いただけます。
             </p>
           </div>
@@ -491,7 +491,7 @@ export function ServiceDirectory({ compact = false }: { compact?: boolean }) {
         <span className="doya-eyebrow">YOUR AI TEAM</span>
         <h2>
           {compact
-            ? "ほかの仕事にも、ドヤマーケAI。"
+            ? "ほかの仕事にも、ドヤAI。"
             : "今日の「やりたい」に、\nぴったりの仲間を。"}
         </h2>
         <p>作る、伝える、チームで進める。必要な業務からお選びください。</p>

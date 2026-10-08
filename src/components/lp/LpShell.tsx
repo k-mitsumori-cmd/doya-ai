@@ -94,7 +94,7 @@ export function LpShell({
             <Link
               href="/"
               className="doya-header-brand"
-              aria-label="ドヤマーケAI トップ"
+              aria-label="ドヤAI トップ"
             >
               <Image
                 src={
@@ -134,7 +134,7 @@ export function LpShell({
             <div className="doya-footer-top">
               <div>
                 <Link href="/">
-                  <h2>ドヤマーケAI</h2>
+                  <h2>ドヤAI</h2>
                 </Link>
                 <p>
                   つくる仕事も、チームの仕事も。

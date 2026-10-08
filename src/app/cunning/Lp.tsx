@@ -23,7 +23,7 @@ export default function CunningLp() {
   return (
     <LpShell serviceName={SVC.name} icon="support_agent" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
       <ProductHero
-        eyebrow="ドヤマーケAI"
+        eyebrow="ドヤAI"
         title="想定外の質問にも、"
         highlight="根拠を見ながら答える。"
         subtitle="Web会議の相手の発言から質問を見つけ、登録した資料を根拠にした回答案を画面に出します。"

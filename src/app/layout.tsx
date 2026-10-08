@@ -46,7 +46,7 @@ export const metadata: Metadata = {
         url: SERVICE_SEO.portal.ogImage,
         width: 1200,
         height: 630,
-        alt: 'ドヤマーケAI - AI SaaSサービス群',
+        alt: 'ドヤAI - AI SaaSサービス群',
       },
     ],
   },

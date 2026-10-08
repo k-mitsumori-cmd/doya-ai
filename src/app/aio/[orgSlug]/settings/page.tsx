@@ -168,7 +168,7 @@ export default function AioSettingsPage() {
       <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
         {field('追跡ブランド名 *', 'brandName', '例: ドヤマーケ')}
         {field('自社サイトURL', 'brandUrl', '例: https://doya-ai.surisuta.jp', '自社ドメイン引用率の判定に使います')}
-        {field('別名・表記ゆれ', 'aliases', '例: ドヤマーケAI, DoyaMarke', 'カンマ区切り、最大30件')}
+        {field('別名・表記ゆれ', 'aliases', '例: ドヤAI, DoyaMarke', 'カンマ区切り、最大30件')}
         {field('競合ブランド', 'competitors', '例: 競合サービスA, 競合サービスB', 'カンマ区切り、最大30件。Share of Voiceの比較対象')}
         {field('カテゴリ', 'category', '例: マーケティングAI SaaS')}
         {field('市場・地域', 'market', '例: 日本')}

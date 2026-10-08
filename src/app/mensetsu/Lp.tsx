@@ -43,7 +43,7 @@ export default function MensetsuLp() {
   return (
     <LpShell serviceName={SVC.name} icon="support_agent" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
       <ProductHero
-        eyebrow="ドヤマーケAI"
+        eyebrow="ドヤAI"
         title="一次面接の日程調整を、"
         highlight="まるごと無くす。"
         subtitle="AIが一次面接を実施し、評価軸ごとの点数と根拠の引用まで残します。応募者はURLを開くだけ、都合のよい時間に受けられます。"
