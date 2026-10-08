@@ -1,4 +1,4 @@
-import sys, subprocess, pathlib, json, urllib.request, urllib.error, re, datetime
+import sys, subprocess, pathlib, json, urllib.request, urllib.error, urllib.parse, re, datetime, html as html_parser
 
 base = pathlib.Path(__file__).parent
 marker, commit = sys.argv[1:3]
@@ -29,8 +29,12 @@ with urllib.request.urlopen(request, timeout=25) as response:
     assert response.status == 200
     html = response.read(1024 * 1024 + 1)
     assert len(html) <= 1024 * 1024
-urls = sorted(set(re.findall(r'(?:src|href)="(/_next/static/[^"<>]+\.js)"', html.decode('utf-8'))))
+urls = sorted(set(html_parser.unescape(url) for url in re.findall(r'(?:src|href)="(/_next/static/[^"<>]+\.js(?:\?[^"<>]*)?)"', html.decode('utf-8'))))
 assert urls and len(urls) <= 100
+for url in urls:
+    parsed = urllib.parse.urlsplit(url)
+    assert not parsed.scheme and not parsed.netloc and parsed.path.startswith('/_next/static/') and parsed.path.endswith('.js')
+    assert urllib.parse.parse_qs(parsed.query).get('dpl') == [marker], 'Every referenced JS must target this exact production deployment'
 chunks = []
 total = 0
 for url in urls:

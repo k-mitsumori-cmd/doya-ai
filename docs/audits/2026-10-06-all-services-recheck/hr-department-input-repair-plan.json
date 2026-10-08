@@ -1,0 +1,70 @@
+{
+  "checkedAt": "2026-10-08T17:33:37.029726+00:00",
+  "status": "root-integrated-awaiting-fresh-full163-and-actualNext53",
+  "rootApplied": true,
+  "deployed": false,
+  "productionFiles": [
+    "src/lib/hr/department-input.ts",
+    "src/lib/hr/department-mutation.ts",
+    "src/app/api/hr/departments/route.ts",
+    "src/app/api/hr/departments/[id]/route.ts"
+  ],
+  "defects": [
+    "Opposite concurrent parent edits can persist a cycle",
+    "Department deletion can race employee assignment",
+    "Empty/whitespace names can be saved",
+    "Malformed JSON and duplicate PATCH code can yield500 instead of input guidance"
+  ],
+  "baselineEvidence": [
+    "hr-department-input-baseline.json",
+    "hr-department-concurrent-cycle-baseline.json",
+    "hr-department-concurrency-postgres-baseline.json"
+  ],
+  "repair": "Combine organization/membership/department row locks with shared typed input validation. Preserve valid long names, nullable links, false/zero and full Prisma Int range. Return known400 for malformed input and real duplicate code conflict. No field-length cap invented.",
+  "verification": {
+    "realPostgresCases": 47,
+    "original12ConcurrencyCasesRetained": true,
+    "bothAssignmentDeleteLockInterleavingsObserved": true,
+    "newInputCompatibilityAuthCases": 35,
+    "legacyCases": {
+      "related": 33,
+      "access": 1,
+      "validation": 6,
+      "cache": 3
+    },
+    "wholeRootVirtualTypes": true,
+    "cleanIsolatedPostgresShutdown": true
+  },
+  "preparedActualNext": {
+    "file": "verify-hr-department-input-next.cjs",
+    "expectedCases": 53,
+    "original38PagedAndLegacyRetained": true,
+    "newMutationCases": 6,
+    "newInputCases": 9,
+    "status": "prepared-not-run",
+    "precondition": "Combined root integration and frozen build after current org-chart release is publicly verified"
+  },
+  "regressionCandidates": "hr-department-input-regression-overlay/scripts/security-regression",
+  "pending": [
+    "Fresh expanded frozen original156 plus new input gates and actualNext53",
+    "Review user-facing settings error/retry flows and source-to-UI integration",
+    "Exact reviewed commit/CI/READY/public verification",
+    "Continue full17service2074criterion188GET audit"
+  ],
+  "scope": "Synthetic authenticated fixtures, Unix-only isolated full-schema PostgreSQL and virtual noEmit types only. No production/customer DB writes, paid provider generation or migrations.",
+  "previousVerifiedCommit": "7b7446881650b2627c0d907f01fe6d2e5e1784b0",
+  "regressionFiles": [
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-hr-department-access.cjs",
+    "scripts/security-regression/verify-hr-department-input.cjs",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs",
+    "scripts/security-regression/verify-related-records.cjs"
+  ],
+  "currentGate": "docs/audits/2026-10-06-all-services-recheck/hr-department-input-release-73d6952b-e5c4-4e40-8e9d-e9c43adc4cf0",
+  "previousReleaseVerified": true,
+  "additionalOpenFindings": [
+    "hr-department-settings-repair-plan.json",
+    "hr-department-operation-repair-plan.json",
+    "hr-department-read-repair-plan.json"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-08T17:22:09.673911+00:00",
+  "commit": "7b7446881650b2627c0d907f01fe6d2e5e1784b0",
+  "deployment": "dpl_GbUfW9LsEEVVZKH3b6vEUrPoqKif",
+  "passed": true,
+  "routes": [
+    {
+      "path": "/api/hr/org-chart?format=pages",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "genericErrorOnly": true
+    },
+    {
+      "path": "/api/hr/org-chart?format=pages&cursor=invalid",
+      "status": 401,
+      "privateNoStore": true,
+      "varyCookie": true,
+      "genericErrorOnly": true
+    }
+  ],
+  "orgChartPageStatus": 200,
+  "referencedJsChunks": 24,
+  "jsBytes": 928314,
+  "clientMarkers": [
+    "/api/hr/org-chart?format=pages",
+    "hr-org-chart-page-v1",
+    "さらに",
+    "取得中に組織図が更新されました"
+  ],
+  "scope": "Inherited17-service/static/SEO/banner/cache public checks and exact deployment identity, plus anonymous paged GET private401 and the current public page referenced JavaScript markers. No authenticated customer operation, production DB writes, real OAuth or provider generation. Browser interaction and authenticated data paths require separate synthetic native/actualNext proofs; full17service2074criterion188GET audit remains active."
+}

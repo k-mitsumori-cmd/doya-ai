@@ -1,0 +1,63 @@
+{
+  "previousGate": "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-release-6daa0dd5-1ec4-4d9c-975a-1b2c496af8d3",
+  "previousCount": 156,
+  "newGate": "docs/audits/2026-10-06-all-services-recheck/hr-department-input-release-73d6952b-e5c4-4e40-8e9d-e9c43adc4cf0",
+  "newCount": 163,
+  "allOriginal156RetainedInOrder": true,
+  "added": [
+    [
+      "hr-department-input-realPG47",
+      [
+        "python3",
+        "docs/audits/2026-10-06-all-services-recheck/hr-department-input-postgres-supervise.py"
+      ]
+    ],
+    [
+      "hr-department-input-legacy-related",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-input-legacy.cjs",
+        "related"
+      ]
+    ],
+    [
+      "hr-department-input-legacy-access",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-input-legacy.cjs",
+        "access"
+      ]
+    ],
+    [
+      "hr-department-input-legacy-validation",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-input-legacy.cjs",
+        "validation"
+      ]
+    ],
+    [
+      "hr-department-input-legacy-cache",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-input-legacy.cjs",
+        "cache"
+      ]
+    ],
+    [
+      "hr-department-input-types4",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-input-overlay-types.cjs"
+      ]
+    ],
+    [
+      "hr-department-input-actualNext53",
+      [
+        "python3",
+        "docs/audits/2026-10-06-all-services-recheck/hr-department-input-next-supervise.py"
+      ]
+    ]
+  ],
+  "pointerCorrectedBeforeStart": true
+}

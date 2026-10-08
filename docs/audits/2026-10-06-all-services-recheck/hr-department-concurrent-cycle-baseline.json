@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-10-08T15:49:46.033Z",
+  "expected": 4,
+  "passed": 3,
+  "cases": [
+    {
+      "name": "self",
+      "passed": true,
+      "statuses": [
+        400
+      ],
+      "savedCycle": false
+    },
+    {
+      "name": "existing-cycle",
+      "passed": true,
+      "statuses": [
+        400
+      ],
+      "savedCycle": false
+    },
+    {
+      "name": "foreign",
+      "passed": true,
+      "statuses": [
+        400
+      ],
+      "savedCycle": false
+    },
+    {
+      "name": "concurrent",
+      "passed": false,
+      "statuses": [
+        200,
+        200
+      ],
+      "savedCycle": true
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/departments/[id]/route.ts": "0457da5b903457280b8dfd4cc6736170da7cad632b4e705f679a65976966deac",
+    "src/lib/department-integrity.ts": "6f709deb570c4b17df571d9e1c92ed80f594400e4987c002e802dde8daec37a1"
+  },
+  "scope": "Actual HR department PATCH and actual parent-chain validator. Synthetic authenticated admin, organization-filtered row model, and a barrier after both validated requests enter update to reproduce concurrent interleaving. No real DB/provider/production write. Real PostgreSQL concurrency proof remains required before repair/release."
+}

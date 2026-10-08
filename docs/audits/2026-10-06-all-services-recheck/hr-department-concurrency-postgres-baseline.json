@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-08T15:51:33.915Z",
+  "expected": 2,
+  "defectsReproduced": 2,
+  "reproduced": true,
+  "cases": [
+    {
+      "name": "Concurrent valid PATCH requests persist mutual parent cycle in real PostgreSQL",
+      "reproduced": true,
+      "statuses": [
+        200,
+        200
+      ]
+    },
+    {
+      "name": "Actual org-chart GET omits ACTIVE employee attached to the persisted cycle",
+      "reproduced": true,
+      "storedActiveEmployees": 1,
+      "renderedEmployees": 0
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/departments/[id]/route.ts": "0457da5b903457280b8dfd4cc6736170da7cad632b4e705f679a65976966deac",
+    "src/lib/department-integrity.ts": "6f709deb570c4b17df571d9e1c92ed80f594400e4987c002e802dde8daec37a1",
+    "src/app/api/hr/org-chart/route.ts": "bf703853f2fac13bb312eb4a49b2925d6fdda48a02bf9c7674264f661955b42e",
+    "prisma/schema.prisma": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-department-concurrency-postgres-baseline.cjs": "e3831f25fce7afb96b3c660ea7b1db288fab419d7139f89629a34e149de26cc7"
+  },
+  "scope": "Actual PATCH/GET/chain validator and real isolated full-schema PostgreSQL. Synthetic authenticated ADMIN context; explicit update barrier reproduces a valid concurrency interleaving. Unix-only private DB; no production/customer/provider writes. This confirms defects; it is not a successful repair."
+}

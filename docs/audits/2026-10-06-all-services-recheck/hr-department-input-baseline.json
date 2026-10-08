@@ -1,0 +1,64 @@
+{
+  "checkedAt": "2026-10-08T16:48:27.770Z",
+  "observations": [
+    {
+      "scenario": "empty-department-name",
+      "observedStatus": 200,
+      "mutationSpyCalls": 1,
+      "savedData": {
+        "name": ""
+      },
+      "response": {
+        "success": true,
+        "department": {
+          "id": "synthetic-dept",
+          "name": ""
+        }
+      },
+      "defectReproduced": true
+    },
+    {
+      "scenario": "whitespace-department-name",
+      "observedStatus": 200,
+      "mutationSpyCalls": 1,
+      "savedData": {
+        "name": "   "
+      },
+      "response": {
+        "success": true,
+        "department": {
+          "id": "synthetic-dept",
+          "name": "   "
+        }
+      },
+      "defectReproduced": true
+    },
+    {
+      "scenario": "duplicate-department-code",
+      "observedStatus": 500,
+      "mutationSpyCalls": 0,
+      "savedData": null,
+      "response": {
+        "error": "Failed to update department"
+      },
+      "defectReproduced": true
+    },
+    {
+      "scenario": "malformed-json",
+      "observedStatus": 500,
+      "mutationSpyCalls": 0,
+      "savedData": null,
+      "response": {
+        "error": "Failed to update department"
+      },
+      "defectReproduced": true
+    }
+  ],
+  "defectsReproduced": 4,
+  "sourceHashes": {
+    "src/app/api/hr/departments/[id]/route.ts": "0457da5b903457280b8dfd4cc6736170da7cad632b4e705f679a65976966deac",
+    "prisma/schema.prisma": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-input-baseline.cjs": "04155c93dec28d2bbea2f963e506e8fabd300cb0b884b2fb6644cb1649a1c620"
+  },
+  "scope": "Actual current root PATCH handler with synthetic authenticated admin, scoped Prisma spies and synthetic P2002 matching the schema unique organization/code constraint. Empty and whitespace names reach update with200; malformed JSON and duplicate code produce500. This is a defect baseline, not a passing repair verification or real database/production proof. No database/customer/provider writes."
+}

@@ -1,8 +1,8 @@
 {
-  "checkedAt": "2026-10-08T17:03:46.639980+00:00",
-  "status": "full156-and-actualNext38-passed-awaiting-exact-release",
+  "checkedAt": "2026-10-08T17:22:41.288079+00:00",
+  "status": "exact-CI-success-READY-public-verified",
   "rootApplied": true,
-  "deployed": false,
+  "deployed": true,
   "productionFiles": [
     "src/app/api/hr/org-chart/route.ts",
     "src/app/hr/org-chart/page.tsx",
@@ -36,10 +36,8 @@
     "allSourcesFrozenAndUnchanged": true
   },
   "pending": [
-    "Fresh frozen full156 after long-field repair, including actual Next/auth/realDB38 (original35 plus3 valid long-field cases)",
-    "Resolve independent finding only after current-source full gate and actualNext38 pass",
-    "Exact reviewed commit/push, CI, production READY and public verification",
-    "Combined department input/concurrency candidate verification and integration",
+    "Observe exact commit CI/production READY/public response and page bundle verification",
+    "Combined department input/concurrency candidate47+legacy43/types4 verified locally; root integration and actualNext53 pending",
     "Continue full17services2074criteria188GET audit"
   ],
   "scope": "Synthetic isolated fixtures and loopback browser only. No production/customer database writes, paid providers or migrations. Full17services2074criteria188GET audit remains incomplete.",
@@ -52,5 +50,8 @@
   ],
   "previousVerifiedCommit": "8ecafb9c366d7af397dee522fb4b5d309469af7e",
   "releaseReady": true,
-  "currentGate": "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-release-6daa0dd5-1ec4-4d9c-975a-1b2c496af8d3"
+  "currentGate": "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-release-6daa0dd5-1ec4-4d9c-975a-1b2c496af8d3",
+  "commit": "7b7446881650b2627c0d907f01fe6d2e5e1784b0",
+  "productionReleased": true,
+  "publicVerification": "hr-org-chart-pagination-public.json"
 }

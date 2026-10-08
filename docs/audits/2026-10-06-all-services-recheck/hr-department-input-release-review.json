@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-08T17:34:07.847450+00:00",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/hr-department-input-release-73d6952b-e5c4-4e40-8e9d-e9c43adc4cf0",
+  "reviewStatus": "full163-and-actualNext53-passed-awaiting-exact-publish",
+  "productionFiles": [
+    "src/lib/hr/department-input.ts",
+    "src/lib/hr/department-mutation.ts",
+    "src/app/api/hr/departments/route.ts",
+    "src/app/api/hr/departments/[id]/route.ts"
+  ],
+  "regressionFiles": [
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-related-records.cjs",
+    "scripts/security-regression/verify-hr-department-access.cjs",
+    "scripts/security-regression/verify-hr-department-input.cjs",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs"
+  ],
+  "requiredPrimaryFiles": [
+    "src/lib/hr/department-input.ts",
+    "src/lib/hr/department-mutation.ts",
+    "src/app/api/hr/departments/route.ts",
+    "src/app/api/hr/departments/[id]/route.ts",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-related-records.cjs",
+    "scripts/security-regression/verify-hr-department-access.cjs",
+    "scripts/security-regression/verify-hr-department-input.cjs",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs"
+  ],
+  "sourceHashes": {
+    "src/lib/hr/department-input.ts": "c8cad10c6d271c3c9ff075c9e0066d65e3a48d1af44a586a01f2efd8ca85890c",
+    "src/lib/hr/department-mutation.ts": "bc75490965e859a89450b540cebac07bdea3126fd978dac8ed870849629771a8",
+    "src/app/api/hr/departments/route.ts": "bbdbdc6a094959fee8786f16f54e5c93cd922f6e3882c0a7c45315a8c04f1c01",
+    "src/app/api/hr/departments/[id]/route.ts": "0673b9338b845a0488df3a97624eb09d84bd8db71643641a69c0bd7462370d0c",
+    "scripts/security-regression/run.cjs": "efcd44854ad9443099655343b2f05f8730464496546e6eda27f955ac0863da99",
+    "scripts/security-regression/verify-related-records.cjs": "ded0c4de4f082770cca05b96c42df29e03cd279379959c223abfc70223c3f93b",
+    "scripts/security-regression/verify-hr-department-access.cjs": "ec6084b5749dd61851763635368fd0c8fba686f21e0d4f4a131df49003c8adc3",
+    "scripts/security-regression/verify-hr-department-input.cjs": "56ed6759d3fcb338dce9a7b98ab75cc24aede2b6dc7d8f19a1c3b2db9090dc24",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs": "24950db70a629d95a6321489d9bfd7b02759ee6924d26eb970be5a6095b573bf"
+  },
+  "compiledMarkerProof": {
+    "checks": {
+      "full163": true,
+      "original156Preserved": true,
+      "frozenSourcesUnchanged": true,
+      "actualNext53": true,
+      "isolatedDatabaseStoppedAndRemoved": true,
+      "departmentInputCompiled": true
+    },
+    "assets": {
+      ".next/server/app/api/hr/departments/route.js": "78f625dd26944cd59bc8e24d9d90166a9a970510c9243fb94840ca4d7bad32fe",
+      ".next/server/app/api/hr/departments/[id]/route.js": "6188b5a2c7210617be0e5ba13036212722b9ec4c770cf6170b9f8c47696e0350"
+    }
+  },
+  "scope": "HR department input validation and serialized organization/membership/department mutation locks. Production4 and mandatory regression5; original156 preserved plus7, full163, actualNext53, realPG47. No schema/dependency/customer DB/provider changes. Settings response-loss and durable creation are separately reproduced, remain incomplete and are not part of this release. Full17services2074criteria188GET audit remains active."
+}
