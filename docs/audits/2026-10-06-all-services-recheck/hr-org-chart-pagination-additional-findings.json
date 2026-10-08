@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-08T17:03:46.639980+00:00",
+  "status": "resolved-and-verified",
+  "releaseReady": true,
+  "finding": "Client imposes1024-character string and8192-character photo URL restrictions absent from schema/write paths, rejecting valid transport-bounded chart pages. Must not release the current candidate as complete.",
+  "baseline": "hr-org-chart-long-text-baseline.json",
+  "repair": "Keep strict field types and1MiB per-page transport/deadline/duplicate/revision defenses; remove unsupported individual string-length cutoffs; add compatibility coverage and fresh full156+ verification.",
+  "pending": [
+    "Repair candidate and add long valid field tests",
+    "Retain original28 transport boundary cases plus new long-field compatibility",
+    "After current gate terminal, update root/overlay and mandatory source tests then fresh frozen full gate",
+    "Do not reuse earlier green results with changed sources"
+  ],
+  "localVerification": {
+    "boundaryCases": 31,
+    "original28Retained": true,
+    "newLongFieldCases": 3,
+    "rootMandatory31": true,
+    "realPostgresCases": 18,
+    "mountedCases": 14,
+    "nativeChromeCases": 10,
+    "typesStatus": "passed-current-source"
+  },
+  "repairAppliedToRootAndOverlay": true,
+  "verification": {
+    "fullGate": 156,
+    "original150RetainedInOrder": true,
+    "actualNextCases": 38,
+    "boundaryCases": 31,
+    "actualDbLongFieldCases": 3,
+    "frozenSourcesUnchanged": true,
+    "cleanIsolatedDatabaseShutdown": true,
+    "gate": "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-release-6daa0dd5-1ec4-4d9c-975a-1b2c496af8d3",
+    "nextProof": "hr-org-chart-pagination-next-results.json",
+    "scope": "Current local source and isolated runtime verified; production not yet released"
+  }
+}

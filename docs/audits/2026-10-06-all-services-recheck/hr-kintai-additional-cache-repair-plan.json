@@ -1,7 +1,7 @@
 {
-  "status": "integrated-first-full-gate-found-fixture-import-gap-fixed-awaiting-fresh150",
+  "status": "production-CI-READY-anonymous-public-verified",
   "rootApplied": true,
-  "productionReleased": false,
+  "productionReleased": true,
   "routes": [
     "src/app/api/hr/departments/route.ts",
     "src/app/api/hr/org-chart/route.ts",
@@ -18,13 +18,10 @@
   "plannedNextScope": "private headers, anonymous, two organizations, member/manager HR visibility, unlinked/invalid/inactive memberships, revoked session, full domain-row snapshots per GET",
   "productionExposure": "No actual customer cache hit or leakage established",
   "pending": [
-    "wait for SEO exact release verification before root integration",
-    "retain and update legacy fixture mocks",
-    "mandatory handler tests10 and actual Next20 with isolated PG",
-    "fresh fullgate build/CI/deployment/public checks"
+    "Full17service2074criterion188GET audit remains incomplete; authenticated production customer cache behavior is not asserted"
   ],
-  "checkedAt": "2026-10-08T16:04:08.161801+00:00",
-  "deployed": false,
+  "checkedAt": "2026-10-08T16:44:01.306942+00:00",
+  "deployed": true,
   "productionFiles": [
     "src/app/api/hr/departments/route.ts",
     "src/app/api/hr/org-chart/route.ts",
@@ -44,5 +41,23 @@
     "failedStage": "build npm prerequisite security-regression verify-related-records.cjs",
     "cause": "Missing mock for newly imported actual privateApiJson helper; original department link assertions preserved",
     "sourceChange": "Fixture loads actual private-api-response helper; no behavior assertions removed"
+  },
+  "commit": "8ecafb9c366d7af397dee522fb4b5d309469af7e",
+  "verification": {
+    "fullGate": 150,
+    "allSourcesFrozenAndUnchanged": true,
+    "actualNextCases": 20,
+    "cleanIsolatedDatabaseShutdown": true,
+    "ciRun": 37808579588,
+    "ci": "success",
+    "anonymousPublicRoutes": 3,
+    "publicProof": "hr-kintai-additional-cache-public.json"
+  },
+  "productionDeployment": {
+    "id": "dpl_3powrRPHoCtCo193kFu9YPhSo3BY",
+    "url": "doya-qdnr6r5ob-surisutas-projects.vercel.app",
+    "readyState": "READY",
+    "commit": "8ecafb9c366d7af397dee522fb4b5d309469af7e",
+    "target": "production"
   }
 }

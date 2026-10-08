@@ -4,7 +4,7 @@ const { load, check, results } = require('./load-typescript.cjs')
 
 const ranks = { MEMBER: 1, MANAGER: 2, ADMIN: 3, OWNER: 4 }
 const hasMinRole = (role, minimum) => (ranks[role] || 0) >= ranks[minimum]
-const next = { '@/lib/private-api-response': privateApiResponse, 'next/server': { NextResponse: Response } }
+const next = { '@/lib/hr/org-chart-pagination': { readHrOrgChartPage() { throw Error('Legacy fixture unexpectedly entered paged GET') }, HrOrgChartPageError: class extends Error {} }, '@/lib/private-api-response': privateApiResponse, 'next/server': { NextResponse: Response } }
 
 ;(async () => {
   for (const employeeId of ['own', null]) {

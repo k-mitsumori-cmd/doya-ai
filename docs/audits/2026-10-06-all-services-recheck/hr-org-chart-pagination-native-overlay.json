@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-08T17:03:01.166Z",
+  "expected": 10,
+  "passed": 10,
+  "cases": [
+    "Native unassigned employee is represented separately",
+    "Native instructions match horizontal scrolling and working department collapse/expand",
+    "Native retry replaces failed load with chart without misleading empty state",
+    "Native unauthorized read offers login",
+    "Native late prior actor response cannot enter current chart",
+    "Native auth loading hides chart until same actor reauthentication",
+    "Native department count includes manager",
+    "Native valid empty organization retains department guidance",
+    "Native malformed employee shows sanitized recovery",
+    "Native2000 employees remain fully reachable through bounded member display after40 transport pages"
+  ],
+  "errors": [],
+  "sourceHashes": {
+    "src/app/hr/org-chart/page.tsx": "7ebb3876c2e40bcd31546befa48b62f75c7a7f9d993228d7f48e36e83d1feb88",
+    "src/components/hr/OrgChartView.tsx": "3875aaf263605ff8cb03dd296ecd426b557df58dc0572c1b2138038ffdf923e1",
+    "src/lib/hr/org-chart-paged-client.ts": "bde92f897a80bfc97db55fe0cbc787595738f0e8121f671e939cef63696743c9"
+  },
+  "scope": "Actual full paged HR org-chart page/component and bounded-page client in native Chrome, synthetic loopback auth/HTTP/motion/link only. Native retry click and DOM/error states checked. Outbound blocked; no actual OAuth/Next/customer database/provider/production writes."
+}

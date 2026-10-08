@@ -1,0 +1,75 @@
+{
+  "checkedAt": "2026-10-08T17:02:50.845Z",
+  "expected": 14,
+  "passed": 14,
+  "cases": [
+    {
+      "scenario": "assigned-employee",
+      "passed": true,
+      "employeeVisible": true,
+      "fabricatedEmptyState": false
+    },
+    {
+      "scenario": "unassigned-employee",
+      "passed": true,
+      "employeeVisible": true,
+      "fabricatedEmptyState": false
+    },
+    {
+      "scenario": "failed-load",
+      "passed": true,
+      "employeeVisible": false,
+      "fabricatedEmptyState": false
+    },
+    {
+      "scenario": "malformed body shows recovery without fabricated empty state",
+      "passed": true
+    },
+    {
+      "scenario": "explicit retry recovers the chart after failed HTTP",
+      "passed": true
+    },
+    {
+      "scenario": "HTTP401 offers login and hides empty organization guidance",
+      "passed": true
+    },
+    {
+      "scenario": "valid empty organization still displays department guidance",
+      "passed": true
+    },
+    {
+      "scenario": "late old actor chart cannot enter current actor screen",
+      "passed": true
+    },
+    {
+      "scenario": "actor ABA cannot revive an earlier pending chart",
+      "passed": true
+    },
+    {
+      "scenario": "auth loading hides private chart and performs no private request",
+      "passed": true
+    },
+    {
+      "scenario": "help accurately describes scrolling and department expansion",
+      "passed": true
+    },
+    {
+      "scenario": "all200 employees remain reachable through incremental member display after four transport pages",
+      "passed": true
+    },
+    {
+      "scenario": "loading progress remains visible until every snapshot page has arrived",
+      "passed": true
+    },
+    {
+      "scenario": "manager is included in displayed department employee count",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/app/hr/org-chart/page.tsx": "7ebb3876c2e40bcd31546befa48b62f75c7a7f9d993228d7f48e36e83d1feb88",
+    "src/components/hr/OrgChartView.tsx": "3875aaf263605ff8cb03dd296ecd426b557df58dc0572c1b2138038ffdf923e1",
+    "src/lib/hr/org-chart-paged-client.ts": "bde92f897a80bfc97db55fe0cbc787595738f0e8121f671e939cef63696743c9"
+  },
+  "scope": "Actual full HR org-chart page and OrgChartView mounted with React StrictMode. Synthetic paged HTTP and decorative motion/link/toast adapters. Original12 behavioral cases retained with explicit legacy-fixture-to-page adapter; actual API/client/DB protocol independently verified in real PostgreSQL16. Adds200-employee four-page display and loading progress. No production data or provider. Separately checks employee representation and load failure being displayed as an empty organization."
+}

@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-10-08T17:03:46.639980+00:00",
+  "originalGate": "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-665ec471-f9f2-443e-992b-50dd42c26b58",
+  "originalCount": 150,
+  "newCount": 156,
+  "allOriginalGatesPreservedInOrder": true,
+  "added": [
+    [
+      "hr-org-chart-legacy11",
+      [
+        "env",
+        "DOYA_TEST_BASELINE=/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-repair-overlay",
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-org-chart-pagination-legacy.cjs"
+      ]
+    ],
+    [
+      "hr-org-chart-boundaries31",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-org-chart-pagination-boundaries.cjs"
+      ]
+    ],
+    [
+      "hr-org-chart-realPG18",
+      [
+        "python3",
+        "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-postgres-supervise.py"
+      ]
+    ],
+    [
+      "hr-org-chart-mounted14",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-org-chart-pagination-mounted.cjs"
+      ]
+    ],
+    [
+      "hr-org-chart-native10",
+      [
+        "node",
+        "docs/audits/2026-10-06-all-services-recheck/verify-hr-org-chart-pagination-native.cjs"
+      ]
+    ],
+    [
+      "hr-org-chart-actualNext38",
+      [
+        "python3",
+        "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-next-supervise.py"
+      ]
+    ]
+  ],
+  "newGate": "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-release-6daa0dd5-1ec4-4d9c-975a-1b2c496af8d3",
+  "pointerEnvironmentCorrectedBeforeStart": true,
+  "boundaryExpected": 31,
+  "actualNextExpected": 38,
+  "priorPointerRepair": "hr-org-chart-pagination-gate-repair.json",
+  "original150ComparedExactly": true
+}

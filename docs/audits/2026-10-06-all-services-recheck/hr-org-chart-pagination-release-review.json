@@ -1,0 +1,66 @@
+{
+  "checkedAt": "2026-10-08T17:03:47.589556+00:00",
+  "gate": "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-release-6daa0dd5-1ec4-4d9c-975a-1b2c496af8d3",
+  "reviewStatus": "full156-and-actualNext38-passed-awaiting-exact-publish",
+  "productionFiles": [
+    "src/app/api/hr/org-chart/route.ts",
+    "src/app/hr/org-chart/page.tsx",
+    "src/components/hr/OrgChartView.tsx",
+    "src/lib/hr/org-chart-pagination.ts",
+    "src/lib/hr/org-chart-paged-client.ts"
+  ],
+  "regressionFiles": [
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-hr-employee-reads.cjs",
+    "scripts/security-regression/verify-org-chart-kintai-private-cache.cjs",
+    "scripts/security-regression/verify-hr-org-chart-paged-client.cjs",
+    "scripts/security-regression/verify-hr-org-chart-visibility.cjs"
+  ],
+  "requiredPrimaryFiles": [
+    "src/app/api/hr/org-chart/route.ts",
+    "src/app/hr/org-chart/page.tsx",
+    "src/components/hr/OrgChartView.tsx",
+    "src/lib/hr/org-chart-pagination.ts",
+    "src/lib/hr/org-chart-paged-client.ts",
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-hr-employee-reads.cjs",
+    "scripts/security-regression/verify-org-chart-kintai-private-cache.cjs",
+    "scripts/security-regression/verify-hr-org-chart-paged-client.cjs",
+    "scripts/security-regression/verify-hr-org-chart-visibility.cjs"
+  ],
+  "sourceHashes": {
+    "src/app/api/hr/org-chart/route.ts": "0e4c3c2057b547eac64935070c39efa908167e855a3367506d47824ea0844b41",
+    "src/app/hr/org-chart/page.tsx": "7ebb3876c2e40bcd31546befa48b62f75c7a7f9d993228d7f48e36e83d1feb88",
+    "src/components/hr/OrgChartView.tsx": "3875aaf263605ff8cb03dd296ecd426b557df58dc0572c1b2138038ffdf923e1",
+    "src/lib/hr/org-chart-pagination.ts": "05fee7aeae787ad1d0fe0ff01ab3c7bd8bbed51882d013d060000a813261283f",
+    "src/lib/hr/org-chart-paged-client.ts": "bde92f897a80bfc97db55fe0cbc787595738f0e8121f671e939cef63696743c9",
+    "scripts/security-regression/run.cjs": "08ea99409c4eb9b0a869855812bbfe7300101945fd4a57f3ba82e18fb8127d9a",
+    "scripts/security-regression/verify-hr-employee-reads.cjs": "b8ce2dc79c624614eef0548d10803e31add20fb28833643cbaa413916a14d6f8",
+    "scripts/security-regression/verify-org-chart-kintai-private-cache.cjs": "286fa3b7295b645c007a02be15c8a752991f9ff78dc5bd0a2b844b0ba3ad9e3f",
+    "scripts/security-regression/verify-hr-org-chart-paged-client.cjs": "bfe5b2b777a6715f2ba5ceac28720625136bd480d8eadc3d6aee7618ffa052ca",
+    "scripts/security-regression/verify-hr-org-chart-visibility.cjs": "8675d67192470a008912474cb2cd1feb15583226f642cd9687e7d60f33496e4e"
+  },
+  "compiledMarkerProof": {
+    "checks": {
+      "full156": true,
+      "original150Preserved": true,
+      "frozenSourcesUnchanged": true,
+      "actualNext38": true,
+      "isolatedDatabaseStoppedAndRemoved": true,
+      "serverProtocolBuilt": true,
+      "pageProtocolRecoveryBuilt": true
+    },
+    "assets": {
+      ".next/server/app/api/hr/org-chart/route.js": "b8541e3aaa9ea641e85c7a3b292c2cca05384fa9f4d5847aa7bb6957db4ec4d0",
+      ".next/static/chunks/webpack-e546c97c43e06541.js": "41ddb705bfb4fef9e49e03ccae0f9963ff9d6586a4e5ee769b2b7c7a3d9001f1",
+      ".next/static/chunks/7dfea3db-21b83f9a70557214.js": "3ac580648f3dd25d57c4f0f1e1ee9c9959aad26db0891492043f27473a568cb7",
+      ".next/static/chunks/67986-1824f2b98b384f29.js": "49dfe570db1ab9dab8f3314fbff0ab0e4e3014bf1888e154e7af1ef4f49dbcb9",
+      ".next/static/chunks/main-app-25c785a8eedc2b45.js": "d8ba031d4c8914690554c7f7e5a91ed6e0b8d5c0f66abdd7209264588e4b3caf",
+      ".next/static/chunks/36816-dd859538b8edf3ac.js": "cc9a4ecfa19cd5cafce60ef91687cf9c5f7b522d4f55b9c23619464172ece5a9",
+      ".next/static/chunks/78950-7bb22ffd14ad58cd.js": "e2568eeeb049e4cb3323c7f3574e2c01cebc1e0f2151c0a22575bb2abf7bdf27",
+      ".next/static/chunks/72075-84f0e7567a169a3e.js": "7dba30994dee8e82cda451eaa3b23c78ec6a10576debd26203a1f228c385acca",
+      ".next/static/chunks/app/hr/org-chart/page-335515cc99139378.js": "f655831ca6603b20e6f65267529ad11ecbf8fddcb54c0cb569f7d127fdbb86cf"
+    }
+  },
+  "scope": "HR org-chart pagination, authorized employee visibility, revision consistency and client recovery. Five production files, five mandatory regression files. Original150 frozen checks preserved plus6, actual Next/auth/isolatedDB38, realPG18, boundary31, mounted14, native10. No schema/dependency/customer DB changes, real OAuth or paid providers. Full17services2074criteria188GET audit remains active."
+}

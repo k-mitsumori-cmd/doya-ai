@@ -1,0 +1,99 @@
+{
+  "checkedAt": "2026-10-08T17:02:50.131Z",
+  "expected": 18,
+  "passed": 18,
+  "cases": [
+    {
+      "name": "Anonymous paged GET retains private401",
+      "passed": true
+    },
+    {
+      "name": "All2000 valid employees arrive exactly once over40 bounded pages with unchanged domain rows",
+      "passed": true,
+      "pages": 40,
+      "employees": 2000,
+      "maxPageBytes": 40701
+    },
+    {
+      "name": "Member page exposes own employee only",
+      "passed": true
+    },
+    {
+      "name": "Unlinked member cannot read other employees",
+      "passed": true
+    },
+    {
+      "name": "Malformed cursors are rejected without mutation",
+      "passed": true
+    },
+    {
+      "name": "Other organization cannot reuse a private snapshot cursor",
+      "passed": true
+    },
+    {
+      "name": "Role change after context lookup fails closed inside transaction",
+      "passed": true
+    },
+    {
+      "name": "Inactive membership after context lookup fails closed",
+      "passed": true
+    },
+    {
+      "name": "Employee edits cannot mix revisions across pages",
+      "passed": true
+    },
+    {
+      "name": "Insertion before later cursor cannot silently omit a record",
+      "passed": true
+    },
+    {
+      "name": "Deletion during traversal cannot masquerade as a complete unchanged chart",
+      "passed": true
+    },
+    {
+      "name": "Department changes invalidate the previous snapshot",
+      "passed": true
+    },
+    {
+      "name": "Ambiguous repeated query parameters are rejected",
+      "passed": true
+    },
+    {
+      "name": "Changed employee association after context lookup cannot expose former self",
+      "passed": true
+    },
+    {
+      "name": "Unknown stored role fails closed even when supplied context matches it",
+      "passed": true
+    },
+    {
+      "name": "Actual paged client consumes actual GET and real DB into complete valid chart larger than1MiB with monotonic progress",
+      "passed": true,
+      "requests": 40,
+      "employees": 2000
+    },
+    {
+      "name": "MVCC revision catches direct SQL edits even when updatedAt is unchanged",
+      "passed": true
+    },
+    {
+      "name": "Actual client/API/SQL delivers10001 enterprise employees in201 bounded pages without writes or arbitrary total cap",
+      "passed": true,
+      "employees": 10001,
+      "requests": 201,
+      "maxPageBytes": 40716,
+      "durationMs": 2453
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/hr/org-chart-paged-client.ts": "bde92f897a80bfc97db55fe0cbc787595738f0e8121f671e939cef63696743c9",
+    "src/lib/hr/org-chart-pagination.ts": "05fee7aeae787ad1d0fe0ff01ab3c7bd8bbed51882d013d060000a813261283f",
+    "src/app/api/hr/org-chart/route.ts": "0e4c3c2057b547eac64935070c39efa908167e855a3367506d47824ea0844b41",
+    "src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0",
+    "src/lib/hr/types.ts": "1fee619f546a9b7740209f209322fbbec321b96855ca65e2bd3089e5d4e8a137",
+    "prisma/schema.prisma": "88da762966029dcc18c7f456991c3c03e1947eb8fdcd956b23e32d375712ae0c",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-org-chart-pagination-postgres.cjs": "cff966cf51ab117f5a39ef5401baa6f2a6099ef86689b9139b5dbeee4d09dc49",
+    "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-postgres-supervise.py": "340778f67fd61f150265cddf8a08b9814e3dcf5028ca55cf196a96551d6e401e"
+  },
+  "scope": "Actual paged GET and read-only RepeatableRead SQL/Prisma helper against isolated full-schema Unix-only PostgreSQL. Synthetic HR context; real current membership recheck, scoped fingerprint and keyset pages. All2000 and10001 valid enterprise employees, MVCC direct-SQL revision, actor/role boundaries and mid-read updates/insert/delete tested. Actual bounded-page client additionally consumes actual GET into a complete >1MiB chart. Root not integrated; mounted/browser, frozen build and production verification pending. No production/customer/provider writes."
+}

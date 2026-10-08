@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-10-08T17:03:46.639980+00:00",
+  "status": "full156-and-actualNext38-passed-awaiting-exact-release",
+  "rootApplied": true,
+  "deployed": false,
+  "productionFiles": [
+    "src/app/api/hr/org-chart/route.ts",
+    "src/app/hr/org-chart/page.tsx",
+    "src/components/hr/OrgChartView.tsx",
+    "src/lib/hr/org-chart-pagination.ts",
+    "src/lib/hr/org-chart-paged-client.ts"
+  ],
+  "defectEvidence": "hr-org-chart-large-valid-payload-baseline.json",
+  "repair": "Existing GET gains format=pages with50 department/employee records each, keyset cursor, role/org/employee-context bound content revision and RepeatableRead pages. Client checks revision, totals, duplicates and progress, assembles hierarchy iteratively without total employee/depth cap, and renders members in increments100. Legacy GET response preserved when format omitted.",
+  "verification": {
+    "isolatedPostgresCases": 18,
+    "all2000EmployeesExactlyOnce": true,
+    "actualPagedClientToActualApiToRealDb": true,
+    "completeDataLargerThan1MiB": true,
+    "wholeRootVirtualTypes": true,
+    "mountedCases": 14,
+    "nativeChromeCases": 10,
+    "nativeAll2000Accessible": true,
+    "cleanDatabaseShutdown": true,
+    "boundaryCases": 31,
+    "legacyCases": 11,
+    "all10001EnterpriseEmployeesExactlyOnce": true,
+    "valid1500LevelHierarchy": true,
+    "mvccDirectSqlEditDetected": true,
+    "original28BoundariesRetained": true,
+    "longFieldCompatibilityCases": 3,
+    "rootMandatory31": true,
+    "fullGate": 156,
+    "actualNextCases": 38,
+    "original150RetainedInOrder": true,
+    "allSourcesFrozenAndUnchanged": true
+  },
+  "pending": [
+    "Fresh frozen full156 after long-field repair, including actual Next/auth/realDB38 (original35 plus3 valid long-field cases)",
+    "Resolve independent finding only after current-source full gate and actualNext38 pass",
+    "Exact reviewed commit/push, CI, production READY and public verification",
+    "Combined department input/concurrency candidate verification and integration",
+    "Continue full17services2074criteria188GET audit"
+  ],
+  "scope": "Synthetic isolated fixtures and loopback browser only. No production/customer database writes, paid providers or migrations. Full17services2074criteria188GET audit remains incomplete.",
+  "regressionFiles": [
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-hr-employee-reads.cjs",
+    "scripts/security-regression/verify-hr-org-chart-paged-client.cjs",
+    "scripts/security-regression/verify-hr-org-chart-visibility.cjs",
+    "scripts/security-regression/verify-org-chart-kintai-private-cache.cjs"
+  ],
+  "previousVerifiedCommit": "8ecafb9c366d7af397dee522fb4b5d309469af7e",
+  "releaseReady": true,
+  "currentGate": "docs/audits/2026-10-06-all-services-recheck/hr-org-chart-pagination-release-6daa0dd5-1ec4-4d9c-975a-1b2c496af8d3"
+}
