@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-08T18:58:28.694Z",
+  "expected": 1,
+  "passed": 1,
+  "cases": [
+    {
+      "name": "Current actual editor misrepresents temporary employee503 as missing employee with no retry",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/app/hr/employees/new/page.tsx": "aafe36e81404b2cd1e0ee2a12a375e9ea3525e3c1fe75360856fdd0d9dd32d4b",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-employee-initial-load-original-baseline/src/app/hr/employees/[id]/edit/page.tsx": "aba531f2917635c1dc5c15b747d7206f88451a24a4418b86c6a57c1d1d4b750d",
+    "/Users/mitsumori_katsuki/Code/09_Cursol/node_modules/react-dom/cjs/react-dom.development.js": "1459b808bc6991de5a1ec3a86d8beee32dbb6c14282cf13f84e00dfebfbdc025",
+    "/Users/mitsumori_katsuki/Code/09_Cursol/node_modules/react/cjs/react.development.js": "1ff3a1d9861a87984329584fa1172aea920855d79eb57dae0d1cebe54093d7e3",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/components/hr/HrAuthenticatedScope.tsx": "e4a9f6c7a9108c2c9d82b9550517ff8eed6a39e6962441dc405fd16e6f52fb41",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/components/hr/DepartmentListState.tsx": "838ef61d9829a5914405060f674deca8d37e8f0e7dbb0ec35ecf78e64adbd434",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/lib/hr/use-department-list.ts": "001f80bea58e26fcaed1ef2026ea29f51ac7fe6e69c38af099c8b2d041d2114e",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/lib/hr/use-page-lifetime.ts": "e0c43ce700d52d5b15a8731b20625e17c39861d5ce493fbb47cd89d86a43b4db",
+    "/Users/mitsumori_katsuki/Code/09_Cursol/node_modules/react/cjs/react-jsx-runtime.development.js": "581f93fa33c32b3aa7ea35b85b80258922517de046f5447236047dcc2845d9ff",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/lib/hr/department-list-client.ts": "9feb4fc7cbfd9a90705bcfcc75e3f04cbfe351a20d938dd70e2a1b55a9258351",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/lib/hr/department-settings-client.ts": "5b945103fb69dc8e28d0e03681dd07a60c8c8cf5f9f68acf5c06143e2cfab157",
+    "/Users/mitsumori_katsuki/Code/09_Cursol/node_modules/scheduler/cjs/scheduler.development.js": "22e3d959dc9f9cd59fca4e1fc95fecb9fde4d2cb8ecadbd279137ada995983ac",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-initial-load-native-baseline.cjs": "210cd1d50e8cd0f7d447b9b36658bbd6d190f459c31f54acd99140f3beb33c63"
+  },
+  "scope": "Baseline reproduced: actual integrated editor maps a synthetic employee503 response to missing employee and provides no retry. Department pagination succeeds. No employee deletion or production occurrence demonstrated. Loopback synthetic HTTP/auth/motion; outbound blocked. No production writes or actual OAuth claim."
+}

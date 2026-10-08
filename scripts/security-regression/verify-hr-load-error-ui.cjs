@@ -25,8 +25,11 @@ function extract(file, functionName) {
 function run(code, response) {
   const state = { loading: false, loadError: false, auditLogsError: false, canCreatePeriods: false, stats: null, periods: null, settings: null, departments: null }
   const controller = new AbortController()
+  const candidateFetch = async (...args) => typeof response === 'function' ? response(...args) : response
+  const { loadHrDepartmentList } = load('src/lib/hr/department-list-client.ts', {}, { fetch: candidateFetch, AbortController, TextDecoder, Uint8Array, setTimeout, clearTimeout })
   const env = {
-    fetch: async (...args) => typeof response === 'function' ? response(...args) : response,
+    loadHrDepartmentList,
+    fetch: candidateFetch,
     controller,
     Promise, Error, Array,
     parseSettingsDepartmentList,
@@ -92,7 +95,7 @@ function run(code, response) {
     const code = extract('src/app/hr/settings/page.tsx', 'fetchSettings')
     const state = await run(code, async url => {
       if (url === '/api/hr/settings') return Response.json({ settings: { id: 'synthetic-org', name: 'Example' }, members: [], myRole: 'OWNER', myMemberId: 'member' })
-      if (url === '/api/hr/departments') return Response.json({ success: true, organizationId: 'synthetic-org', flat: [] })
+      if (url === '/api/hr/departments?format=pages') return Response.json({ success: true, format: 'hr-department-page-v1', organizationId: 'synthetic-org', revision: 'a'.repeat(64), total: 0, fragments: [], nextCursor: null })
       return Response.json({ error: 'Failed' }, { status: 500 })
     })
     assert.equal(state.loadError, false)

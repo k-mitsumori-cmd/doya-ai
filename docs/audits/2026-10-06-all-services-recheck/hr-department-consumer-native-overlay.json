@@ -1,0 +1,76 @@
+{
+  "checkedAt": "2026-10-08T19:12:07.851Z",
+  "expected": 13,
+  "passed": 13,
+  "cases": [
+    {
+      "name": "Native new form503 is an explicit load failure and blocks unverified selection/save",
+      "passed": true
+    },
+    {
+      "name": "Native new form GET retry preserves draft without writes",
+      "passed": true
+    },
+    {
+      "name": "Native pending department list is loading rather than an empty organization",
+      "passed": true
+    },
+    {
+      "name": "Native confirmed empty list permits optional unassigned registration",
+      "passed": true
+    },
+    {
+      "name": "Native malformed department data fails closed without exposing object content",
+      "passed": true
+    },
+    {
+      "name": "Native editor503 keeps assigned department visible and blocks accidental unassignment",
+      "passed": true
+    },
+    {
+      "name": "Native editor GET retry restores department label and preserves employee number",
+      "passed": true
+    },
+    {
+      "name": "Native missing current department requires explicit correction before saving",
+      "passed": true
+    },
+    {
+      "name": "Native editor auth loading immediately clears private employee form",
+      "passed": true
+    },
+    {
+      "name": "Native employee503 remains a recoverable read error and explicit GET retry restores editor",
+      "passed": true
+    },
+    {
+      "name": "Native employee404 remains a genuine missing record without enabling editing",
+      "passed": true
+    },
+    {
+      "name": "Native malformed employee success is a read error rather than a missing employee",
+      "passed": true
+    },
+    {
+      "name": "Native employee401 provides reauthentication and hides unverified employee form",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/hr/employees/new/page.tsx": "aafe36e81404b2cd1e0ee2a12a375e9ea3525e3c1fe75360856fdd0d9dd32d4b",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/hr/employees/[id]/edit/page.tsx": "8da42556cea704c2cb89cee7d44222d936ef9e093b8f9a21349fce8c40f57bbb",
+    "/Users/mitsumori_katsuki/Code/09_Cursol/node_modules/react-dom/cjs/react-dom.development.js": "1459b808bc6991de5a1ec3a86d8beee32dbb6c14282cf13f84e00dfebfbdc025",
+    "/Users/mitsumori_katsuki/Code/09_Cursol/node_modules/react/cjs/react.development.js": "1ff3a1d9861a87984329584fa1172aea920855d79eb57dae0d1cebe54093d7e3",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/components/hr/HrAuthenticatedScope.tsx": "e4a9f6c7a9108c2c9d82b9550517ff8eed6a39e6962441dc405fd16e6f52fb41",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/components/hr/DepartmentListState.tsx": "838ef61d9829a5914405060f674deca8d37e8f0e7dbb0ec35ecf78e64adbd434",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/use-department-list.ts": "001f80bea58e26fcaed1ef2026ea29f51ac7fe6e69c38af099c8b2d041d2114e",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/use-page-lifetime.ts": "e0c43ce700d52d5b15a8731b20625e17c39861d5ce493fbb47cd89d86a43b4db",
+    "/Users/mitsumori_katsuki/Code/09_Cursol/node_modules/react/cjs/react-jsx-runtime.development.js": "581f93fa33c32b3aa7ea35b85b80258922517de046f5447236047dcc2845d9ff",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-list-client.ts": "9feb4fc7cbfd9a90705bcfcc75e3f04cbfe351a20d938dd70e2a1b55a9258351",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/lib/hr/department-settings-client.ts": "5b945103fb69dc8e28d0e03681dd07a60c8c8cf5f9f68acf5c06143e2cfab157",
+    "/Users/mitsumori_katsuki/Code/09_Cursol/node_modules/scheduler/cjs/scheduler.development.js": "22e3d959dc9f9cd59fca4e1fc95fecb9fde4d2cb8ecadbd279137ada995983ac",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-consumer-native.cjs": "d30e3657443970f3f4b3cff14bc89415c8fb88fe8e1da0487b1846dd097f9a94"
+  },
+  "scope": "Actual candidate full new/edit forms and real hooks/parser in native headless Chrome; real inputs, select values and disabled controls. Loopback synthetic HTTP/auth/motion; outbound blocked. No production writes or actual OAuth claim."
+}

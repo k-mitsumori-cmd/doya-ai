@@ -1,0 +1,64 @@
+{
+  "checkedAt": "2026-10-08T19:12:06.525Z",
+  "expected": 12,
+  "passed": 12,
+  "cases": [
+    {
+      "name": "Lost acknowledgment survives real reload and GET-only recovery without duplicate creation",
+      "passed": true
+    },
+    {
+      "name": "Explicit retry after not_received uses immutable body and operation ID",
+      "passed": true
+    },
+    {
+      "name": "Cancellation fence is confirmed before pending intent is cleared",
+      "passed": true
+    },
+    {
+      "name": "Real Web Locks and cross-tab storage permit only one creation operation",
+      "passed": true
+    },
+    {
+      "name": "Malformed success response keeps draft and never announces creation",
+      "passed": true
+    },
+    {
+      "name": "Auth loading hides pending recovery and sends no private recovery request",
+      "passed": true
+    },
+    {
+      "name": "New actor remounts fresh settings and cannot see previous actor pending operation",
+      "passed": true
+    },
+    {
+      "name": "Actor ABA suppresses stale save acknowledgment and resets private form scope",
+      "passed": true
+    },
+    {
+      "name": "Native settings distinguishes department read failure from an empty organization",
+      "passed": true
+    },
+    {
+      "name": "Native settings department retry performs only GET and restores usable creation controls",
+      "passed": true
+    },
+    {
+      "name": "Native settings refuses foreign organization page before permitting department creation",
+      "passed": true
+    },
+    {
+      "name": "Native settings paged-list failure does not retain private form during auth loading",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/hr/settings/page.tsx": "e918ed081f42d4d007abf32dce7bedf3bf9fc7c58581d856fd0b0b359fa2deaf",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/lib/hr/department-settings-client.ts": "5b945103fb69dc8e28d0e03681dd07a60c8c8cf5f9f68acf5c06143e2cfab157",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/src/lib/hr/use-department-creation.ts": "8b67409f2648cc2e19386b9895592dc2ba4e3b17193a6f462dfa7b88eed4e234",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-list-client.ts": "9feb4fc7cbfd9a90705bcfcc75e3f04cbfe351a20d938dd70e2a1b55a9258351",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-paged-native.cjs": "5850305864b55e88973379d4b519fed6f289d280158a766d24b61804c4ae5a29"
+  },
+  "scope": "Actual full settings page, durable hook and transport in native headless Chrome. Real Web Locks, storage events, reload, DOM input and button actions; loopback synthetic HTTP/auth/motion only. External networking blocked. No actual OAuth/Next/production database/provider execution."
+}

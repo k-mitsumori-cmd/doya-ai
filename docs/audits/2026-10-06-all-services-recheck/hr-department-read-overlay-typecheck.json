@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-08T19:12:34.455Z",
+  "expectedOverlayFiles": 11,
+  "overlayFiles": [
+    "src/app/api/hr/departments/route.ts",
+    "src/app/hr/employees/[id]/edit/page.tsx",
+    "src/app/hr/employees/new/page.tsx",
+    "src/app/hr/settings/page.tsx",
+    "src/components/hr/DepartmentListState.tsx",
+    "src/components/hr/HrAuthenticatedScope.tsx",
+    "src/lib/hr/department-hierarchy.ts",
+    "src/lib/hr/department-list-client.ts",
+    "src/lib/hr/department-pagination.ts",
+    "src/lib/hr/use-department-list.ts",
+    "src/lib/hr/use-page-lifetime.ts"
+  ],
+  "passed": true,
+  "errors": [],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/api/hr/departments/route.ts": "dbf62d9d4d6f853ba53c6233f663e3524778df68827ab3fd71f5ad26164b47f8",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/hr/employees/[id]/edit/page.tsx": "8da42556cea704c2cb89cee7d44222d936ef9e093b8f9a21349fce8c40f57bbb",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/hr/employees/new/page.tsx": "aafe36e81404b2cd1e0ee2a12a375e9ea3525e3c1fe75360856fdd0d9dd32d4b",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/hr/settings/page.tsx": "e918ed081f42d4d007abf32dce7bedf3bf9fc7c58581d856fd0b0b359fa2deaf",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/components/hr/DepartmentListState.tsx": "838ef61d9829a5914405060f674deca8d37e8f0e7dbb0ec35ecf78e64adbd434",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/components/hr/HrAuthenticatedScope.tsx": "e4a9f6c7a9108c2c9d82b9550517ff8eed6a39e6962441dc405fd16e6f52fb41",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-hierarchy.ts": "8215b8edd56e57c441686eb363a63be6d7c9f4a8a9c10462a187e90b98ef7281",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-list-client.ts": "9feb4fc7cbfd9a90705bcfcc75e3f04cbfe351a20d938dd70e2a1b55a9258351",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-pagination.ts": "b3ee66da7498886a9343db51581e5fc228bb607dd6bdedf63b5f939e400b80ea",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/use-department-list.ts": "001f80bea58e26fcaed1ef2026ea29f51ac7fe6e69c38af099c8b2d041d2114e",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/use-page-lifetime.ts": "e0c43ce700d52d5b15a8731b20625e17c39861d5ce493fbb47cd89d86a43b4db"
+  },
+  "scope": "Whole-root TypeScript program with eleven virtual department read overlay files; no emit and no root source mutation. Not integration/runtime/production proof."
+}

@@ -1,0 +1,51 @@
+{
+  "checkedAt": "2026-10-08T19:00:17.166408+00:00",
+  "status": "root-integrated-including-initial-employee-read-recovery;fresh192-running;not-published",
+  "rootApplied": true,
+  "deployed": false,
+  "baseline": "hr-department-deep-read-baseline.json",
+  "actualSource": "src/app/api/hr/departments/route.ts",
+  "affectedConsumers": [
+    "src/app/hr/settings/page.tsx",
+    "src/app/hr/employees/new/page.tsx",
+    "src/app/hr/employees/[id]/edit/page.tsx"
+  ],
+  "evidence": "Actual GET with synthetic scoped ORM rows:50-depth200 and5000-depth500. Department schema and writes have no total hierarchy-depth cap. Recursive buildTree prevents clients from reaching flat data. No production occurrence or realDB/browser proof.",
+  "repairRequirements": [
+    "Support valid large/deep hierarchies without recursive traversal or arbitrary total count/depth caps",
+    "Avoid deeply nested response serialization and response transport size failures; evaluate paged flat contract and retain legacy compatibility explicitly",
+    "Preserve every department including orphan/foreign-parent/cyclic legacy rows in an accessible flat representation",
+    "Wire all three actual callers; distinguish failed loading from genuinely no departments, validate responses, scoped actor lifecycle and GET-only retry",
+    "Actual Next/PG, full-page mounted/native, expanded frozen gates and exact production release"
+  ],
+  "userFlowInspectionPending": [
+    "Root integration, full-service regression gates and production verification pending; mounted/native candidate forms passed."
+  ],
+  "scope": "Read repair candidate verified with actual Next/isolated realPG and full-page native Chrome. Pending root integration, whole original176+expanded gates and exact production release. Original17services2074criteria189GET remains active.",
+  "helperBoundaryReport": "hr-department-hierarchy-boundaries-overlay.json",
+  "candidateGETReport": "hr-department-read-candidate-results.json",
+  "consumerBaseline": "hr-department-consumer-baseline.json",
+  "candidateFiles": 11,
+  "transportReport": "hr-department-paged-transport-overlay.json",
+  "realPGReport": "hr-department-read-postgres.json",
+  "realPGSupervisor": "hr-department-read-postgres-supervisor.json",
+  "hookReport": "hr-department-list-hook-overlay.json",
+  "typecheckReport": "hr-department-read-overlay-typecheck.json",
+  "consumerMountedReport": "hr-department-consumer-mounted-overlay.json",
+  "settingsMountedReport": "hr-department-settings-paged-mounted-overlay.json",
+  "realPGCases": 13,
+  "candidateBuildReport": "hr-department-read-candidate-build.json",
+  "candidateBuildSession": 60991,
+  "actualNextReport": "hr-department-read-next-results.json",
+  "actualNextCases": 80,
+  "consumerNativeReport": "hr-department-consumer-native-overlay.json",
+  "consumerNativeCases": 13,
+  "settingsNativeReport": "hr-department-settings-paged-native-overlay.json",
+  "settingsNativeCases": 12,
+  "candidateBuildStatus": "historical;fresh integrated192 build pending",
+  "fullGate": "docs/audits/2026-10-06-all-services-recheck/hr-department-read-release-7de2d4d0-8268-4d0f-acc5-5d2a5a60ba9c",
+  "fullGateSession": 59859,
+  "fullGatePid": 89934,
+  "consumerMountedCases": 14,
+  "initialEmployeeReadBaseline": "hr-employee-initial-load-native-baseline.json"
+}

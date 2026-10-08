@@ -1,0 +1,139 @@
+{
+  "checkedAt": "2026-10-08T19:12:02.968Z",
+  "expected": 31,
+  "passed": 31,
+  "cases": [
+    {
+      "scenario": "confirmed create survives refresh outage; persistent GET-only retry restores authoritative list",
+      "passed": true
+    },
+    {
+      "scenario": "confirmed deletion stays removed when refresh fails",
+      "passed": true
+    },
+    {
+      "scenario": "malformed200 create preserves draft and never announces success",
+      "passed": true
+    },
+    {
+      "scenario": "whitespace-only name cannot submit",
+      "passed": true
+    },
+    {
+      "scenario": "same-event rapid create submits once",
+      "passed": true
+    },
+    {
+      "scenario": "same-event rapid deletion submits once",
+      "passed": true
+    },
+    {
+      "scenario": "malformed list after confirmed create leaves known row and retry warning",
+      "passed": true
+    },
+    {
+      "scenario": "rejected create does not clear draft or announce success",
+      "passed": true
+    },
+    {
+      "scenario": "late mutation after page unmount cannot refresh or notify",
+      "passed": true
+    },
+    {
+      "scenario": "long valid Japanese department name remains supported",
+      "passed": true
+    },
+    {
+      "scenario": "lost create acknowledgment is recovered with GET only and cannot silently enable duplicate creation",
+      "passed": true
+    },
+    {
+      "scenario": "explicit missing-result retry uses original immutable name and exact operation despite edited draft",
+      "passed": true
+    },
+    {
+      "scenario": "cancel unreceived creation persists DELETE fence before user may start a new operation",
+      "passed": true
+    },
+    {
+      "scenario": "deleted creation result cannot offer replay or recreate automatically",
+      "passed": true
+    },
+    {
+      "scenario": "malformed deletion acknowledgment keeps known row and offers persistent GET-only reconciliation",
+      "passed": true
+    },
+    {
+      "scenario": "foreign organization refresh cannot replace known created row or enable next creation",
+      "passed": true
+    },
+    {
+      "scenario": "initial organization mismatch is a load error and never a mixed organization form",
+      "passed": true
+    },
+    {
+      "scenario": "initial malformed department row is a load error, without rendering private malformed data",
+      "passed": true
+    },
+    {
+      "scenario": "auth loading immediately hides all organization fields and sends no reads",
+      "passed": true
+    },
+    {
+      "scenario": "new actor receives fresh settings and authority without old drafts",
+      "passed": true
+    },
+    {
+      "scenario": "unauthenticated scope has login guidance and no private organization form",
+      "passed": true
+    },
+    {
+      "scenario": "old settings save acknowledgment after actor switch cannot toast or change new form",
+      "passed": true
+    },
+    {
+      "scenario": "actor ABA cannot accept first actor save result after returning to same account",
+      "passed": true
+    },
+    {
+      "scenario": "lost create intent stays scoped to original actor across authentication change",
+      "passed": true
+    },
+    {
+      "scenario": "old role member response after actor switch cannot reload, notify or reject unhandled",
+      "passed": true
+    },
+    {
+      "scenario": "old remove member response after actor switch cannot reload, notify or reject unhandled",
+      "passed": true
+    },
+    {
+      "scenario": "old invitation response cannot expose invitation token or trigger a new settings read",
+      "passed": true
+    },
+    {
+      "scenario": "late ownership transfer cannot notify or reload another actor",
+      "passed": true
+    },
+    {
+      "scenario": "late employee search cannot expose previous actor employee data",
+      "passed": true
+    },
+    {
+      "scenario": "clipboard fallback failure is not reported as copied",
+      "passed": true
+    },
+    {
+      "scenario": "late clipboard rejection cannot copy old invitation through DOM fallback",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/app/hr/settings/page.tsx": "e918ed081f42d4d007abf32dce7bedf3bf9fc7c58581d856fd0b0b359fa2deaf",
+    "src/lib/hr/department-settings-client.ts": "5b945103fb69dc8e28d0e03681dd07a60c8c8cf5f9f68acf5c06143e2cfab157",
+    "src/lib/hr/use-department-creation.ts": "8b67409f2648cc2e19386b9895592dc2ba4e3b17193a6f462dfa7b88eed4e234",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-list-client.ts": "9feb4fc7cbfd9a90705bcfcc75e3f04cbfe351a20d938dd70e2a1b55a9258351",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-settings-paged-mounted.cjs": "099b15d95dc9354f01c68bdcf71d99c86841bfd47cd46e92c95bbc6393f7d103"
+  },
+  "scope": "Candidate full settings page with actual paged stream client; synthetic HTTP adapter translates existing flat fixtures to bounded page records. All31 assertions/scenarios retained. Original10 user scenarios retained with explicit synthetic HTTP metadata adapter to the durable operation protocol; known input errors are checked in persistent UI, confirmed create requires explicit next-operation acknowledgment. Adds8 recovery/org/read-shape cases and9 authentication lifecycle cases plus4 search/ownership/clipboard cases. Actual full settings page and actual parser mounted in React StrictMode/JSDOM. Synthetic fetch, motion/link/toast only; real input and button events. Candidate overlay only; no root integration, native browser or production proof. Durable pending/recovery/retry/cancel is connected; actual Next/native/full frozen/root/release proofs remain required."
+}

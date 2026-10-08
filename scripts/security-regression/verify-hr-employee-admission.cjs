@@ -127,6 +127,7 @@ const ts = require('typescript')
       const calls = []
       const destinations = []
       const env = {
+        departmentList: { status: 'ready' }, saving: false, submitted: false,
         form: { lastName: '山田', firstName: '太郎' },
         photoFile: new Blob(['photo']),
         FormData,

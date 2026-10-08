@@ -1,0 +1,88 @@
+{
+  "checkedAt": "2026-10-08T19:11:58.992Z",
+  "expected": 15,
+  "passed": 15,
+  "cases": [
+    {
+      "name": "Empty organization completes only after a valid empty page",
+      "passed": true,
+      "durationMs": 2
+    },
+    {
+      "name": "20000 departments load without total cap, truncation or duplicated records",
+      "passed": true,
+      "durationMs": 214
+    },
+    {
+      "name": "Single row larger than platform request limit survives bounded fragments without field truncation",
+      "passed": true,
+      "durationMs": 6044
+    },
+    {
+      "name": "Department or employee revision change rejects mixed snapshots",
+      "passed": true,
+      "durationMs": 1
+    },
+    {
+      "name": "Current membership is rechecked for every page",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Malformed cursor is rejected before any database access",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Changed organization or revision and inconsistent total are rejected",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Incomplete fragments, incorrect offsets and duplicate identifiers cannot become successful list",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Repeated cursors and incomplete final totals fail closed",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Malformed department fields never render or return partial successful data",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Later HTTP outage rejects entire list without automatic write/retry",
+      "passed": true,
+      "durationMs": 1
+    },
+    {
+      "name": "Abort prevents all requests and no partial list can be returned",
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "name": "Request deadline rejects even when transport ignores AbortSignal",
+      "passed": true,
+      "durationMs": 34
+    },
+    {
+      "name": "Body deadline rejects stalled stream and releases reader",
+      "passed": true,
+      "durationMs": 8
+    },
+    {
+      "name": "Oversized response fails before decoding without retaining stream",
+      "passed": true,
+      "durationMs": 0
+    }
+  ],
+  "sourceHashes": {
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-pagination.ts": "b3ee66da7498886a9343db51581e5fc228bb607dd6bdedf63b5f939e400b80ea",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/hr-department-read-repair-overlay/src/lib/hr/department-list-client.ts": "9feb4fc7cbfd9a90705bcfcc75e3f04cbfe351a20d938dd70e2a1b55a9258351",
+    "/Users/mitsumori_katsuki/Code/doya-billing-client-20261006/docs/audits/2026-10-06-all-services-recheck/verify-hr-department-paged-transport.cjs": "9cf419a0fe7417883a03e3d748e53d4e7dc92b5eeb98f1b18be2c61a1168d721"
+  },
+  "scope": "Actual candidate server paging and client stream parser with synthetic scoped transaction/HTTP, native Response/stream. 20000 total and >4.5MiB single field supported, each response <1MiB. No actual PostgreSQL/Next/browser, page wiring/root integration/production proof."
+}
