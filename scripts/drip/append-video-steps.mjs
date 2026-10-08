@@ -112,7 +112,7 @@ async function main() {
             dayOffset,
             sendTime,
             templateId: t.id,
-            label: `メール${sortOrder + 1} ${e.title || e.subject.replace(/^【ドヤマーケ】/, '')}`.slice(0, 120),
+            label: `メール${sortOrder + 1} ${e.title || e.subject.replace(/^【ドヤ(マーケ|AI)】/, '')}`.slice(0, 120),
           },
         })
       })
