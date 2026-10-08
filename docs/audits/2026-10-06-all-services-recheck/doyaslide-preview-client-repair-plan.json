@@ -1,0 +1,67 @@
+{
+  "checkedAt": "2026-10-08T01:57:52.831577+00:00",
+  "status": "frozen98-and-local-native7-passed-ready-for-reviewed-commit-push",
+  "scope": "All17-service goal remains active. This cohort repairs Slide previews only.",
+  "findings": [
+    "Empty/error/capped results previously looked indefinitely pending",
+    "Unmounted late responses could recreate polling timers",
+    "StrictMode canceled pretransport attempt consumed polling count"
+  ],
+  "focusedChecks": {
+    "transport": 21,
+    "hook": 7,
+    "wizard": 7,
+    "existingUsage": 24,
+    "typecheckExitCode": 0,
+    "native": 7
+  },
+  "gate": "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-release-64b0e131-6b85-4893-bf9b-c4741f72b43f",
+  "requiredNext": [
+    "Frozen97 gate including full build/security/lint and isolated regressions",
+    "Native client verification",
+    "Exact reviewed commit; CI; READY; public verification",
+    "Continue all17 service criteria audit"
+  ],
+  "productionWrites": false,
+  "additionalFinding": "Actual Native Chrome with actual SlideImage confirms URL import button extends to346px on320px viewport; pending min-width correction after running gate",
+  "nativeStatus": "passed7-local-native-http",
+  "nextGatePrepared": "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-release-64b0e131-6b85-4893-bf9b-c4741f72b43f",
+  "nextGateStatus": "passed98-unchanged",
+  "gateObservation": {
+    "checkedAt": "2026-10-08T02:00:47.750713+00:00",
+    "status": "running",
+    "completed": 82,
+    "last": {
+      "name": "doyaslide-preview-2",
+      "exitCode": 0,
+      "endedAt": "2026-10-08T01:58:53.366164+00:00"
+    },
+    "session": 59503
+  },
+  "remoteHeadVerified": "51e886a57ae11290f120f03052210db7e7160fbb",
+  "previousGateStatus": "97passed-before-narrow-layout-correction",
+  "layoutCorrection": "URL input min-w-0; native measured scrollWidth320 at viewport320",
+  "gateSession": 59503,
+  "publicationPreparation": {
+    "publisher": "publish-doyaslide-preview.py",
+    "allowlistFiles": 27,
+    "observer": "doyaslide-preview-release-observe.py",
+    "publicVerifier": "verify-doyaslide-preview-public.py",
+    "status": "prepared-not-executed; full98 must pass unchanged",
+    "requiredProof": "Exact commit CI success; intended production deployment READY; public17 service/asset check and guest-cache-only Slide preview; authenticated production flows remain unverified"
+  },
+  "preReleaseSnapshot": {
+    "checkedAt": "2026-10-08T02:02:02.436355+00:00",
+    "sourceFiles": 2956,
+    "changedSources": [],
+    "allowlistCount": 27,
+    "missingAllowlistFiles": [],
+    "currentProduction": {
+      "project": "doya-ai",
+      "scope": "surisutas-projects",
+      "state": "READY",
+      "commit": "51e886a57ae11290f120f03052210db7e7160fbb"
+    }
+  },
+  "publicationStatus": "ready-not-yet-pushed"
+}

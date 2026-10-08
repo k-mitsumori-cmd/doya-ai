@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-08T01:58:53.354Z",
+  "expected": 7,
+  "passed": 7,
+  "cases": [
+    "Empty terminal response displays unavailable state and explicit retry without losing draft",
+    "Server failure ends preview spinner and leaves project creation usable",
+    "Shared infrastructure cap is explicit without blocking project creation",
+    "Late pending responses after actual wizard unmount cannot recreate polling timers",
+    "Even an abort-ignoring late HTTP response cannot schedule work after unmount",
+    "Retained polling callbacks cannot fetch after actual wizard cleanup",
+    "Actor change discards old pending preview responses and retains current complete preview"
+  ],
+  "sourceHashes": {
+    "src/components/doyaslide/NewDoyaSlideWizard.tsx": "c400281e140670524788a9c557a221a08c3de4ae77781719f49fb185de0c1228",
+    "src/lib/doyaslide/use-style-previews.ts": "9c53a7e3e8a83fff8ec6fe650c78404b1b0fd1c7bf445d1f0e332356d31fca85",
+    "src/lib/doyaslide/style-preview-client.ts": "542623e73571c2f9a7d4631a168a659314cd5c4cdbd7e49e13b38394c52c3ce3",
+    "scripts/security-regression/verify-slide-wizard-usage-mounted.cjs": "f36a1fc50493085a17d20d7da9c2f2636a8c863d2ce5b18437ccecfd1f8ea182",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-wizard-mounted.cjs": "a94c2a2debf7a35ee9d472e77825e05df24b7172864b8d7f0a71afd205fa4931"
+  },
+  "scope": "Actual full Wizard, actual preview hook and bounded reader under React StrictMode, real constants/session context. Synthetic HTTP/timers/router/decorative image child. No Next HTTP, provider, production/customer DB or deployed writes."
+}

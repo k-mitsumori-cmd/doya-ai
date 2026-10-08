@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { readBillingResponse } from '@/lib/billing-response-client'
+import { useStylePreviews } from '@/lib/doyaslide/use-style-previews'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import {
   DOC_TYPES,
@@ -25,6 +26,7 @@ import DoyaChar from '@/components/doyaslide/DoyaChar'
 import SlideImage from '@/components/doyaslide/SlideImage'
 
 type Aspect = 'wide' | 'square' | 'vertical'
+const GENERATED_PREVIEW_STYLES = STYLE_PRESETS.filter(preset => !preset.sampleImages?.length).map(preset => preset.value)
 
 const COLOR_SWATCHES = ['#2563eb', '#7f19e6', '#e11d48', '#059669', '#f59e0b', '#0f172a']
 const ASPECT_ICON: Record<Aspect, string> = { wide: 'crop_16_9', square: 'crop_square', vertical: 'crop_portrait' }
@@ -134,16 +136,8 @@ export default function NewDoyaSlideWizard() {
   const [loginRequired, setLoginRequired] = useState(false)
   const [funIdx, setFunIdx] = useState(0)
   const [elapsed, setElapsed] = useState(0)
-  const [previews, setPreviews] = useState<Record<string, string[]>>({})
   const [previewPage, setPreviewPage] = useState(0)
-  const fetchedStyles = useRef<Set<string>>(new Set())
-  const previewRetryTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
-
-  useEffect(() => {
-    const timers = previewRetryTimers.current
-    return () => { for (const timer of timers.values()) clearTimeout(timer); timers.clear() }
-  }, [])
-
+  const stylePreviews = useStylePreviews(usageContextKey, GENERATED_PREVIEW_STYLES)
   const refreshUsage = useCallback(async () => {
     if (!allowed || activeUsageContext.current !== usageContextKey || usagePendingRef.current || !mountedRef.current) return
     const controller = new AbortController()
@@ -192,53 +186,13 @@ export default function NewDoyaSlideWizard() {
     }
   }, [allowed, refreshUsage])
 
-  const loadPreview = (s: string): Promise<void> => {
-    if (previews[s]?.length === STYLE_PREVIEW_SAMPLE_SLIDES.length || fetchedStyles.current.has(s)) return Promise.resolve()
-    fetchedStyles.current.add(s)
-    return fetch(`/api/doyaslide/style-preview?style=${s}`)
-      .then((r) => r.json())
-      .then((d) => {
-        const urls: string[] = d.urls || (d.url ? [d.url] : [])
-        if (urls.length) setPreviews((p) => ({ ...p, [s]: urls }))
-        if (d.pending) {
-          fetchedStyles.current.delete(s)
-          if (!previewRetryTimers.current.has(s)) {
-            const timer = setTimeout(() => {
-              previewRetryTimers.current.delete(s)
-              void loadPreview(s)
-            }, 10000)
-            previewRetryTimers.current.set(s, timer)
-          }
-        }
-      })
-      .catch(() => {
-        fetchedStyles.current.delete(s)
-      })
-  }
-
-  // 既存スタイルのプレビューだけを逐次先読み。
-  // 個別サンプルを持つ追加テンプレート20種は、静的な3ページだけを表示する。
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      for (const s of STYLE_PRESETS.filter((preset) => !preset.sampleImages?.length)) {
-        if (cancelled) break
-        await loadPreview(s.value)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   // スタイル切替でページを先頭に戻し、既存スタイルだけ代表ページを取得する。
   useEffect(() => {
     setPreviewPage(0)
     const selectedPreset = STYLE_PRESETS.find((preset) => preset.value === style)
-    if (!selectedPreset?.sampleImages?.length) void loadPreview(style)
+    if (!selectedPreset?.sampleImages?.length) void stylePreviews.ensure(style)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [style])
+  }, [style, stylePreviews.ensure])
 
   // 生成中の楽しいメッセージ回し + 経過時間カウント
   useEffect(() => {
@@ -426,7 +380,7 @@ export default function NewDoyaSlideWizard() {
 
   // 追加テンプレートは「専用表紙 → 個別本文2枚」の3ページだけを見せる。
   // 21枚の全体一覧画像は使わず、実際の本文レイアウトを読み取れる大きさに保つ。
-  const generatedStylePages = currentStyle?.sampleImages?.length ? [] : previews[style] || []
+  const generatedStylePages = currentStyle?.sampleImages?.length ? [] : stylePreviews.entries[style]?.urls || []
   const staticStylePages = [currentStyle?.coverImage, ...(currentStyle?.sampleImages || [])].filter(
     (url): url is string => !!url
   )
@@ -436,6 +390,8 @@ export default function NewDoyaSlideWizard() {
   ]
   const curPage = stylePages.length ? Math.min(previewPage, stylePages.length - 1) : 0
   const currentPreviewUrl = stylePages[curPage]
+  const previewState = stylePreviews.entries[style]
+  const previewLoading = !previewState || previewState.status === 'idle' || previewState.status === 'loading'
   const isStaticTemplatePreview = !!currentPreviewUrl && staticStylePages.includes(currentPreviewUrl)
   const previewKind = currentPreviewUrl === currentStyle?.coverImage
     ? '表紙'
@@ -547,7 +503,7 @@ export default function NewDoyaSlideWizard() {
                 }}
                 disabled={urlBusy}
                 placeholder="https://example.com/service"
-                className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
+                className="min-w-0 flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
               />
               <button
                 onClick={importUrl}
@@ -581,7 +537,7 @@ export default function NewDoyaSlideWizard() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                 {STYLE_PRESETS.filter((s) => s.group === group).map((s) => {
                   const on = style === s.value
-                  const thumbnail = s.coverImage || previews[s.value]?.[0] || s.previewImage
+                  const thumbnail = s.coverImage || stylePreviews.entries[s.value]?.urls[0] || s.previewImage
                   return (
                     <button
                       key={s.value}
@@ -615,6 +571,12 @@ export default function NewDoyaSlideWizard() {
                   <span className="text-[11px] font-bold text-slate-400">{previewKind} ・ {curPage + 1} / {stylePages.length}</span>
                 )}
               </div>
+              {previewState && (!previewLoading || previewState.urls.length > 0) && (previewState.status !== 'ready' || previewState.urls.length < STYLE_PREVIEW_SAMPLE_SLIDES.length) && !currentStyle?.sampleImages?.length && (
+                <div role="status" className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-slate-800">
+                  <p>{previewState.message || '一部の見本を表示しています。資料の作成は続けられます。'}</p>
+                  {!previewLoading && <button type="button" className="mt-2 font-bold underline" onClick={() => { void stylePreviews.retry(style) }}>見本を再確認</button>}
+                </div>
+              )}
               <div className={`relative ${isStaticTemplatePreview ? 'aspect-video' : frameClass(aspect)} w-full min-w-0 max-h-[60vh] rounded-2xl overflow-hidden bg-slate-900 shadow-lg`}>
                 {stylePages.length > 0 ? (
                   <SlideImage
@@ -625,8 +587,8 @@ export default function NewDoyaSlideWizard() {
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 gap-2">
-                    <img src="/character/working.png" alt="" className="w-16 h-16 object-contain animate-bounce" />
-                    <p className="text-xs font-bold">ページを生成中…</p>
+                    <img src="/character/working.png" alt="" className={`w-16 h-16 object-contain ${previewLoading ? 'animate-bounce' : ''}`} />
+                    <p className="text-xs font-bold text-center px-4">{previewLoading ? '見本を準備中…' : '見本は未表示です'}</p>
                   </div>
                 )}
                 <div className="absolute bottom-2 left-2 bg-black/55 text-white text-xs font-black px-2.5 py-1 rounded-lg backdrop-blur">

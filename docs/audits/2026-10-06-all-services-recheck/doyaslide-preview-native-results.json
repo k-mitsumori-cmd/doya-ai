@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-08T02:03:42.822Z",
+  "expected": 7,
+  "passed": 7,
+  "cases": [
+    "Empty terminal preview exposes retry and keeps actual creation control usable",
+    "Native retry fetches once and preserves entered draft",
+    "HTTP failure ends waiting state without blocking creation",
+    "Shared daily cap is explained without disabling creation",
+    "Actual recovery messages and controls fit desktop390 and320px",
+    "Native actor switch discards delayed old pending response",
+    "Native unmount completes without any project/provider write"
+  ],
+  "sourceHashes": {
+    "src/components/doyaslide/SlideImage.tsx": "55d32bd8ecabe5e3e288b023d07a91c9455ba0ed324f19e27a6a63a847deb244",
+    "src/components/doyaslide/NewDoyaSlideWizard.tsx": "c400281e140670524788a9c557a221a08c3de4ae77781719f49fb185de0c1228",
+    "src/lib/doyaslide/use-style-previews.ts": "9c53a7e3e8a83fff8ec6fe650c78404b1b0fd1c7bf445d1f0e332356d31fca85",
+    "src/lib/doyaslide/style-preview-client.ts": "542623e73571c2f9a7d4631a168a659314cd5c4cdbd7e49e13b38394c52c3ce3",
+    "src/lib/billing-response-client.ts": "37bcf03abdde567cf1a8de3d5f615148c5e87de09bce5288fb74e7990c481c8c",
+    "src/lib/doyaslide/constants.ts": "7d0e9e3ef825c325564bd9b6f6bdd1f8f54d9ffd6f2f46932bfecfb0d5961a40",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-native.cjs": "264d94d26909390518a91d96e0c0e929d613046f21a984a9c5343b6c8c9fe21f"
+  },
+  "scope": "Native Chrome actual Wizard, preview hook and reader, actual localhost HTTP. Synthetic session/router/API. Actual SlideImage receives native image load events; decorative character omitted. No Next authenticated server, provider or production/customer writes."
+}

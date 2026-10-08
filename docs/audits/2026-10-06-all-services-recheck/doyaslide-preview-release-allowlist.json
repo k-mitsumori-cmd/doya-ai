@@ -1,0 +1,32 @@
+{
+  "scope": "Only reviewed Slide preview cohort; unrelated worktree changes excluded",
+  "files": [
+    ".github/workflows/ci.yml",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-client-baseline.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-client-repair-plan.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-current-gate.txt",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-hook-mounted-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-native-1280.png",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-native-320.png",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-native-390.png",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-native-layout-baseline.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-native-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-release-64b0e131-6b85-4893-bf9b-c4741f72b43f/source-manifest.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-release-64b0e131-6b85-4893-bf9b-c4741f72b43f/state.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-release-64b0e131-6b85-4893-bf9b-c4741f72b43f/supervise.py",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-release-allowlist.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-release-observe.py",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-transport-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/doyaslide-preview-wizard-mounted-results.json",
+    "docs/audits/2026-10-06-all-services-recheck/publish-doyaslide-preview.py",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-hook-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-native.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-public.py",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-transport.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-wizard-mounted.cjs",
+    "scripts/security-regression/verify-slide-wizard-usage-mounted.cjs",
+    "src/components/doyaslide/NewDoyaSlideWizard.tsx",
+    "src/lib/doyaslide/style-preview-client.ts",
+    "src/lib/doyaslide/use-style-previews.ts"
+  ]
+}

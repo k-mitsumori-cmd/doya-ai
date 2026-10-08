@@ -252,6 +252,12 @@ jobs:
       - name: Security and incident regression tests (offline)
         run: npm run test:security
 
+      - name: DoyaSlide preview deadlines and recovery (offline)
+        run: |
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-transport.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-hook-mounted.cjs
+          node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-wizard-mounted.cjs
+
       - name: Type check
         run: npx tsc --noEmit
 

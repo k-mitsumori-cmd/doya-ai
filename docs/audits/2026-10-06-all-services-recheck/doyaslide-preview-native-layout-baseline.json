@@ -1,0 +1,17 @@
+{
+  "status": "confirmed-repair-required-native-assertion-failed",
+  "source": "Native Chrome actual Wizard + existing compiled CSS; synthetic HTTP/session; external requests blocked",
+  "viewport": 320,
+  "scrollWidth": 346,
+  "offendingElement": "URL import button",
+  "likelyCause": "URL input flex item intrinsic minimum width",
+  "productionChanged": false,
+  "checkedAt": "2026-10-08T01:53:49.411786+00:00",
+  "commandExitCode": 1,
+  "sourceHashes": {
+    "src/components/doyaslide/NewDoyaSlideWizard.tsx": "48acb7e31fa7b033ad9c2cda8ae076eca2ff3626e49c6487c56f260c67409489",
+    "src/components/doyaslide/SlideImage.tsx": "55d32bd8ecabe5e3e288b023d07a91c9455ba0ed324f19e27a6a63a847deb244",
+    "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-native.cjs": "264d94d26909390518a91d96e0c0e929d613046f21a984a9c5343b6c8c9fe21f"
+  },
+  "log": "/tmp/doya-slide-preview-native.log"
+}
