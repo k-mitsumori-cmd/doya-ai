@@ -1,3 +1,4 @@
+for (const file of ['verify-hr-department-private-cache.cjs', 'verify-org-chart-kintai-private-cache.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 for (const file of ['verify-seo-creation-receipt.cjs', 'verify-seo-creation-recovery-api.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 const personalizedDashboardCache = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-personalized-dashboard-cache.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (personalizedDashboardCache.status !== 0) process.exit(personalizedDashboardCache.status || 1);

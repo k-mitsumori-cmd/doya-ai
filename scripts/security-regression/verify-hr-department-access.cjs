@@ -1,9 +1,11 @@
+const privateApiResponse = require('./load-typescript.cjs').load('src/lib/private-api-response.ts', { 'next/server': { NextResponse: Response } });
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
 
 const forbiddenDb = new Proxy({}, { get: (_, key) => { throw Error(`DB accessed before role check: ${String(key)}`) } })
 const mocks = {
-  'next/server': { NextResponse: Response },
+  '@/lib/private-api-response': privateApiResponse,
+    'next/server': { NextResponse: Response },
   'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
   '@/lib/auth': {},
   '@/lib/prisma': { prisma: forbiddenDb },

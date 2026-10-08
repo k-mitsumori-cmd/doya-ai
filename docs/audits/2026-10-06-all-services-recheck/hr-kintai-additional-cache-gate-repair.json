@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-10-08T16:10:11.585965+00:00",
+  "oldGate": "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-33c6102c-9667-4a34-a56e-ca9bb5ad41e0",
+  "oldGateTerminal": "failed-build-prerequisite-missing-private-response-mock",
+  "changedRootFile": "scripts/security-regression/verify-related-records.cjs",
+  "targetedResult": "All original33 cases passed, no assertions removed",
+  "newGate": "docs/audits/2026-10-06-all-services-recheck/hr-kintai-additional-cache-release-665ec471-f9f2-443e-992b-50dd42c26b58",
+  "reasonForFreshGate": "Root fixture source changed after confirmed terminal failure; previous frozen snapshot cannot prove updated source.",
+  "productionCodeUnchangedDuringRepair": true
+}

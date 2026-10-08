@@ -1,0 +1,48 @@
+{
+  "status": "integrated-first-full-gate-found-fixture-import-gap-fixed-awaiting-fresh150",
+  "rootApplied": true,
+  "productionReleased": false,
+  "routes": [
+    "src/app/api/hr/departments/route.ts",
+    "src/app/api/hr/org-chart/route.ts",
+    "src/app/api/kintai/departments/route.ts"
+  ],
+  "changeScope": "Only GET response helper imports/calls; POST/mutation bodies and data/authorization queries byte-preserved after helper normalization",
+  "actualHandlerOverlayCases": 10,
+  "existingFixtureReview": [
+    "verify-hr-employee-reads.cjs already mocks actual private helper",
+    "verify-hr-department-access.cjs requires private helper mock",
+    "verify-kintai-department-mutation-atomic.cjs requires private helper mock"
+  ],
+  "plannedActualNextCases": 20,
+  "plannedNextScope": "private headers, anonymous, two organizations, member/manager HR visibility, unlinked/invalid/inactive memberships, revoked session, full domain-row snapshots per GET",
+  "productionExposure": "No actual customer cache hit or leakage established",
+  "pending": [
+    "wait for SEO exact release verification before root integration",
+    "retain and update legacy fixture mocks",
+    "mandatory handler tests10 and actual Next20 with isolated PG",
+    "fresh fullgate build/CI/deployment/public checks"
+  ],
+  "checkedAt": "2026-10-08T16:04:08.161801+00:00",
+  "deployed": false,
+  "productionFiles": [
+    "src/app/api/hr/departments/route.ts",
+    "src/app/api/hr/org-chart/route.ts",
+    "src/app/api/kintai/departments/route.ts"
+  ],
+  "regressionFiles": [
+    "scripts/security-regression/run.cjs",
+    "scripts/security-regression/verify-hr-department-access.cjs",
+    "scripts/security-regression/verify-hr-department-private-cache.cjs",
+    "scripts/security-regression/verify-kintai-department-mutation-atomic.cjs",
+    "scripts/security-regression/verify-org-chart-kintai-private-cache.cjs",
+    "scripts/security-regression/verify-related-records.cjs"
+  ],
+  "previousVerifiedCommit": "37232b2333a7122a1e8207158c89843486004efe",
+  "gateFailureRepair": {
+    "oldGate": "hr-kintai-additional-cache-release-33c6102c-9667-4a34-a56e-ca9bb5ad41e0",
+    "failedStage": "build npm prerequisite security-regression verify-related-records.cjs",
+    "cause": "Missing mock for newly imported actual privateApiJson helper; original department link assertions preserved",
+    "sourceChange": "Fixture loads actual private-api-response helper; no behavior assertions removed"
+  }
+}

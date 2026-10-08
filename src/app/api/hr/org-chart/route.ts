@@ -1,8 +1,8 @@
+import { privateApiJson } from '@/lib/private-api-response'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { OrgChartNode } from '@/lib/hr/types'
@@ -38,7 +38,7 @@ export async function GET() {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const [org, departments, employees] = await Promise.all([
@@ -79,7 +79,7 @@ export async function GET() {
     const tree = buildOrgTree(departments, employeesByDept)
     const unassigned = employeesByDept.get('__unassigned__') || []
 
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       orgName: org?.name || '',
       orgChart: tree,
@@ -94,7 +94,7 @@ export async function GET() {
     })
   } catch (e: any) {
     console.error('[hr/org-chart] unexpected error')
-    return NextResponse.json(
+    return privateApiJson(
       { error: 'Failed to fetch org chart' },
       { status: 500 }
     )

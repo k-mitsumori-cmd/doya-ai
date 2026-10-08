@@ -1,6 +1,7 @@
 const {projectDependencies,adaptProjectPrisma,businessActions}=require('./promane-project-operation-fixture.cjs');
 const {adaptTimePrisma,operationId}=require('./promane-time-creation-fixture.cjs');
 const assert=require('node:assert/strict');const {load,check,results}=require('./verify-data-integrity.cjs');
+const privateApiResponse=require('./load-typescript.cjs').load('src/lib/private-api-response.ts',{'next/server':{NextResponse:Response}});
 const Resp={json:(body,opts)=>({body,status:opts?.status??200})};const req=body=>new Request('https://local.test',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const ctx={params:Promise.resolve({id:'own'})};
 const match=(r,q)=>Object.entries(q).every(([k,v])=>v&&typeof v==='object'?match(r[k]||{},v):r[k]===v);
 const finder=rows=>async q=>rows.find(r=>match(r,q.where))||null;
@@ -12,7 +13,7 @@ async function departments(){
   const departments=[{id:'own',organizationId:'org1',parentId:null},{id:'ok',organizationId:'org1',parentId:null},{id:'child',organizationId:'org1',parentId:'own'},{id:'foreign',organizationId:'org2',parentId:null},{id:'loop',organizationId:'org1',parentId:'loop'}];
   const prisma={[service+'Department']:{findFirst:finder(departments),create:async()=>{writes++;return{id:'new'}},update:async()=>{writes++;return{id:'own'}}},[service+'Employee']:{findFirst:finder([{id:'manager',organizationId:'org1'},{id:'foreign-manager',organizationId:'org2'}])}};
   if(service==='kintai')prisma.$transaction=async fn=>fn(prisma);
-  const mocks={...auth,'next/server':{NextResponse:Resp},'@/lib/prisma':{prisma},'@/lib/department-integrity':helper,[`@/lib/${service}/access`]:{[service==='hr'?'getHrContext':'getKintaiContext']:async()=>({organizationId:'org1',role:'owner'}),hasMinRole:()=>true}};
+  const mocks={...auth,'@/lib/private-api-response':privateApiResponse,'next/server':{NextResponse:Resp},'@/lib/prisma':{prisma},'@/lib/department-integrity':helper,[`@/lib/${service}/access`]:{[service==='hr'?'getHrContext':'getKintaiContext']:async()=>({organizationId:'org1',role:'owner'}),hasMinRole:()=>true}};
   if(service==='kintai'){
     mocks['@/lib/kintai/employee-admission']={lockKintaiEmployeeAdmission:async()=>{}};
     mocks['@/lib/kintai/manager-admission']={lockCurrentKintaiManager:async()=> 'hr_admin'};

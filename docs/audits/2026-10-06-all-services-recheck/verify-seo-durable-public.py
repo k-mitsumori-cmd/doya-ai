@@ -20,6 +20,8 @@ except urllib.error.HTTPError as error:response=error
 with response:
  raw=response.read(4097);assert len(raw)<=4096 and response.status==401
  data=json.loads(raw);assert set(data)=={'success','error'} and data['success'] is False and isinstance(data['error'],str)
- assert response.headers.get('cache-control')=='private, no-store' and 'cookie' in [v.strip().lower() for v in response.headers.get('vary','').split(',')]
-report={'checkedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),'commit':commit,'deployment':marker,'passed':True,'assetCount':len(urls),'markers':checks,'anonymousRecovery':{'status':401,'privateNoStore':True,'varyCookie':True},'scope':'Exact deployment marker, inherited17-service/static/SEO/banner/four cache API checks, SEO durable client bundle markers and anonymous no-cookie recovery401. No production generation, cancellation, OAuth, customer database writes or authenticated production recovery.'}
+ vary_header_values=response.headers.get_all('vary') or []
+ vary_tokens=[v.strip().lower() for v in ','.join(vary_header_values).split(',')]
+ assert response.headers.get('cache-control')=='private, no-store' and 'cookie' in vary_tokens
+report={'checkedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),'commit':commit,'deployment':marker,'passed':True,'assetCount':len(urls),'markers':checks,'anonymousRecovery':{'status':401,'privateNoStore':True,'varyCookie':True,'varyHeaderValues':vary_header_values},'scope':'Exact deployment marker, inherited17-service/static/SEO/banner/four cache API checks, SEO durable client bundle markers and anonymous no-cookie recovery401. No production generation, cancellation, OAuth, customer database writes or authenticated production recovery.'}
 (base/'seo-durable-public.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');print(json.dumps(report,ensure_ascii=False))

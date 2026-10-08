@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-08T16:03:44.008324+00:00",
+  "commit": "37232b2333a7122a1e8207158c89843486004efe",
+  "deployment": "dpl_51MckJFQRhQJpjsNf6S5niNL6VR8",
+  "passed": true,
+  "assetCount": 19,
+  "markers": {
+    "seo-article-create-intent:v1:": true,
+    "/api/seo/article-operation?operationId=": true,
+    "前回の記事作成の結果を確認してください": true,
+    "作成結果を確認": true,
+    "未受付の操作を終了": true,
+    "確認して新しい記事作成へ進む": true,
+    "操作情報を安全に保存・確認できません。": true
+  },
+  "anonymousRecovery": {
+    "status": 401,
+    "privateNoStore": true,
+    "varyCookie": true,
+    "varyHeaderValues": [
+      "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "Cookie"
+    ]
+  },
+  "scope": "Exact deployment marker, inherited17-service/static/SEO/banner/four cache API checks, SEO durable client bundle markers and anonymous no-cookie recovery401. No production generation, cancellation, OAuth, customer database writes or authenticated production recovery."
+}
