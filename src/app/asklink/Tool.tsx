@@ -4,10 +4,44 @@
 // 流れ: URL → 抽出＋質問リンク2本（数秒〜十数秒）→ バナー3枚を1枚ずつ（1枚1〜2分）
 import { useState } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, Link2, Loader2, MessageCircleQuestion } from 'lucide-react'
+import Image from 'next/image'
+import { AlertTriangle, Link2, Loader2 } from 'lucide-react'
 import RunResult from '@/components/asklink/RunResult'
 import { useBannerQueue } from '@/components/asklink/useBannerQueue'
 import type { RunDto } from '@/lib/asklink/dto'
+
+const LOADING_STEPS = ['サイトを読み取っています', '質問文を作っています', 'URLと文字数を確認しています']
+
+// 結果ができるまでの案内。何ができあがって、どこに貼るのかを先に見せる
+const GUIDE = [
+  { src: '/asklink/lp-step1.webp', title: 'URLを入れる', desc: '自社サイトのトップページなど、URLを1つ入れて「作成する」を押します。' },
+  { src: '/asklink/lp-step2.webp', title: 'リンク2本とバナー3枚ができる', desc: 'リンクは十数秒、バナーは1枚1〜2分でできます。リンクは先にお使いいただけます。' },
+  { src: '/asklink/lp-step3.webp', title: 'ポップアップに貼る', desc: 'リンクのURLとバナー画像をコピーして、ポップアップ作成ツールに貼るだけです。' },
+]
+
+function Guide() {
+  return (
+    <section className="mt-8" aria-labelledby="asklink-guide">
+      <h2 id="asklink-guide" className="mb-3 text-sm font-black text-slate-800">
+        できあがるまでの流れ
+      </h2>
+      <ol className="grid gap-4 md:grid-cols-3">
+        {GUIDE.map((g, i) => (
+          <li key={g.title} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <Image src={g.src} alt="" width={1200} height={800} className="aspect-[3/2] w-full bg-blue-50 object-cover" />
+            <div className="p-4">
+              <p className="flex items-center gap-2 text-sm font-black text-slate-900">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#0066ff] text-xs text-white">{i + 1}</span>
+                {g.title}
+              </p>
+              <p className="mt-1.5 text-xs font-bold leading-relaxed text-slate-500">{g.desc}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
 
 export default function AskLinkTool() {
   const [url, setUrl] = useState('')
@@ -61,9 +95,7 @@ export default function AskLinkTool() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
       <div className="mb-6 flex items-center gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#0066ff] to-[#0a0f3c] text-white shadow">
-          <MessageCircleQuestion className="h-5 w-5" />
-        </span>
+        <Image src="/asklink/icon.png" alt="" width={44} height={44} className="h-11 w-11 rounded-xl shadow" priority />
         <div>
           <h1 className="text-2xl font-black text-slate-900">ドヤAI質問リンク</h1>
           <p className="text-sm font-bold text-slate-500">サイトのURLから「AIに聞く」リンク2本とポップアップ用バナー3枚を作ります。</p>
@@ -125,7 +157,19 @@ export default function AskLinkTool() {
         )}
 
         {loading && (
-          <p className="mt-3 text-xs font-bold text-slate-500">サイトを読み取り、質問リンクを作っています。十数秒ほどかかります。</p>
+          <ol className="mt-4 grid gap-2 sm:grid-cols-3">
+            {LOADING_STEPS.map((label, i) => (
+              <li
+                key={label}
+                className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-[#0066ff]"
+                style={{ animation: `pulse 1.6s ease-in-out ${i * 0.5}s infinite` }}
+              >
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#0066ff] text-[10px] font-black text-white">{i + 1}</span>
+                {label}
+              </li>
+            ))}
+            <li className="text-xs font-bold text-slate-500 sm:col-span-3">十数秒ほどかかります。このままお待ちください。</li>
+          </ol>
         )}
         {error && (
           <p className="mt-3 flex items-start gap-1.5 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-800">
@@ -144,6 +188,8 @@ export default function AskLinkTool() {
           </div>
         )}
       </form>
+
+      {!run && !loading && <Guide />}
 
       {run && (
         <div className="mt-8">

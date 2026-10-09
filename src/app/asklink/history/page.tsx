@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChevronRight, History } from 'lucide-react'
-import { EmptyState } from '@/components/EmptyState'
+import Image from 'next/image'
 
 interface RunRow {
   id: string
@@ -47,17 +47,13 @@ export default function AskLinkHistoryPage() {
       ) : error ? (
         <p className="rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</p>
       ) : runs.length === 0 ? (
-        <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-          <EmptyState
-            kind="not-generated"
-            title="最初の質問リンクをつくりましょう"
-            description="サイトのURLを入れると、「AIに聞く」リンクとポップアップ用バナーを作れます。"
-            action={
-              <Link href="/asklink" className="inline-block rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-bold text-white">
-                質問リンクをつくる
-              </Link>
-            }
-          />
+        <div className="flex flex-col items-center rounded-2xl bg-white px-6 py-10 text-center shadow-sm ring-1 ring-slate-200">
+          <Image src="/asklink/empty.webp" alt="" width={800} height={600} className="h-auto w-full max-w-[320px]" />
+          <p className="mt-4 text-lg font-black text-slate-900">最初の質問リンクをつくりましょう</p>
+          <p className="mt-1 text-sm font-bold text-slate-500">サイトのURLを入れると、「AIに聞く」リンクとポップアップ用バナーを作れます。</p>
+          <Link href="/asklink" className="mt-5 inline-block rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-bold text-white">
+            質問リンクをつくる
+          </Link>
         </div>
       ) : (
         <ul className="space-y-3">

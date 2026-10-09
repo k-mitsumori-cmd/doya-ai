@@ -49,6 +49,7 @@ const SERVICE_LOGO: Record<string, string> = {
   quote: '/quote/logo.png',
   aishodan: '/aishodan/logo.png',
   adimage: '/adimage/logo.png',
+  asklink: '/asklink/logo.png',
   // ⚠️ ここに足すときは public/<service>/logo.png を先に置くこと。
   //    実体が無いと NextImage が壊れた画像を描き、アイコンにも落ちない
   //    （onError のフォールバックは無い）。adimage は実体が無いまま

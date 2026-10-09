@@ -239,7 +239,7 @@
 | DB | `asklink_run` / `asklink_banner`（userId スコープ。他人のIDは404） |
 | 画像の保存 | adimage のバケットに `asklink/<userId>/<runId>/` で保存。署名URLは都度発行 |
 | IDOR の静的検査 | `src/lib/asklink/scope.test.ts`。`npm run test:asklink`（ビルドに組み込み済み） |
-| システム画像 | Codex に依頼中。依頼文は `reference/services/asklink-images.md` |
+| システム画像 | Codex 内蔵の画像生成で作成済み（2026-10-09・定額枠）。`public/asklink/` に配置。依頼文と組み込み先は `reference/services/asklink-images.md` |
 
 - UIアイコンは `CLAUDE.md` のブランド規約に従い lucide-react を使う（Material Symbols は既存LPキット内の互換用で凍結）。LPキットの `icon` 指定だけは Material Symbols 名。
 - 設置用HTMLの画像は、署名URLが1時間で切れるため `asklink-○○.png` のファイル名を入れ、利用者が自分のサイトにアップロードしたURLへ置き換える形にした（画面の使い方欄に記載）。

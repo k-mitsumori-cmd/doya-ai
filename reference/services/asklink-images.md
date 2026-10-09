@@ -3,7 +3,21 @@
 仕様の正本: `reference/services/asklink.md` の「5-1」。
 従量課金の画像APIでは作らない。Codex の内蔵画像生成（定額枠）で作り、下の保存先に置く。
 
-置いたら Claude Code が組み込む（下の「組み込み先」）。届くまでは画面モックと共通の空状態イラストで表示している。
+**2026-10-09 作成・組み込み済み。** 各画像の実際の使い先:
+
+| ファイル | 使い先 |
+|---|---|
+| `icon.png`（512×512）と `src/app/asklink/icon.png` | 作成画面の見出し・ファビコン |
+| `logo.png`（2016×864）| ツール切替メニュー `SERVICE_LOGO` |
+| `logo-sidebar.png`（2000×604）| サイドバー。2は仕様（白文字ロゴ）から変更し、他サービスと同じマスコット入りバッジ型にした（白文字版は文字にかすれが出たため） |
+| `lp-hero.webp` | LPのヒーロー |
+| `lp-step2.webp` | LPの「サイトに無いURLを入れない」行 |
+| `lp-step1〜3.webp` | 作成画面の「できあがるまでの流れ」（結果が出るまで表示） |
+| `sample-*.webp` | LPの「バナーも3サイズ」行（`mocks.tsx` の `AskLinkBannerMock`） |
+| `empty.webp` | 履歴0件の表示 |
+| `og-bg.jpg` | `/og/[...slug]` の背景（`OG_BG_SERVICES`） |
+
+LP・空状態の画像はPNGで生成してwebpに変換した（元のPNGはリポジトリに入れていない）。
 
 ---
 

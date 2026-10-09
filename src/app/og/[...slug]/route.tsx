@@ -16,7 +16,7 @@ const BRAND_GRADIENT = 'linear-gradient(135deg, #0047b3 0%, #0066ff 55%, #3d80ff
 //      2026-08-20 まで og-bg.webp を指しており、17サービス全ての背景が
 //      一度も描画されていなかった。PNG か JPEG 以外を指さないこと。
 const OG_BG_SERVICES = new Set([
-  'mensetsu', 'quote', 'aishodan', 'adimage',
+  'mensetsu', 'quote', 'aishodan', 'adimage', 'asklink',
   'banner', 'hr', 'kintai', 'sfa', 'shodan', 'aio',
   'seo', 'interview', 'persona', 'doyalist', 'doyaslide', 'cunning', 'promane',
 ])

@@ -1,6 +1,7 @@
 // ドヤAI質問リンク LP用の画面モック（画像が揃うまでの表示。実データは使わない）
-// ⚠️ 画像（public/asklink/*.png）は Codex に依頼中。届いたら Lp.tsx の image に差し替える
-import { MessageCircleQuestion, Copy, Check, ExternalLink } from 'lucide-react'
+// バナーだけは Codex 内蔵の画像生成で作ったサンプル（public/asklink/sample-*.webp）を見せる
+import Image from 'next/image'
+import { Copy, Check, ExternalLink } from 'lucide-react'
 
 export function AskLinkResultMock() {
   return (
@@ -38,26 +39,19 @@ export function AskLinkResultMock() {
 
 export function AskLinkBannerMock() {
   return (
-    <div className="p-4">
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-blue-100 p-5 text-left">
-        <p className="text-[10px] font-black text-slate-500">サービス名</p>
-        <p className="mt-2 text-lg font-black leading-snug text-[#0a0f3c]">その疑問、AIに聞いてみよう。</p>
-        <p className="mt-1 text-xs font-bold text-slate-600">使い方を、会話でチェック。</p>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {['何を頼める？', 'どう活用する？', '何を解決できる？'].map((b) => (
-            <span key={b} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-[#0066ff] shadow-sm">
-              {b}
-            </span>
-          ))}
-        </div>
-        <div className="mt-4 flex flex-col items-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0a0f3c] px-5 py-2 text-xs font-black text-white">
-            <MessageCircleQuestion className="h-3.5 w-3.5" />
-            AIに聞く →
-          </span>
-          <span className="mt-1 text-[9px] font-bold text-slate-500">ChatGPTが開きます</span>
-        </div>
-      </div>
+    <div className="grid grid-cols-2 items-start gap-3 p-4">
+      <figure className="col-span-2">
+        <Image src="/asklink/sample-landscape.webp" alt="横長のサンプルバナー" width={1200} height={672} className="h-auto w-full rounded-lg shadow-sm ring-1 ring-slate-200" />
+        <figcaption className="mt-1 text-[10px] font-bold text-slate-500">横長（PC向け）</figcaption>
+      </figure>
+      <figure>
+        <Image src="/asklink/sample-square.webp" alt="正方形のサンプルバナー" width={1088} height={1088} className="h-auto w-full rounded-lg shadow-sm ring-1 ring-slate-200" />
+        <figcaption className="mt-1 text-[10px] font-bold text-slate-500">正方形（スライドイン向け）</figcaption>
+      </figure>
+      <figure>
+        <Image src="/asklink/sample-portrait.webp" alt="縦長のサンプルバナー" width={1152} height={1536} className="h-auto w-full rounded-lg shadow-sm ring-1 ring-slate-200" />
+        <figcaption className="mt-1 text-[10px] font-bold text-slate-500">縦長（スマホ向け）</figcaption>
+      </figure>
     </div>
   )
 }
