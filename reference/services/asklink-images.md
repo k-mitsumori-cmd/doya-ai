@@ -10,9 +10,9 @@
 | `icon.png`（512×512）と `src/app/asklink/icon.png` | 作成画面の見出し・ファビコン |
 | `logo.png`（2016×864）| ツール切替メニュー `SERVICE_LOGO` |
 | `logo-sidebar.png`（2000×604）| サイドバー。2は仕様（白文字ロゴ）から変更し、他サービスと同じマスコット入りバッジ型にした（白文字版は文字にかすれが出たため） |
-| `lp-hero.webp` | LPのヒーロー |
-| `lp-step2.webp` | LPの「サイトに無いURLを入れない」行 |
-| `lp-step1〜3.webp` | 作成画面の「できあがるまでの流れ」（結果が出るまで表示） |
+| `hero.webp` | LPのヒーロー |
+| `shots/2-process.webp` | LPの「サイトに無いURLを入れない」行 |
+| `shots/1-input・2-process・3-output.webp` | 作成画面の「できあがるまでの流れ」（結果が出るまで表示） |
 | `sample-*.webp` | LPの「バナーも3サイズ」行（`mocks.tsx` の `AskLinkBannerMock`） |
 | `empty.webp` | 履歴0件の表示 |
 | `og-bg.jpg` | `/og/[...slug]` の背景（`OG_BG_SERVICES`） |

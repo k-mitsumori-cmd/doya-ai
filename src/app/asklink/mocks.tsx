@@ -56,22 +56,3 @@ export function AskLinkBannerMock() {
   )
 }
 
-export function AskLinkCopyMock() {
-  return (
-    <div className="space-y-2 p-4 text-left">
-      {['URLをコピー', '質問文をコピー', '画像をコピー', 'コードをコピー'].map((t, i) => (
-        <div key={t} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
-          <span className="text-xs font-black text-slate-700">{t}</span>
-          {i === 0 ? (
-            <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-600">
-              <Check className="h-3 w-3" />
-              コピーしました
-            </span>
-          ) : (
-            <Copy className="h-3.5 w-3.5 text-slate-400" />
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}

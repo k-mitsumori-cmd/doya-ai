@@ -14,9 +14,9 @@ const LOADING_STEPS = ['サイトを読み取っています', '質問文を作�
 
 // 結果ができるまでの案内。何ができあがって、どこに貼るのかを先に見せる
 const GUIDE = [
-  { src: '/asklink/lp-step1.webp', title: 'URLを入れる', desc: '自社サイトのトップページなど、URLを1つ入れて「作成する」を押します。' },
-  { src: '/asklink/lp-step2.webp', title: 'リンク2本とバナー3枚ができる', desc: 'リンクは十数秒、バナーは1枚1〜2分でできます。リンクは先にお使いいただけます。' },
-  { src: '/asklink/lp-step3.webp', title: 'ポップアップに貼る', desc: 'リンクのURLとバナー画像をコピーして、ポップアップ作成ツールに貼るだけです。' },
+  { src: '/asklink/shots/1-input.webp', title: 'URLを入れる', desc: '自社サイトのトップページなど、URLを1つ入れて「作成する」を押します。' },
+  { src: '/asklink/shots/2-process.webp', title: 'リンク2本とバナー3枚ができる', desc: 'リンクは十数秒、バナーは1枚1〜2分でできます。リンクは先にお使いいただけます。' },
+  { src: '/asklink/shots/3-output.webp', title: 'ポップアップに貼る', desc: 'リンクのURLとバナー画像をコピーして、ポップアップ作成ツールに貼るだけです。' },
 ]
 
 function Guide() {

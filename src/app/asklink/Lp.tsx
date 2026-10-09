@@ -3,14 +3,15 @@
 // ドヤAI質問リンク ランディングページ（未ログインの方に見せる面）
 // ⚠️ 実績数値は持っていないので書かない。
 // 画像（ヒーロー・手順）は Codex 内蔵の画像生成で作ったもの（reference/services/asklink-images.md）。
-// 画像が読めないときは visual の画面モック（mocks.tsx）が出る。
+// LPキットは /asklink/hero.webp・/asklink/shots/*.webp・/renewal/icons/asklink.webp を名前で読む。
+// visual を渡すと image より優先されるので、画像を見せる行には visual を付けない。
 import {
   LpShell, ProductHero, MockWindow, FeatureShowcase,
   HowItWorks, Benefits, UseCases, FaqSection, CtaBand, type ShowcaseRow,
 } from '@/components/lp'
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
-import { AskLinkResultMock, AskLinkBannerMock, AskLinkCopyMock } from './mocks'
+import { AskLinkResultMock, AskLinkBannerMock } from './mocks'
 import ServiceDiagram from './diagram'
 
 const SVC = getServiceById('asklink')!
@@ -28,8 +29,7 @@ const ROWS: ShowcaseRow[] = [
     title: 'サイトに無いURLを入れない',
     desc: '質問文に入れるURLは、サイトを読み取ったときに実際に見つかったページだけです。生成後に機械で照合し、合わないもの・長すぎるものは自動で作り直します。',
     bullets: ['文中のURLはサイト上で確認できたものだけ', '文字数とURLの長さを確認', '通らなければ「要確認」と表示'],
-    visual: <MockWindow title="機械チェック"><AskLinkResultMock /></MockWindow>,
-    image: { src: '/asklink/lp-step2.webp', alt: '合格したリンク2本とバナー3サイズ' },
+    image: { src: '/asklink/shots/2-process.webp', alt: '合格したリンク2本とバナー3サイズ' },
   },
   {
     icon: 'ad_units',
@@ -54,8 +54,7 @@ export default function AskLinkLp() {
         ctaLabel="無料ではじめる"
         subCtaHref="/asklink/pricing"
         subCtaLabel="料金を見る"
-        visual={<MockWindow title="ドヤAI質問リンク"><AskLinkCopyMock /></MockWindow>}
-        image={{ src: '/asklink/lp-hero.webp', alt: 'サイトのポップアップの「AIに聞く」ボタンからChatGPTで相談が始まる様子' }}
+        image={{ src: '/asklink/hero.webp', alt: 'サイトのポップアップの「AIに聞く」ボタンからChatGPTで相談が始まる様子' }}
       />
 
       <UseCases
