@@ -7,11 +7,9 @@ import { authOptions } from '@/lib/auth'
 import AskLinkAppLayout from '@/components/asklink/AskLinkAppLayout'
 import { FAQ } from './lp-data'
 
-// ⚠️ 開発中（UNLISTED_SERVICE_IDS）のあいだは noindex。公開するときは両方外す
 export const metadata: Metadata = buildServiceMetadata('asklink', {
   tagline: 'URLを入れるだけで、ChatGPTに質問が届く「AIに聞く」リンクとバナー',
   keywords: ['AIに聞く ボタン', 'ChatGPT リンク', 'ポップアップ バナー', 'HubSpot ポップアップ', 'チャットボット 代わり'],
-  noindex: true,
 })
 
 const SVC = getServiceById('asklink')!

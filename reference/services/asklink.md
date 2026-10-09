@@ -255,3 +255,9 @@
   - 対策: 1回目で足りない文言があれば、縦を8本の細い帯（高さ16%・少しずつ重ねる）に切って2倍に拡大して読み直し、どちらかで読めれば合格とする（読み取り8回で約$0.02。画像の作り直し約$0.05より安い）。
   - 再判定の結果、3枚とも合格。
 - 修正後の再生成（2026-10-09）: ToB 2本・ToC 2本の4本すべて合格し、すべてに文中URLが入った（料金ページは「未確認」に正しく落ちた）。
+
+### 正式公開（2026-10-09）
+
+- `UNLISTED_SERVICE_IDS` から外し、`status: 'active'`（`badge: 'BETA'` / `isNew` は adimage と同じ扱い）。LP・料金ページの `noindex` を外した。トップ・sitemap・llms.txt・料金ページ・ツール切替は services.ts から派生するので個別の追記は無し。
+- 未ログインの紹介リンク許可リスト（`src/lib/safe-signin-callback.ts` の `PUBLIC_INTRO_SERVICES`）と指名検索の別表記（`src/lib/seo.ts` の `SERVICE_ALIASES`）に追加。
+- 公開サービス数の固定値（`scripts/security-regression/verify-google-analytics-services.cjs`）を17→18へ更新。

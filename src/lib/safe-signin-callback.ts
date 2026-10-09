@@ -17,6 +17,7 @@ export function safeSignInCallbackUrl(raw: string | null): string {
 const PUBLIC_INTRO_SERVICES = new Set([
   'banner', 'seo', 'interview', 'persona', 'hr', 'kintai', 'doyalist', 'promane',
   'doyaslide', 'cunning', 'sfa', 'shodan', 'aio', 'mensetsu', 'quote', 'aishodan', 'adimage',
+  'asklink',
 ])
 
 /** Do not advertise an authenticated dashboard, invitation, or private result as a guest trial. */
