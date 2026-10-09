@@ -21,7 +21,11 @@ export default function AskLinkRunPage() {
     fetch(`/api/asklink/runs/${encodeURIComponent(id)}`)
       .then(async (res) => {
         if (res.status === 401) {
-          window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(`/asklink/history/${id}`)}`
+          // 遷移までのあいだ「0件」「見つかりません」を出さないよう、読み込み中のまま止める
+          if (alive) {
+            alive = false
+            window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(`/asklink/history/${id}`)}`
+          }
           return
         }
         const data = await res.json().catch(() => ({}))
