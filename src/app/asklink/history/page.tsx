@@ -24,6 +24,10 @@ export default function AskLinkHistoryPage() {
     let alive = true
     fetch('/api/asklink/runs')
       .then(async (res) => {
+        if (res.status === 401) {
+          window.location.href = '/auth/signin?callbackUrl=/asklink/history'
+          return
+        }
         const data = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(data?.error || '読み込みに失敗しました。')
         if (alive) setRuns(data.runs || [])

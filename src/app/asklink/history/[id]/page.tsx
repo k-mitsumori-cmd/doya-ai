@@ -20,6 +20,10 @@ export default function AskLinkRunPage() {
     let alive = true
     fetch(`/api/asklink/runs/${encodeURIComponent(id)}`)
       .then(async (res) => {
+        if (res.status === 401) {
+          window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(`/asklink/history/${id}`)}`
+          return
+        }
         const data = await res.json().catch(() => ({}))
         if (!res.ok || !data?.run) throw new Error(data?.error || '見つかりません。')
         if (alive) setRun(data.run)
