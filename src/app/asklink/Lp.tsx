@@ -3,7 +3,7 @@
 // ドヤAI質問リンク ランディングページ（未ログインの方に見せる面）
 // ⚠️ 実績数値は持っていないので書かない。
 // 画像（ヒーロー・手順）は Codex 内蔵の画像生成で作ったもの（reference/services/asklink-images.md）。
-// LPキットは /asklink/hero.webp・/asklink/shots/*.webp・/renewal/icons/asklink.webp を名前で読む。
+// LPキットは /asklink/hero.webp, /asklink/shots/*.webp, /renewal/icons/asklink.webp を名前で読む。
 // visual を渡すと image より優先されるので、画像を見せる行には visual を付けない。
 import {
   LpShell, ProductHero, MockWindow, FeatureShowcase,
