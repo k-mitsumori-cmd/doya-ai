@@ -57,6 +57,7 @@ const portal = load('src/app/api/hr/billing/portal/route.ts', {
   },
 });
 const generic = load('src/app/api/stripe/checkout/route.ts', {
+  '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),
   'next/server': { NextResponse: Response },
   'next-auth': common['next-auth'],
   '@/lib/auth': common['@/lib/auth'],

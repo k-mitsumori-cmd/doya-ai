@@ -12,7 +12,7 @@ const analysisReader=load('src/lib/doyaslide/url-analysis-client.ts',{}, {fetch,
 const storageRows=shared.rows||new Map(),lockTails=shared.locks||new Map();
 const localStorage={getItem:key=>storageRows.get(key)??null,setItem:(key,value)=>storageRows.set(key,value),removeItem:key=>storageRows.delete(key)};
 const locks={request:(key,options,fn)=>{const previous=lockTails.get(key)||Promise.resolve();const p=previous.catch(()=>{}).then(()=>{if(options.signal.aborted)throw Error('aborted');return fn({name:key})});lockTails.set(key,p);return p}};
-const analysisIntent=load('src/lib/doyaslide/url-analysis-intent-client.ts',{}, {localStorage,navigator:{locks},crypto:require('node:crypto').webcrypto,AbortController,...previewClock});
+const analysisIntent=load('src/lib/doyaslide/url-analysis-intent-client.ts',{}, {localStorage,indexedDB:require('./synthetic-indexeddb.cjs')(storageRows),navigator:{locks},crypto:require('node:crypto').webcrypto,AbortController,...previewClock});
 const analysisOperation=load('src/lib/doyaslide/url-analysis-operation-client.ts',{'./url-analysis-client':analysisReader},{fetch,AbortController,TextDecoder,Uint8Array,URL,...previewClock});
 const previewHook=load('src/lib/doyaslide/use-style-previews.ts',{react:React,'./style-preview-client':previewReader},{AbortController,...previewClock});
 const toast=Object.assign(()=>{}, {success(){},error:s=>toasts.push(s)});

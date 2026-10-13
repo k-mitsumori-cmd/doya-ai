@@ -1,8 +1,9 @@
 'use client'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import toast from 'react-hot-toast'
+import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 import Link from 'next/link'
 
 interface ImportResultRow {
@@ -48,6 +49,8 @@ export default function CsvImportModal({
   onClose: () => void
   onImported: () => void
 }) {
+  const { request: fetch } = useHrOrganizationRequest()
+  const { toast, router, live } = useHrPageLifetime()
   const [csvText, setCsvText] = useState('')
   const [fileName, setFileName] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)

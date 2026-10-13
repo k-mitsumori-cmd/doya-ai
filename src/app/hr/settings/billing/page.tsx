@@ -1,4 +1,6 @@
 'use client'
+import { billingRedirectUrl } from '@/lib/billing-response-client'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -81,6 +83,8 @@ function UsageBar({ label, used, limit, icon, color, canUpgrade = true }: {
 }
 
 export default function BillingPage() {
+  const organizationScope = useHrOrganizationRequest()
+  const { request: fetch } = organizationScope
   const [billing, setBilling] = useState<BillingInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
@@ -113,13 +117,15 @@ export default function BillingPage() {
         headers: { 'Content-Type': 'application/json' },
       })
       const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url
+      if (!organizationScope.isCurrent()) return
+      const redirect = billingRedirectUrl(data.url)
+      if (redirect) {
+        window.location.href = redirect
       } else {
         alert(data.error || 'ポータルセッションの作成に失敗しました')
       }
     } catch {
-      alert('エラーが発生しました。もう一度お試しください。')
+      if (organizationScope.isCurrent()) alert('エラーが発生しました。もう一度お試しください。')
     } finally {
       setPortalLoading(false)
     }

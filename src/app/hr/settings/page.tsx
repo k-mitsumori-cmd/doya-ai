@@ -1,4 +1,5 @@
 'use client'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { loadHrDepartmentList } from '@/lib/hr/department-list-client'
@@ -105,13 +106,14 @@ export default function HrSettingsPage() {
 
 /** Each authentication scope owns its form, authority, pending requests and notifications. */
 function HrSettingsForActor({ actor }: { actor: string }) {
+  const organizationScope = useHrOrganizationRequest()
   const lifetime = useRef<{ generation: number; controller: AbortController | null }>({ generation: 0, controller: null })
   useLayoutEffect(() => {
     const controller = new AbortController()
     lifetime.current = { generation: lifetime.current.generation + 1, controller }
     return () => { controller.abort() }
   }, [])
-  const live = () => Boolean(lifetime.current.controller && !lifetime.current.controller.signal.aborted)
+  const live = () => Boolean(organizationScope.isCurrent() && lifetime.current.controller && !lifetime.current.controller.signal.aborted)
   const toast = Object.assign((...args: Parameters<typeof rawToast>) => { if (live()) return rawToast(...args) }, {
     success: (...args: Parameters<typeof rawToast.success>) => { if (live()) return rawToast.success(...args) },
     error: (...args: Parameters<typeof rawToast.error>) => { if (live()) return rawToast.error(...args) },
@@ -123,9 +125,9 @@ function HrSettingsForActor({ actor }: { actor: string }) {
     const abort = () => controller.abort()
     const signals = [captured.controller.signal, init.signal].filter((signal): signal is AbortSignal => Boolean(signal))
     for (const signal of signals) { signal.addEventListener('abort', abort, { once: true }); if (signal.aborted) abort() }
-    const current = () => lifetime.current === captured && !captured.controller?.signal.aborted && !controller.signal.aborted
+    const current = () => organizationScope.isCurrent() && lifetime.current === captured && !captured.controller?.signal.aborted && !controller.signal.aborted
     try {
-      const response = await readDepartmentSettingsResponse(url, init, controller.signal)
+      const response = await readDepartmentSettingsResponse(url, init, controller.signal, organizationScope.request)
       if (!current()) throw Error('操作が中断されました。')
       return { status: response.status, ok: response.status >= 200 && response.status < 300, json: async () => {
         if (!current()) throw Error('操作が中断されました。')
@@ -198,7 +200,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
         if (!settingsRes.ok) throw new Error('設定を取得できませんでした')
         const data = await settingsRes.json()
         if (typeof data?.settings?.id !== 'string' || !data.settings.id) throw new Error('設定の応答が不正です')
-        const listing = await loadHrDepartmentList(controller.signal, data.settings.id)
+        const listing = await loadHrDepartmentList(controller.signal, data.settings.id, organizationScope.request)
         const deptData = { success: true, organizationId: listing.organizationId, flat: listing.rows }
         if (
           !data?.settings || typeof data.settings.name !== 'string' ||
@@ -432,7 +434,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
     departmentRefreshBusy.current = true
     setRefreshingDepartments(true)
     try {
-      const listing = await loadHrDepartmentList(departmentNetwork.current?.signal, settings.id ?? '')
+      const listing = await loadHrDepartmentList(departmentNetwork.current?.signal, settings.id ?? '', organizationScope.request)
       const rows = parseSettingsDepartmentList({ success: true, organizationId: listing.organizationId, flat: listing.rows }, settings.id ?? '')
       if (departmentLife.current !== life) return false
       setDepartments(rows)
@@ -489,7 +491,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
     departmentMutationBusy.current = true
     setDeletingDeptId(id)
     try {
-      const res = await readDepartmentSettingsResponse(`/api/hr/departments/${encodeURIComponent(id)}`, { method: 'DELETE' }, departmentNetwork.current?.signal)
+      const res = await readDepartmentSettingsResponse(`/api/hr/departments/${encodeURIComponent(id)}`, { method: 'DELETE' }, departmentNetwork.current?.signal, organizationScope.request)
       if (res.status !== 200) throw new Error('部署の削除結果を確認できませんでした。部署一覧を再取得してください。')
       confirmSettingsDepartmentDeletion(res.data)
       if (departmentLife.current !== life) return

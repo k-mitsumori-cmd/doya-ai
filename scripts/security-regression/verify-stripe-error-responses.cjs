@@ -3,6 +3,7 @@ const { load } = require('./load-typescript.cjs')
 
 const secret = 'PRIVATE_STRIPE_INTERNAL'
 const common = {
+  '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),
   'node:crypto': require('node:crypto'),
   'next/server': { NextResponse: Response },
   'next-auth': { getServerSession: async () => { throw new Error(secret) } },

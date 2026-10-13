@@ -18,6 +18,20 @@ function extract(file, functionName) {
     ts.forEachChild(node, visit)
   }
   visit(ast)
+  // Period reads now live in a scoped effect. Await its actual promise chain in this
+  // harness; preserve the production callbacks and all original error/empty assertions.
+  if (!code && functionName === 'fetchPeriods') {
+    function findEffect(node) {
+      if (ts.isCallExpression(node) && node.expression.getText(ast) === 'useEffect') {
+        const callback = node.arguments[0]
+        if (callback && callback.getText(ast).includes('void loadHrEvaluationPeriodList(')) {
+          code = callback.getText(ast).replace('void loadHrEvaluationPeriodList(', 'return loadHrEvaluationPeriodList(')
+        }
+      }
+      ts.forEachChild(node, findEffect)
+    }
+    findEffect(ast)
+  }
   assert(code, `${functionName} not found in ${file}`)
   return ts.transpileModule(`(${code})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
 }
@@ -27,15 +41,21 @@ function run(code, response) {
   const controller = new AbortController()
   const candidateFetch = async (...args) => typeof response === 'function' ? response(...args) : response
   const { loadHrDepartmentList } = load('src/lib/hr/department-list-client.ts', {}, { fetch: candidateFetch, AbortController, TextDecoder, Uint8Array, setTimeout, clearTimeout })
+  const periodClient = load('src/lib/hr/evaluation-period-list-client.ts', {}, { fetch: candidateFetch, AbortController, TextDecoder, Uint8Array, setTimeout, clearTimeout })
   const env = {
+    ...periodClient,
+    organizationScope: { request: candidateFetch, isCurrent: () => true },
+    hint: { ready: true }, scopeError: '', expectedOrganization: 'synthetic-org',
+    loadedSnapshot: { current: null }, revision: 0,
+    setOrganizationId: () => {}, setLoginRequired: () => {},
     loadHrDepartmentList,
     fetch: candidateFetch,
-    controller,
+    controller, AbortController,
     Promise, Error, Array,
     parseSettingsDepartmentList,
     ROLE_RANK: { OWNER: 4, ADMIN: 3, MANAGER: 2, MEMBER: 1 },
     setLoading: value => { state.loading = value },
-    setLoadError: value => { state.loadError = value },
+    setLoadError: value => { state.loadError = Boolean(value) },
     setAuditLogsError: value => { state.auditLogsError = value },
     setStats: value => { state.stats = value },
     setRecentOneOnOnes: () => {},
@@ -86,7 +106,7 @@ function run(code, response) {
   })
   await check('evaluations: valid empty list is distinct from an outage', async () => {
     const code = extract('src/app/hr/evaluations/page.tsx', 'fetchPeriods')
-    const state = await run(code, Response.json({ success: true, periods: [], canCreatePeriods: false }))
+    const state = await run(code, Response.json({ success: true, format: 'hr-evaluation-period-page-v1', organizationId: 'synthetic-org', revision: 'a'.repeat(64), total: 0, fragments: [], nextCursor: null, canCreatePeriods: false }))
     assert.equal(state.loadError, false)
     assert.equal(state.periods.length, 0)
     assert.equal(state.canCreatePeriods, false)

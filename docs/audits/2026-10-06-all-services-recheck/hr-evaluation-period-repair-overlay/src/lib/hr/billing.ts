@@ -1,0 +1,196 @@
+import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
+
+// ============================================
+// ドヤHR SaaS課金・プラン制限
+// ============================================
+
+export type HrPlan = 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE'
+
+export interface PlanLimits {
+  maxEmployees: number   // -1 = 無制限
+  maxAiUsage: number     // -1 = 無制限（月次）
+  maxMembers: number     // -1 = 無制限
+}
+
+/**
+ * プランごとの制限値を返す
+ * FREE:5名/3AI/2メンバー, STARTER:30/30/5, PRO:100/-1/-1, ENTERPRISE:-1/-1/-1
+ */
+export function getOrgPlanLimits(plan: string): PlanLimits {
+  switch (plan.toUpperCase()) {
+    case 'ENTERPRISE':
+      return { maxEmployees: -1, maxAiUsage: -1, maxMembers: -1 }
+    case 'PRO':
+    case 'BUNDLE':
+      return { maxEmployees: 100, maxAiUsage: -1, maxMembers: -1 }
+    case 'STARTER':
+    case 'LIGHT':
+      return { maxEmployees: 30, maxAiUsage: 30, maxMembers: 5 }
+    case 'FREE':
+    default:
+      return { maxEmployees: 5, maxAiUsage: 3, maxMembers: 2 }
+  }
+}
+
+/**
+ * 組織のプランを、OWNER の User.plan（グローバル）から取得する。
+ * 統一プラン方針: プラン判定は User.plan が唯一の正。プロ1契約で全サービス解放されるため、
+ * オーナーが ¥9,980 プロを契約していれば組織全体で HR もプロ扱いになる。
+ * （UserServiceSubscription.plan はサービス別の使用量管理用で、プラン判定には使わない）
+ */
+type OrgPlanReader = Pick<Prisma.TransactionClient, 'hrOrganizationMember' | 'user'>
+
+export async function getOrgPlan(organizationId: string, db: OrgPlanReader = prisma): Promise<string> {
+  // 組織のOWNERを取得
+  const owner = await db.hrOrganizationMember.findFirst({
+    where: { organizationId, role: 'OWNER', status: 'ACTIVE' },
+  })
+  if (!owner) return 'FREE'
+
+  // OWNER の User.plan（グローバル）をプランの正とする
+  const user = await db.user.findUnique({
+    where: { id: owner.userId },
+    select: { plan: true },
+  })
+
+  return user?.plan || 'FREE'
+}
+
+export type HrEmployeeAdmission<T> =
+  | { allowed: true; value: T }
+  | { allowed: false; plan: string; limit: number }
+
+/** 組織単位で従業員追加を直列化し、単件登録とCSV登録に同じ上限を適用する。 */
+export async function createWithinEmployeeLimit<T>(
+  organizationId: string,
+  create: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<HrEmployeeAdmission<T>> {
+  return prisma.$transaction(async (tx) => {
+    const organizations = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${organizationId} FOR UPDATE`
+    if (organizations.length === 0) throw new Error('HR organization not found')
+    const plan = await getOrgPlan(organizationId, tx)
+    const limit = getOrgPlanLimits(plan).maxEmployees
+    if (process.env.DOYA_DISABLE_LIMITS !== '1' && limit >= 0) {
+      const count = await tx.hrEmployee.count({ where: { organizationId, status: 'ACTIVE' } })
+      if (count >= limit) return { allowed: false as const, plan, limit }
+    }
+    return { allowed: true as const, value: await create(tx) }
+  })
+}
+
+export function employeeLimitMessage(plan: string, limit: number): string {
+  const base = `従業員数の上限（${limit}名）に達しています。`
+  return ['PRO', 'BUNDLE', 'ENTERPRISE'].includes(plan.toUpperCase())
+    ? `${base}追加が必要な場合はお問い合わせください。`
+    : `${base}プランを変更すると上限を増やせます。`
+}
+
+/**
+ * 従業員追加が可能か確認
+ * @returns null = OK, string = エラーメッセージ
+ */
+export async function checkEmployeeLimit(organizationId: string): Promise<string | null> {
+  if (process.env.DOYA_DISABLE_LIMITS === '1') return null
+
+  const plan = await getOrgPlan(organizationId)
+  const limits = getOrgPlanLimits(plan)
+  if (limits.maxEmployees === -1) return null
+
+  const count = await prisma.hrEmployee.count({
+    where: { organizationId, status: 'ACTIVE' },
+  })
+
+  if (count >= limits.maxEmployees) {
+    return employeeLimitMessage(plan, limits.maxEmployees)
+  }
+
+  return null
+}
+
+/** 日本時間の当月1日0時。実行環境のタイムゾーンに依存しない。 */
+export function hrJstMonthStart(now = new Date()): Date {
+  return hrJstMonthRange(now).start
+}
+
+/** 日本時間の当月初めから翌月初めまでの半開区間。 */
+export function hrJstMonthRange(now = new Date()): { start: Date; end: Date } {
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  const year = jst.getUTCFullYear()
+  const month = jst.getUTCMonth()
+  const offset = 9 * 60 * 60 * 1000
+  return {
+    start: new Date(Date.UTC(year, month, 1) - offset),
+    end: new Date(Date.UTC(year, month + 1, 1) - offset),
+  }
+}
+
+export type HrAiReservation = { organizationId: string; resetAt: Date }
+export type HrAiAdmission =
+  | { granted: true; reservation: HrAiReservation }
+  | { granted: false; error: string }
+
+/** 組織行をロックし、月次リセットと枠の確保を同一トランザクションで行う。 */
+export async function reserveAiUsage(organizationId: string, now = new Date()): Promise<HrAiAdmission> {
+  return prisma.$transaction(tx => reserveAiUsageInTransaction(tx, organizationId, now))
+}
+
+/** Use the caller transaction so live authority/version checks and quota admission are atomic. */
+export async function reserveAiUsageInTransaction(tx: Prisma.TransactionClient, organizationId: string, now = new Date()): Promise<HrAiAdmission> {
+    const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${organizationId} FOR UPDATE`
+    if (rows.length === 0) return { granted: false as const, error: '組織が見つかりません' }
+
+    const org = await tx.hrOrganization.findUnique({
+      where: { id: organizationId },
+      select: { aiUsageCount: true, aiUsageResetAt: true },
+    })
+    if (!org) return { granted: false as const, error: '組織が見つかりません' }
+
+    const resetAt = org.aiUsageResetAt ?? new Date(0)
+    const newMonth = hrJstMonthStart(now).getTime() !== hrJstMonthStart(resetAt).getTime()
+    const current = newMonth ? 0 : org.aiUsageCount
+    const plan = await getOrgPlan(organizationId, tx)
+    const limit = getOrgPlanLimits(plan).maxAiUsage
+    if (process.env.DOYA_DISABLE_LIMITS !== '1' && limit >= 0 && current >= limit) {
+      return { granted: false as const, error: `AI機能の月間利用回数（${limit}回）に達しています。プランをアップグレードしてください。` }
+    }
+
+    const reservationResetAt = newMonth ? now : resetAt
+    await tx.hrOrganization.update({
+      where: { id: organizationId },
+      data: newMonth
+        ? { aiUsageCount: 1, aiUsageResetAt: reservationResetAt }
+        : { aiUsageCount: { increment: 1 } },
+    })
+    return { granted: true as const, reservation: { organizationId, resetAt: reservationResetAt } }
+}
+
+/** 保存できなかった生成だけ返却する。月替わり後の新しい枠は減らさない。 */
+export async function releaseAiUsage({ organizationId, resetAt }: HrAiReservation): Promise<void> {
+  await prisma.hrOrganization.updateMany({
+    where: { id: organizationId, aiUsageResetAt: resetAt, aiUsageCount: { gt: 0 } },
+    data: { aiUsageCount: { decrement: 1 } },
+  })
+}
+
+/**
+ * メンバー招待が可能か確認
+ * @returns null = OK, string = エラーメッセージ
+ */
+export async function checkMemberLimit(organizationId: string): Promise<string | null> {
+  if (process.env.DOYA_DISABLE_LIMITS === '1') return null
+
+  const plan = await getOrgPlan(organizationId)
+  const limits = getOrgPlanLimits(plan)
+  if (limits.maxMembers === -1) return null
+
+  const memberCount = await prisma.hrOrganizationMember.count({
+    where: { organizationId, status: 'ACTIVE' },
+  })
+
+  if (memberCount >= limits.maxMembers) {
+    return `メンバー数の上限（${limits.maxMembers}名）に達しています。プランをアップグレードしてください。`
+  }
+
+  return null
+}

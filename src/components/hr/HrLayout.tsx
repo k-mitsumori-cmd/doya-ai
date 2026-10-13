@@ -2,7 +2,10 @@
 
 import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import HrOrganizationScope from './HrOrganizationScope'
+import { loadHrOrganizationChoices, type HrOrganizationChoice } from '@/lib/hr/organization-choices-client'
+import { HR_SELECTED_ORGANIZATION_HEADER, HR_SELECTED_ACTOR_HEADER } from '@/lib/hr/organization-selection'
 import { readBillingResponse } from '@/lib/billing-response-client'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, Users2 } from 'lucide-react'
@@ -15,7 +18,13 @@ interface HrLayoutProps {
 
 export default function HrLayout({ children }: HrLayoutProps) {
   const { data: session, status } = useSession()
-  const pathname = usePathname()
+  const pathname = usePathname(), router = useRouter()
+  const [selection, setSelection] = useState<{ actor: string; organizationId?: string; revision: number }>({ actor: '', revision: 0 })
+  const [selectionError, setSelectionError] = useState('')
+  const [choices, setChoices] = useState<{ actor: string; rows: HrOrganizationChoice[]; error: string; loading: boolean }>({ actor: '', rows: [], error: '', loading: true })
+  const choiceRequest = useRef(0), choiceController = useRef<AbortController | null>(null)
+  const pinnedOrganization = useRef<{ key: string; organizationId: string } | null>(null)
+  const [confirmedOrganization, setConfirmedOrganization] = useState('')
   // SessionProvider.update temporarily retains its previous data while loading.
   const isSessionLoading = status === 'loading'
   const isSignedOut = status === 'unauthenticated'
@@ -28,7 +37,8 @@ export default function HrLayout({ children }: HrLayoutProps) {
   const allowed = status === 'authenticated' && Boolean(actor)
   const epoch = useRef({ actor, version: 0 })
   if (epoch.current.actor !== actor) epoch.current = { actor, version: epoch.current.version + 1 }
-  const scopeKey = JSON.stringify([actor, epoch.current.version])
+  const selectionReady = selection.actor === actor && Boolean(actor)
+  const scopeKey = JSON.stringify([actor, epoch.current.version, selectionReady ? selection.revision : -1])
   const activeScope = useRef({ key: scopeKey, allowed })
   activeScope.current = { key: scopeKey, allowed }
   const [loadedScope, setLoadedScope] = useState('')
@@ -42,10 +52,11 @@ export default function HrLayout({ children }: HrLayoutProps) {
 
   const isLandingPage = pathname === '/hr'
   const isPricingPage = pathname === '/hr/pricing'
-  const isPublicPage = isLandingPage || isPricingPage
+  const isInvitePage = pathname?.startsWith('/hr/invite/')
+  const isPublicPage = isLandingPage || isPricingPage || isInvitePage
 
   const loadUsage = useCallback(async (preserveView = false) => {
-    if (!activeScope.current.allowed || activeScope.current.key !== scopeKey) return
+    if (!selectionReady || !activeScope.current.allowed || activeScope.current.key !== scopeKey) return
     pendingUsage.current?.abort()
     const controller = new AbortController()
     pendingUsage.current = controller
@@ -58,8 +69,17 @@ export default function HrLayout({ children }: HrLayoutProps) {
     try {
       await Promise.resolve()
       if (!current()) return
-      const response = await readBillingResponse('/api/hr/usage', { method: 'GET' }, controller.signal)
+      const requestedOrganization = selection.organizationId || (pinnedOrganization.current?.key === scopeKey ? pinnedOrganization.current.organizationId : undefined)
+      const response = await readBillingResponse('/api/hr/usage', { method: 'GET', ...(requestedOrganization ? { headers: {
+        [HR_SELECTED_ORGANIZATION_HEADER]: requestedOrganization, [HR_SELECTED_ACTOR_HEADER]: actor, 'X-HR-Organization-Id': requestedOrganization,
+      } } : {}) }, controller.signal)
       if (!current()) return
+      if ((response.status === 401 || response.status === 403) && requestedOrganization) {
+        // Authority rejection differs from a temporary outage: stop displaying private children.
+        // Retain the pinned selection so retries cannot silently fall back to another organization.
+        setLoadedScope('')
+        throw Error('選択した組織の所属を確認できませんでした。')
+      }
       if (response.status === 401) {
         setHasOrg(false)
         setUsageError(false)
@@ -68,10 +88,12 @@ export default function HrLayout({ children }: HrLayoutProps) {
       }
       if (!response.ok) throw new Error('使用状況を取得できませんでした')
       const data = response.data
-      if (typeof data.organizationId !== 'string' || !data.organizationId || typeof data.plan !== 'string' ||
+      if (typeof data.organizationId !== 'string' || !data.organizationId || (requestedOrganization && data.organizationId !== requestedOrganization) || typeof data.plan !== 'string' ||
         !Number.isSafeInteger(data.employeeCount) || (data.employeeCount as number) < 0 ||
         !Number.isSafeInteger(data.employeeLimit) || (data.employeeLimit as number) < -1 ||
         typeof data.canManageEmployees !== 'boolean') throw new Error('使用状況の応答が不正です')
+      pinnedOrganization.current = { key: scopeKey, organizationId: data.organizationId }
+      setConfirmedOrganization(data.organizationId)
       setUsage({ employeeCount: data.employeeCount as number, employeeLimit: data.employeeLimit as number,
         plan: data.plan, canManageEmployees: data.canManageEmployees })
       setHasOrg(true)
@@ -83,18 +105,67 @@ export default function HrLayout({ children }: HrLayoutProps) {
       if (pendingUsage.current === controller) pendingUsage.current = null
       controller.abort()
     }
-  }, [scopeKey])
+  }, [scopeKey, selectionReady, selection.organizationId, actor])
+
+  useEffect(() => {
+    if (!actor) { setSelection({ actor: '', revision: 0 }); setConfirmedOrganization(''); pinnedOrganization.current = null; return }
+    try {
+      const raw = window.sessionStorage.getItem('hr-selected-organization:v1:' + actor)
+      if (raw !== null && (!raw || raw.length > 512 || /[\s\u0000-\u001f\u007f]/.test(raw))) throw Error()
+      setSelection({ actor, organizationId: raw ?? undefined, revision: 1 }); setSelectionError('')
+    } catch { setSelectionError('選択した組織を安全に確認できません。ブラウザの設定を確認してください。') }
+  }, [actor])
+
+  const loadChoices = useCallback(async () => {
+    if (!allowed) return
+    choiceController.current?.abort()
+    const controller = new AbortController(); choiceController.current = controller
+    const request = ++choiceRequest.current
+    setChoices(old => ({ actor, rows: old.actor === actor ? old.rows : [], error: '', loading: true }))
+    try {
+      const rows = await loadHrOrganizationChoices(actor, controller.signal)
+      if (!controller.signal.aborted && request === choiceRequest.current) setChoices({ actor, rows, error: '', loading: false })
+    } catch { if (!controller.signal.aborted && request === choiceRequest.current) setChoices(old => ({ actor, rows: old.actor === actor ? old.rows : [], error: '所属組織を取得できませんでした。', loading: false })) }
+  }, [allowed, actor])
+  useEffect(() => {
+    if (allowed && !isLandingPage && !isInvitePage) void loadChoices()
+    const refresh = () => { if (!isLandingPage && !isInvitePage) void loadChoices() }
+    window.addEventListener('focus', refresh)
+    return () => { choiceRequest.current++; choiceController.current?.abort(); window.removeEventListener('focus', refresh) }
+  }, [allowed, isLandingPage, isInvitePage, loadChoices])
+
+  const selectOrganization = (organizationId: string) => {
+    if (!allowed || choices.actor !== actor || choices.loading || choices.error || !choices.rows.some(row => row.organizationId === organizationId)) return
+    if (organizationId === confirmedOrganization && knownScope) return
+    if (knownScope && !window.confirm('組織を切り替えますか？入力中の未保存内容は破棄されます。未確認の操作記録は保存され、元の組織で確認できます。')) return
+    try { window.sessionStorage.setItem('hr-selected-organization:v1:' + actor, organizationId) }
+    catch { setSelectionError('組織の選択を保存できませんでした。現在の組織は変更していません。'); return }
+    usageRequest.current++; pendingUsage.current?.abort(); pinnedOrganization.current = null
+    setHasOrg(null); setLoadedScope(''); setConfirmedOrganization(''); setUsageError(false); setSelectionError('')
+    setSelection(old => ({ actor, organizationId, revision: old.revision + 1 }))
+    if (/^\/hr\/(employees|evaluations|one-on-one)\/.+/.test(pathname || '') && pathname !== '/hr/employees/new') router.push('/hr/dashboard')
+  }
+  const requestedPickerOrganization = confirmedOrganization || selection.organizationId || ''
+  const pickerOrganization = choices.rows.some(row => row.organizationId === requestedPickerOrganization) ? requestedPickerOrganization : ''
+  const organizationPicker = allowed && choices.actor === actor && <div className="border-b border-slate-200 bg-white px-4 py-3">
+    <label className="flex flex-wrap items-center gap-2 text-sm font-bold">表示する組織<select aria-label="表示する組織" className="min-w-0 max-w-full rounded-lg border p-2" value={pickerOrganization} disabled={choices.loading || Boolean(choices.error)} onChange={event => selectOrganization(event.target.value)}>
+      <option value="" disabled>組織を選択してください</option>{choices.rows.map(row => <option key={row.memberId} value={row.organizationId}>{row.name}</option>)}
+    </select></label>
+    {choices.loading && <p role="status" className="text-sm">所属組織を確認しています。</p>}
+    {choices.error && <p role="alert">{choices.error}<button type="button" onClick={() => void loadChoices()} className="ml-2 underline">再取得する</button></p>}
+    {selectionError && <p role="alert">{selectionError}</p>}
+  </div>
 
   useEffect(() => {
     const requestCounter = usageRequest
-    if (allowed) void loadUsage(confirmedScope.current === scopeKey)
+    if (allowed && selectionReady) void loadUsage(confirmedScope.current === scopeKey)
     else if (status === 'unauthenticated') {
       requestCounter.current++
       setUsageError(false)
       setHasOrg(false)
     }
     return () => { requestCounter.current++; pendingUsage.current?.abort() }
-  }, [allowed, actor, status, globalPlan, scopeKey, loadUsage])
+  }, [allowed, selectionReady, actor, status, globalPlan, scopeKey, loadUsage])
 
   useEffect(() => {
     if (!allowed) return
@@ -106,7 +177,7 @@ export default function HrLayout({ children }: HrLayoutProps) {
   useEffect(() => {
     if (previousPathname.current === pathname) return
     previousPathname.current = pathname
-    if (allowed) void loadUsage(confirmedScope.current === scopeKey)
+    if (allowed && selectionReady) void loadUsage(confirmedScope.current === scopeKey)
   }, [pathname, allowed, scopeKey, loadUsage])
 
   // ルートを変えたらモバイルメニューを閉じる
@@ -115,13 +186,18 @@ export default function HrLayout({ children }: HrLayoutProps) {
   }, [pathname])
 
   if (isPublicPage) {
+    if (isPricingPage && allowed) {
+      if (usageError || selectionError) return <>{organizationPicker}<div role="alert" className="p-6">組織のプランを確認できませんでした。<button type="button" onClick={() => void loadUsage()} className="ml-2 underline">再取得する</button></div></>
+      if (!knownScope) return <p role="status" className="p-6">組織のプランを確認しています。</p>
+      if (hasOrg) return <>{organizationPicker}<HrOrganizationScope key={JSON.stringify([actor, confirmedOrganization, selection.revision])} actor={actor} organizationId={confirmedOrganization} enabled={allowed && knownScope}>{children}</HrOrganizationScope></>
+    }
     return <>{children}</>
   }
 
   if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
 
-  if (usageError && session?.user && !knownScope) {
-    return <div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center"><p className="font-bold text-rose-700">組織情報を取得できませんでした。組織の状態は変更されていません。</p><button type="button" onClick={() => void loadUsage()} className="rounded-xl bg-sky-600 px-5 py-3 font-bold text-white">再読み込み</button></div>
+  if ((usageError || selectionError) && session?.user && !knownScope) {
+    return <div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center">{organizationPicker}<p className="font-bold text-rose-700">組織情報を取得できませんでした。組織の状態は変更されていません。</p><button type="button" onClick={() => void loadUsage()} className="rounded-xl bg-sky-600 px-5 py-3 font-bold text-white">再読み込み</button></div>
   }
 
   if (!knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed)) {
@@ -162,10 +238,11 @@ export default function HrLayout({ children }: HrLayoutProps) {
   }
 
   return (
-    <>
+    <div className="flex h-dvh flex-col overflow-hidden">
+      {organizationPicker}
       {isSessionLoading && <div role="status" className="p-6 text-center">認証情報を確認しています。</div>}
       {usageError && <div role="alert" className="bg-amber-50 p-3 text-center text-sm">組織情報を再確認できませんでした。入力内容は保持しています。<button type="button" onClick={() => void loadUsage(true)} className="ml-2 underline">再取得する</button></div>}
-    <div ref={element => { if (element) element.inert = isSessionLoading || usageError }} style={isSessionLoading ? { display: 'none' } : undefined} className="flex h-screen bg-slate-50 overflow-hidden">
+    <div ref={element => { if (element) element.inert = isSessionLoading || usageError }} style={isSessionLoading ? { display: 'none' } : undefined} className="flex min-h-0 flex-1 bg-slate-50 overflow-hidden">
       {/* Desktop Sidebar (fixed / 画面外フロー) */}
       <div className="hidden md:flex">
         <HrSidebar
@@ -238,9 +315,9 @@ export default function HrLayout({ children }: HrLayoutProps) {
         </div>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-y-auto">{children}</div>
+        <div className="flex-1 overflow-y-auto"><HrOrganizationScope key={JSON.stringify([actor, confirmedOrganization, selection.revision])} actor={actor} organizationId={confirmedOrganization} enabled={allowed && !usageError && knownScope}>{children}</HrOrganizationScope></div>
       </main>
     </div>
-    </>
+    </div>
   )
 }

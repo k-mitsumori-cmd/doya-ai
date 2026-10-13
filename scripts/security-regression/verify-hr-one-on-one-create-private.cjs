@@ -3,8 +3,9 @@ const {load,check,results}=require('./load-typescript.cjs');
 function fixture(role,active=true){
  let writes=0;const ctx={role,userId:'u',memberId:'m',organizationId:'o'};
  const prisma={hrOrganizationMember:{findFirst:async()=>active?{role,employeeId:'self'}:null},hrEmployee:{findFirst:async({where})=>where.organizationId==='o'?{id:where.id}:null},hrOneOnOne:{create:async({data})=>{writes++;return{id:'one',...data}},findFirst:async()=>({id:'one',managerId:'manager',employeeId:'self',status:'SCHEDULED'}),update:async({data})=>{writes++;return{id:'one',managerId:'manager',...data}}}};
- const evaluation=load('src/lib/hr/evaluation-access.ts',{'@/lib/prisma':{prisma}}),access=load('src/lib/hr/one-on-one-access.ts',{'./evaluation-access':evaluation});
- const deps={'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{id:'u'}})},'@/lib/auth':{authOptions:{}},'@/lib/hr/access':{getHrContext:async()=>ctx},'@/lib/prisma':{prisma},'@/lib/hr/one-on-one-access':access,'@/lib/hr/constants':{DEFAULT_PAGE_SIZE:20,MAX_PAGE_SIZE:100}};
+ prisma.hrEmployee.count=async()=>1;
+ const evaluation=require('./hr-evaluation-fixture.cjs').evaluationDependencies(prisma)['@/lib/hr/evaluation-access'],access=load('src/lib/hr/one-on-one-access.ts',{'./evaluation-access':evaluation});
+ const deps={...require('./hr-evaluation-fixture.cjs').evaluationDependencies(prisma),'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{id:'u'}})},'@/lib/auth':{authOptions:{}},'@/lib/hr/access':{getHrContext:async()=>ctx},'@/lib/prisma':{prisma},'@/lib/hr/one-on-one-access':access,'@/lib/hr/constants':{DEFAULT_PAGE_SIZE:20,MAX_PAGE_SIZE:100}};
  return{create:load('src/app/api/hr/one-on-one/route.ts',deps).POST,patch:load('src/app/api/hr/one-on-one/[id]/route.ts',deps).PATCH,writes:()=>writes};
 }
 (async()=>{

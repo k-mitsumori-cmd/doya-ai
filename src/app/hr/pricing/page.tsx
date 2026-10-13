@@ -1,4 +1,5 @@
 'use client'
+import { useOptionalHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -9,6 +10,7 @@ import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 type OrgBilling = { plan: string; planLabel: string; canManageBilling: boolean }
 
 export default function HrPricingPage() {
+  const organizationScope = useOptionalHrOrganizationRequest()
   const { data: session, status } = useSession()
   const identity = String((session?.user as { id?: string } | undefined)?.id || session?.user?.email || '')
   const [billing, setBilling] = useState<OrgBilling | null>(null)
@@ -23,7 +25,7 @@ export default function HrPricingPage() {
     setLoadError(false)
     setNeedsOrganization(false)
     try {
-      const response = await fetch('/api/hr/usage', { cache: 'no-store' })
+      const response = await (organizationScope?.request ?? fetch)('/api/hr/usage', { cache: 'no-store' })
       if (sequence !== request.current) return
       if (response.status === 401) {
         setBilling(null)
@@ -48,7 +50,7 @@ export default function HrPricingPage() {
         setLoading(false)
       }
     }
-  }, [identity])
+  }, [identity, organizationScope])
   useEffect(() => {
     const requestRef = request
     if (status === 'authenticated') void loadBilling()
@@ -94,7 +96,7 @@ export default function HrPricingPage() {
             </div>
           )}
           {status === 'authenticated' && !verifying && !loadError && billing?.canManageBilling && (
-            <UnifiedPricingPlans serviceId="hr" currentPlan={billing.plan} />
+            <UnifiedPricingPlans serviceId="hr" currentPlan={billing.plan} planSource="organization" canPurchase={Boolean(organizationScope?.isCurrent())} billingOrganization={organizationScope ? { actor: organizationScope.actor, organizationId: organizationScope.organizationId } : undefined} />
           )}
           {status === 'unauthenticated' && <UnifiedPricingPlans serviceId="hr" />}
         </motion.div>

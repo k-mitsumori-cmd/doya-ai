@@ -331,4 +331,4 @@ async function webhook(){
   assert.equal(response.status,200);assert.deepEqual(finishes,[true]);assert.equal(f.notices,0);
  });
 }
-(async()=>{await atomic();await routes();await webhook();console.log(JSON.stringify({passed:results.length,allServices:ids.length,networkRequests:0,productionWrites:0,results},null,2))})().catch(e=>{console.error(e);process.exitCode=1});
+(async()=>{await check('billing propagation covers the authoritative catalog exactly including newly added services',async()=>{const catalog=load('src/lib/services.ts',{'./unified-plan':load('src/lib/unified-plan.ts')});assert.equal(new Set(ids).size,ids.length);assert.deepEqual([...ids].sort(),Array.from(catalog.SERVICES,service=>service.id).sort())});await atomic();await routes();await webhook();console.log(JSON.stringify({passed:results.length,allServices:ids.length,networkRequests:0,productionWrites:0,results},null,2))})().catch(e=>{console.error(e);process.exitCode=1});

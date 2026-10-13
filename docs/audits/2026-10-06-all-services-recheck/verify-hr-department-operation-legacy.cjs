@@ -4,7 +4,7 @@ const mode = process.argv[2];
 assert.ok(['related', 'access', 'validation', 'cache'].includes(mode));
 const filename = {related:'verify-related-records.cjs',access:'verify-hr-department-access.cjs',validation:'verify-hr-department-input.cjs',cache:'verify-hr-department-private-cache.cjs'}[mode];
 const original = path.resolve('scripts/security-regression', filename);
-const selected = path.join(__dirname, 'hr-department-operation-regression-overlay/scripts/security-regression', filename);
+const selected = mode === 'related' ? original : path.join(__dirname, 'hr-department-operation-regression-overlay/scripts/security-regression', filename);
 process.env.DOYA_TEST_BASELINE = path.join(__dirname, 'hr-department-operation-repair-overlay');
 const expected = {related:33,access:1,validation:6,cache:3}[mode];
 let completed = false;

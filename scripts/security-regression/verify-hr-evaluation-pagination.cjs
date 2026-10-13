@@ -3,24 +3,24 @@ const { load, check } = require('./load-typescript.cjs')
 
 let reads = 0
 const rows = Array.from({ length: 221 }, (_, index) => ({ id: `evaluation-${String(220 - index).padStart(3, '0')}` }))
-const api = load('src/app/api/hr/evaluations/route.ts', {
-  'next/server': { NextResponse: Response },
-  'next-auth': {},
-  '@/lib/auth': {},
-  '@/lib/prisma': { prisma: {
-    hrEvaluation: {
+const persistence = { hrOrganizationMember: { findFirst: async () => ({ role: 'OWNER', employeeId: null }) }, hrEvaluation: {
       findMany: async (query) => {
         reads++
         assert.equal(query.where.period.is.organizationId, 'org')
         assert.equal(JSON.stringify(query.orderBy), JSON.stringify([{ createdAt: 'desc' }, { id: 'desc' }]))
         assert(query.take <= 100)
-        return rows.slice(query.skip, query.skip + query.take)
+        return rows.slice(query.skip, query.skip + query.take).map(row => ({ ...row, employee: { department: null } }))
       },
       count: async () => rows.length,
-    },
-  } },
-  '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org' }) },
-  '@/lib/hr/evaluation-access': { getEvaluationReader: async () => ({ employeeId: null }) },
+    } };
+const dependencies = require('./hr-evaluation-fixture.cjs').evaluationDependencies(persistence);
+const api = load('src/app/api/hr/evaluations/route.ts', {
+  ...dependencies,
+  'next/server': { NextResponse: Response },
+  'next-auth': {},
+  '@/lib/auth': {},
+  '@/lib/prisma': { prisma: persistence },
+  '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org', userId: 'synthetic', memberId: 'synthetic-member', role: 'OWNER', employeeId: null }) },
   '@/lib/hr/constants': { DEFAULT_PAGE_SIZE: 20, MAX_PAGE_SIZE: 100 },
 })
 

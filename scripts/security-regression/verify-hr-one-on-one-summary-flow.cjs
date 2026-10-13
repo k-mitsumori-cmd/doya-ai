@@ -5,7 +5,7 @@ function visit(n){if(ts.isVariableDeclaration(n)&&['handleSave','handleAiSummary
 (async()=>{
  for(const mode of ['normal','save-failed','duplicate','readonly','saving'])await check('1on1 summary '+mode,async()=>{
   const order=[];let message,release;const gate=new Promise(r=>release=r);
-  const env={canViewManagerNotes:true,readOnly:mode==='readonly',savingRef:{current:mode==='saving'},aiLoadingRef:{current:false},recordId:'r',date:'2026-09-20T10:00',duration:30,employeeId:'e',agenda:[],managerNote:'Current notes',sharedNote:'Shared',actionItems:[],setSaving(){},setAiLoading(){},setAiResult:v=>message=v,toast:{error(){}},onSave:async()=>{order.push('save');if(mode==='duplicate')await gate;if(mode==='save-failed')throw Error('Failed')},fetch:async()=>{order.push('ai');return Response.json({aiSummary:'Summary'})}};
+  const env={live:()=>true,canViewManagerNotes:true,readOnly:mode==='readonly',savingRef:{current:mode==='saving'},aiLoadingRef:{current:false},recordId:'r',date:'2026-09-20T10:00',duration:30,employeeId:'e',agenda:[],managerNote:'Current notes',sharedNote:'Shared',actionItems:[],setSaving(){},setAiLoading(){},setAiResult:v=>message=v,toast:{error(){}},onSave:async()=>{order.push('save');if(mode==='duplicate')await gate;if(mode==='save-failed')throw Error('Failed')},fetch:async()=>{order.push('ai');return Response.json({aiSummary:'Summary'})}};
   for(const [name,code]of Object.entries(callbacks))env[name]=vm.runInNewContext(ts.transpileModule('('+code+')',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,env);
   const first=env.handleAiSummary();
   if(mode==='duplicate'){await env.handleAiSummary();await env.handleManualSave();assert.deepEqual(order,['save']);release()}

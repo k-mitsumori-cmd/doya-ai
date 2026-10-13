@@ -1,4 +1,6 @@
 'use client'
+import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -69,8 +71,9 @@ const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
 }
 
 export default function EmployeeDetailPage() {
+  const { request: fetch } = useHrOrganizationRequest()
+  const { router } = useHrPageLifetime()
   const params = useParams()
-  const router = useRouter()
   const id = params?.id as string
 
   const [employee, setEmployee] = useState<EmployeeDetail | null>(null)

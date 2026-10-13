@@ -3,6 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const { load, check } = require('./load-typescript.cjs')
+const { assertPrivateErrorResponses } = require('./assert-hr-private-error-responses.cjs')
 const root = path.resolve(__dirname, '../../src/app/api/hr')
 const secret = 'postgres://private-password@example.invalid/hr'
 const failure = () => { throw Error(secret) }
@@ -58,6 +59,7 @@ async function expectSafe(promise, expected) {
   })
   await check('HR denied onboarding returns fixed403 without echoing a coded private exception', async () => {
     const api = load('src/app/api/hr/organization/route.ts', {
+      '@/lib/hr/organization-choices': load('src/lib/hr/organization-choices.ts', { 'node:crypto': require('node:crypto'), './types': load('src/lib/hr/types.ts') }),
       '@/lib/private-api-response': privateApiResponse, 'next/server': server, 'next-auth': { getServerSession: async () => ({user:{id:'synthetic'}}) }, '@/lib/auth': {},
       '@prisma/client': {}, '@/lib/prisma': {}, '@/lib/hr/types': {},
       '@/lib/hr/access': { getOrCreateOrganization: async () => { throw Object.assign(new Error(secret),{code:'INVALID_MEMBERSHIP_ROLE'}) } },
@@ -65,6 +67,11 @@ async function expectSafe(promise, expected) {
     const response = await api.POST({json:async()=>({name:'Synthetic'})}); assert.equal(response.status,403)
     const body=await response.json(); assert.equal(body.error,'組織の権限を確認できません。管理者に確認してください。')
     assert.equal(body.code,'INVALID_MEMBERSHIP_ROLE'); assert(!JSON.stringify(body).includes(secret))
+  })
+  await check('HR error dataflow rejects unguarded, unknown-class, stack and500 responses', async () => {
+    const header = "import { HrEvaluationInputError } from '@/lib/hr/evaluation-input';";
+    for (const code of ["return privateApiJson({error:e.message},{status:500})", "if(e instanceof Error) return privateApiJson({error:e.message},{status:400})", "if(e instanceof HrEvaluationInputError) return privateApiJson({error:e.stack},{status:400})", "if(e instanceof HrEvaluationInputError) return privateApiJson({error:e.message},{status:500})", "if(e instanceof HrEvaluationInputError) {} return privateApiJson({error:e.message},{status:400})"]) assert.throws(()=>assertPrivateErrorResponses(header+code));
+    assert.doesNotThrow(()=>assertPrivateErrorResponses(header+"if(e instanceof HrEvaluationInputError) return privateApiJson({error:e.message},{status:400}); return privateApiJson({error:'Failed'},{status:500})"));
   })
   await check('HR API 500 handlers never interpolate exception messages', async () => {
     let checked = 0
@@ -74,7 +81,7 @@ async function expectSafe(promise, expected) {
       else if (file.endsWith('.ts')) {
         const source = fs.readFileSync(file, 'utf8')
         checked += (source.match(/status:\s*500/g) || []).length
-        assert(!/error:\s*(?:e|err|error)\??\.(?:message|stack)/.test(source), `${file} exposes an internal error`)
+        assertPrivateErrorResponses(source, file)
       }
     } }
     visit(root)

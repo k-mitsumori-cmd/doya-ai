@@ -1,4 +1,5 @@
 'use client'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { parseCreatedSettingsDepartment, type SettingsDepartment } from '@/lib/hr/department-settings-client'
 
@@ -37,6 +38,7 @@ function parseResult(value: unknown, intent: Intent): DepartmentCreationResult {
 
 /** Persist one immutable intent per actor/organization before any POST. Never retry a write automatically. */
 export function useHrDepartmentCreation(status: string, actor: string, organizationId: string) {
+  const { request: scopedRequest } = useHrOrganizationRequest()
   const allowed = status === 'authenticated' && Boolean(actor) && Boolean(organizationId)
   const storageKey = 'hr-department-create-intent:v1:' + JSON.stringify([actor, organizationId])
   const scope = JSON.stringify([status, actor, organizationId])
@@ -102,7 +104,7 @@ export function useHrDepartmentCreation(status: string, actor: string, organizat
         timer = setTimeout(() => operation.controller.abort(), 35000)
       })
       return await Promise.race([stopped, (async () => {
-        const response = await fetch(url, { ...init, cache: 'no-store', signal: operation.controller.signal })
+        const response = await scopedRequest(url, { ...init, cache: 'no-store', signal: operation.controller.signal })
         const data: unknown = await response.json()
         return { status: response.status, data }
       })()])

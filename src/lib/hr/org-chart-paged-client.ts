@@ -31,7 +31,7 @@ function parsePage(value: unknown) {
 }
 
 /** Bound each transport page, without converting an employee plan into an arbitrary total chart-size cap. */
-async function readPage(signal: AbortSignal, cursor: string | null) {
+async function readPage(signal: AbortSignal, cursor: string | null, transport: typeof fetch) {
   if (signal.aborted) throw new Error('HR org chart read cancelled')
   const controller = new AbortController()
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
@@ -43,7 +43,7 @@ async function readPage(signal: AbortSignal, cursor: string | null) {
     timer = setTimeout(() => { controller.abort(); reject(new Error('HR org chart read timed out')) }, 35000)
   })
   const work = (async () => {
-    const response = await fetch('/api/hr/org-chart?format=pages' + (cursor === null ? '' : '&cursor=' + encodeURIComponent(cursor)), { method: 'GET', cache: 'no-store', signal: controller.signal })
+    const response = await transport('/api/hr/org-chart?format=pages' + (cursor === null ? '' : '&cursor=' + encodeURIComponent(cursor)), { method: 'GET', cache: 'no-store', signal: controller.signal })
     if (response.status === 401) throw new HrOrgChartReadError(true)
     if (response.status === 409) throw new HrOrgChartReadError(false, true)
     if (response.status !== 200 || controller.signal.aborted || !response.body || Number(response.headers.get('content-length')) > 1024 * 1024) throw new Error('HR org chart read failed')
@@ -109,11 +109,11 @@ export function assembleHrOrgChart(orgName: string, departments: Department[], e
   return { orgName, orgChart: roots, unassignedEmployees, hierarchyWarning }
 }
 
-export async function readHrOrgChart(signal: AbortSignal, progress?: (loaded: number, total: number) => void): Promise<HrOrgChartData> {
+export async function readHrOrgChart(signal: AbortSignal, progress?: (loaded: number, total: number) => void, transport: typeof fetch = fetch): Promise<HrOrgChartData> {
   const departments: Department[] = [], employees: EmployeeRow[] = [], departmentIds = new Set<string>(), employeeIds = new Set<string>(), cursors = new Set<string>()
   let cursor: string | null = null, revision: string | undefined, orgName: string | undefined, totals: { departments: number; employees: number } | undefined
   do {
-    const page = await readPage(signal, cursor)
+    const page = await readPage(signal, cursor, transport)
     if (signal.aborted) throw new Error('HR org chart read cancelled')
     if (revision && (page.revision !== revision || page.orgName !== orgName || page.totals.departments !== totals!.departments || page.totals.employees !== totals!.employees)) throw new HrOrgChartReadError(false, true)
     revision = page.revision; orgName = page.orgName; totals = page.totals

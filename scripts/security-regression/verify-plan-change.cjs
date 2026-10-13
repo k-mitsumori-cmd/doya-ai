@@ -43,6 +43,7 @@ const stripeModule = load('src/lib/stripe.ts', {
 }, { process: { env } })
 const response = (data, init = {}) => Response.json(data, init)
 const checkout = load('src/app/api/stripe/checkout/route.ts', {
+  '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),
   'next/server': { NextResponse: { json: response } },
   'next-auth': { getServerSession: async () => ({ user: { email: 'owner@example.invalid' } }) },
   '@/lib/auth': { authOptions: {} },

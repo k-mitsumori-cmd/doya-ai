@@ -1,4 +1,5 @@
 'use client'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -16,6 +17,7 @@ type SortKey = 'name' | 'hireDate' | 'department'
 const PAGE_SIZE = 20
 
 export default function EmployeesPage() {
+  const { request: fetch } = useHrOrganizationRequest()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)

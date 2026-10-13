@@ -30,10 +30,22 @@ async function departments(){
 }
 async function evaluations(){for(const tail of ['','[id]/']){
  let writes=0;const method=tail?'PATCH':'POST';
- const prisma={hrEmployee:{findFirst:finder([{id:'employee',organizationId:'org1'},{id:'manager',organizationId:'org1'},{id:'foreign',organizationId:'org2'}])},hrEvaluationPeriod:{findFirst:finder([{id:'period',organizationId:'org1'}])},hrEvaluation:{findFirst:async()=>tail?{id:'own',period:{organizationId:'org1'}}:null,create:async()=>{writes++;return{}},update:async()=>{writes++;return{}}}};
- const api=load('src/app/api/hr/evaluations/'+tail+'route.ts',{...auth,'next/server':{NextResponse:Resp},'@/lib/prisma':{prisma},'@/lib/hr/access':{getHrContext:async()=>({organizationId:'org1'})},'@/lib/hr/evaluation-access':{canReadEvaluation:async()=>true,getEvaluationRatingField:async()=> 'finalRating',getEvaluationReader:async()=>({employeeId:null})},'@/lib/hr/constants':{DEFAULT_PAGE_SIZE:20,MAX_PAGE_SIZE:100}});
- await check('HR evaluation '+method+' rejects foreign evaluator without writes',async()=>{let r=await api[method](req({periodId:'period',employeeId:'employee',evaluatorId:'foreign'}),ctx);assert.equal(r.status,400);assert.equal(writes,0)});
- await check('HR evaluation '+method+' retains valid and unassigned evaluator',async()=>{for(const evaluatorId of ['manager',null])assert.equal((await api[method](req({periodId:'period',employeeId:'employee',evaluatorId}),ctx)).status,200)});
+ const employees=[{id:'employee',organizationId:'org1'},{id:'manager',organizationId:'org1'},{id:'foreign',organizationId:'org2'}];
+ let row={id:'own',periodId:'period',employeeId:'employee',evaluatorId:null,status:'DRAFT',updatedAt:new Date('2026-09-01T00:00:00Z'),period:{organizationId:'org1'}};
+ const context={organizationId:'org1',userId:'u1',memberId:'member',role:'OWNER',employeeId:null};
+ const prisma={
+  hrEmployee:{findFirst:finder(employees),count:async({where})=>employees.filter(e=>e.organizationId===where.organizationId&&(typeof where.id==='string'?e.id===where.id:where.id.in.includes(e.id))).length},
+  hrEvaluationPeriod:{findFirst:finder([{id:'period',organizationId:'org1'}])},
+  hrOrganizationMember:{findFirst:async()=>({role:'OWNER',employeeId:null})},
+  hrEvaluation:{findFirst:async()=>tail?row:null,findUnique:async()=>null,findUniqueOrThrow:async()=>row,create:async()=>{writes++;return{}},updateMany:async({where,data})=>{assert.equal(where.id,'own');assert.equal(where.updatedAt.getTime(),row.updatedAt.getTime());assert.equal(where.status.not,'FINALIZED');writes++;row={...row,...data};return{count:1}}},
+  $transaction:async fn=>fn(prisma),$queryRaw:async strings=>strings.join('').includes('hr_organization_members')?[{role:'OWNER',status:'ACTIVE',employeeId:null}]:strings.join('').includes('hr_organizations')?[{id:'org1'}]:[],
+ };
+ const dependencies=require('./hr-evaluation-fixture.cjs').evaluationDependencies(prisma);
+ const api=load('src/app/api/hr/evaluations/'+tail+'route.ts',{...dependencies,...auth,'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/hr/access':{getHrContext:async()=>context},'@/lib/hr/constants':{DEFAULT_PAGE_SIZE:20,MAX_PAGE_SIZE:100}});
+ // Editing keeps the immutable employee/period; the current row version is mandatory.
+ const input=evaluatorId=>tail?{evaluatorId,expectedUpdatedAt:row.updatedAt.toISOString()}:{periodId:'period',employeeId:'employee',evaluatorId};
+ await check('HR evaluation '+method+' rejects foreign evaluator without writes',async()=>{let r=await api[method](req(input('foreign')),ctx);assert.equal(r.status,400);assert.equal(writes,0)});
+ await check('HR evaluation '+method+' retains valid and unassigned evaluator',async()=>{for(const evaluatorId of ['manager',null])assert.equal((await api[method](req(input(evaluatorId)),ctx)).status,200)});
 }}
 async function promane(){
  let writes=0;const prisma={$transaction:async function(fn){const tx={...this,promaneMember:{findFirst:async q=>q.where.userId?{id:'m1'}:this.promaneMember.findFirst(q)}};return fn(tx)},promaneMember:{findFirst:finder([{id:'m1',workspaceId:'ws1',isActive:true},{id:'foreign',workspaceId:'ws2',isActive:true},{id:'inactive',workspaceId:'ws1',isActive:false}])},promaneClient:{findFirst:finder([{id:'client',workspaceId:'ws1'},{id:'foreign',workspaceId:'ws2'}])},promaneTask:{findFirst:finder([{id:'task',projectId:'proj1',project:{workspaceId:'ws1'},startDate:null,dueDate:null},{id:'foreign',projectId:'proj2',project:{workspaceId:'ws2'}}]),aggregate:async()=>({_max:{order:0}}),create:async()=>{writes++;return{id:'synthetic-task',projectId:'proj1'}},update:async()=>{writes++;return{projectId:'proj1'}}},promaneProject:{findFirst:finder([{id:'proj1',workspaceId:'ws1',startDate:null,endDate:null,updatedAt:new Date('2026-09-01T01:00:00Z')}]),create:async()=>{writes++;return{}},update:async()=>{writes++;return{}}}};

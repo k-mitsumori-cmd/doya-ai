@@ -132,7 +132,11 @@ export type HrAiAdmission =
 
 /** 組織行をロックし、月次リセットと枠の確保を同一トランザクションで行う。 */
 export async function reserveAiUsage(organizationId: string, now = new Date()): Promise<HrAiAdmission> {
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(tx => reserveAiUsageInTransaction(tx, organizationId, now))
+}
+
+/** Use the caller transaction so live authority/version checks and quota admission are atomic. */
+export async function reserveAiUsageInTransaction(tx: Prisma.TransactionClient, organizationId: string, now = new Date()): Promise<HrAiAdmission> {
     const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${organizationId} FOR UPDATE`
     if (rows.length === 0) return { granted: false as const, error: '組織が見つかりません' }
 
@@ -159,7 +163,6 @@ export async function reserveAiUsage(organizationId: string, now = new Date()): 
         : { aiUsageCount: { increment: 1 } },
     })
     return { granted: true as const, reservation: { organizationId, resetAt: reservationResetAt } }
-  })
 }
 
 /** 保存できなかった生成だけ返却する。月替わり後の新しい枠は減らさない。 */

@@ -1,4 +1,6 @@
 'use client'
+import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -27,8 +29,9 @@ function localInputDate(value: string): string | undefined {
 }
 
 export default function OneOnOneDetailPage() {
+  const { request: fetch } = useHrOrganizationRequest()
+  const { router } = useHrPageLifetime()
   const params = useParams()
-  const router = useRouter()
   const id = params?.id as string
 
   const [record, setRecord] = useState<OneOnOneData | null>(null)
