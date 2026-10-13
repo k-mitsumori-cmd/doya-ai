@@ -1,4 +1,6 @@
 import { getServerSession } from 'next-auth'
+import { headers } from 'next/headers'
+import { parseHrOrganizationSelection } from './organization-selection'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { HrMemberRole, HrContext } from './types'
@@ -11,8 +13,12 @@ export async function getHrContext(): Promise<HrContext | null> {
   const userId = (session?.user as any)?.id as string | undefined
   if (!userId) return null
 
+  const selection = parseHrOrganizationSelection(await headers(), userId)
+  // An explicit invalid/revoked selection must never fall back to another organization.
+  if (selection.kind === 'invalid') return null
   const membership = await prisma.hrOrganizationMember.findFirst({
-    where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
+    where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES },
+      ...(selection.kind === 'selected' ? { organizationId: selection.organizationId } : {}) },
     orderBy: { createdAt: 'desc' },
   })
   if (!membership || !Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, membership.role)) return null

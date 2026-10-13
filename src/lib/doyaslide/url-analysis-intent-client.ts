@@ -24,7 +24,7 @@ export function readUrlAnalysisIntent(actor: string): UrlAnalysisIntent | null {
   } catch { throw new Error('保存された取り込み情報を確認できません。新しい解析をせずお問い合わせください。') }
 }
 /** The lock covers metadata mutation, not network I/O, so recovery/cancellation can proceed during a slow POST. */
-async function locked<T>(actor: string, signal: AbortSignal, action: () => T): Promise<T> {
+async function locked<T>(actor: string, signal: AbortSignal, action: (lockSignal: AbortSignal) => T): Promise<T> {
   const key = storageKey(actor)
   if (signal.aborted || typeof navigator === 'undefined' || !navigator.locks) throw new Error(guidance)
   const controller = new AbortController()
@@ -39,26 +39,91 @@ async function locked<T>(actor: string, signal: AbortSignal, action: () => T): P
     return await Promise.race([navigator.locks.request(key, { mode: 'exclusive', signal: controller.signal }, () => {
       // Also guard a noncooperative/queued lock callback after timeout or actor unmount.
       if (signal.aborted || controller.signal.aborted) throw new Error(guidance)
-      return action()
+      return action(controller.signal)
     }), stopped])
   } finally { clearTimeout(timer); signal.removeEventListener('abort', stop); controller.abort() }
 }
+/** IndexedDB serializes the durable decision across renderer processes; localStorage is only the UI mirror. */
+function mutateIntent<T>(actor: string, signal: AbortSignal, mutate: (previous: UrlAnalysisIntent | null) => { next: UrlAnalysisIntent | null; result: T }): Promise<T> {
+  const key = storageKey(actor)
+  return new Promise<T>((resolve, reject) => {
+    if (signal.aborted || typeof indexedDB === 'undefined') { reject(new Error(guidance)); return }
+    let database: IDBDatabase | undefined
+    let transaction: IDBTransaction | undefined
+    let settled = false
+    let result: T
+    let failure: unknown
+    const finish = (error?: unknown) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      signal.removeEventListener('abort', stop)
+      database?.close()
+      if (error) reject(error)
+      else resolve(result)
+    }
+    const stop = () => {
+      try { transaction?.abort() } catch { /* Already terminal. */ }
+      finish(new Error(guidance))
+    }
+    const timer = setTimeout(stop, 10000)
+    signal.addEventListener('abort', stop, { once: true })
+    let request: IDBOpenDBRequest
+    try { request = indexedDB.open('doyaslide-url-operations-v1', 1) }
+    catch (error) { finish(error); return }
+    request.onupgradeneeded = () => {
+      if (settled || signal.aborted) { request.transaction?.abort(); return }
+      request.result.createObjectStore('intents')
+    }
+    request.onblocked = () => finish(new Error(guidance))
+    request.onerror = () => finish(request.error || new Error(guidance))
+    request.onsuccess = () => {
+      database = request.result
+      if (settled || signal.aborted) { database.close(); finish(new Error(guidance)); return }
+      database.onversionchange = () => { stop(); database?.close() }
+      try {
+        transaction = database.transaction('intents', 'readwrite')
+        const store = transaction.objectStore('intents')
+        transaction.onabort = () => finish(failure || transaction?.error || new Error(guidance))
+        transaction.onerror = () => { failure ||= transaction?.error || new Error(guidance) }
+        transaction.oncomplete = () => finish(signal.aborted ? new Error(guidance) : undefined)
+        const read = store.get(key)
+        read.onsuccess = () => {
+          try {
+            if (settled || signal.aborted) throw new Error(guidance)
+            // Validate the old mirror even after migration; corrupt metadata must not be silently discarded.
+            const legacy = readUrlAnalysisIntent(actor)
+            const value: unknown = read.result
+            if (value !== undefined && value !== null && !validIntent(value)) throw new Error(guidance)
+            const previous = value === undefined || value === null ? legacy : value as UrlAnalysisIntent
+            const update = mutate(previous)
+            if (update.next) localStorage.setItem(key, JSON.stringify(update.next))
+            else localStorage.removeItem(key)
+            if (readUrlAnalysisIntent(actor)?.operationId !== update.next?.operationId) throw new Error(guidance)
+            // Retain only metadata. A valid legacy mirror can still recover an old receipt without admitting a new POST.
+            store.put(update.next, key)
+            result = update.result
+          } catch (error) {
+            failure = error
+            try { transaction?.abort() } catch { finish(error) }
+          }
+        }
+      } catch (error) { finish(error) }
+    }
+  })
+}
 export async function claimUrlAnalysisIntent(actor: string, signal: AbortSignal): Promise<{ intent: UrlAnalysisIntent; created: boolean }> {
-  return locked(actor, signal, () => {
-    const previous = readUrlAnalysisIntent(actor)
-    if (previous) return { intent: previous, created: false }
+  return locked(actor, signal, lockSignal => mutateIntent(actor, lockSignal, previous => {
+    if (previous) return { next: previous, result: { intent: previous, created: false } }
     const intent: UrlAnalysisIntent = { version: 1, operationId: crypto.randomUUID(), createdAt: new Date().toISOString() }
     if (!validIntent(intent)) throw new Error(guidance)
-    localStorage.setItem(storageKey(actor), JSON.stringify(intent))
-    if (readUrlAnalysisIntent(actor)?.operationId !== intent.operationId) throw new Error(guidance)
-    return { intent, created: true }
-  })
+    return { next: intent, result: { intent, created: true } }
+  }))
 }
 /** Call only after applying a completed proposal or confirming a terminal cancellation/failure. */
 export async function clearUrlAnalysisIntent(actor: string, operationId: string, signal: AbortSignal): Promise<void> {
-  return locked(actor, signal, () => {
-    if (!uuid.test(operationId) || readUrlAnalysisIntent(actor)?.operationId !== operationId) throw new Error(guidance)
-    localStorage.removeItem(storageKey(actor))
-    if (readUrlAnalysisIntent(actor) !== null) throw new Error(guidance)
-  })
+  return locked(actor, signal, lockSignal => mutateIntent(actor, lockSignal, previous => {
+    if (!uuid.test(operationId) || previous?.operationId !== operationId) throw new Error(guidance)
+    return { next: null, result: undefined }
+  }))
 }

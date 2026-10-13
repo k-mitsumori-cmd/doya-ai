@@ -6,7 +6,7 @@ const {createRoot}=req('react-dom/client'),file='src/app/hr/employees/[id]/edit/
 let pendingUpload;const readers=[];
 let currentId='employee',pendingPatch,delayOld=false,resolveOld
 const employee=id=>({id,updatedAt:version,firstName:'Synthetic',lastName:id,employmentType:'FULL_TIME'})
-const fetch=async(url,init={})=>{
+const fetch=async(url,init={})=>{const parsed=new URL(url,dom.window.location.origin);url=parsed.pathname+parsed.search;assert.equal(new Headers(init.headers).get('X-HR-Selected-Actor'),'synthetic-editor-actor');assert.equal(new Headers(init.headers).get('X-HR-Selected-Organization'),'synthetic-org');
  if(url==='/api/hr/upload')return new Promise(r=>pendingUpload=r)
  if(init.method==='PATCH'){writes.push({url,body:JSON.parse(init.body)});return new Promise(r=>pendingPatch=r)}
  if(url==='/api/hr/departments')return Response.json({departments:[]})
@@ -28,12 +28,13 @@ function loadPageModule(moduleFile){
  if(n==='framer-motion')return{motion:new Proxy({},{get:(_,tag)=>({children,...props})=>React.createElement(tag,props,children)})}
  if(n==='next/link')return{__esModule:true,default:({children,...props})=>React.createElement('a',props,children)}
  if(n.startsWith('@/')){const source='src/'+n.slice(2);return loadPageModule(fs.existsSync(source+'.tsx')?source+'.tsx':source+'.ts')}
+ if(n.startsWith('./')){const source=path.posix.join(path.posix.dirname(moduleFile),n);return loadPageModule(fs.existsSync(source+'.tsx')?source+'.tsx':source+'.ts')}
  throw Error('Unmocked '+n)
- },fetch,Date,console,AbortController,TextDecoder,Uint8Array,Response,URL,FormData:dom.window.FormData,FileReader:class{constructor(){readers.push(this)}readAsDataURL(){}},window:dom.window,document:dom.window.document,setTimeout,clearTimeout},{filename:moduleFile});return output
+ },fetch,Date,console,Headers,Request,AbortController,TextDecoder,Uint8Array,Response,URL,FormData:dom.window.FormData,FileReader:class{constructor(){readers.push(this)}readAsDataURL(){}},window:dom.window,document:dom.window.document,setTimeout,clearTimeout},{filename:moduleFile});return output
 }
-const exportsObj=loadPageModule(file)
+const exportsObj=loadPageModule(file),Scope=loadPageModule('src/components/hr/HrOrganizationScope.tsx').default
 const container=document.createElement('div');document.body.append(container);const root=createRoot(container),Page=exportsObj.default
-const act=f=>React.act(async()=>{await f();for(let i=0;i<10;i++)await new Promise(setImmediate)}),props=e=>{assert(e);return e[Object.keys(e).find(k=>k.startsWith('__reactProps$'))]},render=()=>root.render(React.createElement(Page)),submit=()=>props(container.querySelector('form')).onSubmit({preventDefault(){}})
+const act=f=>React.act(async()=>{await f();for(let i=0;i<10;i++)await new Promise(setImmediate)}),props=e=>{assert(e);return e[Object.keys(e).find(k=>k.startsWith('__reactProps$'))]},render=()=>root.render(React.createElement(Scope,{actor:'synthetic-editor-actor',organizationId:'synthetic-org',enabled:true},React.createElement(Page))),submit=()=>props(container.querySelector('form')).onSubmit({preventDefault(){}})
 ;(async()=>{try{
  await act(render);let promise;await act(()=>{promise=submit()});currentId='after-save';await act(render);await act(async()=>{pendingPatch(Response.json({success:true,employee:employee('employee')}));await promise});try{assert.equal(navigations.length,0);cases.push('late save response has no navigation after route change')}catch(e){errors.push({scenario:'late-save-route-change',error:e.message})}
  currentId='photo-source';await act(render);await act(()=>props(container.querySelector('input[type=file]')).onChange({target:{files:[new dom.window.File(['test'],'test.png',{type:'image/png'})]}}));currentId='photo-destination';await act(render);await act(()=>readers.at(-1).onload({target:{result:'data:image/png;base64,PRIVATE_OLD_PHOTO'}}));try{assert(!container.innerHTML.includes('PRIVATE_OLD_PHOTO'));cases.push('old photo read cannot populate another employee')}catch(e){errors.push({scenario:'late-photo-route-change',error:e.message})}

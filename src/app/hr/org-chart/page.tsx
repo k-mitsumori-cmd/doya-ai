@@ -1,4 +1,5 @@
 'use client'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -23,6 +24,7 @@ function mapOrgChartNodes(nodes: any[]): any[] {
 }
 
 export default function OrgChartPage() {
+  const organizationScope = useHrOrganizationRequest()
   const { data: session, status } = useSession()
   const actor = status === 'unauthenticated' ? '' : session?.user?.id || ''
   const allowed = status === 'authenticated' && Boolean(actor)
@@ -41,7 +43,7 @@ export default function OrgChartPage() {
     const current = () => !controller.signal.aborted && currentScope.current.allowed && currentScope.current.key === scopeKey
     setView({ scope: scopeKey, data: null, error: false, unauthorized: false, loading: true })
     setProgress({ scope: scopeKey, loaded: 0, total: 0 })
-    void readHrOrgChart(controller.signal, (loaded, total) => { if (current()) setProgress({ scope: scopeKey, loaded, total }) }).then(data => {
+    void readHrOrgChart(controller.signal, (loaded, total) => { if (current()) setProgress({ scope: scopeKey, loaded, total }) }, organizationScope.request).then(data => {
       if (current()) setView({ scope: scopeKey, data, error: false, unauthorized: false, loading: false })
     }).catch(error => {
       if (current()) setView({ scope: scopeKey, data: null, error: true, unauthorized: error instanceof HrOrgChartReadError && error.unauthorized, changed: error instanceof HrOrgChartReadError && error.changed, loading: false })

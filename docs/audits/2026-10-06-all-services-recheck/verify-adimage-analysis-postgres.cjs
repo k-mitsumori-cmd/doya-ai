@@ -110,10 +110,12 @@ async function record(name, work) { await reset(); await work(); cases.push(name
       await post(); const state = await usage(); await db.systemSetting.update({ where: { key }, data: { value: JSON.stringify({ ...state, count: 20 }) } })
       const response = await post({ operationId: uuid2 }); assert.equal(response.status, 429); const data = await response.json(); assert.equal(data.code, 'ANALYSIS_DAILY_LIMIT'); assert.equal(data.upgradeUrl, '/adimage/pricing'); assert.equal(data.usage.used, 20); assert.equal(calls, 1)
     })
-    if (process.env.DOYA_ANALYSIS_NATIVE_CHROME !== '0') await record('Native Chrome automatic POST retry after saved-response socket loss replays exactly one result', async () => {
+    if (process.env.DOYA_ANALYSIS_NATIVE_CHROME !== '0') await record('Native Chrome identical POST replay after saved-response socket loss persists exactly one result', async () => {
       let requests = 0, origin
       server = http.createServer(async (req, res) => { try {
         if (req.url === '/') { res.end('<!doctype html><title>Synthetic analysis recovery</title>'); return }
+        // Count only operation POSTs: Chromium may independently request a favicon.
+        if (req.method !== 'POST' || new URL(req.url, origin).pathname !== '/api/adimage/analyze') { res.writeHead(404); res.end(); return }
         let raw = ''; for await (const part of req) raw += part
         requests++; const reply = await route.POST(new Request(origin + '/api/adimage/analyze', { method: 'POST', body: raw })); const data = await reply.text()
         if (requests === 1) { assert.equal(reply.status, 200); req.socket.destroy(); return }
@@ -122,7 +124,12 @@ async function record(name, work) { await reset(); await work(); cases.push(name
       await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); origin = 'http://127.0.0.1:' + server.address().port
       browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true, args: ['--no-first-run', '--disable-background-networking', '--disable-sync'] }); const page = await browser.newPage()
       await page.setRequestInterception(true); page.on('request', r => r.url().startsWith(origin) ? r.continue() : r.abort()); await page.goto(origin)
-      const first = await page.evaluate(async payload => { try { const r = await fetch('/api/adimage/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); return { status: r.status, body: await r.json() } } catch { return { status: null } } }, body())
+      let first = await page.evaluate(async payload => { try { const r = await fetch('/api/adimage/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); return { status: r.status, body: await r.json() } } catch { return { status: null } } }, body())
+      if (first.status === null) {
+        assert.equal(requests, 1); assert.equal(calls, 1); assert.equal(await count(), 1);
+        // Explicit replay verifies the receipt invariant even when Chromium declines transport retry.
+        first = await page.evaluate(async payload => { const r = await fetch('/api/adimage/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); return { status: r.status, body: await r.json() } }, body())
+      }
       assert.equal(first.status, 200); assert.equal(first.body.state, 'completed'); assert.equal(requests, 2); assert.equal(calls, 1); assert.equal(copyCalls, 1); assert.equal(await count(), 1); assert.equal((await usage()).count, 1)
       await browser.close(); browser = null; server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); server = null
     })
@@ -152,10 +159,18 @@ async function record(name, work) { await reset(); await work(); cases.push(name
       browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true, args: ['--no-first-run', '--disable-background-networking', '--disable-sync'] }); const page = await browser.newPage(); const errors = []
       page.on('pageerror', e => errors.push(e.message)); await page.setRequestInterception(true); page.on('request', r => r.url().startsWith(origin) ? r.continue() : r.abort()); await page.goto(origin)
       const click = text => page.evaluate(label => { const b = [...document.querySelectorAll('button')].find(b => b.textContent.includes(label)); if (!b) throw Error('Missing button ' + label); b.click() }, text)
-      await page.type('input[placeholder="https://example.com"]', 'https://synthetic.test'); await click('広告コピーを作る'); try { await page.waitForSelector('input[type="file"]') } catch (error) { console.error(JSON.stringify({nativeAnalysisFailure:{requests,calls,copyCalls,errors,view:await page.evaluate(()=>document.body.innerText.slice(0,3000))}})); throw error }
-      assert.equal(requests, 2); assert.equal(calls, 1); assert.equal(copyCalls, 1); assert.equal(await count(), 1); assert.equal((await usage()).count, 1)
+      await page.type('input[placeholder="https://example.com"]', 'https://synthetic.test'); await click('広告コピーを作る');
+      try {
+        await page.waitForFunction(() => document.querySelector('input[type="file"]') || [...document.querySelectorAll('button')].some(b => b.textContent.includes('保存結果を確認') && !b.disabled));
+        if (!(await page.$('input[type="file"]'))) {
+          assert.equal(requests, 1); assert.equal(calls, 1); assert.equal(await count(), 1);
+          await click('保存結果を確認');
+        }
+        await page.waitForSelector('input[type="file"]');
+      } catch (error) { console.error(JSON.stringify({nativeAnalysisFailure:{requests,calls,copyCalls,errors,view:await page.evaluate(()=>document.body.innerText.slice(0,3000))}})); throw error }
+      assert.ok(requests === 1 || requests === 2); const committedPosts = requests; assert.equal(calls, 1); assert.equal(copyCalls, 1); assert.equal(await count(), 1); assert.equal((await usage()).count, 1)
       const metadata = await page.evaluate(() => localStorage.getItem('adimage-intent:v1:budget-user')); assert.equal(JSON.parse(metadata).kind, 'analyze'); assert(!metadata.includes('synthetic.test'))
-      await page.reload({ waitUntil: 'networkidle0' }); assert.equal(requests, 2); await click('保存結果を確認'); await page.waitForSelector('input[type="file"]'); assert.equal(requests, 2); assert.equal(calls, 1)
+      await page.reload({ waitUntil: 'networkidle0' }); assert.equal(requests, committedPosts); await click('保存結果を確認'); await page.waitForSelector('input[type="file"]'); assert.equal(requests, committedPosts); assert.equal(calls, 1)
       await click('結果を確認しました'); await page.waitForFunction(() => localStorage.getItem('adimage-intent:v1:budget-user') === null); assert.equal(errors.length, 0)
       await browser.close(); browser = null; server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); server = null
     })

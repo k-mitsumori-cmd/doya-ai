@@ -14,6 +14,7 @@ const UNKNOWN_SYNC = 'ご契約は確認できましたが、プランの反映�
 
 interface CheckoutButtonProps {
   planId: string
+  billingOrganization?: { actor: string; organizationId: string }
   billingPeriod?: 'monthly' | 'yearly'
   loginCallbackUrl?: string
   className?: string
@@ -23,6 +24,7 @@ interface CheckoutButtonProps {
 
 export function CheckoutButton({
   planId,
+  billingOrganization,
   billingPeriod = 'monthly',
   loginCallbackUrl,
   className = '',
@@ -36,8 +38,8 @@ export function CheckoutButton({
   const messageId = useId()
   const user = session?.user as { id?: string; email?: string } | undefined
   const identity = user?.id || user?.email
-  const scopeKey = JSON.stringify([identity, planId, billingPeriod])
-  const contextKey = JSON.stringify([status, identity, planId, billingPeriod])
+  const scopeKey = JSON.stringify([identity, planId, billingPeriod, billingOrganization?.actor, billingOrganization?.organizationId])
+  const contextKey = JSON.stringify([status, identity, planId, billingPeriod, billingOrganization?.actor, billingOrganization?.organizationId])
   const notice = status === 'authenticated' && identity && noticeResult?.scopeKey === scopeKey ? noticeResult.message : null
   const context = useRef(contextKey)
   context.current = contextKey
@@ -85,6 +87,7 @@ export function CheckoutButton({
       return
     }
     if (status !== 'authenticated' || !identity) return
+    if (billingOrganization && (originService !== 'hr' || billingOrganization.actor !== user?.id || !billingOrganization.organizationId || /[\s\u0000-\u001f\u007f]/.test(billingOrganization.organizationId))) return
 
     const controller = new AbortController()
     active.current = controller
@@ -105,6 +108,7 @@ export function CheckoutButton({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(billingOrganization ? { 'X-HR-Selected-Actor': billingOrganization.actor, 'X-HR-Selected-Organization': billingOrganization.organizationId, 'X-HR-Organization-Id': billingOrganization.organizationId } : {}),
         },
         body: JSON.stringify({
           planId,

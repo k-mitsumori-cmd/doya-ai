@@ -1,300 +1,242 @@
 'use client'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
-import toast from 'react-hot-toast'
+import HrAuthenticatedScope from '@/components/hr/HrAuthenticatedScope'
+import { HrEvaluationOverviewClientError, loadHrEvaluationPeriodOverview } from '@/lib/hr/evaluation-period-client'
+import { findHrEvaluationCreationOrganization, useHrEvaluationCreation } from '@/lib/hr/use-evaluation-creation'
+import { findHrEvaluationPeriodOperationOrganization, useHrEvaluationPeriodOperation } from '@/lib/hr/use-evaluation-period-operation'
+import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 
-interface Period {
-  canManageEvaluations: boolean
-  id: string
-  name: string
-  startDate: string
-  endDate: string
-  status: string
+type Overview = Awaited<ReturnType<typeof loadHrEvaluationPeriodOverview>>
+type View = { state: 'loading' } | { state: 'error'; message: string; status: number } | { state: 'ready'; data: Overview }
+const PERIOD_STATUS: Record<string, string> = { DRAFT: '準備中', OPEN: '進行中', IN_REVIEW: 'レビュー中', CLOSED: '完了' }
+const EVALUATION_STATUS: Record<string, string> = {
+  DRAFT: '未着手', SELF: '自己評価中', SELF_REVIEW: '自己評価中', SELF_EVALUATION: '自己評価中',
+  IN_REVIEW: '上司評価中', MANAGER_REVIEW: '上司評価中', REVIEWED: '確認済み', SUBMITTED: '提出済み', FINALIZED: '確定',
 }
-
-interface EvaluationRow {
-  id: string
-  employeeId: string
-  status: string
-}
-
-interface Employee {
-  id: string
-  firstName?: string
-  lastName?: string
-  department?: { name?: string } | null
-}
-
-const PERIOD_STATUS: Record<string, { label: string; color: string }> = {
-  DRAFT: { label: '準備中', color: 'bg-slate-100 text-slate-600' },
-  OPEN: { label: '進行中', color: 'bg-emerald-100 text-emerald-700' },
-  IN_REVIEW: { label: 'レビュー中', color: 'bg-amber-100 text-amber-700' },
-  CLOSED: { label: '完了', color: 'bg-blue-100 text-blue-700' },
-}
-
-const EVAL_STATUS: Record<string, { label: string; color: string }> = {
-  DRAFT: { label: '未着手', color: 'bg-slate-100 text-slate-500' },
-  SELF: { label: '自己評価中', color: 'bg-amber-100 text-amber-700' },
-  IN_REVIEW: { label: '上司評価中', color: 'bg-indigo-100 text-indigo-700' },
-  SUBMITTED: { label: '提出済み', color: 'bg-sky-100 text-sky-700' },
-  FINALIZED: { label: '確定', color: 'bg-emerald-100 text-emerald-700' },
-}
-
-function fmtDate(s?: string) {
-  if (!s) return ''
-  try {
-    return new Date(s).toLocaleDateString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric' })
-  } catch {
-    return s
-  }
-}
+const buttonClass = 'px-4 py-2 rounded-full border border-slate-300 text-sm font-bold disabled:opacity-50'
+const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
+const iso = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(new Date(value).getTime()) && new Date(value).toISOString() === value
+const fmtDate = (date: string) => new Date(date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric' })
 
 export default function EvaluationPeriodDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const id = params?.id as string
+  const params = useParams(), id = typeof params?.id === 'string' ? params.id : ''
+  return <HrAuthenticatedScope callbackUrl={'/hr/evaluations/period/' + encodeURIComponent(id)} resourceLabel="評価期間">
+    {actor => <EvaluationPeriodContent key={id} id={id} actor={actor} />}
+  </HrAuthenticatedScope>
+}
 
-  const [period, setPeriod] = useState<Period | null>(null)
-  const [evaluations, setEvaluations] = useState<EvaluationRow[]>([])
-  const [employees, setEmployees] = useState<Employee[]>([])
-  const [loading, setLoading] = useState(true)
-  const [notFound, setNotFound] = useState(false)
-  const [creatingFor, setCreatingFor] = useState<string | null>(null)
-  const [updatingStatus, setUpdatingStatus] = useState(false)
-
-  const load = useCallback(async () => {
-    try {
-      const [periodRes, evalRes, empRes] = await Promise.all([
-        fetch(`/api/hr/evaluations/periods/${id}`),
-        fetch(`/api/hr/evaluations?periodId=${id}`),
-        fetch('/api/hr/employees'),
-      ])
-      if (!periodRes.ok) {
-        setNotFound(true)
-        return
-      }
-      const periodData = await periodRes.json()
-      setPeriod(periodData.period)
-      if (evalRes.ok) {
-        const ev = await evalRes.json()
-        setEvaluations(ev.items ?? ev.evaluations ?? [])
-      }
-      if (empRes.ok) {
-        const emp = await empRes.json()
-        setEmployees(emp.items ?? emp.employees ?? [])
-      }
-    } catch (e: any) {
-      toast.error('評価期間の取得に失敗しました')
-      setNotFound(true)
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
-
+function EvaluationPeriodContent({ id, actor }: { id: string; actor: string }) {
+  const organizationScope = useHrOrganizationRequest()
+  const [view, setView] = useState<View>({ state: 'loading' }), [attempt, setAttempt] = useState(0)
+  const organization = useRef<string>(), patchBusy = useRef(false), confirmedVersion = useRef<string>()
+  const [updating, setUpdating] = useState(false)
+  const [evaluatorId, setEvaluatorId] = useState('')
+  const [scopeInitialized, setScopeInitialized] = useState(false), [scopeIssue, setScopeIssue] = useState('')
+  const [notice, setNotice] = useState<{ message: string; verifyAttempt: number | null; verified: boolean; operationId?: string; minimumVersion?: string; completedVersion?: string; intendedStatus?: 'OPEN' | 'CLOSED' } | null>(null)
+  const lifetime = useHrPageLifetime()
+  const data = view.state === 'ready' ? view.data : null
+  const periodOperation = useHrEvaluationPeriodOperation(scopeInitialized && !scopeIssue ? 'authenticated' : 'loading', actor, organization.current ?? '', id)
+  const creation = useHrEvaluationCreation(scopeInitialized && !scopeIssue ? 'authenticated' : 'loading', actor, organization.current ?? '', id)
   useEffect(() => {
-    if (id) load()
-  }, [id, load])
-
-  const evalByEmployee = new Map(evaluations.map((e) => [e.employeeId, e]))
-
-  const handleCreate = async (employeeId: string) => {
-    if (!period?.canManageEvaluations) return
-    setCreatingFor(employeeId)
     try {
-      const res = await fetch('/api/hr/evaluations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ periodId: id, employeeId }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || !data.evaluation?.id) {
-        toast.error(data.error || '評価の作成に失敗しました')
-        return
+      const periodOrganization = findHrEvaluationPeriodOperationOrganization(actor, id)
+      const creationOrganization = findHrEvaluationCreationOrganization(actor, id)
+      if (periodOrganization && creationOrganization && periodOrganization !== creationOrganization) throw Error('操作時の組織が一致しません。')
+      organization.current = periodOrganization ?? creationOrganization
+      if (organizationScope.organizationId && organization.current && organization.current !== organizationScope.organizationId) {
+        setScopeIssue('前回の操作は別の組織で行われました。操作記録は保持しています。画面上部の「表示する組織」で操作時の組織を選び直し、評価期間を開いて結果を確認してください。')
       }
-      toast.success('評価を作成しました')
-      router.push(`/hr/evaluations/${data.evaluation.id}`)
-    } catch {
-      toast.error('評価の作成に失敗しました')
-    } finally {
-      setCreatingFor(null)
     }
-  }
+    catch { setScopeIssue('前回の変更操作の組織を安全に確認できません。操作記録は保持しています。ブラウザの保存設定と評価一覧を確認してください。') }
+    setScopeInitialized(true)
+  }, [actor, id, organizationScope.organizationId])
+  useEffect(() => {
+    if (!scopeInitialized) return
+    if (scopeIssue) { setView({ state: 'error', status: 0, message: scopeIssue }); return }
+    const controller = new AbortController(); let active = true
+    setView({ state: 'loading' })
+    void loadHrEvaluationPeriodOverview(id, controller.signal, organization.current || organizationScope.organizationId, organizationScope.request).then(snapshot => {
+      if (!active || controller.signal.aborted) return
+      if (confirmedVersion.current && new Date(snapshot.period.updatedAt).getTime() < new Date(confirmedVersion.current).getTime()) throw Error('評価期間の応答が確認済みの変更より古いため、再取得してください。')
+      organization.current = snapshot.organizationId
+      setView({ state: 'ready', data: snapshot })
+      setNotice(old => {
+        if (old?.verifyAttempt !== attempt) return old
+        const version = new Date(snapshot.period.updatedAt).getTime()
+        const invalid = old.minimumVersion && version < new Date(old.minimumVersion).getTime() || old.completedVersion === snapshot.period.updatedAt && snapshot.period.status !== old.intendedStatus
+        return invalid ? { ...old, verified: false, message: '評価期間の応答が操作記録と一致しません。内容を変更せず、再確認してください。' } : { ...old, verified: true }
+      })
+    }).catch((error: unknown) => {
+      if (!active || controller.signal.aborted) return
+      setView({ state: 'error', status: error instanceof HrEvaluationOverviewClientError ? error.status : 0,
+        message: error instanceof HrEvaluationOverviewClientError ? error.message : '評価期間の応答を確認できませんでした。再取得してください。' })
+    })
+    return () => { active = false; controller.abort() }
+  }, [id, attempt, scopeInitialized, scopeIssue])
 
-  const handleStatus = async (status: string) => {
-    if (!period?.canManageEvaluations) return
-    setUpdatingStatus(true)
+  const reload = () => setAttempt(old => old + 1)
+  const verifyStatus = async () => {
+    if (patchBusy.current || updating || creation.busy || periodOperation.busy || !lifetime.live()) return
+    patchBusy.current = true; setUpdating(true)
     try {
-      const res = await fetch(`/api/hr/evaluations/periods/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        toast.error(data.error || 'ステータスの更新に失敗しました')
-        return
+      const intent = periodOperation.intent
+      const result = intent ? await periodOperation.recover() : null
+      if (!lifetime.live() || !periodOperation.isCurrent()) return
+      if (intent && (!result || result.state === 'not_received')) {
+        setNotice({ message: '変更結果が未確認です。未受付の操作は「この変更操作を終了する」で終了してから、保存結果を確認してください。', verifyAttempt: null, verified: false }); return
       }
-      toast.success(status === 'OPEN' ? '評価期間を開始しました' : '評価期間を締めました')
-      setPeriod((p) => (p ? { ...p, status } : p))
+      const nextAttempt = attempt + 1
+      setNotice({ message: '現在の評価期間を確認し、最新状態を確認してから続けてください。', verifyAttempt: nextAttempt, verified: false,
+        ...(intent ? { operationId: intent.operationId, intendedStatus: intent.input.status, minimumVersion: result?.state === 'completed' ? result.updatedAt : intent.input.expectedUpdatedAt } : {}),
+        ...(result?.state === 'completed' ? { completedVersion: result.updatedAt } : {}),
+      })
+      setAttempt(nextAttempt)
+    } finally { patchBusy.current = false; if (lifetime.live()) setUpdating(false) }
+  }
+  const finishStatus = async () => {
+    if (!notice?.verified || patchBusy.current || periodOperation.busy || creation.busy || !periodOperation.ready || !lifetime.live()) return
+    if (periodOperation.intent && (notice.operationId !== periodOperation.intent.operationId || !periodOperation.result || periodOperation.result.state === 'not_received' || !await periodOperation.acknowledge(notice.operationId))) return
+    if (lifetime.live() && periodOperation.isCurrent()) { if (data) confirmedVersion.current = data.period.updatedAt; setNotice(null) }
+  }
+  const finishDeletedStatus = async () => {
+    const result = periodOperation.result
+    if (result?.state !== 'deleted' || patchBusy.current || periodOperation.busy || creation.busy || !lifetime.live()) return
+    patchBusy.current = true; setUpdating(true)
+    try {
+      if (await periodOperation.acknowledge(result.operationId) && lifetime.live() && periodOperation.isCurrent()) lifetime.router.push('/hr/evaluations')
+    } finally { patchBusy.current = false; if (lifetime.live()) setUpdating(false) }
+  }
+  const handleStatus = async (status: 'OPEN' | 'CLOSED') => {
+    if (!data?.period.canManageEvaluations || patchBusy.current || notice || creation.intent || creation.busy || !creation.ready || !periodOperation.ready || periodOperation.intent || periodOperation.busy) return
+    patchBusy.current = true; setUpdating(true)
+    const period = data.period
+    try {
+      const response = await periodOperation.create({ periodId: id, expectedUpdatedAt: period.updatedAt, status })
+      if (!lifetime.live() || !periodOperation.isCurrent()) return
+      const body = response?.acknowledgment
+      if (!response || response.result.state !== 'completed') {
+        setNotice({ message: '更新結果を確認できませんでした。新しく変更せず、同じ変更操作の結果を確認してください。', verifyAttempt: null, verified: false }); return
+      }
+      if (!object(body) || body.success !== true || !object(body.period) || body.period.id !== id || body.period.organizationId !== data.organizationId ||
+        body.period.status !== status || !iso(body.period.updatedAt) || body.period.updatedAt !== response.result.updatedAt || new Date(body.period.updatedAt).getTime() <= new Date(period.updatedAt).getTime() ||
+        !await periodOperation.acknowledge(response.result.operationId, body.period.updatedAt)) {
+        setNotice({ message: '保存の応答を確認できませんでした。保存結果を確認してから続けてください。', verifyAttempt: null, verified: false }); return
+      }
+      if (!lifetime.live() || !periodOperation.isCurrent()) return
+      confirmedVersion.current = body.period.updatedAt
+      lifetime.toast.success(status === 'OPEN' ? '評価期間を開始しました' : '評価期間を締めました')
+      reload()
     } catch {
-      toast.error('ステータスの更新に失敗しました')
-    } finally {
-      setUpdatingStatus(false)
+      if (lifetime.live()) setNotice({ message: '更新結果を確認できませんでした。保存結果を確認してから続けてください。', verifyAttempt: null, verified: false })
+    } finally { if (lifetime.live()) { patchBusy.current = false; setUpdating(false) } }
+  }
+  const createEvaluation = async (employeeId: string) => {
+    if (!data?.period.canManageEvaluations || patchBusy.current || notice || creation.intent || creation.busy || !creation.ready || periodOperation.intent || periodOperation.busy || !periodOperation.ready || !lifetime.live()) return
+    patchBusy.current = true
+    try {
+      if (evaluatorId && (evaluatorId === employeeId || !data?.employees.some(employee => employee.id === evaluatorId))) {
+        lifetime.toast.error('対象者以外の上司担当者を選択してください。'); return
+      }
+      await creation.create({ periodId: id, employeeId, evaluatorId: evaluatorId || null })
     }
+    finally { patchBusy.current = false }
+  }
+  const finishCreation = async (open: boolean) => {
+    const result = creation.result
+    if (!result || result.state === 'not_received') return
+    const acknowledged = await creation.acknowledge()
+    if (!acknowledged || !creation.isCurrent() || !lifetime.live()) return
+    if (open && result.state === 'created') lifetime.router.push('/hr/evaluations/' + encodeURIComponent(result.evaluation.id))
+    else if (view.state === 'error') lifetime.router.push('/hr/evaluations')
+    else reload()
   }
 
-  if (loading) {
-    return (
-      <div className="p-6 lg:p-10 max-w-4xl mx-auto">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-slate-100 rounded w-1/3" />
-          <div className="h-64 bg-slate-100 rounded-3xl" />
-        </div>
+  const periodRecovery = (notice || periodOperation.intent || periodOperation.message) ? <section role="alert" className="bg-amber-50 rounded-2xl p-4 mb-4">
+      <h2 className="font-bold">評価期間の変更結果を確認してください</h2>
+      <p className="mt-2">{notice?.message || periodOperation.message || '前回の変更結果が未確認です。新しく変更せず、同じ操作の結果を確認してください。'}</p>
+      {notice && periodOperation.message && notice.message !== periodOperation.message && <p className="mt-2">{periodOperation.message}</p>}
+      {periodOperation.loginRequired && <Link className={buttonClass} href={'/auth/signin?callbackUrl=' + encodeURIComponent('/hr/evaluations/period/' + id)}>ログインする</Link>}
+      <div className="flex flex-wrap gap-3 mt-3">
+        {periodOperation.intent && <button type="button" className={buttonClass} disabled={updating || periodOperation.busy || creation.busy} onClick={() => void periodOperation.recover()}>変更操作の結果を確認する</button>}
+        {periodOperation.intent && (!periodOperation.result || periodOperation.result.state === 'not_received') && <button type="button" className={buttonClass} disabled={updating || periodOperation.busy || creation.busy || periodOperation.accessDenied || periodOperation.loginRequired || view.state === 'error'} onClick={() => void periodOperation.recover(true)}>この変更操作を終了する</button>}
+        {view.state === 'ready' && periodOperation.result?.state !== 'deleted' && <button type="button" className={buttonClass} disabled={updating || periodOperation.busy || creation.busy} onClick={() => void verifyStatus()}>保存結果を確認する</button>}
+        {periodOperation.result?.state === 'deleted' && <button type="button" className={buttonClass} disabled={updating || periodOperation.busy || creation.busy} onClick={() => void finishDeletedStatus()}>削除済みの結果を確認して評価一覧に戻る</button>}
+        {notice?.verified && view.state === 'ready' && periodOperation.result?.state !== 'deleted' && <button type="button" className={buttonClass} disabled={updating || periodOperation.busy || creation.busy || !periodOperation.ready} onClick={() => void finishStatus()}>最新状態を確認して続ける</button>}
       </div>
-    )
-  }
+    </section> : null
 
-  if (notFound || !period) {
-    return (
-      <div className="p-6 lg:p-10 max-w-4xl mx-auto">
-        <div className="bg-white rounded-3xl shadow-md p-12 text-center text-slate-500">
-          <span className="material-symbols-outlined text-5xl mb-3 block">error</span>
-          <p className="text-lg font-medium">評価期間が見つかりません</p>
-          <Link href="/hr/evaluations" className="mt-4 inline-block text-blue-600 font-bold">
-            評価一覧に戻る
-          </Link>
-        </div>
+  const creationRecovery = (creation.intent || creation.message) ? <section role="status" className="bg-blue-50 rounded-2xl p-4 mb-4">
+      <p>{creation.message || '前回の評価作成がまだ確認できていません。結果を確認してから続けてください。'}</p>
+      <div className="flex flex-wrap gap-3 mt-3">
+        {creation.loginRequired && <Link className={buttonClass} href={'/auth/signin?callbackUrl=' + encodeURIComponent('/hr/evaluations/period/' + id)}>ログインする</Link>}
+        {creation.intent && <button type="button" className={buttonClass} disabled={creation.busy} onClick={() => void creation.recover()}>作成結果を確認する</button>}
+        {creation.result?.state === 'not_received' && <>
+          <button type="button" className={buttonClass} disabled={view.state !== 'ready' || !data?.period.canManageEvaluations || creation.accessDenied || creation.loginRequired || creation.busy || updating || Boolean(notice) || periodOperation.busy || Boolean(periodOperation.intent) || !periodOperation.ready} onClick={() => void creation.retry()}>同じ内容で作成を再開する</button>
+          <button type="button" className={buttonClass} disabled={creation.busy || creation.accessDenied || creation.loginRequired} onClick={() => void creation.recover(true)}>未受付の操作を終了する</button>
+        </>}
+        {creation.result?.state === 'created' && <button type="button" className={buttonClass} disabled={creation.busy} onClick={() => void finishCreation(true)}>保存済みの評価を開く</button>}
+        {creation.result && creation.result.state !== 'not_received' && <button type="button" className={buttonClass} disabled={creation.busy} onClick={() => void finishCreation(false)}>{view.state === 'error' ? '結果を確認して評価一覧に戻る' : '結果を確認して一覧を更新する'}</button>}
       </div>
-    )
-  }
+    </section> : null
 
-  const periodBadge = PERIOD_STATUS[period.status] ?? PERIOD_STATUS.DRAFT
-
-  return (
-    <div className="p-6 lg:p-10 max-w-4xl mx-auto">
-      {/* Back */}
-      <Link
-        href="/hr/evaluations"
-        className="inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-slate-700 mb-4"
-      >
-        <span className="material-symbols-outlined text-lg">arrow_back</span>
-        評価一覧
-      </Link>
-
-      {/* Header */}
-      <div className="bg-white rounded-3xl shadow-md p-6 mb-6">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-slate-900">{period.name}</h1>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${periodBadge.color}`}>
-                {periodBadge.label}
-              </span>
-            </div>
-            <p className="text-sm text-slate-500 mt-1">
-              {fmtDate(period.startDate)} 〜 {fmtDate(period.endDate)}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {period.canManageEvaluations && period.status === 'DRAFT' && (
-              <button
-                onClick={() => handleStatus('OPEN')}
-                disabled={updatingStatus}
-                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-full text-sm font-bold shadow-md hover:bg-emerald-700 transition-all disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined text-lg">play_arrow</span>
-                評価を開始する
-              </button>
-            )}
-            {period.canManageEvaluations && (period.status === 'OPEN' || period.status === 'IN_REVIEW') && (
-              <button
-                onClick={() => handleStatus('CLOSED')}
-                disabled={updatingStatus}
-                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-full text-sm font-bold hover:border-blue-400 hover:text-blue-600 transition-all disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined text-lg">flag</span>
-                評価を締める
-              </button>
-            )}
-          </div>
-        </div>
-        {period.canManageEvaluations && period.status === 'DRAFT' && (
-          <p className="mt-3 text-xs text-amber-600 bg-amber-50 rounded-xl px-3 py-2">
-            「準備中」の評価期間はダッシュボードの「進行中の評価」に集計されません。各メンバーの評価を作成し、「評価を開始する」を押すと進行中になります。
-          </p>
-        )}
-      </div>
-
-      {/* Employee list */}
-      <div className="bg-white rounded-3xl shadow-md p-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <span className="material-symbols-outlined text-blue-600">groups</span>
-          メンバーの評価
-          <span className="text-sm font-bold text-slate-400">
-            {evaluations.length} / {employees.length} 名作成済み
-          </span>
-        </h2>
-
-        {employees.length === 0 ? (
-          <div className="text-center py-8 text-slate-500">
-            <p className="text-sm font-bold">先に従業員を登録してください</p>
-            <Link href="/hr/employees/new" className="mt-2 inline-block text-blue-600 font-bold text-sm">
-              従業員を追加する
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {employees.map((emp) => {
-              const ev = evalByEmployee.get(emp.id)
-              const name = `${emp.lastName ?? ''} ${emp.firstName ?? ''}`.trim() || '名称未設定'
-              const evalBadge = ev ? EVAL_STATUS[ev.status] ?? EVAL_STATUS.DRAFT : null
-              return (
-                <motion.div
-                  key={emp.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-slate-100 hover:border-slate-200 transition-all"
-                >
-                  <div className="min-w-0">
-                    <p className="text-base font-bold text-slate-900 truncate">{name}</p>
-                    {emp.department?.name && (
-                      <p className="text-xs text-slate-400">{emp.department.name}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {evalBadge && (
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${evalBadge.color}`}>
-                        {evalBadge.label}
-                      </span>
-                    )}
-                    {ev ? (
-                      <Link
-                        href={`/hr/evaluations/${ev.id}`}
-                        className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-bold hover:bg-blue-700 transition-all"
-                      >
-                        <span className="material-symbols-outlined text-base">edit_note</span>
-                        評価を開く
-                      </Link>
-                    ) : period.canManageEvaluations ? (
-                      <button
-                        onClick={() => handleCreate(emp.id)}
-                        disabled={creatingFor === emp.id}
-                        className="flex items-center gap-1 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-full text-sm font-bold hover:border-blue-400 hover:text-blue-600 transition-all disabled:opacity-50"
-                      >
-                        <span className="material-symbols-outlined text-base">add</span>
-                        {creatingFor === emp.id ? '作成中...' : '評価を作成'}
-                      </button>
-                    ) : <span className="text-xs text-slate-500">表示できる評価はありません</span>}
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-        )}
+  if (view.state === 'loading') return <div className="p-6 lg:p-10 max-w-4xl mx-auto" role="status">評価期間と対象者を確認しています。</div>
+  if (view.state === 'error') return <div className="p-6 lg:p-10 max-w-4xl mx-auto">
+    {periodRecovery}
+    {creationRecovery}
+    <div className="bg-white rounded-3xl shadow-md p-8" role="alert">
+      <h1 className="text-lg font-bold">{view.status === 404 ? '評価期間が見つかりません' : '評価期間を表示できません'}</h1>
+      <p className="mt-3">{view.message}</p>
+      <div className="flex flex-wrap gap-3 mt-4">
+        {view.status === 401 && <Link className={buttonClass} href={'/auth/signin?callbackUrl=' + encodeURIComponent('/hr/evaluations/period/' + id)}>ログインする</Link>}
+        {view.status !== 404 && <button type="button" className={buttonClass} onClick={reload}>再取得する</button>}
+        <Link className={buttonClass} href="/hr/evaluations">評価一覧に戻る</Link>
       </div>
     </div>
-  )
+  </div>
+  const { period, employees } = view.data
+  const disabled = updating || Boolean(notice) || creation.busy || Boolean(creation.intent) || !creation.ready || periodOperation.busy || Boolean(periodOperation.intent) || !periodOperation.ready
+  return <div className="p-6 lg:p-10 max-w-4xl mx-auto">
+    <Link href="/hr/evaluations" className="inline-block mb-4 text-blue-600 font-bold">評価一覧に戻る</Link>
+    {periodRecovery}
+    {creationRecovery}
+    <header className="bg-white rounded-3xl shadow-md p-6 mb-6">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div><h1 className="text-2xl font-black text-slate-900 break-words">{period.name}</h1>
+          <p className="mt-2 text-sm font-bold">{Object.prototype.hasOwnProperty.call(PERIOD_STATUS, period.status) ? PERIOD_STATUS[period.status] : '状態未確認'}</p>
+          <p className="text-sm text-slate-500 mt-1">{fmtDate(period.startDate)} 〜 {fmtDate(period.endDate)}</p></div>
+        <div className="flex items-center gap-2">
+          {period.canManageEvaluations && period.status === 'DRAFT' && <button type="button" className={buttonClass} disabled={disabled} onClick={() => void handleStatus('OPEN')}>評価を開始する</button>}
+          {period.canManageEvaluations && ['OPEN', 'IN_REVIEW'].includes(period.status) && <button type="button" className={buttonClass} disabled={disabled} onClick={() => void handleStatus('CLOSED')}>評価を締める</button>}
+        </div>
+      </div>
+      {period.canManageEvaluations && period.status === 'DRAFT' && <p className="mt-3 text-xs text-amber-800 bg-amber-50 rounded-xl px-3 py-2">「準備中」の評価期間はダッシュボードの「進行中の評価」に集計されません。各メンバーの評価を作成し、「評価を開始する」を押すと進行中になります。</p>}
+    </header>
+    <section className="bg-white rounded-3xl shadow-md p-6">
+      <h2 className="text-lg font-bold text-slate-900 mb-4">メンバーの評価 <span className="text-sm text-slate-600">{period.evaluationCount} / {employees.length} 名作成済み</span></h2>
+      {period.canManageEvaluations && employees.length > 0 && <div className="mb-4 space-y-2">
+        <label className="block text-sm font-bold" htmlFor="evaluation-creation-evaluator">次に作成する評価の上司担当者</label>
+        <select id="evaluation-creation-evaluator" className="w-full min-w-0 rounded-xl border border-slate-300 px-3 py-2" value={evaluatorId} disabled={disabled} onChange={event => setEvaluatorId(event.target.value)}>
+          <option value="">指定なし（管理者がレビューを行います）</option>
+          {employees.map(employee => <option key={employee.id} value={employee.id}>{`${employee.lastName} ${employee.firstName}`.trim() || '名称未設定'}</option>)}
+        </select>
+        <p className="text-xs text-slate-600">選択した担当者は、組織メンバーと従業員の紐付けが有効な場合、本人の提出後に上司評価を行えます。対象者と同じ従業員は指定できません。</p>
+        <Link className="text-xs font-bold text-blue-600 underline" href="/hr/settings">組織設定でメンバーと従業員の紐付けを確認する</Link>
+      </div>}
+      {employees.length === 0 ? <div className="text-center py-8 text-slate-600">
+        <p>{period.canManageEvaluations ? '先に従業員を登録してください' : '表示できる対象者はいません'}</p>
+        {period.canManageEvaluations && <Link href="/hr/employees/new" className="mt-2 inline-block text-blue-600 font-bold">従業員を追加する</Link>}
+      </div> : <ul className="space-y-2">{employees.map(employee => <li key={employee.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border border-slate-200">
+        <div className="min-w-0"><p className="font-bold text-slate-900 break-words">{`${employee.lastName} ${employee.firstName}`.trim() || '名称未設定'}</p>{employee.department && <p className="text-xs text-slate-600 break-words">{employee.department.name}</p>}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          {employee.evaluation ? <><span className="text-xs font-bold">{Object.prototype.hasOwnProperty.call(EVALUATION_STATUS, employee.evaluation.status) ? EVALUATION_STATUS[employee.evaluation.status] : '状態未確認'}</span><Link className={buttonClass} href={'/hr/evaluations/' + encodeURIComponent(employee.evaluation.id)}>評価を開く</Link></> :
+            employee.evaluationUnavailable ? <span className="text-sm text-amber-800">評価情報の確認が必要です。管理者にお問い合わせください。</span> :
+              period.canManageEvaluations ? <button type="button" className={buttonClass} disabled={disabled} onClick={() => void createEvaluation(employee.id)}>評価を作成</button> : <span className="text-xs text-slate-600">表示できる評価はありません</span>}
+        </div>
+      </li>)}</ul>}
+    </section>
+  </div>
 }

@@ -18,6 +18,8 @@ const js = ts.transpileModule(`(${callback.getText(ast)})`, { compilerOptions: {
 async function load(response) {
   const state = { hasOrg: true, error: false, usage: { plan: 'FREE' } }
   const loadUsage = vm.runInNewContext(js, {
+    selectionReady:true, selection:{}, pinnedOrganization:{current:null}, actor:'synthetic-actor', setConfirmedOrganization(){},
+    HR_SELECTED_ORGANIZATION_HEADER:'X-HR-Selected-Organization',HR_SELECTED_ACTOR_HEADER:'X-HR-Selected-Actor',
     scopeKey: 'synthetic-scope', activeScope: { current: { key: 'synthetic-scope', allowed: true } },
     pendingUsage: { current: null }, AbortController,
     readBillingResponse: async () => ({ ok: response.ok, status: response.status, data: await response.clone().json() }),

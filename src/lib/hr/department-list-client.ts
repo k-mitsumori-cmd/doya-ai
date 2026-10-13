@@ -67,7 +67,7 @@ export function createDepartmentListReader(expectedOrganization?: string) {
   }
 }
 
-async function readPage(url: string, organizationId: string | undefined, signal?: AbortSignal) {
+async function readPage(url: string, organizationId: string | undefined, signal?: AbortSignal, transport: typeof fetch = fetch) {
   const controller = new AbortController(), abort = () => controller.abort()
   signal?.addEventListener('abort', abort, { once: true })
   const timer = setTimeout(abort, 35000)
@@ -79,7 +79,7 @@ async function readPage(url: string, organizationId: string | undefined, signal?
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
   try {
     if (signal?.aborted) throw Error('操作が中断されました。')
-    const response = await Promise.race([stopped, fetch(url, { method: 'GET', cache: 'no-store', signal: controller.signal,
+    const response = await Promise.race([stopped, transport(url, { method: 'GET', cache: 'no-store', signal: controller.signal,
       ...(organizationId ? { headers: { 'X-HR-Organization-Id': organizationId } } : {}) })])
     if (response.status !== 200) throw Error(response.status === 401 ? 'ログイン状態を確認してください。' : response.status === 409 ?
       '部署が更新されました。部署一覧を再取得してください。' : '部署一覧を取得できませんでした。再取得してください。')
@@ -106,12 +106,12 @@ async function readPage(url: string, organizationId: string | undefined, signal?
 }
 
 /** GET only; any outage, inconsistent snapshot or abort rejects the entire candidate list. */
-export async function loadHrDepartmentList(signal?: AbortSignal, expectedOrganization?: string) {
+export async function loadHrDepartmentList(signal?: AbortSignal, expectedOrganization?: string, transport: typeof fetch = fetch) {
   const reader = createDepartmentListReader(expectedOrganization)
   let cursor: string | null = null
   do {
     if (signal?.aborted) throw Error('操作が中断されました。')
-    const data = await readPage('/api/hr/departments?format=pages' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''), reader.organizationId(), signal)
+    const data = await readPage('/api/hr/departments?format=pages' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''), reader.organizationId(), signal, transport)
     if (signal?.aborted) throw Error('操作が中断されました。')
     cursor = reader.accept(data)
   } while (cursor !== null)

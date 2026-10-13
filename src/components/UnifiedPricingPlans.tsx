@@ -32,12 +32,14 @@ function Sym({ name, size = 20, className = '', fill = false, style }: { name: s
  */
 export function UnifiedPricingPlans({
   serviceId,
+  billingOrganization,
   currentPlan,
   planSource = 'account',
   canPurchase = true,
   className,
 }: {
   serviceId: string
+  billingOrganization?: { actor: string; organizationId: string }
   currentPlan?: string | null
   planSource?: 'account' | 'organization'
   canPurchase?: boolean
@@ -63,7 +65,7 @@ export function UnifiedPricingPlans({
 
   const svc = getServiceById(serviceId)
   const { run: resyncPlan, busy: resyncing, disabled: resyncDisabled, message: resyncMessage } = useBillingPlanResync({
-    scope: JSON.stringify(['pricing', serviceId, planSource, canPurchase]),
+    scope: JSON.stringify(['pricing', serviceId, planSource, canPurchase, billingOrganization?.actor, billingOrganization?.organizationId]),
     enabled: Boolean(svc) && canPurchase && planKnown && plan === 'FREE',
     keepBusyOnVerified: true,
     onVerified: () => { window.location.reload() },
@@ -194,6 +196,7 @@ export function UnifiedPricingPlans({
             <span className="block w-full rounded-full bg-white/20 px-6 py-3.5 text-center text-sm font-black text-white ring-1 ring-white/30">組織の契約変更はオーナーにご相談ください</span>
           ) : (
             <CheckoutButton
+              billingOrganization={billingOrganization}
               planId={UNIFIED_PRO_PLAN_ID}
               loginCallbackUrl={returnTo}
               variant="secondary"

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { parseHrOrganizationSelection } from '@/lib/hr/organization-selection'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createCheckoutSession, STRIPE_PRICE_IDS, findActiveLikeSubscriptions } from '@/lib/stripe'
@@ -81,12 +82,16 @@ export async function POST(request: NextRequest) {
 
     // HR の利用枠は組織オーナーの契約で決まる。メンバー個人の決済へ案内しない。
     if (requestedServiceId === 'hr' || String(planId).startsWith('hr-') || requestedReturnTo === '/hr' || requestedReturnTo?.startsWith('/hr/')) {
+      const selection = parseHrOrganizationSelection(request.headers, dbUser.id)
+      if (selection.kind === 'invalid') {
+        return NextResponse.json({ code: 'HR_BILLING_OWNER_REQUIRED', error: '選択した組織とログイン情報を確認してください。' }, { status: 403 })
+      }
       const membership = await prisma.hrOrganizationMember.findFirst({
-        where: { userId: dbUser.id, status: 'ACTIVE' },
+        where: { userId: dbUser.id, status: 'ACTIVE', ...(selection.kind === 'selected' ? { organizationId: selection.organizationId } : {}) },
         orderBy: { createdAt: 'desc' },
         select: { role: true },
       })
-      if (membership && membership.role !== 'OWNER') {
+      if ((selection.kind === 'selected' && !membership) || (membership && membership.role !== 'OWNER')) {
         return NextResponse.json({
           code: 'HR_BILLING_OWNER_REQUIRED',
           error: 'この組織のプランはオーナーのみ変更できます。組織のオーナーにご確認ください。',

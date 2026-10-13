@@ -1,4 +1,5 @@
 'use client'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 import { useEffect, useRef, useState } from 'react'
 import { loadHrDepartmentList } from '@/lib/hr/department-list-client'
 import type { DepartmentHierarchyRow } from '@/lib/hr/department-hierarchy'
@@ -7,6 +8,8 @@ type View = { key: string; status: 'loading' | 'ready' | 'error'; rows: Departme
 
 /** A list belongs to one authentication/organization scope; retries never recreate a department or employee. */
 export function useHrDepartmentList(status: string, actor: string, organizationId?: string) {
+  const organizationScope = useHrOrganizationRequest()
+  organizationId ??= organizationScope.organizationId
   const allowed = status === 'authenticated' && Boolean(actor)
   const scope = JSON.stringify([status, actor, organizationId ?? null])
   const epoch = useRef({ scope, version: 0 })
@@ -22,7 +25,7 @@ export function useHrDepartmentList(status: string, actor: string, organizationI
     const current = () => active && !controller.signal.aborted && latest.current === key
     setView(old => ({ key, status: 'loading', rows: old.key === key ? old.rows : [],
       organizationId: old.key === key ? old.organizationId : undefined, error: '' }))
-    void loadHrDepartmentList(controller.signal, organizationId).then(result => {
+    void loadHrDepartmentList(controller.signal, organizationId, organizationScope.request).then(result => {
       if (current()) setView({ key, status: 'ready', rows: result.rows, organizationId: result.organizationId, error: '' })
     }).catch((error: unknown) => {
       if (current()) setView(old => ({ key, status: 'error', rows: old.key === key ? old.rows : [],
@@ -30,7 +33,7 @@ export function useHrDepartmentList(status: string, actor: string, organizationI
         error: error instanceof Error ? error.message : '部署一覧を取得できませんでした。再取得してください。' }))
     })
     return () => { active = false; controller.abort() }
-  }, [key, allowed, organizationId, attempt])
+  }, [key, allowed, organizationId, attempt, organizationScope])
   const visible = allowed && view.key === key
   return { status: visible ? view.status : 'loading' as const, rows: visible ? view.rows : [],
     organizationId: visible ? view.organizationId : undefined, error: visible ? view.error : '',

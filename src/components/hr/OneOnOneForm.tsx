@@ -1,6 +1,7 @@
 'use client'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
-import toast from 'react-hot-toast'
+import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 
 import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -57,6 +58,8 @@ export default function OneOnOneForm({
   canViewManagerNotes = false,
   onSave,
 }: OneOnOneFormProps) {
+  const { request: fetch } = useHrOrganizationRequest()
+  const { toast, router, live } = useHrPageLifetime()
   const [date, setDate] = useState(initialDate)
   const [duration, setDuration] = useState(initialDuration)
   const [agenda, setAgenda] = useState<AgendaItem[]>(
@@ -166,7 +169,7 @@ export default function OneOnOneForm({
         })
         if (!res.ok) throw new Error('保存に失敗しました')
       }
-      return true
+      return live()
     } catch (e: any) {
       toast.error(e.message)
       return false

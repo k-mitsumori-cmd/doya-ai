@@ -1,6 +1,7 @@
 'use client'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
-import toast from 'react-hot-toast'
+import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -37,7 +38,8 @@ function getAvatarColor(name: string) {
 }
 
 export default function OneOnOnePage() {
-  const router = useRouter()
+  const { request: fetch } = useHrOrganizationRequest()
+  const { toast, router, live } = useHrPageLifetime()
   const [records, setRecords] = useState<OneOnOneRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [employees, setEmployees] = useState<any[]>([])

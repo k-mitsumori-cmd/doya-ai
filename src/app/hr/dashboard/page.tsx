@@ -1,4 +1,5 @@
 'use client'
+import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -110,6 +111,7 @@ function getGreeting(): string {
 }
 
 export default function HrDashboardPage() {
+  const { request: fetch } = useHrOrganizationRequest()
   const [stats, setStats] = useState<DashboardStats>({
     canManageEmployees: false,
     canCreatePeriods: false,

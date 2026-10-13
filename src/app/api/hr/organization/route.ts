@@ -10,6 +10,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, getOrCreateOrganization, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
+import { readHrOrganizationChoicesPage, HrOrganizationChoicesError } from '@/lib/hr/organization-choices'
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,12 +49,18 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
       return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (req?.nextUrl.searchParams.get('format') === 'choices') {
+      const query = req.nextUrl.searchParams
+      if (query.getAll('format').length !== 1 || query.getAll('cursor').length > 1 || [...query.keys()].some(k => !['format', 'cursor'].includes(k))) return privateApiJson({ error: '組織一覧の取得条件が正しくありません。' }, { status: 400 })
+      return privateApiJson(await readHrOrganizationChoicesPage(prisma, userId, query.get('cursor')))
     }
 
     const memberships = await prisma.hrOrganizationMember.findMany({
@@ -82,6 +89,7 @@ export async function GET() {
 
     return privateApiJson({ success: true, organizations })
   } catch (e) {
+    if (e instanceof HrOrganizationChoicesError) return privateApiJson({ error: e.status === 409 ? '所属組織が更新されました。再取得してください。' : '所属組織を確認できませんでした。' }, { status: e.status })
     console.error('[hr/organization GET]')
     return privateApiJson({ error: '組織情報の取得に失敗しました' }, { status: 500 })
   }

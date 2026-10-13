@@ -47,7 +47,7 @@ export function confirmSettingsDepartmentDeletion(value: unknown): void {
 }
 
 /** A deadline covers fetch and JSON parsing; callers reconcile mutations with a GET, never an automatic retry. */
-export async function readDepartmentSettingsResponse(url: string, init: RequestInit, signal?: AbortSignal): Promise<{ status: number; data: unknown }> {
+export async function readDepartmentSettingsResponse(url: string, init: RequestInit, signal?: AbortSignal, transport: typeof fetch = fetch): Promise<{ status: number; data: unknown }> {
   const controller = new AbortController()
   let timer: ReturnType<typeof setTimeout> | undefined
   let aborted: (() => void) | undefined
@@ -61,7 +61,7 @@ export async function readDepartmentSettingsResponse(url: string, init: RequestI
       timer = setTimeout(() => controller.abort(), 35000)
     })
     return await Promise.race([stopped, (async () => {
-      const response = await fetch(url, { ...init, cache: 'no-store', signal: controller.signal })
+      const response = await transport(url, { ...init, cache: 'no-store', signal: controller.signal })
       return { status: response.status, data: await response.json() as unknown }
     })()])
   } finally {
