@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     siteName: SITE_CONFIG.name,
     title: `料金プラン｜${SITE_CONFIG.name}`,
     description: `無料プランで試せて、プロプラン（月額9,980円）なら${SITE_CONFIG.name}の全ツールのプロ機能をプラン別の上限内で利用できます。`,
-    images: [{ url: `${SITE_CONFIG.url}/og/portal.png`, width: 1200, height: 630, alt: `料金プラン - ${SITE_CONFIG.name}` }],
+    images: [{ url: `${SITE_CONFIG.url}/ogp/portal.jpg`, width: 1200, height: 630, alt: `料金プラン - ${SITE_CONFIG.name}` }],
   },
 }
 

@@ -5,6 +5,7 @@
 import type { Metadata } from 'next'
 import { SEO_PRICING, BANNER_PRICING, KANTAN_PRICING, PERSONA_PRICING } from './pricing'
 import { getServiceById } from './services'
+import { staticOgpPath } from './ogp'
 
 export const SITE_CONFIG = {
   name: 'ドヤAI',
@@ -88,7 +89,7 @@ export const SERVICE_SEO = {
     title: 'ドヤAI | AI SaaSサービス群',
     description: 'ドヤAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などを束ねたAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉が運営しています。',
     keywords: ['ドヤAI', 'ドヤマーケ', 'SaaSは死にましぇん', '株式会社スリスタ', '三森捷暉', 'AI SaaS', '記事生成', 'バナー作成', '営業支援', '人事AI', '勤怠管理', 'SFA'],
-    ogImage: '/og/portal.png',
+    ogImage: '/ogp/portal.jpg',
   },
   
   // ドヤ広告画像AI（媒体別サイズの広告画像を一括制作）
@@ -98,7 +99,7 @@ export const SERVICE_SEO = {
     description:
       'サービスURLを入れるだけで、Meta・Google・X・LINE・Yahoo! の各配置に合わせた広告画像を一括制作。文字は画像に描き込むので、そのまま入稿できます。AIが実際の画像を見て採点し、ボタンひとつで改善版を作ります。',
     keywords: ['広告画像', '広告バナー', 'バナー作成', '広告クリエイティブ', 'Meta広告', 'Google広告', 'LINE広告', 'AI バナー', '入稿サイズ'],
-    ogImage: '/og/portal.png',
+    ogImage: '/ogp/portal.jpg',
   },
 
   // ドヤ商談準備（商談先URLだけで提案準備を一括生成）
@@ -107,7 +108,7 @@ export const SERVICE_SEO = {
     description:
       '商談先企業のURLを入れるだけで、実従業員数・マーケ状況・オウンドメディア・PR TIMESの最新動向まで深掘り調査。現状分析・課題仮説・解決策から提案資料・スライドまでAIが一括作成します。',
     keywords: ['商談準備', '営業AI', '提案資料作成', '企業調査', '商談', 'BtoB営業', '提案スライド', 'PR TIMES'],
-    ogImage: '/og/portal.png',
+    ogImage: '/ogp/portal.jpg',
   },
 
   // カンタンマーケAI（マーケティング業務AIエージェント）
@@ -116,7 +117,7 @@ export const SERVICE_SEO = {
     description:
       'LP構成案、バナーコピー、広告文、メルマガ、競合分析…マーケ業務を丸ごとAIエージェントがサポート。チャット形式で誰でもプロ品質のアウトプット。',
     keywords: ['マーケティングAI', 'LP構成案', 'バナーコピー', '広告文作成', 'メルマガ', '競合分析', 'AIエージェント', 'マーケティング自動化'],
-    ogImage: '/og/portal.png',
+    ogImage: '/ogp/portal.jpg',
     sections: {
       dashboard: {
         title: 'ダッシュボード | カンタンマーケAI',
@@ -138,7 +139,7 @@ export const SERVICE_SEO = {
     title: 'ドヤライティングAI | SEO + LLMOに強い長文記事を安定生成',
     description: 'アウトライン→分割生成→整合性チェック→統合のパイプラインで、長文でも崩れにくい記事生成を目指します。',
     keywords: ['SEO', '記事生成', 'アウトライン', 'LLMO', 'コンテンツマーケ', '生成AI'],
-    ogImage: '/og/seo.png',
+    ogImage: '/ogp/seo.jpg',
     sections: {
       dashboard: {
         title: 'ダッシュボード | ドヤライティングAI',
@@ -205,7 +206,7 @@ export const SERVICE_SEO = {
     title: 'ドヤオープニングAI | URLからReactオープニングアニメーションを自動生成',
     description: 'URLを入れるだけで、サイトに最適化されたReactオープニングアニメーションを6種類自動生成。カラー・ロゴ・テキスト自動抽出。プレビュー→微調整→コードエクスポートまで一気通貫。',
     keywords: ['オープニングアニメーション', 'React', 'framer-motion', 'Webアニメーション', '自動生成', 'AI', 'モーション'],
-    ogImage: '/og/portal.png',
+    ogImage: '/ogp/portal.jpg',
     sections: {
       dashboard: {
         title: 'ダッシュボード | ドヤオープニングAI',
@@ -227,7 +228,7 @@ export const SERVICE_SEO = {
     title: 'ドヤコピーAI | AIが刺さるコピーを自動生成',
     description: 'ターゲットと訴求軸を入力するだけで、プロ品質の広告コピー・キャッチコピーを一括生成。ペルソナ分析・ブランドボイス対応。',
     keywords: ['コピーライティング', 'AIコピー', 'キャッチコピー', '広告文', 'コピー生成', '自動生成'],
-    ogImage: '/og/portal.png',
+    ogImage: '/ogp/portal.jpg',
   },
 
   // ドヤボイスAI
@@ -235,7 +236,7 @@ export const SERVICE_SEO = {
     title: 'ドヤボイスAI | AI音声ナレーションを自動生成',
     description: 'テキストを入力するだけで自然なAIナレーションを生成。SSML対応、複数話者、バッチ処理に対応。',
     keywords: ['AI音声', 'テキスト読み上げ', 'TTS', 'ナレーション', '音声合成', '自動生成'],
-    ogImage: '/og/portal.png',
+    ogImage: '/ogp/portal.jpg',
   },
 
   // ドヤムービーAI
@@ -243,14 +244,14 @@ export const SERVICE_SEO = {
     title: 'ドヤムービーAI | AIで動画を自動生成',
     description: '商品情報を入力するだけで、プロ品質のプロモーション動画を自動生成。シーン構成・テロップ・BGM・ナレーション対応。',
     keywords: ['AI動画生成', '動画自動生成', 'プロモーション動画', 'Remotion', '動画制作', '自動化'],
-    ogImage: '/og/portal.png',
+    ogImage: '/ogp/portal.jpg',
   },
 
   // 管理画面
   admin: {
     title: '管理画面 | ドヤAI',
     description: 'ドヤAIの管理画面。ユーザー管理、統計、設定などを一元管理。',
-    ogImage: '/og/portal.png',
+    ogImage: '/ogp/portal.jpg',
   },
   
   // ドヤワイヤーフレーム AI
@@ -258,7 +259,7 @@ export const SERVICE_SEO = {
     title: 'ドヤワイヤーフレーム AI | ワイヤーフレームをAIで自動生成',
     description: 'URLを入力するだけで、LPの構成案・コピー・デザインをAIが自動生成。8種類のテーマから選んでHTMLエクスポート。',
     keywords: ['LP作成', 'ランディングページ', 'AI', '自動生成', 'Webデザイン'],
-    ogImage: '/og/portal.png',
+    ogImage: '/ogp/portal.jpg',
   },
 
   // 認証
@@ -401,7 +402,7 @@ export function getOgImageUrl(path?: string): string {
   if (path) {
     return `${SITE_CONFIG.url}${path}`
   }
-  return `${SITE_CONFIG.url}/og/portal.png`
+  return `${SITE_CONFIG.url}/ogp/portal.jpg`
 }
 
 // ページタイトル生成
@@ -450,7 +451,7 @@ export function buildServiceMetadata(
   const title = { absolute: `${headline} | ${SITE_CONFIG.name}` }
   const description = opts?.descriptionOverride || svc.longDescription || svc.description
   const canonical = opts?.canonicalPath || svc.href
-  const ogImage = `${SITE_CONFIG.url}${opts?.ogPath || `/og/${svc.id}`}`
+  const ogImage = `${SITE_CONFIG.url}${opts?.ogPath || staticOgpPath(svc.id) || `/og/${svc.id}`}`
   // 指名検索の受け皿として、サービス名と表記ゆれを keywords の先頭に必ず置く
   const keywords = Array.from(
     new Set([svc.name, ...getServiceAliases(svc.id), ...(opts?.keywords || [])])

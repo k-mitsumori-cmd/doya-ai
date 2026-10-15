@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 import { getServiceById } from '@/lib/services'
+import { staticOgpPath } from '@/lib/ogp'
 
 export const runtime = 'edge'
 
@@ -24,6 +25,9 @@ const OG_BG_SERVICES = new Set([
 export async function GET(request: NextRequest, props: { params: Promise<{ slug: string[] }> }) {
   const params = await props.params;
   const raw = params.slug?.[0]?.replace(/\.(png|jpg|jpeg)$/i, '') || 'portal'
+  // Codex生成の静的OGPがあるIDはそちらへ（/og/<id> を直書きしている箇所・外部の古い共有URL向け）
+  const staticPath = staticOgpPath(raw)
+  if (staticPath) return Response.redirect(new URL(staticPath, request.nextUrl.origin), 308)
   const svc = getServiceById(raw)
 
   const title = svc?.name || 'ドヤAI'

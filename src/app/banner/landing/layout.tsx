@@ -8,7 +8,7 @@ const SVC = getServiceById('banner')!
 // 親 banner/layout の title.template（`%s | ドヤバナーAI`）を避けるため absolute で確定。
 // canonical は親の '/banner' 継承を上書きし、LP自身（/banner/landing）を指す。
 const pageTitle = `${SVC.name}｜プロ品質のバナーをAIで自動生成 | ${SITE_CONFIG.name}`
-const ogImage = `${SITE_CONFIG.url}/og/banner`
+const ogImage = `${SITE_CONFIG.url}/ogp/banner.jpg`
 
 export const metadata: Metadata = {
   title: { absolute: pageTitle },
