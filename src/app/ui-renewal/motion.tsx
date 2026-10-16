@@ -127,7 +127,7 @@ export function Ring({
   size = 88,
   stroke = 8,
   color = '#0066ff',
-  track = 'rgba(10,15,60,.08)',
+  track = 'var(--track)',
   start = true,
   children,
 }: {
@@ -146,7 +146,7 @@ export function Ring({
   return (
     <span className={s.ring} style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" style={{ stroke: track }} strokeWidth={stroke} />
         <circle
           className={s.ringArc}
           cx={size / 2}
@@ -162,6 +162,31 @@ export function Ring({
         />
       </svg>
       <span className={s.ringLabel}>{children}</span>
+    </span>
+  )
+}
+
+/** 数字が1桁ずつ回って止まる（Stripe のダッシュボード風） */
+export function Odometer({ value, decimals = 0, start = true }: { value: number; decimals?: number; start?: boolean }) {
+  const text = value.toFixed(decimals)
+  const digits = '01234567890123456789'.split('')
+  return (
+    <span className={s.odo} aria-label={text} role="text">
+      {Array.from(text).map((ch, i) =>
+        /\d/.test(ch) ? (
+          <span key={i} className={s.odoCol} aria-hidden="true">
+            <span className={s.odoStrip} style={{ '--n': start ? Number(ch) + 10 : 0, '--i': i } as CSSProperties}>
+              {digits.map((d, j) => (
+                <span key={j}>{d}</span>
+              ))}
+            </span>
+          </span>
+        ) : (
+          <span key={i} aria-hidden="true">
+            {ch}
+          </span>
+        ),
+      )}
     </span>
   )
 }

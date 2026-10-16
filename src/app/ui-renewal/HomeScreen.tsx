@@ -3,13 +3,14 @@
 import { useState, type CSSProperties } from 'react'
 import { ArrowRight, ArrowUpRight, Flame, Image as Images, Building2, TrendingUp } from 'lucide-react'
 import s from './renewal.module.css'
-import { CountUp, Ring, SplitText, useInView, useReveal } from './motion'
+import { CountUp, Odometer, Ring, SplitText, useInView, useReveal } from './motion'
+import { AskBar } from './AskBar'
 import { HOME, RECENT, STAGES, SUGGESTIONS, type StageId } from './data'
 import { getServiceById } from '@/lib/services'
 
 const stageOf = (id: StageId) => STAGES.find((st) => st.id === id)!
 
-export function HomeScreen({ onOpen }: { onOpen: (serviceId: string) => void }) {
+export function HomeScreen({ onOpen, onAsk }: { onOpen: (serviceId: string) => void; onAsk: (text: string) => void }) {
   const root = useReveal<HTMLDivElement>()
   const today = new Date()
   const dateLabel = today.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })
@@ -21,12 +22,14 @@ export function HomeScreen({ onOpen }: { onOpen: (serviceId: string) => void }) 
           <span className={s.eyebrowNo}>{dateLabel}</span>
           <span>WORKSPACE</span>
         </p>
+        {/* 2トーンの見出し（Linear / Stripe 型）：言い切り＋薄い補足 */}
         <h1 className={s.homeTitle}>
           <SplitText text={`おはようございます、${HOME.userName}さん。`} />
+          <span className={s.titleMute}>
+            <SplitText text="今日は、何をAIに任せますか。" delay={420} />
+          </span>
         </h1>
-        <p className={s.homeLead} data-reveal style={{ '--d': '.35s' } as CSSProperties}>
-          今月、AIチームが代わりに進めた仕事をまとめました。
-        </p>
+        <AskBar onAsk={onAsk} />
       </header>
 
       <SavedHours />
@@ -57,6 +60,8 @@ export function HomeScreen({ onOpen }: { onOpen: (serviceId: string) => void }) 
                 type="button"
                 className={s.suggest}
                 data-reveal
+                data-spot
+                data-cursor="開く"
                 style={{ '--d': `${i * 0.08}s` } as CSSProperties}
                 onClick={() => onOpen(sg.serviceId)}
               >
@@ -82,7 +87,7 @@ export function HomeScreen({ onOpen }: { onOpen: (serviceId: string) => void }) 
         </div>
         <div className={s.recentGrid}>
           {RECENT.map((r, i) => (
-            <figure key={r.src} className={s.recent} data-reveal="img" style={{ '--d': `${i * 0.1}s` } as CSSProperties}>
+            <figure key={r.src} className={s.recent} data-reveal="img" data-cursor="見る" style={{ '--d': `${i * 0.1}s` } as CSSProperties}>
               <div className={s.recentImg}>
                 <img src={r.src} alt={r.title} loading="lazy" />
               </div>
@@ -119,11 +124,18 @@ function SavedHours() {
 
   return (
     <section ref={ref} className={`${s.hero} ${seen ? s.on : ''}`}>
+      {/* ゆっくり動く光（Stripe）と粒子ノイズ（Raycast） */}
+      <span className={s.heroGlow} aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
+      <span className={s.heroGrain} aria-hidden="true" />
       <div className={s.heroCopy}>
         <img src="/character/success-256.webp" alt="" className={s.heroMascot} width={150} height={150} />
         <p className={s.heroLabel}>今月AIに任せられた時間</p>
         <p className={s.heroNum}>
-          <CountUp value={HOME.savedHours} decimals={1} start={seen} duration={2000} />
+          <Odometer value={HOME.savedHours} decimals={1} start={seen} />
           <span className={s.heroUnit}>時間</span>
         </p>
         <p className={s.heroSub}>
@@ -182,7 +194,7 @@ function KpiCard({
   delay: number
 }) {
   return (
-    <article className={s.kpi} data-reveal style={{ '--d': `${delay}s` } as CSSProperties}>
+    <article className={s.kpi} data-reveal data-spot style={{ '--d': `${delay}s` } as CSSProperties}>
       <span className={s.kpiIcon}>{icon}</span>
       <p className={s.kpiLabel}>{label}</p>
       <div className={s.kpiBody}>{children}</div>
@@ -288,7 +300,7 @@ function WeeklyChart() {
   const area = `${line} L${x(n - 1)},${H - padBottom} L${x(0)},${H - padBottom} Z`
 
   return (
-    <article ref={ref} className={`${s.card} ${s.chartCard} ${seen ? s.on : ''}`} data-reveal>
+    <article ref={ref} className={`${s.card} ${s.chartCard} ${seen ? s.on : ''}`} data-reveal data-spot>
       <div className={s.cardHead}>
         <div>
           <h2 className={s.h3}>週ごとの成果物</h2>
@@ -372,7 +384,7 @@ function ShareDonut() {
   const focus = active ? HOME.share.find((x) => x.stage === active)! : null
 
   return (
-    <article ref={ref} className={`${s.card} ${s.donutCard} ${seen ? s.on : ''}`} data-reveal style={{ '--d': '.1s' } as CSSProperties}>
+    <article ref={ref} className={`${s.card} ${s.donutCard} ${seen ? s.on : ''}`} data-reveal data-spot style={{ '--d': '.1s' } as CSSProperties}>
       <div className={s.cardHead}>
         <div>
           <h2 className={s.h3}>どの仕事を任せたか</h2>
@@ -382,7 +394,7 @@ function ShareDonut() {
       <div className={s.donutBody}>
         <div className={s.donut}>
           <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(10,15,60,.06)" strokeWidth={stroke} />
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" style={{ stroke: 'var(--track)' }} strokeWidth={stroke} />
             {segs.map((sg) => {
               const st = stageOf(sg.stage)
               return (

@@ -104,7 +104,7 @@ export function ArticleTool() {
                 <span>12,000</span>
               </div>
             </div>
-            <button type="submit" className={s.btnPrimary}>
+            <button type="submit" className={s.btnPrimary} data-magnetic>
               <span>構成をつくる</span>
               <span className={s.arw}>
                 <Sparkles size={15} strokeWidth={2} />
@@ -232,7 +232,7 @@ export function ArticleTool() {
               })}
             </ul>
             {phase === 'review' && (
-              <button type="button" className={s.btnPrimary} onClick={() => setPhase('input')}>
+              <button type="button" className={s.btnPrimary} data-magnetic onClick={() => setPhase('input')}>
                 <span>下書きを保存して戻る</span>
                 <span className={s.arw}>
                   <ArrowRight size={15} strokeWidth={2} />

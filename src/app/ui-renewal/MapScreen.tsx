@@ -56,7 +56,11 @@ export function MapScreen({ onOpen }: { onOpen: (serviceId: string) => void }) {
         </div>
       </header>
 
-      <section className={s.mapFig} data-reveal>
+      <section className={s.mapFig} data-reveal data-spot>
+        {/* 図の四隅の十字（Vercel の罫線表現） */}
+        {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
+          <i key={c} className={s.cross} data-c={c} aria-hidden="true" />
+        ))}
         <div className={s.figMeta}>
           <span>FIG. 01</span>
           <em>Doya AI Workflow</em>

@@ -86,7 +86,7 @@ export function BannerTool() {
             <b>{count}回</b>
             <span className={s.costRest}>残り 37 → {37 - count}回</span>
           </div>
-          <button type="submit" className={s.btnPrimary} disabled={phase === 'running'}>
+          <button type="submit" className={s.btnPrimary} data-magnetic disabled={phase === 'running'}>
             <span>{count}案つくる</span>
             <span className={s.arw}>
               <Sparkles size={15} strokeWidth={2} />
@@ -269,6 +269,7 @@ function Results({
             key={res.src}
             type="button"
             className={`${s.resultCard} ${picked === i ? s.resultOn : ''}`}
+            data-spot
             style={{ '--i': i } as CSSProperties}
             onClick={() => onPick(i)}
             aria-pressed={picked === i}
@@ -296,7 +297,7 @@ function Results({
             <small>案 {picked + 1} の採点</small>
             {r.copy}
           </p>
-          <button type="button" className={s.btnPrimary} onClick={onExport}>
+          <button type="button" className={s.btnPrimary} data-magnetic onClick={onExport}>
             <span>この案で書き出す</span>
             <span className={s.arw}>
               <ArrowRight size={15} strokeWidth={2} />
@@ -335,7 +336,7 @@ function ExportSheet({ sizes, onClose, onRestart }: { sizes: string[]; onClose: 
           ))}
         </ul>
         <div className={s.sheetActions}>
-          <button type="button" className={s.btnPrimary} disabled title="見本の画面のため無効です">
+          <button type="button" className={s.btnPrimary} data-magnetic disabled title="見本の画面のため無効です">
             <span>まとめてダウンロード</span>
             <span className={s.arw}>
               <Download size={15} strokeWidth={2} />

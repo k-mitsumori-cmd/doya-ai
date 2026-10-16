@@ -25,6 +25,45 @@
   --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
   --shadow: 0 1px 2px rgba(16, 22, 51, 0.04), 0 8px 28px -12px rgba(16, 22, 51, 0.14);
   --shadow-lg: 0 2px 6px rgba(16, 22, 51, 0.05), 0 30px 60px -24px rgba(10, 15, 60, 0.28);
+  /* 面と線（ダークモードで差し替える） */
+  --surface-2: #f8faff;
+  --canvas: #fbfcff;
+  --track: #eef1f8;
+  --line-strong: #c6cde0;
+  --bar: #dbe7ff;
+  --blue-line: #d7e5ff;
+  --skel-a: #eef2fa;
+  --skel-b: #f9fbff;
+  --note-bg: #fff7d6;
+  --note-ink: #7a5b00;
+  --ok-bg: #e6f8ef;
+  --ok-ink: #0b8a4d;
+  --chart-line: #0a0f3c;
+  --spot: rgba(0, 102, 255, 0.07);
+  --spot-edge: rgba(0, 102, 255, 0.35);
+  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  /* デザイン案ごとに差し替える面・ボタン・見出しの変数（LP と共通） */
+  --page-bg: var(--bg);
+  --card-bg: var(--paper);
+  --card-border: 1px solid var(--line);
+  --card-shadow: var(--shadow);
+  --card-blur: none;
+  --btn-bg: var(--blue);
+  --btn-ink: #fff;
+  --btn-border: 0 solid transparent;
+  --btn-shadow: 0 10px 24px -10px rgba(0, 102, 255, 0.7);
+  --btn-hover: var(--navy);
+  --grad-text: linear-gradient(90deg, var(--ink), var(--ink));
+  --accent-grad: linear-gradient(135deg, #0066ff, #00b4ff);
+  --hero-bg:
+    radial-gradient(120% 140% at 100% 0%, rgba(0, 224, 255, 0.22), transparent 50%),
+    radial-gradient(90% 120% at 0% 100%, rgba(0, 102, 255, 0.35), transparent 55%), #0a0f3c;
+  --hero-ink: #fff;
+  --hero-border: 0 solid transparent;
+  --side-bg: var(--paper);
+  --cursor-a: #0066ff;
+  --cursor-b: #00e0ff;
 
   min-height: 100vh;
   background: var(--bg);
@@ -32,6 +71,211 @@
   font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
   font-feature-settings: 'palt';
   -webkit-font-smoothing: antialiased;
+}
+/* ---------- デザイン案C「ミッドナイト」（Linear / Raycast 型：暗い面に細い線と発光） ---------- */
+.root[data-design='midnight'] {
+  --blue-deep: #7fb2ff;
+  --blue-soft: rgba(0, 102, 255, 0.16);
+  --ink: #eef1f8;
+  --sub: #a9b1c7;
+  --muted: #6f7894;
+  --line: rgba(255, 255, 255, 0.08);
+  --bg: #08090f;
+  --paper: #10131c;
+  --surface-2: #0c0f17;
+  --canvas: #0c0f17;
+  --track: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.2);
+  --bar: rgba(0, 102, 255, 0.3);
+  --blue-line: rgba(0, 102, 255, 0.35);
+  --skel-a: rgba(255, 255, 255, 0.04);
+  --skel-b: rgba(255, 255, 255, 0.1);
+  --note-bg: rgba(255, 212, 0, 0.12);
+  --note-ink: #ffd84d;
+  --ok-bg: rgba(18, 183, 106, 0.16);
+  --ok-ink: #4ade80;
+  --chart-line: #eef1f8;
+  --spot: rgba(0, 140, 255, 0.12);
+  --spot-edge: rgba(90, 160, 255, 0.55);
+  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px -14px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 30px 60px -20px rgba(0, 0, 0, 0.8);
+  --page-bg:
+    radial-gradient(900px 500px at 15% -10%, rgba(0, 102, 255, 0.22), transparent 60%),
+    radial-gradient(700px 500px at 100% 10%, rgba(255, 30, 114, 0.1), transparent 60%), #08090f;
+  --card-bg: rgba(16, 19, 28, 0.72);
+  --card-blur: blur(14px);
+  --btn-bg: linear-gradient(120deg, #0066ff, #00c2ff);
+  --btn-shadow: 0 0 0 1px rgba(0, 190, 255, 0.45), 0 12px 40px -8px rgba(0, 140, 255, 0.85);
+  --btn-hover: #ffffff;
+  --grad-text: linear-gradient(100deg, #ffffff, #9cc2ff 55%, #00e0ff);
+  --accent-grad: linear-gradient(135deg, #00e0ff, #0066ff 50%, #ff1e72);
+  --hero-bg:
+    radial-gradient(80% 120% at 100% 0%, rgba(0, 224, 255, 0.28), transparent 55%),
+    radial-gradient(70% 120% at 0% 100%, rgba(255, 30, 114, 0.22), transparent 55%), #05060c;
+  --hero-border: 1px solid rgba(120, 180, 255, 0.25);
+  --side-bg: rgba(12, 14, 22, 0.7);
+  --cursor-a: #00e0ff;
+  --cursor-b: #ff1e72;
+  color-scheme: dark;
+}
+
+/* ---------- デザイン案B「オーロラ」（Stripe 型：流れる色とすりガラス） ---------- */
+.root[data-design='aurora'] {
+  --bg: #f5f6ff;
+  --blue-soft: rgba(0, 102, 255, 0.1);
+  --line: rgba(80, 90, 180, 0.14);
+  --paper: rgba(255, 255, 255, 0.78);
+  --page-bg:
+    radial-gradient(800px 520px at 8% 0%, rgba(0, 170, 255, 0.28), transparent 60%),
+    radial-gradient(760px 560px at 92% 8%, rgba(150, 90, 255, 0.26), transparent 60%),
+    radial-gradient(900px 600px at 70% 100%, rgba(255, 60, 140, 0.18), transparent 60%), #f5f6ff;
+  --card-bg: rgba(255, 255, 255, 0.6);
+  --card-border: 1px solid rgba(255, 255, 255, 0.9);
+  --card-shadow: 0 24px 50px -28px rgba(70, 50, 200, 0.38), inset 0 1px 0 #fff;
+  --card-blur: blur(18px) saturate(1.5);
+  --btn-bg: linear-gradient(120deg, #0066ff, #7b5cff 50%, #ff1e72);
+  --btn-shadow: 0 14px 30px -12px rgba(123, 92, 255, 0.75);
+  --btn-hover: #0a0f3c;
+  --grad-text: linear-gradient(100deg, #0047d6, #7b5cff 45%, #ff1e72 85%);
+  --accent-grad: linear-gradient(135deg, #00b4ff, #7b5cff 50%, #ff1e72);
+  --hero-bg:
+    radial-gradient(70% 120% at 0% 0%, #00b4ff, transparent 60%),
+    radial-gradient(70% 120% at 100% 0%, #7b5cff, transparent 60%),
+    radial-gradient(90% 120% at 60% 100%, #ff1e72, transparent 60%), #2a1a8a;
+  --side-bg: rgba(255, 255, 255, 0.55);
+  --r: 28px;
+  --cursor-a: #7b5cff;
+  --cursor-b: #ff1e72;
+}
+
+/* ---------- デザイン案D「ポップ」（太い線とずらした影。遊べる見た目） ---------- */
+.root[data-design='pop'] {
+  --bg: #fff6e6;
+  --paper: #ffffff;
+  --ink: #0b0b14;
+  --sub: #33334a;
+  --muted: #6b6b80;
+  --line: #0b0b14;
+  --blue-soft: #dfeaff;
+  --blue-line: #0b0b14;
+  --page-bg:
+    radial-gradient(#0b0b14 1px, transparent 1.2px) 0 0 / 22px 22px, #fff6e6;
+  --card-border: 2px solid #0b0b14;
+  --card-shadow: 5px 5px 0 #0b0b14;
+  --shadow: 4px 4px 0 #0b0b14;
+  --shadow-lg: 7px 7px 0 #0b0b14;
+  --btn-bg: #ffd400;
+  --btn-ink: #0b0b14;
+  --btn-border: 2px solid #0b0b14;
+  --btn-shadow: 4px 4px 0 #0b0b14;
+  --btn-hover: #ff1e72;
+  --grad-text: linear-gradient(90deg, #0b0b14, #0b0b14);
+  --accent-grad: linear-gradient(135deg, #ff1e72, #ffd400);
+  --hero-bg: #0066ff;
+  --hero-border: 2px solid #0b0b14;
+  --chart-line: #0b0b14;
+  --r: 18px;
+  --cursor-a: #ff1e72;
+  --cursor-b: #ffd400;
+}
+
+/* ---------- デザイン変数を各部品へ当てる ---------- */
+.root {
+  background: var(--page-bg);
+  background-attachment: fixed;
+}
+.root
+  :is(.card, .kpi, .suggest, .toolInput, .toolCanvas, .mapFig, .panelIn, .inspector, .paper, .outline, .assist, .sheet) {
+  background-color: var(--card-bg);
+  border: var(--card-border);
+  box-shadow: var(--card-shadow);
+  -webkit-backdrop-filter: var(--card-blur);
+  backdrop-filter: var(--card-blur);
+}
+.root .btnPrimary {
+  background: var(--btn-bg);
+  color: var(--btn-ink) !important;
+  border: var(--btn-border);
+  box-shadow: var(--btn-shadow);
+}
+.root .btnPrimary::before {
+  background: var(--btn-hover);
+}
+.root .btnPrimary:hover:not(:disabled) {
+  color: var(--btn-ink) !important;
+}
+.root[data-design='midnight'] .btnPrimary:hover:not(:disabled),
+.root[data-design='pop'] .btnPrimary:hover:not(:disabled) {
+  color: #0b0b14 !important;
+}
+.root[data-design='pop'] .btnPrimary:hover:not(:disabled) {
+  color: #fff !important;
+}
+.root .hero {
+  background: var(--hero-bg);
+  border: var(--hero-border);
+  color: var(--hero-ink);
+}
+.root .side {
+  background: var(--side-bg);
+  -webkit-backdrop-filter: var(--card-blur);
+  backdrop-filter: var(--card-blur);
+}
+/* 見出しのグラデーション文字（1文字ずつの span でも途切れないよう画面基準で塗る） */
+.root:is([data-design='aurora'], [data-design='midnight']) :is(.display, .homeTitle > .split, .panelTitle, .resultsTitle) .ch,
+.root:is([data-design='aurora'], [data-design='midnight']) :is(.panelTitle, .resultsTitle, .kpiNum) {
+  background: var(--grad-text);
+  background-attachment: fixed;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* オーロラ：ヒーローの光を強める */
+.root[data-design='aurora'] .heroGlow i {
+  opacity: 0.8;
+  mix-blend-mode: screen;
+}
+/* ポップ：線とずらした影、ホバーで少し傾く */
+.root[data-design='pop'] :is(.kpi, .suggest, .resultCard):hover {
+  transform: translate(-2px, -2px) rotate(-0.6deg) !important;
+  box-shadow: 8px 8px 0 #0b0b14 !important;
+}
+.root[data-design='pop'] .hero {
+  box-shadow: 8px 8px 0 #0b0b14;
+}
+.root[data-design='pop'] .heroNum,
+.root[data-design='pop'] .heroSub strong {
+  color: #ffd400;
+}
+.root[data-design='pop'] :is(.chip, .sizeChip, .askQuick button, .segment) {
+  border: 2px solid #0b0b14;
+}
+.root[data-design='pop'] .chipOn {
+  background: #ff1e72 !important;
+  border-color: #0b0b14 !important;
+  box-shadow: 3px 3px 0 #0b0b14;
+}
+.root[data-design='pop'] .eyebrowNo {
+  background: #ff1e72;
+  border: 2px solid #0b0b14;
+}
+.root[data-design='pop'] .navPill {
+  background: #ffd400;
+  box-shadow: inset 0 0 0 2px #0b0b14, 3px 3px 0 #0b0b14;
+}
+.root[data-design='pop'] .navOn {
+  color: #0b0b14 !important;
+}
+.root[data-design='pop'] .heroGlow,
+.root[data-design='pop'] .heroGrain {
+  display: none;
+}
+.root[data-design='midnight'] .hero {
+  box-shadow: 0 0 0 1px rgba(0, 200, 255, 0.15), 0 30px 80px -30px rgba(0, 140, 255, 0.6);
+}
+.root[data-design='midnight'] :is(.kpiIcon, .stepperDot) {
+  box-shadow: 0 0 18px -4px rgba(0, 190, 255, 0.6);
 }
 /* リセットは詳細度0にして、各部品の指定を優先させる */
 :where(.root) button {
@@ -182,7 +426,7 @@
 }
 .searchBtn:hover {
   border-color: var(--blue);
-  background: #fff;
+  background: var(--paper);
   box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.08);
 }
 .searchBtn span {
@@ -196,7 +440,7 @@
   padding: 2px 6px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--paper);
   font: 600 11px/1.2 'Inter', sans-serif;
   color: var(--muted);
 }
@@ -215,6 +459,7 @@
 }
 .navItem {
   position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -233,10 +478,21 @@
   color: var(--ink) !important;
 }
 .navOn {
-  background: var(--blue-soft) !important;
   color: var(--blue-deep) !important;
 }
-.navOn::before {
+.navOn:hover {
+  background: transparent;
+}
+/* 選択中の背景。ページを変えると次の項目へ滑って移る */
+.navPill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 10px;
+  background: var(--blue-soft);
+  box-shadow: inset 0 0 0 1px var(--blue-line);
+}
+.navPill::before {
   content: '';
   position: absolute;
   left: -14px;
@@ -245,7 +501,6 @@
   width: 3px;
   border-radius: 0 3px 3px 0;
   background: var(--blue);
-  animation: barIn 0.5s var(--ease);
 }
 @keyframes barIn {
   from {
@@ -394,7 +649,7 @@
   height: 38px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fff;
+  background: var(--paper);
 }
 .menuBtn {
   display: none;
@@ -429,9 +684,10 @@
   align-items: center;
   gap: 10px;
   margin: 0 0 10px;
-  font: 700 11px/1 'Inter', sans-serif;
-  letter-spacing: 0.18em;
-  color: var(--sub);
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 .eyebrowNo {
   padding: 4px 9px;
@@ -560,7 +816,7 @@
   transition: transform 0.5s var(--ease), background 0.3s;
 }
 .btnPrimary:hover:not(:disabled) .arw {
-  background: #fff;
+  background: var(--paper);
   color: var(--navy);
   transform: translateX(3px) rotate(-8deg);
 }
@@ -571,7 +827,7 @@
   padding: 9px 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--paper);
   font-size: 13px;
   font-weight: 700;
   transition: border-color 0.3s, transform 0.3s var(--ease);
@@ -620,9 +876,14 @@
 .homeTitle {
   margin: 0;
   font-size: clamp(26px, 3.4vw, 40px);
-  font-weight: 900;
-  letter-spacing: 0.01em;
-  line-height: 1.3;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.32;
+}
+.titleMute {
+  display: block;
+  color: var(--muted);
+  font-weight: 700;
 }
 .homeLead {
   margin: 10px 0 0;
@@ -670,7 +931,8 @@
   gap: 6px;
   margin: 6px 0 4px;
   font-size: clamp(56px, 7vw, 88px);
-  font-weight: 900;
+  font-weight: 800;
+  letter-spacing: -0.04em;
   line-height: 1;
 }
 .heroUnit {
@@ -839,8 +1101,8 @@
   margin-left: auto;
   padding: 3px 7px;
   border-radius: 99px;
-  background: #e6f8ef;
-  color: #0b8a4d;
+  background: var(--ok-bg);
+  color: var(--ok-ink);
   font-size: 11px;
   font-weight: 800;
 }
@@ -900,7 +1162,7 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 1.5px dashed #c4cbe0;
+  border: 1.5px dashed var(--line-strong);
 }
 .dotOn {
   border: 0;
@@ -931,7 +1193,7 @@
 .heat span {
   aspect-ratio: 1;
   border-radius: 3px;
-  background: #eef1f8;
+  background: var(--track);
   opacity: 0;
 }
 .heat span.on {
@@ -966,7 +1228,7 @@
   overflow: visible;
 }
 .gridLine {
-  stroke: #edf0f7;
+  stroke: var(--track);
   stroke-dasharray: 3 5;
 }
 .axisText {
@@ -974,7 +1236,7 @@
   font: 600 11px 'Inter', sans-serif;
 }
 .bar {
-  fill: #dbe7ff;
+  fill: var(--bar);
   transform-box: fill-box;
   transform-origin: bottom;
   transform: scaleY(0);
@@ -989,7 +1251,7 @@
 }
 .line {
   fill: none;
-  stroke: var(--navy);
+  stroke: var(--chart-line);
   stroke-width: 2.5;
   stroke-linejoin: round;
   stroke-dasharray: 1;
@@ -1010,8 +1272,8 @@
   animation: fadeIn 1s var(--ease) 1.4s forwards;
 }
 .linePt {
-  fill: #fff;
-  stroke: var(--navy);
+  fill: var(--paper);
+  stroke: var(--chart-line);
   stroke-width: 2.5;
   opacity: 0;
   transition: r 0.25s var(--ease);
@@ -1105,7 +1367,7 @@
 .shareBar {
   height: 8px;
   border-radius: 99px;
-  background: #f0f3fa;
+  background: var(--track);
   overflow: hidden;
 }
 .shareBar span {
@@ -1230,7 +1492,7 @@
   aspect-ratio: 1200 / 628;
   border-radius: 16px;
   overflow: hidden;
-  background: #e8edf8;
+  background: var(--track);
 }
 .recentImg img {
   width: 100%;
@@ -1266,8 +1528,8 @@
 .display {
   margin: 0;
   font-size: clamp(40px, 6vw, 72px);
-  font-weight: 900;
-  letter-spacing: 0.01em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   line-height: 1.1;
 }
 .displaySub {
@@ -1289,7 +1551,7 @@
   padding: 4px;
   border: 1.5px solid var(--ink);
   border-radius: 999px;
-  background: #fff;
+  background: var(--paper);
 }
 .toggle button {
   position: relative;
@@ -1336,7 +1598,7 @@
   border-radius: 30px;
   background:
     radial-gradient(60% 60% at 35% 50%, rgba(0, 102, 255, 0.07), transparent 70%),
-    linear-gradient(#fff, #f8faff);
+    linear-gradient(var(--paper), var(--surface-2));
   box-shadow: var(--shadow);
   overflow: hidden;
 }
@@ -1462,7 +1724,7 @@
   height: 30px;
   border-radius: 50%;
   background: var(--c);
-  box-shadow: 0 0 0 6px #fff, 0 6px 18px -4px var(--c);
+  box-shadow: 0 0 0 6px var(--paper), 0 6px 18px -4px var(--c);
   transition: transform 0.45s var(--ease);
 }
 .hotDot::after {
@@ -1492,7 +1754,7 @@
   position: absolute;
   inset: 9px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--paper);
   animation: pop 0.4s var(--ease);
 }
 .hotLabel {
@@ -1503,7 +1765,7 @@
   gap: 6px;
   padding: 6px 12px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--paper);
   border: 1px solid var(--line);
   font-size: 13px;
   font-weight: 800;
@@ -1524,7 +1786,7 @@
 .hotOn .hotLabel {
   background: var(--ink);
   border-color: var(--ink);
-  color: #fff;
+  color: var(--paper);
 }
 
 .mapPanel {
@@ -1537,7 +1799,7 @@
   padding: 20px;
   border: 1px solid var(--line);
   border-radius: 22px;
-  background: #fff;
+  background: var(--paper);
   box-shadow: var(--shadow-lg);
   animation: cardIn 0.6s var(--ease) both;
   border-top: 4px solid var(--c);
@@ -1569,7 +1831,7 @@
   height: 28px;
   border: 1px solid var(--line);
   border-radius: 50%;
-  background: #fff;
+  background: var(--paper);
   transition: transform 0.4s var(--ease);
 }
 .close:hover {
@@ -1621,7 +1883,7 @@
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--c) 10%, #fff);
+  background: color-mix(in srgb, var(--c) 10%, var(--paper));
   overflow: hidden;
 }
 .panelThumb img {
@@ -1717,7 +1979,7 @@
   align-self: flex-start;
   padding: 3px 9px;
   border-radius: 99px;
-  background: color-mix(in srgb, var(--c) 12%, #fff);
+  background: color-mix(in srgb, var(--c) 12%, var(--paper));
   color: var(--ink);
   font-size: 11px;
   font-weight: 800;
@@ -1749,7 +2011,7 @@
   width: 60px;
   height: 60px;
   border-radius: 18px;
-  background: #fff;
+  background: var(--paper);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
   animation: pop 0.6s var(--ease) both;
@@ -1781,8 +2043,8 @@
   margin: 0;
   padding: 7px 12px;
   border-radius: 99px;
-  background: #fff7d6;
-  color: #7a5b00;
+  background: var(--note-bg);
+  color: var(--note-ink);
   font-size: 12px;
   font-weight: 700;
 }
@@ -1825,7 +2087,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--paper);
   border: 2px solid var(--line);
   font: 800 13px 'Inter', sans-serif;
   color: var(--muted);
@@ -1867,7 +2129,7 @@
   padding: 22px;
   border: 1px solid var(--line);
   border-radius: var(--r);
-  background: #fff;
+  background: var(--paper);
   box-shadow: var(--shadow);
   transition: opacity 0.5s var(--ease);
 }
@@ -1906,7 +2168,7 @@
 }
 .urlBox:focus-within {
   border-color: var(--blue);
-  background: #fff;
+  background: var(--paper);
   box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.1);
 }
 .urlBox input {
@@ -1928,7 +2190,7 @@
   padding: 7px 13px;
   border: 1.5px solid var(--line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--paper);
   font-size: 13px;
   font-weight: 700;
   color: var(--sub) !important;
@@ -1957,7 +2219,7 @@
   padding: 12px 6px 10px;
   border: 1.5px solid var(--line);
   border-radius: 14px;
-  background: #fff;
+  background: var(--paper);
   font-size: 12px;
   font-weight: 800;
   transition: all 0.3s var(--ease);
@@ -2009,7 +2271,7 @@
   transition: all 0.35s var(--ease);
 }
 .segment button[aria-pressed='true'] {
-  background: #fff;
+  background: var(--paper);
   color: var(--ink) !important;
   box-shadow: 0 2px 8px rgba(16, 22, 51, 0.1);
 }
@@ -2044,7 +2306,7 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--paper);
   border: 3px solid var(--blue);
   box-shadow: 0 4px 10px rgba(0, 102, 255, 0.35);
   transition: transform 0.25s var(--ease);
@@ -2067,7 +2329,7 @@
   background:
     linear-gradient(rgba(0, 102, 255, 0.04) 1px, transparent 1px) 0 0 / 28px 28px,
     linear-gradient(90deg, rgba(0, 102, 255, 0.04) 1px, transparent 1px) 0 0 / 28px 28px,
-    #fbfcff;
+    var(--canvas);
   overflow: hidden;
 }
 .idle {
@@ -2111,7 +2373,7 @@
   padding: 6px 12px 6px 6px;
   border: 1px solid var(--line);
   border-radius: 99px;
-  background: #fff;
+  background: var(--paper);
   font-size: 12px;
   font-weight: 700;
   animation: cardIn 0.6s var(--ease) both;
@@ -2211,7 +2473,7 @@
   width: 58px;
   height: 58px;
   border-radius: 18px;
-  background: #fff;
+  background: var(--paper);
   border: 2px solid var(--line);
   font: 900 15px 'Inter', sans-serif;
   color: var(--muted);
@@ -2288,7 +2550,7 @@
 .pipeSkeleton span {
   aspect-ratio: 1200 / 628;
   border-radius: 14px;
-  background: linear-gradient(100deg, #eef2fa 30%, #f9fbff 50%, #eef2fa 70%);
+  background: linear-gradient(100deg, var(--skel-a) 30%, var(--skel-b) 50%, var(--skel-a) 70%);
   background-size: 300% 100%;
   animation: shimmer 1.6s linear infinite;
   animation-delay: calc(var(--i) * 0.15s);
@@ -2329,7 +2591,7 @@
   padding: 8px;
   border: 2px solid transparent;
   border-radius: 20px;
-  background: #fff;
+  background: var(--paper);
   box-shadow: var(--shadow);
   text-align: left;
   opacity: 0;
@@ -2400,7 +2662,7 @@
 .inspector {
   padding: 18px 20px;
   border-radius: 18px;
-  background: #fff;
+  background: var(--paper);
   border: 1px solid var(--line);
 }
 .inspectorHead {
@@ -2450,7 +2712,7 @@
 .scoreTrack {
   height: 8px;
   border-radius: 99px;
-  background: #eef1f8;
+  background: var(--track);
   overflow: hidden;
 }
 .scoreTrack span {
@@ -2482,7 +2744,7 @@
   margin-bottom: 24px;
   padding: 26px 24px 22px;
   border-radius: 24px;
-  background: #fff;
+  background: var(--paper);
   box-shadow: var(--shadow-lg);
   text-align: center;
   animation: sheetUp 0.6s var(--ease) both;
@@ -2552,7 +2814,7 @@
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: var(--r);
-  background: #fff;
+  background: var(--paper);
   box-shadow: var(--shadow);
 }
 .outlineHead {
@@ -2625,7 +2887,7 @@
   padding: 40px 48px;
   border: 1px solid var(--line);
   border-radius: var(--r);
-  background: #fff;
+  background: var(--paper);
   box-shadow: var(--shadow);
 }
 .paperKicker {
@@ -2653,7 +2915,7 @@
 .paperSkeleton span {
   height: 12px;
   border-radius: 99px;
-  background: linear-gradient(100deg, #eef2fa 30%, #f9fbff 50%, #eef2fa 70%);
+  background: linear-gradient(100deg, var(--skel-a) 30%, var(--skel-b) 50%, var(--skel-a) 70%);
   background-size: 300% 100%;
   animation: shimmer 1.6s linear infinite;
   animation-delay: calc(var(--i) * 0.1s);
@@ -2667,8 +2929,8 @@
   position: relative;
   padding: 18px 20px 18px 20px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #f1f6ff, #fff);
-  border: 1px solid #d7e5ff;
+  background: linear-gradient(135deg, var(--blue-soft), var(--paper));
+  border: 1px solid var(--blue-line);
 }
 .conclusion > span {
   display: inline-block;
@@ -2764,7 +3026,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1.5px solid #c9d0e2;
+  border: 1.5px solid var(--line-strong);
   transition: all 0.4s var(--ease);
 }
 .checklist li[data-ok] {
@@ -2788,6 +3050,528 @@
   font-weight: 800;
 }
 
+/* ---------- スポットライト（カーソルに追従する光と縁） ---------- */
+.root [data-spot] {
+  --mx: 50%;
+  --my: 50%;
+  position: relative;
+}
+.root [data-spot]:hover {
+  background-image: radial-gradient(420px circle at var(--mx) var(--my), var(--spot), transparent 45%);
+}
+.root [data-spot]::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  background: radial-gradient(260px circle at var(--mx) var(--my), var(--spot-edge), transparent 60%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: 0;
+  transition: opacity 0.4s var(--ease);
+  pointer-events: none;
+}
+.root [data-spot]:hover::after {
+  opacity: 1;
+}
+
+/* ---------- AIに頼む（Attio 型の入口） ---------- */
+@property --ask-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+.ask {
+  margin-top: 22px;
+  max-width: 760px;
+}
+.askBox {
+  --ask-angle: 0deg;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 18px;
+  border-radius: 20px;
+  background:
+    linear-gradient(var(--paper), var(--paper)) padding-box,
+    conic-gradient(from var(--ask-angle), var(--line), var(--blue), var(--cyan), var(--pink), var(--line) 60%, var(--line)) border-box;
+  border: 1.5px solid transparent;
+  box-shadow: var(--shadow), var(--highlight);
+  transition: box-shadow 0.4s var(--ease), transform 0.4s var(--ease);
+  animation: askSpin 6s linear infinite;
+}
+.askBox:focus-within {
+  box-shadow: 0 0 0 6px rgba(0, 102, 255, 0.1), var(--shadow-lg);
+  transform: translateY(-1px);
+}
+@keyframes askSpin {
+  to {
+    --ask-angle: 360deg;
+  }
+}
+.askSpark {
+  flex: none;
+  color: var(--blue);
+}
+.askField {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.askField input {
+  width: 100%;
+  height: 46px;
+  border: 0;
+  outline: 0;
+  background: none;
+  font: 500 16px 'Inter', 'Noto Sans JP', sans-serif;
+  color: var(--ink);
+}
+.askHint {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 16px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.askHint i {
+  width: 2px;
+  height: 1.1em;
+  margin-left: 2px;
+  background: var(--blue);
+  animation: blink 1s steps(2) infinite;
+}
+.askSend {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--blue);
+  color: #fff !important;
+  transition: transform 0.35s var(--ease), opacity 0.3s, background 0.3s;
+}
+.askSend:disabled {
+  background: var(--track);
+  color: var(--muted) !important;
+  cursor: default;
+}
+.askSend:not(:disabled):hover {
+  transform: translateY(-2px) rotate(-6deg);
+}
+.askQuick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.askQuick button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--sub) !important;
+  box-shadow: var(--highlight);
+  transition: border-color 0.3s, color 0.3s, transform 0.35s var(--ease);
+}
+.askQuick button:hover {
+  border-color: var(--blue);
+  color: var(--ink) !important;
+  transform: translateY(-2px);
+}
+.askQuick svg {
+  color: var(--blue);
+}
+
+/* ---------- 数字が回るカウンター ---------- */
+.odo {
+  display: inline-flex;
+  font-variant-numeric: tabular-nums;
+}
+.odoCol {
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+  line-height: 1;
+}
+.odoStrip {
+  display: flex;
+  flex-direction: column;
+  transform: translateY(calc(var(--n) * -1em));
+  transition: transform 2.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: calc(0.2s + var(--i) * 0.12s);
+}
+.odoStrip span {
+  height: 1em;
+}
+
+/* ---------- ヒーローの光と粒子 ---------- */
+.heroGlow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.heroGlow i {
+  position: absolute;
+  width: 46%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.55;
+  animation: drift 18s ease-in-out infinite alternate;
+}
+.heroGlow i:nth-child(1) {
+  left: -10%;
+  top: 30%;
+  background: #0066ff;
+}
+.heroGlow i:nth-child(2) {
+  right: -8%;
+  top: -30%;
+  background: #00b4ff;
+  animation-duration: 22s;
+  animation-delay: -6s;
+}
+.heroGlow i:nth-child(3) {
+  left: 40%;
+  bottom: -50%;
+  background: #ff1e72;
+  opacity: 0.28;
+  animation-duration: 26s;
+  animation-delay: -12s;
+}
+@keyframes drift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(12%, -8%) scale(1.15);
+  }
+  100% {
+    transform: translate(-8%, 10%) scale(0.95);
+  }
+}
+.heroGrain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- 図の四隅の十字 ---------- */
+.cross {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  pointer-events: none;
+}
+.cross::before,
+.cross::after {
+  content: '';
+  position: absolute;
+  background: var(--line-strong);
+}
+.cross::before {
+  left: 6px;
+  top: 0;
+  width: 1px;
+  height: 13px;
+}
+.cross::after {
+  top: 6px;
+  left: 0;
+  width: 13px;
+  height: 1px;
+}
+.cross[data-c='tl'] {
+  left: 12px;
+  top: 12px;
+}
+.cross[data-c='tr'] {
+  right: 12px;
+  top: 12px;
+}
+.cross[data-c='bl'] {
+  left: 12px;
+  bottom: 12px;
+}
+.cross[data-c='br'] {
+  right: 12px;
+  bottom: 12px;
+}
+
+/* ---------- テーマ切り替え ---------- */
+.themeBtn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.themeIcon {
+  display: grid;
+  animation: themeIn 0.5s var(--ease) both;
+}
+@keyframes themeIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) rotate(-60deg);
+  }
+}
+.root {
+  transition: background-color 0.4s var(--ease), color 0.4s var(--ease);
+}
+
+/* ---------- カーソル演出 ---------- */
+@media (pointer: fine) {
+  .root[data-cursor='on'],
+  .root[data-cursor='on'] :is(button, a, label, [role='option'], [data-cursor]) {
+    cursor: none !important;
+  }
+}
+.cursorLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.cursorLayer[data-ready] {
+  opacity: 1;
+}
+.cursorLayer[data-hidden] {
+  opacity: 0;
+}
+.cursorDot,
+.cursorRing {
+  position: fixed;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+.cursorDot {
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--cursor-a);
+  box-shadow: 0 0 12px var(--cursor-a);
+}
+.cursorRing {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
+  border-radius: 999px;
+  border: 1.5px solid var(--cursor-a);
+  transition: width 0.35s var(--ease), height 0.35s var(--ease), margin 0.35s var(--ease), background 0.3s, border-color 0.3s,
+    border-radius 0.35s var(--ease);
+}
+.cursorRing[data-state='hover'] {
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  border-color: transparent;
+  background: color-mix(in srgb, var(--cursor-a) 18%, transparent);
+  backdrop-filter: blur(2px);
+}
+.cursorRing[data-state='hover'][data-label] {
+  width: auto;
+  min-width: 64px;
+  height: 34px;
+  margin: -17px 0 0 18px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--accent-grad);
+}
+.cursorRing[data-state='text'] {
+  width: 3px;
+  height: 26px;
+  margin: -13px 0 0 -1.5px;
+  border-radius: 2px;
+  border-color: transparent;
+  background: var(--cursor-a);
+}
+.cursorRing[data-down] {
+  scale: 0.8;
+}
+.cursorLabel {
+  display: none;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  white-space: nowrap;
+}
+.cursorRing[data-state='hover'][data-label] .cursorLabel {
+  display: block;
+}
+.trail {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--accent-grad);
+  opacity: 0;
+}
+.trailOn {
+  animation: trailFade 0.7s var(--ease) forwards;
+}
+@keyframes trailFade {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.1);
+  }
+}
+.spark {
+  position: fixed;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 2px;
+  background: var(--c);
+  animation: sparkOut 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes sparkOut {
+  to {
+    transform: translate(var(--dx), var(--dy)) rotate(200deg) scale(0.2);
+    opacity: 0;
+  }
+}
+.root [data-magnetic] {
+  transition: translate 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- デザイン案の切り替え ---------- */
+.dock {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 16px;
+  border-radius: 999px;
+  border: var(--card-border);
+  background: color-mix(in srgb, var(--paper) 82%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+  box-shadow: var(--shadow-lg);
+  animation: sheetUp 0.7s var(--ease) 0.6s both;
+}
+.dockLabel {
+  display: flex;
+  flex-direction: column;
+  font: 600 10px/1.3 var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.dockLabel b {
+  font: 800 13px/1.3 'Inter', 'Noto Sans JP', sans-serif;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+.dockSwatches {
+  display: flex;
+  gap: 6px;
+}
+.dockSwatch {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  transition: transform 0.4s var(--ease);
+}
+.dockSwatch span {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--sw);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  transition: transform 0.4s var(--ease);
+}
+.dockSwatch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  opacity: 0;
+  transform: scale(0.7);
+  transition: all 0.4s var(--ease);
+}
+.dockSwatch[aria-pressed='true']::after {
+  opacity: 1;
+  transform: none;
+}
+.dockSwatch:hover span {
+  transform: scale(1.12) rotate(20deg);
+}
+.dockCursor {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--muted) !important;
+}
+.dockCursor[aria-pressed='true'] {
+  background: var(--accent-grad);
+  border-color: transparent;
+  color: #fff !important;
+}
+/* 案を変えた瞬間に、全体へ色が流れ込む */
+.designSwap {
+  animation: designSwap 0.7s var(--ease);
+}
+@keyframes designSwap {
+  0% {
+    filter: saturate(0.4) blur(2px);
+    opacity: 0.6;
+  }
+  100% {
+    filter: none;
+    opacity: 1;
+  }
+}
+
 /* ---------- ⌘K パレット ---------- */
 .paletteScrim {
   position: fixed;
@@ -2803,10 +3587,12 @@
   opacity: 0;
 }
 .palette {
-  width: min(620px, 100%);
-  border-radius: 22px;
-  background: #fff;
-  box-shadow: var(--shadow-lg);
+  width: min(640px, 100%);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(24px) saturate(1.6);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg), var(--highlight);
   overflow: hidden;
   animation: sheetUp 0.45s var(--ease) both;
 }
@@ -2822,6 +3608,7 @@
   flex: 1;
   border: 0;
   outline: 0;
+  background: none;
   font: 600 16px 'Inter', 'Noto Sans JP', sans-serif;
   color: var(--ink);
 }
@@ -2837,7 +3624,7 @@
   padding: 6px 12px;
   border: 1px solid var(--line);
   border-radius: 99px;
-  background: #fff;
+  background: var(--paper);
   font-size: 12px;
   font-weight: 700;
 }
@@ -2864,8 +3651,72 @@
   background: none;
   text-align: left;
 }
-.paletteList button:hover {
-  background: var(--bg);
+.paletteList button[data-active] {
+  background: var(--blue-soft);
+  box-shadow: inset 0 0 0 1px var(--blue-line);
+}
+.paletteGroup {
+  margin: 10px 10px 6px;
+  font: 600 10.5px/1 var(--mono);
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+.paletteIcon {
+  display: grid !important;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--track);
+  color: var(--blue);
+}
+.paletteArw {
+  color: var(--muted);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all 0.3s var(--ease);
+}
+.paletteList button[data-active] .paletteArw {
+  opacity: 1;
+  transform: none;
+  color: var(--blue);
+}
+.paletteSwatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+.paletteFoot {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.paletteFoot span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.paletteFoot kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  font: 600 11px var(--mono);
+}
+.paletteBrand {
+  margin-left: auto;
+  font-weight: 800;
+  color: var(--sub);
 }
 .paletteList img {
   width: 40px;
