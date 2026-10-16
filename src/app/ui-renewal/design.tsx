@@ -15,7 +15,8 @@ export const DESIGNS: { id: Design; label: string; note: string; swatch: string 
   { id: 'pop', label: 'ポップ', note: '太い線とずらした影', swatch: 'linear-gradient(135deg, #ffd400 0 50%, #ff1e72 50%)' },
 ]
 
-const KEY = 'doya-ui-renewal-design'
+// v3: クリアを既定に決めた時点で、以前の選択は持ち越さない
+const KEY = 'doya-ui-renewal-design-v3'
 const CURSOR_KEY = 'doya-ui-renewal-cursor'
 
 function read(key: string) {

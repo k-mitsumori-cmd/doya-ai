@@ -1,0 +1,54 @@
+.board { margin-top: 16px; padding: 16px; }
+.boardHead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.boardHead small { font-size: 12px; font-weight: 800; color: var(--muted); }
+.scroll { overflow-x: auto; padding-bottom: 6px; }
+.gantt { position: relative; min-width: 640px; display: flex; flex-direction: column; gap: 8px; }
+.axis, .row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0; align-items: center; }
+.axis > div { position: relative; height: 20px; }
+.axis b { position: absolute; top: 0; font-size: 11px; font-weight: 800; color: var(--muted); padding-left: 6px; border-left: 1px solid var(--line); height: 20px; }
+.rowName { display: flex; flex-direction: column; font-size: 13px; font-weight: 800; color: var(--ink); padding-right: 8px; }
+.rowName small { font-size: 11px; font-weight: 700; color: var(--muted); }
+.lane { position: relative; height: 30px; border-radius: 8px; background: var(--track); }
+.bar { position: absolute; top: 3px; height: 24px; padding: 0; border: 0; border-radius: 8px; background: hsl(var(--h) 80% 60% / 0.28); cursor: pointer; transform-origin: left center; animation: grow 0.9s var(--ease) backwards; animation-delay: calc(var(--i) * 90ms); }
+.fill { position: absolute; inset: 0 auto 0 0; width: var(--pct); border-radius: 8px; background: linear-gradient(90deg, hsl(var(--h) 85% 52%), hsl(calc(var(--h) + 40) 85% 62%)); }
+.bar:hover, .bar:focus-visible { box-shadow: 0 6px 18px -6px hsl(var(--h) 85% 50% / 0.8); outline: none; z-index: 3; }
+@keyframes grow { from { transform: scaleX(0); opacity: 0.2; } to { transform: scaleX(1); opacity: 1; } }
+.tip { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 5; padding: 6px 10px; border-radius: 8px; background: #0a0f3c; color: #fff; font-size: 11.5px; font-weight: 800; white-space: nowrap; opacity: 0; pointer-events: none; transform: translateY(4px); transition: opacity 0.2s, transform 0.2s var(--ease); }
+.bar:hover .tip, .bar:focus-visible .tip { opacity: 1; transform: translateY(0); }
+.today { position: absolute; top: 24px; bottom: 0; width: 0; border-left: 2px dashed var(--k3); pointer-events: none; z-index: 2; }
+.today em { position: absolute; top: -22px; left: 50%; translate: -50% 0; padding: 1px 8px; border-radius: 99px; background: var(--k3); color: #fff; font-style: normal; font-size: 10.5px; font-weight: 900; }
+
+.kanban { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.col { padding: 10px; border-radius: var(--r-sm); background: var(--track); min-height: 160px; }
+.col > p { display: flex; justify-content: space-between; align-items: center; margin: 0 0 8px; font-size: 12.5px; font-weight: 900; color: var(--sub); }
+.cards { display: flex; flex-direction: column; gap: 8px; }
+.card { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 12px; background: var(--card-bg); border: var(--card-border); border-left: 4px solid hsl(var(--h) 80% 58%); box-shadow: var(--card-shadow); }
+.card b { font-size: 13px; font-weight: 900; color: var(--ink); }
+.card small { font-size: 11px; font-weight: 700; color: var(--muted); }
+.card button { align-self: flex-end; display: inline-flex; align-items: center; gap: 3px; padding: 3px 10px; border-radius: 99px; border: 0; background: var(--track); color: var(--sub); font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.card button:hover { background: var(--accent-grad); color: #fff; }
+
+.money { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
+.moneyBars, .sim { padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.moneyHead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.sim > b { font-size: 14px; font-weight: 900; }
+.sim > small { margin-top: -10px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.calc { margin: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--track); }
+.calc div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.calc dt { font-size: 12px; font-weight: 800; color: var(--sub); }
+.calc dd { margin: 0; font-size: 17px; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--ink); }
+.profit { font-size: 22px !important; background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.profit[data-neg] { background: none; -webkit-text-fill-color: #e0245e; color: #e0245e; }
+
+@media (max-width: 900px) {
+  .money { grid-template-columns: minmax(0, 1fr); }
+  .kanban { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .tiles { grid-template-columns: minmax(0, 1fr); }
+  .kanban { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar { animation: none; }
+}

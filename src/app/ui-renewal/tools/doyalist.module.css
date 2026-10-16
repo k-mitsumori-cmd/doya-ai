@@ -1,0 +1,48 @@
+.quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.quick button { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--sub); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.quick button[data-on] { background: var(--track); color: var(--ink); border-color: var(--k2); }
+
+.result { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.selBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: var(--r-sm); background: var(--accent-grad); color: #fff; font-size: 13px; font-weight: 700; overflow: hidden; }
+.selBar b { font-size: 16px; margin-right: 2px; }
+.selBar span { margin-right: auto; }
+.selBar button { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border: 1px solid rgba(255,255,255,0.6); border-radius: 999px; background: rgba(255,255,255,0.16); color: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+
+.table { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.headRow, .row { display: grid; grid-template-columns: 28px minmax(0, 2.2fr) 70px 80px minmax(120px, 1.3fr); align-items: center; gap: 12px; padding: 0 12px; }
+.headRow { padding-bottom: 4px; }
+.th, .thPlain { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; color: var(--sub); font: inherit; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-align: left; }
+.th { cursor: pointer; }
+.th:hover, .th[data-on] { color: var(--ink); }
+.row { padding-top: 11px; padding-bottom: 11px; border-radius: var(--r-sm); background: var(--card-bg); border: var(--card-border); cursor: pointer; transition: box-shadow 0.25s, border-color 0.25s; }
+.row:hover { box-shadow: var(--card-shadow); border-color: var(--k2); }
+.row[data-sel] { background: var(--track); }
+.check { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 2px solid var(--muted); border-radius: 6px; background: transparent; color: #fff; cursor: pointer; }
+.check[data-on] { background: var(--accent-grad); border-color: transparent; }
+.name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.name b { font-size: 14px; font-weight: 900; }
+.name small { color: var(--sub); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cell { font-size: 12px; font-weight: 700; color: var(--sub); }
+.score { min-width: 0; }
+.score > div { grid-template-columns: 0 1fr 32px; gap: 0 8px; }
+.score > div > span:first-child { display: none; }
+
+.scrim { position: fixed; inset: 0; z-index: 90; background: rgba(10, 8, 30, 0.4); backdrop-filter: blur(3px); }
+.panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 91; display: flex; flex-direction: column; gap: 12px; width: min(440px, 100vw); padding: 24px 22px; overflow-y: auto; background: var(--paper); border-left: var(--card-border); box-shadow: -20px 0 50px -20px rgba(40, 20, 120, 0.4); }
+.panel h3 { margin: 0 32px 0 0; font-size: 18px; font-weight: 900; }
+.close { position: absolute; right: 16px; top: 16px; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--track); color: var(--ink); cursor: pointer; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.pain { margin: 0; font-size: 13px; color: var(--sub); line-height: 1.6; }
+.script { margin: 0; min-height: 190px; padding: 14px; border-radius: var(--r-sm); background: var(--track); font: inherit; font-size: 13px; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+.copy { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border: 0; border-radius: 999px; background: var(--accent-grad); color: #fff; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+
+@media (max-width: 720px) {
+  .headRow { display: none; }
+  .row { grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-areas: 'c n n' '. s s' '. a b'; row-gap: 6px; }
+  .check { grid-area: c; }
+  .name { grid-area: n; }
+  .name small { white-space: normal; }
+  .score { grid-area: s; }
+  .cell[data-k='地域'] { grid-area: a; }
+  .cell[data-k='従業員'] { grid-area: b; text-align: right; }
+}

@@ -24,8 +24,10 @@ import { ArticleTool } from './ArticleTool'
 import { HOME, STAGES, mascotOf, stageServices } from './data'
 import { Cursor } from './Cursor'
 import { DESIGNS, DesignDock, useDesign, type Design } from './design'
+import { SERVICE_TOOLS } from './tools/registry'
+import { getServiceById } from '@/lib/services'
 
-type Screen = 'home' | 'map' | 'banner' | 'seo'
+type Screen = 'home' | 'map' | 'banner' | 'seo' | 'svc'
 const TOOL_SCREENS: Record<string, Screen> = { banner: 'banner', seo: 'seo' }
 
 // 「AIに頼む」の文から、使うAIを決める（見本なので単純な言葉の一致）
@@ -38,11 +40,22 @@ const INTENTS: { words: string[]; id: string }[] = [
   { words: ['見積'], id: 'quote' },
   { words: ['勤怠', '打刻'], id: 'kintai' },
   { words: ['スライド', '資料'], id: 'doyaslide' },
+  { words: ['広告画像', '入稿'], id: 'adimage' },
+  { words: ['インタビュー', '取材', '文字起こし'], id: 'interview' },
+  { words: ['ペルソナ', 'ターゲット像'], id: 'persona' },
+  { words: ['AI検索', 'ChatGPT', 'AIO', 'AEO'], id: 'aio' },
+  { words: ['質問リンク', 'AIに聞く'], id: 'asklink' },
+  { words: ['一次商談', 'AI商談'], id: 'aishodan' },
+  { words: ['営業管理', 'SFA', 'パイプライン'], id: 'sfa' },
+  { words: ['カンペ', 'カンニング', 'Web会議'], id: 'cunning' },
+  { words: ['人事', '評価', 'タレント'], id: 'hr' },
+  { words: ['案件', '進捗', 'ガント', 'プロマネ'], id: 'promane' },
 ]
 const intentOf = (text: string) => INTENTS.find((it) => it.words.some((w) => text.toLowerCase().includes(w.toLowerCase())))?.id
 
 export function RenewalApp() {
   const [screen, setScreen] = useState<Screen>('home')
+  const [svcId, setSvcId] = useState<string | null>(null)
   const [navOpen, setNavOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [paletteQuery, setPaletteQuery] = useState('')
@@ -79,9 +92,38 @@ export function RenewalApp() {
   const openService = (id: string) => {
     const target = TOOL_SCREENS[id]
     if (target) return go(target)
+    if (SERVICE_TOOLS[id]) {
+      setSvcId(id)
+      return go('svc')
+    }
     setPaletteOpen(false)
-    setToast('この見本で操作できるのは、ドヤバナーAIとドヤ記事作成です')
+    setToast('このAIの見本は準備中です')
   }
+
+  // ?s=サービスID で、そのAIの画面を直接開く（共有・確認用）
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('s')
+    if (!id) return
+    if (TOOL_SCREENS[id]) setScreen(TOOL_SCREENS[id])
+    else if (SERVICE_TOOLS[id]) {
+      setSvcId(id)
+      setScreen('svc')
+    }
+  }, [])
+  // 初回は ?s= を読む前なので URL を書き換えない（読む前に消してしまうのを防ぐ）
+  const urlReady = useRef(false)
+  useEffect(() => {
+    if (!urlReady.current) {
+      urlReady.current = true
+      return
+    }
+    const url = new URL(window.location.href)
+    const id = screen === 'svc' ? svcId : screen === 'banner' || screen === 'seo' ? screen : null
+    if (id) url.searchParams.set('s', id)
+    else url.searchParams.delete('s')
+    window.history.replaceState(null, '', url)
+  }, [screen, svcId])
+  const SvcTool = svcId ? SERVICE_TOOLS[svcId] : null
   const openPalette = (query = '') => {
     setPaletteQuery(query)
     setPaletteOpen(true)
@@ -167,7 +209,7 @@ export function RenewalApp() {
                         <button
                           key={svc.id}
                           type="button"
-                          className={`${s.navSvc} ${TOOL_SCREENS[svc.id] === screen ? s.navSvcOn : ''}`}
+                          className={`${s.navSvc} ${TOOL_SCREENS[svc.id] === screen || (screen === 'svc' && svcId === svc.id) ? s.navSvcOn : ''}`}
                           onClick={() => openService(svc.id)}
                         >
                           {svc.name}
@@ -200,7 +242,9 @@ export function RenewalApp() {
               <Menu size={20} />
             </button>
             <span className={s.topbarTitle}>
-              {{ home: 'ホーム', map: '業務マップ', banner: 'ドヤバナーAI', seo: 'ドヤ記事作成' }[screen]}
+              {screen === 'svc'
+                ? getServiceById(svcId ?? '')?.name
+                : { home: 'ホーム', map: '業務マップ', banner: 'ドヤバナーAI', seo: 'ドヤ記事作成' }[screen]}
             </span>
             <button type="button" className={s.topSearch} onClick={() => openPalette()} aria-label="AIを探す">
               <Search size={18} />
@@ -215,11 +259,12 @@ export function RenewalApp() {
             </span>
           </div>
 
-          <div key={screen} className={s.screenIn}>
+          <div key={screen === 'svc' ? `svc-${svcId}` : screen} className={s.screenIn}>
             {screen === 'home' && <HomeScreen onOpen={openService} onAsk={onAsk} />}
             {screen === 'map' && <MapScreen onOpen={openService} />}
             {screen === 'banner' && <BannerTool />}
             {screen === 'seo' && <ArticleTool />}
+            {screen === 'svc' && SvcTool && <SvcTool />}
           </div>
         </main>
       </div>

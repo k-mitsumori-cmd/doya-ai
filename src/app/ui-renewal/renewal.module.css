@@ -7,6 +7,10 @@
 
 .root {
   --blue: #0066ff;
+  /* 光・強調の3色（全サービス画面の部品が使う。案ごとに差し替え） */
+  --k1: #00b4ff;
+  --k2: #0066ff;
+  --k3: #00d0ff;
   --blue-deep: #0047d6;
   --blue-soft: #e8f0ff;
   --navy: #0a0f3c;
@@ -74,6 +78,9 @@
 }
 /* ---------- デザイン案C「ミッドナイト」（Linear / Raycast 型：暗い面に細い線と発光） ---------- */
 .root[data-design='midnight'] {
+  --k1: #00e0ff;
+  --k2: #3d8bff;
+  --k3: #7b5cff;
   --blue-deep: #7fb2ff;
   --blue-soft: rgba(0, 102, 255, 0.16);
   --ink: #eef1f8;
@@ -122,6 +129,9 @@
 
 /* ---------- デザイン案B「オーロラ」（Stripe 型：流れる色とすりガラス） ---------- */
 .root[data-design='aurora'] {
+  --k1: #00b4ff;
+  --k2: #7b5cff;
+  --k3: #ff1e72;
   --bg: #f5f6ff;
   --blue-soft: rgba(0, 102, 255, 0.1);
   --line: rgba(80, 90, 180, 0.14);
@@ -151,6 +161,9 @@
 
 /* ---------- デザイン案D「ポップ」（太い線とずらした影。遊べる見た目） ---------- */
 .root[data-design='pop'] {
+  --k1: #0066ff;
+  --k2: #ff1e72;
+  --k3: #ffd400;
   --bg: #fff6e6;
   --paper: #ffffff;
   --ink: #0b0b14;

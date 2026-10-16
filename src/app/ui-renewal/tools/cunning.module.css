@@ -1,0 +1,59 @@
+.meet { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+.bar {
+  display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: var(--r-sm);
+  background: var(--card-bg); border: var(--card-border); box-shadow: var(--card-shadow); flex-wrap: wrap;
+}
+.rec { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 800; color: #e0114f; }
+.rec i { width: 10px; height: 10px; border-radius: 50%; background: #ff1e4d; animation: recPulse 1.3s ease-out infinite; }
+.rec[data-off] { color: var(--muted); }
+.rec[data-off] i { background: var(--muted); animation: none; }
+@keyframes recPulse { 0% { box-shadow: 0 0 0 0 rgba(255, 30, 77, 0.6); } 70%, 100% { box-shadow: 0 0 0 9px rgba(255, 30, 77, 0); } }
+.timer { font-family: var(--mono); font-size: 16px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+.levels { display: flex; align-items: center; gap: 3px; height: 28px; flex: 1; min-width: 120px; }
+.levels i {
+  flex: 1; max-width: 6px; height: 100%; border-radius: 3px; background: linear-gradient(to top, var(--k1), var(--k2), var(--k3));
+  transform-origin: center; transform: scaleY(0.15); animation: level var(--d) ease-in-out var(--o) infinite alternate;
+}
+.levels[data-off] i { animation: none; transform: scaleY(0.1); opacity: 0.4; }
+@keyframes level { 0% { transform: scaleY(0.12); } 100% { transform: scaleY(1); } }
+
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 14px; align-items: start; }
+@media (max-width: 860px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.paneTitle { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 12px; font-weight: 800; color: var(--sub); }
+
+.trans, .ans { padding: 14px; border-radius: var(--r-sm); background: var(--card-bg); border: var(--card-border); box-shadow: var(--card-shadow); min-width: 0; }
+.log { height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; scrollbar-width: thin; padding-right: 2px; }
+.line { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
+.line small { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.line p { margin: 0; font-size: 14px; line-height: 1.8; color: var(--ink); }
+.line[data-live] p { color: var(--ink); }
+.detect {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 800;
+  background: var(--accent-grad); color: #fff; box-shadow: 0 4px 14px color-mix(in srgb, var(--k2) 35%, transparent);
+}
+.listening { display: inline-flex; align-items: center; gap: 4px; margin: 0; font-size: 11px; color: var(--muted); font-weight: 700; }
+.listening i { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: lis 1.1s ease-in-out infinite; }
+.listening i:nth-child(2) { animation-delay: 0.15s; }
+.listening i:nth-child(3) { animation-delay: 0.3s; margin-right: 4px; }
+@keyframes lis { 0%, 60%, 100% { opacity: 0.3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+
+.ans { display: flex; flex-direction: column; gap: 12px; }
+.ans .paneTitle { margin-bottom: 0; }
+.wait { margin: 0; padding: 40px 12px; text-align: center; font-size: 12px; color: var(--muted); border: 1.5px dashed var(--line); border-radius: 12px; }
+.card { min-width: 0; }
+.cardIn { padding: 14px; border-radius: var(--r-sm); background: var(--card-bg); display: flex; flex-direction: column; gap: 10px; }
+.card[data-old] .cardIn { padding: 10px 14px; }
+.cQ { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; font-weight: 900; color: var(--ink); flex-wrap: wrap; }
+.points { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.points li { display: flex; align-items: flex-start; gap: 7px; font-size: 13px; line-height: 1.55; color: var(--ink); font-weight: 700; }
+.points svg { flex: none; margin-top: 3px; padding: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--accent-grad); color: #fff; }
+.say { padding: 10px 12px; border-radius: 10px; background: var(--track); border-left: 3px solid var(--k2); }
+.say small { display: block; margin-bottom: 3px; font-size: 10px; font-weight: 800; color: var(--muted); }
+.say p { margin: 0; font-size: 13px; line-height: 1.8; color: var(--ink); }
+.card[data-old] .points, .card[data-old] .say { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rec i, .levels i, .listening i { animation: none; }
+  .levels i { transform: scaleY(0.5); }
+}

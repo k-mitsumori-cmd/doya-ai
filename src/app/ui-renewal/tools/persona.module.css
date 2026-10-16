@@ -1,0 +1,240 @@
+.done {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  perspective: 1200px;
+}
+.slot {
+  height: 100%;
+}
+.glow {
+  height: 100%;
+}
+.card {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 340px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform 0.7s var(--ease);
+}
+.flipped {
+  transform: rotateY(180deg);
+}
+.face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px;
+  border-radius: calc(var(--r-sm) - 1px);
+  background: var(--paper);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+.front {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.back {
+  transform: rotateY(180deg);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--k2) 35%, transparent);
+  overflow: hidden;
+}
+.avatar img {
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
+}
+.name {
+  margin-top: 8px;
+  font-size: 18px;
+  font-weight: 900;
+}
+.sub {
+  color: var(--muted);
+  font-size: 12px;
+}
+.tag {
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--track);
+  color: var(--sub);
+}
+.turn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.backName {
+  font-size: 14px;
+  font-weight: 900;
+}
+.sec {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  background: var(--grad-text, var(--accent-grad));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.back ul {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--sub);
+}
+.words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.words em {
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 11px;
+  color: #fff;
+  background: var(--accent-grad);
+}
+.journey {
+  padding: 16px 16px 18px;
+  border-radius: var(--r-sm);
+  background: var(--card-bg);
+  border: var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+.jHead {
+  margin: 0 0 18px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.jTrack {
+  position: relative;
+}
+.jLine {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 15px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--accent-grad);
+  transform-origin: left;
+}
+.jList {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: center;
+}
+.jList li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.jDot {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 900;
+  color: #fff;
+  background: var(--accent-grad);
+  box-shadow: 0 0 0 4px var(--paper), 0 6px 16px color-mix(in srgb, var(--k2) 40%, transparent);
+}
+.jList b {
+  font-size: 13px;
+}
+.jList small {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+@container (max-width: 520px) {
+  .cards {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 8px;
+  }
+  .cards > * {
+    flex: 0 0 min(78%, 260px);
+    scroll-snap-align: center;
+  }
+}
+@container (max-width: 560px) {
+  .jLine {
+    left: 15px;
+    right: auto;
+    top: 16px;
+    bottom: 40px;
+    width: 3px;
+    height: auto;
+    transform-origin: top;
+  }
+  .jList {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .jList li {
+    flex-direction: row;
+    flex-wrap: wrap;
+    text-align: left;
+    gap: 4px 12px;
+  }
+  .jList small {
+    flex-basis: 100%;
+    padding-left: 44px;
+    margin-top: -6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}

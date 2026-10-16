@@ -1,0 +1,50 @@
+.result { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.stack { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.h { display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px; font-size: 14px; font-weight: 900; }
+.h small { color: var(--sub); font-size: 12px; font-weight: 700; font-family: var(--mono); }
+
+.profile { padding: 18px; }
+.profHead { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.profHead b { display: block; font-size: 16px; font-weight: 900; }
+.profHead small { color: var(--sub); font-size: 12px; }
+.logo { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: var(--accent-grad); color: #fff; }
+.facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.facts div { padding: 10px 12px; border-radius: 10px; background: var(--track); }
+.facts dt { color: var(--sub); font-size: 11px; font-weight: 700; }
+.facts dd { margin: 2px 0 0; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.facts em { margin-left: 3px; color: var(--sub); font-size: 11px; font-style: normal; font-weight: 700; }
+
+.mk { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.mk li { display: grid; grid-template-columns: 140px 52px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--r-sm); background: var(--card-bg); border: var(--card-border); font-size: 13px; font-weight: 800; }
+.mk small { color: var(--sub); font-size: 12px; font-weight: 600; }
+
+.hypos { display: flex; flex-direction: column; gap: 10px; }
+.hypo { border-radius: var(--r-sm); background: var(--paper); overflow: hidden; }
+.hypoBtn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.hypoBtn b { flex: 1; min-width: 0; font-weight: 900; }
+.no { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-grad); color: #fff; font-size: 12px; font-weight: 900; }
+.chev { flex: none; color: var(--sub); transition: transform 0.3s var(--ease); }
+.chev[data-open] { transform: rotate(180deg); }
+.why { margin: 0; padding: 0 14px 14px 48px; font-size: 13px; line-height: 1.8; color: var(--sub); overflow: hidden; }
+
+.rail { display: flex; gap: 12px; padding: 4px 2px 14px; overflow-x: auto; scroll-snap-type: x proximity; }
+.slide { position: relative; flex: none; display: flex; flex-direction: column; justify-content: flex-end; gap: 5px; width: 150px; aspect-ratio: 16 / 10; padding: 10px; border-radius: 10px; background: var(--card-bg); border: var(--card-border); box-shadow: var(--card-shadow); scroll-snap-align: start; overflow: hidden; }
+.slide::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 5px; background: var(--accent-grad); }
+.slide i { display: block; height: 4px; border-radius: 2px; background: var(--line); }
+.slide i:nth-of-type(2) { width: 80%; }
+.slide i:nth-of-type(3) { width: 55%; }
+.slide b { margin-top: 4px; font-size: 12px; font-weight: 900; }
+.slideNo { position: absolute; right: 8px; top: 12px; color: var(--muted); font-size: 11px; font-weight: 900; font-family: var(--mono); }
+
+.qs { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.qs button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 14px; border: var(--card-border); border-radius: var(--r-sm); background: var(--card-bg); color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; text-align: left; cursor: pointer; transition: background 0.2s; }
+.qs button[data-on] { color: var(--sub); text-decoration: line-through; background: var(--track); }
+.box { display: grid; place-items: center; flex: none; width: 20px; height: 20px; border: 2px solid var(--muted); border-radius: 6px; transition: background 0.2s, border-color 0.2s; }
+.box svg { width: 12px; height: 12px; }
+.qs button[data-on] .box { background: var(--accent-grad); border-color: transparent; }
+
+@media (max-width: 720px) {
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mk li { grid-template-columns: minmax(0, 1fr) auto; }
+  .mk small { grid-column: 1 / -1; }
+}
