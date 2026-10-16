@@ -14,6 +14,9 @@ import {
   Palette as PaletteIcon,
   PenLine,
   Search,
+  Sparkles,
+  History,
+  LayoutGrid,
   X,
 } from 'lucide-react'
 import s from './renewal.module.css'
@@ -305,25 +308,26 @@ export function RenewalApp() {
       </div>
 
       <nav className={s.tabbar} aria-label="スマホ用メニュー">
-        {/* 固定のAIは置かない：ホーム・マップと、その人が最近使ったAI（最大2つ）・探す */}
-        <button type="button" aria-current={screen === 'home' ? 'page' : undefined} onClick={() => go('home')}>
-          <Home size={20} strokeWidth={1.75} />
-          <span>ホーム</span>
+        {/* いつも5つ・等幅。固定のAIは置かず、中央に「頼む」、右に最近使ったAIとすべてのAI */}
+        <TabItem label="ホーム" icon={<Home size={21} strokeWidth={1.75} />} on={screen === 'home'} onClick={() => go('home')} />
+        <TabItem label="マップ" icon={<MapIcon size={21} strokeWidth={1.75} />} on={screen === 'map'} onClick={() => go('map')} />
+        <button type="button" className={s.tabAsk} onClick={() => openPalette()} aria-label="AIに頼む">
+          <span>
+            <Sparkles size={20} strokeWidth={2} />
+          </span>
+          <small>頼む</small>
         </button>
-        <button type="button" aria-current={screen === 'map' ? 'page' : undefined} onClick={() => go('map')}>
-          <MapIcon size={20} strokeWidth={1.75} />
-          <span>マップ</span>
-        </button>
-        {recent.slice(0, 2).map((id) => (
-          <button key={id} type="button" aria-current={isOpen(id) ? 'page' : undefined} onClick={() => openService(id)}>
-            <img src={mascotOf(id)} alt="" width={22} height={22} className={s.tabMascot} />
-            <span>{getServiceById(id)?.shortName ?? id}</span>
-          </button>
-        ))}
-        <button type="button" onClick={() => openPalette()}>
-          <Search size={20} strokeWidth={1.75} />
-          <span>AIを探す</span>
-        </button>
+        {recent[0] ? (
+          <TabItem
+            label={getServiceById(recent[0])?.shortName ?? '最近'}
+            icon={<History size={21} strokeWidth={1.75} />}
+            on={isOpen(recent[0])}
+            onClick={() => openService(recent[0])}
+          />
+        ) : (
+          <TabItem label="最近" icon={<History size={21} strokeWidth={1.75} />} on={false} onClick={() => openPalette()} />
+        )}
+        <TabItem label="すべて" icon={<LayoutGrid size={21} strokeWidth={1.75} />} on={navOpen} onClick={() => setNavOpen(true)} />
       </nav>
 
       <DesignDock design={design} onChange={setDesign} cursorOn={cursorOn} onCursor={setCursorOn} />
@@ -346,6 +350,16 @@ export function RenewalApp() {
         </div>
       )}
     </div>
+  )
+}
+
+function TabItem({ icon, label, on, onClick }: { icon: React.ReactNode; label: string; on: boolean; onClick: () => void }) {
+  return (
+    <button type="button" className={s.tabItem} aria-current={on ? 'page' : undefined} onClick={onClick}>
+      {icon}
+      <span>{label}</span>
+      {on && <motion.i layoutId="rn-tab-dot" className={s.tabDot} transition={{ type: 'spring', stiffness: 520, damping: 40 }} />}
+    </button>
   )
 }
 
