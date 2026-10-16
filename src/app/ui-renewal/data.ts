@@ -198,3 +198,83 @@ export const RESULTS = [
     ],
   },
 ]
+
+// ---- ドヤバナーAI：見本ギャラリー（既存の見本画像を流用・使用回数は見本） ----
+export type GalleryGroup = 'taste' | 'industry' | 'purpose'
+export interface GalleryItem {
+  id: string
+  src: string
+  title: string
+  group: GalleryGroup
+  tag: string
+  uses: number
+  isNew?: boolean
+}
+
+export const GALLERY_GROUPS: { id: GalleryGroup; label: string }[] = [
+  { id: 'taste', label: 'テイスト' },
+  { id: 'industry', label: '業種' },
+  { id: 'purpose', label: '用途' },
+]
+
+const TASTES: [string, string, string][] = [
+  ['01-minimal-isometric', 'ミニマル・立体図', 'シンプル'],
+  ['02-pop-sticker', 'ポップなステッカー', 'にぎやか'],
+  ['03-future-grid', '未来的なグリッド', 'テック'],
+  ['04-gentle-pastel', 'やさしいパステル', 'やわらか'],
+  ['05-trust-navy', '信頼のネイビー', 'きちんと'],
+  ['06-luxury-monochrome', '上質なモノクロ', '高級感'],
+  ['07-fresh-aqua', 'さわやかなアクア', 'やわらか'],
+  ['08-dynamic-diagonal', '勢いのある斜め', 'にぎやか'],
+  ['09-editorial-red', '雑誌風の赤', '高級感'],
+  ['10-two-tone-split', 'ツートンで比べる', 'きちんと'],
+  ['11-isometric-system', '立体の仕組み図', 'テック'],
+  ['12-soft-3d', 'やわらかい3D', 'やわらか'],
+  ['13-hand-drawn-note', '手描きノート', 'にぎやか'],
+  ['14-data-dashboard', 'データで見せる', 'テック'],
+  ['15-modular-card', 'カードで整理', 'シンプル'],
+  ['16-circular-ecosystem', '循環の図', 'やわらか'],
+  ['17-character-story', '人物のストーリー', 'にぎやか'],
+  ['18-icon-taxonomy', 'アイコンで分類', 'シンプル'],
+  ['19-timeline-process', '流れで見せる', 'きちんと'],
+  ['20-accessible-universal', '誰でも読める', 'きちんと'],
+]
+const INDUSTRY_NAMES: [string, string][] = [
+  ['food', '飲食'], ['beauty', '美容'], ['it', 'IT・SaaS'], ['realestate', '不動産'], ['education', '教育'], ['recruit', '採用'],
+  ['ec', 'EC・通販'], ['finance', '金融'], ['health', '医療・健康'], ['marketing', 'マーケティング'], ['telecom', '通信'], ['other', 'その他'],
+]
+const PURPOSE_NAMES: [string, string][] = [
+  ['sns_ad', 'SNS広告'], ['display', 'ディスプレイ広告'], ['campaign', 'キャンペーン'], ['lp_hero', 'LPのメイン'],
+  ['webinar', 'ウェビナー'], ['email', 'メール'], ['youtube', 'YouTubeサムネ'],
+]
+
+// 使用回数は見本。並び替えの動きを見せるために、ばらつきだけ付けている
+const fakeUses = (i: number) => 180 + ((i * 7919) % 2400)
+
+export const GALLERY: GalleryItem[] = [
+  ...TASTES.map(([file, title, tag], i) => ({
+    id: `t-${file}`,
+    src: `/doyaslide/template-covers/${file}.webp`,
+    title,
+    group: 'taste' as const,
+    tag,
+    uses: fakeUses(i + 1),
+    isNew: i >= 16,
+  })),
+  ...INDUSTRY_NAMES.map(([key, name], i) => ({
+    id: `i-${key}`,
+    src: `/banner-samples/cat-${key}.webp`,
+    title: `${name}の見本`,
+    group: 'industry' as const,
+    tag: name,
+    uses: fakeUses(i + 31),
+  })),
+  ...PURPOSE_NAMES.map(([key, name], i) => ({
+    id: `p-${key}`,
+    src: `/banner-samples/purpose-${key}.webp`,
+    title: `${name}の見本`,
+    group: 'purpose' as const,
+    tag: name,
+    uses: fakeUses(i + 61),
+  })),
+]
