@@ -204,6 +204,11 @@ function AppMock({ tilt = false }: { tilt?: boolean }) {
               </span>
             ))}
           </div>
+          <div className={l.winChart} aria-hidden="true">
+            {[9, 12, 10, 16, 14, 21, 19, 27, 24, 30, 28, 34].map((v, i) => (
+              <span key={i} style={{ '--h': v / 34, '--i': i } as CSSProperties} />
+            ))}
+          </div>
         </div>
       </div>
     </div>

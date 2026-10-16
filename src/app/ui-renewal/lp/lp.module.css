@@ -389,6 +389,29 @@
   color: #fff;
   font-size: 10px;
 }
+.winChart {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 64px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+.winChart span {
+  flex: 1;
+  height: calc(var(--h) * 100%);
+  border-radius: 4px 4px 2px 2px;
+  background: var(--accent-grad);
+  transform-origin: bottom;
+  animation: lpBar 0.9s var(--ease) both;
+  animation-delay: calc(0.9s + var(--i) * 0.06s);
+}
+@keyframes lpBar {
+  from {
+    transform: scaleY(0);
+  }
+}
 @keyframes lpPop {
   from {
     opacity: 0;
@@ -425,7 +448,7 @@
 }
 .clearTitle {
   margin: 0;
-  font-size: clamp(38px, 5.2vw, 64px);
+  font-size: clamp(34px, 4.4vw, 58px);
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.18;
@@ -1185,7 +1208,7 @@
   font-size: 16px;
   letter-spacing: 0;
 }
-.num span {
+.num > span {
   font-size: 13px;
   color: var(--muted);
 }
