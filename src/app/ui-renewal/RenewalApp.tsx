@@ -51,6 +51,7 @@ const INTENTS: { words: string[]; id: string }[] = [
   { words: ['人事', '評価', 'タレント'], id: 'hr' },
   { words: ['案件', '進捗', 'ガント', 'プロマネ'], id: 'promane' },
 ]
+const RECENT_KEY = 'doya-ui-renewal-recent'
 const intentOf = (text: string) => INTENTS.find((it) => it.words.some((w) => text.toLowerCase().includes(w.toLowerCase())))?.id
 
 export function RenewalApp() {
@@ -89,10 +90,33 @@ export function RenewalApp() {
     setPaletteOpen(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+  // 最近使ったAI（閲覧者ごとの好み。保存できない環境では毎回空から始まる）
+  const [recent, setRecent] = useState<string[]>([])
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(RECENT_KEY) ?? '[]')
+      if (Array.isArray(saved)) setRecent(saved.filter((id) => typeof id === 'string' && getServiceById(id)).slice(0, 3))
+    } catch {}
+  }, [])
+  const remember = (id: string) => {
+    setRecent((r) => {
+      const next = [id, ...r.filter((x) => x !== id)].slice(0, 3)
+      try {
+        window.localStorage.setItem(RECENT_KEY, JSON.stringify(next))
+      } catch {}
+      return next
+    })
+  }
+  const isOpen = (id: string) => (TOOL_SCREENS[id] ? screen === TOOL_SCREENS[id] : screen === 'svc' && svcId === id)
+
   const openService = (id: string) => {
     const target = TOOL_SCREENS[id]
-    if (target) return go(target)
+    if (target) {
+      remember(id)
+      return go(target)
+    }
     if (SERVICE_TOOLS[id]) {
+      remember(id)
       setSvcId(id)
       return go('svc')
     }
@@ -154,7 +178,7 @@ export function RenewalApp() {
   }, [])
 
   return (
-    <div ref={rootRef} className={s.root} data-design={design} data-cursor={cursorOn ? 'on' : 'off'} onPointerMove={onPointerMove}>
+    <div ref={rootRef} className={s.root} data-design={design} data-cursor-fx={cursorOn ? 'on' : 'off'} onPointerMove={onPointerMove}>
       <Cursor enabled={cursorOn} />
       <div className={s.proposalBar}>
         <span className={s.proposalTag}>提案</span>
@@ -183,9 +207,20 @@ export function RenewalApp() {
             <NavItem icon={<Home size={17} strokeWidth={1.75} />} label="ホーム" on={screen === 'home'} onClick={() => go('home')} />
             <NavItem icon={<MapIcon size={17} strokeWidth={1.75} />} label="業務マップ" on={screen === 'map'} onClick={() => go('map')} />
 
-            <p className={s.navCap}>よく使う</p>
-            <NavItem icon={<ImageIcon size={17} strokeWidth={1.75} />} label="ドヤバナーAI" on={screen === 'banner'} onClick={() => go('banner')} />
-            <NavItem icon={<PenLine size={17} strokeWidth={1.75} />} label="ドヤ記事作成" on={screen === 'seo'} onClick={() => go('seo')} />
+            {recent.length > 0 && (
+              <>
+                <p className={s.navCap}>最近使ったAI</p>
+                {recent.map((id) => (
+                  <NavItem
+                    key={id}
+                    icon={<img src={mascotOf(id)} alt="" width={20} height={20} className={s.navMascot} />}
+                    label={getServiceById(id)?.name ?? id}
+                    on={isOpen(id)}
+                    onClick={() => openService(id)}
+                  />
+                ))}
+              </>
+            )}
 
             <p className={s.navCap}>すべてのAI</p>
             {STAGES.map((st) => {
@@ -270,19 +305,25 @@ export function RenewalApp() {
       </div>
 
       <nav className={s.tabbar} aria-label="スマホ用メニュー">
-        {(
-          [
-            ['home', 'ホーム', <Home key="h" size={20} strokeWidth={1.75} />],
-            ['map', 'マップ', <MapIcon key="m" size={20} strokeWidth={1.75} />],
-            ['banner', 'バナー', <ImageIcon key="b" size={20} strokeWidth={1.75} />],
-            ['seo', '記事', <PenLine key="s" size={20} strokeWidth={1.75} />],
-          ] as const
-        ).map(([id, label, icon]) => (
-          <button key={id} type="button" aria-current={screen === id ? 'page' : undefined} onClick={() => go(id)}>
-            {icon}
-            <span>{label}</span>
+        {/* 固定のAIは置かない：ホーム・マップと、その人が最近使ったAI（最大2つ）・探す */}
+        <button type="button" aria-current={screen === 'home' ? 'page' : undefined} onClick={() => go('home')}>
+          <Home size={20} strokeWidth={1.75} />
+          <span>ホーム</span>
+        </button>
+        <button type="button" aria-current={screen === 'map' ? 'page' : undefined} onClick={() => go('map')}>
+          <MapIcon size={20} strokeWidth={1.75} />
+          <span>マップ</span>
+        </button>
+        {recent.slice(0, 2).map((id) => (
+          <button key={id} type="button" aria-current={isOpen(id) ? 'page' : undefined} onClick={() => openService(id)}>
+            <img src={mascotOf(id)} alt="" width={22} height={22} className={s.tabMascot} />
+            <span>{getServiceById(id)?.shortName ?? id}</span>
           </button>
         ))}
+        <button type="button" onClick={() => openPalette()}>
+          <Search size={20} strokeWidth={1.75} />
+          <span>AIを探す</span>
+        </button>
       </nav>
 
       <DesignDock design={design} onChange={setDesign} cursorOn={cursorOn} onCursor={setCursorOn} />

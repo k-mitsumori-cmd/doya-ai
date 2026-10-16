@@ -3361,8 +3361,8 @@
 
 /* ---------- カーソル演出 ---------- */
 @media (pointer: fine) {
-  .root[data-cursor='on'],
-  .root[data-cursor='on'] :is(button, a, label, [role='option'], [data-cursor]) {
+  .root[data-cursor-fx='on'],
+  .root[data-cursor-fx='on'] :is(button, a, label, [role='option'], [data-cursor]) {
     cursor: none !important;
   }
 }
@@ -3388,51 +3388,37 @@
   will-change: transform;
 }
 .cursorDot {
-  width: 8px;
-  height: 8px;
-  margin: -4px 0 0 -4px;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
   border-radius: 50%;
-  background: var(--cursor-a);
-  box-shadow: 0 0 12px var(--cursor-a);
+  background: var(--ink);
 }
 .cursorRing {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  margin: -19px 0 0 -19px;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
   border-radius: 999px;
-  border: 1.5px solid var(--cursor-a);
-  transition: width 0.35s var(--ease), height 0.35s var(--ease), margin 0.35s var(--ease), background 0.3s, border-color 0.3s,
-    border-radius 0.35s var(--ease);
+  border: 1px solid color-mix(in srgb, var(--ink) 35%, transparent);
+  transition: width 0.25s var(--ease), height 0.25s var(--ease), margin 0.25s var(--ease), background 0.25s, border-color 0.25s;
 }
 .cursorRing[data-state='hover'] {
-  width: 64px;
-  height: 64px;
-  margin: -32px 0 0 -32px;
-  border-color: transparent;
-  background: color-mix(in srgb, var(--cursor-a) 18%, transparent);
-  backdrop-filter: blur(2px);
-}
-.cursorRing[data-state='hover'][data-label] {
-  width: auto;
-  min-width: 64px;
-  height: 34px;
-  margin: -17px 0 0 18px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: var(--accent-grad);
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border-color: color-mix(in srgb, var(--k2) 60%, transparent);
+  background: color-mix(in srgb, var(--k2) 8%, transparent);
 }
 .cursorRing[data-state='text'] {
-  width: 3px;
-  height: 26px;
-  margin: -13px 0 0 -1.5px;
-  border-radius: 2px;
+  width: 2px;
+  height: 20px;
+  margin: -10px 0 0 -1px;
+  border-radius: 1px;
   border-color: transparent;
-  background: var(--cursor-a);
+  background: var(--ink);
 }
 .cursorRing[data-down] {
-  scale: 0.8;
+  scale: 0.85;
 }
 .cursorLabel {
   display: none;
@@ -3442,7 +3428,7 @@
   white-space: nowrap;
 }
 .cursorRing[data-state='hover'][data-label] .cursorLabel {
-  display: block;
+  display: none;
 }
 .trail {
   position: fixed;
@@ -4639,4 +4625,261 @@
     opacity: 1;
     transform: none;
   }
+}
+
+/* ---------- 今月の削減時間（ダッシュボード型）：白い面・細い線・1色の折れ線 ---------- */
+.saved {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr);
+  grid-template-areas:
+    'head chart'
+    'goal chart';
+  gap: 22px 40px;
+  padding: 30px 32px;
+  border-radius: var(--r);
+  background: var(--card-bg);
+  border: var(--card-border);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: var(--card-blur);
+  -webkit-backdrop-filter: var(--card-blur);
+}
+.savedHead {
+  grid-area: head;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.savedLabel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.savedNum {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 10px 0 8px;
+  font-size: clamp(48px, 5.6vw, 68px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--ink);
+}
+.savedNum > span:last-child {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--sub);
+}
+.savedSub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--sub);
+}
+.savedSub b {
+  margin: 0 2px;
+  color: var(--ink);
+}
+.savedDelta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: var(--ok-bg);
+  color: var(--ok-ink);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.savedChart {
+  grid-area: chart;
+  position: relative;
+  align-self: stretch;
+  min-height: 210px;
+  padding-bottom: 24px;
+}
+.savedChart svg {
+  display: block;
+  width: 100%;
+  height: calc(100% - 24px);
+  min-height: 186px;
+  overflow: visible;
+}
+.savedGrid {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  vector-effect: non-scaling-stroke;
+}
+.savedLine {
+  stroke: var(--k2);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+/* 線は図全体を左から見せて描く（線そのものを切ると、山の頂点で線幅ぶん欠けるため。上下右に余白をとる） */
+.savedChart svg {
+  clip-path: inset(-8px 100% -8px 0);
+}
+.saved.on .savedChart svg {
+  transition: clip-path 1.6s var(--ease) 0.2s;
+  clip-path: inset(-8px -8px -8px 0);
+}
+.savedPoint {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+.saved.on .savedPoint {
+  transition: opacity 0.4s ease 1.6s;
+  opacity: 1;
+}
+.savedPoint i {
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 3px solid var(--k2);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--k2) 14%, transparent);
+}
+.savedPoint em {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.savedPoint em b {
+  margin-left: 4px;
+  font-weight: 800;
+}
+.savedAxis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+}
+.savedGoal {
+  grid-area: goal;
+  align-self: end;
+}
+.savedGoal > p:first-child {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sub);
+}
+.savedGoal > p:first-child b {
+  color: var(--ink);
+}
+.savedBar {
+  display: flex;
+  gap: 3px;
+  height: 8px;
+  border-radius: 8px;
+  background: var(--track);
+  overflow: hidden;
+}
+.savedBar span {
+  width: calc(var(--w) * 100%);
+  background: var(--c);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.saved.on .savedBar span {
+  transition: transform 0.9s var(--ease);
+  transition-delay: calc(0.3s + var(--i) * 0.12s);
+  transform: scaleX(1);
+}
+.savedLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--sub);
+}
+.savedLegend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.savedLegend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+.savedLegend b {
+  color: var(--ink);
+}
+.savedFoot {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.root[data-design='pop'] .saved {
+  border: 2px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+@media (max-width: 900px) {
+  .saved {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'head'
+      'chart'
+      'goal';
+    padding: 22px 20px;
+  }
+  .savedChart {
+    min-height: 170px;
+  }
+  .savedChart svg {
+    min-height: 146px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .savedChart svg {
+    clip-path: none;
+  }
+  .savedPoint {
+    opacity: 1;
+  }
+  .savedBar span {
+    transform: none;
+  }
+}
+
+/* 最近使ったAI（サイドバー・スマホ下部メニュー）のマスコット */
+.navMascot {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+.tabMascot {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
 }

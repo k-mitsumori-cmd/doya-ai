@@ -105,44 +105,93 @@ export function HomeScreen({ onOpen, onAsk }: { onOpen: (serviceId: string) => v
   )
 }
 
-// ---- 今月の削減時間：1マス=1時間のマス目で「どれだけ任せたか」を見せる ----
+// ---- 今月の削減時間：大きな数字＋週ごとの推移＋目標までの内訳バー（落ち着いたダッシュボード型） ----
 function SavedHours() {
   const [ref, seen] = useInView<HTMLElement>()
-  const cells = Array.from({ length: HOME.goalHours }, (_, i) => i)
-  // 各マスの色＝そのマスの時間帯を担った業務
-  const bounds: { stage: StageId; to: number }[] = []
-  let acc = 0
-  for (const sh of HOME.share) {
-    acc += sh.hours
-    bounds.push({ stage: sh.stage, to: acc })
-  }
-  const colorAt = (i: number) => {
-    const b = bounds.find((x) => i < x.to)
-    return b ? stageOf(b.stage).color : 'transparent'
-  }
   const yen = Math.round((HOME.savedHours * HOME.hourlyYen) / 1000) / 10
+  const pct = Math.round((HOME.savedHours / HOME.goalHours) * 100)
+  const weekly = HOME.weekly
+  const last = weekly[weekly.length - 1]
+  const prev = weekly[weekly.length - 2]
+  const diff = last.value - prev.value
+
+  // 折れ線（なめらかな曲線）と塗り
+  const W = 520
+  const H = 150
+  const max = Math.max(...weekly.map((w) => w.value)) * 1.15
+  const pts = weekly.map((w, i) => [(i / (weekly.length - 1)) * W, H - (w.value / max) * H] as const)
+  const line = pts
+    .map(([x, y], i) => {
+      if (i === 0) return `M${x},${y}`
+      const [px, py] = pts[i - 1]
+      const cx = (px + x) / 2
+      return `C${cx},${py} ${cx},${y} ${x},${y}`
+    })
+    .join(' ')
+  const [lx, ly] = pts[pts.length - 1]
 
   return (
-    <section ref={ref} className={`${s.hero} ${seen ? s.on : ''}`}>
-      {/* ゆっくり動く光（Stripe）と粒子ノイズ（Raycast） */}
-      <span className={s.heroGlow} aria-hidden="true">
-        <i />
-        <i />
-        <i />
-      </span>
-      <span className={s.heroGrain} aria-hidden="true" />
-      <div className={s.heroCopy}>
-        <img src="/character/success-256.webp" alt="" className={s.heroMascot} width={150} height={150} />
-        <p className={s.heroLabel}>今月AIに任せられた時間</p>
-        <p className={s.heroNum}>
-          <Odometer value={HOME.savedHours} decimals={1} start={seen} />
-          <span className={s.heroUnit}>時間</span>
+    <section ref={ref} className={`${s.saved} ${seen ? s.on : ''}`} data-spot>
+      <div className={s.savedHead}>
+        <div>
+          <p className={s.savedLabel}>今月AIに任せられた時間</p>
+          <p className={s.savedNum}>
+            <Odometer value={HOME.savedHours} decimals={1} start={seen} />
+            <span>時間</span>
+          </p>
+          <p className={s.savedSub}>
+            人の手でやると 約<b>{yen}万円</b> 分の作業です
+          </p>
+        </div>
+        <span className={s.savedDelta}>
+          <TrendingUp size={14} strokeWidth={2.2} />
+          先週より +{diff}時間
+        </span>
+      </div>
+
+      <div className={s.savedChart}>
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="saved-fill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" style={{ stopColor: 'var(--k2)' }} stopOpacity="0.18" />
+              <stop offset="1" style={{ stopColor: 'var(--k2)' }} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {[0.25, 0.5, 0.75].map((g) => (
+            <line key={g} x1="0" x2={W} y1={H * g} y2={H * g} className={s.savedGrid} />
+          ))}
+          <path d={`${line} L${W},${H} L0,${H} Z`} fill="url(#saved-fill)" className={s.savedArea} />
+          <path d={line} fill="none" className={s.savedLine} />
+        </svg>
+        <span className={s.savedPoint} style={{ left: `${(lx / W) * 100}%`, top: `${(ly / H) * 100}%` }}>
+          <i />
+          <em>
+            {last.label}週 <b>{last.value}時間</b>
+          </em>
+        </span>
+        <div className={s.savedAxis}>
+          {weekly.map((w) => (
+            <span key={w.label}>{w.label}</span>
+          ))}
+        </div>
+      </div>
+
+      <div className={s.savedGoal}>
+        <p>
+          目標 {HOME.goalHours}時間まで <b>{pct}%</b>
         </p>
-        <p className={s.heroSub}>
-          人の手でやると 約<strong>{yen}万円</strong> 分の作業です
-          <span className={s.heroFoot}>時給{HOME.hourlyYen.toLocaleString()}円で換算・見本の数値</span>
-        </p>
-        <ul className={s.legend}>
+        <div className={s.savedBar} role="img" aria-label={`目標${HOME.goalHours}時間のうち${HOME.savedHours}時間`}>
+          {HOME.share.map((sh, i) => {
+            const st = stageOf(sh.stage)
+            return (
+              <span
+                key={sh.stage}
+                style={{ '--w': sh.hours / HOME.goalHours, '--c': st.color, '--i': i } as CSSProperties}
+              />
+            )
+          })}
+        </div>
+        <ul className={s.savedLegend}>
           {HOME.share.map((sh) => {
             const st = stageOf(sh.stage)
             return (
@@ -154,27 +203,7 @@ function SavedHours() {
             )
           })}
         </ul>
-      </div>
-      <div className={s.hourGridWrap}>
-        <div className={s.hourGrid} role="img" aria-label={`目標${HOME.goalHours}時間のうち${HOME.savedHours}時間`}>
-          {cells.map((i) => {
-            const fill = Math.max(0, Math.min(1, HOME.savedHours - i))
-            return (
-              <span key={i} className={s.cell} style={{ '--i': i } as CSSProperties}>
-                {fill > 0 && (
-                  <span
-                    className={s.cellFill}
-                    style={{ background: colorAt(i), '--fill': fill } as CSSProperties}
-                  />
-                )}
-              </span>
-            )
-          })}
-        </div>
-        <div className={s.hourScale}>
-          <span>0</span>
-          <span>目標 {HOME.goalHours}時間</span>
-        </div>
+        <p className={s.savedFoot}>時給{HOME.hourlyYen.toLocaleString()}円で換算・見本の数値</p>
       </div>
     </section>
   )

@@ -17,7 +17,8 @@ export const DESIGNS: { id: Design; label: string; note: string; swatch: string 
 
 // v3: クリアを既定に決めた時点で、以前の選択は持ち越さない
 const KEY = 'doya-ui-renewal-design-v3'
-const CURSOR_KEY = 'doya-ui-renewal-cursor'
+// v2: 演出を既定でオフにした時点で、以前の設定は持ち越さない
+const CURSOR_KEY = 'doya-ui-renewal-cursor-v2'
 
 function read(key: string) {
   try {
@@ -34,11 +35,11 @@ function write(key: string, value: string) {
 
 export function useDesign() {
   const [design, setDesignState] = useState<Design>('clear')
-  const [cursorOn, setCursorOnState] = useState(true)
+  const [cursorOn, setCursorOnState] = useState(false)
   useEffect(() => {
     const saved = read(KEY)
     if (DESIGNS.some((d) => d.id === saved)) setDesignState(saved as Design)
-    if (read(CURSOR_KEY) === 'off') setCursorOnState(false)
+    if (read(CURSOR_KEY) === 'on') setCursorOnState(true)
   }, [])
   const setDesign = (d: Design) => {
     setDesignState(d)

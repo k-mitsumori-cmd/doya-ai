@@ -46,7 +46,7 @@ export function LpSample() {
       ref={root}
       className={`${s.root} ${l.lp}`}
       data-design={design}
-      data-cursor={cursorOn ? 'on' : 'off'}
+      data-cursor-fx={cursorOn ? 'on' : 'off'}
       onPointerMove={onPointerMove}
     >
       <Cursor enabled={cursorOn} />
