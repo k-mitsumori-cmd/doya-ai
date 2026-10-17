@@ -21,6 +21,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/income-schedule",
+      "schedule": "0 21 * * *"
+    },
+    {
       "path": "/api/cron/aishodan-evaluations",
       "schedule": "*/5 * * * *"
     },

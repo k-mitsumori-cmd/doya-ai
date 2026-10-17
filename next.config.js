@@ -20,6 +20,7 @@ const APP_ONLY_PREFIXES = [
   '/adimage/history',
   '/asklink/history',
   '/popup/sites', '/popup/edit',
+  '/income/clients', '/income/contracts', '/income/revenue', '/income/invoices', '/income/payments', '/income/settings',
   '/opening/dashboard',
   '/tenkai/projects',
   '/aio/invite', '/sfa/invite', '/shodan/invite', '/promane/invite',
