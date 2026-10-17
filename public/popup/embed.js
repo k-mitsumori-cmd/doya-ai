@@ -272,7 +272,7 @@
     if (current) return
     var colors = p.colors || {}
     var bg = /^#[0-9a-f]{6}$/i.test(colors.bg || '') ? colors.bg : '#ffffff'
-    var accent = /^#[0-9a-f]{6}$/i.test(colors.accent || '') ? colors.accent : '#ff5a36'
+    var accent = /^#[0-9a-f]{6}$/i.test(colors.accent || '') ? colors.accent : '#0066ff'
     var text = /^#[0-9a-f]{6}$/i.test(colors.text || '') ? colors.text : '#1f2430'
     var mobile = isMobile()
     var layout = p.layout === 'slide' || p.layout === 'bar' ? p.layout : 'modal'

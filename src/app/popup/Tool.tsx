@@ -2,65 +2,67 @@
 
 // ドヤポップアップ ログイン後のトップ: 提案の作成とサイト一覧
 // 流れ: URL → 読み取り＋質問リンク＋3案（十数秒〜数十秒）→ サイト詳細へ
-import { useCallback, useEffect, useState } from 'react'
+// ⚠️ 初期表示のサイト一覧はサーバ（page.tsx → popup-read.ts）で取って渡す
+import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, ArrowRight, CheckCircle2, CircleDashed, Globe, Loader2, PanelTopOpen, Sparkles } from 'lucide-react'
+import { AlertTriangle, ArrowRight, CheckCircle2, CircleDashed, Globe, Sparkles } from 'lucide-react'
 import type { SiteDto } from '@/lib/popup/dto'
-import { fmt, pct } from '@/components/popup/ui'
+import { EmptyState, PageHeader, ProcessingSteps, fmt, pct } from '@/components/popup/ui'
+import { useInPopupShell } from '@/components/popup/shell-context'
 
 const LOADING_STEPS = ['サイトを読み取っています', '「AIに聞く」の質問文を作っています', 'ポップアップの案をまとめています']
 
 function SiteCard({ s }: { s: SiteDto }) {
   return (
-    <Link
-      href={`/popup/sites/${s.id}`}
-      className="group block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
-    >
-      <div className="flex items-start justify-between gap-3">
+    <Link href={`/popup/sites/${s.id}`} className="pd-card group block transition-shadow hover:shadow-[var(--shadow-lg)]">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="truncate text-base font-black text-slate-900">{s.name}</p>
-          <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-bold text-slate-500">
-            <Globe className="h-3.5 w-3.5 shrink-0" />
+          <p className="pd-h2 truncate">{s.name}</p>
+          <p className="pd-label mt-1 flex items-center gap-1 truncate">
+            <Globe className="h-4 w-4 shrink-0" aria-hidden />
             {s.domain}
           </p>
         </div>
-        <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition-colors group-hover:text-[#ff5a36]" />
+        <ArrowRight className="h-5 w-5 shrink-0 text-[color:var(--muted)] group-hover:text-[color:var(--blue)]" aria-hidden />
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black">
+      <div className="mt-4 flex flex-wrap gap-2">
         {s.lastSeenAt ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">
-            <CheckCircle2 className="h-3 w-3" />
+          <span className="pd-chip pd-chip-ok">
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
             タグ設置済み
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">
-            <CircleDashed className="h-3 w-3" />
+          <span className="pd-chip pd-chip-note">
+            <CircleDashed className="h-3.5 w-3.5" aria-hidden />
             タグ未設置
           </span>
         )}
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">公開中 {s.liveCount}件</span>
+        <span className="pd-chip">公開中 {s.liveCount}件</span>
       </div>
-      <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-center">
+      <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-[color:var(--line)] pt-4">
         <div>
-          <dt className="text-[10px] font-black text-slate-400">表示（30日）</dt>
-          <dd className="text-lg font-black tabular-nums text-slate-900">{fmt(s.totals.impressions)}</dd>
+          <dt className="pd-label">表示（30日）</dt>
+          <dd className="pd-tabular text-xl font-bold">{fmt(s.totals.impressions)}</dd>
         </div>
         <div>
-          <dt className="text-[10px] font-black text-slate-400">クリック</dt>
-          <dd className="text-lg font-black tabular-nums text-slate-900">{fmt(s.totals.clicks)}</dd>
+          <dt className="pd-label">クリック</dt>
+          <dd className="pd-tabular text-xl font-bold">{fmt(s.totals.clicks)}</dd>
         </div>
         <div>
-          <dt className="text-[10px] font-black text-slate-400">クリック率</dt>
-          <dd className="text-lg font-black tabular-nums text-[#e0442c]">{pct(s.totals.ctr)}</dd>
+          <dt className="pd-label">クリック率</dt>
+          <dd className="pd-tabular text-xl font-bold text-[color:var(--blue)]">{pct(s.totals.ctr)}</dd>
         </div>
       </dl>
     </Link>
   )
 }
 
-export default function PopupTool() {
+export default function PopupTool({ initialSites }: { initialSites: SiteDto[] }) {
   const router = useRouter()
+  // 共通シェルの中では ToolFrame が同じ見出しと説明を出すので、ここでは出さない
+  const inShell = useInPopupShell()
   const [url, setUrl] = useState('')
   const [manualText, setManualText] = useState('')
   const [needManual, setNeedManual] = useState(false)
@@ -68,21 +70,7 @@ export default function PopupTool() {
   const [step, setStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [limit, setLimit] = useState<{ message: string; upgradeUrl?: string } | null>(null)
-  const [sites, setSites] = useState<SiteDto[] | null>(null)
-
-  const load = useCallback(async () => {
-    const res = await fetch('/api/popup/sites', { cache: 'no-store' })
-    if (res.status === 401) {
-      window.location.href = '/auth/signin?callbackUrl=/popup'
-      return
-    }
-    const data = await res.json().catch(() => ({}))
-    setSites(Array.isArray(data?.sites) ? data.sites : [])
-  }, [])
-
-  useEffect(() => {
-    void load()
-  }, [load])
+  const sites = initialSites
 
   useEffect(() => {
     if (!loading) return
@@ -91,8 +79,10 @@ export default function PopupTool() {
     return () => clearInterval(t)
   }, [loading])
 
+  const urlLooksValid = /^(https?:\/\/)?[^\s/]+\.[^\s]+/.test(url.trim())
+
   const create = async () => {
-    if (loading || !url.trim()) return
+    if (loading || !urlLooksValid) return
     setLoading(true)
     setError(null)
     setLimit(null)
@@ -121,6 +111,7 @@ export default function PopupTool() {
         return
       }
       window.dispatchEvent(new Event('popup:generated'))
+      // 作った案はサーバに残っているので、途中で画面を閉じても結果は消えない
       router.push(`/popup/sites/${data.site.id}?created=1`)
     } catch {
       setError('通信に失敗しました。接続を確かめてもう一度お試しください。')
@@ -130,50 +121,61 @@ export default function PopupTool() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-10">
-      <div className="flex items-center gap-3">
-        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-[#ff5a36] to-[#b8202f] text-white shadow">
-          <PanelTopOpen className="h-6 w-6" />
-        </span>
-        <div>
-          <h1 className="text-xl font-black text-slate-900 md:text-2xl">ドヤポップアップ</h1>
-          <p className="text-xs font-bold text-slate-500 md:text-sm">URLを入れるだけで、AIがサイトに合ったポップアップを提案します。</p>
-        </div>
-        <span className="ml-auto rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-black text-[#d9362b]">BETA</span>
-      </div>
+    <div className="pd-page mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-12">
+      {!inShell && (
+        <PageHeader
+          title={
+            <span className="flex items-center gap-3">
+              ドヤポップアップ
+              <span className="pd-chip pd-chip-blue">開発中</span>
+            </span>
+          }
+          sub="URLを入れるだけで、AIがサイトに合ったポップアップを提案します。"
+        />
+      )}
 
-      <section className="mt-6 rounded-3xl border border-orange-100 bg-gradient-to-br from-white to-orange-50/60 p-5 shadow-sm md:p-7">
-        <label htmlFor="popup-url" className="text-sm font-black text-slate-800">
-          ポップアップを出したいサイトのURL
-        </label>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-          <input
-            id="popup-url"
-            type="url"
-            inputMode="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.nativeEvent.isComposing) void create()
-            }}
-            placeholder="https://example.co.jp/"
-            disabled={loading}
-            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-base font-bold text-slate-900 outline-none placeholder:text-slate-300 focus:border-[#ff5a36] focus:ring-2 focus:ring-orange-100"
-          />
-          <button
-            type="button"
-            onClick={() => void create()}
-            disabled={loading || !url.trim()}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#ff5a36] px-6 py-3 text-sm font-black text-white shadow-md transition-colors hover:bg-[#e8482a] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            提案を作る
-          </button>
+      <section className={`pd-card ${inShell ? '' : 'mt-8'}`} aria-labelledby="popup-create">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center">
+          <div className="min-w-0 flex-1">
+            <h2 id="popup-create" className="pd-h2">
+              ポップアップを出したいサイトのURL
+            </h2>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <label htmlFor="popup-url" className="sr-only">
+                サイトのURL
+              </label>
+              <input
+                id="popup-url"
+                type="url"
+                inputMode="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) void create()
+                }}
+                placeholder="https://example.co.jp/"
+                disabled={loading}
+                aria-invalid={url.trim().length > 0 && !urlLooksValid}
+                aria-describedby="popup-url-help"
+                className="pd-input min-w-0 flex-1"
+              />
+              <button type="button" onClick={() => void create()} disabled={loading || !urlLooksValid} className="pd-btn">
+                <Sparkles className="h-4 w-4" aria-hidden />
+                提案を作る
+              </button>
+            </div>
+            <p id="popup-url-help" className="pd-label mt-2">
+              {url.trim().length > 0 && !urlLooksValid
+                ? 'URLの形になっていません（例: https://example.co.jp/）'
+                : '「AIに聞く」・相談や申し込みへの案内・おすすめページの3案を、下書きで作ります。公開するまでサイトには何も出ません。'}
+            </p>
+          </div>
+          <Image src="/ui-renewal/mascots/popup.webp" alt="" width={720} height={600} className="mx-auto hidden h-auto w-[200px] md:block" priority />
         </div>
 
         {needManual && (
-          <div className="mt-3">
-            <label htmlFor="popup-manual" className="text-xs font-black text-slate-700">
+          <div className="mt-4">
+            <label htmlFor="popup-manual" className="pd-label">
               サービスの説明（サイトを読み取れなかったときの手入力。20〜3000字）
             </label>
             <textarea
@@ -181,60 +183,59 @@ export default function PopupTool() {
               value={manualText}
               onChange={(e) => setManualText(e.target.value)}
               rows={4}
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-[#ff5a36]"
+              className="pd-input mt-1"
               placeholder="何を提供しているか、強み、対象のお客さまなど"
             />
           </div>
         )}
-
-        {loading && (
-          <p className="mt-3 flex items-center gap-2 text-sm font-bold text-slate-600" role="status">
-            <Loader2 className="h-4 w-4 animate-spin text-[#ff5a36]" />
-            {LOADING_STEPS[step]}（30秒ほどかかります）
-          </p>
-        )}
         {error && (
-          <p className="mt-3 flex items-start gap-2 rounded-xl bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700" role="alert">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p className="pd-error mt-4 flex items-start gap-2" role="alert">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             {error}
           </p>
         )}
         {limit && (
-          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800" role="alert">
+          <p className="pd-note mt-4" role="alert">
             {limit.message}
             {limit.upgradeUrl && (
-              <Link href={limit.upgradeUrl} className="ml-2 underline">
+              <Link href={limit.upgradeUrl} className="ml-2 font-bold underline">
                 料金プランを見る
               </Link>
             )}
-          </div>
+          </p>
         )}
-        <p className="mt-3 text-[11px] font-bold text-slate-400">
-          「AIに聞く」・相談や申し込みへの案内・おすすめページの3案を、下書きで作ります。公開するまでサイトには何も出ません。
-        </p>
       </section>
 
-      <section className="mt-10">
-        <h2 className="text-sm font-black text-slate-800">あなたのサイト</h2>
-        {sites === null ? (
-          <div className="mt-3 grid gap-4 md:grid-cols-2">
-            {[0, 1].map((i) => (
-              <div key={i} className="h-44 animate-pulse rounded-2xl bg-white" />
-            ))}
-          </div>
-        ) : sites.length === 0 ? (
-          <div className="mt-3 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
-            <PanelTopOpen className="mx-auto h-8 w-8 text-slate-300" />
-            <p className="mt-2 text-sm font-black text-slate-700">まだサイトがありません</p>
-            <p className="mt-1 text-xs font-bold text-slate-500">上にURLを入れると、最初の提案ができます。</p>
-          </div>
-        ) : (
-          <div className="mt-3 grid gap-4 md:grid-cols-2">
-            {sites.map((s) => (
-              <SiteCard key={s.id} s={s} />
-            ))}
-          </div>
-        )}
+      {loading && (
+        <div className="mt-4">
+          <ProcessingSteps steps={LOADING_STEPS} current={step} note="30秒ほどかかります。画面を閉じても、できた案はサイト一覧に残ります" />
+        </div>
+      )}
+
+      <section className="mt-12" aria-labelledby="popup-sites">
+        <h2 id="popup-sites" className="pd-h2">
+          あなたのサイト
+        </h2>
+        <div className="mt-4">
+          {sites.length === 0 ? (
+            <EmptyState
+              image="/popup/empty-sites.webp"
+              title="まだサイトがありません"
+              body="上の欄にサイトのURLを入れると、最初の提案ができます。"
+              action={
+                <button type="button" className="pd-btn-outline" onClick={() => document.getElementById('popup-url')?.focus()}>
+                  URLを入れる
+                </button>
+              }
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {sites.map((s) => (
+                <SiteCard key={s.id} s={s} />
+              ))}
+            </div>
+          )}
+        </div>
       </section>
     </div>
   )
