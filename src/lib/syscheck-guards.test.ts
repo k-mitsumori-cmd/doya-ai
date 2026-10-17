@@ -74,3 +74,12 @@ test('BILL-051: 日次サマリの Cron は、プランを直接書き換えず�
   assert.doesNotMatch(src, /plan: 'FREE',\s*\n\s*stripeSubscriptionId: null,\s*\n\s*stripePriceId: null/)
   assert.doesNotMatch(src, /userServiceSubscription\.update\(/)
 })
+
+test('SEC-069: インタビュー素材は確定時に中身を検査し、署名付き URL を DB に保存しない', () => {
+  const confirm = read('src/app/api/interview/materials/confirm/route.ts')
+  assert.match(confirm, /matchesInterviewFileSignature\(/)
+  assert.match(confirm, /const fileUrl = `storage:\$\{storagePath\}`/)
+  assert.doesNotMatch(confirm, /getSignedFileUrl\(storagePath, 7 \* 24 \* 3600\)/)
+  const detail = read('src/app/api/interview/materials/[id]/route.ts')
+  assert.doesNotMatch(detail, /let fileUrl = material\.fileUrl/)
+})

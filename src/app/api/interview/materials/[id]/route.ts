@@ -50,13 +50,14 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const ownerErr = checkOwnership(material.project, userId, guestId)
     if (ownerErr) return ownerErr
 
-    // fileUrlが期限切れの場合は再取得
-    let fileUrl = material.fileUrl
+    // DB の fileUrl は返さない（確定済みの目印、または旧形式の 7 日有効の署名付き URL のため。SEC-069）。
+    // 確定済みの素材だけ、その場で 1 時間有効の署名付き URL を発行して返す。発行できなければ null。
+    let fileUrl: string | null = null
     if (material.filePath && material.status === 'COMPLETED') {
       try {
         fileUrl = await getSignedFileUrl(material.filePath, 3600)
       } catch {
-        // ストレージ接続できない場合は既存URLを使う
+        fileUrl = null
       }
     }
 
