@@ -20,8 +20,9 @@
 
 | 機能 | 場所 |
 | --- | --- |
-| 画面 | `/tenjikai`（`src/app/tenjikai/`）。本体は `src/components/tenjikai/TenjikaiApp.tsx`。1 画面の中でセクションを切り替える |
-| サイドバー | `src/components/tenjikai/TenjikaiSidebar.tsx`（共通部品 `@/components/sidebar` と `ToolSwitcherMenu`）。項目は `src/lib/tenjikai/nav.ts`（R-1） |
+| 画面 | `/tenjikai` と `/tenjikai/<section>`（overview / booth / creatives / novelty / budget / vendors / docs）。本体の `TenjikaiApp.tsx` は `layout.tsx` に置き、URL からセクションを決める（セクションを移っても状態が残る）。`page.tsx` は URL を受けるだけ |
+| 共通シェル | フラグ `UI_SHELL_SERVICES` に `tenjikai` があるとき、`TenjikaiShellFrame.tsx` が AppShell＋ToolFrame で包む（ナビは nav.ts）。無いときは暫定の TenjikaiSidebar |
+| サイドバー（フラグ OFF） | `src/components/tenjikai/TenjikaiSidebar.tsx`（共通部品 `@/components/sidebar` と `ToolSwitcherMenu`）。項目は `src/lib/tenjikai/nav.ts`（R-1。型は `ShellNavItem`） |
 | 見た目 | 色・角丸・影はリニューアルの ds トークン名に合わせる（R-3）。CSS 変数は `src/app/tenjikai/tenjikai.css` の `.tenjikai-root`、SVG とアニメーション用の値は `src/lib/tenjikai/tokens.ts`。Tailwind の `doya-*` / `ink` はその変数を参照する |
 | 生成 | `src/lib/tenjikai/engine.ts`（現在はモック。Gemini テキストへの置き換えは別ブランチで作業中） |
 | 画像生成 | `src/lib/tenjikai/imagegen.ts`、`/api/tenjikai/image`。**`TENJIKAI_IMAGEGEN_ENABLED=true` のときだけ動く（本番は未設定＝無効）**。ログイン必須・見込み額の承認必須・1 日の上限額・ユーザーごとの回数制限あり |

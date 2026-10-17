@@ -2,14 +2,14 @@
 
 - 生成日: 2026-10-18
 - 手段: Codex の内蔵画像生成（`codex exec -m gpt-5.6-sol`、ChatGPT の定額枠）。実行前に `~/.codex/auth.json` が `auth_mode=chatgpt`・API キー無しであることを確かめた。`OPENAI_API_KEY` は渡していない（`env -u OPENAI_API_KEY`）。従量課金の画像 API は使っていない
-- 書き出し: sharp で指定の大きさに縮小し、中央で切り出して WebP にした（品質86、各300KB以下）。アイコンは角丸の外側を透過にした。OGP は既存の `public/ogp/<id>.jpg` に合わせて JPEG にした
+- 書き出し: sharp で指定の大きさに縮小し、中央で切り出して WebP にした（品質86、各300KB以下）。アイコンは透過の PNG をそのまま縮小した。OGP は既存の `public/ogp/<id>.jpg` に合わせて JPEG にした
 - 作り直すときは、下の「依頼文の全文」から始める
 
 ## 一覧
 
 | 置き場所 | 大きさ | 依頼文の番号 | 採用した版 | 使うところ |
 | --- | --- | --- | --- | --- |
-| `public/renewal/icons/tenjikai.webp` | 256×256 | 1（icon.png） | 1版目 | AppShell のサイドバー・⌘K・ホームのカード |
+| `public/renewal/icons/tenjikai.webp` | 256×256 | 下の「アイコン（作り直し）」 | 2版目（1版目は角丸正方形のグラデーション型だった。§12.1 の訂正に合わせ、シロクマのステッカー型で作り直した） | AppShell のサイドバー・⌘K・ホームのカード |
 | `public/ui-renewal/mascots/tenjikai.webp` | 720×600 | 2（mascot.png） | 1版目 | ツールのトップ（入力画面の左）・ホームの提案カード |
 | `public/tenjikai/hero.webp` | 1600×900 | 3（hero.png） | 1版目 | 公開 LP のヒーロー・ツールのトップ |
 | `public/tenjikai/step-1.webp` | 1200×800 | 4 | 1版目 | LP の使い方・初回ガイド（URLと条件を入れる） |
@@ -65,4 +65,24 @@ Common rules for every image:
 11. ogp.png — 1200x630. OGP card following the layout of in/ogp_layout_ref.png (same composition, same typography style, same placement of the bear and the brand area), but for this tool: main title in Japanese 「ドヤ展示会」, sub copy in Japanese 「URLを入れるだけで、展示会の準備を一式そろえる」, and the small brand label 「ドヤAI」. Use the booth scene and the bear from the hero. Japanese characters must be exactly as given.
 
 After saving all files, reply only with the list of file names.
+```
+
+## アイコン（作り直し。2026-10-18）
+
+統合仕様 §12.1 の訂正で、ツールアイコンはシロクマのステッカー型になった。1版目（下の依頼文 1 の角丸正方形）は使わない。
+
+- 参照画像: `public/renewal/icons/adimage.webp` と `public/renewal/icons/hr.webp`（PNG にして `-i` で渡した）
+- 実行: `env -u OPENAI_API_KEY codex exec -m gpt-5.6-sol --skip-git-repo-check -s workspace-write -C <作業フォルダ> -i in/icon_adimage.png -i in/icon_hr.png - < prompt.md`
+- 採用前に、adimage のアイコンと並べて見比べた（白い縁取り・青い外枠・ゴーグル・線の太さ）。64px でもブースの形が分かる
+
+```text
+Use your built-in image generation tool. Create ONE image and save it as icon.png in the current directory.
+
+It is a tool icon for "Doya Tenjikai" (trade-show exhibition preparation). Match the attached reference icons in/icon_adimage.png and in/icon_hr.png exactly in style: a die-cut sticker of the DoyaAI polar bear (white fluffy body, blue goggles over the eyes showing "^ ^" happy eyes, white hoodie), thick white outline around the whole sticker with a thin blue outer edge, flat-shaded cartoon render with blue (#0066ff, #0047d6) accents, transparent background. Upper body, smiling.
+
+The bear holds ONE object that represents the tool: a small isometric exhibition booth (a blue back wall with a white reception counter in front). The object should be large and readable at 64px.
+
+No text, no letters, no numbers. No other colors except blue and white tones (one tiny yellow #ffd400 highlight is allowed). Square 1024x1024, transparent background.
+
+After saving, reply only with the file name.
 ```

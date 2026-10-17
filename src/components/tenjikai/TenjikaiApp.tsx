@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu } from 'lucide-react'
-import TenjikaiSidebar, { type Section } from './TenjikaiSidebar'
+import { usePathname, useRouter } from 'next/navigation'
+import TenjikaiSidebar from './TenjikaiSidebar'
+import { sectionFromPath, sectionHref, type Section } from '@/lib/tenjikai/nav'
 import Wizard from './Wizard'
 import Generating from './Generating'
 import Overview from './Overview'
@@ -30,9 +32,12 @@ import {
 
 type Phase = 'input' | 'generating' | 'ready'
 
-export default function TenjikaiApp() {
+// ⚠️ src/app/tenjikai/layout.tsx に置く。セクション（/tenjikai/<section>）を移っても、ここの状態は残る。
+// shell=true のときは共通シェル（AppShell＋ToolFrame）の中身だけを描き、独自のサイドバーと外枠を出さない。
+export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
+  const router = useRouter()
+  const section = sectionFromPath(usePathname())
   const [phase, setPhase] = useState<Phase>('input')
-  const [section, setSection] = useState<Section>('new')
   const [input, setInput] = useState<ProjectInput>(SAMPLE_INPUT)
   const [variant, setVariant] = useState<'A' | 'B' | 'C'>('A')
   const [selectedNovelty, setSelectedNovelty] = useState<string[]>([])
@@ -81,13 +86,13 @@ export default function TenjikaiApp() {
   useEffect(() => {
     if (phase === 'generating' && animDone && !pending) {
       setPhase('ready')
-      setSection('overview')
+      router.push(sectionHref('overview'))
     }
-  }, [phase, animDone, pending])
+  }, [phase, animDone, pending, router])
 
   const go = (s: Section) => {
     if (s === 'new') setPhase('input')
-    setSection(s)
+    router.push(sectionHref(s))
     setMobileOpen(false)
   }
 
@@ -121,6 +126,31 @@ export default function TenjikaiApp() {
 
   const key = phase === 'ready' ? section : phase
 
+  const body = (
+    <>
+      {phase === 'ready' && section !== 'new' && generated.notice && (
+        <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900">{generated.notice}</p>
+        </div>
+      )}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={key}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="min-h-full"
+        >
+          {content}
+        </motion.div>
+      </AnimatePresence>
+    </>
+  )
+
+  // 共通シェルの中：外枠・サイドバー・スマホの見出しはシェル側が持つ
+  if (shell) return <div className="tenjikai-root text-ink">{body}</div>
+
   return (
     <div className="tenjikai-root flex h-screen overflow-hidden bg-[var(--bg)] text-ink">
       <div className="hidden md:flex">
@@ -147,25 +177,7 @@ export default function TenjikaiApp() {
           <span className="font-display text-lg text-ink">ドヤ展示会</span>
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">開発中</span>
         </div>
-        <div className="floor flex-1 overflow-y-auto">
-          {phase === 'ready' && section !== 'new' && generated.notice && (
-            <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">
-              <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900">{generated.notice}</p>
-            </div>
-          )}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={key}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="min-h-full"
-            >
-              {content}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+        <div className="floor flex-1 overflow-y-auto">{body}</div>
       </main>
     </div>
   )

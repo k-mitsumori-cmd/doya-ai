@@ -59,7 +59,7 @@ export async function listTasks(
     owner: r.owner,
     dueAt: r.dueAt,
     done: r.done,
-    href: '/tenjikai?section=docs',
+    href: '/tenjikai/docs',
   }))
 }
 
@@ -90,7 +90,7 @@ export async function listCalendarEvents(ctx: TenjikaiReadCtx, from: Date, to: D
   for (const p of projects) {
     const end = new Date(p.eventStart.getTime() + (Math.max(p.eventDays, 1) - 1) * DAY_MS)
     if (end < from) continue
-    events.push({ id: `event:${p.id}`, kind: 'event', title: `${p.eventName}（会期）`, start: p.eventStart, end, projectId: p.id, projectName: p.name, href: '/tenjikai?section=overview' })
+    events.push({ id: `event:${p.id}`, kind: 'event', title: `${p.eventName}（会期）`, start: p.eventStart, end, projectId: p.id, projectName: p.name, href: '/tenjikai/overview' })
   }
 
   const tasks = await ctx.db.tenjikaiTask.findMany({
@@ -101,7 +101,7 @@ export async function listCalendarEvents(ctx: TenjikaiReadCtx, from: Date, to: D
   })
   for (const t of tasks) {
     const kind = t.kind === 'application' || t.kind === 'submission' || t.kind === 'order' ? t.kind : 'application'
-    events.push({ id: `task:${t.id}`, kind, title: t.title, start: t.dueAt, projectId: t.projectId, projectName: t.project.name, done: t.done, href: '/tenjikai?section=docs' })
+    events.push({ id: `task:${t.id}`, kind, title: t.title, start: t.dueAt, projectId: t.projectId, projectName: t.project.name, done: t.done, href: '/tenjikai/docs' })
   }
 
   const docs = await ctx.db.tenjikaiDocument.findMany({
@@ -112,7 +112,7 @@ export async function listCalendarEvents(ctx: TenjikaiReadCtx, from: Date, to: D
   })
   for (const d of docs) {
     if (!d.dueAt) continue
-    events.push({ id: `doc:${d.id}`, kind: 'document', title: `${d.title}の期限`, start: d.dueAt, projectId: d.projectId, projectName: d.project.name, href: '/tenjikai?section=docs' })
+    events.push({ id: `doc:${d.id}`, kind: 'document', title: `${d.title}の期限`, start: d.dueAt, projectId: d.projectId, projectName: d.project.name, href: '/tenjikai/docs' })
   }
 
   return events.sort((a, b) => a.start.getTime() - b.start.getTime() || a.id.localeCompare(b.id))
@@ -165,7 +165,7 @@ export async function summary(ctx: TenjikaiReadCtx, now = new Date(), windowDays
       budgetYen: p.budgetYen,
       committedYen,
       budgetUsedRatio: p.budgetYen > 0 ? committedYen / p.budgetYen : null,
-      href: '/tenjikai?section=overview',
+      href: '/tenjikai/overview',
     }
   })
 }

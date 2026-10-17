@@ -44,7 +44,7 @@ test('listTasks は自分のプロジェクトの未完了タスクだけを締�
   })
   const rows = await listTasks({ db, userId: 'u1' })
   assert.equal(rows.length, 1)
-  assert.deepEqual(rows[0], { id: 't1', projectId: 'p1', projectName: '展示会A', title: '大判グラフィックの入稿', kind: 'submission', owner: '印刷・ノベルティ', dueAt, done: false, href: '/tenjikai?section=docs' })
+  assert.deepEqual(rows[0], { id: 't1', projectId: 'p1', projectName: '展示会A', title: '大判グラフィックの入稿', kind: 'submission', owner: '印刷・ノベルティ', dueAt, done: false, href: '/tenjikai/docs' })
   assert.equal(calls[0].args.where.project.userId, 'u1')
   assert.equal(calls[0].args.where.done, false)
   assert.deepEqual(calls[0].args.orderBy, [{ dueAt: 'asc' }, { id: 'asc' }])
