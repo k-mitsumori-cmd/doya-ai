@@ -1713,12 +1713,13 @@ export const SERVICES: Service[] = [
       free: { name: '無料プラン', limit: '提案3回・1サイトまで', dailyLimit: -1, price: 0 },
       pro: { name: 'プロプラン', limit: '提案は月30回、サイトは何件でも登録できます', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
-    // 開発中。対外的な面には出さない（UNLISTED_SERVICE_IDS）。ログイン後は使える
-    status: 'coming_soon',
+    status: 'active',
+    // 2026-10-18: 正式公開。当面は NEW ではなく BETA を出す（asklink と同じ扱い）
     badge: 'BETA',
     category: 'web',
     order: 33,
     requiresAuth: true,
+    isNew: true,
   },
 ]
 
@@ -1771,7 +1772,7 @@ export const RETIRED_SERVICE_IDS = new Set([
 // トップ・sitemap・llms.txt・公開LP（/all-in-one）からは消えるが、
 // ログイン後のツール切替・サイドバーの他サービス一覧・直リンクでは従来どおり使える。
 // 公開する時はここから id を外し、各 layout.tsx の noindex も一緒に外すこと。
-export const UNLISTED_SERVICE_IDS = new Set<string>(['popup']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-17: popup 開発中
+export const UNLISTED_SERVICE_IDS = new Set<string>([]) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-18: popup 公開
 
 // 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中。
 // トップページ・sitemap・llms.txt・公開LP がこのリストを参照するため、

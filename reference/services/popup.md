@@ -216,7 +216,8 @@ model PopupStat {
 
 ## 8. 公開状態
 
-- 開発中扱いで出す: `UNLISTED_SERVICE_IDS` に入れる、`status: 'coming_soon'`、`badge: 'BETA'`、LP は `noindex`
+- **2026-10-18 に公開した**（`status: 'active'`・`badge: 'BETA'`・`UNLISTED_SERVICE_IDS` から外した・LP と料金ページの noindex を外した・`PUBLIC_INTRO_SERVICES` と `SERVICE_ALIASES` に追加・公開サービス数の固定値を 18→19）
+- 以下は公開前の扱い（記録として残す）: 開発中扱いで出す: `UNLISTED_SERVICE_IDS` に入れる、`status: 'coming_soon'`、`badge: 'BETA'`、LP は `noindex`
 - 公開するときは asklink と同じ手順（`UNLISTED_SERVICE_IDS` から外す・`status: 'active'`・`noindex` を外す・`PUBLIC_INTRO_SERVICES` と `SERVICE_ALIASES` に追加・公開サービス数の固定値を更新）
 
 ## 9. 受け入れ基準
@@ -440,3 +441,13 @@ export const manifest: ServiceManifest = {
   // §4 ホーム: 集客の数字（7日）= popup-read.ts の getPopupSummary(db, userId, 7)
 }
 ```
+
+## 16. 本番への反映（2026-10-18。ユーザーの承認の上で実施）
+
+1. 本番DBに `popup_site.companyProfileId`（text・null 可）を追加。既存の1件はそのまま
+2. R-1〜R-8 の対応（c8c143b4）と、作り直したアイコン（866fd6d8）を main に反映（318841cb → 866fd6d8）
+3. 公開の切り替え（このコミット）。LP に構造化データ（`LpJsonLd`）を足した（asklink と同じ）
+
+戻し方:
+- 公開の切り替えだけを戻す: このコミットを `git revert` して main に push する（UNLISTED に戻り、LP は noindex に戻る。データは変わらない）
+- R-1〜R-8 の対応を戻す: 866fd6d8・c8c143b4 を revert する。`companyProfileId` の列は残してよい（null 可・どこからも必須にしていない）
