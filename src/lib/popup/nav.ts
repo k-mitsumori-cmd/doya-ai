@@ -4,7 +4,6 @@
 // 項目はデータで持つ。共通シェル（ui.shell.popup が ON）では ToolFrame の nav にそのまま渡し、
 // OFF の間の暫定サイドバー（PopupSidebar）もこれを描くだけにする。
 // 形は段0の ShellNavItem（src/components/shell/nav.ts）。将来の manifest.ui.nav[] と同じ。
-import { CreditCard, PanelTopOpen } from 'lucide-react'
 import type { ShellNavItem } from '@/components/shell/nav'
 
 export interface PopupNavItem extends ShellNavItem {
@@ -14,8 +13,8 @@ export interface PopupNavItem extends ShellNavItem {
 
 export const POPUP_NAV: PopupNavItem[] = [
   // ⚠️ exact: '/popup/pricing' でトップまで選択中にならないように
-  { label: 'サイトとポップアップ', href: '/popup', icon: PanelTopOpen, exact: true, activePrefixes: ['/popup/sites', '/popup/edit'] },
-  { label: '料金プラン', href: '/popup/pricing', icon: CreditCard },
+  { label: 'サイトとポップアップ', href: '/popup', icon: 'PanelTopOpen', exact: true, activePrefixes: ['/popup/sites', '/popup/edit'] },
+  { label: '料金プラン', href: '/popup/pricing', icon: 'CreditCard' },
 ]
 
 /** 暫定サイドバーでの選択中の判定（共通シェルでは ToolFrame の isNavActive を使う） */
