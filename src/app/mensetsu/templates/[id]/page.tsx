@@ -90,6 +90,9 @@ export default function TemplateEditPage() {
         }))
       )
       setCriteria(t.criteria || [])
+    } catch {
+      // 通信失敗・不正な応答のときに空のフォームのまま黙らないようにする
+      notifyError(setError, '質問セットを取得できませんでした。通信状況を確認して、ページを再読み込みしてください。')
     } finally {
       setLoading(false)
     }
