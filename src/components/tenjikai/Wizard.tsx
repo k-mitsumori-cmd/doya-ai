@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Globe, Sparkles } from 'lucide-react'
+import { ArrowRight, Globe } from 'lucide-react'
 import { clsx } from 'clsx'
 import { GOAL_LABEL, POSITION_LABEL, VENUES, boothSize, expectedVisitors, man, type BoothPosition, type Goal, type ProjectInput } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
+import Image from 'next/image'
 
 const stagger = { animate: { transition: { staggerChildren: 0.06 } } }
 const item = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } } }
@@ -36,9 +37,6 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
   return (
     <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 md:px-8 lg:grid-cols-[1fr_1.15fr] lg:py-12">
       <motion.div variants={stagger} initial="initial" animate="animate" className="flex flex-col gap-5 lg:pt-6">
-        <motion.span variants={item} className="inline-flex w-fit items-center gap-2 rounded-full border border-doya-200 bg-white px-3 py-1 font-mono text-[11px] text-doya-600">
-          <Sparkles className="h-3.5 w-3.5" /> SaaS is Dead 検証 #展示会
-        </motion.span>
         <motion.h1 variants={item} className="flex flex-col font-display text-3xl leading-[1.25] text-ink md:text-4xl xl:text-5xl">
           <span className="whitespace-nowrap">URLひとつで、</span>
           <span className="whitespace-nowrap">
@@ -57,6 +55,9 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
             </motion.li>
           ))}
         </motion.ul>
+        <motion.div variants={item} className="hidden max-w-sm lg:block">
+          <Image src="/ui-renewal/mascots/tenjikai.webp" alt="ブースの模型と名刺を持つドヤAIのシロクマ" width={720} height={600} priority className="h-auto w-full" />
+        </motion.div>
       </motion.div>
 
       <motion.form

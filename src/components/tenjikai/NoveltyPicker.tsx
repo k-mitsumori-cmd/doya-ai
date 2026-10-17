@@ -17,9 +17,8 @@ export default function NoveltyPicker({ input, novelties, selected, setSelected 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
       <PageHeader
-        eyebrow="NOVELTY"
         title="ノベルティ"
-        desc={`想定来場 ${expectedVisitors(input).toLocaleString()} 人を「商談者・名刺交換者・来場者全員」の3段に分け、渡すものと数量を提案しています。`}
+        desc={`想定の来場者は ${expectedVisitors(input).toLocaleString()} 人です。商談者・名刺交換者・来場者全員の3段に分けて、渡すものと数量を提案します。`}
         right={
           <div className="rounded-[var(--r-sm)] border border-gray-200 bg-white px-4 py-3 text-right">
             <p className="text-[11px] font-black text-gray-500">選択中の合計</p>

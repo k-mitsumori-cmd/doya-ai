@@ -97,10 +97,10 @@ export default function IsoBooth({ plan, analysis, selectedId, onSelect, compact
       ))}
       {back && (
         <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }} transform={`matrix(${C},${S},0,1,${bx},${by})`}>
-          <text x="0" y="0" fontSize={compact ? 15 : 17} fontWeight={900} fill={analysis.colors.secondary} fontFamily="var(--font-display)">
+          <text x="0" y="0" fontSize={compact ? 15 : 17} fontWeight={900} fill={analysis.colors.secondary}>
             {analysis.headline.split('\n')[0]}
           </text>
-          <text x="0" y="22" fontSize={compact ? 15 : 17} fontWeight={900} fill={analysis.colors.primary} fontFamily="var(--font-display)">
+          <text x="0" y="22" fontSize={compact ? 15 : 17} fontWeight={900} fill={analysis.colors.primary}>
             {analysis.headline.split('\n')[1] ?? ''}
           </text>
           <text x="0" y="40" fontSize="8" fill={ds.sub} fontWeight={700}>{analysis.brand}</text>
@@ -114,7 +114,7 @@ export default function IsoBooth({ plan, analysis, selectedId, onSelect, compact
         </motion.g>
       )}
       {/* 寸法 */}
-      <g fontFamily="var(--font-mono)" fontSize="10" fill={ds.sub}>
+      <g style={{ fontVariantNumeric: 'tabular-nums' }} fontSize="10" fill={ds.sub}>
         <text x={P(W / 2, D + 0.9, 0)[0]} y={P(W / 2, D + 0.9, 0)[1]} transform={`rotate(30 ${P(W / 2, D + 0.9, 0)[0]} ${P(W / 2, D + 0.9, 0)[1]})`} textAnchor="middle">
           {W.toFixed(2)}m
         </text>

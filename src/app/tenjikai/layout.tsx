@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import { Dela_Gothic_One, Zen_Kaku_Gothic_New, JetBrains_Mono } from 'next/font/google'
 import { buildServiceMetadata } from '@/lib/seo'
+import '@/components/tenjikai/ds-tokens.css'
 import './tenjikai.css'
 
 // ⚠️ 開発中（UNLISTED_SERVICE_IDS / coming_soon）のあいだは noindex。公開するときは両方外す
@@ -10,10 +10,7 @@ export const metadata: Metadata = buildServiceMetadata('tenjikai', {
   noindex: true,
 })
 
-const display = Dela_Gothic_One({ weight: '400', subsets: ['latin'], variable: '--font-tenjikai-display', display: 'swap' })
-const body = Zen_Kaku_Gothic_New({ weight: ['400', '500', '700', '900'], subsets: ['latin'], variable: '--font-tenjikai-body', display: 'swap' })
-const mono = JetBrains_Mono({ weight: ['400', '600'], subsets: ['latin'], variable: '--font-tenjikai-mono', display: 'swap' })
-
 export default function TenjikaiLayout({ children }: { children: React.ReactNode }) {
-  return <div className={`${display.variable} ${body.variable} ${mono.variable}`}>{children}</div>
+  // ⚠️ ツール独自のフォントは使わない（統合仕様 §11）。サイト共通の Inter ＋ Noto Sans JP のまま
+  return <>{children}</>
 }

@@ -36,7 +36,7 @@ export default function Overview({ input, analysis, plan, budget, deadlines, cre
       <PageHeader
         eyebrow={`${venue.name} / ${POSITION_LABEL[input.position]} / ${w}m × ${d}m`}
         title={input.eventName}
-        desc={`${analysis.brand}（${analysis.category}）の出展準備がそろいました。各項目は左のメニューから詳細を編集できます。`}
+        desc={`${analysis.brand}（${analysis.category}）の出展準備をまとめました。各項目の詳細は、メニューから開いて確かめられます。`}
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

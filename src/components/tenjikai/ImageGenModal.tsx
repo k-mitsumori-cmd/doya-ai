@@ -7,6 +7,7 @@ import { clsx } from 'clsx'
 import { Modal } from './ui'
 import { IMAGE_MODELS, estimateCost, type ImageSize } from '@/lib/tenjikai/imagegen'
 import { ds } from '@/lib/tenjikai/tokens'
+import EmptyState from './EmptyState'
 
 interface Props {
   open: boolean
@@ -25,7 +26,8 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
   const [prompt, setPrompt] = useState(initialPrompt)
   const [agreed, setAgreed] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string>()
+  // 失敗の種類で出し分ける（統合仕様 §11。ステータスコードなどの技術的な文言は出さない）
+  const [error, setError] = useState<{ tone: 'error' | 'forbidden' | 'disabled'; message: string }>()
 
   useEffect(() => {
     if (open) {
@@ -47,12 +49,15 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, model, size, aspectRatio, count, approved: true, expectedCostYen: est.totalYen, referencePng }),
       })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || '画像生成に失敗しました。')
+      const json = await res.json().catch(() => ({}))
+      if (res.status === 401) return setError({ tone: 'forbidden', message: 'ログインすると、画像を作れます。' })
+      if (res.status === 403) return setError({ tone: 'disabled', message: '画像の生成は準備中です。いまは使えません。' })
+      if (res.status >= 500) return setError({ tone: 'error', message: '画像を作れませんでした。時間をおいて、もう一度お試しください。' })
+      if (!res.ok) return setError({ tone: 'error', message: typeof json.error === 'string' ? json.error : '画像を作れませんでした。' })
       onResult(json.images)
       onClose()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '画像生成に失敗しました。')
+    } catch {
+      setError({ tone: 'error', message: '通信できませんでした。接続を確かめて、もう一度お試しください。' })
     } finally {
       setBusy(false)
     }
@@ -116,9 +121,21 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
         </label>
 
         {error && (
-          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700">
-            {error}
-          </motion.p>
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="rounded-[var(--r-sm)] border border-gray-200 bg-white">
+            <EmptyState
+              compact
+              tone={error.tone === 'disabled' ? 'empty' : error.tone}
+              image={error.tone === 'disabled' ? '/empty/preparing.svg' : undefined}
+              title={error.message}
+              action={
+                error.tone === 'forbidden'
+                  ? { label: 'ログインする', href: '/auth/signin?callbackUrl=%2Ftenjikai' }
+                  : error.tone === 'error'
+                    ? { label: 'もう一度', onClick: () => void run() }
+                    : undefined
+              }
+            />
+          </motion.div>
         )}
 
         <div className="flex justify-end gap-2">

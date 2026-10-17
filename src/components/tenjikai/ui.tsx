@@ -3,13 +3,16 @@
 import { useEffect, useState } from 'react'
 import { animate, motion } from 'framer-motion'
 
-export function PageHeader({ eyebrow, title, desc, right }: { eyebrow: string; title: string; desc?: string; right?: React.ReactNode }) {
+// 英語の飾り見出しは使わない（統合仕様 §11）。eyebrow は会場名などの日本語の補足だけに使う
+export function PageHeader({ eyebrow, title, desc, right }: { eyebrow?: string; title: string; desc?: string; right?: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div className="flex max-w-2xl flex-col gap-1.5">
-        <motion.span initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="font-mono text-[11px] uppercase tracking-[.14em] text-doya-500">
-          {eyebrow}
-        </motion.span>
+        {eyebrow && (
+          <motion.span initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="text-[13px] font-medium text-doya-500">
+            {eyebrow}
+          </motion.span>
+        )}
         <h1 className="text-balance font-display text-2xl text-ink md:text-3xl">{title}</h1>
         {desc && <p className="text-sm leading-relaxed text-gray-600">{desc}</p>}
       </div>

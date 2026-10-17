@@ -7,6 +7,7 @@ import { clsx } from 'clsx'
 import { PageHeader, cardIn } from './ui'
 import { daysUntil, type Deadline, type ProjectInput } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
+import EmptyState from './EmptyState'
 
 type DocKind = '出展規約' | 'マニュアル' | '申請書' | '見積・請求' | 'デザイン' | 'その他'
 
@@ -37,7 +38,7 @@ const SAMPLE_DOCS: Doc[] = [
 ]
 
 export default function DocsVault({ deadlines, input }: { deadlines: Deadline[]; input: ProjectInput }) {
-  const [docs, setDocs] = useState<Doc[]>(SAMPLE_DOCS)
+  const [docs, setDocs] = useState<Doc[]>([])
   const [drag, setDrag] = useState(false)
   const [done, setDone] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
@@ -49,7 +50,7 @@ export default function DocsVault({ deadlines, input }: { deadlines: Deadline[];
       name: f.name,
       kind: guessKind(f.name),
       size: f.size > 1e6 ? `${(f.size / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1e3))} KB`,
-      note: '本番ではAIが締切と注意事項を抽出します',
+      note: '締切と注意事項の読み取りは準備中です。',
     }))
     setDocs((d) => [...next, ...d])
   }
@@ -58,7 +59,7 @@ export default function DocsVault({ deadlines, input }: { deadlines: Deadline[];
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
-      <PageHeader eyebrow="DOCUMENTS & SCHEDULE" title="資料庫・締切" desc={`主催者から届く規約やマニュアル、各種申請書、見積書をここにまとめます。締切は会期初日（${input.eventStart}）から逆算しています。`} />
+      <PageHeader title="資料庫・締切" desc={`主催者から届く規約やマニュアル、各種申請書、見積書をここにまとめます。締切は会期初日（${input.eventStart}）から逆算しています。`} />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
         <div className="flex flex-col gap-3">
@@ -79,6 +80,15 @@ export default function DocsVault({ deadlines, input }: { deadlines: Deadline[];
             <input ref={fileRef} id="docs-upload" type="file" multiple className="hidden" onChange={(e) => add(e.target.files)} />
           </motion.div>
 
+          {docs.length === 0 && (
+            <EmptyState
+              compact
+              image="/tenjikai/empty-venue-map.webp"
+              title="主催者の資料は、まだありません。"
+              description="出展規約や会場図を上の枠に入れると、ここに並びます。"
+              action={{ label: '見本の資料を表示する', onClick: () => setDocs(SAMPLE_DOCS) }}
+            />
+          )}
           <ul className="flex flex-col gap-2">
             <AnimatePresence initial={false}>
               {docs.map((d) => {

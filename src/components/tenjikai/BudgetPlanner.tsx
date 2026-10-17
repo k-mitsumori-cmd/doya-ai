@@ -35,7 +35,7 @@ function Donut({ lines, total }: { lines: BudgetLine[]; total: number }) {
         )
       })}
       <text x="100" y="94" textAnchor="middle" fontSize="11" fill={ds.sub} fontWeight={700}>見積合計</text>
-      <text x="100" y="116" textAnchor="middle" fontSize="18" fill={ds.ink} fontFamily="var(--font-mono)" fontWeight={600}>{man(total)}</text>
+      <text x="100" y="116" textAnchor="middle" fontSize="18" fill={ds.ink} style={{ fontVariantNumeric: 'tabular-nums' }} fontWeight={600}>{man(total)}</text>
     </svg>
   )
 }
@@ -47,7 +47,7 @@ export default function BudgetPlanner({ input, setInput, budget }: { input: Proj
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
-      <PageHeader eyebrow="BUDGET" title="予算シミュレーター" desc="小間料・装飾・電気・制作物・ノベルティ・人件費を、会場の料金と単価表から積み上げています。設営案やノベルティを変えると即座に再計算されます。" />
+      <PageHeader title="予算シミュレーター" desc="小間料・装飾・電気・制作物・ノベルティ・人件費を、会場の料金と単価表から積み上げています。設営案やノベルティを変えると即座に再計算されます。" />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
         <motion.div {...cardIn(0)} className="flex flex-col items-center gap-4 rounded-[var(--r)] border border-gray-200 bg-white p-6">
@@ -62,7 +62,7 @@ export default function BudgetPlanner({ input, setInput, budget }: { input: Proj
               <motion.div animate={{ width: `${Math.min(100, usage * 100)}%` }} transition={{ type: 'spring', stiffness: 120, damping: 20 }} className={clsx('h-full rounded-full', diff >= 0 ? 'bg-emerald-500' : 'bg-rose-500')} />
             </div>
             <p className={clsx('mt-2 text-center text-sm font-black', diff >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
-              {diff >= 0 ? `予算内です。残り ${man(diff)}` : `${man(-diff)} 超過しています。設営案Cかノベルティの見直しを検討してください`}
+              {diff >= 0 ? `予算内です。残り ${man(diff)}` : `予算を ${man(-diff)} 超えています。設営案かノベルティを見直してください。`}
             </p>
           </div>
         </motion.div>
@@ -100,7 +100,7 @@ export default function BudgetPlanner({ input, setInput, budget }: { input: Proj
           </table>
         </motion.div>
       </div>
-      <p className="text-[11px] text-gray-400">小間料・単価は画面設計用の目安です。実装時に会場・展示会ごとの公開料金と業者見積で単価表を作ります。</p>
+      <p className="text-[11px] text-gray-400">小間料と単価は目安です。実際の金額は、主催者の料金表と業者の見積で確かめてください。</p>
     </div>
   )
 }

@@ -13,6 +13,7 @@ import { buildBoothRenderPrompt, nearestRatio } from '@/lib/tenjikai/imagegen'
 import { buildPanelPrompt, generateGraphicPlan, type GraphicPanel } from '@/lib/tenjikai/graphics'
 import { KIND_LABEL, man, planCost, yen, type BoothPlan, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
+import Image from 'next/image'
 
 function PlanView({ plan, selectedId, onSelect }: { plan: BoothPlan; selectedId?: string; onSelect: (id: string) => void }) {
   const s = 60
@@ -33,7 +34,7 @@ function PlanView({ plan, selectedId, onSelect }: { plan: BoothPlan; selectedId?
           )}
         </motion.g>
       ))}
-      <g fontFamily="var(--font-mono)" fontSize="10" fill={ds.sub}>
+      <g style={{ fontVariantNumeric: 'tabular-nums' }} fontSize="10" fill={ds.sub}>
         <line x1={0} y1={-14} x2={W} y2={-14} stroke={ds.sub} />
         <text x={W / 2} y={-18} textAnchor="middle">{Math.round(plan.widthM * 1000).toLocaleString()}</text>
         <line x1={-14} y1={0} x2={-14} y2={D} stroke={ds.sub} />
@@ -83,7 +84,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
-      <PageHeader eyebrow="BOOTH DESIGN" title="ブース設計" desc="出展目的と小間の位置から3つの設営案を作りました。3D図面はドラッグで回転できます。壁面をクリックすると、その面に描く画像の割付が下に表示されます。" />
+      <PageHeader title="ブース設計" desc="出展目的と小間の位置から3つの設営案を作りました。3D図面はドラッグで回転できます。壁面をクリックすると、その面に描く画像の割付が下に表示されます。" />
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex gap-1 rounded-[var(--r-sm)] border border-gray-200 bg-white p-1">
@@ -175,7 +176,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
       <div className="rounded-[var(--r)] border border-gray-200 bg-white p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-sm font-black text-ink">完成予想図（画像生成）</h2>
-          <span className="text-[11px] font-bold text-gray-500">立体模型を参照画像として渡し、配置を保ったまま描かせます</span>
+          <span className="text-[11px] font-bold text-gray-500">等角模型の図を参考に渡し、配置を変えずに描きます</span>
         </div>
         {renders[variant]?.length ? (
           <div className="grid gap-3 sm:grid-cols-2">
@@ -184,13 +185,16 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
             ))}
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[var(--r-sm)] border-2 border-dashed border-gray-200 bg-gray-50 text-center">
-                <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent" animate={{ x: ['-100%', '100%'] }} transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.3 }} />
-                <p className="relative px-4 text-[11px] font-bold text-gray-400">{['来場者目線（斜め前方）', '通路の正面から', '真上からの俯瞰'][i]}</p>
-              </div>
-            ))}
+          // 空状態：まだ完成予想図が無いときは、完成イメージの見本を出す
+          <div className="grid items-center gap-4 sm:grid-cols-[1.2fr_1fr]">
+            <figure className="overflow-hidden rounded-[var(--r-sm)] border border-gray-200">
+              <Image src="/tenjikai/booth-sample.webp" alt="完成したブースの見本" width={1600} height={1200} className="h-auto w-full" />
+              <figcaption className="px-3 py-2 text-[13px] text-[var(--sub)]">見本の画像です。この案の完成予想図ではありません。</figcaption>
+            </figure>
+            <div className="flex flex-col gap-2">
+              <p className="text-[15px] font-bold text-ink">この案の完成予想図は、まだありません。</p>
+              <p className="text-[13px] leading-relaxed text-[var(--sub)]">「3D完成予想図を画像生成」を押すと、見込み額を確認してから作れます。</p>
+            </div>
           </div>
         )}
       </div>

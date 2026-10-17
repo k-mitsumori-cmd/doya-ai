@@ -136,7 +136,6 @@ export default function CreativeStudio({ creatives, analysis }: { creatives: Cre
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
       <PageHeader
-        eyebrow="CREATIVE STUDIO"
         title="制作物スタジオ"
         desc="サイトの訴求点から、展示会に必要な制作物6点のコピーと構成を作りました。気に入ったものは画像生成で入稿用のデザイン案にできます。"
         right={

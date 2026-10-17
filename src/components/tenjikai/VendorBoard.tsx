@@ -60,7 +60,6 @@ export default function VendorBoard({ input, plan, creatives, analysis, budget }
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
       <PageHeader
-        eyebrow="VENDORS"
         title="業者選定・発注"
         desc="設営そのものは業者に依頼します。予算と納期から候補を絞り、図面と部材表をまとめた発注仕様書を作って相見積を取ります。"
         right={
@@ -119,7 +118,7 @@ export default function VendorBoard({ input, plan, creatives, analysis, budget }
               </div>
               <p className="text-xs leading-relaxed text-gray-600">{v.strength}</p>
               <div>
-                <div className="mb-1 flex justify-between text-[11px] font-black"><span className="text-gray-500">マッチ度</span><span className="font-mono text-doya-600">{v.match}%</span></div>
+                <div className="mb-1 flex justify-between text-[11px] font-black"><span className="text-gray-500">条件との合致</span><span className="font-mono text-doya-600">{v.match}%</span></div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
                   <motion.div className="h-full rounded-full bg-gradient-to-r from-doya-500 to-amber-400" initial={{ width: 0 }} animate={{ width: `${v.match}%` }} transition={{ delay: 0.2 + i * 0.1, duration: 0.8 }} />
                 </div>
@@ -133,7 +132,7 @@ export default function VendorBoard({ input, plan, creatives, analysis, budget }
           )
         })}
       </div>
-      <p className="text-[11px] text-gray-400">装飾業者・人材会社はサンプル表示です。提携業者マスタが決まり次第差し替えます。</p>
+      <p className="text-[11px] text-gray-400">装飾業者と人材会社の候補は見本です。実在の業者ではありません。</p>
 
       <Modal open={specOpen} onClose={() => setSpecOpen(false)} title="発注仕様書プレビュー">
         <div className="flex flex-col gap-4">
@@ -157,7 +156,7 @@ export default function VendorBoard({ input, plan, creatives, analysis, budget }
           </div>
           <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[var(--r-sm)] bg-gray-50 p-4 font-mono text-[11px] leading-relaxed text-ink">{text}</pre>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <span className="mr-auto text-[11px] text-gray-400">本番ではjspdfでPDF化し、業者へのメール送信は送信前に確認画面を挟みます。</span>
+            <span className="mr-auto text-[11px] text-gray-400">業者へ送る機能はまだありません。仕様書をコピーして、メールに貼って送ってください。</span>
             <button onClick={copy} className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-black text-white">
               {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
               {copied ? 'コピーしました' : '仕様書をコピー'}

@@ -24,7 +24,7 @@ function Elevation({ p, a, image }: { p: GraphicPanel; a: SiteAnalysis; image?: 
   return (
     <svg viewBox={`0 0 ${vbW} ${vbH}`} className="h-auto w-full" role="img" aria-label={`${p.name}の立面図`}>
       <line x1={pad.l - 20} y1={floorY} x2={pad.l + w + 40} y2={floorY} stroke={ds.ink} strokeWidth={1.5} />
-      <text x={pad.l - 20} y={floorY + 14} fontSize="9" fill={ds.sub} fontFamily="var(--font-mono)">FL±0</text>
+      <text x={pad.l - 20} y={floorY + 14} fontSize="9" fill={ds.sub} style={{ fontVariantNumeric: 'tabular-nums' }}>FL±0</text>
       <foreignObject x={pad.l} y={floorY - h} width={w} height={h}>
         <div style={{ width: '100%', height: '100%' }}>
           <PanelArt p={p} a={a} image={image} />
@@ -41,16 +41,16 @@ function Elevation({ p, a, image }: { p: GraphicPanel; a: SiteAnalysis; image?: 
             <line x1={pad.l} y1={top} x2={pad.l + w} y2={top} stroke={ds.ink} strokeDasharray="3 3" strokeWidth={0.6} />
             <line x1={pad.l + w + 6} y1={mid} x2={pad.l + w + 18} y2={mid} stroke={ds.blue} />
             <text x={pad.l + w + 22} y={mid - 2} fontSize="10" fontWeight={900} fill={ds.blue}>{z.label}</text>
-            <text x={pad.l + w + 22} y={mid + 11} fontSize="8" fill={ds.sub} fontFamily="var(--font-mono)">{z.fromMm}–{z.toMm}</text>
+            <text x={pad.l + w + 22} y={mid + 11} fontSize="8" fill={ds.sub} style={{ fontVariantNumeric: 'tabular-nums' }}>{z.fromMm}–{z.toMm}</text>
           </motion.g>
         )
       })}
       {/* 高さ寸法 */}
       <line x1={pad.l - 12} y1={floorY - h} x2={pad.l - 12} y2={floorY} stroke={ds.sub} />
-      <text x={pad.l - 16} y={floorY - h / 2} fontSize="9" fill={ds.sub} fontFamily="var(--font-mono)" textAnchor="middle" transform={`rotate(-90 ${pad.l - 16} ${floorY - h / 2})`}>H {p.heightMm.toLocaleString()}</text>
+      <text x={pad.l - 16} y={floorY - h / 2} fontSize="9" fill={ds.sub} style={{ fontVariantNumeric: 'tabular-nums' }} textAnchor="middle" transform={`rotate(-90 ${pad.l - 16} ${floorY - h / 2})`}>H {p.heightMm.toLocaleString()}</text>
       {/* 幅寸法 */}
       <line x1={pad.l} y1={floorY + 20} x2={pad.l + w} y2={floorY + 20} stroke={ds.sub} />
-      <text x={pad.l + w / 2} y={floorY + 31} fontSize="9" fill={ds.sub} fontFamily="var(--font-mono)" textAnchor="middle">W {p.widthMm.toLocaleString()}</text>
+      <text x={pad.l + w / 2} y={floorY + 31} fontSize="9" fill={ds.sub} style={{ fontVariantNumeric: 'tabular-nums' }} textAnchor="middle">W {p.widthMm.toLocaleString()}</text>
       {/* 目線の高さ */}
       {p.baseMm < EYE_MM && EYE_MM < p.baseMm + p.heightMm + 400 && (
         <g>
@@ -85,8 +85,7 @@ export default function GraphicPlanner({ panels, analysis, images, selectedPanel
     <section className="rounded-[var(--r)] border border-gray-200 bg-white p-5">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="flex items-center gap-1.5 text-[11px] font-black text-doya-500"><Layers className="h-3.5 w-3.5" />GRAPHIC LAYOUT</p>
-          <h2 className="text-lg font-black text-ink">グラフィック割付</h2>
+          <h2 className="flex items-center gap-1.5 text-lg font-black text-ink"><Layers className="h-4 w-4 text-doya-500" />グラフィック割付</h2>
           <p className="text-xs text-gray-500">壁面・カウンター・バナーのどこに、どの高さで、何を描くかを決めています。上段は遠くから読ませ、下段は什器で隠れるので文字を置きません。</p>
         </div>
         <div className="flex items-center gap-2">

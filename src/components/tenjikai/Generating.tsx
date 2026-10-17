@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Loader2 } from 'lucide-react'
 import { boothSize, expectedVisitors, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
+import Image from 'next/image'
 
 const STEP_MS = 520
 
@@ -78,6 +79,7 @@ export default function Generating({ analysis, input, onDone }: { analysis: Site
       </div>
 
       <div className="flex flex-col gap-5">
+        <Image src="/tenjikai/working.webp" alt="" width={640} height={480} priority className="h-auto w-48 self-center md:self-start" />
         <div className="flex items-center gap-4">
           <svg viewBox="0 0 44 44" className="h-16 w-16 -rotate-90" aria-hidden="true">
             <circle cx="22" cy="22" r="19" fill="none" stroke={ds.blueSoft} strokeWidth="4" />
@@ -107,7 +109,6 @@ export default function Generating({ analysis, input, onDone }: { analysis: Site
             )
           })}
         </ul>
-        <p className="text-[11px] text-gray-400">プロトタイプのため、AI呼び出しは行わずルールで生成しています。</p>
       </div>
     </div>
   )

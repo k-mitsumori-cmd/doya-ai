@@ -1,6 +1,6 @@
 // ドヤ展示会の色・角丸・影。名前はリニューアルの ds トークン（クリア。renewal.module.css）と同じにしてある。
 // ds/* が main に入ったら、この値を ds の import に差し替えるだけで済むようにする（ADDON-SERVICES R-3）。
-// CSS 側は src/app/tenjikai/tenjikai.css の .tenjikai-root に同名の変数（--blue 等）を置き、
+// CSS 側は src/components/tenjikai/ds-tokens.css の .tenjikai-root に同名の変数（--blue 等）を置き、
 // Tailwind の doya-* / ink はその変数を参照する（tailwind.config.ts）。
 // SVG の属性や framer-motion のアニメーションは CSS 変数を補間できないため、ここの値を直接使う。
 
