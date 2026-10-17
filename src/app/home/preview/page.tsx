@@ -18,6 +18,7 @@ function sample(): HomeSummary {
   const quoted = [2_900_000, 3_300_000, 3_600_000, 4_000_000, 4_500_000, 3_200_000]
   return {
     generatedAt: now.toISOString(),
+    sources: { revenue: 'sfa_quote', cost: 'promane' },
     user: { name: 'サンプル', email: null },
     contract: { tier: 'PRO', label: 'プロ', paid: true, status: 'active', currentPeriodEnd: day(19), cancelAtPeriodEnd: false },
     sales: {

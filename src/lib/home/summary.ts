@@ -44,8 +44,19 @@ export interface HomeEvent {
   href: string
 }
 
+/**
+ * 売上・支出の数字をどのツールから取ったか（ADDON-SERVICES-2026-10-18.md §4）。
+ * - 売上: 収入管理（income）を使っている組織は income が正本。その組織では SFA・見積の金額を足さない（二重計上）
+ * - 支出: 支出管理（expense）が正本。使っていなければプロマネの経費＋人件費で代替
+ * ⚠️ income / expense はまだ main に入っていない。入ったら loadIncome / loadExpense を足し、
+ *    ここを 'income' / 'expense' に切り替える。今は常に代替（sfa_quote / promane）。
+ */
+export type HomeRevenueSource = 'income' | 'sfa_quote'
+export type HomeCostSource = 'expense' | 'promane'
+
 export interface HomeSummary {
   generatedAt: string
+  sources: { revenue: HomeRevenueSource; cost: HomeCostSource }
   user: { name: string | null; email: string | null }
   contract: {
     tier: PlanTier
@@ -426,6 +437,7 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
 
   return {
     generatedAt: new Date().toISOString(),
+    sources: { revenue: 'sfa_quote', cost: 'promane' },
     user: contract?.user ?? { name: null, email: null },
     contract: contract?.contract ?? {
       tier: 'FREE', label: planLabel('FREE'), paid: false, status: null, currentPeriodEnd: null, cancelAtPeriodEnd: false,

@@ -2166,6 +2166,98 @@ erDiagram
 
 ---
 
+
+### 18.8 追加開発ツールの組み込み（2026-10-18 追補）
+
+正本は `ADDON-SERVICES-2026-10-18.md`。ここには表だけを転記する（食い違ったら追補を正とし、ここを直す）。ホームの売上・支出の正本切替（追補 §4）は `src/lib/home/summary.ts` の `sources` に受け口を用意済み（income / expense が main に入るまで常に代替）。
+
+#### 18.8.1 追加ツール 6 本の位置づけ（§16.1 マニフェストの値）
+
+`stage` は §16.1 の 4 区分（`collect` 集める / `sell` 売る / `hire` 人 / `operate` 回す）。AppShell のサイドバーはこの区分でグループ化する（§18.6）。
+
+| id | 表示名（サイドバー） | stage | テナント単位 | 説明（hint） | AppShell への載せ方 |
+|---|---|---|---|---|---|
+| `asklink` | 質問リンク | collect | ユーザー | サイトに置く「AIに聞く」リンクとバナーを作る | 移行順 10（`ToolFrame` だけ当てる） |
+| `popup` | ポップアップ | collect | ユーザー | サイトに出すポップアップの作成と配信・計測 | 移行順 10。**設置タグの公開 API（`/api/popup/public/*`）と `public/popup/embed.js` は対象外**（`routes.public`） |
+| `tenjikai` | 展示会 | collect | ユーザー | 出展計画・ブース・制作物・予算・準備タスク | 移行順 10 |
+| `shanai` | 社内インタビュー | hire | ユーザー | 社員インタビューから採用広報の記事を作る | 移行順 10。**回答画面 `/shanai/answer/[token]` は対象外**（`guestShared` / `token-param`。§18.6 末尾の規則） |
+| `income` | 収入管理 | operate | 組織（`IncomeOrganization`、`companyId` は null 可で予約） | 契約・売上予定・請求書・入金 | **最初から `AppShell` で作る**（新規ツールなので旧レイアウトを持たない。§3 の R-2） |
+| `expense` | 支出管理 | operate | 組織（`ExpenseOrganization`、同上） | 固定費・業務委託・支払予定 | 同上 |
+
+非表示の扱い: 開発中（`UNLISTED_SERVICE_IDS`）のツールは、AppShell のサイドバーには**ログイン後のみ「開発中」バッジ付きで出す**（`getActiveServices()` と同じ規則。対外の一覧には出さない）。提供終了（`RETIRED_SERVICE_IDS`）は出さない。
+
+---
+
+#### 18.8.2 エージェントの道具の追加（§18.5 の追加候補に追記）
+
+区分・承認は §8.2 / §18.5 の規則どおり（読む・下書き＝自動、外に出る・取り消せない・費用大＝承認）。
+
+| key | 取消 | コスト | 承認 | 呼ぶ既存コード（各ブランチ） | 備考 |
+|---|---|---|---|---|---|
+| `income.summary` | read | none | 不要 | `src/lib/income/*-read.ts`（新設） | 売上予定・請求漏れ・入金遅延 |
+| `income.draftInvoice` | reversible | none | 設定次第 | 売上予定から請求書の下書き | 発行（番号確定・PDF 送付）は別 |
+| `income.issueInvoice` | **irreversible** | none | **必須** | 採番確定・PDF | 適格請求書の番号は戻せない |
+| `income.draftDunning` | reversible | low | 設定次第 | 督促文面の AI 下書き | 送信はしない |
+| `expense.summary` | read | none | 不要 | `src/lib/expense/*-read.ts` | 今月・来月の支払予定 |
+| `expense.listUpcomingPayments` | read, sensitive | none | 不要 | 同上 | 振込先を含むため sensitive |
+| `popup.stats` | read | none | 不要 | `src/lib/popup/*`（`PopupStat` 集計） | — |
+| `popup.proposeDrafts` | reversible | low（テキスト AI 4〜8 回） | 設定次第 | asklink の `readSite` / `generateLinks` 再利用 | — |
+| `popup.publish` | **irreversible** | none | **必須** | 公開状態の切り替え | 外部サイトに表示が出る |
+| `asklink.createLinks` | reversible | low | 設定次第 | `src/lib/asklink/generate.ts` | バナー画像まで作る場合は `high` で承認必須 |
+| `shanai.listInterviews` | read | none | 不要 | `src/lib/shanai/*` | — |
+| `shanai.draftArticle` | reversible | low | 設定次第 | `src/lib/shanai/generate.ts` | — |
+| `shanai.sendAnswerLink` | **irreversible** | none | **必須** | 回答リンクの発行・送付 | 社員に届く。sensitive |
+| `tenjikai.listTasks` | read | none | 不要 | `src/lib/tenjikai/*` | ホームの今日のタスク |
+| `tenjikai.planBooth` | reversible | low | 設定次第 | `src/lib/tenjikai/engine.ts` | — |
+| `tenjikai.generateCreatives` | reversible | **high**（画像生成） | **必須** | `src/lib/tenjikai/imagegen.ts` | 画像 API の見込み額を承認画面に出す |
+
+---
+
+#### 18.8.3 ツール間連携の追加（§18.4 の #9 以降）
+
+規則は §18.4 の共通規則どおり（作成のみ・上書きしない・取り消しはリンクを外す・3 経路で同じ lib 関数）。
+
+| # | 連携（方向） | トリガ | 対応 | 必要なスキーマ | 難度 | 置き場所 |
+|---|---|---|---|---|---|---|
+| 9 | SFA 商談 won → 収入の契約下書き（`income.createContractFromDeal`） | 自動（会社設定 ON 時）／ボタン | `SfaDeal.name / amount / accountId` → `IncomeContract`（下書き）、取引先は `IncomeClient.sfaAccountId` | `IncomeContract.sfaDealId?`（unique、FK なし） | 中 | income |
+| 10 | 見積確定 → 請求書の下書き（`income.createInvoiceFromQuote`） | ボタン | `QuoteDocument` の明細・税計算 → `IncomeInvoice`（下書き） | `IncomeInvoice.quoteDocumentId?` | 中 | income |
+| 11 | 支出 → 収入の粗利（`income` の `ExpenseSource` に `expense` を追加） | 自動（読み取り） | 支出管理 §8 のとおり | `IncomeOrganization.expenseOrganizationId? / expenseSourceId?` | 低 | income（支出側の接続点に合わせる） |
+| 12 | 展示会の予算 → 支出（`expense.importFromTenjikai`） | ボタン（発注確定時） | `TenjikaiBudgetLine`（発注済み）→ 支出の明細 | 支出側に `sourceType='tenjikai.budgetLine' / sourceId`（unique） | 低 | expense |
+| 13 | 展示会で集めた名刺・リード → SFA リード（`sfa.importLeadsFromTenjikai`） | ボタン | `SfaLead.originType='tenjikai'`（§18.2 参照列③） | ③に種別を足すだけ | 低 | sfa |
+| 14 | ポップアップ・質問リンクの対象サイト ← 会社情報（`CompanyProfile.url`） | 初期値 | ウィザード画面 1 の URL を既定のサイトに | 無し | 低 | popup / asklink |
+| 15 | 社内インタビューの対象社員 ← HR 社員（`ObjectLink(kind='employee', from='shanai.interview', to='hr.employee')`） | ボタン（社員を選ぶ） | 氏名・部署・入社日を初期値に | 無し（ObjectLink） | 低 | shanai |
+| 16 | 社内インタビューの記事 → 採用（mensetsu の会社紹介・HR） | ボタン | 記事 URL を `MensetsuCompanyProfile` の参考資料に | 無し（ObjectLink） | 低 | Phase3d 以降 |
+
+`ObjectLink.fromType` の候補（§18.2）に足す値: `'income.contract' | 'income.invoice' | 'income.client' | 'expense.item' | 'tenjikai.project' | 'tenjikai.budgetLine' | 'shanai.interview' | 'popup.site'`。
+
+---
+
+#### 18.8.4 初期セットアップの追加（§18.3 に追記）
+
+| サービス | ウィザードが足すもの | 冪等キー |
+|---|---|---|
+| income | `IncomeOrganization`、`IncomeIssuer`（画面 2。インボイス番号・住所・ロゴ。`QuoteIssuer` と同じ値） | `IncomeOrganization.companyId` |
+| expense | `ExpenseOrganization`（決算月・締め日） | `ExpenseOrganization.companyId` |
+| popup | `PopupSite`（画面 1 の URL。サイトキーだけ発行、ポップアップは作らない） | `PopupSite.userId + host` |
+| asklink / tenjikai / shanai | 初期化不要（shanai は会社情報を画面 2 から初期値として読むだけ。R-5） | — |
+
+---
+
+#### 18.8.5 新ツール共通のルール（R-1〜R-8）
+
+| # | ルール | 理由 |
+|---|---|---|
+| R-1 | **ナビ項目をデータで持つ**。各ツールのサイドバー項目は `src/lib/<svc>/nav.ts` に `{ label, href, icon, minServiceRole? }[]` で書き、独自サイドバーはそれを描画するだけにする。これが §18.6 手順 2 の `manifest.ui.nav[]` にそのまま移る | AppShell 載せ替え時にナビを書き直さずに済む |
+| R-2 | **income / expense は独自サイドバーを作らない**。リニューアルの `AppShell` が main に入るまでは、既存の共通レイアウト（`ToolSwitcherMenu` 経由）に最小限で載せ、ページ本体は `ToolFrame` の `children` にそのまま入る作り（ページ内で外枠・サイドバーを持たない）にする | 新規ツールに旧レイアウトを増やさない（G-5） |
+| R-3 | **見た目は ds トークンに寄せる**。色はクリア（`--blue #0066ff` 等、`renewal.module.css` のトークン名）、角丸・影・余白もトークン名で書く。`ds/*` が main に入るまでは、ツール内の CSS で同じ変数名を参照しておき、入ったら差し替えるだけにする。アイコンは `lucide-react`（`icons.tsx` 経由）、絵文字なし、日本語 | §18.6 手順 3 の置換を機械的にする |
+| R-4 | **ページ本体とデータ取得を分ける**。画面の集計は `src/lib/<svc>/*-read.ts`（読み取り専用の関数）に置き、API route と将来のエージェント道具（`agentTools[].run`）が同じ関数を呼ぶ | §18.4「3 経路とも同じ lib 関数」 |
+| R-5 | **自社プロフィールを新設しない**。会社名・URL・事業内容などは、今は各ツールのモデルに持ってよいが、**`companyProfileId String?` を予約列として足す**（null 可・FK なし）。§18.2「自社」の写し一覧に追記する | 8 つ目の写しを増やさない（G-6） |
+| R-6 | **他ツールへの参照は FK なしの文字列**（`sfaDealId` 等）。書き込み時に所有確認。§18.2 と同じ | ツール間に削除の連鎖を持ち込まない |
+| R-7 | **公開画面・ゲスト画面に AppShell を出さない**（popup の公開 API と embed.js、shanai の回答画面） | §18.6 末尾 |
+| R-8 | **マニフェスト草案を `reference/services/<id>.md` の末尾に書く**（`id / name / stage / status / landing / dataModels / routes.public / guestShared / cron / externalApis / agentTools / usage.meters`）。Phase0 で `src/services/<id>/manifest.ts` に移す | §16.1、OPS-26 |
+
+---
+
 ### 付録 A. 新設ファイル一覧（実装担当向け）
 
 | パス | 役割 |

@@ -535,6 +535,34 @@
 
 項目数: TEN 38 / AUTH 38 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 51 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 9 ＝ **350 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1〜7 回の 17 / 7 / 8 / 7 / 5 / 6 / 3 指摘すべてに対応項目あり（漏れ 0）。
 
+## ADD: 追加開発ツールの組み込み（ADDON-SERVICES-2026-10-18.md）
+
+新ツールは次をすべて満たしてから main に出す。
+
+| # | 項目 | 理由 |
+|---|---|---|
+| R-1 | **ナビ項目をデータで持つ**。各ツールのサイドバー項目は `src/lib/<svc>/nav.ts` に `{ label, href, icon, minServiceRole? }[]` で書き、独自サイドバーはそれを描画するだけにする。これが §18.6 手順 2 の `manifest.ui.nav[]` にそのまま移る | AppShell 載せ替え時にナビを書き直さずに済む |
+| R-2 | **income / expense は独自サイドバーを作らない**。リニューアルの `AppShell` が main に入るまでは、既存の共通レイアウト（`ToolSwitcherMenu` 経由）に最小限で載せ、ページ本体は `ToolFrame` の `children` にそのまま入る作り（ページ内で外枠・サイドバーを持たない）にする | 新規ツールに旧レイアウトを増やさない（G-5） |
+| R-3 | **見た目は ds トークンに寄せる**。色はクリア（`--blue #0066ff` 等、`renewal.module.css` のトークン名）、角丸・影・余白もトークン名で書く。`ds/*` が main に入るまでは、ツール内の CSS で同じ変数名を参照しておき、入ったら差し替えるだけにする。アイコンは `lucide-react`（`icons.tsx` 経由）、絵文字なし、日本語 | §18.6 手順 3 の置換を機械的にする |
+| R-4 | **ページ本体とデータ取得を分ける**。画面の集計は `src/lib/<svc>/*-read.ts`（読み取り専用の関数）に置き、API route と将来のエージェント道具（`agentTools[].run`）が同じ関数を呼ぶ | §18.4「3 経路とも同じ lib 関数」 |
+| R-5 | **自社プロフィールを新設しない**。会社名・URL・事業内容などは、今は各ツールのモデルに持ってよいが、**`companyProfileId String?` を予約列として足す**（null 可・FK なし）。§18.2「自社」の写し一覧に追記する | 8 つ目の写しを増やさない（G-6） |
+| R-6 | **他ツールへの参照は FK なしの文字列**（`sfaDealId` 等）。書き込み時に所有確認。§18.2 と同じ | ツール間に削除の連鎖を持ち込まない |
+| R-7 | **公開画面・ゲスト画面に AppShell を出さない**（popup の公開 API と embed.js、shanai の回答画面） | §18.6 末尾 |
+| R-8 | **マニフェスト草案を `reference/services/<id>.md` の末尾に書く**（`id / name / stage / status / landing / dataModels / routes.public / guestShared / cron / externalApis / agentTools / usage.meters`）。Phase0 で `src/services/<id>/manifest.ts` に移す | §16.1、OPS-26 |
+
+「完成」の定義（追補 §10）:
+
+| # | 条件 | 確かめ方 |
+|---|---|---|
+| D-1 | 独自レイアウト・独自サイドバーを持たない（段 0 が入るまでの暫定サイドバーは `nav.ts` を描くだけ） | `src/components/<svc>/*Sidebar*` が `nav.ts` 以外の項目を持たない |
+| D-2 | `ds/*` の部品とトークンだけで画面ができている（色・角丸・影・余白の直書きが無い） | `grep -E '#[0-9a-fA-F]{3,6}' src/app/<svc>` が 0 件（画像・SVG 内を除く） |
+| D-3 | AppShell＋ToolFrame に載り、サイドバーは `stage` のグループに出る | `ui.shell.<svc>=on` で 375px / 1280px のスクリーンショット |
+| D-4 | マニフェスト草案（R-8）があり、`stage / ui.nav / agentTools / usage.meters` が埋まっている | `reference/services/<id>.md` 末尾 |
+| D-5 | §5 のエージェント道具のうち **read の道具が少なくとも 1 本**、`*-read.ts` の関数として呼べる | 単体テスト（`npm run test:<svc>`） |
+| D-6 | §11 の状態表示（読込・空・エラー・権限なし）がすべての一覧・詳細画面にある | スクリーンショット 4 状態 |
+| D-7 | §12 の画像一覧の画像がすべて置かれ、`docs/design/images/<svc>/PROMPTS.md` にプロンプトが残っている | ファイルの存在 |
+
+
 ## 最終ゲート第 7 回（FIN7）との対応表
 
 | 審査 | 再発防止するチェック項目 |
