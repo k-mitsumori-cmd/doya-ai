@@ -53,3 +53,24 @@ test('CRON-002: 運用通知の Cron はクエリ文字列の無いパスで登�
     assert.match(route, new RegExp(`searchParams\\.set\\('mode', '${mode}'\\)`))
   }
 })
+
+test('SEC-106: 勤怠でシステム管理者以外は、自分の申請を承認・却下できない', () => {
+  const src = read('src/app/api/kintai/requests/[id]/route.ts')
+  assert.match(src, /existing\.employeeId === kctx\.employeeId && actorRole !== 'system_admin'/)
+})
+
+test('SEC-109: 面接から HR への引き渡しは、従業員上限を通し、紐付けが空のときだけ書く', () => {
+  const src = read('src/app/api/mensetsu/sessions/[id]/hr-handoff/route.ts')
+  assert.match(src, /createWithinEmployeeLimit\(hrOrganizationId/)
+  assert.match(src, /hrEmployeeId: null \}/)
+  assert.match(src, /logAudit\(/)
+  assert.doesNotMatch(src, /prisma\.hrEmployee\.create\(/)
+})
+
+test('BILL-051: 日次サマリの Cron は、プランを直接書き換えず正規の同期処理を通す', () => {
+  const src = read('src/app/api/cron/daily-summary/route.ts')
+  assert.match(src, /syncUnifiedBilling\(\{/)
+  assert.match(src, /findActiveLikeSubscriptions\(/)
+  assert.doesNotMatch(src, /plan: 'FREE',\s*\n\s*stripeSubscriptionId: null,\s*\n\s*stripePriceId: null/)
+  assert.doesNotMatch(src, /userServiceSubscription\.update\(/)
+})
