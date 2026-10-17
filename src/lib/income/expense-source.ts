@@ -9,6 +9,7 @@
 import { prisma } from '@/lib/prisma'
 import { laborCostForEntry } from '@/lib/promane/labor-cost'
 import { addMonthsYm, formatYmd, parseYmd } from './dates'
+import { EXPENSE_SOURCE_LABEL, EXPENSE_SOURCE_NOTE, expenseCashOut, expenseMonthly, listReadableExpenseOrganizations, readableExpenseOrganization } from '@/lib/expense/income-source'
 
 export type MonthlyExpense = {
   month: string
@@ -127,9 +128,10 @@ const promaneAdapter: ExpenseAdapter = {
   monthly: promaneMonthly,
 }
 
-/** 取り込み元の一覧。expense は支出管理のマージ時に足す（上の注記） */
+/** 取り込み元の一覧。支出管理がある組織は expense を正本にする（ADDON-SERVICES §6 #11） */
 export const EXPENSE_ADAPTERS: Partial<Record<ExpenseSourceId, ExpenseAdapter>> = {
   promane: promaneAdapter,
+  expense: { id: 'expense', label: EXPENSE_SOURCE_LABEL, note: EXPENSE_SOURCE_NOTE, canRead: readableExpenseOrganization, listLinkable: listReadableExpenseOrganizations, monthly: expenseMonthly, cashOut: expenseCashOut },
 }
 
 export type ExpenseLink = { expenseSourceId: string | null; promaneWorkspaceId: string | null; expenseOrganizationId: string | null }

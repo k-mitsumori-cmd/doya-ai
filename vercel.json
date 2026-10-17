@@ -25,6 +25,10 @@
       "schedule": "0 21 * * *"
     },
     {
+      "path": "/api/cron/expense-schedule",
+      "schedule": "0 22 * * *"
+    },
+    {
       "path": "/api/cron/aishodan-evaluations",
       "schedule": "*/5 * * * *"
     },
