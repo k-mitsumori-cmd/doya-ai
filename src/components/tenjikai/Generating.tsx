@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Loader2 } from 'lucide-react'
 import { boothSize, expectedVisitors, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
+import { ds } from '@/lib/tenjikai/tokens'
 
 const STEP_MS = 520
 
@@ -36,7 +37,7 @@ export default function Generating({ analysis, input, onDone }: { analysis: Site
 
   return (
     <div className="mx-auto grid max-w-5xl items-center gap-8 px-4 py-10 md:grid-cols-2 md:px-8 md:py-16">
-      <div className="relative overflow-hidden rounded-3xl border border-gray-200 bg-white p-5 shadow-xl">
+      <div className="relative overflow-hidden rounded-[var(--r)] border border-gray-200 bg-white p-5 shadow-xl">
         <div className="mb-4 flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-red-300" />
           <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
@@ -50,7 +51,7 @@ export default function Generating({ analysis, input, onDone }: { analysis: Site
           </p>
           <div className="grid grid-cols-3 gap-2 pt-2">
             {analysis.valueProps.map((v, i) => (
-              <motion.div key={v.title} initial={{ opacity: 0.4 }} animate={{ opacity: done > 1 ? 1 : 0.4, borderColor: done > 1 ? analysis.colors.primary : '#e5e7eb' }} transition={{ delay: i * 0.1 }} className="rounded-xl border-2 p-2">
+              <motion.div key={v.title} initial={{ opacity: 0.4 }} animate={{ opacity: done > 1 ? 1 : 0.4, borderColor: done > 1 ? analysis.colors.primary : ds.line }} transition={{ delay: i * 0.1 }} className="rounded-xl border-2 p-2">
                 <p className="text-[11px] font-black text-ink">{v.title}</p>
                 <div className="mt-1 h-1.5 w-full rounded bg-gray-100" />
                 <div className="mt-1 h-1.5 w-2/3 rounded bg-gray-100" />
@@ -79,8 +80,8 @@ export default function Generating({ analysis, input, onDone }: { analysis: Site
       <div className="flex flex-col gap-5">
         <div className="flex items-center gap-4">
           <svg viewBox="0 0 44 44" className="h-16 w-16 -rotate-90" aria-hidden="true">
-            <circle cx="22" cy="22" r="19" fill="none" stroke="#ecdcfd" strokeWidth="4" />
-            <motion.circle cx="22" cy="22" r="19" fill="none" stroke="#7f19e6" strokeWidth="4" strokeLinecap="round" strokeDasharray={2 * Math.PI * 19} animate={{ strokeDashoffset: 2 * Math.PI * 19 * (1 - pct / 100) }} transition={{ duration: 0.4 }} />
+            <circle cx="22" cy="22" r="19" fill="none" stroke={ds.blueSoft} strokeWidth="4" />
+            <motion.circle cx="22" cy="22" r="19" fill="none" stroke={ds.blue} strokeWidth="4" strokeLinecap="round" strokeDasharray={2 * Math.PI * 19} animate={{ strokeDashoffset: 2 * Math.PI * 19 * (1 - pct / 100) }} transition={{ duration: 0.4 }} />
           </svg>
           <div>
             <p className="font-mono text-3xl font-semibold text-ink tabular">{pct}%</p>
@@ -92,7 +93,7 @@ export default function Generating({ analysis, input, onDone }: { analysis: Site
             const state = i < done ? 'done' : i === done ? 'run' : 'wait'
             return (
               <motion.li key={s} initial={{ opacity: 0, x: 12 }} animate={{ opacity: state === 'wait' ? 0.35 : 1, x: 0 }} transition={{ delay: i * 0.04 }} className="flex items-center gap-3 rounded-xl bg-white/80 px-3 py-2 text-sm font-bold text-ink">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full" style={{ background: state === 'done' ? '#7f19e6' : '#f1eff6' }}>
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full" style={{ background: state === 'done' ? ds.blue : ds.track }}>
                   {state === 'done' ? (
                     <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500 }}>
                       <Check className="h-3.5 w-3.5 text-white" />

@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import type { BoothElement, BoothPlan, SiteAnalysis } from '@/lib/tenjikai/engine'
+import { ds } from '@/lib/tenjikai/tokens'
 
 // 等角投影：x軸は右下、y軸は左下、z軸は上
 const C = Math.cos(Math.PI / 6)
@@ -12,14 +13,14 @@ const P = (x: number, y: number, z: number) => [(x - y) * C * U, (x + y) * S * U
 const pts = (arr: (readonly [number, number])[]) => arr.map((p) => p.join(',')).join(' ')
 
 const FILL: Record<BoothElement['kind'], { top: string; left: string; right: string }> = {
-  wall: { top: '#f4f1fa', left: '#ffffff', right: '#e8e3f3' },
+  wall: { top: ds.surface2, left: ds.paper, right: ds.line },
   monitor: { top: '#3a3550', left: '#15121f', right: '#25203a' },
-  counter: { top: '#ffffff', left: '#ece8f5', right: '#d9d3ea' },
+  counter: { top: ds.paper, left: ds.track, right: ds.lineStrong },
   table: { top: '#f7e7c6', left: '#e2c48c', right: '#c9a96b' },
-  demo: { top: '#ecdcfd', left: '#c9a3f7', right: '#a978ec' },
-  rollup: { top: '#ffffff', left: '#7f19e6', right: '#550e9e' },
-  storage: { top: '#ebe7f3', left: '#dcd6ea', right: '#c8c0dd' },
-  sign: { top: '#7f19e6', left: '#6a12c4', right: '#550e9e' },
+  demo: { top: ds.blueSoft, left: ds.blueLine, right: ds.k1 },
+  rollup: { top: ds.paper, left: ds.blue, right: ds.navy },
+  storage: { top: ds.track, left: ds.lineStrong, right: ds.muted },
+  sign: { top: ds.blue, left: ds.blueDeep, right: ds.navy },
 }
 
 function Box({ e, colors, selected, onSelect, i }: { e: BoothElement; colors: SiteAnalysis['colors']; selected: boolean; onSelect?: (id: string) => void; i: number }) {
@@ -30,7 +31,7 @@ function Box({ e, colors, selected, onSelect, i }: { e: BoothElement; colors: Si
   const side = [P(x + w, y, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x + w, y, z + h)]
   let f = FILL[e.kind]
   if (e.kind === 'rollup' || e.kind === 'sign') f = { top: f.top, left: colors.primary, right: colors.secondary }
-  const stroke = selected ? '#ffb020' : 'rgba(27,21,48,.35)'
+  const stroke = selected ? ds.yellow : 'rgba(16,22,51,.35)'
   return (
     <motion.g
       initial={{ opacity: 0, y: -60 }}
@@ -73,23 +74,23 @@ export default function IsoBooth({ plan, analysis, selectedId, onSelect, compact
     <svg viewBox={vb.join(' ')} className="h-full w-full" role="img" aria-label={`${plan.name}のブース模型`}>
       <defs>
         <pattern id="carpet" width="8" height="8" patternUnits="userSpaceOnUse">
-          <rect width="8" height="8" fill="#efe7fb" />
+          <rect width="8" height="8" fill={ds.blueSoft} />
           <circle cx="2" cy="2" r=".8" fill="#dccbf6" />
         </pattern>
       </defs>
       {/* 通路 */}
-      <polygon points={pts([P(-0.6, D, 0), P(W + 1.6, D, 0), P(W + 1.6, D + 1.6, 0), P(-0.6, D + 1.6, 0)])} fill="#e9e6f0" />
-      <polygon points={pts([P(W, -0.6, 0), P(W + 1.6, -0.6, 0), P(W + 1.6, D, 0), P(W, D, 0)])} fill="#e9e6f0" />
+      <polygon points={pts([P(-0.6, D, 0), P(W + 1.6, D, 0), P(W + 1.6, D + 1.6, 0), P(-0.6, D + 1.6, 0)])} fill={ds.line} />
+      <polygon points={pts([P(W, -0.6, 0), P(W + 1.6, -0.6, 0), P(W + 1.6, D, 0), P(W, D, 0)])} fill={ds.line} />
       {/* 床 */}
-      <motion.polygon initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} points={pts([P(0, 0, 0), P(W, 0, 0), P(W, D, 0), P(0, D, 0)])} fill="url(#carpet)" stroke="#7f19e6" strokeWidth="1.5" />
+      <motion.polygon initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} points={pts([P(0, 0, 0), P(W, 0, 0), P(W, D, 0), P(0, D, 0)])} fill="url(#carpet)" stroke={ds.blue} strokeWidth="1.5" />
       {/* 小間の区切り線 */}
       {Array.from({ length: Math.max(1, Math.round(W / 2.9)) - 1 }).map((_, i, arr) => {
         const gx = ((i + 1) * W) / (arr.length + 1)
-        return <line key={`gx${i}`} x1={P(gx, 0, 0)[0]} y1={P(gx, 0, 0)[1]} x2={P(gx, D, 0)[0]} y2={P(gx, D, 0)[1]} stroke="#c9a3f7" strokeDasharray="4 4" />
+        return <line key={`gx${i}`} x1={P(gx, 0, 0)[0]} y1={P(gx, 0, 0)[1]} x2={P(gx, D, 0)[0]} y2={P(gx, D, 0)[1]} stroke={ds.blueLine} strokeDasharray="4 4" />
       })}
       {Array.from({ length: Math.max(1, Math.round(D / 2.9)) - 1 }).map((_, i, arr) => {
         const gy = ((i + 1) * D) / (arr.length + 1)
-        return <line key={`gy${i}`} x1={P(0, gy, 0)[0]} y1={P(0, gy, 0)[1]} x2={P(W, gy, 0)[0]} y2={P(W, gy, 0)[1]} stroke="#c9a3f7" strokeDasharray="4 4" />
+        return <line key={`gy${i}`} x1={P(0, gy, 0)[0]} y1={P(0, gy, 0)[1]} x2={P(W, gy, 0)[0]} y2={P(W, gy, 0)[1]} stroke={ds.blueLine} strokeDasharray="4 4" />
       })}
       {sorted.map((e, i) => (
         <Box key={`${plan.variant}-${e.id}`} e={e} colors={analysis.colors} selected={selectedId === e.id} onSelect={onSelect} i={i} />
@@ -102,7 +103,7 @@ export default function IsoBooth({ plan, analysis, selectedId, onSelect, compact
           <text x="0" y="22" fontSize={compact ? 15 : 17} fontWeight={900} fill={analysis.colors.primary} fontFamily="var(--font-display)">
             {analysis.headline.split('\n')[1] ?? ''}
           </text>
-          <text x="0" y="40" fontSize="8" fill="#5d5873" fontWeight={700}>{analysis.brand}</text>
+          <text x="0" y="40" fontSize="8" fill={ds.sub} fontWeight={700}>{analysis.brand}</text>
         </motion.g>
       )}
       {sideW && (
@@ -113,7 +114,7 @@ export default function IsoBooth({ plan, analysis, selectedId, onSelect, compact
         </motion.g>
       )}
       {/* 寸法 */}
-      <g fontFamily="var(--font-mono)" fontSize="10" fill="#5d5873">
+      <g fontFamily="var(--font-mono)" fontSize="10" fill={ds.sub}>
         <text x={P(W / 2, D + 0.9, 0)[0]} y={P(W / 2, D + 0.9, 0)[1]} transform={`rotate(30 ${P(W / 2, D + 0.9, 0)[0]} ${P(W / 2, D + 0.9, 0)[1]})`} textAnchor="middle">
           {W.toFixed(2)}m
         </text>

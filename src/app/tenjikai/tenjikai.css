@@ -1,7 +1,34 @@
 /* ドヤ展示会（/tenjikai）専用のスタイル。.tenjikai-root の内側だけに効かせる */
+.tenjikai-root {
+  /* リニューアルの ds トークン（クリア。renewal.module.css の .root と同名・同値）。
+     ds/* が main に入ったら、この塊を ds の読み込みに差し替える。値は src/lib/tenjikai/tokens.ts と揃える */
+  --blue: #0066ff;
+  --blue-deep: #0047d6;
+  --blue-soft: #e8f0ff;
+  --blue-line: #d7e5ff;
+  --bar: #dbe7ff;
+  --k1: #00b4ff;
+  --navy: #0a0f3c;
+  --ink: #101633;
+  --sub: #4a5375;
+  --muted: #7a83a3;
+  --line: #e3e8f4;
+  --line-strong: #c6cde0;
+  --track: #eef1f8;
+  --bg: #f4f7fd;
+  --surface-2: #f8faff;
+  --paper: #ffffff;
+  --yellow: #ffd400;
+  --spot: rgba(0, 102, 255, 0.07);
+  --r: 22px;
+  --r-sm: 14px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow: 0 1px 2px rgba(16, 22, 51, 0.04), 0 8px 28px -12px rgba(16, 22, 51, 0.14);
+  --shadow-lg: 0 2px 6px rgba(16, 22, 51, 0.05), 0 30px 60px -24px rgba(10, 15, 60, 0.28);
+}
 .tenjikai-root { font-family: var(--font-tenjikai-body), 'Noto Sans JP', 'Hiragino Sans', sans-serif; -webkit-font-smoothing: antialiased; }
 .tenjikai-root .font-display { font-family: var(--font-tenjikai-display), sans-serif; }
 .tenjikai-root .font-mono { font-family: var(--font-tenjikai-mono), ui-monospace, monospace; }
-.tenjikai-root .floor { background-image: linear-gradient(rgba(127,25,230,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(127,25,230,.06) 1px, transparent 1px); background-size: 28px 28px; }
+.tenjikai-root .floor { background-image: linear-gradient(var(--spot) 1px, transparent 1px), linear-gradient(90deg, var(--spot) 1px, transparent 1px); background-size: 28px 28px; }
 .tenjikai-root .tabular { font-variant-numeric: tabular-nums; }
 .tenjikai-root .text-balance { text-wrap: balance; }

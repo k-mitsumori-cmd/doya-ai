@@ -4746,6 +4746,8 @@ model TenjikaiProject {
   goal           String // lead | brand | demo
   staffCount     Int                     @default(4)
   status         String                  @default("draft") // draft | planning | ordering | ready | done
+  /// 会社情報（リニューアルの CompanyProfile）への予約列。null 可・FK なし（ADDON-SERVICES R-5）
+  companyProfileId String?
   createdAt      DateTime                @default(now())
   updatedAt      DateTime                @updatedAt
   analysis       TenjikaiSiteAnalysis?
@@ -4759,6 +4761,7 @@ model TenjikaiProject {
   generationJobs TenjikaiGenerationJob[]
 
   @@index([userId, createdAt])
+  @@index([userId, eventStart])
   @@map("tenjikai_project")
 }
 
@@ -4793,6 +4796,7 @@ model TenjikaiBoothPlan {
   selected    Boolean                @default(false)
   renderUrls  String[] // 画像生成した完成予想図
   elements    TenjikaiBoothElement[]
+  panels      TenjikaiGraphicPanel[]
   createdAt   DateTime               @default(now())
 
   @@index([projectId, variant])
@@ -4814,6 +4818,31 @@ model TenjikaiBoothElement {
   costYen Int
 
   @@map("tenjikai_booth_element")
+}
+
+// グラフィック割付：どの部材のどの面に、どの高さで何を描くか
+model TenjikaiGraphicPanel {
+  id            String            @id @default(cuid())
+  planId        String
+  plan          TenjikaiBoothPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  elementId     String
+  face          String // front | side
+  name          String
+  offsetMm      Int
+  widthMm       Int
+  heightMm      Int
+  baseMm        Int               @default(0)
+  viewDistanceM Float
+  role          String
+  visual        String // 描く画像の指示
+  headline      String
+  zones         Json // [{ label, fromMm, toMm, content, tone }]
+  material      String
+  imageUrl      String?
+  createdAt     DateTime          @default(now())
+
+  @@index([planId])
+  @@map("tenjikai_graphic_panel")
 }
 
 model TenjikaiCreative {
@@ -4859,6 +4888,8 @@ model TenjikaiBudgetLine {
   label     String
   amountYen Int
   source    String          @default("ai") // ai | manual | quote
+  /// 発注済み（ordered）以降が支出管理への取り込み対象（ADDON-SERVICES §6 #12）
+  status    String          @default("planned") // planned | ordered | paid
 
   @@map("tenjikai_budget_line")
 }
@@ -4913,6 +4944,8 @@ model TenjikaiTask {
   documentId String?
   document   TenjikaiDocument? @relation(fields: [documentId], references: [id])
   title      String
+  /// カレンダーに出す締切の種類。task 以外がホームのカレンダー対象（ADDON-SERVICES §4）
+  kind       String            @default("task") // task | application | submission | order
   owner      String
   daysBefore Int
   dueAt      DateTime

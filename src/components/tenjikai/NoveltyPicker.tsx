@@ -5,6 +5,7 @@ import { Check, ExternalLink, Gift } from 'lucide-react'
 import { clsx } from 'clsx'
 import { CountUp, PageHeader, cardIn } from './ui'
 import { expectedVisitors, noveltyQty, recommendPrinters, yen, type Novelty, type ProjectInput } from '@/lib/tenjikai/engine'
+import { ds } from '@/lib/tenjikai/tokens'
 
 const TIERS: Novelty['tier'][] = ['商談者', '名刺交換者', '来場者全員']
 
@@ -20,7 +21,7 @@ export default function NoveltyPicker({ input, novelties, selected, setSelected 
         title="ノベルティ"
         desc={`想定来場 ${expectedVisitors(input).toLocaleString()} 人を「商談者・名刺交換者・来場者全員」の3段に分け、渡すものと数量を提案しています。`}
         right={
-          <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-right">
+          <div className="rounded-[var(--r-sm)] border border-gray-200 bg-white px-4 py-3 text-right">
             <p className="text-[11px] font-black text-gray-500">選択中の合計</p>
             <CountUp value={total} format={yen} className="font-mono text-xl font-semibold text-ink tabular" />
           </div>
@@ -44,13 +45,13 @@ export default function NoveltyPicker({ input, novelties, selected, setSelected 
                     {...cardIn(ti * 2 + i)}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => toggle(n.id)}
-                    className={clsx('relative flex flex-col gap-2 rounded-3xl border-2 bg-white p-5 text-left transition-colors', on ? 'border-doya-500 shadow-[0_14px_40px_-24px_rgba(127,25,230,.8)]' : 'border-gray-200 hover:border-doya-200')}
+                    className={clsx('relative flex flex-col gap-2 rounded-[var(--r)] border-2 bg-white p-5 text-left transition-colors', on ? 'border-doya-500 shadow-[0_14px_40px_-24px_rgba(0,102,255,.8)]' : 'border-gray-200 hover:border-doya-200')}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-doya-50 text-doya-600">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-[var(--r-sm)] bg-doya-50 text-doya-600">
                         <Gift className="h-5 w-5" />
                       </div>
-                      <motion.span animate={{ scale: on ? 1 : 0.8, backgroundColor: on ? '#7f19e6' : '#ffffff' }} className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-doya-500">
+                      <motion.span animate={{ scale: on ? 1 : 0.8, backgroundColor: on ? ds.blue : ds.paper }} className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-doya-500">
                         <AnimatePresence>{on && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><Check className="h-3.5 w-3.5 text-white" /></motion.span>}</AnimatePresence>
                       </motion.span>
                     </div>
@@ -72,10 +73,10 @@ export default function NoveltyPicker({ input, novelties, selected, setSelected 
         ))}
       </div>
 
-      <div className="flex flex-col gap-3 rounded-3xl border border-gray-200 bg-white p-5 md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 rounded-[var(--r)] border border-gray-200 bg-white p-5 md:flex-row md:items-center">
         <p className="text-sm font-black text-ink">名入れノベルティの発注先</p>
         {partners.map((p) => (
-          <a key={p.id} href={p.url} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl bg-gray-50 px-4 py-3 hover:bg-doya-50">
+          <a key={p.id} href={p.url} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-[var(--r-sm)] bg-gray-50 px-4 py-3 hover:bg-doya-50">
             <span className="min-w-0">
               <span className="block text-sm font-black text-ink">{p.name}</span>
               <span className="block text-[11px] text-gray-500">{p.strength}</span>

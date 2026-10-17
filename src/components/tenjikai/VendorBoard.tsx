@@ -70,7 +70,7 @@ export default function VendorBoard({ input, plan, creatives, analysis, budget }
         }
       />
 
-      <div className="flex gap-1 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-[var(--r-sm)] border border-gray-200 bg-white p-1">
         {CATS.map((c) => (
           <button key={c} onClick={() => setCat(c)} className={clsx('relative flex-1 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-black', cat === c ? 'text-white' : 'text-ink hover:bg-gray-50')}>
             {cat === c && <motion.span layoutId="vendorTab" className="absolute inset-0 rounded-xl bg-ink" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
@@ -80,11 +80,11 @@ export default function VendorBoard({ input, plan, creatives, analysis, budget }
       </div>
 
       {partnerKind && (
-        <motion.div key={cat} {...cardIn(0)} className="rounded-3xl border-2 border-amber-300 bg-amber-50/60 p-5">
+        <motion.div key={cat} {...cardIn(0)} className="rounded-[var(--r)] border-2 border-amber-300 bg-amber-50/60 p-5">
           <p className="mb-3 text-sm font-black text-ink">おすすめのネット{cat === '印刷' ? '印刷' : 'ノベルティ'}サービス</p>
           <div className="grid gap-3 md:grid-cols-3">
             {(partnerKind === 'novelty' ? recommendPrinters('novelty') : PRINT_PARTNERS).map((p, i) => (
-              <a key={p.id} href={p.url} target="_blank" rel="noopener noreferrer" className="group flex flex-col gap-1 rounded-2xl bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+              <a key={p.id} href={p.url} target="_blank" rel="noopener noreferrer" className="group flex flex-col gap-1 rounded-[var(--r-sm)] bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
                 <span className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-sm font-black text-ink">
                     {i === 0 && <span className="rounded bg-amber-400 px-1 text-[9px] text-amber-950">おすすめ</span>}
@@ -109,7 +109,7 @@ export default function VendorBoard({ input, plan, creatives, analysis, budget }
           const on = picked.includes(v.id)
           const fits = v.category !== '装飾・施工' || v.minYen <= buildBudget
           return (
-            <motion.button key={v.id} {...cardIn(i + 1)} onClick={() => setPicked(on ? picked.filter((x) => x !== v.id) : [...picked, v.id])} className={clsx('flex flex-col gap-3 rounded-3xl border-2 bg-white p-5 text-left transition-colors', on ? 'border-doya-500' : 'border-gray-200 hover:border-doya-200')}>
+            <motion.button key={v.id} {...cardIn(i + 1)} onClick={() => setPicked(on ? picked.filter((x) => x !== v.id) : [...picked, v.id])} className={clsx('flex flex-col gap-3 rounded-[var(--r)] border-2 bg-white p-5 text-left transition-colors', on ? 'border-doya-500' : 'border-gray-200 hover:border-doya-200')}>
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h3 className="font-black text-ink">{v.name}</h3>
@@ -138,7 +138,7 @@ export default function VendorBoard({ input, plan, creatives, analysis, budget }
       <Modal open={specOpen} onClose={() => setSpecOpen(false)} title="発注仕様書プレビュー">
         <div className="flex flex-col gap-4">
           <div className="grid gap-4 md:grid-cols-[1fr_1.2fr]">
-            <div className="aspect-[4/3] rounded-2xl border border-gray-200 bg-gray-50 p-2">
+            <div className="aspect-[4/3] rounded-[var(--r-sm)] border border-gray-200 bg-gray-50 p-2">
               <IsoBooth plan={plan} analysis={analysis} compact />
             </div>
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
@@ -155,7 +155,7 @@ export default function VendorBoard({ input, plan, creatives, analysis, budget }
               </dd>
             </dl>
           </div>
-          <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-2xl bg-gray-50 p-4 font-mono text-[11px] leading-relaxed text-ink">{text}</pre>
+          <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[var(--r-sm)] bg-gray-50 p-4 font-mono text-[11px] leading-relaxed text-ink">{text}</pre>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <span className="mr-auto text-[11px] text-gray-400">本番ではjspdfでPDF化し、業者へのメール送信は送信前に確認画面を挟みます。</span>
             <button onClick={copy} className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-black text-white">

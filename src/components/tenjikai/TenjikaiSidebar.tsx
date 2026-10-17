@@ -2,7 +2,7 @@
 
 import React, { memo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Box, FolderOpen, Gift, LayoutDashboard, Truck, Palette, PlusCircle, Wallet, Zap } from 'lucide-react'
+import { Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { tenjikaiTheme } from '@/components/sidebar/themes'
 import {
@@ -18,19 +18,11 @@ import {
 } from '@/components/sidebar'
 import type { SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { TENJIKAI_NAV, type Section, type TenjikaiNavItem } from '@/lib/tenjikai/nav'
+import { ds } from '@/lib/tenjikai/tokens'
 
-export type Section = 'new' | 'overview' | 'booth' | 'creatives' | 'novelty' | 'budget' | 'vendors' | 'docs'
-
-const NAV: { id: Section; label: string; icon: React.ElementType; hot?: boolean }[] = [
-  { id: 'new', label: '新規出展プロジェクト', icon: PlusCircle, hot: true },
-  { id: 'overview', label: '概要ダッシュボード', icon: LayoutDashboard },
-  { id: 'booth', label: 'ブース設計', icon: Box },
-  { id: 'creatives', label: '制作物スタジオ', icon: Palette },
-  { id: 'novelty', label: 'ノベルティ', icon: Gift },
-  { id: 'budget', label: '予算シミュレーター', icon: Wallet },
-  { id: 'vendors', label: '業者選定・発注', icon: Truck },
-  { id: 'docs', label: '資料庫・締切', icon: FolderOpen },
-]
+// ナビ項目の正本は src/lib/tenjikai/nav.ts（ADDON-SERVICES R-1）
+export type { Section } from '@/lib/tenjikai/nav'
 
 export function BoothMark({ className }: { className?: string }) {
   // ドヤ展示会のマーク：小間を等角投影で描いたもの
@@ -39,7 +31,7 @@ export function BoothMark({ className }: { className?: string }) {
       <polygon points="16,6 28,12 16,18 4,12" fill="currentColor" opacity=".35" />
       <polygon points="4,12 16,6 16,2 4,8" fill="currentColor" />
       <polygon points="16,6 28,12 28,8 16,2" fill="currentColor" opacity=".7" />
-      <polygon points="14,12 19,14.5 14,17 9,14.5" fill="#ffb020" />
+      <polygon points="14,12 19,14.5 14,17 9,14.5" fill={ds.yellow} />
     </svg>
   )
 }
@@ -60,7 +52,7 @@ function SectionButton({
   showLabel,
   onClick,
 }: {
-  item: (typeof NAV)[number]
+  item: TenjikaiNavItem
   isActive: boolean
   disabled: boolean
   showLabel: boolean
@@ -143,14 +135,14 @@ function TenjikaiSidebarImpl({
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <nav className="py-4 sm:py-6 px-3 space-y-1">
             <SidebarSectionTitle title="ドヤ展示会" isCollapsed={isCollapsed} theme={tenjikaiTheme} />
-            {NAV.map((item) => (
+            {TENJIKAI_NAV.map((item) => (
               <SectionButton
-                key={item.id}
+                key={item.section}
                 item={item}
-                isActive={section === item.id}
-                disabled={!ready && item.id !== 'new'}
+                isActive={section === item.section}
+                disabled={!ready && !item.availableBeforeProject}
                 showLabel={showLabel}
-                onClick={() => go(item.id)}
+                onClick={() => go(item.section)}
               />
             ))}
           </nav>
@@ -160,7 +152,7 @@ function TenjikaiSidebarImpl({
             <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
-                  <Zap className="w-4 h-4 text-[#6a12c4] fill-[#6a12c4]" />
+                  <Zap className="w-4 h-4 text-[var(--blue-deep)] fill-[var(--blue-deep)]" />
                 </div>
                 <p className="text-xs font-black text-white">開発中のサービスです</p>
               </div>

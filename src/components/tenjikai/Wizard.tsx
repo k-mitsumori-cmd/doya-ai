@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Globe, Sparkles } from 'lucide-react'
 import { clsx } from 'clsx'
 import { GOAL_LABEL, POSITION_LABEL, VENUES, boothSize, expectedVisitors, man, type BoothPosition, type Goal, type ProjectInput } from '@/lib/tenjikai/engine'
+import { ds } from '@/lib/tenjikai/tokens'
 
 const stagger = { animate: { transition: { staggerChildren: 0.06 } } }
 const item = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } } }
@@ -12,11 +13,11 @@ const item = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0, tran
 function PositionIcon({ p, active }: { p: BoothPosition; active: boolean }) {
   // 塗り = 自社小間 / 破線 = 開放面（通路）
   const open = { inline: ['b'], corner: ['b', 'r'], peninsula: ['b', 'r', 'l'], island: ['b', 'r', 'l', 't'] }[p]
-  const c = active ? '#7f19e6' : '#a59fbd'
+  const c = active ? ds.blue : ds.muted
   const side = (k: string, d: string) => <path d={d} stroke={c} strokeWidth={open.includes(k) ? 1.5 : 3} strokeDasharray={open.includes(k) ? '3 3' : undefined} fill="none" />
   return (
     <svg viewBox="0 0 40 40" className="h-9 w-9" aria-hidden="true">
-      <rect x="8" y="8" width="24" height="24" fill={active ? '#ecdcfd' : '#f1eff6'} />
+      <rect x="8" y="8" width="24" height="24" fill={active ? ds.blueSoft : ds.track} />
       {side('t', 'M8 8 H32')}
       {side('r', 'M32 8 V32')}
       {side('b', 'M8 32 H32')}
@@ -66,7 +67,7 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
           e.preventDefault()
           onSubmit(f)
         }}
-        className="flex flex-col gap-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-[0_20px_60px_-30px_rgba(127,25,230,.45)] md:p-7"
+        className="flex flex-col gap-6 rounded-[var(--r)] border border-gray-200 bg-white p-5 shadow-[0_20px_60px_-30px_rgba(0,102,255,.45)] md:p-7"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-black text-ink">出展条件を入力</h2>
@@ -131,7 +132,7 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
                       set('komaCols', c)
                       set('komaRows', r)
                     }}
-                    animate={{ backgroundColor: on ? '#7f19e6' : '#ffffff', scale: on ? 1 : 0.92 }}
+                    animate={{ backgroundColor: on ? ds.blue : ds.paper, scale: on ? 1 : 0.92 }}
                     transition={{ duration: 0.15 }}
                     className="h-8 w-8 rounded-md border border-gray-200"
                   />
@@ -158,7 +159,7 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
         <label className="flex flex-col gap-2">
           <div className="flex items-baseline justify-between">
             <span className="text-xs font-black text-gray-500">総予算（小間料込み）</span>
-            <motion.span key={f.budgetYen} initial={{ scale: 1.2, color: '#7f19e6' }} animate={{ scale: 1, color: '#1b1530' }} className="font-mono text-lg font-semibold tabular">
+            <motion.span key={f.budgetYen} initial={{ scale: 1.2, color: ds.blue }} animate={{ scale: 1, color: ds.ink }} className="font-mono text-lg font-semibold tabular">
               {man(f.budgetYen)}
             </motion.span>
           </div>
@@ -186,7 +187,7 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
           </label>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl bg-doya-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-[var(--r-sm)] bg-doya-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs font-bold leading-relaxed text-doya-700">
             想定来場 <span className="font-mono text-sm">{expectedVisitors(f).toLocaleString()}</span> 人（{f.days}日間）をもとに、制作物とノベルティの数量を計算します。
           </p>

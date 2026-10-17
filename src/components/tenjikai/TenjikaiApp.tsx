@@ -34,6 +34,9 @@ export default function TenjikaiApp() {
   const [selectedNovelty, setSelectedNovelty] = useState<string[]>([])
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  // 3D図面の面ごとの画像と完成予想図。セクションを移っても消えないよう、ここで持つ
+  const [panelImages, setPanelImages] = useState<Record<string, string>>({})
+  const [renders, setRenders] = useState<Record<string, string[]>>({})
 
   const analysis = useMemo(() => analyzeSite(input.serviceUrl), [input.serviceUrl])
   const plans = useMemo(() => generateBoothPlans(input), [input])
@@ -76,7 +79,7 @@ export default function TenjikaiApp() {
       case 'overview':
         return <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} />
       case 'booth':
-        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} />
+        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} panelImages={panelImages} setPanelImages={setPanelImages} renders={renders} setRenders={setRenders} />
       case 'creatives':
         return <CreativeStudio creatives={creatives} analysis={analysis} />
       case 'novelty':
@@ -93,7 +96,7 @@ export default function TenjikaiApp() {
   const key = phase === 'ready' ? section : phase
 
   return (
-    <div className="tenjikai-root flex h-screen overflow-hidden bg-[#f7f6fb] text-ink">
+    <div className="tenjikai-root flex h-screen overflow-hidden bg-[var(--bg)] text-ink">
       <div className="hidden md:flex">
         <TenjikaiSidebar section={phase === 'ready' ? section : 'new'} ready={phase === 'ready'} go={go} isCollapsed={collapsed} onToggle={setCollapsed} projectName={phase === 'input' ? undefined : input.eventName} />
       </div>

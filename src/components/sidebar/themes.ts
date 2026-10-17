@@ -404,19 +404,19 @@ export const mensetsuTheme: SidebarTheme = {
   zapColor: 'text-sky-300 fill-sky-300',
 }
 
-/** ドヤ展示会 — バイオレット（#7f19e6。プロトタイプの doya-600〜900 と揃える） */
+/** ドヤ展示会 — クリア（ds トークンの --blue / --blue-deep / --navy。ADDON-SERVICES R-3） */
 export const tenjikaiTheme: SidebarTheme = {
-  bgGradient: 'bg-gradient-to-b from-[#6a12c4] via-[#550e9e] to-[#2a0752]',
-  navText: 'text-violet-100/75',
-  navTextIcon: 'text-violet-200/75',
-  sectionText: 'text-violet-200/55',
-  toggleText: 'text-[#6a12c4]',
-  toggleHover: 'hover:bg-violet-50',
-  brandingText: 'text-violet-100/35',
-  profileBg: 'bg-[#2a0752]/40',
-  avatarBg: 'bg-[#7f19e6]',
-  loginText: 'text-[#6a12c4]',
-  loginHover: 'hover:bg-violet-50',
-  aiBubbleBg: 'bg-[#7f19e6]',
-  zapColor: 'text-amber-300 fill-amber-300',
+  bgGradient: 'bg-gradient-to-b from-[#0066ff] via-[#0047d6] to-[#0a0f3c]',
+  navText: 'text-blue-100/75',
+  navTextIcon: 'text-blue-200/75',
+  sectionText: 'text-blue-200/55',
+  toggleText: 'text-[#0047d6]',
+  toggleHover: 'hover:bg-blue-50',
+  brandingText: 'text-blue-100/35',
+  profileBg: 'bg-[#0a0f3c]/40',
+  avatarBg: 'bg-[#0066ff]',
+  loginText: 'text-[#0047d6]',
+  loginHover: 'hover:bg-blue-50',
+  aiBubbleBg: 'bg-[#0066ff]',
+  zapColor: 'text-[#ffd400] fill-[#ffd400]',
 }

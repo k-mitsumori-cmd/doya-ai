@@ -7,6 +7,7 @@ import { PageHeader, cardIn } from './ui'
 import ImageGenModal from './ImageGenModal'
 import { recommendPrinters, yen, type Creative, type SiteAnalysis } from '@/lib/tenjikai/engine'
 import { buildCreativePrompt, nearestRatio } from '@/lib/tenjikai/imagegen'
+import { ds } from '@/lib/tenjikai/tokens'
 
 function QR({ size = 40, seed = 7 }: { size?: number; seed?: number }) {
   // 見た目用のダミーQR（実物は入稿時に差し込む）
@@ -21,7 +22,7 @@ function QR({ size = 40, seed = 7 }: { size?: number; seed?: number }) {
     }
   return (
     <svg viewBox={`-1 -1 ${n + 2} ${n + 2}`} width={size} height={size} className="rounded bg-white" aria-hidden="true">
-      <g fill="#1b1530">{cells}</g>
+      <g fill={ds.ink}>{cells}</g>
     </svg>
   )
 }
@@ -81,7 +82,7 @@ export function CreativePreview({ c, a }: { c: Creative; a: SiteAnalysis }) {
     case 'clearfile':
       return (
         <div className="relative h-full w-full overflow-hidden" style={{ background: `${primary}18` }}>
-          <div className="absolute -right-[20%] -top-[10%] h-[70%] w-[90%] rotate-12 rounded-3xl" style={{ background: primary }} />
+          <div className="absolute -right-[20%] -top-[10%] h-[70%] w-[90%] rotate-12 rounded-[var(--r)]" style={{ background: primary }} />
           <div className="absolute bottom-[8%] left-[8%]">
             <p className="font-display text-[14px]" style={{ color: secondary }}>{a.brand}</p>
             <p className="text-[7px] font-bold text-gray-600">{a.category}</p>
@@ -139,7 +140,7 @@ export default function CreativeStudio({ creatives, analysis }: { creatives: Cre
         title="制作物スタジオ"
         desc="サイトの訴求点から、展示会に必要な制作物6点のコピーと構成を作りました。気に入ったものは画像生成で入稿用のデザイン案にできます。"
         right={
-          <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-right">
+          <div className="rounded-[var(--r-sm)] border border-gray-200 bg-white px-4 py-3 text-right">
             <p className="text-[11px] font-black text-gray-500">制作・印刷の概算</p>
             <p className="font-mono text-xl font-semibold text-ink tabular">{yen(printTotal)}</p>
           </div>
@@ -152,13 +153,13 @@ export default function CreativeStudio({ creatives, analysis }: { creatives: Cre
           const printers = recommendPrinters(c.kind)
           const ratio = c.widthMm / c.heightMm
           return (
-            <motion.article key={c.kind} {...cardIn(i)} whileHover={{ y: -4 }} className="flex flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white">
-              <div className="flex h-56 items-center justify-center bg-[#f1eff6] p-5">
+            <motion.article key={c.kind} {...cardIn(i)} whileHover={{ y: -4 }} className="flex flex-col overflow-hidden rounded-[var(--r)] border border-gray-200 bg-white">
+              <div className="flex h-56 items-center justify-center bg-[var(--track)] p-5">
                 <motion.div
                   initial={{ rotateY: -18, opacity: 0 }}
                   animate={{ rotateY: 0, opacity: 1 }}
                   transition={{ delay: 0.2 + i * 0.08, type: 'spring', stiffness: 120 }}
-                  className="overflow-hidden rounded-md bg-white shadow-[0_12px_30px_-12px_rgba(27,21,48,.45)]"
+                  className="overflow-hidden rounded-md bg-white shadow-[0_12px_30px_-12px_rgba(16,22,51,.45)]"
                   style={{ aspectRatio: `${c.widthMm} / ${c.heightMm}`, height: ratio > 1.2 ? 'auto' : '100%', width: ratio > 1.2 ? '100%' : 'auto', maxHeight: '100%', maxWidth: '100%' }}
                 >
                   {imgs?.length ? <img src={imgs[shown[c.kind] ?? 0]} alt={`${c.name}の生成画像`} className="h-full w-full object-cover" /> : <CreativePreview c={c} a={analysis} />}
@@ -186,7 +187,7 @@ export default function CreativeStudio({ creatives, analysis }: { creatives: Cre
                 <p className="text-xs leading-relaxed text-gray-600">{c.purpose}</p>
 
                 {printers.length > 0 && (
-                  <div className="rounded-2xl border border-gray-100 bg-gray-50/70 p-3">
+                  <div className="rounded-[var(--r-sm)] border border-gray-100 bg-gray-50/70 p-3">
                     <p className="mb-2 flex items-center gap-1.5 text-[11px] font-black text-gray-500"><Printer className="h-3.5 w-3.5" />おすすめの印刷会社</p>
                     <ul className="flex flex-col gap-1.5">
                       {printers.map((p, k) => (

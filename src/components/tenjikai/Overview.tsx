@@ -41,7 +41,7 @@ export default function Overview({ input, analysis, plan, budget, deadlines, cre
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map((k, i) => (
-          <motion.div key={k.label} {...cardIn(i)} className="rounded-2xl border border-gray-200 bg-white p-4">
+          <motion.div key={k.label} {...cardIn(i)} className="rounded-[var(--r-sm)] border border-gray-200 bg-white p-4">
             <p className="text-[11px] font-black text-gray-500">{k.label}</p>
             <CountUp value={k.value} format={k.fmt} className="mt-1 block font-mono text-2xl font-semibold text-ink tabular" />
             <p className={`mt-1 text-[11px] font-bold ${k.tone}`}>{k.sub}</p>
@@ -50,7 +50,7 @@ export default function Overview({ input, analysis, plan, budget, deadlines, cre
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
-        <motion.div {...cardIn(4)} className="flex flex-col rounded-3xl border border-gray-200 bg-white p-5">
+        <motion.div {...cardIn(4)} className="flex flex-col rounded-[var(--r)] border border-gray-200 bg-white p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[11px] font-black text-doya-500">採用中の設営案 {plan.variant}</p>
@@ -67,7 +67,7 @@ export default function Overview({ input, analysis, plan, budget, deadlines, cre
         </motion.div>
 
         <div className="flex flex-col gap-4">
-          <motion.div {...cardIn(5)} className="rounded-3xl border border-gray-200 bg-white p-5">
+          <motion.div {...cardIn(5)} className="rounded-[var(--r)] border border-gray-200 bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-black text-ink">予算の内訳</h2>
               <button onClick={() => go('budget')} className="text-xs font-black text-doya-600 hover:underline">調整する</button>
@@ -87,7 +87,7 @@ export default function Overview({ input, analysis, plan, budget, deadlines, cre
             </ul>
           </motion.div>
 
-          <motion.div {...cardIn(6)} className="rounded-3xl border border-gray-200 bg-white p-5">
+          <motion.div {...cardIn(6)} className="rounded-[var(--r)] border border-gray-200 bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="flex items-center gap-1.5 text-sm font-black text-ink"><CalendarClock className="h-4 w-4 text-doya-500" />次の締切</h2>
               <button onClick={() => go('docs')} className="text-xs font-black text-doya-600 hover:underline">締切表</button>
@@ -105,7 +105,7 @@ export default function Overview({ input, analysis, plan, budget, deadlines, cre
         </div>
       </div>
 
-      <motion.div {...cardIn(7)} className="grid gap-4 rounded-3xl border border-gray-200 bg-white p-5 md:grid-cols-[1fr_1fr_auto]">
+      <motion.div {...cardIn(7)} className="grid gap-4 rounded-[var(--r)] border border-gray-200 bg-white p-5 md:grid-cols-[1fr_1fr_auto]">
         <div>
           <p className="text-[11px] font-black text-gray-500">サイトから抽出した訴求点</p>
           <ul className="mt-2 flex flex-col gap-1.5">

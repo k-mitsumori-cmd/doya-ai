@@ -6,6 +6,7 @@ import { AlertTriangle, ImagePlus, Loader2 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Modal } from './ui'
 import { IMAGE_MODELS, estimateCost, type ImageSize } from '@/lib/tenjikai/imagegen'
+import { ds } from '@/lib/tenjikai/tokens'
 
 interface Props {
   open: boolean
@@ -62,7 +63,7 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
       <div className="flex flex-col gap-5">
         <div className="grid gap-3 sm:grid-cols-2">
           {IMAGE_MODELS.map((m) => (
-            <button key={m.id} onClick={() => setModel(m.id)} className={clsx('rounded-2xl border-2 p-3 text-left', model === m.id ? 'border-doya-500 bg-doya-50' : 'border-gray-200')}>
+            <button key={m.id} onClick={() => setModel(m.id)} className={clsx('rounded-[var(--r-sm)] border-2 p-3 text-left', model === m.id ? 'border-doya-500 bg-doya-50' : 'border-gray-200')}>
               <p className="text-sm font-black text-ink">{m.label}</p>
               <p className="font-mono text-[10px] text-gray-500">{m.id}</p>
               <p className="mt-1 text-[11px] text-gray-600">{m.note}</p>
@@ -95,7 +96,7 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
           <textarea id="imagegen-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={6} className="rounded-xl border-2 border-gray-200 p-3 text-xs leading-relaxed outline-none focus:border-doya-500" />
         </label>
 
-        <div className="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50">
+        <div className="overflow-hidden rounded-[var(--r-sm)] border border-amber-200 bg-amber-50">
           <div className="flex items-center gap-2 border-b border-amber-200 px-4 py-2 text-xs font-black text-amber-800">
             <AlertTriangle className="h-4 w-4" /> 従量課金のAPIを使います。実行前に見込み額を確認してください
           </div>
@@ -154,7 +155,7 @@ export async function svgToPngBase64(svg: SVGSVGElement, width = 1280): Promise<
     canvas.height = Math.round(width * ratio)
     const ctx = canvas.getContext('2d')
     if (!ctx) return undefined
-    ctx.fillStyle = '#ffffff'
+    ctx.fillStyle = ds.paper
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
     return canvas.toDataURL('image/png').split(',')[1]

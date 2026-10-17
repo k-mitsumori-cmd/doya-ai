@@ -1734,9 +1734,9 @@ export const SERVICES: Service[] = [
       '自社サービスのURLと、展示会名・小間数・予算・出展の目的を入力すると、サイトの内容から訴求点とブランドカラーを読み取り、ブースのレイアウト案を3パターン、背面パネルやチラシなどの制作物のコピー、目的に合ったノベルティ、費用の内訳を用意します。施工・印刷・ノベルティの業者候補と発注に使う仕様書、会期から逆算した締切の一覧もまとめて作るため、初めての出展でも準備の抜け漏れを防げます。',
     // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
     icon: '',
-    color: 'violet',
-    gradient: 'from-[#7f19e6] to-[#2a0752]',
-    bgGradient: 'from-violet-50 to-purple-50',
+    color: 'blue',
+    gradient: 'from-[#0066ff] to-[#0a0f3c]',
+    bgGradient: 'from-blue-50 to-sky-50',
     href: '/tenjikai',
     dashboardHref: '/tenjikai',
     // 料金が未確定のため共通の料金ページへ（service-limit-ui は末尾が /pricing のものだけ使う）
