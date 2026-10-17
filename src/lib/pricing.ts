@@ -1694,7 +1694,7 @@ export const HR_PRICING: ServicePricing = {
       features: [
         { text: '従業員100名まで', included: true },
         { text: '全機能利用可能', included: true },
-        { text: 'AI機能（無制限）', included: true },
+        { text: 'AI機能（月100回）', included: true },
         { text: 'メンバー招待（無制限）', included: true },
         { text: 'カスタムフィールド', included: true },
         { text: '優先サポート', included: true },
@@ -1737,9 +1737,10 @@ export function getHrEmployeeLimitByUserPlan(plan: string | null | undefined): n
 export function getHrAiLimitByUserPlan(plan: string | null | undefined): number {
   if (process.env.DOYA_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()
+  // 実際に効く上限は src/lib/hr/billing.ts（正本は plan-limit.ts の HR_AI_MONTHLY_LIMITS）。表示用に同じ値を返す。
   switch (p) {
-    case 'ENTERPRISE':
-    case 'PRO': return -1
+    case 'ENTERPRISE': return 500
+    case 'PRO': return 100
     case 'LIGHT':
     case 'STARTER': return 30
     case 'FREE': return 3
