@@ -27,7 +27,7 @@
 15. [設計とは別に先に直す修正（フェーズ0の前）](#15-設計とは別に先に直す修正フェーズ0の前)
 16. [新しいサービスを追加するときの仕様（サービス契約）](#16-新しいサービスを追加するときの仕様サービス契約)
 17. [運用（データ保持・掃除、監視と SLO、前提）](#17-運用データ保持掃除監視と-slo前提)
-- 付録 A 新設ファイル / B 未確認点 / C schema-draft の結合検証 / D 監査への回答 / E 改訂履歴 / F 第 2 回審査への回答 / G 最終ゲート第 1 回への回答 / H 告知文 / I LLM プロバイダ契約 / J 多重記述キー一覧 / K 最終ゲート第 2 回への回答 / L 最終ゲート第 3 回への回答 / M 最終ゲート第 4 回への回答
+- 付録 A 新設ファイル / B 未確認点 / C schema-draft の結合検証 / D 監査への回答 / E 改訂履歴 / F 第 2 回審査への回答 / G 最終ゲート第 1 回への回答 / H 告知文 / I LLM プロバイダ契約 / J 多重記述キー一覧 / K 最終ゲート第 2 回への回答 / L 最終ゲート第 3 回への回答 / M 最終ゲート第 4 回への回答 / N 最終ゲート第 5 回への回答
 
 ---
 
@@ -673,9 +673,9 @@ export async function requireCompanyAccess(
 
 **移行期の互換 API**: 既存 18 本の `getXxxContext()` は内部で `requireCompanyAccess(serviceId, <最下位>)` を呼び、**戻り値の形（`{userId, organizationId, role, ...}`）を維持**する。`organizationId` には `CompanyContext.legacy.organizationId` を入れる。これにより既存 577 ルートと 674 回帰テストを一斉に書き換えずに済む（フラグ `core.unified_access` で新旧切替、§12）。
 
-### 6.3 middleware での保護範囲（既定拒否・4 分類の機械抽出）
+### 6.3 middleware での保護範囲（既定拒否・5 分類の機械抽出）
 
-許可リストは**手書きしない**（監査 A-6: 手書きでは実在する公開ルートを多数取りこぼした）。全 `route.ts` と `page.tsx` を次の 4 分類に**機械的に振り分け**、分類表を `scripts/security-regression/verify-core-route-classes.cjs` がスナップショット（`route-classes.json`）として保持する。分類が変わる PR はスナップショット差分で可視化され、`public` への移動はマニフェスト（§16）に理由が無ければ失敗する。
+許可リストは**手書きしない**（監査 A-6: 手書きでは実在する公開ルートを多数取りこぼした）。全 `route.ts` と `page.tsx` を次の 5 分類に**機械的に振り分け**、分類表を `scripts/security-regression/verify-core-route-classes.cjs` がスナップショット（`route-classes.json`）として保持する。分類が変わる PR はスナップショット差分で可視化され、`public` への移動はマニフェスト（§16）に理由が無ければ失敗する。
 
 | 分類 | 定義（抽出ルール） | middleware の扱い | 例（監査が挙げた実在ルートを全て含む） |
 |---|---|---|---|
@@ -1109,12 +1109,22 @@ Prisma 公式ドキュメントの制限: 「The `query` extension type does not
 | **書き込み全部**（`create / createMany / createManyAndReturn / update / updateMany / upsert / delete / deleteMany`） | **`owned(client, ctx)` だけ** | `walkData`（純関数。戻り値を必ず使う）→ `refs` の所属検証（同じ client で 1 クエリ）→ モジュール内マーカー付きで元操作。拡張は**マーカー無しの書き込みを例外なく throw** |
 | tx 直接呼び出し | 型（`OwnedTx`） | テナントモデルの読み書き**全操作**を `Omit`。`owned(tx, ctx)` 経由だけがコンパイルできる。lint `core/tx-tenant-where` はエラー |
 
-**`walkData` の契約**（FIN4-02。この 1 つに固定する）:
+**`walkData` の契約（改訂 8: DMMF 駆動の既定拒否）**（FIN4-02 → FIN5-01/02 で方式転換。「危ないものを列挙して検査する」のをやめ、`Prisma.dmmf` のモデル・relation 定義でデータを再帰的にたどり、**許可リストに無いものは全て throw** する）:
 
-- `walkData(model, data, op, ctx): { data: NewData; refs: Ref[] }` — **純関数**。入力を変更せず、**書き換えた新しい `data` を返す**。呼び出し側は**必ず戻り値の `data` を使い**、入力の `data` を Prisma に渡してはならない（渡すと複合条件化が失われる）。
-- **即 throw**（`TenantViolation`）: (1) `op in (update, updateMany, upsert.update)` の `data` にテナント列がある、(2) `op in (create, createMany, upsert.create)` の `data` のテナント列が `expected` と異なる（無ければ `withTenant` で補う）、(3) ネストした `create / createMany / connectOrCreate.create` の data に上記違反がある、(4) ネスト対象の `where` がテナント列を含み `expected` と異なる。
-- **refs 収集**: ネストした `connect / set / disconnect / connectOrCreate.where / update.where / updateMany.where / delete.where / deleteMany.where` の対象を `{ model, where }` として `refs` に集める（where はそのまま。複合条件化はしない）。
-- `owned()` は `refs` を model ごとにまとめ、**同じ `client` で `findMany({ where: { AND: [{ OR: wheres }, { [tenant]: expected }] }, select: { id: true } })` を 1 回**実行し、件数が一致しなければ `TenantViolation` で**元操作を呼ばずに**拒否する（DB の `RecordNotFound` に頼らない。他社 id は明示的に拒否され、`SecurityEvent(tenant.violation)` になる）。
+- `walkData(model, data, op, ctx): { data: NewData; refs: Ref[] }` — **純関数**。入力を変更せず、書き換えた新しい `data` を返す。呼び出し側は必ず戻り値の `data` を使う。**対象はテナントモデルに限らず全モデル**（`User / Account / Session` などテナント列を持たない親も含む）。非テナント親の書き込みでも、ネスト先にテナントモデルがあれば同じ契約を適用する。
+- **既定拒否 1（フィールド）**: `data` のキーが `Prisma.dmmf.datamodel.models[model].fields` に無ければ `UnknownNestedKey` で即 throw（ネストの各段で同じ）。
+- **既定拒否 2（ネスト操作キー）**: relation フィールドの値のキーは Prisma 5.22 の NestedInput の**閉じた集合**（手元の `.prisma/client/index.d.ts` で実測）だけを許可し、それ以外は即 throw:
+
+| relation | op 文脈 | 許可キー | 各キーに適用する検査 |
+|---|---|---|---|
+| to-many | create 側（`*CreateNestedManyWithout*Input`） | `create connectOrCreate createMany connect` | `create / createMany.data`: **data 検査**（create 契約）。`connectOrCreate`: `where` を **refs**、`create` を data 検査。`connect`: `where` を refs |
+| to-many | update 側（`*UpdateManyWithout*NestedInput`） | `create connectOrCreate upsert createMany set disconnect delete connect update updateMany deleteMany` | 上記に加え `upsert`: `where` を refs、`create` を data 検査（create）、`update` を data 検査（update）。`update / updateMany`: `where` を refs、`data` を data 検査（update）。`set / disconnect / delete / deleteMany`: `where` を refs |
+| to-one | create 側（`*CreateNestedOneWithout*Input`） | `create connectOrCreate connect` | 同上（create 契約） |
+| to-one | update 側（`*UpdateOne(Required)Without*NestedInput`） | `create connectOrCreate upsert connect update`（optional relation はさらに `disconnect delete`） | `upsert`: `where`（あれば）を refs、`create / update` を data 検査。`update`: `{ where?, data }` 形なら `where` を refs、`data` を data 検査。`disconnect / delete` が boolean なら検査なし、where 形なら refs |
+
+- **data 検査（テナント列の契約）**: 対象モデルがテナント列を持つとき、`create` 契約では値が `expected` と異なれば即 throw（無ければ補う）、`update` 契約ではテナント列が**存在するだけで**即 throw（トップレベルでもネストの `update.data / updateMany.data / upsert.update` でも同じ。FIN5-02）。`via:` 型のテナント列を持つモデルは親の所属で保証されるため data 検査は親に委ねる。
+- **refs 検査（`assertRefsOwned(client, refs, ctx)`）**（FIN5-05）: (a) `refs` のうち**テナント列を持たないモデル**（`User` 等）の参照は検査対象外（所属は親側で保証）。(b) `where` は正規化（キー順ソート・複合 unique セレクタの展開）して**重複排除**し、model ごとに `findMany({ where: { AND: [{ OR: wheres }, tenantWhere(model, ctx)] }, select: { id: true } })` を同じ `client` で 1 回実行、**distinct 件数**が正規化後の where 数と一致しなければ `TenantViolation`（元操作は呼ばない）。(c) `tenantWhere()` は `via:<relation>` 型のテナント列を `scoped()` と同じ規則で展開する。(d) 1 回の書き込みで refs が 200 を超える場合は `TenantViolation`（設計上あり得ない大きさ。`createMany` の大量 connect は分割）。
+- **書き込みの入口**: テナントモデルか非テナントモデルかに関わらず、`data`（upsert は `create / update`）にテナントモデルへの relation を含む書き込みは **`owned()` 経由でしか通らない**（拡張は `TENANT_COLUMNS` の判定より前に `touchesTenantRelation(model, args)` でマーカーを要求）。`OwnedTx` は非テナントモデルの書き込みも `Omit`（読み取りは可）。
 
 ```ts
 // src/lib/core/tenant-prisma.ts  — owned() と同じモジュール。ownedScope は export しない
@@ -1127,7 +1137,14 @@ const WRITES = new Set(['create','createMany','createManyAndReturn','update','up
 
 export function tenantPrisma(ctx) {
   return prisma.$extends({ query: { $allModels: { async $allOperations({ model, operation, args, query }) {
-    const t = TENANT_COLUMNS[model]; if (!t) return query(args)
+    const t = TENANT_COLUMNS[model]
+    if (!t) {                                                   // 非テナントモデル（User / Account / Session 等）
+      if (WRITES.has(operation) && touchesTenantRelation(model, args)) {   // FIN5-01: data（upsert は create/update）にテナントモデルへの relation があれば owned() 経由のみ
+        const scope = ownedScope.getStore()
+        if (!scope || scope.model !== model || scope.op !== operation) throw new UseOwnedHelperError(model, operation)
+      }
+      return query(args)
+    }
     const expected = expectedFor(t, ctx); if (!expected) throw new TenantScopeError(model)
     if (READS.has(operation))
       return query({ ...args, where: { AND: [expandCompound(model, args.where) ?? {}, { [t.column]: expected }] }, ...scopeInclude(model, args, ctx) })
@@ -1140,7 +1157,8 @@ export function tenantPrisma(ctx) {
   } } } })
 }
 
-// owned(): 呼び出し元のクライアント（ctx.db でも tx でも）で動く。拡張が乗っていても乗っていなくても同じ検査を自分で行う
+// owned(): 呼び出し元のクライアント（ctx.db でも tx でも）で動く。拡張が乗っていても乗っていなくても同じ検査を自分で行う。
+// 全モデルに使える（非テナント親からのネスト書き込みもここを通す）。walkData は DMMF 駆動の既定拒否（上記契約）
 export function owned(client: TenantPrisma | OwnedTx, ctx) {
   const run = (model, op, fn) => ownedScope.run({ model, op }, async () => await fn())   // run の中で await（実験 B）
   const guard = async (model, op, data) => {                                            // walkData → refs 検証。戻り値の data を必ず使う
@@ -1197,6 +1215,8 @@ export function owned(client: TenantPrisma | OwnedTx, ctx) {
 | `delete` | 拡張が throw | 所属確認（`findFirstOrThrow(scoped)`）＋マーカー | 同左 | 同左 | 型で `Omit` | TEN-28 |
 | `deleteMany` | 拡張が throw | where に `scoped()`＋マーカー | 同左 | 同左 | 型で `Omit` | TEN-28 |
 | `$queryRaw` / `$executeRaw` | `tenantSql(ctx)` フラグメントが無ければ lint **エラー**（拡張は素通り） | 同左（owned は raw を持たない） | 同左 | 同左 | `OwnedTx` は `$queryRaw` を `tenantSql` 必須の薄いラッパー `tx.$tenantRaw(ctx, sql)` だけに `Omit`／置換 | TEN-29 |
+| `$queryRawUnsafe` / `$executeRawUnsafe` | **lint で呼び出し自体を禁止**（`Prisma.sql` を埋め込めず `tenantSql` 規則が成立しないため。例外は `scripts/ops/**` のみ。FIN5-03） | 同左 | 同左 | 同左 | `OwnedTx` から `Omit` | TEN-29 |
+| 非テナント親からのネスト書き込み（`user.update({ data: { companyMemberships: { update: … } } })` 等） | 拡張の入口ゲート `touchesTenantRelation` がマーカー無しで throw（FIN5-01） | `walkData` が DMMF でネスト先のテナントモデルに同じ契約（data 検査／refs）を適用＋マーカー | 同左 | 同左（owned が全検査） | 型で `Omit`（非テナントモデルの書き込みも Omit。読み取りは可） | TEN-34 |
 | `$transaction([...])` 配列形 | PrismaPromise のみ受け付ける。読み取りは拡張が AND、書き込みは `owned()` が async 関数なので渡せず（マーカー無しの書き込みは拡張が throw）＝**読み取り専用でしか使えない** | `owned()` の戻り値は Promise なので配列形には渡せない（型エラー）。書き込みは対話型へ | 配列形には tx が存在しない（対話型のみ） | 同左 | 配列形には `tx` が無い（`OwnedTx` は対話型のコールバック型） | TEN-31 |
 | `$transaction(async tx => ...)` 対話型 | コールバック内で `ctx.db` を使うと tx 外の別接続になるため lint `core/tx-tenant-where` がエラー（必ず `tx` を使う） | 同左（`owned(ctx.db)` も tx 外。lint エラー） | `owned(tx, ctx)` 経由 | `owned(tx, ctx)` 経由 | `tx: OwnedTx`（全操作 Omit） | TEN-21/22 |
 
@@ -1215,13 +1235,26 @@ export function owned(client: TenantPrisma | OwnedTx, ctx) {
 - **`$transaction`**: `ctx.db.$transaction(async (tx: OwnedTx) => ...)` を使い、tx 内の読み書きは `owned(tx, ctx)` 経由。**配列形 `$transaction([...])` は読み取り専用**（`owned()` は async 関数で PrismaPromise ではないため書き込みを渡せない）。既存コードの配列形の書き込みは対話型へ書き換える（FIN3-07）。
 - **確認済みの事実（リードが手元の `@prisma/client` 5.22 で、DB 接続なしに query 拡張 `$allOperations` 内の `AsyncLocalStorage.getStore()` を記録して実験）**: A) `ownedScope.run({..}, () => db.user.update(...))` で PrismaPromise を返し run の**外**で await → 拡張内の store は **null**（マーカーが届かない）。B) `ownedScope.run({..}, async () => await db.user.update(...))` → store は **{marker}**（届く）。C) run 内の処理と同時に run の外で別クエリを走らせる → 外側のクエリの store は **null**（他の処理に漏れない）。D) 拡張クライアントの対話型 `$transaction` で tx に拡張が乗るか → DB 接続が要るため**未確認**（要実機確認のまま。両方に耐える設計を維持）。擬似コードの `run` は B の形。`createManyAndReturn` が 5.22 に存在することは `.prisma/client/index.d.ts` で確認済み（`updateManyAndReturn` は無い）。
 - 回帰テスト `verify-core-access-cross-tenant.cjs` は**マトリクスの全マス**を持つ（CHECKLIST TEN-26〜TEN-32。tx の列は拡張の有無を両方モック）。
+- **DMMF とマトリクスの整合を CI で検査**（TEN-35）: `verify-core-dmmf-matrix.cjs` が (1) `.prisma/client/index.d.ts` の Delegate からモデル操作名を抽出し、マトリクスの行集合（16 操作）と完全一致、(2) `*NestedInput` 型群からネスト操作キーを抽出し、許可リスト 4 表と完全一致、(3) クライアント操作（`$queryRaw*` 等）がマトリクスの raw 行に含まれる、ことを検査する。Prisma を上げて新しい操作・キー（例: `updateManyAndReturn`）が現れたら CI が落ち、マトリクスと `walkData` の更新を強制する。
+- **プロトタイプ実行結果**（改訂 8、スクラッチ領域で `Prisma.dmmf` を読む核を DB 接続なしに実行）: 192 モデル・396 relation をすべてたどれる（traversed=396）、許可リスト外のネストキー（`hrMemberships.foo`）と未知フィールド（`notAField`）で `UnknownNestedKey`、`User.hrMemberships.update.data.organizationId` の書き換えで `TenantViolation`、ネスト `upsert` の `where` が refs に入り `create` にテナント列が強制される、入力は不変（純関数）。許可リストは `index.d.ts` 実測の to-many 11 種・to-one 7 種（create 側は 4 種・3 種）と一致。
 - **raw SQL**（SEC-04）: `tenantSql(ctx)` が返す `Prisma.sql` フラグメント（`"companyId" = ${ctx.companyId}` 等。値は ctx からしか作れない）を埋め込む API にし、lint は「`$queryRaw` / `$executeRaw` の引数に `tenantSql(` が含まれる」を要求する（文字列一致ではない）。
 - **子テーブル**: マニフェスト `dataModels[].tenantColumn='via:<relation>'` は `where: { <relation>: { organizationId } }` に展開。列も via も無いモデルは Phase1 で `companyId` を非正規化追加。`verify-core-tenant-columns.cjs`。
 - **IDOR 対策**: cuid に頼らず上記で保証。パスパラメータ id は zod cuid。
 
-**方式 B（Phase4 以降、任意）: RLS**は改訂 2 のまま（新テーブル限定。pgbouncer のため全面適用はしない）。
+**方式 B（二重の守り）: Postgres RLS を機微テーブルに限って併用する評価と決定**
 
-**認可の形式的保証**（SEC-12）: 4 分類の抽出を「ガード関数名の文字列の有無」で行うと、戻り値を `return` し忘れたルート（`banner-admin-guard.ts` の戻り値方式）や、ヘルパー内部で `getServerSession` を呼ぶルートを誤分類する。よって (1) ハンドラは **`withCompanyAccess(serviceId, minRole, handler)` / `withCompanyAccessOrCron(serviceId, minRole, handler)`（cron-launch 専用） / `withGuestToken(...)` / `withCron(handler)` / `withAdmin(handler)` / `withPublic(reason, handler)` の HOF でしか export できない型**にし、`verify-core-route-guard.cjs` は「`export const GET|POST|... = with*(` 以外の export」をビルド失敗にする。(2) **ランタイム・スモーク** `verify-core-route-smoke.cjs`: 全 route を未認証で叩き、`public` 以外で 2xx が返れば失敗（`next build` 後の `next start` に対して、モック DB で）。(3) 既存 577 ルートは Phase2〜3 で順次 HOF 化し、未変換ルートは `route-classes.json` に `legacy: true` で記録（Phase4 で 0）。
+| 観点 | 評価 |
+|---|---|
+| 対象 | HR・勤怠・面接の PII を持つテーブル（マニフェスト `pii.columns` を持つモデル。`hr_*`, `kintai_*`, `mensetsu_*` の該当表）に限定。全 192 モデルには張らない |
+| 方式 | 対話型 tx の冒頭で `SELECT set_config('app.company_id', $1, true)`（第 3 引数 true＝トランザクション限定）を実行し、ポリシーは `USING (company_id = current_setting('app.company_id', true))`。旧 `organizationId` 列の表は `organization_id IN (SELECT legacy_organization_id FROM core_company_service_links WHERE company_id = current_setting(...))` |
+| pgbouncer（transaction mode）との両立 | `set_config(..., true)` はトランザクション内で有効・終了で消えるため、接続が別クライアントに再利用されても漏れない（`SET` セッション変数は使わない）。Prisma の対話型 `$transaction` は 1 接続を占有するので、冒頭の `set_config` と後続クエリは同じ接続（**要実機確認**: Prisma 5.22 + pgbouncer で対話型 tx が 1 接続に固定されること自体は Prisma の前提だが、Supabase の pooler 設定で確認する） |
+| 実装量 | `withTenantTx(ctx, fn)` ラッパー（`ctx.db.$transaction(async tx => { await tx.$executeRaw\`SELECT set_config('app.company_id', ${ctx.companyId}, true)\`; return fn(tx) })`）を core に 1 つ。機微テーブルへのアクセスを**必ず**このラッパーの中で行う（lint `core/pii-table-in-tenant-tx`: マニフェスト `pii` を持つモデルを `ctx.db` 直接で触ると**エラー**）。ポリシー・`ENABLE ROW LEVEL SECURITY` は Prisma が管理しないので `doya-db-push` 手順の raw SQL（**`db push` がポリシーを落とさないかは要実機確認**） |
+| 性能 | 機微テーブルの操作が全て対話型 tx になり、`connection_limit=3`・`pool_timeout=30` の下で接続占有時間が伸びる。advance の DB 区間はセマフォ 2 で直列化済み。見積り: HR/勤怠/面接の API は 1 リクエスト 1 tx（既存の多くが既に `$transaction` を使う）なので追加コストは `set_config` 1 往復（<1ms） |
+| 失敗時の挙動 | `set_config` を忘れた経路は `current_setting(..., true)` が NULL → ポリシーが偽 → **0 行**（fail-closed。他社データは見えず、自社も見えないので検知しやすい）。Cron / 運用バッチは `app.company_id` を会社ごとに設定して回す（`BYPASSRLS` ロールは使わない。owner ロールの `DIRECT_URL` は `db push` 専用で、アプリから使わない） |
+| アプリ層との関係 | アプリ層（`owned()` ＋ DMMF 既定拒否）が第 1 防御、RLS は第 2 防御。アプリ層の穴（列挙漏れ・新しい Prisma 機能）が機微テーブルで他社行に到達しても DB が止める |
+| 決定 | **段階採用**: Phase4 で機微テーブル限定（§12 Phase4）。Phase3 のステージングで (1) `set_config` が tx 限定で効くこと、(2) `db push` がポリシーを保持すること、(3) p95 レイテンシの増分、を計測してから本番。新テーブル（`core_*` 等）への拡張は未決 D21 |
+
+**認可の形式的保証**（SEC-12）: 5 分類の抽出を「ガード関数名の文字列の有無」で行うと、戻り値を `return` し忘れたルート（`banner-admin-guard.ts` の戻り値方式）や、ヘルパー内部で `getServerSession` を呼ぶルートを誤分類する。よって (1) ハンドラは **`withCompanyAccess(serviceId, minRole, handler)` / `withCompanyAccessOrCron(serviceId, minRole, handler)`（cron-launch 専用） / `withGuestToken(...)` / `withCron(handler)` / `withAdmin(handler)` / `withPublic(reason, handler)` の HOF でしか export できない型**にし、`verify-core-route-guard.cjs` は「`export const GET|POST|... = with*(` 以外の export」をビルド失敗にする。(2) **ランタイム・スモーク** `verify-core-route-smoke.cjs`: 全 route を未認証で叩き、`public` 以外で 2xx が返れば失敗（`next build` 後の `next start` に対して、モック DB で）。(3) 既存 577 ルートは Phase2〜3 で順次 HOF 化し、未変換ルートは `route-classes.json` に `legacy: true` で記録（Phase4 で 0）。
 
 ### 10.3 認可（既定拒否）
 
@@ -1283,7 +1316,7 @@ export function owned(client: TenantPrisma | OwnedTx, ctx) {
 | ファイル名（新規） | 検証内容 | 監査対応 |
 |---|---|---|
 | `verify-core-schema-draft.cjs` | `schema-draft.prisma` を既存 schema と結合して `prisma validate`（付録 C の結合規則） | A-3 |
-| `verify-core-route-classes.cjs` | 全 route/page を 4 分類に機械抽出し `route-classes.json` と一致。無認証ルートがマニフェスト `routes.public` に無ければ失敗 | A-6 |
+| `verify-core-route-classes.cjs` | 全 route/page を 5 分類に機械抽出し `route-classes.json` と一致。無認証ルートがマニフェスト `routes.public` に無ければ失敗 | A-6 |
 | `verify-core-route-guard.cjs` | `auth-required` 分類の全 `route.ts` にガード呼び出し文字列が存在 | A-6 |
 | `verify-core-access-cross-tenant.cjs` | A 社の ctx で B 社の `companyId` 指定 → 403。`tenantPrisma` の `findUnique(id)` が他社 id で null、`update` が NotFound | A-1 以外全般 |
 | `verify-core-access-role-ceiling.cjs` | 会社 viewer ＋サービス owner 行 → 実効は読み取りのみ | — |
@@ -1451,7 +1484,7 @@ export function owned(client: TenantPrisma | OwnedTx, ctx) {
 | **1. 足す** | 新テーブルと nullable 列を追加。**`Session` の変更手順を固定**（DATA-05）: `SET lock_timeout='5s'`、`CREATE INDEX CONCURRENTLY "Session_userId_revokedAt_lastSeenAt_idx" ON "Session"("userId","revokedAt","lastSeenAt")`、`CREATE INDEX CONCURRENTLY "Session_deviceId_idx" ON "Session"("deviceId")`、FK は `ALTER TABLE "Session" ADD CONSTRAINT "Session_deviceId_fkey" FOREIGN KEY ("deviceId") REFERENCES "sec_session_devices"("id") ON DELETE SET NULL NOT VALID` → `VALIDATE CONSTRAINT`。同名なら `db push` は差分なし。`AuditLog` 等の新規テーブルは空なので通常の `db push`。`core_audit_logs` の月次パーティション（§17.1）。名寄せバッチ（**旧データへの唯一の書き込み**＝`*Organization.companyId` 等の派生列。正本は `CompanyServiceLink`、同一 tx で両方書く。DATA-09）。adapter ラップ投入と同時に Cookie を `__Host-` へ（全員再ログイン）。`AuditLog` 書き込み開始 | 全アクティブ組織に Link。`tenant-reconcile.ts` の Link↔派生列不一致 0。`RuntimeCounter('session.revoked_by_limit')` は未強制なので 0 | `core.session_tracking` OFF | `core.session_tracking` |
 | **2. 二重書き込み（両方向）** | 旧 `*Member` ↔ `CompanyMember`（**除籍は旧行を物理削除**。DATA-03）。逆方向 `ensureLegacyOrganizationForCompany`。招待は新＋旧 token（`tokenHash` 併設）。会社情報は旧＋新。**webhook は所有者 3 段判定（常時 ON）＋ `User.plan` は単一の書き手 `syncUserPlan`（max 規則）**（DATA-14 / FIN-05）。`UsageLedger` 記録のみ。shadow mode。middleware report-only **本番 2 週間以上**。同時セッション上限は通知のみ。**Phase2 初回 ON 前にも `tenant-reconcile.ts` を実行**（DATA-09） | shadow 差分 0 件が 7 日（`RuntimeCounter('access_shadow.diff')`）。`UsageLedger` 残高と旧台帳の差 0。report-only の誤分類 0（`RuntimeCounter('route_class.report_only_denied')` を分類別に） | `core.dual_write` OFF。再 ON 前に reconcile | `core.dual_write`, `core.access_shadow`, `core.middleware_report_only`, `core.session_limit_notify_only` |
 | **3. 読み替え** | `core.unified_access` ON（`RuntimeCounter('legacy_access.<svc>')` で旧本体の呼び出しを数える）。middleware 既定拒否。`UsageLedger` 上限判定。課金画面統一、HR checkout 閉鎖、**Checkout 入口を会社経路に**。`CompanyProfile` 優先。同時セッション・step-up（パスキー）・共有検知を強制。ツール内部の LLM を gateway へ。エージェントは運営会社のみ ON（3a: read のみ → 3b〜3d: 当該 lib の gateway 移行完了がツール登録の前提。未移行ツールは存在しない）。各サービスのマニフェストに `agentTools / usage / pii` を埋める（§16.6 の順） | `legacy_access.*` が 7 日間 0。回帰テスト全通過。運営利用 2 週間で `SecurityEvent(critical)` 0。`estimatedPaidCalls` 乖離 2 倍超 0。`unknown_outcome` の発生率 < 1% | 各フラグ OFF（**ただし会社経路で契約済みの会社はそのまま**） | `core.unified_access`, `core.middleware_enforce`, `billing.usage_ledger_enforce`, `billing.company_mode`, `core.profile_prefer_company`, `core.session_limit_enforce`, `core.step_up_enforce`, `agent.enabled`, `agent.tools.<key>.enabled` |
-| **4. 旧列削除** | `pg_dump`＋別 DB への復元リハーサル。二重書き込み停止（課金の併記も停止）。旧列・旧テーブル削除（§12 改訂 2 の一覧）。各 `access.ts` を薄い re-export に。RLS（任意）。ER 再生成 | schema から旧列が消え、ER 差分レビュー済み。`legacy: true` の route 0 | DB バックアップからの復元のみ。Phase3 安定後 60 日 | なし |
+| **4. 旧列削除** | `pg_dump`＋別 DB への復元リハーサル。二重書き込み停止（課金の併記も停止）。旧列・旧テーブル削除（§12 改訂 2 の一覧）。各 `access.ts` を薄い re-export に。RLS（機微テーブル限定の段階採用。§10.2 方式 B の要実機確認 3 点をステージングで通過後）。ER 再生成 | schema から旧列が消え、ER 差分レビュー済み。`legacy: true` の route 0 | DB バックアップからの復元のみ。Phase3 安定後 60 日 | なし |
 
 **所要期間と人員の見積り**（前提: 実装 2 名＋リード 1 名、既存機能の改修と並行しない、本番トラフィックの観察期間は短縮しない）:
 
@@ -1477,7 +1510,7 @@ export function owned(client: TenantPrisma | OwnedTx, ctx) {
 | 4 | 同一ユーザーが複数サービスで別会社を作成（名寄せ） | `getOrCreateOrganization` が 8 系統にあり（`shodan/access.ts` L107 等）、ログインで自動生成 | 1 人が 8 つの空組織を持つ。owner-email 名寄せで**全部 1 社**に束ねると、本当に別会社（副業・顧客代行）だったケースを混ぜる | 「メンバー 1 人・データ 0」の組織は Company 化しない。owner が同一でも名前が明確に異なる場合は人が確認。`CompanyServiceLink.linkedBy` で根拠を残す |
 | 5 | session コールバックの性能 | `src/lib/auth.ts` L76-89（毎リクエスト `User` ＋ `serviceSubscriptions` 全件）、`updateAge: 60` L189 | Session 拡張（`revokedAt` 検査、device、companyId）を**追加**すると更に重くなる。`connection_limit=3`（`src/lib/prisma.ts` L39-53）では待ちが発生 | コールバックを「`Session` 1 行（`sessionToken` で）＋ `User` 1 行＋ `CompanyMember` 現在の会社 1 行」の 1 クエリ（`include`）に作り直し、`serviceSubscriptions` 全件は廃止。`lastSeenAt` 更新は 60 秒に 1 回 |
 | 6 | `as any` セッション 205 箇所 | grep `session.user as any` 205 件、`xxxPlan` 約 63 件 | 新しいセッション形（`companyId`, `sessionId`, `stepUpAt`）を追加しても型で守れず、`plan` の読み方が 27 ファイルでバラバラのまま | `src/types/next-auth.d.ts` で `Session.user` を拡張（module augmentation）。`plan` 系は `getEntitlement(ctx)` に寄せ、移行期は従来キーも積む |
-| 7 | DB セッション Cookie とサブドメイン | `src/middleware.ts` `MITSUBOSHI_HOSTS` / `SLIDE_HOSTS`（別ホストで同一デプロイ） | NextAuth の Cookie は発行ホスト限定。`doyaslide` 別ドメインでは未ログイン扱い。middleware 既定拒否にすると**これらのホストが全面 401** | 4 分類（§6.3）にホスト条件（`SLIDE_HOSTS` 配下は `/doyaslide/*` を public）。`cookies.sessionToken.options.domain` は**設定しない** |
+| 7 | DB セッション Cookie とサブドメイン | `src/middleware.ts` `MITSUBOSHI_HOSTS` / `SLIDE_HOSTS`（別ホストで同一デプロイ） | NextAuth の Cookie は発行ホスト限定。`doyaslide` 別ドメインでは未ログイン扱い。middleware 既定拒否にすると**これらのホストが全面 401** | 5 分類（§6.3）にホスト条件（`SLIDE_HOSTS` 配下は `/doyaslide/*` を public）。`cookies.sessionToken.options.domain` は**設定しない** |
 | 7b | 手書き許可リストの取りこぼし | 監査 A-6: 初版の許可リストは `/api/t/*`, `/api/drip/unsubscribe`, `/api/inbound-email`, `/api/interviewx/public/*` 等を漏らし、存在しない `/api/seo/guest/*` を書いていた。ゲストはログイン済みと同じルートを共有（54 本） | 既定拒否の強制でメール計測・配信停止・外部アプリ受け口・お試し導線が一斉に 401 | 許可リストを**機械抽出＋マニフェスト宣言**に変更（§6.3、§16）。report-only を本番 2 週間以上 |
 | 8 | middleware の位置 | `src/middleware.ts` 冒頭注記（直下に置くと**実行されない**。2026-08-17 まで未実行だった） | 既定拒否を実装したつもりで一度も動かない | ビルド後 `.next/server/middleware-manifest.json` の `middleware` が空でないことを `verify-core-middleware-manifest.cjs` で検証 |
 | 9 | security-regression への影響 | `scripts/security-regression/run.cjs` 1,374 行・674 本、`load-typescript.cjs` で TS を直接ロード、`*-fixture.cjs` が `access.ts` の export 名に依存 | `access.ts` の export 名や戻り値の形を変えると数十本が落ちてビルド不能 | export 名・戻り値の形を維持（§6.4）。新経路はフラグで切替、テストは `FeatureFlag` をモックして新旧両方を流す |
@@ -1533,6 +1566,7 @@ export function owned(client: TenantPrisma | OwnedTx, ctx) {
 | D18 | Edge 段のレート制限 | (a) Vercel WAF (b) Upstash (c) ルート段のみ | **(a)。使えなければ (c)** | Edge から Postgres は引けない（監査 A-11）。WAF は追加コード無しで IP 制限できる |
 | D19 | `sfa.updateDealStage` の冪等化 | (a) `SfaDeal.lastOperationId` 列を足して native 化 (b) `local-record`（unknown_outcome は人の確認） | **(b) で開始、利用が増えたら (a)** | 列追加は SFA の 56 本の回帰テストに影響 |
 | D20 | マニフェストの i18n / PWA 宣言 | (a) 今入れる (b) 将来 | **(b)** | 現状は日本語のみ（OPS-29(5)） |
+| D21 | RLS を新テーブル（`core_*` / `agent_*` / `billing_*`）にも広げるか | (a) 機微テーブルのみ（§10.2 方式 B） (b) 新テーブルにも (c) 全テーブル | **(a) で開始、Phase4 の計測後に (b) を判断** | 全テーブルは対話型 tx 必須になり `connection_limit=3` で成立しない。新テーブルは `companyId` が単純で policy が書きやすい |
 | D7 | 共有検知の自動停止 | (a) 通知のみ (b) 再認証まで (c) suspend まで | **(b) を既定、(c) は会社設定で opt-in** | 誤検知時の被害を限定 |
 | D8 | 機微列の暗号化方式 | (a) アプリ層 AES-GCM (b) Supabase Vault/pgsodium (c) しない（アクセス制御と監査のみ） | **(a)**。対象列は HR/勤怠/面接の連絡先・逐語・評価本文から | Prisma から透過に扱え、鍵ローテーションを自前で制御できる。(b) は raw SQL が増える |
 | D9 | 運営のサポートアクセス | (a) `User.role='ADMIN'` で全社閲覧 (b) owner が時限許可 (c) 無し（DB 直接） | **(b)** | 既定拒否と監査の原則を運営にも適用 |
@@ -1669,7 +1703,7 @@ export const manifest: ServiceManifest = {
 
 | 対象 | 生成 or 検査 | 仕組み |
 |---|---|---|
-| middleware の 4 分類（§6.3） | **生成** | `scripts/build/route-classes.cjs` が全 `route.ts` / `page.tsx` を走査し、`routes.public / guestShared / cron` と突合して `route-classes.json` を出力。middleware はこの JSON を `import` する（Edge で DB 不要） |
+| middleware の 5 分類（§6.3） | **生成** | `scripts/build/route-classes.cjs` が全 `route.ts` / `page.tsx` を走査し、`routes.public / guestShared / cron` と突合して `route-classes.json` を出力。middleware はこの JSON を `import` する（Edge で DB 不要） |
 | 無認証ルートの検出 | **検査** | `verify-core-route-classes.cjs`: ガード文字列の無い route が `routes.public` に無ければ失敗 |
 | `requireCompanyAccess` の呼び出し | **検査** | `verify-core-route-guard.cjs`: `auth-required` 分類の route に `requireCompanyAccess(` または `requireGuestToken(` が無ければ失敗。`serviceId` 引数がマニフェスト id と一致 |
 | テナント列の表（`tenantPrisma`） | **生成** | `dataModels[].tenantColumn` から `TENANT_COLUMNS` を生成。`verify-core-tenant-columns.cjs` が「Prisma schema にあって、どのマニフェストにも無いモデル」と「宣言列が schema に無いモデル」を失敗にする |
@@ -1915,7 +1949,7 @@ if (r.status !== 0) process.exit(1)
 | A-3 | **反映** | draft 全体（merge-into 断片）、付録 C、§10.8 `verify-core-schema-draft.cjs` | 結合 validate を実測（改訂 4 時点 226 model、valid） |
 | A-4 | **反映** | draft `FeatureFlag.scope`（NOT NULL、`'*'` 番兵、`@@unique([key, scope])`）、`AuditLog/SecurityEvent/LlmCallLog.companyId` は FK なし文字列 | — |
 | A-5 | **反映** | draft の onDelete 原則（Restrict / FK なし）、§10.6、§13 #35 | `Company` は論理削除のみ。purge バッチは AuditLog を残す |
-| A-6 | **反映** | §6.3（4 分類の機械抽出）、§2.6（実在ルート一覧）、§13 #7b、§16.2 M-3/M-4 | 監査が挙げた実在ルートは全て分類表に収録。`/api/seo/guest/*` の誤りを訂正。report-only 2 週間以上 |
+| A-6 | **反映** | §6.3（5 分類の機械抽出）、§2.6（実在ルート一覧）、§13 #7b、§16.2 M-3/M-4 | 監査が挙げた実在ルートは全て分類表に収録。`/api/seo/guest/*` の誤りを訂正。report-only 2 週間以上 |
 | A-7 | **反映** | §6.4 手順 6（`ensureLegacyOrganizationForCompany`）、§12 Phase2（逆方向二重書き込み）、§9.1 `services/[serviceId]` | 409 化を撤回 |
 | A-8 | **反映** | §6.2（`evaluateCompanyAccess` 分離）、§8.5、§9.2 承認 API | 承認の step-up は承認者のセッションで評価 |
 | A-9 | **反映** | draft `ToolCall.idempotencyKey = runId:stepId`、`attempt` 列、`@@unique([stepId, attempt])`、§8.2, §8.4 | — |
@@ -1994,6 +2028,7 @@ if (r.status !== 0) process.exit(1)
 | 5 | 2026-10-17 | 最終ゲート第 2 回（FIN2-01〜07 と部分的 8 件）を全件反映（付録 K）。重大 FIN2-01: `owned()` が `walkData` → 所属確認 → モジュール内 `AsyncLocalStorage` マーカー付きで元操作を呼び、拡張はマーカー無しの update/delete/upsert/findUnique を throw。拡張が tx に乗る／乗らない両ケースの動作表と回帰テスト 4 ケース（TEN-21/22）。FIN2-02 フェンスの status 集合に planning。FIN2-03 `syncUserPlan` へ 3 箇所統一。FIN2-04 cron-launch 分類・`withCompanyAccessOrCron`・トークン継承・`CRON_SECRET` の到達範囲。FIN2-05 M-11 を import 閉包の実体検査に。FIN2-06 `ReauthChallenge.sessionId` 任意化、`login.passkey`、複数会社・未登録判定の規則。FIN2-07 数値・ER・PII-14・voided キー。付録 J を「正本の文言／禁止語」付き 20 キーに改め、スクラッチ領域の一致検査スクリプトで禁止語 0 を確認（結果は完了報告）。draft 冒頭を改訂 5 に |
 | 6 | 2026-10-17 | 最終ゲート第 3 回（FIN3-01〜08、重大 0）を全件反映（付録 L）。§10.2: `updateMany.data` のテナント列書き換えを拡張側でも拒否、`OwnedTx` 型が読み取り系も Omit し `owned(tx)` に読み取りメソッドを追加、`run` 内で await する形（リードの実機実験 A/B/C を「確認済みの事実」として記録、D は未確認）、配列形 `$transaction` は対話型へ。リース TTL を 360s に統一、§8.1 シーケンス図を 2 軸リスクに、`AgentRun.maxApprovals`（既定 5）を draft に追加、cron-launch をレート制限対象に、CHECKLIST AUTHZ-19/AGT-35 と付録 F OPS-06 の旧表現を新方式に。付録 J にキー 21（リース TTL）・22（リスク区分の用語）を追加、キー 17 の禁止語を拡張。一致検査スクリプトを 22 キーで再実行（結果は完了報告）。draft 冒頭を改訂 6 に |
 | 7 | 2026-10-17 | 最終ゲート第 4 回（FIN4-01〜07、重大 0）を全件反映（付録 M）。§10.2 を「全操作マトリクス」方式に再構成: Prisma 5.22 の全モデル操作（`createManyAndReturn` を含む。`index.d.ts` で存在確認）＋raw SQL＋include/select＋`$transaction` 両形式を行、`ctx.db` 直接／`owned(ctx.db)`／`owned(tx)` 乗る／乗らない／`tx` 直接を列にし、空欄・「守られない」マス 0。分担を「読み取りは拡張と owned、書き込みは例外なく owned、tx 直接は型で全 Omit」に単純化。`walkData` の契約を純関数（戻り値必須）＋テナント列違反の即 throw＋ネスト対象は `refs` を同じ client で検証（RecordNotFound に頼らない）に固定。`owned()` に create/createMany/createManyAndReturn/findFirstOrThrow。ER の AgentRun/AgentStep/Company 属性を draft と照合して補完。§8.1 図と §8.2 の approveDrafts 規則を一致。Cron 本数の旧表記 3 箇所を修正。付録 J にキー 23（walkData 契約）・24（書き込みは owned のみ）、キー 13/22 の禁止語を拡張。CHECKLIST にマトリクス対応 TEN-26〜32。draft 冒頭を改訂 7 に |
+| 8 | 2026-10-17 | 最終ゲート第 5 回（FIN5-01〜05、重大 0）と方針転換を反映（付録 N）。`walkData` を **DMMF 駆動の既定拒否**に: 全モデル対象、フィールド既定拒否、Prisma 5.22 NestedInput の閉じた許可リスト（to-many 11 / to-one 7 / create 側 4・3 を `index.d.ts` で実測）、キーごとの data 検査・refs 検査の割当（ネスト `upsert` と `update.data / updateMany.data / upsert.update` のテナント列書き換え禁止を含む）、非テナント親からのネスト書き込みは `owned()` 経由のみ（拡張の入口ゲート、`OwnedTx` の Omit）、`assertRefsOwned` の仕様（非テナント refs 除外・正規化と重複排除・via 型は `scoped()`）。スクラッチ領域で `Prisma.dmmf` を読む核を実行し 192 モデル・396 relation の走査と許可リスト外の throw を確認。DMMF↔マトリクス整合の CI（TEN-35）。RLS を機微テーブル限定で**段階採用**（評価表、Phase4、D21）。`$queryRawUnsafe / $executeRawUnsafe` を lint 禁止。「5 分類」に統一。付録 J にキー 25・26。draft 冒頭を改訂 8 に |
 
 
 ### 付録 F. 第 2 回審査（REVIEW-2026-10-17-data / sec / ops）への回答
@@ -2176,6 +2211,20 @@ if (r.status !== 0) process.exit(1)
 | FIN4-06 | **反映** | §8.1 シーケンス図（read、または reversible×(none\|low) で `approveDrafts=false`）、§8.2（reversible × none も `approveDrafts` に従う） | — |
 | FIN4-07 | **反映** | §10.2 `owned().findFirstOrThrow` | — |
 
+### 付録 N. 最終ゲート第 5 回（FINAL-GATE-2026-10-17-5.md）への回答
+
+凡例は付録 D と同じ。HEAD `2453e7fc` で再確認。
+
+| # | 判定 | 反映先 | 補足 |
+|---|---|---|---|
+| 方針転換（DMMF 駆動の既定拒否） | **反映** | §10.2「`walkData` の契約（改訂 8）」（全モデル対象、フィールド既定拒否、NestedInput の閉じた許可リスト 4 表、data 検査／refs 検査の割当、書き込みの入口）、擬似コード（非テナント親の入口ゲート、`owned()` は全モデル）、マトリクス（非テナント親の行）、「プロトタイプ実行結果」、CHECKLIST TEN-33/34/35 | スクラッチ領域で `Prisma.dmmf` を読む核を実行（192 モデル・396 relation を全てたどり、許可リスト外キーと未知フィールドで throw。結果は完了報告） |
+| 二重の守り（RLS の評価） | **反映（段階採用）** | §10.2 方式 B（評価表: 対象・方式・pgbouncer 両立・実装量・性能・失敗時・決定）、§12 Phase4、§14 D21、CHECKLIST TEN-12/TEN-37 | 要実機確認: 対話型 tx の 1 接続固定、`db push` がポリシーを保持するか |
+| FIN5-01 | **反映** | 上記（非テナント親からのネスト書き込みは `owned()` 経由のみ、`OwnedTx` は非テナントモデルの書き込みも `Omit`）、TEN-27/28 に `user.update` 経由 | — |
+| FIN5-02 | **反映** | 許可リスト表（`upsert` を含む 11 種／7 種／4 種／3 種）、ネストの `update.data / updateMany.data / upsert.update` もテナント列の書き換え禁止、TEN-14 | — |
+| FIN5-03 | **反映** | §10.2 マトリクス raw 行（`$queryRawUnsafe / $executeRawUnsafe` は lint で呼び出し自体を禁止、`scripts/ops/**` のみ例外）、TEN-29。既存の `scripts/` 直下 3 本（`shodan-inspect-slide.ts`, `migrate-banner-templates-to-storage.ts`, `analyze-banner-templates.ts`）は Phase0 で `scripts/ops/` へ移すか `$queryRaw` に書き換え | `src/` での使用は 0 件を確認 |
+| FIN5-04 | **反映** | 「5 分類」に統一（§6.3 見出し・本文、§10.2 末尾、§10.8、§13 #7、§16.2、付録 F A-6、CHECKLIST AUTHZ-01）、付録 J キー 25 | — |
+| FIN5-05 | **反映** | 「`walkData` の契約」の refs 検査 (a)〜(d) | — |
+
 ### 付録 H. 既存契約者への告知文（雛形。絵文字なし・敬語）
 
 > 件名: ご契約プランの切り替えについて（お手続きは不要です）
@@ -2226,3 +2275,5 @@ if (r.status !== 0) process.exit(1)
 | 22 | リスク区分の用語（改訂 6 新設） | §8.2（`reversibility × costClass`） | §8.1 シーケンス図、§8.5、§10.4、draft `AgentStep`、CHECKLIST AGT-01 | `reversibility` | `riskLevel`、`read / draft / external`、`external 承認`、`external を追加` |
 | 23 | `walkData` の契約（改訂 7 新設） | §10.2「`walkData` の契約」 | §10.2 擬似コード・動作表・マトリクス、CHECKLIST TEN-32 | `refs` または `assertRefsOwned` | `その場で書き換え`、`戻り値なし`、`RecordNotFound → 拒否`、`複合条件に書き換え` |
 | 24 | 書き込みは `owned()` 経由のみ（改訂 7 新設） | §10.2 分担表 | §10.2 マトリクス、CHECKLIST TEN-27/28 | `書き込み全部` | `create / createMany` の data 検査 \| query 拡張（旧分担）、`拡張の `updateMany` 分岐で` |
+| 25 | middleware の分類数（改訂 8 新設） | §6.3 見出し | §6.3 本文、§10.2 末尾、§10.8、§13 #7、§16.2、付録 F A-6、CHECKLIST AUTHZ-01 | `5 分類` | `4 分類` |
+| 26 | `walkData` は DMMF 駆動の既定拒否（改訂 8 新設） | §10.2「`walkData` の契約（改訂 8）」 | §10.2 擬似コード・マトリクス、付録 N、CHECKLIST TEN-14/33/34/35 | `許可リスト` | 旧契約の列挙 `refs 対象は \`connect / set / disconnect`、`テナントモデルに対して同じ契約` |

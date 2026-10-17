@@ -29,9 +29,9 @@
 | TEN-09 | `?company=` / `x-company` がセッションの会社と異なる**書き込み**は 409 になるか | リンク誘導による別会社への書き込み防止 | 自動: `verify-core-company-mismatch.cjs` | M | B-25 |
 | TEN-10 | 新規会社を作った直後・サービス有効化直後に、旧 `*Organization` が 1 件だけ存在するか | Phase2〜4 の間、旧 route が `organizationId=null` で壊れる | 自動: `verify-core-legacy-org-backfill.cjs` | H | A-7 |
 | TEN-11 | `CompanyServiceLink` は 1 会社 N 旧組織を許し、読み替えは `isPrimary` だけを使うか | 同 owner 同サービス複数組織で移行が止まる | 手動: 移行ドライランの「同 owner 複数組織」件数を確認 | M | B-4 |
-| TEN-12 | RLS を使う場合、新テーブルのみ・`SET LOCAL` がトランザクション内で発行されているか | pgbouncer transaction pooling では `SET` は漏れる | 手動: DBA が Phase4 の SQL をレビュー | M | — |
+| TEN-12 | RLS は機微テーブル（マニフェスト `pii`）限定で、`withTenantTx` が対話型 tx の冒頭で `set_config('app.company_id', …, true)` を張り、`SET` セッション変数を使っていないか | pgbouncer transaction pooling では `SET` は漏れる | 自動: `verify-core-rls.cjs`（ステージング DB）＋手動: DBA が Phase4 の SQL をレビュー | M | 方針転換（二重の守り） |
 | TEN-13 | サーバ内部用ヘッダ（`x-tenant-id` 等）を middleware が削除しているか | ヘッダ偽装による内部信頼の防止 | 自動: `verify-core-route-classes.cjs` 内の middleware ユニット | M | — |
-| TEN-14 | `tenantPrisma` が `args.data`（upsert では `create` と `update` の両方）を再帰走査し、ネストした `connect/set/disconnect/connectOrCreate/update/updateMany/delete/deleteMany` の対象 id を所属確認し、ネスト `create/createMany`（配列含む）にテナント列を強制しているか | Prisma 公式: query 拡張はネスト操作に発火しない | 自動: `verify-core-access-cross-tenant.cjs`（ネスト connect で他社 id → 拒否） | H | SEC-01 |
+| TEN-14 | `walkData` が `Prisma.dmmf` でデータを再帰走査し（upsert では `create` と `update` の両方、対象は全モデル）、NestedInput の閉じた許可リスト（to-many 11 / to-one 7 / create 側 4・3）の各キーに data 検査（テナント列の強制・書き換え禁止。ネストの `update.data / updateMany.data / upsert.update` を含む）と refs 検査（`connect / set / disconnect / delete / deleteMany / update.where / updateMany.where / upsert.where / connectOrCreate.where`）を割り当てているか | Prisma 公式: query 拡張はネスト操作に発火しない | 自動: `verify-core-access-cross-tenant.cjs`（ネスト connect で他社 id → 拒否） | H | SEC-01 |
 | TEN-15 | `update / updateMany / upsert.update` の `data` にテナント列が含まれていたら throw しているか（テナント移動の禁止） | 子行の他社への移動 | 自動: 同上（`data.organizationId` 書き換え → 拒否） | H | SEC-01 |
 | TEN-16 | 複合 unique セレクタ（`userId_serviceId` 等）を DMMF で `{a, b}` に展開してから `findFirst` に渡しているか | `WhereInput` に複合セレクタは無く実行時エラー | 自動: 同上（複合 unique の `findUnique` ケース） | H | SEC-02 |
 | TEN-17 | raw SQL は `tenantSql(ctx)` フラグメント経由で、lint は文字列一致ではなく `tenantSql(` の有無を見るか | `"companyId" = ${anything}` で擦り抜ける | 自動: `verify-core-raw-sql-tenant.cjs` | M | SEC-04 |
@@ -44,12 +44,17 @@
 | TEN-24 | `updateMany` の `data` にテナント列があるとき、拡張の `updateMany` 分岐と `owned().updateMany` の両方が `walkData` で throw するか | 自社行を他社テナントへ移す書き込み | 自動: `verify-core-access-cross-tenant.cjs`（updateMany data） | H | FIN3-01 |
 | TEN-25 | tx 内の一覧・集計読みが `owned(tx, ctx)` 経由だけで、`tx.<model>.findMany` 等の直接呼び出しが型エラー＋lint エラーになるか | 拡張が乗らない tx で他社行が返る | 自動: tsc＋ESLint `core/tx-tenant-where`（error） | H | FIN3-02 |
 | TEN-26 | マトリクスの読み取り行（findUnique(OrThrow)・findFirst(OrThrow)・findMany・count・aggregate・groupBy）が 5 列すべてで表どおりか（ctx.db 直接の findUnique は throw、owned は scoped、tx 直接は型エラー） | 読み取りの穴 | 自動: `verify-core-access-cross-tenant.cjs`（reads×5 列、ext-on/off） | H | FIN4-01 |
-| TEN-27 | create / createMany / createManyAndReturn が ctx.db 直接では throw、owned では walkData（戻り値）＋refs 検証＋withTenant、tx 直接は型エラーか | create 経路のネスト connect・テナント列 | 自動: 同上（creates×5 列） | H | FIN4-01 |
-| TEN-28 | update / updateMany / upsert / delete / deleteMany が ctx.db 直接では throw、owned では表どおり（所属確認・scoped・walkData）、tx 直接は型エラーか | 更新・削除の穴 | 自動: 同上（writes×5 列） | H | FIN4-01 |
-| TEN-29 | `$queryRaw` / `$executeRaw` が `tenantSql(ctx)` 無しで lint エラーになり、`OwnedTx` では `$tenantRaw` だけが使えるか | raw SQL の素通り | 自動: `verify-core-raw-sql-tenant.cjs`＋tsc | H | SEC-04, FIN4-01 |
+| TEN-27 | create / createMany / createManyAndReturn が ctx.db 直接では throw、owned では walkData（戻り値）＋refs 検証＋withTenant、tx 直接は型エラーか。`user.create` 等**非テナント親**の data にテナントモデルへのネストがある場合も同じか | create 経路のネスト connect・テナント列 | 自動: 同上（creates×5 列） | H | FIN4-01 |
+| TEN-28 | update / updateMany / upsert / delete / deleteMany が ctx.db 直接では throw、owned では表どおり（所属確認・scoped・walkData）、tx 直接は型エラーか。`user.update({ data: { companyMemberships: { update / upsert / deleteMany } } })` 等**非テナント親経由**でも同じか | 更新・削除の穴 | 自動: 同上（writes×5 列） | H | FIN4-01 |
+| TEN-29 | `$queryRaw` / `$executeRaw` が `tenantSql(ctx)` 無しで lint エラーになり、`OwnedTx` では `$tenantRaw` だけが使え、**`$queryRawUnsafe` / `$executeRawUnsafe` は呼び出し自体が lint 禁止（`scripts/ops/**` 以外）**か | raw SQL の素通り | 自動: `verify-core-raw-sql-tenant.cjs`＋tsc | H | SEC-04, FIN4-01 |
 | TEN-30 | include / select の to-many relation に where が足され、to-one の親が post-filter されるか（ctx.db と owned の両方） | 親方向の他社読み | 自動: `verify-core-access-cross-tenant.cjs`（include） | H | SEC-01 |
 | TEN-31 | 配列形 `$transaction([...])` が読み取り専用で、書き込み PrismaPromise（マーカー無し）が拡張で throw されるか | 配列形経由の書き込み | 自動: 同上（array tx） | M | FIN3-07 |
 | TEN-32 | `walkData` が純関数で、呼び出し側が戻り値の data を必ず使い（入力を渡すと検査で検出）、テナント列違反は即 throw、ネスト対象は refs を `assertRefsOwned` が同じ client で検証して `TenantViolation` にするか（RecordNotFound に頼らない） | 書き換えの喪失・DB 依存の拒否 | 自動: 同上（walkData の戻り値を捨てた実装を検出する契約テスト、refs 0 件→拒否） | H | FIN4-02 |
+| TEN-33 | `walkData` が既定拒否で、モデルのフィールドに無いキー・許可リストに無いネスト操作キーで即 throw し、入力を変更しない純関数か | 列挙漏れによる新しい穴 | 自動: `verify-core-access-cross-tenant.cjs`（未知フィールド・未知ネストキー・入力不変） | H | FIN5-01, FIN5-02 |
+| TEN-34 | 非テナントモデル（User / Account / Session 等）への書き込みで data にテナントモデルへの relation があるとき、拡張の入口ゲートがマーカー無しで throw し、`OwnedTx` が非テナントモデルの書き込みを `Omit` しているか | 非テナント親経由の他社書き込み | 自動: 同上（`ctx.db.user.update` 経由 → throw、`owned(x).user.update` → 検査） | H | FIN5-01 |
+| TEN-35 | `verify-core-dmmf-matrix.cjs` が `.prisma/client/index.d.ts` からモデル操作名・NestedInput キー・クライアント操作を抽出し、マトリクスの行と許可リスト 4 表に完全一致することを検査しているか（Prisma 更新で新操作が出たら CI が落ちる） | Prisma 更新時の列挙漏れ | 自動: `verify-core-dmmf-matrix.cjs` | H | 方針転換 |
+| TEN-36 | `assertRefsOwned` が非テナントモデルの refs を除外し、where を正規化・重複排除して distinct 件数で比較し、`via:` 型は `scoped()` の展開を使い、refs 200 超で拒否するか | 正常系の誤拒否・非テナント参照の不通 | 自動: `verify-core-access-cross-tenant.cjs`（重複 where、User 参照、via 型） | M | FIN5-05 |
+| TEN-37 | 機微テーブルの RLS ポリシーが fail-closed（`app.company_id` 未設定で 0 行）で、Cron / バッチが会社ごとに `set_config` して回り、`BYPASSRLS` ロールをアプリで使っていないか。`db push` がポリシーを保持することをステージングで確認したか | 第 2 防御の形骸化 | 自動: `verify-core-rls.cjs`＋手動: ステージング計測（p95） | M | 方針転換 |
 
 ## 2. AUTH 認証・セッション（Google のみ・使い回し防止）
 
@@ -98,7 +103,7 @@
 
 | ID | 確認内容 | なぜ | 確認方法 | 重大度 | 監査 |
 |---|---|---|---|---|---|
-| AUTHZ-01 | 全 route / page が 4 分類（public / cron / guest-shared / auth-required）のいずれかに機械的に分類され、スナップショットと一致するか | 手書き許可リストの取りこぼし | 自動: `verify-core-route-classes.cjs` | H | A-6 |
+| AUTHZ-01 | 全 route / page が 5 分類（public / cron / cron-launch / guest-shared / auth-required）のいずれかに機械的に分類され、スナップショットと一致するか | 手書き許可リストの取りこぼし | 自動: `verify-core-route-classes.cjs` | H | A-6 |
 | AUTHZ-02 | ガード無しの route はすべてマニフェスト `routes.public` に**理由付き**で載っているか | 新設ルートの公開漏れ | 自動: `verify-core-route-classes.cjs`, `verify-service-manifest-public-reason.cjs` | H | A-6, M-3, M-4 |
 | AUTHZ-03 | ゲスト共有ルート（`guestId` Cookie を読む 54 本）が `guest-shared` に分類され、「セッション or guest Cookie or `[token]`」で通るか | お試し導線の全滅防止 | 自動: 同上 | H | A-6 |
 | AUTHZ-04 | メール計測（`/api/t/*`）、配信停止、`inbound-email`、`service-activity`、`operational-error`、`interviewx/public`、HR 招待確認が public に入っているか | 既定拒否で止まる実在ルート | 自動: スナップショットに含まれる | H | A-6 |
@@ -494,7 +499,19 @@
 | D-7 | AUTH-18, RUN-12 |
 | D-8 | MIG-04, SCH-05 |
 
-項目数: TEN 32 / AUTH 38 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 51 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 9 ＝ **344 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1〜4 回の 17 / 7 / 8 / 7 指摘すべてに対応項目あり（漏れ 0）。
+項目数: TEN 37 / AUTH 38 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 51 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 9 ＝ **349 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1〜5 回の 17 / 7 / 8 / 7 / 5 指摘すべてに対応項目あり（漏れ 0）。
+
+## 最終ゲート第 5 回（FIN5）との対応表
+
+| 審査 | 再発防止するチェック項目 |
+|---|---|
+| 方針転換（DMMF 既定拒否・RLS） | TEN-33, TEN-34, TEN-35, TEN-12, TEN-37 |
+| FIN5-01 | TEN-34, TEN-27, TEN-28 |
+| FIN5-02 | TEN-14, TEN-33 |
+| FIN5-03 | TEN-29 |
+| FIN5-04 | AUTHZ-01, DOC-03 |
+| FIN5-05 | TEN-36 |
+
 
 ## 最終ゲート第 4 回（FIN4）との対応表
 
