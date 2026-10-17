@@ -3,21 +3,22 @@
 // ds — 全ツール共通の画面部品（クリア）
 // ============================================
 // ⚠️ 数字やデータは props で受け取るだけ。部品の中で取得しない。
+// ⚠️ アイコンは名前の文字列で受け取る（例: icon="FileText"）。部品（関数）はサーバーから渡せないため（src/components/shell/icons.tsx）。
 // ⚠️ AppShell（.ds）の中で使う前提。外で使うときは tokens.module.css の .ds を親に当てる。
 // 仕様: docs/architecture/management-agent/ADDON-SERVICES-2026-10-18.md §11
 import Link from 'next/link'
 import { useEffect, useState, type ReactNode } from 'react'
-import type { LucideIcon } from 'lucide-react'
+import { ShellIcon, type ShellIconName } from '@/components/shell/icons'
 import type { EmptyStateKind } from '@/components/EmptyState'
 import styles from './ds.module.css'
 
 export { default as tokens } from './tokens.module.css'
 
 /* ---- Card ---- */
-export function Card({ title, meta, icon: Icon, children, className }: {
+export function Card({ title, meta, icon, children, className }: {
   title?: ReactNode
   meta?: ReactNode
-  icon?: LucideIcon
+  icon?: ShellIconName
   children: ReactNode
   className?: string
 }) {
@@ -25,7 +26,7 @@ export function Card({ title, meta, icon: Icon, children, className }: {
     <section className={`${styles.card} ${className ?? ''}`}>
       {title || meta ? (
         <div className={styles.cardHead}>
-          {title ? <h2 className={styles.cardTitle}>{Icon ? <Icon size={18} aria-hidden /> : null}{title}</h2> : <span />}
+          {title ? <h2 className={styles.cardTitle}>{icon ? <ShellIcon name={icon} size={18} /> : null}{title}</h2> : <span />}
           {meta ? <span className={styles.cardMeta}>{meta}</span> : null}
         </div>
       ) : null}
@@ -35,18 +36,18 @@ export function Card({ title, meta, icon: Icon, children, className }: {
 }
 
 /* ---- StatTile ---- */
-export function StatTile({ label, value, unit, sub, icon: Icon, href, muted }: {
+export function StatTile({ label, value, unit, sub, icon, href, muted }: {
   label: string
   value: ReactNode
   unit?: string
   sub?: ReactNode
-  icon?: LucideIcon
+  icon?: ShellIconName
   href?: string
   muted?: boolean
 }) {
   const body = (
     <>
-      {Icon ? <span className={styles.statIcon}><Icon size={18} aria-hidden /></span> : null}
+      {icon ? <span className={styles.statIcon}><ShellIcon name={icon} size={18} /></span> : null}
       <span className={styles.statLabel}>{label}</span>
       <span className={styles.statValue}>{value}{unit ? <span className={styles.statUnit}>{unit}</span> : null}</span>
       {sub ? <span className={styles.statSub}>{sub}</span> : null}
@@ -63,13 +64,13 @@ export function Badge({ children, tone = 'neutral' }: { children: ReactNode; ton
 }
 
 /* ---- Button ---- */
-type ButtonBase = { children: ReactNode; variant?: 'primary' | 'secondary' | 'ghost'; size?: 'md' | 'sm'; icon?: LucideIcon }
+type ButtonBase = { children: ReactNode; variant?: 'primary' | 'secondary' | 'ghost'; size?: 'md' | 'sm'; icon?: ShellIconName }
 export function Button(props: ButtonBase & (
   | { href: string; onClick?: never; type?: never; disabled?: never }
   | { href?: undefined; onClick?: () => void; type?: 'button' | 'submit'; disabled?: boolean }
 )) {
-  const { children, variant = 'primary', size = 'md', icon: Icon } = props
-  const inner = <>{Icon ? <Icon size={size === 'sm' ? 15 : 17} aria-hidden /> : null}{children}</>
+  const { children, variant = 'primary', size = 'md', icon } = props
+  const inner = <>{icon ? <ShellIcon name={icon} size={size === 'sm' ? 15 : 17} /> : null}{children}</>
   if (props.href !== undefined) {
     // API 経由のリダイレクト（決済ポータル等）は通常のリンクで開く
     if (props.href.startsWith('/api/')) {
