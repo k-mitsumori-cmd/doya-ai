@@ -39,10 +39,17 @@
 | TEN-19 | `upsert` は `owned()` ヘルパーで「findFirst → あれば update、無ければ create（テナント列強制）」に分解され、create 経路が所属確認で失敗しないか | upsert 全滅→直 import への逃げ | 自動: `verify-core-access-cross-tenant.cjs`（upsert の両経路） | H | FIN-02 |
 | TEN-20 | query 拡張のコールバックが基底クライアントで追加クエリを発行せず、`owned(client, ctx)` 自身が `walkData` → 所属確認 → モジュール内 `ownedScope`（AsyncLocalStorage、export しない）マーカー付きで元操作を呼び、拡張はマーカー無しの update/delete/upsert/findUnique を throw するか | 分担不成立（全 update 失敗 or tx 経路で無検査） | 自動: `verify-core-access-cross-tenant.cjs` | H | FIN-03, FIN2-01 |
 | TEN-21 | 拡張が tx に**乗る**モックで、`owned()` の `run` が **run の中で await する実装**であること（run の外で PrismaPromise を await するとマーカーが届かない。リード実機実験 A/B）を含めて `owned(tx).update` が成功し、`owned(tx)` のネスト connect で他社 id が拒否され、`tx.<model>.update` 直接が `UseOwnedHelperError` になるか | 分担の検証（乗る側） | 自動: `verify-core-access-cross-tenant.cjs`（ext-on） | H | FIN2-01 |
-| TEN-22 | 拡張が tx に**乗らない**モックで、`owned(tx).update` が成功し、`owned(tx)` のネスト connect で他社 id が拒否され、`owned(tx).findMany` が自社行のみを返し、`OwnedTx` 型が直接の update/delete/upsert/findUnique と読み取り系（findMany/findFirst/count/aggregate/groupBy）・updateMany/deleteMany をコンパイルエラーにするか | 分担の検証（乗らない側） | 自動: 同上（ext-off）＋tsc | H | FIN2-01 |
+| TEN-22 | 拡張が tx に**乗らない**モックで、`owned(tx).update` が成功し、`owned(tx)` のネスト connect で他社 id が拒否され、`owned(tx).findMany` が自社行のみを返し、`OwnedTx` 型がテナントモデルの読み書き全操作（create/createMany/createManyAndReturn を含む）を Omit してコンパイルエラーにするか | 分担の検証（乗らない側） | 自動: 同上（ext-off）＋tsc | H | FIN2-01 |
 | TEN-23 | `ownedScope` が export されておらず、外部モジュールからマーカーを付けて拡張を迂回できないか | マーカー偽造 | 自動: `verify-core-access-cross-tenant.cjs`（別モジュールからの `update` 直呼びが throw） | H | FIN2-01 |
 | TEN-24 | `updateMany` の `data` にテナント列があるとき、拡張の `updateMany` 分岐と `owned().updateMany` の両方が `walkData` で throw するか | 自社行を他社テナントへ移す書き込み | 自動: `verify-core-access-cross-tenant.cjs`（updateMany data） | H | FIN3-01 |
 | TEN-25 | tx 内の一覧・集計読みが `owned(tx, ctx)` 経由だけで、`tx.<model>.findMany` 等の直接呼び出しが型エラー＋lint エラーになるか | 拡張が乗らない tx で他社行が返る | 自動: tsc＋ESLint `core/tx-tenant-where`（error） | H | FIN3-02 |
+| TEN-26 | マトリクスの読み取り行（findUnique(OrThrow)・findFirst(OrThrow)・findMany・count・aggregate・groupBy）が 5 列すべてで表どおりか（ctx.db 直接の findUnique は throw、owned は scoped、tx 直接は型エラー） | 読み取りの穴 | 自動: `verify-core-access-cross-tenant.cjs`（reads×5 列、ext-on/off） | H | FIN4-01 |
+| TEN-27 | create / createMany / createManyAndReturn が ctx.db 直接では throw、owned では walkData（戻り値）＋refs 検証＋withTenant、tx 直接は型エラーか | create 経路のネスト connect・テナント列 | 自動: 同上（creates×5 列） | H | FIN4-01 |
+| TEN-28 | update / updateMany / upsert / delete / deleteMany が ctx.db 直接では throw、owned では表どおり（所属確認・scoped・walkData）、tx 直接は型エラーか | 更新・削除の穴 | 自動: 同上（writes×5 列） | H | FIN4-01 |
+| TEN-29 | `$queryRaw` / `$executeRaw` が `tenantSql(ctx)` 無しで lint エラーになり、`OwnedTx` では `$tenantRaw` だけが使えるか | raw SQL の素通り | 自動: `verify-core-raw-sql-tenant.cjs`＋tsc | H | SEC-04, FIN4-01 |
+| TEN-30 | include / select の to-many relation に where が足され、to-one の親が post-filter されるか（ctx.db と owned の両方） | 親方向の他社読み | 自動: `verify-core-access-cross-tenant.cjs`（include） | H | SEC-01 |
+| TEN-31 | 配列形 `$transaction([...])` が読み取り専用で、書き込み PrismaPromise（マーカー無し）が拡張で throw されるか | 配列形経由の書き込み | 自動: 同上（array tx） | M | FIN3-07 |
+| TEN-32 | `walkData` が純関数で、呼び出し側が戻り値の data を必ず使い（入力を渡すと検査で検出）、テナント列違反は即 throw、ネスト対象は refs を `assertRefsOwned` が同じ client で検証して `TenantViolation` にするか（RecordNotFound に頼らない） | 書き換えの喪失・DB 依存の拒否 | 自動: 同上（walkData の戻り値を捨てた実装を検出する契約テスト、refs 0 件→拒否） | H | FIN4-02 |
 
 ## 2. AUTH 認証・セッション（Google のみ・使い回し防止）
 
@@ -230,7 +237,7 @@
 | AGT-08 | 各ステップ実行直前に `evaluateCompanyAccess({userId: requestedById})` で再評価し、承認者が上位でも依頼者の権限で実行するか | 権限の貸与 | 自動: `verify-agent-actor-ceiling.cjs` | H | A-8 |
 | AGT-09 | 依頼者のロールで使えない sensitive ツールが計画段階から除外されるか | 機微データの漏洩 | 自動: 同上 | H | — |
 | AGT-10 | 外部由来テキスト（ツール結果、`fieldSources.origin='scraped'` の会社情報、`KnowledgeSource.isUntrusted`）が `<untrusted>` で包まれるか | プロンプトインジェクション | 自動: `verify-agent-untrusted-wrapping.cjs` | H | B-15 |
-| AGT-11 | 計画確定後に追加できる step は `read` ツールのみか | 結果を読んで external を追加させない | 自動: 同上 | H | — |
+| AGT-11 | 計画確定後に追加できる step は `read` ツールのみか | 結果を読んで irreversible / high の step を追加させない | 自動: 同上 | H | — |
 | AGT-12 | ツール入力は zod `.strict()` で、URL は `assertUrlSafe`、id は cuid＋会社所属を検査するか | 入力経由の攻撃 | 自動: `verify-agent-tool-input-strict.cjs` | H | M-9 |
 | AGT-13 | run ごとに `creditBudget` / `maxToolCalls` / `maxLlmCalls` / `wallClockLimitSec` があり、超過で `failed(budget)` になるか | コスト暴走 | 自動: `verify-agent-budget.cjs` | H | C-1 |
 | AGT-14 | `estimatedPaidCalls` と `LlmCallLog` の実測が 2 倍以上乖離したら `SecurityEvent` になるか | 見積りの形骸化 | 自動: 同上 | M | B-16 |
@@ -368,7 +375,7 @@
 | RUN-01 | schema 変更は「`doya-db-push` で本番反映 → デプロイ」の順で、逆になっていないか | P2022 で全 500 | 手動: デプロイ前チェック欄 | H | — |
 | RUN-02 | 起動時ヘルスチェックが新テーブルの存在を確認し、欠落を早期検出するか | 反映漏れ | 自動: `/api/health` の応答 | M | — |
 | RUN-03 | `Session` の index と FK を手順どおり（CONCURRENTLY / NOT VALID / lock_timeout）に先行作成しているか | ロック | 手動: 手順書 | H | B-18, DATA-05 |
-| RUN-04 | Cron 本数が README §17.3 の数（41、スロット化なら 45）と `vercel.json` で一致し、100 本以内か | 上限と記述の不一致 | 手動: `vercel.json` | L | B-13, OPS-27 |
+| RUN-04 | Cron 本数が README §17.3 の数（41。K スロット代替なら 41 + K − 1）と `vercel.json` で一致し、100 本以内か | 上限と記述の不一致 | 手動: `vercel.json` | L | B-13, OPS-27 |
 | RUN-05 | 重複起動し得る Cron（Vercel は best effort・重複あり）が DB リースで相互排他され、冪等か | 二重処理 | 自動: `verify-agent-run-lease.cjs` | H | — |
 | RUN-06 | 長時間処理は 240s で自発的に返し、`maxDuration=300` の関数を使い切らないか | リース残り | 自動: `verify-agent-deadline.cjs` | H | B-14 |
 | RUN-07 | SSE ルートにも `maxDuration` があり、再接続前提か | 切断 | 手動: コードレビュー | L | C-14 |
@@ -385,7 +392,7 @@
 | RUN-18 | SLO（承認→再開 ≤2 分、read run ≤3 分 p95、リース喪失 ≤0.5%、webhook ≤5 分、kill switch ≤120s）が計測されているか | 改善の基準が無い | 手動: Phase3 の計測値 | M | OPS-33 |
 | RUN-19 | kill switch の伝播が「進行中の 1 有料呼び出し」以内（≤120s）か | 暴走に気づいても止まらない | 自動: `verify-agent-kill-switch.cjs` | H | OPS-34 |
 | RUN-20 | Vercel Pro 前提（毎分 Cron、`maxDuration=300`、`x-vercel-forwarded-for`）が明記され、Hobby では成立しないことが書かれているか | プラン変更で日次 Cron に | 手動: README §17.3 | L | OPS-35 |
-| RUN-21 | Cron 本数の記述が全文書で一致しているか（41 / スロット化 45） | 不一致 | 手動: grep | L | OPS-27 |
+| RUN-21 | Cron 本数の記述が全文書で一致しているか（41。K スロット代替なら 41 + K − 1） | 不一致 | 手動: grep | L | OPS-27 |
 | RUN-22 | 夜間 `billing-audit` が DB distinct `serviceId` ⊆ active manifests と retired の `enabled` 無しを検査するか | 1 回きりの検査 | 自動: `verify-service-manifest-ids.cjs`＋cron | M | OPS-30 |
 | RUN-23 | 完了条件のカウンタ（`legacy_access.*`、`route_class.report_only_denied`、`access_shadow.diff`）が `RuntimeCounter` にあり、`SystemSetting` を使っていないか | 測定不能な完了条件 | 自動: grep | M | OPS-25 |
 | RUN-24 | 会社 purge の順序（Artifacts→Runs→Members→Profile/Assets/Knowledge→旧組織→匿名化）と「課金系・AuditLog は残す」が手順にあるか | Restrict で purge が失敗 | 自動: `verify-core-company-purge.cjs` | M | DATA-10 |
@@ -416,7 +423,7 @@
 | DOC-01 | 同じ規則が文書内の複数箇所に書かれているとき、修正前に grep で全出現を列挙し、全箇所を同時に直したか（例: 除籍の意味論＝§5.1 / §9.1 / §11.6 / MIG-15、Cron claim 条件＝§8.4 / §8.6 / §17.2 / AGT-26、Cookie 名＝§6.3 / §10.7、冪等キーの基底＝§7.4 / §8.4 / §8.6 / draft） | 取り残しが矛盾になり、読んだ箇所で実装が変わる | 自動: `verify-doc-consistency.cjs`（付録 J の「多重記述キー」ごとに正規表現で全出現を抽出し、正本の文言と一致しなければ失敗） | H | FIN-07, FIN-13 |
 | DOC-02 | 件数・行番号・モデル数（merge 28 / 新規 34 / 結合 226、テーブル 28、Cron 41）が README・draft・CHECKLIST・付録で一致しているか | 検証スクリプトの期待値が決まらない | 自動: 同上（数値キー） | M | FIN-16, DATA-17 |
 | DOC-03 | 名称（Cookie 名、フラグ名、cron パス、ツール key、verify スクリプト名）が全文書で同一か | 実装者が別名で作る | 自動: 同上（名称キー） | M | FIN-13 |
-| DOC-04 | ER 図の実体・カーディナリティ・UK/FK 表記が draft と一致しているか | 図を見て作ると違う | 自動: `verify-core-er-consistency.cjs` | M | FIN-17, DATA-16 |
+| DOC-04 | ER 図の実体・カーディナリティ・UK/FK 表記が draft と一致し、ER に載せた属性名が draft に存在するか（属性は draft が正本。ER は抜粋だが載せたものは一致させる） | 図を見て作ると違う | 自動: `verify-core-er-consistency.cjs` | M | FIN-17, DATA-16 |
 | DOC-05 | 状態遷移図の status / pausedReason の値が draft のコメントと一致し、全状態に終端への経路と復帰主体があるか | 実装者が 2 通りに解釈 | 自動: `verify-agent-state-machine.cjs`（図から遷移表を抽出し、到達性と draft の値を検査） | H | FIN-01, FIN-12 |
 | DOC-06 | 「要実機確認」と書いた外部仕様に、確認できなかった場合の代替設計が併記されているか | 片方に賭けた設計 | 手動: 付録 B の各項目 | M | FIN-03, FIN-08, FIN-14, FIN-15 |
 | DOC-07 | 付録の回答表（D / F / G）に審査の全 ID の行があり、「部分的」判定が次の改訂で「反映」まで到達しているか | 取りこぼし | 自動: ID 列挙スクリプト | M | 全般 |
@@ -487,7 +494,20 @@
 | D-7 | AUTH-18, RUN-12 |
 | D-8 | MIG-04, SCH-05 |
 
-項目数: TEN 25 / AUTH 38 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 51 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 9 ＝ **337 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1 回の 17 指摘、第 2 回の 7 指摘、第 3 回の 8 指摘すべてに対応項目あり（漏れ 0）。
+項目数: TEN 32 / AUTH 38 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 51 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 9 ＝ **344 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1〜4 回の 17 / 7 / 8 / 7 指摘すべてに対応項目あり（漏れ 0）。
+
+## 最終ゲート第 4 回（FIN4）との対応表
+
+| 審査 | 再発防止するチェック項目 |
+|---|---|
+| FIN4-01 | TEN-22, TEN-26, TEN-27, TEN-28, TEN-29, TEN-30, TEN-31 |
+| FIN4-02 | TEN-32, TEN-14 |
+| FIN4-03 | RUN-04, RUN-21, DOC-02 |
+| FIN4-04 | DOC-04 |
+| FIN4-05 | AGT-11, DOC-03 |
+| FIN4-06 | AGT-02, DOC-05 |
+| FIN4-07 | TEN-26 |
+
 
 ## 最終ゲート第 3 回（FIN3）との対応表
 

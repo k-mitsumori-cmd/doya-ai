@@ -27,7 +27,7 @@
 15. [設計とは別に先に直す修正（フェーズ0の前）](#15-設計とは別に先に直す修正フェーズ0の前)
 16. [新しいサービスを追加するときの仕様（サービス契約）](#16-新しいサービスを追加するときの仕様サービス契約)
 17. [運用（データ保持・掃除、監視と SLO、前提）](#17-運用データ保持掃除監視と-slo前提)
-- 付録 A 新設ファイル / B 未確認点 / C schema-draft の結合検証 / D 監査への回答 / E 改訂履歴 / F 第 2 回審査への回答 / G 最終ゲート第 1 回への回答 / H 告知文 / I LLM プロバイダ契約 / J 多重記述キー一覧 / K 最終ゲート第 2 回への回答 / L 最終ゲート第 3 回への回答
+- 付録 A 新設ファイル / B 未確認点 / C schema-draft の結合検証 / D 監査への回答 / E 改訂履歴 / F 第 2 回審査への回答 / G 最終ゲート第 1 回への回答 / H 告知文 / I LLM プロバイダ契約 / J 多重記述キー一覧 / K 最終ゲート第 2 回への回答 / L 最終ゲート第 3 回への回答 / M 最終ゲート第 4 回への回答
 
 ---
 
@@ -264,6 +264,7 @@ erDiagram
     string allowedGoogleDomains "配列"
     int maxSessionsPerUser "既定 3"
     boolean requireStepUp
+    boolean strictSharing "既定 false"
     datetime deletedAt "論理削除のみ"
   }
   CompanyMember {
@@ -362,16 +363,21 @@ erDiagram
     string executionToken
     datetime executionExpiresAt
     int advanceAttempts
+    datetime nextRunAt "作成時 now()。解放・承認・復帰で更新"
+    int runningSeconds "running の累積"
+    string pausedReason "kill_switch|company_suspended|llm_outage"
     int creditBudget
     int creditUsed
     int maxToolCalls
     int toolCallCount
     int maxLlmCalls
     int llmCallCount
+    int maxApprovals "既定 5"
     int wallClockLimitSec
   }
   AgentStep {
     string companyId "非正規化"
+    int planVersion "runId+planVersion+ord で unique"
     int ord
     string toolKey "sfa.listDeals"
     json input "zod検証済み"
@@ -380,8 +386,10 @@ erDiagram
     string costClass "none|low|high"
     int estimatedPaidCalls
     boolean requiresApproval "導出"
+    string downstreamIdempotency "native|local-record|none"
     string status
     int attempts
+    int maxAttempts "read 2 / 他 1"
   }
   ToolCall {
     string idempotencyKey "runId:stepId（attempt を含まない）"
@@ -832,7 +840,7 @@ sequenceDiagram
 
   loop 依存の解けた step を並列（最大 4）
     EX->>EX: UsageLedger reserve（creditCost）
-    alt reversibility=read、または reversible×(none|low)（承認不要）
+    alt reversibility=read、または reversible×(none|low) で会社設定 approveDrafts=false
       EX->>SVC: ツール実行（依頼者の CompanyContext で）
       SVC-->>EX: 結果（外部テキストは <untrusted> で包む）
       EX->>EX: ToolCall 記録・consume
@@ -857,7 +865,7 @@ sequenceDiagram
 - 1 ツール＝`{ key, providerName, serviceId, minServiceRole, reversibility, costClass, estimatedPaidCalls, sensitive, downstreamIdempotency, input, output, creditCost, timeoutMs, run(ctx, input, signal) }`。
 - **`key` と `providerName` を分ける**（OPS-10）: `key='sfa.listDeals'` はレジストリ・DB・UI 用。LLM に渡す名前は `providerName='sfa__listDeals'`（OpenAI の function name は `^[a-zA-Z0-9_-]{1,64}$`、SDK `shared.d.ts` L52 で確認。Gemini は dots 可・128 文字だが、両方に通る形に統一）。往復変換は gateway に閉じ込め、`verify-service-manifest-tools.cjs` が両規約を検査する。
 - **リスク区分は 2 軸**: `reversibility`（`read` / `reversible` / `irreversible`）× `costClass`（`none` / `low`＝有料 API 1〜3 回 / `high`＝4 回以上、または画像・動画・音声 1 回以上、または件数比例）。
-- **承認要否**: `irreversible` → 常に承認。`costClass=high` → **下書きでも常に承認**（2026-08-24 の 173 回事故の再発防止）。`reversible × low` → 会社設定 `approveDrafts`。`read` → 不要。承認画面には **見込み回数・モデル・単価・合計見込み額**（`ApprovalRequest.estimate`）と **`approvalHash`** を表示する（SEC-15）。
+- **承認要否**: `irreversible` → 常に承認。`costClass=high` → **下書きでも常に承認**（2026-08-24 の 173 回事故の再発防止）。`reversible × low` と `reversible × none` → 会社設定 `approveDrafts`。`read` → 不要。承認画面には **見込み回数・モデル・単価・合計見込み額**（`ApprovalRequest.estimate`）と **`approvalHash`** を表示する（SEC-15）。
 - **下流の冪等性は 3 区分で宣言**（OPS-03。ラベルではなく実体で検査）:
   - `native`: 下流がキーを受け取れる（Stripe `idempotencyKey`、`SeoJob.executionToken`、`createSfaOnce(operationId)`（`src/lib/sfa/creation-receipt.ts` L39、作成のみ）、`PersonaProject.requestKey`、`CunningRecordingLease.requestKey`）。**`requestKey` 列は Cunning / Persona にしか無く、SFA には無い**（改訂 2 の「`sfa.updateDealStage` は `requestKey` で冪等」は誤り）。
   - `local-record`: 下流に受け口が無い（Slack webhook、`rooms/route.ts` POST、`sessions/route.ts` POST、`image-generator.ts`、`aio/run.ts`、`doyalist collectCompanies`、`deal-mutation.ts` の更新）。**呼び出し前に `ToolCall(status='running')` をフェンス付きで commit**し、呼び出し後に結果を書く。結果が書けなかった行（`running` のまま）は `unknown_outcome` として **人の確認待ち**（`ApprovalRequest(kind='unknown_outcome')`: 「実行済みとして扱う／未実行として再実行／中止」）。**自動再試行はしない**（`maxAttempts=1`）。
@@ -1091,19 +1099,22 @@ stateDiagram-v2
 
 ### 10.2 テナント分離
 
-**方式 A（採用・Phase1 から）: アプリ層での強制（query 拡張 ＋ `owned()` ヘルパー ＋ モジュール内マーカー）**
+**方式 A（採用・Phase1 から）: アプリ層での強制（query 拡張 ＋ `owned()` ヘルパー ＋ モジュール内マーカー ＋ 全操作マトリクス）**
 
-Prisma 公式ドキュメントの制限: 「The `query` extension type does not support nested read and write operations」（SEC-01）。query 拡張のコールバック内から現在のトランザクションクライアントを取る手段は公式に無い（FIN-03）。したがって**分担を次のように固定**する（FIN2-01）:
+Prisma 公式ドキュメントの制限: 「The `query` extension type does not support nested read and write operations」（SEC-01）。query 拡張のコールバック内から現在のトランザクションクライアントを取る手段は公式に無い（FIN-03）。改訂 4〜6 で「表の外」の操作（upsert → updateMany → tx の読み取り → tx の create）に穴が 1 件ずつ見つかったため、改訂 7 で **Prisma 5.22 の全モデル操作を行に持つマトリクス**（下表）で閉じ、分担を次の 3 行に単純化する（FIN4-01〜02）:
 
 | 役割 | 誰が | 何をするか |
 |---|---|---|
-| 一覧・集計の where にテナント列を AND | **query 拡張**（`tenantPrisma`） | `findMany / findFirst / findFirstOrThrow / count / aggregate / groupBy / updateMany / deleteMany` |
-| `create / createMany / updateMany` の data 検査 | query 拡張（`walkData`） | テナント列強制、ネスト書き込みの再帰検査、**`updateMany.data` のテナント列書き換え拒否**（FIN3-01） |
-| tx 内の一覧・集計読み（`findMany / findFirst / count / aggregate / groupBy`） | **`owned(tx, ctx)` だけ**（`scoped()` を AND） | `OwnedTx` 型は読み取り系も `Omit`。拡張が tx に乗らない場合でも他社行が返らない（FIN3-02） |
-| `update / delete / upsert / findUnique(OrThrow)` | **`owned(client, ctx)` ヘルパーだけ** | `walkData` → 所属確認（`findFirstOrThrow(scoped)`）→ **「owned 経由」マーカーを付けて**元の操作を呼ぶ |
-| マーカー無しの `update / delete / upsert / findUnique` | query 拡張 | **throw `UseOwnedHelperError`**。マーカー有りは「`walkData` 済み」として通す |
+| **読み取り**（`findMany / findFirst / findFirstOrThrow / count / aggregate / groupBy`）の where にテナント列を AND、`include / select` の relation にスコープ | query 拡張（`ctx.db` 直接） と `owned()`（tx 内） | `findUnique / findUniqueOrThrow` は拡張が throw し、`owned().findUnique(OrThrow)`（`findFirst(OrThrow)` へ写像）だけを許す |
+| **書き込み全部**（`create / createMany / createManyAndReturn / update / updateMany / upsert / delete / deleteMany`） | **`owned(client, ctx)` だけ** | `walkData`（純関数。戻り値を必ず使う）→ `refs` の所属検証（同じ client で 1 クエリ）→ モジュール内マーカー付きで元操作。拡張は**マーカー無しの書き込みを例外なく throw** |
+| tx 直接呼び出し | 型（`OwnedTx`） | テナントモデルの読み書き**全操作**を `Omit`。`owned(tx, ctx)` 経由だけがコンパイルできる。lint `core/tx-tenant-where` はエラー |
 
-マーカーはモジュール内の `AsyncLocalStorage`（`ownedScope`）で、**export しないので外部から偽造できない**（`args` に Symbol を付ける方式は Prisma が args を複製すると失われる可能性があるため採らない。`WeakSet<args>` は args が参照のまま渡される場合の補助として併用可。要実機確認）。
+**`walkData` の契約**（FIN4-02。この 1 つに固定する）:
+
+- `walkData(model, data, op, ctx): { data: NewData; refs: Ref[] }` — **純関数**。入力を変更せず、**書き換えた新しい `data` を返す**。呼び出し側は**必ず戻り値の `data` を使い**、入力の `data` を Prisma に渡してはならない（渡すと複合条件化が失われる）。
+- **即 throw**（`TenantViolation`）: (1) `op in (update, updateMany, upsert.update)` の `data` にテナント列がある、(2) `op in (create, createMany, upsert.create)` の `data` のテナント列が `expected` と異なる（無ければ `withTenant` で補う）、(3) ネストした `create / createMany / connectOrCreate.create` の data に上記違反がある、(4) ネスト対象の `where` がテナント列を含み `expected` と異なる。
+- **refs 収集**: ネストした `connect / set / disconnect / connectOrCreate.where / update.where / updateMany.where / delete.where / deleteMany.where` の対象を `{ model, where }` として `refs` に集める（where はそのまま。複合条件化はしない）。
+- `owned()` は `refs` を model ごとにまとめ、**同じ `client` で `findMany({ where: { AND: [{ OR: wheres }, { [tenant]: expected }] }, select: { id: true } })` を 1 回**実行し、件数が一致しなければ `TenantViolation` で**元操作を呼ばずに**拒否する（DB の `RecordNotFound` に頼らない。他社 id は明示的に拒否され、`SecurityEvent(tenant.violation)` になる）。
 
 ```ts
 // src/lib/core/tenant-prisma.ts  — owned() と同じモジュール。ownedScope は export しない
@@ -1111,82 +1122,99 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 const ownedScope = new AsyncLocalStorage<{ model: string; op: string }>()   // モジュール内。偽造不能
 const TENANT_COLUMNS = buildFromManifests()
 const COMPOUND = buildCompoundUniqueMap()   // Prisma.dmmf → 'userId_serviceId' → ['userId','serviceId']（SEC-02）
+const READS  = new Set(['findMany','findFirst','findFirstOrThrow','count','aggregate','groupBy'])
+const WRITES = new Set(['create','createMany','createManyAndReturn','update','updateMany','upsert','delete','deleteMany'])
 
 export function tenantPrisma(ctx) {
   return prisma.$extends({ query: { $allModels: { async $allOperations({ model, operation, args, query }) {
     const t = TENANT_COLUMNS[model]; if (!t) return query(args)
     const expected = expectedFor(t, ctx); if (!expected) throw new TenantScopeError(model)
-    switch (operation) {
-      case 'updateMany':
-        walkData(model, args.data, 'updateMany', ctx)       // FIN3-01: data にテナント列があれば throw（where が自社に AND されても、自社行を他社へ移せてしまうため）
-        // fallthrough
-      case 'findMany': case 'findFirst': case 'findFirstOrThrow': case 'count': case 'aggregate': case 'groupBy': case 'deleteMany':
-        return query({ ...args, where: { AND: [expandCompound(model, args.where) ?? {}, { [t.column]: expected }] } })
-      case 'create': case 'createMany':
-        walkData(model, args.data, operation, ctx); return query(args)
-      case 'update': case 'delete': case 'upsert': case 'findUnique': case 'findUniqueOrThrow': {
-        const scope = ownedScope.getStore()
-        if (!scope || scope.model !== model || scope.op !== operation) throw new UseOwnedHelperError(model, operation)  // マーカー無し
-        return query(args)                                   // マーカー有り: owned() が walkData 済み
-      }
-      default: return query(args)
+    if (READS.has(operation))
+      return query({ ...args, where: { AND: [expandCompound(model, args.where) ?? {}, { [t.column]: expected }] }, ...scopeInclude(model, args, ctx) })
+    const scope = ownedScope.getStore()
+    if (WRITES.has(operation) || operation === 'findUnique' || operation === 'findUniqueOrThrow') {
+      if (!scope || scope.model !== model || scope.op !== operation) throw new UseOwnedHelperError(model, operation)  // マーカー無し
+      return query(args)                                   // マーカー有り: owned() が walkData・refs 検証済み
     }
+    return query(args)
   } } } })
 }
 
 // owned(): 呼び出し元のクライアント（ctx.db でも tx でも）で動く。拡張が乗っていても乗っていなくても同じ検査を自分で行う
-export function owned(client: TenantPrisma | Prisma.TransactionClient, ctx) {
-  // FIN3-03: Prisma の client[model].update(a) は遅延実行の PrismaPromise。リクエスト（＝$allOperations の呼び出し）は await 時に始まるので、
-  // **run の中で await** してストアの中でリクエストを開始する（リード実機実験 A/B: run の外で await すると store は null、中で await すれば届く）
-  const run = (model, op, fn) => ownedScope.run({ model, op }, async () => await fn())
+export function owned(client: TenantPrisma | OwnedTx, ctx) {
+  const run = (model, op, fn) => ownedScope.run({ model, op }, async () => await fn())   // run の中で await（実験 B）
+  const guard = async (model, op, data) => {                                            // walkData → refs 検証。戻り値の data を必ず使う
+    const { data: next, refs } = walkData(model, data, op, ctx)
+    await assertRefsOwned(client, refs, ctx)                                            // 同じ client で 1 クエリ。不一致なら TenantViolation
+    return next
+  }
+  const sc = (model, a) => ({ ...a, where: scoped(model, a?.where, ctx), ...scopeInclude(model, a, ctx) })
   return new Proxy({}, { get: (_, model: string) => ({
-    findUnique:        (a) => client[model].findFirst({ ...a, where: scoped(model, a.where, ctx) }),
-    findUniqueOrThrow: (a) => client[model].findFirstOrThrow({ ...a, where: scoped(model, a.where, ctx) }),
-    // FIN3-02: tx 内の読み取りもここだけ（OwnedTx 型が読み取り系を Omit するため）。拡張が乗っていれば AND が二重になるだけで無害
-    findMany:  (a) => client[model].findMany({ ...a, where: scoped(model, a?.where, ctx) }),
-    findFirst: (a) => client[model].findFirst({ ...a, where: scoped(model, a?.where, ctx) }),
-    count:     (a) => client[model].count({ ...a, where: scoped(model, a?.where, ctx) }),
-    aggregate: (a) => client[model].aggregate({ ...a, where: scoped(model, a?.where, ctx) }),
-    groupBy:   (a) => client[model].groupBy({ ...a, where: scoped(model, a?.where, ctx) }),
-    updateMany: (a) => { walkData(model, a.data, 'updateMany', ctx); return client[model].updateMany({ ...a, where: scoped(model, a.where, ctx) }) },
-    deleteMany: (a) => client[model].deleteMany({ ...a, where: scoped(model, a.where, ctx) }),
+    // 読み取り（tx 内の唯一の経路。ctx.db では拡張が同じ AND をするので二重でも無害）
+    findUnique:        (a) => client[model].findFirst(sc(model, a)),
+    findUniqueOrThrow: (a) => client[model].findFirstOrThrow(sc(model, a)),
+    findFirst:         (a) => client[model].findFirst(sc(model, a)),
+    findFirstOrThrow:  (a) => client[model].findFirstOrThrow(sc(model, a)),             // FIN4-07
+    findMany:          (a) => client[model].findMany(sc(model, a)),
+    count:             (a) => client[model].count(sc(model, a)),
+    aggregate:         (a) => client[model].aggregate(sc(model, a)),
+    groupBy:           (a) => client[model].groupBy(sc(model, a)),
+    // 書き込み（全部ここ。walkData の戻り値を使う）
+    create:              async (a) => run(model, 'create',              async () => client[model].create({ ...a, data: await guard(model, 'create', a.data) })),
+    createMany:          async (a) => run(model, 'createMany',          async () => client[model].createMany({ ...a, data: await Promise.all([].concat(a.data).map(d => guard(model, 'create', d))) })),
+    createManyAndReturn: async (a) => run(model, 'createManyAndReturn', async () => client[model].createManyAndReturn({ ...a, data: await Promise.all([].concat(a.data).map(d => guard(model, 'create', d))) })),
     update: async (a) => {
-      walkData(model, a.data, 'update', ctx)                                           // (1) data の再帰検査（ネスト connect/set/… と テナント列書き換え禁止）
-      await client[model].findFirstOrThrow({ where: scoped(model, a.where, ctx), select: { id: true } })   // (2) 所属確認（同じ client ＝ tx なら tx 上）
-      return run(model, 'update', () => client[model].update(a))                        // (3) マーカー付きで元操作
+      const data = await guard(model, 'update', a.data)
+      await client[model].findFirstOrThrow({ where: scoped(model, a.where, ctx), select: { id: true } })   // 所属確認（同じ client ＝ tx なら tx 上）
+      return run(model, 'update', () => client[model].update({ ...a, data }))
     },
-    delete: async (a) => {
-      await client[model].findFirstOrThrow({ where: scoped(model, a.where, ctx), select: { id: true } })
-      return run(model, 'delete', () => client[model].delete(a))
-    },
-    upsert: async (a) => {                                                              // FIN-02(b): create 経路は行が無いのが正常
-      walkData(model, a.update, 'update', ctx); walkData(model, a.create, 'create', ctx)
+    updateMany: async (a) => { const data = await guard(model, 'updateMany', a.data); return run(model, 'updateMany', () => client[model].updateMany({ ...a, where: scoped(model, a.where, ctx), data })) },
+    upsert: async (a) => {
+      const [create, update] = [await guard(model, 'create', a.create), await guard(model, 'update', a.update)]
       const hit = await client[model].findFirst({ where: scoped(model, a.where, ctx), select: { id: true } })
-      return hit
-        ? run(model, 'update', () => client[model].update({ where: a.where, data: a.update }))
-        : run(model, 'create', () => client[model].create({ data: withTenant(model, a.create, ctx) }))   // create は拡張側でも walkData されるが冪等
+      return hit ? run(model, 'update', () => client[model].update({ where: a.where, data: update }))
+                 : run(model, 'create', () => client[model].create({ data: create }))                   // create 経路は行が無いのが正常
     },
+    delete:     async (a) => { await client[model].findFirstOrThrow({ where: scoped(model, a.where, ctx), select: { id: true } }); return run(model, 'delete', () => client[model].delete(a)) },
+    deleteMany: async (a) => run(model, 'deleteMany', () => client[model].deleteMany({ ...a, where: scoped(model, a.where, ctx) })),
   }) })
 }
 ```
 
-**両ケースの動作**（拡張が対話型 tx に乗るかは Prisma 公式に明記が無く要実機確認。どちらでも成立することを示す）:
+**全操作マトリクス**（Prisma 5.22。`createManyAndReturn` は手元の `.prisma/client/index.d.ts` に存在、`updateManyAndReturn` は無し）。各マスは「どこで・どう守られるか」。空欄は無く、全マスに防御がある。
 
-| ケース | (a) 正常な `owned(tx, ctx).sfaDeal.update({ where: { id: 自社 deal }, data: { stageId } })` | (b) `owned(tx, ctx).sfaTask.update({ where: { id: 自社 task }, data: { deal: { connect: { id: <B 社 deal> } } } })` | `tx.sfaDeal.update(...)` を直接呼ぶ |
-|---|---|---|---|
-| tx に拡張が**乗る** | `walkData` OK → `findFirstOrThrow(scoped)` 1 件 → `run` 内で `await tx.sfaDeal.update(a)`（await が run の中なので拡張の `getStore()` にマーカーが届く。実験 B）→ 拡張は `query(args)` → 成功 | `walkData` が `connect: { id }` を `connect: { id, organizationId: A }` に書き換え → Prisma が B 社 deal を見つけられず `RecordNotFound` → 拒否 | 拡張がマーカー無しで throw |
-| tx に拡張が**乗らない** | `walkData` OK → `findFirstOrThrow(scoped)` → `run` 内で `await tx.sfaDeal.update(a)` が直接実行 → 成功 | `walkData` が同じ書き換えを行う（owned 側で実行済み）→ `RecordNotFound` → 拒否 | 拡張が無いので止まらない。**型で防ぐ**: `ctx.db.$transaction` のコールバック引数型 `OwnedTx` は `update / delete / upsert / findUnique / findUniqueOrThrow` に加えて **読み取り系（`findMany / findFirst / findFirstOrThrow / count / aggregate / groupBy`）と `updateMany / deleteMany` も `Omit`**（テナントモデルについて）し、`owned(tx, ctx).<op>` だけを許す（FIN3-02）。lint `core/tx-tenant-where`（`tx.<model>.` の直接呼び出し）は**エラー** |
-| `updateMany` の `data` にテナント列（`ctx.db.sfaDeal.updateMany({ where: { id }, data: { organizationId: B } })`） | 拡張の `updateMany` 分岐の `walkData` が throw（FIN3-01） | — | `owned(tx).updateMany` も同じ `walkData` で throw |
-| `ctx.db` 直接（tx 外） | 拡張が throw（`UseOwnedHelperError`） | 同左 | 同左 |
+| 操作 | `ctx.db` 直接 | `owned(ctx.db)` | `owned(tx)`・拡張が乗る | `owned(tx)`・拡張が乗らない | `tx` 直接（`OwnedTx` 型） | 回帰テスト |
+|---|---|---|---|---|---|---|
+| `findUnique` / `findUniqueOrThrow` | 拡張が throw（`UseOwnedHelperError`） | `findFirst(OrThrow)` に写像＋`scoped()`（複合 unique は DMMF で展開） | 同左（＋拡張の AND が二重、無害） | 同左（owned の `scoped()` のみ） | 型で `Omit`（コンパイルエラー） | TEN-26 |
+| `findFirst` / `findFirstOrThrow` / `findMany` / `count` / `aggregate` / `groupBy` | 拡張が where に AND ＋ `scopeInclude` | `scoped()`＋`scopeInclude` | 同左（二重、無害） | 同左 | 型で `Omit` | TEN-26 |
+| `include` / `select` の relation 読み（to-many） | 拡張の `scopeInclude` が `include.<rel>.where` にテナント列を AND | 同左（owned の `scopeInclude`） | 同左 | 同左 | 型で `Omit`（読み取り自体が不可） | TEN-30 |
+| `include` / `select` の relation 読み（to-one の親） | 拡張が結果を post-filter（親がテナント外なら null） | 同左 | 同左 | 同左 | 同上 | TEN-30 |
+| `create` | 拡張が throw（マーカー無し） | `walkData`（戻り値の data）＋`refs` 検証＋`withTenant`＋マーカー | 同左（拡張はマーカーを見て通す） | 同左（owned が全検査） | 型で `Omit` | TEN-27 |
+| `createMany` / `createManyAndReturn` | 拡張が throw | 配列の全要素に `walkData`＋`refs`＋`withTenant` | 同左 | 同左 | 型で `Omit` | TEN-27 |
+| `update` | 拡張が throw | `walkData`（update: テナント列があれば throw）＋`refs`＋所属確認（`findFirstOrThrow(scoped)`）＋マーカー | 同左 | 同左 | 型で `Omit` | TEN-28 |
+| `updateMany` | 拡張が throw | `walkData`＋`refs`＋where に `scoped()`＋マーカー | 同左 | 同左 | 型で `Omit` | TEN-28 |
+| `upsert` | 拡張が throw | create/update の両方に `walkData`＋`refs`、`findFirst(scoped)` で分岐（create 経路は行無しが正常）＋マーカー | 同左 | 同左 | 型で `Omit` | TEN-28 |
+| `delete` | 拡張が throw | 所属確認（`findFirstOrThrow(scoped)`）＋マーカー | 同左 | 同左 | 型で `Omit` | TEN-28 |
+| `deleteMany` | 拡張が throw | where に `scoped()`＋マーカー | 同左 | 同左 | 型で `Omit` | TEN-28 |
+| `$queryRaw` / `$executeRaw` | `tenantSql(ctx)` フラグメントが無ければ lint **エラー**（拡張は素通り） | 同左（owned は raw を持たない） | 同左 | 同左 | `OwnedTx` は `$queryRaw` を `tenantSql` 必須の薄いラッパー `tx.$tenantRaw(ctx, sql)` だけに `Omit`／置換 | TEN-29 |
+| `$transaction([...])` 配列形 | PrismaPromise のみ受け付ける。読み取りは拡張が AND、書き込みは `owned()` が async 関数なので渡せず（マーカー無しの書き込みは拡張が throw）＝**読み取り専用でしか使えない** | `owned()` の戻り値は Promise なので配列形には渡せない（型エラー）。書き込みは対話型へ | 配列形には tx が存在しない（対話型のみ） | 同左 | 配列形には `tx` が無い（`OwnedTx` は対話型のコールバック型） | TEN-31 |
+| `$transaction(async tx => ...)` 対話型 | コールバック内で `ctx.db` を使うと tx 外の別接続になるため lint `core/tx-tenant-where` がエラー（必ず `tx` を使う） | 同左（`owned(ctx.db)` も tx 外。lint エラー） | `owned(tx, ctx)` 経由 | `owned(tx, ctx)` 経由 | `tx: OwnedTx`（全操作 Omit） | TEN-21/22 |
 
-- `walkData` は同期の純関数（追加クエリを発行しない）。ネストした `connect / set / disconnect / connectOrCreate / update / updateMany / delete / deleteMany` の対象 where を「id ＋ テナント列」の複合条件に書き換え、ネスト `create / createMany`（配列含む）にテナント列を強制し、update 系の data にテナント列があれば throw する。`createMany.data` が配列なら全要素。
-- `scoped()` は `expandCompound` で複合 unique セレクタを展開してからテナント列を AND する。`withTenant()` は create data にテナント列を強制し、他社 id が入っていれば throw。
-- 戻り値の形: `owned().update / delete / upsert` は元の操作をそのまま呼ぶので既存コードの戻り値と同じ。`findUnique` → `findFirst` は戻り値の形が同じ。`findUniqueOrThrow` → `findFirstOrThrow` で throw 意味論を保つ。
-- `include` / `select` で親側の relation を辿る読みは、`TENANT_COLUMNS` にあるモデルについて `include.<rel>.where`（to-many）を足し、to-one の親は結果を post-filter する。
+**両ケースの動作**（拡張が対話型 tx に乗るかは実験 D＝未確認。どちらでも成立する）:
+
+| ケース | (a) 正常な `owned(tx, ctx).sfaDeal.update({ where: { id: 自社 deal }, data: { stageId } })` | (b) `owned(tx, ctx).sfaTask.update({ where: { id: 自社 task }, data: { deal: { connect: { id: <B 社 deal> } } } })` | (c) `owned(tx, ctx).sfaTask.create({ data: { organizationId: A, deal: { connect: { id: <B 社 deal> } } } })` | `tx.sfaDeal.update(...)` / `tx.sfaTask.create(...)` を直接 |
+|---|---|---|---|---|
+| tx に拡張が**乗る** | `walkData` OK（refs 空）→ `findFirstOrThrow(scoped)` 1 件 → `run` 内で `await tx.sfaDeal.update(...)`（await が run の中なので拡張の `getStore()` にマーカーが届く。実験 B）→ 拡張は `query(args)` → 成功 | `walkData` が `refs=[{model:'sfaDeal', where:{id:B}}]` を返す → `assertRefsOwned` が tx 上で `findMany({ id in [B], organizationId: A })` → 0 件 → **`TenantViolation`**（元操作は呼ばれない） | 同左（create でも `refs` 検証） | 拡張がマーカー無しで throw |
+| tx に拡張が**乗らない** | `walkData` OK → `findFirstOrThrow(scoped)` → `run` 内で `await tx.sfaDeal.update(...)` が直接実行 → 成功 | 同上（`owned()` 側の検査なので拡張の有無に依らない）→ `TenantViolation` | 同左 | **型で防ぐ**: `OwnedTx` はテナントモデルの読み書き全操作を `Omit`（FIN4-01）。lint もエラー |
+| `ctx.db` 直接（tx 外） | 拡張が throw（`UseOwnedHelperError`） | 同左 | 同左 | 同左 |
+| `updateMany` の `data` にテナント列（`owned(x).sfaDeal.updateMany({ where: { id }, data: { organizationId: B } })`） | `walkData` が即 throw（FIN3-01） | 同左 | 同左 | 型で `Omit` |
+
+- `scoped()` は `expandCompound` で複合 unique セレクタを展開してからテナント列を AND する。`withTenant()` は create data にテナント列を強制し、他社 id が入っていれば throw（`walkData` 内で実行）。`scopeInclude()` は `include / select` の relation（to-many）に where を足し、to-one の親は結果を post-filter する。
+- 戻り値の形: `owned().update / delete / upsert / create` は元の操作をそのまま呼ぶので既存コードの戻り値と同じ。`findUnique(OrThrow)` → `findFirst(OrThrow)` は戻り値の形が同じ。
 - `requireCompanyAccess` / `evaluateCompanyAccess` が返す `ctx.db` だけを使う。`@/lib/prisma` の直 import は ESLint で禁止（593 ファイルは段階移行、§13 #37）。`doya-ai/src/app/banner/dashboard/page.tsx` は除外・削除候補。
-- **`$transaction`**: `ctx.db.$transaction(async (tx: OwnedTx) => ...)` を使い、tx 内の読み書きは `owned(tx, ctx)` 経由。**配列形 `$transaction([...])` は使えない**（`owned().update` 等は `async` 関数で PrismaPromise ではない）ので、既存コードの配列形は対話型へ書き換える（FIN3-07）。
-- **確認済みの事実（リードが手元の `@prisma/client` 5.22 で、DB 接続なしに query 拡張 `$allOperations` 内の `AsyncLocalStorage.getStore()` を記録して実験）**: A) `ownedScope.run({..}, () => db.user.update(...))` で PrismaPromise を返し run の**外**で await → 拡張内の store は **null**（マーカーが届かない）。B) `ownedScope.run({..}, async () => await db.user.update(...))` → store は **{marker}**（届く）。C) run 内の処理と同時に run の外で別クエリを走らせる → 外側のクエリの store は **null**（他の処理に漏れない）。D) 拡張クライアントの対話型 `$transaction` で tx に拡張が乗るか → DB 接続が要るため**未確認**（要実機確認のまま。両方に耐える設計を維持）。擬似コードの `run` は B の形。
-- 回帰テスト `verify-core-access-cross-tenant.cjs` は **6 ケース**を持つ: 「`owned(ctx.db).update` が成功（run 内 await）」「`owned(tx).update` が成功」「`owned(ctx.db)` / `owned(tx)` のネスト connect で他社 id → 拒否」「`ctx.db.<model>.update` 直接 → `UseOwnedHelperError`」「`updateMany.data` にテナント列 → 拒否（`ctx.db` / `owned(tx)` の両方）」「`owned(tx).findMany` が自社行のみ」。tx のケースは拡張の有無を両方モックして走らせる（CHECKLIST TEN-21/TEN-22）。
+- **`$transaction`**: `ctx.db.$transaction(async (tx: OwnedTx) => ...)` を使い、tx 内の読み書きは `owned(tx, ctx)` 経由。**配列形 `$transaction([...])` は読み取り専用**（`owned()` は async 関数で PrismaPromise ではないため書き込みを渡せない）。既存コードの配列形の書き込みは対話型へ書き換える（FIN3-07）。
+- **確認済みの事実（リードが手元の `@prisma/client` 5.22 で、DB 接続なしに query 拡張 `$allOperations` 内の `AsyncLocalStorage.getStore()` を記録して実験）**: A) `ownedScope.run({..}, () => db.user.update(...))` で PrismaPromise を返し run の**外**で await → 拡張内の store は **null**（マーカーが届かない）。B) `ownedScope.run({..}, async () => await db.user.update(...))` → store は **{marker}**（届く）。C) run 内の処理と同時に run の外で別クエリを走らせる → 外側のクエリの store は **null**（他の処理に漏れない）。D) 拡張クライアントの対話型 `$transaction` で tx に拡張が乗るか → DB 接続が要るため**未確認**（要実機確認のまま。両方に耐える設計を維持）。擬似コードの `run` は B の形。`createManyAndReturn` が 5.22 に存在することは `.prisma/client/index.d.ts` で確認済み（`updateManyAndReturn` は無い）。
+- 回帰テスト `verify-core-access-cross-tenant.cjs` は**マトリクスの全マス**を持つ（CHECKLIST TEN-26〜TEN-32。tx の列は拡張の有無を両方モック）。
 - **raw SQL**（SEC-04）: `tenantSql(ctx)` が返す `Prisma.sql` フラグメント（`"companyId" = ${ctx.companyId}` 等。値は ctx からしか作れない）を埋め込む API にし、lint は「`$queryRaw` / `$executeRaw` の引数に `tenantSql(` が含まれる」を要求する（文字列一致ではない）。
 - **子テーブル**: マニフェスト `dataModels[].tenantColumn='via:<relation>'` は `where: { <relation>: { organizationId } }` に展開。列も via も無いモデルは Phase1 で `companyId` を非正規化追加。`verify-core-tenant-columns.cjs`。
 - **IDOR 対策**: cuid に頼らず上記で保証。パスパラメータ id は zod cuid。
@@ -1965,6 +1993,7 @@ if (r.status !== 0) process.exit(1)
 | 4 | 2026-10-17 | 最終ゲート第 1 回（FIN-01〜17）を全件反映（付録 G）。重大 2 件: Cron claim 条件に `planning`、テナント拡張の upsert 走査＋所有確認を明示クライアントのヘルパー `owned(client, ctx)` へ。部分的 4 件（DATA-03 §11.6 残存、SEC-01、OPS-01、OPS-12「未移行ツールは登録不可」）を解消。中: 拡張内の基底クライアント使用の撤廃、`reservationId` を冪等キーの基底に、`User.plan` の単一の書き手 `syncUserPlan`（max 規則）、`strictSharing` の pending 文脈（`__Host-doya_pending`）と未登録者・紛失者の経路、Cron の HTTP 起動（`after()`）と処理能力式、Stripe 返金は `adjust(−)`、`nextRunAt` の初期値、`company_suspended` の復帰、`cookies()` 経路と `DEVICE_UNVERIFIED`、`AuditLog @@id([id, createdAt])`＋パーティションは Phase4 の要実機確認項目に。軽微: 年額は月額へ、`pausedReason` の整理、Cookie 名の統一、数値を実測値（merge 28 / 新規 34 / 結合 226）に統一、ER の `ApprovalRequest` 表記。外部仕様: Vercel `@vercel/functions` リファレンス（Next 15.1+ は `after()` 推奨、`waitUntil` の Promise は関数の `maxDuration` まで）、Next.js `cookies()` リファレンス（Server Components / Route Handlers / Server Functions で使用可、Next 15 で async）、Prisma query 拡張ページ（tx ハンドルの取得手段なし）、本リポジトリ `vercel.json` L124-128 の `?mode=` パス稼働実績。付録 G/H を H/I に改番 |
 | 5 | 2026-10-17 | 最終ゲート第 2 回（FIN2-01〜07 と部分的 8 件）を全件反映（付録 K）。重大 FIN2-01: `owned()` が `walkData` → 所属確認 → モジュール内 `AsyncLocalStorage` マーカー付きで元操作を呼び、拡張はマーカー無しの update/delete/upsert/findUnique を throw。拡張が tx に乗る／乗らない両ケースの動作表と回帰テスト 4 ケース（TEN-21/22）。FIN2-02 フェンスの status 集合に planning。FIN2-03 `syncUserPlan` へ 3 箇所統一。FIN2-04 cron-launch 分類・`withCompanyAccessOrCron`・トークン継承・`CRON_SECRET` の到達範囲。FIN2-05 M-11 を import 閉包の実体検査に。FIN2-06 `ReauthChallenge.sessionId` 任意化、`login.passkey`、複数会社・未登録判定の規則。FIN2-07 数値・ER・PII-14・voided キー。付録 J を「正本の文言／禁止語」付き 20 キーに改め、スクラッチ領域の一致検査スクリプトで禁止語 0 を確認（結果は完了報告）。draft 冒頭を改訂 5 に |
 | 6 | 2026-10-17 | 最終ゲート第 3 回（FIN3-01〜08、重大 0）を全件反映（付録 L）。§10.2: `updateMany.data` のテナント列書き換えを拡張側でも拒否、`OwnedTx` 型が読み取り系も Omit し `owned(tx)` に読み取りメソッドを追加、`run` 内で await する形（リードの実機実験 A/B/C を「確認済みの事実」として記録、D は未確認）、配列形 `$transaction` は対話型へ。リース TTL を 360s に統一、§8.1 シーケンス図を 2 軸リスクに、`AgentRun.maxApprovals`（既定 5）を draft に追加、cron-launch をレート制限対象に、CHECKLIST AUTHZ-19/AGT-35 と付録 F OPS-06 の旧表現を新方式に。付録 J にキー 21（リース TTL）・22（リスク区分の用語）を追加、キー 17 の禁止語を拡張。一致検査スクリプトを 22 キーで再実行（結果は完了報告）。draft 冒頭を改訂 6 に |
+| 7 | 2026-10-17 | 最終ゲート第 4 回（FIN4-01〜07、重大 0）を全件反映（付録 M）。§10.2 を「全操作マトリクス」方式に再構成: Prisma 5.22 の全モデル操作（`createManyAndReturn` を含む。`index.d.ts` で存在確認）＋raw SQL＋include/select＋`$transaction` 両形式を行、`ctx.db` 直接／`owned(ctx.db)`／`owned(tx)` 乗る／乗らない／`tx` 直接を列にし、空欄・「守られない」マス 0。分担を「読み取りは拡張と owned、書き込みは例外なく owned、tx 直接は型で全 Omit」に単純化。`walkData` の契約を純関数（戻り値必須）＋テナント列違反の即 throw＋ネスト対象は `refs` を同じ client で検証（RecordNotFound に頼らない）に固定。`owned()` に create/createMany/createManyAndReturn/findFirstOrThrow。ER の AgentRun/AgentStep/Company 属性を draft と照合して補完。§8.1 図と §8.2 の approveDrafts 規則を一致。Cron 本数の旧表記 3 箇所を修正。付録 J にキー 23（walkData 契約）・24（書き込みは owned のみ）、キー 13/22 の禁止語を拡張。CHECKLIST にマトリクス対応 TEN-26〜32。draft 冒頭を改訂 7 に |
 
 
 ### 付録 F. 第 2 回審査（REVIEW-2026-10-17-data / sec / ops）への回答
@@ -2056,7 +2085,7 @@ if (r.status !== 0) process.exit(1)
 | OPS-24 | **反映** | §7.3（2 キー予約） | `checkout-reservation.ts` L63 を確認 |
 | OPS-25 | **反映** | §12 フラグ依存表（`requires`、不可逆）、`RuntimeCounter`、完了条件の測定可能化 | — |
 | OPS-26 | **反映** | §12 Phase0（18 件の最小マニフェスト）、§16.1/16.6、所要期間・人員の見積り | — |
-| OPS-27 | **反映** | §17.3（39 本＋2＝41、スロット化なら 45） | — |
+| OPS-27 | **反映** | §17.3（39 本＋2＝41。K スロット代替なら 41 + K − 1） | — |
 | OPS-28 | **反映** | §8.3 Realtime、§16.1 `via` enum、§16.4 M-11 | — |
 | OPS-29 | **反映** | §16.1（`webhooks / integrations / storage / jobs`、`guard` enum）、§16.4 M-21〜M-24。(5) i18n/PWA は将来項目として未決 D20 | — |
 | OPS-30 | **反映** | §7.3 / §17.2 #12（夜間 cron で DB distinct serviceId を突合） | — |
@@ -2133,6 +2162,20 @@ if (r.status !== 0) process.exit(1)
 | FIN3-08 | **反映** | §10.7 レート制限行（cron-launch を `ip:/24` バケットの対象に、失敗を `SecurityEvent`）、付録 J キー 17 の出現箇所 | — |
 | FIN2-01 / FIN-02 / FIN-03 / SEC-01（部分的） | **反映** | FIN3-01〜03 のとおり | — |
 
+### 付録 M. 最終ゲート第 4 回（FINAL-GATE-2026-10-17-4.md）への回答
+
+凡例は付録 D と同じ。HEAD `02e71762` で再確認。
+
+| # | 判定 | 反映先 | 補足 |
+|---|---|---|---|
+| FIN4-01 | **反映** | §10.2（`OwnedTx` はテナントモデルの読み書き**全操作**を `Omit`、`owned()` に `create / createMany / createManyAndReturn`（`walkData`＋`refs`＋`withTenant`）、全操作マトリクス）、CHECKLIST TEN-22/TEN-27 | `createManyAndReturn` は 5.22 に存在（`index.d.ts` 961 箇所）、`updateManyAndReturn` は無し |
+| FIN4-02 | **反映** | §10.2「`walkData` の契約」（純関数・戻り値の `data` を必ず使う・テナント列違反は即 throw・ネスト対象は `refs` として `assertRefsOwned` で同じ client で検証して `TenantViolation`。DB の RecordNotFound に頼らない）、擬似コード全箇所を `guard()` 経由に、動作表、付録 J キー 23、CHECKLIST TEN-32 | — |
+| FIN4-03 | **反映** | CHECKLIST RUN-04/RUN-21、付録 F OPS-27 を「41（K スロット代替なら 41 + K − 1）」に。付録 J キー 13 の禁止語に旧表記を追加 | — |
+| FIN4-04 | **反映** | §4.2 ER `AgentRun`（`maxApprovals / nextRunAt / runningSeconds / pausedReason`）、`AgentStep`（`planVersion / downstreamIdempotency / maxAttempts`）、§4.1 `Company`（`strictSharing`）。CHECKLIST DOC-04 に「属性は draft が正本。ER に載せた属性は draft と一致させる」を明記 | — |
+| FIN4-05 | **反映** | CHECKLIST AGT-11（irreversible / high の step を追加させない）、付録 J キー 22 の禁止語に旧区分名を使った追加表現を登録 | — |
+| FIN4-06 | **反映** | §8.1 シーケンス図（read、または reversible×(none\|low) で `approveDrafts=false`）、§8.2（reversible × none も `approveDrafts` に従う） | — |
+| FIN4-07 | **反映** | §10.2 `owned().findFirstOrThrow` | — |
+
 ### 付録 H. 既存契約者への告知文（雛形。絵文字なし・敬語）
 
 > 件名: ご契約プランの切り替えについて（お手続きは不要です）
@@ -2171,7 +2214,7 @@ if (r.status !== 0) process.exit(1)
 | 10 | 承認必須の条件 | §8.5 | §8.2 表、§16.4 M-10、CHECKLIST AGT-02 | `costClass=high` → 承認 | `external` は常に承認、`external` 全部 |
 | 11 | 既定の同時端末数 | §11.3 | draft `Company.maxSessionsPerUser`、§14 D6、CHECKLIST AUTH-06 | `既定 3`/`既定 **3 端末**` | `既定 **2 端末**` |
 | 12 | 未移行 lib を呼ぶツールは登録不可 | §8.2 | §8.3、§12 Phase3、§16.4 M-11、付録 B、付録 F OPS-12/B-16、CHECKLIST AGT-15 | `登録できない` または `登録不可` | `costClass=high` 扱い、`未移行なら high`、`high 扱い` |
-| 13 | 数値（merge 28 / 新規 34 / 結合 226 / テーブル 28 / Cron 41） | 付録 C、§17.3 | §13 #14、付録 D A-3/B-13、付録 E、付録 F DATA-17、CHECKLIST DOC-02 | `226` | `27 件、新規 model 32`、`結合後 224`、`35→38`、`27 テーブル` |
+| 13 | 数値（merge 28 / 新規 34 / 結合 226 / テーブル 28 / Cron 41） | 付録 C、§17.3 | §13 #14、付録 D A-3/B-13、付録 E、付録 F DATA-17、CHECKLIST DOC-02 | `226` | `27 件、新規 model 32`、`結合後 224`、`35→38`、`27 テーブル`、`スロット化なら 45`、`スロット化 45` |
 | 14 | purge の定義 | §17.1 | §9.1 `DELETE /api/company/[id]`、§13 #35、CHECKLIST SCH-30/RUN-24 | `匿名化` | `Artifacts→Runs→Members→Links→旧組織→Company` |
 | 15 | 自動名寄せの規則（3 条件のみ） | §5.1 手順 1 | §14 D3、draft `CompanyServiceLink.linkedBy`、CHECKLIST MIG-18 | `3 条件` | `linkedBy='slug'`、`第一キー`、`第二キー` |
 | 16 | `owned()` のマーカー分担（改訂 5 新設） | §10.2 方式 A | CHECKLIST TEN-20/21/22、付録 K | `ownedScope` | `所有確認は呼び出し元クライアント（tx 可）を受け取る` だけの旧記述、`owned 経由の分担が無い` |
@@ -2180,4 +2223,6 @@ if (r.status !== 0) process.exit(1)
 | 19 | Stripe 返金の扱い | §7.4 規約表 | §7.3 イベント表、数値例、draft `UsageLedger` コメント、CHECKLIST BIL-30 | `adjust:stripe:` | `refund:<元 base>`、`Stripe 返金・運営補填` |
 | 20 | `strictSharing` の pending 文脈 | §11.5 | §9.1、draft `ReauthChallenge.purpose`、CHECKLIST AUTH-28/36/38 | `__Host-doya_pending` | `pendingPasskey` フラグ |
 | 21 | リース TTL（改訂 6 新設） | §8.4 モデル行（`acquireSeoJobExecution` と同じ 360s） | §8.1 シーケンス図、draft `executionExpiresAt` コメント、CHECKLIST AGT-26 | `360s` | `executionToken, 300s`、`リース 300s` |
-| 22 | リスク区分の用語（改訂 6 新設） | §8.2（`reversibility × costClass`） | §8.1 シーケンス図、§8.5、§10.4、draft `AgentStep`、CHECKLIST AGT-01 | `reversibility` | `riskLevel`、`read / draft / external`、`external 承認` |
+| 22 | リスク区分の用語（改訂 6 新設） | §8.2（`reversibility × costClass`） | §8.1 シーケンス図、§8.5、§10.4、draft `AgentStep`、CHECKLIST AGT-01 | `reversibility` | `riskLevel`、`read / draft / external`、`external 承認`、`external を追加` |
+| 23 | `walkData` の契約（改訂 7 新設） | §10.2「`walkData` の契約」 | §10.2 擬似コード・動作表・マトリクス、CHECKLIST TEN-32 | `refs` または `assertRefsOwned` | `その場で書き換え`、`戻り値なし`、`RecordNotFound → 拒否`、`複合条件に書き換え` |
+| 24 | 書き込みは `owned()` 経由のみ（改訂 7 新設） | §10.2 分担表 | §10.2 マトリクス、CHECKLIST TEN-27/28 | `書き込み全部` | `create / createMany` の data 検査 \| query 拡張（旧分担）、`拡張の `updateMany` 分岐で` |
