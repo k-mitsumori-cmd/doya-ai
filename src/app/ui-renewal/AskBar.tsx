@@ -1,22 +1,23 @@
 'use client'
 
-// ホームの入口（Attio 型）：やりたいことを書けば、合うAIへ振り分ける
+// ホームの入口：経営の仕事を一言で頼むと、エージェントが複数のAIを同時に動かす（1つのAIで足りる依頼はそのAIへ）
 import { useEffect, useState } from 'react'
-import { ArrowUp, Building2, Image as ImageIcon, PenLine, Sparkles, UserRoundCheck } from 'lucide-react'
+import { ArrowUp, Building2, CalendarCheck, Sparkles, TrendingUp, UserRoundCheck } from 'lucide-react'
 import s from './renewal.module.css'
 
+// 経営の仕事を一言で頼む例。複数のAIが同時に動く（エージェント）
 const EXAMPLES = [
-  '秋の限定メニューのバナーを4案つくって',
-  '「カフェ 集客」で記事の構成を考えて',
-  '明日の商談先を調べておいて',
-  '来週の面接の質問を用意して',
+  '来月の売上を伸ばす作戦を立てて、準備まで進めて',
+  '営業を1人採用したい。必要な準備を全部やって',
+  '今月の締めの数字をまとめて、承認待ちを片付けて',
+  '明日の商談の準備を、資料と見積まで全部やって',
 ]
 
 const QUICK = [
-  { label: 'バナーを4案', text: 'バナーを4案つくる', icon: ImageIcon },
-  { label: '記事の構成', text: '記事の構成をつくる', icon: PenLine },
-  { label: '商談の準備', text: '商談の準備', icon: Building2 },
-  { label: '面接の準備', text: '面接の準備', icon: UserRoundCheck },
+  { label: '売上を伸ばす作戦', text: EXAMPLES[0], icon: TrendingUp },
+  { label: '営業を1人採用', text: EXAMPLES[1], icon: UserRoundCheck },
+  { label: '今月の締め', text: EXAMPLES[2], icon: CalendarCheck },
+  { label: '明日の商談準備', text: EXAMPLES[3], icon: Building2 },
 ]
 
 export function AskBar({ onAsk }: { onAsk: (text: string) => void }) {

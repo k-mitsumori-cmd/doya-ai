@@ -28,9 +28,11 @@ import { HOME, STAGES, mascotOf, stageServices } from './data'
 import { Cursor } from './Cursor'
 import { DESIGNS, DesignDock, useDesign, type Design } from './design'
 import { SERVICE_TOOLS } from './tools/registry'
+import AgentRun from './tools/agent'
+import { scenarioScore } from './tools/agentScenarios'
 import { getServiceById } from '@/lib/services'
 
-type Screen = 'home' | 'map' | 'banner' | 'seo' | 'svc'
+type Screen = 'home' | 'map' | 'banner' | 'seo' | 'svc' | 'agent'
 const TOOL_SCREENS: Record<string, Screen> = { banner: 'banner', seo: 'seo' }
 
 // 「AIに頼む」の文から、使うAIを決める（見本なので単純な言葉の一致）
@@ -130,6 +132,12 @@ export function RenewalApp() {
   // ?s=サービスID で、そのAIの画面を直接開く（共有・確認用）
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get('s')
+    const ask = new URLSearchParams(window.location.search).get('agent')
+    if (ask) {
+      setAgentReq(ask)
+      setScreen('agent')
+      return
+    }
     if (!id) return
     if (TOOL_SCREENS[id]) setScreen(TOOL_SCREENS[id])
     else if (SERVICE_TOOLS[id]) {
@@ -155,10 +163,15 @@ export function RenewalApp() {
     setPaletteQuery(query)
     setPaletteOpen(true)
   }
+  // ホームの依頼：経営の仕事（複数のAIで片付けるもの）はエージェントへ。1つのAIで足りる依頼はそのAIを直接開く
+  const [agentReq, setAgentReq] = useState('')
   const onAsk = (text: string) => {
     const id = intentOf(text)
-    if (id) return openService(id)
-    openPalette(text)
+    if (scenarioScore(text) > 0 || !id) {
+      setAgentReq(text)
+      return go('agent')
+    }
+    openService(id)
   }
 
   useEffect(() => {
@@ -282,7 +295,7 @@ export function RenewalApp() {
             <span className={s.topbarTitle}>
               {screen === 'svc'
                 ? getServiceById(svcId ?? '')?.name
-                : { home: 'ホーム', map: '業務マップ', banner: 'ドヤバナーAI', seo: 'ドヤ記事作成' }[screen]}
+                : { home: 'ホーム', map: '業務マップ', banner: 'ドヤバナーAI', seo: 'ドヤ記事作成', agent: 'エージェント' }[screen]}
             </span>
             <button type="button" className={s.topSearch} onClick={() => openPalette()} aria-label="AIを探す">
               <Search size={18} />
@@ -303,6 +316,7 @@ export function RenewalApp() {
             {screen === 'banner' && <BannerTool />}
             {screen === 'seo' && <ArticleTool />}
             {screen === 'svc' && SvcTool && <SvcTool />}
+            {screen === 'agent' && <AgentRun key={agentReq} request={agentReq} onOpen={openService} />}
           </div>
         </main>
       </div>
