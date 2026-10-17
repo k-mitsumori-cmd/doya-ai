@@ -4701,3 +4701,299 @@ model PopupStat {
   @@id([popupId, day, target])
   @@map("popup_stat")
 }
+
+// ============================================
+// ドヤ支出管理（Expense）
+// 設計書: docs/design/2026-10-18-doya-expense/README.md
+// ⚠️ 本番反映は doya-db-push の手順で手動（Vercel ビルドは db push しない）
+// ============================================
+
+model ExpenseOrganization {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  /// 共通 Company 移行用。会社情報ウィザードの冪等キー（ADDON-SERVICES §7）
+  companyId          String?  @unique
+  /// 自社プロフィールの予約列（FK なし。ADDON-SERVICES R-5）
+  companyProfileId   String?
+  /// 決算月（1〜12）
+  fiscalYearEndMonth Int      @default(3)
+  /// monthly = 翌月10日 / special = 納期の特例（7/10・1/20）
+  withholdingMode String   @default("monthly")
+  /// 通知先（https://hooks.slack.com/ のみ）
+  slackWebhookUrl String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  members        ExpenseMember[]
+  vendors        ExpenseVendor[]
+  paymentMethods ExpensePaymentMethod[]
+  contracts      ExpenseContract[]
+  schedules      ExpenseSchedule[]
+  bills          ExpenseBill[]
+  fxRates        ExpenseFxRate[]
+  reminders      ExpenseReminder[]
+  auditLogs      ExpenseAuditLog[]
+
+  @@map("expense_organizations")
+}
+
+model ExpenseMember {
+  id             String              @id @default(cuid())
+  organizationId String
+  userId         String
+  name           String
+  /// owner | admin | manager | member
+  role           String              @default("member")
+  /// ACTIVE | INACTIVE
+  status         String              @default("ACTIVE")
+  organization   ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([userId, status])
+  @@map("expense_members")
+}
+
+model ExpenseVendor {
+  id                 String              @id @default(cuid())
+  organizationId     String
+  /// company | individual（individual = 業務委託の個人）
+  kind               String              @default("company")
+  name               String
+  nameNormalized     String
+  /// 業務委託の担当業務
+  role               String?
+  invoiceRegNo       String?
+  withholdingDefault Boolean             @default(false)
+  bankName           String?
+  bankBranch         String?
+  bankAccountType    String?
+  bankAccountNo      String?
+  bankAccountHolder  String?
+  /// 締め日（31=月末）・支払月（1=翌月）・支払日（31=月末）
+  closingDay         Int                 @default(31)
+  paymentMonths      Int                 @default(1)
+  paymentDay         Int                 @default(31)
+  note               String?
+  organization       ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contracts          ExpenseContract[]
+  bills              ExpenseBill[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([organizationId, kind])
+  @@index([organizationId, nameNormalized])
+  @@index([organizationId, invoiceRegNo])
+  @@map("expense_vendors")
+}
+
+model ExpensePaymentMethod {
+  id               String              @id @default(cuid())
+  organizationId   String
+  /// card | transfer | debit
+  type             String
+  label            String
+  closingDay       Int?
+  withdrawalMonths Int?
+  withdrawalDay    Int?
+  organization     ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contracts        ExpenseContract[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([organizationId])
+  @@map("expense_payment_methods")
+}
+
+model ExpenseContract {
+  id                String                 @id @default(cuid())
+  organizationId    String
+  vendorId          String
+  paymentMethodId   String?
+  title             String
+  /// saas | contractor | rent | ads | payroll | utility | other
+  category          String
+  /// fixed | per_seat | hourly | per_deliverable | variable
+  billingModel      String                 @default("fixed")
+  /// 1/3/6/12、0=単発
+  frequencyMonths   Int                    @default(1)
+  anchorDate        DateTime               @db.Date
+  startDate         DateTime               @db.Date
+  endDate           DateTime?              @db.Date
+  autoRenew         Boolean                @default(false)
+  renewalNoticeDays Int                    @default(30)
+  /// JPY | USD
+  currency          String                 @default("JPY")
+  withholding       Boolean                @default(false)
+  /// avg3 | cap | planned（変動費の予測方法）
+  forecastMode      String                 @default("planned")
+  /// active | paused | ended
+  status            String                 @default("active")
+  note              String?
+  organization      ExpenseOrganization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vendor            ExpenseVendor          @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  paymentMethod     ExpensePaymentMethod?  @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+  prices            ExpenseContractPrice[]
+  schedules         ExpenseSchedule[]
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@index([organizationId, status])
+  @@index([vendorId])
+  @@map("expense_contracts")
+}
+
+model ExpenseContractPrice {
+  id            String          @id @default(cuid())
+  contractId    String
+  effectiveFrom DateTime        @db.Date
+  /// JPY は円、USD はセント
+  unitPrice     Int
+  /// 席数・予定時間・予定本数
+  quantity      Int             @default(1)
+  /// hourly の上限時間
+  capQuantity   Int?
+  taxRate       Int             @default(10)
+  taxIncluded   Boolean         @default(false)
+  contract      ExpenseContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  createdAt     DateTime        @default(now())
+
+  @@unique([contractId, effectiveFrom])
+  @@map("expense_contract_prices")
+}
+
+model ExpenseSchedule {
+  id                   String              @id @default(cuid())
+  organizationId       String
+  contractId           String?
+  /// contract | one_time | withholding_tax
+  kind                 String              @default("contract")
+  title                String
+  category             String
+  /// 計上月（月初日）
+  period               DateTime            @db.Date
+  /// 口座から出る日
+  plannedPayDate       DateTime            @db.Date
+  /// 契約から計算した予定額（差異の検出用）
+  plannedAmountExclTax Int                 @default(0)
+  amountExclTax        Int
+  taxAmount            Int                 @default(0)
+  withholdingAmount    Int                 @default(0)
+  netPayAmount         Int
+  estimated            Boolean             @default(false)
+  /// planned | billed | approved | paid | skipped
+  status               String              @default("planned")
+  skipReason           String?
+  paidOn               DateTime?           @db.Date
+  paidAmount           Int?
+  note                 String?
+  /// 他ツールから取り込んだ支出の出どころ（例: 'tenjikai.budgetLine'）。FK なし（ADDON-SERVICES §6 #12）
+  sourceType           String?
+  sourceId             String?
+  organization         ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contract             ExpenseContract?    @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  billLines            ExpenseBillLine[]
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@unique([contractId, period])
+  @@unique([organizationId, sourceType, sourceId])
+  @@index([organizationId, plannedPayDate])
+  @@index([organizationId, period])
+  @@index([organizationId, kind, period])
+  @@map("expense_schedules")
+}
+
+/// 受領した請求書（Phase2 で AI 読み取りと合わせて使う。表は Phase1 で作っておく）
+model ExpenseBill {
+  id              String              @id @default(cuid())
+  organizationId  String
+  vendorId        String?
+  documentPath    String
+  billNo          String?
+  issueDate       DateTime?           @db.Date
+  dueDate         DateTime?           @db.Date
+  subtotalExclTax Int?
+  taxAmount       Int?
+  totalInclTax    Int?
+  currency        String              @default("JPY")
+  invoiceRegNo    String?
+  extracted       Json?
+  /// uploaded | extracted | confirmed | rejected
+  status          String              @default("uploaded")
+  uploadedBy      String
+  organization    ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vendor          ExpenseVendor?      @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  lines           ExpenseBillLine[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@unique([organizationId, vendorId, billNo])
+  @@index([organizationId, status])
+  @@map("expense_bills")
+}
+
+model ExpenseBillLine {
+  id            String           @id @default(cuid())
+  billId        String
+  scheduleId    String?
+  name          String
+  amountExclTax Int
+  taxRate       Int              @default(10)
+  bill          ExpenseBill      @relation(fields: [billId], references: [id], onDelete: Cascade)
+  schedule      ExpenseSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  @@index([billId])
+  @@index([scheduleId])
+  @@map("expense_bill_lines")
+}
+
+model ExpenseFxRate {
+  organizationId String
+  /// YYYY-MM
+  month          String
+  currency       String
+  /// 1 単位あたりの円
+  rate           Decimal             @db.Decimal(12, 4)
+  organization   ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  updatedAt      DateTime            @updatedAt
+
+  @@id([organizationId, month, currency])
+  @@map("expense_fx_rates")
+}
+
+model ExpenseReminder {
+  id             String              @id @default(cuid())
+  organizationId String
+  /// bill_missing | overdue | renewal | contract_end | amount_diff | withholding_due
+  kind           String
+  dueOn          DateTime            @db.Date
+  targetType     String
+  targetId       String
+  /// open | done | dismissed
+  status         String              @default("open")
+  notifiedAt     DateTime?
+  organization   ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+
+  @@unique([organizationId, kind, targetType, targetId, dueOn])
+  @@index([organizationId, status, dueOn])
+  @@map("expense_reminders")
+}
+
+model ExpenseAuditLog {
+  id             String              @id @default(cuid())
+  organizationId String
+  actorUserId    String
+  action         String
+  targetType     String
+  targetId       String
+  diff           Json?
+  organization   ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+
+  @@index([organizationId, createdAt])
+  @@map("expense_audit_logs")
+}

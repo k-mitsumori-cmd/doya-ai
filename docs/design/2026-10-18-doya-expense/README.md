@@ -2,7 +2,8 @@
 
 - 作成日: 2026-10-18
 - 対象: ドヤAI（`Code/09_Cursol`、origin/main `dc089b44` 時点）
-- 状態: 設計案。実装前に §12 の未決事項を決める
+- 状態: §12 は推奨案で決定（2026-10-18）。Phase1 を実装済み（ブランチ `feat/doya-expense`、本番 DB 未反映）
+- 改訂: 2026-10-18 §12 を決定。Phase1 の実装範囲と設計からの差分を §13 に記録
 - 関連: ドヤ収入管理 設計書 `docs/design/2026-10-18-doya-income/README.md`（`docs/doya-income-design` ブランチ）。特に §8.1「支出の暫定接続」は、本書の §8 で差し替える前提で書いている
 
 ---
@@ -554,15 +555,68 @@ src/lib/expense/
 
 ---
 
-## 12. 未決事項（決めてほしいこと）と推奨案
+## 12. 決定事項（2026-10-18、推奨案で決定）
 
-| # | 論点 | 推奨案 |
+| # | 論点 | 決定 |
 |---|---|---|
-| Q1 | 組織を `ExpenseOrganization` で作るか、`IncomeOrganization` と共有するか | 収入側と同じく独立して作り、`companyId` を null 可で持つ。収入側からは `expenseOrganizationId` で結ぶ。共通 `Company` がマージされたら乗せ替える |
-| Q2 | 支出の基準を税抜にするか税込にするか | 両方持つ。粗利は税抜（収入側と合わせる）、資金繰りは税込（実際の出金） |
-| Q3 | 為替レートの取り方 | Phase1 は月ごとの手入力（未入力なら前月のレート）。自動取得は Phase3 |
-| Q4 | 給与・社会保険を入れるか | 個人ごとの給与は持たず、`payroll` カテゴリの「給与総額」「社会保険料」を月額の契約として入れる（機微情報を持たない） |
-| Q5 | 業務委託の請求書が来ないまま支払日を迎えたとき | 予定額のまま出金予定に残し、「請求書待ち」を出し続ける（予定から消さない） |
-| Q6 | 出金日の計算を収入側と共通化するか | 収入側がマージされたら `src/lib/money/dates.ts` に切り出して両方から使う。先に作る側が置く |
-| Q7 | 料金プラン | 無料: 契約 10 件・AI 10 回/月、Pro: 無制限・AI 300 回/月（収入側と揃える） |
+| Q1 | 組織を `ExpenseOrganization` で作るか、`IncomeOrganization` と共有するか | **独立して作る**。`companyId` を null 可で持つ。収入側からは `expenseOrganizationId` で結ぶ。共通 `Company` がマージされたら乗せ替える |
+| Q2 | 支出の基準を税抜にするか税込にするか | **両方持つ**。粗利は税抜（収入側と合わせる）、資金繰りは税込・源泉控除後（実際の出金） |
+| Q3 | 為替レートの取り方 | **月ごとの手入力**。その月が未入力なら、それ以前で一番新しい月のレートを使う。1 件も無ければ USD 契約の保存を止めて設定を促す。自動取得は Phase3 |
+| Q4 | 給与・社会保険を入れるか | **個人ごとの給与は持たない**。`payroll` カテゴリの「給与総額」「社会保険料」を月額の契約として入れる |
+| Q5 | 業務委託の請求書が来ないまま支払日を迎えたとき | **予定額のまま出金予定に残す**。支払日の 5 日前から「請求書待ち」、過ぎたら「支払日超過」を出し続ける |
+| Q6 | 出金日の計算を収入側と共通化するか | 収入側がマージされたら `src/lib/money/dates.ts` に切り出す。それまでは `src/lib/expense/dates.ts` に置く（31 = 月末の規則は同じ） |
+| Q7 | 料金プラン | **開発中は制限なし**（`UNLISTED`）。公開時に 無料: 契約 10 件・AI 10 回/月、Pro: 無制限・AI 300 回/月 を `plan-limit.ts` に入れる |
 | Q8 | サービス ID と URL | `expense` / `/expense` |
+
+---
+
+## 13. Phase1 の実装メモ（2026-10-18）
+
+### 13.1 入ったもの
+
+| 項目 | 場所 |
+|---|---|
+| スキーマ（11 表） | `prisma/schema.prisma` の「ドヤ支出管理」。**正本はこちら**（`schema-draft.prisma` は初版の下書き） |
+| 計算（純粋関数） | `src/lib/expense/{dates,plan,withholding,aggregate}.ts`。検証は `src/lib/expense/calc.test.ts`（§10.3 のケース） |
+| 組織・権限・IDOR | `src/lib/expense/access.ts`（`withExpense`）。`src/lib/expense/scope.test.ts` で全ルートを静的に検査 |
+| 支払予定の生成 | `src/lib/expense/sync.ts`（契約保存時＋cron。今月から 12 か月先まで。源泉税の行も集計） |
+| API | `src/app/api/expense/**`（組織・メンバー・取引先・支払方法・契約・単価・支払予定・予測・集計・業務委託・為替） |
+| cron | `/api/cron/expense-schedule`（毎朝 7:00 JST。予定の補完 → 源泉税 → 要対応の通知） |
+| 収入側への受け渡し | `src/lib/expense/income-source.ts`（`expenseMonthly` / `expenseCashOut` / `canReadExpenseOrganization`）。**収入側のファイルは編集していない** |
+| 画面 | `src/app/expense/**`、`src/components/expense/**` |
+| サービス登録 | `services.ts`（`UNLISTED`・`coming_soon`・BETA・noindex）、ToolSwitcherMenu、サイドバーのテーマ |
+| テスト | `npm run test:expense` をビルドに追加。サービス数を数える回帰テスト 2 本の期待値を 19 → 20 に更新 |
+
+### 13.2 設計からの差分
+
+| 設計 | 実装 | 理由 |
+|---|---|---|
+| Phase1 で請求書 PDF を保存 | **Phase2 に移す**（表 `expense_bills` は作成済み） | Storage のバケット作成は本番作業になるため、AI 読み取りと一緒に入れる。Phase1 は実額を手入力 |
+| メンバーの招待 | **ドヤAI 登録済みのユーザーをメールアドレスで追加** | 招待 URL の仕組みは SFA 側の作りが大きいため。必要になったら招待トークンを足す |
+| `ExpenseSchedule` | `plannedAmountExclTax`（予定額）と `note` を追加 | 請求額との差異を出すため |
+| `ExpenseOrganization` | `slackWebhookUrl` を追加（`hooks.slack.com` のみ受け付ける） | 通知先 |
+| `ExpenseReminder` | `notifiedAt` を追加。一意制約に `organizationId` を含める | 同じ通知を 2 回送らない |
+| 権限 | member = 閲覧のみ、manager = 契約・取引先・支払状態の更新と振込先の閲覧、admin = 設定・支払方法・為替・メンバー・削除 | §9 をそのまま具体化 |
+
+### 13.3 統合仕様（ADDON-SERVICES-2026-10-18）への対応
+
+レイアウト・トークン・画像の決まりは `feat/ui-renewal-sample` の `docs/architecture/management-agent/ADDON-SERVICES-2026-10-18.md` が正本。本書には書き写さない。対応した箇所だけ記録する。
+
+| 項目 | 対応 |
+|---|---|
+| R-1 ナビをデータで | `src/lib/expense/nav.ts`（`EXPENSE_NAV`）。暫定サイドバーはこれを描くだけ |
+| R-2 独自サイドバーを作らない | 専用テーマは足さない（既存の `asklinkTheme` を流用）。段 0 が入ったら `layout.tsx` を AppShell＋ToolFrame に差し替える |
+| R-3 ds トークン | `src/components/expense/tokens.module.css` に `renewal.module.css` と同じ変数名で定義。`src/app/expense` に色の直書きを置かない |
+| R-4 読み取り関数 | `src/lib/expense/expense-read.ts`（`getExpenseSummary` / `listUpcomingPayments` / `listCalendarEvents`）。API（`summary` / `upcoming` / `calendar`）も同じ関数を呼ぶ |
+| R-5 自社プロフィール | `ExpenseOrganization.companyProfileId`（予約列）を追加 |
+| R-8 マニフェスト草案 | `reference/services/expense.md` の末尾 |
+| §5 エージェントの道具 | `expense.summary`（read）、`expense.listUpcomingPayments`（read・sensitive。振込先は `includeBank` のときだけ） |
+| §6 #12 展示会の予算 → 支出 | `ExpenseSchedule.sourceType / sourceId`（`@@unique([organizationId, sourceType, sourceId])`）と `src/lib/expense/import.ts`（作成のみ・上書きしない・取り消しはリンクを外す） |
+| §7 ウィザード | `src/lib/expense/setup.ts`（`initExpenseForCompany`。冪等キー `companyId` を一意に）。`ExpenseOrganization.fiscalYearEndMonth`（決算月）を追加。**締め日は組織に持たない**（取引先・カードごとに違うため。取引先の既定は月末締め翌月末払い） |
+| §12 画像 | Codex の内蔵画像生成（`auth_mode=chatgpt`、API キーなし）で作成。`docs/design/images/expense/PROMPTS.md` |
+
+### 13.4 本番に出す前にやること（未実施）
+
+1. `doya-db-push` の手順で `expense_*` の 11 表を本番 Supabase に反映（**実行前に利用者の確認を取る**）
+2. Vercel の環境変数 `CRON_SECRET` が設定済みであることを確認（既存 cron と共通）
+3. 収入側（`feat/doya-income` 系）で `ExpenseSource` の `'expense'` 実装を `income-source.ts` につなぐ（§8.1・§8.3）
