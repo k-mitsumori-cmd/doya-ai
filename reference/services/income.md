@@ -44,7 +44,7 @@ B2B の「契約 → 毎月の売上 → 請求書 → 入金」を一本の線�
 
 ## 5. 画面
 
-`/income`（ダッシュボード／未ログインは LP）、`/income/revenue`、`/income/invoices`（`/new`・`/[id]`）、`/income/payments`、`/income/contracts`（`/new`・`/[id]`）、`/income/clients`（`/[id]`）、`/income/settings`、`/income/pricing`。ナビは `src/lib/income/nav.ts`。
+`/income`（ダッシュボード／未ログインは LP）、`/income/revenue`、`/income/invoices`（`/new`・`/[id]`）、`/income/payments`、`/income/contracts`（`/new`・`/[id]`）、`/income/clients`（`/[id]`）、`/income/settings`、`/income/pricing`。ログイン後は AppShell＋ToolFrame に載る（`src/app/income/layout.tsx`）。ナビは `src/lib/income/nav.ts`。
 
 ## 6. 本番反映の手順（ユーザー確認が要る）
 

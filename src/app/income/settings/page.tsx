@@ -144,7 +144,7 @@ function SettingsForms({ org, issuer: loadedIssuer }: Loaded) {
                 </select>
               </Field>
             </div>
-            <p className={s.sub} style={{ margin: '12px 0 0' }}>支出は、選んだドヤプロマネのワークスペースの記録（プロジェクト経費＋人件費）を暫定的に使い、ダッシュボードの粗利を出します。財務を閲覧できるワークスペースだけが選べます。</p>
+            <p className={s.sub} style={{ margin: '12px 0 0' }}>ダッシュボードの粗利には、選んだドヤプロマネのワークスペースの記録（プロジェクト経費＋人件費）を暫定的に使います。財務を閲覧できるワークスペースだけを選べます。</p>
           </Card>
         </fieldset>
         <div className="mt-4 space-y-3">

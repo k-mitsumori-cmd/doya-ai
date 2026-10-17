@@ -5,7 +5,6 @@ import {
   ShoppingCart, Users, Utensils, Home, BookOpen, CircleDollarSign, HeartPulse, Laptop,
   Wand2, Zap, Trophy, AlertTriangle, Image, FileText, Link, RefreshCw,
   Mail, Download, Trash2, Copy, Play, Mic, Clock, Sparkle, Send, Pencil, Eye, Lock,
-  LayoutDashboard, CalendarRange, Wallet, FileSignature, Settings, CreditCard,
 } from 'lucide-react'
 
 const ICONS = {
@@ -17,7 +16,6 @@ const ICONS = {
   trophy: Trophy, warning: AlertTriangle, image: Image, document: FileText, link: Link, refresh: RefreshCw,
   mail: Mail, download: Download, trash: Trash2, copy: Copy, play: Play, mic: Mic,
   clock: Clock, star: Sparkle, send: Send, edit: Pencil, view: Eye, lock: Lock,
-  dashboard: LayoutDashboard, calendarRange: CalendarRange, wallet: Wallet, contract: FileSignature, settings: Settings, card: CreditCard,
 } satisfies Record<string, ComponentType<SVGProps<SVGSVGElement>>>
 
 export type UiIconName = keyof typeof ICONS

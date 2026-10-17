@@ -211,10 +211,12 @@ export function ToastHost() {
 export type Crumb = { label: string; href?: string }
 
 /** パンくず・タイトル・主ボタン 1 つ（actions の先頭だけ primary にする） */
-export function PageHeader({ crumbs, title, sub, actions }: { crumbs?: Crumb[]; title: string; sub?: string; actions?: ReactNode }) {
+export function PageHeader({ crumbs: allCrumbs, title, sub, actions }: { crumbs?: Crumb[]; title: string; sub?: string; actions?: ReactNode }) {
+  // ToolFrame が「経営ホーム > 収入管理」を出すので、先頭の「収入管理」は出さない。残りが今の画面だけなら出さない
+  const crumbs = (allCrumbs ?? []).filter((c, i) => !(i === 0 && c.label === '収入管理'))
   return (
     <header className={s.header}>
-      {crumbs && crumbs.length > 0 && (
+      {crumbs.length > 1 && (
         <nav aria-label="パンくず">
           <ol className={s.crumbs}>
             {crumbs.map((c, i) => (
@@ -228,7 +230,8 @@ export function PageHeader({ crumbs, title, sub, actions }: { crumbs?: Crumb[]; 
       )}
       <div className={s.titleRow}>
         <div style={{ minWidth: 0 }}>
-          <h1 className={s.title}>{title}</h1>
+          {/* h1 は ToolFrame（ツール名）が持つので、画面の見出しは h2 */}
+          <h2 className={s.title}>{title}</h2>
           {sub && <p className={s.sub} style={{ margin: '4px 0 0' }}>{sub}</p>}
         </div>
         {actions && <div className={s.actions}>{actions}</div>}

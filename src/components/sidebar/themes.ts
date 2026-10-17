@@ -387,23 +387,6 @@ export const popupTheme: SidebarTheme = {
   zapColor: 'text-amber-200 fill-amber-200',
 }
 
-/** ドヤ収入管理 — ds のクリア（--blue / --blue-deep / --navy）。AppShell に載るまでの暫定（ADDON-SERVICES R-2） */
-export const incomeTheme: SidebarTheme = {
-  bgGradient: 'bg-gradient-to-b from-[#0066ff] via-[#0047d6] to-[#0a0f3c]',
-  navText: 'text-blue-50/80',
-  navTextIcon: 'text-blue-100/80',
-  sectionText: 'text-blue-100/60',
-  toggleText: 'text-[#0047d6]',
-  toggleHover: 'hover:bg-blue-50',
-  brandingText: 'text-blue-50/40',
-  profileBg: 'bg-black/15',
-  avatarBg: 'bg-[#0047d6]',
-  loginText: 'text-[#0047d6]',
-  loginHover: 'hover:bg-blue-50',
-  aiBubbleBg: 'bg-[#0047d6]',
-  zapColor: 'text-cyan-200 fill-cyan-200',
-}
-
 /** ドヤ面接官 — ブルー（採用・信頼） */
 export const mensetsuTheme: SidebarTheme = {
   bgGradient: 'bg-gradient-to-b from-blue-700 via-blue-800 to-indigo-900',

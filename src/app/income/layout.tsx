@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { buildServiceMetadata } from '@/lib/seo'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import IncomeAppLayout from '@/components/income/IncomeAppLayout'
+import AppShell from '@/components/shell/AppShell'
+import IncomeFrame from '@/components/income/IncomeFrame'
 
 // ⚠️ 開発中（UNLISTED_SERVICE_IDS）の間は noindex。公開するときに外す
 export const metadata: Metadata = buildServiceMetadata('income', {
@@ -11,8 +12,14 @@ export const metadata: Metadata = buildServiceMetadata('income', {
   noindex: true,
 })
 
+// 新しいツールなので、フラグ（ui.shell.income）を使わず最初から AppShell＋ToolFrame に載せる（ADDON-SERVICES §9 段4）。
+// ⚠️ 未ログイン（LP）はアプリ枠で包まない。
 export default async function IncomeLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
-  // ⚠️ 未ログインをアプリ枠で包まない（空のサイドバーが出る）
-  return session?.user ? <IncomeAppLayout>{children}</IncomeAppLayout> : <>{children}</>
+  if (!session?.user) return <>{children}</>
+  return (
+    <AppShell userName={session.user.name}>
+      <IncomeFrame>{children}</IncomeFrame>
+    </AppShell>
+  )
 }

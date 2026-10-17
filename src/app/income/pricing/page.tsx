@@ -20,7 +20,7 @@ export default function IncomePricingPage() {
           </Link>
           <h1 className="text-3xl font-black text-slate-900">料金プラン</h1>
           <p className="mx-auto mt-2 max-w-xl font-bold text-slate-500">
-            無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。
+            無料で使いはじめて、必要になったらプロプランに切り替えられます。プロプラン1つで、ドヤAIの全サービスのプロ機能が使えます。
           </p>
         </div>
         <UnifiedPricingPlans serviceId="income" currentPlan="FREE" />

@@ -40,7 +40,7 @@ export async function allocate(
     if (!inv) throw new IncomeError('請求書が見つかりません', 404)
     if (inv.status !== 'confirmed' && inv.status !== 'sent') throw new IncomeError(`${inv.invoiceNo ?? '下書き'} は確定していないため消込できません`, 409)
     const remaining = inv.totalInclTax - inv.paidAmount
-    if (row.amount > remaining) throw new IncomeError(`${inv.invoiceNo} の残高（${remaining.toLocaleString('ja-JP')}円）を超えています`)
+    if (row.amount > remaining) throw new IncomeError(`消込額が ${inv.invoiceNo} の残高（${remaining.toLocaleString('ja-JP')}円）を超えています`)
     await tx.incomePaymentAllocation.upsert({
       where: { paymentId_invoiceId: { paymentId: payment.id, invoiceId: inv.id } },
       create: { paymentId: payment.id, invoiceId: inv.id, amount: row.amount, matchedBy: row.matchedBy ?? 'manual' },

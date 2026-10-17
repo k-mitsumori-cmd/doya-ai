@@ -80,7 +80,7 @@ function Inner() {
     try {
       await fetchJson(`/api/income/revenue/${skipTarget.id}`, { method: 'PATCH', body: { skip: true, reason: reason.trim() } })
       setSkipTarget(null)
-      toast('請求しないにしました')
+      toast('請求しない月にしました')
       await res.reload()
     } catch (e) {
       setSkipError(errMsg(e))
@@ -213,7 +213,7 @@ function Inner() {
         <ConfirmDialog
           title="請求しない理由を入力"
           message={`${skipTarget.client.name} の「${skipTarget.contract.title}」を、この月は請求しないことにします。あとで「戻す」から未請求に戻せます。`}
-          confirmLabel="請求しないにする"
+          confirmLabel="請求しない月にする"
           busy={skipBusy}
           error={skipError}
           confirmDisabled={!reason.trim()}

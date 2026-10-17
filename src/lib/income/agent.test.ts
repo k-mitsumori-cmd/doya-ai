@@ -5,7 +5,8 @@ import assert from 'node:assert/strict'
 import { buildCalendarEvents } from './calendar-events'
 import { buildDunningDraft, dunningStage } from './dunning'
 import { INCOME_AGENT_TOOLS } from './agent-tools'
-import { INCOME_NAV, activeNavHref } from './nav'
+import { INCOME_NAV } from './nav'
+import { isNavActive } from '@/components/shell/nav'
 
 test('道具: 名前・承認・冪等の規約（README §8.2）', () => {
   const keys = new Set<string>()
@@ -79,7 +80,8 @@ test('督促: 段階と文面（敬語・絵文字なし・送付先の情報を
 
 test('ナビ: データで持ち、今いる画面を 1 つだけ選ぶ', () => {
   assert.ok(INCOME_NAV.length >= 6)
-  assert.equal(activeNavHref('/income'), '/income')
-  assert.equal(activeNavHref('/income/invoices/abc'), '/income/invoices')
-  assert.equal(activeNavHref('/income/revenue'), '/income/revenue')
+  const active = (p: string) => INCOME_NAV.filter((n) => isNavActive(p, n)).map((n) => n.href)
+  assert.deepEqual(active('/income'), ['/income'])
+  assert.deepEqual(active('/income/invoices/abc'), ['/income/invoices'])
+  assert.deepEqual(active('/income/revenue'), ['/income/revenue'])
 })
