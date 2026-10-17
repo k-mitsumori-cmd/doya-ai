@@ -8,6 +8,7 @@ export const STATIC_OGP_IDS = new Set([
   'cunning', 'promane', 'sfa', 'shodan', 'aio', 'mensetsu', 'quote', 'aishodan', 'adimage',
   'asklink',
   'popup',
+  'tenjikai',
 ])
 
 export function staticOgpPath(id: string): string | null {

@@ -28,6 +28,10 @@ const config: Config = {
           purple: '#8B5CF6',
           pink: '#EC4899',
         },
+        // ドヤ展示会（/tenjikai）専用。他サービスでは使わない。
+        // 値は ds トークン（--blue 等）を参照し、変数は src/app/tenjikai/tenjikai.css の .tenjikai-root で定義する
+        doya: { DEFAULT: 'color-mix(in srgb, var(--blue) calc(<alpha-value> * 100%), transparent)', 50: 'color-mix(in srgb, var(--blue-soft) calc(<alpha-value> * 100%), transparent)', 100: 'color-mix(in srgb, var(--blue-line) calc(<alpha-value> * 100%), transparent)', 200: 'color-mix(in srgb, var(--bar) calc(<alpha-value> * 100%), transparent)', 500: 'color-mix(in srgb, var(--blue) calc(<alpha-value> * 100%), transparent)', 600: 'color-mix(in srgb, var(--blue-deep) calc(<alpha-value> * 100%), transparent)', 700: 'color-mix(in srgb, var(--blue-deep) calc(<alpha-value> * 100%), transparent)', 900: 'color-mix(in srgb, var(--navy) calc(<alpha-value> * 100%), transparent)' },
+        ink: 'color-mix(in srgb, var(--ink) calc(<alpha-value> * 100%), transparent)',
         // アクセント（差し色・LPのサービス別アクセントの既定候補）
         accent: {
           rose: '#ff1e72',
