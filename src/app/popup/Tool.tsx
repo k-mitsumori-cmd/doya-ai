@@ -127,7 +127,7 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
           title={
             <span className="flex items-center gap-3">
               ドヤポップアップ
-              <span className="pd-chip pd-chip-blue">開発中</span>
+              <span className="pd-chip pd-chip-blue">BETA</span>
             </span>
           }
           sub="URLを入れるだけで、AIがサイトに合ったポップアップを提案します。"
