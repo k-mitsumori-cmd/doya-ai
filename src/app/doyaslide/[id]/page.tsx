@@ -10,6 +10,7 @@ import SlideImage from '@/components/doyaslide/SlideImage'
 import { useSession } from 'next-auth/react'
 import { useDoyaSlideRecovery } from '@/lib/doyaslide/use-operation-recovery'
 import DoyaSlideOperationRecovery from '@/components/doyaslide/DoyaSlideOperationRecovery'
+import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 
 interface Slide {
   id: string
@@ -766,7 +767,7 @@ function EditorInner() {
             >
               <div className={`${ac} bg-slate-100 flex items-center justify-center relative`}>
                 {s.imageUrl ? (
-                  <img src={s.imageUrl} alt="" className="w-full h-full object-cover" />
+                  <img src={doyaslideImageSrc(s.imageUrl)} alt="" className="w-full h-full object-cover" />
                 ) : s.status === 'generating' || generating ? (
                   <span className="material-symbols-outlined animate-spin text-slate-400">progress_activity</span>
                 ) : (
@@ -903,7 +904,7 @@ function EditorInner() {
                     className="flex-shrink-0 w-16 rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-400 relative"
                     title={`v${v.version} に戻す`}
                   >
-                    <img src={v.imageUrl} alt={`v${v.version}`} className="w-full aspect-[3/2] object-cover" />
+                    <img src={doyaslideImageSrc(v.imageUrl)} alt={`v${v.version}`} className="w-full aspect-[3/2] object-cover" />
                     <span className="absolute bottom-0 right-0 text-[9px] font-black bg-black/60 text-white px-1">
                       v{v.version}
                     </span>
