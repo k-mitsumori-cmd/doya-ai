@@ -10,6 +10,8 @@ model IncomeOrganization {
   companyId         String?
   /// SFA 連携先の組織（取引先・商談の取り込み元）
   sfaOrganizationId String?
+  /// 支出の取り込み元（ドヤプロマネのワークスペース）。支出管理ができるまでの暫定（README §8.1）
+  promaneWorkspaceId String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

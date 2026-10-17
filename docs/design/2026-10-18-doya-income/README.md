@@ -3,6 +3,7 @@
 - 作成日: 2026-10-18
 - 対象: ドヤAI（`Code/09_Cursol`、main `5ac27bd2` 時点）
 - 状態: 設計案。実装前にこのファイルの §12 の未決事項を決める
+- 改訂: 2026-10-18 支出管理は未実装と確定。支出は当面ドヤプロマネの経費＋人件費で代用する（§8.1）
 - 関連: `docs/architecture/management-agent/README.md`（ui-renewal ブランチ。§16 サービス契約・§18 オールインワン化）
 
 ---
@@ -59,7 +60,7 @@ flowchart LR
 | カレンダー | **無い**。Google のカレンダー権限も取っていない | — |
 | 定期処理 | Vercel Cron（`src/app/api/cron/*`） | — |
 | 金額 | Quote / Promane は `Int`（円）、SFA は `BigInt`。見積は「浮動小数は丸め誤差が実害」の方針 | `src/lib/quote/money.ts` |
-| **支出管理** | **コード上で見つからない**。main・各クローン・全ブランチ・履歴で「支出管理」を検索して 0 件。支出のデータは `PromaneExpense`（プロマネのプロジェクト経費）のみ | §12 Q1 |
+| **支出管理** | **未実装（2026-10-18 確定）**。支出のデータは `PromaneExpense`（プロマネのプロジェクト経費）と `PromaneTimeEntry`（工数×時給＝人件費）のみ。当面これを支出として使う | §8.1 |
 
 ---
 
@@ -76,7 +77,7 @@ flowchart TB
   end
   subgraph MONEY["お金"]
     INC["ドヤ収入管理（本書）<br/>契約・売上予定・請求・入金"]
-    EXP["ドヤ支出管理<br/>（所在確認中・§12 Q1）"]
+    EXP["支出（暫定）<br/>ドヤプロマネの経費＋人件費<br/>将来ドヤ支出管理に差し替え"]
   end
   SFA -->|受注 → 契約下書き| INC
   Q -->|見積 → 契約／請求書| INC
@@ -368,7 +369,7 @@ sequenceDiagram
 | 契約書の読み取り | PDF から 取引先名・金額・開始日・終了日・自動更新・解約予告・支払条件 を抽出して契約の下書きを作る | Gemini（`geminiGenerateJson`）。**必ず人が確認して確定**（見積の確定フローと同じ） | 組織ごとの月間回数上限（`ai-limit` の型）。無料枠・有料枠で回数を分ける |
 | 一言で契約登録 | 「A社と月30万、来月から1年、月末締め翌月末払い」→ 契約下書き | Gemini | 同上 |
 | 入金の照合 | 銀行明細の 1 行を、どの請求書の入金か推定する | **まずルール**（金額一致・振込名義のカナ正規化一致・手数料差引の許容）。ルールで決まらない行だけ AI に候補を出させる | ルールで大半を処理し、AI 呼び出しを最小にする |
-| 請求書送付メール | 送付状の文面を下書き | Gemini。**丁寧な敬語、絵文字なし**。送信は人が押す | 同上 |
+| 請求書送付メール | 送付状の文面を下書き | Gemini。**丁寧な敬語、絵文字なし**。送信は人が押す（送信は既存の `src/lib/email.ts:sendEmail()`＝Resend） | 同上 |
 | 督促文面 | 遅延日数に応じて 3 段階（確認のお願い → 再度のお願い → 最終のお願い）で下書き | Gemini。送信は人が押す | 同上 |
 | 今月のまとめ | 「請求漏れ 2 件・入金遅延 1 件・来月の売上予定は前月比 +8%」 | **ルールで作る**（LLM 不要）。§18.1 の方針 | 無料 |
 | 経営エージェントの道具 | `income.summary`（月別の売上・入金・未入金）、`income.listActionItems` を read ツールとして公開 | §8.2 の道具の型 | read のみ |
@@ -397,8 +398,46 @@ sequenceDiagram
 | SFA → 収入 | 商談が won になったら契約の下書きを作る（`SfaDeal.amount` / `SfaLineItem` / `SfaAccount` を写す）。取引先は `IncomeClient.sfaAccountId` で結ぶ | Phase2 |
 | 見積 → 収入 | 確定済みの見積から「契約にする」「請求書にする」。請求元情報は `QuoteIssuer` から初期値を取る | Phase1（請求元情報）／Phase2（変換） |
 | 収入 → ホーム | 月別の売上予定・請求・入金を集計 API で返す | Phase1（API）／Phase3（ホーム） |
-| 支出 → ホーム | 月別の支出。**支出管理の所在が確認でき次第つなぐ**。それまでは `PromaneExpense` ＋ 人件費（`src/lib/promane/labor-cost.ts`）を暫定の支出として読む | §12 Q1 |
+| プロマネ → 収入 | 支出（経費・人件費）を月別に読む。§8.1 | Phase1 |
 | 収入 → 会計ソフト | 請求書・入金を freee / マネーフォワードの取込 CSV 形式で出力 | Phase3 |
+
+### 8.1 支出の暫定接続（ドヤプロマネの経費＋人件費）
+
+支出管理は未実装のため、当面は **ドヤプロマネのデータを「支出」として読む**。後で「ドヤ支出管理」を作ったときに差し替えられるよう、読み取り口を 1 つに絞る。
+
+```ts
+// src/lib/income/expense-source.ts
+export type MonthlyExpense = {
+  month: string            // 'YYYY-MM'（JST）
+  expense: number          // 経費（円・税抜扱い）
+  laborCost: number        // 人件費（円）
+  total: number
+  byCategory: Record<string, number>
+}
+export interface ExpenseSource {
+  id: 'promane' | 'expense'   // 'expense' は将来のドヤ支出管理
+  monthly(range: { from: string; to: string }): Promise<MonthlyExpense[]>
+}
+```
+
+**プロマネ実装の中身**
+
+| 項目 | 読むもの | 計算 |
+|---|---|---|
+| 経費 | `PromaneExpense`（`project.workspaceId` で絞る） | `date` を JST の月に丸めて `amount` を合計。`category` 別にも集計 |
+| 人件費 | `PromaneTimeEntry`（`member.workspaceId` で絞る） | `src/lib/promane/labor-cost.ts` の `laborCostForEntry()`（分÷60×時給。`hourlyRateSnapshot` 優先）を月ごとに合計し、**合計後に 1 回だけ円に丸める**（関数は小数を返すため） |
+
+**どのワークスペースの支出を読むか**
+
+- `IncomeOrganization.promaneWorkspaceId`（null 可）で、収入側の組織とプロマネのワークスペースを 1 対 1 で結ぶ。設定画面で「支出の取り込み元」として選ぶ。
+- 選べるのは、操作者がそのワークスペースの ACTIVE メンバーで、かつ収入側で admin 以上のときだけ（他社のプロマネを結べないようにする）。
+- 未設定なら支出は 0 ではなく「未接続」と表示し、粗利も出さない（0 円と誤解させない）。
+
+**この暫定案の限界（画面に注記する）**
+
+- プロジェクトに紐づかない会社全体の経費（家賃・SaaS 利用料・広告費など）は入らない。粗利は「プロジェクト原価ベース」の数字になる。
+- 経費の税区分を持たないため、税込・税抜が混在しうる。ダッシュボードでは「支出（プロマネ記録ベース）」と表記する。
+- 将来の差し替え: ドヤ支出管理を作ったら `ExpenseSource` の実装を足し、設定で取り込み元を切り替える。ホーム・ダッシュボードの画面は変えない。
 
 **粗利の定義（ホームで出す数字）**
 
@@ -431,13 +470,14 @@ src/app/api/cron/income-schedule/route.ts   毎朝: 売上予定の補完・期�
 src/components/income/*                     IncomeSidebar ほか
 src/lib/income/
   access.ts      getIncomeContext / hasMinRole（sfa/access.ts と同じ型）
-  schedule.ts    契約 → 売上予定の生成（純粋関数。テストを書く）
-  dates.ts       締め日・支払期日の計算（純粋関数。テストを書く）
+  schedule.ts    契約 → 売上予定の生成（純粋関数。検証スクリプトで確かめる）
+  dates.ts       締め日・支払期日の計算（純粋関数。検証スクリプトで確かめる）
   tax.ts         適格請求書の税計算（税率ごとに 1 回丸め）
   matching.ts    入金照合のルール
   pdf.ts         quote/pdf.ts を手本に
   ai.ts, ai-limit.ts
   ics.ts
+  expense-source.ts   支出の読み取り口（§8.1。今はプロマネ実装のみ）
 ```
 
 - API ルートの先頭は `runtime='nodejs'` / `dynamic='force-dynamic'`、`ctx.params` は await する（Next 15）。
@@ -453,15 +493,15 @@ src/lib/income/
 
 | フェーズ | 中身 | できるようになること |
 |---|---|---|
-| **0. 準備** | §12 の未決事項を決める。支出管理の所在確認。`services.ts` に `income`（`status` は非公開）を追加 | — |
-| **1. MVP（漏れをなくす）** | 組織・メンバー、取引先、契約（手入力）、売上予定の自動生成と cron、月次売上画面、請求書（作成・確定・PDF・取消）、入金の手入力と消込、ダッシュボード、請求漏れ・入金遅延の通知（アプリ内・Slack）、ICS 購読 | 「今月いくら売上が立ち、請求したか、入金されたか」が漏れなく分かる |
+| **0. 準備** | §12 の未決事項を決める。`services.ts` に `income`（`status` は非公開）を追加 | — |
+| **1. MVP（漏れをなくす）** | 組織・メンバー、取引先、契約（手入力）、売上予定の自動生成と cron、月次売上画面、請求書（作成・確定・PDF・取消）、入金の手入力と消込、ダッシュボード（支出はプロマネから読む §8.1）、請求漏れ・入金遅延の通知（アプリ内・Slack）、ICS 購読 | 「今月いくら売上が立ち、請求したか、入金されたか」が漏れなく分かる |
 | **2. AI と連携** | 契約書 PDF の AI 読み取り、一言登録、銀行明細 CSV 取込とルール＋AI 照合、送付・督促メールの下書きと送信、Google カレンダー API、SFA 受注 → 契約、見積 → 契約/請求書 | 入力の手間が大きく減る |
 | **3. 経営ダッシュボード** | ホームのウィジェット（収入×支出×営業）、経営エージェントの read ツール、会計ソフト向け CSV、共通 `Company` への乗せ替え | ホームで黒字・赤字と営業の進み具合が一目で分かる |
 
 ### 10.2 Phase1 の作業順（1 つずつ完了させる）
 
 1. Prisma スキーマ追加 → **本番 Supabase へ手動で反映**（Vercel ビルドは db push をしない。`doya-db-push` の手順）
-2. `src/lib/income/dates.ts`・`schedule.ts`・`tax.ts` を純粋関数で作り、テストを書く（ここが間違うと金額がずれる）
+2. `src/lib/income/dates.ts`・`schedule.ts`・`tax.ts` を純粋関数で作り、`scripts/verify-income-calc.ts`（`npx tsx`）で §10.3 のケースを全部確かめる（リポジトリに自動テストの仕組みが無いため。ここが間違うと金額がずれる）
 3. `access.ts` と組織・メンバー API
 4. 取引先・契約の CRUD と画面
 5. 売上予定の生成（契約保存時＋cron）と月次売上画面
@@ -500,7 +540,7 @@ src/lib/income/
 
 | # | 論点 | 推奨案 |
 |---|---|---|
-| Q1 | **「ドヤ支出管理」はどこにあるか**（このリポジトリでは見つからない） | 別リポジトリ・別名ならその場所を教えてほしい。未実装なら、収入と同じ型で「支出管理」を後から作る前提で、ホームの集計は「支出の読み取りインターフェース」を挟んで作る |
+| Q1 | ~~「ドヤ支出管理」はどこにあるか~~ | **決定（2026-10-18）**: 未実装。当面はドヤプロマネの経費＋人件費で代用し、`ExpenseSource` を挟んで後から差し替える（§8.1） |
 | Q2 | テナントを `IncomeOrganization` で作るか、共通 `Company` のマージを待つか | 今の型で作り、`companyId` を null 可で持つ（待たない） |
 | Q3 | 取引先を SFA の `SfaAccount` と共有するか、収入側に持つか | 収入側に `IncomeClient` を持ち、`sfaAccountId` で結ぶ（請求先メール・振込名義など請求固有の項目があるため） |
 | Q4 | 内税（税込価格）の契約に対応するか | Phase1 は外税のみ。必要になったら追加 |
