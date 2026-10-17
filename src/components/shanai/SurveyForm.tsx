@@ -18,18 +18,18 @@ export default function SurveyForm({ answers, onChange, disabled }: { answers: S
         const update = (patch: Partial<typeof a>) => onChange({ ...answers, [q.id]: { ...a, ...patch } })
         return (
           <div key={q.id}>
-            {showSection && <p className="mb-2 mt-6 text-xs font-black tracking-wide text-fuchsia-700 first:mt-0">{q.section}</p>}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            {showSection && <p className="mb-2 mt-6 text-xs font-black tracking-wide text-[var(--blue-deep)] first:mt-0">{q.section}</p>}
+            <div className="rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-4">
               <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-black leading-relaxed text-slate-900">
+                <p className="text-sm font-black leading-relaxed text-[var(--ink)]">
                   Q{i + 1}. {q.question}
-                  {!q.required && <span className="ml-2 text-[11px] font-bold text-slate-400">任意</span>}
+                  {!q.required && <span className="ml-2 text-[11px] font-bold text-[var(--muted)]">任意</span>}
                 </p>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black tabular-nums ${enough ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black tabular-nums ${enough ? 'bg-[var(--ok-bg)] text-[var(--ok-ink)]' : 'bg-[var(--note-bg)] text-[var(--note-ink)]'}`}>
                   {have} / {q.minChars}字
                 </span>
               </div>
-              <p className="mt-1 text-xs font-bold text-slate-400">書くと良いこと: {q.hint}</p>
+              <p className="mt-1 text-xs font-bold text-[var(--muted)]">書くと良いこと: {q.hint}</p>
               <textarea
                 className={`${inputCls} mt-2 min-h-[110px] leading-relaxed`}
                 value={a.answer}
@@ -39,8 +39,8 @@ export default function SurveyForm({ answers, onChange, disabled }: { answers: S
                 placeholder="具体的な場面や出来事を書いてください"
               />
               {a.followupQuestion && (
-                <div className="mt-3 rounded-xl border border-fuchsia-100 bg-fuchsia-50/60 p-3">
-                  <p className="text-xs font-black text-fuchsia-700">追加の質問: {a.followupQuestion}</p>
+                <div className="mt-3 rounded-[var(--r-sm)] border border-[var(--blue-line)] bg-[var(--blue-soft)] p-3">
+                  <p className="text-xs font-black text-[var(--blue-deep)]">追加の質問: {a.followupQuestion}</p>
                   <textarea
                     className={`${inputCls} mt-2 min-h-[80px] leading-relaxed`}
                     value={a.followupAnswer || ''}

@@ -1,6 +1,7 @@
 'use client'
 
-// ドヤ社内インタビュー サイドバー
+// ドヤ社内インタビュー サイドバー（暫定。段0の AppShell が入ったら置き換える）
+// ⚠️ 項目は src/lib/shanai/nav.ts のデータを描くだけ（統合仕様 R-1 / D-1）。ここに項目を足さない
 // ⚠️ 共通サイドバー部品（src/components/sidebar/）で組む。
 //    独自のヘッダーやナビを作らないこと。reference/06-ui-patterns.md §7 が正本。
 // ⚠️ ToolSwitcherMenu を必ず含める（他サービスへ移れなくなる）。
@@ -25,10 +26,12 @@ import {
   SidebarUsagePanel,
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
+import { SHANAI_NAV, isNavActive } from '@/lib/shanai/nav'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { getServiceById } from '@/lib/services'
 
 const BASE = '/shanai'
+const ICONS = { BookUser, Plus, Building2, CreditCard } as const
 
 function ShanaiSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
@@ -41,12 +44,7 @@ function ShanaiSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const NAV: NavItem[] = [
-    { href: BASE, label: 'インタビュー一覧', icon: BookUser },
-    { href: BASE + '/new', label: '新しく作る', icon: Plus, hot: true },
-    { href: BASE + '/company', label: '会社情報', icon: Building2 },
-    { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
-  ]
+  const NAV: NavItem[] = SHANAI_NAV.map((n) => ({ href: n.href, label: n.label, icon: ICONS[n.icon], hot: n.hot }))
 
   const planLabel = (() => {
     if (!isLoggedIn) return 'GUEST'
@@ -59,9 +57,8 @@ function ShanaiSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }
   const isPro = planLabel === 'PRO' || planLabel === 'ENTERPRISE'
 
   const isActive = (href: string) => {
-    // インタビュー詳細も「インタビュー一覧」の中として扱う
-    if (href === BASE) return pathname === BASE || pathname.startsWith(BASE + '/interviews')
-    return pathname === href || pathname.startsWith(href + '/')
+    const item = SHANAI_NAV.find((n) => n.href === href)
+    return item ? isNavActive(item, pathname) : false
   }
 
   const confirmLogout = async () => {
@@ -100,9 +97,9 @@ function ShanaiSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }
 
           {/* プラン案内。⚠️ 金額の正本は unified-plan.ts。回数の文言は services.ts（plan-limit.ts と一致させてある） */}
           {sessionReady && !isPro && (isMobile || !isCollapsed) && (
-            <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md">
+            <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-[var(--r-sm)] md:rounded-[var(--r)] bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-[var(--paper)] flex items-center justify-center shadow-md flex-shrink-0">
                   <Zap className="w-4 h-4" />
                 </div>
                 <p className="text-xs font-black text-white">現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
@@ -112,7 +109,7 @@ function ShanaiSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }
               </p>
               <Link
                 href="/shanai/pricing"
-                className="block w-full py-2 bg-white text-slate-800 text-[11px] font-black rounded-lg text-center shadow-md transition-colors hover:bg-slate-50"
+                className="block w-full py-2 bg-[var(--paper)] text-[var(--ink)] text-[11px] font-black rounded-lg text-center shadow-md transition-colors hover:bg-[var(--bg)]"
               >
                 プロにアップグレード
               </Link>

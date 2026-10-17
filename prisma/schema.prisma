@@ -4717,11 +4717,13 @@ model ShanaiCompany {
   /// 会社サイトのトップURL
   websiteUrl  String?
   /// サムネに使う色（#RRGGBB）
-  brandColor  String   @default("#c026d3")
+  brandColor  String   @default("#0066ff")
   /// サイトから抽出した色の候補
   colors      Json?
   /// 利用者が補足する会社の説明（サイトに無い情報の手入力）
   manualNote  String?  @db.Text
+  /// 予約列: 経営エージェントの自社プロフィール（8つ目の写しを増やさないため）。null 可・FK なし（統合仕様 R-5）
+  companyProfileId String?
   crawledAt   DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -4816,8 +4818,8 @@ model ShanaiInterview {
   roleInService    String   @default("")
 
   // --- アンケートモード ---
-  /// 社員が回答する公開URLのトークン（ログイン不要）
-  surveyToken       String   @unique @default(cuid())
+  /// 社員が回答する公開URLのトークン（ログイン不要）。src/lib/shanai/token.ts の CSPRNG で作る（cuid は使わない）
+  surveyToken       String   @unique
   /// { [questionId]: { answer, followupQuestion?, followupAnswer? } }
   surveyAnswers     Json?
   surveySubmittedAt DateTime?

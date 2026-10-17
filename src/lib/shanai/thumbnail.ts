@@ -27,7 +27,7 @@ function fonts() {
 }
 
 function normalizeColor(c: string): string {
-  return /^#[0-9a-f]{6}$/i.test(c) ? c : '#c026d3'
+  return /^#[0-9a-f]{6}$/i.test(c) ? c : '#0066ff'
 }
 
 /** 背景色に対して読みやすい文字色 */

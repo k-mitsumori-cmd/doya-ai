@@ -7,12 +7,13 @@
 // ⚠️ robots.txt で禁止されたパスは読まない。
 // ⚠️ プロフィール項目はページ本文からの原文引用を必須にし、引用が本文に無い項目は捨てる。
 import { createHash } from 'node:crypto'
-import { safeFetchResource, safeFetchText, htmlToText } from '@/lib/net/safe-fetch'
+import { safeFetchResource, htmlToText } from '@/lib/net/safe-fetch'
 import { collectLinks } from '@/lib/asklink/site'
 import { extractColors } from '@/lib/adimage/brand'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { prisma } from '@/lib/prisma'
 import { quoteExists } from './evidence'
+import { readRobots, robotsAllows } from './robots'
 import { clip, oneOf, type ProfileCategory, type SourceKind } from './types'
 
 const PAGE_TEXT_MAX = 8000
@@ -27,6 +28,13 @@ const USEFUL_LINK =
   /会社概要|会社案内|企業情報|会社情報|私たちについて|わたしたち|about|company|corporate|理念|ミッション|ビジョン|バリュー|mission|vision|value|philosophy|代表|メッセージ|message|事業|サービス|service|business|solution|product|特徴|強み|導入事例|実績|事例|case|works|採用|recruit|career|jobs|社員|メンバー|member|people|interview|カルチャー|culture|働き方|福利厚生|制度|benefit|数字|numbers|沿革|history/i
 /** 読まないページ */
 const SKIP_LINK = /privacy|プライバシー|個人情報|terms|規約|cookie|login|ログイン|signin|cart|カート|contact|問い合わせ|お問合|sitemap|\.pdf$|\.zip$|\.(jpe?g|png|gif|webp|svg)$/i
+
+/** 会社情報の行を用意する（1ユーザー1社） */
+export async function getOrCreateCompany(userId: string) {
+  const found = await prisma.shanaiCompany.findUnique({ where: { userId } })
+  if (found) return found
+  return prisma.shanaiCompany.upsert({ where: { userId }, update: {}, create: { userId } })
+}
 
 export const PROFILE_CATEGORIES: readonly ProfileCategory[] = ['mission', 'business', 'service', 'number', 'culture', 'benefit', 'other']
 export const SOURCE_KINDS: readonly SourceKind[] = ['corporate', 'service', 'recruit', 'other']
@@ -44,85 +52,6 @@ export function parseSiteUrl(raw: unknown): string | null {
   } catch {
     return null
   }
-}
-
-// ---------- robots.txt ----------
-
-interface RobotsRules {
-  disallow: string[]
-  allow: string[]
-}
-
-async function readRobots(origin: string): Promise<RobotsRules> {
-  const rules: RobotsRules = { disallow: [], allow: [] }
-  const text = await safeFetchText(`${origin}/robots.txt`, { timeoutMs: 6000, accept: 'text/plain, */*', maxBytes: 256 * 1024 }).catch(() => null)
-  if (!text) return rules
-  let applies = false
-  let sawAgentInGroup = false
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.replace(/#.*$/, '').trim()
-    if (!line) continue
-    const m = line.match(/^([A-Za-z-]+)\s*:\s*(.*)$/)
-    if (!m) continue
-    const key = m[1].toLowerCase()
-    const value = m[2].trim()
-    if (key === 'user-agent') {
-      if (!sawAgentInGroup) applies = false
-      sawAgentInGroup = true
-      if (value === '*') applies = true
-      continue
-    }
-    sawAgentInGroup = false
-    if (!applies) continue
-    if (key === 'disallow' && value) rules.disallow.push(value)
-    if (key === 'allow' && value) rules.allow.push(value)
-  }
-  return rules
-}
-
-const MAX_ROBOTS_RULES = 200
-const MAX_RULE_LENGTH = 200
-
-/**
- * robots.txt のパターン照合（* と末尾 $ のみ）。
- * ⚠️ 正規表現を組み立てない。相手サイトの robots.txt は外部入力で、
- *    `*` を並べたパターンで正規表現のバックトラックを爆発させられる（ReDoS）。線形時間の貪欲照合で判定する。
- */
-export function wildcardMatch(pattern: string, path: string): boolean {
-  let p = pattern.slice(0, MAX_RULE_LENGTH)
-  const anchored = p.endsWith('$')
-  if (anchored) p = p.slice(0, -1)
-  const s = path.slice(0, 2000)
-  let pi = 0
-  let si = 0
-  let star = -1
-  let mark = 0
-  while (si < s.length) {
-    if (pi < p.length && p[pi] === '*') {
-      star = pi++
-      mark = si
-    } else if (pi < p.length && p[pi] === s[si]) {
-      pi++
-      si++
-    } else if (pi === p.length && !anchored) {
-      return true
-    } else if (star >= 0) {
-      pi = star + 1
-      si = ++mark
-    } else {
-      return false
-    }
-  }
-  while (pi < p.length && p[pi] === '*') pi++
-  return pi === p.length
-}
-
-function robotsAllows(rules: RobotsRules, path: string): boolean {
-  const match = (pattern: string) => wildcardMatch(pattern, path)
-  const longest = (list: string[]) => list.slice(0, MAX_ROBOTS_RULES).filter(match).reduce((n, p) => Math.max(n, p.length), -1)
-  const d = longest(rules.disallow)
-  if (d < 0) return true
-  return longest(rules.allow) >= d
 }
 
 // ---------- 取得 ----------

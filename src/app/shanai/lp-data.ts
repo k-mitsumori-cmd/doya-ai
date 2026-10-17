@@ -3,18 +3,20 @@ import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤ社内インタビュー LPコンテンツ
 import type { Step, Benefit, Faq } from '@/components/lp'
 
-export const ACCENT = '#c026d3'
+import { SHANAI_ACCENT } from '@/lib/shanai/types'
+
+export const ACCENT = SHANAI_ACCENT
 export const CTA = '/auth/signin?callbackUrl=/shanai'
 
 export const STEPS: Step[] = [
-  { icon: 'language', title: '会社のURLを登録', desc: '会社サイト・サービスサイト・採用ページのURLを入れると、ミッションや事業、数字、制度を読み取ります。最初に1回だけです。' },
+  { icon: 'language', title: '会社のURLを登録', desc: '会社サイトやサービスサイト、採用ページのURLを入れます。ミッション・事業・数字・制度を読み取ります。登録は最初の1回だけです。' },
   { icon: 'mic', title: '録音かアンケートを用意', desc: '社内インタビューの録音をアップロードするか、社員にアンケートのURLを送ります。写真も数枚アップロードします。' },
   { icon: 'description', title: '記事とサムネが完成', desc: '本人の言葉と会社の事実をつなげた記事ができます。Wordでダウンロードでき、サムネ画像も自動で作られます。' },
 ]
 
 export const BENEFITS: Benefit[] = [
   { icon: 'fact_check', title: '書いていないことは書かない', desc: '先に録音・回答・会社サイトから「事実」だけを原文つきで抜き出し、確認した事実だけで記事を書きます。根拠のない段落は編集画面で知らせます。' },
-  { icon: 'domain', title: '会社ならではの記事になる', desc: '会社サイトやサービスサイトの内容を読み取り、社員の仕事が会社のどこにつながっているかを記事の中で紹介します。' },
+  { icon: 'domain', title: '会社ならではの記事になる', desc: '会社サイトとサービスサイトの内容を読み取ります。社員の仕事が会社のどこにつながるかを、記事の中で紹介します。' },
   { icon: 'edit_document', title: 'Wordで受け取ってすぐ使える', desc: '写真とサムネ入りの Word ファイルでダウンロードできます。Googleドライブで開けば Googleドキュメントとしても編集できます。' },
 ]
 

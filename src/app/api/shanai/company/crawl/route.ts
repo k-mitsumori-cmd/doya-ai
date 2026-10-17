@@ -5,7 +5,7 @@ export const maxDuration = 300
 
 import { prisma } from '@/lib/prisma'
 import { getShanaiUserId, json, unauthorized } from '@/lib/shanai/access'
-import { companyDto } from '@/lib/shanai/company-dto'
+import { companyDto } from '@/lib/shanai/company-read'
 import { crawlCompany } from '@/lib/shanai/company'
 import { recordServiceUsage } from '@/lib/service-usage'
 

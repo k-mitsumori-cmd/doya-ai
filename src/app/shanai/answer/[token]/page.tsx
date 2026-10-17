@@ -4,9 +4,10 @@
 // ⚠️ 社外・社内の第三者が開く画面。アプリ枠・料金・他サービスへの導線は出さない（guest-path.ts に登録済み）
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { CheckCircle2, Loader2, Sparkles } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { CheckCircle2, Sparkles } from 'lucide-react'
 import SurveyForm from '@/components/shanai/SurveyForm'
-import { api, Button, Notice } from '@/components/shanai/ui'
+import { api, Button, EmptyState, ErrorState, Notice, PageSkeleton } from '@/components/shanai/ui'
 import type { SurveyAnswers } from '@/lib/shanai/types'
 
 interface Payload {
@@ -33,15 +34,21 @@ export default function ShanaiAnswerPage() {
   const answersRef = useRef<SurveyAnswers>({})
   answersRef.current = answers
 
-  useEffect(() => {
+  const [notFound, setNotFound] = useState(false)
+  const load = () => {
+    setError(null)
     api<Payload>(`/api/shanai/public/survey/${token}`)
       .then((d) => {
         setData(d)
         setAnswers(d.answers || {})
         if (d.submittedAt) setDone(true)
       })
-      .catch((e) => setError((e as Error).message))
-  }, [token])
+      .catch((e) => {
+        setNotFound((e as any)?.status === 404)
+        setError((e as Error).message)
+      })
+  }
+  useEffect(load, [token])
 
   // 書いた内容が消えないよう、30秒ごとに下書き保存する
   useEffect(() => {
@@ -73,6 +80,7 @@ export default function ShanaiAnswerPage() {
       setData((p) => (p ? { ...p, check: d.check } : p))
       dirty.current = false
       setSavedAt(new Date())
+      toast.success('下書きを保存しました', { duration: 3000 })
     } catch (e) {
       setMessage({ tone: 'error', text: (e as Error).message })
     } finally {
@@ -111,31 +119,36 @@ export default function ShanaiAnswerPage() {
     }
   }
 
+  if (error && !notFound) {
+    return (
+      <div className="min-h-screen bg-[var(--bg)] px-4 py-10">
+        <ErrorState message={error} onRetry={load} />
+      </div>
+    )
+  }
   if (error) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16">
-        <Notice tone="error">{error}</Notice>
+      <div className="min-h-screen bg-[var(--bg)] px-4 py-10">
+        <EmptyState
+          image="/empty/forbidden.svg"
+          title="このアンケートを開けませんでした"
+          desc="URLが途中で切れているか、作り直されて使えなくなっている可能性があります。お手数ですが、URLを送ってくれた担当者にお問い合わせください。"
+        />
       </div>
     )
   }
-  if (!data) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-24 text-sm font-bold text-slate-500">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        読み込んでいます
-      </div>
-    )
-  }
+  if (!data) return <PageSkeleton variant="form" />
 
-  const color = /^#[0-9a-f]{6}$/i.test(data.brandColor) ? data.brandColor : '#c026d3'
+  // 会社の色（登録済みの値）。無ければトークンの青
+  const color = /^#[0-9a-f]{6}$/i.test(data.brandColor) ? data.brandColor : 'var(--blue)'
 
   if (done) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-[var(--bg)]">
         <div className="mx-auto max-w-xl px-4 py-20 text-center">
           <CheckCircle2 className="mx-auto h-12 w-12" style={{ color }} />
-          <h1 className="mt-4 text-xl font-black text-slate-900">ご回答ありがとうございました</h1>
-          <p className="mt-2 text-sm font-bold leading-relaxed text-slate-500">
+          <h1 className="mt-4 text-xl font-black text-[var(--ink)]">ご回答ありがとうございました</h1>
+          <p className="mt-2 text-sm font-bold leading-relaxed text-[var(--sub)]">
             いただいた内容をもとに、担当者がインタビュー記事を作成します。内容の修正をご希望の場合は、担当者までご連絡ください。
           </p>
         </div>
@@ -145,28 +158,30 @@ export default function ShanaiAnswerPage() {
 
   const check = data.check
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-3xl px-4 py-6">
+    <div className="min-h-screen bg-[var(--bg)]">
+      <header className="relative overflow-hidden border-b border-[var(--line)] bg-[var(--paper)]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/shanai/answer-header.webp" alt="" aria-hidden className="pointer-events-none absolute inset-0 h-full w-full object-cover object-right opacity-90" />
+        <div className="relative mx-auto max-w-3xl px-4 py-6 sm:pr-48">
           <p className="text-xs font-black" style={{ color }}>
             {data.companyName ? `${data.companyName} 社員インタビュー` : '社員インタビュー'}
           </p>
-          <h1 className="mt-1 text-xl font-black text-slate-900">{data.intervieweeName} さん、アンケートのご協力をお願いします</h1>
-          <p className="mt-2 text-sm font-bold leading-relaxed text-slate-500">
+          <h1 className="mt-1 text-xl font-black text-[var(--ink)]">{data.intervieweeName} さん、アンケートのご協力をお願いします</h1>
+          <p className="mt-2 text-sm font-bold leading-relaxed text-[var(--sub)]">
             お答えいただいた内容をもとに、インタビュー記事を作成します。書いていただいたこと以外は記事に書きませんので、できるだけ具体的な場面や出来事を教えてください。途中で閉じても、30秒ごとに下書きが保存されます。
           </p>
         </div>
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-6">
-        <div className="sticky top-0 z-10 -mx-4 mb-4 border-b border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur">
-          <div className="flex items-center justify-between text-xs font-black text-slate-600">
+        <div className="sticky top-0 z-10 -mx-4 mb-4 border-b border-[var(--line)] bg-[var(--bg)] px-4 py-3 backdrop-blur">
+          <div className="flex items-center justify-between text-xs font-black text-[var(--sub)]">
             <span>回答の充実度</span>
             <span className="tabular-nums">
               {check.score}%{check.missing.length > 0 ? `（文字数が足りない設問 ${check.missing.length}問）` : ''}
             </span>
           </div>
-          <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-200">
+          <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--track)]">
             <div className="h-full rounded-full transition-all" style={{ width: `${check.score}%`, backgroundColor: color }} />
           </div>
         </div>
@@ -180,7 +195,7 @@ export default function ShanaiAnswerPage() {
         )}
 
         <div className="mt-6 flex flex-wrap items-center justify-end gap-2 pb-16">
-          {savedAt && <span className="mr-auto text-xs font-bold text-slate-400">{savedAt.toLocaleTimeString('ja-JP')} に保存しました</span>}
+          {savedAt && <span className="mr-auto text-xs font-bold text-[var(--muted)]">{savedAt.toLocaleTimeString('ja-JP')} に保存しました</span>}
           <Button variant="secondary" onClick={save} loading={saving} disabled={asking}>
             下書き保存
           </Button>

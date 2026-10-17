@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShanaiUserId, json, notFound, ownInterview, unauthorized } from '@/lib/shanai/access'
 import { interviewDetailDto } from '@/lib/shanai/dto'
+import { getInterviewDetail } from '@/lib/shanai/interviews-read'
 import { removeFiles } from '@/lib/shanai/storage'
 import { clip, isCuid, oneOf } from '@/lib/shanai/types'
 
@@ -17,7 +18,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     const userId = await getShanaiUserId()
     if (!userId) return unauthorized()
     if (!isCuid(id)) return notFound()
-    const interview = await interviewDetailDto(id, userId)
+    const interview = await getInterviewDetail(userId, id)
     if (!interview) return notFound()
     return json({ success: true, interview })
   } catch (e) {

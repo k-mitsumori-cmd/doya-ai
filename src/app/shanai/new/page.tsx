@@ -51,8 +51,8 @@ export default function ShanaiNewPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
-      <h1 className="text-2xl font-black text-slate-900">インタビューを作る</h1>
-      <p className="mt-1 text-sm font-bold text-slate-500">素材の集め方と、インタビューする社員の情報を入れてください。</p>
+      <h1 className="text-2xl font-black text-[var(--ink)]">インタビューを作る</h1>
+      <p className="mt-1 text-sm font-bold text-[var(--sub)]">素材の集め方と、インタビューする社員の情報を入れてください。</p>
 
       <Card className="mt-6">
         <SectionTitle step="1" title="素材の集め方" />
@@ -67,11 +67,11 @@ export default function ShanaiNewPage() {
               key={m.key}
               type="button"
               onClick={() => setMode(m.key)}
-              className={`rounded-2xl border p-4 text-left transition-colors ${mode === m.key ? 'border-fuchsia-400 bg-fuchsia-50 ring-2 ring-fuchsia-100' : 'border-slate-200 bg-white hover:border-fuchsia-200'}`}
+              className={`rounded-[var(--r)] border p-4 text-left transition-colors ${mode === m.key ? 'border-[var(--blue)] bg-[var(--blue-soft)] ring-2 ring-[var(--blue-line)]' : 'border-[var(--line)] bg-[var(--paper)] hover:border-[var(--blue-line)]'}`}
             >
-              <m.icon className={`h-5 w-5 ${mode === m.key ? 'text-fuchsia-600' : 'text-slate-400'}`} />
-              <p className="mt-2 text-sm font-black text-slate-900">{m.title}</p>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">{m.desc}</p>
+              <m.icon className={`h-5 w-5 ${mode === m.key ? 'text-[var(--blue-deep)]' : 'text-[var(--muted)]'}`} />
+              <p className="mt-2 text-sm font-black text-[var(--ink)]">{m.title}</p>
+              <p className="mt-1 text-xs font-bold leading-relaxed text-[var(--sub)]">{m.desc}</p>
             </button>
           ))}
         </div>
@@ -96,7 +96,7 @@ export default function ShanaiNewPage() {
 
         {sources.length > 0 && (
           <div className="mt-5">
-            <p className="text-xs font-black text-slate-600">関わっているサービス</p>
+            <p className="text-xs font-black text-[var(--sub)]">関わっているサービス</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {sources.map((s) => {
                 const on = serviceIds.includes(s.id)
@@ -105,7 +105,7 @@ export default function ShanaiNewPage() {
                     key={s.id}
                     type="button"
                     onClick={() => setServiceIds((ids) => (on ? ids.filter((x) => x !== s.id) : [...ids, s.id]))}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-black ${on ? 'border-fuchsia-400 bg-fuchsia-50 text-fuchsia-700' : 'border-slate-200 bg-white text-slate-600'}`}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-black ${on ? 'border-[var(--blue)] bg-[var(--blue-soft)] text-[var(--blue-deep)]' : 'border-[var(--line)] bg-[var(--paper)] text-[var(--sub)]'}`}
                   >
                     {s.label || new URL(s.url).hostname}
                   </button>

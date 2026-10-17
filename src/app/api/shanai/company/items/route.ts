@@ -6,8 +6,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShanaiUserId, json, unauthorized } from '@/lib/shanai/access'
-import { companyDto, getOrCreateCompany } from '@/lib/shanai/company-dto'
-import { PROFILE_CATEGORIES } from '@/lib/shanai/company'
+import { companyDto } from '@/lib/shanai/company-read'
+import { getOrCreateCompany, PROFILE_CATEGORIES } from '@/lib/shanai/company'
 import { clip, oneOf } from '@/lib/shanai/types'
 
 export async function PUT(req: NextRequest) {

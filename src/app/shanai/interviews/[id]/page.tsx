@@ -9,8 +9,11 @@ import Link from 'next/link'
 import {
   AlertTriangle, ArrowLeft, Check, ClipboardList, Copy, Download, FileText, ImagePlus, Loader2, Mic, RefreshCw, Sparkles, Star, Trash2, Upload,
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import SurveyForm from '@/components/shanai/SurveyForm'
-import { api, Button, Card, Field, inputCls, Notice, SectionTitle, StatusBadge, uploadToInterview } from '@/components/shanai/ui'
+import {
+  api, Button, Card, ConfirmDialog, ErrorState, Field, ForbiddenState, inputCls, Notice, PageSkeleton, ProgressSteps, SectionTitle, StatusBadge, uploadToInterview, useLeaveGuard, useTimedStep,
+} from '@/components/shanai/ui'
 import { FACT_CATEGORY_LABELS, type ArticleBlock, type FactCategory, type SurveyAnswers } from '@/lib/shanai/types'
 import { findQuestion } from '@/lib/shanai/survey'
 
@@ -57,14 +60,16 @@ export default function ShanaiInterviewPage() {
   const router = useRouter()
   const [data, setData] = useState<Detail | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const load = useCallback(async () => {
     try {
       const d = await api<{ interview: Detail }>(`/api/shanai/interviews/${id}`)
       setData(d.interview)
     } catch (e) {
-      if ((e as any)?.status === 401) window.location.href = `/auth/signin?callbackUrl=/shanai/interviews/${id}`
-      setLoadError((e as Error).message)
+      const status = (e as any)?.status
+      if (status === 401) window.location.href = `/auth/signin?callbackUrl=/shanai/interviews/${id}`
+      setLoadError(status === 404 || status === 403 ? 'forbidden' : (e as Error).message)
     }
   }, [id])
 
@@ -72,32 +77,17 @@ export default function ShanaiInterviewPage() {
     void load()
   }, [load])
 
-  if (loadError) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-10">
-        <Notice tone="error">{loadError}</Notice>
-        <Link href="/shanai" className="mt-4 inline-flex items-center gap-1 text-sm font-black text-slate-500">
-          <ArrowLeft className="h-4 w-4" /> 一覧に戻る
-        </Link>
-      </div>
-    )
-  }
-  if (!data) {
-    return (
-      <div className="flex items-center gap-2 px-6 py-16 text-sm font-bold text-slate-500">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        読み込んでいます
-      </div>
-    )
-  }
+  if (loadError) return loadError === 'forbidden' ? <ForbiddenState /> : <ErrorState message={loadError} onRetry={() => void load()} />
+  if (!data) return <PageSkeleton variant="detail" />
 
   const remove = async () => {
-    if (!window.confirm(`${data.intervieweeName}さんのインタビューを削除します。録音・写真・記事もすべて削除され、元に戻せません。よろしいですか？`)) return
+    setConfirmDelete(false)
     try {
       await api(`/api/shanai/interviews/${id}`, { method: 'DELETE' })
+      toast.success('削除しました', { duration: 3000 })
       router.push('/shanai')
     } catch (e) {
-      window.alert((e as Error).message)
+      toast.error((e as Error).message)
     }
   }
 
@@ -105,22 +95,32 @@ export default function ShanaiInterviewPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
-      <Link href="/shanai" className="inline-flex items-center gap-1 text-xs font-black text-slate-500 hover:text-slate-800">
+      <Link href="/shanai" className="inline-flex items-center gap-1 text-xs font-black text-[var(--sub)] hover:text-[var(--ink)]">
         <ArrowLeft className="h-3.5 w-3.5" /> インタビュー一覧
       </Link>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">{data.intervieweeName} さん</h1>
-          <p className="mt-1 text-sm font-bold text-slate-500">{[data.department, data.position, data.joinYear && `${data.joinYear}入社`].filter(Boolean).join(' / ') || '部署未設定'}</p>
+          <h1 className="text-2xl font-black text-[var(--ink)]">{data.intervieweeName} さん</h1>
+          <p className="mt-1 text-sm font-bold text-[var(--sub)]">{[data.department, data.position, data.joinYear && `${data.joinYear}入社`].filter(Boolean).join(' / ') || '部署未設定'}</p>
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={data.status} />
-          <Button variant="danger" onClick={remove}>
+          <Button variant="danger" onClick={() => setConfirmDelete(true)}>
             <Trash2 className="h-4 w-4" />
             削除
           </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title={`${data.intervieweeName}さんのインタビューを削除しますか？`}
+        body="録音・写真・記事もすべて削除され、元に戻せません。"
+        confirmLabel="削除する"
+        danger
+        onConfirm={() => void remove()}
+        onClose={() => setConfirmDelete(false)}
+      />
 
       <div className="mt-6 space-y-4">
         {data.mode === 'voice' ? <VoiceSection data={data} onChange={setData} reload={load} /> : <SurveySection data={data} onChange={setData} />}
@@ -139,6 +139,7 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<{ message: string; upgradeUrl?: string } | null>(null)
   const [showAll, setShowAll] = useState(false)
+  const transcribeStep = useTimedStep(busy, 3, 20000)
   const inputRef = useRef<HTMLInputElement>(null)
   const cancelled = useRef(false)
 
@@ -195,14 +196,14 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
             文字起こしする
           </Button>
         )}
-        {progress !== null && <span className="text-xs font-black text-slate-500">アップロード中 {progress}%</span>}
+        {progress !== null && <span className="text-xs font-black text-[var(--sub)]">アップロード中 {progress}%</span>}
         {data.audio.uploaded && data.audio.size && progress === null && (
-          <span className="text-xs font-bold text-slate-400">
+          <span className="text-xs font-bold text-[var(--muted)]">
             {(data.audio.size / 1024 / 1024).toFixed(1)}MB{data.audio.durationSec ? ` / ${fmtTime(data.audio.durationSec)}` : ''}
           </span>
         )}
       </div>
-      {busy && <p className="mt-3 text-xs font-bold text-slate-500">文字起こししています。30分の録音で数分かかります。この画面を開いたままお待ちください。</p>}
+      {busy && <ProgressSteps steps={['録音の長さを確認しています', '文字起こしサービスに送っています', '話者を分けて文字にしています']} current={transcribeStep} note="30分の録音で数分かかります。" />}
       {data.audio.status === 'failed' && data.audio.error && !error && (
         <div className="mt-3">
           <Notice tone="error">{data.audio.error}</Notice>
@@ -214,19 +215,19 @@ function VoiceSection({ data, onChange, reload }: { data: Detail; onChange: (d: 
         </div>
       )}
       {segs.length > 0 && (
-        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-black text-slate-600">文字起こし（{segs.length}件の発言）</p>
+        <div className="mt-4 rounded-[var(--r-sm)] border border-[var(--line)] bg-[var(--bg)] p-3">
+          <p className="text-xs font-black text-[var(--sub)]">文字起こし（{segs.length}件の発言）</p>
           <ul className="mt-2 max-h-[360px] space-y-1.5 overflow-y-auto pr-1 text-sm">
             {(showAll ? segs : segs.slice(0, 12)).map((s, i) => (
               <li key={i} className="flex gap-2">
-                <span className="w-12 shrink-0 font-mono text-[11px] text-slate-400">{fmtTime(s.start)}</span>
-                <span className="w-14 shrink-0 text-[11px] font-black text-fuchsia-700">{s.speaker ? `話者${s.speaker}` : '話者'}</span>
-                <span className="font-bold leading-relaxed text-slate-700">{s.text}</span>
+                <span className="w-12 shrink-0 font-mono text-[11px] text-[var(--muted)]">{fmtTime(s.start)}</span>
+                <span className="w-14 shrink-0 text-[11px] font-black text-[var(--blue-deep)]">{s.speaker ? `話者${s.speaker}` : '話者'}</span>
+                <span className="font-bold leading-relaxed text-[var(--sub)]">{s.text}</span>
               </li>
             ))}
           </ul>
           {segs.length > 12 && (
-            <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-2 text-xs font-black text-fuchsia-700">
+            <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-2 text-xs font-black text-[var(--blue-deep)]">
               {showAll ? '閉じる' : 'すべて表示'}
             </button>
           )}
@@ -245,6 +246,17 @@ function SurveySection({ data, onChange }: { data: Detail; onChange: (d: Detail)
   const [copied, setCopied] = useState(false)
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState<{ tone: 'info' | 'error' | 'warn'; text: string } | null>(null)
+  const [confirmRotate, setConfirmRotate] = useState(false)
+  const rotate = async () => {
+    setConfirmRotate(false)
+    try {
+      const d = await api<{ interview: Detail }>(`/api/shanai/interviews/${data.id}/survey`, { method: 'POST', json: { action: 'rotateToken' } })
+      onChange(d.interview)
+      toast.success('新しい回答URLを作りました。前のURLは使えなくなりました。', { duration: 3000 })
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/shanai/answer/${data.survey.token}` : ''
   const submitted = !!data.survey.submittedAt
 
@@ -254,7 +266,7 @@ function SurveySection({ data, onChange }: { data: Detail; onChange: (d: Detail)
       setCopied(true)
       setTimeout(() => setCopied(false), 1800)
     } catch {
-      window.prompt('コピーしてお使いください', shareUrl)
+      toast.error('コピーできませんでした。URLを選択してコピーしてください。')
     }
   }
 
@@ -310,25 +322,38 @@ function SurveySection({ data, onChange }: { data: Detail; onChange: (d: Detail)
   return (
     <Card>
       <SectionTitle step="ステップ1" title="アンケート" desc="下のURLを社員の方に送ってください。ログインは不要です。担当者がこの画面で代わりに入力することもできます。" />
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
-        <code className="min-w-0 flex-1 truncate px-2 text-xs font-bold text-slate-600">{shareUrl}</code>
-        <button type="button" onClick={copy} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black text-white ${copied ? 'bg-emerald-600' : 'bg-[#c026d3] hover:bg-[#a21caf]'}`}>
+      <div className="flex flex-wrap items-center gap-2 rounded-[var(--r-sm)] border border-[var(--line)] bg-[var(--bg)] p-2">
+        <code className="min-w-0 flex-1 truncate px-2 text-xs font-bold text-[var(--sub)]">{shareUrl}</code>
+        <button type="button" onClick={copy} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black text-white ${copied ? 'bg-[var(--ok-bg)]' : 'bg-[var(--blue)] hover:bg-[var(--blue-deep)]'}`}>
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
           {copied ? 'コピーしました' : 'URLをコピー'}
         </button>
+        {!submitted && (
+          <button type="button" onClick={() => setConfirmRotate(true)} className="min-h-[44px] rounded-[var(--r-sm)] px-3 text-xs font-black text-[var(--sub)] hover:bg-[var(--paper)]">
+            URLを作り直す
+          </button>
+        )}
       </div>
+      <ConfirmDialog
+        open={confirmRotate}
+        title="回答URLを作り直しますか？"
+        body="送り先を間違えたときに使います。前のURLは開けなくなります。書きかけの回答は残ります。"
+        confirmLabel="作り直す"
+        onConfirm={() => void rotate()}
+        onClose={() => setConfirmRotate(false)}
+      />
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <div className="flex-1">
-          <div className="flex items-center justify-between text-xs font-black text-slate-600">
+          <div className="flex items-center justify-between text-xs font-black text-[var(--sub)]">
             <span>回答の充実度</span>
             <span className="tabular-nums">{check.score}%</span>
           </div>
-          <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-[#c026d3] transition-all" style={{ width: `${check.score}%` }} />
+          <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--bg)]">
+            <div className="h-full rounded-full bg-[var(--blue)] transition-all" style={{ width: `${check.score}%` }} />
           </div>
         </div>
-        <span className={`rounded-full px-2.5 py-1 text-[11px] font-black ${submitted ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+        <span className={`rounded-full px-2.5 py-1 text-[11px] font-black ${submitted ? 'bg-[var(--ok-bg)] text-[var(--ok-ink)]' : 'bg-[var(--bg)] text-[var(--sub)]'}`}>
           {submitted ? '提出済み' : check.canSubmit ? '提出できます' : `足りない設問 ${check.missing.length}件`}
         </span>
         <Button variant="ghost" onClick={refresh}>
@@ -343,7 +368,7 @@ function SurveySection({ data, onChange }: { data: Detail; onChange: (d: Detail)
         </div>
       )}
 
-      <button type="button" onClick={() => setOpen((v) => !v)} className="mt-4 text-sm font-black text-fuchsia-700">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="mt-4 text-sm font-black text-[var(--blue-deep)]">
         {open ? '回答を閉じる' : '回答を見る・代わりに入力する'}
       </button>
       {open && (
@@ -411,29 +436,29 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
 
   return (
     <Card>
-      <SectionTitle step="ステップ2" title="写真" desc="ご本人の写真を3〜5枚おすすめします（8枚まで）。星印の写真がサムネに使われます。" />
+      <SectionTitle step="ステップ2" title="写真" desc="ご本人の写真は3〜5枚がおすすめです（8枚まで）。星印を付けた写真をサムネに使います。" />
       <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => e.target.files && upload(e.target.files)} />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {data.photos.map((p) => (
-          <div key={p.id} className={`overflow-hidden rounded-xl border ${p.usage === 'thumbnail' ? 'border-fuchsia-400 ring-2 ring-fuchsia-100' : 'border-slate-200'}`}>
-            <div className="relative aspect-[4/3] bg-slate-100">
+          <div key={p.id} className={`overflow-hidden rounded-[var(--r-sm)] border ${p.usage === 'thumbnail' ? 'border-[var(--blue)] ring-2 ring-[var(--blue-line)]' : 'border-[var(--line)]'}`}>
+            <div className="relative aspect-[4/3] bg-[var(--bg)]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {p.url && <img src={p.url} alt={p.caption || '社員の写真'} className="h-full w-full object-cover" />}
               <button
                 type="button"
                 onClick={() => patch(p.id, { usage: 'thumbnail' })}
-                className={`absolute left-1.5 top-1.5 rounded-full p-1.5 ${p.usage === 'thumbnail' ? 'bg-[#c026d3] text-white' : 'bg-white/90 text-slate-500 hover:text-fuchsia-600'}`}
+                className={`absolute left-1.5 top-1.5 rounded-full p-1.5 ${p.usage === 'thumbnail' ? 'bg-[var(--blue)] text-white' : 'bg-[var(--paper)] text-[var(--sub)] hover:text-[var(--blue-deep)]'}`}
                 aria-label="サムネに使う"
                 title="サムネに使う"
               >
                 <Star className="h-3.5 w-3.5" />
               </button>
-              <button type="button" onClick={() => remove(p.id)} className="absolute right-1.5 top-1.5 rounded-full bg-white/90 p-1.5 text-slate-500 hover:text-rose-600" aria-label="写真を削除">
+              <button type="button" onClick={() => remove(p.id)} className="absolute right-1.5 top-1.5 rounded-full bg-[var(--paper)] p-1.5 text-[var(--sub)] hover:text-rose-600" aria-label="写真を削除">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
             <input
-              className="w-full border-t border-slate-100 px-2 py-1.5 text-[11px] font-bold text-slate-600 placeholder:text-slate-300 focus:outline-none"
+              className="w-full border-t border-[var(--line)] px-2 py-1.5 text-[11px] font-bold text-[var(--sub)] placeholder:text-[var(--muted)] focus:outline-none"
               defaultValue={p.caption}
               placeholder="キャプション（任意）"
               maxLength={100}
@@ -446,7 +471,7 @@ function PhotoSection({ data, onChange }: { data: Detail; onChange: (d: Detail) 
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={!!uploading}
-            className="flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-200 text-xs font-black text-slate-400 hover:border-fuchsia-300 hover:text-fuchsia-600"
+            className="flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-[var(--r-sm)] border-2 border-dashed border-[var(--line)] text-xs font-black text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--blue-deep)]"
           >
             {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ImagePlus className="h-5 w-5" />}
             {uploading ? 'アップロード中' : '写真を追加'}
@@ -474,8 +499,10 @@ function FactSection({ data, onChange, materialReady }: { data: Detail; onChange
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<{ message: string; upgradeUrl?: string } | null>(null)
 
+  const [confirmRedo, setConfirmRedo] = useState(false)
+  const factStep = useTimedStep(busy, 3, 15000)
   const extract = async () => {
-    if (data.facts.length && !window.confirm('事実を抽出し直すと、いまの確認内容は消えます。よろしいですか？')) return
+    setConfirmRedo(false)
     setBusy(true)
     setError(null)
     try {
@@ -502,23 +529,23 @@ function FactSection({ data, onChange, materialReady }: { data: Detail; onChange
   const company = data.facts.filter((f) => f.sourceType === 'company')
 
   const FactRow = ({ f }: { f: Fact }) => (
-    <li className={`rounded-xl border p-3 ${f.approved ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50 opacity-70'}`}>
+    <li className={`rounded-[var(--r-sm)] border p-3 ${f.approved ? 'border-[var(--line)] bg-[var(--paper)]' : 'border-[var(--line)] bg-[var(--bg)] opacity-70'}`}>
       <div className="flex items-start gap-3">
-        <input type="checkbox" checked={f.approved} onChange={(e) => update([{ id: f.id, approved: e.target.checked }])} className="mt-1 h-4 w-4 accent-[#c026d3]" aria-label="記事に使う" />
+        <input type="checkbox" checked={f.approved} onChange={(e) => update([{ id: f.id, approved: e.target.checked }])} className="mt-1 h-4 w-4 accent-[var(--blue)]" aria-label="記事に使う" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="rounded-full bg-fuchsia-50 px-2 py-0.5 text-[10px] font-black text-fuchsia-700">{FACT_CATEGORY_LABELS[f.category] || f.category}</span>
-            <span className="text-[10px] font-bold text-slate-400">{sourceLabel(f)}</span>
+            <span className="rounded-full bg-[var(--blue-soft)] px-2 py-0.5 text-[10px] font-black text-[var(--blue-deep)]">{FACT_CATEGORY_LABELS[f.category] || f.category}</span>
+            <span className="text-[10px] font-bold text-[var(--muted)]">{sourceLabel(f)}</span>
           </div>
           <input
-            className="mt-1 w-full rounded-lg border border-transparent bg-transparent px-1 py-0.5 text-sm font-black text-slate-800 hover:border-slate-200 focus:border-fuchsia-300 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-transparent bg-transparent px-1 py-0.5 text-sm font-black text-[var(--ink)] hover:border-[var(--line)] focus:border-[var(--blue)] focus:outline-none"
             defaultValue={f.statement}
             maxLength={300}
             onBlur={(e) => e.target.value.trim() && e.target.value !== f.statement && update([{ id: f.id, statement: e.target.value }])}
           />
-          <p className="mt-0.5 px-1 text-xs font-bold leading-relaxed text-slate-500">原文: {f.quote}</p>
+          <p className="mt-0.5 px-1 text-xs font-bold leading-relaxed text-[var(--sub)]">原文: {f.quote}</p>
         </div>
-        <button type="button" onClick={() => update([{ id: f.id, delete: true }])} className="rounded-lg p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-600" aria-label="この事実を削除">
+        <button type="button" onClick={() => update([{ id: f.id, delete: true }])} className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600" aria-label="この事実を削除">
           <Trash2 className="h-4 w-4" />
         </button>
       </div>
@@ -532,12 +559,20 @@ function FactSection({ data, onChange, materialReady }: { data: Detail; onChange
         title="記事に使う事実"
         desc="録音・回答・会社プロフィールから、記事の材料になる事実を原文つきで抜き出します。記事にしてよいものにチェックを入れてください。文の言い回しは直せますが、原文は変えられません。"
       />
-      <Button onClick={extract} loading={busy} disabled={!materialReady} variant={data.facts.length ? 'secondary' : 'primary'}>
+      <ConfirmDialog
+        open={confirmRedo}
+        title="事実を抽出し直しますか？"
+        body="いまのチェックや言い回しの修正は消え、素材からもう一度抜き出します。"
+        confirmLabel="抽出し直す"
+        onConfirm={() => void extract()}
+        onClose={() => setConfirmRedo(false)}
+      />
+      <Button onClick={() => (data.facts.length ? setConfirmRedo(true) : void extract())} loading={busy} disabled={!materialReady} variant={data.facts.length ? 'secondary' : 'primary'}>
         <ClipboardList className="h-4 w-4" />
         {data.facts.length ? '事実を抽出し直す' : '事実を抽出する'}
       </Button>
-      {!materialReady && <p className="mt-2 text-xs font-bold text-slate-400">{data.mode === 'voice' ? '先に録音を文字起こししてください。' : 'アンケートの必須設問が埋まると抽出できます。'}</p>}
-      {busy && <p className="mt-2 text-xs font-bold text-slate-500">素材を読み込んで事実を抜き出しています。1分ほどかかります。</p>}
+      {!materialReady && <p className="mt-2 text-xs font-bold text-[var(--muted)]">{data.mode === 'voice' ? '先に録音を文字起こししてください。' : 'アンケートの必須設問が埋まると抽出できます。'}</p>}
+      {busy && <ProgressSteps steps={['素材を読み込んでいます', '事実を原文つきで抜き出しています', '原文と照らし合わせて確かめています']} current={factStep} note="1分ほどかかります。" />}
       {error && (
         <div className="mt-3">
           <LimitNotice error={error} />
@@ -545,7 +580,7 @@ function FactSection({ data, onChange, materialReady }: { data: Detail; onChange
       )}
       {person.length > 0 && (
         <div className="mt-5">
-          <p className="text-xs font-black text-slate-600">ご本人のお話（{person.filter((f) => f.approved).length} / {person.length}件を使用）</p>
+          <p className="text-xs font-black text-[var(--sub)]">ご本人のお話（{person.filter((f) => f.approved).length} / {person.length}件を使用）</p>
           <ul className="mt-2 space-y-2">
             {person.map((f) => (
               <FactRow key={f.id} f={f} />
@@ -555,7 +590,7 @@ function FactSection({ data, onChange, materialReady }: { data: Detail; onChange
       )}
       {company.length > 0 && (
         <div className="mt-5">
-          <p className="text-xs font-black text-slate-600">会社の事実（{company.filter((f) => f.approved).length} / {company.length}件を使用）</p>
+          <p className="text-xs font-black text-[var(--sub)]">会社の事実（{company.filter((f) => f.approved).length} / {company.length}件を使用）</p>
           <ul className="mt-2 space-y-2">
             {company.map((f) => (
               <FactRow key={f.id} f={f} />
@@ -585,8 +620,11 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
   const factById = useMemo(() => new Map(data.facts.map((f) => [f.id, f])), [data.facts])
   const approvedPerson = data.facts.filter((f) => f.approved && f.sourceType !== 'company').length
 
+  const [confirmRegen, setConfirmRegen] = useState(false)
+  const articleStep = useTimedStep(busy, 3, 25000)
+  useLeaveGuard(dirty)
   const generate = async () => {
-    if (article && !window.confirm('記事を作り直すと、新しい版ができます（利用回数を1回使います）。いまの編集内容は残りません。よろしいですか？')) return
+    setConfirmRegen(false)
     setBusy(true)
     setError(null)
     try {
@@ -596,6 +634,7 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
       setThumbKey((k) => k + 1)
       onChange({ ...data, article: d.article, status: 'DONE' })
       window.dispatchEvent(new Event('shanai:generated'))
+      toast.success('記事ができました', { duration: 3000 })
     } catch (e) {
       const err = e as Error & { data?: any }
       setError({ message: err.message, upgradeUrl: err.data?.upgradeUrl })
@@ -613,6 +652,7 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
       setArticle(d.article)
       setDirty(false)
       setSaved(true)
+      toast.success('保存しました', { duration: 3000 })
       setThumbKey((k) => k + 1)
       setTimeout(() => setSaved(false), 1800)
     } catch (e) {
@@ -641,7 +681,15 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
     <Card>
       <SectionTitle step="ステップ4" title="記事" desc="チェックを入れた事実だけを使って記事を書きます。会社の事実は、ご本人の仕事とつなげて紹介します。" />
       <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={generate} loading={busy} disabled={approvedPerson < 5} variant={article ? 'secondary' : 'primary'}>
+        <ConfirmDialog
+          open={confirmRegen}
+          title="記事を作り直しますか？"
+          body="新しい版ができます（利用回数を1回使います）。いまの編集内容は新しい版には引き継がれません。"
+          confirmLabel="作り直す"
+          onConfirm={() => void generate()}
+          onClose={() => setConfirmRegen(false)}
+        />
+        <Button onClick={() => (article ? setConfirmRegen(true) : void generate())} loading={busy} disabled={approvedPerson < 5} variant={article ? 'secondary' : 'primary'}>
           <Sparkles className="h-4 w-4" />
           {article ? '記事を作り直す' : '記事を作る'}
         </Button>
@@ -653,8 +701,8 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
             </Button>
             <a
               href={dirty ? undefined : `/api/shanai/interviews/${data.id}/export`}
-              onClick={(e) => dirty && (e.preventDefault(), window.alert('先に「編集を保存」を押してください。'))}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-800 hover:bg-slate-50"
+              onClick={(e) => dirty && (e.preventDefault(), toast.error('先に「編集を保存」を押してください。'))}
+              className="inline-flex items-center gap-1.5 rounded-[var(--r-sm)] border border-[var(--line)] bg-[var(--paper)] px-4 py-2.5 text-sm font-black text-[var(--ink)] hover:bg-[var(--bg)]"
             >
               <FileText className="h-4 w-4" />
               Wordでダウンロード
@@ -662,8 +710,8 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
           </>
         )}
       </div>
-      {approvedPerson < 5 && <p className="mt-2 text-xs font-bold text-slate-400">ご本人のお話の事実が5件以上チェックされると作れます。</p>}
-      {busy && <p className="mt-2 text-xs font-bold text-slate-500">記事を書いています。1〜2分かかります。</p>}
+      {approvedPerson < 5 && <p className="mt-2 text-xs font-bold text-[var(--muted)]">ご本人のお話の事実が5件以上チェックされると作れます。</p>}
+      {busy && <ProgressSteps steps={['確認済みの事実を整理しています', '記事の構成を組み立てています', '本文を書き、根拠を照らし合わせています']} current={articleStep} note="1〜2分かかります。" />}
       {error && (
         <div className="mt-3">
           <LimitNotice error={error} />
@@ -682,14 +730,14 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
               </Field>
             </div>
             <div>
-              <p className="text-xs font-black text-slate-600">サムネイル</p>
+              <p className="text-xs font-black text-[var(--sub)]">サムネイル</p>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img key={thumbKey} src={`/api/shanai/interviews/${data.id}/thumbnail?v=${thumbKey}`} alt="サムネイル画像" className="mt-1 w-full rounded-xl border border-slate-200" />
-              <a href={`/api/shanai/interviews/${data.id}/thumbnail?download=1`} className="mt-2 inline-flex items-center gap-1 text-xs font-black text-fuchsia-700">
+              <img key={thumbKey} src={`/api/shanai/interviews/${data.id}/thumbnail?v=${thumbKey}`} alt="サムネイル画像" className="mt-1 w-full rounded-[var(--r-sm)] border border-[var(--line)]" />
+              <a href={`/api/shanai/interviews/${data.id}/thumbnail?download=1`} className="mt-2 inline-flex items-center gap-1 text-xs font-black text-[var(--blue-deep)]">
                 <Download className="h-3.5 w-3.5" />
                 サムネをダウンロード（1200×630）
               </a>
-              {dirty && <p className="mt-1 text-[11px] font-bold text-slate-400">一言の変更は保存後に反映されます。</p>}
+              {dirty && <p className="mt-1 text-[11px] font-bold text-[var(--muted)]">一言の変更は保存後に反映されます。</p>}
             </div>
           </div>
 
@@ -709,22 +757,22 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
               b.type === 'heading' ? (
                 <div key={i} className="flex items-center gap-2 pt-2">
                   <input className={`${inputCls} text-base font-black`} value={b.heading || ''} maxLength={120} onChange={(e) => editBlock(i, { heading: e.target.value })} aria-label="見出し" />
-                  <button type="button" onClick={() => removeBlock(i)} className="rounded-lg p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-600" aria-label="見出しを削除">
+                  <button type="button" onClick={() => removeBlock(i)} className="rounded-lg p-2 text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600" aria-label="見出しを削除">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               ) : (
-                <div key={i} className={`rounded-xl border p-3 ${b.unsupported ? 'border-amber-300 bg-amber-50/50' : b.type === 'company' ? 'border-slate-200 bg-slate-50' : 'border-slate-200 bg-white'}`}>
+                <div key={i} className={`rounded-[var(--r-sm)] border p-3 ${b.unsupported ? 'border-[var(--note-ink)] bg-[var(--note-bg)]' : b.type === 'company' ? 'border-[var(--line)] bg-[var(--bg)]' : 'border-[var(--line)] bg-[var(--paper)]'}`}>
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-black text-slate-500">
+                    <span className="text-[11px] font-black text-[var(--sub)]">
                       {b.type === 'qa' ? '質問と答え' : b.type === 'quote' ? '印象に残った一言' : b.type === 'company' ? '会社について' : '本文'}
-                      {b.unsupported && <span className="ml-2 text-amber-700">根拠の事実がありません</span>}
+                      {b.unsupported && <span className="ml-2 text-[var(--note-ink)]">根拠の事実がありません</span>}
                     </span>
-                    <button type="button" onClick={() => removeBlock(i)} className="rounded-lg p-1 text-slate-300 hover:bg-rose-50 hover:text-rose-600" aria-label="段落を削除">
+                    <button type="button" onClick={() => removeBlock(i)} className="rounded-lg p-1 text-[var(--muted)] hover:bg-rose-50 hover:text-rose-600" aria-label="段落を削除">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  {b.type === 'qa' && <input className={`${inputCls} mb-2 font-black text-fuchsia-700`} value={b.question || ''} maxLength={300} onChange={(e) => editBlock(i, { question: e.target.value })} aria-label="質問" />}
+                  {b.type === 'qa' && <input className={`${inputCls} mb-2 font-black text-[var(--blue-deep)]`} value={b.question || ''} maxLength={300} onChange={(e) => editBlock(i, { question: e.target.value })} aria-label="質問" />}
                   <textarea
                     className={`${inputCls} leading-relaxed ${b.type === 'quote' ? 'min-h-[60px] text-base font-black' : 'min-h-[120px]'}`}
                     value={b.body}
@@ -733,14 +781,14 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
                   />
                   {b.factIds.length > 0 && (
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-[11px] font-black text-slate-400">根拠の事実（{b.factIds.length}件）</summary>
+                      <summary className="cursor-pointer text-[11px] font-black text-[var(--muted)]">根拠の事実（{b.factIds.length}件）</summary>
                       <ul className="mt-1 space-y-1">
                         {b.factIds.map((fid) => {
                           const f = factById.get(fid)
                           return f ? (
-                            <li key={fid} className="text-[11px] font-bold leading-relaxed text-slate-500">
+                            <li key={fid} className="text-[11px] font-bold leading-relaxed text-[var(--sub)]">
                               ・{f.statement}
-                              <span className="text-slate-400">（原文: {f.quote}）</span>
+                              <span className="text-[var(--muted)]">（原文: {f.quote}）</span>
                             </li>
                           ) : null
                         })}
@@ -752,8 +800,8 @@ function ArticleSection({ data, onChange }: { data: Detail; onChange: (d: Detail
             )}
           </div>
 
-          <p className="text-[11px] font-bold leading-relaxed text-slate-400">
-            Googleドキュメントで編集する場合は、ダウンロードした Word ファイルを Googleドライブにアップロードして開いてください。公開前に、ご本人と内容を必ずご確認ください。
+          <p className="text-[11px] font-bold leading-relaxed text-[var(--muted)]">
+            Googleドキュメントで編集するときは、WordファイルをGoogleドライブにアップロードして開いてください。公開する前に、ご本人と内容を必ずご確認ください。
           </p>
         </div>
       )}

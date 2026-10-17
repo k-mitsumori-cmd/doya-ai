@@ -1733,9 +1733,9 @@ export const SERVICES: Service[] = [
       '社内インタビューの録音をアップロードするか、社員にアンケートのURLを送るだけで、採用広報や社内報に使える社員インタビュー記事を作成します。会社サイト・サービスサイトのURLを登録しておくと、ミッションや事業、制度などを読み取り、社員の仕事が会社のどこにつながっているかまで記事の中で紹介します。記事は録音・回答・会社サイトから原文つきで抜き出した事実だけをもとに書くため、書いていないことを盛った文章になりません。写真とサムネ入りのWordファイルでダウンロードできます。',
     // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
     icon: '',
-    color: 'fuchsia',
-    gradient: 'from-[#c026d3] to-[#4a044e]',
-    bgGradient: 'from-fuchsia-50 to-pink-50',
+    color: 'blue',
+    gradient: 'from-[#0066ff] to-[#0047d6]',
+    bgGradient: 'from-blue-50 to-sky-50',
     href: '/shanai',
     dashboardHref: '/shanai',
     pricingHref: '/shanai/pricing',

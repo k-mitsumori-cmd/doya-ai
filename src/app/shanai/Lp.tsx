@@ -18,12 +18,12 @@ function FactMock() {
     <MockWindow title="記事の根拠になる事実（表示例）">
       <div className="space-y-2 p-4 text-left">
         {rows.map(([who, text, src]) => (
-          <div key={text} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+          <div key={text} className="rounded-[var(--r-sm)] border border-[var(--line)] bg-[var(--paper)] px-3 py-2.5">
             <div className="flex items-center gap-2">
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${who === '会社' ? 'bg-slate-100 text-slate-600' : 'bg-fuchsia-50 text-fuchsia-700'}`}>{who}</span>
-              <span className="text-[10px] font-bold text-slate-400">{src}</span>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${who === '会社' ? 'bg-[var(--bg)] text-[var(--sub)]' : 'bg-[var(--blue-soft)] text-[var(--blue-deep)]'}`}>{who}</span>
+              <span className="text-[10px] font-bold text-[var(--muted)]">{src}</span>
             </div>
-            <p className="mt-1 text-sm font-black text-slate-800">{text}</p>
+            <p className="mt-1 text-sm font-black text-[var(--ink)]">{text}</p>
           </div>
         ))}
       </div>
@@ -35,10 +35,10 @@ function ArticleMock() {
   return (
     <MockWindow title="できあがる記事（表示例）">
       <div className="space-y-3 p-5 text-left">
-        <p className="text-base font-black leading-snug text-slate-900">「お客様の声が、仕事のいちばんの原動力です」</p>
-        <p className="text-xs font-bold leading-relaxed text-slate-500">カスタマーサクセス部 リーダー / 2021年入社</p>
-        <p className="text-sm font-black text-fuchsia-700">― 入社を決めた理由を教えてください。</p>
-        <p className="text-sm font-bold leading-relaxed text-slate-700">前職では、自分の仕事がお客様にどう届いているのか見えませんでした。面接で……</p>
+        <p className="text-base font-black leading-snug text-[var(--ink)]">「お客様の声が、仕事のいちばんの原動力です」</p>
+        <p className="text-xs font-bold leading-relaxed text-[var(--sub)]">カスタマーサクセス部 リーダー / 2021年入社</p>
+        <p className="text-sm font-black text-[var(--blue-deep)]">― 入社を決めた理由を教えてください。</p>
+        <p className="text-sm font-bold leading-relaxed text-[var(--sub)]">前職では、自分の仕事がお客様にどう届いているのか見えませんでした。面接で……</p>
       </div>
     </MockWindow>
   )
@@ -55,7 +55,7 @@ const ROWS: ShowcaseRow[] = [
   {
     icon: 'domain',
     title: '会社のURLで、その会社だけの記事に',
-    desc: '会社サイト・サービスサイト・採用ページを読み取り、ミッションや事業、数字、制度を会社プロフィールにまとめます。社員の仕事がどのサービスにつながっているかまで記事で伝えます。',
+    desc: '会社サイトやサービスサイト、採用ページを読み取ります。ミッション・事業・数字・制度を、会社プロフィールにまとめます。社員の仕事がどのサービスにつながっているかまで記事で伝えます。',
     bullets: ['会社情報は一度登録すれば全インタビューで使い回し', 'サイトに書かれた原文を根拠として保存', 'サムネは会社の色とご本人の写真で作成'],
     visual: <ArticleMock />,
   },
@@ -69,13 +69,13 @@ export default function ShanaiLp() {
         eyebrow="ドヤAI"
         title="録音と写真を入れるだけで、"
         highlight="会社が魅力的に見える社員インタビュー。"
-        subtitle="社内インタビューの録音か、社員のアンケート回答から、会社の情報と組み合わせた記事をAIが書き上げます。Wordとサムネ画像で受け取れます。"
+        subtitle="社内インタビューの録音か社員のアンケート回答から、AIが記事を書き上げます。記事には会社の情報も組み合わせます。Wordとサムネ画像で受け取れます。"
         note={`無料プランは${freeLimit}。クレジットカードの登録は不要です。`}
         ctaHref={CTA}
         ctaLabel="無料ではじめる"
         subCtaHref="/shanai/pricing"
         subCtaLabel="料金を見る"
-        visual={<ArticleMock />}
+        image={{ src: '/shanai/hero.webp', alt: 'マイクを持ったドヤAIのシロクマと、社員インタビュー記事の編集画面' }}
       />
 
       <UseCases
@@ -91,6 +91,7 @@ export default function ShanaiLp() {
       <FeatureShowcase title="素材集めから記事まで、ひとつで" lead="録音でもアンケートでも、同じ手順で記事になります。" rows={ROWS} />
 
       <HowItWorks title="3ステップで記事が完成" steps={STEPS} />
+
 
       <Benefits title="選ばれる理由" items={BENEFITS} />
 

@@ -2,6 +2,13 @@
 // ドヤ社内インタビュー 型定義
 // ============================================
 
+/**
+ * 色の値（画面では tokens.css の var(--blue) を使う。ここは LP の SVG・サムネ・色入力の初期値など、
+ * CSS 変数が使えない所のためだけに置く。値は統合仕様 §11 の --blue と同じ）
+ */
+export const SHANAI_ACCENT = '#0066ff'
+export const DEFAULT_BRAND_COLOR = '#0066ff'
+
 export type ShanaiMode = 'voice' | 'survey'
 export type ShanaiStatus = 'DRAFT' | 'COLLECTING' | 'FACTS' | 'WRITING' | 'DONE'
 export type ShanaiPurpose = 'recruit' | 'internal'

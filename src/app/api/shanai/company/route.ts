@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShanaiUserId, json, unauthorized } from '@/lib/shanai/access'
-import { companyDto, getOrCreateCompany } from '@/lib/shanai/company-dto'
-import { parseSiteUrl, SOURCE_KINDS } from '@/lib/shanai/company'
+import { companyDto } from '@/lib/shanai/company-read'
+import { getOrCreateCompany, parseSiteUrl, SOURCE_KINDS } from '@/lib/shanai/company'
 import { clip, oneOf } from '@/lib/shanai/types'
 
 const MAX_SOURCES = 6

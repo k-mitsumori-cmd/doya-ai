@@ -1,0 +1,60 @@
+/*
+ * ドヤ社内インタビュー デザイントークン（暫定）
+ * ⚠️ 統合仕様 R-3: 値は src/app/ui-renewal/renewal.module.css の :root と同じ（クリア）。
+ *    段0で src/components/ds/tokens.css が main に入ったら、このファイルを消して ds 側に差し替えるだけにする。
+ *    他サービスに漏らさないよう .shanai-ds の中だけで定義する。
+ */
+.shanai-ds {
+  --blue: #0066ff;
+  --blue-deep: #0047d6;
+  --blue-soft: #e8f0ff;
+  --blue-line: #d7e5ff;
+  --navy: #0a0f3c;
+  --ink: #101633;
+  --sub: #4a5375;
+  --muted: #7a83a3;
+  --line: #e3e8f4;
+  --line-strong: #c6cde0;
+  --bg: #f4f7fd;
+  --paper: #ffffff;
+  --surface-2: #f8faff;
+  --track: #eef1f8;
+  --pink: #ff1e72;
+  --yellow: #ffd400;
+  --cyan: #00e0ff;
+  --note-bg: #fff7d6;
+  --note-ink: #7a5b00;
+  --ok-bg: #e6f8ef;
+  --ok-ink: #0b8a4d;
+  --skel-a: #eef2fa;
+  --skel-b: #f9fbff;
+  --r: 22px;
+  --r-sm: 14px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --shadow: 0 1px 2px rgba(16, 22, 51, 0.04), 0 8px 28px -12px rgba(16, 22, 51, 0.14);
+  --shadow-lg: 0 2px 6px rgba(16, 22, 51, 0.05), 0 30px 60px -24px rgba(10, 15, 60, 0.28);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.shanai-ds :focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.shanai-skeleton {
+  background: linear-gradient(90deg, var(--skel-a) 25%, var(--skel-b) 37%, var(--skel-a) 63%);
+  background-size: 400% 100%;
+  border-radius: var(--r-sm);
+  animation: shanai-skel 1.4s var(--ease-io) infinite;
+}
+
+@keyframes shanai-skel {
+  from { background-position: 100% 50%; }
+  to { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shanai-skeleton { animation: none; }
+}

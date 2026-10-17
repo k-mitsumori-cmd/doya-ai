@@ -29,7 +29,7 @@ export async function buildThumbnail(data: NonNullable<Awaited<ReturnType<typeof
     department: interview.department,
     position: interview.position,
     companyName: company?.name || '',
-    brandColor: company?.brandColor || '#c026d3',
+    brandColor: company?.brandColor || '#0066ff',
   })
 }
 

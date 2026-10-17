@@ -404,19 +404,19 @@ export const mensetsuTheme: SidebarTheme = {
   zapColor: 'text-sky-300 fill-sky-300',
 }
 
-/** ドヤ社内インタビュー — フクシア（人の温度感。LP の ACCENT と揃える） */
+/** ドヤ社内インタビュー — クリアの青（統合仕様 R-3。段0の AppShell が入るまでの暫定サイドバー用） */
 export const shanaiTheme: SidebarTheme = {
-  bgGradient: 'bg-gradient-to-b from-[#c026d3] via-[#a21caf] to-[#4a044e]',
-  navText: 'text-fuchsia-50/80',
-  navTextIcon: 'text-fuchsia-100/80',
-  sectionText: 'text-fuchsia-100/60',
-  toggleText: 'text-[#a21caf]',
-  toggleHover: 'hover:bg-fuchsia-50',
-  brandingText: 'text-fuchsia-50/40',
+  bgGradient: 'bg-gradient-to-b from-[#0066ff] via-[#0047d6] to-[#0a0f3c]',
+  navText: 'text-blue-50/80',
+  navTextIcon: 'text-blue-100/80',
+  sectionText: 'text-blue-100/60',
+  toggleText: 'text-[#0047d6]',
+  toggleHover: 'hover:bg-blue-50',
+  brandingText: 'text-blue-50/40',
   profileBg: 'bg-black/15',
-  avatarBg: 'bg-[#a21caf]',
-  loginText: 'text-[#a21caf]',
-  loginHover: 'hover:bg-fuchsia-50',
-  aiBubbleBg: 'bg-[#a21caf]',
-  zapColor: 'text-amber-200 fill-amber-200',
+  avatarBg: 'bg-[#0047d6]',
+  loginText: 'text-[#0047d6]',
+  loginHover: 'hover:bg-blue-50',
+  aiBubbleBg: 'bg-[#0047d6]',
+  zapColor: 'text-sky-200 fill-sky-200',
 }

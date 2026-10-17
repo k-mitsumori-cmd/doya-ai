@@ -12,6 +12,7 @@ import { prisma } from '@/lib/prisma'
 import { SURVEY_QUESTIONS, checkSurvey } from '@/lib/shanai/survey'
 import { addFollowups, saveSurveyAnswers, submitSurvey } from '@/lib/shanai/survey-service'
 import type { SurveyAnswers } from '@/lib/shanai/types'
+import { isSurveyToken } from '@/lib/shanai/token'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -19,7 +20,7 @@ const HEADERS = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollo
 const reply = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: HEADERS })
 
 async function findByToken(token: string) {
-  if (!/^[a-z0-9]{20,40}$/i.test(token)) return null
+  if (!isSurveyToken(token)) return null
   return prisma.shanaiInterview.findUnique({
     where: { surveyToken: token },
     select: { id: true, userId: true, mode: true, intervieweeName: true, surveyAnswers: true, surveySubmittedAt: true, followupRuns: true },
@@ -27,22 +28,28 @@ async function findByToken(token: string) {
 }
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
-  const { token } = await ctx.params
-  const row = await findByToken(token)
-  if (!row || row.mode !== 'survey') return reply({ error: 'このアンケートは見つかりません。URLをご確認ください。' }, 404)
-  const company = await prisma.shanaiCompany.findUnique({ where: { userId: row.userId }, select: { name: true, brandColor: true } })
-  const answers = (row.surveyAnswers as unknown as SurveyAnswers) || {}
-  return reply({
-    success: true,
-    intervieweeName: row.intervieweeName,
-    companyName: company?.name || '',
-    brandColor: company?.brandColor || '#c026d3',
-    questions: SURVEY_QUESTIONS,
-    answers,
-    check: checkSurvey(answers),
-    submittedAt: row.surveySubmittedAt?.toISOString() ?? null,
-    canAskFollowups: row.followupRuns < 3,
-  })
+  try {
+    const { token } = await ctx.params
+    const row = await findByToken(token)
+    if (!row || row.mode !== 'survey') return reply({ error: 'このアンケートは見つかりません。URLをご確認ください。' }, 404)
+    const company = await prisma.shanaiCompany.findUnique({ where: { userId: row.userId }, select: { name: true, brandColor: true } })
+    // ⚠️ 提出後は回答を返さない（URL が転送・漏えいしても、提出済みの内容は読めない）
+    const answers = row.surveySubmittedAt ? {} : (row.surveyAnswers as unknown as SurveyAnswers) || {}
+    return reply({
+      success: true,
+      intervieweeName: row.intervieweeName,
+      companyName: company?.name || '',
+      brandColor: company?.brandColor || '',
+      questions: SURVEY_QUESTIONS,
+      answers,
+      check: checkSurvey(row.surveySubmittedAt ? (row.surveyAnswers as unknown as SurveyAnswers) || {} : answers),
+      submittedAt: row.surveySubmittedAt?.toISOString() ?? null,
+      canAskFollowups: row.followupRuns < 3,
+    })
+  } catch (e) {
+    console.error('[shanai/public/survey][GET] failed', (e as Error)?.name)
+    return reply({ error: '読み込みに失敗しました。時間をおいてもう一度お試しください。' }, 500)
+  }
 }
 
 export async function PUT(req: NextRequest, ctx: Ctx) {

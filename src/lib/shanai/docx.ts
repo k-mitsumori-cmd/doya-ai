@@ -54,7 +54,7 @@ export async function buildArticleDocx(input: DocxInput): Promise<Buffer> {
       new Paragraph({
         children: [text(input.lead, { size: 22 })],
         spacing: { after: 320, line: 360 },
-        border: { left: { style: BorderStyle.SINGLE, size: 18, color: 'C026D3', space: 12 } },
+        border: { left: { style: BorderStyle.SINGLE, size: 18, color: '0066FF', space: 12 } },
         indent: { left: 240 },
       })
     )
@@ -75,7 +75,7 @@ export async function buildArticleDocx(input: DocxInput): Promise<Buffer> {
       continue
     }
     if (b.type === 'qa') {
-      if (b.question) children.push(new Paragraph({ children: [text('― ' + b.question, { bold: true, size: 22, color: '7E22CE' })], spacing: { before: 120, after: 120 } }))
+      if (b.question) children.push(new Paragraph({ children: [text('― ' + b.question, { bold: true, size: 22, color: '0047D6' })], spacing: { before: 120, after: 120 } }))
       children.push(...paragraphs(b.body))
       continue
     }
@@ -83,7 +83,7 @@ export async function buildArticleDocx(input: DocxInput): Promise<Buffer> {
       children.push(
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          children: [text(`「${b.body.replace(/^[「『]|[」』]$/g, '')}」`, { bold: true, size: 30, color: '7E22CE' })],
+          children: [text(`「${b.body.replace(/^[「『]|[」』]$/g, '')}」`, { bold: true, size: 30, color: '0047D6' })],
           spacing: { before: 280, after: 280 },
         })
       )

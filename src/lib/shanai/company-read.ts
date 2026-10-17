@@ -1,16 +1,11 @@
 // ============================================
-// ドヤ社内インタビュー 会社情報の取得・返却
+// ドヤ社内インタビュー 会社情報の読み取り（読み取り専用）
 // ============================================
+// ⚠️ 統合仕様 R-4: API route と将来のエージェント道具が同じ関数を呼ぶ。ここでは書き込まない
 import { prisma } from '@/lib/prisma'
 
-export async function getOrCreateCompany(userId: string) {
-  const found = await prisma.shanaiCompany.findUnique({ where: { userId } })
-  if (found) return found
-  return prisma.shanaiCompany.upsert({ where: { userId }, update: {}, create: { userId } })
-}
-
-export async function companyDto(userId: string) {
-  const c = await prisma.shanaiCompany.findUnique({
+export async function companyDto(userId: string, db: Pick<typeof prisma, 'shanaiCompany'> = prisma) {
+  const c = await db.shanaiCompany.findUnique({
     where: { userId },
     include: {
       sources: { orderBy: { createdAt: 'asc' } },

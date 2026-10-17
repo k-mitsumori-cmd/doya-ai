@@ -84,10 +84,13 @@
 | ShanaiArticle | shanai_article | 記事（版ごと） |
 | ShanaiUsageLog | shanai_usage_log | 利用枠の台帳（削除しない） |
 
+- `ShanaiCompany.companyProfileId`（null 可・FK なし）は、経営エージェントの自社プロフィールを指すための**予約列**（統合仕様 R-5）。いまは使わない。段0以降、自社プロフィールが入ったらここで結ぶ
+- 回答URLのトークン（`surveyToken`）は `src/lib/shanai/token.ts` の CSPRNG（192ビット）で作る。cuid は使わない。担当者は画面から作り直せる（前のURLは使えなくなる）。提出後は公開APIが回答を返さない
+
 録音・写真はドヤインタビューと同じ非公開バケット（`INTERVIEW_STORAGE_BUCKET`）の `{userId}/shanai_{audio|photo}_{interviewId}/` に置く。
 
 ## 本番反映の前に必要なこと
-1. **DB**: 上の9テーブルを `doya-db-push` の手順で本番に反映する（Vercel のビルドは db push しない。忘れると全API が 500）
+1. **DB**: 上の9テーブル（`companyProfileId` 予約列を含む）を `doya-db-push` の手順で本番に反映する（Vercel のビルドは db push しない。忘れると全API が 500）
 2. **環境変数**: 既存の `ASSEMBLYAI_API_KEY`・Supabase・LLM の設定をそのまま使う（新規なし）
 3. **実機確認**: 録音のアップロード → 文字起こし → 事実 → 記事 → Word / サムネまでを、テスト用の短い録音で1回通す（AssemblyAI と LLM の従量課金が発生するため、実行前に承認を取る）
 
@@ -96,3 +99,69 @@
 - `src/app/shanai/layout.tsx` の `noindex: true` を外す
 - `scripts/security-regression/verify-google-analytics-services.cjs` の公開サービス数を合わせる
 - 公開用の OGP 画像・ロゴを置く場合は `src/lib/ogp.ts` / `ToolSwitcherMenu` のロゴ表に追加する
+
+## 経営エージェント（リニューアル）との関係
+
+正本は統合仕様 `docs/architecture/management-agent/ADDON-SERVICES-2026-10-18.md`（`feat/ui-renewal-sample`）。レイアウト・トークン・画像の決まりはそちらを参照し、ここには書き写さない。
+
+| 項目 | このブランチでの対応 |
+|------|------|
+| R-1 ナビをデータで持つ | `src/lib/shanai/nav.ts`。`ShanaiSidebar` はこれを描くだけ |
+| R-3 ds トークン | `src/components/shanai/tokens.css`（`.shanai-ds` の中だけで効く。値は `renewal.module.css` と同じ）。`src/app/shanai` に色の直書きは無い。段0で ds に差し替える |
+| R-4 読み取りの分離 | `src/lib/shanai/interviews-read.ts`（`listInterviews` / `countInterviews` / `getInterviewDetail`）、`src/lib/shanai/company-read.ts`。API とエージェント道具が同じ関数を呼ぶ |
+| R-5 自社プロフィール | `ShanaiCompany.companyProfileId` を予約 |
+| R-7 公開画面 | `/shanai/answer/[token]` はアプリ枠を出さない（`src/lib/ui/guest-path.ts`）。AppShell 移行時も対象外（`guestShared`） |
+| §5 エージェント道具 | `src/lib/shanai/agent-tools.ts` |
+| §6 #15 社員の選択 | 未実装。将来 `ObjectLink(kind='employee', from='shanai.interview', to='hr.employee')` で HR の社員から氏名・部署・入社日を初期値にする |
+| §11 状態表示 | 読込（スケルトン）・空（イラスト）・エラー（もう一度）・権限なし・処理中（段階表示）・成功（トースト3秒）。`alert` / `confirm` は使わない |
+| §12 画像 | `docs/design/images/shanai/PROMPTS.md` |
+| 単体テスト | `npm run test:shanai`（ビルドにも入れてある） |
+
+## マニフェスト草案（R-8。Phase0 で `src/services/shanai/manifest.ts` に移す）
+
+```ts
+export const shanaiManifest = {
+  id: 'shanai',
+  name: 'ドヤ社内インタビュー',
+  stage: 'hire',
+  status: 'beta', // 開発中（UNLISTED）。公開時に 'active'
+  landing: '/shanai',
+  ui: {
+    nav: SHANAI_NAV, // src/lib/shanai/nav.ts（一覧 / 新しく作る / 会社情報 / 料金プラン）
+    icon: '/renewal/icons/shanai.webp',
+    mascot: '/ui-renewal/mascots/shanai.webp',
+  },
+  dataModels: [
+    'ShanaiCompany', 'ShanaiCompanySource', 'ShanaiWebPage', 'ShanaiProfileItem',
+    'ShanaiInterview', 'ShanaiPhoto', 'ShanaiFact', 'ShanaiArticle', 'ShanaiUsageLog',
+  ],
+  scope: 'user', // 1ユーザー1社。組織対応は自社プロフィール（companyProfileId）と合わせて行う
+  routes: {
+    public: ['/shanai', '/shanai/pricing', '/shanai/answer/[token]'],
+    api: { public: ['/api/shanai/public/survey/[token]'] },
+  },
+  guestShared: [{ path: '/shanai/answer/[token]', auth: 'token-param' }],
+  cron: [],
+  externalApis: [
+    { name: 'AssemblyAI', use: '録音の文字起こし', billing: 'metered' },
+    { name: 'テキストLLM（@seo/lib/gemini の既定）', use: '会社サイトの要約・事実の抽出・追加質問・記事の生成', billing: 'metered' },
+    { name: 'Resend', use: 'shanai.sendAnswerLink のメール送付', billing: 'metered' },
+  ],
+  agentTools: [
+    { key: 'shanai.listInterviews', effect: 'read', cost: 'none', approval: 'none', run: 'src/lib/shanai/interviews-read.ts#listInterviews' },
+    { key: 'shanai.draftArticle', effect: 'reversible', cost: 'low', approval: 'setting', run: 'src/lib/shanai/article-service.ts#draftArticle' },
+    { key: 'shanai.sendAnswerLink', effect: 'irreversible', cost: 'none', approval: 'required', sensitive: true, run: 'src/lib/shanai/agent-tools.ts' },
+  ],
+  usage: {
+    meters: [
+      { key: 'shanaiArticles', label: '記事', unit: '本', free: 3, pro: 30, enterprise: 100, period: { free: 'lifetime', paid: 'month' } },
+      { key: 'shanaiTranscripts', label: '文字起こし', unit: '件', free: 3, pro: 30, enterprise: 100, period: { free: 'lifetime', paid: 'month' } },
+    ],
+    ledger: 'shanai_usage_log',
+  },
+  links: [
+    { kind: 'employee', from: 'shanai.interview', to: 'hr.employee', status: 'planned' }, // §6 #15
+    { kind: 'reference', from: 'shanai.article', to: 'mensetsu.companyProfile', status: 'planned' }, // §6 #16
+  ],
+}
+```

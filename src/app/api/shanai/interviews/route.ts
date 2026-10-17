@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic'
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShanaiUserId, json, unauthorized } from '@/lib/shanai/access'
-import { interviewSummaryDto } from '@/lib/shanai/dto'
+import { listInterviews } from '@/lib/shanai/interviews-read'
 import { clip, oneOf } from '@/lib/shanai/types'
+import { newSurveyToken } from '@/lib/shanai/token'
 
 /** 作成できるインタビューの件数（記事生成・文字起こしの枠とは別に、行の作りすぎを防ぐ） */
 const MAX_INTERVIEWS = 500
@@ -15,16 +16,7 @@ export async function GET() {
   try {
     const userId = await getShanaiUserId()
     if (!userId) return unauthorized()
-    const rows = await prisma.shanaiInterview.findMany({
-      where: { userId },
-      orderBy: { updatedAt: 'desc' },
-      take: 200,
-      include: {
-        articles: { orderBy: { version: 'desc' }, take: 1, select: { id: true, title: true, version: true }, where: { NOT: { title: '生成中' } } },
-        photos: { select: { id: true } },
-      },
-    })
-    return json({ success: true, interviews: rows.map(interviewSummaryDto) })
+    return json({ success: true, interviews: await listInterviews(userId) })
   } catch (e) {
     console.error('[shanai/interviews][GET] failed', (e as Error)?.name)
     return json({ error: 'インタビューの取得に失敗しました。' }, 500)
@@ -48,6 +40,7 @@ export async function POST(req: NextRequest) {
     const row = await prisma.shanaiInterview.create({
       data: {
         userId,
+        surveyToken: newSurveyToken(),
         mode: oneOf(body.mode, ['voice', 'survey'] as const, 'voice'),
         intervieweeName,
         department: clip(body.department, 60),

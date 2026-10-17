@@ -1,5 +1,6 @@
 // PUT /api/shanai/interviews/[id]/survey — 担当者がアンケート回答を代わりに入力・保存
 // POST 同上 { action: 'submit' } — 回答を確定（文字数が足りなければ 400）
+// POST 同上 { action: 'rotateToken' } — 回答URLを作り直す（前のURLは使えなくなる。送り先を間違えたとき用）
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -9,6 +10,7 @@ import { getShanaiUserId, json, notFound, ownInterview, unauthorized } from '@/l
 import { saveSurveyAnswers, submitSurvey } from '@/lib/shanai/survey-service'
 import { interviewDetailDto } from '@/lib/shanai/dto'
 import { isCuid } from '@/lib/shanai/types'
+import { newSurveyToken } from '@/lib/shanai/token'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -42,6 +44,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const row = await own(userId, id)
     if (!row) return notFound()
     const body = await req.json().catch(() => ({}))
+    if (body.action === 'rotateToken') {
+      await prisma.shanaiInterview.update({ where: { id }, data: { surveyToken: newSurveyToken() } })
+      return json({ success: true, interview: await interviewDetailDto(id, userId) })
+    }
     if (body.answers) await saveSurveyAnswers(id, body.answers)
     const result = await submitSurvey(id)
     if (!result.ok) return json({ error: result.error, missing: result.missing }, 400)
