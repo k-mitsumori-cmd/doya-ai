@@ -27,7 +27,7 @@
 15. [設計とは別に先に直す修正（フェーズ0の前）](#15-設計とは別に先に直す修正フェーズ0の前)
 16. [新しいサービスを追加するときの仕様（サービス契約）](#16-新しいサービスを追加するときの仕様サービス契約)
 17. [運用（データ保持・掃除、監視と SLO、前提）](#17-運用データ保持掃除監視と-slo前提)
-- 付録 A 新設ファイル / B 未確認点 / C schema-draft の結合検証 / D 監査への回答 / E 改訂履歴 / F 第 2 回審査への回答 / G 最終ゲート第 1 回への回答 / H 告知文 / I LLM プロバイダ契約 / J 多重記述キー一覧 / K 最終ゲート第 2 回への回答
+- 付録 A 新設ファイル / B 未確認点 / C schema-draft の結合検証 / D 監査への回答 / E 改訂履歴 / F 第 2 回審査への回答 / G 最終ゲート第 1 回への回答 / H 告知文 / I LLM プロバイダ契約 / J 多重記述キー一覧 / K 最終ゲート第 2 回への回答 / L 最終ゲート第 3 回への回答
 
 ---
 
@@ -821,22 +821,22 @@ sequenceDiagram
   U->>API: POST { conversationId?, request }
   API->>API: requireCompanyAccess('agent','member') / kill switch / 予算チェック
   API->>EX: AgentRun(queued, nextRunAt=now) 作成 → advance(runId)
-  EX->>EX: リース取得（executionToken, 300s）
+  EX->>EX: リース取得（executionToken, 360s）
   EX->>GW: 意図解析（依頼文＋会社プロフィール要約＋利用可能ツール一覧）
-  GW-->>EX: intent { goal, services[], riskLevel }
+  GW-->>EX: intent { goal, services[], expectedCostClass }
   EX->>GW: 計画生成（tool calling: plan_steps）
   GW-->>EX: steps[] { toolKey, inputDraft, dependsOn }
   EX->>REG: 各 step を zod 検証・権限検証（依頼者の実効ロール ≥ ツール要求ロール）
-  REG-->>EX: 検証済み AgentPlan / AgentStep（riskLevel 付与）
+  REG-->>EX: 検証済み AgentPlan / AgentStep（reversibility × costClass、downstreamIdempotency 付与）
   API-->>U: 202 { runId, status: 'running' }（以後 GET でポーリング / SSE）
 
   loop 依存の解けた step を並列（最大 4）
     EX->>EX: UsageLedger reserve（creditCost）
-    alt riskLevel = read / draft
+    alt reversibility=read、または reversible×(none|low)（承認不要）
       EX->>SVC: ツール実行（依頼者の CompanyContext で）
       SVC-->>EX: 結果（外部テキストは <untrusted> で包む）
       EX->>EX: ToolCall 記録・consume
-    else riskLevel = external
+    else irreversible または costClass=high（承認必須）
       EX->>AP: ApprovalRequest(frozenInput) 作成 → Notification
       EX->>EX: run.status = waiting_approval、リース解放
       U->>API: POST /api/agent/approvals/{id} { decision }（必要なら step-up）
@@ -952,7 +952,7 @@ interface ImageRequest extends LlmRequestBase { size: ImageSize /* 'auto' なし
 - **モデル**: `AgentRun` は SeoJob 型の再開可能ジョブ。リース取得は `seo/lib/job-execution.ts` L20 `acquireSeoJobExecution`（raw SQL 条件付き UPDATE、360s）を複製。
 - **書き込みフェンス**（OPS-02）: SeoJob の `withSeoJobExecution`（L41-60: `executionToken` 一致＋status 条件＋`FOR UPDATE`＋`executionExpiresAt > clock_timestamp()` 再確認。SeoJob 側は `queued,running` だが、エージェントでは **`status IN ('queued','planning','running')`**（planning 中の `AgentPlan / AgentStep` 生成と `running` への遷移もフェンス内で書く。FIN2-02））を **`withAgentRunExecution(token, write)` として複製**し、`AgentRun / AgentStep / ToolCall / ApprovalRequest / UsageLedger(run 由来)` への**全書き込み**をこの中で行う。token 不一致・期限切れは `ExecutionLostError` で即中断（その後の書き込みは一切しない）。ツール呼び出し**前**に `ToolCall(status='running', executionToken)` を commit し、呼び出し**後**も同じフェンスで結果を書く。新ホルダーは `running` のまま残った step を**自動再試行しない**（`downstreamIdempotency='native'` なら結果再取得、`local-record` なら `unknown_outcome` で人の確認）。
 - **advance のスライス**: `POST /api/agent/runs/[id]/advance`（`maxDuration = 300`）は入口で `deadline = now + 240s` の `AbortSignal` を作り、全 LLM・ツール呼び出しに派生 signal を渡す。残り 30s で新しい step を開始せず、**`nextRunAt = now()` を書いてから**リースを解放して返す（OPS-01: `releaseSeoJobExecution` L62-67 は `executionToken=null, executionExpiresAt=null` にするだけで `NULL < now` は偽になるため、解放時に必ず `nextRunAt` を書く）。`runningSeconds` にスライスの実行秒を加算する。
-- **Cron 回収**（OPS-01/06、FIN-01/08/11）: `/api/cron/agent-runs`（`* * * * *`）の claim 条件は **`status IN ('queued','planning','running') AND (executionExpiresAt < now() OR (executionToken IS NULL AND nextRunAt <= now()))`**（`planning` を含める。意図解析・計画中に関数が死んだ run を拾う）。`AgentRun.create` は **必ず `nextRunAt = now()` を書く**（POST 内の最初の advance が claim 前に失敗しても `queued` のまま残らない）。**起動方式**: Cron 自身は advance を実行せず、claim できた run を最大 `K = ceil(agent.max_concurrent_runs / 4) + 2`（既定 20 → 7）件まで **`POST /api/agent/runs/[id]/advance?detached=1`（Bearer `CRON_SECRET`、Cookie 無し）で HTTP 起動**して即終了する。advance 側は `?detached=1` のとき 202 を返してから `after()`（`next/server`、Next 15.1+。Vercel 公式は `waitUntil` の代替として推奨し、`maxDuration` まで実行が延長される）でスライスを実行する。これで毎分の処理能力は K スライスになり、同時 run 上限（20、各 4 分に 1 スライス＝5/分）に対して余裕がある（§3 の「HTTP 自己呼び出しを避ける」は Cookie 転送が理由なので、Cron 文脈は例外）。**一貫性**（FIN2-04）: (1) `/api/agent/runs/[id]/advance` は §6.3 の第 5 分類 **cron-launch**（マニフェスト `routes.cronLaunch[]`。Cookie 無し＋`Authorization: Bearer` 存在なら middleware を通す）。(2) ハンドラは HOF **`withCompanyAccessOrCron('agent','member', handler)`** で export（Bearer があれば `requireCron` → `evaluateCompanyAccess({userId: run.requestedById, companyId: run.companyId})` でセッション非依存の ctx を作る。無ければ `requireCompanyAccess`）。(3) **トークンの受け渡し**: Cron が claim して得た `executionToken` を JSON body `{executionToken}` で渡し、advance は再 claim せず `withAgentRunExecution(token)` を**継承**する（不一致＝別ホルダーなら 409。body にトークンが無い通常のクライアント呼び出しは自分で claim）。(4) `CRON_SECRET` の到達範囲は「`/api/cron/*` の実行」と「cron-launch ルートでスライスを**起動**すること」だけで、データへのアクセス権限は依頼者の `actorSnapshot` / `requestedById` から導く（§15 #2 の「admin 代替としての CRON 受理を廃止」とは別物。admin 権限には一切つながらない）。`after()` が `maxDuration` 300s を本当に使えるかは**要実機確認**（既存の `waitUntil` 10 ファイルと同じ挙動が前提）。確認できない場合の代替は「`agent-runs?slot=0..K-1` を K 本登録して 1 呼び出し 1 件」（Cron パスの query string は公式に明記が無いが、本リポジトリの `vercel.json` L124-128 `service-operations?mode=*` が本番で稼働中）。加えて sweep を 2 つ: (a) `waiting_approval` で全 approval が `expired/rejected` → step `skipped`、reserve を release、run は他 step を続行（§8.6）。(b) `paused` で `nextRunAt <= now()` → `running` に戻して claim。時刻比較はすべて DB `now()` / `clock_timestamp()`（OPS-08）。
+- **Cron 回収**（OPS-01/06、FIN-01/08/11）: `/api/cron/agent-runs`（`* * * * *`）の claim 条件は **`status IN ('queued','planning','running') AND (executionExpiresAt < now() OR (executionToken IS NULL AND nextRunAt <= now()))`**（`planning` を含める。意図解析・計画中に関数が死んだ run を拾う）。`AgentRun.create` は **必ず `nextRunAt = now()` を書く**（POST 内の最初の advance が claim 前に失敗しても `queued` のまま残らない）。**起動方式**: Cron 自身は advance を実行せず、claim できた run を最大 `K = ceil(agent.max_concurrent_runs / 4) + 2`（既定 20 → 7）件まで **`POST /api/agent/runs/[id]/advance?detached=1`（Bearer `CRON_SECRET`、Cookie 無し）で HTTP 起動**して即終了する。advance 側は `?detached=1` のとき 202 を返してから `after()`（`next/server`、Next 15.1+。Vercel 公式は `waitUntil` の代替として推奨し、`maxDuration` まで実行が延長される）でスライスを実行する。これで毎分の処理能力は K スライスになり、同時 run 上限（20、各 4 分に 1 スライス＝5/分）に対して余裕がある（§3 の「HTTP 自己呼び出しを避ける」は Cookie 転送が理由なので、Cron 文脈は例外）。**一貫性**（FIN2-04）: (1) `/api/agent/runs/[id]/advance` は §6.3 の第 5 分類 **cron-launch**（マニフェスト `routes.cronLaunch[]`。Cookie 無し＋`Authorization: Bearer` 存在なら middleware を通す）。(2) ハンドラは HOF **`withCompanyAccessOrCron('agent','member', handler)`** で export（Bearer があれば `requireCron` → `evaluateCompanyAccess({userId: run.requestedById, companyId: run.companyId})` でセッション非依存の ctx を作る。無ければ `requireCompanyAccess`）。(3) **トークンの受け渡し**: Cron が claim して得た `executionToken` を JSON body `{executionToken}` で渡し、advance は再 claim せず `withAgentRunExecution(token)` を**継承**する（不一致＝別ホルダーなら 409。body にトークンが無い通常のクライアント呼び出しは自分で claim）。(4) `CRON_SECRET` の到達範囲は「`/api/cron/*` の実行」と「cron-launch ルートでスライスを**起動**すること」だけで、データへのアクセス権限は依頼者の `actorSnapshot` / `requestedById` から導く（§15 #2 の「admin 代替としての CRON 受理を廃止」とは別物。admin 権限には一切つながらない）。`after()` が `maxDuration` 300s を本当に使えるかは**要実機確認**（既存の `waitUntil` 10 ファイルと同じ挙動が前提）。確認できない場合の代替は「`agent-runs?slot=0..K-1` を K 本登録し、各呼び出しが 1 run だけを扱う」（Cron パスの query string は公式に明記が無いが、本リポジトリの `vercel.json` L124-128 `service-operations?mode=*` が本番で稼働中）。加えて sweep を 2 つ: (a) `waiting_approval` で全 approval が `expired/rejected` → step `skipped`、reserve を release、run は他 step を続行（§8.6）。(b) `paused` で `nextRunAt <= now()` → `running` に戻して claim。時刻比較はすべて DB `now()` / `clock_timestamp()`（OPS-08）。
 - **advanceAttempts** は「期限切れリースからの再 claim」だけを数える（OPS-07）。自発解放・承認・paused からの再開は数えない。上限 5。
 - **並列と接続**（OPS-04）: 1 run 内の並列は最大 4 だが、**DB を触る区間はセマフォ 2** で直列化し、LLM / 外部 HTTP 区間だけ 4 並列（`connection_limit=3`、`pool_timeout=30`）。`costClass=high` の step は同時 1。会社あたり同時 `running` run 2、全体 `agent.max_concurrent_runs`（既定 20）。
 - **冪等性**: `ToolCall.idempotencyKey = '<runId>:<stepId>'`。下流の受け口は `downstreamIdempotency`（§8.2）で宣言し、`none` は read 以外禁止。
@@ -1098,7 +1098,8 @@ Prisma 公式ドキュメントの制限: 「The `query` extension type does not
 | 役割 | 誰が | 何をするか |
 |---|---|---|
 | 一覧・集計の where にテナント列を AND | **query 拡張**（`tenantPrisma`） | `findMany / findFirst / findFirstOrThrow / count / aggregate / groupBy / updateMany / deleteMany` |
-| `create / createMany` の data 検査 | query 拡張（`walkData`） | テナント列強制、ネスト書き込みの再帰検査 |
+| `create / createMany / updateMany` の data 検査 | query 拡張（`walkData`） | テナント列強制、ネスト書き込みの再帰検査、**`updateMany.data` のテナント列書き換え拒否**（FIN3-01） |
+| tx 内の一覧・集計読み（`findMany / findFirst / count / aggregate / groupBy`） | **`owned(tx, ctx)` だけ**（`scoped()` を AND） | `OwnedTx` 型は読み取り系も `Omit`。拡張が tx に乗らない場合でも他社行が返らない（FIN3-02） |
 | `update / delete / upsert / findUnique(OrThrow)` | **`owned(client, ctx)` ヘルパーだけ** | `walkData` → 所属確認（`findFirstOrThrow(scoped)`）→ **「owned 経由」マーカーを付けて**元の操作を呼ぶ |
 | マーカー無しの `update / delete / upsert / findUnique` | query 拡張 | **throw `UseOwnedHelperError`**。マーカー有りは「`walkData` 済み」として通す |
 
@@ -1116,8 +1117,10 @@ export function tenantPrisma(ctx) {
     const t = TENANT_COLUMNS[model]; if (!t) return query(args)
     const expected = expectedFor(t, ctx); if (!expected) throw new TenantScopeError(model)
     switch (operation) {
-      case 'findMany': case 'findFirst': case 'findFirstOrThrow': case 'count': case 'aggregate': case 'groupBy':
-      case 'updateMany': case 'deleteMany':
+      case 'updateMany':
+        walkData(model, args.data, 'updateMany', ctx)       // FIN3-01: data にテナント列があれば throw（where が自社に AND されても、自社行を他社へ移せてしまうため）
+        // fallthrough
+      case 'findMany': case 'findFirst': case 'findFirstOrThrow': case 'count': case 'aggregate': case 'groupBy': case 'deleteMany':
         return query({ ...args, where: { AND: [expandCompound(model, args.where) ?? {}, { [t.column]: expected }] } })
       case 'create': case 'createMany':
         walkData(model, args.data, operation, ctx); return query(args)
@@ -1133,10 +1136,20 @@ export function tenantPrisma(ctx) {
 
 // owned(): 呼び出し元のクライアント（ctx.db でも tx でも）で動く。拡張が乗っていても乗っていなくても同じ検査を自分で行う
 export function owned(client: TenantPrisma | Prisma.TransactionClient, ctx) {
-  const run = (model, op, fn) => ownedScope.run({ model, op }, fn)      // マーカーを付けて元操作を呼ぶ
+  // FIN3-03: Prisma の client[model].update(a) は遅延実行の PrismaPromise。リクエスト（＝$allOperations の呼び出し）は await 時に始まるので、
+  // **run の中で await** してストアの中でリクエストを開始する（リード実機実験 A/B: run の外で await すると store は null、中で await すれば届く）
+  const run = (model, op, fn) => ownedScope.run({ model, op }, async () => await fn())
   return new Proxy({}, { get: (_, model: string) => ({
     findUnique:        (a) => client[model].findFirst({ ...a, where: scoped(model, a.where, ctx) }),
     findUniqueOrThrow: (a) => client[model].findFirstOrThrow({ ...a, where: scoped(model, a.where, ctx) }),
+    // FIN3-02: tx 内の読み取りもここだけ（OwnedTx 型が読み取り系を Omit するため）。拡張が乗っていれば AND が二重になるだけで無害
+    findMany:  (a) => client[model].findMany({ ...a, where: scoped(model, a?.where, ctx) }),
+    findFirst: (a) => client[model].findFirst({ ...a, where: scoped(model, a?.where, ctx) }),
+    count:     (a) => client[model].count({ ...a, where: scoped(model, a?.where, ctx) }),
+    aggregate: (a) => client[model].aggregate({ ...a, where: scoped(model, a?.where, ctx) }),
+    groupBy:   (a) => client[model].groupBy({ ...a, where: scoped(model, a?.where, ctx) }),
+    updateMany: (a) => { walkData(model, a.data, 'updateMany', ctx); return client[model].updateMany({ ...a, where: scoped(model, a.where, ctx) }) },
+    deleteMany: (a) => client[model].deleteMany({ ...a, where: scoped(model, a.where, ctx) }),
     update: async (a) => {
       walkData(model, a.data, 'update', ctx)                                           // (1) data の再帰検査（ネスト connect/set/… と テナント列書き換え禁止）
       await client[model].findFirstOrThrow({ where: scoped(model, a.where, ctx), select: { id: true } })   // (2) 所属確認（同じ client ＝ tx なら tx 上）
@@ -1161,8 +1174,9 @@ export function owned(client: TenantPrisma | Prisma.TransactionClient, ctx) {
 
 | ケース | (a) 正常な `owned(tx, ctx).sfaDeal.update({ where: { id: 自社 deal }, data: { stageId } })` | (b) `owned(tx, ctx).sfaTask.update({ where: { id: 自社 task }, data: { deal: { connect: { id: <B 社 deal> } } } })` | `tx.sfaDeal.update(...)` を直接呼ぶ |
 |---|---|---|---|
-| tx に拡張が**乗る** | `walkData` OK → `findFirstOrThrow(scoped)` 1 件 → `ownedScope.run` 内で `tx.sfaDeal.update` → 拡張はマーカーを見て `query(args)` → 成功 | `walkData` が `connect: { id }` を `connect: { id, organizationId: A }` に書き換え → Prisma が B 社 deal を見つけられず `RecordNotFound` → 拒否 | 拡張がマーカー無しで throw |
-| tx に拡張が**乗らない** | `walkData` OK → `findFirstOrThrow(scoped)` → `tx.sfaDeal.update` が直接実行 → 成功 | `walkData` が同じ書き換えを行う（owned 側で実行済み）→ `RecordNotFound` → 拒否 | 拡張が無いので止まらない。**型で防ぐ**: `ctx.db.$transaction` のコールバック引数型 `OwnedTx` は `update / delete / upsert / findUnique` を `Omit` しており、直接呼び出しはコンパイルエラー。残りは lint `core/tx-tenant-where`（`tx.<model>.findMany` に `tenantWhere(` が無ければ警告） |
+| tx に拡張が**乗る** | `walkData` OK → `findFirstOrThrow(scoped)` 1 件 → `run` 内で `await tx.sfaDeal.update(a)`（await が run の中なので拡張の `getStore()` にマーカーが届く。実験 B）→ 拡張は `query(args)` → 成功 | `walkData` が `connect: { id }` を `connect: { id, organizationId: A }` に書き換え → Prisma が B 社 deal を見つけられず `RecordNotFound` → 拒否 | 拡張がマーカー無しで throw |
+| tx に拡張が**乗らない** | `walkData` OK → `findFirstOrThrow(scoped)` → `run` 内で `await tx.sfaDeal.update(a)` が直接実行 → 成功 | `walkData` が同じ書き換えを行う（owned 側で実行済み）→ `RecordNotFound` → 拒否 | 拡張が無いので止まらない。**型で防ぐ**: `ctx.db.$transaction` のコールバック引数型 `OwnedTx` は `update / delete / upsert / findUnique / findUniqueOrThrow` に加えて **読み取り系（`findMany / findFirst / findFirstOrThrow / count / aggregate / groupBy`）と `updateMany / deleteMany` も `Omit`**（テナントモデルについて）し、`owned(tx, ctx).<op>` だけを許す（FIN3-02）。lint `core/tx-tenant-where`（`tx.<model>.` の直接呼び出し）は**エラー** |
+| `updateMany` の `data` にテナント列（`ctx.db.sfaDeal.updateMany({ where: { id }, data: { organizationId: B } })`） | 拡張の `updateMany` 分岐の `walkData` が throw（FIN3-01） | — | `owned(tx).updateMany` も同じ `walkData` で throw |
 | `ctx.db` 直接（tx 外） | 拡張が throw（`UseOwnedHelperError`） | 同左 | 同左 |
 
 - `walkData` は同期の純関数（追加クエリを発行しない）。ネストした `connect / set / disconnect / connectOrCreate / update / updateMany / delete / deleteMany` の対象 where を「id ＋ テナント列」の複合条件に書き換え、ネスト `create / createMany`（配列含む）にテナント列を強制し、update 系の data にテナント列があれば throw する。`createMany.data` が配列なら全要素。
@@ -1170,8 +1184,9 @@ export function owned(client: TenantPrisma | Prisma.TransactionClient, ctx) {
 - 戻り値の形: `owned().update / delete / upsert` は元の操作をそのまま呼ぶので既存コードの戻り値と同じ。`findUnique` → `findFirst` は戻り値の形が同じ。`findUniqueOrThrow` → `findFirstOrThrow` で throw 意味論を保つ。
 - `include` / `select` で親側の relation を辿る読みは、`TENANT_COLUMNS` にあるモデルについて `include.<rel>.where`（to-many）を足し、to-one の親は結果を post-filter する。
 - `requireCompanyAccess` / `evaluateCompanyAccess` が返す `ctx.db` だけを使う。`@/lib/prisma` の直 import は ESLint で禁止（593 ファイルは段階移行、§13 #37）。`doya-ai/src/app/banner/dashboard/page.tsx` は除外・削除候補。
-- **`$transaction`**: `ctx.db.$transaction(async (tx: OwnedTx) => ...)` を使い、tx 内の書き込みは `owned(tx, ctx)` 経由。
-- 回帰テスト `verify-core-access-cross-tenant.cjs` は **4 ケース**を持つ: 「`owned(ctx.db).update` が成功」「`owned(tx).update` が成功」「`owned(ctx.db)` / `owned(tx)` のネスト connect で他社 id → 拒否」「`ctx.db.<model>.update` 直接 → `UseOwnedHelperError`」。tx のケースは拡張の有無を両方モックして走らせる（CHECKLIST TEN-21/TEN-22）。
+- **`$transaction`**: `ctx.db.$transaction(async (tx: OwnedTx) => ...)` を使い、tx 内の読み書きは `owned(tx, ctx)` 経由。**配列形 `$transaction([...])` は使えない**（`owned().update` 等は `async` 関数で PrismaPromise ではない）ので、既存コードの配列形は対話型へ書き換える（FIN3-07）。
+- **確認済みの事実（リードが手元の `@prisma/client` 5.22 で、DB 接続なしに query 拡張 `$allOperations` 内の `AsyncLocalStorage.getStore()` を記録して実験）**: A) `ownedScope.run({..}, () => db.user.update(...))` で PrismaPromise を返し run の**外**で await → 拡張内の store は **null**（マーカーが届かない）。B) `ownedScope.run({..}, async () => await db.user.update(...))` → store は **{marker}**（届く）。C) run 内の処理と同時に run の外で別クエリを走らせる → 外側のクエリの store は **null**（他の処理に漏れない）。D) 拡張クライアントの対話型 `$transaction` で tx に拡張が乗るか → DB 接続が要るため**未確認**（要実機確認のまま。両方に耐える設計を維持）。擬似コードの `run` は B の形。
+- 回帰テスト `verify-core-access-cross-tenant.cjs` は **6 ケース**を持つ: 「`owned(ctx.db).update` が成功（run 内 await）」「`owned(tx).update` が成功」「`owned(ctx.db)` / `owned(tx)` のネスト connect で他社 id → 拒否」「`ctx.db.<model>.update` 直接 → `UseOwnedHelperError`」「`updateMany.data` にテナント列 → 拒否（`ctx.db` / `owned(tx)` の両方）」「`owned(tx).findMany` が自社行のみ」。tx のケースは拡張の有無を両方モックして走らせる（CHECKLIST TEN-21/TEN-22）。
 - **raw SQL**（SEC-04）: `tenantSql(ctx)` が返す `Prisma.sql` フラグメント（`"companyId" = ${ctx.companyId}` 等。値は ctx からしか作れない）を埋め込む API にし、lint は「`$queryRaw` / `$executeRaw` の引数に `tenantSql(` が含まれる」を要求する（文字列一致ではない）。
 - **子テーブル**: マニフェスト `dataModels[].tenantColumn='via:<relation>'` は `where: { <relation>: { organizationId } }` に展開。列も via も無いモデルは Phase1 で `companyId` を非正規化追加。`verify-core-tenant-columns.cjs`。
 - **IDOR 対策**: cuid に頼らず上記で保証。パスパラメータ id は zod cuid。
@@ -1193,7 +1208,7 @@ export function owned(client: TenantPrisma | Prisma.TransactionClient, ctx) {
 - **ツール入力の zod 検証**は `.strict()`（未知キー拒否）。文字列長上限、配列長上限、enum を必ず付ける。
 - **権限の再評価**は step 実行直前（計画時だけではない）。
 - **承認 UI** には「何を・誰に・いくらで・取り消せるか」を `ApprovalRequest.detail` から表示し、LLM 生成文ではなくレジストリ定義のテンプレートで生成（LLM に承認文面を書かせると誘導の余地がある）。
-- **1 run あたり**: `creditBudget`、`maxToolCalls`、LLM 40 回、壁時計 30 分、external 承認 5 件まで。
+- **1 run あたり**: `creditBudget`、`maxToolCalls`（30）、`maxLlmCalls`（40）、`wallClockLimitSec`（running 累積 30 分）、**承認要求は `AgentRun.maxApprovals`（既定 5）件まで**（irreversible / high の step が 6 件以上ある計画は planning で `failed(budget)` にし、分割を依頼者に促す。draft に列あり）。
 - **緊急停止**: `agent.kill_switch`（全体）、`agent.enabled`（会社）、`agent.tools.<key>.enabled`（ツール単位）。
 
 ### 10.5 秘密情報・機微データ
@@ -1227,7 +1242,7 @@ export function owned(client: TenantPrisma | Prisma.TransactionClient, ctx) {
 |---|---|
 | CSRF | 主防御は NextAuth Cookie の `SameSite=Lax`（`cookie.js` L24）。状態変更 API（`mutation: true`）の判定は固定（SEC-24）: **`Sec-Fetch-Site === 'same-origin'`、または欠落時に `Origin` の host が `Host`（`MITSUBOSHI_HOSTS / SLIDE_HOSTS` を含む許可ホスト集合）と一致。どちらも無い／`Origin: null` は 403**。`x-requested-with` の必須化はしない（監査 B-20） |
 | Cookie | セッション Cookie 名を **`__Host-next-auth.session-token`**（Secure・Path=/・Domain 無しが強制。兄弟サブドメインからの Cookie 固定を防ぐ。SEC-06）。`__Host-` は Secure 必須なので **本番（https）のみ**。ローカル http では NextAuth の `useSecureCookies=false` に合わせて無接頭辞にする（`cookie.js` L18-26 の切替と同じ）。middleware の存在チェック（§6.3）も同じ名前を使う（FIN-13）。`doya_device` も `__Host-`。既存セッションは全員再ログインになるので Phase1 の adapter ラップ投入と同時に切替。`cookies.sessionToken.options.domain` は設定しない |
-| レート制限 | 2 段（Edge は Vercel WAF、ルートは `RateLimitBucket`）。**IP の取得元**（SEC-25）: Vercel 上は `x-vercel-forwarded-for` / `request.ip` を正本にし、`x-forwarded-for` 先頭は使わない（既存 6 ファイルは §15 で置換）。`guest-shared` のゲスト quota は `ip:/24 × 日` でも二重に数える（SEC-13） |
+| レート制限 | 2 段（Edge は Vercel WAF、ルートは `RateLimitBucket`）。**cron-launch**（`/api/agent/runs/[id]/advance` への Bearer 呼び出し）は未認証で middleware を通るので `ip:/24` バケット（10/分）の対象に含め、`requireCron` 失敗は `SecurityEvent(rate.limited)` に数える（FIN3-08）。**IP の取得元**（SEC-25）: Vercel 上は `x-vercel-forwarded-for` / `request.ip` を正本にし、`x-forwarded-for` 先頭は使わない（既存 6 ファイルは §15 で置換）。`guest-shared` のゲスト quota は `ip:/24 × 日` でも二重に数える（SEC-13） |
 | アップロード | マジックバイト（`file-type`）＋ `sharp` 再エンコード＋SVG 禁止＋10MB。既存 `shodan/company-profile/logo` はクライアント申告 MIME のみなので §15 で統一（SEC-32） |
 | SSRF | 全機能 `safe-fetch` 経由。**公開 IP でもポートは 80/443 に限定**（SEC-23(a)）。退役サービスの importer（`tenkai/scraper.ts` L68 raw fetch、interviewx analyze-url）は退役ゲートで到達不能だが、**退役解除前に `safeFetchResource` へ置換**を必須にし、`verify-tenkai-private-address-rejection.cjs` 等を退役中でも残す（SEC-31） |
 | セキュリティヘッダ | CSP 本体（script は nonce、`style-src` は `dangerouslySetInnerHTML` の定数 CSS 16 ファイルを棚卸しして nonce 化、無理なら `'unsafe-inline'` を style のみ残す判断を Phase2 で）。`Permissions-Policy` |
@@ -1826,6 +1841,8 @@ SLO（運営会社での Phase3 計測値を初期値にする）: 承認→再�
 - Google ID トークンの `auth_time` がセッション再利用時に更新されるか（記録のみ、検証に使わない）。
 - aishodan 完了通知のチャネル、seo outline ルートが LLM を呼ぶか（探索の未確認事項。該当 lib が gateway へ移るまで当該ツールは登録できない）。
 
+確認済みに変わった点（改訂 6）: Prisma 5.22 の query 拡張と `AsyncLocalStorage` の組合せ（§10.2「確認済みの事実」A/B/C。D＝対話型 tx に拡張が乗るかは未確認）。
+
 確認済みに変わった点（改訂 2）: `sharp 0.35.4` あり／`zod-to-json-schema`・`file-type`・`@simplewebauthn/*` なし／doyalist 収集は有料 LLM を呼ぶ／mensetsu は応募者にメールを送らない／`promane.createTask` は server action 内で session を読む／Google OIDC・Vercel Cron・Stripe basil の外部仕様（§11.5, §6.5, §7.3）。
 
 ### 付録 C. schema-draft の結合検証（`verify-core-schema-draft.cjs` の仕様）
@@ -1947,6 +1964,7 @@ if (r.status !== 0) process.exit(1)
 | 3 | 2026-10-17 | 第 2 回独立審査（data 23 / sec 34 / ops 35 ＝ 92 件）を全件反映（付録 F）。外部仕様 6 件を確認: Prisma 公式 Limitations（query 拡張はネスト操作非対応）、OpenAI SDK 4.104 `shared.d.ts` L52（function name は英数字・`_`・`-`、64 文字）、Gemini API リファレンス（`FunctionDeclaration.name` は dots 可・128 文字、`Schema` は OpenAPI 3.0 サブセットで `additionalProperties`/`$ref` 無し、`parametersJsonSchema` は要実機確認）、WebAuthn Level 3 §6.1.1（counter 0 ＝未実装、保存値>0 かつ 新値<=保存値で clone 疑い）、jsonwebtoken 9 `verify.js` L132-134（文字列鍵の既定は HS 系）、`.prisma/client/index.d.ts` L225755（複合 unique セレクタは WhereUniqueInput のみ）。重大 16 件（DATA-01〜04、SEC-01/03、OPS-01/02/03/05/10/11/12/17/18/19/20/21/28）はすべて反映。主な変更: §7 全面（所有者 3 段判定・経路分離・付与キー・台帳の符号と period・数値例・席同期）、§8.2〜8.6（2 軸リスク＋冪等 3 区分、provider 別名前/schema、事前＋事後予算、フェンス、状態遷移図）、§9（admin ユーザー削除の改修、パスキー API、承認 API 非同期）、§10.2（ネスト走査・複合 unique 展開・HOF）、§10.5〜10.7（暗号化仕様、ロール分離、`__Host-`、CSRF 判定、IP 取得元）、§11（限界の明記、Session↔端末束縛、観測履歴、strictSharing、パスキー運用）、§12（フラグ依存、Phase0 の 18 マニフェスト、Session 変更手順、見積り）、§15 を深刻度順に 16 件へ、§17 新設（保持・掃除・監視・SLO・前提）。draft: `planVersion`、`ApprovalRequest(stepId, attempt)`＋`approvalHash`、`downstreamIdempotency`、`runningSeconds`、`SessionObservation`、`RuntimeCounter`、`SeoJob.originRunId`、`LlmCallLog` の計測列、`CompanySubscription.seatItemId / lastStripeEventCreated`、`KnowledgeSource.allowedServices` 既定の反転、`AuditLog` index 3 本、FK index 4 本。結合 validate 226 モデルで valid |
 | 4 | 2026-10-17 | 最終ゲート第 1 回（FIN-01〜17）を全件反映（付録 G）。重大 2 件: Cron claim 条件に `planning`、テナント拡張の upsert 走査＋所有確認を明示クライアントのヘルパー `owned(client, ctx)` へ。部分的 4 件（DATA-03 §11.6 残存、SEC-01、OPS-01、OPS-12「未移行ツールは登録不可」）を解消。中: 拡張内の基底クライアント使用の撤廃、`reservationId` を冪等キーの基底に、`User.plan` の単一の書き手 `syncUserPlan`（max 規則）、`strictSharing` の pending 文脈（`__Host-doya_pending`）と未登録者・紛失者の経路、Cron の HTTP 起動（`after()`）と処理能力式、Stripe 返金は `adjust(−)`、`nextRunAt` の初期値、`company_suspended` の復帰、`cookies()` 経路と `DEVICE_UNVERIFIED`、`AuditLog @@id([id, createdAt])`＋パーティションは Phase4 の要実機確認項目に。軽微: 年額は月額へ、`pausedReason` の整理、Cookie 名の統一、数値を実測値（merge 28 / 新規 34 / 結合 226）に統一、ER の `ApprovalRequest` 表記。外部仕様: Vercel `@vercel/functions` リファレンス（Next 15.1+ は `after()` 推奨、`waitUntil` の Promise は関数の `maxDuration` まで）、Next.js `cookies()` リファレンス（Server Components / Route Handlers / Server Functions で使用可、Next 15 で async）、Prisma query 拡張ページ（tx ハンドルの取得手段なし）、本リポジトリ `vercel.json` L124-128 の `?mode=` パス稼働実績。付録 G/H を H/I に改番 |
 | 5 | 2026-10-17 | 最終ゲート第 2 回（FIN2-01〜07 と部分的 8 件）を全件反映（付録 K）。重大 FIN2-01: `owned()` が `walkData` → 所属確認 → モジュール内 `AsyncLocalStorage` マーカー付きで元操作を呼び、拡張はマーカー無しの update/delete/upsert/findUnique を throw。拡張が tx に乗る／乗らない両ケースの動作表と回帰テスト 4 ケース（TEN-21/22）。FIN2-02 フェンスの status 集合に planning。FIN2-03 `syncUserPlan` へ 3 箇所統一。FIN2-04 cron-launch 分類・`withCompanyAccessOrCron`・トークン継承・`CRON_SECRET` の到達範囲。FIN2-05 M-11 を import 閉包の実体検査に。FIN2-06 `ReauthChallenge.sessionId` 任意化、`login.passkey`、複数会社・未登録判定の規則。FIN2-07 数値・ER・PII-14・voided キー。付録 J を「正本の文言／禁止語」付き 20 キーに改め、スクラッチ領域の一致検査スクリプトで禁止語 0 を確認（結果は完了報告）。draft 冒頭を改訂 5 に |
+| 6 | 2026-10-17 | 最終ゲート第 3 回（FIN3-01〜08、重大 0）を全件反映（付録 L）。§10.2: `updateMany.data` のテナント列書き換えを拡張側でも拒否、`OwnedTx` 型が読み取り系も Omit し `owned(tx)` に読み取りメソッドを追加、`run` 内で await する形（リードの実機実験 A/B/C を「確認済みの事実」として記録、D は未確認）、配列形 `$transaction` は対話型へ。リース TTL を 360s に統一、§8.1 シーケンス図を 2 軸リスクに、`AgentRun.maxApprovals`（既定 5）を draft に追加、cron-launch をレート制限対象に、CHECKLIST AUTHZ-19/AGT-35 と付録 F OPS-06 の旧表現を新方式に。付録 J にキー 21（リース TTL）・22（リスク区分の用語）を追加、キー 17 の禁止語を拡張。一致検査スクリプトを 22 キーで再実行（結果は完了報告）。draft 冒頭を改訂 6 に |
 
 
 ### 付録 F. 第 2 回審査（REVIEW-2026-10-17-data / sec / ops）への回答
@@ -2017,7 +2035,7 @@ if (r.status !== 0) process.exit(1)
 | OPS-03 | **反映** | §8.2（`downstreamIdempotency` 3 区分、`unknown_outcome` は人の確認、自動再試行なし、`sfa.updateDealStage` の訂正）、draft `AgentStep.downstreamIdempotency / maxAttempts=1`、`ApprovalRequest.kind`、§16.4 M-8/M-8b | `requestKey` が L2960/L3020/L4504/L4529（Cunning/Persona）のみ、`src/lib/sfa` に 0 件を確認 |
 | OPS-04 | **反映** | §8.4（DB 区間セマフォ 2）、§17.3 | — |
 | OPS-05 | **反映** | §8.6 状態遷移図と規則（期限切れ sweep、running 累積の壁時計、cancel 伝播、paused 復帰、承認 API 非同期＋advance 認可に `decidedById`）、draft `runningSeconds / pausedReason` | — |
-| OPS-06 | **反映** | §8.4（Cron 1 呼び出し 1 件、`?slot=`） | — |
+| OPS-06 | **反映** | §8.4（改訂 5 で HTTP 起動方式に変更: Cron は claim と `POST /advance?detached=1` の起動のみで自身は advance を実行しない。`after()` が使えない場合の代替は K スロット） | — |
 | OPS-07 | **反映** | §8.4、draft `advanceAttempts` コメント（期限切れ再 claim のみ、上限 5） | — |
 | OPS-08 | **反映** | §8.4、§17.3（DB 時計に統一） | — |
 | OPS-09 | **反映** | §8.4 SSE（`Last-Event-ID`、3s、同時 2、コスト） | — |
@@ -2099,6 +2117,22 @@ if (r.status !== 0) process.exit(1)
 | SEC-01（部分的） | **反映** | FIN2-01（tx 経路でも `walkData` が `owned()` 側で必ず走る） | — |
 | OPS-12（部分的） | **反映** | FIN2-05（M-11 が宣言値ではなく import 閉包の実体を検査） | — |
 
+### 付録 L. 最終ゲート第 3 回（FINAL-GATE-2026-10-17-3.md）への回答
+
+凡例は付録 D と同じ。HEAD `ce3ea51d` で再確認。
+
+| # | 判定 | 反映先 | 補足 |
+|---|---|---|---|
+| FIN3-01 | **反映** | §10.2 分担表 2 行目（`updateMany` の data 検査）、擬似コードの `updateMany` 分岐で `walkData`、`owned().updateMany` も同じ検査、動作表に行追加、回帰テスト 6 ケース、CHECKLIST TEN-24 | — |
+| FIN3-02 | **反映** | §10.2（`OwnedTx` 型は読み取り系と `updateMany / deleteMany` も `Omit`、`owned(tx, ctx).findMany/findFirst/count/aggregate/groupBy` を追加、lint はエラー）、CHECKLIST TEN-22/TEN-25 | — |
+| FIN3-03 | **反映** | §10.2（`run = (model, op, fn) => ownedScope.run({model, op}, async () => await fn())`、動作表を「run 内で await」に、「確認済みの事実」A/B/C/D を記録）、付録 B、CHECKLIST TEN-21 | リードの実機実験（@prisma/client 5.22、DB 接続なし）: A 外で await → store null、B 中で await → marker、C 並行クエリに漏れない、D 対話型 tx は未確認 |
+| FIN3-04 | **反映** | §8.1 シーケンス図を 360s に統一、draft `executionExpiresAt` コメント、付録 J キー 21、CHECKLIST AGT-26 | — |
+| FIN3-05 | **反映** | CHECKLIST AUTHZ-19（HOF 一覧に `withCompanyAccessOrCron`）、AGT-35（claim と HTTP 起動のみ）、付録 F OPS-06、付録 J キー 17 の禁止語に旧方式の表現（スロット単位の件数表記）を追加 | — |
+| FIN3-06 | **反映** | §8.1 シーケンス図（`reversibility × costClass`、`downstreamIdempotency`）、§10.4（`AgentRun.maxApprovals` 既定 5、超過は planning で failed）、draft `AgentRun.maxApprovals`、付録 J キー 22、CHECKLIST AGT-51 | — |
+| FIN3-07 | **反映** | §10.2 `$transaction` 行（配列形は対話型へ書き換え） | — |
+| FIN3-08 | **反映** | §10.7 レート制限行（cron-launch を `ip:/24` バケットの対象に、失敗を `SecurityEvent`）、付録 J キー 17 の出現箇所 | — |
+| FIN2-01 / FIN-02 / FIN-03 / SEC-01（部分的） | **反映** | FIN3-01〜03 のとおり | — |
+
 ### 付録 H. 既存契約者への告知文（雛形。絵文字なし・敬語）
 
 > 件名: ご契約プランの切り替えについて（お手続きは不要です）
@@ -2133,7 +2167,7 @@ if (r.status !== 0) process.exit(1)
 | 6 | `pausedReason` の値 | §8.6 規則 | draft `AgentRun`、§10.9、CHECKLIST AGT-48 | `kill_switch`＋`company_suspended`＋`llm_outage` | `pausedReason='unknown_outcome'`、`'unknown_outcome'（4 値）` |
 | 7 | `User.plan` の書き手 | §7.1 | §7.2 手順 8、§12 Phase2/4、付録 F DATA-14、CHECKLIST BIL-22/BIL-29 | `syncUserPlan` | `syncUnifiedBilling` を併記、`syncUnifiedBilling()` も併せて、`owner の syncUnifiedBilling` |
 | 8 | 月次クレジット付与 | §7.3 イベント表 | §7.4 規約表・数値例、§13 #10、draft コメント、CHECKLIST BIL-16 | `grant:<subId>:<P>` または `grant:<stripeSubscriptionId>:<period>` | `stripe:<eventId>:grant`、`'stripe:<eventId>'` |
-| 9 | `costClass=high` の閾値 | §8.2 | §14 D17、§16.1、draft `AgentStep.costClass`、CHECKLIST AGT-03 | `4 回以上` | `N はマニフェストで宣言`、`既定 5）` |
+| 9 | `costClass=high` の閾値 | §8.2 | §14 D17、§16.1、draft `AgentStep.costClass`、CHECKLIST AGT-03 | `4 回以上` | `N はマニフェストで宣言`（`既定 5` は `maxApprovals` と重なるため検査語にしない） |
 | 10 | 承認必須の条件 | §8.5 | §8.2 表、§16.4 M-10、CHECKLIST AGT-02 | `costClass=high` → 承認 | `external` は常に承認、`external` 全部 |
 | 11 | 既定の同時端末数 | §11.3 | draft `Company.maxSessionsPerUser`、§14 D6、CHECKLIST AUTH-06 | `既定 3`/`既定 **3 端末**` | `既定 **2 端末**` |
 | 12 | 未移行 lib を呼ぶツールは登録不可 | §8.2 | §8.3、§12 Phase3、§16.4 M-11、付録 B、付録 F OPS-12/B-16、CHECKLIST AGT-15 | `登録できない` または `登録不可` | `costClass=high` 扱い、`未移行なら high`、`high 扱い` |
@@ -2141,7 +2175,9 @@ if (r.status !== 0) process.exit(1)
 | 14 | purge の定義 | §17.1 | §9.1 `DELETE /api/company/[id]`、§13 #35、CHECKLIST SCH-30/RUN-24 | `匿名化` | `Artifacts→Runs→Members→Links→旧組織→Company` |
 | 15 | 自動名寄せの規則（3 条件のみ） | §5.1 手順 1 | §14 D3、draft `CompanyServiceLink.linkedBy`、CHECKLIST MIG-18 | `3 条件` | `linkedBy='slug'`、`第一キー`、`第二キー` |
 | 16 | `owned()` のマーカー分担（改訂 5 新設） | §10.2 方式 A | CHECKLIST TEN-20/21/22、付録 K | `ownedScope` | `所有確認は呼び出し元クライアント（tx 可）を受け取る` だけの旧記述、`owned 経由の分担が無い` |
-| 17 | advance の Cron 起動（改訂 5 新設） | §8.4 Cron 回収 | §6.3 cron-launch 行、§6.5 CRON 行、§9 冒頭、§9.2 advance 行、§10.2 末尾、§16.1 `routes.cronLaunch`、§16.4 M-3、CHECKLIST AGT-47/AGT-49 | `withCompanyAccessOrCron` | `?slot=` を 5 本登録、`1 呼び出し 1 件（毎分 1 件で足りなければ` |
+| 17 | advance の Cron 起動（改訂 5 新設） | §8.4 Cron 回収 | §6.3 cron-launch 行、§6.5 CRON 行、§9 冒頭、§9.2 advance 行、§10.2 末尾、§16.1 `routes.cronLaunch`、§16.4 M-3、§10.7 レート制限行、付録 F OPS-06、CHECKLIST AUTHZ-19/AGT-35/AGT-47/AGT-49 | `withCompanyAccessOrCron` | `?slot=` を 5 本登録、`1 呼び出し 1 件（毎分 1 件で足りなければ`、`1 呼び出し 1 件` |
 | 18 | M-11 の import 閉包検査（改訂 5 新設） | §16.4 M-11 | §8.2、§8.3、CHECKLIST AGT-15/EXT-01、付録 K | `import 閉包` | `宣言どおり`（M-11 の条件文内） |
 | 19 | Stripe 返金の扱い | §7.4 規約表 | §7.3 イベント表、数値例、draft `UsageLedger` コメント、CHECKLIST BIL-30 | `adjust:stripe:` | `refund:<元 base>`、`Stripe 返金・運営補填` |
 | 20 | `strictSharing` の pending 文脈 | §11.5 | §9.1、draft `ReauthChallenge.purpose`、CHECKLIST AUTH-28/36/38 | `__Host-doya_pending` | `pendingPasskey` フラグ |
+| 21 | リース TTL（改訂 6 新設） | §8.4 モデル行（`acquireSeoJobExecution` と同じ 360s） | §8.1 シーケンス図、draft `executionExpiresAt` コメント、CHECKLIST AGT-26 | `360s` | `executionToken, 300s`、`リース 300s` |
+| 22 | リスク区分の用語（改訂 6 新設） | §8.2（`reversibility × costClass`） | §8.1 シーケンス図、§8.5、§10.4、draft `AgentStep`、CHECKLIST AGT-01 | `reversibility` | `riskLevel`、`read / draft / external`、`external 承認` |

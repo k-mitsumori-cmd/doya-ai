@@ -38,9 +38,11 @@
 | TEN-18 | `include / select` で親側 relation を辿る読みに、テナント列の `where` または post-filter を適用しているか | 他社の親レコードが返る | 自動: 同上（include 経由） | M | SEC-01 |
 | TEN-19 | `upsert` は `owned()` ヘルパーで「findFirst → あれば update、無ければ create（テナント列強制）」に分解され、create 経路が所属確認で失敗しないか | upsert 全滅→直 import への逃げ | 自動: `verify-core-access-cross-tenant.cjs`（upsert の両経路） | H | FIN-02 |
 | TEN-20 | query 拡張のコールバックが基底クライアントで追加クエリを発行せず、`owned(client, ctx)` 自身が `walkData` → 所属確認 → モジュール内 `ownedScope`（AsyncLocalStorage、export しない）マーカー付きで元操作を呼び、拡張はマーカー無しの update/delete/upsert/findUnique を throw するか | 分担不成立（全 update 失敗 or tx 経路で無検査） | 自動: `verify-core-access-cross-tenant.cjs` | H | FIN-03, FIN2-01 |
-| TEN-21 | 拡張が tx に**乗る**モックで、`owned(tx).update` が成功し、`owned(tx)` のネスト connect で他社 id が拒否され、`tx.<model>.update` 直接が `UseOwnedHelperError` になるか | 分担の検証（乗る側） | 自動: `verify-core-access-cross-tenant.cjs`（ext-on） | H | FIN2-01 |
-| TEN-22 | 拡張が tx に**乗らない**モックで、`owned(tx).update` が成功し、`owned(tx)` のネスト connect で他社 id が拒否され、`OwnedTx` 型が直接の update/delete/upsert/findUnique をコンパイルエラーにするか | 分担の検証（乗らない側） | 自動: 同上（ext-off）＋tsc | H | FIN2-01 |
+| TEN-21 | 拡張が tx に**乗る**モックで、`owned()` の `run` が **run の中で await する実装**であること（run の外で PrismaPromise を await するとマーカーが届かない。リード実機実験 A/B）を含めて `owned(tx).update` が成功し、`owned(tx)` のネスト connect で他社 id が拒否され、`tx.<model>.update` 直接が `UseOwnedHelperError` になるか | 分担の検証（乗る側） | 自動: `verify-core-access-cross-tenant.cjs`（ext-on） | H | FIN2-01 |
+| TEN-22 | 拡張が tx に**乗らない**モックで、`owned(tx).update` が成功し、`owned(tx)` のネスト connect で他社 id が拒否され、`owned(tx).findMany` が自社行のみを返し、`OwnedTx` 型が直接の update/delete/upsert/findUnique と読み取り系（findMany/findFirst/count/aggregate/groupBy）・updateMany/deleteMany をコンパイルエラーにするか | 分担の検証（乗らない側） | 自動: 同上（ext-off）＋tsc | H | FIN2-01 |
 | TEN-23 | `ownedScope` が export されておらず、外部モジュールからマーカーを付けて拡張を迂回できないか | マーカー偽造 | 自動: `verify-core-access-cross-tenant.cjs`（別モジュールからの `update` 直呼びが throw） | H | FIN2-01 |
+| TEN-24 | `updateMany` の `data` にテナント列があるとき、拡張の `updateMany` 分岐と `owned().updateMany` の両方が `walkData` で throw するか | 自社行を他社テナントへ移す書き込み | 自動: `verify-core-access-cross-tenant.cjs`（updateMany data） | H | FIN3-01 |
+| TEN-25 | tx 内の一覧・集計読みが `owned(tx, ctx)` 経由だけで、`tx.<model>.findMany` 等の直接呼び出しが型エラー＋lint エラーになるか | 拡張が乗らない tx で他社行が返る | 自動: tsc＋ESLint `core/tx-tenant-where`（error） | H | FIN3-02 |
 
 ## 2. AUTH 認証・セッション（Google のみ・使い回し防止）
 
@@ -107,7 +109,7 @@
 | AUTHZ-16 | `CRON_SECRET` を admin 代替として受理するコードが無いか | 漏洩時の権限直結 | 自動: `verify-cron-timing-safe.cjs`（guard の検査） | M | D-6 |
 | AUTHZ-17 | ゲストトークン（mensetsu / aishodan / interviewx / 招待）はハッシュ保存・24 byte 以上・期限必須か | DB 漏洩時の URL 悪用 | 自動: `verify-core-invitation-token-hash.cjs` | M | D-4 |
 | AUTHZ-18 | 招待受諾は `email` 一致・`email_verified`・`hd`・席上限を検査し、removed 行は復帰 upsert か | 乗っ取り・席の擦り抜け・P2002 | 自動: `verify-core-invitation-token-hash.cjs`, `verify-billing-seat-limit.cjs` | H | B-5, B-6 |
-| AUTHZ-19 | route ハンドラは `withCompanyAccess / withGuestToken / withCron / withAdmin / withPublic(reason)` の HOF でしか export できず、文字列検査に頼っていないか | `return` し忘れ・ヘルパー内認証の誤分類 | 自動: `verify-core-route-guard.cjs`（export の形） | H | SEC-12 |
+| AUTHZ-19 | route ハンドラは `withCompanyAccess / withCompanyAccessOrCron / withGuestToken / withCron / withAdmin / withPublic(reason)` の HOF でしか export できず、文字列検査に頼っていないか | `return` し忘れ・ヘルパー内認証の誤分類 | 自動: `verify-core-route-guard.cjs`（export の形） | H | SEC-12 |
 | AUTHZ-20 | ランタイム・スモーク（全 route を未認証で叩き、public 以外で 2xx なら失敗）が CI にあるか | 静的検査の取りこぼし | 自動: `verify-core-route-smoke.cjs` | H | SEC-12 |
 | AUTHZ-21 | `support` ロールは 72h 上限・sensitive ツールとエクスポート禁止・`onBehalfOf` 必須・owner のパスキー step-up で付与か | 運営の裁量アクセス | 自動: `verify-core-access-role-ceiling.cjs`（support） | M | SEC-14 |
 | AUTHZ-22 | `routes.public[].guard` が enum（`token-param / requireGuestToken / secret-header / none`）で、`none` に理由があり、`secret-header` は `webhooks[]` と対応しているか | 自由文字列では検査対象を特定できない | 自動: `verify-service-manifest-public-reason.cjs`, `verify-service-manifest-webhooks.cjs` | M | OPS-29 |
@@ -243,7 +245,7 @@
 | AGT-23 | エージェントが `guestId` 系ルートやツールを一切呼ばないか | 会社文脈の無い実行 | 自動: レジストリに guest 系が無い | M | — |
 | AGT-24 | 運営 Slack の `notifyServiceActivity` がツール実行時に抑止され、顧客向け Slack は会社設定の webhook（`hooks.slack.com` のみ）か | 通知の混線・SSRF | 自動: `verify-agent-notify-slack.cjs` | M | — |
 | AGT-25 | プロバイダ全断時に run が `paused` → 最大 3 回再開 → `failed(llm)` と通知になるか | 無限リトライ・無音失敗 | 自動: `verify-agent-deadline.cjs` | M | — |
-| AGT-26 | 自発解放時に必ず `nextRunAt=now()` を書き、Cron の claim 条件が `status IN ('queued','planning','running')` で `executionToken IS NULL AND nextRunAt <= now()` を含むか | ブラウザを閉じると永久に running | 自動: `verify-agent-run-lease.cjs`（解放後 1 分以内に Cron が再開） | H | OPS-01 |
+| AGT-26 | 自発解放時に必ず `nextRunAt=now()` を書き、Cron の claim 条件が `status IN ('queued','planning','running')` で `executionToken IS NULL AND nextRunAt <= now()` を含み、リース TTL が 360s（1 つ）か | ブラウザを閉じると永久に running | 自動: `verify-agent-run-lease.cjs`（解放後 1 分以内に Cron が再開） | H | OPS-01 |
 | AGT-27 | `AgentRun/AgentStep/ToolCall/ApprovalRequest/UsageLedger` への全書き込みが `withAgentRunExecution(token)` のフェンス内で、ツール呼び出し前に `ToolCall(running)` を commit しているか | stale プロセスとの二重実行 | 自動: `verify-agent-write-fence.cjs` | H | OPS-02 |
 | AGT-28 | `downstreamIdempotency` が `native / local-record / none` で宣言され、`local-record` の結果不明は `unknown_outcome` として人の確認（自動再試行なし、`maxAttempts=1`）か | 下流に受け口が無い再実行 | 自動: `verify-agent-unknown-outcome.cjs`、M-8/M-8b | H | OPS-03 |
 | AGT-29 | DB を触る区間がセマフォ 2 で直列化され、LLM/HTTP 区間だけ 4 並列か | `pool_timeout` で P2024 | 自動: `verify-agent-deadline.cjs`（接続数） | M | OPS-04 |
@@ -252,7 +254,7 @@
 | AGT-32 | cancel / kill switch / `AgentRun.status` を各 step 開始前と各有料呼び出し直前にキャッシュ無しで読み、`AbortController` で進行中呼び出しを中断するか | 240s スライス中に 4 並列で進む | 自動: `verify-agent-kill-switch.cjs`（進行中） | H | OPS-05, OPS-34 |
 | AGT-33 | kill switch 解除時に `paused(kill_switch)` を一括 `nextRunAt=now()` にし、`paused` も Cron が拾うか | 復帰経路が無い | 自動: 同上 | M | OPS-05 |
 | AGT-34 | 承認 API が同期で advance を呼ばず即 200 を返し、advance の認可に `decidedById` 本人が含まれるか | スマホの承認がタイムアウト／承認者が 403 | 自動: `verify-agent-approval-matrix.cjs` | H | OPS-05 |
-| AGT-35 | Cron は 1 呼び出し 1 件（スロット分割）か | 5×240s で関数が死にリースが残る | 自動: `verify-agent-run-lease.cjs` | H | OPS-06 |
+| AGT-35 | Cron は claim と `POST /advance?detached=1` の HTTP 起動（最大 K 件）だけを行い、自身は advance のスライスを実行しないか | 5×240s で関数が死にリースが残る | 自動: `verify-agent-run-lease.cjs`（detached） | H | OPS-06, FIN3-05 |
 | AGT-36 | `advanceAttempts` が期限切れリースからの再 claim だけを数えるか | 正常な長い run が failed | 自動: 同上 | M | OPS-07 |
 | AGT-37 | リース・`nextRunAt` の比較が DB `now()` / `clock_timestamp()` に統一されているか | 時計差 | 自動: 同上（raw SQL の確認） | L | OPS-08 |
 | AGT-38 | SSE が `Last-Event-ID` で再開し、3s ポーリング・同時 2 接続に制限されているか | 関数 300s の占有 | 自動: `verify-agent-sse.cjs` | L | OPS-09 |
@@ -268,6 +270,7 @@
 | AGT-48 | `pausedReason` が 3 値で、`company_suspended` の復帰（会社復旧手順の一括 `nextRunAt`）があるか | 復旧後も paused | 自動: `verify-agent-kill-switch.cjs`（会社復旧） | L | FIN-12 |
 | AGT-49 | `/api/agent/runs/[id]/advance` が cron-launch 分類（`routes.cronLaunch`）で、`withCompanyAccessOrCron` で export され、Cron が claim した `executionToken` を body で渡して advance が再 claim せず継承し、不一致で 409 になるか。`CRON_SECRET` が cron-launch の起動以外に効かないか | middleware で 401／自分の claim に阻まれて 409／秘密の過剰な到達範囲 | 自動: `verify-agent-run-lease.cjs`（detached）、`verify-core-route-classes.cjs`（cron-launch） | H | FIN2-04 |
 | AGT-50 | 書き込みフェンスの status 集合が `('queued','planning','running')` で、planning 中の `AgentPlan / AgentStep` 生成がフェンス内で成功するか | planning が完了しない／フェンス穴 | 自動: `verify-agent-write-fence.cjs`（planning） | H | FIN2-02 |
+| AGT-51 | `AgentRun.maxApprovals`（既定 5）を超える承認要求を含む計画が planning で `failed(budget)` になり、依頼者に分割を促すか | 承認件数上限が実装されない | 自動: `verify-agent-approval-matrix.cjs`（6 件） | M | FIN3-06 |
 
 ## 8. EXT 外部 API・LLM（従量課金の事前承認・キーの扱い）
 
@@ -484,7 +487,21 @@
 | D-7 | AUTH-18, RUN-12 |
 | D-8 | MIG-04, SCH-05 |
 
-項目数: TEN 23 / AUTH 38 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 50 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 9 ＝ **334 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1 回の 17 指摘、第 2 回の 7 指摘すべてに対応項目あり（漏れ 0）。
+項目数: TEN 25 / AUTH 38 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 51 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 9 ＝ **337 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1 回の 17 指摘、第 2 回の 7 指摘、第 3 回の 8 指摘すべてに対応項目あり（漏れ 0）。
+
+## 最終ゲート第 3 回（FIN3）との対応表
+
+| 審査 | 再発防止するチェック項目 |
+|---|---|
+| FIN3-01 | TEN-24, TEN-14 |
+| FIN3-02 | TEN-22, TEN-25 |
+| FIN3-03 | TEN-21, TEN-20 |
+| FIN3-04 | AGT-26, DOC-02 |
+| FIN3-05 | AUTHZ-19, AGT-35, DOC-03 |
+| FIN3-06 | AGT-51, AGT-01, DOC-04 |
+| FIN3-07 | TEN-25 |
+| FIN3-08 | IO-04, AGT-49 |
+
 
 ## 最終ゲート第 2 回（FIN2）との対応表
 
