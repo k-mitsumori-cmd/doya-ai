@@ -1,8 +1,8 @@
 'use client'
 
 // ドヤポップアップ ランディングページ（未ログインの方に見せる面）
-// ⚠️ 実績数値は持っていないので書かない。ヒーロー画像の数値は「表示例」と画像内に明記している。
-// ヒーロー画像・アイコンは SVG から sharp で描き出したもの（画像生成APIは使っていない）。
+// ⚠️ 実績数値は持っていないので書かない。
+// 画像は Codex の内蔵画像生成（定額枠）で作ったもの。依頼文は docs/design/images/popup/PROMPTS.md
 import {
   LpShell, ProductHero, MockWindow, FeatureShowcase,
   HowItWorks, Benefits, UseCases, FaqSection, CtaBand, type ShowcaseRow,
@@ -18,7 +18,7 @@ const ROWS: ShowcaseRow[] = [
     title: 'URLだけで、出す内容までAIが考える',
     desc: 'サイトを読み取り、そのサイトに合ったポップアップを3案作ります。ChatGPTに相談できる「AIに聞く」ボタン、問い合わせや資料への案内、次に読むおすすめページです。',
     bullets: ['ToB / ToC を判定して内容を切り替え', 'リンク先はサイトで実際に見つかったページだけ', '出すタイミングと位置もあわせて提案'],
-    image: { src: '/popup/hero.webp', alt: 'AIが提案したポップアップがサイトの上に表示されている様子' },
+    image: { src: '/popup/step-2.webp', alt: 'AIが作ったポップアップの3案が並んでいる様子' },
   },
   {
     icon: 'tune',
@@ -43,6 +43,13 @@ const ROWS: ShowcaseRow[] = [
         </div>
       </MockWindow>
     ),
+  },
+  {
+    icon: 'web_asset',
+    title: 'タグを1行貼るだけで、サイトに出る',
+    desc: '設置タグをサイトの<head>に1行貼れば、公開した案がサイトに表示されます。表示数・クリック数・クリック率は日別に計測され、案ごとに比べられます。',
+    bullets: ['WordPress・Studio・Wix などのヘッダー設定から貼れる', 'サイトの見た目と干渉しない作り', '登録したドメイン以外では表示も計測もしない'],
+    image: { src: '/popup/install-example.webp', alt: 'Webサイトの上にポップアップが表示されている例' },
   },
 ]
 

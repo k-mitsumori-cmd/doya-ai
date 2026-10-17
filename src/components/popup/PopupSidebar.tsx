@@ -27,6 +27,9 @@ import {
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { getServiceById } from '@/lib/services'
+import { POPUP_NAV, isPopupNavActive, type PopupNavIcon } from '@/lib/popup/nav'
+
+const NAV_ICON: Record<PopupNavIcon, NavItem['icon']> = { popup: PanelTopOpen, pricing: CreditCard }
 
 const BASE = '/popup'
 
@@ -41,10 +44,8 @@ function PopupSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const NAV: NavItem[] = [
-    { href: BASE, label: 'サイトとポップアップ', icon: PanelTopOpen, hot: true },
-    { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
-  ]
+  // ⚠️ 項目は src/lib/popup/nav.ts が正本（統合仕様 R-1）。ここでは描くだけ
+  const NAV: NavItem[] = POPUP_NAV.map((item, i) => ({ href: item.href, label: item.label, icon: NAV_ICON[item.icon], hot: i === 0 }))
 
   const planLabel = (() => {
     if (!isLoggedIn) return 'GUEST'
@@ -57,9 +58,8 @@ function PopupSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
   const isPro = planLabel === 'PRO' || planLabel === 'ENTERPRISE'
 
   const isActive = (href: string) => {
-    // サイト詳細・編集画面も「サイトとポップアップ」の中として扱う
-    if (href === BASE) return pathname === BASE || pathname.startsWith(BASE + '/sites') || pathname.startsWith(BASE + '/edit')
-    return pathname === href || pathname.startsWith(href + '/')
+    const item = POPUP_NAV.find((n) => n.href === href)
+    return item ? isPopupNavActive(item, pathname || '') : false
   }
 
   const confirmLogout = async () => {

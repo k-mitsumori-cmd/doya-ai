@@ -29,7 +29,7 @@ export default function PopupAppLayout({ children }: { children: React.ReactNode
   if (guest) return <>{children}</>
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-[var(--bg)]">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex">
         <PopupSidebar isCollapsed={sidebarCollapsed} onToggle={(c) => setSidebarCollapsed(c)} />
@@ -69,15 +69,15 @@ export default function PopupAppLayout({ children }: { children: React.ReactNode
         style={{ marginLeft: isMobile ? 0 : sidebarCollapsed ? 72 : 240 }}
       >
         {/* Mobile header */}
-        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white p-3 md:hidden">
-          <button onClick={() => setMobileMenuOpen(true)} className="rounded-lg p-2 text-slate-700 hover:bg-slate-100">
+        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-[color:var(--line)] bg-[var(--paper)] p-3 md:hidden">
+          <button onClick={() => setMobileMenuOpen(true)} className="grid h-11 w-11 place-items-center rounded-[var(--r-sm)] text-[color:var(--ink)] hover:bg-[var(--track)]">
             <Menu className="h-6 w-6" />
           </button>
           <div className="flex items-center gap-2">
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-[#ff5a36] to-[#b8202f] text-white shadow">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-[var(--blue)] text-white shadow">
               <PanelTopOpen className="h-4 w-4" />
             </span>
-            <span className="text-base font-black text-slate-900">ドヤポップアップ</span>
+            <span className="text-base font-bold text-[color:var(--ink)]">ドヤポップアップ</span>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">{children}</div>
