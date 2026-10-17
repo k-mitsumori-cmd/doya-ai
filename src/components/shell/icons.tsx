@@ -8,17 +8,17 @@
 // ⚠️ 新しい名前を使うときは、ここの対応表に足す。無い名前は既定のアイコン（LayoutGrid）になる。
 import type { LucideIcon, LucideProps } from 'lucide-react'
 import {
-  BadgeJapaneseYen, BarChart3, BookOpen, Briefcase, Building2, Calendar, CircleUser, Clock, CreditCard,
-  FileText, FolderKanban, Headphones, Home, Image, LayoutDashboard, LayoutGrid, Link2, List, ListChecks,
-  Megaphone, MessageSquare, Mic, MousePointerClick, PenTool, Plus, Presentation, Receipt, Search, Settings,
-  Store, UserCheck, Users, Wallet,
+  BadgeJapaneseYen, BarChart3, BookOpen, Box, Briefcase, Building2, Calendar, CircleUser, Clock, CreditCard,
+  FileText, FolderKanban, FolderOpen, Gift, Headphones, Home, Image, LayoutDashboard, LayoutGrid, Link2, List,
+  ListChecks, Megaphone, MessageSquare, Mic, MousePointerClick, Palette, PenTool, Plus, PlusCircle, Presentation,
+  Receipt, Search, Settings, Store, Truck, UserCheck, Users, Wallet,
 } from 'lucide-react'
 
 export const SHELL_ICONS = {
-  BadgeJapaneseYen, BarChart3, BookOpen, Briefcase, Building2, Calendar, CircleUser, Clock, CreditCard,
-  FileText, FolderKanban, Headphones, Home, Image, LayoutDashboard, LayoutGrid, Link2, List, ListChecks,
-  Megaphone, MessageSquare, Mic, MousePointerClick, PenTool, Plus, Presentation, Receipt, Search, Settings,
-  Store, UserCheck, Users, Wallet,
+  BadgeJapaneseYen, BarChart3, BookOpen, Box, Briefcase, Building2, Calendar, CircleUser, Clock, CreditCard,
+  FileText, FolderKanban, FolderOpen, Gift, Headphones, Home, Image, LayoutDashboard, LayoutGrid, Link2, List,
+  ListChecks, Megaphone, MessageSquare, Mic, MousePointerClick, Palette, PenTool, Plus, PlusCircle, Presentation,
+  Receipt, Search, Settings, Store, Truck, UserCheck, Users, Wallet,
 } satisfies Record<string, LucideIcon>
 
 /** 対応表にある名前。対応表に無い文字列も受け付ける（既定のアイコンになる） */
