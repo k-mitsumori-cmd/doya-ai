@@ -1474,8 +1474,11 @@ export function owned(client: TenantPrisma | OwnedTx, ctx) {
 | `core.middleware_enforce` | `core.middleware_report_only`（本番 2 週間） | — |
 | `billing.usage_ledger_enforce` | **`core.unified_access`**（旧 ctx には companyId が無い） | — |
 | `billing.company_mode`（Checkout 入口のみ） | `core.unified_access` | **既契約は戻らない**（webhook 分岐と権利判定は常時 ON。OPS-21） |
+| `core.session_limit_notify_only`（Phase2） | `core.session_tracking` | —（通知のみで失効させないため戻せる） |
 | `core.session_limit_enforce` | `core.session_tracking` | 失効は不可逆 |
 | `core.step_up_enforce` | `core.session_tracking` | — |
+| `core.profile_prefer_company`（Phase3） | `core.dual_write` | OFF に戻すと `CompanyProfile` にだけ書かれた列が旧画面から見えなくなる。Phase3 中に OFF にするのは `tenant-reconcile.ts` で旧プロフィールへ反映した後に限る（FIN8-01） |
+| `agent.kill_switch`（全体の緊急停止） | —（常に操作可。依存を持たせると止めたいときに止められない） | —（OFF にするときは `paused(kill_switch)` の run を一括で `nextRunAt=now()` に戻す。§8.5・§8.6） |
 | `agent.enabled` | **`billing.usage_ledger_enforce` ∧ 会社に `CompanySubscription` or `planOverride`**（無いと reserve が常に budget 失敗） | — |
 | `agent.tools.<key>.enabled` | `agent.enabled` | — |
 
@@ -2033,6 +2036,7 @@ if (r.status !== 0) process.exit(1)
 | 8 | 2026-10-17 | 最終ゲート第 5 回（FIN5-01〜05、重大 0）と方針転換を反映（付録 N）。`walkData` を **DMMF 駆動の既定拒否**に: 全モデル対象、フィールド既定拒否、Prisma 5.22 NestedInput の閉じた許可リスト（to-many 11 / to-one 7 / create 側 4・3 を `index.d.ts` で実測）、キーごとの data 検査・refs 検査の割当（ネスト `upsert` と `update.data / updateMany.data / upsert.update` のテナント列書き換え禁止を含む）、非テナント親からのネスト書き込みは `owned()` 経由のみ（拡張の入口ゲート、`OwnedTx` の Omit）、`assertRefsOwned` の仕様（非テナント refs 除外・正規化と重複排除・via 型は `scoped()`）。スクラッチ領域で `Prisma.dmmf` を読む核を実行し 192 モデル・396 relation の走査と許可リスト外の throw を確認。DMMF↔マトリクス整合の CI（TEN-35）。RLS を機微テーブル限定で**段階採用**（評価表、Phase4、D21）。`$queryRawUnsafe / $executeRawUnsafe` を lint 禁止。「5 分類」に統一。付録 J にキー 25・26。draft 冒頭を改訂 8 に |
 | 9 | 2026-10-17 | 最終ゲート第 6 回（FIN6-01〜06、重大 0）を全件反映（付録 O）。`walkData` の契約にテナント relation（DMMF `relationFromFields`）の規則（update は種類を問わず throw、create は `connect:{<主キー>: expected}` のみ）、`createMany` エンベロープの明示的例外、refs 検査の select を DMMF `primaryKey.fields` に、入口ゲートを「relation キーが 1 つでもあればマーカー要求」の保守的規則に。RLS ポリシーを `FOR ALL TO app_rw USING/WITH CHECK`、owner は `DIRECT_URL` のみ、`FORCE` は付けない判断。§13 #38・D5 を方式 B/D21 に統一、付録 J キー 27。`prototypes/walkdata-proto.cjs` を核から更新し case6〜11 と審査プローブを回帰に追加（実行結果は付録 O・完了報告） |
 | 10 | 2026-10-17 | 最終ゲート第 7 回（FIN7-01〜03、重大 0・中 0）を反映（付録 P）。RLS の前提（アプリは `app_rw`、owner ではない）を起動時の DB 側検査（`pg_roles` 属性と `pii` 表の owner）で fail-fast に担保、`owned()` の所属確認 3 箇所を `selectFor(model)` に、FIN7-03（同一テナント再 connect の許容）はリード判断で緩めず（`src/` grep 0 件を記録）。付録 J キー 28、プロトタイプ case12、§17.2 #13 |
+| 10.1 | 2026-10-17 | 最終ゲート第 8 回（完了判定。重大 0・中 0・軽微 1、「条件付きで着手可」。FINAL-GATE-2026-10-17-8.md）の FIN8-01 をリードが直接反映：§12 フラグ依存表に `core.session_limit_notify_only`・`core.profile_prefer_company`・`agent.kill_switch` の 3 行を追加（requires と不可逆性）。着手の条件 4 つは §12 の Phase0 の前提として扱う |
 
 
 ### 付録 F. 第 2 回審査（REVIEW-2026-10-17-data / sec / ops）への回答
