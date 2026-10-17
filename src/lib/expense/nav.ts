@@ -3,21 +3,27 @@
 // ============================================
 // ⚠️ ToolFrame の nav にそのまま渡す。項目を足すときはここだけを直す。
 //    将来の manifest.ui.nav[]（README §18.6 手順 2）と同じ形（ShellNavItem）。
+// ⚠️ アイコンは名前の文字列で書く（部品の関数を渡すと、サーバーの layout.tsx から渡したときに 500 になる）。
+//    名前は src/components/shell/icons.tsx の SHELL_ICONS にあるものだけを使う（型で確かめる）。
 // ⚠️ 料金プランは AppShell 側の導線に任せ、ツール内ナビには入れない。
-import { CalendarClock, FileText, LayoutDashboard, LineChart, Settings, UserRound } from 'lucide-react'
 import type { ShellNavItem } from '@/components/shell/nav'
+import type { SHELL_ICONS } from '@/components/shell/icons'
 import { ROLE_RANK, type ExpenseRole } from './constants'
 
-type ExpenseNavDef = Omit<ShellNavItem, 'href' | 'minServiceRole'> & { path: string; minServiceRole?: ExpenseRole }
+type ExpenseNavDef = Omit<ShellNavItem, 'href' | 'minServiceRole' | 'icon'> & {
+  path: string
+  icon: keyof typeof SHELL_ICONS
+  minServiceRole?: ExpenseRole
+}
 
 /** 組織の中の相対パス（'' はダッシュボード） */
 export const EXPENSE_NAV: ExpenseNavDef[] = [
-  { label: 'ダッシュボード', path: '', icon: LayoutDashboard, exact: true },
-  { label: '支払予定', path: '/payables', icon: CalendarClock },
-  { label: '業務委託', path: '/contractors', icon: UserRound },
-  { label: '支出契約', path: '/contracts', icon: FileText },
-  { label: '予測', path: '/forecast', icon: LineChart },
-  { label: '設定', path: '/settings', icon: Settings, minServiceRole: 'admin' },
+  { label: 'ダッシュボード', path: '', icon: 'LayoutDashboard', exact: true },
+  { label: '支払予定', path: '/payables', icon: 'Calendar' },
+  { label: '業務委託', path: '/contractors', icon: 'UserCheck' },
+  { label: '支出契約', path: '/contracts', icon: 'FileText' },
+  { label: '予測', path: '/forecast', icon: 'BarChart3' },
+  { label: '設定', path: '/settings', icon: 'Settings', minServiceRole: 'admin' },
 ]
 
 /** その組織・権限で ToolFrame に渡すナビ。権限が足りない項目は出さない */

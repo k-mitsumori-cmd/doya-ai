@@ -3,7 +3,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { Plus } from 'lucide-react'
 import { Button } from '@/components/ds'
 import { BILLING_MODEL_LABEL, type BillingModel } from '@/lib/expense/constants'
 import { useExpenseQuery } from '@/components/expense/api'
@@ -49,7 +48,7 @@ function Inner() {
         actions={
           <>
             <MonthSwitcher value={month} onChange={(m) => router.replace(`?month=${m}`)} />
-            {canManage && <Button href={addHref} icon={Plus}>業務委託を追加</Button>}
+            {canManage && <Button href={addHref} icon="Plus">業務委託を追加</Button>}
           </>
         }
       />
