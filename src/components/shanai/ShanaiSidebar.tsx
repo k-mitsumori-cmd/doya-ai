@@ -8,7 +8,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookUser, Building2, CreditCard, Plus, Zap } from 'lucide-react'
+import { BookUser, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { shanaiTheme } from '@/components/sidebar/themes'
@@ -31,7 +31,6 @@ import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { getServiceById } from '@/lib/services'
 
 const BASE = '/shanai'
-const ICONS = { BookUser, Plus, Building2, CreditCard } as const
 
 function ShanaiSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
@@ -44,7 +43,7 @@ function ShanaiSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const NAV: NavItem[] = SHANAI_NAV.map((n) => ({ href: n.href, label: n.label, icon: ICONS[n.icon], hot: n.hot }))
+  const NAV: NavItem[] = SHANAI_NAV.map((n) => ({ href: n.href, label: n.label, icon: n.icon ?? BookUser, hot: n.hot }))
 
   const planLabel = (() => {
     if (!isLoggedIn) return 'GUEST'

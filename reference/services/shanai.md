@@ -106,8 +106,9 @@
 
 | 項目 | このブランチでの対応 |
 |------|------|
-| R-1 ナビをデータで持つ | `src/lib/shanai/nav.ts`。`ShanaiSidebar` はこれを描くだけ |
-| R-3 ds トークン | `src/components/shanai/tokens.css`（`.shanai-ds` の中だけで効く。値は `renewal.module.css` と同じ）。`src/app/shanai` に色の直書きは無い。段0で ds に差し替える |
+| R-1 ナビをデータで持つ | `src/lib/shanai/nav.ts`（`ShellNavItem[]`）。共通シェルでは `ToolFrame` の `nav` に、OFF のあいだは暫定の `ShanaiSidebar` に同じ配列を渡す |
+| 段0（共通シェル） | `src/app/shanai/layout.tsx` が `isShellEnabled('shanai')` を見て、ON のときだけ `ShanaiFrame` が `AppShell`＋`ToolFrame` で包む。回答画面は包まない。手元で見るときは `UI_SHELL_SERVICES=shanai` |
+| R-3 ds トークン | 段0の `src/components/ds/tokens.module.css`（`.ds`）を layout で当てる。ds に無い補助の値だけ `src/components/shanai/tokens.css`（`.shanai-ds`）。空状態は `ds/EmptyState`。`src/app/shanai` に色の直書きは無い |
 | R-4 読み取りの分離 | `src/lib/shanai/interviews-read.ts`（`listInterviews` / `countInterviews` / `getInterviewDetail`）、`src/lib/shanai/company-read.ts`。API とエージェント道具が同じ関数を呼ぶ |
 | R-5 自社プロフィール | `ShanaiCompany.companyProfileId` を予約 |
 | R-7 公開画面 | `/shanai/answer/[token]` はアプリ枠を出さない（`src/lib/ui/guest-path.ts`）。AppShell 移行時も対象外（`guestShared`） |

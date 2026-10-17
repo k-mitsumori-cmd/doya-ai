@@ -4,14 +4,14 @@
 実行前に `~/.codex/auth.json` が `auth_mode=chatgpt`・API キー無しであることを確認し、`OPENAI_API_KEY` を渡さずに `codex exec -m gpt-5.6-sol -i <参照画像>` で実行した（API キーの従量課金は使っていない）。
 
 - 生成日: 2026-10-18
-- 参照画像: アイコンは `public/renewal/icons/interview.webp`、それ以外は `public/ui-renewal/mascots/interview.webp`（シロクマの画風合わせ）
-- 書き出し: 元画像（PNG）を sharp で指定サイズの WebP（品質82、300KB以下）に変換。アイコンは角丸の外側を透過に切り抜き
+- 参照画像: アイコンは `public/renewal/icons/adimage.webp` と `hr.webp`（シロクマのステッカー型）、それ以外は `public/ui-renewal/mascots/interview.webp`（シロクマの画風合わせ）
+- 書き出し: 元画像（PNG）を sharp で指定サイズの WebP（品質82、300KB以下）に変換。アイコンは元画像の透過をそのまま使用
 - 作り直すときは、下のプロンプトの全文から始める
 - `public/shanai/shots/1-input.webp`・`2-process.webp`・`3-output.webp` は LP（`components/lp/renewal`）が手順の画像として読む名前。中身は `step-1〜3.webp` と同じ
 
 | ファイル | 大きさ | 使う場所 | 採用した版 |
 |---|---|---|---|
-| `public/renewal/icons/shanai.webp` | 256×256 | AppShell のサイドバー・⌘K・ホームのカード | 1回目 |
+| `public/renewal/icons/shanai.webp` | 256×256 | AppShell のサイドバー・⌘K・ホームのカード | 2回目（2026-10-18。§12.1 の訂正に合わせ、角丸グラデーション型からシロクマのステッカー型に作り直し。透過は元画像のアルファをそのまま使用） |
 | `public/ui-renewal/mascots/shanai.webp` | 720×600 | ツールのトップ・ホームの提案カード | 1回目 |
 | `public/shanai/hero.webp` | 1600×900 | LP のヒーロー・ツールのトップ | 1回目 |
 | `public/shanai/step-1.webp` | 1200×800 | LP「3ステップ」・初回ガイド（会社URLの登録） | 2回目（1回目は赤・緑のアクセントが混ざり §12.1 の「1枚1色」に合わないため作り直し） |
@@ -26,7 +26,15 @@
 
 各プロンプトの先頭に `Use your built-in image generation tool.`、末尾に `After saving, reply only with the file name.` を付けて実行した。
 
-### icon（参照: interview のアイコン）
+### icon（参照: adimage.webp・hr.webp のアイコン）
+
+採用版（2回目・ステッカー型）:
+
+```
+Create ONE image and save it as icon.png in the current directory. It is a tool icon that must match the two attached reference icons exactly in style: a sticker of the DoyaAI polar bear (white body, blue goggles with </> marks, white hoodie), flat blue line-art with white fill, thick white die-cut outline around the whole sticker, transparent background, same line weight and blue (#0066ff family) as the references, upper body framing. The bear holds ONE object that represents the tool 'employee interview': a handheld microphone (preferred) held up as if interviewing. No text, no letters, no extra props, no background shapes. Square 1024x1024.
+```
+
+1回目（不採用。§12.1 の訂正前の角丸グラデーション型。参照: interview.webp）:
 
 ```
 Create ONE image and save it as icon.png in the current directory. It is an app icon matching the attached reference icon's style exactly: rounded square, diagonal gradient from #0066ff (top-left) to #0047d6 (bottom-right), a single white line-art glyph centered with the same stroke width as the reference. Glyph: an ID badge / person card with a small speech bubble (employee interview). No text, no letters. Square 1024x1024.

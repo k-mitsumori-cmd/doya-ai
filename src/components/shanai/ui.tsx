@@ -3,6 +3,7 @@
 // ドヤ社内インタビュー 画面の共通部品
 import { useEffect, useState, type ReactNode } from 'react'
 import { Check, Loader2 } from 'lucide-react'
+import { EmptyState as DsEmptyState } from '@/components/ds'
 
 export const ACCENT = 'var(--blue)'
 
@@ -186,27 +187,17 @@ export function PageSkeleton({ variant = 'list' }: { variant?: 'list' | 'detail'
   )
 }
 
-/** 空・エラー・権限なし。イラスト＋一文＋次にやるボタン1つ */
-export function EmptyState({
-  image,
-  title,
-  desc,
-  action,
-}: {
-  image: string
-  title: string
-  desc?: string
-  action?: ReactNode
-}) {
-  return (
-    <div className="flex flex-col items-center px-4 py-10 text-center">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={image} alt="" aria-hidden className="h-40 w-auto max-w-full object-contain sm:h-48" />
-      <p className="mt-4 text-[18px] font-bold leading-[1.4] text-[var(--ink)]">{title}</p>
-      {desc && <p className="mt-1 max-w-md text-[13px] font-medium leading-[1.5] text-[var(--sub)]">{desc}</p>}
-      {action && <div className="mt-5">{action}</div>}
-    </div>
-  )
+/**
+ * 空・エラー・権限なし。イラスト＋一文＋次にやるボタン1つ。
+ * 中身は段0の ds の EmptyState。共通の絵（public/empty 配下の SVG）は kind で、ツール固有の絵は art で渡す
+ */
+const EMPTY_KINDS = ['not-generated', 'zero', 'no-results', 'error', 'forbidden', 'preparing'] as const
+type EmptyKind = (typeof EMPTY_KINDS)[number]
+
+export function EmptyState({ image, title, desc, action }: { image: string; title: string; desc?: string; action?: ReactNode }) {
+  const m = image.match(/^\/empty\/([a-z-]+)\.svg$/)
+  const kind = m && (EMPTY_KINDS as readonly string[]).includes(m[1]) ? (m[1] as EmptyKind) : undefined
+  return <DsEmptyState kind={kind ?? 'zero'} art={kind ? undefined : image} title={title} description={desc} action={action} />
 }
 
 export function ErrorState({ message, onRetry }: { message?: string; onRetry?: () => void }) {

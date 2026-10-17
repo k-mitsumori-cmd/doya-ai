@@ -1,31 +1,29 @@
 // ============================================
-// ドヤ社内インタビュー サイドバーの項目（データ）
+// ドヤ社内インタビュー ツール内ナビ（データ）
 // ============================================
-// ⚠️ 統合仕様 R-1: 項目はここにだけ書く。ShanaiSidebar はこれを描くだけにする。
-//    段0（AppShell）で manifest.ui.nav[] にそのまま移す。icon は lucide のアイコン名
-export interface ShanaiNavItem {
-  label: string
-  href: string
-  icon: 'BookUser' | 'Plus' | 'Building2' | 'CreditCard'
-  /** 目立たせる（新規作成など） */
+// ⚠️ 統合仕様 R-1: 項目はここにだけ書く。
+//    共通シェル（ui.shell.shanai=ON）では ToolFrame の nav に、OFF のあいだは暫定の ShanaiSidebar に同じ配列を渡す。
+import { BookUser, Building2, CreditCard, Plus } from 'lucide-react'
+import { isNavActive as isShellNavActive, type ShellNavItem } from '@/components/shell/nav'
+
+export interface ShanaiNavItem extends ShellNavItem {
+  /** 暫定サイドバーで目立たせる（新規作成など） */
   hot?: boolean
-  /** この項目の下にあるパスも「選択中」とみなす */
-  matchPrefixes?: string[]
-  minServiceRole?: 'member' | 'admin'
 }
 
 export const SHANAI_BASE = '/shanai'
 
 export const SHANAI_NAV: ShanaiNavItem[] = [
-  { label: 'インタビュー一覧', href: SHANAI_BASE, icon: 'BookUser', matchPrefixes: [SHANAI_BASE + '/interviews'] },
-  { label: '新しく作る', href: SHANAI_BASE + '/new', icon: 'Plus', hot: true },
-  { label: '会社情報', href: SHANAI_BASE + '/company', icon: 'Building2' },
-  { label: '料金プラン', href: SHANAI_BASE + '/pricing', icon: 'CreditCard' },
+  // 一覧はツールのトップなので exact にする（/shanai/company などで一覧が選択中にならないように）。
+  // 詳細（/shanai/interviews/…）を一覧の中として扱う判定は、下の isNavActive で足す
+  { label: 'インタビュー一覧', href: SHANAI_BASE, icon: BookUser, exact: true },
+  { label: '新しく作る', href: SHANAI_BASE + '/new', icon: Plus, hot: true },
+  { label: '会社情報', href: SHANAI_BASE + '/company', icon: Building2 },
+  { label: '料金プラン', href: SHANAI_BASE + '/pricing', icon: CreditCard },
 ]
 
-/** pathname がその項目の選択中にあたるか */
+/** pathname がその項目の選択中にあたるか（インタビュー詳細は「インタビュー一覧」の中） */
 export function isNavActive(item: ShanaiNavItem, pathname: string): boolean {
-  if (pathname === item.href) return true
-  if (item.matchPrefixes?.some((p) => pathname === p || pathname.startsWith(p + '/'))) return true
-  return item.href !== SHANAI_BASE && pathname.startsWith(item.href + '/')
+  if (item.href === SHANAI_BASE && pathname.startsWith(SHANAI_BASE + '/interviews')) return true
+  return isShellNavActive(pathname, item)
 }
