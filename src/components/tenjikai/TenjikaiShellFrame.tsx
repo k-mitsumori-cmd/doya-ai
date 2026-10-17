@@ -1,7 +1,7 @@
 'use client'
 
 // 共通シェル（ui.shell.tenjikai が ON）のときの外枠。ナビは nav.ts のデータを ToolFrame に渡すだけ（ADDON R-1）。
-// ⚠️ アイコン（関数）をサーバーから渡せないため、ナビの配列はこのクライアント部品の中で読む。
+// ナビの icon は名前の文字列なので、サーバーから渡すこともできる。ここでは TenjikaiApp と同じクライアント部品の中で読んでいる。
 import AppShell from '@/components/shell/AppShell'
 import ToolFrame from '@/components/shell/ToolFrame'
 import { TENJIKAI_NAV } from '@/lib/tenjikai/nav'

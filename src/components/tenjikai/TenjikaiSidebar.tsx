@@ -19,6 +19,7 @@ import {
 import type { SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { TENJIKAI_NAV, type Section, type TenjikaiNavItem } from '@/lib/tenjikai/nav'
+import { resolveShellIcon } from '@/components/shell/icons'
 import { ds } from '@/lib/tenjikai/tokens'
 
 // ナビ項目の正本は src/lib/tenjikai/nav.ts（ADDON-SERVICES R-1）
@@ -58,7 +59,7 @@ function SectionButton({
   showLabel: boolean
   onClick: () => void
 }) {
-  const Icon = item.icon
+  const Icon = resolveShellIcon(item.icon)
   return (
     <button type="button" onClick={onClick} disabled={disabled} title={item.label} className="block w-full text-left disabled:cursor-not-allowed">
       <motion.div
