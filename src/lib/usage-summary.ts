@@ -228,6 +228,26 @@ export async function getUsageSummary(
       }
     }
 
+    case 'popup': {
+      // ⚠️ 上限は plan-limit.ts の popupProposals が正本。数え方も popup/access.ts と同じ
+      //    （無料は累計・有料は月次。削除したサイトも提案1回として数える）
+      const tier = String(plan || '').toUpperCase() === 'ENTERPRISE' ? 'ENTERPRISE' : isPaidPlan(plan) ? 'PRO' : 'FREE'
+      const [total, month] = await Promise.all([
+        prisma.popupSite.count({ where: { userId } }),
+        prisma.popupSite.count({ where: { userId, createdAt: { gte: jstStartOfMonthUtc() } } }),
+      ])
+      return {
+        title: '作った提案',
+        unit: '回',
+        total,
+        planLabel,
+        meters:
+          tier === 'FREE'
+            ? [{ label: '無料枠', used: total, limit: FREE_LIMITS.popupProposals }]
+            : [{ label: '今月', used: month, limit: (tier === 'ENTERPRISE' ? ENTERPRISE_MONTHLY_LIMITS : PRO_MONTHLY_LIMITS).popupProposals }],
+      }
+    }
+
     case 'banner': {
       // 生成予約と同じく、統一プランとサービス個別付与の上位を採用する。
       const sub = await prisma.userServiceSubscription.findUnique({

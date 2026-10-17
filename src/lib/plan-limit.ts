@@ -38,6 +38,10 @@ export const FREE_LIMITS = {
   mensetsuSessions: 3,
   /** 質問リンクの作成回数（累計）。1回＝リンク2本＋バナー画像3枚 */
   asklinkRuns: 3,
+  /** ポップアップの提案回数（累計）。1回＝サイトの読み取り＋2〜3案 */
+  popupProposals: 3,
+  /** ポップアップを出すサイトの登録数（累計） */
+  popupSites: 1,
 } as const
 
 /**
@@ -58,6 +62,10 @@ export const PRO_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   mensetsuTemplates: null,
   // 1回で画像3枚（作り直し込みで最大9枚）。画像生成の従量課金が直接効く
   asklinkRuns: 30,
+  // 1回でLLMを3〜7回（読み取り1＋質問リンク2〜6＋文言1）。画像は作らない
+  popupProposals: 30,
+  // 登録するだけで実費が出ない
+  popupSites: null,
 }
 
 /** ENTERPRISE の月次上限。個別契約のため広めに取るが、無制限にはしない */
@@ -69,6 +77,8 @@ export const ENTERPRISE_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   aishodanProducts: null,
   mensetsuTemplates: null,
   asklinkRuns: 100,
+  popupProposals: 100,
+  popupSites: null,
 }
 
 export type FreeLimitKey = keyof typeof FREE_LIMITS

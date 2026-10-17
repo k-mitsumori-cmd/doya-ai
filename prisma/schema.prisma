@@ -4621,3 +4621,83 @@ model AskLinkBanner {
   @@unique([runId, kind])
   @@map("asklink_banner")
 }
+
+// ============================================================
+// ドヤポップアップ（popup）— 仕様: reference/services/popup.md
+// ------------------------------------------------------------
+// URL1つからポップアップを提案し、埋め込みタグで配信して、表示・クリックを日別に数える。
+// ⚠️ userId でスコープする（ログイン必須）。他人のサイト・案は findFirst({ id, userId }) で弾く。
+// ⚠️ creative / trigger / targeting / frequency の形は src/lib/popup/schema.ts の sanitize*() が正本。
+// ⚠️ 計測は生ログを持たず、popup_stat に日別で加算する（行数を表示回数に比例させない）。
+// ============================================================
+model PopupSite {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  sourceUrl   String
+  /// 表示を許すホスト（www なし・小文字）。サブドメインも許す
+  domain      String
+  /// 埋め込みタグに載せる公開キー（推測できない乱数）
+  siteKey     String    @unique
+  /// 抽出結果（asklink の SiteProfile と同じ形）
+  site        Json
+  /// サイト上で実際に見つかったURLの集合。ポップアップのリンク先はこの中から選ぶ
+  allowedUrls Json
+  /// 'b2b' | 'b2c'
+  audience    String    @default("b2b")
+  /// 'site' | 'manual'
+  source      String    @default("site")
+  /// 埋め込みタグからの最終アクセス（設置確認。10分に1回まで更新）
+  lastSeenAt  DateTime?
+  /// 削除日時。⚠️ 行は消さない（消すと提案回数の数え直しで無料枠が戻ってしまう）
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  popups Popup[]
+
+  @@index([userId, createdAt])
+  @@map("popup_site")
+}
+
+model Popup {
+  id        String    @id @default(cuid())
+  siteId    String
+  site      PopupSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  userId    String
+  name      String
+  /// 'ask' | 'cta' | 'pages' | 'image'
+  kind      String
+  /// 'draft' | 'live' | 'paused'
+  status    String    @default("draft")
+  sortOrder Int       @default(0)
+  creative  Json
+  trigger   Json
+  targeting Json
+  frequency Json
+  /// 提案の理由（画面表示用）
+  reason    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  stats PopupStat[]
+
+  @@index([siteId, status, sortOrder])
+  @@index([userId])
+  @@map("popup")
+}
+
+model PopupStat {
+  popupId     String
+  popup       Popup    @relation(fields: [popupId], references: [id], onDelete: Cascade)
+  /// JST の日付
+  day         DateTime @db.Date
+  /// 'main'（表示・閉じる・ボタン）か 'link:N'（リスト内のN番目のリンク）
+  target      String   @default("main")
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  closes      Int      @default(0)
+
+  @@id([popupId, day, target])
+  @@map("popup_stat")
+}
