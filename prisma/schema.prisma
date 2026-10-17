@@ -4647,6 +4647,9 @@ model PopupSite {
   audience    String    @default("b2b")
   /// 'site' | 'manual'
   source      String    @default("site")
+  /// 予約列（統合仕様 R-5）: 経営ホームの会社情報（CompanyProfile）を指す。null 可・FK なし。
+  /// 自社プロフィールの写しを新設しないため、会社情報が入ったらここで参照する
+  companyProfileId String?
   /// 埋め込みタグからの最終アクセス（設置確認。10分に1回まで更新）
   lastSeenAt  DateTime?
   /// 削除日時。⚠️ 行は消さない（消すと提案回数の数え直しで無料枠が戻ってしまう）

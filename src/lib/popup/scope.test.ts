@@ -81,3 +81,15 @@ test('画像の配信は公開中か持ち主だけ', () => {
   assert.ok(/popup\.status === 'live'/.test(image))
   assert.ok(/userId !== popup\.userId/.test(image))
 })
+
+// 統合仕様 R-4 で、API はデータの読み書きを lib（popup-read / popup-write / propose）に任せた。
+// IDOR の守りは lib 側にあるので、lib の問い合わせも userId 付きか確かめる。
+for (const rel of ['src/lib/popup/popup-read.ts', 'src/lib/popup/popup-write.ts', 'src/lib/popup/propose.ts']) {
+  const src = readFileSync(join(process.cwd(), rel), 'utf8')
+  test(`${rel}: サイト・案は userId 付きでしか引かない`, () => {
+    assert.ok(!/(popupSite|popup)\.findUnique\(/.test(src), 'findUnique を使っている')
+    for (const m of src.matchAll(/(popupSite|popup)\.(findFirst|findMany|count)\(\{\s*where:\s*([^}]*)/g)) {
+      assert.ok(/userId/.test(m[3]), `userId の無い検索: ${m[0]}`)
+    }
+  })
+}
