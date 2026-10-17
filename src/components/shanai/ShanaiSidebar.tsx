@@ -27,6 +27,7 @@ import {
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { SHANAI_NAV, isNavActive } from '@/lib/shanai/nav'
+import { resolveShellIcon } from '@/components/shell/icons'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { getServiceById } from '@/lib/services'
 
@@ -43,7 +44,7 @@ function ShanaiSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const NAV: NavItem[] = SHANAI_NAV.map((n) => ({ href: n.href, label: n.label, icon: n.icon ?? BookUser, hot: n.hot }))
+  const NAV: NavItem[] = SHANAI_NAV.map((n) => ({ href: n.href, label: n.label, icon: n.icon ? resolveShellIcon(n.icon) : BookUser, hot: n.hot }))
 
   const planLabel = (() => {
     if (!isLoggedIn) return 'GUEST'
