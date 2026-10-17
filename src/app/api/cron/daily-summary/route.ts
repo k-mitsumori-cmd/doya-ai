@@ -5,6 +5,7 @@ import { stripe, ALL_SERVICE_IDS } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 
 // ========================================
 // 期限切れサブスクリプションのフォールバック処理
