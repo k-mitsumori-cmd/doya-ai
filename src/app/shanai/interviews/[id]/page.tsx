@@ -12,7 +12,7 @@ import {
 import toast from 'react-hot-toast'
 import SurveyForm from '@/components/shanai/SurveyForm'
 import {
-  api, Button, Card, ConfirmDialog, ErrorState, Field, ForbiddenState, inputCls, Notice, PageSkeleton, ProgressSteps, SectionTitle, StatusBadge, uploadToInterview, useLeaveGuard, useTimedStep,
+  api, Button, Card, ConfirmDialog, ErrorState, Field, ForbiddenState, inputCls, Notice, PageSkeleton, ProgressSteps, SectionTitle, StatusBadge, uploadToInterview, useLeaveGuard, useTimedStep, PageTitle,
 } from '@/components/shanai/ui'
 import { FACT_CATEGORY_LABELS, type ArticleBlock, type FactCategory, type SurveyAnswers } from '@/lib/shanai/types'
 import { findQuestion } from '@/lib/shanai/survey'
@@ -100,7 +100,7 @@ export default function ShanaiInterviewPage() {
       </Link>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-[var(--ink)]">{data.intervieweeName} さん</h1>
+          <PageTitle>{data.intervieweeName} さん</PageTitle>
           <p className="mt-1 text-sm font-bold text-[var(--sub)]">{[data.department, data.position, data.joinYear && `${data.joinYear}入社`].filter(Boolean).join(' / ') || '部署未設定'}</p>
         </div>
         <div className="flex items-center gap-2">

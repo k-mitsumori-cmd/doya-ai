@@ -4,6 +4,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { EmptyState as DsEmptyState } from '@/components/ds'
+import { useInShanaiShell } from './shell-context'
 
 export const ACCENT = 'var(--blue)'
 
@@ -231,7 +232,7 @@ export function ProgressSteps({ steps, current, note }: { steps: string[]; curre
   return (
     <div className="mt-4 flex flex-col items-center gap-4 rounded-[var(--r)] border border-[var(--blue-line)] bg-[var(--blue-soft)] p-5 sm:flex-row sm:items-start" role="status" aria-live="polite">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/shanai/working.webp" alt="" aria-hidden className="h-24 w-auto shrink-0" />
+      <img src="/shanai/working.webp" alt="" aria-hidden className="h-24 w-auto shrink-0 mix-blend-multiply" />
       <div className="w-full">
         <ol className="space-y-1.5">
           {steps.map((label, i) => (
@@ -332,4 +333,13 @@ export function useLeaveGuard(dirty: boolean) {
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [dirty])
+}
+
+/**
+ * ページの見出し。共通シェルの中では ToolFrame が h1 を出すので、ここは h2 にする（見出しを1つにする）
+ */
+export function PageTitle({ children, className = '' }: { children: ReactNode; className?: string }) {
+  const inShell = useInShanaiShell()
+  if (inShell) return <h2 className={`text-[18px] font-bold leading-[1.4] text-[var(--ink)] ${className}`}>{children}</h2>
+  return <h1 className={`text-[22px] font-bold leading-[1.3] text-[var(--ink)] sm:text-[28px] ${className}`}>{children}</h1>
 }

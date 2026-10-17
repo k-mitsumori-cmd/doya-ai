@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ClipboardList, Mic } from 'lucide-react'
-import { api, Button, Card, Field, inputCls, Notice, SectionTitle } from '@/components/shanai/ui'
+import { api, Button, Card, Field, inputCls, Notice, SectionTitle, PageTitle } from '@/components/shanai/ui'
 import { PURPOSE_LABELS, TONE_LABELS, type ShanaiPurpose, type ShanaiTone } from '@/lib/shanai/types'
 
 interface Source {
@@ -51,7 +51,7 @@ export default function ShanaiNewPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
-      <h1 className="text-2xl font-black text-[var(--ink)]">インタビューを作る</h1>
+      <PageTitle>インタビューを作る</PageTitle>
       <p className="mt-1 text-sm font-bold text-[var(--sub)]">素材の集め方と、インタビューする社員の情報を入れてください。</p>
 
       <Card className="mt-6">

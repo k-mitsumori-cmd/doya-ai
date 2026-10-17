@@ -5,8 +5,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Building2, ClipboardList, Image as ImageIcon, Mic, Plus } from 'lucide-react'
 import { api, Card, EmptyState, ErrorState, PageSkeleton, StatusBadge } from '@/components/shanai/ui'
+import { useInShanaiShell } from '@/components/shanai/shell-context'
 
-interface Row {
+export interface ShanaiRow {
   id: string
   mode: 'voice' | 'survey'
   status: string
@@ -18,16 +19,19 @@ interface Row {
   updatedAt: string
 }
 
-export default function ShanaiTool() {
-  const [rows, setRows] = useState<Row[] | null>(null)
-  const [companyReady, setCompanyReady] = useState<boolean | null>(null)
+/** initialRows を渡すと読み込みをしない（開発用の見本画面 /shanai/dev/states で使う） */
+export default function ShanaiTool({ initialRows, initialCompanyReady }: { initialRows?: ShanaiRow[]; initialCompanyReady?: boolean } = {}) {
+  const [rows, setRows] = useState<ShanaiRow[] | null>(initialRows ?? null)
+  const [companyReady, setCompanyReady] = useState<boolean | null>(initialCompanyReady ?? null)
   const [error, setError] = useState<string | null>(null)
+  // 共通シェルの中では ToolFrame が見出しと説明を出すので、ここでは出さない
+  const inShell = useInShanaiShell()
 
   const load = async () => {
     setError(null)
     setRows(null)
     try {
-      const [list, company] = await Promise.all([api<{ interviews: Row[] }>('/api/shanai/interviews'), api<{ company: any }>('/api/shanai/company')])
+      const [list, company] = await Promise.all([api<{ interviews: ShanaiRow[] }>('/api/shanai/interviews'), api<{ company: any }>('/api/shanai/company')])
       setRows(list.interviews)
       setCompanyReady(!!company.company?.name && (company.company?.sources?.length || 0) > 0)
     } catch (e) {
@@ -37,7 +41,9 @@ export default function ShanaiTool() {
   }
 
   useEffect(() => {
+    if (initialRows) return
     void load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (error) return <ErrorState message={error} onRetry={() => void load()} />
@@ -46,6 +52,7 @@ export default function ShanaiTool() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
+        {!inShell && (
         <div className="flex items-center gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/ui-renewal/mascots/shanai.webp" alt="" aria-hidden className="hidden h-20 w-auto sm:block" />
@@ -54,6 +61,7 @@ export default function ShanaiTool() {
           <p className="mt-1 text-[13px] font-medium leading-[1.5] text-[var(--sub)]">録音かアンケートと写真から、会社の魅力が伝わる社員インタビュー記事を作ります。</p>
           </div>
         </div>
+        )}
         <Link href="/shanai/new" className="inline-flex items-center gap-1.5 rounded-[var(--r-sm)] bg-[var(--blue)] px-4 py-2.5 text-sm font-black text-white hover:bg-[var(--blue-deep)]">
           <Plus className="h-4 w-4" />
           インタビューを作る

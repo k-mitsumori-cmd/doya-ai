@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
+import { PageTitle } from '@/components/shanai/ui'
 
 // ⚠️ 料金は統一プラン。サービスごとに個別課金しないこと。
 //    金額の正本は src/lib/unified-plan.ts と UnifiedPricingPlans。ここには書かない。
@@ -18,7 +19,7 @@ export default function ShanaiPricingPage() {
             <ArrowLeft className="h-4 w-4" />
             ドヤ社内インタビューに戻る
           </Link>
-          <h1 className="text-3xl font-black text-[var(--ink)]">料金プラン</h1>
+          <PageTitle>料金プラン</PageTitle>
           <p className="mx-auto mt-2 max-w-xl font-bold text-[var(--sub)]">
             無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。
           </p>

@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { ExternalLink, Globe, Plus, RefreshCw, Trash2 } from 'lucide-react'
-import { api, Button, Card, EmptyState, ErrorState, Field, inputCls, Notice, PageSkeleton, ProgressSteps, SectionTitle, useLeaveGuard, useTimedStep } from '@/components/shanai/ui'
+import { api, Button, Card, EmptyState, ErrorState, Field, inputCls, Notice, PageSkeleton, ProgressSteps, SectionTitle, useLeaveGuard, useTimedStep, PageTitle } from '@/components/shanai/ui'
 import { DEFAULT_BRAND_COLOR, PROFILE_CATEGORY_LABELS, SOURCE_KIND_LABELS, type ProfileCategory, type SourceKind } from '@/lib/shanai/types'
 
 interface Source {
@@ -129,7 +129,7 @@ export default function ShanaiCompanyPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
-      <h1 className="text-[22px] font-bold leading-[1.3] text-[var(--ink)] sm:text-[28px]">会社情報</h1>
+      <PageTitle>会社情報</PageTitle>
       <p className="mt-1 text-[13px] font-medium leading-[1.5] text-[var(--sub)]">ここで登録した内容を、すべてのインタビュー記事で使います。</p>
 
       {message && (
