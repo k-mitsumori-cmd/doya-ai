@@ -8,7 +8,7 @@
 // ⚠️ 新しい名前を使うときは、ここの対応表に足す。無い名前は既定のアイコン（LayoutGrid）になる。
 import type { LucideIcon, LucideProps } from 'lucide-react'
 import {
-  BadgeJapaneseYen, BarChart3, BookOpen, Box, Briefcase, Building2, Calendar, CalendarClock, CalendarRange,
+  BadgeJapaneseYen, BarChart3, BookOpen, BookUser, Box, Briefcase, Building2, Calendar, CalendarClock, CalendarRange,
   CircleUser, Clock, CreditCard, FileSignature, FileText, FolderKanban, FolderOpen, Gift, Headphones, Home, Image,
   LayoutDashboard, LayoutGrid, LineChart, Link2, List, ListChecks, Megaphone, MessageSquare, Mic, MousePointerClick,
   Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Store,
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 
 export const SHELL_ICONS = {
-  BadgeJapaneseYen, BarChart3, BookOpen, Box, Briefcase, Building2, Calendar, CalendarClock, CalendarRange,
+  BadgeJapaneseYen, BarChart3, BookOpen, BookUser, Box, Briefcase, Building2, Calendar, CalendarClock, CalendarRange,
   CircleUser, Clock, CreditCard, FileSignature, FileText, FolderKanban, FolderOpen, Gift, Headphones, Home, Image,
   LayoutDashboard, LayoutGrid, LineChart, Link2, List, ListChecks, Megaphone, MessageSquare, Mic, MousePointerClick,
   Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Store,
