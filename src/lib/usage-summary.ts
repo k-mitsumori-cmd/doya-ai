@@ -248,6 +248,36 @@ export async function getUsageSummary(
       }
     }
 
+    case 'shanai': {
+      // ⚠️ 上限は plan-limit.ts の shanaiArticles / shanaiTranscripts が正本。数え方も shanai/access.ts と同じ
+      //    （台帳 shanai_usage_log で数える。無料は累計・有料は月次。インタビューを消しても戻らない）
+      const tier = String(plan || '').toUpperCase() === 'ENTERPRISE' ? 'ENTERPRISE' : isPaidPlan(plan) ? 'PRO' : 'FREE'
+      const since = jstStartOfMonthUtc()
+      const [total, month, transcriptTotal, transcriptMonth] = await Promise.all([
+        prisma.shanaiUsageLog.count({ where: { userId, kind: 'article' } }),
+        prisma.shanaiUsageLog.count({ where: { userId, kind: 'article', createdAt: { gte: since } } }),
+        prisma.shanaiUsageLog.count({ where: { userId, kind: 'transcript' } }),
+        prisma.shanaiUsageLog.count({ where: { userId, kind: 'transcript', createdAt: { gte: since } } }),
+      ])
+      const monthly = tier === 'ENTERPRISE' ? ENTERPRISE_MONTHLY_LIMITS : PRO_MONTHLY_LIMITS
+      return {
+        title: '作った記事',
+        unit: '本',
+        total,
+        planLabel,
+        meters:
+          tier === 'FREE'
+            ? [
+                { label: '記事（無料枠）', used: total, limit: FREE_LIMITS.shanaiArticles },
+                { label: '文字起こし（無料枠）', used: transcriptTotal, limit: FREE_LIMITS.shanaiTranscripts },
+              ]
+            : [
+                { label: '記事（今月）', used: month, limit: monthly.shanaiArticles },
+                { label: '文字起こし（今月）', used: transcriptMonth, limit: monthly.shanaiTranscripts },
+              ],
+      }
+    }
+
     case 'banner': {
       // 生成予約と同じく、統一プランとサービス個別付与の上位を採用する。
       const sub = await prisma.userServiceSubscription.findUnique({

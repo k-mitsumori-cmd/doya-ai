@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && tsc --noEmit && next build",
+    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:shanai && tsc --noEmit && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -17,7 +17,8 @@
     "test:asklink": "tsx --test src/lib/asklink/link.test.ts src/lib/asklink/scope.test.ts",
     "test:popup": "tsx --test src/lib/popup/schema.test.ts src/lib/popup/scope.test.ts src/lib/popup/read.test.ts",
     "test:syscheck": "tsx --test src/lib/syscheck-guards.test.ts src/lib/server-daily-quota.test.ts src/lib/drip-click-link.test.ts src/lib/mitsuboshi/nagusame/guest.test.ts src/lib/interview/file-signature.test.ts",
-    "test:tenjikai": "tsx --test src/lib/tenjikai/engine.test.ts src/lib/tenjikai/tenjikai-read.test.ts"
+    "test:tenjikai": "tsx --test src/lib/tenjikai/engine.test.ts src/lib/tenjikai/tenjikai-read.test.ts",
+    "test:shanai": "tsx --test src/lib/shanai/shanai.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -44,6 +45,7 @@
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.0.0",
+    "docx": "9.5.1",
     "exceljs": "^4.4.0",
     "framer-motion": "^10.17.0",
     "google-auth-library": "^9.15.1",
