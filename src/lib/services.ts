@@ -1815,6 +1815,47 @@ export const SERVICES: Service[] = [
     order: 35,
     requiresAuth: true,
   },
+  {
+    id: 'income',
+    name: 'ドヤ収入管理',
+    shortName: '収入管理',
+    description: '契約を登録すると、毎月の売上予定が自動で作られます。請求書の発行から入金の確認まで、請求漏れと入金の確認漏れに気づけるB2B向けの収入管理ツールです。',
+    longDescription:
+      'B2Bの「契約 → 毎月の売上 → 請求書 → 入金」を、1つの流れで管理します。契約（月額・期間・支払条件）を登録すると、計上月ごとの売上予定が自動で作られます。請求予定日を過ぎても請求書が無い月は、「請求漏れ」として表示されます。月次の一覧から、請求書（適格請求書）をまとめて作成できます。入金を登録すると、金額と振込名義から照合の候補が出ます。支払期日を過ぎた未入金は、「入金遅延」として一覧に出ます。ドヤプロマネの経費・人件費と合わせて、月ごとの粗利も確認できます。仕訳や確定申告は会計ソフトで行う前提の、シンプルな管理ツールです。',
+    // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
+    icon: '',
+    color: 'blue',
+    gradient: 'from-[#0066ff] to-[#0047d6]',
+    bgGradient: 'from-blue-50 to-sky-50',
+    href: '/income',
+    dashboardHref: '/income',
+    pricingHref: '/income/pricing',
+    guideHref: '/income',
+    features: [
+      '契約を登録すると、毎月の売上予定を自動で作成',
+      '請求予定日を過ぎても請求書が無い月を「請求漏れ」として表示',
+      '月次の一覧から、取引先ごとに請求書をまとめて作成（適格請求書・税率ごとの内訳）',
+      '入金を登録すると、金額と振込名義から照合の候補を表示',
+      '支払期日を過ぎた未入金を「入金遅延」として一覧に表示',
+      'ドヤプロマネの経費・人件費と合わせて月ごとの粗利を表示',
+    ],
+    useCases: [
+      '月額契約の請求書を出し忘れることがある',
+      '振り込まれたかどうかを、毎月通帳と見比べて確かめている',
+      '会計ソフトほど細かくなくていいので、売上と入金を大まかに把握したい',
+    ],
+    // 開発中は上限なし（設計書 docs/design/2026-10-18-doya-income §12 Q6）
+    pricing: {
+      free: { name: '無料プラン', limit: '開発中のため上限なし', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '開発中のため上限なしでお使いいただけます', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+    },
+    // 開発中。対外的な面には出さない（UNLISTED_SERVICE_IDS）。ログイン後は使える
+    status: 'coming_soon',
+    badge: 'BETA',
+    category: 'other',
+    order: 36,
+    requiresAuth: true,
+  },
 ]
 
 // ============================================
@@ -1866,7 +1907,7 @@ export const RETIRED_SERVICE_IDS = new Set([
 // トップ・sitemap・llms.txt・公開LP（/all-in-one）からは消えるが、
 // ログイン後のツール切替・サイドバーの他サービス一覧・直リンクでは従来どおり使える。
 // 公開する時はここから id を外し、各 layout.tsx の noindex も一緒に外すこと。
-export const UNLISTED_SERVICE_IDS = new Set<string>(['tenjikai', 'shanai']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-18: popup 公開。tenjikai は開発中
+export const UNLISTED_SERVICE_IDS = new Set<string>(['tenjikai', 'shanai', 'income']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-18: popup 公開。tenjikai は開発中
 
 // 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中。
 // トップページ・sitemap・llms.txt・公開LP がこのリストを参照するため、

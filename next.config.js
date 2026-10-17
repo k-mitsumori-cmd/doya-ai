@@ -21,6 +21,7 @@ const APP_ONLY_PREFIXES = [
   '/asklink/history',
   '/popup/sites', '/popup/edit',
   '/shanai/interviews', '/shanai/company', '/shanai/new', '/shanai/answer',
+  '/income/clients', '/income/contracts', '/income/revenue', '/income/invoices', '/income/payments', '/income/settings',
   '/opening/dashboard',
   '/tenkai/projects',
   '/aio/invite', '/sfa/invite', '/shodan/invite', '/promane/invite',
