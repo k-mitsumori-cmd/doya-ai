@@ -60,6 +60,8 @@ model Account_Fragment {
   emailVerifiedClaim Boolean?
   /// Google の hd
   hostedDomain       String?
+  // 既存 refresh_token / access_token / id_token 列は adapter ラップの linkAccount で **null にして保存**する
+  // （Google API を呼ぶ用途が無い。access_type=offline は要求しない。SEC-08）
 }
 
 /// @@merge-into Session
@@ -88,9 +90,17 @@ model Session_Fragment {
   stepUpAt      DateTime?
   /// 'passkey' | 'google'
   stepUpMethod  String?
+  // sessionToken 列には Cookie 値そのものではなく sha256 を保存する（adapter ラップで写像。SEC-09）。列定義は NextAuth 標準のまま
 
   @@index([userId, revokedAt, lastSeenAt])
   @@index([deviceId])
+}
+
+/// @@merge-into SeoJob
+model SeoJob_Fragment {
+  /// エージェント run から作られた Job。SeoJob 側の LLM/画像支出を run の予算・usage に紐付ける（OPS-12）
+  originRunId String?
+  @@index([originRunId])
 }
 
 /// @@merge-into HrOrganization
@@ -234,6 +244,9 @@ model Company {
   allowedGoogleDomains String[] @default([])
   /// 同時セッション上限（既定 3。監査 B-17: アプリ内ブラウザ・PWA は別端末に数えられるため 2 は厳しすぎる）。null はシステム既定
   maxSessionsPerUser   Int?
+  /// 厳格共有防止モード（SEC-03）: desktop 1 + mobile 1 を上限にし、ログイン自体にパスキーを要求。
+  /// 既定 false（使い回しは技術的に完全には防げないため、既定は「検知→通知→admin 判断」）
+  strictSharing        Boolean  @default(false)
   /// 機微データを扱う操作に step-up 再認証を要求するか
   requireStepUp        Boolean  @default(true)
   /// エージェント設定（approveDrafts / allowSensitive / slackWebhook / sessionPolicy など）
@@ -335,8 +348,9 @@ model CompanyInvitation {
   serviceRoles Json?
   /// ⚠️ 平文トークンは保存しない。SHA-256 ハッシュのみ（32 byte ランダム → base64url）
   tokenHash String  @unique
-  invitedById String
-  invitedBy   User  @relation("CompanyInvitationInvitedBy", fields: [invitedById], references: [id], onDelete: Restrict)
+  /// 招待者。User 削除で止める価値は無いので SetNull（第2回審査 DATA-01）。移行で退職者なら null
+  invitedById String?
+  invitedBy   User?  @relation("CompanyInvitationInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
   /// pending / accepted / expired / revoked
   status    String  @default("pending")
   /// pending の間だけ `<companyId>:<lower(email)>` を入れ、同一メールへの重複招待を防ぐ（監査 B-6）。
@@ -349,6 +363,7 @@ model CompanyInvitation {
 
   @@index([companyId, status])
   @@index([email, status])
+  @@index([invitedById])
   @@map("core_company_invitations")
 }
 
@@ -389,8 +404,8 @@ model CompanyServiceLink {
   legacyOrganizationId String
   legacySlug String?
   isPrimary Boolean @default(true)
-  /// 名寄せの根拠（'owner-email' | 'manual' | 'slug' | 'created-by-company'）
-  linkedBy  String  @default("owner-email")
+  /// 名寄せの根拠（'auto-3cond'（§5.1 の 3 条件自動）| 'manual' | 'created-by-company'）。'slug' 単独は使わない（DATA-07）
+  linkedBy  String  @default("manual")
   createdAt DateTime @default(now())
 
   @@unique([serviceId, legacyOrganizationId])
@@ -489,7 +504,8 @@ model KnowledgeSource {
   fetchedAt DateTime?
   originService String?
   originRecordId String?
-  /// 利用を許可するサービス（空 = 全サービス）。HR 由来の機微テキストは限定する
+  /// 利用を許可するサービス。**空 = どこからも使えない**（DATA-20: 指定忘れで HR 由来テキストが全サービスへ出ないよう既定を閉じる）。
+  /// 取り込み API は最低 1 つの serviceId を必須にする
   allowedServices String[] @default([])
   /// 外部由来テキストである印。エージェントはこの内容を「命令」として扱わない
   isUntrusted Boolean @default(true)
@@ -552,8 +568,12 @@ model CompanySubscription {
   planId           String
   /// trialing / active / past_due / canceled / unpaid / incomplete
   status           String
-  /// 契約席数（Stripe の subscription item quantity と同期。§7.5）
+  /// 契約席数（Stripe の subscription item quantity と同期。§7.5。正本は Stripe、webhook は live 再取得後に書く）
   seats            Int            @default(1)
+  /// 席数を持つ SubscriptionItem の id（基本料＋席の 2 Price 構成でどの item が席かを固定。OPS-22）
+  seatItemId       String?
+  /// 最後に適用した Stripe event の `created`（秒）。これより古い event は no-op（順序逆転対策。OPS-19）
+  lastStripeEventCreated Int?
   /// Stripe 2025-03-31.basil で Subscription から SubscriptionItem へ移動したため nullable（監査 B-21。リポジトリは apiVersion '2023-10-16' 固定）
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
@@ -570,7 +590,13 @@ model CompanySubscription {
 
 /// 全サービス共通の使用量台帳（追記専用）。
 /// 残高 = SUM(amount) WHERE companyId AND period AND meter。負が消費、正が付与。
-/// idempotencyKey の規約（監査 C-5）: `<base>:reserve` / `<base>:consume` / `<base>:release` / `stripe:<eventId>:grant`
+/// 符号と period の規約（OPS-17 / OPS-18。README §7.4 に数値例）:
+///   grant   : amount=+n, period=P, idempotencyKey='grant:<stripeSubscriptionId>:<P>'（invoice.payment_succeeded 起点。event.id は使わない）
+///   reserve : amount=-n, period=P（JST で確定）, key='<base>:reserve'
+///   consume : amount=+(n - 実消費) ≥ 0（調整行。0 でも書く）, period=P（reserve 行から複製）, key='<base>:consume'
+///   release : amount=+n, period=P, key='<base>:release'
+///   refund  : amount=+m, period=元消費の P, refId=元 idempotencyKey
+///   adjust  : 運営の手動補正（AuditLog 必須）
 model UsageLedger {
   id        String  @id @default(cuid())
   companyId String
@@ -599,10 +625,13 @@ model UsageLedger {
   @@index([companyId, period, meter])
   @@index([companyId, serviceId, createdAt])
   @@index([reservationId])
+  @@index([userId])
   @@map("billing_usage_ledger")
 }
 
-/// 会社×期間×meter の残高キャッシュ（正本は UsageLedger。再計算可能）
+/// 会社×期間×meter の残高キャッシュ（正本は UsageLedger。再計算可能）。
+/// reserve/consume/release と同一 tx では更新しない（DATA-13: 会社行ロックで直列化し接続が枯れる）。
+/// 残高判定は短い tx の SUM で行い、本テーブルは cron/非同期で再計算する
 model UsageBalance {
   id        String @id @default(cuid())
   companyId String
@@ -655,8 +684,10 @@ model AgentRun {
   /// 依頼者の会社ロール・サービスロールのスナップショット（実行途中で権限が変わっても縮小方向にのみ反映）
   actorSnapshot  Json
   request        String            @db.Text
-  /// queued / planning / running / waiting_approval / paused / done / failed / canceled
+  /// queued / planning / running / waiting_approval / paused / done / failed / canceled（遷移は README §8.6 の状態遷移図が正本）
   status         String            @default("queued")
+  /// paused の理由: 'kill_switch' | 'company_suspended' | 'llm_outage' | 'unknown_outcome'
+  pausedReason   String?
   /// init / intent / plan / execute / summarize / done
   step           String            @default("init")
   intent         Json?
@@ -668,12 +699,15 @@ model AgentRun {
   // --- 再開・リース（SeoJob.executionToken / executionExpiresAt と同方式） ---
   executionToken     String?
   executionExpiresAt DateTime?
-  /// advance の取得回数（クラッシュ・リース期限切れからの再開回数）。maxAdvanceAttempts を超えたら failed(lease_lost)。
-  /// ステップ単位の再試行は AgentStep.attempts で別に数える（監査 C-2）
+  /// **期限切れリースからの再 claim** の回数のみ（claim 時に executionExpiresAt < now だった場合に +1。OPS-07）。
+  /// 240s スライスの自発解放・承認後の再開・Cron の通常再開は数えない。maxAdvanceAttempts 超過で failed(lease_lost)
   advanceAttempts    Int       @default(0)
-  maxAdvanceAttempts Int       @default(10)
+  maxAdvanceAttempts Int       @default(5)
+  /// 自発解放・承認・paused 復帰のたびに必ず書く（null のままにしない。OPS-01）。Cron は nextRunAt <= now() を拾う
   nextRunAt          DateTime?
   supersededAt       DateTime?
+  /// running 状態で経過した累積秒（スライスの終わりに加算）。wallClockLimitSec はこれと比較する（OPS-05(2)/OPS-16: 承認待ち・paused は数えない）
+  runningSeconds     Int       @default(0)
 
   // --- コスト上限（§8.5） ---
   creditBudget   Int               @default(50)
@@ -687,7 +721,7 @@ model AgentRun {
   llmCostMinor   Int               @default(0)
   inputTokens    Int               @default(0)
   outputTokens   Int               @default(0)
-  /// 1 run の壁時計上限（createdAt 起点、秒）
+  /// running の累積秒の上限（runningSeconds と比較。createdAt 起点ではない）
   wallClockLimitSec Int            @default(1800)
 
   startedAt  DateTime?
@@ -705,6 +739,7 @@ model AgentRun {
   @@index([status, nextRunAt])
   @@index([status, executionExpiresAt])
   @@index([requestedById, createdAt])
+  @@index([conversationId, createdAt])
   @@map("agent_runs")
 }
 
@@ -732,6 +767,8 @@ model AgentStep {
   run      AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
   /// 非正規化（AgentRun.companyId と一致。verify-agent-company-consistency.cjs で検査。監査 C-4）
   companyId String
+  /// 計画の版。再計画で新 step 群を作るとき +1。旧版の step は status='superseded' で残す（DATA-11）
+  planVersion Int    @default(1)
   ord      Int
   /// ツールレジストリのキー（例 'sfa.listDeals'）
   toolKey  String
@@ -740,8 +777,11 @@ model AgentStep {
   /// 検証済み入力（これだけを実行に使う）
   input    Json?
   dependsOn String[] @default([])
-  /// pending / ready / running / waiting_approval / done / failed / skipped / denied / canceled
+  /// pending / ready / running / waiting_approval / unknown_outcome / done / failed / skipped / denied / canceled / superseded
   status   String   @default("pending")
+  /// 下流の冪等性の種別（OPS-03）: 'native'（Stripe idempotencyKey / SeoJob executionToken / createSfaOnce 受領証）
+  /// | 'local-record'（呼び出し前に ToolCall(running) を commit し、結果未記録なら unknown_outcome で人の確認）| 'none'（read のみ許可）
+  downstreamIdempotency String @default("none")
   /// 取り消し可能性: 'read'（副作用なし）| 'reversible'（自社 DB の下書き・更新。取り消せる）| 'irreversible'（送信・発行・削除・外部公開・課金）
   reversibility String
   /// コスト区分: 'none' | 'low'（有料 API 呼び出し見込み 1〜N 回）| 'high'（N 回超、または画像/動画/音声生成）。N はマニフェストで宣言、既定 5
@@ -752,18 +792,18 @@ model AgentStep {
   requiresApproval Boolean @default(false)
   outputSummary String? @db.Text
   error    String?  @db.Text
-  /// ステップの実行試行回数（同一エラー 2 回で failed）
+  /// ステップの実行試行回数。read は 2、reversible/irreversible は **1**（自動再試行しない。unknown_outcome は人の確認。OPS-03）
   attempts Int      @default(0)
-  maxAttempts Int   @default(2)
+  maxAttempts Int   @default(1)
   startedAt  DateTime?
   finishedAt DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   toolCalls ToolCall[]
-  approval  ApprovalRequest?
+  approvals ApprovalRequest[]
 
-  @@unique([runId, ord])
+  @@unique([runId, planVersion, ord])
   @@index([runId, status])
   @@map("agent_steps")
 }
@@ -785,8 +825,10 @@ model ToolCall {
   /// 出力（機微データはマスキング済みで保存。原本は各サービスのレコードを参照）
   output   Json?
   containsUntrustedText Boolean @default(false)
-  /// ok / error / denied / timeout / skipped_duplicate
+  /// running（呼び出し前にフェンス付きで commit。OPS-02）/ ok / error / denied / timeout / skipped_duplicate / unknown_outcome
   status   String
+  /// 書き込みフェンス: この行を書いた時点の AgentRun.executionToken。不一致の書き込みは withAgentRunExecution が拒否
+  executionToken String?
   errorCode String?
   error    String?   @db.Text
   durationMs Int?
@@ -805,13 +847,21 @@ model ToolCall {
 }
 
 /// 人の承認。irreversible / high コストのステップは必ずここを通る。
+/// 1 step に複数行（expired 後の再要求、unknown_outcome の確認）を許す（DATA-11）。
 model ApprovalRequest {
   id       String    @id @default(cuid())
   runId    String
   run      AgentRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
-  stepId   String    @unique
+  stepId   String
   step     AgentStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  /// 同一 step 内の通し番号
+  attempt  Int       @default(1)
+  /// 'pre'（実行前の承認）| 'unknown_outcome'（結果不明の人の確認: 「実行済みとして扱う / 未実行として再実行 / 中止」）
+  kind     String    @default("pre")
   companyId String
+  /// sha256(canonicalJson({runId, stepId, attempt, toolKey, frozenInput, estimate, detail, requestedToId}))。
+  /// UI はこれを表示し、承認 API は {decision, approvalHash} を要求。実行直前にも再計算して一致しなければ denied（SEC-15）
+  approvalHash String
   /// 承認を求める相手（既定は依頼者。依頼者の権限で足りない場合は admin/owner）。FK あり（監査 B-8）
   requestedToId String
   requestedTo   User   @relation("ApprovalRequestedTo", fields: [requestedToId], references: [id], onDelete: Restrict)
@@ -832,8 +882,11 @@ model ApprovalRequest {
   expiresAt DateTime
   createdAt DateTime @default(now())
 
+  @@unique([stepId, attempt])
+  @@index([runId])
   @@index([companyId, status, createdAt])
   @@index([requestedToId, status])
+  @@index([status, expiresAt])
   @@map("agent_approval_requests")
 }
 
@@ -893,6 +946,7 @@ model AuditLog {
   action    String
   targetType String?
   targetId   String?
+  /// 変更前後の差分。書き込み前に redact() を通す（SEC-22）。削除要求時は actorUserId/onBehalfOf を deleted:<hash> に置換
   diff      Json?
   details   Json?
   /// /24 に丸めた帯
@@ -905,11 +959,11 @@ model AuditLog {
   hash      String?
   createdAt DateTime @default(now())
 
+  // index は 3 本に絞る（DATA-21: 高頻度 INSERT 表。sensitive はアプリ側フィルタ）。
+  // 月次パーティション（createdAt）は Prisma が管理しないため raw SQL で作成し、PK を (id, createdAt) にする手順を §17.1 に記載（OPS-32）
   @@index([companyId, createdAt])
-  @@index([companyId, action])
   @@index([actorUserId, createdAt])
   @@index([targetType, targetId])
-  @@index([sensitive, createdAt])
   @@map("core_audit_logs")
 }
 
@@ -959,10 +1013,20 @@ model LlmCallLog {
   model     String
   /// text / image / embedding / audio / video / search
   modality  String   @default("text")
+  /// 計測単位（OPS-15）: 'token' | 'image' | 'audio_sec' | 'request'
+  unitKind  String   @default("token")
   inputTokens  Int?
   outputTokens Int?
+  /// Gemini の cachedContentTokenCount / thoughtsTokenCount など単価の違うトークン
+  cachedTokens    Int?
+  reasoningTokens Int?
   units     Int?
+  /// 円の 1/100。単価不明なモデルは null にせず、その feature の最大単価で見積もる（予算側は null を 0 と扱わない）
   costMinor Int?
+  /// 使った単価表の版（cost.ts）。過去行の再計算可否の判断に使う
+  priceTableVersion String?
+  /// フォールバック時の元呼び出し（画像: 1 行目 status='timeout' でも満額計上、2 行目がこの id を指す。OPS-12）
+  retryOfId String?
   durationMs Int?
   /// ok / error / timeout / rate_limited / budget_exceeded
   status    String
@@ -981,6 +1045,7 @@ model LlmCallLog {
   @@index([serviceId, feature, createdAt])
   @@index([provider, model, createdAt])
   @@index([toolCallId])
+  @@index([refType, refId])
   @@map("core_llm_call_logs")
 }
 
@@ -1015,6 +1080,7 @@ model SessionDevice {
 }
 
 /// パスキー（WebAuthn）。step-up 再認証の本線（監査 A-1: Google は prompt=login / max_age をサポートしない）。
+/// 追加・削除は既存パスキーでの step-up 必須。最後の 1 本は代替登録後でなければ削除不可。回復は二人制御（§11.5、SEC-07）
 model WebAuthnCredential {
   id        String   @id @default(cuid())
   userId    String
@@ -1023,7 +1089,12 @@ model WebAuthnCredential {
   credentialId String @unique
   /// COSE 公開鍵（base64url）
   publicKey String   @db.Text
+  /// 署名カウンタ。WebAuthn §6.1.1: カウンタ未実装の認証器は常に 0。拒否するのは「保存値 > 0 かつ 新値 <= 保存値」のときだけ
   counter   BigInt   @default(0)
+  /// 登録経路: 'passkey-stepup'（既存パスキーで step-up 後）| 'google-bootstrap'（初回のみ。登録後 24h は高リスク purpose に使えない）| 'recovery'
+  registeredVia String @default("passkey-stepup")
+  /// 高リスク purpose に使えるようになる時刻（google-bootstrap / recovery は登録 +24h）
+  usableForHighRiskAt DateTime?
   /// 'platform' | 'cross-platform'
   deviceType String?
   backedUp  Boolean  @default(false)
@@ -1095,6 +1166,38 @@ model SecurityEvent {
   @@map("sec_security_events")
 }
 
+/// Session ごとの観測履歴（48 時間リング。SEC-03: 同一 Session Cookie の共有検知）。
+/// 同じ sessionId で 5 分以内に異なる uaHash / ipPrefix が交互に出れば share.session_cookie_shared。
+model SessionObservation {
+  id        String   @id @default(cuid())
+  sessionId String
+  /// 分単位に丸めた観測時刻
+  minute    DateTime
+  ipPrefix  String?
+  uaHash    String?
+  geoCountry String?
+  geoRegion  String?
+
+  @@unique([sessionId, minute, ipPrefix, uaHash])
+  @@index([sessionId, minute])
+  @@index([minute])
+  @@map("sec_session_observations")
+}
+
+/// 実行時カウンタ（OPS-25: 「旧 access.ts 本体が呼ばれない（カウンタ 0）」等の完了条件を測る置き場。SystemSetting は使わない）
+model RuntimeCounter {
+  /// 'legacy_access.<svc>' | 'route_class.report_only_denied' | 'webhook.user_path' | ...
+  key       String
+  /// 'YYYY-MM-DD'
+  day       String
+  count     Int      @default(0)
+  updatedAt DateTime @default(now())
+
+  @@id([key, day])
+  @@index([day])
+  @@map("core_runtime_counters")
+}
+
 /// ルート段のレート制限カウンタ（Postgres 実装。Edge 段は Vercel WAF / Upstash など外部、監査 A-11）。
 /// 更新は raw SQL `UPDATE ... RETURNING` で行うため @updatedAt は使わない（監査 B-22）。
 model RateLimitBucket {
@@ -1115,7 +1218,7 @@ model FeatureFlag {
   id        String   @id @default(cuid())
   /// 'agent.enabled' | 'agent.kill_switch' | 'agent.tools.<key>.enabled' | 'core.unified_access' | 'billing.company_mode' | '<serviceId>.enabled' ...
   key       String
-  /// '*' = 全体既定、それ以外は Company.id
+  /// '*' = 全体既定、それ以外は Company.id。書き込み関数で `scope !== '*' ⇒ companyId === scope` を強制（DATA-19。Prisma は CHECK を表せない）
   scope     String   @default("*")
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
