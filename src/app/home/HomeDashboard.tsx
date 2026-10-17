@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import type { HomeSummary, HomeEvent } from '@/lib/home/summary'
 import { SHELL_GROUPS } from '@/components/shell/tools'
+import { ShellIcon } from '@/components/shell/icons'
 import { AGENT_SUGGESTIONS, planAgent, type AgentPlan } from './agent'
 import styles from './home.module.css'
 
@@ -450,15 +451,12 @@ export default function HomeDashboard({ initial }: { initial: HomeSummary }) {
             <div key={g.label}>
               <p className={styles.toolGroupLabel}>{g.label}</p>
               <div className={styles.tools}>
-                {g.tools.map((t) => {
-                  const Icon = t.icon
-                  return (
-                    <Link key={t.id} href={t.href} className={styles.tool}>
-                      <span className={styles.toolIcon}><Icon size={18} /></span>
-                      <span className={styles.toolText}><b>{t.name}{t.beta ? <em className={styles.beta}>開発中</em> : null}</b><small>{t.hint}</small></span>
-                    </Link>
-                  )
-                })}
+                {g.tools.map((t) => (
+                  <Link key={t.id} href={t.href} className={styles.tool}>
+                    <span className={styles.toolIcon}><ShellIcon name={t.icon} size={18} /></span>
+                    <span className={styles.toolText}><b>{t.name}{t.beta ? <em className={styles.beta}>開発中</em> : null}</b><small>{t.hint}</small></span>
+                  </Link>
+                ))}
               </div>
             </div>
           ))}
