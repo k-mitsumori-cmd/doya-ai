@@ -25,6 +25,9 @@
   --note-ink: #7a5b00;
   --ok-bg: #e6f8ef;
   --ok-ink: #0b8a4d;
+  /* 警告（請求漏れ・入金遅延など）。値は収入管理の tokens.module.css と同じ */
+  --bad-bg: #ffecef;
+  --bad-ink: #c0123c;
   --r: 22px;
   --r-sm: 14px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
