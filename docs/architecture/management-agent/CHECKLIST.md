@@ -31,7 +31,7 @@
 | TEN-11 | `CompanyServiceLink` は 1 会社 N 旧組織を許し、読み替えは `isPrimary` だけを使うか | 同 owner 同サービス複数組織で移行が止まる | 手動: 移行ドライランの「同 owner 複数組織」件数を確認 | M | B-4 |
 | TEN-12 | RLS は機微テーブル（マニフェスト `pii`）限定で、`withTenantTx` が対話型 tx の冒頭で `set_config('app.company_id', …, true)` を張り、`SET` セッション変数を使っていないか | pgbouncer transaction pooling では `SET` は漏れる | 自動: `verify-core-rls.cjs`（ステージング DB）＋手動: DBA が Phase4 の SQL をレビュー | M | 方針転換（二重の守り） |
 | TEN-13 | サーバ内部用ヘッダ（`x-tenant-id` 等）を middleware が削除しているか | ヘッダ偽装による内部信頼の防止 | 自動: `verify-core-route-classes.cjs` 内の middleware ユニット | M | — |
-| TEN-14 | `walkData` が `Prisma.dmmf` でデータを再帰走査し（upsert では `create` と `update` の両方、対象は全モデル）、NestedInput の閉じた許可リスト（to-many 11 / to-one 7 / create 側 4・3）の各キーに data 検査（テナント列の強制・書き換え禁止。ネストの `update.data / updateMany.data / upsert.update` を含む）と refs 検査（`connect / set / disconnect / delete / deleteMany / update.where / updateMany.where / upsert.where / connectOrCreate.where`）を割り当てているか | Prisma 公式: query 拡張はネスト操作に発火しない | 自動: `verify-core-access-cross-tenant.cjs`（ネスト connect で他社 id → 拒否） | H | SEC-01 |
+| TEN-14 | `walkData` が `Prisma.dmmf` でデータを再帰走査し（upsert では `create` と `update` の両方、対象は全モデル）、NestedInput の閉じた許可リスト（to-many 11 / to-one 7 / create 側 4・3）の各キーに data 検査（テナント列の強制・書き換え禁止。ネストの `update.data / updateMany.data / upsert.update` を含む）と refs 検査（`connect / set / disconnect / delete / deleteMany / update.where / updateMany.where / upsert.where / connectOrCreate.where`）を割り当て、**テナント relation**（DMMF `relationFromFields` にテナント列を含む relation）は update 契約で種類を問わず throw・create 契約で `connect:{<主キー>: expected}` のみ許可しているか | Prisma 公式: query 拡張はネスト操作に発火しない | 自動: `verify-core-access-cross-tenant.cjs`（ネスト connect で他社 id → 拒否） | H | SEC-01 |
 | TEN-15 | `update / updateMany / upsert.update` の `data` にテナント列が含まれていたら throw しているか（テナント移動の禁止） | 子行の他社への移動 | 自動: 同上（`data.organizationId` 書き換え → 拒否） | H | SEC-01 |
 | TEN-16 | 複合 unique セレクタ（`userId_serviceId` 等）を DMMF で `{a, b}` に展開してから `findFirst` に渡しているか | `WhereInput` に複合セレクタは無く実行時エラー | 自動: 同上（複合 unique の `findUnique` ケース） | H | SEC-02 |
 | TEN-17 | raw SQL は `tenantSql(ctx)` フラグメント経由で、lint は文字列一致ではなく `tenantSql(` の有無を見るか | `"companyId" = ${anything}` で擦り抜ける | 自動: `verify-core-raw-sql-tenant.cjs` | M | SEC-04 |
@@ -50,11 +50,12 @@
 | TEN-30 | include / select の to-many relation に where が足され、to-one の親が post-filter されるか（ctx.db と owned の両方） | 親方向の他社読み | 自動: `verify-core-access-cross-tenant.cjs`（include） | H | SEC-01 |
 | TEN-31 | 配列形 `$transaction([...])` が読み取り専用で、書き込み PrismaPromise（マーカー無し）が拡張で throw されるか | 配列形経由の書き込み | 自動: 同上（array tx） | M | FIN3-07 |
 | TEN-32 | `walkData` が純関数で、呼び出し側が戻り値の data を必ず使い（入力を渡すと検査で検出）、テナント列違反は即 throw、ネスト対象は refs を `assertRefsOwned` が同じ client で検証して `TenantViolation` にするか（RecordNotFound に頼らない） | 書き換えの喪失・DB 依存の拒否 | 自動: 同上（walkData の戻り値を捨てた実装を検出する契約テスト、refs 0 件→拒否） | H | FIN4-02 |
-| TEN-33 | `walkData` が既定拒否で、モデルのフィールドに無いキー・許可リストに無いネスト操作キーで即 throw し、入力を変更しない純関数か | 列挙漏れによる新しい穴 | 自動: `verify-core-access-cross-tenant.cjs`（未知フィールド・未知ネストキー・入力不変） | H | FIN5-01, FIN5-02 |
-| TEN-34 | 非テナントモデル（User / Account / Session 等）への書き込みで data にテナントモデルへの relation があるとき、拡張の入口ゲートがマーカー無しで throw し、`OwnedTx` が非テナントモデルの書き込みを `Omit` しているか | 非テナント親経由の他社書き込み | 自動: 同上（`ctx.db.user.update` 経由 → throw、`owned(x).user.update` → 検査） | H | FIN5-01 |
+| TEN-33 | `walkData` が既定拒否で、モデルのフィールドに無いキー・許可リストに無いネスト操作キー・`createMany` エンベロープ（`data / skipDuplicates`）外のキーで即 throw し、入力を変更しない純関数か | 列挙漏れによる新しい穴 | 自動: `verify-core-access-cross-tenant.cjs`（未知フィールド・未知ネストキー・入力不変） | H | FIN5-01, FIN5-02 |
+| TEN-34 | 非テナントモデル（User / Account / Session 等）への書き込みで data に relation キーが 1 つでもあるとき（再帰判定しない保守的規則。非テナント子を挟んだ 2 段ネストも含む）、拡張の入口ゲートがマーカー無しで throw し、`OwnedTx` が非テナントモデルの書き込みを `Omit` しているか | 非テナント親経由の他社書き込み | 自動: 同上（`ctx.db.user.update` 経由 → throw、`owned(x).user.update` → 検査） | H | FIN5-01 |
 | TEN-35 | `verify-core-dmmf-matrix.cjs` が `.prisma/client/index.d.ts` からモデル操作名・NestedInput キー・クライアント操作を抽出し、マトリクスの行と許可リスト 4 表に完全一致することを検査しているか（Prisma 更新で新操作が出たら CI が落ちる） | Prisma 更新時の列挙漏れ | 自動: `verify-core-dmmf-matrix.cjs` | H | 方針転換 |
-| TEN-36 | `assertRefsOwned` が非テナントモデルの refs を除外し、where を正規化・重複排除して distinct 件数で比較し、`via:` 型は `scoped()` の展開を使い、refs 200 超で拒否するか | 正常系の誤拒否・非テナント参照の不通 | 自動: `verify-core-access-cross-tenant.cjs`（重複 where、User 参照、via 型） | M | FIN5-05 |
-| TEN-37 | 機微テーブルの RLS ポリシーが fail-closed（`app.company_id` 未設定で 0 行）で、Cron / バッチが会社ごとに `set_config` して回り、`BYPASSRLS` ロールをアプリで使っていないか。`db push` がポリシーを保持することをステージングで確認したか | 第 2 防御の形骸化 | 自動: `verify-core-rls.cjs`＋手動: ステージング計測（p95） | M | 方針転換 |
+| TEN-36 | `assertRefsOwned` が非テナントモデルの refs を除外し、where を正規化・重複排除して DMMF `primaryKey.fields`（無ければ `@id`）の組の distinct 件数で比較し（複合主キーのモデルで正しく数える）、`via:` 型は `scoped()` の展開を使い、refs 200 超で拒否するか | 正常系の誤拒否・非テナント参照の不通 | 自動: `verify-core-access-cross-tenant.cjs`（重複 where、User 参照、via 型） | M | FIN5-05 |
+| TEN-37 | 機微テーブルの RLS ポリシーが `FOR ALL TO app_rw USING (...) WITH CHECK (...)` で fail-closed（`app.company_id` 未設定で読み 0 行・INSERT/UPDATE エラー）、表 owner は `DIRECT_URL` ロールのみでアプリ接続のロールが `app_rw` であることを env 検査し、Cron / バッチが会社ごとに `set_config` して回り、`BYPASSRLS` ロールをアプリで使っていないか。`db push` がポリシーを保持することをステージングで確認したか | 第 2 防御の形骸化 | 自動: `verify-core-rls.cjs`＋手動: ステージング計測（p95） | M | 方針転換 |
+| TEN-38 | テナント列が relation の FK でもあるモデル（`organizationId ↔ organization`、`userId ↔ user`）で、relation 形式の書き換え（`data: { user: { connect / disconnect / set / update / upsert / create / connectOrCreate } }`）が update 契約で全て拒否され、create 契約で `connect:{<主キー>: expected}` だけが通ってスカラが付かないか（`prototypes/walkdata-proto.cjs` case6/case7 を本番テストに移植） | 自分の行を他ユーザー・他社の所有に移す書き込み | 自動: `verify-core-access-cross-tenant.cjs`（relation FK 7 キー × update/create） | H | FIN6-01 |
 
 ## 2. AUTH 認証・セッション（Google のみ・使い回し防止）
 
@@ -499,7 +500,19 @@
 | D-7 | AUTH-18, RUN-12 |
 | D-8 | MIG-04, SCH-05 |
 
-項目数: TEN 37 / AUTH 38 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 51 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 9 ＝ **349 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1〜5 回の 17 / 7 / 8 / 7 / 5 指摘すべてに対応項目あり（漏れ 0）。
+項目数: TEN 38 / AUTH 38 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 51 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 9 ＝ **350 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1〜6 回の 17 / 7 / 8 / 7 / 5 / 6 指摘すべてに対応項目あり（漏れ 0）。
+
+## 最終ゲート第 6 回（FIN6）との対応表
+
+| 審査 | 再発防止するチェック項目 |
+|---|---|
+| FIN6-01 | TEN-38, TEN-14 |
+| FIN6-02 | TEN-33 |
+| FIN6-03 | TEN-36 |
+| FIN6-04 | TEN-37, TEN-12 |
+| FIN6-05 | DOC-01, DOC-03 |
+| FIN6-06 | TEN-34 |
+
 
 ## 最終ゲート第 5 回（FIN5）との対応表
 

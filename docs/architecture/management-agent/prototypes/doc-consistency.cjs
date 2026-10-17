@@ -1,4 +1,4 @@
-// 付録 J の 20 キー: 正本語（required, >=1 回）と禁止語（forbidden, 付録 J 自身を除いて 0 回）を 3 ファイルで検査
+// 付録 J の 27 キー: 正本語（required, >=1 回）と禁止語（forbidden, 付録 J 自身を除いて 0 回）を 3 ファイルで検査
 const fs=require("fs");const dir=process.argv[2];
 const files={README:fs.readFileSync(dir+"/README.md","utf8"),CHECKLIST:fs.readFileSync(dir+"/CHECKLIST.md","utf8"),draft:fs.readFileSync(dir+"/schema-draft.prisma","utf8")};
 // 付録 J 自身を除外
@@ -33,6 +33,7 @@ const keys=[
  {k:"24 書き込みは owned のみ",req:["書き込み全部"],forb:["`create / createMany` の data 検査 | query 拡張","拡張の `updateMany` 分岐で"]},
  {k:"25 分類数",req:["5 分類"],forb:["4 分類"]},
  {k:"26 walkData は DMMF 既定拒否",req:["許可リスト"],forb:["refs 対象は `connect / set / disconnect","テナントモデルに対して同じ契約"]},
+ {k:"27 RLS の対象と方式",req:["機微テーブル"],forb:["RLS は新テーブル限定","新テーブルのみ Phase4","SET LOCAL"]},
 ];
 let fail=0;const rows=[];
 for(const key of keys){
