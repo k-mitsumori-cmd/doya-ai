@@ -83,3 +83,17 @@ test('SEC-069: インタビュー素材は確定時に中身を検査し、署�
   const detail = read('src/app/api/interview/materials/[id]/route.ts')
   assert.doesNotMatch(detail, /let fileUrl = material\.fileUrl/)
 })
+
+test('BILL-081: HR と SFA の AI の月次上限は、plan-limit.ts・実装・services.ts の表示がそろっている（有料でも無制限にしない）', () => {
+  const planLimit = read('src/lib/plan-limit.ts')
+  assert.match(planLimit, /HR_AI_MONTHLY_LIMITS = \{ FREE: 3, LIGHT: 30, PRO: 100, ENTERPRISE: 500 \}/)
+  assert.match(planLimit, /SFA_AI_MONTHLY_LIMITS = \{ FREE: 20, LIGHT: 300, PRO: 1000, ENTERPRISE: 5000 \}/)
+  const hr = read('src/lib/hr/billing.ts')
+  assert.match(hr, /case 'ENTERPRISE':\n\s*return \{ maxEmployees: -1, maxAiUsage: 500,/)
+  assert.match(hr, /return \{ maxEmployees: 100, maxAiUsage: 100,/)
+  const sfa = read('src/lib/sfa/ai-limit.ts')
+  assert.match(sfa, /tier === 'FREE' \|\| tier === 'GUEST' \? 20 : tier === 'LIGHT' \? 300 : tier === 'PRO' \? 1000 : 5000/)
+  const services = read('src/lib/services.ts')
+  assert.match(services, /従業員100名まで \/ AI 月100回/)
+  assert.match(services, /AI 月1,000回/)
+})
