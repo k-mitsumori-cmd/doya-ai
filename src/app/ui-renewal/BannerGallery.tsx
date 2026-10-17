@@ -40,7 +40,7 @@ export function BannerGallery({
         (group === 'all' || g.group === group) &&
         (!tag || g.tag === tag) &&
         (!onlyLiked || liked.has(g.id)) &&
-        (!needle || `${g.title}${g.tag}`.toLowerCase().includes(needle)),
+        (!needle || `${g.title}${g.sub}${g.tag}`.toLowerCase().includes(needle)),
     )
     return sort === 'popular' ? [...list].sort((a, b) => b.uses - a.uses) : [...list].sort((a, b) => Number(!!b.isNew) - Number(!!a.isNew))
   }, [group, tag, q, sort, liked, onlyLiked])
@@ -156,7 +156,6 @@ export function BannerGallery({
               key={it.id}
               item={it}
               index={i}
-              big={i % 7 === 0 && !q && !tag}
               order={order}
               liked={liked.has(it.id)}
               onToggle={() => toggle(it.id)}
@@ -224,7 +223,6 @@ export function BannerGallery({
 function GalleryCard({
   item,
   index,
-  big,
   order,
   liked,
   onToggle,
@@ -233,7 +231,6 @@ function GalleryCard({
 }: {
   item: GalleryItem
   index: number
-  big: boolean
   order: number
   liked: boolean
   onToggle: () => void
@@ -244,7 +241,6 @@ function GalleryCard({
   return (
     <figure
       className={`${s.gCard} ${on ? s.gCardOn : ''}`}
-      data-big={big ? '' : undefined}
       style={{ '--i': Math.min(index, 18) } as CSSProperties}
       data-spot
     >

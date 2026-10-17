@@ -44,7 +44,7 @@ const STEPS = [
 export function BannerTool() {
   const [phase, setPhase] = useState<Phase>("gallery");
   const [refs, setRefs] = useState<string[]>([]);
-  const [url, setUrl] = useState("https://example.com/cafe-autumn");
+  const [url, setUrl] = useState("https://example.com/cafe-summer");
   const [industry, setIndustry] = useState("飲食");
   const [purpose, setPurpose] = useState("SNS広告");
   const [sizes, setSizes] = useState<string[]>(["1080x1080", "1200x628"]);

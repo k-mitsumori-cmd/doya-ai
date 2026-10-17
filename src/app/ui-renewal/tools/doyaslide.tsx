@@ -5,7 +5,7 @@ import { AnimatePresence, Reorder, motion } from 'framer-motion'
 import { GripVertical, Maximize2, Send, X } from 'lucide-react'
 import rs from '../renewal.module.css'
 import s from './doyaslide.module.css'
-import { GALLERY } from '../data'
+import { SLIDE_TASTES } from '../data'
 import { Field, GhostButton, IdleCanvas, Panel, ResultHead, RunButton, RunStage, ServiceHero, Slider, Steps, TextInput, Workbench, useRun } from './kit'
 
 const STEPS = [
@@ -15,7 +15,7 @@ const STEPS = [
   { label: '仕上げる', log: ['文字の大きさをそろえました', '全体の流れを確認しました'] },
 ]
 
-const TASTES = GALLERY.filter((g) => g.group === 'taste')
+const TASTES = SLIDE_TASTES
 const TITLES = ['表紙', 'いまの課題', '原因は3つ', '解決の考え方', '進め方', '期待できる効果', '費用と期間', '次の一歩', 'よくある質問', 'まとめ', '補足資料', 'お問い合わせ']
 
 type Slide = { id: string; title: string; src: string; ver: number }
