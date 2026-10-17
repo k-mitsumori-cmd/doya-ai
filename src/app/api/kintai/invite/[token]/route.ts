@@ -98,7 +98,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
           })
           for (const seat of adminSeats) {
             const otherAdmins = await tx.kintaiMember.count({
-              where: { organizationId: seat.organizationId, id: { not: seat.id }, role: 'system_admin', status: 'ACTIVE' },
+              // 従業員として無効な管理者は数えない（PATCH の「最後のシステム管理者」判定と同じ条件）
+              where: { organizationId: seat.organizationId, id: { not: seat.id }, role: 'system_admin', status: 'ACTIVE', employee: { is: { isActive: true } } },
             })
             if (otherAdmins === 0) {
               return { status: 409, error: '現在の組織で唯一のシステム管理者のため、この招待には参加できません。先に別の方へシステム管理者の権限を引き継いでください。' }
