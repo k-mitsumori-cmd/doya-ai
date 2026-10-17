@@ -1,0 +1,268 @@
+'use client'
+
+// ドヤ社内インタビュー 会社情報: URL登録 → サイト読み取り → プロフィール確認
+// ⚠️ ここで確認した項目（approved）だけが記事の「会社の事実」になる
+import { useEffect, useState } from 'react'
+import { ExternalLink, Globe, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { api, Button, Card, Field, inputCls, Notice, SectionTitle } from '@/components/shanai/ui'
+import { PROFILE_CATEGORY_LABELS, SOURCE_KIND_LABELS, type ProfileCategory, type SourceKind } from '@/lib/shanai/types'
+
+interface Source {
+  id?: string
+  kind: SourceKind
+  label: string
+  url: string
+  lastCrawledAt?: string | null
+  error?: string | null
+}
+interface Item {
+  id: string
+  category: ProfileCategory
+  statement: string
+  quote: string | null
+  origin: 'site' | 'manual'
+  approved: boolean
+  pageUrl: string | null
+  pageTitle: string | null
+}
+interface Company {
+  name: string
+  brandColor: string
+  colors: string[]
+  manualNote: string
+  crawledAt: string | null
+  sources: Source[]
+  items: Item[]
+}
+
+const CATEGORY_ORDER: ProfileCategory[] = ['mission', 'business', 'service', 'number', 'culture', 'benefit', 'other']
+
+export default function ShanaiCompanyPage() {
+  const [company, setCompany] = useState<Company | null>(null)
+  const [name, setName] = useState('')
+  const [brandColor, setBrandColor] = useState('#c026d3')
+  const [sources, setSources] = useState<Source[]>([])
+  const [saving, setSaving] = useState(false)
+  const [crawling, setCrawling] = useState(false)
+  const [message, setMessage] = useState<{ tone: 'info' | 'error' | 'warn'; text: string } | null>(null)
+  const [newItem, setNewItem] = useState<{ category: ProfileCategory; statement: string }>({ category: 'culture', statement: '' })
+
+  const apply = (c: Company) => {
+    setCompany(c)
+    setName(c.name)
+    setBrandColor(c.brandColor)
+    setSources(c.sources.length ? c.sources : [{ kind: 'corporate', label: '', url: '' }])
+  }
+
+  useEffect(() => {
+    api<{ company: Company }>('/api/shanai/company')
+      .then((d) => apply(d.company))
+      .catch((e) => setMessage({ tone: 'error', text: (e as Error).message }))
+  }, [])
+
+  const save = async () => {
+    setSaving(true)
+    setMessage(null)
+    try {
+      const d = await api<{ company: Company }>('/api/shanai/company', { method: 'PUT', json: { name, brandColor, sources: sources.filter((s) => s.url.trim()) } })
+      apply(d.company)
+      setMessage({ tone: 'info', text: '保存しました。' })
+      return true
+    } catch (e) {
+      setMessage({ tone: 'error', text: (e as Error).message })
+      return false
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const crawl = async () => {
+    if (!(await save())) return
+    setCrawling(true)
+    setMessage(null)
+    try {
+      const d = await api<{ company: Company; summary: { pagesRead: number; itemsAdded: number; robotsSkipped: number; failures: unknown[] } }>('/api/shanai/company/crawl', { method: 'POST' })
+      apply(d.company)
+      const s = d.summary
+      setMessage({
+        tone: s.failures.length ? 'warn' : 'info',
+        text: `${s.pagesRead}ページを読み取り、${s.itemsAdded}件の項目を追加しました。${s.robotsSkipped ? `robots.txt で許可されていない${s.robotsSkipped}ページは読み取っていません。` : ''}${s.failures.length ? '読み取れなかったURLがあります。下の一覧をご確認ください。' : ''}`,
+      })
+    } catch (e) {
+      setMessage({ tone: 'error', text: (e as Error).message })
+    } finally {
+      setCrawling(false)
+    }
+  }
+
+  const updateItems = async (items: unknown[]) => {
+    try {
+      const d = await api<{ company: Company }>('/api/shanai/company/items', { method: 'PUT', json: { items } })
+      setCompany(d.company)
+    } catch (e) {
+      setMessage({ tone: 'error', text: (e as Error).message })
+    }
+  }
+
+  if (!company) {
+    return (
+      <div className="flex items-center gap-2 px-6 py-16 text-sm font-bold text-slate-500">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        読み込んでいます
+      </div>
+    )
+  }
+
+  const grouped = CATEGORY_ORDER.map((c) => ({ category: c, items: company.items.filter((i) => i.category === c) })).filter((g) => g.items.length)
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+      <h1 className="text-2xl font-black text-slate-900">会社情報</h1>
+      <p className="mt-1 text-sm font-bold text-slate-500">ここで登録した内容を、すべてのインタビュー記事で使います。</p>
+
+      {message && (
+        <div className="mt-4">
+          <Notice tone={message.tone}>{message.text}</Notice>
+        </div>
+      )}
+
+      <Card className="mt-6">
+        <SectionTitle title="会社の基本" />
+        <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+          <Field label="会社名">
+            <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="株式会社サンプル" maxLength={120} />
+          </Field>
+          <Field label="サムネの色">
+            <div className="flex items-center gap-2">
+              <input type="color" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="h-10 w-12 cursor-pointer rounded-lg border border-slate-200" aria-label="サムネの色" />
+              {company.colors.slice(0, 3).map((c) => (
+                <button key={c} type="button" onClick={() => setBrandColor(c)} className="h-7 w-7 rounded-full border border-slate-200" style={{ backgroundColor: c }} aria-label={`サイトの色 ${c} を使う`} />
+              ))}
+            </div>
+          </Field>
+        </div>
+      </Card>
+
+      <Card className="mt-4">
+        <SectionTitle title="読み取るURL" desc="会社サイト・サービスサイト・採用ページなど、6件まで登録できます。トップページから会社概要や採用情報のページを自動で探して読み取ります。" />
+        <div className="space-y-3">
+          {sources.map((s, i) => (
+            <div key={s.id || i} className="rounded-xl border border-slate-200 p-3">
+              <div className="grid gap-2 sm:grid-cols-[140px_1fr_1fr_auto]">
+                <select className={inputCls} value={s.kind} onChange={(e) => setSources((l) => l.map((x, j) => (j === i ? { ...x, kind: e.target.value as SourceKind } : x)))}>
+                  {Object.entries(SOURCE_KIND_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+                <input className={inputCls} value={s.label} onChange={(e) => setSources((l) => l.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} placeholder={s.kind === 'service' ? 'サービス名' : '名前（任意）'} maxLength={60} />
+                <input className={inputCls} value={s.url} onChange={(e) => setSources((l) => l.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} placeholder="https://example.co.jp" inputMode="url" />
+                <button type="button" onClick={() => setSources((l) => l.filter((_, j) => j !== i))} className="rounded-xl px-3 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label="このURLを外す">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              {(s.error || s.lastCrawledAt) && (
+                <p className={`mt-2 text-xs font-bold ${s.error ? 'text-rose-600' : 'text-slate-400'}`}>
+                  {s.error || `最終読み取り: ${new Date(s.lastCrawledAt!).toLocaleString('ja-JP')}`}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {sources.length < 6 && (
+            <Button variant="secondary" onClick={() => setSources((l) => [...l, { kind: l.some((x) => x.kind === 'corporate') ? 'service' : 'corporate', label: '', url: '' }])}>
+              <Plus className="h-4 w-4" />
+              URLを追加
+            </Button>
+          )}
+          <div className="ml-auto flex gap-2">
+            <Button variant="secondary" onClick={save} loading={saving} disabled={crawling}>
+              保存
+            </Button>
+            <Button onClick={crawl} loading={crawling} disabled={saving}>
+              <RefreshCw className="h-4 w-4" />
+              {company.crawledAt ? '読み取り直す' : 'サイトを読み取る'}
+            </Button>
+          </div>
+        </div>
+        {crawling && <p className="mt-3 text-xs font-bold text-slate-500">サイトを読み取っています。ページ数によっては1〜2分かかります。</p>}
+      </Card>
+
+      <Card className="mt-4">
+        <SectionTitle
+          title="会社プロフィール"
+          desc="サイトから読み取った項目です。記事に使ってよいものにチェックを入れてください。原文はサイトに書かれていた文章で、変更できません。"
+        />
+        {grouped.length === 0 ? (
+          <p className="text-sm font-bold text-slate-400">まだ項目がありません。URLを登録して「サイトを読み取る」を押してください。</p>
+        ) : (
+          <div className="space-y-6">
+            {grouped.map((g) => (
+              <div key={g.category}>
+                <p className="text-xs font-black text-fuchsia-700">{PROFILE_CATEGORY_LABELS[g.category]}</p>
+                <ul className="mt-2 space-y-2">
+                  {g.items.map((it) => (
+                    <li key={it.id} className={`rounded-xl border p-3 ${it.approved ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50 opacity-70'}`}>
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={it.approved}
+                          onChange={(e) => updateItems([{ id: it.id, category: it.category, approved: e.target.checked }])}
+                          className="mt-1 h-4 w-4 accent-[#c026d3]"
+                          aria-label="記事に使う"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-slate-800">{it.statement}</p>
+                          {it.quote && <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">原文: {it.quote}</p>}
+                          {it.pageUrl ? (
+                            <a href={it.pageUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-fuchsia-600">
+                              <Globe className="h-3 w-3" />
+                              {it.pageTitle || it.pageUrl}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : (
+                            it.origin === 'manual' && <p className="mt-1 text-[11px] font-bold text-slate-400">手入力</p>
+                          )}
+                        </div>
+                        <button type="button" onClick={() => updateItems([{ id: it.id, delete: true }])} className="rounded-lg p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-600" aria-label="この項目を削除">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6 border-t border-slate-100 pt-5">
+          <p className="text-xs font-black text-slate-600">サイトに無い情報を追加する</p>
+          <p className="mt-0.5 text-[11px] font-bold text-slate-400">社内の制度や数字など、事実として記事に書いてよいことだけを入れてください。</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-[160px_1fr_auto]">
+            <select className={inputCls} value={newItem.category} onChange={(e) => setNewItem((n) => ({ ...n, category: e.target.value as ProfileCategory }))}>
+              {CATEGORY_ORDER.map((c) => (
+                <option key={c} value={c}>
+                  {PROFILE_CATEGORY_LABELS[c]}
+                </option>
+              ))}
+            </select>
+            <input className={inputCls} value={newItem.statement} onChange={(e) => setNewItem((n) => ({ ...n, statement: e.target.value }))} placeholder="例: 毎月1回、全社で成果を共有する会を開いている" maxLength={300} />
+            <Button
+              variant="secondary"
+              disabled={!newItem.statement.trim()}
+              onClick={async () => {
+                await updateItems([{ category: newItem.category, statement: newItem.statement }])
+                setNewItem((n) => ({ ...n, statement: '' }))
+              }}
+            >
+              追加
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
+}

@@ -42,6 +42,10 @@ export const FREE_LIMITS = {
   popupProposals: 3,
   /** ポップアップを出すサイトの登録数（累計） */
   popupSites: 1,
+  /** 社内インタビュー記事の生成回数（累計）。1回＝事実の抽出＋記事1本 */
+  shanaiArticles: 3,
+  /** 社内インタビューで文字起こしした録音の件数（累計）。1件＝最大90分 */
+  shanaiTranscripts: 3,
 } as const
 
 /**
@@ -66,6 +70,10 @@ export const PRO_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   popupProposals: 30,
   // 登録するだけで実費が出ない
   popupSites: null,
+  // テキスト生成のみ（文字起こしは録音1本ごとに別途。記事の作り直しもここで数える）
+  shanaiArticles: 30,
+  // 音声の文字起こし（AssemblyAI の従量課金が直接効く）
+  shanaiTranscripts: 30,
 }
 
 /** ENTERPRISE の月次上限。個別契約のため広めに取るが、無制限にはしない */
@@ -79,6 +87,8 @@ export const ENTERPRISE_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   asklinkRuns: 100,
   popupProposals: 100,
   popupSites: null,
+  shanaiArticles: 100,
+  shanaiTranscripts: 100,
 }
 
 export type FreeLimitKey = keyof typeof FREE_LIMITS

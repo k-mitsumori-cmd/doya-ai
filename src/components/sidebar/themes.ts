@@ -403,3 +403,20 @@ export const mensetsuTheme: SidebarTheme = {
   aiBubbleBg: 'bg-blue-700',
   zapColor: 'text-sky-300 fill-sky-300',
 }
+
+/** ドヤ社内インタビュー — フクシア（人の温度感。LP の ACCENT と揃える） */
+export const shanaiTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-[#c026d3] via-[#a21caf] to-[#4a044e]',
+  navText: 'text-fuchsia-50/80',
+  navTextIcon: 'text-fuchsia-100/80',
+  sectionText: 'text-fuchsia-100/60',
+  toggleText: 'text-[#a21caf]',
+  toggleHover: 'hover:bg-fuchsia-50',
+  brandingText: 'text-fuchsia-50/40',
+  profileBg: 'bg-black/15',
+  avatarBg: 'bg-[#a21caf]',
+  loginText: 'text-[#a21caf]',
+  loginHover: 'hover:bg-fuchsia-50',
+  aiBubbleBg: 'bg-[#a21caf]',
+  zapColor: 'text-amber-200 fill-amber-200',
+}
