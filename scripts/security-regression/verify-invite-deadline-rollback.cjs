@@ -28,7 +28,7 @@ function fixture(service, { offset = -1, delayAt = '', full = false, existing = 
     },
   };
   const tx = {
-    sfaMember: membership, kintaiMember: membership,
+    sfaMember: membership, kintaiMember: { ...membership, findMany: async () => [] },
     user: { findUnique: async () => ({ plan: 'FREE', id: 'user' }) },
     promaneInvitation: {
       findUnique: async () => structuredClone({ ...invitation, acceptedAt: state.acceptedAt }),

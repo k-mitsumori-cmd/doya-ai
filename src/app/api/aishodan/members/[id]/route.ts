@@ -33,7 +33,7 @@ async function mutateMember(c: MemberContext, targetId: string, action: 'update'
           return { kind: 'peer' as const }
         }
         if (action === 'update') {
-          if (!role || ROLE_HIERARCHY[role] > ROLE_HIERARCHY[actor.role as AishodanRole]) return { kind: 'role' as const }
+          if (!role || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actor.role as AishodanRole]) return { kind: 'role' as const }
           await tx.aishodanMember.update({ where: { id: target.id }, data: { role } })
           return { kind: 'updated' as const }
         }
@@ -65,7 +65,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (result.kind === 'forbidden' || result.kind === 'peer') return NextResponse.json({ error: 'このメンバーの権限は変更できません' }, { status: 403 })
   if (result.kind === 'missing') return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   if (result.kind === 'self') return NextResponse.json({ error: '自分の権限は変更できません' }, { status: 403 })
-  if (result.kind === 'role') return NextResponse.json({ error: '自分より上の権限は付与できません' }, { status: 403 })
+  if (result.kind === 'role') return NextResponse.json({ error: '自分と同じか上の権限は付与できません' }, { status: 403 })
   return NextResponse.json({ ok: true, memberId: p.id, role })
 }
 

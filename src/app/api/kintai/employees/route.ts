@@ -105,6 +105,10 @@ export async function POST(req: NextRequest) {
       if (assignRole === 'system_admin' && actorRole !== 'system_admin') {
         return { kind: 'admin-only' as const }
       }
+      // hr_admin は自分と同じ権限（hr_admin）を付与できない。付与できるのは自分より下の権限だけ。
+      if (actorRole !== 'system_admin' && hasMinRole(assignRole, actorRole)) {
+        return { kind: 'peer-role' as const }
+      }
       const limit = await reachedKintaiEmployeeLimit(tx, ctx.organizationId)
       if (limit !== null) return { kind: 'limit' as const, limit }
       const employee = await tx.kintaiEmployee.create({
@@ -137,6 +141,9 @@ export async function POST(req: NextRequest) {
     }
     if (admission.kind === 'admin-only') {
       return NextResponse.json({ error: 'システム管理者のみがシステム管理者権限を付与できます' }, { status: 403 })
+    }
+    if (admission.kind === 'peer-role') {
+      return NextResponse.json({ error: '自分と同じか上の権限は付与できません' }, { status: 403 })
     }
     if (admission.kind === 'limit') {
       return NextResponse.json(
