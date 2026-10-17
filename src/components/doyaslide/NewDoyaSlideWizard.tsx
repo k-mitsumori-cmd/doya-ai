@@ -27,6 +27,7 @@ import {
 } from '@/lib/doyaslide/constants'
 import DoyaChar from '@/components/doyaslide/DoyaChar'
 import SlideImage from '@/components/doyaslide/SlideImage'
+import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 
 type Aspect = 'wide' | 'square' | 'vertical'
 const GENERATED_PREVIEW_STYLES = STYLE_PRESETS.filter(preset => !preset.sampleImages?.length).map(preset => preset.value)
@@ -658,7 +659,7 @@ export default function NewDoyaSlideWizard() {
                     >
                       <div className={`${s.coverImage || s.previewImage ? 'aspect-video' : 'aspect-[3/2]'} bg-slate-100 flex items-center justify-center overflow-hidden`}>
                         {thumbnail ? (
-                          <img src={thumbnail} alt={s.label} className="w-full h-full object-cover" />
+                          <img src={doyaslideImageSrc(thumbnail)} alt={s.label} className="w-full h-full object-cover" />
                         ) : (
                           <span className="material-symbols-outlined animate-spin text-slate-300 text-lg">progress_activity</span>
                         )}
