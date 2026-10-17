@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
     )
   } catch (error) {
     // 列不足(P2022)などDB起因の失敗を Vercel ログで切り分けられるように記録する
-    console.error('[sfa/deals] GET failed', { code: (error as { code?: string })?.code, message: error instanceof Error ? error.message : String(error) })
+    console.error('[sfa/deals] GET failed', { code: (error as { code?: string })?.code, name: (error as { name?: string })?.name })
     return json({ error: '商談を取得できませんでした。時間をおいて再度お試しください。' }, 500)
   }
 }
