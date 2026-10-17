@@ -8,12 +8,7 @@
 //    - services.ts に新しいツールが入ると、対応表に無くても「その他」に自動で出る
 // ⚠️ ここはナビの表示だけ。各ツールの認可・課金判定はツール側が持つ。
 // 仕様: docs/architecture/management-agent/ADDON-SERVICES-2026-10-18.md §2・§8（U-1〜U-4）
-import type { LucideIcon } from 'lucide-react'
-import {
-  LayoutDashboard, Briefcase, FileText, Users, Clock, FolderKanban, Image as ImageIcon, Search,
-  Presentation, MessageSquare, Mic, Link2, ListChecks, UserCheck, PenTool, Building2, Megaphone,
-  Headphones, CircleUser, MousePointerClick, Store, Receipt, Wallet, BookOpen, LayoutGrid,
-} from 'lucide-react'
+import type { ShellIconName } from './icons'
 import { getActiveServices, UNLISTED_SERVICE_IDS } from '@/lib/services'
 
 export type ShellStage = 'sell' | 'collect' | 'hire' | 'operate' | 'other'
@@ -22,7 +17,8 @@ export interface ShellTool {
   id: string
   name: string
   href: string
-  icon: LucideIcon
+  /** アイコンの名前（src/components/shell/icons.tsx の対応表）。部品そのものは持たない */
+  icon: ShellIconName
   /** ホームとサイドバーのツールチップに出す一言説明 */
   hint: string
   stage: ShellStage
@@ -36,37 +32,37 @@ export interface ShellGroup {
   tools: ShellTool[]
 }
 
-interface ToolMeta { stage: ShellStage; name: string; icon: LucideIcon; hint: string; href?: string }
+interface ToolMeta { stage: ShellStage; name: string; icon: ShellIconName; hint: string; href?: string }
 
 /** 区分・短い名前・アイコン・一言説明の対応表（services.ts に無い id は出ない） */
 const TOOL_META: Record<string, ToolMeta> = {
   // 売る
-  sfa: { stage: 'sell', name: '営業管理', icon: Briefcase, hint: '商談・パイプライン・タスク' },
-  quote: { stage: 'sell', name: '見積', icon: FileText, hint: '見積書の作成と確定' },
-  shodan: { stage: 'sell', name: '商談準備', icon: Building2, hint: '企業リサーチと提案資料' },
-  aishodan: { stage: 'sell', name: 'AI商談', icon: MessageSquare, hint: '商談の記録と要約' },
-  cunning: { stage: 'sell', name: 'カンニング', icon: Headphones, hint: 'Web会議の回答をその場で提示' },
-  doyalist: { stage: 'sell', name: 'リスト作成', icon: ListChecks, hint: '営業リストの作成' },
-  doyaslide: { stage: 'sell', name: 'スライド', icon: Presentation, hint: '提案資料・スライド作成' },
+  sfa: { stage: 'sell', name: '営業管理', icon: 'Briefcase', hint: '商談・パイプライン・タスク' },
+  quote: { stage: 'sell', name: '見積', icon: 'FileText', hint: '見積書の作成と確定' },
+  shodan: { stage: 'sell', name: '商談準備', icon: 'Building2', hint: '企業リサーチと提案資料' },
+  aishodan: { stage: 'sell', name: 'AI商談', icon: 'MessageSquare', hint: '商談の記録と要約' },
+  cunning: { stage: 'sell', name: 'カンニング', icon: 'Headphones', hint: 'Web会議の回答をその場で提示' },
+  doyalist: { stage: 'sell', name: 'リスト作成', icon: 'ListChecks', hint: '営業リストの作成' },
+  doyaslide: { stage: 'sell', name: 'スライド', icon: 'Presentation', hint: '提案資料・スライド作成' },
   // 集める
-  aio: { stage: 'collect', name: 'AI検索対策', icon: Search, hint: 'AI検索での見え方を確認' },
-  seo: { stage: 'collect', name: '記事作成', icon: PenTool, hint: 'SEO記事の作成' },
-  banner: { stage: 'collect', name: 'バナー', icon: ImageIcon, hint: 'バナーの制作' },
-  adimage: { stage: 'collect', name: '広告画像', icon: Megaphone, hint: '媒体ごとの広告画像をまとめて作成' },
-  persona: { stage: 'collect', name: 'ペルソナ', icon: CircleUser, hint: 'ターゲット像の作成' },
-  interview: { stage: 'collect', name: 'インタビュー', icon: Mic, hint: '取材音声から記事を作成' },
-  asklink: { stage: 'collect', name: '質問リンク', icon: Link2, hint: 'サイトに置く「AIに聞く」リンクとバナー' },
-  popup: { stage: 'collect', name: 'ポップアップ', icon: MousePointerClick, hint: 'サイトに出すポップアップの作成と計測' },
-  tenjikai: { stage: 'collect', name: '展示会', icon: Store, hint: '出展計画・制作物・予算・準備タスク' },
+  aio: { stage: 'collect', name: 'AI検索対策', icon: 'Search', hint: 'AI検索での見え方を確認' },
+  seo: { stage: 'collect', name: '記事作成', icon: 'PenTool', hint: 'SEO記事の作成' },
+  banner: { stage: 'collect', name: 'バナー', icon: 'Image', hint: 'バナーの制作' },
+  adimage: { stage: 'collect', name: '広告画像', icon: 'Megaphone', hint: '媒体ごとの広告画像をまとめて作成' },
+  persona: { stage: 'collect', name: 'ペルソナ', icon: 'CircleUser', hint: 'ターゲット像の作成' },
+  interview: { stage: 'collect', name: 'インタビュー', icon: 'Mic', hint: '取材音声から記事を作成' },
+  asklink: { stage: 'collect', name: '質問リンク', icon: 'Link2', hint: 'サイトに置く「AIに聞く」リンクとバナー' },
+  popup: { stage: 'collect', name: 'ポップアップ', icon: 'MousePointerClick', hint: 'サイトに出すポップアップの作成と計測' },
+  tenjikai: { stage: 'collect', name: '展示会', icon: 'Store', hint: '出展計画・制作物・予算・準備タスク' },
   // 人
-  hr: { stage: 'hire', name: '人事', icon: Users, hint: '社員・評価・1on1', href: '/hr/dashboard' },
-  mensetsu: { stage: 'hire', name: '面接', icon: UserCheck, hint: '採用面接の準備と記録' },
-  shanai: { stage: 'hire', name: '社内インタビュー', icon: BookOpen, hint: '社員インタビューから採用広報の記事を作成' },
+  hr: { stage: 'hire', name: '人事', icon: 'Users', hint: '社員・評価・1on1', href: '/hr/dashboard' },
+  mensetsu: { stage: 'hire', name: '面接', icon: 'UserCheck', hint: '採用面接の準備と記録' },
+  shanai: { stage: 'hire', name: '社内インタビュー', icon: 'BookOpen', hint: '社員インタビューから採用広報の記事を作成' },
   // 回す
-  kintai: { stage: 'operate', name: '勤怠', icon: Clock, hint: '打刻・残業・申請', href: '/kintai/dashboard' },
-  promane: { stage: 'operate', name: 'プロマネ', icon: FolderKanban, hint: '案件・工数・収支' },
-  income: { stage: 'operate', name: '収入管理', icon: Receipt, hint: '契約・売上予定・請求書・入金' },
-  expense: { stage: 'operate', name: '支出管理', icon: Wallet, hint: '固定費・業務委託・支払予定' },
+  kintai: { stage: 'operate', name: '勤怠', icon: 'Clock', hint: '打刻・残業・申請', href: '/kintai/dashboard' },
+  promane: { stage: 'operate', name: 'プロマネ', icon: 'FolderKanban', hint: '案件・工数・収支' },
+  income: { stage: 'operate', name: '収入管理', icon: 'Receipt', hint: '契約・売上予定・請求書・入金' },
+  expense: { stage: 'operate', name: '支出管理', icon: 'Wallet', hint: '固定費・業務委託・支払予定' },
 }
 
 const STAGE_LABELS: { stage: ShellStage; label: string }[] = [
@@ -78,7 +74,7 @@ const STAGE_LABELS: { stage: ShellStage; label: string }[] = [
 ]
 
 export const SHELL_HOME: ShellTool = {
-  id: 'home', name: '経営ホーム', href: '/home', icon: LayoutDashboard, hint: '売上・収入・予定をまとめて見る', stage: 'other',
+  id: 'home', name: '経営ホーム', href: '/home', icon: 'LayoutDashboard', hint: '売上・収入・予定をまとめて見る', stage: 'other',
 }
 
 /** 区分の中は対応表の並び（よく使う順）。対応表に無いものは services.ts の順で後ろに */
@@ -95,7 +91,7 @@ function buildTools(): ShellTool[] {
       id: s.id,
       name: meta?.name ?? s.shortName ?? s.name,
       href: meta?.href ?? s.href,
-      icon: meta?.icon ?? LayoutGrid,
+      icon: meta?.icon ?? 'LayoutGrid',
       hint: meta?.hint ?? s.description,
       stage: meta?.stage ?? 'other',
       beta: UNLISTED_SERVICE_IDS.has(s.id) || undefined,
