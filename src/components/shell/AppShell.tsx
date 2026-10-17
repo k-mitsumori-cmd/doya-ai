@@ -14,6 +14,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { LayoutGrid, Menu, Search, X } from 'lucide-react'
 import ds from '@/components/ds/tokens.module.css'
+import { ShellIcon } from './icons'
 import { ALL_SHELL_TOOLS, SHELL_GROUPS, SHELL_HOME, type ShellTool } from './tools'
 import styles from './AppShell.module.css'
 
@@ -38,11 +39,10 @@ function readRecent(): string[] {
 }
 
 function NavItem({ tool, pathname, onNavigate }: { tool: ShellTool; pathname: string; onNavigate: () => void }) {
-  const Icon = tool.icon
   const active = isActive(pathname, tool)
   return (
     <Link href={tool.href} className={styles.navItem} aria-current={active ? 'page' : undefined} onClick={onNavigate} title={tool.name}>
-      <Icon size={18} strokeWidth={2} aria-hidden />
+      <ShellIcon name={tool.icon} size={18} strokeWidth={2} />
       <span className={styles.navLabel}>{tool.name}</span>
       {tool.beta ? <span className={styles.beta}>開発中</span> : null}
     </Link>
@@ -103,11 +103,10 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
         </div>
         <ul className={styles.paletteList} role="listbox">
           {results.length ? results.map((t, i) => {
-            const Icon = t.icon
             return (
               <li key={t.id} role="option" aria-selected={i === index}>
                 <button type="button" className={styles.paletteItem} data-active={i === index} onMouseEnter={() => setIndex(i)} onClick={() => go(t)}>
-                  <span className={styles.paletteIcon}><Icon size={16} aria-hidden /></span>
+                  <span className={styles.paletteIcon}><ShellIcon name={t.icon} size={16} /></span>
                   <span className={styles.paletteText}><b>{t.name}</b><small>{t.hint}</small></span>
                   {t.beta ? <span className={styles.beta}>開発中</span> : null}
                 </button>
@@ -209,10 +208,9 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
 
       <nav className={styles.tabbar} aria-label="よく使うツール">
         {[SHELL_HOME, ...tabTools].map((t) => {
-          const Icon = t.icon
           return (
             <Link key={t.id} href={t.href} className={styles.tab} aria-current={isActive(pathname, t) ? 'page' : undefined}>
-              <Icon size={20} aria-hidden />
+              <ShellIcon name={t.icon} size={20} />
               <span>{t.id === 'home' ? 'ホーム' : t.name}</span>
             </Link>
           )

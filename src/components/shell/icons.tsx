@@ -1,0 +1,34 @@
+// ============================================
+// 共通シェルのアイコン（名前の文字列 → lucide の部品）
+// ============================================
+// ⚠️ ナビやツール一覧のアイコンは「名前の文字列」で持つ。
+//    lucide の部品（関数）をサーバーの layout.tsx からクライアント部品（ToolFrame / AppShell）へ渡すと、
+//    「Functions cannot be passed directly to Client Components」で全画面が 500 になる。
+//    ビルドは通り、画面を開いたときに初めて落ちるので気づきにくい（2026-10-18 収入管理で発覚）。
+// ⚠️ 新しい名前を使うときは、ここの対応表に足す。無い名前は既定のアイコン（LayoutGrid）になる。
+import type { LucideIcon, LucideProps } from 'lucide-react'
+import {
+  BadgeJapaneseYen, BarChart3, BookOpen, Briefcase, Building2, Calendar, CircleUser, Clock, CreditCard,
+  FileText, FolderKanban, Headphones, Home, Image, LayoutDashboard, LayoutGrid, Link2, List, ListChecks,
+  Megaphone, MessageSquare, Mic, MousePointerClick, PenTool, Plus, Presentation, Receipt, Search, Settings,
+  Store, UserCheck, Users, Wallet,
+} from 'lucide-react'
+
+export const SHELL_ICONS = {
+  BadgeJapaneseYen, BarChart3, BookOpen, Briefcase, Building2, Calendar, CircleUser, Clock, CreditCard,
+  FileText, FolderKanban, Headphones, Home, Image, LayoutDashboard, LayoutGrid, Link2, List, ListChecks,
+  Megaphone, MessageSquare, Mic, MousePointerClick, PenTool, Plus, Presentation, Receipt, Search, Settings,
+  Store, UserCheck, Users, Wallet,
+} satisfies Record<string, LucideIcon>
+
+/** 対応表にある名前。対応表に無い文字列も受け付ける（既定のアイコンになる） */
+export type ShellIconName = keyof typeof SHELL_ICONS | (string & {})
+
+export function resolveShellIcon(name?: string): LucideIcon {
+  return (name && (SHELL_ICONS as Record<string, LucideIcon>)[name]) || LayoutGrid
+}
+
+export function ShellIcon({ name, ...props }: { name?: ShellIconName } & LucideProps) {
+  const Icon = resolveShellIcon(name)
+  return <Icon aria-hidden {...props} />
+}
