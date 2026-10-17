@@ -37,7 +37,10 @@
 | TEN-17 | raw SQL は `tenantSql(ctx)` フラグメント経由で、lint は文字列一致ではなく `tenantSql(` の有無を見るか | `"companyId" = ${anything}` で擦り抜ける | 自動: `verify-core-raw-sql-tenant.cjs` | M | SEC-04 |
 | TEN-18 | `include / select` で親側 relation を辿る読みに、テナント列の `where` または post-filter を適用しているか | 他社の親レコードが返る | 自動: 同上（include 経由） | M | SEC-01 |
 | TEN-19 | `upsert` は `owned()` ヘルパーで「findFirst → あれば update、無ければ create（テナント列強制）」に分解され、create 経路が所属確認で失敗しないか | upsert 全滅→直 import への逃げ | 自動: `verify-core-access-cross-tenant.cjs`（upsert の両経路） | H | FIN-02 |
-| TEN-20 | query 拡張のコールバックが基底クライアントで追加クエリを発行しておらず、所属確認は呼び出し元クライアント（tx 可）を受け取る `owned(client, ctx)` で行っているか | tx 外の別接続で読む不整合・接続枯渇 | 自動: `verify-core-access-cross-tenant.cjs`（tx 内で `owned(tx)`） | H | FIN-03 |
+| TEN-20 | query 拡張のコールバックが基底クライアントで追加クエリを発行せず、`owned(client, ctx)` 自身が `walkData` → 所属確認 → モジュール内 `ownedScope`（AsyncLocalStorage、export しない）マーカー付きで元操作を呼び、拡張はマーカー無しの update/delete/upsert/findUnique を throw するか | 分担不成立（全 update 失敗 or tx 経路で無検査） | 自動: `verify-core-access-cross-tenant.cjs` | H | FIN-03, FIN2-01 |
+| TEN-21 | 拡張が tx に**乗る**モックで、`owned(tx).update` が成功し、`owned(tx)` のネスト connect で他社 id が拒否され、`tx.<model>.update` 直接が `UseOwnedHelperError` になるか | 分担の検証（乗る側） | 自動: `verify-core-access-cross-tenant.cjs`（ext-on） | H | FIN2-01 |
+| TEN-22 | 拡張が tx に**乗らない**モックで、`owned(tx).update` が成功し、`owned(tx)` のネスト connect で他社 id が拒否され、`OwnedTx` 型が直接の update/delete/upsert/findUnique をコンパイルエラーにするか | 分担の検証（乗らない側） | 自動: 同上（ext-off）＋tsc | H | FIN2-01 |
+| TEN-23 | `ownedScope` が export されておらず、外部モジュールからマーカーを付けて拡張を迂回できないか | マーカー偽造 | 自動: `verify-core-access-cross-tenant.cjs`（別モジュールからの `update` 直呼びが throw） | H | FIN2-01 |
 
 ## 2. AUTH 認証・セッション（Google のみ・使い回し防止）
 
@@ -80,6 +83,7 @@
 | AUTH-35 | `requireBannerAdmin` が `verifyAdminSession`（DB 照合）を使い、ログアウト済み JWT を拒否するか | 無効化済み admin の JWT が 24h 有効 | 自動: `verify-cron-timing-safe.cjs`（guard） | M | SEC-30 |
 | AUTH-36 | `strictSharing` の pending 文脈で使えるルートが passkey-login / 初回登録 / 回復申請の 3 つに限定され、ON 時に未登録メンバー数を確認表示するか | 未登録者・紛失者の締め出し | 自動: `verify-core-step-up-passkey.cjs`（pending 文脈） | H | FIN-06 |
 | AUTH-37 | adapter 内の `cookies()` 読み取りが try/catch で、取れない文脈では `deviceVerified=false` → mutation 401・読み取り許可になるか | 設計どおり書けない／例外 | 自動: `verify-core-session-binding.cjs`（cookies 不可の文脈） | M | FIN-14 |
+| AUTH-38 | 複数会社所属で pending になる条件（ログイン直後に選ばれる会社が strictSharing）と、切替時の assertion 要求、未登録判定（`revokedAt IS NULL` 0 件）が実装されているか | 他社経由での strictSharing 迂回 | 自動: `verify-core-step-up-passkey.cjs`（switch） | M | FIN2-06 |
 
 ## 3. AUTHZ 認可（既定拒否・ロール）
 
@@ -133,7 +137,7 @@
 | BIL-19 | ユーザー経路（`isDoyaSubscription` / `findActiveLikeSubscriptions` / `handleSubscriptionDeleted`）が `metadata.companyId` を持つ subscription を除外し、会社経路はそれだけを扱うか | 会社契約が `User.plan` を書き換える／個人解約が FREE に落ちない | 自動: `verify-billing-company-webhook-idempotent.cjs`（交差汚染 2 ケース） | H | OPS-20 |
 | BIL-20 | 会社経路の webhook 分岐と権利判定がフラグ非依存で常時 ON、`billing.company_mode` は Checkout 入口のみか | ロールバックで支払い済みの会社が FREE | 自動: 同上（フラグ OFF でも会社契約が反映） | H | OPS-21 |
 | BIL-21 | 移行時に `stripe.subscriptions.update({metadata: {companyId}})` を実行し、webhook は `CompanySubscription.stripeSubscriptionId` の逆引きも行うか | 移行契約の解約・失敗が反映されない | 自動: 同上（metadata 無し subscription の status 変更） | H | DATA-02 |
-| BIL-22 | Phase2〜3 の会社経路で owner の `syncUnifiedBilling` を併記し、Phase3 ロールバックで権利が消えないか | 会社 Checkout 契約者が FREE 扱い | 自動: 同上 | M | DATA-14 |
+| BIL-22 | Phase2〜3 の会社経路が台帳更新後に `syncUserPlan(owner)`（max 規則の単一の書き手）を呼び、Phase3 ロールバックで権利が消えないか | 会社 Checkout 契約者が FREE 扱い | 自動: 同上 | M | DATA-14 |
 | BIL-23 | 旧 Price → 統一 Price は同一 Customer 内の item 差し替え（`create_prorations`）で、再契約させず、席 item は `seatItemId` で固定か | 年額の按分・空白期間 | 手動: Stripe テストモードで差し替え | M | OPS-22 |
 | BIL-24 | `billing-audit` が `CompanySubscription` 全件を Stripe と突合し、`StripeWebhookEvent.status='failed'` を報告するか | Webhook 欠落 | 手動: Slack レポート | M | OPS-23 |
 | BIL-25 | 会社 Checkout が会社キーと操作者 user キーの 2 キーで予約されるか | 個人と会社の同時契約 | 自動: 既存 reservation テストの会社版 | M | OPS-24 |
@@ -228,7 +232,7 @@
 | AGT-12 | ツール入力は zod `.strict()` で、URL は `assertUrlSafe`、id は cuid＋会社所属を検査するか | 入力経由の攻撃 | 自動: `verify-agent-tool-input-strict.cjs` | H | M-9 |
 | AGT-13 | run ごとに `creditBudget` / `maxToolCalls` / `maxLlmCalls` / `wallClockLimitSec` があり、超過で `failed(budget)` になるか | コスト暴走 | 自動: `verify-agent-budget.cjs` | H | C-1 |
 | AGT-14 | `estimatedPaidCalls` と `LlmCallLog` の実測が 2 倍以上乖離したら `SecurityEvent` になるか | 見積りの形骸化 | 自動: 同上 | M | B-16 |
-| AGT-15 | ツールが呼ぶ lib の LLM が gateway 経由で、未移行ツールは `costClass=high` 扱いか | 計測ゼロでの運用 | 自動: `verify-service-manifest-paid-api.cjs` | H | B-16, M-11 |
+| AGT-15 | ツールが呼ぶ lib の有料呼び出しが gateway / image-core / realtime 経由で、未移行 lib を呼ぶツールは登録できない（M-11 が `run` の import 閉包で raw fetch / SDK 直接利用を検出）か | 計測ゼロでの運用 | 自動: `verify-service-manifest-paid-api.cjs`（import 閉包） | H | B-16, M-11 |
 | AGT-16 | advance は入口で 240s の `AbortSignal` を作り、LLM / ツールのタイムアウトは残り時間から派生するか | 関数ごと死んでリースが残る | 自動: `verify-agent-deadline.cjs` | H | B-14 |
 | AGT-17 | 二重 advance が 409 になり、期限切れリースを Cron が回収し、`maxAdvanceAttempts` 超過で failed になるか | 二重実行・無限再開 | 自動: `verify-agent-run-lease.cjs` | H | C-2 |
 | AGT-18 | `agent.kill_switch`（全体）/ `agent.enabled`（会社）/ `agent.tools.<key>.enabled` が advance 冒頭で効くか | 緊急停止 | 自動: `verify-agent-kill-switch.cjs` | H | — |
@@ -262,6 +266,8 @@
 | AGT-46 | `AgentRun.create` が `nextRunAt=now()` を書き、`planning` 中にリースが切れた run を Cron が再 claim するか | 永久 queued / planning | 自動: `verify-agent-run-lease.cjs`（planning 期限切れ、作成直後の失敗） | H | FIN-01, FIN-11 |
 | AGT-47 | Cron の処理能力式（K = ceil(max_concurrent_runs/4)+2）と HTTP 起動（`after()`）または K スロットのどちらかが実装され、同時 run 上限に対して余裕があるか | ピーク時にキューが伸びる | 手動: 負荷試験（20 run 同時） | M | FIN-08 |
 | AGT-48 | `pausedReason` が 3 値で、`company_suspended` の復帰（会社復旧手順の一括 `nextRunAt`）があるか | 復旧後も paused | 自動: `verify-agent-kill-switch.cjs`（会社復旧） | L | FIN-12 |
+| AGT-49 | `/api/agent/runs/[id]/advance` が cron-launch 分類（`routes.cronLaunch`）で、`withCompanyAccessOrCron` で export され、Cron が claim した `executionToken` を body で渡して advance が再 claim せず継承し、不一致で 409 になるか。`CRON_SECRET` が cron-launch の起動以外に効かないか | middleware で 401／自分の claim に阻まれて 409／秘密の過剰な到達範囲 | 自動: `verify-agent-run-lease.cjs`（detached）、`verify-core-route-classes.cjs`（cron-launch） | H | FIN2-04 |
+| AGT-50 | 書き込みフェンスの status 集合が `('queued','planning','running')` で、planning 中の `AgentPlan / AgentStep` 生成がフェンス内で成功するか | planning が完了しない／フェンス穴 | 自動: `verify-agent-write-fence.cjs`（planning） | H | FIN2-02 |
 
 ## 8. EXT 外部 API・LLM（従量課金の事前承認・キーの扱い）
 
@@ -309,7 +315,7 @@
 | PII-11 | ゲスト（応募者・見込み客）の `guestEmail / candidateEmail` はツール出力でマスクされるか | 第三者の個人情報 | 自動: `verify-agent-sensitive-output.cjs` | H | — |
 | PII-12 | 列暗号化が `keyId || nonce || AES-GCM(..., aad=table:column:rowId)` で、盲検索 HMAC が別鍵か | 暗号文の行間・列間入れ替え | 自動: `verify-core-encryption.cjs` | H | SEC-19 |
 | PII-13 | 「env 漏洩は列暗号化の対象外」が脅威モデルに明記され、鍵ローテーションに「旧 keyId 行 0 の検証」があるか | 過信 | 手動: README §10.1/10.5 | M | SEC-19 |
-| PII-14 | LLM プロバイダの保持・学習不使用・DPA が付録 I に記録され、未締結なら `allowSensitive=false` が全社既定か | 第三者提供の整理 | 手動: 付録 H | H | SEC-21 |
+| PII-14 | LLM プロバイダの保持・学習不使用・DPA が付録 I に記録され、未締結なら `allowSensitive=false` が全社既定か | 第三者提供の整理 | 手動: 付録 I | H | SEC-21 |
 | PII-15 | `AuditLog.diff / details` に `redact()` を適用し、削除要求時の匿名化手順（`deleted:<hash>`、hash 再計算）があるか | 3 年残る PII | 自動: `verify-core-redact.cjs`（diff） | M | SEC-22 |
 
 ## 10. AUD 監査ログ
@@ -411,6 +417,8 @@
 | DOC-05 | 状態遷移図の status / pausedReason の値が draft のコメントと一致し、全状態に終端への経路と復帰主体があるか | 実装者が 2 通りに解釈 | 自動: `verify-agent-state-machine.cjs`（図から遷移表を抽出し、到達性と draft の値を検査） | H | FIN-01, FIN-12 |
 | DOC-06 | 「要実機確認」と書いた外部仕様に、確認できなかった場合の代替設計が併記されているか | 片方に賭けた設計 | 手動: 付録 B の各項目 | M | FIN-03, FIN-08, FIN-14, FIN-15 |
 | DOC-07 | 付録の回答表（D / F / G）に審査の全 ID の行があり、「部分的」判定が次の改訂で「反映」まで到達しているか | 取りこぼし | 自動: ID 列挙スクリプト | M | 全般 |
+| DOC-08 | 改訂のたびに、付録 J の全キーについて「正本の文言 ≥1 回、禁止語 0 回（付録 J 自身を除く）」を README・CHECKLIST・schema-draft の 3 ファイルで機械検査し、結果（キーごとの出現数・禁止語の残数）を完了報告に添付したか | grep 依頼だけでは取り残しが出る（改訂 4 で 4 キー） | 自動: `verify-doc-consistency.cjs`（キー・正本語・禁止語は付録 J の表から読む） | H | FIN2-03, FIN2-05, FIN2-07 |
+| DOC-09 | 新しい規則を追加したとき、それが 2 箇所以上に書かれるなら付録 J にキー・正本・禁止語を追加したか | 多重記述の増殖 | 手動: PR テンプレートのチェック欄 | M | FIN2-01, FIN2-04, FIN2-05 |
 
 ## 監査指摘との対応表
 
@@ -476,7 +484,20 @@
 | D-7 | AUTH-18, RUN-12 |
 | D-8 | MIG-04, SCH-05 |
 
-項目数: TEN 20 / AUTH 37 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 48 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 7 ＝ **326 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1 回の 17 指摘すべてに対応項目あり（漏れ 0）。
+項目数: TEN 23 / AUTH 38 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 50 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 9 ＝ **334 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1 回の 17 指摘、第 2 回の 7 指摘すべてに対応項目あり（漏れ 0）。
+
+## 最終ゲート第 2 回（FIN2）との対応表
+
+| 審査 | 再発防止するチェック項目 |
+|---|---|
+| FIN2-01 | TEN-20, TEN-21, TEN-22, TEN-23 |
+| FIN2-02 | AGT-50, DOC-01 |
+| FIN2-03 | BIL-22, BIL-29, DOC-08 |
+| FIN2-04 | AGT-49, AUTHZ-19, AUTHZ-16 |
+| FIN2-05 | AGT-15, EXT-01, DOC-08 |
+| FIN2-06 | AUTH-36, AUTH-38, SCH-10 |
+| FIN2-07 | DOC-02, DOC-03, DOC-04, DOC-08 |
+
 
 ## 最終ゲート第 1 回（FIN）との対応表
 
