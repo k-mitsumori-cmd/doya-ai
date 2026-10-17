@@ -6,32 +6,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getPopupUserId, ownSite } from '@/lib/popup/access'
 import { isId, parseDomain, sanitizeName } from '@/lib/popup/schema'
-import { parseDays, sumTotals, totalsByPopup } from '@/lib/popup/stats'
-import { toPopupDto, toSiteDto } from '@/lib/popup/dto'
+import { parseDays } from '@/lib/popup/stats'
+import { getSiteDetail } from '@/lib/popup/popup-read'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 const NOT_FOUND = { error: '見つかりません。' }
 
-/** サイト詳細（案と集計）。自分の分だけ。他人のIDは404 */
+/** サイト詳細（案と集計）。自分の分だけ。他人のIDは404。正本は popup-read.ts */
 export async function GET(req: NextRequest, ctx: Ctx) {
   const userId = await getPopupUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です。' }, { status: 401 })
   const { id } = await ctx.params
   if (!isId(id)) return NextResponse.json(NOT_FOUND, { status: 404 })
-  const site = await prisma.popupSite.findFirst({
-    where: ownSite(userId, id),
-    include: { popups: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] } },
-  })
-  if (!site) return NextResponse.json(NOT_FOUND, { status: 404 })
-  const days = parseDays(req.nextUrl.searchParams.get('days'))
-  const totals = await totalsByPopup(site.popups.map((p) => p.id), days)
-  const popups = site.popups.map((p) => toPopupDto(p, totals.get(p.id)))
-  return NextResponse.json({
-    days,
-    site: toSiteDto(site, { liveCount: popups.filter((p) => p.status === 'live').length, totals: sumTotals(popups.map((p) => p.totals)) }),
-    popups,
-  })
+  const detail = await getSiteDetail(prisma, userId, id, parseDays(req.nextUrl.searchParams.get('days')))
+  if (!detail) return NextResponse.json(NOT_FOUND, { status: 404 })
+  return NextResponse.json(detail)
 }
 
 /** サイト名・表示を許すドメインの変更 */

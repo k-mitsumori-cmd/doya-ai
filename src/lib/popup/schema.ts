@@ -121,7 +121,7 @@ export interface PopupFrequency {
   oncePerSession: boolean
 }
 
-export const DEFAULT_COLORS: PopupColors = { bg: '#ffffff', accent: '#ff5a36', text: '#1f2430' }
+export const DEFAULT_COLORS: PopupColors = { bg: '#ffffff', accent: '#0066ff', text: '#1f2430' }
 
 export const DEFAULT_TRIGGER: PopupTrigger = { type: 'delay', delaySec: 10, scrollPct: 50 }
 export const DEFAULT_TARGETING: PopupTargeting = { device: 'all', pathMode: 'all', paths: [] }

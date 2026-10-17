@@ -3,7 +3,8 @@ import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤポップアップ LPコンテンツ
 import type { Step, Benefit, Faq } from '@/components/lp'
 
-export const ACCENT = '#ff5a36'
+// シリーズの青（トークン。.popup-ds の中で解決される。統合仕様 R-3）
+export const ACCENT = 'var(--blue)'
 export const CTA = '/auth/signin?callbackUrl=/popup'
 
 export const STEPS: Step[] = [

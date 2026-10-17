@@ -38,7 +38,7 @@ for (const [setter, field] of Object.entries({
 })) state[setter] = (value) => { state[field] = typeof value === 'function' ? value(state[field]) : value; };
 const org = load('src/lib/org-client-response.ts', {}, { fetch: (...args) => state.fetch(...args), AbortController, setTimeout, clearTimeout, TextDecoder, Uint8Array });
 const response = load('src/lib/sfa/client-response.ts', { '@/lib/org-client-response': org, './task-date': load('src/lib/sfa/task-date.ts') });
-state.sfaJson = response.sfaJson; state.isSfaClientTask = response.isSfaClientTask;
+state.sfaJson = response.sfaJson; state.isSfaClientTask = response.isSfaClientTask; state.sfaValidRows = response.sfaValidRows;
 vm.createContext(state);
 const code = ts.transpileModule(`this.loadDetailTasks = ${callback};`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 vm.runInContext(code, state);

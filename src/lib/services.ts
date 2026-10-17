@@ -1690,9 +1690,9 @@ export const SERVICES: Service[] = [
       '自社サイトのURLを1つ入力すると、サイトの内容と主要ページを読み取り、そのサイトに合ったポップアップを3案提案します。ChatGPTにサイトのことを相談できる「AIに聞く」ボタン、問い合わせや資料ダウンロードへの案内、次に読むおすすめページの3つです。バナーはサイトの色に合わせて自動でデザインされるので、画像を用意する必要はありません。設置タグをサイトに1行貼るだけで、表示するタイミング・端末・ページ・頻度を決めて配信でき、表示数・クリック数・クリック率を日別に確認できます。',
     // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
     icon: '',
-    color: 'orange',
-    gradient: 'from-[#ff5a36] to-[#b8202f]',
-    bgGradient: 'from-orange-50 to-rose-50',
+    color: 'blue',
+    gradient: 'from-[#0066ff] to-[#0047d6]',
+    bgGradient: 'from-blue-50 to-sky-50',
     href: '/popup',
     dashboardHref: '/popup',
     pricingHref: '/popup/pricing',

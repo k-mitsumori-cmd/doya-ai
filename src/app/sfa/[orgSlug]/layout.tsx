@@ -42,6 +42,15 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
     setMobileMenuOpen(false)
   }, [pathname])
 
+  // ログイン状態の確認が終わらないとき、読み込み中のまま止まらないよう案内を出す
+  const [guardStalled, setGuardStalled] = useState(false)
+  useEffect(() => {
+    setGuardStalled(false)
+    if (guard.allowed || guard.requiresLogin) return
+    const timer = setTimeout(() => setGuardStalled(true), 15000)
+    return () => clearTimeout(timer)
+  }, [guard.allowed, guard.requiresLogin, guard.key])
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Toaster position="top-center" />
@@ -74,7 +83,12 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {!guard.allowed && <p role="status" className="p-6">{guard.requiresLogin ? '再度ログインしてください。' : 'ログイン状態を確認しています。'}</p>}
+          {!guard.allowed && (guardStalled && !guard.requiresLogin ? (
+            <div role="alert" className="p-6 space-y-3">
+              <p>ログイン状態を確認できませんでした。通信状況を確認して、ページを再読み込みしてください。</p>
+              <button type="button" onClick={() => window.location.reload()} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-bold">再読み込み</button>
+            </div>
+          ) : <p role="status" className="p-6">{guard.requiresLogin ? '再度ログインしてください。' : 'ログイン状態を確認しています。'}</p>)}
           <div hidden={!guard.allowed}><Fragment key={guard.identity}>{children}</Fragment></div>
         </div>
       </main>

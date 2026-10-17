@@ -15,7 +15,7 @@
     "db:push": "prisma db push",
     "test:security": "node scripts/security-regression/run.cjs",
     "test:asklink": "tsx --test src/lib/asklink/link.test.ts src/lib/asklink/scope.test.ts",
-    "test:popup": "tsx --test src/lib/popup/schema.test.ts src/lib/popup/scope.test.ts",
+    "test:popup": "tsx --test src/lib/popup/schema.test.ts src/lib/popup/scope.test.ts src/lib/popup/read.test.ts",
     "test:syscheck": "tsx --test src/lib/syscheck-guards.test.ts src/lib/server-daily-quota.test.ts src/lib/drip-click-link.test.ts src/lib/mitsuboshi/nagusame/guest.test.ts src/lib/interview/file-signature.test.ts"
   },
   "dependencies": {
