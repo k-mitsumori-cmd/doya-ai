@@ -27,7 +27,7 @@
 15. [設計とは別に先に直す修正（フェーズ0の前）](#15-設計とは別に先に直す修正フェーズ0の前)
 16. [新しいサービスを追加するときの仕様（サービス契約）](#16-新しいサービスを追加するときの仕様サービス契約)
 17. [運用（データ保持・掃除、監視と SLO、前提）](#17-運用データ保持掃除監視と-slo前提)
-- 付録 A 新設ファイル / B 未確認点 / C schema-draft の結合検証 / D 監査への回答 / E 改訂履歴 / F 第 2 回審査への回答 / G 告知文 / H LLM プロバイダ契約
+- 付録 A 新設ファイル / B 未確認点 / C schema-draft の結合検証 / D 監査への回答 / E 改訂履歴 / F 第 2 回審査への回答 / G 最終ゲート第 1 回への回答 / H 告知文 / I LLM プロバイダ契約 / J 多重記述キー一覧
 
 ---
 
@@ -395,7 +395,10 @@ erDiagram
     int paidCalls "LlmCallLog と突合"
   }
   ApprovalRequest {
-    string stepId UK
+    string stepId FK "stepId+attempt で unique（1:N）"
+    int attempt
+    string kind "pre|unknown_outcome"
+    string approvalHash
     string requestedToId FK
     json frozenInput "承認後は変更不可"
     json estimate "回数・単価・合計"
@@ -671,7 +674,7 @@ export async function requireCompanyAccess(
 | **public** | マニフェスト `routes.public[]` に理由付きで列挙されたもの。抽出時に「`getServerSession` / `requireCompanyAccess` / `requireCron` / `requireAdmin` / `requireGuestToken` のいずれも無い `route.ts`」と突合し、**列挙されていない無認証ルートがあれば失敗**（新設ルートの公開漏れ検出） | 素通し（レート制限のみ） | `/api/auth/*`, `/api/stripe/webhook`, `/api/health`, `/api/t/open/[trackingId]`, `/api/t/click/[trackingId]/[linkId]`（メール計測）, `/api/drip/unsubscribe`（配信停止）, `/api/inbound-email`（`x-inbound-secret`）, `/api/service-activity`, `/api/operational-error`（`x-client-error-token`。ブラウザエラー受け口）, `/api/seo/preview`, `/api/banner/image`, `/api/banner/gallery`, `/api/doyaslide/style-preview`, `/api/banner/test/health`, `/api/tenkai/health`, `/api/aishodan/scenarios/[id]/preview`, `/api/hr/organization/invite/[token]` GET（招待確認）, `/api/mitsuboshi/*`, `/api/admin/login`。画面: `/`, `/auth/*`, `/pricing`, `/privacy`, `/legal/*`, `/banner/landing`, 各サービス LP（`/<svc>` 直下。`services.ts` に `landingPath` は無いので `manifest.routes.landing` で宣言）, `/m/[token]`, `/shodan/[orgSlug]/p/[id]`（公開提案）, `/aishodan/preview`, `/cunning/live`, `/<svc>/invite/[token]`（9 系統）, `/nagusame/*` |
 | **cron** | パスが `/api/cron/*`。本体は `requireCron`（Bearer `CRON_SECRET` を `timingSafeEqual`） | middleware でも Bearer の存在のみ確認（値比較はルート） | 35 本すべて |
 | **guest-shared** | `requireGuestToken` を呼ぶか、`guestId` Cookie（`doyaSeo.guestId` / `doyaInterview.guestId` / `aishodan_gid` / `adbanner_gid` / `adimage_gid` / `movie_guest_id`）を読む `route.ts` / `page.tsx`。**ログイン済みと同じルートを共有**する（`/api/seo/articles`, `/api/seo/articles/[id]/outline`, `/api/interview/projects`, `/api/swipe/*`, `/api/adimage/concepts` 等 54 本） | `next-auth.session-token` **または**該当 guest Cookie **または** パスに `[token]` を含む（`/api/mensetsu/live/[token]/*`, `/api/aishodan/room/[token]/*`, `/api/interviewx/public/[token]/*`, `/interviewx/respond/[token]`）のいずれかを要求。無ければ画面は LP へ、API は 401 | 上記 |
-| **auth-required** | 上の 3 つに該当しない全て（既定） | `next-auth.session-token`（本番は `__Secure-` 接頭辞）の**存在**を要求。無ければ画面は `/auth/signin?callbackUrl=`、API は 401 JSON。`/admin/*`, `/api/admin/*` は `admin_session_token` の存在も要求 | 残り全部 |
+| **auth-required** | 上の 3 つに該当しない全て（既定） | **`__Host-next-auth.session-token`**（本番。開発 http では `useSecureCookies=false` のため無接頭辞 `next-auth.session-token`。§10.7 と同じ名前。FIN-13）の**存在**を要求。無ければ画面は `/auth/signin?callbackUrl=`、API は 401 JSON。`/admin/*`, `/api/admin/*` は `admin_session_token` の存在も要求 | 残り全部 |
 
 運用規則:
 
@@ -715,8 +718,9 @@ export async function requireCompanyAccess(
 - **`BillingAccount.stripeCustomerId` は unique にしない**（監査 A-2）。会社の識別は Stripe **Subscription** の `metadata.companyId`（Customer の metadata ではない。DATA-02）。Customer は請求先情報に過ぎない。
 - **ユーザー経路と会社経路の完全分離**（OPS-20）: `metadata.companyId` を持つ Subscription は**会社経路だけ**が扱い、ユーザー経路（`src/lib/stripe.ts` L275 `isDoyaSubscription`、L306 `findActiveLikeSubscriptions`、`route.ts` の `updateBestLiveSubscription` / `handleSubscriptionDeleted` L376-382）は **`metadata.companyId` を持つ Subscription を除外**する。逆に会社経路は `metadata.companyId` を持つもの（＋逆引きで会社に紐づくもの）だけを扱う。これで「会社契約が操作者の `User.plan` を PRO にする」「個人契約を解約しても会社契約が残るため FREE に落ちない」の交差汚染を防ぐ。
 - **席＝`CompanyMember(isSeat=true, status=active)` の数**。`seats` を超える招待受諾は 402。再入社は removed 行の upsert（監査 B-5）。
-- **統一プラン**: `planId` は `'unified-pro'`, `'unified-enterprise'`。D2 の「基本料＋追加席」は **2 Price（基本 1 item ＋ 席 1 item）**構成とし、席の item id を `CompanySubscription.seatItemId` に固定する（OPS-22）。旧 Price（`STRIPE_PRICE_*` 139 箇所、`*_YEARLY` あり）は `src/lib/billing/price-map.ts` で tier に読み替える。
+- **統一プランは月額のみ**（年額 Price は作らない。既存の `*_YEARLY` 契約は §7.2 手順 5 で月額に差し替え、未経過分は按分クレジット。年額のままだと `subscription_cycle` が年 1 回＝付与も年 1 回になる。FIN-10）。`planId` は `'unified-pro'`, `'unified-enterprise'`。D2 の「基本料＋追加席」は **2 Price（基本 1 item ＋ 席 1 item）**構成とし、席の item id を `CompanySubscription.seatItemId` に固定する（OPS-22）。旧 Price（`STRIPE_PRICE_*` 139 箇所、`*_YEARLY` あり）は `src/lib/billing/price-map.ts` で tier に読み替える。
 - **個人利用**: 所属会社の無いユーザーには「個人会社」を自動生成する。既存の `User.plan` 契約は**当面ユーザー経路のまま**（会社経路へ写すのは §7.2 の移行手順で、Subscription の metadata を書いた時点から）。1 ユーザーが作れる会社数は `company.max_per_user`（既定 3）。
+- **`User.plan` の書き手は 1 つ**（FIN-05）: Phase2〜4 の間、`User.plan` は `syncUserPlan(userId)` だけが書く。値は **max(個人の live 契約の tier, その人が active owner である会社の `CompanySubscription` の tier)**。ユーザー経路（`updateBestLiveSubscription` / `handleSubscriptionDeleted`）も会社経路（`syncCompanyBilling`）も、自分の台帳を更新した後に `syncUserPlan(owner)` を呼ぶ。個人 PRO を解約しても会社契約があれば PRO のまま、会社解約でも個人契約があれば PRO のまま。Phase4 で `User.plan` の参照が `getEntitlement(ctx)` に置き換わったら停止。
 - **会社経路の webhook 分岐と権利判定はフラグに依存せず常時 ON**（OPS-21）。`billing.company_mode` は「新規 Checkout の入口を会社経路にするか」だけを切り替える。
 
 ### 7.2 既存契約の移行手順（HR 独自 Stripe を含む）
@@ -725,10 +729,10 @@ export async function requireCompanyAccess(
 2. Stripe で `metadata.app='doya-ai'` かつ `metadata.companyId` 無しの Subscription を列挙（個人統一プランと HR `serviceId='hr'` の両方）。各 Subscription の `customer` → `User.stripeCustomerId` → その User が owner の会社（`CompanyServiceLink` 経由。個人会社を含む）。1 対多なら人が選ぶ。
 3. `BillingAccount(migratedFrom='user', stripeCustomerId=<既存 Customer>)` を作成。**Customer の付け替えはしない**（Stripe 上不可）。
 4. **`stripe.subscriptions.update(subId, { metadata: { ...既存, companyId } })` を必ず実行**し、同時に `CompanySubscription`（`stripeSubscriptionId`, `planId`=price-map, `seats`, `seatItemId`, `status`, `lastStripeEventCreated=0`）を作る。この瞬間からその Subscription は会社経路の所有になる（DATA-02）。
-5. 旧 Price → 統一 Price の差し替えは **同一 Customer 内で** `subscriptions.update({ items: [{ id: old, deleted: true }, { price: unifiedBase }, { price: unifiedSeat, quantity: seats }], proration_behavior: 'create_prorations' })`。年額前払いは未経過分が Stripe のクレジット残高になる。再契約（カード再入力）はさせない（OPS-22）。告知文の雛形は付録 G。
+5. 旧 Price → 統一 Price（**月額のみ**）の差し替えは **同一 Customer 内で** `subscriptions.update({ items: [{ id: old, deleted: true }, { price: unifiedBase }, { price: unifiedSeat, quantity: seats }], proration_behavior: 'create_prorations' })`。年額前払いは未経過分が Stripe のクレジット残高になる。再契約（カード再入力）はさせない（OPS-22）。告知文の雛形は付録 H。
 6. `hr/billing/checkout` と `portal` を `/api/company/[id]/billing/*` に統合。`hr/billing/webhook` は 410 Gone（§15）。
 7. `HrOrganization.plan` の読み手（Phase0 で grep して一覧化）は Phase3 で `getEntitlement(ctx)` に差し替え。`billing-sync.ts` L70-76 の同期は Phase3 まで残す。Phase4 の前に `verify-billing-no-legacy-plan-readers.cjs` で読み手 0 を確認（監査 B-11）。
-8. **Phase2〜3 の二重書き込み（課金版）**（DATA-14）: 会社経路の `syncCompanyBilling()` は、会社 owner に対して `syncUnifiedBilling()` を**併せて**呼び、`User.plan` にも tier を写す（会社契約者の個人枠が開くのは意図どおり＝owner は席の 1 人）。ただし owner 以外のメンバーには写さない。Phase4 でこの併記を止める。
+8. **Phase2〜3 の二重書き込み（課金版）**（DATA-14 / FIN-05）: 会社経路の `syncCompanyBilling()` は台帳更新後に `syncUserPlan(ownerUserId)` を呼ぶ（§7.1 の単一の書き手。owner 以外には写さない）。Phase3 ロールバック時も owner の `User.plan` は会社 tier を含む max のまま残る。Phase4 で停止。
 
 ### 7.3 Webhook の一本化（3 段の所有者判定）
 
@@ -745,6 +749,7 @@ export async function requireCompanyAccess(
 | `invoice.payment_succeeded` | `billing_reason in ('subscription_create','subscription_cycle')` かつ（`amount_paid > 0` または trial 開始）のときだけ **月次クレジット付与** `UsageLedger(kind=grant, amount=+monthlyCredits, period=P(JST, invoice.period_start), idempotencyKey='grant:<subId>:<P>')`。同じ期間に 2 回来ても unique で 1 行 |
 | `invoice.payment_failed` | `Notification(billing.past_due)` を owner/billing へ。席・サービスは維持 |
 | `customer.subscription.deleted` | `status='canceled'`、`CompanyServiceAccess` を FREE 相当（`planOverride` が無ければ無料枠）。席数は保持 |
+| `charge.refunded` / `invoice.voided` | 返金額を当月 grant に対する比率でクレジットに換算し `UsageLedger(kind=adjust, amount=−m, period=対象 invoice の P, idempotencyKey='adjust:stripe:<refundId>')`。`AuditLog(actor='stripe:<eventId>')`（FIN-09） |
 
 - `current_period_*` は Stripe `2025-03-31.basil` で SubscriptionItem へ移動（リポジトリは `apiVersion '2023-10-16'` 固定）。読み取りは両対応（監査 B-21）。
 - **Checkout の二重起動防止**（OPS-24）: 会社 Checkout は `checkout-reservation:v1:<mode>:company:<id>` と **操作者の user キー**（既存 L63 の形式）の 2 キーを同時に取る。どちらかが取れなければ 409。
@@ -757,10 +762,11 @@ export async function requireCompanyAccess(
 | kind | amount | period | idempotencyKey | いつ |
 |---|---|---|---|---|
 | `grant` | +n | 付与対象月 P（`invoice.period_start` を JST で月に丸める） | `grant:<subId>:<P>` | `invoice.payment_succeeded`（§7.3） |
-| `reserve` | −n（見込み） | 予約時点の JST 月 P | `<base>:reserve` | 生成・ツール実行の直前 |
-| `consume` | **+(n − 実消費) ≥ 0**（調整行。0 でも必ず書く） | **reserve 行から複製**（再計算しない） | `<base>:consume` | 成功時 |
-| `release` | +n | reserve 行から複製 | `<base>:release` | 失敗・キャンセル・paused 遷移時 |
-| `refund` | +m | **元消費の P** | `refund:<元 base>` | Stripe 返金・運営補填 |
+| `reserve` | −n（見込み） | 予約時点の JST 月 P | `<reservationId>:reserve`（**`reservationId` は reserve ごとに新しい cuid**。再 reserve は別 id なので衝突しない。FIN-04） | 生成・ツール実行の直前 |
+| `consume` | **+(n − 実消費) ≥ 0**（調整行。0 でも必ず書く） | **reserve 行から複製**（再計算しない） | `<reservationId>:consume` | 成功時 |
+| `release` | +n | reserve 行から複製 | `<reservationId>:release` | 失敗・キャンセル・paused 遷移時 |
+| `refund` | +m（**運営補填のみ**） | **元消費の P** | `refund:<元 reservationId>` | 運営が利用者に補填するとき（`AuditLog(actor='admin:')`） |
+| `adjust`（Stripe 返金） | **−m**（返金額に相当するクレジット。全額返金なら当月 grant を打ち消す） | 返金対象 invoice の P | `adjust:stripe:<refundId>` | `charge.refunded` / `invoice.voided` から webhook が書く（`AuditLog(actor='stripe:')`。FIN-09）。残高が負になれば以後の reserve は拒否 |
 | `adjust` | ±k | 指定 | `adjust:<auditLogId>` | 運営の手動補正（`AuditLog` 必須） |
 
 **数値例**（月次付与 100、`banner.generate` 1 枚＝5 クレジット）:
@@ -775,6 +781,7 @@ export async function requireCompanyAccess(
 | 10/31 23:59 JST にバナー 2 枚を予約 | reserve −10（P=2026-10） | 75 |
 | 11/1 00:01 JST に成功（2 枚） | consume +0（**P=2026-10** を reserve 行から複製） | 75（11 月の残高には影響しない） |
 | 11/2 10 月の 1 枚を運営が補填 | refund +5（P=2026-10） | 80 |
+| 11/5 10 月分を Stripe で全額返金 | adjust −100（P=2026-10、`charge.refunded`） | −20（10 月は以後 reserve 不可。11 月の残高には影響しない） |
 | 11/1 `invoice.payment_succeeded` | grant +100（P=2026-11） | 11 月: 100 |
 | 11/1 `customer.subscription.updated`（席 +1） | **付与しない** | 11 月: 100 のまま |
 
@@ -812,7 +819,7 @@ sequenceDiagram
 
   U->>API: POST { conversationId?, request }
   API->>API: requireCompanyAccess('agent','member') / kill switch / 予算チェック
-  API->>EX: AgentRun(queued) 作成 → advance(runId)
+  API->>EX: AgentRun(queued, nextRunAt=now) 作成 → advance(runId)
   EX->>EX: リース取得（executionToken, 300s）
   EX->>GW: 意図解析（依頼文＋会社プロフィール要約＋利用可能ツール一覧）
   GW-->>EX: intent { goal, services[], riskLevel }
@@ -857,7 +864,7 @@ sequenceDiagram
   - M-8 は「`reversibility!=='read'` かつ `downstreamIdempotency==='none'`」を失敗にする。
 - **機微** `sensitive=true` のツールは出力スキーマで列を限定し、依頼者が当該サービスで `manager` 以上でなければ登録段階で除外。planner に渡す前に **氏名→社員 ID の仮名化**を行い、`ToolCall.output` の要約だけを渡す（SEC-21）。
 - **入力の型で上限を固定**（OPS-12）: `doyalist.buildList.maxCompanies ≤ 50`、`banner.generate.n ≤ 8`、`aio.runScan.engines ≤ 2`、`shodan.generateSlides.pages ≤ 10`。承認画面の見込み額はこの上限で計算する。
-- 呼び先はすべて **lib 関数**。ツールが呼ぶ lib の LLM は **gateway 経由が必須**（未移行は `costClass=high` 扱い）。
+- 呼び先はすべて **lib 関数**。ツールが呼ぶ lib の有料呼び出しは **gateway / image-core / realtime 経由が必須で、未移行の lib を呼ぶツールはレジストリに登録できない**（M-11 ＋ `verify-service-manifest-paid-api.cjs` が `run` の import 先を追って `externalApis[].via` と突合）。「承認＋入力上限で有界だが実測で止まらない期間」は作らない: gateway 移行が終わるまで当該ツールは存在せず、Phase3a は read ツールだけで始める（OPS-12 部分的の解消）。
 
 | ツール key | 説明 | 取消 | コスト（見込み回数） | 承認 | 冪等 | 最低サービスロール | 呼ぶ既存コード（確認済みパス） | 備考 / 切り出し |
 |---|---|---|---|---|---|---|---|---|
@@ -934,7 +941,7 @@ interface ImageRequest extends LlmRequestBase { size: ImageSize /* 'auto' なし
 - **run 外の支出**（OPS-12）: `seo.generateArticle` が作る `SeoJob` は `originRunId` を持ち、SeoJob 側の gateway 呼び出しは `ref={type:'seo-job', id}` ＋ `originRunId` で run に集計される。`GET /api/agent/usage` は `LlmCallLog` を `refType/refId` と `SeoJob.originRunId` の両方で引く。
 - **Realtime（WebRTC、分単価）**（OPS-28）: gateway を経由しない。マニフェスト `externalApis[].via='realtime'` と `usageReport` 関数を必須にし、セッション終了時（`live/[token]/end`、`room/[token]/end`）に `LlmCallLog(modality='audio', unitKind='audio_sec', units=秒)` を書く。
 - **計測の正確さ**（OPS-15）: `LlmCallLog.unitKind / cachedTokens / reasoningTokens / priceTableVersion`。単価不明なモデルは `costMinor=null` にせず最大単価で見積もる。
-- **ツール内部の LLM を gateway に寄せる順**（監査 B-16）: (1) `shodan/ai.ts`、(2) `quote/analyze.ts`、(3) `doyalist/collect/web-scraper.ts`、(4) `aio/engines.ts`、(5) `nanobanner.ts` の精錬と `image-generator.ts`、(6) `seo/lib/pipeline.ts`。未移行ツールは `costClass=high`＋入力上限で縛る。
+- **ツール内部の LLM を gateway に寄せる順**（監査 B-16）: (1) `shodan/ai.ts`、(2) `quote/analyze.ts`、(3) `doyalist/collect/web-scraper.ts`、(4) `aio/engines.ts`、(5) `nanobanner.ts` の精錬と `image-generator.ts`、(6) `seo/lib/pipeline.ts`。未移行の lib を呼ぶツールは登録できない（M-11。Phase3a は read ツールのみで始める）。
 - **プロンプト管理**: `src/lib/llm/prompts/<key>/<version>.md`、`AgentPromptVersion.isActive`。会社データは `<data>`、外部由来（`origin in (scraped, agent)`、`KnowledgeSource.isUntrusted`、ツール結果）は **実際に `<untrusted>` で包んで渡す**（SEC-16）。
 
 ### 8.4 実行基盤（Vercel の制限下での長時間実行）
@@ -944,7 +951,7 @@ interface ImageRequest extends LlmRequestBase { size: ImageSize /* 'auto' なし
 - **モデル**: `AgentRun` は SeoJob 型の再開可能ジョブ。リース取得は `seo/lib/job-execution.ts` L20 `acquireSeoJobExecution`（raw SQL 条件付き UPDATE、360s）を複製。
 - **書き込みフェンス**（OPS-02）: SeoJob の `withSeoJobExecution`（L41-60: `executionToken` 一致＋`status IN (queued,running)`＋`FOR UPDATE`＋`executionExpiresAt > clock_timestamp()` 再確認）を **`withAgentRunExecution(token, write)` として複製**し、`AgentRun / AgentStep / ToolCall / ApprovalRequest / UsageLedger(run 由来)` への**全書き込み**をこの中で行う。token 不一致・期限切れは `ExecutionLostError` で即中断（その後の書き込みは一切しない）。ツール呼び出し**前**に `ToolCall(status='running', executionToken)` を commit し、呼び出し**後**も同じフェンスで結果を書く。新ホルダーは `running` のまま残った step を**自動再試行しない**（`downstreamIdempotency='native'` なら結果再取得、`local-record` なら `unknown_outcome` で人の確認）。
 - **advance のスライス**: `POST /api/agent/runs/[id]/advance`（`maxDuration = 300`）は入口で `deadline = now + 240s` の `AbortSignal` を作り、全 LLM・ツール呼び出しに派生 signal を渡す。残り 30s で新しい step を開始せず、**`nextRunAt = now()` を書いてから**リースを解放して返す（OPS-01: `releaseSeoJobExecution` L62-67 は `executionToken=null, executionExpiresAt=null` にするだけで `NULL < now` は偽になるため、解放時に必ず `nextRunAt` を書く）。`runningSeconds` にスライスの実行秒を加算する。
-- **Cron 回収**（OPS-01/06）: `/api/cron/agent-runs`（`* * * * *`）の claim 条件は `status IN ('queued','running') AND (executionExpiresAt < now() OR (executionToken IS NULL AND nextRunAt <= now()))`。**1 呼び出し 1 件**（毎分 1 件で足りなければ `agent-runs?slot=0..4` を 5 本登録。`x-vercel-cron-schedule` は使わない）。加えて sweep を 2 つ: (a) `waiting_approval` で全 approval が `expired/rejected` → step `skipped`、reserve を release、run は他 step を続行（§8.6）。(b) `paused` で `nextRunAt <= now()` → `running` に戻して claim。時刻比較はすべて DB `now()` / `clock_timestamp()`（OPS-08）。
+- **Cron 回収**（OPS-01/06、FIN-01/08/11）: `/api/cron/agent-runs`（`* * * * *`）の claim 条件は **`status IN ('queued','planning','running') AND (executionExpiresAt < now() OR (executionToken IS NULL AND nextRunAt <= now()))`**（`planning` を含める。意図解析・計画中に関数が死んだ run を拾う）。`AgentRun.create` は **必ず `nextRunAt = now()` を書く**（POST 内の最初の advance が claim 前に失敗しても `queued` のまま残らない）。**起動方式**: Cron 自身は advance を実行せず、claim できた run を最大 `K = ceil(agent.max_concurrent_runs / 4) + 2`（既定 20 → 7）件まで **`POST /api/agent/runs/[id]/advance?detached=1`（Bearer `CRON_SECRET`、Cookie 無し）で HTTP 起動**して即終了する。advance 側は `?detached=1` のとき 202 を返してから `after()`（`next/server`、Next 15.1+。Vercel 公式は `waitUntil` の代替として推奨し、`maxDuration` まで実行が延長される）でスライスを実行する。これで毎分の処理能力は K スライスになり、同時 run 上限（20、各 4 分に 1 スライス＝5/分）に対して余裕がある（§3 の「HTTP 自己呼び出しを避ける」は Cookie 転送が理由なので、Cron 文脈は例外）。`after()` が `maxDuration` 300s を本当に使えるかは**要実機確認**（既存の `waitUntil` 10 ファイルと同じ挙動が前提）。確認できない場合の代替は「`agent-runs?slot=0..K-1` を K 本登録して 1 呼び出し 1 件」（Cron パスの query string は公式に明記が無いが、本リポジトリの `vercel.json` L124-128 `service-operations?mode=*` が本番で稼働中）。加えて sweep を 2 つ: (a) `waiting_approval` で全 approval が `expired/rejected` → step `skipped`、reserve を release、run は他 step を続行（§8.6）。(b) `paused` で `nextRunAt <= now()` → `running` に戻して claim。時刻比較はすべて DB `now()` / `clock_timestamp()`（OPS-08）。
 - **advanceAttempts** は「期限切れリースからの再 claim」だけを数える（OPS-07）。自発解放・承認・paused からの再開は数えない。上限 5。
 - **並列と接続**（OPS-04）: 1 run 内の並列は最大 4 だが、**DB を触る区間はセマフォ 2** で直列化し、LLM / 外部 HTTP 区間だけ 4 並列（`connection_limit=3`、`pool_timeout=30`）。`costClass=high` の step は同時 1。会社あたり同時 `running` run 2、全体 `agent.max_concurrent_runs`（既定 20）。
 - **冪等性**: `ToolCall.idempotencyKey = '<runId>:<stepId>'`。下流の受け口は `downstreamIdempotency`（§8.2）で宣言し、`none` は read 以外禁止。
@@ -974,6 +981,7 @@ stateDiagram-v2
   [*] --> queued: POST /api/agent/runs
   queued --> planning: advance が claim
   planning --> running: 計画確定（AgentStep 生成）
+  planning --> planning: リース期限切れ → Cron が再 claim（advanceAttempts+1。FIN-01）
   planning --> failed: 意図解析/計画が不能（failureCode=llm/budget）
   running --> running: スライス終了（nextRunAt=now, リース解放）→ Cron/クライアントが再 claim
   running --> waiting_approval: irreversible/high/unknown_outcome の step に到達（他の実行可能 step が無い）
@@ -981,7 +989,8 @@ stateDiagram-v2
   waiting_approval --> running: 却下/期限切れ → 当該 step を skipped、他 step を続行
   waiting_approval --> done: 却下/期限切れで残 step なし（部分失敗として報告）
   running --> paused: kill switch / 会社 suspended / LLM 全断（pausedReason、reserve は release）
-  paused --> running: kill switch 解除（nextRunAt=now 一括）/ nextRunAt 到来（llm_outage は最大 3 回）
+  paused --> running: kill switch 解除 / 会社の suspended 解除（いずれも nextRunAt=now 一括）/ nextRunAt 到来（llm_outage は最大 3 回）
+  paused --> canceled: 会社復旧時に admin が「再開しない」を選択
   paused --> failed: llm_outage 3 回超（failureCode=llm）
   running --> failed: budget / wallClock（runningSeconds）/ lease_lost（advanceAttempts>5）/ 全 step failed
   running --> done: 全 step が done/skipped/failed かつ要約完了
@@ -999,7 +1008,8 @@ stateDiagram-v2
 - **承認 API は非同期**（OPS-05(5)）: `POST /api/agent/approvals/[id]` は `ApprovalRequest.status`、`AgentStep.status='ready'`、`AgentRun.nextRunAt=now()` を書いて即 200。advance は別リクエスト（クライアントが `POST .../advance` を叩く、または Cron が 1 分以内に拾う）。advance の認可は「依頼者 / `ApprovalRequest.decidedById` 本人 / cron」。
 - **期限切れ**: Cron の sweep が `expiresAt < now()` の pending を `expired` にし、step を `skipped`、reserve を release。
 - **キャンセルの伝播**: `AgentRun.status` と kill switch を各 step 開始前・各有料呼び出し直前に読む。進行中の呼び出しは `AbortController` で中断。中断された `local-record` ステップは `unknown_outcome`（結果が不明なので人の確認）。
-- **paused の reserve**: paused 遷移時に release、再開時に再 reserve（残高不足なら `failed(budget)`）。
+- **paused の reserve**: paused 遷移時に release、再開時に**新しい `reservationId` で**再 reserve（残高不足なら `failed(budget)`。FIN-04）。
+- **`pausedReason`** は `kill_switch | company_suspended | llm_outage` の 3 つだけ（結果不明は `waiting_approval`＋`ApprovalRequest(kind='unknown_outcome')` で表す。FIN-12）。`company_suspended` の復帰は §10.9 の会社復旧手順が一括で行う。
 - **終了状態からの復帰は無い**（再実行は新しい run）。
 
 ## 9. API設計
@@ -1038,6 +1048,8 @@ stateDiagram-v2
 | `POST /api/me/passkeys/register/options` → `.../verify` | WebAuthn 登録 | 2 本目以降は**既存パスキーで step-up 必須**。初回のみ Google 経路＋本人メール通知＋24h クールダウン（SEC-07） | 本人 |
 | `DELETE /api/me/passkeys/[id]` | — | **既存パスキーで step-up 必須**。最後の 1 本は代替登録後でなければ 409 | 本人 |
 | `POST /api/me/passkeys/recovery` | — | 二人制御の回復（§11.5）。48h 待機 | 本人＋会社 owner＋運営 admin |
+| `POST /api/auth/passkey-login/{options,verify}`、`.../register/{options,verify}` | WebAuthn | `strictSharing` 会社のログイン完了／初回登録（pending 文脈。§11.5 FIN-06） | `__Host-doya_pending` |
+| `POST /api/auth/passkey-recovery` | `{email}` | 未ログインで回復申請（pending 文脈＋メール確認） | `__Host-doya_pending` |
 | `POST /api/auth/step-up` | `{purpose, method?}` | `{challengeId, method, options}` | ログイン |
 | `POST /api/auth/step-up/[challengeId]/verify` | `{assertion}` | `Session.stepUpAt / stepUpMethod` | 本人 |
 | `GET /api/auth/step-up/callback` | `?code&state` | Google 経路（§11.5） | 本人 |
@@ -1078,46 +1090,60 @@ stateDiagram-v2
 
 ### 10.2 テナント分離
 
-**方式 A（採用・Phase1 から）: アプリ層での強制（Prisma Client Extension ＋ 再帰検査）**
+**方式 A（採用・Phase1 から）: アプリ層での強制（Prisma Client Extension ＋ 再帰検査 ＋ 明示クライアントの所有確認ヘルパー）**
 
-Prisma 公式ドキュメントの制限: 「The `query` extension type does not support nested read and write operations」（client-extensions の Limitations。SEC-01 を確認）。したがって拡張は**トップレベルの `args` 全体を自前で走査**する。
+Prisma 公式ドキュメントの制限: 「The `query` extension type does not support nested read and write operations」（client-extensions の Limitations。SEC-01）。さらに query 拡張のコールバック内から**現在のトランザクションクライアントを取る手段は公式に無い**（`query` 拡張ページの例は外側の `prisma` で `$transaction([query(args)])` を組むだけ。FIN-03）。したがって:
+
+1. **query 拡張は「args の書き換え」と「拒否」だけを行い、追加クエリを発行しない**（基底クライアントで読まない）。
+2. 所属確認が要る操作（`findUnique / findUniqueOrThrow / update / delete / upsert`）は、テナントモデルに対して**拡張が throw して使えなくし**、代わりに **呼び出し元のクライアント（`db` でも `tx` でも）を明示的に受け取るヘルパー** `owned(client, ctx)` を使う。ヘルパーは渡されたクライアントで `findFirst` → 元の操作を行うので、`ctx.db.$transaction(async tx => owned(tx, ctx).sfaDeal.update(...))` なら両方 tx 上で実行される（tx に拡張が乗るかどうかに依存しない）。
 
 ```ts
 // src/lib/core/tenant-prisma.ts
 const TENANT_COLUMNS = buildFromManifests()   // model → { column, kind: 'company'|'legacy'|'user', serviceId?, via? }
-const COMPOUND = buildCompoundUniqueMap()      // Prisma.dmmf.datamodel.models[].uniqueFields → 'userId_serviceId' → ['userId','serviceId']
+const COMPOUND = buildCompoundUniqueMap()      // Prisma.dmmf → 'userId_serviceId' → ['userId','serviceId']（SEC-02）
 
 export function tenantPrisma(ctx) {
   return prisma.$extends({ query: { $allModels: { async $allOperations({ model, operation, args, query }) {
     const t = TENANT_COLUMNS[model]; if (!t) return query(args)
     const expected = expectedFor(t, ctx); if (!expected) throw new TenantScopeError(model)
-    // 1) where: 複合 unique セレクタを DMMF で展開してから AND を足す（SEC-02: findFirst の where に 'userId_serviceId' は渡せない）
-    const where = expandCompound(model, args.where)
-    // 2) data: 再帰走査（SEC-01）
-    //    - ネストした connect/set/disconnect/connectOrCreate/update/updateMany/delete/deleteMany の対象 id → assertOwnedOrThrow(targetModel, id)
-    //    - ネストした create/createMany → assertTenantColumn(targetModel, data)
-    //    - update 系の data にテナント列が含まれていたら throw（テナント移動の禁止）
-    //    - createMany.data が配列なら全要素
-    if ('data' in args) await walkData(model, args.data, operation, ctx)
+    // data の再帰走査（SEC-01 / FIN-02）: upsert は data を持たないので create/update の両方を対象にする
+    const payloads = 'data' in args ? [args.data] : [args.create, args.update].filter(Boolean)
+    for (const p of payloads) walkData(model, p, operation, ctx)   // 同期検査のみ。ネスト connect/set/connectOrCreate/update/delete の対象 id は
+                                                                   // 「id ＋ テナント列」の複合条件に書き換え（所属しない行は Prisma 側で RecordNotFound）、
+                                                                   // ネスト create/createMany（配列含む）にはテナント列を強制、update 系の data にテナント列があれば throw
     switch (operation) {
-      case 'findMany': case 'findFirst': case 'count': case 'aggregate': case 'groupBy': case 'updateMany': case 'deleteMany':
-        return query({ ...args, where: { AND: [where ?? {}, { [t.column]: expected }] } })
-      case 'findUnique': case 'findUniqueOrThrow':
-        return (prisma as any)[model].findFirst({ ...args, where: { AND: [where, { [t.column]: expected }] } })
+      case 'findMany': case 'findFirst': case 'findFirstOrThrow': case 'count': case 'aggregate': case 'groupBy':
+      case 'updateMany': case 'deleteMany':
+        return query({ ...args, where: { AND: [expandCompound(model, args.where) ?? {}, { [t.column]: expected }] } })
       case 'create': case 'createMany':
-        return query(args)                                  // walkData が data 側を検査済み
-      case 'update': case 'delete': case 'upsert':
-        await assertOwnedOrThrow(model, where, t.column, expected)   // 2 クエリ。戻り値の形は保つ（監査 B-2）
         return query(args)
+      case 'findUnique': case 'findUniqueOrThrow': case 'update': case 'delete': case 'upsert':
+        throw new UseOwnedHelperError(model, operation)   // ctx.db.<model>.<op> は型でも除外（TenantPrisma 型が Omit）
       default: return query(args)
     }
   } } } })
 }
+
+// src/lib/core/owned.ts  — 呼び出し元のクライアントで動く（tx でも可）
+export function owned(client: Prisma.TransactionClient | TenantPrisma, ctx) {
+  return new Proxy({}, { get: (_, model) => ({
+    findUnique:        (a) => client[model].findFirst({ ...a, where: scoped(model, a.where, ctx) }),
+    findUniqueOrThrow: (a) => client[model].findFirstOrThrow({ ...a, where: scoped(model, a.where, ctx) }),   // throw 意味論を保つ
+    update:  async (a) => { await client[model].findFirstOrThrow({ where: scoped(model, a.where, ctx), select: { id: true } }); return client[model].update(a) },
+    delete:  async (a) => { await client[model].findFirstOrThrow({ where: scoped(model, a.where, ctx), select: { id: true } }); return client[model].delete(a) },
+    upsert:  async (a) => {                                   // FIN-02(b): create 経路は行が無いのが正常
+      const hit = await client[model].findFirst({ where: scoped(model, a.where, ctx), select: { id: true } })
+      return hit ? client[model].update({ where: a.where, data: a.update }) : client[model].create({ data: withTenant(model, a.create, ctx) })
+    },
+  }) })
+}
 ```
 
-- `include` / `select` で読む子は親のスコープで守られる（Prisma は親→子の結合）。ただし `include: { deal: true }` のように**親側の relation を辿る読み**は他社の親を返し得るので、`walkData` と同じ走査を `include/select` の relation にも適用し、`TENANT_COLUMNS` にあるモデルは `where` を足す（`include` の `where` は Prisma 5 の to-many でのみ可。to-one の親は結果を post-filter）。
+- `scoped()` は `expandCompound` で複合 unique セレクタを展開してからテナント列を AND する。`withTenant()` は create data にテナント列を強制し、他社 id が入っていれば throw。ネスト連結の対象 id は `walkData` が「id ＋ テナント列」の複合 where に書き換える（他社 id は Prisma 側で見つからず失敗）。この方式は追加クエリを発行しないので tx の内外を問わない。
+- 戻り値の形: `owned().update/delete/upsert` は元の操作をそのまま呼ぶので既存コードの戻り値と同じ。`findUnique` → `findFirst` は戻り値の形が同じ。
+- `include` / `select` で親側の relation を辿る読みは、`TENANT_COLUMNS` にあるモデルについて `include.<rel>.where`（to-many）を足し、to-one の親は結果を post-filter する。
 - `requireCompanyAccess` / `evaluateCompanyAccess` が返す `ctx.db` だけを使う。`@/lib/prisma` の直 import は ESLint で禁止（593 ファイルは段階移行、§13 #37）。`doya-ai/src/app/banner/dashboard/page.tsx` は除外・削除候補。
-- **`$transaction`**: `ctx.db.$transaction(async tx => ...)` を使う。`prisma.$transaction` 直呼びは lint 検出。
+- **`$transaction`**: `ctx.db.$transaction(async tx => ...)` を使い、tx 内の所属確認は `owned(tx, ctx)` に tx を渡す。**拡張クライアントの対話型 tx に query 拡張が乗るかは Prisma 公式に明記が無い（要実機確認）**。乗らない場合でも `owned(tx, ctx)` は tx 上で正しく動き、list 系の AND は `tenantWhere(ctx)` ヘルパーを tx 内で明示的に使う（lint `core/tx-tenant-where` で `tx.<model>.findMany` に `tenantWhere(` が無ければ警告）。
 - **raw SQL**（SEC-04）: `tenantSql(ctx)` が返す `Prisma.sql` フラグメント（`"companyId" = ${ctx.companyId}` 等。値は ctx からしか作れない）を埋め込む API にし、lint は「`$queryRaw` / `$executeRaw` の引数に `tenantSql(` が含まれる」を要求する（文字列一致ではない）。
 - **子テーブル**: マニフェスト `dataModels[].tenantColumn='via:<relation>'` は `where: { <relation>: { organizationId } }` に展開。列も via も無いモデルは Phase1 で `companyId` を非正規化追加。`verify-core-tenant-columns.cjs`。
 - **IDOR 対策**: cuid に頼らず上記で保証。パスパラメータ id は zod cuid。
@@ -1154,7 +1180,7 @@ export function tenantPrisma(ctx) {
   - **守れる範囲を明記**: 鍵は Vercel env に `DATABASE_URL` と同居するため、**env 漏洩には無力**。守れるのは DB ダンプ・バックアップ・Supabase ダッシュボード経由の閲覧・SQL 権限者。§10.1 脅威モデルに「env 漏洩は本暗号化の対象外（鍵ローテーションと監査で対応）」を追記。
   - 対象列: マニフェスト `pii.columns[].encrypted=true`（HR/勤怠/面接の連絡先・逐語・評価本文。列名は Phase0 で確定）。
 - 機微データ閲覧の監査: hr/kintai/mensetsu の詳細 GET は `AuditLog(sensitive=true)` 必須。
-- **LLM へ渡す PII の最小化**（SEC-21）: planner へは仮名化（氏名→社員 ID）した要約のみ。`hr.oneOnOneSummary` の本文は planner に渡さず、ツール内部の gateway 呼び出し（`keyLabel='hr'`）だけが扱う。プロバイダ側の保持（OpenAI API: 学習不使用・既定 30 日保持、Gemini API 有料枠: 学習不使用）と DPA の締結状況を付録 H に記録し、締結前は `allowSensitive=false` を全社既定にする。
+- **LLM へ渡す PII の最小化**（SEC-21）: planner へは仮名化（氏名→社員 ID）した要約のみ。`hr.oneOnOneSummary` の本文は planner に渡さず、ツール内部の gateway 呼び出し（`keyLabel='hr'`）だけが扱う。プロバイダ側の保持（OpenAI API: 学習不使用・既定 30 日保持、Gemini API 有料枠: 学習不使用）と DPA の締結状況を付録 I に記録し、締結前は `allowSensitive=false` を全社既定にする。
 - `KnowledgeSource.allowedServices` は**空＝どこからも使えない**（DATA-20）。取り込み API は 1 つ以上を必須。
 
 ### 10.6 監査ログ
@@ -1172,7 +1198,7 @@ export function tenantPrisma(ctx) {
 | 項目 | 設計 |
 |---|---|
 | CSRF | 主防御は NextAuth Cookie の `SameSite=Lax`（`cookie.js` L24）。状態変更 API（`mutation: true`）の判定は固定（SEC-24）: **`Sec-Fetch-Site === 'same-origin'`、または欠落時に `Origin` の host が `Host`（`MITSUBOSHI_HOSTS / SLIDE_HOSTS` を含む許可ホスト集合）と一致。どちらも無い／`Origin: null` は 403**。`x-requested-with` の必須化はしない（監査 B-20） |
-| Cookie | セッション Cookie 名を **`__Host-next-auth.session-token`**（Secure・Path=/・Domain 無しが強制。兄弟サブドメインからの Cookie 固定を防ぐ。SEC-06）。`doya_device` も `__Host-`。既存セッションは全員再ログインになるので Phase1 の adapter ラップ投入と同時に切替。`cookies.sessionToken.options.domain` は設定しない |
+| Cookie | セッション Cookie 名を **`__Host-next-auth.session-token`**（Secure・Path=/・Domain 無しが強制。兄弟サブドメインからの Cookie 固定を防ぐ。SEC-06）。`__Host-` は Secure 必須なので **本番（https）のみ**。ローカル http では NextAuth の `useSecureCookies=false` に合わせて無接頭辞にする（`cookie.js` L18-26 の切替と同じ）。middleware の存在チェック（§6.3）も同じ名前を使う（FIN-13）。`doya_device` も `__Host-`。既存セッションは全員再ログインになるので Phase1 の adapter ラップ投入と同時に切替。`cookies.sessionToken.options.domain` は設定しない |
 | レート制限 | 2 段（Edge は Vercel WAF、ルートは `RateLimitBucket`）。**IP の取得元**（SEC-25）: Vercel 上は `x-vercel-forwarded-for` / `request.ip` を正本にし、`x-forwarded-for` 先頭は使わない（既存 6 ファイルは §15 で置換）。`guest-shared` のゲスト quota は `ip:/24 × 日` でも二重に数える（SEC-13） |
 | アップロード | マジックバイト（`file-type`）＋ `sharp` 再エンコード＋SVG 禁止＋10MB。既存 `shodan/company-profile/logo` はクライアント申告 MIME のみなので §15 で統一（SEC-32） |
 | SSRF | 全機能 `safe-fetch` 経由。**公開 IP でもポートは 80/443 に限定**（SEC-23(a)）。退役サービスの importer（`tenkai/scraper.ts` L68 raw fetch、interviewx analyze-url）は退役ゲートで到達不能だが、**退役解除前に `safeFetchResource` へ置換**を必須にし、`verify-tenkai-private-address-rejection.cjs` 等を退役中でも残す（SEC-31） |
@@ -1244,7 +1270,7 @@ export function tenantPrisma(ctx) {
 |---|---|
 | セッション一括失効（全体） | `UPDATE "User" SET "sessionsInvalidBefore"=now()`（スクリプト `scripts/ops/revoke-all-sessions.ts`）。NextAuth は次リクエストで `requireCompanyAccess` が 401 → 再ログイン。`AdminSession` も `expiresAt=now()` |
 | 特定ユーザー失効 | `POST /api/company/[id]/security/revoke-sessions {userId}` または admin 画面。`Session.revokedAt`、`SessionDevice.revokedAt` |
-| 会社単位の停止 | `Company.status='suspended'` → 全 API 403、エージェント `paused`、Cron の対象外。復旧は owner の step-up ＋運営承認 |
+| 会社単位の停止 | `Company.status='suspended'` → 全 API 403、エージェント `paused`、Cron の対象外。復旧時は **`paused(company_suspended)` の run を一括で `nextRunAt=now()`（または admin が canceled を選択）**（FIN-12）。復旧は owner の step-up ＋運営承認 |
 | 鍵のローテーション | (1) LLM キー: 新キー発行→env 更新→Vercel 再デプロイ→旧キー失効。`LlmCallLog` で旧キー経由の失敗が 0 になったことを確認。(2) `NEXTAUTH_SECRET`: 変更すると全 Cookie 無効＝全員再ログイン（意図的に使える）。(3) `ADMIN_JWT_SECRET`: 同様。(4) `DATA_ENCRYPTION_KEY`: 新 `keyId` を追加→バックグラウンド再暗号化 cron→旧 keyId 削除。(5) `CRON_SECRET`: Vercel 環境変数と `vercel.json` は自動なので env 更新のみ。(6) Stripe webhook secret: 新エンドポイント追加→切替→旧削除 |
 | プロンプトインジェクションの疑い | `agent.kill_switch` ON → 該当 run の `ToolCall` を `SecurityEvent(agent.injection_suspected)` に添付 → 影響した `AgentArtifact` を一覧化しユーザーへ通知 → レジストリ・プロンプト修正後に OFF |
 | データ漏洩の疑い | `AuditLog(sensitive=true)` を `companyId` / 期間で抽出（`GET /api/company/[id]/audit?sensitive=1`）→ 対象レコード・閲覧者を特定 → 影響会社へ通知 |
@@ -1274,7 +1300,7 @@ export function tenantPrisma(ctx) {
 ### 11.3 同時ログイン制御
 
 - 既定 **3 端末**（監査 B-17）。`Company.maxSessionsPerUser` で 1〜5。`strictSharing=true` の会社は **desktop 1 + mobile 1** 固定かつログインにパスキー必須（§11.5）。Phase2 の通知のみ期間で失効候補件数を集計して閾値を再決定。
-- **失効の仕組み**（監査 B-1）: `PrismaAdapter` をラップ（`src/lib/core/session-adapter.ts`）し、`getSessionAndUser(sessionToken)` が次のいずれかで `null` を返す（NextAuth が Cookie を消す）: `revokedAt IS NOT NULL`、`createdAt <= User.sessionsInvalidBefore`、**`sha256(doya_device Cookie) !== SessionDevice.deviceTokenHash`**（Session を端末に束縛。SEC-03(2)。Cookie 2 つを同時にコピーすれば依然通るが、ブラウザ標準の Cookie 共有・同期では破れる）。
+- **失効の仕組み**（監査 B-1）: `PrismaAdapter` をラップ（`src/lib/core/session-adapter.ts`）し、`getSessionAndUser(sessionToken)` が次のいずれかで `null` を返す（NextAuth が Cookie を消す）: `revokedAt IS NOT NULL`、`createdAt <= User.sessionsInvalidBefore`、**`sha256(doya_device Cookie) !== SessionDevice.deviceTokenHash`**（Session を端末に束縛。SEC-03(2)。Cookie 2 つを同時にコピーすれば依然通るが、ブラウザ標準の Cookie 共有・同期では破れる）。**Cookie の読み取り経路**（FIN-14）: adapter の `getSessionAndUser(sessionToken)` は引数がトークンだけなので、ラップ内で `next/headers` の `cookies()` を `try/catch` で呼んで `doya_device` を読む（`cookies()` は Server Components / Route Handlers / Server Functions で使える Request-time API。本リポジトリの NextAuth は App Router の `src/app/api/auth/[...nextauth]` で `src/pages` は無く、`getServerSession` の呼び出しも全て request スコープ）。**`cookies()` が取れない文脈**（テスト、`next/headers` 外のスクリプト）では **Session を無効（null）にはせず `deviceVerified=false` を session に積み、`requireCompanyAccess` は `mutation:true` を 401 `DEVICE_UNVERIFIED` で拒否**（読み取りは許可。§13 #29「信頼しない側」）。`cookies()` が request 外で throw するかは**要実機確認**（両方に耐える）。
 - **セッショントークンはハッシュ保存**（SEC-09）: `sessionToken` 列には `sha256(cookie値)` を入れ、adapter の `createSession / getSessionAndUser / updateSession / deleteSession` で写像する（Cookie 値は不変）。`AdminSession.token` も同様にハッシュへ。
 - `createSession(data)` をラップ: `doya_device` Cookie（`__Host-`、httpOnly、1 年、32 byte）を読み `SessionDevice` を upsert。**`pg_advisory_xact_lock(hashtext('session-limit'), hashtext(userId))` で直列化**（SEC-10: 同時 2 端末ログインの競合）。(a) 同じ端末なら既存 `Session` を置換。(b) 別端末で有効端末数が上限以上なら同 `kind` の最古を `revokedReason='limit'` で失効、通知。(c) `Session` 作成と `deviceId` 設定は 1 トランザクション。
 - 「上限超過で確認画面」方式は会社設定 `sessionPolicy='confirm'` で選択可。
@@ -1308,11 +1334,11 @@ export function tenantPrisma(ctx) {
   - **回復（全パスキー紛失）**: 二人制御。本人申請 → 会社 owner の承認（パスキー step-up）→ 運営 admin の承認（admin step-up）→ **48 時間待機**（本人のメールに毎日通知、取り消し可能）→ 新パスキーを `registeredVia='recovery'` で登録（24h クールダウン）。`AuditLog(sensitive)`。個人会社は owner 承認を運営 admin 2 名に置換。
 - **Google 経路**（`method='google'`）: 別ルート `/api/auth/step-up/callback` で自前 code 交換、`sub`・`nonce`・`email_verified` 一致で `stepUpAt`。保証が弱いので高リスク purpose には使えない。
 - `requireCompanyAccess(..., { requireStepUpWithin: 600 })`。`SessionDevice.trustedAt` の端末は会社設定で 8 時間に延長可。
-- **`strictSharing` のログイン**: Google ログイン成功後、パスキー assertion を追加で要求してから Session を発行する（`createSession` ラップ内で `pendingPasskey` フラグ）。これが「人」を端末で区別できる唯一の手段であり、使い回し防止を本当に求める会社の選択肢。
+- **`strictSharing` のログイン**（FIN-06）: Google ログイン成功後、通常の Session を発行する**前**に、短命の pending Cookie **`__Host-doya_pending`**（httpOnly、10 分、`sha256` を `ReauthChallenge(purpose='login.passkey', sessionId=null)` に保存）を発行する。この pending 文脈で使えるルートは 3 つだけ: (a) `POST /api/auth/passkey-login/{options,verify}`（assertion 検証に成功したら Session を発行し pending を消す）、(b) **パスキー未登録のメンバーの初回登録** `POST /api/auth/passkey-login/register/{options,verify}`（直前に Google 認証が済んでいるので `registeredVia='google-bootstrap'`、24h クールダウン付き。登録後そのまま Session を発行）、(c) **回復申請** `POST /api/auth/passkey-recovery`（未ログインで可。pending 文脈＋本人メールへの確認リンクで受理し、以後は §11.5 の二人制御・48h 待機）。会社が `strictSharing` を ON にするとき、画面に「パスキー未登録メンバー N 人（初回ログイン時に登録を求めます）」を表示して確認する。owner 自身は PATCH 時に step-up（パスキー必須）を通っているので締め出されない。
 
 ### 11.6 退職・異動
 
-- `DELETE /api/company/[id]/members/[userId]`（または `status=removed`）で: (1) `CompanyMember.status='removed'`、(2) 9 系統の旧 Member 行も `INACTIVE`（移行期）、(3) **そのユーザーの `Session` を全件 `revokedAt`**（他社にも所属しているなら「会社切替で 403」で十分だが、安全側に倒して全失効）、(4) `AuditLog`、(5) 本人・admin へ通知。
+- `DELETE /api/company/[id]/members/[userId]`（または `status=removed`）で: (1) `CompanyMember.status='removed'`、(2) 9 系統の旧 Member 行は**物理削除**（旧系統の除籍と同じ意味論。INACTIVE にしない。§5.1 手順 9 / DATA-03 / FIN-07）、(3) **そのユーザーの `Session` を全件 `revokedAt`**（他社にも所属しているなら「会社切替で 403」で十分だが、安全側に倒して全失効）、(4) `AuditLog`、(5) 本人・admin へ通知。
 - `User.sessionsInvalidBefore` は全失効の大域スイッチ。`requireCompanyAccess` と `session` コールバックの両方で `Session.createdAt > sessionsInvalidBefore` を検査。
 - 異動（ロール変更）は step-up ＋即時反映（セッションにロールをキャッシュしないため、次リクエストから効く）。
 
@@ -1353,7 +1379,7 @@ export function tenantPrisma(ctx) {
 | **0. 準備（DB なし）** | `src/lib/core/`, `src/lib/llm/`, `src/lib/agent/` の骨格。**18 サービス全部の最小マニフェスト**（id / status / routes.public・guestShared / dataModels のみ、`agentTools` 空）を生成（OPS-26。allowlist は作らない）。`service-roles.ts` 集約。`requireCron`。`verify-core-schema-draft.cjs`、`verify-core-route-classes.cjs`（report-only）。`DATABASE_URL`（`app_rw`）と `DIRECT_URL`（owner）のロール分離。本番ドライラン（Prisma 経由・読み取り専用）: 組織数・空組織・FK 孤児（`pending_` 除外後）・slug 衝突・同 owner 複数組織・owner 複数の組織・同一メール複数系統 PENDING・`HrOrganization.stripe*` 非 null・`HrOrganization.plan` 読み手・**Session 総行数と直近 30 日ログイン数**・各系統 Member 行数（DATA-E） | `npm run build` 通過。ドライラン結果を §13 に数値で反映。マニフェスト 18 件で `verify-core-tenant-columns` が通る | コード revert | なし |
 | **1. 足す** | 新テーブルと nullable 列を追加。**`Session` の変更手順を固定**（DATA-05）: `SET lock_timeout='5s'`、`CREATE INDEX CONCURRENTLY "Session_userId_revokedAt_lastSeenAt_idx" ON "Session"("userId","revokedAt","lastSeenAt")`、`CREATE INDEX CONCURRENTLY "Session_deviceId_idx" ON "Session"("deviceId")`、FK は `ALTER TABLE "Session" ADD CONSTRAINT "Session_deviceId_fkey" FOREIGN KEY ("deviceId") REFERENCES "sec_session_devices"("id") ON DELETE SET NULL NOT VALID` → `VALIDATE CONSTRAINT`。同名なら `db push` は差分なし。`AuditLog` 等の新規テーブルは空なので通常の `db push`。`core_audit_logs` の月次パーティション（§17.1）。名寄せバッチ（**旧データへの唯一の書き込み**＝`*Organization.companyId` 等の派生列。正本は `CompanyServiceLink`、同一 tx で両方書く。DATA-09）。adapter ラップ投入と同時に Cookie を `__Host-` へ（全員再ログイン）。`AuditLog` 書き込み開始 | 全アクティブ組織に Link。`tenant-reconcile.ts` の Link↔派生列不一致 0。`RuntimeCounter('session.revoked_by_limit')` は未強制なので 0 | `core.session_tracking` OFF | `core.session_tracking` |
 | **2. 二重書き込み（両方向）** | 旧 `*Member` ↔ `CompanyMember`（**除籍は旧行を物理削除**。DATA-03）。逆方向 `ensureLegacyOrganizationForCompany`。招待は新＋旧 token（`tokenHash` 併設）。会社情報は旧＋新。**webhook は所有者 3 段判定（常時 ON）＋ 会社経路で owner の `syncUnifiedBilling` 併記**（DATA-14）。`UsageLedger` 記録のみ。shadow mode。middleware report-only **本番 2 週間以上**。同時セッション上限は通知のみ。**Phase2 初回 ON 前にも `tenant-reconcile.ts` を実行**（DATA-09） | shadow 差分 0 件が 7 日（`RuntimeCounter('access_shadow.diff')`）。`UsageLedger` 残高と旧台帳の差 0。report-only の誤分類 0（`RuntimeCounter('route_class.report_only_denied')` を分類別に） | `core.dual_write` OFF。再 ON 前に reconcile | `core.dual_write`, `core.access_shadow`, `core.middleware_report_only`, `core.session_limit_notify_only` |
-| **3. 読み替え** | `core.unified_access` ON（`RuntimeCounter('legacy_access.<svc>')` で旧本体の呼び出しを数える）。middleware 既定拒否。`UsageLedger` 上限判定。課金画面統一、HR checkout 閉鎖、**Checkout 入口を会社経路に**。`CompanyProfile` 優先。同時セッション・step-up（パスキー）・共有検知を強制。ツール内部の LLM を gateway へ。エージェントは運営会社のみ ON（3a〜3d）。各サービスのマニフェストに `agentTools / usage / pii` を埋める（§16.6 の順） | `legacy_access.*` が 7 日間 0。回帰テスト全通過。運営利用 2 週間で `SecurityEvent(critical)` 0。`estimatedPaidCalls` 乖離 2 倍超 0。`unknown_outcome` の発生率 < 1% | 各フラグ OFF（**ただし会社経路で契約済みの会社はそのまま**） | `core.unified_access`, `core.middleware_enforce`, `billing.usage_ledger_enforce`, `billing.company_mode`, `core.profile_prefer_company`, `core.session_limit_enforce`, `core.step_up_enforce`, `agent.enabled`, `agent.tools.<key>.enabled` |
+| **3. 読み替え** | `core.unified_access` ON（`RuntimeCounter('legacy_access.<svc>')` で旧本体の呼び出しを数える）。middleware 既定拒否。`UsageLedger` 上限判定。課金画面統一、HR checkout 閉鎖、**Checkout 入口を会社経路に**。`CompanyProfile` 優先。同時セッション・step-up（パスキー）・共有検知を強制。ツール内部の LLM を gateway へ。エージェントは運営会社のみ ON（3a: read のみ → 3b〜3d: 当該 lib の gateway 移行完了がツール登録の前提。未移行ツールは存在しない）。各サービスのマニフェストに `agentTools / usage / pii` を埋める（§16.6 の順） | `legacy_access.*` が 7 日間 0。回帰テスト全通過。運営利用 2 週間で `SecurityEvent(critical)` 0。`estimatedPaidCalls` 乖離 2 倍超 0。`unknown_outcome` の発生率 < 1% | 各フラグ OFF（**ただし会社経路で契約済みの会社はそのまま**） | `core.unified_access`, `core.middleware_enforce`, `billing.usage_ledger_enforce`, `billing.company_mode`, `core.profile_prefer_company`, `core.session_limit_enforce`, `core.step_up_enforce`, `agent.enabled`, `agent.tools.<key>.enabled` |
 | **4. 旧列削除** | `pg_dump`＋別 DB への復元リハーサル。二重書き込み停止（課金の併記も停止）。旧列・旧テーブル削除（§12 改訂 2 の一覧）。各 `access.ts` を薄い re-export に。RLS（任意）。ER 再生成 | schema から旧列が消え、ER 差分レビュー済み。`legacy: true` の route 0 | DB バックアップからの復元のみ。Phase3 安定後 60 日 | なし |
 
 **所要期間と人員の見積り**（前提: 実装 2 名＋リード 1 名、既存機能の改修と並行しない、本番トラフィックの観察期間は短縮しない）:
@@ -1693,7 +1719,7 @@ docs/services/<id>.md                    # マニフェストから生成した�
 | `LlmCallLog` | 400 日 | 同上。90 日超は月次集計表 `core_llm_cost_monthly`（未記載・小テーブル）に畳んでから削除 | 支出レポートの履歴に必要 |
 | `AgentRun / AgentStep / ToolCall / AgentConversation` | 会社の `retentionDays`（既定 180） | `cron/agent-retention`（日次） | `AgentArtifact.state='deleted'` 更新 |
 | `UsageLedger` | 3 年（課金の正本） | 削除しない | `UsageBalance` は再計算可能 |
-| `AuditLog` | 3 年 | **月次パーティション**（`createdAt`）。Prisma は管理しないため `doya-db-push` 手順に raw SQL: `CREATE TABLE core_audit_logs (...) PARTITION BY RANGE ("createdAt")`、PK は `("id","createdAt")`、毎月 `cron/core-retention` が翌月パーティションを作成。90 日超のパーティションは JSONL で Storage（WORM）へアーカイブし、連鎖ハッシュの head だけ残して DETACH | cuid PK のランダム挿入による B-tree 肥大は index を 3 本に絞って緩和（DATA-21） |
+| `AuditLog` | 3 年 | **Phase1〜3: パーティションなし**。`cron/core-retention` が 90 日超の行を `core_audit_logs_archive`（Prisma schema に載せない raw SQL 表、月次パーティション）へ `INSERT ... SELECT` → 元表から DELETE（owner ロールの cron。連鎖ハッシュは head を保持）。**Phase4 の任意項目として本表のパーティション化**を検討するが、Prisma は partitioning を管理せず（公式に記載なし）、`db push` が PK `(id, createdAt)` や PARTITION BY をどう扱うかは**要実機確認**（ステージングで `db push --accept-data-loss` 無しの差分が空になることを確認してから）。draft は DB と一致させるため **`@@id([id, createdAt])`**（FIN-15）。Prisma 管理外の archive 表が `db push` で落とされないことも同じ検証で確認する | cuid PK のランダム挿入による B-tree 肥大は index を 3 本に絞って緩和（DATA-21） |
 | `KnowledgeSource / BrandAsset` の実体（バケット） | マニフェスト `storage[].retentionDays` | 各サービスの purge cron（`seo-image-purge`, `interview-storage-purge` と同列） | DB の `pii.purgeCron` とは別（OPS-29(3)） |
 | **会社の purge**（論理削除 30 日後） | — | `cron/core-retention` | **定義を限定**（DATA-10）: PII を持つ子（`CompanyMember` / `CompanyInvitation` / `CompanyProfile` / `BrandAsset` / `KnowledgeSource` / `Agent*` / `Notification` / `SessionObservation`）を削除し、`Company.name / slug` を `deleted-<id>` に匿名化、旧 `*Organization` を削除。**`Company` 行・`BillingAccount` / `CompanySubscription` / `UsageLedger` / `UsageBalance` / `AuditChainHead` / `CompanyServiceLink` は保持期間（3 年）満了まで残す**。順序: Artifacts → ToolCalls/Steps/Runs/Conversations → Members/Invitations → Profile/Assets/Knowledge → 旧組織 → 匿名化。3 年後に課金系を削除してから `Company` 行を削除 |
 
@@ -1703,7 +1729,7 @@ docs/services/<id>.md                    # マニフェストから生成した�
 
 | # | 監視項目 | しきい値 / 条件 | 検出元 |
 |---|---|---|---|
-| 1 | `AgentRun` が `running` かつ `executionToken IS NULL` かつ `nextRunAt` が 5 分超過（OPS-01 の検出） | 1 件以上 | DB |
+| 1 | `AgentRun` が `queued / planning / running` かつ `executionToken IS NULL` かつ `nextRunAt` が 5 分超過、または `executionExpiresAt` が 5 分超過（OPS-01 / FIN-01 の検出） | 1 件以上 | DB |
 | 2 | `waiting_approval` が 24h 超（sweep 漏れ） | 1 件以上 | DB |
 | 3 | `failed(lease_lost)` の発生率 | 日次 run の 2% 超 | DB |
 | 4 | `unknown_outcome` の発生率 | 日次 step の 1% 超 | DB |
@@ -1721,7 +1747,7 @@ SLO（運営会社での Phase3 計測値を初期値にする）: 承認→再�
 ### 17.3 前提（Vercel / Supabase）
 
 - **Vercel Pro 以上**: 毎分 Cron、`maxDuration=300`、`x-vercel-forwarded-for`。Hobby では `agent-runs` が日次になり本設計は成立しない（OPS-35）。
-- Cron 本数: 35 → **39**（`agent-runs`, `security-scan`, `audit-verify`, `agent-retention`）＋ `core-retention`, `llm-cost-rollup` で **41**（OPS-27 の不一致を解消。上限 100）。`agent-runs` を 5 スロットにする場合は 45。
+- Cron 本数: 35 → **39**（`agent-runs`, `security-scan`, `audit-verify`, `agent-retention`）＋ `core-retention`, `llm-cost-rollup` で **41**（上限 100）。`agent-runs` は HTTP 起動方式（§8.4）なので 1 本。`after()` が使えない場合の代替（K スロット）では 41 + K − 1。
 - Supabase: `pgbouncer=true`、`connection_limit=3`、`pool_timeout=30`（`src/lib/prisma.ts`）。advance 内の DB 区間はセマフォ 2（§8.4）。
 - 時計: リース・`nextRunAt` の比較は DB `now()` / `clock_timestamp()` に統一（OPS-08）。
 
@@ -1784,7 +1810,7 @@ SLO（運営会社での Phase3 計測値を初期値にする）: 承認→再�
 3. 結合結果をスクラッチ領域（`/tmp` ではなく scratchpad）に書き、`DATABASE_URL` / `DIRECT_URL` にダミー値を与えて `npx prisma validate --schema <結合ファイル>` を実行。リポジトリの `prisma/` は触らない。
 4. 失敗時は draft 側の行番号に写像して報告する（結合ファイルの行 − 既存 schema の行数）。
 
-2026-10-17 の実測（HEAD `73fa405c`、Prisma CLI 5.22.0）: merge-into 27 件、新規 model 32 件、結合後 224 model、`The schema at prisma/schema.prisma is valid`。
+2026-10-17 の実測（改訂 4、HEAD `24ac0467`、Prisma CLI 5.22.0）: merge-into **28** 件、新規 model **34** 件、結合後 **226** model、`The schema at prisma/schema.prisma is valid`（改訂 2 時点は 27 / 32 / 224）。
 
 ```js
 // scripts/security-regression/verify-core-schema-draft.cjs（骨子）
@@ -1812,7 +1838,7 @@ if (r.status !== 0) process.exit(1)
 |---|---|---|---|
 | A-1 | **一部反映** | §11.5, §9.1, §13 #34, draft `WebAuthnCredential` / `ReauthChallenge.method` | Google 公式ドキュメントで確認: `prompt` は `none|consent|select_account` のみ、`max_age` 無し（指摘どおり）。ただし **`auth_time` は ID トークンの claims 表に存在する**（指摘の「含まれない」は誤り）。結論（パスキーを本線、Google は `sub` 一致まで）は採用。`authTime` は `providerAuthTime` として記録のみ残し、検証条件には使わない。「要実機確認」を明記 |
 | A-2 | **反映** | §7.1, §7.3, draft `BillingAccount.stripeCustomerId`（index のみ） | `metadata.companyId` を主キーに。新規会社は Customer 新規作成 |
-| A-3 | **反映** | draft 全体（merge-into 断片）、付録 C、§10.8 `verify-core-schema-draft.cjs` | 結合 validate を実測（224 model、valid） |
+| A-3 | **反映** | draft 全体（merge-into 断片）、付録 C、§10.8 `verify-core-schema-draft.cjs` | 結合 validate を実測（改訂 4 時点 226 model、valid） |
 | A-4 | **反映** | draft `FeatureFlag.scope`（NOT NULL、`'*'` 番兵、`@@unique([key, scope])`）、`AuditLog/SecurityEvent/LlmCallLog.companyId` は FK なし文字列 | — |
 | A-5 | **反映** | draft の onDelete 原則（Restrict / FK なし）、§10.6、§13 #35 | `Company` は論理削除のみ。purge バッチは AuditLog を残す |
 | A-6 | **反映** | §6.3（4 分類の機械抽出）、§2.6（実在ルート一覧）、§13 #7b、§16.2 M-3/M-4 | 監査が挙げた実在ルートは全て分類表に収録。`/api/seo/guest/*` の誤りを訂正。report-only 2 週間以上 |
@@ -1836,7 +1862,7 @@ if (r.status !== 0) process.exit(1)
 | B-13 | **一部反映** | §8.4、§2.1 | Vercel 公式: **上限は全プラン 100 本/プロジェクト**（指摘の「Pro 40」は誤り）。35→38 で余裕あり。`*/5` は 4 本に訂正 |
 | B-14 | **反映** | §8.3（残り時間からタイムアウト配分）、§8.4、`verify-agent-deadline.cjs` | — |
 | B-15 | **反映** | draft `CompanyProfile.fieldSources.origin`、§8.2 `company.getProfile`、§8.5 | — |
-| B-16 | **反映** | §8.3（gateway 移行の優先順、未移行ツールは high 扱い）、§7.4 | — |
+| B-16 | **反映** | §8.3（gateway 移行の優先順。改訂 4 で「未移行 lib を呼ぶツールは登録不可」に強化）、§7.4 | — |
 | B-17 | **反映** | §11.3（既定 3、同 kind 置換）、draft `Company.maxSessionsPerUser` コメント、§14 D6 | — |
 | B-18 | **反映** | §12 Phase1（`CREATE INDEX CONCURRENTLY` 先行） | — |
 | B-19 | **反映** | §10.6（日次バッチで後埋め）、draft `AuditChainHead` | — |
@@ -1890,6 +1916,7 @@ if (r.status !== 0) process.exit(1)
 | 1 | 2026-10-17 | 初版（HEAD `98475c0a`）。全 14 章、ER 3 枚、チェックリスト 43 項目 |
 | 2 | 2026-10-17 | 監査 `AUDIT-2026-10-17.md` を全件反映（付録 D）。外部仕様 4 件を公式ドキュメントで確認（Google OIDC、Vercel Cron ×2、Stripe basil）。`schema-draft.prisma` を merge-into 断片方式に改め、結合 `prisma validate` を実測（付録 C）。§15（先に直す修正）、§16（サービス契約）、`CHECKLIST.md`（13 章）を新設。CHECKLIST による自己点検で見つかった不足を修正: (1) UI 規約（日本語・絵文字禁止・375px）が無かった → §16.7 と M-20、(2) 画像・動画生成の `size/quality/n` を型で必須化する規定が無かった → §8.3、(3) LLM プロバイダ全断時の run の挙動が無かった → §8.4、(4) エージェント会話の purge cron 名が無かった → §8.5（`cron/agent-retention`）、(5) `AuditLog.userAgent` を 3 年平文保持するのは過剰 → `userAgentHash` に変更、(6) Phase4 の削除前バックアップは書いてあったが復元リハーサルが無かった → §12 Phase4 に追記 |
 | 3 | 2026-10-17 | 第 2 回独立審査（data 23 / sec 34 / ops 35 ＝ 92 件）を全件反映（付録 F）。外部仕様 6 件を確認: Prisma 公式 Limitations（query 拡張はネスト操作非対応）、OpenAI SDK 4.104 `shared.d.ts` L52（function name は英数字・`_`・`-`、64 文字）、Gemini API リファレンス（`FunctionDeclaration.name` は dots 可・128 文字、`Schema` は OpenAPI 3.0 サブセットで `additionalProperties`/`$ref` 無し、`parametersJsonSchema` は要実機確認）、WebAuthn Level 3 §6.1.1（counter 0 ＝未実装、保存値>0 かつ 新値<=保存値で clone 疑い）、jsonwebtoken 9 `verify.js` L132-134（文字列鍵の既定は HS 系）、`.prisma/client/index.d.ts` L225755（複合 unique セレクタは WhereUniqueInput のみ）。重大 16 件（DATA-01〜04、SEC-01/03、OPS-01/02/03/05/10/11/12/17/18/19/20/21/28）はすべて反映。主な変更: §7 全面（所有者 3 段判定・経路分離・付与キー・台帳の符号と period・数値例・席同期）、§8.2〜8.6（2 軸リスク＋冪等 3 区分、provider 別名前/schema、事前＋事後予算、フェンス、状態遷移図）、§9（admin ユーザー削除の改修、パスキー API、承認 API 非同期）、§10.2（ネスト走査・複合 unique 展開・HOF）、§10.5〜10.7（暗号化仕様、ロール分離、`__Host-`、CSRF 判定、IP 取得元）、§11（限界の明記、Session↔端末束縛、観測履歴、strictSharing、パスキー運用）、§12（フラグ依存、Phase0 の 18 マニフェスト、Session 変更手順、見積り）、§15 を深刻度順に 16 件へ、§17 新設（保持・掃除・監視・SLO・前提）。draft: `planVersion`、`ApprovalRequest(stepId, attempt)`＋`approvalHash`、`downstreamIdempotency`、`runningSeconds`、`SessionObservation`、`RuntimeCounter`、`SeoJob.originRunId`、`LlmCallLog` の計測列、`CompanySubscription.seatItemId / lastStripeEventCreated`、`KnowledgeSource.allowedServices` 既定の反転、`AuditLog` index 3 本、FK index 4 本。結合 validate 226 モデルで valid |
+| 4 | 2026-10-17 | 最終ゲート第 1 回（FIN-01〜17）を全件反映（付録 G）。重大 2 件: Cron claim 条件に `planning`、テナント拡張の upsert 走査＋所有確認を明示クライアントのヘルパー `owned(client, ctx)` へ。部分的 4 件（DATA-03 §11.6 残存、SEC-01、OPS-01、OPS-12「未移行ツールは登録不可」）を解消。中: 拡張内の基底クライアント使用の撤廃、`reservationId` を冪等キーの基底に、`User.plan` の単一の書き手 `syncUserPlan`（max 規則）、`strictSharing` の pending 文脈（`__Host-doya_pending`）と未登録者・紛失者の経路、Cron の HTTP 起動（`after()`）と処理能力式、Stripe 返金は `adjust(−)`、`nextRunAt` の初期値、`company_suspended` の復帰、`cookies()` 経路と `DEVICE_UNVERIFIED`、`AuditLog @@id([id, createdAt])`＋パーティションは Phase4 の要実機確認項目に。軽微: 年額は月額へ、`pausedReason` の整理、Cookie 名の統一、数値を実測値（merge 28 / 新規 34 / 結合 226）に統一、ER の `ApprovalRequest` 表記。外部仕様: Vercel `@vercel/functions` リファレンス（Next 15.1+ は `after()` 推奨、`waitUntil` の Promise は関数の `maxDuration` まで）、Next.js `cookies()` リファレンス（Server Components / Route Handlers / Server Functions で使用可、Next 15 で async）、Prisma query 拡張ページ（tx ハンドルの取得手段なし）、本リポジトリ `vercel.json` L124-128 の `?mode=` パス稼働実績。付録 G/H を H/I に改番 |
 
 
 ### 付録 F. 第 2 回審査（REVIEW-2026-10-17-data / sec / ops）への回答
@@ -1900,7 +1927,7 @@ if (r.status !== 0) process.exit(1)
 |---|---|---|---|
 | DATA-01 | **反映** | §9.1（`DELETE /api/admin/users/[id]` の改修手順）、draft `CompanyInvitation.invitedById` SetNull、CHECKLIST SCH-03/SCH-17 | `admin/users/route.ts` L301-308 を確認 |
 | DATA-02 | **反映** | §7.2 手順 4（`subscriptions.update({metadata})` 必須）、§7.3（3 段の所有者判定・逆引き） | — |
-| DATA-03 | **反映** | §9.1 メンバー削除行（旧行は物理削除）、§12 Phase2、CHECKLIST MIG-07/MIG-15 | `sfa/invite/[token]/route.ts` L72-86 の `updateMany` と P2002 を確認 |
+| DATA-03 | **反映**（改訂 4 で §11.6 の残存記述を修正。付録 G） | §9.1 メンバー削除行（旧行は物理削除）、§12 Phase2、CHECKLIST MIG-07/MIG-15 | `sfa/invite/[token]/route.ts` L72-86 の `updateMany` と P2002 を確認 |
 | DATA-04 | **反映** | §5.1 Kintai 行（`pending_` 除外を先に）、CHECKLIST MIG-03 の言い換え | `kintai/employees/route.ts` L123 を確認 |
 | DATA-05 | **反映** | §12 Phase1（index 名・FK `NOT VALID`→`VALIDATE`・`lock_timeout`）。「Session / User / AuditLog」→「Session のみ」に訂正 | — |
 | DATA-06 | **反映** | §17.1（Session 90 日削除）、§12 Phase0（行数計測） | — |
@@ -1914,14 +1941,14 @@ if (r.status !== 0) process.exit(1)
 | DATA-14 | **反映** | §7.2 手順 8（会社経路で owner の `syncUnifiedBilling` 併記）、§12 Phase2 | — |
 | DATA-15 | **反映** | §5.2（`personName`→`representativeName`、`size`→`companySize`、`AdImageBrand.ngWords` Json→string[] 変換、`HrOrganization.logoUrl` を BrandAsset 候補に、`MensetsuCompanyProfile.companyName` を legalName 候補に、`fiscalMonth @default(4)` は既定と同じなら写さない） | 列を schema で確認 |
 | DATA-16 | **反映** | §4.1/4.2/4.3 の ER カーディナリティ（`||--o|`、`||--o{`）、`UsageLedger.kind` に `adjust` | — |
-| DATA-17 | **反映** | §13 #10（キー名統一）、#14（内訳 9+9+6+Session+User+Account=27）、§5.1 `linkedBy` | — |
+| DATA-17 | **反映** | §13 #10（キー名統一）、#14（内訳 9+9+6+Session+User+Account+SeoJob=28）、§5.1 `linkedBy` | — |
 | DATA-18 | **反映** | draft に `AgentRun @@index([conversationId, createdAt])`、`UsageLedger @@index([userId])`、`CompanyInvitation @@index([invitedById])`、`ApprovalRequest @@index([runId])` | — |
 | DATA-19 | **反映** | draft `FeatureFlag` コメント、`verify-core-feature-flag-scope.cjs` に `scope≠'*' ⇒ companyId===scope` | — |
 | DATA-20 | **反映** | draft `KnowledgeSource.allowedServices`（空＝使えない）、§9.1 knowledge API で必須 | — |
 | DATA-21 | **反映** | draft `AuditLog` index 3 本、§17.1 パーティション | — |
 | DATA-22 | **反映** | §5.1 Promane 行（連番付与） | — |
 | DATA-23 | **反映** | §9.2 `GET /api/agent/usage` は BigInt 集計 | — |
-| SEC-01 | **反映** | §10.2（`walkData` 再帰走査、テナント列書き換え禁止、`createMany` 配列）、CHECKLIST TEN-14/15 | Prisma 公式 Limitations「The `query` extension type does not support nested read and write operations」を確認 |
+| SEC-01 | **反映**（改訂 4 で upsert の create/update 走査と所有確認ヘルパーを追加。付録 G） | §10.2（`walkData` 再帰走査、テナント列書き換え禁止、`createMany` 配列）、CHECKLIST TEN-14/15 | Prisma 公式 Limitations「The `query` extension type does not support nested read and write operations」を確認 |
 | SEC-02 | **反映** | §10.2（DMMF で複合セレクタ展開） | `.prisma/client/index.d.ts` L225755/225771 で `userId_serviceId` が WhereUniqueInput のみであることを確認 |
 | SEC-03 | **反映** | §11.1（限界の明記・三層）、§11.3（Session↔端末束縛、観測履歴）、§11.4（`share.session_cookie_shared`、自動 suspend しない）、§11.5（`strictSharing`）、draft `Company.strictSharing`、`SessionObservation` | — |
 | SEC-04 | **反映** | §10.2 `tenantSql(ctx)` | — |
@@ -1941,7 +1968,7 @@ if (r.status !== 0) process.exit(1)
 | SEC-18 | **反映** | §8.3 `budget` 必須（`estimatedPaidCalls` を `maxCalls` に） | — |
 | SEC-19 | **反映** | §10.5（nonce・AAD・別鍵 HMAC・env 漏洩は対象外・ローテーション手順） | — |
 | SEC-20 | **反映** | §10.6（`DATABASE_URL` / `DIRECT_URL` のロール分離、外部アンカー）、§12 Phase0 | — |
-| SEC-21 | **反映** | §10.5（仮名化、プロバイダ保持と DPA を付録 H、締結前は `allowSensitive=false`）、§8.2 | — |
+| SEC-21 | **反映** | §10.5（仮名化、プロバイダ保持と DPA を付録 I、締結前は `allowSensitive=false`）、§8.2 | — |
 | SEC-22 | **反映** | §10.5/§10.6（`diff` に redact、削除要求時の匿名化手順）、draft コメント | — |
 | SEC-23 | **反映** | §10.7（ポート 80/443、退役 importer の置換と回帰テスト維持）、§15 #13/#14 | — |
 | SEC-24 | **反映** | §10.7 CSRF 判定の固定 | — |
@@ -1955,7 +1982,7 @@ if (r.status !== 0) process.exit(1)
 | SEC-32 | **反映** | §15 #10 | `shodan/company-profile/logo/route.ts` L23/L30 を確認 |
 | SEC-33 | **反映** | §15 #11 | `seoAccess.ts` L17-20 を確認 |
 | SEC-34 | **反映** | §15 #12 | 6 ファイルを確認 |
-| OPS-01 | **反映** | §8.4（解放時に `nextRunAt=now()`、Cron 条件に `executionToken IS NULL AND nextRunAt <= now()`）、draft `nextRunAt` コメント、§17.2 #1 | `releaseSeoJobExecution` L62-67 を確認 |
+| OPS-01 | **反映**（改訂 4 で claim 条件に `planning` を追加。付録 G） | §8.4（解放時に `nextRunAt=now()`、Cron 条件に `executionToken IS NULL AND nextRunAt <= now()`）、draft `nextRunAt` コメント、§17.2 #1 | `releaseSeoJobExecution` L62-67 を確認 |
 | OPS-02 | **反映** | §8.4（`withAgentRunExecution` 全書き込みフェンス、呼び出し前 commit）、draft `ToolCall.executionToken` | `withSeoJobExecution` L41-60 を確認 |
 | OPS-03 | **反映** | §8.2（`downstreamIdempotency` 3 区分、`unknown_outcome` は人の確認、自動再試行なし、`sfa.updateDealStage` の訂正）、draft `AgentStep.downstreamIdempotency / maxAttempts=1`、`ApprovalRequest.kind`、§16.4 M-8/M-8b | `requestKey` が L2960/L3020/L4504/L4529（Cunning/Persona）のみ、`src/lib/sfa` に 0 件を確認 |
 | OPS-04 | **反映** | §8.4（DB 区間セマフォ 2）、§17.3 | — |
@@ -1966,7 +1993,7 @@ if (r.status !== 0) process.exit(1)
 | OPS-09 | **反映** | §8.4 SSE（`Last-Event-ID`、3s、同時 2、コスト） | — |
 | OPS-10 | **反映** | §8.2 `providerName`、§8.3、§16.1/16.4 M-9b | `openai` SDK `shared.d.ts` L52 で `^[a-zA-Z0-9_-]{1,64}$` 相当の記述を確認。Gemini は dots 可・128 文字（公式リファレンス） |
 | OPS-11 | **反映** | §8.3（provider 別変換器、`parametersJsonSchema` は要実機確認でフラグ切替）、`verify-llm-gateway-tool-schema.cjs` | Gemini `Schema` が OpenAPI 3.0 サブセットで `additionalProperties` / `$ref` 無しを公式リファレンスで確認 |
-| OPS-12 | **反映** | §8.3（事前＋事後予算、画像フォールバック 2 回計上、`SeoJob.originRunId`、入力の型で上限）、draft `SeoJob_Fragment`、`LlmCallLog.retryOfId` | `image-generator.ts` L80-124 を確認 |
+| OPS-12 | **反映**（改訂 4 で「未移行ツールは登録不可」に強化。付録 G） | §8.3（事前＋事後予算、画像フォールバック 2 回計上、`SeoJob.originRunId`、入力の型で上限）、draft `SeoJob_Fragment`、`LlmCallLog.retryOfId` | `image-generator.ts` L80-124 を確認 |
 | OPS-13 | **反映** | §8.3、§15 #6 | L103/L113/L286 を確認 |
 | OPS-14 | **反映** | §8.3（試行カウンタ 1 つ、上限 4） | — |
 | OPS-15 | **反映** | draft `LlmCallLog.unitKind / cachedTokens / reasoningTokens / priceTableVersion`、§8.3 | — |
@@ -1976,7 +2003,7 @@ if (r.status !== 0) process.exit(1)
 | OPS-19 | **反映** | §7.3（live 再取得、`lastStripeEventCreated`、advisory lock）、draft 列 | `route.ts` L279-281 を確認 |
 | OPS-20 | **反映** | §7.1（ユーザー経路は `metadata.companyId` を除外、会社経路はそれだけ） | `stripe.ts` L275-285 / L306、`route.ts` L376-382 を確認 |
 | OPS-21 | **反映** | §7.1/§12（会社経路の webhook 分岐と権利判定は常時 ON、`billing.company_mode` は Checkout 入口のみ、既契約は戻らない） | — |
-| OPS-22 | **反映** | §7.1（2 Price、`seatItemId`）、§7.2 手順 5（同一 Customer 内で Price 差し替え、按分）、付録 G 告知文 | `STRIPE_PRICE_` 139 箇所を確認 |
+| OPS-22 | **反映** | §7.1（2 Price、`seatItemId`）、§7.2 手順 5（同一 Customer 内で Price 差し替え、按分）、付録 H 告知文 | `STRIPE_PRICE_` 139 箇所を確認 |
 | OPS-23 | **反映** | §7.3（`billing-audit` に会社契約の突合） | — |
 | OPS-24 | **反映** | §7.3（2 キー予約） | `checkout-reservation.ts` L63 を確認 |
 | OPS-25 | **反映** | §12 フラグ依存表（`requires`、不可逆）、`RuntimeCounter`、完了条件の測定可能化 | — |
@@ -1994,7 +2021,33 @@ if (r.status !== 0) process.exit(1)
 | 付録 D 残件（sec 表） | **反映** | SEC-07/01/02/03/16/17/20/24/06/08/28/29/30 を上記のとおり | — |
 | 付録 D 残件（ops 表） | **反映** | OPS-03/12/05/19/17/20/18/07/06/27/09/13/16 を上記のとおり | — |
 
-### 付録 G. 既存契約者への告知文（雛形。絵文字なし・敬語）
+### 付録 G. 最終ゲート第 1 回（FINAL-GATE-2026-10-17-1.md）への回答
+
+凡例は付録 D と同じ。HEAD `24ac0467` で再確認。同じ規則が複数箇所にある項目は、修正前に grep で全出現を確認してから直した（FIN-07 の再発防止。CHECKLIST DOC 章）。
+
+| # | 判定 | 反映先 | 補足 |
+|---|---|---|---|
+| FIN-01 | **反映** | §8.4 Cron 回収（claim 条件に `planning`）、§8.6（`planning --> planning` 再 claim）、§17.2 #1、draft `nextRunAt` コメント、CHECKLIST AGT-26/AGT-46 | — |
+| FIN-02 | **反映** | §10.2 方式 A（`payloads = args.data ?? [args.create, args.update]` の再帰走査、upsert は `owned()` ヘルパーで「findFirst → update / create（テナント列強制）」に分解）、CHECKLIST TEN-14/TEN-19 | — |
+| FIN-03 | **反映** | §10.2（query 拡張は args 書き換えと拒否のみ。所有確認は呼び出し元クライアント（tx 可）を受け取る `owned(client, ctx)`。`findUniqueOrThrow` → `findFirstOrThrow` で throw 意味論維持。tx に拡張が乗るかは要実機確認とし、乗らなくても動く設計）、CHECKLIST TEN-20 | Prisma 公式の query 拡張ページに tx ハンドルの取得手段は無いことを確認 |
+| FIN-04 | **反映** | §7.4 規約表（`<reservationId>:reserve/consume/release`、reserve ごとに新 cuid）、§8.6 規則、draft `UsageLedger` / `reservationId` コメント、CHECKLIST BIL-17/BIL-28 | — |
+| FIN-05 | **反映** | §7.1（`User.plan` の単一の書き手 `syncUserPlan` ＝ max(個人 tier, owner 会社 tier)）、§7.2 手順 8、CHECKLIST BIL-29 | — |
+| FIN-06 | **反映** | §11.5（`__Host-doya_pending` の pending 文脈で passkey-login / 初回登録 / 回復申請の 3 ルートのみ許可、ON 時に未登録者数を表示）、§9.1 ルート追加、CHECKLIST AUTH-36 | — |
+| FIN-07 | **反映** | §11.6 (2)（旧 Member 行は物理削除）。grep `INACTIVE` の全出現を確認し、§5.1 手順 9・§9.1・MIG-15 と一致 | — |
+| FIN-08 | **反映** | §8.4（Cron は claim して `POST /advance?detached=1` を HTTP 起動、advance は 202 後に `after()` で実行。K = ceil(max_concurrent_runs/4)+2。`after()` の `maxDuration` 延長は要実機確認、代替は K スロット）、§17.3、CHECKLIST AGT-47 | Vercel 公式 `@vercel/functions` リファレンス: Next 15.1+ は `after()` 推奨、`waitUntil` の Promise は関数と同じタイムアウト。Cron パスの query string は公式に明記なし、本リポジトリ `vercel.json` L124-128 で稼働実績 |
+| FIN-09 | **反映** | §7.4 規約表（`refund` は運営補填 + のみ、Stripe 返金は `adjust` −）、数値例に返金行、§7.3 イベント表に `charge.refunded / invoice.voided`、draft コメント、CHECKLIST BIL-30 | — |
+| FIN-10 | **反映** | §7.1（統一プランは月額のみ）、§7.2 手順 5 | — |
+| FIN-11 | **反映** | §8.4、§8.1 シーケンス、draft `nextRunAt` コメント（作成時に now()）、CHECKLIST AGT-46 | — |
+| FIN-12 | **反映** | §8.6（`paused --> running` に会社復旧、`paused --> canceled`、`pausedReason` 3 値）、§10.9 会社単位の停止行、draft `pausedReason` コメント、CHECKLIST AGT-48 | — |
+| FIN-13 | **反映** | §6.3 auth-required 行（`__Host-next-auth.session-token`、開発 http は無接頭辞）、§10.7 Cookie 行、CHECKLIST AUTH-21/DOC-03 | — |
+| FIN-14 | **反映** | §11.3（adapter 内で `cookies()` を try/catch、取れない文脈は `deviceVerified=false` → mutation は 401 `DEVICE_UNVERIFIED`、読み取りは許可。request 外で throw するかは要実機確認）、CHECKLIST AUTH-37 | Next.js 公式 `cookies()` リファレンス: Server Components / Route Handlers / Server Functions で使用可、Next 15 で async。本リポジトリは App Router（`src/app/api/auth/[...nextauth]`）で `src/pages` は無い |
+| FIN-15 | **反映** | draft `AuditLog @@id([id, createdAt])`、§17.1（Phase1〜3 はパーティションなし＋archive 表へ退避、パーティション化は Phase4 の要実機確認項目）、CHECKLIST SCH-31 | Prisma 公式にパーティションの記載なし。`db push` の挙動は未実測 |
+| FIN-16 | **反映** | 付録 C（28 / 34 / 226、HEAD `24ac0467`）、付録 D A-3、付録 F DATA-17（28 テーブル）、draft 冒頭（改訂 4）、CHECKLIST DOC-02 | — |
+| FIN-17 | **反映** | §4.2 ER `ApprovalRequest`（`stepId FK`、`attempt`、`kind`、`approvalHash`） | — |
+| OPS-12（部分的） | **反映** | §8.2 / §8.3（未移行 lib を呼ぶツールは登録不可。Phase3a は read のみ。「実測で止まらない期間」は存在しない）、§12 Phase3、付録 F の OPS-12 / B-16 行 | — |
+| SEC-01 / OPS-01 / DATA-03（部分的） | **反映** | FIN-02 / FIN-01 / FIN-07 のとおり | — |
+
+### 付録 H. 既存契約者への告知文（雛形。絵文字なし・敬語）
 
 > 件名: ご契約プランの切り替えについて（お手続きは不要です）
 >
@@ -2003,7 +2056,7 @@ if (r.status !== 0) process.exit(1)
 > 年額でお支払いのお客様は、未経過分を次回以降のご請求に充当いたします（日割り計算）。月額の料金は変わりません。
 > ご不明な点は、サポート窓口（support@…）までご連絡ください。
 
-### 付録 H. LLM プロバイダのデータ保持・契約（SEC-21）
+### 付録 I. LLM プロバイダのデータ保持・契約（SEC-21）
 
 | プロバイダ | 用途 | 学習不使用 | 保持 | DPA | 備考 |
 |---|---|---|---|---|---|
@@ -2013,3 +2066,25 @@ if (r.status !== 0) process.exit(1)
 | OpenAI Realtime | mensetsu / aishodan の音声 | 同上 | 同上 | 同上 | 応募者・見込み客の音声＝第三者の個人情報。同意文面は既存 |
 
 （各社の最新の規約を確認して埋める。設計書の値は確認時点の一般的な既定であり、契約の根拠にはしない。）
+
+### 付録 J. 多重記述キー一覧（CHECKLIST DOC-01 / `verify-doc-consistency.cjs` の対象）
+
+同じ規則が複数箇所に書かれているもの。変更時は grep で全出現を列挙し、**正本**に合わせて全箇所を同時に直す。スクリプトはキーごとの正規表現で出現箇所を抽出し、正本の文言（抜粋）と一致しなければ失敗する。
+
+| キー | 正本 | 出現箇所 | 検査用の語 |
+|---|---|---|---|
+| 除籍の意味論（旧 Member 行は物理削除） | §5.1 手順 9 | §9.1 メンバー削除行、§11.6 (2)、§12 Phase2、CHECKLIST MIG-15 | `INACTIVE`、`物理削除` |
+| Cron claim 条件（`queued / planning / running`） | §8.4 Cron 回収 | §8.6、§17.2 #1、draft `nextRunAt` コメント、CHECKLIST AGT-26/AGT-46 | `status IN (` |
+| 冪等キーの基底（`reservationId`） | §7.4 規約表 | §8.4、§8.6 規則、draft `UsageLedger` コメント、CHECKLIST BIL-17/BIL-28 | `:reserve`、`<base>` |
+| ツール冪等キー（`runId:stepId`、attempt なし） | §8.2 | §8.4、draft `ToolCall`、CHECKLIST AGT-07 | `idempotencyKey` |
+| Cookie 名（`__Host-next-auth.session-token`、開発は無接頭辞） | §10.7 Cookie 行 | §6.3 auth-required 行、§11.3、§12 Phase1、CHECKLIST AUTH-21 | `__Host-`、`__Secure-` |
+| `pausedReason` の値（3 値） | §8.6 規則 | draft `AgentRun`、§10.9、CHECKLIST AGT-48 | `pausedReason` |
+| `User.plan` の書き手（`syncUserPlan`、max 規則） | §7.1 | §7.2 手順 8、§12 Phase2/4、CHECKLIST BIL-29 | `syncUserPlan`、`User.plan` |
+| 月次クレジット付与（`invoice.payment_succeeded`、`grant:<subId>:<P>`） | §7.3 イベント表 | §7.4 規約表・数値例、§13 #10、draft コメント、CHECKLIST BIL-16 | `grant:` |
+| `costClass=high` の閾値（4 回以上 or 画像・動画・音声 1 回） | §8.2 | §14 D17、§16.1、CHECKLIST AGT-03 | `costClass` |
+| 承認必須の条件（irreversible / high / updateProfile / oneOnOneSummary） | §8.5 | §8.2 表、§16.4 M-10、CHECKLIST AGT-02 | `承認必須` |
+| 既定の同時端末数（3） | §11.3 | draft `Company.maxSessionsPerUser`、§14 D6、CHECKLIST AUTH-06 | `既定 3` |
+| 未移行 lib を呼ぶツールは登録不可 | §8.2 | §8.3、§12 Phase3、§16.4 M-11、付録 F OPS-12/B-16 | `未移行` |
+| 数値（merge 28 / 新規 34 / 結合 226 / テーブル 28 / Cron 41） | 付録 C、§17.3 | §13 #14、付録 D A-3、付録 E、付録 F DATA-17、CHECKLIST DOC-02 | `226`、`28 テーブル`、`41` |
+| purge の定義（PII 子の削除＋匿名化、課金系・AuditLog は 3 年） | §17.1 | §9.1 `DELETE /api/company/[id]`、§13 #35、CHECKLIST SCH-30/RUN-24 | `purge` |
+| 自動名寄せの規則（3 条件のみ） | §5.1 手順 1 | §14 D3、draft `CompanyServiceLink.linkedBy`、CHECKLIST MIG-18 | `3 条件`、`linkedBy` |

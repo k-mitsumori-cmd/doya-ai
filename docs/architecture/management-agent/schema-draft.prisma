@@ -1,5 +1,5 @@
 // =====================================================================
-// ドヤAI 共通テナント・課金・経営エージェント  Prisma 草案（改訂 2: 監査 2026-10-17 反映）
+// ドヤAI 共通テナント・課金・経営エージェント  Prisma 草案（改訂 4: 監査・第 2 回審査・最終ゲート第 1 回 2026-10-17 反映）
 // ---------------------------------------------------------------------
 // ⚠️ これは設計草案であり、本番 prisma/schema.prisma には **コピーしない**。
 //    採用が決まったモデルから順に本番 schema へ移植し、`doya-db-push` 手順で
@@ -592,11 +592,11 @@ model CompanySubscription {
 /// 残高 = SUM(amount) WHERE companyId AND period AND meter。負が消費、正が付与。
 /// 符号と period の規約（OPS-17 / OPS-18。README §7.4 に数値例）:
 ///   grant   : amount=+n, period=P, idempotencyKey='grant:<stripeSubscriptionId>:<P>'（invoice.payment_succeeded 起点。event.id は使わない）
-///   reserve : amount=-n, period=P（JST で確定）, key='<base>:reserve'
-///   consume : amount=+(n - 実消費) ≥ 0（調整行。0 でも書く）, period=P（reserve 行から複製）, key='<base>:consume'
-///   release : amount=+n, period=P, key='<base>:release'
-///   refund  : amount=+m, period=元消費の P, refId=元 idempotencyKey
-///   adjust  : 運営の手動補正（AuditLog 必須）
+///   reserve : amount=-n, period=P（JST で確定）, key='<reservationId>:reserve'（reservationId は reserve ごとに新しい cuid。再 reserve は別 id。FIN-04）
+///   consume : amount=+(n - 実消費) ≥ 0（調整行。0 でも書く）, period=P（reserve 行から複製）, key='<reservationId>:consume'
+///   release : amount=+n, period=P, key='<reservationId>:release'
+///   refund  : amount=+m（運営補填のみ）, period=元消費の P, refId=元 reservationId
+///   adjust  : 運営の手動補正（AuditLog 必須）、または Stripe 返金（amount=-m, key='adjust:stripe:<refundId>', actor=stripe:。FIN-09）
 model UsageLedger {
   id        String  @id @default(cuid())
   companyId String
@@ -611,6 +611,7 @@ model UsageLedger {
   amount    Int
   /// grant / consume / reserve / release / refund / adjust
   kind      String
+  /// reserve ごとに採番する cuid。consume/release/refund はこれを参照し、idempotencyKey の基底にもなる（FIN-04）
   reservationId String?
   idempotencyKey String @unique
   /// 'YYYY-MM'（JST で確定）
@@ -686,7 +687,7 @@ model AgentRun {
   request        String            @db.Text
   /// queued / planning / running / waiting_approval / paused / done / failed / canceled（遷移は README §8.6 の状態遷移図が正本）
   status         String            @default("queued")
-  /// paused の理由: 'kill_switch' | 'company_suspended' | 'llm_outage' | 'unknown_outcome'
+  /// paused の理由: 'kill_switch' | 'company_suspended' | 'llm_outage' の 3 つだけ（結果不明は waiting_approval＋ApprovalRequest(kind=unknown_outcome)。FIN-12）
   pausedReason   String?
   /// init / intent / plan / execute / summarize / done
   step           String            @default("init")
@@ -703,7 +704,8 @@ model AgentRun {
   /// 240s スライスの自発解放・承認後の再開・Cron の通常再開は数えない。maxAdvanceAttempts 超過で failed(lease_lost)
   advanceAttempts    Int       @default(0)
   maxAdvanceAttempts Int       @default(5)
-  /// 自発解放・承認・paused 復帰のたびに必ず書く（null のままにしない。OPS-01）。Cron は nextRunAt <= now() を拾う
+  /// 作成時（queued）に now() で初期化し（FIN-11）、自発解放・承認・paused 復帰のたびに必ず書く（null のままにしない。OPS-01）。
+  /// Cron の claim 条件は status IN (queued, planning, running)（FIN-01）
   nextRunAt          DateTime?
   supersededAt       DateTime?
   /// running 状態で経過した累積秒（スライスの終わりに加算）。wallClockLimitSec はこれと比較する（OPS-05(2)/OPS-16: 承認待ち・paused は数えない）
@@ -935,7 +937,8 @@ model AgentPromptVersion {
 /// companyId は FK を張らない（会社が論理削除・purge されても記録を保つ。監査 A-5）。
 /// 連鎖ハッシュは同期では計算しない。日次 cron `audit-verify` がバッチで埋める（監査 B-19）。
 model AuditLog {
-  id        String   @id @default(cuid())
+  /// PK は (id, createdAt)。将来の月次パーティション（createdAt）と DB 定義を一致させるため（FIN-15。パーティション化自体は Phase4 の要実機確認項目）
+  id        String   @default(cuid())
   companyId String?
   /// 'user:<id>' | 'agent:<runId>' | 'cron:<path>' | 'admin:<adminUserId>' | 'stripe:<eventId>' | 'guest:<sessionId>'
   actor     String
@@ -963,6 +966,7 @@ model AuditLog {
   // 月次パーティション（createdAt）は Prisma が管理しないため raw SQL で作成し、PK を (id, createdAt) にする手順を §17.1 に記載（OPS-32）
   @@index([companyId, createdAt])
   @@index([actorUserId, createdAt])
+  @@id([id, createdAt])
   @@index([targetType, targetId])
   @@map("core_audit_logs")
 }
