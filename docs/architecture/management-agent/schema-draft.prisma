@@ -1,0 +1,1130 @@
+// =====================================================================
+// ドヤAI 共通テナント・課金・経営エージェント  Prisma 草案（改訂 2: 監査 2026-10-17 反映）
+// ---------------------------------------------------------------------
+// ⚠️ これは設計草案であり、本番 prisma/schema.prisma には **コピーしない**。
+//    採用が決まったモデルから順に本番 schema へ移植し、`doya-db-push` 手順で
+//    手動反映する（Vercel ビルドは db push をスキップするため、反映漏れは
+//    該当テーブル全クエリ 500 になる）。
+//
+// 検証方法（監査 A-3 対応）:
+//   このファイルは「既存 schema と結合して `prisma validate` が通る」ことを保証する。
+//   結合規則は README §付録 C（`verify-core-schema-draft.cjs` 仕様）のとおり:
+//     1. `// @@new-models` 以降の model はそのまま既存 schema の末尾に連結する
+//     2. `/// @@merge-into <Model>` で始まるブロックは、その中身（{ } の内側）を
+//        既存 schema の同名 model の閉じ括弧の直前に挿入する
+//   2026-10-17 時点で結合後 `npx prisma validate` 通過を実測済み。
+//
+// 表記ルール:
+//   - id は cuid() を踏襲（既存 192 モデルと同じ。推測不能IDの要件は cuid で満たす）。
+//   - 文字列 enum は既存流儀（String + コメント）。Prisma enum は使わない。
+//   - テーブル名は `@@map("<prefix>_...")`。core_ / billing_ / agent_ / sec_。
+//   - onDelete の原則（監査 A-5 / B-7）:
+//       課金・台帳・監査・エージェント実行履歴・会社所属 → **Restrict**（会社は論理削除のみ）
+//       会社設定の従属物（招待・有効化・プロフィール・資産・ナレッジ） → Cascade
+//       AuditLog / SecurityEvent / LlmCallLog の companyId は **FK を張らない文字列**（会社が消えても記録を保つ）
+//   - NULL を含む複合 unique は Postgres では一意にならない（監査 A-4）。
+//     全体既定は番兵値 '*' を使い、NOT NULL にする。
+// =====================================================================
+
+
+// =====================================================================
+// 0. 既存モデルへの追加（merge-into ブロック。コメントではなく model 断片）
+// =====================================================================
+
+/// @@merge-into User
+model User_Fragment {
+  /// 既定の会社（ホームで最初に開く会社）。複数所属時は Session.companyId が優先
+  defaultCompanyId    String?
+  /// Google の hd クレーム（Workspace ドメイン）。個人 Gmail は null
+  googleHostedDomain  String?
+  /// 最終 Google 認証時刻（id_token の auth_time。Google の ID トークン claims 表に存在。要実機確認: 値がセッション再利用時に更新されない可能性）
+  lastAuthAt          DateTime?
+  /// 全セッション一括失効の基準。これより古い Session.createdAt は無効扱い（adapter.getSessionAndUser で null を返す）
+  sessionsInvalidBefore DateTime?
+
+  companyMemberships  CompanyMember[]
+  companyInvitationsSent CompanyInvitation[] @relation("CompanyInvitationInvitedBy")
+  sessionDevices      SessionDevice[]
+  webauthnCredentials WebAuthnCredential[]
+  reauthChallenges    ReauthChallenge[]
+  agentConversations  AgentConversation[]
+  agentRunsRequested  AgentRun[]            @relation("AgentRunRequestedBy")
+  approvalRequests    ApprovalRequest[]     @relation("ApprovalRequestedTo")
+  coreNotifications   Notification[]
+  usageLedgerEntries  UsageLedger[]
+}
+
+/// @@merge-into Account
+model Account_Fragment {
+  /// Google の email_verified（id_token から）。signIn で true を必須にする
+  emailVerifiedClaim Boolean?
+  /// Google の hd
+  hostedDomain       String?
+}
+
+/// @@merge-into Session
+model Session_Fragment {
+  /// SessionDevice.id（同一端末の再ログインは置換、別端末は上限判定）
+  deviceId      String?
+  device        SessionDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  /// 「現在の会社」。切替は /api/company/switch（Cookie より改ざんに強い）
+  companyId     String?
+  /// 直近 IP の SHA-256（日替わり salt）。平文は保存しない
+  ipHash        String?
+  /// /24 or /48 帯（共有検知用）
+  ipPrefix      String?
+  /// 'JP' 等（x-vercel-ip-country）
+  geoCountry    String?
+  geoRegion     String?
+  userAgentHash String?
+  /// 1 分粒度で更新（updateAge=60 と同期）
+  lastSeenAt    DateTime?
+  createdAt     DateTime  @default(now())
+  /// 失効（削除せず残し、監査に使う）。adapter.getSessionAndUser は revokedAt IS NOT NULL なら null を返す
+  revokedAt     DateTime?
+  /// 'limit' | 'logout' | 'member-removed' | 'admin' | 'suspicious' | 'invalid-before'
+  revokedReason String?
+  /// 最終 step-up 再認証時刻（パスキー or Google 再認可）
+  stepUpAt      DateTime?
+  /// 'passkey' | 'google'
+  stepUpMethod  String?
+
+  @@index([userId, revokedAt, lastSeenAt])
+  @@index([deviceId])
+}
+
+/// @@merge-into HrOrganization
+model HrOrganization_Fragment {
+  /// Phase1: nullable で追加 → Phase3 で NOT NULL → Phase4 で Company に畳む
+  companyId String?
+  @@index([companyId])
+}
+/// @@merge-into KintaiOrganization
+model KintaiOrganization_Fragment {
+  companyId String?
+  @@index([companyId])
+}
+/// @@merge-into PromaneWorkspace
+model PromaneWorkspace_Fragment {
+  companyId String?
+  @@index([companyId])
+}
+/// @@merge-into SfaOrganization
+model SfaOrganization_Fragment {
+  companyId String?
+  @@index([companyId])
+}
+/// @@merge-into ShodanOrganization
+model ShodanOrganization_Fragment {
+  companyId String?
+  @@index([companyId])
+}
+/// @@merge-into AioOrganization
+model AioOrganization_Fragment {
+  companyId String?
+  @@index([companyId])
+}
+/// @@merge-into MensetsuOrganization
+model MensetsuOrganization_Fragment {
+  companyId String?
+  @@index([companyId])
+}
+/// @@merge-into QuoteOrganization
+model QuoteOrganization_Fragment {
+  companyId String?
+  @@index([companyId])
+}
+/// @@merge-into AishodanOrganization
+model AishodanOrganization_Fragment {
+  companyId String?
+  @@index([companyId])
+}
+
+/// @@merge-into HrOrganizationMember
+model HrOrganizationMember_Fragment {
+  /// 対応する CompanyMember（移行検証・読み替え用。最終的に不要）
+  companyMemberId String?
+}
+/// @@merge-into KintaiMember
+model KintaiMember_Fragment {
+  companyMemberId String?
+}
+/// @@merge-into PromaneMember
+model PromaneMember_Fragment {
+  companyMemberId String?
+}
+/// @@merge-into SfaMember
+model SfaMember_Fragment {
+  companyMemberId String?
+}
+/// @@merge-into ShodanMember
+model ShodanMember_Fragment {
+  companyMemberId String?
+}
+/// @@merge-into AioMember
+model AioMember_Fragment {
+  companyMemberId String?
+}
+/// @@merge-into MensetsuMember
+model MensetsuMember_Fragment {
+  companyMemberId String?
+}
+/// @@merge-into QuoteMember
+model QuoteMember_Fragment {
+  companyMemberId String?
+}
+/// @@merge-into AishodanMember
+model AishodanMember_Fragment {
+  companyMemberId String?
+}
+
+/// @@merge-into ShodanCompanyProfile
+model ShodanCompanyProfile_Fragment {
+  /// 正本への参照。読み替え完了後は列ごと廃止
+  companyProfileId String?
+}
+/// @@merge-into AioBrandProfile
+model AioBrandProfile_Fragment {
+  companyProfileId String?
+}
+/// @@merge-into MensetsuCompanyProfile
+model MensetsuCompanyProfile_Fragment {
+  companyProfileId String?
+}
+/// @@merge-into CunningCompanyProfile
+model CunningCompanyProfile_Fragment {
+  companyProfileId String?
+}
+/// @@merge-into QuoteIssuer
+model QuoteIssuer_Fragment {
+  companyProfileId String?
+}
+/// @@merge-into AdImageBrand
+model AdImageBrand_Fragment {
+  companyProfileId String?
+}
+
+// 既存 HrInvitation.token / *Member.inviteToken / MensetsuSession.token / AishodanRoom.token（平文 @unique）には
+// Phase2 で `tokenHash String? @unique` を併設し、Phase4 で平文列を削除する（監査 D-4）。
+// ここでは断片を省略（列名が 4 種類あるため、移植時に各モデルへ 1 行ずつ足す）。
+
+// 既存 HrOrganization の Stripe 列（stripeCustomerId / stripeSubscriptionId / stripePriceId /
+// stripeCurrentPeriodEnd / plan / aiUsageCount / aiUsageResetAt）は Phase3 で読み替え、Phase4 で削除。
+// 既存 UserServiceSubscription.dailyUsage / monthlyUsage / lastUsageReset は UsageLedger に置き換え（Phase3）。
+// 既存 StripeWebhookEvent はそのまま流用（会社課金 webhook も同じ台帳で冪等化する）。
+
+
+// @@new-models
+// =====================================================================
+// 1. 共通テナント（会社・所属・招待・サービス有効化・会社情報）
+// =====================================================================
+
+/// 会社（テナント）。9系統の *Organization / PromaneWorkspace を束ねる親。
+/// 物理削除はしない（deletedAt のみ）。子の課金・台帳・監査は Restrict。
+model Company {
+  id        String   @id @default(cuid())
+  /// URL・ヘッダで使う識別子。9系統の slug は衝突しうるため、移行時は
+  /// `<serviceId>-<旧slug>` を暫定 slug とし、人が後から整える。
+  slug      String   @unique
+  name      String
+  /// active / suspended。削除は deletedAt で表す（status に 'deleted' は持たない。監査 C-3）
+  status    String   @default("active")
+  /// Google Workspace ドメイン制限（例: "example.co.jp"）。
+  /// 設定時は hd クレームが一致する Google アカウントのみ所属可。owner 自身が通らない設定は拒否。
+  allowedGoogleDomains String[] @default([])
+  /// 同時セッション上限（既定 3。監査 B-17: アプリ内ブラウザ・PWA は別端末に数えられるため 2 は厳しすぎる）。null はシステム既定
+  maxSessionsPerUser   Int?
+  /// 機微データを扱う操作に step-up 再認証を要求するか
+  requireStepUp        Boolean  @default(true)
+  /// エージェント設定（approveDrafts / allowSensitive / slackWebhook / sessionPolicy など）
+  agentSettings        Json?
+  /// 論理削除。purge は Phase4 の専用バッチが順序固定で行う
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members        CompanyMember[]
+  invitations    CompanyInvitation[]
+  serviceAccess  CompanyServiceAccess[]
+  profile        CompanyProfile?
+  brandAssets    BrandAsset[]
+  knowledge      KnowledgeSource[]
+  billingAccount BillingAccount?
+  usageLedger    UsageLedger[]
+  usageBalances  UsageBalance[]
+  notifications  Notification[]
+  agentConversations AgentConversation[]
+  agentRuns      AgentRun[]
+  serviceLinks   CompanyServiceLink[]
+  featureFlags   FeatureFlag[]
+  auditChainHead AuditChainHead?
+
+  @@index([status, deletedAt])
+  @@map("core_companies")
+}
+
+/// User と Company の所属。席（seat）課金の単位。
+/// 再招待は「removed 行があれば status=active, removedAt=null に更新」の upsert（監査 B-5）。
+model CompanyMember {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  /// ⚠️ 既存 Sfa/Shodan/Aio/Mensetsu/Quote/Aishodan Member は userId が
+  ///    nullable かつ FK なし。共通層では **必ず FK あり・NOT NULL**。
+  ///    招待中（未承諾）は CompanyInvitation で表し、Member 行は作らない。
+  ///    User 削除は Restrict（owner 不在の会社を作らない。削除 API 側で先に移譲を強制。監査 B-7）
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  /// 会社ロール: owner / admin / member / viewer / billing / support
+  ///   owner   = 課金・削除・オーナー移譲
+  ///   admin   = メンバー・サービス有効化・会社情報
+  ///   member  = 各サービスの通常利用
+  ///   viewer  = 読み取りのみ（エージェントも読み取りツールのみ）
+  ///   billing = 課金画面のみ（経理担当向け）
+  ///   support = 運営のサポートアクセス（owner が時限で付与。removedAt が期限）
+  role      String  @default("member")
+  /// active / suspended / removed。removed は再入社に備え行を残す（席には数えない）
+  status    String  @default("active")
+  /// 表示名（各サービスの Member.name / displayName の集約先）
+  displayName String?
+  /// 席として課金対象か（viewer は 5 席まで無償: §14 D1）
+  isSeat    Boolean @default(true)
+  invitedBy String?
+  joinedAt  DateTime @default(now())
+  removedAt DateTime?
+  removedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  serviceRoles CompanyMemberServiceRole[]
+
+  @@unique([companyId, userId])
+  @@index([userId, status])
+  @@index([companyId, role, status])
+  @@map("core_company_members")
+}
+
+/// サービス内ロール（二層目）。勤怠の hr_admin、HR の MANAGER 等を保持する。
+/// 行が無ければ会社ロールから既定サービスロールへ写像する（§6.1）。
+model CompanyMemberServiceRole {
+  id        String        @id @default(cuid())
+  memberId  String
+  member    CompanyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /// serviceId: マニフェスト（src/services/<id>/manifest.ts）の id
+  serviceId String
+  /// サービス固有の文字列ロール（例: kintai の 'hr_admin'、promane の 'guest'）。原文維持（HR は大文字）
+  role      String
+  /// サービス側の従業員レコード等へのリンク（KintaiEmployee.id / HrEmployee.id）
+  linkedRecordId String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([memberId, serviceId])
+  @@index([serviceId, role])
+  @@map("core_company_member_service_roles")
+}
+
+/// 招待。9系統（HrInvitation / PromaneInvitation / 各 Member.inviteToken）を統合。
+model CompanyInvitation {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email     String
+  role      String  @default("member")
+  /// 招待時に付与するサービスロール {"kintai":"employee", ...}
+  serviceRoles Json?
+  /// ⚠️ 平文トークンは保存しない。SHA-256 ハッシュのみ（32 byte ランダム → base64url）
+  tokenHash String  @unique
+  invitedById String
+  invitedBy   User  @relation("CompanyInvitationInvitedBy", fields: [invitedById], references: [id], onDelete: Restrict)
+  /// pending / accepted / expired / revoked
+  status    String  @default("pending")
+  /// pending の間だけ `<companyId>:<lower(email)>` を入れ、同一メールへの重複招待を防ぐ（監査 B-6）。
+  /// accepted/expired/revoked になったら null に戻す（Postgres の部分 unique index を Prisma で表せないための代替）
+  activeKey String? @unique
+  expiresAt DateTime
+  acceptedAt DateTime?
+  acceptedUserId String?
+  createdAt DateTime @default(now())
+
+  @@index([companyId, status])
+  @@index([email, status])
+  @@map("core_company_invitations")
+}
+
+/// 会社×サービスの有効化・席数。課金の「何を使えるか」の実体。
+/// serviceId はコード側マニフェスト（§15）の id と一致しなければならない（verify-service-manifest-ids.cjs）。
+model CompanyServiceAccess {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  serviceId String
+  /// enabled / disabled / trial / suspended
+  status    String  @default("enabled")
+  /// このサービスの席上限（null = 会社契約の席数に従う）
+  seatLimit Int?
+  /// サービス固有のプラン上書き（手動付与 BILLING_MANUAL_GRANT_EMAILS の移行先）
+  planOverride String?
+  planOverrideReason String?
+  trialEndsAt DateTime?
+  enabledAt DateTime @default(now())
+  disabledAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, serviceId])
+  @@index([serviceId, status])
+  @@map("core_company_service_access")
+}
+
+/// 既存9系統の組織と Company の対応表。1 会社 N 旧組織を許す（監査 B-4）。
+/// 読み替え時は isPrimary の 1 件を使い、残りは「統合待ち」として管理画面に出す。
+model CompanyServiceLink {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  /// 'hr' | 'kintai' | 'promane' | 'sfa' | 'shodan' | 'aio' | 'mensetsu' | 'quote' | 'aishodan'
+  serviceId String
+  /// 旧 *Organization.id / PromaneWorkspace.id
+  legacyOrganizationId String
+  legacySlug String?
+  isPrimary Boolean @default(true)
+  /// 名寄せの根拠（'owner-email' | 'manual' | 'slug' | 'created-by-company'）
+  linkedBy  String  @default("owner-email")
+  createdAt DateTime @default(now())
+
+  @@unique([serviceId, legacyOrganizationId])
+  @@index([companyId, serviceId, isPrimary])
+  @@map("core_company_service_links")
+}
+
+/// 共通の会社情報（1会社1件）。7系統の会社情報の正本。
+model CompanyProfile {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // --- 基本（QuoteIssuer / HrOrganization 由来） ---
+  legalName     String?
+  displayName   String?
+  website       String?
+  postalCode    String?
+  address       String?  @db.Text
+  tel           String?
+  industry      String?
+  companySize   String?
+  fiscalMonth   Int?
+  invoiceNo     String?
+  representativeName String?
+
+  // --- 事業内容（Shodan / Mensetsu / Cunning / Aishodan 由来） ---
+  description    String? @db.Text
+  valueProp      String? @db.Text
+  products       String? @db.Text
+  targetCustomer String? @db.Text
+  pricingNote    String? @db.Text
+  caseStudies    String? @db.Text
+  culture        String? @db.Text
+  idealProfile   String? @db.Text
+
+  // --- ブランド（Aio / AdImage / Tenkai / Copy 由来） ---
+  aliases      Json?
+  competitors  Json?
+  category     String?
+  market       String?
+  tone         String? @db.Text
+  ngWords      String[] @default([])
+  requiredWords String[] @default([])
+
+  // --- 支払条件（QuoteIssuer 由来） ---
+  paymentTerms  String? @db.Text
+  deliveryTerms String? @db.Text
+  notes         String? @db.Text
+
+  /// 各列の出どころ {"description":{"source":"shodan","origin":"scraped"|"human"|"agent","at":"..."}}。
+  /// origin=scraped の列はエージェントへ渡す際 <untrusted> で包む（監査 B-15）
+  fieldSources Json?
+  /// 自社URLの解析結果（Shodan.research の集約。生テキストは KnowledgeSource へ）
+  research     Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("core_company_profiles")
+}
+
+/// ロゴ・角印・ブランド色などの資産。ファイル実体は非公開バケット。
+model BrandAsset {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// logo / seal / color-palette / font / og-image
+  kind      String
+  storagePath String?
+  colors    Json?
+  config    Json?
+  isPrimary Boolean @default(false)
+  /// アップロード検査の結果（マジックバイト MIME・再エンコード済みか）
+  mimeType  String?
+  byteSize  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, kind])
+  @@map("core_brand_assets")
+}
+
+/// 会社ナレッジ（URL・手入力・ファイル）。
+model KnowledgeSource {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// url / manual / file / service-import
+  type      String  @default("url")
+  url       String?
+  title     String?
+  /// type=url の未取得状態を表すため nullable（監査 B-22）
+  rawText   String? @db.Text
+  /// pending / fetched / failed
+  fetchStatus String @default("pending")
+  fetchedAt DateTime?
+  originService String?
+  originRecordId String?
+  /// 利用を許可するサービス（空 = 全サービス）。HR 由来の機微テキストは限定する
+  allowedServices String[] @default([])
+  /// 外部由来テキストである印。エージェントはこの内容を「命令」として扱わない
+  isUntrusted Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chunks KnowledgeChunk[]
+
+  @@index([companyId, type])
+  @@map("core_knowledge_sources")
+}
+
+model KnowledgeChunk {
+  id       String          @id @default(cuid())
+  sourceId String
+  source   KnowledgeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  ord      Int
+  text     String          @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([sourceId, ord])
+  @@map("core_knowledge_chunks")
+}
+
+
+// =====================================================================
+// 2. 課金（会社単位）
+// =====================================================================
+
+/// Stripe 顧客 = 会社。
+/// ⚠️ stripeCustomerId は unique にしない（監査 A-2）: 旧 owner の Customer を複数会社が共有する移行期がある。
+///    webhook の突合は metadata.companyId を主キー、stripeCustomerId は補助。
+model BillingAccount {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  stripeCustomerId String
+  billingEmail String?
+  taxSettings Json?
+  /// 移行元: 'user' (User.stripeCustomerId) | 'hr' (HrOrganization.stripeCustomerId) | 'new'
+  migratedFrom String?
+  migratedFromId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions CompanySubscription[]
+
+  @@index([stripeCustomerId])
+  @@map("billing_accounts")
+}
+
+/// 会社の契約。既存 Subscription(User単位) とは別モデル。移行完了後に旧 Subscription を廃止。
+model CompanySubscription {
+  id               String         @id @default(cuid())
+  billingAccountId String
+  billingAccount   BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Restrict)
+  stripeSubscriptionId String @unique
+  stripePriceId    String?
+  /// 統一プラン ID（'unified-pro' | 'unified-enterprise'）。旧 Price は price-map.ts で読み替え
+  planId           String
+  /// trialing / active / past_due / canceled / unpaid / incomplete
+  status           String
+  /// 契約席数（Stripe の subscription item quantity と同期。§7.5）
+  seats            Int            @default(1)
+  /// Stripe 2025-03-31.basil で Subscription から SubscriptionItem へ移動したため nullable（監査 B-21。リポジトリは apiVersion '2023-10-16' 固定）
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean      @default(false)
+  canceledAt       DateTime?
+  /// 月次クレジット付与量（UsageLedger の grant に使う）
+  monthlyCredits   Int            @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([billingAccountId, status])
+  @@map("billing_company_subscriptions")
+}
+
+/// 全サービス共通の使用量台帳（追記専用）。
+/// 残高 = SUM(amount) WHERE companyId AND period AND meter。負が消費、正が付与。
+/// idempotencyKey の規約（監査 C-5）: `<base>:reserve` / `<base>:consume` / `<base>:release` / `stripe:<eventId>:grant`
+model UsageLedger {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  /// 操作者（cron 等は null）。User 削除時は SetNull（台帳は残す）
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  serviceId String
+  /// 'credit' | 'banner.generate' | 'seo.article' | 'agent.run' ... （マニフェストの usage.meters に列挙）
+  meter     String
+  /// 正=付与（grant/refund/release）、負=消費（consume/reserve）
+  amount    Int
+  /// grant / consume / reserve / release / refund / adjust
+  kind      String
+  reservationId String?
+  idempotencyKey String @unique
+  /// 'YYYY-MM'（JST で確定）
+  period    String
+  refType   String?
+  refId     String?
+  /// 実コスト見積（円の 1/100 単位）
+  costMinor Int?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([companyId, period, meter])
+  @@index([companyId, serviceId, createdAt])
+  @@index([reservationId])
+  @@map("billing_usage_ledger")
+}
+
+/// 会社×期間×meter の残高キャッシュ（正本は UsageLedger。再計算可能）
+model UsageBalance {
+  id        String @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  period    String
+  meter     String
+  balance   Int    @default(0)
+  limit     Int?
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, period, meter])
+  @@map("billing_usage_balances")
+}
+
+
+// =====================================================================
+// 3. 経営エージェント
+// =====================================================================
+
+/// ホームの会話スレッド（1ユーザー×1会社）
+model AgentConversation {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  title     String?
+  /// active / archived
+  status    String  @default("active")
+  lastRunAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  runs AgentRun[]
+
+  @@index([companyId, userId, updatedAt])
+  @@map("agent_conversations")
+}
+
+/// 依頼 1 件（= 1 ターン）。再開可能ジョブ（SeoJob 方式）。
+model AgentRun {
+  id             String            @id @default(cuid())
+  conversationId String
+  conversation   AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  companyId      String
+  company        Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  /// 依頼者。ツールは **この人の権限以下** で実行する（監査 B-8: FK あり）
+  requestedById  String
+  requestedBy    User              @relation("AgentRunRequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
+  /// 依頼者の会社ロール・サービスロールのスナップショット（実行途中で権限が変わっても縮小方向にのみ反映）
+  actorSnapshot  Json
+  request        String            @db.Text
+  /// queued / planning / running / waiting_approval / paused / done / failed / canceled
+  status         String            @default("queued")
+  /// init / intent / plan / execute / summarize / done
+  step           String            @default("init")
+  intent         Json?
+  summary        String?           @db.Text
+  error          String?           @db.Text
+  /// 'budget' | 'timeout' | 'tool' | 'llm' | 'denied' | 'kill_switch' | 'lease_lost'
+  failureCode    String?
+
+  // --- 再開・リース（SeoJob.executionToken / executionExpiresAt と同方式） ---
+  executionToken     String?
+  executionExpiresAt DateTime?
+  /// advance の取得回数（クラッシュ・リース期限切れからの再開回数）。maxAdvanceAttempts を超えたら failed(lease_lost)。
+  /// ステップ単位の再試行は AgentStep.attempts で別に数える（監査 C-2）
+  advanceAttempts    Int       @default(0)
+  maxAdvanceAttempts Int       @default(10)
+  nextRunAt          DateTime?
+  supersededAt       DateTime?
+
+  // --- コスト上限（§8.5） ---
+  creditBudget   Int               @default(50)
+  creditUsed     Int               @default(0)
+  /// ツール呼び出し回数の上限・実績
+  maxToolCalls   Int               @default(30)
+  toolCallCount  Int               @default(0)
+  /// LLM 呼び出し回数の上限・実績（監査 C-1。ツール内部の LLM 呼び出しも gateway 経由なら数える）
+  maxLlmCalls    Int               @default(40)
+  llmCallCount   Int               @default(0)
+  llmCostMinor   Int               @default(0)
+  inputTokens    Int               @default(0)
+  outputTokens   Int               @default(0)
+  /// 1 run の壁時計上限（createdAt 起点、秒）
+  wallClockLimitSec Int            @default(1800)
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  plan      AgentPlan?
+  steps     AgentStep[]
+  toolCalls ToolCall[]
+  approvals ApprovalRequest[]
+  artifacts AgentArtifact[]
+
+  @@index([companyId, status, updatedAt])
+  @@index([status, nextRunAt])
+  @@index([status, executionExpiresAt])
+  @@index([requestedById, createdAt])
+  @@map("agent_runs")
+}
+
+/// 計画（run につき最新 1 件。再計画時は version を上げて上書き、旧版は revisions に残す）
+model AgentPlan {
+  id       String   @id @default(cuid())
+  runId    String   @unique
+  run      AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  version  Int      @default(1)
+  rationale String? @db.Text
+  revisions Json?
+  model     String?
+  promptVersion String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("agent_plans")
+}
+
+/// 計画の 1 手順。dependsOn が空のものは並列実行可。
+/// リスクは 2 軸（監査 A-10）: reversibility × costClass。承認要否はその組合せから決まる（§8.2）。
+model AgentStep {
+  id       String   @id @default(cuid())
+  runId    String
+  run      AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  /// 非正規化（AgentRun.companyId と一致。verify-agent-company-consistency.cjs で検査。監査 C-4）
+  companyId String
+  ord      Int
+  /// ツールレジストリのキー（例 'sfa.listDeals'）
+  toolKey  String
+  /// LLM が決めた入力（zod 検証前の原文）
+  inputDraft Json
+  /// 検証済み入力（これだけを実行に使う）
+  input    Json?
+  dependsOn String[] @default([])
+  /// pending / ready / running / waiting_approval / done / failed / skipped / denied / canceled
+  status   String   @default("pending")
+  /// 取り消し可能性: 'read'（副作用なし）| 'reversible'（自社 DB の下書き・更新。取り消せる）| 'irreversible'（送信・発行・削除・外部公開・課金）
+  reversibility String
+  /// コスト区分: 'none' | 'low'（有料 API 呼び出し見込み 1〜N 回）| 'high'（N 回超、または画像/動画/音声生成）。N はマニフェストで宣言、既定 5
+  costClass String
+  /// 有料 API（LLM・画像・外部有料 API）の呼び出し見込み回数
+  estimatedPaidCalls Int @default(0)
+  /// 上の 2 軸から導出: irreversible または high は常に true。reversible×low は会社設定 approveDrafts に従う
+  requiresApproval Boolean @default(false)
+  outputSummary String? @db.Text
+  error    String?  @db.Text
+  /// ステップの実行試行回数（同一エラー 2 回で failed）
+  attempts Int      @default(0)
+  maxAttempts Int   @default(2)
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  toolCalls ToolCall[]
+  approval  ApprovalRequest?
+
+  @@unique([runId, ord])
+  @@index([runId, status])
+  @@map("agent_steps")
+}
+
+/// ツール呼び出し 1 回（ステップの試行ごとに 1 行）。
+/// ⚠️ 冪等キーは `<runId>:<stepId>` 固定で attempt を含めない（監査 A-9）。再試行でも下流には同じキーを渡す。
+model ToolCall {
+  id       String    @id @default(cuid())
+  runId    String
+  run      AgentRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  stepId   String
+  step     AgentStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  companyId String
+  toolKey  String
+  attempt  Int       @default(1)
+  /// `<runId>:<stepId>`。同一ステップの全試行で同じ値
+  idempotencyKey String
+  input    Json
+  /// 出力（機微データはマスキング済みで保存。原本は各サービスのレコードを参照）
+  output   Json?
+  containsUntrustedText Boolean @default(false)
+  /// ok / error / denied / timeout / skipped_duplicate
+  status   String
+  errorCode String?
+  error    String?   @db.Text
+  durationMs Int?
+  creditCost Int     @default(0)
+  /// 有料 API を実際に呼んだ回数（gateway 経由の LlmCallLog と突合）
+  paidCalls Int      @default(0)
+  backend  String?
+  startedAt  DateTime @default(now())
+  finishedAt DateTime?
+
+  @@unique([stepId, attempt])
+  @@index([idempotencyKey])
+  @@index([runId, startedAt])
+  @@index([companyId, toolKey, startedAt])
+  @@map("agent_tool_calls")
+}
+
+/// 人の承認。irreversible / high コストのステップは必ずここを通る。
+model ApprovalRequest {
+  id       String    @id @default(cuid())
+  runId    String
+  run      AgentRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  stepId   String    @unique
+  step     AgentStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  companyId String
+  /// 承認を求める相手（既定は依頼者。依頼者の権限で足りない場合は admin/owner）。FK あり（監査 B-8）
+  requestedToId String
+  requestedTo   User   @relation("ApprovalRequestedTo", fields: [requestedToId], references: [id], onDelete: Restrict)
+  /// 承認対象の人間向け説明（レジストリのテンプレートから生成。LLM 生成文は使わない）
+  title    String
+  detail   String    @db.Text
+  /// 承認時に実行される入力の確定値（承認後に LLM が入力を変えられない）
+  frozenInput Json
+  /// 見込みコスト（表示用）: 有料 API 回数・クレジット・円
+  estimate Json?
+  /// pending / approved / rejected / expired
+  status   String    @default("pending")
+  decidedById String?
+  decidedAt DateTime?
+  decisionNote String? @db.Text
+  requiresStepUp Boolean @default(false)
+  stepUpVerifiedAt DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([companyId, status, createdAt])
+  @@index([requestedToId, status])
+  @@map("agent_approval_requests")
+}
+
+/// 成果物へのリンク。各サービスが作ったレコードの id を指す（本文は複製しない）。
+model AgentArtifact {
+  id       String   @id @default(cuid())
+  runId    String
+  run      AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  companyId String
+  serviceId String
+  /// 'quote.document' | 'banner.generation' | 'seo.article' | 'shodan.preparation' ...
+  kind     String
+  recordId String
+  title    String?
+  url      String?
+  /// draft / published / sent / deleted（retention purge が deleted に更新）
+  state    String   @default("draft")
+  createdAt DateTime @default(now())
+
+  @@index([runId])
+  @@index([companyId, serviceId, createdAt])
+  @@index([serviceId, recordId])
+  @@map("agent_artifacts")
+}
+
+/// プロンプト版管理（内容は Git 管理。DB は「どの版をいつ有効化したか」のみ）
+model AgentPromptVersion {
+  id        String   @id @default(cuid())
+  key       String
+  version   String
+  sha256    String
+  isActive  Boolean  @default(false)
+  activatedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@unique([key, version])
+  @@map("agent_prompt_versions")
+}
+
+
+// =====================================================================
+// 4. 横断（監査・通知・LLM 利用記録）
+// =====================================================================
+
+/// 全サービス共通の監査ログ。追記専用（UPDATE/DELETE は DB ロールで禁止）。
+/// companyId は FK を張らない（会社が論理削除・purge されても記録を保つ。監査 A-5）。
+/// 連鎖ハッシュは同期では計算しない。日次 cron `audit-verify` がバッチで埋める（監査 B-19）。
+model AuditLog {
+  id        String   @id @default(cuid())
+  companyId String?
+  /// 'user:<id>' | 'agent:<runId>' | 'cron:<path>' | 'admin:<adminUserId>' | 'stripe:<eventId>' | 'guest:<sessionId>'
+  actor     String
+  actorUserId String?
+  onBehalfOf String?
+  serviceId String?
+  /// マニフェストの audit.events に列挙されたイベント名（'company.member.remove' / 'agent.tool.call' ...）
+  action    String
+  targetType String?
+  targetId   String?
+  diff      Json?
+  details   Json?
+  /// /24 に丸めた帯
+  ipPrefix  String?
+  userAgentHash String?
+  sessionId String?
+  sensitive Boolean  @default(false)
+  /// 連鎖ハッシュ（バッチで後埋め。null = 未検証）
+  prevHash  String?
+  hash      String?
+  createdAt DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@index([companyId, action])
+  @@index([actorUserId, createdAt])
+  @@index([targetType, targetId])
+  @@index([sensitive, createdAt])
+  @@map("core_audit_logs")
+}
+
+/// 会社ごとの連鎖ハッシュ先頭（日次バッチが更新。同期ロックは取らない）
+model AuditChainHead {
+  companyId String  @id
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  lastAuditLogId String?
+  hash      String?
+  verifiedAt DateTime?
+  updatedAt DateTime @updatedAt
+
+  @@map("core_audit_chain_heads")
+}
+
+/// アプリ内通知（Slack 運営通知 notifications.ts とは別）。
+model Notification {
+  id        String   @id @default(cuid())
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// マニフェストの notifications.types に列挙
+  type      String
+  title     String
+  body      String?  @db.Text
+  url       String?
+  refType   String?
+  refId     String?
+  readAt    DateTime?
+  delivery  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt, createdAt])
+  @@index([companyId, type, createdAt])
+  @@map("core_notifications")
+}
+
+/// LLM / 有料 API 呼び出し記録（ゲートウェイが必ず 1 行書く）。companyId は FK なし。
+model LlmCallLog {
+  id        String   @id @default(cuid())
+  companyId String?
+  userId    String?
+  serviceId String
+  feature   String
+  provider  String
+  model     String
+  /// text / image / embedding / audio / video / search
+  modality  String   @default("text")
+  inputTokens  Int?
+  outputTokens Int?
+  units     Int?
+  costMinor Int?
+  durationMs Int?
+  /// ok / error / timeout / rate_limited / budget_exceeded
+  status    String
+  errorCode String?
+  refType   String?
+  refId     String?
+  /// ToolCall.id（ツール内部からの呼び出しを run に紐付ける）
+  toolCallId String?
+  promptKey String?
+  promptVersion String?
+  /// 使用した API キーの識別子（'agent' | 'banner' | ...。ローテーション確認用。値は保存しない）
+  keyLabel  String?
+  createdAt DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@index([serviceId, feature, createdAt])
+  @@index([provider, model, createdAt])
+  @@index([toolCallId])
+  @@map("core_llm_call_logs")
+}
+
+
+// =====================================================================
+// 5. セキュリティ（端末・パスキー・再認証・セキュリティイベント・レート制限・フラグ）
+// =====================================================================
+
+/// 端末。同一ユーザーの Session を束ねる。同時ログイン上限は「端末数」で数える。
+model SessionDevice {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 端末識別 Cookie（httpOnly, 1 年）の SHA-256
+  deviceTokenHash String @unique
+  /// 'desktop' | 'mobile' | 'tablet' | 'unknown'（UA から推定。同一 kind の置換を優先。監査 B-17）
+  kind      String   @default("unknown")
+  label     String?
+  userAgentHash String?
+  firstIpPrefix String?
+  lastIpPrefix  String?
+  lastGeoCountry String?
+  lastSeenAt DateTime @default(now())
+  trustedAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  sessions Session[]
+
+  @@index([userId, revokedAt, lastSeenAt])
+  @@map("sec_session_devices")
+}
+
+/// パスキー（WebAuthn）。step-up 再認証の本線（監査 A-1: Google は prompt=login / max_age をサポートしない）。
+model WebAuthnCredential {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// base64url の credential id
+  credentialId String @unique
+  /// COSE 公開鍵（base64url）
+  publicKey String   @db.Text
+  counter   BigInt   @default(0)
+  /// 'platform' | 'cross-platform'
+  deviceType String?
+  backedUp  Boolean  @default(false)
+  transports String[] @default([])
+  /// 登録時の AAGUID（任意）
+  aaguid    String?
+  label     String?
+  lastUsedAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, revokedAt])
+  @@map("sec_webauthn_credentials")
+}
+
+/// step-up 再認証の要求と結果。method=passkey が本線、google は補助（新規 code 交換＋sub 一致までを保証）。
+model ReauthChallenge {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String
+  /// 'billing.change' | 'member.role.change' | 'export' | 'agent.grant' | 'approval.irreversible' | 'company.delete' | 'domain.restrict' | 'support.grant'
+  purpose   String
+  refType   String?
+  refId     String?
+  /// 'passkey' | 'google'
+  method    String
+  /// WebAuthn challenge または OAuth state nonce の SHA-256
+  nonceHash String   @unique
+  /// pending / verified / failed / expired
+  status    String   @default("pending")
+  /// method=google のとき: id_token の auth_time（存在すれば保存。要実機確認。検証条件には使わない）
+  providerAuthTime DateTime?
+  /// method=passkey のとき: userVerification が 'required' を満たしたか
+  userVerified Boolean?
+  verifiedAt DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId, status, createdAt])
+  @@map("sec_reauth_challenges")
+}
+
+/// セキュリティイベント（検知・対応の記録）。companyId は FK なし。
+model SecurityEvent {
+  id        String   @id @default(cuid())
+  companyId String?
+  userId    String?
+  /// 'session.limit_exceeded' | 'session.new_device' | 'share.geo_velocity' | 'share.concurrent' | 'share.ip_churn'
+  /// | 'auth.hd_mismatch' | 'auth.email_unverified' | 'auth.sub_changed' | 'rate.limited' | 'agent.budget_exceeded'
+  /// | 'agent.injection_suspected' | 'ssrf.blocked' | 'upload.rejected' | 'kill_switch.on' | 'audit.chain_broken' ...
+  type      String
+  /// info / warning / critical
+  severity  String   @default("warning")
+  evidence  Json?
+  /// open / acknowledged / resolved / false_positive
+  status    String   @default("open")
+  /// 'none' | 'notified' | 'reauth_required' | 'session_revoked' | 'member_suspended' | 'company_suspended'
+  autoAction String  @default("none")
+  /// false_positive 時に検知感度を下げる期限（監査 §11.4 救済）
+  suppressUntil DateTime?
+  resolvedBy String?
+  resolvedAt DateTime?
+  resolutionNote String? @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([companyId, status, createdAt])
+  @@index([userId, type, createdAt])
+  @@map("sec_security_events")
+}
+
+/// ルート段のレート制限カウンタ（Postgres 実装。Edge 段は Vercel WAF / Upstash など外部、監査 A-11）。
+/// 更新は raw SQL `UPDATE ... RETURNING` で行うため @updatedAt は使わない（監査 B-22）。
+model RateLimitBucket {
+  /// 'user:<id>:<route>' | 'company:<id>:<route>' | 'ip:<prefix>:<route>'
+  key       String   @id
+  windowStart DateTime
+  count     Int      @default(0)
+  updatedAt DateTime @default(now())
+
+  @@index([windowStart])
+  @@map("sec_rate_limit_buckets")
+}
+
+/// 機能フラグ・緊急停止スイッチ。
+/// companyId は NOT NULL。全体既定は番兵値 '*'（NULL を含む unique は一意にならないため。監査 A-4）。
+/// 会社行は Company への FK（'*' 行は FK を張れないので relation は optional の別列で表す）。
+model FeatureFlag {
+  id        String   @id @default(cuid())
+  /// 'agent.enabled' | 'agent.kill_switch' | 'agent.tools.<key>.enabled' | 'core.unified_access' | 'billing.company_mode' | '<serviceId>.enabled' ...
+  key       String
+  /// '*' = 全体既定、それ以外は Company.id
+  scope     String   @default("*")
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([key, scope])
+  @@index([companyId])
+  @@map("core_feature_flags")
+}
