@@ -70,6 +70,7 @@ asklink との違い: asklink は「リンクと画像を作って、他社の�
 | 頻度 | 閉じたら何日出さないか（0〜365）/ 同じ訪問では1回まで |
 
 - 1ページに出すポップアップは**1つだけ**。条件に合う公開中の案のうち、並び順が先のものを使う
+- ページを読み直さずに URL だけが変わるサイト（Studio・Wix・Next.js など）では、URL の変化（1秒ごと＋popstate）を見て、表示中でなければ判定し直す。仕掛け中のきっかけは取り消す。`history` は書き換えない
 - 頻度の記録は訪問者のブラウザの `localStorage` / `sessionStorage`（Cookie は使わない）
 
 ### 3-4. 埋め込みタグ
@@ -279,3 +280,32 @@ model PopupStat {
 
 - 本番DBへの3テーブルの反映（`doya-db-push`）と、実サイトでの設置・表示・計測
 - 実際のサイトでの提案生成（Gemini / Claude のテキスト生成を使う。画像生成は使わない）
+
+## 13. 公開（UNLISTED → active）に向けて（2026-10-18 時点）
+
+### 済み
+
+- 本番DBに `popup_site` / `popup` / `popup_stat` を作成（2026-10-17。`IF NOT EXISTS` 付きの手動DDL、既存テーブルは無変更）
+- `main` へ反映済み（`dc089b44`）。本番で確認した項目（2026-10-18）:
+  - `/popup/embed.js` がリポジトリと同一で配信される（`application/javascript`）
+  - `/popup`（LP）が 200・`noindex`、`/popup/pricing` が 200、`/og/popup` が 200
+  - ログインが要るAPI（`/api/popup/sites`）は 401
+  - 公開API: 不正なキー・未登録のキーは 404、壊れた本文は 400、未登録の案への計測は 404、存在しない画像は 404
+  - プリフライトは呼び出し元の Origin だけを返す（`*` ではない）
+- ページ内遷移（SPA）での再判定を追加。模擬サーバ `scripts/popup-embed-harness.cjs` で確認: `/home` では出ない / `/target` に移ってすぐ離れると取り消される / `/target` に留まると出て表示が1回数えられる
+- `reference/10-service-status.md` に開発中として登録
+
+### 残り（ユーザーの確認が要るもの）
+
+1. **本番での一連の確認**: 自社サイトのURLで提案を1回作る（テキストAIを4〜8回呼ぶ。既定モデルは Claude Haiku 4.5、`SEO_CLAUDE_MODEL` で変わる）→ 案を公開 → 自社サイトに設置タグを貼る → 表示・クリックが数えられ、登録外のドメインでは出ないことを確かめる
+2. **公開の切り替え**（asklink と同じ手順）:
+   - `services.ts` の `UNLISTED_SERVICE_IDS` から `popup` を外し、`status: 'active'`（`badge: 'BETA'` / `isNew: true` は asklink と同じ扱い）
+   - `src/app/popup/layout.tsx` と `pricing/layout.tsx` の `noindex` を外す
+   - `src/lib/safe-signin-callback.ts` の `PUBLIC_INTRO_SERVICES` と `src/lib/seo.ts` の `SERVICE_ALIASES` に追加
+   - 公開サービス数の固定値（`scripts/security-regression/verify-google-analytics-services.cjs`）を 18→19
+   - トップ・sitemap・llms.txt・料金ページ・ツール切替は services.ts から派生するので個別の追記は無し
+
+### 確認の道具
+
+- `node scripts/popup-embed-harness.cjs` → `http://localhost:4817/`。`/_mode?m=ask|pages|bar|spa` で案を切り替え、`/_log` で送られた計測を見る
+- ⚠️ ブラウザのペインが非表示だと、`scrollTo` でスクロールイベントが配られずスクロール型が出ないことがある（実機の操作では起きない）。`window.dispatchEvent(new Event('scroll'))` で切り分ける

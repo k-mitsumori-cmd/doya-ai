@@ -151,6 +151,12 @@ test('embed.js は利用者の文字をHTMLとして解釈させない', () => {
   assert.ok(!/innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(|new Function/.test(code))
 })
 
+test('embed.js はサイトの history を書き換えない（ルーターと衝突させない）', () => {
+  const src = readFileSync(join(process.cwd(), 'public/popup/embed.js'), 'utf8')
+  assert.ok(!/history\.(pushState|replaceState)\s*=/.test(src))
+  assert.ok(/function watchUrl\(/.test(src), 'ページ内遷移の再判定が無い')
+})
+
 test('計測の target は main と link:0〜2 だけ', () => {
   assert.equal(sanitizeTarget(undefined), 'main')
   assert.equal(sanitizeTarget('link:2'), 'link:2')
