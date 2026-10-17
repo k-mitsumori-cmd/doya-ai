@@ -1,45 +1,21 @@
 /*
- * ドヤポップアップ: ds トークン（統合仕様 ADDON-SERVICES-2026-10-18 R-3 / §11）
- * 値と名前は src/app/ui-renewal/renewal.module.css の :root（クリア）と同じ。
- * ⚠️ .popup-ds の中だけに効かせる（他のサービスの見た目を変えない）。
+ * ドヤポップアップ: 画面の見た目（.pd-*）（統合仕様 ADDON-SERVICES-2026-10-18 R-3 / §11）
+ * ⚠️ トークン（--blue など）は段0の src/components/ds/tokens.module.css（.ds）が正本。ここでは定義しない。
+ *    layout.tsx が .ds を当てる（共通シェルが ON のときは AppShell が当てる）。
+ * ⚠️ ここで定義するのは、段0のトークンに無いポップアップの画面だけで使う値（エラーの色・骨組み・グラフ・面）。
+ *    段0に同じ用途のトークンが入ったら、そちらに置き換えて消す。
  * ⚠️ src/app/popup に置かない（D-2: src/app/popup に色の直書きを残さない）。
- * ⚠️ 段0（src/components/ds/tokens.css）が main に入ったら、このファイルの変数定義を消して
- *    ds の tokens.css を読むだけにする（クラス名 .pd-* は ds の部品に置き換える）。
+ * ⚠️ .popup-ds の中だけに効かせる（他のサービスの見た目を変えない）。
  */
 .popup-ds {
   display: contents;
-  --blue: #0066ff;
-  --blue-deep: #0047d6;
-  --blue-soft: #e8f0ff;
-  --blue-line: #d7e5ff;
-  --navy: #0a0f3c;
-  --ink: #101633;
-  --sub: #4a5375;
-  --muted: #7a83a3;
-  --line: #e3e8f4;
-  --line-strong: #c6cde0;
-  --bg: #f4f7fd;
-  --paper: #ffffff;
+  --err-bg: #fff0f3;
+  --err-ink: #b4123e;
   --surface-2: #f8faff;
   --track: #eef1f8;
   --bar: #dbe7ff;
-  --pink: #ff1e72;
-  --yellow: #ffd400;
-  --cyan: #00e0ff;
-  --ok-bg: #e6f8ef;
-  --ok-ink: #0b8a4d;
-  --note-bg: #fff7d6;
-  --note-ink: #7a5b00;
-  --err-bg: #fff0f3;
-  --err-ink: #b4123e;
   --skel-a: #eef2fa;
   --skel-b: #f9fbff;
-  --r: 22px;
-  --r-sm: 14px;
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
-  --shadow: 0 1px 2px rgba(16, 22, 51, 0.04), 0 8px 28px -12px rgba(16, 22, 51, 0.14);
-  --shadow-lg: 0 2px 6px rgba(16, 22, 51, 0.05), 0 30px 60px -24px rgba(10, 15, 60, 0.28);
 }
 
 /* ---------- 文字（§11） ---------- */

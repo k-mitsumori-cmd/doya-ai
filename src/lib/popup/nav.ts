@@ -1,30 +1,26 @@
 // ============================================
-// ドヤポップアップ: サイドバーの項目（統合仕様 R-1）
+// ドヤポップアップ: ツール内ナビの項目（統合仕様 R-1）
 // ============================================
-// 項目はデータで持ち、暫定の PopupSidebar はこれを描くだけにする。
-// 段0（AppShell）が入ったら manifest.ui.nav[] にそのまま移す。
-// icon は名前で持つ（描画側で lucide のアイコンに対応させる。マニフェストに関数を持ち込まない）。
+// 項目はデータで持つ。共通シェル（ui.shell.popup が ON）では ToolFrame の nav にそのまま渡し、
+// OFF の間の暫定サイドバー（PopupSidebar）もこれを描くだけにする。
+// 形は段0の ShellNavItem（src/components/shell/nav.ts）。将来の manifest.ui.nav[] と同じ。
+import { CreditCard, PanelTopOpen } from 'lucide-react'
+import type { ShellNavItem } from '@/components/shell/nav'
 
-export type PopupNavIcon = 'popup' | 'pricing'
-
-export interface PopupNavItem {
-  label: string
-  href: string
-  icon: PopupNavIcon
-  /** この項目を見せる最低限のサービス内ロール（無ければ全員） */
-  minServiceRole?: 'member' | 'manager' | 'admin' | 'owner'
-  /** この href の下の画面でも選択中にする（サイト詳細・編集画面など） */
+export interface PopupNavItem extends ShellNavItem {
+  /** 暫定サイドバーで、この href の下の画面でも選択中にする（サイト詳細・編集画面など） */
   activePrefixes?: string[]
 }
 
 export const POPUP_NAV: PopupNavItem[] = [
-  { label: 'サイトとポップアップ', href: '/popup', icon: 'popup', activePrefixes: ['/popup/sites', '/popup/edit'] },
-  { label: '料金プラン', href: '/popup/pricing', icon: 'pricing' },
+  // ⚠️ exact: '/popup/pricing' でトップまで選択中にならないように
+  { label: 'サイトとポップアップ', href: '/popup', icon: PanelTopOpen, exact: true, activePrefixes: ['/popup/sites', '/popup/edit'] },
+  { label: '料金プラン', href: '/popup/pricing', icon: CreditCard },
 ]
 
-/** その項目が選択中か（サイドバーの表示用） */
+/** 暫定サイドバーでの選択中の判定（共通シェルでは ToolFrame の isNavActive を使う） */
 export function isPopupNavActive(item: PopupNavItem, pathname: string): boolean {
   if (pathname === item.href) return true
-  if (item.href !== '/popup' && pathname.startsWith(item.href + '/')) return true
+  if (!item.exact && pathname.startsWith(item.href + '/')) return true
   return (item.activePrefixes || []).some((p) => pathname === p || pathname.startsWith(p + '/'))
 }

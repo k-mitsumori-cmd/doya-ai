@@ -199,3 +199,12 @@ test('D-2: src/app/popup に色の直書きが無い', () => {
   )
   assert.deepEqual(hits, [])
 })
+
+test('D-3: 共通シェルにはフラグ ui.shell.popup が ON のときだけ載せる', () => {
+  const layout = readFileSync(join(process.cwd(), 'src/app/popup/layout.tsx'), 'utf8')
+  assert.ok(/isShellEnabled\('popup'\)/.test(layout), 'layout.tsx がフラグを見ていない')
+  assert.ok(/<PopupShellFrame/.test(layout))
+  assert.ok(/<PopupAppLayout>/.test(layout), 'フラグ OFF の従来の枠が無い')
+  const frame = readFileSync(join(process.cwd(), 'src/components/popup/PopupShellFrame.tsx'), 'utf8')
+  assert.ok(/<AppShell/.test(frame) && /<ToolFrame[^>]*serviceId="popup"[^>]*nav=\{POPUP_NAV\}/.test(frame), 'ToolFrame に nav.ts を渡していない')
+})

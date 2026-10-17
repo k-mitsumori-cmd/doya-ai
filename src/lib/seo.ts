@@ -72,6 +72,7 @@ export const SERVICE_ALIASES: Record<string, string[]> = {
     'ドヤ広告バナー', 'ドヤ広告バナーAI', 'ドヤ広告バナーエーアイ', 'Doya Ad Banner AI',
   ],
   asklink: ['ドヤ質問リンク', 'ドヤAI 質問リンク', 'ドヤ 質問リンク', 'Doya Ask Link'],
+  popup: ['ドヤ ポップアップ', 'ドヤAI ポップアップ', 'Doya Popup'],
 }
 
 export function getServiceAliases(serviceId: string): string[] {

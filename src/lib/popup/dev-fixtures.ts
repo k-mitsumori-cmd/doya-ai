@@ -36,7 +36,7 @@ function popup(id: string, kind: PopupDto['kind'], status: PopupDto['status'], c
     trigger: sanitizeTrigger({ type: kind === 'ask' ? 'scroll' : kind === 'cta' ? 'exit' : 'delay', scrollPct: 50, delaySec: 15 }),
     targeting: sanitizeTargeting({}),
     frequency: sanitizeFrequency({}),
-    reason: 'ページを読み進めた訪問者は関心が高く、疑問も出てきています。その場でサイトのことをChatGPTに相談できる入口を出します。',
+    reason: 'ページを半分まで読んだ訪問者に出します。サイトのことを、その場でChatGPTに相談できるボタンです。',
     issues: [],
     totals: { impressions: 1240, clicks: 93, closes: 310, ctr: 7.5 },
     updatedAt: '2026-10-18T03:00:00.000Z',

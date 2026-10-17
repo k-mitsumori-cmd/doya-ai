@@ -58,7 +58,7 @@
 | ドヤ商談準備 | `/shodan` | active | ✅ | ✅ 9頁 | ✅ 9件 | ✅ 4モデル | ✅ 統一プラン | ✅ |
 | ~~ドヤ広告バナーAI~~ | ~~`/adbanner`~~ | **廃止** | — | — | — | — | — | — |
 | ドヤ広告画像AI | `/adimage` | active | ✅ | ✅ | ✅ | ✅ | ✅ 統一プラン | ✅ |
-| ドヤポップアップ | `/popup` | coming_soon（UNLISTED・BETA） | ✅ | ✅ 4頁 | ✅ 9件（公開3件） | ✅ 3モデル | ✅ 統一プラン | ✅ |
+| ドヤポップアップ | `/popup` | active（BETA） | ✅ | ✅ 4頁 | ✅ 9件（公開3件） | ✅ 3モデル | ✅ 統一プラン | ✅ |
 | 旧スライド | `/slide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | 旧SlashSlide | `/slashslide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | ドヤHR | `/hr` | active | ✅ | ✅ 14頁 | ✅ 30件 | ✅ 10モデル | ✅ 統一プラン | ❌ |
@@ -345,6 +345,7 @@ grep "^model " prisma/schema.prisma
 | 2026-06-02 | ドヤスライドを active 化（coming_soon→active、badge 開発中→NEW）。ドヤカンニングは coming_soon のまま |
 | 2026-06-12 | ドヤ営業管理(sfa)・ドヤカンニング(cunning)を active 化。ドヤスライドのプロンプトを「きちんとした企業資料」設計に全面改修（LayerX/スライドランド調査反映・デッキ内配色統一・ページ番号描画・スタイルプレビュー v4-document 焼き直し） |
 | 2026-10-17 | ドヤポップアップ (`/popup`) を開発中サービスとして追加（UNLISTED・coming_soon・BETA・noindex）。URLから3案を提案し、設置タグで配信・日別計測。本番DBは手動DDLで popup_site / popup / popup_stat を作成。仕様は popup.md |
+| 2026-10-18 | ドヤポップアップ (`/popup`) を公開（UNLISTED から外し active・BETA、LP と料金ページの noindex を解除、公開サービス数 18→19）。本番DBに `popup_site.companyProfileId` を追加 |
 
 ---
 

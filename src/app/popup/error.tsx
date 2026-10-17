@@ -7,7 +7,7 @@ import { ErrorState } from '@/components/popup/ui'
 export default function PopupError({ reset }: { error: Error; reset: () => void }) {
   return (
     <div className="pd-page mx-auto max-w-3xl px-4 py-12 md:px-8">
-      <ErrorState message="通信がうまくいかなかったか、一時的に混み合っています。少し待ってからもう一度お試しください。" onRetry={reset} />
+      <ErrorState message="少し待ってから、もう一度お試しください。続くときは、ページを開き直してください。" onRetry={reset} />
     </div>
   )
 }
