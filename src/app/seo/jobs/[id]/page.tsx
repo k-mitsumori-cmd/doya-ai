@@ -325,6 +325,7 @@ export default function SeoJobPage() {
 
   // ポーリング中かどうかのref（再レンダリングを避けるため）
   const isPollingRef = useRef(false)
+  const readStoppedRef = useRef(false)
   const jobRef = useRef<SeoJob | null>(null)
 
   // jobが更新されたらrefも更新
@@ -412,7 +413,10 @@ export default function SeoJobPage() {
     if (!showLoading && isPollingRef.current) return
     isPollingRef.current = true
 
-    if (showLoading) setLoading(true)
+    if (showLoading) {
+      setLoading(true)
+      readStoppedRef.current = false
+    }
     setLoadError(null)
     let t: ReturnType<typeof setTimeout> | undefined
     try {
@@ -425,7 +429,11 @@ export default function SeoJobPage() {
       })
       const json = await res.json()
       if (!res.ok || json?.success === false) {
-        if ([401, 403, 404].includes(res.status)) setJob(null)
+        if ([401, 403, 404].includes(res.status)) {
+          setJob(null)
+          // 権限なし・存在しないジョブは待っても変わらないため、自動の再取得を止める（再読み込みボタンで再開）
+          readStoppedRef.current = true
+        }
         // 404は「ジョブが存在しない」だけでなく「所有者チェックNG」でも返す（情報漏洩防止）
         // そのためUI側では分かりやすいガイドを出す
         const raw = String(json?.error || '').trim()
@@ -613,6 +621,7 @@ export default function SeoJobPage() {
     const t = setInterval(() => {
       const j = jobRef.current
       if (j && (j.supersededAt || j.status === 'done' || j.status === 'error' || j.status === 'cancelled')) return
+      if (readStoppedRef.current) return
       load({ showLoading: false })
     }, 4000)
     return () => clearInterval(t)

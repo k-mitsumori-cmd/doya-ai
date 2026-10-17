@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server'
 import { prisma, withRetry } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
 import { generateUnsubscribeToken } from '@/lib/drip-tokens'
+import { createClickLinkId } from '@/lib/drip-click-link'
 import crypto from 'crypto'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 
 // Vercel Cron認証（任意）
 const CRON_SECRET = process.env.CRON_SECRET
@@ -420,7 +422,8 @@ function wrapLinksWithTracking(html: string, trackingId: string, baseUrl: string
     (_, url) => {
       // 配信停止リンクや自サイトのトラッキングURLはスキップ
       if (url.includes('/api/t/') || url.includes('/unsubscribe')) return `href="${url}"`
-      const linkId = Buffer.from(url).toString('base64url')
+      // 署名付きの linkId にする。署名が無いと /api/t/click が任意のサイトへの転送に使われてしまう。
+      const linkId = createClickLinkId(trackingId, url)
       return `href="${baseUrl}/api/t/click/${trackingId}/${linkId}"`
     }
   )

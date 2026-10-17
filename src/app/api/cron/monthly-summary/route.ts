@@ -4,6 +4,7 @@ import { withRetry } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 
 export async function GET(request: Request) {
   // ⚠️ CRON_SECRET が未設定だとテンプレートが "Bearer undefined" になり、

@@ -62,8 +62,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'メールアドレスの形式が正しくありません' }, { status: 400 })
   }
   // ⚠️ 自分より上の権限は与えられない（権限の昇格を防ぐ）
-  if (ROLE_HIERARCHY[role] > ROLE_HIERARCHY[c.role]) {
-    return NextResponse.json({ error: '自分より上の権限は付与できません' }, { status: 403 })
+  if (ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[c.role]) {
+    return NextResponse.json({ error: '自分と同じか上の権限は付与できません' }, { status: 403 })
   }
   // owner は組織にひとりだけ。招待では付与しない
   if (role === 'owner') {
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       const actor = await tx.$queryRaw<{ role: QuoteRole }[]>`SELECT role FROM quote_members
         WHERE "organizationId" = ${c.organizationId} AND "userId" = ${c.userId}
         AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
-      if (!actor.length || ROLE_HIERARCHY[role] > ROLE_HIERARCHY[actor[0].role]) return { kind: 'forbidden' as const }
+      if (!actor.length || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actor[0].role]) return { kind: 'forbidden' as const }
       const cutoff = new Date(Date.now() - INVITE_TTL_MS)
       const duplicate = await tx.quoteMember.findFirst({
         where: { organizationId: c.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: cutoff } }] },
