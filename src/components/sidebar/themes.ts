@@ -403,3 +403,20 @@ export const mensetsuTheme: SidebarTheme = {
   aiBubbleBg: 'bg-blue-700',
   zapColor: 'text-sky-300 fill-sky-300',
 }
+
+/** ドヤ展示会 — バイオレット（#7f19e6。プロトタイプの doya-600〜900 と揃える） */
+export const tenjikaiTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-[#6a12c4] via-[#550e9e] to-[#2a0752]',
+  navText: 'text-violet-100/75',
+  navTextIcon: 'text-violet-200/75',
+  sectionText: 'text-violet-200/55',
+  toggleText: 'text-[#6a12c4]',
+  toggleHover: 'hover:bg-violet-50',
+  brandingText: 'text-violet-100/35',
+  profileBg: 'bg-[#2a0752]/40',
+  avatarBg: 'bg-[#7f19e6]',
+  loginText: 'text-[#6a12c4]',
+  loginHover: 'hover:bg-violet-50',
+  aiBubbleBg: 'bg-[#7f19e6]',
+  zapColor: 'text-amber-300 fill-amber-300',
+}

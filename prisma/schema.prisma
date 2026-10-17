@@ -154,6 +154,9 @@ model User {
   updatedAt           DateTime             @updatedAt
   serviceFeedback     ServiceFeedback[]
   feedbackPromptState FeedbackPromptState?
+
+  // ドヤ展示会（開発中）
+  tenjikaiProjects TenjikaiProject[]
 }
 
 // ============================================
@@ -4700,4 +4703,238 @@ model PopupStat {
 
   @@id([popupId, day, target])
   @@map("popup_stat")
+}
+
+// ============================================================
+// ドヤ展示会（tenjikai）— 試作: ~/Code/sandbox/doya-tenjikai
+// ------------------------------------------------------------
+// URLと出展条件から、ブース設営案・制作物・ノベルティ・予算・業者選定・締切を一括で用意する。
+// ⚠️ 開発中（coming_soon）。画面はまだDBを使っていない。
+// ⚠️ Vercel ビルドは db push しない。本番反映は doya-db-push スキルの手順で、承認を得てから行う。
+// ⚠️ userId でスコープする（ログイン必須）。他人のプロジェクトは findFirst({ id, userId }) で弾く。
+// ⚠️ TenjikaiGenerationJob は従量課金APIの実行ログ。承認した見込み額と結果を必ず残す。
+// ============================================================
+model TenjikaiVenue {
+  id           String            @id @default(cuid())
+  name         String
+  komaSizeM    Float
+  komaPriceYen Int
+  maxHeightM   Float
+  rules        Json?
+  projects     TenjikaiProject[]
+
+  @@map("tenjikai_venue")
+}
+
+model TenjikaiProject {
+  id             String                  @id @default(cuid())
+  userId         String
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venueId        String?
+  venue          TenjikaiVenue?          @relation(fields: [venueId], references: [id])
+  name           String
+  serviceUrl     String
+  eventName      String
+  eventStart     DateTime
+  eventDays      Int                     @default(3)
+  komaCols       Int
+  komaRows       Int
+  boothWidthM    Float
+  boothDepthM    Float
+  boothPosition  String // inline | corner | peninsula | island
+  budgetYen      Int
+  goal           String // lead | brand | demo
+  staffCount     Int                     @default(4)
+  status         String                  @default("draft") // draft | planning | ordering | ready | done
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  analysis       TenjikaiSiteAnalysis?
+  boothPlans     TenjikaiBoothPlan[]
+  creatives      TenjikaiCreative[]
+  novelties      TenjikaiNovelty[]
+  budgetLines    TenjikaiBudgetLine[]
+  vendorRequests TenjikaiVendorRequest[]
+  documents      TenjikaiDocument[]
+  tasks          TenjikaiTask[]
+  generationJobs TenjikaiGenerationJob[]
+
+  @@index([userId, createdAt])
+  @@map("tenjikai_project")
+}
+
+model TenjikaiSiteAnalysis {
+  id          String          @id @default(cuid())
+  projectId   String          @unique
+  project     TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  brand       String
+  category    String
+  headline    String
+  subline     String
+  valueProps  Json
+  targets     Json
+  brandColors Json
+  tone        String
+  logoUrl     String?
+  createdAt   DateTime        @default(now())
+
+  @@map("tenjikai_site_analysis")
+}
+
+model TenjikaiBoothPlan {
+  id          String                 @id @default(cuid())
+  projectId   String
+  project     TenjikaiProject        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  variant     String // A | B | C
+  version     Int                    @default(1)
+  name        String
+  concept     String
+  flow        String
+  estimateYen Int
+  selected    Boolean                @default(false)
+  renderUrls  String[] // 画像生成した完成予想図
+  elements    TenjikaiBoothElement[]
+  createdAt   DateTime               @default(now())
+
+  @@index([projectId, variant])
+  @@map("tenjikai_booth_plan")
+}
+
+model TenjikaiBoothElement {
+  id      String            @id @default(cuid())
+  planId  String
+  plan    TenjikaiBoothPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  kind    String // wall | monitor | counter | table | demo | rollup | storage | sign
+  label   String
+  x       Float
+  y       Float
+  z       Float             @default(0)
+  w       Float
+  d       Float
+  h       Float
+  costYen Int
+
+  @@map("tenjikai_booth_element")
+}
+
+model TenjikaiCreative {
+  id               String          @id @default(cuid())
+  projectId        String
+  project          TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind             String // backwall | rollup | flyer | clearfile | card | loop
+  widthMm          Int
+  heightMm         Int
+  qty              Int
+  unitYen          Int
+  copy             String
+  purpose          String
+  imageUrls        String[]
+  recommendedPrint String? // raksul | printpac | graphic
+  status           String          @default("draft") // draft | approved | generated | final
+  version          Int             @default(1)
+  createdAt        DateTime        @default(now())
+
+  @@map("tenjikai_creative")
+}
+
+model TenjikaiNovelty {
+  id        String          @id @default(cuid())
+  projectId String
+  project   TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  tier      String
+  unitYen   Int
+  quantity  Int
+  leadDays  Int
+  reason    String
+  selected  Boolean         @default(true)
+
+  @@map("tenjikai_novelty")
+}
+
+model TenjikaiBudgetLine {
+  id        String          @id @default(cuid())
+  projectId String
+  project   TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category  String // space | build | electric | print | novelty | staff | logistics
+  label     String
+  amountYen Int
+  source    String          @default("ai") // ai | manual | quote
+
+  @@map("tenjikai_budget_line")
+}
+
+model TenjikaiVendor {
+  id           String                  @id @default(cuid())
+  name         String
+  category     String // booth | print | novelty | staff
+  area         String
+  url          String?
+  minBudgetYen Int?
+  leadDays     Int?
+  isPartner    Boolean                 @default(false) // 送客計測の対象
+  requests     TenjikaiVendorRequest[]
+
+  @@map("tenjikai_vendor")
+}
+
+model TenjikaiVendorRequest {
+  id         String          @id @default(cuid())
+  projectId  String
+  project    TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  vendorId   String
+  vendor     TenjikaiVendor  @relation(fields: [vendorId], references: [id])
+  status     String          @default("draft") // draft | sent | quoted | selected | declined
+  specPdfUrl String?
+  quotedYen  Int?
+  createdAt  DateTime        @default(now())
+
+  @@map("tenjikai_vendor_request")
+}
+
+model TenjikaiDocument {
+  id        String          @id @default(cuid())
+  projectId String
+  project   TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind      String // rules | manual | application | quote | invoice | design | other
+  title     String
+  fileUrl   String
+  sizeBytes Int?
+  dueAt     DateTime?
+  createdAt DateTime        @default(now())
+  tasks     TenjikaiTask[]
+
+  @@map("tenjikai_document")
+}
+
+model TenjikaiTask {
+  id         String            @id @default(cuid())
+  projectId  String
+  project    TenjikaiProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  documentId String?
+  document   TenjikaiDocument? @relation(fields: [documentId], references: [id])
+  title      String
+  owner      String
+  daysBefore Int
+  dueAt      DateTime
+  done       Boolean           @default(false)
+
+  @@index([projectId, dueAt])
+  @@map("tenjikai_task")
+}
+
+// 従量課金APIの実行ログ。承認した見込み額と実行結果を必ず残す
+model TenjikaiGenerationJob {
+  id               String          @id @default(cuid())
+  projectId        String
+  project          TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind             String // creative_image | booth_render
+  model            String
+  size             String
+  count            Int
+  estimatedCostYen Int
+  approvedAt       DateTime
+  status           String          @default("pending") // pending | done | failed
+  createdAt        DateTime        @default(now())
+
+  @@map("tenjikai_generation_job")
 }

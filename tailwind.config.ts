@@ -28,6 +28,9 @@ const config: Config = {
           purple: '#8B5CF6',
           pink: '#EC4899',
         },
+        // ドヤ展示会（/tenjikai）専用。他サービスでは使わない
+        doya: { DEFAULT: '#7f19e6', 50: '#f6effe', 100: '#ecdcfd', 200: '#d9b9fb', 500: '#7f19e6', 600: '#6a12c4', 700: '#550e9e', 900: '#2a0752' },
+        ink: '#1b1530',
         // アクセント（差し色・LPのサービス別アクセントの既定候補）
         accent: {
           rose: '#ff1e72',

@@ -1,0 +1,7 @@
+/* ドヤ展示会（/tenjikai）専用のスタイル。.tenjikai-root の内側だけに効かせる */
+.tenjikai-root { font-family: var(--font-tenjikai-body), 'Noto Sans JP', 'Hiragino Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+.tenjikai-root .font-display { font-family: var(--font-tenjikai-display), sans-serif; }
+.tenjikai-root .font-mono { font-family: var(--font-tenjikai-mono), ui-monospace, monospace; }
+.tenjikai-root .floor { background-image: linear-gradient(rgba(127,25,230,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(127,25,230,.06) 1px, transparent 1px); background-size: 28px 28px; }
+.tenjikai-root .tabular { font-variant-numeric: tabular-nums; }
+.tenjikai-root .text-balance { text-wrap: balance; }

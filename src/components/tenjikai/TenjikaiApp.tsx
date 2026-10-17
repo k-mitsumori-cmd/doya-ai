@@ -1,0 +1,138 @@
+'use client'
+
+import { useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Menu } from 'lucide-react'
+import TenjikaiSidebar, { type Section } from './TenjikaiSidebar'
+import Wizard from './Wizard'
+import Generating from './Generating'
+import Overview from './Overview'
+import BoothStudio from './BoothStudio'
+import CreativeStudio from './CreativeStudio'
+import NoveltyPicker from './NoveltyPicker'
+import BudgetPlanner from './BudgetPlanner'
+import VendorBoard from './VendorBoard'
+import DocsVault from './DocsVault'
+import {
+  SAMPLE_INPUT,
+  analyzeSite,
+  computeBudget,
+  generateBoothPlans,
+  generateCreatives,
+  generateDeadlines,
+  generateNovelties,
+  type ProjectInput,
+} from '@/lib/tenjikai/engine'
+
+type Phase = 'input' | 'generating' | 'ready'
+
+export default function TenjikaiApp() {
+  const [phase, setPhase] = useState<Phase>('input')
+  const [section, setSection] = useState<Section>('new')
+  const [input, setInput] = useState<ProjectInput>(SAMPLE_INPUT)
+  const [variant, setVariant] = useState<'A' | 'B' | 'C'>('A')
+  const [selectedNovelty, setSelectedNovelty] = useState<string[]>([])
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+
+  const analysis = useMemo(() => analyzeSite(input.serviceUrl), [input.serviceUrl])
+  const plans = useMemo(() => generateBoothPlans(input), [input])
+  const plan = plans.find((p) => p.variant === variant) ?? plans[0]
+  const creatives = useMemo(() => generateCreatives(analysis, input), [analysis, input])
+  const novelties = useMemo(() => generateNovelties(input), [input])
+  const deadlines = useMemo(() => generateDeadlines(input), [input])
+  const budget = useMemo(
+    () => computeBudget(input, plan, creatives, novelties, selectedNovelty),
+    [input, plan, creatives, novelties, selectedNovelty],
+  )
+
+  const start = (next: ProjectInput) => {
+    setInput(next)
+    setSelectedNovelty(generateNovelties(next).filter((n) => n.recommended).map((n) => n.id))
+    setVariant(next.goal === 'demo' ? 'A' : next.goal === 'brand' ? 'B' : 'C')
+    setPhase('generating')
+  }
+
+  const go = (s: Section) => {
+    if (s === 'new') setPhase('input')
+    setSection(s)
+    setMobileOpen(false)
+  }
+
+  const content = (() => {
+    if (phase === 'generating')
+      return (
+        <Generating
+          analysis={analysis}
+          input={input}
+          onDone={() => {
+            setPhase('ready')
+            setSection('overview')
+          }}
+        />
+      )
+    if (phase === 'input' || section === 'new') return <Wizard initial={input} onSubmit={start} />
+    switch (section) {
+      case 'overview':
+        return <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} />
+      case 'booth':
+        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} />
+      case 'creatives':
+        return <CreativeStudio creatives={creatives} analysis={analysis} />
+      case 'novelty':
+        return <NoveltyPicker input={input} novelties={novelties} selected={selectedNovelty} setSelected={setSelectedNovelty} />
+      case 'budget':
+        return <BudgetPlanner input={input} setInput={setInput} budget={budget} />
+      case 'vendors':
+        return <VendorBoard input={input} plan={plan} creatives={creatives} analysis={analysis} budget={budget} />
+      case 'docs':
+        return <DocsVault deadlines={deadlines} input={input} />
+    }
+  })()
+
+  const key = phase === 'ready' ? section : phase
+
+  return (
+    <div className="tenjikai-root flex h-screen overflow-hidden bg-[#f7f6fb] text-ink">
+      <div className="hidden md:flex">
+        <TenjikaiSidebar section={phase === 'ready' ? section : 'new'} ready={phase === 'ready'} go={go} isCollapsed={collapsed} onToggle={setCollapsed} projectName={phase === 'input' ? undefined : input.eventName} />
+      </div>
+
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} />
+            <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ duration: 0.2, ease: 'easeOut' }} className="fixed inset-y-0 left-0 z-50 md:hidden">
+              <TenjikaiSidebar section={phase === 'ready' ? section : 'new'} ready={phase === 'ready'} go={go} forceExpanded isMobile onToggle={() => setMobileOpen(false)} projectName={phase === 'input' ? undefined : input.eventName} />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* 共通サイドバー（SidebarShell）はデスクトップで fixed のため、幅のぶん本文をずらす */}
+      <main className="flex flex-1 flex-col overflow-hidden transition-[margin] duration-200 md:ml-[var(--tenjikai-sidebar-w)]" style={{ ['--tenjikai-sidebar-w' as string]: collapsed ? '72px' : '240px' }}>
+        <div className="flex items-center gap-3 border-b border-gray-200 bg-gradient-to-r from-doya-50 to-white p-3 md:hidden">
+          <button onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-gray-700 hover:bg-gray-100" aria-label="メニューを開く">
+            <Menu className="h-6 w-6" />
+          </button>
+          <span className="font-display text-lg text-ink">ドヤ展示会</span>
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">開発中</span>
+        </div>
+        <div className="floor flex-1 overflow-y-auto">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={key}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="min-h-full"
+            >
+              {content}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </main>
+    </div>
+  )
+}
