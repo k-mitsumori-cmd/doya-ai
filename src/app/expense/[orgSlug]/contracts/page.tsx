@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Plus } from 'lucide-react'
+import { Button } from '@/components/ds'
 import { BILLING_MODEL_LABEL, CATEGORIES, CATEGORY_LABEL, CONTRACT_STATUSES, CONTRACT_STATUS_LABEL, FREQUENCY_LABEL, type BillingModel } from '@/lib/expense/constants'
 import { useExpenseQuery } from '@/components/expense/api'
 import type { Contract } from '@/components/expense/types'
@@ -27,7 +28,7 @@ export default function ContractsPage() {
       <PageHeader
         title="支出契約"
         sub="SaaS、業務委託、家賃など、定期的に払う契約の一覧です。"
-        actions={canManage ? <Link href={`${base}/contracts/new`} className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[var(--r-sm)] bg-[var(--blue)] px-4 text-sm font-bold text-white hover:bg-[var(--blue-deep)]"><Plus className="h-4 w-4" />契約を追加</Link> : undefined}
+        actions={canManage ? <Button href={`${base}/contracts/new`} icon={Plus}>契約を追加</Button> : undefined}
       />
       <div className="flex flex-wrap gap-3">
         <select aria-label="カテゴリで絞り込む" className={`${inputCls} !w-auto`} value={category} onChange={(e) => setCategory(e.target.value)}>

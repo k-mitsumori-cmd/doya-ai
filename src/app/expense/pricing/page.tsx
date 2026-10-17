@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import tokens from '@/components/ds/tokens.module.css'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
 // ⚠️ 料金は統一プラン。サービスごとに個別課金しないこと。
 //    金額の正本は src/lib/unified-plan.ts と UnifiedPricingPlans。ここには書かない。
 export default function ExpensePricingPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className={`${tokens.ds} min-h-screen`}>
       <div className="mx-auto max-w-5xl px-6 py-12">
         <div className="mb-10 text-center">
           <Link

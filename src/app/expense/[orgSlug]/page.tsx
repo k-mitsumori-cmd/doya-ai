@@ -6,7 +6,8 @@ import { AlertTriangle } from 'lucide-react'
 import { useExpenseQuery } from '@/components/expense/api'
 import type { ForecastMatrix, Schedule } from '@/components/expense/types'
 import CashBars from '@/components/expense/CashBars'
-import { Badge, BigYen, Card, EmptyState, ErrorBox, Loading, PageBody, PageHeader, StatusBadge, addMonths, currentYm, fmtMonthDay, fmtMonthLabel, formatYen, todayYmd, type Tone } from '@/components/expense/ui'
+import { StatTile } from '@/components/ds'
+import { Badge, Card, EmptyState, ErrorBox, Loading, PageBody, PageHeader, StatusBadge, addMonths, currentYm, fmtMonthDay, fmtMonthLabel, formatYen, todayYmd, type Tone } from '@/components/expense/ui'
 
 interface ActionItem { kind: string; scheduleId: string; title: string; dueOn: string; amount: number; detail: string }
 interface ContractAlert { kind: string; contractId: string; title: string; dueOn: string; detail: string }
@@ -29,13 +30,7 @@ const ACTION_LABEL: Record<string, { label: string; tone: Tone }> = {
 }
 
 function Kpi({ label, value, sub }: { label: string; value: number; sub?: string }) {
-  return (
-    <Card>
-      <p className="text-xs font-bold text-[var(--sub)]">{label}</p>
-      <p className="mt-1"><BigYen value={value} /></p>
-      {sub && <p className="mt-0.5 text-xs font-bold text-[var(--muted)]">{sub}</p>}
-    </Card>
-  )
+  return <StatTile label={label} value={value.toLocaleString('ja-JP')} unit="円" sub={sub} />
 }
 
 export default function DashboardPage() {

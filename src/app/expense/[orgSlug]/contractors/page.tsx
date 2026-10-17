@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Plus } from 'lucide-react'
+import { Button } from '@/components/ds'
 import { BILLING_MODEL_LABEL, type BillingModel } from '@/lib/expense/constants'
 import { useExpenseQuery } from '@/components/expense/api'
 import type { Vendor } from '@/components/expense/types'
@@ -48,7 +49,7 @@ function Inner() {
         actions={
           <>
             <MonthSwitcher value={month} onChange={(m) => router.replace(`?month=${m}`)} />
-            {canManage && <Link href={addHref} className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[var(--r-sm)] bg-[var(--blue)] px-4 text-sm font-bold text-white hover:bg-[var(--blue-deep)]"><Plus className="h-4 w-4" />業務委託を追加</Link>}
+            {canManage && <Button href={addHref} icon={Plus}>業務委託を追加</Button>}
           </>
         }
       />

@@ -12,10 +12,10 @@ export const CATEGORY_COLOR: Record<string, string> = {
   ads: 'var(--muted)',
   payroll: 'var(--sub)',
   utility: 'var(--line-strong)',
-  other: 'var(--bar)',
+  other: 'var(--blue-line)',
   withholding_tax: 'var(--pink)',
 }
-const colorOf = (c: string) => CATEGORY_COLOR[c] ?? 'var(--bar)'
+const colorOf = (c: string) => CATEGORY_COLOR[c] ?? 'var(--blue-line)'
 
 export default function CashBars({ cash }: { cash: ForecastMatrix }) {
   const max = Math.max(1, ...cash.months.map((m) => cash.totals[m]?.amount ?? 0))

@@ -14,7 +14,7 @@ SaaS・業務委託・家賃などの「払う約束」を契約として登録�
 | 種類 | 場所 |
 |---|---|
 | 画面 | `src/app/expense/**`（LP・入口・`[orgSlug]` 配下） |
-| 部品 | `src/components/expense/**`（暫定サイドバーは `src/lib/expense/nav.ts` を描くだけ） |
+| 部品 | `src/components/expense/**`。外枠は AppShell＋ToolFrame、ナビは `src/lib/expense/nav.ts`、部品は `src/components/ds` |
 | API | `src/app/api/expense/**`（すべて `withExpense` を通る。`scope.test.ts` で静的に検査） |
 | 読み取り関数 | `src/lib/expense/expense-read.ts`（`getExpenseSummary` / `listUpcomingPayments` / `listCalendarEvents`） |
 | 計算 | `src/lib/expense/{dates,plan,withholding,aggregate}.ts`（純粋関数。`calc.test.ts`） |
@@ -27,7 +27,7 @@ SaaS・業務委託・家賃などの「払う約束」を契約として登録�
 1. 本番 DB への反映（`doya-db-push`。利用者の確認後）
 2. 振込先口座（`ExpenseVendor.bankAccountNo` など）の扱い: 現在は平文。§16.2 の個人情報の検査（`retentionDays` が null で `encrypted=false` は失敗）を通すため、AppShell 移行時に暗号化列にするか保持期間を決める
 3. 料金の上限（`plan-limit.ts`。無料: 契約 10 件・AI 10 回/月、Pro: 無制限・AI 300 回/月）
-4. 段 0（`feat/ds-shell`）が main に入ったら、`layout.tsx` を AppShell＋ToolFrame に差し替え、`tokens.module.css` を `ds/tokens.css` に置き換える
+4. 段 0（`feat/ds-shell`）を取り込み済み。main へは段 0 → … → 段 5 の順で入れる（ADDON-SERVICES §9）
 5. Phase2: 請求書 PDF の保存と AI 読み取り（`expense_bills`）
 6. OGP 画像: 公開時に `src/app/expense/opengraph-image.tsx` を足す（開発中は noindex のため作っていない。`public/og` はこのブランチに無い）
 
@@ -145,7 +145,7 @@ export const manifest: ServiceManifest = {
     japaneseOnly: true,
     noEmojiIcons: true,
     minViewportPx: 375,
-    nav: EXPENSE_NAV,                      // src/lib/expense/nav.ts
+    nav: (ctx) => expenseNav(ctx.orgSlug, ctx.role),   // src/lib/expense/nav.ts（ShellNavItem[]）
   },
 
   setup: { seed: (ctx, profile, options) => import('@/lib/expense/setup').then((m) => m.initExpenseForCompany({ companyId: ctx.companyId, companyName: profile.name, userId: ctx.userId, memberName: ctx.userName, fiscalYearEndMonth: profile.fiscalYearEndMonth })) },

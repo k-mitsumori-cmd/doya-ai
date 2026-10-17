@@ -1,10 +1,9 @@
 'use client'
 
 // ドヤ支出管理: 共通の見た目の部品と整形関数
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Loader2, X } from 'lucide-react'
-import styles from './tokens.module.css'
+import React, { createContext, useCallback, useContext, useState } from 'react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { Badge as DsBadge, Button as DsButton, Card as DsCard, EmptyState as DsEmpty, Skeleton as DsSkeleton } from '@/components/ds'
 import { ROLE_RANK, SCHEDULE_STATUS_LABEL, type ExpenseRole } from '@/lib/expense/constants'
 
 // ---------- 組織・権限 ----------
@@ -52,15 +51,16 @@ export const inputCls =
   'w-full rounded-[var(--r-sm)] border border-[var(--line-strong)] bg-[var(--paper)] px-3 py-2 min-h-[44px] text-[15px] font-medium text-[var(--ink)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-[var(--blue)]/20 disabled:bg-[var(--bg)] disabled:text-[var(--muted)]'
 
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-4 shadow-[var(--shadow)] md:p-6 ${className}`}>{children}</div>
+  return <DsCard className={className}>{children}</DsCard>
 }
 
+/** 画面内の見出し行（h1 は ToolFrame が出すため、ここは h2） */
 export function PageHeader({ title, sub, actions }: { title: string; sub?: React.ReactNode; actions?: React.ReactNode }) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-[22px] font-bold leading-[1.3] text-[var(--ink)] md:text-[28px]">{title}</h1>
-        {sub && <div className="mt-1 text-[13px] font-medium text-[var(--sub)]">{sub}</div>}
+        <h2 className="text-[18px] font-bold leading-[1.4] text-[var(--ink)]">{title}</h2>
+        {sub && <div className="mt-1 text-[13px] font-medium leading-[1.5] text-[var(--sub)]">{sub}</div>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -68,50 +68,30 @@ export function PageHeader({ title, sub, actions }: { title: string; sub?: React
 }
 
 export function PageBody({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto w-full max-w-6xl space-y-4 p-4 sm:p-6">{children}</div>
+  // ⚠️ ToolFrame は本文の余白を持たない。見出し（ToolFrame の .head）と同じ左右の余白をここで付ける
+  return <div className="space-y-4 px-4 pb-8 pt-4 md:px-8 md:pt-6">{children}</div>
 }
 
 type BtnVariant = 'primary' | 'secondary' | 'danger' | 'ghost'
-const BTN: Record<BtnVariant, string> = {
-  primary: 'bg-[var(--blue)] text-white hover:bg-[var(--blue-deep)]',
-  secondary: 'border border-[var(--line-strong)] bg-[var(--paper)] text-[var(--ink)] hover:bg-[var(--bg)]',
-  danger: 'border border-[var(--pink)] bg-[var(--paper)] text-[var(--pink)] hover:bg-[var(--bg)]',
-  ghost: 'text-[var(--blue)] hover:bg-[var(--blue-soft)]',
-}
-export function Btn({
-  variant = 'primary',
-  size = 'md',
-  busy,
-  className = '',
-  children,
-  ...rest
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant; size?: 'sm' | 'md'; busy?: boolean }) {
+export function Btn({ variant = 'primary', size = 'md', busy, disabled, onClick, children }: {
+  variant?: BtnVariant
+  size?: 'sm' | 'md'
+  busy?: boolean
+  disabled?: boolean
+  onClick?: () => void
+  children: React.ReactNode
+}) {
   return (
-    <button
-      type="button"
-      {...rest}
-      disabled={rest.disabled || busy}
-      className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--r-sm)] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-        size === 'sm' ? 'min-h-[44px] px-3 py-1 text-xs md:min-h-[32px]' : 'min-h-[44px] px-4 py-2 text-sm'
-      } ${BTN[variant]} ${className}`}
-    >
-      {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+    <DsButton variant={variant === 'danger' ? 'secondary' : variant} size={size} onClick={onClick} disabled={disabled || busy}>
       {children}
-    </button>
+    </DsButton>
   )
 }
 
 export type Tone = 'slate' | 'teal' | 'amber' | 'red' | 'blue' | 'green'
-const TONE: Record<Tone, string> = {
-  slate: 'bg-[var(--bg)] text-[var(--sub)]',
-  teal: 'bg-[var(--blue-soft)] text-[var(--blue-deep)]',
-  amber: 'bg-[var(--note-bg)] text-[var(--note-ink)]',
-  red: 'bg-[var(--pink)]/10 text-[var(--pink)]',
-  blue: 'bg-[var(--blue-soft)] text-[var(--blue-deep)]',
-  green: 'bg-[var(--ok-bg)] text-[var(--ok-ink)]',
-}
+const TONE: Record<Tone, 'neutral' | 'blue' | 'ok' | 'note'> = { slate: 'neutral', teal: 'blue', blue: 'blue', green: 'ok', amber: 'note', red: 'note' }
 export function Badge({ tone = 'slate', children }: { tone?: Tone; children: React.ReactNode }) {
-  return <span className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold ${TONE[tone]}`}>{children}</span>
+  return <DsBadge tone={TONE[tone]}>{children}</DsBadge>
 }
 
 const STATUS_TONE: Record<string, Tone> = { planned: 'slate', billed: 'blue', approved: 'teal', paid: 'green', skipped: 'amber' }
@@ -173,63 +153,27 @@ export function Check({ checked, onChange, label, hint, disabled }: { checked: b
   )
 }
 
-/** 読込中: 実物に近い形のスケルトン。300ms 未満で終わるなら出さない */
-export function ExpenseSkeleton({ rows = 4, kpi = false }: { rows?: number; kpi?: boolean }) {
-  const [show, setShow] = useState(false)
-  useEffect(() => {
-    const t = setTimeout(() => setShow(true), 300)
-    return () => clearTimeout(t)
-  }, [])
-  if (!show) return <div className="min-h-[200px]" aria-hidden />
-  return (
-    <div className="space-y-4" role="status" aria-label="読み込み中">
-      {kpi && (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => <div key={i} className={`${styles.skel} h-24 rounded-[var(--r)]`} />)}
-        </div>
-      )}
-      <div className="space-y-3 rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-4 md:p-6">
-        {Array.from({ length: rows }).map((_, i) => <div key={i} className={`${styles.skel} h-10 rounded-[var(--r-sm)]`} />)}
-      </div>
-    </div>
-  )
-}
-export const Loading = ({ rows, kpi }: { label?: string; rows?: number; kpi?: boolean }) => <ExpenseSkeleton rows={rows} kpi={kpi} />
-
-export function EmptyState({
-  image, alt = '', text, actionLabel, onAction, href,
-}: { image: string; alt?: string; text: string; actionLabel?: string; onAction?: () => void; href?: string }) {
-  return (
-    <div className="flex flex-col items-center gap-4 py-10 text-center">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={image} alt={alt} width={160} height={160} className="h-40 w-40 object-contain" />
-      <p className="max-w-sm text-[15px] leading-[1.7] text-[var(--sub)]">{text}</p>
-      {actionLabel && (href ? (
-        <Link href={href} className="inline-flex min-h-[44px] items-center rounded-[var(--r-sm)] border border-[var(--line-strong)] bg-[var(--paper)] px-4 text-sm font-bold text-[var(--ink)] hover:bg-[var(--bg)]">{actionLabel}</Link>
-      ) : (
-        <Btn variant="secondary" onClick={onAction}>{actionLabel}</Btn>
-      ))}
-    </div>
-  )
-}
-/** 空の一覧（次の行動ボタンが無いときは文だけで済ませない: 呼び出し側で actionLabel を渡す） */
-export const Empty = ({ children }: { children: React.ReactNode }) => (
-  <EmptyState image="/empty/zero.svg" text={typeof children === 'string' ? children : ''} />
+/** 読込中: ds の Skeleton（300ms 未満なら出さない） */
+export const Loading = ({ rows = 3 }: { label?: string; rows?: number; kpi?: boolean }) => (
+  <Card><DsSkeleton lines={rows + 1} height={18} /></Card>
 )
+
+type EmptyKind = 'zero' | 'error' | 'forbidden'
+export function EmptyState({ image, text, actionLabel, onAction, href, kind = 'zero' }: { image?: string; alt?: string; text: string; actionLabel?: string; onAction?: () => void; href?: string; kind?: EmptyKind }) {
+  const action = actionLabel
+    ? href ? <DsButton variant="secondary" href={href}>{actionLabel}</DsButton> : <DsButton variant="secondary" onClick={onAction}>{actionLabel}</DsButton>
+    : undefined
+  return <DsEmpty kind={kind} title={text} art={image} action={action} />
+}
+/** 空の一覧 */
+export const Empty = ({ children }: { children: React.ReactNode }) => <EmptyState text={typeof children === 'string' ? children : ''} />
 
 /** forbidden=true（HTTP 403 または画面側の権限判定）で権限なし表示にする。メッセージ文では判定しない */
 export function ErrorBox({ onRetry, forbidden }: { message?: string; onRetry?: () => void; forbidden?: boolean }) {
   if (forbidden) {
-    return <EmptyState image="/empty/forbidden.svg" text="この操作を行う権限がありません。組織の管理者に権限の変更を依頼してください。" />
+    return <EmptyState kind="forbidden" text="この操作を行う権限がありません。組織の管理者に権限の変更を依頼してください。" />
   }
-  return (
-    <EmptyState
-      image="/empty/error.svg"
-      text="読み込めませんでした。通信の状態を確認して、もう一度お試しください。"
-      actionLabel="もう一度"
-      onAction={onRetry}
-    />
-  )
+  return <EmptyState kind="error" text="読み込めませんでした。通信の状態を確認して、もう一度お試しください。" actionLabel="もう一度" onAction={onRetry} />
 }
 
 /** 画面内の確認ダイアログ（alert / confirm は使わない） */
@@ -248,7 +192,7 @@ export function useConfirm() {
       <p className="text-[15px] leading-[1.7] text-[var(--ink)]">{state.message}</p>
       <div className="mt-5 flex justify-end gap-2">
         <Btn variant="secondary" onClick={() => close(false)}>キャンセル</Btn>
-        <Btn variant="danger" onClick={() => close(true)}>{state.confirmLabel}</Btn>
+        <Btn variant="primary" onClick={() => close(true)}>{state.confirmLabel}</Btn>
       </div>
     </Modal>
   ) : null
@@ -279,16 +223,4 @@ export function priceSummary(c: { currency: string; currentPrice: { unitPrice: n
   const base = formatMoney(total, c.currency)
   const detail = p.quantity !== 1 ? `（${formatMoney(p.unitPrice, c.currency)} × ${p.quantity}）` : ''
   return `${base}${detail}${p.taxIncluded ? ' 税込' : ' 税抜'}`
-}
-
-/** 大きい金額: 数字と「円」を分け、折り返さない。桁が多いときは数字を小さくする */
-export function BigYen({ value }: { value: number }) {
-  const n = (value ?? 0).toLocaleString('ja-JP')
-  const size = n.length > 11 ? 'text-[20px] md:text-[24px]' : n.length > 9 ? 'text-[22px] md:text-[28px]' : 'text-[24px] md:text-[32px]'
-  return (
-    <span className="inline-flex items-baseline gap-0.5 whitespace-nowrap tabular-nums text-[var(--ink)]">
-      <span className={`${size} font-bold leading-[1.1]`}>{n}</span>
-      <span className="text-[14px] font-medium">円</span>
-    </span>
-  )
 }

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast, { Toaster } from 'react-hot-toast'
 import { startGoogleSignIn } from '@/lib/use-navigation-submission'
-import styles from '@/components/expense/tokens.module.css'
+import tokens from '@/components/ds/tokens.module.css'
 import { Btn, Field, inputCls, Loading } from '@/components/expense/ui'
 
 export default function ExpenseEntry() {
@@ -50,14 +50,14 @@ export default function ExpenseEntry() {
 
   if (checking) {
     return (
-      <div className={`${styles.root} grid min-h-screen place-items-center bg-[var(--bg)]`}>
+      <div className={`${tokens.ds} grid min-h-screen place-items-center bg-[var(--bg)]`}>
         <Loading />
       </div>
     )
   }
 
   return (
-    <div className={`${styles.root} grid min-h-screen place-items-center bg-[var(--bg)] p-6`}>
+    <div className={`${tokens.ds} grid min-h-screen place-items-center bg-[var(--bg)] p-6`}>
       <Toaster position="top-center" />
       <div className="w-full max-w-md rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-8 shadow-[var(--shadow-lg)]">
         <div className="mb-6 text-center">
@@ -74,9 +74,11 @@ export default function ExpenseEntry() {
             <input className={inputCls} value={memberName} onChange={(e) => setMemberName(e.target.value)} placeholder="例: 三森 律稀" />
           </Field>
         </div>
-        <Btn className="mt-6 w-full !py-3" onClick={create} busy={busy} disabled={!orgName.trim() || !memberName.trim()}>
-          組織を作成して始める
-        </Btn>
+        <div className="mt-6 flex justify-center">
+          <Btn onClick={create} busy={busy} disabled={!orgName.trim() || !memberName.trim()}>
+            組織を作成して始める
+          </Btn>
+        </div>
       </div>
     </div>
   )

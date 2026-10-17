@@ -6,10 +6,11 @@ import toast from 'react-hot-toast'
 import { Plus } from 'lucide-react'
 import { CATEGORY_LABEL } from '@/lib/expense/constants'
 import { expenseApi, jsonInit, useExpenseQuery } from '@/components/expense/api'
+import { StatTile } from '@/components/ds'
 import type { Schedule } from '@/components/expense/types'
 import OneOffModal from '@/components/expense/OneOffModal'
 import {
-  Badge, BigYen, Btn, Card, EmptyState, ErrorBox, Field, Loading, MonthSwitcher, PageBody, PageHeader, StatusBadge, TableWrap,
+  Badge, Btn, Card, EmptyState, ErrorBox, Field, Loading, MonthSwitcher, PageBody, PageHeader, StatusBadge, TableWrap,
   currentYm, fmtDate, fmtMonthDay, formatYen, inputCls, isYm, tableCls, tbodyCls, tdCls, theadCls, thCls, todayYmd, trCls, useConfirm, useExpenseOrg,
 } from '@/components/expense/ui'
 
@@ -138,9 +139,9 @@ function PayablesInner() {
       />
       {data && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card><p className="text-xs font-bold text-[var(--sub)]">出金合計</p><BigYen value={data.totals.all} /></Card>
-          <Card><p className="text-xs font-bold text-[var(--sub)]">支払済</p><BigYen value={data.totals.paid} /></Card>
-          <Card><p className="text-xs font-bold text-[var(--sub)]">これから払う</p><BigYen value={data.totals.unpaid} /></Card>
+          <StatTile label="出金合計" value={data.totals.all.toLocaleString('ja-JP')} unit="円" />
+          <StatTile label="支払済" value={data.totals.paid.toLocaleString('ja-JP')} unit="円" />
+          <StatTile label="これから払う" value={data.totals.unpaid.toLocaleString('ja-JP')} unit="円" />
         </div>
       )}
       <Card>

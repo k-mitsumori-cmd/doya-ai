@@ -2,7 +2,7 @@
 
 // ドヤ支出管理 ランディングページ（未ログインの方向け。簡易版）
 import { LpShell, ProductHero, FeatureShowcase, Benefits, UseCases, CtaBand, type ShowcaseRow } from '@/components/lp'
-import styles from '@/components/expense/tokens.module.css'
+import tokens from '@/components/ds/tokens.module.css'
 import { getServiceById } from '@/lib/services'
 
 const SVC = getServiceById('expense')!
@@ -17,7 +17,7 @@ const STEP_ROWS: ShowcaseRow[] = [
 
 export default function ExpenseLp() {
   return (
-    <div className={styles.root}>
+    <div className={tokens.ds}>
     <LpShell serviceName={SVC.name} icon="account_balance_wallet" ctaHref={CTA} ctaLabel="ログインしてはじめる" accent={ACCENT}>
       <ProductHero
         eyebrow="ドヤAI"

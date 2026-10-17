@@ -2,7 +2,7 @@
 // ドヤ収入管理への支出の受け渡し（ExpenseSource 'expense' の中身）
 // ============================================
 // 収入側 src/lib/income/expense-source.ts の ExpenseSource（id: 'expense'）から呼ぶ想定。
-// ⚠️ 収入側のファイルはここでは編集しない。型は収入設計書 §8.1 と本書 §8.1 に合わせて同じ形で持つ。
+// ⚠️ 収入側のファイルはここでは編集しない。型は収入側 ExpenseAdapter（feat/doya-income d6a59b02）と同じ形で持つ。
 //    収入側での接続例:
 //      import { expenseMonthly, expenseCashOut } from '@/lib/expense/income-source'
 //      const source: ExpenseSource = {
@@ -40,6 +40,23 @@ export async function expenseCashOut(organizationId: string, range: { from: stri
     where: { organizationId, OR: [{ plannedPayDate: { gte: toDbDate(from) } }, { paidOn: { gte: toDbDate(from) } }] },
   })
   return cashOutEvents(rows.map(toRowLike), from, to)
+}
+
+/** 収入側の画面に出す注記（取り込み範囲） */
+export const EXPENSE_SOURCE_LABEL = 'ドヤ支出管理'
+export const EXPENSE_SOURCE_NOTE = '支出管理に登録した契約と単発の支出を、計上月ごとに税抜で集計しています。業務委託と給与は人件費に入ります。'
+
+/**
+ * 収入側 ExpenseAdapter.canRead の形: 操作者が支出側の組織の ACTIVE メンバーなら { id, name }、違えば null
+ * 収入側（feat/doya-income の src/lib/income/expense-source.ts）の EXPENSE_ADAPTERS に足す 1 行:
+ *   expense: { id: 'expense', label: EXPENSE_SOURCE_LABEL, note: EXPENSE_SOURCE_NOTE, canRead: readableExpenseOrganization, listLinkable: listReadableExpenseOrganizations, monthly: expenseMonthly, cashOut: expenseCashOut },
+ */
+export async function readableExpenseOrganization(userId: string, expenseOrganizationId: string): Promise<{ id: string; name: string } | null> {
+  const m = await prisma.expenseMember.findFirst({
+    where: { userId, organizationId: expenseOrganizationId, status: 'ACTIVE' },
+    include: { organization: { select: { id: true, name: true } } },
+  })
+  return m?.organization ?? null
 }
 
 /** 収入側の設定画面で、支出側の組織を「取り込み元」に選べるか */

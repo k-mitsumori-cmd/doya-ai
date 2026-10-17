@@ -604,9 +604,9 @@ src/lib/expense/
 
 | 項目 | 対応 |
 |---|---|
-| R-1 ナビをデータで | `src/lib/expense/nav.ts`（`EXPENSE_NAV`）。暫定サイドバーはこれを描くだけ |
-| R-2 独自サイドバーを作らない | 専用テーマは足さない（既存の `asklinkTheme` を流用）。段 0 が入ったら `layout.tsx` を AppShell＋ToolFrame に差し替える |
-| R-3 ds トークン | `src/components/expense/tokens.module.css` に `renewal.module.css` と同じ変数名で定義。`src/app/expense` に色の直書きを置かない |
+| R-1 ナビをデータで | `src/lib/expense/nav.ts` の `expenseNav(orgSlug, role)` が `ShellNavItem[]` を返し、ToolFrame の `nav` に渡す |
+| R-2 独自サイドバーを作らない | 段 0（`feat/ds-shell`）を取り込み、最初から AppShell＋ToolFrame で包む（フラグなし）。専用のサイドバーとテーマは無い |
+| R-3 ds トークン | `src/components/ds` の部品とトークンを使う。`src/app/expense` と `src/components/expense` に色の直書きを置かない |
 | R-4 読み取り関数 | `src/lib/expense/expense-read.ts`（`getExpenseSummary` / `listUpcomingPayments` / `listCalendarEvents`）。API（`summary` / `upcoming` / `calendar`）も同じ関数を呼ぶ |
 | R-5 自社プロフィール | `ExpenseOrganization.companyProfileId`（予約列）を追加 |
 | R-8 マニフェスト草案 | `reference/services/expense.md` の末尾 |

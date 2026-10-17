@@ -1,32 +1,30 @@
 // ============================================
-// ドヤ支出管理: ナビ項目（データで持つ。ADDON-SERVICES §3 R-1）
+// ドヤ支出管理: ツール内ナビ（データで持つ。ADDON-SERVICES §3 R-1）
 // ============================================
-// ⚠️ サイドバーはこの配列を描くだけ。項目を足すときはここだけを直す。
-//    AppShell（段 0）が main に入ったら、manifest.ui.nav[] にこのまま移す。
-import type { LucideIcon } from 'lucide-react'
-import { CalendarClock, FileText, LayoutDashboard, LineChart, Settings, UserRound, CreditCard } from 'lucide-react'
-import type { ExpenseRole } from './constants'
+// ⚠️ ToolFrame の nav にそのまま渡す。項目を足すときはここだけを直す。
+//    将来の manifest.ui.nav[]（README §18.6 手順 2）と同じ形（ShellNavItem）。
+// ⚠️ 料金プランは AppShell 側の導線に任せ、ツール内ナビには入れない。
+import { CalendarClock, FileText, LayoutDashboard, LineChart, Settings, UserRound } from 'lucide-react'
+import type { ShellNavItem } from '@/components/shell/nav'
+import { ROLE_RANK, type ExpenseRole } from './constants'
 
-export type ExpenseNavItem = {
-  label: string
-  /** 組織の中の相対パス（'' はダッシュボード）。組織の外は absolute: true */
-  href: string
-  icon: LucideIcon
-  minServiceRole?: ExpenseRole
-  absolute?: boolean
-}
+type ExpenseNavDef = Omit<ShellNavItem, 'href' | 'minServiceRole'> & { path: string; minServiceRole?: ExpenseRole }
 
-export const EXPENSE_NAV: ExpenseNavItem[] = [
-  { label: 'ダッシュボード', href: '', icon: LayoutDashboard },
-  { label: '支払予定', href: '/payables', icon: CalendarClock },
-  { label: '業務委託', href: '/contractors', icon: UserRound },
-  { label: '支出契約', href: '/contracts', icon: FileText },
-  { label: '予測', href: '/forecast', icon: LineChart },
-  { label: '設定', href: '/settings', icon: Settings, minServiceRole: 'admin' },
-  { label: '料金プラン', href: '/expense/pricing', icon: CreditCard, absolute: true },
+/** 組織の中の相対パス（'' はダッシュボード） */
+export const EXPENSE_NAV: ExpenseNavDef[] = [
+  { label: 'ダッシュボード', path: '', icon: LayoutDashboard, exact: true },
+  { label: '支払予定', path: '/payables', icon: CalendarClock },
+  { label: '業務委託', path: '/contractors', icon: UserRound },
+  { label: '支出契約', path: '/contracts', icon: FileText },
+  { label: '予測', path: '/forecast', icon: LineChart },
+  { label: '設定', path: '/settings', icon: Settings, minServiceRole: 'admin' },
 ]
 
-/** 実際のリンク先 */
-export function expenseNavHref(item: ExpenseNavItem, orgSlug: string): string {
-  return item.absolute ? item.href : `/expense/${encodeURIComponent(orgSlug)}${item.href}`
+/** その組織・権限で ToolFrame に渡すナビ。権限が足りない項目は出さない */
+export function expenseNav(orgSlug: string, role: ExpenseRole | null): ShellNavItem[] {
+  const base = `/expense/${encodeURIComponent(orgSlug)}`
+  return EXPENSE_NAV.filter((i) => !i.minServiceRole || (role !== null && ROLE_RANK[role] >= ROLE_RANK[i.minServiceRole])).map(({ path, ...i }) => ({
+    ...i,
+    href: `${base}${path}`,
+  }))
 }
