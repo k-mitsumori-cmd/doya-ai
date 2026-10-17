@@ -145,14 +145,19 @@
 
   // ---------- きっかけ ----------
 
+  /** きっかけを仕掛ける。戻り値は取り消し（ページ内遷移で別のページになったとき用） */
   function arm(p, show) {
     var t = p.trigger || {}
     var done = false
     var cleanups = []
-    function fire() {
+    function stop() {
       if (done) return
       done = true
       for (var i = 0; i < cleanups.length; i++) cleanups[i]()
+    }
+    function fire() {
+      if (done) return
+      stop()
       show()
     }
     function after(sec) {
@@ -177,13 +182,13 @@
       var doc0 = document.documentElement
       if (doc0.scrollHeight <= window.innerHeight + 10) after(5)
       else check()
-      return
+      return stop
     }
     if (t.type === 'exit') {
       // スマホにはマウスが無いので、指定秒数に置き換える
       if (isMobile() || !window.matchMedia || window.matchMedia('(hover: none)').matches) {
         after(t.delaySec || 25)
-        return
+        return stop
       }
       var onOut = function (e) {
         if (!e.relatedTarget && e.clientY <= 0) fire()
@@ -192,9 +197,10 @@
       cleanups.push(function () {
         document.removeEventListener('mouseout', onOut)
       })
-      return
+      return stop
     }
     after(t.delaySec || 0)
+    return stop
   }
 
   // ---------- 見た目 ----------
@@ -435,18 +441,40 @@
 
   // ---------- 起動 ----------
 
+  var disarm = null
+
   function start(popups) {
+    if (disarm) {
+      disarm()
+      disarm = null
+    }
     for (var i = 0; i < popups.length; i++) {
       var p = popups[i]
       if (!p || !p.id || !eligible(p)) continue
       // 1ページに出すのは1つだけ（並び順が先のもの）
-      arm(p, (function (x) {
+      disarm = arm(p, (function (x) {
         return function () {
           render(x)
         }
       })(p))
       return
     }
+  }
+
+  /**
+   * ページを読み直さずにURLだけが変わるサイト（Studio・Wix・Next.js など）向け。
+   * URLが変わったら、表示中でなければ条件を判定し直す（表示するページの指定・きっかけを新しいページで効かせる）。
+   * ⚠️ history を書き換えない（サイト側のルーターと衝突させない）。1秒ごとに見るだけ。
+   */
+  function watchUrl(popups) {
+    var last = location.href
+    function check() {
+      if (location.href === last) return
+      last = location.href
+      if (!current) start(popups)
+    }
+    window.addEventListener('popstate', check)
+    setInterval(check, 1000)
   }
 
   if (preview) {
@@ -471,6 +499,7 @@
       if (!cfg || !cfg.popups || !cfg.popups.length) return
       if (cfg.track && safeUrl(cfg.track)) trackUrl = cfg.track
       start(cfg.popups)
+      watchUrl(cfg.popups)
     })
     .catch(function () {})
 
