@@ -12,7 +12,7 @@ export async function POST(req: NextRequest, c: IdCtx) {
   return withIncome(req, 'admin', async (ctx) => {
     const id = await idFrom(c)
     const reason = reqStr(asBody(await readJson(req)), 'reason', '取消の理由', 200)
-    const invoice = await prisma.$transaction((tx) => voidInvoice(tx, ctx, id, reason))
+    const invoice = await prisma.$transaction((tx) => voidInvoice(tx, ctx, id, reason), { isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'invoice.void', 'invoice', id, { reason })
     return NextResponse.json({ invoice })
   })

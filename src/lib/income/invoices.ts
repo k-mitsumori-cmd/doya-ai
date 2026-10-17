@@ -198,3 +198,39 @@ export function periodLabel(period: Ymd): string {
   const { y, m } = parseYmd(period)
   return `${y}年${m}月分`
 }
+
+/**
+ * 売上予定から、取引先ごとに 1 枚の請求書の下書きを作る。
+ * 月次売上画面のまとめて作成・エージェント道具 income.draftInvoice が同じ関数を呼ぶ（R-4）。
+ * 同じ予定を 2 回指定すると claimSchedules が 409 で止める（二重請求しない）。
+ */
+export async function draftFromSchedules(tx: Tx, ctx: IncomeContext, scheduleIds: string[], issueDate: Ymd): Promise<string[]> {
+  if (scheduleIds.length === 0 || scheduleIds.length > 200) throw new IncomeError('請求する売上予定を選んでください')
+  const schedules = await tx.incomeRevenueSchedule.findMany({
+    where: { id: { in: scheduleIds }, organizationId: ctx.organizationId, status: 'planned' },
+    include: { contract: { select: { title: true, items: { select: { taxRate: true }, take: 1 } } } },
+    orderBy: { period: 'asc' },
+  })
+  if (schedules.length !== new Set(scheduleIds).size) throw new IncomeError('請求済み、または見つからない売上予定が含まれています。画面を更新してください', 409)
+  const byClient = new Map<string, typeof schedules>()
+  for (const s of schedules) byClient.set(s.clientId, [...(byClient.get(s.clientId) ?? []), s])
+  const out: string[] = []
+  for (const [clientId, rows] of Array.from(byClient.entries())) {
+    const inv = await createDraft(tx, ctx, {
+      clientId,
+      title: rows.length === 1 ? `${rows[0].contract.title}（${periodLabel(fromDbDate(rows[0].period))}）` : null,
+      issueDate,
+      dueDate: null,
+      notes: null,
+      lines: rows.map((s) => ({
+        name: `${s.contract.title}（${periodLabel(fromDbDate(s.period))}）`,
+        quantity: 1,
+        unitPrice: s.amountExclTax,
+        taxRate: s.contract.items[0]?.taxRate ?? 10,
+        scheduleId: s.id,
+      })),
+    })
+    out.push(inv.id)
+  }
+  return out
+}

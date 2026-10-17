@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest, c: IdCtx) {
   return withIncome(req, 'member', async (ctx) => {
     const id = await idFrom(c)
     const input = invoiceDraft(await readJson(req))
-    const invoice = await prisma.$transaction((tx) => updateDraft(tx, ctx, id, input))
+    const invoice = await prisma.$transaction((tx) => updateDraft(tx, ctx, id, input), { isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'invoice.update', 'invoice', id)
     return NextResponse.json({ invoice })
   })
@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest, c: IdCtx) {
 export async function DELETE(req: NextRequest, c: IdCtx) {
   return withIncome(req, 'member', async (ctx) => {
     const id = await idFrom(c)
-    await prisma.$transaction((tx) => deleteDraft(tx, ctx, id))
+    await prisma.$transaction((tx) => deleteDraft(tx, ctx, id), { isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'invoice.delete', 'invoice', id)
     return NextResponse.json({ ok: true })
   })

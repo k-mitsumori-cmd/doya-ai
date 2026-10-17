@@ -1,19 +1,31 @@
 'use client'
 
-// ドヤ収入管理 画面の共通部品
+// ドヤ収入管理 画面の共通部品（見た目の土台は ds.tsx / ds.module.css）
 // 注意: lib/income のうちクライアントで使ってよいのは dates / schedule / tax だけ（他はサーバー専用の import を含む）
-import { useEffect, type ReactNode } from 'react'
-import { AlertCircle, ChevronLeft, ChevronRight, Loader2, Plus, Trash2, X } from 'lucide-react'
+import {
+  Children, cloneElement, isValidElement, useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode,
+} from 'react'
+import { AlertCircle, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 import { MONTH_END, describePaymentTerms, weekdayJa } from '@/lib/income/dates'
 import { TAX_RATES, computeInvoiceTotals } from '@/lib/income/tax'
+import { Button, EmptyState, FORBIDDEN_MESSAGE, s } from './ds'
 
-export const ACCENT = '#0f9f6e'
+export {
+  Button, Card, DetailSkeleton, EmptyState, ListSkeleton, PageHeader, PageShell, Skeleton, StatTile, StatsSkeleton, buttonClass, toast, useToast,
+} from './ds'
+export { s }
 
 // ---------- 表示ヘルパー ----------
 
 export function yen(n: number | null | undefined): string {
   if (n === null || n === undefined) return '—'
   return `${n < 0 ? '-' : ''}¥${Math.abs(n).toLocaleString('ja-JP')}`
+}
+
+/** 桁区切りの数字だけ（StatTile 用。単位は別に渡す） */
+export function num(n: number | null | undefined): string {
+  if (n === null || n === undefined) return '—'
+  return n.toLocaleString('ja-JP')
 }
 
 /** @db.Date の ISO 文字列を 'YYYY-MM-DD' にする（タイムゾーン変換しない） */
@@ -23,12 +35,12 @@ export function ymd(iso: string | null | undefined): string {
 
 /** 'YYYY-MM-DD（月）' */
 export function ymdW(iso: string | null | undefined): string {
-  const s = ymd(iso)
-  if (!s) return '—'
+  const v = ymd(iso)
+  if (!v) return '—'
   try {
-    return `${s}（${weekdayJa(s)}）`
+    return `${v}（${weekdayJa(v)}）`
   } catch {
-    return s
+    return v
   }
 }
 
@@ -50,8 +62,8 @@ export function shiftMonth(key: string, delta: number): string {
 }
 
 /** 金額入力（カンマ・全角を許容）。空は NaN */
-export function parseYenInput(s: string): number {
-  const t = s.normalize('NFKC').replace(/[,\s]/g, '')
+export function parseYenInput(v: string): number {
+  const t = v.normalize('NFKC').replace(/[,\s]/g, '')
   if (t === '' || t === '-') return NaN
   return /^-?\d+$/.test(t) ? Number(t) : NaN
 }
@@ -71,21 +83,33 @@ export const ACCOUNT_TYPE_LABEL: Record<string, string> = { ordinary: '普通', 
 
 // ---------- 通信 ----------
 
+/** status は 401 / 403 / 404 の出し分けに使う。画面には出さない */
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message)
+  }
+}
+
 export async function fetchJson<T = any>(url: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const hasBody = init.body !== undefined
-  const res = await fetch(url, {
-    method: init.method ?? 'GET',
-    headers: hasBody ? { 'Content-Type': 'application/json' } : undefined,
-    body: hasBody ? JSON.stringify(init.body) : undefined,
-    cache: 'no-store',
-  })
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method: init.method ?? 'GET',
+      headers: hasBody ? { 'Content-Type': 'application/json' } : undefined,
+      body: hasBody ? JSON.stringify(init.body) : undefined,
+      cache: 'no-store',
+    })
+  } catch {
+    throw new ApiError('通信に失敗しました。接続を確認して、もう一度お試しください。', 0)
+  }
   let data: any = null
   try {
     data = await res.json()
   } catch {
     // JSON でない応答
   }
-  if (!res.ok) throw new Error(data?.error || `エラーが発生しました（${res.status}）`)
+  if (!res.ok) throw new ApiError(data?.error || '処理に失敗しました。時間をおいて再度お試しください。', res.status)
   return data as T
 }
 
@@ -93,116 +117,163 @@ export function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : '通信に失敗しました'
 }
 
-// ---------- スタイル ----------
+// ---------- 読み込みの 4 状態（読込・エラー・権限なし・未ログイン） ----------
 
-export const inputCls =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:border-[#0f9f6e] focus:outline-none focus:ring-2 focus:ring-[#0f9f6e]/30 disabled:bg-slate-50 disabled:text-slate-500'
-export const btnPrimary =
-  'inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#0f9f6e] px-4 py-2 text-sm font-black text-white transition-colors hover:bg-[#0b7f58] disabled:cursor-not-allowed disabled:opacity-50'
-export const btnSecondary =
-  'inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50'
-export const btnDanger =
-  'inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-black text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50'
-export const btnSmall = 'px-3 py-1.5 text-xs'
+export type Resource<T> = {
+  data: T | null
+  error: ApiError | null
+  loading: boolean
+  /** 読込が 300ms を超えたら true（短い読込でスケルトンを点滅させない） */
+  slow: boolean
+  /** 画面を維持したまま取り直す（操作のあとの更新）。失敗したらエラー状態になる */
+  reload: () => Promise<void>
+  /** 失敗後の「もう一度」。スケルトンから取り直す */
+  retry: () => Promise<void>
+}
+
+export function useResource<T>(loader: () => Promise<T>, key: string): Resource<T> {
+  const ref = useRef(loader)
+  ref.current = loader
+  const seq = useRef(0)
+  const [st, setSt] = useState<{ data: T | null; error: ApiError | null; loading: boolean }>({ data: null, error: null, loading: true })
+  const [slow, setSlow] = useState(false)
+
+  const fetchNow = useCallback(async (reset: boolean) => {
+    const n = ++seq.current
+    setSt((p) => ({ data: reset ? null : p.data, error: null, loading: true }))
+    try {
+      const d = await ref.current()
+      if (n === seq.current) setSt({ data: d, error: null, loading: false })
+    } catch (e) {
+      if (n === seq.current) setSt({ data: null, error: e instanceof ApiError ? e : new ApiError(errMsg(e), 0), loading: false })
+    }
+  }, [])
+
+  useEffect(() => { fetchNow(true) }, [key, fetchNow])
+
+  const waiting = st.loading && st.data === null
+  useEffect(() => {
+    if (!waiting) { setSlow(false); return }
+    const t = setTimeout(() => setSlow(true), 300)
+    return () => clearTimeout(t)
+  }, [waiting])
+
+  return { data: st.data, error: st.error, loading: st.loading, slow, reload: () => fetchNow(false), retry: () => fetchNow(true) }
+}
+
+/** 読込中はスケルトン、失敗・権限なし・未ログインは EmptyState、成功したら children に data を渡す */
+export function Gate<T>({
+  res, skeleton, listHref, listLabel, children,
+}: { res: Resource<T>; skeleton: ReactNode; listHref?: string; listLabel?: string; children: (data: T) => ReactNode }) {
+  if (res.data !== null) return <>{children(res.data)}</>
+  const e = res.error
+  if (e) {
+    if (e.status === 403) return <EmptyState variant="forbidden" message={FORBIDDEN_MESSAGE} />
+    if (e.status === 401) return <EmptyState variant="unauth" message="ログインの有効期限が切れました。もう一度ログインしてください。" />
+    if (e.status === 404 && listHref) {
+      return <EmptyState variant="error" message="この情報は見つかりませんでした。削除されたか、リンクが正しくない可能性があります。" action={{ label: `${listLabel ?? '一覧'}へ戻る`, href: listHref }} />
+    }
+    return <EmptyState variant="error" message="読み込めませんでした。通信状態を確認して、もう一度お試しください。" action={{ label: 'もう一度', onClick: () => { void res.retry() } }} />
+  }
+  return res.slow ? <>{skeleton}</> : null
+}
+
+// ---------- 入力中の離脱確認 ----------
+
+/**
+ * フォームの値が最初から変わっていたら、タブを閉じる・再読込の前に確認を出す（beforeunload）。
+ * 保存できたら markClean() を呼ぶ。読み込み後に初期値が入る画面も、入ったあとに markClean() を呼ぶ。
+ */
+export function useUnsavedGuard(value: unknown) {
+  const cur = JSON.stringify(value)
+  const base = useRef(cur)
+  const curRef = useRef(cur)
+  curRef.current = cur
+  const dirty = cur !== base.current
+  const dirtyRef = useRef(dirty)
+  dirtyRef.current = dirty
+  useEffect(() => {
+    const h = (e: BeforeUnloadEvent) => {
+      if (!dirtyRef.current) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', h)
+    return () => window.removeEventListener('beforeunload', h)
+  }, [])
+  const markClean = useCallback(() => { base.current = curRef.current }, [])
+  return { dirty, markClean }
+}
 
 // ---------- 小さな部品 ----------
 
-export function PageShell({ children }: { children: ReactNode }) {
-  return <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">{children}</div>
-}
-
-export function PageHeader({ title, sub, actions }: { title: string; sub?: string; actions?: ReactNode }) {
-  return (
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
-        <h1 className="text-xl font-black text-slate-900 sm:text-2xl">{title}</h1>
-        {sub && <p className="mt-1 text-xs font-bold text-slate-500">{sub}</p>}
-      </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-    </div>
-  )
-}
-
-export function Card({ title, children, className = '', right }: { title?: string; children: ReactNode; className?: string; right?: ReactNode }) {
-  return (
-    <section className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 ${className}`}>
-      {(title || right) && (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          {title && <h2 className="text-sm font-black text-slate-900">{title}</h2>}
-          {right}
-        </div>
-      )}
-      {children}
-    </section>
-  )
-}
+export const inputCls = s.input
 
 export function ErrorText({ message }: { message: string | null | undefined }) {
   if (!message) return null
   return (
-    <p role="alert" className="flex items-start gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
-      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-      <span className="min-w-0 break-words">{message}</span>
+    <p role="alert" className={s.errBox} style={{ margin: 0 }}>
+      <AlertCircle size={18} aria-hidden="true" style={{ flex: 'none', marginTop: 3 }} />
+      <span style={{ minWidth: 0 }}>{message}</span>
     </p>
   )
 }
 
-export function Loading({ label = '読み込み中です' }: { label?: string }) {
+export function Field({
+  label, children, hint, error, className = '',
+}: { label: string; children: ReactNode; hint?: string; error?: string | null; className?: string }) {
+  // 入力欄に aria-invalid を足す（エラー文は下に出す）
+  const kids = Children.map(children, (c) => {
+    if (isValidElement(c) && typeof c.type === 'string' && ['input', 'select', 'textarea'].includes(c.type)) {
+      return cloneElement(c as ReactElement<Record<string, unknown>>, error ? { 'aria-invalid': true } : {})
+    }
+    return c
+  })
   return (
-    <div className="flex items-center justify-center gap-2 py-16 text-sm font-bold text-slate-500">
-      <Loader2 className="h-4 w-4 animate-spin" />
-      {label}
-    </div>
-  )
-}
-
-export function Empty({ children }: { children: ReactNode }) {
-  return <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm font-bold text-slate-500">{children}</div>
-}
-
-export function Spinner() {
-  return <Loader2 className="h-4 w-4 animate-spin" />
-}
-
-export function Field({ label, children, hint, className = '' }: { label: string; children: ReactNode; hint?: string; className?: string }) {
-  return (
-    <label className={`block ${className}`}>
-      <span className="mb-1 block text-[11px] font-black text-slate-600">{label}</span>
-      {children}
-      {hint && <span className="mt-1 block text-[11px] font-bold text-slate-400">{hint}</span>}
+    <label className={`${s.field} ${className}`.trim()}>
+      <span className={s.label}>{label}</span>
+      {kids}
+      {error ? <span role="alert" className={s.fieldError}>{error}</span> : hint ? <span className={s.hint}>{hint}</span> : null}
     </label>
   )
 }
 
-export function StatTile({ label, value, sub, tone = 'default' }: { label: string; value: string; sub?: string; tone?: 'default' | 'red' | 'green' }) {
-  const color = tone === 'red' ? 'text-red-600' : tone === 'green' ? 'text-[#0f9f6e]' : 'text-slate-900'
+export function CheckRow({ checked, onChange, children, disabled }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode; disabled?: boolean }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-      <p className="text-[11px] font-black text-slate-500">{label}</p>
-      <p className={`mt-0.5 break-words text-xl font-black tabular-nums sm:text-2xl ${color}`}>{value}</p>
-      {sub && <p className="mt-0.5 text-[11px] font-bold text-slate-500">{sub}</p>}
-    </div>
+    <label className={s.checkRow}>
+      <input type="checkbox" className={s.check} checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      <span>{children}</span>
+    </label>
   )
 }
 
 export function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+  const panel = useRef<HTMLDivElement>(null)
   useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null
+    panel.current?.focus()
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      prev?.focus?.()
+    }
   }, [onClose])
   return (
-    <div className="no-print fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
+    <div className={`no-print ${s.overlay}`} onClick={onClose}>
       <div
+        ref={panel}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        className={`max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'}`}
+        aria-label={title}
+        className={`${s.modal} ${wide ? s.modalWide : ''}`.trim()}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-base font-black text-slate-900">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="閉じる" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-            <X className="h-5 w-5" />
+        <div className={s.cardHead} style={{ marginBottom: 12, flexWrap: 'nowrap' }}>
+          <h2 className={s.h2}>{title}</h2>
+          <button type="button" onClick={onClose} aria-label="閉じる" className={s.iconBtn}>
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
         {children}
@@ -211,45 +282,69 @@ export function Modal({ title, onClose, children, wide = false }: { title: strin
   )
 }
 
-// ---------- バッジ ----------
+/** alert / confirm / prompt の代わり。理由の入力などは children に入れる */
+export function ConfirmDialog({
+  title, message, confirmLabel, cancelLabel = 'やめる', danger = false, busy = false, error, confirmDisabled = false, onConfirm, onClose, children,
+}: {
+  title: string
+  message?: ReactNode
+  confirmLabel: string
+  cancelLabel?: string
+  danger?: boolean
+  busy?: boolean
+  error?: string | null
+  confirmDisabled?: boolean
+  onConfirm: () => void
+  onClose: () => void
+  children?: ReactNode
+}) {
+  return (
+    <Modal title={title} onClose={() => !busy && onClose()}>
+      {message && <p style={{ margin: '0 0 12px', fontSize: 15, lineHeight: 1.7, color: 'var(--sub)' }}>{message}</p>}
+      {children}
+      {error && <div style={{ marginTop: 12 }}><ErrorText message={error} /></div>}
+      <div className={s.modalFoot}>
+        <Button variant="secondary" onClick={onClose} disabled={busy}>{cancelLabel}</Button>
+        <Button variant={danger ? 'dangerSolid' : 'primary'} onClick={onConfirm} loading={busy} disabled={confirmDisabled}>{confirmLabel}</Button>
+      </div>
+    </Modal>
+  )
+}
 
-const BADGE = 'inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-black'
+// ---------- バッジ（状態色: 請求漏れ・遅延=bad / 入金済み・成功=ok / 注意=note） ----------
+
+type Tone = 'ok' | 'note' | 'bad' | 'info' | 'neutral'
+const TONE_CLS: Record<Tone, string> = { ok: s.bOk, note: s.bNote, bad: s.bBad, info: s.bInfo, neutral: s.bNeutral }
+
+export function Badge({ tone, children }: { tone: Tone; children: ReactNode }) {
+  return <span className={`${s.badge} ${TONE_CLS[tone]}`}>{children}</span>
+}
 
 export function ContractStatusBadge({ status }: { status: string }) {
-  const cls =
-    status === 'active' ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-      : status === 'draft' ? 'border-amber-200 bg-amber-50 text-amber-700'
-        : status === 'paused' ? 'border-slate-200 bg-slate-100 text-slate-600'
-          : 'border-slate-200 bg-slate-50 text-slate-500'
-  return <span className={`${BADGE} ${cls}`}>{CONTRACT_STATUS_LABEL[status] ?? status}</span>
+  const tone: Tone = status === 'active' ? 'ok' : status === 'draft' ? 'note' : 'neutral'
+  return <Badge tone={tone}>{CONTRACT_STATUS_LABEL[status] ?? status}</Badge>
 }
 
 export function InvoiceStatusBadge({ status }: { status: string }) {
-  const cls =
-    status === 'draft' ? 'border-amber-200 bg-amber-50 text-amber-700'
-      : status === 'confirmed' ? 'border-sky-200 bg-sky-50 text-sky-700'
-        : status === 'sent' ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-          : 'border-slate-200 bg-slate-100 text-slate-500'
-  return <span className={`${BADGE} ${cls}`}>{INVOICE_STATUS_LABEL[status] ?? status}</span>
+  const tone: Tone = status === 'draft' ? 'note' : status === 'confirmed' ? 'info' : status === 'sent' ? 'ok' : 'neutral'
+  return <Badge tone={tone}>{INVOICE_STATUS_LABEL[status] ?? status}</Badge>
 }
 
 /** API の state.label（未入金/一部入金/入金済み/入金遅延）。取消・下書きは null */
 export function PaymentStateBadge({ label }: { label: string | null | undefined }) {
-  if (!label) return <span className="text-xs text-slate-300">—</span>
-  const cls =
-    label === '入金遅延' ? 'border-red-200 bg-red-50 text-red-700'
-      : label === '入金済み' ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-        : label === '一部入金' ? 'border-amber-200 bg-amber-50 text-amber-700'
-          : 'border-slate-200 bg-slate-50 text-slate-600'
-  return <span className={`${BADGE} ${cls}`}>{label}</span>
+  if (!label) return <span className={s.muted}>—</span>
+  const tone: Tone = label === '入金遅延' ? 'bad' : label === '入金済み' ? 'ok' : label === '一部入金' ? 'note' : 'neutral'
+  return <Badge tone={tone}>{label}</Badge>
 }
 
 export function ScheduleStatusBadge({ status }: { status: string }) {
-  const cls =
-    status === 'invoiced' ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-      : status === 'skipped' ? 'border-slate-200 bg-slate-100 text-slate-500'
-        : 'border-amber-200 bg-amber-50 text-amber-700'
-  return <span className={`${BADGE} ${cls}`}>{SCHEDULE_STATUS_LABEL[status] ?? status}</span>
+  const tone: Tone = status === 'invoiced' ? 'ok' : status === 'skipped' ? 'neutral' : 'note'
+  return <Badge tone={tone}>{SCHEDULE_STATUS_LABEL[status] ?? status}</Badge>
+}
+
+export function PaymentMatchBadge({ status }: { status: string }) {
+  const tone: Tone = status === 'matched' ? 'ok' : status === 'partial' ? 'note' : 'neutral'
+  return <Badge tone={tone}>{PAYMENT_STATUS_LABEL[status] ?? status}</Badge>
 }
 
 // ---------- 支払条件の選択 ----------
@@ -268,10 +363,11 @@ export function PaymentTermsFields({ value, onChange, allowDefault }: { value: T
   // 既存値が選択肢にないとき（例: 末日以外の 7 日）も表示できるように足す
   const withCurrent = (v: number) => (DAY_OPTIONS.includes(v) ? DAY_OPTIONS : [...DAY_OPTIONS, v].sort((a, b) => a - b))
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {allowDefault && (
         <select
           className={inputCls}
+          aria-label="支払条件の指定方法"
           value={isDefault ? 'default' : 'custom'}
           onChange={(e) => onChange(e.target.value === 'default' ? { closingDay: null, paymentMonths: null, paymentDay: null } : { closingDay: MONTH_END, paymentMonths: 1, paymentDay: MONTH_END })}
         >
@@ -281,7 +377,7 @@ export function PaymentTermsFields({ value, onChange, allowDefault }: { value: T
       )}
       {!isDefault && (
         <>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label="締め日">
               <select className={inputCls} value={closing} onChange={(e) => set({ closingDay: Number(e.target.value), paymentMonths: months, paymentDay: payDay })}>
                 {withCurrent(closing).map((d) => <option key={d} value={d}>{dayLabel(d)}</option>)}
@@ -300,7 +396,7 @@ export function PaymentTermsFields({ value, onChange, allowDefault }: { value: T
               </select>
             </Field>
           </div>
-          <p className="text-[11px] font-bold text-slate-500">{describePaymentTerms({ closingDay: closing, paymentMonths: months, paymentDay: payDay })}</p>
+          <p className={s.sub} style={{ margin: 0 }}>{describePaymentTerms({ closingDay: closing, paymentMonths: months, paymentDay: payDay })}</p>
         </>
       )}
     </div>
@@ -334,6 +430,14 @@ export function safeTotals(rows: LineRow[]) {
   }
 }
 
+/** 明細の入力ミスを文にして返す（空のものは返さない。保存時はサーバーも検証する） */
+export function lineRowErrors(r: LineRow): { quantity?: string; unitPrice?: string } {
+  const out: { quantity?: string; unitPrice?: string } = {}
+  if (r.quantity.trim() !== '' && Number.isNaN(Number(r.quantity.normalize('NFKC').replace(/,/g, '')))) out.quantity = '数量は数字で入力してください'
+  if (r.unitPrice.trim() !== '' && Number.isNaN(parseYenInput(r.unitPrice))) out.unitPrice = '単価は整数で入力してください'
+  return out
+}
+
 export function LineItemsEditor({
   rows, onChange, disabled, hint, namePlaceholder = '例: 月額利用料',
 }: { rows: LineRow[]; onChange: (rows: LineRow[]) => void; disabled?: boolean; hint?: string; namePlaceholder?: string }) {
@@ -350,55 +454,58 @@ export function LineItemsEditor({
   }
   return (
     <div>
-      {hint && <p className="mb-2 text-[11px] font-bold text-slate-500">{hint}</p>}
-      <div className="space-y-2">
-        {rows.map((r, i) => (
-          <div key={i} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-            <div className="grid grid-cols-6 gap-2">
-              <Field label="品目" className="col-span-6 sm:col-span-3">
-                <input className={inputCls} value={r.name} disabled={disabled} maxLength={120} placeholder={namePlaceholder} onChange={(e) => update(i, { name: e.target.value })} />
-              </Field>
-              <Field label="数量" className="col-span-2 sm:col-span-1">
-                <input className={inputCls} inputMode="numeric" value={r.quantity} disabled={disabled} onChange={(e) => update(i, { quantity: e.target.value })} />
-              </Field>
-              <Field label="単価（円）" className="col-span-4 sm:col-span-2">
-                <input className={inputCls} inputMode="text" value={r.unitPrice} disabled={disabled} placeholder="100000" onChange={(e) => update(i, { unitPrice: e.target.value })} />
-              </Field>
-              <Field label="税率" className="col-span-3 sm:col-span-2">
-                <select className={inputCls} value={r.taxRate} disabled={disabled} onChange={(e) => update(i, { taxRate: Number(e.target.value) })}>
-                  {TAX_RATES.map((t) => <option key={t} value={t}>{t}%</option>)}
-                </select>
-              </Field>
-              <div className="col-span-3 flex items-end justify-between gap-2 sm:col-span-4">
-                <p className="pb-2 text-xs font-bold text-slate-500">
-                  金額 <span className="tabular-nums text-slate-800">{totals ? yen(totals.lineAmounts[i]) : '—'}</span>
-                </p>
-                {rows.length > 1 && !disabled && (
-                  <button type="button" onClick={() => onChange(rows.filter((_, idx) => idx !== i))} className="mb-1 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-black text-red-600 hover:bg-red-50">
-                    <Trash2 className="h-3.5 w-3.5" />
-                    削除
-                  </button>
-                )}
+      {hint && <p className={s.sub} style={{ margin: '0 0 12px' }}>{hint}</p>}
+      <div className="space-y-3">
+        {rows.map((r, i) => {
+          const er = lineRowErrors(r)
+          return (
+            <div key={i} className={s.lineCard}>
+              <div className="grid grid-cols-6 gap-3">
+                <Field label="品目" className="col-span-6 sm:col-span-3">
+                  <input className={inputCls} value={r.name} disabled={disabled} maxLength={120} placeholder={namePlaceholder} onChange={(e) => update(i, { name: e.target.value })} />
+                </Field>
+                <Field label="数量" error={er.quantity} className="col-span-2 sm:col-span-1">
+                  <input className={inputCls} inputMode="numeric" value={r.quantity} disabled={disabled} onChange={(e) => update(i, { quantity: e.target.value })} />
+                </Field>
+                <Field label="単価（円）" error={er.unitPrice} className="col-span-4 sm:col-span-2">
+                  <input className={inputCls} inputMode="text" value={r.unitPrice} disabled={disabled} placeholder="100000" onChange={(e) => update(i, { unitPrice: e.target.value })} />
+                </Field>
+                <Field label="税率" className="col-span-3 sm:col-span-2">
+                  <select className={inputCls} value={r.taxRate} disabled={disabled} onChange={(e) => update(i, { taxRate: Number(e.target.value) })}>
+                    {TAX_RATES.map((t) => <option key={t} value={t}>{t}%</option>)}
+                  </select>
+                </Field>
+                <div className="col-span-3 flex flex-wrap items-end justify-between gap-2 sm:col-span-4">
+                  <p className={s.sub} style={{ margin: 0, paddingBottom: 12 }}>
+                    金額 <span className={`${s.num} ${s.strong}`}>{totals ? yen(totals.lineAmounts[i]) : '—'}</span>
+                  </p>
+                  {rows.length > 1 && !disabled && (
+                    <Button variant="danger" size="sm" onClick={() => onChange(rows.filter((_, idx) => idx !== i))}>
+                      <Trash2 size={14} aria-hidden="true" />削除
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
       {!disabled && (
-        <button type="button" onClick={() => onChange([...rows, emptyLine(rows[rows.length - 1]?.taxRate ?? 10)])} className={`${btnSecondary} ${btnSmall} mt-2`}>
-          <Plus className="h-3.5 w-3.5" />
-          行を追加
-        </button>
+        <div style={{ marginTop: 12 }}>
+          <Button size="sm" onClick={() => onChange([...rows, emptyLine(rows[rows.length - 1]?.taxRate ?? 10)])}>
+            <Plus size={14} aria-hidden="true" />行を追加
+          </Button>
+        </div>
       )}
-      <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
+      <div className={s.totals}>
         {totals ? (
-          <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 tabular-nums">
-            <dt>小計（税抜）</dt><dd className="text-right">{yen(totals.subtotalExclTax)}</dd>
-            <dt>消費税</dt><dd className="text-right">{yen(totals.taxAmount)}</dd>
-            <dt className="text-slate-900">合計（税込）</dt><dd className="text-right text-slate-900">{yen(totals.totalInclTax)}</dd>
+          <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 tabular-nums">
+            <dt>小計（税抜）</dt><dd className="m-0 text-right">{yen(totals.subtotalExclTax)}</dd>
+            <dt>消費税</dt><dd className="m-0 text-right">{yen(totals.taxAmount)}</dd>
+            <dt className={s.strong}>合計（税込）</dt><dd className={`m-0 text-right ${s.strong}`}>{yen(totals.totalInclTax)}</dd>
           </dl>
         ) : (
-          <span className={totalError ? 'text-red-600' : 'text-slate-400'}>{totalError ?? '数量と単価を入力すると合計が出ます'}</span>
+          <span className={totalError ? s.badText : s.muted}>{totalError ?? '数量と単価を入力すると合計が出ます'}</span>
         )}
       </div>
     </div>
@@ -409,14 +516,28 @@ export function LineItemsEditor({
 
 export function MonthSwitcher({ month, onChange }: { month: string; onChange: (m: string) => void }) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
-      <button type="button" aria-label="前の月" onClick={() => onChange(shiftMonth(month, -1))} className="rounded-lg px-2.5 py-1.5 text-sm font-black text-slate-600 hover:bg-slate-100">
-        <ChevronLeft className="h-4 w-4" />
+    <div className={s.monthSw}>
+      <button type="button" aria-label="前の月" onClick={() => onChange(shiftMonth(month, -1))} className={s.monthBtn}>
+        <ChevronLeft size={18} aria-hidden="true" />
       </button>
-      <span className="min-w-[6.5rem] text-center text-sm font-black text-slate-900">{monthLabel(month)}</span>
-      <button type="button" aria-label="次の月" onClick={() => onChange(shiftMonth(month, 1))} className="rounded-lg px-2.5 py-1.5 text-sm font-black text-slate-600 hover:bg-slate-100">
-        <ChevronRight className="h-4 w-4" />
+      <span className={`${s.monthLabel} ${s.num}`} aria-live="polite">{monthLabel(month)}</span>
+      <button type="button" aria-label="次の月" onClick={() => onChange(shiftMonth(month, 1))} className={s.monthBtn}>
+        <ChevronRight size={18} aria-hidden="true" />
       </button>
+    </div>
+  )
+}
+
+// ---------- 切替タブ ----------
+
+export function Tabs({ tabs, value, onChange }: { tabs: [string, string][]; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className={s.tabs} role="group" aria-label="絞り込み">
+      {tabs.map(([k, label]) => (
+        <button key={k} type="button" aria-pressed={value === k} onClick={() => onChange(k)} className={`${s.tab} ${value === k ? s.tabOn : ''}`.trim()}>
+          {label}
+        </button>
+      ))}
     </div>
   )
 }

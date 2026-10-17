@@ -575,3 +575,29 @@ src/lib/income/
 1. `doya-db-push` の手順で `income_*` 15 表を本番 DB に反映する（Vercel のビルドは db push をしない。忘れると全 API が 500）
 2. 課金仕様書 §11.3: `npx tsx scripts/backfill-new-service-subscriptions.ts --service=income` で既存有料ユーザーの不足行を確認し、件数を確かめてから `--apply`（しないと課金監査が「サービス別プランのズレ」を警告する）
 3. main へ push（Vercel が本番デプロイ）
+
+### リニューアル（経営エージェント）への組み込み（2026-10-18 追記。ADDON-SERVICES-2026-10-18.md）
+
+| 規則 | 対応 |
+|---|---|
+| R-1 ナビをデータで | `src/lib/income/nav.ts`（`INCOME_NAV`）。暫定サイドバー `IncomeSidebar` はこれを描くだけ |
+| R-2 独自レイアウトを持たない | ページ本体は外枠を持たない。AppShell（段 0）が main に入ったら `IncomeAppLayout` / `IncomeSidebar` を消して AppShell に載せる |
+| R-3 ds トークン | `src/components/income/tokens.module.css`（`.ds`。ds と同じ名前・値。請求漏れ・遅延用に `--bad-bg / --bad-ink` を足した → ds への追加を提案） |
+| R-4 読み取りを分ける | `summary-read.ts`（`buildSummary` / `homeIncomeSummary`）、`calendar-read.ts`（`listCalendarEvents` / `listCashInEvents`） |
+| R-5 自社プロフィール | `IncomeIssuer.companyProfileId String?`（予約列） |
+| R-6 FK なし | `sfaDealId`（unique）/ `quoteDocumentId` / `expenseOrganizationId` |
+| R-8 マニフェスト | `reference/services/income.md` §7 |
+| §5 道具 | `src/lib/income/agent-tools.ts`: `income.summary` / `income.listCalendarEvents`（read）、`income.draftInvoice`、`income.issueInvoice`（承認必須）、`income.draftDunning`（Phase1 は定型文で費用なし） |
+| §6 #11 支出 | `EXPENSE_ADAPTERS`（取り込み元は 1 つ）。支出管理のマージで `expense` を 1 行足す。設定 API は `{ expenseSourceId, expenseRefId }` |
+
+本番前の作業は変わらない（db push → backfill → push）。
+
+### 動作確認（2026-10-18、ローカルの検証用 DB。本番 DB には触れていない）
+
+- 検証用 DB: Homebrew の PostgreSQL 17 を作業用の一時ディレクトリ・ポート 5433 で起動し、`prisma db push` で `income_*` を作成。`.env.local`（git 管理外）でだけ接続
+- API を順に呼んで通しで確認: 請求元登録 → 取引先 2 件 → 契約 2 件（自動更新・日割り）→ 9 月分をまとめて請求書作成 → 確定（`INV-2026-0001` / `0002`）→ 入金登録（手数料 660 円差引）→ 照合候補「金額と振込名義が一致」→ 消込 → 請求書が「入金済み」
+- ダッシュボード: 8 月分の未請求が「請求漏れ」に出る、未入金・入金済の金額が合う
+- 別ユーザーが他社の組織を `?org=` で指定 → 403（IDOR が実際に止まる）
+- 画面: 1280px / 375px で主要画面を目視。スクリーンショットは `screenshots/`（データあり・空・見つからない の各状態）
+- 見つけて直したもの: 375px で表の最小幅がカード表示を壊していた／見出しのボタン列がはみ出していた／請求書の用紙がはみ出していた／最初の HTML で本体が 240px ずれて出ていた（余白を CSS の画面幅で決めるように変更）／ルート引数の型が Next 15 の規約に合わず `next build` の型検査で落ちる形だった
+- 権限なし（403）の画面表示は、画面からは自組織しか呼ばないため実画面では出していない（API の 403 と表示部品は確認済み）

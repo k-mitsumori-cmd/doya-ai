@@ -1,8 +1,10 @@
 // ============================================
-// ドヤ収入管理: ダッシュボードの集計（LLM は使わない。設計書 §6「今月のまとめ」）
+// ドヤ収入管理: 集計（読み取り専用。ADDON-SERVICES R-4）
+// ダッシュボード API・ホーム・エージェント道具（income.summary）が同じ関数を呼ぶ。LLM は使わない。
 // ============================================
 import { prisma } from '@/lib/prisma'
-import type { IncomeContext } from './access'
+/** 読み取りに要る文脈だけ（エージェント道具からも作れるように IncomeContext の一部） */
+export type ReadCtx = { userId: string; organizationId: string }
 import { addDays, addMonthsYm, diffDays, formatYmd, fromDbDate, parseYmd, toDbDate, todayJst, type Ymd } from './dates'
 import { monthlyExpenses } from './expense-source'
 import { paymentState, periodLabel } from './invoices'
@@ -22,10 +24,10 @@ function monthRange(month: string) {
   return { gte: toDbDate(formatYmd(y, m, 1)), lt: toDbDate(formatYmd(next.y, next.m, 1)) }
 }
 
-export async function buildSummary(ctx: IncomeContext, month: string, today: Ymd = todayJst()) {
+export async function buildSummary(ctx: ReadCtx, month: string, today: Ymd = todayJst()) {
   const orgId = ctx.organizationId
   const range = monthRange(month)
-  const org = await prisma.incomeOrganization.findFirst({ where: { id: orgId }, select: { promaneWorkspaceId: true } })
+  const org = await prisma.incomeOrganization.findFirst({ where: { id: orgId }, select: { promaneWorkspaceId: true, expenseSourceId: true, expenseOrganizationId: true } })
 
   const [monthSchedules, receivedAgg, openInvoices, leaks, contracts] = await Promise.all([
     prisma.incomeRevenueSchedule.findMany({ where: { organizationId: orgId, period: range, status: { not: 'skipped' } }, select: { amountExclTax: true, status: true } }),
@@ -99,7 +101,7 @@ export async function buildSummary(ctx: IncomeContext, month: string, today: Ymd
   const [trendSchedules, trendPayments, expense] = await Promise.all([
     prisma.incomeRevenueSchedule.groupBy({ by: ['period'], where: { organizationId: orgId, period: trendRange, status: { not: 'skipped' } }, _sum: { amountExclTax: true } }),
     prisma.incomePayment.findMany({ where: { organizationId: orgId, receivedOn: trendRange }, select: { receivedOn: true, amount: true } }),
-    monthlyExpenses(ctx.userId, org?.promaneWorkspaceId ?? null, fromMonth, month),
+    monthlyExpenses(ctx.userId, { promaneWorkspaceId: org?.promaneWorkspaceId ?? null, expenseSourceId: org?.expenseSourceId ?? null, expenseOrganizationId: org?.expenseOrganizationId ?? null }, fromMonth, month),
   ])
   const trend = Array.from({ length: 12 }, (_, i) => {
     const ym = addMonthsYm(first.y, first.m, i)
@@ -125,8 +127,32 @@ export async function buildSummary(ctx: IncomeContext, month: string, today: Ymd
       expense: current.expense,
       profit: current.profit,
     },
-    expense: expense.connected ? { connected: true as const, workspaceName: expense.workspaceName } : { connected: false as const, reason: expense.reason },
+    expense: expense.connected ? { connected: true as const, workspaceName: expense.workspaceName, sourceLabel: expense.sourceLabel, note: expense.note } : { connected: false as const, reason: expense.reason },
     actions,
     trend,
+  }
+}
+
+/**
+ * ホーム（経営ホーム §4）のカード用。ダッシュボードの集計から必要な分だけ返す。
+ * 使っていない組織（契約 0 件）は null（空のカードを出さない）。
+ */
+export async function homeIncomeSummary(ctx: ReadCtx, month: string, today: Ymd = todayJst()) {
+  const used = await prisma.incomeContract.count({ where: { organizationId: ctx.organizationId } })
+  if (used === 0) return null
+  const s = await buildSummary(ctx, month, today)
+  return {
+    month: s.month,
+    revenue: { scheduled: s.kpi.scheduled, invoiced: s.kpi.invoiced, received: s.kpi.received },
+    billing: {
+      leaks: s.actions.filter((a) => a.kind === 'leak').length,
+      overdue: s.kpi.overdueCount,
+      unpaid: s.kpi.unpaid,
+    },
+    expense: s.kpi.expense,
+    profit: s.kpi.profit,
+    /** 今日やること（請求漏れ・入金遅延を先頭に最大 5 件） */
+    todo: s.actions.slice(0, 5),
+    href: '/income',
   }
 }

@@ -1,14 +1,14 @@
 'use client'
 
 // 取引先の詳細・編集
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import ClientForm, { type ClientDto } from '@/components/income/ClientForm'
 import {
-  Card, ContractStatusBadge, Empty, ErrorText, InvoiceStatusBadge, Loading, PageHeader, PageShell, PaymentStateBadge, Spinner,
-  btnDanger, btnPrimary, btnSecondary, errMsg, fetchJson, ymd, yen, BILLING_CYCLE_LABEL,
+  BILLING_CYCLE_LABEL, Button, Card, ConfirmDialog, ContractStatusBadge, DetailSkeleton, EmptyState, ErrorText, Gate, InvoiceStatusBadge, PageHeader, PageShell,
+  PaymentStateBadge, errMsg, fetchJson, s, toast, useResource, yen, ymd,
 } from '@/components/income/ui'
 
 type Detail = ClientDto & {
@@ -19,31 +19,24 @@ type Detail = ClientDto & {
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const [client, setClient] = useState<Detail | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
+  const res = useResource(() => fetchJson<{ client: Detail }>(`/api/income/clients/${id}`).then((d) => d.client), id)
+  const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
-
-  const load = useCallback(async () => {
-    try {
-      setClient((await fetchJson<{ client: Detail }>(`/api/income/clients/${id}`)).client)
-    } catch (e) {
-      setError(errMsg(e))
-    }
-  }, [id])
-  useEffect(() => { load() }, [load])
+  const [error, setError] = useState<string | null>(null)
 
   const remove = async () => {
-    if (!client) return
-    const hasHistory = client.contracts.length + client.invoices.length > 0
-    const msg = hasHistory ? '契約や請求書があるため、削除ではなく「取引終了」にします。よろしいですか？' : 'この取引先を削除します。よろしいですか？'
-    if (!window.confirm(msg)) return
     setBusy(true)
     setError(null)
     try {
       const r = await fetchJson<{ deactivated?: boolean }>(`/api/income/clients/${id}`, { method: 'DELETE' })
-      if (r.deactivated) await load()
-      else router.push('/income/clients')
+      setConfirming(false)
+      if (r.deactivated) {
+        await res.reload()
+        toast('取引終了にしました')
+      } else {
+        toast('取引先を削除しました')
+        router.push('/income/clients')
+      }
     } catch (e) {
       setError(errMsg(e))
     } finally {
@@ -51,84 +44,93 @@ export default function ClientDetailPage() {
     }
   }
 
-  if (!client) {
-    return <PageShell>{error ? <ErrorText message={error} /> : <Loading />}</PageShell>
-  }
-
   return (
     <PageShell>
-      <Link href="/income/clients" className="mb-3 inline-flex items-center gap-1 text-xs font-black text-slate-500 hover:text-slate-800">
-        <ArrowLeft className="h-3.5 w-3.5" />取引先の一覧
-      </Link>
-      <PageHeader
-        title={client.name}
-        actions={
-          <>
-            <Link href={`/income/contracts/new?clientId=${client.id}`} className={btnPrimary}><Plus className="h-4 w-4" />契約を登録</Link>
-            <button type="button" onClick={remove} disabled={busy} className={btnDanger}>
-              {busy && <Spinner />}
-              {client.contracts.length + client.invoices.length > 0 ? '取引終了にする' : '削除'}
-            </button>
-          </>
-        }
-      />
-      <ErrorText message={error} />
-      <div className="mt-3 space-y-4">
-        <Card title="基本情報">
-          <ClientForm
-            key={client.updatedAt}
-            initial={client}
-            submitLabel="保存する"
-            onSubmit={async (payload) => {
-              setSaved(false)
-              await fetchJson(`/api/income/clients/${id}`, { method: 'PATCH', body: payload })
-              await load()
-              setSaved(true)
-            }}
-          />
-          {saved && <p className="mt-2 text-xs font-black text-[#0f9f6e]">保存しました</p>}
-        </Card>
+      <Gate res={res} skeleton={<DetailSkeleton cards={3} />} listHref="/income/clients" listLabel="取引先の一覧">
+        {(client) => {
+          const hasHistory = client.contracts.length + client.invoices.length > 0
+          return (
+            <>
+              <PageHeader
+                crumbs={[{ label: '収入管理', href: '/income' }, { label: '取引先', href: '/income/clients' }, { label: client.name }]}
+                title={client.name}
+                actions={
+                  <>
+                    <Button href={`/income/contracts/new?clientId=${client.id}`}><Plus size={16} aria-hidden="true" />契約を登録</Button>
+                    <Button variant="danger" onClick={() => { setError(null); setConfirming(true) }}>{hasHistory ? '取引終了にする' : '削除'}</Button>
+                  </>
+                }
+              />
+              <div className={s.stackY}>
+                <Card title="基本情報">
+                  <ClientForm
+                    key={client.updatedAt}
+                    initial={client}
+                    submitLabel="保存する"
+                    onSubmit={async (payload) => {
+                      await fetchJson(`/api/income/clients/${id}`, { method: 'PATCH', body: payload })
+                      await res.reload()
+                    }}
+                  />
+                </Card>
 
-        <Card title={`契約（${client.contracts.length}）`}>
-          {client.contracts.length === 0 ? (
-            <Empty>この取引先の契約はまだありません。</Empty>
-          ) : (
-            <ul className="divide-y divide-slate-100">
-              {client.contracts.map((c) => (
-                <li key={c.id}>
-                  <Link href={`/income/contracts/${c.id}`} className="flex flex-wrap items-center gap-2 py-2.5 hover:bg-slate-50">
-                    <span className="min-w-0 flex-1 truncate text-sm font-black text-slate-900">{c.title}</span>
-                    <ContractStatusBadge status={c.status} />
-                    <span className="text-xs font-bold tabular-nums text-slate-700">{yen(c.amountExclTax)}（{BILLING_CYCLE_LABEL[c.billingCycle] ?? ''}）</span>
-                    <span className="text-xs font-bold text-slate-400">{ymd(c.startDate)} 〜 {ymd(c.endDate) || '期間の定めなし'}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+                <Card title={`契約（${client.contracts.length}）`}>
+                  {client.contracts.length === 0 ? (
+                    <EmptyState image="/income/empty-contracts.webp" message="この取引先の契約はまだありません。契約を登録すると、月ごとの売上予定が作られます。" action={{ label: '契約を登録する', href: `/income/contracts/new?clientId=${client.id}` }} />
+                  ) : (
+                    <ul className={s.divided}>
+                      {client.contracts.map((c) => (
+                        <li key={c.id}>
+                          <Link href={`/income/contracts/${c.id}`} className={s.lineRow}>
+                            <span className={`${s.grow} ${s.strong} ${s.truncate}`}>{c.title}</span>
+                            <ContractStatusBadge status={c.status} />
+                            <span className={s.num}>{yen(c.amountExclTax)}（{BILLING_CYCLE_LABEL[c.billingCycle] ?? ''}）</span>
+                            <span className={s.sub}>{ymd(c.startDate)} 〜 {ymd(c.endDate) || '期間の定めなし'}</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Card>
 
-        <Card title={`請求書（直近${client.invoices.length}件）`}>
-          {client.invoices.length === 0 ? (
-            <Empty>この取引先の請求書はまだありません。</Empty>
-          ) : (
-            <ul className="divide-y divide-slate-100">
-              {client.invoices.map((i) => (
-                <li key={i.id}>
-                  <Link href={`/income/invoices/${i.id}`} className="flex flex-wrap items-center gap-2 py-2.5 hover:bg-slate-50">
-                    <span className="min-w-0 flex-1 truncate text-sm font-black text-slate-900">{i.invoiceNo ?? '（下書き）'} {i.title}</span>
-                    <InvoiceStatusBadge status={i.status} />
-                    <PaymentStateBadge label={i.state.label} />
-                    <span className="text-xs font-bold text-slate-400">{ymd(i.issueDate)}</span>
-                    <span className="text-xs font-bold tabular-nums text-slate-700">{yen(i.totalInclTax)}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </div>
-      <div className="mt-4"><Link href="/income/clients" className={btnSecondary}>一覧に戻る</Link></div>
+                <Card title={`請求書（直近${client.invoices.length}件）`}>
+                  {client.invoices.length === 0 ? (
+                    <EmptyState image="/income/empty-invoices.webp" message="この取引先の請求書はまだありません。売上予定から請求書を作れます。" action={{ label: '月次売上を開く', href: '/income/revenue' }} />
+                  ) : (
+                    <ul className={s.divided}>
+                      {client.invoices.map((i) => (
+                        <li key={i.id}>
+                          <Link href={`/income/invoices/${i.id}`} className={s.lineRow}>
+                            <span className={`${s.grow} ${s.strong} ${s.truncate}`}>{i.invoiceNo ?? '（下書き）'} {i.title}</span>
+                            <InvoiceStatusBadge status={i.status} />
+                            <PaymentStateBadge label={i.state.label} />
+                            <span className={s.sub}>{ymd(i.issueDate)}</span>
+                            <span className={s.num}>{yen(i.totalInclTax)}</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Card>
+              </div>
+
+              {confirming && (
+                <ConfirmDialog
+                  title={hasHistory ? '取引終了にしますか' : '取引先を削除しますか'}
+                  message={hasHistory ? '契約や請求書があるため、削除ではなく「取引終了」にします。新しい契約の選択肢には出なくなりますが、過去の記録は残ります。' : 'この取引先を削除します。元に戻せません。'}
+                  confirmLabel={hasHistory ? '取引終了にする' : '削除する'}
+                  danger
+                  busy={busy}
+                  error={error}
+                  onConfirm={remove}
+                  onClose={() => setConfirming(false)}
+                />
+              )}
+              {!confirming && <div style={{ marginTop: 16 }}><ErrorText message={error} /></div>}
+            </>
+          )
+        }}
+      </Gate>
     </PageShell>
   )
 }

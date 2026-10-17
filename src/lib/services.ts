@@ -1729,9 +1729,9 @@ export const SERVICES: Service[] = [
       'B2Bの「契約 → 毎月の売上 → 請求書 → 入金」を一本の線で管理します。契約（月額・期間・支払条件）を登録すると、計上月ごとの売上予定が自動で作られ、請求予定日を過ぎても請求書が無い月は「請求漏れ」として表示されます。月次の一覧から請求書（適格請求書）をまとめて作成し、入金を登録すると金額と振込名義から照合の候補を出します。支払期日を過ぎた未入金は「入金遅延」として一覧に出ます。ドヤプロマネの経費・人件費と合わせて、月ごとの粗利も確認できます。仕訳や確定申告は会計ソフトにお任せいただく前提の、シンプルな管理ツールです。',
     // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
     icon: '',
-    color: 'emerald',
-    gradient: 'from-[#0f9f6e] to-[#065f46]',
-    bgGradient: 'from-emerald-50 to-teal-50',
+    color: 'blue',
+    gradient: 'from-[#0066ff] to-[#0047d6]',
+    bgGradient: 'from-blue-50 to-sky-50',
     href: '/income',
     dashboardHref: '/income',
     pricingHref: '/income/pricing',

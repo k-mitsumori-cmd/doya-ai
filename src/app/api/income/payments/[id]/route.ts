@@ -10,7 +10,7 @@ import { idFrom, withIncome, type IdCtx } from '@/lib/income/route'
 export async function DELETE(req: NextRequest, c: IdCtx) {
   return withIncome(req, 'manager', async (ctx) => {
     const id = await idFrom(c)
-    await prisma.$transaction((tx) => deletePayment(tx, ctx, id))
+    await prisma.$transaction((tx) => deletePayment(tx, ctx, id), { isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'payment.delete', 'payment', id)
     return NextResponse.json({ ok: true })
   })

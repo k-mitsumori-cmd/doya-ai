@@ -15,7 +15,7 @@ function walk(dir: string, pick: (name: string) => boolean): string[] {
 }
 
 const routes = walk(join(root, 'src/app/api/income'), (n) => n === 'route.ts')
-const libs = ['contracts.ts', 'invoices.ts', 'payments.ts', 'summary.ts'].map((f) => join(root, 'src/lib/income', f))
+const libs = ['contracts.ts', 'invoices.ts', 'payments.ts', 'summary-read.ts', 'calendar-read.ts'].map((f) => join(root, 'src/lib/income', f))
 const rel = (f: string) => f.slice(root.length + 1)
 
 /** 開き括弧の位置から、対応する閉じ括弧までを返す */

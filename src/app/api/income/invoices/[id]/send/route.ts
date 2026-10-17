@@ -14,7 +14,7 @@ export async function POST(req: NextRequest, c: IdCtx) {
     const id = await idFrom(c)
     const body = asBody((await readJson(req)) ?? {})
     const sentTo = email(body, 'sentTo', '送付先メール')
-    const invoice = await prisma.$transaction((tx) => markSent(tx, ctx, id, sentTo))
+    const invoice = await prisma.$transaction((tx) => markSent(tx, ctx, id, sentTo), { isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'invoice.sent', 'invoice', id, { sentTo })
     return NextResponse.json({ invoice })
   })

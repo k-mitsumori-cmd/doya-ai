@@ -7,7 +7,8 @@ import { addMonthsYm, daysInMonth, formatYmd, isYmd, parseYmd, todayJst } from '
 import { buildSchedule } from '@/lib/income/schedule'
 import {
   BILLING_CYCLE_LABEL, CONTRACT_STATUS_LABEL, CONTRACT_STATUS_ORDER, CONTRACT_TYPE_LABEL, ISSUE_TIMING_LABEL, PRORATE_LABEL,
-  btnPrimary, Card, emptyLine, ErrorText, Field, inputCls, LineItemsEditor, linesToPayload, Spinner, errMsg, fetchJson, periodText, yen, ymd,
+  Button, Card, CheckRow, emptyLine, ErrorText, Field, inputCls, LineItemsEditor, linesToPayload, errMsg, fetchJson, periodText, s, toast,
+  useUnsavedGuard, yen, ymd,
   type LineRow,
 } from './ui'
 
@@ -62,7 +63,9 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
   )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [tried, setTried] = useState(false)
+  const { markClean } = useUnsavedGuard({ f, rows })
 
   useEffect(() => {
     fetchJson<{ clients: ClientOpt[] }>('/api/income/clients')
@@ -71,7 +74,18 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
   }, [])
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value })
+  const touch = (k: string) => () => setTouched((x) => ({ ...x, [k]: true }))
   const oneTime = f.type === 'one_time'
+
+  // 入力しながら検証する（触った項目か、保存を押したあとだけ出す）
+  const errors: Record<string, string | undefined> = {
+    clientId: f.clientId ? undefined : '取引先を選択してください',
+    title: f.title.trim() ? undefined : '契約名を入力してください',
+    startDate: isYmd(f.startDate) ? undefined : '開始日を入力してください',
+    endDate: f.endDate && !isYmd(f.endDate) ? '終了日の形式が正しくありません' : f.endDate && isYmd(f.startDate) && f.endDate < f.startDate ? '終了日は開始日以降にしてください' : undefined,
+    renewalNoticeDays: f.renewalNoticeDays.trim() !== '' && !/^\d+$/.test(f.renewalNoticeDays.normalize('NFKC').trim()) ? '日数は0以上の整数で入力してください' : undefined,
+  }
+  const err = (k: string) => (touched[k] || tried ? errors[k] : undefined)
 
   const preview = useMemo(() => {
     try {
@@ -101,22 +115,29 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setTried(true)
+    if (Object.values(errors).some(Boolean)) {
+      setError('入力に誤りがあります。赤字の項目を直してください。')
+      return
+    }
     setBusy(true)
     setError(null)
-    setSaved(false)
     try {
       const body = {
         ...f,
-        renewalNoticeDays: f.renewalNoticeDays.trim() === '' ? null : Number(f.renewalNoticeDays),
+        renewalNoticeDays: f.renewalNoticeDays.trim() === '' ? null : Number(f.renewalNoticeDays.normalize('NFKC')),
         endDate: f.endDate || null,
         items: linesToPayload(rows).map(({ name, quantity, unitPrice, taxRate }) => ({ name, quantity, unitPrice, taxRate })),
       }
       if (initial) {
         await fetchJson(`/api/income/contracts/${initial.id}`, { method: 'PATCH', body })
-        setSaved(true)
+        markClean()
+        toast('契約を保存しました')
         onSaved?.()
       } else {
         const d = await fetchJson<{ id: string }>('/api/income/contracts', { method: 'POST', body })
+        markClean()
+        toast('契約を登録しました')
         router.push(`/income/contracts/${d.id}`)
       }
     } catch (err) {
@@ -127,17 +148,17 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} noValidate className="space-y-4">
       <Card title="契約の内容">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="取引先（必須）">
-            <select className={inputCls} value={f.clientId} onChange={set('clientId')} required>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="取引先（必須）" error={err('clientId')}>
+            <select className={inputCls} value={f.clientId} onChange={set('clientId')} onBlur={touch('clientId')}>
               <option value="">選択してください</option>
               {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
-          <Field label="契約名（必須）">
-            <input className={inputCls} value={f.title} onChange={set('title')} maxLength={120} required placeholder="例: 保守運用契約" />
+          <Field label="契約名（必須）" error={err('title')}>
+            <input className={inputCls} value={f.title} onChange={set('title')} onBlur={touch('title')} maxLength={120} placeholder="例: 保守運用契約" />
           </Field>
           <Field label="契約番号">
             <input className={inputCls} value={f.contractNo} onChange={set('contractNo')} maxLength={60} />
@@ -149,24 +170,23 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
           </Field>
           <Field label="状態" hint="「有効」にすると売上予定が自動で作られます">
             <select className={inputCls} value={f.status} onChange={set('status')}>
-              {CONTRACT_STATUS_ORDER.map((s) => <option key={s} value={s}>{CONTRACT_STATUS_LABEL[s]}</option>)}
+              {CONTRACT_STATUS_ORDER.map((st) => <option key={st} value={st}>{CONTRACT_STATUS_LABEL[st]}</option>)}
             </select>
           </Field>
-          <div />
-          <Field label="開始日（必須）">
-            <input type="date" className={inputCls} value={f.startDate} onChange={set('startDate')} required />
+          <div className="hidden sm:block" />
+          <Field label="開始日（必須）" error={err('startDate')}>
+            <input type="date" className={inputCls} value={f.startDate} onChange={set('startDate')} onBlur={touch('startDate')} />
           </Field>
-          <Field label="終了日" hint={oneTime ? undefined : '空欄は期間の定めなし'}>
-            <input type="date" className={inputCls} value={f.endDate} onChange={set('endDate')} />
+          <Field label="終了日" error={err('endDate')} hint={oneTime ? undefined : '空欄は期間の定めなし'}>
+            <input type="date" className={inputCls} value={f.endDate} onChange={set('endDate')} onBlur={touch('endDate')} />
           </Field>
           {!oneTime && (
             <>
-              <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                <input type="checkbox" checked={f.autoRenew} onChange={(e) => setF({ ...f, autoRenew: e.target.checked })} className="h-4 w-4 accent-[#0f9f6e]" />
+              <CheckRow checked={f.autoRenew} onChange={(v) => setF({ ...f, autoRenew: v })}>
                 自動更新する（終了日が更新日）
-              </label>
-              <Field label="解約予告の日数" hint="更新日の何日前までに通知が必要か">
-                <input className={inputCls} inputMode="numeric" value={f.renewalNoticeDays} onChange={set('renewalNoticeDays')} placeholder="30" />
+              </CheckRow>
+              <Field label="解約予告の日数" error={err('renewalNoticeDays')} hint="更新日の何日前までに通知が必要か">
+                <input className={inputCls} inputMode="numeric" value={f.renewalNoticeDays} onChange={set('renewalNoticeDays')} onBlur={touch('renewalNoticeDays')} placeholder="30" />
               </Field>
             </>
           )}
@@ -174,7 +194,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       </Card>
 
       <Card title="請求のルール">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-3">
           {!oneTime && (
             <Field label="請求サイクル">
               <select className={inputCls} value={f.billingCycle} onChange={set('billingCycle')}>
@@ -203,27 +223,25 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
 
       <Card title="売上予定のプレビュー（先頭6件）">
         {preview.rows.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[420px] text-xs">
+          <div className={s.tableWrap}>
+            <table className={s.table}>
               <thead>
-                <tr className="border-b border-slate-200 text-left text-[11px] font-black text-slate-500">
-                  <th className="py-1.5 pr-3">計上月</th><th className="py-1.5 pr-3">請求予定日</th><th className="py-1.5 text-right">金額（税抜）</th>
-                </tr>
+                <tr><th>計上月</th><th>請求予定日</th><th className={s.r}>金額（税抜）</th></tr>
               </thead>
               <tbody>
                 {preview.rows.map((r) => (
-                  <tr key={r.period} className="border-b border-slate-100">
-                    <td className="py-1.5 pr-3 font-bold text-slate-800">{periodText(r.period)}</td>
-                    <td className="py-1.5 pr-3 font-bold text-slate-600">{r.plannedIssueDate}</td>
-                    <td className="py-1.5 text-right font-bold tabular-nums text-slate-900">{yen(r.amountExclTax)}</td>
+                  <tr key={r.period}>
+                    <td data-label="計上月" className={s.strong}>{periodText(r.period)}</td>
+                    <td data-label="請求予定日">{r.plannedIssueDate}</td>
+                    <td data-label="金額（税抜）" className={s.r}>{yen(r.amountExclTax)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : null}
-        {preview.note && <p className="mt-1 text-[11px] font-bold text-slate-500">{preview.note}</p>}
-        {f.status !== 'active' && <p className="mt-1 text-[11px] font-bold text-amber-700">状態が「有効」ではないため、保存しても売上予定は作られません。</p>}
+        {preview.note && <p className={s.sub} style={{ margin: '8px 0 0' }}>{preview.note}</p>}
+        {f.status !== 'active' && <p className={s.note} style={{ margin: '12px 0 0' }}>状態が「有効」ではないため、保存しても売上予定は作られません。</p>}
       </Card>
 
       <Card>
@@ -234,11 +252,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
 
       <ErrorText message={error} />
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={busy} className={btnPrimary}>
-          {busy && <Spinner />}
-          {initial ? '保存する' : '契約を登録する'}
-        </button>
-        {saved && <span className="text-xs font-black text-[#0f9f6e]">保存しました</span>}
+        <Button type="submit" variant="primary" loading={busy}>{initial ? '保存する' : '契約を登録する'}</Button>
       </div>
     </form>
   )

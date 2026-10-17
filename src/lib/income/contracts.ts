@@ -109,7 +109,7 @@ export async function syncContractSchedule(tx: Tx, contractId: string, organizat
   )
   const wanted = new Set(rows.map((r) => r.period))
   const stale = existing.filter((r) => r.status === 'planned' && !wanted.has(fromDbDate(r.period))).map((r) => r.id)
-  if (stale.length) await tx.incomeRevenueSchedule.deleteMany({ where: { id: { in: stale }, organizationId } })
+  if (stale.length) await tx.incomeRevenueSchedule.deleteMany({ where: { id: { in: stale }, organizationId, status: 'planned' } })
 
   for (const row of rows) {
     const current = byPeriod.get(row.period)

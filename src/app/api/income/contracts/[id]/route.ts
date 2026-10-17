@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest, c: IdCtx) {
   return withIncome(req, 'member', async (ctx) => {
     const id = await idFrom(c)
     const input = parseContract(await readJson(req))
-    await prisma.$transaction((tx) => saveContract(tx, ctx, input, id), { timeout: 30000 })
+    await prisma.$transaction((tx) => saveContract(tx, ctx, input, id), { timeout: 30000, isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'contract.update', 'contract', id, { status: input.status, amountExclTax: input.amountExclTax })
     return NextResponse.json({ id })
   })
@@ -43,7 +43,7 @@ export async function DELETE(req: NextRequest, c: IdCtx) {
       const billed = await tx.incomeRevenueSchedule.count({ where: { contractId: own.id, organizationId: ctx.organizationId, status: 'invoiced' } })
       if (billed) throw new IncomeError('請求済みの月がある契約は削除できません。状態を「解約」か「終了」にしてください', 409)
       await tx.incomeContract.delete({ where: { id: own.id } })
-    })
+    }, { isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'contract.delete', 'contract', id)
     return NextResponse.json({ ok: true })
   })

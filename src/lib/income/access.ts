@@ -10,8 +10,8 @@ import { NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export const ROLE_HIERARCHY: Record<string, number> = { member: 1, manager: 2, admin: 3, owner: 4 }
-export type IncomeRole = 'owner' | 'admin' | 'manager' | 'member'
+import { ROLE_HIERARCHY, hasMinRole, type IncomeRole } from './roles'
+export { ROLE_HIERARCHY, hasMinRole, type IncomeRole }
 const VALID_ROLES = Object.keys(ROLE_HIERARCHY)
 
 export type IncomeContext = {
@@ -21,10 +21,6 @@ export type IncomeContext = {
   organizationName: string
   role: IncomeRole
   memberId: string
-}
-
-export function hasMinRole(role: string, min: IncomeRole): boolean {
-  return Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, role) && ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[min]
 }
 
 /** ?org= 優先、無ければヘッダ x-income-org（encodeURIComponent 済み） */
@@ -129,6 +125,8 @@ export class IncomeError extends Error {
 
 export function errorResponse(error: unknown) {
   if (error instanceof IncomeError) return NextResponse.json({ error: error.message }, { status: error.status })
+  // Serializable の競合（同時操作）。やり直せば通る
+  if ((error as { code?: string })?.code === 'P2034') return NextResponse.json({ error: '同時に別の操作がありました。もう一度お試しください。' }, { status: 409 })
   // ⚠️ 例外の中身（message/stack）はログに出さない（個人情報・取引先名が混ざりうる。verify-api-error-log-privacy）
   console.error('[income] unexpected error', { code: (error as { code?: string })?.code, name: (error as { name?: string })?.name })
   return NextResponse.json({ error: '処理に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })

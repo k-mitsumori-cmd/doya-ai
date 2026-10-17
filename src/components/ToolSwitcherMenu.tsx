@@ -83,7 +83,7 @@ const SERVICE_ICON_MAP: Record<string, ServiceMapping> = {
   mensetsu:  { icon: UserCheck,   iconBg: 'from-blue-600 to-indigo-700',    hoverBg: 'hover:bg-blue-50' },
   asklink:   { icon: MessageCircleQuestion, iconBg: 'from-[#0066ff] to-[#0a0f3c]', hoverBg: 'hover:bg-blue-50' },
   popup:     { icon: PanelTopOpen, iconBg: 'from-[#ff5a36] to-[#b8202f]', hoverBg: 'hover:bg-orange-50' },
-  income:    { icon: BadgeJapaneseYen, iconBg: 'from-[#0f9f6e] to-[#065f46]', hoverBg: 'hover:bg-emerald-50' },
+  income:    { icon: BadgeJapaneseYen, iconBg: 'from-[#0066ff] to-[#0047d6]', hoverBg: 'hover:bg-blue-50' },
 }
 
 const FALLBACK_MAPPING: ServiceMapping = {

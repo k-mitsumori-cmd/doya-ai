@@ -2,11 +2,9 @@
 
 // 契約の新規登録
 import { Suspense } from 'react'
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
 import ContractForm from '@/components/income/ContractForm'
-import { Loading, PageHeader, PageShell } from '@/components/income/ui'
+import { DetailSkeleton, PageHeader, PageShell } from '@/components/income/ui'
 
 function Inner() {
   const sp = useSearchParams()
@@ -16,11 +14,8 @@ function Inner() {
 export default function NewContractPage() {
   return (
     <PageShell>
-      <Link href="/income/contracts" className="mb-3 inline-flex items-center gap-1 text-xs font-black text-slate-500 hover:text-slate-800">
-        <ArrowLeft className="h-3.5 w-3.5" />契約の一覧
-      </Link>
-      <PageHeader title="新規契約" />
-      <Suspense fallback={<Loading />}>
+      <PageHeader crumbs={[{ label: '収入管理', href: '/income' }, { label: '契約', href: '/income/contracts' }, { label: '新規契約' }]} title="新規契約" />
+      <Suspense fallback={<DetailSkeleton cards={3} />}>
         <Inner />
       </Suspense>
     </PageShell>

@@ -1,6 +1,7 @@
 // ドヤ収入管理 スキーマ下書き（2026-10-18）
-// prisma/schema.prisma にはまだ入れていない。設計書 README.md §4 と対応。
+// prisma/schema.prisma の Income* と同じ内容（2026-10-18 時点の写し。正本は schema.prisma）。設計書 README.md §4 と対応。
 // 金額はすべて Int（円）。他ツールへの参照（sfa* / quote*）は FK を張らない文字列。
+
 
 model IncomeOrganization {
   id                String   @id @default(cuid())
@@ -12,6 +13,10 @@ model IncomeOrganization {
   sfaOrganizationId String?
   /// 支出の取り込み元（ドヤプロマネのワークスペース）。支出管理ができるまでの暫定（README §8.1）
   promaneWorkspaceId String?
+  /// 支出の取り込み元の種類: promane / expense。両方は足さない（業務委託の二重計上。支出設計書 §8.3）
+  expenseSourceId    String?
+  /// ドヤ支出管理の組織（FK なし。ADDON-SERVICES §6 #11）
+  expenseOrganizationId String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -50,6 +55,8 @@ model IncomeMember {
 /// 請求元（自社）情報。QuoteIssuer から初期値を取り込める
 model IncomeIssuer {
   organizationId       String             @id
+  /// 共通 CompanyProfile 移行用の予約列（null 可・FK なし。ADDON-SERVICES R-5）
+  companyProfileId     String?
   organization         IncomeOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   companyName          String
   postalCode           String?
@@ -140,7 +147,9 @@ model IncomeContract {
   signedAt          DateTime?
   /// AI 読み取り結果の原文（確認画面で並べて表示する）
   aiExtracted       Json?
-  sfaDealId         String?
+  /// SFA 商談（FK なし・unique。受注 1 件から契約は 1 つ。ADDON-SERVICES §6 #9）
+  sfaDealId         String?            @unique
+  /// 見積（FK なし。§6 #10）
   quoteDocumentId   String?
   memo              String?            @db.Text
   createdByUserId   String
@@ -152,7 +161,6 @@ model IncomeContract {
 
   @@index([organizationId, status])
   @@index([organizationId, endDate])
-  @@index([organizationId, sfaDealId])
   @@map("income_contracts")
 }
 

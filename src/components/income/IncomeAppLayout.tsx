@@ -2,12 +2,13 @@
 
 // ドヤ収入管理 アプリ枠（AdImageAppLayout と同型：デスクトップ/モバイルでサイドバーを配置）
 // ⚠️ reference/06-ui-patterns.md §7・§9.2 が正本。独自のヘッダーを作らないこと。
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { isGuestPath } from '@/lib/ui/guest-path'
 import { Menu, BadgeJapaneseYen } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import IncomeSidebar from './IncomeSidebar'
+import tokens from './tokens.module.css'
 
 export default function IncomeAppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -17,14 +18,7 @@ export default function IncomeAppLayout({ children }: { children: React.ReactNod
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
 
   if (guest) return <>{children}</>
 
@@ -64,9 +58,9 @@ export default function IncomeAppLayout({ children }: { children: React.ReactNod
       </AnimatePresence>
 
       {/* Main */}
+      {/* ⚠️ 余白は CSS の画面幅で決める（JS の isMobile で決めると、最初の HTML が 240px ずれて出て、スマホで一瞬崩れる） */}
       <main
-        className="flex flex-1 flex-col overflow-hidden transition-all duration-200"
-        style={{ marginLeft: isMobile ? 0 : sidebarCollapsed ? 72 : 240 }}
+        className={`flex flex-1 flex-col overflow-hidden transition-[margin] duration-200 ml-0 ${sidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-[240px]'}`}
       >
         {/* Mobile header */}
         <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white p-3 md:hidden">
@@ -74,13 +68,14 @@ export default function IncomeAppLayout({ children }: { children: React.ReactNod
             <Menu className="h-6 w-6" />
           </button>
           <div className="flex items-center gap-2">
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-[#0f9f6e] to-[#065f46] text-white shadow">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-[#0066ff] to-[#0047d6] text-white shadow">
               <BadgeJapaneseYen className="h-4 w-4" />
             </span>
             <span className="text-base font-black text-slate-900">ドヤ収入管理</span>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">{children}</div>
+        {/* ⚠️ ページ本体は外枠を持たない（ToolFrame の children にそのまま入る作り。R-2）。トークンはここで当てる */}
+        <div className={`${tokens.ds} flex-1 overflow-y-auto`}>{children}</div>
       </main>
     </div>
   )

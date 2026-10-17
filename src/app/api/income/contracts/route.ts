@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   return withIncome(req, 'member', async (ctx) => {
     const input = parseContract(await readJson(req))
-    const id = await prisma.$transaction((tx) => saveContract(tx, ctx, input), { timeout: 30000 })
+    const id = await prisma.$transaction((tx) => saveContract(tx, ctx, input), { timeout: 30000, isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'contract.create', 'contract', id)
     return NextResponse.json({ id }, { status: 201 })
   })

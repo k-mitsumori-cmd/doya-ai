@@ -3,9 +3,11 @@
 // ドヤ収入管理 サイドバー
 // ⚠️ 共通サイドバー部品（src/components/sidebar/）で組む。reference/06-ui-patterns.md §7 が正本。
 // ⚠️ ToolSwitcherMenu を必ず含める（他サービスへ移れなくなる）。
+// ⚠️ 項目は src/lib/income/nav.ts を描くだけ（ADDON-SERVICES R-1 / D-1）。ここに項目を書き足さない。
+//    AppShell（段 0）が main に入ったら、このファイルごと消して AppShell に載せる。
 import React, { memo, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { BadgeJapaneseYen, Building2, CalendarRange, CreditCard, FileSignature, FileText, LayoutDashboard, Settings, Wallet } from 'lucide-react'
+import { BadgeJapaneseYen } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { incomeTheme } from '@/components/sidebar/themes'
 import {
@@ -22,22 +24,18 @@ import {
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { UiIcon } from '@/components/icons'
+import { INCOME_NAV, activeNavHref, type IncomeNavItem } from '@/lib/income/nav'
 
 const BASE = '/income'
 
-const NAV: NavItem[] = [
-  { href: BASE, label: 'ダッシュボード', icon: LayoutDashboard },
-  { href: BASE + '/revenue', label: '月次売上', icon: CalendarRange, hot: true },
-  { href: BASE + '/invoices', label: '請求書', icon: FileText },
-  { href: BASE + '/payments', label: '入金・消込', icon: Wallet },
-  { href: BASE + '/contracts', label: '契約', icon: FileSignature },
-  { href: BASE + '/clients', label: '取引先', icon: Building2 },
-]
-
-const NAV_SETTINGS: NavItem[] = [
-  { href: BASE + '/settings', label: '設定', icon: Settings },
-  { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
-]
+/** nav.ts の 1 項目を共通サイドバーの NavItem に変える */
+function toNavItem(n: IncomeNavItem): NavItem {
+  const Icon = (props: { className?: string }) => <UiIcon name={n.icon} size={20} className={props.className} />
+  return { href: n.href, label: n.label, icon: Icon }
+}
+const NAV: NavItem[] = INCOME_NAV.filter((n) => n.group === 'main').map(toNavItem)
+const NAV_SETTINGS: NavItem[] = INCOME_NAV.filter((n) => n.group === 'settings').map(toNavItem)
 
 function IncomeSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
@@ -47,7 +45,7 @@ function IncomeSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const isActive = (href: string) => (href === BASE ? pathname === BASE : pathname === href || pathname.startsWith(href + '/'))
+  const isActive = (href: string) => activeNavHref(pathname) === href
 
   const confirmLogout = async () => {
     if (isLoggingOut) return

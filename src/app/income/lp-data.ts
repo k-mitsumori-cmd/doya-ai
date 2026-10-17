@@ -2,7 +2,7 @@ import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤ収入管理 LPコンテンツ
 import type { Step, Benefit, Faq } from '@/components/lp'
 
-export const ACCENT = '#0f9f6e'
+export { INCOME_ACCENT as ACCENT } from '@/lib/income/brand'
 export const CTA = '/auth/signin?callbackUrl=/income'
 
 export const STEPS: Step[] = [

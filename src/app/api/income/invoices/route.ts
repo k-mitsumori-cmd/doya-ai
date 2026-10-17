@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   return withIncome(req, 'member', async (ctx) => {
     const input = invoiceDraft(await readJson(req))
-    const invoice = await prisma.$transaction((tx) => createDraft(tx, ctx, input))
+    const invoice = await prisma.$transaction((tx) => createDraft(tx, ctx, input), { isolationLevel: 'Serializable' })
     await audit(prisma, ctx, 'invoice.create', 'invoice', invoice.id)
     return NextResponse.json({ invoice }, { status: 201 })
   })

@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { badRequest } from '@/lib/income/access'
 import { isMonthKey, todayJst } from '@/lib/income/dates'
 import { withIncome } from '@/lib/income/route'
-import { buildSummary } from '@/lib/income/summary'
+import { buildSummary } from '@/lib/income/summary-read'
 
 export async function GET(req: NextRequest) {
   return withIncome(req, 'member', async (ctx) => {
