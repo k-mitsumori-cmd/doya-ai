@@ -18,8 +18,15 @@ export const sfaClientDate = (v: unknown): v is string => {
 }
 const nullableId = (v: unknown) => v === null || sfaClientId(v)
 const text = (v: unknown, max: number) => v === null || typeof v === 'string' && v.length <= max
+/** 一覧の応答から検証に通る行だけを残す。不正な1行のために一覧全体を捨てない。配列でなければ null。 */
+export function sfaValidRows<T>(rows: unknown, isRow: (v: unknown) => v is T): { rows: T[]; skipped: number } | null {
+  if (!Array.isArray(rows)) return null
+  const valid = rows.filter(isRow)
+  return { rows: valid, skipped: rows.length - valid.length }
+}
+// Legacy values stay visible (pre-2026-10-07 rows had no length limits); writes enforce the current limits.
 export function isSfaClientTask(v: unknown): v is SfaClientTask {
-  return record(v) && sfaClientId(v.id) && typeof v.title === 'string' && !!v.title.trim() && v.title.length <= 200
+  return record(v) && sfaClientId(v.id) && typeof v.title === 'string' && !!v.title.trim() && v.title.length <= 10000
     && ['open', 'done'].includes(String(v.status)) && (v.dueDate === null || sfaClientDate(v.dueDate))
     && nullableId(v.dealId) && sfaClientDate(v.createdAt) && sfaClientDate(v.updatedAt)
     && (v.dealName === undefined || text(v.dealName, 2_000))
@@ -62,11 +69,12 @@ export interface SfaClientDeal {
   startDate: string | null; expectedCloseDate: string | null; wonAt: string | null; lostAt: string | null
   lastActivityAt: string | null; createdAt: string; updatedAt: string
 }
+// Same legacy rule as tasks: reads accept pre-limit rows, dealBody() enforces the write limits.
 export function isSfaClientDeal(v: unknown): v is SfaClientDeal {
-  if (!record(v) || !sfaClientId(v.id) || typeof v.name !== 'string' || !v.name.trim() || v.name.length > 200
+  if (!record(v) || !sfaClientId(v.id) || typeof v.name !== 'string' || !v.name.trim() || v.name.length > 10000
     || !Number.isSafeInteger(v.amount) || (v.amount as number) < 0 || !nullableId(v.stageId) || !nullableId(v.accountId)
     || !Number.isInteger(v.probability) || (v.probability as number) < 0 || (v.probability as number) > 100
-    || v.contactId !== undefined && !nullableId(v.contactId) || !text(v.contactName, 100) || !text(v.note, 5000) || !text(v.lostReason, 300)
+    || v.contactId !== undefined && !nullableId(v.contactId) || !text(v.contactName, 10000) || !text(v.note, 100000) || !text(v.lostReason, 10000)
     || !['open', 'won', 'lost'].includes(String(v.status)) || !sfaClientDate(v.createdAt) || !sfaClientDate(v.updatedAt)
     || !['startDate', 'expectedCloseDate', 'wonAt', 'lostAt', 'lastActivityAt'].every(k => v[k] === null || sfaClientDate(v[k]))) return false
   return true

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef, type PointerEvent as ReactPoi
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { withOrg, fetchAllSfaAccounts } from '@/lib/sfa/client'
-import { sfaJson, SfaClientRejection, isSfaClientTask, isSfaClientActivity, type SfaClientTask, isSfaClientDeal, type SfaClientDeal, type SfaClientNextAction } from '@/lib/sfa/client-response'
+import { sfaJson, sfaValidRows, SfaClientRejection, isSfaClientTask, isSfaClientActivity, type SfaClientTask, isSfaClientDeal, type SfaClientDeal, type SfaClientNextAction } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
 import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
@@ -29,11 +29,15 @@ interface DealPage {
   stageSummary: { stageId: string | null; count: number; total: string }[]
 }
 
+function isDealRow(deal: unknown): deal is Deal {
+  return isSfaClientDeal(deal) && ((deal as Deal).accountName === null || typeof (deal as Deal).accountName === 'string') && Number.isSafeInteger((deal as Deal).openTaskCount) && (deal as Deal).openTaskCount >= 0
+}
+
+/** 商談の行は検証しない（行単位の除外は sfaValidRows(isDealRow) で行う）。不正な1件でパイプライン全体を捨てないため。 */
 function isDealPage(value: unknown): value is DealPage {
   if (!value || typeof value !== 'object') return false
   const page = value as Partial<DealPage>
   return Array.isArray(page.stages) && page.stages.every(stage => stage && typeof stage.id === 'string' && typeof stage.name === 'string' && Number.isInteger(stage.order) && Number.isInteger(stage.probability) && stage.probability >= 0 && stage.probability <= 100 && typeof stage.color === 'string' && typeof stage.isWon === 'boolean' && typeof stage.isLost === 'boolean' && !(stage.isWon && stage.isLost)) && Array.isArray(page.deals)
-    && page.deals.every((deal) => isSfaClientDeal(deal) && (deal.accountName === null || typeof deal.accountName === 'string') && Number.isSafeInteger(deal.openTaskCount) && deal.openTaskCount >= 0)
     && (page.nextCursor === null || typeof page.nextCursor === 'string')
     && Number.isSafeInteger(page.totalCount) && (page.totalCount as number) >= 0
     && Array.isArray(page.stageSummary)
@@ -95,6 +99,7 @@ export default function SfaDealsPage() {
   const [detailTasksRetryPage, setDetailTasksRetryPage] = useState(1)
   const [dealsLoading, setDealsLoading] = useState(true)
   const [dealsError, setDealsError] = useState(false)
+  const [skippedDeals, setSkippedDeals] = useState(0)
   const [tasksError, setTasksError] = useState(false)
   const [accountsError, setAccountsError] = useState(false)
   const [accountsLoading, setAccountsLoading] = useState(true)
@@ -136,7 +141,9 @@ export default function SfaDealsPage() {
       })
       .then((d) => {
         if (!controller.signal.aborted && mutations.active()) {
-          setStages(d.stages); setDeals(d.deals); setNextCursor(d.nextCursor)
+          const valid = sfaValidRows(d.deals, isDealRow)!
+          setSkippedDeals(valid.skipped)
+          setStages(d.stages); setDeals(valid.rows); setNextCursor(d.nextCursor)
           setTotalCount(d.totalCount); setStageSummary(d.stageSummary)
         }
       })
@@ -165,9 +172,11 @@ export default function SfaDealsPage() {
       })
       .then((data) => {
         if (controller.signal.aborted || !mutations.active()) return
+        const valid = sfaValidRows(data.deals, isDealRow)!
+        setSkippedDeals((skipped) => skipped + valid.skipped)
         setDeals((current) => {
           const seen = new Set(current.map((deal) => deal.id))
-          return [...current, ...data.deals.filter((deal) => !seen.has(deal.id))]
+          return [...current, ...valid.rows.filter((deal) => !seen.has(deal.id))]
         })
         setNextCursor(data.nextCursor)
         setTotalCount(data.totalCount)
@@ -185,10 +194,11 @@ export default function SfaDealsPage() {
     setTasksError(false)
     sfaJson('/api/sfa/tasks', orgSlug, { signal: controller.signal })
       .then(d => {
-        if (!Array.isArray(d.tasks) || !d.tasks.every(isSfaClientTask)) throw new Error('タスクの応答形式が不正です')
-        return d as { tasks: Task[] }
+        const valid = sfaValidRows(d.tasks, isSfaClientTask)
+        if (!valid) throw new Error('タスクの応答形式が不正です')
+        return valid.rows
       })
-      .then((d) => { if (!controller.signal.aborted && mutations.active()) setTasks(d.tasks) })
+      .then((rows) => { if (!controller.signal.aborted && mutations.active()) setTasks(rows) })
       .catch(() => { if (!controller.signal.aborted && mutations.active()) setTasksError(true) })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, orgSlug, mutations.key])
@@ -202,12 +212,13 @@ export default function SfaDealsPage() {
     try {
       const path = `/api/sfa/tasks?dealId=${encodeURIComponent(dealId)}&page=${page}`
       const data = await sfaJson(path, orgSlug, { signal: controller.signal })
-      if (!Array.isArray(data.tasks) || !data.tasks.every(isSfaClientTask) || data.page !== page || typeof data.hasMore !== 'boolean' ||
-          !data.tasks.every((task: Task) => task.dealId === dealId)) {
+      const valid = sfaValidRows(data.tasks, isSfaClientTask)
+      if (!valid || data.page !== page || typeof data.hasMore !== 'boolean' ||
+          !valid.rows.every((task: Task) => task.dealId === dealId)) {
         throw new Error( '商談のタスクを取得できませんでした')
       }
       if (controller.signal.aborted || !mutations.active() || detailRef.current !== dealId) return
-      const rows = data.tasks
+      const rows = valid.rows
       setDetailTasks((current) => page === 1
         ? rows
         : [...current, ...rows.filter((task: Task) => !current.some((item) => item.id === task.id))])
@@ -583,6 +594,11 @@ export default function SfaDealsPage() {
         </div>
       </div>
 
+      {skippedDeals > 0 && (
+        <p role="status" className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
+          {skippedDeals}件の商談は内容を確認できなかったため表示していません。件数・金額の集計には含まれています。
+        </p>
+      )}
       {(dealsError || tasksError || accountsError || summaryError) && (
         <div role="alert" className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800 space-y-2">
           {dealsError && <p>商談を読み込めませんでした。表示中の商談がある場合は更新前の情報です。</p>}
