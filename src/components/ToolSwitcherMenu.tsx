@@ -14,6 +14,7 @@ import {
   Eye,
   FileText,
   Image,
+  LayoutDashboard,
   LayoutGrid,
   Megaphone,
   MessageCircleQuestion,
@@ -29,6 +30,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { getActiveServices } from '@/lib/services'
+import { SHELL_GROUPS } from '@/components/shell/tools'
 
 // services.ts の id → 公式ロゴ画像（あれば優先表示）
 const SERVICE_LOGO: Record<string, string> = {
@@ -90,14 +92,8 @@ const FALLBACK_MAPPING: ServiceMapping = {
   hoverBg: 'hover:bg-slate-50',
 }
 
-// ツール切替メニューのジャンル分け（services.ts の category → 表示見出し）。この順で並べる。
-const CATEGORY_GROUPS: { cat: string; label: string }[] = [
-  { cat: 'text', label: '文章・SEO・ライティング' },
-  { cat: 'image', label: '画像・バナー・デザイン' },
-  { cat: 'video', label: '動画・音声' },
-  { cat: 'web', label: 'Web・マーケ' },
-  { cat: 'other', label: 'その他・業務支援' },
-]
+// ツール切替メニューの区分は経営ホーム・共通シェルと揃える（売る・集める・人・回す）。
+// ⚠️ 区分の正本は src/components/shell/tools.ts。ここで別の分け方を持たない。
 
 /**
  * ツールのビジュアル。公式ロゴがあれば白カードに大きく contain 表示、
@@ -203,7 +199,7 @@ export function ToolSwitcherMenu({ currentService, showLabel, className }: ToolS
         <button
           ref={buttonRef}
           onClick={handleToggle}
-          className={`group w-full flex items-center gap-2 px-3 py-3 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all text-white ${
+          className={`group w-full flex items-center gap-2 px-3 py-3 rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0047d6] hover:from-[#0047d6] hover:to-[#0a0f3c] shadow-lg shadow-[#0066ff]/25 hover:shadow-[#0066ff]/40 transition-all text-white ${
             !showLabel ? 'justify-center' : 'justify-between'
           }`}
           title="他のツールを使う"
@@ -262,11 +258,27 @@ export function ToolSwitcherMenu({ currentService, showLabel, className }: ToolS
 
               <div className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-4">
                 {/* ジャンルごとに見出し＋2列グリッドで表示 */}
-                {CATEGORY_GROUPS.map(({ cat, label }) => {
-                  const items = activeServices.filter((s) => (s.category || 'other') === cat)
+                <Link
+                  href="/home"
+                  onClick={() => setIsOpen(false)}
+                  role="menuitem"
+                  className="flex items-center gap-3 rounded-2xl p-3 ring-1 ring-[#d7e5ff] bg-[#e8f0ff]/60 hover:bg-[#e8f0ff] transition-colors"
+                >
+                  <span className="grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#0066ff] to-[#0047d6] text-white flex-shrink-0">
+                    <LayoutDashboard className="w-4 h-4" />
+                  </span>
+                  <span className="leading-tight min-w-0">
+                    <span className="block text-[13px] font-black text-slate-900">経営ホーム</span>
+                    <span className="block text-[11px] font-bold text-slate-500 truncate">売上・収入・予定をまとめて見て、やりたいことを頼めます</span>
+                  </span>
+                </Link>
+                {SHELL_GROUPS.map(({ stage, label, tools }) => {
+                  const items = tools
+                    .map((t) => activeServices.find((s) => s.id === t.id))
+                    .filter((s): s is (typeof activeServices)[number] => Boolean(s))
                   if (items.length === 0) return null
                   return (
-                    <div key={cat}>
+                    <div key={stage}>
                       <div className="flex items-center gap-2 mb-2 px-0.5">
                         <span className="text-[11px] font-black text-slate-400 tracking-wide">{label}</span>
                         <span className="text-[10px] font-bold text-slate-300">{items.length}</span>

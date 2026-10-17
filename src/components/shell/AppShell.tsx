@@ -9,6 +9,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Menu, X } from 'lucide-react'
 import { SHELL_GROUPS, SHELL_HOME, type ShellTool } from './tools'
+import ds from '@/components/ds/tokens.module.css'
 import styles from './AppShell.module.css'
 
 function isActive(pathname: string, tool: ShellTool) {
@@ -42,7 +43,7 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
   const close = () => setOpen(false)
 
   return (
-    <div className={styles.shell}>
+    <div className={`${ds.ds} ${styles.shell}`}>
       <header className={styles.topbar}>
         <button type="button" className={styles.menuButton} onClick={() => setOpen(true)} aria-label="メニューを開く">
           <Menu size={20} />

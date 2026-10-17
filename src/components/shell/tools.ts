@@ -81,8 +81,15 @@ export const SHELL_HOME: ShellTool = {
   id: 'home', name: '経営ホーム', href: '/home', icon: LayoutDashboard, hint: '売上・収入・予定をまとめて見る', stage: 'other',
 }
 
+/** 区分の中は対応表の並び（よく使う順）。対応表に無いものは services.ts の順で後ろに */
+const META_ORDER = Object.keys(TOOL_META)
+const orderOf = (id: string) => {
+  const i = META_ORDER.indexOf(id)
+  return i === -1 ? META_ORDER.length : i
+}
+
 function buildTools(): ShellTool[] {
-  return getActiveServices().map((s) => {
+  return [...getActiveServices()].sort((a, b) => orderOf(a.id) - orderOf(b.id)).map((s) => {
     const meta = TOOL_META[s.id]
     return {
       id: s.id,
