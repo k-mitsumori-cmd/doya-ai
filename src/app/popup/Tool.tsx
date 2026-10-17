@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, ArrowRight, CheckCircle2, CircleDashed, Globe, Sparkles } from 'lucide-react'
 import type { SiteDto } from '@/lib/popup/dto'
 import { EmptyState, PageHeader, ProcessingSteps, fmt, pct } from '@/components/popup/ui'
+import { useInPopupShell } from '@/components/popup/shell-context'
 
 const LOADING_STEPS = ['サイトを読み取っています', '「AIに聞く」の質問文を作っています', 'ポップアップの案をまとめています']
 
@@ -60,6 +61,8 @@ function SiteCard({ s }: { s: SiteDto }) {
 
 export default function PopupTool({ initialSites }: { initialSites: SiteDto[] }) {
   const router = useRouter()
+  // 共通シェルの中では ToolFrame が同じ見出しと説明を出すので、ここでは出さない
+  const inShell = useInPopupShell()
   const [url, setUrl] = useState('')
   const [manualText, setManualText] = useState('')
   const [needManual, setNeedManual] = useState(false)
@@ -119,17 +122,19 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
 
   return (
     <div className="pd-page mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-12">
-      <PageHeader
-        title={
-          <span className="flex items-center gap-3">
-            ドヤポップアップ
-            <span className="pd-chip pd-chip-blue">開発中</span>
-          </span>
-        }
-        sub="URLを入れるだけで、AIがサイトに合ったポップアップを提案します。"
-      />
+      {!inShell && (
+        <PageHeader
+          title={
+            <span className="flex items-center gap-3">
+              ドヤポップアップ
+              <span className="pd-chip pd-chip-blue">開発中</span>
+            </span>
+          }
+          sub="URLを入れるだけで、AIがサイトに合ったポップアップを提案します。"
+        />
+      )}
 
-      <section className="pd-card mt-8" aria-labelledby="popup-create">
+      <section className={`pd-card ${inShell ? '' : 'mt-8'}`} aria-labelledby="popup-create">
         <div className="flex flex-col gap-6 md:flex-row md:items-center">
           <div className="min-w-0 flex-1">
             <h2 id="popup-create" className="pd-h2">

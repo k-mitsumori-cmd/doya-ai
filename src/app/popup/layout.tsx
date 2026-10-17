@@ -2,8 +2,11 @@ import type { Metadata } from 'next'
 import { buildServiceMetadata } from '@/lib/seo'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { isShellEnabled } from '@/lib/ui-shell'
+import { tokens } from '@/components/ds'
 import PopupAppLayout from '@/components/popup/PopupAppLayout'
-// ds トークン（統合仕様 R-3）。.popup-ds の中だけに効く
+import PopupShellFrame from '@/components/popup/PopupShellFrame'
+// .pd-*（ポップアップの画面だけで使う見た目）。トークンは段0の .ds（tokens.module.css）を読む
 import '@/components/popup/popup-ds.css'
 
 // ⚠️ 開発中（UNLISTED_SERVICE_IDS）の間は noindex。公開するときに外す（reference/services/popup.md 13章）
@@ -15,7 +18,22 @@ export const metadata: Metadata = buildServiceMetadata('popup', {
 
 export default async function PopupLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
-  // ⚠️ 未ログインをアプリ枠で包まない（空のサイドバーが出る）
-  // ⚠️ 段0が入ったら、ここで ui.shell.popup を見て AppShell＋ToolFrame に載せ替える（統合仕様 §9）
-  return <div className="popup-ds">{session?.user ? <PopupAppLayout>{children}</PopupAppLayout> : children}</div>
+  // ⚠️ 未ログインをアプリ枠で包まない（LP に空のサイドバーが出る）
+  if (!session?.user) {
+    return <div className={`${tokens.ds} popup-ds`}>{children}</div>
+  }
+  // 統合仕様 §9: ui.shell.popup が ON のときだけ共通シェルに載せる。OFF の間は従来の枠
+  // ⚠️ 公開の口（/api/popup/public/*・/popup/embed.js）はこの layout を通らない（R-7）
+  if (isShellEnabled('popup')) {
+    return (
+      <div className="popup-ds">
+        <PopupShellFrame userName={session.user.name}>{children}</PopupShellFrame>
+      </div>
+    )
+  }
+  return (
+    <div className={`${tokens.ds} popup-ds`}>
+      <PopupAppLayout>{children}</PopupAppLayout>
+    </div>
+  )
 }

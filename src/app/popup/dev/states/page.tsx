@@ -5,8 +5,10 @@
 // 一覧・詳細・編集と、読込・空・エラー・権限なし・処理中の各状態を 375px / 1280px で確かめる。
 // ⚠️ DB・ログイン・AIには一切触れない（見本データだけ）。
 // 使い方: npx next dev → /popup/dev/states?s=home|home-empty|site|edit|forbidden|error|loading|processing
+//   &shell=1 を付けると、共通シェル（AppShell＋ToolFrame）に載せた形で表示する（D-3 の確認用）
 import { notFound } from 'next/navigation'
 import { DETAIL, EDIT_SITE, POPUPS, SITES } from '@/lib/popup/dev-fixtures'
+import PopupShellFrame from '@/components/popup/PopupShellFrame'
 import { ErrorState, ForbiddenState, ProcessingSteps, SkeletonDetail, SkeletonSiteCards } from '@/components/popup/ui'
 import PopupTool from '../../Tool'
 import SiteDetailClient from '../../sites/[id]/SiteDetailClient'
@@ -14,12 +16,17 @@ import EditClient from '../../edit/[id]/EditClient'
 
 export const dynamic = 'force-dynamic'
 
-type Props = { searchParams: Promise<{ s?: string }> }
+type Props = { searchParams: Promise<{ s?: string; shell?: string }> }
 
 export default async function PopupDevStates({ searchParams }: Props) {
   if (process.env.NODE_ENV === 'production') notFound()
-  const { s = 'home' } = await searchParams
+  const { s = 'home', shell } = await searchParams
   const wrap = (node: React.ReactNode) => <div className="pd-page mx-auto max-w-6xl px-4 py-8 md:px-8">{node}</div>
+  const body = renderState(s, wrap)
+  return shell === '1' ? <PopupShellFrame userName="見本 太郎">{body}</PopupShellFrame> : body
+}
+
+function renderState(s: string, wrap: (node: React.ReactNode) => React.ReactNode) {
   switch (s) {
     case 'home':
       return <PopupTool initialSites={SITES} />
@@ -32,7 +39,7 @@ export default async function PopupDevStates({ searchParams }: Props) {
     case 'forbidden':
       return wrap(<ForbiddenState what="サイト" />)
     case 'error':
-      return wrap(<ErrorState message="通信がうまくいかなかったか、一時的に混み合っています。少し待ってからもう一度お試しください。" />)
+      return wrap(<ErrorState message="少し待ってから、もう一度お試しください。続くときは、ページを開き直してください。" />)
     case 'loading':
       return wrap(
         <div className="space-y-12">

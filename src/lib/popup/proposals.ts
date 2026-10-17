@@ -76,7 +76,7 @@ function askProposal(site: SiteProfile, link: AskLink, copy: BannerCopy, colors:
     kind: 'ask',
     name: 'A. AIに聞く',
     reason:
-      'ページを読み進めた訪問者は関心が高く、疑問も出てきています。その場でサイトのことをChatGPTに相談できる入口を出します。' +
+      'ページを半分まで読んだ訪問者に出します。サイトのことを、その場でChatGPTに相談できるボタンです。' +
       (link.needsReview ? '（質問文が自動チェックを通らなかったため、公開前に内容を確認してください）' : ''),
     creative: sanitizeCreative({
       layout: 'modal',
@@ -127,7 +127,7 @@ function ctaProposal(site: SiteProfile, audience: Audience, colors: PopupColors)
   return {
     kind: 'cta',
     name: 'B. 相談・申し込み',
-    reason: `ページを離れそうになったときに、${t.what}への最後のひと押しを出します。スマホでは離脱の動きが取れないため、25秒後に出します。`,
+    reason: `ページを離れそうなときに、${t.what}への案内を出します。スマホではページを離れる動きを見分けられないので、25秒後に出します。`,
     creative: sanitizeCreative({
       layout: 'modal',
       eyebrow: site.name,
@@ -167,7 +167,7 @@ function pagesProposal(site: SiteProfile, audience: Audience, second: AskLink | 
   return {
     kind: 'pages',
     name: 'C. おすすめページ',
-    reason: '少し読んだところで、次に読むとよいページを右下に控えめに出します。迷っている訪問者向けに、AIに相談できるボタンも添えます。',
+    reason: 'ページを開いて15秒後に、次に読むとよいページを右下に出します。AIに相談できるボタンも一緒に出します。',
     creative: sanitizeCreative({
       layout: 'slide',
       eyebrow: site.name,
