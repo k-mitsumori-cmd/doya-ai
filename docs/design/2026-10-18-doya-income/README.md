@@ -536,14 +536,42 @@ src/lib/income/
 
 ---
 
-## 12. 未決事項（決めてほしいこと）と推奨案
+## 12. 未決事項の決定（2026-10-18）
 
-| # | 論点 | 推奨案 |
-|---|---|---|
-| Q1 | ~~「ドヤ支出管理」はどこにあるか~~ | **決定（2026-10-18）**: 未実装。当面はドヤプロマネの経費＋人件費で代用し、`ExpenseSource` を挟んで後から差し替える（§8.1） |
-| Q2 | テナントを `IncomeOrganization` で作るか、共通 `Company` のマージを待つか | 今の型で作り、`companyId` を null 可で持つ（待たない） |
-| Q3 | 取引先を SFA の `SfaAccount` と共有するか、収入側に持つか | 収入側に `IncomeClient` を持ち、`sfaAccountId` で結ぶ（請求先メール・振込名義など請求固有の項目があるため） |
-| Q4 | 内税（税込価格）の契約に対応するか | Phase1 は外税のみ。必要になったら追加 |
-| Q5 | 支払期日が土日祝のときの扱い | Phase1 は調整しない（曜日を表示）。Phase2 で「前営業日／翌営業日」を設定可能に |
-| Q6 | 料金プラン（無料枠の契約数・請求書数、AI 回数） | 無料: 契約 5 件・AI 10 回/月、Pro: 無制限・AI 300 回/月（SFA の価格帯に合わせて調整） |
-| Q7 | サービス ID と URL | `income` / `/income` |
+推奨案をそのまま採用した。変える場合はこの表を更新してから実装を直す。
+
+| # | 論点 | 決定 | 理由 |
+|---|---|---|---|
+| Q1 | 支出管理の所在 | 未実装。当面はドヤプロマネの経費＋人件費で代用し、`ExpenseSource` を挟んで後から差し替える（§8.1） | ユーザー確認済み（2026-10-18） |
+| Q2 | テナント | `IncomeOrganization` を今の型（SFA と同じ）で作り、`companyId` を null 可で持つ。共通 `Company` は待たない | Company は未マージ。待つと着手できない |
+| Q2a | URL | **`/income/...`（orgSlug をパスに入れない）**。組織はクエリ `?org=` → ヘッダ `x-income-org` → 最後に参加した組織 の順で解決（`getIncomeContext`）。初回アクセスで自分の組織を自動作成 | SFA の `[orgSlug]` 型より画面数が減る。組織切替は Phase1 後半で足す |
+| Q2b | メンバー招待 | **Phase1 では作らない**（owner 1 人で使う）。表・ロール判定は最初から入れておく | 最初の利用者は 1 社 1 人が大半。招待は SFA のものを移植すれば足りる |
+| Q3 | 取引先 | 収入側に `IncomeClient` を持ち、`sfaAccountId` で結ぶ | 請求先メール・振込名義など請求固有の項目があるため |
+| Q4 | 内税 | Phase1 は外税のみ | 単純さ優先。B2B は外税が大半 |
+| Q5 | 土日祝の支払期日 | Phase1 は調整しない（画面に曜日を出す） | 祝日データの保守が要るため後回し |
+| Q6 | 料金 | 開発中（UNLISTED・`coming_soon`・BETA・noindex）の間は無料・プロとも上限なし。AI 機能は Phase2 で入れるときに `plan-limit.ts` に枠を足す | Phase1 に AI 呼び出しが無い |
+| Q7 | サービス ID と URL | `income` / `/income` | — |
+| Q8 | 請求書番号 | `INV-YYYY-0001`（年ごとの連番。`IncomeInvoiceSequence`）。確定時に採番、下書きは番号なし | 取消しても欠番として残す（§4.2-8） |
+| Q9 | PDF | Phase1 は**ブラウザの印刷（PDF 保存）用の請求書画面**で出す。サーバー側 PDF（puppeteer）は Phase2 | Chromium 起動のコストと依存を Phase1 に持ち込まない |
+| Q10 | 日付の基準 | すべて JST の暦日で計算し、DB には `@db.Date` で保存 | 月末・締め日の境界ずれを防ぐ |
+| Q11 | 契約の税率 | Phase1 は **1 契約 1 税率**（明細の税率をそろえる）。売上予定 1 行を請求書の明細 1 行にするため | 税率が混ざる契約は契約を分ける |
+| Q12 | 契約の種類 | Phase1 は `recurring`（定額継続）と `one_time`（単発）のみ。`milestone`（分割）は Phase2 | 分割は単発契約を複数登録で代用できる |
+| Q13 | 請求書の送付 | Phase1 は「送付済みにする」で記録だけ（メール送信は Phase2。`src/lib/email.ts` を使う） | 外に出る操作を Phase1 に入れない |
+
+## 13. Phase1 の実装状況（2026-10-18、ブランチ `feat/doya-income`）
+
+| 範囲 | ファイル |
+|---|---|
+| スキーマ | `prisma/schema.prisma` の `Income*` 15 モデル（`income_*` 表） |
+| 計算（純粋関数） | `src/lib/income/{dates,schedule,tax,matching}.ts` |
+| 業務処理 | `src/lib/income/{access,parse,clients,contracts,invoices,payments,summary,expense-source,route}.ts` |
+| API | `src/app/api/income/**`（18 ルート）、`src/app/api/cron/income-schedule`（毎朝 JST 6:00。`vercel.json`） |
+| 画面 | `src/app/income/**`、`src/components/income/**`（ダッシュボード・取引先・契約・月次売上・請求書・入金・設定・LP・料金） |
+| テスト | `npm run test:income`（計算 20 件・IDOR の静的検査 42 件）。`npm run build` に組み込み済み |
+| 登録 | `services.ts`（`coming_soon`・BETA・`UNLISTED_SERVICE_IDS`）、`ALL_SERVICE_IDS`、ツール切替、サイドバーのテーマ、`next.config.js` のアプリ専用パス |
+
+### 本番に出す前にやること（ユーザー確認が必要）
+
+1. `doya-db-push` の手順で `income_*` 15 表を本番 DB に反映する（Vercel のビルドは db push をしない。忘れると全 API が 500）
+2. 課金仕様書 §11.3: `npx tsx scripts/backfill-new-service-subscriptions.ts --service=income` で既存有料ユーザーの不足行を確認し、件数を確かめてから `--apply`（しないと課金監査が「サービス別プランのズレ」を警告する）
+3. main へ push（Vercel が本番デプロイ）
