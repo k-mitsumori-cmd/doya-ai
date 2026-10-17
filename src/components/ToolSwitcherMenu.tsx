@@ -28,6 +28,7 @@ import {
   Target,
   UserCheck,
   Users,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react'
 import { getActiveServices } from '@/lib/services'
@@ -86,6 +87,7 @@ const SERVICE_ICON_MAP: Record<string, ServiceMapping> = {
   popup:     { icon: PanelTopOpen, iconBg: 'from-[#0066ff] to-[#0047d6]', hoverBg: 'hover:bg-blue-50' },
   tenjikai:  { icon: Store,       iconBg: 'from-[#0066ff] to-[#0a0f3c]',    hoverBg: 'hover:bg-blue-50' },
   income:    { icon: BadgeJapaneseYen, iconBg: 'from-[#0066ff] to-[#0047d6]', hoverBg: 'hover:bg-blue-50' },
+  expense:   { icon: Wallet,      iconBg: 'from-[#0066ff] to-[#0047d6]',    hoverBg: 'hover:bg-blue-50' },
 }
 
 const FALLBACK_MAPPING: ServiceMapping = {

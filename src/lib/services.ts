@@ -1808,6 +1808,49 @@ export const SERVICES: Service[] = [
     order: 35,
     requiresAuth: true,
   },
+  // ----------------------------------------
+  // ドヤ支出管理（Expense）
+  // 設計: docs/design/2026-10-18-doya-expense/README.md
+  // ----------------------------------------
+  {
+    id: 'expense',
+    name: 'ドヤ支出管理',
+    shortName: '支出管理',
+    description: '契約ごとに支払いを登録すると、毎月の出金と12か月先までの予定が分かります。',
+    longDescription:
+      'SaaS・業務委託・家賃などの契約を登録すると、口座からお金が出る日と金額が12か月先まで並びます。年払いや半年払いの契約も、支払う月に予定が入ります。カードで払う契約は、締め日と引落日から出金日を計算します。業務委託は、人ごとに請求書の受け取りから支払いまでの状態を記録できます。源泉所得税の納付予定も、報酬の支払いから自動で計算します。ドヤ収入管理と合わせて使うと、毎月の粗利と口座残高の見込みが分かります。',
+    // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
+    icon: '',
+    color: 'cyan',
+    gradient: 'from-cyan-600 to-teal-800',
+    bgGradient: 'from-cyan-50 to-teal-50',
+    href: '/expense',
+    dashboardHref: '/expense',
+    pricingHref: '/expense/pricing',
+    guideHref: '/expense',
+    features: [
+      'SaaS・業務委託・家賃などの契約を登録できます',
+      '12か月先までの出金予定を自動で作ります',
+      'カードの締め日と引落日から出金日を計算します',
+      '業務委託の請求書と支払いの状態を人ごとに記録できます',
+      '源泉所得税の納付予定を自動で計算します',
+    ],
+    useCases: [
+      '毎月の支出の合計をすぐに確認したい',
+      '業務委託の請求書の受け取り漏れと支払い漏れをなくしたい',
+      '年払いと半年払いが重なる月を前もって知りたい',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: '開発中のため制限なし', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '開発中のため制限なし', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+    },
+    // 開発中。対外的な面には出さない（UNLISTED_SERVICE_IDS）。ログイン後は使える
+    status: 'coming_soon',
+    badge: 'BETA',
+    category: 'other',
+    order: 36,
+    requiresAuth: true,
+  },
 ]
 
 // ============================================
@@ -1859,7 +1902,7 @@ export const RETIRED_SERVICE_IDS = new Set([
 // トップ・sitemap・llms.txt・公開LP（/all-in-one）からは消えるが、
 // ログイン後のツール切替・サイドバーの他サービス一覧・直リンクでは従来どおり使える。
 // 公開する時はここから id を外し、各 layout.tsx の noindex も一緒に外すこと。
-export const UNLISTED_SERVICE_IDS = new Set<string>(['popup', 'tenjikai', 'income']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-17: popup・tenjikai は開発中 / 2026-10-18: income 開発中
+export const UNLISTED_SERVICE_IDS = new Set<string>(['popup', 'tenjikai', 'income', 'expense']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-17: popup・tenjikai は開発中 / 2026-10-18: income・expense 開発中
 
 // 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中。
 // トップページ・sitemap・llms.txt・公開LP がこのリストを参照するため、
