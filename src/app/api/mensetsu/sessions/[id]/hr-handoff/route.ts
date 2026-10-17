@@ -13,6 +13,8 @@ import { prisma } from '@/lib/prisma'
 import { getMensetsuContext, hasMinRole, orgSlugFrom } from '@/lib/mensetsu/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { hasMinRole as hasHrRole } from '@/lib/hr/access'
+import { createWithinEmployeeLimit, employeeLimitMessage, type HrEmployeeAdmission } from '@/lib/hr/billing'
+import { logAudit } from '@/lib/hr/audit'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -108,26 +110,54 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
 
   const { lastName, firstName } = splitName(s.candidateName)
 
-  const employee = await prisma.hrEmployee.create({
-    data: {
-      organizationId: hrOrganizationId,
-      lastName,
-      firstName,
-      email: s.candidateEmail,
-      // ⚠️ 生年月日・性別は入れない。面接で収集していない情報をここで作らない
-      employmentType,
-      status: 'ACTIVE',
-      hireDate,
-      notes: `ドヤ面接官の一次面接から登録（面接ID: ${s.id}）`,
-    },
-    select: { id: true, lastName: true, firstName: true },
-  })
+  // ⚠️ ドヤHR の従業員上限を通す（createWithinEmployeeLimit）。以前はこの経路だけ上限を素通りしていた（SEC-109）。
+  // ⚠️ 登録と面接側の紐付けを同じトランザクションで行い、紐付けは「まだ空のとき」だけ書く。
+  //    同時に 2 回押されても、2 人目の登録は取り消される（二重登録を防ぐ）。
+  let admission: HrEmployeeAdmission<{ id: string; lastName: string; firstName: string }>
+  try {
+    admission = await createWithinEmployeeLimit(hrOrganizationId, async (tx) => {
+      const employee = await tx.hrEmployee.create({
+        data: {
+          organizationId: hrOrganizationId,
+          lastName,
+          firstName,
+          email: s.candidateEmail,
+          // ⚠️ 生年月日・性別は入れない。面接で収集していない情報をここで作らない
+          employmentType,
+          status: 'ACTIVE',
+          hireDate,
+          notes: `ドヤ面接官の一次面接から登録（面接ID: ${s.id}）`,
+        },
+        select: { id: true, lastName: true, firstName: true },
+      })
+      const linked = await tx.mensetsuSession.updateMany({
+        where: { id: s.id, organizationId: ctx.organizationId, hrEmployeeId: null },
+        data: { hrEmployeeId: employee.id },
+      })
+      if (linked.count !== 1) throw new AlreadyHandedOff()
+      return employee
+    })
+  } catch (error) {
+    if (error instanceof AlreadyHandedOff) {
+      return NextResponse.json({ error: 'この方は既に登録済みです' }, { status: 409 })
+    }
+    throw error
+  }
+  if (!admission.allowed) {
+    return NextResponse.json({ error: employeeLimitMessage(admission.plan, admission.limit) }, { status: 403 })
+  }
+  const employee = admission.value
 
-  // ⚠️ 二重登録を防ぐため、面接側に紐付けを残す
-  await prisma.mensetsuSession.update({
-    where: { id: s.id },
-    data: { hrEmployeeId: employee.id },
+  await logAudit({
+    organizationId: hrOrganizationId,
+    userId: ctx.userId,
+    action: 'EMPLOYEE_CREATED_FROM_MENSETSU',
+    target: 'employee',
+    targetId: employee.id,
+    details: { source: 'mensetsu-handoff', mensetsuSessionId: s.id },
   })
 
   return NextResponse.json({ employee })
 }
+
+class AlreadyHandedOff extends Error {}

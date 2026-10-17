@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   const userId = request.nextUrl.searchParams.get('userId') || 'test-user'
   const unsubToken = generateUnsubscribeToken(userId)
-  const baseUrl = process.env.NEXTAUTH_URL || `https://${process.env.VERCEL_URL}` || 'https://doya-ai.surisuta.jp'
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'
 
   return NextResponse.json({
     token: unsubToken,

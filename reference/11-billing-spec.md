@@ -596,7 +596,12 @@ curl -s -H "Authorization: Bearer $CRON_SECRET" \
 
 ## HR評価AIの利用枠・生成結果の再確認
 
-- 利用枠は組織オーナーの契約を基準に管理する。プラン、料金、上限値、月次リセットの条件は変更しない。
+- 利用枠は組織オーナーの契約を基準に管理する。プラン、料金、月次リセットの条件は変更しない。
+- 月次の上限値は、無料 3 回、LIGHT 30 回、PRO・BUNDLE 100 回、ENTERPRISE 500 回（2026-10-18 にユーザーが決定）。
+  それまで PRO・ENTERPRISE は無制限だったが、有料でも無制限にしない方針に合わせた。
+  正本は `src/lib/plan-limit.ts` の `HR_AI_MONTHLY_LIMITS`、実装は `src/lib/hr/billing.ts`。
+- ドヤ営業管理（SFA）の AI（スコア・次の一手）も同じ方針で、月次の上限は無料 20 回、LIGHT 300 回、PRO 1,000 回、ENTERPRISE 5,000 回。
+  正本は `SFA_AI_MONTHLY_LIMITS`、実装は `src/lib/sfa/ai-limit.ts`。
 - `reserveAiUsageInTransaction(tx, organizationId, now)` は呼び出し元のトランザクション内で組織のロック、月次リセット、契約確認、利用枠の予約を行う。既存の `reserveAiUsage` も同じ処理を利用する。
 - 生成前に現在の所属・役割、対象者と評価者と評価期間の組織、評価の更新日時、編集可能な段階を確認し、利用枠の予約と同じトランザクションで確定する。外部AIの応答待ちはトランザクションの外で行う。
 - 保存時にも権限、関連レコードの所属、更新日時、評価の段階を再確認する。保存できなかった生成の予約は返却する。前月分の返却で新しい月の利用回数を減らさない。

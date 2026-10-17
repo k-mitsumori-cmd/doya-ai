@@ -972,13 +972,14 @@ export const SERVICES: Service[] = [
     pricing: {
       free: {
         name: '無料プラン',
-        limit: '従業員5名まで',
+        // AI の回数は src/lib/plan-limit.ts の HR_AI_MONTHLY_LIMITS とそろえる
+        limit: '従業員5名まで / AI 月3回',
         dailyLimit: 3,
         price: 0,
       },
       pro: {
         name: 'プロプラン',
-        limit: '従業員100名まで',
+        limit: '従業員100名まで / AI 月100回',
         dailyLimit: -1,
         price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_HR_PRO_PRICE_ID,
@@ -1293,10 +1294,11 @@ export const SERVICES: Service[] = [
       'まずはシンプルに商談を見える化したい',
     ],
     pricing: {
-      free: { name: '無料プラン', limit: '3名 / 取引先・商談 各50件', dailyLimit: -1, price: 0 },
+      // AI の回数は src/lib/plan-limit.ts の SFA_AI_MONTHLY_LIMITS とそろえる
+      free: { name: '無料プラン', limit: '3名 / 取引先・商談 各50件 / AI 月20回', dailyLimit: -1, price: 0 },
       pro: {
         name: 'プロプラン',
-        limit: '50名 / 無制限',
+        limit: '50名 / 取引先・商談 無制限 / AI 月1,000回',
         dailyLimit: -1,
         price: UNIFIED_PRO_PRICE,
       },

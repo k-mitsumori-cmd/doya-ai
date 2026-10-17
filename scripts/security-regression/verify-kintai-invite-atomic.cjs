@@ -2,12 +2,20 @@ const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 const tokenHelpers = load('src/lib/kintai/invite-token.ts', {}, { crypto: require('node:crypto').webcrypto });
 
-function fixture({ role = 'employee', email = 'invited@example.com', employee = true, existing = false, failClaim = false, conflictOnce = false, token = 'token', createdAt = new Date() } = {}) {
+function fixture({ role = 'employee', email = 'invited@example.com', employee = true, existing = false, failClaim = false, conflictOnce = false, token = 'token', createdAt = new Date(), oldRole = 'employee', otherAdmin = false } = {}) {
   let rows = [
     { id: 'invite', organizationId: 'org', userId: 'pending', status: 'PENDING', role, inviteToken: token, inviteEmail: 'invited@example.com', createdAt, employee: employee ? { email: 'invited@example.com' } : null, organization: { name: 'Acme' } },
-    { id: 'old', organizationId: 'other', userId: 'user', status: 'ACTIVE' },
+    { id: 'old', organizationId: 'other', userId: 'user', status: 'ACTIVE', role: oldRole },
   ];
+  if (otherAdmin) rows.push({ id: 'other-admin', organizationId: 'other', userId: 'someone', status: 'ACTIVE', role: 'system_admin', employee: { isActive: otherAdmin !== 'inactive' } });
   if (existing) rows.push({ id: 'existing', organizationId: 'org', userId: 'user', status: 'ACTIVE', employee: { email } });
+  const matchesWhere = (row, where) =>
+    (where.organizationId === undefined || row.organizationId === where.organizationId) &&
+    (where.userId === undefined || row.userId === where.userId) &&
+    (where.status === undefined || row.status === where.status) &&
+    (where.role === undefined || row.role === where.role) &&
+    (where.id?.not === undefined || row.id !== where.id.not) &&
+    (where.employee?.is?.isActive === undefined || row.employee?.isActive === where.employee.is.isActive);
   let transactions = 0;
   let deletions = 0;
   const tx = { kintaiMember: {
@@ -28,6 +36,8 @@ function fixture({ role = 'employee', email = 'invited@example.com', employee = 
       for (const row of matches) Object.assign(row, data);
       return { count: matches.length };
     },
+    findMany: async ({ where }) => structuredClone(rows.filter((row) => matchesWhere(row, where))),
+    count: async ({ where }) => rows.filter((row) => matchesWhere(row, where)).length,
     delete: async () => { deletions++; },
   } };
   const prisma = {
@@ -67,6 +77,20 @@ function fixture({ role = 'employee', email = 'invited@example.com', employee = 
     assert.equal(f.rows.find((row) => row.id === 'invite').status, 'PENDING');
     assert.equal(f.deletions, 0);
   }
+
+  // SEC-105: 参加先以外の組織で唯一のシステム管理者なら、参加を断り、どちらの所属も変えない
+  const lastAdmin = fixture({ oldRole: 'system_admin' });
+  assert.equal((await lastAdmin.post()).status, 409);
+  assert.equal(lastAdmin.rows.find((row) => row.id === 'old').status, 'ACTIVE');
+  assert.equal(lastAdmin.rows.find((row) => row.id === 'invite').status, 'PENDING');
+  // ほかに有効なシステム管理者がいれば、従来どおり参加できる
+  // 無効化された従業員の管理者しか残らない場合も、管理者がいないものとして断る
+  const inactiveOnly = fixture({ oldRole: 'system_admin', otherAdmin: 'inactive' });
+  assert.equal((await inactiveOnly.post()).status, 409);
+  assert.equal(inactiveOnly.rows.find((row) => row.id === 'old').status, 'ACTIVE');
+  const handedOver = fixture({ oldRole: 'system_admin', otherAdmin: true });
+  assert.equal((await handedOver.post()).status, 200);
+  assert.equal(handedOver.rows.find((row) => row.id === 'old').status, 'INACTIVE');
 
   const failed = fixture({ failClaim: true });
   assert.equal((await failed.post()).status, 500);

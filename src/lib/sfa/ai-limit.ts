@@ -29,7 +29,8 @@ export async function reserveSfaAiUsage(organizationId: string, actorUserId: str
  */
 export async function reserveSfaAiUsageInTransaction(tx: Prisma.TransactionClient, organizationId: string, actorUserId: string, action: 'score' | 'next-action'): Promise<SfaAiReservation> {
   const tier = await sfaOwnerPlanTier(tx, organizationId)
-  const limit = tier === 'FREE' || tier === 'GUEST' ? 20 : tier === 'LIGHT' ? 300 : null
+  // 月次上限。src/lib/plan-limit.ts の SFA_AI_MONTHLY_LIMITS と同じ値にする（有料でも無制限にしない）。
+  const limit = tier === 'FREE' || tier === 'GUEST' ? 20 : tier === 'LIGHT' ? 300 : tier === 'PRO' ? 1000 : 5000
   const orgFilter = { path: ['organizationId'], equals: organizationId }
   await tx.generation.deleteMany({
     where: { serviceId: 'sfa', outputType: PENDING, createdAt: { lt: new Date(Date.now() - STALE_PENDING_MS) }, metadata: orgFilter },
@@ -43,7 +44,7 @@ export async function reserveSfaAiUsageInTransaction(tx: Prisma.TransactionClien
         metadata: orgFilter,
       },
     })
-    if (used >= limit) return { limit, used, upgradeAvailable: true }
+    if (used >= limit) return { limit, used, upgradeAvailable: tier === 'FREE' || tier === 'GUEST' || tier === 'LIGHT' }
   }
   const reservation = await tx.generation.create({
     data: {
@@ -70,7 +71,7 @@ export async function releaseSfaAiUsage(id: string, db: Pick<Prisma.TransactionC
 
 export function sfaAiLimitResponse(quota: Extract<SfaAiReservation, { limit: number }>, canManageBilling: boolean) {
   return NextResponse.json({
-    error: `今月のAI実行上限（${quota.limit}回）に達しました。${canManageBilling ? 'プロプランで枠を広げられます。' : '利用枠の変更は組織の契約者にご相談ください。'}`,
+    error: `今月のAI実行上限（${quota.limit}回）に達しました。${!canManageBilling ? '利用枠の変更は組織の契約者にご相談ください。' : quota.upgradeAvailable ? 'プロプランで枠を広げられます。' : '枠を増やしたい場合はお問い合わせください。'}`,
     code: 'SFA_AI_LIMIT_REACHED',
     limitReached: true,
     canManageBilling,

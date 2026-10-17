@@ -81,6 +81,20 @@ export const ENTERPRISE_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   popupSites: null,
 }
 
+/**
+ * ドヤHR の AI（評価コメント・1on1 要約）の月次上限。組織単位で数える。
+ * ⚠️ 実装は src/lib/hr/billing.ts の getOrgPlanLimits。値を変えたら両方と services.ts の表示をそろえる。
+ * ⚠️ 2026-10-18 まで PRO・ENTERPRISE は無制限だった。無制限にしない（実費が青天井になる）。
+ */
+export const HR_AI_MONTHLY_LIMITS = { FREE: 3, LIGHT: 30, PRO: 100, ENTERPRISE: 500 } as const
+
+/**
+ * ドヤ営業管理（SFA）の AI（スコア・次の一手）の月次上限。組織単位で、2 種類の AI が同じ枠を使う。
+ * ⚠️ 実装は src/lib/sfa/ai-limit.ts。値を変えたら両方と services.ts の表示をそろえる。
+ * ⚠️ 2026-10-18 まで PRO・ENTERPRISE は無制限だった。無制限にしない。
+ */
+export const SFA_AI_MONTHLY_LIMITS = { FREE: 20, LIGHT: 300, PRO: 1000, ENTERPRISE: 5000 } as const
+
 export type FreeLimitKey = keyof typeof FREE_LIMITS
 
 /** ログイン中ユーザーが有料プランか */

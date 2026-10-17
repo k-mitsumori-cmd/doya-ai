@@ -18,7 +18,11 @@ import { generateImageWithFallback } from '@/lib/image-generator'
 //     -d '{"prompt":"a cute purple cat hugging a banana","quality":"low"}'
 // ========================================
 
+// 有料の画像生成を直接呼べる検証用の口のため、本番デプロイでは存在しない扱いにする。
+const isProductionDeployment = () => process.env.VERCEL_ENV === 'production'
+
 export async function POST(req: NextRequest) {
+  if (isProductionDeployment()) return NextResponse.json({ error: 'Not Found' }, { status: 404 })
   const token = req.headers.get('x-test-token')
   const expected = process.env.OPENAI_TEST_TOKEN
   if (!expected) {
@@ -74,6 +78,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
+  if (isProductionDeployment()) return NextResponse.json({ error: 'Not Found' }, { status: 404 })
   return NextResponse.json({
     endpoint: '/api/test/openai-image',
     method: 'POST',
