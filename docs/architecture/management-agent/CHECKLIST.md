@@ -9,6 +9,7 @@
 | **設計を変えたとき**（README / schema-draft / マニフェスト型の変更） | **DOC**（必ず最初と最後）、SCH、TEN、AUTHZ、MIG、AGT（エージェントに触るとき）、AUD | 残り |
 | **新サービスを追加するとき**（§16 のマニフェスト 1 件） | TEN、AUTHZ、BIL、SCH、EXT、PII、AUD、IO、UI。ツールを出すなら AGT | AUTH、MIG、OPS |
 | **本番に出す前**（各フェーズのデプロイ、Phase 昇格） | 全章。特に RUN、MIG、BIL | — |
+| **ホーム・連携・画面載せ替えに触るとき**（§18） | **ALL**、TEN、AUTHZ、AGT（道具を出すとき）、UI、DOC | 残り |
 
 列の意味: **確認方法** は「自動＝security-regression の verify スクリプト名案 / lint / prisma validate」「手動＝誰が何を見るか」。**重大度** は H（出すと事故）/ M（放置すると事故）/ L（品質）。**監査** は対応する指摘番号。
 
@@ -427,7 +428,7 @@
 | ID | 確認内容（はい/いいえ） | なぜ必要か | 確認方法 | 重大度 | 監査 |
 |---|---|---|---|---|---|
 | DOC-01 | 同じ規則が文書内の複数箇所に書かれているとき、修正前に grep で全出現を列挙し、全箇所を同時に直したか（例: 除籍の意味論＝§5.1 / §9.1 / §11.6 / MIG-15、Cron claim 条件＝§8.4 / §8.6 / §17.2 / AGT-26、Cookie 名＝§6.3 / §10.7、冪等キーの基底＝§7.4 / §8.4 / §8.6 / draft） | 取り残しが矛盾になり、読んだ箇所で実装が変わる | 自動: `verify-doc-consistency.cjs`（付録 J の「多重記述キー」ごとに正規表現で全出現を抽出し、正本の文言と一致しなければ失敗） | H | FIN-07, FIN-13 |
-| DOC-02 | 件数・行番号・モデル数（merge 28 / 新規 34 / 結合 226、テーブル 28、Cron 41）が README・draft・CHECKLIST・付録で一致しているか | 検証スクリプトの期待値が決まらない | 自動: 同上（数値キー） | M | FIN-16, DATA-17 |
+| DOC-02 | 件数・行番号・モデル数（merge 28 / 新規 34 / 結合 226、§18 込みは 36 / 38 / 230、テーブル 28、Cron 41）が README・draft・CHECKLIST・付録で一致しているか | 検証スクリプトの期待値が決まらない | 自動: 同上（数値キー） | M | FIN-16, DATA-17 |
 | DOC-03 | 名称（Cookie 名、フラグ名、cron パス、ツール key、verify スクリプト名）が全文書で同一か | 実装者が別名で作る | 自動: 同上（名称キー） | M | FIN-13 |
 | DOC-04 | ER 図の実体・カーディナリティ・UK/FK 表記が draft と一致し、ER に載せた属性名が draft に存在するか（属性は draft が正本。ER は抜粋だが載せたものは一致させる） | 図を見て作ると違う | 自動: `verify-core-er-consistency.cjs` | M | FIN-17, DATA-16 |
 | DOC-05 | 状態遷移図の status / pausedReason の値が draft のコメントと一致し、全状態に終端への経路と復帰主体があるか | 実装者が 2 通りに解釈 | 自動: `verify-agent-state-machine.cjs`（図から遷移表を抽出し、到達性と draft の値を検査） | H | FIN-01, FIN-12 |
@@ -435,6 +436,38 @@
 | DOC-07 | 付録の回答表（D / F / G）に審査の全 ID の行があり、「部分的」判定が次の改訂で「反映」まで到達しているか | 取りこぼし | 自動: ID 列挙スクリプト | M | 全般 |
 | DOC-08 | 改訂のたびに、付録 J の全キーについて「正本の文言 ≥1 回、禁止語 0 回（付録 J 自身を除く）」を README・CHECKLIST・schema-draft の 3 ファイルで機械検査し、結果（キーごとの出現数・禁止語の残数）を完了報告に添付したか | grep 依頼だけでは取り残しが出る（改訂 4 で 4 キー） | 自動: `verify-doc-consistency.cjs`（キー・正本語・禁止語は付録 J の表から読む） | H | FIN2-03, FIN2-05, FIN2-07 |
 | DOC-09 | 新しい規則を追加したとき、それが 2 箇所以上に書かれるなら付録 J にキー・正本・禁止語を追加したか | 多重記述の増殖 | 手動: PR テンプレートのチェック欄 | M | FIN2-01, FIN2-04, FIN2-05 |
+
+## 15. ALL オールインワン化（§18: ホーム・共通オブジェクト・セットアップ・連携・リブランディング）
+
+| ID | 確認内容（はい/いいえ） | なぜ必要か | 確認方法 | 重大度 | 監査 |
+|---|---|---|---|---|---|
+| ALL-01 | セットアップウィザード完了後、有効化した各ツールの最初の一覧画面（sfa 商談・quote 発行元と品目・kintai 部署と勤務ルール・hr 部署・shodan 自社情報・aishodan 商材とシナリオ・aio ブランドとプロンプト・mensetsu 会社情報）が空でないか、または「空でよい」をマニフェストで宣言しているか | 「会社情報を登録すれば各ツールが動く」の定義 | 自動: `verify-core-setup-no-empty-screen.cjs`（§18.3） | H | §18.3 |
+| ALL-02 | `manifest.setup.seed` を同じ入力で 2 回呼んでも行数が増えないか（サービスごとの冪等キー: `QuoteIssuer.organizationId`、`KintaiEmployee.hrEmployeeId`、`AishodanProduct.companyProductId` 等） | 再実行ボタンと途中失敗の再開で二重作成しない | 自動: `verify-core-setup-idempotent.cjs` | H | §18.3 |
+| ALL-03 | seed はサービスごとに別 tx で、1 つの失敗が他を巻き込まず `setupState.failed[]` と `AuditLog(company.setup.seed_failed)` に残るか | 部分成功を見えるようにする | 自動: `verify-core-setup-idempotent.cjs`（失敗注入） | M | §18.3 |
+| ALL-04 | ウィザードが既存の自動作成（kintai の部署 4 つ・勤務ルール、sfa のパイプライン・サンプル）と重複して作らないか。sfa のサンプルは `options.skipSample` でだけ抑止し、既定の挙動は変えていないか | 既存ユーザーの初回体験を壊さない | 自動: `verify-sfa-*`（既存）、`verify-core-setup-idempotent.cjs` | M | §18.3、A-7 |
+| ALL-05 | 自社 URL から取得した内容（`scrapeCompanyWebsite` / `searchGbizInfo` / LLM 抽出の商材候補）は `origin='scraped'` で保存され、人が確定するまで planner に本文を渡さないか | 他社サイト経由のプロンプト注入の永続化防止（SEC-16） | 自動: `verify-core-profile-merge.cjs`（origin 列）、手動: 確認画面 | H | §18.3、SEC-16 |
+| ALL-06 | 参照列（①〜⑥）と `ObjectLink` の書き込み前に両端が同じ `companyId` に属することを `owned()` で確認し、別会社の id なら throw するか | ツール間リンクによる IDOR | 自動: `verify-core-object-link-tenant.cjs`（新規。A 社の商談に B 社の見積を結ぶ→throw） | H | §18.2、A-6 |
+| ALL-07 | 参照列は FK を張らず、参照先が消えても行を残し、表示時に「削除済み」と出すか。`ObjectLink` の参照先不在行は `cron/core-retention` の月次掃除に入っているか | ツール間の連鎖削除を持ち込まない | 自動: `verify-core-retention.cjs`（ObjectLink 行）、手動: 画面 | M | §18.2、§17.1 |
+| ALL-08 | 非正規化の参照列は 6 本（`QuoteProduct.companyProductId`、`AishodanProduct.companyProductId`、`SfaLead.originType/originId`、`QuoteDocument.sfaDealId`、`KintaiEmployee.hrEmployeeId`、`KintaiDepartment.hrDepartmentId`）に限り、それ以外の横断参照は `ObjectLink` か。増やすときは §18.2 の表と draft を同時に更新したか | 参照列の増殖＝二重書き込み対象の増殖 | 手動: PR レビュー、自動: `verify-core-schema-draft.cjs` | M | §18.2 |
+| ALL-09 | 連携 8 本の冪等キー（`SfaLead @@unique([organizationId, originType, originId])`、`PromaneTimeEntry.sourceAllocationId @unique`、`ObjectLink` の unique、`MensetsuSession.hrEmployeeId` の unique 化）が draft と本番 schema にあり、同じ入力の 2 回目が 409 か no-op になるか | ボタン連打・エージェントの再試行・自動トリガの重複発火 | 自動: `verify-link-idempotent.cjs`（8 本×2 回） | H | §18.4 |
+| ALL-10 | 自動トリガの連携（#2 見積確定→商談、#4 AI 商談→リード、#7 HR→勤怠）は「作成のみ・上書きしない」（#2 の金額だけ例外で、上書き前の値を `SfaActivity` に残す）か | 片方のツールで直した値が消える事故 | 自動: `verify-link-no-overwrite.cjs` | H | §18.4 |
+| ALL-11 | 連携の 3 経路（ボタン・道具・自動）が同じ lib 関数 `src/lib/<svc>/links/*.ts` を呼び、権限は両サービスの `minServiceRole` を満たすことを `requireCompanyAccess` で確認しているか | 経路ごとの抜け | 自動: `verify-link-roles.cjs`（quote member だが sfa 非所属→403）、M-11（道具の import 閉包） | H | §18.4、B-2 |
+| ALL-12 | HR→勤怠の同期で、ログインユーザーが居ない社員は作らず、`CompanyInvitation` 受諾時に遅延同期するか。雇用形態の写像（`INTERN / TEMPORARY → part_time`＋note）と `OTHER` の廃止が hr-handoff にも適用されているか | `KintaiEmployee` は `KintaiMember.userId` 必須 | 自動: `verify-link-hr-kintai.cjs` | M | §18.4 #7、E1 |
+| ALL-13 | 勤怠→人件費は `KintaiProjectAllocation` を経由し、`workMinutes` の合計と配賦 `minutes` の合計が一致しない日を取り込まないか | 配賦漏れ・二重計上 | 自動: `verify-link-labor-allocation.cjs` | M | §18.4 #8 |
+| ALL-14 | 連携で作った行の出所（`ObjectLink.createdBy` か `note`）が残り、取り消しは「リンクを外す」であって行の削除ではないか。`createdBy='agent:<runId>'` の行は run の結果画面から一括で外せるか | 人のデータを機械が消さない | 手動: 画面、自動: `verify-agent-unknown-outcome.cjs`（既存の延長） | M | §18.4、§8.5 |
+| ALL-15 | ホームの「今日の提案」は、LLM を呼ばない規則ベース（期限超過タスク・未承認申請・期限切れ間近の見積）と `report.weeklyManagement`（costClass=low）だけで作られ、ホームを開くたびに有料 API を呼んでいないか | 画面表示で課金が走る事故 | 自動: `verify-home-no-paid-call.cjs`（ホームのデータ取得の import 閉包に gateway 呼び出しが無い） | H | §18.1、OPS-12 |
+| ALL-16 | ホームの実行は `POST /api/agent/runs` → `AgentRun` であり、見本 `agent.tsx` のタイマー進行（120ms interval）や固定シナリオが本番コードに残っていないか | 別の実行系を作らない | 自動: grep `agentScenarios` / `setInterval` in `src/app/home` | H | §18.5 |
+| ALL-17 | 承認待ちの step に依存する step を進めていないか（見本は進めてしまう）。依存しない step は進むか | 承認前に下流が動く | 自動: `verify-agent-approval-matrix.cjs`（dependsOn ケース追加） | H | §18.5、§8.6 |
+| ALL-18 | 「勝手にやってくれる」範囲の表（自動／承認／しない）が初回に表示され、会社設定（`approveDrafts`）で変えられ、「絶対にしない」列（課金・メンバー・会社情報の自動上書き・セキュリティ設定・AuditLog）が設定で緩められないか | 利用者の期待と動作の一致 | 手動: 画面、自動: `verify-agent-approval-matrix.cjs` | H | §18.5、SEC-16 |
+| ALL-19 | 見本にあるが存在しないツール名（`mensetsu.publishOpening` 等）が提案カード・planner のプロンプトに出ていないか。追加候補はレジストリ登録後にだけ出るか | 存在しない道具を planner が呼ぶ | 自動: `verify-service-manifest-tools.cjs`（提案カードの key がレジストリに存在） | M | §18.5 |
+| ALL-20 | 画面の載せ替えは `ui.shell.<svc>` フラグで切り替え、ページ本体・データ取得・API・route を変えていないか（PR の差分が `layout.tsx`・`components/ds`・`components/shell`・マニフェスト `ui.nav` に限られる） | 「画面だけ差し替え・API は変えない」 | 手動: PR レビュー、自動: `verify-ui-shell-diff.cjs`（変更ファイルの allowlist） | H | §18.6 |
+| ALL-21 | 載せ替え後に既存の `verify-<svc>-*.cjs` と主要画面のスモークが通り、DOM の `role` / `aria-*` / 文言が維持されているか。375px / 1280px のスクリーンショット比較を PR に添付したか | 既存機能の回帰なし | 自動: 既存 verify、`scripts/ui/snap.cjs` | H | §18.6、UI-04 |
+| ALL-22 | 会社スイッチは `AppShell` の 1 つだけで、旧 4 流儀（SFA membership リンク・`OrgSwitcher`・HR `<select>`・slug 固定）は Phase3 までの併存期間中 `CompanyServiceLink` から変換されているか。`?org=` / localStorage の値がセッションの会社と矛盾する書き込みは 409 か | 会社の取り違え | 自動: `verify-core-company-mismatch.cjs`（既存） | H | §18.6、B-25 |
+| ALL-23 | ゲスト・公開画面（`routes.public` / `guestShared`）に `AppShell` が出ず、`PublicFrame` だけか | 認証無し画面に会社情報・ナビを出さない | 自動: `verify-core-route-smoke.cjs`（public で AppShell の DOM が無い） | H | §18.6、§6.3 |
+| ALL-24 | 部品群 `ds/*` のチャートは数値を props で受け、自分でデータ取得や有料 API を呼ばないか。アイコンは `icons.tsx` の SVG かマスコット画像で、絵文字が無いか | 部品の再利用性と UI 規約 | 自動: M-20（`ui.noEmojiIcons`）、grep `fetch(` in `components/ds` | M | §18.6、UI-02 |
+| ALL-25 | 既定テーマはクリア（`data-design` 未指定）で、ダークは `prefers-color-scheme` に従い、テーマ切替が localStorage だけに依存し DB に書かないか | 見本の 4 案のうち既定を固定 | 手動: 画面 | L | §18.6 |
+| ALL-26 | SFA 読み込み不具合の確認手順（ステータスコード→検証→列→guard→重複パイプライン）を本番で実施し、結果を §13 末尾に追記したか。修正は本設計と別 PR か | 原因を推測で直さない | 手動: 記録 | M | §18.7 |
+| ALL-27 | `manifest.setup / objects / ui.nav` は任意キーで、無いサービスは M-1 を落とさず、ホームと ⌘K に出ないだけか | 18 サービス全部に一度に要求しない | 自動: `verify-service-manifest-schema.cjs` | M | §18.2、§16.1 |
 
 ## 監査指摘との対応表
 

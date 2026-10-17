@@ -1,5 +1,5 @@
 // =====================================================================
-// ドヤAI 共通テナント・課金・経営エージェント  Prisma 草案（改訂 10: 監査・第 2 回審査・最終ゲート第 1〜7 回 2026-10-17 反映）
+// ドヤAI 共通テナント・課金・経営エージェント  Prisma 草案（改訂 11: §18 オールインワン化の相互参照列・新規 4 モデルを追加。改訂 10: 監査・第 2 回審査・最終ゲート第 1〜7 回 2026-10-17 反映）
 // ---------------------------------------------------------------------
 // ⚠️ これは設計草案であり、本番 prisma/schema.prisma には **コピーしない**。
 //    採用が決まったモデルから順に本番 schema へ移植し、`doya-db-push` 手順で
@@ -9,7 +9,54 @@
 // 検証方法（監査 A-3 対応）:
 //   このファイルは「既存 schema と結合して `prisma validate` が通る」ことを保証する。
 //   結合規則は README §付録 C（`verify-core-schema-draft.cjs` 仕様）のとおり:
-//     1. `// @@new-models` 以降の model はそのまま既存 schema の末尾に連結する
+//     1. `/// @@merge-into QuoteProduct
+model QuoteProduct_Fragment {
+  /// §18.2 参照列①: 共通の商材 CompanyProduct。FK は張らない（ツール間の連鎖削除を持ち込まない）
+  companyProductId String?
+  @@index([companyProductId])
+}
+/// @@merge-into AishodanProduct
+model AishodanProduct_Fragment {
+  /// §18.2 参照列②
+  companyProductId String?
+  @@index([companyProductId])
+}
+/// @@merge-into SfaLead
+model SfaLead_Fragment {
+  /// §18.2 参照列③: 出所（'doyalist' | 'aishodan'）と出所側の id。同じ出所からの二重取込を unique で防ぐ（§18.4 #4 #5）
+  originType String?
+  originId   String?
+  @@unique([organizationId, originType, originId])
+}
+/// @@merge-into QuoteDocument
+model QuoteDocument_Fragment {
+  /// §18.2 参照列④: 元になった SFA 商談（§18.4 #1 #2）。FK なし
+  sfaDealId String?
+  @@index([sfaDealId])
+}
+/// @@merge-into KintaiEmployee
+model KintaiEmployee_Fragment {
+  /// §18.2 参照列⑤: HR の社員（§18.4 #7 同期の冪等キー）。FK なし
+  hrEmployeeId String? @unique
+}
+/// @@merge-into KintaiDepartment
+model KintaiDepartment_Fragment {
+  /// §18.2 参照列⑥: HR の部署。FK なし
+  hrDepartmentId String?
+  @@index([hrDepartmentId])
+}
+/// @@merge-into PromaneTimeEntry
+model PromaneTimeEntry_Fragment {
+  /// §18.4 #8: 勤怠からの取込元。unique で二重取込を防ぐ。FK なし
+  sourceAllocationId String? @unique
+}
+/// @@merge-into MensetsuSession
+model MensetsuSession_Fragment {
+  /// §18.4 E1: hrEmployeeId は既存列（String?）。本番では同名列に @unique を足す（断片では index だけ宣言し、unique 化は移植時に ALTER）
+  @@index([hrEmployeeId])
+}
+
+// @@new-models` 以降の model はそのまま既存 schema の末尾に連結する
 //     2. `/// @@merge-into <Model>` で始まるブロックは、その中身（{ } の内側）を
 //        既存 schema の同名 model の閉じ括弧の直前に挿入する
 //   2026-10-17 時点で結合後 `npx prisma validate` 通過を実測済み。
@@ -251,6 +298,11 @@ model Company {
   requireStepUp        Boolean  @default(true)
   /// エージェント設定（approveDrafts / allowSensitive / slackWebhook / sessionPolicy など）
   agentSettings        Json?
+  /// §18.3 登録ウィザードの進捗 { step, completedAt, seeded: { <serviceId>: ISO }, failed: [] }
+  setupState           Json?
+  products             CompanyProduct[]
+  objectLinks          ObjectLink[]
+  agentSchedules       AgentSchedule[]
   /// 論理削除。purge は Phase4 の専用バッチが順序固定で行う
   deletedAt DateTime?
   createdAt DateTime @default(now())
@@ -1238,4 +1290,93 @@ model FeatureFlag {
   @@unique([key, scope])
   @@index([companyId])
   @@map("core_feature_flags")
+}
+
+// ---------------------------------------------------------------------
+// §18 オールインワン化（改訂 11）
+// ---------------------------------------------------------------------
+
+/// 横断の関連（HubSpot の association 相当）。正本はこの表。両端は「種別＋id」で FK は張らない（§18.2）
+model ObjectLink {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// 'sfa.account' | 'sfa.contact' | 'sfa.lead' | 'sfa.deal' | 'quote.document' | 'hr.employee' | 'kintai.employee' | 'promane.client' | 'promane.project' | 'doyalist.company' | 'shodan.preparation' | 'aishodan.session' | 'company.product'
+  fromType  String
+  fromId    String
+  toType    String
+  toId      String
+  /// 'account' | 'contact' | 'quote' | 'employee' | 'origin' | 'related'
+  kind      String
+  /// 'user:<companyMemberId>' | 'agent:<runId>' | 'setup' | 'migration'
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, fromType, fromId, toType, toId, kind])
+  @@index([companyId, toType, toId])
+  @@index([companyId, fromType, fromId])
+  @@map("core_object_links")
+}
+
+/// 共通の商材（§18.2）。QuoteProduct / AishodanProduct は companyProductId で参照する
+model CompanyProduct {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  sourceUrl   String?
+  /// 一言説明・提供価値・ICP・料金・FAQ（QuoteProduct.profile / AishodanProduct.profile と同じ形）
+  profile     Json?
+  /// 税抜の定価（円）。未定なら null
+  listPrice   Int?
+  unit        String   @default("式")
+  taxRate     Int      @default(10)
+  /// 'user' | 'scraped' | 'agent'（§18.3 画面 3 の出所）
+  origin      String   @default("user")
+  archivedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyId, archivedAt])
+  @@map("core_company_products")
+}
+
+/// 勤怠の日次実績をプロジェクトへ配賦する行（§18.4 #8）。attendanceId / projectId は別ツールの行なので FK なし
+model KintaiProjectAllocation {
+  id           String   @id @default(cuid())
+  companyId    String
+  attendanceId String
+  projectId    String
+  minutes      Int
+  /// 'manual' | 'rule'（部署→プロジェクトの既定配賦）
+  source       String   @default("manual")
+  createdById  String?
+  createdAt    DateTime @default(now())
+
+  @@unique([attendanceId, projectId])
+  @@index([companyId, projectId])
+  @@map("core_kintai_project_allocations")
+}
+
+/// 定期実行する依頼（§18.5。Phase3d 以降）。costClass=high のツールは含められない
+model AgentSchedule {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdById String
+  /// 依頼文（run の request と同じ）
+  request     String   @db.Text
+  /// 'weekly' | 'monthly'
+  cadence     String
+  /// 0-6（weekly）/ 1-28（monthly）
+  dayOf       Int
+  hourJst     Int      @default(7)
+  enabled     Boolean  @default(true)
+  lastRunId   String?
+  nextRunAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([enabled, nextRunAt])
+  @@map("agent_schedules")
 }

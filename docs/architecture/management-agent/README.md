@@ -1697,7 +1697,11 @@ export const manifest: ServiceManifest = {
   notifications: { types: ['quote.document.shared'] },
   featureFlags: ['quote.enabled', 'quote.ai_suggest'],
 
-  ui: { japaneseOnly: true, noEmojiIcons: true, minViewportPx: 375 },
+  ui: { japaneseOnly: true, noEmojiIcons: true, minViewportPx: 375, nav: [] },   // nav[]: 共通シェルのサイドバー項目（§18.6。任意）
+
+  // 任意（§18）: 無ければホームに出ないだけで、M-1 の必須キーには含めない
+  setup: { seed: (ctx, profile, options) => import('./setup').then(m => m.seed(ctx, profile, options)) },   // §18.3。冪等
+  objects: { types: ['quote.document'], resolve: (ctx, type, ids) => import('./objects').then(m => m.resolve(ctx, type, ids)) }, // §18.2
 }
 ```
 
@@ -1865,6 +1869,303 @@ SLO（運営会社での Phase3 計測値を初期値にする）: 承認→再�
 
 ---
 
+## 18. オールインワン化：ホームから全部できる・全ツールの連携・リブランディング
+
+目的: 「最初の画面で何をしたいかを書けば、作ってきた各ツールをエージェントが引き連れて最適な使い方を出し、実行してくれる。会社情報を登録すれば各ツールが動く。個別のツールにもアクセスできる」を、§4〜§8 の設計の**上に**載せる。新しいデータ基盤は作らない。HubSpot が「1 つの CRM オブジェクト群の上に Marketing / Sales / Service の Hub を載せる」のと同じ構造を、**`Company` と既存モデル（正本はそのまま）＋相互参照**で作る。
+
+この章で決めること: (1) 利用者から見た流れ、(2) 共通のビジネスオブジェクトと正本、(3) 初期セットアップ（空の画面を無くす）、(4) ツール間連携の一覧と入れる順、(5) エージェント中心のホームの本番仕様、(6) リブランディングの部品化と載せ替え手順、(7) 既知の不具合候補。**この章は §4〜§12 を変更しない**。足すのは schema-draft の相互参照列・2 モデル、マニフェストの 2 キー、エージェントの道具（§8.2 の表に追記）、UI 部品群、フラグ `ui.shell.<svc>` / `core.setup_wizard` / `link.<key>` である。
+
+### 18.1 プロダクト像（利用者の 1 日）
+
+```mermaid
+flowchart LR
+  A["朝: ホームを開く<br/>（会社ごとの『今日の提案』が並ぶ）"] --> B["一言で依頼<br/>『今月の売上を伸ばしたい』"]
+  B --> C["エージェントが計画<br/>（どのツールを・どの順で・承認が要るのは何か）"]
+  C --> D["各ツールを道具として実行<br/>read／下書きは自動"]
+  D --> E{"外に出る・取り消せない・<br/>費用が大きい？"}
+  E -- はい --> F["承認画面<br/>（見込み額・approvalHash）"]
+  E -- いいえ --> G["結果カード<br/>（数値・下書き・次の一手）"]
+  F --> G
+  G --> H["個別ツールで深掘り<br/>（同じデータを同じ画面部品で）"]
+  H --> A
+```
+
+- **ホームが入口**: `src/app/page.tsx`（現 LP）とは別に、ログイン後の既定ランディングを `/home`（仮）にする。見本 `src/app/ui-renewal/HomeScreen.tsx`（`AskBar`、KPI 行、提案グリッド）が出発点。「今日の提案」は §8.2 の read ツール（`sfa.pipelineSummary`、`kintai.dashboard`、`aio.visibilityReport`、`report.weeklyManagement`）の結果から作る。LLM を呼ばずに作れる提案（期限超過タスク・未承認の勤怠申請・期限切れ間近の見積）は **ルールで**出し、LLM が要る要約は `report.weeklyManagement`（§8.2: `costClass=low`）に限る。
+- **依頼→計画→実行→承認→結果**は §8.1 の実行フローそのもの。ホームは `AgentRun` の画面であって別の実行系ではない（§18.5）。
+- **個別ツールにもアクセスできる**: 共通シェルのサイドバー（§18.6）から全ツールへ。各ツールは今の route と API を保ったまま画面だけ共通部品に載せ替える。
+- **会社情報を登録すれば各ツールが動く**: §18.3 のセットアップウィザードが `CompanyProfile` と各ツールの初期データを一度に作る。
+
+**HubSpot 型の構造**（1 つのデータの上に複数の機能）:
+
+```mermaid
+flowchart TB
+  subgraph HOME["ホーム（エージェント・今日の提案・⌘K）"]
+    AG["AgentRun / ApprovalRequest（§8）"]
+  end
+  subgraph TOOLS["ツール群（同じ画面部品・同じ会社・同じ権限）"]
+    T1["集める: banner / adimage / seo / aio / doyaslide ..."]
+    T2["売る: doyalist / shodan / aishodan / quote / sfa"]
+    T3["雇う・育てる: mensetsu / hr"]
+    T4["回す: kintai / promane"]
+  end
+  subgraph OBJ["共通のビジネスオブジェクト（§18.2。正本は既存モデル）"]
+    O1["自社 Company / CompanyProfile / CompanyProduct"]
+    O2["取引先 SfaAccount・担当者 SfaContact・リード SfaLead"]
+    O3["商談 SfaDeal・見積 QuoteDocument"]
+    O4["社員 HrEmployee ↔ KintaiEmployee・部署"]
+    O5["プロジェクト PromaneProject・工数 PromaneTimeEntry・勤怠 KintaiAttendance"]
+    LINK["ObjectLink（横断の関連。§18.2）"]
+  end
+  subgraph BASE["共通基盤（§4〜§11）"]
+    B1["Company / CompanyMember / CompanyServiceLink"]
+    B2["requireCompanyAccess / tenantPrisma / AuditLog"]
+    B3["BillingAccount / UsageLedger"]
+  end
+  HOME --> TOOLS
+  HOME --> OBJ
+  TOOLS --> OBJ
+  OBJ --> BASE
+  TOOLS --> BASE
+```
+
+### 18.2 共通のビジネスオブジェクト（HubSpot の CRM オブジェクトに相当）
+
+**方針**: 既存モデルを正本のまま使い、**新しい「統合テーブル」は作らない**（二重書き込み期間を増やさない。§12 の原則「足すだけ」の範囲）。横断の関連は (a) 利用頻度の高い 4 本だけ**非正規化した参照列**（nullable、`@@index`、FK は張らない＝相手が別ツールの行で、削除時の連鎖をツール間に持ち込まないため。参照先の存在確認は書き込み時に `owned()` で行う）、(b) それ以外は汎用の **`ObjectLink`**（HubSpot の association に相当）で持つ。どちらも `companyId` を持ち、`tenantPrisma` の対象（TEN-01）。
+
+確認済みの事実（`prisma/schema.prisma`、2026-10-17 時点）:
+- **ツール間の FK は 1 本も無い**。唯一の横断列は `MensetsuSession.hrEmployeeId String?`（L3781。FK なし・unique なし）。`quoteId` / `sfaDealId` / `externalId` の類は無い。
+- SFA 内部の `accountId / stageId / contactId / convertedAccountId / *MemberId` も relation 無しの文字列。SFA の金額は `BigInt`、Quote / Promane は `Int`（円）。
+- `QuoteDocument` の顧客は `clientCompany / clientDept / clientPerson` の文字列（顧客モデル無し）。商材は `QuoteProduct` と `AishodanProduct` に**別々に**あり、`SfaLineItem.productName` は自由文字列。
+- `KintaiEmployee.memberId String @unique` → `KintaiMember.userId String`（必須）。つまり **勤怠の従業員はログインユーザーが必須**。`HrEmployee` には `userId` が無く、`HrOrganizationMember.employeeId` 経由でのみユーザーに結び付く。雇用形態は Kintai が `full_time / part_time / contract`、HR が `FULL_TIME / PART_TIME / CONTRACT / INTERN / TEMPORARY`（`src/lib/hr/types.ts` L17-23。mensetsu の hr-handoff は `OTHER` を使い、`TEMPORARY` を知らない）。
+- 人件費: `PromaneTimeEntry.duration × hourlyRateSnapshot`（`PromaneMember.hourlyRate`）。勤怠の `KintaiAttendance.workMinutes` にはプロジェクト配賦が無い。
+- 初回状態: kintai は部署 4 つ（営業部・開発部・総務部・人事部）と勤務ルール「標準（9:00-18:00）」まで自動作成（`src/lib/kintai/access.ts` L40-82）、sfa は標準パイプライン 7 ステージ（`src/lib/sfa/constants.ts` `DEFAULT_STAGES`: 見込み/アプローチ/提案/見積/交渉/受注/失注）とサンプルの取引先・商談・タスクまで（`src/lib/sfa/access.ts` L99-164）。quote / shodan / aishodan / hr / promane / mensetsu は組織だけで中身は空。
+
+| 共通オブジェクト | 正本（既存モデル） | 他ツールでの写し・参照（現状） | 結合の方法（本章で足すもの） |
+|---|---|---|---|
+| 自社 | `Company` ＋ `CompanyProfile`（§4.1） | `QuoteIssuer`、`ShodanCompanyProfile`、`AioBrandProfile`、`MensetsuCompanyProfile`、`HrOrganization.{name,website,address,industry,size,logoUrl}`、`AdImageBrand`、`AdBannerCampaign.{serviceName,sourceUrl,brandColors,logoPath}` | §4.3 のとおり `companyProfileId` と `fieldSources.origin`。`core.profile_prefer_company` で読み替え（Phase3） |
+| 商材（新設） | **`CompanyProduct`**（新規。`name / sourceUrl / profile Json / listPrice Int? / unit / taxRate`） | `QuoteProduct`、`AishodanProduct`（どちらも `name / sourceUrl / profile Json`）、`SfaLineItem.productName`（自由文字列） | `QuoteProduct.companyProductId?`、`AishodanProduct.companyProductId?`（非正規化列 ①②）。ウィザードが `CompanyProduct` を作り、両ツールの行を同じ tx で作る |
+| 取引先 | `SfaAccount`（`name / corporateNumber / url / industry / prefecture / address`） | `PromaneClient`、`QuoteDocument.clientCompany`、`DoyalistCompany`、`ShodanPreparation.targetName/targetUrl`、`AishodanSession.guestCompany` | `ObjectLink(kind='account')`。`corporateNumber` → `url` のホスト → 正規化名 の順で候補を出し、**人が確定**（自動名寄せしない） |
+| 担当者 | `SfaContact` | `PromaneClient.contactName/email`、`QuoteDocument.clientPerson`、`AishodanSession.guestName/guestEmail`、`DoyalistCompany.contactPerson` | `ObjectLink(kind='contact')`。メール一致のみ候補 |
+| リード | `SfaLead`（`source ∈ manual/csv/doyalist`） | `DoyalistCompany`、`AishodanOutcome(verdict)` | 非正規化列 ③ `SfaLead.originType/originId`（`doyalist:<DoyalistCompany.id>` / `aishodan:<AishodanSession.id>`。`@@unique([organizationId, originType, originId])` で重複取込を防ぐ） |
+| 商談 | `SfaDeal` | （無し） | 非正規化列 ④ `QuoteDocument.sfaDealId?`。逆方向は `ObjectLink(kind='quote')` で一覧（1 商談に複数見積） |
+| 見積 | `QuoteDocument` | （無し） | 同上 |
+| タスク | `SfaTask` と `PromaneTask` の **2 正本**（統合しない。文脈が違う） | — | ホームの「今日のタスク」は 2 つの read ツール（`sfa.listTasks`、`promane.listTasks`）の結果を**画面で**並べる。書き込みは各ツールへ |
+| 社員 | `HrEmployee`（`CompanyMember` とは `HrOrganizationMember.employeeId` で結ぶ） | `KintaiEmployee`（勤怠の従業員）、`PromaneMember`（時給） | `KintaiEmployee.hrEmployeeId?`（非正規化列 ⑤）と `ObjectLink(kind='employee')`。同期の規則は §18.4 #7 |
+| 部署 | `HrDepartment`（`code`、親子） | `KintaiDepartment`（親子、`managerId`） | `KintaiDepartment.hrDepartmentId?`（非正規化列 ⑥） |
+| プロジェクト | `PromaneProject`（`clientId` → `PromaneClient`） | — | 取引先は `ObjectLink(kind='account')` 経由 |
+| 勤怠 | `KintaiAttendance`（日次） | `PromaneTimeEntry`（工数） | 配賦は §18.4 #8 の新モデル `KintaiProjectAllocation` |
+
+**非正規化列は 6 本**（①〜⑥）。これ以上は増やさず `ObjectLink` に寄せる。
+
+```prisma
+/// 横断の関連（HubSpot の association 相当）。正本はこの表。両端は「種別＋id」で、FK は張らない。
+model ObjectLink {
+  id         String   @id @default(cuid())
+  companyId  String
+  fromType   String   // 'sfa.account' | 'sfa.contact' | 'sfa.lead' | 'sfa.deal' | 'quote.document' | 'hr.employee' | 'kintai.employee' | 'promane.client' | 'promane.project' | 'doyalist.company' | 'shodan.preparation' | 'aishodan.session' | 'company.product'
+  fromId     String
+  toType     String
+  toId       String
+  kind       String   // 'account' | 'contact' | 'quote' | 'employee' | 'origin' | 'related'
+  createdBy  String   // 'user:<companyMemberId>' | 'agent:<runId>' | 'setup' | 'migration'
+  createdAt  DateTime @default(now())
+  @@unique([companyId, fromType, fromId, toType, toId, kind])
+  @@index([companyId, toType, toId])
+  @@index([companyId, fromType, fromId])
+  @@map("core_object_links")
+}
+```
+
+ER（§4.3 に足す線。`..` は FK 無しの参照）:
+
+```mermaid
+erDiagram
+  Company ||--o{ CompanyProduct : "companyId"
+  Company ||--o{ ObjectLink : "companyId"
+  CompanyProduct ||--o{ QuoteProduct : "companyProductId（参照列①）"
+  CompanyProduct ||--o{ AishodanProduct : "companyProductId（参照列②）"
+  SfaDeal ||--o{ QuoteDocument : "sfaDealId（参照列④）"
+  SfaLead }o--|| DoyalistCompany : "originType/originId（参照列③）"
+  SfaLead }o--|| AishodanSession : "originType/originId（参照列③）"
+  HrEmployee ||--o| KintaiEmployee : "hrEmployeeId（参照列⑤）"
+  HrDepartment ||--o| KintaiDepartment : "hrDepartmentId（参照列⑥）"
+  ObjectLink }o--|| SfaAccount : "toType='sfa.account'"
+  ObjectLink }o--|| PromaneClient : "fromType='promane.client'"
+  ObjectLink }o--|| ShodanPreparation : "fromType='shodan.preparation'"
+  ObjectLink }o--|| SfaContact : "toType='sfa.contact'"
+  KintaiAttendance ||--o{ KintaiProjectAllocation : "attendanceId（§18.4 #8）"
+  PromaneProject ||--o{ KintaiProjectAllocation : "projectId"
+```
+
+規則:
+- 参照列・`ObjectLink` の書き込みは **両端が同じ `companyId` に属すること**を `owned()` で確認してから（§10.2。相手が別ツールのモデルでも `walkData` の `refs` と同じ扱い。cross-tenant のリンクは throw）。
+- 参照先が消えたら（旧ツール側の物理削除）、参照列は **残す**（履歴）。表示時に存在しなければ「削除済み」と出す。`ObjectLink` は `cron/core-retention`（§17.1）で参照先不在の行を月次で掃除する。
+- `ObjectLink.createdBy='agent:<runId>'` の行は `AgentRun` の結果画面から一括で取り消せる（reversible）。
+- オブジェクトの**表示用の共通型**（`BusinessObjectCard = { type, id, title, subtitle, href, service }`）を `src/lib/core/objects.ts` に置き、各マニフェストが `objects: { types: [...], resolve(ctx, type, ids) }` で**自ツールのオブジェクトを解決する関数**を提供する（§16.1 に追加するキー）。ホーム・⌘K・リンク候補 UI はこの関数だけを呼ぶ。
+
+### 18.3 初期セットアップ（会社情報の登録ウィザード）
+
+目的: **一度の入力で、各ツールの最初の画面が空にならない**。既存の自動作成（kintai の部署・勤務ルール、sfa のパイプライン・サンプル）とは重複させず、ウィザードは「既存の自動作成が作らないもの」と「会社情報から導けるもの」だけを作る。
+
+**入口**: 会社作成直後（`POST /api/company`。§9.1）と、ホームの「会社情報を登録する」カード。途中保存可（`Company.setupState Json`: `{ step, completedAt, seeded: { <serviceId>: <ISO> } }`）。フラグ `core.setup_wizard`（Phase2 で ON。`requires: ['core.dual_write']`。`CompanyProfile` への書き込みが二重書き込みに乗る必要があるため）。
+
+**手順（5 画面、スマホ幅で完結）**:
+
+| # | 画面 | 入力 | 自動で埋めるもの（出典） | 書く先 |
+|---|---|---|---|---|
+| 1 | 自社 URL | URL 1 つ（任意で会社名） | `scrapeCompanyWebsite`（`src/lib/doyalist/collect/*`。shodan の `research.ts` L11-12 が既に再利用）＋ `searchGbizInfo`（法人番号・所在地）。取得結果は **`origin='scraped'` として `<untrusted>` 扱い**（§10.4。本文は planner に渡さない） | `CompanyProfile`（`fieldSources.origin='scraped'`）。確認画面で人が直したものは `origin='user'` |
+| 2 | 会社の基本 | 正式名・表示名・住所・電話・業種・規模・決算月・インボイス番号・ロゴ | 1 の結果を初期値に | `CompanyProfile`（§4.3 の `QuoteIssuer / HrOrganization / AioBrandProfile` へは Phase2 の二重書き込みで写る） |
+| 3 | 商材 | 商材名・一言説明・価格（任意）・URL。最大 20 | 1 のサイトから LLM で候補抽出（`costClass=low`、1 回。**ウィザードは承認不要の範囲**＝`report.weeklyManagement` と同じ扱いで `UsageLedger` に記録） | `CompanyProduct` → `QuoteProduct`、`AishodanProduct`（参照列①②） |
+| 4 | 社員と部署 | 部署（既定 4 つを提示）・社員（氏名・メール・部署・雇用形態・入社日。CSV 可、最大 300 行）・招待するか | — | `HrDepartment`、`HrEmployee`、（招待する社員は）`CompanyInvitation`。勤怠側は §18.4 #7 の同期で `KintaiEmployee` を作る（ログインユーザーが居る社員だけ） |
+| 5 | 使うツール | 有効化するサービス（既定: 全部）と、各ツールの初期化の確認 | — | `CompanyServiceAccess`（§9.1）→ `ensureLegacyOrganizationForCompany`（§6.4 手順 6）→ 各マニフェストの `setup.seed` |
+
+**各ツールの初期データ（`manifest.setup.seed(ctx, profile, options)`。冪等＝2 回呼んでも増えない）**:
+
+| サービス | 既存の自動作成（触らない） | ウィザードが足すもの | 冪等キー |
+|---|---|---|---|
+| sfa | パイプライン 7 ステージ、サンプル取引先・商談・タスク（`getOrCreateOrganization`） | **サンプルを作らない選択**（`options.skipSample`。`getOrCreateOrganization` に引数を 1 つ足す。既定は従来どおり作る）、社員→`SfaMember`（招待経由）、`CompanyProduct`→`SfaLineItem` の品目候補（`SfaProductHint` は作らない。候補は `CompanyProduct` を読む） | `SfaOrganization.companyId` |
+| quote | 無し（組織のみ） | `QuoteIssuer`（画面 2 から。`companyName` 必須）、`QuoteProduct`（画面 3） | `QuoteIssuer.organizationId @unique` |
+| kintai | 部署 4 つ・勤務ルール 1 つ・自分の従業員 | 画面 4 の部署を `KintaiDepartment` に（既定 4 つと**名前一致で統合**）、ログインユーザーが居る社員の `KintaiMember`＋`KintaiEmployee`、雇用形態の写像（§18.4 #7） | `KintaiEmployee.hrEmployeeId` |
+| hr | 無し | `HrDepartment`（画面 4）、`HrEmployee`、`HrOrganization.{industry,size,address,website,logoUrl}`（画面 2） | `HrEmployee.email`＋`organizationId`（`employeeNumber` は未入力なら付けない） |
+| shodan | 無し | `ShodanCompanyProfile`（`companyName / url / description / valueProp / products / targetCustomer / pricingNote / caseStudies / logoPath / brandColors`。画面 1〜3） | `organizationId @unique` |
+| aishodan | 無し | `AishodanProduct`（画面 3）＋ 商材ごとに**既定シナリオ 1 つ**（`phases / slots / icp / guardrails` は雛形 `src/services/aishodan/setup-templates.ts`。LLM は使わない） | `AishodanProduct.companyProductId` |
+| aio | 無し | `AioBrandProfile`（`brandName / brandUrl / aliases / competitors / category`。画面 1〜2）＋ 既定プロンプト 5 本（雛形。業種で置換） | `organizationId @unique` |
+| mensetsu | 無し | `MensetsuCompanyProfile`（`sourceUrl / companyName / business / valueProp`）。テンプレートは作らない（職種が要る） | `sourceUrl`＋`organizationId` |
+| promane | 無し | `PromaneMember`（社員のうちログインユーザー。`hourlyRate` は 0）、取引先は作らない | `PromaneMember.userId` |
+| banner / adimage / seo / doyalist 等（ユーザー単位） | — | `AdImageBrand`（`name / sourceUrl / colors / logoPath`。画面 1〜2）。他は初期化不要 | `AdImageBrand.companyProfileId` |
+
+実装: `src/lib/core/setup/wizard.ts`（画面の状態と検証）、`src/lib/core/setup/seed.ts`（全マニフェストの `setup.seed` を順に呼ぶ。**サービスごとに別 tx**。1 つ失敗しても他は進み、失敗は `setupState.failed[]` と `AuditLog(company.setup.seed_failed)` に残して再実行ボタンを出す）。`verify-core-setup-idempotent.cjs`（seed を 2 回呼んで件数が同じ）、`verify-core-setup-no-empty-screen.cjs`（seed 後に各ツールの一覧 API が 1 件以上 or 「空でよい」宣言。CHECKLIST ALL-02）。
+
+既存の `src/components/OnboardingWizard.tsx`（テンプレート選択のチュートリアル）は**別物**（ツールの使い方案内）。セットアップ完了後に案内として出すだけで、置き換えない。
+
+### 18.4 ツール間連携の一覧
+
+全部で **13 本**（既存 5 本の整理＋新規 8 本）。新規 8 本はすべて (a) 画面のボタン、(b) エージェントの道具（§8.2 のレジストリ。`link.*` ではなく**受け側のサービスのツール**として登録。例: `quote.createFromDeal` は quote のマニフェストに置く）、(c) 自動トリガ（あれば）の 3 経路で呼べる。**3 経路とも同じ lib 関数**（`src/lib/<svc>/links/*.ts`）を呼び、冪等キーは `ObjectLink` の unique か参照列の unique で担保する。
+
+**既存の連携（確認済み。データ連携は 1 本だけ）**:
+
+| # | 連携 | 実体 | 本章での扱い |
+|---|---|---|---|
+| E1 | mensetsu → hr（hr-handoff） | `api/mensetsu/sessions/[id]/hr-handoff/route.ts`。手動 POST、`HrEmployee` 作成→`MensetsuSession.hrEmployeeId`。**tx 無し・unique 無し**（同時 POST で 2 件できる） | 同一 tx 化し、`MensetsuSession.hrEmployeeId` に `@unique` を足す（schema-draft）。`ObjectLink` は使わない（列が既にある）。雇用形態は `src/lib/hr/types.ts` の 5 値に統一し `OTHER` を廃止（`TEMPORARY` へ） |
+| E2 | shodan → doyaslide | コードの再利用（`composePrivateSlideImage`）。データ連携なし | そのまま |
+| E3 | aishodan → cunning | `chunkText` の再利用のみ | そのまま |
+| E4 | adimage → banner | `BannerTemplate` を参考デザインとして読む（read） | そのまま |
+| E5 | doyalist → sfa | **受け口のみ**（`api/sfa/leads/import` `source='doyalist'`、`createSfaOnce` で冪等）。送り手は無い（`leads/page.tsx` の CSV だけ） | #5 で送り手を作る |
+
+**新規の連携 8 本**:
+
+| # | 連携（方向） | トリガ | 対応する列 | 必要なスキーマ変更 | 難度 | フェーズ |
+|---|---|---|---|---|---|---|
+| 1 | SFA 商談 → 見積（`quote.createFromDeal`） | ボタン（商談詳細「見積を作る」）／道具（reversible × low。`quote.draftQuote` の入力に `sfaDealId` を足す形） | `SfaDeal.name`→`title`、`SfaAccount.name`→`clientCompany`、`SfaContact.name`→`clientPerson`、`SfaLineItem.{productName,quantity,unitPrice}`→`QuoteLineItem.{itemName,qty,unitPrice}`（`BigInt`→`Int` は 2^31 超で拒否）、`expectedCloseDate`→`expiryDate` の既定 | `QuoteDocument.sfaDealId?`（参照列④）、`ObjectLink(kind='quote')` | 中 | Phase3b（`quote.draftQuote` と同時） |
+| 2 | 見積確定 → SFA 商談（`sfa.applyQuote`） | 自動（`QuoteDocument.status` が `confirmed` になったとき。`sfaDealId` がある場合のみ）／ボタン | `totalExclTax`→`SfaDeal.amount`（`Int`→`BigInt`）、ステージを「見積」（`DEFAULT_STAGES` の `order=3`。名前が変わっていたら**動かさない**）、`SfaActivity(type='note')` に「見積 `quoteNo` を確定」 | 無し（④を読む） | 中 | Phase3b |
+| 3 | 商談準備 → SFA 取引先（`sfa.createAccountFromPreparation`） | ボタン（準備結果「取引先に登録」）／道具（reversible × none） | `ShodanPreparation.targetName`→`SfaAccount.name`、`targetUrl`→`url`、`research.corporateNumber`（あれば）→`corporateNumber`、`analysis` の要約→`note` | `ObjectLink(kind='account', from='shodan.preparation', to='sfa.account')` | 低〜中 | Phase3b |
+| 4 | AI 商談の結果 → SFA リード（`sfa.createLeadFromAishodan`） | 自動（`AishodanOutcome.verdict ∈ {hot, warm}` になったとき。会社設定 `links.aishodanToSfa=true` の場合）／ボタン | `guestCompany`→`name`、`guestName`→`contactName`、`guestEmail`→`email`、`fitScore`→`score`、`verdict`＋`reason`→`note`、`SlotValue` 一式→`raw` | `SfaLead.originType/originId`（参照列③。unique で二重作成を防ぐ） | 低 | Phase3b |
+| 5 | doyalist → SFA リード（`sfa.importLeadsFromDoyalist`） | ボタン（リスト画面「SFA に送る」。選択行）／道具（reversible × none） | 既存の `lead-import.ts` の写像（`name / corporateNumber / contactName / email / phone / raw`） | `SfaLead.originType/originId`（③） | 低 | Phase2 末（受け口が既にあるため最初に出す） |
+| 6 | プロマネ顧客 ↔ SFA 取引先（`promane.linkClientToAccount`） | ボタン（顧客詳細「取引先と結ぶ」。候補は `corporateNumber`／URL ホスト／正規化名の順）。自動では結ばない | 表示のみ（商談・見積を顧客詳細に並べる）。列の同期はしない | `ObjectLink(kind='account')` | 低〜中 | Phase3c |
+| 7 | HR 社員 → 勤怠従業員（`kintai.syncEmployeesFromHr`） | 自動（`HrEmployee` 作成・部署変更・退職時。`core.dual_write` と同じ compat 層に置く）／ボタン（「勤怠に反映」） | `lastName+firstName`→`name`、`email`→`email`、`departmentId`→`KintaiDepartment`（⑥）、`employmentType` 写像（`FULL_TIME→full_time`、`PART_TIME→part_time`、`CONTRACT→contract`、`INTERN / TEMPORARY→part_time`＋`note`）、`hireDate`、`resignDate`→`isActive=false` | `KintaiEmployee.hrEmployeeId?`（⑤）、`KintaiDepartment.hrDepartmentId?`（⑥） | **高**（`KintaiEmployee` は `KintaiMember.userId` 必須。**ログインユーザーが居ない社員は作れない**→ `CompanyInvitation` 受諾時に作る「遅延同期」にする。`HrEmployee` に `userId` が無いので `HrOrganizationMember.employeeId` から引く） | Phase3c（compat 層の上） |
+| 8 | 勤怠工数 → プロマネ人件費（`promane.importLaborFromKintai`） | ボタン（月次。プロジェクト別の配賦を入力して取込）／道具（reversible × none、承認は `approveDrafts`） | `KintaiAttendance.workMinutes` を **`KintaiProjectAllocation`（新規: `attendanceId / projectId / minutes / source`）** で配賦 → `PromaneTimeEntry(duration=minutes, hourlyRateSnapshot=PromaneMember.hourlyRate, note='勤怠から')` | `KintaiProjectAllocation`（新規）、`PromaneTimeEntry.sourceAllocationId? @unique`（二重取込防止） | **高**（配賦の概念が無い。社員↔`PromaneMember` は #7 と `CompanyMember.userId` で結ぶ） | Phase3d 以降（待機期間中にステージングで検証、Phase4 後に本番） |
+
+共通規則:
+- **自動トリガは「作成のみ」で「上書きしない」**（#2 の金額だけ例外。上書き前の値は `SfaActivity` に残す）。
+- 連携で作った行は `createdBy`（`ObjectLink`）か `note` に出所を書き、**取り消し**は「作った行を削除」ではなく「リンクを外す」（行は残す。消すのは人）。
+- 道具として呼ぶ場合の承認は §8.2 の規則どおり（全部 `reversible`。費用は #1 の見積下書きだけ `low`）。`sensitive` は #7（社員）と #8（勤怠）。
+- 3 経路の権限は同じ（`requireCompanyAccess` で**両方のサービス**の `minServiceRole` を満たすこと。例: #1 は sfa `member` ∧ quote `member`）。
+
+### 18.5 エージェント中心のホーム（本番仕様）
+
+見本 `src/app/ui-renewal/tools/agent.tsx`（`AgentRun({request,onOpen})`、`think → plan → run → done`、wave ごとの `TaskCard`、承認 `Sheet`）と `agentScenarios.ts`（growth / hire / close / meeting の 4 シナリオ）を**画面の出発点**にし、実行は §8 に置き換える。
+
+| 見本の要素 | 本番 | 差分 |
+|---|---|---|
+| `think`（思考行の逐次表示） | `AgentRun.status='planning'`。planner の出力（`AgentStep` 一覧）を `GET /api/agent/runs/[id]` のポーリング（§8.4）で受けて表示 | 思考文は planner の要約のみ（`ToolCall.output` の生は出さない） |
+| wave（0 → 1 → 2） | `AgentStep.dependsOn[]`。同じ wave の step は並列、次の wave は前の wave の完了後 | 見本は **承認待ちを完了扱いにして次 wave を進める**（`approve` は wait/run に数えない）。本番は **承認待ちの step に依存する step を進めない**（§8.6 `waiting_approval`）。依存しない step は進む |
+| `approve`（Sheet） | `ApprovalRequest`（`approvalHash`、見込み額、`kind`）。承認は非同期（§9.2） | 承認期限（`expiresAt`、既定 24 時間）を画面に出す |
+| 4 シナリオ | **シナリオは固定しない**。planner が §8.2 のレジストリから組む。ただし見本の 4 つは「提案カード」（`SUGGESTIONS`）の雛形として残し、押すと同じ依頼文を `POST /api/agent/runs` に送る | 見本のツール名のうち存在しないもの: `sfa.draftFollowUp`、`mensetsu.publishOpening`、`kintai.monthlySummary`、`sfa.forecast`、`kintai.approveRequests`、`doyaslide.generate`、`cunning.prepareQA`。下の追加候補へ |
+| `stop()` | `POST /api/agent/runs/[id]/cancel`（`AbortController` 伝播。§8.5） | — |
+| Slack 共有・週次トグル（mock） | `notify.slack`（irreversible → 承認）／`AgentSchedule`（**新規・Phase3d 以降**。週次の定期 run。`cron/agent-schedules` 1 本） | 定期実行は `costClass=high` のツールを含められない |
+| `Ring` の残量 | `GET /api/agent/usage`（§9.2。BigInt） | — |
+
+**「勝手にやってくれる」の範囲**（§8.2 の規則の言い換え。ホームの初回に 1 画面で説明し、会社設定で変えられる）:
+
+| 自動で実行 | 承認してから | 絶対にしない |
+|---|---|---|
+| 読む・集計する（`read`）、下書きを作る（`reversible × none/low`。会社設定 `approveDrafts=false` のとき） | 外に出る（メール・Slack・面接 URL の発行＝`irreversible`）、取り消せない変更、費用が大きい（`costClass=high`: 画像・動画・音声・件数比例）、機微データを含む出力の共有 | 課金・契約の変更、メンバーの追加・除籍、会社情報の自動上書き（`company.updateProfile` は常に承認。SEC-16）、セキュリティ設定の変更、`AuditLog` の操作 |
+
+**見本のツール名に対応する追加候補**（§8.2 表に Phase3 で追記。登録条件は §8.2 と同じ）:
+
+| key | 取消 | コスト | 承認 | 冪等 | 呼ぶ既存コード | 備考 |
+|---|---|---|---|---|---|---|
+| `sfa.listTasks` | read | none | 不要 | none | `api/sfa/tasks/route.ts` GET → `src/lib/sfa/tasks-read.ts` に切り出し | ホームの「今日のタスク」 |
+| `sfa.forecast` | read | none | 不要 | none | `summary.ts`（`probability × amount` の合計。`BigInt`） | 見本の `sfa.forecast` |
+| `sfa.draftFollowUp` | reversible | low（件数 ≤ 20） | 設定次第 | local-record | `SfaActivity(type='email', status='draft')` を書く（**送信機能は無い**。下書き止まり） | 見本の「7 社にフォロー」。送信は将来 `irreversible` で別ツール |
+| `kintai.monthlySummary` | read, sensitive | none | 不要 | none | `kintai/attendance/admin/route.ts` GET | `kintai.monthlyOvertime` の上位 |
+| `kintai.listPendingRequests` / `kintai.approveRequest` | read / **irreversible** | none | 不要 / **必須** | none / local-record | `KintaiRequest(status='pending')`、`requests/[id]` PATCH | 承認は 1 件ずつ `ApprovalRequest`（まとめ承認はしない） |
+| `promane.listTasks` | read | none | 不要 | none | lib 切り出し | — |
+| `doyaslide.generate` | reversible | **high**（枚数比例） | **必須** | local-record | `src/lib/doyaslide/generate.ts` | Phase3d |
+| `cunning.prepareQA` | reversible | low（1〜2） | 設定次第 | local-record | `src/lib/cunning/*`（RAG。`KnowledgeSource.allowedServices` に従う） | Phase3d |
+| `mensetsu.publishOpening` | — | — | — | — | **該当機能が無い**（求人公開の機能は mensetsu に無い） | 作らない。提案カードから外す |
+| §18.4 の 8 本（`quote.createFromDeal` 等） | reversible | none（#1 のみ low） | 設定次第 | native（`ObjectLink` unique） | `src/lib/<svc>/links/*.ts` | #7 #8 は sensitive |
+
+### 18.6 リブランディング（共通部品化と載せ替え）
+
+**確認済みの現状**: 各ツールのレイアウトは別実装（`SfaSidebar`、`KintaiLayout`、`HrLayout`、`QuoteSidebar`、`ShodanAppLayout`、`AioAppLayout`、`promane/sidebar.tsx`、`MensetsuAppLayout`、`CunningLayoutShell` ほか）。組織スイッチも 4 流儀（SFA はサイドバー内の membership リンク、quote / aishodan は `OrgSwitcher`（localStorage `doya.<svc>.org`＋`?org=`）、HR は独自 `<select>`、shodan / aio / promane / kintai はスイッチ無し）。`ToolSwitcherMenu` はほぼ全サイドバーで使われ、`ServiceNav` は未使用。見本 `src/app/ui-renewal` には **既定「クリア」**（`design.tsx` L37。`clear | aurora | midnight | pop`）、CSS モジュール `renewal.module.css`（トークン `--blue / --ink / --sub / --line / --bg / --paper / --r` ほか）、`tools/kit.tsx`（`StatTile / Sparkline / Bars / Meter / Ring / Badge / Tabs / Sheet / Field / ChipSelect …`）、⌘K パレット、モバイルタブバー、16 サービスの作業画面がある。
+
+**部品群（新設）**:
+
+| 置き場所 | 中身 | 出典（見本） |
+|---|---|---|
+| `src/components/ds/tokens.css` | 色・角丸・影・フォント・間隔の CSS 変数。**クリアを既定**、`[data-design]` で他 3 案。ダークは `prefers-color-scheme` で後日 | `renewal.module.css` L1-200 のトークン部分 |
+| `src/components/ds/*` | `Card / StatTile / Sparkline / Bars / Meter / Ring / Badge / Tabs / Sheet / Field / TextInput / TextArea / ChipSelect / ChipMulti / Toggle / Button / EmptyState / Skeleton` | `tools/kit.tsx`（`useRun / Workbench / RunStage` は見本専用なので持ち込まない） |
+| `src/components/ds/charts/*` | インフォグラフィック用: `AreaChart / Donut / Heatmap / Odometer / CountUp`。**数値は props で受け、取得はしない** | `HomeScreen.tsx` の `SavedHours / WeeklyChart / ShareDonut / KpiStreak`、`motion.tsx` |
+| `src/components/shell/AppShell.tsx` | サイドバー（ステージ別グループ `collect / sell / hire / operate` ＝マニフェスト `stage`。§16.1）、トップバー、モバイルタブバー、`CommandPalette`（⌘K）、**会社スイッチ 1 つ**（`CompanyMember` 基準。§6。旧 `?org=` / localStorage / slug は Phase3 まで併存し、`CompanyServiceLink` から変換） | `RenewalApp.tsx` の `s.side / Topbar / Palette / Tabbar` |
+| `src/components/shell/ToolFrame.tsx` | ツール画面の枠（パンくず・`ToolHeader`・右ペイン）。**各ツールの既存ページをそのまま `children` に入れられる** | `ToolChrome.tsx` |
+| `src/components/icons.tsx` | 既存。絵文字アイコン禁止（§16.7）。見本のマスコット画像は `data.ts mascotOf` を `public/` に置き直す（SVG/PNG。絵文字ではない） | — |
+
+**載せ替えの手順（1 ツールずつ。API は変えない）**:
+1. `ui.shell.<svc>` フラグ（既定 OFF）を足す。ON のとき当該サービスの `layout.tsx` が `AppShell`＋`ToolFrame` を使い、OFF なら従来のレイアウト。**ページ本体（`page.tsx`）とデータ取得・API・route は触らない**。
+2. 従来レイアウトのナビ項目を `manifest.ui.nav[]`（新キー。`{ label, href, icon, minServiceRole }`）に移し、`AppShell` はそれを読む。旧サイドバー固有の機能（SFA の membership リンク、HR の組織 `<select>`、quote / aishodan の `OrgSwitcher`）は会社スイッチに吸収。
+3. ページ内の見た目だけを `ds/*` に置換（`StatTile` 等）。**DOM の `role` / `aria-*` / テキストは維持**し、既存の `verify-<svc>-*.cjs` と Playwright のスモーク（主要画面）を回す。
+4. 375px / 1280px のスクリーンショット比較（`scripts/ui/snap.cjs`、新規）を PR に添付。
+5. 運営会社で 1 週間使ってから既定 ON。問題があればフラグ OFF（**データは一切変わらないので戻すのはフラグだけ**）。
+
+**移行順**（リスク小→大。組織スイッチの流儀が単純なもの・画面数が少ないものから）:
+
+| 順 | サービス | 理由 |
+|---|---|---|
+| 0 | ホーム（新規 `/home`）＋ `AppShell` | 新規なので既存を壊さない。ここで部品を固める |
+| 1 | quote | 画面 4 つ、`OrgSwitcher` 利用 |
+| 2 | shodan | slug 固定、画面 4 つ |
+| 3 | aio | 同上 |
+| 4 | aishodan | `OrgSwitcher` 利用 |
+| 5 | mensetsu | スイッチ無し。ゲスト画面（候補者）は**載せ替え対象外**（`guestShared`） |
+| 6 | sfa | 画面 7 つ、独自 membership リンク。§18.7 の不具合候補を先に片付ける |
+| 7 | promane | workspace slug |
+| 8 | hr | 独自 `<select>`、画面 7 つ |
+| 9 | kintai | 画面 11 で最多。打刻画面は**操作感を変えない** |
+| 10 | doyalist / doyaslide / adimage / asklink / banner / seo / cunning / interview / persona | ユーザー単位。`ToolFrame` だけ当てる |
+
+ゲスト・公開画面（`routes.public` / `guestShared`: 見積の共有閲覧、面接、AI 商談のルーム、`/api/t/*` 計測）は**リブランディングの対象外**（認証無しの画面に `AppShell` を出さない。別途 `PublicFrame`）。
+
+### 18.7 既知の不具合候補（SFA のタスク・パイプラインが読み込めない件）
+
+修正は本設計とは別作業。ここでは原因候補と本番での確かめ方だけを記録する（確認済みの行番号は 2026-10-17 の `feat/ui-renewal-sample`）。
+
+| # | 候補 | 根拠（確認済み） | 本番で確かめる手順 |
+|---|---|---|---|
+| 1 | **クライアント側の検証が厳しすぎる**（1 行でも形が違うと一覧全体が失敗） | `src/app/sfa/[orgSlug]/tasks/page.tsx` L51-53: `!data.tasks.every(isSfaClientTask)` で throw。`isSfaClientTask`（`src/lib/sfa/client-response.ts` L21-26）は `status` が `open/done` 厳密、`title` ≤ 200、日付が 24 文字 ISO。`deals/page.tsx` L188 / L205-206 と `isSfaClientDeal`（L65-73）も同じで、`amount` は `Number.isSafeInteger` 必須（`BigInt`→`Number(v)`、`src/lib/sfa/format.ts` L19-21）。schema は `status String`（自由文字列）、`title` 長さ制限なし | ブラウザの Network で `/api/sfa/tasks?page=1` と `/api/sfa/deals` が **200** なのに画面がエラーなら本候補。応答 JSON を `isSfaClientTask / isSfaClientDeal` に通して落ちる行を特定（`node -e` で `client-response.ts` を読み込む） |
+| 2 | **GET が 500**（try/catch 無し。本番の列不足＝P2022 を含む） | `api/sfa/tasks/route.ts` GET L43-58 の `findMany` と `api/sfa/deals/route.ts` GET L64-89 の `Promise.all / groupBy` は try/catch の外。`summary` / `activities` は囲っている | Network で **500** なら Vercel のログで Prisma エラーコードを見る。`P2022`（列が無い）なら `doya-db-push` 未反映（手順どおり反映）。それ以外は SQL エラー |
+| 3 | **401（slug 不一致・会社の取り違え）** | `getSfaContext`（`src/lib/sfa/access.ts` L47-77）は slug があれば membership を slug で引き、無ければ**最新の ACTIVE membership に黙って fallback**（L61-67）。呼び出し側は `ctx.organizationSlug` と URL の slug を比較しない（shodan / aio の layout は比較して redirect） | Network で **401** なら `x-sfa-org` / `?org=` の有無と、ユーザーの `SfaMember(status='ACTIVE')` の slug 一覧を確認。200 だが別組織のデータが出る場合は fallback が原因（§6 の統一で解消） |
+| 4 | **`useOrgSettingsGuard` の無限待ち** | `src/app/sfa/[orgSlug]/layout.tsx` L77-78: `guard.allowed` は `status==='authenticated' && session.user.id && orgSlug`。`session.user.id` が無いと「再度ログインしてください」で止まる（サーバ側 `resolveUserId` L32-40 はメールで補うが、クライアントは補わない） | 画面に「再度ログインしてください」「ログイン状態を確認しています」が出続ける場合。`/api/auth/session` の応答に `user.id` があるか |
+| 5 | **パイプラインの重複**（`ensurePipeline` が tx 外の check-then-create、`SfaPipeline / SfaStage` に unique 無し） | `access.ts` L172-204、schema L3211-3236 | `SELECT "organizationId", count(*) FROM "SfaPipeline" GROUP BY 1 HAVING count(*) > 1`（ドライラン §12 Phase0 に 1 行追加）。重複があれば `deals` の `stageId` が別パイプラインを指し表示が崩れる |
+
+確かめる順: ステータスコード（Network）→ 200 なら #1（検証）→ 500 なら #2（列）→ 401 なら #3 → 画面が止まるなら #4 → データが崩れるなら #5。結果は §13 の末尾に「SFA 読み込み不具合」として追記する。
+
+**本章で schema-draft に足すもの**（付録 C の規則どおり merge-into 断片と新規モデル。`prisma validate` 済み）: 新規 `ObjectLink`、`CompanyProduct`、`KintaiProjectAllocation`、`AgentSchedule`。断片: `Company.setupState`、`QuoteProduct.companyProductId`、`AishodanProduct.companyProductId`、`SfaLead.originType/originId`、`QuoteDocument.sfaDealId`、`KintaiEmployee.hrEmployeeId`、`KintaiDepartment.hrDepartmentId`、`PromaneTimeEntry.sourceAllocationId`、`MensetsuSession.hrEmployeeId @unique`。
+
+**マニフェストに足すキー**（§16.1）: `setup: { seed(ctx, profile, options) }`、`objects: { types, resolve(ctx, type, ids) }`、`ui.nav[]`。`verify-service-manifest-schema.cjs` の必須キーには**入れない**（任意。無ければホームに出ないだけ）。
+
+---
+
 ### 付録 A. 新設ファイル一覧（実装担当向け）
 
 | パス | 役割 |
@@ -1877,6 +2178,11 @@ SLO（運営会社での Phase3 計測値を初期値にする）: 承認→再�
 | `src/lib/core/security-events.ts` | 共有検知ルール・段階対応 |
 | `src/lib/core/audit.ts` | `AuditLog` 追記＋連鎖ハッシュ、`redact()` |
 | `src/lib/core/notifications.ts` | アプリ内 `Notification`（Slack 運営通知 `src/lib/notifications.ts` とは別） |
+| `src/lib/core/objects.ts` | 共通オブジェクトの表示型 `BusinessObjectCard` と `ObjectLink` の書き込み（両端の所属確認）（§18.2） |
+| `src/lib/core/setup/wizard.ts`, `src/lib/core/setup/seed.ts` | 会社情報の登録ウィザードと各マニフェスト `setup.seed` の順次実行（§18.3） |
+| `src/lib/<svc>/links/*.ts` | ツール間連携 8 本の lib 関数（ボタン・道具・自動トリガの共通の呼び先）（§18.4） |
+| `src/components/ds/*`, `src/components/shell/*` | 共通部品群とアプリシェル（§18.6） |
+| `scripts/ui/snap.cjs` | 375px / 1280px のスクリーンショット比較（§18.6 手順 4） |
 | `src/lib/core/public-routes.ts` | middleware 許可リスト |
 | `src/lib/core/rate-limit.ts` | `RateLimitBucket` |
 | `src/lib/core/feature-flags.ts` | `FeatureFlag` 読み取り（60 秒キャッシュ） |
@@ -1924,6 +2230,8 @@ SLO（運営会社での Phase3 計測値を初期値にする）: 承認→再�
 4. 失敗時は draft 側の行番号に写像して報告する（結合ファイルの行 − 既存 schema の行数）。
 
 2026-10-17 の実測（改訂 4、HEAD `24ac0467`、Prisma CLI 5.22.0）: merge-into **28** 件、新規 model **34** 件、結合後 **226** model、`The schema at prisma/schema.prisma is valid`（改訂 2 時点は 27 / 32 / 224）。
+
+改訂 11（§18）の実測: §18 の断片 8 本と新規 4 モデルを加えた結合は merge-into **36** 件、新規 model **38** 件、結合後 **230** model で valid（同じ手順）。§18 を除いた数（28 / 34 / 226）は改訂 10 までの正本として残す。
 
 ```js
 // scripts/security-regression/verify-core-schema-draft.cjs（骨子）
@@ -2036,6 +2344,7 @@ if (r.status !== 0) process.exit(1)
 | 8 | 2026-10-17 | 最終ゲート第 5 回（FIN5-01〜05、重大 0）と方針転換を反映（付録 N）。`walkData` を **DMMF 駆動の既定拒否**に: 全モデル対象、フィールド既定拒否、Prisma 5.22 NestedInput の閉じた許可リスト（to-many 11 / to-one 7 / create 側 4・3 を `index.d.ts` で実測）、キーごとの data 検査・refs 検査の割当（ネスト `upsert` と `update.data / updateMany.data / upsert.update` のテナント列書き換え禁止を含む）、非テナント親からのネスト書き込みは `owned()` 経由のみ（拡張の入口ゲート、`OwnedTx` の Omit）、`assertRefsOwned` の仕様（非テナント refs 除外・正規化と重複排除・via 型は `scoped()`）。スクラッチ領域で `Prisma.dmmf` を読む核を実行し 192 モデル・396 relation の走査と許可リスト外の throw を確認。DMMF↔マトリクス整合の CI（TEN-35）。RLS を機微テーブル限定で**段階採用**（評価表、Phase4、D21）。`$queryRawUnsafe / $executeRawUnsafe` を lint 禁止。「5 分類」に統一。付録 J にキー 25・26。draft 冒頭を改訂 8 に |
 | 9 | 2026-10-17 | 最終ゲート第 6 回（FIN6-01〜06、重大 0）を全件反映（付録 O）。`walkData` の契約にテナント relation（DMMF `relationFromFields`）の規則（update は種類を問わず throw、create は `connect:{<主キー>: expected}` のみ）、`createMany` エンベロープの明示的例外、refs 検査の select を DMMF `primaryKey.fields` に、入口ゲートを「relation キーが 1 つでもあればマーカー要求」の保守的規則に。RLS ポリシーを `FOR ALL TO app_rw USING/WITH CHECK`、owner は `DIRECT_URL` のみ、`FORCE` は付けない判断。§13 #38・D5 を方式 B/D21 に統一、付録 J キー 27。`prototypes/walkdata-proto.cjs` を核から更新し case6〜11 と審査プローブを回帰に追加（実行結果は付録 O・完了報告） |
 | 10 | 2026-10-17 | 最終ゲート第 7 回（FIN7-01〜03、重大 0・中 0）を反映（付録 P）。RLS の前提（アプリは `app_rw`、owner ではない）を起動時の DB 側検査（`pg_roles` 属性と `pii` 表の owner）で fail-fast に担保、`owned()` の所属確認 3 箇所を `selectFor(model)` に、FIN7-03（同一テナント再 connect の許容）はリード判断で緩めず（`src/` grep 0 件を記録）。付録 J キー 28、プロトタイプ case12、§17.2 #13 |
+| 11 | 2026-10-17 | §18「オールインワン化」新設（7 節・図 3 枚）: 共通のビジネスオブジェクト（正本は既存モデル、非正規化列 6 本＋`ObjectLink`）、会社情報の登録ウィザード（5 画面、`manifest.setup.seed` 冪等）、ツール間連携 13 本（既存 5＋新規 8。方向・トリガ・列・スキーマ・難度・フェーズ）、エージェント中心のホーム（見本 `tools/agent.tsx` → §8 の AgentRun。「勝手にやる」範囲の表、追加ツール候補）、リブランディング（`ds/` `shell/` 部品群、フラグ `ui.shell.<svc>` で画面だけ載せ替え、移行順 10 段）、SFA 読み込み不具合の候補 5 件と確認手順。§16.1 に `setup / objects / ui.nav` の任意キー。draft に新規 4 モデル・断片 9 本。CHECKLIST に ALL 章、SCHEDULE に並行トラック C/D |
 | 10.1 | 2026-10-17 | 最終ゲート第 8 回（完了判定。重大 0・中 0・軽微 1、「条件付きで着手可」。FINAL-GATE-2026-10-17-8.md）の FIN8-01 をリードが直接反映：§12 フラグ依存表に `core.session_limit_notify_only`・`core.profile_prefer_company`・`agent.kill_switch` の 3 行を追加（requires と不可逆性）。着手の条件 4 つは §12 の Phase0 の前提として扱う |
 
 
@@ -2294,7 +2603,7 @@ if (r.status !== 0) process.exit(1)
 | 10 | 承認必須の条件 | §8.5 | §8.2 表、§16.4 M-10、CHECKLIST AGT-02 | `costClass=high` → 承認 | `external` は常に承認、`external` 全部 |
 | 11 | 既定の同時端末数 | §11.3 | draft `Company.maxSessionsPerUser`、§14 D6、CHECKLIST AUTH-06 | `既定 3`/`既定 **3 端末**` | `既定 **2 端末**` |
 | 12 | 未移行 lib を呼ぶツールは登録不可 | §8.2 | §8.3、§12 Phase3、§16.4 M-11、付録 B、付録 F OPS-12/B-16、CHECKLIST AGT-15 | `登録できない` または `登録不可` | `costClass=high` 扱い、`未移行なら high`、`high 扱い` |
-| 13 | 数値（merge 28 / 新規 34 / 結合 226 / テーブル 28 / Cron 41） | 付録 C、§17.3 | §13 #14、付録 D A-3/B-13、付録 E、付録 F DATA-17、CHECKLIST DOC-02 | `226` | `27 件、新規 model 32`、`結合後 224`、`35→38`、`27 テーブル`、`スロット化なら 45`、`スロット化 45` |
+| 13 | 数値（merge 28 / 新規 34 / 結合 226 / テーブル 28 / Cron 41。§18 込みは 36 / 38 / 230） | 付録 C、§17.3 | §13 #14、付録 D A-3/B-13、付録 E、付録 F DATA-17、CHECKLIST DOC-02 | `226` | `27 件、新規 model 32`、`結合後 224`、`35→38`、`27 テーブル`、`スロット化なら 45`、`スロット化 45` |
 | 14 | purge の定義 | §17.1 | §9.1 `DELETE /api/company/[id]`、§13 #35、CHECKLIST SCH-30/RUN-24 | `匿名化` | `Artifacts→Runs→Members→Links→旧組織→Company` |
 | 15 | 自動名寄せの規則（3 条件のみ） | §5.1 手順 1 | §14 D3、draft `CompanyServiceLink.linkedBy`、CHECKLIST MIG-18 | `3 条件` | `linkedBy='slug'`、`第一キー`、`第二キー` |
 | 16 | `owned()` のマーカー分担（改訂 5 新設） | §10.2 方式 A | CHECKLIST TEN-20/21/22、付録 K | `ownedScope` | `所有確認は呼び出し元クライアント（tx 可）を受け取る` だけの旧記述、`owned 経由の分担が無い` |
