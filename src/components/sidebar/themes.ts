@@ -370,6 +370,23 @@ export const asklinkTheme: SidebarTheme = {
   zapColor: 'text-sky-300 fill-sky-300',
 }
 
+/** ドヤポップアップ — オレンジ（目を引く。LP の ACCENT と揃える） */
+export const popupTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-[#ff5a36] via-[#e0342f] to-[#8f1426]',
+  navText: 'text-orange-50/80',
+  navTextIcon: 'text-orange-100/80',
+  sectionText: 'text-orange-100/60',
+  toggleText: 'text-[#d9362b]',
+  toggleHover: 'hover:bg-orange-50',
+  brandingText: 'text-orange-50/40',
+  profileBg: 'bg-black/15',
+  avatarBg: 'bg-[#e0342f]',
+  loginText: 'text-[#d9362b]',
+  loginHover: 'hover:bg-orange-50',
+  aiBubbleBg: 'bg-[#e0342f]',
+  zapColor: 'text-amber-200 fill-amber-200',
+}
+
 /** ドヤ面接官 — ブルー（採用・信頼） */
 export const mensetsuTheme: SidebarTheme = {
   bgGradient: 'bg-gradient-to-b from-blue-700 via-blue-800 to-indigo-900',

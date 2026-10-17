@@ -1674,6 +1674,52 @@ export const SERVICES: Service[] = [
     requiresAuth: true,
     isNew: true,
   },
+
+  // ----------------------------------------
+  // ドヤポップアップ（Popup）
+  // 仕様: reference/services/popup.md
+  // ----------------------------------------
+  {
+    id: 'popup',
+    name: 'ドヤポップアップ',
+    shortName: 'ポップアップ',
+    description: 'サイトのURLを入れるだけで、AIがポップアップを提案。タグを1行貼れば表示され、クリック率まで計測できます。',
+    longDescription:
+      '自社サイトのURLを1つ入力すると、サイトの内容と主要ページを読み取り、そのサイトに合ったポップアップを3案提案します。ChatGPTにサイトのことを相談できる「AIに聞く」ボタン、問い合わせや資料ダウンロードへの案内、次に読むおすすめページの3つです。バナーはサイトの色に合わせて自動でデザインされるので、画像を用意する必要はありません。設置タグをサイトに1行貼るだけで、表示するタイミング・端末・ページ・頻度を決めて配信でき、表示数・クリック数・クリック率を日別に確認できます。',
+    // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
+    icon: '',
+    color: 'orange',
+    gradient: 'from-[#ff5a36] to-[#b8202f]',
+    bgGradient: 'from-orange-50 to-rose-50',
+    href: '/popup',
+    dashboardHref: '/popup',
+    pricingHref: '/popup/pricing',
+    guideHref: '/popup',
+    features: [
+      'URLを入れるだけで、サイトに合ったポップアップを3案提案',
+      'ChatGPTに相談できる「AIに聞く」ボタンを自動で作成',
+      '問い合わせ・資料・おすすめページへの案内も、サイトで見つかったURLだけで作成',
+      'バナーはサイトの色で自動デザイン。画像の用意は不要（画像のアップロードも可）',
+      '設置タグを1行貼るだけ。表示のタイミング・端末・ページ・頻度を設定',
+      '表示数・クリック数・クリック率を日別に計測',
+    ],
+    useCases: [
+      'HubSpotなどを契約せずに、サイトにポップアップを出したい',
+      'ポップアップに何を出せばよいか、AIに考えてほしい',
+      '出したポップアップが押されているか、数字で確かめたい',
+    ],
+    // ⚠️ 回数の正本は plan-limit.ts の popupProposals / popupSites。ここを変えたら両方直す
+    pricing: {
+      free: { name: '無料プラン', limit: '提案3回・1サイトまで', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '提案は月30回、サイトは何件でも登録できます', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+    },
+    // 開発中。対外的な面には出さない（UNLISTED_SERVICE_IDS）。ログイン後は使える
+    status: 'coming_soon',
+    badge: 'BETA',
+    category: 'web',
+    order: 33,
+    requiresAuth: true,
+  },
 ]
 
 // ============================================
@@ -1725,7 +1771,7 @@ export const RETIRED_SERVICE_IDS = new Set([
 // トップ・sitemap・llms.txt・公開LP（/all-in-one）からは消えるが、
 // ログイン後のツール切替・サイドバーの他サービス一覧・直リンクでは従来どおり使える。
 // 公開する時はここから id を外し、各 layout.tsx の noindex も一緒に外すこと。
-export const UNLISTED_SERVICE_IDS = new Set<string>([]) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開
+export const UNLISTED_SERVICE_IDS = new Set<string>(['popup']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-17: popup 開発中
 
 // 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中。
 // トップページ・sitemap・llms.txt・公開LP がこのリストを参照するため、
