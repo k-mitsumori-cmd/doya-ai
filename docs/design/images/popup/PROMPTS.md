@@ -2,7 +2,7 @@
 
 - 生成日: 2026-10-18
 - 手段: Codex の内蔵画像生成（`codex exec -m gpt-5.6-sol`、ChatGPT の定額枠）。実行前に `~/.codex/auth.json` が `auth_mode=chatgpt`・API キー無しであることを確認し、`OPENAI_API_KEY` は渡していない。従量課金の画像APIは使っていない
-- アイコンだけは SVG を sharp で描き出した（asklink と同じ型。線幅をそろえるため）
+- アイコンは 2026-10-18 に作り直した（統合仕様 §12.1 の訂正に合わせ、角丸正方形からシロクマのステッカー型へ）。下の「アイコン（ステッカー型）」
 - 書き出し: `node`＋sharp で指定サイズへ縮小・中央で切り出し、WebP（品質86、各300KB以下）。OGP は JPEG 1200x630（既存の `public/ogp/<id>.jpg` に合わせた）
 - 作り直すときは、下の「依頼文の全文」から始める
 
@@ -10,7 +10,7 @@
 
 | 置き場所 | 大きさ | 生成の元 | 採用した版 | 使うところ |
 |---|---|---|---|---|
-| `public/renewal/icons/popup.webp` | 256×256 | 下の「アイコンのSVG」 | SVG 1版目 | AppShell のサイドバー・⌘K・ホームのカード・LP のヘッダー |
+| `public/renewal/icons/popup.webp` | 256×256（透過） | 下の「アイコン（ステッカー型）」の依頼文 | 2版目（1版目は Codex が自分で確認して作り直し） | AppShell のサイドバー・⌘K・ホームのカード・LP のヘッダー |
 | `public/ui-renewal/mascots/popup.webp` | 720×600 | 依頼文 1（mascot.png） | 2版目（1版目は背景が市松模様になったため、Codex が白背景で作り直し） | ツールのトップ・ホームの提案カード |
 | `public/popup/hero.webp` | 1600×900 | 依頼文 2（hero.png） | 1版目 | 公開 LP のヒーロー・ツールのトップ |
 | `public/popup/step-1.webp` | 1200×800 | 依頼文 3 | 1版目 | LP の使い方・初回ガイド（URLを入れる） |
@@ -46,22 +46,42 @@ codex exec -m gpt-5.6-sol --skip-git-repo-check -s workspace-write -C <作業フ
 - `-i` は複数の値を取るので、依頼文は標準入力（`-`）で渡す（引数で渡すと画像のパスとして読まれて失敗する）
 - 既定のモデルは ChatGPT アカウントでは使えないことがあるので `-m gpt-5.6-sol` を付ける
 
-## アイコンのSVG
+## アイコン（ステッカー型）
 
-```svg
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0066ff"/><stop offset="1" stop-color="#0047d6"/></linearGradient></defs>
-<rect width="512" height="512" rx="112" fill="url(#g)"/>
-<g fill="none" stroke="#fff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
-<rect x="96" y="124" width="320" height="248" rx="34"/>
-<path d="M96 184h320"/>
-<rect x="176" y="228" width="160" height="104" rx="20"/>
-<path d="M300 228l0 0"/>
-</g>
-<circle cx="146" cy="154" r="12" fill="#fff"/><circle cx="184" cy="154" r="12" fill="#fff"/>
-<path d="M332 330l52 104 16-42 42-16z" fill="#0047d6" stroke="#fff" stroke-width="22" stroke-linejoin="round"/>
-</svg>
+- 生成日: 2026-10-18。統合仕様 §12.1 の訂正（ツールアイコンは既存の大半と同じシロクマのステッカー型。見本は `public/renewal/icons/adimage.webp`・`hr.webp`）に合わせて作り直した。以前の角丸正方形（SVG）は使わない
+- 参照画像: `public/renewal/icons/adimage.webp`（型の見本）、`public/renewal/bear-hero.webp`（キャラクター）、`public/renewal/icons/hr.webp`
+- 背景は Codex に単色のマゼンタ（#FF00FF）で描かせ、手元でその色だけを透明にした。マゼンタからの色の距離が 90 未満は透明、90〜150 は距離に応じて半透明にし、白に寄せた。そのあと余白を詰め、4% の余白を付けた正方形にして 256×256 の WebP（品質92）で書き出した
+- 確認: adimage・hr と並べ、灰色と白の両方の背景で、縁のにじみが無いことを目で見た
+
+```bash
+codex exec -m gpt-5.6-sol --skip-git-repo-check -s workspace-write -C <作業フォルダ> \
+  -i in/icon_adimage.png -i in/bear.png -i in/icon_hr.png - < prompt.md
 ```
+
+````markdown
+Codex内蔵の画像生成ツール（image_gen）で、ドヤAIのツールアイコンを1枚作り、out/icon.png（正方形 1024x1024）に保存してください。
+従量課金のAPI・スクリプト（scripts/image_gen.py、OPENAI_API_KEY など）は使わないこと。内蔵の画像生成のみを使う。
+
+## 何のアイコンか
+「ドヤポップアップ」: Webサイトにポップアップ（ページの上に重なる小さな案内の窓）を出して、クリックを計測するツール。
+
+## 画風（in/icon_adimage.png と同じ型にそろえる）
+- in/icon_adimage.png と同じ「ステッカー型」: シロクマの上半身と持ち物が、太い白の縁取りでひとかたまりに囲まれ、その外側に細い青（#0066FF）の縁がある。角丸正方形の背景板は付けない
+- シロクマは in/bear.png と同じキャラクター: 白い体、青いゴーグル（レンズに青い光）、白いパーカーの胸に青い「</>」。顔・ゴーグル・パーカーの</>・線の太さ・配色を変えない。笑顔
+- 構図: in/icon_adimage.png と同じく、シロクマが左寄りで、右手前に持ち物を大きめに持つ
+- 持ち物（1つだけ）: Webブラウザの窓（上に小さな丸3つのタブ）。その窓の中央に、少し手前に浮いた小さなポップアップの窓が重なっている。ポップアップの中は、灰色の線2本と青い横長のボタンの形だけ。右上に小さな「×」の形
+- 色は青（#0066FF・#0047D6）と白と紺（#0A0F3C）。アクセントは無し
+- 線はくっきりした太めの輪郭線。128x128 に縮小しても形が分かること
+- 文字・数字・英字は描かない（パーカーの</>だけは描く）
+
+## 背景（重要）
+- ステッカーの外側の背景は、全面を単色のマゼンタ #FF00FF で塗りつぶす（グラデーション・影・模様なし）。あとでこの色だけを透明にする
+- ステッカーの中（シロクマ・持ち物・白い縁取り・青い縁）にはマゼンタやピンクを使わない
+- ステッカーが画像の端に触れないよう、上下左右に余白を取る
+
+## 確認
+生成後に自分で見て、(a) 文字が入っている (b) 背景がマゼンタ一色でない (c) ステッカーの中にマゼンタ・ピンクがある (d) クマの顔・ゴーグル・</>が in/bear.png と違う、のどれかなら作り直す。最後にファイル名・実寸・作り直した回数を報告。
+````
 
 ## 依頼文の全文（prompt.md）
 
