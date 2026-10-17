@@ -124,6 +124,8 @@ ok('probe-set set: []', () => walkData('User', { hrMemberships: { set: [] } }, '
 deny('probe-upsert-update upsert.update.organizationId=B', () => walkData('User', { hrMemberships: { upsert: { where: { id: 'm9' }, create: { role: 'member' }, update: { organizationId: 'B' } } } }, 'update', A))
 // --- 11) FIN6-03: refs の select は主キー（複合主キー対応） ---
 const composite = dm.models.find(m => m.primaryKey && m.primaryKey.fields.length > 1)
-console.log('case11 selectFor composite pk', composite ? composite.name : '(none)', '=', JSON.stringify(composite ? selectFor(composite.name) : null), '; selectFor(HrOrganizationMember) =', JSON.stringify(selectFor('HrOrganizationMember')))
-// --- 12) 許可リスト ---
+console.log('case11 selectFor（refs 検査と owned() の所属確認で共通。FIN7-02）composite pk', composite ? composite.name : '(none)', '=', JSON.stringify(composite ? selectFor(composite.name) : null), '; selectFor(HrOrganizationMember) =', JSON.stringify(selectFor('HrOrganizationMember')))
+// --- 12) FIN7-03: update 契約では同一テナントへの再 connect も意図的に拒否（リード判断。src/ の grep で該当 0 件） ---
+deny('case12 HrOrganizationMember.update organization.connect A (same tenant, intentionally rejected)', () => walkData('HrOrganizationMember', { organization: { connect: { id: 'A' } } }, 'update', A))
+// --- 13) 許可リスト ---
 console.log('allowlist to-many =', Object.keys(NESTED['to-many']).join(' ')); console.log('allowlist to-one  =', Object.keys(NESTED['to-one']).join(' '), '; createMany envelope =', [...CREATE_MANY_ENVELOPE].join(' '))

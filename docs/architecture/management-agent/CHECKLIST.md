@@ -53,9 +53,9 @@
 | TEN-33 | `walkData` が既定拒否で、モデルのフィールドに無いキー・許可リストに無いネスト操作キー・`createMany` エンベロープ（`data / skipDuplicates`）外のキーで即 throw し、入力を変更しない純関数か | 列挙漏れによる新しい穴 | 自動: `verify-core-access-cross-tenant.cjs`（未知フィールド・未知ネストキー・入力不変） | H | FIN5-01, FIN5-02 |
 | TEN-34 | 非テナントモデル（User / Account / Session 等）への書き込みで data に relation キーが 1 つでもあるとき（再帰判定しない保守的規則。非テナント子を挟んだ 2 段ネストも含む）、拡張の入口ゲートがマーカー無しで throw し、`OwnedTx` が非テナントモデルの書き込みを `Omit` しているか | 非テナント親経由の他社書き込み | 自動: 同上（`ctx.db.user.update` 経由 → throw、`owned(x).user.update` → 検査） | H | FIN5-01 |
 | TEN-35 | `verify-core-dmmf-matrix.cjs` が `.prisma/client/index.d.ts` からモデル操作名・NestedInput キー・クライアント操作を抽出し、マトリクスの行と許可リスト 4 表に完全一致することを検査しているか（Prisma 更新で新操作が出たら CI が落ちる） | Prisma 更新時の列挙漏れ | 自動: `verify-core-dmmf-matrix.cjs` | H | 方針転換 |
-| TEN-36 | `assertRefsOwned` が非テナントモデルの refs を除外し、where を正規化・重複排除して DMMF `primaryKey.fields`（無ければ `@id`）の組の distinct 件数で比較し（複合主キーのモデルで正しく数える）、`via:` 型は `scoped()` の展開を使い、refs 200 超で拒否するか | 正常系の誤拒否・非テナント参照の不通 | 自動: `verify-core-access-cross-tenant.cjs`（重複 where、User 参照、via 型） | M | FIN5-05 |
-| TEN-37 | 機微テーブルの RLS ポリシーが `FOR ALL TO app_rw USING (...) WITH CHECK (...)` で fail-closed（`app.company_id` 未設定で読み 0 行・INSERT/UPDATE エラー）、表 owner は `DIRECT_URL` ロールのみでアプリ接続のロールが `app_rw` であることを env 検査し、Cron / バッチが会社ごとに `set_config` して回り、`BYPASSRLS` ロールをアプリで使っていないか。`db push` がポリシーを保持することをステージングで確認したか | 第 2 防御の形骸化 | 自動: `verify-core-rls.cjs`＋手動: ステージング計測（p95） | M | 方針転換 |
-| TEN-38 | テナント列が relation の FK でもあるモデル（`organizationId ↔ organization`、`userId ↔ user`）で、relation 形式の書き換え（`data: { user: { connect / disconnect / set / update / upsert / create / connectOrCreate } }`）が update 契約で全て拒否され、create 契約で `connect:{<主キー>: expected}` だけが通ってスカラが付かないか（`prototypes/walkdata-proto.cjs` case6/case7 を本番テストに移植） | 自分の行を他ユーザー・他社の所有に移す書き込み | 自動: `verify-core-access-cross-tenant.cjs`（relation FK 7 キー × update/create） | H | FIN6-01 |
+| TEN-36 | `assertRefsOwned` が非テナントモデルの refs を除外し、where を正規化・重複排除して DMMF `primaryKey.fields`（無ければ `@id`）の組の distinct 件数で比較し（複合主キーのモデルで正しく数える）、`owned().update / upsert / delete` の所属確認の `select` も同じ `selectFor(model)` で複合主キーのモデル（例 `CunningUsageAllocation`）の `owned().update` が成功し、`via:` 型は `scoped()` の展開を使い、refs 200 超で拒否するか | 正常系の誤拒否・非テナント参照の不通 | 自動: `verify-core-access-cross-tenant.cjs`（重複 where、User 参照、via 型） | M | FIN5-05 |
+| TEN-37 | 機微テーブルの RLS ポリシーが `FOR ALL TO app_rw USING (...) WITH CHECK (...)` で fail-closed（`app.company_id` 未設定で読み 0 行・INSERT/UPDATE エラー）、表 owner は `DIRECT_URL` ロールのみで、アプリ接続ロールが superuser でも `BYPASSRLS` でも表 owner でもないことを**起動時の DB 側検査**（`pg_roles` 属性と `pg_tables.tableowner`。pooler のユーザー名形式に依存しない）で確認し不一致なら fail-fast にし、Cron / バッチが会社ごとに `set_config` して回り、`BYPASSRLS` ロールをアプリで使っていないか。`db push` がポリシーを保持することをステージングで確認したか | 第 2 防御の形骸化 | 自動: `verify-core-rls.cjs`＋手動: ステージング計測（p95） | M | 方針転換 |
+| TEN-38 | テナント列が relation の FK でもあるモデル（`organizationId ↔ organization`、`userId ↔ user`）で、relation 形式の書き換え（`data: { user: { connect / disconnect / set / update / upsert / create / connectOrCreate } }`）が update 契約で全て拒否され（**同一テナントへの再 connect も意図的に拒否**。既存コードに該当する書き方は 0 件）、create 契約で `connect:{<主キー>: expected}` だけが通ってスカラが付かないか（`prototypes/walkdata-proto.cjs` case6/case7 を本番テストに移植） | 自分の行を他ユーザー・他社の所有に移す書き込み | 自動: `verify-core-access-cross-tenant.cjs`（relation FK 7 キー × update/create） | H | FIN6-01 |
 
 ## 2. AUTH 認証・セッション（Google のみ・使い回し防止）
 
@@ -379,7 +379,7 @@
 | ID | 確認内容 | なぜ | 確認方法 | 重大度 | 監査 |
 |---|---|---|---|---|---|
 | RUN-01 | schema 変更は「`doya-db-push` で本番反映 → デプロイ」の順で、逆になっていないか | P2022 で全 500 | 手動: デプロイ前チェック欄 | H | — |
-| RUN-02 | 起動時ヘルスチェックが新テーブルの存在を確認し、欠落を早期検出するか | 反映漏れ | 自動: `/api/health` の応答 | M | — |
+| RUN-02 | 起動時ヘルスチェックが新テーブルの存在を確認し、さらに接続ロールの `pg_roles` 属性（`rolsuper=false`、`rolbypassrls=false`）と `pii` 表の owner が current_user でないことを DB 側で検査して不一致なら fail-fast（起動失敗＋`SecurityEvent`＋Slack）にするか | 反映漏れ・owner 接続による RLS の無効化 | 自動: `/api/health` の応答＋`verify-core-rls.cjs`（ロール属性の検査が存在すること） | H | FIN7-01 |
 | RUN-03 | `Session` の index と FK を手順どおり（CONCURRENTLY / NOT VALID / lock_timeout）に先行作成しているか | ロック | 手動: 手順書 | H | B-18, DATA-05 |
 | RUN-04 | Cron 本数が README §17.3 の数（41。K スロット代替なら 41 + K − 1）と `vercel.json` で一致し、100 本以内か | 上限と記述の不一致 | 手動: `vercel.json` | L | B-13, OPS-27 |
 | RUN-05 | 重複起動し得る Cron（Vercel は best effort・重複あり）が DB リースで相互排他され、冪等か | 二重処理 | 自動: `verify-agent-run-lease.cjs` | H | — |
@@ -500,7 +500,16 @@
 | D-7 | AUTH-18, RUN-12 |
 | D-8 | MIG-04, SCH-05 |
 
-項目数: TEN 38 / AUTH 38 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 51 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 9 ＝ **350 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1〜6 回の 17 / 7 / 8 / 7 / 5 / 6 指摘すべてに対応項目あり（漏れ 0）。
+項目数: TEN 38 / AUTH 38 / AUTHZ 22 / BIL 31 / MIG 25 / SCH 31 / AGT 51 / EXT 24 / PII 15 / AUD 13 / IO 17 / RUN 25 / UI 11 / DOC 9 ＝ **350 項目**。監査 A〜D の 59 指摘、第 2 回審査の 92 指摘、最終ゲート第 1〜7 回の 17 / 7 / 8 / 7 / 5 / 6 / 3 指摘すべてに対応項目あり（漏れ 0）。
+
+## 最終ゲート第 7 回（FIN7）との対応表
+
+| 審査 | 再発防止するチェック項目 |
+|---|---|
+| FIN7-01 | RUN-02, TEN-37 |
+| FIN7-02 | TEN-36 |
+| FIN7-03（反映しない） | TEN-38（意図的な拒否として明記） |
+
 
 ## 最終ゲート第 6 回（FIN6）との対応表
 
