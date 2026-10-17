@@ -455,7 +455,7 @@ export default function HomeDashboard({ initial }: { initial: HomeSummary }) {
                   return (
                     <Link key={t.id} href={t.href} className={styles.tool}>
                       <span className={styles.toolIcon}><Icon size={18} /></span>
-                      <span className={styles.toolText}><b>{t.name}</b><small>{t.hint}</small></span>
+                      <span className={styles.toolText}><b>{t.name}{t.beta ? <em className={styles.beta}>開発中</em> : null}</b><small>{t.hint}</small></span>
                     </Link>
                   )
                 })}

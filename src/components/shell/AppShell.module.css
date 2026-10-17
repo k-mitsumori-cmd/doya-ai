@@ -78,6 +78,16 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
+.beta {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .navItem:hover { background: #f1f5f9; color: var(--ink); }
 
 .navItem[aria-current='page'] { background: var(--accent-soft); color: var(--accent); }

@@ -213,6 +213,10 @@
 .emptyCard p { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.7; }
 
 /* ツール一覧 */
+.beta {
+  font-style: normal; margin-left: 6px; font-size: 10px; font-weight: 700; padding: 1px 6px;
+  border-radius: 999px; background: #fef3c7; color: #92400e; vertical-align: 2px;
+}
 .toolGroups { display: grid; gap: 16px; }
 .toolGroupLabel { margin: 0 0 8px; font-size: 12px; font-weight: 700; color: var(--ink-3); letter-spacing: 0.06em; }
 .tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }

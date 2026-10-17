@@ -23,6 +23,7 @@ function NavItem({ tool, pathname, onNavigate }: { tool: ShellTool; pathname: st
     <Link href={tool.href} className={styles.navItem} aria-current={active ? 'page' : undefined} onClick={onNavigate} title={tool.hint}>
       <Icon size={17} strokeWidth={2} aria-hidden />
       <span>{tool.name}</span>
+      {tool.beta ? <span className={styles.beta}>開発中</span> : null}
     </Link>
   )
 }
