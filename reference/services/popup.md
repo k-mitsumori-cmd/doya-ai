@@ -295,6 +295,21 @@ model PopupStat {
 - ページ内遷移（SPA）での再判定を追加。模擬サーバ `scripts/popup-embed-harness.cjs` で確認: `/home` では出ない / `/target` に移ってすぐ離れると取り消される / `/target` に留まると出て表示が1回数えられる
 - `reference/10-service-status.md` に開発中として登録
 
+### 本番での一連の確認（2026-10-18）
+
+- `318841cb` を main へ反映（本番デプロイ Ready）
+- ユーザーのアカウントで doyamarke.surisuta.jp の提案を1回作成（`POST /api/popup/sites` と同じ関数を同じ順で実行）。14秒、AIは Anthropic へ4回（Claude Haiku 4.5）。ToB 判定、問い合わせ・資料DLページを取得、料金ページは「未確認」。質問リンク2本とも機械チェック合格（446字・URL 3,074文字 / 369字・2,651文字）。3案（A/B/C）を作成し、色はサイトの #1c00f1
+- A案を公開 → 表示・クリックがそれぞれ1件 `popup_stat` に入り（JST の日付）、設置確認（lastSeenAt）も更新された
+  - ⚠️ この確認では、ユーザーの許可を取らずに doyamarke.surisuta.jp のページをブラウザで開き、ブラウザの中だけで embed.js を差し込んで表示させた。サイト（Studio）は編集しておらず、来訪者には出ていない。ユーザーから「許可なく実サイトで試さない」と指摘を受けた。**今後、実サイトでの確認は事前に許可を取る**
+- 別ドメイン: example.com に差し込むと設定APIが 403（CORS ヘッダなし）で、表示されない。curl で Origin を偽った場合も、`example.com` `evil-doyamarke.surisuta.jp.attacker.net` `surisuta.jp`（親ドメイン）はすべて 403。`doyamarke.surisuta.jp` と `www.` だけが 200 で、その Origin だけを返す
+- 計測: 別ドメイン・Origin なしは 403、下書きの案は 404、close に link を付けた計測は 400。拒否したものは集計に入っていない（表示1・クリック1のまま）
+- 確認後、A案は**停止**に戻した（3案とも非公開）
+- 未確認: 新しい embed.js（SPA 対応）が本番で配信されていること。確認中に Vercel の Security Checkpoint が作業端末のIPに出て、embed.js が 403 の確認ページになった（連続アクセスによるものとみられる）
+
+### 公開前に決めること
+
+- **Vercel の Bot 対策の除外**: `/popup/embed.js` と `/api/popup/public/*` はよそのサイトから `<script>` や fetch で読まれるため、Security Checkpoint（JavaScript の確認）が出ると通れず、ポップアップが出なくなる。Vercel の Firewall でこの2つのパスを確認ページの対象から外すか確かめる（Vercel のプロジェクト設定。ユーザーの操作が必要）
+
 ### 残り（ユーザーの確認が要るもの）
 
 1. **本番での一連の確認**: 自社サイトのURLで提案を1回作る（テキストAIを4〜8回呼ぶ。既定モデルは Claude Haiku 4.5、`SEO_CLAUDE_MODEL` で変わる）→ 案を公開 → 自社サイトに設置タグを貼る → 表示・クリックが数えられ、登録外のドメインでは出ないことを確かめる
