@@ -262,7 +262,7 @@ model PopupStat {
 | 埋め込み | `public/popup/embed.js` |
 | 画面 | `/popup`（LP / サイト一覧と作成）、`/popup/sites/[id]`、`/popup/edit/[id]`、`/popup/pricing`。部品は `src/components/popup/` |
 | 登録 | `services.ts`（`UNLISTED_SERVICE_IDS`・`coming_soon`・BETA）、`plan-limit.ts`、`usage-summary.ts`、`stripe.ts` の `ALL_SERVICE_IDS`、サイドバーのテーマ、ツール切替のアイコン、`next.config.js` の noindex |
-| システム画像 | `public/popup/hero.webp`・`public/popup/icon.png`・`public/renewal/icons/popup.webp`。SVG を sharp で描き出したもの（画像生成APIは使っていない）。ヒーローの数値は画像内に「表示例」と明記 |
+| システム画像 | 2026-10-18 に Codex の内蔵画像生成（定額枠）で作り直した。一覧と依頼文は `docs/design/images/popup/PROMPTS.md`（アイコンはシロクマのステッカー型） |
 | テスト | `npm run test:popup`（40件。ビルドに組み込み済み）。IDOR の静的検査 `scope.test.ts` |
 
 - 公開サービス数の固定値（ログイン後に使える数）を 18→19 に更新した: `verify-service-popup-guard-mounted.cjs`（確認数 130→136）、`verify-service-limit-provider-mounted.cjs`（確認数 119→123）。対外的な公開数（`verify-google-analytics-services.cjs`）は popup が UNLISTED なので変わらない。
