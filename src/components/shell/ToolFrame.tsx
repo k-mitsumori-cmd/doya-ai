@@ -11,6 +11,7 @@ import type { ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { ALL_SHELL_TOOLS, SHELL_HOME } from './tools'
 import { isNavActive, type ShellNavItem } from './nav'
+import { ShellIcon } from './icons'
 import styles from './ToolFrame.module.css'
 
 export default function ToolFrame({ serviceId, title, description, action, nav, aside, children }: {
@@ -47,11 +48,10 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
         {nav?.length ? (
           <div className={styles.tabs} role="tablist" aria-label={`${name}のメニュー`}>
             {nav.map((item) => {
-              const Icon = item.icon
               const active = isNavActive(pathname, item)
               return (
                 <Link key={item.href} href={item.href} className={styles.tab} role="tab" aria-selected={active} aria-current={active ? 'page' : undefined}>
-                  {Icon ? <Icon size={16} aria-hidden /> : null}
+                  {item.icon ? <ShellIcon name={item.icon} size={16} /> : null}
                   {item.label}
                 </Link>
               )
