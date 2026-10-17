@@ -1851,6 +1851,51 @@ export const SERVICES: Service[] = [
     order: 36,
     requiresAuth: true,
   },
+  // ----------------------------------------
+  // ドヤ社内インタビュー（Shanai）
+  // 仕様: reference/services/shanai.md
+  // ----------------------------------------
+  {
+    id: 'shanai',
+    name: 'ドヤ社内インタビュー',
+    shortName: '社内インタビュー',
+    description: '録音か社員アンケートと写真から、会社の魅力が伝わる社員インタビュー記事とサムネを自動で作成します。',
+    longDescription:
+      '社内インタビューの録音をアップロードするか、社員にアンケートのURLを送るだけで、採用広報や社内報に使える社員インタビュー記事を作成します。会社サイト・サービスサイトのURLを登録しておくと、ミッションや事業、制度などを読み取り、社員の仕事が会社のどこにつながっているかまで記事の中で紹介します。記事は録音・回答・会社サイトから原文つきで抜き出した事実だけをもとに書くため、書いていないことを盛った文章になりません。写真とサムネ入りのWordファイルでダウンロードできます。',
+    // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
+    icon: '',
+    color: 'blue',
+    gradient: 'from-[#0066ff] to-[#0047d6]',
+    bgGradient: 'from-blue-50 to-sky-50',
+    href: '/shanai',
+    dashboardHref: '/shanai',
+    pricingHref: '/shanai/pricing',
+    guideHref: '/shanai',
+    features: [
+      '録音をアップロードするだけで、文字起こしから記事まで自動で作成',
+      'アンケートは最低文字数とAIの追加質問で、記事にできる材料を集める',
+      '会社サイト・サービスサイトを読み取り、会社ならではの記事に',
+      '原文つきの事実だけで記事を書き、根拠のない段落は警告',
+      '本人の写真で作るサムネ画像（画像生成AIは使いません）',
+      '写真・サムネ入りの Word ファイルでダウンロード',
+    ],
+    useCases: [
+      '採用サイトに社員インタビューを載せたいが、書く人がいない',
+      '社内インタビューの録音が手つかずのまま残っている',
+      '社員にアンケートを書いてもらい、記事にまとめたい',
+    ],
+    // ⚠️ 回数の正本は plan-limit.ts の shanaiArticles / shanaiTranscripts。ここを変えたら両方直す
+    pricing: {
+      free: { name: '無料プラン', limit: '記事3本・録音の文字起こし3件まで', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '記事は月30本、録音の文字起こしは月30件まで作成できます', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+    },
+    // 開発中。対外的な面には出さない（UNLISTED_SERVICE_IDS）。ログイン後は使える
+    status: 'coming_soon',
+    badge: 'BETA',
+    category: 'text',
+    order: 37,
+    requiresAuth: true,
+  },
 ]
 
 // ============================================
@@ -1902,7 +1947,7 @@ export const RETIRED_SERVICE_IDS = new Set([
 // トップ・sitemap・llms.txt・公開LP（/all-in-one）からは消えるが、
 // ログイン後のツール切替・サイドバーの他サービス一覧・直リンクでは従来どおり使える。
 // 公開する時はここから id を外し、各 layout.tsx の noindex も一緒に外すこと。
-export const UNLISTED_SERVICE_IDS = new Set<string>(['popup', 'tenjikai', 'income', 'expense']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-17: popup・tenjikai は開発中 / 2026-10-18: income・expense 開発中
+export const UNLISTED_SERVICE_IDS = new Set<string>(['popup', 'tenjikai', 'income', 'expense', 'shanai']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-17: popup・tenjikai は開発中 / 2026-10-18: income・expense・shanai 開発中
 
 // 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中。
 // トップページ・sitemap・llms.txt・公開LP がこのリストを参照するため、

@@ -5641,3 +5641,235 @@ model ExpenseAuditLog {
   @@index([organizationId, createdAt])
   @@map("expense_audit_logs")
 }
+
+// ============================================
+// ドヤ社内インタビュー（shanai）
+// 仕様: reference/services/shanai.md
+// ============================================
+// ⚠️ 記事は「事実（ShanaiFact）」だけから書く。事実はどれも根拠
+//    （文字起こし・アンケート回答・会社サイトの原文）を持ち、原文に無い引用は保存しない。
+
+/// 会社情報（1ユーザー1社）。会社サイト・サービスサイトから読み取った内容を全インタビューで使い回す
+model ShanaiCompany {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  name        String   @default("")
+  /// 会社サイトのトップURL
+  websiteUrl  String?
+  /// サムネに使う色（#RRGGBB）
+  brandColor  String   @default("#0066ff")
+  /// サイトから抽出した色の候補
+  colors      Json?
+  /// 利用者が補足する会社の説明（サイトに無い情報の手入力）
+  manualNote  String?  @db.Text
+  /// 予約列: 経営エージェントの自社プロフィール（8つ目の写しを増やさないため）。null 可・FK なし（統合仕様 R-5）
+  companyProfileId String?
+  crawledAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sources      ShanaiCompanySource[]
+  profileItems ShanaiProfileItem[]
+
+  @@map("shanai_company")
+}
+
+/// 読み取り対象のURL（会社サイト・サービスサイト・採用ページなど）
+model ShanaiCompanySource {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       ShanaiCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// 'corporate' | 'service' | 'recruit' | 'other'
+  kind          String   @default("corporate")
+  label         String   @default("")
+  url           String
+  lastCrawledAt DateTime?
+  /// 直近の読み取り失敗理由（利用者向けの日本語）
+  error         String?
+  createdAt     DateTime @default(now())
+
+  pages ShanaiWebPage[]
+
+  @@index([companyId])
+  @@map("shanai_company_source")
+}
+
+/// 読み取ったページの本文。プロフィール項目の引用はこの本文の中にあることを検証する
+model ShanaiWebPage {
+  id          String   @id @default(cuid())
+  sourceId    String
+  source      ShanaiCompanySource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  url         String
+  title       String   @default("")
+  contentText String   @db.Text
+  /// 内容が変わったページだけ要約し直すためのハッシュ
+  contentHash String
+  fetchedAt   DateTime @default(now())
+
+  profileItems ShanaiProfileItem[]
+
+  @@unique([sourceId, url])
+  @@map("shanai_web_page")
+}
+
+/// 会社プロフィールの1項目（ミッション・事業・サービスの特徴・数字・カルチャー・制度）
+model ShanaiProfileItem {
+  id        String   @id @default(cuid())
+  companyId String
+  company   ShanaiCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  webPageId String?
+  webPage   ShanaiWebPage? @relation(fields: [webPageId], references: [id], onDelete: SetNull)
+  /// 'mission' | 'business' | 'service' | 'number' | 'culture' | 'benefit' | 'other'
+  category  String
+  statement String   @db.Text
+  /// ページ本文からの原文引用（手入力の項目は null）
+  quote     String?  @db.Text
+  /// サービスURLから取った項目なら、そのソースID（社員と関わるサービスの対応づけに使う）
+  sourceId  String?
+  /// 'site' | 'manual'
+  origin    String   @default("site")
+  approved  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, category])
+  @@map("shanai_profile_item")
+}
+
+/// インタビュー1件（社員1名）。音声モードかアンケートモードのどちらか
+model ShanaiInterview {
+  id               String   @id @default(cuid())
+  userId           String
+  /// 'voice' | 'survey'
+  mode             String
+  /// 'DRAFT' | 'COLLECTING' | 'FACTS' | 'WRITING' | 'DONE'
+  status           String   @default("DRAFT")
+  intervieweeName  String
+  department       String   @default("")
+  position         String   @default("")
+  joinYear         String   @default("")
+  /// 記事の目的。'recruit'（採用広報） | 'internal'（社内報）
+  purpose          String   @default("recruit")
+  /// 'friendly' | 'formal' | 'passionate'
+  tone             String   @default("friendly")
+  /// 関わっているサービス（ShanaiCompanySource.id の配列）
+  serviceSourceIds Json?
+  /// サービスでの役割（自由記述）
+  roleInService    String   @default("")
+
+  // --- アンケートモード ---
+  /// 社員が回答する公開URLのトークン（ログイン不要）。src/lib/shanai/token.ts の CSPRNG で作る（cuid は使わない）
+  surveyToken       String   @unique
+  /// { [questionId]: { answer, followupQuestion?, followupAnswer? } }
+  surveyAnswers     Json?
+  surveySubmittedAt DateTime?
+  /// 公開回答画面で追加質問を作った回数（費用の乱用防止）
+  followupRuns      Int      @default(0)
+  /// 事実の抽出を行った回数（1インタビュー5回まで。AI費用の乱用防止）
+  factRuns          Int      @default(0)
+  /// 発行したアップロードURLの数（未確定のファイルを無制限に置かせないための上限判定に使う）
+  uploadUrlsIssued  Int      @default(0)
+
+  // --- 音声モード ---
+  audioPath          String?
+  audioMime          String?
+  audioSize          Int?
+  /// 'none' | 'processing' | 'done' | 'failed'
+  transcriptStatus   String   @default("none")
+  transcriptJobId    String?
+  /// [{ start, end, speaker, text }]
+  transcriptSegments Json?
+  transcriptError    String?
+  audioDurationSec   Int?
+  /// このインタビューで文字起こしを依頼した回数（録音の差し替えは2回まで）
+  transcriptRuns     Int      @default(0)
+  /// 初めて文字起こしを依頼した日時（利用枠はこの日時で数える）
+  transcribedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  photos   ShanaiPhoto[]
+  facts    ShanaiFact[]
+  articles ShanaiArticle[]
+
+  @@index([userId, createdAt])
+  @@index([userId, transcribedAt])
+  @@map("shanai_interview")
+}
+
+/// 社員の写真（サムネ・本文用）
+model ShanaiPhoto {
+  id          String   @id @default(cuid())
+  interviewId String
+  interview   ShanaiInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  storagePath String
+  mimeType    String
+  /// 'thumbnail' | 'body'
+  usage       String   @default("body")
+  caption     String   @default("")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([interviewId])
+  @@map("shanai_photo")
+}
+
+/// 記事の根拠になる事実。sourceType の原文に quote が含まれることを保存時に検証する
+model ShanaiFact {
+  id          String   @id @default(cuid())
+  interviewId String
+  interview   ShanaiInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  /// 'transcript' | 'answer' | 'company'
+  sourceType  String
+  /// transcript: セグメント番号 / answer: 設問ID / company: ShanaiProfileItem.id
+  sourceRef   String
+  /// 'career' | 'work' | 'episode' | 'value' | 'team' | 'future' | 'company' | 'other'
+  category    String   @default("other")
+  statement   String   @db.Text
+  quote       String   @db.Text
+  approved    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([interviewId])
+  @@map("shanai_fact")
+}
+
+/// 生成した記事（版ごとに1行）。利用枠はこの行数で数える
+model ShanaiArticle {
+  id          String   @id @default(cuid())
+  interviewId String
+  interview   ShanaiInterview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  userId      String
+  version     Int      @default(1)
+  title       String
+  lead        String   @db.Text
+  /// [{ type: 'heading'|'qa'|'paragraph'|'quote'|'company', heading?, question?, body, factIds: string[] }]
+  blocks      Json
+  /// サムネに載せる一言（20字前後）
+  catchphrase String   @default("")
+  model       String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([interviewId, version])
+  @@index([userId, createdAt])
+  @@map("shanai_article")
+}
+
+/// 利用枠の台帳。インタビューを削除しても消さない（削除で枠が戻るのを防ぐ）
+model ShanaiUsageLog {
+  id          String   @id @default(cuid())
+  userId      String
+  /// 'article' | 'transcript'
+  kind        String
+  /// 参照のみ（インタビュー削除後も残すため外部キーにしない）
+  interviewId String?
+  /// 記事の行（生成に失敗したら台帳ごと消して枠を戻す）
+  articleId   String?  @unique
+  createdAt   DateTime @default(now())
+
+  @@index([userId, kind, createdAt])
+  @@map("shanai_usage_log")
+}

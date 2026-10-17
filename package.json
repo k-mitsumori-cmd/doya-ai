@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:income && npm run test:expense && tsc --noEmit && next build",
+    "build": "prisma generate && npm run test:security && npm run test:asklink && npm run test:popup && npm run test:syscheck && npm run test:tenjikai && npm run test:income && npm run test:expense && npm run test:shanai && tsc --noEmit && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -19,7 +19,8 @@
     "test:syscheck": "tsx --test src/lib/syscheck-guards.test.ts src/lib/server-daily-quota.test.ts src/lib/drip-click-link.test.ts src/lib/mitsuboshi/nagusame/guest.test.ts",
     "test:tenjikai": "tsx --test src/lib/tenjikai/engine.test.ts src/lib/tenjikai/tenjikai-read.test.ts",
     "test:income": "tsx --test src/lib/income/calc.test.ts src/lib/income/scope.test.ts src/lib/income/agent.test.ts",
-    "test:expense": "tsx --test src/lib/expense/calc.test.ts src/lib/expense/scope.test.ts"
+    "test:expense": "tsx --test src/lib/expense/calc.test.ts src/lib/expense/scope.test.ts",
+    "test:shanai": "tsx --test src/lib/shanai/shanai.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -46,6 +47,7 @@
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.0.0",
+    "docx": "9.5.1",
     "exceljs": "^4.4.0",
     "framer-motion": "^10.17.0",
     "google-auth-library": "^9.15.1",

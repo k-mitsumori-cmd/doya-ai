@@ -9,6 +9,7 @@ export const STATIC_OGP_IDS = new Set([
   'asklink',
   'popup',
   'tenjikai',
+  'shanai',
 ])
 
 export function staticOgpPath(id: string): string | null {

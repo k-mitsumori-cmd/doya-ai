@@ -44,6 +44,10 @@ export const FREE_LIMITS = {
   popupSites: 1,
   /** 展示会プランのAI作成回数（累計）。1回＝サイトの読み取り＋LLM3回（解析・ブース・制作物）。画像は作らない */
   tenjikaiPlans: 3,
+  /** 社内インタビュー記事の生成回数（累計）。1回＝事実の抽出＋記事1本 */
+  shanaiArticles: 3,
+  /** 社内インタビューで文字起こしした録音の件数（累計）。1件＝最大90分 */
+  shanaiTranscripts: 3,
 } as const
 
 /**
@@ -70,6 +74,10 @@ export const PRO_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   popupSites: null,
   // 1回でLLMを3回（解析1＋ブース1＋制作物1）。画像は作らない
   tenjikaiPlans: 30,
+  // テキスト生成のみ（文字起こしは録音1本ごとに別途。記事の作り直しもここで数える）
+  shanaiArticles: 30,
+  // 音声の文字起こし（AssemblyAI の従量課金が直接効く）
+  shanaiTranscripts: 30,
 }
 
 /** ENTERPRISE の月次上限。個別契約のため広めに取るが、無制限にはしない */
@@ -84,6 +92,8 @@ export const ENTERPRISE_MONTHLY_LIMITS: Record<FreeLimitKey, number | null> = {
   popupProposals: 100,
   popupSites: null,
   tenjikaiPlans: 100,
+  shanaiArticles: 100,
+  shanaiTranscripts: 100,
 }
 
 export type FreeLimitKey = keyof typeof FREE_LIMITS

@@ -5,6 +5,7 @@ import NextImage from 'next/image'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
+  BookUser,
   BarChart3,
   Check,
   ChevronUp,
@@ -88,6 +89,7 @@ const SERVICE_ICON_MAP: Record<string, ServiceMapping> = {
   tenjikai:  { icon: Store,       iconBg: 'from-[#0066ff] to-[#0a0f3c]',    hoverBg: 'hover:bg-blue-50' },
   income:    { icon: BadgeJapaneseYen, iconBg: 'from-[#0066ff] to-[#0047d6]', hoverBg: 'hover:bg-blue-50' },
   expense:   { icon: Wallet,      iconBg: 'from-[#0066ff] to-[#0047d6]',    hoverBg: 'hover:bg-blue-50' },
+  shanai:    { icon: BookUser,    iconBg: 'from-[#0066ff] to-[#0047d6]',    hoverBg: 'hover:bg-blue-50' },
 }
 
 const FALLBACK_MAPPING: ServiceMapping = {
