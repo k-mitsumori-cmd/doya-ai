@@ -1,0 +1,919 @@
+<title>ドヤAI 基盤改修計画</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Kaku+Gothic+New:wght@700;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* 構成：設計図の青焼きを思わせる細い罫線のグリッド上に、章ごとに「今 → これから」を置く。録画で読める大きさを優先 */
+:root {
+  --bg: #f6f8fc;
+  --paper: #ffffff;
+  --ink: #0f1a33;
+  --sub: #4a5577;
+  --muted: #7d87a6;
+  --line: #dfe5f1;
+  --grid: rgba(28, 74, 168, 0.06);
+  --accent: #1c4fd8;
+  --accent-soft: #e6edfd;
+  --now: #c2410c;
+  --now-soft: #fdf0e8;
+  --ok: #0f7a4a;
+  --ok-soft: #e4f5ec;
+  --warn: #9a6400;
+  --warn-soft: #fbf3dc;
+  --crit: #c0263d;
+  --display: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  --body: 'BIZ UDPGothic', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1222; --paper: #131b30; --ink: #e8edf9; --sub: #aab4d0; --muted: #7f8aa8; --line: #26304a;
+    --grid: rgba(120, 160, 255, 0.06); --accent: #7aa2ff; --accent-soft: #1b2a52; --now: #ff9a63; --now-soft: #3a2216;
+    --ok: #5fd39b; --ok-soft: #12321f; --warn: #f0c060; --warn-soft: #36290c; --crit: #ff7387; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1222; --paper: #131b30; --ink: #e8edf9; --sub: #aab4d0; --muted: #7f8aa8; --line: #26304a;
+  --grid: rgba(120, 160, 255, 0.06); --accent: #7aa2ff; --accent-soft: #1b2a52; --now: #ff9a63; --now-soft: #3a2216;
+  --ok: #5fd39b; --ok-soft: #12321f; --warn: #f0c060; --warn-soft: #36290c; --crit: #ff7387; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background-color: var(--bg);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.8;
+  font-feature-settings: 'palt';
+}
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-block: 40px 96px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+}
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.35; }
+h1 { font-size: clamp(34px, 5.4vw, 60px); font-weight: 900; letter-spacing: 0.01em; }
+h2 { font-size: clamp(24px, 3.2vw, 34px); font-weight: 900; }
+h3 { font-size: 19px; font-weight: 700; }
+p { margin: 0; }
+code { font-family: var(--mono); font-size: 0.86em; padding: 1px 6px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); }
+.eyebrow { font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em; color: var(--accent); text-transform: uppercase; }
+.lead { font-size: clamp(18px, 2.1vw, 22px); color: var(--sub); max-width: 46em; }
+section { display: flex; flex-direction: column; gap: 22px; }
+.head { display: flex; flex-direction: column; gap: 8px; }
+.head p { color: var(--sub); max-width: 52em; }
+
+/* 表紙 */
+.cover { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 32px; align-items: end; padding-block: 24px 8px; border-bottom: 2px solid var(--ink); padding-bottom: 32px; }
+.cover .meta { display: flex; flex-direction: column; gap: 10px; font-size: 14px; color: var(--sub); border-left: 2px solid var(--accent); padding-left: 16px; }
+.cover .meta b { color: var(--ink); font-family: var(--mono); font-weight: 700; }
+.thesis { font-family: var(--display); font-weight: 900; font-size: clamp(22px, 3vw, 30px); line-height: 1.5; }
+.thesis em { font-style: normal; color: var(--accent); }
+
+/* 今 → これから */
+.shift { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.shift article { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.shift .what { font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+.shift .pair { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+.shift .num { font-family: var(--display); font-weight: 900; font-size: 34px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.shift .num small { font-size: 14px; font-weight: 700; margin-left: 2px; }
+.shift .before .num { color: var(--now); }
+.shift .after .num { color: var(--accent); }
+.shift .before, .shift .after { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.shift .label { font-size: 12px; color: var(--muted); }
+.shift .arrow { color: var(--muted); font-family: var(--mono); font-size: 20px; }
+.shift .note { font-size: 14px; color: var(--sub); line-height: 1.6; }
+
+/* ゴール */
+.goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.goals div { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; align-items: start; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.goals .g { font-family: var(--mono); font-weight: 700; color: var(--accent); font-size: 15px; padding-top: 2px; }
+.goals b { display: block; font-family: var(--display); font-size: 17px; }
+.goals span { font-size: 14px; color: var(--sub); line-height: 1.65; }
+
+/* 図 */
+.figure { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.figure .cap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 14px; color: var(--sub); }
+.figure .cap b { color: var(--ink); font-family: var(--display); font-size: 16px; }
+.diagram { overflow-x: auto; }
+.diagram pre.mermaid { margin: 0; background: transparent; font-family: var(--body); text-align: center; min-width: 640px; }
+.twofig { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--sub); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+details { background: var(--paper); border: 1px dashed var(--line); border-radius: 12px; padding: 12px 16px; }
+details summary { cursor: pointer; font-weight: 700; color: var(--accent); }
+details[open] summary { margin-bottom: 12px; }
+summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+/* 守りの層 */
+.layers { display: flex; flex-direction: column; gap: 8px; }
+.layer { display: grid; grid-template-columns: 44px minmax(0, 220px) minmax(0, 1fr); gap: 14px; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+.layer .n { font-family: var(--mono); font-weight: 700; color: var(--accent); }
+.layer b { font-family: var(--display); }
+.layer span { font-size: 14px; color: var(--sub); line-height: 1.6; }
+.layer:nth-child(1) { margin-right: 0; }
+.layer:nth-child(2) { margin-right: 3%; }
+.layer:nth-child(3) { margin-right: 6%; }
+.layer:nth-child(4) { margin-right: 9%; }
+.layer:nth-child(5) { margin-right: 12%; }
+.layer:nth-child(6) { margin-right: 15%; }
+.layer:nth-child(7) { margin-right: 18%; }
+
+/* 進め方 */
+.phases { display: flex; flex-direction: column; gap: 10px; }
+.phase { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: start; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.phase .name { font-family: var(--display); font-weight: 900; font-size: 17px; }
+.phase .name small { display: block; font-family: var(--mono); font-weight: 500; font-size: 12px; color: var(--muted); }
+.phase .bar { height: 8px; border-radius: 4px; background: var(--accent); margin-bottom: 8px; }
+.phase .bar.wait { background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 10px); border: 1px solid var(--line); }
+.phase p { font-size: 15px; color: var(--sub); line-height: 1.7; }
+.phase .back { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+/* 表 */
+.tablewrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 640px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; font-weight: 700; background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.sev { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 99px; white-space: nowrap; }
+.sev.mid { background: var(--warn-soft); color: var(--warn); }
+.sev.low { background: var(--ok-soft); color: var(--ok); }
+
+/* 審査の推移 */
+.chart { overflow-x: auto; }
+.chart svg { display: block; min-width: 640px; width: 100%; height: auto; }
+.chart text { fill: var(--sub); font-family: var(--body); font-size: 12px; }
+.chart .val { fill: var(--ink); font-family: var(--mono); font-size: 11px; font-weight: 700; }
+.chart .axis { stroke: var(--line); }
+
+/* 着手条件 */
+.conds { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.conds div { background: var(--paper); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.conds b { font-family: var(--display); }
+.conds span { font-size: 14px; color: var(--sub); line-height: 1.65; }
+.open { background: var(--warn-soft); color: var(--ink); border-radius: 12px; padding: 16px 18px; font-size: 15px; }
+.open b { color: var(--warn); }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+
+@media (max-width: 720px) {
+  body { font-size: 16px; }
+  .cover { grid-template-columns: 1fr; }
+  .layer { grid-template-columns: 32px minmax(0, 1fr); margin-right: 0 !important; }
+  .layer span { grid-column: 2; }
+  .phase { grid-template-columns: 1fr; }
+  .twofig { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="cover">
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <p class="eyebrow">Doya AI / Platform Renovation Plan</p>
+      <h1>ドヤAI 基盤改修計画</h1>
+      <p class="thesis">18 のAIを、<em>1つの会社</em>・<em>1つの権限</em>・<em>1つの課金</em>にまとめ、その上に<em>経営エージェント</em>を載せる。</p>
+    </div>
+    <div class="meta">
+      <span>設計書 <b>docs/architecture/management-agent/</b></span>
+      <span>改訂 <b>10.1</b>（2026-10-17）</span>
+      <span>最終判定 <b>重大 0・中 0</b> / 条件付きで着手可</span>
+      <span>この画面は「これから直すこと」の説明用です。本番はまだ何も変えていません。</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Before / After</p>
+      <h2>今の作りと、直したあとの作り</h2>
+      <p>ログインはすでに全サービス共通です。分かれているのはログインした後の「会社」「権限」「課金」「会社情報」です。ここを1つにそろえます。</p>
+    </div>
+    <div class="shift">
+      <article>
+        <span class="what">会社（組織）のしくみ</span>
+        <div class="pair">
+          <div class="before"><span class="num">9<small>系統</small></span><span class="label">今</span></div>
+          <span class="arrow">→</span>
+          <div class="after"><span class="num">1<small>つ</small></span><span class="label">これから</span></div>
+        </div>
+        <p class="note">HR・勤怠・営業管理など9サービスが別々に会社を持つ。同じ会社でも作り直しになる。</p>
+      </article>
+      <article>
+        <span class="what">会社情報の入力</span>
+        <div class="pair">
+          <div class="before"><span class="num">7<small>か所</small></span><span class="label">今</span></div>
+          <span class="arrow">→</span>
+          <div class="after"><span class="num">1<small>回</small></span><span class="label">これから</span></div>
+        </div>
+        <p class="note">自社の事業・強み・ロゴを、サービスごとに入れ直している。</p>
+      </article>
+      <article>
+        <span class="what">課金のしくみ</span>
+        <div class="pair">
+          <div class="before"><span class="num">3<small>層</small></span><span class="label">今</span></div>
+          <span class="arrow">→</span>
+          <div class="after"><span class="num">1<small>本</small></span><span class="label">これから</span></div>
+        </div>
+        <p class="note">個人単位・サービス単位・HRだけ会社単位が混在。会社単位の席課金にそろえる。</p>
+      </article>
+      <article>
+        <span class="what">権限チェックの実装</span>
+        <div class="pair">
+          <div class="before"><span class="num">18<small>本</small></span><span class="label">今</span></div>
+          <span class="arrow">→</span>
+          <div class="after"><span class="num">1<small>つ</small></span><span class="label">これから</span></div>
+        </div>
+        <p class="note">サービスごとにほぼ同じコードをコピー。入口で「既定は拒否」にする。</p>
+      </article>
+      <article>
+        <span class="what">AIが使える道具</span>
+        <div class="pair">
+          <div class="before"><span class="num">0<small>個</small></span><span class="label">今</span></div>
+          <span class="arrow">→</span>
+          <div class="after"><span class="num">37<small>個</small></span><span class="label">これから</span></div>
+        </div>
+        <p class="note">各サービスの機能を、エージェントが呼べる道具（ツール）として切り出す。</p>
+      </article>
+    </div>
+
+    <div class="figure">
+      <div class="cap"><b>全体のつながり（これから）</b><span>ブラウザ → 入口の検問 → 共通の権限 → 各サービス／エージェント → AIの共通窓口</span></div>
+      <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  B["ブラウザ<br/>Googleログインのみ"] --> M["入口の検問<br/>middleware<br/>既定は拒否・5分類"]
+  M --> A["共通の権限チェック<br/>requireCompanyAccess"]
+  A --> S["既存18サービス<br/>営業管理・見積もり・HR・勤怠 など"]
+  A --> G["経営エージェント<br/>計画 → 実行 → 承認 → まとめ"]
+  G -->|"道具として呼ぶ"| S
+  G --> L["AIの共通窓口<br/>LLMゲートウェイ<br/>費用の上限・記録"]
+  S --> D[("1つの会社データ<br/>Company / 課金台帳 / 監査ログ")]
+  G --> D
+  L --> X["OpenAI / Gemini / Claude"]
+</pre>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Goals</p>
+      <h2>7つのゴール</h2>
+      <p>どれも「完了した」と測れる形で定義しています。</p>
+    </div>
+    <div class="goals">
+      <div><span class="g">G1</span><p><b>会社を1つに</b><span>9系統の組織を <code>Company</code> と <code>CompanyMember</code> にまとめ、どのサービスも会社IDでデータを引く</span></p></div>
+      <div><span class="g">G2</span><p><b>権限を1つに</b><span>18本の権限チェックを共通の1つに置き換え、入口で全APIと画面を既定拒否で守る</span></p></div>
+      <div><span class="g">G3</span><p><b>課金を1つに</b><span>Stripeの顧客＝会社。席（メンバー）単位の契約。使用量は1本の台帳で上限を管理</span></p></div>
+      <div><span class="g">G4</span><p><b>会社情報を1つに</b><span>7系統の会社情報を、共通の会社プロフィール・ブランド素材・ナレッジにまとめる</span></p></div>
+      <div><span class="g">G5</span><p><b>経営エージェント</b><span>ホームで一言頼むと各サービスを横断して動く。外に出る操作は必ず人の承認を通す</span></p></div>
+      <div><span class="g">G6</span><p><b>セキュリティ</b><span>会社ごとのデータ分離・既定拒否・承認必須・改ざんしにくい記録を、自動テストで守り続ける</span></p></div>
+      <div><span class="g">G7</span><p><b>1人1アカウント</b><span>Googleログインのみ、席課金、同時ログインの上限、共有の兆候の検知で使い回しを防ぐ</span></p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">ER Diagram 1</p>
+      <h2>ER図① 会社・メンバー・課金の土台</h2>
+      <p>中心に <code>Company</code>（会社）を置きます。人・権限・会社情報・契約・使用量の台帳が、すべて会社にぶら下がります。既存の9系統の組織は <code>CompanyServiceLink</code> で会社につなぎ、段階的に読み替えます。</p>
+    </div>
+    <div class="twofig" style="grid-template-columns:1fr">
+    <div class="figure">
+      <div class="cap"><b>①-1 会社と人</b><span>1人が複数の会社に所属できる。会社ごとの役割とサービスごとの役割の二段</span></div>
+      <div class="diagram">
+<pre class="mermaid">
+erDiagram
+  User ||--o{ CompanyMember : "所属する"
+  Company ||--o{ CompanyMember : "メンバー（席）"
+  CompanyMember ||--o{ CompanyMemberServiceRole : "サービス内の役割"
+  Company ||--o{ CompanyInvitation : "招待"
+  User ||--o{ SessionDevice : "端末"
+  User ||--o{ WebAuthnCredential : "パスキー"
+  Company {
+    string id PK
+    string slug UK
+    boolean strictSharing "共有に厳しいモード"
+    datetime deletedAt "論理削除のみ"
+  }
+  CompanyMember {
+    string companyId FK
+    string userId FK
+    string role "owner/admin/member/viewer"
+    string status "active/removed"
+  }
+</pre>
+      </div>
+    </div>
+    <div class="figure">
+      <div class="cap"><b>①-2 会社情報（1回入力すれば全サービスで使う）</b><span>既存の9組織は CompanyServiceLink で会社につなぐ</span></div>
+      <div class="diagram">
+<pre class="mermaid">
+erDiagram
+  Company ||--o| CompanyProfile : "会社情報"
+  Company ||--o{ BrandAsset : "ロゴ・色"
+  Company ||--o{ KnowledgeSource : "ナレッジ"
+  Company ||--o{ CompanyServiceAccess : "使えるサービス"
+  Company ||--o{ CompanyServiceLink : "既存組織との対応"
+</pre>
+      </div>
+    </div>
+    <div class="figure">
+      <div class="cap"><b>①-3 契約と使用量</b><span>Stripeの顧客＝会社。使用量は1本の台帳で二重計上を防ぐ</span></div>
+      <div class="diagram">
+<pre class="mermaid">
+erDiagram
+  Company ||--o| BillingAccount : "Stripe顧客"
+  BillingAccount ||--o{ CompanySubscription : "契約（席数）"
+  Company ||--o{ UsageLedger : "使用量の台帳"
+  UsageLedger {
+    string kind "grant/reserve/consume/release/refund/adjust"
+    int amount "正=付与 負=消費"
+    string idempotencyKey UK "二重計上を防ぐ"
+  }
+</pre>
+      </div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>課金・台帳・監査・会社所属は削除を止める設定（論理削除のみ）</span><span><i style="background:var(--now)"></i>既存の9組織は消さずにつなぐ（最後の段階で旧列を削除）</span></div>
+    </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">ER Diagram 2</p>
+      <h2>ER図② 経営エージェントと記録</h2>
+      <p>1回の依頼が <code>AgentRun</code> になり、計画 → 作業ステップ → 道具の呼び出しの順に記録されます。外に出る操作は <code>ApprovalRequest</code>（承認）を必ず通ります。AIの呼び出しは <code>LlmCallLog</code> に費用ごと残り、全操作は <code>AuditLog</code> に追記されます。</p>
+    </div>
+    <div class="figure">
+      <div class="cap"><b>エージェント実行の記録の流れ</b><span>どの依頼で、どのAIに、いくら使い、誰が承認したかを全部たどれる</span></div>
+      <div class="diagram">
+<pre class="mermaid">
+erDiagram
+  Company ||--o{ AgentConversation : "会話"
+  AgentConversation ||--o{ AgentRun : "依頼1件"
+  AgentRun ||--o| AgentPlan : "計画"
+  AgentRun ||--o{ AgentStep : "作業ステップ"
+  AgentStep ||--o{ ToolCall : "道具の呼び出し"
+  AgentStep ||--o{ ApprovalRequest : "人の承認"
+  AgentRun ||--o{ AgentArtifact : "できた成果物"
+  ToolCall ||--o{ LlmCallLog : "AIの呼び出しと費用"
+  AgentRun ||--o{ UsageLedger : "クレジットの予約と消費"
+  AgentRun {
+    string status "queued/planning/running/waiting_approval/paused/done/failed/canceled"
+    datetime nextRunAt "止まっても拾い直す"
+    int maxApprovals "承認は5件まで"
+  }
+  AgentStep {
+    string toolKey "sfa.listDeals など"
+    string reversibility "取り消せるか"
+    string costClass "費用の大きさ"
+  }
+  ToolCall {
+    string idempotencyKey UK "二重実行を防ぐ"
+    string executionToken "途中で入れ替わったら書かない"
+  }
+  ApprovalRequest {
+    string approvalHash "見た内容と実行内容が同じか"
+    string status "pending/approved/rejected/expired"
+  }
+</pre>
+      </div>
+    </div>
+    <details>
+      <summary>設計書の原本のER図（4枚・全項目）を開く</summary>
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <p style="font-size:14px;color:var(--sub)">設計書 README.md §4 の図をそのまま表示しています。属性は schema-draft.prisma が正本で、図に載せた属性は全て一致することを確認済みです。図は実寸で表示しているので、横にスクロールして見てください。</p>
+        <div class="diagram"><pre class="mermaid" id="er-full-1">
+%%{init: {"er": {"useMaxWidth": false}}}%%
+erDiagram
+  User ||--o{ CompanyMember : &quot;所属&quot;
+  User ||--o{ Session : &quot;&quot;
+  User ||--o{ SessionDevice : &quot;&quot;
+  Company ||--o{ CompanyMember : &quot;&quot;
+  Company ||--o{ CompanyInvitation : &quot;&quot;
+  Company ||--o{ CompanyServiceAccess : &quot;有効化・席数&quot;
+  Company ||--o| CompanyProfile : &quot;会社情報&quot;
+  Company ||--o{ BrandAsset : &quot;ロゴ・色&quot;
+  Company ||--o{ KnowledgeSource : &quot;ナレッジ&quot;
+  KnowledgeSource ||--o{ KnowledgeChunk : &quot;&quot;
+  CompanyMember ||--o{ CompanyMemberServiceRole : &quot;サービス内ロール&quot;
+  Company ||--o| BillingAccount : &quot;Stripe顧客&quot;
+  BillingAccount ||--o{ CompanySubscription : &quot;&quot;
+  Company ||--o{ UsageLedger : &quot;使用量台帳&quot;
+  Company ||--o{ UsageBalance : &quot;残高キャッシュ&quot;
+  Company ||--o{ CompanyServiceLink : &quot;旧組織との対応（1:N, isPrimary）&quot;
+  Company ||--o{ FeatureFlag : &quot;会社単位フラグ（scope=&#x27;*&#x27; は全体）&quot;
+
+  Company {
+    string id PK
+    string slug UK
+    string name
+    string status &quot;active|suspended（削除は deletedAt）&quot;
+    string allowedGoogleDomains &quot;配列&quot;
+    int maxSessionsPerUser &quot;既定 3&quot;
+    boolean requireStepUp
+    boolean strictSharing &quot;既定 false&quot;
+    datetime deletedAt &quot;論理削除のみ&quot;
+  }
+  CompanyMember {
+    string id PK
+    string companyId FK &quot;Restrict&quot;
+    string userId FK &quot;Restrict&quot;
+    string role &quot;owner|admin|member|viewer|billing|support&quot;
+    string status &quot;active|suspended|removed&quot;
+    boolean isSeat
+    datetime removedAt
+  }
+  CompanyMemberServiceRole {
+    string memberId FK
+    string serviceId
+    string role &quot;hr_admin 等&quot;
+    string linkedRecordId
+  }
+  CompanyInvitation {
+    string tokenHash UK
+    string email
+    string role
+    json serviceRoles
+    string status
+    string activeKey UK &quot;pending 中のみ companyId:email&quot;
+    datetime expiresAt
+  }
+  CompanyServiceAccess {
+    string companyId FK
+    string serviceId
+    string status &quot;enabled|disabled|trial|suspended&quot;
+    int seatLimit
+  }
+  CompanyProfile {
+    string companyId FK
+    string legalName
+    string website
+    string description
+    string valueProp
+    json fieldSources
+  }
+  BillingAccount {
+    string companyId FK &quot;Restrict&quot;
+    string stripeCustomerId &quot;index のみ（unique にしない）&quot;
+    string migratedFrom
+  }
+  CompanySubscription {
+    string stripeSubscriptionId UK
+    string planId
+    string status
+    int seats &quot;Stripe quantity と同期&quot;
+    datetime currentPeriodEnd &quot;nullable（basil 対応）&quot;
+  }
+  UsageLedger {
+    string companyId FK &quot;Restrict&quot;
+    string userId FK &quot;SetNull&quot;
+    string serviceId
+    string meter &quot;manifest.usage.meters&quot;
+    int amount &quot;正=付与 負=消費&quot;
+    string kind &quot;grant|consume|reserve|release|refund|adjust&quot;
+    string idempotencyKey UK &quot;reservationId:reserve|consume|release&quot;
+    string period &quot;YYYY-MM JST&quot;
+  }
+</pre></div>
+        <div class="diagram"><pre class="mermaid" id="er-full-2">
+%%{init: {"er": {"useMaxWidth": false}}}%%
+erDiagram
+  Company ||--o{ AgentConversation : &quot;&quot;
+  AgentConversation ||--o{ AgentRun : &quot;依頼1件&quot;
+  AgentRun ||--o| AgentPlan : &quot;&quot;
+  AgentRun ||--o{ AgentStep : &quot;手順&quot;
+  AgentStep ||--o{ ToolCall : &quot;試行ごと&quot;
+  AgentStep ||--o{ ApprovalRequest : &quot;pre / unknown_outcome（stepId+attempt）&quot;
+  AgentRun ||--o{ AgentArtifact : &quot;成果物リンク&quot;
+  AgentRun ||--o{ UsageLedger : &quot;消費&quot;
+  AgentRun ||--o{ LlmCallLog : &quot;&quot;
+  AgentRun ||--o{ AuditLog : &quot;actor=agent:&lt;runId&gt;&quot;
+  Company ||--o{ AuditLog : &quot;&quot;
+  Company ||--o{ Notification : &quot;&quot;
+  Company ||--o{ SecurityEvent : &quot;&quot;
+  User ||--o{ ReauthChallenge : &quot;step-up&quot;
+  User ||--o{ WebAuthnCredential : &quot;パスキー（step-up 本線）&quot;
+  User ||--o{ AgentRun : &quot;requestedById FK&quot;
+  User ||--o{ ApprovalRequest : &quot;requestedToId FK&quot;
+  ApprovalRequest ||--o| ReauthChallenge : &quot;irreversible/high は再認証&quot;
+  Company ||--o| AuditChainHead : &quot;日次バッチで更新&quot;
+
+  AgentRun {
+    string id PK
+    string companyId FK &quot;Restrict&quot;
+    string requestedById FK
+    json actorSnapshot &quot;依頼者の権限&quot;
+    string status &quot;queued|planning|running|waiting_approval|paused|done|failed|canceled&quot;
+    string failureCode
+    string executionToken
+    datetime executionExpiresAt
+    int advanceAttempts
+    datetime nextRunAt &quot;作成時 now()。解放・承認・復帰で更新&quot;
+    int runningSeconds &quot;running の累積&quot;
+    string pausedReason &quot;kill_switch|company_suspended|llm_outage&quot;
+    int creditBudget
+    int creditUsed
+    int maxToolCalls
+    int toolCallCount
+    int maxLlmCalls
+    int llmCallCount
+    int maxApprovals &quot;既定 5&quot;
+    int wallClockLimitSec
+  }
+  AgentStep {
+    string companyId &quot;非正規化&quot;
+    int planVersion &quot;runId+planVersion+ord で unique&quot;
+    int ord
+    string toolKey &quot;sfa.listDeals&quot;
+    json input &quot;zod検証済み&quot;
+    string dependsOn &quot;配列&quot;
+    string reversibility &quot;read|reversible|irreversible&quot;
+    string costClass &quot;none|low|high&quot;
+    int estimatedPaidCalls
+    boolean requiresApproval &quot;導出&quot;
+    string downstreamIdempotency &quot;native|local-record|none&quot;
+    string status
+    int attempts
+    int maxAttempts &quot;read 2 / 他 1&quot;
+  }
+  ToolCall {
+    string idempotencyKey &quot;runId:stepId（attempt を含まない）&quot;
+    int attempt &quot;stepId+attempt で unique&quot;
+    json input
+    json output &quot;マスキング済み&quot;
+    boolean containsUntrustedText
+    string status
+    int durationMs
+    int creditCost
+    int paidCalls &quot;LlmCallLog と突合&quot;
+  }
+  ApprovalRequest {
+    string stepId FK &quot;stepId+attempt で unique（1:N）&quot;
+    int attempt
+    string kind &quot;pre|unknown_outcome&quot;
+    string approvalHash
+    string requestedToId FK
+    json frozenInput &quot;承認後は変更不可&quot;
+    json estimate &quot;回数・単価・合計&quot;
+    string status &quot;pending|approved|rejected|expired&quot;
+    boolean requiresStepUp
+    datetime expiresAt
+  }
+  WebAuthnCredential {
+    string credentialId UK
+    string publicKey
+    bigint counter
+    boolean backedUp
+    datetime revokedAt
+  }
+  AuditChainHead {
+    string companyId PK
+    string hash
+    datetime verifiedAt
+  }
+  AgentArtifact {
+    string serviceId
+    string kind &quot;quote.document&quot;
+    string recordId
+    string url
+  }
+  AuditLog {
+    string companyId &quot;FK なし（会社 purge 後も残す）&quot;
+    string actor &quot;user:|agent:|cron:|admin:|stripe:|guest:&quot;
+    string onBehalfOf
+    string action
+    string targetType
+    string targetId
+    json diff &quot;マスキング済み&quot;
+    boolean sensitive
+    string prevHash
+    string hash
+  }
+  Notification {
+    string userId
+    string type
+    string title
+    datetime readAt
+  }
+  SecurityEvent {
+    string type
+    string severity
+    json evidence
+    string status
+    string autoAction
+  }
+  LlmCallLog {
+    string provider
+    string model
+    int inputTokens
+    int outputTokens
+    int costMinor
+  }
+</pre></div>
+        <div class="diagram"><pre class="mermaid" id="er-full-3">
+%%{init: {"er": {"useMaxWidth": false}}}%%
+erDiagram
+  ServiceManifest ||--o{ CompanyServiceAccess : &quot;serviceId（verify-service-manifest-ids で一致検査）&quot;
+  ServiceManifest ||--o{ CompanyMemberServiceRole : &quot;serviceId + roles[]&quot;
+  ServiceManifest ||--o{ AgentStep : &quot;agentTools[].key → toolKey&quot;
+  ServiceManifest ||--o{ UsageLedger : &quot;usage.meters[] → meter&quot;
+  ServiceManifest ||--o{ AuditLog : &quot;audit.events[] → action&quot;
+  ServiceManifest ||--o{ Notification : &quot;notifications.types[] → type&quot;
+  ServiceManifest ||--o{ FeatureFlag : &quot;featureFlags[] → key&quot;
+  ServiceManifest ||--o{ WebAuthnCredential : &quot;（関係なし。step-up は core）&quot;
+  ServiceManifest {
+    string id PK &quot;コード側。DB には無い&quot;
+    string stage &quot;collect|sell|hire|operate&quot;
+    json roles
+    json dataModels &quot;tenantColumn 宣言&quot;
+    json routes &quot;public の理由付き&quot;
+    json externalApis &quot;costClass&quot;
+    json agentTools &quot;2軸リスク・冪等&quot;
+    json usage
+    json audit
+    json retention &quot;個人情報列と保持日数&quot;
+  }
+</pre></div>
+        <div class="diagram"><pre class="mermaid" id="er-full-4">
+%%{init: {"er": {"useMaxWidth": false}}}%%
+erDiagram
+  Company ||--o{ HrOrganization : &quot;companyId（1:N, Link.isPrimary）&quot;
+  Company ||--o{ KintaiOrganization : &quot;companyId（1:N, Link.isPrimary）&quot;
+  Company ||--o{ PromaneWorkspace : &quot;companyId（1:N, Link.isPrimary）&quot;
+  Company ||--o{ SfaOrganization : &quot;companyId（1:N, Link.isPrimary）&quot;
+  Company ||--o{ ShodanOrganization : &quot;companyId（1:N, Link.isPrimary）&quot;
+  Company ||--o{ AioOrganization : &quot;companyId（1:N, Link.isPrimary）&quot;
+  Company ||--o{ MensetsuOrganization : &quot;companyId（1:N, Link.isPrimary）&quot;
+  Company ||--o{ QuoteOrganization : &quot;companyId（1:N, Link.isPrimary）&quot;
+  Company ||--o{ AishodanOrganization : &quot;companyId（1:N, Link.isPrimary）&quot;
+  CompanyMember ||--o| HrOrganizationMember : &quot;companyMemberId&quot;
+  CompanyMember ||--o| KintaiMember : &quot;companyMemberId&quot;
+  CompanyMember ||--o| PromaneMember : &quot;companyMemberId&quot;
+  CompanyMember ||--o| SfaMember : &quot;companyMemberId&quot;
+  CompanyMember ||--o| ShodanMember : &quot;companyMemberId&quot;
+  CompanyMember ||--o| AioMember : &quot;companyMemberId&quot;
+  CompanyMember ||--o| MensetsuMember : &quot;companyMemberId&quot;
+  CompanyMember ||--o| QuoteMember : &quot;companyMemberId&quot;
+  CompanyMember ||--o| AishodanMember : &quot;companyMemberId&quot;
+  CompanyProfile ||--o{ ShodanCompanyProfile : &quot;companyProfileId&quot;
+  CompanyProfile ||--o{ AioBrandProfile : &quot;companyProfileId&quot;
+  CompanyProfile ||--o{ MensetsuCompanyProfile : &quot;companyProfileId&quot;
+  CompanyProfile ||--o{ CunningCompanyProfile : &quot;companyProfileId&quot;
+  CompanyProfile ||--o{ QuoteIssuer : &quot;companyProfileId&quot;
+  CompanyProfile ||--o{ AdImageBrand : &quot;companyProfileId&quot;
+  KnowledgeSource ||--o{ AishodanSource : &quot;originRecordId&quot;
+  BillingAccount ||--o| HrOrganization : &quot;stripeCustomerId を移す&quot;
+  BillingAccount ||--o| User : &quot;stripeCustomerId を移す&quot;
+  CompanySubscription ||--o{ UserServiceSubscription : &quot;plan を読み替え&quot;
+  AuditLog ||--o{ HrAuditLog : &quot;将来統合&quot;
+</pre></div>
+      </div>
+    </details>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Agent</p>
+      <h2>エージェントは、こう動く</h2>
+      <p>ホームで「来月の売上を伸ばす作戦を立てて」と頼むと、エージェントが計画を立て、営業管理・AI検索の分析・リスト作成・バナー・記事・見積もりを段階ごとに同時に動かします。メール送信のように外に出る操作の前では、必ず止まって承認を待ちます。</p>
+    </div>
+    <div class="twofig">
+      <div class="figure">
+        <div class="cap"><b>依頼から完了まで</b></div>
+        <div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+  actor U as あなた
+  participant H as ホーム
+  participant E as エージェント
+  participant T as 各サービスの道具
+  participant G as AIの共通窓口
+  U->>H: 一言で依頼する
+  H->>E: 依頼を登録（予算を予約）
+  E->>G: 意図を読み、計画を立てる
+  E->>T: 段階1の作業を同時に実行
+  T-->>E: 結果（外部の文章は命令として扱わない）
+  E->>T: 段階2・3を実行
+  E-->>U: 外に出る操作は承認を依頼
+  U->>E: 承認する／やめる
+  E->>T: 承認された操作だけ実行
+  E-->>U: まとめと次にやること
+</pre>
+        </div>
+      </div>
+      <div class="figure">
+        <div class="cap"><b>状態の移り変わり</b><span>どの状態からも必ず終わりにたどり着く</span></div>
+        <div class="diagram">
+<pre class="mermaid">
+stateDiagram-v2
+  state "受付" as queued
+  state "計画中" as planning
+  state "実行中" as running
+  state "承認待ち" as waiting
+  state "一時停止" as paused
+  state "完了" as done
+  state "失敗" as failed
+  state "取り消し" as canceled
+  [*] --> queued
+  queued --> planning
+  planning --> running
+  planning --> planning: 途中で止まったら拾い直す
+  running --> running: 区切りごとに続きを再開
+  running --> waiting: 外に出る操作に到達
+  waiting --> running: 承認／やめる
+  running --> paused: 緊急停止・AIの障害
+  paused --> running: 解除
+  running --> done
+  running --> failed: 予算・時間の上限
+  queued --> canceled
+  running --> canceled: あなたが止める
+  waiting --> canceled
+  done --> [*]
+  failed --> [*]
+  canceled --> [*]
+</pre>
+        </div>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>作業の種類</th><th>例</th><th>承認</th><th>理由</th></tr></thead>
+        <tbody>
+          <tr><td>読むだけ</td><td><code>sfa.listDeals</code> 商談一覧、<code>kintai.monthlyOvertime</code> 残業の集計</td><td>不要</td><td>何も変えない</td></tr>
+          <tr><td>下書き（取り消せる）</td><td><code>quote.draftQuote</code> 見積書の下書き、<code>seo.createOutline</code> 記事の構成</td><td>会社の設定に従う</td><td>あとで消せる</td></tr>
+          <tr><td>外に出る・取り消せない</td><td>メール送信、求人の公開、勤怠申請の承認</td><td><b>必ず必要</b></td><td>相手に届いたら戻せない</td></tr>
+          <tr><td>費用が大きい</td><td>画像生成、多数の会社の調査</td><td><b>必ず必要</b></td><td>無断課金を防ぐ（2026年8月の事故の再発防止）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Security</p>
+      <h2>守りは7層、1枚破られても次で止める</h2>
+      <p>他社のデータを見られない・書き換えられないことを最優先にしています。アプリの中の検査は「知らない操作は通さない」方式にし、さらに機微なデータ（HR・勤怠・面接）はデータベース側でも行単位で制限します。</p>
+    </div>
+    <div class="layers">
+      <div class="layer"><span class="n">1</span><b>Googleログインのみ</b><span>パスワードは作らない。メールの確認済みを必須、会社のドメインで制限も可能</span></div>
+      <div class="layer"><span class="n">2</span><b>端末とセッションの結びつけ</b><span>ログイン情報だけ盗んでも別の端末では使えない。同時ログインは上限つき</span></div>
+      <div class="layer"><span class="n">3</span><b>入口の検問（既定は拒否）</b><span>全ルートを5分類で機械的に洗い出し、分類のない入口は通さない</span></div>
+      <div class="layer"><span class="n">4</span><b>共通の権限チェック</b><span>会社の役割とサービス内の役割の二段で判定。依頼者の権限を超えて動かない</span></div>
+      <div class="layer"><span class="n">5</span><b>会社ごとのデータ分離</b><span>Prismaの定義をたどり、許可リストにない書き込みは即拒否。192モデル・396の関連を走査して確認済み</span></div>
+      <div class="layer"><span class="n">6</span><b>データベースの行単位の制限</b><span>HR・勤怠・面接の表に限り、二重の守りとして採用（最後の段階）</span></div>
+      <div class="layer"><span class="n">7</span><b>改ざんしにくい記録</b><span>誰が・いつ・どの会社で・何をしたかを追記専用で3年保管</span></div>
+    </div>
+    <div class="figure">
+      <div class="cap"><b>アカウントの使い回しへの3段の対策</b><span>技術だけで完全には防げないことを明記したうえで、抑止・検知・契約を組み合わせる</span></div>
+      <div class="conds">
+        <div><b>1. 抑止する</b><span>端末とセッションを結びつけ、ログイン情報だけ渡しても別の端末では使えないようにする。同時ログインは3台まで。会社の設定で、ログインにパスキー（端末に結びついた鍵）を必須にできる</span></div>
+        <div><b>2. 兆候を見つける</b><span>同じセッションが短い時間に別の端末や回線から交互に使われる、離れた地域から同時に使われる、といった動きを検知する</span></div>
+        <div><b>3. 契約と運用で決める</b><span>契約上「1席＝1つのGoogleアカウント」とする。検知したら管理者に通知して判断してもらい、誤検知で利用者を自動では止めない</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Fix first</p>
+      <h2>設計とは別に、先に強化するところ（16件）</h2>
+      <p>改修を始める前に、今の本番コードで強化すべき点を、小さなPRで先に直します。どれも単独で出せて、すぐ戻せます。具体的な中身は修正が終わるまで社内の設計書だけに記載しています。</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>分野</th><th>件数</th><th>どう強化するか</th></tr></thead>
+        <tbody>
+          <tr><td>管理者まわりの認証</td><td class="num">4</td><td>秘密鍵や管理者セッションの確認を厳しくし、緊急用ログインの扱いを見直す</td></tr>
+          <tr><td>外部APIの鍵と課金</td><td class="num">2</td><td>APIキーの送り方を見直し、画像生成は品質とサイズの指定を必須にする（無断課金の再発防止）</td></tr>
+          <tr><td>ログインと入力のチェック</td><td class="num">5</td><td>Googleアカウントの確認状態、アップロード、ゲスト利用の入力などの検査を追加</td></tr>
+          <tr><td>通信と記録</td><td class="num">5</td><td>外部ページの読み込み先の制限、アクセス元の記録方法、使われていない入口の整理など</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Roadmap</p>
+      <h2>進め方：足す → 両方に書く → 読み替える → 古いものを消す</h2>
+      <p>いきなり作り替えず、どの段階でもスイッチ1つで前に戻せる順番にしています。データベースは「足すだけ」から始め、消すのは最後です。設計書の見積りは、実装2名とリード1名で約6か月です。</p>
+    </div>
+    <div class="phases">
+      <div class="phase"><div class="name">先に直す<small>1週間</small></div><div><div class="bar" style="width:6%"></div><p>今の弱点16件を小さなPRで修正。</p><p class="back">戻し方：各PRを個別に取り消し</p></div></div>
+      <div class="phase"><div class="name">段階0 準備<small>3週間</small></div><div><div class="bar" style="width:18%"></div><p>共通部品の骨組み、18サービス全部の設定ファイル（マニフェスト）、本番データの件数をのぞくだけの確認、実機でしか確かめられない4点の確認。</p><p class="back">戻し方：DBに触れないので影響なし</p></div></div>
+      <div class="phase"><div class="name">段階1 足す<small>2週間＋観察1週間</small></div><div><div class="bar" style="width:18%"></div><p>新しい表と列を追加し、既存の9組織を会社につなぐ。ログイン情報の保存方式を強化（全員が一度だけ再ログイン）。</p><p class="back">戻し方：スイッチOFF。追加した表は使われないだけ</p></div></div>
+      <div class="phase"><div class="name">段階2 両方に書く<small>6週間</small></div><div><div class="bar" style="width:36%"></div><p>古い仕組みと新しい仕組みの両方に書き込み、差が0件の状態を7日続ける。入口の検問は「記録だけ」で2週間試す。</p><p class="back">戻し方：スイッチOFF。再開前に差分をそろえる</p></div></div>
+      <div class="phase"><div class="name">段階3 読み替える<small>8週間</small></div><div><div class="bar" style="width:48%"></div><p>新しい仕組みから読むように切り替え、検問を本番で有効化。課金を会社単位に。エージェントは運営会社だけで試し、読むだけの道具から順に解放。</p><p class="back">戻し方：スイッチOFF（会社単位で契約済みの会社はそのまま）</p></div></div>
+      <div class="phase"><div class="name">待機<small>60日</small></div><div><div class="bar wait" style="width:52%"></div><p>新しい仕組みだけで問題なく回ることを確かめる期間。</p></div></div>
+      <div class="phase"><div class="name">段階4 古いものを消す<small>2週間</small></div><div><div class="bar" style="width:12%"></div><p>バックアップと別環境への復元練習をしてから、古い列と表を削除。機微データの表にデータベース側の行単位の制限を追加。</p><p class="back">戻し方：復元練習済みのバックアップから戻す</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">New service</p>
+      <h2>これからサービスを足すときは、設定ファイル1つから</h2>
+      <p>新しいサービスは「マニフェスト」という設定ファイルを1つ書く決まりにします。権限・課金・記録・エージェントへの登録は、そこから自動で作られます。決まりを破る作り方は、ビルド時の自動検査（27項目）で止まります。</p>
+    </div>
+    <div class="figure">
+      <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  N["npm run new-service 名前"] --> MF["マニフェスト<br/>扱うデータ・権限・公開ページ<br/>個人情報と保存期間・AIの道具・費用"]
+  MF --> R1["入口の検問の分類"]
+  MF --> R2["権限チェックの呼び出し"]
+  MF --> R3["エージェントの道具の登録"]
+  MF --> R4["使用量の台帳の種類"]
+  MF --> R5["監査ログの記録項目"]
+  MF --> CI{"ビルド時の自動検査"}
+  CI -->|"会社IDのないデータ・未承認の有料API・公開理由のないページ"| STOP["ビルド失敗"]
+  CI -->|"合格"| OK["リリースできる"]
+</pre>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Review</p>
+      <h2>設計の確かめ方：問題が0になるまで繰り返した</h2>
+      <p>設計担当とは別の審査担当が、毎回実際のコードと突き合わせて指摘し、直すたびに確認し直しました。件数は保存した審査結果から数えたものです。</p>
+    </div>
+    <div class="figure">
+      <div class="cap"><b>回ごとの指摘件数</b><span class="legend"><span><i style="background:var(--crit)"></i>重大</span><span><i style="background:var(--warn)"></i>中</span><span><i style="background:var(--muted)"></i>軽微</span></span></div>
+      <div class="chart" id="chart"></div>
+    </div>
+    <div class="shift">
+      <article><span class="what">設計書</span><p class="note"><b style="font-family:var(--display);font-size:22px;color:var(--ink)">約2,300行</b><br>図7枚（ER図4枚・状態遷移・流れ・全体図）</p></article>
+      <article><span class="what">チェックリスト</span><p class="note"><b style="font-family:var(--display);font-size:22px;color:var(--ink)">350項目</b><br>設計変更時・サービス追加時・本番前に使う</p></article>
+      <article><span class="what">データベース設計</span><p class="note"><b style="font-family:var(--display);font-size:22px;color:var(--ink)">新規34モデル</b><br>既存と結合して検証が通ることを毎回確認</p></article>
+      <article><span class="what">動く見本</span><p class="note"><b style="font-family:var(--display);font-size:22px;color:var(--ink)">2本</b><br>データ分離の検査と、文書の食い違い検査</p></article>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Start conditions</p>
+      <h2>実装に入るための4つの条件</h2>
+      <p>最終確認の判定は「条件付きで着手可」です。</p>
+    </div>
+    <div class="conds">
+      <div><b>1. 先に直す16件を出す</b><span>改修の前に、単独のPRで今の弱点をふさぐ</span></div>
+      <div><b>2. 実機で4点を確かめる</b><span>一括処理の中で検査が働くか、裏の処理の時間上限、DB側の制限の保持、接続の固定</span></div>
+      <div><b>3. 自動テストを同梱する</b><span>各段階のPRに、チェックリストの自動検査を入れる</span></div>
+      <div><b>4. 動く見本をテストに移す</b><span>データ分離の検査を本番の自動テストに移してから本番コードにする</span></div>
+    </div>
+    <p class="open"><b>まだ確かめていないこと</b>　本番データベースの実際の件数（重複した組織、宙に浮いたデータなど）は見ていません。段階0で、書き込みをしない確認用の実行で数えます。</p>
+  </section>
+
+  <footer>ドヤAI 基盤改修計画（設計書 改訂 10.1 の要約）。詳細は docs/architecture/management-agent/README.md、CHECKLIST.md、schema-draft.prisma を参照。数値は設計書と審査結果のファイルから取得。</footer>
+</div>
+
+<script>
+// 審査の推移（保存した審査結果のファイルから数えた件数）
+(function () {
+  var rounds = [
+    { label: '初回監査', c: 11, m: 25, l: 15 },
+    { label: '独立審査（3人）', c: 19, m: 38, l: 29 },
+    { label: '最終確認1', c: 2, m: 10, l: 5 },
+    { label: '2', c: 1, m: 4, l: 2 },
+    { label: '3', c: 0, m: 3, l: 5 },
+    { label: '4', c: 0, m: 2, l: 5 },
+    { label: '5', c: 0, m: 2, l: 3 },
+    { label: '6', c: 0, m: 1, l: 5 },
+    { label: '7', c: 0, m: 0, l: 3 },
+    { label: '8（完了）', c: 0, m: 0, l: 1 }
+  ];
+  var W = 960, H = 300, left = 40, bottom = 44, top = 18, max = 40;
+  var colW = (W - left - 10) / rounds.length, bw = Math.min(16, colW / 4);
+  var y = function (v) { return top + (H - top - bottom) * (1 - Math.min(v, max) / max); };
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="回ごとの指摘件数。重大は2回目の独立審査の19件から最終確認3回目で0件、中は7回目で0件になった">';
+  [0, 10, 20, 30, 40].forEach(function (t) {
+    s += '<line class="axis" x1="' + left + '" x2="' + (W - 6) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke-width="1"/>';
+    s += '<text x="' + (left - 8) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + t + '</text>';
+  });
+  var cols = [['c', 'var(--crit)'], ['m', 'var(--warn)'], ['l', 'var(--muted)']];
+  rounds.forEach(function (r, i) {
+    var x0 = left + i * colW + (colW - bw * 3 - 4) / 2;
+    cols.forEach(function (k, j) {
+      var v = r[k[0]], x = x0 + j * (bw + 2), h = y(0) - y(v);
+      s += '<rect x="' + x + '" y="' + y(v) + '" width="' + bw + '" height="' + Math.max(h, v ? 1 : 0) + '" rx="2" fill="' + k[1] + '"/>';
+      s += '<text class="val" x="' + (x + bw / 2) + '" y="' + (y(v) - 4) + '" text-anchor="middle">' + (v > max ? v + '+' : v) + '</text>';
+    });
+    s += '<text x="' + (left + i * colW + colW / 2) + '" y="' + (H - bottom + 18) + '" text-anchor="middle">' + r.label + '</text>';
+  });
+  s += '<text x="' + (W - 6) + '" y="' + (H - 6) + '" text-anchor="end">軸の上限は40件（それを超える値は数字で表示）</text></svg>';
+  document.getElementById('chart').innerHTML = s;
+})();
+</script>
