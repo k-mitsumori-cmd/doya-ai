@@ -1,6 +1,6 @@
 /*
  * ドヤ収入管理の部品スタイル（ds のクリアと同じ見た目。ADDON-SERVICES §11）
- * ⚠️ 色・角丸・影は tokens.module.css の変数だけを使う（D-2）。ds/* が main に入ったら差し替える。
+ * ⚠️ 色・角丸・影は src/components/ds/tokens.module.css（AppShell が当てる .ds）の変数だけを使う（D-2）。
  */
 
 /* ---------- ページ枠 ---------- */

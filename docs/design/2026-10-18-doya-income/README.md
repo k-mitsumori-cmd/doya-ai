@@ -582,7 +582,7 @@ src/lib/income/
 |---|---|
 | R-1 ナビをデータで | `src/lib/income/nav.ts`（`INCOME_NAV: ShellNavItem[]`）。ToolFrame の `nav` に渡す |
 | R-2 独自レイアウトを持たない | 段 0（`feat/ds-shell` 58e28ab2）を取り込み、`src/app/income/layout.tsx` で最初から AppShell＋ToolFrame に載せた（フラグなし）。独自サイドバー（`IncomeSidebar` / `IncomeAppLayout` / `incomeTheme`）は削除 |
-| R-3 ds トークン | `src/components/income/tokens.module.css`（`.ds`。ds と同じ名前・値。請求漏れ・遅延用に `--bad-bg / --bad-ink` を足した → ds への追加を提案） |
+| R-3 ds トークン | AppShell が当てる ds のトークン（`src/components/ds/tokens.module.css`）だけを使う。`--bad-bg / --bad-ink` は段0 に入った（c5a77c85） |
 | R-4 読み取りを分ける | `summary-read.ts`（`buildSummary` / `homeIncomeSummary`）、`calendar-read.ts`（`listCalendarEvents` / `listCashInEvents`） |
 | R-5 自社プロフィール | `IncomeIssuer.companyProfileId String?`（予約列） |
 | R-6 FK なし | `sfaDealId`（unique）/ `quoteDocumentId` / `expenseOrganizationId` |

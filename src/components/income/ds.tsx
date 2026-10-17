@@ -1,7 +1,7 @@
 'use client'
 
 // ドヤ収入管理 ds 部品（ds のクリアと同じ見た目の写し。ds/* が main に入ったら import を差し替える）
-// ⚠️ 色・角丸・影は ds.module.css → tokens.module.css の変数だけを使う（ADDON-SERVICES D-2）
+// ⚠️ 色・角丸・影は ds.module.css で src/components/ds/tokens.module.css の変数だけを使う（ADDON-SERVICES D-2）
 import Link from 'next/link'
 import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 

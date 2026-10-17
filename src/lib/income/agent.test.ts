@@ -7,6 +7,7 @@ import { buildDunningDraft, dunningStage } from './dunning'
 import { INCOME_AGENT_TOOLS } from './agent-tools'
 import { INCOME_NAV } from './nav'
 import { isNavActive } from '@/components/shell/nav'
+import { SHELL_ICONS } from '@/components/shell/icons'
 
 test('道具: 名前・承認・冪等の規約（README §8.2）', () => {
   const keys = new Set<string>()
@@ -80,6 +81,8 @@ test('督促: 段階と文面（敬語・絵文字なし・送付先の情報を
 
 test('ナビ: データで持ち、今いる画面を 1 つだけ選ぶ', () => {
   assert.ok(INCOME_NAV.length >= 6)
+  // 名前が一覧に無いと、別のアイコンに置き換わって表示される
+  for (const n of INCOME_NAV) assert.ok(n.icon && n.icon in SHELL_ICONS, `アイコン名が無い: ${n.icon}`)
   const active = (p: string) => INCOME_NAV.filter((n) => isNavActive(p, n)).map((n) => n.href)
   assert.deepEqual(active('/income'), ['/income'])
   assert.deepEqual(active('/income/invoices/abc'), ['/income/invoices'])

@@ -3,7 +3,8 @@ import { buildServiceMetadata } from '@/lib/seo'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import AppShell from '@/components/shell/AppShell'
-import IncomeFrame from '@/components/income/IncomeFrame'
+import ToolFrame from '@/components/shell/ToolFrame'
+import { INCOME_NAV } from '@/lib/income/nav'
 
 // ⚠️ 開発中（UNLISTED_SERVICE_IDS）の間は noindex。公開するときに外す
 export const metadata: Metadata = buildServiceMetadata('income', {
@@ -19,7 +20,9 @@ export default async function IncomeLayout({ children }: { children: React.React
   if (!session?.user) return <>{children}</>
   return (
     <AppShell userName={session.user.name}>
-      <IncomeFrame>{children}</IncomeFrame>
+      <ToolFrame serviceId="income" nav={INCOME_NAV}>
+        {children}
+      </ToolFrame>
     </AppShell>
   )
 }
