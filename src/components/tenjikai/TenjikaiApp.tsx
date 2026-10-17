@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu } from 'lucide-react'
 import TenjikaiSidebar, { type Section } from './TenjikaiSidebar'
@@ -15,12 +15,16 @@ import VendorBoard from './VendorBoard'
 import DocsVault from './DocsVault'
 import {
   SAMPLE_INPUT,
-  analyzeSite,
+  applyBoothCopy,
+  applyCreativeCopy,
   computeBudget,
   generateBoothPlans,
   generateCreatives,
   generateDeadlines,
   generateNovelties,
+  mockGeneratedPlan,
+  requestGeneratedPlan,
+  type GeneratedPlan,
   type ProjectInput,
 } from '@/lib/tenjikai/engine'
 
@@ -38,10 +42,16 @@ export default function TenjikaiApp() {
   const [panelImages, setPanelImages] = useState<Record<string, string>>({})
   const [renders, setRenders] = useState<Record<string, string[]>>({})
 
-  const analysis = useMemo(() => analyzeSite(input.serviceUrl), [input.serviceUrl])
-  const plans = useMemo(() => generateBoothPlans(input), [input])
+  // 文面（解析・ブース案・制作物）は API で作り、寸法・金額はルール計算に重ねる
+  const [generated, setGenerated] = useState<GeneratedPlan>(() => mockGeneratedPlan(SAMPLE_INPUT))
+  const [pending, setPending] = useState(false)
+  const [animDone, setAnimDone] = useState(false)
+  const requestSeq = useRef(0)
+
+  const analysis = generated.analysis
+  const plans = useMemo(() => applyBoothCopy(generateBoothPlans(input), generated.boothCopy), [input, generated.boothCopy])
   const plan = plans.find((p) => p.variant === variant) ?? plans[0]
-  const creatives = useMemo(() => generateCreatives(analysis, input), [analysis, input])
+  const creatives = useMemo(() => applyCreativeCopy(generateCreatives(analysis, input), generated.creativeCopy), [analysis, input, generated.creativeCopy])
   const novelties = useMemo(() => generateNovelties(input), [input])
   const deadlines = useMemo(() => generateDeadlines(input), [input])
   const budget = useMemo(
@@ -53,8 +63,27 @@ export default function TenjikaiApp() {
     setInput(next)
     setSelectedNovelty(generateNovelties(next).filter((n) => n.recommended).map((n) => n.id))
     setVariant(next.goal === 'demo' ? 'A' : next.goal === 'brand' ? 'B' : 'C')
+    setGenerated(mockGeneratedPlan(next))
+    setAnimDone(false)
+    setPending(true)
     setPhase('generating')
+    const seq = ++requestSeq.current
+    requestGeneratedPlan(next).then((g) => {
+      if (seq !== requestSeq.current) return
+      setGenerated(g)
+      setPending(false)
+    })
   }
+
+  const onGeneratingDone = useCallback(() => setAnimDone(true), [])
+
+  // 演出と API の両方が終わってから結果画面へ
+  useEffect(() => {
+    if (phase === 'generating' && animDone && !pending) {
+      setPhase('ready')
+      setSection('overview')
+    }
+  }, [phase, animDone, pending])
 
   const go = (s: Section) => {
     if (s === 'new') setPhase('input')
@@ -68,10 +97,7 @@ export default function TenjikaiApp() {
         <Generating
           analysis={analysis}
           input={input}
-          onDone={() => {
-            setPhase('ready')
-            setSection('overview')
-          }}
+          onDone={onGeneratingDone}
         />
       )
     if (phase === 'input' || section === 'new') return <Wizard initial={input} onSubmit={start} />
@@ -122,6 +148,11 @@ export default function TenjikaiApp() {
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">開発中</span>
         </div>
         <div className="floor flex-1 overflow-y-auto">
+          {phase === 'ready' && section !== 'new' && generated.notice && (
+            <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900">{generated.notice}</p>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             <motion.div
               key={key}

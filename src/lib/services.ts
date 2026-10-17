@@ -1755,10 +1755,10 @@ export const SERVICES: Service[] = [
       'ブースの施工会社に出す要望をまとめたい',
       '展示会の予算を社内で説明できる形にしたい',
     ],
-    // ⚠️ 料金・回数は未確定（開発中）。確定したら plan-limit.ts に枠を作り、ここと揃える
+    // ⚠️ 回数の正本は plan-limit.ts の tenjikaiPlans。ここを変えたら両方直す（料金は開発中のため仮）
     pricing: {
-      free: { name: '無料プラン', limit: '開発中のため未定', dailyLimit: -1, price: 0 },
-      pro: { name: 'プロプラン', limit: '開発中のため未定', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+      free: { name: '無料プラン', limit: 'AIでの作成3回まで', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: 'AIでの作成は月30回まで', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
     // 開発中。UNLISTED_SERVICE_IDS に入れ、/tenjikai は noindex
     status: 'coming_soon',

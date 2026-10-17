@@ -1,6 +1,7 @@
-// ドヤ展示会 モックエンジン
-// 本番では analyze / booth / creatives を Gemini テキスト（JSON）で置き換える。
-// 金額・寸法・締切はAIに任せず、ここにあるルール計算を本番でもそのまま使う想定。
+// ドヤ展示会 エンジン（画面とサーバーで共用。サーバー専用の処理は置かない）
+// analyze / booth / creatives の文面は /api/tenjikai/generate（src/lib/tenjikai/ai.ts）が LLM で作る。
+// ここにある analyzeSite / generateBoothPlans / generateCreatives はその下書き兼フォールバック。
+// 金額・寸法・数量・締切はAIに任せず、ここにあるルール計算を本番でもそのまま使う。
 
 export type BoothPosition = 'inline' | 'corner' | 'peninsula' | 'island'
 export type Goal = 'lead' | 'brand' | 'demo'
@@ -457,4 +458,57 @@ export const PRINT_PARTNERS: { id: string; name: string; url: string; strength: 
 
 export function recommendPrinters(kind: CreativeKind | 'novelty') {
   return PRINT_PARTNERS.filter((p) => p.kinds.includes(kind))
+}
+
+// ---------- AIで作った文面の重ね合わせ ----------
+// AIが返すのは文面だけ。寸法・金額・数量はルール計算のものを使い、予算や小間数を後から変えても文面は保つ。
+
+export interface BoothCopy {
+  name: string
+  concept: string
+  flow: string
+}
+
+export interface CreativeCopy {
+  copy: string
+  purpose: string
+}
+
+export interface GeneratedPlan {
+  /** ai = LLMで作成 / mock = ルールの下書き（未ログイン・上限・失敗時） */
+  source: 'ai' | 'mock'
+  /** 利用者に見せる補足（モックにした理由など） */
+  notice?: string
+  analysis: SiteAnalysis
+  boothCopy: Partial<Record<BoothPlan['variant'], BoothCopy>>
+  creativeCopy: Partial<Record<CreativeKind, CreativeCopy>>
+}
+
+export function mockGeneratedPlan(input: ProjectInput, notice?: string): GeneratedPlan {
+  return { source: 'mock', notice, analysis: analyzeSite(input.serviceUrl), boothCopy: {}, creativeCopy: {} }
+}
+
+export function applyBoothCopy(plans: BoothPlan[], copy: GeneratedPlan['boothCopy']): BoothPlan[] {
+  return plans.map((p) => (copy[p.variant] ? { ...p, ...copy[p.variant] } : p))
+}
+
+export function applyCreativeCopy(creatives: Creative[], copy: GeneratedPlan['creativeCopy']): Creative[] {
+  return creatives.map((c) => (copy[c.kind] ? { ...c, ...copy[c.kind] } : c))
+}
+
+/** 画面から呼ぶ。通信・認証・上限・LLMのどこで失敗してもモックを返す（画面は止めない） */
+export async function requestGeneratedPlan(input: ProjectInput): Promise<GeneratedPlan> {
+  try {
+    const res = await fetch('/api/tenjikai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+    const json = (await res.json().catch(() => null)) as (GeneratedPlan & { error?: string }) | null
+    if (res.ok && json?.analysis) return json
+    if (res.status === 401) return mockGeneratedPlan(input, 'ログインすると、サイトの内容に合わせてAIが作成します。いまは下書きを表示しています。')
+    return mockGeneratedPlan(input, json?.error ? `${json.error} いまは下書きを表示しています。` : 'AIでの作成に失敗したため、下書きを表示しています。')
+  } catch {
+    return mockGeneratedPlan(input, 'AIでの作成に失敗したため、下書きを表示しています。')
+  }
 }
