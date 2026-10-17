@@ -370,21 +370,21 @@ export const asklinkTheme: SidebarTheme = {
   zapColor: 'text-sky-300 fill-sky-300',
 }
 
-/** ドヤポップアップ — オレンジ（目を引く。LP の ACCENT と揃える） */
+/** ドヤポップアップ — シリーズの青（クリア #0066ff。統合仕様 R-3 / §12.1） */
 export const popupTheme: SidebarTheme = {
-  bgGradient: 'bg-gradient-to-b from-[#ff5a36] via-[#e0342f] to-[#8f1426]',
-  navText: 'text-orange-50/80',
-  navTextIcon: 'text-orange-100/80',
-  sectionText: 'text-orange-100/60',
-  toggleText: 'text-[#d9362b]',
-  toggleHover: 'hover:bg-orange-50',
-  brandingText: 'text-orange-50/40',
+  bgGradient: 'bg-gradient-to-b from-[#0066ff] via-[#0052e0] to-[#0a0f3c]',
+  navText: 'text-blue-100/80',
+  navTextIcon: 'text-blue-100/80',
+  sectionText: 'text-blue-200/60',
+  toggleText: 'text-[#0047d6]',
+  toggleHover: 'hover:bg-blue-50',
+  brandingText: 'text-blue-100/40',
   profileBg: 'bg-black/15',
-  avatarBg: 'bg-[#e0342f]',
-  loginText: 'text-[#d9362b]',
-  loginHover: 'hover:bg-orange-50',
-  aiBubbleBg: 'bg-[#e0342f]',
-  zapColor: 'text-amber-200 fill-amber-200',
+  avatarBg: 'bg-[#0047d6]',
+  loginText: 'text-[#0047d6]',
+  loginHover: 'hover:bg-blue-50',
+  aiBubbleBg: 'bg-[#0047d6]',
+  zapColor: 'text-sky-300 fill-sky-300',
 }
 
 /** ドヤ面接官 — ブルー（採用・信頼） */

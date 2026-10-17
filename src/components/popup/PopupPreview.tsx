@@ -6,7 +6,7 @@
 // ⚠️ 本番と同じ public/popup/embed.js で描く（React で描き直さない。見た目がずれるため）。
 //    iframe の中に仮のページを作り、window.__DOYA_POPUP_PREVIEW__ に設定を渡すと、
 //    embed.js は条件・頻度を見ずにすぐ表示し、計測もしない。
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PopupDto } from '@/lib/popup/dto'
 
 /** 画面の値を embed.js が読む形にする（dto.ts の toEmbedPopup と同じ項目） */
@@ -47,6 +47,9 @@ function srcDoc(popup: ReturnType<typeof toPreviewPopup>, origin: string): strin
 <script src="${origin}/popup/embed.js"></script></body></html>`
 }
 
+/** プレビューで再現する画面幅。PC はこの幅で描いて欄の幅に縮小する（そのまま狭い欄に出すとスマホ表示になるため） */
+const VIRTUAL_WIDTH = { pc: 1280, sp: 375 } as const
+
 export default function PopupPreview({ popup, device, height = 560 }: { popup: PopupDto; device: 'pc' | 'sp'; height?: number }) {
   const preview = useMemo(() => toPreviewPopup(popup), [popup])
   const key = useMemo(() => safeJson(preview), [preview])
@@ -58,19 +61,35 @@ export default function PopupPreview({ popup, device, height = 560 }: { popup: P
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
 
-  const width = device === 'sp' ? 375 : '100%'
+  // 欄の幅を測り、再現する画面幅からの縮小率を決める
+  const boxRef = useRef<HTMLDivElement>(null)
+  const [boxWidth, setBoxWidth] = useState(0)
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => setBoxWidth(entry.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const vw = VIRTUAL_WIDTH[device]
+  const scale = boxWidth > 0 ? Math.min(1, boxWidth / vw) : 1
+  const frameHeight = Math.round(height / scale)
+
   return (
-    <div className="flex justify-center rounded-2xl border border-slate-200 bg-slate-100 p-3">
-      {doc ? (
-        <iframe
-          key={`${device}:${key}`}
-          title="ポップアップのプレビュー"
-          srcDoc={doc}
-          style={{ width, height, border: 0, borderRadius: 14, background: '#fff', boxShadow: '0 1px 3px rgba(15,23,42,.08)' }}
-        />
-      ) : (
-        <div style={{ width, height }} className="animate-pulse rounded-[14px] bg-white" />
-      )}
+    <div ref={boxRef} className="pd-soft flex w-full min-w-0 justify-center overflow-hidden p-0">
+      {/* ⚠️ 幅を測るまでは欄の幅いっぱい（1280px で描くと、親のグリッドの列が広がってしまう） */}
+      <div style={{ width: boxWidth > 0 ? vw * scale : '100%', height }}>
+        {doc && boxWidth > 0 ? (
+          <iframe
+            key={`${device}:${key}`}
+            title="ポップアップのプレビュー"
+            srcDoc={doc}
+            style={{ width: vw, height: frameHeight, border: 0, transform: `scale(${scale})`, transformOrigin: '0 0', background: 'var(--paper)' }}
+          />
+        ) : (
+          <div className="pd-skel" style={{ width: '100%', height }} />
+        )}
+      </div>
     </div>
   )
 }

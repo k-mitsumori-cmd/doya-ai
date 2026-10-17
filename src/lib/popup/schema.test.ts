@@ -207,8 +207,8 @@ const COPY = { headline: 'その疑問、AIに聞いてみよう。', sub: 'サ�
 
 test('色はボタンの白文字が読めるものだけを選ぶ', () => {
   assert.equal(pickColors(SITE.colors).accent, '#0a58ca')
-  assert.equal(pickColors(['#ffffff', '#eeeeee']).accent, '#ff5a36')
-  assert.ok(contrastRatio('#ff5a36', '#ffffff') >= 3)
+  assert.equal(pickColors(['#ffffff', '#eeeeee']).accent, '#0066ff')
+  assert.ok(contrastRatio('#0066ff', '#ffffff') >= 3)
 })
 
 test('3案を作る。リンク先はサイトで見つかったURLだけ', () => {
