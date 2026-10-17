@@ -1,0 +1,9 @@
+/* ドヤ展示会（/tenjikai）専用のスタイル。.tenjikai-root の内側だけに効かせる */
+.tenjikai-root { -webkit-font-smoothing: antialiased; }
+/* 見出しは太字で区別する（独自フォントは使わない。§11） */
+.tenjikai-root .font-display { font-weight: 700; letter-spacing: -0.01em; }
+/* 数字の桁をそろえる。等幅フォントの代わりに tabular-nums を使う */
+.tenjikai-root .font-mono { font-family: inherit; font-variant-numeric: tabular-nums; }
+.tenjikai-root .floor { background-image: linear-gradient(var(--spot) 1px, transparent 1px), linear-gradient(90deg, var(--spot) 1px, transparent 1px); background-size: 28px 28px; }
+.tenjikai-root .tabular { font-variant-numeric: tabular-nums; }
+.tenjikai-root .text-balance { text-wrap: balance; }

@@ -21,6 +21,7 @@ import {
   MessagesSquare,
   Mic,
   Presentation,
+  Store,
   Receipt,
   Sparkles,
   Target,
@@ -82,6 +83,7 @@ const SERVICE_ICON_MAP: Record<string, ServiceMapping> = {
   mensetsu:  { icon: UserCheck,   iconBg: 'from-blue-600 to-indigo-700',    hoverBg: 'hover:bg-blue-50' },
   asklink:   { icon: MessageCircleQuestion, iconBg: 'from-[#0066ff] to-[#0a0f3c]', hoverBg: 'hover:bg-blue-50' },
   popup:     { icon: PanelTopOpen, iconBg: 'from-[#0066ff] to-[#0047d6]', hoverBg: 'hover:bg-blue-50' },
+  tenjikai:  { icon: Store,       iconBg: 'from-[#0066ff] to-[#0a0f3c]',    hoverBg: 'hover:bg-blue-50' },
 }
 
 const FALLBACK_MAPPING: ServiceMapping = {

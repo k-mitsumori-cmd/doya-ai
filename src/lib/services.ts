@@ -1720,6 +1720,53 @@ export const SERVICES: Service[] = [
     order: 33,
     requiresAuth: true,
   },
+
+  // ----------------------------------------
+  // ドヤ展示会（Tenjikai）
+  // 試作: ~/Code/sandbox/doya-tenjikai（設計書 docs/）
+  // ----------------------------------------
+  {
+    id: 'tenjikai',
+    name: 'ドヤ展示会',
+    shortName: '展示会',
+    description: 'サービスのURLと出展条件を入れるだけで、展示会のブース設営案・制作物・ノベルティ・予算・業者選定・締切管理までを一括で準備します。',
+    longDescription:
+      '自社サービスのURLと、展示会名・小間数・予算・出展の目的を入力すると、サイトの内容から訴求点とブランドカラーを読み取り、ブースのレイアウト案を3パターン、背面パネルやチラシなどの制作物のコピー、目的に合ったノベルティ、費用の内訳を用意します。施工・印刷・ノベルティの業者候補と発注に使う仕様書、会期から逆算した締切の一覧もまとめて作るため、初めての出展でも準備の抜け漏れを防げます。',
+    // ⚠️ UIに絵文字を出さないため空にしている（ツール切替のアイコンは ToolSwitcherMenu 側で lucide を指定）
+    icon: '',
+    color: 'blue',
+    gradient: 'from-[#0066ff] to-[#0a0f3c]',
+    bgGradient: 'from-blue-50 to-sky-50',
+    href: '/tenjikai',
+    dashboardHref: '/tenjikai',
+    // 料金が未確定のため共通の料金ページへ（service-limit-ui は末尾が /pricing のものだけ使う）
+    pricingHref: '/pricing',
+    guideHref: '/tenjikai',
+    features: [
+      'URLからサービスの訴求点とブランドカラーを読み取り',
+      '小間数と目的に合わせたブースのレイアウト案を3パターン',
+      '背面パネル・ロールアップ・チラシなど制作物のコピーとサイズ',
+      '目的と来場者数に合わせたノベルティの提案',
+      '小間代から施工・印刷・人件費までの予算シミュレーション',
+      '業者候補の比較と、会期から逆算した締切の一覧',
+    ],
+    useCases: [
+      '初めての展示会出展で、何をいつまでに準備すればよいか分からない',
+      'ブースの施工会社に出す要望をまとめたい',
+      '展示会の予算を社内で説明できる形にしたい',
+    ],
+    // ⚠️ 回数の正本は plan-limit.ts の tenjikaiPlans。ここを変えたら両方直す（料金は開発中のため仮）
+    pricing: {
+      free: { name: '無料プラン', limit: 'AIでの作成3回まで', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: 'AIでの作成は月30回まで', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+    },
+    // 開発中。UNLISTED_SERVICE_IDS に入れ、/tenjikai は noindex
+    status: 'coming_soon',
+    badge: 'BETA',
+    category: 'web',
+    order: 34,
+    requiresAuth: true,
+  },
 ]
 
 // ============================================
@@ -1771,7 +1818,7 @@ export const RETIRED_SERVICE_IDS = new Set([
 // トップ・sitemap・llms.txt・公開LP（/all-in-one）からは消えるが、
 // ログイン後のツール切替・サイドバーの他サービス一覧・直リンクでは従来どおり使える。
 // 公開する時はここから id を外し、各 layout.tsx の noindex も一緒に外すこと。
-export const UNLISTED_SERVICE_IDS = new Set<string>(['popup']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-17: popup 開発中
+export const UNLISTED_SERVICE_IDS = new Set<string>(['popup', 'tenjikai']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-17: popup・tenjikai は開発中
 
 // 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中。
 // トップページ・sitemap・llms.txt・公開LP がこのリストを参照するため、
