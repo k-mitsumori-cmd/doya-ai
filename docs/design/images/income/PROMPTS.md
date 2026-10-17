@@ -14,15 +14,17 @@
 
 | 項目 | 内容 |
 |---|---|
-| ファイル名 | `public/renewal/icons/income.webp` |
-| 参照画像 | kintai.png, quote.png（public/renewal/icons） |
+| ファイル名 | `public/renewal/icons/income.webp`（256×256、透過、20KB） |
+| 参照画像 | adimage.png, hr.png（public/renewal/icons の webp を PNG 化して `-i` で添付） |
 | 生成日 | 2026-10-18 |
-| 採用した版 | v2（v1はレシート＋矢印で線が多く不採用） |
+| 採用した版 | v3（1回目で採用。マゼンタ背景で生成し sharp でキーイング、暗背景でフリンジなしを確認） |
+
+注: 先行の「青グラデ角丸四角」版は、仕様がシール風（白フチのシロクマ）に訂正されたため破棄した。実行は `cat prompt | codex exec -m gpt-5.6-sol -i ... -i ... -`（プロンプトは stdin。`-i` が可変長のため引数渡しだとプロンプトを飲み込む）。
 
 プロンプト全文:
 
 ```
-Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as /private/tmp/claude-501/income-img/raw/icon-v2.png. A square app tool icon, rounded-square shape with transparent corners, diagonal gradient from #0066ff (top-left) to #0047d6 (bottom-right). ONE white line-art glyph centered, uniform thick rounded stroke: a simple invoice sheet (rectangle with a folded top-right corner) containing a yen sign (¥ drawn as a symbol) and nothing else. Clean, minimal, generous padding, no zigzag edges, no letters. Same line weight and flat style as the attached reference icons (quote.png, kintai.png). No text.
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as /private/tmp/claude-501/income-img/icon-v3/raw1.png. A square tool-icon sticker on a perfectly flat solid pure magenta #ff00ff background (no shadow, no gradient; it will be keyed out). Subject: the ドヤAI polar bear mascot exactly like the attached reference images (adimage.png, hr.png): white fluffy bear, blue visor goggles, white hoodie with a small </> symbol on the chest, soft glossy 3D render, friendly smile, cute chibi proportions, upper body filling most of the canvas, holding ONE object in its hands: a white invoice sheet (folded top-right corner, gray bars as fake text lines) with a gold yen coin (a yen symbol as a symbol, not a letter) on it. The whole subject has a thick white die-cut sticker outline following the silhouette, with a thin blue edge line just inside like the references. Match the references closely in bear shape, goggle color, outline thickness, lighting and framing/scale. ABSOLUTELY NO text, letters or numerals anywhere (the yen symbol on the coin is the only glyph allowed).
 ```
 
 ## income.webp
