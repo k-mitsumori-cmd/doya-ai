@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, Check, Copy, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Check, Copy } from 'lucide-react'
 import { Badge, Button, EmptyState as DsEmptyState, StatTile as DsStatTile } from '@/components/ds'
 import { useInPopupShell } from './shell-context'
 import type { PopupDto } from '@/lib/popup/dto'
@@ -178,7 +178,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
         description={message}
         action={
           onRetry ? (
-            <Button onClick={onRetry} icon={RotateCcw}>
+            <Button onClick={onRetry} icon="RotateCcw">
               もう一度
             </Button>
           ) : undefined
