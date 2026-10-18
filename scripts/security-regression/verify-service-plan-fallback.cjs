@@ -18,7 +18,7 @@ function expression(file, variable) {
 }
 
 async function pricing(service, response, org = '') {
-  const file = `src/app/${service}/pricing/page.tsx`
+  const file = `src/app/${service === 'sfa' ? '(shell)/' : ''}${service}/pricing/page.tsx`
   // useCallback wraps the actual async callback.
   const source = fs.readFileSync(file, 'utf8')
   const original = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)

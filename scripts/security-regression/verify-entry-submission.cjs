@@ -27,7 +27,7 @@ function fixture(service, response, sdk = () => Promise.resolve(), authed = true
     if (!mounted) { mounted = true; effects.forEach(effect => cleanups.push(effect())) }
     return hook
   }
-  const file = `src/app/${service}/Entry.tsx`
+  const file = `src/app/${service === 'sfa' ? '(shell)/' : ''}${service}/Entry.tsx`
   const source = fs.readFileSync(file, 'utf8')
   const handler = service === 'aio' ? 'start' : 'create'
   assert.ok(source.includes('const { busy: creating, run: submit } = useNavigationSubmission('), 'entry must use the tested hook')

@@ -17,7 +17,7 @@ const pages = {
   }),
   doyaslide: () => import("@/app/doyaslide/Lp"),
   cunning: () => import("@/app/cunning/Lp"),
-  sfa: () => import("@/app/sfa/Lp"),
+  sfa: () => import("@/app/(shell)/sfa/Lp"),
   shodan: () => import("@/app/shodan/Lp"),
   aio: () => import("@/app/aio/Lp"),
   mensetsu: () => import("@/app/mensetsu/Lp"),

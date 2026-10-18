@@ -157,10 +157,10 @@ async function fixture(page, options = {}) {
     const hook = load('src/lib/sfa/use-client-mutations.ts').useSfaClientMutations;
     component = () => { currentHook = hook(orgSlug, () => { recoveries++; }); return null; };
   } else if (page === 'layout') {
-    const Layout = load('src/app/sfa/[orgSlug]/layout.tsx').default;
+    const Layout = load('src/app/(shell)/sfa/[orgSlug]/layout.tsx').default;
     const Child = () => { const [value, setValue] = React.useState('Initial'); return React.createElement('input', { id: 'scoped-child', value, onChange: e => setValue(e.target.value) }); };
     component = () => React.createElement(Layout, null, React.createElement(Child));
-  } else component = load('src/app/sfa/[orgSlug]/' + (page ? page + '/' : '') + 'page.tsx').default;
+  } else component = load('src/app/(shell)/sfa/[orgSlug]/' + (page ? page + '/' : '') + 'page.tsx').default;
   const container = document.createElement('div'); document.body.append(container); const root = createRoot(container);
   const render = () => act(() => root.render(React.createElement(React.StrictMode, null, React.createElement(component))));
   await render();

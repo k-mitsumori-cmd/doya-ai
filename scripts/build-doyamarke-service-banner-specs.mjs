@@ -176,7 +176,7 @@ for (const s of services) {
       confirmed_ui_elements: s.features,
       official_logo_reference: `public/${s.id}/logo.png`,
       official_screenshot_reference: `public/${s.id}/hero.webp`,
-      sources: [officialUrl, `src/app/${s.id}`, `src/lib/services.ts`],
+      sources: [officialUrl, `src/app/${s.id === 'sfa' ? '(shell)/' : ''}${s.id}`, `src/lib/services.ts`],
     },
     banner: { ...common, headline: s.headline, support_copy: s.support, feature_chips: s.features, cta: s.cta || common.cta },
     layout: {

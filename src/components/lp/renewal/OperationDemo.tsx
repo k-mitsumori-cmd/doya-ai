@@ -80,7 +80,7 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["資料を登録", "会話から質問を検出", "回答と根拠を確認"],
   },
   sfa: {
-    load: () => import("@/app/sfa/mocks"),
+    load: () => import("@/app/(shell)/sfa/mocks"),
     screens: ["SfaPipelineMock", "SfaAccountsMock", "SfaDashboardMock"],
     labels: ["商談を選ぶ", "顧客情報を見る", "営業状況を確認"],
   },
