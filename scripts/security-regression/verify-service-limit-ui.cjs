@@ -30,9 +30,12 @@ const fixtureMessages=[
  ['shodan',402,'提案資料の生成はプロプランの機能です。プロプランにアップグレードするとご利用いただけます。'],
  ['interview',429,'今月の作成上限に達しました。'],
 ];
+// ルートグループ（src/app/(shell) など）は URL に出ないので、その下も同じ URL のページとして探す
+const ROUTE_GROUPS=fs.readdirSync('src/app',{withFileTypes:true}).filter(e=>e.isDirectory()&&/^\(.+\)$/.test(e.name)).map(e=>e.name);
+const pageExists=href=>['', ...ROUTE_GROUPS].some(group=>fs.existsSync(path.join('src/app',group,href,'page.tsx')));
 (async()=>{
  for(const s of SERVICES) await check(s.id+' has a real pricing destination and quota path',async()=>{
-  const r=classify('/api/'+s.id+'/generate',429,{code:'MONTHLY_LIMIT_REACHED',error:'今月の上限に達しました'});assert.equal(r.service,s.id);const href=r.pricingHref;assert.ok(fs.existsSync(path.join('src/app',href,'page.tsx')),href);
+  const r=classify('/api/'+s.id+'/generate',429,{code:'MONTHLY_LIMIT_REACHED',error:'今月の上限に達しました'});assert.equal(r.service,s.id);const href=r.pricingHref;assert.ok(pageExists(href),href);
  });
  for(const [s,status,error] of fixtureMessages)await check(s+' actual quota wording: '+error.slice(0,20),async()=>assert.ok(classify('/api/'+s+'/generate',status,{error})));
  await check('billing-independent workspace cap offers cleanup',async()=>assert.equal(classify('/api/aio/quick-start',402,{code:'LIMIT',error:'登録できるワークスペースの上限（3件）に達しました。不要なワークスペースを整理してください。'}).kind,'capacity'));
