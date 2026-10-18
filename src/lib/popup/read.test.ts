@@ -211,6 +211,9 @@ test('D-3: 共通シェルにはフラグ ui.shell.popup が ON のときだけ�
   assert.ok(/isShellEnabled\('popup'\)/.test(layout), 'layout.tsx がフラグを見ていない')
   assert.ok(/<PopupShellFrame[^>]*nav=\{POPUP_NAV\}/.test(layout), 'layout.tsx から nav.ts を渡していない')
   assert.ok(/<PopupAppLayout>/.test(layout), 'フラグ OFF の従来の枠が無い')
+  // SHL-098: サーバの layout から 'use client' の ds/index.tsx 経由でトークンを読まない
+  assert.ok(!/from '@\/components\/ds'/.test(layout), "layout.tsx が '@/components/ds' を読んでいる")
+  assert.ok(/from '@\/components\/ds\/tokens\.module\.css'/.test(layout))
   const frame = readFileSync(join(process.cwd(), 'src/components/popup/PopupShellFrame.tsx'), 'utf8')
   assert.ok(/<AppShell/.test(frame) && /<ToolFrame[^>]*serviceId="popup"[^>]*nav=\{nav\}/.test(frame), 'ToolFrame に nav を渡していない')
 })

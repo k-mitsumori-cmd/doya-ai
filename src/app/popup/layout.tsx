@@ -3,7 +3,9 @@ import { buildServiceMetadata } from '@/lib/seo'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { isShellEnabled } from '@/lib/ui-shell'
-import { tokens } from '@/components/ds'
+// ⚠️ トークンは CSS モジュールを直接読む。'@/components/ds'（'use client' の index.tsx）経由だと、
+//    サーバの layout では tokens.ds が undefined になり配色が崩れる（SHL-098）
+import tokens from '@/components/ds/tokens.module.css'
 import PopupAppLayout from '@/components/popup/PopupAppLayout'
 import PopupShellFrame from '@/components/popup/PopupShellFrame'
 import { POPUP_NAV } from '@/lib/popup/nav'
