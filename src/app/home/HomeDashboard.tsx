@@ -346,6 +346,9 @@ export default function HomeDashboard({ initial }: { initial: HomeSummary }) {
     return h < 11 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'おつかれさまです'
   })()
   const updated = new Date(s.generatedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+  // 数字の出所（ADDON-SERVICES §4）。収入管理・支出管理を使っている組織では、そちらが正本になる
+  const revenueSource = s.sources.revenue === 'income' ? '収入管理' : '営業管理・見積'
+  const costSource = s.sources.cost === 'expense' ? '支出管理' : 'プロマネ（経費と人件費）'
   const periodEnd = c.currentPeriodEnd ? new Date(c.currentPeriodEnd).toLocaleDateString('ja-JP') : null
 
   return (
@@ -355,6 +358,7 @@ export default function HomeDashboard({ initial }: { initial: HomeSummary }) {
           <p className={styles.eyebrow}>経営ホーム</p>
           <h1 className={styles.title}>{greeting}{s.user.name ? `、${s.user.name}さん` : ''}</h1>
           <p className={styles.subtitle}>売上・収入・予定・人の状態を、全ツールからまとめています。</p>
+          <p className={styles.sources}>売上は{revenueSource}、支出は{costSource}の数字です。</p>
         </div>
         <button type="button" className={styles.refresh} onClick={refresh} disabled={loading}>
           <RefreshCw size={15} className={loading ? styles.spin : undefined} /> {updated} 時点
