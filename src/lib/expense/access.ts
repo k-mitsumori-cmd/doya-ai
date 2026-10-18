@@ -50,6 +50,29 @@ export async function getExpenseContext(orgSlug?: string): Promise<ExpenseContex
   return { userId, organizationId: membership.organizationId, organizationSlug: membership.organization.slug, role: membership.role, memberId: membership.id }
 }
 
+/**
+ * 招待中（PENDING）のメンバーを、本人の ACTIVE にする（システム点検 EXP-F05）。
+ * メールはセッションの申告ではなく、DB のユーザーのメールで照合する。入口（/api/expense/usage）で毎回呼ぶ。
+ */
+export async function claimPendingMemberships(userId: string): Promise<number> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+  const email = user?.email?.toLowerCase()
+  if (!email) return 0
+  const pending = await prisma.expenseMember.findMany({ where: { invitedEmail: email, status: 'PENDING', userId: null }, select: { id: true, organizationId: true } })
+  let claimed = 0
+  for (const p of pending) {
+    // 同じ組織に本人の行が既にあれば（以前に外された等）、招待の行は使わずに取り消す
+    const own = await prisma.expenseMember.findFirst({ where: { organizationId: p.organizationId, userId }, select: { id: true } })
+    if (own) {
+      await prisma.expenseMember.update({ where: { id: p.id }, data: { status: 'INACTIVE' } })
+      continue
+    }
+    const r = await prisma.expenseMember.updateMany({ where: { id: p.id, status: 'PENDING', userId: null }, data: { userId, status: 'ACTIVE' } })
+    claimed += r.count
+  }
+  return claimed
+}
+
 export async function listMemberships() {
   const userId = await resolveUserId()
   if (!userId) return []

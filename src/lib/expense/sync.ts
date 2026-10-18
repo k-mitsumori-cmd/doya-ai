@@ -153,7 +153,8 @@ export async function syncWithholding(tx: Tx, organizationId: string, today: Ymd
       estimated: false,
     }
     const cur = byPeriod.get(period)
-    if (!cur) await tx.expenseSchedule.create({ data: { organizationId, kind: 'withholding_tax', period: toDbDate(period), ...data } })
+    // sourceType/sourceId は (organizationId, sourceType, sourceId) の一意制約で、同時に集計しても同じ期間の行を 2 つ作らないためのもの
+    if (!cur) await tx.expenseSchedule.create({ data: { organizationId, kind: 'withholding_tax', period: toDbDate(period), sourceType: WITHHOLDING_SOURCE, sourceId: period, ...data } })
     else if (cur.status !== 'paid') await tx.expenseSchedule.update({ where: { id: cur.id }, data })
     byPeriod.delete(period)
   }
@@ -162,12 +163,33 @@ export async function syncWithholding(tx: Tx, organizationId: string, today: Ymd
   if (stale.length) await tx.expenseSchedule.deleteMany({ where: { id: { in: stale }, organizationId } })
 }
 
+const WITHHOLDING_SOURCE = 'expense.withholding'
+
+/**
+ * 一意制約の衝突（P2002）と直列化の競合（P2034）のときに、処理を丸ごとやり直す。
+ * 同じ契約の予定を、cron と画面の保存が同時に作ろうとしたときに起きる（システム点検の指摘）。
+ * ⚠️ fn はトランザクション全体を渡すこと（やり直すと、前回の書き込みは巻き戻っている）。
+ */
+export async function retryOnConflict<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  for (let i = 0; ; i++) {
+    try {
+      return await fn()
+    } catch (e) {
+      const code = (e as { code?: string })?.code
+      if (i >= attempts - 1 || (code !== 'P2002' && code !== 'P2034')) throw e
+      await new Promise((r) => setTimeout(r, 100 * (i + 1) + Math.floor(Math.random() * 100)))
+    }
+  }
+}
+
 /** 契約 1 件を保存した直後に呼ぶ */
 export async function resyncContract(organizationId: string, contractId: string) {
-  await prisma.$transaction(async (tx) => {
-    await syncContractSchedules(tx, organizationId, contractId)
-    await syncWithholding(tx, organizationId)
-  }, { maxWait: 10000, timeout: 30000 })
+  await retryOnConflict(() =>
+    prisma.$transaction(async (tx) => {
+      await syncContractSchedules(tx, organizationId, contractId)
+      await syncWithholding(tx, organizationId)
+    }, { maxWait: 10000, timeout: 30000 })
+  )
 }
 
 /** 組織の全契約（cron 用）。為替未設定などで失敗した契約は飛ばして件数を返す */
@@ -177,12 +199,12 @@ export async function resyncOrganization(organizationId: string): Promise<{ ok: 
   let failed = 0
   for (const c of contracts) {
     try {
-      await prisma.$transaction((tx) => syncContractSchedules(tx, organizationId, c.id), { maxWait: 10000, timeout: 30000 })
+      await retryOnConflict(() => prisma.$transaction((tx) => syncContractSchedules(tx, organizationId, c.id), { maxWait: 10000, timeout: 30000 }))
       ok++
     } catch {
       failed++
     }
   }
-  await prisma.$transaction((tx) => syncWithholding(tx, organizationId), { maxWait: 10000, timeout: 30000 })
+  await retryOnConflict(() => prisma.$transaction((tx) => syncWithholding(tx, organizationId), { maxWait: 10000, timeout: 30000 }))
   return { ok, failed }
 }

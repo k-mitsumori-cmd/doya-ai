@@ -592,9 +592,11 @@ src/lib/expense/
 | 設計 | 実装 | 理由 |
 |---|---|---|
 | Phase1 で請求書 PDF を保存 | **Phase2 に移す**（表 `expense_bills` は作成済み） | Storage のバケット作成は本番作業になるため、AI 読み取りと一緒に入れる。Phase1 は実額を手入力 |
-| メンバーの招待 | **ドヤAI 登録済みのユーザーをメールアドレスで追加** | 招待 URL の仕組みは SFA 側の作りが大きいため。必要になったら招待トークンを足す |
+| メンバーの招待 | **メールアドレスで招待する**。登録済みならすぐ ACTIVE、未登録なら PENDING で残し、本人がそのメールでログインしたときに ACTIVE にする（`claimPendingMemberships`）。応答は登録の有無で変えない | システム点検 EXP-F05（メールの登録有無が分かってしまう）への対応 |
+| メンバーの権限 | owner でない人は、自分と同じか上のロールの人を変更・除外できず、自分と同じか上のロールを付与できない（`member-policy.ts`。`>=` で比べる） | システム点検 EXP-006 / EXP-F02。見積・面接・AI商談と同じ形 |
 | `ExpenseSchedule` | `plannedAmountExclTax`（予定額）と `note` を追加 | 請求額との差異を出すため |
 | `ExpenseOrganization` | `slackWebhookUrl` を追加（`hooks.slack.com` のみ受け付ける） | 通知先 |
+| `ExpenseMember` | `userId` を null 可にし、`invitedEmail` を追加（招待中の人） | EXP-F05 |
 | `ExpenseReminder` | `notifiedAt` を追加。一意制約に `organizationId` を含める | 同じ通知を 2 回送らない |
 | 権限 | member = 閲覧のみ、manager = 契約・取引先・支払状態の更新と振込先の閲覧、admin = 設定・支払方法・為替・メンバー・削除 | §9 をそのまま具体化 |
 

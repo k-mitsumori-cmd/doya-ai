@@ -7,7 +7,7 @@ import { audit, ExpenseHttpError, readJson, withExpense } from '@/lib/expense/ac
 import { CATEGORIES } from '@/lib/expense/constants'
 import { contractDto } from '@/lib/expense/dto'
 import { contractInput, priceInput, vendorInput } from '@/lib/expense/inputs'
-import { syncContractSchedules, syncWithholding } from '@/lib/expense/sync'
+import { syncContractSchedules, syncWithholding, retryOnConflict } from '@/lib/expense/sync'
 import { fromDbDate, todayJst, toDbDate } from '@/lib/expense/dates'
 import { id as idParam } from '@/lib/expense/validate'
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const data = contractInput(body)
     const price = priceInput((body.price ?? {}) as Record<string, unknown>, fromDbDate(data.startDate as Date))
     const paymentMethodId = idParam(body.paymentMethodId, '支払方法', false)
-    const created = await prisma.$transaction(async (tx) => {
+    const created = await retryOnConflict(() => prisma.$transaction(async (tx) => {
       let vendorId = idParam(body.vendorId, '取引先', false)
       if (vendorId) {
         if (!(await tx.expenseVendor.findFirst({ where: { id: vendorId, organizationId: ctx.organizationId }, select: { id: true } }))) throw new ExpenseHttpError(404, '取引先が見つかりません')
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       await syncWithholding(tx, ctx.organizationId)
       await audit(tx, ctx, 'contract.create', 'contract', c.id)
       return c
-    }, { maxWait: 10000, timeout: 30000 })
+    }, { maxWait: 10000, timeout: 30000 }))
     const full = await prisma.expenseContract.findFirstOrThrow({ where: { id: created.id, organizationId: ctx.organizationId }, include: { prices: true, vendor: true, paymentMethod: true } })
     return NextResponse.json({ contract: contractDto(full, ctx) })
   })
