@@ -34,6 +34,8 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'tenjikai', basePath: '/tenjikai' },
   // 社内インタビューの回答画面（/shanai/answer/<token>）は社員が開く公開の画面
   { id: 'shanai', basePath: '/shanai', inShell: (p) => !p.startsWith('/shanai/answer') },
+  // AIO は組織を選んだあと（/aio/<組織>）だけ枠に入る。入口（/aio）・料金（/aio/pricing）・招待は今までどおり
+  { id: 'aio', basePath: '/aio', inShell: (p) => /^\/aio\/[^/]+/.test(p) && !p.startsWith('/aio/pricing') && !p.startsWith('/aio/invite') },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */

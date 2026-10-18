@@ -18,9 +18,9 @@ for (const name of samples) {
 }
 
 for (const id of ids) {
-  const diagram = await fs.readFile(path.join(ROOT, 'src/app', id === 'banner' ? 'banner/landing/diagram.tsx' : `${id}/diagram.tsx`), 'utf8')
+  const diagram = await fs.readFile(path.join(ROOT, 'src/app', id === 'banner' ? 'banner/landing/diagram.tsx' : `${id==='aio'?'(shell)/aio':id}/diagram.tsx`), 'utf8')
   assert(diagram.includes('ServiceFlowDiagram'), `${id}: diagram missing`)
-  const lpFile = lpFiles[id] || `src/app/${id}/Lp.tsx`
+  const lpFile = lpFiles[id] || `src/app/${id==='aio'?'(shell)/aio':id}/Lp.tsx`
   const source = await fs.readFile(path.join(ROOT, lpFile), 'utf8')
   assert((source.match(new RegExp(`/${id}/shots/[123]-(?:input|process|output)\\.webp`, 'g')) || []).length === 3, `${id}: screenshots not wired`)
   assert(source.includes('diagram={<ServiceDiagram steps={STEPS} />}'), `${id}: diagram not wired`)

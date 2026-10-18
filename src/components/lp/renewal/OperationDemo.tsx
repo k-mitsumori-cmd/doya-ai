@@ -94,7 +94,7 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["企業情報を見る", "課題仮説を確認", "提案資料を見る"],
   },
   aio: {
-    load: () => import("@/app/aio/mocks"),
+    load: () => import("@/app/(shell)/aio/mocks"),
     screens: ["AioEnginesMock", "AioSovMock", "AioCitationsMock"],
     labels: ["AI別の状況を見る", "競合シェアを比較", "引用元を確認"],
   },
