@@ -6,7 +6,7 @@
 // ⚠️ ToolSwitcherMenu を必ず含める（他サービスへ移れなくなる）。
 import React, { memo, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { MessagesSquare, DoorOpen, ClipboardList, CreditCard, Settings } from 'lucide-react'
+import { MessagesSquare } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { aishodanTheme } from '@/components/sidebar/themes'
 import {
@@ -24,8 +24,8 @@ import {
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
-
-const BASE = '/aishodan'
+import { resolveShellIcon } from '@/components/shell/icons'
+import { AISHODAN_BASE as BASE, AISHODAN_NAV, isNavActive } from '@/lib/aishodan/nav'
 
 function AishodanSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
@@ -38,17 +38,12 @@ function AishodanSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const NAV: NavItem[] = [
-    { href: BASE, label: 'ホーム', icon: MessagesSquare, hot: true },
-    { href: BASE + '/sessions', label: '商談ログ', icon: ClipboardList },
-    { href: BASE + '/preview', label: '練習モード', icon: DoorOpen },
-    { href: BASE + '/settings', label: '設定', icon: Settings },
-    { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
-  ]
+  // 項目は src/lib/aishodan/nav.ts が正本。ここでは部品に引き直して描くだけ
+  const NAV: NavItem[] = AISHODAN_NAV.map((item) => ({ href: item.href, label: item.label, icon: resolveShellIcon(item.icon), hot: item.hot }))
 
   const isActive = (href: string) => {
-    if (href === BASE) return pathname === BASE
-    return pathname === href || pathname.startsWith(href + '/')
+    const item = AISHODAN_NAV.find((n) => n.href === href)
+    return item ? isNavActive(item, pathname) : false
   }
 
   const confirmLogout = async () => {

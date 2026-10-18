@@ -5,6 +5,8 @@ import { LpJsonLd } from '@/components/lp'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import AishodanAppLayout from '@/components/aishodan/AishodanAppLayout'
+import AishodanShellFrame from '@/components/aishodan/AishodanShellFrame'
+import { isShellEnabled } from '@/lib/ui-shell'
 import { FAQ } from './lp-data'
 
 // ⚠️ これが無いと canonical がルートlayoutの既定（サイトトップ）のままになり、
@@ -35,7 +37,8 @@ export default async function AishodanLayout({ children }: { children: React.Rea
       />
       {/* ⚠️ ログイン後はサイドバー付きのアプリ枠で包む（reference/06-ui-patterns.md §7）。
            ToolSwitcherMenu はサイドバーの中にある。独自ヘッダーを作らないこと。 */}
-      {session?.user ? <AishodanAppLayout>{children}</AishodanAppLayout> : children}
+      {/* 共通の枠（UI_SHELL_SERVICES に aishodan）が有効なときは ToolFrame だけ。枠そのものは (shell)/layout.tsx が出す */}
+      {!session?.user ? children : isShellEnabled('aishodan') ? <AishodanShellFrame>{children}</AishodanShellFrame> : <AishodanAppLayout>{children}</AishodanAppLayout>}
     </>
   )
 }

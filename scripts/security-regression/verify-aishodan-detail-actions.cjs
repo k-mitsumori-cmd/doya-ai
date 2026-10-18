@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript')
 const {check,results}=require('./load-typescript.cjs')
-const ast=ts.createSourceFile('page.tsx',fs.readFileSync('src/app/aishodan/sessions/[id]/page.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
+const ast=ts.createSourceFile('page.tsx',fs.readFileSync('src/app/(shell)/aishodan/sessions/[id]/page.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
 const actions={}
 function visit(n){if(ts.isFunctionDeclaration(n)&&['override','reEvaluate'].includes(n.name?.text))actions[n.name.text]=n.getText(ast);ts.forEachChild(n,visit)}visit(ast)
 function fixture(name,response){let error='',saving=false,loads=0,calls=0;const context={id:'synthetic',d:{outcome:null},setSaving:v=>saving=v,setError:v=>error=v,notifyError:(setter,text)=>setter(text),MANUAL_FIT_SCORE:{hot:85},withOrg:(_s,u)=>u,fetch:async()=>{calls++;return response()},load:async()=>loads++,window:{confirm:()=>false},Error};const action=vm.runInNewContext(ts.transpileModule('('+actions[name]+')',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);return{run:()=>action(name==='override'?'hot':false),state:()=>({error,saving,loads,calls})}}

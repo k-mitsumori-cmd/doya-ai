@@ -22,7 +22,7 @@ const pages = {
   aio: () => import("@/app/aio/Lp"),
   mensetsu: () => import("@/app/mensetsu/Lp"),
   quote: () => import("@/app/quote/Lp"),
-  aishodan: () => import("@/app/aishodan/Lp"),
+  aishodan: () => import("@/app/(shell)/aishodan/Lp"),
   adimage: () => import("@/app/adimage/Lp"),
 };
 
