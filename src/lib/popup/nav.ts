@@ -1,9 +1,11 @@
 // ============================================
 // ドヤポップアップ: ツール内ナビの項目（統合仕様 R-1）
 // ============================================
-// 項目はデータで持つ。共通シェル（ui.shell.popup が ON）では ToolFrame の nav にそのまま渡し、
+// 項目はデータで持つ。共通シェル（ui.shell.popup が ON）では、サーバの layout.tsx から ToolFrame の nav にそのまま渡し、
 // OFF の間の暫定サイドバー（PopupSidebar）もこれを描くだけにする。
 // 形は段0の ShellNavItem（src/components/shell/nav.ts）。将来の manifest.ui.nav[] と同じ。
+// ⚠️ icon は名前の文字列で書く（src/components/shell/icons.tsx の対応表の名前）。関数を持たせると、
+//    サーバの layout.tsx からクライアント部品へ渡せず全画面が 500 になる
 import type { ShellNavItem } from '@/components/shell/nav'
 
 export interface PopupNavItem extends ShellNavItem {

@@ -44,7 +44,7 @@ function PopupSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   // ⚠️ 項目は src/lib/popup/nav.ts が正本（統合仕様 R-1）。ここでは描くだけ
-  const NAV: NavItem[] = POPUP_NAV.map((item, i) => ({ href: item.href, label: item.label, icon: item.icon ? resolveShellIcon(item.icon) : PanelTopOpen, hot: i === 0 }))
+  const NAV: NavItem[] = POPUP_NAV.map((item, i) => ({ href: item.href, label: item.label, icon: resolveShellIcon(item.icon), hot: i === 0 }))
 
   const planLabel = (() => {
     if (!isLoggedIn) return 'GUEST'
