@@ -1,6 +1,6 @@
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript'), assert = require('node:assert/strict');
 const { check, results } = require('./load-typescript.cjs');
-const file = 'src/app/doyaslide/[id]/page.tsx';
+const file = 'src/app/(shell)/doyaslide/[id]/page.tsx';
 const source = fs.readFileSync(path.join(process.env.DOYA_TEST_ROOT || process.cwd(), file), 'utf8');
 const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
 const names = ['validSlides', 'validProject', 'readSlideResponse', 'reload', 'ensureOk', 'runGenerate'];

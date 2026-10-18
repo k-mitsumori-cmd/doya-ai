@@ -37,6 +37,6 @@ async function test(name, work) { await f.close(); f.dom.window.localStorage.cle
     f.setActor('actor-a'); await f.render(); assert(f.host().querySelector('section[aria-label="解析の結果確認"]')); assert.equal(count(), 1)
     await f.click('保存結果を確認'); assert(f.host().querySelector('input[type="file"]')); assert.equal(count(), 1)
   })
-  const files = ['src/app/adimage/Tool.tsx', 'src/lib/adimage/operation-client.ts', 'src/lib/adimage/use-operation-recovery.ts', 'src/lib/adimage/analysis-result.ts']
+  const files = ['src/app/(shell)/adimage/Tool.tsx', 'src/lib/adimage/operation-client.ts', 'src/lib/adimage/use-operation-recovery.ts', 'src/lib/adimage/analysis-result.ts']
   fs.writeFileSync('docs/audits/2026-10-06-all-services-recheck/adimage-analysis-tool-mounted-results.json', JSON.stringify({ checkedAt: new Date().toISOString(), passed: cases.length, cases, sourceHashes: Object.fromEntries(files.map(f => [f, crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')])), scope: 'Actual full Tool, actual recovery hook/reader and output validator under React18 StrictMode. Synthetic network/session/Web Locks. No real provider or production DB; native automatic POST retry proved separately by private PostgreSQL fixture.' }, null, 2) + '\n')
 } finally { await f.close() } })().catch(error => { console.error(error); process.exitCode = 1 })

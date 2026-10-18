@@ -11,11 +11,11 @@ const pages = {
   persona: () => import("@/app/persona/Lp"),
   hr: () => import("@/app/hr/page"),
   kintai: () => import("@/app/kintai/page"),
-  doyalist: () => import("@/app/doyalist/Lp"),
+  doyalist: () => import("@/app/(shell)/doyalist/Lp"),
   promane: async () => ({
     default: (await import("@/app/promane/PromaneLp")).PromaneLp,
   }),
-  doyaslide: () => import("@/app/doyaslide/Lp"),
+  doyaslide: () => import("@/app/(shell)/doyaslide/Lp"),
   cunning: () => import("@/app/cunning/Lp"),
   sfa: () => import("@/app/sfa/Lp"),
   shodan: () => import("@/app/shodan/Lp"),
@@ -23,7 +23,7 @@ const pages = {
   mensetsu: () => import("@/app/mensetsu/Lp"),
   quote: () => import("@/app/quote/Lp"),
   aishodan: () => import("@/app/aishodan/Lp"),
-  adimage: () => import("@/app/adimage/Lp"),
+  adimage: () => import("@/app/(shell)/adimage/Lp"),
 };
 
 export const dynamicParams = false;

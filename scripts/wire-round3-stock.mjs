@@ -4,8 +4,8 @@ const targets = {
   banner: 'src/app/banner/landing/page.tsx', hr: 'src/app/hr/page.tsx', kintai: 'src/app/kintai/page.tsx',
   sfa: 'src/app/sfa/Lp.tsx', shodan: 'src/app/shodan/Lp.tsx', aio: 'src/app/aio/Lp.tsx',
   mensetsu: 'src/app/mensetsu/Lp.tsx', quote: 'src/app/quote/Lp.tsx', aishodan: 'src/app/aishodan/Lp.tsx',
-  adimage: 'src/app/adimage/Lp.tsx', seo: 'src/app/seo/Lp.tsx', interview: 'src/app/interview/Lp.tsx',
-  persona: 'src/app/persona/Lp.tsx', doyalist: 'src/app/doyalist/Lp.tsx', doyaslide: 'src/app/doyaslide/Lp.tsx',
+  adimage: 'src/app/(shell)/adimage/Lp.tsx', seo: 'src/app/seo/Lp.tsx', interview: 'src/app/interview/Lp.tsx',
+  persona: 'src/app/persona/Lp.tsx', doyalist: 'src/app/(shell)/doyalist/Lp.tsx', doyaslide: 'src/app/(shell)/doyaslide/Lp.tsx',
   cunning: 'src/app/cunning/Lp.tsx', promane: 'src/app/promane/PromaneLp.tsx',
 }
 

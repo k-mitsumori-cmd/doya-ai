@@ -34,6 +34,10 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'tenjikai', basePath: '/tenjikai' },
   // 社内インタビューの回答画面（/shanai/answer/<token>）は社員が開く公開の画面
   { id: 'shanai', basePath: '/shanai', inShell: (p) => !p.startsWith('/shanai/answer') },
+  { id: 'doyalist', basePath: '/doyalist' },
+  // ドヤスライドの紹介ページ（/doyaslide）は、ログイン後も枠の外（旧レイアウトと同じ判定）
+  { id: 'doyaslide', basePath: '/doyaslide', inShell: (p) => p.replace(/\/+$/, '') !== '/doyaslide' },
+  { id: 'adimage', basePath: '/adimage' },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */

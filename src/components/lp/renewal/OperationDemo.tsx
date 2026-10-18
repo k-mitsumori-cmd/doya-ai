@@ -54,7 +54,7 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["出勤を打刻", "勤怠を集計", "申請を確認"],
   },
   doyalist: {
-    load: () => import("@/app/doyalist/mocks"),
+    load: () => import("@/app/(shell)/doyalist/mocks"),
     screens: ["DoyalistFilterMock", "DoyalistTableMock", "DoyalistMessageMock"],
     labels: ["検索条件を指定", "企業リストを見る", "営業文面を確認"],
   },
@@ -65,7 +65,7 @@ export const DEMOS: Record<string, Recipe> = {
     typing: "新サービスサイト制作",
   },
   doyaslide: {
-    load: () => import("@/app/doyaslide/mocks"),
+    load: () => import("@/app/(shell)/doyaslide/mocks"),
     screens: [
       "DoyaSlideBriefMock",
       "DoyaSlideStructureMock",
@@ -114,7 +114,7 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["AIと商談を進める", "ヒアリングを整理", "商談結果を確認"],
   },
   adimage: {
-    load: () => import("@/app/adimage/mocks"),
+    load: () => import("@/app/(shell)/adimage/mocks"),
     screens: ["AdImageGridMock", "AdImageVerifyMock", "AdImageRefineMock"],
     labels: ["媒体別の画像を見る", "文字をチェック", "改善点を確認"],
   },

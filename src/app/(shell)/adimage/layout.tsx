@@ -5,6 +5,8 @@ import { LpJsonLd } from '@/components/lp'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import AdImageAppLayout from '@/components/adimage/AdImageAppLayout'
+import AdImageShellFrame from '@/components/adimage/AdImageShellFrame'
+import { isShellEnabled } from '@/lib/ui-shell'
 import { FAQ } from './lp-data'
 
 // ⚠️ これが無いと canonical がルートlayoutの既定（サイトトップ）のままになり、
@@ -35,7 +37,7 @@ export default async function AdimageLayout({ children }: { children: React.Reac
       />
       {/* ⚠️ ログイン後はサイドバー付きのアプリ枠で包む（reference/06-ui-patterns.md §7）。
            ToolSwitcherMenu はサイドバーの中にある。独自ヘッダーを作らないこと。 */}
-      {session?.user ? <AdImageAppLayout>{children}</AdImageAppLayout> : children}
+      {!session?.user ? children : isShellEnabled('adimage') ? <AdImageShellFrame>{children}</AdImageShellFrame> : <AdImageAppLayout>{children}</AdImageAppLayout>}
     </>
   )
 }
