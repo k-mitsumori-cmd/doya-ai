@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T09:19:01.304Z",
+  "checkedAt": "2026-10-18T09:25:17.164Z",
   "passed": 11,
   "cases": [
     "metadata persists before POST and two mounted callers cannot duplicate generation",

@@ -21,7 +21,7 @@ const pages = {
   shodan: () => import("@/app/shodan/Lp"),
   aio: () => import("@/app/aio/Lp"),
   mensetsu: () => import("@/app/mensetsu/Lp"),
-  quote: () => import("@/app/quote/Lp"),
+  quote: () => import("@/app/(shell)/quote/Lp"),
   aishodan: () => import("@/app/aishodan/Lp"),
   adimage: () => import("@/app/adimage/Lp"),
 };

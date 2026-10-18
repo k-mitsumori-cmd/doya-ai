@@ -104,7 +104,7 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["面接を進める", "評価を確認", "質問の基準を見る"],
   },
   quote: {
-    load: () => import("@/app/quote/mocks"),
+    load: () => import("@/app/(shell)/quote/mocks"),
     screens: ["QuoteLinesMock", "QuoteTaxMock", "QuotePdfMock"],
     labels: ["見積明細を確認", "税・値引きを確認", "PDFを書き出す"],
   },

@@ -61,7 +61,7 @@ function load(file,deps){const exports={};vm.runInNewContext(compile(read(file))
   }
  }
  // Execute the actual unit-price input callback on both editing screens.
- for(const file of ['src/app/quote/Tool.tsx','src/app/quote/documents/[id]/page.tsx']) {
+ for(const file of ['src/app/(shell)/quote/Tool.tsx','src/app/(shell)/quote/documents/[id]/page.tsx']) {
   const ast=ts.createSourceFile('p.tsx',read(file),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let callback;
   function walk(n){if(ts.isJsxAttribute(n)&&n.name.getText(ast)==='onChange'&&n.initializer?.expression){const c=n.initializer.expression.getText(ast);if(c.includes('unitPrice:')&&c.includes("sourceRef: '手入力'"))callback=c;}ts.forEachChild(n,walk);}walk(ast);assert(callback);
   let patch;const fn=vm.runInNewContext(compile('('+callback+')'),{idx:0,it:{id:'line'},updateItem:(_,p)=>patch=p});

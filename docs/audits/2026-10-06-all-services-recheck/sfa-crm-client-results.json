@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T06:03:20.444Z",
+  "checkedAt": "2026-10-18T09:22:37.425Z",
   "passed": 51,
   "cases": [
     "account: same-frame create persists one UUID before network",
@@ -55,13 +55,13 @@
     "deal:explicit checkbox and save unlinks contact with reviewed version while preserving contactName"
   ],
   "sourceHashes": {
-    "src/lib/sfa/client-response.ts": "f2f0e15a6d8c1daa3b197798aa42428993ea26dc8b3fe4afeed93c6c14f58fc7",
+    "src/lib/sfa/client-response.ts": "28592b18e63eb9af69f99d2f3b17781ed6e1f07f2e8077702d17bb82b8bf39f4",
     "src/lib/sfa/use-client-mutations.ts": "4115c3e0923f713180ee51b25512408ed56268f7dc19ef90a72dd81bc985e918",
     "src/components/sfa/MutationRecovery.tsx": "2227ba375d2fa315ca07bd21d0cd128b2a25ad7f7be30e3cab498a9479666167",
-    "src/components/sfa/CrmRecordsPage.tsx": "6ae85f2c29e76831e35cbe1d91a18b737cf0aacbb754f786129a7ceed699948e",
+    "src/components/sfa/CrmRecordsPage.tsx": "7287533c9e61e180ee0806eb1d4559367b80a0fb2e381d59ceba16b6f88e94a2",
     "src/app/sfa/[orgSlug]/accounts/page.tsx": "738ea8905a35dcb926f96caf88121daa6b7fc8a78e1459cee84447bd1687804e",
     "src/app/sfa/[orgSlug]/contacts/page.tsx": "bc2b199de0319a46b87ba931a19c03545bd924dbac76ccbff5bfb773ca36f88e",
-    "src/app/sfa/[orgSlug]/deals/page.tsx": "fd957ea9fab0cbc013dafca16af88fc76a0d134eb084284bbf6099de285f0cec"
+    "src/app/sfa/[orgSlug]/deals/page.tsx": "cc907b6b1ebd5417fcd6df0f0067e5a17301d9f6bdd63c8f8c1405e0b5010ff6"
   },
   "scope": "Actual account/contact pages, shared component, mutation hook, bounded transport and actor guard mounted in React18 StrictMode with synthetic DOM/auth/router/API. No real database, browser/customer session or provider calls."
 }

@@ -34,6 +34,7 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'tenjikai', basePath: '/tenjikai' },
   // 社内インタビューの回答画面（/shanai/answer/<token>）は社員が開く公開の画面
   { id: 'shanai', basePath: '/shanai', inShell: (p) => !p.startsWith('/shanai/answer') },
+  { id: 'quote', basePath: '/quote' },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */

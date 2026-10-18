@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T04:32:51.184Z",
+  "checkedAt": "2026-10-18T09:31:27.721Z",
   "passed": 22,
   "cases": [
     "Fresh actor authority rejects all create/update/delete and recovery methods",
@@ -31,7 +31,7 @@
     "src/app/api/sfa/leads/import/route.ts": "4dcc0a193f8b7e61a77da636e524991e41fc5ea611065e6e79488ac87950c316",
     "src/lib/sfa/lead-mutation.ts": "76d8cdf62128b8f679c2fad4f1a0959d6cfe0e06fd0687399877a87b48dedfb0",
     "src/lib/sfa/lead-import.ts": "d986d153c0bf990df40dc9309e9f3b7eb9b0411742d30880c325abecdbfa4cff",
-    "src/lib/sfa/creation-receipt.ts": "6a9e1363eb8f98a947ec70279c7f095906bd41bb679e270a8c4209402d5bb0ee"
+    "src/lib/sfa/creation-receipt.ts": "30c3bbc63e837855cdc6f7025eebf15b7a8a4a55834dfb317e9152201a140c96"
   },
   "scope": "Actual manual create/detail PATCH/DELETE/recovery/import handlers and shared authority/receipt/validation/Serializable admission helpers, synthetic Prisma transactions with rollback and serialized scheduling. Not actual PostgreSQL concurrency, mounted UI or production/customer/provider writes."
 }

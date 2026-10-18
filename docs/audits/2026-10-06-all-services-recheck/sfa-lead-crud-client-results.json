@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T04:32:52.702Z",
+  "checkedAt": "2026-10-18T09:31:30.555Z",
   "passed": 14,
   "cases": [
     "Same-frame manual create submits one durable UUID",
@@ -18,10 +18,10 @@
     "Storage failure prevents import network write"
   ],
   "sourceHashes": {
-    "src/lib/sfa/client-response.ts": "20becc7fa936eda6f8d385e08587fa91a0fb977a889272cae835ab58701a7732",
-    "src/lib/sfa/use-client-mutations.ts": "1f012ad2742ba1936627bf06b092a41636cad5df23a78f4a4eeb478501c8a1fb",
-    "src/components/sfa/MutationRecovery.tsx": "4295345d7e4d56945f7d17f6283767f1bcf941f42eceb4268b891094ccb132c5",
-    "src/app/sfa/[orgSlug]/leads/page.tsx": "d082dc593225d9d131d1ba08cae6d56526574e4b839b7e0f63a597b9115fb99f"
+    "src/lib/sfa/client-response.ts": "28592b18e63eb9af69f99d2f3b17781ed6e1f07f2e8077702d17bb82b8bf39f4",
+    "src/lib/sfa/use-client-mutations.ts": "4115c3e0923f713180ee51b25512408ed56268f7dc19ef90a72dd81bc985e918",
+    "src/components/sfa/MutationRecovery.tsx": "2227ba375d2fa315ca07bd21d0cd128b2a25ad7f7be30e3cab498a9479666167",
+    "src/app/sfa/[orgSlug]/leads/page.tsx": "0777fd7f1ea6d4614e4bfe71874c8cc663cdd94bf3b7283a315afec27e20f241"
   },
   "scope": "Actual leads page/shared hook/transport/guard mounted in StrictMode with synthetic DOM/auth/router/network. No paid provider or customer DB calls."
 }
