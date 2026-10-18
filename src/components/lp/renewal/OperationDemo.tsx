@@ -49,7 +49,7 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["従業員を選ぶ", "組織図を見る", "人事評価を確認"],
   },
   kintai: {
-    load: () => import("@/app/kintai/mocks"),
+    load: () => import("@/app/(shell)/kintai/mocks"),
     screens: ["KintaiClockMock", "KintaiSummaryMock", "KintaiRequestsMock"],
     labels: ["出勤を打刻", "勤怠を集計", "申請を確認"],
   },

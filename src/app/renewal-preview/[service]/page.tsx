@@ -10,7 +10,7 @@ const pages = {
   interview: () => import("@/app/interview/Lp"),
   persona: () => import("@/app/persona/Lp"),
   hr: () => import("@/app/hr/page"),
-  kintai: () => import("@/app/kintai/page"),
+  kintai: () => import("@/app/(shell)/kintai/page"),
   doyalist: () => import("@/app/doyalist/Lp"),
   promane: async () => ({
     default: (await import("@/app/promane/PromaneLp")).PromaneLp,

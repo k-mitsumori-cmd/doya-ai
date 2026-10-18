@@ -9,8 +9,16 @@ import KintaiSidebar from './KintaiSidebar'
 import KintaiOnboarding from './KintaiOnboarding'
 import { KintaiAccessContext } from './KintaiAccessContext'
 
+export interface KintaiFrameArgs {
+  role: string
+  employeeActive: boolean
+  children: React.ReactNode
+}
+
 interface KintaiLayoutProps {
   children: React.ReactNode
+  /** 共通の枠（ToolFrame）で描くとき、サイドバーと上部バーの代わりに呼ぶ。読み込み・認可・オンボーディングの処理は変えない */
+  renderFrame?: (args: KintaiFrameArgs) => React.ReactNode
 }
 
 interface UsageData {
@@ -22,7 +30,7 @@ interface UsageData {
   plan?: string
 }
 
-export default function KintaiLayout({ children }: KintaiLayoutProps) {
+export default function KintaiLayout({ children, renderFrame }: KintaiLayoutProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname()
   // SessionProvider.update temporarily retains its previous data while loading.
@@ -175,6 +183,26 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   const role = usage?.role || 'employee'
   const employeeName = usage?.employeeName || session?.user?.name || 'ゲスト'
 
+  const inactiveNotice = usage?.isActive === false && (
+    <div role="status" className="mx-4 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 lg:mx-6">
+      従業員情報が無効化されています。勤怠と申請の履歴は閲覧できますが、打刻や申請の操作はできません。管理者にご確認ください。
+    </div>
+  )
+
+  if (renderFrame) {
+    return (
+      <>
+        {isSessionLoading && <div role="status" className="p-6 text-center">認証情報を確認しています。</div>}
+        {usageError && <div role="alert" className="bg-amber-50 p-3 text-center text-sm">勤怠情報を再確認できませんでした。入力内容は保持しています。<button type="button" onClick={() => void loadUsage(true)} className="ml-2 underline">再取得する</button></div>}
+        <KintaiAccessContext.Provider value={{ isActive: usage?.isActive ?? null, organizationId: knownScope ? usage?.organizationId : null, actorId: actor, role, ready: allowed && knownScope && !isSessionLoading && !usageError }}>
+          <div ref={element => { if (element) element.inert = isSessionLoading || usageError }} style={isSessionLoading ? { display: 'none' } : undefined}>
+            {renderFrame({ role, employeeActive: usage?.isActive !== false, children: <>{inactiveNotice}{children}</> })}
+          </div>
+        </KintaiAccessContext.Provider>
+      </>
+    )
+  }
+
   return (
     <>
       {isSessionLoading && <div role="status" className="p-6 text-center">認証情報を確認しています。</div>}
@@ -206,11 +234,7 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
           </div>
         </header>
         <main className="flex-1 min-w-0">
-          {usage?.isActive === false && (
-            <div role="status" className="mx-4 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 lg:mx-6">
-              従業員情報が無効化されています。勤怠と申請の履歴は閲覧できますが、打刻や申請の操作はできません。管理者にご確認ください。
-            </div>
-          )}
+          {inactiveNotice}
           {children}
         </main>
       </div>

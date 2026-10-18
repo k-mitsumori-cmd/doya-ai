@@ -13,6 +13,7 @@ import {
   LayoutDashboard, LayoutGrid, LineChart, Link2, List, ListChecks, Megaphone, MessageSquare, Mic, MousePointerClick,
   Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Store,
   Truck, UserCheck, UserRound, Users, Wallet,
+  CalendarDays, CheckSquare,
 } from 'lucide-react'
 
 export const SHELL_ICONS = {
@@ -21,6 +22,7 @@ export const SHELL_ICONS = {
   LayoutDashboard, LayoutGrid, LineChart, Link2, List, ListChecks, Megaphone, MessageSquare, Mic, MousePointerClick,
   Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Store,
   Truck, UserCheck, UserRound, Users, Wallet,
+  CalendarDays, CheckSquare,
 } satisfies Record<string, LucideIcon>
 
 /** 対応表にある名前。対応表に無い文字列も受け付ける（既定のアイコンになる） */

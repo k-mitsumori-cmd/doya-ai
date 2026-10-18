@@ -34,6 +34,8 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'tenjikai', basePath: '/tenjikai' },
   // 社内インタビューの回答画面（/shanai/answer/<token>）は社員が開く公開の画面
   { id: 'shanai', basePath: '/shanai', inShell: (p) => !p.startsWith('/shanai/answer') },
+  // 勤怠の紹介ページ（/kintai）・料金（/kintai/pricing）・招待（/kintai/invite*）は枠を出さない（KintaiLayout の公開ページと同じ判定）
+  { id: 'kintai', basePath: '/kintai', inShell: (p) => p !== '/kintai' && p !== '/kintai/pricing' && !p.startsWith('/kintai/invite') },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */

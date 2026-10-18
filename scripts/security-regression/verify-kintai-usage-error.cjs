@@ -50,7 +50,7 @@ async function layout(response, preserveView = false) {
 
 async function pricing(response) {
   const state = { plan: 'FREE', error: false, loading: true, hasOrg: false, canManageBilling: false, loadedIdentity: '' }
-  const loadPlan = callback('src/app/kintai/pricing/page.tsx', 'loadPlan', {
+  const loadPlan = callback('src/app/(shell)/kintai/pricing/page.tsx', 'loadPlan', {
     identity: 'user', request: { current: 0 },
     fetch: async () => response,
     setUserPlan: (value) => { state.plan = value },
@@ -82,7 +82,7 @@ async function pricing(response) {
   assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO', canManageBilling: false })), { plan: 'PRO', error: false, loading: false, hasOrg: true, canManageBilling: false, loadedIdentity: 'user' })
   assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO', canManageBilling: true })), { plan: 'PRO', error: false, loading: false, hasOrg: true, canManageBilling: true, loadedIdentity: 'user' })
   assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO' })), { plan: null, error: true, loading: false, hasOrg: false, canManageBilling: false, loadedIdentity: 'user' })
-  const pricingSource = fs.readFileSync('src/app/kintai/pricing/page.tsx', 'utf8')
+  const pricingSource = fs.readFileSync('src/app/(shell)/kintai/pricing/page.tsx', 'utf8')
   assert.ok(pricingSource.includes('対象者は30日間無料'))
   assert.ok(!pricingSource.includes('全プラン14日間'))
   console.log('PASS kintai usage: server failure never becomes onboarding or FREE')
