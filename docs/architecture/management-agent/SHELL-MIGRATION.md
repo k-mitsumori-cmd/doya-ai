@@ -39,9 +39,14 @@ git mv src/app/quote "src/app/(shell)/quote"
 - `@/app/quote/...` を import しているところ（例: `src/components/lp/renewal/OperationDemo.tsx` の `@/app/quote/mocks`）を `@/app/(shell)/quote/...` に直す
 - `scripts/` の中で `src/app/quote/` を読んでいるテスト（セキュリティテストに多い）を、`src/app/(shell)/quote/` に直す。直すのは**パスの文字列だけ**。確認の中身・件数は変えない
 
+- `src/lib/quote/*.test.ts` のようなツールの単体テストが、`src/app/quote/...` のファイルを読んでいることがある。これもパスだけを直す
+- コメントに書いたパスも、あとで読む人が迷わないように直す
+
 ```bash
-grep -rln "@/app/quote/\|src/app/quote/" src scripts seo
+grep -rln "@/app/quote/\|src/app/quote" src scripts seo
 ```
+
+サービスの `href` が指すページがあるかを確かめるテスト（`verify-active-service-navigation`・`verify-service-limit-ui`）は、ルートグループの下も探すので、直さなくてよい。
 
 ### 2.2 台帳に1行足す
 
