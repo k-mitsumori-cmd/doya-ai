@@ -6,7 +6,7 @@ const targets = {
   mensetsu: 'src/app/mensetsu/Lp.tsx', quote: 'src/app/quote/Lp.tsx', aishodan: 'src/app/aishodan/Lp.tsx',
   adimage: 'src/app/adimage/Lp.tsx', seo: 'src/app/seo/Lp.tsx', interview: 'src/app/interview/Lp.tsx',
   persona: 'src/app/persona/Lp.tsx', doyalist: 'src/app/doyalist/Lp.tsx', doyaslide: 'src/app/doyaslide/Lp.tsx',
-  cunning: 'src/app/cunning/Lp.tsx', promane: 'src/app/promane/PromaneLp.tsx',
+  cunning: 'src/app/cunning/Lp.tsx', promane: 'src/app/(shell)/promane/PromaneLp.tsx',
 }
 
 for (const [service, file] of Object.entries(targets)) {

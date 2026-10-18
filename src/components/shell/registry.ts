@@ -34,6 +34,8 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'tenjikai', basePath: '/tenjikai' },
   // 社内インタビューの回答画面（/shanai/answer/<token>）は社員が開く公開の画面
   { id: 'shanai', basePath: '/shanai', inShell: (p) => !p.startsWith('/shanai/answer') },
+  // プロマネは組織（ワークスペース）を選んだあと（/promane/<slug>）だけ枠に入る。入口（/promane）・招待・料金は今までどおり
+  { id: 'promane', basePath: '/promane', inShell: (p) => /^\/promane\/[^/]+/.test(p) && !/^\/promane\/(invite|pricing)(\/|$)/.test(p) },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */

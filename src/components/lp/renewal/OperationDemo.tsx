@@ -59,7 +59,7 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["検索条件を指定", "企業リストを見る", "営業文面を確認"],
   },
   promane: {
-    load: () => import("@/app/promane/mocks"),
+    load: () => import("@/app/(shell)/promane/mocks"),
     screens: ["PromaneProjectMock", "PromaneBoardMock", "PromaneProfitMock"],
     labels: ["案件を入力", "タスクを整理", "収支を確認"],
     typing: "新サービスサイト制作",
