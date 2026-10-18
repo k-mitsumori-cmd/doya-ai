@@ -3,6 +3,10 @@ import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
 import PlanUpdatedListener from '@/components/PlanUpdatedListener'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { isShellEnabled } from '@/lib/ui-shell'
+import BannerShellFrame from '@/components/banner/BannerShellFrame'
 
 // ============================================
 // ドヤバナーAI メタデータ
@@ -17,11 +21,12 @@ export const metadata: Metadata = buildServiceMetadata('banner', {
 
 const SVC = getServiceById('banner')!
 
-export default function BannerLayout({
+export default async function BannerLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await getServerSession(authOptions)
   return (
     <>
       <LpJsonLd
@@ -33,7 +38,8 @@ export default function BannerLayout({
       />
       {/* 決済直後など、プラン更新イベントを受けてUIを即時反映 */}
       <PlanUpdatedListener />
-      {children}
+      {/* 共通の枠が有効で、ログイン中のときだけ ToolFrame（作業画面 /banner/dashboard/** のみ。BannerShellFrame が判定）。無効なら今のまま */}
+      {session?.user && isShellEnabled('banner') ? <BannerShellFrame>{children}</BannerShellFrame> : children}
     </>
   )
 }

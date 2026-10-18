@@ -1,7 +1,7 @@
 {
-  "checkedAt": "2026-10-08T08:11:16.626Z",
-  "expected": 115,
-  "passed": 115,
+  "checkedAt": "2026-10-18T09:33:36.106Z",
+  "expected": 139,
+  "passed": 139,
   "cases": [
     {
       "name": "banner recognized quota shows current service and next action",
@@ -140,6 +140,54 @@
       "passed": true
     },
     {
+      "name": "asklink recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "asklink old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "popup recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "popup old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "tenjikai recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "tenjikai old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "shanai recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "shanai old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "income recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "income old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
+      "name": "expense recognized quota shows current service and next action",
+      "passed": true
+    },
+    {
+      "name": "expense old notice never returns after alpha beta alpha",
+      "passed": true
+    },
+    {
       "name": "banner navigation hides previous view notice and returning does not revive it",
       "passed": true
     },
@@ -273,6 +321,54 @@
     },
     {
       "name": "adimage new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "asklink navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "asklink new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "popup navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "popup new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "tenjikai navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "tenjikai new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "shanai navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "shanai new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "income navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "income new view still shows a fresh quota action",
+      "passed": true
+    },
+    {
+      "name": "expense navigation hides previous view notice and returning does not revive it",
+      "passed": true
+    },
+    {
+      "name": "expense new view still shows a fresh quota action",
       "passed": true
     },
     {
@@ -468,9 +564,9 @@
     "src/components/limits/ServiceLimitProvider.tsx": "80fffd613d05d070f329734372a91b843a6653166a478a4debb15ef36b439af8",
     "src/components/Providers.tsx": "ad65db076b6298637d58ea9057a0b9e7493f1e8d141edde71f6f912d6f891f2b",
     "src/lib/service-limit-ui.ts": "6fe543af3fa87ff9233c35e3f39371b99e2f7efd9353c2e97763046ad29665f2",
-    "src/lib/services.ts": "88041e2debc0d8f865506719031426653ebb0db4f8827e7a2bced72ac80eabeb",
+    "src/lib/services.ts": "c5e1ec2db7dbaf3a27340ed05bcbd23d2f3e306b6489f7fb3db9014404298832",
     "src/lib/unified-plan.ts": "b15b8773e24358283e89d20601c63cdf55248bdec9945d92c296c3e647d7ef80",
     "src/lib/plan-utils.ts": "4aef73f8d8da1145e9026d1e3d88920f37f380a47a1d48d0fc2c9161b8899d86"
   },
-  "scope": "Actual shared provider/classifier/fetch observer and root Suspense boundary mounted with synthetic sessions/quota replies and mocked Next navigation/trial eligibility;17 active service IDs, path/query/actor/unified-plan transitions and all7 actual independent session service-plan transitions including delayed/ABA replies. Actual Next/browser/customer/provider operations remain unverified."
+  "scope": "Actual shared provider/classifier/fetch observer and root Suspense boundary mounted with synthetic sessions/quota replies and mocked Next navigation/trial eligibility;23 active service IDs, path/query/actor/unified-plan transitions and all7 actual independent session service-plan transitions including delayed/ABA replies. Actual Next/browser/customer/provider operations remain unverified."
 }

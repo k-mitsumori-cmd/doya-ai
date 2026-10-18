@@ -4,7 +4,9 @@ import React from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ExternalLink, Menu, Plus, Timer, X } from 'lucide-react'
 import Link from 'next/link'
-import { SeoSidebar } from '@/components/SeoSidebar'
+import { SeoSidebar, type SeoSidebarNavItem } from '@/components/SeoSidebar'
+import { resolveShellIcon } from '@/components/shell/icons'
+import { SEO_NAV, seoNavHref } from '@/lib/seo/nav'
 import { getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
 
 type SeoPlanCode = 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
@@ -63,11 +65,20 @@ export function SeoAppLayout({
 
   const planHref = isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing'
 
+  // ナビは nav.ts の配列を、サイドバーが描ける形にして渡す
+  const nav: SeoSidebarNavItem[] = SEO_NAV.map((item) => ({
+    label: item.label,
+    href: seoNavHref(item.href, !!isLoggedIn),
+    matchHref: item.href,
+    icon: resolveShellIcon(item.icon),
+    exact: item.exact,
+  }))
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       {/* Sidebar - Desktop */}
       <div className="hidden md:block">
-        <SeoSidebar />
+        <SeoSidebar nav={nav} />
       </div>
 
       {/* Sidebar - Mobile */}
@@ -88,7 +99,7 @@ export function SeoAppLayout({
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed inset-y-0 left-0 w-[240px] shadow-2xl"
             >
-              <SeoSidebar isMobile />
+              <SeoSidebar nav={nav} isMobile />
               <button
                 className="absolute top-3 right-3 p-2 text-white/70 hover:text-white bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-md transition-colors"
                 onClick={() => setIsSidebarOpen(false)}

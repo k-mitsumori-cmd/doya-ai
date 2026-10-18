@@ -19,12 +19,12 @@ type Recipe = {
 };
 export const DEMOS: Record<string, Recipe> = {
   banner: {
-    load: () => import("@/app/banner/landing/mocks"),
+    load: () => import("@/app/(shell)/banner/landing/mocks"),
     screens: ["BannerTemplatesMock", "BannerVariantsMock", "BannerSizesMock"],
     labels: ["業種を選ぶ", "バナー案を見る", "サイズを選んで出力"],
   },
   seo: {
-    load: () => import("@/app/seo/mocks"),
+    load: () => import("@/app/(shell)/seo/mocks"),
     screens: ["SeoBriefMock", "SeoOutlineMock", "SeoAuditMock"],
     labels: ["記事の条件を入力", "構成を確認", "公開前にチェック"],
     typing: "BtoB マーケティング AI活用",

@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T05:27:29.428Z",
+  "checkedAt": "2026-10-18T09:36:22.343Z",
   "passed": 21,
   "cases": [
     "Same-frame score clicks send one durable UUID and reviewed version",
@@ -25,10 +25,10 @@
     "Authentication refresh keeps same-actor score recovery without automatic provider retry"
   ],
   "sourceHashes": {
-    "src/app/sfa/[orgSlug]/deals/page.tsx": "6d0cd0bfadaa30dd0c66e7a24b23fc08a52b3c3e2aea2613b03b47f224bc731c",
-    "src/lib/sfa/use-client-mutations.ts": "e0ebd1858fb5633508ea4eee77e164ca6050532a686e688e83c3b317cc46a26e",
-    "src/lib/sfa/client-response.ts": "cdc0dcf7fd86b04a8a66d185061f3df024ab14372fb0b64f35525df1351a545d",
-    "src/components/sfa/MutationRecovery.tsx": "96d9934f286a980dbe78437a1f16aeaf04df6bce1684300efac22789438aca15"
+    "src/app/sfa/[orgSlug]/deals/page.tsx": "cc907b6b1ebd5417fcd6df0f0067e5a17301d9f6bdd63c8f8c1405e0b5010ff6",
+    "src/lib/sfa/use-client-mutations.ts": "4115c3e0923f713180ee51b25512408ed56268f7dc19ef90a72dd81bc985e918",
+    "src/lib/sfa/client-response.ts": "28592b18e63eb9af69f99d2f3b17781ed6e1f07f2e8077702d17bb82b8bf39f4",
+    "src/components/sfa/MutationRecovery.tsx": "2227ba375d2fa315ca07bd21d0cd128b2a25ad7f7be30e3cab498a9479666167"
   },
   "scope": "Actual leads page/shared mutation recovery/transport/guard mounted StrictMode, synthetic DOM/router/auth/API; quota local guidance only, global modal and real browser/provider not proven."
 }

@@ -7,7 +7,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { MessageCircleQuestion, History, CreditCard, Zap } from 'lucide-react'
+import { MessageCircleQuestion, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { asklinkTheme } from '@/components/sidebar/themes'
@@ -27,8 +27,11 @@ import {
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { getServiceById } from '@/lib/services'
+import { resolveShellIcon } from '@/components/shell/icons'
+import { ASKLINK_BASE, ASKLINK_NAV } from '@/lib/asklink/nav'
+import { isNavActive } from '@/components/shell/nav'
 
-const BASE = '/asklink'
+const BASE = ASKLINK_BASE
 
 function AskLinkSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
@@ -41,11 +44,7 @@ function AskLinkSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile 
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const NAV: NavItem[] = [
-    { href: BASE, label: '質問リンクをつくる', icon: MessageCircleQuestion, hot: true },
-    { href: BASE + '/history', label: 'これまでの結果', icon: History },
-    { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
-  ]
+  const NAV: NavItem[] = ASKLINK_NAV.map((n) => ({ href: n.href, label: n.label, icon: resolveShellIcon(n.icon), hot: n.hot }))
 
   const planLabel = (() => {
     if (!isLoggedIn) return 'GUEST'
@@ -58,8 +57,8 @@ function AskLinkSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile 
   const isPro = planLabel === 'PRO' || planLabel === 'ENTERPRISE'
 
   const isActive = (href: string) => {
-    if (href === BASE) return pathname === BASE
-    return pathname === href || pathname.startsWith(href + '/')
+    const item = ASKLINK_NAV.find((n) => n.href === href)
+    return item ? isNavActive(pathname, item) : false
   }
 
   const confirmLogout = async () => {

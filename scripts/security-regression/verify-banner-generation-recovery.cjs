@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
 const {check,results}=require('./load-typescript.cjs');
-const files=['src/app/banner/dashboard/create/page.tsx','src/app/banner/dashboard/chat/page.tsx'];
+const files=['src/app/(shell)/banner/dashboard/create/page.tsx','src/app/(shell)/banner/dashboard/chat/page.tsx'];
 function fixture(file,response){
  const source=fs.readFileSync(path.join(process.env.DOYA_TEST_BASELINE||process.cwd(),file),'utf8'),ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true),parts={};
  function visit(n){if(ts.isClassDeclaration(n)&&n.name?.text==='BannerApiError')parts.error=n.getText(ast);if(ts.isFunctionDeclaration(n)&&['safeReadJson','normalizeNonJsonApiError'].includes(n.name?.text))parts[n.name.text]=n.getText(ast);if(ts.isVariableDeclaration(n)&&['safeReadJson','normalizeNonJsonApiError','handleGenerate'].includes(n.name.getText(ast)))parts[n.name.getText(ast)]='const '+n.getText(ast)+';';ts.forEachChild(n,visit)}visit(ast);assert.ok(parts.handleGenerate);
