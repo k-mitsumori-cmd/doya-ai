@@ -7,7 +7,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { PanelTopOpen, CreditCard, Zap } from 'lucide-react'
+import { PanelTopOpen, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { popupTheme } from '@/components/sidebar/themes'
@@ -27,9 +27,8 @@ import {
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { getServiceById } from '@/lib/services'
-import { POPUP_NAV, isPopupNavActive, type PopupNavIcon } from '@/lib/popup/nav'
-
-const NAV_ICON: Record<PopupNavIcon, NavItem['icon']> = { popup: PanelTopOpen, pricing: CreditCard }
+import { POPUP_NAV, isPopupNavActive } from '@/lib/popup/nav'
+import { resolveShellIcon } from '@/components/shell/icons'
 
 const BASE = '/popup'
 
@@ -45,7 +44,7 @@ function PopupSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   // ⚠️ 項目は src/lib/popup/nav.ts が正本（統合仕様 R-1）。ここでは描くだけ
-  const NAV: NavItem[] = POPUP_NAV.map((item, i) => ({ href: item.href, label: item.label, icon: NAV_ICON[item.icon], hot: i === 0 }))
+  const NAV: NavItem[] = POPUP_NAV.map((item, i) => ({ href: item.href, label: item.label, icon: resolveShellIcon(item.icon), hot: i === 0 }))
 
   const planLabel = (() => {
     if (!isLoggedIn) return 'GUEST'

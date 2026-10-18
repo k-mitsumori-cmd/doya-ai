@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { sfaJson, isSfaClientTask, isSfaClientActivity, type SfaClientTask } from '@/lib/sfa/client-response'
+import { sfaJson, sfaValidRows, isSfaClientTask, isSfaClientActivity, type SfaClientTask } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
 import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
@@ -34,6 +34,7 @@ export default function SfaTasksPage() {
   const [hasMore, setHasMore] = useState(false)
   const [listLoading, setListLoading] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
+  const [skippedTasks, setSkippedTasks] = useState(0)
   const loadSequenceRef = useRef(0)
   const listRequest = useRef<AbortController | null>(null)
   const taskDraft = useSfaDraftSnapshot([title, dueDate])
@@ -49,11 +50,13 @@ export default function SfaTasksPage() {
     setListError(null)
     try {
       const data = await sfaJson(`/api/sfa/tasks?page=${page}`, orgSlug, { signal: controller.signal })
-      if (!Array.isArray(data.tasks) || !data.tasks.every(isSfaClientTask) || data.page !== page || typeof data.hasMore !== 'boolean') {
+      const valid = sfaValidRows(data.tasks, isSfaClientTask)
+      if (!valid || data.page !== page || typeof data.hasMore !== 'boolean') {
         throw new Error( 'タスク一覧を取得できませんでした')
       }
       if (sequence !== loadSequenceRef.current || !mutations.active()) return
-      const rows = data.tasks
+      const rows = valid.rows
+      setSkippedTasks(prev => (page === 1 ? 0 : prev) + valid.skipped)
       setTasks(prev => page === 1 ? rows : [...prev, ...rows.filter((t: Task) => !prev.some(p => p.id === t.id))])
       setLoadedPage(page)
       setHasMore(data.hasMore)
@@ -250,6 +253,7 @@ export default function SfaTasksPage() {
 
       <div className="mt-4 space-y-2 text-sm">
         {listLoading && <p role="status">タスクを読み込んでいます…</p>}
+        {skippedTasks > 0 && <p role="status" className="text-amber-700">{skippedTasks}件のタスクは内容を確認できなかったため表示していません。</p>}
         {listError && <p role="alert" className="text-red-600">{listError}。表示内容が最新でない可能性があります。</p>}
         {loadedPage > 0 && <p className="text-slate-500">{tasks.length}件を表示中{hasMore ? '（続きがあります）' : ''}</p>}
         <button onClick={() => load()} disabled={listLoading} className="rounded-lg border px-3 py-2 disabled:opacity-50">一覧を再読み込み</button>

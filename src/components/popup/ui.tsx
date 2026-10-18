@@ -3,13 +3,16 @@
 // ============================================
 // ドヤポップアップ 画面の共通部品（統合仕様 R-3 / §11）
 // ============================================
-// ⚠️ 色・角丸・影・余白は popup-ds.css のトークン（.pd-*）だけで描く。色を直書きしない。
-// ⚠️ 段0の ds/*（Skeleton / EmptyState / StatTile など）が main に入ったら、ここを ds の部品に置き換える。
+// ⚠️ 色・角丸・影・余白はトークン（段0の .ds）と .pd-* だけで描く。色を直書きしない。
+// ⚠️ 空・エラー・権限なし・数字のタイル・バッジは段0の ds 部品（src/components/ds）を使う。
+//    骨組み（読込中）は実物と同じ形にしたいので、ここの Skeleton* を使う（ds の Skeleton は行の形だけ）。
 // ⚠️ alert() / confirm() は使わない（確認は ConfirmDialog、結果は Toast）。
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, Check, Copy, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Check, Copy } from 'lucide-react'
+import { Badge, Button, EmptyState as DsEmptyState, StatTile as DsStatTile } from '@/components/ds'
+import { useInPopupShell } from './shell-context'
 import type { PopupDto } from '@/lib/popup/dto'
 import {
   KIND_LABEL,
@@ -88,24 +91,16 @@ export function CopyButton({ text, label = 'コピー', primary = false }: { tex
 }
 
 export function StatusBadge({ status }: { status: PopupStatus }) {
-  const cls = status === 'live' ? 'pd-chip pd-chip-ok' : status === 'paused' ? 'pd-chip' : 'pd-chip pd-chip-note'
-  return <span className={cls}>{STATUS_LABEL[status]}</span>
+  return <Badge tone={status === 'live' ? 'ok' : status === 'paused' ? 'neutral' : 'note'}>{STATUS_LABEL[status]}</Badge>
 }
 
 export function KindBadge({ kind }: { kind: PopupDto['kind'] }) {
-  return <span className="pd-chip pd-chip-blue">{KIND_LABEL[kind]}</span>
+  return <Badge tone="blue">{KIND_LABEL[kind]}</Badge>
 }
 
+/** 数字のタイル（段0の StatTile） */
 export function StatTile({ label, value, unit }: { label: string; value: string; unit?: string }) {
-  return (
-    <div className="pd-card" style={{ padding: 16 }}>
-      <p className="pd-label">{label}</p>
-      <p className="mt-1">
-        <span className="pd-num">{value}</span>
-        {unit && <span className="ml-1 text-sm font-medium text-[color:var(--sub)]">{unit}</span>}
-      </p>
-    </div>
-  )
+  return <DsStatTile label={label} value={value} unit={unit} />
 }
 
 export function DaysSwitch({ value, onChange }: { value: number; onChange: (d: 7 | 30 | 90) => void }) {
@@ -140,6 +135,9 @@ export function PageHeader({
   sub?: React.ReactNode
   action?: React.ReactNode
 }) {
+  // 共通シェルの中では ToolFrame がページの見出し（h1）を出すので、ここは小見出しにする
+  const inShell = useInPopupShell()
+  const Heading = inShell ? 'h2' : 'h1'
   return (
     <header>
       {back && (
@@ -150,7 +148,7 @@ export function PageHeader({
       )}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="pd-h1 break-words">{title}</h1>
+          <Heading className={`${inShell ? 'pd-h2' : 'pd-h1'} break-words`}>{title}</Heading>
           {sub && <div className="pd-label mt-1 break-all">{sub}</div>}
         </div>
         {action}
@@ -161,54 +159,45 @@ export function PageHeader({
 
 // ---------- 状態表示（§11。読込・空・エラー・権限なし・処理中） ----------
 
-export function EmptyState({
-  image,
-  title,
-  body,
-  action,
-}: {
-  image: string
-  title: string
-  body: string
-  action?: React.ReactNode
-}) {
+/** 空のとき（ツール固有のイラスト＋一文＋次にやるボタン1つ）。段0の EmptyState */
+export function EmptyState({ image, title, body, action }: { image: string; title: string; body: string; action?: React.ReactNode }) {
   return (
-    <div className="pd-card flex flex-col items-center px-6 py-12 text-center">
-      <Image src={image} alt="" width={320} height={240} className="h-auto w-[240px] md:w-[320px]" />
-      <p className="pd-h2 mt-4">{title}</p>
-      <p className="pd-label mt-2 max-w-md">{body}</p>
-      {action && <div className="mt-6">{action}</div>}
+    <div className="pd-card">
+      <DsEmptyState kind="zero" art={image} title={title} description={body} action={action} />
     </div>
   )
 }
 
+/** 読み込めなかったとき（何が起きたか＋「もう一度」）。技術的な文言は出さない */
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="pd-card flex flex-col items-center px-6 py-12 text-center" role="alert">
-      <Image src="/empty/error.svg" alt="" width={320} height={256} unoptimized className="h-auto w-[200px] md:w-[240px]" />
-      <p className="pd-h2 mt-4">読み込めませんでした</p>
-      <p className="pd-label mt-2 max-w-md">{message}</p>
-      {onRetry && (
-        <button type="button" onClick={onRetry} className="pd-btn mt-6">
-          <RotateCcw className="h-4 w-4" aria-hidden />
-          もう一度
-        </button>
-      )}
+    <div className="pd-card">
+      <DsEmptyState
+        kind="error"
+        title="読み込めませんでした"
+        description={message}
+        action={
+          onRetry ? (
+            <Button onClick={onRetry} icon="RotateCcw">
+              もう一度
+            </Button>
+          ) : undefined
+        }
+      />
     </div>
   )
 }
 
+/** 見る権限がないとき（誰に頼めばよいか） */
 export function ForbiddenState({ what }: { what: string }) {
   return (
-    <div className="pd-card flex flex-col items-center px-6 py-12 text-center">
-      <Image src="/empty/forbidden.svg" alt="" width={320} height={256} unoptimized className="h-auto w-[200px] md:w-[240px]" />
-      <p className="pd-h2 mt-4">この{what}は表示できません</p>
-      <p className="pd-label mt-2 max-w-md">
-        削除されたか、別のアカウントで作られた{what}です。作ったときのアカウントでログインしているか確かめてください。共有したい場合は、作った方に設置タグや内容を送ってもらってください。
-      </p>
-      <Link href="/popup" className="pd-btn mt-6">
-        サイト一覧へ
-      </Link>
+    <div className="pd-card">
+      <DsEmptyState
+        kind="forbidden"
+        title={`この${what}は表示できません`}
+        description={`削除されたか、別のアカウントで作られた${what}です。作ったときのアカウントでログインしているか確かめてください。共有したい場合は、作った方に設置タグや内容を送ってもらってください。`}
+        action={<Button href="/popup">サイト一覧へ</Button>}
+      />
     </div>
   )
 }

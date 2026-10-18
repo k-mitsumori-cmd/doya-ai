@@ -20,6 +20,8 @@ const APP_ONLY_PREFIXES = [
   '/adimage/history',
   '/asklink/history',
   '/popup/sites', '/popup/edit',
+  '/shanai/interviews', '/shanai/company', '/shanai/new', '/shanai/answer',
+  '/income/clients', '/income/contracts', '/income/revenue', '/income/invoices', '/income/payments', '/income/settings',
   '/opening/dashboard',
   '/tenkai/projects',
   '/aio/invite', '/sfa/invite', '/shodan/invite', '/promane/invite',
@@ -72,6 +74,10 @@ const nextConfig = {
       // MediaInfo は実行時に WebAssembly をファイルから読むため、両文字起こし関数に同梱する。
       '/api/interview/materials/[id]/transcribe': ['./node_modules/mediainfo.js/dist/MediaInfoModule.wasm'],
       '/api/interview/materials/[id]/transcribe-stream': ['./node_modules/mediainfo.js/dist/MediaInfoModule.wasm'],
+      // ドヤ社内インタビュー: 録音の長さを測る MediaInfo と、サムネ・Word のサムネ合成に使う日本語フォント
+      '/api/shanai/interviews/[id]/transcribe': ['./node_modules/mediainfo.js/dist/MediaInfoModule.wasm'],
+      '/api/shanai/interviews/[id]/thumbnail': ['./assets/fonts/*.ttf'],
+      '/api/shanai/interviews/[id]/export': ['./assets/fonts/*.ttf'],
       // ⚠️ 日本語フォントも必ず同梱する。Lambda用Chromiumには日本語フォントが無く、
       //    入れるのを忘れるとPDFの日本語が全て空白になる（assets/fonts/README.md 参照）。
       //    banner/from-url はページから色を取るだけで文字を描画しないため不要。

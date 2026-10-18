@@ -137,6 +137,38 @@ export async function getSignedFileUrl(
 }
 
 /**
+ * ファイルの先頭だけを読む（中身の形式の確認用。SEC-069）。
+ * 大きな音声・動画を丸ごと取らないよう、Range で先頭の数十バイトだけを取る。
+ */
+export async function readFileHead(storagePath: string, length: number): Promise<Uint8Array> {
+  if (!Number.isSafeInteger(length) || length < 1 || length > 4096) throw new Error('読み取る長さが不正です')
+  const url = await getSignedFileUrl(storagePath, 60)
+  const res = await fetch(url, { headers: { Range: `bytes=0-${length - 1}` }, signal: AbortSignal.timeout(15_000), redirect: 'error' })
+  if (!res.ok && res.status !== 206) throw new Error('ファイルの先頭を読み取れませんでした')
+  const reader = res.body?.getReader()
+  if (!reader) return new Uint8Array()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  // Range が無視されて全体が返ってきても、必要な分だけ読んで止める
+  while (total < length) {
+    const { done, value } = await reader.read()
+    if (done || !value) break
+    chunks.push(value)
+    total += value.length
+  }
+  await reader.cancel().catch(() => {})
+  const head = new Uint8Array(Math.min(total, length))
+  let offset = 0
+  for (const chunk of chunks) {
+    const part = chunk.subarray(0, head.length - offset)
+    head.set(part, offset)
+    offset += part.length
+    if (offset >= head.length) break
+  }
+  return head
+}
+
+/**
  * ファイルの存在確認 + メタデータ取得
  */
 export async function getFileMetadata(

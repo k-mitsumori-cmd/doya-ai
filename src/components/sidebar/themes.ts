@@ -403,3 +403,37 @@ export const mensetsuTheme: SidebarTheme = {
   aiBubbleBg: 'bg-blue-700',
   zapColor: 'text-sky-300 fill-sky-300',
 }
+
+/** ドヤ展示会 — クリア（ds トークンの --blue / --blue-deep / --navy。ADDON-SERVICES R-3） */
+export const tenjikaiTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-[#0066ff] via-[#0047d6] to-[#0a0f3c]',
+  navText: 'text-blue-100/75',
+  navTextIcon: 'text-blue-200/75',
+  sectionText: 'text-blue-200/55',
+  toggleText: 'text-[#0047d6]',
+  toggleHover: 'hover:bg-blue-50',
+  brandingText: 'text-blue-100/35',
+  profileBg: 'bg-[#0a0f3c]/40',
+  avatarBg: 'bg-[#0066ff]',
+  loginText: 'text-[#0047d6]',
+  loginHover: 'hover:bg-blue-50',
+  aiBubbleBg: 'bg-[#0066ff]',
+  zapColor: 'text-[#ffd400] fill-[#ffd400]',
+}
+
+/** ドヤ社内インタビュー — クリアの青（統合仕様 R-3。段0の AppShell が入るまでの暫定サイドバー用） */
+export const shanaiTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-[#0066ff] via-[#0047d6] to-[#0a0f3c]',
+  navText: 'text-blue-50/80',
+  navTextIcon: 'text-blue-100/80',
+  sectionText: 'text-blue-100/60',
+  toggleText: 'text-[#0047d6]',
+  toggleHover: 'hover:bg-blue-50',
+  brandingText: 'text-blue-50/40',
+  profileBg: 'bg-black/15',
+  avatarBg: 'bg-[#0047d6]',
+  loginText: 'text-[#0047d6]',
+  loginHover: 'hover:bg-blue-50',
+  aiBubbleBg: 'bg-[#0047d6]',
+  zapColor: 'text-sky-200 fill-sky-200',
+}

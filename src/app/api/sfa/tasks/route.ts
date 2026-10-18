@@ -40,29 +40,35 @@ export async function GET(req: NextRequest) {
     return json({ error: '商談の指定が正しくありません' }, { status: 400 })
   }
   const pageSize = 200
-  const rows = await prisma.sfaTask.findMany({
-    where: { organizationId: ctx.organizationId, ...(dealId ? { dealId } : {}) },
-    orderBy: [{ status: 'desc' }, { dueDate: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }],
-    skip: (page - 1) * pageSize,
-    take: pageSize + 1,
-    select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true },
-  })
-  const tasks = rows.slice(0, pageSize)
+  try {
+    const rows = await prisma.sfaTask.findMany({
+      where: { organizationId: ctx.organizationId, ...(dealId ? { dealId } : {}) },
+      orderBy: [{ status: 'desc' }, { dueDate: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }],
+      skip: (page - 1) * pageSize,
+      take: pageSize + 1,
+      select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true, updatedAt: true },
+    })
+    const tasks = rows.slice(0, pageSize)
 
-  // dealId → 商談名（SfaTask に Prisma リレーションは無いため1クエリで引き当て）
-  const dealIds = Array.from(new Set(tasks.map((t) => t.dealId).filter((v): v is string => !!v)))
-  const deals = dealIds.length
-    ? await prisma.sfaDeal.findMany({
-        where: { id: { in: dealIds }, organizationId: ctx.organizationId },
-        select: { id: true, name: true },
-      })
-    : []
-  const dealName = new Map(deals.map((d) => [d.id, d.name]))
+    // dealId → 商談名（SfaTask に Prisma リレーションは無いため1クエリで引き当て）
+    const dealIds = Array.from(new Set(tasks.map((t) => t.dealId).filter((v): v is string => !!v)))
+    const deals = dealIds.length
+      ? await prisma.sfaDeal.findMany({
+          where: { id: { in: dealIds }, organizationId: ctx.organizationId },
+          select: { id: true, name: true },
+        })
+      : []
+    const dealName = new Map(deals.map((d) => [d.id, d.name]))
 
-  return json(
-    { tasks: tasks.map((t) => ({ ...t, dealName: t.dealId ? dealName.get(t.dealId) || null : null })), page, hasMore: rows.length > pageSize },
-    { headers: { 'Cache-Control': 'no-store' } }
-  )
+    return json(
+      { tasks: tasks.map((t) => ({ ...t, dealName: t.dealId ? dealName.get(t.dealId) || null : null })), page, hasMore: rows.length > pageSize },
+      { headers: { 'Cache-Control': 'no-store' } }
+    )
+  } catch (error) {
+    // 列不足(P2022)などDB起因の失敗を Vercel ログで切り分けられるように記録する
+    console.error('[sfa/tasks] GET failed', { code: (error as { code?: string })?.code, name: (error as { name?: string })?.name })
+    return json({ error: 'タスク一覧を取得できませんでした。時間をおいて再度お試しください。' }, { status: 500 })
+  }
 }
 
 // POST /api/sfa/tasks — タスク追加（dealId で商談に紐付け可能）

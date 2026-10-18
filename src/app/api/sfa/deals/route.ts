@@ -60,53 +60,59 @@ export async function GET(req: NextRequest) {
     ]
   }
 
-  // パイプライン未生成の組織でも必ずステージが返る（カンバンが空にならない）
-  const [stages, page, stageGroups] = await Promise.all([
-    ensurePipeline(ctx.organizationId),
-    prisma.sfaDeal.findMany({ where, orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }], take: pageSize + 1 }),
-    prisma.sfaDeal.groupBy({
-      by: ['stageId'],
-      where: { organizationId: ctx.organizationId, isActive: true },
-      _count: { _all: true },
-      _sum: { amount: true },
-    }),
-  ])
-  const hasMore = page.length > pageSize
-  const deals = page.slice(0, pageSize)
-  // 取引先名を引く
-  const accIds = Array.from(new Set(deals.map((d) => d.accountId).filter(Boolean))) as string[]
-  const [accs, taskGroups] = await Promise.all([
-    accIds.length
-      ? prisma.sfaAccount.findMany({ where: { id: { in: accIds }, organizationId: ctx.organizationId }, select: { id: true, name: true } })
-      : Promise.resolve([]),
-    deals.length
-      ? prisma.sfaTask.groupBy({
-          by: ['dealId'],
-          where: { organizationId: ctx.organizationId, dealId: { in: deals.map((d) => d.id) }, status: { not: 'done' } },
-          _count: { _all: true },
-        })
-      : Promise.resolve([]),
-  ])
-  const accMap = Object.fromEntries(accs.map((a) => [a.id, a.name]))
-  const taskCount = new Map(taskGroups.map((row) => [row.dealId, row._count._all]))
-  const withName = deals.map((d) => ({
-    ...d,
-    accountName: d.accountId ? accMap[d.accountId] || null : null,
-    openTaskCount: taskCount.get(d.id) || 0,
-  }))
+  try {
+    // パイプライン未生成の組織でも必ずステージが返る（カンバンが空にならない）
+    const [stages, page, stageGroups] = await Promise.all([
+      ensurePipeline(ctx.organizationId),
+      prisma.sfaDeal.findMany({ where, orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }], take: pageSize + 1 }),
+      prisma.sfaDeal.groupBy({
+        by: ['stageId'],
+        where: { organizationId: ctx.organizationId, isActive: true },
+        _count: { _all: true },
+        _sum: { amount: true },
+      }),
+    ])
+    const hasMore = page.length > pageSize
+    const deals = page.slice(0, pageSize)
+    // 取引先名を引く
+    const accIds = Array.from(new Set(deals.map((d) => d.accountId).filter(Boolean))) as string[]
+    const [accs, taskGroups] = await Promise.all([
+      accIds.length
+        ? prisma.sfaAccount.findMany({ where: { id: { in: accIds }, organizationId: ctx.organizationId }, select: { id: true, name: true } })
+        : Promise.resolve([]),
+      deals.length
+        ? prisma.sfaTask.groupBy({
+            by: ['dealId'],
+            where: { organizationId: ctx.organizationId, dealId: { in: deals.map((d) => d.id) }, status: { not: 'done' } },
+            _count: { _all: true },
+          })
+        : Promise.resolve([]),
+    ])
+    const accMap = Object.fromEntries(accs.map((a) => [a.id, a.name]))
+    const taskCount = new Map(taskGroups.map((row) => [row.dealId, row._count._all]))
+    const withName = deals.map((d) => ({
+      ...d,
+      accountName: d.accountId ? accMap[d.accountId] || null : null,
+      openTaskCount: taskCount.get(d.id) || 0,
+    }))
 
-  return NextResponse.json(
-    {
-      stages: bigIntToNumber(stages),
-      deals: bigIntToNumber(withName),
-      nextCursor: hasMore && deals.length
-        ? Buffer.from(JSON.stringify({ updatedAt: deals[deals.length - 1].updatedAt.toISOString(), id: deals[deals.length - 1].id })).toString('base64url')
-        : null,
-      totalCount: stageGroups.reduce((sum, row) => sum + row._count._all, 0),
-      stageSummary: stageGroups.map((row) => ({ stageId: row.stageId, count: row._count._all, total: (row._sum.amount ?? 0n).toString() })),
-    },
-    { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } }
-  )
+    return NextResponse.json(
+      {
+        stages: bigIntToNumber(stages),
+        deals: bigIntToNumber(withName),
+        nextCursor: hasMore && deals.length
+          ? Buffer.from(JSON.stringify({ updatedAt: deals[deals.length - 1].updatedAt.toISOString(), id: deals[deals.length - 1].id })).toString('base64url')
+          : null,
+        totalCount: stageGroups.reduce((sum, row) => sum + row._count._all, 0),
+        stageSummary: stageGroups.map((row) => ({ stageId: row.stageId, count: row._count._all, total: (row._sum.amount ?? 0n).toString() })),
+      },
+      { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } }
+    )
+  } catch (error) {
+    // 列不足(P2022)などDB起因の失敗を Vercel ログで切り分けられるように記録する
+    console.error('[sfa/deals] GET failed', { code: (error as { code?: string })?.code, name: (error as { name?: string })?.name })
+    return json({ error: '商談を取得できませんでした。時間をおいて再度お試しください。' }, 500)
+  }
 }
 
 // POST /api/sfa/deals — actor authority, replay receipt and quota are committed together.

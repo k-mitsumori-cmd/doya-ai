@@ -1,15 +1,36 @@
 /**
  * ナグサメ フリーミアム制限
  *
- * - 匿名ユーザー: guestId cookie で 1日3回
+ * - 匿名ユーザー: 署名付き guestId cookie で 1日3回 + 接続元 IP ごとの上限
  * - Free プラン: 1日3回 + 5キャラ
- * - PRO プラン: 無制限 + 全キャラ
+ * - PRO プラン: 投稿は無制限 + 全キャラ（会話の継続は 1 日の上限あり）
  */
 
 import { prisma } from '@/lib/prisma'
+import { clientIp, consumeDailyQuota, quotaSubject, type DailyQuotaResult } from '@/lib/server-daily-quota'
 import { MITSUBOSHI_DISABLE_LIMITS } from '../_shared/constants'
 
 const FREE_DAILY_LIMIT = 3
+
+// ゲストは Cookie を作り直せるため、接続元 IP ごとの上限を別に数える。
+// 同じ回線を複数人で使う場合を考え、1 人分の枠より多めにしている。
+const GUEST_IP_DAILY_LIMIT = { generate: 10, chat: 40 } as const
+// 会話の継続も有料の AI を呼ぶため、ログイン中でも 1 日の上限を置く（無制限にしない）。
+const CHAT_DAILY_LIMIT = { guest: 30, user: 200 } as const
+
+/** ゲストの接続元 IP ごとの 1 日の上限を 1 回分消費する */
+export function claimNagusameGuestIp(headers: Headers, kind: 'generate' | 'chat'): Promise<DailyQuotaResult> {
+  if (MITSUBOSHI_DISABLE_LIMITS) return Promise.resolve('allowed')
+  return consumeDailyQuota(`nagusame-${kind}-ip`, quotaSubject(clientIp(headers)), GUEST_IP_DAILY_LIMIT[kind])
+}
+
+/** 会話の継続（chat）の 1 日の上限を、ユーザーまたはゲスト単位で 1 回分消費する */
+export function claimNagusameChat(actor: { userId: string } | { guestId: string }): Promise<DailyQuotaResult> {
+  if (MITSUBOSHI_DISABLE_LIMITS) return Promise.resolve('allowed')
+  return 'userId' in actor
+    ? consumeDailyQuota('nagusame-chat-user', quotaSubject(`user:${actor.userId}`), CHAT_DAILY_LIMIT.user)
+    : consumeDailyQuota('nagusame-chat-guest', quotaSubject(`guest:${actor.guestId}`), CHAT_DAILY_LIMIT.guest)
+}
 
 export interface LimitCheckResult {
   allowed: boolean

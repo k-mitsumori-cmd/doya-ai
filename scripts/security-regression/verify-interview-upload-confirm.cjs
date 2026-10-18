@@ -26,6 +26,8 @@ let signedReads = 0
 let queued = []
 let currentOwner = { userId: null, guestId: 'guest-1' }
 let claimAfterMetadata = false
+let currentHead = Buffer.from('RIFF\0\0\0\0WAVE')
+let headReads = 0
 const material = () => ({
   id: 'material-1', projectId: 'project-1', filePath: 'guest_guest-1/project-1/audio.wav',
   fileName: 'audio.wav', mimeType: 'audio/wav', type: 'audio', status: currentStatus,
@@ -63,8 +65,10 @@ const confirm = load('src/app/api/interview/materials/confirm/route.ts', {
     ensureBucket: async () => {}, getDetectedMaxFileSize: () => 500,
     getFileMetadata: async () => { metadataReads++; if (claimAfterMetadata) currentOwner = { userId: 'account-1', guestId: 'guest-1' }; return { size: currentSize, mimeType: 'audio/wav' } },
     getSignedFileUrl: async () => { signedReads++; return 'https://storage.example.test/signed' },
+    readFileHead: async () => { headReads++; return new Uint8Array(currentHead) },
   },
   '@/lib/interview/types': { getMaxFileSize: () => 500 },
+  '@/lib/interview/file-signature': load('src/lib/interview/file-signature.ts', {}),
   '@/lib/pricing': { getInterviewGuestLimits: () => ({ uploadSizeLimit: 100 }), getInterviewLimitsByPlan: () => ({ uploadSizeLimit: 200 }) },
   '@/lib/interview/storage-purge-queue': purge,
 }, { process: { env: { DATABASE_URL: 'postgres://test' } } })
@@ -122,8 +126,22 @@ const request = () => ({ cookies: { get: () => guestId ? { value: guestId } : un
     assert.equal(res.status, 200)
     assert.equal(currentSize, 81)
     assert.equal(currentStatus, 'COMPLETED')
-    assert.equal(currentFileUrl, 'https://storage.example.test/signed')
+    // SEC-069: 7 日有効の署名付き URL は保存せず、秘密を含まない目印だけを残す
+    assert.equal(currentFileUrl, 'storage:guest_guest-1/project-1/audio.wav')
+    assert.equal(signedReads, 0)
     assert.equal(queued.length, 0)
+  })
+  await check('content that does not match the declared type is rejected and queued for cleanup (SEC-069)', async () => {
+    currentStatus = 'UPLOADED'; currentFileUrl = null; currentSize = 81; queued = []
+    currentHead = Buffer.from('<html><script>')
+    const res = await confirm.POST(request())
+    assert.equal(res.status, 415)
+    assert.equal((await res.json()).code, 'UPLOAD_CONTENT_MISMATCH')
+    assert.equal(currentStatus, 'ERROR')
+    assert.equal(currentFileUrl, null)
+    assert.equal(queued.length, 1)
+    currentHead = Buffer.from('RIFF\0\0\0\0WAVE')
+    currentStatus = 'UPLOADED'; queued = []
   })
   await check('claim during storage lookup blocks both confirmation and over-limit purge', async () => {
     currentStatus = 'UPLOADED'; currentFileUrl = null; currentSize = 81; queued = []

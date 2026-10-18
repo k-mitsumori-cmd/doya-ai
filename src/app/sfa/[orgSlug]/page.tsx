@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { sfaJson, isSfaClientTask, type SfaClientTask } from '@/lib/sfa/client-response'
+import { sfaJson, sfaValidRows, isSfaClientTask, type SfaClientTask } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
 import { jstDateKey } from '@/lib/sfa/task-date'
@@ -66,8 +66,9 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
     const timer = setTimeout(() => controller.abort(), 15000)
     setTaskError('')
     sfaJson('/api/sfa/tasks', orgSlug, { signal: controller.signal }).then(d => {
-      if (!Array.isArray(d.tasks) || !d.tasks.every(isSfaClientTask) || typeof d.hasMore !== 'boolean') throw new Error('タスク取得失敗')
-      if (alive.current && mutations.active() && sequence === taskSequence.current) { setTasks(d.tasks); setHasMoreTasks(d.hasMore === true); setTasksLoaded(true) }
+      const valid = sfaValidRows(d.tasks, isSfaClientTask)
+      if (!valid || typeof d.hasMore !== 'boolean') throw new Error('タスク取得失敗')
+      if (alive.current && mutations.active() && sequence === taskSequence.current) { setTasks(valid.rows); setHasMoreTasks(d.hasMore === true); setTasksLoaded(true) }
     }).catch(() => { if (alive.current && mutations.active() && sequence === taskSequence.current) setTaskError('タスクを取得できませんでした。再試行してください。') }).finally(() => clearTimeout(timer))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, orgSlug, mutations.key])

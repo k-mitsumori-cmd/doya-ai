@@ -46,7 +46,8 @@ function SignInContent() {
     }
   }, [])
 
-  const errorMessage = loginError || (error ? (errorMessages[error] || errorMessages.Default) : null)
+  // /api/auth/error を直接開くと NextAuth が error=undefined を付けて戻すため、エラーなしとして扱う。
+  const errorMessage = loginError || (error && error !== 'undefined' ? (errorMessages[error] || errorMessages.Default) : null)
 
   const handleGoogleLogin = async () => {
     if (loginInFlight.current) return

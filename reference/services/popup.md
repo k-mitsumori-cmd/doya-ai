@@ -361,12 +361,17 @@ ALTER TABLE "popup_site" ADD COLUMN IF NOT EXISTS "companyProfileId" TEXT;
 
 追加のみ・null 可で、既存の行とアプリの動作には影響しない。**main に入れる前に反映する**（反映前にデプロイすると `popup_site` を読むすべての問い合わせが P2022 で落ちる）。
 
-### 段0が入ったらやること
+### 段0への接続（2026-10-18。ブランチ `feat/doya-popup-shell`、段0 `feat/ds-shell` 58e28ab2 の上）
 
-1. 段0（`feat/ds-shell`）を取り込み、`src/app/popup/layout.tsx` でフラグ `ui.shell.popup` を見て AppShell＋ToolFrame に載せる（フラグ OFF の間は今の暫定サイドバー）
-2. `popup-ds.css` の変数定義を消して ds の `tokens.css` を読む。`.pd-*` を ds の部品（Skeleton / EmptyState / StatTile / Button）に置き換える
-3. `POPUP_NAV` をマニフェストの `ui.nav[]` に移す
-4. 375px / 768px / 1280px でスクリーンショット（D-3）
+- `src/app/popup/layout.tsx` がフラグ `isShellEnabled('popup')`（環境変数 `UI_SHELL_SERVICES`）を見て、ON のときだけ `PopupShellFrame`（AppShell＋ToolFrame）で包む。OFF の間は従来の `PopupAppLayout`。ページ本体と API は変えていない
+- ナビは `src/lib/popup/nav.ts` の `POPUP_NAV`（段0の `ShellNavItem`）。ToolFrame の `nav` に渡す。アイコンは関数なので、サーバの layout からではなくクライアントの `PopupShellFrame` が読む
+- ToolFrame がページの見出し（h1）を出すので、シェルの中ではページの見出しを h2 にする（`shell-context.ts`）。トップは同じ見出しと説明が重なるので出さない
+- トークンは段0の `.ds`（`src/components/ds/tokens.module.css`）を正本にした。`popup-ds.css` には段0に無い値（エラーの色・骨組み・グラフ・面）だけを残した
+- 空・エラー・権限なし・数字のタイル・バッジは段0の部品（`EmptyState` / `StatTile` / `Badge` / `Button`）。骨組みは実物と同じ形にしたいので、ポップアップのものを使う
+- 目視確認（2026-10-18）: `/popup/dev/states?s=home|site&shell=1` を 375px と 1280px で確認。横スクロール無し、h1 は ToolFrame の1つだけ、サイドバーの「集める」にポップアップ（開発中）が出る
+- テスト: layout がフラグを見ていること、ToolFrame に `POPUP_NAV` を渡していることを確認（`read.test.ts`）
+
+残り: `POPUP_NAV` をマニフェストの `ui.nav[]` に移す（Phase0 で `src/services/popup/manifest.ts` を作るとき）
 
 ## 15. マニフェスト草案（統合仕様 R-8。Phase0 で `src/services/popup/manifest.ts` に移す）
 

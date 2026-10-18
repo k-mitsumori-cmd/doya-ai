@@ -65,8 +65,11 @@ export async function PUT(req: NextRequest) {
     data[f] = typeof v === 'string' ? v.trim().slice(0, 4000) || null : null
   }
   // ロゴパス（自前アップロード形式のみ許可）
+  // 他組織のパスを保存されると、そのロゴの署名URLが発行されてしまうため、自組織の配下だけを受け付ける。
   const rawLogo = typeof body.logoPath === 'string' ? body.logoPath.trim() : ''
-  data.logoPath = rawLogo && /^shodan\/logos\/[a-z0-9-]+\/[0-9a-fA-F-]{36}\.(png|jpg|webp)$/.test(rawLogo) ? rawLogo : null
+  data.logoPath = rawLogo
+    && rawLogo.startsWith(`shodan/logos/${ctx.organizationId}/`)
+    && /^shodan\/logos\/[a-z0-9-]+\/[0-9a-fA-F-]{36}\.(png|jpg|webp)$/.test(rawLogo) ? rawLogo : null
   // ブランドカラー（#RRGGBB を最大4色）
   data.brandColors = Array.isArray(body.brandColors)
     ? body.brandColors.filter((c: any) => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c)).slice(0, 4)

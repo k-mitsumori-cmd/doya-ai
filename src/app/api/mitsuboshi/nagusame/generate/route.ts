@@ -15,15 +15,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { randomUUID } from 'crypto'
 
 import { detectSelfHarmRisk, SAFETY_RESOURCES } from '@/lib/mitsuboshi/_shared/safety'
-import { checkNagusameLimit } from '@/lib/mitsuboshi/nagusame/limits'
+import { checkNagusameLimit, claimNagusameGuestIp } from '@/lib/mitsuboshi/nagusame/limits'
+import { GUEST_COOKIE, guestCookieHeader, issueGuestId, readGuestId } from '@/lib/mitsuboshi/nagusame/guest'
 import { getPersonasForSegment } from '@/lib/mitsuboshi/nagusame/personas'
 import { generateNagusameReplies } from '@/lib/mitsuboshi/nagusame/generation'
 import type { NagusameSegment } from '@/lib/mitsuboshi/nagusame/types'
-
-const GUEST_COOKIE = 'mitsuboshi_guest_id'
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,12 +41,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '1000文字以内で入力してください' }, { status: 400 })
     }
 
-    // ゲストID を cookie から取得 or 発行
-    let guestId = req.cookies.get(GUEST_COOKIE)?.value || null
-    let setGuestCookie = false
+    // ゲストID を cookie から取得 or 発行（署名の合わない値は使わない）
+    let guestId = userId ? null : readGuestId(req.cookies.get(GUEST_COOKIE)?.value)
+    let guestCookieValue: string | null = null
     if (!userId && !guestId) {
-      guestId = randomUUID()
-      setGuestCookie = true
+      const issued = issueGuestId()
+      guestId = issued.guestId
+      guestCookieValue = issued.cookieValue
+    }
+
+    // ゲストは Cookie を作り直せるため、接続元 IP ごとの上限も数える（数えられないときは止める）
+    if (!userId) {
+      const ipQuota = await claimNagusameGuestIp(req.headers, 'generate')
+      if (ipQuota !== 'allowed') {
+        return NextResponse.json(
+          {
+            error: ipQuota === 'limited'
+              ? '本日の無料枠を使い切りました。ログインするか、明日もう一度お試しください。'
+              : '混み合っています。時間をおいて再度お試しください。',
+            limitReached: ipQuota === 'limited',
+          },
+          { status: ipQuota === 'limited' ? 429 : 503 }
+        )
+      }
     }
 
     // 利用制限判定
@@ -178,21 +193,9 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    if (setGuestCookie && guestId) {
-      // ゲストID Cookie を付与（30日）
-      // - HttpOnly: XSSでJSから読まれない
-      // - SameSite=Lax: CSRFを軽減しつつ通常リンク遷移は許可
-      // - Secure: 本番（HTTPS）でのみ。ローカル開発(http)では付けない
-      const isProduction = process.env.NODE_ENV === 'production'
-      const cookieParts = [
-        `${GUEST_COOKIE}=${guestId}`,
-        'Path=/',
-        `Max-Age=${60 * 60 * 24 * 30}`,
-        'SameSite=Lax',
-        'HttpOnly',
-      ]
-      if (isProduction) cookieParts.push('Secure')
-      res.headers.append('Set-Cookie', cookieParts.join('; '))
+    if (guestCookieValue) {
+      // 署名付きのゲストID Cookie を付与（30日・HttpOnly・SameSite=Lax・本番のみ Secure）
+      res.headers.append('Set-Cookie', guestCookieHeader(guestCookieValue))
     }
 
     return res

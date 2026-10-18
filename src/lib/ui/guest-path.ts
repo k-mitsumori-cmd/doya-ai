@@ -21,6 +21,8 @@ const GUEST_PATH_PATTERNS: RegExp[] = [
   /^\/[a-z]+\/invite\//,
   // 見込み客が開く商談ルーム
   /^\/m\//,
+  // 社員が開く社内インタビューのアンケート回答画面
+  /^\/shanai\/answer\//,
 ]
 
 export function isGuestPath(pathname: string | null | undefined): boolean {

@@ -173,6 +173,12 @@ test('エージェントの道具は API と同じ lib 関数を呼ぶ（処理�
 
 test('nav.ts: サイドバーの項目はデータで、選択中の判定', () => {
   assert.deepEqual(POPUP_NAV.map((n) => n.href), ['/popup', '/popup/pricing'])
+  // アイコンは名前の文字列（関数だとサーバの layout から渡せず 500 になる）。対応表にある名前だけ
+  const { SHELL_ICONS } = require('../../components/shell/icons') as typeof import('../../components/shell/icons')
+  for (const n of POPUP_NAV) {
+    assert.equal(typeof n.icon, 'string', n.label)
+    assert.ok(n.icon! in SHELL_ICONS, `対応表に無いアイコン: ${n.icon}`)
+  }
   const home = POPUP_NAV[0]
   assert.ok(isPopupNavActive(home, '/popup'))
   assert.ok(isPopupNavActive(home, '/popup/sites/abc'))
@@ -198,4 +204,16 @@ test('D-2: src/app/popup に色の直書きが無い', () => {
       .filter((x): x is string => !!x)
   )
   assert.deepEqual(hits, [])
+})
+
+test('D-3: 共通シェルにはフラグ ui.shell.popup が ON のときだけ載せる', () => {
+  const layout = readFileSync(join(process.cwd(), 'src/app/popup/layout.tsx'), 'utf8')
+  assert.ok(/isShellEnabled\('popup'\)/.test(layout), 'layout.tsx がフラグを見ていない')
+  assert.ok(/<PopupShellFrame[^>]*nav=\{POPUP_NAV\}/.test(layout), 'layout.tsx から nav.ts を渡していない')
+  assert.ok(/<PopupAppLayout>/.test(layout), 'フラグ OFF の従来の枠が無い')
+  // SHL-098: サーバの layout から 'use client' の ds/index.tsx 経由でトークンを読まない
+  assert.ok(!/from '@\/components\/ds'/.test(layout), "layout.tsx が '@/components/ds' を読んでいる")
+  assert.ok(/from '@\/components\/ds\/tokens\.module\.css'/.test(layout))
+  const frame = readFileSync(join(process.cwd(), 'src/components/popup/PopupShellFrame.tsx'), 'utf8')
+  assert.ok(/<AppShell/.test(frame) && /<ToolFrame[^>]*serviceId="popup"[^>]*nav=\{nav\}/.test(frame), 'ToolFrame に nav を渡していない')
 })

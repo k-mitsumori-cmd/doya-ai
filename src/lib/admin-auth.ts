@@ -2,8 +2,11 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { prisma } from './prisma'
 
-// JWT秘密鍵（環境変数から取得、なければ警告）
-export const JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret-change-in-production'
+// JWT秘密鍵（環境変数から取得）
+// 本番で未設定のときに公開リポジトリ上の固定文字列で署名・検証すると管理者トークンを偽造できるため、
+// 固定文字列は開発環境だけで使う。本番で空のときは jwt.sign / jwt.verify が失敗し、ログインも検証も通らない。
+export const JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.NEXTAUTH_SECRET
+  || (process.env.NODE_ENV === 'production' ? '' : 'fallback-secret-change-in-production')
 export const JWT_EXPIRES_IN = '24h'
 export const COOKIE_NAME = 'admin_session_token'
 export const MAX_LOGIN_ATTEMPTS = 5

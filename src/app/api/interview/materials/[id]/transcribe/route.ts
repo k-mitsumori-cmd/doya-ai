@@ -257,14 +257,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
 function getErrorHint(e: any): string | undefined {
   const m = String(e?.message || '')
-  if (/OPENAI_API_KEY/i.test(m)) {
-    return 'OPENAI_API_KEY を環境変数に設定してください'
-  }
-  if (/GOOGLE_SPEECH/i.test(m)) {
-    return 'INTERVIEW_GOOGLE_SPEECH_API_KEY を環境変数に設定してください'
-  }
-  if (/ASSEMBLYAI_API_KEY/i.test(m)) {
-    return 'ASSEMBLYAI_API_KEY を環境変数に設定してください'
+  // 設定不備は利用者には直せないため、環境変数名を出さずに定型文で案内する（詳細はサーバー側の設定を確認する）
+  if (/OPENAI_API_KEY|GOOGLE_SPEECH|ASSEMBLYAI_API_KEY/i.test(m)) {
+    console.error('[interview] transcribe provider is not configured')
+    return '文字起こし機能が一時的にご利用いただけません。お手数ですが、時間をおいて再度お試しください。'
   }
   if (/タイムアウト/i.test(m)) {
     return 'ファイルが大きすぎる可能性があります。短い音声から試してください。'

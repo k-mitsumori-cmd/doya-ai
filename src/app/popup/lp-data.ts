@@ -15,14 +15,14 @@ export const STEPS: Step[] = [
 
 export const BENEFITS: Benefit[] = [
   { icon: 'image_not_supported', title: '画像を用意しなくていい', desc: 'バナーはサイトの色に合わせて自動でデザインします。文言はあとから自由に直せます。手持ちの画像を使うこともできます。' },
-  { icon: 'lightbulb', title: '何を出すかをAIが考える', desc: 'サイトで見つかったページと内容から、出す内容・出すタイミング・出す位置まで提案します。' },
+  { icon: 'lightbulb', title: '何を出すかをAIが考える', desc: 'AIがサイトの内容とページを読み取り、出す内容・タイミング・位置を提案します。' },
   { icon: 'monitoring', title: '押されたかが数字で分かる', desc: '案ごとの表示数・クリック数・クリック率を日別に計測します。Cookieは使いません。' },
 ]
 
 export const FAQ: Faq[] = [
   { q: '無料で使えますか？', a: `無料プランは${getServiceById('popup')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('popup')!.pricing.pro.limit}。1つの契約で全サービスのプロプランが使えます。` },
   { q: 'どんなサイトに設置できますか？', a: 'HTMLの<head>にタグを1行追加できるサイトなら設置できます。WordPress、Studio、Wix、HubSpot CMS などでも、ヘッダーにコードを追加する設定から貼れます。' },
-  { q: 'サイトの表示が遅くなりませんか？', a: '設置タグは非同期で読み込み、ページの表示を待たせません。スクリプトは圧縮時7KB程度です。' },
+  { q: 'サイトの表示が遅くなりませんか？', a: '設置タグは、ページの表示が終わるのを待たせない形で読み込みます。スクリプトの大きさは、圧縮した状態で約7KBです。' },
   { q: '「AIに聞く」ボタンを押すと何が起きますか？', a: 'ChatGPTが新しいタブで開き、サイトに合わせた質問文が入力欄に入った状態になります。ChatGPTに質問文を渡す仕組みはOpenAIの公式仕様ではないため、将来動かなくなる可能性があります。' },
   { q: '訪問者の個人情報を取りますか？', a: '取りません。数えるのは案ごとの表示・クリック・閉じた回数だけで、Cookie・IPアドレスは保存しません。' },
 ]

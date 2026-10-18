@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { sendDailySummary, sendErrorNotification } from '@/lib/notifications'
 import { prisma, withRetry } from '@/lib/prisma'
-import { stripe, ALL_SERVICE_IDS } from '@/lib/stripe'
+import { stripe, findActiveLikeSubscriptions } from '@/lib/stripe'
+import { syncUnifiedBilling } from '@/lib/billing-sync'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 
 // ========================================
 // 期限切れサブスクリプションのフォールバック処理
@@ -25,6 +27,7 @@ async function resetExpiredSubscriptions() {
       email: true,
       name: true,
       plan: true,
+      stripeCustomerId: true,
       stripeSubscriptionId: true,
       stripeCurrentPeriodEnd: true,
     },
@@ -33,7 +36,6 @@ async function resetExpiredSubscriptions() {
   if (expiredUsers.length === 0) return 0
 
   let resetCount = 0
-  const allServiceIds = ALL_SERVICE_IDS
 
   for (const user of expiredUsers) {
     try {
@@ -72,37 +74,28 @@ async function resetExpiredSubscriptions() {
 
       if (!shouldReset) continue
 
-      // ユーザーの plan を FREE に戻す
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          plan: 'FREE',
-          stripeSubscriptionId: null,
-          stripePriceId: null,
-          stripeCurrentPeriodEnd: null,
-        },
-      })
-
-      // 全サービスも FREE に戻す
-      for (const serviceId of allServiceIds) {
-        await prisma.userServiceSubscription.update({
-          where: { userId_serviceId: { userId: user.id, serviceId } },
-          data: {
-            plan: 'FREE',
-            stripeSubscriptionId: null,
-            stripePriceId: null,
-            stripeCurrentPeriodEnd: null,
-          },
-        }).catch((e: any) => {
-          // レコードが存在しない場合は無視（全サービス分を一律更新するため）
-          if (e?.code !== 'P2025') {
-            console.error("[api/cron/daily-summary] failed")
-          }
-        })
+      // ------------------------------------------------------------------
+      // 誤ダウングレード防止（reference/11-billing-spec.md R-2。Webhook の解約処理と同じ考え方）
+      // ------------------------------------------------------------------
+      // 顧客が分裂して二重契約になっていると、DB の ID が解約済みの側を指していることがある。
+      // ほかに生きている契約が残っていれば、ここでは落とさない（照会に失敗したときも、外側の catch で落とさない）。
+      const remaining = (
+        await findActiveLikeSubscriptions({ userId: user.id, email: user.email, stripeCustomerId: user.stripeCustomerId })
+      ).filter((s) => s.id !== user.stripeSubscriptionId)
+      if (remaining.length > 0) {
+        console.warn(`[Cron] Skip expired-subscription reset: user=${user.id} has another live subscription`)
+        continue
       }
 
+      // FREE に戻すときも、正規の同期処理を通す（以前は User と各サービスの行を直接書き換えていた）。
+      // これで手動付与の保護、HR 組織の同期、全行を 1 つのトランザクションで更新することが効く。
+      const synced = await syncUnifiedBilling({
+        userId: user.id, plan: 'FREE', stripeSubscriptionId: null,
+        stripePriceId: null, stripeCurrentPeriodEnd: null,
+      })
+
       resetCount++
-      console.log(`[Cron] Reset expired subscription: user=${user.id} email=${user.email} oldPlan=${user.plan}`)
+      console.log(`[Cron] Reset expired subscription: user=${user.id} oldPlan=${user.plan} newPlan=${synced.userPlan}`)
     } catch (err: any) {
       console.error("[api/cron/daily-summary] failed")
     }
