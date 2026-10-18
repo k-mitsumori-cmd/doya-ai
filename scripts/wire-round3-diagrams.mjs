@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 const targets = {
-  banner: ['src/app/banner/landing/page.tsx', 'ドヤバナーAI', '#00e0ff'], hr: ['src/app/hr/page.tsx', 'ドヤHR', '#009bff'],
+  banner: ['src/app/banner/landing/page.tsx', 'ドヤバナーAI', '#00e0ff'], hr: ['src/app/(shell)/hr/page.tsx', 'ドヤHR', '#009bff'],
   kintai: ['src/app/kintai/page.tsx', 'ドヤ勤怠', '#00e0ff'], sfa: ['src/app/sfa/Lp.tsx', 'ドヤ営業管理', '#009bff'],
   shodan: ['src/app/shodan/Lp.tsx', 'ドヤ商談準備', '#ffd400'], aio: ['src/app/aio/Lp.tsx', 'ドヤAIO', '#00e0ff'],
   mensetsu: ['src/app/mensetsu/Lp.tsx', 'ドヤ面接官', '#ff1e72'], quote: ['src/app/quote/Lp.tsx', 'ドヤ見積もりAI', '#ffd400'],

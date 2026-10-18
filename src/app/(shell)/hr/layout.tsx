@@ -1,8 +1,12 @@
 import type { Metadata } from 'next'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
+import { isShellEnabled } from '@/lib/ui-shell'
 import { LpJsonLd } from '@/components/lp'
 import HrLayoutShell from '@/components/hr/HrLayout'
+import HrShellFrame from '@/components/hr/HrShellFrame'
 import { FAQ } from './lp-data'
 
 export const metadata: Metadata = buildServiceMetadata('hr', {
@@ -11,7 +15,11 @@ export const metadata: Metadata = buildServiceMetadata('hr', {
 
 const SVC = getServiceById('hr')!
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default async function Layout({ children }: { children: React.ReactNode }) {
+  // ⚠️ 共通の枠は、ログインしていて UI_SHELL_SERVICES に hr があるときだけ（registry.ts と同じ条件）。
+  //    それ以外（未ログインを含む）は今までどおり HrLayoutShell。LP・料金・招待の判定は HrLayout が行う
+  const session = await getServerSession(authOptions).catch(() => null)
+  const shell = Boolean(session?.user) && isShellEnabled('hr')
   return (
     <>
       <LpJsonLd
@@ -22,7 +30,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         features={SVC.features}
         faq={FAQ}
       />
-      <HrLayoutShell>{children}</HrLayoutShell>
+      {shell ? <HrShellFrame>{children}</HrShellFrame> : <HrLayoutShell>{children}</HrLayoutShell>}
     </>
   )
 }
