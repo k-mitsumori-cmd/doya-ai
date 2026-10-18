@@ -17,9 +17,11 @@ interface Props {
   aspectRatio: string
   getReference?: () => Promise<string | undefined>
   onResult: (images: string[]) => void
+  /** サーバーの実行記録に残す種類 */
+  kind?: 'creative_image' | 'booth_render' | 'graphic_panel'
 }
 
-export default function ImageGenModal({ open, onClose, title, prompt: initialPrompt, aspectRatio, getReference, onResult }: Props) {
+export default function ImageGenModal({ open, onClose, title, prompt: initialPrompt, aspectRatio, getReference, onResult, kind = 'creative_image' }: Props) {
   const [model, setModel] = useState(IMAGE_MODELS[0].id)
   const [size, setSize] = useState<ImageSize>('2K')
   const [count, setCount] = useState(1)
@@ -47,7 +49,7 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
       const res = await fetch('/api/tenjikai/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, model, size, aspectRatio, count, approved: true, expectedCostYen: est.totalYen, referencePng }),
+        body: JSON.stringify({ prompt, model, size, aspectRatio, count, approved: true, expectedCostYen: est.totalYen, referencePng, kind }),
       })
       const json = await res.json().catch(() => ({}))
       if (res.status === 401) return setError({ tone: 'forbidden', message: 'ログインすると、画像を作れます。' })

@@ -78,4 +78,6 @@ export interface ImageGenRequest {
   approved: true
   expectedCostYen: number
   referencePng?: string // base64（data URLのプレフィックスなし）
+  /** 記録用の種類（creative_image / booth_render / graphic_panel） */
+  kind?: string
 }

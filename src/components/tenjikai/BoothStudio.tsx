@@ -202,6 +202,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
       <ImageGenModal
         open={genOpen}
         onClose={() => setGenOpen(false)}
+        kind="booth_render"
         title={`3D完成予想図を生成：案${plan.variant} ${plan.name}`}
         prompt={[buildBoothRenderPrompt(plan, analysis), '各面のグラフィック：', ...panels.map((p) => `・${p.name}：${p.visual}`)].join('\n')}
         aspectRatio="4:3"
@@ -216,6 +217,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
         <ImageGenModal
           open={!!panelTarget}
           onClose={() => setPanelTarget(null)}
+          kind="graphic_panel"
           title={`${panelTarget.name}のグラフィックを生成`}
           prompt={buildPanelPrompt(panelTarget, analysis)}
           aspectRatio={nearestRatio(panelTarget.widthMm, panelTarget.heightMm)}
