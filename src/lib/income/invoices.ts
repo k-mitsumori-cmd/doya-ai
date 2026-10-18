@@ -4,7 +4,9 @@
 // ⚠️ 確定（confirmed）以降は明細・金額を変えない。直すときは取消（void）→ 作り直し（設計書 §4.2-8）。
 // ⚠️ 売上予定（schedule）と明細は 1 対 1。明細が付いた予定は invoiced、取消・下書き削除で planned に戻す。
 import type { Prisma } from '@prisma/client'
+import type { prisma } from '@/lib/prisma'
 import { IncomeError, type IncomeContext } from './access'
+import { runWithTxRetry } from './retry'
 import { dueDateFor, fromDbDate, isYmd, parseYmd, toDbDate, todayJst, type Ymd } from './dates'
 import { computeInvoiceTotals } from './tax'
 
@@ -172,6 +174,15 @@ export async function confirmInvoice(tx: Tx, ctx: IncomeContext, invoiceId: stri
       } as Prisma.InputJsonValue,
     },
   })
+}
+
+/**
+ * 確定を、同時実行の衝突（P2002 / P2034）のときだけ最大 3 回までやり直して行う（INC-F03）。
+ * 確定 API とエージェント道具 income.issueInvoice が同じ関数を呼ぶ（R-4）。
+ * やり直すと、次の処理は採番表の行を更新する側に回るので、番号は重複しない。
+ */
+export async function confirmInvoiceWithRetry(db: Pick<typeof prisma, '$transaction'>, ctx: IncomeContext, invoiceId: string) {
+  return runWithTxRetry(() => db.$transaction((tx) => confirmInvoice(tx, ctx, invoiceId), { isolationLevel: 'Serializable' }))
 }
 
 export async function markSent(tx: Tx, ctx: IncomeContext, invoiceId: string, sentTo: string | null) {
