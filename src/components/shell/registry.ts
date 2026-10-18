@@ -34,6 +34,8 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'tenjikai', basePath: '/tenjikai' },
   // 社内インタビューの回答画面（/shanai/answer/<token>）は社員が開く公開の画面
   { id: 'shanai', basePath: '/shanai', inShell: (p) => !p.startsWith('/shanai/answer') },
+  // 面接の画面（/mensetsu/live/<token>）と招待（/mensetsu/invite/<token>）は候補者・招待者が開く。guest-path.ts でも外れている
+  { id: 'mensetsu', basePath: '/mensetsu', inShell: (p) => !p.startsWith('/mensetsu/live') && !p.startsWith('/mensetsu/invite') },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */
