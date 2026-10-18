@@ -2,6 +2,14 @@ import { OrgResponseError, orgErrorMessage, requestOrgJson } from '@/lib/org-cli
 import { jstDateKey } from './task-date'
 import type { ActivityType } from './types'
 
+// 営業管理の slug は useParams() から URL エンコードされたまま（例: %E3%82%B9…）届く。
+// そのまま requestOrgJson に渡すと ?org= が二重にエンコードされ、日本語の組織名で 401 になる（2026-10-18 本番で確認）。
+// 「%XX」を含むときだけ 1 回デコードする。ほかのサービスの共通処理は変えない。
+function normalizeOrgSlug(slug: string): string {
+  if (!/%[0-9A-Fa-f]{2}/.test(slug)) return slug
+  try { return decodeURIComponent(slug) } catch { return slug }
+}
+
 export interface SfaClientTask {
   id: string; title: string; status: 'open' | 'done'; dueDate: string | null
   dealId: string | null; createdAt: string; updatedAt: string; dealName?: string | null
@@ -39,7 +47,7 @@ export class SfaClientRejection extends Error {
   constructor(readonly status: number, message: string, readonly code: string | null = null, readonly upgradeUrl: string | null = null) { super(message); this.name = 'SfaClientRejection' }
 }
 export async function sfaJson(path: string, orgSlug: string, init: RequestInit = {}) {
-  const result = await requestOrgJson('sfa', path, orgSlug, init)
+  const result = await requestOrgJson('sfa', path, normalizeOrgSlug(orgSlug), init)
   if (!result.res.ok) {
     if (result.res.status >= 500) throw new OrgResponseError(!!init.method && init.method !== 'GET', result.res.status)
     throw new SfaClientRejection(result.res.status, orgErrorMessage(result.data, result.res.status, !!init.method && init.method !== 'GET'), typeof result.data.code === 'string' && /^[A-Z0-9_]{1,80}$/.test(result.data.code) ? result.data.code : null, result.res.status === 402 && result.data.code === 'SFA_LIMIT_REACHED' && result.data.canManageBilling === true && result.data.upgradeUrl === '/sfa/pricing' ? '/sfa/pricing' : null)
