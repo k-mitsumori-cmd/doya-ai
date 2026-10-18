@@ -378,9 +378,19 @@ async function loadPeople(userId: string) {
   return { activeEmployees, departments }
 }
 
+/**
+ * ログに出してよいのは、例外の種類（name）と Prisma のエラーコード（code）だけ。
+ * ⚠️ 例外そのものや message を console に出さない（個人情報やSQLが混ざるため。verify-api-error-log-privacy）。
+ */
+export function safeErrorInfo(reason: unknown): { name: string; code?: string } {
+  const name = reason instanceof Error ? reason.name : typeof reason
+  const raw = typeof reason === 'object' && reason !== null ? (reason as { code?: unknown }).code : undefined
+  return typeof raw === 'string' ? { name, code: raw } : { name }
+}
+
 function settle<T>(r: PromiseSettledResult<T | null>): { state: HomeToolState; value: T | null } {
   if (r.status === 'rejected') {
-    console.error('[home/summary] tool load failed', r.reason)
+    console.error('[home/summary] tool load failed', safeErrorInfo(r.reason))
     return { state: 'error', value: null }
   }
   return { state: r.value ? 'ready' : 'empty', value: r.value }
@@ -401,7 +411,7 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
   ])
 
   const contract = contractR.status === 'fulfilled' ? contractR.value : null
-  if (contractR.status === 'rejected') console.error('[home/summary] contract load failed', contractR.reason)
+  if (contractR.status === 'rejected') console.error('[home/summary] contract load failed', safeErrorInfo(contractR.reason))
   const sales = settle(salesR)
   const quotes = settle(quotesR)
   const projects = settle(projectsR)
