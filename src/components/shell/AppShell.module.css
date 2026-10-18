@@ -86,11 +86,16 @@
 .tab:focus-visible,
 .paletteItem:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
+.account { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 2px; }
+
 .userLine {
-  margin: 8px 8px 0; padding-top: 12px; border-top: 1px solid var(--line);
+  margin: 0; padding: 4px 12px 6px;
   font-size: 12px; color: var(--muted);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+
+/* ログアウトは button なので、リンクと見た目をそろえる */
+.logout { width: 100%; border: 0; background: transparent; font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
 
 .main { min-width: 0; }
 

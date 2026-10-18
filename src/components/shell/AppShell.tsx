@@ -12,7 +12,8 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { LayoutGrid, Menu, Search, X } from 'lucide-react'
+import { CreditCard, LayoutGrid, LogOut, Menu, Search, X } from 'lucide-react'
+import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
 import { ShellIcon } from './icons'
 import { ALL_SHELL_TOOLS, SHELL_GROUPS, SHELL_HOME, type ShellTool } from './tools'
@@ -201,7 +202,17 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
             </div>
           ))}
         </div>
-        {userName ? <p className={styles.userLine}>{userName} さん</p> : null}
+        <div className={styles.account}>
+          {userName ? <p className={styles.userLine}>{userName} さん</p> : null}
+          <Link href="/pricing" className={styles.navItem} onClick={close} title="料金プラン">
+            <CreditCard size={18} strokeWidth={2} aria-hidden />
+            <span className={styles.navLabel}>料金プラン</span>
+          </Link>
+          <button type="button" className={`${styles.navItem} ${styles.logout}`} onClick={() => signOut({ callbackUrl: '/' })} title="ログアウト">
+            <LogOut size={18} strokeWidth={2} aria-hidden />
+            <span className={styles.navLabel}>ログアウト</span>
+          </button>
+        </div>
       </nav>
 
       <main id="shell-main" className={styles.main}>{children}</main>
