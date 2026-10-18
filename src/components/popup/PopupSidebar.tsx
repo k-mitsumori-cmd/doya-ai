@@ -28,6 +28,7 @@ import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { getServiceById } from '@/lib/services'
 import { POPUP_NAV, isPopupNavActive } from '@/lib/popup/nav'
+import { resolveShellIcon } from '@/components/shell/icons'
 
 const BASE = '/popup'
 
@@ -43,7 +44,7 @@ function PopupSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   // ⚠️ 項目は src/lib/popup/nav.ts が正本（統合仕様 R-1）。ここでは描くだけ
-  const NAV: NavItem[] = POPUP_NAV.map((item, i) => ({ href: item.href, label: item.label, icon: item.icon ?? PanelTopOpen, hot: i === 0 }))
+  const NAV: NavItem[] = POPUP_NAV.map((item, i) => ({ href: item.href, label: item.label, icon: resolveShellIcon(item.icon), hot: i === 0 }))
 
   const planLabel = (() => {
     if (!isLoggedIn) return 'GUEST'

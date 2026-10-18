@@ -1,10 +1,11 @@
 // ============================================
 // ドヤポップアップ: ツール内ナビの項目（統合仕様 R-1）
 // ============================================
-// 項目はデータで持つ。共通シェル（ui.shell.popup が ON）では ToolFrame の nav にそのまま渡し、
+// 項目はデータで持つ。共通シェル（ui.shell.popup が ON）では、サーバの layout.tsx から ToolFrame の nav にそのまま渡し、
 // OFF の間の暫定サイドバー（PopupSidebar）もこれを描くだけにする。
 // 形は段0の ShellNavItem（src/components/shell/nav.ts）。将来の manifest.ui.nav[] と同じ。
-import { CreditCard, PanelTopOpen } from 'lucide-react'
+// ⚠️ icon は名前の文字列で書く（src/components/shell/icons.tsx の対応表の名前）。関数を持たせると、
+//    サーバの layout.tsx からクライアント部品へ渡せず全画面が 500 になる
 import type { ShellNavItem } from '@/components/shell/nav'
 
 export interface PopupNavItem extends ShellNavItem {
@@ -14,8 +15,8 @@ export interface PopupNavItem extends ShellNavItem {
 
 export const POPUP_NAV: PopupNavItem[] = [
   // ⚠️ exact: '/popup/pricing' でトップまで選択中にならないように
-  { label: 'サイトとポップアップ', href: '/popup', icon: PanelTopOpen, exact: true, activePrefixes: ['/popup/sites', '/popup/edit'] },
-  { label: '料金プラン', href: '/popup/pricing', icon: CreditCard },
+  { label: 'サイトとポップアップ', href: '/popup', icon: 'PanelTopOpen', exact: true, activePrefixes: ['/popup/sites', '/popup/edit'] },
+  { label: '料金プラン', href: '/popup/pricing', icon: 'CreditCard' },
 ]
 
 /** 暫定サイドバーでの選択中の判定（共通シェルでは ToolFrame の isNavActive を使う） */

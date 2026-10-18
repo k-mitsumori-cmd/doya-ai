@@ -6,6 +6,7 @@ import { isShellEnabled } from '@/lib/ui-shell'
 import { tokens } from '@/components/ds'
 import PopupAppLayout from '@/components/popup/PopupAppLayout'
 import PopupShellFrame from '@/components/popup/PopupShellFrame'
+import { POPUP_NAV } from '@/lib/popup/nav'
 import { LpJsonLd } from '@/components/lp'
 import { getServiceById } from '@/lib/services'
 import { FAQ } from './lp-data'
@@ -39,7 +40,7 @@ export default async function PopupLayout({ children }: { children: React.ReactN
       <>
         {jsonLd}
         <div className="popup-ds">
-          <PopupShellFrame userName={session.user.name}>{children}</PopupShellFrame>
+          <PopupShellFrame userName={session.user.name} nav={POPUP_NAV}>{children}</PopupShellFrame>
         </div>
       </>
     )
