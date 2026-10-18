@@ -85,7 +85,7 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["商談を選ぶ", "顧客情報を見る", "営業状況を確認"],
   },
   shodan: {
-    load: () => import("@/app/shodan/mocks"),
+    load: () => import("@/app/(shell)/shodan/mocks"),
     screens: [
       "ShodanResearchMock",
       "ShodanHypothesisMock",

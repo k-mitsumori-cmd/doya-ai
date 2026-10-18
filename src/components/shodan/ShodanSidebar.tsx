@@ -3,7 +3,9 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Sparkles, Building2, Users, CreditCard, Zap, Target } from 'lucide-react'
+import { Zap, Target } from 'lucide-react'
+import { resolveShellIcon } from '@/components/shell/icons'
+import { shodanNav } from '@/lib/shodan/nav'
 import { useSession, signOut } from 'next-auth/react'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { shodanTheme } from '@/components/sidebar/themes'
@@ -43,13 +45,7 @@ function ShodanSidebarImpl({ orgSlug, orgName, organizationPlan, canManageBillin
 
   const base = `/shodan/${encodeURIComponent(orgSlug)}`
   const pricingHref = `/shodan/pricing?org=${encodeURIComponent(orgSlug)}`
-  const NAV: NavItem[] = [
-    { href: base, label: '商談準備一覧', icon: LayoutDashboard },
-    { href: `${base}/new`, label: '新規作成', icon: Sparkles, hot: true },
-    { href: `${base}/settings`, label: '自社情報', icon: Building2 },
-    { href: `${base}/members`, label: 'メンバー', icon: Users },
-    { href: pricingHref, label: '料金プラン', icon: CreditCard },
-  ]
+  const NAV: NavItem[] = shodanNav(orgSlug).map((item) => ({ href: item.href, label: item.label, icon: resolveShellIcon(item.icon), hot: item.hot }))
 
   const planLabel = (() => {
     if (!organizationPlan) return '確認中'

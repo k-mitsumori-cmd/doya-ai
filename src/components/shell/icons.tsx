@@ -11,7 +11,7 @@ import {
   BadgeJapaneseYen, BarChart3, BookOpen, BookUser, Box, Briefcase, Building2, Calendar, CalendarClock, CalendarRange,
   CircleUser, Clock, CreditCard, FileSignature, FileText, FolderKanban, FolderOpen, Gift, Headphones, Home, Image,
   LayoutDashboard, LayoutGrid, LineChart, Link2, List, ListChecks, Megaphone, MessageSquare, Mic, MousePointerClick,
-  Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Store,
+  Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Sparkles, Store,
   Truck, UserCheck, UserRound, Users, Wallet,
 } from 'lucide-react'
 
@@ -19,7 +19,7 @@ export const SHELL_ICONS = {
   BadgeJapaneseYen, BarChart3, BookOpen, BookUser, Box, Briefcase, Building2, Calendar, CalendarClock, CalendarRange,
   CircleUser, Clock, CreditCard, FileSignature, FileText, FolderKanban, FolderOpen, Gift, Headphones, Home, Image,
   LayoutDashboard, LayoutGrid, LineChart, Link2, List, ListChecks, Megaphone, MessageSquare, Mic, MousePointerClick,
-  Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Store,
+  Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Sparkles, Store,
   Truck, UserCheck, UserRound, Users, Wallet,
 } satisfies Record<string, LucideIcon>
 
