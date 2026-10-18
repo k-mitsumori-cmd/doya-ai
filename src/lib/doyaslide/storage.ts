@@ -1,8 +1,11 @@
 // ============================================
-// ドヤスライド ストレージ (Supabase Storage / 公開バケット)
+// ドヤスライド ストレージ (Supabase Storage)
 // ============================================
-// 生成スライド画像・アップロードロゴを保存し、公開URLを返す。
-// 一覧/プレビュー/エクスポートで <img> として長期表示するため公開URLを採用。
+// 生成スライド画像・アップロードロゴを保存し、DB 保存用の URL（公開 URL の形）を返す。
+// ⚠️ 画面は、この URL を <img> に渡す直前に file-urls.ts の doyaslideImageSrc で
+//    自社の配信 URL（/api/doyaslide/files/...）に読み替える。
+//    これでバケットを非公開にしても表示は壊れない（2026-10-18 のシステム点検 SEC-062）。
+// ⚠️ サーバーで画像を読むときは、公開 URL を fetch せず downloadDoyaslideObject を使う（logo.ts の fetchBuffer）。
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { randomUUID } from 'crypto'
 
@@ -17,16 +20,27 @@ function getSupabase() {
   return _supabase
 }
 
-const BUCKET = 'doyaslide'
+const BUCKET = 'doyaslide' // file-urls.ts の DOYASLIDE_BUCKET と同じ値にする
 
 let bucketReady = false
 async function ensureBucket() {
   if (bucketReady) return // プロセス内で一度確認すれば十分（毎アップロードのlistBucketsを回避）
   const { data: buckets } = await getSupabase().storage.listBuckets()
   if (!buckets?.some((b) => b.name === BUCKET)) {
-    await getSupabase().storage.createBucket(BUCKET, { public: true })
+    // 新しく作るときは非公開にする。既存バケットの公開設定はここでは変えない（Supabase の画面で変更する）。
+    await getSupabase().storage.createBucket(BUCKET, { public: false })
   }
   bucketReady = true
+}
+
+const READABLE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp'])
+
+/** バケット内のファイルをサービス権限で読み出す（バケットが非公開でも読める）。無ければ null。 */
+export async function downloadDoyaslideObject(path: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+  const { data, error } = await getSupabase().storage.from(BUCKET).download(path)
+  if (error || !data) return null
+  const contentType = READABLE_TYPES.has(data.type) ? data.type : 'application/octet-stream'
+  return { buffer: Buffer.from(await data.arrayBuffer()), contentType }
 }
 
 async function uploadBuffer(buffer: Buffer, path: string, contentType: string): Promise<string> {
@@ -102,10 +116,11 @@ export async function uploadStylePreview(style: string, base64: string, page = 0
 }
 
 /**
- * 書き出しファイル(PDF/ZIP)を保存し、ダウンロード用の公開URLを返す。
+ * 書き出しファイル(PDF/ZIP)を保存し、ダウンロード用の署名付きURL（1時間有効）を返す。
  * Vercel Functions のレスポンス本文上限(約4.5MB)を回避するため、生成物は
  * バイナリ直返しせず Storage 経由でCDNから直接ダウンロードさせる。
  * download パラメータで Content-Disposition: attachment（ファイル名付き）を付与。
+ * ⚠️ 公開URLにしないのは、バケットを非公開にしてもダウンロードできるようにするため（SEC-062）。
  */
 export async function uploadExportFile(
   userId: string,
@@ -121,11 +136,11 @@ export async function uploadExportFile(
     .storage.from(BUCKET)
     .upload(path, buffer, { contentType, upsert: false })
   if (error) throw new Error('Supabase upload error')
-  const { data } = getSupabase()
+  const { data, error: signError } = await getSupabase()
     .storage.from(BUCKET)
-    .getPublicUrl(path, { download: `${baseName}.${ext}` })
-  if (!data?.publicUrl) throw new Error('公開URLの生成に失敗しました')
-  return { url: data.publicUrl, path }
+    .createSignedUrl(path, 60 * 60, { download: `${baseName}.${ext}` })
+  if (signError || !data?.signedUrl) throw new Error('ダウンロードURLの生成に失敗しました')
+  return { url: data.signedUrl, path }
 }
 
 /** ロゴを保存 */

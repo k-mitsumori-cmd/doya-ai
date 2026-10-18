@@ -17,7 +17,7 @@ const Page=load('src/app/doyaslide/[id]/page.tsx',{
  react:React,'react/jsx-runtime':runtime,'next/navigation':{useParams:()=>({id:'project-a'}),useRouter:()=>({replace(){}}),useSearchParams:()=>({get:()=>null})},
  'next/link':p=>React.createElement('a',{href:p.href},p.children),'react-hot-toast':toast,
  '@/lib/doyaslide/constants':{LOGO_POSITIONS:[],estimateGenSeconds:()=>5,formatDuration:()=> '5秒'},'@/lib/pricing':{SUPPORT_CONTACT_URL:'/contact'},
- '@/components/doyaslide/SlideImage':p=>React.createElement('img',{src:p.src,alt:p.alt||''}),
+ '@/lib/doyaslide/file-urls':{doyaslideImageSrc:u=>u||''},'@/components/doyaslide/SlideImage':p=>React.createElement('img',{src:p.src,alt:p.alt||''}),
  'next-auth/react':{useSession:()=>({status,data:{user:{id:actor}}})},
  '@/lib/doyaslide/use-operation-recovery':hook,'@/components/doyaslide/DoyaSlideOperationRecovery':Panel,
 }).default;

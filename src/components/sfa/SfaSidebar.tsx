@@ -22,6 +22,12 @@ import {
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
+// 日本語の slug は useParams() から URL エンコードされたまま届くので、二重エンコードを避けて 1 回だけデコードする（2026-10-18）。
+function normalizeOrgSlug(slug: string): string {
+  if (!/%[0-9A-Fa-f]{2}/.test(slug)) return slug
+  try { return decodeURIComponent(slug) } catch { return slug }
+}
+
 interface Membership { slug: string; name: string; role: string }
 interface SfaSidebarProps extends SidebarProps {
   plan?: string
@@ -42,7 +48,7 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
   const [wsOpen, setWsOpen] = useState(false)
   const base = `/sfa/${orgSlug}`
   const currentWs = memberships.find((m) => m.slug === orgSlug)
-  const pricingHref = `/sfa/pricing?org=${encodeURIComponent(orgSlug)}`
+  const pricingHref = `/sfa/pricing?org=${encodeURIComponent(normalizeOrgSlug(orgSlug))}`
 
   const MAIN_NAV: NavItem[] = [
     { href: base, label: 'ダッシュボード', icon: LayoutDashboard },

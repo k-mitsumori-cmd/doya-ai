@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { EmptyState } from '@/components/EmptyState'
+import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 
 interface Project {
   id: string
@@ -196,7 +197,7 @@ export default function DoyaSlideProjectsPage() {
                 <Link href={`/doyaslide/${p.id}`}>
                   <div className="aspect-video bg-slate-100 flex items-center justify-center overflow-hidden">
                     {cover ? (
-                      <img src={cover} alt={p.title} className="w-full h-full object-cover" />
+                      <img src={doyaslideImageSrc(cover)} alt={p.title} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-4xl opacity-30">🖼️</span>
                     )}

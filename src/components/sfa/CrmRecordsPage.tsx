@@ -8,6 +8,12 @@ import { isSfaCrmPage, sfaClientDate, sfaClientId, sfaJson, type SfaClientAccoun
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from './MutationRecovery'
 
+// 日本語の slug は useParams() から URL エンコードされたまま届くので、二重エンコードを避けて 1 回だけデコードする（2026-10-18）。
+function normalizeOrgSlug(slug: string): string {
+  if (!/%[0-9A-Fa-f]{2}/.test(slug)) return slug
+  try { return decodeURIComponent(slug) } catch { return slug }
+}
+
 type Kind = 'account' | 'contact'
 type Row = SfaClientAccount | SfaClientContact
 type Values = Record<string, string | boolean>
@@ -206,7 +212,7 @@ export default function CrmRecordsPage({ kind }: { kind: Kind }) {
     </div>}
     {currentDeletion && <div role="alertdialog" aria-label={label + 'の削除確認'} className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4">
       <p className="break-words">「{currentDeletion.name}」を削除しますか？ 関連する商談・担当者が残る場合は削除できません。過去の活動は保持します。</p>
-      {kind === 'contact' && <p className="my-2 text-sm">商談に紐づく場合は、商談の詳細で「担当者レコードとの紐づけを解除」を選び、保存してください。商談と担当者名は保持されます。<a className="ml-2 underline" href={'/sfa/' + encodeURIComponent(orgSlug) + '/deals'}>商談を開く</a></p>}
+      {kind === 'contact' && <p className="my-2 text-sm">商談に紐づく場合は、商談の詳細で「担当者レコードとの紐づけを解除」を選び、保存してください。商談と担当者名は保持されます。<a className="ml-2 underline" href={'/sfa/' + encodeURIComponent(normalizeOrgSlug(orgSlug)) + '/deals'}>商談を開く</a></p>}
       <button type="button" className={buttonClass} disabled={mutations.blocked(kind + ':' + currentDeletion.id)} onClick={remove}>削除を確定する</button>
       <button type="button" className={buttonClass} onClick={() => setDeletion(null)}>戻る</button>
     </div>}
