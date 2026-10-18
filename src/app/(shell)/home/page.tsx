@@ -10,7 +10,6 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getHomeSummary } from '@/lib/home/summary'
-import AppShell from '@/components/shell/AppShell'
 import HomeDashboard from './HomeDashboard'
 
 export const metadata: Metadata = {
@@ -27,8 +26,7 @@ export default async function HomePage() {
 
   const summary = await getHomeSummary(userId)
   return (
-    <AppShell userName={summary.user.name ?? session?.user?.name}>
-      <HomeDashboard initial={summary} />
-    </AppShell>
+    // 枠（AppShell）は src/app/(shell)/layout.tsx が出す
+    <HomeDashboard initial={summary} />
   )
 }

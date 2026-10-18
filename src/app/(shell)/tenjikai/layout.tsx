@@ -22,12 +22,13 @@ export const dynamic = 'force-dynamic'
 // こうすると、セクションを移っても入力内容や生成結果が消えない。
 // ⚠️ ツール独自のフォントは使わない（統合仕様 §11）。サイト共通の Inter ＋ Noto Sans JP のまま
 export default async function TenjikaiLayout({ children }: { children: React.ReactNode }) {
-  if (isShellEnabled('tenjikai')) {
-    // 共通シェル（フラグ ui.shell.tenjikai。既定 OFF）。名前が取れなくても画面は出す
-    const session = await getServerSession(authOptions).catch(() => null)
+  // 共通の枠（フラグ ui.shell.tenjikai）はログインしているときだけ。未ログインの画面は今までどおり（点検 SHL-015）。
+  // 枠（AppShell）そのものは src/app/(shell)/layout.tsx が出す。ここではツール内のナビ（ToolFrame）だけ
+  const session = isShellEnabled('tenjikai') ? await getServerSession(authOptions).catch(() => null) : null
+  if (session?.user) {
     return (
       <>
-        <TenjikaiShellFrame userName={session?.user?.name ?? null} />
+        <TenjikaiShellFrame />
         {children}
       </>
     )

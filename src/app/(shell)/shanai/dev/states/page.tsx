@@ -5,6 +5,7 @@
 // 使い方: npx next dev → /shanai/dev/states?s=home|home-empty|loading|error|forbidden|processing
 //   &shell=1 を付けると、共通シェル（AppShell＋ToolFrame）に載せた形で表示する
 import { notFound } from 'next/navigation'
+import AppShell from '@/components/shell/AppShell'
 import ShanaiFrame from '@/components/shanai/ShanaiFrame'
 import { ErrorState, ForbiddenState, PageSkeleton, ProgressSteps } from '@/components/shanai/ui'
 import ShanaiTool, { type ShanaiRow } from '../../Tool'
@@ -23,9 +24,11 @@ export default async function ShanaiDevStates({ searchParams }: Props) {
   const { s = 'home', shell } = await searchParams
   const body = renderState(s)
   return shell === '1' ? (
-    <ShanaiFrame shell userName="見本 太郎">
-      {body}
-    </ShanaiFrame>
+    <AppShell userName="見本 太郎">
+      <ShanaiFrame shell>
+        {body}
+      </ShanaiFrame>
+    </AppShell>
   ) : (
     body
   )

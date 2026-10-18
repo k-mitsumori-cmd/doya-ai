@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { buildServiceMetadata } from '@/lib/seo'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import AppShell from '@/components/shell/AppShell'
 import ToolFrame from '@/components/shell/ToolFrame'
 import { INCOME_NAV } from '@/lib/income/nav'
 
@@ -19,10 +18,9 @@ export default async function IncomeLayout({ children }: { children: React.React
   const session = await getServerSession(authOptions)
   if (!session?.user) return <>{children}</>
   return (
-    <AppShell userName={session.user.name}>
-      <ToolFrame serviceId="income" nav={INCOME_NAV}>
-        {children}
-      </ToolFrame>
-    </AppShell>
+    // 枠（AppShell）は src/app/(shell)/layout.tsx が出す。ここではツール内のナビだけ
+    <ToolFrame serviceId="income" nav={INCOME_NAV}>
+      {children}
+    </ToolFrame>
   )
 }

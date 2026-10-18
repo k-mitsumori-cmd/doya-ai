@@ -7,6 +7,8 @@
   border-bottom: 1px solid var(--line);
 }
 
+.crumbRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.switcher { flex: none; min-width: 0; }
 .crumbs { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
 .crumbs a { color: var(--sub); text-decoration: none; }
 .crumbs a:hover { color: var(--blue); }

@@ -22,7 +22,7 @@ export default async function ShanaiLayout({ children }: { children: React.React
   return (
     <div className={`${ds.ds} shanai-ds`}>
       {session?.user ? (
-        <ShanaiFrame shell={isShellEnabled('shanai')} userName={session.user.name}>
+        <ShanaiFrame shell={isShellEnabled('shanai')}>
           {children}
         </ShanaiFrame>
       ) : (

@@ -8,6 +8,7 @@
 //   &shell=1 を付けると、共通シェル（AppShell＋ToolFrame）に載せた形で表示する（D-3 の確認用）
 import { notFound } from 'next/navigation'
 import { DETAIL, EDIT_SITE, POPUPS, SITES } from '@/lib/popup/dev-fixtures'
+import AppShell from '@/components/shell/AppShell'
 import PopupShellFrame from '@/components/popup/PopupShellFrame'
 import { POPUP_NAV } from '@/lib/popup/nav'
 import { ErrorState, ForbiddenState, ProcessingSteps, SkeletonDetail, SkeletonSiteCards } from '@/components/popup/ui'
@@ -24,7 +25,7 @@ export default async function PopupDevStates({ searchParams }: Props) {
   const { s = 'home', shell } = await searchParams
   const wrap = (node: React.ReactNode) => <div className="pd-page mx-auto max-w-6xl px-4 py-8 md:px-8">{node}</div>
   const body = renderState(s, wrap)
-  return shell === '1' ? <PopupShellFrame userName="見本 太郎" nav={POPUP_NAV}>{body}</PopupShellFrame> : body
+  return shell === '1' ? <AppShell userName="見本 太郎"><PopupShellFrame nav={POPUP_NAV}>{body}</PopupShellFrame></AppShell> : body
 }
 
 function renderState(s: string, wrap: (node: React.ReactNode) => React.ReactNode) {

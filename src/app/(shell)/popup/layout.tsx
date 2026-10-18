@@ -42,7 +42,7 @@ export default async function PopupLayout({ children }: { children: React.ReactN
       <>
         {jsonLd}
         <div className="popup-ds">
-          <PopupShellFrame userName={session.user.name} nav={POPUP_NAV}>{children}</PopupShellFrame>
+          <PopupShellFrame nav={POPUP_NAV}>{children}</PopupShellFrame>
         </div>
       </>
     )

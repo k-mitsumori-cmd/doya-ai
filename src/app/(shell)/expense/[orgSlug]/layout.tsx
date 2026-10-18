@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import { Toaster } from 'react-hot-toast'
-import AppShell from '@/components/shell/AppShell'
 import ToolFrame from '@/components/shell/ToolFrame'
 import { expenseNav } from '@/lib/expense/nav'
 import { OrgContext, Loading, ErrorBox } from '@/components/expense/ui'
@@ -14,7 +12,6 @@ export default function ExpenseOrgLayout({ children }: { children: React.ReactNo
   const router = useRouter()
   const params = useParams()
   const orgSlug = (params.orgSlug as string) || ''
-  const { data: session } = useSession()
   const [role, setRole] = useState<Role | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'denied' | 'error'>('loading')
   const [attempt, setAttempt] = useState(0)
@@ -47,7 +44,8 @@ export default function ExpenseOrgLayout({ children }: { children: React.ReactNo
   }, [orgSlug, router, attempt])
 
   return (
-    <AppShell userName={session?.user?.name}>
+    // 枠（AppShell）は src/app/(shell)/layout.tsx が出す。ここではツール内のナビだけ
+    <>
       <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
       <ToolFrame serviceId="expense" nav={expenseNav(orgSlug, role)}>
         {state === 'loading' && <Loading />}
@@ -55,6 +53,6 @@ export default function ExpenseOrgLayout({ children }: { children: React.ReactNo
         {state === 'error' && <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />}
         {state === 'ok' && <OrgContext.Provider value={{ orgSlug, role }}>{children}</OrgContext.Provider>}
       </ToolFrame>
-    </AppShell>
+    </>
   )
 }
