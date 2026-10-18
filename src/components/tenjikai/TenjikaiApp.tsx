@@ -32,7 +32,7 @@ import {
 
 type Phase = 'input' | 'generating' | 'ready'
 
-// ⚠️ src/app/tenjikai/layout.tsx に置く。セクション（/tenjikai/<section>）を移っても、ここの状態は残る。
+// ⚠️ src/app/(shell)/tenjikai/layout.tsx に置く。セクション（/tenjikai/<section>）を移っても、ここの状態は残る。
 // shell=true のときは共通シェル（AppShell＋ToolFrame）の中身だけを描き、独自のサイドバーと外枠を出さない。
 export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
   const router = useRouter()

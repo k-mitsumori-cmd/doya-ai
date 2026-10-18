@@ -2,7 +2,7 @@
 // 共通シェル（ui.shell.tenjikai が ON）のときは ToolFrame の nav に、OFF のときは暫定の TenjikaiSidebar に、同じ配列を渡す。
 // manifest.ui.nav[] にもそのまま移す。型は共通シェルの ShellNavItem に合わせる。
 // ⚠️ セクションは /tenjikai/<section> の URL で表す（シェルのタブは pathname で選択中を決めるため）。
-//    画面の状態は src/app/tenjikai/layout.tsx に置いた TenjikaiApp が持つので、セクションを移っても消えない。
+//    画面の状態は src/app/(shell)/tenjikai/layout.tsx に置いた TenjikaiApp が持つので、セクションを移っても消えない。
 
 import type { ShellNavItem } from '@/components/shell/nav'
 import type { ShellIconName } from '@/components/shell/icons'

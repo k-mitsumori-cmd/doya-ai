@@ -1,5 +1,5 @@
 /* ドヤ展示会の ds トークン（統合仕様 §11 / R-3）。ds/tokens.css が main に入ったら、このファイルをその読み込みに差し替える。
-   ⚠️ 値の直書きはこのファイルだけにする（D-2 の検査は src/app/tenjikai を見る） */
+   ⚠️ 値の直書きはこのファイルだけにする（D-2 の検査は src/app/(shell)/tenjikai を見る） */
 .tenjikai-root {
   /* リニューアルの ds トークン（クリア。renewal.module.css の .root と同名・同値）。
      ds/* が main に入ったら、この塊を ds の読み込みに差し替える。値は src/lib/tenjikai/tokens.ts と揃える */

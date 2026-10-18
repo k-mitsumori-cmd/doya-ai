@@ -1,7 +1,7 @@
 // ============================================
 // ドヤ収入管理: ツール内ナビ（データ。ADDON-SERVICES R-1）
 // ============================================
-// ⚠️ ToolFrame の nav にそのまま渡す（src/app/income/layout.tsx）。将来の manifest.ui.nav[] と同じ形。
+// ⚠️ ToolFrame の nav にそのまま渡す（src/app/(shell)/income/layout.tsx）。将来の manifest.ui.nav[] と同じ形。
 // ⚠️ アイコンは名前（src/components/shell/icons.tsx の SHELL_ICONS のキー）で持つ。サーバーの layout から渡せるように部品は持たない。
 // ⚠️ ここに無い項目を画面側で足さない（D-1）。
 import type { ShellNavItem } from '@/components/shell/nav'

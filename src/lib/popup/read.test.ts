@@ -190,14 +190,14 @@ test('nav.ts: サイドバーの項目はデータで、選択中の判定', () 
   assert.ok(!/label: '/.test(sidebar), 'サイドバーに nav.ts 以外の項目がある（D-1）')
 })
 
-test('D-2: src/app/popup に色の直書きが無い', () => {
+test('D-2: src/app/(shell)/popup に色の直書きが無い', () => {
   const { readdirSync, statSync } = require('node:fs') as typeof import('node:fs')
   const walk = (dir: string): string[] =>
     readdirSync(dir).flatMap((n) => {
       const p = join(dir, n)
       return statSync(p).isDirectory() ? walk(p) : /\.(tsx?|css)$/.test(n) ? [p] : []
     })
-  const hits = walk(join(process.cwd(), 'src/app/popup')).flatMap((f) =>
+  const hits = walk(join(process.cwd(), 'src/app/(shell)/popup')).flatMap((f) =>
     readFileSync(f, 'utf8')
       .split('\n')
       .map((line, i) => (/#[0-9a-fA-F]{3,6}/.test(line) ? `${f}:${i + 1}: ${line.trim()}` : null))
@@ -207,7 +207,7 @@ test('D-2: src/app/popup に色の直書きが無い', () => {
 })
 
 test('D-3: 共通シェルにはフラグ ui.shell.popup が ON のときだけ載せる', () => {
-  const layout = readFileSync(join(process.cwd(), 'src/app/popup/layout.tsx'), 'utf8')
+  const layout = readFileSync(join(process.cwd(), 'src/app/(shell)/popup/layout.tsx'), 'utf8')
   assert.ok(/isShellEnabled\('popup'\)/.test(layout), 'layout.tsx がフラグを見ていない')
   assert.ok(/<PopupShellFrame[^>]*nav=\{POPUP_NAV\}/.test(layout), 'layout.tsx から nav.ts を渡していない')
   assert.ok(/<PopupAppLayout>/.test(layout), 'フラグ OFF の従来の枠が無い')
@@ -215,5 +215,7 @@ test('D-3: 共通シェルにはフラグ ui.shell.popup が ON のときだけ�
   assert.ok(!/from '@\/components\/ds'/.test(layout), "layout.tsx が '@/components/ds' を読んでいる")
   assert.ok(/from '@\/components\/ds\/tokens\.module\.css'/.test(layout))
   const frame = readFileSync(join(process.cwd(), 'src/components/popup/PopupShellFrame.tsx'), 'utf8')
-  assert.ok(/<AppShell/.test(frame) && /<ToolFrame[^>]*serviceId="popup"[^>]*nav=\{nav\}/.test(frame), 'ToolFrame に nav を渡していない')
+  // 枠（AppShell）は src/app/(shell)/layout.tsx が1つだけ出す。ツールの側で包むと二重になる（SHELL-MIGRATION.md）
+  assert.ok(!/<AppShell/.test(frame), 'PopupShellFrame が AppShell で包んでいる（枠が二重になる）')
+  assert.ok(/<ToolFrame[^>]*serviceId="popup"[^>]*nav=\{nav\}/.test(frame), 'ToolFrame に nav を渡していない')
 })
