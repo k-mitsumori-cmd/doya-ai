@@ -7,9 +7,10 @@ import {
   EXPENSE_ROLES, PAYMENT_METHOD_LABEL, PAYMENT_METHOD_TYPES, ROLE_LABEL, WITHHOLDING_MODES, WITHHOLDING_MODE_LABEL,
   type ExpenseRole, type PaymentMethodType, type WithholdingMode,
 } from '@/lib/expense/constants'
+import { canGrantRole, canManageMember } from '@/lib/expense/member-policy'
 import { expenseApi, jsonInit, useExpenseQuery } from './api'
 import type { PaymentMethod } from './types'
-import { Btn, Card, ErrorBox, Field, Loading, currentYm, fmtMonthLabel, inputCls, tableCls, tbodyCls, tdCls, theadCls, thCls, trCls, TableWrap, useConfirm, useExpenseOrg } from './ui'
+import { Badge, Btn, Card, ErrorBox, Field, Loading, currentYm, fmtMonthLabel, inputCls, tableCls, tbodyCls, tdCls, theadCls, thCls, trCls, TableWrap, useConfirm, useExpenseOrg } from './ui'
 
 const H = ({ children }: { children: React.ReactNode }) => <h2 className="mb-4 text-[18px] font-bold text-[var(--ink)]">{children}</h2>
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
@@ -198,7 +199,7 @@ export function FxSection() {
 }
 
 // ---------- メンバー ----------
-interface Member { id: string; name: string; role: ExpenseRole; email: string | null; isMe: boolean }
+interface Member { id: string; name: string; role: ExpenseRole; status: 'ACTIVE' | 'PENDING'; email: string | null; isMe: boolean }
 
 export function MembersSection() {
   const { orgSlug, role: myRole } = useExpenseOrg()
@@ -206,13 +207,17 @@ export function MembersSection() {
   const [f, setF] = useState({ email: '', name: '', role: 'member' as ExpenseRole })
   const [busy, setBusy] = useState(false)
   const { ask, dialog } = useConfirm()
-  const roles = EXPENSE_ROLES.filter((r) => r !== 'owner')
+  // ⚠️ owner でない人は、自分と同じか上の権限を付与できず、その人たちを変更・除外できない（API と同じ判定。member-policy.ts）
+  const roles = EXPENSE_ROLES.filter((r) => r !== 'owner' && !!myRole && canGrantRole(myRole, r))
+  const grantable = (r: ExpenseRole) => !!myRole && canGrantRole(myRole, r)
+  const manageable = (m: Member) => !!myRole && canManageMember(myRole, m.role)
 
   const add = async () => {
     setBusy(true)
     try {
       await expenseApi('/api/expense/members', orgSlug, jsonInit('POST', f))
-      toast.success('メンバーを追加しました')
+      // 応答は、相手がドヤAIに登録しているかどうかで変わらない
+      toast.success('招待しました。ドヤAIにログインすると、メンバーになります。')
       setF({ email: '', name: '', role: 'member' })
       reload()
     } catch (e) {
@@ -231,10 +236,11 @@ export function MembersSection() {
     reload()
   }
   const remove = async (m: Member) => {
-    if (!(await ask(`${m.name}さんを組織から外します。よろしいですか？`, '外す'))) return
+    const pending = m.status === 'PENDING'
+    if (!(await ask(pending ? `${m.name}さんへの招待を取り消します。よろしいですか？` : `${m.name}さんを組織から外します。よろしいですか？`, pending ? '取り消す' : '外す'))) return
     try {
       await expenseApi(`/api/expense/members/${m.id}`, orgSlug, jsonInit('DELETE'))
-      toast.success('外しました')
+      toast.success(pending ? '招待を取り消しました' : '外しました')
       reload()
     } catch (e) {
       toast.error((e as Error).message)
@@ -243,24 +249,27 @@ export function MembersSection() {
   return (
     <Card>
       <H>メンバー</H>
-      <p className="mb-4 text-[13px] text-[var(--sub)]">承認者は、契約の登録と支払状態の更新ができます。メンバーは閲覧のみです。追加できるのは、ドヤAIにログイン済みの方です。</p>
+      <p className="mb-4 text-[13px] text-[var(--sub)]">承認者は、契約の登録と支払状態の更新ができます。メンバーは閲覧のみです。招待した方は、そのメールアドレスでドヤAIにログインするとメンバーになります。自分と同じか上の権限の変更は、オーナーに依頼してください。</p>
       <div className="mb-5 grid gap-3 rounded-[var(--r-sm)] bg-[var(--bg)] p-4 sm:grid-cols-4">
         <Field label="メールアドレス" className="sm:col-span-2"><input type="email" className={inputCls} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
         <Field label="氏名"><input className={inputCls} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
         <Field label="権限"><select className={inputCls} value={f.role} onChange={(e) => setF({ ...f, role: e.target.value as ExpenseRole })}>{roles.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select></Field>
-        <div className="sm:col-span-4"><Btn variant="secondary" onClick={add} busy={busy} disabled={!f.email.trim() || !f.name.trim()}>メンバーを追加</Btn></div>
+        <div className="sm:col-span-4"><Btn variant="secondary" onClick={add} busy={busy} disabled={!f.email.trim() || !f.name.trim() || roles.length === 0}>招待する</Btn></div>
       </div>
       {loading && !data ? <Loading rows={3} /> : error ? <ErrorBox forbidden={forbidden} onRetry={reload} /> : (
         <ul className="divide-y divide-[var(--line)]">
           {(data?.members ?? []).map((m) => {
-            const locked = (m.role === 'owner' || false) && myRole !== 'owner'
+            const locked = !manageable(m)
             return (
               <li key={m.id} className="flex flex-wrap items-center gap-3 py-3">
-                <div className="min-w-0 flex-1"><p className="text-[15px] font-bold text-[var(--ink)]">{m.name}{m.isMe && '（あなた）'}</p><p className="truncate text-[13px] text-[var(--sub)]">{m.email ?? ''}</p></div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-bold text-[var(--ink)]">{m.name}{m.isMe && '（あなた）'} {m.status === 'PENDING' && <Badge tone="amber">招待中</Badge>}</p>
+                  <p className="truncate text-[13px] text-[var(--sub)]">{m.email ?? ''}</p>
+                </div>
                 <select aria-label={`${m.name}さんの権限`} className={`${inputCls} !w-40`} value={m.role} disabled={locked} onChange={(e) => changeRole(m, e.target.value as ExpenseRole)}>
-                  {EXPENSE_ROLES.filter((r) => r !== 'owner' || myRole === 'owner' || m.role === 'owner').map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                  {EXPENSE_ROLES.filter((r) => r === m.role || grantable(r)).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                 </select>
-                <Btn size="sm" variant="secondary" disabled={locked || m.isMe} onClick={() => remove(m)}>外す</Btn>
+                <Btn size="sm" variant="secondary" disabled={locked || m.isMe} onClick={() => remove(m)}>{m.status === 'PENDING' ? '招待を取り消す' : '外す'}</Btn>
               </li>
             )
           })}

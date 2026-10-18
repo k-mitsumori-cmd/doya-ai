@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { audit, createOrganization, readJson, resolveUserId, withExpense } from '@/lib/expense/access'
 import { WITHHOLDING_MODES } from '@/lib/expense/constants'
-import { syncWithholding } from '@/lib/expense/sync'
+import { syncWithholding, retryOnConflict } from '@/lib/expense/sync'
 import { oneOf, slackWebhook, str } from '@/lib/expense/validate'
 
 // POST /api/expense/organization — 初回の組織作成
@@ -52,11 +52,11 @@ export async function PATCH(req: NextRequest) {
     if ('name' in body) data.name = str(body.name, '組織名', 120)!
     if ('withholdingMode' in body) data.withholdingMode = oneOf(body.withholdingMode, WITHHOLDING_MODES, '源泉税の納付方法')
     if ('slackWebhookUrl' in body) data.slackWebhookUrl = slackWebhook(body.slackWebhookUrl)
-    await prisma.$transaction(async (tx) => {
+    await retryOnConflict(() => prisma.$transaction(async (tx) => {
       await tx.expenseOrganization.update({ where: { id: ctx.organizationId }, data })
       if (data.withholdingMode) await syncWithholding(tx, ctx.organizationId)
       await audit(tx, ctx, 'organization.update', 'organization', ctx.organizationId, { fields: Object.keys(data) })
-    })
+    }))
     return NextResponse.json({ ok: true })
   })
 }

@@ -5617,18 +5617,23 @@ model ExpenseOrganization {
 model ExpenseMember {
   id             String              @id @default(cuid())
   organizationId String
-  userId         String
+  /// 招待中（PENDING）でまだログインしていない人は null
+  userId         String?
+  /// 招待したメールアドレス（小文字）。本人がこのメールでログインしたときに userId を入れて ACTIVE にする
+  invitedEmail   String?
   name           String
   /// owner | admin | manager | member
   role           String              @default("member")
-  /// ACTIVE | INACTIVE
+  /// ACTIVE | PENDING | INACTIVE
   status         String              @default("ACTIVE")
   organization   ExpenseOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
   @@unique([organizationId, userId])
+  @@unique([organizationId, invitedEmail])
   @@index([userId, status])
+  @@index([invitedEmail, status])
   @@map("expense_members")
 }
 

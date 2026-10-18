@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { audit, ExpenseHttpError, readJson, withExpense } from '@/lib/expense/access'
 import { contractDto, scheduleDto } from '@/lib/expense/dto'
 import { contractInput } from '@/lib/expense/inputs'
-import { syncContractSchedules, syncWithholding } from '@/lib/expense/sync'
+import { syncContractSchedules, syncWithholding, retryOnConflict } from '@/lib/expense/sync'
 import { id as idParam } from '@/lib/expense/validate'
 
 type Params = { params: Promise<{ id: string }> }
@@ -47,12 +47,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const start = (data.startDate as Date | undefined) ?? c.startDate
     const end = 'endDate' in data ? (data.endDate as Date | null) : c.endDate
     if (end && end < start) throw new ExpenseHttpError(400, '終了日は開始日より後の日付にしてください')
-    await prisma.$transaction(async (tx) => {
+    await retryOnConflict(() => prisma.$transaction(async (tx) => {
       await tx.expenseContract.update({ where: { id: c.id }, data })
       await syncContractSchedules(tx, ctx.organizationId, c.id)
       await syncWithholding(tx, ctx.organizationId)
       await audit(tx, ctx, 'contract.update', 'contract', c.id, { fields: Object.keys(data) })
-    }, { maxWait: 10000, timeout: 30000 })
+    }, { maxWait: 10000, timeout: 30000 }))
     return NextResponse.json({ contract: contractDto(await findContract(ctx.organizationId, c.id), ctx) })
   })
 }
@@ -62,12 +62,12 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   return withExpense(req, 'admin', async (ctx) => {
     const { id } = await params
     const c = await findContract(ctx.organizationId, id)
-    await prisma.$transaction(async (tx) => {
+    await retryOnConflict(() => prisma.$transaction(async (tx) => {
       await tx.expenseSchedule.deleteMany({ where: { organizationId: ctx.organizationId, contractId: c.id, status: 'planned' } })
       await tx.expenseContract.delete({ where: { id: c.id } })
       await syncWithholding(tx, ctx.organizationId)
       await audit(tx, ctx, 'contract.delete', 'contract', c.id, { title: c.title })
-    }, { maxWait: 10000, timeout: 30000 })
+    }, { maxWait: 10000, timeout: 30000 }))
     return NextResponse.json({ ok: true })
   })
 }

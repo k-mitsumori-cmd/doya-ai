@@ -8,7 +8,7 @@ import { CATEGORIES } from '@/lib/expense/constants'
 import { addMonthsToYm, firstOfMonth, todayJst, toDbDate, ymOf } from '@/lib/expense/dates'
 import { scheduleDto } from '@/lib/expense/dto'
 import { settle, splitTax } from '@/lib/expense/plan'
-import { syncWithholding } from '@/lib/expense/sync'
+import { syncWithholding, retryOnConflict } from '@/lib/expense/sync'
 import { bool, date, money, month, oneOf, str } from '@/lib/expense/validate'
 
 // GET /api/expense/schedules?org=&month=2026-11 — その月に口座から出る予定（出金日で絞る）
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const taxRate = oneOf(typeof b.taxRate === 'string' ? Number(b.taxRate) : b.taxRate, [10, 8, 0] as const, '税率', 10)
     const { exclTax, tax } = splitTax(money(b.amount, '金額')!, taxRate, bool(b.taxIncluded))
     const s = settle(exclTax, tax, bool(b.withholding))
-    const row = await prisma.$transaction(async (tx) => {
+    const row = await retryOnConflict(() => prisma.$transaction(async (tx) => {
       const r = await tx.expenseSchedule.create({
         data: {
           organizationId: ctx.organizationId,
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       if (s.withholdingAmount > 0) await syncWithholding(tx, ctx.organizationId)
       await audit(tx, ctx, 'schedule.create', 'schedule', r.id)
       return r
-    })
+    }))
     return NextResponse.json({ schedule: scheduleDto(row) })
   })
 }

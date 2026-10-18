@@ -8,7 +8,7 @@ import { SCHEDULE_STATUSES } from '@/lib/expense/constants'
 import { todayJst, toDbDate } from '@/lib/expense/dates'
 import { scheduleDto } from '@/lib/expense/dto'
 import { settle } from '@/lib/expense/plan'
-import { syncContractSchedules, syncWithholding } from '@/lib/expense/sync'
+import { syncContractSchedules, syncWithholding, retryOnConflict } from '@/lib/expense/sync'
 import { date, money, oneOf, str } from '@/lib/expense/validate'
 
 type Params = { params: Promise<{ id: string }> }
@@ -58,14 +58,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (status === 'skipped') data.skipReason = str(b.skipReason, '発生しない理由', 200)
     else data.skipReason = null
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated = await retryOnConflict(() => prisma.$transaction(async (tx) => {
       await tx.expenseSchedule.update({ where: { id: r.id }, data })
       // 予定に戻したら契約の計算に合わせ直す（実額の入力を取り消す）
       if (status === 'planned' && r.status !== 'planned' && r.contractId) await syncContractSchedules(tx, ctx.organizationId, r.contractId)
       if (r.kind !== 'withholding_tax') await syncWithholding(tx, ctx.organizationId)
       await audit(tx, ctx, 'schedule.update', 'schedule', r.id, { from: r.status, to: status, amountChanged })
       return tx.expenseSchedule.findFirst({ where: { id: r.id, organizationId: ctx.organizationId }, include: { contract: { include: { vendor: true } } } })
-    }, { maxWait: 10000, timeout: 30000 })
+    }, { maxWait: 10000, timeout: 30000 }))
     if (!updated) throw new ExpenseHttpError(404, '支払予定が見つかりません')
     return NextResponse.json({ schedule: scheduleDto(updated) })
   })
@@ -78,11 +78,11 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     const r = await findSchedule(ctx.organizationId, id)
     if (r.kind !== 'one_time') throw new ExpenseHttpError(400, '契約の予定は削除できません。「発生なし」にするか、契約を変更してください')
     if (r.status === 'paid') throw new ExpenseHttpError(409, '支払済みの支出は削除できません')
-    await prisma.$transaction(async (tx) => {
+    await retryOnConflict(() => prisma.$transaction(async (tx) => {
       await tx.expenseSchedule.delete({ where: { id: r.id } })
       if (r.withholdingAmount > 0) await syncWithholding(tx, ctx.organizationId)
       await audit(tx, ctx, 'schedule.delete', 'schedule', r.id, { title: r.title })
-    })
+    }))
     return NextResponse.json({ ok: true })
   })
 }

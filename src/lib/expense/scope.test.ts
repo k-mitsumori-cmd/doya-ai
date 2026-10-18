@@ -73,7 +73,8 @@ for (const file of files) {
         /^\{\s*contractId_effectiveFrom:/.test(w) ||
         // 入口: ログイン中のユーザーのメールで本人の id を引く
         /^\{\s*email(:|\s*\})/.test(w) ||
-        /^\{\s*id:\s*\{\s*in:\s*rows\.map\(\(r\) => r\.userId\)\s*\}\s*\}$/.test(w)
+        // メンバー一覧: 自組織のメンバー行から取り出した userId だけでメールを引く
+        /^\{\s*id:\s*\{\s*in:\s*userIds\s*\}\s*\}$/.test(w)
       assert.ok(ok, `organizationId の無い where: ${w}`)
     }
   })

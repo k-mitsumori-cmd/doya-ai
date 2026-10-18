@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { audit, ExpenseHttpError, readJson, withExpense } from '@/lib/expense/access'
 import { priceDto } from '@/lib/expense/dto'
 import { priceInput } from '@/lib/expense/inputs'
-import { syncContractSchedules, syncWithholding } from '@/lib/expense/sync'
+import { syncContractSchedules, syncWithholding, retryOnConflict } from '@/lib/expense/sync'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const c = await prisma.expenseContract.findFirst({ where: { id, organizationId: ctx.organizationId }, select: { id: true } })
     if (!c) throw new ExpenseHttpError(404, '契約が見つかりません')
     const data = priceInput(await readJson(req))
-    const p = await prisma.$transaction(async (tx) => {
+    const p = await retryOnConflict(() => prisma.$transaction(async (tx) => {
       const row = await tx.expenseContractPrice.upsert({
         where: { contractId_effectiveFrom: { contractId: c.id, effectiveFrom: data.effectiveFrom } },
         create: { ...data, contractId: c.id },
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       await syncWithholding(tx, ctx.organizationId)
       await audit(tx, ctx, 'contract.price', 'contract', c.id, { effectiveFrom: data.effectiveFrom.toISOString().slice(0, 10), unitPrice: data.unitPrice, quantity: data.quantity })
       return row
-    }, { maxWait: 10000, timeout: 30000 })
+    }, { maxWait: 10000, timeout: 30000 }))
     return NextResponse.json({ price: priceDto(p) })
   })
 }

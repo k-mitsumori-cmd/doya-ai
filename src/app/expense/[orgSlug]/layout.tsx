@@ -16,7 +16,8 @@ export default function ExpenseOrgLayout({ children }: { children: React.ReactNo
   const orgSlug = (params.orgSlug as string) || ''
   const { data: session } = useSession()
   const [role, setRole] = useState<Role | null>(null)
-  const [state, setState] = useState<'loading' | 'ok' | 'denied'>('loading')
+  const [state, setState] = useState<'loading' | 'ok' | 'denied' | 'error'>('loading')
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let alive = true
@@ -27,6 +28,11 @@ export default function ExpenseOrgLayout({ children }: { children: React.ReactNo
           router.replace('/expense')
           return
         }
+        // ⚠️ 読み込みの失敗（500・通信エラー）を「権限なし」と出さない（システム点検 EXP-F07）
+        if (!r.ok) {
+          if (alive) setState('error')
+          return
+        }
         const d = await r.json()
         if (!alive) return
         if (d?.role) {
@@ -34,11 +40,11 @@ export default function ExpenseOrgLayout({ children }: { children: React.ReactNo
           setState('ok')
         } else setState('denied')
       })
-      .catch(() => alive && setState('denied'))
+      .catch(() => alive && setState('error'))
     return () => {
       alive = false
     }
-  }, [orgSlug, router])
+  }, [orgSlug, router, attempt])
 
   return (
     <AppShell userName={session?.user?.name}>
@@ -46,6 +52,7 @@ export default function ExpenseOrgLayout({ children }: { children: React.ReactNo
       <ToolFrame serviceId="expense" nav={expenseNav(orgSlug, role)}>
         {state === 'loading' && <Loading />}
         {state === 'denied' && <ErrorBox forbidden />}
+        {state === 'error' && <ErrorBox onRetry={() => setAttempt((n) => n + 1)} />}
         {state === 'ok' && <OrgContext.Provider value={{ orgSlug, role }}>{children}</OrgContext.Provider>}
       </ToolFrame>
     </AppShell>
