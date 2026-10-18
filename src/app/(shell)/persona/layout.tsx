@@ -4,7 +4,9 @@ import type { Metadata } from 'next'
 import { buildServiceMetadata, SERVICE_SEO } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
+import { isShellEnabled } from '@/lib/ui-shell'
 import PersonaAppLayout from '@/components/PersonaAppLayout'
+import PersonaShellFrame from '@/components/persona/PersonaShellFrame'
 
 export const metadata: Metadata = buildServiceMetadata('persona', {
   keywords: SERVICE_SEO.persona.keywords,
@@ -23,7 +25,8 @@ export default async function PersonaLayout({ children }: { children: React.Reac
         category="BusinessApplication"
         features={SVC.features}
       />
-      {session?.user ? <PersonaAppLayout>{children}</PersonaAppLayout> : children}
+      {/* 未ログイン → 今のまま / 枠が有効 → ToolFrame だけ（枠は (shell)/layout.tsx） / それ以外 → 今のレイアウト */}
+      {!session?.user ? children : isShellEnabled('persona') ? <PersonaShellFrame>{children}</PersonaShellFrame> : <PersonaAppLayout>{children}</PersonaAppLayout>}
     </>
   )
 }

@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'../..'),compile=s=>ts.transpileModule(s,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
-const file='src/app/interview/Tool.tsx',source=fs.readFileSync(path.join(root,file),'utf8'),ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let effect;
+const file='src/app/(shell)/interview/Tool.tsx',source=fs.readFileSync(path.join(root,file),'utf8'),ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let effect;
 function visit(n){if(ts.isCallExpression(n)&&n.expression.getText(ast)==='useEffect'&&n.arguments[0]?.getText(ast).includes("readInterviewCreationResponse('/api/interview/projects'"))effect=n.arguments[0].getText(ast);ts.forEachChild(n,visit)}visit(ast);assert.ok(effect);
 const reader=compile(fs.readFileSync(path.join(root,'src/lib/interview/creation-response.ts'),'utf8')),tick=()=>new Promise(r=>setImmediate(r));
 function fixture(actor='owner'){

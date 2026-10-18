@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript'),assert=require('node:assert/strict');
-const source=fs.readFileSync(path.resolve(__dirname,'../../src/app/persona/Tool.tsx'),'utf8'),ast=ts.createSourceFile('Tool.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let callback;
+const source=fs.readFileSync(path.resolve(__dirname,'../../src/app/(shell)/persona/Tool.tsx'),'utf8'),ast=ts.createSourceFile('Tool.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let callback;
 function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='handleGenerateScene')callback=n.initializer.arguments[0].getText(ast);ts.forEachChild(n,visit)}visit(ast);
 function wireReader(env){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.resolve(__dirname,'../../src/lib/persona/image-response.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,Error,TextDecoder,TextEncoder,AbortController,setTimeout,clearTimeout,fetch:env.fetch});Object.assign(env,exports,{PersonaQuotaError:class PersonaQuotaError extends Error{},personaQuotaAction:()=>null})}
 const compiled=ts.transpileModule('('+callback+');',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;

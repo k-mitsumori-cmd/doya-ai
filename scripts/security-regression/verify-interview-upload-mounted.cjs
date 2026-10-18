@@ -5,7 +5,7 @@ global.window=dom.window;global.document=dom.window.document;global.navigator=do
 const {createRoot}=require('react-dom/client'),ReactDOM=require('react-dom'),tick=()=>new Promise(r=>setImmediate(r));
 const warnings=[],originalError=console.error;console.error=(...args)=>warnings.push(args.map(String).join(' '));
 const motionCache={},motion=new Proxy({}, {get:(_,tag)=>motionCache[tag]||(motionCache[tag]=React.forwardRef(function MotionFixture(props,ref){const clean={...props,ref};for(const key of ['initial','animate','exit','transition','whileHover','whileTap','variants','layout','viewport'])delete clean[key];return React.createElement(tag,clean)}))});
-const files=['src/app/interview/Tool.tsx','src/app/interview/projects/[id]/materials/page.tsx'];
+const files=['src/app/(shell)/interview/Tool.tsx','src/app/(shell)/interview/projects/[id]/materials/page.tsx'];
 const nativeFile=bytes=>new File([bytes],'same.pdf',{type:'application/pdf',lastModified:1});
 (async()=>{
  const results=[];

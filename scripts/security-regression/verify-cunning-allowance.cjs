@@ -1,7 +1,7 @@
 const fs=require('fs'),ts=require('typescript'),vm=require('vm'),assert=require('node:assert/strict');
 const {load,check}=require('./load-typescript.cjs');
 const {recordingAllowance}=load('src/lib/cunning/allowance-client.ts');
-const source=fs.readFileSync('src/app/cunning/live/[sessionId]/page.tsx','utf8');
+const source=fs.readFileSync('src/app/(shell)/cunning/live/[sessionId]/page.tsx','utf8');
 const effect=source.slice(source.indexOf('  // 確認失敗や旧レスポンス'),source.indexOf('  // アンマウント時'));
 const tick=source.slice(source.indexOf('  // 経過秒カウント'),source.indexOf('  const transcriptionFailed'));
 function evaluate(code,env){vm.runInNewContext(ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{recordingVersionRef:{current:1},recordingClientRef:{current:null},mountedRef:{current:true},pendingTranscriptIdsRef:{current:[]},requestAnswer:()=>{},...env})}
