@@ -86,6 +86,14 @@
 .tab:focus-visible,
 .paletteItem:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
+/* 利用量とプラン（SidebarUsagePanel は白い文字なので、今までのサイドバーと同じ青の上に置く） */
+.usage {
+  margin: 8px 0 0; padding: 4px 0 12px; border-radius: var(--r-sm);
+  background: linear-gradient(160deg, var(--blue), var(--blue-deep) 60%, var(--navy));
+}
+/* 数字を読み込むまで SidebarUsagePanel は何も描かない。空の青い箱を出さない */
+.usage:empty { display: none; }
+
 .account { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 2px; }
 
 .userLine {
@@ -139,7 +147,7 @@
   .shell { grid-template-columns: 76px minmax(0, 1fr); }
   .sidebar { padding: 16px 10px 12px; }
   .sideHead { justify-content: center; padding: 0 0 12px; }
-  .navLabel, .beta, .groupLabel, .userLine { display: none; }
+  .navLabel, .beta, .groupLabel, .userLine, .usage { display: none; }
   .search { justify-content: center; padding: 0; }
   .navItem { justify-content: center; padding: 0; }
   .group { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }

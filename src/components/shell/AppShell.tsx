@@ -16,6 +16,7 @@ import { CreditCard, LayoutGrid, LogOut, Menu, Search, X } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
 import { ShellIcon } from './icons'
+import { ShellUsageArea, ShellUsageProvider } from './ShellUsage'
 import { ALL_SHELL_TOOLS, SHELL_GROUPS, SHELL_HOME, type ShellTool } from './tools'
 import styles from './AppShell.module.css'
 
@@ -160,6 +161,7 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
   }, [recent])
 
   return (
+    <ShellUsageProvider>
     <div className={`${ds.ds} ${styles.shell}`}>
       <a href="#shell-main" className={styles.skip}>本文へ移動</a>
       <header className={styles.topbar}>
@@ -202,6 +204,7 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
             </div>
           ))}
         </div>
+        <ShellUsageArea className={styles.usage} />
         <div className={styles.account}>
           {userName ? <p className={styles.userLine}>{userName} さん</p> : null}
           <Link href="/pricing" className={styles.navItem} onClick={close} title="料金プラン">
@@ -234,5 +237,6 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
 
       <CommandPalette open={palette} onClose={() => setPalette(false)} />
     </div>
+    </ShellUsageProvider>
   )
 }

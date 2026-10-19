@@ -127,6 +127,16 @@ export default function QuoteShellFrame({ children }: { children: React.ReactNod
 - 切り替えの中身（localStorage・`?org=`・slug）は変えない。共通の会社の切り替えは別の作業（README §18.6 手順 2）
 - 組織を選ぶまで画面が出せないツールは、`inShell` で入口のパスを外し、組織を選んだあとのパスだけ枠に入れる（支出管理の例: `/^\/expense\/[^/]+/`）
 
+### 2.5b 利用量とプランを枠に出す
+
+今のサイドバーの「作った数 / 残り」（`SidebarUsagePanel`）は、枠の左下に1か所で出す。ツールの側では出さない。
+
+- `/api/usage/<id>` で数えるツールは、台帳の行に `usage` を足す。サイドバーで渡していた値をそのまま書く
+  - 例: `usage: { service: 'quote', refreshEvent: 'quote:usage-changed', pricingHref: '/quote/pricing', org: 'quote' }`
+  - 組織ごとに数えるツールは `org` を書く。URL の2つめが組織なら `'path'`
+- ツールの中でしか分からない数字（人事の従業員数など）は、ツールの枠の部品から `<ShellUsageSlot>` で渡す（例: `HrShellFrame`）。渡したものが台帳より優先される
+- 上限に達したときのモーダルは、各ツールにそのまま残す
+
 ### 2.6 確かめる
 
 ```bash

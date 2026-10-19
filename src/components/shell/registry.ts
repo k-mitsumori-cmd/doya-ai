@@ -23,6 +23,27 @@ export interface ShellService {
    * 公開の画面（回答画面・共有画面など）や、組織を選ぶ前の入口のように、枠を出さないパスをここで外す。
    */
   inShell?: (pathname: string) => boolean
+  /**
+   * 枠の左下に出す「作った数 / 残り」とプラン（SidebarUsagePanel と同じもの）。
+   * 数字は /api/usage/<service> から取る。省略したツールは出さない（料金プランへの導線だけが出る）。
+   * ツールの中でしか分からない数字（人事の従業員数など）は、ツールの側から ShellUsageSlot で渡す。
+   */
+  usage?: ShellUsage
+}
+
+export interface ShellUsage {
+  /** /api/usage/<service> の service */
+  service: string
+  /** この名前のイベントが来たら数字を読み直す（今のサイドバーと同じ名前） */
+  refreshEvent?: string
+  /** 「プランを見る」の行き先。省略すると SidebarUsagePanel の既定 */
+  pricingHref?: string
+  /**
+   * 組織ごとに数えるツールの、組織の取り方。
+   * - 'path': URL の2つめ（/aio/<組織>/...）
+   * - 'quote': 見積の組織の選び方（localStorage・?org=）。useQuoteUsageOrganization と同じ
+   */
+  org?: 'path' | 'quote'
 }
 
 export const SHELL_SERVICES: ShellService[] = [
@@ -30,29 +51,29 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'income', basePath: '/income', always: true },
   // 支出管理は組織を選んだあと（/expense/<組織>）だけ枠に入る。入口（/expense）と料金（/expense/pricing）は今までどおり
   { id: 'expense', basePath: '/expense', always: true, inShell: (p) => /^\/expense\/[^/]+/.test(p) && !p.startsWith('/expense/pricing') },
-  { id: 'popup', basePath: '/popup' },
+  { id: 'popup', basePath: '/popup', usage: { service: 'popup', refreshEvent: 'popup:generated' } },
   { id: 'tenjikai', basePath: '/tenjikai' },
   // 社内インタビューの回答画面（/shanai/answer/<token>）は社員が開く公開の画面
-  { id: 'shanai', basePath: '/shanai', inShell: (p) => !p.startsWith('/shanai/answer') },
+  { id: 'shanai', basePath: '/shanai', inShell: (p) => !p.startsWith('/shanai/answer'), usage: { service: 'shanai', refreshEvent: 'shanai:generated' } },
   { id: 'doyalist', basePath: '/doyalist' },
   // ドヤスライドの紹介ページ（/doyaslide）は、ログイン後も枠の外（旧レイアウトと同じ判定）
   { id: 'doyaslide', basePath: '/doyaslide', inShell: (p) => p.replace(/\/+$/, '') !== '/doyaslide' },
-  { id: 'adimage', basePath: '/adimage' },
-  { id: 'asklink', basePath: '/asklink' },
-  { id: 'banner', basePath: '/banner', inShell: (p) => p === '/banner/dashboard' || p.startsWith('/banner/dashboard/') },
-  { id: 'seo', basePath: '/seo' },
+  { id: 'adimage', basePath: '/adimage', usage: { service: 'adimage', refreshEvent: 'adimage:generated' } },
+  { id: 'asklink', basePath: '/asklink', usage: { service: 'asklink', refreshEvent: 'asklink:generated' } },
+  { id: 'banner', basePath: '/banner', inShell: (p) => p === '/banner/dashboard' || p.startsWith('/banner/dashboard/'), usage: { service: 'banner', refreshEvent: 'banner:usage-changed' } },
+  { id: 'seo', basePath: '/seo', usage: { service: 'seo' } },
   { id: 'cunning', basePath: '/cunning' },
   { id: 'interview', basePath: '/interview' },
-  { id: 'persona', basePath: '/persona' },
-  { id: 'quote', basePath: '/quote' },
+  { id: 'persona', basePath: '/persona', usage: { service: 'persona', refreshEvent: 'persona:usage-changed' } },
+  { id: 'quote', basePath: '/quote', usage: { service: 'quote', refreshEvent: 'quote:usage-changed', pricingHref: '/quote/pricing', org: 'quote' } },
   // ドヤ商談準備は組織を選んだあと（/shodan/<組織>）だけ枠に入る。入口（/shodan）・料金（/shodan/pricing）・招待は今までどおり
-  { id: 'shodan', basePath: '/shodan', inShell: (p) => /^\/shodan\/[^/]+/.test(p) && !/^\/shodan\/(pricing|invite)(\/|$)/.test(p) },
+  { id: 'shodan', basePath: '/shodan', inShell: (p) => /^\/shodan\/[^/]+/.test(p) && !/^\/shodan\/(pricing|invite)(\/|$)/.test(p), usage: { service: 'shodan', refreshEvent: 'shodan:usage-changed', org: 'path' } },
   // AIO は組織を選んだあと（/aio/<組織>）だけ枠に入る。入口（/aio）・料金（/aio/pricing）・招待は今までどおり
-  { id: 'aio', basePath: '/aio', inShell: (p) => /^\/aio\/[^/]+/.test(p) && !p.startsWith('/aio/pricing') && !p.startsWith('/aio/invite') },
+  { id: 'aio', basePath: '/aio', inShell: (p) => /^\/aio\/[^/]+/.test(p) && !p.startsWith('/aio/pricing') && !p.startsWith('/aio/invite'), usage: { service: 'aio', refreshEvent: 'aio:usage-changed', org: 'path' } },
   // AI商談の招待の受諾画面（/aishodan/invite/<token>）は枠の外（guest-path.ts でも外れる）
-  { id: 'aishodan', basePath: '/aishodan', inShell: (p) => !p.startsWith('/aishodan/invite') },
+  { id: 'aishodan', basePath: '/aishodan', inShell: (p) => !p.startsWith('/aishodan/invite'), usage: { service: 'aishodan', pricingHref: '/aishodan/pricing' } },
   // 面接の画面（/mensetsu/live/<token>）と招待（/mensetsu/invite/<token>）は候補者・招待者が開く。guest-path.ts でも外れている
-  { id: 'mensetsu', basePath: '/mensetsu', inShell: (p) => !p.startsWith('/mensetsu/live') && !p.startsWith('/mensetsu/invite') },
+  { id: 'mensetsu', basePath: '/mensetsu', inShell: (p) => !p.startsWith('/mensetsu/live') && !p.startsWith('/mensetsu/invite'), usage: { service: 'mensetsu', pricingHref: '/mensetsu/pricing' } },
   // 営業管理は組織を選んだあと（/sfa/<組織>）だけ枠に入る。入口（/sfa）・料金（/sfa/pricing）・招待は今までどおり
   { id: 'sfa', basePath: '/sfa', inShell: (p) => /^\/sfa\/[^/]+/.test(p) && !p.startsWith('/sfa/pricing') && !p.startsWith('/sfa/invite') },
   // プロマネは組織（ワークスペース）を選んだあと（/promane/<slug>）だけ枠に入る。入口（/promane）・招待・料金は今までどおり

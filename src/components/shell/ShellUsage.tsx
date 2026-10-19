@@ -1,0 +1,88 @@
+'use client'
+// ============================================
+// 枠の左下の「作った数 / 残り」とプランの表示
+// ============================================
+// 今のツールのサイドバーにあった表示を、枠の側の1か所で出す。
+// - 台帳（registry.ts）の usage があれば、SidebarUsagePanel をそのまま使う（数字の出どころ・読み直しの合図は今と同じ）
+// - ツールの中でしか分からない数字（人事の従業員数など）は、ツールが <ShellUsageSlot> で渡す。渡されたらそちらを出す
+// ⚠️ 上限に達したときのモーダルは各ツールに残っている。ここは表示だけ。
+import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { SidebarUsagePanel } from '@/components/sidebar'
+import { useQuoteUsageOrganization } from '@/lib/quote/use-usage-organization'
+import { shellServiceForPath, type ShellUsage } from './registry'
+
+type SlotSetter = (node: ReactNode | null) => void
+const SetterContext = createContext<SlotSetter | null>(null)
+const SlotContext = createContext<ReactNode | null>(null)
+
+/** AppShell の外側に置く。ツールが渡した表示を持つ */
+export function ShellUsageProvider({ children }: { children: ReactNode }) {
+  const [slot, setSlot] = useState<ReactNode | null>(null)
+  return (
+    <SetterContext.Provider value={setSlot}>
+      <SlotContext.Provider value={slot}>{children}</SlotContext.Provider>
+    </SetterContext.Provider>
+  )
+}
+
+/**
+ * ツールの側から、枠の左下に表示を渡す。枠の外（設定で無効・未ログイン）では何もしない。
+ * 例: <ShellUsageSlot><HrUsageMeter … /></ShellUsageSlot>
+ */
+export function ShellUsageSlot({ children }: { children: ReactNode }) {
+  const setSlot = useContext(SetterContext)
+  useEffect(() => {
+    if (!setSlot) return
+    setSlot(children)
+    return () => setSlot(null)
+  }, [setSlot, children])
+  return null
+}
+
+/** URL の2つめ（/aio/<組織>/...）を組織として読む */
+function orgFromPath(pathname: string): string | null {
+  const second = pathname.split('/')[2]
+  if (!second) return null
+  try {
+    return decodeURIComponent(second)
+  } catch {
+    return null
+  }
+}
+
+function QuoteUsage({ usage }: { usage: ShellUsage }) {
+  const { data: session, status } = useSession()
+  const organizationSlug = useQuoteUsageOrganization(session?.user?.id || '', status)
+  return <SidebarUsagePanel service={usage.service} refreshEvent={usage.refreshEvent} pricingHref={usage.pricingHref} organizationSlug={organizationSlug} show />
+}
+
+/**
+ * 台帳から、今のツールの利用量を出す。ツールが ShellUsageSlot で渡していれば、そちらを優先する。
+ * ⚠️ SidebarUsagePanel は色つきのサイドバー用（白い文字）なので、青いカードの上に置く（className は AppShell が渡す）
+ */
+export function ShellUsageArea({ className }: { className?: string }) {
+  const pathname = usePathname() || '/'
+  const slot = useContext(SlotContext)
+  const body = usageBody(pathname, slot)
+  return body ? <div className={className}>{body}</div> : null
+}
+
+function usageBody(pathname: string, slot: ReactNode | null): ReactNode {
+  if (slot) return slot
+  const usage = shellServiceForPath(pathname)?.usage
+  if (!usage) return null
+  if (usage.org === 'quote') return <QuoteUsage key={usage.service} usage={usage} />
+  const organizationSlug = usage.org === 'path' ? orgFromPath(pathname) : undefined
+  return (
+    <SidebarUsagePanel
+      key={usage.service}
+      service={usage.service}
+      refreshEvent={usage.refreshEvent}
+      pricingHref={usage.pricingHref}
+      organizationSlug={organizationSlug}
+      show
+    />
+  )
+}

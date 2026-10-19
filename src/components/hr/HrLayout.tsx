@@ -19,7 +19,7 @@ interface HrLayoutProps {
    * 共通の枠に載せたときの外側（HrShellFrame が ToolFrame を渡す）。省略時は今までのサイドバーのレイアウト。
    * 組織の切り替え（<select>）は switcher として渡し、中身（sessionStorage・ヘッダー）はここで持ったまま変えない
    */
-  renderFrame?: (frame: { switcher: ReactNode; canManageEmployees: boolean; children: ReactNode }) => ReactNode
+  renderFrame?: (frame: { switcher: ReactNode; canManageEmployees: boolean; usage: { employeeCount: number; employeeLimit: number; plan: string } | null; children: ReactNode }) => ReactNode
 }
 
 export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
@@ -164,7 +164,7 @@ export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
   const organizationPicker = organizationPickerBody && <div className="border-b border-slate-200 bg-white px-4 py-3">{organizationPickerBody}</div>
   // 共通の枠では、組織の切り替えを ToolFrame の switcher（パンくずの右）に出し、本文には出さない
   const framed = (node: ReactNode) => renderFrame
-    ? <>{renderFrame({ switcher: organizationPickerBody ? <div>{organizationPickerBody}</div> : null, canManageEmployees: usage.canManageEmployees, children: node })}</>
+    ? <>{renderFrame({ switcher: organizationPickerBody ? <div>{organizationPickerBody}</div> : null, canManageEmployees: usage.canManageEmployees, usage: hasOrg && !usageError ? { employeeCount: usage.employeeCount, employeeLimit: usage.employeeLimit, plan: usage.plan } : null, children: node })}</>
     : <>{node}</>
   const inlinePicker = renderFrame ? null : organizationPicker
 
