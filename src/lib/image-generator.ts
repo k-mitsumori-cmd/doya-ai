@@ -8,13 +8,14 @@
 //   直接 gemini-3-pro-image を使用
 //   理由: gpt-image-2 generations は入力画像非対応、edits 経由は別実装
 //
-// フォールバック発動条件:
-//   - HTTP 4xx (429含む) / 5xx
-//   - タイムアウト
-//   - レスポンスに画像が含まれない
+// フォールバック発動条件（2026-10-19 原価見直しで絞った）:
+//   - HTTP 429 / 5xx のときだけ
+//   ⚠️ タイムアウト・接続の切断・画像の無い応答・400 などでは替えない。
+//      OpenAI 側では課金済みのことがあり、替えると1回分の費用（約20円）が二重にかかる。
+//      参照画像の編集（gpt-image-2 → gpt-image-1 → Nano Banana Pro）も同じ条件。
 // ========================================
 
-import { editImageGpt, generateImageGpt, GptImageBackground, GptImageQuality, GptImageSize } from './openai-image'
+import { editImageGpt, generateImageGpt, isRetryableImageProviderError, GptImageBackground, GptImageQuality, GptImageSize } from './openai-image'
 import { withTimeout } from './fetch-timeout'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
@@ -78,7 +79,8 @@ export async function generateImageWithFallback(
     try {
       const r = await callOpenAI(req)
       return { ...r, fallbackUsed: false }
-    } catch {
+    } catch (error) {
+      if (!isRetryableImageProviderError(error)) throw error
       console.warn('[image-gen] gpt-image-2 失敗。Nano Banana Pro にフォールバックします')
       const r = await callNanoBananaProPreview(req)
       return { ...r, fallbackUsed: true, primaryError: 'メインの画像生成サービスを利用できませんでした' }
@@ -88,7 +90,8 @@ export async function generateImageWithFallback(
   try {
     const r = await callOpenAIEdit(req)
     return { ...r, fallbackUsed: false }
-  } catch {
+  } catch (error) {
+    if (!isRetryableImageProviderError(error)) throw error
     console.warn('[image-gen] OpenAI参照画像編集に失敗。Nano Banana Pro にフォールバックします')
     const r = await callNanoBananaProPreview(req)
     return { ...r, fallbackUsed: true, primaryError: 'メインの画像編集サービスを利用できませんでした' }

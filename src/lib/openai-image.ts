@@ -23,6 +23,33 @@ export type GptImageQuality = 'low' | 'medium' | 'high' | 'auto'
 // 有効値への丸めは image-generator.ts:mapSizeForGptImage2() が一元的に担う。
 export type GptImageSize = `${number}x${number}` | 'auto'
 
+/**
+ * 別のモデルへ替えてよい失敗か（429 と 5xx だけ）。
+ * ⚠️ タイムアウトや接続の切断では替えない。OpenAI 側では生成が終わって課金済みのことがあり、
+ *    別のモデルを呼ぶと1回分の費用が二重にかかる（1回あたり約20円。2026-10-19 原価見直し）。
+ *    400 などの入力の誤りは、別のモデルでも同じ結果になりやすいので替えない。
+ */
+export function isRetryableImageProviderError(error: unknown): boolean {
+  const status = imageProviderErrorStatus(error)
+  return status === 429 || (typeof status === 'number' && status >= 500 && status <= 599)
+}
+
+function imageProviderErrorStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== 'object') return undefined
+  const status = (error as { status?: unknown }).status
+  return typeof status === 'number' && Number.isInteger(status) ? status : undefined
+}
+
+/** HTTP の状態コードを持つ画像APIのエラー（再試行の判定に使う） */
+export class ImageProviderHttpError extends Error {
+  readonly status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ImageProviderHttpError'
+    this.status = status
+  }
+}
+
 export interface GptImageResult {
   b64: string
   revisedPrompt?: string
@@ -69,7 +96,7 @@ export async function generateImageGpt(params: {
 
     if (!res.ok) {
       const errText = await readLimitedOpenAiResponse(res, OPENAI_ERROR_RESPONSE_MAX_BYTES)
-      throw new Error(`OpenAI image generation failed (${res.status}): ${errText.slice(0, 500)}`)
+      throw new ImageProviderHttpError(`OpenAI image generation failed (${res.status}): ${errText.slice(0, 500)}`, res.status)
     }
 
     const json = JSON.parse(await readLimitedOpenAiResponse(res, OPENAI_IMAGE_RESPONSE_MAX_BYTES))
@@ -145,7 +172,8 @@ export async function editImageGpt(params: {
 }): Promise<GptImageResult & { model: string }> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) throw new Error('OPENAI_API_KEY が設定されていません')
-  const client = new OpenAI({ apiKey })
+  // SDK の自動再試行は止める。タイムアウトでも再試行するため、押されていない分の費用がかかる。
+  const client = new OpenAI({ apiKey, maxRetries: 0 })
   const uploads = await Promise.all(params.images.map((image, index) => {
     const ext = image.mimeType.includes('webp') ? 'webp' : image.mimeType.includes('jpeg') ? 'jpg' : 'png'
     return toFile(Buffer.from(image.base64, 'base64'), `reference-${index + 1}.${ext}`, { type: image.mimeType })
@@ -177,6 +205,8 @@ export async function editImageGpt(params: {
       return { b64, model }
     } catch (error) {
       lastError = error
+      // gpt-image-1 へ替えるのは 429 と 5xx のときだけ（isRetryableImageProviderError の説明を参照）。
+      if (!isRetryableImageProviderError(error)) break
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError))

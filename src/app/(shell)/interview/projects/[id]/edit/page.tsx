@@ -526,18 +526,22 @@ export default function EditPage() {
   }
 
   // バナー画像生成 (Nano Banana Pro)
-  const generateBanner = useCallback(async (force: boolean) => {
+  // auto=true は画面を開いたときの自動生成。サーバーが「1件につき1回・ログイン済み・利用枠あり」のときだけ作る。
+  // 自動生成の失敗や見送りは、利用者が押した操作ではないので通知しない。
+  const generateBanner = useCallback(async (force: boolean, auto = false) => {
     if (bannerGenerating) return
     setBannerGenerating(true)
     try {
       const res = await fetch(`/api/interview/projects/${projectId}/thumbnail`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleContent: content.slice(0, 2000), articleTitle: title, force }),
+        body: JSON.stringify({ articleContent: content.slice(0, 2000), articleTitle: title, force, auto }),
       })
       const data = await res.json()
       if (data.success && data.thumbnailUrl) {
         setBannerUrl(data.thumbnailUrl)
+      } else if (auto) {
+        // 何もしない（ボタンから作り直せる）
       } else {
         if (res.status === 429 && data.code === 'INTERVIEW_AUX_LIMIT_REACHED') {
           setAuxLimitMessage(data.error || '本日の追加AI編集枠を使い切りました。')
@@ -547,7 +551,7 @@ export default function EditPage() {
       }
     } catch (e) {
       console.error('[banner] generation failed:')
-      showToast('バナー画像を生成できませんでした。通信状態を確認して再試行してください。', 'error')
+      if (!auto) showToast('バナー画像を生成できませんでした。通信状態を確認して再試行してください。', 'error')
     } finally {
       setBannerGenerating(false)
     }
@@ -557,7 +561,7 @@ export default function EditPage() {
   useEffect(() => {
     if (!loading && content.trim().length > 100 && !bannerUrl && !bannerGenerating && !bannerAutoTriedRef.current) {
       bannerAutoTriedRef.current = true
-      generateBanner(false)
+      generateBanner(false, true)
     }
   }, [loading, content, bannerUrl, bannerGenerating, generateBanner])
 

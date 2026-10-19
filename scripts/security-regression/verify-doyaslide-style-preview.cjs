@@ -54,21 +54,21 @@ const { load, check } = require('./load-typescript.cjs')
     assert.equal(rows.get(budgetKey), '2026-09-26:3')
   })
 
+  const loadRoute = (storage, counters) => load('src/app/api/doyaslide/style-preview/route.ts', {
+    'next/server': { NextResponse: Response },
+    // 画像生成と lease は GET から呼ばれてはいけない。import されたら数える。
+    '@/lib/image-generator': { generateImageWithFallback: async () => { counters.providers++ } },
+    '@/lib/doyaslide/style-preview-lease': new Proxy({}, { get: () => { counters.lease++; return async () => {} } }),
+    '@/lib/doyaslide/access': { getUserId: async () => 'user' },
+    '@/lib/doyaslide/constants': { STYLE_PRESETS: [{ value: 'corporate' }], STYLE_PREVIEW_SAMPLE_SLIDES: [{ index: 1 }, { index: 2 }, { index: 3 }], getStylePreviewColor: () => '#123' },
+    '@/lib/doyaslide/storage': { ...storage, uploadStylePreview: async () => { counters.uploads++ } },
+  })
   await check('storage lookup errors fail closed before provider calls', async () => {
-    let providers = 0
-    const api = load('src/app/api/doyaslide/style-preview/route.ts', {
-      'next/server': { NextResponse: Response },
-      '@/lib/image-generator': { generateImageWithFallback: async () => { providers++ } },
-      '@/lib/doyaslide/access': { getUserId: async () => 'user' },
-      '@/lib/doyaslide/prompts': { buildImagePrompt: () => 'prompt' },
-      '@/lib/doyaslide/constants': { STYLE_PRESETS: [{ value: 'corporate' }], STYLE_PREVIEW_SAMPLE_SLIDES: [{ index: 1 }, { index: 2 }, { index: 3 }], getStylePreviewColor: () => '#123' },
-      '@/lib/doyaslide/storage': { stylePreviewExists: async () => { throw Error('storage offline') }, stylePreviewPublicUrl: () => 'url', uploadStylePreview: async () => { throw Error('unexpected upload') } },
-      '@/lib/doyaslide/aspect': { normalizeGeneratedSlide: async () => ({ base64: 'png' }) },
-      '@/lib/doyaslide/style-preview-lease': { StylePreviewBudgetError: class extends Error {}, reserveStylePreviewImages: async () => {}, StylePreviewInProgressError: class extends Error {}, claimStylePreviewLease: async () => { throw Error('unexpected claim') }, releaseStylePreviewLease: async () => {} },
-    })
+    const counters = { providers: 0, lease: 0, uploads: 0 }
+    const api = loadRoute({ stylePreviewExists: async () => { throw Error('storage offline') }, stylePreviewPublicUrl: () => 'url' }, counters)
     const response = await api.GET(new Request('https://example.test/api/doyaslide/style-preview?style=corporate'))
     assert.equal(response.status, 500)
-    assert.equal(providers, 0)
+    assert.deepEqual(counters, { providers: 0, lease: 0, uploads: 0 })
   })
 
   await check('storage helper distinguishes missing preview from failed listing', async () => {
@@ -82,67 +82,26 @@ const { load, check } = require('./load-typescript.cjs')
     await assert.rejects(storage.stylePreviewExists('corporate', 0), /確認できません/)
   })
 
-  await check('in-progress preview returns retry signal without duplicate generation', async () => {
-    let providers = 0
-    class InProgress extends Error {}
-    const api = load('src/app/api/doyaslide/style-preview/route.ts', {
-      'next/server': { NextResponse: Response },
-      '@/lib/image-generator': { generateImageWithFallback: async () => { providers++ } },
-      '@/lib/doyaslide/access': { getUserId: async () => 'user' },
-      '@/lib/doyaslide/prompts': { buildImagePrompt: () => 'prompt' },
-      '@/lib/doyaslide/constants': { STYLE_PRESETS: [{ value: 'corporate' }], STYLE_PREVIEW_SAMPLE_SLIDES: [{ index: 1 }, { index: 2 }, { index: 3 }], getStylePreviewColor: () => '#123' },
-      '@/lib/doyaslide/storage': { stylePreviewExists: async () => false, stylePreviewPublicUrl: () => 'url', uploadStylePreview: async () => { throw Error('unexpected upload') } },
-      '@/lib/doyaslide/aspect': { normalizeGeneratedSlide: async () => ({ base64: 'png' }) },
-      '@/lib/doyaslide/style-preview-lease': { StylePreviewBudgetError: class extends Error {}, reserveStylePreviewImages: async () => {}, StylePreviewInProgressError: InProgress, claimStylePreviewLease: async () => { throw new InProgress() }, releaseStylePreviewLease: async () => {} },
-    })
-    const response = await api.GET(new Request('https://example.test/api/doyaslide/style-preview?style=corporate'))
-    assert.equal(response.status, 202)
-    assert.equal((await response.json()).pending, true)
-    assert.equal(providers, 0)
-  })
-  await check('successful preview generation is cached and releases its lease', async () => {
-    const cached = new Set()
-    let providers = 0
-    let claims = 0
-    let releases = 0
-    const api = load('src/app/api/doyaslide/style-preview/route.ts', {
-      'next/server': { NextResponse: Response },
-      '@/lib/image-generator': { generateImageWithFallback: async () => { providers++; return { base64: 'png', mimeType: 'image/png' } } },
-      '@/lib/doyaslide/access': { getUserId: async () => 'user' },
-      '@/lib/doyaslide/prompts': { buildImagePrompt: () => 'prompt' },
-      '@/lib/doyaslide/constants': { STYLE_PRESETS: [{ value: 'corporate' }], STYLE_PREVIEW_SAMPLE_SLIDES: [{ index: 1 }, { index: 2 }, { index: 3 }], getStylePreviewColor: () => '#123' },
-      '@/lib/doyaslide/storage': { stylePreviewExists: async (_, page) => cached.has(page), stylePreviewPublicUrl: (_, page) => `url-${page}`, uploadStylePreview: async (_, __, page) => { cached.add(page); return `url-${page}` } },
-      '@/lib/doyaslide/aspect': { normalizeGeneratedSlide: async base64 => ({ base64 }) },
-      '@/lib/doyaslide/style-preview-lease': { StylePreviewBudgetError: class extends Error {}, reserveStylePreviewImages: async () => {}, StylePreviewInProgressError: class extends Error {}, claimStylePreviewLease: async () => { claims++; return 'token' }, releaseStylePreviewLease: async () => { releases++ } },
-    })
+  await check('GET never generates missing previews, even for signed-in users (cost guard)', async () => {
+    const counters = { providers: 0, lease: 0, uploads: 0 }
+    const cached = new Set([1])
+    const api = loadRoute({ stylePreviewExists: async (_, page) => cached.has(page), stylePreviewPublicUrl: (_, page) => `url-${page}` }, counters)
     const request = new Request('https://example.test/api/doyaslide/style-preview?style=corporate')
-    assert.equal((await api.GET(request)).status, 200)
-    assert.equal(providers, 3)
-    assert.equal(claims, 1)
-    assert.equal(releases, 1)
-    const again = await api.GET(request)
-    assert.equal((await again.json()).urls.length, 3)
-    assert.equal(providers, 3)
-    assert.equal(claims, 1)
+    for (let i = 0; i < 3; i++) {
+      const response = await api.GET(request)
+      assert.equal(response.status, 200)
+      assert.deepEqual(await response.json(), { url: 'url-1', urls: ['url-1'], pending: false })
+    }
+    cached.clear()
+    const empty = await api.GET(request)
+    assert.deepEqual(await empty.json(), { url: null, urls: [], pending: false })
+    assert.deepEqual(counters, { providers: 0, lease: 0, uploads: 0 })
   })
-  await check('daily provider ceiling rejects before generating and releases the lease', async () => {
-    class BudgetError extends Error {}
-    let providers = 0
-    let releases = 0
-    const api = load('src/app/api/doyaslide/style-preview/route.ts', {
-      'next/server': { NextResponse: Response },
-      '@/lib/image-generator': { generateImageWithFallback: async () => { providers++ } },
-      '@/lib/doyaslide/access': { getUserId: async () => 'user' },
-      '@/lib/doyaslide/prompts': { buildImagePrompt: () => 'prompt' },
-      '@/lib/doyaslide/constants': { STYLE_PRESETS: [{ value: 'corporate' }], STYLE_PREVIEW_SAMPLE_SLIDES: [{ index: 1 }, { index: 2 }, { index: 3 }], getStylePreviewColor: () => '#123' },
-      '@/lib/doyaslide/storage': { stylePreviewExists: async () => false, stylePreviewPublicUrl: () => 'url', uploadStylePreview: async () => { throw Error('unexpected upload') } },
-      '@/lib/doyaslide/aspect': { normalizeGeneratedSlide: async () => ({ base64: 'png' }) },
-      '@/lib/doyaslide/style-preview-lease': { StylePreviewBudgetError: BudgetError, StylePreviewInProgressError: class extends Error {}, claimStylePreviewLease: async () => 'token', reserveStylePreviewImages: async () => { throw new BudgetError() }, releaseStylePreviewLease: async () => { releases++ } },
-    })
+  await check('fully cached previews are returned as-is', async () => {
+    const counters = { providers: 0, lease: 0, uploads: 0 }
+    const api = loadRoute({ stylePreviewExists: async () => true, stylePreviewPublicUrl: (_, page) => `url-${page}` }, counters)
     const response = await api.GET(new Request('https://example.test/api/doyaslide/style-preview?style=corporate'))
-    assert.equal(response.status, 429)
-    assert.equal((await response.json()).code, 'STYLE_PREVIEW_DAILY_CAP')
-    assert.equal(providers, 0)
-    assert.equal(releases, 1)
+    assert.deepEqual((await response.json()).urls, ['url-0', 'url-1', 'url-2'])
+    assert.equal(counters.providers, 0)
   })
 })().catch(error => { console.error(error); process.exitCode = 1 })
