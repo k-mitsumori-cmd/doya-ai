@@ -74,6 +74,11 @@ const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.in
     const fs=require('node:fs'),read=f=>fs.readFileSync(path.join(root,f),'utf8');
     assert.match(read('src/app/(shell)/layout.tsx'),/uiNext=\{uiNext\}/);
     assert.match(read('src/app/(shell)/layout.tsx'),/session\?\.user \? await uiNextMode\(\) : null/);
+    // 組織の一覧は、新しい見た目の人のときだけ集めて渡す
+    assert.match(read('src/app/(shell)/layout.tsx'),/const companies = uiNext \? await listShellCompanies\(\)/);
+    assert.match(read('src/components/shell/ShellGate.tsx'),/ShellCompaniesContext\.Provider value=\{uiNext \? companies : null\}/);
+    // 一覧はログイン中の人の所属だけを読む関数から作る（組織を作らない）
+    const loader=read('src/lib/shell/company.server.ts');assert.doesNotMatch(loader,/prisma\.|create|upsert|ensure/);
     for(const f of ['src/app/(shell)/shodan/page.tsx','src/app/(shell)/aio/page.tsx'])assert.match(read(f),/&& \(await isUiNext\(\)\)\) \{/,f);
     assert.match(read('src/app/(shell)/home/page.tsx'),/uiNext \? <HomeDashboard/);
     assert.match(read('src/app/pricing/page.tsx'),/if \(!\(await isUiNext\(\)\)\) return <PricingLegacy \/>/);

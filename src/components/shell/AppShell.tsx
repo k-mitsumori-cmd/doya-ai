@@ -11,7 +11,7 @@
 // ⚠️ 公開画面・ゲスト画面（共有閲覧・面接・回答画面など）では使わない（ADDON R-7）。
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CreditCard, LayoutGrid, LogOut, Menu, Search, X } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
@@ -20,6 +20,7 @@ import { ShellUsageArea, ShellUsageProvider } from './ShellUsage'
 import { InShellContext } from './in-shell'
 import { ALL_SHELL_TOOLS, SHELL_HOME, shellGroups, type ShellTool } from './tools'
 import { useUiNext } from './ui-next-context'
+import ShellCompanyCard from './ShellCompanyCard'
 import styles from './AppShell.module.css'
 
 const RECENT_KEY = 'doya-shell-recent-v1'
@@ -218,6 +219,8 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
         </div>
         <ShellUsageArea className={styles.usage} />
         <div className={styles.account}>
+          {/* 登録会社と切り替え（新しい見た目のときだけ中身が出る。UI 品質 B-1） */}
+          <Suspense fallback={null}><ShellCompanyCard onNavigate={close} /></Suspense>
           {userName ? <p className={styles.userLine}>{userName} さん</p> : null}
           <Link href="/pricing" className={styles.navItem} onClick={close} title="料金プラン">
             <CreditCard size={18} strokeWidth={2} aria-hidden />
