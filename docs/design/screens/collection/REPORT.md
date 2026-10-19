@@ -81,12 +81,15 @@ model DoyaPowerOrgSetting {
 | `npm ci` | 0 |
 | `npx tsc --noEmit -p .` | 0 |
 | `npx tsx --test src/lib/collection/collection.test.ts`（14件すべて成功） | 0 |
-| `UI_NEXT_ROLLOUT=preview UI_PREVIEW_EMAILS=k-mitsumori@surisuta.jp UI_SHELL_SERVICES=all GIT_DIR=/nonexistent npm run build` | 0（直したあとにもう一度実行し 0） |
+| `UI_NEXT_ROLLOUT=preview UI_PREVIEW_EMAILS=k-mitsumori@surisuta.jp UI_SHELL_SERVICES=all GIT_DIR=/nonexistent npm run build`（1回目） | 0 |
+| 同上（2回目） | 2（1回目が作った `.next/types` を tsc が読み、見本のページの `searchParams` が Next 15 の型に合わないと分かった） |
+| 同上（`searchParams` を Promise に直した3回目。最後のコミットの状態） | 0 |
 | `COLLECTION_PREVIEW=1 … npx next start -p 3123` → `/home/collection/preview` | 200 |
 | `NEXTAUTH_SECRET=（仮の値）… next start` → `/home/collection`（未ログイン） | 307 → `/auth/signin?callbackUrl=/home/collection` |
 | 同上 → `/home/collection/preview`（`COLLECTION_PREVIEW` なし） | 404 |
 | `node shot.cjs`（Playwright でスクリーンショット） | 0 |
 
+- ※ 初めてビルドする環境では `.next/types` が無いので、ページの props の型の誤りは2回目のビルドで初めて出る。ページを足したら2回ビルドして確かめる
 - ※ `NEXTAUTH_SECRET` が無いローカルでは `/home` と同じく `/home/collection` も 500（next-auth の NO_SECRET）。本番の設定では起きない
 - ※ `npm run build` の中の security テストが `docs/audits/**.json` を書き換えるが、担当外なのでコミットせず元に戻した
 
