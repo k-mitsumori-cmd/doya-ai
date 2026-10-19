@@ -5,24 +5,15 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/promane/utils";
 import Image from "next/image";
+import { Building2, LogOut } from "lucide-react";
+import { resolveShellIcon } from "@/components/shell/icons";
+import { PROMANE_NAV_ITEMS } from "@/lib/promane/nav";
 import { ToolSwitcherMenu } from "@/components/ToolSwitcherMenu";
 
-interface NavItem {
-  label: string;
-  href: string;
-  emoji: string;
+function NavIcon({ name }: { name: string }) {
+  const Icon = resolveShellIcon(name);
+  return <Icon size={18} className="w-5" aria-hidden />;
 }
-
-const navItems: NavItem[] = [
-  { label: "ダッシュボード", href: "", emoji: "📊" },
-  { label: "プロジェクト", href: "/projects", emoji: "📁" },
-  { label: "顧客管理", href: "/clients", emoji: "🏢" },
-  { label: "メンバー", href: "/members", emoji: "👥" },
-  { label: "タイムシート", href: "/timesheet", emoji: "⏱" },
-  { label: "レポート", href: "/reports", emoji: "📈" },
-  { label: "使い方", href: "/help", emoji: "💡" },
-  { label: "設定", href: "/settings", emoji: "⚙️" },
-];
 
 export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
   const pathname = usePathname();
@@ -50,15 +41,15 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
 
       {/* ナビ */}
       <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => {
-          const href = `${basePath}${item.href}`;
+        {PROMANE_NAV_ITEMS.map((item) => {
+          const href = `${basePath}${item.suffix}`;
           const isActive =
-            item.href === ""
+            item.suffix === ""
               ? pathname === basePath
               : pathname.startsWith(href);
           return (
             <Link
-              key={item.href}
+              key={item.suffix}
               href={href}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-bold transition-all",
@@ -67,7 +58,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               )}
             >
-              <span className="text-[18px] leading-none w-5 text-center">{item.emoji}</span>
+              <NavIcon name={item.icon} />
               <span>{item.label}</span>
               {isActive && <span className="ml-auto text-blue-500 text-xs">●</span>}
             </Link>
@@ -85,7 +76,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
         href="/promane?select=1"
         className="mx-2 my-1 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-50 to-violet-50 hover:from-blue-100 hover:to-violet-100 text-[12px] font-black text-gray-700 hover:text-blue-700 transition-all flex items-center gap-2"
       >
-        <span className="text-base">🏢</span>
+        <Building2 size={16} aria-hidden />
         <span className="flex-1">ワークスペース切替</span>
         <span className="text-gray-400">→</span>
       </Link>
@@ -119,7 +110,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
               title="ログアウト"
               className="text-gray-400 hover:text-rose-500 transition-colors text-[11px] font-bold"
             >
-              🚪
+              <LogOut size={14} aria-hidden />
             </button>
           )}
         </div>

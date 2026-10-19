@@ -10,7 +10,7 @@ const targets = {
   seo: ['src/app/(shell)/seo/Lp.tsx', 'ドヤSEO', '#00e0ff'], interview: ['src/app/(shell)/interview/Lp.tsx', 'ドヤインタビュー', '#ff1e72'],
   persona: ['src/app/(shell)/persona/Lp.tsx', 'ドヤペルソナAI', '#009bff'], doyalist: ['src/app/(shell)/doyalist/Lp.tsx', 'ドヤリスト', '#ffd400'],
   doyaslide: ['src/app/(shell)/doyaslide/Lp.tsx', 'ドヤスライド', '#00e0ff'], cunning: ['src/app/(shell)/cunning/Lp.tsx', 'ドヤカンニング', '#ff1e72'],
-  promane: ['src/app/promane/PromaneLp.tsx', 'ドヤプロマネ', '#009bff'],
+  promane: ['src/app/(shell)/promane/PromaneLp.tsx', 'ドヤプロマネ', '#009bff'],
 }
 
 for (const [id, [file, name, accent]] of Object.entries(targets)) {

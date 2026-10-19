@@ -13,7 +13,7 @@ const pages = {
   kintai: () => import("@/app/kintai/page"),
   doyalist: () => import("@/app/(shell)/doyalist/Lp"),
   promane: async () => ({
-    default: (await import("@/app/promane/PromaneLp")).PromaneLp,
+    default: (await import("@/app/(shell)/promane/PromaneLp")).PromaneLp,
   }),
   doyaslide: () => import("@/app/(shell)/doyaslide/Lp"),
   cunning: () => import("@/app/(shell)/cunning/Lp"),

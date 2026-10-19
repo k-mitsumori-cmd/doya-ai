@@ -3,6 +3,8 @@ import { Sidebar } from "@/components/promane/sidebar";
 import { FeedbackButton } from "@/components/promane/feedback-button";
 import { Toaster as SonnerToaster } from "sonner";
 import { redirect } from "next/navigation";
+import { isShellEnabled } from "@/lib/ui-shell";
+import PromaneShellFrame from "@/components/promane/PromaneShellFrame";
 
 export default async function DashboardLayout({
   children,
@@ -15,6 +17,11 @@ export default async function DashboardLayout({
   const { workspaceSlug } = await params;
   const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
   if (!workspace) redirect("/promane"); // ワークスペースが無い/権限が無い時は入口へ（/login は存在しない）
+
+  // 共通の枠が有効なときは ToolFrame だけで包む（サイドバー・フィードバック・通知は枠の側で出す）
+  if (isShellEnabled("promane")) {
+    return <PromaneShellFrame workspaceSlug={workspaceSlug}>{children}</PromaneShellFrame>;
+  }
 
   return (
     <div className="flex h-screen bg-[#f8f9fb]">
