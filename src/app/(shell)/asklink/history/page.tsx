@@ -95,8 +95,8 @@ export default function AskLinkHistoryPage() {
                 className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:ring-[#0066ff]"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-black text-slate-900">{r.name}</p>
-                  <p className="truncate text-xs font-bold text-slate-500">{r.sourceUrl}</p>
+                  <p className="truncate !whitespace-nowrap text-base font-black text-slate-900">{r.name}</p>
+                  <p className="truncate !whitespace-nowrap text-xs font-bold text-slate-500">{r.sourceUrl}</p>
                 </div>
                 <div className="hidden shrink-0 text-right text-xs font-bold text-slate-500 sm:block">
                   <p>{r.audience === 'b2c' ? 'ToC' : 'ToB'}・バナー{r.bannersDone}/3</p>

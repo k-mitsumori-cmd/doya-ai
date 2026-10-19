@@ -90,8 +90,8 @@ export default function SeoShellFrame({
                 <Timer className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-black text-blue-900 truncate">初回ログイン特典：1時間 使い放題（PRO相当）</p>
-                <p className="text-[10px] font-bold text-blue-800/80 truncate">画像生成・AI自動修正などが解放されています</p>
+                <p className="text-[11px] font-black text-blue-900 truncate !whitespace-nowrap">初回ログイン特典：1時間 使い放題（PRO相当）</p>
+                <p className="text-[10px] font-bold text-blue-800/80 truncate !whitespace-nowrap">画像生成・AI自動修正などが解放されています</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">

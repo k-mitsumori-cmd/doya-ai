@@ -13,7 +13,7 @@ import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { findInterviewUploadAttempt } from '@/lib/interview/upload-attempt'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { EmptyState, Skeleton, ToolHero } from '@/components/ds'
-import { ErrorNotice, FirstSteps } from '@/components/ds/feedback'
+import { ErrorNotice } from '@/components/ds/feedback'
 
 // 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/interview.webp）が置かれるまでは、LP の画面の絵を仮に出す
 const HERO_ART = '/interview/hero.webp'
@@ -550,20 +550,13 @@ export default function InterviewTool() {
       animate="show"
     >
       {uiNext ? (
+        // ⚠️ 使い方のカード（FirstSteps）は置かない。読み込み後に差し込まれて中身が動き（CLS 0.1）、375px ではアップロードの枠が画面の外に押し出されるため
         <>
           <ToolHero
             title={<>取材の音声から、<wbr />記事の下書きまで</>}
             lead="録音・録画のファイルを入れるだけで、話者を分けて文字に起こし、AIがインタビュー記事を書きます。"
             art={HERO_ART}
             artAlt="ドヤインタビューAIの文字起こしの画面"
-          />
-          <FirstSteps
-            id="interview"
-            steps={[
-              { title: 'ファイルを入れる', body: '音声・動画・資料を下の枠に入れます。' },
-              { title: '文字起こしを確かめる', body: '話者ごとに分かれた文字起こしを直せます。' },
-              { title: '記事を作る', body: 'スキルを選ぶと、AIが記事の下書きを書きます。' },
-            ]}
           />
         </>
       ) : (
@@ -1190,7 +1183,7 @@ export default function InterviewTool() {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <h4 className="text-sm font-bold text-slate-900 truncate group-hover:text-[#7f19e6] transition-colors flex-1">
+                        <h4 className="text-sm font-bold text-slate-900 truncate !whitespace-nowrap group-hover:text-[#7f19e6] transition-colors flex-1">
                           {project.articleTitle || project.title}
                         </h4>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-black whitespace-nowrap ${status.color}`}>

@@ -327,7 +327,7 @@ export default function SeoTool() {
                         <p className="text-[11px] font-black text-gray-400">
                           {new Date(a.updatedAt || a.createdAt).toLocaleDateString('ja-JP')}
                         </p>
-                        <p className="text-sm font-black text-gray-900 truncate hover:underline">
+                        <p className="text-sm font-black text-gray-900 truncate !whitespace-nowrap hover:underline">
                           {a.title}
                         </p>
                       </Link>
@@ -339,7 +339,7 @@ export default function SeoTool() {
           )}
         </div>
 
-        <div className={uiNext ? 'min-w-0 lg:col-span-1' : 'lg:col-span-1'}>
+        <div className={uiNext ? `min-w-0 lg:col-span-1 ${bannerId ? '' : 'hidden lg:block'}` : 'lg:col-span-1'}>
           <div className="aspect-video rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
             {bannerId ? (
               <img
@@ -416,9 +416,9 @@ export default function SeoTool() {
         )}
 
       {/* 統計カード */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 flex items-center justify-center">
+      <div className={uiNext ? 'mb-6 grid grid-cols-3 gap-2 sm:gap-4' : "grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6"}>
+        <div className={uiNext ? 'flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-6' : "bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4"}>
+          <div className={`${uiNext ? 'h-9 w-9 rounded-xl' : 'w-12 h-12 rounded-2xl'} sm:w-14 sm:h-14 sm:rounded-2xl flex items-center justify-center bg-blue-50`}>
             <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
           </div>
           <div>
@@ -426,8 +426,8 @@ export default function SeoTool() {
             <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.total}</p>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-orange-50 flex items-center justify-center">
+        <div className={uiNext ? 'flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-6' : "bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4"}>
+          <div className={`${uiNext ? 'h-9 w-9 rounded-xl' : 'w-12 h-12 rounded-2xl'} sm:w-14 sm:h-14 sm:rounded-2xl flex items-center justify-center bg-orange-50`}>
             <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-orange-600 animate-pulse" />
           </div>
           <div>
@@ -435,8 +435,8 @@ export default function SeoTool() {
             <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.running}</p>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-50 flex items-center justify-center">
+        <div className={uiNext ? 'flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-6' : "bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4"}>
+          <div className={`${uiNext ? 'h-9 w-9 rounded-xl' : 'w-12 h-12 rounded-2xl'} sm:w-14 sm:h-14 sm:rounded-2xl flex items-center justify-center bg-emerald-50`}>
             <CheckCircle2 className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600" />
           </div>
           <div>
@@ -507,7 +507,7 @@ export default function SeoTool() {
       </div>
 
       {/* Search */}
-      <div className={uiNext ? 'mb-6 flex justify-end' : 'flex justify-end mb-6 sm:hidden'}>
+      <div className={uiNext ? 'mb-6 flex' : 'flex justify-end mb-6 sm:hidden'}>
         <div className={uiNext ? 'relative w-full sm:max-w-sm' : 'relative w-full'}>
           <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
@@ -618,7 +618,7 @@ export default function SeoTool() {
                     className="group bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-200 hover:translate-y-[-2px] transition-all cursor-pointer"
                     title="クリックで記事詳細（本文/画像）を開く"
                   >
-                      <div className="flex items-start sm:items-center gap-2 sm:gap-3 md:gap-4">
+                      <div className={uiNext ? 'flex flex-wrap items-center gap-3 sm:flex-nowrap md:gap-4' : "flex items-start sm:items-center gap-2 sm:gap-3 md:gap-4"}>
                         {/* バナーサムネ（一覧で”ひと目で違いが分かる”） */}
                         <div className="hidden sm:block w-28">
                           <div className="aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 border border-gray-100">
@@ -650,7 +650,7 @@ export default function SeoTool() {
                         </div>
 
                         {/* メインコンテンツ */}
-                        <div className="flex-1 min-w-0">
+                        <div className={uiNext ? 'min-w-0 flex-1 basis-full sm:basis-auto' : 'flex-1 min-w-0'}>
                           <div className="flex items-center gap-2 mb-1">
                             <Badge tone={config.tone}>{config.label}</Badge>
                             {mainKw && (
@@ -659,7 +659,7 @@ export default function SeoTool() {
                               </span>
                             )}
                           </div>
-                          <h3 className="font-black text-gray-900 text-sm sm:text-base truncate group-hover:text-blue-600 transition-colors">
+                          <h3 className="font-black text-gray-900 text-sm sm:text-base truncate !whitespace-nowrap group-hover:text-blue-600 transition-colors">
                             {a.title}
                           </h3>
                           <p className="text-[10px] text-gray-400 font-bold mt-1">
@@ -667,8 +667,8 @@ export default function SeoTool() {
                           </p>
                         </div>
 
-                        {/* 進捗 or CTA */}
-                        <div className="flex items-center gap-3">
+                        {/* 進捗 or CTA（新しい見た目では、375px で題名の下に回して右に寄せる） */}
+                        <div className={uiNext ? 'ml-auto flex items-center gap-2 sm:gap-3' : 'flex items-center gap-3'}>
                           {a.status === 'RUNNING' && job && (
                             <div className="hidden sm:block w-28">
                               <div className="flex justify-between text-[10px] font-black text-orange-600 mb-1">
