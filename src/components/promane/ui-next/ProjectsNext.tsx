@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Button, Card, EmptyState, StatTile } from '@/components/ds'
 import { formatCurrency, profitTone, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '@/lib/promane/format'
-import { PROMANE_UI_NEXT_ART } from '@/components/promane/ui-next-art'
+import { manYen, PROMANE_UI_NEXT_ART } from '@/components/promane/ui-next-art'
 
 const PROFIT_TEXT = { positive: 'text-emerald-700', negative: 'text-rose-700', zero: 'text-slate-500' } as const
 
@@ -58,7 +58,7 @@ export default function ProjectsNext({ workspaceSlug, rows, activeCount, totalRe
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <StatTile label="プロジェクト" value={rows.length} unit="件" icon="FolderKanban" />
             <StatTile label="進行中" value={activeCount} unit="件" icon="Timer" />
-            <StatTile label="売上（契約額）" value={formatCurrency(totalRevenue)} icon="BadgeJapaneseYen" />
+            <StatTile label="売上（契約額）" value={manYen(totalRevenue)} unit="円" icon="BadgeJapaneseYen" />
             <StatTile label="平均の利益率" value={avgProfitRate} unit="%" icon="LineChart" />
           </div>
 

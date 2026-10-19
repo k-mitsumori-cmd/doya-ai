@@ -10,7 +10,7 @@ import { ArrowRight, CheckCircle2, CircleDashed, FolderOpen, ListChecks, Loader 
 import { Badge, Button, Card, EmptyState, FirstSteps, StatTile, ToolHero } from '@/components/ds'
 import { formatCurrency, formatPercent, profitLabel, profitTone, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '@/lib/promane/format'
 import { TaskPieChart, RevenueLineChart, ProfitBarChart } from '@/components/promane/dashboard-charts'
-import { PROMANE_UI_NEXT_ART } from '@/components/promane/ui-next-art'
+import { manYen, PROMANE_UI_NEXT_ART } from '@/components/promane/ui-next-art'
 
 const ROLE_LABELS: Record<string, string> = { owner: 'オーナー', admin: '管理者', member: 'メンバー', guest: 'ゲスト' }
 
@@ -76,8 +76,8 @@ export default function DashboardNext({ workspaceSlug, data, myData, chartData, 
         </>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          <StatTile label="売上合計" value={formatCurrency(data.totalRevenue)} icon="BadgeJapaneseYen" />
-          <StatTile label="原価合計" value={formatCurrency(data.totalCost)} icon="Wallet" />
+          <StatTile label="売上合計" value={manYen(data.totalRevenue)} unit="円" icon="BadgeJapaneseYen" />
+          <StatTile label="原価合計" value={manYen(data.totalCost)} unit="円" icon="Wallet" />
           <StatTile label="利益率" value={formatPercent(data.totalProfitRate)} sub={<span className={PROFIT_TEXT[tone]}>{profitLabel(data.totalProfit)}</span>} icon="LineChart" />
           <StatTile label="進行中の案件" value={data.activeProjects} unit="件" icon="FolderKanban" href={`${base}/projects`} />
         </div>
@@ -85,9 +85,10 @@ export default function DashboardNext({ workspaceSlug, data, myData, chartData, 
 
       {myMember && (
         <Card
-          title={<>あなたの担当<span className="ml-2 align-middle"><Badge tone="blue">{ROLE_LABELS[myMember.role] || myMember.role}</Badge></span></>}
-          meta={<>未完了のタスク <strong className="tabular-nums text-slate-900">{myData.tasks.length}</strong> 件</>}
+          title="あなたの担当"
+          meta={<Badge tone="blue">{ROLE_LABELS[myMember.role] || myMember.role}</Badge>}
         >
+          <p className="-mt-2 mb-3 text-sm text-slate-600">未完了のタスク <strong className="tabular-nums text-slate-900">{myData.tasks.length}</strong> 件</p>
           {myData.tasks.length === 0 ? (
             <p className="text-sm text-slate-600">
               タスクはまだ割り振られていません。プロジェクトの画面でタスクをつくり、担当を決めましょう。
