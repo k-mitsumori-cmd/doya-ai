@@ -8,7 +8,7 @@
 //   3. CLS が 0.1 未満（PerformanceObserver の layout-shift。セッションの窓の最大値）
 //   4. 読み込めない画像が無い
 //   5. 最初の画面にキービジュアル（120px 以上の画像）がある
-//   6. 1文字だけの行が無い（行の高さで数える）
+//   6. 1文字だけの行が無い（行の高さで数える。下までスクロールした後に2回測り、2回とも出たものだけ）
 // 結果の中身は attachment（e2e-checks）にも残し、summary-reporter.ts が表にまとめる。
 import fs from 'node:fs'
 import path from 'node:path'
@@ -57,13 +57,20 @@ for (const route of PUBLIC_ROUTES) {
     const h1 = await h1Info(page)
     const overflowTop = await horizontalOverflow(page)
     const kv = await keyVisual(page, [...blocked.imageUrls])
-    const lone = await singleCharLines(page)
 
     // ---- 下までスクロールしてから測る ----
     await scrollThrough(page)
     const overflowBottom = await horizontalOverflow(page)
     const broken = [...(await brokenImages(page, [...blocked.imageUrls])), ...failedImages]
     const brokenUnique = [...new Set(broken)]
+    // 1文字だけの行: アニメーションや JS の縮小が落ち着く前の一瞬を拾わないよう、
+    // 下までスクロールした後に2回（0.8 秒あけて）測り、2回とも出たものだけを数える
+    const lone1 = await singleCharLines(page)
+    await page.waitForTimeout(800)
+    const lone2 = await singleCharLines(page)
+    const key = (l: { element: string; lone: string[] }) => `${l.element}|${l.lone.join('')}`
+    const seen = new Set(lone1.map(key))
+    const lone = lone2.filter((l) => seen.has(key(l)))
 
     const checks = {
       path: route.path,
@@ -93,7 +100,7 @@ for (const route of PUBLIC_ROUTES) {
     expect.soft(brokenUnique, '読み込めない画像が無い').toEqual([])
     expect.soft(kv.length, '最初の画面にキービジュアル（120px 以上の画像）がある').toBeGreaterThan(0)
     expect
-      .soft(lone, `1文字だけの行が無い: ${lone.map((l) => `「${l.lone.join('')}」 in ${l.element}`).join(' / ')}`)
+      .soft(lone, `1文字だけの行が無い: ${lone.map((l) => `「${l.lone.join('')}」 in ${l.element}（行: ${l.text}）`).join(' / ')}`)
       .toEqual([])
 
     await attachIfFailed(testInfo, 'first-view', shot)

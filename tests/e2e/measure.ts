@@ -119,6 +119,8 @@ export async function horizontalOverflow(page: Page) {
 // 最初の画面（スクロール 0 のビューポート）に一部でも入り、縦横とも 120px 以上、見えている（不透明度 > 0）もの。
 // 外部の画像は fixture で止めているので、止めた画像は「読み込めた」とみなす（blockedImages）。
 export async function keyVisual(page: Page, blockedImages: string[], min = 120) {
+  // ⚠️ 文字列で渡すと page.evaluate は第2引数を渡さないので、値は JSON で文字列に埋め込む
+  const args = JSON.stringify({ blocked: blockedImages, min })
   return page.evaluate(
     `((args) => {
     ${DESCRIBE}
@@ -157,8 +159,7 @@ export async function keyVisual(page: Page, blockedImages: string[], min = 120) 
       if (found.length >= 3) break
     }
     return found
-  })`,
-    { blocked: blockedImages, min },
+  })(${args})`,
   ) as Promise<string[]>
 }
 
@@ -201,6 +202,7 @@ export async function brokenImages(page: Page, blockedImages: string[]) {
 // 文字ごとの位置（Range）を「ブロックの単位」（inline でない一番近い祖先）で集め、
 // 縦の位置で行に分ける。同じ行の中で <span> などの区切りが分かれていても、縦の位置が同じなら1行と数える。
 // 2行以上あるブロックの中に、空白以外が1文字だけの行があれば報告する。
+// 回転した要素（資料の表紙など）で誤って数えないよう、測る間だけ transform を消す。
 export async function singleCharLines(page: Page) {
   return page.evaluate(`(() => {
     ${DESCRIBE}
@@ -214,6 +216,11 @@ export async function singleCharLines(page: Page) {
       }
       return el
     }
+    // 回転・傾き（transform）があると文字の縦の位置がずれ、1行が何行にも見える。
+    // 改行の位置は transform に左右されないので、測る間だけ transform を消す（測ったあと戻す）
+    const neutral = document.createElement('style')
+    neutral.textContent = '*, *::before, *::after { transform: none !important; rotate: none !important; translate: none !important; scale: none !important; }'
+    document.head.appendChild(neutral)
     const groups = new Map()
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
     const range = document.createRange()
@@ -245,6 +252,7 @@ export async function singleCharLines(page: Page) {
         i += len
       }
     }
+    neutral.remove()
     const found = []
     for (const [block, chars] of groups) {
       if (chars.length < 2) continue
@@ -263,12 +271,13 @@ export async function singleCharLines(page: Page) {
         element: __e2eDescribe(block),
         lines: lines.length,
         lone: lone.map((l) => l.chars[0]),
+        text: lines.map((l) => l.chars.join('')).join(' / ').slice(0, 80),
         y: Math.round(lone[0].top + window.scrollY),
       })
       if (found.length >= 10) break
     }
     return found
-  })()`) as Promise<Array<{ element: string; lines: number; lone: string[]; y: number }>>
+  })()`) as Promise<Array<{ element: string; lines: number; lone: string[]; text: string; y: number }>>
 }
 
 // --------------------------------------------
