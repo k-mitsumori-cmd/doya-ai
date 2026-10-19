@@ -77,10 +77,11 @@ export default function HistoryPage() {
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const loadProjects = useCallback(async () => {
+  // reportStatus: 失敗の status を知らせる先（新しい見た目の文の出し分け用）。呼ぶ側が setXxxErrorStatus を渡す
+  const loadProjects = useCallback(async (reportStatus: (status: number) => void = () => {}) => {
     const version = ++projectRequestVersion.current
     setProjectsError('')
-    setProjectsErrorStatus(0)
+    reportStatus(0)
     setLoadingProjects(true)
     setLoadingMoreProjects(false)
     setLists([])
@@ -92,7 +93,7 @@ export default function HistoryPage() {
       if (search.trim()) params.set('search', search.trim())
       const response = await fetch(`/api/doyalist/projects?${params}`, { cache: 'no-store' })
       const data = await response.json().catch(() => null)
-      if (!response.ok && version === projectRequestVersion.current) setProjectsErrorStatus(response.status)
+      if (!response.ok && version === projectRequestVersion.current) reportStatus(response.status)
       if (!response.ok) throw new Error(response.status === 401 ? '履歴の確認にはログインが必要です' : 'リスト履歴を取得できませんでした')
       const page = parseProjectPage<ListSummary>(data)
       if (version !== projectRequestVersion.current) return
@@ -107,10 +108,10 @@ export default function HistoryPage() {
     }
   }, [search])
 
-  const loadApproaches = useCallback(async () => {
+  const loadApproaches = useCallback(async (reportStatus: (status: number) => void = () => {}) => {
     const version = ++requestVersion.current
     setApproachesError('')
-    setApproachesErrorStatus(0)
+    reportStatus(0)
     setLoadingApproaches(true)
     setLoadingMore(false)
     setApproaches([])
@@ -121,7 +122,7 @@ export default function HistoryPage() {
       if (search.trim()) params.set('search', search.trim())
       const response = await fetch(`/api/doyalist/approaches?${params}`, { cache: 'no-store' })
       const data = await response.json().catch(() => null)
-      if (!response.ok && version === requestVersion.current) setApproachesErrorStatus(response.status)
+      if (!response.ok && version === requestVersion.current) reportStatus(response.status)
       if (!response.ok) throw new Error(data?.error || '営業文履歴を取得できませんでした')
       const page = parseApproachPage<ApproachSummary>(data)
       if (version !== requestVersion.current) return
@@ -137,29 +138,29 @@ export default function HistoryPage() {
   }, [search, tab])
 
   useEffect(() => {
-    const timer = setTimeout(() => void loadProjects(), search.trim() ? 250 : 0)
+    const timer = setTimeout(() => void loadProjects(setProjectsErrorStatus), search.trim() ? 250 : 0)
     const versionRef = projectRequestVersion
     return () => { clearTimeout(timer); versionRef.current++ }
   }, [loadProjects, search])
   useEffect(() => {
-    const timer = setTimeout(() => void loadApproaches(), search.trim() ? 250 : 0)
+    const timer = setTimeout(() => void loadApproaches(setApproachesErrorStatus), search.trim() ? 250 : 0)
     const versionRef = requestVersion
     return () => { clearTimeout(timer); versionRef.current++ }
   }, [loadApproaches, search])
 
-  async function loadMore() {
+  async function loadMore(reportStatus: (status: number) => void = () => {}) {
     if (!nextCursor || loadingMore) return
     const version = requestVersion.current
     setLoadingMore(true)
     setApproachesError('')
-    setApproachesErrorStatus(0)
+    reportStatus(0)
     try {
       const params = new URLSearchParams({ cursor: nextCursor })
       if (tab !== 'all' && tab !== 'list') params.set('type', tab)
       if (search.trim()) params.set('search', search.trim())
       const response = await fetch(`/api/doyalist/approaches?${params}`, { cache: 'no-store' })
       const data = await response.json().catch(() => null)
-      if (!response.ok && version === requestVersion.current) setApproachesErrorStatus(response.status)
+      if (!response.ok && version === requestVersion.current) reportStatus(response.status)
       if (!response.ok) throw new Error(data?.error || '営業文履歴の続きを取得できませんでした')
       const page = parseApproachPage<ApproachSummary>(data)
       if (version !== requestVersion.current) return
@@ -173,18 +174,18 @@ export default function HistoryPage() {
     }
   }
 
-  async function loadMoreProjects() {
+  async function loadMoreProjects(reportStatus: (status: number) => void = () => {}) {
     if (!projectNextCursor || loadingMoreProjects) return
     const version = projectRequestVersion.current
     setLoadingMoreProjects(true)
     setProjectsError('')
-    setProjectsErrorStatus(0)
+    reportStatus(0)
     try {
       const params = new URLSearchParams({ limit: '50', cursor: projectNextCursor })
       if (search.trim()) params.set('search', search.trim())
       const response = await fetch(`/api/doyalist/projects?${params}`, { cache: 'no-store' })
       const data = await response.json().catch(() => null)
-      if (!response.ok && version === projectRequestVersion.current) setProjectsErrorStatus(response.status)
+      if (!response.ok && version === projectRequestVersion.current) reportStatus(response.status)
       if (!response.ok) throw new Error(data?.error || 'リスト履歴の続きを取得できませんでした')
       const page = parseProjectPage<ListSummary>(data)
       if (version !== projectRequestVersion.current) return
@@ -207,8 +208,8 @@ export default function HistoryPage() {
       setLists((prev) => prev.filter((l) => l.id !== id))
       setApproachSummary(null)
       setExpandedId(null)
-      void loadProjects()
-      void loadApproaches()
+      void loadProjects(setProjectsErrorStatus)
+      void loadApproaches(setApproachesErrorStatus)
     } catch (e: any) {
       toast.error(e?.message || '削除に失敗しました')
     }
@@ -223,7 +224,7 @@ export default function HistoryPage() {
       setApproaches((prev) => prev.filter((a) => a.id !== id))
       setApproachSummary(null)
       setExpandedId(null)
-      void loadApproaches()
+      void loadApproaches(setApproachesErrorStatus)
     } catch (e: any) {
       toast.error(e?.message || '削除に失敗しました')
     }
@@ -288,8 +289,8 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        {!uiNext && projectsError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{projectsError}<button type="button" onClick={() => void loadProjects()} className="ml-3 underline">再読み込み</button></div>}
-        {!uiNext && approachesError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{approachesError}<button type="button" onClick={() => void loadApproaches()} className="ml-3 underline">再読み込み</button></div>}
+        {!uiNext && projectsError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{projectsError}<button type="button" onClick={() => void loadProjects(setProjectsErrorStatus)} className="ml-3 underline">再読み込み</button></div>}
+        {!uiNext && approachesError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{approachesError}<button type="button" onClick={() => void loadApproaches(setApproachesErrorStatus)} className="ml-3 underline">再読み込み</button></div>}
 
         {!projectsError && projectSummary && approachSummary && <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <StatCard icon="chart" label="合計件数" value={stats.total} color="cyan" />
@@ -339,8 +340,8 @@ export default function HistoryPage() {
           {/* 新しい見た目: 読み込みの失敗は、表の上にまとめて出す（理由に合わせた文と、次の操作を1つ） */}
           {uiNext && (projectsError || approachesError) && (
             <div className="space-y-2 px-5 pt-4">
-              {projectsError && errorNotice(projectsErrorStatus, 'リスト履歴', () => void loadProjects())}
-              {approachesError && tab !== 'list' && errorNotice(approachesErrorStatus, '営業文の履歴', () => void loadApproaches())}
+              {projectsError && errorNotice(projectsErrorStatus, 'リスト履歴', () => void loadProjects(setProjectsErrorStatus))}
+              {approachesError && tab !== 'list' && errorNotice(approachesErrorStatus, '営業文の履歴', () => void loadApproaches(setApproachesErrorStatus))}
             </div>
           )}
 
@@ -470,8 +471,8 @@ export default function HistoryPage() {
               </table>
             </div>
           )}
-          {tab !== 'list' && nextCursor && !loadingApproaches && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMore()} disabled={loadingMore} className={`${uiNext ? `min-h-11 ${focusRing} ` : ''}rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50`}>{loadingMore ? '読み込み中…' : `営業文履歴をさらに表示（${approaches.length}/${approachTotal}件）`}</button></div>}
-          {(tab === 'all' || tab === 'list') && projectNextCursor && !loadingProjects && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMoreProjects()} disabled={loadingMoreProjects} className={`${uiNext ? `min-h-11 ${focusRing} ` : ''}rounded-lg border border-cyan-300 px-4 py-2 text-sm font-bold text-cyan-700 disabled:opacity-50`}>{loadingMoreProjects ? '読み込み中…' : `リスト履歴をさらに表示（${lists.length}/${projectTotal}件）`}</button></div>}
+          {tab !== 'list' && nextCursor && !loadingApproaches && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMore(setApproachesErrorStatus)} disabled={loadingMore} className={`${uiNext ? `min-h-11 ${focusRing} ` : ''}rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50`}>{loadingMore ? '読み込み中…' : `営業文履歴をさらに表示（${approaches.length}/${approachTotal}件）`}</button></div>}
+          {(tab === 'all' || tab === 'list') && projectNextCursor && !loadingProjects && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMoreProjects(setProjectsErrorStatus)} disabled={loadingMoreProjects} className={`${uiNext ? `min-h-11 ${focusRing} ` : ''}rounded-lg border border-cyan-300 px-4 py-2 text-sm font-bold text-cyan-700 disabled:opacity-50`}>{loadingMoreProjects ? '読み込み中…' : `リスト履歴をさらに表示（${lists.length}/${projectTotal}件）`}</button></div>}
         </div>
       </div>
     </div>

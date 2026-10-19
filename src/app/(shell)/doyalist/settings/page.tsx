@@ -106,7 +106,9 @@ export default function SettingsPage() {
     }
   }
 
-  const handleExportAll = async () => {
+  // genericError: 新しい見た目では、失敗の文をこれに固定する（サーバーの文字列は出さない。UI 品質 S-20）。
+  // 今までの見た目は onClick から直接呼ぶので、引数はクリックのイベントになる → 文字列のときだけ使う
+  const handleExportAll = async (genericError?: unknown) => {
     if (exportingRef.current) return
     exportingRef.current = true
     setExporting(true)
@@ -135,8 +137,7 @@ export default function SettingsPage() {
         toast.success('CSVをまとめたZIPを準備しました。保存先をご確認ください', { id: tid })
       } finally { clearTimeout(timeout) }
     } catch (e: any) {
-      // 新しい見た目では、サーバーの文字列は出さない（UI 品質 S-20）
-      toast.error(uiNext ? '全件エクスポートを準備できませんでした。時間をおいて、もう一度お試しください' : e?.message || 'エクスポートに失敗しました', { id: tid })
+      toast.error(typeof genericError === 'string' ? genericError : e?.message || 'エクスポートに失敗しました', { id: tid })
     } finally {
       exportingRef.current = false
       setExporting(false)
@@ -320,7 +321,7 @@ export default function SettingsPage() {
               </p>
               <button
                 type="button"
-                onClick={handleExportAll}
+                onClick={uiNext ? () => void handleExportAll('全件エクスポートを準備できませんでした。時間をおいて、もう一度お試しください') : handleExportAll}
                 disabled={exporting}
                 className={`${tap}${focusRing} w-full py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 disabled:bg-slate-100 disabled:cursor-not-allowed text-slate-700 font-bold text-xs transition-colors flex items-center justify-center gap-2`}
               >
