@@ -74,6 +74,18 @@ const STAGE_LABELS: { stage: ShellStage; label: string }[] = [
   { stage: 'other', label: 'その他' },
 ]
 
+// ⚠️ 新しい見た目（isUiNext()）でない人には、今までの区分の名前・並びのまま出す（プレビューの切り替え。チェックリスト §5.1）
+const LEGACY_STAGE_LABELS: { stage: ShellStage; label: string }[] = [
+  { stage: 'sell', label: '売る' },
+  { stage: 'collect', label: '集める' },
+  { stage: 'hire', label: '人' },
+  { stage: 'operate', label: '回す' },
+  { stage: 'other', label: 'その他' },
+]
+/** 今までの区分（見積は「売る」、勤怠は「回す」にあった） */
+const LEGACY_STAGE: Record<string, ShellStage> = { quote: 'sell', kintai: 'operate' }
+const LEGACY_ORDER = ['sfa', 'quote', 'shodan', 'aishodan', 'cunning', 'doyalist', 'doyaslide', 'aio', 'seo', 'banner', 'adimage', 'persona', 'interview', 'asklink', 'popup', 'tenjikai', 'hr', 'mensetsu', 'shanai', 'kintai', 'promane', 'income', 'expense']
+
 export const SHELL_HOME: ShellTool = {
   id: 'home', name: '経営ホーム', href: '/home', icon: 'LayoutDashboard', hint: '売上・収入・予定をまとめて見る', stage: 'other',
 }
@@ -102,8 +114,26 @@ function buildTools(): ShellTool[] {
 
 const TOOLS = buildTools()
 
-export const SHELL_GROUPS: ShellGroup[] = STAGE_LABELS
-  .map(({ stage, label }) => ({ stage, label, tools: TOOLS.filter((t) => t.stage === stage) }))
-  .filter((g) => g.tools.length > 0)
+function groupsOf(labels: { stage: ShellStage; label: string }[], tools: ShellTool[]): ShellGroup[] {
+  return labels
+    .map(({ stage, label }) => ({ stage, label, tools: tools.filter((t) => t.stage === stage) }))
+    .filter((g) => g.tools.length > 0)
+}
+
+export const SHELL_GROUPS: ShellGroup[] = groupsOf(STAGE_LABELS, TOOLS)
+
+const legacyOrderOf = (id: string) => {
+  const i = LEGACY_ORDER.indexOf(id)
+  return i === -1 ? LEGACY_ORDER.length + orderOf(id) : i
+}
+const LEGACY_SHELL_GROUPS: ShellGroup[] = groupsOf(
+  LEGACY_STAGE_LABELS,
+  TOOLS.map((t) => (LEGACY_STAGE[t.id] ? { ...t, stage: LEGACY_STAGE[t.id] } : t)).sort((a, b) => legacyOrderOf(a.id) - legacyOrderOf(b.id)),
+)
+
+/** 左のメニューの区分。新しい見た目（uiNext）のときだけ、部門の名前の区分にする */
+export function shellGroups(uiNext: boolean): ShellGroup[] {
+  return uiNext ? SHELL_GROUPS : LEGACY_SHELL_GROUPS
+}
 
 export const ALL_SHELL_TOOLS: ShellTool[] = [SHELL_HOME, ...TOOLS]

@@ -47,20 +47,16 @@
  * - 見出しは text-wrap: balance（行の長さをそろえ、最後の行に1文字だけ残さない）
  * - 本文は text-wrap: pretty（最後の行が短くなりすぎないようにする）
  * ⚠️ 対応しないブラウザでも1文字だけの行を出したくない見出しは、<wbr> で文節を区切る
+ * ⚠️ 新しい見た目（data-ui-next。チェックリスト §5.1）のときだけ効かせる
  */
-.ds {
+.ds[data-ui-next='true'], :global([data-ui-next='true']) .ds {
   word-break: auto-phrase;
   line-break: strict;
   overflow-wrap: break-word;
 }
-.ds :global(h1),
-.ds :global(h2),
-.ds :global(h3),
-.ds :global(h4) {
+.ds[data-ui-next='true'] :global(:is(h1, h2, h3, h4)), :global([data-ui-next='true']) .ds :global(:is(h1, h2, h3, h4)) {
   text-wrap: balance;
 }
-.ds :global(p),
-.ds :global(li),
-.ds :global(dd) {
+.ds[data-ui-next='true'] :global(:is(p, li, dd)), :global([data-ui-next='true']) .ds :global(:is(p, li, dd)) {
   text-wrap: pretty;
 }

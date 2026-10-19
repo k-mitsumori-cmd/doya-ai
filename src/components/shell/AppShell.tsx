@@ -18,7 +18,8 @@ import ds from '@/components/ds/tokens.module.css'
 import { ShellIcon } from './icons'
 import { ShellUsageArea, ShellUsageProvider } from './ShellUsage'
 import { InShellContext } from './in-shell'
-import { ALL_SHELL_TOOLS, SHELL_GROUPS, SHELL_HOME, type ShellTool } from './tools'
+import { ALL_SHELL_TOOLS, SHELL_HOME, shellGroups, type ShellTool } from './tools'
+import { useUiNext } from './ui-next-context'
 import styles from './AppShell.module.css'
 
 const RECENT_KEY = 'doya-shell-recent-v1'
@@ -41,10 +42,10 @@ function readRecent(): string[] {
   }
 }
 
-function NavItem({ tool, pathname, onNavigate }: { tool: ShellTool; pathname: string; onNavigate: (href: string) => void }) {
+function NavItem({ tool, pathname, onNavigate, prefetch }: { tool: ShellTool; pathname: string; onNavigate: (href: string) => void; prefetch?: boolean }) {
   const active = isActive(pathname, tool)
   return (
-    <Link href={tool.href} className={styles.navItem} aria-current={active ? 'page' : undefined} onClick={() => onNavigate(tool.href)} title={tool.name} prefetch>
+    <Link href={tool.href} className={styles.navItem} aria-current={active ? 'page' : undefined} onClick={() => onNavigate(tool.href)} title={tool.name} prefetch={prefetch}>
       <ShellIcon name={tool.icon} size={18} strokeWidth={2} />
       <span className={styles.navLabel}>{tool.name}</span>
       {tool.beta ? <span className={styles.beta}>開発中</span> : null}
@@ -124,6 +125,9 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
 
 export default function AppShell({ children, userName }: { children: ReactNode; userName?: string | null }) {
   const pathname = usePathname() || '/'
+  // 新しい見た目（チェックリスト §5.1）のときだけ、UI 品質の直し（区分の名前・押した瞬間の選択・先読み）を使う
+  const uiNext = useUiNext()
+  const groups = shellGroups(uiNext)
   const [open, setOpen] = useState(false)
   const [palette, setPalette] = useState(false)
   const [recent, setRecent] = useState<string[]>([])
@@ -157,19 +161,20 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
   const [pendingHref, setPendingHref] = useState<string | null>(null)
   useEffect(() => setPendingHref(null), [pathname])
   const shownPath = pendingHref ?? pathname
-  const navigate = (href: string) => { setPendingHref(href); close() }
+  const navigate = (href: string) => { if (uiNext) setPendingHref(href); close() }
+  const prefetch = uiNext ? true : undefined
 
   const tabTools = useMemo(() => {
     const byId = new Map(ALL_SHELL_TOOLS.map((t) => [t.id, t]))
     const picked = recent.map((id) => byId.get(id)).filter((t): t is ShellTool => Boolean(t))
-    const fill = SHELL_GROUPS.flatMap((g) => g.tools).filter((t) => !recent.includes(t.id))
+    const fill = groups.flatMap((g) => g.tools).filter((t) => !recent.includes(t.id))
     return [...picked, ...fill].slice(0, 3)
-  }, [recent])
+  }, [recent, groups])
 
   return (
     <InShellContext.Provider value={true}>
     <ShellUsageProvider>
-    <div className={`${ds.ds} ${styles.shell}`}>
+    <div className={`${ds.ds} ${styles.shell}`} data-ui-next={uiNext ? 'true' : undefined}>
       <a href="#shell-main" className={styles.skip}>本文へ移動</a>
       <header className={styles.topbar}>
         <button type="button" className={styles.iconButton} onClick={() => setOpen(true)} aria-label="メニューを開く">
@@ -201,12 +206,12 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
           <kbd className={`${styles.kbd} ${styles.navLabel}`}>⌘K</kbd>
         </button>
         <div className={styles.navScroll}>
-          <NavItem tool={SHELL_HOME} pathname={shownPath} onNavigate={navigate} />
-          {SHELL_GROUPS.map((group) => (
+          <NavItem tool={SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
+          {groups.map((group) => (
             <div key={group.stage} className={styles.group}>
               <p className={styles.groupLabel}>{group.label}</p>
               {group.tools.map((tool) => (
-                <NavItem key={tool.id} tool={tool} pathname={shownPath} onNavigate={navigate} />
+                <NavItem key={tool.id} tool={tool} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
               ))}
             </div>
           ))}

@@ -111,11 +111,12 @@
  * 枠の中では、旧レイアウトの名残の「画面いっぱいの高さ」を外す（UI 品質 C-2）。
  * 枠の中にもう1つ画面いっぱいの箱ができると、二重のスクロールや、読み込みが全画面に見える原因になる。
  * ⚠️ 枠の外（LP など）には効かない（.main は AppShell の中だけ）。
+ * ⚠️ 新しい見た目（data-ui-next。チェックリスト §5.1）のときだけ効かせる。
  */
-.main :global(.h-screen), .main :global(.h-dvh), .main :global(.h-\[100dvh\]) { height: auto !important; }
-.main :global(.min-h-screen), .main :global(.min-h-dvh), .main :global(.min-h-\[100dvh\]) { min-height: 0 !important; }
+.shell[data-ui-next='true'] .main :global(.h-screen), .shell[data-ui-next='true'] .main :global(.h-dvh), .shell[data-ui-next='true'] .main :global(.h-\[100dvh\]) { height: auto !important; }
+.shell[data-ui-next='true'] .main :global(.min-h-screen), .shell[data-ui-next='true'] .main :global(.min-h-dvh), .shell[data-ui-next='true'] .main :global(.min-h-\[100dvh\]) { min-height: 0 !important; }
 /* 枠の中の読み込み表示が小さくなりすぎないよう、中身の領域の最低の高さを持たせる */
-.main { min-height: calc(100vh - 1px); }
+.shell[data-ui-next='true'] .main { min-height: calc(100vh - 1px); }
 
 .scrim { display: none; }
 

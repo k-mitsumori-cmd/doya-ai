@@ -12,6 +12,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { SidebarUsagePanel } from '@/components/sidebar'
 import { useQuoteUsageOrganization } from '@/lib/quote/use-usage-organization'
 import { shellServiceForPath, type ShellUsage } from './registry'
+import { useUiNext } from './ui-next-context'
 
 type SlotSetter = (node: ReactNode | null) => void
 const SetterContext = createContext<SlotSetter | null>(null)
@@ -71,6 +72,7 @@ export function ShellUsageArea({ className }: { className?: string }) {
   const body = usageBody(pathname, slot)
   // ⚠️ SidebarUsagePanel は、読み直しの間は何も描かない（古い数字を出さないため。verify-sidebar-usage-mounted）。
   //    そのたびに高さが0になると、下の行が上にずれる。同じツールの間は、直前の高さを保つ（UI 品質 C-6）
+  const uiNext = useUiNext()
   const holdKey = slot ? 'slot' : shellServiceForPath(pathname)?.usage?.service ?? ''
   const ref = useRef<HTMLDivElement | null>(null)
   const [held, setHeld] = useState<{ key: string; height: number }>({ key: '', height: 0 })
@@ -85,7 +87,8 @@ export function ShellUsageArea({ className }: { className?: string }) {
     return () => ro.disconnect()
   }, [holdKey])
   if (!body) return null
-  const minHeight = held.key === holdKey && held.height > 0 ? held.height : undefined
+  // ⚠️ 高さを保つのは、新しい見た目（チェックリスト §5.1）のときだけ
+  const minHeight = uiNext && held.key === holdKey && held.height > 0 ? held.height : undefined
   return <div ref={ref} className={className} data-hold={minHeight ? 'true' : undefined} style={minHeight ? { minHeight } : undefined}>{body}</div>
 }
 

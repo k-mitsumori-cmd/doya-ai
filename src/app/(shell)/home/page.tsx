@@ -10,7 +10,9 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getHomeSummary } from '@/lib/home/summary'
+import { isUiNext } from '@/lib/ui-next'
 import HomeDashboard from './HomeDashboard'
+import HomeDashboardLegacy from './HomeDashboardLegacy'
 
 export const metadata: Metadata = {
   title: '経営ホーム | ドヤAI',
@@ -24,9 +26,8 @@ export default async function HomePage() {
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) redirect('/auth/signin?callbackUrl=/home')
 
-  const summary = await getHomeSummary(userId)
-  return (
-    // 枠（AppShell）は src/app/(shell)/layout.tsx が出す
-    <HomeDashboard initial={summary} />
-  )
+  const [summary, uiNext] = await Promise.all([getHomeSummary(userId), isUiNext()])
+  // 枠（AppShell）は src/app/(shell)/layout.tsx が出す。
+  // 入力が主役の新しいホーム（UI 品質 H-2）は、新しい見た目（チェックリスト §5.1）のときだけ
+  return uiNext ? <HomeDashboard initial={summary} /> : <HomeDashboardLegacy initial={summary} />
 }

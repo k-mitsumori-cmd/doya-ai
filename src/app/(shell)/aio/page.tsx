@@ -10,6 +10,7 @@
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
+import { isUiNext } from '@/lib/ui-next'
 import { listMemberships } from '@/lib/aio/access'
 import AioEntry from './Entry'
 import AioLp from './Lp'
@@ -20,8 +21,9 @@ export default async function AioPage({ searchParams }: { searchParams: Promise<
   // ⚠️ 組織があるなら、サーバーで直接その組織のページへ移す（全画面の読み込みを出さない。UI 品質 C-1）。
   //    選び方は、これまでクライアント（Entry）がしていたのと同じ。URL に指定（クイックスタートなど）があるときと、
   //    組織がまだ無いときは、今までどおり Entry に任せる
+  //    新しい見た目（チェックリスト §5.1）のときだけ
   const params = await searchParams
-  if (Object.keys(params).length === 0) {
+  if (Object.keys(params).length === 0 && (await isUiNext())) {
     const memberships = await listMemberships().catch(() => [])
     const target = memberships[memberships.length - 1]
     if (target) redirect(`/aio/${encodeURIComponent(target.slug)}/scan`)

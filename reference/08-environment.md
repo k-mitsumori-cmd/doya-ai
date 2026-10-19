@@ -186,6 +186,17 @@ export const HIGH_USAGE_CONTACT_URL = '...'   // 大量利用相談
 
 ---
 
+## 画面の見た目の切り替え
+
+| 変数名 | 説明 |
+|--------|------|
+| `UI_SHELL_SERVICES` | 共通の枠（AppShell）で表示するツールの id（カンマ区切り）。`all` で全ツール。未設定なら従来のレイアウト（`src/lib/ui-shell.ts`） |
+| `UI_NEXT_ROLLOUT` | UI 品質の直しを誰に出すか。`off`（誰にも出さない）／`preview`（切り替えた許可者だけ。既定）／`all`（全員）（`src/lib/ui-next.ts`） |
+| `UI_PREVIEW_EMAILS` | プレビューの切り替え（`/api/ui-preview?on=1`、戻すときは `?on=0`）を使ってよい人のメール（カンマ区切り） |
+
+- 判定はサーバーで毎回メールを確かめる。cookie `doya_ui_next=1` だけでは新しい見た目にならない。
+- 変えたあとは再デプロイが必要（コードとデータは変わらない）。仕様: `docs/architecture/management-agent/UI-QUALITY-CHECKLIST-2026-10-19.md` §5.1
+
 ## セットアップ手順
 
 ### ローカル開発の最小構成

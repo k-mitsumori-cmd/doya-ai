@@ -11,13 +11,16 @@ import type { ReactNode } from 'react'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { shellEnabledIds } from '@/lib/ui-shell'
+import { uiNextMode } from '@/lib/ui-next'
 import ShellGate from '@/components/shell/ShellGate'
 
 export default async function ShellGroupLayout({ children }: { children: ReactNode }) {
   // ⚠️ ここで落ちると (shell) の下の全ツールが開けなくなる。ログインが分からないときは「未ログイン」として枠を出さない
   const session = await getServerSession(authOptions).catch(() => null)
+  // 新しい見た目（UI 品質の直し）を出すか。サーバーで決めて、クライアントの部品には context で渡す（チェックリスト §5.1）
+  const uiNext = session?.user ? await uiNextMode() : null
   return (
-    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()}>
+    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext}>
       {children}
     </ShellGate>
   )
