@@ -5,10 +5,12 @@
 // ⚠️ 入れるのは AnnualReport にあるものだけ。顧客名・金額・社員名は、report.ts が許した項目だけが入っている。
 // 台紙は public/annual-report/frame.webp（統括があとで差し替える）。無いときは、無地の枠で出す。
 // フォントは assets/fonts の Noto Sans JP（shanai のサムネと同じ）。
+// ⚠️ resvg-js はネイティブの .node を持ち、webpack で束ねるとビルドが落ちる。next.config.js の serverExternalPackages に
+//    入っていないため、実行時に createRequire で読む（webpack は追わない）。読めないとき（同梱されていない等）は sharp で PNG にする。
 import fs from 'node:fs'
 import path from 'node:path'
 import satori from 'satori'
-import { Resvg } from '@resvg/resvg-js'
+import { createRequire } from 'node:module'
 import { IMAGE_SIZES, formatYen, type AnnualReport, type ImageSize } from './report'
 
 export const FRAME_PATH = path.join('public', 'annual-report', 'frame.webp')
@@ -187,5 +189,16 @@ export async function renderAnnualImage(r: AnnualReport, size: ImageSize, root: 
       { name: 'Noto Sans JP', data: f.bold, weight: 700, style: 'normal' },
     ],
   })
-  return Buffer.from(new Resvg(svg, { fitTo: { mode: 'width', value: width } }).render().asPng())
+  return svgToPng(svg, width, root)
+}
+
+async function svgToPng(svg: string, width: number, root: string): Promise<Buffer> {
+  try {
+    const load = createRequire(path.join(root, 'package.json'))
+    const { Resvg } = load('@resvg/resvg-js') as typeof import('@resvg/resvg-js')
+    return Buffer.from(new Resvg(svg, { fitTo: { mode: 'width', value: width } }).render().asPng())
+  } catch {
+    const sharp = (await import('sharp')).default
+    return sharp(Buffer.from(svg)).png().toBuffer()
+  }
 }
