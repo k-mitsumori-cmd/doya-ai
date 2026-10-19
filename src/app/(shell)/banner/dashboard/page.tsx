@@ -1633,8 +1633,8 @@ function BannerTestPageInner() {
 
           </div>
 
-          {/* ジャンルフィルタタブ + ギャラリーに戻るボタン */}
-          <div className={`w-full relative z-10 bg-black/90 backdrop-blur-sm border-b border-gray-800/50 transition-all duration-500 ease-in-out ${
+          {/* ジャンルフィルタタブ + ギャラリーに戻るボタン（data-ui は、新しい見た目の色に合わせるための目印。banner-next.module.css） */}
+          <div data-ui="gallery-filters" className={`w-full relative z-10 bg-black/90 backdrop-blur-sm border-b border-gray-800/50 transition-all duration-500 ease-in-out ${
               isHeroCollapsed
                 ? 'pt-[6vh] sm:pt-[6vh] md:pt-[4vh] lg:pt-[4vh]'
                 : isFormVisible
@@ -1698,7 +1698,7 @@ function BannerTestPageInner() {
 
           {/* 一部表示中の案内 */}
           {!isLoadingTemplates && templates.length > 0 && (
-            <div className="px-2 sm:px-4 md:px-8 lg:px-12 pt-2">
+            <div data-ui="gallery-note" className="px-2 sm:px-4 md:px-8 lg:px-12 pt-2">
               <div className="flex items-center gap-2 text-[11px] sm:text-xs text-blue-400/80">
                 <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
                 <span>

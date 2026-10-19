@@ -23,6 +23,7 @@ import { ALL_SHELL_TOOLS, SHELL_HOME, shellGroups, type ShellTool } from './tool
 import { useToolHref, useUiNext } from './ui-next-context'
 import ShellCompanyCard from './ShellCompanyCard'
 import { demoteExtraH1 } from './heading-guard'
+import { HIDE_HUBSPOT_CSS } from './hide-hubspot'
 import { RECENT_COOKIE, serializeRecent } from '@/lib/shell/recent'
 import styles from './AppShell.module.css'
 
@@ -230,6 +231,8 @@ export default function AppShell({ children, userName, initialRecent }: {
     <InShellContext.Provider value={true}>
     <ShellUsageProvider>
     <div className={`${ds.ds} ${styles.shell}`} data-ui-next={uiNext ? 'true' : undefined}>
+      {/* アプリの画面では、HubSpot のポップアップで画面と下のタブを覆わない（新しい見た目のときだけ） */}
+      {uiNext ? <style>{HIDE_HUBSPOT_CSS}</style> : null}
       <a href="#shell-main" className={styles.skip}>本文へ移動</a>
       <header className={styles.topbar}>
         <button type="button" className={styles.iconButton} onClick={() => setOpen(true)} aria-label="メニューを開く">

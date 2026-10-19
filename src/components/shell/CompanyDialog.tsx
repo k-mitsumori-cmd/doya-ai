@@ -8,6 +8,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useId, useRef, useState } from 'react'
 import { X } from 'lucide-react'
+import { HIDE_HUBSPOT_CSS } from './hide-hubspot'
 import styles from './CompanyDialog.module.css'
 
 type Loaded = { company: { name: string; websiteUrl: string | null; industry: string | null } | null; candidates: string[] }
@@ -73,7 +74,7 @@ export default function CompanyDialog({ open, onClose }: { open: boolean; onClos
   return (
     <>
     {/* 開いている間は、HubSpot のポップアップ（右下）を隠す。showModal の最前面の層より上に、あとから出ることがあるため */}
-    {open ? <style>{'[id^="hs-web-interactives"],[class*="hs-web-interactive"],#hubspot-messages-iframe-container,.hs-overlay-container{display:none!important}'}</style> : null}
+    {open ? <style>{HIDE_HUBSPOT_CSS}</style> : null}
     <dialog ref={ref} className={styles.dialog} aria-labelledby={titleId} onClose={onClose} onCancel={onClose}>
       <form className={styles.body} onSubmit={(e) => { e.preventDefault(); if (!busy) void save() }}>
         <div className={styles.head}>
