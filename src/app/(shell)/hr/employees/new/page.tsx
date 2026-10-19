@@ -1,5 +1,6 @@
 'use client'
 
+import { PageTitle } from '@/components/hr/ui-next'
 import HrAuthenticatedScope from '@/components/hr/HrAuthenticatedScope'
 import DepartmentListState from '@/components/hr/DepartmentListState'
 import { useHrDepartmentList } from '@/lib/hr/use-department-list'
@@ -150,7 +151,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
             戻る
           </button>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-black text-slate-900">従業員を追加</h1>
+            <PageTitle className="text-3xl font-black text-slate-900">従業員を追加</PageTitle>
             <img
               src="/hr/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png"
               alt="白くまキャラクター"

@@ -1,4 +1,6 @@
 'use client'
+import { PageTitle, useToolUiNext } from '@/components/hr/ui-next'
+import { Button, ErrorNotice, ToolHero } from '@/components/ds'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useState } from 'react'
@@ -126,6 +128,7 @@ export default function HrDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
+  const uiNext = useToolUiNext()
 
   useEffect(() => {
     const controller = new AbortController()
@@ -170,11 +173,19 @@ export default function HrDashboardPage() {
     return () => controller.abort()
   }, [retryKey])
 
+  if (loadError && uiNext) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        <ErrorNotice what="ダッシュボードを読み込めませんでした。組織の情報は変わっていません。" how="時間をおいて、もう一度お試しください。" onRetry={() => setRetryKey((key) => key + 1)} retryLabel="再読み込み" />
+      </div>
+    )
+  }
+
   if (loadError) {
     return (
       <div role="alert" className="p-6 lg:p-10 max-w-7xl mx-auto">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
-          <h1 className="text-xl font-black text-rose-800">ダッシュボードを取得できませんでした</h1>
+          <PageTitle className="text-xl font-black text-rose-800">ダッシュボードを取得できませんでした</PageTitle>
           <p className="mt-2 text-sm font-bold text-rose-700">組織の情報は変更されていません。時間をおいて再試行してください。</p>
           <button type="button" onClick={() => setRetryKey((key) => key + 1)} className="mt-4 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">
             再試行する
@@ -185,14 +196,25 @@ export default function HrDashboardPage() {
   }
 
   return (
-    <div className="p-6 lg:p-10 max-w-7xl mx-auto">
+    <div className={uiNext ? 'p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto' : 'p-6 lg:p-10 max-w-7xl mx-auto'}>
+      {/* 新しい見た目: ToolHero（キービジュアル・一言の説明・主ボタン1つ）。h1 は ToolFrame が出す */}
+      {uiNext ? (
+        <div className="mb-6">
+          <ToolHero
+            art="/hr/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png"
+            title={stats.orgName ? <>{stats.orgName}の<wbr />人と組織を、ひと目で</> : '人と組織を、ひと目で'}
+            lead={`${getGreeting()} 従業員・部署・評価・1on1の状況を、まとめて確認できます。`}
+            action={stats.canManageEmployees ? <Button href="/hr/employees/new" icon="UserPlus">従業員を追加</Button> : undefined}
+          />
+        </div>
+      ) : null}
       {/* Header */}
-      <div className="mb-8 flex items-center gap-4">
+      {uiNext ? null : <div className="mb-8 flex items-center gap-4">
         <div className="flex-1">
           <p className="text-base font-bold text-blue-600 mb-1">{getGreeting()}</p>
-          <h1 className="text-3xl font-black text-slate-900">
+          <PageTitle className="text-3xl font-black text-slate-900">
             {stats.orgName ? `${stats.orgName} のダッシュボード` : 'ダッシュボード'}
-          </h1>
+          </PageTitle>
           <p className="text-sm text-slate-500 mt-1">組織の概況をひと目で確認</p>
         </div>
         <motion.img
@@ -202,7 +224,7 @@ export default function HrDashboardPage() {
           animate={{ y: [0, -8, 0] }}
           transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
         />
-      </div>
+      </div>}
 
       {/* Stats Cards */}
       <motion.div

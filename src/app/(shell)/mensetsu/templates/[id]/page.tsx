@@ -7,6 +7,7 @@
 // ⚠️ 手で追加した質問も、保存時にサーバ側で就職差別チェックを通す（C3）。
 //    違反があれば保存されず、該当箇所が返ってくるので画面に表示する。
 
+import { PageTitle } from '@/components/mensetsu/ui-next'
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -227,7 +228,7 @@ export default function TemplateEditPage() {
         <button onClick={() => router.push('/mensetsu')} className="text-xs font-black text-[#0066ff]">
           ← ダッシュボード
         </button>
-        <h1 className="mt-3 text-2xl font-black text-[#0a0f3c]">面接テンプレートの編集</h1>
+        <PageTitle className="mt-3 text-2xl font-black text-[#0a0f3c]">面接テンプレートの編集</PageTitle>
         <p className="mt-2 text-sm font-semibold leading-relaxed text-[#425071]">
           主質問は<strong className="font-black text-[#0a0f3c]">全応募者に同じ内容で尋ねられます</strong>（構造化面接）。
           深掘りは面接官AIが最大2回まで、ここに書いた方針に沿って行います。

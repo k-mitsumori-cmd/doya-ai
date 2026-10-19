@@ -1,5 +1,6 @@
 'use client'
 
+import { PageTitle } from '@/components/hr/ui-next'
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -294,7 +295,7 @@ function EditEmployeeForActor({ actor }: { actor: string }) {
           従業員詳細
         </Link>
 
-        <h1 className="text-3xl font-black text-slate-900 mb-6">従業員情報を編集</h1>
+        <PageTitle className="text-3xl font-black text-slate-900 mb-6">従業員情報を編集</PageTitle>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-md p-6 space-y-6">
           {/* 顔写真 */}

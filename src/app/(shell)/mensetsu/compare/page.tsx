@@ -7,6 +7,7 @@
 // ⚠️ 点数の高い順に並べているが、これは意思決定そのものではない。
 //    情報不足の軸があると平均は上振れするため、必ず個別レポートを確認してもらう。
 
+import { PageTitle } from '@/components/mensetsu/ui-next'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
@@ -175,7 +176,7 @@ export default function ComparePage() {
         <Link href="/mensetsu" className="text-xs font-black text-[#0066ff]">
           ← ダッシュボード
         </Link>
-        <h1 className="mt-3 text-2xl font-black text-[#0a0f3c]">候補者の比較</h1>
+        <PageTitle className="mt-3 text-2xl font-black text-[#0a0f3c]">候補者の比較</PageTitle>
         <p className="mt-2 max-w-[68ch] text-sm font-semibold leading-relaxed text-[#425071]">
           {templateId === 'all' ? '評価済みの候補者を職種をまたいで表示します。' : '同じテンプレートで面接した候補者を並べます。'}色は<strong className="font-black text-[#0a0f3c]">その軸の中央値との差</strong>で、
           絶対的な良し悪しではありません。

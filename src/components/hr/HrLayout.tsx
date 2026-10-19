@@ -12,6 +12,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, Users2 } from 'lucide-react'
 import HrSidebar from './HrSidebar'
 import HrOnboarding from './HrOnboarding'
+import { useToolUiNext } from './ui-next'
+import { ErrorNotice, Skeleton } from '@/components/ds'
 
 interface HrLayoutProps {
   children: React.ReactNode
@@ -25,6 +27,8 @@ interface HrLayoutProps {
 export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname(), router = useRouter()
+  // 新しい見た目（枠の中）では、読み込み・エラーを全画面にせず、中身の領域にだけ出す（C-2・F-3）
+  const toolNext = useToolUiNext()
   const [selection, setSelection] = useState<{ actor: string; organizationId?: string; revision: number }>({ actor: '', revision: 0 })
   const [selectionError, setSelectionError] = useState('')
   const [choices, setChoices] = useState<{ actor: string; rows: HrOrganizationChoice[]; error: string; loading: boolean }>({ actor: '', rows: [], error: '', loading: true })
@@ -208,10 +212,16 @@ export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
 
   if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
 
+  if ((usageError || selectionError) && session?.user && !knownScope && renderFrame && toolNext) {
+    return framed(<div className="p-4 sm:p-6"><ErrorNotice what="組織の情報を読み込めませんでした。組織の状態は変わっていません。" how={selectionError || '時間をおいて、もう一度お試しください。'} onRetry={() => void loadUsage()} retryLabel="再読み込み" /></div>)
+  }
   if ((usageError || selectionError) && session?.user && !knownScope) {
     return framed(<div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center">{inlinePicker}<p className="font-bold text-rose-700">組織情報を取得できませんでした。組織の状態は変更されていません。</p><button type="button" onClick={() => void loadUsage()} className="rounded-xl bg-sky-600 px-5 py-3 font-bold text-white">再読み込み</button></div>)
   }
 
+  if (!knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed) && renderFrame && toolNext) {
+    return framed(<div className="grid gap-4 p-4 sm:p-6" aria-busy="true" aria-label="読み込み中"><Skeleton lines={1} height={28} delayMs={0} /><Skeleton lines={4} height={18} delayMs={0} /></div>)
+  }
   if (!knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed)) {
     return framed(
       <div className="min-h-screen flex items-center justify-center bg-slate-50">

@@ -1,10 +1,13 @@
 'use client'
 
+import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { formatMinutesJa } from '@/lib/kintai/format'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
+import { useToolUiNext } from '@/components/kintai/ui-next'
+import KintaiDashboardNext, { KintaiDashboardError, KintaiDashboardLoading } from '@/components/kintai/KintaiDashboardNext'
 
 export default function DashboardPage() {
   const { isActive } = useKintaiAccess()
@@ -13,6 +16,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
   const router = useRouter()
+  const uiNext = useToolUiNext()
 
   useEffect(() => {
     fetch('/api/kintai/dashboard', { credentials: 'include' })
@@ -32,6 +36,9 @@ export default function DashboardPage() {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
+
+  if (uiNext && loading) return <KintaiDashboardLoading />
+  if (uiNext && (error || !data)) return <KintaiDashboardError message={error || '不明なエラー'} />
 
   if (loading) {
     return (
@@ -74,6 +81,8 @@ export default function DashboardPage() {
   }
   const sc = statusConfig[status] || statusConfig.not_clocked_in
 
+  if (uiNext) return <KintaiDashboardNext name={emp?.name || 'ゲスト'} status={status} now={now} summary={summary} isActive={isActive} />
+
   return (
     <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-5 pb-20">
       {/* Hero */}
@@ -81,7 +90,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <p className={`text-base font-bold ${sc.color} opacity-70`}>{dateStr}</p>
-            <h1 className={`text-3xl font-black ${sc.color} mt-1`}>{greeting}、{emp?.name || 'ゲスト'}さん</h1>
+            <PageTitle className={`text-3xl font-black ${sc.color} mt-1`}>{greeting}、{emp?.name || 'ゲスト'}さん</PageTitle>
             <p className={`text-xl font-black ${sc.color} mt-2`}>{sc.label}</p>
           </div>
           <div className="flex items-center gap-4">

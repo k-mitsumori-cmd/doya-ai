@@ -21,6 +21,9 @@ const mocks = {
   '@/lib/kintai/types': { CLOCK_TYPE_LABELS: {}, REQUEST_TYPE_LABELS: {}, REQUEST_STATUS_LABELS: {} },
   '@/lib/kintai/format': { formatMinutesJa: () => '0分' },
   '@/lib/kintai/load-requests': { appendKintaiRequestPage: () => [], fetchKintaiRequestPage: async () => ({}) },
+  // 新しい見た目（UI 品質の直し）の判定。ここでは今の見た目（偽）を確かめる
+  '@/components/kintai/ui-next': { useToolUiNext: () => false, PageTitle: ({ className, children }) => React.createElement('h1', { className }, children) },
+  '@/components/ds': { Button: () => null, EmptyState: () => null },
 }
 
 function page(file) {

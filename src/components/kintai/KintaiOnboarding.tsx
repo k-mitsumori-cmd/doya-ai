@@ -1,5 +1,6 @@
 'use client'
 
+import { PageTitle } from './ui-next'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -90,9 +91,9 @@ export default function KintaiOnboarding() {
                 </div>
                 <span className="text-xs font-bold text-[#7f19e6]">ドヤ勤怠</span>
               </div>
-              <h1 className="text-2xl font-black text-slate-900 mb-2">
+              <PageTitle className="text-2xl font-black text-slate-900 mb-2">
                 ドヤ勤怠へようこそ！
-              </h1>
+              </PageTitle>
               <p className="text-sm text-slate-500">
                 組織を作成して勤怠管理を始めましょう
               </p>

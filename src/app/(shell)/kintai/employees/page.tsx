@@ -1,5 +1,8 @@
 'use client'
 
+import { useToolUiNext } from '@/components/kintai/ui-next'
+import { AlertTriangle, CheckCircle2, Mail } from 'lucide-react'
+import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { ROLE_LABELS, ROLE_DESCRIPTIONS, EMPLOYMENT_TYPE_LABELS } from '@/lib/kintai/types'
 import { loadAllEmployees } from '@/lib/kintai/load-employees'
@@ -25,6 +28,7 @@ function formatHireDate(dateStr: string | null): string {
 }
 
 export default function EmployeesPage() {
+  const uiNext = useToolUiNext()
   const [employees, setEmployees] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
   const [workRules, setWorkRules] = useState<any[]>([])
@@ -222,7 +226,7 @@ export default function EmployeesPage() {
           <div className="flex items-center gap-3">
             <img src="/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
-              <h1 className="text-xl font-bold text-slate-800">従業員管理</h1>
+              <PageTitle className="text-xl font-bold text-slate-800">従業員管理</PageTitle>
               <p className="text-xs text-slate-500">チームメンバーを管理しよう</p>
             </div>
           </div>
@@ -402,9 +406,9 @@ export default function EmployeesPage() {
                       <td className="px-4 py-3 text-center">
                         <div className="flex flex-col items-center gap-1">
                           {emp.member?.status === 'PENDING' ? (
-                            <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-700">📩 招待中</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-700">{uiNext ? <Mail size={14} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" /> : '📩 '}招待中</span>
                           ) : emp.member?.status === 'ACTIVE' ? (
-                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">✅ 参加済</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">{uiNext ? <CheckCircle2 size={14} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" /> : '✅ '}参加済</span>
                           ) : (
                             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-500">未参加</span>
                           )}
@@ -412,7 +416,7 @@ export default function EmployeesPage() {
                             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-400">無効</span>
                           )}
                           {emp.isActive && !emp.workRule && (
-                            <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">⚠️ ルール未設定</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">{uiNext ? <AlertTriangle size={14} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" /> : '⚠️ '}ルール未設定</span>
                           )}
                         </div>
                       </td>

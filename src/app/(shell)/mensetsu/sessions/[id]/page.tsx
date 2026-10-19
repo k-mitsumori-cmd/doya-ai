@@ -6,6 +6,7 @@
 // スコア・根拠引用・逐語ログを表示する。
 // ⚠️ AIの判定は「推薦度」であり最終決定ではない旨を、画面上に常時明示する（C2）。
 
+import { PageTitle } from '@/components/mensetsu/ui-next'
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
@@ -207,9 +208,9 @@ export default function MensetsuReportPage() {
           ← 面接一覧
         </Link>
 
-        <h1 className="mt-3 text-2xl font-black text-[#0a0f3c]">
+        <PageTitle className="mt-3 text-2xl font-black text-[#0a0f3c]">
           {s.candidateName || '（名前未入力）'}
-        </h1>
+        </PageTitle>
         <p className="mt-1 text-sm font-semibold text-[#425071]">
           {s.template.jobTitle} / {s.template.durationMin}分 /{' '}
           {s.endedAt ? new Date(s.endedAt).toLocaleString('ja-JP') : '未実施'}
