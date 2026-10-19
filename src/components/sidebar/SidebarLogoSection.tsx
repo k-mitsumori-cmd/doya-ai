@@ -40,7 +40,8 @@ export function SidebarLogoSection({
       <AnimatePresence>
         {showLabel && (
           <motion.div
-            initial={{ opacity: 0, x: -10 }}
+            // ⚠️ 最初から見える状態にし、動かすのは位置だけ（アニメーションが止まる環境でも文字が出る。F-12）
+            initial={{ opacity: 1, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
             className="overflow-hidden min-w-0"

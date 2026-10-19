@@ -1,26 +1,30 @@
 /* ds/motion — 動きは短く、意味があるところだけ。動きを減らす設定では止める */
 .num { font-variant-numeric: tabular-nums; }
 
-/* Stagger: 画面に入ったら、子が順に下からふわっと入る */
+/* Stagger: 画面に入ったら、子が順に下から少し上がって入る。
+ * ⚠️ 最初から見える状態にする（opacity は下げない）。アニメーションが止まる環境でも中身が見える（F-12） */
 .stagger .item {
-  opacity: 0;
-  transform: translateY(10px);
+  transform: none;
 }
 .stagger[data-seen='true'] .item {
   animation: ds-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: calc(var(--i, 0) * var(--stagger-step, 60ms));
 }
 @keyframes ds-rise {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 1; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
 
-/* DrawIn: pathLength="1" の線を、0 から 1 まで描く */
-.draw :global([pathLength]) {
+/* DrawIn: pathLength="1" の線を、0 から 1 まで描く。
+ * ⚠️ 線を隠すのは、スクリプトが動いて（data-armed）、まだ画面に入っていないときだけ。
+ *    描き終わるはずの時間が過ぎたら（data-done）、アニメーションが止まっていても線を出す（F-12） */
+.draw[data-armed='true'] :global([pathLength]) {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
 }
+.draw[data-done='true'] :global([pathLength]) { stroke-dashoffset: 0 !important; animation: none !important; }
 .draw[data-seen='true'] :global([pathLength]) {
+  stroke-dasharray: 1;
   animation: ds-draw var(--draw-ms, 900ms) cubic-bezier(0.65, 0, 0.35, 1) forwards;
 }
 @keyframes ds-draw {
@@ -31,5 +35,6 @@
   .stagger .item,
   .stagger[data-seen='true'] .item { opacity: 1; transform: none; animation: none; }
   .draw :global([pathLength]),
+  .draw[data-armed='true'] :global([pathLength]),
   .draw[data-seen='true'] :global([pathLength]) { stroke-dashoffset: 0; animation: none; }
 }

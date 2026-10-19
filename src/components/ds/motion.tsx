@@ -39,6 +39,27 @@ export function useInViewOnce<T extends Element>(rootMargin = '0px 0px -10% 0px'
   return { ref, seen }
 }
 
+/**
+ * スクリプトが動いたら true（初めの描画では false）。
+ * 隠してから見せる動きは、これが true のときだけ隠す。スクリプトが動かない環境では、最初から見える（F-12）
+ */
+export function useArmed(): boolean {
+  const [armed, setArmed] = useState(false)
+  useEffect(() => setArmed(true), [])
+  return armed
+}
+
+/** start が true になってから ms が過ぎたら true。アニメーションが止まる環境でも、最後の形に移すため（F-12） */
+export function useDoneAfter(start: boolean, ms: number): boolean {
+  const [done, setDone] = useState(false)
+  useEffect(() => {
+    if (!start || done) return
+    const t = setTimeout(() => setDone(true), ms)
+    return () => clearTimeout(t)
+  }, [start, ms, done])
+  return done
+}
+
 const easeOutExpo = (t: number) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t))
 
 /**
@@ -123,8 +144,10 @@ export function StaggerItem({ children, index, className, as: Tag = 'div' }: {
  */
 export function DrawIn({ children, duration = 900, className }: { children: ReactNode; duration?: number; className?: string }) {
   const { ref, seen } = useInViewOnce<SVGGElement>()
+  const armed = useArmed()
+  const done = useDoneAfter(seen, duration + 400)
   return (
-    <g ref={ref} className={`${styles.draw} ${className ?? ''}`} data-seen={seen ? 'true' : undefined} style={{ '--draw-ms': `${duration}ms` } as CSSProperties}>
+    <g ref={ref} className={`${styles.draw} ${className ?? ''}`} data-seen={seen ? 'true' : undefined} data-armed={armed && !done ? 'true' : undefined} data-done={done ? 'true' : undefined} style={{ '--draw-ms': `${duration}ms` } as CSSProperties}>
       {children}
     </g>
   )

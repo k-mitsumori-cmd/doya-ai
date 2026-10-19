@@ -7,7 +7,7 @@
 // - 数字やデータは props で受け取るだけ。ここで取得しない
 // - 画面に入ったとき1回だけ動く。動きを減らす設定では、最初から最後の形で出す（motion.tsx）
 import { useId, type CSSProperties } from 'react'
-import { DrawIn, useInViewOnce } from './motion'
+import { DrawIn, useArmed, useDoneAfter, useInViewOnce } from './motion'
 import styles from './charts.module.css'
 
 function scale(values: number[], w: number, h: number, pad = 4) {
@@ -97,9 +97,11 @@ export function AreaChart({ labels, series, height = 200, format }: {
 /** 横棒（段階ごとの金額など）。画面に入ったら左から伸びる */
 export function Bars({ data, format }: { data: { label: string; value: number; sub?: string }[]; format?: (n: number) => string }) {
   const { ref, seen } = useInViewOnce<HTMLUListElement>()
+  const armed = useArmed()
+  const done = useDoneAfter(seen, 700 + data.length * 70 + 400)
   const max = Math.max(...data.map((d) => d.value), 1)
   return (
-    <ul ref={ref} className={styles.bars} data-seen={seen ? 'true' : undefined}>
+    <ul ref={ref} className={styles.bars} data-seen={seen ? 'true' : undefined} data-armed={armed && !done ? 'true' : undefined} data-done={done ? 'true' : undefined}>
       {data.map((d, i) => (
         <li key={d.label}>
           <div className={styles.barHead}>
