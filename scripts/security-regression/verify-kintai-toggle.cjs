@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript');
-const source=fs.readFileSync(path.join(__dirname,'../../src/app/kintai/employees/page.tsx'),'utf8');
+const source=fs.readFileSync(path.join(__dirname,'../../src/app/(shell)/kintai/employees/page.tsx'),'utf8');
 const ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let callback;
 function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='toggleActive')callback=n.initializer.getText(ast);ts.forEachChild(n,visit)}visit(ast);if(!callback)throw Error('Callback missing');
 const code=ts.transpileModule('globalThis.toggle='+callback,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;

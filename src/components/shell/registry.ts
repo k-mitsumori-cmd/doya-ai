@@ -58,6 +58,8 @@ export const SHELL_SERVICES: ShellService[] = [
   // プロマネは組織（ワークスペース）を選んだあと（/promane/<slug>）だけ枠に入る。入口（/promane）・招待・料金は今までどおり
   { id: 'promane', basePath: '/promane', inShell: (p) => /^\/promane\/[^/]+/.test(p) && !/^\/promane\/(invite|pricing)(\/|$)/.test(p) },
   { id: 'hr', basePath: '/hr', inShell: (p) => p !== '/hr' && p !== '/hr/pricing' && !p.startsWith('/hr/pricing/') }, // 紹介ページと料金は枠の外。招待は guest-path.ts で外れる
+  // 勤怠の紹介ページ（/kintai）・料金（/kintai/pricing）・招待（/kintai/invite*）は枠を出さない（KintaiLayout の公開ページと同じ判定）
+  { id: 'kintai', basePath: '/kintai', inShell: (p) => p !== '/kintai' && p !== '/kintai/pricing' && !p.startsWith('/kintai/invite') },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */

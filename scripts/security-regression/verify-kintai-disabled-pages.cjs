@@ -37,9 +37,9 @@ function page(file) {
   return exports.default
 }
 
-const requests = page('src/app/kintai/requests/page.tsx')
-const newRequest = page('src/app/kintai/requests/new/page.tsx')
-const clock = page('src/app/kintai/clock/page.tsx')
+const requests = page('src/app/(shell)/kintai/requests/page.tsx')
+const newRequest = page('src/app/(shell)/kintai/requests/new/page.tsx')
+const clock = page('src/app/(shell)/kintai/clock/page.tsx')
 const sidebar = page('src/components/kintai/KintaiSidebar.tsx')
 
 const render = Component => renderToStaticMarkup(React.createElement(Component))
