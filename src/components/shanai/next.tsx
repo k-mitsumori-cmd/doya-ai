@@ -73,7 +73,7 @@ export function ShanaiSteps() {
                     <span className="min-w-0">{st.title}</span>
                   </p>
                   <p className="text-[14px] leading-[1.7] text-[var(--sub)]">{st.body}</p>
-                  <Link href={st.href} className="mt-auto inline-flex items-center gap-1 text-[14px] font-bold text-[var(--blue)] hover:text-[var(--blue-deep)]">
+                  <Link href={st.href} className="mt-auto inline-flex min-h-11 items-center gap-1 self-start rounded-[var(--r-sm)] text-[14px] font-bold text-[var(--blue)] hover:text-[var(--blue-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]">
                     {st.cta}
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Link>
@@ -95,7 +95,7 @@ export function ShanaiCardList({ rows }: { rows: ShanaiRow[] }) {
         <StaggerItem index={i} key={r.id}>
           <Link
             href={`/shanai/interviews/${r.id}`}
-            className="group block h-full rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-5 shadow-[var(--shadow)] transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[var(--blue-line)] hover:shadow-[var(--shadow-lg)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            className="group block h-full rounded-[var(--r)] border border-[var(--line)] bg-[var(--paper)] p-5 shadow-[var(--shadow)] transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[var(--blue-line)] hover:shadow-[var(--shadow-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
