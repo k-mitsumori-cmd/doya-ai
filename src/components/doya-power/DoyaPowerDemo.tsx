@@ -62,7 +62,7 @@ export default function DoyaPowerDemo() {
 
       <DoyaPowerGauge remaining={remaining} limit={LIMIT} conversions={CONVERSIONS} nextRecoveryAt={NEXT_RECOVERY} now={NOW} fx={fx} />
 
-      <Card title="静かな表示（演出とドヤくんをオフ）" icon="Settings">
+      <Card title="静かな表示（演出オフ）" icon="Settings">
         <DoyaPowerGauge remaining={remaining} limit={LIMIT} conversions={CONVERSIONS} nextRecoveryAt={NEXT_RECOVERY} now={NOW} fx={quiet} />
       </Card>
 

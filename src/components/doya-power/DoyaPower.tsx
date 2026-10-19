@@ -235,7 +235,7 @@ export function LowPowerNotice({
         <p className={styles.noticeTitle}>{title}</p>
         <p className={styles.noticeBody}>
           {value > 0 ? <>残りは <b className={styles.noticeNum}>{fmt(value)}</b> / {fmt(limit)} です{lightest && lightest.count > 0 ? `（あと ${lightest.label}${fmt(lightest.count)}${lightest.unit}分）` : ''}。</> : <>たくさん使っていただき、ありがとうございます。</>}
-          {recovery ? <>{recovery} に {fmt(limit)} まで回復します。</> : null}
+          {recovery ? <><span className={styles.nobr}>{recovery} に</span> {fmt(limit)} まで回復します。</> : null}
           {value > 0 ? 'いま作っているものは、そのまま続けられます。' : '回復するまで、作ったものの確認や編集はそのままできます。'}
         </p>
         {moreHref ? (
@@ -318,13 +318,13 @@ export function MorningRecoveryToast({
     <div className={styles.toast} data-placement={placement} data-motion={motion ? 'on' : 'off'} role="status" aria-live="polite">
       {f.mascot ? <Mascot pose="hello" size={52} className={styles.toastMascot} /> : <span className={styles.toastIcon}><Sunrise size={20} aria-hidden /></span>}
       <div className={styles.toastText}>
-        <p className={styles.toastTitle}>おはようございます。{label}が回復しました</p>
+        <p className={styles.toastTitle}><span>おはようございます。</span><span>{label}が回復しました</span></p>
         <p className={styles.toastBody}>
           {amount !== undefined && amount < limit ? `${fmt(amount)} 回復して、` : ''}
           今日は {fmt(limit)} 使えます
           {top.length ? `（${top.map((c) => `${c.label}${fmt(c.count)}${c.unit}`).join('／')}）` : ''}。
         </p>
-        <p className={styles.toastTime}>{jstDateTime(recoveredAt)} に回復</p>
+        <p className={styles.toastTime}><span className={styles.nobr}>{jstDateTime(recoveredAt)}</span> <span className={styles.nobr}>に回復</span></p>
       </div>
       <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="知らせを閉じる"><X size={16} aria-hidden /></button>
     </div>

@@ -55,7 +55,8 @@
 
 .gaugeFoot { display: flex; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; font-size: 13px; color: var(--sub, #4a5375); min-height: 20px; }
 .pct { font-weight: 700; font-variant-numeric: tabular-nums; }
-.recovery { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.recovery { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.recovery svg { flex: none; }
 
 /* ---- 言い換え ---- */
 .equiv { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--ink, #101633); }
@@ -102,7 +103,7 @@
   box-shadow: var(--shadow-lg, 0 30px 60px -24px rgba(10, 15, 60, 0.28));
 }
 .toast[data-placement='fixed'] { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 60; }
-.toast[data-placement='inline'] { position: relative; }
+.toast[data-placement='inline'] { position: relative; width: 100%; max-width: 420px; box-shadow: var(--shadow, 0 8px 28px -12px rgba(16, 22, 51, 0.14)); }
 .toast[data-motion='on'] { animation: toastIn 0.5s var(--ease, cubic-bezier(0.22, 1, 0.36, 1)) both; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
 .toastMascot { width: 52px; height: 52px; flex: none; }
@@ -114,12 +115,21 @@
 
 .mascot { display: block; object-fit: contain; }
 
+/* 日本語の折り返し: 文節で折り、見出しは行の長さをそろえる（1文字だけの行を出さない） */
+.gauge, .notice, .toast { word-break: auto-phrase; line-break: strict; overflow-wrap: break-word; }
+.noticeTitle, .toastTitle { text-wrap: balance; }
+.noticeBody, .toastBody { text-wrap: pretty; }
+.nobr { white-space: nowrap; }
+.toastTitle > span { display: block; }
+
 /* スマートフォン: 枠の余白を詰め、トーストは下のタブバーにかぶらない位置に */
 @media (max-width: 560px) {
   .gauge { padding: 16px; }
   .gaugeValue { font-size: 24px; }
   .notice { padding: 14px 16px; gap: 12px; }
   .noticeMascot { width: 44px; height: 44px; }
+  .toast { gap: 10px; padding: 12px; }
+  .toastMascot { width: 40px; height: 40px; }
   .toast[data-placement='fixed'] { right: 16px; left: 16px; width: auto; bottom: calc(80px + env(safe-area-inset-bottom)); }
 }
 
