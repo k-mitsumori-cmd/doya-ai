@@ -26,7 +26,8 @@ export default function QuoteAppLayout({ children }: { children: React.ReactNode
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  if (guest) return <>{children}</>
+  // 開発時だけの見本（/quote/dev/...）は自分で枠を描く
+  if (guest || /^\/quote\/dev(\/|$)/.test(pathname || '')) return <>{children}</>
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">

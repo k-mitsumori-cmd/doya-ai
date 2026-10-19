@@ -8,10 +8,14 @@ import { isGuestPath } from '@/lib/ui/guest-path'
 import { QUOTE_NAV } from '@/lib/quote/nav'
 import QuoteOrgSwitcher from './QuoteOrgSwitcher'
 
+const DEV_PREVIEW = /^\/quote\/dev(\/|$)/
+
 export default function QuoteShellFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   // 招待の受諾（/quote/invite/<token>）など第三者が開く画面には、ツール内のナビも組織の切り替えも出さない（点検 SAL-020）
   if (isGuestPath(pathname)) return <>{children}</>
+  // 開発時だけの見本（/quote/dev/...）は自分で枠を描く（ログイン中に開いても枠が二重にならないように）
+  if (DEV_PREVIEW.test(pathname || '')) return <>{children}</>
   return (
     <ToolFrame serviceId="quote" nav={QUOTE_NAV} switcher={<QuoteOrgSwitcher />}>
       {children}
