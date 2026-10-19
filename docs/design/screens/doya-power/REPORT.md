@@ -1,6 +1,7 @@
 # ドヤパワーの表示の部品 — 報告（ui-next/doyapower-gauge）
 
 - ブランチ: `ui-next/doyapower-gauge`（origin/main `bd19215` から作成。main には入れていない）
+- コミット: `5649ed6`（部品と見本のページ）、`93332e1`（375px の直しと写真・報告）、この報告の更新
 - 担当範囲: 表示の部品だけ。値はすべて props で受け取る（台帳・残りの計算は `ui-next/doyapower-ledger`）。データ取得・API 呼び出し・メール・通知は無し。本番DB・Stripe・料金は触っていない。
 - 触ったファイル（すべて新規。既存の ds の部品は変更なし）
   - `src/components/doya-power/DoyaPower.tsx` … 部品の本体
@@ -40,7 +41,7 @@ import { DoyaPowerGauge, PowerEquivalents, LowPowerNotice, MorningRecoveryToast,
 |---|---|
 | `npm ci` | 0 |
 | `npx tsc --noEmit -p .`（今回のファイルのエラーだけを grep → 0件） | — （リポジトリ全体には既存の型エラーがあるため、フィルタして確認） |
-| `UI_NEXT_ROLLOUT=preview UI_PREVIEW_EMAILS=k-mitsumori@surisuta.jp UI_SHELL_SERVICES=all GIT_DIR=/nonexistent npm run build`（最終のコード） | 下の「最終ビルド」を参照 |
+| `UI_NEXT_ROLLOUT=preview UI_PREVIEW_EMAILS=k-mitsumori@surisuta.jp UI_SHELL_SERVICES=all GIT_DIR=/nonexistent npm run build`（最終のコード。`/ds-preview/doya-power` 5.89 kB） | **0** |
 | 写真用: 同じ環境変数で `npx next build` → `DS_PREVIEW_SHOT=1 npx next start -p 3456` → Playwright（Chromium）で撮影 | 0 |
 
 ⚠️ `/ds-preview` は `NODE_ENV=production`（= `next start`）では 404 になる作り（既存の layout）。写真を撮るときだけ、手元で layout と page の `notFound()` に `&& process.env.DS_PREVIEW_SHOT !== '1'` を一時的に足してビルドし、撮ったあと元に戻した（コミットには入れていない）。
