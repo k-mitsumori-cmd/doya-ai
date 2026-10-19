@@ -6,6 +6,12 @@ import { useSession } from 'next-auth/react'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES } from '@/lib/doyalist/constants'
 import { useApproachUsage } from './useApproachUsage'
+import { Copy, FileText, Link2, Mail, MessageSquare, PenLine, Phone, Sparkles, Target } from 'lucide-react'
+import { useUiNext } from '@/components/shell/ui-next-context'
+
+// 新しい見た目では、絵文字の代わりに lucide のアイコンを出す（UI 品質 S-52。絵文字をアイコンにしない）
+const TYPE_ICON = { form: PenLine, email: Mail, phone: Phone } as const
+const ico = (Icon: typeof Copy) => <Icon size={16} strokeWidth={1.75} aria-hidden className="mr-1 inline-block align-[-3px]" />
 import { DOYALIST_UNKNOWN_RESULT, readDoyalistToolResponse, validDoyalistToolResult } from '@/lib/doyalist/tool-response-client'
 
 const CHARS = {
@@ -57,6 +63,10 @@ export default function ToolForm(props: Props) {
 }
 
 function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
+  // 新しい見た目（チェックリスト §5.1）。偽のときは今までの見た目のまま
+  const uiNext = useUiNext()
+  const Heading = uiNext ? 'h2' : 'h1'
+  const TypeIcon = TYPE_ICON[type]
   const [serviceInput, setServiceInput] = useState('')
   const [targetIndustry, setTargetIndustry] = useState('IT・ソフトウェア')
   const [tone, setTone] = useState('formal')
@@ -145,17 +155,21 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
   const tips = TIPS_BY_TYPE[type] || []
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
+    <div className={uiNext ? 'p-4 lg:p-8' : 'min-h-screen bg-slate-50 p-4 lg:p-8'}>
       <Toaster position="top-center" />
 
       <div className="max-w-7xl mx-auto pb-20">
         {/* Page Header */}
         <div className="flex items-center gap-3 mb-6">
+          {uiNext ? (
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0066ff] flex items-center justify-center"><TypeIcon size={24} strokeWidth={1.75} aria-hidden /></div>
+          ) : (
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-2xl">
             {emoji}
           </div>
+          )}
           <div>
-            <h1 className="text-2xl lg:text-3xl font-black text-[#0a1530]">{title}</h1>
+            <Heading className={`${uiNext ? 'text-xl lg:text-2xl' : 'text-2xl lg:text-3xl'} font-black text-[#0a1530]`}>{title}</Heading>
             <p className="text-sm font-medium text-slate-500 mt-0.5">{subtitle}</p>
           </div>
         </div>
@@ -187,7 +201,7 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
               {/* 自社サービス */}
               <div>
                 <label className="block text-sm font-bold text-[#0a1530] mb-2">
-                  ✨ 自社サービスの内容 または URL <span className="text-rose-500 text-xs">*必須</span>
+                  {uiNext ? ico(Sparkles) : '✨ '}自社サービスの内容 または URL <span className="text-rose-500 text-xs">*必須</span>
                 </label>
                 <textarea
                   value={serviceInput}
@@ -196,13 +210,13 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
                   rows={3}
                   className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 bg-white placeholder:text-slate-300 focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100 resize-none"
                 />
-                {isUrl && (<p className="text-xs font-bold text-cyan-600 mt-1">🔗 URLとして認識：AIがサイトの内容を推定します</p>)}
+                {isUrl && (<p className="text-xs font-bold text-cyan-600 mt-1">{uiNext ? ico(Link2) : '🔗 '}URLとして認識：AIがサイトの内容を推定します</p>)}
               </div>
 
               {/* 相手の業種 */}
               <div>
                 <label className="block text-sm font-bold text-[#0a1530] mb-2">
-                  🎯 相手の業種 <span className="text-rose-500 text-xs">*必須</span>
+                  {uiNext ? ico(Target) : '🎯 '}相手の業種 <span className="text-rose-500 text-xs">*必須</span>
                 </label>
                 <select
                   value={targetIndustry}
@@ -215,7 +229,7 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
 
               {/* トーン */}
               <div>
-                <label className="block text-sm font-bold text-[#0a1530] mb-2">💬 トーン</label>
+                <label className="block text-sm font-bold text-[#0a1530] mb-2">{uiNext ? ico(MessageSquare) : '💬 '}トーン</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { v: 'formal', l: '丁寧・フォーマル' },
@@ -238,7 +252,9 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
               <button
                 onClick={handleGenerate}
                 disabled={generating || Boolean(limitMessage) || !quota.usage || quota.failed || !quota.allowed}
-                className="w-full py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold text-base rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className={uiNext
+                  ? 'w-full py-4 bg-[#0066ff] text-white font-bold text-base rounded-xl shadow-lg shadow-blue-500/25 hover:bg-[#0052cc] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
+                  : 'w-full py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold text-base rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'}
               >
                 {generating ? (
                   <><img src={CHARS.working} alt="" className="w-6 h-6 animate-spin" />作成中...</>
@@ -253,7 +269,7 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 p-6 lg:sticky lg:top-24">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                <span className="text-xl">📝</span>
+                {uiNext ? <FileText size={20} strokeWidth={1.75} aria-hidden className="text-slate-500" /> : <span className="text-xl">📝</span>}
                 <h3 className="text-sm font-bold text-[#0a1530]">生成プレビュー</h3>
               </div>
 
@@ -286,7 +302,7 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
                       onClick={copyToClipboard}
                       className="px-3 py-1.5 bg-[#0a1530] text-white font-bold text-xs rounded-lg hover:bg-[#13234d] active:scale-95 transition-all"
                     >
-                      📋 コピー
+                      {uiNext ? <Copy size={14} aria-hidden className="mr-1 inline-block align-[-2px]" /> : '📋 '}コピー
                     </button>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3 max-h-[400px] overflow-y-auto">

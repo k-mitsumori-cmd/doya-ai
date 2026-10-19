@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import { EmptyState } from '@/components/EmptyState'
+import { EmptyState as DsEmptyState } from '@/components/ds'
+import { useUiNext } from '@/components/shell/ui-next-context'
 import { UiIcon, type UiIconName } from '@/components/icons'
 import { appendApproachPage, parseApproachPage, type ApproachSummaryCounts } from '@/lib/doyalist/approach-pages'
 import { appendProjectPage, parseProjectPage, type ProjectSummaryCounts } from '@/lib/doyalist/project-pages'
@@ -48,6 +50,9 @@ const TYPE_LABEL: Record<string, { l: string; color: string; icon: string }> = {
 }
 
 export default function HistoryPage() {
+  // 新しい見た目（チェックリスト §5.1）では、ページの見出しは枠の h1 に任せて h2 にする（S-57）
+  const uiNext = useUiNext()
+  const Heading = uiNext ? 'h2' : 'h1'
   const [lists, setLists] = useState<ListSummary[]>([])
   const [approaches, setApproaches] = useState<ApproachSummary[]>([])
   const [loadingProjects, setLoadingProjects] = useState(true)
@@ -235,7 +240,7 @@ export default function HistoryPage() {
 
   if (loadingProjects) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className={uiNext ? 'flex items-center justify-center py-24' : 'min-h-screen flex items-center justify-center bg-slate-50'}>
         <div className="flex flex-col items-center gap-4">
           <img src={CHARS.thinking} alt="" className="w-28 h-28 animate-bounce" />
           <p className="text-sm font-medium text-slate-500">読み込み中...</p>
@@ -245,14 +250,14 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
+    <div className={uiNext ? 'p-4 lg:p-8' : 'min-h-screen bg-slate-50 p-4 lg:p-8'}>
       <Toaster position="top-center" />
 
       <div className="max-w-7xl mx-auto pb-20">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-white"><UiIcon name="book" size={26} /></div>
+          <div className={uiNext ? 'w-12 h-12 rounded-2xl bg-blue-50 text-[#0066ff] flex items-center justify-center' : 'w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-white'}><UiIcon name="book" size={uiNext ? 24 : 26} /></div>
           <div>
-            <h1 className="text-2xl lg:text-3xl font-black text-[#0a1530]">生成履歴</h1>
+            <Heading className={`${uiNext ? 'text-xl lg:text-2xl' : 'text-2xl lg:text-3xl'} font-black text-[#0a1530]`}>生成履歴</Heading>
             <p className="text-sm font-medium text-slate-500 mt-0.5">これまでに作成したリスト・営業文・メール・スクリプトをまとめて管理できます</p>
           </div>
         </div>
@@ -281,7 +286,8 @@ export default function HistoryPage() {
                       tab === t.v ? 'bg-[#0a1530] text-white' : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    <span>{t.icon}</span>
+                    {/* ⚠️ 今の見た目では、アイコンの名前（book・list など）がそのまま文字で出ている。新しい見た目では絵にする */}
+                    {uiNext ? <UiIcon name={t.icon as UiIconName} size={14} /> : <span>{t.icon}</span>}
                     <span>{t.l}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${tab === t.v ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>{approachSummary ? count : '—'}</span>
                   </button>
@@ -305,6 +311,14 @@ export default function HistoryPage() {
             <p className="px-5 py-8 text-center text-sm font-semibold text-rose-700">履歴を取得できませんでした。再読み込みしてください。</p>
           ) : projectsError && filteredLists.length === 0 && filteredApproaches.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm font-semibold text-rose-700">リスト履歴を取得できませんでした。再読み込みしてください。</p>
+          ) : isEmpty && uiNext ? (
+            // 新しい見た目: ツールの空状態の画像と、次にやることを1つ（UI 品質 S-17）
+            <DsEmptyState
+              title="該当する履歴がありません"
+              description="リストを作ると、ここに履歴が並びます。条件を変えて探すこともできます。"
+              art="/doyalist/empty-lists.webp"
+              action={<Link href="/doyalist" className="inline-flex rounded-xl bg-[#0066ff] px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#0052cc]">リストを作る</Link>}
+            />
           ) : isEmpty ? (
             <EmptyState
               kind="no-results"
@@ -367,7 +381,7 @@ export default function HistoryPage() {
                       <tr key={`appr-${a.id}`} className="hover:bg-slate-50 transition-colors align-top">
                         <td className="px-5 py-3">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md ${meta.color}`}>
-                            {meta.icon} {meta.l}
+                            {uiNext ? <UiIcon name={meta.icon as UiIconName} size={12} /> : <>{meta.icon} </>}{meta.l}
                           </span>
                         </td>
                         <td className="px-5 py-3 max-w-[400px]">

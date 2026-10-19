@@ -6,6 +6,9 @@ import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES, AREAS } from '@/lib/doyalist/constants'
 import { DEFAULT_DOYALIST_PREFERENCES, readDoyalistPreferences, saveDoyalistPreferences, type DoyalistPreferences } from '@/lib/doyalist/preferences'
+import Sym from '@/components/doyalist/Sym'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { AlertTriangle, Clock, Settings } from 'lucide-react'
 
 interface Usage {
   plan?: { raw?: string; tier?: string; periodEnd?: string | null } | string
@@ -45,6 +48,9 @@ const CHARS = {
 }
 
 export default function SettingsPage() {
+  // 新しい見た目（チェックリスト §5.1）では、ページの見出しは枠の h1 に任せて h2 にする（S-57）
+  const uiNext = useUiNext()
+  const Heading = uiNext ? 'h2' : 'h1'
   const { data: session } = useSession()
   const [settings, setSettings] = useState(DEFAULT_DOYALIST_PREFERENCES)
   const [usage, setUsage] = useState(null as Usage | null)
@@ -149,15 +155,19 @@ export default function SettingsPage() {
   const userImage = session?.user?.image || ''
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
+    <div className={uiNext ? 'p-4 lg:p-8' : 'min-h-screen bg-slate-50 p-4 lg:p-8'}>
       <Toaster position="top-center" />
 
       <div className="max-w-7xl mx-auto pb-20">
         {/* ===== Page Header ===== */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-2xl">⚙️</div>
+          {uiNext ? (
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0066ff] flex items-center justify-center"><Settings size={24} strokeWidth={1.75} aria-hidden /></div>
+          ) : (
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-2xl">⚙️</div>
+          )}
           <div>
-            <h1 className="text-2xl lg:text-3xl font-black text-[#0a1530]">設定</h1>
+            <Heading className={`${uiNext ? 'text-xl lg:text-2xl' : 'text-2xl lg:text-3xl'} font-black text-[#0a1530]`}>設定</Heading>
             <p className="text-sm font-medium text-slate-500 mt-0.5">アカウント情報・プラン・各種設定を管理します</p>
           </div>
         </div>
@@ -188,7 +198,7 @@ export default function SettingsPage() {
               onClick={() => signOut({ callbackUrl: '/doyalist' })}
               className="mt-5 w-full py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-sm transition-colors flex items-center justify-center gap-2"
             >
-              <span className="material-symbols-outlined text-base">logout</span>
+              <Sym name="logout" className="text-base" />
               ログアウト
             </button>
           </Card>
@@ -240,7 +250,7 @@ export default function SettingsPage() {
               href="/doyalist/pricing"
               className="mt-5 w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all"
             >
-              <span className="material-symbols-outlined text-base">arrow_upward</span>
+              <Sym name="arrow_upward" className="text-base" />
               プランをアップグレード
             </Link>
             </>
@@ -278,7 +288,7 @@ export default function SettingsPage() {
             {/* データエクスポート */}
             <div className="pt-4 mt-4 border-t border-slate-100">
               <p className="text-xs font-black text-[#0a1530] mb-2 flex items-center gap-1">
-                <span className="material-symbols-outlined text-base text-cyan-600">cloud_download</span>
+                <Sym name="cloud_download" className="text-base text-cyan-600" />
                 データ管理
               </p>
               <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
@@ -296,7 +306,7 @@ export default function SettingsPage() {
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-base">download</span>
+                    <Sym name="download" className="text-base" />
                     全件エクスポート（ZIP）
                   </>
                 )}
@@ -311,7 +321,7 @@ export default function SettingsPage() {
             <img src={CHARS.point} alt="" className="w-16 h-16 flex-shrink-0" />
             <div className="flex-1 min-w-[200px]">
               <p className="text-base font-black text-[#0a1530] flex items-center gap-2">
-                <span className="material-symbols-outlined text-cyan-600">support_agent</span>
+                <Sym name="support_agent" className="text-cyan-600" />
                 サポート窓口
               </p>
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
@@ -322,21 +332,21 @@ export default function SettingsPage() {
               href="mailto:info@surisuta.jp?subject=ドヤリストに関するお問い合わせ"
               className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-black text-sm rounded-xl shadow-lg shadow-cyan-500/30 transition-all active:scale-95"
             >
-              <span className="material-symbols-outlined">mail</span>
+              <Sym name="mail" />
               info@surisuta.jp
             </a>
           </div>
           <div className="mt-4 pt-4 border-t border-cyan-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">
             <div className="flex items-center gap-2 text-slate-600">
-              <span className="material-symbols-outlined text-cyan-500 text-base">schedule</span>
+              <Sym name="schedule" className="text-cyan-500 text-base" />
               <span>平日 10:00-18:00 (JST)</span>
             </div>
             <div className="flex items-center gap-2 text-slate-600">
-              <span className="material-symbols-outlined text-cyan-500 text-base">reply</span>
+              <Sym name="reply" className="text-cyan-500 text-base" />
               <span>通常 1営業日以内に返信</span>
             </div>
             <div className="flex items-center gap-2 text-slate-600">
-              <span className="material-symbols-outlined text-cyan-500 text-base">language</span>
+              <Sym name="language" className="text-cyan-500 text-base" />
               <span>日本語のみ</span>
             </div>
           </div>
@@ -347,10 +357,11 @@ export default function SettingsPage() {
 }
 
 function Card({ icon, title, subtitle, children }: { icon: string; title: string; subtitle: string; children: React.ReactNode }) {
+  const uiNext = useUiNext()
   return (
     <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 p-6">
       <div className="flex items-center gap-2 pb-4 border-b border-slate-100 mb-4">
-        <span className="material-symbols-outlined text-cyan-600 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
+        {uiNext ? <Sym name={icon} className="text-[#0066ff] text-xl" /> : <span className="material-symbols-outlined text-cyan-600 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>}
         <div>
           <h2 className="text-base font-black text-[#0a1530]">{title}</h2>
           <p className="text-[10px] text-slate-400 mt-0.5">{subtitle}</p>
@@ -377,7 +388,7 @@ function InfoRow({ label, value, icon }: { label: string; value: string; icon: s
   return (
     <div className="flex items-center justify-between text-xs">
       <span className="flex items-center gap-1.5 text-slate-500">
-        <span className="material-symbols-outlined text-base">{icon}</span>
+        <Sym name={icon} className="text-base" />
         {label}
       </span>
       <span className="font-bold text-[#0a1530]">{value}</span>
@@ -386,6 +397,7 @@ function InfoRow({ label, value, icon }: { label: string; value: string; icon: s
 }
 
 function UsageBar({ label, used, max, color }: { label: string; used: number; max: number; color: 'cyan' | 'violet' }) {
+  const uiNext = useUiNext()
   const isUnlimited = max === -1
   const pct = isUnlimited ? 0 : max > 0 ? Math.min(100, (used / max) * 100) : 0
   // 80%以上で警告色、95%以上で危険色
@@ -427,10 +439,10 @@ function UsageBar({ label, used, max, color }: { label: string; used: number; ma
         )}
       </div>
       {warningLevel === 'danger' && (
-        <p className="text-[10px] text-rose-600 mt-1 font-bold">⚠️ まもなく上限です。プランをアップグレードしてください</p>
+        <p className="text-[10px] text-rose-600 mt-1 font-bold">{uiNext ? <AlertTriangle size={12} className="mr-1 inline-block align-[-2px]" aria-hidden /> : '⚠️ '}まもなく上限です。プランをアップグレードしてください</p>
       )}
       {warningLevel === 'warn' && (
-        <p className="text-[10px] text-amber-600 mt-1 font-bold">⏰ あと {(max - used).toLocaleString()} で上限です</p>
+        <p className="text-[10px] text-amber-600 mt-1 font-bold">{uiNext ? <Clock size={12} className="mr-1 inline-block align-[-2px]" aria-hidden /> : '⏰ '}あと {(max - used).toLocaleString()} で上限です</p>
       )}
     </div>
   )
