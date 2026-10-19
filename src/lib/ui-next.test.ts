@@ -10,13 +10,15 @@ test('UI_NEXT_ROLLOUT は off / preview / all。それ以外と未設定は prev
   assert.equal(uiNextRollout('off'), 'off')
   assert.equal(uiNextRollout(' ALL '), 'all')
   assert.equal(uiNextRollout('preview'), 'preview')
-  assert.equal(uiNextRollout(undefined), 'preview')
+  // undefined は process.env.UI_NEXT_ROLLOUT を読むので、未設定は空文字で確かめる
+  assert.equal(uiNextRollout(''), 'preview')
   assert.equal(uiNextRollout('yes'), 'preview')
 })
 
 test('UI_PREVIEW_EMAILS はカンマ区切り。前後の空白と大文字小文字を無視する', () => {
   assert.deepEqual(uiPreviewEmails(' Owner@Example.invalid , ,b@example.invalid'), ['owner@example.invalid', 'b@example.invalid'])
-  assert.deepEqual(uiPreviewEmails(undefined), [])
+  // ⚠️ undefined を渡すと既定値として process.env.UI_PREVIEW_EMAILS を読む。本番のビルドでは値があるので、空文字で確かめる（2026-10-19）
+  assert.deepEqual(uiPreviewEmails(''), [])
 })
 
 test('許可したメールの人だけが切り替えを使える', () => {
