@@ -50,7 +50,8 @@ export default function PricingNext({ canceled }: { canceled: boolean }) {
   const { data: session, status: authStatus } = useSession()
   // 契約の判定は UnifiedPricingPlans（planSource='account'）と同じ
   const accountPlan = authStatus === 'authenticated' ? (session?.user as { plan?: string } | undefined)?.plan : undefined
-  const plan = accountPlan ? higherPlan(null, accountPlan) : ''
+  // ⚠️ 文字列として比べる（PlanTier に BUNDLE は無いが、User.plan には入りうる。UnifiedPricingPlans と同じ判定）
+  const plan: string = accountPlan ? higherPlan(null, accountPlan) : ''
   const isPro = authStatus === 'authenticated' && (plan === 'PRO' || plan === 'BUNDLE' || plan === 'ENTERPRISE')
   const planKnown = Boolean(accountPlan)
   const isFree = authStatus === 'authenticated' && !isPro && plan === 'FREE'
