@@ -2,7 +2,7 @@
  * 記事テンプレート用バナー生成スクリプト
  * 
  * 使用方法:
- * npx tsx src/app/seo/template/generate-banners.ts
+ * npx tsx src/app/(shell)/seo/template/generate-banners.ts
  */
 
 import { articleTemplates } from './data'

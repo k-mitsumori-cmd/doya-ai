@@ -5,8 +5,8 @@ import { getServiceById } from "@/lib/services";
 // Render the same public LP even when the comparison viewer is signed in.
 // This route never mounts authenticated app screens or reads customer data.
 const pages = {
-  banner: () => import("@/app/banner/landing/page"),
-  seo: () => import("@/app/seo/Lp"),
+  banner: () => import("@/app/(shell)/banner/landing/page"),
+  seo: () => import("@/app/(shell)/seo/Lp"),
   interview: () => import("@/app/interview/Lp"),
   persona: () => import("@/app/persona/Lp"),
   hr: () => import("@/app/hr/page"),

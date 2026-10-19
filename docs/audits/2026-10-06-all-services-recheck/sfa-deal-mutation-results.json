@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T04:01:23.723Z",
+  "checkedAt": "2026-10-18T09:36:01.839Z",
   "passed": 19,
   "cases": [
     "20 deal replays create once, usage once and full-quota replay still returns committed row",
@@ -23,10 +23,10 @@
     "Actor/organization isolate creation receipts and all handled responses are private"
   ],
   "sourceHashes": {
-    "src/app/api/sfa/deals/route.ts": "85a9ce07bc0a8dad753cbc3610936e70704995bf5e70f6e8b3863cecd87f5969",
-    "src/app/api/sfa/deals/[id]/route.ts": "eb097d6b0bf33c7add692f4c4df152bc7a9d91d99788984cf04aac5844c33f62",
-    "src/lib/sfa/deal-mutation.ts": "772689c0ae1888c78878429db9b9d7e418060812ce8b96452a50591f47339131",
-    "src/lib/sfa/creation-receipt.ts": "7c66784078e0dd73e9a55f6b4294325204f29e5add8db8bbbaad8734f501a2b3",
+    "src/app/api/sfa/deals/route.ts": "2255eedd9b3402d4d977ca39f4536f519401a972e02323c2f1a91ae9fada0040",
+    "src/app/api/sfa/deals/[id]/route.ts": "fe53b700176303f011d307f1f887b61e5417f6d57c1b01f61b49976d555face9",
+    "src/lib/sfa/deal-mutation.ts": "47f1491b25ca2d6ebf5d581311e9b1253a29633b6b0dcc1b3da04eecb898e9e1",
+    "src/lib/sfa/creation-receipt.ts": "30c3bbc63e837855cdc6f7025eebf15b7a8a4a55834dfb317e9152201a140c96",
     "src/lib/sfa/mutation-authority.ts": "1310ba745586b9373620f9a73520a9ecc915a392d4f73a9c5a191642906bb3ba",
     "src/lib/sfa/limits.ts": "5f8b9101d14b49ba57293801e780909c2464ed52b1f5ad9ee9aa2998f4c2d8b6"
   },

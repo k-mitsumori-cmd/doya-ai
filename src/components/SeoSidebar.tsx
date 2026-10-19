@@ -4,13 +4,7 @@ import React, { memo, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  FileText,
-  Sparkles,
-  CreditCard,
-  Zap,
-  LayoutTemplate,
-} from 'lucide-react'
+import { Sparkles, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { markLogoutToastPending } from '@/components/LogoutToastListener'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
@@ -34,26 +28,25 @@ import { higherPlan } from '@/lib/plan-utils'
 import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
 import type { SidebarProps } from '@/components/sidebar'
 
-type SeoNavItem = {
-  href: string
+// ⚠️ ナビの項目は src/lib/seo/nav.ts にだけ書く。ここは SeoAppLayout から受け取った配列を描くだけ。
+//    （このファイルの import を増やすと verify-seo-sidebar-mounted.cjs の差し替え一覧から外れるため、配列は props で受け取る）
+export interface SeoSidebarNavItem {
   label: string
+  /** 行き先（料金プランはログイン後 /seo/dashboard/plan に書き換え済み） */
+  href: string
+  /** 選択中の判定に使う元の href（nav.ts の値） */
+  matchHref: string
   icon: React.ElementType
-  badge?: string
+  exact?: boolean
 }
 
-const SEO_NAV: SeoNavItem[] = [
-  { href: '/seo/swipe', label: 'スワイプ記事作成', icon: Sparkles },
-  { href: '/seo/template', label: 'テンプレ記事作成', icon: LayoutTemplate },
-  { href: '/seo', label: '生成記事一覧', icon: FileText },
-  { href: '/seo/pricing', label: '料金プラン設定', icon: CreditCard },
-]
-
 function SeoSidebarImpl({
+  nav = [],
   isMobile,
   isCollapsed: controlledIsCollapsed,
   onToggle,
   forceExpanded,
-}: SidebarProps) {
+}: SidebarProps & { nav?: SeoSidebarNavItem[] }) {
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
   // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
@@ -85,12 +78,8 @@ function SeoSidebarImpl({
     }
   }
 
-  const isActive = (href: string) => {
-    if (href === '/seo/create') return pathname === '/seo/create'
-    if (href === '/seo') return pathname === '/seo'
-    if (href === '/seo/articles') return pathname.startsWith('/seo/articles')
-    return pathname.startsWith(href)
-  }
+  // 一覧（/seo）だけ完全一致、ほかは前方一致（今までと同じ判定）
+  const isActive = (item: SeoSidebarNavItem) => (item.exact ? pathname === item.matchHref : pathname.startsWith(item.matchHref))
 
   return (
     <>
@@ -118,12 +107,11 @@ function SeoSidebarImpl({
         {/* Navigation（SEO固有: hrefの動的書き換えがあるためNavLink共通化せず） */}
         <div className="flex-1 overflow-y-auto">
         <nav className="py-4 px-3 space-y-1">
-          {SEO_NAV.map((item) => {
-            const href = item.href === '/seo/pricing' ? (isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing') : item.href
-            const active = isActive(item.href)
+          {nav.map((item) => {
+            const active = isActive(item)
             const Icon = item.icon
             return (
-              <Link key={item.href} href={href}>
+              <Link key={item.matchHref} href={item.href}>
                 <motion.div
                   whileHover={{ x: 4 }}
                   className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer group ${
@@ -142,11 +130,6 @@ function SeoSidebarImpl({
                         className="text-sm font-semibold whitespace-nowrap overflow-hidden flex items-center gap-2"
                       >
                         {item.label}
-                        {item.badge && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-bold bg-white/20 text-white rounded-full">
-                            {item.badge}
-                          </span>
-                        )}
                       </motion.span>
                     )}
                   </AnimatePresence>

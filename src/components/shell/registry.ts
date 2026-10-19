@@ -38,6 +38,9 @@ export const SHELL_SERVICES: ShellService[] = [
   // ドヤスライドの紹介ページ（/doyaslide）は、ログイン後も枠の外（旧レイアウトと同じ判定）
   { id: 'doyaslide', basePath: '/doyaslide', inShell: (p) => p.replace(/\/+$/, '') !== '/doyaslide' },
   { id: 'adimage', basePath: '/adimage' },
+  { id: 'asklink', basePath: '/asklink' },
+  { id: 'banner', basePath: '/banner', inShell: (p) => p === '/banner/dashboard' || p.startsWith('/banner/dashboard/') },
+  { id: 'seo', basePath: '/seo' },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */

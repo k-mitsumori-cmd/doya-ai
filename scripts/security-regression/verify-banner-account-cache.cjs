@@ -37,8 +37,8 @@ function harness(file, keyName, reader, writer, component) {
 
 ;(async () => {
   for (const config of [
-    ['src/app/banner/dashboard/history/page.tsx', 'HISTORY_CACHE_KEY', 'readHistoryCache', 'writeHistoryCache', 'BannerHistoryPage'],
-    ['src/app/banner/dashboard/stats/page.tsx', 'STATS_CACHE_KEY', 'readStatsCache', 'writeStatsCache', 'StatsPage'],
+    ['src/app/(shell)/banner/dashboard/history/page.tsx', 'HISTORY_CACHE_KEY', 'readHistoryCache', 'writeHistoryCache', 'BannerHistoryPage'],
+    ['src/app/(shell)/banner/dashboard/stats/page.tsx', 'STATS_CACHE_KEY', 'readStatsCache', 'writeStatsCache', 'StatsPage'],
   ]) {
     const [file, keyName, reader, writer, component] = config
     await check(`${component} cache is scoped to its authenticated owner`, () => {

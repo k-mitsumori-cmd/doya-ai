@@ -1,7 +1,7 @@
 process.env.NODE_ENV='test';
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),crypto=require('node:crypto'),assert=require('node:assert/strict'),React=require('react'),ts=require('typescript'),{JSDOM}=require('jsdom');
 const sourcePath=f=>process.env.DOYA_TEST_BASELINE&&fs.existsSync(path.join(process.env.DOYA_TEST_BASELINE,f))?path.join(process.env.DOYA_TEST_BASELINE,f):f;const readSource=f=>fs.readFileSync(sourcePath(f));
-const {load}=require('./load-typescript.cjs');const file='src/app/seo/template/page.tsx',data=load('src/app/seo/template/data.ts');
+const {load}=require('./load-typescript.cjs');const file='src/app/(shell)/seo/template/page.tsx',data=load('src/app/(shell)/seo/template/data.ts');
 const dom=new JSDOM('<body></body>',{url:'https://example.invalid/seo/template'});Object.assign(global,{window:dom.window,document:dom.window.document,IS_REACT_ACT_ENVIRONMENT:true});
 const lanes=new Map();Object.defineProperty(window.navigator,'locks',{configurable:true,value:{request:async(key,action)=>{const before=lanes.get(key)||Promise.resolve();let release;const held=new Promise(r=>release=r);lanes.set(key,held);await before;try{return await action()}finally{release();if(lanes.get(key)===held)lanes.delete(key)}}}});
 const {createRoot}=require('react-dom/client');let user,reply,requests,root,host,authStatus,navigations,navigationThrows;const tick=()=>new Promise(r=>setImmediate(r));const act=fn=>React.act(async()=>{await fn();await tick();await tick()});

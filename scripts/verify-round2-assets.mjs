@@ -47,7 +47,7 @@ for (const file of ['noroi-nikki-art.jpg','yurusen-art.jpg','hitorijime-art.jpg'
   assert(meta.width === 1536 && meta.height === 1024, `${file}: dimensions`)
 }
 
-const emojiTargets = ['src/app/banner/dashboard/create/page.tsx','src/app/seo/jobs/[id]/page.tsx','src/app/banner/dashboard/page.tsx']
+const emojiTargets = ['src/app/(shell)/banner/dashboard/create/page.tsx','src/app/(shell)/seo/jobs/[id]/page.tsx','src/app/(shell)/banner/dashboard/page.tsx']
 const emoji = /\p{Extended_Pictographic}|✓/gu
 for (const file of emojiTargets) {
   const source = await fs.readFile(path.join(ROOT,file),'utf8')
