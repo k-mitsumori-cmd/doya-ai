@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation'
 import { usePreparationDetail } from '@/lib/shodan/use-preparation-detail'
 import { completeSlideImages } from '@/lib/shodan/preparation-response'
 import Markdown from '@/components/shodan/Markdown'
-import { DoyaKun, SiteShot, type Mood } from '@/components/shodan/ui'
+import { DoyaKun, ShodanHeading, SiteShot, type Mood } from '@/components/shodan/ui'
 import SlideDeck from '@/components/shodan/SlideDeck'
 import toast from 'react-hot-toast'
 
@@ -127,7 +127,7 @@ export default function ShodanResultPage() {
           {prep.status === 'done' && <DoyaKun mood="success" size={56} float={false} />}
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-slate-900">{prep.targetName || prep.targetUrl}</h1>
+              <ShodanHeading className="text-2xl font-black text-slate-900">{prep.targetName || prep.targetUrl}</ShodanHeading>
               {prep.status === 'done' && <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">準備完了</span>}
             </div>
             <a href={prep.targetUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-purple-600 hover:underline flex items-center gap-1 mt-1">{sym('open_in_new', 14)}{prep.targetUrl}</a>

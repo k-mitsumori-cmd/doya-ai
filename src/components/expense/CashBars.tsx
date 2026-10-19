@@ -2,6 +2,7 @@
 
 // 月ごとの出金をカテゴリ別に積み上げた棒グラフ（div だけで描く。見込み分は薄い色）
 import { CATEGORY_LABEL } from '@/lib/expense/constants'
+import { useInViewOnce, usePrefersReducedMotion } from '@/components/ds/motion'
 import type { ForecastMatrix } from './types'
 import { formatYen } from './ui'
 
@@ -17,19 +18,27 @@ export const CATEGORY_COLOR: Record<string, string> = {
 }
 const colorOf = (c: string) => CATEGORY_COLOR[c] ?? 'var(--blue-line)'
 
-export default function CashBars({ cash }: { cash: ForecastMatrix }) {
+/** grow: 画面に入ったときに棒を下から伸ばす（新しい見た目のときだけ渡す。動きを減らす設定では伸ばさない） */
+export default function CashBars({ cash, grow = false }: { cash: ForecastMatrix; grow?: boolean }) {
+  const { ref, seen } = useInViewOnce<HTMLDivElement>()
+  const animate = grow && !usePrefersReducedMotion()
   const max = Math.max(1, ...cash.months.map((m) => cash.totals[m]?.amount ?? 0))
   const H = 160
   return (
     <div>
       <div className="overflow-x-auto">
-        <div className="flex min-w-[560px] items-end gap-2" style={{ height: H + 40 }}>
-          {cash.months.map((m) => {
+        <div ref={ref} className="flex min-w-[560px] items-end gap-2" style={{ height: H + 40 }}>
+          {cash.months.map((m, i) => {
             const total = cash.totals[m]?.amount ?? 0
             return (
               <div key={m} className="flex flex-1 flex-col items-center justify-end" title={`${m} 合計 ${formatYen(total)}`}>
                 <span className="mb-1 text-[10px] font-bold text-[var(--sub)]">{total ? `${Math.round(total / 1000).toLocaleString('ja-JP')}千` : ''}</span>
-                <div className="flex w-full flex-col-reverse overflow-hidden rounded-t-md" style={{ height: Math.round((total / max) * H) }}>
+                <div
+                  className="flex w-full flex-col-reverse overflow-hidden rounded-t-md"
+                  style={animate
+                    ? { height: seen ? Math.round((total / max) * H) : 0, transition: `height 700ms cubic-bezier(.2,.8,.2,1) ${i * 40}ms` }
+                    : { height: Math.round((total / max) * H) }}
+                >
                   {cash.categories.map((c) => {
                     const cell = cash.cells[c]?.[m]
                     if (!cell || cell.amount <= 0) return null

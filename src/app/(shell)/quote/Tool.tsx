@@ -24,6 +24,9 @@ import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
 import LoadingProgress from '@/components/LoadingProgress'
 import { EmptyState } from '@/components/EmptyState'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { Button as DsButton, EmptyState as DsEmptyState, FirstSteps, ToolHero } from '@/components/ds'
+import { QUOTE_UI_NEXT_ART } from '@/components/quote/ui-next-art'
 
 // Reactの再描画前に送信されても、入力イベントで確定した最新値を使う。
 function useQuoteDraftState<T>(initial: T) {
@@ -64,6 +67,8 @@ const MAX_QUOTE_ITEMS = 60
 
 export default function QuoteTool() {
   const { data: session, status: authStatus } = useSession()
+  // 新しい見た目（UI 品質の直し）。偽のときは今までの見た目のまま（チェックリスト §5.1）
+  const uiNext = useUiNext()
   const lastActor = useRef('')
   if (authStatus === 'authenticated') lastActor.current = session?.user?.id || ''
   if (authStatus === 'unauthenticated') lastActor.current = ''
@@ -683,12 +688,26 @@ export default function QuoteTool() {
   // --- 初回オンボーディング ---
   if (!org) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className={uiNext ? 'flex justify-center px-4 py-8 sm:py-12' : 'flex min-h-screen items-center justify-center bg-slate-50 px-4'}>
         <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-          <h1 className="text-xl font-bold text-slate-900">ドヤ見積もりAI</h1>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600 font-semibold">
-            はじめに、見積書を発行する組織を作成してください。
-          </p>
+          {uiNext ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={QUOTE_UI_NEXT_ART.empty} alt="" width={240} height={180} className="mx-auto h-auto w-[200px]" />
+              {/* ⚠️ 枠（ToolFrame）が h1 を持つので、ここは h2 */}
+              <h2 className="mt-4 text-xl font-bold text-slate-900">見積書を発行する組織をつくる</h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600 font-semibold">
+                見積書に載せる会社の名前を入れてください。あとから発行者情報（住所・印影など）を足せます。
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-xl font-bold text-slate-900">ドヤ見積もりAI</h1>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600 font-semibold">
+                はじめに、見積書を発行する組織を作成してください。
+              </p>
+            </>
+          )}
           <input
             value={orgName}
             onChange={(e) => { if (context.isCurrent(epoch)) setOrgName(e.target.value) }}
@@ -710,7 +729,7 @@ export default function QuoteTool() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className={uiNext ? 'pb-24' : 'min-h-screen bg-slate-50 pb-24'}>
       {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
       <LoadingProgress
         isLoading={analyzing}
@@ -733,7 +752,8 @@ export default function QuoteTool() {
         subtitle="商材と相場から、見積書に載せる品目を組み立てています。"
         tips={['Tip: 想定予算を入れると、その範囲に寄せた構成になります', 'Tip: 相手の状況を書くほど、刺さる品目が出ます', 'Tip: 出てきた品目は追加・削除・単価変更が自由にできます']}
       />
-      <header className="border-b border-slate-200 bg-white">
+      {/* ⚠️ 新しい見た目では、見出し（h1）と組織の切り替えは枠（ToolFrame）の1か所だけにする（S-31・S-57） */}
+      {!uiNext && <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <div>
             <h1 className="text-lg font-bold text-slate-900">ドヤ見積もりAI</h1>
@@ -751,9 +771,29 @@ export default function QuoteTool() {
             </Link>
           </div>
         </div>
-      </header>
+      </header>}
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
+        {uiNext && (
+          <>
+            <ToolHero
+              title="URLを入れるだけで、相場つきの見積書"
+              lead={<>サービスのページを読み取り、品目と金額の出所（自社価格・相場・AI推定）をそろえます。<span className="mt-1 block text-sm text-slate-500">発行する組織: {org.name}</span></>}
+              action={<DsButton href="#quote-step-1" icon="Receipt">見積書をつくる</DsButton>}
+              art={QUOTE_UI_NEXT_ART.hero}
+            />
+            {docs.length === 0 && (
+              <FirstSteps
+                id="quote"
+                steps={[
+                  { title: 'サービスのURLを入れる', body: '提供形態・課金の軸・公開している価格を読み取ります。' },
+                  { title: '品目の候補を出す', body: '相手の状況と予算から、見積書に載せる品目を組み立てます。' },
+                  { title: '金額を直して見積書にする', body: '根拠の無い品目は「要見積」のまま残せます。PDFで渡せます。' },
+                ]}
+              />
+            )}
+          </>
+        )}
         {!hasIssuer && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 font-semibold">
             見積書に印字する自社情報が未設定です。このままでもPDFは出力できます（自社名の欄は空欄になります）。
@@ -774,22 +814,23 @@ export default function QuoteTool() {
         )}
 
         {/* --- 1. 商材の取り込み --- */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <section id="quote-step-1" className="scroll-mt-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-base font-bold text-slate-900">1. 商材を取り込む</h2>
           <p className="mt-1 text-sm text-slate-600 font-semibold">
             自社のサービスURLを入力すると、提供形態・課金の軸・公開している価格を読み取ります。
           </p>
-          <div className="mt-4 flex gap-2">
+          {/* ⚠️ 375px でボタンの文字が1文字ずつ折り返さないよう、新しい見た目では縦に積む（S-59） */}
+          <div className={uiNext ? 'mt-4 flex flex-col gap-2 sm:flex-row' : 'mt-4 flex gap-2'}>
             <input
               value={url}
               onChange={(e) => { if (context.isCurrent(epoch)) setUrl(e.target.value) }}
               placeholder="https://example.com/service"
-              className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+              className={`${uiNext ? 'min-w-0 ' : ''}flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold`}
             />
             <button
               onClick={analyze}
               disabled={analyzing || !url.trim()}
-              className="rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
+              className={`${uiNext ? 'shrink-0 whitespace-nowrap ' : ''}rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0`}
             >
               {analyzing ? '解析中...' : '解析する'}
             </button>
@@ -822,17 +863,17 @@ export default function QuoteTool() {
                   </dd>
                 </div>
               </dl>
-              <div className="mt-4 flex gap-2">
+              <div className={uiNext ? 'mt-4 flex flex-col gap-2 sm:flex-row' : 'mt-4 flex gap-2'}>
                 <input
                   value={productName}
                   onChange={(e) => { if (context.isCurrent(epoch)) setProductName(e.target.value) }}
                   placeholder="商材名（例: SEOコンサルティング）"
-                  className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+                  className={`${uiNext ? 'min-w-0 ' : ''}flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold`}
                 />
                 <button
                   onClick={saveProduct}
                   disabled={!productName.trim() || savingProduct || productSaveUncertain || productLimited}
-                  className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
+                  className={`${uiNext ? 'shrink-0 ' : ''}rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0`}
                 >
                   {savingProduct ? '保存しています…' : productLimited ? '商材登録の利用上限に達しています' : productSaveUncertain ? '保存結果の確認が必要です' : '商材として保存'}
                 </button>
@@ -1217,7 +1258,16 @@ export default function QuoteTool() {
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-base font-bold text-slate-900">見積書</h2>
           {docs.length === 0 ? (
-            <EmptyState kind="not-generated" title="まだ見積書はありません" description="商材と商談条件を入力すると、根拠つきの見積書を作成できます。" />
+            uiNext ? (
+              <DsEmptyState
+                title="まだ見積書はありません"
+                description="上の「1. 商材を取り込む」にサービスのURLを入れると、根拠つきの見積書を作れます。"
+                art={QUOTE_UI_NEXT_ART.empty}
+                action={<DsButton href="#quote-step-1" variant="secondary" icon="Receipt">最初の見積書をつくる</DsButton>}
+              />
+            ) : (
+              <EmptyState kind="not-generated" title="まだ見積書はありません" description="商材と商談条件を入力すると、根拠つきの見積書を作成できます。" />
+            )
           ) : (
             <div className="mt-4 divide-y divide-slate-100">
               {docs.map((d) => (

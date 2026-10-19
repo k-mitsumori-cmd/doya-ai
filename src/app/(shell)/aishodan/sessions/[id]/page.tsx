@@ -13,6 +13,9 @@ import { useParams } from 'next/navigation'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import AishodanHeading from '@/components/aishodan/AishodanHeading'
+import { Skeleton } from '@/components/ds'
 
 interface Detail {
   id: string
@@ -56,6 +59,8 @@ const VERDICT_STYLE: Record<string, string> = {
 const MANUAL_FIT_SCORE: Record<Verdict, number> = { hot: 85, warm: 65, cold: 40, unfit: 15 }
 
 export default function AishodanSessionDetail() {
+  // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
+  const uiNext = useUiNext()
   const params = useParams<{ id: string }>()
   const id = params?.id
   const [d, setD] = useState<Detail | null>(null)
@@ -141,6 +146,9 @@ export default function AishodanSessionDetail() {
     }
   }
 
+  if (loading && uiNext) {
+    return <div className="mx-auto max-w-4xl p-4 sm:p-6" aria-busy="true" aria-label="読み込み中"><Skeleton lines={5} height={18} /></div>
+  }
   if (loading) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 bg-slate-50">
@@ -152,7 +160,7 @@ export default function AishodanSessionDetail() {
   }
   if (!d) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50">
+      <div className={uiNext ? 'flex flex-col items-center justify-center gap-4 px-4 py-16' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
         <p className="text-slate-600">{error || '商談が見つかりません'}</p>
         <Link href="/aishodan/sessions" className="text-sm text-[#0066ff] underline font-semibold">商談一覧に戻る</Link>
       </div>
@@ -166,13 +174,13 @@ export default function AishodanSessionDetail() {
   const canEvaluate = !!d.startedAt && !!d.endedAt && ['completed', 'evaluated'].includes(d.status)
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className={uiNext ? 'pb-12' : 'min-h-screen bg-slate-50 pb-24'}>
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-4xl px-4 py-4">
           <Link href="/aishodan/sessions" className="text-xs text-slate-500 hover:underline font-semibold">← 商談ログ</Link>
-          <h1 className="text-lg font-bold text-slate-900">
+          <AishodanHeading className="text-lg font-bold text-slate-900">
             {d.guestCompany || '会社名未取得'} {d.guestName ? `／ ${d.guestName}` : ''}
-          </h1>
+          </AishodanHeading>
           <p className="text-xs text-slate-500 font-semibold">
             {d.productName} / {d.startedAt ? new Date(d.startedAt).toLocaleString('ja-JP') : '未実施'}
             {d.guestEmail && ` / ${d.guestEmail}`}

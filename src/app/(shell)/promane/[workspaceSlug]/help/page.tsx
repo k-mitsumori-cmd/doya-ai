@@ -1,3 +1,4 @@
+import PromanePageIntro from '@/components/promane/PromanePageIntro';
 import { requirePromaneAuth, getWorkspaceBySlug } from '@/lib/promane/auth'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
@@ -90,13 +91,16 @@ export default async function HelpPage({ params }: { params: Promise<{ workspace
 
   return (
     <div className="p-8 max-w-[1000px] mx-auto">
-      <div className="flex items-center gap-5 mb-8 animate-slide-up">
-        <Image src="/character/point.png" alt="" width={100} height={100} className="animate-bounce-in drop-shadow-xl" unoptimized />
-        <div>
-          <h1 className="text-[32px] font-black tracking-tight text-gray-900">使い方ガイド</h1>
-          <p className="mt-0.5 text-[16px] text-gray-400 font-bold">ドヤプロマネの基本操作を解説するよ！</p>
-        </div>
-      </div>
+      <PromanePageIntro
+        className="flex items-center gap-5 mb-8 animate-slide-up"
+        image="/character/point.png"
+        imageSize={100}
+        title="使い方ガイド"
+        titleClassName="text-[32px] font-black tracking-tight text-gray-900"
+        legacyLead={<>ドヤプロマネの基本操作を解説するよ！</>}
+        legacyLeadClassName="mt-0.5 text-[16px] text-gray-400 font-bold"
+        lead="ドヤプロマネの基本の使い方です。"
+      />
 
       <div className="grid gap-5 mb-10">
         {SECTIONS.map((section, i) => (

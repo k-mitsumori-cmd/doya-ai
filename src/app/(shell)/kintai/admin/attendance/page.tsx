@@ -1,5 +1,6 @@
 'use client'
 
+import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo } from 'react'
 import { formatMinutesJa } from '@/lib/kintai/format'
 import { ATTENDANCE_STATUS_LABELS } from '@/lib/kintai/types'
@@ -108,7 +109,7 @@ export default function AdminAttendancePage() {
           <div className="flex items-center gap-3">
             <img src="/kintai/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
-              <h1 className="text-2xl font-black text-slate-800">部署勤怠管理</h1>
+              <PageTitle className="text-2xl font-black text-slate-800">部署勤怠管理</PageTitle>
               <p className="text-sm font-bold text-slate-500">チームの出勤状況をチェック</p>
             </div>
           </div>

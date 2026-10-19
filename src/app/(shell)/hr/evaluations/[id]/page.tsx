@@ -1,4 +1,5 @@
 'use client'
+import { PageTitle } from '@/components/hr/ui-next'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
@@ -139,7 +140,7 @@ function EvaluationDetailContent({ id, actor }: { id: string; actor: string }) {
   if (loading) return <div role="status" className="p-6 lg:p-10 max-w-4xl mx-auto">評価情報を確認しています。</div>
   return <div className="p-6 lg:p-10 max-w-4xl mx-auto">
     <Link href="/hr/evaluations" className="inline-block mb-4 font-bold text-blue-600">評価一覧に戻る</Link>
-    <h1 className="text-3xl font-black text-slate-900 mb-6">評価詳細</h1>
+    <PageTitle className="text-3xl font-black text-slate-900 mb-6">評価詳細</PageTitle>
     {(save.intent || save.message) && <section role="alert" className="bg-amber-50 rounded-2xl p-4 mb-4">
       <h2 className="font-bold">前回の保存結果を確認してください</h2>
       <p className="mt-2">{save.message || '前回の保存結果が未確認です。新しく保存せず、同じ操作の結果を確認してください。'}</p>

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
+import Sym from '@/components/doyalist/Sym'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 type PlanId = 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
 
@@ -43,20 +45,24 @@ export default function PricingPage() {
     void loadPlan()
   }, [loadPlan])
 
+  // 新しい見た目では、ページの見出しは枠（ToolFrame）の h1 に任せ、ここは h2 にする（UI 品質 S-57・S-63）
+  const uiNext = useUiNext()
+  const Heading = uiNext ? 'h2' : 'h1'
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className={uiNext ? undefined : 'min-h-screen bg-slate-50'}>
       <Toaster position="top-center" />
 
       <div className="p-4 lg:p-10 max-w-6xl mx-auto pb-20">
         {/* ===== Page Header ===== */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-50 border border-cyan-200 mb-4">
-            <span className="material-symbols-outlined text-cyan-600 text-base">diamond</span>
+            <Sym name="diamond" className="text-cyan-600 text-base" />
             <span className="text-xs font-black text-cyan-700">料金プラン</span>
           </div>
-          <h1 className="text-3xl lg:text-4xl font-black text-[#0a1530] mb-3">
+          <Heading className={`${uiNext ? 'text-2xl lg:text-3xl' : 'text-3xl lg:text-4xl'} font-black text-[#0a1530] mb-3`}>
             シンプルな2プラン
-          </h1>
+          </Heading>
           <p className="text-base text-slate-500 max-w-xl mx-auto">
             無料ではじめて、必要になったらプロへ。<br className="sm:hidden" />
             いつでも変更・解約可能です。
@@ -70,7 +76,7 @@ export default function PricingPage() {
         {/* ===== FAQ ===== */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 lg:p-8 mt-12">
           <h3 className="text-lg font-black text-[#0a1530] mb-5 flex items-center gap-2">
-            <span className="material-symbols-outlined text-cyan-600">help</span>
+            <Sym name="help" className="text-cyan-600" />
             よくある質問
           </h3>
           <div className="space-y-5 text-sm">

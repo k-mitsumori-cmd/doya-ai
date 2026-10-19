@@ -5,6 +5,8 @@
 // ⚠️ 本文の余白と最大幅は SeoAppLayout と同じにする（/seo/template の負の margin がこの余白を打ち消す前提のため）
 import React from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useUiNext } from '@/components/shell/ui-next-context'
 import { Plus, Timer } from 'lucide-react'
 import ToolFrame from '@/components/shell/ToolFrame'
 import { SEO_NAV, seoNavHref } from '@/lib/seo/nav'
@@ -48,6 +50,11 @@ export default function SeoShellFrame({
     return () => window.clearInterval(t)
   }, [isLoggedIn, firstLoginAt])
 
+  // 新しい見た目では、記事の一覧（/seo）の主ボタンはページのヒーローに置くので、見出しの帯には出さない（主ボタンは1画面に1つ）
+  const uiNext = useUiNext()
+  const pathname = usePathname()
+  const showCreate = !(uiNext && pathname === '/seo')
+
   const nav = SEO_NAV.map((item) => ({ ...item, href: seoNavHref(item.href, !!isLoggedIn) }))
 
   return (
@@ -64,14 +71,14 @@ export default function SeoShellFrame({
           >
             現在のプラン：{PLAN_LABEL[currentPlan ?? 'UNKNOWN']}
           </Link>
-          <Link
+          {showCreate && <Link
             href="/seo/create"
             className="h-10 px-3 sm:px-4 rounded-xl bg-[#2563EB] text-white text-xs font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 sm:gap-2"
             title="新規記事作成"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">新規記事作成</span>
-          </Link>
+          </Link>}
         </div>
       }
     >
@@ -83,8 +90,8 @@ export default function SeoShellFrame({
                 <Timer className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-black text-blue-900 truncate">初回ログイン特典：1時間 使い放題（PRO相当）</p>
-                <p className="text-[10px] font-bold text-blue-800/80 truncate">画像生成・AI自動修正などが解放されています</p>
+                <p className="text-[11px] font-black text-blue-900 truncate !whitespace-nowrap">初回ログイン特典：1時間 使い放題（PRO相当）</p>
+                <p className="text-[10px] font-bold text-blue-800/80 truncate !whitespace-nowrap">画像生成・AI自動修正などが解放されています</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">

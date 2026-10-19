@@ -11,6 +11,7 @@ import { useSession } from 'next-auth/react'
 import { useDoyaSlideRecovery } from '@/lib/doyaslide/use-operation-recovery'
 import DoyaSlideOperationRecovery from '@/components/doyaslide/DoyaSlideOperationRecovery'
 import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 interface Slide {
   id: string
@@ -96,8 +97,13 @@ function aspectClass(a: string) {
 }
 
 const GEN_MESSAGES = ['もくもく描いてるよ…', 'いい感じ…！🎨', '色を塗ってる…', 'ドヤれる仕上がりに…✨', 'あと少し…！']
+// 新しい見た目では、文の中の絵文字を外す（UI 品質。絵文字をアイコン・飾りに使わない）
+const GEN_MESSAGES_NEXT = ['もくもく描いています…', 'いい感じです…', '色を塗っています…', 'ドヤれる仕上がりに…', 'あと少しです…']
 
 function EditorInner() {
+  // 新しい見た目（チェックリスト §5.1）。ページの見出しは枠の h1 に任せて h2 にする（UI 品質 S-57）
+  const uiNext = useUiNext()
+  const Heading = uiNext ? 'h2' : 'h1'
   const params = useParams()
   const router = useRouter()
   const search = useSearchParams()
@@ -638,7 +644,7 @@ function EditorInner() {
           <Link href="/doyaslide/projects" className="text-slate-400 hover:text-slate-700">
             <span className="material-symbols-outlined">arrow_back</span>
           </Link>
-          <h1 className="text-xl font-black text-slate-900 truncate">{project.title}</h1>
+          <Heading className="text-xl font-black text-slate-900 truncate">{project.title}</Heading>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <button
@@ -794,7 +800,7 @@ function EditorInner() {
             ) : generating || selected?.status === 'generating' ? (
               <div className="text-center text-white/90">
                 <img src="/character/working.png" alt="" className="w-24 h-24 object-contain mx-auto animate-bounce" />
-                <p className="font-black mt-2">{GEN_MESSAGES[funIdx]}</p>
+                <p className="font-black mt-2">{(uiNext ? GEN_MESSAGES_NEXT : GEN_MESSAGES)[funIdx]}</p>
                 <p className="text-xs text-white/60 mt-1">残り {total - doneCount} 枚</p>
               </div>
             ) : (
@@ -1004,7 +1010,7 @@ function EditorInner() {
         <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
           <div className="bg-white/90 backdrop-blur rounded-3xl shadow-2xl px-10 py-7 flex flex-col items-center gap-2 animate-[fadeIn_.3s_ease]">
             <img src="/character/jump.png" alt="" className="w-28 h-28 object-contain animate-bounce" />
-            <p className="text-xl font-black text-blue-700">完成しました！🎉</p>
+            <p className="text-xl font-black text-blue-700">{uiNext ? '完成しました！' : '完成しました！🎉'}</p>
           </div>
         </div>
       )}

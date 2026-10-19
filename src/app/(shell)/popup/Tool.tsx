@@ -11,6 +11,9 @@ import { AlertTriangle, ArrowRight, CheckCircle2, CircleDashed, Globe, Sparkles 
 import type { SiteDto } from '@/lib/popup/dto'
 import { EmptyState, PageHeader, ProcessingSteps, fmt, pct } from '@/components/popup/ui'
 import { useInPopupShell } from '@/components/popup/shell-context'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { ToolHero } from '@/components/ds'
+import { FirstSteps } from '@/components/ds/feedback'
 
 const LOADING_STEPS = ['サイトを読み取っています', '「AIに聞く」の質問文を作っています', 'ポップアップの案をまとめています']
 
@@ -63,6 +66,8 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
   const router = useRouter()
   // 共通シェルの中では ToolFrame が同じ見出しと説明を出すので、ここでは出さない
   const inShell = useInPopupShell()
+  // 新しい見た目（UI 品質の直し。チェックリスト §5.1）。偽のときは今までの見た目のまま
+  const uiNext = useUiNext()
   const [url, setUrl] = useState('')
   const [manualText, setManualText] = useState('')
   const [needManual, setNeedManual] = useState(false)
@@ -134,6 +139,25 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
         />
       )}
 
+      {uiNext && (
+        <div className="mb-6 space-y-4">
+          {/* キービジュアルを 375px でも出す（今までは md 以上だけ）。主ボタンは下の「提案を作る」1つ（UI 品質 H-3・S-22） */}
+          <ToolHero
+            title={<>URLを入れるだけで、<wbr />サイトに合う<wbr />ポップアップを3案</>}
+            lead={<>「AIに聞く」・相談への案内・<wbr />おすすめページの3案を、<wbr />下書きで作ります。<wbr />公開するまで、<wbr />サイトには何も出ません。</>}
+            tool="popup"
+          />
+          <FirstSteps
+            id="popup"
+            steps={[
+              { title: 'サイトのURLを入れる', body: 'AIがサイトを読み取り、3つの案を作ります' },
+              { title: '案を直して公開する', body: '文言・色・出すページを選びます' },
+              { title: 'タグを1行貼る', body: 'サイトに貼ると表示され、クリック率まで測れます' },
+            ]}
+          />
+        </div>
+      )}
+
       <section className={`pd-card ${inShell ? '' : 'mt-8'}`} aria-labelledby="popup-create">
         <div className="flex flex-col gap-6 md:flex-row md:items-center">
           <div className="min-w-0 flex-1">
@@ -167,10 +191,12 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
             <p id="popup-url-help" className="pd-label mt-2">
               {url.trim().length > 0 && !urlLooksValid
                 ? 'URLの形になっていません（例: https://example.co.jp/）'
-                : '「AIに聞く」・相談や申し込みへの案内・おすすめページの3案を、下書きで作ります。公開するまでサイトには何も出ません。'}
+                : uiNext
+                  ? '例: https://example.co.jp/ 。トップページのURLで大丈夫です。'
+                  : '「AIに聞く」・相談や申し込みへの案内・おすすめページの3案を、下書きで作ります。公開するまでサイトには何も出ません。'}
             </p>
           </div>
-          <Image src="/ui-renewal/mascots/popup.webp" alt="" width={720} height={600} className="mx-auto hidden h-auto w-[200px] md:block" priority />
+          {!uiNext && <Image src="/ui-renewal/mascots/popup.webp" alt="" width={720} height={600} className="mx-auto hidden h-auto w-[200px] md:block" priority />}
         </div>
 
         {needManual && (

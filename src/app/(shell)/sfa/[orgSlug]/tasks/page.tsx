@@ -9,6 +9,9 @@ import MutationRecovery from '@/components/sfa/MutationRecovery'
 import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
+import SfaPageHeading from '@/components/sfa/PageHeading'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import SfaEmpty from '@/components/sfa/SfaEmpty'
 
 type Task = SfaClientTask
 
@@ -23,6 +26,7 @@ interface SfaActivityRow {
 const isOverdue = (t: Task) => t.status !== 'done' && isJstOverdue(t.dueDate)
 
 export default function SfaTasksPage() {
+  const uiNext = useUiNext()
   const orgSlug = (useParams().orgSlug as string) || ''
   const mutations = useSfaClientMutations(orgSlug, () => { void load(); void loadActs() })
   const ready = mutations.allowed
@@ -222,7 +226,7 @@ export default function SfaTasksPage() {
     <div className="p-6 lg:p-10 max-w-3xl mx-auto">
       <MutationRecovery mutations={mutations} />
       <div className="mb-6">
-        <h1 className="text-2xl font-black text-slate-900">タスク・活動</h1>
+        <SfaPageHeading className="text-2xl font-black text-slate-900">タスク・活動</SfaPageHeading>
         <p className="text-slate-500 font-bold text-sm">やること・期日と、活動の記録をまとめて管理</p>
       </div>
 
@@ -235,12 +239,12 @@ export default function SfaTasksPage() {
           className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold"
         />
         <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="rounded-xl border border-slate-200 px-3 py-2.5 font-bold text-sm" />
-        <button onClick={create} disabled={busy || mutations.creationBlocked('task') || !ready} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-lime-600 text-white font-black disabled:opacity-50 whitespace-nowrap">追加</button>
+        <button onClick={create} disabled={busy || mutations.creationBlocked('task') || !ready} className={`px-5 py-2.5 rounded-xl text-white font-black disabled:opacity-50 whitespace-nowrap ${uiNext ? 'bg-[#0066ff] hover:bg-[#0052cc]' : 'bg-gradient-to-r from-green-500 to-lime-600'}`}>追加</button>
       </div>
 
       <div className="space-y-2">
         {open.length === 0 && done.length === 0 && loadedPage > 0 && !listLoading && !listError && (
-          <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-slate-400 font-bold">タスクがありません。上から追加しましょう。</div>
+          <SfaEmpty title="まだタスクがありません" description="上の欄にやることと期日を入れて「追加」を押すと、ここに並びます。" legacy={<div className="bg-white rounded-2xl shadow-sm p-10 text-center text-slate-400 font-bold">タスクがありません。上から追加しましょう。</div>} />
         )}
         {open.map(row)}
         {done.length > 0 && (

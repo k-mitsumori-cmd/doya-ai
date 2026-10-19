@@ -1,4 +1,5 @@
 'use client'
+import { PageTitle } from '@/components/hr/ui-next'
 import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
@@ -176,9 +177,9 @@ export default function EmployeeDetailPage() {
             )}
             <div className="text-center sm:text-left flex-1">
               <div className="flex items-center gap-3 justify-center sm:justify-start flex-wrap">
-                <h1 className="text-3xl font-black text-slate-900">
+                <PageTitle className="text-3xl font-black text-slate-900">
                   {employee.lastName} {employee.firstName}
-                </h1>
+                </PageTitle>
                 {canManageEmployees && <Link
                   href={`/hr/employees/${id}/edit`}
                   className="flex items-center gap-1.5 px-4 py-2 bg-sky-50 text-sky-600 rounded-full text-sm font-bold hover:bg-sky-100 transition-colors"

@@ -1,5 +1,6 @@
 'use client'
 
+import { PageTitle } from './ui-next'
 import toast from 'react-hot-toast'
 
 import { useState } from 'react'
@@ -75,7 +76,7 @@ export default function HrOnboarding() {
               <span className="material-symbols-outlined text-2xl">groups</span>
             </div>
             <div>
-              <h1 className="text-2xl font-black text-gray-900">ドヤHR へようこそ!</h1>
+              <PageTitle className="text-2xl font-black text-gray-900">ドヤHR へようこそ!</PageTitle>
               <p className="text-base font-bold text-gray-500">かんたんに組織を作成しましょう</p>
             </div>
           </div>

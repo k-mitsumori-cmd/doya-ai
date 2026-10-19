@@ -1,0 +1,65 @@
+/*
+ * ペルソナの紫・桃色を、ブランドの青にそろえる（UI 品質 H-3・S-22）
+ * ⚠️ 新しい見た目（[data-ui-next='true']。チェックリスト §5.1）のときだけ効く。今の見た目は変えない。
+ * ⚠️ 中身の Tailwind のクラス（purple / pink / fuchsia / violet）を書き換えず、ここで上書きする。
+ *    ツールの画面に新しく紫のクラスを足したら、ここにも足すこと（同じ濃さの青に置き換える。桃色のグラデーションは1段濃い青、
+ *    桃色の文字・背景・線はアクセントの桃色 #ff1e72 の段階）。
+ * 青の段階: 600 = --blue（#0066ff）。50〜200 は --blue-soft・--blue-line に近い淡い青。
+ */
+:global([data-ui-next='true']) .brand :global(.bg-pink-100) { background-color: rgb(255 227 237); }
+:global([data-ui-next='true']) .brand :global(.bg-purple-100) { background-color: rgb(232 240 255); }
+:global([data-ui-next='true']) .brand :global(.bg-purple-50) { background-color: rgb(242 247 255); }
+:global([data-ui-next='true']) .brand :global(.bg-purple-50\/50) { background-color: rgb(242 247 255 / 0.5); }
+:global([data-ui-next='true']) .brand :global(.bg-purple-500) { background-color: rgb(43 128 255); }
+:global([data-ui-next='true']) .brand :global(.bg-purple-600) { background-color: rgb(0 102 255); }
+:global([data-ui-next='true']) .brand :global(.bg-violet-50) { background-color: rgb(242 247 255); }
+:global([data-ui-next='true']) .brand :global(.bg-violet-500) { background-color: rgb(43 128 255); }
+:global([data-ui-next='true']) .brand :global(.bg-violet-600) { background-color: rgb(0 102 255); }
+:global([data-ui-next='true']) .brand :global(.border-purple-100) { border-color: rgb(232 240 255); }
+:global([data-ui-next='true']) .brand :global(.border-purple-200) { border-color: rgb(215 229 255); }
+:global([data-ui-next='true']) .brand :global(.border-purple-300) { border-color: rgb(169 200 255); }
+:global([data-ui-next='true']) .brand :global(.border-purple-500\/30) { border-color: rgb(43 128 255 / 0.3); }
+:global([data-ui-next='true']) .brand :global(.border-violet-100) { border-color: rgb(232 240 255); }
+:global([data-ui-next='true']) .brand :global(.border-violet-200) { border-color: rgb(215 229 255); }
+:global([data-ui-next='true']) .brand :global(.fill-purple-600) { fill: rgb(0 102 255); }
+:global([data-ui-next='true']) .brand :global(.focus\:border-purple-500):focus { border-color: rgb(43 128 255); }
+:global([data-ui-next='true']) .brand :global(.focus\:ring-purple-500\/50):focus { --tw-ring-color: rgb(43 128 255 / 0.5); }
+:global([data-ui-next='true']) .brand :global(.hover\:bg-purple-100):hover { background-color: rgb(232 240 255); }
+:global([data-ui-next='true']) .brand :global(.hover\:bg-purple-50):hover { background-color: rgb(242 247 255); }
+:global([data-ui-next='true']) .brand :global(.hover\:bg-purple-500):hover { background-color: rgb(43 128 255); }
+:global([data-ui-next='true']) .brand :global(.hover\:bg-purple-900\/30):hover { background-color: rgb(10 47 138 / 0.3); }
+:global([data-ui-next='true']) .brand :global(.hover\:text-purple-600):hover { color: rgb(0 102 255); }
+:global([data-ui-next='true']) .brand :global(.ring-purple-200) { --tw-ring-color: rgb(215 229 255); }
+:global([data-ui-next='true']) .brand :global(.shadow-purple-500\/25) { --tw-shadow-color: rgb(43 128 255 / 0.25); --tw-shadow: var(--tw-shadow-colored); }
+:global([data-ui-next='true']) .brand :global(.text-pink-500) { color: rgb(255 30 114); }
+:global([data-ui-next='true']) .brand :global(.text-pink-700) { color: rgb(184 0 73); }
+:global([data-ui-next='true']) .brand :global(.text-purple-100) { color: rgb(232 240 255); }
+:global([data-ui-next='true']) .brand :global(.text-purple-300) { color: rgb(169 200 255); }
+:global([data-ui-next='true']) .brand :global(.text-purple-400) { color: rgb(92 155 255); }
+:global([data-ui-next='true']) .brand :global(.text-purple-500) { color: rgb(43 128 255); }
+:global([data-ui-next='true']) .brand :global(.text-purple-600) { color: rgb(0 102 255); }
+:global([data-ui-next='true']) .brand :global(.text-purple-700) { color: rgb(0 82 214); }
+:global([data-ui-next='true']) .brand :global(.text-purple-800) { color: rgb(0 71 184); }
+:global([data-ui-next='true']) .brand :global(.text-purple-950) { color: rgb(10 15 60); }
+:global([data-ui-next='true']) .brand :global(.text-violet-500) { color: rgb(43 128 255); }
+:global([data-ui-next='true']) .brand :global(.from-purple-50) { --tw-gradient-from: rgb(242 247 255) var(--tw-gradient-from-position); --tw-gradient-to: rgb(242 247 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.from-purple-500) { --tw-gradient-from: rgb(43 128 255) var(--tw-gradient-from-position); --tw-gradient-to: rgb(43 128 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.from-purple-500\/20) { --tw-gradient-from: rgb(43 128 255 / 0.2) var(--tw-gradient-from-position); --tw-gradient-to: rgb(43 128 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.from-purple-600) { --tw-gradient-from: rgb(0 102 255) var(--tw-gradient-from-position); --tw-gradient-to: rgb(0 102 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.from-purple-700) { --tw-gradient-from: rgb(0 82 214) var(--tw-gradient-from-position); --tw-gradient-to: rgb(0 82 214 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.from-purple-900\/50) { --tw-gradient-from: rgb(10 47 138 / 0.5) var(--tw-gradient-from-position); --tw-gradient-to: rgb(10 47 138 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.from-violet-700) { --tw-gradient-from: rgb(0 82 214) var(--tw-gradient-from-position); --tw-gradient-to: rgb(0 82 214 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.hover\:from-purple-500):hover { --tw-gradient-from: rgb(43 128 255) var(--tw-gradient-from-position); --tw-gradient-to: rgb(43 128 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+:global([data-ui-next='true']) .brand :global(.hover\:to-pink-500):hover { --tw-gradient-to: rgb(0 102 255) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-pink-50) { --tw-gradient-to: rgb(232 240 255) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-pink-500) { --tw-gradient-to: rgb(0 102 255) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-pink-500\/20) { --tw-gradient-to: rgb(0 102 255 / 0.2) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-pink-600) { --tw-gradient-to: rgb(0 82 214) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-purple-50\/30) { --tw-gradient-to: rgb(242 247 255 / 0.3) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-purple-600) { --tw-gradient-to: rgb(0 102 255) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-purple-950\/30) { --tw-gradient-to: rgb(10 15 60 / 0.3) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-violet-100) { --tw-gradient-to: rgb(232 240 255) var(--tw-gradient-to-position); }
+:global([data-ui-next='true']) .brand :global(.to-violet-50) { --tw-gradient-to: rgb(242 247 255) var(--tw-gradient-to-position); }
+/* 旧ブランドの紫（#7f19e6）の直書き */
+:global([data-ui-next='true']) .brand :global(.text-\[\#7f19e6\]) { color: rgb(0 102 255); }
+:global([data-ui-next='true']) .brand :global(.from-\[\#7f19e6\]\/10) { --tw-gradient-from: rgb(0 102 255 / 0.1) var(--tw-gradient-from-position); --tw-gradient-to: rgb(0 102 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }

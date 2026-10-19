@@ -1,5 +1,6 @@
 'use client'
 
+import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS, CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import { appendKintaiRequestPage, fetchKintaiRequestPage } from '@/lib/kintai/load-requests'
@@ -192,7 +193,7 @@ export default function ApprovalsPage() {
           <div className="flex items-center gap-3">
             <img src="/kintai/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
-              <h1 className="text-xl font-bold text-slate-800">承認管理</h1>
+              <PageTitle className="text-xl font-bold text-slate-800">承認管理</PageTitle>
               <p className="text-xs text-slate-500">申請の承認・却下を管理</p>
             </div>
           </div>

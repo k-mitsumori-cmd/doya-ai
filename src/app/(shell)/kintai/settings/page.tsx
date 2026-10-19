@@ -1,5 +1,6 @@
 'use client'
 
+import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { validateKintaiWorkRuleInput, validateKintaiWorkRuleSchedule } from '@/lib/kintai/work-rule-input'
 import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
@@ -212,7 +213,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-3">
             <img src="/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
-              <h1 className="text-2xl font-black text-slate-800">就業ルール設定</h1>
+              <PageTitle className="text-2xl font-black text-slate-800">就業ルール設定</PageTitle>
               <p className="text-xs text-slate-500">勤務時間やフレックスを設定しよう</p>
             </div>
           </div>

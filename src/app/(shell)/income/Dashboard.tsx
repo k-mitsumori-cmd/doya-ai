@@ -9,6 +9,8 @@ import {
   Button, Card, EmptyState, Gate, ListSkeleton, MonthSwitcher, PageHeader, PageShell, StatTile, StatsSkeleton, Skeleton,
   fetchJson, monthLabel, num, s, useResource, yen,
 } from '@/components/income/ui'
+import { IncomeHero, OnboardingSteps, TrendChart, YenCount } from '@/components/income/next'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 type Action = { kind: string; title: string; detail: string; amount: number | null; href: string; dueOn: string }
 type TrendRow = { month: string; revenue: number; received: number; expense: number | null; profit: number | null }
@@ -112,9 +114,13 @@ function DashboardSkeleton() {
 export default function Dashboard() {
   const [month, setMonth] = useState(() => todayJst().slice(0, 7))
   const res = useResource(() => fetchJson<Summary>(`/api/income/summary?month=${month}`), month)
+  // 新しい見た目（キービジュアル・数字の動き・グラフ）は、許可した人だけに出す（チェックリスト §5.1）
+  const uiNext = useUiNext()
+  const n = (v: number | null) => (uiNext ? <YenCount value={v} /> : num(v))
 
   return (
     <PageShell>
+      {uiNext && <IncomeHero />}
       <PageHeader title={`${monthLabel(month)}の収入`} sub="売上予定・請求・入金を月ごとに確認します" actions={<MonthSwitcher month={month} onChange={setMonth} />} />
       <Gate res={res} skeleton={<DashboardSkeleton />}>
         {(data) => {
@@ -122,20 +128,20 @@ export default function Dashboard() {
           const empty = k.scheduled === 0 && k.invoiced === 0 && k.received === 0 && k.unpaid === 0 && k.scheduleCount === 0 && data.actions.length === 0
           return (
             <div className={s.stackY} style={{ opacity: res.loading ? 0.6 : 1, transition: 'opacity .2s' }}>
-              {empty && <Onboarding />}
+              {empty && (uiNext ? <OnboardingSteps /> : <Onboarding />)}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <StatTile label="売上予定（税抜）" value={num(k.scheduled)} unit="円" sub={`契約 ${k.scheduleCount} 件`} />
-                <StatTile label="請求済（税抜）" value={num(k.invoiced)} unit="円" sub={`${k.invoicedCount} / ${k.scheduleCount} 件`} />
-                <StatTile label="入金済" value={num(k.received)} unit="円" tone="ok" />
-                <StatTile label="未入金（税込）" value={num(k.unpaid)} unit="円" sub={`うち遅延 ${k.overdueCount} 件`} tone={k.overdueCount > 0 ? 'bad' : 'default'} />
+                <StatTile label="売上予定（税抜）" value={n(k.scheduled)} unit="円" sub={`契約 ${k.scheduleCount} 件`} />
+                <StatTile label="請求済（税抜）" value={n(k.invoiced)} unit="円" sub={`${k.invoicedCount} / ${k.scheduleCount} 件`} />
+                <StatTile label="入金済" value={n(k.received)} unit="円" tone="ok" />
+                <StatTile label="未入金（税込）" value={n(k.unpaid)} unit="円" sub={`うち遅延 ${k.overdueCount} 件`} tone={k.overdueCount > 0 ? 'bad' : 'default'} />
               </div>
 
               {data.expense.connected ? (
                 <div className={s.stackY} style={{ gap: 8 }}>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <StatTile label="支出" value={num(k.expense)} unit="円" sub={data.expense.workspaceName ? `取り込み元: ${data.expense.workspaceName}` : undefined} />
-                    <StatTile label="粗利（売上予定 - 支出）" value={num(k.profit)} unit="円" tone={k.profit !== null && k.profit < 0 ? 'bad' : 'ok'} />
+                    <StatTile label="支出" value={n(k.expense)} unit="円" sub={data.expense.workspaceName ? `取り込み元: ${data.expense.workspaceName}` : undefined} />
+                    <StatTile label="粗利（売上予定 - 支出）" value={n(k.profit)} unit="円" tone={k.profit !== null && k.profit < 0 ? 'bad' : 'ok'} />
                   </div>
                   <p className={s.sub} style={{ margin: 0 }}>支出はドヤプロマネの記録（プロジェクト経費＋人件費）です。</p>
                 </div>
@@ -155,6 +161,7 @@ export default function Dashboard() {
               </Card>
 
               <Card title="月別推移（直近12か月）">
+                {uiNext && <div style={{ marginBottom: 16 }}><TrendChart rows={data.trend} /></div>}
                 <TrendTable rows={data.trend} />
               </Card>
             </div>

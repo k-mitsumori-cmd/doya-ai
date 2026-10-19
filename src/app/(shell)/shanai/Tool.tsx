@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { ArrowRight, Building2, ClipboardList, Image as ImageIcon, Mic, Plus } from 'lucide-react'
 import { api, Card, EmptyState, ErrorState, PageSkeleton, StatusBadge } from '@/components/shanai/ui'
 import { useInShanaiShell } from '@/components/shanai/shell-context'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { ShanaiHero, ShanaiStats, ShanaiSteps, ShanaiCardList } from '@/components/shanai/next'
 
 export interface ShanaiRow {
   id: string
@@ -26,6 +28,8 @@ export default function ShanaiTool({ initialRows, initialCompanyReady }: { initi
   const [error, setError] = useState<string | null>(null)
   // 共通シェルの中では ToolFrame が見出しと説明を出すので、ここでは出さない
   const inShell = useInShanaiShell()
+  // 新しい見た目（キービジュアル・数字・使い方・カードの入り）は、許可した人だけに出す（チェックリスト §5.1）
+  const uiNext = useUiNext()
 
   const load = async () => {
     setError(null)
@@ -49,6 +53,21 @@ export default function ShanaiTool({ initialRows, initialCompanyReady }: { initi
   if (error) return <ErrorState message={error} onRetry={() => void load()} />
   if (rows === null) return <PageSkeleton variant="list" />
 
+  if (uiNext) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+        <ShanaiHero />
+        {companyReady === false && <CompanyNotice />}
+        {rows.length === 0 ? <ShanaiSteps /> : (
+          <>
+            <ShanaiStats rows={rows} />
+            <ShanaiCardList rows={rows} />
+          </>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -68,25 +87,7 @@ export default function ShanaiTool({ initialRows, initialCompanyReady }: { initi
         </Link>
       </div>
 
-      {companyReady === false && (
-        <Card className="mt-6 border-[var(--blue-line)] bg-[var(--blue-soft)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-[var(--blue-deep)]" />
-              <div>
-                <p className="text-sm font-black text-[var(--ink)]">はじめに会社情報を登録してください</p>
-                <p className="mt-0.5 text-xs font-bold leading-relaxed text-[var(--sub)]">
-                  会社サイトやサービスサイトのURLを入れると、ミッション・事業・制度などを読み取ります。読み取った内容は、記事の中で会社の魅力として紹介します。
-                </p>
-              </div>
-            </div>
-            <Link href="/shanai/company" className="inline-flex items-center gap-1 rounded-[var(--r-sm)] bg-[var(--paper)] px-3 py-2 text-xs font-black text-[var(--blue-deep)] ring-1 ring-[var(--blue-line)] hover:bg-[var(--blue-soft)]">
-              会社情報を登録する
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </Card>
-      )}
+      {companyReady === false && <CompanyNotice className="mt-6" />}
 
       <div className="mt-6">
         {rows.length === 0 ? (
@@ -137,5 +138,28 @@ export default function ShanaiTool({ initialRows, initialCompanyReady }: { initi
         )}
       </div>
     </div>
+  )
+}
+
+/** 会社情報が未登録のときの案内 */
+function CompanyNotice({ className = '' }: { className?: string }) {
+  return (
+    <Card className={`${className} border-[var(--blue-line)] bg-[var(--blue-soft)]`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-[var(--blue-deep)]" />
+          <div>
+            <p className="text-sm font-black text-[var(--ink)]">はじめに会社情報を登録してください</p>
+            <p className="mt-0.5 text-xs font-bold leading-relaxed text-[var(--sub)]">
+              会社サイトやサービスサイトのURLを入れると、ミッション・事業・制度などを読み取ります。読み取った内容は、記事の中で会社の魅力として紹介します。
+            </p>
+          </div>
+        </div>
+        <Link href="/shanai/company" className="inline-flex items-center gap-1 rounded-[var(--r-sm)] bg-[var(--paper)] px-3 py-2 text-xs font-black text-[var(--blue-deep)] ring-1 ring-[var(--blue-line)] hover:bg-[var(--blue-soft)]">
+          会社情報を登録する
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+    </Card>
   )
 }

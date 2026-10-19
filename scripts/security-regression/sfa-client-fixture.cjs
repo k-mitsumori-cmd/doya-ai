@@ -132,7 +132,10 @@ async function fixture(page, options = {}) {
     setTimeout: (fn, ms) => setTimeout(fn, timeout && [30000, 310000].includes(ms) ? 5 : ms), clearTimeout };
   const externals = {
     'framer-motion': { motion: { div: ({ children }) => React.createElement('div', null, children) }, AnimatePresence: ({ children }) => children },
-    'lucide-react': { Menu: () => null, TrendingUp: () => null },
+    // アイコンと ds の部品は、新しい見た目（useUiNext() が真）のときだけ描く。この試験は今の見た目（偽）で動かすので、空の部品でよい
+    'lucide-react': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : () => null }),
+    '@/components/ds': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : () => null }),
+    '@/components/ds/motion': new Proxy({}, { get: (_, name) => name === '__esModule' ? false : ({ children }) => children ?? null }),
     '@/components/sfa/SfaSidebar': { __esModule: true, default: ({ plan, memberships }) => React.createElement('aside', { 'data-plan': plan || '', 'data-memberships': JSON.stringify(memberships) }) },
     react: React, 'react/jsx-runtime': require('react/jsx-runtime'), 'next-auth/react': { useSession: session },
     'next/navigation': { useParams: () => ({ orgSlug }), usePathname: () => '/sfa/' + orgSlug },

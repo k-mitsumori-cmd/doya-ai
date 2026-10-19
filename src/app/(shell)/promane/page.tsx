@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { Button } from '@/components/promane/ui/button'
 import { Badge } from '@/components/promane/ui/badge'
 import { CreateWorkspaceButton } from '@/components/promane/create-workspace-button'
+import { isUiNext } from '@/lib/ui-next'
 
 const ROLE_LABELS: Record<string, string> = {
   owner: '👑 オーナー',
@@ -16,6 +17,8 @@ const ROLE_LABELS: Record<string, string> = {
   member: '👤 メンバー',
   guest: '👁 ゲスト',
 }
+// 新しい見た目では、絵文字をアイコンにしない（UI 品質。チェックリスト §5.1 の内側だけ）
+const ROLE_LABELS_NEXT: Record<string, string> = { owner: 'オーナー', admin: '管理者', member: 'メンバー', guest: 'ゲスト' }
 
 export default async function PromaneEntryPage({
   searchParams,
@@ -87,6 +90,8 @@ export default async function PromaneEntryPage({
   }
 
   // 複数 or 招待あり → セレクターUI
+  const uiNext = await isUiNext()
+  const roleLabels = uiNext ? ROLE_LABELS_NEXT : ROLE_LABELS
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-violet-50 p-6">
       <div className="max-w-4xl mx-auto pt-6">
@@ -105,7 +110,7 @@ export default async function PromaneEntryPage({
         {/* Header */}
         <div className="text-center mb-10 animate-slide-up">
           <h1 className="text-[28px] font-black text-gray-900 tracking-tight">どのワークスペースで作業する？</h1>
-          <p className="text-[14px] text-gray-500 font-bold mt-2">参加中のワークスペース・招待を確認しよう 👇</p>
+          <p className="text-[14px] text-gray-500 font-bold mt-2">{uiNext ? '参加中のワークスペースと、届いている招待です。' : '参加中のワークスペース・招待を確認しよう 👇'}</p>
         </div>
 
         {/* 招待 (pending invitations) */}
@@ -126,12 +131,12 @@ export default async function PromaneEntryPage({
                 >
                   <div className="flex items-center justify-between gap-5">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-black opacity-80">📩 招待が届いています</p>
+                      <p className="text-[12px] font-black opacity-80">{uiNext ? '招待が届いています' : '📩 招待が届いています'}</p>
                       <p className="text-[22px] font-black mt-1 truncate">{inv.workspace.name}</p>
                       <p className="text-[13px] font-bold opacity-90 mt-1">
                         {inv.invitedBy.name || inv.invitedBy.email} さんから
                         <span className="ml-2 px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-black">
-                          {ROLE_LABELS[inv.role] || inv.role}
+                          {roleLabels[inv.role] || inv.role}
                         </span>
                       </p>
                     </div>
@@ -173,7 +178,7 @@ export default async function PromaneEntryPage({
                     <div className="flex-1 min-w-0">
                       <p className="text-[18px] font-black text-gray-900 truncate">{m.workspace.name}</p>
                       <Badge variant="secondary" className="mt-1 font-black text-[11px] rounded-full">
-                        {ROLE_LABELS[m.role] || m.role}
+                        {roleLabels[m.role] || m.role}
                       </Badge>
                     </div>
                   </div>

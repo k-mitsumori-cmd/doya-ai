@@ -3,10 +3,13 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 // ⚠️ 料金は統一プラン。サービスごとに個別課金しないこと。
 //    金額の正本は src/lib/unified-plan.ts と UnifiedPricingPlans。ここには書かない。
 export default function IncomePricingPage() {
+  // 枠の中では ToolFrame が h1 を持つので、新しい見た目では見出しを h2 にする（見出しを1つにする。S-57）
+  const Title = useUiNext() ? 'h2' : 'h1'
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-5xl px-6 py-12">
@@ -18,7 +21,7 @@ export default function IncomePricingPage() {
             <ArrowLeft className="h-4 w-4" />
             ドヤ収入管理に戻る
           </Link>
-          <h1 className="text-3xl font-black text-slate-900">料金プラン</h1>
+          <Title className="text-3xl font-black text-slate-900">料金プラン</Title>
           <p className="mx-auto mt-2 max-w-xl font-bold text-slate-500">
             無料で使いはじめて、必要になったらプロプランに切り替えられます。プロプラン1つで、ドヤAIの全サービスのプロ機能が使えます。
           </p>

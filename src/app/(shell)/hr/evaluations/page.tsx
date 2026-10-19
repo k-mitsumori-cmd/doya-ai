@@ -1,4 +1,5 @@
 'use client'
+import { PageTitle } from '@/components/hr/ui-next'
 import HrPeriodCreationRecovery from '@/components/hr/HrPeriodCreationRecovery'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
@@ -88,7 +89,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
         {/* Header */}
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-black text-slate-900">評価管理</h1>
+            <PageTitle className="text-3xl font-black text-slate-900">評価管理</PageTitle>
             <p className="text-sm text-slate-500 mt-1">MBO評価の期間を管理</p>
           </div>
           {canCreatePeriods && (

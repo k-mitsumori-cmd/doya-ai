@@ -1,3 +1,4 @@
+import PromanePageHeading from '@/components/promane/PromanePageHeading';
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -20,7 +21,7 @@ export default async function NewProjectPage({
 
   return (
     <div className="p-6">
-      <h1 className="mb-6 text-2xl font-bold">新規プロジェクト作成</h1>
+      <PromanePageHeading className="mb-6 text-2xl font-bold">新規プロジェクト作成</PromanePageHeading>
       <ProjectForm workspaceSlug={workspaceSlug} workspaceId={workspace.id} clients={clients} />
     </div>
   );

@@ -5,6 +5,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { EmptyState } from '@/components/EmptyState'
+import { Button, EmptyState as DsEmptyState } from '@/components/ds'
+import { CunningModeIcon } from '@/components/cunning/mode-icon'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 interface SessionRow {
   id: string
@@ -17,6 +20,9 @@ interface SessionRow {
 }
 
 export default function CunningHistoryPage() {
+  // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
+  const uiNext = useUiNext()
+  const Title = uiNext ? 'h2' : 'h1'
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -81,12 +87,20 @@ export default function CunningHistoryPage() {
   }
 
   return (
-    <div className="p-6 lg:p-10 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-black text-slate-900 mb-6">履歴</h1>
+    <div className={`${uiNext ? 'p-4 sm:p-6 lg:p-10' : 'p-6 lg:p-10'} max-w-4xl mx-auto`}>
+      <Title className="text-2xl font-black text-slate-900 mb-6">履歴</Title>
       {error && <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><p>{error}</p><button onClick={() => void load(nextCursor)} disabled={loading} className="mt-2 font-bold underline">再試行する</button></div>}
       {loading && sessions.length === 0 ? (
         <p className="text-slate-400 font-bold">読み込み中…</p>
       ) : sessions.length === 0 && !error && !nextCursor ? (
+        uiNext ? (
+          <DsEmptyState
+            title="まだセッションがありません"
+            description={<>会議を開始すると、相手の質問と<wbr />回答のカンペがここに残ります。</>}
+            art="/cunning/empty-cards.webp"
+            action={<Button href="/cunning" icon="Mic">ライブを始める</Button>}
+          />
+        ) : (
         <div className="bg-white rounded-2xl shadow-sm">
           <EmptyState
             kind="not-generated"
@@ -94,12 +108,13 @@ export default function CunningHistoryPage() {
             description="会議を開始すると、相手の質問と回答カンペがここに残ります。"
           />
         </div>
+        )
       ) : (
         <div className="space-y-2">
           {sessions.map((s) => (
             <div key={s.id} className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm">
               <Link href={`/cunning/history/${s.id}`} className="flex items-center gap-3 min-w-0 flex-1">
-                <span>{s.mode === 'interview' ? '🎓' : '💼'}</span>
+                {uiNext ? <CunningModeIcon mode={s.mode} size={18} className="text-[#0066ff] flex-shrink-0" /> : <span>{s.mode === 'interview' ? '🎓' : '💼'}</span>}
                 <div className="min-w-0">
                   <p className="font-bold text-slate-700 truncate">{s.title}</p>
                   <p className="text-xs font-bold text-slate-400">

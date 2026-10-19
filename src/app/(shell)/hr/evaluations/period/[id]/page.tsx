@@ -1,4 +1,5 @@
 'use client'
+import { PageTitle } from '@/components/hr/ui-next'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useRef, useState } from 'react'
@@ -188,7 +189,7 @@ function EvaluationPeriodContent({ id, actor }: { id: string; actor: string }) {
     {periodRecovery}
     {creationRecovery}
     <div className="bg-white rounded-3xl shadow-md p-8" role="alert">
-      <h1 className="text-lg font-bold">{view.status === 404 ? '評価期間が見つかりません' : '評価期間を表示できません'}</h1>
+      <PageTitle className="text-lg font-bold">{view.status === 404 ? '評価期間が見つかりません' : '評価期間を表示できません'}</PageTitle>
       <p className="mt-3">{view.message}</p>
       <div className="flex flex-wrap gap-3 mt-4">
         {view.status === 401 && <Link className={buttonClass} href={'/auth/signin?callbackUrl=' + encodeURIComponent('/hr/evaluations/period/' + id)}>ログインする</Link>}
@@ -205,7 +206,7 @@ function EvaluationPeriodContent({ id, actor }: { id: string; actor: string }) {
     {creationRecovery}
     <header className="bg-white rounded-3xl shadow-md p-6 mb-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div><h1 className="text-2xl font-black text-slate-900 break-words">{period.name}</h1>
+        <div><PageTitle className="text-2xl font-black text-slate-900 break-words">{period.name}</PageTitle>
           <p className="mt-2 text-sm font-bold">{Object.prototype.hasOwnProperty.call(PERIOD_STATUS, period.status) ? PERIOD_STATUS[period.status] : '状態未確認'}</p>
           <p className="text-sm text-slate-500 mt-1">{fmtDate(period.startDate)} 〜 {fmtDate(period.endDate)}</p></div>
         <div className="flex items-center gap-2">

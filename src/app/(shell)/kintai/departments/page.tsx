@@ -1,5 +1,6 @@
 'use client'
 
+import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useRef, useState } from 'react'
 
 const DEPT_BORDER_COLORS = [
@@ -83,7 +84,7 @@ export default function DepartmentsPage() {
           <div className="flex items-center gap-3">
             <img src="/kintai/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
-              <h1 className="text-2xl font-black text-slate-800">部署管理</h1>
+              <PageTitle className="text-2xl font-black text-slate-800">部署管理</PageTitle>
               {!loading && !loadError && (
                 <span className="text-sm text-slate-500">
                   全<span className="font-bold text-[#7f19e6]">{departments.length}</span>部署

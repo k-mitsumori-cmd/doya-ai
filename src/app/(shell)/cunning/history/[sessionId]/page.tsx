@@ -4,6 +4,9 @@ import { mergeCunningEntries } from '@/lib/cunning/history-client'
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { UiIcon } from '@/components/icons'
+import { CunningModeIcon } from '@/components/cunning/mode-icon'
 
 interface Transcript {
   id: string
@@ -55,6 +58,9 @@ export default function CunningSessionReview() {
 }
 
 function CunningSessionContent({ sessionId }: { sessionId: string }) {
+  // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
+  const uiNext = useUiNext()
+  const Title = uiNext ? 'h2' : 'h1'
   const [session, setSession] = useState<SessionDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [genLoading, setGenLoading] = useState(false)
@@ -149,13 +155,13 @@ function CunningSessionContent({ sessionId }: { sessionId: string }) {
   if (!session) return <div className="p-10 text-slate-400 font-bold">セッションが見つかりません</div>
 
   return (
-    <div className="p-6 lg:p-10 max-w-4xl mx-auto">
+    <div className={`${uiNext ? 'p-4 sm:p-6 lg:p-10' : 'p-6 lg:p-10'} max-w-4xl mx-auto`}>
       <div className="flex items-center gap-3 mb-2">
         <Link href="/cunning/history" className="text-slate-400 hover:text-slate-600">
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
-        <span>{session.mode === 'interview' ? '🎓' : '💼'}</span>
-        <h1 className="text-xl font-black text-slate-900">{session.title}</h1>
+        {uiNext ? <CunningModeIcon mode={session.mode} size={20} className="text-[#0066ff] flex-shrink-0" /> : <span>{session.mode === 'interview' ? '🎓' : '💼'}</span>}
+        <Title className="text-xl font-black text-slate-900">{session.title}</Title>
       </div>
       <p className="text-xs font-bold text-slate-400 mb-6">
         {new Date(session.createdAt).toLocaleString('ja-JP')} · {Math.max(session.totals?.answers ?? 0, session.answers.length)}回答 ·{' '}
@@ -228,7 +234,7 @@ function CunningSessionContent({ sessionId }: { sessionId: string }) {
           <div className="grid grid-cols-2 gap-3">
             {session.report.good.length > 0 && (
               <div className="bg-green-50 rounded-xl p-3">
-                <p className="text-xs font-black text-green-600 mb-1">👍 良かった点</p>
+                <p className="text-xs font-black text-green-600 mb-1">{uiNext ? <span className="inline-flex items-center gap-1"><UiIcon name="done" size={14} />良かった点</span> : '👍 良かった点'}</p>
                 <ul className="text-xs text-slate-600 font-bold space-y-0.5 list-disc list-inside">
                   {session.report.good.map((d, i) => <li key={i}>{d}</li>)}
                 </ul>
@@ -236,7 +242,7 @@ function CunningSessionContent({ sessionId }: { sessionId: string }) {
             )}
             {session.report.improve.length > 0 && (
               <div className="bg-amber-50 rounded-xl p-3">
-                <p className="text-xs font-black text-amber-600 mb-1">💡 改善点</p>
+                <p className="text-xs font-black text-amber-600 mb-1">{uiNext ? <span className="inline-flex items-center gap-1"><UiIcon name="idea" size={14} />改善点</span> : '💡 改善点'}</p>
                 <ul className="text-xs text-slate-600 font-bold space-y-0.5 list-disc list-inside">
                   {session.report.improve.map((d, i) => <li key={i}>{d}</li>)}
                 </ul>
@@ -276,7 +282,7 @@ function CunningSessionContent({ sessionId }: { sessionId: string }) {
 
       {moreError.answers && <p role="alert" className="mb-2 text-sm text-amber-700">{moreError.answers} <button className="underline font-bold" onClick={() => setRetryStep(n => n + 1)}>履歴を読み直す</button></p>}
       {session.pagination?.answers && <button disabled={moreBusy.answers} onClick={() => void loadMore('answers')} className="mb-8 rounded-xl border px-4 py-2 text-sm font-bold disabled:opacity-50">{moreBusy.answers ? '読み込み中…' : '回答の続きを読み込む'}</button>}
-      <h2 className="font-black text-slate-700 mb-3">文字起こし（🟦自分 / ⬜相手）</h2>
+      <h2 className="font-black text-slate-700 mb-3">{uiNext ? <>文字起こし<span className="ml-2 text-xs font-bold text-slate-500">右の青が自分、左が相手</span></> : '文字起こし（🟦自分 / ⬜相手）'}</h2>
       <div className="bg-slate-900 rounded-2xl p-4 max-h-[40vh] overflow-y-auto space-y-1.5">
         {session.transcripts.length === 0 ? (
           <p className="text-slate-500 font-bold text-sm">記録はありません</p>

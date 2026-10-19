@@ -1,4 +1,5 @@
 'use client'
+import { PageTitle } from '@/components/hr/ui-next'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useRef, useState } from 'react'
@@ -67,7 +68,7 @@ export default function OrgChartPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-black text-slate-900">組織図</h1>
+          <PageTitle className="text-3xl font-black text-slate-900">組織図</PageTitle>
           <p className="text-sm text-slate-500 mt-1">部署構成と所属メンバーをビジュアルで確認</p>
         </div>
 

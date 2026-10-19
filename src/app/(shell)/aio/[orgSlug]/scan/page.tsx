@@ -8,10 +8,15 @@ import { useAioQuickStart } from '@/lib/aio/use-quick-start'
 import { AioQuickStartStatus } from '@/components/aio/quick-start-status'
 import { DoyaKun, sym } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
+import { ToolHero } from '@/components/ds'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 const EXAMPLES = ['https://doya-ai.surisuta.jp', 'https://example.co.jp']
 
 export default function AioScanPage() {
+  // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
+  const uiNext = useUiNext()
+  const Title = uiNext ? 'h2' : 'h1'
   const { orgSlug } = useParams<{ orgSlug: string }>()
   const router = useRouter()
   const [url, setUrl] = useState('')
@@ -28,12 +33,23 @@ export default function AioScanPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className={uiNext ? 'max-w-3xl mx-auto p-4 sm:p-6' : 'max-w-2xl mx-auto p-6'}>
+      {uiNext ? (
+        <div className="mb-5">
+          {/* 見出しは枠（ToolFrame）の h1 が出す。ここはツール名ではなく「何ができるか」を書く */}
+          <ToolHero
+            title={<>AI検索で、自社が<wbr />どう語られているかを調べます</>}
+            lead={<>調べたいサービスのURLを入れるだけ。<wbr />サービス名も監視する質問もAIが判定して、<wbr />ChatGPT・Gemini などでの今の見え方を診断します。</>}
+            art="/aio/hero.webp"
+          />
+        </div>
+      ) : (
       <div className="text-center mt-4 mb-6">
         <div className="flex justify-center"><DoyaKun mood="point" size={104} /></div>
-        <h1 className="text-2xl md:text-3xl font-black text-slate-900 mt-3">URL AI調査</h1>
+        <Title className="text-2xl md:text-3xl font-black text-slate-900 mt-3">URL AI調査</Title>
         <p className="text-slate-500 font-bold mt-2">調べたいサービスのURLを入れるだけ。AIがサービス名も監視する質問も自動で判定して、AIでの現状を診断します。</p>
       </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-xl shadow-purple-500/10 border border-purple-100 p-5">
         <label htmlFor="aio-scan-service-url" className="block text-sm font-black text-slate-700 mb-2">サービスのURL <span className="text-purple-600">*</span></label>

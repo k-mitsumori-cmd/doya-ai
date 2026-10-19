@@ -19,6 +19,9 @@ import AdImageLp from './Lp'
 import ExportDownload from '@/components/adimage/ExportDownload'
 import { notifyError } from '@/lib/ui/notify'
 import LoadingProgress from '@/components/LoadingProgress'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { Button, ToolHero } from '@/components/ds'
+import AdImageProgressNext from '@/components/adimage/AdImageProgressNext'
 
 interface PlacementRow {
   key: string
@@ -63,6 +66,8 @@ const REFS_PAGE_SIZE = 30
 
 export default function AdImageTool() {
   const { data: session, status: authStatus } = useSession()
+  // 新しい見た目（チェックリスト §5.1）のときだけ、共通の ToolHero・中身の領域だけの生成中表示を使う
+  const uiNext = useUiNext()
   const actor = (session?.user as { id?: string } | undefined)?.id || ''
   const operation = useAdImageRecovery(authStatus, actor)
   const [step, setStep] = useState<Step>('input')
@@ -494,47 +499,65 @@ export default function AdImageTool() {
   )
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
-      {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
-      <LoadingProgress
-        isLoading={analyzing}
-        operationKey="adimage-analyzing"
-        title="ブランドを読み取っています"
-        subtitle="サービスページから訴求のトーンとコピー案を組み立てています。"
-        tips={['Tip: ロゴを登録すると画像に合成できます', 'Tip: 配置を多く選んでも1コンセプトとして数えます', 'Tip: 気に入らなければAIが採点して作り直します']}
-      />
-      <LoadingProgress
-        isLoading={generating}
-        operationKey="adimage-generating"
-        title="広告画像を生成しています"
-        subtitle="媒体ごとの実寸で、文字を画像に描き込んでいます。"
-        tips={['Tip: 目標比率のまま生成するので文字が切れません', 'Tip: 描かれた文字は自動で検査され、不合格なら作り直します', 'Tip: 媒体別に整理したZIPでまとめて落とせます']}
-      />
-      <LoadingProgress
-        isLoading={refining}
-        operationKey="adimage-refining"
-        title="改善版を作っています"
-        subtitle="AIが出来上がった画像を見て採点し、次の案に反映しています。"
-        tips={['Tip: 気になる点をチップで選ぶほど狙いが伝わります', 'Tip: 改善のたびに履歴として残ります']}
-      />
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">ドヤ広告画像AI</h1>
-            <p className="text-xs text-slate-500 font-semibold">サービスURLから、媒体ごとにサイズの揃った広告画像を作ります。</p>
-          </div>
-          {/* ⚠️ 履歴への導線をここに置くこと。無いと作った画像を見返す手段が
-               画面から消え、実装済みの一覧APIが誰にも使われないまま残る */}
-          <Link
-            href="/adimage/history"
-            className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
-          >
-            これまでの画像
-          </Link>
+    <div className={uiNext ? 'bg-slate-50 pb-24' : 'min-h-screen bg-slate-50 pb-24'}>
+      {/* 新しい見た目では、全画面の読み込みを出さず、中身の領域に段階と残り時間を出す（下の main の先頭。UI 品質 C-2・S-18） */}
+      {!uiNext && (
+        <>
+          {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
+          <LoadingProgress
+            isLoading={analyzing}
+            operationKey="adimage-analyzing"
+            title="ブランドを読み取っています"
+            subtitle="サービスページから訴求のトーンとコピー案を組み立てています。"
+            tips={['Tip: ロゴを登録すると画像に合成できます', 'Tip: 配置を多く選んでも1コンセプトとして数えます', 'Tip: 気に入らなければAIが採点して作り直します']}
+          />
+          <LoadingProgress
+            isLoading={generating}
+            operationKey="adimage-generating"
+            title="広告画像を生成しています"
+            subtitle="媒体ごとの実寸で、文字を画像に描き込んでいます。"
+            tips={['Tip: 目標比率のまま生成するので文字が切れません', 'Tip: 描かれた文字は自動で検査され、不合格なら作り直します', 'Tip: 媒体別に整理したZIPでまとめて落とせます']}
+          />
+          <LoadingProgress
+            isLoading={refining}
+            operationKey="adimage-refining"
+            title="改善版を作っています"
+            subtitle="AIが出来上がった画像を見て採点し、次の案に反映しています。"
+            tips={['Tip: 気になる点をチップで選ぶほど狙いが伝わります', 'Tip: 改善のたびに履歴として残ります']}
+          />
+        </>
+      )}
+      {uiNext ? (
+        <div className="mx-auto max-w-6xl px-4 pt-6">
+          {/* 枠の見出し（h1）と重ならないよう、ここは「何ができるか」を書く（H-3・S-57） */}
+          <ToolHero
+            title="URLひとつで、媒体ごとの広告画像をまとめて。"
+            lead="サービスのページを読み取って、コピーを考え、Meta・Google・X・LINE などのサイズで文字入りの広告画像をつくります。"
+            action={<Button href="/adimage/history" variant="secondary" icon="History">これまでの画像</Button>}
+            art="/ui-renewal/mascots/adimage.webp"
+          />
         </div>
-      </header>
+      ) : (
+        <header className="border-b border-slate-200 bg-white">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+            <div>
+              <h1 className="text-lg font-bold text-slate-900">ドヤ広告画像AI</h1>
+              <p className="text-xs text-slate-500 font-semibold">サービスURLから、媒体ごとにサイズの揃った広告画像を作ります。</p>
+            </div>
+            {/* ⚠️ 履歴への導線をここに置くこと。無いと作った画像を見返す手段が
+                 画面から消え、実装済みの一覧APIが誰にも使われないまま残る */}
+            <Link
+              href="/adimage/history"
+              className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+            >
+              これまでの画像
+            </Link>
+          </div>
+        </header>
+      )}
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+        {uiNext && <AdImageProgressNext kind={analyzing ? 'analyzing' : generating ? 'generating' : refining ? 'refining' : null} />}
         {(operation.intent || operation.message) && <section aria-label={operation.intent?.kind.startsWith('logo-') ? 'ロゴ保存の結果確認' : operation.intent?.kind === 'analyze' ? '解析の結果確認' : operation.intent?.kind === 'feedback' ? '採点の結果確認' : '画像生成の結果確認'} className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">
           <p role="status">{operation.message || (operation.result?.state === 'completed' ? '保存済みの結果を表示しました。内容を確認してから次の操作へ進んでください。' : '前の操作の保存結果を確認してください。新しい生成はまだ開始できません。')}</p>
           <div className="mt-3 flex flex-wrap gap-2">

@@ -28,6 +28,7 @@ import {
 import DoyaChar from '@/components/doyaslide/DoyaChar'
 import SlideImage from '@/components/doyaslide/SlideImage'
 import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 type Aspect = 'wide' | 'square' | 'vertical'
 const GENERATED_PREVIEW_STYLES = STYLE_PRESETS.filter(preset => !preset.sampleImages?.length).map(preset => preset.value)
@@ -98,6 +99,9 @@ function frameClass(a: Aspect) {
 }
 
 export default function NewDoyaSlideWizard() {
+  // 新しい見た目（チェックリスト §5.1）では、ページの見出しは枠の h1 に任せて h2 にする（UI 品質 S-57）
+  const uiNext = useUiNext()
+  const Heading = uiNext ? 'h2' : 'h1'
   const router = useRouter()
   const { data: session, status: authStatus } = useSession()
   const actor = authStatus === 'unauthenticated' ? '' : session?.user?.id || ''
@@ -507,7 +511,7 @@ export default function NewDoyaSlideWizard() {
         <span className="material-symbols-outlined text-lg">arrow_back</span>
         プロジェクト一覧
       </Link>
-      <h1 className="text-3xl font-black text-slate-900 mb-3">スライドを作る</h1>
+      <Heading className={`${uiNext ? 'text-2xl' : 'text-3xl'} font-black text-slate-900 mb-3`}>スライドを作る</Heading>
       {(authStatus === 'unauthenticated' || loginRequired) && (
         <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
           <span>スライドを作成するにはログインが必要です。</span>

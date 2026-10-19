@@ -11,7 +11,10 @@ import { AIO_MAX_PROMPTS_PER_SCAN, ENGINE_LABEL, type EngineId, type ScanSummary
 import { isCompleteScan, type ScanCoverageCounts } from '@/lib/aio/coverage'
 import { DoyaKun, sym, type Mood } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
+import { EmptyState } from '@/components/ds'
+import { UiIcon } from '@/components/icons'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 type Tab = 'visibility' | 'sov' | 'citations' | 'recommend'
 
@@ -35,6 +38,9 @@ export default function AioDashboard() {
 }
 
 function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
+  // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
+  const uiNext = useUiNext()
+  const Title = uiNext ? 'h2' : 'h1'
   const loadSequence = useRef(0)
   const searchParams = useSearchParams()
   const autoScanTriggered = useRef(false)
@@ -258,6 +264,29 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
 
   if (!summary && error) return <div className="max-w-2xl mx-auto p-6">{errorBanner}</div>
 
+  if (!summary && uiNext) {
+    // 新しい見た目: 空状態の絵と説明と、次にやること（スキャン実行）を1つだけ出す
+    return (
+      <div className="max-w-2xl mx-auto p-4 sm:p-6">
+        {errorBanner}
+        {scanLimitBanner}
+        {failedBanner}
+        {coverageBanner}
+        {setupBanner}
+        {promptLimitBanner}
+        <EmptyState
+          title="まだスキャン結果がありません"
+          description={<>サービス名とURLは登録済みです。<wbr />「スキャン実行」を押すと、AIでの今の見え方を調べます。<wbr />監視する質問は<Link href={`/aio/${encodeURIComponent(orgSlug)}/prompts`} className="text-[#0047d6] underline">監視プロンプト</Link>で編集できます。</>}
+          art="/aio/empty-scans.webp"
+          action={RunButton}
+        />
+        <p className="mt-4 text-center">
+          <Link href={`/aio/${encodeURIComponent(orgSlug)}/scan`} className="text-sm font-bold text-[#0047d6] hover:underline">別のURLを調べる</Link>
+        </p>
+      </div>
+    )
+  }
+
   if (!summary) {
     return (
       <div className="max-w-2xl mx-auto p-6">
@@ -270,7 +299,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
         <div className="text-center">
           <div className="flex justify-center mt-6"><DoyaKun mood={doya.mood} size={120} /></div>
           <div className="inline-block mt-3 rounded-2xl bg-purple-50 border border-purple-100 px-4 py-2 text-sm font-bold text-purple-800">{doya.message}</div>
-          <h1 className="text-2xl font-black text-slate-900 mt-3">まだスキャン結果がありません</h1>
+          <Title className="text-2xl font-black text-slate-900 mt-3">まだスキャン結果がありません</Title>
           <p className="text-slate-500 font-bold mt-2 mb-6">
             サービス名・URLは登録済みです。下のボタンでAIでの現状をスキャンしましょう（監視する質問は
             <Link href={`/aio/${orgSlug}/prompts`} className="text-purple-700 underline">プロンプト</Link>で編集できます）。
@@ -287,16 +316,16 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className={`max-w-5xl mx-auto ${uiNext ? 'p-4 sm:p-6' : 'p-6'}`}>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
         <div className="flex items-center gap-3 min-w-0">
           <DoyaKun mood={doya.mood} size={56} float={false} className="shrink-0" />
           <div className="min-w-0">
-            <h1 className="text-2xl font-black text-slate-900">AEO ダッシュボード</h1>
+            <Title className="text-2xl font-black text-slate-900">AEO ダッシュボード</Title>
             <p className="text-sm font-bold text-purple-700">{doya.message}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${uiNext ? 'flex-wrap' : ''}`}>
           <Link href={`/aio/${encodeURIComponent(orgSlug)}/history`} className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-purple-200 text-purple-700 font-black text-sm hover:bg-purple-50 transition-colors">スキャン履歴</Link>
           <Link href="/aio" className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-purple-200 text-purple-700 font-black text-sm hover:bg-purple-50 transition-colors">
             {sym('add', 18)}別のURLを調べる
@@ -360,6 +389,8 @@ function DashboardSkeleton() {
 
 // スキャン中の派手な進捗演出。実際の監視プロンプト・エンジンを小出しに見せて飽きさせない。
 function ScanProgress({ brandName, prompts }: { brandName: string | null; prompts: string[] }) {
+  // 新しい見た目（チェックリスト §5.1）のときは、絵文字の代わりに lucide のアイコンを出す
+  const uiNext = useUiNext()
   const [tick, setTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000)
@@ -437,7 +468,7 @@ function ScanProgress({ brandName, prompts }: { brandName: string | null; prompt
         ))}
       </div>
 
-      <p key={tip} className="mt-4 text-center text-xs font-bold text-slate-400 animate-fade-in-up">💡 {tip}</p>
+      <p key={tip} className="mt-4 text-center text-xs font-bold text-slate-400 animate-fade-in-up">{uiNext ? <span className="inline-flex items-center gap-1"><UiIcon name="idea" size={14} className="flex-shrink-0" />{tip}</span> : <>💡 {tip}</>}</p>
       <p className="text-center text-[11px] font-bold text-slate-300 mt-2">完了までふつう数分かかります。このままお待ちください。</p>
     </div>
   )

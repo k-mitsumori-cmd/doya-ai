@@ -5,6 +5,8 @@
 // ============================================
 // 組織作成 → 企業URL調査 → 質問セット生成 → 面接URL発行 までを1画面で完了させる。
 
+import { PageTitle, useToolUiNext } from '@/components/mensetsu/ui-next'
+import { EmptyState, ErrorNotice, Skeleton, ToolHero } from '@/components/ds'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import MensetsuLp from './Lp'
@@ -79,6 +81,8 @@ export default function MensetsuTool() {
   const [error, setError] = useState<string | null>(null)
   const [templateUpgrade, setTemplateUpgrade] = useState<{ message: string; url: string } | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  // 新しい見た目（枠の中で useUiNext() が真）のときだけ、ToolHero・空状態・中身の領域だけの読み込みにする
+  const uiNext = useToolUiNext()
   const [moreError, setMoreError] = useState<string | null>(null)
   const [moreLoading, setMoreLoading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -443,6 +447,23 @@ export default function MensetsuTool() {
     }
   }
 
+  if (loading && uiNext) {
+    return (
+      <div className="grid gap-4 px-4 py-6 lg:px-8" aria-busy="true" aria-label="読み込み中">
+        <Skeleton lines={2} height={28} delayMs={0} />
+        <Skeleton lines={5} height={16} delayMs={0} />
+      </div>
+    )
+  }
+
+  if (loadError && uiNext) {
+    return (
+      <div className="px-4 py-6 lg:px-8">
+        <ErrorNotice what="面接の情報を読み込めませんでした。" how={loadError} onRetry={() => void load()} retryLabel="再読み込み" />
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f2f6ff]">
@@ -467,7 +488,7 @@ export default function MensetsuTool() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8">
+    <main className={uiNext ? 'px-4 py-6 lg:px-8' : 'min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8'}>
       {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
       <LoadingProgress
         isLoading={busy === 'generate'}
@@ -477,14 +498,23 @@ export default function MensetsuTool() {
         tips={['Tip: 就職差別につながる質問は生成の時点で除外されます', 'Tip: 全応募者に同じ主質問を当てる構造化面接の方式です', 'Tip: 生成後に質問は自由に編集できます']}
       />
       <div className="mx-auto max-w-[1100px]">
+        {uiNext ? (
+          // キービジュアルは仮（人事の熊）。統括が public/ui-next/mensetsu/hero.webp を置いたら差し替える
+          <ToolHero
+            art="/hr/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png"
+            title={<>AIが一次面接をして、<wbr />評価まで残す</>}
+            lead={<>企業URLから質問セットと評価基準を自動で作り、応募者はURLを開くだけで面接を受けられます。判定は「推薦度」で、<strong className="font-bold text-[var(--ink)]">最終的な選考の判断は、必ず人が行います。</strong></>}
+          />
+        ) : (<>
         <p className="text-sm font-black text-[#0066ff]">ドヤ面接官</p>
-        <h1 className="mt-2 text-3xl font-black leading-tight text-[#0a0f3c]">
+        <PageTitle className="mt-2 text-3xl font-black leading-tight text-[#0a0f3c]">
           AIが一次面接を実施し、評価まで残す
-        </h1>
+        </PageTitle>
         <p className="mt-3 max-w-[62ch] text-sm font-semibold leading-relaxed text-[#425071]">
           企業URLから質問セットと評価基準を自動生成し、応募者はURLを開くだけで面接を受けられます。
           判定は「推薦度」であり、<strong className="font-black text-[#0a0f3c]">最終的な選考の判断は必ず人が行います。</strong>
         </p>
+        </>)}
 
         {error && (
           <div className="mt-5 rounded-lg border border-[#ffd0de] bg-[#fff2f6] p-4 text-sm font-bold text-[#c2185b]">
@@ -863,7 +893,13 @@ export default function MensetsuTool() {
                 </div>
               )}
 
-              {sessions.length === 0 ? (
+              {sessions.length === 0 && uiNext ? (
+                <EmptyState
+                  art="/mensetsu/empty-interviews.webp"
+                  title="まだ面接はありません"
+                  description="上の「面接URLを発行する」で応募者ごとのURLを作って送ると、面接の状況と結果がここに並びます。"
+                />
+              ) : sessions.length === 0 ? (
                 <p className="mt-3 text-sm font-semibold text-[#425071]">まだ面接はありません。</p>
               ) : (
                 <ul className="mt-4 divide-y divide-[#eef3ff]">

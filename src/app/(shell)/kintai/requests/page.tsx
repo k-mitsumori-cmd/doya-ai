@@ -1,5 +1,8 @@
 'use client'
 
+import { useToolUiNext } from '@/components/kintai/ui-next'
+import { Button, EmptyState } from '@/components/ds'
+import { PageTitle } from '@/components/kintai/ui-next'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS, CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
@@ -60,6 +63,7 @@ function getInitials(name: string): string {
 export default function RequestsPage() {
   const { isActive } = useKintaiAccess()
   const canWrite = isActive !== false
+  const uiNext = useToolUiNext()
   const [requests, setRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -143,7 +147,7 @@ export default function RequestsPage() {
           <div className="flex items-center gap-3">
             <img src="/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
-              <h1 className="text-xl font-bold text-slate-800">申請一覧</h1>
+              <PageTitle className="text-xl font-bold text-slate-800">申請一覧</PageTitle>
               <p className="text-xs text-slate-500">打刻修正や休暇の申請を管理</p>
             </div>
           </div>
@@ -191,6 +195,15 @@ export default function RequestsPage() {
             <p className="font-bold text-red-800">申請一覧を読み込めませんでした。時間をおいて再試行してください。</p>
             <button onClick={load} className="mt-4 rounded-xl border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
           </div>
+        ) : requests.length === 0 && uiNext ? (
+          tab === 'pending'
+            ? <EmptyState art="/kintai/empty-records.webp" title="承認待ちの申請はありません" description="新しい申請が届くと、ここに並びます。" />
+            : <EmptyState
+                art="/kintai/empty-records.webp"
+                title={canWrite ? 'まだ申請はありません' : '表示する申請はありません'}
+                description={canWrite ? '打刻の修正・休暇・残業を、ここから申請できます。' : undefined}
+                action={canWrite ? <Button href="/kintai/requests/new" icon="PlusCircle">申請をつくる</Button> : undefined}
+              />
         ) : requests.length === 0 ? (
           <div className="text-center py-16 space-y-4 fade-in-up">
             {tab === 'pending' ? (

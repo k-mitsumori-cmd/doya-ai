@@ -1,4 +1,5 @@
 'use client'
+import { PageTitle } from '@/components/hr/ui-next'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
@@ -165,7 +166,7 @@ export default function OneOnOnePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-black text-slate-900">1on1</h1>
+            <PageTitle className="text-3xl font-black text-slate-900">1on1</PageTitle>
             <p className="text-sm text-slate-500 mt-1">1対1ミーティングの記録を管理</p>
           </div>
           {canCreate && <button
