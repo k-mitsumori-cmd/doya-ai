@@ -279,7 +279,12 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
         </div>
       </nav>
 
-      <main id="shell-main" ref={mainRef} className={styles.main}>{children}</main>
+      <main id="shell-main" ref={mainRef} className={styles.main}>
+        {/* 読み込みの表示は、枠の上の細い線だけ（新しい見た目のときだけ。UI 品質 C-3）。
+            ⚠️ loading.tsx は置かない。置くと、ふつうの利用者にも前のページが消えて読み込みが出るようになる */}
+        {uiNext && pendingHref && pendingHref !== pathname ? <div className={styles.progress} role="progressbar" aria-label="読み込み中" /> : null}
+        {children}
+      </main>
 
       <nav className={styles.tabbar} aria-label="よく使うツール">
         {[SHELL_HOME, ...tabTools].map((t) => {

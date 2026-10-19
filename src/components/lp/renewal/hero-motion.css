@@ -537,7 +537,7 @@
 }
 @keyframes doya-copy-arrive {
   from {
-    opacity: 0.3;
+    opacity: 1;
     transform: translateY(30px);
   }
   to {
@@ -581,7 +581,7 @@
 }
 @keyframes doya-tool-arrive {
   from {
-    opacity: 0;
+    opacity: 1;
     transform: translateY(45px) rotate(calc(var(--tilt) * 3)) scale(0.5);
   }
   to {
@@ -600,7 +600,7 @@
 }
 @keyframes doya-screen-arrive {
   from {
-    opacity: 0.2;
+    opacity: 1;
     transform: perspective(900px) translate(55px, 35px) rotateY(-25deg)
       rotate(8deg) scale(0.85);
   }
@@ -621,7 +621,7 @@
 }
 @keyframes doya-team-arrive {
   from {
-    opacity: 0;
+    opacity: 1;
     transform: translateY(90px) scale(0.8);
   }
   to {
@@ -651,7 +651,7 @@
 }
 @keyframes doya-product-arrive {
   from {
-    opacity: 0.1;
+    opacity: 1;
     transform: translate(45px, 35px) rotateY(-14deg) rotateX(7deg) rotate(5deg)
       scale(0.9);
   }
@@ -681,7 +681,7 @@
 }
 @keyframes doya-label-arrive {
   from {
-    opacity: 0.2;
+    opacity: 1;
     transform: translate(-25px, -15px) rotate(-12deg);
   }
   to {
@@ -691,7 +691,7 @@
 }
 @keyframes doya-bear-arrive {
   from {
-    opacity: 0;
+    opacity: 1;
     transform: translateY(45px) rotate(10deg) scale(0.7);
   }
   to {

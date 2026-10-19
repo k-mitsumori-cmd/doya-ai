@@ -145,8 +145,12 @@ export function Skeleton({ lines = 3, height = 14, delayMs = 300 }: { lines?: nu
 // ⚠️ 主ボタンは1つ（ブランドの青）。見出しは ToolFrame と重ならないよう、ツール名ではなく「何ができるか」を書く。
 // tool を渡すと、そのツールのキービジュアル（下の TOOL_HERO_ART）を使う（UI 品質 S-58）。
 // ⚠️ 絵を足したら、public/ui-renewal/mascots/<id>.webp に置き、TOOL_HERO_ART に id を足す（無い絵は出さない）。
+//    23ツールの絵は feat/ui-tools-base（d27c0ffa）にある。このブランチだけでは、前からある5つ以外の絵は無い
 //    絵は Codex 内蔵の画像生成（定額枠）で作る。従量課金の API は使わない。
-const TOOL_HERO_ART = new Set(['expense', 'income', 'popup', 'shanai', 'tenjikai'])
+const TOOL_HERO_ART = new Set([
+  'adimage', 'aio', 'aishodan', 'asklink', 'banner', 'cunning', 'doyalist', 'doyaslide', 'expense', 'hr', 'income', 'interview',
+  'kintai', 'mensetsu', 'persona', 'popup', 'promane', 'quote', 'seo', 'sfa', 'shanai', 'shodan', 'tenjikai',
+])
 
 /** そのツールのキービジュアルの場所。まだ無ければ undefined */
 export function toolHeroArt(tool: string): string | undefined {

@@ -218,3 +218,16 @@
 @media (prefers-reduced-motion: reduce) {
   .sidebar, .scrim, .navItem { transition: none; }
 }
+
+/* 移っている間の細い線（UI 品質 C-3）。前のページはそのまま見せる */
+.progress {
+  position: sticky; top: 0; z-index: 40; height: 3px; margin-bottom: -3px; overflow: hidden;
+  background: var(--blue-soft);
+}
+.progress::after {
+  content: ''; position: absolute; inset: 0; width: 40%;
+  background: var(--blue); border-radius: 999px;
+  animation: shell-progress 1.1s var(--ease-io) infinite;
+}
+@keyframes shell-progress { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+@media (prefers-reduced-motion: reduce) { .progress::after { animation: none; width: 100%; opacity: 0.6; } }

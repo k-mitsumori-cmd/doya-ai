@@ -87,7 +87,10 @@ const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.in
     // 新しい料金ページも、購入は同じボタンと同じプラン ID を使う
     assert.match(read('src/components/pricing/PricingNext.tsx'),/<CheckoutButton planId=\{UNIFIED_PRO_PLAN_ID\}/);
     assert.match(read('src/components/DashboardLayout.tsx'),/if \(inShell && uiNext\)/);
-    assert.match(read('src/components/shell/ShellLoading.tsx'),/if \(!uiNext\) return null/);
+    // ふつうの利用者の切り替えを main と同じにする: (shell) の下に、こちらで足した loading.tsx を置かない。template は包みを出さない
+    const loadings=require('node:child_process').execSync("git ls-files 'src/app/(shell)/*loading.tsx'",{cwd:root}).toString().trim().split('\n').filter(Boolean);
+    assert.deepEqual(loadings.sort(),['src/app/(shell)/banner/dashboard/loading.tsx','src/app/(shell)/popup/edit/[id]/loading.tsx','src/app/(shell)/popup/sites/[id]/loading.tsx']);
+    assert.match(read('src/app/(shell)/template.tsx'),/if \(!uiNext\) return <>\{children\}<\/>/);
     const shell=read('src/components/shell/AppShell.tsx');
     assert.match(shell,/if \(!uiNext\) return \[\]/);
     assert.match(shell,/withIntents=\{uiNext\}/);
