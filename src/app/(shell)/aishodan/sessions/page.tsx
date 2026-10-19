@@ -45,6 +45,10 @@ const FILTERS: Array<{ key: string; label: string }> = [
   { key: 'unfit', label: '不適合' },
 ]
 
+// ⚠️ load() は scripts/security-regression が取り出して単体で動かすので、load() の中では新しい名前を使わない。
+//    最初の読み込みの失敗は、load() が出す 403 の文（ここと同じ文）だけを見分け、ほかは「読み込めなかった」として出す
+const LOAD_FORBIDDEN_MESSAGE = '選択中の組織にアクセスできません。ダッシュボードで組織を選び直してください。'
+
 export default function AishodanSessionsPage() {
   // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
   const uiNext = useUiNext()
@@ -52,7 +56,7 @@ export default function AishodanSessionsPage() {
   const [loading, setLoading] = useState(true)
   const [verdict, setVerdict] = useState('')
   const [error, setError] = useState('')
-  /** 失敗したときの応答の状態（新しい見た目で「何が起きたか・どうすればよいか」を決める。通信の失敗は 0） */
+  /** 続きの読み込みに失敗したときの応答の状態（新しい見た目で「何が起きたか・どうすればよいか」を決める。通信の失敗は 0） */
   const [errorStatus, setErrorStatus] = useState(0)
   // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠（今までの見た目では何も足さない）
   const tap = uiNext ? AISHODAN_TAP : ''
@@ -72,19 +76,16 @@ export default function AishodanSessionsPage() {
       const q = verdict ? `?verdict=${encodeURIComponent(verdict)}` : ''
       const r = await fetch(withOrg('aishodan', `/api/aishodan/sessions${q}`))
       const d = await r.json().catch(() => ({}))
-      if (!r.ok) throw new AishodanHttpError(r.status === 403
+      if (!r.ok) throw new Error(r.status === 403
         ? '選択中の組織にアクセスできません。ダッシュボードで組織を選び直してください。'
-        : d?.error || '商談ログを取得できませんでした', r.status)
+        : d?.error || '商談ログを取得できませんでした')
       const page = parseAishodanPage<SessionRow>(d, 'sessions', 200)
       if (version !== loadVersion.current) return
       setSessions(page.items)
       setNextCursor(page.nextCursor)
       setTotal(page.total)
     } catch (e) {
-      if (version === loadVersion.current) {
-        setError(e instanceof Error ? e.message : '商談ログを取得できませんでした')
-        setErrorStatus(failureStatus(e))
-      }
+      if (version === loadVersion.current) setError(e instanceof Error ? e.message : '商談ログを取得できませんでした')
     } finally {
       if (version === loadVersion.current) setLoading(false)
     }
@@ -154,7 +155,7 @@ export default function AishodanSessionsPage() {
           ) : error && sessions.length === 0 && uiNext ? (
             // サーバーの文は出さない。403 は組織の選び直し、401 はログインし直し、それ以外はやり直す
             <AishodanFailureNotice
-              failure={describeAishodanFailure(errorStatus, '商談ログを読み込めませんでした。')}
+              failure={describeAishodanFailure(error === LOAD_FORBIDDEN_MESSAGE ? 403 : 0, '商談ログを読み込めませんでした。')}
               onRetry={() => void load()}
               retryLabel="再読み込みする"
               backHref="/aishodan"

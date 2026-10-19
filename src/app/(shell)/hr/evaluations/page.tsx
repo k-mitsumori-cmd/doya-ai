@@ -23,9 +23,10 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
   const [periods, setPeriods] = useState<HrEvaluationPeriodListRow[]>([])
   const [organizationId, setOrganizationId] = useState('')
   const [canCreatePeriods, setCanCreatePeriods] = useState(false)
-  const [loading, setLoading] = useState(true), [loadError, setLoadError] = useState(''), [loginRequired, setLoginRequired] = useState(false)
+  const [loading, setLoading] = useState(true), [loadError, setLoadError] = useState<unknown>(null), [loginRequired, setLoginRequired] = useState(false)
   // 新しい見た目で、失敗の種類（ログイン・権限・上限）を分けるためのステータス
-  const [errorStatus, setErrorStatus] = useState<number | undefined>(undefined)
+  const errorStatus = loadError instanceof HrEvaluationPeriodListReadError ? loadError.status : undefined
+  const loadErrorText = loadError ? (loadError instanceof Error ? loadError.message : '評価期間を取得できませんでした。') : ''
   const uiNext = useToolUiNext()
   const reduceMotion = useReducedMotion()
   const still = uiNext && Boolean(reduceMotion)
@@ -57,16 +58,16 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
     // Recording that identity must not discard the list and fetch it again.
     if (expectedOrganization && loadedSnapshot.current?.organizationId === expectedOrganization && loadedSnapshot.current.revision === revision) return
     const controller = new AbortController(); let live = true
-    setLoading(true); setLoadError(''); setLoginRequired(false)
+    setLoading(true); setLoadError(null); setLoginRequired(false)
     void loadHrEvaluationPeriodList(controller.signal, expectedOrganization, organizationScope.request).then(data => {
       if (!live || controller.signal.aborted) return
       loadedSnapshot.current = { organizationId: data.organizationId, revision }
       setOrganizationId(data.organizationId); setPeriods(data.rows); setCanCreatePeriods(data.canCreatePeriods); setLoading(false)
     }).catch(error => {
       if (!live || controller.signal.aborted) return
-      setLoadError(error instanceof Error ? error.message : '評価期間を取得できませんでした。')
+      // 失敗そのものを持つ（状態コードは新しい見た目の出し分けに、文は今の見た目に使う）
+      setLoadError(error ?? true)
       setLoginRequired(error instanceof HrEvaluationPeriodListReadError && error.status === 401)
-      setErrorStatus(error instanceof HrEvaluationPeriodListReadError ? error.status : undefined)
     }).finally(() => { if (live && !controller.signal.aborted) setLoading(false) })
     return () => { live = false; controller.abort() }
   }, [hint.ready, expectedOrganization, scopeError, revision])
@@ -155,7 +156,7 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
         ) : loadError ? (
           <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
             <h2 className="text-lg font-black text-rose-800">評価期間を取得できませんでした</h2>
-            <p className="mt-2 text-sm font-bold text-rose-700">{loadError} 登録済みの評価期間は変更されていません。</p>
+            <p className="mt-2 text-sm font-bold text-rose-700">{loadErrorText} 登録済みの評価期間は変更されていません。</p>
             {loginRequired && <Link href="/auth/signin?callbackUrl=%2Fhr%2Fevaluations">ログインする</Link>}
             <button type="button" onClick={() => void fetchPeriods()} className="mt-4 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">
               再試行する

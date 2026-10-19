@@ -2,7 +2,7 @@
 import { PageTitle, useToolUiNext } from '@/components/hr/ui-next'
 import { Button, EmptyState, StatTile, ToolHero } from '@/components/ds'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
-import HrLoadError, { HrStatusError, hrErrorStatus } from '@/components/hr/HrLoadError'
+import HrLoadError, { HrStatusError } from '@/components/hr/HrLoadError'
 
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
@@ -130,9 +130,10 @@ export default function HrDashboardPage() {
   const [recentOneOnOnes, setRecentOneOnOnes] = useState<RecentOneOnOne[]>([])
   const [evaluationPeriods, setEvaluationPeriods] = useState<EvaluationPeriod[]>([])
   const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState(false)
+  // 失敗の状態コード（分からないときは true）。新しい見た目で出し分けに使う
+  const [loadError, setLoadError] = useState<boolean | number>(false)
   // 新しい見た目で、失敗の種類（ログイン・権限・上限）を分けるためのステータス
-  const [errorStatus, setErrorStatus] = useState<number | undefined>(undefined)
+  const errorStatus = typeof loadError === 'number' ? loadError : undefined
   const [retryKey, setRetryKey] = useState(0)
   const uiNext = useToolUiNext()
   // 新しい見た目では、動きを減らす設定のときにキャラクターを揺らさない
@@ -173,7 +174,7 @@ export default function HrDashboardPage() {
         setRecentOneOnOnes(data.recentOneOnOnes)
         setEvaluationPeriods(data.evaluationPeriods)
       } catch (error) {
-        if (!controller.signal.aborted) { setLoadError(true); setErrorStatus(hrErrorStatus(error)) }
+        if (!controller.signal.aborted) { const status = (error as { status?: unknown } | null)?.status; setLoadError(typeof status === 'number' ? status : true) }
       } finally {
         if (!controller.signal.aborted) setLoading(false)
       }

@@ -1,19 +1,17 @@
 'use client'
 
 import type { useSfaClientMutations } from '@/lib/sfa/use-client-mutations'
-import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { ErrorNotice } from '@/components/ds'
 import { useUiNext } from '@/components/shell/ui-next-context'
 
 export default function MutationRecovery({ mutations }: { mutations: ReturnType<typeof useSfaClientMutations> }) {
   const uiNext = useUiNext()
-  const router = useRouter()
   // 新しい見た目（UI 品質 S-20）: ログイン切れ・上限は、何が起きたか・どうすればよいかと操作を1つ出す。サーバーの文はそのまま出さない
   if (uiNext && mutations.requiresLogin) return <div className="my-3"><ErrorNotice what="ログインの有効期限が切れています。" how="もう一度ログインしてください。入力内容はこの画面に残しています。" onRetry={() => void signIn()} retryLabel="ログインし直す" /></div>
   if (uiNext && mutations.upgradeHref && !mutations.pending.length) {
     const href = mutations.upgradeHref
-    return <div className="my-3"><ErrorNotice what="今のプランで使える上限に達したため、保存できませんでした。" how="料金プランを見直すと、続けて登録できます。入力内容はこの画面に残しています。" onRetry={() => router.push(href)} retryLabel="料金プランを見る" /></div>
+    return <div className="my-3"><ErrorNotice what="今のプランで使える上限に達したため、保存できませんでした。" how="料金プランを見直すと、続けて登録できます。入力内容はこの画面に残しています。" onRetry={() => window.location.assign(href)} retryLabel="料金プランを見る" /></div>
   }
   if (mutations.requiresLogin) return <p role="alert" className="my-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">ログイン状態を確認できません。再度ログインしてください。入力内容はこの画面に保持しています。</p>
   if (!mutations.message && !mutations.pending.length) return null

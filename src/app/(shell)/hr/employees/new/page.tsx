@@ -83,22 +83,10 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ⚠️ 本体は scripts/security-regression が取り出して単体で動かす。新しい見た目の処理は引数（onRejected）と handleSubmitNext に置き、ここで新しい名前を参照しない
+  const handleSubmit = async (e: React.FormEvent, onRejected?: (status: number) => void) => {
     e.preventDefault()
     if (departmentList.status !== 'ready' || saving || submitted) return
-    if (uiNext) {
-      const errors = {
-        lastName: form.lastName.trim() ? undefined : '姓を入力してください。',
-        firstName: form.firstName.trim() ? undefined : '名を入力してください。',
-      }
-      setFieldErrors(errors)
-      setFormError('')
-      if (errors.lastName || errors.firstName) {
-        // 最初の誤りの欄に移る
-        document.getElementById(fid(errors.lastName ? 'lastName' : 'firstName'))?.focus()
-        return
-      }
-    }
     setLimitNotice(null)
     setSaving(true)
 
@@ -117,14 +105,8 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        if (uiNext && errData.code !== 'HR_ORG_EMPLOYEE_LIMIT') {
-          const kind = hrErrorKind(res.status)
-          setFormError(kind === 'login' ? 'ログインの有効期限が切れた可能性があります。入力内容はそのままです。ログインし直してから、もう一度保存してください。'
-            : kind === 'forbidden' ? '従業員を登録する権限がありません。組織の管理者に依頼してください。'
-            : kind === 'limit' ? '登録できる従業員数の上限に達しました。料金プランを見直すと、さらに登録できます。'
-            : res.status === 400 ? '入力内容を確認できませんでした。メールアドレスや日付の形式を確認して、もう一度保存してください。'
-            : '保存できませんでした。入力内容はそのままです。時間をおいて、もう一度お試しください。')
-          requestAnimationFrame(() => formErrorRef.current?.scrollIntoView({ block: 'center' }))
+        if (onRejected && errData.code !== 'HR_ORG_EMPLOYEE_LIMIT') {
+          onRejected(res.status)
           return
         }
         if (errData.code === 'HR_ORG_EMPLOYEE_LIMIT') {
@@ -176,6 +158,32 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
     } finally {
       setSaving(false)
     }
+  }
+
+  // 新しい見た目: 欄の下に誤りを出してから送る。断られたときは、生の文ではなく日本語の案内をフォームの上に出す
+  const handleSubmitNext = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (departmentList.status !== 'ready' || saving || submitted) return
+    const errors = {
+      lastName: form.lastName.trim() ? undefined : '姓を入力してください。',
+      firstName: form.firstName.trim() ? undefined : '名を入力してください。',
+    }
+    setFieldErrors(errors)
+    setFormError('')
+    if (errors.lastName || errors.firstName) {
+      // 最初の誤りの欄に移る
+      document.getElementById(fid(errors.lastName ? 'lastName' : 'firstName'))?.focus()
+      return
+    }
+    await handleSubmit(e, (status) => {
+      const kind = hrErrorKind(status)
+      setFormError(kind === 'login' ? 'ログインの有効期限が切れた可能性があります。入力内容はそのままです。ログインし直してから、もう一度保存してください。'
+        : kind === 'forbidden' ? '従業員を登録する権限がありません。組織の管理者に依頼してください。'
+        : kind === 'limit' ? '登録できる従業員数の上限に達しました。料金プランを見直すと、さらに登録できます。'
+        : status === 400 ? '入力内容を確認できませんでした。メールアドレスや日付の形式を確認して、もう一度保存してください。'
+        : '保存できませんでした。入力内容はそのままです。時間をおいて、もう一度お試しください。')
+      requestAnimationFrame(() => formErrorRef.current?.scrollIntoView({ block: 'center' }))
+    })
   }
 
   return (
@@ -245,7 +253,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate={uiNext || undefined}>
+        <form onSubmit={uiNext ? handleSubmitNext : (e) => void handleSubmit(e)} noValidate={uiNext || undefined}>
           <div className={uiNext ? 'bg-white rounded-3xl shadow-lg p-5 sm:p-8 space-y-8' : 'bg-white rounded-3xl shadow-lg p-8 space-y-8'}>
             {/* Photo Upload */}
             <div>

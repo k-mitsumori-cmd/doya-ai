@@ -6,7 +6,6 @@
 // 新しい見た目（UI 品質 S-20）のときだけ使う。何が起きたか・どうすればよいかを日本語で出し、やり直しの操作を1つ付ける。
 // ⚠️ サーバーの error 文字列・ステータス番号・err.message は画面に出さない（状態の種類だけで文を決める）。
 // ⚠️ 新しい見た目でないときは、各ページの今までの表示をそのまま使う（ここは呼ばない）。
-import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { ErrorNotice } from '@/components/ds'
 import { SfaClientRejection } from '@/lib/sfa/client-response'
@@ -35,7 +34,6 @@ export default function SfaLoadError({ error, what, onRetry, orgSlug }: {
   onRetry?: () => void
   orgSlug?: string
 }) {
-  const router = useRouter()
   const kind = sfaErrorKind(error)
   if (kind === 'login') {
     return <ErrorNotice what={`${what}を読み込めませんでした。ログインの有効期限が切れています。`} how="もう一度ログインしてください。" onRetry={() => void signIn()} retryLabel="ログインし直す" />
@@ -48,7 +46,7 @@ export default function SfaLoadError({ error, what, onRetry, orgSlug }: {
     let slug = orgSlug || ''
     if (/%[0-9A-Fa-f]{2}/.test(slug)) { try { slug = decodeURIComponent(slug) } catch { /* そのまま使う */ } }
     const pricing = '/sfa/pricing' + (slug ? '?org=' + encodeURIComponent(slug) : '')
-    return <ErrorNotice what="今のプランで使える上限に達しました。" how="料金プランを見直すと、続けて登録できます。" onRetry={() => router.push(pricing)} retryLabel="料金プランを見る" />
+    return <ErrorNotice what="今のプランで使える上限に達しました。" how="料金プランを見直すと、続けて登録できます。" onRetry={() => window.location.assign(pricing)} retryLabel="料金プランを見る" />
   }
   return <ErrorNotice what={`${what}を読み込めませんでした。`} how="通信状況を確かめて、時間をおいてもう一度お試しください。" onRetry={onRetry} retryLabel="再試行" />
 }
