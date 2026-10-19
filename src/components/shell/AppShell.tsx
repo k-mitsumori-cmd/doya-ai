@@ -12,7 +12,8 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { CreditCard, LayoutGrid, LogOut, Menu, Search, X } from 'lucide-react'
+import { CircleUser, CreditCard, LayoutGrid, LogOut, Menu, Search, Sparkles, X } from 'lucide-react'
+import { HOME_INTENT_GROUPS } from '@/app/(shell)/home/intents'
 import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
 import { ShellIcon } from './icons'
@@ -43,10 +44,11 @@ function readRecent(): string[] {
   }
 }
 
-function NavItem({ tool, pathname, onNavigate, prefetch }: { tool: ShellTool; pathname: string; onNavigate: (href: string) => void; prefetch?: boolean }) {
+function NavItem({ tool, pathname, onNavigate, prefetch, mirror }: { tool: ShellTool; pathname: string; onNavigate: (href: string) => void; prefetch?: boolean; mirror?: boolean }) {
   const active = isActive(pathname, tool)
+  // mirror は「最近使ったツール」の複製。今のページの印（aria-current）は本来の区分の側だけに付ける
   return (
-    <Link href={tool.href} className={styles.navItem} aria-current={active ? 'page' : undefined} onClick={() => onNavigate(tool.href)} title={tool.name} prefetch={prefetch}>
+    <Link href={tool.href} className={styles.navItem} aria-current={active && !mirror ? 'page' : undefined} data-active={active && mirror ? 'true' : undefined} onClick={() => onNavigate(tool.href)} title={tool.name} prefetch={prefetch}>
       <ShellIcon name={tool.icon} size={18} strokeWidth={2} />
       <span className={styles.navLabel}>{tool.name}</span>
       {tool.beta ? <span className={styles.beta}>開発中</span> : null}
@@ -55,17 +57,28 @@ function NavItem({ tool, pathname, onNavigate, prefetch }: { tool: ShellTool; pa
 }
 
 /* ---- ⌘K パレット ---- */
-function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
+/** ⌘K の候補。ツールのほか、新しい見た目では「やりたいこと」も探せる（経営ホームの入力と同じ辞書。UI 品質 S-5） */
+type PaletteItem = { key: string; name: string; hint: string; href: string; icon?: ShellTool['icon']; beta?: boolean; intent?: boolean }
+const TOOL_ITEMS: PaletteItem[] = ALL_SHELL_TOOLS.map((t) => ({ key: t.id, name: t.name, hint: t.hint, href: t.href, icon: t.icon, beta: t.beta }))
+const INTENT_ITEMS: (PaletteItem & { words: string })[] = HOME_INTENT_GROUPS.flatMap((g) => g.intents.map((i) => ({
+  key: `intent:${i.label}`, name: i.label, hint: g.label, href: i.href, intent: true, words: `${i.label} ${i.keywords.join(' ')}`.toLowerCase(),
+})))
+
+function CommandPalette({ open, onClose, withIntents }: { open: boolean; onClose: () => void; withIntents: boolean }) {
   const router = useRouter()
   const [q, setQ] = useState('')
   const [index, setIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const results = useMemo(() => {
+  const results = useMemo<PaletteItem[]>(() => {
     const k = q.trim().toLowerCase()
-    if (!k) return ALL_SHELL_TOOLS
-    return ALL_SHELL_TOOLS.filter((t) => `${t.name} ${t.hint} ${t.id}`.toLowerCase().includes(k))
-  }, [q])
+    if (!k) return TOOL_ITEMS
+    const tools = TOOL_ITEMS.filter((t) => `${t.name} ${t.hint} ${t.key}`.toLowerCase().includes(k))
+    if (!withIntents) return tools
+    const compact = k.replace(/\s+/g, '')
+    const intents = INTENT_ITEMS.filter((i) => i.words.includes(k) || i.words.replace(/\s+/g, '').includes(compact) || i.words.split(' ').some((w) => w && compact.includes(w)))
+    return [...intents, ...tools]
+  }, [q, withIntents])
 
   useEffect(() => {
     if (!open) return
@@ -79,10 +92,10 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
 
   if (!open) return null
 
-  const go = (tool?: ShellTool) => {
-    if (!tool) return
+  const go = (item?: PaletteItem) => {
+    if (!item) return
     onClose()
-    router.push(tool.href)
+    router.push(item.href)
   }
 
   return (
@@ -109,9 +122,9 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
         <ul className={styles.paletteList} role="listbox">
           {results.length ? results.map((t, i) => {
             return (
-              <li key={t.id} role="option" aria-selected={i === index}>
+              <li key={t.key} role="option" aria-selected={i === index}>
                 <button type="button" className={styles.paletteItem} data-active={i === index} onMouseEnter={() => setIndex(i)} onClick={() => go(t)}>
-                  <span className={styles.paletteIcon}><ShellIcon name={t.icon} size={16} /></span>
+                  <span className={styles.paletteIcon}>{t.intent ? <Sparkles size={16} aria-hidden /> : <ShellIcon name={t.icon ?? 'LayoutGrid'} size={16} />}</span>
                   <span className={styles.paletteText}><b>{t.name}</b><small>{t.hint}</small></span>
                   {t.beta ? <span className={styles.beta}>開発中</span> : null}
                 </button>
@@ -169,8 +182,21 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
     const byId = new Map(ALL_SHELL_TOOLS.map((t) => [t.id, t]))
     const picked = recent.map((id) => byId.get(id)).filter((t): t is ShellTool => Boolean(t))
     const fill = groups.flatMap((g) => g.tools).filter((t) => !recent.includes(t.id))
-    return [...picked, ...fill].slice(0, 3)
-  }, [recent, groups])
+    // 新しい見た目のスマホの下のタブは「ホーム・最近使ったツール2つ・すべて・アカウント」の決まった並び（UI 品質 S-4）
+    return [...picked, ...fill].slice(0, uiNext ? 2 : 3)
+  }, [recent, groups, uiNext])
+
+  // 左のメニューの上に出す「最近使ったツール」（新しい見た目のときだけ。UI 品質 S-1）
+  const recentTools = useMemo(() => {
+    if (!uiNext) return []
+    const byId = new Map(ALL_SHELL_TOOLS.map((t) => [t.id, t]))
+    return recent.map((id) => byId.get(id)).filter((t): t is ShellTool => Boolean(t) && t!.id !== 'home').slice(0, 3)
+  }, [recent, uiNext])
+
+  const openAccount = () => {
+    setOpen(true)
+    requestAnimationFrame(() => document.getElementById('shell-account')?.scrollIntoView({ block: 'end' }))
+  }
 
   return (
     <InShellContext.Provider value={true}>
@@ -208,6 +234,14 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
         </button>
         <div className={styles.navScroll}>
           <NavItem tool={SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
+          {recentTools.length ? (
+            <div className={styles.group}>
+              <p className={styles.groupLabel}>最近使ったツール</p>
+              {recentTools.map((tool) => (
+                <NavItem key={tool.id} tool={tool} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} mirror />
+              ))}
+            </div>
+          ) : null}
           {groups.map((group) => (
             <div key={group.stage} className={styles.group}>
               <p className={styles.groupLabel}>{group.label}</p>
@@ -218,7 +252,7 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
           ))}
         </div>
         <ShellUsageArea className={styles.usage} />
-        <div className={styles.account}>
+        <div className={styles.account} id="shell-account">
           {/* 登録会社と切り替え（新しい見た目のときだけ中身が出る。UI 品質 B-1） */}
           <ShellCompanyCard onNavigate={close} />
           {userName ? <p className={styles.userLine}>{userName} さん</p> : null}
@@ -248,9 +282,15 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
           <LayoutGrid size={20} aria-hidden />
           <span>すべて</span>
         </button>
+        {uiNext ? (
+          <button type="button" className={styles.tab} onClick={openAccount}>
+            <CircleUser size={20} aria-hidden />
+            <span>アカウント</span>
+          </button>
+        ) : null}
       </nav>
 
-      <CommandPalette open={palette} onClose={() => setPalette(false)} />
+      <CommandPalette open={palette} onClose={() => setPalette(false)} withIntents={uiNext} />
     </div>
     </ShellUsageProvider>
     </InShellContext.Provider>
