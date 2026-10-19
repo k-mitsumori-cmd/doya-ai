@@ -24,6 +24,12 @@ import { Badge } from '@seo/components/ui/Badge'
 import { ProgressBar } from '@seo/components/ui/ProgressBar'
 import { FeatureGuide } from '@/components/FeatureGuide'
 import { seoLimitActionFromResponse, type SeoLimitAction } from '@/lib/seo-limit-action'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { Button as DsButton, EmptyState, Skeleton, ToolHero } from '@/components/ds'
+import { ErrorNotice } from '@/components/ds/feedback'
+
+// 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/seo.webp）が置かれるまでは、LP の画面の絵を仮に出す
+const HERO_ART = '/seo/hero.webp'
 
 type SeoArticleRow = {
   id: string
@@ -95,6 +101,7 @@ class SeoArticleDeleteError extends Error {}
 
 export default function SeoTool() {
   const router = useRouter()
+  const uiNext = useUiNext()
   const [articles, setArticles] = useState<SeoArticleRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -263,9 +270,112 @@ export default function SeoTool() {
     }
   }
 
+  // トップストーリー（最新の1本を大きく）
+  function renderTopStory() {
+    const hero = filtered[0]
+    const rest = filtered.slice(1, 4)
+    const config = STATUS_CONFIG[hero.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.DRAFT
+    const bannerId = hero.images?.[0]?.id || ''
+    const href = `/seo/articles/${hero.id}`
+    return (
+      <div className={uiNext ? 'grid grid-cols-1 gap-6 lg:grid-cols-3' : 'grid lg:grid-cols-3 gap-6'}>
+        <div className={uiNext ? 'min-w-0 lg:col-span-2' : 'lg:col-span-2'}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-black text-gray-500 tracking-widest">トップストーリー</p>
+            <Link href={href} className="text-xs font-black text-gray-900 hover:underline">
+              これまでの話題 →
+            </Link>
+          </div>
+
+          <div className="mt-3">
+            <div className="flex items-center gap-2">
+              <Badge tone={config.tone}>{config.label}</Badge>
+              {(hero.keywords || [])[0] ? (
+                <span className="text-[11px] font-black text-gray-500 truncate max-w-[240px]">
+                  {(hero.keywords || [])[0]}
+                </span>
+              ) : null}
+            </div>
+            <Link href={href} className="block mt-2">
+              {uiNext ? (
+                <h3 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug break-words hover:underline decoration-gray-300">
+                  {hero.title}
+                </h3>
+              ) : (
+                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-snug hover:underline decoration-gray-300">
+                  {hero.title}
+                </h1>
+              )}
+            </Link>
+            <p className="mt-2 text-sm font-bold text-gray-600">
+              {(hero.keywords || []).slice(0, 6).join(' / ') || 'キーワード未設定'}
+            </p>
+            <p className="mt-2 text-xs font-bold text-gray-400">
+              更新: {new Date(hero.updatedAt || hero.createdAt).toLocaleDateString('ja-JP')}
+            </p>
+          </div>
+
+          {rest.length > 0 && (
+            <div className="mt-4">
+              <ul className="space-y-2">
+                {rest.map((a) => {
+                  const u = `/seo/articles/${a.id}`
+                  return (
+                    <li key={a.id} className="flex items-start gap-3">
+                      <span className="mt-[7px] w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />
+                      <Link href={u} className="flex-1 min-w-0">
+                        <p className="text-[11px] font-black text-gray-400">
+                          {new Date(a.updatedAt || a.createdAt).toLocaleDateString('ja-JP')}
+                        </p>
+                        <p className="text-sm font-black text-gray-900 truncate !whitespace-nowrap hover:underline">
+                          {a.title}
+                        </p>
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className={uiNext ? `min-w-0 lg:col-span-1 ${bannerId ? '' : 'hidden lg:block'}` : 'lg:col-span-1'}>
+          <div className="aspect-video rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+            {bannerId ? (
+              <img
+                src={`/api/seo/images/${bannerId}?thumb=1`}
+                alt=""
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                <FileText className="w-8 h-8" />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 新しい見た目（チェックリスト §5.1）のときの直し:
+  // - 見出し（h1）は枠（ToolFrame）の1つだけ。ページ内の見出しは h2、記事のタイトルは h3（S-56・S-57）
+  // - 画面いっぱいの高さ・二重の見出しの帯・二重の左右の余白を外す（S-63）
+  // - 375px で横にはみ出さない（M-1。トップストーリーの1行の題名が、グリッドの列を押し広げていた）
+  // - 読み込みの前後で中身が動かない（CLS。トップストーリーと件数の行が、読み込み後に上に差し込まれていた）
+  const Root = uiNext ? 'div' : 'main'
   return (
-    <main className="min-h-screen bg-white">
-      {/* ヘッダー（ドヤライティングAI） */}
+    <Root className={uiNext ? 'min-w-0 bg-white' : 'min-h-screen bg-white'}>
+      {uiNext ? (
+        <ToolHero
+          title={<>キーワードから、<wbr />検索で読まれる記事を</>}
+          lead="キーワードを入れると、AIが検索の意図を調べて、構成・本文・図解まで仕上げます。"
+          action={<DsButton href="/seo/create" icon="Plus">新規記事作成</DsButton>}
+          art={HERO_ART}
+          artAlt="ドヤ記事作成で、検索の意図から記事の構成を作っている画面"
+        />
+      ) : (
       <div className="border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4">
           <div className="h-14 flex items-center justify-between gap-3">
@@ -295,99 +405,20 @@ export default function SeoTool() {
           </div>
         </div>
       </div>
+      )}
 
-      <div className="max-w-6xl mx-auto py-6 sm:py-8 px-4">
-        {/* NewsPicks風: トップストーリー（最新の1本を大きく） */}
-        {!loading && !error && filtered.length > 0 && (
+      <div className={uiNext ? 'mx-auto max-w-6xl pt-6' : 'max-w-6xl mx-auto py-6 sm:py-8 px-4'}>
+        {/* NewsPicks風: トップストーリー（最新の1本を大きく）。新しい見た目では、一覧の上に移す（読み込み後に上へ差し込まない） */}
+        {!uiNext && !loading && !error && filtered.length > 0 && (
           <div className="mb-8 border-b border-gray-200 pb-6">
-            {(() => {
-              const hero = filtered[0]
-              const rest = filtered.slice(1, 4)
-              const config = STATUS_CONFIG[hero.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.DRAFT
-              const bannerId = hero.images?.[0]?.id || ''
-              const href = `/seo/articles/${hero.id}`
-              return (
-                <div className="grid lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-black text-gray-500 tracking-widest">トップストーリー</p>
-                      <Link href={href} className="text-xs font-black text-gray-900 hover:underline">
-                        これまでの話題 →
-                      </Link>
-                    </div>
-
-                    <div className="mt-3">
-                      <div className="flex items-center gap-2">
-                        <Badge tone={config.tone}>{config.label}</Badge>
-                        {(hero.keywords || [])[0] ? (
-                          <span className="text-[11px] font-black text-gray-500 truncate max-w-[240px]">
-                            {(hero.keywords || [])[0]}
-                          </span>
-                        ) : null}
-                      </div>
-                      <Link href={href} className="block mt-2">
-                        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-snug hover:underline decoration-gray-300">
-                          {hero.title}
-                        </h1>
-                      </Link>
-                      <p className="mt-2 text-sm font-bold text-gray-600">
-                        {(hero.keywords || []).slice(0, 6).join(' / ') || 'キーワード未設定'}
-                      </p>
-                      <p className="mt-2 text-xs font-bold text-gray-400">
-                        更新: {new Date(hero.updatedAt || hero.createdAt).toLocaleDateString('ja-JP')}
-                      </p>
-                    </div>
-
-                    {rest.length > 0 && (
-                      <div className="mt-4">
-                        <ul className="space-y-2">
-                          {rest.map((a) => {
-                            const u = `/seo/articles/${a.id}`
-                            return (
-                              <li key={a.id} className="flex items-start gap-3">
-                                <span className="mt-[7px] w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />
-                                <Link href={u} className="flex-1 min-w-0">
-                                  <p className="text-[11px] font-black text-gray-400">
-                                    {new Date(a.updatedAt || a.createdAt).toLocaleDateString('ja-JP')}
-                                  </p>
-                                  <p className="text-sm font-black text-gray-900 truncate hover:underline">
-                                    {a.title}
-                                  </p>
-                                </Link>
-                              </li>
-                            )
-                          })}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="lg:col-span-1">
-                    <div className="aspect-video rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
-                      {bannerId ? (
-                        <img
-                          src={`/api/seo/images/${bannerId}?thumb=1`}
-                          alt=""
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          <FileText className="w-8 h-8" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
+            {renderTopStory()}
           </div>
         )}
 
       {/* 統計カード */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 flex items-center justify-center">
+      <div className={uiNext ? 'mb-6 grid grid-cols-3 gap-2 sm:gap-4' : "grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6"}>
+        <div className={uiNext ? 'flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-6' : "bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4"}>
+          <div className={`${uiNext ? 'h-9 w-9 rounded-xl' : 'w-12 h-12 rounded-2xl'} sm:w-14 sm:h-14 sm:rounded-2xl flex items-center justify-center bg-blue-50`}>
             <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
           </div>
           <div>
@@ -395,8 +426,8 @@ export default function SeoTool() {
             <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.total}</p>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-orange-50 flex items-center justify-center">
+        <div className={uiNext ? 'flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-6' : "bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4"}>
+          <div className={`${uiNext ? 'h-9 w-9 rounded-xl' : 'w-12 h-12 rounded-2xl'} sm:w-14 sm:h-14 sm:rounded-2xl flex items-center justify-center bg-orange-50`}>
             <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-orange-600 animate-pulse" />
           </div>
           <div>
@@ -404,8 +435,8 @@ export default function SeoTool() {
             <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.running}</p>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-50 flex items-center justify-center">
+        <div className={uiNext ? 'flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-6' : "bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4"}>
+          <div className={`${uiNext ? 'h-9 w-9 rounded-xl' : 'w-12 h-12 rounded-2xl'} sm:w-14 sm:h-14 sm:rounded-2xl flex items-center justify-center bg-emerald-50`}>
             <CheckCircle2 className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600" />
           </div>
           <div>
@@ -441,7 +472,9 @@ export default function SeoTool() {
         {/* タイトル & CTA */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">生成記事一覧</h1>
+            {uiNext
+              ? <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">生成記事一覧</h2>
+              : <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">生成記事一覧</h1>}
             <p className="text-sm text-gray-400 font-bold mt-1">
               {counts.total}件の記事 · {counts.running}件が生成中 · {counts.done}件が完成
             </p>
@@ -463,18 +496,19 @@ export default function SeoTool() {
               />
             </div>
           </div>
-          <Link href="/seo/create">
+          {/* 新しい見た目では、主ボタンは上のヒーローの1つだけ */}
+          {!uiNext && <Link href="/seo/create">
             <button className="w-full sm:w-auto h-12 sm:h-14 px-6 sm:px-8 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-sm sm:text-base shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2">
               <Plus className="w-5 h-5" />
               新規記事作成
             </button>
-          </Link>
+          </Link>}
         </div>
       </div>
 
       {/* Search */}
-      <div className="flex justify-end mb-6 sm:hidden">
-        <div className="relative w-full">
+      <div className={uiNext ? 'mb-6 flex' : 'flex justify-end mb-6 sm:hidden'}>
+        <div className={uiNext ? 'relative w-full sm:max-w-sm' : 'relative w-full'}>
           <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-100 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:border-blue-500 shadow-sm transition-all"
@@ -493,10 +527,38 @@ export default function SeoTool() {
         </div>
       )}
 
-      {!loading && !error && <p className="mb-3 text-sm text-gray-500">{matched}件中 {articles.length}件を表示 · 作成日時の新しい順</p>}
+      {uiNext && !error && (
+        // 読み込みの間も1行分の高さを取っておく（CLS）
+        <p className="mb-3 min-h-5 text-sm text-gray-500" aria-live="polite">{loading ? '\u00a0' : `${matched}件中 ${articles.length}件を表示 · 作成日時の新しい順`}</p>
+      )}
+      {!uiNext && !loading && !error && <p className="mb-3 text-sm text-gray-500">{matched}件中 {articles.length}件を表示 · 作成日時の新しい順</p>}
       {/* Article Cards */}
+      {uiNext && !loading && !error && filtered.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-gray-100 p-4 sm:p-6">{renderTopStory()}</div>
+      )}
       <div className="space-y-3">
-        {loading ? (
+        {loading && uiNext ? (
+          // 記事のカードと同じ高さの骨組み（読み込み後に下の中身が動かないように）
+          <div className="space-y-3" aria-busy="true">
+            {[1, 2, 3].map((i) => <div key={i} className="min-h-[88px] rounded-2xl border border-gray-100 bg-white p-4 sm:p-5"><Skeleton lines={2} delayMs={0} /></div>)}
+          </div>
+        ) : error && uiNext ? (
+          <ErrorNotice what={error} how="通信の状態を確かめて、もう一度読み込んでください。" onRetry={() => load({ showLoading: true })} retryLabel="読み込み直す" />
+        ) : filtered.length === 0 && uiNext ? (
+          <div className="rounded-3xl border border-gray-100 bg-white">
+            {query.trim() || activeStatus !== 'ALL' ? (
+              <EmptyState kind="no-results" title="条件に一致する記事はありません" description="検索の言葉を変えるか、消してください。" />
+            ) : (
+              <EmptyState
+                kind="not-generated"
+                art="/seo/empty-articles.webp"
+                title="まだ記事はありません"
+                description="キーワードを1つ入れるだけで、構成から本文・図解まで作れます。最初の1本を作りましょう。"
+                action={<DsButton href="/seo/create" icon="Plus">新規記事作成</DsButton>}
+              />
+            )}
+          </div>
+        ) : loading ? (
           <div className="py-20 text-center">
             <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <p className="text-gray-400 font-black text-xs uppercase tracking-widest">読み込み中...</p>
@@ -556,7 +618,7 @@ export default function SeoTool() {
                     className="group bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-200 hover:translate-y-[-2px] transition-all cursor-pointer"
                     title="クリックで記事詳細（本文/画像）を開く"
                   >
-                      <div className="flex items-start sm:items-center gap-2 sm:gap-3 md:gap-4">
+                      <div className={uiNext ? 'flex flex-wrap items-center gap-3 sm:flex-nowrap md:gap-4' : "flex items-start sm:items-center gap-2 sm:gap-3 md:gap-4"}>
                         {/* バナーサムネ（一覧で”ひと目で違いが分かる”） */}
                         <div className="hidden sm:block w-28">
                           <div className="aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 border border-gray-100">
@@ -588,7 +650,7 @@ export default function SeoTool() {
                         </div>
 
                         {/* メインコンテンツ */}
-                        <div className="flex-1 min-w-0">
+                        <div className={uiNext ? 'min-w-0 flex-1 basis-full sm:basis-auto' : 'flex-1 min-w-0'}>
                           <div className="flex items-center gap-2 mb-1">
                             <Badge tone={config.tone}>{config.label}</Badge>
                             {mainKw && (
@@ -597,7 +659,7 @@ export default function SeoTool() {
                               </span>
                             )}
                           </div>
-                          <h3 className="font-black text-gray-900 text-sm sm:text-base truncate group-hover:text-blue-600 transition-colors">
+                          <h3 className="font-black text-gray-900 text-sm sm:text-base truncate !whitespace-nowrap group-hover:text-blue-600 transition-colors">
                             {a.title}
                           </h3>
                           <p className="text-[10px] text-gray-400 font-bold mt-1">
@@ -605,8 +667,8 @@ export default function SeoTool() {
                           </p>
                         </div>
 
-                        {/* 進捗 or CTA */}
-                        <div className="flex items-center gap-3">
+                        {/* 進捗 or CTA（新しい見た目では、375px で題名の下に回して右に寄せる） */}
+                        <div className={uiNext ? 'ml-auto flex items-center gap-2 sm:gap-3' : 'flex items-center gap-3'}>
                           {a.status === 'RUNNING' && job && (
                             <div className="hidden sm:block w-28">
                               <div className="flex justify-between text-[10px] font-black text-orange-600 mb-1">
@@ -669,6 +731,6 @@ export default function SeoTool() {
       {!loading && !error && nextCursor && <div className="mt-6 text-center"><button className="px-6 py-3 rounded-xl border bg-white font-bold disabled:opacity-50" disabled={moreLoading} onClick={() => load({ more: true })}>{moreLoading ? '読み込み中…' : '記事の続きを読み込む'}</button></div>}
 
       </div>
-    </main>
+    </Root>
   )
 }

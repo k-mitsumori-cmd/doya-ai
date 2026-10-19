@@ -5,6 +5,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChevronRight, History } from 'lucide-react'
 import Image from 'next/image'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { Button, EmptyState, Skeleton } from '@/components/ds'
+import { ErrorNotice } from '@/components/ds/feedback'
 
 interface RunRow {
   id: string
@@ -19,6 +22,7 @@ export default function AskLinkHistoryPage() {
   const [runs, setRuns] = useState<RunRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const uiNext = useUiNext()
 
   useEffect(() => {
     let alive = true
@@ -47,10 +51,29 @@ export default function AskLinkHistoryPage() {
     <div className="mx-auto max-w-4xl px-4 py-8 md:px-8">
       <div className="mb-6 flex items-center gap-3">
         <History className="h-6 w-6 text-[#0066ff]" />
-        <h1 className="text-2xl font-black text-slate-900">これまでの結果</h1>
+        {/* 新しい見た目では、h1 は枠（ToolFrame）の見出しだけにする */}
+        {uiNext
+          ? <h2 className="text-2xl font-black text-slate-900">これまでの結果</h2>
+          : <h1 className="text-2xl font-black text-slate-900">これまでの結果</h1>}
       </div>
 
-      {loading ? (
+      {loading && uiNext ? (
+        <div className="space-y-3" aria-busy="true">
+          {[1, 2, 3].map((i) => <div key={i} className="min-h-[76px] rounded-2xl bg-white p-4 ring-1 ring-slate-200"><Skeleton lines={2} delayMs={0} /></div>)}
+        </div>
+      ) : error && uiNext ? (
+        <ErrorNotice what={error} how="通信の状態を確かめて、もう一度読み込んでください。" onRetry={() => window.location.reload()} retryLabel="読み込み直す" />
+      ) : runs.length === 0 && !loading && uiNext ? (
+        <div className="rounded-2xl bg-white ring-1 ring-slate-200">
+          <EmptyState
+            kind="not-generated"
+            art="/asklink/empty-links.webp"
+            title="最初の質問リンクをつくりましょう"
+            description="サイトのURLを入れると、「AIに聞く」リンクとポップアップ用のバナーを作れます。"
+            action={<Button href="/asklink" icon="Link2">質問リンクをつくる</Button>}
+          />
+        </div>
+      ) : loading ? (
         <p className="py-16 text-center text-sm font-semibold text-slate-500">読み込んでいます…</p>
       ) : error ? (
         <p className="rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</p>
@@ -72,8 +95,8 @@ export default function AskLinkHistoryPage() {
                 className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:ring-[#0066ff]"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-black text-slate-900">{r.name}</p>
-                  <p className="truncate text-xs font-bold text-slate-500">{r.sourceUrl}</p>
+                  <p className="truncate !whitespace-nowrap text-base font-black text-slate-900">{r.name}</p>
+                  <p className="truncate !whitespace-nowrap text-xs font-bold text-slate-500">{r.sourceUrl}</p>
                 </div>
                 <div className="hidden shrink-0 text-right text-xs font-bold text-slate-500 sm:block">
                   <p>{r.audience === 'b2c' ? 'ToC' : 'ToB'}・バナー{r.bannersDone}/3</p>
