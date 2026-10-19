@@ -19,7 +19,9 @@
 | `9937eb4` | aishodan |
 | `50ac561` | sfa |
 | `fe0edb9` | hr |
-| 最後のコミット | quote の読み込み失敗のトーストに出ていた英語の文（Too Many Requests など）を、新しい見た目では日本語の文にする。写真とこの報告を足す |
+| `338aa2c` | quote の読み込み失敗のトーストに出ていた英語の文（Too Many Requests など）を、新しい見た目では日本語の文にする。写真とこの報告を足す |
+| `05ad93f` `73c2934` `d3550ef` `d5206c0` | ビルドに入っている回帰テスト（scripts/security-regression）を通すための直し（下の「ビルドの回帰テストへの対応」） |
+| 最後のコミット | この報告にビルドの結果を書き足す |
 
 ## 共通のやり方
 
@@ -219,8 +221,40 @@
 | `npm ci` | 0 |
 | `npx tsc --noEmit`（作業の前。エラー0件） | 0 |
 | 各ツールの作業のあと `npx tsc --noEmit` と、変えたファイルの `npx eslint`（各担当） | 0（エラー0件） |
-| `env UI_NEXT_ROLLOUT=all UI_PREVIEW_EMAILS=k-mitsumori@surisuta.jp UI_SHELL_SERVICES=all GIT_DIR=/nonexistent GIT_CEILING_DIRECTORIES=/ npm run build` | BUILD_RESULT |
+| `env UI_NEXT_ROLLOUT=all UI_PREVIEW_EMAILS=k-mitsumori@surisuta.jp UI_SHELL_SERVICES=all GIT_DIR=/nonexistent GIT_CEILING_DIRECTORIES=/ npm run build` | **0**（最初は 1。回帰テストを直してから 0） |
 | `node shot.mjs …`（写真150枚。失敗0、横のはみ出し0） | 0 |
+
+## ビルドの回帰テストへの対応
+
+最初の `npm run build` は、終了コード 1 で止まった。ビルドの最初に回帰テスト（`scripts/security-regression/run.cjs`）が走り、そのうち14件が落ちたため。
+- 14件とも、origin/main では通っていた。
+- 原因は2種類あった。
+
+1. **関数を取り出して動かすテスト**
+   - テストは、ページの関数（`load`・`fetchRecords`・`handleSubmit` など）を取り出し、決まった名前だけを渡して動かす。
+   - 新しく足した名前（`setErrorStatus`・`uiNext`・`AishodanHttpError` など）は、テストの中では見つからずに落ちた。
+   - ページの側を次のように直した。テストは変えていない。
+     - 失敗の中身は、もとからある setter の値に持たせる（hr のダッシュボード・評価・1on1、sfa の活動・タスク）。
+     - 新しい見た目の処理は、省略できる引数と、別の包む関数に分ける（hr の従業員の追加、aishodan の判定操作、doyalist の生成履歴・設定）。
+   - sfa の `MutationRecovery`・`SfaLoadError` は、`useRouter` をやめて `window.location.assign` にした。
+2. **部品を描くテスト**
+   - テストは、読み込む部品を名前で決めた代役で置き換えて描く。新しく読み込んだ `@/components/ds` と `lucide-react` には代役が無く、落ちた。
+   - 5つのテストに、代役を1行ずつ足した。ほかのテストで使っている形と同じで、確かめる中身（assert）は変えていない。
+     - `verify-quote-document-mounted`
+     - `verify-quote-settings-mounted`
+     - `verify-org-members-mounted`
+     - `verify-doyalist-collect-mounted`
+     - `verify-doyalist-tool-mounted`
+   - ⚠️ `scripts/` は今回の担当の外のパス。代役を足すだけの最小の変更なので、ここで明記する。
+   - hr の見本ページで外の枠を外す判定は、`process.env` を読まず、パスだけで決めるようにした。
+
+新しい見た目で弱めた点は1つ。aishodan の商談ログの**最初の**読み込みの失敗は、403 だけを見分ける。ほかの失敗はすべて「読み込めませんでした」として出す。
+- 理由: この読み込みの関数はテストが取り出して動かすので、状態コードを持ち出せない。
+- 続きの読み込みの失敗は、今までどおり状態ごとに出し分ける。
+
+**写真について:** 写真は、回帰テストの直しより前に撮った。直しのあとは撮り直していない。
+- 回帰テストの直しは、見た目を変えない作りにしている。
+- 上の aishodan の、写真に撮っていない最初の読み込みの失敗の分け方だけは変わっている。
 
 ## まだ良くない点
 
