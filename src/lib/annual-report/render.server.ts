@@ -25,21 +25,34 @@ const C = {
   tint: '#f5f8ff',
 }
 
-let fontCache: { regular: Buffer; bold: Buffer } | null = null
-function fonts(root: string) {
-  if (!fontCache) {
-    const dir = path.join(root, 'assets', 'fonts')
-    fontCache = {
-      regular: fs.readFileSync(path.join(dir, 'NotoSansJP-Regular.ttf')),
-      bold: fs.readFileSync(path.join(dir, 'NotoSansJP-Bold.ttf')),
+/** 読むファイル。⚠️ 本番では process.cwd() と文字のままのパスで書く（Vercel の同梱（ファイルの追跡）が見つけられるように） */
+function files(root?: string) {
+  if (root) {
+    return {
+      regular: path.join(root, 'assets', 'fonts', 'NotoSansJP-Regular.ttf'),
+      bold: path.join(root, 'assets', 'fonts', 'NotoSansJP-Bold.ttf'),
+      frame: path.join(root, FRAME_PATH),
     }
   }
-  return fontCache
+  return {
+    regular: path.join(process.cwd(), 'assets/fonts/NotoSansJP-Regular.ttf'),
+    bold: path.join(process.cwd(), 'assets/fonts/NotoSansJP-Bold.ttf'),
+    frame: path.join(process.cwd(), 'public/annual-report/frame.webp'),
+  }
+}
+
+const fontCache = new Map<string, { regular: Buffer; bold: Buffer }>()
+function fonts(f: ReturnType<typeof files>) {
+  let hit = fontCache.get(f.regular)
+  if (!hit) {
+    hit = { regular: fs.readFileSync(f.regular), bold: fs.readFileSync(f.bold) }
+    fontCache.set(f.regular, hit)
+  }
+  return hit
 }
 
 /** 台紙。あれば PNG の data URI にして返す（satori は webp を読めないため sharp で変える）。無い・読めないときは null */
-async function frameDataUri(root: string, width: number, height: number): Promise<string | null> {
-  const file = path.join(root, FRAME_PATH)
+async function frameDataUri(file: string, width: number, height: number): Promise<string | null> {
   if (!fs.existsSync(file)) return null
   try {
     const sharp = (await import('sharp')).default
@@ -177,10 +190,12 @@ export function buildTree(r: AnnualReport, size: ImageSize, frame: string | null
   ])
 }
 
-export async function renderAnnualImage(r: AnnualReport, size: ImageSize, root: string = process.cwd()): Promise<Buffer> {
+/** root は確認用（省略すると process.cwd()） */
+export async function renderAnnualImage(r: AnnualReport, size: ImageSize, root?: string): Promise<Buffer> {
   const { width, height } = IMAGE_SIZES[size]
-  const frame = await frameDataUri(root, width, height)
-  const f = fonts(root)
+  const paths = files(root)
+  const frame = await frameDataUri(paths.frame, width, height)
+  const f = fonts(paths)
   const svg = await satori(buildTree(r, size, frame) as any, {
     width,
     height,
@@ -189,7 +204,7 @@ export async function renderAnnualImage(r: AnnualReport, size: ImageSize, root: 
       { name: 'Noto Sans JP', data: f.bold, weight: 700, style: 'normal' },
     ],
   })
-  return svgToPng(svg, width, root)
+  return svgToPng(svg, width, root ?? process.cwd())
 }
 
 async function svgToPng(svg: string, width: number, root: string): Promise<Buffer> {

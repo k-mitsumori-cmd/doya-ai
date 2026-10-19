@@ -6,7 +6,7 @@
 // ⚠️ 顧客名・金額・社員名は、既定で入れない。選べるのは、サーバーが許した項目（allowed）だけ。
 //    ここで選べても、最後に確かめるのはサーバー（許していない項目は画像に入らない）。
 // ⚠️ 演出は控えめ（動きは画像の切り替えのフェードだけ）。
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { UiIcon } from '@/components/icons'
 import { IMAGE_SIZES, REVEAL_KEYS, REVEAL_LABELS, SENSITIVE_REVEAL, DEFAULT_REVEAL, type ImageSize, type RevealKey } from '@/lib/annual-report/report'
 import styles from './AnnualReportView.module.css'
@@ -34,7 +34,12 @@ export default function AnnualReportView({ years, initialYear, allowed, sample }
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
 
   const src = useMemo(() => annualImageUrl({ year, size, show, sample }), [year, size, show, sample])
-  useEffect(() => setState('loading'), [src])
+  const imgRef = useRef<HTMLImageElement>(null)
+  useEffect(() => {
+    // ⚠️ 画像が描画（hydration）より先に読み終わると onLoad が来ない。読み終わっていれば、ここで表示に切り替える
+    const img = imgRef.current
+    setState(img?.complete ? (img.naturalWidth > 0 ? 'ready' : 'error') : 'loading')
+  }, [src])
 
   const toggle = (k: RevealKey) =>
     setShow((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : REVEAL_KEYS.filter((x) => x === k || cur.includes(x))))
@@ -109,6 +114,7 @@ export default function AnnualReportView({ years, initialYear, allowed, sample }
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               key={src}
+              ref={imgRef}
               src={src}
               alt={`${year}年の年間レポートの画像（${dim.label}）`}
               className={state === 'ready' ? styles.imgOn : styles.img}
