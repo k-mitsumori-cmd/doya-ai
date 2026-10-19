@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowRight, Send, StopCircle, CheckCircle2, Loader2, RefreshCw, TrendingUp, Wallet, FileText, FolderKanban,
-  Clock, Users, CreditCard, AlertTriangle, ChevronLeft, ChevronRight,
+  Clock, Users, CreditCard, AlertTriangle, ChevronLeft, ChevronRight, X,
 } from 'lucide-react'
 import type { HomeSummary, HomeEvent } from '@/lib/home/summary'
 import { SHELL_GROUPS } from '@/components/shell/tools'
@@ -40,6 +40,7 @@ function SmartLink({ href, className, children }: { href: string; className?: st
 type RunState = { plan: AgentPlan; query: string; shown: number; status: 'running' | 'done' | 'stopped' }
 
 function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: string }) {
+  const narrow = useNarrow()
   const router = useRouter()
   const [opening, setOpening] = useState<string | null>(null)
   const [input, setInput] = useState('')
@@ -95,7 +96,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
           className={styles.askInput}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="例: バナーを作りたい ／ 今月の売上を教えて"
+          placeholder={narrow ? '例: 請求書を作りたい' : '例: バナーを作りたい ／ 今月の売上を教えて'}
           aria-label="エージェントへの依頼"
           maxLength={200}
         />
@@ -196,24 +197,46 @@ function Kpi({ icon: Icon, label, value, sub, href, muted }: { icon: typeof Wall
 
 /* ---------------- 今日やること（UI 品質 S-10） ---------------- */
 
-/** 会社をまだ登録していない人への、最初の案内（UI 品質 S-9）。押すと、会社名とサイトの URL を入れる小さな画面が開く */
+const SETUP_HIDE_KEY = 'doya_home_company_setup_hidden'
+
+/**
+ * 会社をまだ登録していない人への案内（UI 品質 S-9・B-1）。1行の細い帯で、入力（主役）の下に出す。閉じたら、このブラウザでは出さない。
+ * 押すと、会社名とサイトの URL を入れる小さな画面が開く。左下の「会社情報」からも、いつでも登録できる。
+ */
 function CompanySetupNote() {
   const company = useAccountCompany()
+  const [hidden, setHidden] = useState(true)
+  useEffect(() => {
+    try { setHidden(window.localStorage.getItem(SETUP_HIDE_KEY) === '1') } catch { setHidden(false) }
+  }, [])
   // undefined は今の見た目（出さない）。登録済み（source が company）なら出さない
-  if (company === undefined || company?.source === 'company') return null
+  if (hidden || company === undefined || company?.source === 'company') return null
+  const hide = () => {
+    setHidden(true)
+    try { window.localStorage.setItem(SETUP_HIDE_KEY, '1') } catch { /* 覚えられなくても閉じる */ }
+  }
   return (
     <section className={styles.setup} aria-label="会社情報の登録">
-      <div>
-        <p className={styles.setupTitle}>はじめに、会社情報を登録してください</p>
-        <p className={styles.setupBody}>
-          {company
-            ? `今は、ツールで使っている名前（${company.name}）を仮に出しています。登録すると、左下とこの画面に登録した会社名が出ます。`
-            : '会社名とサイトの URL を登録すると、左下とこの画面に会社名が出ます。'}
-        </p>
-      </div>
-      <CompanyRegisterButton className={styles.setupAction}>会社情報を登録する</CompanyRegisterButton>
+      <p className={styles.setupText}>
+        {company ? <>会社情報が未登録です（今は「{company.name}」を仮に表示）</> : '会社情報が未登録です'}
+      </p>
+      <CompanyRegisterButton className={styles.setupAction}>登録する</CompanyRegisterButton>
+      <button type="button" className={styles.setupClose} onClick={hide} aria-label="この案内を閉じる"><X size={16} aria-hidden /></button>
     </section>
   )
+}
+
+/** 767px 以下か（入力の例文を短くするため）。最初の描画では false */
+function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(false)
+  useEffect(() => {
+    const m = window.matchMedia('(max-width: 767px)')
+    const on = () => setNarrow(m.matches)
+    on()
+    m.addEventListener('change', on)
+    return () => m.removeEventListener('change', on)
+  }, [])
+  return narrow
 }
 
 function TodayCard({ summary }: { summary: HomeSummary }) {
@@ -400,10 +423,10 @@ export default function HomeDashboard({ initial }: { initial: HomeSummary }) {
 
   return (
     <div className={styles.page}>
-      {/* 会社の登録の帯は、いちばん上（UI 品質 B-1・S-9） */}
-      <CompanySetupNote />
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
       <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
+      {/* 会社の登録の案内は、入力（主役）の下に1行で（UI 品質 B-1・S-9） */}
+      <CompanySetupNote />
 
       <TodayCard summary={s} />
 

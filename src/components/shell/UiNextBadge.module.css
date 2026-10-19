@@ -10,5 +10,11 @@
 }
 .back:hover { background: rgba(255, 255, 255, 0.24); }
 .back:focus-visible { outline: 2px solid #00e0ff; outline-offset: 2px; }
-/* スマホでは下のタブバーに重ねない */
-@media (max-width: 767px) { .badge { bottom: 76px; right: 12px; } }
+button.badge { border: 0; font: inherit; cursor: pointer; }
+.folded { width: 40px; height: 40px; padding: 0; justify-content: center; gap: 0; opacity: 0.85; }
+.folded:hover { opacity: 1; }
+.fold { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: #fff; cursor: pointer; }
+.fold:hover { background: rgba(255, 255, 255, 0.14); }
+.folded:focus-visible, .fold:focus-visible { outline: 2px solid #00e0ff; outline-offset: 2px; }
+/* スマホでは下のタブバー（約64px）の上に、余白を取って出す */
+@media (max-width: 767px) { .badge { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); right: 12px; } }

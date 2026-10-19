@@ -45,7 +45,7 @@ function comparisonGroups(services: Service[]) {
   }))
 }
 
-export default function PricingNext({ canceled }: { canceled: boolean }) {
+export default function PricingNext({ canceled, inShell = false }: { canceled: boolean; inShell?: boolean }) {
   const trialEligible = useTrialEligible()
   const { data: session, status: authStatus } = useSession()
   // 契約の判定は UnifiedPricingPlans（planSource='account'）と同じ
@@ -66,8 +66,11 @@ export default function PricingNext({ canceled }: { canceled: boolean }) {
   const groups = comparisonGroups(services)
 
   return (
-    <div className={`${ds.ds} ${styles.page}`} data-ui-next="true">
+    <div className={`${ds.ds} ${styles.page}`} data-ui-next="true" data-in-shell={inShell ? 'true' : undefined}>
       <header className={styles.hero}>
+        {/* キービジュアル（統括の確認 2026-10-19）。大きさを決めて置き、読み込みで下がずれないようにする */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/renewal/bear-success.webp" alt="" width={160} height={160} className={styles.heroArt} />
         <p className={styles.eyebrow}>料金プラン</p>
         <h1 className={styles.title}>1つの契約で、<wbr />全{services.length}ツールの<wbr />プロ機能を使えます</h1>
         <p className={styles.lead}>プランは無料とプロの2つだけです。ツールごとの契約や組み合わせは要りません。</p>

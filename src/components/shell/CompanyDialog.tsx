@@ -71,6 +71,9 @@ export default function CompanyDialog({ open, onClose }: { open: boolean; onClos
   }
 
   return (
+    <>
+    {/* 開いている間は、HubSpot のポップアップ（右下）を隠す。showModal の最前面の層より上に、あとから出ることがあるため */}
+    {open ? <style>{'[id^="hs-web-interactives"],[class*="hs-web-interactive"],#hubspot-messages-iframe-container,.hs-overlay-container{display:none!important}'}</style> : null}
     <dialog ref={ref} className={styles.dialog} aria-labelledby={titleId} onClose={onClose} onCancel={onClose}>
       <form className={styles.body} onSubmit={(e) => { e.preventDefault(); if (!busy) void save() }}>
         <div className={styles.head}>
@@ -110,5 +113,6 @@ export default function CompanyDialog({ open, onClose }: { open: boolean; onClos
         </div>
       </form>
     </dialog>
+    </>
   )
 }

@@ -266,6 +266,8 @@
   .agent { padding: 20px 16px; }
   .intents { grid-template-columns: minmax(0, 1fr); }
   .agent .askInput { font-size: 16px; padding: 14px 16px; }
+  /* 送信ボタンを入力欄の高さに合わせて小さくする */
+  .agent .askButton { width: 48px; }
 }
 
 /* ---- 今日やること（UI 品質 S-10） ---- */
@@ -281,10 +283,11 @@
 .todayEmpty { margin: 0; font-size: 14px; color: var(--sub); }
 @media (max-width: 767px) { .today { padding: 16px; } }
 
-/* ---- 会社情報の登録の案内（UI 品質 S-9） ---- */
-.setup { margin: 0 0 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-radius: var(--r); background: var(--blue-soft); }
-.setupTitle { margin: 0; font-size: 15px; font-weight: 800; color: var(--ink); }
-.setupBody { margin: 4px 0 0; font-size: 13px; line-height: 1.7; color: var(--sub); }
-.setupAction { flex: none; padding: 10px 18px; border: 0; border-radius: 999px; background: var(--blue); color: #fff; font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
+/* ---- 会社情報の登録の案内（UI 品質 S-9）。1行の細い帯 ---- */
+.setup { margin: 0 0 16px; display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 16px; border-radius: var(--r-sm); background: var(--blue-soft); }
+.setupText { margin: 0; flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.setupAction { flex: none; padding: 6px 14px; border: 0; border-radius: 999px; background: var(--blue); color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .setupAction:hover { background: var(--blue-deep); }
-@media (max-width: 767px) { .setup { flex-direction: column; align-items: stretch; text-align: left; } .setupAction { text-align: center; } }
+.setupClose { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--sub); cursor: pointer; }
+.setupClose:hover { background: var(--paper); color: var(--ink); }
+.setupAction:focus-visible, .setupClose:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }

@@ -83,9 +83,10 @@ const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.in
     assert.doesNotMatch(loader,/prisma\.(?!accountCompany\b|user\.findUnique)\w+\.\w+/);assert.doesNotMatch(loader,/ensure\w*\(/);
     // AI検索対策の組織はブランドの一覧なので、会社名に使わない
     assert.doesNotMatch(loader,/lib\/aio\//);
-    for(const f of ['src/app/(shell)/shodan/page.tsx','src/app/(shell)/aio/page.tsx'])assert.match(read(f),/&& \(await isUiNext\(\)\)\) \{/,f);
+    for(const f of ['src/app/(shell)/shodan/page.tsx','src/app/(shell)/aio/page.tsx','src/app/(shell)/sfa/page.tsx'])assert.match(read(f),/&& \(await isUiNext\(\)\)\) \{/,f);
     assert.match(read('src/app/(shell)/home/page.tsx'),/uiNext \? <HomeDashboard/);
-    assert.match(read('src/app/pricing/page.tsx'),/if \(!\(await isUiNext\(\)\)\) return <PricingLegacy \/>/);
+    assert.match(read('src/app/pricing/page.tsx'),/if \(!uiNext\) return <PricingLegacy \/>/);
+    assert.match(read('src/app/pricing/page.tsx'),/if \(!session\?\.user\) return <PricingNext/);
     // 新しい料金ページも、購入は同じボタンと同じプラン ID を使う
     assert.match(read('src/components/pricing/PricingNext.tsx'),/<CheckoutButton planId=\{UNIFIED_PRO_PLAN_ID\}/);
     assert.match(read('src/components/DashboardLayout.tsx'),/if \(inShell && uiNext\)/);

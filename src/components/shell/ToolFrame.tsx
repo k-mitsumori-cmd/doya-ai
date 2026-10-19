@@ -7,12 +7,13 @@
 // ⚠️ ナビは src/lib/<svc>/nav.ts のデータを渡す（ADDON R-1）。
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { ALL_SHELL_TOOLS, SHELL_HOME } from './tools'
 import { isNavActive, type ShellNavItem } from './nav'
 import { ShellIcon } from './icons'
 import { ShellCompanyTag } from './ShellCompanyCard'
+import { useUiNext } from './ui-next-context'
 import styles from './ToolFrame.module.css'
 
 export default function ToolFrame({ serviceId, title, description, action, nav, aside, switcher, children }: {
@@ -32,6 +33,35 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
   const pathname = usePathname() || '/'
   const tool = ALL_SHELL_TOOLS.find((t) => t.id === serviceId)
   const name = tool?.name ?? serviceId
+
+  // タブの列が横にあふれるとき（375px など）、送れる側の端を薄くぼかし、今のタブが見える位置まで送る
+  // （新しい見た目のときだけ。統括の確認 2026-10-19）
+  const uiNext = useUiNext()
+  const tabsRef = useRef<HTMLDivElement | null>(null)
+  const [more, setMore] = useState({ left: false, right: false })
+  useEffect(() => {
+    const el = tabsRef.current
+    if (!uiNext || !el) return
+    const update = () => {
+      const max = el.scrollWidth - el.clientWidth
+      setMore((prev) => {
+        const next = { left: el.scrollLeft > 2, right: max - el.scrollLeft > 2 }
+        return prev.left === next.left && prev.right === next.right ? prev : next
+      })
+    }
+    // 今のタブが切れていたら、見える位置まで送る（ページ全体は動かさない）
+    const active = el.querySelector<HTMLElement>('[aria-current="page"]')
+    if (active) {
+      const left = active.getBoundingClientRect().left - el.getBoundingClientRect().left + el.scrollLeft
+      const right = left + active.offsetWidth
+      if (left < el.scrollLeft || right > el.scrollLeft + el.clientWidth) el.scrollLeft = Math.max(0, left - 24)
+    }
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null
+    ro?.observe(el)
+    return () => { el.removeEventListener('scroll', update); ro?.disconnect() }
+  }, [uiNext, pathname, nav?.length])
 
   return (
     <div className={styles.frame}>
@@ -53,7 +83,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
           {action ? <div className={styles.action}>{action}</div> : null}
         </div>
         {nav?.length ? (
-          <div className={styles.tabs} role="tablist" aria-label={`${name}のメニュー`}>
+          <div ref={tabsRef} className={styles.tabs} role="tablist" aria-label={`${name}のメニュー`} data-more-left={more.left ? 'true' : undefined} data-more-right={more.right ? 'true' : undefined}>
             {nav.map((item) => {
               const active = isNavActive(pathname, item)
               return (

@@ -16,8 +16,10 @@ import { UiNextContext } from './ui-next-context'
 import UiNextBadge from './UiNextBadge'
 import ShellVitals from './ShellVitals'
 
-export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, company = undefined, children }: {
+export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, company = undefined, always = false, children }: {
   signedIn: boolean
+  /** ツールの一覧に無いページ（/pricing など）でも、ログインしていれば枠を出す */
+  always?: boolean
   /** 新しい見た目を出すか（サーバーの uiNextMode() で決めて渡す。チェックリスト §5.1） */
   uiNext?: UiNextMode
   /** アカウントの会社（新しい見た目のときだけ。null は見つからない。UI 品質 B-1） */
@@ -28,7 +30,7 @@ export default function ShellGate({ signedIn, userName, enabledIds, uiNext = nul
   children: ReactNode
 }) {
   const pathname = usePathname()
-  const inner = shouldShowShell(pathname, { signedIn, enabledIds })
+  const inner = (always ? signedIn : shouldShowShell(pathname, { signedIn, enabledIds }))
     ? <AppShell userName={userName}>{children}</AppShell>
     : <>{children}</>
   return (
