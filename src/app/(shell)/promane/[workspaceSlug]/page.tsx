@@ -1,3 +1,4 @@
+import PromanePageHeading from '@/components/promane/PromanePageHeading';
 import { timeEntryBelongsToProject } from "@/lib/promane/time-entry-project";
 import { laborCostForEntry } from "@/lib/promane/labor-cost";
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
@@ -11,6 +12,8 @@ import { ArrowRight, Plus, TrendingUp, Wallet, Briefcase, Target } from "lucide-
 import { Button } from "@/components/promane/ui/button";
 import Image from "next/image";
 import { TaskPieChart, RevenueLineChart, ProfitBarChart, ActivityTimeline } from "@/components/promane/dashboard-charts";
+import { isUiNext } from "@/lib/ui-next";
+import DashboardNext from "@/components/promane/ui-next/DashboardNext";
 
 async function getMyAssignmentsData(workspaceId: string, myMemberId: string) {
   const tasks = await prisma.promaneTask.findMany({
@@ -260,11 +263,17 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
   const myMember = workspace.members[0];
 
   // 並列実行 + 各々が独立して try-catch (1つが落ちても他が表示される)
-  const [data, myData, chartData] = await Promise.all([
+  const [data, myData, chartData, uiNext] = await Promise.all([
     safeDashboardData(workspace.id),
     myMember ? safeMyAssignments(workspace.id, myMember.id) : Promise.resolve({ tasks: [] as any[], myProjects: [] as any[] }),
     safeChartData(workspace.id),
+    isUiNext(),
   ]);
+
+  // 新しい見た目（UI 品質の直し）。偽のときは下の今までの画面のまま（チェックリスト §5.1）
+  if (uiNext) {
+    return <DashboardNext workspaceSlug={workspaceSlug} data={data as any} myData={myData} chartData={chartData} myMember={myMember} />;
+  }
 
   // 利益率を黒字/赤字で色分け
   const profitColors = profitColorClass(data.totalProfit);
@@ -289,7 +298,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
         <div className="flex items-center gap-5">
           <Image src="/character/hello.png" alt="ドヤプロマネくん" width={100} height={100} className="animate-bounce-in drop-shadow-xl" unoptimized />
           <div>
-            <h1 className="text-[32px] font-black tracking-tight text-gray-900">ダッシュボード</h1>
+            <PromanePageHeading className="text-[32px] font-black tracking-tight text-gray-900">ダッシュボード</PromanePageHeading>
             <p className="mt-0.5 text-[16px] text-gray-400 font-bold">今日も一緒にがんばろう！💪</p>
           </div>
         </div>
