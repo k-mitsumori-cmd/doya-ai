@@ -38,7 +38,6 @@ interface ToolMeta { stage: ShellStage; name: string; icon: ShellIconName; hint:
 const TOOL_META: Record<string, ToolMeta> = {
   // 売る
   sfa: { stage: 'sell', name: '営業管理', icon: 'Briefcase', hint: '商談・パイプライン・タスク' },
-  quote: { stage: 'sell', name: '見積', icon: 'FileText', hint: '見積書の作成と確定' },
   shodan: { stage: 'sell', name: '商談準備', icon: 'Building2', hint: '企業リサーチと提案資料' },
   aishodan: { stage: 'sell', name: 'AI商談', icon: 'MessageSquare', hint: '商談の記録と要約' },
   cunning: { stage: 'sell', name: 'カンニング', icon: 'Headphones', hint: 'Web会議の回答をその場で提示' },
@@ -58,18 +57,20 @@ const TOOL_META: Record<string, ToolMeta> = {
   hr: { stage: 'hire', name: '人事', icon: 'Users', hint: '社員・評価・1on1', href: '/hr/dashboard' },
   mensetsu: { stage: 'hire', name: '面接', icon: 'UserCheck', hint: '採用面接の準備と記録' },
   shanai: { stage: 'hire', name: '社内インタビュー', icon: 'BookOpen', hint: '社員インタビューから採用広報の記事を作成' },
+  kintai: { stage: 'hire', name: '勤怠', icon: 'Clock', hint: '打刻・残業・申請', href: '/kintai/dashboard' },
   // 回す
-  kintai: { stage: 'operate', name: '勤怠', icon: 'Clock', hint: '打刻・残業・申請', href: '/kintai/dashboard' },
+  quote: { stage: 'operate', name: '見積', icon: 'FileText', hint: '見積書の作成と確定' },
   promane: { stage: 'operate', name: 'プロマネ', icon: 'FolderKanban', hint: '案件・工数・収支' },
   income: { stage: 'operate', name: '収入管理', icon: 'Receipt', hint: '契約・売上予定・請求書・入金' },
   expense: { stage: 'operate', name: '支出管理', icon: 'Wallet', hint: '固定費・業務委託・支払予定' },
 }
 
 const STAGE_LABELS: { stage: ShellStage; label: string }[] = [
-  { stage: 'sell', label: '売る' },
-  { stage: 'collect', label: '集める' },
-  { stage: 'hire', label: '人' },
-  { stage: 'operate', label: '回す' },
+  // 事業の部門の名前にする（UI 品質 H-1）。並びは、集客 → 営業 → 人 → お金
+  { stage: 'collect', label: 'マーケティング' },
+  { stage: 'sell', label: '営業（セールス）' },
+  { stage: 'hire', label: '採用・人材管理' },
+  { stage: 'operate', label: '経理・バックオフィス' },
   { stage: 'other', label: 'その他' },
 ]
 

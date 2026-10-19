@@ -20,7 +20,7 @@ export default function HrShellFrame({ children }: { children: ReactNode }) {
       renderFrame={({ switcher, canManageEmployees, usage, children: content }) => (
         <>
           {/* サイドバーにあった従業員数のメーターとプランを、枠の左下に出す */}
-          {usage ? <ShellUsageSlot><HrUsageMeter {...usage} /></ShellUsageSlot> : null}
+          {usage ? <ShellUsageSlot id={JSON.stringify(usage)}><HrUsageMeter {...usage} /></ShellUsageSlot> : null}
           <ToolFrame serviceId="hr" title="ドヤHR" nav={hrShellNav(canManageEmployees)} switcher={switcher}>
             {content}
           </ToolFrame>

@@ -8,7 +8,7 @@
 // ⚠️ 上限に達したときのモーダルは各ツールに残っている。ここは表示だけ。
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { SidebarUsagePanel } from '@/components/sidebar'
 import { useQuoteUsageOrganization } from '@/lib/quote/use-usage-organization'
 import { shellServiceForPath, type ShellUsage } from './registry'
@@ -29,15 +29,18 @@ export function ShellUsageProvider({ children }: { children: ReactNode }) {
 
 /**
  * ツールの側から、枠の左下に表示を渡す。枠の外（設定で無効・未ログイン）では何もしない。
- * 例: <ShellUsageSlot><HrUsageMeter … /></ShellUsageSlot>
+ * 例: <ShellUsageSlot id={JSON.stringify(usage)}><HrUsageMeter … /></ShellUsageSlot>
  */
-export function ShellUsageSlot({ children }: { children: ReactNode }) {
+export function ShellUsageSlot({ id, children }: { id: string; children: ReactNode }) {
+  // ⚠️ 中身が変わったときだけ入れ直す。children は描くたびに新しくなるので、id（表示する値をまとめた文字列）で比べる。
+  //    毎回入れ直すと、左下の表示が一瞬消えたりずれたりする（UI 品質 C-6）
   const setSlot = useContext(SetterContext)
+  const latest = useRef(children)
+  latest.current = children
   useEffect(() => {
-    if (!setSlot) return
-    setSlot(children)
-    return () => setSlot(null)
-  }, [setSlot, children])
+    setSlot?.(latest.current)
+  }, [setSlot, id])
+  useEffect(() => () => setSlot?.(null), [setSlot])
   return null
 }
 

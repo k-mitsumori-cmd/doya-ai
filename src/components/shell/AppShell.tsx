@@ -2,7 +2,7 @@
 // ============================================
 // 共通シェル（全ツール共通の枠）
 // ============================================
-// 左にツール一覧（区分: 売る・集める・人・回す）、右に中身。
+// 左にツール一覧（区分: マーケティング・営業（セールス）・採用・人材管理・経理・バックオフィス）、右に中身。
 // - 1280px 以上: サイドバー展開
 // - 768〜1279px: サイドバーはアイコンのみ
 // - 767px 以下: 上にメニューボタン、下にタブバー（ホーム・最近使ったツール・すべて）。サイドバーは引き出し
@@ -17,6 +17,7 @@ import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
 import { ShellIcon } from './icons'
 import { ShellUsageArea, ShellUsageProvider } from './ShellUsage'
+import { InShellContext } from './in-shell'
 import { ALL_SHELL_TOOLS, SHELL_GROUPS, SHELL_HOME, type ShellTool } from './tools'
 import styles from './AppShell.module.css'
 
@@ -40,10 +41,10 @@ function readRecent(): string[] {
   }
 }
 
-function NavItem({ tool, pathname, onNavigate }: { tool: ShellTool; pathname: string; onNavigate: () => void }) {
+function NavItem({ tool, pathname, onNavigate }: { tool: ShellTool; pathname: string; onNavigate: (href: string) => void }) {
   const active = isActive(pathname, tool)
   return (
-    <Link href={tool.href} className={styles.navItem} aria-current={active ? 'page' : undefined} onClick={onNavigate} title={tool.name}>
+    <Link href={tool.href} className={styles.navItem} aria-current={active ? 'page' : undefined} onClick={() => onNavigate(tool.href)} title={tool.name} prefetch>
       <ShellIcon name={tool.icon} size={18} strokeWidth={2} />
       <span className={styles.navLabel}>{tool.name}</span>
       {tool.beta ? <span className={styles.beta}>開発中</span> : null}
@@ -152,6 +153,11 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
   }, [onKey])
 
   const close = () => setOpen(false)
+  // 押した瞬間に選択の表示を変える（読み込みを待たない。UI 品質 C-5）。移り終わったら実際のパスに戻す
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
+  useEffect(() => setPendingHref(null), [pathname])
+  const shownPath = pendingHref ?? pathname
+  const navigate = (href: string) => { setPendingHref(href); close() }
 
   const tabTools = useMemo(() => {
     const byId = new Map(ALL_SHELL_TOOLS.map((t) => [t.id, t]))
@@ -161,6 +167,7 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
   }, [recent])
 
   return (
+    <InShellContext.Provider value={true}>
     <ShellUsageProvider>
     <div className={`${ds.ds} ${styles.shell}`}>
       <a href="#shell-main" className={styles.skip}>本文へ移動</a>
@@ -194,12 +201,12 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
           <kbd className={`${styles.kbd} ${styles.navLabel}`}>⌘K</kbd>
         </button>
         <div className={styles.navScroll}>
-          <NavItem tool={SHELL_HOME} pathname={pathname} onNavigate={close} />
+          <NavItem tool={SHELL_HOME} pathname={shownPath} onNavigate={navigate} />
           {SHELL_GROUPS.map((group) => (
             <div key={group.stage} className={styles.group}>
               <p className={styles.groupLabel}>{group.label}</p>
               {group.tools.map((tool) => (
-                <NavItem key={tool.id} tool={tool} pathname={pathname} onNavigate={close} />
+                <NavItem key={tool.id} tool={tool} pathname={shownPath} onNavigate={navigate} />
               ))}
             </div>
           ))}
@@ -238,5 +245,6 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
       <CommandPalette open={palette} onClose={() => setPalette(false)} />
     </div>
     </ShellUsageProvider>
+    </InShellContext.Provider>
   )
 }
