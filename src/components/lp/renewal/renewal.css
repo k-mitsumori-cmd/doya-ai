@@ -879,7 +879,7 @@
 }
 @keyframes doya-enter {
   from {
-    opacity: 0.25;
+    opacity: 1;
     translate: 0 18px;
   }
   to {

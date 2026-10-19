@@ -13,7 +13,7 @@ import { Sym, BgDots, SectionHeading } from './primitives'
 /** ブラウザ/アプリ風の枠（中に製品モックを入れる） */
 export function MockWindow({ title, children, className = '', floating = true }: { title?: string; children: React.ReactNode; className?: string; floating?: boolean }) {
   return (
-    <div data-mock-window role="img" aria-label={`${title || "製品画面"}の操作イメージ`} className={`relative rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xl shadow-slate-300/40 ${floating ? 'animate-fade-in-up' : ''} ${className}`}>
+    <div data-mock-window role="img" aria-label={`${title || "製品画面"}の操作イメージ`} className={`relative rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xl shadow-slate-300/40 ${floating ? 'animate-rise-in' : ''} ${className}`}>
       <div aria-hidden="true" inert>
       {/* トップバー */}
       <div className="flex items-center gap-2 px-4 h-10 border-b border-slate-100 bg-slate-50/80">
