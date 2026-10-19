@@ -3,7 +3,7 @@ import path from 'node:path'
 
 const targets = {
   banner: ['src/app/(shell)/banner/landing/page.tsx', 'ドヤバナーAI', '#00e0ff'], hr: ['src/app/hr/page.tsx', 'ドヤHR', '#009bff'],
-  kintai: ['src/app/kintai/page.tsx', 'ドヤ勤怠', '#00e0ff'], sfa: ['src/app/sfa/Lp.tsx', 'ドヤ営業管理', '#009bff'],
+  kintai: ['src/app/kintai/page.tsx', 'ドヤ勤怠', '#00e0ff'], sfa: ['src/app/(shell)/sfa/Lp.tsx', 'ドヤ営業管理', '#009bff'],
   shodan: ['src/app/(shell)/shodan/Lp.tsx', 'ドヤ商談準備', '#ffd400'], aio: ['src/app/(shell)/aio/Lp.tsx', 'ドヤAIO', '#00e0ff'],
   mensetsu: ['src/app/(shell)/mensetsu/Lp.tsx', 'ドヤ面接官', '#ff1e72'], quote: ['src/app/(shell)/quote/Lp.tsx', 'ドヤ見積もりAI', '#ffd400'],
   aishodan: ['src/app/(shell)/aishodan/Lp.tsx', 'ドヤAI商談', '#00e0ff'], adimage: ['src/app/(shell)/adimage/Lp.tsx', 'ドヤ広告画像AI', '#ff1e72'],

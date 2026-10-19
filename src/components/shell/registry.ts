@@ -53,6 +53,8 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'aishodan', basePath: '/aishodan', inShell: (p) => !p.startsWith('/aishodan/invite') },
   // 面接の画面（/mensetsu/live/<token>）と招待（/mensetsu/invite/<token>）は候補者・招待者が開く。guest-path.ts でも外れている
   { id: 'mensetsu', basePath: '/mensetsu', inShell: (p) => !p.startsWith('/mensetsu/live') && !p.startsWith('/mensetsu/invite') },
+  // 営業管理は組織を選んだあと（/sfa/<組織>）だけ枠に入る。入口（/sfa）・料金（/sfa/pricing）・招待は今までどおり
+  { id: 'sfa', basePath: '/sfa', inShell: (p) => /^\/sfa\/[^/]+/.test(p) && !p.startsWith('/sfa/pricing') && !p.startsWith('/sfa/invite') },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */

@@ -8,6 +8,7 @@ import { Toaster } from 'react-hot-toast'
 import SfaSidebar from '@/components/sfa/SfaSidebar'
 import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
 import { sfaJson } from '@/lib/sfa/client-response'
+import { useSfaShell } from '@/lib/sfa/shell-context'
 
 interface Membership { slug: string; name: string; role: string }
 
@@ -16,6 +17,8 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
   const params = useParams()
   const orgSlug = (params.orgSlug as string) || ''
   const guard = useOrgSettingsGuard(orgSlug)
+  // 共通の枠（SfaShellFrame）の中のとき、サイドバーと外枠は描かない（枠と ToolFrame が出す）。所属組織の一覧だけ枠へ渡す
+  const shell = useSfaShell()
   const [usageKey, setUsageKey] = useState('')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -38,6 +41,14 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
   const currentPlan = guard.allowed && usageKey === guard.key ? plan : undefined
   const currentMemberships = guard.allowed && usageKey === guard.key ? memberships : []
 
+  const membershipsKey = JSON.stringify(currentMemberships)
+  useEffect(() => {
+    if (!shell) return
+    shell.publishMemberships(currentMemberships)
+    return () => shell.publishMemberships([])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shell, membershipsKey])
+
   useEffect(() => {
     setMobileMenuOpen(false)
   }, [pathname])
@@ -50,6 +61,27 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
     const timer = setTimeout(() => setGuardStalled(true), 15000)
     return () => clearTimeout(timer)
   }, [guard.allowed, guard.requiresLogin, guard.key])
+
+  const guardView = (
+    <>
+    {!guard.allowed && (guardStalled && !guard.requiresLogin ? (
+      <div role="alert" className="p-6 space-y-3">
+        <p>ログイン状態を確認できませんでした。通信状況を確認して、ページを再読み込みしてください。</p>
+        <button type="button" onClick={() => window.location.reload()} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-bold">再読み込み</button>
+      </div>
+    ) : <p role="status" className="p-6">{guard.requiresLogin ? '再度ログインしてください。' : 'ログイン状態を確認しています。'}</p>)}
+    <div hidden={!guard.allowed}><Fragment key={guard.identity}>{children}</Fragment></div>
+    </>
+  )
+
+  if (shell) {
+    return (
+      <>
+        <Toaster position="top-center" />
+        {guardView}
+      </>
+    )
+  }
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
@@ -83,13 +115,7 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {!guard.allowed && (guardStalled && !guard.requiresLogin ? (
-            <div role="alert" className="p-6 space-y-3">
-              <p>ログイン状態を確認できませんでした。通信状況を確認して、ページを再読み込みしてください。</p>
-              <button type="button" onClick={() => window.location.reload()} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-bold">再読み込み</button>
-            </div>
-          ) : <p role="status" className="p-6">{guard.requiresLogin ? '再度ログインしてください。' : 'ログイン状態を確認しています。'}</p>)}
-          <div hidden={!guard.allowed}><Fragment key={guard.identity}>{children}</Fragment></div>
+          {guardView}
         </div>
       </main>
     </div>

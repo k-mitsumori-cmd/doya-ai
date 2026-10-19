@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 
 const targets = {
   banner: 'src/app/(shell)/banner/landing/page.tsx', hr: 'src/app/hr/page.tsx', kintai: 'src/app/kintai/page.tsx',
-  sfa: 'src/app/sfa/Lp.tsx', shodan: 'src/app/(shell)/shodan/Lp.tsx', aio: 'src/app/(shell)/aio/Lp.tsx',
+  sfa: 'src/app/(shell)/sfa/Lp.tsx', shodan: 'src/app/(shell)/shodan/Lp.tsx', aio: 'src/app/(shell)/aio/Lp.tsx',
   mensetsu: 'src/app/(shell)/mensetsu/Lp.tsx', quote: 'src/app/(shell)/quote/Lp.tsx', aishodan: 'src/app/(shell)/aishodan/Lp.tsx',
   adimage: 'src/app/(shell)/adimage/Lp.tsx', seo: 'src/app/(shell)/seo/Lp.tsx', interview: 'src/app/(shell)/interview/Lp.tsx',
   persona: 'src/app/(shell)/persona/Lp.tsx', doyalist: 'src/app/(shell)/doyalist/Lp.tsx', doyaslide: 'src/app/(shell)/doyaslide/Lp.tsx',

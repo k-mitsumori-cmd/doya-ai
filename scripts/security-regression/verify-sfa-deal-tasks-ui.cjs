@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const { load } = require('./load-typescript.cjs');
 
-const source = fs.readFileSync('src/app/sfa/[orgSlug]/deals/page.tsx', 'utf8');
+const source = fs.readFileSync('src/app/(shell)/sfa/[orgSlug]/deals/page.tsx', 'utf8');
 const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 let callback;
 function visit(node) {
