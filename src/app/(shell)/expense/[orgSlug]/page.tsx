@@ -6,8 +6,10 @@ import { AlertTriangle } from 'lucide-react'
 import { useExpenseQuery } from '@/components/expense/api'
 import type { ForecastMatrix, Schedule } from '@/components/expense/types'
 import CashBars from '@/components/expense/CashBars'
-import { StatTile } from '@/components/ds'
-import { Badge, Card, EmptyState, ErrorBox, Loading, PageBody, PageHeader, StatusBadge, addMonths, currentYm, fmtMonthDay, fmtMonthLabel, formatYen, todayYmd, type Tone } from '@/components/expense/ui'
+import { Button as DsButton, StatTile } from '@/components/ds'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { ExpenseHero, MonthDonut, YenCount } from '@/components/expense/next'
+import { Badge, Card, EmptyState, ErrorBox, Loading, PageBody, PageHeader, StatusBadge, addMonths, currentYm, fmtMonthDay, fmtMonthLabel, formatYen, todayYmd, type Tone, useExpenseOrg } from '@/components/expense/ui'
 
 interface ActionItem { kind: string; scheduleId: string; title: string; dueOn: string; amount: number; detail: string }
 interface ContractAlert { kind: string; contractId: string; title: string; dueOn: string; detail: string }
@@ -29,14 +31,17 @@ const ACTION_LABEL: Record<string, { label: string; tone: Tone }> = {
   contract_end: { label: '契約終了', tone: 'amber' },
 }
 
-function Kpi({ label, value, sub }: { label: string; value: number; sub?: string }) {
-  return <StatTile label={label} value={value.toLocaleString('ja-JP')} unit="円" sub={sub} />
+function Kpi({ label, value, sub, count }: { label: string; value: number; sub?: string; count?: boolean }) {
+  return <StatTile label={label} value={count ? <YenCount value={value} /> : value.toLocaleString('ja-JP')} unit="円" sub={sub} />
 }
 
 export default function DashboardPage() {
   const { orgSlug } = useParams() as { orgSlug: string }
   const base = `/expense/${orgSlug}`
   const ym = currentYm()
+  // 新しい見た目（キービジュアル・数字の動き・割合の円）は、許可した人だけに出す（チェックリスト §5.1）
+  const uiNext = useUiNext()
+  const { canManage } = useExpenseOrg()
   const summary = useExpenseQuery<Summary>('/api/expense/summary', orgSlug)
   const thisM = useExpenseQuery<{ schedules: Schedule[] }>(`/api/expense/schedules?month=${ym}`, orgSlug)
   const nextM = useExpenseQuery<{ schedules: Schedule[] }>(`/api/expense/schedules?month=${addMonths(ym, 1)}`, orgSlug)
@@ -54,6 +59,15 @@ export default function DashboardPage() {
 
   return (
     <PageBody>
+      {uiNext ? (
+        <ExpenseHero
+          month={fmtMonthLabel(s.month)}
+          contractCount={s.contractCount}
+          action={canManage
+            ? <DsButton href={`${base}/contracts/new`} icon="Plus">契約を登録する</DsButton>
+            : <DsButton href={`${base}/payables`} icon="CalendarDays">支払予定を見る</DsButton>}
+        />
+      ) : (
       <div className="flex items-center gap-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/ui-renewal/mascots/expense.webp" alt="ドヤくん" width={72} height={72} className="h-[72px] w-[72px] object-contain" />
@@ -61,12 +75,13 @@ export default function DashboardPage() {
           <PageHeader title={fmtMonthLabel(s.month)} sub={`有効な契約 ${s.contractCount} 件`} />
         </div>
       </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Kpi label="今月の出金予定" value={s.kpi.thisMonthOut} sub={`${s.kpi.thisMonthCount} 件`} />
-        <Kpi label="支払済" value={s.kpi.paid} sub={`${s.kpi.paidCount} 件 / ${s.kpi.thisMonthCount} 件`} />
-        <Kpi label="固定費（月額）" value={s.kpi.fixedMonthly} sub="有効な契約の月額換算" />
-        <Kpi label="SaaS 合計" value={s.kpi.saasMonthly} sub={`${s.kpi.saasCount} サービス`} />
+        <Kpi count={uiNext} label="今月の出金予定" value={s.kpi.thisMonthOut} sub={`${s.kpi.thisMonthCount} 件`} />
+        <Kpi count={uiNext} label="支払済" value={s.kpi.paid} sub={`${s.kpi.paidCount} 件 / ${s.kpi.thisMonthCount} 件`} />
+        <Kpi count={uiNext} label="固定費（月額）" value={s.kpi.fixedMonthly} sub="有効な契約の月額換算" />
+        <Kpi count={uiNext} label="SaaS 合計" value={s.kpi.saasMonthly} sub={`${s.kpi.saasCount} サービス`} />
       </div>
 
       <Card className="mt-4">
@@ -100,7 +115,17 @@ export default function DashboardPage() {
 
       <Card className="mt-4">
         <h2 className="mb-3 text-[18px] font-bold text-[var(--ink)]">12か月の出金（カテゴリ別）</h2>
-        <CashBars cash={s.cash} />
+        {uiNext ? (
+          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="min-w-0"><CashBars cash={s.cash} grow /></div>
+            <div className="min-w-0">
+              <p className="mb-2 text-[13px] font-medium text-[var(--sub)]">今月の内訳</p>
+              <MonthDonut cash={s.cash} month={s.month} />
+            </div>
+          </div>
+        ) : (
+          <CashBars cash={s.cash} />
+        )}
       </Card>
 
       <Card className="mt-4">

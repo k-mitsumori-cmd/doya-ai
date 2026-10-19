@@ -56,6 +56,8 @@
 .navScroll { flex: 1; overflow-y: auto; padding-right: 2px; }
 
 .group { margin-top: 16px; }
+/* 「最近使ったツール」の複製の、今のページの印（aria-current は本来の区分の側だけ） */
+.navItem[data-active='true'] { color: var(--blue); }
 
 .groupLabel {
   font-size: 11px; font-weight: 700; color: var(--muted);
@@ -113,8 +115,9 @@
  * ⚠️ 枠の外（LP など）には効かない（.main は AppShell の中だけ）。
  * ⚠️ 新しい見た目（data-ui-next。チェックリスト §5.1）のときだけ効かせる。
  */
-.shell[data-ui-next='true'] .main :global(.h-screen), .shell[data-ui-next='true'] .main :global(.h-dvh), .shell[data-ui-next='true'] .main :global(.h-\[100dvh\]) { height: auto !important; }
-.shell[data-ui-next='true'] .main :global(.min-h-screen), .shell[data-ui-next='true'] .main :global(.min-h-dvh), .shell[data-ui-next='true'] .main :global(.min-h-\[100dvh\]) { min-height: 0 !important; }
+.shell[data-ui-next='true'] .main :global(.h-screen), .shell[data-ui-next='true'] .main :global(.h-dvh), .shell[data-ui-next='true'] .main :global(.h-\[100dvh\]), .shell[data-ui-next='true'] .main :global(.h-svh), .shell[data-ui-next='true'] .main :global(.h-lvh), .shell[data-ui-next='true'] .main :global(.h-\[100vh\]) { height: auto !important; }
+.shell[data-ui-next='true'] .main :global(.min-h-screen), .shell[data-ui-next='true'] .main :global(.min-h-dvh), .shell[data-ui-next='true'] .main :global(.min-h-\[100dvh\]), .shell[data-ui-next='true'] .main :global(.min-h-svh), .shell[data-ui-next='true'] .main :global(.min-h-lvh), .shell[data-ui-next='true'] .main :global(.min-h-\[100vh\]) { min-height: 0 !important; }
+/* ⚠️ チャットの欄などの h-[calc(100vh-80px)] は、画面に合わせた大きさとして残す（S-63） */
 /* 枠の中の読み込み表示が小さくなりすぎないよう、中身の領域の最低の高さを持たせる */
 .shell[data-ui-next='true'] .main { min-height: calc(100vh - 1px); }
 
