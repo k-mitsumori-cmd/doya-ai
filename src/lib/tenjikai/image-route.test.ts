@@ -19,11 +19,21 @@ test('上限をプロセス内の変数で数えていない', () => {
 })
 
 test('生成の前に、ログイン・上限の消費・実行の記録をこの順で行う', () => {
-  const login = at('getServerSession(authOptions)')
+  const post = at('export async function POST')
+  const login = src.indexOf('await currentUserId()', post)
   const quota = at('reserveImageQuota(userId')
   const job = at('tenjikaiGenerationJob.create(')
-  const call = at('await fetch(endpoint')
-  assert.ok(login < quota && quota < job && job < call)
+  const call = at('await fetch(')
+  assert.ok(post < login && login < quota && quota < job && job < call)
+})
+
+test('見本の画像（課金なし）は開発サーバーでだけ返す', () => {
+  assert.match(src, /process\.env\.NODE_ENV === 'development' && process\.env\.TENJIKAI_IMAGEGEN_MOCK === 'true'/)
+})
+
+test('モデルと解像度は利用者の入力を使わない', () => {
+  assert.doesNotMatch(src, /body\.model\b/)
+  assert.doesNotMatch(src, /body\.size\b/)
 })
 
 test('失敗したとき、外部 API の応答の本文を利用者に返さない', () => {
@@ -32,5 +42,8 @@ test('失敗したとき、外部 API の応答の本文を利用者に返さな
 })
 
 test('有効化のフラグが無ければ、何もせずに断る', () => {
-  assert.ok(at("process.env.TENJIKAI_IMAGEGEN_ENABLED !== 'true'") < at('getServerSession(authOptions)'))
+  const post = at('export async function POST')
+  const gate = src.indexOf('if (!mock && !enabled())', post)
+  assert.ok(gate > post && gate < src.indexOf('await req.json()', post))
+  assert.match(src, /const enabled = \(\) => process\.env\.TENJIKAI_IMAGEGEN_ENABLED === 'true'/)
 })

@@ -99,13 +99,20 @@ export default function Booth3D({ plan, analysis, panels, images, selectedId, on
     }
   }, [plan.variant, pitch, yaw])
 
-  // 小間の大きさに合わせて初期倍率を決める
+  // 小間の大きさと枠の大きさから倍率を決める。枠の大きさが変わるたびに合わせ直す（画面幅を変えても崩れない）
   useEffect(() => {
     const el = boxRef.current
     if (!el) return
-    const diag = Math.hypot(W, D)
-    const fit = Math.min(el.clientWidth / (diag * 1.2), el.clientHeight / ((diag * 0.6 + wallH) * 1.25))
-    zoom.set(Math.max(0.25, Math.min(1.6, fit)))
+    const fitNow = () => {
+      if (!el.clientWidth || !el.clientHeight) return
+      const diag = Math.hypot(W, D)
+      const fit = Math.min(el.clientWidth / (diag * 1.2), el.clientHeight / ((diag * 0.6 + wallH) * 1.25))
+      zoom.set(Math.max(0.2, Math.min(1.6, fit)))
+    }
+    fitNow()
+    const ro = new ResizeObserver(fitNow)
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [W, D, wallH, zoom])
 
   const go = (k: ViewKey) => {
@@ -121,8 +128,9 @@ export default function Booth3D({ plan, analysis, panels, images, selectedId, on
   return (
     <div
       ref={boxRef}
-      className="relative h-full w-full touch-none select-none overflow-hidden"
-      style={{ perspective: 2400, cursor: drag.current ? 'grabbing' : 'grab', background: `radial-gradient(ellipse at 50% 40%, ${ds.paper} 0%, ${ds.track} 70%)` }}
+      className="relative h-full w-full select-none overflow-hidden"
+      // スマホでは縦のスクロールを止めない（指を横に動かすと回る。上下の角度は「正面」「真上」で変える）
+      style={{ perspective: 2400, touchAction: 'pan-y', cursor: drag.current ? 'grabbing' : 'grab', background: `radial-gradient(ellipse at 50% 40%, ${ds.paper} 0%, ${ds.track} 70%)` }}
       onPointerDown={(e) => {
         drag.current = { x: e.clientX, y: e.clientY }
         ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
@@ -133,11 +141,11 @@ export default function Booth3D({ plan, analysis, panels, images, selectedId, on
         const dy = e.clientY - drag.current.y
         drag.current = { x: e.clientX, y: e.clientY }
         yaw.set(yaw.get() + dx * 0.35)
-        pitch.set(Math.max(0, Math.min(85, pitch.get() - dy * 0.3)))
+        if (e.pointerType !== 'touch') pitch.set(Math.max(0, Math.min(85, pitch.get() - dy * 0.3)))
         setView(null)
       }}
       onPointerUp={() => (drag.current = null)}
-      onWheel={(e) => zoom.set(Math.max(0.35, Math.min(2.4, zoom.get() * (e.deltaY > 0 ? 0.92 : 1.08))))}
+      onPointerCancel={() => (drag.current = null)}
     >
       <motion.div
         className="absolute left-1/2"
@@ -192,19 +200,19 @@ export default function Booth3D({ plan, analysis, panels, images, selectedId, on
       </motion.div>
 
       {/* 操作 */}
-      <div className="absolute left-3 top-3 flex gap-1 rounded-xl bg-white/90 p-1 shadow-sm backdrop-blur" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="absolute bottom-2 left-2 flex flex-wrap gap-1 rounded-xl bg-white/90 p-1 shadow-sm backdrop-blur sm:bottom-auto sm:left-3 sm:top-3" onPointerDown={(e) => e.stopPropagation()}>
         {(Object.keys(VIEWS) as ViewKey[]).map((k) => (
-          <button key={k} onClick={() => go(k)} className={clsx('rounded-lg px-2.5 py-1 text-[11px] font-black', view === k ? 'bg-doya-500 text-white' : 'text-gray-600 hover:bg-gray-100')}>
+          <button key={k} onClick={() => go(k)} aria-pressed={view === k} className={clsx('min-h-[36px] rounded-lg px-2.5 text-[12px] font-black', view === k ? 'bg-doya-500 text-white' : 'text-gray-600 hover:bg-gray-100')}>
             {VIEWS[k].label}
           </button>
         ))}
       </div>
-      <div className="absolute right-3 top-3 flex gap-1 rounded-xl bg-white/90 p-1 shadow-sm backdrop-blur" onPointerDown={(e) => e.stopPropagation()}>
-        <button aria-label="縮小" onClick={() => zoom.set(Math.max(0.35, zoom.get() * 0.85))} className="rounded-lg p-1.5 text-gray-600 hover:bg-gray-100"><Minus className="h-3.5 w-3.5" /></button>
-        <button aria-label="拡大" onClick={() => zoom.set(Math.min(2.4, zoom.get() * 1.18))} className="rounded-lg p-1.5 text-gray-600 hover:bg-gray-100"><Plus className="h-3.5 w-3.5" /></button>
-        <button aria-label="視点を戻す" onClick={() => go('diagonal')} className="rounded-lg p-1.5 text-gray-600 hover:bg-gray-100"><RotateCcw className="h-3.5 w-3.5" /></button>
+      <div className="absolute right-2 top-2 flex gap-1 rounded-xl bg-white/90 p-1 shadow-sm backdrop-blur sm:right-3 sm:top-3" onPointerDown={(e) => e.stopPropagation()}>
+        <button aria-label="縮小" onClick={() => zoom.set(Math.max(0.35, zoom.get() * 0.85))} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100"><Minus className="h-3.5 w-3.5" /></button>
+        <button aria-label="拡大" onClick={() => zoom.set(Math.min(2.4, zoom.get() * 1.18))} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100"><Plus className="h-3.5 w-3.5" /></button>
+        <button aria-label="視点を戻す" onClick={() => go('diagonal')} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100"><RotateCcw className="h-3.5 w-3.5" /></button>
       </div>
-      <p className="pointer-events-none absolute bottom-2 left-3 text-[10px] font-bold text-gray-400">ドラッグで回転・ホイールで拡大。壁面をクリックすると割付を表示します</p>
+      <p className="pointer-events-none absolute bottom-3 right-3 hidden text-[11px] font-bold text-gray-500 sm:block">ドラッグで回転します。壁面を押すと、その面の割付を表示します</p>
     </div>
   )
 }

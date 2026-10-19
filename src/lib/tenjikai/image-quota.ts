@@ -54,3 +54,16 @@ export async function reserveImageQuota(userId: string, images: number, costYen:
   if (yen === 'limited') return { ok: false, status: 429, message: '本日の画像生成の上限に達しました。明日もう一度お試しください。' }
   return { ok: true }
 }
+
+/** きょう作れる残りの枚数（表示用）。DB が使えないときは null */
+export async function remainingImagesToday(userId: string): Promise<number | null> {
+  try {
+    const key = dailyQuotaKey('tenjikai-img-user', quotaSubject(userId))
+    const row = await prisma.systemSetting.findUnique({ where: { key }, select: { value: true } })
+    const used = row ? Number.parseInt(row.value, 10) || 0 : 0
+    return Math.max(0, perUserDailyImages() - used)
+  } catch {
+    console.warn('[tenjikai/image-quota] remaining unavailable')
+    return null
+  }
+}
