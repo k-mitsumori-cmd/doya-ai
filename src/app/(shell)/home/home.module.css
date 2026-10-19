@@ -267,3 +267,24 @@
   .intents { grid-template-columns: minmax(0, 1fr); }
   .agent .askInput { font-size: 16px; padding: 14px 16px; }
 }
+
+/* ---- 今日やること（UI 品質 S-10） ---- */
+.today { margin: 0 0 24px; padding: 20px 24px; border: 1px solid var(--line); border-radius: var(--r); background: var(--paper); }
+.todayTitle { margin: 0 0 8px; font-size: 15px; font-weight: 800; }
+.todayList { list-style: none; margin: 0; padding: 0; display: grid; }
+.todayItem { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-top: 1px solid var(--line); color: var(--ink); font-size: 14px; text-decoration: none; }
+.todayList li:first-child .todayItem { border-top: 0; }
+.todayItem:hover { color: var(--blue); }
+.todayDot { width: 8px; height: 8px; border-radius: 999px; background: var(--blue-line); flex: none; }
+.todayItem[data-urgent='true'] .todayDot { background: var(--pink); }
+.todayGo { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--blue); flex: none; }
+.todayEmpty { margin: 0; font-size: 14px; color: var(--sub); }
+@media (max-width: 767px) { .today { padding: 16px; } }
+
+/* ---- 会社情報の登録の案内（UI 品質 S-9） ---- */
+.setup { margin: 0 0 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-radius: var(--r); background: var(--blue-soft); }
+.setupTitle { margin: 0; font-size: 15px; font-weight: 800; color: var(--ink); }
+.setupBody { margin: 4px 0 0; font-size: 13px; line-height: 1.7; color: var(--sub); }
+.setupAction { flex: none; padding: 10px 18px; border-radius: 999px; background: var(--blue); color: #fff; font-size: 14px; font-weight: 700; text-decoration: none; }
+.setupAction:hover { background: var(--blue-deep); }
+@media (max-width: 767px) { .setup { flex-direction: column; align-items: stretch; text-align: left; } .setupAction { text-align: center; } }
