@@ -1,12 +1,16 @@
 // ============================================
-// アカウントの会社の名前を決める（UI 品質 B-1・B-2）
+// アカウントの会社を読む・保存する（UI 品質 B-1・B-2）
 // ============================================
-// ⚠️ 会社の正本ができるまでの仮の決め方。どのツールの組織を使うかは統括が本番を調べて決める。
-//    今は、下の順にツールの組織を読み、最初に見つかった1つの名前を出す。
-// ⚠️ 読むだけ。組織の自動作成はしない（各ツールの listMemberships は findMany だけ）。
+// - 正本は AccountCompany（本人が登録した会社）。userId はいつもセッションから決める（他人の会社は読めない・書けない）
+// - 登録が無ければ、各ツールの組織の名前を、下の SOURCES の順に読み、最初に見つかった1つを仮に出す
+// ⚠️ 各ツールの組織の名前は書き換えない。読むだけ（各ツールの listMemberships は findMany だけ）。
 // ⚠️ 1つのツールが失敗しても、次のツールを見る。失敗の中身はログに出さない。
-// ⚠️ 新しい見た目（src/lib/ui-next.ts）の人のときだけ、(shell)/layout.tsx から呼ぶ。
-import { pickAccountCompany, type AccountCompany } from './company'
+// ⚠️ 新しい見た目（src/lib/ui-next.ts）の人のときだけ、(shell)/layout.tsx と /api/account/company から呼ぶ。
+// ⚠️ 本番の DB に account_companies の表が入るまでは、読むと失敗する。そのときは仮の名前に戻る。
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { pickAccountCompany, uniqueCandidateNames, type AccountCompany, type CompanyInput } from './company'
 
 type Lister = () => Promise<{ slug: string; name: string }[]>
 
@@ -24,7 +28,42 @@ const SOURCES: (() => Promise<Lister>)[] = [
   async () => (await import('@/lib/expense/access')).listMemberships as Lister,
 ]
 
-export async function getAccountCompanyName(): Promise<AccountCompany | null> {
+/** ログイン中の人の id。メールしか無いセッションでは、メールから引く（各ツールの access.ts と同じ） */
+export async function currentUserId(): Promise<string | null> {
+  const session = await getServerSession(authOptions).catch(() => null)
+  const id = (session?.user as { id?: string } | undefined)?.id
+  if (id) return id
+  const email = session?.user?.email
+  if (!email) return null
+  const u = await prisma.user.findUnique({ where: { email }, select: { id: true } }).catch(() => null)
+  return u?.id ?? null
+}
+
+/** 本人が登録した会社。無ければ null */
+export async function getOwnCompany(userId: string) {
+  return prisma.accountCompany.findUnique({
+    where: { userId },
+    select: { name: true, websiteUrl: true, industry: true, updatedAt: true },
+  })
+}
+
+/** 本人の会社を保存する（無ければ作る）。⚠️ userId は呼ぶ側がセッションから決めたものだけを渡す */
+export async function saveOwnCompany(userId: string, input: CompanyInput) {
+  return prisma.accountCompany.upsert({
+    where: { userId },
+    create: { userId, name: input.name, websiteUrl: input.websiteUrl, industry: input.industry },
+    update: { name: input.name, websiteUrl: input.websiteUrl, industry: input.industry },
+    select: { name: true, websiteUrl: true, industry: true, updatedAt: true },
+  })
+}
+
+/** 登録の候補（各ツールの組織の名前）。読むだけ */
+export async function listCompanyCandidates(): Promise<string[]> {
+  const settled = await Promise.allSettled(SOURCES.map(async (load) => (await (await load())()).map((r) => r?.name)))
+  return uniqueCandidateNames(settled.flatMap((s) => (s.status === 'fulfilled' ? s.value : [])))
+}
+
+async function fallbackFromTools(): Promise<AccountCompany | null> {
   for (const load of SOURCES) {
     try {
       const found = pickAccountCompany(await (await load())())
@@ -34,4 +73,18 @@ export async function getAccountCompanyName(): Promise<AccountCompany | null> {
     }
   }
   return null
+}
+
+/** 左下・ホーム・ツールの見出しの帯に出す、アカウントの会社 */
+export async function getAccountCompanyName(): Promise<AccountCompany | null> {
+  const userId = await currentUserId()
+  if (userId) {
+    try {
+      const own = await getOwnCompany(userId)
+      if (own) return { name: own.name, source: 'company', websiteUrl: own.websiteUrl, industry: own.industry }
+    } catch {
+      // 表がまだ無い（本番に反映する前）などのときは、仮の名前に戻る
+    }
+  }
+  return fallbackFromTools()
 }

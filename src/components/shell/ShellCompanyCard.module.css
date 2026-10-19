@@ -7,7 +7,10 @@
 .label { font-size: 11px; font-weight: 700; color: var(--muted); }
 .name { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .empty { margin: 2px 0 6px; font-size: 13px; color: var(--sub); }
-.register { font-size: 13px; font-weight: 700; color: var(--blue); text-decoration: none; }
+.register { padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: var(--blue); text-decoration: none; cursor: pointer; }
+.edit { flex: none; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--sub); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.edit:hover { border-color: var(--blue-line); color: var(--blue); }
+.edit:focus-visible, .register:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .register:hover { text-decoration: underline; }
 .card > .label { display: block; padding: 0 2px; }
 

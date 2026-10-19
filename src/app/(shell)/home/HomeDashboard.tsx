@@ -17,7 +17,7 @@ import { HOME_INTENT_GROUPS, matchHomeIntent } from './intents'
 import { todayItems } from './today'
 import { CountUp } from '@/components/ds/motion'
 import { AreaChart, Bars } from '@/components/ds/charts'
-import { ShellCompanyTag } from '@/components/shell/ShellCompanyCard'
+import { CompanyRegisterButton, ShellCompanyTag } from '@/components/shell/ShellCompanyCard'
 import { useAccountCompany } from '@/components/shell/company-context'
 import styles from './home.module.css'
 
@@ -196,17 +196,22 @@ function Kpi({ icon: Icon, label, value, sub, href, muted }: { icon: typeof Wall
 
 /* ---------------- 今日やること（UI 品質 S-10） ---------------- */
 
-/** 会社がまだ登録されていない人への、最初の案内（UI 品質 S-9）。行き先は仮（会社の正本ができたら差し替える） */
+/** 会社をまだ登録していない人への、最初の案内（UI 品質 S-9）。押すと、会社名とサイトの URL を入れる小さな画面が開く */
 function CompanySetupNote() {
   const company = useAccountCompany()
-  if (company !== null) return null
+  // undefined は今の見た目（出さない）。登録済み（source が company）なら出さない
+  if (company === undefined || company?.source === 'company') return null
   return (
     <section className={styles.setup} aria-label="会社情報の登録">
       <div>
         <p className={styles.setupTitle}>はじめに、会社情報を登録してください</p>
-        <p className={styles.setupBody}>会社の名前を登録すると、左下とこの画面に表示されます。各ツールの組織もこの会社として使えます。</p>
+        <p className={styles.setupBody}>
+          {company
+            ? `今は、ツールで使っている名前（${company.name}）を仮に出しています。登録すると、左下とこの画面に登録した会社名が出ます。`
+            : '会社名とサイトの URL を登録すると、左下とこの画面に会社名が出ます。'}
+        </p>
       </div>
-      <Link href="/sfa" className={styles.setupAction}>会社情報を登録する</Link>
+      <CompanyRegisterButton className={styles.setupAction}>会社情報を登録する</CompanyRegisterButton>
     </section>
   )
 }
@@ -395,10 +400,11 @@ export default function HomeDashboard({ initial }: { initial: HomeSummary }) {
 
   return (
     <div className={styles.page}>
+      {/* 会社の登録の帯は、いちばん上（UI 品質 B-1・S-9） */}
+      <CompanySetupNote />
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
       <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
 
-      <CompanySetupNote />
       <TodayCard summary={s} />
 
       <header className={styles.hero}>

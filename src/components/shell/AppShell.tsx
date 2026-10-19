@@ -266,7 +266,7 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
         <ShellUsageArea className={styles.usage} />
         <div className={styles.account} id="shell-account">
           {/* 登録会社と切り替え（新しい見た目のときだけ中身が出る。UI 品質 B-1） */}
-          <ShellCompanyCard onNavigate={close} />
+          <ShellCompanyCard />
           {userName ? <p className={styles.userLine}>{userName} さん</p> : null}
           <Link href="/pricing" className={styles.navItem} onClick={close} title="料金プラン">
             <CreditCard size={18} strokeWidth={2} aria-hidden />

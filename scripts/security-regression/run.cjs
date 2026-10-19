@@ -1373,3 +1373,4 @@ for (const verifier of ['verify-sfa-deal-mutations.cjs', 'verify-sfa-deal-client
   if (result.error || result.status !== 0) { console.error('Security regression failed:', verifier); process.exit(1); }
 }
 for (const file of ['verify-ui-next-preview.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
+for (const file of ['verify-account-company-scope.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }

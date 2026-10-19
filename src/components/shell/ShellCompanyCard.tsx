@@ -3,23 +3,24 @@
 // 枠の左下の「登録会社」（UI 品質 B-1）
 // ============================================
 // どの画面でも同じ会社の名前を出す。会社の切り替えは作らない（1つのアカウントに会社は1つ）。
-// 会社が見つからなければ、登録への案内を出す。
-import Link from 'next/link'
+// 「会社情報」から、登録と直しの小さな画面（CompanyDialog）を開く。
+import { useState } from 'react'
 import { useAccountCompany } from './company-context'
+import CompanyDialog from './CompanyDialog'
 import styles from './ShellCompanyCard.module.css'
 
-/** 会社が見つからないときの案内の行き先（仮。会社の正本ができたら、その登録の画面にする） */
-const REGISTER_HREF = '/sfa'
-
-export default function ShellCompanyCard({ onNavigate }: { onNavigate?: () => void }) {
+export default function ShellCompanyCard() {
   const company = useAccountCompany()
+  const [open, setOpen] = useState(false)
   if (company === undefined) return null
+  const dialog = <CompanyDialog open={open} onClose={() => setOpen(false)} />
   if (!company) {
     return (
       <div className={styles.card}>
         <p className={styles.label}>登録会社</p>
         <p className={styles.empty}>まだ登録されていません</p>
-        <Link href={REGISTER_HREF} className={styles.register} onClick={onNavigate}>会社情報を登録する</Link>
+        <button type="button" className={styles.register} onClick={() => setOpen(true)}>会社情報を登録する</button>
+        {dialog}
       </div>
     )
   }
@@ -30,8 +31,23 @@ export default function ShellCompanyCard({ onNavigate }: { onNavigate?: () => vo
           <span className={styles.label}>登録会社</span>
           <span className={styles.name}>{company.name}</span>
         </span>
+        <button type="button" className={styles.edit} onClick={() => setOpen(true)}>
+          {company.source === 'company' ? '会社情報' : '登録する'}
+        </button>
       </div>
+      {dialog}
     </div>
+  )
+}
+
+/** 会社情報の登録の小さな画面を開くボタン（経営ホームの帯から使う） */
+export function CompanyRegisterButton({ className, children }: { className?: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button type="button" className={className} onClick={() => setOpen(true)}>{children}</button>
+      <CompanyDialog open={open} onClose={() => setOpen(false)} />
+    </>
   )
 }
 

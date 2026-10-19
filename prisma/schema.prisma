@@ -157,6 +157,9 @@ model User {
 
   // ドヤ展示会（開発中）
   tenjikaiProjects TenjikaiProject[]
+
+  // アカウントの会社（1つのアカウントに会社は1つ。UI 品質 B-1・B-2）
+  accountCompany AccountCompany?
 }
 
 // ============================================
@@ -5886,4 +5889,24 @@ model ExpenseAuditLog {
 
   @@index([organizationId, createdAt])
   @@map("expense_audit_logs")
+}
+
+// ============================================
+// アカウントの会社（UI 品質 B-1・B-2）
+// ============================================
+// 1つのアカウントに会社は1つ（ユーザーの判断。2026-10-19）。左下のアカウント欄・経営ホーム・ツールの見出しに出す名前の正本。
+// ⚠️ 各ツールの組織（SfaOrganization など）の名前は書き換えない。登録のときに、候補として読むだけ。
+// ⚠️ 読み書きは本人だけ（/api/account/company は userId をセッションから決める）。
+model AccountCompany {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String // 会社名
+  websiteUrl String? // サイトの URL
+  industry   String? // 業種
+  logoUrl    String? // ロゴ（今は入力の画面なし。あとで足す）
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("account_companies")
 }

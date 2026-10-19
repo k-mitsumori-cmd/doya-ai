@@ -77,8 +77,10 @@ const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.in
     // 会社の名前は、新しい見た目の人のときだけ読んで渡す
     assert.match(read('src/app/(shell)/layout.tsx'),/const company = uiNext \? await getAccountCompanyName\(\)/);
     assert.match(read('src/components/shell/ShellGate.tsx'),/AccountCompanyContext\.Provider value=\{uiNext \? company : undefined\}/);
-    // 一覧はログイン中の人の所属だけを読む関数から作る（組織を作らない）
-    const loader=read('src/lib/shell/company.server.ts');assert.doesNotMatch(loader,/prisma\.|create|upsert|ensure/);
+    // 候補はログイン中の人の所属だけを読む関数から作る（組織を作らない）
+    const loader=read('src/lib/shell/company.server.ts');
+    // 書き込むのは本人の会社の表（accountCompany）だけ。各ツールの組織は読むだけ（詳しくは verify-account-company-scope.cjs）
+    assert.doesNotMatch(loader,/prisma\.(?!accountCompany\b|user\.findUnique)\w+\.\w+/);assert.doesNotMatch(loader,/ensure\w*\(/);
     // AI検索対策の組織はブランドの一覧なので、会社名に使わない
     assert.doesNotMatch(loader,/lib\/aio\//);
     for(const f of ['src/app/(shell)/shodan/page.tsx','src/app/(shell)/aio/page.tsx'])assert.match(read(f),/&& \(await isUiNext\(\)\)\) \{/,f);
