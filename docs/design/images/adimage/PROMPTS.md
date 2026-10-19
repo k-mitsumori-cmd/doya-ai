@@ -6,11 +6,11 @@
 - 画風: ADDON-SERVICES-2026-10-18.md §12.1 の「空状態のイラスト」。画像の中に文字なし
 - 作り直すときは下記プロンプトから始める
 
-## empty-images aishodan:sessions asklink:links banner:banners cunning:cards doyalist:lists doyaslide:slides interview:interviews kintai:records persona:personas quote:quotes seo:articles.webp
+## empty-images.webp
 
 | 項目 | 内容 |
 |---|---|
-| ファイル名 | `public/adimage/empty-images aishodan:sessions asklink:links banner:banners cunning:cards doyalist:lists doyaslide:slides interview:interviews kintai:records persona:personas quote:quotes seo:articles.webp`（640×480） |
+| ファイル名 | `public/adimage/empty-images.webp`（640×480） |
 | 参照画像 | bear-hero.png, aio.png |
 | 生成日 | 2026-10-19 |
 | 採用した版 | v1（1回目で採用） |
