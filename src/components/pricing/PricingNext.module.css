@@ -45,6 +45,8 @@
 .secondary:hover { border-color: var(--ink); }
 .secondary:disabled { opacity: 0.6; cursor: default; }
 .current { background: var(--bg); color: var(--sub); }
+/* プランが分かるまで、ボタンと同じ高さだけを取る */
+.pending { display: block; min-height: 48px; border-radius: 999px; background: var(--bg); }
 .primary:focus-visible, .secondary:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 
 .section { margin-top: 64px; }

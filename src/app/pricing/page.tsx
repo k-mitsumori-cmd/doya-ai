@@ -8,6 +8,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { uiNextMode } from '@/lib/ui-next'
 import { getAccountCompanyName } from '@/lib/shell/company.server'
+import { shellToolHrefs } from '@/lib/shell/tool-hrefs.server'
+import { cookies } from 'next/headers'
+import { parseRecent, RECENT_COOKIE } from '@/lib/shell/recent'
 import ShellGate from '@/components/shell/ShellGate'
 import PricingNext from '@/components/pricing/PricingNext'
 import PricingLegacy from './PricingLegacy'
@@ -18,11 +21,12 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
   const params = await searchParams
   const canceled = Boolean(params.canceled) || params.payment === 'cancelled'
   const session = await getServerSession(authOptions).catch(() => null)
-  if (!session?.user) return <PricingNext canceled={canceled} />
-  const company = await getAccountCompanyName().catch(() => null)
+  if (!session?.user) return <PricingNext canceled={canceled} serverSignedIn={false} />
+  const [company, toolHrefs] = await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({}))])
+  const initialRecent = parseRecent((await cookies()).get(RECENT_COOKIE)?.value)
   return (
-    <ShellGate signedIn userName={session.user.name ?? null} enabledIds={[]} uiNext={uiNext} company={company} always>
-      <PricingNext canceled={canceled} inShell />
+    <ShellGate signedIn userName={session.user.name ?? null} enabledIds={[]} uiNext={uiNext} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} always>
+      <PricingNext canceled={canceled} inShell serverSignedIn serverPlan={(session.user as { plan?: string }).plan ?? null} />
     </ShellGate>
   )
 }

@@ -14,6 +14,8 @@ import { shellEnabledIds } from '@/lib/ui-shell'
 import { uiNextMode } from '@/lib/ui-next'
 import { getAccountCompanyName } from '@/lib/shell/company.server'
 import { shellToolHrefs } from '@/lib/shell/tool-hrefs.server'
+import { cookies } from 'next/headers'
+import { parseRecent, RECENT_COOKIE } from '@/lib/shell/recent'
 import ShellGate from '@/components/shell/ShellGate'
 
 export default async function ShellGroupLayout({ children }: { children: ReactNode }) {
@@ -25,8 +27,10 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   const [company, toolHrefs] = uiNext
     ? await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({}))])
     : [undefined, {}]
+  // 最近使ったツール（新しい見た目のときだけ。最初の描画から並べ、あとから押し下げない）
+  const initialRecent = uiNext ? parseRecent((await cookies()).get(RECENT_COOKIE)?.value) : undefined
   return (
-    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} company={company} toolHrefs={toolHrefs}>
+    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
       {children}
     </ShellGate>
   )

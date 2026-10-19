@@ -15,6 +15,7 @@ import { ShellIcon } from '@/components/shell/icons'
 import { AGENT_SUGGESTIONS, planAgent, type AgentPlan } from './agent'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from './intents'
 import { todayItems } from './today'
+import { SETUP_HIDE_COOKIE } from './cookies'
 import { CountUp } from '@/components/ds/motion'
 import { AreaChart, Bars } from '@/components/ds/charts'
 import { CompanyRegisterButton, ShellCompanyTag } from '@/components/shell/ShellCompanyCard'
@@ -41,7 +42,6 @@ function SmartLink({ href, className, children }: { href: string; className?: st
 type RunState = { plan: AgentPlan; query: string; shown: number; status: 'running' | 'done' | 'stopped' }
 
 function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: string }) {
-  const narrow = useNarrow()
   // 組織を選ぶツールは、入口ではなく組織のページへ（新しい見た目のときだけ中身がある）
   const toHref = useToolHref()
   const router = useRouter()
@@ -99,7 +99,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
           className={styles.askInput}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={narrow ? '例: 請求書を作りたい' : '例: バナーを作りたい ／ 今月の売上を教えて'}
+          placeholder="例: 請求書を作りたい"
           aria-label="エージェントへの依頼"
           maxLength={200}
         />
@@ -200,23 +200,18 @@ function Kpi({ icon: Icon, label, value, sub, href, muted }: { icon: typeof Wall
 
 /* ---------------- 今日やること（UI 品質 S-10） ---------------- */
 
-const SETUP_HIDE_KEY = 'doya_home_company_setup_hidden'
-
 /**
  * 会社をまだ登録していない人への案内（UI 品質 S-9・B-1）。1行の細い帯で、入力（主役）の下に出す。閉じたら、このブラウザでは出さない。
  * 押すと、会社名とサイトの URL を入れる小さな画面が開く。左下の「会社情報」からも、いつでも登録できる。
  */
-function CompanySetupNote() {
+function CompanySetupNote({ initiallyHidden }: { initiallyHidden: boolean }) {
   const company = useAccountCompany()
-  const [hidden, setHidden] = useState(true)
-  useEffect(() => {
-    try { setHidden(window.localStorage.getItem(SETUP_HIDE_KEY) === '1') } catch { setHidden(false) }
-  }, [])
+  const [hidden, setHidden] = useState(initiallyHidden)
   // undefined は今の見た目（出さない）。登録済み（source が company）なら出さない
   if (hidden || company === undefined || company?.source === 'company') return null
   const hide = () => {
     setHidden(true)
-    try { window.localStorage.setItem(SETUP_HIDE_KEY, '1') } catch { /* 覚えられなくても閉じる */ }
+    try { document.cookie = `${SETUP_HIDE_COOKIE}=1; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax` } catch { /* 覚えられなくても閉じる */ }
   }
   return (
     <section className={styles.setup} aria-label="会社情報の登録">
@@ -227,19 +222,6 @@ function CompanySetupNote() {
       <button type="button" className={styles.setupClose} onClick={hide} aria-label="この案内を閉じる"><X size={16} aria-hidden /></button>
     </section>
   )
-}
-
-/** 767px 以下か（入力の例文を短くするため）。最初の描画では false */
-function useNarrow(): boolean {
-  const [narrow, setNarrow] = useState(false)
-  useEffect(() => {
-    const m = window.matchMedia('(max-width: 767px)')
-    const on = () => setNarrow(m.matches)
-    on()
-    m.addEventListener('change', on)
-    return () => m.removeEventListener('change', on)
-  }, [])
-  return narrow
 }
 
 function TodayCard({ summary }: { summary: HomeSummary }) {
@@ -393,7 +375,8 @@ function EmptyCard({ text, href, cta }: { text: string; href: string; cta: strin
 
 /* ---------------- 本体 ---------------- */
 
-export default function HomeDashboard({ initial }: { initial: HomeSummary }) {
+// setupHidden: 会社の登録の案内を閉じたか（サーバーが cookie から読む。最初の描画から出す・出さないを決め、あとから出さない）
+export default function HomeDashboard({ initial, setupHidden = false }: { initial: HomeSummary; setupHidden?: boolean }) {
   const [summary, setSummary] = useState(initial)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -429,7 +412,7 @@ export default function HomeDashboard({ initial }: { initial: HomeSummary }) {
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
       <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
       {/* 会社の登録の案内は、入力（主役）の下に1行で（UI 品質 B-1・S-9） */}
-      <CompanySetupNote />
+      <CompanySetupNote initiallyHidden={setupHidden} />
 
       <TodayCard summary={s} />
 

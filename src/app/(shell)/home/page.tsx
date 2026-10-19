@@ -10,7 +10,9 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getHomeSummary } from '@/lib/home/summary'
+import { cookies } from 'next/headers'
 import { isUiNext } from '@/lib/ui-next'
+import { SETUP_HIDE_COOKIE } from './cookies'
 import HomeDashboard from './HomeDashboard'
 import HomeDashboardLegacy from './HomeDashboardLegacy'
 
@@ -29,5 +31,7 @@ export default async function HomePage() {
   const [summary, uiNext] = await Promise.all([getHomeSummary(userId), isUiNext()])
   // 枠（AppShell）は src/app/(shell)/layout.tsx が出す。
   // 入力が主役の新しいホーム（UI 品質 H-2）は、新しい見た目（チェックリスト §5.1）のときだけ
-  return uiNext ? <HomeDashboard initial={summary} /> : <HomeDashboardLegacy initial={summary} />
+  if (!uiNext) return <HomeDashboardLegacy initial={summary} />
+  const setupHidden = (await cookies()).get(SETUP_HIDE_COOKIE)?.value === '1'
+  return <HomeDashboard initial={summary} setupHidden={setupHidden} />
 }
