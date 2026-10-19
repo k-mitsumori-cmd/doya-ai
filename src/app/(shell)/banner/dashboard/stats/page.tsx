@@ -1,5 +1,6 @@
 'use client'
 
+import { useUiNext } from '@/components/shell/ui-next-context'
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -75,6 +76,8 @@ export default function StatsPage() {
 }
 
 function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
+  // 新しい見た目（チェックリスト §5.1）では、枠の見出し・タブと重なる旧来の見出しの帯を出さない（h1 を1つにする。S-57）
+  const uiNext = useUiNext()
   const { data: session, status } = auth
   const userId = status === 'authenticated' ? session?.user?.id : null
   const isGuest = status !== 'loading' && !userId
@@ -263,18 +266,20 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
           <DashboardSidebar />
         </div>
         <div className="md:pl-[240px] transition-all duration-200">
-          <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-            <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
-              <div className="h-16 sm:h-20 flex items-center gap-4">
-                <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-                  <ArrowLeft className="w-5 h-5 text-slate-400" />
-                </Link>
-                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
-                  パフォーマンス分析
-                </h1>
+          {!uiNext && (
+            <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+              <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
+                <div className="h-16 sm:h-20 flex items-center gap-4">
+                  <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
+                    <ArrowLeft className="w-5 h-5 text-slate-400" />
+                  </Link>
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                    パフォーマンス分析
+                  </h1>
+                </div>
               </div>
-            </div>
-          </header>
+            </header>
+          )}
           <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-12">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -324,18 +329,20 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
           <DashboardSidebar />
         </div>
         <div className="md:pl-[240px] transition-all duration-200">
-          <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-            <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
-              <div className="h-16 sm:h-20 flex items-center gap-4">
-                <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-                  <ArrowLeft className="w-5 h-5 text-slate-400" />
-                </Link>
-                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
-                  パフォーマンス分析
-                </h1>
+          {!uiNext && (
+            <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+              <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
+                <div className="h-16 sm:h-20 flex items-center gap-4">
+                  <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
+                    <ArrowLeft className="w-5 h-5 text-slate-400" />
+                  </Link>
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                    パフォーマンス分析
+                  </h1>
+                </div>
               </div>
-            </div>
-          </header>
+            </header>
+          )}
           <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-12">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -379,44 +386,46 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
         <DashboardSidebar />
       </div>
       <div className="md:pl-[240px] transition-all duration-200">
-        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
-          <div className="h-16 sm:h-20 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-                <ArrowLeft className="w-5 h-5 text-slate-400" />
-              </Link>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
-                パフォーマンス分析
-              </h1>
-            </div>
-            
-            <div className="flex items-center gap-3 sm:gap-6">
-              <button
-                onClick={() => loadHistory(true)}
-                disabled={isLoading}
-                className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-                title="更新"
-              >
-                <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-              </button>
-              <div className="flex items-center gap-3 pl-2">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || 'ゲスト'}</p>
-                  <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{isGuest ? 'Guest' : 'User'}</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-                  {session?.user?.image ? (
-                    <img src={session.user.image} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-blue-600 font-black text-xs">{session?.user?.name?.[0]?.toUpperCase() || 'G'}</span>
-                  )}
+        {!uiNext && (
+          <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
+            <div className="h-16 sm:h-20 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
+                  <ArrowLeft className="w-5 h-5 text-slate-400" />
+                </Link>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                  パフォーマンス分析
+                </h1>
+              </div>
+              
+              <div className="flex items-center gap-3 sm:gap-6">
+                <button
+                  onClick={() => loadHistory(true)}
+                  disabled={isLoading}
+                  className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                  title="更新"
+                >
+                  <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
+                <div className="flex items-center gap-3 pl-2">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || 'ゲスト'}</p>
+                    <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{isGuest ? 'Guest' : 'User'}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
+                    {session?.user?.image ? (
+                      <img src={session.user.image} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-blue-600 font-black text-xs">{session?.user?.name?.[0]?.toUpperCase() || 'G'}</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+        )}
 
       <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8">
         {/* Summary Stats Grid */}

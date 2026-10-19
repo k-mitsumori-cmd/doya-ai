@@ -1,5 +1,6 @@
 'use client'
 
+import { useUiNext } from '@/components/shell/ui-next-context'
 import Link from 'next/link'
 import { ArrowLeft, Palette, Save, Check } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -16,6 +17,8 @@ export default function BannerBrandPage() {
 }
 
 function BannerBrandContent({ storageKey }: { storageKey: string }) {
+  // 新しい見た目（チェックリスト §5.1）では、枠の見出し・タブと重なる旧来の見出しの帯を出さない（h1 を1つにする。S-57）
+  const uiNext = useUiNext()
   const [primaryColor, setPrimaryColor] = useState('#2563EB')
   const [secondaryColor, setSecondaryColor] = useState('#F97316')
   const [brandName, setBrandName] = useState('')
@@ -53,18 +56,20 @@ function BannerBrandContent({ storageKey }: { storageKey: string }) {
       </div>
       <div className="md:pl-[240px] transition-all duration-200">
         {/* ヘッダー */}
-        <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
-          <div className="max-w-4xl mx-auto px-4 h-16 flex items-center gap-4">
-            <Link href="/banner" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-              <ArrowLeft className="w-5 h-5" />
-              <span>戻る</span>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Palette className="w-5 h-5 text-blue-600" />
-              <span className="font-bold text-gray-800">ブランド設定</span>
+        {!uiNext && (
+          <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+            <div className="max-w-4xl mx-auto px-4 h-16 flex items-center gap-4">
+              <Link href="/banner" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+                <ArrowLeft className="w-5 h-5" />
+                <span>戻る</span>
+              </Link>
+              <div className="flex items-center gap-2">
+                <Palette className="w-5 h-5 text-blue-600" />
+                <span className="font-bold text-gray-800">ブランド設定</span>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         {/* メイン */}
         <main className="max-w-2xl mx-auto px-4 py-8">

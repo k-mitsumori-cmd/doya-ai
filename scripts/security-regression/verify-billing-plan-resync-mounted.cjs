@@ -1,4 +1,5 @@
 process.env.NODE_ENV = 'test';
+const UI_NEXT_MOCKS={'@/components/shell/ui-next-context':{__esModule:true,useUiNext:()=>false,useUiNextMode:()=>null},'@/components/ds':{__esModule:true,Button:()=>null,ToolHero:()=>null,EmptyState:()=>null,Skeleton:()=>null},'@/components/shell/ShellLoading':{__esModule:true,default:()=>null},'@/components/banner/banner-next.module.css':{__esModule:true,default:{}},'@/components/adimage/AdImageProgressNext':{__esModule:true,default:()=>null}} // 新しい見た目（UI 品質）の部品。今の見た目（useUiNext()=false）で確かめる
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
@@ -17,7 +18,7 @@ function component(file, mocks, globals = {}) {
   const exports = {};
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,
-  } }).outputText, { exports, require: name => { assert.ok(name in mocks, name); return mocks[name]; },
+  } }).outputText, { exports, require: name => { if (!(name in mocks) && name in UI_NEXT_MOCKS) return UI_NEXT_MOCKS[name]; assert.ok(name in mocks, name); return mocks[name]; },
     AbortController, Date, Set, Map, console, ...globals }, { filename: file });
   return exports;
 }

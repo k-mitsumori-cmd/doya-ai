@@ -1,0 +1,50 @@
+/* ============================================
+ * ドヤバナーAI 新しい見た目（UI 品質の直し）の調整
+ * ============================================
+ * ⚠️ BannerShellFrame が useUiNext() のときだけ .next で包む。今の見た目には効かない（チェックリスト §5.1）。
+ * 旧来の画面は、自分のサイドバー（240px）のぶん左を空けている。枠の中ではサイドバーを出さないので、その空きを消す。 */
+.next :global(.md\:pl-\[240px\]) { padding-left: 0 !important; }
+.next :global(.md\:ml-\[240px\]) { margin-left: 0 !important; }
+.next :global(.md\:left-\[240px\]) { left: 0 !important; }
+
+/* ---- 見本から作る（旧来の黒い画面）を、枠の中の箱に閉じ込める ----
+ * 旧来の画面は position: fixed のヒーロー・モーダルを持つ。transform を持つ親の中では、
+ * fixed はその親を基準に置かれる（画面全体ではなく、この箱の中に収まる）。
+ * 箱そのものはスクロールさせず、中の .scroller をスクロールさせるので、fixed の部品は箱に貼りついたまま。 */
+.stage {
+  position: relative;
+  transform: translateZ(0);
+  height: calc(100dvh - 32px);
+  margin: 0 24px 24px;
+  border-radius: var(--r, 16px);
+  overflow: hidden;
+  background: #000;
+  box-shadow: var(--shadow, 0 8px 24px rgba(10, 15, 60, 0.08));
+}
+.scroller { height: 100%; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+.heroWrap { padding: 24px 24px 16px; }
+
+@media (max-width: 767px) {
+  /* 枠の上の帯（64px）と下のタブ（68px）のぶん低くする */
+  .stage { height: calc(100dvh - 64px - 68px - 16px); margin: 0 0 16px; border-radius: 0; }
+  .heroWrap { padding: 16px; }
+}
+
+/* ---- 作成の画面 ---- */
+.createHero { margin-bottom: 24px; }
+/* ⚠️ 共通の text-wrap: balance（tokens.module.css）が white-space より強いので、text-wrap も指定する */
+.nowrap { white-space: nowrap !important; text-wrap: nowrap !important; }
+
+/* 旧来の DashboardLayout が持っていた中身の余白（枠の中では DashboardLayout が中身だけを返すため） */
+.page { padding: 24px 32px 32px; max-width: 1280px; }
+@media (max-width: 767px) { .page { padding: 16px; } }
+
+/* 作成の画面の中の段（用途・業種・サイズ）は、画面の幅（lg）で2列になる作り。
+ * 枠の中では左のメニューのぶん狭いので、1536px 未満では縦に積む（ボタンの文字が縦書きのように1文字ずつ折り返していた。T-2） */
+@media (max-width: 1535px) {
+  .page :global(.lg\:grid-cols-2), .page :global(.lg\:grid-cols-\[1fr\2c 280px\]) { grid-template-columns: minmax(0, 1fr) !important; }
+  .page :global(.lg\:grid-cols-4) { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
+
+/* 隠れているツールチップ（統計の画面）などで、ページが横にはみ出さないようにする */
+.next { overflow-x: clip; }
