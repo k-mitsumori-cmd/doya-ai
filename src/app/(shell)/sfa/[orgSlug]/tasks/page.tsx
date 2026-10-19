@@ -40,10 +40,12 @@ export default function SfaTasksPage() {
   const [loadedPage, setLoadedPage] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [listLoading, setListLoading] = useState(false)
-  const [listError, setListError] = useState<string | null>(null)
+  const [listError, setListErrorText] = useState<string | null>(null)
   // 新しい見た目のとき、失敗の種類（ログイン切れ・権限なし・通信）で案内を変えるために、投げられたエラーを持つ。画面に err.message は出さない
   const [listFailure, setListFailure] = useState<unknown>(null)
   const [actsFailure, setActsFailure] = useState<unknown>(null)
+  // 失敗のエラー本体は第2引数で受け取る（一覧を読む関数は今までと同じ setter だけを使う。安全性の検査がその関数だけを取り出して動かすため）
+  const setListError = useCallback((message: string | null, failure?: unknown) => { setListErrorText(message); setListFailure(failure ?? null) }, [])
   const titleInput = useRef<HTMLInputElement>(null)
   const actInput = useRef<HTMLInputElement>(null)
   const [skippedTasks, setSkippedTasks] = useState(0)
@@ -73,7 +75,7 @@ export default function SfaTasksPage() {
       setLoadedPage(page)
       setHasMore(data.hasMore)
     } catch (error) {
-      if (sequence === loadSequenceRef.current && mutations.active()) { setListFailure(error); setListError(error instanceof Error ? error.message : 'タスク一覧を取得できませんでした') }
+      if (sequence === loadSequenceRef.current && mutations.active()) { setListError(error instanceof Error ? error.message : 'タスク一覧を取得できませんでした', error) }
     } finally {
       if (sequence === loadSequenceRef.current && mutations.active()) setListLoading(false)
     }
@@ -89,7 +91,8 @@ export default function SfaTasksPage() {
   const [actsCursor, setActsCursor] = useState<string | null>(null)
   const [actsTotal, setActsTotal] = useState(0)
   const [actsLoading, setActsLoading] = useState(true)
-  const [actsError, setActsError] = useState<string | null>(null)
+  const [actsError, setActsErrorText] = useState<string | null>(null)
+  const setActsError = useCallback((message: string | null, failure?: unknown) => { setActsErrorText(message); setActsFailure(failure ?? null) }, [])
   const [actsRetryCursor, setActsRetryCursor] = useState<string | null>(null)
   const actsRequest = useRef<AbortController | null>(null)
   const activityDraft = useSfaDraftSnapshot([actType, actSubject])
@@ -118,8 +121,7 @@ export default function SfaTasksPage() {
       setActsRetryCursor(null)
     } catch (error) {
       if (!controller.signal.aborted && mutations.active()) {
-        setActsFailure(error)
-        setActsError(error instanceof Error ? error.message : '活動を取得できませんでした')
+        setActsError(error instanceof Error ? error.message : '活動を取得できませんでした', error)
         setActsRetryCursor(cursor || null)
       }
     } finally {

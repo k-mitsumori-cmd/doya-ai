@@ -50,9 +50,11 @@ export default function SfaActivitiesPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loadError, setLoadErrorText] = useState<string | null>(null)
   // 新しい見た目のとき、失敗の種類（ログイン切れ・権限なし・通信）で案内を変えるために、投げられたエラーを持つ。画面に err.message は出さない
   const [loadFailure, setLoadFailure] = useState<unknown>(null)
+  // 失敗のエラー本体は第2引数で受け取る（一覧を読む関数は今までと同じ setter だけを使う。安全性の検査がその関数だけを取り出して動かすため）
+  const setLoadError = useCallback((message: string | null, failure?: unknown) => { setLoadErrorText(message); setLoadFailure(failure ?? null) }, [])
   const subjectInput = useRef<HTMLInputElement>(null)
   const [retryCursor, setRetryCursor] = useState<string | null>(null)
   const draft = useSfaDraftSnapshot([type, subject, body])
@@ -83,8 +85,7 @@ export default function SfaActivitiesPage() {
       setRetryCursor(null)
     } catch (error) {
       if (!controller.signal.aborted && mutations.active()) {
-        setLoadFailure(error)
-        setLoadError(error instanceof Error ? error.message : '活動を取得できませんでした')
+        setLoadError(error instanceof Error ? error.message : '活動を取得できませんでした', error)
         setRetryCursor(cursor || null)
       }
     } finally {
