@@ -93,6 +93,9 @@ const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.in
     assert.match(read('src/app/pricing/page.tsx'),/if \(!session\?\.user\) return <PricingNext/);
     // 新しい料金ページも、購入は同じボタンと同じプラン ID を使う
     assert.match(read('src/components/pricing/PricingNext.tsx'),/<CheckoutButton planId=\{UNIFIED_PRO_PLAN_ID\}/);
+    // 有料のプランの人には、トライアルの表示を出さない（trial-eligibility の API と TrialCallout は変えない）
+    assert.match(read('src/components/pricing/PricingNext.tsx'),/const trialEligible = trialEligibleRaw && !paid/);
+    assert.match(read('src/components/pricing/PricingNext.tsx'),/const paid = authStatus === 'authenticated' && isPaidPlan\(accountPlan\)/);
     assert.match(read('src/components/DashboardLayout.tsx'),/if \(inShell && uiNext\)/);
     // ふつうの利用者の切り替えを main と同じにする: (shell) の下に、こちらで足した loading.tsx を置かない。template は包みを出さない
     // ⚠️ git ls-files は使わない（Vercel のビルドには .git が無く、失敗してデプロイが止まる。2026-10-19）

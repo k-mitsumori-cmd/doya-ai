@@ -21,7 +21,7 @@ import { useBillingPlanResync } from '@/hooks/useBillingPlanResync'
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { higherPlan } from '@/lib/plan-utils'
 import { getPublicServices, type Service } from '@/lib/services'
-import { UNIFIED_PLAN_COPY, UNIFIED_PRO_PLAN_ID, UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
+import { isPaidPlan, UNIFIED_PLAN_COPY, UNIFIED_PRO_PLAN_ID, UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
 import styles from './PricingNext.module.css'
 
 const RETURN_TO = '/pricing'
@@ -46,7 +46,7 @@ function comparisonGroups(services: Service[]) {
 }
 
 export default function PricingNext({ canceled, inShell = false }: { canceled: boolean; inShell?: boolean }) {
-  const trialEligible = useTrialEligible()
+  const trialEligibleRaw = useTrialEligible()
   const { data: session, status: authStatus } = useSession()
   // 契約の判定は UnifiedPricingPlans（planSource='account'）と同じ
   const accountPlan = authStatus === 'authenticated' ? (session?.user as { plan?: string } | undefined)?.plan : undefined
@@ -55,6 +55,11 @@ export default function PricingNext({ canceled, inShell = false }: { canceled: b
   const isPro = authStatus === 'authenticated' && (plan === 'PRO' || plan === 'BUNDLE' || plan === 'ENTERPRISE')
   const planKnown = Boolean(accountPlan)
   const isFree = authStatus === 'authenticated' && !isPro && plan === 'FREE'
+  // ⚠️ すでに有料のプランの人には、トライアルの札・説明・「初月無料」の文言を出さない（統括の確認 2026-10-19）。
+  //    /api/stripe/trial-eligibility は Stripe の契約の履歴で決めるため、履歴の無い有料の人にも true を返すことがある。
+  //    API と TrialCallout は課金の正本に関わるので変えず、この画面の表示だけで止める（reference/11-billing-spec.md）
+  const paid = authStatus === 'authenticated' && isPaidPlan(accountPlan)
+  const trialEligible = trialEligibleRaw && !paid
   const { run: resyncPlan, busy: resyncing, disabled: resyncDisabled, message: resyncMessage } = useBillingPlanResync({
     scope: JSON.stringify(['pricing', 'unified', 'account']),
     enabled: planKnown && plan === 'FREE',
@@ -112,7 +117,9 @@ export default function PricingNext({ canceled, inShell = false }: { canceled: b
           {/* トライアルの表示は、対象と分かってから出る（TrialCallout）。出たときに下がずれないよう、場所の高さを先に取る。
               対象外（または確かめている間）は、同じ場所に短い文を出す */}
           <div className={styles.trialSlot}>
-            {trialEligible ? (
+            {paid ? (
+              <p className={styles.trialFallback}>{isPro ? 'ご利用中のプランです。' : 'プロへの変更は、今のご契約から手続きできます。'}</p>
+            ) : trialEligible ? (
               <>
                 <TrialBadge className={styles.trialBadge} />
                 <TrialNote className={styles.trialNote} />
