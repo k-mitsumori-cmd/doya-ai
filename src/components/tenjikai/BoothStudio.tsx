@@ -27,7 +27,7 @@ function PlanView({ plan, selectedId, onSelect }: { plan: BoothPlan; selectedId?
       <text x={W / 2} y={D + 26} textAnchor="middle" fontSize="11" fill={ds.sub} fontWeight={700}>通路</text>
       <motion.rect initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.8 }} x={0} y={0} width={W} height={D} fill="#faf7ff" stroke={ds.ink} strokeWidth={2} />
       {plan.elements.map((e, i) => (
-        <motion.g key={`${plan.variant}-${e.id}`} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 + i * 0.06, type: 'spring', stiffness: 300, damping: 20 }} style={{ transformOrigin: `${(e.x + e.w / 2) * s}px ${(e.y + e.d / 2) * s}px`, cursor: 'pointer' }} onClick={() => onSelect(e.id)}>
+        <motion.g key={`${plan.variant}-${e.id}`} initial={false} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 + i * 0.06, type: 'spring', stiffness: 300, damping: 20 }} style={{ transformOrigin: `${(e.x + e.w / 2) * s}px ${(e.y + e.d / 2) * s}px`, cursor: 'pointer' }} onClick={() => onSelect(e.id)}>
           <rect x={e.x * s} y={e.y * s} width={Math.max(e.w * s, 4)} height={Math.max(e.d * s, 4)} rx={2} fill={e.kind === 'wall' ? ds.blue : e.kind === 'monitor' ? ds.ink : e.kind === 'table' ? '#f7e7c6' : e.kind === 'demo' ? ds.blueSoft : ds.paper} stroke={selectedId === e.id ? ds.yellow : ds.ink} strokeWidth={selectedId === e.id ? 3 : 1} opacity={e.z && e.z > 3 ? 0.4 : 1} />
           {e.w * s > 40 && e.d * s > 14 && (
             <text x={(e.x + e.w / 2) * s} y={(e.y + e.d / 2) * s + 4} textAnchor="middle" fontSize="10" fontWeight={700} fill={e.kind === 'monitor' ? '#fff' : ds.ink}>
@@ -239,7 +239,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
               <Booth3D plan={plan} analysis={analysis} panels={panels} images={panelImages} selectedId={selectedId} onSelect={selectElement} selectedPanelId={panelId} onSelectPanel={selectPanel} />
             ) : (
               <AnimatePresence mode="wait" initial={false}>
-                <motion.div key={`${variant}-${view}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="h-full w-full">
+                <motion.div key={`${variant}-${view}`} initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="h-full w-full">
                   {view === 'iso' ? <IsoBooth plan={plan} analysis={analysis} selectedId={selectedId} onSelect={selectElement} /> : <PlanView plan={plan} selectedId={selectedId} onSelect={selectElement} />}
                 </motion.div>
               </AnimatePresence>

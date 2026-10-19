@@ -94,7 +94,7 @@ export default function Overview({ input, analysis, plan, budget, deadlines, cre
             </div>
             <ul className="flex flex-col gap-2">
               {upcoming.map((x, i) => (
-                <motion.li key={x.id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.08 }} className="flex items-center gap-3">
+                <motion.li key={x.id} initial={false} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.08 }} className="flex items-center gap-3">
                   <span className="w-14 flex-shrink-0 rounded-lg bg-doya-50 py-1 text-center font-mono text-[11px] font-semibold text-doya-700">T-{x.daysBefore}</span>
                   <span className="min-w-0 flex-1 truncate text-xs font-bold text-ink">{x.title}</span>
                   <span className="font-mono text-[11px] text-gray-500">{x.date.slice(5).replace('-', '/')}</span>

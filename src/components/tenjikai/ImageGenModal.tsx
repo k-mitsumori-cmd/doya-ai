@@ -63,7 +63,7 @@ export default function ImageGenModal({ open, onClose, title, prompt: initialPro
         </details>
 
         {error && (
-          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="rounded-[var(--r-sm)] border border-gray-200 bg-white">
+          <motion.div initial={false} animate={{ opacity: 1, y: 0 }} className="rounded-[var(--r-sm)] border border-gray-200 bg-white">
             <EmptyState
               compact
               tone={error.tone === 'forbidden' ? 'forbidden' : error.tone === 'error' ? 'error' : 'empty'}

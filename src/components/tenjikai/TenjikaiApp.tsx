@@ -133,19 +133,11 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900">{generated.notice}</p>
         </div>
       )}
-      {/* initial={false}: 最初の表示は薄い色から始めない（F-12。読み込みが遅いと薄いまま止まって見えるため） */}
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={key}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -12 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="min-h-full"
-        >
-          {content}
-        </motion.div>
-      </AnimatePresence>
+      {/* 画面の切り替えにアニメーションを付けない。前の画面が消えるのを待つ作りだと、
+          アニメーションが止まる環境（裏のタブ・重い端末）で、薄い色や空白のまま止まって見えるため（F-12） */}
+      <div key={key} className="min-h-full">
+        {content}
+      </div>
     </>
   )
 
@@ -161,7 +153,7 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
       <AnimatePresence>
         {mobileOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} />
+            <motion.div initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} />
             <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ duration: 0.2, ease: 'easeOut' }} className="fixed inset-y-0 left-0 z-50 md:hidden">
               <TenjikaiSidebar section={phase === 'ready' ? section : 'new'} ready={phase === 'ready'} go={go} forceExpanded isMobile onToggle={() => setMobileOpen(false)} projectName={phase === 'input' ? undefined : input.eventName} />
             </motion.div>

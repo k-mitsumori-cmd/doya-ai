@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Globe } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -30,6 +30,9 @@ function PositionIcon({ p, active }: { p: BoothPosition; active: boolean }) {
 export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; onSubmit: (i: ProjectInput) => void }) {
   const [f, setF] = useState<ProjectInput>(initial)
   const [hover, setHover] = useState<{ c: number; r: number } | null>(null)
+  // 読み込みが終わる前に押されると、ブラウザーがフォームをそのまま送ってページが読み直される。終わるまで押せないようにする
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => setHydrated(true), [])
   const set = <K extends keyof ProjectInput>(k: K, v: ProjectInput[K]) => setF((p) => ({ ...p, [k]: v }))
   const size = boothSize(f)
   const komas = f.komaCols * f.komaRows
@@ -62,9 +65,6 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
       </div>
 
       <motion.form
-        initial={{ opacity: 0, y: 24, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
         onSubmit={(e) => {
           e.preventDefault()
           onSubmit(f)
@@ -151,7 +151,11 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
               {(Object.keys(POSITION_LABEL) as BoothPosition[]).map((p) => (
                 <button type="button" key={p} onClick={() => set('position', p)} className={clsx('flex items-center gap-2 rounded-xl border-2 px-2 py-1.5 text-left transition-colors', f.position === p ? 'border-doya-500 bg-doya-50' : 'border-gray-200 hover:border-doya-200')}>
                   <PositionIcon p={p} active={f.position === p} />
-                  <span className="text-[11px] font-bold leading-tight text-ink">{POSITION_LABEL[p]}</span>
+                  {/* 名前と（何面開放）を別の行にする。1文字だけの行（「放）」）が出ないように */}
+                  <span className="flex flex-col text-[12px] font-bold leading-tight text-ink">
+                    <span className="whitespace-nowrap">{POSITION_LABEL[p].split('（')[0]}</span>
+                    <span className="whitespace-nowrap text-[11px] font-medium text-[var(--sub)]">（{POSITION_LABEL[p].split('（')[1]}</span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -193,7 +197,7 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
           <p className="text-xs font-bold leading-relaxed text-doya-700">
             想定来場 <span className="font-mono text-sm">{expectedVisitors(f).toLocaleString()}</span> 人（{f.days}日間）をもとに、制作物とノベルティの数量を計算します。
           </p>
-          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} type="submit" className="group inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-xl bg-doya-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-doya-500/30">
+          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} type="submit" disabled={!hydrated} className="group inline-flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 rounded-xl bg-doya-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-doya-500/30 disabled:opacity-60">
             展示会の準備を一括作成
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </motion.button>

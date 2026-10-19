@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { animate, motion, useMotionTemplate, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import { motion, useMotionTemplate, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { clsx } from 'clsx'
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import type { BoothElement, BoothPlan, SiteAnalysis } from '@/lib/tenjikai/engine'
@@ -72,12 +72,14 @@ interface Props {
 export default function Booth3D({ plan, analysis, panels, images, selectedId, onSelect, selectedPanelId, onSelectPanel }: Props) {
   const W = plan.widthM * S
   const D = plan.depthM * S
-  const pitch = useMotionValue(70)
-  const yaw = useMotionValue(-70)
+  // 最初から斜めの視点で出す（回り込む演出は、アニメーションが止まる環境で変な角度のまま残るのでやめた）
+  const pitch = useMotionValue<number>(VIEWS.diagonal.pitch)
+  const yaw = useMotionValue<number>(VIEWS.diagonal.yaw)
   const zoom = useMotionValue(1)
   const sp = useSpring(pitch, { stiffness: 120, damping: 22 })
   const sy = useSpring(yaw, { stiffness: 120, damping: 22 })
-  const sz = useSpring(zoom, { stiffness: 160, damping: 24 })
+  // 倍率はばねを通さずにそのまま当てる（枠に合わせた倍率が、すぐに反映されるように）
+  const sz = zoom
   const transform = useMotionTemplate`rotateX(${sp}deg) rotateZ(${sy}deg) scale3d(${sz}, ${sz}, ${sz})`
   const wallH = Math.max(2.7, ...plan.elements.map((e) => (e.z ?? 0) + e.h)) * S
   // 壁が立ち上がるぶん絵の重心が上がるので、視点の角度に合わせて下へずらす
@@ -86,17 +88,11 @@ export default function Booth3D({ plan, analysis, panels, images, selectedId, on
   const drag = useRef<{ x: number; y: number } | null>(null)
   const boxRef = useRef<HTMLDivElement>(null)
 
-  // 登場時にゆっくり回り込んで斜めの視点に止まる
+  // 案を切り替えたら、斜めの視点に戻す
   useEffect(() => {
-    pitch.set(70)
-    yaw.set(-80)
-    const a1 = animate(pitch, VIEWS.diagonal.pitch, { duration: 1.4, ease: [0.22, 1, 0.36, 1] })
-    const a2 = animate(yaw, VIEWS.diagonal.yaw, { duration: 1.6, ease: [0.22, 1, 0.36, 1] })
+    pitch.set(VIEWS.diagonal.pitch)
+    yaw.set(VIEWS.diagonal.yaw)
     setView('diagonal')
-    return () => {
-      a1.stop()
-      a2.stop()
-    }
   }, [plan.variant, pitch, yaw])
 
   // 小間の大きさと枠の大きさから倍率を決める。枠の大きさが変わるたびに合わせ直す（画面幅を変えても崩れない）
@@ -154,12 +150,11 @@ export default function Booth3D({ plan, analysis, panels, images, selectedId, on
         {/* 通路 */}
         <div className="absolute" style={{ left: -1.2 * S, top: D, width: W + 2.4 * S, height: 1.8 * S, background: ds.line }} />
         <div className="absolute" style={{ left: W, top: -1.2 * S, width: 1.8 * S, height: D + 1.2 * S, background: ds.line }} />
-        <div className="absolute font-mono text-[11px] font-semibold text-gray-500" style={{ left: W / 2 - 40, top: D + 0.7 * S }}>メイン通路</div>
+        <div className="absolute whitespace-nowrap font-mono text-[11px] font-semibold text-gray-500" style={{ left: W / 2 - 40, top: D + 0.7 * S }}>メイン通路</div>
 
         {/* 床（カーペット） */}
+        {/* 入りのアニメーションを付けない（止まる環境で薄いまま残るため。F-12 と同じ理由） */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
           className="absolute inset-0 border-2 border-doya-500"
           style={{ background: `repeating-linear-gradient(45deg, ${ds.blueSoft} 0 6px, ${ds.bar} 6px 12px)` }}
         >
@@ -172,7 +167,7 @@ export default function Booth3D({ plan, analysis, panels, images, selectedId, on
         </motion.div>
 
         {/* 寸法 */}
-        <div className="absolute flex items-center justify-center font-mono text-[12px] font-semibold text-doya-700" style={{ left: 0, top: D + 6, width: W }}>
+        <div className="absolute flex items-center justify-center whitespace-nowrap font-mono text-[12px] font-semibold text-doya-700" style={{ left: 0, top: D + 6, width: W }}>
           ← {Math.round(plan.widthM * 1000).toLocaleString()} mm →
         </div>
         <div className="absolute flex items-center justify-center font-mono text-[12px] font-semibold text-doya-700" style={{ left: W + 6, top: 0, height: D, width: 24, writingMode: 'vertical-rl' }}>
@@ -270,9 +265,10 @@ function Box({ e, i, a, panels, images, selected, selectedPanelId, onSelect, onS
     <motion.div
       className="absolute"
       style={{ left: e.x * S, top: e.y * S, width: w, height: d, transformStyle: 'preserve-3d' }}
-      initial={{ z: z + 260, opacity: 0 }}
-      animate={{ z, opacity: 1 }}
-      transition={{ delay: 0.3 + i * 0.09, type: 'spring', stiffness: 140, damping: 16 }}
+      // 最初から置いた位置に出す（上から降ろす演出は、アニメーションが止まる環境で部材が浮いたまま残るのでやめた）
+      initial={false}
+      animate={{ z }}
+      transition={{ type: 'spring', stiffness: 140, damping: 16 }}
       onClick={() => onSelect?.(e.id)}
     >
       {/* 天面 */}

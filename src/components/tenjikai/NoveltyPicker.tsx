@@ -56,7 +56,7 @@ export default function NoveltyPicker({ input, novelties, selected, setSelected 
                     </div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-black text-ink">{n.name}</h3>
-                      {n.recommended && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[9px] font-black text-amber-950">おすすめ</span>}
+                      {n.recommended && <span className="flex-shrink-0 whitespace-nowrap rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-black text-amber-950">おすすめ</span>}
                     </div>
                     <p className="text-xs leading-relaxed text-gray-600">{n.reason}</p>
                     <div className="mt-auto grid grid-cols-3 gap-2 border-t border-gray-100 pt-3 font-mono text-[11px]">

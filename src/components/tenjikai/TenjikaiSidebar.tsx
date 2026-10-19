@@ -1,7 +1,7 @@
 'use client'
 
 import React, { memo, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { tenjikaiTheme } from '@/components/sidebar/themes'
@@ -71,18 +71,8 @@ function SectionButton({
         }`}
       >
         <Icon className={`w-6 h-6 sm:w-5 sm:h-5 flex-shrink-0 ${isActive ? 'text-white' : `${tenjikaiTheme.navTextIcon} ${disabled ? '' : 'group-hover:text-white'}`}`} />
-        <AnimatePresence>
-          {showLabel && (
-            <motion.span
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              className="text-base sm:text-sm font-bold sm:font-medium whitespace-nowrap overflow-hidden"
-            >
-              {item.label}
-            </motion.span>
-          )}
-        </AnimatePresence>
+        {/* 文字は入りのアニメーションを付けない（止まる環境で薄いまま残るため。F-12） */}
+        {showLabel && <span className="text-base sm:text-sm font-bold sm:font-medium whitespace-nowrap overflow-hidden">{item.label}</span>}
         {item.hot && showLabel && !isActive && (
           <span className="ml-auto px-2 py-1 sm:px-1.5 sm:py-0.5 bg-gradient-to-r from-amber-400 to-orange-400 text-xs sm:text-[10px] font-bold text-white rounded-md shadow-sm">
             NEW

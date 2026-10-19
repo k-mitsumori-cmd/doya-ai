@@ -62,14 +62,15 @@ export default function Generating({ analysis, input, onDone }: { analysis: Site
           <div className="h-24 rounded-xl bg-gray-50" />
         </div>
         <motion.div
-          className="pointer-events-none absolute inset-x-0 h-24 bg-gradient-to-b from-transparent via-doya-500/20 to-transparent"
-          initial={{ top: '-20%' }}
-          animate={{ top: ['-20%', '100%'] }}
+          // top ではなく transform で動かす（top を動かすと、毎フレームがレイアウトのずれ＝CLS として数えられる）
+          className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-transparent via-doya-500/20 to-transparent"
+          initial={{ y: '-100%' }}
+          animate={{ y: ['-100%', '500%'] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
         />
         <AnimatePresence>
           {done > 2 && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="absolute bottom-4 right-4 flex gap-1.5 rounded-full bg-white/90 p-1.5 shadow-lg backdrop-blur">
+            <motion.div initial={false} animate={{ opacity: 1, y: 0 }} className="absolute bottom-4 right-4 flex gap-1.5 rounded-full bg-white/90 p-1.5 shadow-lg backdrop-blur">
               {Object.values(analysis.colors).map((c, i) => (
                 <motion.span key={c} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.08, type: 'spring' }} className="h-6 w-6 rounded-full ring-2 ring-white" style={{ background: c }} />
               ))}
@@ -94,7 +95,7 @@ export default function Generating({ analysis, input, onDone }: { analysis: Site
           {steps.map((s, i) => {
             const state = i < done ? 'done' : i === done ? 'run' : 'wait'
             return (
-              <motion.li key={s} initial={{ opacity: 0, x: 12 }} animate={{ opacity: state === 'wait' ? 0.35 : 1, x: 0 }} transition={{ delay: i * 0.04 }} className="flex items-center gap-3 rounded-xl bg-white/80 px-3 py-2 text-sm font-bold text-ink">
+              <motion.li key={s} initial={false} animate={{ opacity: state === 'wait' ? 0.35 : 1, x: 0 }} transition={{ delay: i * 0.04 }} className="flex items-center gap-3 rounded-xl bg-white/80 px-3 py-2 text-sm font-bold text-ink">
                 <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full" style={{ background: state === 'done' ? ds.blue : ds.track }}>
                   {state === 'done' ? (
                     <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500 }}>

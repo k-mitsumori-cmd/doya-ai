@@ -19,6 +19,7 @@
 | `public/tenjikai/working.webp` | 640×480 | 8 | 1版目 | 準備一式を作っている間（処理中の画面） |
 | `public/tenjikai/booth-sample.webp` | 1200×900 | 9 | 1版目 | ブース設計で、完成予想図がまだ無いときの見本 |
 | `public/tenjikai/empty-venue-map.webp` | 640×480 | 10 | 1版目 | 資料庫・締切で、主催者の資料（会場図など）がまだ無いとき |
+| `public/tenjikai/shots/1-input.webp`・`2-process.webp`・`3-output.webp` | 1200×800 | 手順の3枚（step-1〜3）と同じ画像 | — | 紹介ページ（LP キット）が名前で読む操作の見本（src/components/lp/renewal/Renewal.tsx） |
 | `public/ogp/tenjikai.jpg` | 1200×630 | 11（ogp.png） | 1版目（文言3つを目で見て一字ずつ確かめた） | SNS 共有。`src/lib/ogp.ts` の `STATIC_OGP_IDS` |
 
 - §12.1 の画風との照合: クマの体型・青いゴーグル・パーカー胸の `</>` は `public/renewal/bear-hero.webp` と、既存のマスコットに合わせた。主色は青で、アクセントは1枚1色まで（黄の小さな光）。1〜10 には文字が無い
