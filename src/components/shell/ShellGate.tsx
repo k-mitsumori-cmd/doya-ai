@@ -12,12 +12,16 @@ import type { AccountCompany } from '@/lib/shell/company'
 import { AccountCompanyContext } from './company-context'
 import AppShell from './AppShell'
 import { shouldShowShell } from './registry'
-import { UiNextContext } from './ui-next-context'
+import { ShellToolHrefsContext, UiNextContext } from './ui-next-context'
 import UiNextBadge from './UiNextBadge'
 import ShellVitals from './ShellVitals'
 
-export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, company = undefined, always = false, children }: {
+const EMPTY: Record<string, string> = {}
+
+export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, company = undefined, always = false, toolHrefs, children }: {
   signedIn: boolean
+  /** 組織を選ぶツールのリンクの行き先（新しい見た目のときだけ。src/lib/shell/tool-hrefs.server.ts） */
+  toolHrefs?: Record<string, string>
   /** ツールの一覧に無いページ（/pricing など）でも、ログインしていれば枠を出す */
   always?: boolean
   /** 新しい見た目を出すか（サーバーの uiNextMode() で決めて渡す。チェックリスト §5.1） */
@@ -36,11 +40,13 @@ export default function ShellGate({ signedIn, userName, enabledIds, uiNext = nul
   return (
     <UiNextContext.Provider value={uiNext}>
       <AccountCompanyContext.Provider value={uiNext ? company : undefined}>
+      <ShellToolHrefsContext.Provider value={uiNext && toolHrefs ? toolHrefs : EMPTY}>
       {inner}
       {/* useSearchParams を使うので Suspense で包む（静的な画面の書き出しを止めない） */}
       <Suspense fallback={null}><UiNextBadge /></Suspense>
       {/* 表示の速さを測る（新しい見た目のときだけ。外には送らない。UI 品質 S-45） */}
       {uiNext ? <ShellVitals /> : null}
+      </ShellToolHrefsContext.Provider>
       </AccountCompanyContext.Provider>
     </UiNextContext.Provider>
   )

@@ -20,7 +20,7 @@ import { ShellIcon } from './icons'
 import { ShellUsageArea, ShellUsageProvider } from './ShellUsage'
 import { InShellContext } from './in-shell'
 import { ALL_SHELL_TOOLS, SHELL_HOME, shellGroups, type ShellTool } from './tools'
-import { useUiNext } from './ui-next-context'
+import { useToolHref, useUiNext } from './ui-next-context'
 import ShellCompanyCard from './ShellCompanyCard'
 import { demoteExtraH1 } from './heading-guard'
 import styles from './AppShell.module.css'
@@ -47,9 +47,11 @@ function readRecent(): string[] {
 
 function NavItem({ tool, pathname, onNavigate, prefetch, mirror }: { tool: ShellTool; pathname: string; onNavigate: (href: string) => void; prefetch?: boolean; mirror?: boolean }) {
   const active = isActive(pathname, tool)
+  // 組織を選ぶツールは、入口ではなく組織のページへ（新しい見た目のときだけ中身がある）
+  const href = useToolHref()(tool.href)
   // mirror は「最近使ったツール」の複製。今のページの印（aria-current）は本来の区分の側だけに付ける
   return (
-    <Link href={tool.href} className={styles.navItem} aria-current={active && !mirror ? 'page' : undefined} data-active={active && mirror ? 'true' : undefined} onClick={() => onNavigate(tool.href)} title={tool.name} prefetch={prefetch}>
+    <Link href={href} className={styles.navItem} aria-current={active && !mirror ? 'page' : undefined} data-active={active && mirror ? 'true' : undefined} onClick={() => onNavigate(href)} title={tool.name} prefetch={prefetch}>
       <ShellIcon name={tool.icon} size={18} strokeWidth={2} />
       <span className={styles.navLabel}>{tool.name}</span>
       {tool.beta ? <span className={styles.beta}>開発中</span> : null}
@@ -67,6 +69,7 @@ const INTENT_ITEMS: (PaletteItem & { words: string })[] = HOME_INTENT_GROUPS.fla
 
 function CommandPalette({ open, onClose, withIntents }: { open: boolean; onClose: () => void; withIntents: boolean }) {
   const router = useRouter()
+  const toHref = useToolHref()
   const [q, setQ] = useState('')
   const [index, setIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -96,7 +99,7 @@ function CommandPalette({ open, onClose, withIntents }: { open: boolean; onClose
   const go = (item?: PaletteItem) => {
     if (!item) return
     onClose()
-    router.push(item.href)
+    router.push(toHref(item.href))
   }
 
   return (
@@ -142,6 +145,7 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
   const pathname = usePathname() || '/'
   // 新しい見た目（チェックリスト §5.1）のときだけ、UI 品質の直し（区分の名前・押した瞬間の選択・先読み）を使う
   const uiNext = useUiNext()
+  const toHref = useToolHref()
   const groups = shellGroups(uiNext)
   const [open, setOpen] = useState(false)
   const [palette, setPalette] = useState(false)
@@ -289,7 +293,7 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
       <nav className={styles.tabbar} aria-label="よく使うツール">
         {[SHELL_HOME, ...tabTools].map((t) => {
           return (
-            <Link key={t.id} href={t.href} className={styles.tab} aria-current={isActive(pathname, t) ? 'page' : undefined}>
+            <Link key={t.id} href={toHref(t.href)} className={styles.tab} aria-current={isActive(pathname, t) ? 'page' : undefined}>
               <ShellIcon name={t.icon} size={20} />
               <span>{t.id === 'home' ? 'ホーム' : t.name}</span>
             </Link>

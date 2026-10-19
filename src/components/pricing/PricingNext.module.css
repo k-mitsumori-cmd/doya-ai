@@ -24,8 +24,10 @@
 .price { margin: 20px 0 4px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 8px; }
 .priceNum { font-size: 44px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .priceUnit { font-size: 14px; color: var(--sub); }
-.trialBadge { align-self: center; }
-.trialNote { margin: 0 0 4px; }
+.trialSlot { min-height: 56px; display: grid; align-content: start; justify-items: start; gap: 6px; }
+.trialBadge { align-self: start; }
+.trialNote { margin: 0; }
+.trialFallback { margin: 2px 0 0; font-size: 12px; color: var(--sub); }
 .planList { list-style: none; margin: 16px 0 0; padding: 16px 0 0; border-top: 1px solid var(--line); display: grid; gap: 10px; flex: 1; font-size: 14px; line-height: 1.7; color: var(--sub); }
 .planList li { padding-left: 22px; position: relative; }
 .planList li::before { content: ''; position: absolute; left: 2px; top: 0.55em; width: 10px; height: 6px; border-left: 2px solid var(--blue); border-bottom: 2px solid var(--blue); transform: rotate(-45deg); }
@@ -95,10 +97,18 @@
 
 @media (max-width: 767px) {
   .page { padding-top: 40px; }
+  /* 枠の中では、上のメニューの分（約56px）だけ、さらに詰める */
+  .page[data-in-shell='true'] { padding-top: 12px; }
   .plans, .flow { grid-template-columns: minmax(0, 1fr); }
   /* スマホでは、おすすめのプロを先に出す */
   .planPro { order: -1; }
-  .heroArt { width: 120px; height: 120px; }
+  /* 375px の最初の画面（812px）に、プロの申し込みのボタンまで入れる（統括の確認 2026-10-19）。
+     絵は大きさを決めたまま小さくし（表示はずれない）、プロのカードでは、ボタンを機能の一覧より上に出す */
+  .heroArt { width: 80px; height: 80px; margin-bottom: 4px; }
+  .hero { margin-bottom: 28px; }
+  .promises { margin-top: 14px; }
+  .planPro .planAction { order: 1; margin-top: 20px; }
+  .planPro .planList { order: 2; margin-top: 20px; }
   .plans { gap: 28px; }
   .campaign, .contact { flex-direction: column; align-items: stretch; }
   .campaign .secondary, .contact .secondary { width: 100%; }

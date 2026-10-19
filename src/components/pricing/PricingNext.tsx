@@ -77,7 +77,6 @@ export default function PricingNext({ canceled, inShell = false }: { canceled: b
         <ul className={styles.promises}>
           <li><Check size={16} strokeWidth={2.5} aria-hidden />いつでも解約できます</li>
           <li><Check size={16} strokeWidth={2.5} aria-hidden />追加の課金はありません</li>
-          {trialEligible ? <li><Check size={16} strokeWidth={2.5} aria-hidden />初月は無料です</li> : null}
         </ul>
       </header>
 
@@ -109,9 +108,19 @@ export default function PricingNext({ canceled, inShell = false }: { canceled: b
           <p className={styles.price}>
             <span className={styles.priceNum}>{UNIFIED_PRO_PRICE_LABEL}</span>
             <span className={styles.priceUnit}>/ 月（税込）</span>
-            <TrialBadge className={styles.trialBadge} />
           </p>
-          <TrialNote className={styles.trialNote} />
+          {/* トライアルの表示は、対象と分かってから出る（TrialCallout）。出たときに下がずれないよう、場所の高さを先に取る。
+              対象外（または確かめている間）は、同じ場所に短い文を出す */}
+          <div className={styles.trialSlot}>
+            {trialEligible ? (
+              <>
+                <TrialBadge className={styles.trialBadge} />
+                <TrialNote className={styles.trialNote} />
+              </>
+            ) : (
+              <p className={styles.trialFallback}>月額のみ。いつでも解約できます。</p>
+            )}
+          </div>
           <ul className={styles.planList}>
             <li>全{services.length}ツールのプロ機能を使えます</li>
             <li>各ツールの上限が上がります（下の比較表）</li>

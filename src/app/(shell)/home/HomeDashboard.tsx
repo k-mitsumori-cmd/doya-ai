@@ -19,6 +19,7 @@ import { CountUp } from '@/components/ds/motion'
 import { AreaChart, Bars } from '@/components/ds/charts'
 import { CompanyRegisterButton, ShellCompanyTag } from '@/components/shell/ShellCompanyCard'
 import { useAccountCompany } from '@/components/shell/company-context'
+import { useToolHref } from '@/components/shell/ui-next-context'
 import styles from './home.module.css'
 
 const man = (n: number) => {
@@ -41,6 +42,8 @@ type RunState = { plan: AgentPlan; query: string; shown: number; status: 'runnin
 
 function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: string }) {
   const narrow = useNarrow()
+  // 組織を選ぶツールは、入口ではなく組織のページへ（新しい見た目のときだけ中身がある）
+  const toHref = useToolHref()
   const router = useRouter()
   const [opening, setOpening] = useState<string | null>(null)
   const [input, setInput] = useState('')
@@ -60,7 +63,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
       setOpening(intent.label)
       setRun(null)
       setInput('')
-      router.push(intent.href)
+      router.push(toHref(intent.href))
       return
     }
     setOpening(null)
@@ -111,7 +114,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
             <p className={styles.intentLabel}>{g.label}</p>
             <div className={styles.chips}>
               {g.intents.map((it) => (
-                <Link key={it.label} href={it.href} className={styles.chip} prefetch={false}>{it.label}</Link>
+                <Link key={it.label} href={toHref(it.href)} className={styles.chip} prefetch={false}>{it.label}</Link>
               ))}
             </div>
           </div>

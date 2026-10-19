@@ -13,6 +13,7 @@ import { authOptions } from '@/lib/auth'
 import { shellEnabledIds } from '@/lib/ui-shell'
 import { uiNextMode } from '@/lib/ui-next'
 import { getAccountCompanyName } from '@/lib/shell/company.server'
+import { shellToolHrefs } from '@/lib/shell/tool-hrefs.server'
 import ShellGate from '@/components/shell/ShellGate'
 
 export default async function ShellGroupLayout({ children }: { children: ReactNode }) {
@@ -21,9 +22,11 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   // 新しい見た目（UI 品質の直し）を出すか。サーバーで決めて、クライアントの部品には context で渡す（チェックリスト §5.1）
   const uiNext = session?.user ? await uiNextMode() : null
   // 左下の「登録会社」（UI 品質 B-1）。新しい見た目のときだけ読む。失敗しても枠は出す
-  const company = uiNext ? await getAccountCompanyName().catch(() => null) : undefined
+  const [company, toolHrefs] = uiNext
+    ? await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({}))])
+    : [undefined, {}]
   return (
-    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} company={company}>
+    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} company={company} toolHrefs={toolHrefs}>
       {children}
     </ShellGate>
   )
