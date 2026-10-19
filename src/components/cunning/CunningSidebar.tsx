@@ -3,7 +3,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Headphones, LayoutDashboard, BookOpen, Building2, History, Tag, Zap } from 'lucide-react'
+import { Headphones, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { cunningTheme } from '@/components/sidebar/themes'
@@ -20,17 +20,14 @@ import {
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { resolveShellIcon } from '@/components/shell/icons'
+import { CUNNING_MAIN_NAV, CUNNING_SUB_NAV, isCunningNavActive } from '@/lib/cunning/nav'
 
-const MAIN_NAV: NavItem[] = [
-  { href: '/cunning', label: 'ライブ開始', icon: LayoutDashboard, hot: true },
-]
-
-const SUB_NAV: NavItem[] = [
-  { href: '/cunning/knowledge', label: 'ナレッジ（商談）', icon: BookOpen },
-  { href: '/cunning/company', label: '企業・プロフィール（面接）', icon: Building2 },
-  { href: '/cunning/history', label: '履歴', icon: History },
-  { href: '/cunning/pricing', label: '料金プラン', icon: Tag },
-]
+// 項目は src/lib/cunning/nav.ts にだけ書く（共通の枠と同じ配列）
+const toNavItems = (items: typeof CUNNING_MAIN_NAV): NavItem[] =>
+  items.map((item) => ({ href: item.href, label: item.label, icon: resolveShellIcon(item.icon), hot: item.hot }))
+const MAIN_NAV = toNavItems(CUNNING_MAIN_NAV)
+const SUB_NAV = toNavItems(CUNNING_SUB_NAV)
 
 interface CunningSidebarProps extends SidebarProps {
   plan?: string
@@ -67,13 +64,7 @@ function CunningSidebarImpl({
     return p === 'FREE' ? 'FREE' : '未確認'
   })()
 
-  const isActive = (href: string) => {
-    if (href === '/cunning') {
-      if (pathname === '/cunning') return true
-      return (pathname?.startsWith('/cunning/live') ?? false)
-    }
-    return pathname?.startsWith(href) ?? false
-  }
+  const isActive = (href: string) => isCunningNavActive(href, pathname)
 
   const confirmLogout = async () => {
     if (isLoggingOut) return

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import PersonaTool, { type PersonaRestoredRecord } from '@/app/persona/Tool'
+import PersonaTool, { type PersonaRestoredRecord } from '@/app/(shell)/persona/Tool'
 import { isPersonaDisplayData, hasValidPersonaImages } from '@/lib/persona/display-data'
 
 export default function PersonaSavedProject({ projectId }: { projectId: string }) {

@@ -3,7 +3,7 @@ const fs = require('node:fs')
 const vm = require('node:vm')
 const ts = require('typescript')
 
-const source = fs.readFileSync('src/app/mensetsu/compare/page.tsx', 'utf8')
+const source = fs.readFileSync('src/app/(shell)/mensetsu/compare/page.tsx', 'utf8')
 const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
 const functions = {}
 function visit(node) {

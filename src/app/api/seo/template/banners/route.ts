@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-guard'
 import { generateBanners, isNanobannerConfigured } from '@/lib/nanobanner'
-import { articleTemplates } from '@/app/seo/template/data'
+import { articleTemplates } from '@/app/(shell)/seo/template/data'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300

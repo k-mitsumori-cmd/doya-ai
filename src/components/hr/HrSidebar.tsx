@@ -3,18 +3,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import {
-  Users,
-  Users2,
-  Network,
-  ClipboardList,
-  MessageSquare,
-  Settings,
-  CreditCard,
-  Tag,
-  UserPlus,
-  LayoutDashboard,
-} from 'lucide-react'
+import { Users, Users2 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { hrTheme } from '@/components/sidebar/themes'
 import {
@@ -31,20 +20,13 @@ import {
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { resolveShellIcon } from '@/components/shell/icons'
+import { HR_ADD_EMPLOYEE_HREF, HR_ADMIN_NAV, HR_MAIN_NAV, type HrNavItem } from '@/lib/hr/nav'
 
-const HR_MAIN_NAV: NavItem[] = [
-  { href: '/hr/employees/new', label: '従業員を追加', icon: UserPlus, hot: true },
-  { href: '/hr/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
-  { href: '/hr/employees', label: '従業員', icon: Users },
-  { href: '/hr/org-chart', label: '組織図', icon: Network },
-  { href: '/hr/evaluations', label: '評価', icon: ClipboardList },
-]
-
-const HR_ADMIN_NAV: NavItem[] = [
-  { href: '/hr/settings', label: '設定', icon: Settings },
-  { href: '/hr/settings/billing', label: '現在のプラン', icon: CreditCard },
-  { href: '/hr/pricing', label: '料金プラン', icon: Tag },
-]
+// 項目は src/lib/hr/nav.ts にだけ書く（共通の枠の ToolFrame と同じ配列）。ここはアイコンの名前を部品に引いて描くだけ
+const toSidebarItem = (item: HrNavItem): NavItem => ({ href: item.href, label: item.label, icon: resolveShellIcon(item.icon), hot: item.hot })
+const HR_SIDEBAR_MAIN_NAV = HR_MAIN_NAV.map(toSidebarItem)
+const HR_SIDEBAR_ADMIN_NAV = HR_ADMIN_NAV.map(toSidebarItem)
 
 interface HrSidebarProps extends SidebarProps {
   employeeCount?: number
@@ -133,7 +115,7 @@ function HrSidebarImpl({
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <nav className="py-4 sm:py-6 px-3 space-y-1">
             <div className="space-y-1">
-              {HR_MAIN_NAV.filter((item) => item.href !== '/hr/employees/new' || canManageEmployees).map((item) => (
+              {HR_SIDEBAR_MAIN_NAV.filter((item) => item.href !== HR_ADD_EMPLOYEE_HREF || canManageEmployees).map((item) => (
                 <SidebarNavLink
                   key={item.href}
                   item={item}
@@ -147,7 +129,7 @@ function HrSidebarImpl({
 
             <div className="pt-4 mt-3 border-t border-white/10 space-y-1">
               <SidebarSectionTitle title="管理" isCollapsed={isCollapsed} theme={hrTheme} />
-              {HR_ADMIN_NAV.map((item) => (
+              {HR_SIDEBAR_ADMIN_NAV.map((item) => (
                 <SidebarNavLink
                   key={item.href}
                   item={item}

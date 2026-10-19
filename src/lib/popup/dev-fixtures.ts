@@ -2,7 +2,7 @@
 // ドヤポップアップ: 画面の見本データ（開発時の目視確認だけで使う。/popup/dev/states）
 // ============================================
 // ⚠️ 実在の会社・数字ではない。本番の画面からは読まない。
-// ⚠️ 色の値（ポップアップの色＝利用者のデータ）があるので src/app/popup ではなくここに置く（D-2）。
+// ⚠️ 色の値（ポップアップの色＝利用者のデータ）があるので src/app/(shell)/popup ではなくここに置く（D-2）。
 import type { PopupDto, SiteDto } from './dto'
 import type { EditSiteInfo, SiteDetail } from './popup-read'
 import { sanitizeCreative, sanitizeFrequency, sanitizeTargeting, sanitizeTrigger } from './schema'

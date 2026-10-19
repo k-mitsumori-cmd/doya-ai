@@ -5,7 +5,7 @@ const ts = require('typescript');
 const { load: loadModule } = require('./load-typescript.cjs');
 const { parseAishodanPage } = loadModule('src/lib/aishodan/list-pages.ts');
 
-const source = fs.readFileSync('src/app/aishodan/sessions/page.tsx', 'utf8');
+const source = fs.readFileSync('src/app/(shell)/aishodan/sessions/page.tsx', 'utf8');
 const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 let loadArrow;
 function visit(node) {

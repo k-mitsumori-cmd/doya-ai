@@ -1,10 +1,12 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { existsSync } from 'node:fs'
 import sharp from 'sharp'
 
 const ROOT = process.cwd()
+const appDir = (id) => existsSync(path.join(ROOT, 'src/app/(shell)', id)) ? `(shell)/${id}` : id
 const ids = ['banner','seo','interview','persona','hr','kintai','doyalist','doyaslide','cunning','promane','sfa','shodan','aio','mensetsu','quote','aishodan','adimage']
-const lpFiles = { banner: 'src/app/banner/landing/page.tsx', hr: 'src/app/hr/page.tsx', kintai: 'src/app/kintai/page.tsx', promane: 'src/app/promane/PromaneLp.tsx' }
+const lpFiles = { banner: 'src/app/(shell)/banner/landing/page.tsx', hr: 'src/app/(shell)/hr/page.tsx', kintai: 'src/app/(shell)/kintai/page.tsx', promane: 'src/app/(shell)/promane/PromaneLp.tsx', cunning: 'src/app/(shell)/cunning/Lp.tsx', interview: 'src/app/(shell)/interview/Lp.tsx', persona: 'src/app/(shell)/persona/Lp.tsx' }
 const samples = ['cat-telecom','cat-marketing','cat-ec','cat-recruit','cat-beauty','cat-food','cat-realestate','cat-education','cat-finance','cat-health','cat-it','cat-other','purpose-sns_ad','purpose-youtube','purpose-display','purpose-webinar','purpose-lp_hero','purpose-email','purpose-campaign','size-1080x1080','size-1200x628','size-1080x1920','size-1280x720','size-1920x1080','size-300x250','size-728x90','size-320x50','size-1920x600','size-1200x800','size-600x200','size-600x300']
 let checks = 0
 const assert = (condition, message) => { checks += 1; if (!condition) throw new Error(message) }
@@ -18,21 +20,21 @@ for (const name of samples) {
 }
 
 for (const id of ids) {
-  const diagram = await fs.readFile(path.join(ROOT, 'src/app', id === 'banner' ? 'banner/landing/diagram.tsx' : `${id}/diagram.tsx`), 'utf8')
+  const diagram = await fs.readFile(path.join(ROOT, 'src/app', id === 'banner' ? `${appDir('banner')}/landing/diagram.tsx` : `${appDir(id)}/diagram.tsx`), 'utf8')
   assert(diagram.includes('ServiceFlowDiagram'), `${id}: diagram missing`)
-  const lpFile = lpFiles[id] || `src/app/${id}/Lp.tsx`
+  const lpFile = lpFiles[id] || `src/app/${appDir(id)}/Lp.tsx`
   const source = await fs.readFile(path.join(ROOT, lpFile), 'utf8')
   assert((source.match(new RegExp(`/${id}/shots/[123]-(?:input|process|output)\\.webp`, 'g')) || []).length === 3, `${id}: screenshots not wired`)
   assert(source.includes('diagram={<ServiceDiagram steps={STEPS} />}'), `${id}: diagram not wired`)
 }
 
-for (const file of ['src/app/banner/dashboard/history/page.tsx','src/app/doyaslide/projects/page.tsx','src/app/quote/Tool.tsx','src/app/seo/jobs/[id]/page.tsx']) {
+for (const file of ['src/app/(shell)/banner/dashboard/history/page.tsx','src/app/(shell)/doyaslide/projects/page.tsx','src/app/(shell)/quote/Tool.tsx','src/app/(shell)/seo/jobs/[id]/page.tsx']) {
   const source = await fs.readFile(path.join(ROOT, file), 'utf8')
   assert(source.includes('<EmptyState'), `${file}: EmptyState missing`)
 }
 
 const svgRefs = []
-for (const root of ['src/app/banner/dashboard/create/page.tsx','src/app/api/seo/template/image/category/[category]/route.ts','src/app/api/swipe/question-images/route.ts']) {
+for (const root of ['src/app/(shell)/banner/dashboard/create/page.tsx','src/app/api/seo/template/image/category/[category]/route.ts','src/app/api/swipe/question-images/route.ts']) {
   const source = await fs.readFile(path.join(ROOT, root), 'utf8')
   if (/banner-samples\/(?:cat|purpose|size)-[^'" )]+\.svg/.test(source)) svgRefs.push(root)
 }

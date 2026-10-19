@@ -8,7 +8,7 @@ const a=moduleExports.personaBrowserStorage('A'),b=moduleExports.personaBrowserS
 assert.equal(a.getItem('doya_persona_last'),null);a.setItem('doya_persona_last','A private');assert.equal(b.getItem('doya_persona_last'),null);b.setItem('doya_persona_last','B private');a.removeItem('doya_persona_last');assert.equal(b.getItem('doya_persona_last'),'B private');assert.equal(rows.get('doya_persona_last'),'legacy private');assert.throws(()=>moduleExports.personaBrowserStorage(''));
 console.log('PASS account scoped reads writes deletion and legacy isolation');
 const historyHelpers=require('./load-typescript.cjs').load('src/lib/persona/history-records.ts',{});
-const source=fs.readFileSync(path.join(root,'src/app/persona/Tool.tsx'),'utf8');
+const source=fs.readFileSync(path.join(root,'src/app/(shell)/persona/Tool.tsx'),'utf8');
 const ast=ts.createSourceFile('Tool.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),callbacks={};
 function visit(n){if(ts.isVariableDeclaration(n)&&['handleGenerate','handleModify'].includes(n.name.getText(ast)))callbacks[n.name.getText(ast)]=n.initializer.getText(ast);ts.forEachChild(n,visit)}visit(ast);
 async function run(kind,scenario){

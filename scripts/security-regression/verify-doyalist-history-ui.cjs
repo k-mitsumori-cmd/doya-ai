@@ -5,7 +5,7 @@ const ts = require('typescript')
 const { load } = require('./load-typescript.cjs')
 const helpers = load('src/lib/doyalist/approach-pages.ts')
 const projectHelpers = load('src/lib/doyalist/project-pages.ts')
-const source = fs.readFileSync('src/app/doyalist/history/page.tsx', 'utf8')
+const source = fs.readFileSync('src/app/(shell)/doyalist/history/page.tsx', 'utf8')
 const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
 let loadArrow, loadProjectsArrow, loadMoreFunction, loadMoreProjectsFunction
 function visit(node) {

@@ -5,25 +5,25 @@ import { getServiceById } from "@/lib/services";
 // Render the same public LP even when the comparison viewer is signed in.
 // This route never mounts authenticated app screens or reads customer data.
 const pages = {
-  banner: () => import("@/app/banner/landing/page"),
-  seo: () => import("@/app/seo/Lp"),
-  interview: () => import("@/app/interview/Lp"),
-  persona: () => import("@/app/persona/Lp"),
-  hr: () => import("@/app/hr/page"),
-  kintai: () => import("@/app/kintai/page"),
-  doyalist: () => import("@/app/doyalist/Lp"),
+  banner: () => import("@/app/(shell)/banner/landing/page"),
+  seo: () => import("@/app/(shell)/seo/Lp"),
+  interview: () => import("@/app/(shell)/interview/Lp"),
+  persona: () => import("@/app/(shell)/persona/Lp"),
+  hr: () => import("@/app/(shell)/hr/page"),
+  kintai: () => import("@/app/(shell)/kintai/page"),
+  doyalist: () => import("@/app/(shell)/doyalist/Lp"),
   promane: async () => ({
-    default: (await import("@/app/promane/PromaneLp")).PromaneLp,
+    default: (await import("@/app/(shell)/promane/PromaneLp")).PromaneLp,
   }),
-  doyaslide: () => import("@/app/doyaslide/Lp"),
-  cunning: () => import("@/app/cunning/Lp"),
-  sfa: () => import("@/app/sfa/Lp"),
-  shodan: () => import("@/app/shodan/Lp"),
-  aio: () => import("@/app/aio/Lp"),
-  mensetsu: () => import("@/app/mensetsu/Lp"),
-  quote: () => import("@/app/quote/Lp"),
-  aishodan: () => import("@/app/aishodan/Lp"),
-  adimage: () => import("@/app/adimage/Lp"),
+  doyaslide: () => import("@/app/(shell)/doyaslide/Lp"),
+  cunning: () => import("@/app/(shell)/cunning/Lp"),
+  sfa: () => import("@/app/(shell)/sfa/Lp"),
+  shodan: () => import("@/app/(shell)/shodan/Lp"),
+  aio: () => import("@/app/(shell)/aio/Lp"),
+  mensetsu: () => import("@/app/(shell)/mensetsu/Lp"),
+  quote: () => import("@/app/(shell)/quote/Lp"),
+  aishodan: () => import("@/app/(shell)/aishodan/Lp"),
+  adimage: () => import("@/app/(shell)/adimage/Lp"),
 };
 
 export const dynamicParams = false;

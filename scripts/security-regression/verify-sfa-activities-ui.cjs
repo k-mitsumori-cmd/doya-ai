@@ -68,19 +68,19 @@ async function verify(path, name, config) {
 }
 
 (async () => {
-  await verify('src/app/sfa/[orgSlug]/activities/page.tsx', 'load', {
+  await verify('src/app/(shell)/sfa/[orgSlug]/activities/page.tsx', 'load', {
     list: 'activities', cursor: 'nextCursor', setters: {
       setLoading: 'loading', setLoadError: 'loadError', setActivities: 'activities',
       setNextCursor: 'nextCursor', setTotalCount: 'totalCount', setRetryCursor: 'retryCursor',
     },
   });
-  await verify('src/app/sfa/[orgSlug]/tasks/page.tsx', 'loadActs', {
+  await verify('src/app/(shell)/sfa/[orgSlug]/tasks/page.tsx', 'loadActs', {
     list: 'acts', cursor: 'actsCursor', setters: {
       setActsLoading: 'actsLoading', setActsError: 'actsError', setActs: 'acts',
       setActsCursor: 'actsCursor', setActsTotal: 'actsTotal', setActsRetryCursor: 'actsRetryCursor',
     },
   });
-  await verify('src/app/sfa/[orgSlug]/deals/page.tsx', 'loadActivities', {
+  await verify('src/app/(shell)/sfa/[orgSlug]/deals/page.tsx', 'loadActivities', {
     deal: true, list: 'detailActs', cursor: 'activitiesCursor', setters: {
       setActivitiesLoading: 'activitiesLoading', setActivitiesError: 'activitiesError', setDetailActs: 'detailActs',
       setActivitiesCursor: 'activitiesCursor', setActivitiesTotal: 'activitiesTotal', setActivitiesRetryCursor: 'activitiesRetryCursor',

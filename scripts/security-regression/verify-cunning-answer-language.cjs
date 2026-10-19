@@ -1,5 +1,5 @@
 const fs=require('node:fs'),ts=require('typescript'),vm=require('node:vm'),assert=require('node:assert/strict')
-const source=fs.readFileSync('src/app/cunning/live/[sessionId]/page.tsx','utf8'),ast=ts.createSourceFile('live.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
+const source=fs.readFileSync('src/app/(shell)/cunning/live/[sessionId]/page.tsx','utf8'),ast=ts.createSourceFile('live.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
 let declaration,handler,finalizer
 function walk(n){if(ts.isExpressionStatement(n)&&ts.isBinaryExpression(n.expression)&&n.expression.left.getText(ast)==='finalWindowAnswerRef.current')finalizer=n.getText(ast);if(ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>d.name.getText(ast)==='performAnswer'))declaration=n.getText(ast);if(ts.isJsxAttribute(n)&&n.name.getText(ast)==='onClick'&&n.initializer?.expression?.getText(ast).includes('requestAnswer(a.question'))handler=n.initializer.expression.getText(ast);ts.forEachChild(n,walk)}walk(ast);assert(declaration&&handler)
 ;(async()=>{for(const final of [true,false]){const exports={},a={},lang={current:'ja'},requests=[];let cards=[]

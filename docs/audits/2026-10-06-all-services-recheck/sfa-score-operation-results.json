@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-07T05:27:24.881Z",
+  "checkedAt": "2026-10-18T09:36:13.700Z",
   "passed": 24,
   "cases": [
     "Invalid body, version, UUID and ID reject before provider/reservation",
@@ -30,7 +30,7 @@
   "sourceHashes": {
     "src/lib/sfa/score-operation.ts": "01f347139f70bdb85961b057560be714fce7974bcc32e129aef89f6dc2977806",
     "src/app/api/sfa/ai/score/route.ts": "d8b8f814587cbd18624dd81eb4a85f3f076e249bf0eb3fb4b85ee5a90827eef2",
-    "src/lib/sfa/ai-limit.ts": "657edd9d5835d5dd5b79967b4263745202ac61c54c0839678c3f69814edfe555",
+    "src/lib/sfa/ai-limit.ts": "daf34c29ab6251ffc175ad2ccb89a21778ace8b1a9b0f65a8e5bf519eb4bb938",
     "src/lib/sfa/lead-score-result.ts": "efc548a4bb4f04ff5a7e73ab288c0145f2a87b99b5b49755379df48c4fd778d3"
   },
   "scope": "Actual route and operation/authority/quota/parser helpers; stateful synthetic serialized transactions with rollback and mocked provider. Not PostgreSQL scheduling, production or browser proof."

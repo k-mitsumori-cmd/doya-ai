@@ -119,13 +119,13 @@ function fixture(initial = null, accountPlan = 'FREE') {
     }
   }
   for (const page of ['dashboard/page.tsx', 'test/page.tsx']) {
-    const source = fs.readFileSync(path.join(root, 'src/app/banner', page), 'utf8')
+    const source = fs.readFileSync(path.join(root, 'src/app/(shell)/banner', page), 'utf8')
     assert(!source.includes('bannerTrialStartTime'), `${page} must not grant a local-only free hour`)
     assert(!source.includes('isTrialActive'), `${page} must not treat a free user as ENTERPRISE`)
     assert(source.includes('[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num)'), `${page} must allow one remaining credit and all ENTERPRISE batch sizes`)
   }
   for (const page of ['dashboard/create/page.tsx', 'dashboard/chat/page.tsx', 'url/page.tsx']) {
-    const source = fs.readFileSync(path.join(root, 'src/app/banner', page), 'utf8')
+    const source = fs.readFileSync(path.join(root, 'src/app/(shell)/banner', page), 'utf8')
     assert(source.includes('getBannerMaxImagesPerRequest('), `${page} must use the server batch cap`)
   }
   const fromUrl = fs.readFileSync(path.join(root, 'src/app/api/banner/from-url/route.ts'), 'utf8')

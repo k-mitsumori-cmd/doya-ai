@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
 const {check,results}=require('./load-typescript.cjs');
-const source=fs.readFileSync('src/app/interview/projects/[id]/edit/page.tsx','utf8');
+const source=fs.readFileSync('src/app/(shell)/interview/projects/[id]/edit/page.tsx','utf8');
 const ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 let code;function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='autoSave')code=n.initializer.arguments[0].getText(ast);ts.forEachChild(n,visit)}visit(ast);
 const compiled=ts.transpileModule('('+code+')',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;

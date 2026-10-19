@@ -23,6 +23,10 @@ const services = moduleExports.getActiveServices()
 assert(services.length > 0, 'No active services were loaded')
 assert.equal(new Set(services.map(service => service.id)).size, services.length, 'Duplicate active service ID')
 
+const routeGroups = fs.readdirSync(path.join(root, 'src/app'), { withFileTypes: true })
+  .filter(entry => entry.isDirectory() && /^\(.+\)$/.test(entry.name))
+  .map(entry => entry.name)
+
 const links = new Set()
 for (const service of services) {
   for (const field of ['href', 'dashboardHref', 'pricingHref', 'guideHref']) {
@@ -30,9 +34,10 @@ for (const service of services) {
     assert.match(href, /^\/[a-z0-9/-]+$/, `${service.id}.${field} must be a local path`)
     assert(!href.includes('//') && !href.includes('..'), `${service.id}.${field} contains an unsafe path`)
     links.add(href)
-    const dir = path.join(root, 'src/app', href.slice(1))
+    // ルートグループ（src/app/(shell) など）は URL に出ないので、その下も同じ URL のページとして探す
+    const dirs = [path.join(root, 'src/app', href.slice(1)), ...routeGroups.map(group => path.join(root, 'src/app', group, href.slice(1)))]
     assert(
-      ['page.tsx', 'page.ts', 'page.jsx', 'page.js'].some(file => fs.existsSync(path.join(dir, file))),
+      dirs.some(dir => ['page.tsx', 'page.ts', 'page.jsx', 'page.js'].some(file => fs.existsSync(path.join(dir, file)))),
       `${service.id}.${field} points to a missing page: ${href}`,
     )
   }

@@ -10,22 +10,20 @@
 // ⚠️ シェルの中では見出しを ToolFrame の1つにする（各ページは ShanaiShellContext を見て h1 を出さない）
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
-import AppShell from '@/components/shell/AppShell'
 import ToolFrame from '@/components/shell/ToolFrame'
 import { isGuestPath } from '@/lib/ui/guest-path'
 import { SHANAI_NAV } from '@/lib/shanai/nav'
 import ShanaiAppLayout from './ShanaiAppLayout'
 import { ShanaiShellContext } from './shell-context'
 
-export default function ShanaiFrame({ shell, userName, children }: { shell: boolean; userName?: string | null; children: ReactNode }) {
+// ⚠️ 枠（AppShell）は src/app/(shell)/layout.tsx が出す。ここではツール内のナビ（ToolFrame）だけ
+export default function ShanaiFrame({ shell, children }: { shell: boolean; children: ReactNode }) {
   const pathname = usePathname()
   if (isGuestPath(pathname)) return <>{children}</>
   if (!shell) return <ShanaiAppLayout>{children}</ShanaiAppLayout>
   return (
-    <AppShell userName={userName}>
-      <ToolFrame serviceId="shanai" title="ドヤ社内インタビュー" description="録音かアンケートと写真から、会社の魅力が伝わる社員インタビュー記事を作ります。" nav={SHANAI_NAV}>
-        <ShanaiShellContext.Provider value={true}>{children}</ShanaiShellContext.Provider>
-      </ToolFrame>
-    </AppShell>
+    <ToolFrame serviceId="shanai" title="ドヤ社内インタビュー" description="録音かアンケートと写真から、会社の魅力が伝わる社員インタビュー記事を作ります。" nav={SHANAI_NAV}>
+      <ShanaiShellContext.Provider value={true}>{children}</ShanaiShellContext.Provider>
+    </ToolFrame>
   )
 }

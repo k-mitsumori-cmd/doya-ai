@@ -1,6 +1,6 @@
 const fs = require('node:fs'), vm = require('node:vm'), ts = require('typescript'), assert = require('node:assert/strict');
 const { check, results } = require('./load-typescript.cjs');
-const source = fs.readFileSync('src/app/seo/articles/[id]/edit/page.tsx', 'utf8');
+const source = fs.readFileSync('src/app/(shell)/seo/articles/[id]/edit/page.tsx', 'utf8');
 const ast = ts.createSourceFile('editor.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 let effect;
 function visit(n) {

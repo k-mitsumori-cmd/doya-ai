@@ -45,6 +45,8 @@ function AioSidebarImpl({ orgSlug, orgName, organizationPlan, isOwner = true, is
 
   const base = `/aio/${encodeURIComponent(orgSlug)}`
   const pricingHref = `/aio/pricing?org=${encodeURIComponent(orgSlug)}`
+  // ⚠️ 共通の枠（ui.shell.aio=ON）では src/lib/aio/nav.ts の同じ項目を使う。項目を変えるときは両方を直す
+  //    （このファイルを読む verify-aio-plan-cta が import を固定しているため、nav.ts をここでは読まない）
   // URL一本フローに合わせ、ブランド設定/監視プロンプトはナビから外す（自動セットアップ。ページ自体は残置）
   const NAV: NavItem[] = [
     { href: `${base}/scan`, label: 'URL AI調査', icon: ScanSearch, hot: true },

@@ -6,7 +6,7 @@ const inviteInfo={organizationName:'Synthetic organization',organizationSlug:'te
 const ok=data=>({status:200,ok:true,json:async()=>data})
 const unauthorized=()=>({status:401,ok:false,json:()=>{throw Error('401 must not be parsed')}})
 function fixture(kind,{get=()=>ok(inviteInfo),post=unauthorized,sdk=()=>Promise.reject(Error('PRIVATE_SDK_DETAILS')),logout=()=>Promise.resolve(),token='synthetic?x#y',orgSlug='synthetic org'}={}){
- const file=kind==='scan'?'src/app/aio/[orgSlug]/scan/page.tsx':`src/app/${kind}/invite/[token]/page.tsx`
+ const file=kind==='scan'?'src/app/(shell)/aio/[orgSlug]/scan/page.tsx':`src/app/${fs.existsSync(`src/app/(shell)/${kind}`)?"(shell)/":""}${kind}/invite/[token]/page.tsx`
  const slots=[],effects=[],cleanups=[],effectDeps=[],errors=[],successes=[],requests=[],auth=[],signouts=[],navigation=[],listeners=new Map()
  let cursor=0,mounted=false,disposed=false,writesAfterUnmount=0,wrapperKey
  const react={useState(value){const i=cursor++;if(!(i in slots))slots[i]=value;return[slots[i],value=>{if(disposed)writesAfterUnmount++;slots[i]=typeof value==='function'?value(slots[i]):value}]},useRef(value){const i=cursor++;if(!(i in slots))slots[i]={current:value};return slots[i]},useEffect(effect,deps){const i=cursor++;if(!effectDeps[i]||!deps||deps.some((value,index)=>value!==effectDeps[i][index])){effects.push({i,effect});effectDeps[i]=deps}}}

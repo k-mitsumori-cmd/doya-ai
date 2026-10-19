@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript'),assert=require('node:assert/strict');
-const source=fs.readFileSync(path.resolve(__dirname,'../../src/app/persona/Tool.tsx'),'utf8');
+const source=fs.readFileSync(path.resolve(__dirname,'../../src/app/(shell)/persona/Tool.tsx'),'utf8');
 const ast=ts.createSourceFile('Tool.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),effects=[];
 function visit(n){if(ts.isCallExpression(n)&&n.expression.getText(ast)==='useEffect')effects.push(n.arguments[0].getText(ast));ts.forEachChild(n,visit)}visit(ast);
 const restore=effects.find(s=>s.includes("accountStorage.getItem('doya_persona_last')"));

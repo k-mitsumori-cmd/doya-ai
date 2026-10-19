@@ -13,3 +13,14 @@ export function isShellEnabled(serviceId: string, raw: string | undefined = proc
     .filter(Boolean)
   return ids.includes('all') || ids.includes(serviceId.toLowerCase())
 }
+
+/**
+ * UI_SHELL_SERVICES に書かれた id の一覧（小文字）。共通の枠（src/app/(shell)/layout.tsx）がクライアントに渡す。
+ * ⚠️ 返すのはツールの id だけ。ほかの環境変数は渡さない。
+ */
+export function shellEnabledIds(raw: string | undefined = process.env.UI_SHELL_SERVICES): string[] {
+  return (raw ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+}

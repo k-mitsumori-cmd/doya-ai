@@ -1,6 +1,6 @@
 const fs = require('fs'), path = require('path'), vm = require('vm'), ts = require('typescript'), assert = require('node:assert/strict');
 const historyHelpers = require('./load-typescript.cjs').load('src/lib/persona/history-records.ts', {});
-const source = fs.readFileSync(path.resolve(__dirname, '../../src/app/persona/Tool.tsx'), 'utf8');
+const source = fs.readFileSync(path.resolve(__dirname, '../../src/app/(shell)/persona/Tool.tsx'), 'utf8');
 const ast = ts.createSourceFile('Tool.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX), callbacks = {};
 function visit(n) { if (ts.isVariableDeclaration(n) && ['setGeneratedData', 'handleGeneratePortrait', 'handleGenerateScene', 'handleModify'].includes(n.name.getText(ast))) { const init = n.initializer; callbacks[n.name.getText(ast)] = (ts.isCallExpression(init) ? init.arguments[0] : init).getText(ast) } ts.forEachChild(n, visit) } visit(ast);
 const compile = s => ts.transpileModule(s, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;

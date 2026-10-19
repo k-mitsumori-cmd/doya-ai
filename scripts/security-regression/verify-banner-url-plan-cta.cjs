@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),ts=require('typescript'),React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
-const {load,check,results}=require('./load-typescript.cjs'),root=path.resolve(__dirname,'../..'),file='src/app/banner/url/page.tsx';
+const {load,check,results}=require('./load-typescript.cjs'),root=path.resolve(__dirname,'../..'),file='src/app/(shell)/banner/url/page.tsx';
 const pricing=load('src/lib/pricing.ts',{'./unified-plan':load('src/lib/unified-plan.ts')}),plans=load('src/lib/plan-utils.ts');
 function fixture({plan='PRO',bannerPlan='FREE',guest=false,eligible=true,usage={monthlyLimit:150,monthlyUsed:150,monthlyRemaining:0},limit=true,fetches=[]}={}){
  const source=fs.readFileSync(path.join(process.env.DOYA_TEST_BASELINE||root,file),'utf8'),ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true),stateNames=[];

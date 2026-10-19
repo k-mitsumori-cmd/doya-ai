@@ -4,7 +4,7 @@ import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Building2, Kanban, UserPlus, Tag, TrendingUp, Zap, ChevronsUpDown, Check, CheckSquare } from 'lucide-react'
+import { Building2, TrendingUp, Zap, ChevronsUpDown, Check } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { sfaTheme } from '@/components/sidebar/themes'
@@ -20,13 +20,10 @@ import {
   useSidebarState,
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
+import type { ShellNavItem } from '@/components/shell/nav'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
-
-// 日本語の slug は useParams() から URL エンコードされたまま届くので、二重エンコードを避けて 1 回だけデコードする（2026-10-18）。
-function normalizeOrgSlug(slug: string): string {
-  if (!/%[0-9A-Fa-f]{2}/.test(slug)) return slug
-  try { return decodeURIComponent(slug) } catch { return slug }
-}
+import { resolveShellIcon } from '@/components/shell/icons'
+import { sfaMainNav, sfaPricingHref, sfaSubNav } from '@/lib/sfa/nav'
 
 interface Membership { slug: string; name: string; role: string }
 interface SfaSidebarProps extends SidebarProps {
@@ -48,21 +45,12 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
   const [wsOpen, setWsOpen] = useState(false)
   const base = `/sfa/${orgSlug}`
   const currentWs = memberships.find((m) => m.slug === orgSlug)
-  const pricingHref = `/sfa/pricing?org=${encodeURIComponent(normalizeOrgSlug(orgSlug))}`
+  const pricingHref = sfaPricingHref(orgSlug)
 
-  const MAIN_NAV: NavItem[] = [
-    { href: base, label: 'ダッシュボード', icon: LayoutDashboard },
-    { href: `${base}/deals`, label: '商談（パイプライン）', icon: Kanban, hot: true },
-    // リード（leads）は2026-06-12にメニューから廃止（商談パイプラインに集約。ページ自体はURL直アクセスで残存）
-    { href: `${base}/accounts`, label: '取引先', icon: Building2 },
-    // 担当者（contacts）・活動（activities）は2026-06-12にメニューから廃止
-    // （担当者名は商談詳細のフリーテキスト、活動はタスクページに統合。旧ページはURL直アクセスで残存）
-    { href: `${base}/tasks`, label: 'タスク・活動', icon: CheckSquare },
-  ]
-  const SUB_NAV: NavItem[] = [
-    { href: `${base}/members`, label: 'メンバー', icon: UserPlus },
-    { href: pricingHref, label: '料金プラン', icon: Tag },
-  ]
+  // 項目・並び・リンク先は src/lib/sfa/nav.ts（共通の枠の ToolFrame と同じ配列）。ここでは描くだけ
+  const toNavItem = (item: ShellNavItem): NavItem => ({ href: item.href, label: item.label, icon: resolveShellIcon(item.icon), hot: item.href === `${base}/deals` || undefined })
+  const MAIN_NAV: NavItem[] = sfaMainNav(orgSlug).map(toNavItem)
+  const SUB_NAV: NavItem[] = sfaSubNav(orgSlug).map(toNavItem)
 
   const planLabel = (() => {
     if (!plan) return isLoggedIn ? '未確認' : 'GUEST'

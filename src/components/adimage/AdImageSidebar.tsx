@@ -7,7 +7,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Megaphone, History, CreditCard, Zap } from 'lucide-react'
+import { Megaphone, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { adimageTheme } from '@/components/sidebar/themes'
@@ -26,8 +26,10 @@ import {
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { resolveShellIcon } from '@/components/shell/icons'
+import { ADIMAGE_BASE, ADIMAGE_NAV } from '@/lib/adimage/nav'
 
-const BASE = '/adimage'
+const BASE = ADIMAGE_BASE
 
 function AdImageSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
@@ -40,11 +42,8 @@ function AdImageSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile 
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const NAV: NavItem[] = [
-    { href: BASE, label: '広告画像をつくる', icon: Megaphone, hot: true },
-    { href: BASE + '/history', label: 'これまでの画像', icon: History },
-    { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
-  ]
+  // 項目は src/lib/adimage/nav.ts が正本。サイドバーはこの配列を描くだけ
+  const NAV: NavItem[] = ADIMAGE_NAV.map((item, i) => ({ href: item.href, label: item.label, icon: resolveShellIcon(item.icon), hot: i === 0 }))
 
   const planLabel = (() => {
     if (!isLoggedIn) return 'GUEST'

@@ -14,7 +14,7 @@ import { isNavActive, type ShellNavItem } from './nav'
 import { ShellIcon } from './icons'
 import styles from './ToolFrame.module.css'
 
-export default function ToolFrame({ serviceId, title, description, action, nav, aside, children }: {
+export default function ToolFrame({ serviceId, title, description, action, nav, aside, switcher, children }: {
   serviceId: string
   /** 見出し。省略時はツール名 */
   title?: ReactNode
@@ -24,6 +24,8 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
   nav?: ShellNavItem[]
   /** 右ペイン（1280px 以上でのみ表示） */
   aside?: ReactNode
+  /** 組織・ワークスペースの切り替え（パンくずの右に出す）。ツールの既存の切り替え部品をそのまま渡す */
+  switcher?: ReactNode
   children: ReactNode
 }) {
   const pathname = usePathname() || '/'
@@ -33,11 +35,14 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
   return (
     <div className={styles.frame}>
       <div className={styles.head}>
-        <nav className={styles.crumbs} aria-label="パンくず">
-          <Link href={SHELL_HOME.href}>{SHELL_HOME.name}</Link>
-          <ChevronRight size={14} aria-hidden />
-          <span aria-current="page">{name}</span>
-        </nav>
+        <div className={styles.crumbRow}>
+          <nav className={styles.crumbs} aria-label="パンくず">
+            <Link href={SHELL_HOME.href}>{SHELL_HOME.name}</Link>
+            <ChevronRight size={14} aria-hidden />
+            <span aria-current="page">{name}</span>
+          </nav>
+          {switcher ? <div className={styles.switcher}>{switcher}</div> : null}
+        </div>
         <div className={styles.titleRow}>
           <div className={styles.titleBox}>
             <h1 className={styles.title}>{title ?? name}</h1>
