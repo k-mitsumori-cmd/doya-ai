@@ -76,6 +76,9 @@ const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.in
     assert.match(read('src/app/(shell)/layout.tsx'),/session\?\.user \? await uiNextMode\(\) : null/);
     for(const f of ['src/app/(shell)/shodan/page.tsx','src/app/(shell)/aio/page.tsx'])assert.match(read(f),/&& \(await isUiNext\(\)\)\) \{/,f);
     assert.match(read('src/app/(shell)/home/page.tsx'),/uiNext \? <HomeDashboard/);
+    assert.match(read('src/app/pricing/page.tsx'),/if \(!\(await isUiNext\(\)\)\) return <PricingLegacy \/>/);
+    // 新しい料金ページも、購入は同じボタンと同じプラン ID を使う
+    assert.match(read('src/components/pricing/PricingNext.tsx'),/<CheckoutButton planId=\{UNIFIED_PRO_PLAN_ID\}/);
     assert.match(read('src/components/DashboardLayout.tsx'),/if \(inShell && uiNext\)/);
     assert.match(read('src/components/shell/ShellLoading.tsx'),/if \(!uiNext\) return null/);
     // CSS の直しは data-ui-next の下だけ
