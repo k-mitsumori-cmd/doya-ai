@@ -1,5 +1,6 @@
 'use client'
 
+import { useUiNext } from '@/components/shell/ui-next-context'
 import { useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { DashboardLayout } from '@/components/DashboardLayout'
@@ -15,6 +16,8 @@ import { AccountSummaryCard } from '@/components/AccountSummaryCard'
 import { useSubscriptionManagement } from '@/hooks/useSubscriptionManagement'
 
 export default function SettingsPage() {
+  // 新しい見た目（チェックリスト §5.1）では、枠の見出し・タブと重なる旧来の見出しの帯を出さない（h1 を1つにする。S-57）
+  const uiNext = useUiNext()
   const { data: session, status } = useSession()
   const management = useSubscriptionManagement('banner')
   const isCancelling = management.busy
@@ -69,9 +72,9 @@ export default function SettingsPage() {
     <DashboardLayout>
       <Toaster position="top-center" />
       {management.message && <div role="status" className="p-4 text-slate-700 bg-slate-50"><p>{management.message}</p><button type="button" disabled={management.busy} onClick={() => void management.recheck()} className="mt-2 underline">契約状態を再確認</button></div>}
-      <div className="max-w-2xl mx-auto space-y-8">
+      <div className={uiNext ? 'max-w-2xl mx-auto space-y-8 px-4 py-6 sm:px-8 sm:py-8' : 'max-w-2xl mx-auto space-y-8'}>
         <div>
-          <h1 className="text-2xl font-black text-slate-900">設定</h1>
+          {uiNext ? <h2 className="text-2xl font-black text-slate-900">設定</h2> : <h1 className="text-2xl font-black text-slate-900">設定</h1>}
           <p className="text-sm text-slate-500 font-bold mt-1">アカウント情報とプランの管理</p>
         </div>
 

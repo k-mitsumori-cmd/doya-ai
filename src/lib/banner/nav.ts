@@ -15,3 +15,12 @@ export const BANNER_NAV: ShellNavItem[] = [
   { label: 'プラン', href: BANNER_DASHBOARD_BASE + '/plan', icon: 'CreditCard' },
   { label: '設定', href: BANNER_DASHBOARD_BASE + '/settings', icon: 'Settings' },
 ]
+
+/**
+ * 新しい見た目（useUiNext()）のときのナビ。今までのサイドバーにあった「選んで生成」（/banner/dashboard）を先頭に足す。
+ * ⚠️ 今の見た目では BANNER_NAV のまま（チェックリスト §5.1）
+ */
+export const BANNER_NAV_NEXT: ShellNavItem[] = [
+  { label: '見本から作る', href: BANNER_DASHBOARD_BASE, icon: 'LayoutTemplate', exact: true },
+  ...BANNER_NAV,
+]

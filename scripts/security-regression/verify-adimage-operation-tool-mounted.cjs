@@ -1,4 +1,5 @@
 process.env.NODE_ENV='test';
+const UI_NEXT_MOCKS={'@/components/shell/ui-next-context':{__esModule:true,useUiNext:()=>false,useUiNextMode:()=>null},'@/components/ds':{__esModule:true,Button:()=>null,ToolHero:()=>null,EmptyState:()=>null,Skeleton:()=>null},'@/components/shell/ShellLoading':{__esModule:true,default:()=>null},'@/components/banner/banner-next.module.css':{__esModule:true,default:{}},'@/components/adimage/AdImageProgressNext':{__esModule:true,default:()=>null}} // 新しい見た目（UI 品質）の部品。今の見た目（useUiNext()=false）で確かめる
 const assert=require('node:assert/strict'),fs=require('node:fs'),crypto=require('node:crypto'),vm=require('node:vm'),ts=require('typescript'),React=require('react'),{JSDOM}=require('jsdom');
 const dom=new JSDOM('<body></body>',{url:'https://local.test'});global.window=dom.window;global.document=dom.window.document;global.IS_REACT_ACT_ENVIRONMENT=true;
 const {createRoot}=require('react-dom/client');
@@ -8,7 +9,7 @@ let network,calls=[],imageMode='good',status='authenticated',actor='actor-a',vie
 class FakeImage {set src(value){if(!value)return;queueMicrotask(()=>{this.naturalWidth=imageMode==='oversize'?9000:320;this.naturalHeight=50;if(imageMode==='bad')this.onerror?.();else if(imageMode==='good'||imageMode==='oversize')this.onload?.()})}}
 let lockTail=Promise.resolve();const navigator={locks:{request:(_name,fn)=>{const next=lockTail.then(fn);lockTail=next.catch(()=>{});return next}}};
 const globals={window:dom.window,document:dom.window.document,localStorage:dom.window.localStorage,crypto,navigator,Image:FakeImage,FormData:dom.window.FormData,AbortController,Response,URL,URLSearchParams,Date,Map,Set,Error,TextDecoder,TextEncoder,Uint8Array,console,setTimeout,clearTimeout,fetch:async(url,init)=>{const c={url,init:init||{},body:typeof init?.body==='string'?JSON.parse(init.body):init?.body??null};calls.push(c);return network(c)}};
-function load(file,mocks,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports,require:n=>{if(n in mocks)return mocks[n];throw Error('Unmocked '+n)},...globals,...extra},{filename:file});return exports}
+function load(file,mocks,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports,require:n=>{if(!(n in mocks)&&n in UI_NEXT_MOCKS)return UI_NEXT_MOCKS[n];if(n in mocks)return mocks[n];throw Error('Unmocked '+n)},...globals,...extra},{filename:file});return exports}
 
 const analysisOutput=load('src/lib/adimage/analysis-result.ts',{'./types':load('src/lib/adimage/types.ts',{})});
 const logoContext=load('src/lib/adimage/logo-context.ts',{'./analysis-result':analysisOutput});

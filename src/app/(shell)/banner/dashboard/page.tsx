@@ -14,6 +14,10 @@ import { useBannerRequestFence } from '@/lib/banner/use-request-fence'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import Image from 'next/image'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import ShellLoading from '@/components/shell/ShellLoading'
+import { Button, ToolHero } from '@/components/ds'
+import nextStyles from '@/components/banner/banner-next.module.css'
 
 type BannerTemplate = {
   id: string
@@ -168,8 +172,9 @@ export default function BannerTestPage() {
   const { data: session } = useSession()
   const user = session?.user as { id?: string; email?: string } | undefined
   const actor = user?.id || user?.email || 'guest'
+  const uiNext = useUiNext()
   return (
-    <Suspense fallback={<DashboardSkeleton />}>
+    <Suspense fallback={uiNext ? <ShellLoading /> : <DashboardSkeleton />}>
       <BannerTestPageInner key={actor} />
     </Suspense>
   )
@@ -177,6 +182,9 @@ export default function BannerTestPage() {
 
 function BannerTestPageInner() {
   const { data: session, status: sessionStatus } = useSession()
+  // 新しい見た目（チェックリスト §5.1）。枠の見出し（h1）と重ならないよう、この画面の見出しは h2 にする
+  const uiNext = useUiNext()
+  const Heading: 'h1' | 'h2' = uiNext ? 'h2' : 'h1'
   const [templates, setTemplates] = useState<BannerTemplate[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<BannerTemplate | null>(null)
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true)
@@ -1340,7 +1348,7 @@ function BannerTestPageInner() {
     toast.success('ダウンロードしました')
   }
 
-  return (
+  const view = (
     <div className="min-h-screen bg-black text-white flex">
       {/* PC用サイドバー（モバイルでは完全に非表示） */}
       <div className="hidden md:block">
@@ -1374,14 +1382,15 @@ function BannerTestPageInner() {
       <main className="flex-1 ml-0 md:ml-[240px] min-h-screen bg-black overflow-x-hidden">
         {/* モバイル用ヘッダー */}
         <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-black/90 backdrop-blur-sm border-b border-gray-800 px-3 py-2 flex items-center justify-between">
-          <button
+          {/* 枠の中（新しい見た目）では旧来のサイドバーを出さないので、開くボタンも出さない */}
+          {uiNext ? <div className="w-9" /> : <button
             onClick={() => setIsSidebarOpen(true)}
             className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
             aria-label="メニューを開く"
           >
             <Menu className="w-5 h-5 text-white" />
-          </button>
-          <h1 className="text-sm font-bold text-white">バナーテンプレート</h1>
+          </button>}
+          <Heading className="text-sm font-bold text-white">バナーテンプレート</Heading>
           <div className="w-9" /> {/* スペーサー */}
         </div>
         
@@ -1488,7 +1497,7 @@ function BannerTestPageInner() {
             }`}>
               <div className="max-w-6xl mx-auto">
                 {/* メインタイトル：日本語の短いタイトルを優先表示 */}
-                <h1 className={`font-black drop-shadow-2xl leading-tight transition-all duration-300 ${
+                <Heading className={`font-black drop-shadow-2xl leading-tight transition-all duration-300 ${
                   isFormVisible 
                     ? 'text-sm sm:text-base md:text-lg mb-0.5' 
                     : 'text-base sm:text-xl md:text-3xl lg:text-4xl mb-0.5 sm:mb-2'
@@ -1497,7 +1506,7 @@ function BannerTestPageInner() {
                     ? serviceName || '生成されたバナー'
                     : selectedTemplate?.displayTitle || selectedTemplate?.name || selectedTemplate?.industry || 'バナーテンプレート'
                   }
-                </h1>
+                </Heading>
                 {/* サブタイトル：ジャンル名（フォーム表示時は非表示） */}
                 {!isFormVisible && (
                   <p className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-200 mb-1 drop-shadow-lg font-medium">
@@ -2122,8 +2131,8 @@ function BannerTestPageInner() {
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs sm:text-sm font-bold">生成枚数</label>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-lg sm:text-xl font-bold text-blue-400">{generateCount}枚</span>
-                        <span className="text-[10px] sm:text-xs text-gray-400">最大{planLimits.maxCount}枚</span>
+                        <span className={`text-lg sm:text-xl font-bold text-blue-400 ${uiNext ? 'whitespace-nowrap' : ''}`}>{generateCount}枚</span>
+                        <span className={`text-[10px] sm:text-xs text-gray-400 ${uiNext ? 'whitespace-nowrap' : ''}`}>最大{planLimits.maxCount}枚</span>
                       </div>
                     </div>
                     <p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">
@@ -3530,5 +3539,23 @@ function BannerTestPageInner() {
         )}
       </AnimatePresence>
     </div>
+  )
+
+  if (!uiNext) return view
+  // 新しい見た目: 枠の中に、ヒーロー（何ができるか・主ボタン）と、見本の画面を入れた箱を出す（U-6・H-3・C-7）
+  return (
+    <>
+      <div className={nextStyles.heroWrap}>
+        <ToolHero
+          title="好きな見本を選んで、文字を入れるだけ。"
+          lead="プロが作った見本の雰囲気のまま、あなたのサービスのバナーを3案つくります。見本が合わなければ、ゼロからもつくれます。"
+          action={<Button href="/banner/dashboard/create" variant="secondary" icon="PlusCircle">ゼロからつくる</Button>}
+          art="/banner/hero.webp"
+        />
+      </div>
+      <div className={nextStyles.stage}>
+        <div className={nextStyles.scroller}>{view}</div>
+      </div>
+    </>
   )
 }
