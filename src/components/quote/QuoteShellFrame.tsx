@@ -2,11 +2,16 @@
 
 // 共通の枠（src/app/(shell)/layout.tsx）の中に出す、見積のツール内ナビ。
 // ⚠️ AppShell で包まない（枠が二重になる）。ToolFrame だけを返す。
+import { usePathname } from 'next/navigation'
 import ToolFrame from '@/components/shell/ToolFrame'
+import { isGuestPath } from '@/lib/ui/guest-path'
 import { QUOTE_NAV } from '@/lib/quote/nav'
 import QuoteOrgSwitcher from './QuoteOrgSwitcher'
 
 export default function QuoteShellFrame({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  // 招待の受諾（/quote/invite/<token>）など第三者が開く画面には、ツール内のナビも組織の切り替えも出さない（点検 SAL-020）
+  if (isGuestPath(pathname)) return <>{children}</>
   return (
     <ToolFrame serviceId="quote" nav={QUOTE_NAV} switcher={<QuoteOrgSwitcher />}>
       {children}
