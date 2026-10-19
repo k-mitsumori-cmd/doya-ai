@@ -79,6 +79,8 @@ const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.in
     assert.match(read('src/components/shell/ShellGate.tsx'),/AccountCompanyContext\.Provider value=\{uiNext \? company : undefined\}/);
     // 一覧はログイン中の人の所属だけを読む関数から作る（組織を作らない）
     const loader=read('src/lib/shell/company.server.ts');assert.doesNotMatch(loader,/prisma\.|create|upsert|ensure/);
+    // AI検索対策の組織はブランドの一覧なので、会社名に使わない
+    assert.doesNotMatch(loader,/lib\/aio\//);
     for(const f of ['src/app/(shell)/shodan/page.tsx','src/app/(shell)/aio/page.tsx'])assert.match(read(f),/&& \(await isUiNext\(\)\)\) \{/,f);
     assert.match(read('src/app/(shell)/home/page.tsx'),/uiNext \? <HomeDashboard/);
     assert.match(read('src/app/pricing/page.tsx'),/if \(!\(await isUiNext\(\)\)\) return <PricingLegacy \/>/);
