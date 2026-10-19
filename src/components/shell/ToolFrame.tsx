@@ -7,7 +7,7 @@
 // ⚠️ ナビは src/lib/<svc>/nav.ts のデータを渡す（ADDON R-1）。
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Suspense, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { ALL_SHELL_TOOLS, SHELL_HOME } from './tools'
 import { isNavActive, type ShellNavItem } from './nav'
@@ -43,7 +43,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
             <span aria-current="page">{name}</span>
           </nav>
           {/* 組織の切り替えが無いツールでは、今の会社を小さく出す（新しい見た目のときだけ。UI 品質 B-2） */}
-          {switcher ? <div className={styles.switcher}>{switcher}</div> : <Suspense fallback={null}><ShellCompanyTag tool={serviceId} /></Suspense>}
+          {switcher ? <div className={styles.switcher}>{switcher}</div> : <ShellCompanyTag />}
         </div>
         <div className={styles.titleRow}>
           <div className={styles.titleBox}>

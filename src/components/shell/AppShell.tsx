@@ -11,7 +11,7 @@
 // ⚠️ 公開画面・ゲスト画面（共有閲覧・面接・回答画面など）では使わない（ADDON R-7）。
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CreditCard, LayoutGrid, LogOut, Menu, Search, X } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
@@ -220,7 +220,7 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
         <ShellUsageArea className={styles.usage} />
         <div className={styles.account}>
           {/* 登録会社と切り替え（新しい見た目のときだけ中身が出る。UI 品質 B-1） */}
-          <Suspense fallback={null}><ShellCompanyCard onNavigate={close} /></Suspense>
+          <ShellCompanyCard onNavigate={close} />
           {userName ? <p className={styles.userLine}>{userName} さん</p> : null}
           <Link href="/pricing" className={styles.navItem} onClick={close} title="料金プラン">
             <CreditCard size={18} strokeWidth={2} aria-hidden />

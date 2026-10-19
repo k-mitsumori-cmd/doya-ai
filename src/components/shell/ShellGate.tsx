@@ -8,19 +8,19 @@
 import { usePathname } from 'next/navigation'
 import { Suspense, type ReactNode } from 'react'
 import type { UiNextMode } from '@/lib/ui-next'
-import type { ShellCompany } from '@/lib/shell/company'
-import { ShellCompaniesContext } from './company-context'
+import type { AccountCompany } from '@/lib/shell/company'
+import { AccountCompanyContext } from './company-context'
 import AppShell from './AppShell'
 import { shouldShowShell } from './registry'
 import { UiNextContext } from './ui-next-context'
 import UiNextBadge from './UiNextBadge'
 
-export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, companies = null, children }: {
+export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, company = undefined, children }: {
   signedIn: boolean
   /** 新しい見た目を出すか（サーバーの uiNextMode() で決めて渡す。チェックリスト §5.1） */
   uiNext?: UiNextMode
-  /** 入っている組織（新しい見た目のときだけ。サーバーで集めて渡す。UI 品質 B-1） */
-  companies?: ShellCompany[] | null
+  /** アカウントの会社（新しい見た目のときだけ。null は見つからない。UI 品質 B-1） */
+  company?: AccountCompany | null
   userName?: string | null
   /** UI_SHELL_SERVICES に書かれた id（サーバーで読んで渡す） */
   enabledIds: string[]
@@ -32,11 +32,11 @@ export default function ShellGate({ signedIn, userName, enabledIds, uiNext = nul
     : <>{children}</>
   return (
     <UiNextContext.Provider value={uiNext}>
-      <ShellCompaniesContext.Provider value={uiNext ? companies : null}>
+      <AccountCompanyContext.Provider value={uiNext ? company : undefined}>
       {inner}
       {/* useSearchParams を使うので Suspense で包む（静的な画面の書き出しを止めない） */}
       <Suspense fallback={null}><UiNextBadge /></Suspense>
-      </ShellCompaniesContext.Provider>
+      </AccountCompanyContext.Provider>
     </UiNextContext.Provider>
   )
 }

@@ -4,7 +4,7 @@
 // ============================================
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowRight, Send, StopCircle, CheckCircle2, Loader2, RefreshCw, TrendingUp, Wallet, FileText, FolderKanban,
   Clock, Users, CreditCard, AlertTriangle, ChevronLeft, ChevronRight,
@@ -83,7 +83,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
     <section className={styles.agent} aria-label="やりたいことを頼む">
       <p className={styles.agentGreeting}>{greeting}</p>
       {/* 今の会社（UI 品質 B-2）。組織が無ければ何も出さない */}
-      <Suspense fallback={null}><ShellCompanyTag className={styles.agentCompany} /></Suspense>
+      <ShellCompanyTag className={styles.agentCompany} />
       <h1 className={styles.agentTitle}>今日は、何をしますか？</h1>
       <form
         className={styles.ask}
