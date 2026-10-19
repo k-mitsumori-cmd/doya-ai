@@ -109,7 +109,7 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["見積明細を確認", "税・値引きを確認", "PDFを書き出す"],
   },
   aishodan: {
-    load: () => import("@/app/aishodan/mocks"),
+    load: () => import("@/app/(shell)/aishodan/mocks"),
     screens: ["AishodanTalkMock", "AishodanSlotsMock", "AishodanFitMock"],
     labels: ["AIと商談を進める", "ヒアリングを整理", "商談結果を確認"],
   },
