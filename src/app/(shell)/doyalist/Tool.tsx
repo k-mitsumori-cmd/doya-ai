@@ -13,6 +13,10 @@ import { readBillingResponse } from '@/lib/billing-response-client'
 import { DOYALIST_COLLECTION_UNKNOWN, parseCollectionUsage, readCollectionResponse, validCollectionResult } from '@/lib/doyalist/collect-response-client'
 import { readExtractionIntent, claimExtractionIntent, clearExtractionIntent, type ExtractionIntent } from '@/lib/doyalist/extraction-intent-client'
 import { readDoyalistPreferences } from '@/lib/doyalist/preferences'
+import Sym from '@/components/doyalist/Sym'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { EmptyState as DsEmptyState, ToolHero, toolHeroArt } from '@/components/ds'
+import { FirstSteps } from '@/components/ds/feedback'
 
 interface Company {
   id?: string
@@ -93,6 +97,8 @@ export default function DoyalistTool() {
 
 function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRefObject<{ actor: string; version: number; hasActor: boolean }>; epoch: number }) {
   const { data: session, status } = useSession()
+  // 新しい見た目（UI 品質の直し。チェックリスト §5.1）。偽のときは今までの見た目のまま
+  const uiNext = useUiNext()
   const [industry, setIndustry] = useState('IT・ソフトウェア')
   const [area, setArea] = useState('全国')
   const [prefecture, setPrefecture] = useState('')
@@ -444,7 +450,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className={uiNext ? 'flex items-center justify-center py-24' : 'min-h-screen flex items-center justify-center bg-slate-50'}>
         <div className="flex flex-col items-center gap-4">
           <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-48 animate-pulse" />
           <p className="text-sm font-bold text-slate-500">読み込み中...</p>
@@ -455,7 +461,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+      <div className={uiNext ? 'flex items-center justify-center p-6 py-16' : 'min-h-screen flex items-center justify-center bg-slate-50 p-6'}>
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-10 max-w-md w-full text-center space-y-5">
           <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-64 mx-auto" />
           <p className="text-sm font-medium text-slate-600">AIが営業先リストを自動で作ります</p>
@@ -471,20 +477,41 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 lg:p-8 text-slate-800">
+    <div className={uiNext ? 'p-4 lg:p-8 text-slate-800' : 'min-h-screen bg-slate-50 p-4 lg:p-8 text-slate-800'}>
       <Toaster position="top-center" />
 
       <div className="max-w-7xl mx-auto pb-20">
         {/* ===== Page Header ===== */}
+        {uiNext ? (
+          <div className="mb-6 space-y-4">
+            {/* 見出しは枠（ToolFrame）の h1。ここは「何ができるか」を書く（UI 品質 H-3・S-57・S-58） */}
+            <ToolHero
+              title={<>条件を選ぶだけで、<wbr />実在する企業の<wbr />営業リストに</>}
+              lead={<>業界・エリア・規模を選ぶと、<wbr />国の法人データ（gBizINFO）から<wbr />企業を抽出します。<wbr />CSV・Excel で<wbr />そのまま使えます。</>}
+              // 熊のキービジュアル（public/ui-renewal/mascots/doyalist.webp）が置かれるまでは、操作画面の絵を出す
+              art={toolHeroArt('doyalist') ?? '/doyalist/hero.webp'}
+              artAlt=""
+            />
+            <FirstSteps
+              id="doyalist"
+              steps={[
+                { title: '条件を選ぶ', body: '業界・エリア・企業規模を選びます。キーワードは任意です' },
+                { title: '件数を決めて抽出する', body: '1回で最大10,000社まで抽出できます' },
+                { title: 'CSV・Excel で書き出す', body: '絞り込んでから書き出すと、すぐ営業に使えます' },
+              ]}
+            />
+          </div>
+        ) : (
         <div className="flex items-center gap-3 mb-6">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md">
-            <span className="material-symbols-outlined text-white text-3xl">bar_chart</span>
+            <Sym name="bar_chart" className="text-white text-3xl" />
           </div>
           <div>
             <h1 className="text-2xl lg:text-3xl font-black text-[#0a1530]">営業リストをつくる</h1>
             <p className="text-sm font-medium text-slate-500 mt-0.5">条件を選ぶと、実企業データから営業リストをランダム抽出します</p>
           </div>
         </div>
+        )}
 
         {/* ===== 2-Column Layout ===== */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -500,32 +527,43 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label={<><span className="material-symbols-outlined align-middle text-base mr-1">apartment</span>業界</>} value={industry} onChange={handleIndustryChange} options={INDUSTRIES} />
-                <Field label={<><span className="material-symbols-outlined align-middle text-base mr-1">map</span>エリア</>} value={area} onChange={handleAreaChange} options={AREAS} />
-                <Field label={<><span className="material-symbols-outlined align-middle text-base mr-1">groups</span>企業規模</>} value={size} onChange={setSize} options={SIZES} />
+                <Field label={<><Sym name="apartment" className="align-middle text-base mr-1" />業界</>} value={industry} onChange={handleIndustryChange} options={INDUSTRIES} />
+                <Field label={<><Sym name="map" className="align-middle text-base mr-1" />エリア</>} value={area} onChange={handleAreaChange} options={AREAS} />
+                <Field label={<><Sym name="groups" className="align-middle text-base mr-1" />企業規模</>} value={size} onChange={setSize} options={SIZES} />
               </div>
 
               {/* キーワード + AI変換 */}
               <div>
+                {uiNext ? (
+                  // 375px で項目名が切れないよう、項目名と補足を2行に分ける（UI 品質 S-51）
+                  <label className="block mb-2">
+                    <span className="flex items-center gap-1 text-sm font-bold text-[#0a1530]"><Sym name="search" className="text-base" />キーワード</span>
+                    <span className="mt-0.5 block text-xs font-normal text-slate-500">任意。AIが法人検索の言葉に変換します</span>
+                  </label>
+                ) : (
                 <label className="block text-sm font-bold text-[#0a1530] mb-2">
-                  <span className="material-symbols-outlined align-middle text-base mr-1">search</span>キーワード <span className="text-xs font-normal text-slate-400">（任意・AIで法人検索ワードに変換）</span>
+                  <Sym name="search" className="align-middle text-base mr-1" />キーワード <span className="text-xs font-normal text-slate-400">（任意・AIで法人検索ワードに変換）</span>
                 </label>
+                )}
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={keywords}
                     onChange={(e) => handleKeywordChange(e.target.value)}
                     placeholder="例: SaaS, AI, 営業効率化, 美容、コンサル..."
-                    className="flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 bg-white placeholder:text-slate-300 focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100"
+                    className={`${uiNext ? 'min-w-0 ' : ''}flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 bg-white placeholder:text-slate-300 focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100`}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleExpandKeyword() } }}
                   />
                   <button
                     type="button"
                     onClick={handleExpandKeyword}
                     disabled={expanding || !keywords.trim()}
-                    className="px-4 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-black rounded-xl shadow hover:shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                    className={uiNext
+                      // 主ボタンは「リストを抽出する」の1つ。AI変換は控えめなボタンにする（UI 品質 S-22）
+                      ? 'px-4 py-3 bg-white text-[#0066ff] border border-[#0066ff]/40 text-xs font-bold rounded-xl hover:bg-blue-50 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap'
+                      : 'px-4 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-black rounded-xl shadow hover:shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap'}
                   >
-                    {expanding ? '変換中...' : <><span className="material-symbols-outlined align-middle text-sm mr-0.5">smart_toy</span>AIで変換</>}
+                    {expanding ? '変換中...' : <><Sym name="smart_toy" className="align-middle text-sm mr-0.5" />AIで変換</>}
                   </button>
                 </div>
 
@@ -533,7 +571,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                 {aiTags.length > 0 && (
                   <div className="mt-3 p-3 bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-black text-violet-700 inline-flex items-center gap-0.5"><span className="material-symbols-outlined text-sm">smart_toy</span>AI変換タグ</span>
+                      <span className="text-xs font-black text-violet-700 inline-flex items-center gap-0.5"><Sym name="smart_toy" className="text-sm" />AI変換タグ</span>
                       <span className="text-[10px] text-slate-500">クリックで使用ON/OFF（選択タグで検索）</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -565,7 +603,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
 
               {prefectureOptions.length > 0 && (
                 <div>
-                  <label className="block text-sm font-bold text-[#0a1530] mb-2"><span className="material-symbols-outlined align-middle text-base mr-1">location_on</span>都道府県（任意・絞り込み）</label>
+                  <label className="block text-sm font-bold text-[#0a1530] mb-2"><Sym name="location_on" className="align-middle text-base mr-1" />都道府県（任意・絞り込み）</label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
                     <button onClick={() => setPrefecture('')} className={`py-2.5 rounded-xl text-xs font-bold transition-all ${prefecture === '' ? 'bg-[#0a1530] text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
                       全て
@@ -583,7 +621,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
               {SPARSE_INDUSTRIES.includes(industry) && (
                 <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
                   <p className="text-xs font-bold text-amber-700 leading-relaxed inline-flex items-start gap-1">
-                    <span className="material-symbols-outlined text-base">warning</span><strong>「{industry}」業界はgBizINFO登録率が低い傾向です</strong>
+                    <Sym name="warning" className="text-base" /><strong>「{industry}」業界はgBizINFO登録率が低い傾向です</strong>
                   </p>
                   <p className="text-[11px] text-amber-600 mt-1 leading-relaxed">
                     代表者名・従業員数・公式URL等の詳細情報が取得できない企業が多い場合があります。<br/>
@@ -594,7 +632,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
 
               <div>
                 <label className="block text-sm font-bold text-[#0a1530] mb-2">
-                  <span className="material-symbols-outlined align-middle text-base mr-1">bar_chart</span>抽出する件数 <span className="text-xs font-normal text-slate-400">（1回最大10,000社）</span>
+                  <Sym name="bar_chart" className="align-middle text-base mr-1" />抽出する件数 <span className="text-xs font-normal text-slate-400">（1回最大10,000社）</span>
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {COUNT_OPTIONS.map((c) => (
@@ -619,12 +657,12 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                 {!validCount && <p className="mt-1 text-xs font-medium text-rose-700">1〜10,000社の整数を入力してください。</p>}
                 {count >= 500 && (
                   <p className="text-xs font-medium text-cyan-700 mt-2 inline-flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">schedule</span>{count.toLocaleString()}社の抽出（詳細情報の取得込み）は約 {Math.max(20, Math.ceil(count / 60))}〜{Math.ceil(count / 30)}秒かかります
+                    <Sym name="schedule" className="text-sm" />{count.toLocaleString()}社の抽出（詳細情報の取得込み）は約 {Math.max(20, Math.ceil(count / 60))}〜{Math.ceil(count / 30)}秒かかります
                   </p>
                 )}
                 {count >= 5000 && (
                   <p className="text-xs font-medium text-amber-700 mt-1 inline-flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">warning</span>大量抽出時はブラウザを閉じずにお待ちください
+                    <Sym name="warning" className="text-sm" />大量抽出時はブラウザを閉じずにお待ちください
                   </p>
                 )}
               </div>
@@ -632,7 +670,9 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
               <button
                 onClick={handleGenerate}
                 disabled={generating || !validCount || !intentReady || Boolean(extractionIntent)}
-                className="w-full py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold text-base rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className={uiNext
+                  ? 'w-full py-4 bg-[#0066ff] text-white font-bold text-base rounded-xl shadow-lg shadow-blue-500/25 hover:bg-[#0052cc] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
+                  : 'w-full py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold text-base rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'}
               >
                 {generating ? (
                   <><img src={CHARS.working} alt="" className="w-6 h-6 animate-spin" />抽出中...</>
@@ -656,7 +696,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
 
               {warningMsg && (
                 <div role="status" className="mt-3 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3">
-                  <span className="material-symbols-outlined text-amber-600 text-xl flex-shrink-0">info</span>
+                  <Sym name="info" className="text-amber-600 text-xl flex-shrink-0" />
                   <p className="flex-1 min-w-0 text-sm font-bold text-amber-900">{warningMsg}</p>
                   <button onClick={() => setWarningMsg(null)} className="text-amber-700 hover:text-amber-900 text-xl flex-shrink-0" aria-label="通知を閉じる">×</button>
                 </div>
@@ -664,11 +704,11 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
               {/* エラー表示（toastだけだと見落としやすいので持続表示） */}
               {errorMsg && (
                 <div className="mt-3 p-4 bg-rose-50 border-2 border-rose-200 rounded-xl flex items-start gap-3">
-                  <span className="material-symbols-outlined text-rose-500 text-xl flex-shrink-0">error</span>
+                  <Sym name="error" className="text-rose-500 text-xl flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-black text-rose-700">{errorMsg}</p>
                     {errorHint && (
-                      <p className="text-xs text-rose-600 mt-1 leading-relaxed inline-flex items-start gap-1"><span className="material-symbols-outlined text-sm">lightbulb</span>{errorHint}</p>
+                      <p className="text-xs text-rose-600 mt-1 leading-relaxed inline-flex items-start gap-1"><Sym name="lightbulb" className="text-sm" />{errorHint}</p>
                     )}
                     {quotaAction && (
                       <Link href={quotaAction === 'pricing' ? '/doyalist/pricing' : 'https://doyamarke.surisuta.jp/contact'} className="mt-2 inline-flex rounded-full bg-blue-600 px-4 py-2 text-xs font-black text-white">
@@ -690,7 +730,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
           <div className="lg:col-span-1">
             <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 p-6 lg:sticky lg:top-24">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                <span className="material-symbols-outlined text-xl text-slate-500">search</span>
+                <Sym name="search" className="text-xl text-slate-500" />
                 <h3 className="text-sm font-bold text-[#0a1530]">抽出プレビュー</h3>
               </div>
 
@@ -714,7 +754,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                       </p>
                       {!estimateIsApprox && estimatedCount < count && (
                         <p className="text-[10px] text-amber-700 mt-1 font-bold inline-flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">warning</span>キーワード検索の参考件数が指定件数を下回っています。業種・規模などで絞り込んだ実際の取得数とは異なります
+                          <Sym name="warning" className="text-xs" />キーワード検索の参考件数が指定件数を下回っています。業種・規模などで絞り込んだ実際の取得数とは異なります
                         </p>
                       )}
                       {estimateNote && (
@@ -728,7 +768,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
               </div>
 
               <div className="py-4 space-y-2">
-                <p className="text-xs font-bold text-slate-700 mb-2 inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm">checklist</span>取得できる情報</p>
+                <p className="text-xs font-bold text-slate-700 mb-2 inline-flex items-center gap-1"><Sym name="checklist" className="text-sm" />取得できる情報</p>
                 {PREVIEW_FIELDS.map((f) => (
                   <div key={f.label} className="flex items-start gap-2 text-xs text-slate-600">
                     <span className={f.always ? 'text-emerald-500' : 'text-cyan-500'}>{f.always ? '✓' : '◯'}</span>
@@ -743,10 +783,10 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
 
               <div className="pt-4 border-t border-slate-100 space-y-2">
                 <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className="material-symbols-outlined text-base">cell_tower</span><span>gBizINFO（経済産業省）</span>
+                  <Sym name="cell_tower" className="text-base" /><span>gBizINFO（経済産業省）</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className="material-symbols-outlined text-base">download</span><span>CSV/Excelダウンロード可</span>
+                  <Sym name="download" className="text-base" /><span>CSV/Excelダウンロード可</span>
                 </div>
               </div>
             </div>
@@ -762,6 +802,18 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
           </div>
         )}
 
+        {/* ===== 空の状態（新しい見た目だけ。UI 品質 S-17） ===== */}
+        {uiNext && !generating && companies.length === 0 && (
+          <div className="mt-6 rounded-3xl border border-slate-200 bg-white">
+            <DsEmptyState
+              title="まだリストがありません"
+              description="上で条件を選び、「リストを抽出する」を押すと、ここに企業が並びます。"
+              art="/doyalist/empty-lists.webp"
+              action={<button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="rounded-xl border border-[#0066ff]/40 px-4 py-2 text-sm font-bold text-[#0066ff] hover:bg-blue-50">条件を選ぶ</button>}
+            />
+          </div>
+        )}
+
         {/* ===== Results ===== */}
         {companies.length > 0 && (
           <div className="mt-6 bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 overflow-hidden">
@@ -771,7 +823,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                 <div>
                   <h2 className="text-lg font-bold text-[#0a1530]">
                     <CountUp value={companies.length} duration={1500} />社できました
-                    <span className="material-symbols-outlined ml-2 inline-block animate-pulse text-xl align-middle">auto_awesome</span>
+                    <Sym name="auto_awesome" className="ml-2 inline-block animate-pulse text-xl align-middle" />
                   </h2>
                   <p className="text-xs font-medium text-slate-500">
                     {companies.length < count ? `指定${count.toLocaleString()}社のうち${companies.length}社のみ該当（条件を緩めると増えます）` : `ダウンロードで保存できます`}
@@ -779,8 +831,8 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={downloadCSV} className="inline-flex items-center gap-1 px-4 py-2.5 bg-[#0a1530] text-white font-bold text-sm rounded-xl shadow hover:bg-[#13234d] active:scale-95 transition-all"><span className="material-symbols-outlined text-base">download</span>CSV</button>
-                <button onClick={downloadExcel} className="inline-flex items-center gap-1 px-4 py-2.5 bg-cyan-500 text-white font-bold text-sm rounded-xl shadow hover:bg-cyan-600 active:scale-95 transition-all"><span className="material-symbols-outlined text-base">bar_chart</span>Excel</button>
+                <button onClick={downloadCSV} className="inline-flex items-center gap-1 px-4 py-2.5 bg-[#0a1530] text-white font-bold text-sm rounded-xl shadow hover:bg-[#13234d] active:scale-95 transition-all"><Sym name="download" className="text-base" />CSV</button>
+                <button onClick={downloadExcel} className="inline-flex items-center gap-1 px-4 py-2.5 bg-cyan-500 text-white font-bold text-sm rounded-xl shadow hover:bg-cyan-600 active:scale-95 transition-all"><Sym name="bar_chart" className="text-base" />Excel</button>
               </div>
             </div>
 
@@ -790,7 +842,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                   type="text"
                   value={filterText}
                   onChange={(e) => { setFilterText(e.target.value); setVisibleCount(PAGE_SIZE) }}
-                  placeholder="🔍 名前・業種・住所で絞り込み"
+                  placeholder={uiNext ? '名前・業種・住所で絞り込み' : '🔍 名前・業種・住所で絞り込み'}
                   className="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100"
                 />
                 <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white cursor-pointer focus:outline-none focus:border-[#0a1530]">
@@ -815,7 +867,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                         : 'bg-white text-slate-600 border-slate-200 hover:border-cyan-300 hover:bg-cyan-50'
                     }`}
                   >
-                    <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm">{f.icon}</span>{f.label}</span>
+                    <span className="inline-flex items-center gap-1"><Sym name={f.icon} className="text-sm" />{f.label}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded ${f.state ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>{f.count}</span>
                   </button>
                 ))}
@@ -854,7 +906,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                               title="Google検索で企業情報を確認"
                             >
                               <h3 className="text-base font-bold text-[#0a1530] group-hover:text-cyan-600 group-hover:underline transition-colors">{c.name}</h3>
-                              <span className="material-symbols-outlined text-base text-slate-300 group-hover:text-cyan-500 transition-colors">arrow_outward</span>
+                              <Sym name="arrow_outward" className="text-base text-slate-300 group-hover:text-cyan-500 transition-colors" />
                             </a>
                           ) : (
                             <h3 className="text-base font-bold text-[#0a1530]">{c.name}</h3>
@@ -886,25 +938,25 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                         </div>
                         {(ed.businessSummary || c.description) && (
                           <div className="bg-cyan-50/50 border-l-4 border-cyan-400 px-3 py-2 rounded-r-lg">
-                            <p className="text-[11px] font-bold text-cyan-700 mb-0.5 inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm">description</span>事業概要</p>
+                            <p className="text-[11px] font-bold text-cyan-700 mb-0.5 inline-flex items-center gap-1"><Sym name="description" className="text-sm" />事業概要</p>
                             <p className="text-sm text-slate-700 leading-relaxed">{ed.businessSummary || c.description}</p>
                           </div>
                         )}
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           {c.website ? (
                             <a href={c.website.startsWith('http') ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-cyan-100 text-cyan-700 text-xs font-bold rounded-lg hover:bg-cyan-200 transition-colors group">
-                              <span className="material-symbols-outlined text-sm">language</span>公式サイト
-                              <span className="material-symbols-outlined text-sm group-hover:translate-x-0.5 transition-transform">arrow_outward</span>
+                              <Sym name="language" className="text-sm" />公式サイト
+                              <Sym name="arrow_outward" className="text-sm group-hover:translate-x-0.5 transition-transform" />
                             </a>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-400 text-xs font-bold rounded-lg border border-dashed border-slate-200" title="gBizINFOに公式URLが登録されていません">
-                              <span className="material-symbols-outlined text-sm">language</span>登録URLなし
+                              <Sym name="language" className="text-sm" />登録URLなし
                             </span>
                           )}
                           {gbizUrl && (
                             <a href={gbizUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors group" title="Google検索で企業情報を調べる">
-                              <span className="material-symbols-outlined text-sm">search</span>企業情報を検索
-                              <span className="material-symbols-outlined text-sm group-hover:translate-x-0.5 transition-transform">arrow_outward</span>
+                              <Sym name="search" className="text-sm" />企業情報を検索
+                              <Sym name="arrow_outward" className="text-sm group-hover:translate-x-0.5 transition-transform" />
                             </a>
                           )}
                           {ed.corporateNumber && (
@@ -914,7 +966,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch }: { identityEpoch: MutableRe
                           )}
                         </div>
                         <div className="pt-2 mt-1 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-400">
-                          <span className="inline-flex items-center gap-0.5"><span className="material-symbols-outlined text-xs">cell_tower</span>情報ソース:</span>
+                          <span className="inline-flex items-center gap-0.5"><Sym name="cell_tower" className="text-xs" />情報ソース:</span>
                           <span>{c.source === 'gbizinfo' ? 'gBizINFO（経済産業省）' : c.source === 'corporate_number' ? '法人番号公表サイト（国税庁）' : c.source?.includes('+') ? 'gBizINFO + 法人番号公表サイト' : c.source || '不明'}</span>
                         </div>
                       </div>
@@ -1000,7 +1052,7 @@ function formatCapital(v: string | number): string {
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <div className="flex items-start gap-1.5">
-      <span className="material-symbols-outlined flex-shrink-0 text-slate-400 text-base">{icon}</span>
+      <Sym name={icon} className="flex-shrink-0 text-slate-400 text-base" />
       <div className="min-w-0 flex-1">
         <span className="text-slate-400 mr-1">{label}:</span>
         <span className="text-[#0a1530] font-medium">{value}</span>
