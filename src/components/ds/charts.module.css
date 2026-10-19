@@ -1,0 +1,43 @@
+/* ds/charts — 色はトークン。数字は等幅 */
+.figure { margin: 0; }
+.svg { display: block; width: 100%; height: auto; overflow: visible; }
+.grid { stroke: var(--line); stroke-width: 1; }
+.axis { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.point { fill: var(--paper); stroke-width: 2; }
+.fadeIn { animation: ds-chart-fade 700ms ease-out both; animation-delay: 250ms; }
+@keyframes ds-chart-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; font-size: 12px; color: var(--sub); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legendLine { width: 16px; height: 3px; border-radius: 2px; background: var(--blue); display: inline-block; }
+.legendDash { width: 16px; height: 0; border-top: 3px dashed var(--blue-deep); display: inline-block; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+.bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.barHead { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+.barValue { color: var(--sub); font-variant-numeric: tabular-nums; }
+.barTrack { height: 8px; border-radius: 999px; background: var(--bg); overflow: hidden; }
+.barFill {
+  height: 100%; width: var(--w); border-radius: 999px;
+  background: linear-gradient(90deg, var(--blue), var(--blue-deep));
+  transform-origin: left center; transform: scaleX(0);
+}
+.bars[data-seen='true'] .barFill {
+  animation: ds-bar-grow 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes ds-bar-grow { to { transform: scaleX(1); } }
+
+.ring { position: relative; display: inline-grid; place-items: center; }
+.ring svg { width: 100%; height: 100%; }
+.ringTrack { fill: none; stroke: var(--bg); stroke-width: 10; }
+.ringValue { fill: none; stroke: var(--blue); stroke-width: 10; stroke-linecap: round; }
+.ringCenter { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.donut { margin: 0; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fadeIn { animation: none; }
+  .barFill, .bars[data-seen='true'] .barFill { transform: none; animation: none; }
+}

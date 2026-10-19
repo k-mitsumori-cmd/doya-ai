@@ -133,3 +133,27 @@ export function Skeleton({ lines = 3, height = 14, delayMs = 300 }: { lines?: nu
     </div>
   )
 }
+
+/* ---- ToolHero（ツールの最初の帯: キービジュアル・一言の説明・主ボタン） ---- */
+// ⚠️ 主ボタンは1つ（ブランドの青）。見出しは ToolFrame と重ならないよう、ツール名ではなく「何ができるか」を書く。
+export function ToolHero({ title, lead, action, art, artAlt = '' }: {
+  title: ReactNode
+  lead?: ReactNode
+  /** 主ボタン（<Button> を1つ） */
+  action?: ReactNode
+  /** キービジュアル（public/ui-renewal/mascots/<id>.webp など） */
+  art?: string
+  artAlt?: string
+}) {
+  return (
+    <section className={styles.hero}>
+      <div className={styles.heroText}>
+        <h2 className={styles.heroTitle}>{title}</h2>
+        {lead ? <p className={styles.heroLead}>{lead}</p> : null}
+        {action ? <div className={styles.heroAction}>{action}</div> : null}
+      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {art ? <img src={art} alt={artAlt} className={styles.heroArt} width={200} height={167} /> : null}
+    </section>
+  )
+}

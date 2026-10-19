@@ -3,6 +3,7 @@
 // 経営ホーム 画面本体
 // ============================================
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowRight, Send, StopCircle, CheckCircle2, Loader2, RefreshCw, TrendingUp, Wallet, FileText, FolderKanban,
@@ -12,6 +13,9 @@ import type { HomeSummary, HomeEvent } from '@/lib/home/summary'
 import { SHELL_GROUPS } from '@/components/shell/tools'
 import { ShellIcon } from '@/components/shell/icons'
 import { AGENT_SUGGESTIONS, planAgent, type AgentPlan } from './agent'
+import { HOME_INTENT_GROUPS, matchHomeIntent } from './intents'
+import { CountUp } from '@/components/ds/motion'
+import { AreaChart, Bars } from '@/components/ds/charts'
 import styles from './home.module.css'
 
 const man = (n: number) => {
@@ -32,7 +36,9 @@ function SmartLink({ href, className, children }: { href: string; className?: st
 
 type RunState = { plan: AgentPlan; query: string; shown: number; status: 'running' | 'done' | 'stopped' }
 
-function AgentPanel({ summary }: { summary: HomeSummary }) {
+function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: string }) {
+  const router = useRouter()
+  const [opening, setOpening] = useState<string | null>(null)
   const [input, setInput] = useState('')
   const [run, setRun] = useState<RunState | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -44,10 +50,21 @@ function AgentPanel({ summary }: { summary: HomeSummary }) {
     const q = query.trim()
     if (!q) return
     clear()
+    // 「〜を作りたい」のように、ツールの作業を頼む文なら、そのツールを開く（UI 品質 H-2）
+    const intent = matchHomeIntent(q)
+    if (intent) {
+      setOpening(intent.label)
+      setRun(null)
+      setInput('')
+      router.push(intent.href)
+      return
+    }
+    setOpening(null)
+    // 数字の質問（売上・残業・パイプラインなど）は、各ツールを読んで答える
     const plan = planAgent(q, summary)
     setRun({ plan, query: q, shown: 0, status: 'running' })
     setInput('')
-  }, [summary])
+  }, [summary, router])
 
   useEffect(() => {
     if (!run || run.status !== 'running') return
@@ -62,7 +79,9 @@ function AgentPanel({ summary }: { summary: HomeSummary }) {
   const stop = () => { clear(); setRun((r) => (r ? { ...r, status: 'stopped' } : r)) }
 
   return (
-    <section className={styles.agent} aria-label="経営エージェント">
+    <section className={styles.agent} aria-label="やりたいことを頼む">
+      <p className={styles.agentGreeting}>{greeting}</p>
+      <h1 className={styles.agentTitle}>今日は、何をしますか？</h1>
       <form
         className={styles.ask}
         onSubmit={(e) => { e.preventDefault(); start(input) }}
@@ -71,7 +90,7 @@ function AgentPanel({ summary }: { summary: HomeSummary }) {
           className={styles.askInput}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="やりたいことを入力してください（例: 今月の売上と収入を教えて）"
+          placeholder="例: バナーを作りたい ／ 今月の売上を教えて"
           aria-label="エージェントへの依頼"
           maxLength={200}
         />
@@ -79,10 +98,26 @@ function AgentPanel({ summary }: { summary: HomeSummary }) {
           <Send size={18} />
         </button>
       </form>
-      <div className={styles.chips}>
-        {AGENT_SUGGESTIONS.map((s) => (
-          <button key={s} type="button" className={styles.chip} onClick={() => start(s)}>{s}</button>
+      {opening ? <p className={styles.opening} role="status">「{opening}」の画面を開いています</p> : null}
+      <div className={styles.intents}>
+        {HOME_INTENT_GROUPS.map((g) => (
+          <div key={g.label} className={styles.intentGroup}>
+            <p className={styles.intentLabel}>{g.label}</p>
+            <div className={styles.chips}>
+              {g.intents.map((it) => (
+                <Link key={it.label} href={it.href} className={styles.chip} prefetch={false}>{it.label}</Link>
+              ))}
+            </div>
+          </div>
         ))}
+        <div className={styles.intentGroup}>
+          <p className={styles.intentLabel}>数字をたずねる</p>
+          <div className={styles.chips}>
+            {AGENT_SUGGESTIONS.map((q) => (
+              <button key={q} type="button" className={styles.chip} onClick={() => start(q)}>{q}</button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {run ? (
@@ -143,12 +178,12 @@ function AgentPanel({ summary }: { summary: HomeSummary }) {
 
 /* ---------------- 指標カード ---------------- */
 
-function Kpi({ icon: Icon, label, value, sub, href, muted }: { icon: typeof Wallet; label: string; value: string; sub?: string; href: string; muted?: boolean }) {
+function Kpi({ icon: Icon, label, value, sub, href, muted }: { icon: typeof Wallet; label: string; value: number | null; sub?: string; href: string; muted?: boolean }) {
   return (
     <Link href={href} className={styles.kpi} data-muted={muted ? 'true' : undefined}>
       <span className={styles.kpiIcon}><Icon size={18} /></span>
       <span className={styles.kpiLabel}>{label}</span>
-      <span className={styles.kpiValue}>{value}</span>
+      <span className={styles.kpiValue}>{value === null ? '—' : <CountUp value={value} format={man} />}</span>
       {sub ? <span className={styles.kpiSub}>{sub}</span> : null}
     </Link>
   )
@@ -157,44 +192,17 @@ function Kpi({ icon: Icon, label, value, sub, href, muted }: { icon: typeof Wall
 /* ---------------- 月次推移 ---------------- */
 
 function TrendChart({ trend }: { trend: HomeSummary['trend'] }) {
-  const max = Math.max(1, ...trend.flatMap((p) => [p.won, p.quoted]))
-  const W = 560, H = 200, P = 28
-  const bw = (W - P * 2) / trend.length
-  const y = (v: number) => H - P - (v / max) * (H - P * 2)
-  const line = trend.map((p, i) => `${i === 0 ? 'M' : 'L'}${P + bw * i + bw / 2},${y(p.quoted)}`).join(' ')
   const empty = trend.every((p) => p.won === 0 && p.quoted === 0)
   return (
     <div className={styles.chartWrap}>
-      <svg viewBox={`0 0 ${W} ${H}`} className={styles.chart} role="img" aria-label="直近6か月の受注額と確定見積額">
-        {[0.25, 0.5, 0.75, 1].map((t) => (
-          <line key={t} x1={P} x2={W - P} y1={y(max * t)} y2={y(max * t)} className={styles.grid} />
-        ))}
-        {trend.map((p, i) => (
-          <g key={p.month}>
-            <rect
-              x={P + bw * i + bw * 0.22}
-              y={y(p.won)}
-              width={bw * 0.56}
-              height={Math.max(0, H - P - y(p.won))}
-              rx={6}
-              className={styles.bar}
-            >
-              <title>{`${p.month} 受注 ${man(p.won)}`}</title>
-            </rect>
-            <text x={P + bw * i + bw / 2} y={H - 8} className={styles.axis} textAnchor="middle">{Number(p.month.slice(5))}月</text>
-          </g>
-        ))}
-        <path d={line} className={styles.line} />
-        {trend.map((p, i) => (
-          <circle key={p.month} cx={P + bw * i + bw / 2} cy={y(p.quoted)} r={3.5} className={styles.point}>
-            <title>{`${p.month} 確定見積 ${man(p.quoted)}`}</title>
-          </circle>
-        ))}
-      </svg>
-      <div className={styles.legend}>
-        <span><i className={styles.legendBar} />受注（営業管理）</span>
-        <span><i className={styles.legendLine} />確定見積（税抜）</span>
-      </div>
+      <AreaChart
+        labels={trend.map((p) => `${Number(p.month.slice(5))}月`)}
+        series={[
+          { name: '受注（営業管理）', values: trend.map((p) => p.won) },
+          { name: '確定見積（税抜）', values: trend.map((p) => p.quoted), tone: 'cyan' },
+        ]}
+        format={man}
+      />
       {empty ? <p className={styles.chartEmpty}>まだ受注・確定見積のデータがありません</p> : null}
     </div>
   )
@@ -209,19 +217,7 @@ function Pipeline({ sales }: { sales: HomeSummary['sales'] }) {
   const max = Math.max(1, ...sales.stages.map((s) => s.amount))
   return (
     <div>
-      <ul className={styles.funnel}>
-        {sales.stages.map((s) => (
-          <li key={s.name}>
-            <div className={styles.funnelHead}>
-              <span>{s.name}</span>
-              <span className={styles.funnelValue}>{s.count}件 ・ {man(s.amount)}</span>
-            </div>
-            <div className={styles.funnelTrack}>
-              <div className={styles.funnelFill} style={{ width: `${Math.max(2, (s.amount / max) * 100)}%`, background: s.color }} />
-            </div>
-          </li>
-        ))}
-      </ul>
+      <Bars data={sales.stages.map((st) => ({ label: st.name, value: st.amount, sub: `${st.count}件` }))} format={man} />
       <div className={styles.funnelFoot}>
         <span>営業タスク {sales.openTasks}件</span>
         {sales.overdueTasks > 0 ? <span className={styles.warn}><AlertTriangle size={14} /> 期限切れ {sales.overdueTasks}件</span> : null}
@@ -353,12 +349,13 @@ export default function HomeDashboard({ initial }: { initial: HomeSummary }) {
 
   return (
     <div className={styles.page}>
+      {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
+      <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
+
       <header className={styles.hero}>
         <div>
-          <p className={styles.eyebrow}>経営ホーム</p>
-          <h1 className={styles.title}>{greeting}{s.user.name ? `、${s.user.name}さん` : ''}</h1>
-          <p className={styles.subtitle}>売上・収入・予定・人の状態を、全ツールからまとめています。</p>
-          <p className={styles.sources}>売上は{revenueSource}、支出は{costSource}の数字です。</p>
+          <h2 className={styles.sectionTitle}>今月の数字</h2>
+          <p className={styles.sources}>全ツールからまとめています。売上は{revenueSource}、支出は{costSource}の数字です。</p>
         </div>
         <button type="button" className={styles.refresh} onClick={refresh} disabled={loading}>
           <RefreshCw size={15} className={loading ? styles.spin : undefined} /> {updated} 時点
@@ -366,13 +363,11 @@ export default function HomeDashboard({ initial }: { initial: HomeSummary }) {
       </header>
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
 
-      <AgentPanel summary={s} />
-
       <section className={styles.kpis} aria-label="今月の主要な数字">
-        <Kpi icon={TrendingUp} label="今月の受注" value={s.sales.state === 'ready' ? man(s.sales.wonThisMonth) : '—'} sub={s.sales.state === 'ready' ? `${s.sales.wonCountThisMonth}件` : '営業管理が未使用'} href={s.sales.href} muted={s.sales.state !== 'ready'} />
-        <Kpi icon={FileText} label="今月確定した見積" value={s.quotes.state === 'ready' ? man(s.quotes.confirmedThisMonth) : '—'} sub={s.quotes.state === 'ready' ? `下書き ${s.quotes.draftCount}件` : '見積が未使用'} href={s.quotes.href} muted={s.quotes.state !== 'ready'} />
-        <Kpi icon={Wallet} label="受注見込み（確度で加重）" value={s.sales.state === 'ready' ? man(s.sales.weightedPipeline) : '—'} sub={s.sales.state === 'ready' ? `進行中 ${s.sales.openDeals}件 / ${man(s.sales.openPipeline)}` : undefined} href={s.sales.state === 'ready' ? `${s.sales.href}/deals` : '/sfa'} muted={s.sales.state !== 'ready'} />
-        <Kpi icon={FolderKanban} label="プロジェクト利益" value={s.projects.state === 'ready' ? man(s.projects.profit) : '—'} sub={s.projects.state === 'ready' ? `売上 ${man(s.projects.revenue)} ・ 原価 ${man(s.projects.cost)}` : 'プロマネが未使用'} href={s.projects.href} muted={s.projects.state !== 'ready'} />
+        <Kpi icon={TrendingUp} label="今月の受注" value={s.sales.state === 'ready' ? s.sales.wonThisMonth : null} sub={s.sales.state === 'ready' ? `${s.sales.wonCountThisMonth}件` : '営業管理が未使用'} href={s.sales.href} muted={s.sales.state !== 'ready'} />
+        <Kpi icon={FileText} label="今月確定した見積" value={s.quotes.state === 'ready' ? s.quotes.confirmedThisMonth : null} sub={s.quotes.state === 'ready' ? `下書き ${s.quotes.draftCount}件` : '見積が未使用'} href={s.quotes.href} muted={s.quotes.state !== 'ready'} />
+        <Kpi icon={Wallet} label="受注見込み（確度で加重）" value={s.sales.state === 'ready' ? s.sales.weightedPipeline : null} sub={s.sales.state === 'ready' ? `進行中 ${s.sales.openDeals}件 / ${man(s.sales.openPipeline)}` : undefined} href={s.sales.state === 'ready' ? `${s.sales.href}/deals` : '/sfa'} muted={s.sales.state !== 'ready'} />
+        <Kpi icon={FolderKanban} label="プロジェクト利益" value={s.projects.state === 'ready' ? s.projects.profit : null} sub={s.projects.state === 'ready' ? `売上 ${man(s.projects.revenue)} ・ 原価 ${man(s.projects.cost)}` : 'プロマネが未使用'} href={s.projects.href} muted={s.projects.state !== 'ready'} />
       </section>
 
       <div className={styles.gridWide}>
