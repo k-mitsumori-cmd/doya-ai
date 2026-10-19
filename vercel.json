@@ -81,10 +81,6 @@
       "schedule": "0 11 * * *"
     },
     {
-      "path": "/api/cron/aio-scan",
-      "schedule": "0 3,9,15,21 * * *"
-    },
-    {
       "path": "/api/cron/analytics-report",
       "schedule": "0 22 * * *"
     },

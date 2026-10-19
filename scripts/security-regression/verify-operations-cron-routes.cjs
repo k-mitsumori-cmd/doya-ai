@@ -106,7 +106,7 @@ function feedbackFixture({ fail = false } = {}) {
       '@/lib/unified-plan': { isPaidPlan: () => true },
       '@/lib/aio/quota': { scanQuota: () => ({ since: new Date(0), limit: 30 }) },
       '@/lib/aio/types': { SCAN_STALE_MS: 600000 },
-    }, { process: { env: { CRON_SECRET: 'secret' } } })
+    }, { process: { env: { CRON_SECRET: 'secret', AIO_SCHEDULED_SCAN_ENABLED: '1' } } })
     const response = await route.GET(request('aio-scan'))
     assert.equal(response.status, 200)
     assert.equal(response.body.failed, 1)
