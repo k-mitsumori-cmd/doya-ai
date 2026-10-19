@@ -17,6 +17,9 @@ import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
 import LoadingProgress from '@/components/LoadingProgress'
 import { appendAishodanPage, parseAishodanPage } from '@/lib/aishodan/list-pages'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { Button, EmptyState, FirstSteps, Skeleton, StatTile, ToolHero } from '@/components/ds'
+import { Stagger, StaggerItem } from '@/components/ds/motion'
 
 interface Product {
   id: string
@@ -66,6 +69,9 @@ const VERDICT_STYLE: Record<string, string> = {
 }
 
 export default function AishodanTool() {
+  // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）、ToolHero・StatTile・空状態の絵。
+  // ページの見出しは h2（h1 は枠の ToolFrame）
+  const uiNext = useUiNext()
   const [loading, setLoading] = useState(true)
   const [org, setOrg] = useState<{ slug: string; name: string; role: string } | null>(null)
   const [orgName, setOrgName] = useState('')
@@ -351,6 +357,15 @@ export default function AishodanTool() {
     }
   }
 
+  if (loading && uiNext) {
+    return (
+      <div className="mx-auto grid max-w-5xl gap-4 p-4 sm:p-6" aria-busy="true" aria-label="読み込み中">
+        <Skeleton lines={2} height={28} />
+        <Skeleton lines={4} height={18} />
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 bg-slate-50">
@@ -373,9 +388,9 @@ export default function AishodanTool() {
 
   if (!org) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className={uiNext ? 'flex items-center justify-center px-4 py-8 sm:py-12' : 'flex min-h-screen items-center justify-center bg-slate-50 px-4'}>
         <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-          <h1 className="text-xl font-bold text-slate-900">ドヤAI商談</h1>
+          {uiNext ? <h2 className="text-xl font-bold text-slate-900">AI商談をはじめましょう</h2> : <h1 className="text-xl font-bold text-slate-900">ドヤAI商談</h1>}
           <p className="mt-2 text-sm leading-relaxed text-slate-600 font-semibold">
             はじめに、商談を行う組織を作成してください。
           </p>
@@ -399,7 +414,7 @@ export default function AishodanTool() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className={uiNext ? 'pb-12' : 'min-h-screen bg-slate-50 pb-24'}>
       {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
       <LoadingProgress
         isLoading={importing}
@@ -408,6 +423,24 @@ export default function AishodanTool() {
         subtitle="サービスページから商材ナレッジと商談シナリオを組み立てています。"
         tips={['Tip: 資料を足すほど、答えられる質問の範囲が広がります', 'Tip: 根拠が無い質問には推測で答えず記録に残します', 'Tip: シナリオは生成後に編集できます']}
       />
+      {/* 新しい見た目では、ページの見出しの帯の代わりに ToolHero（組織の切り替えは枠の ToolFrame にある） */}
+      {uiNext ? (
+        <div className="mx-auto grid max-w-5xl gap-4 px-4 pt-4 sm:pt-6">
+          <ToolHero
+            title="AIが一次商談を進め、適合度まで残す。"
+            lead="自社サービスのURLを取り込むと、AIが商材を覚えて商談のシナリオを作ります。発行したURLを送るだけで、相手はログインせずに商談を始められます。"
+            art="/aishodan/hero.webp"
+          />
+          <FirstSteps
+            id="aishodan"
+            steps={[
+              { title: '商材を取り込む', body: '自社サービスのURLを入れると、ナレッジとシナリオができます。' },
+              { title: '商談URLを発行する', body: 'メール・LP・広告のリンク先に置けます。' },
+              { title: '商談の記録を見る', body: '発話の記録と、適合度の判定が残ります。' },
+            ]}
+          />
+        </div>
+      ) : (
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <div>
@@ -427,12 +460,21 @@ export default function AishodanTool() {
           </div>
         </div>
       </header>
+      )}
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
 
         {/* 指標 */}
-        {stats && stats.total > 0 && (
+        {uiNext && stats && stats.total > 0 && (
+          <Stagger as="section" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StaggerItem index={0}><StatTile label="保存期間内の商談数" value={stats.total} unit="件" icon="MessagesSquare" href="/aishodan/sessions" /></StaggerItem>
+            <StaggerItem index={1}><StatTile label="完了率" value={stats.completionRate} unit="%" icon="CheckSquare" /></StaggerItem>
+            <StaggerItem index={2}><StatTile label="平均所要" value={stats.avgMin} unit="分" icon="Timer" /></StaggerItem>
+            <StaggerItem index={3}><StatTile label="日程調整" value={stats.scheduled} unit="件" icon="CalendarDays" sub={`調整率 ${stats.schedulingRate}%`} /></StaggerItem>
+          </Stagger>
+        )}
+        {!uiNext && stats && stats.total > 0 && (
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Metric label="保存期間内の商談数" value={`${stats.total}件`} />
             <Metric label="完了率" value={`${stats.completionRate}%`} />
@@ -442,13 +484,15 @@ export default function AishodanTool() {
         )}
 
         {/* 1. 商材を取り込む */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <section id="aishodan-import" className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-base font-bold text-slate-900">1. 商材を取り込む</h2>
           <p className="mt-1 text-sm text-slate-600 font-semibold">
             自社サービスのURLを入力すると、サイトを読み取ってナレッジを作り、既定の商談シナリオまで用意します。
           </p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <input
+              id="aishodan-import-url"
+              aria-label="自社サービスのURL"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com/service"
@@ -617,7 +661,18 @@ export default function AishodanTool() {
               すべて見る
             </Link>
           </div>
-          {sessions.length === 0 ? (
+          {sessions.length === 0 && uiNext ? (
+            <EmptyState
+              title="まだ商談はありません"
+              description={products.length === 0
+                ? '商材を取り込んで商談URLを発行すると、相手との商談の記録がここに並びます。'
+                : '発行した商談URLを相手に送ると、商談の記録と適合度の判定がここに並びます。先に練習モードで流れを確かめられます。'}
+              art="/aishodan/empty-sessions.webp"
+              action={products.length === 0
+                ? <Button onClick={() => document.getElementById('aishodan-import-url')?.focus()} icon="Plus">商材を取り込む</Button>
+                : <Button href="/aishodan/preview" variant="secondary" icon="Mic">練習モードで試す</Button>}
+            />
+          ) : sessions.length === 0 ? (
             <p className="mt-3 text-sm text-slate-500 font-semibold">まだ商談はありません。</p>
           ) : (
             <div className="mt-4 divide-y divide-slate-100">

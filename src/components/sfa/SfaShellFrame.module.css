@@ -1,0 +1,29 @@
+/*
+ * ドヤ営業管理: 新しい見た目（UI 品質 §5.1・S-22）のときだけ、操作の色（緑・黄緑）をブランドの青（#0066ff）に置き換える。
+ * 受注・完了など意味のある色（emerald）はそのまま残す。
+ * ページ本体の className は今の見た目のために残し、枠（SfaShellFrame）の中だけで色を差し替える。
+ * ⚠️ [data-ui-next='true']（AppShell の根）の下だけに効く。今の見た目は変わらない。
+ */
+
+:global([data-ui-next='true']) .content :global(.from-green-500) { --tw-gradient-from: #0066ff var(--tw-gradient-from-position) !important; --tw-gradient-to: rgb(0 102 255 / 0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+:global([data-ui-next='true']) .content :global(.to-lime-600) { --tw-gradient-to: #0052cc var(--tw-gradient-to-position) !important; }
+:global([data-ui-next='true']) .content :global(.bg-green-600) { background-color: #0066ff !important; }
+:global([data-ui-next='true']) .content :global(.bg-green-500) { background-color: #0066ff !important; }
+:global([data-ui-next='true']) .content :global(.bg-green-50) { background-color: #eef4ff !important; }
+:global([data-ui-next='true']) .content :global(.bg-green-50\/50) { background-color: #eef4ff !important; }
+:global([data-ui-next='true']) .content :global(.bg-green-100) { background-color: #eef4ff !important; }
+:global([data-ui-next='true']) .content :global(.hover\:bg-green-50:hover) { background-color: #eef4ff !important; }
+:global([data-ui-next='true']) .content :global(.text-green-600) { color: #0066ff !important; }
+:global([data-ui-next='true']) .content :global(.text-green-700) { color: #0066ff !important; }
+:global([data-ui-next='true']) .content :global(.text-lime-600) { color: #0066ff !important; }
+:global([data-ui-next='true']) .content :global(.hover\:text-green-600:hover) { color: #0066ff !important; }
+:global([data-ui-next='true']) .content :global(.hover\:text-green-700:hover) { color: #0066ff !important; }
+:global([data-ui-next='true']) .content :global(.text-green-800) { color: #0a2a66 !important; }
+:global([data-ui-next='true']) .content :global(.text-green-900) { color: #0a2a66 !important; }
+:global([data-ui-next='true']) .content :global(.border-green-100) { border-color: #d6e4ff !important; }
+:global([data-ui-next='true']) .content :global(.border-green-200) { border-color: #d6e4ff !important; }
+:global([data-ui-next='true']) .content :global(.border-green-400) { border-color: #0066ff !important; }
+:global([data-ui-next='true']) .content :global(.border-green-500) { border-color: #0066ff !important; }
+:global([data-ui-next='true']) .content :global(.hover\:border-green-500:hover) { border-color: #0066ff !important; }
+:global([data-ui-next='true']) .content :global(.ring-green-400) { --tw-ring-color: #0066ff !important; }
+:global([data-ui-next='true']) .content :global(.shadow-green-500\/30) { --tw-shadow-color: rgb(0 102 255 / 0.2) !important; --tw-shadow: var(--tw-shadow-colored) !important; }

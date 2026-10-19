@@ -16,6 +16,9 @@ import { useParams } from 'next/navigation'
 import { PRICE_POLICY_LABELS, type Guardrails, type Icp, type Persona, type Phase, type PricePolicy, type ProductProfile, type Slot } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import AishodanHeading from '@/components/aishodan/AishodanHeading'
+import { Skeleton } from '@/components/ds'
 
 interface ScenarioData {
   id: string
@@ -32,6 +35,8 @@ interface ScenarioData {
 }
 
 export default function AishodanScenarioPage() {
+  // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
+  const uiNext = useUiNext()
   const params = useParams<{ id: string }>()
   const id = params?.id
   const [s, setS] = useState<ScenarioData | null>(null)
@@ -97,6 +102,9 @@ export default function AishodanScenarioPage() {
     setS((prev) => (prev ? { ...prev, ...p } : prev))
   }
 
+  if (loading && uiNext) {
+    return <div className="mx-auto max-w-4xl p-4 sm:p-6" aria-busy="true" aria-label="読み込み中"><Skeleton lines={5} height={18} /></div>
+  }
   if (loading) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 bg-slate-50">
@@ -108,7 +116,7 @@ export default function AishodanScenarioPage() {
   }
   if (!s) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50">
+      <div className={uiNext ? 'flex flex-col items-center justify-center gap-4 px-4 py-16' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
         <p className="text-slate-600">{error || 'シナリオが見つかりません'}</p>
         <Link href="/aishodan" className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードに戻る</Link>
       </div>
@@ -119,12 +127,12 @@ export default function AishodanScenarioPage() {
   const totalWeight = s.icp.conditions.reduce((n, c) => n + c.weight, 0)
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className={uiNext ? 'pb-12' : 'min-h-screen bg-slate-50 pb-24'}>
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
             <Link href="/aishodan" className="text-xs text-slate-500 hover:underline font-semibold">← ダッシュボード</Link>
-            <h1 className="truncate text-base font-bold text-slate-900">{s.name}</h1>
+            <AishodanHeading className="truncate text-base font-bold text-slate-900">{s.name}</AishodanHeading>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {/* ⚠️ 直したら即その場で試せることが、品質調整を回す上で効く */}

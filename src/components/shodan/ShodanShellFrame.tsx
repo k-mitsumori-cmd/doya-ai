@@ -9,11 +9,13 @@ import type { ReactNode } from 'react'
 import ToolFrame from '@/components/shell/ToolFrame'
 import { shodanNav } from '@/lib/shodan/nav'
 import ShodanOrgSwitcher from './ShodanOrgSwitcher'
+import styles from './ShodanShellFrame.module.css'
 
 export default function ShodanShellFrame({ orgSlug, orgName, children }: { orgSlug: string; orgName?: string; children: ReactNode }) {
   return (
     <ToolFrame serviceId="shodan" nav={shodanNav(orgSlug)} switcher={<ShodanOrgSwitcher orgSlug={orgSlug} orgName={orgName} />}>
-      {children}
+      {/* 新しい見た目のときだけ、中の紫をブランドの青に置き換える（ShodanShellFrame.module.css） */}
+      <div className={styles.content}>{children}</div>
     </ToolFrame>
   )
 }

@@ -18,6 +18,9 @@ function load(file){if(modules.has(file))return modules.get(file);const exports=
  if(n==='@/components/shodan/ui')return{DoyaKun:()=>null,sym:()=>null}
  if(n==='./ShodanSidebar')return{__esModule:true,default:()=>null}
  if(n==='lucide-react')return new Proxy({},{get:()=>()=>null})
+ // ds の部品は新しい見た目（useUiNext() が真）のときだけ描く。この試験は今の見た目で動かす
+ if(n==='@/components/ds')return new Proxy({},{get:()=>()=>null})
+ if(n==='@/components/ds/motion')return new Proxy({},{get:()=>({children})=>children??null})
  if(n==='framer-motion')return{AnimatePresence:({children})=>children,motion:new Proxy({},{get:(_,tag)=>({children})=>React.createElement(tag,null,children)})}
  const resolved=n.startsWith('@/')?path.join('src',n.slice(2)):n.startsWith('.')?path.join(path.dirname(file),n):null
  if(resolved)for(const ext of ['.ts','.tsx'])if(fs.existsSync(path.join(root,resolved+ext)))return load(resolved+ext)

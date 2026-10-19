@@ -11,6 +11,9 @@ import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aisho
 import { DoyaKun } from '@/components/lp'
 import { EmptyState } from '@/components/EmptyState'
 import { appendAishodanPage, parseAishodanPage } from '@/lib/aishodan/list-pages'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import AishodanHeading from '@/components/aishodan/AishodanHeading'
+import { Button, EmptyState as DsEmptyState, ErrorNotice, Skeleton } from '@/components/ds'
 
 interface SessionRow {
   id: string
@@ -42,6 +45,8 @@ const FILTERS: Array<{ key: string; label: string }> = [
 ]
 
 export default function AishodanSessionsPage() {
+  // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
+  const uiNext = useUiNext()
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [verdict, setVerdict] = useState('')
@@ -105,11 +110,11 @@ export default function AishodanSessionsPage() {
   }, [load])
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className={uiNext ? 'pb-12' : 'min-h-screen bg-slate-50 pb-24'}>
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-4xl px-4 py-4">
           <Link href="/aishodan" className="text-xs text-slate-500 hover:underline font-semibold">← ダッシュボード</Link>
-          <h1 className="text-lg font-bold text-slate-900">商談ログ</h1>
+          <AishodanHeading className="text-lg font-bold text-slate-900">商談ログ</AishodanHeading>
         </div>
       </header>
 
@@ -129,14 +134,26 @@ export default function AishodanSessionsPage() {
         </div>
 
         <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          {loading ? (
+          {loading && uiNext ? (
+            <Skeleton lines={5} height={18} />
+          ) : loading ? (
             <div className="flex flex-col items-center justify-center gap-2 py-6"><DoyaKun mood="working" size={72} /><p className="text-sm font-bold text-slate-400">読み込んでいます…</p></div>
+          ) : error && sessions.length === 0 && uiNext ? (
+            <ErrorNotice what={error} how="通信状況と、選んでいる組織を確かめてください。" onRetry={() => void load()} retryLabel="再読み込みする" />
           ) : error && sessions.length === 0 ? (
             <div role="alert" className="py-6 text-center">
               <p className="text-sm font-semibold text-red-700">{error}</p>
               <button type="button" onClick={() => void load()} className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">再読み込みする</button>
               <Link href="/aishodan" className="ml-3 inline-block text-sm font-bold text-blue-700 underline">組織を確認する</Link>
             </div>
+          ) : sessions.length === 0 && uiNext ? (
+            <DsEmptyState
+              kind={verdict === '' ? 'zero' : 'no-results'}
+              title={verdict === '' ? 'まだ商談がありません' : 'この判定の商談はありません'}
+              description={verdict === '' ? '商談URLを相手に送ると、発話の記録と適合度の判定がここに残ります。' : 'ほかの判定を選ぶと、商談が見つかるかもしれません。'}
+              art={verdict === '' ? '/aishodan/empty-sessions.webp' : undefined}
+              action={verdict === '' ? <Button href="/aishodan" icon="Link2">商談URLを発行する</Button> : undefined}
+            />
           ) : sessions.length === 0 ? (
             <EmptyState
               kind="not-generated"

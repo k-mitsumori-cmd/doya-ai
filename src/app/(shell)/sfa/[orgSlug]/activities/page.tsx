@@ -8,6 +8,9 @@ import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client
 import MutationRecovery from '@/components/sfa/MutationRecovery'
 import { ACTIVITY_TYPE_LABEL, ACTIVITY_TYPE_ICON } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
+import SfaPageHeading from '@/components/sfa/PageHeading'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import SfaEmpty from '@/components/sfa/SfaEmpty'
 
 interface Activity {
   id: string
@@ -30,6 +33,7 @@ const fmtDateTime = (d: string) => {
 }
 
 export default function SfaActivitiesPage() {
+  const uiNext = useUiNext()
   const orgSlug = (useParams().orgSlug as string) || ''
   const mutations = useSfaClientMutations(orgSlug, () => { void load() })
   const ready = mutations.allowed
@@ -98,7 +102,7 @@ export default function SfaActivitiesPage() {
     <div className="p-6 lg:p-10 max-w-3xl mx-auto">
       <MutationRecovery mutations={mutations} />
       <div className="mb-6">
-        <h1 className="text-2xl font-black text-slate-900">活動タイムライン</h1>
+        <SfaPageHeading className="text-2xl font-black text-slate-900">活動タイムライン</SfaPageHeading>
         <p className="text-slate-500 font-bold text-sm">電話・商談・メール・メモを時系列で記録</p>
       </div>
 
@@ -106,20 +110,20 @@ export default function SfaActivitiesPage() {
       <div className="bg-white rounded-2xl shadow-sm p-4 mb-6">
         <div className="flex gap-1.5 mb-2 flex-wrap">
           {TYPES.map((t) => (
-            <button key={t} onClick={() => setType(t)} className={`px-3 py-1.5 rounded-full text-xs font-black flex items-center gap-1 transition-colors ${type === t ? 'bg-[#7f19e6] text-white' : 'bg-slate-100 text-slate-500'}`}>
+            <button key={t} onClick={() => setType(t)} className={`px-3 py-1.5 rounded-full text-xs font-black flex items-center gap-1 transition-colors ${type === t ? (uiNext ? 'bg-[#0066ff] text-white' : 'bg-[#7f19e6] text-white') : 'bg-slate-100 text-slate-500'}`}>
               <span className="material-symbols-outlined text-[14px]">{ACTIVITY_TYPE_ICON[t]}</span>{ACTIVITY_TYPE_LABEL[t]}
             </button>
           ))}
         </div>
         <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="件名（例: 定例MTG / 折り返し電話）" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 font-bold mb-2" />
         <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={2} placeholder="メモ・要点（任意）" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm" />
-        <button onClick={create} disabled={busy || mutations.creationBlocked('activity') || !ready} className="mt-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-lime-600 text-white font-black disabled:opacity-50">{busy ? '記録中…' : '記録する'}</button>
+        <button onClick={create} disabled={busy || mutations.creationBlocked('activity') || !ready} className={`mt-2 px-5 py-2.5 rounded-xl text-white font-black disabled:opacity-50 ${uiNext ? 'bg-[#0066ff] hover:bg-[#0052cc]' : 'bg-gradient-to-r from-green-500 to-lime-600'}`}>{busy ? '記録中…' : '記録する'}</button>
       </div>
 
       {/* タイムライン */}
       <div className="space-y-2">
         {activities.length === 0 && !loading && !loadError ? (
-          <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-slate-400 font-bold">活動がありません。上から記録しましょう。</div>
+          <SfaEmpty title="まだ活動の記録がありません" description="電話・商談・メールなどの種類を選び、件名を入れて「記録する」を押すと、時系列で並びます。" legacy={<div className="bg-white rounded-2xl shadow-sm p-10 text-center text-slate-400 font-bold">活動がありません。上から記録しましょう。</div>} />
         ) : (
           activities.map((a) => (
             <div key={a.id} className="bg-white rounded-xl shadow-sm p-4 flex items-start gap-3">

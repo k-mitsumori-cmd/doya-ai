@@ -10,6 +10,10 @@ import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client
 import MutationRecovery from '@/components/sfa/MutationRecovery'
 import LeadConversionForm, { type ConversionLead } from '@/components/sfa/LeadConversionForm'
 import type { LeadStatus } from '@/lib/sfa/types'
+import SfaPageHeading from '@/components/sfa/PageHeading'
+import { Button } from '@/components/ds'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import SfaEmpty from '@/components/sfa/SfaEmpty'
 
 interface Lead extends ConversionLead {
   id: string
@@ -50,6 +54,7 @@ const scoreColor = (s: number | null) =>
   s == null ? 'text-slate-300' : s >= 70 ? 'text-green-600' : s >= 40 ? 'text-amber-500' : 'text-slate-400'
 
 export default function SfaLeadsPage() {
+  const uiNext = useUiNext()
   const orgSlug = (useParams().orgSlug as string) || ''
   const reload = useRef<() => void>(() => {})
   const mutations = useSfaClientMutations(orgSlug, (pending, state, row) => {
@@ -197,14 +202,14 @@ export default function SfaLeadsPage() {
     <div className="p-6 lg:p-10 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">リード</h1>
+          <SfaPageHeading className="text-2xl font-black text-slate-900">リード</SfaPageHeading>
           <p className="text-slate-500 font-bold text-sm">見込み客を集めて、有望なら取引先へ転換</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { setImportOpen((v) => !v); setOpen(false) }} className="px-4 py-3 rounded-full bg-white border border-slate-200 text-green-700 font-black shadow-sm hover:shadow flex items-center gap-1">
+          <button onClick={() => { setImportOpen((v) => !v); setOpen(false) }} className={uiNext ? 'px-4 py-3 rounded-full bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 flex items-center gap-1 whitespace-nowrap' : 'px-4 py-3 rounded-full bg-white border border-slate-200 text-green-700 font-black shadow-sm hover:shadow flex items-center gap-1'}>
             <span className="material-symbols-outlined">upload</span>CSV取込
           </button>
-          <button onClick={() => { setOpen((v) => !v); setImportOpen(false) }} className="px-5 py-3 rounded-full bg-gradient-to-r from-green-500 to-lime-600 text-white font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-1">
+          <button onClick={() => { setOpen((v) => !v); setImportOpen(false) }} className={uiNext ? 'px-5 py-3 rounded-full bg-[#0066ff] hover:bg-[#0052cc] text-white font-bold shadow-sm transition-colors flex items-center gap-1 whitespace-nowrap' : 'px-5 py-3 rounded-full bg-gradient-to-r from-green-500 to-lime-600 text-white font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-1'}>
             <span className="material-symbols-outlined">add</span>リード追加
           </button>
         </div>
@@ -259,7 +264,13 @@ export default function SfaLeadsPage() {
       {currentList && !loading && !listError && <p className="mb-3 text-xs text-slate-500">{totalCount}件中{leads.length}件を表示</p>}
       {currentList && !loading && !listError && <div className="space-y-2">
         {leads.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-slate-400 font-bold">{q || filter !== 'all' ? '条件に一致するリードがありません。検索条件を変更してください。' : 'リードがありません。「リード追加」か「CSV取込」から始めましょう。'}</div>
+          <SfaEmpty
+            filtered={Boolean(q || filter !== 'all')}
+            title={q || filter !== 'all' ? '条件に合うリードがありません' : 'まだリードがありません'}
+            description={q || filter !== 'all' ? '検索の言葉や絞り込みを変えてみてください。' : '見込みの会社を1件ずつ追加するか、ドヤリストの CSV をまとめて取り込めます。'}
+            action={q || filter !== 'all' ? undefined : <Button onClick={() => { setOpen(true); setImportOpen(false) }} icon="Plus">最初のリードを追加する</Button>}
+            legacy={<div className="bg-white rounded-2xl shadow-sm p-10 text-center text-slate-400 font-bold">{q || filter !== 'all' ? '条件に一致するリードがありません。検索条件を変更してください。' : 'リードがありません。「リード追加」か「CSV取込」から始めましょう。'}</div>}
+          />
         ) : (
           leads.map((l) => (
             <div key={l.id} className="bg-white rounded-xl shadow-sm p-4">
