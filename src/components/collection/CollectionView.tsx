@@ -127,7 +127,7 @@ function ScoreCard({ score, areas, isProvisional, canEdit, onSave }: {
             <p className={styles.scoreLead}>会社で使う分野の <b>{score.total}</b> ツールのうち、<b>{score.used}</b> ツールを使っています。</p>
           )}
           <p className={styles.scoreNote}>
-            選んでいない分野は計算に入れません。
+            選んでいない分野と、開発中のツールは計算に入れません。
             {isProvisional && areas.length > 0 ? ' 今は使った記録から仮に選んでいます。' : ''}
           </p>
           {canEdit && !editing ? (

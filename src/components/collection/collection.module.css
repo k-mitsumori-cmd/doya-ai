@@ -85,7 +85,7 @@
 .areaActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
 .areaBars { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 24px; }
-.areaBar { display: grid; grid-template-columns: 9em minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
+.areaBar { display: grid; grid-template-columns: 11em minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
 .areaBarLabel { color: var(--sub); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .areaBarValue { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
 .bar { display: block; height: 8px; border-radius: 999px; background: var(--blue-soft); overflow: hidden; }
@@ -183,7 +183,7 @@
   .card { padding: 18px 16px; }
   .scoreMain { flex-direction: column; align-items: flex-start; gap: 14px; }
   .areaOptions { grid-template-columns: minmax(0, 1fr); }
-  .areaBar { grid-template-columns: 8em minmax(0, 1fr) auto; }
+  .areaBar { grid-template-columns: 10.5em minmax(0, 1fr) auto; font-size: 12px; }
   .badges { grid-template-columns: minmax(0, 1fr); }
   .stamps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 }
