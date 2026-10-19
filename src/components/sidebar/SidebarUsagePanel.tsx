@@ -107,13 +107,7 @@ export function SidebarUsagePanel({
   const context = useRef(key)
   context.current = key
   const [loaded, setLoaded] = useState<{ key: string; summary: Summary | null } | null>(null)
-  // ページを移るたびに読み直すが、読み直しの間は、同じ人・同じプラン・同じ組織の直前の数字を出し続ける
-  // （空になって一瞬消えたり、上にずれたりしないように。UI 品質 C-6）
-  const identity = JSON.stringify([status, actor, user?.plan, servicePlan, requestUrl, allowed, organizationSlug])
-  const lastShown = useRef<{ identity: string; summary: Summary } | null>(null)
-  const fresh = allowed && loaded?.key === key ? loaded.summary : null
-  if (fresh) lastShown.current = { identity, summary: fresh }
-  const summary = fresh ?? (allowed && lastShown.current?.identity === identity ? lastShown.current.summary : null)
+  const summary = allowed && loaded?.key === key ? loaded.summary : null
 
   useEffect(() => {
     if (!allowed) return

@@ -69,7 +69,24 @@ export function ShellUsageArea({ className }: { className?: string }) {
   const pathname = usePathname() || '/'
   const slot = useContext(SlotContext)
   const body = usageBody(pathname, slot)
-  return body ? <div className={className}>{body}</div> : null
+  // ⚠️ SidebarUsagePanel は、読み直しの間は何も描かない（古い数字を出さないため。verify-sidebar-usage-mounted）。
+  //    そのたびに高さが0になると、下の行が上にずれる。同じツールの間は、直前の高さを保つ（UI 品質 C-6）
+  const holdKey = slot ? 'slot' : shellServiceForPath(pathname)?.usage?.service ?? ''
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [held, setHeld] = useState<{ key: string; height: number }>({ key: '', height: 0 })
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      const h = el.getBoundingClientRect().height
+      if (h > 8) setHeld((prev) => (prev.key === holdKey && Math.abs(prev.height - h) < 1 ? prev : { key: holdKey, height: h }))
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [holdKey])
+  if (!body) return null
+  const minHeight = held.key === holdKey && held.height > 0 ? held.height : undefined
+  return <div ref={ref} className={className} data-hold={minHeight ? 'true' : undefined} style={minHeight ? { minHeight } : undefined}>{body}</div>
 }
 
 function usageBody(pathname: string, slot: ReactNode | null): ReactNode {
