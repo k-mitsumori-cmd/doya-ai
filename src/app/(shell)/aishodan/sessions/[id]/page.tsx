@@ -74,15 +74,24 @@ export default function AishodanSessionDetail() {
   const [actionFailure, setActionFailure] = useState<AishodanFailure | null>(null)
   // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠（今までの見た目では何も足さない）
   const tap = uiNext ? AISHODAN_TAP : ''
-  /** 判定の操作の失敗を知らせる。新しい見た目ではサーバーの文の代わりに利用者向けの文を出す */
-  function reportActionFailure(status: number, subject: string, serverMessage: string | undefined, fallback: string) {
-    if (!uiNext) {
-      notifyError(setError, serverMessage || fallback)
-      return
+  /**
+   * 新しい見た目だけ: 判定の操作の失敗を、サーバーの文の代わりに利用者向けの文で知らせる。
+   * override / reEvaluate に onRejected として渡す（今までの見た目では渡さず、サーバーの文をそのまま出す）
+   */
+  function actionRejected(subject: string) {
+    return (status: number, serverMessage: string | undefined) => {
+      const f = describeAishodanFailure(status, subject, { serverMessage })
+      setActionFailure(f)
+      notifyError(setError, f.what)
     }
-    const f = describeAishodanFailure(status, subject, { serverMessage })
-    setActionFailure(f)
-    notifyError(setError, f.what)
+  }
+  function overrideNext(verdict: Verdict) {
+    setActionFailure(null)
+    return override(verdict, actionRejected('判定を保存できませんでした。'))
+  }
+  function reEvaluateNext() {
+    setActionFailure(null)
+    return reEvaluate(false, actionRejected('自動判定を作成できませんでした。'))
   }
 
   const load = useCallback(async () => {
@@ -107,11 +116,10 @@ export default function AishodanSessionDetail() {
     void load()
   }, [load])
 
-  async function override(verdict: Verdict) {
+  async function override(verdict: Verdict, onRejected?: (status: number, serverMessage: string | undefined) => void) {
     if (!id) return
     setSaving(true)
     setError('')
-    setActionFailure(null)
     try {
       // ⚠️ 判定がまだ無い商談（自動判定に失敗したもの）は適合度も一緒に送る。
       //    サーバ側は判定と適合度が揃って初めて新規作成する。
@@ -124,7 +132,8 @@ export default function AishodanSessionDetail() {
       })
       if (!res.ok) {
         const j = await res.json().catch(() => null)
-        reportActionFailure(res.status, '判定を保存できませんでした。', j?.error, '判定を保存できませんでした')
+        if (onRejected) onRejected(res.status, j?.error)
+        else notifyError(setError, j?.error || '判定を保存できませんでした')
         return
       }
       await load()
@@ -136,11 +145,10 @@ export default function AishodanSessionDetail() {
   }
 
   /** 自動判定をやり直す。生成に失敗した商談を救うための導線 */
-  async function reEvaluate(overwriteManual = false) {
+  async function reEvaluate(overwriteManual = false, onRejected?: (status: number, serverMessage: string | undefined) => void) {
     if (!id) return
     setSaving(true)
     setError('')
-    setActionFailure(null)
     try {
       const res = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}/re-evaluate`), {
         method: 'POST',
@@ -152,11 +160,12 @@ export default function AishodanSessionDetail() {
         // 手入力を上書きしてよいか、一度だけ確かめる
         if (j?.needsConfirm && !overwriteManual) {
           if (window.confirm('この商談の判定は担当者が手で入力しています。AIの判定で上書きしますか。')) {
-            await reEvaluate(true)
+            await reEvaluate(true, onRejected)
           }
           return
         }
-        reportActionFailure(res.status, '自動判定を作成できませんでした。', j?.error, '判定を作成できませんでした')
+        if (onRejected) onRejected(res.status, j?.error)
+        else notifyError(setError, j?.error || '判定を作成できませんでした')
         return
       }
       await load()
@@ -309,7 +318,7 @@ export default function AishodanSessionDetail() {
 
             <div className="mt-5 border-t border-slate-100 pt-4">
               <button
-                onClick={() => void reEvaluate()}
+                onClick={() => void (uiNext ? reEvaluateNext() : reEvaluate())}
                 disabled={saving || !canEvaluate}
                 className={`rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40${tap}`}
               >
@@ -323,7 +332,7 @@ export default function AishodanSessionDetail() {
                 {(['hot', 'warm', 'cold', 'unfit'] as Verdict[]).map((v) => (
                   <button
                     key={v}
-                    onClick={() => override(v)}
+                    onClick={() => (uiNext ? overrideNext(v) : override(v))}
                     disabled={saving || d.outcome?.verdict === v}
                     aria-pressed={uiNext ? d.outcome?.verdict === v : undefined}
                     className={`rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
@@ -348,7 +357,7 @@ export default function AishodanSessionDetail() {
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
-                onClick={() => void reEvaluate()}
+                onClick={() => void (uiNext ? reEvaluateNext() : reEvaluate())}
                 disabled={saving || !canEvaluate}
                 className={`rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-bold text-white disabled:opacity-40${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
               >
@@ -358,7 +367,7 @@ export default function AishodanSessionDetail() {
               {(['hot', 'warm', 'cold', 'unfit'] as Verdict[]).map((v) => (
                 <button
                   key={v}
-                  onClick={() => override(v)}
+                  onClick={() => (uiNext ? overrideNext(v) : override(v))}
                   disabled={saving}
                   className={`rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-amber-900 hover:bg-amber-100 disabled:opacity-40 font-semibold${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
                 >

@@ -2,7 +2,7 @@
 import { PageTitle, useToolUiNext } from '@/components/hr/ui-next'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 import { Button, EmptyState } from '@/components/ds'
-import HrLoadError, { HrStatusError, hrErrorStatus } from '@/components/hr/HrLoadError'
+import HrLoadError from '@/components/hr/HrLoadError'
 
 import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 
@@ -58,9 +58,8 @@ export default function OneOnOnePage() {
 
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
-  const [listError, setListError] = useState('')
-  // 新しい見た目で、失敗の種類（ログイン・権限・上限）を分けるためのステータス
-  const [errorStatus, setErrorStatus] = useState<number | undefined>(undefined)
+  // 失敗の文と、新しい見た目で失敗の種類（ログイン・権限・上限）を分けるためのステータスを一緒に持つ
+  const [listError, setListError] = useState<'' | { message: string; status?: number }>('')
   const uiNext = useToolUiNext()
   const reduceMotion = useReducedMotion()
   const still = uiNext && Boolean(reduceMotion)
@@ -85,7 +84,7 @@ export default function OneOnOnePage() {
     setListError('')
     try {
       const res = await fetch(`/api/hr/one-on-one?page=${nextPage}`)
-      if (!res.ok) throw new HrStatusError(res.status)
+      if (!res.ok) throw Object.assign(new Error(), { status: res.status })
       const data = await res.json()
       if (!Array.isArray(data.items) || data.page !== nextPage || !Number.isInteger(data.totalPages)) throw new Error()
       if (sequence !== recordSequence.current) return
@@ -107,7 +106,7 @@ export default function OneOnOnePage() {
       }))
       setRecords(items)
     } catch (error) {
-      if (sequence === recordSequence.current) { setListError('1on1の一覧を取得できませんでした。再読み込みしてください。'); setErrorStatus(hrErrorStatus(error)) }
+      if (sequence === recordSequence.current) { const status = (error as { status?: unknown } | null)?.status; setListError({ message: '1on1の一覧を取得できませんでした。再読み込みしてください。', status: typeof status === 'number' ? status : undefined }) }
     } finally {
       if (sequence === recordSequence.current) setLoading(false)
     }
@@ -200,9 +199,9 @@ export default function OneOnOnePage() {
           </button>}
         </div>
 
-        {listError && uiNext && <HrLoadError className="mb-4" subject="1on1の一覧" status={errorStatus} onRetry={() => { if (!loading) fetchRecords(page) }} />}
+        {listError && uiNext && <HrLoadError className="mb-4" subject="1on1の一覧" status={listError.status} onRetry={() => { if (!loading) fetchRecords(page) }} />}
         {listError && !uiNext && <div role="alert" className="mb-4 p-4 bg-red-50 text-red-700 rounded-xl">
-          {listError} <button onClick={() => fetchRecords(page)} disabled={loading} className="underline">再読み込み</button>
+          {listError.message} <button onClick={() => fetchRecords(page)} disabled={loading} className="underline">再読み込み</button>
         </div>}
         {/* Records List */}
         {loading ? (
