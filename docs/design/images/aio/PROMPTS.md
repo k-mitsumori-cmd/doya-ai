@@ -20,3 +20,18 @@
 ```
 Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/aio-empty-v1.png. 4:3 landscape EMPTY-STATE illustration, line art with dark navy outlines and pale blue fills (#e8f0ff), plain white background with no scene background. Subject: an empty AI search answer panel: a rounded search bar with a magnifier icon, below it a blank answer card with a small sparkle shape and dotted empty citation chips. A very small ドヤAI polar bear mascot exactly like the attached reference images (bear-hero.png, aio.png): white fluffy body, blue visor goggles, white hoodie with a small </> symbol on the chest, soft glossy 3D sticker-like render with a thin outline, friendly smile, peeks from a corner, smiling (never sad). Lots of whitespace, minimal, centered composition with generous margins so it can be cropped to 4:3. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere in the image (use plain gray or blue bars/shapes where text would be). At most one accent color (pink #ff1e72 OR yellow #ffd400 OR cyan #00e0ff) besides blue/white.
 ```
+
+## mascots/aio.webp
+
+| 項目 | 内容 |
+|---|---|
+| ファイル名 | `public/ui-renewal/mascots/aio.webp`（720×600、透過） |
+| 参照画像 | bear-hero.png, aio.png |
+| 生成日 | 2026-10-19 |
+| 採用した版 | v1（1回目で採用。マゼンタの背景で作り、sharp でキーイングして透過にした。暗い背景で縁が残らないことを確認） |
+
+プロンプト全文:
+
+```
+Use your built-in image generation tool (not any API key, not a script) to generate ONE image and save it as raw/aio-mascot-v1.png. Mascot illustration, 6:5 landscape, perfectly flat solid pure magenta #ff00ff background (no shadow on the ground, no gradient, no checkerboard; it will be keyed out): the ドヤAI polar bear mascot exactly like the attached reference images (bear-hero.png, aio.png): white fluffy body, blue visor goggles, white hoodie with a small </> symbol on the chest, soft glossy 3D sticker-like render with a thin outline, friendly smile, standing in front-to-3/4 view, holding a search bar shape with a magnifier and a sparkle, AI answer card floating beside it. The hoodie chest MUST show the white </> code symbol (not a diamond). Match the body shape and goggle color of the references. Keep the whole character and props inside the frame with margins. ABSOLUTELY NO text, letters, numerals, logos or watermarks anywhere in the image (use plain gray or blue bars/shapes where text would be). At most one accent color (pink #ff1e72 OR yellow #ffd400 OR cyan #00e0ff) besides blue/white.
+```
