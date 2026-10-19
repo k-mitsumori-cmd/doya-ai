@@ -13,8 +13,8 @@ import {
   LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
   DoyaKun, Sym, type ShowcaseRow,
 } from '@/components/lp'
-import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from '@/app/aio/lp-data'
-import { AioSovMock, AioEnginesMock, AioCitationsMock } from '@/app/aio/mocks'
+import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from '@/app/(shell)/aio/lp-data'
+import { AioSovMock, AioEnginesMock, AioCitationsMock } from '@/app/(shell)/aio/mocks'
 
 const SVC = getServiceById('aio')!
 

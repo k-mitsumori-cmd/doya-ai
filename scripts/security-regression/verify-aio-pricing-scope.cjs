@@ -6,7 +6,7 @@ const ts = require('typescript')
 const React = require('react')
 const { renderToStaticMarkup } = require('react-dom/server')
 
-const source = fs.readFileSync(path.resolve(__dirname, '../../src/app/aio/pricing/page.tsx'), 'utf8')
+const source = fs.readFileSync(path.resolve(__dirname, '../../src/app/(shell)/aio/pricing/page.tsx'), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: {
   module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,
 } }).outputText
