@@ -44,6 +44,7 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'cunning', basePath: '/cunning' },
   { id: 'interview', basePath: '/interview' },
   { id: 'persona', basePath: '/persona' },
+  { id: 'quote', basePath: '/quote' },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */

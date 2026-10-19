@@ -24,9 +24,13 @@ import {
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { QUOTE_NAV } from '@/lib/quote/nav'
 import { useQuoteUsageOrganization } from '@/lib/quote/use-usage-organization'
 
 const BASE = '/quote'
+
+// nav.ts の icon（名前の文字列）を部品に引く。共通の対応表（shell/icons）と同じ名前を使う
+const NAV_ICONS: Record<string, React.ElementType> = { Receipt, Settings, CreditCard }
 
 function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
@@ -40,13 +44,8 @@ function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const NAV: NavItem[] = [
-    // ⚠️ 見積書一覧はトップ画面内のセクション。/quote/documents というページは
-    //    存在しないので、サイドバーに項目を作らないこと（404になる）。
-    { href: BASE, label: '見積書をつくる', icon: Receipt, hot: true },
-    { href: BASE + '/settings', label: '設定', icon: Settings },
-    { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
-  ]
+  // ⚠️ ナビの正本は src/lib/quote/nav.ts（共通の枠と同じ配列）
+  const NAV: NavItem[] = QUOTE_NAV.map((item) => ({ href: item.href, label: item.label, icon: NAV_ICONS[item.icon ?? ''] ?? Receipt, ...(item.href === BASE ? { hot: true } : {}) }))
 
   const isActive = (href: string) => {
     if (href === BASE) return pathname === BASE

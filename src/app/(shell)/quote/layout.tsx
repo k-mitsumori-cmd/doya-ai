@@ -4,7 +4,9 @@ import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { isShellEnabled } from '@/lib/ui-shell'
 import QuoteAppLayout from '@/components/quote/QuoteAppLayout'
+import QuoteShellFrame from '@/components/quote/QuoteShellFrame'
 import { FAQ } from './lp-data'
 
 // ⚠️ これが無いと canonical がルートlayoutの既定（サイトトップ）のままになり、
@@ -34,8 +36,9 @@ export default async function QuoteLayout({ children }: { children: React.ReactN
         faq={FAQ}
       />
       {/* ⚠️ ログイン後はサイドバー付きのアプリ枠で包む（reference/06-ui-patterns.md §7）。
-           ToolSwitcherMenu はサイドバーの中にある。独自ヘッダーを作らないこと。 */}
-      {session?.user ? <QuoteAppLayout>{children}</QuoteAppLayout> : children}
+           ToolSwitcherMenu はサイドバーの中にある。独自ヘッダーを作らないこと。
+           共通の枠が有効（isShellEnabled）なら ToolFrame だけを出す（枠は (shell)/layout.tsx が描く）。 */}
+      {!session?.user ? children : isShellEnabled('quote') ? <QuoteShellFrame>{children}</QuoteShellFrame> : <QuoteAppLayout>{children}</QuoteAppLayout>}
     </>
   )
 }

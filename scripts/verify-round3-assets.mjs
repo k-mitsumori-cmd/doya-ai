@@ -20,7 +20,7 @@ for (const name of samples) {
 }
 
 for (const id of ids) {
-  const diagram = await fs.readFile(path.join(ROOT, 'src/app', id === 'banner' ? 'banner/landing/diagram.tsx' : `${appDir(id)}/diagram.tsx`), 'utf8')
+  const diagram = await fs.readFile(path.join(ROOT, 'src/app', id === 'banner' ? `${appDir('banner')}/landing/diagram.tsx` : `${appDir(id)}/diagram.tsx`), 'utf8')
   assert(diagram.includes('ServiceFlowDiagram'), `${id}: diagram missing`)
   const lpFile = lpFiles[id] || `src/app/${appDir(id)}/Lp.tsx`
   const source = await fs.readFile(path.join(ROOT, lpFile), 'utf8')
@@ -28,7 +28,7 @@ for (const id of ids) {
   assert(source.includes('diagram={<ServiceDiagram steps={STEPS} />}'), `${id}: diagram not wired`)
 }
 
-for (const file of ['src/app/(shell)/banner/dashboard/history/page.tsx','src/app/(shell)/doyaslide/projects/page.tsx','src/app/quote/Tool.tsx','src/app/(shell)/seo/jobs/[id]/page.tsx']) {
+for (const file of ['src/app/(shell)/banner/dashboard/history/page.tsx','src/app/(shell)/doyaslide/projects/page.tsx','src/app/(shell)/quote/Tool.tsx','src/app/(shell)/seo/jobs/[id]/page.tsx']) {
   const source = await fs.readFile(path.join(ROOT, file), 'utf8')
   assert(source.includes('<EmptyState'), `${file}: EmptyState missing`)
 }

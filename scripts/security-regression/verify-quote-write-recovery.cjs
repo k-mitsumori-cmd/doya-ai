@@ -5,7 +5,7 @@ const path = require('node:path')
 const vm = require('node:vm')
 const ts = require('typescript')
 
-const source = fs.readFileSync(path.resolve(__dirname, '../../src/app/quote/Tool.tsx'), 'utf8')
+const source = fs.readFileSync(path.resolve(__dirname, '../../src/app/(shell)/quote/Tool.tsx'), 'utf8')
 const ast = ts.createSourceFile('Tool.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
 const handlers = {}
 function visit(node) {
