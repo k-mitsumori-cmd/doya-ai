@@ -74,7 +74,8 @@ export function PromaneLp() {
         <UseCases items={SVC.useCases || []} />
         <FaqSection items={FAQ} />
         <CtaBand
-          title="案件の利益、今月から見えるようにしませんか"
+          // 375px で最後の行が2文字にならないよう、文節ごとに折り返す（文節の途中では折り返さない）
+          title={<><span className="inline-block">案件の利益、</span><span className="inline-block">今月から</span><span className="inline-block">見えるように</span><span className="inline-block">しませんか</span></>}
           subtitle="ドヤプロマネは無料ではじめられます。"
           ctaHref={CTA}
           ctaLabel="無料ではじめる"
