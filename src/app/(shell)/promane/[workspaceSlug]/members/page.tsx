@@ -1,8 +1,8 @@
+import PromanePageIntro from '@/components/promane/PromanePageIntro';
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { MemberList } from "@/components/promane/member-list";
-import Image from "next/image";
 
 async function safeMembers(workspaceId: string) {
   try {
@@ -46,13 +46,16 @@ export default async function MembersPage({ params }: { params: Promise<{ worksp
 
   return (
     <div className="p-8 max-w-[1200px]">
-      <div className="flex items-center gap-5 mb-8 animate-slide-up">
-        <Image src="/character/thumbsup.png" alt="" width={80} height={80} className="animate-bounce-in drop-shadow-xl" unoptimized />
-        <div className="flex-1">
-          <h1 className="text-[28px] font-black tracking-tight text-gray-900">メンバー</h1>
-          <p className="text-[15px] text-gray-400 font-bold">チームの仲間たち 👥 {members.length}人</p>
-        </div>
-      </div>
+      <PromanePageIntro
+        className="flex items-center gap-5 mb-8 animate-slide-up"
+        image="/character/thumbsup.png"
+        imageSize={80}
+        title="メンバー"
+        titleClassName="text-[28px] font-black tracking-tight text-gray-900"
+        legacyLead={<>チームの仲間たち 👥 {members.length}人</>}
+        legacyLeadClassName="text-[15px] text-gray-400 font-bold" legacyTextClassName="flex-1"
+        lead="メンバーの招待と、役割・時給を管理します。"
+      />
       <MemberList
         workspaceId={workspace.id}
         workspaceSlug={workspaceSlug}

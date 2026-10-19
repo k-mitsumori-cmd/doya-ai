@@ -1,3 +1,4 @@
+import PromanePageIntro from '@/components/promane/PromanePageIntro';
 import { timeEntryBelongsToProject } from "@/lib/promane/time-entry-project";
 import { laborCostForEntry } from "@/lib/promane/labor-cost";
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
@@ -62,13 +63,16 @@ export default async function ReportsPage({ params }: { params: Promise<{ worksp
 
   return (
     <div className="p-8 max-w-[1200px] space-y-8">
-      <div className="flex items-center gap-5 animate-slide-up">
-        <Image src="/character/present.png" alt="" width={80} height={80} className="animate-bounce-in drop-shadow-xl" unoptimized />
-        <div>
-          <h1 className="text-[28px] font-black tracking-tight text-gray-900">レポート</h1>
-          <p className="text-[15px] text-gray-400 font-bold">数字で振り返ろう 📊</p>
-        </div>
-      </div>
+      <PromanePageIntro
+        className="flex items-center gap-5 animate-slide-up"
+        image="/character/present.png"
+        imageSize={80}
+        title="レポート"
+        titleClassName="text-[28px] font-black tracking-tight text-gray-900"
+        legacyLead={<>数字で振り返ろう 📊</>}
+        legacyLeadClassName="text-[15px] text-gray-400 font-bold"
+        lead="案件ごとの売上・原価・利益率を振り返ります。"
+      />
 
       {projectReports.length === 0 ? (
         <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm py-24 text-center animate-bounce-in">

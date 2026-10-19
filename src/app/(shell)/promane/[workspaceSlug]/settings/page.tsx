@@ -1,3 +1,4 @@
+import PromanePageIntro from '@/components/promane/PromanePageIntro';
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -26,13 +27,16 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
 
   return (
     <div className="p-8 max-w-[800px]">
-      <div className="flex items-center gap-5 mb-8 animate-slide-up">
-        <Image src="/character/point.png" alt="" width={80} height={80} className="animate-bounce-in drop-shadow-xl" unoptimized />
-        <div>
-          <h1 className="text-[28px] font-black tracking-tight text-gray-900">設定</h1>
-          <p className="text-[15px] text-gray-400 font-bold">ワークスペースの設定 ⚙️</p>
-        </div>
-      </div>
+      <PromanePageIntro
+        className="flex items-center gap-5 mb-8 animate-slide-up"
+        image="/character/point.png"
+        imageSize={80}
+        title="設定"
+        titleClassName="text-[28px] font-black tracking-tight text-gray-900"
+        legacyLead={<>ワークスペースの設定 ⚙️</>}
+        legacyLeadClassName="text-[15px] text-gray-400 font-bold"
+        lead="ワークスペースの名前と、データの整理をします。"
+      />
 
       <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm p-8 mb-6 animate-slide-up stagger-1">
         <div className="flex items-center gap-3 mb-6">

@@ -1,3 +1,4 @@
+import PromanePageIntro from '@/components/promane/PromanePageIntro';
 import { Prisma } from '@prisma/client';
 import Link from 'next/link';
 import { parseTimesheetQuery, readTimesheet } from '@/lib/promane/timesheet-read';
@@ -5,7 +6,6 @@ import { requirePromaneAuth } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { TimesheetView } from "@/components/promane/timesheet-view";
-import Image from "next/image";
 
 export default async function TimesheetPage({ params, searchParams }: { params: Promise<{ workspaceSlug: string }>; searchParams: Promise<{ month?: string | string[]; cursor?: string | string[] }> }) {
   const session = await requirePromaneAuth();
@@ -26,13 +26,16 @@ export default async function TimesheetPage({ params, searchParams }: { params: 
 
   return (
     <div className="p-8 max-w-[1200px]">
-      <div className="flex items-center gap-5 mb-8 animate-slide-up">
-        <Image src="/character/focus.png" alt="" width={80} height={80} className="animate-bounce-in drop-shadow-xl" unoptimized />
-        <div>
-          <h1 className="text-[28px] font-black tracking-tight text-gray-900">タイムシート</h1>
-          <p className="text-[15px] text-gray-400 font-bold">今日の作業を記録しよう ⏱</p>
-        </div>
-      </div>
+      <PromanePageIntro
+        className="flex items-center gap-5 mb-8 animate-slide-up"
+        image="/character/focus.png"
+        imageSize={80}
+        title="タイムシート"
+        titleClassName="text-[28px] font-black tracking-tight text-gray-900"
+        legacyLead={<>今日の作業を記録しよう ⏱</>}
+        legacyLeadClassName="text-[15px] text-gray-400 font-bold"
+        lead="作業した時間を記録し、月ごとに見返します。"
+      />
       <form className="flex flex-wrap items-end gap-3 mb-6" method="get" action={`/promane/${workspaceSlug}/timesheet`}>
         <label className="text-sm font-bold">対象月（未指定は全期間）<input className="block border rounded-lg p-2" type="month" name="month" defaultValue={query.month} /></label>
         <button className="border rounded-lg px-4 py-2" type="submit">表示する</button>

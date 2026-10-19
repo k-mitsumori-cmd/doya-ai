@@ -1,3 +1,4 @@
+import PromanePageHeading from '@/components/promane/PromanePageHeading';
 import { requirePromaneAuth, getWorkspaceBySlug } from '@/lib/promane/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect, notFound } from 'next/navigation'
@@ -55,7 +56,7 @@ export default async function EditProjectPage({
         <ArrowLeft className="h-4 w-4" />
         プロジェクト詳細に戻る
       </Link>
-      <h1 className="text-[28px] font-black text-gray-900 mb-1">プロジェクトを編集</h1>
+      <PromanePageHeading className="text-[28px] font-black text-gray-900 mb-1">プロジェクトを編集</PromanePageHeading>
       <p className="text-[13px] font-bold text-gray-400 mb-6">{project.name}</p>
       <ProjectForm workspaceSlug={workspaceSlug} workspaceId={workspace.id} clients={clients} project={projectData} />
     </div>

@@ -1,3 +1,4 @@
+import PromanePageHeading from '@/components/promane/PromanePageHeading';
 import { timeEntryBelongsToProject } from "@/lib/promane/time-entry-project";
 import { laborCostForEntry } from "@/lib/promane/labor-cost";
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
@@ -9,6 +10,8 @@ import { Button } from "@/components/promane/ui/button";
 import Link from "next/link";
 import Image from "next/image";
 import { Plus, ArrowRight, FolderKanban, Wallet, TrendingUp, CheckCircle2 } from "lucide-react";
+import { isUiNext } from "@/lib/ui-next";
+import ProjectsNext from "@/components/promane/ui-next/ProjectsNext";
 
 export default async function ProjectsPage({ params }: { params: Promise<{ workspaceSlug: string }> }) {
   const session = await requirePromaneAuth();
@@ -65,6 +68,11 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
   const totalProfit = projectStats.reduce((s, p) => s + p.profit, 0);
   const avgProfitRate = totalRevenue > 0 ? Math.round((totalProfit / totalRevenue) * 100) : 0;
 
+  // 新しい見た目（UI 品質の直し）。偽のときは下の今までの画面のまま（チェックリスト §5.1）
+  if (await isUiNext()) {
+    return <ProjectsNext workspaceSlug={workspaceSlug} rows={projectStats} activeCount={activeCount} totalRevenue={totalRevenue} avgProfitRate={avgProfitRate} />;
+  }
+
   const kpis = [
     { icon: FolderKanban, label: "総プロジェクト", value: `${projects.length}件`, color: "from-blue-500 to-violet-500", bg: "from-blue-50 to-violet-50" },
     { icon: TrendingUp, label: "進行中", value: `${activeCount}件`, color: "from-orange-500 to-amber-500", bg: "from-orange-50 to-amber-50" },
@@ -79,7 +87,7 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
         <div className="flex items-center gap-5">
           <Image src="/character/working.png" alt="" width={80} height={80} className="animate-bounce-in drop-shadow-xl" unoptimized />
           <div>
-            <h1 className="text-[28px] font-black tracking-tight text-gray-900">プロジェクト一覧</h1>
+            <PromanePageHeading className="text-[28px] font-black tracking-tight text-gray-900">プロジェクト一覧</PromanePageHeading>
             <p className="text-[14px] text-gray-400 font-bold">すべてのプロジェクトを一覧で確認</p>
           </div>
         </div>

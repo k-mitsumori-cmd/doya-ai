@@ -14,6 +14,8 @@ import { useParams } from 'next/navigation'
 import { yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource } from '@/lib/quote/types'
 import { DoyaKun } from '@/components/lp'
+import QuotePageHeading from '@/components/quote/QuotePageHeading'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 const SOURCE_STYLE: Record<string, string> = {
   own_price: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -31,6 +33,7 @@ export default function QuoteDocumentPage() {
     discountType, discountValue, notes, paymentTerms, deliveryTerms, setClientCompany, setClientPerson,
     setDiscountType, setDiscountValue, setNotes, setPaymentTerms, setDeliveryTerms, updateItem,
     save, load, canApprove, pdfUrl } = useQuoteDocumentDetail(id)
+  const uiNext = useUiNext()
 
   if (loading) {
     return (
@@ -43,7 +46,7 @@ export default function QuoteDocumentPage() {
   }
   if (!doc) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50">
+      <div className={uiNext ? 'flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
         <p className="text-slate-600">{error || '見積書が見つかりません'}</p>
         <button onClick={() => void load()} className="text-sm font-semibold underline">再読み込みする</button>
         <Link href="/quote" className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードに戻る</Link>
@@ -56,12 +59,12 @@ export default function QuoteDocumentPage() {
 
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className={uiNext ? 'pb-24' : 'min-h-screen bg-slate-50 pb-24'}>
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
             <Link href="/quote" className="text-xs text-slate-500 hover:underline font-semibold">← 見積もり一覧</Link>
-            <h1 className="truncate text-base font-bold text-slate-900">{doc.quoteNo}</h1>
+            <QuotePageHeading className="truncate text-base font-bold text-slate-900">{doc.quoteNo}</QuotePageHeading>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${

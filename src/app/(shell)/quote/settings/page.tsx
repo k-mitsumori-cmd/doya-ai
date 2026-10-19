@@ -5,6 +5,8 @@
 // ============================================
 // 発行者情報（見積書に印字される自社情報）とメンバー招待。
 
+import QuotePageHeading from '@/components/quote/QuotePageHeading'
+import { useUiNext } from '@/components/shell/ui-next-context'
 import Link from 'next/link'
 import { useQuoteIssuerSettings } from '@/lib/quote/use-issuer-settings'
 import MemberPanel from '@/components/org/MemberPanel'
@@ -27,14 +29,15 @@ const TEXTAREAS = [
 
 export default function QuoteSettingsPage() {
   const { form, loading, loaded, saving, error, message, unknown, canEdit, update, load, save } = useQuoteIssuerSettings()
+  const uiNext = useUiNext()
 
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className={uiNext ? 'pb-24' : 'min-h-screen bg-slate-50 pb-24'}>
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-2xl px-4 py-4">
           <Link href="/quote" className="text-xs text-slate-500 hover:underline font-semibold">← 見積もり一覧</Link>
-          <h1 className="text-lg font-bold text-slate-900">設定</h1>
+          <QuotePageHeading className="text-lg font-bold text-slate-900">設定</QuotePageHeading>
           <p className="text-xs text-slate-500 font-semibold">発行者情報とメンバーを管理します。</p>
         </div>
       </header>
