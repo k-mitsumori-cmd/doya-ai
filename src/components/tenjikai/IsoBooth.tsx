@@ -34,7 +34,7 @@ function Box({ e, colors, selected, onSelect, i }: { e: BoothElement; colors: Si
   const stroke = selected ? ds.yellow : 'rgba(16,22,51,.35)'
   return (
     <motion.g
-      initial={{ opacity: 0, y: -60 }}
+      initial={false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.25 + i * 0.09, type: 'spring', stiffness: 260, damping: 18 }}
       onClick={() => onSelect?.(e.id)}
@@ -82,7 +82,7 @@ export default function IsoBooth({ plan, analysis, selectedId, onSelect, compact
       <polygon points={pts([P(-0.6, D, 0), P(W + 1.6, D, 0), P(W + 1.6, D + 1.6, 0), P(-0.6, D + 1.6, 0)])} fill={ds.line} />
       <polygon points={pts([P(W, -0.6, 0), P(W + 1.6, -0.6, 0), P(W + 1.6, D, 0), P(W, D, 0)])} fill={ds.line} />
       {/* 床 */}
-      <motion.polygon initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} points={pts([P(0, 0, 0), P(W, 0, 0), P(W, D, 0), P(0, D, 0)])} fill="url(#carpet)" stroke={ds.blue} strokeWidth="1.5" />
+      <motion.polygon initial={false} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} points={pts([P(0, 0, 0), P(W, 0, 0), P(W, D, 0), P(0, D, 0)])} fill="url(#carpet)" stroke={ds.blue} strokeWidth="1.5" />
       {/* 小間の区切り線 */}
       {Array.from({ length: Math.max(1, Math.round(W / 2.9)) - 1 }).map((_, i, arr) => {
         const gx = ((i + 1) * W) / (arr.length + 1)
@@ -96,7 +96,7 @@ export default function IsoBooth({ plan, analysis, selectedId, onSelect, compact
         <Box key={`${plan.variant}-${e.id}`} e={e} colors={analysis.colors} selected={selectedId === e.id} onSelect={onSelect} i={i} />
       ))}
       {back && (
-        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }} transform={`matrix(${C},${S},0,1,${bx},${by})`}>
+        <motion.g initial={false} animate={{ opacity: 1 }} transition={{ delay: 0.9 }} transform={`matrix(${C},${S},0,1,${bx},${by})`}>
           <text x="0" y="0" fontSize={compact ? 15 : 17} fontWeight={900} fill={analysis.colors.secondary}>
             {analysis.headline.split('\n')[0]}
           </text>
@@ -107,7 +107,7 @@ export default function IsoBooth({ plan, analysis, selectedId, onSelect, compact
         </motion.g>
       )}
       {sideW && (
-        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} transform={`matrix(${C},${-S},0,1,${sx},${sy})`}>
+        <motion.g initial={false} animate={{ opacity: 1 }} transition={{ delay: 1 }} transform={`matrix(${C},${-S},0,1,${sx},${sy})`}>
           <rect x="-4" y="-14" width={Math.min(150, sideW.d * U * 0.8)} height="44" fill={analysis.colors.primary} rx="2" />
           <text x="4" y="4" fontSize="11" fontWeight={900} fill="#fff">{analysis.valueProps[0].title}</text>
           <text x="4" y="20" fontSize="8" fill="#fff" opacity=".85">{analysis.valueProps[1].title}</text>

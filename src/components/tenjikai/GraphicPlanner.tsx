@@ -37,7 +37,7 @@ function Elevation({ p, a, image }: { p: GraphicPanel; a: SiteAnalysis; image?: 
         const bottom = y(Math.max(z.fromMm, p.baseMm))
         const mid = (top + bottom) / 2
         return (
-          <motion.g key={z.label} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.1 }}>
+          <motion.g key={z.label} initial={false} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.1 }}>
             <line x1={pad.l} y1={top} x2={pad.l + w} y2={top} stroke={ds.ink} strokeDasharray="3 3" strokeWidth={0.6} />
             <line x1={pad.l + w + 6} y1={mid} x2={pad.l + w + 18} y2={mid} stroke={ds.blue} />
             <text x={pad.l + w + 22} y={mid - 2} fontSize="10" fontWeight={900} fill={ds.blue}>{z.label}</text>
@@ -99,7 +99,7 @@ export default function GraphicPlanner({ panels, analysis, images, selectedPanel
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <ul className="flex max-h-[520px] flex-col gap-1.5 overflow-y-auto pr-1">
           {panels.map((x, i) => (
-            <motion.li key={x.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
+            <motion.li key={x.id} initial={false} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
               <button onClick={() => onSelectPanel(x.id)} className={clsx('flex w-full items-center gap-3 rounded-[var(--r-sm)] p-2 text-left transition-colors', p.id === x.id ? 'bg-doya-50 ring-2 ring-doya-500' : 'hover:bg-gray-50')}>
                 <div className="h-12 flex-shrink-0 overflow-hidden rounded-md border border-gray-200" style={{ aspectRatio: `${x.widthMm} / ${x.heightMm}`, maxWidth: 72 }}>
                   <PanelArt p={x} a={analysis} image={images[x.id]} compact />
@@ -115,7 +115,7 @@ export default function GraphicPlanner({ panels, analysis, images, selectedPanel
         </ul>
 
         <AnimatePresence mode="wait">
-          <motion.div key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }} className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
+          <motion.div key={p.id} initial={false} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }} className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
             <div className="rounded-[var(--r-sm)] border border-gray-100 bg-[var(--surface-2)] p-3">
               <p className="mb-1 flex items-center gap-1.5 text-[11px] font-black text-gray-500"><Ruler className="h-3.5 w-3.5" />立面図（単位 mm）</p>
               <Elevation p={p} a={analysis} image={images[p.id]} />

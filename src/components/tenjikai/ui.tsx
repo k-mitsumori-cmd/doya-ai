@@ -9,7 +9,7 @@ export function PageHeader({ eyebrow, title, desc, right }: { eyebrow?: string; 
     <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div className="flex max-w-2xl flex-col gap-1.5">
         {eyebrow && (
-          <motion.span initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="text-[13px] font-medium text-doya-500">
+          <motion.span initial={false} animate={{ opacity: 1, x: 0 }} className="text-[13px] font-medium text-doya-500">
             {eyebrow}
           </motion.span>
         )}
@@ -31,8 +31,10 @@ export function CountUp({ value, format = (n) => Math.round(n).toLocaleString(),
   return <span className={className}>{format(v)}</span>
 }
 
+// 入りのアニメーションは付けない（initial: false）。アニメーションが止まる環境（裏のタブ・重い端末）で、
+// 薄い色のまま止まって見えるため（F-12）。i は呼び出し側の互換のために残している
 export const cardIn = (i: number) => ({
-  initial: { opacity: 0, y: 18 },
+  initial: false as const,
   animate: { opacity: 1, y: 0 },
   transition: { delay: 0.05 + i * 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] },
 })
@@ -40,12 +42,12 @@ export const cardIn = (i: number) => ({
 export function Modal({ open, onClose, children, title }: { open: boolean; onClose: () => void; children: React.ReactNode; title: string }) {
   if (!open) return null
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm" onClick={onClose}>
+    <motion.div initial={false} animate={{ opacity: 1 }} className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm" onClick={onClose}>
       <motion.div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        initial={{ opacity: 0, y: 30, scale: 0.96 }}
+        initial={false}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', stiffness: 320, damping: 28 }}
         className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[var(--r)] bg-white p-6 shadow-2xl"

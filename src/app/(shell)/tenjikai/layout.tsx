@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { isShellEnabled } from '@/lib/ui-shell'
 import TenjikaiApp from '@/components/tenjikai/TenjikaiApp'
 import TenjikaiShellFrame from '@/components/tenjikai/TenjikaiShellFrame'
+import TenjikaiLp from './Lp'
 import '@/components/tenjikai/ds-tokens.css'
 import './tenjikai.css'
 
@@ -22,10 +23,14 @@ export const dynamic = 'force-dynamic'
 // こうすると、セクションを移っても入力内容や生成結果が消えない。
 // ⚠️ ツール独自のフォントは使わない（統合仕様 §11）。サイト共通の Inter ＋ Noto Sans JP のまま
 export default async function TenjikaiLayout({ children }: { children: React.ReactNode }) {
-  // 共通の枠（フラグ ui.shell.tenjikai）はログインしているときだけ。未ログインの画面は今までどおり（点検 SHL-015）。
-  // 枠（AppShell）そのものは src/app/(shell)/layout.tsx が出す。ここではツール内のナビ（ToolFrame）だけ
-  const session = isShellEnabled('tenjikai') ? await getServerSession(authOptions).catch(() => null) : null
-  if (session?.user) {
+  // 名前が取れなくても（認証の設定が無い開発環境など）、未ログインとして扱う
+  const session = await getServerSession(authOptions).catch(() => null)
+  // 未ログインには紹介ページ（LP）だけを出す。アプリの画面はログイン後だけ（点検 SHL-015。asklink と同じ）
+  // 開発中の画面確認用（next dev でだけ効く）。ログインせずにアプリの画面を開く
+  const devPreview = process.env.NODE_ENV === 'development' && process.env.TENJIKAI_DEV_PREVIEW === 'true'
+  if (!session?.user && !devPreview) return <TenjikaiLp />
+  // 共通の枠（フラグ ui.shell.tenjikai）。枠（AppShell）そのものは src/app/(shell)/layout.tsx が出す。ここではツール内のナビ（ToolFrame）だけ
+  if (session?.user && isShellEnabled('tenjikai')) {
     return (
       <>
         <TenjikaiShellFrame />

@@ -72,28 +72,33 @@ export default function BudgetPlanner({ input, setInput, budget }: { input: Proj
             <thead>
               <tr className="bg-gray-50 text-left font-mono text-[10px] uppercase tracking-wider text-gray-500">
                 <th className="px-5 py-3">費目</th>
-                <th className="px-5 py-3">内訳</th>
+                <th className="hidden px-5 py-3 sm:table-cell">内訳</th>
                 <th className="px-5 py-3 text-right">金額</th>
               </tr>
             </thead>
             <tbody>
               {budget.map((b, i) => (
-                <motion.tr key={b.category} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.05 }} className="border-t border-gray-100">
-                  <td className="whitespace-nowrap px-5 py-3 font-black text-ink">
-                    <span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: BUDGET_META[b.category].color }} />
-                    {BUDGET_META[b.category].label}
+                <motion.tr key={b.category} className="border-t border-gray-100">
+                  <td className="px-5 py-3 font-black text-ink">
+                    <span className="whitespace-nowrap">
+                      <span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: BUDGET_META[b.category].color }} />
+                      {BUDGET_META[b.category].label}
+                    </span>
+                    {/* スマホでは内訳の列を出さず、費目の下に並べる（狭い列で1文字だけの行が出るため） */}
+                    <span className="mt-1 block text-[12px] font-normal leading-snug text-gray-500 sm:hidden">{b.detail}</span>
                   </td>
-                  <td className="px-5 py-3 text-xs text-gray-500">
+                  <td className="hidden px-5 py-3 text-xs text-gray-500 sm:table-cell">
                     {b.detail}
                     <div className="mt-1 h-1 rounded-full bg-gray-100">
-                      <motion.div className="h-full rounded-full" style={{ background: BUDGET_META[b.category].color }} initial={{ width: 0 }} animate={{ width: `${(b.amountYen / total) * 100}%` }} transition={{ delay: 0.3 + i * 0.05, duration: 0.6 }} />
+                      <motion.div className="h-full rounded-full" style={{ background: BUDGET_META[b.category].color }} initial={false} animate={{ width: `${(b.amountYen / total) * 100}%` }} transition={{ duration: 0.4 }} />
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-5 py-3 text-right font-mono tabular text-ink">{yen(b.amountYen)}</td>
                 </motion.tr>
               ))}
               <tr className="border-t-2 border-ink">
-                <td className="px-5 py-3 font-black text-ink" colSpan={2}>合計</td>
+                <td className="px-5 py-3 font-black text-ink sm:hidden">合計</td>
+                <td className="hidden px-5 py-3 font-black text-ink sm:table-cell" colSpan={2}>合計</td>
                 <td className="px-5 py-3 text-right font-mono text-base font-semibold tabular text-ink">{yen(total)}</td>
               </tr>
             </tbody>

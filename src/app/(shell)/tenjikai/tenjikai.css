@@ -7,3 +7,5 @@
 .tenjikai-root .floor { background-image: linear-gradient(var(--spot) 1px, transparent 1px), linear-gradient(90deg, var(--spot) 1px, transparent 1px); background-size: 28px 28px; }
 .tenjikai-root .tabular { font-variant-numeric: tabular-nums; }
 .tenjikai-root .text-balance { text-wrap: balance; }
+/* 1文字だけの行を出さない（D-11）。対応していないブラウザーでは、ふつうに折り返す */
+.tenjikai-root :is(p, li, h1, h2, h3, dd, figcaption, span) { text-wrap: pretty; }

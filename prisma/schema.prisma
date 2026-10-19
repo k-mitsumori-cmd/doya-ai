@@ -4960,18 +4960,27 @@ model TenjikaiTask {
 
 // 従量課金APIの実行ログ。承認した見込み額と実行結果を必ず残す
 model TenjikaiGenerationJob {
-  id               String          @id @default(cuid())
-  projectId        String
-  project          TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  kind             String // creative_image | booth_render
+  id               String           @id @default(cuid())
+  /// 実行した利用者。画面のプロジェクトを保存する前でも記録できるよう、projectId より先にこちらで持つ
+  userId           String
+  /// 保存済みのプロジェクトから実行したときだけ入る
+  projectId        String?
+  project          TenjikaiProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind             String // creative_image | booth_render | graphic_panel
   model            String
   size             String
   count            Int
   estimatedCostYen Int
   approvedAt       DateTime
-  status           String          @default("pending") // pending | done | failed
-  createdAt        DateTime        @default(now())
+  status           String           @default("pending") // pending | done | failed
+  /// 実際に返ってきた枚数（done のとき）
+  imageCount       Int              @default(0)
+  /// 失敗の理由（利用者には出さない。例: upstream_429）
+  errorCode        String?
+  finishedAt       DateTime?
+  createdAt        DateTime         @default(now())
 
+  @@index([userId, createdAt])
   @@map("tenjikai_generation_job")
 }
 

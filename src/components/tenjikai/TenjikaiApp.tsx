@@ -45,7 +45,6 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
   const [collapsed, setCollapsed] = useState(false)
   // 3D図面の面ごとの画像と完成予想図。セクションを移っても消えないよう、ここで持つ
   const [panelImages, setPanelImages] = useState<Record<string, string>>({})
-  const [renders, setRenders] = useState<Record<string, string[]>>({})
 
   // 文面（解析・ブース案・制作物）は API で作り、寸法・金額はルール計算に重ねる
   const [generated, setGenerated] = useState<GeneratedPlan>(() => mockGeneratedPlan(SAMPLE_INPUT))
@@ -86,7 +85,8 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
   useEffect(() => {
     if (phase === 'generating' && animDone && !pending) {
       setPhase('ready')
-      router.push(sectionHref('overview'))
+      // 条件を入れたら、次は 3D で確かめる（利用者の流れ。2026-10-19 ユーザー指示）
+      router.push(sectionHref('booth'))
     }
   }, [phase, animDone, pending, router])
 
@@ -110,7 +110,7 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
       case 'overview':
         return <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} />
       case 'booth':
-        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} panelImages={panelImages} setPanelImages={setPanelImages} renders={renders} setRenders={setRenders} />
+        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} panelImages={panelImages} setPanelImages={setPanelImages} />
       case 'creatives':
         return <CreativeStudio creatives={creatives} analysis={analysis} />
       case 'novelty':
@@ -133,18 +133,11 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900">{generated.notice}</p>
         </div>
       )}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={key}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -12 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="min-h-full"
-        >
-          {content}
-        </motion.div>
-      </AnimatePresence>
+      {/* 画面の切り替えにアニメーションを付けない。前の画面が消えるのを待つ作りだと、
+          アニメーションが止まる環境（裏のタブ・重い端末）で、薄い色や空白のまま止まって見えるため（F-12） */}
+      <div key={key} className="min-h-full">
+        {content}
+      </div>
     </>
   )
 
@@ -160,7 +153,7 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
       <AnimatePresence>
         {mobileOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} />
+            <motion.div initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} />
             <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ duration: 0.2, ease: 'easeOut' }} className="fixed inset-y-0 left-0 z-50 md:hidden">
               <TenjikaiSidebar section={phase === 'ready' ? section : 'new'} ready={phase === 'ready'} go={go} forceExpanded isMobile onToggle={() => setMobileOpen(false)} projectName={phase === 'input' ? undefined : input.eventName} />
             </motion.div>

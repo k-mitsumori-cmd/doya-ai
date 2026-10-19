@@ -64,7 +64,7 @@ export default function DocsVault({ deadlines, input }: { deadlines: Deadline[];
       <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
         <div className="flex flex-col gap-3">
           <motion.div
-            initial={{ opacity: 0, y: 18 }}
+            initial={false}
             onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
             onDragLeave={() => setDrag(false)}
             onDrop={(e) => { e.preventDefault(); setDrag(false); add(e.dataTransfer.files) }}
@@ -94,7 +94,7 @@ export default function DocsVault({ deadlines, input }: { deadlines: Deadline[];
               {docs.map((d) => {
                 const Icon = ICON[d.kind]
                 return (
-                  <motion.li key={d.id} layout initial={{ opacity: 0, y: -12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }} className="flex items-start gap-3 rounded-[var(--r-sm)] border border-gray-200 bg-white p-3">
+                  <motion.li key={d.id} layout initial={false} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }} className="flex items-start gap-3 rounded-[var(--r-sm)] border border-gray-200 bg-white p-3">
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-50 text-doya-600"><Icon className="h-5 w-5" /></div>
                     <div className="min-w-0 flex-1">
                       <p className="flex items-center gap-2 truncate text-sm font-black text-ink">
@@ -127,7 +127,7 @@ export default function DocsVault({ deadlines, input }: { deadlines: Deadline[];
               const left = daysUntil(d.date)
               const isNext = i === nextIdx
               return (
-                <motion.li key={d.id} initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.05 }}>
+                <motion.li key={d.id} initial={false} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.05 }}>
                   <button onClick={() => setDone(isDone ? done.filter((x) => x !== d.id) : [...done, d.id])} className={clsx('relative flex w-full items-center gap-3 rounded-[var(--r-sm)] px-2 py-2 text-left transition-colors', isNext ? 'bg-amber-50 ring-2 ring-amber-300' : 'hover:bg-gray-50')}>
                     <motion.span animate={{ backgroundColor: isDone ? ds.blue : ds.paper, scale: isNext && !isDone ? [1, 1.12, 1] : 1 }} transition={isNext ? { scale: { duration: 1.6, repeat: Infinity } } : {}} className="relative z-10 flex h-6 w-6 flex-shrink-0 translate-x-[4px] items-center justify-center rounded-full border-2 border-doya-500">
                       {isDone && <Check className="h-3.5 w-3.5 text-white" />}

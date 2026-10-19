@@ -1,6 +1,6 @@
 // 画像生成の仕様（モデル・単価・プロンプト）
-// 従量課金のため、UIで見込み額を提示して承認を得てから /api/tenjikai/image を呼ぶ。
-// 単価は目安。実行前に Google の最新料金表で確認すること。
+// ⚠️ モデルと解像度はサーバーが決める。利用者には選ばせず、原価も見せない（2026-10-19 ユーザー指示）。
+// 単価は、サーバー側の1日の上限額（image-quota.ts）を数えるためだけに使う。目安なので、Google の料金表で確かめること。
 
 import type { Creative, CreativeKind, SiteAnalysis, BoothPlan } from './engine'
 
@@ -16,9 +16,30 @@ export interface ImageModel {
 export const USD_JPY = 150
 
 export const IMAGE_MODELS: ImageModel[] = [
-  { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', usdPerImage: { '1K': 0.134, '2K': 0.134, '4K': 0.24 }, note: '文字入りのデザインに強い。ドヤバナーAIと同じモデル' },
-  { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image', usdPerImage: { '1K': 0.039, '2K': 0.039, '4K': 0.039 }, note: '安価なラフ案向け。解像度は1K相当' },
+  { id: 'gemini-3-pro-image', label: 'Gemini 3 Pro Image', usdPerImage: { '1K': 0.134, '2K': 0.134, '4K': 0.24 }, note: '文字入りのデザインに強い。ドヤバナーAIの既定（src/lib/nanobanner.ts）と同じ ID' },
+  { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image（プレビュー名）', usdPerImage: { '1K': 0.134, '2K': 0.134, '4K': 0.24 }, note: '上の ID が使えないときの予備' },
+  { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image', usdPerImage: { '1K': 0.039, '2K': 0.039, '4K': 0.039 }, note: '最後の予備。解像度は1K相当' },
 ]
+
+/** 使う解像度（固定） */
+export const IMAGE_SIZE: ImageSize = '2K'
+
+/**
+ * 呼ぶ順番。404（廃止・未提供）のときだけ次へ進む。
+ * 2026-10-19 に本番のキーで3つとも生存を確かめた（文字だけの返事で各1回。どれも 200）。
+ *    画像モデルのエイリアス（*-latest）と gemini-3.1-flash-image は、呼んで確かめていないので鎖には入れていない。
+ *    環境変数 TENJIKAI_IMAGE_MODEL で先頭を差し替えられる。
+ */
+export function imageModelChain(): string[] {
+  const head = process.env.TENJIKAI_IMAGE_MODEL?.trim()
+  const ids = IMAGE_MODELS.map((m) => m.id)
+  return head ? [head, ...ids.filter((id) => id !== head)] : ids
+}
+
+/** 上限額を数えるための見込み額。いちばん高い単価（先頭のモデル）で数える */
+export function estimateQuotaYen(count: number) {
+  return estimateCost(IMAGE_MODELS[0].id, IMAGE_SIZE, count).totalYen
+}
 
 export function estimateCost(modelId: string, size: ImageSize, count: number) {
   const m = IMAGE_MODELS.find((x) => x.id === modelId) ?? IMAGE_MODELS[0]
@@ -71,11 +92,11 @@ export function buildBoothRenderPrompt(plan: BoothPlan, a: SiteAnalysis) {
 
 export interface ImageGenRequest {
   prompt: string
-  model: string
-  size: ImageSize
   aspectRatio: string
   count: number
+  /** 利用者が「作る」を押したこと */
   approved: true
-  expectedCostYen: number
   referencePng?: string // base64（data URLのプレフィックスなし）
+  /** 記録用の種類（creative_image / booth_render / graphic_panel） */
+  kind?: string
 }

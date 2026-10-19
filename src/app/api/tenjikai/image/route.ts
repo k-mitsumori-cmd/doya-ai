@@ -5,107 +5,151 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { IMAGE_MODELS, RATIOS, estimateCost, type ImageGenRequest } from '@/lib/tenjikai/imagegen'
+import { prisma } from '@/lib/prisma'
+import { IMAGE_SIZE, RATIOS, estimateQuotaYen, imageModelChain, type ImageGenRequest } from '@/lib/tenjikai/imagegen'
+import { perUserDailyImages, remainingImagesToday, reserveImageQuota } from '@/lib/tenjikai/image-quota'
+import { mockPanelImage } from '@/lib/tenjikai/mock-image'
 
 const MAX_COUNT = 4
 const MAX_PROMPT_CHARS = 4000
 const MAX_REFERENCE_BYTES = 4 * 1024 * 1024
-const PER_CLIENT_PER_HOUR = 10
+const JOB_KINDS = ['creative_image', 'booth_render', 'graphic_panel'] as const
 
-// 画面から送られる expectedCostYen は利用者への確認表示にすぎず、課金の防御にはならない。
-// そのためサーバー側で1日の上限額と送信元ごとの回数制限をかける（プロトタイプ用にプロセス内で保持）。
-// ログイン必須（getServerSession）。正式公開までに、利用者のプランと
-// TenjikaiGenerationJob に記録した当日の使用額で上限を判定する形に置き換える。
-const usage = { day: '', spentYen: 0 }
-const hits = new Map<string, number[]>()
+// 従量課金の API。モデルと解像度はサーバーが決める（利用者には選ばせず、原価も見せない）。
+// 生成の前にサーバー側で上限を消費する（src/lib/tenjikai/image-quota.ts）。
+// 1人あたりの枚数とサービス全体の金額を SystemSetting で数えるので、Vercel のインスタンスをまたいでも守れる。
+// 実行の記録は TenjikaiGenerationJob に残す（見込み額・結果・失敗の理由）。
 
-function dailyLimitYen() {
-  const n = Number(process.env.TENJIKAI_IMAGEGEN_DAILY_LIMIT_YEN ?? 500)
-  return Number.isFinite(n) && n > 0 ? n : 500
+const fail = (status: number, error: string) => NextResponse.json({ error }, { status })
+const enabled = () => process.env.TENJIKAI_IMAGEGEN_ENABLED === 'true'
+// 開発中の画面確認用。課金 API を呼ばずに見本の画像を返す。開発サーバー（next dev）でだけ効く
+const mockMode = () => process.env.NODE_ENV === 'development' && process.env.TENJIKAI_IMAGEGEN_MOCK === 'true'
+
+async function currentUserId() {
+  const session = await getServerSession(authOptions).catch(() => null)
+  return (session?.user as { id?: string } | undefined)?.id ?? null
 }
 
+// 画面に出す「きょう作れる残りの枚数」
+export async function GET() {
+  if (mockMode()) return NextResponse.json({ enabled: true, remaining: perUserDailyImages(), perDay: perUserDailyImages() })
+  if (!enabled()) return NextResponse.json({ enabled: false, remaining: 0, perDay: perUserDailyImages() })
+  const userId = await currentUserId()
+  if (!userId) return fail(401, 'ログインが必要です。')
+  return NextResponse.json({ enabled: true, remaining: await remainingImagesToday(userId), perDay: perUserDailyImages() })
+}
 
-// 従量課金API。以下の4つがそろったときだけ実行する。
+// 以下がそろったときだけ実行する。
 // 1. TENJIKAI_IMAGEGEN_ENABLED=true（明示的に有効化。本番では未設定のまま＝無効）
 // 2. ログインしている
 // 3. GEMINI_API_KEY が設定されている
-// 4. リクエストに approved: true と、サーバー側の見積と一致する expectedCostYen がある
+// 4. リクエストに approved: true がある（利用者が「作る」を押した）
 export async function POST(req: NextRequest) {
-  if (process.env.TENJIKAI_IMAGEGEN_ENABLED !== 'true') {
-    return NextResponse.json({ error: '画像生成は無効です。TENJIKAI_IMAGEGEN_ENABLED=true を設定すると有効になります。' }, { status: 403 })
-  }
-  const session = await getServerSession(authOptions)
-  const userId = (session?.user as { id?: string } | undefined)?.id
-  if (!userId) return NextResponse.json({ error: 'ログインが必要です。' }, { status: 401 })
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'GEMINI_API_KEY が設定されていません。' }, { status: 500 })
+  const mock = mockMode()
+  if (!mock && !enabled()) return fail(403, '画像の生成は準備中です。')
 
   let body: ImageGenRequest
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'リクエストの形式が正しくありません。' }, { status: 400 })
+    return fail(400, 'リクエストの形式が正しくありません。')
   }
-
   if (typeof body.prompt !== 'string' || !body.prompt.trim() || body.prompt.length > MAX_PROMPT_CHARS) {
-    return NextResponse.json({ error: `プロンプトは1〜${MAX_PROMPT_CHARS}文字で指定してください。` }, { status: 400 })
+    return fail(400, `指示文は1〜${MAX_PROMPT_CHARS}文字にしてください。`)
   }
-  if (!(RATIOS as readonly string[]).includes(body.aspectRatio)) return NextResponse.json({ error: '対応していないアスペクト比です。' }, { status: 400 })
+  if (!(RATIOS as readonly string[]).includes(body.aspectRatio)) return fail(400, '対応していない縦横比です。')
   if (body.referencePng !== undefined && (typeof body.referencePng !== 'string' || body.referencePng.length * 0.75 > MAX_REFERENCE_BYTES || !/^[A-Za-z0-9+/=]+$/.test(body.referencePng))) {
-    return NextResponse.json({ error: '参照画像は4MB以下のPNGにしてください。' }, { status: 400 })
+    return fail(400, '参照画像は4MB以下のPNGにしてください。')
   }
-  if (body.approved !== true) return NextResponse.json({ error: '見込み額の承認がありません。' }, { status: 400 })
-  if (!IMAGE_MODELS.some((m) => m.id === body.model)) return NextResponse.json({ error: '対応していないモデルです。' }, { status: 400 })
-  if (!['1K', '2K', '4K'].includes(body.size)) return NextResponse.json({ error: '解像度は 1K / 2K / 4K から指定してください。' }, { status: 400 })
+  if (body.approved !== true) return fail(400, '作成の確認がありません。')
   const count = Math.min(Math.max(1, Math.floor(body.count || 1)), MAX_COUNT)
-  const est = estimateCost(body.model, body.size, count)
-  if (est.totalYen !== body.expectedCostYen) {
-    return NextResponse.json({ error: `見込み額が一致しません（サーバー計算 ¥${est.totalYen}）。画面を更新して再度承認してください。` }, { status: 409 })
+
+  if (mock) return NextResponse.json({ images: Array.from({ length: count }, (_, i) => mockPanelImage(body.aspectRatio, i)), mock: true })
+
+  const userId = await currentUserId()
+  if (!userId) return fail(401, 'ログインが必要です。')
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY
+  if (!apiKey) {
+    console.error('[tenjikai/image] GEMINI_API_KEY is not set')
+    return fail(500, '画像を作れません。時間をおいて、もう一度お試しください。')
   }
 
-  const now = Date.now()
-  const key = userId
-  const recent = (hits.get(key) ?? []).filter((t) => now - t < 3600_000)
-  if (recent.length >= PER_CLIENT_PER_HOUR) return NextResponse.json({ error: '1時間あたりの生成回数の上限に達しました。' }, { status: 429 })
-  const today = new Date(now).toISOString().slice(0, 10)
-  if (usage.day !== today) {
-    usage.day = today
-    usage.spentYen = 0
+  const kind = (JOB_KINDS as readonly string[]).includes(String(body.kind)) ? String(body.kind) : 'creative_image'
+  const costYen = estimateQuotaYen(count)
+
+  // 上限の消費（DB が使えなければ実行しない）
+  const quota = await reserveImageQuota(userId, count, costYen)
+  if (!quota.ok) return fail(quota.status, quota.message)
+
+  // 実行の記録。記録できないときは実行しない（課金の跡が残らないため）
+  const chain = imageModelChain()
+  let jobId: string
+  try {
+    const job = await prisma.tenjikaiGenerationJob.create({
+      data: { userId, kind, model: chain[0], size: IMAGE_SIZE, count, estimatedCostYen: costYen, approvedAt: new Date() },
+      select: { id: true },
+    })
+    jobId = job.id
+  } catch (e) {
+    console.error('[tenjikai/image] failed to record job', { code: (e as { code?: string })?.code ?? 'unknown' })
+    return fail(503, '実行の記録を残せないため、画像を作れません。時間をおいて、もう一度お試しください。')
   }
-  if (usage.spentYen + est.totalYen > dailyLimitYen()) {
-    return NextResponse.json({ error: `本日の画像生成の上限（¥${dailyLimitYen()}）を超えるため実行しません。` }, { status: 429 })
-  }
-  hits.set(key, [...recent, now])
-  usage.spentYen += est.totalYen
+  const finish = (data: { status: 'done' | 'failed'; imageCount: number; errorCode?: string; model?: string }) =>
+    prisma.tenjikaiGenerationJob.update({ where: { id: jobId }, data: { ...data, finishedAt: new Date() } }).catch((e) => {
+      console.error('[tenjikai/image] failed to update job', { jobId, code: (e as { code?: string })?.code ?? 'unknown' })
+    })
 
   const parts: unknown[] = [{ text: body.prompt }]
   if (body.referencePng) parts.push({ inline_data: { mime_type: 'image/png', data: body.referencePng } })
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${body.model}:generateContent`
   const images: string[] = []
-  for (let i = 0; i < count; i++) {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts }],
-        generationConfig: {
-          responseModalities: ['IMAGE'],
-          imageConfig: body.model.includes('pro') ? { aspectRatio: body.aspectRatio, imageSize: body.size } : { aspectRatio: body.aspectRatio },
-        },
-      }),
-    })
-    if (!res.ok) {
-      const text = await res.text()
-      return NextResponse.json({ error: `画像生成に失敗しました（${res.status}）`, detail: text.slice(0, 500), images }, { status: 502 })
+  let used = chain[0]
+  try {
+    for (let i = 0; i < count; i++) {
+      let res: Response | null = null
+      // 404（廃止・未提供の ID）のときだけ、次のモデルを試す
+      for (let m = chain.indexOf(used); m < chain.length; m++) {
+        used = chain[m]
+        res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${used}:generateContent`, {
+          signal: AbortSignal.timeout(120_000),
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts }],
+            generationConfig: {
+              responseModalities: ['IMAGE'],
+              imageConfig: used.includes('pro') ? { aspectRatio: body.aspectRatio, imageSize: IMAGE_SIZE } : { aspectRatio: body.aspectRatio },
+            },
+          }),
+        })
+        if (res.status !== 404) break
+        console.warn('[tenjikai/image] model unavailable, trying next', { jobId, model: used })
+      }
+      if (!res || !res.ok) {
+        // 応答の本文はサーバーのログにだけ残す。利用者には日本語の文言だけを返す
+        const text = res ? await res.text().catch(() => '') : ''
+        console.error('[tenjikai/image] upstream error', { jobId, model: used, status: res?.status, body: text.slice(0, 500) })
+        await finish({ status: 'failed', imageCount: images.length, errorCode: `upstream_${res?.status ?? 'none'}`, model: used })
+        return fail(502, '画像を作れませんでした。時間をおいて、もう一度お試しください。')
+      }
+      const json = await res.json()
+      const found = json?.candidates?.[0]?.content?.parts?.find((p: any) => p?.inlineData?.data || p?.inline_data?.data)
+      const data = found?.inlineData?.data ?? found?.inline_data?.data
+      const mime = found?.inlineData?.mimeType ?? found?.inline_data?.mime_type ?? 'image/png'
+      if (data) images.push(`data:${mime};base64,${data}`)
     }
-    const json = await res.json()
-    const found = json?.candidates?.[0]?.content?.parts?.find((p: any) => p?.inlineData?.data || p?.inline_data?.data)
-    const data = found?.inlineData?.data ?? found?.inline_data?.data
-    const mime = found?.inlineData?.mimeType ?? found?.inline_data?.mime_type ?? 'image/png'
-    if (data) images.push(`data:${mime};base64,${data}`)
+  } catch (e) {
+    console.error('[tenjikai/image] upstream request failed', { jobId, kind: e instanceof Error ? e.name : 'unknown' })
+    await finish({ status: 'failed', imageCount: images.length, errorCode: 'network', model: used })
+    return fail(502, '画像を作れませんでした。時間をおいて、もう一度お試しください。')
   }
 
-  // 本番では Supabase Storage に保存し、TenjikaiCreative.imageUrl と TenjikaiGenerationJob を更新する
-  return NextResponse.json({ images, costYen: est.totalYen, model: body.model, size: body.size })
+  if (images.length === 0) {
+    console.error('[tenjikai/image] upstream returned no image', { jobId })
+    await finish({ status: 'failed', imageCount: 0, errorCode: 'no_image', model: used })
+    return fail(502, '画像を作れませんでした。内容を変えて、もう一度お試しください。')
+  }
+  await finish({ status: 'done', imageCount: images.length, model: used })
+  // 画像の保存（Supabase Storage と TenjikaiCreative.imageUrl）は、プロジェクトの保存と一緒に入れる
+  return NextResponse.json({ images })
 }
