@@ -96,7 +96,7 @@ COMMIT;
 ### ブランチとコミット
 
 - ブランチ: `ui-next/doyapower-ledger`（`origin/main` の `bd19215` から）。main には入れていない
-- コミット: このブランチの先頭（`feat(doya-power): 会社ごとのドヤパワーの台帳…`）
+- コミット: `0665565`（台帳の本体）と、その次の build の結果を書き足したコミット
 
 ### モデル（`prisma/schema.prisma`）
 
@@ -142,7 +142,7 @@ COMMIT;
 | `node scripts/security-regression/verify-doya-power-ledger.cjs` | 0（4 件 PASS） |
 | `npx prisma validate` / `npx prisma generate` | 0 |
 | `npx prisma migrate diff --from-schema-datamodel <main の schema> --to-schema-datamodel prisma/schema.prisma --script` | 0（上の SQL の元。新しい表3つだけ） |
-| `UI_NEXT_ROLLOUT=preview UI_PREVIEW_EMAILS=k-mitsumori@surisuta.jp UI_SHELL_SERVICES=all GIT_DIR=/nonexistent npm run build` | BUILD_RESULT |
+| `UI_NEXT_ROLLOUT=preview UI_PREVIEW_EMAILS=k-mitsumori@surisuta.jp UI_SHELL_SERVICES=all GIT_DIR=/nonexistent npm run build` | **0**（prisma generate → test:security（ドヤパワーの4件を含む）→ 各 tsx --test（test:doyapower 13件）→ `tsc --noEmit` → `next build` の Compiled successfully） |
 
 テストは git のコマンドを使わず、`process.env` の既定値に頼らない（時計は引数で渡す）。本番DB・Stripe・料金・有料の外部 API には触れていない。
 
