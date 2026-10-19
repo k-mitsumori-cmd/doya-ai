@@ -6,7 +6,7 @@
 // ⚠️ ToolSwitcherMenu を必ず含める（他サービスへ移れなくなる）。
 import React, { memo, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { UserCheck, Users, CreditCard, Settings } from 'lucide-react'
+import { UserCheck } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { mensetsuTheme } from '@/components/sidebar/themes'
 import {
@@ -24,6 +24,8 @@ import {
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { resolveShellIcon } from '@/components/shell/icons'
+import { MENSETSU_NAV } from '@/lib/mensetsu/nav'
 
 const BASE = '/mensetsu'
 
@@ -38,12 +40,12 @@ function MensetsuSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const NAV: NavItem[] = [
-    { href: BASE, label: '面接を用意する', icon: UserCheck, hot: true },
-    { href: BASE + '/compare', label: '候補者を比較', icon: Users },
-    { href: BASE + '/settings', label: '設定', icon: Settings },
-    { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
-  ]
+  const NAV: NavItem[] = MENSETSU_NAV.map((item, i) => ({
+    href: item.href,
+    label: item.label,
+    icon: resolveShellIcon(item.icon),
+    ...(i === 0 ? { hot: true } : {}),
+  }))
 
   const isActive = (href: string) => {
     if (href === BASE) return pathname === BASE

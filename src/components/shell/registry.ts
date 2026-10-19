@@ -51,6 +51,8 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'aio', basePath: '/aio', inShell: (p) => /^\/aio\/[^/]+/.test(p) && !p.startsWith('/aio/pricing') && !p.startsWith('/aio/invite') },
   // AI商談の招待の受諾画面（/aishodan/invite/<token>）は枠の外（guest-path.ts でも外れる）
   { id: 'aishodan', basePath: '/aishodan', inShell: (p) => !p.startsWith('/aishodan/invite') },
+  // 面接の画面（/mensetsu/live/<token>）と招待（/mensetsu/invite/<token>）は候補者・招待者が開く。guest-path.ts でも外れている
+  { id: 'mensetsu', basePath: '/mensetsu', inShell: (p) => !p.startsWith('/mensetsu/live') && !p.startsWith('/mensetsu/invite') },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */

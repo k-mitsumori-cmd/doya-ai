@@ -99,7 +99,7 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["AI別の状況を見る", "競合シェアを比較", "引用元を確認"],
   },
   mensetsu: {
-    load: () => import("@/app/mensetsu/mocks"),
+    load: () => import("@/app/(shell)/mensetsu/mocks"),
     screens: ["MensetsuLiveMock", "MensetsuScoreMock", "MensetsuGuardMock"],
     labels: ["面接を進める", "評価を確認", "質問の基準を見る"],
   },
