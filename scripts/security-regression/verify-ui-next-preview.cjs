@@ -63,7 +63,7 @@ const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.in
     assert.match(off.headers.get('set-cookie')||'',/doya_ui_next=;.*Max-Age=0/i);
   });
   await check('Preview API never redirects to another site',async()=>{
-    for(const next of ['https://evil.example/','//evil.example/','/\\evil.example']){
+    for(const next of ['https://evil.example/','//evil.example/','/\\evil.example','/\t/evil.example','/\n/evil.example']){
       const res=await loadRoute(ALLOWED).GET(req('?on=1&next='+encodeURIComponent(next)));
       assert.equal(new URL(res.headers.get('location')).origin,'https://doya-ai.example.invalid',next);
     }
