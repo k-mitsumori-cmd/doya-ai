@@ -77,9 +77,19 @@ export async function isUiNext(): Promise<boolean> {
 
 /** 切り替えのあとに戻す先。同じサイトの中のパスだけを許す（ほかのサイトへ飛ばさない） */
 export function safeReturnPath(raw: string | null | undefined, fallback = '/home'): string {
-  if (!raw) return fallback
-  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return fallback
-  if (/[\r\n]/.test(raw)) return fallback
-  if (raw.startsWith('/api/')) return fallback
-  return raw
+  if (!raw || !raw.startsWith('/')) return fallback
+  // ⚠️ 制御文字は URL の読み取りで消されることがある（/\t/evil → //evil）。含むものは使わない
+  if (/[\u0000-\u001F\u007F\\]/.test(raw)) return fallback
+  // 実際に移るときと同じ読み方で読み、同じサイトのままかを確かめる
+  const base = 'https://return-path.invalid'
+  let u: URL
+  try {
+    u = new URL(raw, base)
+  } catch {
+    return fallback
+  }
+  if (u.origin !== base) return fallback
+  const path = u.pathname + u.search
+  if (path.startsWith('/api/') || path.startsWith('//')) return fallback
+  return path
 }

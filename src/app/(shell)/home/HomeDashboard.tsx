@@ -14,8 +14,11 @@ import { SHELL_GROUPS } from '@/components/shell/tools'
 import { ShellIcon } from '@/components/shell/icons'
 import { AGENT_SUGGESTIONS, planAgent, type AgentPlan } from './agent'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from './intents'
+import { todayItems } from './today'
 import { CountUp } from '@/components/ds/motion'
 import { AreaChart, Bars } from '@/components/ds/charts'
+import { ShellCompanyTag } from '@/components/shell/ShellCompanyCard'
+import { useAccountCompany } from '@/components/shell/company-context'
 import styles from './home.module.css'
 
 const man = (n: number) => {
@@ -81,6 +84,8 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
   return (
     <section className={styles.agent} aria-label="やりたいことを頼む">
       <p className={styles.agentGreeting}>{greeting}</p>
+      {/* 今の会社（UI 品質 B-2）。組織が無ければ何も出さない */}
+      <ShellCompanyTag className={styles.agentCompany} />
       <h1 className={styles.agentTitle}>今日は、何をしますか？</h1>
       <form
         className={styles.ask}
@@ -186,6 +191,47 @@ function Kpi({ icon: Icon, label, value, sub, href, muted }: { icon: typeof Wall
       <span className={styles.kpiValue}>{value === null ? '—' : <CountUp value={value} format={man} />}</span>
       {sub ? <span className={styles.kpiSub}>{sub}</span> : null}
     </Link>
+  )
+}
+
+/* ---------------- 今日やること（UI 品質 S-10） ---------------- */
+
+/** 会社がまだ登録されていない人への、最初の案内（UI 品質 S-9）。行き先は仮（会社の正本ができたら差し替える） */
+function CompanySetupNote() {
+  const company = useAccountCompany()
+  if (company !== null) return null
+  return (
+    <section className={styles.setup} aria-label="会社情報の登録">
+      <div>
+        <p className={styles.setupTitle}>はじめに、会社情報を登録してください</p>
+        <p className={styles.setupBody}>会社の名前を登録すると、左下とこの画面に表示されます。各ツールの組織もこの会社として使えます。</p>
+      </div>
+      <Link href="/sfa" className={styles.setupAction}>会社情報を登録する</Link>
+    </section>
+  )
+}
+
+function TodayCard({ summary }: { summary: HomeSummary }) {
+  const items = todayItems(summary)
+  return (
+    <section className={styles.today} aria-labelledby="home-today">
+      <h2 id="home-today" className={styles.todayTitle}>今日やること</h2>
+      {items.length ? (
+        <ul className={styles.todayList}>
+          {items.map((i) => (
+            <li key={i.key}>
+              <Link href={i.href} className={styles.todayItem} data-urgent={i.urgent ? 'true' : undefined}>
+                <span className={styles.todayDot} aria-hidden />
+                <span>{i.label}</span>
+                <span className={styles.todayGo} aria-hidden>開く</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className={styles.todayEmpty}>今日、急いで手を付けるものはありません。</p>
+      )}
+    </section>
   )
 }
 
@@ -351,6 +397,9 @@ export default function HomeDashboard({ initial }: { initial: HomeSummary }) {
     <div className={styles.page}>
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
       <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
+
+      <CompanySetupNote />
+      <TodayCard summary={s} />
 
       <header className={styles.hero}>
         <div>
