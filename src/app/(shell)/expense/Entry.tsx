@@ -7,15 +7,20 @@ import toast, { Toaster } from 'react-hot-toast'
 import { startGoogleSignIn } from '@/lib/use-navigation-submission'
 import tokens from '@/components/ds/tokens.module.css'
 import { Btn, Field, inputCls, Loading } from '@/components/expense/ui'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { EntryNext } from '@/components/expense/next'
 
-export default function ExpenseEntry() {
+/** known: サーバーで「組織が無い」と確かめ済み（新しい見た目のとき）。組織の確認の読み込みを挟まない */
+export default function ExpenseEntry({ known = false }: { known?: boolean } = {}) {
   const router = useRouter()
-  const [checking, setChecking] = useState(true)
+  const uiNext = useUiNext()
+  const [checking, setChecking] = useState(!known)
   const [orgName, setOrgName] = useState('')
   const [memberName, setMemberName] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
+    if (known) return
     fetch('/api/expense/usage', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -24,7 +29,7 @@ export default function ExpenseEntry() {
         else setChecking(false)
       })
       .catch(() => setChecking(false))
-  }, [router])
+  }, [router, known])
 
   const create = async () => {
     if (!orgName.trim() || !memberName.trim() || busy) return
@@ -46,6 +51,23 @@ export default function ExpenseEntry() {
       toast.error((e as Error).message)
       setBusy(false)
     }
+  }
+
+  // 新しい見た目（チェックリスト §5.1）: キービジュアルと「3ステップで始める」の案内（S-69）
+  if (uiNext && !checking) {
+    return (
+      <>
+        <Toaster position="top-center" />
+        <EntryNext
+          orgName={orgName}
+          memberName={memberName}
+          busy={busy}
+          onOrgName={setOrgName}
+          onMemberName={setMemberName}
+          onCreate={create}
+        />
+      </>
+    )
   }
 
   if (checking) {

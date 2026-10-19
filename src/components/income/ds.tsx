@@ -69,7 +69,8 @@ export function Card({ title, right, children, className = '', flush = false }: 
 
 // ---------- StatTile ----------
 
-export function StatTile({ label, value, unit, sub, tone = 'default' }: { label: string; value: string; unit?: string; sub?: string; tone?: 'default' | 'bad' | 'ok' }) {
+// value は文字列のほか、数字の動き（ds/motion の CountUp）も渡せる
+export function StatTile({ label, value, unit, sub, tone = 'default' }: { label: string; value: ReactNode; unit?: string; sub?: string; tone?: 'default' | 'bad' | 'ok' }) {
   return (
     <div className={`${s.stat} ${tone === 'bad' ? s.toneBad : tone === 'ok' ? s.toneOk : ''}`.trim()}>
       <p className={s.statLabel} style={{ margin: 0 }}>{label}</p>
