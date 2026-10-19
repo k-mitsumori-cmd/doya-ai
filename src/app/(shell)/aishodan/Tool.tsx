@@ -10,7 +10,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import OrgSwitcher, { clearSelectedOrg, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
-import { fetchOrgJson } from '@/lib/org-fetch'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import AishodanLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
@@ -20,6 +19,7 @@ import { appendAishodanPage, parseAishodanPage } from '@/lib/aishodan/list-pages
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button, EmptyState, FirstSteps, Skeleton, StatTile, ToolHero } from '@/components/ds'
 import { Stagger, StaggerItem } from '@/components/ds/motion'
+import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, fetchAishodanJson, type AishodanFailure } from '@/components/aishodan/failure'
 
 interface Product {
   id: string
@@ -97,16 +97,38 @@ export default function AishodanTool() {
   const [url, setUrl] = useState('')
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<string | null>(null)
-  const [importIssue, setImportIssue] = useState<{ message: string; upgradeUrl?: string } | null>(null)
+  const [importIssue, setImportIssue] = useState<{ message: string; upgradeUrl?: string; failure?: AishodanFailure } | null>(null)
 
   const [issuing, setIssuing] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
   const [error, setError] = useState('')
+  // 新しい見た目だけ: サーバーの文の代わりに出す「何が起きたか・どうすればよいか」（UI 品質 S-20）
+  const [loadFailure, setLoadFailure] = useState<AishodanFailure | null>(null)
+  const [actionFailure, setActionFailure] = useState<AishodanFailure | null>(null)
+  useEffect(() => {
+    if (!error) setActionFailure(null)
+  }, [error])
+  /** 新しい見た目では利用者向けの文に直す。今までの見た目は、今までどおりサーバーの文を出す */
+  function reportFailure(e: unknown, subject: string, fallback: string) {
+    if (!uiNext) {
+      notifyError(setError, e instanceof Error ? e.message : fallback)
+      return
+    }
+    const f = describeAishodanFailure(failureStatus(e), subject, {
+      serverMessage: e instanceof AishodanHttpError ? e.message : undefined,
+      limit: e instanceof AishodanHttpError && e.code === 'LIMIT_REACHED',
+    })
+    setActionFailure(f)
+    notifyError(setError, f.what)
+  }
+  // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠（今までの見た目では何も足さない）
+  const tap = uiNext ? AISHODAN_TAP : ''
 
   const load = useCallback(async () => {
     const version = ++loadVersion.current
     setLoading(true)
     setError('')
+    setLoadFailure(null)
     setNeedsLogin(false)
     setOrg(null)
     setProducts([])
@@ -122,22 +144,23 @@ export default function AishodanTool() {
         if (version === loadVersion.current) setNeedsLogin(true)
         return
       }
-      if (!r.ok) throw new Error('組織一覧を取得できませんでした')
+      if (!r.ok) throw new AishodanHttpError('組織一覧を取得できませんでした', r.status)
       let d = await r.json()
       const memberships = Array.isArray(d.memberships) ? d.memberships : []
       if (reconcileSelectedOrg('aishodan', memberships)) {
         const scoped = await fetch(withOrg('aishodan', '/api/aishodan/organizations'))
-        if (!scoped.ok) throw new Error('選択中の組織を確認できませんでした')
+        if (!scoped.ok) throw new AishodanHttpError('選択中の組織を確認できませんでした', scoped.status)
         const scopedData = await scoped.json()
         if (scopedData?.current) d = scopedData
         else clearSelectedOrg('aishodan')
       }
       if (d.current) {
         const [pr, rr, sr, st] = await Promise.all([
-          fetchOrgJson(withOrg('aishodan', '/api/aishodan/products')),
-          fetchOrgJson(withOrg('aishodan', '/api/aishodan/rooms')),
-          fetchOrgJson(withOrg('aishodan', '/api/aishodan/sessions')),
-          fetchOrgJson<Stats>(withOrg('aishodan', '/api/aishodan/stats')),
+          // fetchOrgJson と同じ動き。失敗したときに応答の状態（403・上限など）も分かる
+          fetchAishodanJson(withOrg('aishodan', '/api/aishodan/products')),
+          fetchAishodanJson(withOrg('aishodan', '/api/aishodan/rooms')),
+          fetchAishodanJson(withOrg('aishodan', '/api/aishodan/sessions')),
+          fetchAishodanJson<Stats>(withOrg('aishodan', '/api/aishodan/stats')),
         ])
         if (!Array.isArray(sr.sessions)) {
           throw new Error('組織のデータを確認できませんでした')
@@ -159,11 +182,16 @@ export default function AishodanTool() {
         setMemberships(memberships)
       }
     } catch (e) {
-      if (version === loadVersion.current) notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (version === loadVersion.current) {
+        // 新しい見た目では、画面にもトーストにも、サーバーの文ではなく状態に合わせた文を出す
+        const failure = describeAishodanFailure(failureStatus(e), '商談のデータを読み込めませんでした。')
+        setLoadFailure(failure)
+        notifyError(setError, uiNext ? failure.what : e instanceof Error ? e.message : '読み込みに失敗しました')
+      }
     } finally {
       if (version === loadVersion.current) setLoading(false)
     }
-  }, [])
+  }, [uiNext])
 
   async function loadMore(kind: 'products' | 'rooms') {
     const cursor = kind === 'products' ? productCursor : roomCursor
@@ -172,7 +200,7 @@ export default function AishodanTool() {
     setLoadingMore(kind)
     setError('')
     try {
-      const data = await fetchOrgJson(withOrg('aishodan', `/api/aishodan/${kind}?cursor=${encodeURIComponent(cursor)}`))
+      const data = await fetchAishodanJson(withOrg('aishodan', `/api/aishodan/${kind}?cursor=${encodeURIComponent(cursor)}`))
       if (version !== loadVersion.current) return
       if (kind === 'products') {
         const page = parseAishodanPage<Product>(data, kind, 100)
@@ -184,7 +212,7 @@ export default function AishodanTool() {
         setRoomCursor(page.nextCursor)
       }
     } catch (e) {
-      if (version === loadVersion.current) notifyError(setError, e instanceof Error ? e.message : '続きを取得できませんでした')
+      if (version === loadVersion.current) reportFailure(e, '続きを読み込めませんでした。', '続きを取得できませんでした')
     } finally {
       if (version === loadVersion.current) setLoadingMore(null)
     }
@@ -203,7 +231,9 @@ export default function AishodanTool() {
       body: JSON.stringify({ name: orgName.trim() }),
     })
     if (!r.ok) {
-      setError((await r.json().catch(() => ({})))?.error || '作成に失敗しました')
+      const message = (await r.json().catch(() => ({})))?.error || '作成に失敗しました'
+      if (uiNext) setActionFailure(describeAishodanFailure(r.status, '組織を作成できませんでした。', { serverMessage: message }))
+      setError(message)
       return
     }
     await load()
@@ -225,15 +255,19 @@ export default function AishodanTool() {
       const d = await r.json()
       if (!r.ok) {
         if (r.status === 402 && d?.code === 'LIMIT_REACHED' && d?.upgradeUrl === '/aishodan/pricing') upgradeUrl = d.upgradeUrl
-        throw new Error(d?.error || '取り込みに失敗しました')
+        throw new AishodanHttpError(d?.error || '取り込みに失敗しました', r.status, d?.code)
       }
       setImportResult(`「${d.product.name}」を取り込みました（${d.pageCount}ページ / ${d.chunkCount}件のナレッジ）`)
       setUrl('')
       await load()
     } catch (e) {
       const message = e instanceof Error ? e.message : '取り込みに失敗しました'
-      setImportIssue({ message, upgradeUrl })
-      notifyError(setError, message)
+      // 新しい見た目では、サーバーの文ではなく「何が起きたか・どうすればよいか」を出す（上限なら料金プランへ）
+      const failure = uiNext
+        ? describeAishodanFailure(failureStatus(e), '商材を取り込めませんでした。', { serverMessage: e instanceof AishodanHttpError ? message : undefined, limit: !!upgradeUrl })
+        : undefined
+      setImportIssue({ message, upgradeUrl, failure })
+      notifyError(setError, failure ? failure.what : message)
     } finally {
       setImporting(false)
     }
@@ -249,10 +283,10 @@ export default function AishodanTool() {
         body: JSON.stringify({ scenarioId }),
       })
       const d = await r.json()
-      if (!r.ok) throw new Error(d?.error || 'ルームを発行できませんでした')
+      if (!r.ok) throw new AishodanHttpError(d?.error || 'ルームを発行できませんでした', r.status, d?.code)
       await load()
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : 'ルームを発行できませんでした')
+      reportFailure(e, '商談URLを発行できませんでした。', 'ルームを発行できませんでした')
     } finally {
       setIssuing(false)
     }
@@ -278,11 +312,11 @@ export default function AishodanTool() {
         method: 'DELETE',
       })
       const d = await r.json().catch(() => ({}))
-      if (!r.ok) throw new Error(d?.error || '削除できませんでした')
+      if (!r.ok) throw new AishodanHttpError(d?.error || '削除できませんでした', r.status, d?.code)
       await load()
       setImportResult(d.archived ? `「${prod.name}」を保管しました。商談記録は残り、商談URLの公開は停止しました。` : `「${prod.name}」を削除しました。`)
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '削除できませんでした')
+      reportFailure(e, '商材を削除・保管できませんでした。', '削除できませんでした')
     } finally {
       setDeletingId('')
     }
@@ -294,6 +328,7 @@ export default function AishodanTool() {
    */
   async function deleteRoom(room: Room) {
     if (room._count.sessions > 0) {
+      if (uiNext) setActionFailure({ kind: 'other', what: `この商談URLには記録が${room._count.sessions}件あるため削除できません。`, how: '「公開を停止」を押すと、新しく開かれなくなります。記録は残ります。' })
       notifyError(setError, `この商談URLには記録が${room._count.sessions}件あるため削除できません。「公開を停止」で新規アクセスを止めてください。`)
       return
     }
@@ -318,10 +353,10 @@ export default function AishodanTool() {
         method: 'DELETE',
       })
       const d = await r.json().catch(() => ({}))
-      if (!r.ok) throw new Error(d?.error || '削除できませんでした')
+      if (!r.ok) throw new AishodanHttpError(d?.error || '削除できませんでした', r.status, d?.code)
       await load()
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '削除できませんでした')
+      reportFailure(e, '商談URLを削除できませんでした。', '削除できませんでした')
     } finally {
       setDeletingId('')
     }
@@ -353,6 +388,7 @@ export default function AishodanTool() {
       setCopied(token)
       setTimeout(() => setCopied(null), 2000)
     } catch {
+      if (uiNext) setActionFailure({ kind: 'other', what: 'URLをコピーできませんでした。', how: 'URLの文字を長押し（または選択）して、コピーしてください。' })
       notifyError(setError, 'コピーできませんでした。URLを選択してコピーしてください。')
     }
   }
@@ -382,6 +418,18 @@ export default function AishodanTool() {
     return <AishodanLp />
   }
 
+  if (!org && error && uiNext) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-8 sm:py-12">
+        <AishodanFailureNotice
+          failure={loadFailure ?? describeAishodanFailure(0, '商談のデータを読み込めませんでした。')}
+          onRetry={() => void load()}
+          retryLabel="もう一度読み込む"
+        />
+      </div>
+    )
+  }
+
   if (!org && error) {
     return <div role="alert" className="mx-auto max-w-md p-8 text-center text-sm font-semibold text-rose-700">{error}<button type="button" onClick={() => void load()} className="mt-4 block w-full rounded-lg bg-blue-600 px-4 py-2 font-bold text-white">再読み込みする</button></div>
   }
@@ -389,22 +437,31 @@ export default function AishodanTool() {
   if (!org) {
     return (
       <div className={uiNext ? 'flex items-center justify-center px-4 py-8 sm:py-12' : 'flex min-h-screen items-center justify-center bg-slate-50 px-4'}>
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+        <div className={`w-full max-w-md rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 ${uiNext ? 'p-5 sm:p-8' : 'p-8'}`}>
           {uiNext ? <h2 className="text-xl font-bold text-slate-900">AI商談をはじめましょう</h2> : <h1 className="text-xl font-bold text-slate-900">ドヤAI商談</h1>}
           <p className="mt-2 text-sm leading-relaxed text-slate-600 font-semibold">
             はじめに、商談を行う組織を作成してください。
           </p>
+          {/* 新しい見た目: 入力欄に名前を付け、エラーは入力欄と結び付けて読み上げる（UI 品質 a11y） */}
+          {uiNext && <label htmlFor="aishodan-org-name" className="mt-5 block text-xs font-bold text-slate-600">組織名</label>}
           <input
+            id={uiNext ? 'aishodan-org-name' : undefined}
             value={orgName}
             onChange={(e) => setOrgName(e.target.value)}
-            placeholder="株式会社スリスタ"
-            className="mt-5 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+            placeholder={uiNext ? '見本 株式会社' : '株式会社スリスタ'}
+            aria-invalid={uiNext && error ? true : undefined}
+            aria-describedby={uiNext && error ? 'aishodan-org-error' : undefined}
+            className={`${uiNext ? 'mt-1.5' : 'mt-5'} w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold`}
           />
-          {error && <p className="mt-3 text-sm text-rose-600 font-semibold">{error}</p>}
+          {error && uiNext ? (
+            <p id="aishodan-org-error" role="alert" className="mt-3 text-sm text-rose-600 font-semibold">
+              {actionFailure ? `${actionFailure.what}${actionFailure.how}` : error}
+            </p>
+          ) : error && <p className="mt-3 text-sm text-rose-600 font-semibold">{error}</p>}
           <button
             onClick={createOrg}
             disabled={!orgName.trim()}
-            className="mt-4 w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
+            className={`mt-4 w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0${tap}`}
           >
             組織を作成する
           </button>
@@ -463,7 +520,12 @@ export default function AishodanTool() {
       )}
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
+        {/* 新しい見た目: サーバーの文ではなく「何が起きたか・どうすればよいか」（商材の取り込みの失敗は、取り込み欄の下に出す） */}
+        {uiNext ? (
+          actionFailure && <AishodanFailureNotice failure={actionFailure} />
+        ) : (
+          error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>
+        )}
 
         {/* 指標 */}
         {uiNext && stats && stats.total > 0 && (
@@ -484,7 +546,7 @@ export default function AishodanTool() {
         )}
 
         {/* 1. 商材を取り込む */}
-        <section id="aishodan-import" className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <section id="aishodan-import" className={`rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 ${uiNext ? 'p-4 sm:p-6' : 'p-6'}`}>
           <h2 className="text-base font-bold text-slate-900">1. 商材を取り込む</h2>
           <p className="mt-1 text-sm text-slate-600 font-semibold">
             自社サービスのURLを入力すると、サイトを読み取ってナレッジを作り、既定の商談シナリオまで用意します。
@@ -496,17 +558,25 @@ export default function AishodanTool() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com/service"
-              className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+              type={uiNext ? 'url' : undefined}
+              inputMode={uiNext ? 'url' : undefined}
+              aria-invalid={uiNext && importIssue ? true : undefined}
+              aria-describedby={uiNext && importIssue ? 'aishodan-import-issue' : undefined}
+              className={`flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold${uiNext ? ' min-w-0' : ''}`}
             />
             <button
               onClick={importProduct}
               disabled={importing || !url.trim()}
-              className="rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
+              className={`rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0${uiNext ? ` whitespace-nowrap motion-reduce:transition-none motion-reduce:hover:translate-y-0${tap}` : ''}`}
             >
               {importing ? '取り込み中...' : '取り込む'}
             </button>
           </div>
-          {importIssue && (
+          {importIssue?.failure && uiNext ? (
+            <div id="aishodan-import-issue" className="mt-3">
+              <AishodanFailureNotice failure={importIssue.failure} />
+            </div>
+          ) : importIssue && (
             <div role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
               <p>{importIssue.message}</p>
               {importIssue.upgradeUrl && <Link href={importIssue.upgradeUrl} className="mt-2 inline-block text-blue-700 underline">プロプランの料金と30日間無料の対象条件を確認する</Link>}
@@ -527,18 +597,18 @@ export default function AishodanTool() {
                       ナレッジ {p._count.chunks}件 / {p._count.sources}ページ
                     </p>
                   </div>
-                  <div className="flex shrink-0 gap-2">
+                  <div className={uiNext ? 'flex flex-wrap gap-2' : 'flex shrink-0 gap-2'}>
                     {p.scenarios[0] && (
                       <>
                         <Link
                           href={`/aishodan/scenarios/${p.scenarios[0].id}`}
-                          className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold"
+                          className={`rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold${uiNext ? ` inline-flex items-center whitespace-nowrap${tap}` : ''}`}
                         >
                           シナリオを編集
                         </Link>
                         <Link
                           href="/aishodan/preview"
-                          className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold"
+                          className={`rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold${uiNext ? ` inline-flex items-center whitespace-nowrap${tap}` : ''}`}
                         >
                           練習する
                         </Link>
@@ -549,7 +619,7 @@ export default function AishodanTool() {
                     <button
                       onClick={() => deleteProduct(p)}
                       disabled={deletingId === p.id}
-                      className="rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className={`rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
                     >
                       {deletingId === p.id ? '処理中…' : '削除・保管'}
                     </button>
@@ -561,7 +631,7 @@ export default function AishodanTool() {
                     <button
                       onClick={() => issueRoom(p.scenarios[0].id)}
                       disabled={issuing}
-                      className="mt-3 w-full rounded-xl bg-[#0066ff] px-6 py-4 text-base font-black text-white shadow-lg transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:bg-slate-200 sm:text-lg"
+                      className={`mt-3 w-full rounded-xl bg-[#0066ff] px-6 py-4 text-base font-black text-white shadow-lg transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:bg-slate-200 sm:text-lg${tap}`}
                     >
                       {issuing ? '発行中…' : '商談URLを発行する'}
                     </button>
@@ -570,19 +640,19 @@ export default function AishodanTool() {
               ))}
             </div>
           )}
-          {productCursor && <button type="button" onClick={() => void loadMore('products')} disabled={loadingMore !== null} className="mt-4 rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50">{loadingMore === 'products' ? '読み込み中…' : `商材をさらに表示（${products.length}/${productTotal}件）`}</button>}
+          {productCursor && <button type="button" onClick={() => void loadMore('products')} disabled={loadingMore !== null} className={`mt-4 rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50${tap}`}>{loadingMore === 'products' ? '読み込み中…' : `商材をさらに表示（${products.length}/${productTotal}件）`}</button>}
         </section>
 
         {/* 2. 商談ルーム */}
         {rooms.length > 0 && (
-          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <section className={`rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 ${uiNext ? 'p-4 sm:p-6' : 'p-6'}`}>
             <h2 className="text-base font-bold text-slate-900">2. 商談URL</h2>
             <p className="mt-1 text-sm text-slate-600 font-semibold">
               このURLをメール・LP・広告のリンク先に置くと、相手がログイン不要で商談を始められます。
             </p>
             <div className="mt-4 space-y-3">
               {rooms.map((room) => (
-                <div key={room.id} className="rounded-xl border border-slate-200 p-4">
+                <div key={room.id} className={`rounded-xl border border-slate-200 ${uiNext ? 'p-3 sm:p-4' : 'p-4'}`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-900">{room.name}</p>
@@ -607,7 +677,7 @@ export default function AishodanTool() {
                   </div>
                   {/* ⚠️ ここが最後の操作。コピーして送れば完了だと分かるように大きく出す */}
                   <div className="mt-3 rounded-xl bg-[#eaf3ff] p-4 ring-2 ring-[#0066ff]">
-                    <p className="text-base font-black text-[#0066ff]">
+                    <p className={`text-base font-black text-[#0066ff]${uiNext ? ' [text-wrap:balance]' : ''}`}>
                       このURLをコピーして、相手にお送りください
                     </p>
                     <p className="mt-2 break-all rounded-lg bg-white px-3 py-3 text-sm font-bold text-[#0a0f3c] ring-1 ring-[#d8e7ff]">
@@ -615,7 +685,8 @@ export default function AishodanTool() {
                     </p>
                     <button
                       onClick={() => copyUrl(room.token)}
-                      className="mt-3 w-full rounded-xl bg-[#0066ff] px-6 py-3.5 text-base font-black text-white shadow-lg transition hover:bg-[#0052cc]"
+                      className={`mt-3 w-full rounded-xl bg-[#0066ff] px-6 py-3.5 text-base font-black text-white shadow-lg transition hover:bg-[#0052cc]${tap}`}
+                      aria-live={uiNext ? 'polite' : undefined}
                     >
                       {copied === room.token ? 'コピーしました' : 'URLをコピーする'}
                     </button>
@@ -625,13 +696,13 @@ export default function AishodanTool() {
                       href={roomUrl(room.token)}
                       target="_blank"
                       rel="noopener"
-                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold"
+                      className={`rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold${uiNext ? ` inline-flex items-center whitespace-nowrap${tap}` : ''}`}
                     >
                       試す
                     </a>
                     <button
                       onClick={() => toggleRoom(room)}
-                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold"
+                      className={`rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
                     >
                       {room.isActive ? '公開を停止' : '公開する'}
                     </button>
@@ -640,7 +711,7 @@ export default function AishodanTool() {
                     <button
                       onClick={() => deleteRoom(room)}
                       disabled={deletingId === room.id}
-                      className="ml-auto rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className={`ml-auto rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
                     >
                       {deletingId === room.id ? '削除中…' : 'このURLを削除'}
                     </button>
@@ -649,15 +720,15 @@ export default function AishodanTool() {
                 </div>
               ))}
             </div>
-            {roomCursor && <button type="button" onClick={() => void loadMore('rooms')} disabled={loadingMore !== null} className="mt-4 rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50">{loadingMore === 'rooms' ? '読み込み中…' : `商談URLをさらに表示（${rooms.length}/${roomTotal}件）`}</button>}
+            {roomCursor && <button type="button" onClick={() => void loadMore('rooms')} disabled={loadingMore !== null} className={`mt-4 rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50${tap}`}>{loadingMore === 'rooms' ? '読み込み中…' : `商談URLをさらに表示（${rooms.length}/${roomTotal}件）`}</button>}
           </section>
         )}
 
         {/* 3. 直近の商談 */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="flex items-baseline justify-between">
+        <section className={`rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 ${uiNext ? 'p-4 sm:p-6' : 'p-6'}`}>
+          <div className={uiNext ? 'flex items-center justify-between gap-3' : 'flex items-baseline justify-between'}>
             <h2 className="text-base font-bold text-slate-900">直近の商談</h2>
-            <Link href="/aishodan/sessions" className="text-xs text-[#0066ff] hover:underline font-semibold">
+            <Link href="/aishodan/sessions" className={`text-xs text-[#0066ff] hover:underline font-semibold${uiNext ? ` inline-flex items-center whitespace-nowrap rounded-lg px-2${tap}` : ''}`}>
               すべて見る
             </Link>
           </div>
@@ -677,7 +748,7 @@ export default function AishodanTool() {
           ) : (
             <div className="mt-4 divide-y divide-slate-100">
               {sessions.slice(0, 8).map((s) => (
-                <Link key={s.id} href={`/aishodan/sessions/${s.id}`} className="flex items-center justify-between gap-3 py-3 hover:bg-slate-50">
+                <Link key={s.id} href={`/aishodan/sessions/${s.id}`} className={`flex items-center justify-between gap-3 py-3 hover:bg-slate-50${uiNext ? ` rounded-lg px-1${tap}` : ''}`}>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-900">
                       {s.guestCompany || '会社名未取得'} {s.guestName ? `／ ${s.guestName}` : ''}
@@ -712,7 +783,7 @@ export default function AishodanTool() {
 
         {/* 未回答質問 = ナレッジ拡充の優先順位 */}
         {stats && stats.unanswered.length > 0 && (
-          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <section className={`rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 ${uiNext ? 'p-4 sm:p-6' : 'p-6'}`}>
             <h2 className="text-base font-bold text-slate-900">よく出た未回答の質問</h2>
             <p className="mt-1 text-sm text-slate-600 font-semibold">
               資料に根拠が無く「確認して折り返す」と回答したものです。ここを埋めると商談の質が上がります。

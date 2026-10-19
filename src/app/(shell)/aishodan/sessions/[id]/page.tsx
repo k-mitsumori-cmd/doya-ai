@@ -16,6 +16,7 @@ import { DoyaKun } from '@/components/lp'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import AishodanHeading from '@/components/aishodan/AishodanHeading'
 import { Skeleton } from '@/components/ds'
+import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, type AishodanFailure } from '@/components/aishodan/failure'
 
 interface Detail {
   id: string
@@ -67,6 +68,22 @@ export default function AishodanSessionDetail() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  /** 読み込みに失敗したときの応答の状態（新しい見た目で、出す文と次の一手を決める。通信の失敗は 0） */
+  const [loadStatus, setLoadStatus] = useState(0)
+  /** 新しい見た目だけ: 判定の保存・再評価に失敗したときの「何が起きたか・どうすればよいか」 */
+  const [actionFailure, setActionFailure] = useState<AishodanFailure | null>(null)
+  // 新しい見た目のボタン・リンク: 押せる大きさとキーボードの枠（今までの見た目では何も足さない）
+  const tap = uiNext ? AISHODAN_TAP : ''
+  /** 判定の操作の失敗を知らせる。新しい見た目ではサーバーの文の代わりに利用者向けの文を出す */
+  function reportActionFailure(status: number, subject: string, serverMessage: string | undefined, fallback: string) {
+    if (!uiNext) {
+      notifyError(setError, serverMessage || fallback)
+      return
+    }
+    const f = describeAishodanFailure(status, subject, { serverMessage })
+    setActionFailure(f)
+    notifyError(setError, f.what)
+  }
 
   const load = useCallback(async () => {
     if (!id) return
@@ -75,14 +92,16 @@ export default function AishodanSessionDetail() {
       await ensureSelectedOrg('aishodan')
       const r = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}`))
       const j = await r.json()
-      if (!r.ok) throw new Error(j?.error || '読み込みに失敗しました')
+      if (!r.ok) throw new AishodanHttpError(j?.error || '読み込みに失敗しました', r.status)
       setD(j.session)
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
+      setLoadStatus(failureStatus(e))
+      // 新しい見た目では、トーストにもサーバーの文を出さない
+      notifyError(setError, uiNext ? '商談を読み込めませんでした。' : e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
-  }, [id])
+  }, [id, uiNext])
 
   useEffect(() => {
     void load()
@@ -92,6 +111,7 @@ export default function AishodanSessionDetail() {
     if (!id) return
     setSaving(true)
     setError('')
+    setActionFailure(null)
     try {
       // ⚠️ 判定がまだ無い商談（自動判定に失敗したもの）は適合度も一緒に送る。
       //    サーバ側は判定と適合度が揃って初めて新規作成する。
@@ -104,7 +124,7 @@ export default function AishodanSessionDetail() {
       })
       if (!res.ok) {
         const j = await res.json().catch(() => null)
-        notifyError(setError, j?.error || '判定を保存できませんでした')
+        reportActionFailure(res.status, '判定を保存できませんでした。', j?.error, '判定を保存できませんでした')
         return
       }
       await load()
@@ -120,6 +140,7 @@ export default function AishodanSessionDetail() {
     if (!id) return
     setSaving(true)
     setError('')
+    setActionFailure(null)
     try {
       const res = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}/re-evaluate`), {
         method: 'POST',
@@ -135,7 +156,7 @@ export default function AishodanSessionDetail() {
           }
           return
         }
-        notifyError(setError, j?.error || '判定を作成できませんでした')
+        reportActionFailure(res.status, '自動判定を作成できませんでした。', j?.error, '判定を作成できませんでした')
         return
       }
       await load()
@@ -158,6 +179,19 @@ export default function AishodanSessionDetail() {
       </div>
     )
   }
+  if (!d && uiNext) {
+    // サーバーの文は出さない。見つからない・権限が無いときは一覧へ、通信の失敗はやり直す
+    return (
+      <div className="mx-auto max-w-xl px-4 py-8 sm:py-12">
+        <AishodanFailureNotice
+          failure={describeAishodanFailure(error ? loadStatus : 404, error && loadStatus !== 404 ? '商談を読み込めませんでした。' : 'この商談は見つかりませんでした。')}
+          onRetry={() => void load()}
+          backHref="/aishodan/sessions"
+          backLabel="商談ログに戻る"
+        />
+      </div>
+    )
+  }
   if (!d) {
     return (
       <div className={uiNext ? 'flex flex-col items-center justify-center gap-4 px-4 py-16' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
@@ -177,11 +211,11 @@ export default function AishodanSessionDetail() {
     <div className={uiNext ? 'pb-12' : 'min-h-screen bg-slate-50 pb-24'}>
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-4xl px-4 py-4">
-          <Link href="/aishodan/sessions" className="text-xs text-slate-500 hover:underline font-semibold">← 商談ログ</Link>
-          <AishodanHeading className="text-lg font-bold text-slate-900">
+          <Link href="/aishodan/sessions" className={`text-xs text-slate-500 hover:underline font-semibold${uiNext ? ` inline-flex items-center rounded-lg${tap}` : ''}`}>← 商談ログ</Link>
+          <AishodanHeading className={`text-lg font-bold text-slate-900${uiNext ? ' break-words [text-wrap:balance]' : ''}`}>
             {d.guestCompany || '会社名未取得'} {d.guestName ? `／ ${d.guestName}` : ''}
           </AishodanHeading>
-          <p className="text-xs text-slate-500 font-semibold">
+          <p className={`text-xs text-slate-500 font-semibold${uiNext ? ' break-words' : ''}`}>
             {d.productName} / {d.startedAt ? new Date(d.startedAt).toLocaleString('ja-JP') : '未実施'}
             {d.guestEmail && ` / ${d.guestEmail}`}
           </p>
@@ -207,7 +241,7 @@ export default function AishodanSessionDetail() {
         )}
         {/* 判定 */}
         {d.outcome ? (
-          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <section className={`rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 ${uiNext ? 'p-4 sm:p-6' : 'p-6'}`}>
             <div className="flex flex-wrap items-center gap-4">
               <div>
                 <p className="text-xs text-slate-500 font-semibold">適合スコア</p>
@@ -233,9 +267,12 @@ export default function AishodanSessionDetail() {
                       className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                         c.met ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-white'
                       }`}
+                      aria-hidden={uiNext ? true : undefined}
                     >
                       {c.met ? '○' : '−'}
                     </span>
+                    {/* 記号だけでは読み上げで伝わらない（新しい見た目だけ） */}
+                    {uiNext && <span className="sr-only">{c.met ? '満たしている' : '満たしていない'}</span>}
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-900">
                         {c.label} <span className="text-xs font-normal text-slate-500 font-semibold">（{c.weight}点）</span>
@@ -274,11 +311,13 @@ export default function AishodanSessionDetail() {
               <button
                 onClick={() => void reEvaluate()}
                 disabled={saving || !canEvaluate}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                className={`rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40${tap}`}
               >
                 自動判定をやり直す
               </button>
-              {error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
+              {error && uiNext ? (
+                <div className="mt-3"><AishodanFailureNotice failure={actionFailure ?? describeAishodanFailure(0, error)} /></div>
+              ) : error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
               <p className="mt-4 text-xs text-slate-500 font-semibold">判定を変える</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(['hot', 'warm', 'cold', 'unfit'] as Verdict[]).map((v) => (
@@ -286,7 +325,8 @@ export default function AishodanSessionDetail() {
                     key={v}
                     onClick={() => override(v)}
                     disabled={saving || d.outcome?.verdict === v}
-                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold"
+                    aria-pressed={uiNext ? d.outcome?.verdict === v : undefined}
+                    className={`rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
                   >
                     {VERDICT_LABELS[v]}
                   </button>
@@ -310,7 +350,7 @@ export default function AishodanSessionDetail() {
               <button
                 onClick={() => void reEvaluate()}
                 disabled={saving || !canEvaluate}
-                className="rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-bold text-white disabled:opacity-40"
+                className={`rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-bold text-white disabled:opacity-40${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
               >
                 {saving ? '処理中…' : '自動判定をやり直す'}
               </button>
@@ -320,13 +360,15 @@ export default function AishodanSessionDetail() {
                   key={v}
                   onClick={() => override(v)}
                   disabled={saving}
-                  className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-amber-900 hover:bg-amber-100 disabled:opacity-40 font-semibold"
+                  className={`rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-amber-900 hover:bg-amber-100 disabled:opacity-40 font-semibold${uiNext ? ` whitespace-nowrap${tap}` : ''}`}
                 >
                   {VERDICT_LABELS[v]}
                 </button>
               ))}
             </div>
-            {error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
+            {error && uiNext ? (
+              <div className="mt-3"><AishodanFailureNotice failure={actionFailure ?? describeAishodanFailure(0, error)} /></div>
+            ) : error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
           </section>
         )}
 
@@ -372,12 +414,12 @@ export default function AishodanSessionDetail() {
           <h2 className="text-sm font-bold text-slate-900">ヒアリング結果</h2>
           <dl className="mt-3 divide-y divide-slate-100">
             {d.slots.map((s) => (
-              <div key={s.key} className="flex gap-4 py-2.5">
-                <dt className="w-32 shrink-0 text-xs text-slate-500 font-semibold">
+              <div key={s.key} className={uiNext ? 'flex gap-3 py-2.5 sm:gap-4' : 'flex gap-4 py-2.5'}>
+                <dt className={uiNext ? 'w-24 shrink-0 text-xs text-slate-500 font-semibold sm:w-32' : 'w-32 shrink-0 text-xs text-slate-500 font-semibold'}>
                   {s.label}
                   {s.required && <span className="ml-1 text-rose-500">*</span>}
                 </dt>
-                <dd className={`text-sm ${s.value ? 'text-slate-800' : 'text-slate-400'}`}>
+                <dd className={`text-sm ${s.value ? 'text-slate-800' : 'text-slate-400'}${uiNext ? ' min-w-0 break-words' : ''}`}>
                   {s.value || '聞き取れず'}
                 </dd>
               </div>
@@ -412,7 +454,7 @@ export default function AishodanSessionDetail() {
                   <div
                     className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                       t.speaker === 'ai' ? 'bg-slate-100 text-slate-800' : 'bg-[#0066ff] text-white'
-                    }`}
+                    }${uiNext ? ' min-w-0 break-words' : ''}`}
                   >
                     {t.text}
                   </div>
