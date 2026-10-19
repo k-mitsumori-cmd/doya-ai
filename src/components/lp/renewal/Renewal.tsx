@@ -33,6 +33,9 @@ import type { Step } from "../sections";
 import "./renewal.css";
 import "./hero-motion.css";
 
+// 操作の3段階の写真（public/<id>/shots/）がまだ無いサービス。写真を置いたら外す
+const NO_STEP_SHOTS = new Set(["income", "expense", "tenjikai"]);
+
 export const RenewalContext = createContext("");
 export function RenewalFrame({
   serviceName,
@@ -259,6 +262,7 @@ export function Workflow({
   const name = useContext(RenewalContext);
   const service = SERVICES.find((s) => s.name === name);
   const [active, setActive] = useState(0);
+  const [failedShot, setFailedShot] = useState<string | null>(null);
   return (
     <section id="doya-how" className="doya-workflow">
       <div className="doya-section-inner">
@@ -344,7 +348,8 @@ export function Workflow({
                   : "詳しい使い方は、各サービスのページでご覧いただけます。"}
             </p>
           </div>
-          {service ? (
+          {/* 操作画面の写真が無い・読めないサービスは、ドヤくんの絵を出す（収入管理など） */}
+          {service && !NO_STEP_SHOTS.has(service.id) && failedShot !== `${service.id}-${active}` ? (
             <ProductPreview
               className="doya-step-image"
               key={`${service.id}-${active}`}
@@ -358,6 +363,7 @@ export function Workflow({
                 width={1280}
                 height={800}
                 sizes="(max-width: 800px) 95vw, 640px"
+                onError={() => setFailedShot(`${service.id}-${active}`)}
               />
             </ProductPreview>
           ) : (
