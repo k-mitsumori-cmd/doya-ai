@@ -45,11 +45,24 @@ function comparisonGroups(services: Service[]) {
   }))
 }
 
-export default function PricingNext({ canceled, inShell = false }: { canceled: boolean; inShell?: boolean }) {
+export default function PricingNext({ canceled, inShell = false, serverSignedIn, serverPlan }: {
+  canceled: boolean
+  inShell?: boolean
+  /** サーバーで読んだログインの有無とプラン（User.plan）。セッションを読み込む間も、最初から正しいボタンを出すため */
+  serverSignedIn?: boolean
+  serverPlan?: string | null
+}) {
   const trialEligibleRaw = useTrialEligible()
-  const { data: session, status: authStatus } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
+  // セッションを読み込む間は、サーバーで読んだ値を使う（「プロにアップグレード」が一瞬出てから変わらないように。統括の確認 2026-10-19）
+  const authStatus = sessionStatus === 'loading' && serverSignedIn !== undefined
+    ? (serverSignedIn ? 'authenticated' : 'unauthenticated')
+    : sessionStatus
   // 契約の判定は UnifiedPricingPlans（planSource='account'）と同じ
-  const accountPlan = authStatus === 'authenticated' ? (session?.user as { plan?: string } | undefined)?.plan : undefined
+  const accountPlan = authStatus !== 'authenticated' ? undefined
+    : sessionStatus === 'authenticated' ? (session?.user as { plan?: string } | undefined)?.plan : (serverPlan ?? undefined)
+  // サーバーの値も無く、セッションを読み込んでいる間は、ボタンの場所に高さだけを取って文言は出さない
+  const planPending = authStatus === 'loading'
   // ⚠️ 文字列として比べる（PlanTier に BUNDLE は無いが、User.plan には入りうる。UnifiedPricingPlans と同じ判定）
   const plan: string = accountPlan ? higherPlan(null, accountPlan) : ''
   const isPro = authStatus === 'authenticated' && (plan === 'PRO' || plan === 'BUNDLE' || plan === 'ENTERPRISE')
@@ -134,7 +147,7 @@ export default function PricingNext({ canceled, inShell = false }: { canceled: b
             <li>{UNIFIED_PLAN_COPY.proNote}</li>
           </ul>
           <div className={styles.planAction}>
-            {isPro ? <span className={styles.current}>ご利用中のプラン</span> : (
+            {planPending ? <span className={styles.pending} aria-hidden /> : isPro ? <span className={styles.current}>ご利用中のプラン</span> : (
               <CheckoutButton planId={UNIFIED_PRO_PLAN_ID} loginCallbackUrl={RETURN_TO} variant="primary" className={styles.primary}>
                 {trialEligible ? '初月無料でプロを試す' : 'プロにアップグレード'}
               </CheckoutButton>

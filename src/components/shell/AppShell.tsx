@@ -23,6 +23,7 @@ import { ALL_SHELL_TOOLS, SHELL_HOME, shellGroups, type ShellTool } from './tool
 import { useToolHref, useUiNext } from './ui-next-context'
 import ShellCompanyCard from './ShellCompanyCard'
 import { demoteExtraH1 } from './heading-guard'
+import { RECENT_COOKIE, serializeRecent } from '@/lib/shell/recent'
 import styles from './AppShell.module.css'
 
 const RECENT_KEY = 'doya-shell-recent-v1'
@@ -141,7 +142,12 @@ function CommandPalette({ open, onClose, withIntents }: { open: boolean; onClose
   )
 }
 
-export default function AppShell({ children, userName }: { children: ReactNode; userName?: string | null }) {
+export default function AppShell({ children, userName, initialRecent }: {
+  children: ReactNode
+  userName?: string | null
+  /** 最近使ったツール（新しい見た目のとき、サーバーが cookie から読んで渡す。最初の描画から並べ、あとから押し下げない） */
+  initialRecent?: string[]
+}) {
   const pathname = usePathname() || '/'
   // 新しい見た目（チェックリスト §5.1）のときだけ、UI 品質の直し（区分の名前・押した瞬間の選択・先読み）を使う
   const uiNext = useUiNext()
@@ -149,18 +155,24 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
   const groups = shellGroups(uiNext)
   const [open, setOpen] = useState(false)
   const [palette, setPalette] = useState(false)
-  const [recent, setRecent] = useState<string[]>([])
+  const [recent, setRecent] = useState<string[]>(initialRecent ?? [])
+  // サーバーから並びを受け取ったときは、最初の1回は表示を変えない（読み込みの直後に並びが動くと CLS になる）
+  const keepFirst = useRef(Boolean(uiNext && initialRecent))
 
   // 最近使ったツール（タブバー用）。サービスを固定しない
   useEffect(() => {
     const current = ALL_SHELL_TOOLS.find((t) => t.id !== 'home' && isActive(pathname, t))
     const list = readRecent()
     const next = current ? [current.id, ...list.filter((id) => id !== current.id)].slice(0, 6) : list
-    setRecent(next)
+    if (keepFirst.current) keepFirst.current = false
+    else setRecent(next)
+    if (uiNext) {
+      try { document.cookie = `${RECENT_COOKIE}=${serializeRecent(next)}; path=/; max-age=${60 * 60 * 24 * 180}; samesite=lax` } catch { /* 覚えられなくても動く */ }
+    }
     if (current) {
       try { window.localStorage.setItem(RECENT_KEY, JSON.stringify(next)) } catch { /* 保存できなくても動く */ }
     }
-  }, [pathname])
+  }, [pathname, uiNext])
 
   const onKey = useCallback((e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {

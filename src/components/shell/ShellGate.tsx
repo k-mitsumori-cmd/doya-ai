@@ -18,10 +18,12 @@ import ShellVitals from './ShellVitals'
 
 const EMPTY: Record<string, string> = {}
 
-export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, company = undefined, always = false, toolHrefs, children }: {
+export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, company = undefined, always = false, toolHrefs, initialRecent, children }: {
   signedIn: boolean
   /** 組織を選ぶツールのリンクの行き先（新しい見た目のときだけ。src/lib/shell/tool-hrefs.server.ts） */
   toolHrefs?: Record<string, string>
+  /** 最近使ったツール（新しい見た目のとき、cookie から読んで渡す） */
+  initialRecent?: string[]
   /** ツールの一覧に無いページ（/pricing など）でも、ログインしていれば枠を出す */
   always?: boolean
   /** 新しい見た目を出すか（サーバーの uiNextMode() で決めて渡す。チェックリスト §5.1） */
@@ -35,7 +37,7 @@ export default function ShellGate({ signedIn, userName, enabledIds, uiNext = nul
 }) {
   const pathname = usePathname()
   const inner = (always ? signedIn : shouldShowShell(pathname, { signedIn, enabledIds }))
-    ? <AppShell userName={userName}>{children}</AppShell>
+    ? <AppShell userName={userName} initialRecent={uiNext ? initialRecent : undefined}>{children}</AppShell>
     : <>{children}</>
   return (
     <UiNextContext.Provider value={uiNext}>

@@ -1380,8 +1380,8 @@ function BannerTestPageInner() {
 
       {/* メインコンテンツ */}
       <main className="flex-1 ml-0 md:ml-[240px] min-h-screen bg-black overflow-x-hidden">
-        {/* モバイル用ヘッダー */}
-        <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-black/90 backdrop-blur-sm border-b border-gray-800 px-3 py-2 flex items-center justify-between">
+        {/* モバイル用ヘッダー。⚠️ 新しい見た目では出さない（枠の上に黒い帯が浮いて見えるため。見出しは ToolFrame とヒーローにある。統括の確認 2026-10-19） */}
+        {!uiNext ? <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-black/90 backdrop-blur-sm border-b border-gray-800 px-3 py-2 flex items-center justify-between">
           {/* 枠の中（新しい見た目）では旧来のサイドバーを出さないので、開くボタンも出さない */}
           {uiNext ? <div className="w-9" /> : <button
             onClick={() => setIsSidebarOpen(true)}
@@ -1392,12 +1392,12 @@ function BannerTestPageInner() {
           </button>}
           <Heading className="text-sm font-bold text-white">バナーテンプレート</Heading>
           <div className="w-9" /> {/* スペーサー */}
-        </div>
+        </div> : null}
         
         {/* ローディング画面は廃止: テンプレートギャラリーのスケルトンで代替 */}
 
         {/* Netflix風のメインコンテンツ */}
-        <div className="relative pt-12 md:pt-0">
+        <div className={`relative ${uiNext ? '' : 'pt-12 md:pt-0'}`}>
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- 固定表示、フォーム表示時は縮小 */}
           <div
             data-tour="hero-preview"
@@ -3550,7 +3550,8 @@ function BannerTestPageInner() {
           title="好きな見本を選んで、文字を入れるだけ。"
           lead="プロが作った見本の雰囲気のまま、あなたのサービスのバナーを3案つくります。見本が合わなければ、ゼロからもつくれます。"
           action={<Button href="/banner/dashboard/create" variant="secondary" icon="PlusCircle">ゼロからつくる</Button>}
-          art="/banner/hero.webp"
+          tool="banner"
+          artAlt=""
         />
       </div>
       <div className={nextStyles.stage}>
