@@ -28,7 +28,7 @@ const ROWS: ShowcaseRow[] = [
   },
   {
     icon: 'leaderboard', title: '競合とSoVを比較',
-    desc: '同じ質問群で、競合より自社がどれだけ登場するか。AI上の占有率（Share of Voice）をランキングで定点観測します。',
+    desc: '同じ質問群で、競合より自社がどれだけ登場するか。AI上の占有率（Share of Voice）を、スキャンするたびにランキングで比べます。',
     bullets: ['自社と競合の登場比率を可視化', '占有率の推移を時系列で追跡', '「AIに推されている度合い」を数値化'],
     visual: <MockWindow title="AI可視性ランキング"><AioSovMock /></MockWindow>,
   },

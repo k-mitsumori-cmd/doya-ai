@@ -1361,7 +1361,7 @@ export const SERVICES: Service[] = [
     id: 'aio',
     name: 'ドヤAIO',
     shortName: 'AIO',
-    description: 'ChatGPT・Gemini・Claude・PerplexityでのブランドのAI可視性を定点観測（AEO/回答エンジン最適化）。',
+    description: 'ChatGPT・Gemini・Claude・PerplexityでのブランドのAI可視性を測って比べる（AEO/回答エンジン最適化）。',
     longDescription:
       '監視したい質問（プロンプト）を登録すると、ChatGPT・Gemini・Claude・Perplexityに反復で投げ、自社ブランドの言及率・Share of Voice・引用元ドメイン・感情を測定します。競合との比較、時系列の推移、AIに引用されるための改善アクション（メディア掲載・サイトのAI可読化・比較コンテンツ）まで提案。検索の次の「AIに選ばれる」競争を可視化します。組織スコープ・チーム招待対応。',
     icon: '🔍',

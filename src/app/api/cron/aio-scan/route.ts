@@ -30,6 +30,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // ⚠️ 2026-10-19 ユーザーの判断で、自動スキャンは止めた（1回の原価が最大 約840円、月 約10万円の見込みのため）。
+  //    vercel.json の crons からも外してある。手動のスキャン（画面のボタン）はそのまま使える。
+  //    もう一度動かすときは、ユーザーの承認を得てから AIO_SCHEDULED_SCAN_ENABLED=1 を設定し、crons に戻す。
+  if (process.env.AIO_SCHEDULED_SCAN_ENABLED !== '1') {
+    return NextResponse.json({ skipped: true, reason: 'scheduled scan disabled' })
+  }
+
   try {
     const now = new Date()
     const weekAgo = new Date(now.getTime() - WEEK_MS)

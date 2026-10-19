@@ -15,7 +15,7 @@ export const STEPS: Step[] = [
 
 export const BENEFITS: Benefit[] = [
   { icon: 'visibility', title: 'AIからの見られ方が数字でわかる', desc: '言及率・引用元・論調（ポジ/ネガ）まで測定。感覚ではなくデータで、AI上の現状を把握できます。' },
-  { icon: 'leaderboard', title: '競合とのSoVを比較できる', desc: '同じ質問群で、競合より自社がどれだけ登場するか。AI上の占有率（Share of Voice）を定点観測します。' },
+  { icon: 'leaderboard', title: '競合とのSoVを比較できる', desc: '同じ質問群で、競合より自社がどれだけ登場するか。AI上の占有率（Share of Voice）を、スキャンするたびに比べます。' },
   { icon: 'trending_up', title: '改善を時系列で追える', desc: '認知度・SoVの推移を記録し、AEOの改善アクションを実行→効果検証まで一気通貫で回せます。' },
 ]
 
