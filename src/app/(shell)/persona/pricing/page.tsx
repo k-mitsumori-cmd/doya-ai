@@ -1,4 +1,5 @@
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
+import PersonaPageTitle from '@/components/persona/PersonaPageTitle'
 
 const FAQ_ITEMS = [
   {
@@ -34,9 +35,9 @@ export default function PersonaPricingPage() {
             </span>
             <span className="text-sm font-bold text-[#7f19e6]">ドヤペルソナAI</span>
           </div>
-          <h1 className="text-3xl lg:text-4xl font-black text-slate-900 mb-3">
+          <PersonaPageTitle className="text-3xl lg:text-4xl font-black text-slate-900 mb-3">
             ドヤペルソナAI 料金プラン
-          </h1>
+          </PersonaPageTitle>
           <p className="text-slate-500 max-w-xl mx-auto text-base">
             ターゲット顧客のペルソナをAIが瞬時に生成。
             まずは無料でお試しいただき、本格活用はプロプランへ。

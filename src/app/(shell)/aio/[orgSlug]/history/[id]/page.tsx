@@ -5,10 +5,14 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { aioGet } from '@/lib/aio/client'
 import type { ScanSummary, Recommendation } from '@/lib/aio/types'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 type StoredScan = { id: string; status: string; createdAt: string; summary: (ScanSummary & { recommendations?: Recommendation[] }) | null }
 
 export default function AioHistoryDetailPage() {
+  // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
+  const uiNext = useUiNext()
+  const Title = uiNext ? 'h2' : 'h1'
   const { orgSlug, id } = useParams<{ orgSlug: string; id: string }>()
   const [scan, setScan] = useState<StoredScan | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +33,7 @@ export default function AioHistoryDetailPage() {
   const history = `/aio/${encodeURIComponent(orgSlug)}/history`
   return <div className="mx-auto max-w-5xl p-6">
     <Link href={history} className="text-sm font-bold text-purple-700 underline">← スキャン履歴に戻る</Link>
-    <h1 className="mt-4 text-2xl font-black text-slate-900">測定結果</h1>
+    <Title className="mt-4 text-2xl font-black text-slate-900">測定結果</Title>
     {loading && <p role="status" className="mt-6">読み込み中…</p>}
     {error && <p role="alert" className="mt-6 rounded-xl bg-amber-50 p-4 text-amber-900">{error}</p>}
     {scan && <p className="mt-2 text-sm text-slate-600">{new Date(scan.createdAt).toLocaleString('ja-JP')} ・ {scan.status === 'done' ? '測定完了' : scan.status === 'failed' ? '測定失敗' : '処理中'}</p>}

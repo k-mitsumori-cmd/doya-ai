@@ -55,6 +55,7 @@ async function checkToolList(name, endpoint, response) {
     setSessionsError: (value) => { state.error = value },
     setKbs: (value) => { state.items = value },
     setSessions: (value) => { state.items = value },
+    setSessionsLoaded: () => {},
   })
   loader()
   await new Promise(setImmediate)

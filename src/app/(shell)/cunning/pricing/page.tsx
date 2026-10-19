@@ -3,8 +3,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 export default function CunningPricingPage() {
+  // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
+  const uiNext = useUiNext()
+  const Title = uiNext ? 'h2' : 'h1'
   const [plan, setPlan] = useState<string | null>(null)
   const [planError, setPlanError] = useState(false)
   const loadPlan = useCallback(async () => {
@@ -25,7 +29,7 @@ export default function CunningPricingPage() {
   }, [loadPlan])
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className={uiNext ? '' : 'min-h-screen bg-slate-50'}>
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="text-center mb-10">
           <Link
@@ -35,7 +39,7 @@ export default function CunningPricingPage() {
             <span className="material-symbols-outlined text-lg">arrow_back</span>
             ライブに戻る
           </Link>
-          <h1 className="text-3xl font-black text-slate-900">料金プラン</h1>
+          <Title className="text-3xl font-black text-slate-900">料金プラン</Title>
           <p className="mt-2 text-slate-500 font-bold max-w-xl mx-auto">
             無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。
           </p>

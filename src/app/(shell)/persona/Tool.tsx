@@ -12,6 +12,8 @@ import PersonaBannerGenerator from '@/components/persona/PersonaBannerGenerator'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { TrialNote } from '@/components/TrialCallout'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { EmptyState, FirstSteps, ToolHero } from '@/components/ds'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
@@ -238,6 +240,8 @@ export default function PersonaTool({ initialRecord }: { initialRecord?: Persona
 }
 
 function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; plan?: string | null; initialRecord?: PersonaRestoredRecord }) {
+  // 新しい見た目（チェックリスト §5.1）のときだけ、ヒーロー・空状態を出し、見出しの二重と画面いっぱいの高さを外す
+  const uiNext = useUiNext()
   const accountStorage = useMemo(() => personaBrowserStorage(userId), [userId])
   const textRequest = useRef<symbol | null>(null)
   const generationAttempt = useRef<{ input: string; key: string } | null>(null)
@@ -892,8 +896,8 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
   const persona = generatedData?.persona
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50/30">
-      <div className="max-w-6xl mx-auto p-4 lg:p-8">
+    <div className={uiNext ? '' : 'min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50/30'}>
+      <div className={uiNext ? 'max-w-6xl mx-auto p-4 sm:p-6' : 'max-w-6xl mx-auto p-4 lg:p-8'}>
         <PersonaUsagePanel refreshKey={`${loading}-${modifying}-${portraitLoading}-${Object.keys(sceneImages).length}-${Object.values(sceneLoading).filter(Boolean).length}-${bannerUsageRevision}`} />
         {quotaNotice && (
           <div role="alert" className="mb-6 rounded-xl border border-purple-300 bg-purple-50 p-4 text-sm text-purple-950">
@@ -904,6 +908,33 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
           </div>
         )}
         {/* Header */}
+        {uiNext ? (
+          <div className="mb-6 space-y-4">
+            {/* 見出しは枠（ToolFrame）の h1 が出す。ここはツール名ではなく「何ができるか」を書く（同じ見出しの二重をやめる。F-9） */}
+            <ToolHero
+              title={<>サイトのURLから、<wbr />お客さまの人物像を描きます</>}
+              lead={<>URLを入れるだけで、年齢・仕事・悩み・<wbr />1日の過ごし方まで、具体的なペルソナにまとめます。<wbr />似顔絵と履歴書の形で、チームに共有できます。</>}
+              art="/persona/hero.webp"
+            />
+            <FirstSteps
+              id="persona"
+              steps={[
+                { title: 'サイトのURLを入れる', body: '自社の商品やサービスのページのURLです。' },
+                { title: '必要なら詳しい情報を足す', body: '「詳細設定」から、サービス名やターゲットの補足を入れられます。' },
+                { title: '「ペルソナを生成」を押す', body: '1分ほどで、人物像と似顔絵ができます。' },
+              ]}
+            />
+            <div className="flex justify-end">
+              <a
+                href={`/api/stripe/portal?returnTo=${encodeURIComponent('/persona')}`}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 underline-offset-2 hover:underline"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                プラン管理・解約
+              </a>
+            </div>
+          </div>
+        ) : (
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h1 className="text-2xl lg:text-3xl font-black text-gray-900 mb-1 flex items-center gap-3">
@@ -922,6 +953,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
             </a>
           </div>
         </div>
+        )}
 
         {/* Input Section */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6 shadow-sm">
@@ -1148,6 +1180,15 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
               </div>
             </div>
           </motion.div>
+        )}
+
+        {/* ===== 空の状態（新しい見た目のときだけ） ===== */}
+        {uiNext && !initialRecord && !loading && !generatedData && (
+          <EmptyState
+            title="まだペルソナがありません"
+            description={<>上の欄にサイトのURLを入れて、<wbr />「ペルソナを生成」を押してください。<wbr />作ったペルソナは「生成履歴」にたまります。</>}
+            art="/persona/empty-personas.webp"
+          />
         )}
 
         {/* ===== Results ===== */}

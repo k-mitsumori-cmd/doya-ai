@@ -7,8 +7,10 @@ import { personaBrowserStorage } from '@/lib/persona/browser-storage'
 import { deletePersonaRecord, clearPersonaRecords, selectPersonaRecord, savedPersonaPath } from '@/lib/persona/history-records'
 import { Trash2, ExternalLink, Clock, Target } from 'lucide-react'
 import { EmptyState } from '@/components/EmptyState'
+import light from '@/components/persona/history-next.module.css'
 import PersonaServerHistory from '@/components/persona/PersonaServerHistory'
 import { isPersonaDisplayData, hasValidPersonaImages } from '@/lib/persona/display-data'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 interface HistoryItem {
   id?: string
@@ -35,6 +37,9 @@ export default function PersonaHistoryPage() {
 }
 
 function AccountHistory({ userId }: { userId: string }) {
+  // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
+  const uiNext = useUiNext()
+  const Title = uiNext ? 'h2' : 'h1'
   const accountStorage = useMemo(() => personaBrowserStorage(userId), [userId])
   const [error, setError] = useState('')
   const [history, setHistory] = useState<HistoryItem[]>([])
@@ -100,12 +105,12 @@ function AccountHistory({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30 p-4 lg:p-8">
+    <div className={uiNext ? `${light.light} p-4 sm:p-6` : 'min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30 p-4 lg:p-8'}>
       <div className="max-w-4xl mx-auto">
-        <h1 className="mb-6 text-2xl font-black text-white">生成履歴</h1>
+        <Title className="mb-6 text-2xl font-black text-white">生成履歴</Title>
         <PersonaServerHistory userId={userId} onLocalChange={refreshHistory} />
-        <div className="flex items-center justify-between mb-6">
-          <div>
+        <div className={`flex justify-between mb-6 ${uiNext ? 'flex-wrap items-start gap-3' : 'items-center'}`}>
+          <div className={uiNext ? 'min-w-0' : undefined}>
             <h2 className="text-xl font-black text-white flex items-center gap-3">
               <Clock className="w-7 h-7 text-purple-400" />
               このブラウザの履歴
@@ -126,7 +131,7 @@ function AccountHistory({ userId }: { userId: string }) {
         <p className="mb-4 text-sm text-slate-400">以前の共通保存形式の履歴は、所有者を確認できないため表示されません。</p>
         {history.length === 0 && !error ? (
           <EmptyState
-            tone="dark"
+            tone={uiNext ? 'light' : 'dark'}
             kind="not-generated"
             title="このブラウザには履歴がありません"
             description="保存済みのペルソナは、上の「アカウントの保存済み履歴」から開けます。"
