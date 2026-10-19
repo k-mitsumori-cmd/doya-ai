@@ -6,6 +6,8 @@ import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
 import InterviewLayout from '@/components/interview/InterviewLayout'
+import { isShellEnabled } from '@/lib/ui-shell'
+import InterviewShellFrame from '@/components/interview/InterviewShellFrame'
 import InterviewGuestClaimGate from '@/components/interview/InterviewGuestClaimGate'
 import { INTERVIEW_GUEST_COOKIE } from '@/lib/interview/access'
 
@@ -87,7 +89,8 @@ export default async function Layout({ children }: { children: React.ReactNode }
       ` }} />
       <div className="interview-root">
         <InterviewGuestClaimGate enabled={guestCookiePresent}>
-          {isLoggedIn ? <InterviewLayout currentPlan={currentPlan} isLoggedIn={isLoggedIn}>{children}</InterviewLayout> : children}
+          {/* ゲスト（未ログイン）→ 枠なし / 枠が有効 → ToolFrame だけ（枠は (shell)/layout.tsx） / それ以外 → 今のレイアウト */}
+          {!isLoggedIn ? children : isShellEnabled('interview') ? <InterviewShellFrame>{children}</InterviewShellFrame> : <InterviewLayout currentPlan={currentPlan} isLoggedIn={isLoggedIn}>{children}</InterviewLayout>}
         </InterviewGuestClaimGate>
       </div>
     </>

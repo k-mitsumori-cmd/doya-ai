@@ -4,14 +4,7 @@ import React, { memo, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Mic,
-  BookOpen,
-  Zap,
-  FolderOpen,
-  Settings,
-  LayoutTemplate,
-} from 'lucide-react'
+import { Mic, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { HIGH_USAGE_CONTACT_URL, INTERVIEW_PRICING } from '@/lib/pricing'
 import { higherPlan } from '@/lib/plan-utils'
@@ -32,15 +25,12 @@ import {
   useSidebarState,
 } from '@/components/sidebar'
 import { useInterviewUsage } from './useInterviewUsage'
+import { resolveShellIcon } from '@/components/shell/icons'
+import { INTERVIEW_NAV as INTERVIEW_NAV_DATA } from '@/lib/interview/nav'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 
-const INTERVIEW_NAV: NavItem[] = [
-  { href: '/interview', label: '記事作成', icon: Mic },
-  { href: '/interview/projects', label: '記事一覧', icon: FolderOpen },
-  { href: '/interview/templates', label: 'テンプレート', icon: LayoutTemplate },
-  { href: '/interview/skills', label: 'スキル', icon: BookOpen },
-  { href: '/interview/settings', label: '設定', icon: Settings },
-]
+// 項目は src/lib/interview/nav.ts にだけ書く（共通の枠と同じ配列）
+const INTERVIEW_NAV: NavItem[] = INTERVIEW_NAV_DATA.map((item) => ({ href: item.href, label: item.label, icon: resolveShellIcon(item.icon) }))
 
 // 利用分数表示コンポーネント（Interview固有）
 function UsageStats({ showLabel, isLoggedIn, planLabel, isCollapsed }: { showLabel: boolean; isLoggedIn: boolean; planLabel: string; isCollapsed: boolean }) {

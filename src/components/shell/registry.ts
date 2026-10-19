@@ -41,6 +41,9 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'asklink', basePath: '/asklink' },
   { id: 'banner', basePath: '/banner', inShell: (p) => p === '/banner/dashboard' || p.startsWith('/banner/dashboard/') },
   { id: 'seo', basePath: '/seo' },
+  { id: 'cunning', basePath: '/cunning' },
+  { id: 'interview', basePath: '/interview' },
+  { id: 'persona', basePath: '/persona' },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */

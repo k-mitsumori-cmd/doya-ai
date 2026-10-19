@@ -7,9 +7,9 @@ const targets = {
   shodan: ['src/app/shodan/Lp.tsx', 'ドヤ商談準備', '#ffd400'], aio: ['src/app/aio/Lp.tsx', 'ドヤAIO', '#00e0ff'],
   mensetsu: ['src/app/mensetsu/Lp.tsx', 'ドヤ面接官', '#ff1e72'], quote: ['src/app/quote/Lp.tsx', 'ドヤ見積もりAI', '#ffd400'],
   aishodan: ['src/app/aishodan/Lp.tsx', 'ドヤAI商談', '#00e0ff'], adimage: ['src/app/(shell)/adimage/Lp.tsx', 'ドヤ広告画像AI', '#ff1e72'],
-  seo: ['src/app/(shell)/seo/Lp.tsx', 'ドヤSEO', '#00e0ff'], interview: ['src/app/interview/Lp.tsx', 'ドヤインタビュー', '#ff1e72'],
-  persona: ['src/app/persona/Lp.tsx', 'ドヤペルソナAI', '#009bff'], doyalist: ['src/app/(shell)/doyalist/Lp.tsx', 'ドヤリスト', '#ffd400'],
-  doyaslide: ['src/app/(shell)/doyaslide/Lp.tsx', 'ドヤスライド', '#00e0ff'], cunning: ['src/app/cunning/Lp.tsx', 'ドヤカンニング', '#ff1e72'],
+  seo: ['src/app/(shell)/seo/Lp.tsx', 'ドヤSEO', '#00e0ff'], interview: ['src/app/(shell)/interview/Lp.tsx', 'ドヤインタビュー', '#ff1e72'],
+  persona: ['src/app/(shell)/persona/Lp.tsx', 'ドヤペルソナAI', '#009bff'], doyalist: ['src/app/(shell)/doyalist/Lp.tsx', 'ドヤリスト', '#ffd400'],
+  doyaslide: ['src/app/(shell)/doyaslide/Lp.tsx', 'ドヤスライド', '#00e0ff'], cunning: ['src/app/(shell)/cunning/Lp.tsx', 'ドヤカンニング', '#ff1e72'],
   promane: ['src/app/promane/PromaneLp.tsx', 'ドヤプロマネ', '#009bff'],
 }
 

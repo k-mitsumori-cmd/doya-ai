@@ -37,7 +37,7 @@ const entry = { sessionId: 's', recordingToken: 'token', finalTranscriptId: 'las
     assert.equal(recovery.loadFinalAnswerRecovery('s', storage), null)
   })
 
-  const source = fs.readFileSync('src/app/cunning/live/[sessionId]/page.tsx', 'utf8')
+  const source = fs.readFileSync('src/app/(shell)/cunning/live/[sessionId]/page.tsx', 'utf8')
   const ast = ts.createSourceFile('live.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   let declaration
   function walk(node) {

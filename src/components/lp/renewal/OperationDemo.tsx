@@ -30,7 +30,7 @@ export const DEMOS: Record<string, Recipe> = {
     typing: "BtoB マーケティング AI活用",
   },
   interview: {
-    load: () => import("@/app/interview/mocks"),
+    load: () => import("@/app/(shell)/interview/mocks"),
     screens: [
       "InterviewUploadMock",
       "InterviewTranscriptMock",
@@ -39,7 +39,7 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["音声をアップロード", "文字起こしを確認", "記事を確認"],
   },
   persona: {
-    load: () => import("@/app/persona/mocks"),
+    load: () => import("@/app/(shell)/persona/mocks"),
     screens: ["PersonaBriefMock", "PersonaProfileMock", "PersonaPlanMock"],
     labels: ["商材の条件を入力", "顧客像を確認", "施策の要点を見る"],
   },
@@ -75,7 +75,7 @@ export const DEMOS: Record<string, Recipe> = {
     typing: "新規事業の社内提案資料",
   },
   cunning: {
-    load: () => import("@/app/cunning/mocks"),
+    load: () => import("@/app/(shell)/cunning/mocks"),
     screens: ["CunningKnowledgeMock", "CunningLiveMock", "CunningAnswerMock"],
     labels: ["資料を登録", "会話から質問を検出", "回答と根拠を確認"],
   },
