@@ -15,7 +15,7 @@ import HomeDashboard from './HomeDashboard'
 import HomeDashboardLegacy from './HomeDashboardLegacy'
 
 export const metadata: Metadata = {
-  title: '経営ホーム | ドヤAI',
+  title: '経営ホーム',
   robots: { index: false, follow: false },
 }
 

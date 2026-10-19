@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: '特定商取引法に基づく表記 | ドヤAI',
+  title: '特定商取引法に基づく表記',
   description: '株式会社スリスタが運営するドヤAIの特定商取引法に基づく表記',
 }
 

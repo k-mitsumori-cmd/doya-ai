@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: '利用規約 | ドヤAI',
+  title: '利用規約',
   description: '株式会社スリスタが運営するドヤAI（ドヤバナーAI・ドヤ記事作成 等の各サービス）共通の利用規約',
 }
 
