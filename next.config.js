@@ -117,7 +117,9 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: false,
+    // 型チェックは package.json の build が next build の前に `tsc --noEmit` で行う（型の誤りはそこで止まる）。
+    // next build の中で同じ型チェックをもう一度すると、Vercel のビルドでメモリが足りなくなり止まる（2026-10-19）。
+    ignoreBuildErrors: true,
   },
   webpack(config) {
     // ローカルの空き容量が少ない場合だけ、再生成可能な巨大なディスクキャッシュを省く。
