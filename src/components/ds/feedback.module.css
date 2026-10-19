@@ -1,0 +1,43 @@
+/* ds/feedback — 色はトークン。急かす色（赤）はエラーだけ */
+.close { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; flex: none; }
+.close:hover { background: var(--bg); color: var(--ink); }
+.close:focus-visible, .retry:focus-visible, .linkButton:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+.steps { padding: 20px 24px; border: 1px solid var(--blue-line); border-radius: var(--r); background: var(--blue-soft); }
+.stepsHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.stepsTitle { margin: 0; font-size: 15px; font-weight: 800; }
+.stepList { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.stepList li { display: flex; gap: 10px; }
+.stepNum { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: var(--blue); color: #fff; font-size: 12px; font-weight: 800; flex: none; }
+.stepTitle { margin: 0; font-size: 14px; font-weight: 700; }
+.stepBody { margin: 2px 0 0; font-size: 13px; line-height: 1.7; color: var(--sub); }
+.stepsAction { margin-top: 16px; }
+
+.progress { padding: 20px 24px; border: 1px solid var(--line); border-radius: var(--r); background: var(--paper); display: grid; gap: 10px; }
+.progressHead { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.progressStage { margin: 0; font-size: 15px; font-weight: 800; }
+.progressLeft { margin: 0; font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; }
+.bar { height: 6px; border-radius: 999px; background: var(--bg); overflow: hidden; }
+.bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--blue), var(--blue-deep)); transition: width 800ms var(--ease); }
+.stageList { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+.stageList li[data-state='done'] { color: var(--sub); }
+.stageList li[data-state='now'] { color: var(--blue); font-weight: 700; }
+.linkButton { justify-self: start; padding: 0; border: 0; background: none; color: var(--sub); font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; }
+
+.done { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: var(--r-sm); background: var(--ok-bg); color: var(--ok-ink); }
+.doneIcon { flex: none; }
+.doneTitle { margin: 0; font-size: 14px; font-weight: 700; flex: 1; min-width: 0; }
+.doneNext { flex: none; }
+
+.error { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--r-sm); background: var(--bad-bg); color: var(--bad-ink); }
+.errorIcon { flex: none; margin-top: 2px; }
+.errorText { flex: 1; min-width: 0; }
+.errorWhat { margin: 0; font-size: 14px; font-weight: 700; }
+.errorHow { margin: 4px 0 0; font-size: 13px; line-height: 1.7; color: var(--ink); }
+.retry { flex: none; padding: 8px 14px; border: 1px solid currentColor; border-radius: 999px; background: var(--paper); color: var(--bad-ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+@media (max-width: 767px) {
+  .stepList { grid-template-columns: minmax(0, 1fr); }
+  .done, .error { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) { .bar span { transition: none; } }

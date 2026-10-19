@@ -45,7 +45,7 @@ test('判定の組み合わせ', () => {
 
 test('戻る先は同じサイトの中のパスだけ', () => {
   assert.equal(safeReturnPath('/shodan/acme?tab=1'), '/shodan/acme?tab=1')
-  for (const bad of ['https://evil.example', '//evil.example', '/\\evil.example', 'javascript:alert(1)', '/api/ui-preview?on=1', '/a\r\nSet-Cookie: x=1', '', null]) {
+  for (const bad of ['https://evil.example', '//evil.example', '/\\evil.example', 'javascript:alert(1)', '/api/ui-preview?on=1', '/a\r\nSet-Cookie: x=1', '/\t/evil.example', '/\u0000/evil.example', '', null]) {
     assert.equal(safeReturnPath(bad), '/home', String(bad))
   }
 })

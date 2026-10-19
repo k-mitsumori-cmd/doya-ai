@@ -1,0 +1,21 @@
+.card { position: relative; margin-bottom: 6px; }
+.current {
+  display: flex; width: 100%; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink); font: inherit; text-align: left;
+}
+.text { display: grid; min-width: 0; flex: 1; }
+.label { font-size: 11px; font-weight: 700; color: var(--muted); }
+.name { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.empty { margin: 2px 0 6px; font-size: 13px; color: var(--sub); }
+.register { font-size: 13px; font-weight: 700; color: var(--blue); text-decoration: none; }
+.register:hover { text-decoration: underline; }
+.card > .label { display: block; padding: 0 2px; }
+
+
+.tag {
+  display: inline-flex; align-items: center; max-width: 240px; padding: 2px 10px; border-radius: 999px;
+  background: var(--blue-soft); color: var(--blue-deep); font-size: 12px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* 768〜1279px はアイコンだけのサイドバーなので、左下の会社名は出さない（ホームと見出しの帯には出る） */
+@media (min-width: 768px) and (max-width: 1279px) { .card { display: none; } }

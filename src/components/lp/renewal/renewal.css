@@ -20,6 +20,19 @@
 .doya-renewal :is(h1, h2, h3) {
   text-wrap: balance;
 }
+/*
+ * 日本語の折り返し（1文字だけの行を出さない。UI 品質 T-1・T-2）
+ * - 文節で折り返す（Chrome 119 以降。対応しないブラウザでは無視される）
+ * - 見出し以外の文にも text-wrap: pretty を当てる。「こんな方に」のカードなど、短い文で最後の1文字が行に残っていた
+ */
+.doya-renewal {
+  word-break: auto-phrase;
+  line-break: strict;
+  overflow-wrap: break-word;
+}
+.doya-renewal :is(p, li, dd, dt, figcaption, blockquote, span, a, b, strong) {
+  text-wrap: pretty;
+}
 .doya-renewal p {
   line-height: 1.9;
 }
