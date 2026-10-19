@@ -32,9 +32,9 @@ function sample(): CollectionFacts {
   return f
 }
 
-export default async function CollectionPreviewPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined> }) {
+export default async function CollectionPreviewPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   if (process.env.NODE_ENV === 'production' && process.env.COLLECTION_PREVIEW !== '1') notFound()
-  const sp = 'then' in searchParams ? await searchParams : searchParams
+  const sp = await searchParams
   const facts = sp.state === 'empty' ? emptyFacts() : sample()
   // 見本の会社: 採用はしない（採用の分野で減点されないことを見る）
   const areas: CollectionArea[] = sp.areas === 'none' ? [] : ['collect', 'sell', 'operate']
