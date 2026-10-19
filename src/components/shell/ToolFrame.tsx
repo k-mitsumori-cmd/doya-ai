@@ -12,6 +12,7 @@ import { ChevronRight } from 'lucide-react'
 import { ALL_SHELL_TOOLS, SHELL_HOME } from './tools'
 import { isNavActive, type ShellNavItem } from './nav'
 import { ShellIcon } from './icons'
+import { ShellCompanyTag } from './ShellCompanyCard'
 import styles from './ToolFrame.module.css'
 
 export default function ToolFrame({ serviceId, title, description, action, nav, aside, switcher, children }: {
@@ -41,11 +42,12 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
             <ChevronRight size={14} aria-hidden />
             <span aria-current="page">{name}</span>
           </nav>
-          {switcher ? <div className={styles.switcher}>{switcher}</div> : null}
+          {/* 組織の切り替えが無いツールでは、今の会社を小さく出す（新しい見た目のときだけ。UI 品質 B-2） */}
+          {switcher ? <div className={styles.switcher}>{switcher}</div> : <ShellCompanyTag />}
         </div>
         <div className={styles.titleRow}>
           <div className={styles.titleBox}>
-            <h1 className={styles.title}>{title ?? name}</h1>
+            <h1 className={styles.title} data-shell-title>{title ?? name}</h1>
             {description ? <p className={styles.description}>{description}</p> : null}
           </div>
           {action ? <div className={styles.action}>{action}</div> : null}

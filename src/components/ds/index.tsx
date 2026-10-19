@@ -12,7 +12,11 @@ import { ShellIcon, type ShellIconName } from '@/components/shell/icons'
 import type { EmptyStateKind } from '@/components/EmptyState'
 import styles from './ds.module.css'
 
+import { CountUp } from './motion'
+import { useUiNext } from '@/components/shell/ui-next-context'
 export { default as tokens } from './tokens.module.css'
+// 使い方・生成中・完了・エラーの表示（UI 品質 S-16・S-18・S-19・S-20）
+export { FirstSteps, GenerationProgress, DoneBanner, ErrorNotice } from './feedback'
 
 /* ---- Card ---- */
 export function Card({ title, meta, icon, children, className }: {
@@ -45,11 +49,14 @@ export function StatTile({ label, value, unit, sub, icon, href, muted }: {
   href?: string
   muted?: boolean
 }) {
+  // 数字のときは、画面に入ったときに数え上げる（新しい見た目のときだけ。UI 品質 A-2）
+  const uiNext = useUiNext()
+  const shown = uiNext && typeof value === 'number' && Number.isFinite(value) ? <CountUp value={value} /> : value
   const body = (
     <>
       {icon ? <span className={styles.statIcon}><ShellIcon name={icon} size={18} /></span> : null}
       <span className={styles.statLabel}>{label}</span>
-      <span className={styles.statValue}>{value}{unit ? <span className={styles.statUnit}>{unit}</span> : null}</span>
+      <span className={styles.statValue}>{shown}{unit ? <span className={styles.statUnit}>{unit}</span> : null}</span>
       {sub ? <span className={styles.statSub}>{sub}</span> : null}
     </>
   )
@@ -136,15 +143,28 @@ export function Skeleton({ lines = 3, height = 14, delayMs = 300 }: { lines?: nu
 
 /* ---- ToolHero（ツールの最初の帯: キービジュアル・一言の説明・主ボタン） ---- */
 // ⚠️ 主ボタンは1つ（ブランドの青）。見出しは ToolFrame と重ならないよう、ツール名ではなく「何ができるか」を書く。
-export function ToolHero({ title, lead, action, art, artAlt = '' }: {
+// tool を渡すと、そのツールのキービジュアル（下の TOOL_HERO_ART）を使う（UI 品質 S-58）。
+// ⚠️ 絵を足したら、public/ui-renewal/mascots/<id>.webp に置き、TOOL_HERO_ART に id を足す（無い絵は出さない）。
+//    絵は Codex 内蔵の画像生成（定額枠）で作る。従量課金の API は使わない。
+const TOOL_HERO_ART = new Set(['expense', 'income', 'popup', 'shanai', 'tenjikai'])
+
+/** そのツールのキービジュアルの場所。まだ無ければ undefined */
+export function toolHeroArt(tool: string): string | undefined {
+  return TOOL_HERO_ART.has(tool) ? `/ui-renewal/mascots/${tool}.webp` : undefined
+}
+
+export function ToolHero({ title, lead, action, art, artAlt = '', tool }: {
   title: ReactNode
   lead?: ReactNode
   /** 主ボタン（<Button> を1つ） */
   action?: ReactNode
-  /** キービジュアル（public/ui-renewal/mascots/<id>.webp など） */
+  /** キービジュアル（public/ui-renewal/mascots/<id>.webp など）。tool より優先する */
   art?: string
   artAlt?: string
+  /** ツールの id。art が無いときは、このツールのキービジュアルを使う */
+  tool?: string
 }) {
+  art = art ?? (tool ? toolHeroArt(tool) : undefined)
   return (
     <section className={styles.hero}>
       <div className={styles.heroText}>

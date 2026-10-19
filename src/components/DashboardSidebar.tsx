@@ -1,6 +1,8 @@
 'use client'
 
-import React, { memo, useMemo, useState } from 'react'
+import React, { memo, useMemo, useState, type ComponentProps } from 'react'
+import { useInShell } from '@/components/shell/in-shell'
+import { useUiNext } from '@/components/shell/ui-next-context'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -375,4 +377,13 @@ function DashboardSidebarImpl({
   )
 }
 
-export default memo(DashboardSidebarImpl)
+const DashboardSidebarMemo = memo(DashboardSidebarImpl)
+
+// ⚠️ 共通の枠の中では、旧来のサイドバーを出さない（枠が二重になり、1280px でもページの幅がはみ出すため。UI 品質 S-55）。
+//    新しい見た目（チェックリスト §5.1）のときだけ
+export default function DashboardSidebar(props: ComponentProps<typeof DashboardSidebarImpl>) {
+  const inShell = useInShell()
+  const uiNext = useUiNext()
+  if (inShell && uiNext) return null
+  return <DashboardSidebarMemo {...props} />
+}
