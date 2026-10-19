@@ -47,7 +47,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
         </div>
         <div className={styles.titleRow}>
           <div className={styles.titleBox}>
-            <h1 className={styles.title}>{title ?? name}</h1>
+            <h1 className={styles.title} data-shell-title>{title ?? name}</h1>
             {description ? <p className={styles.description}>{description}</p> : null}
           </div>
           {action ? <div className={styles.action}>{action}</div> : null}

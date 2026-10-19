@@ -143,15 +143,28 @@ export function Skeleton({ lines = 3, height = 14, delayMs = 300 }: { lines?: nu
 
 /* ---- ToolHero（ツールの最初の帯: キービジュアル・一言の説明・主ボタン） ---- */
 // ⚠️ 主ボタンは1つ（ブランドの青）。見出しは ToolFrame と重ならないよう、ツール名ではなく「何ができるか」を書く。
-export function ToolHero({ title, lead, action, art, artAlt = '' }: {
+// tool を渡すと、そのツールのキービジュアル（下の TOOL_HERO_ART）を使う（UI 品質 S-58）。
+// ⚠️ 絵を足したら、public/ui-renewal/mascots/<id>.webp に置き、TOOL_HERO_ART に id を足す（無い絵は出さない）。
+//    絵は Codex 内蔵の画像生成（定額枠）で作る。従量課金の API は使わない。
+const TOOL_HERO_ART = new Set(['expense', 'income', 'popup', 'shanai', 'tenjikai'])
+
+/** そのツールのキービジュアルの場所。まだ無ければ undefined */
+export function toolHeroArt(tool: string): string | undefined {
+  return TOOL_HERO_ART.has(tool) ? `/ui-renewal/mascots/${tool}.webp` : undefined
+}
+
+export function ToolHero({ title, lead, action, art, artAlt = '', tool }: {
   title: ReactNode
   lead?: ReactNode
   /** 主ボタン（<Button> を1つ） */
   action?: ReactNode
-  /** キービジュアル（public/ui-renewal/mascots/<id>.webp など） */
+  /** キービジュアル（public/ui-renewal/mascots/<id>.webp など）。tool より優先する */
   art?: string
   artAlt?: string
+  /** ツールの id。art が無いときは、このツールのキービジュアルを使う */
+  tool?: string
 }) {
+  art = art ?? (tool ? toolHeroArt(tool) : undefined)
   return (
     <section className={styles.hero}>
       <div className={styles.heroText}>

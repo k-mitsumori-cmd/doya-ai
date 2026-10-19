@@ -22,6 +22,7 @@ import { InShellContext } from './in-shell'
 import { ALL_SHELL_TOOLS, SHELL_HOME, shellGroups, type ShellTool } from './tools'
 import { useUiNext } from './ui-next-context'
 import ShellCompanyCard from './ShellCompanyCard'
+import { demoteExtraH1 } from './heading-guard'
 import styles from './AppShell.module.css'
 
 const RECENT_KEY = 'doya-shell-recent-v1'
@@ -193,6 +194,17 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
     return recent.map((id) => byId.get(id)).filter((t): t is ShellTool => Boolean(t) && t!.id !== 'home').slice(0, 3)
   }, [recent, uiNext])
 
+  // 枠の中の h1 を1つにする（新しい見た目のときだけ。UI 品質 S-57）
+  const mainRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    const el = mainRef.current
+    if (!uiNext || !el || typeof MutationObserver === 'undefined') return
+    demoteExtraH1(el)
+    const mo = new MutationObserver(() => demoteExtraH1(el))
+    mo.observe(el, { childList: true, subtree: true })
+    return () => mo.disconnect()
+  }, [uiNext])
+
   const openAccount = () => {
     setOpen(true)
     requestAnimationFrame(() => document.getElementById('shell-account')?.scrollIntoView({ block: 'end' }))
@@ -267,7 +279,7 @@ export default function AppShell({ children, userName }: { children: ReactNode; 
         </div>
       </nav>
 
-      <main id="shell-main" className={styles.main}>{children}</main>
+      <main id="shell-main" ref={mainRef} className={styles.main}>{children}</main>
 
       <nav className={styles.tabbar} aria-label="よく使うツール">
         {[SHELL_HOME, ...tabTools].map((t) => {

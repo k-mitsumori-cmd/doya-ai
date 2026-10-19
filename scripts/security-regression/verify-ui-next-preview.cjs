@@ -92,6 +92,8 @@ const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.in
     assert.match(shell,/if \(!uiNext\) return \[\]/);
     assert.match(shell,/withIntents=\{uiNext\}/);
     assert.match(shell,/\{uiNext \? \(\s*<button type="button" className=\{styles\.tab\} onClick=\{openAccount\}>/);
+    assert.match(read('src/components/DashboardSidebar.tsx'),/if \(inShell && uiNext\) return null/);
+    assert.match(shell,/if \(!uiNext \|\| !el \|\| typeof MutationObserver === 'undefined'\) return/);
     // CSS の直しは data-ui-next の下だけ
     const css=read('src/components/shell/AppShell.module.css');
     for(const line of css.split('\n').filter(l=>/h-screen|min-h-screen|calc\(100vh/.test(l)&&!l.trim().startsWith('*')&&!l.trim().startsWith('/*')))assert.match(line,/\[data-ui-next='true'\]/,line);
