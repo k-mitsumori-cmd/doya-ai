@@ -3,6 +3,8 @@ import { getShodanContext } from '@/lib/shodan/access'
 import { prisma } from '@/lib/prisma'
 import { getShodanBilling } from '@/lib/shodan/billing'
 import ShodanAppLayout from '@/components/shodan/ShodanAppLayout'
+import ShodanShellFrame from '@/components/shodan/ShodanShellFrame'
+import { isShellEnabled } from '@/lib/ui-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,6 +38,11 @@ export default async function ShodanOrgLayout(
     prisma.shodanOrganization.findUnique({ where: { id: ctx.organizationId }, select: { name: true } }),
     getShodanBilling(prisma, ctx.organizationId),
   ])
+
+  // 共通シェルが有効なら ToolFrame だけ（枠は (shell)/layout.tsx が出す）。無効の間は今のレイアウト
+  if (isShellEnabled('shodan')) {
+    return <ShodanShellFrame orgSlug={orgSlug} orgName={org?.name}>{children}</ShodanShellFrame>
+  }
 
   return (
     <ShodanAppLayout orgSlug={orgSlug} orgName={org?.name} organizationPlan={billing?.plan ?? null} canManageBilling={ctx.role === 'owner' && ctx.userId === billing?.ownerUserId}>

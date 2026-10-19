@@ -11,16 +11,14 @@ import {
   BadgeJapaneseYen, BarChart3, BookOpen, BookUser, Box, Briefcase, Building2, Calendar, CalendarClock, CalendarRange,
   CircleUser, Clock, CreditCard, FileSignature, FileText, FolderKanban, FolderOpen, Gift, Headphones, Home, Image,
   LayoutDashboard, LayoutGrid, LineChart, Link2, List, ListChecks, Megaphone, MessageSquare, Mic, MousePointerClick,
-  Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Store,
-  Truck, UserCheck, UserRound, Users, Wallet, History, Mail, PhoneCall, LayoutTemplate, MessageCircleQuestion, Sparkles, Tag, Target,
+  Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Store, Truck, UserCheck, UserRound, Users, Wallet, History, Mail, PhoneCall, LayoutTemplate, MessageCircleQuestion, Sparkles, Tag, Target,
 } from 'lucide-react'
 
 export const SHELL_ICONS = {
   BadgeJapaneseYen, BarChart3, BookOpen, BookUser, Box, Briefcase, Building2, Calendar, CalendarClock, CalendarRange,
   CircleUser, Clock, CreditCard, FileSignature, FileText, FolderKanban, FolderOpen, Gift, Headphones, Home, Image,
   LayoutDashboard, LayoutGrid, LineChart, Link2, List, ListChecks, Megaphone, MessageSquare, Mic, MousePointerClick,
-  Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Store,
-  Truck, UserCheck, UserRound, Users, Wallet, History, Mail, PhoneCall, LayoutTemplate, MessageCircleQuestion, Sparkles, Tag, Target,
+  Palette, PanelTopOpen, PenTool, Plus, PlusCircle, Presentation, Receipt, RotateCcw, Search, Settings, Store, Truck, UserCheck, UserRound, Users, Wallet, History, Mail, PhoneCall, LayoutTemplate, MessageCircleQuestion, Sparkles, Tag, Target,
 } satisfies Record<string, LucideIcon>
 
 /** 対応表にある名前。対応表に無い文字列も受け付ける（既定のアイコンになる） */

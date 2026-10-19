@@ -45,6 +45,8 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'interview', basePath: '/interview' },
   { id: 'persona', basePath: '/persona' },
   { id: 'quote', basePath: '/quote' },
+  // ドヤ商談準備は組織を選んだあと（/shodan/<組織>）だけ枠に入る。入口（/shodan）・料金（/shodan/pricing）・招待は今までどおり
+  { id: 'shodan', basePath: '/shodan', inShell: (p) => /^\/shodan\/[^/]+/.test(p) && !/^\/shodan\/(pricing|invite)(\/|$)/.test(p) },
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */
