@@ -16,7 +16,8 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { looksLikeQuestion } from '@/lib/cunning/classify'
-import { getMode, MODES_BY_CATEGORY } from '@/lib/cunning/modes'
+import { AUTO_ANSWER_MIN_INTERVAL_MS, getMode, MODES_BY_CATEGORY } from '@/lib/cunning/modes'
+import { createAutoAnswerThrottle, type AutoAnswerThrottle } from '@/lib/cunning/answer-throttle'
 import type { CunningMode } from '@/lib/cunning/types'
 import { UiIcon } from '@/components/icons'
 import { useUiNext } from '@/components/shell/ui-next-context'
@@ -153,6 +154,15 @@ export default function CunningLivePage() {
   const finalAudioRetryRef = useRef(createFinalAudioRetry(workRef.current, () => refreshAudioRetry(n => n + 1)))
   const recordersRef = useRef(new Set<MediaRecorder>())
   const flushRef = useRef<() => void>(() => {})
+  // 自動回答は AUTO_ANSWER_MIN_INTERVAL_MS に1件まで。間に来た発話は1件にまとめて送る
+  const autoAnswerSendRef = useRef<(question: string) => void>(() => {})
+  const autoAnswerRef = useRef<AutoAnswerThrottle | null>(null)
+  if (!autoAnswerRef.current) {
+    autoAnswerRef.current = createAutoAnswerThrottle({
+      intervalMs: AUTO_ANSWER_MIN_INTERVAL_MS,
+      send: (question) => autoAnswerSendRef.current(question),
+    })
+  }
   const startedRef = useRef(false)
   const startingRef = useRef(false)
   const recordingVersionRef = useRef(1)
@@ -173,6 +183,7 @@ const SILENCE_PEAK = 8
 
   const stopAll = useCallback(() => {
     runningRef.current = false
+    autoAnswerRef.current?.cancel()
     windowClientRef.current?.stop()
     setRunning(false)
     for (const recorder of recordersRef.current) {
@@ -513,9 +524,14 @@ const SILENCE_PEAK = 8
     if (u.length < 4) return
     const anyTrigger = getMode(modeRef.current).trigger === 'any'
     const shouldReply = anyTrigger ? u.length >= 5 : looksLikeQuestion(u)
-    if (shouldReply) requestAnswer(u)
-  }, [requestAnswer])
+    if (shouldReply) autoAnswerRef.current?.submit(u)
+  }, [])
   flushRef.current = flushUtterance
+  autoAnswerSendRef.current = (question) => {
+    // まとめ待ちの間に録音が止まっていたら送らない（停止後の回答は最後の回答だけが担う）
+    if (recordingVersionRef.current === 2 && !runningRef.current) return
+    void requestAnswer(question)
+  }
 
   finalWindowAnswerRef.current = async (finalTranscriptId) => {
     if (finalWindowAnsweredRef.current || !finalTranscriptId) return

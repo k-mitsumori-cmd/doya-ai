@@ -280,6 +280,14 @@ export const MODES: Record<CunningMode, ModeDef> = {
 
 export const MODE_IDS = Object.keys(MODES) as CunningMode[]
 
+/**
+ * 自動回答（相手の発話を検出して作る回答）の最小間隔。全モード共通。
+ * ⚠️ 発話のたびに回答を作ると、trigger:'any' のモードで費用が膨らむ（2026-10 原価見直し）。
+ *    間に来た発話は1件にまとめ、間隔が空いた時点でまとめて1回だけ回答する。
+ *    手動の質問・再生成・最後の回答はこの対象外。
+ */
+export const AUTO_ANSWER_MIN_INTERVAL_MS = 20000
+
 export function getMode(mode: string | null | undefined): ModeDef {
   return (mode && MODES[mode as CunningMode]) || MODES.sales
 }

@@ -2,9 +2,11 @@
 // ドヤカンニング 回答生成
 // ============================================
 // 質問 + コンテキスト（商談=ナレッジ / 面接=企業×応募者）→ 要点＋話すスクリプト。
-// 低レイテンシ優先で Gemini(GEMINI_TEXT_MODEL_DEFAULT)、失敗時は gpt-4o にフォールバック。
-import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
-import { withTimeout, raceTimeout } from '@/lib/fetch-timeout'
+// 費用を抑えるため、安い gemini-2.5-flash だけを直接呼ぶ（2026-10 原価見直し）。
+// ⚠️ 共通の geminiGenerateText() は ANTHROPIC_API_KEY があると Claude Sonnet を先に呼び、
+//    最後は gpt-4o まで落ちる。自動回答は件数が多いので、ここでは使わない。
+// ⚠️ 20秒を過ぎても gpt-4o へは切り替えない。要求を打ち切り、失敗として返す。
+import { withTimeout } from '@/lib/fetch-timeout'
 import { getMode } from './modes'
 import type {
   AnswerSource,
@@ -107,59 +109,69 @@ function parseAnswer(text: string): { summary: string; script: string } {
   return { summary: plain.slice(0, 40), script: plain }
 }
 
-async function gpt4oFallback(prompt: string): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) throw new Error('OPENAI_API_KEY が設定されていません')
-  return withTimeout('gpt-4o answer', 25000, async (signal) => {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+/** 回答に使うモデル。生存確認済みの ID だけを使う（新しい ID を足すときは実APIで確認する） */
+export const CUNNING_ANSWER_MODEL = 'gemini-2.5-flash'
+/** 回答1件の出力上限（トークン）。要点＋話すスクリプトに十分な長さ */
+export const CUNNING_ANSWER_MAX_OUTPUT_TOKENS = 800
+/** 回答を待つ上限。これを過ぎたら要求を打ち切る（別モデルでのやり直しはしない） */
+export const CUNNING_ANSWER_TIMEOUT_MS = 20000
+const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${CUNNING_ANSWER_MODEL}:generateContent`
+
+function geminiApiKey(): string {
+  // seo/lib/gemini.ts:getApiKey と同じ候補順
+  const key = [
+    process.env.GOOGLE_GENAI_API_KEY,
+    process.env.GOOGLE_API_KEY,
+    process.env.GEMINI_API_KEY,
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+  ].find((v): v is string => typeof v === 'string' && v.trim().length > 0)
+  if (!key) throw new Error('Gemini APIキーが設定されていません')
+  return key.trim()
+}
+
+async function callGeminiFlash(prompt: string): Promise<string> {
+  const apiKey = geminiApiKey()
+  return withTimeout('gemini answer', CUNNING_ANSWER_TIMEOUT_MS, async (signal) => {
+    const res = await fetch(GEMINI_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.5,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.5,
+          maxOutputTokens: CUNNING_ANSWER_MAX_OUTPUT_TOKENS,
+          // 思考トークンも出力上限に数えられるため、思考を止めて800を本文に使う
+          thinkingConfig: { thinkingBudget: 0 },
+        },
       }),
       signal,
     })
-    if (!res.ok) throw new Error(`gpt-4o failed (${res.status})`)
+    if (!res.ok) throw new Error(`gemini answer failed (${res.status})`)
     const json = await res.json()
-    return json?.choices?.[0]?.message?.content || ''
+    const parts = json?.candidates?.[0]?.content?.parts
+    if (!Array.isArray(parts)) return ''
+    return parts
+      .filter((part: any) => part && !part.thought && typeof part.text === 'string')
+      .map((part: any) => part.text)
+      .join('')
   })
 }
 
-/** 質問→回答（要点＋スクリプト＋根拠）。gemini-flash 優先、失敗時 gpt-4o。 */
+/** 質問→回答（要点＋スクリプト＋根拠）。gemini-2.5-flash のみ。失敗時は別モデルを呼ばない。 */
 export async function generateAnswer(p: BuildAnswerParams): Promise<CunningAnswerResult> {
   const { prompt, sources } = buildPrompt(p)
 
   let raw = ''
-  let model = GEMINI_TEXT_MODEL_DEFAULT
-  let primarySettled = false
-  const primary = geminiGenerateText({
-    model: GEMINI_TEXT_MODEL_DEFAULT,
-    parts: [{ text: prompt }],
-    generationConfig: { temperature: 0.5 },
-  }).finally(() => { primarySettled = true })
   try {
-    raw = await raceTimeout(
-      'gemini answer',
-      20000,
-      primary
-    )
-  } catch (e) {
-    console.warn('[cunning/answer] Gemini処理に失敗したため代替モデルを試行します')
-    try {
-      raw = await gpt4oFallback(prompt)
-    } catch {
-      // The timeout wrapper does not cancel Gemini. Do not unlock a retry while
-      // that operation may still be running; expose no provider error contents.
-      throw Object.assign(new Error('Answer generation failed'), { cunningAnswerMayBeRunning: !primarySettled })
-    }
-    model = 'gpt-4o'
+    raw = await callGeminiFlash(prompt)
+  } catch {
+    // 要求は AbortSignal で打ち切り済み。裏で動き続ける処理は残らないので、
+    // 受付を解放して再試行できるようにする（cunningAnswerMayBeRunning=false）。
+    // 提供元のエラー本文はログにも応答にも出さない。
+    console.warn('[cunning/answer] 回答を作れませんでした')
+    throw Object.assign(new Error('Answer generation failed'), { cunningAnswerMayBeRunning: false })
   }
 
   const { summary, script } = parseAnswer(raw)
-  if (!primarySettled && !summary.trim() && !script.trim()) {
-    throw Object.assign(new Error('Answer generation incomplete'), { cunningAnswerMayBeRunning: true })
-  }
-  return { summary, script, sources, model }
+  return { summary, script, sources, model: CUNNING_ANSWER_MODEL }
 }
