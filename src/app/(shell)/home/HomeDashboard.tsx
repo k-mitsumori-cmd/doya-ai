@@ -71,7 +71,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
     const plan = planAgent(q, summary)
     setRun({ plan, query: q, shown: 0, status: 'running' })
     setInput('')
-  }, [summary, router])
+  }, [summary, router, toHref])
 
   useEffect(() => {
     if (!run || run.status !== 'running') return

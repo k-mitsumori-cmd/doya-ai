@@ -4,7 +4,7 @@
 // ============================================
 // 判定はサーバー（src/lib/ui-next.ts の uiNextMode()）。src/app/(shell)/layout.tsx が値を渡す。
 // ⚠️ ここでは cookie を読まない。サーバーが決めた値を使うだけ。
-import { createContext, useContext } from 'react'
+import { createContext, useCallback, useContext } from 'react'
 import type { UiNextMode } from '@/lib/ui-next'
 
 export const UiNextContext = createContext<UiNextMode>(null)
@@ -27,8 +27,8 @@ export const ShellToolHrefsContext = createContext<Record<string, string>>({})
 /** 入口の href を、分かっていれば組織のページに置き換える（/shodan → /shodan/<組織>） */
 export function useToolHref(): (href: string) => string {
   const map = useContext(ShellToolHrefsContext)
-  return (href: string) => {
+  return useCallback((href: string) => {
     const m = /^\/([a-z0-9-]+)\/?$/.exec(href)
     return (m && map[m[1]]) || href
-  }
+  }, [map])
 }
