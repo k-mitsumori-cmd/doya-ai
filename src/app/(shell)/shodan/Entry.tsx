@@ -10,6 +10,8 @@ import {
 } from '@/components/lp'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { ShodanResearchMock, ShodanHypothesisMock, ShodanProposalMock } from './mocks'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { Skeleton } from '@/components/ds'
 
 const ROWS: ShowcaseRow[] = [
   {
@@ -38,6 +40,8 @@ export default function ShodanEntryPage() {
   const router = useRouter()
   const [phase, setPhase] = useState<'loading' | 'guest' | 'onboard'>('loading')
   const [orgName, setOrgName] = useState('')
+  // 新しい見た目（UI 品質 §5.1）: 枠の中で全画面の読み込み・グラデーションの背景を出さない（C-1・C-2）
+  const uiNext = useUiNext()
   const [memberName, setMemberName] = useState('')
   const { busy: creating, run: submit } = useNavigationSubmission('作成に失敗しました。もう一度お試しください。')
 
@@ -72,6 +76,14 @@ export default function ShodanEntryPage() {
     })
   }
 
+  if (phase === 'loading' && uiNext) {
+    return (
+      <div className="mx-auto max-w-md p-6" aria-busy="true" aria-label="読み込み中">
+        <Skeleton lines={4} height={18} />
+      </div>
+    )
+  }
+
   if (phase === 'loading') {
     return (
       <div className="min-h-screen grid place-items-center bg-gradient-to-b from-white to-blue-50">
@@ -85,12 +97,14 @@ export default function ShodanEntryPage() {
 
   if (phase === 'onboard') {
     return (
-      <div className="min-h-screen relative bg-gradient-to-b from-white via-blue-50/40 to-blue-100/40 grid place-items-center p-6">
-        <BgDots />
-        <div className="relative z-10 bg-white rounded-3xl shadow-xl shadow-blue-500/10 p-8 w-full max-w-md border border-blue-100">
+      <div className={uiNext ? 'grid place-items-center px-4 py-8 sm:py-12' : 'min-h-screen relative bg-gradient-to-b from-white via-blue-50/40 to-blue-100/40 grid place-items-center p-6'}>
+        {!uiNext && <BgDots />}
+        <div className={uiNext ? 'w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 sm:p-8' : 'relative z-10 bg-white rounded-3xl shadow-xl shadow-blue-500/10 p-8 w-full max-w-md border border-blue-100'}>
           <div className="text-center mb-6">
             <div className="flex justify-center"><DoyaKun mood="hello" size={110} /></div>
-            <h2 className="text-2xl font-black text-slate-900 mt-2">ようこそ！</h2>
+            {uiNext
+              ? <h1 className="mt-2 text-xl font-bold text-slate-900">商談準備をはじめましょう</h1>
+              : <h2 className="text-2xl font-black text-slate-900 mt-2">ようこそ！</h2>}
             <p className="text-slate-500 font-bold text-sm mt-1">組織を作成するとすぐに使い始められます</p>
           </div>
           <label className="block text-sm font-black text-slate-700 mb-1">組織名（会社名）</label>
@@ -100,8 +114,10 @@ export default function ShodanEntryPage() {
           <input value={memberName} onChange={(e) => setMemberName(e.target.value)} placeholder="例: 三森 律稀"
             className="w-full rounded-xl border-2 border-slate-200 focus:border-[#0066ff] outline-none px-4 py-3 font-bold mb-5 transition-colors" />
           <button onClick={create} disabled={creating}
-            className="w-full py-4 rounded-2xl text-white font-black text-lg shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98]"
-            style={{ background: 'linear-gradient(135deg, #0066ff, #7c3aed)' }}>
+            className={uiNext
+              ? 'w-full rounded-xl bg-[#0066ff] py-3.5 text-base font-bold text-white transition-colors hover:bg-[#0052cc] disabled:opacity-50 active:scale-[0.98] motion-reduce:active:scale-100'
+              : 'w-full py-4 rounded-2xl text-white font-black text-lg shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98]'}
+            style={uiNext ? undefined : { background: 'linear-gradient(135deg, #0066ff, #7c3aed)' }}>
             {creating ? '作成中…' : '組織を作成して始める'}
           </button>
         </div>

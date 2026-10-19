@@ -7,6 +7,9 @@ import { withOrg, fetchAllSfaAccounts } from '@/lib/sfa/client'
 import { sfaJson, sfaValidRows, SfaClientRejection, isSfaClientTask, isSfaClientActivity, type SfaClientTask, isSfaClientDeal, type SfaClientDeal, type SfaClientNextAction } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { Button, EmptyState } from '@/components/ds'
+import { Building2, Clock, Download, GripVertical, Plus, Sparkles, UserRound } from 'lucide-react'
 import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
@@ -77,6 +80,9 @@ export default function SfaDealsPage() {
     if (detailRef.current) { void loadDetailTasks(detailRef.current); void loadActivities(detailRef.current) }
   })
   const ready = mutations.allowed
+  // 新しい見た目（UI 品質 §5.1）。ページの見出しは h2（h1 は枠の ToolFrame）、主ボタンはブランドの青
+  const uiNext = useUiNext()
+  const Heading = uiNext ? 'h2' : 'h1'
   const detailRef = useRef<string | null>(null)
   const detailEpoch = useRef(0)
   const aiEpoch = useRef(0)
@@ -574,22 +580,22 @@ export default function SfaDealsPage() {
       <MutationRecovery mutations={mutations} />
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">商談パイプライン</h1>
+          <Heading className={uiNext ? 'text-xl font-bold text-slate-900' : 'text-2xl font-black text-slate-900'}>商談パイプライン</Heading>
           <p className="text-slate-500 font-bold text-sm">
             総額 {summary ? summaryYen(summary.openTotal) : '—'}・確度加重 <span className="text-green-600">{summary ? summaryYen(summary.weighted) : '—'}</span>
           </p>
           <p className="text-slate-400 font-bold text-xs mt-1">表示中 {deals.length}件 / 全{totalCount}件</p>
           <p className="text-slate-400 font-bold text-[11px] mt-0.5 flex items-center gap-0.5">
-            <span className="material-symbols-outlined text-[14px] leading-none">drag_indicator</span>
+            {uiNext ? <GripVertical className="h-3.5 w-3.5" aria-hidden /> : <span className="material-symbols-outlined text-[14px] leading-none">drag_indicator</span>}
             カードをドラッグしてステージを移動できます
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <a href={withOrg('/api/sfa/export?type=deals', orgSlug)} className="px-4 py-3 rounded-full bg-white border border-slate-200 text-green-700 font-black shadow-sm hover:shadow flex items-center gap-1">
-            <span className="material-symbols-outlined">download</span>CSV出力
+          <a href={withOrg('/api/sfa/export?type=deals', orgSlug)} className={uiNext ? 'px-4 py-3 rounded-full bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 flex items-center gap-1 whitespace-nowrap' : 'px-4 py-3 rounded-full bg-white border border-slate-200 text-green-700 font-black shadow-sm hover:shadow flex items-center gap-1'}>
+            {uiNext ? <Download className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined">download</span>}CSV出力
           </a>
-          <button onClick={() => setOpen((v) => !v)} className="px-5 py-3 rounded-full bg-gradient-to-r from-green-500 to-lime-600 text-white font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-1">
-            <span className="material-symbols-outlined">add</span>商談を追加
+          <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className={uiNext ? 'px-5 py-3 rounded-full bg-[#0066ff] hover:bg-[#0052cc] text-white font-bold shadow-sm transition-colors flex items-center gap-1 whitespace-nowrap' : 'px-5 py-3 rounded-full bg-gradient-to-r from-green-500 to-lime-600 text-white font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-1'}>
+            {uiNext ? <Plus className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined">add</span>}商談を追加
           </button>
         </div>
       </div>
@@ -635,8 +641,20 @@ export default function SfaDealsPage() {
             <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
           </div>
           <div className="sm:col-span-4">
-            <button onClick={create} disabled={busy || !ready || mutations.creationBlocked('deal')} className="px-5 py-2.5 rounded-xl bg-green-600 text-white font-black disabled:opacity-50">{busy ? '追加中…' : '追加する'}</button>
+            <button onClick={create} disabled={busy || !ready || mutations.creationBlocked('deal')} className={`px-5 py-2.5 rounded-xl text-white font-black disabled:opacity-50 ${uiNext ? 'bg-[#0066ff] hover:bg-[#0052cc]' : 'bg-green-600'}`}>{busy ? '追加中…' : '追加する'}</button>
           </div>
+        </div>
+      )}
+
+      {/* 商談が1件も無いとき（新しい見た目だけ）。次の操作は「商談を追加」1つ */}
+      {uiNext && ready && !dealsLoading && !dealsError && totalCount === 0 && !open && (
+        <div className="mb-4 rounded-2xl border border-slate-200 bg-white">
+          <EmptyState
+            title="まだ商談がありません"
+            description="商談名と金額を入れると、パイプラインのカードになります。ドラッグでステージを動かして進めます。"
+            art="/sfa/empty-deals.webp"
+            action={<Button onClick={() => setOpen(true)} icon="Plus">最初の商談を追加する</Button>}
+          />
         </div>
       )}
 
@@ -653,7 +671,9 @@ export default function SfaDealsPage() {
             <div
               key={st.id}
               data-stage-col={unassigned ? undefined : st.id}
-              className={`flex-shrink-0 w-72 rounded-2xl p-3 transition-colors ${isDropTarget ? 'bg-green-100 ring-2 ring-green-400' : 'bg-slate-100'}`}
+              className={uiNext
+                ? `flex-shrink-0 w-72 rounded-2xl p-3 transition-[background-color,box-shadow,transform] duration-200 motion-reduce:transition-none ${isDropTarget ? 'bg-[#0066ff]/10 ring-2 ring-[#0066ff] scale-[1.01]' : 'bg-slate-100'}`
+                : `flex-shrink-0 w-72 rounded-2xl p-3 transition-colors ${isDropTarget ? 'bg-green-100 ring-2 ring-green-400' : 'bg-slate-100'}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
@@ -672,7 +692,9 @@ export default function SfaDealsPage() {
                     <div
                       key={d.id}
                       onPointerDown={(e) => onCardPointerDown(e, d)}
-                      className={`bg-white rounded-xl shadow-sm select-none transition-opacity ${dragDealId === d.id ? 'opacity-40' : ''}`}
+                      className={uiNext
+                        ? `bg-white rounded-xl shadow-sm select-none transition-[opacity,transform,box-shadow] duration-200 motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-md ${dragDealId === d.id ? 'opacity-40 scale-[0.98] border-2 border-dashed border-[#0066ff]/40' : ''}`
+                        : `bg-white rounded-xl shadow-sm select-none transition-opacity ${dragDealId === d.id ? 'opacity-40' : ''}`}
                     >
                       {/* ドラッグハンドル（マウスはカード全体でも掴めるが、タッチはここから。スクロール温存のため touch-action:none） */}
                       <div
@@ -681,7 +703,7 @@ export default function SfaDealsPage() {
                         title="ドラッグしてステージを移動"
                         className="flex items-center justify-center h-5 text-slate-300 hover:text-slate-400 cursor-grab active:cursor-grabbing"
                       >
-                        <span className="material-symbols-outlined text-[18px] leading-none">drag_indicator</span>
+                        {uiNext ? <GripVertical className="h-4 w-4 rotate-90" aria-hidden /> : <span className="material-symbols-outlined text-[18px] leading-none">drag_indicator</span>}
                       </div>
 
                       <div className="px-3 pb-3">
@@ -698,15 +720,22 @@ export default function SfaDealsPage() {
                             {isStale(d) && <span title="14日以上停滞" className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5 flex-shrink-0">停滞</span>}
                           </div>
                           {(d.accountName || d.contactName) && (
+                            uiNext ? (
+                              <p className="text-[11px] font-bold text-slate-500 mt-0.5 flex items-center gap-1 min-w-0">
+                                {d.accountName && <><Building2 className="h-3 w-3 shrink-0" aria-label="取引先" /><span className="truncate">{d.accountName}</span></>}
+                                {d.contactName && <><UserRound className="h-3 w-3 shrink-0 ml-1" aria-label="担当者" /><span className="truncate">{d.contactName}</span></>}
+                              </p>
+                            ) : (
                             <p className="text-[11px] font-bold text-slate-400 mt-0.5 truncate">
                               {d.accountName ? `🏢 ${d.accountName}` : ''}{d.accountName && d.contactName ? '・' : ''}{d.contactName ? `👤 ${d.contactName}` : ''}
                             </p>
+                            )
                           )}
                           <div className="flex items-center justify-between mt-1">
-                            <p className="text-green-600 font-black">{yen(d.amount)}</p>
+                            <p className={`font-black tabular-nums ${uiNext ? 'text-slate-900' : 'text-green-600'}`}>{yen(d.amount)}</p>
                             {elapsedLabel(d) && (
                               <span className="text-[10px] font-black text-slate-400 flex items-center gap-0.5">
-                                <span className="material-symbols-outlined text-[12px] leading-none">schedule</span>
+                                {uiNext ? <Clock className="h-3 w-3" aria-hidden /> : <span className="material-symbols-outlined text-[12px] leading-none">schedule</span>}
                                 {elapsedLabel(d)}
                               </span>
                             )}
@@ -753,9 +782,9 @@ export default function SfaDealsPage() {
                           data-no-drag
                           onClick={() => aiNextAction(d)}
                           disabled={!!aiDealId || mutations.creationBlocked('next-action')}
-                          className="mt-1.5 w-full text-[11px] font-black text-[#7f19e6] hover:bg-purple-50 rounded-lg py-1.5 flex items-center justify-center gap-0.5 disabled:opacity-50"
+                          className={`mt-1.5 w-full text-[11px] font-black rounded-lg py-1.5 flex items-center justify-center gap-0.5 disabled:opacity-50 ${uiNext ? 'text-[#0066ff] hover:bg-[#0066ff]/10' : 'text-[#7f19e6] hover:bg-purple-50'}`}
                         >
-                          <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                          {uiNext ? <Sparkles className="h-3.5 w-3.5" aria-hidden /> : <span className="material-symbols-outlined text-[14px]">auto_awesome</span>}
                           {aiDealId === d.id ? 'AI考え中…' : 'AI次アクション'}
                         </button>
                       </div>
@@ -789,9 +818,9 @@ export default function SfaDealsPage() {
       {/* ドラッグ中のゴースト（ポインタ追従） */}
       {ghost && (
         <div className="fixed z-[60] pointer-events-none w-64" style={{ left: ghost.x + 12, top: ghost.y + 8 }}>
-          <div className="bg-white rounded-xl p-3 shadow-2xl ring-2 ring-green-400 rotate-2">
+          <div className={`bg-white rounded-xl p-3 shadow-2xl ring-2 rotate-2 ${uiNext ? 'ring-[#0066ff] scale-105 motion-reduce:scale-100 motion-reduce:rotate-0' : 'ring-green-400'}`}>
             <p className="font-black text-slate-800 text-sm truncate">{ghost.deal.name}</p>
-            <p className="text-green-600 font-black text-sm">{yen(ghost.deal.amount)}</p>
+            <p className={`font-black text-sm ${uiNext ? 'text-slate-900 tabular-nums' : 'text-green-600'}`}>{yen(ghost.deal.amount)}</p>
           </div>
         </div>
       )}

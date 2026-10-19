@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { InviteDeliveryNotice } from '@/components/InviteDeliveryNotice'
 import { sfaInit } from '@/lib/sfa/client'
+import SfaPageHeading from '@/components/sfa/PageHeading'
 
 interface Member {
   id: string
@@ -125,7 +126,7 @@ export default function SfaMembersPage() {
 
   return (
     <div className="p-6 lg:p-10 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-black text-slate-900 mb-1">メンバー</h1>
+      <SfaPageHeading className="text-2xl font-black text-slate-900 mb-1">メンバー</SfaPageHeading>
       <p className="text-slate-500 font-bold text-sm mb-6">チームを招待し、権限を管理できます。</p>
 
       {canManage && (

@@ -7,6 +7,9 @@ import { withOrg } from '@/lib/sfa/client'
 import { isSfaCrmPage, sfaClientDate, sfaClientId, sfaJson, type SfaClientAccount, type SfaClientContact } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from './MutationRecovery'
+import SfaPageHeading from '@/components/sfa/PageHeading'
+import SfaEmpty from '@/components/sfa/SfaEmpty'
+import { Button } from '@/components/ds'
 
 // 日本語の slug は useParams() から URL エンコードされたまま届くので、二重エンコードを避けて 1 回だけデコードする（2026-10-18）。
 function normalizeOrgSlug(slug: string): string {
@@ -176,7 +179,7 @@ export default function CrmRecordsPage({ kind }: { kind: Kind }) {
 
   return <div className="p-6 lg:p-10 max-w-5xl mx-auto">
     <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-      <div><h1 className="text-2xl font-black text-slate-900">{label}</h1><p className="text-slate-500 font-bold text-sm">{kind === 'account' ? '会社・顧客を一元管理' : '取引先のキーマン・連絡先を管理'}</p></div>
+      <div><SfaPageHeading className="text-2xl font-black text-slate-900">{label}</SfaPageHeading><p className="text-slate-500 font-bold text-sm">{kind === 'account' ? '会社・顧客を一元管理' : '取引先のキーマン・連絡先を管理'}</p></div>
       <div className="flex gap-2">
         {kind === 'account' && ready && <a href={withOrg('/api/sfa/export?type=accounts', orgSlug)} className={buttonClass}>CSV出力</a>}
         <button type="button" className={buttonClass} disabled={!ready || loading} onClick={() => setRefresh(v => v + 1)}>一覧を更新</button>
@@ -221,7 +224,13 @@ export default function CrmRecordsPage({ kind }: { kind: Kind }) {
     {currentList && listError && <p role="alert">{label}を読み込めませんでした。<button type="button" className="underline" onClick={() => setRefresh(v => v + 1)}>再試行</button></p>}
     {currentList && !loading && !listError && <>
       <p className="mb-3 text-xs text-slate-500">{list.total}件中{list.rows.length}件を表示</p>
-      {!list.rows.length && <p>{label}がありません。「新規登録」から追加できます。</p>}
+      {!list.rows.length && <SfaEmpty
+        filtered={Boolean(q)}
+        title={q ? `条件に合う${label}がありません` : `まだ${label}がありません`}
+        description={q ? '検索の言葉を変えてみてください。' : kind === 'account' ? '会社名を登録すると、商談や担当者をこの取引先にまとめられます。' : '取引先のキーマンや連絡先を登録すると、商談の相手を選べるようになります。'}
+        action={q ? undefined : <Button onClick={() => openForm(null)} disabled={!ready || mutations.creationBlocked(kind)} icon="Plus">最初の{label}を登録する</Button>}
+        legacy={<p>{label}がありません。「新規登録」から追加できます。</p>}
+      />}
       <div className="space-y-2">{list.rows.map(row => <div key={row.id} className="bg-white rounded-xl p-4 flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1"><p className="font-bold break-words">{row.name}</p><p className="text-xs text-slate-500 break-words">{'industry' in row ? [row.industry, row.prefecture].filter(Boolean).join(' · ') : [row.accountName, row.title, row.email, row.phone, row.isKeyPerson ? 'キーマン' : ''].filter(Boolean).join(' · ')}</p></div>
         <button type="button" disabled={mutations.blocked(kind + ':' + row.id)} className={buttonClass} onClick={() => openForm(row)}>編集</button>

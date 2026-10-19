@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useSlideEditor } from '@/lib/shodan/use-slide-editor'
-import { DoyaKun, sym } from '@/components/shodan/ui'
+import { DoyaKun, ShodanHeading, sym } from '@/components/shodan/ui'
 
 export default function ShodanSlidesEditPage() {
   const params = useParams<{ orgSlug: string; id: string }>()
@@ -34,7 +34,7 @@ export default function ShodanSlidesEditPage() {
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <DoyaKun mood="present" size={52} float={false} />
         <div className="flex-1 min-w-[180px]">
-          <h1 className="text-2xl font-black text-slate-900">提案スライドの編集</h1>
+          <ShodanHeading className="text-2xl font-black text-slate-900">提案スライドの編集</ShodanHeading>
           <p className="text-sm font-bold text-slate-400 mt-0.5">{prep.targetName || ''}・各スライドに指示を入れて再生成できます。</p>
         </div>
         {slides.some((s) => s.imageUrl) && (

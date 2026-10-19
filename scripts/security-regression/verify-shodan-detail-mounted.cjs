@@ -22,7 +22,7 @@ function load(file){if(modules.has(file))return modules.get(file);const exports=
   if(n==='next/navigation')return{useParams:()=>({orgSlug:org,id}),useRouter:()=>({push:href=>navigation.push(href),replace:href=>navigation.push(href)})}
   if(n==='next-auth/react')return{useSession:()=>({status:auth,data:auth==='unauthenticated'?null:{user:{id:actor}}})}
   if(n==='@/lib/shodan/client'||n==='./client')return client
-  if(n==='@/components/shodan/ui')return{DoyaKun:Null,SiteShot:Null}
+  if(n==='@/components/shodan/ui')return{DoyaKun:Null,SiteShot:Null,ShodanHeading:({children,className})=>React.createElement('h1',{className},children)}
   if(n==='@/components/shodan/Markdown')return{__esModule:true,default:Null}
   if(n==='./ShodanSidebar')return{__esModule:true,default:Null}
   if(n==='lucide-react')return new Proxy({},{get:()=>Null})

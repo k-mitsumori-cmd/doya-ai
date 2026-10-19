@@ -11,6 +11,7 @@ import { useParams } from 'next/navigation'
 import ToolFrame from '@/components/shell/ToolFrame'
 import SfaOrgSwitcher from '@/components/sfa/SfaOrgSwitcher'
 import { sfaNav } from '@/lib/sfa/nav'
+import styles from './SfaShellFrame.module.css'
 import { SfaShellContext, type SfaShellContextValue, type SfaShellMembership } from '@/lib/sfa/shell-context'
 
 export default function SfaShellFrame({ children }: { children: ReactNode }) {
@@ -29,7 +30,8 @@ export default function SfaShellFrame({ children }: { children: ReactNode }) {
         nav={sfaNav(orgSlug)}
         switcher={<SfaOrgSwitcher orgSlug={orgSlug} memberships={memberships} />}
       >
-        {children}
+        {/* 新しい見た目のときだけ、中の緑をブランドの青に置き換える（SfaShellFrame.module.css） */}
+        <div className={styles.content}>{children}</div>
       </ToolFrame>
     </SfaShellContext.Provider>
   )
