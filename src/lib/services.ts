@@ -1952,13 +1952,20 @@ export const RETIRED_SERVICE_IDS = new Set([
 // 公開する時はここから id を外し、各 layout.tsx の noindex も一緒に外すこと。
 export const UNLISTED_SERVICE_IDS = new Set<string>(['tenjikai', 'shanai', 'income', 'expense']) // 2026-09-07: 全17サービスLP公開 / 2026-10-09: asklink 公開 / 2026-10-18: popup 公開。tenjikai は開発中
 
-// 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中。
+// 開発中のベータ版として、一旦どこにも出さないサービスID（2026-10-19 ユーザー判断「ドヤカンニングは、開発中のベータ版として一旦非表示に」）。
+// 開発中（UNLISTED）と違い、ログイン後のツールの一覧・左のメニュー・⌘K・料金ページの数にも出さない。
+// 画面（/<id>）と API（/api/<id>/*）は、許可した人（src/lib/beta-services.ts）だけが使える。データは消さない。
+// ⚠️ 戻すときは、ここから id を外すだけ（一覧・数・入口の判定は、すべてこの旗から決まる）。
+export const BETA_HIDDEN_SERVICE_IDS = new Set<string>(['cunning'])
+
+// 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中 ＋ ベータで非表示。
 // トップページ・sitemap・llms.txt・公開LP がこのリストを参照するため、
 // ここに含まれる id は「外から見えるどの一覧にも出ない」。
 // ⚠️ ログイン後のアプリ内ナビは getActiveServices() を使う（開発中のものは出る）。
 export const HIDDEN_SERVICE_IDS = new Set([
   ...Array.from(RETIRED_SERVICE_IDS),
   ...Array.from(UNLISTED_SERVICE_IDS),
+  ...Array.from(BETA_HIDDEN_SERVICE_IDS),
 ])
 
 // アクティブなサービスのみ取得（提供終了は常に除外）。
@@ -1968,6 +1975,8 @@ export const HIDDEN_SERVICE_IDS = new Set([
 export function getActiveServices(): Service[] {
   return SERVICES
     .filter(s => !RETIRED_SERVICE_IDS.has(s.id))
+    // ベータで非表示のものは、ログイン後の一覧にも出さない（BETA_HIDDEN_SERVICE_IDS）
+    .filter(s => !BETA_HIDDEN_SERVICE_IDS.has(s.id))
     // ⚠️ 開発中（UNLISTED_SERVICE_IDS）は status が 'coming_soon' でも**残す**。
     //    実際に動いていて開発・検証に使うので、ここから外すとログイン後の
     //    ツール切替から消え、URL直打ちでしか行けなくなる（2026-08-23にやった）。
@@ -1999,7 +2008,7 @@ export function getServicesByCategory(category: ServiceCategory): Service[] {
 //    RETIRED を先に弾かないと畳んだサービスが「利用可能」と判定される。
 export function isServiceAvailable(serviceId: string): boolean {
   const service = getServiceById(serviceId)
-  if (!service || RETIRED_SERVICE_IDS.has(service.id)) return false
+  if (!service || RETIRED_SERVICE_IDS.has(service.id) || BETA_HIDDEN_SERVICE_IDS.has(service.id)) return false
   return service.status === 'active' || service.status === 'beta'
 }
 

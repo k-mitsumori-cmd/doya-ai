@@ -7,12 +7,16 @@ import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 import { chunkText, CUNNING_KNOWLEDGE_MAX_CHUNKS } from '@/lib/cunning/rag'
 import { scrapeUrl, CunningScrapeTooLargeError } from '@/lib/cunning/scraper'
+import { betaServiceGuard } from '@/lib/beta-services'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 // POST /api/cunning/knowledge/[id]/ingest — テキスト/URLを取り込み（チャンク化して保存）
 // body: { type: 'text'|'url', text?: string, url?: string, label?: string }
 export async function POST(req: NextRequest, ctx: Ctx) {
+  // 開発中のベータ版のため、許可した人だけが使える（src/lib/beta-services.ts。2026-10-19）
+  const betaBlocked = await betaServiceGuard('cunning')
+  if (betaBlocked) return betaBlocked
   try {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })

@@ -6,9 +6,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 import { getCunningLimits } from '@/lib/cunning/limits'
+import { betaServiceGuard } from '@/lib/beta-services'
 
 // GET /api/cunning/knowledge — ナレッジベース一覧
 export async function GET() {
+  // 開発中のベータ版のため、許可した人だけが使える（src/lib/beta-services.ts。2026-10-19）
+  const betaBlocked = await betaServiceGuard('cunning')
+  if (betaBlocked) return betaBlocked
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
   const bases = await prisma.cunningKnowledgeBase.findMany({
@@ -27,6 +31,9 @@ export async function GET() {
 
 // POST /api/cunning/knowledge — ナレッジベース作成
 export async function POST(req: NextRequest) {
+  // 開発中のベータ版のため、許可した人だけが使える（src/lib/beta-services.ts。2026-10-19）
+  const betaBlocked = await betaServiceGuard('cunning')
+  if (betaBlocked) return betaBlocked
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 

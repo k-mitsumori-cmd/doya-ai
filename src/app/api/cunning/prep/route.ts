@@ -11,10 +11,14 @@ import { generatePrep } from '@/lib/cunning/prep'
 import { resolveSessionContext } from '@/lib/cunning/context'
 import { admitCunningAnswer } from '@/lib/cunning/answer-admission'
 import type { KnowledgeChunkLite } from '@/lib/cunning/types'
+import { betaServiceGuard } from '@/lib/beta-services'
 
 // POST /api/cunning/prep — セッションのコンテキストから想定問答を生成
 // body: { sessionId }
 export async function POST(req: NextRequest) {
+  // 開発中のベータ版のため、許可した人だけが使える（src/lib/beta-services.ts。2026-10-19）
+  const betaBlocked = await betaServiceGuard('cunning')
+  if (betaBlocked) return betaBlocked
   try {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })

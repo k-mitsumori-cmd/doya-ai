@@ -10,12 +10,16 @@ import { nextCunningRevision } from '@/lib/cunning/session-write'
 import { generateReport } from '@/lib/cunning/report'
 import { readCunningRecordingUsage } from '@/lib/cunning/recording-ledger'
 import type { CunningMode } from '@/lib/cunning/types'
+import { betaServiceGuard } from '@/lib/beta-services'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 // POST /api/cunning/sessions/[id]/report — 議事録＋評価を生成して保存。
 // body: { force?: boolean, acceptIncomplete?: boolean } 復旧期限後のみ保存済み内容で生成可能。
 export async function POST(req: NextRequest, ctx: Ctx) {
+  // 開発中のベータ版のため、許可した人だけが使える（src/lib/beta-services.ts。2026-10-19）
+  const betaBlocked = await betaServiceGuard('cunning')
+  if (betaBlocked) return betaBlocked
   try {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
