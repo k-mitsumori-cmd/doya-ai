@@ -10,6 +10,8 @@ import { isShellEnabled } from '@/lib/ui-shell'
 import InterviewShellFrame from '@/components/interview/InterviewShellFrame'
 import InterviewGuestClaimGate from '@/components/interview/InterviewGuestClaimGate'
 import { INTERVIEW_GUEST_COOKIE } from '@/lib/interview/access'
+import { isUiNext } from '@/lib/ui-next'
+import nextStyles from '@/components/interview/interview-next.module.css'
 
 export const metadata: Metadata = buildServiceMetadata('interview', {
   keywords: ['インタビュー記事', '文字起こし', 'AI記事生成', '取材', 'ライティング', '議事録'],
@@ -31,6 +33,8 @@ export default async function Layout({ children }: { children: React.ReactNode }
       currentPlan = 'FREE'
     }
   }
+  // 新しい見た目（UI 品質の直し。チェックリスト §5.1）。枠の中のログイン後の画面だけ
+  const uiNext = isLoggedIn && isShellEnabled('interview') && (await isUiNext())
 
   return (
     <>
@@ -41,53 +45,61 @@ export default async function Layout({ children }: { children: React.ReactNode }
         category="BusinessApplication"
         features={SVC.features}
       />
-      {/* Material Symbols Outlined font（root layout と同じ URL パラメータ） */}
-      <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
-        rel="stylesheet"
-      />
-      {/* Noto Sans JP — リッチなフォント */}
-      <link
-        href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet"
-      />
-      <style dangerouslySetInnerHTML={{ __html: `
-        .interview-root {
-          font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-          font-weight: 600;
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
-        }
-        .interview-root *:not(.material-symbols-outlined) {
-          font-family: inherit !important;
-        }
-        .interview-root .material-symbols-outlined {
-          font-family: 'Material Symbols Outlined' !important;
-          font-weight: normal !important;
-          font-style: normal !important;
-          opacity: 1 !important;
-        }
-        /* 全体的にフォントウェイトを底上げ（アイコンは除外） */
-        .interview-root p:not(.material-symbols-outlined),
-        .interview-root span:not(.material-symbols-outlined),
-        .interview-root div:not(.material-symbols-outlined),
-        .interview-root a:not(.material-symbols-outlined),
-        .interview-root button:not(.material-symbols-outlined),
-        .interview-root label:not(.material-symbols-outlined),
-        .interview-root input:not(.material-symbols-outlined),
-        .interview-root textarea:not(.material-symbols-outlined),
-        .interview-root select:not(.material-symbols-outlined) {
-          font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif !important;
-        }
-        /* font-normal (400) → 500, font-medium (500) → 600 に底上げ */
-        .interview-root .font-normal { font-weight: 600 !important; }
-        .interview-root .font-medium { font-weight: 600 !important; }
-        .interview-root .font-semibold { font-weight: 700 !important; }
-        .interview-root .font-bold { font-weight: 800 !important; }
-        .interview-root .font-extrabold { font-weight: 900 !important; }
-        .interview-root .font-black { font-weight: 900 !important; }
-      ` }} />
-      <div className="interview-root">
+      {/* ⚠️ 新しい見た目では、本文の中のフォントの読み込みと太さの上書きをしない。
+          本文の中の <link rel="stylesheet"> は、読み込みが終わるまで後ろの中身の表示を止めるため、
+          開いてから本文が出るまで数秒かかっていた（Material Symbols は root layout の <head> で読み込み済み）。
+          文字は共通の枠（ds）の書体と太さにそろえる */}
+      {uiNext ? null : (
+        <>
+        {/* Material Symbols Outlined font（root layout と同じ URL パラメータ） */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
+          rel="stylesheet"
+        />
+        {/* Noto Sans JP — リッチなフォント */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
+        <style dangerouslySetInnerHTML={{ __html: `
+          .interview-root {
+            font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+            font-weight: 600;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+          }
+          .interview-root *:not(.material-symbols-outlined) {
+            font-family: inherit !important;
+          }
+          .interview-root .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined' !important;
+            font-weight: normal !important;
+            font-style: normal !important;
+            opacity: 1 !important;
+          }
+          /* 全体的にフォントウェイトを底上げ（アイコンは除外） */
+          .interview-root p:not(.material-symbols-outlined),
+          .interview-root span:not(.material-symbols-outlined),
+          .interview-root div:not(.material-symbols-outlined),
+          .interview-root a:not(.material-symbols-outlined),
+          .interview-root button:not(.material-symbols-outlined),
+          .interview-root label:not(.material-symbols-outlined),
+          .interview-root input:not(.material-symbols-outlined),
+          .interview-root textarea:not(.material-symbols-outlined),
+          .interview-root select:not(.material-symbols-outlined) {
+            font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif !important;
+          }
+          /* font-normal (400) → 500, font-medium (500) → 600 に底上げ */
+          .interview-root .font-normal { font-weight: 600 !important; }
+          .interview-root .font-medium { font-weight: 600 !important; }
+          .interview-root .font-semibold { font-weight: 700 !important; }
+          .interview-root .font-bold { font-weight: 800 !important; }
+          .interview-root .font-extrabold { font-weight: 900 !important; }
+          .interview-root .font-black { font-weight: 900 !important; }
+        ` }} />
+        </>
+      )}
+      <div className={uiNext ? nextStyles.next : 'interview-root'}>
         <InterviewGuestClaimGate enabled={guestCookiePresent}>
           {/* ゲスト（未ログイン）→ 枠なし / 枠が有効 → ToolFrame だけ（枠は (shell)/layout.tsx） / それ以外 → 今のレイアウト */}
           {!isLoggedIn ? children : isShellEnabled('interview') ? <InterviewShellFrame>{children}</InterviewShellFrame> : <InterviewLayout currentPlan={currentPlan} isLoggedIn={isLoggedIn}>{children}</InterviewLayout>}

@@ -9,6 +9,12 @@ import { AlertTriangle, Link2, Loader2 } from 'lucide-react'
 import RunResult from '@/components/asklink/RunResult'
 import { useBannerQueue } from '@/components/asklink/useBannerQueue'
 import type { RunDto } from '@/lib/asklink/dto'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { ToolHero } from '@/components/ds'
+import { DoneBanner, ErrorNotice } from '@/components/ds/feedback'
+
+// 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/asklink.webp）が置かれるまでは、LP の絵を仮に出す
+const HERO_ART = '/asklink/hero.webp'
 
 const LOADING_STEPS = ['サイトを読み取っています', '質問文を作っています', 'URLと文字数を確認しています']
 
@@ -52,6 +58,8 @@ export default function AskLinkTool() {
   const [limit, setLimit] = useState<{ message: string; upgradeUrl?: string } | null>(null)
   const [run, setRun] = useState<RunDto | null>(null)
   const queue = useBannerQueue(setRun)
+  const uiNext = useUiNext()
+  const [doneShown, setDoneShown] = useState(false)
 
   const create = async () => {
     if (loading) return
@@ -82,6 +90,7 @@ export default function AskLinkTool() {
       setRun(data.run)
       setNeedManual(false)
       setManualText('')
+      setDoneShown(true)
       window.dispatchEvent(new Event('asklink:generated'))
       // リンクを先に見せ、画像は順に作る
       void queue.generate(data.run.id, data.run.banners.map((b: { kind: string }) => b.kind))
@@ -94,6 +103,17 @@ export default function AskLinkTool() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
+      {uiNext ? (
+        // 見出し（h1）は枠（ToolFrame）が出すので、ここは「何ができるか」を h2 で書く
+        <div className="mb-6">
+          <ToolHero
+            title={<>サイトのURLから、<wbr />「AIに聞く」リンクを</>}
+            lead="URLを1つ入れると、ChatGPTに質問が届くリンク2本と、ポップアップ用のバナー3枚を作ります。"
+            art={HERO_ART}
+            artAlt="サイトのポップアップの「AIに聞く」ボタンから、ChatGPTで相談が始まる様子"
+          />
+        </div>
+      ) : (
       <div className="mb-6 flex items-center gap-3">
         <Image src="/asklink/icon.png" alt="" width={44} height={44} className="h-11 w-11 rounded-xl shadow" priority />
         <div>
@@ -101,6 +121,7 @@ export default function AskLinkTool() {
           <p className="text-sm font-bold text-slate-500">サイトのURLから「AIに聞く」リンク2本とポップアップ用バナー3枚を作ります。</p>
         </div>
       </div>
+      )}
 
       <form
         onSubmit={(e) => {
@@ -171,7 +192,15 @@ export default function AskLinkTool() {
             <li className="text-xs font-bold text-slate-500 sm:col-span-3">十数秒ほどかかります。このままお待ちください。</li>
           </ol>
         )}
-        {error && (
+        {error && uiNext && (
+          <div className="mt-3">
+            <ErrorNotice
+              what={error}
+              how={needManual ? '下の欄にサービスの説明を入れて、もう一度「作成する」を押してください。' : 'URLを確かめて、もう一度「作成する」を押してください。'}
+            />
+          </div>
+        )}
+        {error && !uiNext && (
           <p className="mt-3 flex items-start gap-1.5 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-800">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             {error}
@@ -193,6 +222,15 @@ export default function AskLinkTool() {
 
       {run && (
         <div className="mt-8">
+          {uiNext && doneShown && !queue.busy && (
+            <div className="mb-4">
+              <DoneBanner
+                title="質問リンクとバナーができました。下のボタンでコピーして、ポップアップに貼ってください。"
+                next={<Link href="/asklink/history" className="text-sm font-bold text-[#0066ff] hover:underline">これまでの結果を見る</Link>}
+                onClose={() => setDoneShown(false)}
+              />
+            </div>
+          )}
           {queue.busy && (
             <p className="mb-4 flex items-center gap-2 rounded-xl bg-blue-50 p-3 text-sm font-bold text-[#0066ff]">
               <Loader2 className="h-4 w-4 animate-spin" />
