@@ -5908,5 +5908,70 @@ model AccountCompany {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  // ドヤパワーの台帳（Prisma の上だけの関連。account_companies の列は増えない）
+  doyaPowerAccount DoyaPowerAccount?
+
   @@map("account_companies")
+}
+
+// ============================================
+// ドヤパワー（会社ごとのポイントの台帳。案。2026-10-19）
+// ============================================
+// 仕様: docs/architecture/management-agent/PRICING-POINTS-2026-10-19.md / DOYA-POWER-MIGRATION.md
+// 処理の正本: src/lib/doya-power/ledger.ts（残りは grant.remaining の合計が正。account.balance は表示用の写し）
+// ⚠️ 本番DBにはまだ無い。流す SQL は DOYA-POWER-MIGRATION.md（統括がユーザーの承認を取って流す）
+// ⚠️ 前払式支払手段（資金決済法）にあたるかは法務の確認が要る（purchase の有効期限を6か月以内に収めているのはそのため）
+
+// 会社ごとの口座（1社に1つ）
+model DoyaPowerAccount {
+  id              String         @id @default(cuid())
+  companyId       String         @unique
+  company         AccountCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  balance         Int            @default(0) // 表示用の写し（grant.remaining の有効な分の合計）
+  lastRecoveryDay String? // 毎日の回復を最後に付けた日（日本時間の YYYY-MM-DD）
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  grants       DoyaPowerGrant[]
+  transactions DoyaPowerTransaction[]
+
+  @@map("doya_power_accounts")
+}
+
+// 付与の1回分（種類・量・残り・有効期限）。減らすときは期限の近い順に remaining を減らす
+model DoyaPowerGrant {
+  id        String           @id @default(cuid())
+  accountId String
+  account   DoyaPowerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  kind      String // monthly | daily_recovery | bonus | mission | purchase
+  amount    Int // 付与した量
+  remaining Int // 残り（0 以上）
+  grantedAt DateTime         @default(now())
+  expiresAt DateTime? // null は期限なし（毎日の回復）
+  sourceKey String? // 二重付与を防ぐ鍵（monthly:2026-10 / daily:2026-10-19 / mission:<id> など）
+  createdAt DateTime         @default(now())
+
+  @@unique([accountId, sourceKey])
+  @@index([accountId, expiresAt])
+  @@index([accountId, kind, grantedAt])
+  @@map("doya_power_grants")
+}
+
+// 増減の記録（消費・戻し・付与・期限切れ）。消さない・書き換えない
+model DoyaPowerTransaction {
+  id           String           @id @default(cuid())
+  accountId    String
+  account      DoyaPowerAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  type         String // consume | refund | grant | expire
+  amount       Int // 増は正、減は負
+  balanceAfter Int
+  operationId  String?          @unique // consume だけ。同じ操作で二重に減らさない
+  refundOf     String?          @unique // refund だけ。戻した consume の operationId（戻しは1回だけ）
+  grantId      String? // grant / expire のときの付与
+  allocations  Json? // consume のとき、どの付与からいくつ減らしたか [{ grantId, amount }]
+  note         String?
+  createdAt    DateTime         @default(now())
+
+  @@index([accountId, createdAt])
+  @@map("doya_power_transactions")
 }
