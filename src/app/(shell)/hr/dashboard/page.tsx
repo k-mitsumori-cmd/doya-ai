@@ -1,10 +1,11 @@
 'use client'
 import { PageTitle, useToolUiNext } from '@/components/hr/ui-next'
-import { Button, ErrorNotice, ToolHero } from '@/components/ds'
+import { Button, EmptyState, StatTile, ToolHero } from '@/components/ds'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
+import HrLoadError, { HrStatusError, hrErrorStatus } from '@/components/hr/HrLoadError'
 
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import Link from 'next/link'
 
 /** Hook: 0 から target まで段階的にカウントアップする */
@@ -50,10 +51,13 @@ interface EvaluationPeriod {
 }
 
 const STAT_CARDS = [
-  { key: 'employeeCount', icon: 'people', label: '従業員数', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
-  { key: 'departmentCount', icon: 'apartment', label: '部署数', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
-  { key: 'activeEvaluations', icon: 'assessment', label: '進行中の評価', iconBg: 'bg-red-100', iconColor: 'text-red-500' },
+  { key: 'employeeCount', icon: 'people', label: '従業員数', iconBg: 'bg-blue-100', iconColor: 'text-blue-600', nextIcon: 'Users', unit: '名', href: '/hr/employees' },
+  { key: 'departmentCount', icon: 'apartment', label: '部署数', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', nextIcon: 'Building2', unit: '部署', href: '/hr/org-chart' },
+  { key: 'activeEvaluations', icon: 'assessment', label: '進行中の評価', iconBg: 'bg-red-100', iconColor: 'text-red-500', nextIcon: 'ClipboardList', unit: '件', href: '/hr/evaluations' },
 ]
+
+// 新しい見た目: リンクのキーボードの選択を見えるようにする
+const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue,#0066ff)] focus-visible:ring-offset-2'
 
 const SETUP_STEPS = [
   {
@@ -127,8 +131,13 @@ export default function HrDashboardPage() {
   const [evaluationPeriods, setEvaluationPeriods] = useState<EvaluationPeriod[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  // 新しい見た目で、失敗の種類（ログイン・権限・上限）を分けるためのステータス
+  const [errorStatus, setErrorStatus] = useState<number | undefined>(undefined)
   const [retryKey, setRetryKey] = useState(0)
   const uiNext = useToolUiNext()
+  // 新しい見た目では、動きを減らす設定のときにキャラクターを揺らさない
+  const reduceMotion = useReducedMotion()
+  const still = uiNext && Boolean(reduceMotion)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -137,7 +146,7 @@ export default function HrDashboardPage() {
       setLoadError(false)
       try {
         const res = await fetch('/api/hr/dashboard', { cache: 'no-store', signal: controller.signal })
-        if (!res.ok) throw new Error('ダッシュボードを取得できませんでした')
+        if (!res.ok) throw new HrStatusError(res.status)
         const data = await res.json()
         if (
           !data || typeof data !== 'object' ||
@@ -163,8 +172,8 @@ export default function HrDashboardPage() {
         })
         setRecentOneOnOnes(data.recentOneOnOnes)
         setEvaluationPeriods(data.evaluationPeriods)
-      } catch {
-        if (!controller.signal.aborted) setLoadError(true)
+      } catch (error) {
+        if (!controller.signal.aborted) { setLoadError(true); setErrorStatus(hrErrorStatus(error)) }
       } finally {
         if (!controller.signal.aborted) setLoading(false)
       }
@@ -176,7 +185,7 @@ export default function HrDashboardPage() {
   if (loadError && uiNext) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        <ErrorNotice what="ダッシュボードを読み込めませんでした。組織の情報は変わっていません。" how="時間をおいて、もう一度お試しください。" onRetry={() => setRetryKey((key) => key + 1)} retryLabel="再読み込み" />
+        <HrLoadError subject="ダッシュボード" status={errorStatus} onRetry={() => setRetryKey((key) => key + 1)} />
       </div>
     )
   }
@@ -226,8 +235,21 @@ export default function HrDashboardPage() {
         />
       </div>}
 
-      {/* Stats Cards */}
-      <motion.div
+      {/* Stats Cards（新しい見た目: StatTile。押すとそれぞれの一覧へ。読み込み中も高さを確保して押し下げない） */}
+      {uiNext ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {STAT_CARDS.map((card) => (
+            <StatTile
+              key={card.key}
+              label={card.label}
+              icon={card.nextIcon}
+              href={card.href}
+              value={loading ? <span aria-label="読み込み中" className="inline-block h-8 w-12 rounded bg-slate-100 motion-safe:animate-pulse" /> : (stats as any)[card.key] as number}
+              unit={loading ? undefined : card.unit}
+            />
+          ))}
+        </div>
+      ) : <motion.div
         initial="hidden"
         animate="visible"
         variants={{
@@ -261,7 +283,7 @@ export default function HrDashboardPage() {
             </p>
           </motion.div>
         ))}
-      </motion.div>
+      </motion.div>}
 
       {/* Setup Guide — shown when no employees */}
       {!loading && stats.employeeCount === 0 && (
@@ -324,7 +346,7 @@ export default function HrDashboardPage() {
               src="/hr/characters/point_%E8%A7%A3%E8%AA%AC.png"
               alt="白くまキャラクター"
               className="hidden sm:block w-40 flex-shrink-0 drop-shadow-lg"
-              animate={{ y: [0, -10, 0] }}
+              animate={still ? undefined : { y: [0, -10, 0] }}
               transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
             />
             {SETUP_STEPS.map((item) => {
@@ -340,7 +362,7 @@ export default function HrDashboardPage() {
                 >
                 <Link
                   href={item.href}
-                  className={`relative block rounded-3xl p-4 transition-all hover:shadow-md ${
+                  className={`relative block rounded-3xl p-4 transition-all hover:shadow-md ${uiNext ? FOCUS_RING : ''} ${
                     done ? 'bg-emerald-50' : 'bg-slate-50 hover:bg-blue-50'
                   }`}
                 >
@@ -450,7 +472,7 @@ export default function HrDashboardPage() {
               <span className="material-symbols-outlined text-red-500">assessment</span>
               評価期間の進捗
             </h2>
-            <Link href="/hr/evaluations" className="text-sm font-semibold text-blue-600 hover:text-blue-700">
+            <Link href="/hr/evaluations" className={uiNext ? `inline-flex min-h-11 items-center whitespace-nowrap rounded-lg px-2 text-sm font-semibold text-blue-600 hover:text-blue-700 ${FOCUS_RING}` : 'text-sm font-semibold text-blue-600 hover:text-blue-700'}>
               すべて見る
             </Link>
           </div>
@@ -465,18 +487,18 @@ export default function HrDashboardPage() {
               {evaluationPeriods.map((period) => {
                 const pct = period.total > 0 ? Math.round((period.completed / period.total) * 100) : 0
                 return (
-                  <Link key={period.id} href={`/hr/evaluations/${period.id}`} className="block">
+                  <Link key={period.id} href={`/hr/evaluations/${period.id}`} className={uiNext ? `block rounded-2xl ${FOCUS_RING}` : 'block'}>
                     <div className="p-3 rounded-2xl hover:bg-slate-50 transition-colors">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-base font-bold text-slate-900">{period.name}</p>
-                        <span className="text-base font-black text-blue-600">{pct}%</span>
+                      <div className={uiNext ? 'flex items-center justify-between gap-3 mb-2' : 'flex items-center justify-between mb-2'}>
+                        <p className={uiNext ? 'min-w-0 truncate text-base font-bold text-slate-900' : 'text-base font-bold text-slate-900'}>{period.name}</p>
+                        <span className={uiNext ? 'shrink-0 text-base font-black text-blue-600' : 'text-base font-black text-blue-600'}>{pct}%</span>
                       </div>
                       <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                         <motion.div
                           className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full"
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
-                          transition={{ duration: 0.8, ease: 'easeOut' }}
+                          transition={still ? { duration: 0 } : { duration: 0.8, ease: 'easeOut' }}
                         />
                       </div>
                       <p className="text-xs text-slate-500 mt-1">{period.completed}/{period.total}件完了</p>
@@ -485,6 +507,14 @@ export default function HrDashboardPage() {
                 )
               })}
             </div>
+          ) : uiNext ? (
+            // 新しい見た目: 空の状態は絵＋次にやること1つ
+            <EmptyState
+              art="/hr/empty-members.webp"
+              title="評価期間はまだありません"
+              description={stats.canCreatePeriods ? '評価期間を作ると、MBO評価の進み具合をここで確認できます。' : '管理者が評価期間を作成すると、ここに表示されます。'}
+              action={stats.canCreatePeriods ? <Button href="/hr/evaluations" icon="Plus">評価期間を作成</Button> : undefined}
+            />
           ) : (
             <div className="text-center py-8 text-slate-400">
               <span className="material-symbols-outlined text-5xl mb-3 block text-red-300">assessment</span>
@@ -507,10 +537,10 @@ export default function HrDashboardPage() {
         <h2 className="text-lg font-black text-slate-900 mb-4">クイックアクション</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {QUICK_ACTIONS.filter((action) => stats.canManageEmployees || action.href !== '/hr/employees/new').map((action) => (
-            <motion.div key={action.href} whileHover={{ scale: 1.03, y: -2 }}>
+            <motion.div key={action.href} whileHover={still ? undefined : { scale: 1.03, y: -2 }}>
               <Link
                 href={action.href}
-                className="flex items-center gap-3 px-5 py-4 rounded-3xl shadow-md hover:shadow-lg bg-white transition-shadow"
+                className={`flex items-center gap-3 px-5 py-4 rounded-3xl shadow-md hover:shadow-lg bg-white transition-shadow ${uiNext ? `min-h-11 ${FOCUS_RING}` : ''}`}
               >
                 <div className={`w-10 h-10 rounded-2xl ${action.iconBg} flex items-center justify-center`}>
                   <span className={`material-symbols-outlined ${action.iconColor}`}>{action.icon}</span>

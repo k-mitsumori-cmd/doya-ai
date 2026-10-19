@@ -63,7 +63,10 @@ export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
   const isLandingPage = pathname === '/hr'
   const isPricingPage = pathname === '/hr/pricing'
   const isInvitePage = pathname?.startsWith('/hr/invite/')
-  const isPublicPage = isLandingPage || isPricingPage || isInvitePage
+  // 開発時だけの画面の見本（/hr/dev/states）。ログインなしで開けるよう、外側の旧来のレイアウトは中身をそのまま返す。
+  // ⚠️ 本番では NODE_ENV で必ず偽（ページ自体も 404）。見本の中の HrShellFrame（renderFrame あり）は通常どおり動かす
+  const isDevPreview = process.env.NODE_ENV !== 'production' && !renderFrame && Boolean(pathname?.startsWith('/hr/dev/'))
+  const isPublicPage = isLandingPage || isPricingPage || isInvitePage || isDevPreview
 
   const loadUsage = useCallback(async (preserveView = false) => {
     if (!selectionReady || !activeScope.current.allowed || activeScope.current.key !== scopeKey) return
