@@ -57,6 +57,7 @@ export const SHELL_SERVICES: ShellService[] = [
   { id: 'sfa', basePath: '/sfa', inShell: (p) => /^\/sfa\/[^/]+/.test(p) && !p.startsWith('/sfa/pricing') && !p.startsWith('/sfa/invite') },
   // プロマネは組織（ワークスペース）を選んだあと（/promane/<slug>）だけ枠に入る。入口（/promane）・招待・料金は今までどおり
   { id: 'promane', basePath: '/promane', inShell: (p) => /^\/promane\/[^/]+/.test(p) && !/^\/promane\/(invite|pricing)(\/|$)/.test(p) },
+  { id: 'hr', basePath: '/hr', inShell: (p) => p !== '/hr' && p !== '/hr/pricing' && !p.startsWith('/hr/pricing/') }, // 紹介ページと料金は枠の外。招待は guest-path.ts で外れる
 ]
 
 /** 今のパスが、台帳のどのツールに当たるか */

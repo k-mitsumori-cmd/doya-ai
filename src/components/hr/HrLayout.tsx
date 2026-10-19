@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import HrOrganizationScope from './HrOrganizationScope'
 import { loadHrOrganizationChoices, type HrOrganizationChoice } from '@/lib/hr/organization-choices-client'
@@ -14,9 +15,14 @@ import HrOnboarding from './HrOnboarding'
 
 interface HrLayoutProps {
   children: React.ReactNode
+  /**
+   * 共通の枠に載せたときの外側（HrShellFrame が ToolFrame を渡す）。省略時は今までのサイドバーのレイアウト。
+   * 組織の切り替え（<select>）は switcher として渡し、中身（sessionStorage・ヘッダー）はここで持ったまま変えない
+   */
+  renderFrame?: (frame: { switcher: ReactNode; canManageEmployees: boolean; children: ReactNode }) => ReactNode
 }
 
-export default function HrLayout({ children }: HrLayoutProps) {
+export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname(), router = useRouter()
   const [selection, setSelection] = useState<{ actor: string; organizationId?: string; revision: number }>({ actor: '', revision: 0 })
@@ -147,14 +153,20 @@ export default function HrLayout({ children }: HrLayoutProps) {
   }
   const requestedPickerOrganization = confirmedOrganization || selection.organizationId || ''
   const pickerOrganization = choices.rows.some(row => row.organizationId === requestedPickerOrganization) ? requestedPickerOrganization : ''
-  const organizationPicker = allowed && choices.actor === actor && <div className="border-b border-slate-200 bg-white px-4 py-3">
+  const organizationPickerBody = allowed && choices.actor === actor && <>
     <label className="flex flex-wrap items-center gap-2 text-sm font-bold">表示する組織<select aria-label="表示する組織" className="min-w-0 max-w-full rounded-lg border p-2" value={pickerOrganization} disabled={choices.loading || Boolean(choices.error)} onChange={event => selectOrganization(event.target.value)}>
       <option value="" disabled>組織を選択してください</option>{choices.rows.map(row => <option key={row.memberId} value={row.organizationId}>{row.name}</option>)}
     </select></label>
     {choices.loading && <p role="status" className="text-sm">所属組織を確認しています。</p>}
     {choices.error && <p role="alert">{choices.error}<button type="button" onClick={() => void loadChoices()} className="ml-2 underline">再取得する</button></p>}
     {selectionError && <p role="alert">{selectionError}</p>}
-  </div>
+  </>
+  const organizationPicker = organizationPickerBody && <div className="border-b border-slate-200 bg-white px-4 py-3">{organizationPickerBody}</div>
+  // 共通の枠では、組織の切り替えを ToolFrame の switcher（パンくずの右）に出し、本文には出さない
+  const framed = (node: ReactNode) => renderFrame
+    ? <>{renderFrame({ switcher: organizationPickerBody ? <div>{organizationPickerBody}</div> : null, canManageEmployees: usage.canManageEmployees, children: node })}</>
+    : <>{node}</>
+  const inlinePicker = renderFrame ? null : organizationPicker
 
   useEffect(() => {
     const requestCounter = usageRequest
@@ -197,11 +209,11 @@ export default function HrLayout({ children }: HrLayoutProps) {
   if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
 
   if ((usageError || selectionError) && session?.user && !knownScope) {
-    return <div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center">{organizationPicker}<p className="font-bold text-rose-700">組織情報を取得できませんでした。組織の状態は変更されていません。</p><button type="button" onClick={() => void loadUsage()} className="rounded-xl bg-sky-600 px-5 py-3 font-bold text-white">再読み込み</button></div>
+    return framed(<div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center">{inlinePicker}<p className="font-bold text-rose-700">組織情報を取得できませんでした。組織の状態は変更されていません。</p><button type="button" onClick={() => void loadUsage()} className="rounded-xl bg-sky-600 px-5 py-3 font-bold text-white">再読み込み</button></div>)
   }
 
   if (!knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed)) {
-    return (
+    return framed(
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 rounded-full border-4 border-sky-200 border-t-sky-500 animate-spin" />
@@ -230,11 +242,20 @@ export default function HrLayout({ children }: HrLayoutProps) {
   }
 
   if (!hasOrg) {
-    return <HrOnboarding />
+    return framed(<HrOnboarding />)
   }
 
   if ((pathname === '/hr/employees/new' || /^\/hr\/employees\/[^/]+\/edit$/.test(pathname || '')) && !usage.canManageEmployees) {
-    return <div role="alert" className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center font-bold text-slate-700">従業員の登録・編集は管理者のみ利用できます。</div>
+    return framed(<div role="alert" className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center font-bold text-slate-700">従業員の登録・編集は管理者のみ利用できます。</div>)
+  }
+
+  if (renderFrame) {
+    // 共通の枠: サイドバーとモバイルのヘッダーは出さない（ToolFrame のタブと、枠の左のメニューが同じ役目をする）
+    return framed(<>
+      {isSessionLoading && <div role="status" className="p-6 text-center">認証情報を確認しています。</div>}
+      {usageError && <div role="alert" className="bg-amber-50 p-3 text-center text-sm">組織情報を再確認できませんでした。入力内容は保持しています。<button type="button" onClick={() => void loadUsage(true)} className="ml-2 underline">再取得する</button></div>}
+      <div ref={element => { if (element) element.inert = isSessionLoading || usageError }} style={isSessionLoading ? { display: 'none' } : undefined}><HrOrganizationScope key={JSON.stringify([actor, confirmedOrganization, selection.revision])} actor={actor} organizationId={confirmedOrganization} enabled={allowed && !usageError && knownScope}>{children}</HrOrganizationScope></div>
+    </>)
   }
 
   return (

@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
 const {check,results}=require('./load-typescript.cjs');
-const source=fs.readFileSync('src/app/hr/one-on-one/[id]/page.tsx','utf8'),ast=ts.createSourceFile('x.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let effect,save;
+const source=fs.readFileSync('src/app/(shell)/hr/one-on-one/[id]/page.tsx','utf8'),ast=ts.createSourceFile('x.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let effect,save;
 function visit(n){if(ts.isCallExpression(n)&&n.expression.getText(ast)==='useEffect')effect=n.arguments[0].getText(ast);if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='handleSave')save=n.initializer.getText(ast);ts.forEachChild(n,visit)}visit(ast);
 const compile=s=>ts.transpileModule('('+s+')',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
 const flush=()=>new Promise(r=>setImmediate(r));

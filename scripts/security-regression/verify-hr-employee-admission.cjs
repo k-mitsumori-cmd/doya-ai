@@ -114,7 +114,7 @@ const ts = require('typescript')
   })
 
   await check('new employee photo uploads only after admission and is attached to the saved employee', async () => {
-    const source = fs.readFileSync('src/app/hr/employees/new/page.tsx', 'utf8')
+    const source = fs.readFileSync('src/app/(shell)/hr/employees/new/page.tsx', 'utf8')
     const ast = ts.createSourceFile('new-page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
     let handler
     function visit(node) {

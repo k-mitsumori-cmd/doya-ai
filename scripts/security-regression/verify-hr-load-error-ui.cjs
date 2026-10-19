@@ -75,9 +75,9 @@ function run(code, response) {
 
 ;(async () => {
   const pages = [
-    ['dashboard', 'fetchDashboard', 'src/app/hr/dashboard/page.tsx'],
-    ['evaluations', 'fetchPeriods', 'src/app/hr/evaluations/page.tsx'],
-    ['settings', 'fetchSettings', 'src/app/hr/settings/page.tsx'],
+    ['dashboard', 'fetchDashboard', 'src/app/(shell)/hr/dashboard/page.tsx'],
+    ['evaluations', 'fetchPeriods', 'src/app/(shell)/hr/evaluations/page.tsx'],
+    ['settings', 'fetchSettings', 'src/app/(shell)/hr/settings/page.tsx'],
   ]
   for (const [name, fn, file] of pages) {
     const code = extract(file, fn)
@@ -97,7 +97,7 @@ function run(code, response) {
     })
   }
   await check('dashboard: valid zero counts are genuinely empty', async () => {
-    const code = extract('src/app/hr/dashboard/page.tsx', 'fetchDashboard')
+    const code = extract('src/app/(shell)/hr/dashboard/page.tsx', 'fetchDashboard')
     const state = await run(code, Response.json({ orgName: 'Example', canManageEmployees: false, canCreatePeriods: false, employeeCount: 0, departmentCount: 0, activeEvaluations: 0, monthlyOneOnOnes: 0, recentOneOnOnes: [], evaluationPeriods: [] }))
     assert.equal(state.loadError, false)
     assert.equal(state.stats.orgName, 'Example')
@@ -105,14 +105,14 @@ function run(code, response) {
     assert.equal(state.stats.canCreatePeriods, false)
   })
   await check('evaluations: valid empty list is distinct from an outage', async () => {
-    const code = extract('src/app/hr/evaluations/page.tsx', 'fetchPeriods')
+    const code = extract('src/app/(shell)/hr/evaluations/page.tsx', 'fetchPeriods')
     const state = await run(code, Response.json({ success: true, format: 'hr-evaluation-period-page-v1', organizationId: 'synthetic-org', revision: 'a'.repeat(64), total: 0, fragments: [], nextCursor: null, canCreatePeriods: false }))
     assert.equal(state.loadError, false)
     assert.equal(state.periods.length, 0)
     assert.equal(state.canCreatePeriods, false)
   })
   await check('settings: audit outage does not hide valid organization and departments', async () => {
-    const code = extract('src/app/hr/settings/page.tsx', 'fetchSettings')
+    const code = extract('src/app/(shell)/hr/settings/page.tsx', 'fetchSettings')
     const state = await run(code, async url => {
       if (url === '/api/hr/settings') return Response.json({ settings: { id: 'synthetic-org', name: 'Example' }, members: [], myRole: 'OWNER', myMemberId: 'member' })
       if (url === '/api/hr/departments?format=pages') return Response.json({ success: true, format: 'hr-department-page-v1', organizationId: 'synthetic-org', revision: 'a'.repeat(64), total: 0, fragments: [], nextCursor: null })

@@ -44,7 +44,7 @@ export const DEMOS: Record<string, Recipe> = {
     labels: ["商材の条件を入力", "顧客像を確認", "施策の要点を見る"],
   },
   hr: {
-    load: () => import("@/app/hr/mocks"),
+    load: () => import("@/app/(shell)/hr/mocks"),
     screens: ["HrEmployeesMock", "HrOrgChartMock", "HrEvalMock"],
     labels: ["従業員を選ぶ", "組織図を見る", "人事評価を確認"],
   },

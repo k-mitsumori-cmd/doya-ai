@@ -6,7 +6,7 @@ import sharp from 'sharp'
 const ROOT = process.cwd()
 const appDir = (id) => existsSync(path.join(ROOT, 'src/app/(shell)', id)) ? `(shell)/${id}` : id
 const ids = ['banner','seo','interview','persona','hr','kintai','doyalist','doyaslide','cunning','promane','sfa','shodan','aio','mensetsu','quote','aishodan','adimage']
-const lpFiles = { banner: 'src/app/(shell)/banner/landing/page.tsx', hr: 'src/app/hr/page.tsx', kintai: 'src/app/kintai/page.tsx', promane: 'src/app/(shell)/promane/PromaneLp.tsx', cunning: 'src/app/(shell)/cunning/Lp.tsx', interview: 'src/app/(shell)/interview/Lp.tsx', persona: 'src/app/(shell)/persona/Lp.tsx' }
+const lpFiles = { banner: 'src/app/(shell)/banner/landing/page.tsx', hr: 'src/app/(shell)/hr/page.tsx', kintai: 'src/app/kintai/page.tsx', promane: 'src/app/(shell)/promane/PromaneLp.tsx', cunning: 'src/app/(shell)/cunning/Lp.tsx', interview: 'src/app/(shell)/interview/Lp.tsx', persona: 'src/app/(shell)/persona/Lp.tsx' }
 const samples = ['cat-telecom','cat-marketing','cat-ec','cat-recruit','cat-beauty','cat-food','cat-realestate','cat-education','cat-finance','cat-health','cat-it','cat-other','purpose-sns_ad','purpose-youtube','purpose-display','purpose-webinar','purpose-lp_hero','purpose-email','purpose-campaign','size-1080x1080','size-1200x628','size-1080x1920','size-1280x720','size-1920x1080','size-300x250','size-728x90','size-320x50','size-1920x600','size-1200x800','size-600x200','size-600x300']
 let checks = 0
 const assert = (condition, message) => { checks += 1; if (!condition) throw new Error(message) }

@@ -1,6 +1,6 @@
 const fs=require('node:fs'), vm=require('node:vm'), ts=require('typescript'), assert=require('node:assert/strict');
 const {check,results}=require('./load-typescript.cjs');
-const source=fs.readFileSync('src/app/hr/one-on-one/page.tsx','utf8'), ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX), codes={};
+const source=fs.readFileSync('src/app/(shell)/hr/one-on-one/page.tsx','utf8'), ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX), codes={};
 function visit(n){if(ts.isFunctionDeclaration(n)&&['fetchRecords','fetchEmployees'].includes(n.name?.text))codes[n.name.text]=n.getText(ast);ts.forEachChild(n,visit)}visit(ast);
 function setup(fetch){const state={},env={fetch,Map,Number,Array,Error,recordSequence:{current:0},employeeSequence:{current:0}};for(const key of ['Records','Page','TotalPages','Loading','ListError','Employees','EmployeePage','EmployeeHasMore','EmployeeLoading','EmployeeError','CanCreate','CreationManagerId','SelectedManager']){state[key]=key==='Employees'||key==='Records'?[]:null;env['set'+key]=value=>state[key]=typeof value==='function'?value(state[key]):value;}const f={};for(const [key,code]of Object.entries(codes))f[key]=vm.runInNewContext(ts.transpileModule('('+code+')',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,env);return{...f,state};}
 (async()=>{
