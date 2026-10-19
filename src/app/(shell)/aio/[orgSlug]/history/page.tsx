@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { aioGet } from '@/lib/aio/client'
 import type { ScanCoverageCounts } from '@/lib/aio/coverage'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 type ScanRow = {
   id: string; status: string; awarenessPct: number | null; shareOfVoice: number | null
@@ -13,6 +14,9 @@ type ScanRow = {
 type ScanPage = { items: ScanRow[]; nextCursor: string | null }
 
 export default function AioHistoryPage() {
+  // 新しい見た目（チェックリスト §5.1）のときは、見出しを h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
+  const uiNext = useUiNext()
+  const Title = uiNext ? 'h2' : 'h1'
   const { orgSlug } = useParams<{ orgSlug: string }>()
   const generation = useRef(0)
   const [items, setItems] = useState<ScanRow[]>([])
@@ -52,7 +56,7 @@ export default function AioHistoryPage() {
   const metric = (value: number | null) => typeof value === 'number' && Number.isFinite(value) ? `${value}%` : '—'
   return <div className="mx-auto max-w-5xl p-6">
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <div><h1 className="text-2xl font-black text-slate-900">スキャン履歴</h1><p className="mt-1 text-sm text-slate-600">保存済みの測定結果を新しい順に確認できます。</p></div>
+      <div><Title className="text-2xl font-black text-slate-900">スキャン履歴</Title><p className="mt-1 text-sm text-slate-600">保存済みの測定結果を新しい順に確認できます。</p></div>
       <Link href={base} className="text-sm font-bold text-purple-700 underline">ダッシュボードに戻る</Link>
     </div>
     {loading && items.length === 0 ? <p role="status">履歴を読み込み中…</p> : null}

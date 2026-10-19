@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { startGoogleSignIn } from '@/lib/use-navigation-submission'
 import { useSession } from 'next-auth/react'
+import { useUiNext } from '@/components/shell/ui-next-context'
 import { readBillingResponse } from '@/lib/billing-response-client'
 import { useAioQuickStart } from '@/lib/aio/use-quick-start'
 import { AioQuickStartStatus } from '@/components/aio/quick-start-status'
@@ -40,6 +41,8 @@ const ROWS: ShowcaseRow[] = [
 ]
 
 export default function AioEntryPage() {
+  // 新しい見た目（チェックリスト §5.1）かどうか
+  const uiNext = useUiNext()
   const router = useRouter()
   const [phase, setPhase] = useState<'loading' | 'ready'>('loading')
   const [authed, setAuthed] = useState(false)
@@ -83,6 +86,16 @@ export default function AioEntryPage() {
     if (flow.disabled) return
     if (!serviceUrl.trim()) { toast.error('URLを入力してください'); return }
     await flow.start()
+  }
+
+  if (phase === 'loading' && uiNext) {
+    // 新しい見た目: 全画面の水色の読み込みにせず、中身の場所にだけ小さく出す（UI 品質 C-1・C-2・F-2）
+    return (
+      <div role="status" className="grid place-items-center py-20 text-center">
+        <DoyaKun mood="thinking" size={72} float={false} />
+        <p className="mt-3 text-sm text-slate-500 font-bold">組織を確認しています…</p>
+      </div>
+    )
   }
 
   if (phase === 'loading') {

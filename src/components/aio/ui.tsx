@@ -2,6 +2,7 @@
 
 // ドヤAIO 共通UIパーツ（ドヤAIデザイン言語：ブランド紫 #7f19e6・ドヤくん・浮遊ドット）
 import React from 'react'
+import { useUiNext } from '@/components/shell/ui-next-context'
 
 export const BRAND = '#7f19e6'
 
@@ -74,6 +75,8 @@ export function BrandMark({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
 
 /** 画面共通ヘッダ（アイコン＋タイトル＋サブ。任意でドヤくん） */
 export function PageHeader({ icon, title, subtitle, mood }: { icon: string; title: string; subtitle?: string; mood?: Mood }) {
+  // 新しい見た目（チェックリスト §5.1）のときは h2 にする（h1 は枠の ToolFrame が出す。UI 品質 S-57）
+  const Title = useUiNext() ? 'h2' : 'h1'
   return (
     <div className="flex items-center gap-3 mb-6">
       {mood ? (
@@ -84,7 +87,7 @@ export function PageHeader({ icon, title, subtitle, mood }: { icon: string; titl
         </span>
       )}
       <div className="min-w-0">
-        <h1 className="text-2xl font-black text-slate-900">{title}</h1>
+        <Title className="text-2xl font-black text-slate-900">{title}</Title>
         {subtitle && <p className="text-sm font-bold text-slate-400 mt-0.5">{subtitle}</p>}
       </div>
     </div>
