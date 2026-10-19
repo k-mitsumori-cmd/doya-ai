@@ -14,6 +14,7 @@ import AppShell from './AppShell'
 import { shouldShowShell } from './registry'
 import { UiNextContext } from './ui-next-context'
 import UiNextBadge from './UiNextBadge'
+import ShellVitals from './ShellVitals'
 
 export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, company = undefined, children }: {
   signedIn: boolean
@@ -36,6 +37,8 @@ export default function ShellGate({ signedIn, userName, enabledIds, uiNext = nul
       {inner}
       {/* useSearchParams を使うので Suspense で包む（静的な画面の書き出しを止めない） */}
       <Suspense fallback={null}><UiNextBadge /></Suspense>
+      {/* 表示の速さを測る（新しい見た目のときだけ。外には送らない。UI 品質 S-45） */}
+      {uiNext ? <ShellVitals /> : null}
       </AccountCompanyContext.Provider>
     </UiNextContext.Provider>
   )
