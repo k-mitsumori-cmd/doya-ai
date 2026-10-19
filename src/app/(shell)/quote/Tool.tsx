@@ -264,13 +264,15 @@ export default function QuoteTool() {
     } catch (e) {
       if (listVersion.current === version && context.isCurrent(epoch)) {
         setLoadFailed(true)
-        setLoadFailStatus(e instanceof QuoteLoadError || e instanceof OrgResponseError ? e.status : 0)
-        notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
+        const failStatus = e instanceof QuoteLoadError || e instanceof OrgResponseError ? e.status : 0
+        setLoadFailStatus(failStatus)
+        // 新しい見た目では、トーストにも生の文（英語の状態の文など）を出さない
+        notifyError(setError, uiNext ? quoteErrorCopy(quoteErrorKind(failStatus), '見積書と商材').what : e instanceof Error ? e.message : '読み込みに失敗しました')
       }
     } finally {
       if (listVersion.current === version && context.isCurrent(epoch)) setLoading(false)
     }
-  }, [epoch, context, changeOrganization, fetch, fetchOrgJson, setSelectedProduct, selectedProductRef])
+  }, [epoch, context, changeOrganization, fetch, fetchOrgJson, setSelectedProduct, selectedProductRef, uiNext])
 
   useEffect(() => {
     if (draftIdentity.current !== identity) {
