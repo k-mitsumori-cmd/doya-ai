@@ -1,4 +1,5 @@
 'use client'
+import { PageTitle } from '@/components/hr/ui-next'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -617,7 +618,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
     return (
       <div role="alert" className="p-6 lg:p-10 max-w-3xl mx-auto">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
-          <h1 className="text-xl font-black text-rose-800">組織設定を取得できませんでした</h1>
+          <PageTitle className="text-xl font-black text-rose-800">組織設定を取得できませんでした</PageTitle>
           <p className="mt-2 text-sm font-bold text-rose-700">設定や部署の情報は変更されていません。時間をおいて再試行してください。</p>
           <button type="button" onClick={() => setRetryKey((key) => key + 1)} className="mt-4 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">
             再試行する
@@ -632,7 +633,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="mb-8">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-black text-slate-900">設定</h1>
+            <PageTitle className="text-3xl font-black text-slate-900">設定</PageTitle>
             <img
               src="/hr/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png"
               alt="白くまキャラクター"

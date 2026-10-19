@@ -1,5 +1,7 @@
 'use client'
 
+import { useToolUiNext } from '@/components/kintai/ui-next'
+import { Bug } from 'lucide-react'
 import { useState } from 'react'
 
 export default function DashboardErrorBoundary({
@@ -10,6 +12,7 @@ export default function DashboardErrorBoundary({
   reset: () => void
 }) {
   const [showReport, setShowReport] = useState(false)
+  const uiNext = useToolUiNext()
   const [reportText, setReportText] = useState('')
   const [sent, setSent] = useState(false)
 
@@ -56,7 +59,7 @@ export default function DashboardErrorBoundary({
 
       {!showReport && !sent && (
         <button onClick={() => setShowReport(true)} className="mt-2 text-sm font-bold text-[#7f19e6] hover:underline">
-          🐛 エラーを報告する
+          {uiNext ? <Bug size={16} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" /> : '🐛 '}エラーを報告する
         </button>
       )}
 

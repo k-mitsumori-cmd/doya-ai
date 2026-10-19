@@ -1,5 +1,6 @@
 'use client'
 
+import { PageTitle } from '@/components/kintai/ui-next'
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
@@ -17,7 +18,7 @@ export default function NewRequestPage() {
   const { isActive } = useKintaiAccess()
   if (isActive === false) {
     return <div className="mx-auto max-w-xl space-y-4 px-4 py-16 text-center">
-      <h1 className="text-xl font-bold text-slate-800">新規申請は利用できません</h1>
+      <PageTitle className="text-xl font-bold text-slate-800">新規申請は利用できません</PageTitle>
       <p className="text-sm text-slate-600">従業員情報が無効化されています。過去の申請は引き続き確認できます。</p>
       <Link href="/kintai/requests" className="inline-block rounded-xl bg-[#7f19e6] px-4 py-2.5 text-sm font-bold text-white">申請履歴を見る</Link>
     </div>
@@ -230,9 +231,9 @@ function NewRequestContent() {
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-slate-800">
+            <PageTitle className="text-lg font-bold text-slate-800">
               {step === 1 ? '申請の種類を選択' : '申請内容を入力'}
-            </h1>
+            </PageTitle>
             <p className="text-xs text-slate-500 mt-0.5">
               {step === 1 ? '申請したい内容の種類を選んでください' : '必要な情報を入力して申請してください'}
             </p>

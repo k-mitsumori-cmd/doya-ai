@@ -1,5 +1,8 @@
 'use client'
 
+import { useToolUiNext } from '@/components/kintai/ui-next'
+import { Button, EmptyState } from '@/components/ds'
+import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { formatMinutesJa } from '@/lib/kintai/format'
@@ -20,6 +23,7 @@ function countWorkingDays(year: number, month: number): number {
 }
 
 export default function AttendancePage() {
+  const uiNext = useToolUiNext()
   const { isActive } = useKintaiAccess()
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)
@@ -93,7 +97,7 @@ export default function AttendancePage() {
               className="w-16 h-16 object-contain bear-header-float"
             />
             <div>
-              <h1 className="text-lg font-black text-slate-800">月間レポート</h1>
+              <PageTitle className="text-lg font-black text-slate-800">月間レポート</PageTitle>
               <p className="text-xs text-slate-500">勤怠データの確認と修正申請</p>
             </div>
           </div>
@@ -194,6 +198,13 @@ export default function AttendancePage() {
             <p className="font-bold text-red-800">勤怠データを読み込めませんでした。時間をおいて再試行してください。</p>
             <button onClick={() => setRetryCount(count => count + 1)} className="mt-4 rounded-xl border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
           </div>
+        ) : !hasData && uiNext ? (
+          <EmptyState
+            art="/kintai/empty-records.webp"
+            title="この月の勤怠はまだありません"
+            description="出勤を打刻すると、ここに日ごとの出勤・退勤・勤務時間が並びます。"
+            action={isActive !== false ? <Button href="/kintai/clock" icon="Clock">打刻画面へ</Button> : undefined}
+          />
         ) : !hasData ? (
           /* Empty state with sleeping bear */
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-200/30 p-10 flex flex-col items-center justify-center gap-4">

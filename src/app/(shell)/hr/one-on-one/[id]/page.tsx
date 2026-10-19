@@ -1,4 +1,5 @@
 'use client'
+import { PageTitle } from '@/components/hr/ui-next'
 import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
@@ -114,7 +115,7 @@ export default function OneOnOneDetailPage() {
           戻る
         </button>
 
-        <h1 className="text-3xl font-black text-slate-900 mb-6">1on1詳細</h1>
+        <PageTitle className="text-3xl font-black text-slate-900 mb-6">1on1詳細</PageTitle>
 
         <OneOnOneForm
           key={record.id}

@@ -1,5 +1,8 @@
 'use client'
 
+import { useToolUiNext } from '@/components/kintai/ui-next'
+import { Pencil, RotateCcw } from 'lucide-react'
+import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import { formatMinutesJa } from '@/lib/kintai/format'
@@ -35,6 +38,7 @@ const TIMELINE_CHAR: Record<string, string> = {
 }
 
 export default function ClockPage() {
+  const uiNext = useToolUiNext()
   const { isActive } = useKintaiAccess()
   const [now, setNow] = useState(new Date())
   const [status, setStatus] = useState<ClockStatus>('not_clocked_in')
@@ -197,7 +201,7 @@ export default function ClockPage() {
 
   if (isActive === false) {
     return <div className="mx-auto max-w-xl space-y-4 px-4 py-16 text-center">
-      <h1 className="text-xl font-bold text-slate-800">打刻は利用できません</h1>
+      <PageTitle className="text-xl font-bold text-slate-800">打刻は利用できません</PageTitle>
       <p className="text-sm text-slate-600">従業員情報が無効化されています。過去の勤怠や申請は引き続き確認できます。</p>
       <div className="flex justify-center gap-3">
         <Link href="/kintai/attendance" className="rounded-xl bg-[#7f19e6] px-4 py-2.5 text-sm font-bold text-white">勤怠履歴を見る</Link>
@@ -483,10 +487,10 @@ export default function ClockPage() {
                 disabled={acting}
                 className="w-full py-3 bg-white border-2 border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition-all text-sm"
               >
-                🔄 再出勤する（シフト・深夜勤務など）
+                {uiNext ? <RotateCcw size={16} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" /> : '🔄 '}再出勤する（シフト・深夜勤務など）
               </button>
               <a href="/kintai/requests/new" className="block w-full py-3 bg-white border-2 border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 text-sm text-center">
-                ✏️ 打刻を修正申請する
+                {uiNext ? <Pencil size={16} strokeWidth={1.75} aria-hidden className="inline-block -mt-0.5 mr-1" /> : '✏️ '}打刻を修正申請する
               </a>
             </div>
           )}

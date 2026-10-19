@@ -7,6 +7,7 @@
 // ⚠️ トップ（Tool.tsx）に置かないこと。面接の作成・発行・一覧の下に毎回並ぶと、
 //    日常の作業のたびにスクロールで通過させられる。
 
+import { PageTitle } from '@/components/mensetsu/ui-next'
 import { useCallback, useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -151,7 +152,7 @@ export default function MensetsuSettingsPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-xl font-black text-[#0a0f3c]">設定</h1>
+      <PageTitle className="text-xl font-black text-[#0a0f3c]">設定</PageTitle>
       <p className="mt-1 text-xs font-semibold text-[#8a94ad]">{org.name}</p>
 
       {error && <p className="mt-4 rounded-lg bg-rose-50 p-3 text-sm font-semibold text-rose-800">{error}</p>}

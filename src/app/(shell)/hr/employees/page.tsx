@@ -1,4 +1,6 @@
 'use client'
+import { PageTitle, useToolUiNext } from '@/components/hr/ui-next'
+import { Button, EmptyState } from '@/components/ds'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -22,6 +24,7 @@ export default function EmployeesPage() {
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  const uiNext = useToolUiNext()
   const [sortKey, setSortKey] = useState<SortKey>('name')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
@@ -83,16 +86,16 @@ export default function EmployeesPage() {
   }, [fetchData, reloadKey])
 
   return (
-    <div className="p-6 lg:p-10 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+    <div className={uiNext ? 'p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto' : 'p-6 lg:p-10 max-w-7xl mx-auto'}>
+      {/* Header（新しい見た目では、375px でボタンを下に回す） */}
+      <div className={uiNext ? 'flex flex-wrap items-end justify-between gap-4 mb-6' : 'flex items-center justify-between mb-8'}>
         <div>
-          <h1 className="text-3xl font-black text-slate-900">
+          <PageTitle className="text-3xl font-black text-slate-900">
             従業員一覧
             {!loading && !loadError && (
               <span className="ml-3 text-lg font-bold text-slate-400">全 {total} 名</span>
             )}
-          </h1>
+          </PageTitle>
           <p className="text-sm text-slate-500 mt-1">{canManageEmployees ? '組織のメンバーを管理' : 'あなたの従業員情報を確認'}</p>
         </div>
         {canManageEmployees && <div className="flex items-center gap-2">
@@ -161,6 +164,22 @@ export default function EmployeesPage() {
             </div>
           ))}
         </div>
+      ) : loadError ? null : employees.length === 0 && uiNext ? (
+        <EmptyState
+          art="/hr/empty-members.webp"
+          title={canManageEmployees ? 'まだ従業員が登録されていません' : '従業員情報を表示できません'}
+          description={canManageEmployees
+            ? '従業員を登録すると、組織図・評価・1on1 で使えるようになります。CSV で一括登録もできます。'
+            : hasLinkedEmployee === false
+              ? 'アカウントに従業員情報が紐付いていません。組織の管理者に確認してください。'
+              : '従業員情報が見つかりません。組織の管理者に確認してください。'}
+          action={canManageEmployees ? (
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button href="/hr/employees/new" icon="UserPlus">最初の従業員を追加する</Button>
+              <Button variant="secondary" onClick={() => setShowImport(true)}>CSVで一括登録</Button>
+            </div>
+          ) : undefined}
+        />
       ) : loadError ? null : employees.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, y: 20 }}

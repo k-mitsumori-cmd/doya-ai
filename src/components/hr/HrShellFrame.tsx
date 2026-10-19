@@ -13,15 +13,18 @@ import { ShellUsageSlot } from '@/components/shell/ShellUsage'
 import { planLabel, tierFrom } from '@/lib/plan-utils'
 import { hrShellNav } from '@/lib/hr/nav'
 import HrLayout from './HrLayout'
+import { useToolUiNext } from './ui-next'
 
 export default function HrShellFrame({ children }: { children: ReactNode }) {
+  // 新しい見た目では「従業員を追加」をタブに出さない（/hr/employees/new でタブが2つ選ばれる S-33）。追加はダッシュボードと一覧の主ボタンから
+  const uiNext = useToolUiNext()
   return (
     <HrLayout
       renderFrame={({ switcher, canManageEmployees, usage, children: content }) => (
         <>
           {/* サイドバーにあった従業員数のメーターとプランを、枠の左下に出す */}
           {usage ? <ShellUsageSlot id={JSON.stringify(usage)}><HrUsageMeter {...usage} /></ShellUsageSlot> : null}
-          <ToolFrame serviceId="hr" title="ドヤHR" nav={hrShellNav(canManageEmployees)} switcher={switcher}>
+          <ToolFrame serviceId="hr" title="ドヤHR" nav={hrShellNav(canManageEmployees && !uiNext)} switcher={switcher}>
             {content}
           </ToolFrame>
         </>

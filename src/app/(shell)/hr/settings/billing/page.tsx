@@ -1,4 +1,5 @@
 'use client'
+import { PageTitle } from '@/components/hr/ui-next'
 import { billingRedirectUrl } from '@/lib/billing-response-client'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
@@ -151,7 +152,7 @@ export default function BillingPage() {
     return (
       <div className="p-6 lg:p-10 max-w-5xl mx-auto">
         <div role="alert" className="rounded-2xl bg-white p-8 shadow-md">
-          <h1 className="text-xl font-bold text-slate-900">組織のプランを確認できませんでした</h1>
+          <PageTitle className="text-xl font-bold text-slate-900">組織のプランを確認できませんでした</PageTitle>
           <p className="mt-2 text-sm text-slate-600">しばらくしてから再読み込みしてください。</p>
           <button type="button" onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-violet-700 px-5 py-3 font-bold text-white">再読み込みする</button>
         </div>
@@ -179,7 +180,7 @@ export default function BillingPage() {
               <span className="material-symbols-outlined text-sm text-slate-400">chevron_right</span>
               <span className="text-sm font-bold text-slate-700">現在のプラン</span>
             </div>
-            <h1 className="text-3xl font-black text-slate-900">現在のプラン</h1>
+            <PageTitle className="text-3xl font-black text-slate-900">現在のプラン</PageTitle>
             <p className="text-sm text-slate-500 mt-1">プランと使用量を管理</p>
           </div>
           <motion.img

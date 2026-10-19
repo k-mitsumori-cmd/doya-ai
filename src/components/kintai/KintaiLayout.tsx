@@ -8,6 +8,9 @@ import Link from 'next/link'
 import KintaiSidebar from './KintaiSidebar'
 import KintaiOnboarding from './KintaiOnboarding'
 import { KintaiAccessContext } from './KintaiAccessContext'
+import { useToolUiNext } from './ui-next'
+import { KintaiDashboardLoading } from './KintaiDashboardNext'
+import { ErrorNotice } from '@/components/ds'
 
 export interface KintaiFrameArgs {
   role: string
@@ -33,6 +36,9 @@ interface UsageData {
 export default function KintaiLayout({ children, renderFrame }: KintaiLayoutProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname()
+  // 新しい見た目では、読み込み・エラーを全画面にせず、枠（ToolFrame）の中身の領域にだけ出す（C-2・F-3）
+  const toolNext = useToolUiNext()
+  const framedNext = Boolean(renderFrame) && toolNext
   // SessionProvider.update temporarily retains its previous data while loading.
   const isSessionLoading = status === 'loading'
   const isSignedOut = status === 'unauthenticated'
@@ -124,6 +130,13 @@ export default function KintaiLayout({ children, renderFrame }: KintaiLayoutProp
   }
 
   if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
+
+  if (framedNext && renderFrame && usageError && session?.user && !knownScope) {
+    return <>{renderFrame({ role: 'employee', employeeActive: true, children: <div style={{ padding: 24 }}><ErrorNotice what="勤怠の情報を読み込めませんでした。組織の状態は変わっていません。" how="時間をおいて、もう一度お試しください。" onRetry={() => void loadUsage()} retryLabel="再読み込み" /></div> })}</>
+  }
+  if (framedNext && renderFrame && !knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed)) {
+    return <>{renderFrame({ role: 'employee', employeeActive: true, children: <KintaiDashboardLoading /> })}</>
+  }
 
   if (usageError && session?.user && !knownScope) {
     return <div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center"><p className="font-bold text-rose-700">勤怠情報を取得できませんでした。組織の状態は変更されていません。</p><button type="button" onClick={() => void loadUsage()} className="rounded-xl bg-[#7f19e6] px-5 py-3 font-bold text-white">再読み込み</button></div>
