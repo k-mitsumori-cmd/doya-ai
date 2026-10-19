@@ -1,0 +1,129 @@
+/*
+ * ドヤパワーの部品
+ * ⚠️ 色はトークン名で書く（ds の .ds の中で使う前提）。外で使っても崩れないよう、主な色には既定値を付ける。
+ * ⚠️ 高さは先に決める（ゲージ・ドヤくん・数字の幅）。値が入っても、動いても、まわりを押さない（CLS を出さない）。
+ * ⚠️ 動きは data-motion='on' のときだけ。prefers-reduced-motion でも止める（二重の守り）。
+ */
+
+/* ---- ゲージ ---- */
+.gauge {
+  display: grid; gap: 10px; min-width: 0;
+  padding: 20px 24px; border-radius: var(--r, 22px);
+  background:
+    radial-gradient(120% 160% at 100% 0%, rgba(0, 224, 255, 0.10), transparent 55%),
+    var(--paper, #fff);
+  border: 1px solid var(--blue-line, #d7e5ff);
+  color: var(--ink, #101633);
+}
+.gaugeHead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
+.gaugeLabel { margin: 0; display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 800; white-space: nowrap; }
+.gaugeIcon {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 9px;
+  background: var(--blue-soft, #e8f0ff); color: var(--blue, #0066ff);
+}
+.lowTag {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px;
+  background: var(--note-bg, #fff7d6); color: var(--note-ink, #7a5b00); font-size: 12px; font-weight: 700;
+}
+.gaugeNums { margin: 0; display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gaugeSmall { font-size: 13px; color: var(--sub, #4a5375); font-weight: 600; }
+.gaugeValue { font-size: 28px; line-height: 1; font-weight: 800; letter-spacing: -0.01em; min-width: 3ch; text-align: right; display: inline-block; }
+
+.gaugeBody { display: flex; align-items: center; gap: 12px; height: 48px; }
+.track {
+  position: relative; flex: 1; min-width: 0; height: 16px; border-radius: 999px; overflow: hidden;
+  background: var(--bg, #f4f7fd);
+  box-shadow: inset 0 0 0 1px var(--line, #e3e8f4);
+}
+.fill {
+  position: absolute; inset: 0; border-radius: inherit; overflow: hidden;
+  background: linear-gradient(90deg, var(--blue, #0066ff) 0%, #009bff 55%, var(--cyan, #00e0ff) 100%);
+  transform-origin: left center;
+  transform: scaleX(var(--fill, 0));
+}
+.gauge[data-motion='on'] .fill { transition: transform 1.2s var(--ease, cubic-bezier(0.22, 1, 0.36, 1)); }
+.shine {
+  position: absolute; top: 0; bottom: 0; left: -40%; width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: shine 2.6s 1.2s var(--ease-io, ease-in-out) infinite;
+}
+@keyframes shine { from { transform: translateX(0); } 60%, to { transform: translateX(350%); } }
+.tick { position: absolute; top: 3px; bottom: 3px; width: 2px; margin-left: -1px; border-radius: 1px; background: rgba(255, 255, 255, 0.7); mix-blend-mode: normal; }
+.gaugeMascot { width: 48px; height: 48px; flex: none; }
+.gauge[data-motion='on'] .gaugeMascot { animation: bob 3.2s var(--ease-io, ease-in-out) infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+.gaugeFoot { display: flex; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; font-size: 13px; color: var(--sub, #4a5375); min-height: 20px; }
+.pct { font-weight: 700; font-variant-numeric: tabular-nums; }
+.recovery { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+/* ---- 言い換え ---- */
+.equiv { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--ink, #101633); }
+.equivLead { font-weight: 700; color: var(--sub, #4a5375); white-space: nowrap; }
+.equivList { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.equivItem {
+  display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px; border-radius: 999px;
+  background: var(--blue-soft, #e8f0ff); color: var(--ink, #101633); white-space: nowrap; font-weight: 600;
+}
+.equivItem svg { color: var(--blue, #0066ff); }
+.equivCount { font-weight: 800; color: var(--blue-deep, #0047d6); font-variant-numeric: tabular-nums; margin-left: 2px; }
+
+/* ---- 残りが少ない知らせ（責めない色: 注意の黄。赤は使わない） ---- */
+.notice {
+  display: flex; align-items: flex-start; gap: 14px; min-width: 0;
+  padding: 16px 20px; border-radius: var(--r-sm, 14px);
+  background: var(--note-bg, #fff7d6); border: 1px solid #f3e2a0; color: var(--ink, #101633);
+}
+.noticeMascot { width: 56px; height: 56px; flex: none; }
+.noticeIcon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--paper, #fff); color: var(--note-ink, #7a5b00); flex: none; }
+.noticeText { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.noticeTitle { margin: 0; font-size: 15px; font-weight: 800; line-height: 1.5; }
+.noticeBody { margin: 0; font-size: 14px; line-height: 1.75; color: var(--sub, #4a5375); }
+.noticeNum { color: var(--ink, #101633); font-variant-numeric: tabular-nums; }
+.noticeLink {
+  justify-self: start; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; min-height: 32px;
+  font-size: 14px; font-weight: 700; color: var(--blue, #0066ff); text-decoration: none;
+}
+.noticeLink:hover { text-decoration: underline; }
+.noticeLink:focus-visible, .close:focus-visible { outline: 2px solid var(--blue, #0066ff); outline-offset: 2px; border-radius: 6px; }
+
+.close {
+  display: grid; place-items: center; width: 32px; height: 32px; flex: none; border: 0; border-radius: 8px;
+  background: transparent; color: var(--muted, #7a83a3); cursor: pointer;
+}
+.close:hover { background: rgba(16, 22, 51, 0.06); color: var(--ink, #101633); }
+
+/* ---- 朝の回復（重ねて出す。まわりを押さない） ---- */
+.toast {
+  display: flex; align-items: flex-start; gap: 12px;
+  width: min(380px, calc(100vw - 32px)); padding: 14px 14px 14px 16px; border-radius: 18px;
+  background: var(--paper, #fff); color: var(--ink, #101633);
+  border: 1px solid var(--blue-line, #d7e5ff);
+  box-shadow: var(--shadow-lg, 0 30px 60px -24px rgba(10, 15, 60, 0.28));
+}
+.toast[data-placement='fixed'] { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 60; }
+.toast[data-placement='inline'] { position: relative; }
+.toast[data-motion='on'] { animation: toastIn 0.5s var(--ease, cubic-bezier(0.22, 1, 0.36, 1)) both; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
+.toastMascot { width: 52px; height: 52px; flex: none; }
+.toastIcon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--blue-soft, #e8f0ff); color: var(--blue, #0066ff); flex: none; }
+.toastText { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.toastTitle { margin: 0; font-size: 14px; font-weight: 800; line-height: 1.5; }
+.toastBody { margin: 0; font-size: 13px; line-height: 1.7; color: var(--sub, #4a5375); }
+.toastTime { margin: 0; font-size: 12px; color: var(--muted, #7a83a3); font-variant-numeric: tabular-nums; }
+
+.mascot { display: block; object-fit: contain; }
+
+/* スマートフォン: 枠の余白を詰め、トーストは下のタブバーにかぶらない位置に */
+@media (max-width: 560px) {
+  .gauge { padding: 16px; }
+  .gaugeValue { font-size: 24px; }
+  .notice { padding: 14px 16px; gap: 12px; }
+  .noticeMascot { width: 44px; height: 44px; }
+  .toast[data-placement='fixed'] { right: 16px; left: 16px; width: auto; bottom: calc(80px + env(safe-area-inset-bottom)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gauge .fill, .shine, .gaugeMascot, .toast { transition: none !important; animation: none !important; }
+  .shine { display: none; }
+}
