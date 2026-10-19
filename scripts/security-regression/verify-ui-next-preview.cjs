@@ -90,7 +90,10 @@ const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.in
     assert.match(read('src/components/pricing/PricingNext.tsx'),/<CheckoutButton planId=\{UNIFIED_PRO_PLAN_ID\}/);
     assert.match(read('src/components/DashboardLayout.tsx'),/if \(inShell && uiNext\)/);
     // ふつうの利用者の切り替えを main と同じにする: (shell) の下に、こちらで足した loading.tsx を置かない。template は包みを出さない
-    const loadings=require('node:child_process').execSync("git ls-files 'src/app/(shell)/*loading.tsx'",{cwd:root}).toString().trim().split('\n').filter(Boolean);
+    // ⚠️ git ls-files は使わない（Vercel のビルドには .git が無く、失敗してデプロイが止まる。2026-10-19）
+    const fsx=require('node:fs'),px=require('node:path');
+    const walk=(d)=>fsx.readdirSync(px.join(root,d),{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(px.join(d,e.name)):e.name==='loading.tsx'?[px.join(d,e.name).split(px.sep).join('/')]:[]);
+    const loadings=walk('src/app/(shell)');
     assert.deepEqual(loadings.sort(),['src/app/(shell)/banner/dashboard/loading.tsx','src/app/(shell)/popup/edit/[id]/loading.tsx','src/app/(shell)/popup/sites/[id]/loading.tsx']);
     assert.match(read('src/app/(shell)/template.tsx'),/if \(!uiNext\) return <>\{children\}<\/>/);
     const shell=read('src/components/shell/AppShell.tsx');
