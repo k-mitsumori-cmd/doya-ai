@@ -1,4 +1,5 @@
 // Runs in its own Node process: synthetic SSR/hydration only; no providers, DB or browser session.
+process.env.NODE_ENV = 'test';
 const fs = require('node:fs');
 const path = require('node:path');
 const { createRequire } = require('node:module');
