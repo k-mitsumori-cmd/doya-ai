@@ -1,0 +1,89 @@
+{
+  "issue": "BILL-020",
+  "status": "passed",
+  "verifiedAt": "2026-10-20T06:34:16.770486+00:00",
+  "sourceHead": "deb68914790b602f2ceedc6684b64c10ba0582d4",
+  "branch": "codex/claude-handoff-20261020",
+  "sourceManifestSha256": "3abc93827b8d08df5ab37eec74993068d1d5c3cb8482614b1539cf6319f9bc6f",
+  "sourceFiles": 4237,
+  "sourceFilesUnchanged": true,
+  "sourcePathSetUnchanged": true,
+  "changedInputs": [],
+  "addedInputs": [],
+  "removedInputs": [],
+  "targetChangeSha256": {
+    "src/app/api/stripe/webhook/route.ts": "6e32abc10f1dbe7d29781d9abe12bec680b7bbd0b9e0709669adef3428fbc6fc",
+    "src/lib/notifications.ts": "50b3eb69c9875013ac1913e88528bafb3b1278af8fa082f4caa69f3c83aefede",
+    "src/lib/billing-audit.ts": "1c034d12e7f937debee73298a0dfca639b30917f298d1af5dcd8cbace7c8e317",
+    "reference/11-billing-spec.md": "7ebbc447a0a1cc3e63c202755472da2dc5ad294ad4feaec81c981b43b3b50167",
+    "scripts/security-regression/verify-billing-integrity.cjs": "160bff0d7a9474014efb2115cd07aca5993f21f83e57a8245704ed8b5178ed2d",
+    "scripts/security-regression/verify-billing-audit-scope.cjs": "72a5367ea76e4e20faec5d0a90ecb563760f06341e3a3f87d7fcab7b19a38dfc"
+  },
+  "targeted": {
+    "billingIntegrity": 95,
+    "billingAuditScope": 21,
+    "typescriptLint": "passed, 3 changed TS files",
+    "cjsSyntax": "passed, both changed CJS files"
+  },
+  "fullBuild": {
+    "command": "npm run build",
+    "exitCode": 0,
+    "prismaGenerate": "passed",
+    "securityRegression": "passed",
+    "serviceSuites": {
+      "asklink": 22,
+      "popup": 55,
+      "syscheck": 48,
+      "tenjikai": 16,
+      "shanai": 7,
+      "income": 68,
+      "expense": 93
+    },
+    "typecheck": "passed: tsc --noEmit before next build",
+    "nextBuild": "passed",
+    "nextBuildId": "Cb3VRI_OIGsYTI_gEnM1J",
+    "startedAt": "2026-10-20T06:25:47.231510+00:00",
+    "endedAt": "2026-10-20T06:33:06.430182+00:00"
+  },
+  "environment": {
+    "physicalNodeModules": true,
+    "realDotenvFilesUsed": false,
+    "syntheticCredentialsOnly": true,
+    "outboundDeniedProbeExitCode": 0,
+    "permittedDomains": [
+      "fonts.googleapis.com",
+      "fonts.gstatic.com"
+    ],
+    "proxyConnectionCount": 131,
+    "deniedProxyConnectionCount": 0,
+    "productionAccess": false,
+    "paidApiCalls": false
+  },
+  "firstAttempt": "Stopped before npm by shared build-slot.sh variable parsing; one-line MY_SLOT brace fix and bash -n passed; failure and before/after hashes retained locally.",
+  "evidence": {
+    "tracked": [
+      "README.md",
+      "verification.json"
+    ],
+    "localOnly": [
+      "release-scope-inventory.json",
+      "frozen-diff.patch",
+      "current-targeted.json",
+      "fresh-build.json",
+      "fresh-build.log",
+      "build-driver.py",
+      "execution-inputs.json",
+      "review.json",
+      "shared-build-slot-fix.json",
+      "shared-build-slot-fix.patch",
+      "attempts/"
+    ]
+  },
+  "remaining": [
+    "Production Stripe paused/resumed event subscription registration or wildcard must be verified before rollout.",
+    "Actual Stripe delivery, customer DB, operational Slack delivery, browser/payment and private-PG/complete GitHub CI flows not exercised."
+  ],
+  "productionReflected": false,
+  "pushed": false,
+  "lunaUsed": false
+}

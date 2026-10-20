@@ -132,6 +132,8 @@ export async function checkWebhookEndpoint(): Promise<{ ok: boolean; detail: str
       'checkout.session.completed',
       'customer.subscription.created',
       'customer.subscription.updated',
+      'customer.subscription.paused',
+      'customer.subscription.resumed',
       'customer.subscription.deleted',
     ]
     const events = (target.enabled_events || []) as string[]

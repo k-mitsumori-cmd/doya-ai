@@ -240,9 +240,20 @@ function fixture({ subs, invoices, refunds = [], charges = {}, paymentIntents = 
   await check('webhook endpoint check reaches page two', async () => {
     const endpoints = Array.from({ length: 100 }, (_, i) => ({ id: 'endpoint-'+i, url: 'https://other.example/'+i, status: 'enabled', enabled_events: [] }))
     endpoints.push({ id: 'target', url: 'https://doya-ai.surisuta.jp/api/stripe/webhook', status: 'enabled',
-      enabled_events: ['checkout.session.completed','customer.subscription.created','customer.subscription.updated','customer.subscription.deleted'] })
+      enabled_events: ['checkout.session.completed','customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','customer.subscription.paused','customer.subscription.resumed'] })
     const f = fixture({ subs: [], invoices: [], endpoints })
     assert.equal((await f.module.checkWebhookEndpoint()).ok, true); assert.equal(f.webhookCalls, 2)
+  })
+  for (const missing of ['customer.subscription.paused','customer.subscription.resumed']) {
+    await check('webhook endpoint missing '+missing+' cannot report healthy', async () => {
+      const events=['checkout.session.completed','customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','customer.subscription.paused','customer.subscription.resumed'].filter(e=>e!==missing)
+      const f=fixture({subs:[],invoices:[],endpoints:[{id:'target',url:'https://doya-ai.surisuta.jp/api/stripe/webhook',status:'enabled',enabled_events:events}]})
+      const result=await f.module.checkWebhookEndpoint();assert.equal(result.ok,false);assert(result.detail.includes(missing))
+    })
+  }
+  await check('webhook wildcard subscription includes paused and resumed events',async()=>{
+    const f=fixture({subs:[],invoices:[],endpoints:[{id:'target',url:'https://doya-ai.surisuta.jp/api/stripe/webhook',status:'enabled',enabled_events:['*']}]})
+    assert.equal((await f.module.checkWebhookEndpoint()).ok,true)
   })
   await check('webhook endpoint repeating cursor reports failure', async () => {
     const f = fixture({ subs: [], invoices: [], webhookList: async () => ({ data: [{ id: 'same', url: 'https://other.example', status: 'enabled', enabled_events: [] }], has_more: true }) })

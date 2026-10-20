@@ -222,6 +222,7 @@ type EventType =
   | 'subscription'
   | 'payment'
   | 'cancellation'
+  | 'subscription_paused'
   | 'cancellation_incomplete'
   | 'payment_failed'
 
@@ -232,6 +233,7 @@ const EVENT_EMOJI: Record<EventType, string> = {
   subscription: ':credit_card:',
   payment: ':moneybag:',
   cancellation: ':wave:',
+  subscription_paused: ':pause_button:',
   cancellation_incomplete: ':warning:',
   payment_failed: ':warning:',
 }
@@ -243,6 +245,7 @@ const EVENT_LABEL: Record<EventType, string> = {
   subscription: '有料プランの申込がありました（入金は別通知で確認）',
   payment: '決済が完了しました',
   cancellation: '解約',
+  subscription_paused: '契約が一時停止しました（解約ではありません）',
   cancellation_incomplete: '解約処理に失敗しました（課金継続の可能性）',
   payment_failed: '支払いに失敗しました・決済状況の確認が必要です',
 }
@@ -265,6 +268,7 @@ const CHANNEL_PING: Record<EventType, boolean> = {
   subscription: false,
   payment: false,
   cancellation: true,
+  subscription_paused: true,
   cancellation_incomplete: true,
   payment_failed: true,
 }

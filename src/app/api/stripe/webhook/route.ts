@@ -92,7 +92,9 @@ export async function POST(request: NextRequest) {
       // ========================================
       // サブスクリプション更新
       // ========================================
-      case 'customer.subscription.updated': {
+      case 'customer.subscription.updated':
+      case 'customer.subscription.paused':
+      case 'customer.subscription.resumed': {
         const subscription = event.data.object as Stripe.Subscription
         notification = await handleSubscriptionUpdated(subscription)
         break
@@ -303,8 +305,8 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   if (!user) {
     throw new Error(`[Webhook] subscription.created: user not found for subscription ${subscription.id}`)
   }
-  if (live.status === 'canceled' || live.status === 'unpaid') {
-    await handleSubscriptionDeleted(live)
+  if (live.status === 'canceled' || live.status === 'unpaid' || live.status === 'paused') {
+    await handleSubscriptionDeleted(live, live.status === 'paused' ? 'subscription_paused' : 'cancellation')
     return
   }
   if (ACTIVE_LIKE_STATUSES.has(String(live.status))) await updateBestLiveSubscription(user, live)
@@ -321,13 +323,14 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
     throw new Error(`[Webhook] subscription.updated: user not found for subscription ${subscription.id}`)
   }
 
-  // canceled / unpaid は FREE に戻す。
+  // canceled / unpaid / paused は、他の生存契約と手動付与を確認してから権利を再計算する。
   // - canceled: 期間終了時の解約、またはトライアル終了時に支払い方法が無く missing_payment_method:'cancel' で解約
   // - unpaid: トライアル後/更新の初回課金が失敗しダンニング(再試行)も尽きた終端状態。
   //   updateUserSubscription は status を見ず PRO 付与するため、ここで弾かないと未入金のまま PRO が残る。
-  if (live.status === 'canceled' || live.status === 'unpaid') {
+  // paused は契約ステータス。active のままの pause_collection とは区別する。
+  if (live.status === 'canceled' || live.status === 'unpaid' || live.status === 'paused') {
     console.log(`Subscription ${live.status} via updated event for user: ${user.id}`)
-    return handleSubscriptionDeleted(live)
+    return handleSubscriptionDeleted(live, live.status === 'paused' ? 'subscription_paused' : 'cancellation')
   }
 
   if (ACTIVE_LIKE_STATUSES.has(String(live.status))) await updateBestLiveSubscription(user, live)
@@ -361,7 +364,10 @@ async function updateBestLiveSubscription(user: { id: string; email: string | nu
   await updateUserSubscription(user.id, selected)
 }
 
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<EventNotification | null> {
+async function handleSubscriptionDeleted(
+  subscription: Stripe.Subscription,
+  notificationType: 'cancellation' | 'subscription_paused' = 'cancellation',
+): Promise<EventNotification | null> {
   if (!isDoyaSubscription(subscription)) return null
   const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id
   const user = await findUserForSubscription(subscription)
@@ -392,6 +398,10 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Pro
           `(deleted=${subscription.id} / keep=${keep.id}(${keep.status}))`
       )
       const live = await stripe.subscriptions.retrieve(keep.id)
+      if (!ACTIVE_LIKE_STATUSES.has(String(live.status)) ||
+          !(await isDoyaSubscriptionOwnedByUser(live, user))) {
+        throw new Error('[Webhook] remaining subscription changed; retry required')
+      }
       await updateUserSubscription(user.id, live)
       return null
     }
@@ -405,8 +415,8 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Pro
     stripePriceId: null, stripeCurrentPeriodEnd: null,
   })
   const notification: EventNotification = {
-    type: 'cancellation', userEmail: user.email, userName: user.name,
-    details: `プラン: ${synced.previousPlan} → ${synced.userPlan}`,
+    type: notificationType, userEmail: user.email, userName: user.name,
+    details: `${notificationType === 'subscription_paused' ? '契約ステータス: paused / ' : ''}プラン: ${synced.previousPlan} → ${synced.userPlan}`,
   }
   console.log(`Subscription canceled for user: ${user.id} (plan: ${synced.userPlan})`)
   return notification
