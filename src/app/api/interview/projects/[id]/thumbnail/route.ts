@@ -14,7 +14,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { callGeminiImageAPI } from '@/lib/resolve-image-model'
 import { THUMBNAIL_STORAGE_MARKER, signedInterviewThumbnailUrl, thumbnailOwner, thumbnailUrlForClient, uploadInterviewThumbnail } from '@/lib/interview/thumbnail-storage'
-import { claimThumbnailAutoAttempt, claimThumbnailLease, releaseThumbnailLease, ThumbnailGenerationInProgressError } from '@/lib/interview/thumbnail-lease'
+import { claimThumbnailLease, releaseThumbnailLease, ThumbnailGenerationInProgressError } from '@/lib/interview/thumbnail-lease'
 import { auxAdmissionError, claimAuxBudget, refundAuxBudget, type AuxClaim } from '@/lib/interview/aux-budget'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -206,13 +206,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     let articleTitle = ''
     let force = false
     let auto = false
+    let manual = false
     try {
       const body = await req.json()
       articleContent = typeof body?.articleContent === 'string' ? body.articleContent.slice(0, 2000) : ''
       articleTitle = typeof body?.articleTitle === 'string' ? body.articleTitle.slice(0, 200) : ''
       force = body?.force === true
-      // 編集画面を開いたときの自動生成（利用者が押していない）。force とは併用しない。
-      auto = body?.auto === true && !force
+      // 古い画面からの自動生成も停止する。force と併記されても生成しない。
+      auto = body?.auto === true
+      manual = body?.manual === true
     } catch {
       // ボディなしの場合は無視
     }
@@ -241,12 +243,14 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const ownerErr = checkOwnership(project, userId, guestId)
     if (ownerErr) return ownerErr
 
+    // 画面を開いただけで生成しない。旧画面の auto なし・force=false も抑止する。
+    // 新画面は manual=true を送り、作成は force=false、再生成は force=true と区別する。
+    // 他のタブで初回画像が完成していれば再利用し、意図しない追加枠の消費を防ぐ。
+    if (auto || (!manual && !force && !project.thumbnailUrl)) {
+      return NextResponse.json({ success: false, skipped: true, code: 'THUMBNAIL_AUTO_SKIPPED' })
+    }
     if (project.thumbnailUrl && !force) {
       return NextResponse.json({ success: true, thumbnailUrl: thumbnailUrlForClient(id, project.thumbnailUrl, project.updatedAt) })
-    }
-    // ゲスト（未ログイン）には自動で作らない。ボタンを押したときだけ作る。
-    if (auto && !userId) {
-      return NextResponse.json({ success: false, skipped: true, code: 'THUMBNAIL_AUTO_SKIPPED' })
     }
     const token = await claimThumbnailLease(id)
     lease = { id, token }
@@ -272,17 +276,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
       auxClaim = admission.claim
     }
-    // 自動生成は、利用枠を先に確かめてから、1件につき1回だけ試す（2026-10-19 原価見直し）。
-    // 枠は生成に成功したときだけ消費し、失敗したら finally で戻す。試した記録は失敗しても残す。
-    if (auto) {
-      const admission = await claimAuxBudget({ userId, guestId, plan, projectId: id })
-      if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
-      auxClaim = admission.claim
-      if (!await claimThumbnailAutoAttempt(id)) {
-        return NextResponse.json({ success: false, skipped: true, code: 'THUMBNAIL_AUTO_SKIPPED' })
-      }
-    }
-
     // 記事内容・タイトルがなければDBから最新ドラフトまたは文字起こしを取得
     if (!articleContent || !articleTitle) {
       const latestDraft = await prisma.interviewDraft.findFirst({

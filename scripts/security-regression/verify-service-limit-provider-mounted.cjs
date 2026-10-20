@@ -18,7 +18,7 @@ async function check(name,fn){if(process.env.DOYA_LIMIT_DEBUG)console.error('STA
 (async()=>{
  const active=services.getActiveServices();
  // 件数は台帳から求める（サービスを足すたびにテストを書き換えない）。台帳と別の経路で数えた値と一致し、2026-10-18 時点の 19 を下回らないことを確かめる。
- const expectedActive=services.SERVICES.filter(s=>!services.RETIRED_SERVICE_IDS.has(s.id));assert.equal(active.length,expectedActive.length);assert.ok(active.length>=19,'Active services must not silently drop below the 2026-10-18 baseline');assert.equal(new Set(active.map(s=>s.id)).size,active.length);
+ const expectedActive=services.SERVICES.filter(s=>!services.RETIRED_SERVICE_IDS.has(s.id)&&!services.BETA_HIDDEN_SERVICE_IDS.has(s.id)&&(s.status==='active'||s.status==='beta'||services.UNLISTED_SERVICE_IDS.has(s.id)));assert.equal(active.length,expectedActive.length);assert.ok(active.length>=19,'Active services must not silently drop below the 2026-10-18 baseline');assert.equal(new Set(active.map(s=>s.id)).size,active.length);
  const CHECKS_PER_SERVICE=4,FIXED_CHECKS=47,EXPECTED_CHECKS=CHECKS_PER_SERVICE*active.length+FIXED_CHECKS;
  for(const s of active){
   await check(s.id+' recognized quota shows current service and next action',async f=>{await f.request(s.id);assert.ok(f.dialog());assert.ok(f.dialog().textContent.includes(s.name));const link=f.dialog().querySelector('a');assert.ok(link);assert.equal(link.getAttribute('href'),s.pricingHref);assert.match(f.dialog().textContent,/30日間無料/)});

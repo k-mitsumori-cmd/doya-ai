@@ -32,16 +32,3 @@ export async function claimThumbnailLease(projectId: string, db: PrismaClient = 
 export async function releaseThumbnailLease(projectId: string, token: string, db: PrismaClient = prisma): Promise<void> {
   await db.systemSetting.deleteMany({ where: { key: leaseKey(projectId), value: token } })
 }
-
-/**
- * 編集画面を開いたときのサムネイル自動生成を、1件につき1回だけに絞るための記録。
- * 初めての呼び出しだけ true を返す（同時に呼ばれても true は1回だけ）。
- * ⚠️ 以前は画面を開くたびに自動生成を試し、失敗が続くと開くたびに有料の画像APIを呼んでいた（2026-10-19 原価見直し）。
- *    InterviewProject に「試した」を表す列が無いため、lease と同じ SystemSetting の行で記録する。
- */
-export async function claimThumbnailAutoAttempt(projectId: string, db: Pick<PrismaClient, 'systemSetting'> = prisma, now = new Date()): Promise<boolean> {
-  if (!/^[A-Za-z0-9_-]{1,128}$/.test(projectId)) throw new Error('Invalid project ID')
-  const key = `interview-thumbnail-auto:v1:${projectId}`
-  const result = await db.systemSetting.createMany({ data: [{ key, value: now.toISOString() }], skipDuplicates: true })
-  return result.count === 1
-}

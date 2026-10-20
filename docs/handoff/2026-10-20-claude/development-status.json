@@ -1,0 +1,289 @@
+{
+  "checkedAt": "2026-10-20T00:32:45.470Z",
+  "mainCommit": "2b88ca32d3c187e754eb93daa20819d2171a2c39",
+  "branch": "codex/claude-handoff-20261020",
+  "mainCatalogue": {
+    "public": [
+      {
+        "id": "banner",
+        "name": "ドヤバナーAI",
+        "status": "active"
+      },
+      {
+        "id": "seo",
+        "name": "ドヤ記事作成",
+        "status": "active"
+      },
+      {
+        "id": "interview",
+        "name": "ドヤインタビュー",
+        "status": "active"
+      },
+      {
+        "id": "persona",
+        "name": "ドヤペルソナAI",
+        "status": "active"
+      },
+      {
+        "id": "hr",
+        "name": "ドヤHR",
+        "status": "active"
+      },
+      {
+        "id": "kintai",
+        "name": "ドヤ勤怠",
+        "status": "active"
+      },
+      {
+        "id": "doyalist",
+        "name": "ドヤリスト",
+        "status": "active"
+      },
+      {
+        "id": "doyaslide",
+        "name": "ドヤスライド",
+        "status": "active"
+      },
+      {
+        "id": "cunning",
+        "name": "ドヤカンニング",
+        "status": "active"
+      },
+      {
+        "id": "promane",
+        "name": "ドヤプロマネ",
+        "status": "active"
+      },
+      {
+        "id": "sfa",
+        "name": "ドヤ営業管理",
+        "status": "active"
+      },
+      {
+        "id": "shodan",
+        "name": "ドヤ商談準備",
+        "status": "active"
+      },
+      {
+        "id": "aio",
+        "name": "ドヤAIO",
+        "status": "active"
+      },
+      {
+        "id": "mensetsu",
+        "name": "ドヤ面接官",
+        "status": "active"
+      },
+      {
+        "id": "quote",
+        "name": "ドヤ見積もりAI",
+        "status": "active"
+      },
+      {
+        "id": "aishodan",
+        "name": "ドヤAI商談",
+        "status": "active"
+      },
+      {
+        "id": "adimage",
+        "name": "ドヤ広告画像AI",
+        "status": "active"
+      },
+      {
+        "id": "asklink",
+        "name": "ドヤAI質問リンク",
+        "status": "active"
+      },
+      {
+        "id": "popup",
+        "name": "ドヤポップアップ",
+        "status": "active"
+      }
+    ],
+    "unlisted": [
+      {
+        "id": "tenjikai",
+        "name": "ドヤ展示会",
+        "status": "coming_soon"
+      },
+      {
+        "id": "shanai",
+        "name": "ドヤ社内インタビュー",
+        "status": "coming_soon"
+      },
+      {
+        "id": "income",
+        "name": "ドヤ収入管理",
+        "status": "coming_soon"
+      },
+      {
+        "id": "expense",
+        "name": "ドヤ支出管理",
+        "status": "coming_soon"
+      }
+    ],
+    "beta": [],
+    "retired": [
+      "video",
+      "presentation",
+      "kantan",
+      "shindan",
+      "logo",
+      "opening",
+      "tenkai",
+      "copy",
+      "interviewx",
+      "lp",
+      "adsim",
+      "movie",
+      "voice",
+      "adbanner"
+    ]
+  },
+  "candidateCatalogue": {
+    "public": [
+      {
+        "id": "banner",
+        "name": "ドヤバナーAI",
+        "status": "active"
+      },
+      {
+        "id": "seo",
+        "name": "ドヤ記事作成",
+        "status": "active"
+      },
+      {
+        "id": "interview",
+        "name": "ドヤインタビュー",
+        "status": "active"
+      },
+      {
+        "id": "persona",
+        "name": "ドヤペルソナAI",
+        "status": "active"
+      },
+      {
+        "id": "hr",
+        "name": "ドヤHR",
+        "status": "active"
+      },
+      {
+        "id": "kintai",
+        "name": "ドヤ勤怠",
+        "status": "active"
+      },
+      {
+        "id": "doyalist",
+        "name": "ドヤリスト",
+        "status": "active"
+      },
+      {
+        "id": "doyaslide",
+        "name": "ドヤスライド",
+        "status": "active"
+      },
+      {
+        "id": "promane",
+        "name": "ドヤプロマネ",
+        "status": "active"
+      },
+      {
+        "id": "sfa",
+        "name": "ドヤ営業管理",
+        "status": "active"
+      },
+      {
+        "id": "shodan",
+        "name": "ドヤ商談準備",
+        "status": "active"
+      },
+      {
+        "id": "aio",
+        "name": "ドヤAIO",
+        "status": "active"
+      },
+      {
+        "id": "mensetsu",
+        "name": "ドヤ面接官",
+        "status": "active"
+      },
+      {
+        "id": "quote",
+        "name": "ドヤ見積もりAI",
+        "status": "active"
+      },
+      {
+        "id": "aishodan",
+        "name": "ドヤAI商談",
+        "status": "active"
+      },
+      {
+        "id": "adimage",
+        "name": "ドヤ広告画像AI",
+        "status": "active"
+      },
+      {
+        "id": "asklink",
+        "name": "ドヤAI質問リンク",
+        "status": "active"
+      },
+      {
+        "id": "popup",
+        "name": "ドヤポップアップ",
+        "status": "active"
+      }
+    ],
+    "unlisted": [
+      {
+        "id": "tenjikai",
+        "name": "ドヤ展示会",
+        "status": "coming_soon"
+      },
+      {
+        "id": "shanai",
+        "name": "ドヤ社内インタビュー",
+        "status": "coming_soon"
+      },
+      {
+        "id": "income",
+        "name": "ドヤ収入管理",
+        "status": "coming_soon"
+      },
+      {
+        "id": "expense",
+        "name": "ドヤ支出管理",
+        "status": "coming_soon"
+      }
+    ],
+    "beta": [
+      {
+        "id": "cunning",
+        "name": "ドヤカンニング",
+        "status": "active"
+      }
+    ],
+    "retired": [
+      "video",
+      "presentation",
+      "kantan",
+      "shindan",
+      "logo",
+      "opening",
+      "tenkai",
+      "copy",
+      "interviewx",
+      "lp",
+      "adsim",
+      "movie",
+      "voice",
+      "adbanner"
+    ]
+  },
+  "prismaModels": 246,
+  "framework": {
+    "next": "15.5.25",
+    "react": "18.3.1",
+    "prisma": "5.22.0"
+  },
+  "state": "Source-derived handoff, not production deployment or authenticated runtime proof"
+}

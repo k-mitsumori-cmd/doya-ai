@@ -23,6 +23,9 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
+      - name: AdImage analysis evidence source paths (offline)
+        run: node scripts/security-regression/verify-adimage-analysis-source-paths.cjs
+
       - name: Install PostgreSQL for isolated operation regression
         run: |
           sudo apt-get update

@@ -1,0 +1,112 @@
+{
+  "recordedAt": "2026-10-20T01:02:31.722268+00:00",
+  "branch": "codex/claude-handoff-20261020",
+  "baseMain": "2b88ca32d3c187e754eb93daa20819d2171a2c39",
+  "state": "local-regression-passed-release-gates-open",
+  "frozenInputCount": 4216,
+  "frozenSourceInventorySha256": "44e4c43098562f3e649a987af2751eb83d2361dcafaa10de091b649da4a799ef",
+  "typecheck": "passed",
+  "lint": "passed-with-existing-warnings",
+  "unitSuites": [
+    {
+      "name": "test:asklink",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:popup",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:syscheck",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:tenjikai",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:shanai",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:income",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:expense",
+      "status": "passed",
+      "exitCode": 0
+    }
+  ],
+  "commonSecurityRegression": {
+    "startedAt": "2026-10-20T00:56:20.815751+00:00",
+    "status": "passed",
+    "steps": [
+      {
+        "name": "security",
+        "status": "passed",
+        "exitCode": 0
+      }
+    ],
+    "providerNetworkPermitted": false,
+    "productionReflected": false,
+    "persistentDatabaseProvisioned": false,
+    "sourceInventorySha256": "44e4c43098562f3e649a987af2751eb83d2361dcafaa10de091b649da4a799ef",
+    "sourceHashesUnchanged": true,
+    "endedAt": "2026-10-20T01:01:16.362844+00:00",
+    "processStopped": true
+  },
+  "adimageCIRegression": {
+    "cases": 16,
+    "sourceHashInputs": 10,
+    "checkedAt": "2026-10-20T00:39:49.228974+00:00",
+    "exitCode": 0,
+    "status": "passed",
+    "dbStopped": true,
+    "ownedFixtureRemoved": true,
+    "persistentDatabaseProvisioned": false,
+    "testLoginCreated": false,
+    "providerNetworkPermitted": false
+  },
+  "postGateChange": {
+    "file": "scripts/security-regression/verify-cost-image-auto.cjs",
+    "change": "Only one explanatory comment; no executable changes",
+    "beforeSha256": "1f57bfb43b016cd0d666f25bea2590b9651028472c8d314c63061f74d4b24ceb",
+    "afterSha256": "b14aa39ff8140205f165ffd8d778f5b6e3b4bb25a1a21d0c9694cb1b1d9b0caf",
+    "executableTranspileSha256": "a2da6d6056d2fbbe6dce816542b04e3ae41e861d6a56f5bd7a1e75168d323549",
+    "executableTranspileUnchanged": true,
+    "targetedCasesPassed": 12
+  },
+  "build": {
+    "checkedAt": "2026-10-20T00:32:01.669938+00:00",
+    "status": "not-started-insufficient-disk",
+    "guardExitCode": 3,
+    "guardOutput": "ディスクの空きが 4GB で、8GB を切っています。ビルドしません。メイン（local_505613b0-da96-4115-8fd4-efb1c4d361be）に知らせてください。",
+    "nextBuildExecuted": false,
+    "minimumFreeGiB": 8
+  },
+  "productionReflected": false,
+  "productionDataWritten": false,
+  "paidProvidersCalled": false,
+  "emailSent": false,
+  "persistentDatabaseProvisioned": false,
+  "remaining": [
+    "Complete Next.js build after existing 8 GiB free-disk guard is satisfied",
+    "GitHub CI all jobs on candidate branch",
+    "Authenticated 375px and 1280px UI confirmation",
+    "Real-provider OCR/image quality and billing only after specific paid-call approval",
+    "Explicit production release and public reflection confirmation"
+  ],
+  "preservedSeparateWork": [
+    "Old 707-input audit remains in its own worktree; not a whole-gate pass for this branch",
+    "SFA ordinary-member visibility/editing policy remains undecided",
+    "Persistent development DB/test login and Cunning WIP remain deferred"
+  ],
+  "evidenceLocation": "Detailed logs, full input manifest and failed earlier attempts remain in the local handoff directory; compact reports are committed"
+}

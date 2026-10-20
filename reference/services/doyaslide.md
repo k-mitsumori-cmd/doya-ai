@@ -42,7 +42,7 @@
   - **メイン: `gpt-image-2`**（OpenAI / `src/lib/openai-image.ts`、`OPENAI_IMAGE_MODEL` で上書き可）
   - **フォールバック: `nano-banana-pro-preview`**（Gemini 3 Pro Image系）
 - サイズは比率に応じて `1536x1024`(横) / `1024x1024`(正方形) / `1024x1536`(縦)（`ASPECT_TO_SIZE`）
-- 品質: 本番スライド=`medium`、スタイルプレビュー=`medium`（gpt-image-2 は `auto` 非対応）。2026-08-27 に high から変更（実測で high は約2.8倍の時間・4.3倍の単価、仕上がりの差は採用判断に足りなかった）
+- 品質: 本番スライド=`medium`、管理者によるスタイル見本の明示生成=`medium`（通常のプレビューGETは画像を生成しない。gpt-image-2 は `auto` 非対応）。2026-08-27 に high から変更（実測で high は約2.8倍の時間・4.3倍の単価、仕上がりの差は採用判断に足りなかった）
 - 構成テキスト（Gemini）は `@seo/lib/gemini` 系ではなく `src/lib/doyaslide/` 内で組み立て
 
 ## スタイルプリセット（32種 = ビジネス系6 + 遊び系6 + デザインテンプレート20）
@@ -67,7 +67,7 @@
 
 - 既定スタイル: `corporate`（new/page.tsx・projects API とも旧 flashy から変更）。
 
-- スタイルプレビューは「スタイル×ページ(表紙/本文/まとめ)」で複数ページを事前生成し、Storageに共有キャッシュ（`style-previews/v5-styles6/{style}-{page}.png`）。モデル/品質/プロンプトを変えたら `STYLE_PREVIEW_DIR` の版を上げると全焼き直し。一括再生成は `npx tsx scripts/regenerate-doyaslide-style-previews.ts`。プレビューAPIは3ページを並列生成（直列だと cold cache 時に maxDuration=300 超過）。
+- スタイルプレビューは「スタイル×ページ(表紙/本文/まとめ)」で複数ページを事前生成し、Storageに共有キャッシュ（`style-previews/v5-styles6/{style}-{page}.png`）。モデル/品質/プロンプトを変えたら `STYLE_PREVIEW_DIR` の版を上げると全焼き直し。一括再生成は `npx tsx scripts/regenerate-doyaslide-style-previews.ts`。プレビューAPIは保存済みの画像を読むだけとし、画面を開いても画像生成APIは呼ばない。保存済み画像がないスタイルは、配色とレイアウトを示す静的SVG見本を表示する。見本の新規画像生成は管理者による明示実行に限る。
 
 ## プロンプト設計（2026-06-12 改修）
 

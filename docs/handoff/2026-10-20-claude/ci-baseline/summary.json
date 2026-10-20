@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-10-20T00:38:33.847800+00:00",
+  "exitCode": 1,
+  "status": "failed",
+  "dbStopped": true,
+  "ownedFixtureRemoved": true,
+  "persistentDatabaseProvisioned": false,
+  "testLoginCreated": false,
+  "providerNetworkPermitted": false
+}

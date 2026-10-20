@@ -350,7 +350,6 @@ export default function EditPage() {
   // バナー画像
   const [bannerUrl, setBannerUrl] = useState<string | null>(null)
   const [bannerGenerating, setBannerGenerating] = useState(false)
-  const bannerAutoTriedRef = useRef(false)
 
   // トースト通知
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -526,22 +525,19 @@ export default function EditPage() {
   }
 
   // バナー画像生成 (Nano Banana Pro)
-  // auto=true は画面を開いたときの自動生成。サーバーが「1件につき1回・ログイン済み・利用枠あり」のときだけ作る。
-  // 自動生成の失敗や見送りは、利用者が押した操作ではないので通知しない。
-  const generateBanner = useCallback(async (force: boolean, auto = false) => {
+  // 初回は記事に付属。利用者がボタンを押したときだけ生成する。
+  const generateBanner = useCallback(async (force: boolean) => {
     if (bannerGenerating) return
     setBannerGenerating(true)
     try {
       const res = await fetch(`/api/interview/projects/${projectId}/thumbnail`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleContent: content.slice(0, 2000), articleTitle: title, force, auto }),
+        body: JSON.stringify({ articleContent: content.slice(0, 2000), articleTitle: title, force, manual: true }),
       })
       const data = await res.json()
       if (data.success && data.thumbnailUrl) {
         setBannerUrl(data.thumbnailUrl)
-      } else if (auto) {
-        // 何もしない（ボタンから作り直せる）
       } else {
         if (res.status === 429 && data.code === 'INTERVIEW_AUX_LIMIT_REACHED') {
           setAuxLimitMessage(data.error || '本日の追加AI編集枠を使い切りました。')
@@ -551,19 +547,11 @@ export default function EditPage() {
       }
     } catch (e) {
       console.error('[banner] generation failed:')
-      if (!auto) showToast('バナー画像を生成できませんでした。通信状態を確認して再試行してください。', 'error')
+      showToast('バナー画像を生成できませんでした。通信状態を確認して再試行してください。', 'error')
     } finally {
       setBannerGenerating(false)
     }
   }, [projectId, content, title, bannerGenerating, showToast])
-
-  // バナー自動生成: 記事読み込み完了時にバナーが未生成なら自動で作成
-  useEffect(() => {
-    if (!loading && content.trim().length > 100 && !bannerUrl && !bannerGenerating && !bannerAutoTriedRef.current) {
-      bannerAutoTriedRef.current = true
-      generateBanner(false, true)
-    }
-  }, [loading, content, bannerUrl, bannerGenerating, generateBanner])
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content)
@@ -1230,19 +1218,19 @@ ${htmlBody}
                     ) : content.trim() ? (
                       <div className="mb-8 -mx-4 sm:-mx-6 md:-mx-8 -mt-6 sm:-mt-10">
                         <button
-                          onClick={() => generateBanner(true)}
+                          onClick={() => generateBanner(false)}
                           disabled={bannerGenerating}
                           className="w-full h-[120px] bg-gradient-to-r from-slate-50 via-slate-100 to-slate-50 border-b border-slate-200 flex flex-col items-center justify-center gap-2 hover:from-[#7f19e6]/5 hover:via-[#7f19e6]/10 hover:to-[#7f19e6]/5 transition-all group"
                         >
                           {bannerGenerating ? (
                             <>
                               <span className="material-symbols-outlined text-2xl text-[#7f19e6] animate-spin">progress_activity</span>
-                              <span className="text-xs font-bold text-slate-500">Nano Banana Pro でバナー生成中...</span>
+                              <span className="text-xs font-bold text-slate-500">サムネイルを作成中...</span>
                             </>
                           ) : (
                             <>
                               <span className="material-symbols-outlined text-2xl text-slate-300 group-hover:text-[#7f19e6] transition-colors">add_photo_alternate</span>
-                              <span className="text-xs font-bold text-slate-400 group-hover:text-[#7f19e6] transition-colors">バナー画像を生成</span>
+                              <span className="text-xs font-bold text-slate-400 group-hover:text-[#7f19e6] transition-colors">サムネイルを作成（初回は記事に付属）</span>
                             </>
                           )}
                         </button>

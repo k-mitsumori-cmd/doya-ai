@@ -1,0 +1,8 @@
+{
+  "file": "scripts/security-regression/verify-cost-image-auto.cjs",
+  "change": "Only one explanatory comment; no executable changes",
+  "beforeSha256": "1f57bfb43b016cd0d666f25bea2590b9651028472c8d314c63061f74d4b24ceb",
+  "afterSha256": "b14aa39ff8140205f165ffd8d778f5b6e3b4bb25a1a21d0c9694cb1b1d9b0caf",
+  "executableTranspileSha256": "a2da6d6056d2fbbe6dce816542b04e3ae41e861d6a56f5bd7a1e75168d323549",
+  "executableTranspileUnchanged": true
+}

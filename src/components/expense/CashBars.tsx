@@ -21,7 +21,8 @@ const colorOf = (c: string) => CATEGORY_COLOR[c] ?? 'var(--blue-line)'
 /** grow: 画面に入ったときに棒を下から伸ばす（新しい見た目のときだけ渡す。動きを減らす設定では伸ばさない） */
 export default function CashBars({ cash, grow = false }: { cash: ForecastMatrix; grow?: boolean }) {
   const { ref, seen } = useInViewOnce<HTMLDivElement>()
-  const animate = grow && !usePrefersReducedMotion()
+  const reducedMotion = usePrefersReducedMotion()
+  const animate = grow && !reducedMotion
   const max = Math.max(1, ...cash.months.map((m) => cash.totals[m]?.amount ?? 0))
   const H = 160
   return (

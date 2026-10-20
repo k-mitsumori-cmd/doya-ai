@@ -1,6 +1,6 @@
 // 利用者が押していないのに有料の画像APIを呼ばないことの確認（2026-10-19 原価見直し）。
 //  1) ドヤスライド: 新規作成の画面を開く・見本を GET しても、画像生成は呼ばれない。見本が無ければ静的な SVG を出す。
-//  2) インタビュー: 編集画面からのサムネイル自動生成は 1件1回・ログイン済み・利用枠ありのときだけ。
+//  2) インタビュー: 自動生成を停止。初回はボタン操作で記事に付属し、再生成だけ追加AI編集枠を消費する。
 // 外部APIは呼ばない。画像生成はモックにして、呼び出し回数を数える。
 process.env.NODE_ENV = 'test'
 const assert = require('node:assert/strict')
@@ -64,7 +64,6 @@ function threadInterviewRoute(state) {
     },
     '@/lib/interview/thumbnail-lease': {
       ThumbnailGenerationInProgressError: lease.ThumbnailGenerationInProgressError,
-      claimThumbnailAutoAttempt: id => lease.claimThumbnailAutoAttempt(id, undefined, new Date(0)),
       claimThumbnailLease: async () => { state.leases++; return 'token' },
       releaseThumbnailLease: async () => {},
     },
@@ -129,54 +128,95 @@ const post = (api, body) => api.POST({ json: async () => body, cookies: {} }, ct
     }
   })
 
-  await check('interview: auto thumbnail is attempted once per project, even after a failure', async () => {
-    const state = newState({ providerFails: true })
-    const api = threadInterviewRoute(state)
-    assert.equal((await post(api, { auto: true })).status, 500)
-    assert.equal(state.providerCalls, 1)
-    assert.equal(state.refunds, 1, 'failed auto attempt returns the quota')
-    const second = await post(api, { auto: true })
-    assert.equal(second.status, 200)
-    assert.equal((await second.json()).code, 'THUMBNAIL_AUTO_SKIPPED')
-    assert.equal(state.providerCalls, 1, 'second open does not call the image API')
-    state.providerFails = false
-    assert.equal((await post(api, { auto: true })).status, 200)
-    assert.equal(state.providerCalls, 1)
-    // ボタンを押したとき（auto なし）は作れる
-    const manual = await post(api, { force: true })
-    assert.equal(manual.status, 200)
-    assert.equal((await manual.json()).thumbnailUrl, '/thumb')
-    assert.equal(state.providerCalls, 2)
+  await check('interview: opening the editor cannot request thumbnail generation', async () => {
+    const ts = require('typescript'), fs = require('node:fs')
+    const file = 'src/app/(shell)/interview/projects/[id]/edit/page.tsx'
+    const source = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+    let clicks = 0
+    function visit(node) {
+      if (ts.isCallExpression(node) && node.expression.getText(source) === 'generateBanner') {
+        let parent = node.parent
+        while (parent && !ts.isJsxAttribute(parent)) parent = parent.parent
+        assert(parent && parent.name.getText(source) === 'onClick', 'generation must originate from a click handler')
+        clicks++
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(source)
+    assert.equal(clicks, 2, 'initial creation and regeneration remain available')
   })
 
-  await check('interview: successful auto thumbnail spends one quota and the next open reuses it', async () => {
-    const state = newState()
-    const api = threadInterviewRoute(state)
-    assert.equal((await (await post(api, { auto: true })).json()).thumbnailUrl, '/thumb')
-    assert.equal(state.providerCalls, 1)
-    assert.equal(state.budgetLeft, 4)
-    assert.equal((await post(api, { auto: true })).status, 200)
-    assert.equal(state.providerCalls, 1)
-  })
+  for (const options of [{}, { budgetLeft: 0 }, { project: { id: 'p1', userId: 'u1', thumbnailUrl: 'marker', updatedAt: new Date(1000) } }]) {
+    await check('interview: automatic requests never call a provider, reserve quota or write an attempt', async () => {
+      const state = newState(options), api = threadInterviewRoute(state)
+      for (const body of [{ auto: true }, { auto: true, force: true }, { auto: true }]) {
+        const response = await post(api, body)
+        assert.equal(response.status, 200)
+        assert.equal((await response.json()).code, 'THUMBNAIL_AUTO_SKIPPED')
+      }
+      assert.equal(state.providerCalls, 0)
+      assert.equal(state.leases, 0)
+      assert.equal(state.budgetClaims, 0)
+      assert.equal(state.settings.size, 0)
+    })
+  }
 
-  await check('interview: guests never get an automatic thumbnail', async () => {
-    const state = newState({ userId: null, project: { id: 'p1', userId: null, guestId: 'guest-1', thumbnailUrl: null, updatedAt: new Date(1000), title: 'T', genre: 'OTHER' } })
-    const api = threadInterviewRoute(state)
-    const res = await post(api, { auto: true })
-    assert.equal(res.status, 200)
-    assert.equal((await res.json()).code, 'THUMBNAIL_AUTO_SKIPPED')
+  await check('interview: legacy automatic requests without the auto flag never generate or spend quota', async () => {
+    const state = newState(), api = threadInterviewRoute(state)
+    for (const body of [{ force: false }, {}]) {
+      const response = await post(api, body)
+      assert.equal(response.status, 200)
+      assert.equal((await response.json()).code, 'THUMBNAIL_AUTO_SKIPPED')
+    }
     assert.equal(state.providerCalls, 0)
     assert.equal(state.leases, 0)
     assert.equal(state.budgetClaims, 0)
-    assert.equal(state.settings.size, 0)
   })
 
-  await check('interview: no remaining quota means no automatic image call and the attempt is not consumed', async () => {
-    const state = newState({ budgetLeft: 0 })
-    const api = threadInterviewRoute(state)
-    const res = await post(api, { auto: true })
-    assert.equal(res.status, 429)
+  await check('interview: guest automatic requests are skipped before quota and provider', async () => {
+    const state = newState({ userId: null, project: { id: 'p1', userId: null, guestId: 'guest-1', thumbnailUrl: null, updatedAt: new Date(1000), title: 'T', genre: 'OTHER' } })
+    const response = await post(threadInterviewRoute(state), { auto: true })
+    assert.equal((await response.json()).code, 'THUMBNAIL_AUTO_SKIPPED')
     assert.equal(state.providerCalls, 0)
-    assert.equal(state.settings.size, 0)
+    assert.equal(state.budgetClaims, 0)
+  })
+
+  await check('interview: explicit first creation is included even when additional edit quota is zero', async () => {
+    const state = newState({ budgetLeft: 0 }), api = threadInterviewRoute(state)
+    const response = await post(api, { force: false, manual: true })
+    assert.equal(response.status, 200)
+    assert.equal((await response.json()).thumbnailUrl, '/thumb')
+    assert.equal(state.providerCalls, 1)
+    assert.equal(state.budgetClaims, 0)
+    assert.equal(state.budgetLeft, 0)
+    assert.equal((await post(api, {})).status, 200)
+    assert.equal(state.providerCalls, 1, 'reuse never creates a second image')
+  })
+
+  await check('interview: first-create click reuses an image completed in another tab without spending a credit', async () => {
+    const state = newState({ budgetLeft: 0, project: { id: 'p1', userId: 'u1', thumbnailUrl: 'marker', updatedAt: new Date(1000) } })
+    const response = await post(threadInterviewRoute(state), { force: false, manual: true })
+    assert.equal(response.status, 200)
+    assert.equal((await response.json()).thumbnailUrl, '/thumb')
+    assert.equal(state.providerCalls, 0)
+    assert.equal(state.budgetClaims, 0)
+    assert.equal(state.leases, 0)
+  })
+
+  await check('interview: explicit regeneration spends exactly one additional edit credit', async () => {
+    const state = newState({ budgetLeft: 1, project: { id: 'p1', userId: 'u1', thumbnailUrl: 'marker', updatedAt: new Date(1000) } }), api = threadInterviewRoute(state)
+    assert.equal((await post(api, { force: true })).status, 200)
+    assert.equal(state.providerCalls, 1)
+    assert.equal(state.budgetLeft, 0)
+    assert.equal(state.budgetClaims, 1)
+    assert.equal((await post(api, { force: true })).status, 429)
+    assert.equal(state.providerCalls, 1)
+  })
+
+  await check('interview: failed explicit regeneration returns the additional edit credit', async () => {
+    const state = newState({ providerFails: true, project: { id: 'p1', userId: 'u1', thumbnailUrl: 'marker', updatedAt: new Date(1000) } })
+    assert.equal((await post(threadInterviewRoute(state), { force: true })).status, 500)
+    assert.equal(state.refunds, 1)
+    assert.equal(state.budgetLeft, 5)
   })
 })().catch(error => { console.error(error); process.exitCode = 1 })
