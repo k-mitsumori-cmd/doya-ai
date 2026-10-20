@@ -16,7 +16,8 @@ const site={parseSourceUrl:raw=>{try{return new URL(raw).href}catch{return null}
 const route=load('src/app/api/asklink/runs/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma:db},'@/lib/service-usage':{recordServiceUsage:async()=>{}},'@/lib/asklink/access':{getAskLinkUserId:async()=>actor},'@/lib/asklink/site':site,'@/lib/asklink/generate':{generateLinks:async()=>[{key:'understand'},{key:'prepare'}],generateBannerCopy:async()=>({headline:'Synthetic'})},'@/lib/asklink/dto':dto,'@/lib/asklink/creation-operation':core,'@/lib/asklink/creation-response':response,'@/lib/asklink/creation-http':http},globals)
 const recovery=load('src/app/api/asklink/creation-operations/[operationId]/route.ts',{'@/lib/asklink/access':{getAskLinkUserId:async()=>actor},'@/lib/asklink/creation-operation':core,'@/lib/asklink/creation-response':response,'@/lib/asklink/creation-http':http},globals)
 const cleanup=load('src/lib/asklink/account-cleanup.ts',{'node:crypto':crypto,'./creation-receipts':receipts})
-const adapter=load('src/lib/asklink/creation-adapter.ts',{'./account-cleanup':cleanup})
+const retirement=load('src/lib/account-retirement.ts',{'@prisma/client':{Prisma}})
+const adapter=load('src/lib/asklink/creation-adapter.ts',{'./account-cleanup':cleanup,'@/lib/account-retirement':retirement})
 const cronEnv={CRON_SECRET:'synthetic-local-only'};let cronCalls=0
 const cron=load('src/app/api/cron/asklink-creation-purge/route.ts',{'@/lib/asklink/creation-operation':{collectAskLinkCreationReceipts:()=>{cronCalls++;return core.collectAskLinkCreationReceipts(db)}}},{...globals,process:{env:cronEnv}})
 const now=()=>new Date(),newId=(date=now())=>date.getTime()+'.'+crypto.randomUUID(),input=(operationId=newId(),who=actor)=>({actor:who,operationId,sourceUrl:'https://example.invalid/',manualText:''}),key=i=>core.askLinkCreationReceiptPrefix(i.actor)+i.operationId
@@ -27,7 +28,7 @@ async function setup(){
  const s=await db.$queryRawUnsafe("SELECT inet_server_addr() AS address,current_user AS role,current_setting('data_directory') AS folder");assert.equal(s[0].address,null);assert.equal(s[0].role,'doya_ask1');assert.equal(s[0].folder,folder+'/data')
  await db.$executeRawUnsafe('CREATE SCHEMA ask1_fixture')
  const quote=s=>'"'+s.replaceAll('"','""')+'"'
- for(const name of ['User','SystemSetting','AskLinkRun','AskLinkBanner']){
+ for(const name of [...new Set(['User','SystemSetting','AskLinkRun','AskLinkBanner',...require('./retirement-fixture.cjs').retirementModels])]){
   const m=Prisma.dmmf.datamodel.models.find(m=>m.name===name),cols=m.fields.filter(f=>f.kind!=='object').map(f=>{let type=({String:'TEXT',Int:'INTEGER',Boolean:'BOOLEAN',DateTime:'TIMESTAMP(3)',Json:'JSONB',Float:'DOUBLE PRECISION',BigInt:'BIGINT',Decimal:'DECIMAL'})[f.type]||'TEXT';if(f.isList)type+='[]';let def='';if(f.type==='DateTime'&&(f.isUpdatedAt||f.default?.name==='now'))def=' DEFAULT CURRENT_TIMESTAMP';else if(f.hasDefaultValue&&['string','number','boolean'].includes(typeof f.default))def=' DEFAULT '+(typeof f.default==='string'?"'"+f.default.replaceAll("'","''")+"'":String(f.default));return quote(f.dbName||f.name)+' '+type+(f.isRequired?' NOT NULL':'')+def+(f.isId?' PRIMARY KEY':'')+(f.isUnique?' UNIQUE':'')});for(const fields of m.uniqueFields)cols.push('UNIQUE ('+fields.map(quote).join(',')+')');await db.$executeRawUnsafe('CREATE TABLE '+quote(m.dbName||name)+' ('+cols.join(',')+')')
  }
  await db.$executeRawUnsafe('ALTER TABLE asklink_banner ADD FOREIGN KEY ("runId") REFERENCES asklink_run(id) ON DELETE CASCADE')

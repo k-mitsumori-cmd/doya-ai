@@ -1,0 +1,15 @@
+# OWNER-A・支出ORG表示とfixture待機の統合確認
+
+退会は外部Stripe操作前と最終削除Tx、adapterで所属・owner状態を照合します。共同データや保留招待のあるowner、未知状態は停止します。本人に明示紐付いたCaseStudyのPII・自由記述だけを匿名化し、statusとconsentを保持します。guestや他actorをemail一致だけで消しません。支出のORG表示はactor/lifecycle/sequenceとorg/roleを読後にも照合し、旧一覧や副readを反映しません。
+
+基準は未pushのfixture独立commit b1103f91です。前の72d471caはCI成功、Vercelは実暗号計算の完了前にボタンを検査したfixtureで失敗しました。failed72dの隔離実ソースで同じ失敗を再現し、元32scenario/assert本文を変えず、実digestと期待ボタンを条件付き・期限付きで待つよう修正しました。25ms遅延あり/なし32件が合格し、遅延中busy・二重POST0も確認しました。前のNext成功は主張しません。
+
+今回22入力を含む5,141入力を固定し、29ゲートが全て終了0でした。global非incremental型、変更TS9入力Lint、共通回帰、7サービス314件、日時5件、CI参照167本/718件、作成PG32・privacyPG41・OWNER PGを含みます。実Form19・ORG表示38・既存Entry54・fixture32も共通回帰で確認しました。前後のsource hash・パス集合と主要依存は不変です。
+
+OWNER PGの64実行は、62件の安全契約合格と2件の未解決観測に分けます。外部Stripe操作中の新membershipで最終削除が409となっても取消1件が残る競合と、照会後checkoutがpayableとなりUser削除後も受付が残る競合です。2件ともaccepted:falseで、安全性の合格へ含めません。退会全体の完了とは扱いません。
+
+Prisma client/generatedは独立、今回generateなしです。React等は共有packageをread-onlyで使い、realpath/version/entry hashを前後で確認しました。offlineの外向き通信は拒否し、実PG3本は所有一時Unix socketに限定して停止・所有dir削除を確認しました。大量manifest・ログはローカルに保持し、小summaryに22入力hashを記録しています。
+
+fixtureと今回候補をまとめてpush後、同じHEADのCI・Vercel Nextビルドを確認します。ORG38はdisplay/readの境界で、mutationのexpectedActor・全callbackは残ります。OWNER引継ぎUI、guest移管、認証後実画面・native戻る/BFCache、実Stripe/Storage/provider、本番反映は未確認または別batchです。
+
+担当Sol、方針Astra。Lunaは使用していません。

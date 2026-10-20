@@ -1,0 +1,76 @@
+{
+  "checkedAt": "2026-10-20T12:11:11.283947+00:00",
+  "baseCommit": "72d471caf245072215414115a6b58fb6a3751295",
+  "state": "source-frozen; local synthetic verification passed; integration typecheck/build/browser/deployment pending",
+  "sourceHashes": {
+    "src/components/expense/api.ts": "ef67df8d48f923f41d9b403e1d037cdb97a144d80068dfd7f85284e83d842a7b",
+    "src/lib/expense/use-read-scope.ts": "97ffdc5094b7a1511e570bedf22e22a40b3a3c178cd62a87de73a019613ff427",
+    "src/app/(shell)/expense/[orgSlug]/layout.tsx": "d03ea2fd89b231e075e85f50bf604962a34361a1a7dceded685490c7a26411e6",
+    "scripts/security-regression/verify-expense-query-scope.cjs": "c1e2eb7ce1d42af0dec0b26262fe5943eeff7a9b3c7a7fd1f8a35b954423d125",
+    "scripts/security-regression/verify-expense-entry-mounted.cjs": "05bd48cd07d94880f00c128e8936e8f1393e67477fa2b10bec3dd8740afc9930"
+  },
+  "loadedSourceHashes": {
+    "src/components/expense/api.ts": "ef67df8d48f923f41d9b403e1d037cdb97a144d80068dfd7f85284e83d842a7b",
+    "src/lib/org-client-response.ts": "560be84c173ca6b6c99a2531ac50a025af4193d7cd301ecf5fe1c7243504964a",
+    "src/lib/expense/use-read-scope.ts": "97ffdc5094b7a1511e570bedf22e22a40b3a3c178cd62a87de73a019613ff427",
+    "src/app/(shell)/expense/[orgSlug]/layout.tsx": "d03ea2fd89b231e075e85f50bf604962a34361a1a7dceded685490c7a26411e6",
+    "src/lib/expense/nav.ts": "a1e9ba92cee12c554883c604df99709ec0e2115aefec1583cb9753f9e243fa86",
+    "src/lib/expense/constants.ts": "17bf4b90e4cdc03425aab3daf8a428ebb9bcb36a788b705aff78a77e43691372"
+  },
+  "checks": {
+    "queryScope": {
+      "passed": 38,
+      "failed": 0,
+      "productionParent": true
+    },
+    "pairedBaseline": {
+      "commit": "72d471caf245072215414115a6b58fb6a3751295",
+      "passed": 5,
+      "failed": 28,
+      "newInterfaceCasesExcluded": 5,
+      "sameAssertions": 33
+    },
+    "previousEntry": {
+      "passed": 54,
+      "failed": 0
+    },
+    "expenseExisting": {
+      "passed": 93,
+      "failed": 0
+    },
+    "targetedEslint": {
+      "exitCode": 0
+    },
+    "syntaxAndDiffCheck": {
+      "exitCode": 0
+    }
+  },
+  "run": {
+    "script": "scripts/security-regression/verify-expense-query-scope.cjs",
+    "env": [],
+    "command": "node scripts/security-regression/verify-expense-query-scope.cjs",
+    "timeoutSeconds": 60,
+    "network": false,
+    "database": false,
+    "paidApi": false,
+    "reactEnvironment": "script-local NODE_ENV=test, parent isolated by process"
+  },
+  "artifacts": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020",
+  "unverified": [
+    "real browser route navigation",
+    "integrated typecheck/build",
+    "deployment",
+    "API mutation expectedActor",
+    "all form saved callbacks"
+  ],
+  "integratedVerification": {
+    "gateExecutions": 29,
+    "allExitCodesZero": true,
+    "sourceFiles": 5141,
+    "sourceAndPathSetUnchanged": true,
+    "majorDependenciesUnchanged": true,
+    "nonincrementalTypecheckExit": 0,
+    "evidence": "../2026-10-20-owner-org/summary.json",
+    "remoteBuild": "Pending same combined commit"
+  }
+}

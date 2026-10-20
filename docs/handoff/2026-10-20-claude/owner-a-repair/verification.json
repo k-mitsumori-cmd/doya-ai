@@ -1,0 +1,32 @@
+{
+  "status": "targeted_and_integrated_checks_passed_two_unsafe_observations_unresolved",
+  "checkedAt": "2026-10-20T12:18:34.701210+00:00",
+  "baseCommit": "72d471caf245072215414115a6b58fb6a3751295",
+  "newPostgres": {
+    "executed": 64,
+    "contractRegressionsPassed": 62,
+    "unresolvedUnsafeObservations": 2,
+    "acceptedUnsafeObservations": 0,
+    "ownedPgStopped": true,
+    "ownedDirectoryRemoved": true
+  },
+  "newOfflineForm": {
+    "passed": 19
+  },
+  "existing": {
+    "creationPostgres": 32,
+    "privacyPostgres": 41,
+    "adminBilling": 10,
+    "authRegistration": 12,
+    "adminQuotas": "passed"
+  },
+  "targetedLint": "6 runtime files, no warnings/errors",
+  "syntax": "new CJS and Python AST parse passed",
+  "integration": "Final nonincremental tsc and29 frozen-input gate executions all exit0;5141source/pathset+major deps unchanged. See ../../2026-10-20-owner-org/summary.json. OWNER62contracts+2unaccepted unsafe observations remain distinct. Same-candidate remote build pending.",
+  "sourceInputHash": "6b7e5cd248fb6c4e7fd74ace38c6b9160647d297cb37a39f8ee33c264b59a77a",
+  "productionActions": "none",
+  "luna": {
+    "status": "未使用",
+    "scope": "通常のCodexで実装・検証"
+  }
+}

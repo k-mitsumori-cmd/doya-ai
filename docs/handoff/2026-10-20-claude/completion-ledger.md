@@ -4,7 +4,7 @@
 
 現在の実装、検証、残作業、判断待ちを分けます。文書に設計があること、テストが通ること、プレビューが立つこと、本番で使えることは別の状態です。各項目の証拠がそろうまで全体完了とはしません。
 
-作業先はこのworktree、ブランチは `codex/claude-handoff-20261020`。BILL-020・日時・ENTRY・収支・ASK1を含む `95063ec663378aa3e54770b41596ff246c6d7437` をpush済みです。同じSHAのGitHub CI（run `39415172709`）成功とVercel `dpl_5Rf1iF2WRZhLTwKxodqZFm2VSNXz` READYを確認しました。今回のAskLink退会・支出・DocsVault候補は5,133入力を固定し25ゲートが全て合格、前後hash・パス集合・主要依存が不変でした。`../2026-10-20-privacy-expense-docs/summary.json` を参照します。今回候補のリモートCI・Nextビルドはcommit後に確認します。認証後UI・本番反映は未完了です。
+作業先はこのworktree、ブランチは `codex/claude-handoff-20261020`。push済み `72d471ca` は同SHAのGitHub CI（run `39418890840`）成功、VercelはASK client fixtureの同期失敗でNextビルド前にERRORです。実暗号処理と期待UIを条件付きで待つ修正を独立commit `b1103f91` に保存し、隔離failed72d実ソースでbefore失敗・after32件合格を確認しました。現在のOWNER-A・ORG候補はb1103基準の5,141入力を固定し29ゲートが全て終了0、前後hash・パス集合・主要依存が不変です。OWNERは62安全契約合格と2未解決の危険観測を分けます。`../2026-10-20-owner-org/summary.json`参照。fixtureと今回候補をまとめてpush後、同HEADのCI・Vercelを確認します。認証後UI・本番反映は未完了です。
 
 正本は `/Users/mitsumori_katsuki/Code/09_Cursol-ui-renewal/docs/architecture/management-agent/README.md` §16・§18と、同じ場所の `ADDON-SERVICES-2026-10-18.md` です。監査の起点はこのworktreeの `docs/system-check/FINDINGS-2026-10-18.md`。過去の監査表を現在の合否としては扱いません。非公開の元ノートの全文や、画面の個人情報は複製していません。
 
@@ -28,6 +28,8 @@
 | AskLink退会後のrun/banner/Storage | 自actorのDB削除と耐久outboxを同一Txにし、Storageをtoken/世代/lease/CASで後処理。不明uploadは完了にしない | 今回privacy実PG41件・creation32件、統合25ゲート、5,133入力/依存不変。`../2026-10-20-privacy-expense-docs/summary.json` | 同一候補remoteビルド、実Storage整合性・障害運用・旧writer drain、認証後UI、cron本番稼働 | OWNER引継ぎ・CaseStudy/guestの扱いは別batch。全サービス退会完了とはしない |
 | 支出の入口・支払予定 | 正常未所属と認証/権限/読取失敗を分け、最新所属と期間別の副readを固定 | 実mounted/SSR54件、既存93件、統合型・Lint・共通回帰合格 | 候補版の認証後375/1280、実ブラウザ戻る/BFCache、本番反映 | 招待claimが残るためGET全体の書込0とはしない |
 | 展示会DocsVaultの一時状態 | 同じ計画のタブ往復は資料名/チェックを保持し、利用者/計画切替で消去 | 実mounted11件、既存16件、統合25ゲート合格 | 実ブラウザ操作、永続保存・ホーム連携、本番反映 | ファイル本体は保持しない。再読み込みで消える一時整理 |
+| OWNER-A・本人の事例匿名化 | 管理者の外部操作前/最終Txとadapterで共同所属・owner・招待をガード。本人userIdの事例PII/freeTextを消しstatus/consentは保持 | OWNER PGは64実行のうち62安全契約合格、2件はaccepted:falseの危険観測。Form19件、統合29gate終了0 | Stripe外部区間の新membership後cancel1/削除409、checkout payable化後User削除という2競合。OWNER引継ぎUI・guest移管・remote・本番 | 64安全合格や退会全体完了とは扱わない。`../2026-10-20-owner-org/summary.json` |
+| 支出ORGの表示read | actor/lifecycle/seq/currentとorg/roleを確認し、旧一覧・副readを破棄 | 実mounted38件、既存Entry54・expense93、global型・対象Lint・29統合gate終了0 | mutation expectedActor、全form callback、認証後UI/native戻る/BFCache、remote・本番 | display/readだけの今回scopeを全mutation対応へ拡張しない |
 | 実環境の接続 | 本番DB・Stripe・プロバイダー・ストレージがあることと、今回差分の実操作検証を区別 | 隔離した一時PostgreSQLと合成プロバイダーによる回帰あり。常設検証DBは新設していない | 実DBの必要列/権限、Stripe test mode、実provider、実storage、署名URL/期限/後始末の適合確認 | 常設検証DB・テストログインは見送り。課金・本番書込は具体承認の範囲内のみ |
 | 旧707入力の監査差分 | 別worktree `doya-billing-client-20261006` に保持。移動44ファイルを含む | 今回の候補全体へ適用した証拠はない | 移動元/先を対応させ、現コードと意味を照合し、必要差分だけ統合。既存の修正との重複・退行を確認 | 707入力の過去合格を現候補の全ゲート合格へ流用しない |
 | SFA権限 | `src/lib/sfa/` の役割と監査指摘が対象。一般メンバーの閲覧・編集範囲は未決 | 今回その方針を変更していない | 方針確定後にaccess/read/writeへ一貫して適用し越境回帰 | ユーザーへ質問中。既存権限を推測で拡張しない |
@@ -67,6 +69,6 @@ Astraの戦略に従い、既存のread関数をつなぎます。ホームか�
 
 本番の375pxホームでは販促パネルが下部ナビに重なっています。候補側の抑制修正をまだ画面で確認できていません。会社情報の登録状態も、共通枠とホームで一貫しません。全サービスの見本比較と実操作の証拠が不足しています。
 
-次はAskLink退会・支出・DocsVaultの同一候補をcommit後、リモートCIとVercelで検証します。OWNER引継ぎ・CaseStudy匿名化・guest transferは別batchです。SWEEP-2とSFAはユーザーの方針を受けて実装します。認証後UIを確認できるまで全体を完成・公開済みとは記録しません。
+次はfixture修正とOWNER-A・ORGの候補をまとめてpushし、同HEADのCI・Vercelを確認します。退会の外部課金区間に残る2競合、OWNER引継ぎUI・guest transferは別gateです。SWEEP-2とSFAはユーザーの方針を受けて実装します。認証後UIを確認できるまで全体を完成・公開済みとは記録しません。
 
 作成: Sol、戦略: Astra。Lunaは使用していません。

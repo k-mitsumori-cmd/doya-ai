@@ -1,0 +1,25 @@
+{
+  "baseCommit": "72d471caf245072215414115a6b58fb6a3751295",
+  "runtimeFiles": 6,
+  "testFixtureFiles": 9,
+  "count": 15,
+  "hashMethod": "SHA256 of UTF8 compact JSON with sorted files-map keys (filename -> SHA256)",
+  "inputHash": "6b7e5cd248fb6c4e7fd74ace38c6b9160647d297cb37a39f8ee33c264b59a77a",
+  "files": {
+    "scripts/security-regression/retirement-fixture.cjs": "bf80337e9a7c14200d5d4410b45390a30a57e39b323d4e8fa23c338a1de499e4",
+    "scripts/security-regression/verify-account-retirement-postgres.cjs": "5a95af9be491578e1c1b1074b7cedf33860dcfcf091a73b3007af53479148a6a",
+    "scripts/security-regression/verify-account-retirement-postgres.py": "d3b379ec22f88fb2eecd959e3a8501241dc5376467f6b096f26f8fd055914f25",
+    "scripts/security-regression/verify-admin-billing-integrity.cjs": "0415a6d9a7a20e3012edcd3d70c8916869874b75643524f5a55a20669abba435",
+    "scripts/security-regression/verify-admin-user-quotas.cjs": "daf5a173eadbad9128341bbce8d13c476f7df720bf8413da211d5ca2f4943693",
+    "scripts/security-regression/verify-asklink-creation-operation.cjs": "db5cf4ea73928ac500379c95b49b7400c33ee2cf3ca993f77ddd4426cd25218c",
+    "scripts/security-regression/verify-asklink-privacy-postgres.cjs": "7d036e35303f79280465a1d2003f8f59be820df9585fafefb899ad25369f5fec",
+    "scripts/security-regression/verify-auth-registration.cjs": "5e1f2110a5fdd9fe1f6d09c4d45413acd738250fec9340d3761cbfe91a4838c8",
+    "scripts/security-regression/verify-case-study-form-mounted.cjs": "1845e908753e9bab76030d5de7aa165732a63ee66f33c8e51353e863f78bd79f",
+    "src/app/api/admin/users/route.ts": "dfee5c30af59ab5879860624e6d7ef927dd223a1fb933feb3d9f7d91ac201185",
+    "src/app/api/campaign/case-study/route.ts": "5641c95cd4207baa5b15822a8c3619c152ce2d0fdbcced74be44df5cceb884a4",
+    "src/app/campaign/case-study/Form.tsx": "047ed68a18bd4bc1af080bbcad33d81ef9951b15c379a1e99194b03effc791f3",
+    "src/lib/account-retirement.ts": "cd4fde365e99ca0276bdff4f30c00c52899679a2ddd809d6e1cbe8b31948142e",
+    "src/lib/asklink/creation-adapter.ts": "d7bd5f0f41d150f3de6027001bfafbf093bbbe078d085a2572f279c051280529",
+    "src/lib/case-study/submission-context.ts": "6249193b6698546b40ae6aa1c46171fa28d8eb4eac444785c21353fc41f13c85"
+  }
+}

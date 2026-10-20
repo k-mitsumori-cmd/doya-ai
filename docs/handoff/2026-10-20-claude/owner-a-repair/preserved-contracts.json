@@ -1,0 +1,20 @@
+{
+  "matchesBaseCommit": "72d471caf245072215414115a6b58fb6a3751295",
+  "unchanged": {
+    "prisma/schema.prisma": true,
+    "package.json": true,
+    "package-lock.json": true,
+    "src/lib/adimage/storage.ts": true,
+    "src/lib/asklink/account-cleanup.ts": true,
+    "vercel.json": true
+  },
+  "existingAssertions": "Existing auth12/admin10/quota checks retained. Admin billing now separately counts total transactions and mutation transactions: preflight read-only transaction is expected; cancellation-failure/foreign-owner cases still assert zero deletion writes, success requires both cancellations before the first anonymization write. Existing creation32/privacy41 assertions are unchanged; current guard dependencies and schema-derived empty tables are added only.",
+  "caseFieldsPreserved": [
+    "id",
+    "status",
+    "allowLogo",
+    "allowName",
+    "createdAt"
+  ],
+  "forbiddenActionsPerformed": []
+}

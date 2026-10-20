@@ -1,0 +1,41 @@
+{
+  "acceptedAsSafe": false,
+  "baselineSourceHashes": {
+    "src/app/api/expense/members/route.ts": "f2cc4a71fcd5263623455c50f2376c20580036cf75fdb67c62a70756d95e7997",
+    "src/lib/checkout-reservation.ts": "11dab2b148831dbb3e7afd5d87bf0670aabd69550e2d28b8e4c01c307dc3c803",
+    "src/lib/account-retirement.ts": "cd4fde365e99ca0276bdff4f30c00c52899679a2ddd809d6e1cbe8b31948142e",
+    "src/lib/case-study/submission-context.ts": "6249193b6698546b40ae6aa1c46171fa28d8eb4eac444785c21353fc41f13c85",
+    "src/app/api/admin/users/route.ts": "dfee5c30af59ab5879860624e6d7ef927dd223a1fb933feb3d9f7d91ac201185",
+    "src/lib/asklink/creation-adapter.ts": "d7bd5f0f41d150f3de6027001bfafbf093bbbe078d085a2572f279c051280529",
+    "src/lib/asklink/account-cleanup.ts": "9fcf900bbabea8917ca1df20130df90a6ff03e4985cb460fdd31b87ac442460c",
+    "src/app/api/campaign/case-study/route.ts": "5641c95cd4207baa5b15822a8c3619c152ce2d0fdbcced74be44df5cceb884a4",
+    "src/app/campaign/case-study/Form.tsx": "047ed68a18bd4bc1af080bbcad33d81ef9951b15c379a1e99194b03effc791f3",
+    "prisma/schema.prisma": "f4a8411f093f9d8bee2da793f2761685edf9f7a359bd2d7ea9a4c1163db1127b"
+  },
+  "observations": [
+    {
+      "name": "KNOWN LIMITATION new membership during external Stripe interval can stop DB delete after cancellation",
+      "classification": "unresolved_unsafe_observation",
+      "accepted": false,
+      "observed": {
+        "unresolved": true,
+        "externalCancellationObserved": 1,
+        "userPreserved": true,
+        "requiresMembershipWriterRetirementFence": true
+      }
+    },
+    {
+      "name": "KNOWN LIMITATION checkout reservation can become payable during retirement gap",
+      "classification": "unresolved_unsafe_observation",
+      "accepted": false,
+      "observed": {
+        "unresolved": true,
+        "syntheticPayableSession": 1,
+        "userDeleted": true,
+        "actualSubscriptionCompletionNotExercised": true,
+        "requiresCheckoutRetirementFence": true
+      }
+    }
+  ],
+  "followUpRequirement": "Replace unsafe-observation expectations with safe outcomes when shared retirement fencing is implemented. These cases are not permanent product specifications or safety passes."
+}
