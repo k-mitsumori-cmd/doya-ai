@@ -1,0 +1,88 @@
+{
+  "recordedAt": "2026-10-20T11:21:20.803157+00:00",
+  "head": "d48052fab934c00ca3bbb3af11eaf981e11dd619",
+  "files": {
+    "src/app/(shell)/asklink/Tool.tsx": {
+      "sha256": "d9e5c1fba599f4ac31609530357304d720cc647802a25ee11e3e214a7615f6ce"
+    },
+    "src/app/(shell)/asklink/Tool.module.css": {
+      "sha256": "d527b2bd5cf4ce7c97991806eba1fb0ac84cfe88bcb86f12caccfd1871f9700d"
+    },
+    "src/lib/asklink/nav.ts": {
+      "sha256": "a0afdd3a364bb4d6fcfd520202e08c65b37eebf46c86e58d7923efcafb054f48"
+    },
+    "src/components/asklink/AskLinkAuthenticatedScope.tsx": {
+      "sha256": "12ee663c9b539d506b21adb985c270838f1c4ea5c6a349038ba1d19e97e24691"
+    },
+    "src/components/asklink/useAskLinkCreation.ts": {
+      "sha256": "e2ea07292e9d810543a1e6a26e90bc36b26fa309295071849593197918e782da"
+    },
+    "src/lib/asklink/creation-adapter.ts": {
+      "sha256": "4b02db22259cc4e8f333bb57244fb91caeb75794039aad54b80db2667ff65709"
+    },
+    "src/lib/asklink/creation-http.ts": {
+      "sha256": "5808a2c3f80490b075cba43d22021283fcfd1311ec42e693542c48b8c8b05465"
+    },
+    "src/lib/asklink/creation-intent-client.ts": {
+      "sha256": "ebceb2d69e8ba62d02b065b79fa798d238e1e9fb4725b6a0a7dcc9ec354d3316"
+    },
+    "src/lib/asklink/creation-operation.ts": {
+      "sha256": "644b017f8de0ac764c9d72736ae1f4702ba657e3d6074157c2b8e76fb227b62d"
+    },
+    "src/lib/asklink/creation-receipts.ts": {
+      "sha256": "bd3033bc036116a77fd31f0e106adcd63223695db4529b66e301c7679b99f10b"
+    },
+    "src/lib/asklink/creation-request.ts": {
+      "sha256": "35de9cec29bf23d27e973721513c8edafd0adffd1687749109f3b2028aaef138"
+    },
+    "src/lib/asklink/creation-response.ts": {
+      "sha256": "9ba565ad70b1e60683dd6bd1aa75d8c4bbf76f66c9d03fca771b5b46cfe7d830"
+    },
+    "src/lib/asklink/creation-run-response.ts": {
+      "sha256": "9fd4439a9a4fa01edf1d99ac4bf6c38ca15d4e12121d8a2dae744ee1fdfae5fc"
+    },
+    "src/app/api/asklink/runs/route.ts": {
+      "sha256": "56488f67343992958ddbd843f554d1f85c49cdd7e447ba18b73d6930ff3f884c"
+    },
+    "src/app/api/asklink/creation-operations/[operationId]/route.ts": {
+      "sha256": "4ea2f7ee3c1458c5bfb4e31d5ab29ce1bbb14346a6da37110be1068efb88d170"
+    },
+    "src/app/api/cron/asklink-creation-purge/route.ts": {
+      "sha256": "826f376b9de7718f234e6dd1019434323cf062817dd3dedcc177077c627f5d0f"
+    },
+    "src/app/api/admin/users/route.ts": {
+      "sha256": "5027547ef6df90c836cc7e88c18981471ee94b2c4426fdc628a4ff963dc80f89"
+    },
+    "src/lib/auth.ts": {
+      "sha256": "97e43f9e3d6c2051b72e7f371394650712d5c8a39c5b5078029bd153c250cfc3"
+    },
+    "vercel.json": {
+      "sha256": "8d216d13a75770afc34d43e630486f455390fb6743c5f3c38f82e4e74ed4a65f"
+    },
+    "reference/services/asklink.md": {
+      "sha256": "ae7402ca4a71f6617eb48f3d4bfc1e092b651ca0792da89a1a7e8c67d358a796"
+    },
+    "scripts/security-regression/verify-asklink-creation-client.cjs": {
+      "sha256": "36a9e265dbf1fae383b6011e498e08f49ebb5ad6569b9c4cde16cecff65f00fb"
+    },
+    "scripts/security-regression/verify-asklink-creation-operation.cjs": {
+      "sha256": "43e7ab8b6038a2480e5dd72fa24740bf88165c634d3ad7d89cbc4364d51d4db3"
+    },
+    "scripts/security-regression/verify-asklink-creation-postgres.py": {
+      "sha256": "e6dd82d51187aaf5ecabe6581be104501131cb0730a0b10533291034988710cc"
+    },
+    "scripts/security-regression/verify-admin-billing-integrity.cjs": {
+      "sha256": "3e35772ac2422fed708a433802bd27f3fca86944c971149e73e07704625e6697"
+    },
+    "scripts/security-regression/verify-admin-user-quotas.cjs": {
+      "sha256": "79456e6901d9fa0a0b01e8b02f5dbc60086cb4fb0a768748357f19e012a7a6b3"
+    },
+    "scripts/security-regression/verify-auth-registration.cjs": {
+      "sha256": "70dc6ed23564d952736053f43a780716808a126a59aaf2e32d4074cfaa65b035"
+    },
+    "src/components/asklink/useBannerQueue.ts": {
+      "sha256": "e47efafde644d7d5ad0e7ebe0fd5d19ef54fb67dd3f32445312bd2369a0ff2fe"
+    }
+  },
+  "note": "Own ASK1/UI scope only; unrelated working tree files and generated evidence are excluded. No commit or push."
+}

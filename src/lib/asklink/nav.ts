@@ -13,7 +13,7 @@ export interface AskLinkNavItem extends ShellNavItem {
 export const ASKLINK_BASE = '/asklink'
 
 export const ASKLINK_NAV: AskLinkNavItem[] = [
-  { label: '質問リンクをつくる', href: ASKLINK_BASE, icon: 'MessageCircleQuestion', exact: true, hot: true },
-  { label: 'これまでの結果', href: ASKLINK_BASE + '/history', icon: 'History' },
-  { label: '料金プラン', href: ASKLINK_BASE + '/pricing', icon: 'CreditCard' },
+  { label: '作成', href: ASKLINK_BASE, icon: 'MessageCircleQuestion', exact: true, hot: true },
+  { label: '履歴', href: ASKLINK_BASE + '/history', icon: 'History' },
+  { label: '料金', href: ASKLINK_BASE + '/pricing', icon: 'CreditCard' },
 ]

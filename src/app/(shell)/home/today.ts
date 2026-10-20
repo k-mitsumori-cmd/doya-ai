@@ -24,6 +24,10 @@ function jstDay(t: number): string | null {
 
 export function todayItems(s: HomeSummary, now: number | null = homeSnapshotEpoch(s.generatedAt)): TodayItem[] {
   const items: TodayItem[] = []
+  const billing = s.finance?.income.state === 'ready' ? s.finance.income.value?.todo ?? [] : []
+  for (const [index, item] of billing.entries()) {
+    items.push({ key: `income:${item.kind}:${index}`, label: item.title, href: item.href, urgent: item.kind === 'leak' || item.kind === 'overdue' })
+  }
   if (s.sales.state === 'ready' && s.sales.overdueTasks > 0) {
     items.push({ key: 'overdue', label: `期日を過ぎたタスクが ${s.sales.overdueTasks}件あります`, href: `${s.sales.href}/tasks`, urgent: true })
   }

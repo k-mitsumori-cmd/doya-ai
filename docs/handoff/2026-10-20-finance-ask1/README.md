@@ -1,0 +1,13 @@
+# 収支連携・ASK1 統合検証（2026-10-20）
+
+ホームは既存の収入・支出readを使い、権限失効と取得失敗を0円へ変換しません。ASK1は操作IDによる受付・再送回復・期限整理を追加し、旧バナー応答が新runの表示を上書きしないよう補修しました。認証adapterと管理者削除は同じUser削除Tx内で受付を整理します。
+
+5,122入力を固定した最初の候補は19ゲートが合格し、tscだけがAdapterUserとのnullable型境界で失敗しました。型assertだけを補い、前後のJavaScriptのbyte一致を確認しました。その後、auth12件、隔離PostgreSQL31件、対象Lint、独立した非incremental型チェックと変換契約照合の5ゲートが合格しました。20ゲートを新たに全実行した記録ではありません。元の失敗とdriver最終照合の変数衝突もローカルに保持しています。独立した照合処理で全入力と依存が不変であることを確定しました。
+
+最初の共通回帰には収支28件、ASK1 client32件、SSR→hydrate16条件、ENTRY42件を含みます。7サービスは314件、日時単体5件、変更TS27入力のLintも合格しました。summary.jsonに候補41入力のhashと結果を記録しています。大量のmanifest・raw logはcommit対象外で、ローカル証拠の参照先を残しています。
+
+依存ルートはphysicalですが、React等の主要packageは別checkoutへのsymlinkです。実行entry・version・hashを前後で照合しました。Prisma client/generatedは独立しており、今回のgateではgenerateしません。合成環境を使い、offline検証の外向き通信をOSで拒否しました。PostgreSQLは別枠で所有する一時Unix socketだけを使い、停止・削除を確認しました。
+
+d48052faは同一SHAのGitHub CI成功・Vercel READYを確認済みです。今回の収支・ASK1差分のNextビルドは、commit後の同一候補Vercelで検証します。以前の成功を今回へ流用しません。認証後UI、native Web Locks、実DB・provider適合、本番反映は未完了です。
+
+担当はSol、方針はAstraです。Lunaは使用していません。

@@ -25,6 +25,7 @@ const route = load('src/app/api/admin/users/route.ts', {
   '@/lib/stripe': { ACTIVE_LIKE_STATUSES: [], findActiveLikeSubscriptions: async () => [], isDoyaSubscriptionOwnedByUser: async () => true },
   '@/lib/billing-sync': {},
   '@/lib/prisma': { prisma },
+  '@/lib/asklink/creation-receipts': load('src/lib/asklink/creation-receipts.ts', { 'node:crypto': require('node:crypto') }),
   '@/lib/admin/banner-quota': { summarizeBannerMonthlyQuota: (sub, plan) => {
     const limit = pricing.getBannerMonthlyLimitByUserPlan(planUtils.higherPlan(sub?.plan, plan))
     return { used: sub.monthlyUsage, limit, remaining: limit - sub.monthlyUsage }

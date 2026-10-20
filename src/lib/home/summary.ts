@@ -13,7 +13,7 @@
 // ⚠️ 1ツールが落ちてもホーム全体は落とさない（Promise.allSettled で個別に握る）。
 // ⚠️ 契約情報（User.plan / Subscription）は表示のみ。変更は既存の課金画面に任せる。
 import { prisma } from '@/lib/prisma'
-import { jstStartOfMonthUtc } from '@/lib/usage-summary'
+import { loadHomeFinance, type HomeFinance } from './finance-read'
 import { tierFrom, planLabel, isPaidTier, type PlanTier } from '@/lib/plan-utils'
 import { laborCostForEntry } from '@/lib/promane/labor-cost'
 import { timeEntryBelongsToProject } from '@/lib/promane/time-entry-project'
@@ -48,15 +48,16 @@ export interface HomeEvent {
  * 売上・支出の数字をどのツールから取ったか（ADDON-SERVICES-2026-10-18.md §4）。
  * - 売上: 収入管理（income）を使っている組織は income が正本。その組織では SFA・見積の金額を足さない（二重計上）
  * - 支出: 支出管理（expense）が正本。使っていなければプロマネの経費＋人件費で代替
- * ⚠️ income / expense はまだ main に入っていない。入ったら loadIncome / loadExpense を足し、
- *    ここを 'income' / 'expense' に切り替える。今は常に代替（sfa_quote / promane）。
+ * 取得失敗・所属失効は unavailable。未使用と確認できた場合だけ旧ツールの参考値を使う。
  */
-export type HomeRevenueSource = 'income' | 'sfa_quote'
-export type HomeCostSource = 'expense' | 'promane'
+export type HomeRevenueSource = 'income' | 'sfa_quote' | 'unavailable'
+export type HomeCostSource = 'expense' | 'promane' | 'unavailable'
 
 export interface HomeSummary {
   generatedAt: string
   sources: { revenue: HomeRevenueSource; cost: HomeCostSource }
+  /** 古いスナップショットとの互換性のため省略可。現在の集計は必ず返す。 */
+  finance?: HomeFinance
   user: { name: string | null; email: string | null }
   contract: {
     tier: PlanTier
@@ -130,8 +131,7 @@ function jstMonthKey(d: Date): string {
 }
 
 /** 直近 n か月（今月を含む）の JST 月初 UTC と月キー */
-function lastMonths(n: number): { key: string; start: Date }[] {
-  const thisMonth = jstStartOfMonthUtc()
+function lastMonths(n: number, thisMonth: Date): { key: string; start: Date }[] {
   const j = new Date(thisMonth.getTime() + 9 * 3600_000)
   const out: { key: string; start: Date }[] = []
   for (let i = n - 1; i >= 0; i--) {
@@ -170,7 +170,7 @@ async function loadContract(userId: string) {
   }
 }
 
-async function loadSales(userId: string, monthStart: Date, trendStart: Date) {
+async function loadSales(userId: string, monthStart: Date, trendStart: Date, now: Date) {
   const membership = await prisma.sfaMember.findFirst({
     where: { userId, status: 'ACTIVE', role: { in: Object.keys(SFA_ROLES) } },
     include: { organization: true },
@@ -179,7 +179,6 @@ async function loadSales(userId: string, monthStart: Date, trendStart: Date) {
   if (!membership) return null
   const orgId = membership.organizationId
   const slug = membership.organization.slug
-  const now = new Date()
 
   const [deals, wonForTrend, pipeline, openTasks, overdueTasks, newLeads, upcomingTasks] = await Promise.all([
     prisma.sfaDeal.findMany({
@@ -245,7 +244,7 @@ async function loadSales(userId: string, monthStart: Date, trendStart: Date) {
   }
 }
 
-async function loadQuotes(userId: string, monthStart: Date, trendStart: Date) {
+async function loadQuotes(userId: string, monthStart: Date, trendStart: Date, now: Date) {
   const membership =
     (await prisma.quoteMember.findFirst({
       where: { userId, status: 'ACTIVE', role: 'owner' },
@@ -268,7 +267,7 @@ async function loadQuotes(userId: string, monthStart: Date, trendStart: Date) {
     prisma.quoteDocument.count({ where: { organizationId: orgId, status: 'draft' } }),
     prisma.quoteDocument.count({ where: { organizationId: orgId, status: 'sent' } }),
     prisma.quoteDocument.findMany({
-      where: { organizationId: orgId, status: 'sent', expiryDate: { gte: new Date() } },
+      where: { organizationId: orgId, status: 'sent', expiryDate: { gte: now } },
       orderBy: { expiryDate: 'asc' },
       select: { id: true, title: true, expiryDate: true },
       take: 10,
@@ -396,18 +395,21 @@ function settle<T>(r: PromiseSettledResult<T | null>): { state: HomeToolState; v
   return { state: r.value ? 'ready' : 'empty', value: r.value }
 }
 
-export async function getHomeSummary(userId: string): Promise<HomeSummary> {
-  const monthStart = jstStartOfMonthUtc()
-  const months = lastMonths(6)
+export async function getHomeSummary(userId: string, reference: Date = new Date()): Promise<HomeSummary> {
+  const now = reference.getTime()
+  const jst = new Date(now + 9 * 3600_000)
+  const monthStart = new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1) - 9 * 3600_000)
+  const months = lastMonths(6, monthStart)
   const trendStart = months[0].start
 
-  const [contractR, salesR, quotesR, projectsR, attendanceR, peopleR] = await Promise.allSettled([
+  const [contractR, salesR, quotesR, projectsR, attendanceR, peopleR, financeR] = await Promise.allSettled([
     loadContract(userId),
-    loadSales(userId, monthStart, trendStart),
-    loadQuotes(userId, monthStart, trendStart),
+    loadSales(userId, monthStart, trendStart, reference),
+    loadQuotes(userId, monthStart, trendStart, reference),
     loadProjects(userId),
     loadAttendance(userId, monthStart),
     loadPeople(userId),
+    loadHomeFinance(userId, reference),
   ])
 
   const contract = contractR.status === 'fulfilled' ? contractR.value : null
@@ -429,7 +431,6 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
     if (p) p.quoted += q.amount
   }
 
-  const now = Date.now()
   const horizon = now + 45 * 86400_000
   const events = [...(sales.value?.events ?? []), ...(quotes.value?.events ?? []), ...(projects.value?.events ?? [])]
     .filter((e) => {
@@ -444,10 +445,14 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
   const p = projects.value
   const a = attendance.value
   const h = people.value
+  const finance: HomeFinance = financeR.status === 'fulfilled' ? financeR.value : {
+    month: jstMonthKey(reference), income: { state: 'error', organization: null, value: null }, expense: { state: 'error', organization: null, value: null },
+  }
 
   return {
-    generatedAt: new Date().toISOString(),
-    sources: { revenue: 'sfa_quote', cost: 'promane' },
+    generatedAt: reference.toISOString(),
+    sources: { revenue: finance.income.state === 'ready' ? 'income' : finance.income.state === 'unused' ? 'sfa_quote' : 'unavailable', cost: finance.expense.state === 'ready' ? 'expense' : finance.expense.state === 'unused' ? 'promane' : 'unavailable' },
+    finance,
     user: contract?.user ?? { name: null, email: null },
     contract: contract?.contract ?? {
       tier: 'FREE', label: planLabel('FREE'), paid: false, status: null, currentPeriodEnd: null, cancelAtPeriodEnd: false,

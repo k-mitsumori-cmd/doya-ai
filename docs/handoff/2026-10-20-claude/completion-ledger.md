@@ -4,7 +4,7 @@
 
 現在の実装、検証、残作業、判断待ちを分けます。文書に設計があること、テストが通ること、プレビューが立つこと、本番で使えることは別の状態です。各項目の証拠がそろうまで全体完了とはしません。
 
-作業先はこのworktree、ブランチは `codex/claude-handoff-20261020`。BILL-020を含む `cedb601aa4d6f9f4f998bb8b8690199838c4e973` を同ブランチへ保存・push済みです。同じ4,237入力でローカル全ゲートが合格し、前後のハッシュとパス集合が不変でした。新しいGitHub CI（run `39381377287`）とVercelプレビューは実行中です。`deb68914` のCI合格を追加差分の合格へ流用しません。ソース凍結は解除しました。
+作業先はこのworktree、ブランチは `codex/claude-handoff-20261020`。BILL-020・ホーム日時・ENTRYを含む `d48052fab934c00ca3bbb3af11eaf981e11dd619` をpush済みです。同じSHAのGitHub CI（run `39410339824`）成功とVercel `dpl_Q62ohnMVuKbpgiqxjMys8MqiwMgV` READYを確認しました。今回の収支・ASK1候補は5,122入力を固定し、19ゲート合格・型1件失敗後、実JSが同じ型境界修正と5つのdelta検証が合格しました。`../2026-10-20-finance-ask1/summary.json` を参照します。今回候補のリモートCI・Nextビルドはcommit後に確認します。認証後UI・本番反映は未完了です。
 
 正本は `/Users/mitsumori_katsuki/Code/09_Cursol-ui-renewal/docs/architecture/management-agent/README.md` §16・§18と、同じ場所の `ADDON-SERVICES-2026-10-18.md` です。監査の起点はこのworktreeの `docs/system-check/FINDINGS-2026-10-18.md`。過去の監査表を現在の合否としては扱いません。非公開の元ノートの全文や、画面の個人情報は複製していません。
 
@@ -12,18 +12,19 @@
 
 | 項目 | 現在の実装・正本 | 検証済みの範囲 | 残作業 | 判断待ち |
 |---|---|---|---|---|
-| Claude引き継ぎ | `src/` と `seo/` の候補へ統合。詳細は本ディレクトリの `README.md` | `9c985e76` のGitHub CI・Vercel READY、型・Lint・7組のテスト・共通回帰。`final-verification.json` | 候補版のログイン後実操作、実モデル品質、本番反映 | 本番反映の具体的な承認 |
+| Claude引き継ぎ | `src/` と `seo/` の候補へ統合。詳細は本ディレクトリの `README.md` | `d48052fa` の同一SHA GitHub CI成功・Vercel READY、型・Lint・7組のテスト・共通回帰。`final-verification.json` | 候補版のログイン後実操作、実モデル品質、本番反映 | 本番反映の具体的な承認 |
 | SEC-081 | `src/app/api/interview/materials/[id]/transcribe-stream/route.ts`。同一オリジンのEventSource要求を確認し、通常遷移・外部要求を先に拒否。GETの有料処理を廃止した実装ではない | HEAD `deb68914` のGitHub CIを今回再照合し成功。`ci-sec081.json`。親セッションも同じHEADのVercelチェック成功を確認。ローカル根拠は `../2026-10-20-obsidian-followup/{verification,checks-current,security-current}.json` | 実ブラウザのSSE再接続、実プロバイダー、本番反映 | 有料実行はモデル・単価・回数・合計額の具体承認が必要 |
-| BILL-020 | `src/app/api/stripe/webhook/route.ts` で停止・再開イベントの現在状態を確認し、paused時の権利を再計算。残存契約・手動付与・利用量を保護し、activeの `pause_collection` と区別。購読監査と停止専用通知を追加 | `cedb601a` を作業ブランチへpush済み。専用95件・監査21件、変更TSのLint・CJS構文、共通回帰、7組309件、独立型チェック、Nextビルドが合格。4,237入力のハッシュ・パス集合不変。`../2026-10-20-billing-paused/verification.json`。新しいリモートCI・プレビューは実行中 | Stripe test modeでの実遷移・配送、本番購読設定の停止/再開イベントまたはワイルドカード確認、本番反映 | 実アカウントの変更・支払い操作は別承認 |
+| BILL-020 | `src/app/api/stripe/webhook/route.ts` で停止・再開イベントの現在状態を確認し、paused時の権利を再計算。残存契約・手動付与・利用量を保護し、activeの `pause_collection` と区別。購読監査と停止専用通知を追加 | `cedb601a` を作業ブランチへpush済み。専用95件・監査21件、変更TSのLint・CJS構文、共通回帰、7組309件、独立型チェック、Nextビルドが合格。4,237入力のハッシュ・パス集合不変。`../2026-10-20-billing-paused/verification.json`。BILLを含む `d48052fa` の同一SHA CI成功・Vercel READYを確認済み | Stripe test modeでの実遷移・配送、本番購読設定の停止/再開イベントまたはワイルドカード確認、本番反映 | 実アカウントの変更・支払い操作は別承認 |
 | SWEEP-2 | 5 APIにAI実行前の永続的な利用枠が未接続。`doyalist/expand-keywords`、`mensetsu/company/analyze`、`quote/documents/suggest`、`quote/documents/estimate-item`、`quote/products/analyze` | ルート現物を確認。認証・入力検査があることを、回数枠の存在とは扱わない | 利用枠の予約・成功確定・失敗解放・並行要求・再試行を統合し回帰 | AI利用枠の数値・単位をユーザーへ確認中。未決値を推測して実装しない |
 | SWEEP-2のAIO | `src/lib/aio/quick-start-operation.ts` にワークスペース上限と予約を確認 | 容量の競合を制御する実装は存在 | AI利用回数・原価の制限として十分か別途設計。容量制限だけでSWEEP-2全件を閉じない | 上と同じAI枠の方針 |
-| 経営ホームの収支 | `src/lib/home/summary.ts` の `sources` は `sfa_quote` / `promane` 固定。`income/summary-read.ts` と `expense/expense-read.ts` は存在するがホームから未接続 | ソースと本番ホームの代替元表示を確認。収入・支出正本接続の合格証拠はない | 正本・代替の切替、権限と失効、未使用と失敗の区別、基準時刻固定、税区分と二重計上防止 | Astraの下記実装方針に従う。ソース凍結解除後の着手指示を待つ |
-| 請求漏れ・入金遅延 | `income/summary-read.ts` は `leak` / `overdue` のactionを算出。ホームの型と集計には未接続 | 読み取り関数の存在を確認 | 今日やることへ接続。正本不使用・権限なし・取得失敗を別表示 | 未使用時はカードを出さないという追補§4に従う |
+| 経営ホームの収支 | `src/lib/home/finance-read.ts` から既存income/expense readへ接続。明示リンク・所属・役割を読後にも照合。正本と参考値を切り替え、失敗時はunavailable | 実read・GET・両UI・agentの合成回帰28ケース、通常/production Node、型・対象Lint、既存income68/expense93が合格。13入力ハッシュ一致。今回の統合19ゲート＋実JS同一の型境界修正後5deltaが合格。`../2026-10-20-finance-ask1/summary.json` | 同一候補のリモートCI・Nextビルド、候補版の認証後UI、実DB適合と本番反映 | `home-finance-verification.json`参照。sourceは親へ凍結引継ぎ済み。本番未反映 |
+| 請求漏れ・入金遅延 | 既存readの `leak` / `overdue` actionを新UIの今日やること、旧UIの要対応、agentへ接続 | 合成回帰で両種類の表示と、当月売上への二重加算なしを確認 | 候補版の認証後UIと実データの適合確認 | 未使用・権限なし・エラーを0件へ置き換えない |
 | 展示会のホーム連携 | `tenjikai/tenjikai-read.ts` の `listTasks` / `listCalendarEvents` / `summary` が存在 | 関数の存在を確認。ホームの呼び出しは未接続 | 既存タスクと並べる。会期60日前からの準備状況、期限・予算の読み取りを接続 | 自動作成や発注を混ぜず読み取りで進める |
 | ポップアップ指標 | `popup/popup-read.ts#getPopupSummary` が存在。ホームから未接続 | 読み取り関数の存在を確認 | 7日間の表示・クリック・CTRを所属と権限に合わせて接続。失敗と0件を分ける | asklinkはクリックを測定しないため、その数値を作らない |
 | 追加4サービス | `tenjikai` / `shanai` / `income` / `expense` にルート、read関数、仕様、テストがある。`services.ts`上の開発中・非公開区分と画面実装を区別する | 既存7組のテストに4サービスが含まれる。機能の部分検証でありD-1〜D-12全受入ではない | 下表の受入証拠をサービスごとにそろえる。公開状態を自動でactiveに変えない | 公開範囲と本番反映は別判断 |
 | UI品質 | 品質基準は `UI-QUALITY-CHECKLIST-2026-10-19.md` §0。今回4枚は既存本番の質問リンク・ホーム | 375px/1280pxの画像をSolが点検、Astraが戦略レビュー。20案は `ui-production-baseline-audit-20261020.md`。本番 `/ui-renewal` は404 | 全ツール・候補版・同幅見本比較、CLS<0.1、遷移、動き、改行、画像、キーボード、下端の重なり。現物は完成条件未充足 | 正しい見本を確保する。認証情報のコピーや検証用ログイン新設で代用しない |
-| 本番ホームのhydration | 本番deployment `dpl_A44rob9HWSR2n8hgHHewvcGFDBV3` は候補と別。候補には取得時刻とJSTを使う最小補修を適用 | 本番のフル遷移2回でReact #418を検知。候補実ソースSSR→hydrateは修正前10条件で不一致、修正後は追加を含む16条件で不一致・回復エラー・警告0。単体11件・対象Lint合格、7入力ハッシュ一致 | 型と全ゲート、候補の認証後ブラウザQA、本番反映後のログ。根本原因となった本番要素・復旧は未確認 | 警告抑制は追加していない。`home-hydration-verification.json`参照。収支連携とは別の最小修正 |
+| 本番ホームのhydration | 本番deployment `dpl_A44rob9HWSR2n8hgHHewvcGFDBV3` は候補と別。候補には取得時刻とJSTを使う最小補修を適用 | 本番のフル遷移2回でReact #418を検知。候補実ソースSSR→hydrateは修正前10条件で不一致、修正後は追加を含む16条件で不一致・回復エラー・警告0。単体11件・対象Lint合格、7入力ハッシュ一致。候補 `d48052fa` はCI成功・Vercel READY。test子プロセスだけNODE_ENV=testへ固定。今回の共通回帰でも16条件合格 | 候補の認証後ブラウザQA、本番反映後のログ。根本原因となった本番要素・復旧は未確認 | 警告抑制は追加していない。`home-hydration-verification.json`参照。収支連携とは別の最小修正 |
+| 組織ENTRY・legacy | SFA/Shodanの確認取得をbounded readerへ統一し、遅延・失敗・利用者切替の旧応答を拒否 | mounted42件、既存reader18件、`985eef45` のlocal12ゲート。後続 `d48052fa` の同一SHA CI成功・Vercel READY。今回共通回帰にもmounted42件を含む | 認証後画面で確認・申請・再取得の実操作、本番反映 | 一般メンバーのSFA権限方針は変更していない |
 | 実環境の接続 | 本番DB・Stripe・プロバイダー・ストレージがあることと、今回差分の実操作検証を区別 | 隔離した一時PostgreSQLと合成プロバイダーによる回帰あり。常設検証DBは新設していない | 実DBの必要列/権限、Stripe test mode、実provider、実storage、署名URL/期限/後始末の適合確認 | 常設検証DB・テストログインは見送り。課金・本番書込は具体承認の範囲内のみ |
 | 旧707入力の監査差分 | 別worktree `doya-billing-client-20261006` に保持。移動44ファイルを含む | 今回の候補全体へ適用した証拠はない | 移動元/先を対応させ、現コードと意味を照合し、必要差分だけ統合。既存の修正との重複・退行を確認 | 707入力の過去合格を現候補の全ゲート合格へ流用しない |
 | SFA権限 | `src/lib/sfa/` の役割と監査指摘が対象。一般メンバーの閲覧・編集範囲は未決 | 今回その方針を変更していない | 方針確定後にaccess/read/writeへ一貫して適用し越境回帰 | ユーザーへ質問中。既存権限を推測で拡張しない |
@@ -57,12 +58,12 @@ Astraの戦略に従い、既存のread関数をつなぎます。ホームか�
 
 代替は、正常取得のうえでincome契約0件、またはexpenseの `inUse=false` と確認できたときだけです。取得失敗、所属失効、権限なしを0円や未使用にしません。リンク先も `no_access` / `not_linked` / `not_available` を区別します。1回の集計では基準時刻を固定し、JSTの月境界をそろえます。
 
-着手後は、GET書き込み0、未知の役割、他組織、失効、契約0とAPI異常、JST月境界、税区分、二重計上なしを回帰で確認します。ソース凍結中のため、本台帳の追加時点では実装していません。
+凍結解除後、上記の方針で最小連携を実装しました。GET書き込み0、未知の役割、他組織、失効、契約0とAPI異常、JST月・年境界、税区分、二重計上なしを合成回帰で確認しています。固定入力の19ゲートと実JS同一の型修正後5deltaが合格しました。同一候補のリモートビルドと実画面は未確認です。詳細は `home-finance-implementation.md` を参照します。
 
 ## まだ良くない点と次の改善
 
 本番の375pxホームでは販促パネルが下部ナビに重なっています。候補側の抑制修正をまだ画面で確認できていません。会社情報の登録状態も、共通枠とホームで一貫しません。全サービスの見本比較と実操作の証拠が不足しています。
 
-次はBILL-020の固定入力ゲートを確定します。並行してホームのhydration不一致を読み取りで調べ、凍結解除後はその修正を収支連携より先に進めます。SWEEP-2とSFAはユーザーの方針を受けて実装します。候補版の認証後UIを確認できるまで、全体を完成・公開済みとは記録しません。
+次は収支・ASK1の同一候補をcommit後、リモートCIとVercelで検証します。SWEEP-2とSFAはユーザーの方針を受けて実装します。候補版の認証後UIを確認できるまで、全体を完成・公開済みとは記録しません。
 
 作成: Sol、戦略: Astra。Lunaは使用していません。

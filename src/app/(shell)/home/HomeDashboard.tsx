@@ -22,6 +22,7 @@ import { AreaChart, Bars } from '@/components/ds/charts'
 import { CompanyRegisterButton, ShellCompanyTag } from '@/components/shell/ShellCompanyCard'
 import { useAccountCompany } from '@/components/shell/company-context'
 import { useToolHref } from '@/components/shell/ui-next-context'
+import FinanceOverview from './FinanceOverview'
 import styles from './home.module.css'
 
 const man = (n: number) => {
@@ -394,8 +395,9 @@ export default function HomeDashboard({ initial, setupHidden = false }: { initia
   const c = s.contract
   const clock = homeSnapshotClock(s.generatedAt)
   // 数字の出所（ADDON-SERVICES §4）。収入管理・支出管理を使っている組織では、そちらが正本になる
-  const revenueSource = s.sources.revenue === 'income' ? '収入管理' : '営業管理・見積'
-  const costSource = s.sources.cost === 'expense' ? '支出管理' : 'プロマネ（経費と人件費）'
+  const revenueSource = s.sources.revenue === 'income' ? '収入管理' : s.sources.revenue === 'unavailable' ? '未取得' : '営業管理・見積（参考）'
+  const costSource = s.sources.cost === 'expense' ? '支出管理' : s.sources.cost === 'unavailable' ? '未取得' : 'プロマネ（案件経費・人件費の参考値）'
+  const useLegacyRevenue = !s.finance || s.finance.income.state === 'unused'
   const periodEnd = homeContractDate(c.currentPeriodEnd)
 
   return (
@@ -418,24 +420,25 @@ export default function HomeDashboard({ initial, setupHidden = false }: { initia
       </header>
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
 
-      <section className={styles.kpis} aria-label="今月の主要な数字">
+      {s.finance ? <FinanceOverview finance={s.finance} /> : null}
+      {useLegacyRevenue ? (<section className={styles.kpis} aria-label="今月の主要な数字">
         <Kpi icon={TrendingUp} label="今月の受注" value={s.sales.state === 'ready' ? s.sales.wonThisMonth : null} sub={s.sales.state === 'ready' ? `${s.sales.wonCountThisMonth}件` : '営業管理が未使用'} href={s.sales.href} muted={s.sales.state !== 'ready'} />
         <Kpi icon={FileText} label="今月確定した見積" value={s.quotes.state === 'ready' ? s.quotes.confirmedThisMonth : null} sub={s.quotes.state === 'ready' ? `下書き ${s.quotes.draftCount}件` : '見積が未使用'} href={s.quotes.href} muted={s.quotes.state !== 'ready'} />
         <Kpi icon={Wallet} label="受注見込み（確度で加重）" value={s.sales.state === 'ready' ? s.sales.weightedPipeline : null} sub={s.sales.state === 'ready' ? `進行中 ${s.sales.openDeals}件 / ${man(s.sales.openPipeline)}` : undefined} href={s.sales.state === 'ready' ? `${s.sales.href}/deals` : '/sfa'} muted={s.sales.state !== 'ready'} />
-        <Kpi icon={FolderKanban} label="プロジェクト利益" value={s.projects.state === 'ready' ? s.projects.profit : null} sub={s.projects.state === 'ready' ? `売上 ${man(s.projects.revenue)} ・ 原価 ${man(s.projects.cost)}` : 'プロマネが未使用'} href={s.projects.href} muted={s.projects.state !== 'ready'} />
-      </section>
+        {!s.finance || s.finance.expense.state === 'unused' ? (<Kpi icon={FolderKanban} label="プロジェクト利益" value={s.projects.state === 'ready' ? s.projects.profit : null} sub={s.projects.state === 'ready' ? `売上 ${man(s.projects.revenue)} ・ 原価 ${man(s.projects.cost)}` : 'プロマネが未使用'} href={s.projects.href} muted={s.projects.state !== 'ready'} />) : null}
+      </section>) : null}
 
-      <div className={styles.gridWide}>
-        <section className={styles.card}>
+      <div className={styles.gridWide} data-single={!useLegacyRevenue ? 'true' : undefined}>
+        {useLegacyRevenue ? (<section className={styles.card}>
           <div className={styles.cardHead}>
-            <h2>売上の推移</h2>
+            <h2>営業の推移（参考）</h2>
             <span className={styles.cardMeta}>直近6か月</span>
           </div>
           <TrendChart trend={s.trend} />
-        </section>
+        </section>) : null}
         <section className={styles.card}>
           <div className={styles.cardHead}>
-            <h2>パイプライン</h2>
+            <h2>パイプライン（営業管理・参考）</h2>
             {s.sales.state === 'ready' ? <Link href={`${s.sales.href}/deals`} className={styles.cardLink}>開く</Link> : null}
           </div>
           <Pipeline sales={s.sales} />
@@ -448,7 +451,7 @@ export default function HomeDashboard({ initial, setupHidden = false }: { initia
           {clock.today ? <MiniCalendar key={clock.today} events={s.events} today={clock.today} /> : <p className={styles.muted}>日付を取得できませんでした。最新の数字を取得してください。</p>}
         </section>
         <section className={styles.card}>
-          <div className={styles.cardHead}><h2>プロジェクト収支</h2>{s.projects.state === 'ready' ? <Link href={s.projects.href} className={styles.cardLink}>レポート</Link> : null}</div>
+          <div className={styles.cardHead}><h2>案件別収支（プロマネ・参考）</h2>{s.projects.state === 'ready' ? <Link href={s.projects.href} className={styles.cardLink}>レポート</Link> : null}</div>
           {s.projects.state === 'ready' && s.projects.top.length ? (
             <ul className={styles.projectList}>
               {s.projects.top.map((p) => (

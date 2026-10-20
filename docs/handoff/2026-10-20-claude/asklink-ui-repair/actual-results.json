@@ -1,0 +1,136 @@
+{
+  "scope": "Offline browser rendering of actual current Tool, ToolHero, ToolFrame and nav with compiled Tailwind/current CSS; synthetic empty creation hook/queue and no company/auth. Not authenticated full app QA; no provider/network.",
+  "rows": [
+    {
+      "width": 375,
+      "tabs": {
+        "x": 12,
+        "y": 88.09375,
+        "width": 351,
+        "height": 44,
+        "right": 363
+      },
+      "items": [
+        {
+          "text": "作成",
+          "href": "/asklink",
+          "selected": "true",
+          "x": 12,
+          "y": 88.09375,
+          "width": 74,
+          "height": 44,
+          "right": 86
+        },
+        {
+          "text": "履歴",
+          "href": "/asklink/history",
+          "selected": "false",
+          "x": 90,
+          "y": 88.09375,
+          "width": 74,
+          "height": 44,
+          "right": 164
+        },
+        {
+          "text": "料金",
+          "href": "/asklink/pricing",
+          "selected": "false",
+          "x": 168,
+          "y": 88.09375,
+          "width": 74,
+          "height": 44,
+          "right": 242
+        }
+      ],
+      "hero": {
+        "x": 16,
+        "y": 165.09375,
+        "width": 343,
+        "height": 209,
+        "right": 359
+      },
+      "art": {
+        "x": 33,
+        "y": 276.09375,
+        "width": 144,
+        "height": 81,
+        "right": 177
+      },
+      "form": {
+        "x": 16,
+        "y": 398.09375,
+        "width": 343,
+        "height": 172,
+        "right": 359
+      },
+      "h2": "URLから質問リンクを作成",
+      "bodyWidth": 375
+    },
+    {
+      "width": 1280,
+      "tabs": {
+        "x": 28,
+        "y": 103.890625,
+        "width": 1224,
+        "height": 44,
+        "right": 1252
+      },
+      "items": [
+        {
+          "text": "作成",
+          "href": "/asklink",
+          "selected": "true",
+          "x": 28,
+          "y": 103.890625,
+          "width": 74,
+          "height": 44,
+          "right": 102
+        },
+        {
+          "text": "履歴",
+          "href": "/asklink/history",
+          "selected": "false",
+          "x": 106,
+          "y": 103.890625,
+          "width": 74,
+          "height": 44,
+          "right": 180
+        },
+        {
+          "text": "料金",
+          "href": "/asklink/pricing",
+          "selected": "false",
+          "x": 184,
+          "y": 103.890625,
+          "width": 74,
+          "height": 44,
+          "right": 258
+        }
+      ],
+      "hero": {
+        "x": 96,
+        "y": 180.890625,
+        "width": 1088,
+        "height": 162.5,
+        "right": 1184
+      },
+      "art": {
+        "x": 959,
+        "y": 205.890625,
+        "width": 200,
+        "height": 112.5,
+        "right": 1159
+      },
+      "form": {
+        "x": 96,
+        "y": 367.390625,
+        "width": 1088,
+        "height": 120,
+        "right": 1184
+      },
+      "h2": "URLから質問リンクを作成",
+      "bodyWidth": 1280
+    }
+  ],
+  "artSha256": "56de3ddc4c5d4bfab37fda28e094730df57cb0eb0afcdea23751a2c352e86819"
+}

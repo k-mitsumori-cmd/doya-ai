@@ -15,6 +15,7 @@ import { prisma } from '@/lib/prisma'
 import { monthlyExpenses, cashOutEvents, type MonthlyExpense, type CashOutEvent } from './aggregate'
 import { addMonthsToYm, isYm, isYmd, toDbDate, type Ym, type Ymd } from './dates'
 import { toRowLike } from './sync'
+import { EXPENSE_ROLES } from './constants'
 
 export type { MonthlyExpense, CashOutEvent }
 
@@ -53,23 +54,22 @@ export const EXPENSE_SOURCE_NOTE = '支出管理に登録した契約と単発�
  */
 export async function readableExpenseOrganization(userId: string, expenseOrganizationId: string): Promise<{ id: string; name: string } | null> {
   const m = await prisma.expenseMember.findFirst({
-    where: { userId, organizationId: expenseOrganizationId, status: 'ACTIVE' },
+    where: { userId, organizationId: expenseOrganizationId, status: 'ACTIVE', role: { in: [...EXPENSE_ROLES] } },
     include: { organization: { select: { id: true, name: true } } },
   })
-  return m?.organization ?? null
+  return m && (EXPENSE_ROLES as readonly string[]).includes(m.role) ? m.organization : null
 }
 
 /** 収入側の設定画面で、支出側の組織を「取り込み元」に選べるか */
 export async function canReadExpenseOrganization(userId: string, expenseOrganizationId: string): Promise<boolean> {
-  const m = await prisma.expenseMember.findFirst({ where: { userId, organizationId: expenseOrganizationId, status: 'ACTIVE' }, select: { id: true } })
-  return !!m
+  return !!(await readableExpenseOrganization(userId, expenseOrganizationId))
 }
 
 /** 収入側の設定画面で選択肢に出す、操作者が所属する支出側の組織 */
 export async function listReadableExpenseOrganizations(userId: string) {
   const rows = await prisma.expenseMember.findMany({
-    where: { userId, status: 'ACTIVE' },
+    where: { userId, status: 'ACTIVE', role: { in: [...EXPENSE_ROLES] } },
     include: { organization: { select: { id: true, name: true, slug: true } } },
   })
-  return rows.map((r) => r.organization)
+  return rows.filter((r) => (EXPENSE_ROLES as readonly string[]).includes(r.role)).map((r) => r.organization)
 }

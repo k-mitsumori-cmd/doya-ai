@@ -1,6 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
+import { withAskLinkReceiptCleanup } from './asklink/creation-adapter';
 import { prisma, withRetry } from './prisma';
 import { sendEventNotification } from './notifications';
 import { readAttributionFromCookies } from './attribution';
@@ -11,7 +12,7 @@ import { isRecentRegistration } from './registration-classification';
 
 export const authOptions: NextAuthOptions = {
   logger: authLogger,
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: withAskLinkReceiptCleanup(PrismaAdapter(prisma), prisma) as any,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',

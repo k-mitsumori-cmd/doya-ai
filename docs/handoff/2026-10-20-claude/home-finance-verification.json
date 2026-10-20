@@ -1,0 +1,100 @@
+{
+  "recordedAt": "2026-10-20T07:10:32.901337+00:00",
+  "state": "targeted-passed-whole-gate-and-authenticated-ui-pending",
+  "scope": "home income expense authoritative read-only integration",
+  "checks": [
+    {
+      "name": "finance-execution",
+      "exitCode": 0
+    },
+    {
+      "name": "finance-production-node",
+      "exitCode": 0
+    },
+    {
+      "name": "home-clock-today-unit",
+      "exitCode": 0
+    },
+    {
+      "name": "finance-lint",
+      "exitCode": 0
+    }
+  ],
+  "typecheck": {
+    "command": "tsc --noEmit --incremental false",
+    "exitCode": 0,
+    "log": "Git-external sandbox home-finance-typecheck.log"
+  },
+  "existingServiceTests": {
+    "income": 68,
+    "expense": 93,
+    "failed": 0
+  },
+  "financeExecutionCases": 28,
+  "homeClockTodayCases": 11,
+  "inputHashesUnchangedDuringTargetedChecks": true,
+  "sourceInputCount": 13,
+  "inputs": {
+    "src/lib/home/finance-read.ts": "6943ac8903be96ece97203327ff7363a5842ab626ee23903c72f3cf32b611c51",
+    "src/lib/home/summary.ts": "8fc40795969bfb47afd1fa38fad3d03991fdb2945718ef8fb5b7577a0217e654",
+    "src/lib/income/summary-read.ts": "f579d27ab50cd83058c3819398516d44d05eedf139fc2ef60d77136e4a2bb3e3",
+    "src/lib/expense/income-source.ts": "655346a1a887bea0aebdf6f9b16700a67efd0ac492df6cd0f55daffc2e561783",
+    "src/app/(shell)/home/HomeDashboard.tsx": "42b7f3a3ae9b7500ba4eb7dfc216ecbf9acdb0cc6116bda765797b61df5db360",
+    "src/app/(shell)/home/HomeDashboardLegacy.tsx": "bf3da70810c83a9e938339e4e7f84753bebb198c9eb92d1ac1d69be554b4d302",
+    "src/app/(shell)/home/FinanceOverview.tsx": "2f1e86bc951d56a1b85dbacbc2dccdcb3a9d5af3b6a981a8680dcf072abd5b9b",
+    "src/app/(shell)/home/finance.module.css": "3c4ce78bc0e079853b78ecc3531aa3b8c92a0b8fa462d8913280c12f9b80cb83",
+    "src/app/(shell)/home/home.module.css": "fd527ceb1030f3552f6ce04f10eca7dcf61b3e1c2765351cc1fee09551d58aa9",
+    "src/app/(shell)/home/home-legacy.module.css": "89eb7f4aece02803f60f8d84f00a2da778c30ec28db30484c6ff22dfc664c7f4",
+    "src/app/(shell)/home/today.ts": "ab87d4053aae7b76a6a21060a7b10c356f287cf3303fede6cf73d33b76af51dd",
+    "src/app/(shell)/home/agent.ts": "c18c029e3d522db60d2a2f54a8c5c8573788cd077e9e5be071d7cac9429c1266",
+    "scripts/security-regression/verify-home-finance.cjs": "45a356fa4d652d37b5dd1dee4f748e471928e857fef0181d70a424b57e7abfcd"
+  },
+  "databaseWrites": 0,
+  "providerCalls": 0,
+  "actualDatabaseConnected": false,
+  "syntheticPrisma": true,
+  "actualGetHandlerExecuted": true,
+  "actualUiRendered": [
+    "HomeDashboard",
+    "HomeDashboardLegacy"
+  ],
+  "actualAgentExecuted": true,
+  "productionReflected": false,
+  "browserUiVerified": false,
+  "commonRunnerHook": "parent/billing-owned; pending",
+  "reactReview": {
+    "hooks": "No new conditional hooks; finance component has no state or effects",
+    "data": "Finance data arrives in the serialized home snapshot; no extra browser fetch or DB import",
+    "accessibility": "Labels include time and tax basis, organization, no-access/error status, focus-visible links",
+    "layout": "Shared token-based responsive grid; 375/1280 browser comparison remains pending"
+  },
+  "remaining": [
+    "Combined fixed-input regression and build",
+    "Authenticated 375px and 1280px candidate UI, reference comparison and CLS",
+    "Real database compatibility and authorized production reflection"
+  ],
+  "reconfirmation": {
+    "recordedAt": "2026-10-20T10:48:21.734446+00:00",
+    "head": "d48052fab934c00ca3bbb3af11eaf981e11dd619",
+    "initialThirteenHashesMatchedBeforeSupplement": true,
+    "applicationInputsUnchanged": true,
+    "changedInput": "scripts/security-regression/verify-home-finance.cjs",
+    "change": "Test-only prior/current month tax-exclusive series assertions in both real UI render paths; chart boundary mock exposes series for assertions",
+    "previousScriptSha256": "dd553b0c0ed9a58befc5febb3282e9cd305feeb0279d805c11a524a49662608e",
+    "productionFinanceCases": 28,
+    "hydrationCases": 16,
+    "combinedCommand": "NODE_ENV=production node --test scripts/security-regression/verify-home-finance.cjs scripts/security-regression/verify-home-hydration.cjs",
+    "combinedExitCode": 0,
+    "sourceReview": {
+      "defaultSelection": "One latest existing membership; invalid newest membership never falls back to an older organization",
+      "explicitLink": "Existing resolveExpenseLink precedence retained; no substitution with latest expense organization",
+      "authorization": "Known ACTIVE roles and selected membership identity; selected link tuple rechecked after aggregation",
+      "otherIncomeApi": "Default readExpense remains true; home explicitly isolates expense failure",
+      "display": "Null remains unavailable; zero remains a used authoritative source; cash and tax-exclusive accruals stay separate",
+      "priorMonth": "Both dashboard chart boundaries receive exactly [50,100] for prior/current tax-exclusive revenue; tax-inclusive payment110 is not part of the series"
+    },
+    "generatedDatabaseOrBuild": false,
+    "log": "Git-external sandbox home-finance-hydration-final-combined.log"
+  },
+  "freeze": "Application and owned regression script frozen after test-only supplement; common runner belongs to billing"
+}

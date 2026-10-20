@@ -53,6 +53,8 @@ const notReady = (name: string) => `${name}はまだ使い始めていません`
 export function planAgent(raw: string, s: HomeSummary): AgentPlan {
   const q = raw.replace(/\s+/g, '')
 
+  if (s.finance && has(q, ['売上', '収入', '入金', '請求漏れ', '入金遅延', '粗利', '支出', '出金'])) return financialPlan(s)
+
   if (has(q, ['契約', 'プラン', '請求', '支払', '解約', '料金'])) {
     const c = s.contract
     const end = c.currentPeriodEnd ? new Date(c.currentPeriodEnd).toLocaleDateString('ja-JP') : '—'
@@ -100,6 +102,9 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
   if (has(q, ['今日', 'やること', 'タスク', 'やるべき', '優先', 'todo', 'TODO'])) {
     const rows: AgentRow[] = []
     const actions: AgentAction[] = []
+    const billing = s.finance?.income.state === 'ready' ? s.finance.income.value?.todo ?? [] : []
+    billing.forEach(item => rows.push({ label: '請求・入金', value: item.title, tone: item.kind === 'leak' || item.kind === 'overdue' ? 'warn' : 'muted' }))
+    if (billing.length) actions.push({ label: '請求・入金を確認する', href: '/income' })
     if (s.sales.state === 'ready') {
       rows.push({ label: '営業タスク（未完了）', value: `${s.sales.openTasks}件` })
       rows.push({ label: 'うち期限切れ', value: `${s.sales.overdueTasks}件`, tone: s.sales.overdueTasks > 0 ? 'warn' : 'good' })
@@ -127,7 +132,7 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
         { tool: '勤怠', label: '承認待ちの申請を確認' },
       ],
       lead: rows.length
-        ? s.sales.overdueTasks > 0
+        ? billing.length ? '請求・入金の要対応があります。内容と期日を確認してください。' : s.sales.overdueTasks > 0
           ? `期限切れの営業タスクが${s.sales.overdueTasks}件あります。まずはそこから片づけましょう。`
           : '期限切れはありません。近い期日のものから順に進めましょう。'
         : 'まだ各ツールにタスクが登録されていません。営業管理かプロマネから始めると、ここに並びます。',
@@ -225,6 +230,7 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
   }
 
   // 既定: 売上と収入の全体像
+  if (s.finance) return financialPlan(s)
   const sa = s.sales
   const pr = s.projects
   const income = sa.wonThisMonth
@@ -250,6 +256,41 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
       { label: '営業管理を開く', href: sa.href },
       { label: 'プロジェクト収支を開く', href: pr.href },
     ],
+  }
+}
+
+function financialPlan(s: HomeSummary): AgentPlan {
+  const finance = s.finance!
+  const { income, expense } = finance
+  const value = income.state === 'ready' ? income.value : null
+  const rows: AgentRow[] = []
+  const unavailable = (state: string) => state === 'no_access' ? '所属と権限を確認してください' : '取得できませんでした'
+  const note = value?.expenseConnection === 'no_access' ? '支出の所属と権限を確認してください'
+    : value?.expenseConnection === 'reference_only' ? 'プロマネは税区分が異なるため未算定'
+      : value?.expenseConnection === 'not_linked' ? '支出管理の取り込み元が未設定です' : '支出を取得できないため未算定'
+  if (income.state !== 'unused') {
+    rows.push(
+      { label: '売上予定（計上月・税抜）', value: value ? man(value.revenue.scheduled) : '—' },
+      { label: 'うち請求済み（税抜）', value: value ? man(value.revenue.invoiced) : '—' },
+      { label: '入金額（受取日・税込）', value: value ? man(value.revenue.received) : '—' },
+      { label: '粗利（予定・税抜）', value: value?.profit != null ? man(value.profit) : `— / ${value ? note : unavailable(income.state)}` },
+    )
+    if (value) rows.push({ label: '請求漏れ / 入金遅延', value: `${value.billing.leaks}件 / ${value.billing.overdue}件`, tone: value.billing.leaks || value.billing.overdue ? 'warn' : 'muted' })
+  } else {
+    // 正常な未使用のときだけ旧業務指標を参考値として返す。合算して売上にはしない。
+    rows.push({ label: '受注（営業管理・参考）', value: s.sales.state === 'ready' ? man(s.sales.wonThisMonth) : '—' }, { label: '確定見積（参考・税抜）', value: s.quotes.state === 'ready' ? man(s.quotes.confirmedThisMonth) : '—' })
+  }
+  if (expense.state !== 'unused') {
+    rows.push({ label: '今月の出金（支払日・税込、源泉税納付含む）', value: expense.state === 'ready' && expense.value ? man(expense.value.cashOut) : `— / ${unavailable(expense.state)}` })
+  } else if (income.state === 'unused') {
+    rows.push({ label: '案件経費・人件費（プロマネ・参考）', value: s.projects.state === 'ready' ? man(s.projects.cost) : '—' })
+  }
+  return {
+    intent: 'revenue', title: '売上・入金と出金',
+    steps: [{ tool: '収入管理', label: '計上月の売上と受取日の入金を確認' }, { tool: '支出管理', label: '選択した組織の計上費用と出金を確認' }],
+    lead: value ? `${finance.month}の収入管理${income.organization ? `（${income.organization.name}）` : ''}の数字です。売上と入金は基準が異なるため合算しません。`
+      : income.state === 'unused' ? '収入管理は未使用です。営業・見積・案件の数字は参考値として表示します。' : `${unavailable(income.state)}。売上を0円や参考値に置き換えていません。`,
+    rows, actions: [{ label: '収入管理を確認する', href: '/income' }, { label: '支出管理を確認する', href: expense.organization ? `/expense/${encodeURIComponent(expense.organization.slug)}` : '/expense' }],
   }
 }
 
