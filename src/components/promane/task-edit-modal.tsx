@@ -224,6 +224,9 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
               className="w-full h-11 px-3 rounded-xl border border-gray-200 text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               <option value="">👤 未割当</option>
+              {task.assigneeId && !members.some(member => member.id === task.assigneeId) && (
+                <option value={task.assigneeId} disabled>以前の担当者（新しい割当不可）</option>
+              )}
               {members.map((m) => (
                 <option key={m.id} value={m.id}>👤 {m.displayName}</option>
               ))}

@@ -1,0 +1,20 @@
+{
+  "baseCommit": "7672cb8f12a0062b73668a0efdb673e87aca1884",
+  "state": "author_frozen_unconnected_R0",
+  "ownedSourceFiles": {
+    "src/lib/account-lifecycle/state.ts": "3360865f72ec324b5f1332672fca09cb6bff01c31934b80945f64696e0d281df",
+    "src/lib/account-lifecycle/store.ts": "fc961245469c8c4f0efdf4f8a9cce222f7e6f0cb81e8ce026b46bd0b50a179f9",
+    "src/lib/account-lifecycle/organization-fence.ts": "df6399c484b59f5cdc282d3e28114fd004cb749a3e87122f039218281b8a4ae9",
+    "scripts/security-regression/verify-account-lifecycle-postgres.cjs": "9fe16d848a4f1b31599b916bf16b15201a7803c6e9b827d132a33fa603ec10fe",
+    "scripts/security-regression/verify-account-lifecycle-postgres.py": "8996540f143fada91e4355298ce5e3051416182ea9f6e8d5d5c5cfd963686113"
+  },
+  "ownedInputSetSha256": "3598768dbe92ea45cc272d3b74dec6bd796eec9cfae6eeebe12f08159ab49935",
+  "digestDefinition": "sha256 of UTF-8 concatenation sorted path + NUL + lowercase SHA256 + LF",
+  "readOnlyTestDependencies": {
+    "scripts/security-regression/retirement-fixture.cjs": "bf80337e9a7c14200d5d4410b45390a30a57e39b323d4e8fa23c338a1de499e4",
+    "scripts/security-regression/load-typescript.cjs": "69440f71ef0d91563d302db86fefd112811517d959bde5b8d585b8b20254fa0a",
+    "prisma/schema.prisma": "f4a8411f093f9d8bee2da793f2761685edf9f7a359bd2d7ea9a4c1163db1127b"
+  },
+  "existingApplicationConnections": 0,
+  "unsafeApplicationObservationsResolved": 0
+}

@@ -1385,6 +1385,7 @@ for (const verifier of [
   'verify-home-finance.cjs', 'verify-asklink-creation-client.cjs',
   'verify-expense-entry-mounted.cjs', 'verify-tenjikai-draft-mounted.cjs',
   'verify-expense-query-scope.cjs', 'verify-case-study-form-mounted.cjs',
+  'verify-promane-nullable-compat.cjs',
 ]) {
   const result = spawnSync(process.execPath, [path.join(__dirname, verifier)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Security regression failed:', verifier); process.exit(1); }

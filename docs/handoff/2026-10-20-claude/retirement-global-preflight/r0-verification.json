@@ -1,0 +1,56 @@
+{
+  "status": "author_frozen_targeted_pass_integration_pending",
+  "verifiedAt": "2026-10-20T15:37:34.766978+00:00",
+  "scope": "Unconnected R0 DB-only contracts; no existing route/provider capability closure",
+  "postgres": {
+    "passed": 86,
+    "classification": "unconnected_core_contract",
+    "script": "python3 scripts/security-regression/verify-account-lifecycle-postgres.py",
+    "timeoutSeconds": {
+      "supervisorChild": 180,
+      "recommendedOuter": 240
+    },
+    "environment": "No DATABASE_URL required or read. Optional DOYA_PRIVATE_POSTGRES_BIN only; supervisor creates own doya_lifecycle Unix-socket PG with synthetic data. CJS direct requires supervisor-generated root/socket/port and verifies role/inet/data-directory before DDL.",
+    "result": "r0-postgres-results.json",
+    "supervisor": "r0-postgres-supervisor.json",
+    "ownedDatabaseStoppedAndRemoved": true
+  },
+  "lint": {
+    "status": "passed",
+    "command": "node_modules/.bin/eslint src/lib/account-lifecycle/state.ts src/lib/account-lifecycle/store.ts src/lib/account-lifecycle/organization-fence.ts"
+  },
+  "types": {
+    "status": "passed_narrow_core_only",
+    "command": "node_modules/.bin/tsc --noEmit --incremental false --skipLibCheck --module commonjs --target es2022 --esModuleInterop src/lib/account-lifecycle/state.ts src/lib/account-lifecycle/store.ts src/lib/account-lifecycle/organization-fence.ts",
+    "integrationTsc": "billing-owned snapshot gate pending; narrow check is not whole-project pass"
+  },
+  "syntax": {
+    "cjs": "node --check passed",
+    "python": "ast.parse passed without pycache artifacts"
+  },
+  "inputManifest": "r0-source-inputs.json",
+  "ownedInputSetSha256": "3598768dbe92ea45cc272d3b74dec6bd796eec9cfae6eeebe12f08159ab49935",
+  "limitations": [
+    "Existing app API/runtime connections: 0. The OWNER-A two unsafe observations are still unresolved.",
+    "HTTP authentication, existing route ACL/quota, concurrent last-admin/owner demotion, full Kintai multi-organization invitation transfer, all billing writers and provider capability/drain are R1/R2/R3 requirements.",
+    "No schema/package/config/runner/CI changes by author; no production/providers/notifications.",
+    "All core receipts including unknown and terminal persist indefinitely; no automated GC or timeout unlock."
+  ],
+  "reviewFixes": [
+    "Kintai plural active employee-backed administrators and exact pending_UUID reference; existing oldest-admin quota reference preserved separately.",
+    "Expense plural owners and explicit pending claim / unknown-target repair; HR INVITED/SUSPENDED.",
+    "All-kind account lane separated from retirement-only membership. Malformed nonretirement receipt/fence/ledger still rejects.",
+    "Global UUID target/principal binding, reserved/executing same-operation resume, immutable dispatched action payload.",
+    "Persisted ledger validates receipt kind/action and create resource targetHash with shared validator, not only prepare."
+  ],
+  "integrationSnapshot": {
+    "summary": "../../2026-10-21-r0-promane/summary.json",
+    "localGatesPassed": 28,
+    "r0UnconnectedContracts": 86,
+    "nonincrementalWholeProjectTypecheckExitCode": 0,
+    "frozenInputsUnchanged": true,
+    "existingRuntimeConnections": 0,
+    "unsafeGapsStillOpen": 2,
+    "sameCommitRemoteNext": "pending"
+  }
+}

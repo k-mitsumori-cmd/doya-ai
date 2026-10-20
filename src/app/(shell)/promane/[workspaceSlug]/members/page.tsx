@@ -62,7 +62,7 @@ export default async function MembersPage({ params }: { params: Promise<{ worksp
         canInvite={canInvite}
         myMemberId={myMember?.id}
         members={members.map((m) => ({
-          id: m.id, displayName: m.displayName, role: m.role, email: m.user.email,
+          id: m.id, displayName: m.displayName, role: m.role, email: m.user?.email ?? null,
           hourlyRate: m.hourlyRate,
           totalMinutes: m.totalMinutes,
         }))}

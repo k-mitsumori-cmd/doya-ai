@@ -1,0 +1,160 @@
+{
+  "checkedAt": "2026-10-20T15:05:40.150721+00:00",
+  "baseCommit": "7672cb8f12a0062b73668a0efdb673e87aca1884",
+  "headAtFreeze": "7672cb8f12a0062b73668a0efdb673e87aca1884",
+  "state": "compatibility preparation frozen; schema/client/migration/retirement guard unchanged",
+  "targetFiles": [
+    "src/lib/promane/auth.ts",
+    "src/lib/promane/actions-tasks.ts",
+    "src/lib/promane/actions-time-entries.ts",
+    "src/app/(shell)/promane/page.tsx",
+    "src/app/(shell)/promane/[workspaceSlug]/members/page.tsx",
+    "src/app/(shell)/promane/[workspaceSlug]/projects/[projectId]/page.tsx",
+    "src/app/api/promane/invite/[token]/route.ts",
+    "src/app/api/promane/invitations/route.ts",
+    "src/components/promane/task-edit-modal.tsx",
+    "scripts/security-regression/verify-promane-time-input.cjs",
+    "scripts/security-regression/verify-promane-time-project.cjs",
+    "scripts/security-regression/verify-promane-record-delete-atomic.cjs",
+    "scripts/security-regression/verify-related-records.cjs",
+    "scripts/security-regression/verify-promane-nullable-compat.cjs"
+  ],
+  "sourceHashes": {
+    "src/lib/promane/auth.ts": "df3f0e7462ac0be195559233e0aa4a11feab2ca90d35a9e03f5229122bc8a259",
+    "src/lib/promane/actions-tasks.ts": "d8f6cc27cf0223164f5534a84ba5147d1b791de6a09beb6fdbfaa537e4235b22",
+    "src/lib/promane/actions-time-entries.ts": "6307d59b65aef30c64c1287b8653fea9162d66feb0d194c88b5298584cd00a83",
+    "src/app/(shell)/promane/page.tsx": "4c57f4e4223b95326a36bfe24c9fa23cb4644ab0c96b0b679acc9c33821b2954",
+    "src/app/(shell)/promane/[workspaceSlug]/members/page.tsx": "6d5c105f973c39a2b83d01927891bc2fa0656fc95d7a3ab27ab2dfa3ac933fa1",
+    "src/app/(shell)/promane/[workspaceSlug]/projects/[projectId]/page.tsx": "de393744f40d6599f5c5356ef6e0e44c416b912bf7dbc45d94adae32c22b4b81",
+    "src/app/api/promane/invite/[token]/route.ts": "adfeec2afbdee352f378f03c69680be8ab1539a0e23a07333068c29a8a5e3da8",
+    "src/app/api/promane/invitations/route.ts": "fc1ec657fed9e5d0b4a19d37d9e81cc7da308e6fa061515ee33d2025d4c08684",
+    "src/components/promane/task-edit-modal.tsx": "21ab82e5365f0b1f8de2db718578b55e20047fc50905a677449d996233e0f536",
+    "scripts/security-regression/verify-promane-time-input.cjs": "24c07387b0adccaf70984e575f1b260652e1fb5d38b98f2bb55091910738d964",
+    "scripts/security-regression/verify-promane-time-project.cjs": "0f08b266143124e03a926214e0c4d12e35584e3e45640bea23decbda24e1447d",
+    "scripts/security-regression/verify-promane-record-delete-atomic.cjs": "da15be10705b91803df0a630c50bbe1415d84ded824aaa353d39173a0013411c",
+    "scripts/security-regression/verify-related-records.cjs": "f22924f5adabbc60695629a63837674f9436c9226209756729123c4c5b5eca6c",
+    "scripts/security-regression/verify-promane-nullable-compat.cjs": "2995faeda714291a019628e37b8665081507c6a101cfabd81496a4ed295bf2c6"
+  },
+  "checks": {
+    "newSyntheticNullable": {
+      "passed": 47,
+      "failed": 0,
+      "productionParent": true
+    },
+    "sameAssertionsBaseline": {
+      "passed": 7,
+      "failed": 40,
+      "commit": "7672cb8f12a0062b73668a0efdb673e87aca1884"
+    },
+    "existingSuites": [
+      {
+        "script": "scripts/security-regression/verify-promane-invite-admission.cjs",
+        "exit": 0,
+        "tail": ""
+      },
+      {
+        "script": "scripts/security-regression/verify-promane-workspace-admission.cjs",
+        "exit": 0,
+        "tail": ""
+      },
+      {
+        "script": "scripts/security-regression/verify-related-records.cjs",
+        "exit": 0,
+        "tail": ""
+      },
+      {
+        "script": "scripts/security-regression/verify-promane-record-delete-atomic.cjs",
+        "exit": 0,
+        "tail": ""
+      },
+      {
+        "script": "scripts/security-regression/verify-promane-task-update-atomic.cjs",
+        "exit": 0,
+        "tail": ""
+      },
+      {
+        "script": "scripts/security-regression/verify-promane-numeric-fields.cjs",
+        "exit": 0,
+        "tail": ""
+      },
+      {
+        "script": "scripts/security-regression/verify-promane-time-project.cjs",
+        "exit": 0,
+        "tail": ""
+      },
+      {
+        "script": "scripts/security-regression/verify-promane-time-input.cjs",
+        "exit": 0,
+        "tail": ""
+      },
+      {
+        "script": "scripts/security-regression/verify-promane-expense-input.cjs",
+        "exit": 0,
+        "tail": ""
+      },
+      {
+        "script": "scripts/security-regression/verify-promane-write-access.cjs",
+        "exit": 0,
+        "tail": ""
+      },
+      {
+        "script": "scripts/security-regression/verify-promane-invitation-delete-atomic.cjs",
+        "exit": 0,
+        "tail": ""
+      },
+      {
+        "script": "scripts/security-regression/verify-promane-task-mutations-atomic.cjs",
+        "exit": 0,
+        "tail": ""
+      },
+      {
+        "script": "scripts/security-regression/verify-promane-invitation-pages.cjs",
+        "exit": 0,
+        "tail": ""
+      }
+    ],
+    "targetedLint": {
+      "exitCode": 0,
+      "runtimeFiles": 9
+    }
+  },
+  "legacyFixtureChanges": "Only add valid live userId to four synthetic member DTOs. Original cases/assertions preserved. Nullable cases live in new script.",
+  "run": {
+    "script": "scripts/security-regression/verify-promane-nullable-compat.cjs",
+    "command": "node scripts/security-regression/verify-promane-nullable-compat.cjs",
+    "requiredEnvironment": [],
+    "timeoutSeconds": 60,
+    "externalCalls": false,
+    "reactEnvironment": "process-local NODE_ENV=test; production parent tested"
+  },
+  "readOnlyConsumerInventory": {
+    "files": 27,
+    "references": 71
+  },
+  "explicitlyNotVerified": [
+    "nullable schema/client generation",
+    "private PostgreSQL migration",
+    "real Prisma null relation materialization",
+    "global retirement intent integration",
+    "concurrent target retirement/new assignment serialization",
+    "retirement unblocking",
+    "production migration",
+    "browser navigation",
+    "integrated typecheck/build"
+  ],
+  "sharedFilesNotEdited": [
+    "prisma/schema.prisma",
+    "src/lib/account-retirement.ts",
+    "src/lib/auth.ts",
+    "scripts/security-regression/run.cjs",
+    "package.json"
+  ],
+  "localOnlySandboxEvidence": "Separate synthetic readiness artifacts retained outside Git; not reused as this candidate proof.",
+  "integrationSnapshot": {
+    "summary": "../2026-10-21-r0-promane/summary.json",
+    "localGatesPassed": 28,
+    "targetInputHashesUnchanged": true,
+    "schemaOrProductionMigration": false,
+    "sameCommitRemoteNext": "pending"
+  }
+}

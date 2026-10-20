@@ -122,7 +122,7 @@ function actionWriteFixture({ revokeDuringCommit = false, foreignTarget = false 
       findFirst: async ({ where }) => {
         assert.equal(where.workspaceId, 'w')
         if (where.userId) return active ? { id: 'actor' } : null
-        return foreignTarget ? null : { id: 'm', hourlyRate: 2500 }
+        return foreignTarget ? null : { id: 'm', userId: 'u', hourlyRate: 2500 }
       },
       updateMany: async ({ where }) => {
         assert.equal(where.workspaceId, 'w')

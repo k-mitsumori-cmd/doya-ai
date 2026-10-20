@@ -99,9 +99,9 @@ export async function createTimeEntry(workspaceSlug: string, data: {
       async () => {
         const member = await tx.promaneMember.findFirst({
           where: { id: data.memberId, workspaceId: workspace.id, isActive: true },
-          select: { id: true, hourlyRate: true },
+          select: { id: true, userId: true, hourlyRate: true },
         });
-        if (!member) throw new Error("メンバーが見つかりません");
+        if (!member?.userId) throw new Error("メンバーが見つかりません");
 
         let projectId = data.projectId || null;
         if (projectId) {

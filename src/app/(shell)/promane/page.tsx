@@ -29,7 +29,7 @@ export default async function PromaneEntryPage({
   // 未ログイン（＝クローラや初見ユーザー）には公開LPを返す。
   // 以前はここで /auth/signin にリダイレクトしていたため「ドヤプロマネ」でクロールされる
   // ページが存在せず、指名検索の受け皿が無かった。
-  if (!session?.user) return <PromaneLp />
+  if (!session?.user || typeof session.user.id !== 'string' || !session.user.id.trim()) return <PromaneLp />
 
   const userId = (session.user as any).id
   const userEmail = session.user.email?.toLowerCase()
@@ -134,7 +134,7 @@ export default async function PromaneEntryPage({
                       <p className="text-[12px] font-black opacity-80">{uiNext ? '招待が届いています' : '📩 招待が届いています'}</p>
                       <p className="text-[22px] font-black mt-1 truncate">{inv.workspace.name}</p>
                       <p className="text-[13px] font-bold opacity-90 mt-1">
-                        {inv.invitedBy.name || inv.invitedBy.email} さんから
+                        {inv.invitedBy?.name || inv.invitedBy?.email || '退会済みの招待者'} さんから
                         <span className="ml-2 px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-black">
                           {roleLabels[inv.role] || inv.role}
                         </span>

@@ -101,7 +101,10 @@ export async function createTask(workspaceSlug: string, data: {
     if (!project) throw new Error('プロジェクトが見つかりません');
     return createPromaneTaskOnce(tx, { workspaceId: workspace.id, userId, projectId: input.projectId }, operationId, input,
       id => tx.promaneTask.findFirst({ where: { id, projectId: input.projectId } }), async () => {
-        if (input.assigneeId && !await tx.promaneMember.findFirst({ where: { id: input.assigneeId, workspaceId: workspace.id, isActive: true }, select: { id: true } })) throw new Error('担当者がワークスペースに所属していません');
+        if (input.assigneeId) {
+          const assignee = await tx.promaneMember.findFirst({ where: { id: input.assigneeId, workspaceId: workspace.id, isActive: true }, select: { id: true, userId: true } });
+          if (!assignee?.userId) throw new Error('担当者がワークスペースに所属していません');
+        }
         if (input.parentId && !await tx.promaneTask.findFirst({ where: { id: input.parentId, projectId: input.projectId }, select: { id: true } })) throw new Error('親タスクが同じプロジェクトに存在しません');
         const maxOrder = await tx.promaneTask.aggregate({ where: { projectId: input.projectId, status: input.status }, _max: { order: true } });
         return tx.promaneTask.create({ data: { ...input,
@@ -156,14 +159,15 @@ export async function updateTask(workspaceSlug: string, taskId: string, data: {
         await requireCurrentTaskWriter(tx, workspace.id, userId);
         const existing = await tx.promaneTask.findFirst({
           where: { id: taskId, project: { workspaceId: workspace.id } },
-          select: { startDate: true, dueDate: true, projectId: true },
+          select: { startDate: true, dueDate: true, projectId: true, assigneeId: true },
         });
         if (!existing) throw new Error("タスクが見つかりません");
         if (data.assigneeId) {
           const member = await tx.promaneMember.findFirst({
-            where: { id: data.assigneeId, workspaceId: workspace.id, isActive: true }, select: { id: true },
+            where: { id: data.assigneeId, workspaceId: workspace.id }, select: { id: true, userId: true, isActive: true },
           });
-          if (!member) throw new Error("担当者がワークスペースに所属していません");
+          // A departed member can remain on an existing task, but cannot receive a new assignment.
+          if (!member || (member.userId ? !member.isActive : data.assigneeId !== existing.assigneeId)) throw new Error("担当者がワークスペースに所属していません");
         }
         const dates = data.startDate !== undefined || data.dueDate !== undefined
           ? validateDates(data.startDate !== undefined ? data.startDate : existing.startDate,

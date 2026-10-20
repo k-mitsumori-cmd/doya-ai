@@ -4,7 +4,9 @@
 
 現在の実装、検証、残作業、判断待ちを分けます。文書に設計があること、テストが通ること、プレビューが立つこと、本番で使えることは別の状態です。各項目の証拠がそろうまで全体完了とはしません。
 
-作業先はこのworktree、ブランチは `codex/claude-handoff-20261020`。push済み `72d471ca` は同SHAのGitHub CI（run `39418890840`）成功、VercelはASK client fixtureの同期失敗でNextビルド前にERRORです。実暗号処理と期待UIを条件付きで待つ修正を独立commit `b1103f91` に保存し、隔離failed72d実ソースでbefore失敗・after32件合格を確認しました。現在のOWNER-A・ORG候補はb1103基準の5,141入力を固定し29ゲートが全て終了0、前後hash・パス集合・主要依存が不変です。OWNERは62安全契約合格と2未解決の危険観測を分けます。`../2026-10-20-owner-org/summary.json`参照。fixtureと今回候補をまとめてpush後、同HEADのCI・Vercelを確認します。認証後UI・本番反映は未完了です。
+作業先はこのworktree、ブランチは `codex/claude-handoff-20261020`。push済み `7672cb8f12a0062b73668a0efdb673e87aca1884` は同SHAのGitHub CI（run `39443473241`）成功、Vercel `dpl_6uAQsRKQgq94KzHYuQMhvedMo4Vz` READYを確認しました。fixture修正 `b1103f91` を含みます。旧 `72d471ca` のVercel ERRORと隔離before失敗・after32件の証拠は保持しています。OWNER-A・ORGの同候補は5,141入力の29ローカルゲートが全て終了0で、前後hash・パス集合・主要依存が不変でした。OWNERは62安全契約合格と2未解決の危険観測を分けます。`../2026-10-20-owner-org/{summary,remote-passed}.json`参照。現在編集中の次差分にはこの合格を流用しません。認証後UI・本番反映は未完了です。
+
+次のR0・Promane互換候補21入力は、基準7672cb8fと対象blobだけの独立snapshotで28ローカルgateが合格しました。5,157実行入力とpathset・主要依存は前後不変です。fresh route型生成と全体nonincremental tscも終了0。R0は86件の未接続core契約であり、既知2競合の解決ではありません。R1・Home Popupの作業中差分、本番migration、退会解禁、同commitのremote Next合格は含みません。`../2026-10-21-r0-promane/summary.json`参照。
 
 正本は `/Users/mitsumori_katsuki/Code/09_Cursol-ui-renewal/docs/architecture/management-agent/README.md` §16・§18と、同じ場所の `ADDON-SERVICES-2026-10-18.md` です。監査の起点はこのworktreeの `docs/system-check/FINDINGS-2026-10-18.md`。過去の監査表を現在の合否としては扱いません。非公開の元ノートの全文や、画面の個人情報は複製していません。
 
@@ -63,12 +65,12 @@ Astraの戦略に従い、既存のread関数をつなぎます。ホームか�
 
 代替は、正常取得のうえでincome契約0件、またはexpenseの `inUse=false` と確認できたときだけです。取得失敗、所属失効、権限なしを0円や未使用にしません。リンク先も `no_access` / `not_linked` / `not_available` を区別します。1回の集計では基準時刻を固定し、JSTの月境界をそろえます。
 
-凍結解除後、上記の方針で最小連携を実装しました。GET書き込み0、未知の役割、他組織、失効、契約0とAPI異常、JST月・年境界、税区分、二重計上なしを合成回帰で確認しています。固定入力の19ゲートと実JS同一の型修正後5deltaが合格しました。同一候補のリモートビルドと実画面は未確認です。詳細は `home-finance-implementation.md` を参照します。
+凍結解除後、上記の方針で最小連携を実装しました。GET書き込み0、未知の役割、他組織、失効、契約0とAPI異常、JST月・年境界、税区分、二重計上なしを合成回帰で確認しています。当時の固定入力19ゲートと実JS同一の型修正後5deltaが合格し、同候補 `95063ec6` のexact SHA CI成功・Vercel READYも確認済みです。後続 `7672cb8f` も同SHAのCI・Nextビルドが成功しました。認証後の実画面は未確認です。詳細は `home-finance-implementation.md` と `../2026-10-20-finance-ask1/remote-passed.json`、`../2026-10-20-owner-org/remote-passed.json` を参照します。
 
 ## まだ良くない点と次の改善
 
 本番の375pxホームでは販促パネルが下部ナビに重なっています。候補側の抑制修正をまだ画面で確認できていません。会社情報の登録状態も、共通枠とホームで一貫しません。全サービスの見本比較と実操作の証拠が不足しています。
 
-次はfixture修正とOWNER-A・ORGの候補をまとめてpushし、同HEADのCI・Vercelを確認します。退会の外部課金区間に残る2競合、OWNER引継ぎUI・guest transferは別gateです。SWEEP-2とSFAはユーザーの方針を受けて実装します。認証後UIを確認できるまで全体を完成・公開済みとは記録しません。
+fixture修正とOWNER-A・ORGの候補は `7672cb8f` にまとめてpushし、同HEADのCI成功・Vercel READYを確認しました。次は独立したR0 coreとPromane互換候補を確認します。退会の外部課金区間に残る2競合、OWNER引継ぎUI・guest transferは未解決または別gateです。SWEEP-2とSFAはユーザーの方針を受けて実装します。認証後UIを確認できるまで全体を完成・公開済みとは記録しません。
 
 作成: Sol、戦略: Astra。Lunaは使用していません。
