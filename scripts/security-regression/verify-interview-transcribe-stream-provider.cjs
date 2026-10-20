@@ -3,13 +3,14 @@ const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 
 function fixture(mode) {
+  const activity = { auth: 0, materialReads: 0 }
   const calls = []
   const writes = []
   const material = { id: 'material', type: 'audio', filePath: 'private/audio.wav', fileUrl: 'confirmed', fileSize: 1024n,
     mimeType: 'audio/wav', fileName: 'sample.wav', project: { id: 'project', userId: 'owner', guestId: null } }
   const prisma = {
     interviewMaterial: {
-      findUnique: async () => material,
+      findUnique: async () => { activity.materialReads++; return material },
       update: async () => {},
       updateMany: async value => { writes.push(value); return { count: 1 } },
     },
@@ -29,7 +30,7 @@ function fixture(mode) {
     'next/server': {},
     'node:crypto': { randomUUID: () => 'uuid' },
     '@/lib/prisma': { prisma },
-    '@/lib/interview/access': { getInterviewUser: async () => ({ userId: 'owner', plan: 'FREE' }), getGuestIdFromRequest: () => null, checkOwnership: () => null },
+    '@/lib/interview/access': { getInterviewUser: async () => { activity.auth++; return { userId: 'owner', plan: 'FREE' } }, getGuestIdFromRequest: () => null, checkOwnership: () => null },
     '@/lib/interview/storage': { getSignedFileUrl: async () => 'https://storage.invalid/audio' },
     '@/lib/pricing': { getInterviewGuestLimits: () => ({ transcriptionMinutes: 5 }), SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
     '@/lib/interview/transcription-legacy': { claimLegacyInterviewTranscription: async () => ({ state: 'started', transcriptionId: 'transcription', externalJobId: 'submitting:synthetic' }) },
@@ -53,10 +54,54 @@ function fixture(mode) {
       return Response.json({ status: 'completed', text: '文字起こし結果', utterances: [{ start: 0, end: 1000, text: '文字起こし結果' }] })
     },
   })
-  return { calls, writes, run: async () => (await stream.GET({}, { params: Promise.resolve({ id: 'material' }) })).text() }
+  const browserRequest = new Request('https://example.test/api/interview/materials/material/transcribe-stream', { headers: { accept: 'text/event-stream', 'sec-fetch-site': 'same-origin', 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty' } })
+  return { calls, writes, activity, response: request => stream.GET(request, { params: Promise.resolve({ id: 'material' }) }), run: async () => (await stream.GET(browserRequest, { params: Promise.resolve({ id: 'material' }) })).text() }
 }
 
 ;(async () => {
+  const valid = { accept: 'text/event-stream', 'sec-fetch-site': 'same-origin', 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty' }
+  for (const [name, headers] of [
+    ['cross-site', { ...valid, 'sec-fetch-site': 'cross-site' }],
+    ['same-site subdomain', { ...valid, 'sec-fetch-site': 'same-site' }],
+    ['document navigation', { ...valid, 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document' }],
+    ['bookmark navigation', { ...valid, 'sec-fetch-site': 'none' }],
+    ['image embed', { ...valid, 'sec-fetch-mode': 'no-cors', 'sec-fetch-dest': 'image' }],
+    ['foreign origin despite metadata', { ...valid, origin: 'https://evil.test' }],
+    ['foreign referer despite metadata', { ...valid, referer: 'https://evil.test/page' }],
+    ['malformed referer', { ...valid, referer: 'not-a-url' }],
+    ['opaque origin', { ...valid, origin: 'null' }],
+    ['normal HTML request', { ...valid, accept: 'text/html' }],
+    ['missing headers', {}],
+    ['SSE Accept alone', { accept: 'text/event-stream' }],
+  ]) {
+    await check(`Interview stream rejects ${name} before any paid provider or write`, async () => {
+      const f = fixture('success')
+      const response = await f.response(new Request('https://example.test/api/interview/materials/material/transcribe-stream', { headers }))
+      assert.equal(response.status, 403)
+      assert.equal((await response.json()).code, 'TRANSCRIPTION_STREAM_REQUEST_REJECTED')
+      assert.equal(response.headers.get('cache-control'), 'private, no-store')
+      assert.match(response.headers.get('vary'), /Sec-Fetch-Site/)
+      assert.equal(f.calls.length, 0)
+      assert.equal(f.writes.length, 0)
+      assert.equal(f.activity.auth, 0)
+      assert.equal(f.activity.materialReads, 0)
+    })
+  }
+  for (const headers of [
+    { 'sec-fetch-site': 'same-origin', 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty' },
+    { accept: '*/*', 'sec-fetch-site': 'same-origin', 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty' },
+    { accept: 'text/event-stream', origin: 'https://example.test' },
+    { accept: 'text/event-stream', referer: 'https://example.test/interview/projects/project/transcribe' },
+  ]) {
+    await check('Interview stream supports same-origin metadata and legacy origin fallback', async () => {
+      const f = fixture('success')
+      const response = await f.response(new Request('https://example.test/api/interview/materials/material/transcribe-stream', { headers }))
+      assert.match(response.headers.get('cache-control'), /private, no-store/ )
+      assert.match(response.headers.get('vary'), /Cookie/)
+      assert.match(await response.text(), /event: complete/)
+      assert.equal(f.calls.length, 2)
+    })
+  }
   await check('Interview stream keeps submit and poll deadlines through JSON reads', async () => {
     const f = fixture('success')
     const result = await f.run()

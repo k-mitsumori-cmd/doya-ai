@@ -38,13 +38,14 @@ const stream = load('src/app/api/interview/materials/[id]/transcribe-stream/rout
   '@/lib/interview/storage': { getSignedFileUrl: async () => { throw Error('storage should not run') } },
   '@/lib/interview/transcription': { readAssemblyJson: async () => { throw Error('provider should not run') } },
 }, globals)
+const browserStream = new Request('https://example.test/api/interview/materials/m1/transcribe-stream', { headers: { accept: 'text/event-stream', 'sec-fetch-site': 'same-origin', 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty' } })
 const context = { params: Promise.resolve({ id: 'm1' }) }
 
 ;(async () => {
   material.fileUrl = null
   const unconfirmed = await post.POST({ json: async () => ({}) }, context)
   assert.equal(unconfirmed.status, 409)
-  const unconfirmedStream = await stream.GET({}, context)
+  const unconfirmedStream = await stream.GET(browserStream, context)
   assert.match(await unconfirmedStream.text(), /アップロードの完了を確認できません/)
   assert.equal(durationCalls, 0)
   assert.equal(providerCalls, 0)
@@ -55,7 +56,7 @@ const context = { params: Promise.resolve({ id: 'm1' }) }
   assert.equal(blocked.body.code, 'TRANSCRIPTION_LIMIT')
   assert.equal(blocked.body.actionUrl, '/interview/pricing')
 
-  const response = await stream.GET({}, context)
+  const response = await stream.GET(browserStream, context)
   const text = await response.text()
   assert.match(text, /event: fail/)
   assert.match(text, /TRANSCRIPTION_LIMIT/)
@@ -63,7 +64,7 @@ const context = { params: Promise.resolve({ id: 'm1' }) }
   userPlan = 'PRO'
   const paidBlocked = await post.POST({ json: async () => ({}) }, context)
   assert.equal(paidBlocked.body.actionUrl, 'https://doyamarke.surisuta.jp/contact')
-  const paidStream = await stream.GET({}, context)
+  const paidStream = await stream.GET(browserStream, context)
   assert.match(await paidStream.text(), /doyamarke\.surisuta\.jp\/contact/)
   userPlan = 'FREE'
   assert.equal(durationCalls, 4)
@@ -71,7 +72,7 @@ const context = { params: Promise.resolve({ id: 'm1' }) }
 
   admission = { state: 'processing', transcriptionId: 't1', externalJobId: 'submitting:uuid' }
   processing = { id: 't1', externalJobId: 'submitting:uuid' }
-  const duplicate = await stream.GET({}, context)
+  const duplicate = await stream.GET(browserStream, context)
   const duplicateText = await duplicate.text()
   assert.match(duplicateText, /TRANSCRIPTION_SUBMISSION_UNKNOWN/)
   assert.equal(providerCalls, 0)
