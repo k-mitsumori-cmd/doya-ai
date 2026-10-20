@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-10-20T01:05:25.691678+00:00",
+  "recordedAt": "2026-10-20T03:20:11.621443+00:00",
   "branch": "codex/claude-handoff-20261020",
   "baseMain": "2b88ca32d3c187e754eb93daa20819d2171a2c39",
   "state": "local-regression-passed-release-gates-open",
@@ -119,5 +119,23 @@
     "unchangedApplicationInputs": 3377,
     "details": "ci-moved-path-regression.json"
   },
-  "pullRequest": "https://github.com/k-mitsumori-cmd/doya-ai/pull/3"
+  "pullRequest": "https://github.com/k-mitsumori-cmd/doya-ai/pull/3",
+  "ciDirectOfflineScripts": {
+    "status": "passed",
+    "count": 52,
+    "details": "ci-offline-regression.json"
+  },
+  "additionalHarnessCases": {
+    "hrAndKintaiAccessProvider": 33,
+    "slidePreviewHook": 8,
+    "slidePreviewWizard": 7
+  },
+  "previewPackagingRepair": {
+    "previousPreviewStatus": "ERROR",
+    "previousCommit": "9192533e5f66f75c3f9c022d6d1d20f40aae5ff6",
+    "cause": "New CI-only source manifest verifier read /docs, excluded from Vercel package",
+    "repair": "Keep mandatory CI preflight; remove CI-only manifest step from application build security runner",
+    "previewRecheckRequired": true
+  },
+  "applicationInputsUnchangedAfterHarnessRepairs": true
 }

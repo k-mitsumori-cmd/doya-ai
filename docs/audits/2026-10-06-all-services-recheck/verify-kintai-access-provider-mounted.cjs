@@ -5,7 +5,22 @@ const payload=service=>service==='hr'?{organizationId:'synthetic-org',plan:'free
 const results=[];
 function hasInertAncestor(element){for(let n=element;n;n=n.parentElement)if(n.inert===true)return true;return false}
 async function fixture(service){const accessModule=load('src/components/kintai/KintaiAccessContext.tsx',{'react':React});const Context=React.createContext(null),Route=React.createContext('/'+service+'/dashboard');let status='authenticated',session={user:{id:'alpha',plan:'FREE'}},pathname='/'+service+'/dashboard',reply=async()=>Response.json(payload(service)),seq=0,closed=false,mounts=0;const calls=[],timers=new Map();const reader=load('src/lib/billing-response-client.ts',{}, {AbortController,TextDecoder,Uint8Array,setTimeout:(fn,ms)=>{assert.equal(ms,35000);timers.set(++seq,fn);return seq},clearTimeout:id=>timers.delete(id),fetch:(url,init)=>{if(service==='hr'&&url.startsWith('/api/hr/organization?format=choices')){const chunk=JSON.stringify([{organizationId:'synthetic-org',memberId:'synthetic-member',role:'OWNER',name:'Synthetic organization'}]);return Promise.resolve(Response.json({success:true,actor:session.user.id,format:'hr-organization-choices-v1',revision:'a'.repeat(64),offset:0,totalCharacters:chunk.length,chunk,nextCursor:null}));}assert.equal(url,'/api/'+service+'/usage');calls.push({url,init});return reply(url,init)}});
+// These admission cases exercise the legacy frame with actual UI-selection contexts.
+const viewModules=new Map();
+function loadViewModule(moduleFile){
+ if(viewModules.has(moduleFile))return viewModules.get(moduleFile);
+ const output={};viewModules.set(moduleFile,output);
+ vm.runInNewContext(ts.transpileModule(fs.readFileSync(moduleFile,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports:output,require:n=>{
+  if(n==='react'||n==='react/jsx-runtime')return require(n);
+  if(n.startsWith('@/components/shell/'))return loadViewModule('src/'+n.slice(2)+'.tsx');
+  throw Error('Unmocked UI-selection import '+n);
+ }},{filename:moduleFile});return output;
+}
+const unexpectedNewFrame=()=>{throw Error('New-frame presentation is outside the legacy admission fixture')};
 const no=()=>null,wrap=({children})=>React.createElement('div',null,children),mocks={react:React,'react/jsx-runtime':require('react/jsx-runtime'),'next-auth/react':{useSession:()=>React.useContext(Context),signOut:async()=>{}},'next/navigation':{usePathname:()=>React.useContext(Route),useRouter:()=>({push:()=>{}})},'next/link':wrap,'framer-motion':{motion:new Proxy({},{get:()=>wrap}),AnimatePresence:wrap},'lucide-react':new Proxy({},{get:()=>no}),'./HrSidebar':{__esModule:true,default:no},'./HrOnboarding':{__esModule:true,default:()=>React.createElement('div',{'data-onboarding':true},'Synthetic onboarding')},'./KintaiSidebar':{__esModule:true,default:no},'./KintaiOnboarding':{__esModule:true,default:()=>React.createElement('div',{'data-onboarding':true},'Synthetic onboarding')},'./KintaiAccessContext':accessModule,'@/lib/billing-response-client':reader};
+mocks['./ui-next']=loadViewModule('src/components/'+service+'/ui-next.tsx');
+mocks['@/components/ds']={ErrorNotice:unexpectedNewFrame,Skeleton:unexpectedNewFrame};
+mocks['./KintaiDashboardNext']={KintaiDashboardLoading:unexpectedNewFrame};
 if(service==='hr'){
 const selection=load('src/lib/hr/organization-selection.ts');
 const requestScope=load('src/lib/hr/organization-request-scope.ts',{'./organization-selection':selection},{AbortController});
