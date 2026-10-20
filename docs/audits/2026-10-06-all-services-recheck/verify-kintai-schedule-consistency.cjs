@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto'),ts=require('typescript'),{load}=require('../../../scripts/security-regression/load-typescript.cjs');
-const file=process.env.DOYA_SETTINGS_SOURCE||'src/app/kintai/settings/page.tsx',source=fs.readFileSync(file,'utf8'),context={};
+const file=process.env.DOYA_SETTINGS_SOURCE||'src/app/(shell)/kintai/settings/page.tsx',source=fs.readFileSync(file,'utf8'),context={};
 vm.runInNewContext(ts.transpileModule(source.slice(source.indexOf('function computeSchedulePreview('),source.indexOf('export default function SettingsPage')),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
 const {calculateDailyAttendance:calc}=load('src/lib/kintai/attendance.ts');
 const day=new Date('2026-09-20T00:00:00+09:00'),cases=[];
