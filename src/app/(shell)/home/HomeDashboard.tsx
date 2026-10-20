@@ -12,7 +12,7 @@ import {
 import type { HomeSummary, HomeEvent } from '@/lib/home/summary'
 import { SHELL_GROUPS } from '@/components/shell/tools'
 import { ShellIcon } from '@/components/shell/icons'
-import { AGENT_SUGGESTIONS, planAgent, type AgentPlan } from './agent'
+import { AGENT_SUGGESTIONS, isHomeMetricsQuestion, planAgent, type AgentPlan } from './agent'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from './intents'
 import { todayItems } from './today'
 import { homeContractDate, homeJstDateKey, homeSnapshotClock } from './clock'
@@ -23,6 +23,7 @@ import { CompanyRegisterButton, ShellCompanyTag } from '@/components/shell/Shell
 import { useAccountCompany } from '@/components/shell/company-context'
 import { useToolHref } from '@/components/shell/ui-next-context'
 import FinanceOverview from './FinanceOverview'
+import PopupOverview from './PopupOverview'
 import styles from './home.module.css'
 
 const man = (n: number) => {
@@ -60,7 +61,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
     if (!q) return
     clear()
     // 「〜を作りたい」のように、ツールの作業を頼む文なら、そのツールを開く（UI 品質 H-2）
-    const intent = matchHomeIntent(q)
+    const intent = isHomeMetricsQuestion(q) ? null : matchHomeIntent(q)
     if (intent) {
       setOpening(intent.label)
       setRun(null)
@@ -421,6 +422,7 @@ export default function HomeDashboard({ initial, setupHidden = false }: { initia
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
 
       {s.finance ? <FinanceOverview finance={s.finance} /> : null}
+      <PopupOverview popup={s.popup} />
       {useLegacyRevenue ? (<section className={styles.kpis} aria-label="今月の主要な数字">
         <Kpi icon={TrendingUp} label="今月の受注" value={s.sales.state === 'ready' ? s.sales.wonThisMonth : null} sub={s.sales.state === 'ready' ? `${s.sales.wonCountThisMonth}件` : '営業管理が未使用'} href={s.sales.href} muted={s.sales.state !== 'ready'} />
         <Kpi icon={FileText} label="今月確定した見積" value={s.quotes.state === 'ready' ? s.quotes.confirmedThisMonth : null} sub={s.quotes.state === 'ready' ? `下書き ${s.quotes.draftCount}件` : '見積が未使用'} href={s.quotes.href} muted={s.quotes.state !== 'ready'} />

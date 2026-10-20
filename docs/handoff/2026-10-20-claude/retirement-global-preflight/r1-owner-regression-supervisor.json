@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-10-20T16:09:49.714655+00:00",
+  "scope": "Owned ephemeral Unix socket PostgreSQL, synthetic data only; no production connection",
+  "privateRoot": "/tmp/doya-owner-6786dc10",
+  "testExitCode": 0,
+  "stopExitCode": 0,
+  "endedAt": "2026-10-20T16:09:53.720645+00:00",
+  "removedOwnedDirectory": true
+}

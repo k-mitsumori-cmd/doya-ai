@@ -61,6 +61,14 @@ export async function assertRetirementMembershipWritable(tx: Tx, ids: string[]):
   }
 }
 
+/** Only the invitation recipient may be deferred. Call after its User lock; never use this for actor/authority or a general target grant. */
+export async function lifecycleInvitationRecipientDisposition(tx: Tx, userId: string): Promise<'ACTIVE' | 'PENDING'> {
+  if (!validLifecycleUser(userId)) throw new LifecycleError('INVALID_LIFECYCLE_PARTICIPANTS', 400)
+  const current = await fence(tx, userId)
+  if (current?.value.state === 'retired') return unavailable()
+  return current?.value.kind === 'retirement' ? 'PENDING' : 'ACTIVE'
+}
+
 async function ledger(tx: Tx, identity: LifecycleIdentity, r: LifecycleReceipt) {
   const row = await tx.systemSetting.findUnique({ where: { key: lifecycleLedgerKey(identity) }, select: { value: true } })
   if (!row) return null

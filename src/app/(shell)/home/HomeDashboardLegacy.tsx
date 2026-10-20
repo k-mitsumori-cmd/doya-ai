@@ -15,6 +15,7 @@ import { ShellIcon } from '@/components/shell/icons'
 import { AGENT_SUGGESTIONS, planAgent, type AgentPlan } from './agent'
 import { homeContractDate, homeJstDateKey, homeSnapshotClock } from './clock'
 import FinanceOverview, { FinanceBillingTasks } from './FinanceOverview'
+import PopupOverview from './PopupOverview'
 import styles from './home-legacy.module.css'
 
 const man = (n: number) => {
@@ -363,6 +364,7 @@ export default function HomeDashboardLegacy({ initial }: { initial: HomeSummary 
       <AgentPanel summary={s} />
 
       {s.finance ? <FinanceOverview finance={s.finance} /> : null}
+      <PopupOverview popup={s.popup} />
       <FinanceBillingTasks finance={s.finance} />
       {useLegacyRevenue ? (<section className={styles.kpis} aria-label="今月の主要な数字">
         <Kpi icon={TrendingUp} label="今月の受注" value={s.sales.state === 'ready' ? man(s.sales.wonThisMonth) : '—'} sub={s.sales.state === 'ready' ? `${s.sales.wonCountThisMonth}件` : '営業管理が未使用'} href={s.sales.href} muted={s.sales.state !== 'ready'} />

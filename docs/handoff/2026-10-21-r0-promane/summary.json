@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-20T15:49:33.904298+00:00",
-  "status": "snapshot_local_passed_remote_pending",
+  "status": "snapshot_local_and_exact_head_remote_passed",
   "baseCommit": "7672cb8f12a0062b73668a0efdb673e87aca1884",
   "candidateConstruction": "Physical Git HEAD tree plus only 21 explicitly frozen source/test/config blobs. No working-tree R1/Popup files, dotenv, .git or stale .next copied. Final commit must match the entire execution-source blob/path set.",
   "candidateManifestSha256": "c7c96f8d9b89066b133973ad93391d8248fa2f6a3b0976849c91e1b485f9ce54",
@@ -288,8 +288,8 @@
     "diskAfterBytes": 11090784256,
     "diskFinalBytes": 11959898112
   },
-  "remoteSameCommitCI": "not_started",
-  "remoteSameCommitNextBuild": "not_started",
+  "remoteSameCommitCI": "success",
+  "remoteSameCommitNextBuild": "READY",
   "separateSandboxNullableSchemaAndFontFixtureProof": "Not reused for this candidate. Repository schema/client unchanged; migration, real-font QA and unmodified Next success not claimed.",
   "r1WorkingTreeChangesCovered": false,
   "popupWorkingTreeChangesCovered": false,
@@ -300,5 +300,18 @@
     "Expense pending-null role edits and inactive former-owner history require dedicated transitions; not ordinary live authority.",
     "Recipient-retirement handling must preserve EXP-F05 email-registration nondisclosure.",
     "Actual route PostgreSQL coverage and Astra review required before R1/core delta acceptance; 86 unconnected contracts do not cover every normal Expense state."
-  ]
+  ],
+  "remoteVerification": {
+    "checkedAt": "2026-10-20T16:10:50.244151+00:00",
+    "commit": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+    "ciRunId": 39452537086,
+    "ciConclusion": "success",
+    "actualCICheckoutSha": "2753c522397e546e3bfaa9ff22e9d79fde9f36eb",
+    "ciCheckoutTree": "439c188e9020ab9f2e3866ae0af2b2412bd3f3ef",
+    "headAndSnapshotTreeMatch": true,
+    "vercelDeployment": "dpl_4fQMoD1GkF22gTEa9XqRdsUfnrH6",
+    "vercelState": "READY",
+    "vercelCommit": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+    "currentWorkingTreeR1PopupJstCovered": false
+  }
 }

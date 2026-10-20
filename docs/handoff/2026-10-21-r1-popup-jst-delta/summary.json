@@ -1,0 +1,243 @@
+{
+  "status": "snapshot_local_passed_remote_pending",
+  "baseCommit": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+  "startedAt": "2026-10-20T16:29:13.653886+00:00",
+  "endedAt": "2026-10-20T16:34:33.045950+00:00",
+  "candidateComposition": "Git base plus preserved failed-25 source blobs and approved POST/members.test delta only; no live Home/Income inputs",
+  "sourceTargets": 26,
+  "sourceFiles": 5163,
+  "gateManifestSha256": "a62781e0a9a033c3472c7553675b0483a383bbd71a2938fd2df71fcc2c82b87d",
+  "allExecutableBlobModePathsetSha256": "1911fa562884af739a2ea3f9fca61e5695032de9aa71c838d94deeb1d9e392a7",
+  "executableDigestFormat": "SHA256 of sorted UTF-8 mode + space + Git blob + TAB + path + NUL",
+  "targetChangeSha256": {
+    ".github/workflows/ci.yml": "81bc3a797ad51924f1eff66aef882ffd39fe0c5b9adbc5318cfa684a6fc6af5a",
+    "scripts/security-regression/run.cjs": "b2795c751078549cc679a854020cd4adb3ed63e166ba17aee9bffc695ff383fd",
+    "scripts/security-regression/verify-account-retirement-postgres.cjs": "66b4946a3a262733f8b5fc3a063c1eca08e5746468f48287a7d222e1ffc8371e",
+    "scripts/security-regression/verify-expense-entry-mounted.cjs": "7dcfbb83d44aff5366752348033734ce6ecc034d3bd753071d1791babd1acdd7",
+    "scripts/security-regression/verify-home-popup.cjs": "f058b5064c898f28af84cd36b1a71614204dda04d746f11779d8a97c1238dcf2",
+    "scripts/security-regression/verify-membership-retirement-postgres.cjs": "011922baeca22daad5a71c08c7561fada45e182aaf8b6728ce3bd280070e63a6",
+    "scripts/security-regression/verify-membership-retirement-postgres.py": "593b9ba3fd7adee52b2809a470bc339a48fa3a499fb2ee60b26c719b975aac1f",
+    "src/app/(shell)/home/HomeDashboard.tsx": "49147c4b14e0ed55b5594d1b77b24edd7de191b0637d90ec14ea8d380c0ad9fb",
+    "src/app/(shell)/home/HomeDashboardLegacy.tsx": "259a1fa748a48318b05f3e2eae1270e9d4c0986cd42a2a305346a7259c6eb1b6",
+    "src/app/(shell)/home/PopupOverview.tsx": "58416125019f2d5a1f50788d0e0e3d2067f61f6bcc5f553b66497407e9d65764",
+    "src/app/(shell)/home/agent.ts": "3a9ae40a1fa2daea0e408151aa148fe85c4c148af3b75c156b9e86e314ab64e1",
+    "src/app/(shell)/home/popup-overview.module.css": "26d24a519374a21bb18da4b06a070667a48156bf6ba667624a28e1f7e92e10d0",
+    "src/app/api/expense/members/[id]/route.ts": "49c0c88dfae0ddab17e252fd957f62c9f42560f3577886f14a14ce492ea04f24",
+    "src/app/api/expense/members/route.ts": "07eeefaef4d588b37a1afdaf742cfc164480727aa30ca573f1dccc4e0b2bb294",
+    "src/app/api/expense/organization/route.ts": "29bea3115d6d93c5baa2901f6cdf4c4ec388ab42d220351c28a3d5e1e87b4e46",
+    "src/app/api/expense/usage/route.ts": "1b1bf9cbcff83e0a773351539b793f616adeabdbaa125f5868d76206187eadc7",
+    "src/lib/account-lifecycle/organization-fence.ts": "9ed18ed0e4af505c105db387b04f97b48113dcdf5cdef3a22e93f9e12739d301",
+    "src/lib/account-lifecycle/store.ts": "b2f4357a042c9abf0b63e8a22b85abe074211cf6587d8db05fdb5dbbb882730f",
+    "src/lib/expense/access.ts": "e34a6d64595941f0264e3796021e1c2ee6692aa71e6e541fc53306a9b011ec32",
+    "src/lib/expense/member-write.ts": "43c867440e1fc365f1c2c6779122278c37b977d1d89b65e903b20b395cb41db6",
+    "src/lib/expense/members.test.ts": "fe4596d75d4c3b76add613b2395ad957ea28d3c25459cc44d77133e0e138bc09",
+    "src/lib/expense/setup.ts": "fa2708e7132350ce273071d90852d57ff6ff1a8b0a38883eae876b945bf854ee",
+    "src/lib/home/summary.ts": "6bd7f97eafd65195ee958df894aa69e197fd2a3b1f4eae062bd334a47fe1e2e6",
+    "src/lib/popup/popup-read.ts": "e35f4f59dfdafb75f8874660140195f8c38caad48f753cf2fc939940d53e7401",
+    "src/lib/tenjikai/tenjikai-read.test.ts": "a632f979ad9f7991d403d852166485f652bc5ba10de2247928b66b683087bb87",
+    "src/lib/tenjikai/tenjikai-read.ts": "9ddb7057e222546d29eb311bad472af7481fc59a020094cca1d7d19a47c628d6"
+  },
+  "deltaInputSetSha256": "6b246598e7427754dbe7954ef6efec70103dd86b9f6f086275b1cee749c50e72",
+  "resultingR1InputSetSha256": "eb52ed434c9226f2440fc70bfe68113f6b9599dbf281283753b8ff49e5b3d097",
+  "localGates": {
+    "planned": 27,
+    "passed": 27,
+    "steps": [
+      {
+        "name": "syntax-run.cjs",
+        "exitCode": 0
+      },
+      {
+        "name": "syntax-verify-account-retirement-postgres.cjs",
+        "exitCode": 0
+      },
+      {
+        "name": "syntax-verify-expense-entry-mounted.cjs",
+        "exitCode": 0
+      },
+      {
+        "name": "syntax-verify-home-popup.cjs",
+        "exitCode": 0
+      },
+      {
+        "name": "syntax-verify-membership-retirement-postgres.cjs",
+        "exitCode": 0
+      },
+      {
+        "name": "syntax-verify-membership-retirement-postgres.py",
+        "exitCode": 0
+      },
+      {
+        "name": "resolver-preflight",
+        "exitCode": 0
+      },
+      {
+        "name": "ci-yaml",
+        "exitCode": 0
+      },
+      {
+        "name": "adimage-ci-paths",
+        "exitCode": 0
+      },
+      {
+        "name": "ci-source-paths",
+        "exitCode": 0
+      },
+      {
+        "name": "account-lifecycle-postgres",
+        "exitCode": 0
+      },
+      {
+        "name": "membership-retirement-postgres",
+        "exitCode": 0
+      },
+      {
+        "name": "ask-privacy-postgres",
+        "exitCode": 0
+      },
+      {
+        "name": "ask-creation-postgres",
+        "exitCode": 0
+      },
+      {
+        "name": "account-retirement-postgres",
+        "exitCode": 0
+      },
+      {
+        "name": "common-security",
+        "exitCode": 0
+      },
+      {
+        "name": "asklink",
+        "exitCode": 0
+      },
+      {
+        "name": "popup",
+        "exitCode": 0
+      },
+      {
+        "name": "syscheck",
+        "exitCode": 0
+      },
+      {
+        "name": "tenjikai",
+        "exitCode": 0
+      },
+      {
+        "name": "shanai",
+        "exitCode": 0
+      },
+      {
+        "name": "income",
+        "exitCode": 0
+      },
+      {
+        "name": "expense",
+        "exitCode": 0
+      },
+      {
+        "name": "home-clock-units",
+        "exitCode": 0
+      },
+      {
+        "name": "changed-lint",
+        "exitCode": 0
+      },
+      {
+        "name": "fresh-route-types",
+        "exitCode": 0
+      },
+      {
+        "name": "typecheck",
+        "exitCode": 0
+      }
+    ],
+    "unitCases": {
+      "asklink": 24,
+      "popup": 55,
+      "syscheck": 51,
+      "tenjikai": 32,
+      "shanai": 7,
+      "income": 68,
+      "expense": 93,
+      "home-clock-units": 5
+    },
+    "sevenSuitesPassed": 330,
+    "popupHomeAcceptanceCases": 47,
+    "popupNodeReportedTests": 48,
+    "expenseEntryMountedCases": 54,
+    "expenseOrgDisplayCases": 38,
+    "freshRouteTypes": true,
+    "nonincrementalTypecheckExitCode": 0,
+    "targetLintFiles": 18,
+    "lintExitCode": 0
+  },
+  "privatePostgres": {
+    "accountLifecycle": {
+      "executed": 86,
+      "contractPassed": 86,
+      "scope": "core contracts; does not prove all services are connected"
+    },
+    "expenseMembership": {
+      "executed": 56,
+      "contractPassed": 56,
+      "unresolvedObservations": 0
+    },
+    "askPrivacy": {
+      "passed": 41
+    },
+    "askCreation": {
+      "passed": 32
+    },
+    "accountRetirement": {
+      "executed": 64,
+      "contractPassed": 62,
+      "unresolvedObservations": 2,
+      "unsafeAccepted": false
+    },
+    "allFiveTestExitCode": 0,
+    "allFiveStopExitCode": 0,
+    "allFiveRemovedOwnedDirectory": true
+  },
+  "immutability": {
+    "sourcePathsetUnchanged": true,
+    "sourceHashesUnchanged": true,
+    "snapshotDependencyUnchanged": true,
+    "workDependencyUnchanged": true,
+    "snapshotTargetsUnchanged": true,
+    "externalToolsUnchanged": true
+  },
+  "dependencies": "Physical node_modules root; React/ReactDOM/TypeScript/Prisma packages resolve to fingerprinted shared read-only targets; physical independently copied Prisma client/generated outputs; no install or generate",
+  "environment": "Synthetic only; no dotenv, credentials or git metadata copied; offline steps deny outbound network; PG supervisors own ephemeral Unix-socket clusters only",
+  "priorFailedAttempt": {
+    "proof": "prior-failed-attempt.json",
+    "status": "failed",
+    "passedGates": 22,
+    "failedGate": "expense",
+    "expensePassed": 88,
+    "expenseFailed": 5,
+    "oldSnapshotAndLogsPreserved": true,
+    "repairedSourceFiles": 2,
+    "all27GatesRerunOnNewCandidate": true
+  },
+  "commitMapping": "Commit must use saved candidate source blobs, not current working-tree source. All 5163 executable blob/mode/path entries and 26 target SHA256 must match index and resulting commit. Normal hooks run with the same gitdir/index/branch and immutable candidate as work-tree.",
+  "remote": {
+    "nextBuild": "Not run locally; exact next commit CI/Vercel is a separate pending gate",
+    "candidateCommitted": false,
+    "candidatePushed": false,
+    "prior07ExactCi": "success",
+    "prior07ExactVercel": "READY",
+    "prior07Proof": "../2026-10-21-r0-promane/remote-passed.json"
+  },
+  "remaining": [
+    "Existing Home actor-isolation gap remains: page has no actor key, Dashboard retains initial props, and refresh lacks actor/sequence response binding. Keyed-remount fixtures do not prove production actor safety; next cohort remediation and authenticated QA are required.",
+    "Two global OWNER-A unsafe observations remain unaccepted: membership after external query and payable checkout after contract query.",
+    "Expense R1 covers membership subset only; other services and global operation/writer integration remain incomplete.",
+    "Promane nullable schema/client migration and retirement enabling are not applied.",
+    "Authenticated UI/375px/1280px/browser navigation and production reflection remain unverified. Prior 07 browser attempt stopped at visible Vercel login.",
+    "Next Income5, saved-project read/Home Tenjikai b, Shodan and other current working-tree authoring are excluded."
+  ],
+  "productionReflected": false,
+  "liveWorkingTreeChangesCovered": false,
+  "staged": false
+}

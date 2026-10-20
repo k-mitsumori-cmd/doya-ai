@@ -4,9 +4,9 @@
 
 現在の実装、検証、残作業、判断待ちを分けます。文書に設計があること、テストが通ること、プレビューが立つこと、本番で使えることは別の状態です。各項目の証拠がそろうまで全体完了とはしません。
 
-作業先はこのworktree、ブランチは `codex/claude-handoff-20261020`。push済み `7672cb8f12a0062b73668a0efdb673e87aca1884` は同SHAのGitHub CI（run `39443473241`）成功、Vercel `dpl_6uAQsRKQgq94KzHYuQMhvedMo4Vz` READYを確認しました。fixture修正 `b1103f91` を含みます。旧 `72d471ca` のVercel ERRORと隔離before失敗・after32件の証拠は保持しています。OWNER-A・ORGの同候補は5,141入力の29ローカルゲートが全て終了0で、前後hash・パス集合・主要依存が不変でした。OWNERは62安全契約合格と2未解決の危険観測を分けます。`../2026-10-20-owner-org/{summary,remote-passed}.json`参照。現在編集中の次差分にはこの合格を流用しません。認証後UI・本番反映は未完了です。
+作業先はこのworktree、ブランチは `codex/claude-handoff-20261020`。push済み `07e53d8b39b9de4c7d38e031649d9e2718387e66` はGitHub CI（run `39452537086`）成功、Vercel `dpl_4fQMoD1GkF22gTEa9XqRdsUfnrH6` READYを確認しました。CI実checkoutはsynthetic merge `2753c522` ですが、treeは検証headと同じ `439c188e` です。Git基準treeと21対象blobだけの物理snapshotで28ローカルgateが終了0、5,157実行source・pathset・主要依存は前後不変でした。R0は86件の未接続core契約、Promaneは互換準備です。repo schema/client・本番migration・退会解禁は変更していません。既知2競合は未解消です。`../2026-10-21-r0-promane/{summary,remote-passed}.json`参照。
 
-次のR0・Promane互換候補21入力は、基準7672cb8fと対象blobだけの独立snapshotで28ローカルgateが合格しました。5,157実行入力とpathset・主要依存は前後不変です。fresh route型生成と全体nonincremental tscも終了0。R0は86件の未接続core契約であり、既知2競合の解決ではありません。R1・Home Popupの作業中差分、本番migration、退会解禁、同commitのremote Next合格は含みません。`../2026-10-21-r0-promane/summary.json`参照。
+直前7672のCI/READYと、旧72dのVercel ERROR・独立fixture before/afterの証拠は保持します。OWNER-Aは62安全契約と2未受入観測を分けます。続くR1 Expense・Home Popup・展示会JSTは26入力の固定候補で全27ローカルgateが合格しました。実行source5,163件・path集合・依存指紋は前後不変です。旧25入力のExpense88合格/5失敗を保持し、2ファイルの最小差分後に全27gateを再実行しています。対象26入力以外の新Income/Home展示会連携は含めません。今回候補のcommit/CI/Vercelは次確認です。`../2026-10-21-r1-popup-jst-delta/summary.json`参照。今回のremote合格を作業中差分・認証後UI・本番反映へ流用しません。HomePageのactor key、Dashboardのprops追従、refreshのactor/sequence応答照合は未実装です。key付きremountの回帰を実productのactor隔離証拠とはせず、次Home候補の補修・認証後QA・安全releaseを残します。
 
 正本は `/Users/mitsumori_katsuki/Code/09_Cursol-ui-renewal/docs/architecture/management-agent/README.md` §16・§18と、同じ場所の `ADDON-SERVICES-2026-10-18.md` です。監査の起点はこのworktreeの `docs/system-check/FINDINGS-2026-10-18.md`。過去の監査表を現在の合否としては扱いません。非公開の元ノートの全文や、画面の個人情報は複製していません。
 
@@ -21,8 +21,8 @@
 | SWEEP-2のAIO | `src/lib/aio/quick-start-operation.ts` にワークスペース上限と予約を確認 | 容量の競合を制御する実装は存在 | AI利用回数・原価の制限として十分か別途設計。容量制限だけでSWEEP-2全件を閉じない | 上と同じAI枠の方針 |
 | 経営ホームの収支 | `src/lib/home/finance-read.ts` から既存income/expense readへ接続。明示リンク・所属・役割を読後にも照合。正本と参考値を切り替え、失敗時はunavailable | 実read・GET・両UI・agentの合成回帰28ケース、通常/production Node、型・対象Lint、既存income68/expense93が合格。13入力ハッシュ一致。後続95063ec6の同一SHA CI成功・Vercel READY。今回の統合19ゲート＋実JS同一の型境界修正後5deltaが合格。`../2026-10-20-finance-ask1/summary.json` | 候補版の認証後UI、実DB適合と本番反映 | `home-finance-verification.json`参照。sourceは親へ凍結引継ぎ済み。本番未反映 |
 | 請求漏れ・入金遅延 | 既存readの `leak` / `overdue` actionを新UIの今日やること、旧UIの要対応、agentへ接続 | 合成回帰で両種類の表示と、当月売上への二重加算なしを確認 | 候補版の認証後UIと実データの適合確認 | 未使用・権限なし・エラーを0件へ置き換えない |
-| 展示会のホーム連携 | `tenjikai/tenjikai-read.ts` の `listTasks` / `listCalendarEvents` / `summary` が存在 | 関数の存在を確認。ホームの呼び出しは未接続 | 既存タスクと並べる。会期60日前からの準備状況、期限・予算の読み取りを接続 | 自動作成や発注を混ぜず読み取りで進める |
-| ポップアップ指標 | `popup/popup-read.ts#getPopupSummary` が存在。ホームから未接続 | 読み取り関数の存在を確認 | 7日間の表示・クリック・CTRを所属と権限に合わせて接続。失敗と0件を分ける | asklinkはクリックを測定しないため、その数値を作らない |
+| 展示会のホーム連携 | `tenjikai/tenjikai-read.ts` の日付比較をJST暦日へ修正。Homeの保存案件連携は次候補 | 同read23件（元7＋追加16）・既存全32件、新26入力の全27gate合格 | 既存タスクと並べる。会期60日前からの準備状況、期限・予算の読み取りを接続 | 自動作成や発注を混ぜず読み取りで進める |
+| ポップアップ指標 | 所属に沿う7日間の表示・クリック・加重CTRを両Home/agentへ接続。失敗と未使用・0件を区別 | 合成47受入（Node48）・新26入力の全27gate、全体型・Lint合格 | 同一候補remote、認証後375/1280、実データ適合、本番反映 | AskLink等のクリック数をPopupから推測しない |
 | 追加4サービス | `tenjikai` / `shanai` / `income` / `expense` にルート、read関数、仕様、テストがある。`services.ts`上の開発中・非公開区分と画面実装を区別する | 既存7組のテストに4サービスが含まれる。機能の部分検証でありD-1〜D-12全受入ではない | 下表の受入証拠をサービスごとにそろえる。公開状態を自動でactiveに変えない | 公開範囲と本番反映は別判断 |
 | UI品質 | 品質基準は `UI-QUALITY-CHECKLIST-2026-10-19.md` §0。今回4枚は既存本番の質問リンク・ホーム | 375px/1280pxの画像をSolが点検、Astraが戦略レビュー。20案は `ui-production-baseline-audit-20261020.md`。本番 `/ui-renewal` は404 | 全ツール・候補版・同幅見本比較、CLS<0.1、遷移、動き、改行、画像、キーボード、下端の重なり。現物は完成条件未充足 | 正しい見本を確保する。認証情報のコピーや検証用ログイン新設で代用しない |
 | 本番ホームのhydration | 本番deployment `dpl_A44rob9HWSR2n8hgHHewvcGFDBV3` は候補と別。候補には取得時刻とJSTを使う最小補修を適用 | 本番のフル遷移2回でReact #418を検知。候補実ソースSSR→hydrateは修正前10条件で不一致、修正後は追加を含む16条件で不一致・回復エラー・警告0。単体11件・対象Lint合格、7入力ハッシュ一致。候補 `d48052fa` はCI成功・Vercel READY。test子プロセスだけNODE_ENV=testへ固定。今回の共通回帰でも16条件合格 | 候補の認証後ブラウザQA、本番反映後のログ。根本原因となった本番要素・復旧は未確認 | 警告抑制は追加していない。`home-hydration-verification.json`参照。収支連携とは別の最小修正 |

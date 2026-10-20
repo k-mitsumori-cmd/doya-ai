@@ -46,12 +46,55 @@ export const AGENT_SUGGESTIONS = [
   '今月の残業と勤怠の状況は？',
   '契約中のプランを確認したい',
   '集客を強化したい',
+  'ポップアップの7日の数字は？',
 ]
 
 const notReady = (name: string) => `${name}はまだ使い始めていません`
 
+type MetricQuestion = 'popup' | 'asklink' | 'other' | 'ambiguous' | null
+
+/** 数字の出所を確定してから答える。作成・配信の依頼は従来の画面案内へ。 */
+function metricQuestion(raw: string): MetricQuestion {
+  const q = raw.replace(/\s+/g, '').toLowerCase()
+  if (has(q, ['作りたい', '作って', '作成したい', '配信したい', '設置したい', '出したい'])) return null
+  const popup = has(q, ['ポップアップ', 'popup'])
+  const asklink = has(q, ['asklink', '質問リンク'])
+  const other = has(q, ['バナー', 'banner', 'ランディングページ', '広告', 'seo', '記事']) || /(?:^|[^a-z])lp(?:[^a-z]|$)/.test(q)
+  const metric = has(q, ['クリック', '表示回数', 'ctr']) || ((popup || asklink || other) && has(q, ['数字', '計測', '実績', '何回']))
+  if (!metric && !/^(ポップアップ|popup)[？?]?$/.test(q)) return null
+  if (Number(popup) + Number(asklink) + Number(other) > 1) return 'ambiguous'
+  return popup ? 'popup' : asklink ? 'asklink' : other ? 'other' : 'ambiguous'
+}
+
+export function isPopupStatsQuestion(raw: string): boolean {
+  return metricQuestion(raw) === 'popup'
+}
+
+/** 他サービス・サービス不明の数字質問も、作成画面へ転送せず出所を案内する。 */
+export function isHomeMetricsQuestion(raw: string): boolean {
+  return metricQuestion(raw) !== null
+}
+
 export function planAgent(raw: string, s: HomeSummary): AgentPlan {
   const q = raw.replace(/\s+/g, '')
+  const metric = metricQuestion(q)
+  if (metric === 'asklink') return {
+    intent: 'asklink', title: '質問リンクの計測', steps: [],
+    lead: '質問リンク（AskLink）はクリック数を計測していません。ポップアップの数字で代替していません。',
+    rows: [], actions: [{ label: '質問リンクを開く', href: '/asklink' }],
+  }
+  if (metric === 'popup') return popupPlan(s)
+  if (metric === 'other' || metric === 'ambiguous') return {
+    intent: 'metrics-source', title: '計測するサービスの確認', steps: [],
+    lead: metric === 'other' ? 'このホームでは、指定されたサービスのクリック指標を取得していません。ポップアップの数字では代替できません。'
+      : 'どのサービスの指標か教えてください。ホームで取得しているのはポップアップの数字です。',
+    rows: [], actions: [],
+  }
+  if (has(q.toLowerCase(), ['ポップアップ', 'popup'])) return {
+    intent: 'popup-action', title: 'ポップアップの作成・配信', steps: [],
+    lead: 'ポップアップの作成・配信は、専用画面で内容を確認して進めてください。',
+    rows: [], actions: [{ label: 'ポップアップを開く', href: '/popup' }],
+  }
 
   if (s.finance && has(q, ['売上', '収入', '入金', '請求漏れ', '入金遅延', '粗利', '支出', '出金'])) return financialPlan(s)
 
@@ -179,11 +222,12 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
     return {
       intent: 'marketing',
       title: '集客を強化する',
-      steps: [{ tool: '営業管理', label: '今月の新規リードを確認' }],
+      steps: [{ tool: '営業管理', label: '今月の新規リードを確認' }, { tool: 'ポップアップ', label: '直近7日の計測を確認' }],
       lead: s.sales.state === 'ready'
         ? `今月の新規リードは${s.sales.newLeads}件です。入口を増やすなら、下の順で進めるのがおすすめです。`
         : '入口を増やすなら、下の順で進めるのがおすすめです。',
       rows: [
+        ...popupRows(s),
         { label: '1. 見られ方を知る', value: 'AI検索対策で現状を確認', tone: 'muted' },
         { label: '2. 受け皿を作る', value: 'LP・記事を用意', tone: 'muted' },
         { label: '3. 届ける', value: 'バナー・コピーで広告', tone: 'muted' },
@@ -302,5 +346,34 @@ function emptyTool(name: string, href: string, lead: string): AgentPlan {
     lead,
     rows: [],
     actions: [{ label: `${name}をはじめる`, href }],
+  }
+}
+
+/** UI と同じ HomeSummary の read 結果のみを参照する。AskLink の計測とは分ける。 */
+function popupRows(s: HomeSummary): AgentRow[] {
+  const popup = s.popup
+  if (!popup) return [{ label: 'ポップアップ（7日）', value: '未取得', tone: 'muted' }]
+  if (popup.state === 'error') return [{ label: 'ポップアップ（7日）', value: '取得できませんでした', tone: 'muted' }]
+  if (popup.value.siteCount === 0) return []
+  const { totals } = popup.value
+  return [
+    { label: '表示回数（7日）', value: `${totals.impressions.toLocaleString('ja-JP')}回` },
+    { label: 'クリック数（7日）', value: `${totals.clicks.toLocaleString('ja-JP')}回` },
+    { label: 'クリック率（7日）', value: totals.ctr === null ? '—' : `${totals.ctr.toLocaleString('ja-JP')}%` },
+  ]
+}
+
+function popupPlan(s: HomeSummary): AgentPlan {
+  const popup = s.popup
+  const ready = popup?.state === 'ready' && popup.value.siteCount > 0
+  return {
+    intent: 'popup', title: '集客の数字（7日）',
+    steps: [{ tool: 'ポップアップ', label: '直近7日の表示・クリックを確認' }],
+    lead: ready ? '今日を含む直近7日（JST）のポップアップの計測です。クリック率は全クリック数を全表示回数で割っています。'
+      : !popup ? 'ポップアップの数字は未取得です。ホームを更新してください。'
+        : popup.state === 'error' ? 'ポップアップの数字を取得できませんでした。ホームを更新してください。'
+          : 'ポップアップは未使用です。サイトを登録すると、ここで計測を確認できます。',
+    rows: ready ? popupRows(s) : [],
+    actions: [{ label: 'ポップアップを開く', href: '/popup' }],
   }
 }

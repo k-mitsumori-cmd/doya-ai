@@ -1,0 +1,38 @@
+{
+  "status": "targeted_pass_integration_pending",
+  "deltaInputSetSha256": "6b246598e7427754dbe7954ef6efec70103dd86b9f6f086275b1cee749c50e72",
+  "resultingR1InputSetSha256": "eb52ed434c9226f2440fc70bfe68113f6b9599dbf281283753b8ff49e5b3d097",
+  "before": {
+    "passed": 88,
+    "failed": 5,
+    "evidence": "docs/handoff/2026-10-21-r1-popup-jst/expense.log",
+    "evidenceSha256": "65e415c9e3b4ed15789d4405048bc0c7ecd998ebcc2e0a1678f50be3c597a9b9"
+  },
+  "after": {
+    "expenseSuitePassed": 93,
+    "expenseSuiteFailed": 0,
+    "actualRoutePgPassed": 56,
+    "existingEntryPassed": 54,
+    "targetedLintPassed": 2,
+    "whitespacePassed": true
+  },
+  "testIntegrity": {
+    "testNamesUnchanged": true,
+    "testCount": 9,
+    "assertCallsBefore": 27,
+    "assertCallsAfter": 57,
+    "scopeTestSha256Unchanged": "51188dcc2ecd328d93872639341b4f72dd5a2049391cfc50bbae45b7d5ac8359"
+  },
+  "otherPrior12Unchanged": true,
+  "incomeFiveUnchanged": true,
+  "typecheck": "deferred to billing sole-owner final fixed-candidate nonincremental typecheck; not claimed passed by author",
+  "scope": "POST where organization condition and existing members test contract precision only. No other app/test/runner/CI edits.",
+  "integrationFollowup": {
+    "status": "snapshot_local_27_passed_remote_pending",
+    "summary": "../../2026-10-21-r1-popup-jst-delta/summary.json",
+    "sourceFiles": 5163,
+    "typecheckExitCode": 0,
+    "sameCandidateOnly": true,
+    "productionReflected": false
+  }
+}

@@ -21,6 +21,7 @@ export function classifyTaskKind(title: string): TenjikaiTaskKind {
 }
 
 const DAY_MS = 86_400_000
+const JST_OFFSET_MS = 9 * 3_600_000
 const MAX_ROWS = 200
 
 export interface TenjikaiTaskRow {
@@ -136,8 +137,10 @@ export interface TenjikaiPrepSummary {
 
 /** ホームの「展示会の準備状況」用。会期まで windowDays 日以内（既定 60 日）のプロジェクトだけを返す */
 export async function summary(ctx: TenjikaiReadCtx, now = new Date(), windowDays = 60): Promise<TenjikaiPrepSummary[]> {
-  const today = new Date(now)
-  today.setHours(0, 0, 0, 0)
+  // 呼出元のDateや環境TZが変わっても、1集計のJST基準時刻は動かさない。
+  const reference = new Date(now.getTime())
+  const todayOrdinal = Math.floor((reference.getTime() + JST_OFFSET_MS) / DAY_MS)
+  const today = new Date(todayOrdinal * DAY_MS - JST_OFFSET_MS)
   const projects = await ctx.db.tenjikaiProject.findMany({
     where: { userId: ctx.userId, eventStart: { gte: today, lt: new Date(today.getTime() + (windowDays + 1) * DAY_MS) }, status: { not: 'done' } },
     select: { id: true, name: true, eventName: true, eventStart: true, budgetYen: true },
@@ -148,7 +151,7 @@ export async function summary(ctx: TenjikaiReadCtx, now = new Date(), windowDays
   const ids = projects.map((p) => p.id)
   const [open, overdue, committed] = await Promise.all([
     ctx.db.tenjikaiTask.groupBy({ by: ['projectId'], where: { projectId: { in: ids }, done: false }, _count: { _all: true } }),
-    ctx.db.tenjikaiTask.groupBy({ by: ['projectId'], where: { projectId: { in: ids }, done: false, dueAt: { lt: now } }, _count: { _all: true } }),
+    ctx.db.tenjikaiTask.groupBy({ by: ['projectId'], where: { projectId: { in: ids }, done: false, dueAt: { lt: reference } }, _count: { _all: true } }),
     ctx.db.tenjikaiBudgetLine.groupBy({ by: ['projectId'], where: { projectId: { in: ids }, status: { in: ['ordered', 'paid'] } }, _sum: { amountYen: true } }),
   ])
   const count = (rows: { projectId: string; _count: { _all: number } }[], id: string) => rows.find((r) => r.projectId === id)?._count._all ?? 0
@@ -159,7 +162,7 @@ export async function summary(ctx: TenjikaiReadCtx, now = new Date(), windowDays
       projectName: p.name,
       eventName: p.eventName,
       eventStart: p.eventStart,
-      daysUntil: Math.round((p.eventStart.getTime() - today.getTime()) / DAY_MS),
+      daysUntil: Math.floor((p.eventStart.getTime() + JST_OFFSET_MS) / DAY_MS) - todayOrdinal,
       openTasks: count(open, p.id),
       overdueTasks: count(overdue, p.id),
       budgetYen: p.budgetYen,

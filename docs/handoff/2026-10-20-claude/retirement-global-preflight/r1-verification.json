@@ -1,0 +1,49 @@
+{
+  "status": "targeted_pass_integration_pending",
+  "checkedAt": "2026-10-20T16:13:29.455372+00:00",
+  "inputs": "r1-source-inputs.json",
+  "inputSetSha256": "3ed5f9aee04d4d68f3bf3e6eb9f5b9365d3b95221763cc03bd8980e2ec7bdd83",
+  "tests": {
+    "actualExpensePG": {
+      "safe": 56,
+      "unsafe": 0,
+      "command": "python3 scripts/security-regression/verify-membership-retirement-postgres.py",
+      "timeoutSeconds": 240,
+      "childTimeoutSeconds": 180
+    },
+    "coreR0PG": {
+      "safe": 86,
+      "command": "python3 scripts/security-regression/verify-account-lifecycle-postgres.py"
+    },
+    "existingOwnerPG": {
+      "safe": 62,
+      "unsafeObservations": 2,
+      "allOriginalAssertionsPreserved": true,
+      "command": "python3 scripts/security-regression/verify-account-retirement-postgres.py"
+    },
+    "existingExpenseMounted": {
+      "passed": 54,
+      "failed": 0,
+      "all67AssertCallsPreserved": true,
+      "command": "node scripts/security-regression/verify-expense-entry-mounted.cjs"
+    }
+  },
+  "postgresSafety": "All three supervisors validated private Unix-only role/data-directory and stopped/removed only owned temporary PG; both intentional before failures also cleaned up. No standing/prod DB.",
+  "lint": "9 scoped runtime passed",
+  "syntax": "new CJS/Python and both fixture adapters passed",
+  "coreTypes": "passed nonincremental narrow state/store/organization-fence only; whole project type/build pending integration",
+  "privacy": "synthetic accounts only; no external notification/paid provider/Stripe production/storage/backfill; DTO remains ok:true and audit member.add role only",
+  "limitations": [
+    "Expense membership writer subset only. Other services, billing capabilities, global coordinator and owner/nullable migrations not complete.",
+    "The two previous Expense-specific failures are fixed; two global OWNER-A unsafe observations remain intentionally unresolved.",
+    "No claim that all account withdrawal, all 78 candidates or all data writers are covered."
+  ],
+  "integrationFollowup": {
+    "status": "snapshot_local_27_passed_remote_pending",
+    "summary": "../../2026-10-21-r1-popup-jst-delta/summary.json",
+    "sourceFiles": 5163,
+    "typecheckExitCode": 0,
+    "sameCandidateOnly": true,
+    "productionReflected": false
+  }
+}

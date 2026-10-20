@@ -1,0 +1,357 @@
+{
+  "executed": 56,
+  "contractPassed": 56,
+  "unresolvedObservations": 0,
+  "scope": "R1 Expense actual source routes and helpers with real isolated current-schema PG, synthetic authentication only; no Stripe/notifications/production. Other services and global retirement coordinator are not connected.",
+  "cases": [
+    {
+      "name": "registered recipient invite keeps ACTIVE contract and audit in the same transaction",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "unregistered recipient invite keeps PENDING null and response does not reveal registration",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "pending invitation role edit cancel and explicit reinvite remain normal operations",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "retiring owner_synthetic blocks third-party invitation with zero member or audit writes",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "retiring admin_synthetic blocks third-party invitation with zero member or audit writes",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "unrelated checkout unknown permits ordinary existing organization invitation",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "two-owner concurrent self-demotion cannot leave zero owners",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "last owner removal is refused and existing peer remains unchanged",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "normal multiple-owner role change and removal preserve the remaining owner",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "known owner can repair unknown target role while unknown actor remains forbidden",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "admin retains no peer elevation or owner mutation authority",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "retired detached ACTIVE null cannot receive new role authority",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "audit failure rolls registration role and removal mutations back",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "real pending email claim binds User after locks and does not create duplicate membership",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "pending claim honors current own membership and retires redundant invitation only",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "explicit target organization claim refuses retirement without treating it as empty",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "unrelated pending organization retirement cannot invalidate active X reads or background entry",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "unrelated pending organization malformed cannot invalidate active X reads or background entry",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "background blocked invitation without an active membership is not verified absence",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "session lookup failure stays server error and never performs guest membership writes",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "session email fallback resolves exact current User but a missing session does not grant access",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "deleted session User cannot create company or membership",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "retirement blocks new organization and company wizard without any new data",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "new organization and wizard creation preserve normal idempotency",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "retirement waits for actual in-flight route member commit without external I/O locks",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "recipient retirement and unregistered response both accept real pending invitations privately",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "canceled unbound owner history remains unchanged and permits a different invitation",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "POST matrix new registered preserves response identity binding and audit",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "POST matrix new unregistered preserves response identity binding and audit",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "POST matrix new retiring preserves response identity binding and audit",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "POST matrix inactive-linked registered preserves response identity binding and audit",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "POST matrix inactive-linked unregistered preserves response identity binding and audit",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "POST matrix inactive-linked retiring preserves response identity binding and audit",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "POST matrix inactive-null registered preserves response identity binding and audit",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "POST matrix inactive-null unregistered preserves response identity binding and audit",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "POST matrix inactive-null retiring preserves response identity binding and audit",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "existing ACTIVE duplicate stays common 409 despite recipient normal",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "existing ACTIVE duplicate stays common 409 despite recipient retiring",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "existing ACTIVE duplicate stays common 409 despite recipient malformed",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "existing PENDING duplicate stays common 409 despite recipient normal",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "existing PENDING duplicate stays common 409 despite recipient retiring",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "existing PENDING duplicate stays common 409 despite recipient malformed",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "recipient is also active owner stays strict and cannot be converted to pending",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "malformed recipient operation is never converted to pending or treated as unregistered",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "retirement recipient pending claim remains strict until safe same-operation abort then claims once",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "recipient invite commits ACTIVE before later retirement reservation waiting on its User",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "recipient retirement first persists pending only with no ACTIVE grant",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "pending role edit reclassifies after concurrent claim instead of granting through stale pending discovery",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "pending role edit cannot revive a concurrent cancellation",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "pending role edit re-resolves changed invite email and respects newly retiring recipient",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "pending invitation with invalid email cannot receive future role authority",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "audit failure rolls old inactive binding and all new pending fields back before retry",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "simultaneous invite replays create one record and one audit with one common duplicate",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "nonretirement recipient unknown still permits the normal immediate ACTIVE binding",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "old inactive binding retirement does not carry User identity into a different current email recipient",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    },
+    {
+      "name": "active null owner remains fail closed even though unrelated inactive null owner history is allowed",
+      "classification": "actual_expense_routes_helpers_real_PG",
+      "accepted": true,
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/account-lifecycle/store.ts": "b2f4357a042c9abf0b63e8a22b85abe074211cf6587d8db05fdb5dbbb882730f",
+    "src/lib/account-lifecycle/organization-fence.ts": "9ed18ed0e4af505c105db387b04f97b48113dcdf5cdef3a22e93f9e12739d301",
+    "src/lib/expense/member-write.ts": "43c867440e1fc365f1c2c6779122278c37b977d1d89b65e903b20b395cb41db6",
+    "src/lib/expense/access.ts": "e34a6d64595941f0264e3796021e1c2ee6692aa71e6e541fc53306a9b011ec32",
+    "src/lib/expense/setup.ts": "fa2708e7132350ce273071d90852d57ff6ff1a8b0a38883eae876b945bf854ee",
+    "src/app/api/expense/members/route.ts": "07eeefaef4d588b37a1afdaf742cfc164480727aa30ca573f1dccc4e0b2bb294",
+    "src/app/api/expense/members/[id]/route.ts": "49c0c88dfae0ddab17e252fd957f62c9f42560f3577886f14a14ce492ea04f24",
+    "src/app/api/expense/usage/route.ts": "1b1bf9cbcff83e0a773351539b793f616adeabdbaa125f5868d76206187eadc7",
+    "src/app/api/expense/organization/route.ts": "29bea3115d6d93c5baa2901f6cdf4c4ec388ab42d220351c28a3d5e1e87b4e46",
+    "scripts/security-regression/verify-membership-retirement-postgres.cjs": "011922baeca22daad5a71c08c7561fada45e182aaf8b6728ce3bd280070e63a6",
+    "scripts/security-regression/verify-membership-retirement-postgres.py": "593b9ba3fd7adee52b2809a470bc339a48fa3a499fb2ee60b26c719b975aac1f"
+  }
+}

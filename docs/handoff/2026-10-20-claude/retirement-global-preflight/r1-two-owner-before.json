@@ -1,0 +1,26 @@
+{
+  "status": "expected_failure_on_baseline",
+  "fixture": "scripts/security-regression/verify-membership-retirement-postgres.cjs",
+  "filter": "two-owner concurrent",
+  "baselineCommit": "7672cb8f12a0062b73668a0efdb673e87aca1884",
+  "actualStatuses": [
+    200,
+    200
+  ],
+  "safeExpectedStatuses": [
+    200,
+    409
+  ],
+  "testExitCode": 1,
+  "ownedDatabaseStoppedAndRemoved": true,
+  "schedule": "Both baseline global member.count queries are held until their real PG results exist, before either update. New code performs counts inside the locked provided Tx and does not enter that global-query barrier.",
+  "baselineSourceHashes": {
+    "src/app/api/expense/organization/route.ts": "fd8df0766d5a638fb80b59dc159c0e133c88e06dda3e843a895a0e8af880ee93",
+    "src/app/api/expense/usage/route.ts": "a690548f7f647146be5e86218f375afe25fe5aa42ed520ee2c222b4966ef6830",
+    "src/app/api/expense/members/route.ts": "f2cc4a71fcd5263623455c50f2376c20580036cf75fdb67c62a70756d95e7997",
+    "src/app/api/expense/members/[id]/route.ts": "b11cbdf7cd8f01dadfd0234510277f5e61f49bd454e6ffa71f20da4080829437",
+    "src/lib/expense/setup.ts": "2dd4117f879891f2203730c58d42b24af5ddc491dfb8f85857d1f0eb17af2b39",
+    "src/lib/expense/access.ts": "9985bc44adab8672b57ffcd3bd378844f3d074a43a506fdf8939f03d0e17ca02"
+  },
+  "after": "r1-expense-postgres-results.json"
+}

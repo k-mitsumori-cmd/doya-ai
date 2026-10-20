@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { audit, createOrganization, readJson, resolveUserId, withExpense } from '@/lib/expense/access'
 import { WITHHOLDING_MODES } from '@/lib/expense/constants'
 import { syncWithholding, retryOnConflict } from '@/lib/expense/sync'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 import { oneOf, slackWebhook, str } from '@/lib/expense/validate'
 
 // POST /api/expense/organization — 初回の組織作成
@@ -19,7 +20,8 @@ export async function POST(req: NextRequest) {
     if (!name || !memberName) return NextResponse.json({ error: '組織名と氏名は必須です' }, { status: 400 })
     const org = await createOrganization(userId, name, memberName)
     return NextResponse.json({ organization: { id: org.id, name: org.name, slug: org.slug } })
-  } catch {
+  } catch (error) {
+    if (error instanceof LifecycleError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status })
     console.error('[expense/organization] create failed')
     return NextResponse.json({ error: '組織の作成に失敗しました' }, { status: 500 })
   }

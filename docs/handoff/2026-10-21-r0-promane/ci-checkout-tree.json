@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-20T15:54:56.467966+00:00",
+  "head": {
+    "sha": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+    "tree": "439c188e9020ab9f2e3866ae0af2b2412bd3f3ef",
+    "parents": [
+      "7672cb8f12a0062b73668a0efdb673e87aca1884"
+    ]
+  },
+  "prSyntheticMerge": {
+    "sha": "2753c522397e546e3bfaa9ff22e9d79fde9f36eb",
+    "tree": "439c188e9020ab9f2e3866ae0af2b2412bd3f3ef",
+    "parents": [
+      "2b88ca32d3c187e754eb93daa20819d2171a2c39",
+      "07e53d8b39b9de4c7d38e031649d9e2718387e66"
+    ]
+  },
+  "mergeTreeMatchesTestedHeadTree": true,
+  "actualCIRunnerCheckoutLogVerified": true,
+  "ciRunId": 39452537086,
+  "ciJobId": 118730856779,
+  "status": "Actual CI checkout SHA and full tree confirmed",
+  "actualCheckoutSha": "2753c522397e546e3bfaa9ff22e9d79fde9f36eb",
+  "checkoutTreeMatchesHeadAndSnapshot": true,
+  "ciConclusion": "success"
+}

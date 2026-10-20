@@ -13,6 +13,7 @@
 // ⚠️ 1ツールが落ちてもホーム全体は落とさない（Promise.allSettled で個別に握る）。
 // ⚠️ 契約情報（User.plan / Subscription）は表示のみ。変更は既存の課金画面に任せる。
 import { prisma } from '@/lib/prisma'
+import { getPopupSummary, type PopupSummary } from '@/lib/popup/popup-read'
 import { loadHomeFinance, type HomeFinance } from './finance-read'
 import { tierFrom, planLabel, isPaidTier, type PlanTier } from '@/lib/plan-utils'
 import { laborCostForEntry } from '@/lib/promane/labor-cost'
@@ -53,8 +54,14 @@ export interface HomeEvent {
 export type HomeRevenueSource = 'income' | 'sfa_quote' | 'unavailable'
 export type HomeCostSource = 'expense' | 'promane' | 'unavailable'
 
+export type HomePopup =
+  | { state: 'ready'; value: Pick<PopupSummary, 'days' | 'totals' | 'liveCount' | 'siteCount'> }
+  | { state: 'error'; value: null }
+
 export interface HomeSummary {
   generatedAt: string
+  /** 旧 snapshot は省略可。未使用（siteCount=0）と取得失敗を分ける。 */
+  popup?: HomePopup
   sources: { revenue: HomeRevenueSource; cost: HomeCostSource }
   /** 古いスナップショットとの互換性のため省略可。現在の集計は必ず返す。 */
   finance?: HomeFinance
@@ -402,7 +409,7 @@ export async function getHomeSummary(userId: string, reference: Date = new Date(
   const months = lastMonths(6, monthStart)
   const trendStart = months[0].start
 
-  const [contractR, salesR, quotesR, projectsR, attendanceR, peopleR, financeR] = await Promise.allSettled([
+  const [contractR, salesR, quotesR, projectsR, attendanceR, peopleR, financeR, popupR] = await Promise.allSettled([
     loadContract(userId),
     loadSales(userId, monthStart, trendStart, reference),
     loadQuotes(userId, monthStart, trendStart, reference),
@@ -410,6 +417,7 @@ export async function getHomeSummary(userId: string, reference: Date = new Date(
     loadAttendance(userId, monthStart),
     loadPeople(userId),
     loadHomeFinance(userId, reference),
+    getPopupSummary(prisma, userId, 7, reference),
   ])
 
   const contract = contractR.status === 'fulfilled' ? contractR.value : null
@@ -449,8 +457,14 @@ export async function getHomeSummary(userId: string, reference: Date = new Date(
     month: jstMonthKey(reference), income: { state: 'error', organization: null, value: null }, expense: { state: 'error', organization: null, value: null },
   }
 
+  const popup: HomePopup = popupR.status === 'fulfilled'
+    ? { state: 'ready', value: { days: popupR.value.days, totals: popupR.value.totals, liveCount: popupR.value.liveCount, siteCount: popupR.value.siteCount } }
+    : { state: 'error', value: null }
+  if (popupR.status === 'rejected') console.error('[home/summary] popup load failed', safeErrorInfo(popupR.reason))
+
   return {
     generatedAt: reference.toISOString(),
+    popup,
     sources: { revenue: finance.income.state === 'ready' ? 'income' : finance.income.state === 'unused' ? 'sfa_quote' : 'unavailable', cost: finance.expense.state === 'ready' ? 'expense' : finance.expense.state === 'unused' ? 'promane' : 'unavailable' },
     finance,
     user: contract?.user ?? { name: null, email: null },
