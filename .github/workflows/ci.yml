@@ -315,3 +315,15 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Isolated regression failure diagnostics
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          base = Path('docs/audits/2026-10-06-all-services-recheck')
+          # These CI probes contain only synthetic data and private temporary DBs.
+          for path in sorted(base.glob('*.log'), key=lambda p: p.stat().st_mtime, reverse=True)[:3]:
+              print('Regression log:', path)
+              print('\n'.join(path.read_text(errors='replace').splitlines()[-80:])[-24000:])
+          PY

@@ -6,6 +6,7 @@ const scriptRefs = text => [...text.matchAll(/(?:docs|scripts)\/[\w./-]+\.(?:py|
 const pending = scriptRefs(fs.readFileSync(workflow, 'utf8'))
 const scripts = new Set()
 const references = []
+const path = require('node:path')
 while (pending.length) {
   const file = pending.pop()
   if (scripts.has(file)) continue
@@ -13,6 +14,11 @@ while (pending.length) {
   assert(fs.existsSync(file), 'CI regression script moved or missing: ' + file)
   const source = fs.readFileSync(file, 'utf8')
   pending.push(...scriptRefs(source))
+  // Supervisors also construct probe paths from their directory and a basename.
+  for (const match of source.matchAll(/["']([\w.-]+\.(?:py|cjs|mjs))["']/g)) {
+    const sibling = path.posix.join(path.posix.dirname(file), match[1])
+    if (fs.existsSync(sibling)) pending.push(sibling)
+  }
   for (const match of source.matchAll(/["'](src\/[^"'\n]+\.(?:ts|tsx))["']/g)) {
     const input = match[1]
     assert(fs.existsSync(input) && fs.statSync(input).isFile(), `${file}: source input moved or missing: ${input}`)
