@@ -27,7 +27,7 @@ export default function ExpenseOrgLayout({ children }: { children: React.ReactNo
         }
         // ⚠️ 読み込みの失敗（500・通信エラー）を「権限なし」と出さない（システム点検 EXP-F07）
         if (!r.ok) {
-          if (alive) setState('error')
+          if (alive) setState(r.status === 403 ? 'denied' : 'error')
           return
         }
         const d = await r.json()

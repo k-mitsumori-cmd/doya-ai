@@ -14,7 +14,8 @@ import CreativeStudio from './CreativeStudio'
 import NoveltyPicker from './NoveltyPicker'
 import BudgetPlanner from './BudgetPlanner'
 import VendorBoard from './VendorBoard'
-import DocsVault from './DocsVault'
+import DocsVault, { type TenjikaiDocumentDraft } from './DocsVault'
+import { useEntryActorScope } from '@/lib/use-entry-organization'
 import {
   SAMPLE_INPUT,
   applyBoothCopy,
@@ -35,6 +36,11 @@ type Phase = 'input' | 'generating' | 'ready'
 // ⚠️ src/app/(shell)/tenjikai/layout.tsx に置く。セクション（/tenjikai/<section>）を移っても、ここの状態は残る。
 // shell=true のときは共通シェル（AppShell＋ToolFrame）の中身だけを描き、独自のサイドバーと外枠を出さない。
 export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
+  const scope = useEntryActorScope()
+  return <TenjikaiAppContent key={scope.version} shell={shell} currentActor={scope.current} />
+}
+
+function TenjikaiAppContent({ shell, currentActor }: { shell: boolean; currentActor: () => boolean }) {
   const router = useRouter()
   const section = sectionFromPath(usePathname())
   const [phase, setPhase] = useState<Phase>('input')
@@ -45,12 +51,15 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
   const [collapsed, setCollapsed] = useState(false)
   // 3D図面の面ごとの画像と完成予想図。セクションを移っても消えないよう、ここで持つ
   const [panelImages, setPanelImages] = useState<Record<string, string>>({})
+  const [docs, setDocs] = useState<TenjikaiDocumentDraft[]>([])
+  const [done, setDone] = useState<string[]>([])
 
   // 文面（解析・ブース案・制作物）は API で作り、寸法・金額はルール計算に重ねる
   const [generated, setGenerated] = useState<GeneratedPlan>(() => mockGeneratedPlan(SAMPLE_INPUT))
   const [pending, setPending] = useState(false)
   const [animDone, setAnimDone] = useState(false)
   const requestSeq = useRef(0)
+  useEffect(() => () => { requestSeq.current++ }, [])
 
   const analysis = generated.analysis
   const plans = useMemo(() => applyBoothCopy(generateBoothPlans(input), generated.boothCopy), [input, generated.boothCopy])
@@ -64,6 +73,10 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
   )
 
   const start = (next: ProjectInput) => {
+    if (!currentActor()) return
+    setDocs([])
+    setDone([])
+    setPanelImages({})
     setInput(next)
     setSelectedNovelty(generateNovelties(next).filter((n) => n.recommended).map((n) => n.id))
     setVariant(next.goal === 'demo' ? 'A' : next.goal === 'brand' ? 'B' : 'C')
@@ -73,7 +86,7 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
     setPhase('generating')
     const seq = ++requestSeq.current
     requestGeneratedPlan(next).then((g) => {
-      if (seq !== requestSeq.current) return
+      if (!currentActor() || seq !== requestSeq.current) return
       setGenerated(g)
       setPending(false)
     })
@@ -83,12 +96,12 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
 
   // 演出と API の両方が終わってから結果画面へ
   useEffect(() => {
-    if (phase === 'generating' && animDone && !pending) {
+    if (currentActor() && phase === 'generating' && animDone && !pending) {
       setPhase('ready')
       // 条件を入れたら、次は 3D で確かめる（利用者の流れ。2026-10-19 ユーザー指示）
       router.push(sectionHref('booth'))
     }
-  }, [phase, animDone, pending, router])
+  }, [phase, animDone, pending, router, currentActor])
 
   const go = (s: Section) => {
     if (s === 'new') setPhase('input')
@@ -120,7 +133,7 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
       case 'vendors':
         return <VendorBoard input={input} plan={plan} creatives={creatives} analysis={analysis} budget={budget} />
       case 'docs':
-        return <DocsVault deadlines={deadlines} input={input} />
+        return <DocsVault deadlines={deadlines} input={input} docs={docs} setDocs={setDocs} done={done} setDone={setDone} />
     }
   })()
 

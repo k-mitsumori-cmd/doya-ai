@@ -1,0 +1,13 @@
+# AskLink退会・支出入口・展示会資料の統合確認
+
+AskLink退会では自分のrun/bannerと受付を同じTxで消し、Storageを耐久outboxから後処理します。遅延uploadのtoken、lease、世代、CASを照合し、不明uploadは空一覧や経過時間だけで完了にしません。active Userの確定not-written/settled ticketだけ24時間後に整理します。旧タブの操作IDなし要求は428として扱います。
+
+支出は未所属・認証・権限・取得失敗を分け、最新所属が失効しても過去所属へ戻しません。支払予定は取得できた期間を残し、失敗を空へ変換しません。展示会は同じ計画のタブ往復で資料名・完了状態を保持し、別計画・利用者切替で消します。ファイル本体やlocalStorageには保存しません。
+
+HEAD95063ec6に対する今回30入力を含め、5,133入力を固定しました。同じ入力で25ゲートが全て終了0です。privacy実PG41件、creation実PG32件、共通回帰内の支出54件・DocsVault11件、7サービス314件、日時5件、変更TSのLint、非incremental全体型チェック、CI構文・ソース参照を確認しました。前後のhashとパス集合、主要実行依存も不変です。summary.jsonに30入力のhashと範囲を記録しています。
+
+node_modulesルートはphysicalですがReact等は共有packageへのsymlinkです。version/実行entry/realpath/hashを前後で確認しました。Prisma client/generatedは独立、今回generateなしです。最小の合成環境を使い、offline検証の外向き通信はOSで拒否しました。2つのPG検証は専用Unix socketだけに待受を限定し、停止と所有一時ディレクトリ削除を確認しました。
+
+基準95063ec6は同一SHAのCI成功・Vercel READYです。今回差分のリモートCI・Nextビルドはcommit後に同じSHAで確認します。認証後UI、実Storageの整合性・障害運用・旧writerのdrain、cron本番稼働は未確認です。OWNER引継ぎ・CaseStudy匿名化・guest transferは別batchです。本番反映・実DB/Storage変更・有料provider実行はしていません。
+
+完全なmanifest・依存snapshot・ログはローカルに保持し、commit対象は小さな要約だけです。担当Sol、方針Astra。Lunaは使用していません。

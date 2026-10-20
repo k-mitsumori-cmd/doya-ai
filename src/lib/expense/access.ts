@@ -9,6 +9,7 @@ import type { Prisma } from '@prisma/client'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { EXPENSE_ROLES, ROLE_RANK, type ExpenseRole } from './constants'
+import { readExpenseEntryMembership } from './entry-read'
 
 export type ExpenseContext = {
   userId: string
@@ -41,13 +42,9 @@ export function orgSlugFrom(req: NextRequest): string | undefined {
 export async function getExpenseContext(orgSlug?: string): Promise<ExpenseContext | null> {
   const userId = await resolveUserId()
   if (!userId) return null
-  const membership = await prisma.expenseMember.findFirst({
-    where: { userId, status: 'ACTIVE', role: { in: [...EXPENSE_ROLES] }, ...(orgSlug ? { organization: { slug: orgSlug } } : {}) },
-    include: { organization: { select: { slug: true } } },
-    orderBy: { createdAt: 'desc' },
-  })
-  if (!membership || !isRole(membership.role)) return null
-  return { userId, organizationId: membership.organizationId, organizationSlug: membership.organization.slug, role: membership.role, memberId: membership.id }
+  const selected = await readExpenseEntryMembership(userId, orgSlug)
+  if (selected.state !== 'found') return null
+  return { userId, organizationId: selected.organizationId, organizationSlug: selected.slug, role: selected.role, memberId: selected.memberId }
 }
 
 /**

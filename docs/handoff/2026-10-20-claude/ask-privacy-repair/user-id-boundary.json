@@ -1,0 +1,11 @@
+{
+  "knownRuntimeCreation": "HubSpot user.create omits id; installed NextAuth callback strips profile.id before PrismaAdapter.createUser; schema User.id default(cuid()). No explicit reusable User id creation was found in src runtime search.",
+  "scopeLimit": "Not a guarantee against manual DB operations, test scripts, future code or arbitrary external writers. Recheck cannot roll back an external remove already begun. Reused IDs require creation-side fencing before use.",
+  "sources": {
+    "prisma/schema.prisma": "f4a8411f093f9d8bee2da793f2761685edf9f7a359bd2d7ea9a4c1163db1127b",
+    "src/app/api/cron/hubspot-sync/route.ts": "fdf061181e23babec28d3568cf820c09a5cbed90cbd423669d378d66e20a39a7",
+    "src/lib/auth.ts": "97e43f9e3d6c2051b72e7f371394650712d5c8a39c5b5078029bd153c250cfc3",
+    "node_modules/next-auth/core/lib/callback-handler.js": "09bba1708891e8f5dc118f942e92f12ed0f4cf59d04b649c73dc3d79246d5f48",
+    "node_modules/@next-auth/prisma-adapter/dist/index.js": "3fdd3864f08d96fea563732d2ee25db39a779d74b3092fdf848a9709314ee34a"
+  }
+}

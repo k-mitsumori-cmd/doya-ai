@@ -2,7 +2,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { claimPendingMemberships, getExpenseContext, listMemberships, resolveUserId } from '@/lib/expense/access'
+import { claimPendingMemberships, listMemberships, resolveUserId } from '@/lib/expense/access'
+import { readExpenseEntryMembership } from '@/lib/expense/entry-read'
 
 // GET /api/expense/usage — 入口の判定用（所属組織と権限）。?org= があればその組織での権限も返す
 export async function GET(req: Request) {
@@ -13,11 +14,12 @@ export async function GET(req: Request) {
     await claimPendingMemberships(userId)
     const memberships = await listMemberships()
     const slug = new URL(req.url).searchParams.get('org')?.trim() || undefined
-    const ctx = await getExpenseContext(slug)
+    const target = await readExpenseEntryMembership(userId, slug)
+    if (target.state === 'forbidden') return NextResponse.json({ error: 'この組織にアクセスできません' }, { status: 403 })
     return NextResponse.json({
       onboarded: memberships.length > 0,
-      organization: ctx ? { slug: ctx.organizationSlug } : null,
-      role: ctx?.role ?? null,
+      organization: target.state === 'found' ? { slug: target.slug } : null,
+      role: target.state === 'found' ? target.role : null,
       memberships,
     })
   } catch {

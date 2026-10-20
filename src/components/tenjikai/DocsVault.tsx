@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, FileSpreadsheet, FileText, FileUp, Image as ImageIcon } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -11,7 +11,7 @@ import EmptyState from './EmptyState'
 
 type DocKind = '出展規約' | 'マニュアル' | '申請書' | '見積・請求' | 'デザイン' | 'その他'
 
-interface Doc {
+export interface TenjikaiDocumentDraft {
   id: string
   name: string
   kind: DocKind
@@ -31,16 +31,21 @@ function guessKind(name: string): DocKind {
 
 const ICON: Record<DocKind, React.ElementType> = { 出展規約: FileText, マニュアル: FileText, 申請書: FileSpreadsheet, '見積・請求': FileSpreadsheet, デザイン: ImageIcon, その他: FileText }
 
-const SAMPLE_DOCS: Doc[] = [
+const SAMPLE_DOCS: TenjikaiDocumentDraft[] = [
   { id: 'd1', name: '出展規約_2027.pdf', kind: '出展規約', size: '2.4 MB', note: '高さ制限 2.7m・通路側の壁は開口50%以上', sample: true },
   { id: 'd2', name: '搬入出マニュアル.pdf', kind: 'マニュアル', size: '5.1 MB', note: '搬入は会期前日 13:00〜20:00 / 車両登録が必要', sample: true },
   { id: 'd3', name: '電気工事申込書.xlsx', kind: '申請書', size: '86 KB', note: '提出期限を締切表に追加しました', sample: true },
 ]
 
-export default function DocsVault({ deadlines, input }: { deadlines: Deadline[]; input: ProjectInput }) {
-  const [docs, setDocs] = useState<Doc[]>([])
+export default function DocsVault({ deadlines, input, docs, setDocs, done, setDone }: {
+  deadlines: Deadline[]
+  input: ProjectInput
+  docs: TenjikaiDocumentDraft[]
+  setDocs: Dispatch<SetStateAction<TenjikaiDocumentDraft[]>>
+  done: string[]
+  setDone: Dispatch<SetStateAction<string[]>>
+}) {
   const [drag, setDrag] = useState(false)
-  const [done, setDone] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
 
   const add = (files: FileList | null) => {
@@ -60,6 +65,7 @@ export default function DocsVault({ deadlines, input }: { deadlines: Deadline[];
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
       <PageHeader title="資料庫・締切" desc={`主催者から届く規約やマニュアル、各種申請書、見積書をここにまとめます。締切は会期初日（${input.eventStart}）から逆算しています。`} />
+      <p role="note" className="rounded-[var(--r-sm)] border border-[var(--line)] bg-[var(--paper)] p-4 text-sm leading-relaxed text-[var(--sub)]">画面内で資料名と締切を一時的に整理できます。ファイル本体は保存されません。再読み込みや別の計画の作成、利用者の切り替えで内容は消えます。</p>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
         <div className="flex flex-col gap-3">

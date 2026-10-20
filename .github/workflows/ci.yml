@@ -36,6 +36,9 @@ jobs:
       - name: AskLink creation and expiry regression (private Unix socket)
         run: python3 scripts/security-regression/verify-asklink-creation-postgres.py
 
+      - name: AskLink account storage purge regression (private Unix socket, synthetic storage)
+        run: python3 scripts/security-regression/verify-asklink-privacy-postgres.py
+
       - name: New service existing paid user backfill (private Unix socket, no external providers)
         run: python3 docs/audits/2026-10-06-all-services-recheck/new-service-backfill-private-postgres-supervise.py
 

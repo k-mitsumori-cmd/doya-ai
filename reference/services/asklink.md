@@ -278,3 +278,9 @@ GCは専用CRON_SECRET付きAPIと毎時の設定コードを追加しました�
 管理者DELETEとPrismaAdapterのdeleteUserは、User lockと自prefix受付削除を同じ削除トランザクションへ接続しました。既存AskLinkRun/Banner/Storageの退会後残置は独立したprivacy P1です。今回の受付対策だけで退会時の全データ削除を完了したとは扱いません。共通DTO、履歴GET、バナー再生成の契約は維持しています。
 
 初回バナーqueueは作成画面の表示runを受け取り、run別tokenで管理します。別runの生成を並行開始しても旧応答を新しい結果へ反映しません。同じrunの重複は抑え、旧runの残り画像は同じ利用者のTool内で順番に要求します。unmount後の表示と後続POSTは止めますが、実行中providerの停止は保証しません。履歴画面の1引数queue呼出しは従来のsingle busyを維持します。
+
+## 退会時のASK画像整理（2026-10-20・本番未反映）
+
+管理者DELETEとPrismaAdapterの削除は、User lock・専用outbox・own run/Banner cascade・receipt・Userを同Txで扱います。banner writerはupload前ticketとUser/own run再確認、token/generation CASで遅延保存を抑えます。専用Storage workerは厳密なASK namespaceと既知exact keyを整理し、unknown/needs_reviewは空一覧でも完了にしません。scan前後のticket signatureが変わった場合は再走査します。正常settledと確定not-writtenだけを24時間後に整理し、不明ticketやoutbox actorを残します。
+
+専用cronは設定コードまでです。本番稼働・過去退会の一括backfill・ticketのない旧writerのdrainは別gateです。owner引継、事例PII匿名化、guest移管や退会全体の対応完了とは扱いません。41件の実PG/Storage mock証跡はdocs/handoff/2026-10-20-claude/ask-privacy-repair/に保存しています。

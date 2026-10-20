@@ -5,14 +5,11 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { recordServiceUsage } from '@/lib/service-usage'
-import { uploadPng } from '@/lib/adimage/storage'
+import { AskLinkBannerWriteError, claimAskLinkBanner, uploadAskLinkBanner, settleAskLinkBanner } from '@/lib/asklink/banner-write'
 import { getAskLinkUserId, isRunId, ownRun } from '@/lib/asklink/access'
 import { generateBanner } from '@/lib/asklink/banner'
-import { BANNER_MAX_GENERATIONS, RUN_SELECT, toRunDto } from '@/lib/asklink/dto'
+import { RUN_SELECT, toRunDto } from '@/lib/asklink/dto'
 import { findBannerSpec, type BannerCopy, type SiteProfile } from '@/lib/asklink/types'
-
-/** 生成中のまま止まった行（関数のタイムアウト等）を、やり直し可能とみなすまでの時間 */
-const STALE_MS = 6 * 60 * 1000
 
 type Ctx = { params: Promise<{ id: string; kind: string }> }
 
@@ -28,47 +25,26 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   const spec = findBannerSpec(p.kind)
   if (!isRunId(p.id) || !spec) return NextResponse.json({ error: '見つかりません。' }, { status: 404 })
 
-  const run = await prisma.askLinkRun.findFirst({ where: ownRun(userId, p.id), select: { id: true, site: true, bannerCopy: true } })
-  if (!run || !run.bannerCopy) return NextResponse.json({ error: '見つかりません。' }, { status: 404 })
-
-  await prisma.askLinkBanner.upsert({
-    where: { runId_kind: { runId: run.id, kind: spec.kind } },
-    create: { runId: run.id, kind: spec.kind },
-    update: {},
-  })
-  const claimed = await prisma.askLinkBanner.updateMany({
-    where: {
-      runId: run.id,
-      kind: spec.kind,
-      generations: { lt: BANNER_MAX_GENERATIONS },
-      OR: [{ status: { not: 'generating' } }, { updatedAt: { lt: new Date(Date.now() - STALE_MS) } }],
-    },
-    data: { generations: { increment: 1 }, status: 'generating' },
-  })
-  if (claimed.count === 0) {
-    const b = await prisma.askLinkBanner.findUnique({ where: { runId_kind: { runId: run.id, kind: spec.kind } }, select: { status: true } })
-    return NextResponse.json(
-      { error: b?.status === 'generating' ? 'このバナーは生成中です。しばらくお待ちください。' : 'このバナーを作り直せる回数の上限に達しました。' },
-      { status: b?.status === 'generating' ? 409 : 429 }
-    )
+  let accepted: Awaited<ReturnType<typeof claimAskLinkBanner>>
+  try { accepted = await claimAskLinkBanner({ actor: userId, runId: p.id, kind: spec.kind }) }
+  catch (error) {
+    if (error instanceof AskLinkBannerWriteError) return NextResponse.json({ error: error.message }, { status: error.status })
+    console.error('[asklink] banner claim unavailable')
+    return NextResponse.json({ error: 'バナーの作成状態を確認できませんでした。' }, { status: 503 })
   }
+  const { run, claim } = accepted
 
   const site = run.site as unknown as SiteProfile
   const copy = run.bannerCopy as unknown as BannerCopy
   try {
     const color = site.colors?.[0] || '#0066ff'
     const result = await generateBanner(spec, copy, site.name, color)
-    const path = await uploadPng(`asklink/${userId}/${run.id}/${spec.kind}_${Date.now()}.png`, result.png)
-    await prisma.askLinkBanner.update({
-      where: { runId_kind: { runId: run.id, kind: spec.kind } },
-      data: { status: 'done', imagePath: path, verify: result.verify as any, model: result.model },
-    })
-    void recordServiceUsage({ userId, serviceId: 'asklink', action: 'バナーを生成', summary: `${site.name} / ${spec.label}`, count: 1 })
-  } catch (e) {
-    console.error('[asklink] banner failed', (e as Error)?.name)
-    await prisma.askLinkBanner
-      .update({ where: { runId_kind: { runId: run.id, kind: spec.kind } }, data: { status: 'failed' } })
-      .catch(() => {})
+    const path = await uploadAskLinkBanner(claim, result.png)
+    const saved = await settleAskLinkBanner(claim, { path, verify: result.verify, model: result.model })
+    if (saved) void recordServiceUsage({ userId, serviceId: 'asklink', action: 'バナーを生成', summary: `${site.name} / ${spec.label}`, count: 1 })
+  } catch {
+    console.error('[asklink] banner result unavailable')
+    await settleAskLinkBanner(claim, null).catch(() => {})
   }
 
   const saved = await prisma.askLinkRun.findFirst({ where: ownRun(userId, run.id), select: RUN_SELECT })

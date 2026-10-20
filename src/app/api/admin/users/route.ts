@@ -4,7 +4,7 @@ import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { findActiveLikeSubscriptions, isDoyaSubscriptionOwnedByUser, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
 import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
-import { purgeAskLinkCreationReceipts } from '@/lib/asklink/creation-receipts'
+import { deleteAskLinkAccount } from '@/lib/asklink/account-cleanup'
 import { summarizeBannerMonthlyQuota } from '@/lib/admin/banner-quota'
 import { getSeoMonthlyLimitByUserPlan, shouldResetDailyUsage, shouldResetMonthlyUsage } from '@/lib/pricing'
 import { getSeoArticleMonthlyUsageForUsers } from '@/lib/seo-article-admission'
@@ -300,14 +300,13 @@ export async function DELETE(req: NextRequest) {
     for (const subscriptionId of cancelIds) await stripe.subscriptions.cancel(subscriptionId)
 
     // 部分削除を防ぐ。外部のStripe操作はトランザクションの外に置く。
-    await prisma.$transaction(async (tx) => {
-      await purgeAskLinkCreationReceipts(tx, userId)
+    await prisma.$transaction((tx) => deleteAskLinkAccount(tx, userId, async () => {
       await tx.userServiceSubscription.deleteMany({ where: { userId } })
       await tx.generation.deleteMany({ where: { userId } })
       await tx.session.deleteMany({ where: { userId } })
       await tx.account.deleteMany({ where: { userId } })
       await tx.user.delete({ where: { id: userId } })
-    })
+    }))
 
     return NextResponse.json({ 
       success: true, 

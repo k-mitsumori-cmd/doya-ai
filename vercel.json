@@ -21,6 +21,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/asklink-storage-purge",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/asklink-creation-purge",
       "schedule": "35 * * * *"
     },

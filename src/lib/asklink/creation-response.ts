@@ -21,6 +21,7 @@ export async function askLinkCreationResponse(actor: string, operation: AskLinkC
   return privateApiJson(packet, { status: operation.state === 'pending' || operation.state === 'unknown' ? 202 : 200 })
 }
 export function askLinkCreationErrorResponse(error: unknown) {
+  if (error instanceof AskLinkCreationError && error.status === 428 && error.code === 'ACTOR_REQUIRED') return privateApiJson({ error: '画面が更新されました。入力内容を控えてから再読み込みし、作成してください。この操作では生成していません。', code: error.code }, { status: 428 })
   if (error instanceof AskLinkCreationError) return privateApiJson({ error: error.status === 401 || error.status === 403 ? 'ログイン状態を確認してください。' : error.message, code: error.code }, { status: error.status })
   console.error('[asklink-create] operation could not be confirmed')
   return privateApiJson({ error: '作成結果を確認できませんでした。新しく作成せず、保存結果を確認してください。', code: 'STATUS_UNAVAILABLE' }, { status: 503 })

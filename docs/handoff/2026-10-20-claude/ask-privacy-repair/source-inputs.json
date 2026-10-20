@@ -1,0 +1,27 @@
+{
+  "recordedAt": "2026-10-20T11:49:04.953332+00:00",
+  "baseHead": "95063ec663378aa3e54770b41596ff246c6d7437",
+  "currentHead": "95063ec663378aa3e54770b41596ff246c6d7437",
+  "runtimePrivacyFiles": 8,
+  "runtimeCompatFiles": 1,
+  "testFiles": 6,
+  "files": {
+    "scripts/security-regression/verify-admin-billing-integrity.cjs": "12178c705d84f95625a1818cc58c197765cfdff006a7765bd095c1ff03209f02",
+    "scripts/security-regression/verify-admin-user-quotas.cjs": "0fc4a2a8300ceb462e2f8ba05fb59d030d04f27935fa6e4e4da4b658aa37c85a",
+    "scripts/security-regression/verify-asklink-creation-operation.cjs": "78470376e930076de2a1046a7531f2fffe4a0dad04483b82ae9a4f6fef70448b",
+    "scripts/security-regression/verify-asklink-privacy-postgres.cjs": "bb5800e81d3cbba7790230a9e015dd84952ea8f131f2264eef0f175e4cd17b54",
+    "scripts/security-regression/verify-asklink-privacy-postgres.py": "603e7206b14addc6e50fc9568d4189b95c93b4ca4037a1469f9dff2957d1ab25",
+    "scripts/security-regression/verify-auth-registration.cjs": "68cd4ff958234e2e45126d1c8621d1da07f3fd2a36847fe51245370067fe8fd4",
+    "src/app/api/admin/users/route.ts": "5623d5b8198589ca3187aa7dc3b4fa61b98b35dce65c94b3c4a8207e00d7d7be",
+    "src/app/api/asklink/runs/[id]/banners/[kind]/route.ts": "ecfab1441f77778c79d5bccd24cec90db735ecfcd796acec1b6f9c9270906836",
+    "src/app/api/cron/asklink-storage-purge/route.ts": "9d52efae889aacadc146006e302fdf2f8d946d6397d258cf710dd42143a98442",
+    "src/lib/asklink/account-cleanup.ts": "9fcf900bbabea8917ca1df20130df90a6ff03e4985cb460fdd31b87ac442460c",
+    "src/lib/asklink/banner-write.ts": "ad74eab69629aef7a88c68c7a9497eb411be5571762203ce4673f0090f2c1f1b",
+    "src/lib/asklink/creation-adapter.ts": "571c556539bba98d5567f3a5d522dddb0dc10c68cca341b156323fc401cf4a9d",
+    "src/lib/asklink/creation-response.ts": "a429bf6077f6aeb7e384773084c95f59cd860ce78bf0b4c785b32cc794f73178",
+    "src/lib/asklink/storage-purge.ts": "0b900da524a41add46a7504d4fe0bb1080fa494cd4ae5bb2d911cdda40230ae8",
+    "vercel.json": "c321313a9575a3fab256febf5a1264577541dad23213a97a97be6dd06e43164f"
+  },
+  "inputHash": "3845f3def09920741eda33dec04fa2ed1ba752a378f0d2750e0b73cd35a23513",
+  "inputHashMethod": "SHA256 of UTF8 JSON files map, sorted keys, compact separators comma/colon. Own explicit15 inputs only; integration runner/CI and other agent files excluded."
+}

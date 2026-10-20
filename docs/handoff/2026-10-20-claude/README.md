@@ -53,3 +53,7 @@ Luna利用：未使用。通常のCodexで調査・統合・修正・検証し�
 ## 収支・ASK1候補の統合確認
 
 d48052faの同一SHA CI成功・Vercel READYを確認済みです。続く収支・ASK1候補は、固定5,122入力で19ゲート合格・型1件失敗後、実JavaScriptが同一の型境界修正と5delta検証が合格しました。今回候補のNextビルドはcommit後の同一SHA Vercelで確認します。詳細は `../2026-10-20-finance-ask1/{README.md,summary.json}`。認証後UI・実provider・本番反映は未完了です。
+
+## AskLink退会・支出入口・DocsVaultの統合確認
+
+基準95063ec6は同一SHAのCI成功・Vercel READYです。今回候補は5,133入力/主要依存を固定し25ゲートが全て合格しました。privacy実PG41・creation32・支出54・DocsVault11・7サービス314件、global非incremental型、Lint、CI参照を含みます。今回候補のリモートNextビルドはcommit後に同一SHAで確認します。詳細は `../2026-10-20-privacy-expense-docs/{README.md,summary.json}`。OWNER/CaseStudy/guestは別batch、本番と認証後全画面QAは未実施です。

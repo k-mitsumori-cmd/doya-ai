@@ -1,0 +1,190 @@
+{
+  "recordedAt": "2026-10-20T11:57:19.883704+00:00",
+  "sourceHead": "95063ec663378aa3e54770b41596ff246c6d7437",
+  "status": "local_passed_remote_next_pending",
+  "localGateExecutions": 25,
+  "allExitCodesZero": true,
+  "sourceFiles": 5133,
+  "changedInputs": 30,
+  "sourceAndPathSetUnchanged": true,
+  "majorDependencyFingerprintsUnchanged": true,
+  "manifestSha256": "f3be3a2f06e5be61e91e0918b94a62eaab7187046a8b33b84cfa70881ad14197",
+  "gates": [
+    {
+      "name": "syntax-run",
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-verify-admin-billing-integrity",
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-verify-admin-user-quotas",
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-verify-asklink-creation-operation",
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-verify-asklink-privacy-postgres",
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-verify-asklink-privacy-postgres",
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-verify-auth-registration",
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-verify-expense-entry-mounted",
+      "exitCode": 0
+    },
+    {
+      "name": "syntax-verify-tenjikai-draft-mounted",
+      "exitCode": 0
+    },
+    {
+      "name": "ci-yaml",
+      "exitCode": 0
+    },
+    {
+      "name": "adimage-ci-paths",
+      "exitCode": 0
+    },
+    {
+      "name": "ci-source-paths",
+      "exitCode": 0
+    },
+    {
+      "name": "ask-privacy-postgres",
+      "exitCode": 0
+    },
+    {
+      "name": "ask-creation-postgres",
+      "exitCode": 0
+    },
+    {
+      "name": "common-security",
+      "exitCode": 0
+    },
+    {
+      "name": "asklink",
+      "exitCode": 0
+    },
+    {
+      "name": "popup",
+      "exitCode": 0
+    },
+    {
+      "name": "syscheck",
+      "exitCode": 0
+    },
+    {
+      "name": "tenjikai",
+      "exitCode": 0
+    },
+    {
+      "name": "shanai",
+      "exitCode": 0
+    },
+    {
+      "name": "income",
+      "exitCode": 0
+    },
+    {
+      "name": "expense",
+      "exitCode": 0
+    },
+    {
+      "name": "home-clock-units",
+      "exitCode": 0
+    },
+    {
+      "name": "changed-lint",
+      "exitCode": 0
+    },
+    {
+      "name": "typecheck",
+      "exitCode": 0
+    }
+  ],
+  "regressions": {
+    "askPrivacyActualPostgres": 41,
+    "askCreationActualPostgres": 32,
+    "expenseMounted": 54,
+    "tenjikaiDraftMounted": 11,
+    "askClientActualQueue": 32,
+    "homeFinance": 28,
+    "homeHydration": 16,
+    "organizationEntry": 42,
+    "serviceSuites": {
+      "asklink": 24,
+      "popup": 55,
+      "syscheck": 51,
+      "tenjikai": 16,
+      "shanai": 7,
+      "income": 68,
+      "expense": 93
+    },
+    "serviceTestsTotal": 314,
+    "homeClockUnits": 5,
+    "changedTsLintInputs": 19,
+    "ciSourceScripts": 164,
+    "ciSourceReferences": 692
+  },
+  "postgres": "Both owned private Unix-socket servers stopped exit0 and owned temporary directories removed true; synthetic auth/provider/Storage only. Actual Prisma/PostgreSQL transaction behavior is exercised.",
+  "environment": "node_modules root physical; React/ReactDOM/TypeScript/Prisma tool packages shared via read-only use; Prisma client/generated directory independent; minimal synthetic env; no real dotenv. Major dependency realpaths/versions/runtime hashes checked before/after.",
+  "network": "OS denies outbound for offline checks; private-PG supervisor separately creates TCP-disabled owned Unix socket and checks role/data_directory.",
+  "targetInputSha256": {
+    ".github/workflows/ci.yml": "e51006048e28d578d6cf107b15ab4c70bec9636bba2c9ddea18ee61224293397",
+    "scripts/security-regression/run.cjs": "f681c2e2705a1982f0ea2634b5e40700351d2e015e8b9da2185f83a386faac6c",
+    "scripts/security-regression/verify-admin-billing-integrity.cjs": "12178c705d84f95625a1818cc58c197765cfdff006a7765bd095c1ff03209f02",
+    "scripts/security-regression/verify-admin-user-quotas.cjs": "0fc4a2a8300ceb462e2f8ba05fb59d030d04f27935fa6e4e4da4b658aa37c85a",
+    "scripts/security-regression/verify-asklink-creation-operation.cjs": "78470376e930076de2a1046a7531f2fffe4a0dad04483b82ae9a4f6fef70448b",
+    "scripts/security-regression/verify-asklink-privacy-postgres.cjs": "bb5800e81d3cbba7790230a9e015dd84952ea8f131f2264eef0f175e4cd17b54",
+    "scripts/security-regression/verify-asklink-privacy-postgres.py": "603e7206b14addc6e50fc9568d4189b95c93b4ca4037a1469f9dff2957d1ab25",
+    "scripts/security-regression/verify-auth-registration.cjs": "68cd4ff958234e2e45126d1c8621d1da07f3fd2a36847fe51245370067fe8fd4",
+    "scripts/security-regression/verify-expense-entry-mounted.cjs": "f1945d208d3b85aaa13c3713e13d74267df8a44951df018bb46a815fe0e59592",
+    "scripts/security-regression/verify-tenjikai-draft-mounted.cjs": "4c6f01893aeb575ff77100502cd499549ea5642212acdfc09ff225b8023977a1",
+    "src/app/(shell)/expense/Entry.tsx": "11c10c0505cbad4321b21b8cbbe30305e9b2f14206d893cd15bb79716967a948",
+    "src/app/(shell)/expense/[orgSlug]/layout.tsx": "57923a4f86d286c05c21efc26e98a721ddf9c48572da89810d0b4d94fdb63801",
+    "src/app/(shell)/expense/[orgSlug]/page.tsx": "2049a5bbb9cc73209cadf75b753387502d8ac7c7762b73c8f36fff86e78315ef",
+    "src/app/(shell)/expense/page.tsx": "ff732a31e363dfea738008c9fa621cc1a2cc116fe4b39f5b3d5b0a2eecd7aa1e",
+    "src/app/api/admin/users/route.ts": "5623d5b8198589ca3187aa7dc3b4fa61b98b35dce65c94b3c4a8207e00d7d7be",
+    "src/app/api/asklink/runs/[id]/banners/[kind]/route.ts": "ecfab1441f77778c79d5bccd24cec90db735ecfcd796acec1b6f9c9270906836",
+    "src/app/api/cron/asklink-storage-purge/route.ts": "9d52efae889aacadc146006e302fdf2f8d946d6397d258cf710dd42143a98442",
+    "src/app/api/expense/usage/route.ts": "a690548f7f647146be5e86218f375afe25fe5aa42ed520ee2c222b4966ef6830",
+    "src/components/expense/UpcomingPayments.tsx": "3abe177958555ecedf66e320b2c7f7d262d5c015394ecea3621cd59cc7a4091d",
+    "src/components/tenjikai/DocsVault.tsx": "b8e3554c66a40c4edccad894d94a7bda854f6d5c34631e288253da451c45a5a3",
+    "src/components/tenjikai/TenjikaiApp.tsx": "8f73e4fbf0e76e9dd7e43ea822541d9986289cf93de7ea28fede2bb797c4a542",
+    "src/lib/asklink/account-cleanup.ts": "9fcf900bbabea8917ca1df20130df90a6ff03e4985cb460fdd31b87ac442460c",
+    "src/lib/asklink/banner-write.ts": "ad74eab69629aef7a88c68c7a9497eb411be5571762203ce4673f0090f2c1f1b",
+    "src/lib/asklink/creation-adapter.ts": "571c556539bba98d5567f3a5d522dddb0dc10c68cca341b156323fc401cf4a9d",
+    "src/lib/asklink/creation-response.ts": "a429bf6077f6aeb7e384773084c95f59cd860ce78bf0b4c785b32cc794f73178",
+    "src/lib/asklink/storage-purge.ts": "0b900da524a41add46a7504d4fe0bb1080fa494cd4ae5bb2d911cdda40230ae8",
+    "src/lib/expense/access.ts": "9985bc44adab8672b57ffcd3bd378844f3d074a43a506fdf8939f03d0e17ca02",
+    "src/lib/expense/entry-client.ts": "c7c1cdb5fe3aa7dd40acf7873e74709a25ba9c217d65122ffcf3e915d310168d",
+    "src/lib/expense/entry-read.ts": "4242a13ab9ad409e762b5e1c33eab8ec0e63e99b28f7759b29efec1522d0a41f",
+    "vercel.json": "c321313a9575a3fab256febf5a1264577541dad23213a97a97be6dd06e43164f"
+  },
+  "remote": {
+    "baselineCommit": "95063ec663378aa3e54770b41596ff246c6d7437",
+    "baselineCi": "success",
+    "baselineVercel": "READY",
+    "currentCandidateCi": "pending commit and push",
+    "currentCandidateNext": "pending same-source Vercel production build"
+  },
+  "nextBuildRunLocally": false,
+  "prismaGeneratedForGate": false,
+  "productionReflected": false,
+  "limitations": [
+    "Authenticated candidate375/1280 and native browser back/BFCache are unverified",
+    "Actual Storage consistency, failures, old-writer drain and cron activation are unverified",
+    "Organization OWNER handover, CaseStudy anonymization and guest transfer remain separate batch"
+  ],
+  "localArtifacts": "Full frozen manifests/dependency snapshots/25step logs retained locally in this directory; not staged.",
+  "luna": "Unused; standard Codex verification"
+}

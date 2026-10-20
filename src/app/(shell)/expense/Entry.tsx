@@ -3,55 +3,85 @@
 // ドヤ支出管理 入口（ログイン済み）: 所属組織があればそこへ、なければ組織作成フォーム
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import toast, { Toaster } from 'react-hot-toast'
-import { startGoogleSignIn } from '@/lib/use-navigation-submission'
+import { Toaster } from 'react-hot-toast'
+import { NavigationSubmissionError, startGoogleSignIn, useNavigationSubmission } from '@/lib/use-navigation-submission'
+import { useEntryActorScope } from '@/lib/use-entry-organization'
+import { readExpenseEntry, expenseEntrySlug, type ExpenseEntryResult } from '@/lib/expense/entry-client'
 import tokens from '@/components/ds/tokens.module.css'
-import { Btn, Field, inputCls, Loading } from '@/components/expense/ui'
+import { Btn, Field, inputCls, Loading, EmptyState, ErrorBox } from '@/components/expense/ui'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { EntryNext } from '@/components/expense/next'
 
-/** known: サーバーで「組織が無い」と確かめ済み（新しい見た目のとき）。組織の確認の読み込みを挟まない */
-export default function ExpenseEntry({ known = false }: { known?: boolean } = {}) {
+/** Only the initial matching authenticated actor may use the server's verified absence. */
+export default function ExpenseEntry({ knownActor }: { knownActor?: string } = {}) {
+  const scope = useEntryActorScope()
+  return <ExpenseEntryContent key={scope.version} scope={scope} knownActor={knownActor} />
+}
+
+function ExpenseEntryContent({ scope, knownActor }: { scope: ReturnType<typeof useEntryActorScope>; knownActor?: string }) {
   const router = useRouter()
   const uiNext = useUiNext()
-  const [checking, setChecking] = useState(!known)
+  const { actor, status, version, current } = scope
+  const verifiedEmpty = version === 0 && status === 'authenticated' && !!actor && actor === knownActor
+  const [result, setResult] = useState<ExpenseEntryResult | { state: 'loading' | 'error' }>(() => ({ state: verifiedEmpty ? 'empty' : 'loading' }))
+  const [attempt, setAttempt] = useState(0)
   const [orgName, setOrgName] = useState('')
   const [memberName, setMemberName] = useState('')
-  const [busy, setBusy] = useState(false)
+  const { busy, run: submit } = useNavigationSubmission('組織を作成できませんでした。保存済みの組織を確認してから、もう一度お試しください。')
 
   useEffect(() => {
-    if (known) return
-    fetch('/api/expense/usage', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        const slug = d?.organization?.slug || d?.memberships?.[0]?.slug
-        if (slug) router.replace(`/expense/${slug}`)
-        else setChecking(false)
-      })
-      .catch(() => setChecking(false))
-  }, [router, known])
+    const restore = (event: PageTransitionEvent) => { if (event.persisted) setAttempt(value => value + 1) }
+    window.addEventListener('pageshow', restore)
+    return () => window.removeEventListener('pageshow', restore)
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const active = () => !controller.signal.aborted && current()
+    if (verifiedEmpty && attempt === 0) return () => controller.abort()
+    setResult({ state: 'loading' })
+    if (status === 'loading') return () => controller.abort()
+    if (status !== 'authenticated') {
+      setResult({ state: 'unauthenticated' })
+      return () => controller.abort()
+    }
+    if (!actor) {
+      setResult({ state: 'error' })
+      return () => controller.abort()
+    }
+    void readExpenseEntry(controller.signal).then(next => {
+      if (!active()) return
+      setResult(next)
+      if (next.state === 'found') router.replace(`/expense/${encodeURIComponent(next.slug)}`)
+    }).catch(() => { if (active()) setResult({ state: 'error' }) })
+    return () => controller.abort()
+  }, [router, actor, status, version, current, verifiedEmpty, attempt])
 
   const create = async () => {
-    if (!orgName.trim() || !memberName.trim() || busy) return
-    setBusy(true)
-    try {
+    if (!scope.current() || result.state !== 'empty' || !scope.actor || !orgName.trim() || !memberName.trim()) return
+    await submit(async isCurrent => {
       const res = await fetch('/api/expense/organization', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: orgName, memberName }),
       })
+      if (!isCurrent() || !scope.current()) return
       if (res.status === 401) {
         await startGoogleSignIn('/expense')
         return
       }
+      if (res.status === 403) { setResult({ state: 'forbidden' }); return }
       const d = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(d.error || '作成に失敗しました')
-      router.replace(`/expense/${d.organization.slug}`)
-    } catch (e) {
-      toast.error((e as Error).message)
-      setBusy(false)
-    }
+      if (!isCurrent() || !scope.current()) return
+      if (!res.ok) throw new NavigationSubmissionError('組織を作成できませんでした。入力内容を確認して、もう一度お試しください。')
+      router.replace(`/expense/${encodeURIComponent(expenseEntrySlug(d?.organization?.slug))}`)
+    })
   }
+
+  if (result.state === 'unauthenticated') return <div className={`${tokens.ds} mx-auto max-w-md p-6`}><EmptyState text="ログインの有効期限が切れました。もう一度ログインしてください。" actionLabel="ログインする" href="/auth/signin?callbackUrl=%2Fexpense" /></div>
+  if (result.state === 'forbidden') return <div className={`${tokens.ds} mx-auto max-w-md p-6`}><ErrorBox forbidden /></div>
+  if (result.state === 'error') return <div className={`${tokens.ds} mx-auto max-w-md p-6`}><ErrorBox onRetry={() => setAttempt(value => value + 1)} /></div>
+  const checking = result.state !== 'empty'
 
   // 新しい見た目（チェックリスト §5.1）: キービジュアルと「3ステップで始める」の案内（S-69）
   if (uiNext && !checking) {
