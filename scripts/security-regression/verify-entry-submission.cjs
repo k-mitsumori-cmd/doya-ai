@@ -37,6 +37,7 @@ function fixture(service, response, sdk = () => Promise.resolve(), authed = true
   assert.ok(start >= 0 && end > start)
   const context = {
     exports: {}, ...api, authed, serviceUrl: 'https://example.invalid/input', orgName: '会社名', memberName: '氏名',
+    scope: { current: () => true },
     submit: action => render().run(action),
     toast: { error: value => errors.push(value) },
     fetch: async (url, options) => { requests.push({ url, options }); return response(requests.length) },

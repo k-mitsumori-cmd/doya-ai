@@ -15,6 +15,7 @@ import { ShellIcon } from '@/components/shell/icons'
 import { AGENT_SUGGESTIONS, planAgent, type AgentPlan } from './agent'
 import { HOME_INTENT_GROUPS, matchHomeIntent } from './intents'
 import { todayItems } from './today'
+import { homeContractDate, homeJstDateKey, homeSnapshotClock } from './clock'
 import { SETUP_HIDE_COOKIE } from './cookies'
 import { CountUp } from '@/components/ds/motion'
 import { AreaChart, Bars } from '@/components/ds/charts'
@@ -290,14 +291,7 @@ function Pipeline({ sales }: { sales: HomeSummary['sales'] }) {
 
 const KIND_LABEL: Record<HomeEvent['kind'], string> = { deal: '受注予定', task: 'タスク', project: '納期', quote: '見積期限' }
 
-function jstDateKey(iso: string | Date) {
-  const d = new Date(typeof iso === 'string' ? iso : iso.getTime())
-  const j = new Date(d.getTime() + 9 * 3600_000)
-  return `${j.getUTCFullYear()}-${String(j.getUTCMonth() + 1).padStart(2, '0')}-${String(j.getUTCDate()).padStart(2, '0')}`
-}
-
-function MiniCalendar({ events }: { events: HomeEvent[] }) {
-  const today = jstDateKey(new Date())
+function MiniCalendar({ events, today }: { events: HomeEvent[]; today: string }) {
   const [offset, setOffset] = useState(0)
   const [selected, setSelected] = useState(today)
   const [y0, m0] = today.split('-').map(Number)
@@ -310,7 +304,8 @@ function MiniCalendar({ events }: { events: HomeEvent[] }) {
   const byDay = useMemo(() => {
     const m = new Map<string, HomeEvent[]>()
     events.forEach((e) => {
-      const k = jstDateKey(e.date)
+      const k = homeJstDateKey(e.date)
+      if (!k) return
       m.set(k, [...(m.get(k) ?? []), e])
     })
     return m
@@ -397,20 +392,16 @@ export default function HomeDashboard({ initial, setupHidden = false }: { initia
 
   const s = summary
   const c = s.contract
-  const greeting = (() => {
-    const h = new Date().getHours()
-    return h < 11 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'おつかれさまです'
-  })()
-  const updated = new Date(s.generatedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+  const clock = homeSnapshotClock(s.generatedAt)
   // 数字の出所（ADDON-SERVICES §4）。収入管理・支出管理を使っている組織では、そちらが正本になる
   const revenueSource = s.sources.revenue === 'income' ? '収入管理' : '営業管理・見積'
   const costSource = s.sources.cost === 'expense' ? '支出管理' : 'プロマネ（経費と人件費）'
-  const periodEnd = c.currentPeriodEnd ? new Date(c.currentPeriodEnd).toLocaleDateString('ja-JP') : null
+  const periodEnd = homeContractDate(c.currentPeriodEnd)
 
   return (
     <div className={styles.page}>
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
-      <AgentPanel summary={s} greeting={`${greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
+      <AgentPanel summary={s} greeting={`${clock.greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
       {/* 会社の登録の案内は、入力（主役）の下に1行で（UI 品質 B-1・S-9） */}
       <CompanySetupNote initiallyHidden={setupHidden} />
 
@@ -422,7 +413,7 @@ export default function HomeDashboard({ initial, setupHidden = false }: { initia
           <p className={styles.sources}>全ツールからまとめています。売上は{revenueSource}、支出は{costSource}の数字です。</p>
         </div>
         <button type="button" className={styles.refresh} onClick={refresh} disabled={loading}>
-          <RefreshCw size={15} className={loading ? styles.spin : undefined} /> {updated} 時点
+          <RefreshCw size={15} className={loading ? styles.spin : undefined} /> {clock.updated} 時点
         </button>
       </header>
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
@@ -454,7 +445,7 @@ export default function HomeDashboard({ initial, setupHidden = false }: { initia
       <div className={styles.gridWide}>
         <section className={styles.card}>
           <div className={styles.cardHead}><h2>カレンダー</h2><span className={styles.badge}>仮</span></div>
-          <MiniCalendar events={s.events} />
+          {clock.today ? <MiniCalendar key={clock.today} events={s.events} today={clock.today} /> : <p className={styles.muted}>日付を取得できませんでした。最新の数字を取得してください。</p>}
         </section>
         <section className={styles.card}>
           <div className={styles.cardHead}><h2>プロジェクト収支</h2>{s.projects.state === 'ready' ? <Link href={s.projects.href} className={styles.cardLink}>レポート</Link> : null}</div>

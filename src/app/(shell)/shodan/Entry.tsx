@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useEntryActorScope, useEntryOrganization } from '@/lib/use-entry-organization'
 import { NavigationSubmissionError, startGoogleSignIn, useNavigationSubmission } from '@/lib/use-navigation-submission'
 import { getServiceById } from '@/lib/services'
 import {
@@ -37,43 +38,46 @@ const ROWS: ShowcaseRow[] = [
 const SVC = getServiceById('shodan')!
 
 export default function ShodanEntryPage() {
+  const scope = useEntryActorScope()
+  return <ShodanEntryContent key={scope.version} scope={scope} />
+}
+
+function ShodanEntryContent({ scope }: { scope: ReturnType<typeof useEntryActorScope> }) {
   const router = useRouter()
-  const [phase, setPhase] = useState<'loading' | 'guest' | 'onboard'>('loading')
+  const { phase, reload } = useEntryOrganization('shodan', scope, router)
   const [orgName, setOrgName] = useState('')
   // 新しい見た目（UI 品質 §5.1）: 枠の中で全画面の読み込み・グラデーションの背景を出さない（C-1・C-2）
   const uiNext = useUiNext()
   const [memberName, setMemberName] = useState('')
   const { busy: creating, run: submit } = useNavigationSubmission('作成に失敗しました。もう一度お試しください。')
 
-  useEffect(() => {
-    fetch('/api/shodan/me', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => {
-        if (!d?.authenticated) { setPhase('guest'); return }
-        if (d?.onboarded && d?.memberships?.[0]?.slug) {
-          router.replace(`/shodan/${encodeURIComponent(d.memberships[0].slug)}`)
-        } else {
-          setPhase('onboard')
-        }
-      })
-      .catch(() => setPhase('guest'))
-  }, [router])
-
   const create = async () => {
-    if (!orgName.trim() || !memberName.trim()) return
+    if (!scope.current() || !orgName.trim() || !memberName.trim()) return
     await submit(async (isCurrent) => {
       const res = await fetch('/api/shodan/organization', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: orgName, memberName }),
       })
-      if (!isCurrent()) return
+      if (!isCurrent() || !scope.current()) return
       if (res.status === 401) { await startGoogleSignIn('/shodan'); return }
       const d = await res.json()
-      if (!isCurrent()) return
+      if (!isCurrent() || !scope.current()) return
       if (!res.ok) throw new NavigationSubmissionError(d.error || '作成に失敗しました')
       router.replace(`/shodan/${encodeURIComponent(d.organization.slug)}`)
     })
+  }
+
+  if (phase === 'error') {
+    return (
+      <div className="mx-auto max-w-md px-4 py-8 sm:px-6" role="alert">
+        <h1 className="text-lg font-bold text-slate-900">組織情報を確認できませんでした。</h1>
+        <p className="mt-2 text-sm text-slate-600">通信状況をご確認のうえ、再読み込みしてください。</p>
+        <button type="button" onClick={reload} className="mt-4 rounded-xl bg-[#0066ff] px-4 py-3 font-bold text-white hover:bg-[#0052cc]">
+          再読み込み
+        </button>
+      </div>
+    )
   }
 
   if (phase === 'loading' && uiNext) {

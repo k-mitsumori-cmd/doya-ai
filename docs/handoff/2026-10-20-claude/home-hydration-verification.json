@@ -1,0 +1,43 @@
+{
+  "recordedAt": "2026-10-20T06:42:03.570275+00:00",
+  "scope": "home snapshot clock hydration only",
+  "checks": [
+    {
+      "name": "home-unit",
+      "exitCode": 0
+    },
+    {
+      "name": "home-ssr-hydrate",
+      "exitCode": 0
+    },
+    {
+      "name": "home-lint",
+      "exitCode": 0
+    }
+  ],
+  "inputs": {
+    "src/app/(shell)/home/HomeDashboard.tsx": "508cfa630c268972532b9ec6d91e19c0c37e51d4121b138285dfdb6746c3eab9",
+    "src/app/(shell)/home/HomeDashboardLegacy.tsx": "37d51805f5b214dcd4074f81957d8432fc6f0f922e55b7b37304f8d6d04574a6",
+    "src/app/(shell)/home/today.ts": "33100627f7ec8a3acb5abe4ddf9fddf7c304492e8db9cb132578c2ad52ca509a",
+    "src/app/(shell)/home/today.test.ts": "b052600bf00844645b61171b5b81b1183beb42ad78744bc74e7a1ad9a9d91200",
+    "src/app/(shell)/home/clock.ts": "a2ef320a1b2a15d00991ac617f25034bab2c9894c2f9126c1895bef60e8a9740",
+    "src/app/(shell)/home/clock.test.ts": "3f6530362f39550fe1e799965275bf8260c38d053b41987c87409b54947eae60",
+    "scripts/security-regression/verify-home-hydration.cjs": "2f1f4a38a24b9ccf35a6b43f15397a631e33fa86d1e71c205d657a421c16ead5"
+  },
+  "inputHashesUnchangedDuringVerification": true,
+  "beforeEvidence": "Git-external sandbox home-hydration-before-expanded.json and home-hydration-before-strict.log",
+  "afterEvidence": "Git-external sandbox home-ssr-hydrate-final.log",
+  "ssrHydrationCases": 16,
+  "unitCases": 11,
+  "productionReflected": false,
+  "productionHydrationRecoveryVerified": false,
+  "paidProviderCalls": 0,
+  "databaseCalls": 0,
+  "typecheck": "deferred-to-parent-combined-gate",
+  "reactQualityReview": {
+    "hooks": "No conditional hook calls added; calendar remounts on snapshot day change",
+    "initialRender": "Serialized snapshot time only; no current-time or locale-timezone fallback",
+    "accessibility": "Existing controls unchanged; unavailable calendar has text explanation",
+    "effects": "No effect or shared mutable runtime clock added"
+  }
+}

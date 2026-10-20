@@ -1380,5 +1380,10 @@ for (const file of ['verify-cost-adimage-ocr.cjs']) { const r = require('node:ch
 
 for (const file of ['verify-handoff-hook-order.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 
+for (const verifier of ['verify-home-hydration.cjs', 'verify-organization-entry-mounted.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, verifier)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) { console.error('Security regression failed:', verifier); process.exit(1); }
+}
+
 // CI source manifests are verified by explicit steps in .github/workflows/ci.yml.
 // Vercel excludes /docs, so those audit inputs are unavailable during npm run build.

@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useEntryActorScope, useEntryOrganization } from '@/lib/use-entry-organization'
 import { NavigationSubmissionError, startGoogleSignIn, useNavigationSubmission } from '@/lib/use-navigation-submission'
 import { getServiceById } from '@/lib/services'
 import {
@@ -38,50 +38,49 @@ const ROWS: ShowcaseRow[] = [
 ]
 
 export default function SfaEntryPage() {
+  const scope = useEntryActorScope()
+  return <SfaEntryContent key={scope.version} scope={scope} />
+}
+
+function SfaEntryContent({ scope }: { scope: ReturnType<typeof useEntryActorScope> }) {
   const router = useRouter()
-  const { status } = useSession()
   // 新しい見た目（UI 品質 §5.1）: 枠の中で全画面の読み込み・グラデーションの背景を出さない（C-2）
   const uiNext = useUiNext()
-  const [checking, setChecking] = useState(true)
+  const { phase, reload } = useEntryOrganization('sfa', scope, router)
   const [orgName, setOrgName] = useState('')
   const [memberName, setMemberName] = useState('')
   const { busy: creating, run: submit } = useNavigationSubmission('作成に失敗しました。もう一度お試しください。')
 
-  useEffect(() => {
-    // Cookie認証のため status を待たずに直接照会する（status ゲートは画面固着の原因）。
-    fetch('/api/sfa/usage', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d?.onboarded && d?.organization?.slug) {
-          router.replace(`/sfa/${d.organization.slug}`)
-        } else if (d?.memberships?.length) {
-          // 既に所属組織がある場合は組織作成フォームを出さず、その組織へ
-          router.replace(`/sfa/${d.memberships[0].slug}`)
-        } else {
-          setChecking(false)
-        }
-      })
-      .catch(() => setChecking(false))
-  }, [router])
-
   const create = async () => {
-    if (!orgName.trim() || !memberName.trim()) return
+    if (!scope.current() || !orgName.trim() || !memberName.trim()) return
     await submit(async (isCurrent) => {
       const res = await fetch('/api/sfa/organization', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: orgName, memberName }),
       })
-      if (!isCurrent()) return
+      if (!isCurrent() || !scope.current()) return
       if (res.status === 401) { await startGoogleSignIn('/sfa'); return }
       const d = await res.json()
-      if (!isCurrent()) return
+      if (!isCurrent() || !scope.current()) return
       if (!res.ok) throw new NavigationSubmissionError(d.error || '作成に失敗しました')
       router.replace(`/sfa/${d.organization.slug}`)
     })
   }
 
-  if (checking && uiNext) {
+  if (phase === 'error') {
+    return (
+      <div className="mx-auto max-w-md px-4 py-8 sm:px-6" role="alert">
+        <h1 className="text-lg font-bold text-slate-900">組織情報を確認できませんでした。</h1>
+        <p className="mt-2 text-sm text-slate-600">通信状況をご確認のうえ、再読み込みしてください。</p>
+        <button type="button" onClick={reload} className="mt-4 rounded-xl bg-[#0066ff] px-4 py-3 font-bold text-white hover:bg-[#0052cc]">
+          再読み込み
+        </button>
+      </div>
+    )
+  }
+
+  if (phase === 'loading' && uiNext) {
     return (
       <div className="mx-auto max-w-md p-6" aria-busy="true" aria-label="読み込み中">
         <Skeleton lines={4} height={18} />
@@ -89,7 +88,7 @@ export default function SfaEntryPage() {
     )
   }
 
-  if (checking) {
+  if (phase === 'loading') {
     return (
       <div className="min-h-screen grid place-items-center bg-gradient-to-b from-white to-blue-50">
         <div className="text-center">
@@ -101,7 +100,7 @@ export default function SfaEntryPage() {
   }
 
   // ログイン済み・未オンボーディング → 組織作成フォーム
-  if (status === 'authenticated') {
+  if (phase === 'onboard') {
     return (
       <div className={uiNext ? 'grid place-items-center px-4 py-8 sm:py-12' : 'min-h-screen relative bg-gradient-to-b from-white via-blue-50/40 to-blue-100/40 grid place-items-center p-6'}>
         {!uiNext && <BgDots />}
