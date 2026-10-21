@@ -28,17 +28,19 @@ const billing = load('src/lib/billing-sync.ts', { '@/lib/prisma': { prisma: db, 
   '@/lib/billing-manual-grants': grants })
 const adminAuth = load('src/lib/admin-auth.ts', { bcryptjs: require('bcryptjs'),
   jsonwebtoken: require('jsonwebtoken'), './prisma': { prisma: db }, '@prisma/client': { Prisma } })
+const selfPlans = load('src/lib/account-lifecycle/subscription-plan.ts', { 'node:crypto': crypto, './state': state })
+const selfFacts = load('src/lib/account-lifecycle/subscription-provider.ts', { './state': state })
+const selfSettlement = load('src/lib/account-lifecycle/self-subscription-settlement.ts', { './state': state })
 const store = load('src/lib/account-lifecycle/store.ts', {
   'node:crypto': crypto, '@prisma/client': { Prisma }, './state': state,
   './admin-subscription-plan': plans, './admin-subscription-fact': facts,
+  './subscription-plan': selfPlans, './subscription-provider': selfFacts,
+  './self-subscription-settlement': selfSettlement,
   '@/lib/admin-auth': adminAuth, '@/lib/billing-sync': billing,
 })
 const coordinator = load('src/lib/account-lifecycle/admin-subscription.ts', {
   'server-only': {}, './state': state, './admin-subscription-plan': plans, './store': store,
 })
-const selfPlans = load('src/lib/account-lifecycle/subscription-plan.ts', { 'node:crypto': crypto, './state': state })
-const selfFacts = load('src/lib/account-lifecycle/subscription-provider.ts', { './state': state })
-const selfSettlement = load('src/lib/account-lifecycle/self-subscription-settlement.ts', { './state': state })
 const selfCoordinator = load('src/lib/account-lifecycle/subscription.ts', {
   'server-only': {}, 'node:crypto': crypto, './state': state,
   './subscription-plan': selfPlans, './subscription-provider': selfFacts, './store': store,
