@@ -16,7 +16,7 @@ const object = (v: unknown): v is Record<string, unknown> => v !== null && typeo
 const sameKeys = (v: Record<string, unknown>, keys: string[]) =>
   Object.keys(v).sort().join(',') === [...keys].sort().join(',')
 
-export function parseAdminSubscriptionHttpAction(value: unknown): AdminSubscriptionAction {
+function parseAdminSubscriptionHttpAction(value: unknown): AdminSubscriptionAction {
   if (!object(value) || !validLifecycleUuid(value.operationId) || !validLifecycleUser(value.expectedAdminId) ||
       !validLifecycleUser(value.targetUserId) ||
       !['period_end_cancel', 'immediate_cancel', 'resume'].includes(String(value.intent)) ||
