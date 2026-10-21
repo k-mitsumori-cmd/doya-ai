@@ -111,7 +111,8 @@ async function check(name, run) { await reset(); await run(); cases.push(name) }
       assert.equal(provider, 1); assert.equal(await db.tenjikaiProject.count(), 1); assert.equal(await db.tenjikaiSiteAnalysis.count(), 1)
       assert.equal(result.body.save?.analysis, 'saved'); assert.equal(result.body.save?.plan, 'saved')
       const saved = await workspaceStore.readFullTenjikaiWorkspace(actor, result.body.projectId, db)
-      assert.deepEqual(saved, result.body.workspace)
+      // Compare the complete HTTP JSON shape; optional undefined notes are omitted on the wire.
+      assert.deepEqual(JSON.parse(JSON.stringify(saved)), result.body.workspace)
       assert.equal(saved.revision, '1')
       assert.deepEqual(saved.plans.map(item => item.plan.variant), ['A', 'B', 'C'])
       assert.equal(await db.tenjikaiBoothPlan.count(), 3)
