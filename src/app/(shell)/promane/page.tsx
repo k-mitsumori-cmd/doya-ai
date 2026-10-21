@@ -10,6 +10,7 @@ import { Button } from '@/components/promane/ui/button'
 import { Badge } from '@/components/promane/ui/badge'
 import { CreateWorkspaceButton } from '@/components/promane/create-workspace-button'
 import { isUiNext } from '@/lib/ui-next'
+import SignInReturnLink from '@/components/SignInReturnLink'
 
 const ROLE_LABELS: Record<string, string> = {
   owner: '👑 オーナー',
@@ -25,11 +26,21 @@ export default async function PromaneEntryPage({
 }: {
   searchParams?: Promise<{ select?: string }>
 }) {
+  const params = await searchParams
+  const forceSelect = params?.select === '1'
   const session = await getServerSession(authOptions)
   // 未ログイン（＝クローラや初見ユーザー）には公開LPを返す。
   // 以前はここで /auth/signin にリダイレクトしていたため「ドヤプロマネ」でクロールされる
   // ページが存在せず、指名検索の受け皿が無かった。
-  if (!session?.user || typeof session.user.id !== 'string' || !session.user.id.trim()) return <PromaneLp />
+  if (!session?.user || typeof session.user.id !== 'string' || !session.user.id.trim()) {
+    if (!forceSelect) return <PromaneLp />
+    return (
+      <main className="mx-auto max-w-xl p-8 text-center">
+        <h1 className="text-xl font-bold">ワークスペースを選択するにはログインが必要です</h1>
+        <SignInReturnLink fallback="/promane?select=1" className="mt-4 inline-block rounded-lg px-3 py-2 font-bold text-blue-700 underline underline-offset-4">ログインしてワークスペースを選ぶ</SignInReturnLink>
+      </main>
+    )
+  }
 
   const userId = (session.user as any).id
   const userEmail = session.user.email?.toLowerCase()
@@ -68,16 +79,13 @@ export default async function PromaneEntryPage({
     })
   }
 
-  const params = await searchParams
-  const forceSelect = params?.select === '1'
-
   // 単一ワークスペース & 招待なし & forceSelect でない → 自動リダイレクト
   if (memberships.length === 1 && pendingInvites.length === 0 && !forceSelect) {
     redirect(`/promane/${memberships[0].workspace.slug}`)
   }
 
-  // 0個でも招待もなければ自動作成
-  if (memberships.length === 0 && pendingInvites.length === 0) {
+  // 通常入口で所属0件・招待0件なら既存の初期設定へ進む
+  if (memberships.length === 0 && pendingInvites.length === 0 && !forceSelect) {
     const ws = await getOrCreateWorkspace(userId)
     if (ws) redirect(`/promane/${ws.slug}`)
     return (
@@ -157,6 +165,13 @@ export default async function PromaneEntryPage({
         )}
 
         {/* My Workspaces */}
+        {memberships.length === 0 && pendingInvites.length === 0 && (
+          <div className="rounded-2xl border border-blue-100 bg-white p-6 text-center shadow-sm">
+            <p className="font-bold text-gray-800">参加中のワークスペースがありません。</p>
+            <p className="mt-2 text-sm text-gray-600">初期設定では、利用状況に応じてワークスペースの作成やアクセス確認が行われます。</p>
+            <Link href="/promane" className="mt-4 inline-block rounded-lg px-3 py-2 font-bold text-blue-700 underline underline-offset-4">初期設定を開始する</Link>
+          </div>
+        )}
         {memberships.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">

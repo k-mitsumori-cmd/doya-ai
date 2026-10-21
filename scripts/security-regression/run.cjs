@@ -564,6 +564,11 @@ if (promaneWorkspaceAdmission.error || promaneWorkspaceAdmission.status !== 0) {
   console.error('Security regression failed: verify-promane-workspace-admission.cjs');
   process.exit(1);
 }
+const promanePricingSelectorReturn = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-pricing-selector-return.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (promanePricingSelectorReturn.error || promanePricingSelectorReturn.status !== 0) {
+  console.error('Security regression failed: verify-promane-pricing-selector-return.cjs');
+  process.exit(1);
+}
 const mensetsuTemplateAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-mensetsu-template-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (mensetsuTemplateAdmission.error || mensetsuTemplateAdmission.status !== 0) {
   console.error('Security regression failed: verify-mensetsu-template-admission.cjs');
