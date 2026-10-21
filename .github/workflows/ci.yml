@@ -23,6 +23,12 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
       - name: CI regression source paths (offline)
         run: |
           node scripts/security-regression/verify-adimage-analysis-source-paths.cjs
@@ -424,12 +430,6 @@ jobs:
           node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-intent-client.cjs
           node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-operation-transport.cjs
           node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-import-mounted.cjs
-
-      - name: Type check
-        run: npx tsc --noEmit
-
-      - name: Lint
-        run: npm run lint
 
       - name: Isolated regression failure diagnostics
         if: failure()
