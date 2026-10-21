@@ -176,6 +176,11 @@ if (workspaceInviteRecovery.error || workspaceInviteRecovery.status !== 0) {
   console.error('Security regression failed: verify-workspace-invite-recovery.cjs');
   process.exit(1);
 }
+const invitationActorMounted = spawnSync(process.execPath, [path.join(__dirname, 'verify-invitation-actor-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (invitationActorMounted.status !== 0) {
+  console.error('Security regression failed: verify-invitation-actor-mounted.cjs');
+  process.exit(invitationActorMounted.status || 1);
+}
 const hrInviteStates = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-invite-states.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrInviteStates.error || hrInviteStates.status !== 0) {
   console.error('Security regression failed: verify-hr-invite-states.cjs');

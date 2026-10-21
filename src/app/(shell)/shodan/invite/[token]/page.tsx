@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { useParams, useRouter } from 'next/navigation'
 import { NavigationSubmissionError, startGoogleSignIn, switchGoogleAccount, useNavigationSubmission } from '@/lib/use-navigation-submission'
 import toast from 'react-hot-toast'
@@ -11,7 +12,14 @@ type State = 'loading' | 'ready' | 'error' | 'expired' | 'account-mismatch'
 export default function ShodanInvitePage() {
   const params = useParams<{ token: string }>()
   const token = String(params.token)
-  return <InvitationContent key={token} token={token} />
+  const { data: session, status } = useSession()
+  const actorId = status === 'authenticated' ? session?.user?.id : null
+  if (status === 'loading' || (status === 'authenticated' && !actorId)) {
+    return <p role="status" className="p-6 text-center text-sm">ログイン状態を確認しています…</p>
+  }
+  // A new actor must not adopt the previous account's lookup, acceptance or redirect.
+  const invitationScope = JSON.stringify([token, status, actorId])
+  return <InvitationContent key={invitationScope} token={token} />
 }
 
 function InvitationContent({ token }: { token: string }) {
