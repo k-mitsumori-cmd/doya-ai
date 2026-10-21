@@ -43,6 +43,7 @@ const checkoutProvider=load('src/lib/account-lifecycle/checkout-provider.ts',{'.
 const checkoutLegacy=load('src/lib/account-lifecycle/checkout-legacy.ts',{'./checkout-receipt':checkoutReceipt,'./state':state});
 const checkoutStore=load('src/lib/account-lifecycle/checkout-store.ts',{'node:crypto':crypto,'@prisma/client':{Prisma},'./state':state,'./store':store,'./checkout-receipt':checkoutReceipt,'./checkout-provider':checkoutProvider,'./checkout-legacy':checkoutLegacy});
 const coordinator=load('src/lib/account-lifecycle/checkout.ts',{'./state':state,'./store':store,'./checkout-receipt':checkoutReceipt,'./checkout-urls':checkoutUrls,'./checkout-provider':checkoutProvider,'./checkout-store':checkoutStore});
+const subscriptionPlan=load('src/lib/account-lifecycle/subscription-plan.ts',{'node:crypto':crypto,'./state':state});
 const epoch=crypto.randomUUID(),expiry=Math.floor(Date.now()/1000)+2400;
 async function reset(){await baseReset();await db.systemSetting.create({data:{key:checkoutReceipt.checkoutKeys.cutover('test'),value:JSON.stringify({version:1,mode:'test',epoch,coverage:'old_ingress_stopped_and_workers_reconciled',evidenceDigest:digest})}})}
 const request=(overrides={})=>({cutoverEpoch:epoch,identity:identity('checkout',target,crypto.randomUUID(),{kind:'user',id:target}),mode:'test',source:'generic',organizationId:null,customerMode:'implicit',customerId:null,terms:{priceId:'price_synthetic',planId:'pro',serviceId:'synthetic',trialDays:0,successUrl:'https://example.invalid/success',cancelUrl:'https://example.invalid/cancel',email:target+'@example.invalid',name:'Synthetic',expiresAt:expiry},...overrides});
@@ -60,6 +61,7 @@ function providerFixture(){
 async function started(r){const admitted=await checkoutStore.admitCheckoutLifecycle(db,r);assert(admitted.claim);await checkoutStore.prepareCheckoutLifecycle(db,admitted.claim);await store.startLifecycleOperation(db,admitted.claim);return admitted}
 async function keyRow(key){return db.systemSetting.findUnique({where:{key}})}
 async function stateRows(){return plain(await snapshot())}
+const subscriptionFactOnly=(operationId,shape)=>shape==='complete'?JSON.stringify({operationId,actionKey:'a'.repeat(64),subscriptionId:'sub_synthetic',customerId:'cus_synthetic',mode:'test',status:'active',cancelAtPeriodEnd:true,currentPeriodEnd:1900000000,outcome:{proof:'ack',resourceId:'sub_synthetic',status:'scheduled_cancel'}}):'{malformed';
 function legacyParts(r){return{priceId:r.terms.priceId,planId:r.terms.planId,service:r.terms.serviceId,email:r.terms.email,successUrl:r.terms.successUrl,cancelUrl:r.terms.cancelUrl,...(r.terms.trialDays?{trialDays:r.terms.trialDays}:{})}}
 async function legacyReady(p,r,status='open'){
  const parts=legacyParts(r),signature=checkoutLegacy.verifiedLegacySignature(r,parts),sessionId='cs_legacy',url='https://checkout.example.invalid/legacy';
@@ -182,6 +184,50 @@ await check('ordinary checkout-first UUID blocks foreign legacy adoption',async(
 await check('parallel ordinary checkout admission and legacy adoption share UUID lock',async()=>{const p=providerFixture(),shared=crypto.randomUUID(),ordinary=request({identity:{...request().identity,operationId:shared}}),r=request({identity:identity('checkout',second,shared,{kind:'user',id:second}),terms:{...ordinary.terms,email:second+'@example.invalid'}}),old=await legacyReady(p,r),results=await Promise.allSettled([checkoutStore.admitCheckoutLifecycle(db,ordinary),p.client.legacyReady(r,old.parts)]);assert.equal(results.filter(x=>x.status==='fulfilled').length,1);assert.equal(await db.systemSetting.count({where:{key:{in:[`doya-account-operation:v2:${shared}`,checkoutReceipt.checkoutKeys.capability(shared)]}}}),1)});
 async function seedOrphanLedger(shape,shared){if(shape==='malformed'){await db.systemSetting.create({data:{key:`doya-account-action:v2:${shared}`,value:'{broken'}});return}const id=identity('retirement',target,shared),old=await store.reserveLifecycleOperation(db,id,digest);await store.prepareLifecycleActions(db,old.claim,[resource()]);await db.systemSetting.delete({where:{key:state.lifecycleReceiptKey(id)}});await db.systemSetting.delete({where:{key:state.lifecycleFenceKey(target)}})}
 for(const shape of ['same-target-old-generation','foreign-target','malformed'])for(const creator of ['reserve','abort','admit','legacy'])await check('ledger-only '+shape+' UUID rejects '+creator+' before mutation',async()=>{const shared=crypto.randomUUID();await seedOrphanLedger(shape,shared);const user=shape==='foreign-target'?second:target,p=providerFixture(),id=identity('checkout',user,shared,{kind:'user',id:user}),r=request({identity:id,terms:{...request().terms,email:user+'@example.invalid'}}),old=creator==='legacy'?await legacyReady(p,r):null,before=await stateRows();if(creator==='reserve')await rejects(()=>store.reserveLifecycleOperation(db,identity('retirement',user,shared),digest));else if(creator==='abort')await rejects(()=>store.abortUnstartedLifecycleOperation(db,identity('retirement',user,shared),digest));else if(creator==='admit')await rejects(()=>checkoutStore.admitCheckoutLifecycle(db,r));else await rejects(()=>p.client.legacyReady(r,old.parts));assert.deepEqual(await stateRows(),before);assert.equal(p.counts.checkoutCreate,0);assert.equal(p.counts.customerCreate,0)});
+// C1 fact-only namespace must block each actual Checkout creator, not only the generic reserve helper.
+for(const shape of ['complete','malformed'])for(const creator of ['admit','legacy-adopt','expired-legacy-next'])await check('C1 fact-only '+shape+' UUID rejects actual '+creator+' with DB mutation zero',async()=>{
+ const p=providerFixture(),shared=crypto.randomUUID();
+ if(creator==='admit'){
+  const r=request({identity:identity('checkout',target,shared,{kind:'user',id:target})});
+  await db.systemSetting.create({data:{key:`doya-subscription-fact:v1:${shared}:${'a'.repeat(64)}`,value:subscriptionFactOnly(shared,shape)}});
+  const before=await stateRows();await assert.rejects(()=>checkoutStore.admitCheckoutLifecycle(db,r),e=>e.code==='LIFECYCLE_IDENTITY_CONFLICT');assert.deepEqual(await stateRows(),before);
+ }else if(creator==='legacy-adopt'){
+  const r=request({identity:identity('checkout',target,shared,{kind:'user',id:target})}),old=await legacyReady(p,r),ticket=await checkoutStore.captureLegacyCheckoutReady(db,r,old.parts),fact=await p.adapter.readLegacyReady(r,ticket.sessionId,ticket.rawHash,ticket.signature);
+  await db.systemSetting.create({data:{key:`doya-subscription-fact:v1:${shared}:${'a'.repeat(64)}`,value:subscriptionFactOnly(shared,shape)}});
+  const before=await stateRows();await assert.rejects(()=>checkoutStore.adoptLegacyCheckoutReady(db,r,ticket,fact,old.parts),e=>e.code==='LIFECYCLE_IDENTITY_CONFLICT');assert.deepEqual(await stateRows(),before);
+  assert.equal((await keyRow(`checkout-reservation:v1:test:${target}`)).value,old.raw);
+ }else{
+  const previous=request(),old=await legacyReady(p,previous,'expired');await rejects(()=>p.client.legacyReady(previous,old.parts));
+  const next=request({identity:identity('checkout',target,shared,{kind:'user',id:target}),terms:{...previous.terms,expiresAt:expiry+600}}),ticket=await checkoutStore.captureLegacyCheckoutReady(db,previous,old.parts),fact=await p.adapter.readLegacyReady(previous,ticket.sessionId,ticket.rawHash,ticket.signature);
+  await db.systemSetting.create({data:{key:`doya-subscription-fact:v1:${shared}:${'a'.repeat(64)}`,value:subscriptionFactOnly(shared,shape)}});
+  const before=await stateRows();await assert.rejects(()=>checkoutStore.admitAfterExpiredLegacyCheckout(db,previous,next,ticket,fact),e=>e.code==='LIFECYCLE_IDENTITY_CONFLICT');assert.deepEqual(await stateRows(),before);
+  assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(shared)),null);
+ }
+ assert.equal(p.counts.customerCreate,0);assert.equal(p.counts.checkoutCreate,0);
+});
+await check('C1 parallel actual Checkout and Subscription creators share global UUID lock',async()=>{
+ const shared=crypto.randomUUID(),checkout=request({identity:identity('checkout',target,shared,{kind:'user',id:target})});
+ const subscription=subscriptionPlan.makeSubscriptionPlan({identity:identity('cancel',second,shared,{kind:'user',id:second}),mode:'test',email:second+'@example.invalid',expectedCustomerId:null,expectedSubscriptionId:null,serviceId:'banner',cancelMode:'period_end',targets:[{id:'sub_synthetic',customerId:'cus_synthetic',status:'active',cancelAtPeriodEnd:false,currentPeriodEnd:1900000000}]});
+ // Hold the exact advisory UUID lock until both actual creator transactions are observed waiting on it.
+ const acquired=defer(),release=defer();
+ const blocker=db.$transaction(async tx=>{await tx.$queryRaw`SELECT 1::integer AS locked FROM pg_advisory_xact_lock(hashtext(${shared})::bigint)`;acquired.resolve();await release.promise},{timeout:10000});
+ await acquired.promise;
+ const pending=Promise.allSettled([checkoutStore.admitCheckoutLifecycle(db,checkout),store.admitSubscriptionLifecycle(db,subscription)]);
+ let waiting=0;
+ try{
+  for(let n=0;n<200;n++){
+   const rows=await db.$queryRawUnsafe("SELECT count(*)::int AS count FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid WHERE l.locktype='advisory' AND NOT l.granted AND a.usename='doya_checkout' AND a.query LIKE '%pg_advisory_xact_lock%'");
+   waiting=rows[0].count;if(waiting>=2)break;await new Promise(r=>setTimeout(r,10));
+  }
+  assert.equal(waiting,2,'both actual creators must reach the same advisory UUID lock');
+ }finally{release.resolve();await blocker}
+ const outcome=await pending;
+ assert.equal(outcome.filter(x=>x.status==='fulfilled').length,1);
+ assert.equal(outcome.find(x=>x.status==='rejected').reason.code,'LIFECYCLE_IDENTITY_CONFLICT');
+ assert.equal(await db.systemSetting.count({where:{key:{in:[`doya-account-operation:v2:${shared}`,checkoutReceipt.checkoutKeys.plan(shared),subscriptionPlan.subscriptionPlanKey(shared)]}}}),2);
+ const checkoutPlan=await keyRow(checkoutReceipt.checkoutKeys.plan(shared)),subscriptionRow=await keyRow(subscriptionPlan.subscriptionPlanKey(shared));
+ assert.equal(Boolean(checkoutPlan)+Boolean(subscriptionRow),1);
+});
 await check('B1 expired legacy switches atomically to one ordinary Checkout and preserves history',async()=>{
  const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired');
  const next=request({terms:{...previous.terms,expiresAt:expiry+600}});
