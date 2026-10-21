@@ -418,6 +418,17 @@ jobs:
       - name: membership-known-role (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-known-role-integrated-postgres-supervise.py
 
+      - name: Preserve membership-known-role private PostgreSQL diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: membership-known-role-private-postgres
+          if-no-files-found: ignore
+          path: |
+            docs/audits/2026-10-06-all-services-recheck/membership-known-role-integrated-postgres.log
+            docs/audits/2026-10-06-all-services-recheck/membership-known-role-integrated-postgres-supervisor.json
+            docs/audits/2026-10-06-all-services-recheck/membership-known-role-integrated-postgres-results.json
+
       - name: membership-aio-operation (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-aio-operation-integrated-postgres-supervise.py
 
@@ -432,6 +443,17 @@ jobs:
 
       - name: Organization onboarding and HR role boundaries (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-postgres-supervise.py
+
+      - name: Preserve membership-onboarding private PostgreSQL diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: membership-onboarding-private-postgres
+          if-no-files-found: ignore
+          path: |
+            docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-postgres.log
+            docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-candidate-postgres-supervisor.json
+            docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-candidate-postgres-results.json
 
       - name: Security and incident regression tests (offline)
         run: npm run test:security
