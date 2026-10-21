@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSession } from 'next-auth/react'
 import { TrialBadge, TrialNote } from '@/components/TrialCallout'
@@ -132,32 +131,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 // ============================================
 export default function PricingPage() {
   const { data: session } = useSession()
-  const router = useRouter()
   const currentPlan = session?.user?.plan?.toLowerCase() || 'free'
-
-  const handleUpgrade = async (planKey: string) => {
-    if (!session?.user) {
-      router.push('/auth/signin')
-      return
-    }
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId: `tenkai_${planKey}` }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        if (data.url) {
-          window.location.href = data.url
-          return
-        }
-      }
-      alert('決済ページの取得に失敗しました。しばらく後に再試行してください。')
-    } catch {
-      alert('エラーが発生しました。しばらく後に再試行してください。')
-    }
-  }
 
   return (
     <motion.div
@@ -235,12 +209,7 @@ export default function PricingPage() {
                       現在のプラン
                     </div>
                   ) : (
-                    <button
-                      onClick={() => handleUpgrade(plan.key)}
-                      className={`w-full py-3 text-center rounded-xl text-sm font-bold bg-gradient-to-r ${plan.gradient} text-white shadow-lg transition-all hover:shadow-xl`}
-                    >
-                      {plan.cta}
-                    </button>
+                    <div role="status" className="w-full py-3 text-center rounded-xl text-sm font-bold bg-slate-100 text-slate-600">新規のお申し込みは終了しました</div>
                   )}
 
                   {/* Features */}

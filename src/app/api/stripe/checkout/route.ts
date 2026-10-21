@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { STRIPE_PRICE_IDS, findActiveLikeSubscriptions } from '@/lib/stripe'
 import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
+import { getActiveServices } from '@/lib/services'
 import { isTrialEligible } from '@/lib/trial'
 import { prisma } from '@/lib/prisma'
 import { parseHrOrganizationSelection } from '@/lib/hr/organization-selection'
@@ -81,7 +82,11 @@ export async function POST(request: NextRequest) {
       catch { throw new LifecycleError('SUBSCRIPTION_CHECK_UNAVAILABLE', 503) }
       if (existing.length) throw new LifecycleError(existing.length === 1 && existing[0]?.priceId && existing[0].priceId !== priceId ? 'PLAN_CHANGE_REQUIRED' : 'ALREADY_SUBSCRIBED')
       const service = requestedServiceId || planId.split('-')[0]
-      const recovery: CheckoutRecoveryBinding = { version: 1, recipe: 'generic', origin: appOrigin(), returnPath: requestedReturnTo }
+      const globalPricing = requestedReturnTo === '/' || requestedReturnTo === '/pricing' || requestedReturnTo === '/all-in-one' || service === 'bundle'
+      const active = getActiveServices().find(item => item.id === service)
+      if (!globalPricing && !active) throw new LifecycleError('CHECKOUT_PLAN_RETIRED', 410)
+      const workingPath = globalPricing ? '/home' : service === 'interview' ? '/interview/projects' : active!.dashboardHref
+      const recovery: CheckoutRecoveryBinding = { version: 2, recipe: 'generic_working', origin: appOrigin(), returnPath: requestedReturnTo, workingPath }
       const urls = checkoutUrls(recovery, planId, service)
       const trialable = billingPeriod === 'monthly' && !planId.includes('enterprise') && planId !== 'bundle'
       let trialDays = 0

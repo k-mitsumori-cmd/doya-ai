@@ -101,7 +101,13 @@ export function checkoutCoordinator(db: LifecycleDb, provider: CheckoutProviderA
     async readyByHandle(identity: LifecycleIdentity) {
       const ticket = await captureCheckoutReadyRead(db, identity)
       const fact = await provider.readReady(ticket.plan, ticket.dispatch, ticket.capability)
-      await ingestCorrelatedCheckoutLateFact(db, fact)
+      const recorded = await ingestCorrelatedCheckoutLateFact(db, fact)
+      if (fact.status === 'expired' || fact.status === 'complete') {
+        if (recorded.needsReview) throw new LifecycleError('CHECKOUT_NEEDS_REVIEW')
+        const bound = await readCheckoutBoundOperation(db, identity)
+        if (bound.phase !== 'completed' || bound.plan?.inputDigest !== ticket.plan.inputDigest) throw new LifecycleError('CHECKOUT_NEEDS_REVIEW')
+        throw new LifecycleError(fact.status === 'expired' ? 'CHECKOUT_EXPIRED' : 'CHECKOUT_ALREADY_COMPLETED')
+      }
       const ready = await authorizeCheckoutReadyRead(db, identity, ticket, fact)
       return { ...ready, operationId: identity.operationId }
     },

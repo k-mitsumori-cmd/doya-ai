@@ -3,7 +3,9 @@ import { LifecycleError, assertLifecycleIdentity, lifecycleSubject, validLifecyc
 import { checkoutUrls } from './checkout-urls'
 
 export const checkoutDigest = (value: unknown): string => createHash('sha256').update(JSON.stringify(value)).digest('hex')
-export type CheckoutRecoveryBinding = { version: 1; recipe: 'generic' | 'hr'; origin: string; returnPath: string | null }
+export type CheckoutRecoveryBinding =
+  | { version: 1; recipe: 'generic' | 'hr'; origin: string; returnPath: string | null }
+  | { version: 2; recipe: 'generic_working'; origin: string; returnPath: string | null; workingPath: string }
 export type CheckoutTerms = { priceId: string; planId: string; serviceId: string; trialDays: number; successUrl: string; cancelUrl: string; email: string; name: string; expiresAt: number }
 export type CheckoutRequest = { cutoverEpoch: string; identity: LifecycleIdentity; mode: 'test' | 'live'; source: 'generic' | 'hr'; organizationId: string | null; customerMode: 'create' | 'reuse' | 'implicit'; customerId: string | null; terms: CheckoutTerms; recovery?: CheckoutRecoveryBinding }
 export type CheckoutPlan = { version: 1 | 2; cutoverEpoch: string; identity: LifecycleIdentity; inputDigest: string; targetHash: string; priceId: string; planId: string; serviceId: string; trialDays: number; mode: 'test' | 'live'; source: 'generic' | 'hr'; organizationId: string | null; customerMode: 'create' | 'reuse' | 'implicit'; expectedCustomerId: string | null; customerId: string | null; expiresAt: number; customerDigest: string; checkoutDigest: string | null; recovery?: CheckoutRecoveryBinding; previousOperationId?: string | null }
@@ -27,12 +29,16 @@ export function exactCheckoutObject(value: unknown, keys: string): value is Reco
 }
 const text = (v: unknown, size = 500) => typeof v === 'string' && v.length > 0 && v.length <= size
 export function validCheckoutRecoveryBinding(v: unknown, source: CheckoutRequest['source']): v is CheckoutRecoveryBinding {
-  if (!exactCheckoutObject(v, 'version,recipe,origin,returnPath') || v.version !== 1 || v.recipe !== source || !text(v.origin, 500)) return false
+  if (!exactCheckoutObject(v, 'version,recipe,origin,returnPath') && !exactCheckoutObject(v, 'version,recipe,origin,returnPath,workingPath')) return false
+  if (!text(v.origin, 500)) return false
+  if (v.version === 1 ? v.recipe !== source || 'workingPath' in v : v.version === 2 ? v.recipe !== 'generic_working' || source !== 'generic' || !('workingPath' in v) : true) return false
   try {
     const origin = new URL(v.origin as string)
     if (origin.protocol !== 'https:' || origin.origin !== v.origin || origin.username || origin.password) return false
   } catch { return false }
-  return v.recipe === 'hr' ? v.returnPath === null : v.returnPath === null || typeof v.returnPath === 'string' && v.returnPath.startsWith('/') && !v.returnPath.startsWith('//') && v.returnPath.length <= 500 && !/[?#\\]/.test(v.returnPath)
+  const returnPathValid = v.returnPath === null || typeof v.returnPath === 'string' && v.returnPath.startsWith('/') && !v.returnPath.startsWith('//') && v.returnPath.length <= 500 && !/[?#\\]/.test(v.returnPath)
+  if (!returnPathValid || v.recipe === 'hr' && v.returnPath !== null) return false
+  return v.version === 1 || typeof v.workingPath === 'string' && v.workingPath.startsWith('/') && !v.workingPath.startsWith('//') && v.workingPath.length <= 500 && !/[#\\]/.test(v.workingPath)
 }
 export const customerIdValid = (v: unknown): v is string => typeof v === 'string' && /^cus_[A-Za-z0-9_]{1,200}$/.test(v)
 export const sessionIdValid = (v: unknown): v is string => typeof v === 'string' && /^cs_[A-Za-z0-9_]{1,200}$/.test(v)

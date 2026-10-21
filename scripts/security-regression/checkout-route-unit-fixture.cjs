@@ -37,6 +37,10 @@ function routeUnitDeps({ prisma, onStart = async () => ({ id: 'cs_fixture', url:
     '@/lib/account-lifecycle/checkout-urls': urls,
     '@/lib/account-lifecycle/checkout-http': bridge,
     '@/lib/account-lifecycle/checkout-stripe-provider': { stripeModeFromSecret: () => 'test' },
+    '@/lib/services': { getActiveServices: () => [
+      { id: 'banner', dashboardHref: '/banner/dashboard' }, { id: 'seo', dashboardHref: '/seo' },
+      { id: 'hr', dashboardHref: '/hr/dashboard' }, { id: 'interview', dashboardHref: '/interview' },
+    ] },
   }
 }
 
