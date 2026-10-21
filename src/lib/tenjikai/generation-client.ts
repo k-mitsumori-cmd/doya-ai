@@ -3,7 +3,7 @@ const MAX_RESPONSE_BYTES = 128 * 1024
 const RESPONSE_DEADLINE_MS = 150_000
 
 /** Timeout/abortはサーバーでの作成取消を意味しない。callerはoutcome_unknownとして扱う。 */
-export async function readGenerationEnvelope(input: RequestInit, signal: AbortSignal): Promise<{ ok: boolean; status: number; body: unknown }> {
+export async function readGenerationEnvelope(input: RequestInit, signal: AbortSignal, url = '/api/tenjikai/generate'): Promise<{ ok: boolean; status: number; body: unknown }> {
   if (signal.aborted) throw new Error('Generation response cancelled')
   const controller = new AbortController()
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
@@ -15,7 +15,7 @@ export async function readGenerationEnvelope(input: RequestInit, signal: AbortSi
     timer = setTimeout(() => { controller.abort(); reject(new Error('Generation response timed out')) }, RESPONSE_DEADLINE_MS)
   })
   const work = (async () => {
-    const response = await fetch('/api/tenjikai/generate', { ...input, cache: 'no-store', signal: controller.signal })
+    const response = await fetch(url, { ...input, cache: 'no-store', signal: controller.signal })
     if (controller.signal.aborted || !response.body || Number(response.headers.get('content-length')) > MAX_RESPONSE_BYTES) throw new Error('Invalid generation response')
     reader = response.body.getReader()
     const chunks: Uint8Array[] = []

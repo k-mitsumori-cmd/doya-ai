@@ -8,10 +8,10 @@ export type GenerationSave = {
 }
 
 export type GenerationResult =
-  | { state: 'generated'; actorId: string; clientRequestId: string; projectId: string; plan: GeneratedPlan; save: GenerationSave }
-  | { state: 'generation_failed'; actorId: string; clientRequestId: string; projectId: string; message: string; save: GenerationSave }
-  | { state: 'auth_changed'; actorId: string; clientRequestId: string; projectId: null; message: string; save: GenerationSave }
-  | { state: 'rejected' | 'outcome_unknown'; actorId: string | null; clientRequestId: string | null; projectId: string | null; message: string; save: GenerationSave }
+  | { state: 'generated'; actorId: string; clientRequestId: string; operationId?: string | null; projectId: string; plan: GeneratedPlan; save: GenerationSave }
+  | { state: 'generation_failed'; actorId: string; clientRequestId: string; operationId?: string | null; projectId: string; message: string; save: GenerationSave }
+  | { state: 'auth_changed'; actorId: string; clientRequestId: string; operationId?: string | null; projectId: null; message: string; save: GenerationSave }
+  | { state: 'rejected' | 'outcome_unknown'; actorId: string | null; clientRequestId: string | null; operationId?: string | null; projectId: string | null; message: string; save: GenerationSave }
 
 export const noProjectSave: GenerationSave = { project: 'not_created', venue: 'not_saved', analysis: 'not_saved', plan: 'not_saved' }
 export const unknownProjectSave: GenerationSave = { ...noProjectSave, project: 'unknown', analysis: 'unknown' }
@@ -42,9 +42,10 @@ function validPlan(value: unknown): boolean {
   })
 }
 
-export function readGenerationResult(body: unknown, actorId: string, requestId: string): GenerationResult | null {
+export function readGenerationResult(body: unknown, actorId: string, requestId: string, operationId?: string): GenerationResult | null {
   const row = object(body)
   if (!row || row.actorId !== actorId || row.clientRequestId !== requestId) return null
+  if (operationId !== undefined && row.operationId !== operationId) return null
   const save = object(row.save)
   if (!save || !['basic', 'unknown', 'not_created'].includes(String(save.project)) || save.venue !== 'not_saved'
       || !['saved', 'unknown', 'not_saved'].includes(String(save.analysis)) || save.plan !== 'not_saved') return null

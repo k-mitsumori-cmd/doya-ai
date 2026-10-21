@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import type { Prisma } from '@prisma/client'
 import { purgeAskLinkCreationReceipts } from './creation-receipts'
+import { purgeGenerationReceipts } from '@/lib/tenjikai/generation-receipts'
 
 export const ASKLINK_ACCOUNT_PURGE = 'asklink-account-purge:v2:'
 export const ASKLINK_UPLOAD_TICKET = 'asklink-upload-ticket:v1:'
@@ -57,5 +58,6 @@ export async function deleteAskLinkAccount<T>(tx: Prisma.TransactionClient, acto
   await tx.systemSetting.upsert({ where: { key }, create: { key, value }, update: { value } })
   await tx.askLinkRun.deleteMany({ where: { userId: actor } })
   await purgeAskLinkCreationReceipts(tx, actor)
+  await purgeGenerationReceipts(tx, actor)
   return removeUser()
 }

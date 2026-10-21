@@ -5,7 +5,12 @@ repo = pathlib.Path(__file__).resolve().parents[2]
 bins = [pathlib.Path(os.environ['DOYA_PRIVATE_POSTGRES_BIN'])] if os.environ.get('DOYA_PRIVATE_POSTGRES_BIN') else [pathlib.Path('/opt/homebrew/opt/postgresql@17/bin'), *sorted(pathlib.Path('/usr/lib/postgresql').glob('*/bin'), reverse=True)]
 pg = next((p for p in bins if (p/'initdb').is_file() and (p/'pg_ctl').is_file()), None)
 if pg is None: raise SystemExit('Private PostgreSQL binaries unavailable')
-root = pathlib.Path('/tmp') / ('doya-tenjikai-c3a-' + uuid.uuid4().hex[:8]); root.mkdir(mode=0o700); (root/'socket').mkdir(mode=0o700)
+for _ in range(4):
+ root = pathlib.Path('/tmp') / ('doya-tenjikai-c3a-' + uuid.uuid4().hex[:8])
+ try: root.mkdir(mode=0o700); break
+ except FileExistsError: continue
+else: raise SystemExit('Unable to reserve a unique private PostgreSQL directory')
+root.chmod(0o700); (root/'socket').mkdir(mode=0o700)
 run_id = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S') + '-' + uuid.uuid4().hex[:6]
 evidence = pathlib.Path(os.environ.get('DOYA_TENJIKAI_C3A_EVIDENCE_DIR', str(repo.parent/'sandbox/doya-tenjikai-c3a-20261021'))).resolve(); evidence.mkdir(parents=True, exist_ok=True)
 env = {k:v for k,v in os.environ.items() if not k.startswith('PG')}; port = 56527; started = False

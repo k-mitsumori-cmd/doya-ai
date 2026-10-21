@@ -90,6 +90,19 @@ jobs:
           path: ${{ runner.temp }}/tenjikai-c3a-postgres/
           if-no-files-found: ignore
 
+      - name: Tenjikai c3b durable generation regression (private Unix socket)
+        env:
+          DOYA_TENJIKAI_C3B_EVIDENCE_DIR: ${{ runner.temp }}/tenjikai-c3b-postgres
+        run: python3 scripts/security-regression/verify-tenjikai-c3b-postgres.py
+
+      - name: Preserve Tenjikai c3b PostgreSQL evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenjikai-c3b-postgres
+          path: ${{ runner.temp }}/tenjikai-c3b-postgres/
+          if-no-files-found: ignore
+
       - name: Shodan member retirement fence regression (private Unix socket)
         run: python3 scripts/security-regression/verify-shodan-membership-postgres.py
 

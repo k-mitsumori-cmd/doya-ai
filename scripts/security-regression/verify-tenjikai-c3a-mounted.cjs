@@ -24,6 +24,7 @@ const wrap = ({ children }) => React.createElement('div', null, children)
 const motion = new Proxy({}, { get: (_, tag) => ({ children, ...props }) => React.createElement(tag,
   Object.fromEntries(Object.entries(props).filter(([key]) => !['initial', 'animate', 'exit', 'transition', 'layout', 'layoutId', 'whileHover', 'whileTap'].includes(key))), children) })
 const Link = ({ children, href, ...props }) => React.createElement('a', { ...props, href }, children)
+function SyntheticGenerating({ onDone }) { f.animationDone = onDone; React.useEffect(onDone, [onDone]); return React.createElement('p', null, 'generating') }
 const mocks = {
   react: React, 'react/jsx-runtime': req('react/jsx-runtime'), 'react-dom': req('react-dom'),
   'next/link': Link,
@@ -39,10 +40,10 @@ const mocks = {
   './TenjikaiSidebar': { __esModule: true, default: ({ go, ready }) => React.createElement('nav', null,
     load(path.join(rootPath, 'src/lib/tenjikai/nav.ts')).SECTIONS.map(section => React.createElement('button', { key: section, disabled: !ready && section !== 'new',
       onClick: () => go(section) }, `nav-${section}`))) },
-  './Wizard': { __esModule: true, default: ({ initial, onSubmit, submitDisabled }) => React.createElement('div', null,
+  './Wizard': { __esModule: true, default: ({ initial, onSubmit, submitDisabled, submitLabel }) => React.createElement('div', null,
     React.createElement('span', null, `input:${initial.eventName}`),
-    React.createElement('button', { disabled: submitDisabled, onClick: () => onSubmit({ ...initial, eventName: '実入力の展示会' }) }, 'start')) },
-  './Generating': { __esModule: true, default: function SyntheticGenerating({ onDone }) { f.animationDone = onDone; React.useEffect(onDone, [onDone]); return React.createElement('p', null, 'generating') } },
+    React.createElement('button', { disabled: submitDisabled, onClick: () => onSubmit({ ...initial, eventName: '実入力の展示会' }) }, submitLabel === '同じ操作で生成を続ける' ? 'resume-same-operation' : 'start')) },
+  './Generating': { __esModule: true, default: SyntheticGenerating },
   './BoothStudio': { __esModule: true, default: ({ input, analysis }) => React.createElement('p', null, `3D:${input.eventName}:${analysis.brand}`) },
   './Overview': { __esModule: true, default: ({ input }) => React.createElement('p', null, `overview:${input.eventName}`) },
   './CreativeStudio': { __esModule: true, default: no }, './NoveltyPicker': { __esModule: true, default: no },
@@ -78,9 +79,14 @@ function load(file) {
 const App = load(path.join(rootPath, 'src/components/tenjikai/TenjikaiApp.tsx')).default
 const Shell = load(path.join(rootPath, 'src/components/tenjikai/TenjikaiShellFrame.tsx')).default
 const tick = () => new Promise(resolve => setImmediate(resolve))
-async function fixture(mode, shell, initialRoute = '/tenjikai') {
-  harness.reset(mode)
-  global.fetch = async (_url, init) => harness.POST(new NextRequest('https://example.invalid/api/tenjikai/generate', init))
+async function fixture(mode, shell, initialRoute = '/tenjikai', preserveState = false) {
+  if (!preserveState) harness.reset(mode)
+  global.fetch = async (url, init) => {
+    const address = new URL(url, 'https://example.invalid')
+    const request = new NextRequest(address, init)
+    if (address.pathname.endsWith('/generate/status')) return init?.method === 'POST' ? harness.statusRoute.POST(request) : harness.statusRoute.GET(request)
+    return harness.POST(request)
+  }
   const container = document.createElement('div'); document.body.append(container)
   const active = { route: initialRoute, routes: [], actor: 'actor-a', status: 'authenticated', container, root: createRoot(container) }
   active.update = async () => ({ user: { id: active.actor } })
@@ -98,8 +104,8 @@ async function fixture(mode, shell, initialRoute = '/tenjikai') {
   active.close = () => act(() => { active.root.unmount(); container.remove(); global.fetch = originalFetch })
   return active
 }
-async function check(name, mode, shell, run, initialRoute) {
-  const view = await fixture(mode, shell, initialRoute)
+async function check(name, mode, shell, run, initialRoute, preserveState = false) {
+  const view = await fixture(mode, shell, initialRoute, preserveState)
   try { await run(view); cases.push(name) } finally { await view.close() }
 }
 ;(async () => {
@@ -152,29 +158,30 @@ async function check(name, mode, shell, run, initialRoute) {
   })
   await check('quota retains input and does not claim project', 'quota', false, async view => {
     await view.click('start')
-    assert.equal(view.route, '/tenjikai')
+    assert.match(view.route, /^\/tenjikai\?operation=\d{13}\.[0-9a-f-]{36}$/)
     assert.match(view.container.textContent, /input:実入力の展示会/)
     assert.doesNotMatch(view.container.textContent, /基本情報を保存しました/)
     assert.equal(harness.getState().provider, 0)
   })
   await check('unknown keeps input and disables ordinary resend', 'commit_then_p2028', false, async view => {
     await view.click('start')
-    assert.equal(view.route, '/tenjikai')
+    assert.match(view.route, /^\/tenjikai\?operation=\d{13}\.[0-9a-f-]{36}$/)
     assert.match(view.container.textContent, /作成結果を確認できません/)
     assert.match(view.container.textContent, /input:実入力の展示会/)
-    assert.equal([...view.container.querySelectorAll('button')].find(item => item.textContent === 'start')?.disabled, true)
+    assert.equal([...view.container.querySelectorAll('button')].some(item => item.textContent === 'start' && !item.disabled), false)
+    assert.ok([...view.container.querySelectorAll('button')].some(item => item.textContent === 'resume-same-operation'))
     assert.equal(harness.getState().creates, 1)
   })
   await check('AI failure keeps input and links owned partial', 'ai_failure', false, async view => {
     await view.click('start')
-    assert.equal(view.route, '/tenjikai')
+    assert.match(view.route, /^\/tenjikai\?operation=\d{13}\.[0-9a-f-]{36}$/)
     assert.match(view.container.textContent, /input:実入力の展示会/)
     assert.match(view.container.querySelector('a[href*="project=project-a"]')?.textContent || '', /保存案件/)
     assert.equal([...view.container.querySelectorAll('button')].find(item => item.textContent === 'start')?.disabled, true)
   })
   await check('malformed response body becomes unknown without another POST', 'success', false, async view => {
     let calls = 0
-    global.fetch = async () => { calls++; return new Response('{bad', { status: 200, headers: { 'content-type': 'application/json' } }) }
+    global.fetch = async (_url, init) => { if (init?.method === 'POST') calls++; return new Response('{bad', { status: 200, headers: { 'content-type': 'application/json' } }) }
     await view.click('start')
     assert.equal(calls, 1)
     assert.match(view.container.textContent, /作成結果を確認できません/)
@@ -286,6 +293,39 @@ async function check(name, mode, shell, run, initialRoute) {
     await view.act(() => release({ user: { id: 'actor-a' } }))
     assert.doesNotMatch(view.container.textContent, /3D:/)
     assert.match(view.container.textContent, /保存内容の部分表示/)
+  })
+  await check('response loss recovers reserved operation and explicit same-handle continuation', 'commit_then_p2028', false, async view => {
+    await view.click('start')
+    assert.equal(harness.getState().creates, 1); assert.equal(harness.getState().provider, 0)
+    assert.match(view.container.textContent, /同じ操作で生成を続ける|resume-same-operation/)
+    await view.click('resume-same-operation')
+    assert.equal(harness.getState().creates, 1); assert.equal(harness.getState().provider, 1)
+    assert.equal(view.route, '/tenjikai/booth?project=project-a')
+    assert.match(view.container.textContent, /3D:実入力の展示会/)
+  })
+  harness.reset('success')
+  harness.getState().project = { id: 'project-a', userId: 'actor-a' }
+  harness.getState().operations.set(harness.operationId, { operationId: harness.operationId, state: 'completed', projectId: 'project-a', analysis: 'saved', dispatchAllowed: false })
+  await check('reload completed handle shows only saved basic and analysis without recreated 3D', 'success', false, async view => {
+    assert.equal(harness.getState().provider, 0); assert.equal(harness.getState().creates, 0)
+    assert.match(view.container.textContent, /基本情報と分析を保存済み/)
+    assert.match(view.container.textContent, /元の3D案は再現されません/)
+    assert.ok(view.container.querySelector('a[href*="project=project-a"]'))
+    assert.doesNotMatch(view.container.textContent, /3D:/)
+  }, `/tenjikai?operation=${harness.operationId}`, true)
+  harness.reset('success')
+  harness.getState().project = { id: 'project-a', userId: 'actor-a' }
+  harness.getState().operations.set(harness.operationId, { operationId: harness.operationId, state: 'claimed', projectId: 'project-a', analysis: 'not_saved', dispatchAllowed: false })
+  await check('reload claimed handle never auto dispatches or calls it completed', 'success', false, async view => {
+    assert.equal(harness.getState().provider, 0); assert.equal(harness.getState().creates, 0)
+    assert.match(view.container.textContent, /AI実行結果を確認中/)
+    assert.doesNotMatch(view.container.textContent, /基本情報と分析を保存済み|3D:/)
+  }, `/tenjikai?operation=${harness.operationId}`, true)
+  await check('actor ABA on operation handle does not auto POST', 'commit_then_p2028', false, async view => {
+    await view.click('start'); assert.equal(harness.getState().provider, 0)
+    await view.auth('actor-b'); await view.auth('actor-a')
+    assert.equal(harness.getState().provider, 0)
+    assert.doesNotMatch(view.container.textContent, /3D:/)
   })
   const hashes = Object.fromEntries([...source].map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(rootPath, file))).digest('hex')]))
   console.log(JSON.stringify({ accepted: true, scope: 'Actual route, adapter and mounted TenjikaiApp/ShellFrame with synthetic auth/DB/AI/router/visual children; no external calls.', passed: cases.length, cases, sourceHashes: hashes }, null, 2))

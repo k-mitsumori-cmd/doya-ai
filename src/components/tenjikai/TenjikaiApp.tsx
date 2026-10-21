@@ -37,6 +37,7 @@ import {
   type ProjectInput,
 } from '@/lib/tenjikai/engine'
 import type { GenerationResult, GenerationSave } from '@/lib/tenjikai/generation-result'
+import { readGenerationStatus, cancelGenerationStatus, validOperationHandle, type ClientOperationStatus } from '@/lib/tenjikai/generation-status-client'
 
 type Phase = 'input' | 'generating' | 'ready'
 
@@ -49,6 +50,8 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
 function TenjikaiAppBoundary({ shell }: { shell: boolean }) {
   const mode = projectModeFromQuery(useSearchParams())
   const scope = useEntryActorScope()
+  const scopeCurrent = scope.current, scopeActor = scope.actor, scopeStatus = scope.status
+  const currentActor = useCallback(() => scopeStatus === 'authenticated' && !!scopeActor && scopeCurrent(), [scopeStatus, scopeActor, scopeCurrent])
   const { update } = useSession()
   const [working, setWorking] = useState<{ actor: string; epoch: number; projectId: string } | null>(null)
   const [workspaceEpoch, setWorkspaceEpoch] = useState(0)
@@ -92,7 +95,7 @@ function TenjikaiAppBoundary({ shell }: { shell: boolean }) {
   if (leavingWorking) return <p role="status" className="p-6">案件の表示を切り替えています。</p>
   if (mode.kind === 'invalid') return <InvalidProjectMode shell={shell} mode={mode} />
   if (mode.kind === 'saved' && mode.id !== currentWorking?.projectId) return <SavedProjectMode shell={shell} mode={mode} />
-  return <TenjikaiAppContent key={`${scope.version}:${workspaceEpoch}`} shell={shell} currentActor={() => scope.status === 'authenticated' && !!scope.actor && scope.current()}
+  return <TenjikaiAppContent key={`${scope.version}:${workspaceEpoch}`} shell={shell} currentActor={currentActor}
     actorId={scope.actor} activeProjectId={currentWorking?.projectId ?? null}
     onWorking={projectId => setWorking({ actor: scope.actor, epoch: scope.version, projectId })}
     onNew={() => { setWorking(null); setWorkspaceEpoch(value => value + 1) }} onAuthChanged={() => { setWorking(null); setBlocked(true) }} />
@@ -152,6 +155,7 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
   onWorking: (projectId: string) => void; onNew: () => void; onAuthChanged: () => void
 }) {
   const router = useRouter()
+  const query = useSearchParams()
   const section = sectionFromPath(usePathname())
   const [phase, setPhase] = useState<Phase>('input')
   const [input, setInput] = useState<ProjectInput>(SAMPLE_INPUT)
@@ -174,7 +178,44 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
   const [animDone, setAnimDone] = useState(false)
   const requestSeq = useRef(0)
   const requestController = useRef<AbortController | null>(null)
+  const operationRef = useRef<string | null>(null)
+  const [operationStatus, setOperationStatus] = useState<ClientOperationStatus | null>(null)
   useEffect(() => () => { requestSeq.current++; requestController.current?.abort() }, [])
+
+  const urlOperation = query.get('operation')
+  useEffect(() => {
+    if (!validOperationHandle(urlOperation) || requestController.current) return
+    operationRef.current = urlOperation
+    const controller = new AbortController()
+    void readGenerationStatus(actorId, urlOperation, controller.signal).then(status => {
+      if (controller.signal.aborted || !currentActor() || !status) return
+      setOperationStatus(status)
+      if (status.state !== 'missing') {
+        setFailureKind('unknown')
+        setError(status.state === 'reserved'
+          ? '作成結果を確認できませんでした。操作はAI開始前です。元と同じ入力で続けられます。'
+          : '操作の保存状態を確認しました。保存済みの範囲をご確認ください。')
+      }
+    })
+    return () => controller.abort()
+  }, [urlOperation, actorId, currentActor])
+
+  const checkOperation = () => {
+    const operationId = operationRef.current
+    if (!operationId || !currentActor()) return
+    const controller = new AbortController()
+    void readGenerationStatus(actorId, operationId, controller.signal).then(status => {
+      if (currentActor() && operationRef.current === operationId && status) setOperationStatus(status)
+    })
+  }
+  const cancelMissingOperation = () => {
+    const operationId = operationRef.current
+    if (!operationId || operationStatus?.state !== 'missing' || !currentActor()) return
+    const controller = new AbortController()
+    void cancelGenerationStatus(actorId, operationId, controller.signal).then(status => {
+      if (currentActor() && operationRef.current === operationId && status) setOperationStatus(status)
+    })
+  }
 
   const analysis = generated.analysis
   const plans = useMemo(() => applyBoothCopy(generateBoothPlans(input), generated.boothCopy), [input, generated.boothCopy])
@@ -187,8 +228,9 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
     [input, plan, creatives, novelties, selectedNovelty],
   )
 
-  const start = (next: ProjectInput) => {
-    if (!currentActor() || requestController.current || failureKind === 'unknown' || failureKind === 'known' && !!projectId) return
+  const start = (next: ProjectInput, explicitSameOperation = false) => {
+    if (!currentActor() || requestController.current || failureKind === 'unknown' && !explicitSameOperation || failureKind === 'known' && !!projectId) return
+    if (explicitSameOperation && operationStatus?.state !== 'reserved') return
     setError(null)
     setFailureKind(null)
     setInput(next)
@@ -199,9 +241,13 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
     setPhase('generating')
     const seq = ++requestSeq.current
     const requestId = crypto.randomUUID()
+    const operationId = explicitSameOperation && operationRef.current ? operationRef.current : `${Date.now()}.${crypto.randomUUID()}`
+    operationRef.current = operationId
+    setOperationStatus(null)
+    router.replace(`${sectionHref('new')}?operation=${encodeURIComponent(operationId)}`)
     const controller = new AbortController()
     requestController.current = controller
-    requestGeneratedPlan(next, actorId, requestId, controller.signal).then((result: GenerationResult) => {
+    requestGeneratedPlan(next, actorId, operationId, requestId, controller.signal).then((result: GenerationResult) => {
       if (!currentActor() || seq !== requestSeq.current) return
       if (result.state === 'generated') {
         setDocs([])
@@ -245,7 +291,7 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
   }, [phase, animDone, pending, router, currentActor, projectId, activeProjectId])
 
   const go = (s: Section) => {
-    if (s === 'new') { requestSeq.current++; requestController.current?.abort(); requestController.current = null; setPhase('input'); setProjectId(null); setError(null); setFailureKind(null); onNew() }
+    if (s === 'new') { requestSeq.current++; requestController.current?.abort(); requestController.current = null; operationRef.current = null; setOperationStatus(null); setPhase('input'); setProjectId(null); setError(null); setFailureKind(null); onNew() }
     router.push(s === 'new' || !activeProjectId ? sectionHref(s) : projectSectionHref(s, { kind: 'saved', id: activeProjectId }))
     setMobileOpen(false)
   }
@@ -259,7 +305,7 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
           onDone={onGeneratingDone}
         />
       )
-    if (phase === 'input' || section === 'new') return <Wizard initial={input} onSubmit={start} submitDisabled={failureKind === 'unknown' || failureKind === 'known' && !!projectId} />
+    if (phase === 'input' || section === 'new') return <Wizard initial={input} onSubmit={next => start(next, operationStatus?.state === 'reserved')} submitLabel={operationStatus?.state === 'reserved' ? '同じ操作で生成を続ける' : undefined} submitDisabled={failureKind === 'unknown' && operationStatus?.state !== 'reserved' || failureKind === 'known' && !!projectId} />
     switch (section) {
       case 'overview':
         return <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} />
@@ -286,7 +332,15 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
         <p>{error}{failureKind === 'unknown' && ' 作成された可能性があるため、ここからの再送は停止しています。'}</p>
         {projectId ? <Link href={projectSectionHref('overview', { kind: 'saved', id: projectId })} className="mt-2 inline-block font-semibold underline">保存案件の基本情報を確認</Link>
           : failureKind === 'unknown' ? <Link href="/home" className="mt-2 inline-block font-semibold underline">ホームで保存案件を確認</Link> : null}
-        {failureKind === 'unknown' && <p className="mt-2">一覧に見つからない場合も、案件が作成されなかった証明にはなりません。</p>}
+        {failureKind === 'unknown' && <>
+          <p className="mt-2">一覧に見つからない場合も、案件が作成されなかった証明にはなりません。</p>
+          {operationRef.current && <button type="button" className="mt-2 block font-semibold underline" onClick={checkOperation}>この操作の状態を確認</button>}
+          {operationStatus?.state === 'reserved' && <p className="mt-2">AIはまだ開始されていません。元と同じ入力を確認してから、同じ操作として生成を続けられます。</p>}
+          {operationStatus?.state === 'missing' && <button type="button" className="mt-2 block font-semibold underline" onClick={cancelMissingOperation}>遅れて届く操作を取り消す</button>}
+          {operationStatus?.state === 'canceled' && <button type="button" className="mt-2 block font-semibold underline" onClick={() => go('new')}>新しい操作を始める</button>}
+          {operationStatus?.projectId && <Link href={projectSectionHref('overview', { kind: 'saved', id: operationStatus.projectId })} className="mt-2 block font-semibold underline">確認できる保存案件を開く</Link>}
+          {operationStatus && <p className="mt-2">操作状態: {operationStatus.state === 'completed' ? '基本情報と分析を保存済み' : operationStatus.state === 'degraded' ? '基本情報のみ確認済み' : operationStatus.state === 'failed' ? '生成に失敗しました' : operationStatus.state === 'reserved' ? 'AI開始前' : operationStatus.state === 'processing' || operationStatus.state === 'unknown' ? 'AI実行結果を確認中' : operationStatus.state === 'missing' ? '未到着の可能性があります' : operationStatus.state === 'canceled' ? '取消済み' : operationStatus.state === 'deleted' ? '案件を確認できません' : '現在の案件と一致しません'}。元の3D案は再現されません。</p>}
+        </>}
       </div>}
       {phase === 'ready' && section !== 'new' && save && (
         <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">

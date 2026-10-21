@@ -496,26 +496,26 @@ export function applyCreativeCopy(creatives: Creative[], copy: GeneratedPlan['cr
   return creatives.map((c) => (copy[c.kind] ? { ...c, ...copy[c.kind] } : c))
 }
 
-/** clientRequestIdは取り違え防止であり、c3bのdurable idempotencyではない。 */
-export async function requestGeneratedPlan(input: ProjectInput, actorId: string, clientRequestId: string, signal: AbortSignal = new AbortController().signal): Promise<import('./generation-result').GenerationResult> {
+/** operationId is stable across explicit retry; clientRequestId binds only this response attempt. */
+export async function requestGeneratedPlan(input: ProjectInput, actorId: string, operationId: string, clientRequestId: string, signal: AbortSignal = new AbortController().signal): Promise<import('./generation-result').GenerationResult> {
   const { readGenerationResult, unknownProjectSave } = await import('./generation-result')
   const { readGenerationEnvelope } = await import('./generation-client')
   const unknown = (message = '案件の作成結果を確認できませんでした。再度作成せず、保存状況をご確認ください。') => ({
-    state: 'outcome_unknown' as const, actorId, clientRequestId, projectId: null, message, save: unknownProjectSave,
+    state: 'outcome_unknown' as const, actorId, clientRequestId, operationId, projectId: null, message, save: unknownProjectSave,
   })
   try {
     const { ok, status, body } = await readGenerationEnvelope({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...input, expectedActor: actorId, clientRequestId }),
+      body: JSON.stringify({ ...input, expectedActor: actorId, clientRequestId, operationId }),
     }, signal)
-    if (status === 401 || status === 409) return { state: 'auth_changed', actorId, clientRequestId, projectId: null,
+    if (status === 401 || status === 409) return { state: 'auth_changed', actorId, clientRequestId, operationId, projectId: null,
       message: 'ログイン状態が変わりました。再度ログイン状態をご確認ください。', save: unknownProjectSave }
-    const result = readGenerationResult(body, actorId, clientRequestId)
+    const result = readGenerationResult(body, actorId, clientRequestId, operationId)
     if (!result) return unknown()
     if (ok && result.state === 'generated') return result
     if (status === 502 && result.state === 'generation_failed') return result
-    if (!ok && (result.state === 'rejected' || result.state === 'outcome_unknown')) return result
+    if ((!ok || status === 202) && (result.state === 'rejected' || result.state === 'outcome_unknown')) return result
     return unknown()
   } catch {
     return unknown()

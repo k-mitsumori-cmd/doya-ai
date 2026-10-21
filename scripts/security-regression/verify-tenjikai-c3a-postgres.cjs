@@ -71,7 +71,7 @@ async function reset() {
   session = { user: { id: actor } }; aiWait = null; provider = 0
 }
 const request = () => new NextRequest('https://example.invalid/api/tenjikai/generate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
-  ...engine.SAMPLE_INPUT, expectedActor: actor, clientRequestId: crypto.randomUUID(),
+  ...engine.SAMPLE_INPUT, expectedActor: actor, clientRequestId: crypto.randomUUID(), operationId: `${Date.now()}.${crypto.randomUUID()}`,
 }) })
 async function post() { const response = await route.POST(request()); return { status: response.status, body: await response.json() } }
 const identity = () => ({ operator: { kind: 'admin', id: 'synthetic_admin' }, targetUserId: actor, operationId: crypto.randomUUID(), kind: 'retirement' })
