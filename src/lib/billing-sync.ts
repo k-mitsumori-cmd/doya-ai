@@ -85,6 +85,7 @@ export async function projectUnifiedBilling(tx: Prisma.TransactionClient, input:
  * 通知の登録は同じトランザクションで行い、外部への実送信は含めない。
  */
 export async function syncUnifiedBilling(input: BillingSyncInput) {
+  if (!Object.hasOwn(PLAN_RANK, input.plan)) throw new Error('Invalid billing plan')
   return withRetry(async () => {
     for (let attempt = 0; ; attempt++) {
       try {
