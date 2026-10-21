@@ -80,6 +80,17 @@ async function setup({ id = SITE_A, actor = 'userA', serverActor = actor, popups
 const respond = async (req, body, status = 200) => act(() => req.header.resolve({ ok: status >= 200 && status < 300,
   status, json: async () => body }))
 const check = async (name, fn) => { try { await fn(); console.log('PASS', name) } catch (error) { console.error('FAIL', name, error); process.exitCode = 1 } }
+const withReadClock = async work => {
+  const originalSet = global.setTimeout, originalClear = global.clearTimeout
+  const timers = new Map(); let serial = -1
+  global.setTimeout = (fn, ms, ...args) => {
+    if (ms === 300 || ms === 15_000) { const id = serial--; timers.set(id, { ms, run: () => fn(...args) }); return id }
+    return originalSet(fn, ms, ...args)
+  }
+  global.clearTimeout = id => { if (timers.has(id)) timers.delete(id); else originalClear(id) }
+  try { await work({ timers, deadline: () => [...timers].find(([, t]) => t.ms === 15_000), fire: async entry => act(() => { timers.delete(entry[0]); entry[1].run() }) }) }
+  finally { global.setTimeout = originalSet; global.clearTimeout = originalClear }
+}
 ;(async () => {
   await check('StrictMode remount keeps the current site usable', async () => {
     const app = await setup({ strict: true })
@@ -221,6 +232,100 @@ const check = async (name, fn) => { try { await fn(); console.log('PASS', name) 
         assert.match(document.body.textContent, /設置タグ/)
       } finally { await app.unmount() }
     }
+  })
+  await check('BFCache hung headers time out, retry succeeds, and late 401 is ignored', async () => {
+    const app = await setup()
+    const navigationAttempts = []
+    const observeNavigation = error => { if (/navigation/.test(error.message)) navigationAttempts.push(error.message) }
+    dom.virtualConsole.on('jsdomError', observeNavigation)
+    try { await withReadClock(async ({ timers, deadline, fire }) => {
+      await act(() => window.dispatchEvent(new window.Event('pagehide')))
+      const event = new window.Event('pageshow'); Object.defineProperty(event, 'persisted', { value: true })
+      await act(() => window.dispatchEvent(event))
+      const old = requests[0], firstDeadline = deadline()
+      assert(firstDeadline)
+      await fire(firstDeadline)
+      assert(button('retry'))
+      assert.doesNotMatch(document.body.textContent, /設置タグ/)
+      assert.equal(requests.length, 1, 'no automatic read retry')
+      await act(() => clicks('retry'))
+      await respond(requests[1], dto(SITE_A, 30))
+      assert.match(document.body.textContent, /設置タグ/)
+      assert.equal(timers.size, 0, 'read deadline and spinner were cleared')
+      const location = window.location.href
+      await respond(old, {}, 401)
+      assert.equal(window.location.href, location)
+      assert.equal(navigationAttempts.length, 0, 'expired old 401 must not attempt sign-in navigation')
+      assert.match(document.body.textContent, /設置タグ/)
+      assert.equal(requests.length, 2)
+    }) } finally { dom.virtualConsole.off('jsdomError', observeNavigation); await app.unmount() }
+  })
+  await check('current read 401 attempts the safe sign-in navigation once', async () => {
+    const app = await setup()
+    const navigationAttempts = []
+    const observeNavigation = error => { if (/navigation/.test(error.message)) navigationAttempts.push(error.message) }
+    dom.virtualConsole.on('jsdomError', observeNavigation)
+    try {
+      await act(() => clicks('days-7'))
+      await respond(requests[0], {}, 401)
+      assert.equal(navigationAttempts.length, 1)
+      assert.equal(requests.length, 1)
+    } finally { dom.virtualConsole.off('jsdomError', observeNavigation); await app.unmount() }
+  })
+  await check('hung JSON body times out and late foreign body cannot replace retry result', async () => {
+    const app = await setup()
+    try { await withReadClock(async ({ timers, deadline, fire }) => {
+      await act(() => clicks('days-7'))
+      const old = requests[0], body = deferred()
+      await act(() => old.header.resolve({ ok: true, status: 200, json: () => body.promise }))
+      await fire(deadline())
+      assert(button('retry'))
+      await act(() => clicks('retry'))
+      assert.equal(requests.length, 2)
+      await respond(requests[1], dto(SITE_A, 7))
+      await act(() => body.resolve(dto(SITE_B, 7)))
+      assert.match(document.body.textContent, /表示（7日）/)
+      assert.doesNotMatch(document.body.textContent, /Site bbbbbbbbbbbbbbbbbbbb/)
+      assert.equal(timers.size, 0)
+    }) } finally { await app.unmount() }
+  })
+  await check('new period and actor ABA retire old read deadlines without touching current UI', async () => {
+    const app = await setup()
+    try { await withReadClock(async ({ timers, deadline, fire }) => {
+      await act(() => clicks('days-7'))
+      const first = deadline()
+      await act(() => clicks('days-90'))
+      assert.equal(timers.has(first[0]), false)
+      await fire(first)
+      assert.equal(button('retry'), undefined)
+      await respond(requests[1], dto(SITE_A, 90))
+      assert.match(document.body.textContent, /表示（90日）/)
+      sdk = { status: 'authenticated', actor: 'userB' }; await app.render()
+      sdk = { status: 'authenticated', actor: 'userA' }; await app.render()
+      const active = deadline()
+      assert(active)
+      await act(() => window.dispatchEvent(new window.Event('pagehide')))
+      assert.equal(timers.has(active[0]), false)
+      await fire(active)
+      assert.equal(requests.length, 3)
+      assert.equal(timers.size, 0)
+    }) } finally { await app.unmount() }
+  })
+  await check('unmount settles an in-flight read and ignores its queued timeout and late body', async () => {
+    const app = await setup()
+    await withReadClock(async ({ timers, deadline, fire }) => {
+      await act(() => clicks('days-7'))
+      const old = requests[0], body = deferred()
+      await act(() => old.header.resolve({ ok: true, status: 200, json: () => body.promise }))
+      const queued = deadline()
+      await app.unmount()
+      assert.equal(timers.size, 0)
+      await fire(queued)
+      await act(() => body.resolve(dto(SITE_A, 7)))
+      assert.equal(requests.length, 1)
+      assert.deepEqual(pushes, [])
+      assert.equal(toasts.length, 0)
+    })
   })
   await check('current publish and undo keep one scoped PATCH each', async () => {
     const app = await setup({ popups: [popup()] })

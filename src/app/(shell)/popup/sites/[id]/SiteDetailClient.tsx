@@ -205,10 +205,10 @@ export default function SiteDetailClient({ initial, serverActorId, created }: {
   currentDays.current = days
   const life = useRef<{ scope: string | null; siteId: string; epoch: number; active: boolean;
     mounted: boolean; readSeq: number; readAbort: AbortController | null;
-    readTimer: ReturnType<typeof setTimeout> | null; nextToken: number;
+    readTimer: ReturnType<typeof setTimeout> | null; readCancel: (() => void) | null; nextToken: number;
     busyToken: number | null; undoSeq: number; pending: Set<() => void> }>({
     scope: null, siteId: initial.site.id, epoch: 0, active: false, mounted: true,
-    readSeq: 0, readAbort: null, readTimer: null, nextToken: 0, busyToken: null, undoSeq: 0,
+    readSeq: 0, readAbort: null, readTimer: null, readCancel: null, nextToken: 0, busyToken: null, undoSeq: 0,
     pending: new Set(),
   })
   const retire = useCallback(() => {
@@ -216,6 +216,8 @@ export default function SiteDetailClient({ initial, serverActorId, created }: {
     state.epoch++
     state.active = false
     state.readSeq++
+    state.readCancel?.()
+    state.readCancel = null
     state.readAbort?.abort()
     state.readAbort = null
     if (state.readTimer) clearTimeout(state.readTimer)
@@ -277,19 +279,41 @@ export default function SiteDetailClient({ initial, serverActorId, created }: {
       { scope: state.scope, epoch: state.epoch, siteId: state.siteId } : null
     if (!ticket) return
     const seq = ++state.readSeq
+    state.readCancel?.()
+    state.readCancel = null
     state.readAbort?.abort()
     if (state.readTimer) clearTimeout(state.readTimer)
     const controller = new AbortController()
     state.readAbort = controller
-    const isReadCurrent = () => state.mounted && state.active && state.scope === ticket.scope &&
+    let transportActive = true
+    let timedOut = false
+    let deadlineTimer: ReturnType<typeof setTimeout> | null = null
+    const isLatestRead = () => state.mounted && state.active && state.scope === ticket.scope &&
       state.epoch === ticket.epoch && state.siteId === ticket.siteId && state.readSeq === seq
+    const isReadCurrent = () => transportActive && isLatestRead()
+    const deadline = new Promise<never>((_, reject) => {
+      deadlineTimer = setTimeout(() => {
+        if (!transportActive) return
+        transportActive = false
+        timedOut = true
+        controller.abort()
+        reject(new Error('read deadline'))
+      }, 15_000)
+      state.readCancel = () => {
+        if (!transportActive) return
+        transportActive = false
+        if (deadlineTimer) clearTimeout(deadlineTimer)
+        controller.abort()
+        reject(new Error('read retired'))
+      }
+    })
     setLoadError(false)
     setSwitching(false)
     state.readTimer = setTimeout(() => { if (isReadCurrent()) setSwitching(true) }, 300)
     try {
-      const res = await fetch(`/api/popup/sites/${encodeURIComponent(ticket.siteId)}?days=${d}`, {
+      const res = await Promise.race([fetch(`/api/popup/sites/${encodeURIComponent(ticket.siteId)}?days=${d}`, {
         cache: 'no-store', signal: controller.signal,
-      })
+      }), deadline])
       if (!isReadCurrent()) return
       if (res.status === 401) {
         const callback = safeSignInCallbackUrl(`/popup/sites/${encodeURIComponent(ticket.siteId)}`)
@@ -297,17 +321,24 @@ export default function SiteDetailClient({ initial, serverActorId, created }: {
         return
       }
       if (!res.ok) throw new Error('load')
-      const body: unknown = await res.json()
+      const body: unknown = await Promise.race([res.json(), deadline])
       if (!isReadCurrent()) return
       if (!isSiteDetail(body, ticket.siteId, d)) throw new Error('load')
       setData(body)
       setDataEpoch(ticket.epoch)
       if (container.current) { container.current.hidden = false; container.current.removeAttribute('inert') }
     } catch {
-      if (isReadCurrent()) setLoadError(true)
+      if (isLatestRead() && (transportActive || timedOut)) setLoadError(true)
     } finally {
-      if (state.readTimer && isReadCurrent()) clearTimeout(state.readTimer)
-      if (isReadCurrent()) { state.readTimer = null; state.readAbort = null; setSwitching(false) }
+      transportActive = false
+      if (deadlineTimer) clearTimeout(deadlineTimer)
+      if (isLatestRead()) {
+        if (state.readTimer) clearTimeout(state.readTimer)
+        state.readTimer = null
+        state.readCancel = null
+        state.readAbort = null
+        setSwitching(false)
+      }
     }
   }, [])
 
