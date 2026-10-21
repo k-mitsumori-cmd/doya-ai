@@ -15,7 +15,16 @@ import { EntryNext } from '@/components/expense/next'
 /** Only the initial matching authenticated actor may use the server's verified absence. */
 export default function ExpenseEntry({ knownActor }: { knownActor?: string } = {}) {
   const scope = useEntryActorScope()
-  return <ExpenseEntryContent key={scope.version} scope={scope} knownActor={knownActor} />
+  return (
+    <>
+      {scope.status !== 'unauthenticated' && (
+        <nav aria-label="共通メニュー" className="mx-auto w-full max-w-5xl px-4 pt-4 sm:px-6">
+          <a href="/home" className="inline-flex rounded-lg px-3 py-2 text-sm font-bold text-blue-700 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">経営ホームへ戻る</a>
+        </nav>
+      )}
+      <ExpenseEntryContent key={scope.version} scope={scope} knownActor={knownActor} />
+    </>
+  )
 }
 
 function ExpenseEntryContent({ scope, knownActor }: { scope: ReturnType<typeof useEntryActorScope>; knownActor?: string }) {

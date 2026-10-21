@@ -39,7 +39,16 @@ const SVC = getServiceById('shodan')!
 
 export default function ShodanEntryPage() {
   const scope = useEntryActorScope()
-  return <ShodanEntryContent key={scope.version} scope={scope} />
+  return (
+    <>
+      {scope.status !== 'unauthenticated' && (
+        <nav aria-label="共通メニュー" className="mx-auto w-full max-w-5xl px-4 pt-4 sm:px-6">
+          <a href="/home" className="inline-flex rounded-lg px-3 py-2 text-sm font-bold text-blue-700 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">経営ホームへ戻る</a>
+        </nav>
+      )}
+      <ShodanEntryContent key={scope.version} scope={scope} />
+    </>
+  )
 }
 
 function ShodanEntryContent({ scope }: { scope: ReturnType<typeof useEntryActorScope> }) {

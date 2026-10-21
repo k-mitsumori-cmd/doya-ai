@@ -84,6 +84,7 @@ export default async function PromaneEntryPage({
       <main className="mx-auto max-w-xl p-8 text-center">
         <h1 className="text-xl font-bold">ワークスペースにアクセスできません</h1>
         <p className="mt-3 text-gray-600">所有するワークスペースの利用権限が無効です。管理者にご確認ください。</p>
+        <Link href="/home" className="mt-4 block rounded-lg px-3 py-2 font-bold text-blue-700 underline underline-offset-4">経営ホームへ戻る</Link>
         <Link href="https://doyamarke.surisuta.jp/contact" className="mt-4 inline-block font-bold text-blue-700 underline">お問い合わせ</Link>
       </main>
     )
@@ -95,6 +96,9 @@ export default async function PromaneEntryPage({
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-violet-50 p-6">
       <div className="max-w-4xl mx-auto pt-6">
+        <nav aria-label="共通メニュー" className="mb-4">
+          <Link href="/home" className="inline-flex rounded-lg px-3 py-2 text-sm font-bold text-blue-700 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">経営ホームへ戻る</Link>
+        </nav>
         {/* ロゴ */}
         <div className="flex justify-center mb-6 animate-slide-up">
           <Image
