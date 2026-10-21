@@ -1436,7 +1436,7 @@ for (const verifier of [
   'verify-tenjikai-c3c-studio.cjs', 'verify-tenjikai-c3c-mounted.cjs', 'verify-tenjikai-c3c-auth.cjs', 'verify-tenjikai-c3c-save-chain.cjs', 'verify-tenjikai-c3c-save-lifecycle-mounted.cjs',
   'verify-expense-query-scope.cjs', 'verify-case-study-form-mounted.cjs',
   'verify-promane-nullable-compat.cjs',
-  'verify-home-popup.cjs', 'verify-popup-site-detail-mounted.cjs', 'verify-popup-dev-site-preview.cjs',
+  'verify-home-popup.cjs', 'verify-popup-site-detail-mounted.cjs', 'verify-public-resource-anchors.cjs', 'verify-popup-dev-site-preview.cjs',
   'verify-home-tenjikai-saved.cjs', 'verify-home-actor.cjs',
   'verify-income-retirement-ui.cjs',
 ]) {
