@@ -494,3 +494,68 @@ jobs:
               print('Regression log:', path)
               print('\n'.join(path.read_text(errors='replace').splitlines()[-80:])[-24000:])
           PY
+
+  next-build-isolated:
+    name: Next build (isolated font fixture)
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact event commit without persisted credentials
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Record exact event source before dependencies
+        run: python3 scripts/ci/isolated-next-build.py prepare --evidence-dir "$RUNNER_TEMP/next-build-isolated"
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      - name: Generate private Prisma client
+        run: ./node_modules/.bin/prisma generate
+
+      - name: Verify isolated gate failure paths (no build)
+        run: python3 -B scripts/ci/test-isolated-next-build.py
+
+      - name: Run seven named suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          for suite in test:asklink test:popup test:syscheck test:tenjikai test:shanai test:income test:expense; do
+            echo "Running $suite"
+            npm run "$suite" 2>&1 | tee -a "$RUNNER_TEMP/next-build-isolated/named-suites.log"
+          done
+
+      - name: Fresh nonincremental TypeScript check
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/tsc --noEmit --incremental false 2>&1 | tee "$RUNNER_TEMP/next-build-isolated/type-before.log"
+
+      - name: Full Next production compile, prerender, and trace in a denied network namespace
+        run: python3 scripts/ci/isolated-next-build.py build --evidence-dir "$RUNNER_TEMP/next-build-isolated"
+
+      - name: Verify generated Next types against the same source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/tsc --noEmit --incremental false 2>&1 | tee "$RUNNER_TEMP/next-build-isolated/type-after.log"
+
+      - name: Finalize exact isolated build evidence
+        run: python3 scripts/ci/isolated-next-build.py finalize --evidence-dir "$RUNNER_TEMP/next-build-isolated"
+
+      - name: Preserve isolated build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build-isolated
+          path: ${{ runner.temp }}/next-build-isolated/
+          if-no-files-found: warn
