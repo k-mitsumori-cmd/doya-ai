@@ -1386,6 +1386,7 @@ for (const verifier of [
   'verify-expense-entry-mounted.cjs', 'verify-tenjikai-draft-mounted.cjs',
   'verify-tenjikai-project-detail-route.cjs', 'verify-tenjikai-project-detail-mounted.cjs',
   'verify-tenjikai-login-return.cjs',
+  'verify-tenjikai-c3a-generation.cjs', 'verify-tenjikai-c3a-mounted.cjs', 'verify-tenjikai-c3a-tier.cjs',
   'verify-expense-query-scope.cjs', 'verify-case-study-form-mounted.cjs',
   'verify-promane-nullable-compat.cjs',
   'verify-home-popup.cjs',

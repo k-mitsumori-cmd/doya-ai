@@ -77,6 +77,19 @@ jobs:
           path: ${{ runner.temp }}/checkout-lifecycle-postgres/
           if-no-files-found: ignore
 
+      - name: Tenjikai c3a generation and retirement regression (private Unix socket)
+        env:
+          DOYA_TENJIKAI_C3A_EVIDENCE_DIR: ${{ runner.temp }}/tenjikai-c3a-postgres
+        run: python3 scripts/security-regression/verify-tenjikai-c3a-postgres.py
+
+      - name: Preserve Tenjikai c3a PostgreSQL evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenjikai-c3a-postgres
+          path: ${{ runner.temp }}/tenjikai-c3a-postgres/
+          if-no-files-found: ignore
+
       - name: Shodan member retirement fence regression (private Unix socket)
         run: python3 scripts/security-regression/verify-shodan-membership-postgres.py
 
