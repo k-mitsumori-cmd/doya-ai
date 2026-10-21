@@ -125,6 +125,13 @@ export default function MensetsuTool() {
   const [issueLimit, setIssueLimit] = useState<{ message: string; url: string; label: string } | null>(null)
   /** 発行直後のコピーボタンを押したことが分かるようにする */
   const [issuedCopied, setIssuedCopied] = useState(false)
+  const issuedCopyAttempt = useRef(0)
+  useEffect(() => {
+    const attempt = issuedCopyAttempt
+    attempt.current++
+    setIssuedCopied(false)
+    return () => { attempt.current++ }
+  }, [proof])
   const [candidateName, setCandidateName] = useState('')
   /** 一覧から「URLをコピー」した面接。押したことが分かるように印を出す */
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -418,6 +425,23 @@ export default function MensetsuTool() {
     }
   }
 
+  const copyIssuedUrl = async () => {
+    const captured = proof, url = issuedUrl
+    if (!captured?.current() || !url) return
+    const attempt = ++issuedCopyAttempt.current
+    try {
+      if (typeof navigator.clipboard?.writeText !== 'function') throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(url)
+      if (!captured.current() || issuedCopyAttempt.current !== attempt) return
+      setIssuedCopied(true)
+      window.setTimeout(() => {
+        if (captured.current() && issuedCopyAttempt.current === attempt) setIssuedCopied(false)
+      }, 2000)
+    } catch {
+      if (captured.current() && issuedCopyAttempt.current === attempt) notifyError(setError, `コピーできませんでした。次のURLをお使いください: ${url}`)
+    }
+  }
+
   const issue = async () => {
     if (!proof?.current() || unknownWrite || !selectedTemplate) return
     const ticket = operation.begin()
@@ -447,6 +471,8 @@ export default function MensetsuTool() {
         notifyError(setError, data?.error || '発行に失敗しました')
         return
       }
+      issuedCopyAttempt.current++
+      setIssuedCopied(false)
       setIssuedUrl(data.url)
       setCandidateName('')
       await load()
@@ -926,11 +952,7 @@ export default function MensetsuTool() {
                       </p>
                       {/* ⚠️ ここが最後の操作。小さいボタンにすると見落とされる */}
                       <button
-                        onClick={() => {
-                          navigator.clipboard?.writeText(issuedUrl)
-                          setIssuedCopied(true)
-                          window.setTimeout(() => { if (proof.current()) setIssuedCopied(false) }, 2000)
-                        }}
+                        onClick={() => void copyIssuedUrl()}
                         className="mt-4 w-full rounded-xl bg-[#0066ff] px-6 py-4 text-base font-black text-white shadow-lg transition hover:bg-[#0052cc] sm:text-lg"
                       >
                         {issuedCopied ? 'コピーしました' : 'URLをコピーする'}

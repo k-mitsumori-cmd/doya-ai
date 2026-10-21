@@ -10,6 +10,8 @@ let actor = 'actor-A', status = 'authenticated', pathname = '/mensetsu', search 
 let selected = 'B', calls = [], writes = [], readCount = 0, sessionStatus = 'none', reportMode = 'evaluate', memberRows = [], workspaceEmpty = false, transportMode = false
 const emptyWrites = []
 const transportWrites = []
+const notifications = []
+let lastProof = null
 window.confirm = () => true
 const mediaCalls = []
 dom.window.HTMLMediaElement.prototype.pause = function () { mediaCalls.push('pause') }
@@ -45,6 +47,7 @@ global.fetch = async (target, init) => {
 const request = (proof, path, init) => {
   assert.equal(proof.current(), true, 'transport requires the captured current proof')
   assert.equal(proof.organization.id, 'orgB')
+  lastProof = proof
   const method = init?.method || 'GET'
   if (method !== 'GET') {
     if (transportMode) return load('src/lib/mensetsu/staff-request-client.ts').requestMensetsuStaff(proof, path, init)
@@ -85,7 +88,7 @@ const mocks = {
   '@/components/mensetsu/ui-next': { PageTitle: ({ children, ...props }) => React.createElement('h1', props, children), useToolUiNext: () => false },
   '@/components/ds': { EmptyState: no, ErrorNotice: no, Skeleton: no, ToolHero: no },
   '@/components/LoadingProgress': { __esModule: true, default: no }, './Lp': { __esModule: true, default: no },
-  '@/lib/ui/notify': { notifyError: (setter, message) => setter(message) },
+  '@/lib/ui/notify': { notifyError: (setter, message) => { notifications.push(message); setter(message) } },
   '@/lib/mensetsu/types': { EVALUATION_STALE_MS: 1000 },
   '@/lib/mensetsu/session-pages': { fetchMensetsuSessionPage: async proof => {
     assert.equal(proof.current(), true); return sessionPage()
@@ -433,6 +436,87 @@ async function close() { await act(() => view.unmount()); document.getElementByI
   assert.equal(emptyWrites.length, 5, 'old actor acknowledgment cannot start a new request')
   assert.equal(document.body.textContent.includes('Retired Organization'), false, 'old actor draft is not shown to next actor')
   await close()
+
+  workspaceEmpty = false; selected = 'B'; sessionStatus = 'none'
+  const clipboardCalls = [], copyTimers = []
+  let clipboardResult = () => Promise.resolve()
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { clipboard: { writeText: value => {
+    clipboardCalls.push(value); return clipboardResult()
+  } } } })
+  const originalWindowTimer = window.setTimeout.bind(window)
+  window.setTimeout = (callback, delay, ...args) => {
+    if (delay === 2000) { copyTimers.push(() => callback(...args)); return copyTimers.length }
+    return originalWindowTimer(callback, delay, ...args)
+  }
+  await open(Tool, '/mensetsu')
+  const candidate = document.querySelector('input[placeholder="山田 太郎"]')
+  assert.ok(candidate)
+  await act(() => props(candidate).onChange({ target: { value: 'Candidate B' } }))
+  const issuedWrite = writes.length
+  await act(() => button('面接URLを発行する').click())
+  assert.equal(writes.length, issuedWrite + 1)
+  await act(() => writes[issuedWrite].held.resolve(Response.json({ url: 'https://candidate.invalid/issued' })))
+  assert.ok(button('URLをコピーする'), 'actual Tool renders issued URL copy control')
+  const staleCopy = props(button('URLをコピーする')).onClick
+  await act(staleCopy)
+  assert.deepEqual(clipboardCalls, ['https://candidate.invalid/issued'], 'current issued URL is copied once')
+  assert.ok(button('コピーしました'), 'current clipboard success is visible')
+  assert.equal(copyTimers.length, 1, 'current copy installs one bounded confirmation timer')
+
+  status = 'loading'; await render(Tool)
+  assert.ok(document.querySelector('[hidden][inert]'), 'retired Tool remains inert while reproof is pending')
+  await act(staleCopy)
+  assert.equal(clipboardCalls.length, 1, 'retired issued copy never writes to clipboard')
+  status = 'authenticated'; await render(Tool); await respondWorkspace(calls.length - 1)
+  assert.ok(button('URLをコピーする'), 'fresh proof clears an old copy confirmation')
+  const heldClipboard = deferred()
+  clipboardResult = () => heldClipboard.promise
+  await act(() => button('URLをコピーする').click())
+  assert.equal(clipboardCalls.length, 2, 'new current proof can start a copy')
+  assert.equal(copyTimers.length, 1, 'pending clipboard cannot claim success or install timer')
+  await reprove(Tool)
+  await act(() => heldClipboard.resolve())
+  assert.ok(button('URLをコピーする'), 'late clipboard completion cannot adopt old proof')
+  assert.equal(copyTimers.length, 1, 'late clipboard completion installs no old timer')
+
+  clipboardResult = () => Promise.resolve()
+  await act(() => button('URLをコピーする').click())
+  assert.ok(button('コピーしました'), 'fresh current proof can copy normally')
+  assert.equal(copyTimers.length, 2)
+  await act(copyTimers[0]); assert.ok(button('コピーしました'), 'old proof timer cannot clear fresh confirmation')
+  await act(copyTimers[1]); assert.ok(button('URLをコピーする'), 'fresh current timer clears confirmation')
+  clipboardResult = () => Promise.reject(new Error('synthetic clipboard denied'))
+  await act(() => button('URLをコピーする').click())
+  assert.ok(button('URLをコピーする'), 'failed clipboard never reports success')
+  assert.equal(copyTimers.length, 2, 'failed clipboard has no success timer')
+  navigator.clipboard = undefined
+  await act(() => button('URLをコピーする').click())
+  assert.ok(button('URLをコピーする'), 'unavailable clipboard never reports success')
+  assert.equal(copyTimers.length, 2, 'unavailable clipboard has no success timer')
+  await close()
+
+  for (const outcome of ['resolve', 'reject']) {
+    navigator.clipboard = { writeText: value => { clipboardCalls.push(value); return pendingClipboard.promise } }
+    await open(Tool, '/mensetsu')
+    const nextCandidate = document.querySelector('input[placeholder="山田 太郎"]')
+    await act(() => props(nextCandidate).onChange({ target: { value: 'Unmount Candidate' } }))
+    const nextIssue = writes.length
+    await act(() => button('面接URLを発行する').click())
+    await act(() => writes[nextIssue].held.resolve(Response.json({ url: 'https://candidate.invalid/unmount' })))
+    const pendingClipboard = deferred()
+    const proofAtCopy = lastProof
+    await act(() => button('URLをコピーする').click())
+    const timersAtUnmount = copyTimers.length, noticesAtUnmount = notifications.length
+    await act(() => view.render(React.createElement(Boundary, null, React.createElement('div', { 'data-testid': 'replacement' }, 'Other child'))))
+    assert.equal(proofAtCopy.current(), true, 'Boundary proof remains current after Tool child unmount')
+    assert.equal(button('URLをコピーする'), undefined, 'Tool child is unmounted')
+    if (outcome === 'resolve') await act(() => pendingClipboard.resolve())
+    else await act(() => pendingClipboard.reject(new Error('synthetic clipboard denied after unmount')))
+    assert.equal(copyTimers.length, timersAtUnmount, 'unmounted Tool cannot install a delayed success timer')
+    assert.equal(notifications.length, noticesAtUnmount, 'unmounted Tool cannot notify from late clipboard result')
+    await close()
+  }
+  window.setTimeout = originalWindowTimer
   dom.window.close()
   console.log('mensetsu actual Boundary+Tool7+empty/Report3/Settings3: pending write, same-actor reproof, unknown/no-repeat/late-ack/current membership PASS', JSON.stringify({ reads: readCount, writes: writes.length, emptyWrites: emptyWrites.length }))
 })().catch(error => { console.error(error); process.exitCode = 1; dom.window.close() })
