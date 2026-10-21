@@ -49,13 +49,50 @@ test('API のルートが見つかる', () => {
   assert.ok(routes.length >= 15, routes.map(rel).join(', '))
 })
 
+const expected = new Map<string, Record<string, string>>([
+  ['clients/[id]/route.ts', { GET: 'member', PATCH: 'member', DELETE: 'manager' }],
+  ['clients/route.ts', { GET: 'member', POST: 'member' }],
+  ['contracts/[id]/route.ts', { GET: 'member', PATCH: 'member', DELETE: 'manager' }],
+  ['contracts/route.ts', { GET: 'member', POST: 'member' }],
+  ['invoices/[id]/confirm/route.ts', { POST: 'manager' }],
+  ['invoices/[id]/route.ts', { GET: 'member', PATCH: 'member', DELETE: 'member' }],
+  ['invoices/[id]/send/route.ts', { POST: 'manager' }],
+  ['invoices/[id]/void/route.ts', { POST: 'admin' }],
+  ['invoices/bulk-create/route.ts', { POST: 'member' }],
+  ['invoices/route.ts', { GET: 'member', POST: 'member' }],
+  ['issuer/route.ts', { GET: 'member', PUT: 'admin' }],
+  ['organization/route.ts', { GET: 'member', PATCH: 'admin' }],
+  ['payments/[id]/allocate/route.ts', { POST: 'manager', DELETE: 'manager' }],
+  ['payments/[id]/route.ts', { DELETE: 'manager' }],
+  ['payments/route.ts', { GET: 'member', POST: 'manager' }],
+  ['revenue/[id]/route.ts', { PATCH: 'manager' }],
+  ['revenue/route.ts', { GET: 'member' }],
+  ['summary/route.ts', { GET: 'member' }],
+])
+test('GET 11 と書込 20 の入口集合が固定されている', () => {
+  assert.deepEqual(routes.map(file => rel(file).replace('src/app/api/income/', '')).sort(), [...expected.keys()].sort())
+  assert.equal([...expected.values()].flatMap(Object.keys).filter(method => method === 'GET').length, 11)
+  assert.equal([...expected.values()].flatMap(Object.keys).filter(method => method !== 'GET').length, 20)
+})
+
 for (const file of routes) {
   const src = readFileSync(file, 'utf8')
-  test(`${rel(file)}: すべてのハンドラで withIncome（ログイン・組織・ロール確認）を通す`, () => {
-    const handlers = src.match(/export async function (GET|POST|PATCH|PUT|DELETE)\b/g) || []
-    const guarded = src.match(/return withIncome\(req, '(member|manager|admin|owner)'/g) || []
-    assert.ok(handlers.length > 0)
-    assert.equal(guarded.length, handlers.length)
+  test(`${rel(file)}: GETはread、書込はlocked roleと同Tx監査を通す`, () => {
+    const name = rel(file).replace('src/app/api/income/', '')
+    const handlers = [...src.matchAll(/export async function (GET|POST|PATCH|PUT|DELETE)\b/g)]
+    assert.deepEqual(handlers.map(h => h[1]).sort(), Object.keys(expected.get(name) ?? {}).sort())
+    for (let n = 0; n < handlers.length; n++) {
+      const h = handlers[n]
+      const body = src.slice(h.index!, handlers[n + 1]?.index ?? src.length)
+      const role = expected.get(name)![h[1]]
+      if (h[1] === 'GET') assert.match(body, new RegExp(`return withIncome\\(req, '${role}'`))
+      else {
+        assert.match(body, new RegExp(`return withIncomeWrite\\(req, '${role}'`))
+        assert.match(body, /async \(ctx, tx,/)
+        assert.match(body, /await audit\(tx, ctx,/)
+        assert.doesNotMatch(body, /await audit\(prisma, ctx,|prisma\.\$transaction\(/)
+      }
+    }
   })
 }
 

@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { audit, notFound } from '@/lib/income/access'
 import { deleteDraft, paymentState, updateDraft } from '@/lib/income/invoices'
 import { invoiceDraft } from '@/lib/income/parse'
-import { idFrom, readJson, withIncome, type IdCtx } from '@/lib/income/route'
+import { idFrom, readJson, withIncome, withIncomeWrite, type IdCtx } from '@/lib/income/route'
 
 export async function GET(req: NextRequest, c: IdCtx) {
   return withIncome(req, 'member', async (ctx) => {
@@ -27,20 +27,17 @@ export async function GET(req: NextRequest, c: IdCtx) {
 }
 
 export async function PATCH(req: NextRequest, c: IdCtx) {
-  return withIncome(req, 'member', async (ctx) => {
-    const id = await idFrom(c)
-    const input = invoiceDraft(await readJson(req))
-    const invoice = await prisma.$transaction((tx) => updateDraft(tx, ctx, id, input), { isolationLevel: 'Serializable' })
-    await audit(prisma, ctx, 'invoice.update', 'invoice', id)
+  return withIncomeWrite(req, 'member', async () => ({ id: await idFrom(c), input: invoiceDraft(await readJson(req)) }), async (ctx, tx, { id, input }) => {
+    const invoice = await updateDraft(tx, ctx, id, input)
+    await audit(tx, ctx, 'invoice.update', 'invoice', id)
     return NextResponse.json({ invoice })
   })
 }
 
 export async function DELETE(req: NextRequest, c: IdCtx) {
-  return withIncome(req, 'member', async (ctx) => {
-    const id = await idFrom(c)
-    await prisma.$transaction((tx) => deleteDraft(tx, ctx, id), { isolationLevel: 'Serializable' })
-    await audit(prisma, ctx, 'invoice.delete', 'invoice', id)
+  return withIncomeWrite(req, 'member', () => idFrom(c), async (ctx, tx, id) => {
+    await deleteDraft(tx, ctx, id)
+    await audit(tx, ctx, 'invoice.delete', 'invoice', id)
     return NextResponse.json({ ok: true })
   })
 }

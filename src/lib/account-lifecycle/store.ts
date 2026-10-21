@@ -14,6 +14,13 @@ const options = { isolationLevel: 'ReadCommitted' as const, maxWait: 10000, time
 const changed = (): never => { throw new LifecycleError('LIFECYCLE_CLAIM_CHANGED') }
 const unavailable = (): never => { throw new LifecycleError('LIFECYCLE_STATE_UNAVAILABLE') }
 const rawReceiptKey = (userId: string, operationId: string) => `doya-account-operation:v2:${operationId}`
+/** Serialize every new receipt or legacy capability for one global UUID before its first write. */
+export async function assertGlobalLifecycleOperationIdFree(tx: Tx, operationId: string): Promise<void> {
+  if (!validLifecycleUuid(operationId)) return unavailable()
+  await tx.$queryRaw`SELECT 1::integer AS locked FROM pg_advisory_xact_lock(hashtext(${operationId})::bigint)`
+  const keys = [rawReceiptKey('', operationId), `doya-account-action:v2:${operationId}`, `doya-checkout-plan:v2:${operationId}`, `doya-checkout-capability:v2:${operationId}`]
+  if (await tx.systemSetting.count({ where: { key: { in: keys } } })) throw new LifecycleError('LIFECYCLE_IDENTITY_CONFLICT')
+}
 const view = (r: LifecycleReceipt) => ({ operationId: r.operationId, kind: r.kind, phase: r.phase, reason: r.reason, createdAt: r.createdAt, updatedAt: r.updatedAt })
 const nextRevision = (n: number) => { if (n >= Number.MAX_SAFE_INTEGER - 1) return unavailable(); return n + 1 }
 const updateTime = (r: LifecycleReceipt) => new Date(Math.max(Date.now(), Date.parse(r.updatedAt) + 1)).toISOString()
@@ -119,6 +126,13 @@ export async function reserveLifecycleOperation(db: LifecycleDb, identity: Lifec
     }
     if (!exists) throw new LifecycleError('LIFECYCLE_USER_UNAVAILABLE')
     if (f) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
+    await assertGlobalLifecycleOperationIdFree(tx, identity.operationId)
+    // A new retirement reservation must invalidate Serializable writers that
+    // acquired their snapshot before waiting for this User row lock.
+    if (identity.kind === 'retirement') {
+      const touched = await tx.$executeRaw`UPDATE "User" SET id = id WHERE id = ${identity.targetUserId}`
+      if (touched !== 1) throw new LifecycleError('LIFECYCLE_USER_UNAVAILABLE')
+    }
     const now = new Date().toISOString()
     const r: LifecycleReceipt = { version: 2, targetHash: lifecycleSubject(identity.targetUserId), operationId: identity.operationId, operator: { kind: identity.operator.kind, id: identity.operator.id }, kind: identity.kind, inputDigest, generation: randomUUID(), token: randomUUID(), revision: 0, phase: 'reserved', reason: null, createdAt: now, updatedAt: now }
     const f2: LifecycleFence = { version: 2, operationId: r.operationId, generation: r.generation, kind: r.kind, state: 'active' }
@@ -159,6 +173,7 @@ export async function dispatchLifecycleAction(db: LifecycleDb, claim: LifecycleC
     if (!l) return unavailable()
     const action = l.value.actions.find(a => a.key === key)
     if (!action || action.phase !== 'planned' || r.value.reason !== null || l.value.actions.some(a => a.phase === 'dispatched')) throw new LifecycleError('LIFECYCLE_RESULT_UNCONFIRMED')
+    if (claim.kind === 'checkout' && action.type === 'checkout_create' && l.value.actions.some(a => a.type === 'customer_create' && a.phase !== 'confirmed')) throw new LifecycleError('CHECKOUT_CUSTOMER_UNCONFIRMED')
     if (action.type === 'subscription_cancel' && claim.kind === 'retirement' && l.value.actions.some(a => a.type === 'checkout_expire' && a.phase !== 'confirmed')) throw new LifecycleError('CHECKOUT_NOT_CLOSED')
     action.phase = 'dispatched'; action.dispatchToken = randomUUID(); l.value.revision = nextRevision(l.value.revision)
     await putLedger(tx, identity, l.raw, l.value, r.value)
@@ -215,6 +230,7 @@ export async function abortUnstartedLifecycleOperation(db: LifecycleDb, identity
     if (r && r.value.inputDigest !== inputDigest) throw new LifecycleError('LIFECYCLE_INPUT_CONFLICT')
     if (r?.value.phase === 'aborted') { if (f?.value.operationId === identity.operationId) return unavailable(); return view(r.value) }
     if (!r) {
+      await assertGlobalLifecycleOperationIdFree(tx, identity.operationId)
       const now = new Date().toISOString(), aborted: LifecycleReceipt = { version: 2, targetHash: lifecycleSubject(identity.targetUserId), operationId: identity.operationId, operator: { kind: identity.operator.kind, id: identity.operator.id }, kind: identity.kind, inputDigest, generation: randomUUID(), token: randomUUID(), revision: 0, phase: 'aborted', reason: null, createdAt: now, updatedAt: now }
       await tx.systemSetting.create({ data: { key: lifecycleReceiptKey(identity), value: JSON.stringify(aborted) } })
       return view(aborted)

@@ -5,6 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { syncContractSchedule } from '@/lib/income/contracts'
+import { withIncomeMaintenanceWrite } from '@/lib/income/write'
 
 /**
  * ドヤ収入管理: 売上予定の補完（毎朝 JST 6:00）
@@ -21,7 +22,11 @@ export async function GET(request: NextRequest) {
   const failed: string[] = []
   for (const c of contracts) {
     try {
-      await prisma.$transaction((tx) => syncContractSchedule(tx, c.id, c.organizationId), { timeout: 30000 })
+      await withIncomeMaintenanceWrite(c.organizationId, async (tx) => {
+        const current = await tx.incomeContract.findFirst({ where: { id: c.id, organizationId: c.organizationId, status: 'active' }, select: { id: true } })
+        if (!current) throw new Error('INCOME_CONTRACT_CHANGED')
+        await syncContractSchedule(tx, c.id, c.organizationId)
+      })
       ok++
     } catch (e) {
       console.error('[cron/income-schedule] failed', { contractId: c.id, code: (e as { code?: string })?.code })

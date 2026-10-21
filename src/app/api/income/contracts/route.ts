@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { audit } from '@/lib/income/access'
 import { CONTRACT_STATUSES, parseContract, saveContract } from '@/lib/income/contracts'
-import { readJson, withIncome } from '@/lib/income/route'
+import { readJson, withIncome, withIncomeWrite } from '@/lib/income/route'
 
 export async function GET(req: NextRequest) {
   return withIncome(req, 'member', async (ctx) => {
@@ -20,10 +20,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  return withIncome(req, 'member', async (ctx) => {
-    const input = parseContract(await readJson(req))
-    const id = await prisma.$transaction((tx) => saveContract(tx, ctx, input), { timeout: 30000, isolationLevel: 'Serializable' })
-    await audit(prisma, ctx, 'contract.create', 'contract', id)
+  return withIncomeWrite(req, 'member', async () => parseContract(await readJson(req)), async (ctx, tx, input) => {
+    const id = await saveContract(tx, ctx, input)
+    await audit(tx, ctx, 'contract.create', 'contract', id)
     return NextResponse.json({ id }, { status: 201 })
   })
 }

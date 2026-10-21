@@ -7,7 +7,7 @@ import { audit } from '@/lib/income/access'
 import { fromDbDate, toDbDate } from '@/lib/income/dates'
 import { suggestMatches } from '@/lib/income/matching'
 import { asBody, date, int, reqInt, str } from '@/lib/income/parse'
-import { readJson, withIncome } from '@/lib/income/route'
+import { readJson, withIncome, withIncomeWrite } from '@/lib/income/route'
 
 /** 入金一覧。未消込の入金には照合候補（ルール）を付ける */
 export async function GET(req: NextRequest) {
@@ -39,21 +39,25 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  return withIncome(req, 'manager', async (ctx) => {
+  return withIncomeWrite(req, 'manager', async () => {
     const body = asBody(await readJson(req))
-    const payment = await prisma.incomePayment.create({
+    return {
+      receivedOn: toDbDate(date(body, 'receivedOn', '入金日', true)!),
+      amount: reqInt(body, 'amount', '入金額', { min: 1 }),
+      feeDeducted: int(body, 'feeDeducted', '振込手数料の差引', { min: 0, max: 10_000 }) ?? 0,
+      payerName: str(body, 'payerName', '振込名義', { max: 100 }),
+      memo: str(body, 'memo', 'メモ', { max: 500 }),
+    }
+  }, async (ctx, tx, input) => {
+    const payment = await tx.incomePayment.create({
       data: {
         organizationId: ctx.organizationId,
-        receivedOn: toDbDate(date(body, 'receivedOn', '入金日', true)!),
-        amount: reqInt(body, 'amount', '入金額', { min: 1 }),
-        feeDeducted: int(body, 'feeDeducted', '振込手数料の差引', { min: 0, max: 10_000 }) ?? 0,
-        payerName: str(body, 'payerName', '振込名義', { max: 100 }),
-        memo: str(body, 'memo', 'メモ', { max: 500 }),
+        ...input,
         source: 'manual',
         createdByUserId: ctx.userId,
       },
     })
-    await audit(prisma, ctx, 'payment.create', 'payment', payment.id, { amount: payment.amount })
+    await audit(tx, ctx, 'payment.create', 'payment', payment.id, { amount: payment.amount })
     return NextResponse.json({ payment }, { status: 201 })
   })
 }

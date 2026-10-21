@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { IncomeError, audit } from '@/lib/income/access'
 import { asBody, oneOf, paymentTerms, reqStr, str } from '@/lib/income/parse'
-import { readJson, withIncome } from '@/lib/income/route'
+import { readJson, withIncome, withIncomeWrite } from '@/lib/income/route'
 
 export async function GET(req: NextRequest) {
   return withIncome(req, 'member', async (ctx) => {
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  return withIncome(req, 'admin', async (ctx) => {
+  return withIncomeWrite(req, 'admin', async () => {
     const body = asBody(await readJson(req))
     const invoiceRegNo = str(body, 'invoiceRegNo', '登録番号', { max: 14 })
     if (invoiceRegNo && !/^T\d{13}$/.test(invoiceRegNo)) throw new IncomeError('登録番号は T＋13 桁の数字で入力してください')
@@ -37,8 +37,10 @@ export async function PUT(req: NextRequest) {
       defaultPaymentMonths: terms.paymentMonths ?? 1,
       defaultPaymentDay: terms.paymentDay ?? 31,
     }
-    const issuer = await prisma.incomeIssuer.upsert({ where: { organizationId: ctx.organizationId }, create: { organizationId: ctx.organizationId, ...data }, update: data })
-    await audit(prisma, ctx, 'issuer.update', 'issuer', ctx.organizationId)
+    return data
+  }, async (ctx, tx, data) => {
+    const issuer = await tx.incomeIssuer.upsert({ where: { organizationId: ctx.organizationId }, create: { organizationId: ctx.organizationId, ...data }, update: data })
+    await audit(tx, ctx, 'issuer.update', 'issuer', ctx.organizationId)
     return NextResponse.json({ issuer })
   })
 }

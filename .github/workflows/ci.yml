@@ -51,6 +51,32 @@ jobs:
       - name: Income membership retirement fence regression (private Unix socket)
         run: python3 scripts/security-regression/verify-income-membership-postgres.py
 
+      - name: Income domain writer regression (private Unix socket)
+        env:
+          DOYA_INCOME_R1_EVIDENCE_DIR: ${{ runner.temp }}/income-domain-postgres
+        run: python3 scripts/security-regression/verify-income-domain-postgres.py
+
+      - name: Preserve Income domain writer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: income-domain-postgres
+          path: ${{ runner.temp }}/income-domain-postgres/
+          if-no-files-found: ignore
+
+      - name: Checkout lifecycle core regression (private Unix socket)
+        env:
+          DOYA_R2_EVIDENCE_DIR: ${{ runner.temp }}/checkout-lifecycle-postgres
+        run: python3 scripts/security-regression/verify-checkout-lifecycle-postgres.py
+
+      - name: Preserve checkout lifecycle core evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkout-lifecycle-postgres
+          path: ${{ runner.temp }}/checkout-lifecycle-postgres/
+          if-no-files-found: ignore
+
       - name: Shodan member retirement fence regression (private Unix socket)
         run: python3 scripts/security-regression/verify-shodan-membership-postgres.py
 

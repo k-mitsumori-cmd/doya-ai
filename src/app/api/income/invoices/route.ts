@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { audit } from '@/lib/income/access'
 import { createDraft, INVOICE_STATUSES, paymentState } from '@/lib/income/invoices'
 import { invoiceDraft } from '@/lib/income/parse'
-import { readJson, withIncome } from '@/lib/income/route'
+import { readJson, withIncome, withIncomeWrite } from '@/lib/income/route'
 
 export async function GET(req: NextRequest) {
   return withIncome(req, 'member', async (ctx) => {
@@ -28,10 +28,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  return withIncome(req, 'member', async (ctx) => {
-    const input = invoiceDraft(await readJson(req))
-    const invoice = await prisma.$transaction((tx) => createDraft(tx, ctx, input), { isolationLevel: 'Serializable' })
-    await audit(prisma, ctx, 'invoice.create', 'invoice', invoice.id)
+  return withIncomeWrite(req, 'member', async () => invoiceDraft(await readJson(req)), async (ctx, tx, input) => {
+    const invoice = await createDraft(tx, ctx, input)
+    await audit(tx, ctx, 'invoice.create', 'invoice', invoice.id)
     return NextResponse.json({ invoice }, { status: 201 })
   })
 }
