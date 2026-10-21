@@ -12,6 +12,15 @@ import { ROLE_HIERARCHY, type AioContext, type AioRole } from './types'
 
 const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
 
+// A raw User row lock can surface PostgreSQL serialization/deadlock SQLSTATE
+// inside Prisma P2010 rather than P2034. Retry the whole transaction so the
+// next attempt reads the retirement fence under a fresh snapshot.
+function retryableCreationConflict(error: unknown): boolean {
+  const failure = error as { code?: string; meta?: { code?: string } } | null
+  return failure?.code === 'P2034' || failure?.code === 'P2002'
+    || failure?.code === 'P2010' && ['40001', '40P01'].includes(failure.meta?.code || '')
+}
+
 /** リクエストから対象ワークスペース(slug)を取り出す。クエリ ?org= 優先、無ければヘッダ x-aio-org */
 export function orgSlugFrom(req: NextRequest): string | undefined {
   try {
@@ -129,8 +138,7 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
         return org
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
     } catch (error) {
-      const code = (error as { code?: string })?.code
-      if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw error
+      if (attempt === 2 || !retryableCreationConflict(error)) throw error
     }
   }
   throw new Error('Organization creation retry exhausted')
@@ -163,8 +171,7 @@ export async function createAioOrganization(
         return org
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
     } catch (error) {
-      const code = (error as { code?: string })?.code
-      if (attempt === 3 || !['P2002', 'P2034'].includes(code || '')) throw error
+      if (attempt === 3 || !retryableCreationConflict(error)) throw error
     }
   }
   throw new Error('Organization creation retry exhausted')
