@@ -19,8 +19,9 @@ export async function GET(req: NextRequest, context: Ctx) {
     return NextResponse.json({ error: 'サービスが見つかりません' }, { status: 404, headers: privateHeaders })
   }
   try {
-    const selected = service === 'aishodan' ? organizationSelection(new URL(req.url).search) : null
-    if (service === 'aishodan') {
+    const strict = service === 'aishodan' || service === 'quote' && req.headers.has('x-doya-workspace-actor')
+    const selected = strict ? organizationSelection(new URL(req.url).search) : null
+    if (strict) {
       const actor = (await getServerSession(authOptions))?.user?.id
       if (!actor) return NextResponse.json({ error: 'ログインしてください' }, { status: 401, headers: privateHeaders })
       if (req.headers.get('x-doya-workspace-actor') !== actor) return NextResponse.json({ error: 'ログイン状態を確認してください' }, { status: 409, headers: privateHeaders })
@@ -31,12 +32,12 @@ export async function GET(req: NextRequest, context: Ctx) {
       : service === 'mensetsu' ? await getMensetsuContext(slug)
         : await getAishodanContext(slug)
     if (!ctx) return NextResponse.json({ error: '組織を確認できませんでした' }, { status: 403, headers: privateHeaders })
-    if (service === 'aishodan' && (ctx.userId !== req.headers.get('x-doya-workspace-actor') || ctx.organizationSlug !== (selected?.kind === 'selected' ? selected.slug : ''))) return NextResponse.json({ error: '組織を確認できませんでした' }, { status: 409, headers: privateHeaders })
+    if (strict && (ctx.userId !== req.headers.get('x-doya-workspace-actor') || ctx.organizationSlug !== (selected?.kind === 'selected' ? selected.slug : ''))) return NextResponse.json({ error: '組織を確認できませんでした' }, { status: 409, headers: privateHeaders })
 
     const billing = await getOrganizationBilling(service as OrganizationService, ctx.organizationId)
     return NextResponse.json({
       organizationId: ctx.organizationId,
-      ...(service === 'aishodan' ? { actorId: ctx.userId, organizationSlug: ctx.organizationSlug } : {}),
+      ...(strict ? { actorId: ctx.userId, organizationSlug: ctx.organizationSlug } : {}),
       plan: billing.plan,
       canManageBilling: ctx.role === 'owner' && ctx.userId === billing.ownerUserId,
     }, { headers: privateHeaders })

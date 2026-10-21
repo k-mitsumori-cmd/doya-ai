@@ -3,7 +3,7 @@ export type OrganizationSelection = { kind: 'absent' } | { kind: 'invalid' } | {
 export type WorkspaceRole = 'owner' | 'admin' | 'manager' | 'member'
 export interface WorkspaceOrganization { id: string; slug: string; name: string; role: WorkspaceRole }
 export interface WorkspaceRead {
-  service: 'aishodan'
+  service: 'aishodan' | 'quote'
   actorId: string
   memberships: WorkspaceOrganization[]
   current: WorkspaceOrganization | null
@@ -38,29 +38,29 @@ export function organizationSelection(search: string): OrganizationSelection {
 }
 
 /** Only host work links use this helper. Public rooms and invite URLs stay unchanged. */
-export function workspaceHref(path: string, slug: string): string {
+export function workspaceHref(path: string, slug: string, service: 'aishodan' | 'quote' = 'aishodan'): string {
   if (!validWorkspaceSlug(slug) || !path.startsWith('/') || path.startsWith('//') || path.includes('\\')) throw new Error('Invalid workspace link')
   const url = new URL(path, 'https://workspace.invalid')
-  if (url.origin !== 'https://workspace.invalid' || !/^\/aishodan(?:\/|$)/.test(url.pathname) || /^\/aishodan\/invite(?:\/|$)/.test(url.pathname)) throw new Error('Invalid workspace link')
+  if (url.origin !== 'https://workspace.invalid' || !url.pathname.startsWith(`/${service}`) || url.pathname !== `/${service}` && !url.pathname.startsWith(`/${service}/`) || url.pathname === `/${service}/invite` || url.pathname.startsWith(`/${service}/invite/`)) throw new Error('Invalid workspace link')
   url.searchParams.set('org', slug)
   return url.pathname + url.search + url.hash
 }
 
-export function workspaceApi(path: string, slug: string): string {
+export function workspaceApi(path: string, slug: string, service: 'aishodan' | 'quote' = 'aishodan'): string {
   if (!validWorkspaceSlug(slug) || !path.startsWith('/') || path.startsWith('//') || path.includes('\\')) throw new Error('Invalid workspace request')
   const url = new URL(path, 'https://workspace.invalid')
-  if (url.origin !== 'https://workspace.invalid' || !/^\/api\/aishodan(?:\/|$)/.test(url.pathname) || url.hash) throw new Error('Invalid workspace request')
+  if (url.origin !== 'https://workspace.invalid' || !url.pathname.startsWith(`/api/${service}/`) || url.hash) throw new Error('Invalid workspace request')
   url.searchParams.set('org', slug)
   return url.pathname + url.search
 }
 
-export function parseWorkspaceRead(value: unknown, actorId: string, requested: OrganizationSelection): WorkspaceRead {
+export function parseWorkspaceRead(value: unknown, actorId: string, requested: OrganizationSelection, service: 'aishodan' | 'quote' = 'aishodan'): WorkspaceRead {
   const record = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v)
   const organization = (v: unknown): v is WorkspaceOrganization => record(v)
     && typeof v.id === 'string' && v.id.length > 0 && v.id.length <= 512
     && validWorkspaceSlug(v.slug) && typeof v.name === 'string' && v.name.trim().length > 0 && v.name.length <= 512
     && typeof v.role === 'string' && ['owner', 'admin', 'manager', 'member'].includes(v.role)
-  if (!actorId || requested.kind === 'invalid' || !record(value) || value.service !== 'aishodan'
+  if (!actorId || requested.kind === 'invalid' || !record(value) || value.service !== service
       || value.actorId !== actorId || value.error !== undefined || value.code !== undefined
       || !Array.isArray(value.memberships) || !value.memberships.every(organization)
       || new Set(value.memberships.map(row => row.id)).size !== value.memberships.length
@@ -70,5 +70,5 @@ export function parseWorkspaceRead(value: unknown, actorId: string, requested: O
   if (current && !value.memberships.some(row => row.id === current.id && row.slug === current.slug && row.name === current.name && row.role === current.role)
       || requested.kind === 'selected' && (!current || current.slug !== requested.slug)
       || value.memberships.length > 0 && !current) throw new Error('Workspace could not be confirmed')
-  return { service: 'aishodan', actorId, memberships: value.memberships, current }
+  return { service, actorId, memberships: value.memberships, current }
 }

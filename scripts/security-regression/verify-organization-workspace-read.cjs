@@ -8,23 +8,24 @@ const rows = [
   { role: 'member', organization: { id: 'A-id', slug: '組織A', name: 'Organization A' } },
   { role: 'owner', organization: { id: 'B-id', slug: 'B', name: 'Organization B' } },
 ]
+const memberStore = { findMany: async query => {
+  reads++
+  assert.equal(query.where.userId, actor)
+  assert.equal(query.where.status, 'ACTIVE')
+  assert.deepEqual(Array.from(query.where.role.in), ['owner', 'admin', 'manager', 'member'])
+  assert.equal(query.orderBy.createdAt, 'asc')
+  assert.equal(query.select.organization.select.id, true)
+  if (fail) throw Error('synthetic DB failure')
+  return empty ? [] : rows
+}, findFirst: async query => {
+  reads++; assert.equal(query.where.userId, actor); assert.equal(query.where.status, 'ACTIVE')
+  return unknown ? { id: 'unknown-role-membership' } : null
+} }
 const route = load('src/app/api/organization-workspace/[service]/route.ts', {
   'next-auth': { getServerSession: async () => actor ? { user: { id: actor } } : null },
   '@/lib/auth': { authOptions: {} },
   '@/lib/organization-workspace-selection': parsing,
-  '@/lib/prisma': { prisma: { aishodanMember: { findMany: async query => {
-    reads++
-    assert.equal(query.where.userId, actor)
-    assert.equal(query.where.status, 'ACTIVE')
-    assert.deepEqual(Array.from(query.where.role.in), ['owner', 'admin', 'manager', 'member'])
-    assert.equal(query.orderBy.createdAt, 'asc')
-    assert.equal(query.select.organization.select.id, true)
-    if (fail) throw Error('synthetic DB failure')
-    return empty ? [] : rows
-  }, findFirst: async query => {
-    reads++; assert.equal(query.where.userId, actor); assert.equal(query.where.status, 'ACTIVE')
-    return unknown ? { id: 'unknown-role-membership' } : null
-  } } } },
+  '@/lib/prisma': { prisma: { aishodanMember: memberStore, quoteMember: memberStore } },
 })
 let passed = 0
 async function check(name, fn) { await fn(); passed++; console.log('PASS ' + name) }
@@ -47,7 +48,7 @@ async function request(query = '', expected = 'actor', service = 'aishodan') {
   }
   await check('scoped host link replaces org and preserves other query and fragment', () => {
     assert.equal(workspaceHref('/aishodan/sessions?verdict=hot&org=B#item', '組織A'), '/aishodan/sessions?verdict=hot&org=%E7%B5%84%E7%B9%94A#item')
-    for (const path of ['https://other.invalid/aishodan', '//other.invalid/aishodan', '/m/public', '/aishodan/invite/token', '/aishodan/../../home']) assert.throws(() => workspaceHref(path, 'A'))
+    for (const path of ['https://other.invalid/aishodan', '//other.invalid/aishodan', '/m/public', '/aishodan/invite', '/aishodan/invite?next=1', '/aishodan/invite#target', '/aishodan/invite/token', '/aishodan/invite/token?next=1#target', '/aishodan/../../home']) assert.throws(() => workspaceHref(path, 'A'))
   })
   await check('explicit A wins over owner-first B and echoes actual principal and organization ID', async () => {
     const result = await request('?org=' + encodeURIComponent('組織A'))
@@ -65,7 +66,17 @@ async function request(query = '', expected = 'actor', service = 'aishodan') {
   })
   await check('guest and unsupported service fail with private responses and no membership read', async () => {
     const before = reads; actor = ''; assert.equal((await request()).status, 401); actor = 'actor'
-    assert.equal((await request('', 'actor', 'quote')).status, 404); assert.equal(reads, before)
+    assert.equal((await request('', 'actor', 'mensetsu')).status, 404); assert.equal(reads, before)
+  })
+  await check('Quote explicit A, default owner B, foreign and mismatched actor preserve host isolation', async () => {
+    assert.equal((await request('?org=' + encodeURIComponent('組織A'), 'actor', 'quote')).data.current.id, 'A-id')
+    assert.equal((await request('', 'actor', 'quote')).data.current.id, 'B-id')
+    assert.equal((await request('?org=foreign', 'actor', 'quote')).status, 403)
+    const before = reads
+    assert.equal((await request('?org=B', 'other', 'quote')).status, 409)
+    assert.equal(reads, before)
+    assert.equal(workspaceHref('/quote/documents/docA?org=B', '組織A', 'quote'), '/quote/documents/docA?org=%E7%B5%84%E7%B9%94A')
+    for (const path of ['/aishodan', '/quote/invite', '/quote/invite?next=1', '/quote/invite#target', '/quote/invite/token', '/quote/invite/token?next=1#target', 'https://foreign.invalid/quote']) assert.throws(() => workspaceHref(path, '組織A', 'quote'))
   })
   await check('read failure is unavailable rather than empty membership', async () => {
     fail = true; const result = await request(); fail = false

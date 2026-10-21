@@ -21,6 +21,7 @@ const mocks = {
   '@/lib/plan-utils': { planLabel: x => x, tierFrom: x => x },
   '@/components/UnifiedPricingPlans': { UnifiedPricingPlans: p => { portalProps = p; return React.createElement('div', { 'data-testid': 'plan', 'data-plan': p.currentPlan || 'guest', 'data-guard': p.checkoutActionGuard ? 'yes' : 'no', 'data-portal': p.portalNavigationGuard ? 'yes' : 'no' }, p.currentPlan || 'guest') } },
   '@/components/org/OrganizationWorkspaceBoundary': { useOptionalOrganizationWorkspace: () => status === 'authenticated' ? { scope: { kind: 'ready', proof: makeProof() } } : null },
+  '@/lib/quote/checkout-origin-hint': { saveQuoteCheckoutHint: () => { throw Error('Quote hint used by Aishodan') }, saveQuotePortalHint: () => { throw Error('Quote hint used by Aishodan') }, readQuotePortalHint: () => { throw Error('Quote hint used by Aishodan') } },
   '@/lib/aishodan/checkout-origin-hint': { saveCheckoutOriginHint: () => true, savePortalOriginHint: () => portalWrite,
     readPortalOriginHint: (_, actorId, navigationId) => portalReadback ? ({ actorId, navigationId, organizationId: 'org-' + selected, slug: selected }) : 'missing' },
 }

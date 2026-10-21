@@ -10,7 +10,7 @@ export class WorkspaceReadError extends Error {
 }
 
 /** An expected actor is an extra equality check. The server always authenticates its own session. */
-export async function readOrganizationWorkspace(actorId: string, selected: OrganizationSelection, signal: AbortSignal): Promise<WorkspaceRead> {
+export async function readOrganizationWorkspace(actorId: string, selected: OrganizationSelection, signal: AbortSignal, service: 'aishodan' | 'quote' = 'aishodan'): Promise<WorkspaceRead> {
   if (!actorId || selected.kind === 'invalid' || signal.aborted) throw new WorkspaceReadError(0, 'unavailable')
   const controller = new AbortController()
   let rejectStopped: (error: WorkspaceReadError) => void = () => {}
@@ -24,7 +24,7 @@ export async function readOrganizationWorkspace(actorId: string, selected: Organ
   let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
   try {
     const read = async (): Promise<WorkspaceRead> => {
-      const url = selected.kind === 'selected' ? `/api/organization-workspace/aishodan?org=${encodeURIComponent(selected.slug)}` : '/api/organization-workspace/aishodan'
+      const url = selected.kind === 'selected' ? `/api/organization-workspace/${service}?org=${encodeURIComponent(selected.slug)}` : `/api/organization-workspace/${service}`
       const response = await fetch(url, { cache: 'no-store', headers: { 'x-doya-workspace-actor': actorId }, signal: controller.signal })
       if (controller.signal.aborted) throw new WorkspaceReadError(0, 'unavailable')
       if (!response.ok) throw new WorkspaceReadError(response.status, response.status === 401 || response.status === 403 || response.status === 409 ? 'denied' : 'unavailable')
@@ -44,7 +44,7 @@ export async function readOrganizationWorkspace(actorId: string, selected: Organ
       let offset = 0
       for (const part of parts) { bytes.set(part, offset); offset += part.byteLength }
       const value: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes))
-      return parseWorkspaceRead(value, actorId, selected)
+      return parseWorkspaceRead(value, actorId, selected, service)
     }
     return await Promise.race([read(), stopped])
   } catch (error) {

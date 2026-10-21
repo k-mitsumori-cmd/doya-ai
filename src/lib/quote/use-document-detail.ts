@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { getSelectedOrg, orgStorageKey } from '@/components/org/OrgSwitcher'
+import { useQuoteWorkspace } from '@/components/quote/QuoteWorkspaceBoundary'
 import { QuoteWorkspaceContext } from '@/lib/quote/workspace-context'
 import { parseQuoteOrganizations } from '@/lib/quote/organization-response'
 import { requestOrgJson, orgErrorMessage } from '@/lib/org-client-response'
@@ -9,18 +9,22 @@ import { parseQuoteDetailDocument, quoteDraftFromDocument, quoteDocumentDraftMat
 
 const emptyDraft = (): QuoteDetailDraft => ({ items:[], clientCompany:'', clientPerson:'', discountType:'', discountValue:'', notes:'', paymentTerms:'', deliveryTerms:'' })
 export function useQuoteDocumentDetail(id: string | undefined) {
+  const { scope } = useQuoteWorkspace()
+  const proof = scope.kind === 'ready' ? scope.proof : null
+  const proofRef = useRef(proof)
+  proofRef.current = proof
   const { data:session, status } = useSession()
   const lastActor = useRef('')
   if (status==='authenticated') lastActor.current=session?.user?.id||''
   if (status==='unauthenticated') lastActor.current=''
   const actor=status==='loading'?lastActor.current:session?.user?.id||''
-  const selection=getSelectedOrg('quote')
+  const selection=proof?.organization.slug || null
   const contextRef=useRef<QuoteWorkspaceContext|null>(null)
-  if (!contextRef.current) contextRef.current=new QuoteWorkspaceContext(()=>getSelectedOrg('quote'))
+  if (!contextRef.current) contextRef.current=new QuoteWorkspaceContext(()=>proofRef.current?.current()?proofRef.current.organization.slug:null)
   const context=contextRef.current
   const lastRoute=useRef(id)
   if (lastRoute.current!==id) { context.invalidate(); lastRoute.current=id }
-  const epoch=context.update({actor,selection,status})
+  const epoch=context.update({actor,selection,status,revision:proof?.revision})
   const identity=JSON.stringify([actor,selection,id])
   const lastIdentity=useRef(identity)
   const state=useRef<{doc:QuoteDetailDocument|null;issuer:{companyName:string}|null;draft:QuoteDetailDraft;revision:number;dirty:boolean;org:string|null}>(
@@ -37,13 +41,7 @@ export function useQuoteDocumentDetail(id: string | undefined) {
   const [saving,setSaving]=useState(false)
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
-  const changed=useCallback(()=>{context.invalidate();redraw(n=>n+1)},[context])
-  useEffect(()=>{
-    const storage=(e:StorageEvent)=>{if(e.key===null||e.key===orgStorageKey('quote'))changed()}
-    window.addEventListener('quote:organization-changed',changed);window.addEventListener('storage',storage)
-    redraw(n=>n+1)
-    return()=>{window.removeEventListener('quote:organization-changed',changed);window.removeEventListener('storage',storage);context.invalidate()}
-  },[context,changed])
+  useEffect(()=>{redraw(n=>n+1);return()=>context.invalidate()},[context])
   const load=useCallback(async(resumeEditing = false)=>{
     if (!id||!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) {setLoading(false);setError('見積書のURLを確認してください');return}
     const ticket=context.begin('document-read',true,epoch)
@@ -54,7 +52,7 @@ export function useQuoteDocumentDetail(id: string | undefined) {
       if(!ticket.current())return
       if(!orgs.res.ok)throw new Error(orgErrorMessage(orgs.data,orgs.res.status,false))
       const org=parseQuoteOrganizations(orgs.data).current
-      if(!org||!context.verifyOrganization(epoch,org.slug))throw new Error('組織の所属を確認できませんでした')
+      if(!org||!proof?.current()||org.slug!==proof.organization.slug||org.role!==proof.organization.role||actor!==proof.actorId||!context.verifyOrganization(epoch,org.slug))throw new Error('組織の所属を確認できませんでした')
       if(state.current.org!==null&&state.current.org!==org.slug){state.current={doc:null,issuer:null,draft:emptyDraft(),revision:0,dirty:false,org:null};pending.current=null}
       state.current.org=org.slug
       const {res,data}=await requestOrgJson('quote',`/api/quote/documents/${id}`,org.slug,{signal:ticket.signal})
@@ -77,9 +75,9 @@ export function useQuoteDocumentDetail(id: string | undefined) {
       setReady({epoch,slug:org.slug,role:org.role})
     }catch(e){if(ticket.current())setError(e instanceof Error?e.message:'見積書を取得できませんでした')}
     finally{if(ticket.current())setLoading(false);ticket.end()}
-  },[context,epoch,id,selection])
+  },[context,epoch,id,selection,proof,actor])
   useEffect(()=>{void load()},[load])
-  const loaded=!!id&&ready?.epoch===epoch&&context.isCurrent(epoch)&&state.current.doc?.id===id
+  const loaded=!!id&&ready?.epoch===epoch&&context.isCurrent(epoch)&&proof?.current()&&state.current.doc?.id===id
   const edit=<K extends keyof QuoteDetailDraft>(field:K,value:QuoteDetailDraft[K])=>{
     if(!loaded||!context.isCurrent(epoch)||state.current.doc?.status!=='draft')return
     state.current.draft={...state.current.draft,[field]:value};state.current.revision++;state.current.dirty=!quoteDocumentDraftMatches(state.current.doc,state.current.draft);redraw(n=>n+1)

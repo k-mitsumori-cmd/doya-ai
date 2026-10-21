@@ -24,6 +24,7 @@ export interface PortalNavigationGuard {
   current: () => boolean
   verify: (signal: AbortSignal) => Promise<boolean>
   prepareReturn: (navigationId: string) => boolean
+  returnPath?: (navigationId: string) => string
 }
 
 export function GuardedPortalLink({ guard }: { guard: PortalNavigationGuard }) {
@@ -39,7 +40,7 @@ export function GuardedPortalLink({ guard }: { guard: PortalNavigationGuard }) {
       if (!await guard.verify(own.signal) || own.signal.aborted || !guard.current()) throw new Error('scope changed')
       const navigationId = crypto.randomUUID()
       if (!guard.prepareReturn(navigationId) || own.signal.aborted || !guard.current()) throw new Error('return unavailable')
-      const returnTo = `/aishodan/billing-return/${navigationId}`
+      const returnTo = guard.returnPath ? guard.returnPath(navigationId) : `/aishodan/billing-return/${navigationId}`
       window.location.assign(`/api/stripe/portal?returnTo=${encodeURIComponent(returnTo)}`)
     } catch { if (!own.signal.aborted && guard.current()) setError(true) }
     finally { if (controller.current === own) { controller.current = null; own.abort(); setBusy(false) } }

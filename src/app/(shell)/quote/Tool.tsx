@@ -9,7 +9,11 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
-import OrgSwitcher, { clearSelectedOrg, getSelectedOrg, selectOrganization, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
+import { selectOrganization } from '@/components/org/OrgSwitcher'
+import QuoteOrgSwitcher from '@/components/quote/QuoteOrgSwitcher'
+import { useRouter } from 'next/navigation'
+import { useQuoteWorkspace } from '@/components/quote/QuoteWorkspaceBoundary'
+import { workspaceHref } from '@/lib/organization-workspace-selection'
 import { useSession } from 'next-auth/react'
 import { QuoteWorkspaceContext } from '@/lib/quote/workspace-context'
 import { isQuoteProductProfile, isQuoteSuggestedItem, isQuoteProductAcknowledgement } from '@/lib/quote/response-shape'
@@ -66,6 +70,15 @@ const SOURCE_STYLE: Record<PriceSource, string> = {
 const MAX_QUOTE_ITEMS = 60
 
 export default function QuoteTool() {
+  const router = useRouter()
+  const { scope } = useQuoteWorkspace()
+  const proof = scope.kind === 'ready' ? scope.proof : null
+  const proofRef = useRef(proof)
+  proofRef.current = proof
+  const scoped = useCallback((path: string) => {
+    if (!proof?.current()) throw new OrgResponseError(true)
+    return proof.api(path)
+  }, [proof])
   const { data: session, status: authStatus } = useSession()
   // 新しい見た目（UI 品質の直し）。偽のときは今までの見た目のまま（チェックリスト §5.1）
   const uiNext = useUiNext()
@@ -73,11 +86,11 @@ export default function QuoteTool() {
   if (authStatus === 'authenticated') lastActor.current = session?.user?.id || ''
   if (authStatus === 'unauthenticated') lastActor.current = ''
   const actor = authStatus === 'loading' ? lastActor.current : session?.user?.id || ''
-  const selection = getSelectedOrg('quote')
+  const selection = proof?.organization.slug || null
   const contextRef = useRef<QuoteWorkspaceContext | null>(null)
-  if (!contextRef.current) contextRef.current = new QuoteWorkspaceContext(() => getSelectedOrg('quote'))
+  if (!contextRef.current) contextRef.current = new QuoteWorkspaceContext(() => proofRef.current?.current() ? proofRef.current.organization.slug : null)
   const context = contextRef.current
-  const epoch = context.update({ actor, selection, status: authStatus })
+  const epoch = context.update({ actor, selection, status: authStatus, revision: proof?.revision })
   const identity = JSON.stringify([actor, selection])
   const draftIdentity = useRef(identity)
   const [, forceScope] = useState(0)
@@ -120,7 +133,6 @@ export default function QuoteTool() {
   const [creatingOrg, setCreatingOrg] = useState(false)
   const [organizationUncertain, setOrganizationUncertain] = useState(false)
   const creatingOrgRequest = useRef(false)
-  const [memberships, setMemberships] = useState<Membership[]>([])
   /** 未ログイン。⚠️ 組織が無いのか、そもそもログインしていないのかを区別する。
    *  区別しないと、未ログインの人に「組織を作成」フォームを見せてしまい、
    *  押しても401で何も起きない（何が悪いのか分からない画面になる）。 */
@@ -203,34 +215,25 @@ export default function QuoteTool() {
     setProductPageError('')
     setDocumentPageError('')
     try {
-      const r = await fetch('/api/quote/organizations')
+      const r = await fetch(proof ? scoped('/api/quote/organizations') : '/api/quote/organizations')
       if (r.status === 401) {
         if (listVersion.current !== version || !context.isCurrent(epoch)) return
         setNeedsLogin(true)
         return
       }
       if (!r.ok) throw new Error('組織一覧を取得できませんでした')
-      let d = parseQuoteOrganizations(await r.json())
+      const d = parseQuoteOrganizations(await r.json())
       if (!context.isCurrent(epoch)) return
-      const memberships = d.memberships
-      const previousSelection = getSelectedOrg('quote')
-      if (reconcileSelectedOrg('quote', memberships)) {
-        const scoped = await fetch(withOrg('quote', '/api/quote/organizations'))
-        if (!scoped.ok) throw new Error('選択中の組織を確認できませんでした')
-        const scopedData = parseQuoteOrganizations(await scoped.json())
-        if (scopedData?.current) d = scopedData
-        else { clearSelectedOrg('quote'); changeOrganization(); return }
-      }
-      if (getSelectedOrg('quote') !== previousSelection) { changeOrganization(); return }
+      if (proof && (!d.current || d.current.slug !== proof.organization.slug || d.current.role !== proof.organization.role)) throw new Error('選択中の組織を確認できませんでした')
+      if (!proof && d.current) throw new Error('組織を確認できませんでした')
       if (listVersion.current !== version || !context.isCurrent(epoch)) return
       if (d.current && !context.verifyOrganization(epoch, d.current.slug)) throw new Error('組織を確認できませんでした')
       setOrg(d.current)
-      setMemberships(memberships)
       if (d.current) {
         const [pr, dr, ir] = await Promise.all([
-          fetchOrgJson(withOrg('quote', '/api/quote/products')),
-          fetchOrgJson(withOrg('quote', '/api/quote/documents')),
-          fetchOrgJson(withOrg('quote', '/api/quote/issuer')),
+          fetchOrgJson(scoped('/api/quote/products')),
+          fetchOrgJson(scoped('/api/quote/documents')),
+          fetchOrgJson(scoped('/api/quote/issuer')),
         ])
         const productPage = parseQuoteListPage<Product>(pr, 'products', 100)
         const documentPage = parseQuoteListPage<DocRow>(dr, 'documents', 200)
@@ -257,7 +260,7 @@ export default function QuoteTool() {
     } finally {
       if (listVersion.current === version && context.isCurrent(epoch)) setLoading(false)
     }
-  }, [epoch, context, changeOrganization, fetch, fetchOrgJson, setSelectedProduct, selectedProductRef])
+  }, [epoch, context, fetch, fetchOrgJson, setSelectedProduct, selectedProductRef, proof, scoped])
 
   useEffect(() => {
     if (draftIdentity.current !== identity) {
@@ -288,7 +291,7 @@ export default function QuoteTool() {
     setLoadingMoreProducts(true)
     setProductPageError('')
     try {
-      const url = withOrg('quote', '/api/quote/products')
+      const url = scoped('/api/quote/products')
       const data = await fetchOrgJson(`${url}${url.includes('?') ? '&' : '?'}cursor=${encodeURIComponent(productCursor)}`)
       const page = parseQuoteListPage<Product>(data, 'products', 100)
       const merged = appendQuoteListPage(products, page, productTotal)
@@ -309,7 +312,7 @@ export default function QuoteTool() {
     setLoadingMoreDocuments(true)
     setDocumentPageError('')
     try {
-      const url = withOrg('quote', '/api/quote/documents')
+      const url = scoped('/api/quote/documents')
       const data = await fetchOrgJson(`${url}${url.includes('?') ? '&' : '?'}cursor=${encodeURIComponent(documentCursor)}`)
       const page = parseQuoteListPage<DocRow>(data, 'documents', 200)
       const merged = appendQuoteListPage(docs, page, documentTotal)
@@ -334,7 +337,7 @@ export default function QuoteTool() {
     setQuotaAction(null)
     let uncertain = false
     try {
-      const r = await fetch(withOrg('quote', '/api/quote/organizations'), {
+      const r = await fetch('/api/quote/organizations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: orgName.trim() }),
@@ -348,7 +351,8 @@ export default function QuoteTool() {
       if (!context.isCurrent(epoch)) return
       if (typeof result.slug !== 'string' || !result.slug || result.slug.length > 512 || result.name !== orgName.trim()) throw new OrgResponseError(true, r.status)
       selectOrganization('quote', result.slug)
-      changeOrganization()
+      context.invalidate()
+      router.push(workspaceHref('/quote', result.slug, 'quote'))
     } catch (e) {
       if (!context.isCurrent(epoch)) return
       uncertain = e instanceof OrgResponseError
@@ -372,7 +376,7 @@ export default function QuoteTool() {
     setError('')
     setQuotaAction(null)
     try {
-      const r = await fetch(withOrg('quote', '/api/quote/products/analyze'), {
+      const r = await fetch(scoped('/api/quote/products/analyze'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim() }),
@@ -419,7 +423,7 @@ export default function QuoteTool() {
     let uncertain = false
     let limited = false
     try {
-      const r = await fetch(withOrg('quote', '/api/quote/products'), {
+      const r = await fetch(scoped('/api/quote/products'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: productName.trim(), sourceUrl: draftUrl, profile: draftProfile }),
@@ -485,7 +489,7 @@ export default function QuoteTool() {
     setError('')
     setQuotaAction(null)
     try {
-      const r = await fetch(withOrg('quote', '/api/quote/documents/suggest'), {
+      const r = await fetch(scoped('/api/quote/documents/suggest'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -546,7 +550,7 @@ export default function QuoteTool() {
     }
     setEstimating((prev) => new Set(prev).add(it))
     try {
-      const r = await fetch(withOrg('quote', '/api/quote/documents/estimate-item'), {
+      const r = await fetch(scoped('/api/quote/documents/estimate-item'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ itemName: name, spec: it.spec || undefined, productId: selectedProduct || undefined }),
@@ -612,7 +616,7 @@ export default function QuoteTool() {
     try {
       const product = products.find((p) => p.id === selectedProduct)
       const title = product ? `${product.name} お見積り`.slice(0, 200) : 'お見積り'
-      const r = await fetch(withOrg('quote', '/api/quote/documents'), {
+      const r = await fetch(scoped('/api/quote/documents'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -646,7 +650,7 @@ export default function QuoteTool() {
         setCreating(false)
         return
       }
-      window.location.href = `/quote/documents/${encodeURIComponent(d.id)}`
+      window.location.href = proof!.href(`/quote/documents/${encodeURIComponent(d.id)}`)
     } catch (e) {
       if (!context.isCurrent(epoch)) return
       const uncertain = e instanceof OrgResponseError
@@ -760,13 +764,8 @@ export default function QuoteTool() {
             <p className="text-xs text-slate-500 font-semibold">{org.name}</p>
           </div>
           <div className="flex items-center gap-3">
-            <OrgSwitcher
-              service="quote"
-              memberships={memberships}
-              currentSlug={org.slug}
-              onChange={changeOrganization}
-            />
-            <Link href="/quote/settings" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold">
+            <QuoteOrgSwitcher />
+            <Link href={proof!.href('/quote/settings')} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold">
               発行者情報
             </Link>
           </div>
@@ -797,7 +796,7 @@ export default function QuoteTool() {
         {!hasIssuer && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 font-semibold">
             見積書に印字する自社情報が未設定です。このままでもPDFは出力できます（自社名の欄は空欄になります）。
-            <Link href="/quote/settings" className="mx-1 font-bold underline">
+            <Link href={proof!.href('/quote/settings')} className="mx-1 font-bold underline">
               発行者情報
             </Link>
             を登録すると印字されます。
@@ -808,7 +807,7 @@ export default function QuoteTool() {
         {error && (
           <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">
             <p>{error}</p>
-            {quotaAction && org?.role === 'owner' && <Link href={quotaAction.url} className="mt-2 inline-block font-bold text-blue-700 underline">{quotaAction.label}</Link>}
+            {quotaAction && org?.role === 'owner' && <Link href={quotaAction.url === '/quote/pricing' ? proof!.href('/quote/pricing') : quotaAction.url} className="mt-2 inline-block font-bold text-blue-700 underline">{quotaAction.label}</Link>}
             {productSaveUncertain && <button type="button" onClick={() => void load()} className="mt-2 block font-bold text-blue-700 underline">商材一覧を再読み込み</button>}
           </div>
         )}
@@ -884,7 +883,7 @@ export default function QuoteTool() {
             <div role="alert" className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-900">
               <p>商材登録の利用上限に達しています。入力は保持しています。</p>
               {org?.role === 'owner' && productQuotaAction
-                ? <Link href={productQuotaAction.url} className="mt-2 inline-block underline">{productQuotaAction.label}</Link>
+                ? <Link href={productQuotaAction.url === '/quote/pricing' ? proof!.href('/quote/pricing') : productQuotaAction.url} className="mt-2 inline-block underline">{productQuotaAction.label}</Link>
                 : <p className="mt-2">利用枠の変更は組織の契約者にご相談ください。</p>}
             </div>
           )}
@@ -1228,7 +1227,7 @@ export default function QuoteTool() {
             {createdDocument && (
               <div role="status" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
                 送信した内容の見積書を作成しました。待機中に変更した入力は保持しています。
-                <Link href={`/quote/documents/${encodeURIComponent(createdDocument.id)}`} className="mt-2 block underline">作成した見積書を確認する（{createdDocument.quoteNo}）</Link>
+                <Link href={proof!.href(`/quote/documents/${encodeURIComponent(createdDocument.id)}`)} className="mt-2 block underline">作成した見積書を確認する（{createdDocument.quoteNo}）</Link>
                 <button type="button" onClick={() => {
                   if (!context.isCurrent(epoch)) return
                   creatingDocumentRequest.current = false
@@ -1245,7 +1244,7 @@ export default function QuoteTool() {
             {quotaAction && error && org?.role === 'owner' && (
               <div role="alert" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
                 <p>{error}</p>
-                <Link href={quotaAction.url} className="mt-2 inline-block text-blue-700 underline">{quotaAction.label}</Link>
+                <Link href={quotaAction.url === '/quote/pricing' ? proof!.href('/quote/pricing') : quotaAction.url} className="mt-2 inline-block text-blue-700 underline">{quotaAction.label}</Link>
               </div>
             )}
           </section>
@@ -1271,7 +1270,7 @@ export default function QuoteTool() {
           ) : (
             <div className="mt-4 divide-y divide-slate-100">
               {docs.map((d) => (
-                <Link key={d.id} href={`/quote/documents/${d.id}`} className="flex items-center justify-between py-3 hover:bg-slate-50">
+                <Link key={d.id} href={proof!.href(`/quote/documents/${encodeURIComponent(d.id)}`)} className="flex items-center justify-between py-3 hover:bg-slate-50">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-900">
                       {d.clientCompany || '宛先未設定'} — {d.title}

@@ -291,7 +291,7 @@ async function loadQuotes(userId: string, monthStart: Date, trendStart: Date, no
     draftCount,
     sentCount,
     forTrend: confirmed.map((q) => ({ amount: toNum(q.totalExclTax), at: q.confirmedAt! })),
-    events: expiring.map((q) => ({ id: `quote-${q.id}`, date: q.expiryDate.toISOString(), title: `見積の有効期限: ${q.title}`, kind: 'quote' as const, href: `/quote/documents/${q.id}` })),
+    events: expiring.map((q) => ({ id: `quote-${q.id}`, date: q.expiryDate.toISOString(), title: `見積の有効期限: ${q.title}`, kind: 'quote' as const, href: `/quote/documents/${encodeURIComponent(q.id)}?org=${encodeURIComponent(membership.organization.slug)}` })),
   }
 }
 

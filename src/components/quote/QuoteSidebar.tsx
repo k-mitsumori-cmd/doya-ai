@@ -25,7 +25,7 @@ import {
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { QUOTE_NAV } from '@/lib/quote/nav'
-import { useQuoteUsageOrganization } from '@/lib/quote/use-usage-organization'
+import { useQuoteWorkspace } from './QuoteWorkspaceBoundary'
 
 const BASE = '/quote'
 
@@ -35,7 +35,7 @@ const NAV_ICONS: Record<string, React.ElementType> = { Receipt, Settings, Credit
 function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
-  const organizationSlug = useQuoteUsageOrganization(session?.user?.id || '', sessionStatus)
+  const { scope } = useQuoteWorkspace()
   // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
   //    表示だけを止める（fetch は止めない。Cookie認証なので未確定でも応答する）
   const sessionReady = sessionStatus !== 'loading'
@@ -45,11 +45,12 @@ function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   // ⚠️ ナビの正本は src/lib/quote/nav.ts（共通の枠と同じ配列）
-  const NAV: NavItem[] = QUOTE_NAV.map((item) => ({ href: item.href, label: item.label, icon: NAV_ICONS[item.icon ?? ''] ?? Receipt, ...(item.href === BASE ? { hot: true } : {}) }))
+  const NAV: NavItem[] = scope.kind === 'ready' ? QUOTE_NAV.map((item) => ({ href: scope.proof.href(item.href), label: item.label, icon: NAV_ICONS[item.icon ?? ''] ?? Receipt, ...(item.href === BASE ? { hot: true } : {}) })) : []
 
   const isActive = (href: string) => {
-    if (href === BASE) return pathname === BASE
-    return pathname === href || pathname.startsWith(href + '/')
+    const path = href.split('?')[0]
+    if (path === BASE) return pathname === BASE
+    return pathname === path || pathname.startsWith(path + '/')
   }
 
   const confirmLogout = async () => {
@@ -85,7 +86,7 @@ function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
 
           {/* プラン案内。⚠️ 金額の正本は unified-plan.ts。ここに別の数字を書かない */}
           {/* 作った数と残り。数字は /api/usage/quote から受け取るだけ */}
-          <SidebarUsagePanel service="quote" refreshEvent="quote:usage-changed" organizationSlug={organizationSlug} show={sessionReady && (isMobile || !isCollapsed)} pricingHref="/quote/pricing" />
+          <SidebarUsagePanel service="quote" refreshEvent="quote:usage-changed" organizationSlug={scope.kind === 'ready' ? scope.proof.organization.slug : null} show={scope.kind === 'ready' && sessionReady && (isMobile || !isCollapsed)} pricingHref={scope.kind === 'ready' ? scope.proof.href('/quote/pricing') : '/quote/pricing'} />
         </div>
 
         <ToolSwitcherMenu currentService="quote" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 sm:px-4 pb-2" />
@@ -97,7 +98,7 @@ function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
           isCollapsed={isCollapsed}
           isMobile={isMobile}
           theme={quoteTheme}
-          loginCallbackUrl="/quote"
+          loginCallbackUrl={scope.kind === 'ready' ? scope.proof.href('/quote') : '/quote'}
           onLogout={() => setIsLogoutDialogOpen(true)}
         />
         <SidebarCollapseToggle isCollapsed={isCollapsed} onToggle={toggle} isMobile={isMobile} theme={quoteTheme} />

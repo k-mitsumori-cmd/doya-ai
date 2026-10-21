@@ -1,4 +1,4 @@
-for (const file of ['verify-organization-workspace-client-deadline.cjs', 'verify-organization-workspace-read.cjs', 'verify-aishodan-org-billing-read.cjs', 'verify-aishodan-org-pricing-mounted.cjs', 'verify-aishodan-org-boundary-mounted.cjs', 'verify-aishodan-org-pages-mounted.cjs', 'verify-aishodan-org-checkout-guard-mounted.cjs', 'verify-aishodan-org-shell-mounted.cjs', 'verify-aishodan-empty-onboarding-mounted.cjs', 'verify-aishodan-private-guest-mounted.cjs', 'verify-aishodan-portal-navigation-mounted.cjs', 'verify-aishodan-checkout-origin-hint.cjs']) {
+for (const file of ['verify-organization-workspace-client-deadline.cjs', 'verify-organization-workspace-read.cjs', 'verify-quote-home-roundtrip.cjs', 'verify-quote-home-boundary-detail.cjs', 'verify-quote-org-boundary-mounted.cjs', 'verify-quote-org-pricing-mounted.cjs', 'verify-quote-org-billing-read.cjs', 'verify-quote-org-shell-mounted.cjs', 'verify-quote-checkout-origin-hint.cjs', 'verify-aishodan-org-billing-read.cjs', 'verify-aishodan-org-pricing-mounted.cjs', 'verify-aishodan-org-boundary-mounted.cjs', 'verify-aishodan-org-pages-mounted.cjs', 'verify-aishodan-org-checkout-guard-mounted.cjs', 'verify-aishodan-org-shell-mounted.cjs', 'verify-aishodan-empty-onboarding-mounted.cjs', 'verify-aishodan-private-guest-mounted.cjs', 'verify-aishodan-portal-navigation-mounted.cjs', 'verify-aishodan-checkout-origin-hint.cjs']) {
   const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], { stdio: 'inherit', timeout: 60000 })
   if (result.error || result.status !== 0) { console.error('AI商談 organization workspace regression failed:', file); process.exit(result.status || 1) }
 }
@@ -435,7 +435,7 @@ if (staticAssetUrls.error || staticAssetUrls.status !== 0) {
   console.error('Security regression failed: verify-static-asset-urls.cjs');
   process.exit(1);
 }
-for (const script of ['verify-quote-workspace-context.cjs', 'verify-quote-workspace-mounted.cjs', 'verify-quote-sidebar-mounted.cjs', 'verify-quote-response-shape.cjs']) {
+for (const script of ['verify-quote-workspace-context.cjs', 'verify-quote-workspace-mounted.cjs', 'verify-quote-sidebar-mounted.cjs', 'verify-quote-usage-organization-hook.cjs', 'verify-quote-response-shape.cjs']) {
   const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
 }

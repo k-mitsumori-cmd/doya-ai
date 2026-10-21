@@ -8,6 +8,7 @@
 // ⚠️ 「確定」は人の明示操作。下書きのPDFには「社内確認用」の透かしが入る。
 //    AIが出した金額を、人が見る前に客先へ渡させないための設計。
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { useQuoteDocumentDetail } from '@/lib/quote/use-document-detail'
 import { useParams } from 'next/navigation'
@@ -16,6 +17,8 @@ import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource } from '@/lib/
 import { DoyaKun } from '@/components/lp'
 import QuotePageHeading from '@/components/quote/QuotePageHeading'
 import { useUiNext } from '@/components/shell/ui-next-context'
+import { useQuoteWorkspace } from '@/components/quote/QuoteWorkspaceBoundary'
+import QuoteOrgSwitcher from '@/components/quote/QuoteOrgSwitcher'
 
 const SOURCE_STYLE: Record<string, string> = {
   own_price: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -27,13 +30,23 @@ const SOURCE_STYLE: Record<string, string> = {
 }
 
 export default function QuoteDocumentPage() {
+  const { scope } = useQuoteWorkspace()
+  const listHref = scope.kind === 'ready' ? scope.proof.href('/quote') : '/quote'
+  const settingsHref = scope.kind === 'ready' ? scope.proof.href('/quote/settings') : '/quote/settings'
   const params = useParams<{ id: string }>()
   const id = params?.id
   const { doc, issuer, loading, saving, unknown, error, message, items, clientCompany, clientPerson,
     discountType, discountValue, notes, paymentTerms, deliveryTerms, setClientCompany, setClientPerson,
     setDiscountType, setDiscountValue, setNotes, setPaymentTerms, setDeliveryTerms, updateItem,
-    save, load, canApprove, pdfUrl } = useQuoteDocumentDetail(id)
+    save, load, canApprove, pdfUrl, hasUnsavedChanges } = useQuoteDocumentDetail(id)
   const uiNext = useUiNext()
+  useEffect(() => {
+    const beforeSwitch = (event: Event) => {
+      if ((hasUnsavedChanges || saving || unknown) && !window.confirm('未保存または確認中の変更があります。組織を切り替えると、この画面の入力内容は失われます。切り替えますか？')) event.preventDefault()
+    }
+    window.addEventListener('quote:before-org-switch', beforeSwitch)
+    return () => window.removeEventListener('quote:before-org-switch', beforeSwitch)
+  }, [hasUnsavedChanges, saving, unknown])
 
   if (loading) {
     return (
@@ -49,7 +62,7 @@ export default function QuoteDocumentPage() {
       <div className={uiNext ? 'flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
         <p className="text-slate-600">{error || '見積書が見つかりません'}</p>
         <button onClick={() => void load()} className="text-sm font-semibold underline">再読み込みする</button>
-        <Link href="/quote" className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードに戻る</Link>
+        <Link href={listHref} className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードに戻る</Link>
       </div>
     )
   }
@@ -63,10 +76,11 @@ export default function QuoteDocumentPage() {
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <Link href="/quote" className="text-xs text-slate-500 hover:underline font-semibold">← 見積もり一覧</Link>
+            <Link href={listHref} className="text-xs text-slate-500 hover:underline font-semibold">← 見積もり一覧</Link>
             <QuotePageHeading className="truncate text-base font-bold text-slate-900">{doc.quoteNo}</QuotePageHeading>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {!uiNext && <QuoteOrgSwitcher />}
             <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
               doc.status === 'draft' ? 'bg-slate-100 text-slate-600'
               : doc.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700'
@@ -128,7 +142,7 @@ export default function QuoteDocumentPage() {
         {!issuer && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 font-semibold">
             発行元情報が未設定です。このままPDFを出力すると、自社名の欄は手書き用の空欄になります。
-            <Link href="/quote/settings" className="ml-1 font-bold underline">発行元設定</Link>
+            <Link href={settingsHref} className="ml-1 font-bold underline">発行元設定</Link>
           </div>
         )}
 
