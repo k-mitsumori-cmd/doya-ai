@@ -40,7 +40,7 @@ export default function ShellGate({ signedIn, serverActorId, userName, enabledId
 }) {
   const pathname = usePathname()
   const { data: session, status } = useSession()
-  const privateContainer = useRef<HTMLDivElement>(null)
+  const privateContainer = useRef<HTMLDivElement | null>(null)
   const retired = useRef(false)
   const [, updateLifecycle] = useState(0)
   const serverActor = typeof serverActorId === 'string' && serverActorId.trim() ? serverActorId : null
@@ -90,7 +90,14 @@ export default function ShellGate({ signedIn, serverActorId, userName, enabledId
       <p role="status">ログイン状態を確認しています…</p>
       <button type="button" onClick={() => window.location.reload()} className="mt-2 font-bold text-blue-700 underline">ログイン状態を読み込み直す</button>
     </div>}
-    <div ref={privateContainer} hidden={waiting} {...(waiting ? { inert: '' } : {})}>
+    <div ref={node => {
+      privateContainer.current = node
+      if (node) {
+        // React 18 does not serialize an unknown boolean inert prop consistently.
+        if (waiting) node.setAttribute('inert', '')
+        else node.removeAttribute('inert')
+      }
+    }} hidden={waiting}>
     <UiNextContext.Provider value={signedIn ? uiNext : null}>
       <AccountCompanyContext.Provider value={privateReady && uiNext ? company : undefined}>
       <ShellToolHrefsContext.Provider value={privateReady && uiNext && toolHrefs ? toolHrefs : EMPTY}>
