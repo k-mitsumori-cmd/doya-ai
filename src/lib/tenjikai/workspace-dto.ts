@@ -71,7 +71,7 @@ export function readFullTenjikaiWorkspaceDto(value: unknown): FullTenjikaiWorksp
       !string(input.serviceUrl) || !string(input.eventName) || !string(input.venueId) || !/^\d{4}-\d{2}-\d{2}$/.test(String(input.eventStart)) ||
       !Number.isFinite(new Date(String(input.eventStart) + 'T00:00:00Z').getTime()) ||
       new Date(String(input.eventStart) + 'T00:00:00Z').toISOString().slice(0, 10) !== input.eventStart ||
-      ![input.days, input.komaCols, input.komaRows, input.budgetYen, input.staff].every(int) ||
+      !int(input.days) || !int(input.komaCols) || !int(input.komaRows) || !int(input.budgetYen) || !int(input.staff) ||
       input.days < 1 || input.days > 14 || input.komaCols < 1 || input.komaCols > 10 ||
       input.komaRows < 1 || input.komaRows > 10 || input.staff < 1 || input.staff > 100 || input.budgetYen > 1_000_000_000 ||
       !['inline', 'corner', 'peninsula', 'island'].includes(String(input.position)) || !['lead', 'brand', 'demo'].includes(String(input.goal)) ||
@@ -110,20 +110,22 @@ export function readFullTenjikaiWorkspaceDto(value: unknown): FullTenjikaiWorksp
         !unique(saved.elements.map(item => item.sortOrder))) return null
     if (cost.parts !== saved.elements.reduce((sum, item) => sum + item.costYen, 0)) return null
     for (const panel of saved.panels) {
-      if (!object(panel) || !id(panel.dbId) || !id(panel.id) || !id(panel.elementDbId) ||
+      if (!object(panel)) return null
+      const heightMm = panel.heightMm
+      if (!id(panel.dbId) || !id(panel.id) || !id(panel.elementDbId) ||
           elements.get(panel.elementDbId) !== panel.elementId || !int(panel.sortOrder) ||
           !['front', 'side'].includes(String(panel.face)) ||
           ![panel.name, panel.role, panel.visual, panel.headline, panel.material].every(string) ||
-          ![panel.offsetMm, panel.widthMm, panel.heightMm, panel.baseMm, panel.viewDistanceM].every(number) ||
+          !number(heightMm) || ![panel.offsetMm, panel.widthMm, panel.baseMm, panel.viewDistanceM].every(number) ||
           !Array.isArray(panel.zones) || !panel.zones.every(zone => object(zone) && string(zone.label) &&
-            int(zone.fromMm) && int(zone.toMm) && zone.toMm >= zone.fromMm && zone.toMm <= panel.heightMm &&
+            int(zone.fromMm) && int(zone.toMm) && zone.toMm >= zone.fromMm && zone.toMm <= heightMm &&
             string(zone.content) && ['primary', 'secondary', 'light', 'muted'].includes(String(zone.tone)))) return null
     }
     if (!unique(saved.panels.map(item => item.id)) || !unique(saved.panels.map(item => item.sortOrder))) return null
   }
   if (!unique(w.plans.map(item => item.dbId)) ||
-      !unique(w.plans.flatMap(item => item.elements.map(element => element.dbId))) ||
-      !unique(w.plans.flatMap(item => item.panels.map(panel => panel.dbId)))) return null
+      !unique(w.plans.flatMap(item => item.elements.map((element: unknown) => object(element) ? element.dbId : null))) ||
+      !unique(w.plans.flatMap(item => item.panels.map((panel: unknown) => object(panel) ? panel.dbId : null)))) return null
   for (const creative of w.creatives) {
     if (!object(creative) || !id(creative.dbId) || !int(creative.sortOrder) ||
         !['backwall', 'rollup', 'flyer', 'clearfile', 'card', 'loop'].includes(String(creative.kind)) ||
@@ -138,13 +140,14 @@ export function readFullTenjikaiWorkspaceDto(value: unknown): FullTenjikaiWorksp
         typeof novelty.selected !== 'boolean' || typeof novelty.recommended !== 'boolean') return null
   }
   if (!unique(w.novelties.map(item => item.id)) || !unique(w.novelties.map(item => item.sortOrder))) return null
-  for (const line of w.budgetLines) {
+  const budgetLines = w.budgetLines
+  for (const line of budgetLines) {
     if (!object(line) || !id(line.dbId) || !(line.sourceLineKey === null || id(line.sourceLineKey)) || !int(line.sortOrder) ||
         !['space', 'build', 'electric', 'print', 'novelty', 'staff', 'logistics'].includes(String(line.category)) ||
         !string(line.detail) || !int(line.amountYen) || !string(line.source) || !string(line.status)) return null
   }
-  if (!unique(w.budgetLines.filter(item => item.sourceLineKey !== null).map(item => item.sourceLineKey)) || !unique(w.budgetLines.map(item => item.sortOrder)) ||
-      !['space', 'build', 'electric', 'print', 'novelty', 'staff', 'logistics'].every(key => w.budgetLines.some(line => line.sourceLineKey === key))) return null
+  if (!unique(budgetLines.filter(item => item.sourceLineKey !== null).map(item => item.sourceLineKey)) || !unique(budgetLines.map(item => item.sortOrder)) ||
+      !['space', 'build', 'electric', 'print', 'novelty', 'staff', 'logistics'].every(key => budgetLines.some(line => line.sourceLineKey === key))) return null
   for (const deadline of w.deadlines) {
     if (!object(deadline) || !id(deadline.dbId) || !id(deadline.id) || !int(deadline.sortOrder) ||
         !Number.isInteger(deadline.daysBefore) || ![deadline.title, deadline.owner].every(string) ||

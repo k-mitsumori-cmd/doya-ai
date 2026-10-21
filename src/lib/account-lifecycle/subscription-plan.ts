@@ -20,7 +20,7 @@ export type SubscriptionPlan = {
 export const subscriptionPlanKey = (operationId: string) => `doya-subscription-plan:v1:${operationId}`
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 const invalid = (): never => { throw new LifecycleError('SUBSCRIPTION_PLAN_UNAVAILABLE') }
-const exact = (value: unknown, fields: string[]) => Boolean(value) && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).sort().join(',') === [...fields].sort().join(',')
+const exact = (value: unknown, fields: string[]) => value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).sort().join(',') === [...fields].sort().join(',')
 const validRef = (value: unknown, prefix: string) => typeof value === 'string' && new RegExp(`^${prefix}_[A-Za-z0-9_]{1,150}$`).test(value)
 const validTarget = (value: unknown): value is SubscriptionTarget =>
   exact(value, ['id', 'customerId', 'status', 'cancelAtPeriodEnd', 'currentPeriodEnd']) &&

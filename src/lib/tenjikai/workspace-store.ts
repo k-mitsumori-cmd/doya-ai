@@ -61,7 +61,7 @@ export async function writeInitialTenjikaiWorkspace(tx: Prisma.TransactionClient
     id, planId, elementId, sourcePanelId: panel.id, sortOrder, face: panel.face, name: panel.name,
     offsetMm: panel.offsetMm, widthMm: panel.widthMm, heightMm: panel.heightMm, baseMm: panel.baseMm,
     viewDistanceM: panel.viewDistanceM, role: panel.role, visual: panel.visual, headline: panel.headline,
-    zones: panel.zones, material: panel.material, imageUrl: null,
+    zones: panel.zones.map(zone => ({ ...zone })), material: panel.material, imageUrl: null,
   })) })
   await tx.tenjikaiCreative.createMany({ data: workspace.creatives.map((item, sortOrder) => ({
     id: randomUUID(), projectId, kind: item.kind, name: item.name, displaySize: item.size, sortOrder,

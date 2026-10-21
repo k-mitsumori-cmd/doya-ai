@@ -69,7 +69,7 @@ export function subscriptionCoordinator(db: PrismaClient, provider: Subscription
         const current = await readSubscriptionServerState(db, id)
         // A lost abort response must observe the authoritative terminal without inventing the old plan digest.
         if (current?.phase === 'aborted') return view(id, actor.id)
-        if (current && current.phase !== 'reserved' && current.phase !== 'aborted') throw new LifecycleError('LIFECYCLE_CANNOT_ABORT')
+        if (current && current.phase !== 'reserved') throw new LifecycleError('LIFECYCLE_CANNOT_ABORT')
         await abortUnstartedLifecycleOperation(db, id, current?.plan?.inputDigest ?? digest([id, 'aborted-without-dispatch']))
         return view(id, actor.id)
       }
@@ -107,6 +107,7 @@ export function subscriptionCoordinator(db: PrismaClient, provider: Subscription
         if (current.phase === 'reserved') await startLifecycleOperation(db, claim)
         return execute(id, actor, current.plan, claim)
       }
+      if (action.action !== 'start') throw new LifecycleError('INVALID_SUBSCRIPTION_ACTION', 400)
       const targets = await provider.discover(actor, kind)
       const plan = makeSubscriptionPlan({ identity: id, mode, email: actor.email,
         expectedCustomerId: actor.stripeCustomerId, expectedSubscriptionId: actor.stripeSubscriptionId,
