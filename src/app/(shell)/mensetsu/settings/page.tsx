@@ -12,6 +12,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
+import { useMensetsuRequest } from '@/components/mensetsu/useMensetsuRequest'
+import { useMensetsuOperation } from '@/components/mensetsu/useMensetsuOperation'
 
 interface Org {
   id: string
@@ -40,6 +42,9 @@ const ROLE_LABEL: Record<string, string> = {
 const ROLE_RANK: Record<string, number> = { owner: 4, admin: 3, manager: 2, member: 1 }
 
 export default function MensetsuSettingsPage() {
+  const { proof, request: fetch } = useMensetsuRequest()
+  const operation = useMensetsuOperation(proof)
+  const unknownWrite = operation.unknown
   const [org, setOrg] = useState<Org | null>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [myRole, setMyRole] = useState('member')
@@ -54,28 +59,40 @@ export default function MensetsuSettingsPage() {
   // ⚠️ 自分の行に名前が無いと「（名前未設定）」になる。ログイン中の名前で埋める。
   const { data: session } = useSession()
 
+  useEffect(() => { if (unknownWrite) { setBusy(null); setInviteUrl('') } }, [unknownWrite])
+
   // ⚠️ useSession の status で fetch をゲートしない（Cookie認証なので未確定でもAPIは応答する）
   const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
       const res = await fetch('/api/mensetsu/organizations')
       const data = await res.json()
+      if (!proof.current() || !res.ok || data?.current?.id !== proof.organization.id || data?.current?.slug !== proof.organization.slug) throw new Error('選択した組織を確認できませんでした')
       setOrg(data?.current || null)
       if (data?.current) {
-        const m = await fetch('/api/mensetsu/members').then((r) => r.json())
+        const membersResponse = await fetch('/api/mensetsu/members')
+        const m = await membersResponse.json()
+        if (!proof.current() || !membersResponse.ok || m?.myUserId !== proof.actorId || !Array.isArray(m?.members)) throw new Error('組織のメンバーを確認できませんでした')
         setMembers(m?.members || [])
         setMyRole(m?.myRole || 'member')
         setMyUserId(m?.myUserId || null)
       }
+    } catch (cause) {
+      if (proof.current()) notifyError(setError, cause instanceof Error ? cause.message : '組織の設定を取得できませんでした')
     } finally {
-      setLoading(false)
+      if (proof.current()) setLoading(false)
     }
-  }, [])
+  }, [fetch, proof])
 
   useEffect(() => {
     void load()
   }, [load])
 
   const saveSettings = async (patch: Record<string, unknown>) => {
+    if (!proof.current() || unknownWrite) return
+    const ticket = operation.begin()
+    if (!ticket) return
     setBusy('settings')
     setError(null)
     setNotice(null)
@@ -86,18 +103,26 @@ export default function MensetsuSettingsPage() {
         body: JSON.stringify(patch),
       })
       const data = await res.json()
+      if (!operation.current(ticket)) return
       if (!res.ok) {
         notifyError(setError, data?.error || '設定の保存に失敗しました')
         return
       }
       setOrg((prev) => (prev ? { ...prev, ...patch } as Org : prev))
       setNotice('保存しました')
+    } catch (cause) {
+      if (operation.current(ticket)) operation.uncertain(ticket)
+      if (operation.current(ticket)) notifyError(setError, cause instanceof Error ? cause.message : '設定の保存結果を確認できませんでした。')
     } finally {
-      setBusy(null)
+      if (operation.current(ticket)) setBusy(null)
+      operation.finish(ticket)
     }
   }
 
   const invite = async () => {
+    if (!proof.current() || unknownWrite) return
+    const ticket = operation.begin()
+    if (!ticket) return
     setBusy('invite')
     setError(null)
     setInviteUrl('')
@@ -108,6 +133,7 @@ export default function MensetsuSettingsPage() {
         body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
       })
       const data = await res.json()
+      if (!operation.current(ticket)) return
       if (!res.ok) {
         notifyError(setError, data?.error || '招待に失敗しました')
         return
@@ -115,24 +141,39 @@ export default function MensetsuSettingsPage() {
       setInviteEmail('')
       if (data?.inviteUrl) setInviteUrl(data.inviteUrl)
       await load()
+    } catch (cause) {
+      if (operation.current(ticket)) operation.uncertain(ticket)
+      if (operation.current(ticket)) notifyError(setError, cause instanceof Error ? cause.message : '招待結果を確認できませんでした。')
     } finally {
-      setBusy(null)
+      if (operation.current(ticket)) setBusy(null)
+      operation.finish(ticket)
     }
   }
 
   const removeMember = async (id: string) => {
+    if (!proof.current() || unknownWrite) return
+    const ticket = operation.begin()
+    if (!ticket) return
     setBusy(`member-${id}`)
     setError(null)
     try {
       const res = await fetch(`/api/mensetsu/members/${id}`, { method: 'DELETE' })
-      const data = await res.json().catch(() => ({}))
+      const data = await res.json().catch(() => {
+        if (res.ok) throw new Error('削除結果を確認できませんでした。')
+        return {}
+      })
+      if (!operation.current(ticket)) return
       if (!res.ok) {
         notifyError(setError, data?.error || '削除に失敗しました')
         return
       }
       await load()
+    } catch (cause) {
+      if (operation.current(ticket)) operation.uncertain(ticket)
+      if (operation.current(ticket)) notifyError(setError, cause instanceof Error ? cause.message : '削除結果を確認できませんでした。')
     } finally {
-      setBusy(null)
+      if (operation.current(ticket)) setBusy(null)
+      operation.finish(ticket)
     }
   }
 
@@ -140,11 +181,18 @@ export default function MensetsuSettingsPage() {
     return <main className="mx-auto max-w-4xl px-4 py-10 text-sm font-semibold text-[#425071]">読み込み中…</main>
   }
 
+  if (!org && error) {
+    return <main className="mx-auto max-w-4xl px-4 py-10 text-sm font-semibold text-[#425071]">
+      <p role="alert" className="text-rose-700">{error}</p>
+      <button type="button" onClick={() => void load()} className="mt-3 text-[#0066ff] underline">再読み込み</button>
+    </main>
+  }
+
   if (!org) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-10">
         <p className="text-sm font-semibold text-[#425071]">
-          先に<Link href="/mensetsu" className="text-[#0066ff] underline">面接の準備</Link>から組織を作成してください。
+          先に<Link href={proof.href('/mensetsu')} className="text-[#0066ff] underline">面接の準備</Link>から組織を作成してください。
         </p>
       </main>
     )
@@ -152,6 +200,7 @@ export default function MensetsuSettingsPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
+      {unknownWrite && <p role="alert" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900">前の変更結果を確認できません。再送すると重複する可能性があります。最新の設定やメンバーを確認し、必要なら画面を開き直してください。</p>}
       <PageTitle className="text-xl font-black text-[#0a0f3c]">設定</PageTitle>
       <p className="mt-1 text-xs font-semibold text-[#8a94ad]">{org.name}</p>
 

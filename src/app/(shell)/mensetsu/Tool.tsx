@@ -11,9 +11,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import MensetsuLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
-import { fetchOrgJson } from '@/lib/org-fetch'
+import { readMensetsuStaffJson, requestMensetsuStaff } from '@/lib/mensetsu/staff-request-client'
 import { appendMensetsuSessionPage, fetchMensetsuSessionPage } from '@/lib/mensetsu/session-pages'
 import LoadingProgress from '@/components/LoadingProgress'
+import { useMensetsuWorkspace } from '@/components/mensetsu/MensetsuWorkspaceBoundary'
+import { useMensetsuOperation } from '@/components/mensetsu/useMensetsuOperation'
 
 interface Org {
   id: string
@@ -74,10 +76,23 @@ const VERDICT_LABEL: Record<string, string> = {
 }
 
 export default function MensetsuTool() {
+  const workspace = useMensetsuWorkspace()
+  const proof = workspace.scope.kind === 'ready' ? workspace.scope.proof : null
+  const operation = useMensetsuOperation(proof || (workspace.scope.kind === 'empty' ? workspace.scope : null))
+  const unknownWrite = operation.unknown
+  const fetch = useCallback(async (path: string, init?: RequestInit) => {
+    if (!proof) {
+      if (workspace.scope.kind !== 'empty' || path !== '/api/mensetsu/organizations') throw new Error('組織を確認できませんでした')
+      return globalThis.fetch(path, init)
+    }
+    return requestMensetsuStaff(proof, path, init)
+  }, [proof, workspace.scope.kind])
   const [org, setOrg] = useState<Org | null>(null)
   const [loading, setLoading] = useState(true)
   const [orgName, setOrgName] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
+  const loadedScope = useRef('')
+  const scopeId = proof ? `${proof.actorId}:${proof.organization.id}` : 'empty'
   const [error, setError] = useState<string | null>(null)
   const [templateUpgrade, setTemplateUpgrade] = useState<{ message: string; url: string } | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -119,6 +134,8 @@ export default function MensetsuTool() {
    *  押しても401で何も起きない（何が悪いのか分からない画面になる）。 */
   const [needsLogin, setNeedsLogin] = useState(false)
 
+  useEffect(() => { if (unknownWrite) { setBusy(null); setDeletingId('') } }, [unknownWrite])
+
   // ⚠️ useSession の status で fetch をゲートしない（Cookie認証なので未確定でもAPIは応答する）
   const load = useCallback(async () => {
     const version = ++loadVersion.current
@@ -131,6 +148,7 @@ export default function MensetsuTool() {
       const res = await fetch('/api/mensetsu/organizations')
       const data = await res.json().catch(() => null)
       if (loadVersion.current !== version) return
+      if (proof && (!proof.current() || data?.current?.id !== proof.organization.id || data?.current?.slug !== proof.organization.slug)) throw new Error('選択した組織を確認できませんでした')
       if (res.status === 401) {
         setOrg(null)
         setNeedsLogin(true)
@@ -145,11 +163,12 @@ export default function MensetsuTool() {
       }
       setNeedsLogin(false)
       if (data.current) {
+        if (!proof) throw new Error('選択した組織を確認できませんでした')
         // ⚠️ メンバーはこの画面では使わない（/mensetsu/settings が自分で取得する）
         const [t, first, c] = await Promise.all([
-          fetchOrgJson('/api/mensetsu/templates'),
-          fetchMensetsuSessionPage<SessionRow>(),
-          fetchOrgJson('/api/mensetsu/company'),
+          readMensetsuStaffJson<Record<string, any>>(proof, '/api/mensetsu/templates'),
+          fetchMensetsuSessionPage<SessionRow>(proof),
+          readMensetsuStaffJson<Record<string, any>>(proof, '/api/mensetsu/company'),
         ])
         if (!Array.isArray(t?.templates) || !Object.prototype.hasOwnProperty.call(c, 'profile')) {
           throw new Error('組織のデータを確認できませんでした')
@@ -157,11 +176,11 @@ export default function MensetsuTool() {
         let loaded = appendMensetsuSessionPage([], first, first.total)
         let cursor = first.nextCursor
         while (cursor && loaded.length < desiredCount) {
-          const page = await fetchMensetsuSessionPage<SessionRow>(cursor)
+          const page = await fetchMensetsuSessionPage<SessionRow>(proof, cursor)
           loaded = appendMensetsuSessionPage(loaded, page, first.total)
           cursor = page.nextCursor
         }
-        if (loadVersion.current !== version) return
+        if (loadVersion.current !== version || !proof.current()) return
         setOrg(data.current)
         setTemplates(t.templates)
         setSessions(loaded)
@@ -172,6 +191,7 @@ export default function MensetsuTool() {
         //    登録済みなのに空なのか」が分からない
         setCompanyUrl(c.profile?.sourceUrl || '')
         setSelectedTemplate(t.templates.find((template: Template) => template.status !== 'archived')?.id || '')
+        loadedScope.current = scopeId
       } else {
         setOrg(null)
         setTemplates([])
@@ -181,32 +201,32 @@ export default function MensetsuTool() {
         setProfile(null)
       }
     } catch (e) {
-      if (loadVersion.current === version) setLoadError(e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (loadVersion.current === version && (!proof || proof.current())) setLoadError(e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
-      if (loadVersion.current === version) setLoading(false)
+      if (loadVersion.current === version && (!proof || proof.current())) setLoading(false)
     }
-  }, [])
+  }, [fetch, proof, scopeId])
 
   useEffect(() => {
-    void load()
+    if (loadedScope.current !== scopeId) void load()
     return invalidateLoad
-  }, [load, invalidateLoad])
+  }, [load, invalidateLoad, scopeId])
 
   const loadMoreSessions = async () => {
-    if (!sessionCursor || moreLoading) return
+    if (!proof?.current() || !sessionCursor || moreLoading) return
     const version = loadVersion.current
     setMoreLoading(true)
     setMoreError(null)
     try {
-      const page = await fetchMensetsuSessionPage<SessionRow>(sessionCursor)
+      const page = await fetchMensetsuSessionPage<SessionRow>(proof, sessionCursor)
       const loaded = appendMensetsuSessionPage(sessionsRef.current, page, sessionTotal)
-      if (loadVersion.current !== version) return
+      if (loadVersion.current !== version || !proof.current()) return
       setSessions(loaded)
       setSessionCursor(page.nextCursor)
     } catch (e) {
-      if (loadVersion.current === version) setMoreError(e instanceof Error ? e.message : '続きを読み込めませんでした')
+      if (loadVersion.current === version && proof.current()) setMoreError(e instanceof Error ? e.message : '続きを読み込めませんでした')
     } finally {
-      if (loadVersion.current === version) setMoreLoading(false)
+      if (loadVersion.current === version && proof.current()) setMoreLoading(false)
     }
   }
 
@@ -216,7 +236,9 @@ export default function MensetsuTool() {
    *    一般論になる。画面の一番上に置いて、最初にやることだと分かるようにする。
    */
   const analyzeCompany = async () => {
-    if (!companyUrl.trim()) return
+    if (!proof?.current() || unknownWrite || !companyUrl.trim()) return
+    const ticket = operation.begin()
+    if (!ticket) return
     setBusy('company')
     setError(null)
     setNotice(null)
@@ -227,18 +249,22 @@ export default function MensetsuTool() {
         body: JSON.stringify({ url: companyUrl.trim() }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || '会社サイトを読み取れませんでした')
+      if (!operation.current(ticket)) return
+      if (!res.ok) { notifyError(setError, data?.error || '会社サイトを読み取れませんでした'); return }
       setProfile(data.profile)
       setNotice(`会社情報を更新しました（${data.pageCount}ページを読み取り）`)
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '会社サイトを読み取れませんでした')
+      if (operation.current(ticket)) operation.uncertain(ticket)
+      if (operation.current(ticket)) notifyError(setError, e instanceof Error ? e.message : '会社サイトを読み取れませんでした')
     } finally {
-      setBusy(null)
+      if (operation.current(ticket)) setBusy(null)
+      operation.finish(ticket)
     }
   }
 
   /** 面接記録がある質問セットは保管し、履歴を残して利用枠を空ける。 */
   const deleteTemplate = async (t: Template) => {
+    if (!proof?.current() || unknownWrite) return
     const n = t._count?.sessions ?? 0
     const warn = (n > 0 ? [
       `質問セット「${t.name}」を保管します。`,
@@ -254,46 +280,87 @@ export default function MensetsuTool() {
       .filter(Boolean)
       .join('\n')
     if (!window.confirm(warn)) return
+    const ticket = operation.begin()
+    if (!ticket) return
 
     setDeletingId(t.id)
     setError(null)
     try {
       const res = await fetch(`/api/mensetsu/templates/${t.id}`, { method: 'DELETE' })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || '削除できませんでした')
+      const data = await res.json().catch(() => {
+        if (res.ok) throw new Error('削除結果を確認できませんでした。')
+        return {}
+      })
+      if (!operation.current(ticket)) return
+      if (!res.ok) { notifyError(setError, data?.error || '削除できませんでした'); return }
       await load()
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '削除できませんでした')
+      if (operation.current(ticket)) operation.uncertain(ticket)
+      if (operation.current(ticket)) notifyError(setError, e instanceof Error ? e.message : '削除できませんでした')
     } finally {
-      setDeletingId('')
+      if (operation.current(ticket)) setDeletingId('')
+      operation.finish(ticket)
     }
   }
 
   const canDelete = org?.role === 'owner' || org?.role === 'admin'
 
   const createOrg = async () => {
-    if (!orgName.trim()) return
+    if (workspace.scope.kind !== 'empty' || !orgName.trim() || unknownWrite) return
+    const ticket = operation.begin()
+    if (!ticket) return
     setBusy('org')
     setError(null)
+    const controller = new AbortController()
+    let expire: (reason: Error) => void = () => {}
+    const deadline = new Promise<never>((_, reject) => { expire = reject })
+    const timer = setTimeout(() => {
+      controller.abort()
+      expire(new Error('組織の作成結果を確認できませんでした。最新の所属先を確認してください。'))
+    }, 30_000)
     try {
-      const res = await fetch('/api/mensetsu/organizations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: orgName.trim() }),
-      })
-      const data = await res.json()
+      const { res, data } = await Promise.race([deadline, (async () => {
+        const res = await fetch('/api/mensetsu/organizations', {
+          method: 'POST', signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: orgName.trim() }),
+        })
+        const data = await res.json()
+        return { res, data }
+      })()])
+      if (!operation.current(ticket)) return
       if (!res.ok) {
         notifyError(setError, data?.error || '組織の作成に失敗しました')
         return
       }
-      await load()
-    } finally {
+      if (!data?.organization || typeof data.organization.id !== 'string' || typeof data.organization.slug !== 'string') {
+        operation.uncertain(ticket)
+        notifyError(setError, '組織の作成結果を確認できませんでした。最新の所属先を確認してください。')
+        return
+      }
+      // A 200 response is not yet a verified membership. Keep the write fenced
+      // until the workspace read proves the new actor/org, or leave it unknown.
+      operation.uncertain(ticket)
       setBusy(null)
+      operation.finish(ticket)
+      workspace.retry()
+    } catch (cause) {
+      if (operation.current(ticket)) {
+        operation.uncertain(ticket)
+        notifyError(setError, cause instanceof Error ? cause.message : '組織の作成結果を確認できませんでした。')
+      }
+    } finally {
+      clearTimeout(timer)
+      controller.abort()
+      if (operation.current(ticket)) setBusy(null)
+      operation.finish(ticket)
     }
   }
 
   const generate = async () => {
-    if (!jobTitle.trim()) return
+    if (!proof?.current() || unknownWrite || !jobTitle.trim()) return
+    const ticket = operation.begin()
+    if (!ticket) return
     setBusy('generate')
     setError(null)
     setTemplateUpgrade(null)
@@ -310,9 +377,10 @@ export default function MensetsuTool() {
         }),
       })
       const data = await res.json()
+      if (!operation.current(ticket)) return
       if (!res.ok) {
         if (res.status === 402 && data?.code === 'LIMIT_REACHED' && data?.upgradeUrl === '/mensetsu/pricing') {
-          setTemplateUpgrade({ message: data?.error || '生成に失敗しました', url: data.upgradeUrl })
+          setTemplateUpgrade({ message: data?.error || '生成に失敗しました', url: proof.href(data.upgradeUrl) })
         }
         notifyError(setError, data?.error || '生成に失敗しました')
         return
@@ -324,10 +392,12 @@ export default function MensetsuTool() {
           : `質問${data.template.questions.length}問・評価軸${data.template.criteria.length}個を作成しました。`
       )
       await load()
-    } catch {
-      notifyError(setError, '通信に失敗しました。時間をおいてもう一度お試しください。')
+    } catch (cause) {
+      if (operation.current(ticket)) operation.uncertain(ticket)
+      if (operation.current(ticket)) notifyError(setError, cause instanceof Error ? cause.message : '通信に失敗しました。状態を確認してください。')
     } finally {
-      setBusy(null)
+      if (operation.current(ticket)) setBusy(null)
+      operation.finish(ticket)
     }
   }
 
@@ -335,19 +405,23 @@ export default function MensetsuTool() {
   const liveUrl = (token: string) => `${window.location.origin}/mensetsu/live/${token}`
 
   const copyUrl = async (s: SessionRow) => {
+    if (!proof?.current()) return
     try {
       await navigator.clipboard.writeText(liveUrl(s.token))
+      if (!proof.current()) return
       setCopiedId(s.id)
-      setTimeout(() => setCopiedId((c) => (c === s.id ? null : c)), 2500)
+      setTimeout(() => { if (proof.current()) setCopiedId((c) => (c === s.id ? null : c)) }, 2500)
     } catch {
       // ⚠️ 「詳細画面をご覧ください」と案内しないこと。詳細画面はURLを表示しない。
       //    コピーできない環境（http・古いブラウザ）でも渡せるよう、URLそのものを出す。
-      notifyError(setError, `コピーできませんでした。次のURLをお使いください: ${liveUrl(s.token)}`)
+      if (proof.current()) notifyError(setError, `コピーできませんでした。次のURLをお使いください: ${liveUrl(s.token)}`)
     }
   }
 
   const issue = async () => {
-    if (!selectedTemplate) return
+    if (!proof?.current() || unknownWrite || !selectedTemplate) return
+    const ticket = operation.begin()
+    if (!ticket) return
     setBusy('issue')
     setError(null)
     setIssueLimit(null)
@@ -361,10 +435,11 @@ export default function MensetsuTool() {
         }),
       })
       const data = await res.json()
+      if (!operation.current(ticket)) return
       if (!res.ok) {
         if (res.status === 402 && data?.code === 'LIMIT_REACHED') {
           if (data?.upgradeUrl === '/mensetsu/pricing') {
-            setIssueLimit({ message: data.error, url: data.upgradeUrl, label: 'プロプランの料金と30日間無料の対象条件を確認する' })
+            setIssueLimit({ message: data.error, url: proof.href(data.upgradeUrl), label: 'プロプランの料金と30日間無料の対象条件を確認する' })
           } else if (typeof data?.contactUrl === 'string' && data.contactUrl.startsWith('https://')) {
             setIssueLimit({ message: data.error, url: data.contactUrl, label: '追加枠を相談する' })
           }
@@ -376,9 +451,11 @@ export default function MensetsuTool() {
       setCandidateName('')
       await load()
     } catch (cause) {
-      notifyError(setError, cause instanceof Error ? cause.message : '通信に失敗しました。時間をおいてもう一度お試しください。')
+      if (operation.current(ticket)) operation.uncertain(ticket)
+      if (operation.current(ticket)) notifyError(setError, cause instanceof Error ? cause.message : '通信に失敗しました。時間をおいてもう一度お試しください。')
     } finally {
-      setBusy(null)
+      if (operation.current(ticket)) setBusy(null)
+      operation.finish(ticket)
     }
   }
 
@@ -395,55 +472,79 @@ export default function MensetsuTool() {
    * 手動の出口を用意している。
    */
   const closeSession = async (id: string) => {
+    if (!proof?.current() || unknownWrite) return
+    const ticket = operation.begin()
+    if (!ticket) return
     setBusy(`close-${id}`)
     setError(null)
     try {
       const res = await fetch(`/api/mensetsu/sessions/${id}/close`, { method: 'POST' })
       const data = await res.json()
+      if (!operation.current(ticket)) return
       if (!res.ok) {
         notifyError(setError, data?.error || '終了処理に失敗しました')
         return
       }
       setNotice(data.status === 'completed' ? '面接を終了しました（評価できます）' : '面接を終了しました')
       await load()
+    } catch (cause) {
+      if (operation.current(ticket)) operation.uncertain(ticket)
+      if (operation.current(ticket)) notifyError(setError, cause instanceof Error ? cause.message : '終了結果を確認できませんでした。')
     } finally {
-      setBusy(null)
+      if (operation.current(ticket)) setBusy(null)
+      operation.finish(ticket)
     }
   }
 
   /** 誤って終了扱いになった面接を、受験可能な状態に戻す */
   const reopenSession = async (id: string) => {
+    if (!proof?.current() || unknownWrite) return
+    const ticket = operation.begin()
+    if (!ticket) return
     setBusy(`reopen-${id}`)
     setError(null)
     try {
       const res = await fetch(`/api/mensetsu/sessions/${id}/close`, { method: 'DELETE' })
       const data = await res.json()
+      if (!operation.current(ticket)) return
       if (!res.ok) {
         notifyError(setError, data?.error || '戻せませんでした')
         return
       }
       setNotice('受験可能に戻しました。同じURLで受けられます。')
       await load()
+    } catch (cause) {
+      if (operation.current(ticket)) operation.uncertain(ticket)
+      if (operation.current(ticket)) notifyError(setError, cause instanceof Error ? cause.message : '変更結果を確認できませんでした。')
     } finally {
-      setBusy(null)
+      if (operation.current(ticket)) setBusy(null)
+      operation.finish(ticket)
     }
   }
 
 
 
   const evaluate = async (id: string) => {
+    if (!proof?.current() || unknownWrite) return
+    const ticket = operation.begin()
+    if (!ticket) return
     setBusy(`eval-${id}`)
     setError(null)
     try {
       const res = await fetch(`/api/mensetsu/sessions/${id}/evaluate`, { method: 'POST' })
       const data = await res.json()
+      if (!operation.current(ticket)) return
       if (!res.ok) {
         notifyError(setError, data?.error || '評価に失敗しました')
         return
       }
       await load()
+    } catch (cause) {
+      if (operation.current(ticket)) operation.uncertain(ticket)
+      if (operation.current(ticket)) notifyError(setError, cause instanceof Error ? cause.message : '評価結果を確認できませんでした。')
     } finally {
-      setBusy(null)
+      if (operation.current(ticket)) setBusy(null)
+      operation.finish(ticket)
     }
   }
 
@@ -498,6 +599,7 @@ export default function MensetsuTool() {
         tips={['Tip: 就職差別につながる質問は生成の時点で除外されます', 'Tip: 全応募者に同じ主質問を当てる構造化面接の方式です', 'Tip: 生成後に質問は自由に編集できます']}
       />
       <div className="mx-auto max-w-[1100px]">
+        {unknownWrite && <p role="alert" className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-900">前の操作の結果を確認できません。再送すると重複する可能性があります。下の一覧で最新状態を確認し、必要ならページを開き直してください。</p>}
         {uiNext ? (
           // キービジュアルは仮（人事の熊）。統括が public/ui-next/mensetsu/hero.webp を置いたら差し替える
           <ToolHero
@@ -690,7 +792,7 @@ export default function MensetsuTool() {
                             {t.status === 'draft' ? '下書き' : t.status === 'active' ? '運用中' : '保管'}
                           </span>
                           <Link
-                            href={`/mensetsu/templates/${t.id}`}
+                            href={proof?.href(`/mensetsu/templates/${t.id}`) || '/mensetsu'}
                             className="rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#0066ff]"
                           >
                             編集
@@ -827,7 +929,7 @@ export default function MensetsuTool() {
                         onClick={() => {
                           navigator.clipboard?.writeText(issuedUrl)
                           setIssuedCopied(true)
-                          window.setTimeout(() => setIssuedCopied(false), 2000)
+                          window.setTimeout(() => { if (proof.current()) setIssuedCopied(false) }, 2000)
                         }}
                         className="mt-4 w-full rounded-xl bg-[#0066ff] px-6 py-4 text-base font-black text-white shadow-lg transition hover:bg-[#0052cc] sm:text-lg"
                       >
@@ -852,7 +954,7 @@ export default function MensetsuTool() {
                 <h2 className="text-base font-black text-[#0a0f3c]">面接一覧</h2>
                 {sessions.some((s) => s.status === 'evaluated') && (
                   <Link
-                    href="/mensetsu/compare"
+                    href={proof?.href('/mensetsu/compare') || '/mensetsu'}
                     className="flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
                   >
                     <span className="material-symbols-outlined text-[16px]">table_chart</span>
@@ -868,7 +970,7 @@ export default function MensetsuTool() {
                     .map((s) => (
                       <Link
                         key={s.id}
-                        href={`/mensetsu/sessions/${s.id}`}
+                        href={proof?.href(`/mensetsu/sessions/${s.id}`) || '/mensetsu'}
                         className="block rounded-2xl bg-[#f7faff] p-5 ring-2 ring-[#d8e7ff] transition hover:ring-[#0066ff]"
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -960,7 +1062,7 @@ export default function MensetsuTool() {
                           </button>
                         )}
                         <Link
-                          href={`/mensetsu/sessions/${s.id}`}
+                          href={proof?.href(`/mensetsu/sessions/${s.id}`) || '/mensetsu'}
                           className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
                         >
                           詳細
@@ -988,7 +1090,7 @@ export default function MensetsuTool() {
                  スクロールで通過させられるため、ここには戻さないこと。 */}
             <p className="mt-6 text-xs font-semibold text-[#8a94ad]">
               メンバーの招待、録音や保持日数の設定は{' '}
-              <Link href="/mensetsu/settings" className="font-black text-[#0066ff] underline">
+              <Link href={proof?.href('/mensetsu/settings') || '/mensetsu'} className="font-black text-[#0066ff] underline">
                 設定
               </Link>
               　から行えます。

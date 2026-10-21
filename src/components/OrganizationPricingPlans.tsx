@@ -11,13 +11,14 @@ import { readBillingResponse } from '@/lib/billing-response-client'
 import type { CheckoutActionGuard } from '@/components/CheckoutButton'
 import { readPortalOriginHint, saveCheckoutOriginHint, savePortalOriginHint } from '@/lib/aishodan/checkout-origin-hint'
 import { readQuotePortalHint, saveQuoteCheckoutHint, saveQuotePortalHint } from '@/lib/quote/checkout-origin-hint'
+import { readMensetsuPortalHint, saveMensetsuCheckoutHint, saveMensetsuPortalHint } from '@/lib/mensetsu/checkout-origin-hint'
 
 type BillingState =
   | { kind: 'loading' | 'missing' | 'error'; identity: string }
   | { kind: 'ready'; identity: string; plan: string; canManageBilling: boolean }
 
 export function OrganizationPricingPlans({ serviceId, workspaceProof }: { serviceId: OrganizationService; workspaceProof?: WorkspaceProof }) {
-  const strict = serviceId === 'aishodan' || serviceId === 'quote' && !!workspaceProof
+  const strict = serviceId === 'aishodan' || serviceId === 'mensetsu' || serviceId === 'quote' && !!workspaceProof
   const { data: session, status } = useSession()
   const actorId = String((session?.user as { id?: string } | undefined)?.id || '')
   const identity = strict ? JSON.stringify([actorId, workspaceProof?.actorId, workspaceProof?.organization.id, workspaceProof?.organization.slug, workspaceProof?.revision])
@@ -56,6 +57,11 @@ export function OrganizationPricingPlans({ serviceId, workspaceProof }: { servic
     return () => { requestRef.current++ }
   }, [status, loadBilling])
 
+  if (status === 'authenticated' && strict && !workspaceProof) {
+    return <div role="alert" className="mx-auto max-w-xl rounded-2xl bg-rose-50 p-6 text-sm font-bold text-rose-700">
+      組織を確認できませんでした。サービスの画面で組織を選択してください。
+    </div>
+  }
   if (status === 'loading' || (status === 'authenticated' && (billing.identity !== identity || billing.kind === 'loading' || strict && !workspaceProof?.current()))) {
     return <p className="text-center text-sm font-bold text-slate-500">組織のプランを確認しています…</p>
   }
@@ -93,6 +99,8 @@ export function OrganizationPricingPlans({ serviceId, workspaceProof }: { servic
       if (!workspaceProof.current() || actor !== workspaceProof.actorId) return
       if (serviceId === 'quote') saveQuoteCheckoutHint(window.sessionStorage, { version: 1, actorId: actor, operationId,
         organizationId: workspaceProof.organization.id, slug: workspaceProof.organization.slug, returnPath: '/quote' })
+      else if (serviceId === 'mensetsu') saveMensetsuCheckoutHint(window.sessionStorage, { version: 1, actorId: actor, operationId,
+        organizationId: workspaceProof.organization.id, slug: workspaceProof.organization.slug, returnPath: '/mensetsu' })
       else saveCheckoutOriginHint(window.sessionStorage, { version: 1, actorId: actor, operationId,
         organizationId: workspaceProof.organization.id, slug: workspaceProof.organization.slug, returnPath: '/aishodan' })
     },
@@ -107,8 +115,10 @@ export function OrganizationPricingPlans({ serviceId, workspaceProof }: { servic
         slug: workspaceProof.organization.slug }
       try {
         if (!(serviceId === 'quote' ? saveQuotePortalHint(window.sessionStorage, { ...hint, returnPath: '/quote' }) :
+          serviceId === 'mensetsu' ? saveMensetsuPortalHint(window.sessionStorage, { ...hint, returnPath: '/mensetsu' }) :
           savePortalOriginHint(window.sessionStorage, { ...hint, returnPath: '/aishodan' }))) return false
-        const stored = serviceId === 'quote' ? readQuotePortalHint(window.sessionStorage, actorId, navigationId) : readPortalOriginHint(window.sessionStorage, actorId, navigationId)
+        const stored = serviceId === 'quote' ? readQuotePortalHint(window.sessionStorage, actorId, navigationId) :
+          serviceId === 'mensetsu' ? readMensetsuPortalHint(window.sessionStorage, actorId, navigationId) : readPortalOriginHint(window.sessionStorage, actorId, navigationId)
         return typeof stored === 'object' && stored.organizationId === hint.organizationId && stored.slug === hint.slug && checkoutActionGuard.current()
       } catch { return false }
     },

@@ -7,11 +7,14 @@
 // ⚠️ AIの判定は「推薦度」であり最終決定ではない旨を、画面上に常時明示する（C2）。
 
 import { PageTitle } from '@/components/mensetsu/ui-next'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
 import { EVALUATION_STALE_MS } from '@/lib/mensetsu/types'
+import { useMensetsuRequest } from '@/components/mensetsu/useMensetsuRequest'
+import { useMensetsuOperation } from '@/components/mensetsu/useMensetsuOperation'
+import { useMensetsuWorkspace } from '@/components/mensetsu/MensetsuWorkspaceBoundary'
 
 const VERDICT_LABEL: Record<string, string> = {
   recommend: '推奨',
@@ -27,6 +30,10 @@ const VERDICT_STYLE: Record<string, string> = {
 }
 
 export default function MensetsuReportPage() {
+  const { proof, request: fetch } = useMensetsuRequest()
+  const { suspended } = useMensetsuWorkspace()
+  const operation = useMensetsuOperation(proof)
+  const unknownWrite = operation.unknown
   const params = useParams<{ id: string }>()
   const id = params?.id as string
   const [data, setData] = useState<any>(null)
@@ -47,6 +54,41 @@ export default function MensetsuReportPage() {
   const [hrOrgId, setHrOrgId] = useState('')
   const [hrBusy, setHrBusy] = useState(false)
   const [hrMsg, setHrMsg] = useState('')
+  const [evaluating, setEvaluating] = useState(false)
+  const readVersion = useRef(0)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const lastProof = useRef(proof)
+  const evaluatingRef = useRef(false)
+  const retireAudio = useCallback(() => {
+    const playback = audioRef.current
+    playback?.pause()
+    playback?.removeAttribute('src')
+    playback?.load()
+    setAudioUrl(null)
+  }, [])
+
+  useEffect(() => {
+    if (suspended || !proof.current()) retireAudio()
+  }, [suspended, proof, retireAudio])
+  useEffect(() => {
+    window.addEventListener('pagehide', retireAudio)
+    return () => window.removeEventListener('pagehide', retireAudio)
+  }, [retireAudio])
+
+  useEffect(() => {
+    if (lastProof.current !== proof) {
+      readVersion.current++
+      evaluatingRef.current = false
+      setEvaluating(false)
+      setLabelBusy(false)
+      setHrBusy(false)
+      setAudioBusy(false)
+      setAudioUrl(null)
+      setHr(null)
+      setHrOrgId('')
+    }
+    lastProof.current = proof
+  }, [proof])
 
   /**
    * 応募者の回答を「自社の採点例」として登録する（F4-3）。
@@ -56,10 +98,13 @@ export default function MensetsuReportPage() {
    */
   const addSample = useCallback(
     async (turn: any, label: 'good' | 'bad', questionText: string) => {
+      if (!proof.current() || unknownWrite) return
       if (!labelCriterion) {
         setLabelError('評価軸を選んでください')
         return
       }
+      const ticket = operation.begin()
+      if (!ticket) return
       setLabelBusy(true)
       setLabelError('')
       try {
@@ -74,67 +119,84 @@ export default function MensetsuReportPage() {
           }),
         })
         const d = await r.json()
-        if (!r.ok) throw new Error(d?.error || '登録できませんでした')
+        if (!operation.current(ticket)) return
+        if (!r.ok) { setLabelError(d?.error || '登録できませんでした'); return }
         setLabelDone((prev) => ({ ...prev, [turn.id]: label }))
         setLabeling(null)
       } catch (e) {
-        setLabelError(e instanceof Error ? e.message : '登録できませんでした')
+        if (operation.current(ticket)) operation.uncertain(ticket)
+        if (operation.current(ticket)) setLabelError(e instanceof Error ? e.message : '登録できませんでした')
       } finally {
-        setLabelBusy(false)
+        if (operation.current(ticket)) setLabelBusy(false)
+        operation.finish(ticket)
       }
     },
-    [labelCriterion]
+    [labelCriterion, fetch, proof, unknownWrite, operation]
   )
 
   // 録音URLは押されたときだけ発行する。15分で失効するため、
   // 画面表示のたびに先読みすると使う頃には切れている。
   const loadRecording = useCallback(async () => {
+    if (!proof.current()) return
     setAudioBusy(true)
     try {
       const res = await fetch(`/api/mensetsu/sessions/${id}/recording`)
       const json = await res.json()
+      if (!proof.current()) return
       if (res.ok && json?.url) setAudioUrl(json.url)
+    } catch (cause) {
+      if (proof.current()) notifyError(setError, cause instanceof Error ? cause.message : '録音URLを確認できませんでした。')
     } finally {
-      setAudioBusy(false)
+      if (proof.current()) setAudioBusy(false)
     }
-  }, [id])
-
-  const [evaluating, setEvaluating] = useState(false)
+  }, [id, fetch, proof])
 
   /** この画面から直接評価を実行する（一覧に戻らせない） */
   const runEvaluate = useCallback(async () => {
+    if (!proof.current() || unknownWrite) return
+    const ticket = operation.begin()
+    if (!ticket) return
+    const version = ++readVersion.current
+    evaluatingRef.current = true
     setEvaluating(true)
     setError(null)
     try {
       const res = await fetch(`/api/mensetsu/sessions/${id}/evaluate`, { method: 'POST' })
       const json = await res.json()
+      if (!operation.current(ticket) || version !== readVersion.current) return
       if (!res.ok) {
         notifyError(setError, json?.error || '評価に失敗しました')
         if (res.status === 409) {
           const current = await fetch(`/api/mensetsu/sessions/${id}`)
-          if (current.ok) setData(await current.json())
+          if (current.ok) { const value = await current.json(); if (operation.current(ticket) && version === readVersion.current) setData(value) }
         }
         return
       }
       const r = await fetch(`/api/mensetsu/sessions/${id}`)
       const current = await r.json()
+      if (!operation.current(ticket) || version !== readVersion.current) return
       if (!r.ok || !current?.session) {
         notifyError(setError, '評価結果を取得できませんでした。再読み込みしてください。')
         return
       }
       setData(current)
       setRefreshError(false)
-    } catch {
-      notifyError(setError, '評価結果を確認できませんでした。再読み込みしてください。')
+    } catch (cause) {
+      if (operation.current(ticket)) operation.uncertain(ticket)
+      if (operation.current(ticket) && version === readVersion.current) notifyError(setError, cause instanceof Error ? cause.message : '評価結果を確認できませんでした。再読み込みしてください。')
     } finally {
-      setEvaluating(false)
+      if (operation.current(ticket)) { evaluatingRef.current = false; setEvaluating(false) }
+      operation.finish(ticket)
     }
-  }, [id])
+  }, [id, fetch, proof, unknownWrite, operation])
 
   const load = useCallback(async (background = false) => {
+    const version = ++readVersion.current
+    if (!background) { setLoading(true); setError(null) }
     try {
       const res = await fetch(`/api/mensetsu/sessions/${id}`)
       const json = await res.json()
+      if (!proof.current() || version !== readVersion.current) return
       if (!res.ok) {
         if (background) setRefreshError(true)
         else notifyError(setError, json?.error || '取得できませんでした')
@@ -143,33 +205,45 @@ export default function MensetsuReportPage() {
       setRefreshError(false)
       setData(json)
     } catch {
-      if (background) setRefreshError(true)
-      else notifyError(setError, '評価結果を取得できませんでした。再読み込みしてください。')
+      if (proof.current() && version === readVersion.current) {
+        if (background) setRefreshError(true)
+        else notifyError(setError, '評価結果を取得できませんでした。再読み込みしてください。')
+      }
     } finally {
-      setLoading(false)
+      if (proof.current() && version === readVersion.current) setLoading(false)
     }
-  }, [id])
+  }, [id, fetch, proof])
 
   // 引き渡し先の候補を読む（採用が決まった方をドヤHRの従業員として登録する）
   useEffect(() => {
     if (!id) return
+    let active = true
     fetch(`/api/mensetsu/sessions/${id}/hr-handoff`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (!d) return
+        if (!d || !active || !proof.current()) return
         setHr(d)
         if (d.organizations?.[0]) setHrOrgId(d.organizations[0].id)
       })
       .catch(() => {})
-  }, [id])
+    return () => { active = false }
+  }, [id, fetch, proof])
 
   useEffect(() => {
     void load()
+    const versionRef = readVersion
+    return () => { versionRef.current++ }
   }, [load])
 
   useEffect(() => {
+    if (!audioUrl) return
+    const playback = audioRef.current
+    return () => { playback?.pause(); playback?.removeAttribute('src'); playback?.load() }
+  }, [audioUrl])
+
+  useEffect(() => {
     if (data?.session?.status !== 'evaluating') return
-    const timer = window.setInterval(() => { void load(true) }, 10000)
+    const timer = window.setInterval(() => { if (!evaluatingRef.current) void load(true) }, 10000)
     return () => window.clearInterval(timer)
   }, [data?.session?.status, load])
 
@@ -185,7 +259,8 @@ export default function MensetsuReportPage() {
       <main className="flex min-h-screen items-center justify-center bg-[#f2f6ff] px-5">
         <div className="rounded-lg bg-white p-8 text-center shadow-sm">
           <p className="text-sm font-bold text-[#425071]">{error || '見つかりません'}</p>
-          <Link href="/mensetsu" className="mt-4 inline-block text-sm font-black text-[#0066ff]">
+          {error && <button type="button" onClick={() => void load()} className="mt-3 block w-full text-sm font-black text-[#0066ff] underline">再読み込み</button>}
+          <Link href={proof.href('/mensetsu')} className="mt-4 inline-block text-sm font-black text-[#0066ff]">
             一覧へ戻る
           </Link>
         </div>
@@ -204,7 +279,7 @@ export default function MensetsuReportPage() {
   return (
     <main className="min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8">
       <div className="mx-auto max-w-[900px]">
-        <Link href="/mensetsu" className="text-xs font-black text-[#0066ff]">
+        <Link href={proof.href('/mensetsu')} className="text-xs font-black text-[#0066ff]">
           ← 面接一覧
         </Link>
 
@@ -216,6 +291,7 @@ export default function MensetsuReportPage() {
           {s.endedAt ? new Date(s.endedAt).toLocaleString('ja-JP') : '未実施'}
         </p>
         {error && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p>}
+        {unknownWrite && <p role="alert" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900">前の操作の結果を確認できません。自動再送は行いません。最新の面接状態を確認してから画面を開き直してください。</p>}
 
         {/* AI判定の位置づけを常時明示（C2） */}
         <div className="mt-5 rounded-lg border border-[#ffe0b2] bg-[#fff8e1] p-4">
@@ -296,14 +372,18 @@ export default function MensetsuReportPage() {
           {s.evaluatedAt && (
             <div className="ml-auto flex items-center gap-2">
               <a
-                href={`/api/mensetsu/sessions/${id}/pdf`}
+                href={proof.api(`/api/mensetsu/sessions/${id}/pdf`)}
+                onClick={(event) => { if (!proof.current()) event.preventDefault() }}
+                onAuxClick={(event) => { if (!proof.current()) event.preventDefault() }}
                 className="flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#0066ff]"
               >
                 <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
                 レポートPDF
               </a>
               <a
-                href={`/api/mensetsu/sessions/${id}/pdf?transcript=1`}
+                href={proof.api(`/api/mensetsu/sessions/${id}/pdf?transcript=1`)}
+                onClick={(event) => { if (!proof.current()) event.preventDefault() }}
+                onAuxClick={(event) => { if (!proof.current()) event.preventDefault() }}
                 className="rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#425071]"
                 title="応募者の発言そのものが綴じ込まれます。取り扱いにご注意ください。"
               >
@@ -335,7 +415,7 @@ export default function MensetsuReportPage() {
               )}
             </div>
             {audioUrl && (
-              <audio controls src={audioUrl} className="mt-3 w-full" controlsList="nodownload" />
+              <audio ref={audioRef} controls src={audioUrl} className="mt-3 w-full" controlsList="nodownload" />
             )}
           </section>
         )}
@@ -454,6 +534,9 @@ export default function MensetsuReportPage() {
                       </select>
                       <button
                         onClick={async () => {
+                          if (!proof.current() || unknownWrite || !hr?.organizations?.some((org: { id: string }) => org.id === hrOrgId)) return
+                          const ticket = operation.begin()
+                          if (!ticket) return
                           setHrBusy(true)
                           setHrMsg('')
                           try {
@@ -463,13 +546,16 @@ export default function MensetsuReportPage() {
                               body: JSON.stringify({ hrOrganizationId: hrOrgId }),
                             })
                             const d = await r.json()
-                            if (!r.ok) throw new Error(d?.error || '登録できませんでした')
+                            if (!operation.current(ticket)) return
+                            if (!r.ok) { setHrMsg(d?.error || '登録できませんでした'); return }
                             setHr((prev: any) => ({ ...prev, alreadyHandedOff: true }))
                             setHrMsg('ドヤHRへ登録しました。')
                           } catch (e) {
-                            setHrMsg(e instanceof Error ? e.message : '登録できませんでした')
+                            if (operation.current(ticket)) operation.uncertain(ticket)
+                            if (operation.current(ticket)) setHrMsg(e instanceof Error ? e.message : '登録できませんでした')
                           } finally {
-                            setHrBusy(false)
+                            if (operation.current(ticket)) setHrBusy(false)
+                            operation.finish(ticket)
                           }
                         }}
                         disabled={hrBusy || !hrOrgId}

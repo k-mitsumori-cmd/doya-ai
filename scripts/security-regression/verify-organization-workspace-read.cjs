@@ -21,11 +21,20 @@ const memberStore = { findMany: async query => {
   reads++; assert.equal(query.where.userId, actor); assert.equal(query.where.status, 'ACTIVE')
   return unknown ? { id: 'unknown-role-membership' } : null
 } }
+const mensetsuStore = { findMany: async query => {
+  reads++
+  assert.equal(query.where.userId, actor)
+  assert.equal(query.where.status, 'ACTIVE')
+  assert.deepEqual(Array.from(query.where.role.in), ['owner', 'admin', 'manager', 'member'])
+  assert.equal(query.orderBy.createdAt, 'desc')
+  if (fail) throw Error('synthetic DB failure')
+  return empty ? [] : rows
+}, findFirst: memberStore.findFirst }
 const route = load('src/app/api/organization-workspace/[service]/route.ts', {
   'next-auth': { getServerSession: async () => actor ? { user: { id: actor } } : null },
   '@/lib/auth': { authOptions: {} },
   '@/lib/organization-workspace-selection': parsing,
-  '@/lib/prisma': { prisma: { aishodanMember: memberStore, quoteMember: memberStore } },
+  '@/lib/prisma': { prisma: { aishodanMember: memberStore, quoteMember: memberStore, mensetsuMember: mensetsuStore } },
 })
 let passed = 0
 async function check(name, fn) { await fn(); passed++; console.log('PASS ' + name) }
@@ -66,7 +75,35 @@ async function request(query = '', expected = 'actor', service = 'aishodan') {
   })
   await check('guest and unsupported service fail with private responses and no membership read', async () => {
     const before = reads; actor = ''; assert.equal((await request()).status, 401); actor = 'actor'
-    assert.equal((await request('', 'actor', 'mensetsu')).status, 404); assert.equal(reads, before)
+    assert.equal((await request('', 'actor', 'unknown')).status, 404); assert.equal(reads, before)
+  })
+  await check('Mensetsu defaults to newest membership, preserves explicit org and blocks guest staff links', async () => {
+    assert.equal((await request('', 'actor', 'mensetsu')).data.current.id, 'A-id')
+    const selected = await request('?org=B', 'actor', 'mensetsu')
+    assert.equal(selected.data.current.id, 'B-id')
+    assert.equal(parseWorkspaceRead(selected.data, 'actor', select('?org=B'), 'mensetsu').service, 'mensetsu')
+    assert.equal((await request('?org=foreign', 'actor', 'mensetsu')).status, 403)
+    const before = reads
+    assert.equal((await request('?org=B', 'other', 'mensetsu')).status, 409)
+    assert.equal(reads, before)
+    assert.equal(workspaceHref('/mensetsu/sessions/session-B?tab=report', 'B', 'mensetsu'), '/mensetsu/sessions/session-B?tab=report&org=B')
+    for (const path of ['/mensetsu/live/token', '/mensetsu/invite/token', '/quote', 'https://foreign.invalid/mensetsu']) assert.throws(() => workspaceHref(path, 'B', 'mensetsu'))
+    for (const path of ['/api/mensetsu/live/token', '/api/quote/templates']) assert.throws(() => parsing.workspaceApi(path, 'B', 'mensetsu'))
+  })
+  await check('Mensetsu invalid explicit selection and unknown role fail before a fallback', async () => {
+    for (const query of ['?org=', '?org=A&org=B', '?org=%', '?org=A%2FB']) {
+      const before = reads
+      assert.equal((await request(query, 'actor', 'mensetsu')).status, 400)
+      assert.equal(reads, before)
+    }
+    empty = true
+    const noMembership = await request('', 'actor', 'mensetsu')
+    assert.equal(noMembership.status, 200)
+    assert.equal(noMembership.data.current, null)
+    unknown = true
+    assert.equal((await request('', 'actor', 'mensetsu')).status, 503)
+    assert.equal((await request('?org=B', 'actor', 'mensetsu')).status, 503)
+    empty = false; unknown = false
   })
   await check('Quote explicit A, default owner B, foreign and mismatched actor preserve host isolation', async () => {
     assert.equal((await request('?org=' + encodeURIComponent('組織A'), 'actor', 'quote')).data.current.id, 'A-id')

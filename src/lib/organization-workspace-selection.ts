@@ -1,9 +1,10 @@
 /** The host workspace is explicit in the URL; storage is only an entry hint. */
 export type OrganizationSelection = { kind: 'absent' } | { kind: 'invalid' } | { kind: 'selected'; slug: string }
 export type WorkspaceRole = 'owner' | 'admin' | 'manager' | 'member'
+export type WorkspaceService = 'aishodan' | 'quote' | 'mensetsu'
 export interface WorkspaceOrganization { id: string; slug: string; name: string; role: WorkspaceRole }
 export interface WorkspaceRead {
-  service: 'aishodan' | 'quote'
+  service: WorkspaceService
   actorId: string
   memberships: WorkspaceOrganization[]
   current: WorkspaceOrganization | null
@@ -38,23 +39,23 @@ export function organizationSelection(search: string): OrganizationSelection {
 }
 
 /** Only host work links use this helper. Public rooms and invite URLs stay unchanged. */
-export function workspaceHref(path: string, slug: string, service: 'aishodan' | 'quote' = 'aishodan'): string {
+export function workspaceHref(path: string, slug: string, service: WorkspaceService = 'aishodan'): string {
   if (!validWorkspaceSlug(slug) || !path.startsWith('/') || path.startsWith('//') || path.includes('\\')) throw new Error('Invalid workspace link')
   const url = new URL(path, 'https://workspace.invalid')
-  if (url.origin !== 'https://workspace.invalid' || !url.pathname.startsWith(`/${service}`) || url.pathname !== `/${service}` && !url.pathname.startsWith(`/${service}/`) || url.pathname === `/${service}/invite` || url.pathname.startsWith(`/${service}/invite/`)) throw new Error('Invalid workspace link')
+  if (url.origin !== 'https://workspace.invalid' || !url.pathname.startsWith(`/${service}`) || url.pathname !== `/${service}` && !url.pathname.startsWith(`/${service}/`) || url.pathname === `/${service}/invite` || url.pathname.startsWith(`/${service}/invite/`) || service === 'mensetsu' && (url.pathname === '/mensetsu/live' || url.pathname.startsWith('/mensetsu/live/'))) throw new Error('Invalid workspace link')
   url.searchParams.set('org', slug)
   return url.pathname + url.search + url.hash
 }
 
-export function workspaceApi(path: string, slug: string, service: 'aishodan' | 'quote' = 'aishodan'): string {
+export function workspaceApi(path: string, slug: string, service: WorkspaceService = 'aishodan'): string {
   if (!validWorkspaceSlug(slug) || !path.startsWith('/') || path.startsWith('//') || path.includes('\\')) throw new Error('Invalid workspace request')
   const url = new URL(path, 'https://workspace.invalid')
-  if (url.origin !== 'https://workspace.invalid' || !url.pathname.startsWith(`/api/${service}/`) || url.hash) throw new Error('Invalid workspace request')
+  if (url.origin !== 'https://workspace.invalid' || !url.pathname.startsWith(`/api/${service}/`) || url.hash || service === 'mensetsu' && url.pathname.startsWith('/api/mensetsu/live/')) throw new Error('Invalid workspace request')
   url.searchParams.set('org', slug)
   return url.pathname + url.search
 }
 
-export function parseWorkspaceRead(value: unknown, actorId: string, requested: OrganizationSelection, service: 'aishodan' | 'quote' = 'aishodan'): WorkspaceRead {
+export function parseWorkspaceRead(value: unknown, actorId: string, requested: OrganizationSelection, service: WorkspaceService = 'aishodan'): WorkspaceRead {
   const record = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v)
   const organization = (v: unknown): v is WorkspaceOrganization => record(v)
     && typeof v.id === 'string' && v.id.length > 0 && v.id.length <= 512

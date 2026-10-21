@@ -1,4 +1,4 @@
-import { organizationSelection, parseWorkspaceRead, type OrganizationSelection, type WorkspaceRead } from './organization-workspace-selection'
+import { organizationSelection, parseWorkspaceRead, type OrganizationSelection, type WorkspaceRead, type WorkspaceService } from './organization-workspace-selection'
 
 const MAX_BYTES = 64 * 1024
 const DEADLINE_MS = 20_000
@@ -10,7 +10,7 @@ export class WorkspaceReadError extends Error {
 }
 
 /** An expected actor is an extra equality check. The server always authenticates its own session. */
-export async function readOrganizationWorkspace(actorId: string, selected: OrganizationSelection, signal: AbortSignal, service: 'aishodan' | 'quote' = 'aishodan'): Promise<WorkspaceRead> {
+export async function readOrganizationWorkspace(actorId: string, selected: OrganizationSelection, signal: AbortSignal, service: WorkspaceService = 'aishodan'): Promise<WorkspaceRead> {
   if (!actorId || selected.kind === 'invalid' || signal.aborted) throw new WorkspaceReadError(0, 'unavailable')
   const controller = new AbortController()
   let rejectStopped: (error: WorkspaceReadError) => void = () => {}

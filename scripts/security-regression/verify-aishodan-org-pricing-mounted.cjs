@@ -34,6 +34,8 @@ function load(rel) {
     if (n in mocks) return mocks[n]
     if (n === '@/components/OrganizationPricingPlans') return load('src/components/OrganizationPricingPlans.tsx')
     if (n === '@/lib/billing-response-client') return load('src/lib/billing-response-client.ts')
+    if (n === '@/lib/mensetsu/checkout-origin-hint') return load('src/lib/mensetsu/checkout-origin-hint.ts')
+    if (n === '@/lib/organization-workspace-selection') return load('src/lib/organization-workspace-selection.ts')
     throw Error('Unmocked ' + n)
   }
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename)

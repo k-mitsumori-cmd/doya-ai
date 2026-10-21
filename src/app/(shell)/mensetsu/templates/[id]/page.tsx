@@ -8,10 +8,12 @@
 //    違反があれば保存されず、該当箇所が返ってくるので画面に表示する。
 
 import { PageTitle } from '@/components/mensetsu/ui-next'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
+import { useMensetsuRequest } from '@/components/mensetsu/useMensetsuRequest'
+import { useMensetsuOperation } from '@/components/mensetsu/useMensetsuOperation'
 
 interface Branch {
   id: string
@@ -43,11 +45,16 @@ interface Violation {
 }
 
 export default function TemplateEditPage() {
+  const { proof, request: fetch } = useMensetsuRequest()
+  const operation = useMensetsuOperation(proof)
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const id = params?.id as string
+  const loadedScope = useRef('')
+  const scopeId = `${proof.actorId}:${proof.organization.id}:${id}`
 
   const [loading, setLoading] = useState(true)
+  const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -65,14 +72,19 @@ export default function TemplateEditPage() {
   const [openRubric, setOpenRubric] = useState<string | null>(null)
 
   const load = useCallback(async () => {
+    setLoading(true)
+    setLoaded(false)
+    setError(null)
     try {
       const res = await fetch(`/api/mensetsu/templates/${id}`)
       const json = await res.json()
+      if (!proof.current()) return
       if (!res.ok) {
         notifyError(setError, json?.error || '取得できませんでした')
         return
       }
       const t = json.template
+      if (!t || typeof t !== 'object' || !Array.isArray(t.questions) || !Array.isArray(t.criteria)) throw new Error('質問セットを確認できませんでした')
       setName(t.name || '')
       setJobTitle(t.jobTitle || '')
       // ⚠️ 既存の20分・30分の質問セットも10分として扱う（固定に揃えたため）
@@ -91,17 +103,23 @@ export default function TemplateEditPage() {
         }))
       )
       setCriteria(t.criteria || [])
+      loadedScope.current = scopeId
+      setLoaded(true)
     } catch {
       // 通信失敗・不正な応答のときに空のフォームのまま黙らないようにする
-      notifyError(setError, '質問セットを取得できませんでした。通信状況を確認して、ページを再読み込みしてください。')
+      if (proof.current()) notifyError(setError, '質問セットを取得できませんでした。通信状況を確認して、ページを再読み込みしてください。')
     } finally {
-      setLoading(false)
+      if (proof.current()) setLoading(false)
     }
-  }, [id])
+  }, [id, fetch, proof, scopeId])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    if (loadedScope.current !== scopeId) void load()
+  }, [load, scopeId])
+
+  useEffect(() => {
+    if (operation.unknown) setSaving(false)
+  }, [operation.unknown])
 
   const update = (i: number, patch: Partial<Question>) =>
     setQuestions((prev) => prev.map((q, idx) => (idx === i ? { ...q, ...patch } : q)))
@@ -174,6 +192,8 @@ export default function TemplateEditPage() {
     )
 
   const save = async () => {
+    const ticket = operation.begin()
+    if (!ticket) return
     setSaving(true)
     setError(null)
     setNotice(null)
@@ -200,6 +220,7 @@ export default function TemplateEditPage() {
         }),
       })
       const json = await res.json()
+      if (!operation.current(ticket)) return
       if (!res.ok) {
         notifyError(setError, json?.error || '保存に失敗しました')
         if (Array.isArray(json?.violations)) setViolations(json.violations)
@@ -207,8 +228,12 @@ export default function TemplateEditPage() {
       }
       setNotice('保存しました')
       await load()
+    } catch (cause) {
+      if (operation.current(ticket)) operation.uncertain(ticket)
+      if (operation.current(ticket)) notifyError(setError, cause instanceof Error ? cause.message : '保存結果を確認できませんでした。')
     } finally {
-      setSaving(false)
+      if (operation.current(ticket)) setSaving(false)
+      operation.finish(ticket)
     }
   }
 
@@ -219,13 +244,20 @@ export default function TemplateEditPage() {
       </main>
     )
   }
+  if (!loaded) {
+    return <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#f2f6ff] px-5 text-center">
+      <p role="alert" className="text-sm font-bold text-[#c2185b]">{error || '質問セットを確認できませんでした'}</p>
+      <button type="button" onClick={() => void load()} className="text-sm font-black text-[#0066ff] underline">再読み込み</button>
+    </main>
+  }
 
   const totalMin = questions.reduce((n, q) => n + (q.targetMin || 0), 0)
 
   return (
     <main className="min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8">
       <div className="mx-auto max-w-[900px]">
-        <button onClick={() => router.push('/mensetsu')} className="text-xs font-black text-[#0066ff]">
+        {operation.unknown && <p role="alert" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900">保存結果を確認できません。再送すると重複する可能性があります。編集内容を控え、一覧で最新状態を確認してください。<Link href={proof.href('/mensetsu')} className="ml-2 underline">一覧を開く</Link></p>}
+        <button onClick={() => router.push(proof.href('/mensetsu'))} className="text-xs font-black text-[#0066ff]">
           ← ダッシュボード
         </button>
         <PageTitle className="mt-3 text-2xl font-black text-[#0a0f3c]">面接テンプレートの編集</PageTitle>
@@ -555,7 +587,7 @@ export default function TemplateEditPage() {
         </div>
 
         <p className="mt-6 text-center text-xs font-semibold text-[#8a94ad]">
-          <Link href="/mensetsu" className="text-[#0066ff]">
+          <Link href={proof.href('/mensetsu')} className="text-[#0066ff]">
             ダッシュボードへ戻る
           </Link>
         </p>

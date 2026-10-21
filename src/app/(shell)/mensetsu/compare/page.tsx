@@ -11,6 +11,7 @@ import { PageTitle } from '@/components/mensetsu/ui-next'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
+import { useMensetsuRequest } from '@/components/mensetsu/useMensetsuRequest'
 
 interface Criterion {
   key: string
@@ -57,6 +58,7 @@ function cellStyle(v: number | null, median: number | null): string {
 }
 
 export default function ComparePage() {
+  const { proof, request: fetch } = useMensetsuRequest()
   const [templates, setTemplates] = useState<TemplateRow[]>([])
   // ⚠️ 既定は「すべて」。以前は最初のテンプレートを選ぶまで何も出ず、
   //    「選ばないと表示されない」状態だった。
@@ -80,6 +82,7 @@ export default function ComparePage() {
     try {
       const res = await fetch('/api/mensetsu/templates', { cache: 'no-store' })
       const json = await res.json().catch(() => null)
+      if (!proof.current()) return
       if (!res.ok || !Array.isArray(json?.templates)) throw new Error('テンプレートを取得できませんでした')
       setTemplates(json.templates)
     } catch {
@@ -87,7 +90,7 @@ export default function ComparePage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [fetch, proof])
 
   useEffect(() => { void loadTemplates() }, [loadTemplates])
 
@@ -111,7 +114,7 @@ export default function ComparePage() {
           !json.template || !Array.isArray(json.template.criteria) || !json.medians) {
         throw new Error('比較結果の応答が正しくありません')
       }
-      if (version !== requestVersion.current) return
+      if (version !== requestVersion.current || !proof.current()) return
       setCriteria(json.template.criteria)
       setCandidates(json.candidates)
       setMedians(json.medians)
@@ -119,11 +122,11 @@ export default function ComparePage() {
       setNextCursor(json.nextCursor)
       setRevision(json.revision)
     } catch (cause) {
-      if (version === requestVersion.current) notifyError(setError, cause instanceof Error ? cause.message : '比較結果を取得できませんでした')
+      if (version === requestVersion.current && proof.current()) notifyError(setError, cause instanceof Error ? cause.message : '比較結果を取得できませんでした')
     } finally {
-      if (version === requestVersion.current) setLoadingCompare(false)
+      if (version === requestVersion.current && proof.current()) setLoadingCompare(false)
     }
-  }, [templateId])
+  }, [templateId, fetch, proof])
 
   useEffect(() => {
     void load()
@@ -132,7 +135,7 @@ export default function ComparePage() {
   }, [load])
 
   const loadMore = async () => {
-    if (!nextCursor || loadingMore) return
+    if (!proof.current() || !nextCursor || loadingMore) return
     const version = requestVersion.current
     setLoadingMore(true)
     setError(null)
@@ -149,14 +152,14 @@ export default function ComparePage() {
           json.candidates.some((candidate: Candidate) => candidates.some((current) => current.id === candidate.id))) {
         throw new Error('比較結果が更新されました。最初から読み直してください')
       }
-      if (version !== requestVersion.current) return
+      if (version !== requestVersion.current || !proof.current()) return
       setCandidates(candidates.concat(json.candidates))
       setNextCursor(json.nextCursor)
       setMedians(json.medians)
     } catch (cause) {
-      if (version === requestVersion.current) notifyError(setError, cause instanceof Error ? cause.message : '続きを取得できませんでした')
+      if (version === requestVersion.current && proof.current()) notifyError(setError, cause instanceof Error ? cause.message : '続きを取得できませんでした')
     } finally {
-      if (version === requestVersion.current) setLoadingMore(false)
+      if (version === requestVersion.current && proof.current()) setLoadingMore(false)
     }
   }
 
@@ -173,7 +176,7 @@ export default function ComparePage() {
   return (
     <main className="min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8">
       <div className="mx-auto max-w-[1200px]">
-        <Link href="/mensetsu" className="text-xs font-black text-[#0066ff]">
+        <Link href={proof.href('/mensetsu')} className="text-xs font-black text-[#0066ff]">
           ← ダッシュボード
         </Link>
         <PageTitle className="mt-3 text-2xl font-black text-[#0a0f3c]">候補者の比較</PageTitle>
@@ -272,7 +275,7 @@ export default function ComparePage() {
                     )}
 
                     <Link
-                      href={`/mensetsu/sessions/${c.id}`}
+                      href={proof.href(`/mensetsu/sessions/${c.id}`)}
                       className="mt-4 block rounded-xl border-2 border-[#d8e7ff] py-2.5 text-center text-sm font-black text-[#0066ff]"
                     >
                       評価の詳細を見る
@@ -337,7 +340,7 @@ export default function ComparePage() {
                         })}
                         <td className="px-3 py-3 text-right">
                           <Link
-                            href={`/mensetsu/sessions/${c.id}`}
+                            href={proof.href(`/mensetsu/sessions/${c.id}`)}
                             className="whitespace-nowrap rounded-lg border border-[#d8e7ff] px-3 py-1.5 text-[11px] font-black text-[#0066ff]"
                           >
                             詳細

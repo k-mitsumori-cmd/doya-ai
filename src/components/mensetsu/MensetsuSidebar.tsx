@@ -26,12 +26,16 @@ import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { resolveShellIcon } from '@/components/shell/icons'
 import { MENSETSU_NAV } from '@/lib/mensetsu/nav'
+import MensetsuOrgSwitcher from './MensetsuOrgSwitcher'
+import { useOptionalMensetsuWorkspace } from './MensetsuWorkspaceBoundary'
 
 const BASE = '/mensetsu'
 
 function MensetsuSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
+  const workspace = useOptionalMensetsuWorkspace()
+  const proof = workspace?.scope.kind === 'ready' ? workspace.scope.proof : null
   // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
   //    表示だけを止める（fetch は止めない。Cookie認証なので未確定でも応答する）
   const sessionReady = sessionStatus !== 'loading'
@@ -41,15 +45,16 @@ function MensetsuSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const NAV: NavItem[] = MENSETSU_NAV.map((item, i) => ({
-    href: item.href,
+    href: proof ? proof.href(item.href) : item.href,
     label: item.label,
     icon: resolveShellIcon(item.icon),
     ...(i === 0 ? { hot: true } : {}),
   }))
 
   const isActive = (href: string) => {
-    if (href === BASE) return pathname === BASE
-    return pathname === href || pathname.startsWith(href + '/')
+    const path = href.split('?')[0]
+    if (path === BASE) return pathname === BASE
+    return pathname === path || pathname.startsWith(path + '/')
   }
 
   const confirmLogout = async () => {
@@ -69,6 +74,7 @@ function MensetsuSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
         <SidebarLogoSection icon={UserCheck} title="ドヤ面接官" showLabel={showLabel} logoSrc="/mensetsu/logo-sidebar.png" logoClassName="w-full h-auto" logoAspect={{ width: 1997, height: 592 }} />
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="px-3 pt-4"><MensetsuOrgSwitcher /></div>
           <nav className="py-4 sm:py-6 px-3 space-y-1">
             <SidebarSectionTitle title="ドヤ面接官" isCollapsed={isCollapsed} theme={mensetsuTheme} />
             {NAV.map((item) => (
@@ -85,7 +91,7 @@ function MensetsuSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
 
           {/* プラン案内。⚠️ 金額の正本は unified-plan.ts。ここに別の数字を書かない */}
           {/* 作った数と残り。数字は /api/usage/mensetsu から受け取るだけ */}
-          <SidebarUsagePanel service="mensetsu" show={sessionReady && (isMobile || !isCollapsed)} pricingHref="/mensetsu/pricing" />
+          <SidebarUsagePanel service="mensetsu" show={sessionReady && (isMobile || !isCollapsed)} pricingHref={proof ? proof.href('/mensetsu/pricing') : '/mensetsu/pricing'} />
         </div>
 
         <ToolSwitcherMenu currentService="mensetsu" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 sm:px-4 pb-2" />
