@@ -93,10 +93,15 @@ async function reset() {
 }
 const opId = () => generation.createGenerationOperationId()
 const saveOpId = () => `save.${Date.now()}.${crypto.randomUUID()}`
-const request = (operationId = opId(), input = engine.SAMPLE_INPUT) => new NextRequest('https://example.invalid/api/tenjikai/generate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
-  ...input, expectedActor: actor, clientRequestId: crypto.randomUUID(), operationId,
+const request = (operationId = opId(), input = engine.SAMPLE_INPUT, expectedActor = actor) => new NextRequest('https://example.invalid/api/tenjikai/generate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+  ...input, expectedActor, clientRequestId: crypto.randomUUID(), operationId,
 }) })
-async function post(operationId, input) { const response = await route.POST(request(operationId, input)); return { status: response.status, body: await response.json() } }
+async function post(operationId, input, expectedActor) { const response = await route.POST(request(operationId, input, expectedActor)); return { status: response.status, body: await response.json() } }
+const saveOpIdAt = time => `save.${time.getTime()}.${crypto.randomUUID()}`
+const saveActorHash = who => crypto.createHash('sha256').update(JSON.stringify(who)).digest('hex')
+const saveReceiptPrefix = who => `tenjikai-workspace-save:v1:${saveActorHash(who)}:`
+const saveOwnerKey = id => `tenjikai-workspace-save-owner:v1:${id}`
+const saveReceiptRows = who => db.systemSetting.findMany({ where: { key: { startsWith: saveReceiptPrefix(who) } }, orderBy: { key: 'asc' } })
 async function status(operationId, expectedActor = actor) {
   const url = new URL('https://example.invalid/api/tenjikai/generate/status')
   url.searchParams.set('operationId', operationId); url.searchParams.set('expectedActor', expectedActor)
@@ -109,13 +114,13 @@ async function cancel(operationId) {
 const identity = () => ({ operator: { kind: 'admin', id: 'synthetic_admin' }, targetUserId: actor, operationId: crypto.randomUUID(), kind: 'retirement' })
 const defer = () => { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
-async function waitForLocks() {
+async function waitForLocks(minimum = 2) {
   for (let i = 0; i < 60; i++) {
     const rows = await db.$queryRawUnsafe("SELECT count(*)::integer AS n FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock' AND query LIKE '%\"User\"%'")
-    if (rows[0].n >= 2) return rows[0].n
+    if (rows[0].n >= minimum) return rows[0].n
     await sleep(50)
   }
-  throw Error('Two competing User row-lock waiters not observed')
+  throw Error(`${minimum} User row-lock waiter(s) not observed`)
 }
 async function check(name, run) { await reset(); await run(); cases.push(name) }
 ;(async () => {
@@ -128,7 +133,7 @@ async function check(name, run) { await reset(); await run(); cases.push(name) }
       assert.equal((await db.tenjikaiProject.findFirst({ where: { userId: actor } })).revision, 1n)
       const projectId = result.body.projectId
       const saved = await workspaceStore.readFullTenjikaiWorkspace(actor, projectId, db)
-      assert.deepEqual(saved, result.body.workspace)
+      assert.deepEqual(JSON.parse(JSON.stringify(saved)), result.body.workspace)
       assert.equal(saved.revision, '1')
       assert.deepEqual(saved.plans.map(item => item.plan.variant), ['A', 'B', 'C'])
       assert.equal(saved.plans.every(item => Number.isInteger(item.electric.amountYen) && item.electric.detail.length > 0), true)
@@ -191,6 +196,184 @@ async function check(name, run) { await reset(); await run(); cases.push(name) }
       const next = await workspaceSave.saveTenjikaiWorkspace(actor, projectId, saveOpId(), latest.revision, { budgetYen: latest.input.budgetYen + 1 }, db)
       assert.equal(next.state, 'committed')
       assert.equal(next.workspace.revision, '3')
+    })
+    await check('save commits novelty selection, budget and completed deadlines as one owned workspace revision', async () => {
+      const generated = await post(); assert.equal(generated.status, 200, JSON.stringify(generated.body))
+      const before = generated.body.workspace, projectId = generated.body.projectId, saveId = saveOpId()
+      const selected = before.novelties.slice(0, 2).map(item => item.id)
+      const done = before.deadlines.slice(0, 2).map(item => item.id)
+      const budgetYen = before.input.budgetYen + 1234
+      const saved = await workspaceSave.saveTenjikaiWorkspace(actor, projectId, saveId, '1', {
+        selectedNoveltyIds: selected, budgetYen, doneDeadlineIds: done,
+      }, db)
+      assert.equal(saved.state, 'committed'); assert.equal(saved.workspace.revision, '2')
+      assert.equal(saved.workspace.input.budgetYen, budgetYen)
+      assert.deepEqual(saved.workspace.novelties.filter(item => item.selected).map(item => item.id), selected)
+      assert.deepEqual(saved.workspace.deadlines.filter(item => item.done).map(item => item.id), done)
+      const line = saved.workspace.budgetLines.find(item => item.sourceLineKey === 'novelty')
+      assert.equal(line.amountYen, before.novelties.filter(item => selected.includes(item.id)).reduce((sum, item) => sum + item.unitYen * item.quantity, 0))
+      assert.deepEqual(await workspaceStore.readFullTenjikaiWorkspace(actor, projectId, db), saved.workspace)
+      assert.deepEqual(await workspaceSave.statusWorkspaceSave(actor, saveId, db), saved)
+      assert.equal((await saveReceiptRows(actor)).length, 1)
+    })
+    for (const [protectedLine, change] of [
+      ['build', { source: 'manual' }], ['electric', { status: 'paid' }], ['novelty', { status: 'ordered' }],
+    ]) await check(`save rejects protected ${protectedLine} line and rolls back every earlier child write`, async () => {
+      const generated = await post(); assert.equal(generated.status, 200, JSON.stringify(generated.body))
+      const projectId = generated.body.projectId, saveId = saveOpId()
+      const line = await db.tenjikaiBudgetLine.findFirst({ where: { projectId, sourceLineKey: protectedLine } })
+      await db.tenjikaiBudgetLine.update({ where: { id: line.id }, data: change })
+      const beforePlans = await db.tenjikaiBoothPlan.findMany({ where: { projectId }, orderBy: { variant: 'asc' } })
+      const beforeNovelties = await db.tenjikaiNovelty.findMany({ where: { projectId }, orderBy: { sortOrder: 'asc' } })
+      const beforeBudget = await db.tenjikaiBudgetLine.findMany({ where: { projectId }, orderBy: { sortOrder: 'asc' } })
+      const patch = protectedLine === 'novelty' ? { selectedNoveltyIds: [generated.body.workspace.novelties[0].id] } : { variant: 'B' }
+      await assert.rejects(workspaceSave.saveTenjikaiWorkspace(actor, projectId, saveId, '1', patch, db),
+        error => error.code === (protectedLine === 'novelty' ? 'BUDGET_CHANGED' : 'PLAN_BUDGET_UNAVAILABLE'))
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: projectId } })).revision, 1n)
+      assert.deepEqual(await db.tenjikaiBoothPlan.findMany({ where: { projectId }, orderBy: { variant: 'asc' } }), beforePlans)
+      assert.deepEqual(await db.tenjikaiNovelty.findMany({ where: { projectId }, orderBy: { sortOrder: 'asc' } }), beforeNovelties)
+      assert.deepEqual(await db.tenjikaiBudgetLine.findMany({ where: { projectId }, orderBy: { sortOrder: 'asc' } }), beforeBudget)
+      assert.equal((await db.tenjikaiBudgetLine.findUnique({ where: { id: line.id } }))[Object.keys(change)[0]], Object.values(change)[0])
+      assert.equal((await workspaceSave.statusWorkspaceSave(actor, saveId, db)).state, 'missing')
+    })
+    await check('save refuses foreign actor and foreign project child IDs without receipts or mutation', async () => {
+      const own = await post(); assert.equal(own.status, 200, JSON.stringify(own.body))
+      const foreignActor = 'tenjikai_c3b_foreign'
+      await db.user.create({ data: { id: foreignActor, plan: 'FREE' } })
+      session = { user: { id: foreignActor } }
+      const other = await post(opId(), engine.SAMPLE_INPUT, foreignActor)
+      session = { user: { id: actor } }
+      assert.equal(other.status, 200, JSON.stringify(other.body))
+      const projectId = own.body.projectId, foreignOp = saveOpId()
+      await assert.rejects(workspaceSave.saveTenjikaiWorkspace(foreignActor, projectId, foreignOp, '1', { variant: 'B' }, db),
+        error => error.code === 'PROJECT_NOT_FOUND')
+      assert.equal((await workspaceSave.statusWorkspaceSave(foreignActor, foreignOp, db)).state, 'missing')
+      const foreignNovelty = await db.tenjikaiNovelty.findFirst({ where: { projectId: other.body.projectId } })
+      const foreignTask = await db.tenjikaiTask.findFirst({ where: { projectId: other.body.projectId } })
+      await db.tenjikaiNovelty.update({ where: { id: foreignNovelty.id }, data: { sourceNoveltyId: 'foreign_novelty' } })
+      await db.tenjikaiTask.update({ where: { id: foreignTask.id }, data: { sourceDeadlineId: 'foreign_deadline' } })
+      for (const patch of [{ selectedNoveltyIds: ['foreign_novelty'] }, { doneDeadlineIds: ['foreign_deadline'] }]) {
+        const id = saveOpId()
+        await assert.rejects(workspaceSave.saveTenjikaiWorkspace(actor, projectId, id, '1', patch, db),
+          error => ['NOVELTY_CHANGED', 'DEADLINE_CHANGED'].includes(error.code))
+        assert.equal((await workspaceSave.statusWorkspaceSave(actor, id, db)).state, 'missing')
+      }
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: projectId } })).revision, 1n)
+      assert.equal((await saveReceiptRows(actor)).length, 0)
+      assert.equal((await saveReceiptRows(foreignActor)).length, 0)
+    })
+    await check('save orphan owner and changed intent fail closed before graph mutation', async () => {
+      const generated = await post(); assert.equal(generated.status, 200, JSON.stringify(generated.body))
+      const projectId = generated.body.projectId, orphan = saveOpId()
+      await db.systemSetting.create({ data: { key: saveOwnerKey(orphan), value: saveActorHash(actor) } })
+      await assert.rejects(workspaceSave.statusWorkspaceSave(actor, orphan, db), error => error.code === 'OWNER_INDEX_ORPHAN')
+      await assert.rejects(workspaceSave.saveTenjikaiWorkspace(actor, projectId, orphan, '1', { variant: 'B' }, db),
+        error => error.code === 'OWNER_INDEX_ORPHAN')
+      const receiptOnly = saveOpId()
+      await db.systemSetting.create({ data: { key: saveReceiptPrefix(actor) + receiptOnly, value: JSON.stringify({
+        version: 1, actorHash: saveActorHash(actor), operationId: receiptOnly, projectId: null, digest: null,
+        expectedRevision: null, resultRevision: null, phase: 'canceled', createdAt: new Date().toISOString(),
+      }) } })
+      await assert.rejects(workspaceSave.statusWorkspaceSave(actor, receiptOnly, db), error => error.code === 'OWNER_INDEX_ORPHAN')
+      const foreignOwner = saveOpId()
+      await db.systemSetting.create({ data: { key: saveOwnerKey(foreignOwner), value: saveActorHash('another_actor') } })
+      await assert.rejects(workspaceSave.saveTenjikaiWorkspace(actor, projectId, foreignOwner, '1', { variant: 'B' }, db),
+        error => error.code === 'FOREIGN_OPERATION')
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: projectId } })).revision, 1n)
+      const id = saveOpId()
+      const committed = await workspaceSave.saveTenjikaiWorkspace(actor, projectId, id, '1', { variant: 'B' }, db)
+      assert.equal(committed.state, 'committed')
+      const receipt = (await saveReceiptRows(actor)).find(row => row.key.endsWith(':' + id))
+      await assert.rejects(workspaceSave.saveTenjikaiWorkspace(actor, projectId, id, '1', { variant: 'C' }, db),
+        error => error.code === 'OPERATION_CHANGED')
+      assert.equal((await db.systemSetting.findUnique({ where: { key: receipt.key } })).value, receipt.value)
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: projectId } })).revision, 2n)
+      assert.equal((await workspaceStore.readFullTenjikaiWorkspace(actor, projectId, db)).selectedVariant, 'B')
+    })
+    await check('save expires new IDs at 24 hours but preserves a committed replay', async () => {
+      const generated = await post(); assert.equal(generated.status, 200, JSON.stringify(generated.body))
+      const projectId = generated.body.projectId, now = new Date('2026-10-22T12:00:00.000Z')
+      const expired = saveOpIdAt(new Date(now.getTime() - 86_400_000))
+      await assert.rejects(workspaceSave.saveTenjikaiWorkspace(actor, projectId, expired, '1', { variant: 'B' }, db, now),
+        error => error.code === 'OPERATION_EXPIRED')
+      const valid = saveOpIdAt(new Date(now.getTime() - 86_400_000 + 1000))
+      const committed = await workspaceSave.saveTenjikaiWorkspace(actor, projectId, valid, '1', { variant: 'B' }, db, now)
+      assert.equal(committed.state, 'committed')
+      assert.deepEqual(await workspaceSave.saveTenjikaiWorkspace(actor, projectId, valid, '1', { variant: 'B' }, db,
+        new Date(now.getTime() + 86_400_000)), committed)
+      assert.equal((await saveReceiptRows(actor)).length, 1)
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: projectId } })).revision, 2n)
+    })
+    await check('save capacity refuses new save and cancellation while retaining 512 valid tombstones', async () => {
+      const generated = await post(); assert.equal(generated.status, 200, JSON.stringify(generated.body))
+      const now = new Date('2026-10-22T12:00:00.000Z'), rows = []
+      for (let n = 0; n < 512; n++) {
+        const id = saveOpIdAt(now), owner = saveActorHash(actor)
+        rows.push({ key: saveOwnerKey(id), value: owner }, { key: saveReceiptPrefix(actor) + id,
+          value: JSON.stringify({ version: 1, actorHash: owner, operationId: id, projectId: null, digest: null,
+            expectedRevision: null, resultRevision: null, phase: 'canceled', createdAt: now.toISOString() }) })
+      }
+      await db.systemSetting.createMany({ data: rows })
+      const next = saveOpIdAt(now)
+      await assert.rejects(workspaceSave.saveTenjikaiWorkspace(actor, generated.body.projectId, next, '1', { variant: 'B' }, db, now),
+        error => error.code === 'RECEIPT_CAPACITY_UNKNOWN')
+      await assert.rejects(workspaceSave.cancelMissingWorkspaceSave(actor, next, db, now),
+        error => error.code === 'RECEIPT_CAPACITY_UNKNOWN')
+      assert.equal((await saveReceiptRows(actor)).length, 512)
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: generated.body.projectId } })).revision, 1n)
+      assert.equal((await workspaceSave.statusWorkspaceSave(actor, next, db)).state, 'missing')
+    })
+    await check('save thirty-day retention removes only old receipt and owner on next admission', async () => {
+      const generated = await post(); assert.equal(generated.status, 200, JSON.stringify(generated.body))
+      const projectId = generated.body.projectId, old = new Date('2026-09-01T12:00:00.000Z')
+      const oldId = saveOpIdAt(old)
+      assert.equal((await workspaceSave.saveTenjikaiWorkspace(actor, projectId, oldId, '1', { variant: 'B' }, db, old)).state, 'committed')
+      assert.equal((await workspaceSave.statusWorkspaceSave(actor, oldId, db)).state, 'committed')
+      const now = new Date('2026-10-22T12:00:00.000Z'), fresh = saveOpIdAt(now)
+      assert.equal((await workspaceSave.saveTenjikaiWorkspace(actor, projectId, fresh, '2', { variant: 'C' }, db, now)).state, 'committed')
+      assert.equal((await workspaceSave.statusWorkspaceSave(actor, oldId, db)).state, 'missing')
+      assert.equal(await db.systemSetting.findUnique({ where: { key: saveOwnerKey(oldId) } }), null)
+      assert.equal((await saveReceiptRows(actor)).length, 1)
+      assert.equal((await workspaceSave.statusWorkspaceSave(actor, fresh, db)).state, 'committed')
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: projectId } })).revision, 3n)
+    })
+    await check('missing save cancellation tombstones a delayed POST on another connection', async () => {
+      const generated = await post(); assert.equal(generated.status, 200, JSON.stringify(generated.body))
+      const projectId = generated.body.projectId, id = saveOpId()
+      assert.equal((await workspaceSave.statusWorkspaceSave(actor, id, db)).state, 'missing')
+      const entered = defer(), release = defer()
+      const holdingDb = { $transaction: (work, options) => db.$transaction(async tx => {
+        const result = await work(tx)
+        entered.resolve(); await release.promise
+        return result
+      }, options) }
+      const canceling = workspaceSave.cancelMissingWorkspaceSave(actor, id, holdingDb)
+      await entered.promise
+      const delayed = workspaceSave.saveTenjikaiWorkspace(actor, projectId, id, '1', { variant: 'B' }, locker)
+      try { assert(await waitForLocks(1) >= 1) } finally { release.resolve() }
+      assert.equal((await canceling).state, 'canceled')
+      await assert.rejects(delayed, error => error.code === 'OPERATION_CHANGED')
+      assert.equal((await workspaceSave.statusWorkspaceSave(actor, id, db)).state, 'canceled')
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: projectId } })).revision, 1n)
+      assert.equal((await saveReceiptRows(actor)).length, 1)
+    })
+    await check('retirement fence before save rejects; saved receipt is purged before owned User deletion', async () => {
+      const generated = await post(); assert.equal(generated.status, 200, JSON.stringify(generated.body))
+      const projectId = generated.body.projectId, committedId = saveOpId()
+      assert.equal((await workspaceSave.saveTenjikaiWorkspace(actor, projectId, committedId, '1', { variant: 'B' }, db)).state, 'committed')
+      await store.reserveLifecycleOperation(reserver, identity(), digest)
+      await assert.rejects(workspaceSave.saveTenjikaiWorkspace(actor, projectId, saveOpId(), '2', { variant: 'C' }, locker))
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: projectId } })).revision, 2n)
+      await db.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${actor} FOR UPDATE`
+        await workspaceSave.purgeWorkspaceSaveReceipts(tx, actor)
+        await generationReceipts.purgeGenerationReceipts(tx, actor)
+        await tx.user.delete({ where: { id: actor } })
+      })
+      assert.equal((await saveReceiptRows(actor)).length, 0)
+      assert.equal(await db.systemSetting.count({ where: { key: { startsWith: 'tenjikai-workspace-save-owner:v1:' } } }), 0)
+      assert.equal(await db.tenjikaiProject.count(), 0)
+      await assert.rejects(workspaceSave.statusWorkspaceSave(actor, committedId, db))
     })
     await check('preexisting real retirement fence denies project before AI', async () => {
       await store.reserveLifecycleOperation(reserver, identity(), digest)
