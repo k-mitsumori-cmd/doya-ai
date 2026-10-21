@@ -1,5 +1,15 @@
 # 全体の完了台帳（2026-10-20）
 
+## 2026-10-21 統合候補の現状態
+
+この節は下の時点別記録より新しい状態です。旧 `02f9a4eb` や707入力の検証を現候補の合格へ流用しません。
+
+固定ソースコミット `69d2d73da36006ec846b17ef3efa75629fcb7089` は、[直前の `f0a82958` のCI成功](https://github.com/k-mitsumori-cmd/doya-ai/actions/runs/39599338447)・[同SHAのPreview Ready](https://vercel.com/surisutas-projects/doya-ai/HpAHppnqncAqndrr7y6k9vewsF9j)を基準に、Income writerと未接続R2 A1/A2 checkout coreを36ソースだけで統合しました。固定候補の実行ソース5,201件、source digest `c41ed731dd8e65a2904806916a96c0781a5ee6585acb549805eb11177aa227d0`、全Git path/mode/blobはソースコミットと一致します。
+
+同一候補のローカル31 gateは終了0です。実private PostgreSQLはR2 checkout 117/117、Income domain 88/88、既存14スイートをoverlayなしで直接実行し、所有DBを停止・削除しました。IncomeはSerializableの `40001` 再試行後に退会予約を409で拒否する競合、R2はglobal UUIDの同時受付とledger-only競合を含みます。共通security、7サービス別テスト、対象Lint、fresh route型生成、全体nonincremental tscも合格しました。ローカルNext buildは外向き通信遮断下のGit外固定Google Fonts応答で成功した別gateであり、実フォント取得の成功とは扱いません。記録作成時点では新コミットのremote CI/Previewは未確認です。
+
+R2は未接続coreのA1/A2までです。B/C/R3、旧ready URLと運用drain、OWNERの外部課金区間に残る未受入2競合、他サービスへの退会writer接続と全体解禁は残ります。展示会c3とTrial actorは別候補で、このソースコミットの完成範囲に含めません。認証後アプリ操作、本番DB/Stripe/Storage、課金・本番反映も未確認です。下表の「次候補」「未実装」という表現は各行を書いた時点の履歴で、現状態はこの節と最新PRの同一SHA証拠で判断します。
+
 ## この台帳の使い方
 
 現在の実装、検証、残作業、判断待ちを分けます。文書に設計があること、テストが通ること、プレビューが立つこと、本番で使えることは別の状態です。各項目の証拠がそろうまで全体完了とはしません。
