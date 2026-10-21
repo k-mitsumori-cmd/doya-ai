@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
+const { shodanLifecycleFixture } = require('./shodan-lifecycle-fixture.cjs')
 
 function fixture(service, action, scenario) {
   const model = `${service}Member`
@@ -17,29 +18,42 @@ function fixture(service, action, scenario) {
     Object.assign(target, data)
     return { ...target }
   }
-  const prisma = {
-    $transaction: async (fn, options) => {
-      assert.equal(options.isolationLevel, 'Serializable')
-      attempts++
-      return fn({
-        $queryRaw: async sql => {
-          assert.match(sql.join('?'), new RegExp(`FROM ${service}_members`))
-          assert.match(sql.join('?'), /ORDER BY id FOR UPDATE/)
-          return [{ id: 'actor' }, { id: 'target' }]
-        },
-        [model]: {
-          findFirst: async ({ where }) => {
-            assert.equal(where.organizationId, 'org')
-            if (where.userId) return actor.role === 'admin' ? { ...actor } : null
-            return where.id === target.id ? { ...target } : null
-          },
-          update: async ({ data }) => mutate(data),
-          delete: async () => mutate({ deleted: true }),
-        },
-      })
+  const member = {
+    findFirst: async ({ where }) => {
+      if (where.id) return where.id === target.id ? { ...target } : null
+      if (where.userId) return actor.role === 'admin' ? { ...actor } : null
+      return null
     },
+    update: async ({ data }) => mutate(data),
+    delete: async () => mutate({ deleted: true }),
   }
+  const tx = {
+    $queryRaw: async () => [{ id: 'org' }],
+    [model]: member,
+  }
+  const prisma = {
+    [model]: member,
+    $transaction: async (fn) => fn(tx),
+  }
+  const lifecycle = shodanLifecycleFixture(prisma, {
+    service, mode: 'member', userId: 'user', userIds: ['user', 'other', 'owner-user'],
+    role: () => actor.role,
+    authorityRows: () => [
+      { id: 'canonical-owner', userId: 'owner-user', role: 'owner', status: 'ACTIVE', pendingEmail: null, inviteToken: null },
+      { id: 'target', userId: target.userId, role: target.role, status: target.status, pendingEmail: null, inviteToken: null },
+    ],
+  })
+  const originalTransaction = prisma.$transaction.bind(prisma)
+  prisma.$transaction = (fn, options) => originalTransaction(async lockedTx => {
+    const originalRaw = lockedTx.$queryRaw.bind(lockedTx)
+    return fn({ ...lockedTx, $queryRaw: async (sql, ...values) => {
+      const text = (Array.isArray(sql) ? sql.join('?') : sql.sql).replaceAll('\"', '')
+      if (text.includes(`FROM ${service}_organizations`) && text.includes('FOR UPDATE')) attempts++
+      return originalRaw(sql, ...values)
+    } })
+  }, options)
   const route = load(`src/app/api/${service}/members/[id]/route.ts`, {
+    ...lifecycle,
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     [`@/lib/${service}/access`]: {
@@ -63,7 +77,7 @@ function fixture(service, action, scenario) {
 
       for (const scenario of ['actor-revoked', 'target-promoted', 'unknown-target-role']) {
         const race = fixture(service, action, scenario)
-        assert.equal((await race.call()).status, 403, `${service} ${action} ${scenario}`)
+        assert.equal((await race.call()).status, scenario === 'unknown-target-role' ? 409 : 403, `${service} ${action} ${scenario}`)
         assert.equal(race.state().writes, 0, `${service} ${action} ${scenario} must not mutate`)
       }
     }

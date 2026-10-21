@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 // GET  /api/quote/organizations — 所属組織一覧＋現在の組織
 // POST /api/quote/organizations — 初回オンボーディング（組織作成）
 import { NextRequest, NextResponse } from 'next/server'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 import { getQuoteContext, getOrCreateOrganization, listMemberships, orgSlugFrom, resolveUserId } from '@/lib/quote/access'
 
 export async function GET(req: NextRequest) {
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
     const org = await getOrCreateOrganization(userId, name, memberName)
     return NextResponse.json({ slug: org.slug, name: org.name })
   } catch (e) {
+    if (e instanceof LifecycleError) return NextResponse.json({ error: e.message, code: e.code }, { status: e.status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
     if (e instanceof Error && 'code' in e && e.code === 'INVALID_MEMBERSHIP_ROLE') return NextResponse.json({ error: '組織の権限を確認できません。管理者に確認してください。', code: 'INVALID_MEMBERSHIP_ROLE' }, { status: 403 })
     throw e
   }

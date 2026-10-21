@@ -13,7 +13,7 @@ function aioLifecycleImports() {
 /** Legacy offline fixture bridge only: actual state/store/fence, synthetic rows and empty KV. */
 function shodanLifecycleFixture(prisma, options = {}) {
   const service = options.service || 'shodan'
-  if (!['shodan', 'aio'].includes(service)) throw Error('Unsupported lifecycle fixture service')
+  if (!['shodan', 'aio', 'quote', 'mensetsu', 'aishodan'].includes(service)) throw Error('Unsupported lifecycle fixture service')
   const globals = options.globals || {}, userId = options.userId || 'user', memberId = options.memberId || 'actor', orgId = options.organizationId || 'org'
   const state = load('src/lib/account-lifecycle/state.ts', { 'node:crypto': crypto }, globals)
   const store = load('src/lib/account-lifecycle/store.ts', { 'node:crypto': crypto, '@prisma/client': { Prisma }, './state': state }, globals)

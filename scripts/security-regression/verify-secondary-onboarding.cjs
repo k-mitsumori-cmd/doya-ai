@@ -1,3 +1,4 @@
+const { shodanLifecycleFixture, aioLifecycleImports } = require('./shodan-lifecycle-fixture.cjs');
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
@@ -28,7 +29,9 @@ function fixture(service, { failMember = false, conflictOnce = false } = {}) {
     try { return await callback(tx); }
     catch (error) { organizations.splice(0, organizations.length, ...before.organizations); members.splice(0, members.length, ...before.members); throw error; }
   } };
+  const lifecycle = shodanLifecycleFixture(prisma, { service, mode: 'creation', userIds: ['user'] });
   const api = load(`src/lib/${service}/access.ts`, {
+    ...lifecycle,
     'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma },
@@ -57,6 +60,7 @@ function fixture(service, { failMember = false, conflictOnce = false } = {}) {
 
     let creations = 0;
     const route = load(`src/app/api/${service}/organizations/route.ts`, {
+      ...aioLifecycleImports(),
       'next/server': { NextResponse: Response },
       '@/lib/prisma': { prisma: {} },
       [`@/lib/${service}/access`]: {
