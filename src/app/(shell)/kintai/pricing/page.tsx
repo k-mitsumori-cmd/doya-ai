@@ -98,6 +98,11 @@ export default function KintaiPricingPage() {
               従業員5名まで永久無料
             </span>
           </div>
+          <div className="mt-6">
+            <Link href="/kintai/dashboard" className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-bold text-[#7f19e6] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7f19e6]">
+              勤怠ダッシュボードに戻る
+            </Link>
+          </div>
         </div>
 
         {/* Plans grid (統一プラン: 無料 / プロ¥9,980) */}

@@ -425,6 +425,11 @@ if (kintaiEmployeeAdmission.error || kintaiEmployeeAdmission.status !== 0) {
   console.error('Security regression failed: verify-kintai-employee-admission.cjs');
   process.exit(1);
 }
+const kintaiPricingReturn = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-pricing-return-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiPricingReturn.error || kintaiPricingReturn.status !== 0) {
+  console.error('Security regression failed: verify-kintai-pricing-return-mounted.cjs');
+  process.exit(1);
+}
 const kintaiDepartmentMutation = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-department-mutation-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (kintaiDepartmentMutation.error || kintaiDepartmentMutation.status !== 0) {
   console.error('Security regression failed: verify-kintai-department-mutation-atomic.cjs');
