@@ -2,6 +2,7 @@
 
 // ドヤポップアップ サイト詳細: 設置タグ・案の一覧（公開の切り替え・並び順）・集計
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -49,7 +50,7 @@ function isSiteDetail(value: unknown, siteId: string, days: number): value is Si
       typeof p.name === 'string' && p.totals && typeof p.totals.impressions === 'number')
 }
 
-function InstallCard({ site }: { site: SiteDetail['site'] }) {
+function InstallCard({ site, readOnly = false }: { site: SiteDetail['site']; readOnly?: boolean }) {
   return (
     <section className="pd-card" aria-labelledby="popup-install">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -77,7 +78,7 @@ function InstallCard({ site }: { site: SiteDetail['site'] }) {
             <code>{site.embedCode}</code>
           </pre>
           <div className="mt-4">
-            <CopyButton text={site.embedCode} label="タグをコピー" primary />
+            {readOnly ? <button type="button" className="pd-btn-primary" disabled>タグをコピー（見本）</button> : <CopyButton text={site.embedCode} label="タグをコピー" primary />}
           </div>
           <ul className="pd-label mt-4 list-disc space-y-1 pl-5">
             <li>
@@ -96,7 +97,7 @@ function InstallCard({ site }: { site: SiteDetail['site'] }) {
   )
 }
 
-function PopupRow({ p, first, last, busy, onAction }: { p: PopupDto; first: boolean; last: boolean; busy: boolean; onAction: (a: Action) => void }) {
+function PopupRow({ p, first, last, busy, readOnly = false, onAction }: { p: PopupDto; first: boolean; last: boolean; busy: boolean; readOnly?: boolean; onAction?: (a: Action) => void }) {
   return (
     <article className="pd-card overflow-hidden" style={{ padding: 0 }} aria-label={p.name}>
       <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -140,42 +141,210 @@ function PopupRow({ p, first, last, busy, onAction }: { p: PopupDto; first: bool
             </p>
           )}
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Link href={`/popup/edit/${p.id}`} className="pd-btn-outline">
-              <Pencil className="h-4 w-4" aria-hidden />
-              編集・プレビュー
-            </Link>
+            {readOnly ? (
+              <button type="button" className="pd-btn-outline" disabled><Pencil className="h-4 w-4" aria-hidden />編集・プレビュー（見本）</button>
+            ) : (
+              <Link href={`/popup/edit/${p.id}`} className="pd-btn-outline"><Pencil className="h-4 w-4" aria-hidden />編集・プレビュー</Link>
+            )}
             {p.status === 'live' ? (
-              <button type="button" disabled={busy} onClick={() => onAction('paused')} className="pd-btn-outline">
+              <button type="button" disabled={busy || readOnly} onClick={() => onAction?.('paused')} className="pd-btn-outline">
                 <Pause className="h-4 w-4" aria-hidden />
                 停止する
               </button>
             ) : (
-              <button type="button" disabled={busy || p.issues.length > 0} onClick={() => onAction('live')} className="pd-btn-outline !text-[color:var(--blue)]">
+              <button type="button" disabled={busy || readOnly || p.issues.length > 0} onClick={() => onAction?.('live')} className="pd-btn-outline !text-[color:var(--blue)]">
                 <Play className="h-4 w-4" aria-hidden />
                 公開する
               </button>
             )}
             <div className="ml-auto flex items-center">
-              <button type="button" disabled={busy || first} onClick={() => onAction('up')} aria-label="上へ（優先して表示）" className="pd-btn-ghost">
+              <button type="button" disabled={busy || readOnly || first} onClick={() => onAction?.('up')} aria-label="上へ（優先して表示）" className="pd-btn-ghost">
                 <ArrowUp className="h-4 w-4" aria-hidden />
               </button>
-              <button type="button" disabled={busy || last} onClick={() => onAction('down')} aria-label="下へ" className="pd-btn-ghost">
+              <button type="button" disabled={busy || readOnly || last} onClick={() => onAction?.('down')} aria-label="下へ" className="pd-btn-ghost">
                 <ArrowDown className="h-4 w-4" aria-hidden />
               </button>
-              <button type="button" disabled={busy} onClick={() => onAction('duplicate')} aria-label="複製" className="pd-btn-ghost">
+              <button type="button" disabled={busy || readOnly} onClick={() => onAction?.('duplicate')} aria-label="複製" className="pd-btn-ghost">
                 <CopyIcon className="h-4 w-4" aria-hidden />
               </button>
-              <button type="button" disabled={busy} onClick={() => onAction('delete')} aria-label="削除" className="pd-btn-danger">
+              <button type="button" disabled={busy || readOnly} onClick={() => onAction?.('delete')} aria-label="削除" className="pd-btn-danger">
                 <Trash2 className="h-4 w-4" aria-hidden />
               </button>
             </div>
           </div>
         </div>
-        <div className="border-t border-[color:var(--line)] bg-[var(--surface-2)] p-3 lg:border-l lg:border-t-0">
+        <div ref={node => {
+          if (!node) return
+          if (readOnly) node.setAttribute('inert', '')
+          else node.removeAttribute('inert')
+        }} className={`border-t border-[color:var(--line)] bg-[var(--surface-2)] p-3 lg:border-l lg:border-t-0 ${readOnly ? 'pointer-events-none' : ''}`}>
           <PopupPreview popup={p} device="pc" height={300} />
         </div>
       </div>
     </article>
+  )
+}
+
+type ViewActions = {
+  onDaysChange: (days: 7 | 30 | 90) => void
+  onRetry: (days: 7 | 30 | 90) => void
+  onAddPopup: (kind: 'image' | 'cta') => void
+  onPopupAction: (popup: PopupDto, action: Action) => void
+  onRequestSiteDelete: () => void
+  onCancelConfirm: () => void
+  onConfirmPopupDelete: (popup: PopupDto) => void
+  onConfirmSiteDelete: () => void
+}
+
+type ViewProps = {
+  data: SiteDetail
+  days: 7 | 30 | 90
+  busy?: string | null
+  actionError?: { message: string; issues: string[] } | null
+  loadError?: boolean
+  switching?: boolean
+  confirm?: null | { kind: 'popup'; p: PopupDto } | { kind: 'site' }
+  toast?: ReactNode
+  actions?: ViewActions
+}
+
+// Presentation only. Without actions this renders a visibly disabled fixture preview;
+// the authenticated controller below remains the sole owner of reads and writes.
+export function SiteDetailView({ data, days, busy = null, actionError = null, loadError = false,
+  switching = false, confirm = null, toast = null, actions }: ViewProps) {
+  const interactive = Boolean(actions)
+  const { site, popups } = data
+  return (
+    <>
+      {toast}
+      {!interactive && <p className="pd-note mb-4" role="status">開発用の見本です。操作はできません。</p>}
+      <PageHeader
+        back={interactive ? { href: '/popup', label: 'サイト一覧' } : undefined}
+        title={site.name}
+        sub={
+          interactive ? <a href={site.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center underline-offset-2 hover:underline">{site.sourceUrl}</a> : <span>{site.sourceUrl}</span>
+        }
+        action={interactive ? <DaysSwitch value={days} onChange={actions!.onDaysChange} /> :
+          <div className="pd-soft inline-flex p-1" role="group" aria-label="集計の期間（見本）">
+            {([7, 30, 90] as const).map(d => <button key={d} type="button" disabled aria-pressed={days === d}
+              className={`min-h-[44px] min-w-[52px] rounded-[10px] px-3 text-[13px] font-bold ${days === d ? 'bg-[var(--paper)] text-[color:var(--ink)] shadow-[var(--shadow)]' : 'text-[color:var(--sub)]'}`}>{d}日</button>)}
+          </div>}
+      />
+
+      {actionError && (
+        <div className="pd-error mt-6 flex items-start gap-2" role="alert">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <div>
+            {actionError.message}
+            {actionError.issues.length > 0 && (
+              <ul className="mt-1 list-disc pl-5">
+                {actionError.issues.map((i) => (
+                  <li key={i}>{i}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {loadError ? (
+        <div className="mt-6">
+          <ErrorState message="集計を読み込めませんでした。少し待ってからもう一度お試しください。" onRetry={interactive ? () => actions!.onRetry(days) : undefined} />
+        </div>
+      ) : switching || data.days !== days ? (
+        <div className="mt-6">
+          <SkeletonDetail />
+        </div>
+      ) : (
+        <>
+          <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatTile label={`表示（${data.days}日）`} value={fmt(site.totals.impressions)} unit="回" />
+            <StatTile label="クリック" value={fmt(site.totals.clicks)} unit="回" />
+            <StatTile label="クリック率" value={site.totals.ctr === null ? '—' : site.totals.ctr.toFixed(1)} unit={site.totals.ctr === null ? undefined : '%'} />
+            <StatTile label="閉じた" value={fmt(site.totals.closes)} unit="回" />
+          </div>
+
+          <div className="mt-12">
+            <InstallCard site={site} readOnly={!interactive} />
+          </div>
+
+          <section className="mt-12" aria-labelledby="popup-list">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 id="popup-list" className="pd-h2">
+                  ポップアップ
+                </h2>
+                <p className="pd-label mt-1">1ページに出るのは1つだけです。条件に合う公開中のもののうち、上にあるものが優先されます。</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={!!busy || !interactive} onClick={() => actions?.onAddPopup('image')} className="pd-btn-outline">
+                  <ImagePlus className="h-4 w-4" aria-hidden />
+                  画像で作る
+                </button>
+                <button type="button" disabled={!!busy || !interactive} onClick={() => actions?.onAddPopup('cta')} className="pd-btn-outline">
+                  <Plus className="h-4 w-4" aria-hidden />
+                  一から作る
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 space-y-4">
+              {popups.length === 0 ? (
+                <EmptyState
+                  image="/popup/empty-sites.webp"
+                  title="ポップアップがありません"
+                  body="手持ちの画像から作るか、文言を入れて一から作れます。"
+                  action={
+                    <button type="button" className="pd-btn-outline" disabled={!interactive} onClick={() => actions?.onAddPopup('cta')}>
+                      一から作る
+                    </button>
+                  }
+                />
+              ) : (
+                popups.map((p, i) => (
+                  <PopupRow
+                    key={p.id}
+                    p={p}
+                    first={i === 0}
+                    last={i === popups.length - 1}
+                    busy={!!busy}
+                    readOnly={!interactive}
+                    onAction={(a) => actions?.onPopupAction(p, a)}
+                  />
+                ))
+              )}
+            </div>
+          </section>
+        </>
+      )}
+
+      <section className="mt-12 border-t border-[color:var(--line)] pt-6">
+        <button type="button" disabled={!!busy || !interactive} onClick={() => actions?.onRequestSiteDelete()} className="pd-btn-danger">
+          <Trash2 className="h-4 w-4" aria-hidden />
+          このサイトを削除する
+        </button>
+      </section>
+
+      {interactive && confirm?.kind === 'popup' && (
+        <ConfirmDialog
+          title={`「${confirm.p.name}」を削除しますか？`}
+          body="計測の数字も一緒に消え、元に戻せません。"
+          confirmLabel="削除する"
+          danger
+          onCancel={() => actions?.onCancelConfirm()}
+          onConfirm={() => actions?.onConfirmPopupDelete(confirm.p)}
+        />
+      )}
+      {interactive && confirm?.kind === 'site' && (
+        <ConfirmDialog
+          title={`「${site.name}」を削除しますか？`}
+          body="公開中のポップアップもすべて止まります。貼ってある設置タグは、外しておくことをおすすめします。"
+          confirmLabel="削除する"
+          danger
+          onCancel={() => actions?.onCancelConfirm()}
+          onConfirm={() => actions?.onConfirmSiteDelete()}
+        />
+      )}
+    </>
   )
 }
 
@@ -491,140 +660,16 @@ export default function SiteDetailClient({ initial, serverActorId, created }: {
       {loadError ? <ErrorState message="サイトを確認できませんでした。少し待ってからもう一度お試しください。" onRetry={() => void load(currentDays.current)} /> : <SkeletonDetail />}
     </div>
   )
-  const { site, popups } = data
-  return (
-    <div ref={container} className="pd-page mx-auto max-w-6xl px-4 py-8 md:px-8">
-      {toastEpoch === life.current.epoch && toast}
-      <PageHeader
-        back={{ href: '/popup', label: 'サイト一覧' }}
-        title={site.name}
-        sub={
-          <a href={site.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center underline-offset-2 hover:underline">
-            {site.sourceUrl}
-          </a>
-        }
-        action={<DaysSwitch value={days} onChange={setDays} />}
-      />
-
-      {actionError && (
-        <div className="pd-error mt-6 flex items-start gap-2" role="alert">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          <div>
-            {actionError.message}
-            {actionError.issues.length > 0 && (
-              <ul className="mt-1 list-disc pl-5">
-                {actionError.issues.map((i) => (
-                  <li key={i}>{i}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      )}
-
-      {loadError ? (
-        <div className="mt-6">
-          <ErrorState message="集計を読み込めませんでした。少し待ってからもう一度お試しください。" onRetry={() => void load(days)} />
-        </div>
-      ) : switching || data.days !== days ? (
-        <div className="mt-6">
-          <SkeletonDetail />
-        </div>
-      ) : (
-        <>
-          <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatTile label={`表示（${data.days}日）`} value={fmt(site.totals.impressions)} unit="回" />
-            <StatTile label="クリック" value={fmt(site.totals.clicks)} unit="回" />
-            <StatTile label="クリック率" value={site.totals.ctr === null ? '—' : site.totals.ctr.toFixed(1)} unit={site.totals.ctr === null ? undefined : '%'} />
-            <StatTile label="閉じた" value={fmt(site.totals.closes)} unit="回" />
-          </div>
-
-          <div className="mt-12">
-            <InstallCard site={site} />
-          </div>
-
-          <section className="mt-12" aria-labelledby="popup-list">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <h2 id="popup-list" className="pd-h2">
-                  ポップアップ
-                </h2>
-                <p className="pd-label mt-1">1ページに出るのは1つだけです。条件に合う公開中のもののうち、上にあるものが優先されます。</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={!!busy} onClick={() => void addPopup('image')} className="pd-btn-outline">
-                  <ImagePlus className="h-4 w-4" aria-hidden />
-                  画像で作る
-                </button>
-                <button type="button" disabled={!!busy} onClick={() => void addPopup('cta')} className="pd-btn-outline">
-                  <Plus className="h-4 w-4" aria-hidden />
-                  一から作る
-                </button>
-              </div>
-            </div>
-            <div className="mt-4 space-y-4">
-              {popups.length === 0 ? (
-                <EmptyState
-                  image="/popup/empty-sites.webp"
-                  title="ポップアップがありません"
-                  body="手持ちの画像から作るか、文言を入れて一から作れます。"
-                  action={
-                    <button type="button" className="pd-btn-outline" onClick={() => void addPopup('cta')}>
-                      一から作る
-                    </button>
-                  }
-                />
-              ) : (
-                popups.map((p, i) => (
-                  <PopupRow
-                    key={p.id}
-                    p={p}
-                    first={i === 0}
-                    last={i === popups.length - 1}
-                    busy={!!busy}
-                    onAction={(a) => (a === 'delete' ? (life.current.busyToken === null && setConfirm({ kind: 'popup', p })) : void run(p, a))}
-                  />
-                ))
-              )}
-            </div>
-          </section>
-        </>
-      )}
-
-      <section className="mt-12 border-t border-[color:var(--line)] pt-6">
-        <button type="button" disabled={!!busy} onClick={() => { if (life.current.busyToken === null) setConfirm({ kind: 'site' }) }} className="pd-btn-danger">
-          <Trash2 className="h-4 w-4" aria-hidden />
-          このサイトを削除する
-        </button>
-      </section>
-
-      {confirm?.kind === 'popup' && (
-        <ConfirmDialog
-          title={`「${confirm.p.name}」を削除しますか？`}
-          body="計測の数字も一緒に消え、元に戻せません。"
-          confirmLabel="削除する"
-          danger
-          onCancel={() => setConfirm(null)}
-          onConfirm={() => {
-            const p = confirm.p
-            setConfirm(null)
-            void run(p, 'delete')
-          }}
-        />
-      )}
-      {confirm?.kind === 'site' && (
-        <ConfirmDialog
-          title={`「${site.name}」を削除しますか？`}
-          body="公開中のポップアップもすべて止まります。貼ってある設置タグは、外しておくことをおすすめします。"
-          confirmLabel="削除する"
-          danger
-          onCancel={() => setConfirm(null)}
-          onConfirm={() => {
-            setConfirm(null)
-            void deleteSite()
-          }}
-        />
-      )}
-    </div>
-  )
+  return <div ref={container} className="pd-page mx-auto max-w-6xl px-4 py-8 md:px-8"><SiteDetailView data={data} days={days} busy={busy} actionError={actionError} loadError={loadError}
+    switching={switching} confirm={confirm} toast={toastEpoch === life.current.epoch ? toast : null}
+    actions={{
+      onDaysChange: setDays,
+      onRetry: d => { void load(d) },
+      onAddPopup: kind => { void addPopup(kind) },
+      onPopupAction: (p, a) => { if (a === 'delete') { if (life.current.busyToken === null) setConfirm({ kind: 'popup', p }) } else void run(p, a) },
+      onRequestSiteDelete: () => { if (life.current.busyToken === null) setConfirm({ kind: 'site' }) },
+      onCancelConfirm: () => setConfirm(null),
+      onConfirmPopupDelete: p => { setConfirm(null); void run(p, 'delete') },
+      onConfirmSiteDelete: () => { setConfirm(null); void deleteSite() },
+    }} /></div>
 }

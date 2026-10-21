@@ -13,7 +13,7 @@ import PopupShellFrame from '@/components/popup/PopupShellFrame'
 import { POPUP_NAV } from '@/lib/popup/nav'
 import { ErrorState, ForbiddenState, ProcessingSteps, SkeletonDetail, SkeletonSiteCards } from '@/components/popup/ui'
 import PopupTool from '../../Tool'
-import SiteDetailClient from '../../sites/[id]/SiteDetailClient'
+import SiteDetailPreview from './SiteDetailPreview'
 import EditClient from '../../edit/[id]/EditClient'
 
 export const dynamic = 'force-dynamic'
@@ -35,7 +35,7 @@ function renderState(s: string, wrap: (node: React.ReactNode) => React.ReactNode
     case 'home-empty':
       return <PopupTool initialSites={[]} />
     case 'site':
-      return <SiteDetailClient initial={DETAIL} created={false} />
+      return <SiteDetailPreview initial={DETAIL} />
     case 'edit':
       return <EditClient initialPopup={POPUPS[0]} site={EDIT_SITE} />
     case 'forbidden':
