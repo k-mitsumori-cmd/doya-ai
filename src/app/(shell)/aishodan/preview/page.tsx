@@ -11,7 +11,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import OrgSwitcher, { clearSelectedOrg, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
+import OrgSwitcher, { type Membership } from '@/components/org/OrgSwitcher'
+import { useOptionalOrganizationWorkspace, useOrganizationWorkspace, useWorkspaceProof } from '@/components/org/OrganizationWorkspaceBoundary'
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { fetchOrgJson } from '@/lib/org-fetch'
 import { SESSION_STATUS_LABELS } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
@@ -38,8 +40,16 @@ interface SessionRow {
 }
 
 export default function AishodanPreviewPage() {
+  const workspace = useOptionalOrganizationWorkspace()
+  if (!workspace) return <main className="p-8"><SignInReturnLink fallback="/aishodan/preview" className="text-blue-700 underline">ログインして練習モードを開く</SignInReturnLink></main>
+  return <AishodanPreviewWorkspace />
+}
+
+function AishodanPreviewWorkspace() {
   // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
   const uiNext = useUiNext()
+  const workspace = useOrganizationWorkspace()
+  const proof = useWorkspaceProof()
   const [loading, setLoading] = useState(true)
   const [needsLogin, setNeedsLogin] = useState(false)
   const [org, setOrg] = useState<{ slug: string; name: string; role: string } | null>(null)
@@ -56,6 +66,7 @@ export default function AishodanPreviewPage() {
   const loadVersion = useRef(0)
 
   const [starting, setStarting] = useState(false)
+  const [operationUnknown, setOperationUnknown] = useState(false)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -71,30 +82,18 @@ export default function AishodanPreviewPage() {
     setSessionCursor(null)
     setLoadingMore(null)
     try {
-      const r = await fetch('/api/aishodan/organizations')
-      if (r.status === 401) {
-        if (version === loadVersion.current) setNeedsLogin(true)
-        return
-      }
-      if (!r.ok) throw new Error('組織一覧を取得できませんでした')
-      let d = await r.json()
-      const memberships = Array.isArray(d.memberships) ? d.memberships : []
-      if (reconcileSelectedOrg('aishodan', memberships)) {
-        const scoped = await fetch(withOrg('aishodan', '/api/aishodan/organizations'))
-        if (!scoped.ok) throw new Error('選択中の組織を確認できませんでした')
-        const scopedData = await scoped.json()
-        if (scopedData?.current) d = scopedData
-        else clearSelectedOrg('aishodan')
-      }
+      if (!proof.current()) return
+      const d = { current: proof.organization }
+      const memberships: Membership[] = workspace.scope.kind === 'ready' ? workspace.scope.memberships : []
       if (d.current) {
         const [pr, sr] = await Promise.all([
-          fetchOrgJson(withOrg('aishodan', '/api/aishodan/products')),
+          fetchOrgJson(proof.api('/api/aishodan/products')),
           // 練習の商談だけを見る
-          fetchOrgJson(withOrg('aishodan', '/api/aishodan/sessions?scope=preview')),
+          fetchOrgJson(proof.api('/api/aishodan/sessions?scope=preview')),
         ])
         const productPage = parseAishodanPage<Product>(pr, 'products', 100)
         const sessionPage = parseAishodanPage<SessionRow>(sr, 'sessions', 200)
-        if (version !== loadVersion.current) return
+        if (version !== loadVersion.current || !proof.current()) return
         setOrg(d.current)
         setMemberships(memberships)
         setProducts(productPage.items)
@@ -105,15 +104,15 @@ export default function AishodanPreviewPage() {
         setSessionTotal(sessionPage.total)
         const scenarios = productPage.items.flatMap((p) => p.scenarios.map((s) => s.id))
         setScenarioId((prev) => scenarios.includes(prev) ? prev : scenarios[0] || '')
-      } else if (version === loadVersion.current) {
+      } else if (version === loadVersion.current && proof.current()) {
         setMemberships(memberships)
       }
     } catch (e) {
-      if (version === loadVersion.current) notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (version === loadVersion.current && proof.current()) notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
-      if (version === loadVersion.current) setLoading(false)
+      if (version === loadVersion.current && proof.current()) setLoading(false)
     }
-  }, [])
+  }, [proof, workspace.scope])
 
   async function loadMore(kind: 'products' | 'sessions') {
     const cursor = kind === 'products' ? productCursor : sessionCursor
@@ -125,8 +124,8 @@ export default function AishodanPreviewPage() {
       const url = kind === 'products'
         ? `/api/aishodan/products?cursor=${encodeURIComponent(cursor)}`
         : `/api/aishodan/sessions?scope=preview&cursor=${encodeURIComponent(cursor)}`
-      const data = await fetchOrgJson(withOrg('aishodan', url))
-      if (version !== loadVersion.current) return
+      const data = await fetchOrgJson(proof.api(url))
+      if (version !== loadVersion.current || !proof.current()) return
       if (kind === 'products') {
         const page = parseAishodanPage<Product>(data, kind, 100)
         setProducts(appendAishodanPage(products, page, productTotal))
@@ -138,34 +137,47 @@ export default function AishodanPreviewPage() {
         setSessionCursor(page.nextCursor)
       }
     } catch (e) {
-      if (version === loadVersion.current) notifyError(setError, e instanceof Error ? e.message : '続きを取得できませんでした')
+      if (version === loadVersion.current && proof.current()) notifyError(setError, e instanceof Error ? e.message : '続きを取得できませんでした')
     } finally {
-      if (version === loadVersion.current) setLoadingMore(null)
+      if (version === loadVersion.current && proof.current()) setLoadingMore(null)
     }
   }
 
   useEffect(() => {
     void load()
+    const versionRef = loadVersion
+    return () => { versionRef.current++ }
   }, [load])
 
+  const operationProof = useRef(proof)
+  useEffect(() => {
+    if (operationProof.current === proof) return
+    operationProof.current = proof
+    if (!starting) return
+    setStarting(false)
+    setOperationUnknown(true)
+    setError('直前の練習開始結果を確認できません。商談の記録を確認してください。')
+  }, [proof, starting])
+
   const startPractice = useCallback(async () => {
-    if (!scenarioId) return
+    if (!scenarioId || !proof.current()) return
     setStarting(true)
     setError('')
     try {
-      const r = await fetch(withOrg('aishodan', `/api/aishodan/scenarios/${scenarioId}/preview`), {
+      const r = await fetch(proof.api(`/api/aishodan/scenarios/${scenarioId}/preview`), {
         method: 'POST',
       })
       const d = await r.json()
       if (!r.ok) throw new Error(d?.error || '練習を開始できませんでした')
+      if (!proof.current()) return
       // ⚠️ 別タブで開く。この画面は残しておき、話した後にすぐログを見返せるようにする。
       window.open(`/m/${d.token}`, '_blank', 'noopener')
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '練習を開始できませんでした')
+      if (proof.current()) notifyError(setError, e instanceof Error ? e.message : '練習を開始できませんでした')
     } finally {
-      setStarting(false)
+      if (proof.current()) setStarting(false)
     }
-  }, [scenarioId])
+  }, [scenarioId, proof])
 
   if (loading && uiNext) {
     return <div className="mx-auto max-w-4xl p-4 sm:p-6" aria-busy="true" aria-label="読み込み中"><Skeleton lines={5} height={18} /></div>
@@ -186,12 +198,12 @@ export default function AishodanPreviewPage() {
         <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-200">
           <AishodanHeading className="text-xl font-bold text-slate-900">ドヤAI商談</AishodanHeading>
           <p className="mt-2 text-sm text-slate-600 font-semibold">ご利用にはログインが必要です。</p>
-          <a
-            href={`/auth/signin?callbackUrl=${encodeURIComponent('/aishodan/preview')}`}
+          <SignInReturnLink
+            fallback={proof.href('/aishodan/preview')}
             className="mt-5 inline-block w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-bold text-white"
           >
             ログインする
-          </a>
+          </SignInReturnLink>
         </div>
       </div>
     )
@@ -205,7 +217,7 @@ export default function AishodanPreviewPage() {
     return (
       <div className={uiNext ? 'flex flex-col items-center justify-center gap-4 px-4 py-16' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
         <p className="text-slate-600">先に商材を取り込んでください。</p>
-        <Link href="/aishodan" className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードへ</Link>
+        <Link href={proof.href('/aishodan')} className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードへ</Link>
       </div>
     )
   }
@@ -217,7 +229,7 @@ export default function AishodanPreviewPage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4">
           <div className="min-w-0">
-            <Link href="/aishodan" className="text-xs text-slate-500 hover:underline font-semibold">← ダッシュボード</Link>
+            <Link href={proof.href('/aishodan')} className="text-xs text-slate-500 hover:underline font-semibold">← ダッシュボード</Link>
             <AishodanHeading className="text-lg font-bold text-slate-900">練習モード</AishodanHeading>
           </div>
           <div className="flex items-center gap-3">
@@ -225,7 +237,7 @@ export default function AishodanPreviewPage() {
               service="aishodan"
               memberships={memberships}
               currentSlug={org.slug}
-              onChange={() => void load()}
+              onChange={workspace.switchTo}
             />
           </div>
         </div>
@@ -233,6 +245,10 @@ export default function AishodanPreviewPage() {
 
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
+        {operationUnknown && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          練習が後から始まる場合があります。記録を確認してから、次の操作を選んでください。
+          <button type="button" onClick={() => void load()} className="ml-2 font-bold text-blue-700 underline">最新の記録を読み込む</button>
+        </div>}
 
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-base font-bold text-slate-900">自分で商談を受けてみる</h2>
@@ -248,7 +264,7 @@ export default function AishodanPreviewPage() {
           {scenarios.length === 0 ? (
             <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900 font-semibold">
               {productCursor ? '表示中の商材にシナリオがありません。続きを読み込んでください。' : 'まだ商材がありません。'}
-              <Link href="/aishodan" className="ml-1 font-bold underline">ダッシュボード</Link>
+              <Link href={proof.href('/aishodan')} className="ml-1 font-bold underline">ダッシュボード</Link>
               でサービスURLを取り込んでください。
             </p>
           ) : (
@@ -278,7 +294,7 @@ export default function AishodanPreviewPage() {
                 </button>
                 {scenarioId && (
                   <Link
-                    href={`/aishodan/scenarios/${scenarioId}`}
+                    href={proof.href(`/aishodan/scenarios/${scenarioId}`)}
                     className="rounded-lg border border-slate-300 px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 font-semibold"
                   >
                     シナリオを直す
@@ -302,7 +318,7 @@ export default function AishodanPreviewPage() {
               {sessions.map((s) => (
                 <Link
                   key={s.id}
-                  href={`/aishodan/sessions/${s.id}`}
+                  href={proof.href(`/aishodan/sessions/${s.id}`)}
                   className="flex items-center justify-between gap-3 py-3 hover:bg-slate-50"
                 >
                   <div className="min-w-0">

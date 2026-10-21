@@ -2,16 +2,19 @@
 
 import Link from 'next/link'
 import { OrganizationPricingPlans } from '@/components/OrganizationPricingPlans'
+import { useOptionalOrganizationWorkspace } from '@/components/org/OrganizationWorkspaceBoundary'
 
 // ⚠️ 料金は統一プラン。サービスごとに個別課金しないこと。
 //    金額の正本は src/lib/unified-plan.ts と UnifiedPricingPlans。ここには書かない。
 export default function AishodanPricingPage() {
+  const workspace = useOptionalOrganizationWorkspace()
+  const proof = workspace?.scope.kind === 'ready' ? workspace.scope.proof : undefined
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-5xl px-6 py-12">
         <div className="mb-10 text-center">
           <Link
-            href="/aishodan"
+            href={proof?.href('/aishodan') || '/aishodan'}
             className="mb-4 inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-slate-700"
           >
             <span className="material-symbols-outlined text-lg font-semibold">arrow_back</span>
@@ -22,7 +25,7 @@ export default function AishodanPricingPage() {
             無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。
           </p>
         </div>
-        <OrganizationPricingPlans serviceId="aishodan" />
+        <OrganizationPricingPlans serviceId="aishodan" workspaceProof={proof} />
       </div>
     </div>
   )

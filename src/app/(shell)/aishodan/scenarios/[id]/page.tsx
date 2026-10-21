@@ -9,9 +9,10 @@
 // ⚠️ ガードレール（価格の扱い・触れない話題・根拠が無いときの挙動）は、
 //    そのまま相手に届く発言を規定する。ここは必ず人が確認できる形で出す。
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
+import { useOptionalOrganizationWorkspace, useWorkspaceProof } from '@/components/org/OrganizationWorkspaceBoundary'
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { useParams } from 'next/navigation'
 import { PRICE_POLICY_LABELS, type Guardrails, type Icp, type Persona, type Phase, type PricePolicy, type ProductProfile, type Slot } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
@@ -35,43 +36,66 @@ interface ScenarioData {
 }
 
 export default function AishodanScenarioPage() {
+  const workspace = useOptionalOrganizationWorkspace()
+  if (!workspace) return <main className="p-8"><SignInReturnLink fallback="/aishodan" className="text-blue-700 underline">ログインしてシナリオを開く</SignInReturnLink></main>
+  return <AishodanScenarioWorkspace />
+}
+
+function AishodanScenarioWorkspace() {
   // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
   const uiNext = useUiNext()
+  const proof = useWorkspaceProof()
   const params = useParams<{ id: string }>()
   const id = params?.id
   const [s, setS] = useState<ScenarioData | null>(null)
   const [loading, setLoading] = useState(true)
+  const loadVersion = useRef(0)
   const [saving, setSaving] = useState(false)
+  const [operationUnknown, setOperationUnknown] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     if (!id) return
+    const version = ++loadVersion.current
     setLoading(true)
+    setError('')
     try {
-      await ensureSelectedOrg('aishodan')
-      const r = await fetch(withOrg('aishodan', `/api/aishodan/scenarios/${id}`))
+      const r = await fetch(proof.api(`/api/aishodan/scenarios/${id}`))
       const d = await r.json()
       if (!r.ok) throw new Error(d?.error || '読み込みに失敗しました')
+      if (version !== loadVersion.current || !proof.current()) return
       setS(d.scenario)
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (version === loadVersion.current && proof.current()) notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
-      setLoading(false)
+      if (version === loadVersion.current && proof.current()) setLoading(false)
     }
-  }, [id])
+  }, [id, proof])
 
   useEffect(() => {
     void load()
+    const versionRef = loadVersion
+    return () => { versionRef.current++ }
   }, [load])
 
+  const operationProof = useRef(proof)
+  useEffect(() => {
+    if (operationProof.current === proof) return
+    operationProof.current = proof
+    if (!saving) return
+    setSaving(false)
+    setOperationUnknown(true)
+    setError('直前の保存結果を確認できません。シナリオを再読み込みして確認してください。')
+  }, [proof, saving])
+
   async function save() {
-    if (!id || !s) return
+    if (!id || !s || !proof.current()) return
     setSaving(true)
     setMessage('')
     setError('')
     try {
-      const r = await fetch(withOrg('aishodan', `/api/aishodan/scenarios/${id}`), {
+      const r = await fetch(proof.api(`/api/aishodan/scenarios/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -88,13 +112,15 @@ export default function AishodanScenarioPage() {
         }),
       })
       const d = await r.json()
+      if (!proof.current()) return
       if (!r.ok) throw new Error(d?.error || '保存に失敗しました')
+      if (!proof.current()) return
       setS(d.scenario)
       setMessage('保存しました')
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '保存に失敗しました')
+      if (proof.current()) notifyError(setError, e instanceof Error ? e.message : '保存に失敗しました')
     } finally {
-      setSaving(false)
+      if (proof.current()) setSaving(false)
     }
   }
 
@@ -118,7 +144,7 @@ export default function AishodanScenarioPage() {
     return (
       <div className={uiNext ? 'flex flex-col items-center justify-center gap-4 px-4 py-16' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
         <p className="text-slate-600">{error || 'シナリオが見つかりません'}</p>
-        <Link href="/aishodan" className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードに戻る</Link>
+        <Link href={proof.href('/aishodan')} className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードに戻る</Link>
       </div>
     )
   }
@@ -131,13 +157,13 @@ export default function AishodanScenarioPage() {
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <Link href="/aishodan" className="text-xs text-slate-500 hover:underline font-semibold">← ダッシュボード</Link>
+            <Link href={proof.href('/aishodan')} className="text-xs text-slate-500 hover:underline font-semibold">← ダッシュボード</Link>
             <AishodanHeading className="truncate text-base font-bold text-slate-900">{s.name}</AishodanHeading>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {/* ⚠️ 直したら即その場で試せることが、品質調整を回す上で効く */}
             <Link
-              href="/aishodan/preview"
+              href={proof.href('/aishodan/preview')}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold"
             >
               試す
@@ -154,6 +180,10 @@ export default function AishodanScenarioPage() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
+        {operationUnknown && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          保存が後から完了する場合があります。内容を確認してから、次の操作を選んでください。
+          <button type="button" onClick={() => void load()} className="ml-2 font-bold text-blue-700 underline">最新のシナリオを読み込む</button>
+        </div>}
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
         {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">{message}</div>}
 

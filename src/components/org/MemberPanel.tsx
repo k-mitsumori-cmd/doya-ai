@@ -11,6 +11,7 @@
 
 import { useOrgMemberManagement } from '@/lib/use-org-member-management'
 import type { OrganizationMemberRow, MemberService } from '@/lib/org-member-response'
+import type { WorkspaceProof } from '@/lib/organization-workspace-selection'
 export type MemberRow = OrganizationMemberRow
 
 const ROLE_LABEL: Record<string, string> = {
@@ -28,11 +29,12 @@ export interface MemberPanelProps {
   service: MemberService
   /** 招待された人が何を扱えるようになるかの説明 */
   description: string
+  workspaceProof?: WorkspaceProof
 }
 
-export default function MemberPanel({ basePath, service, description }: MemberPanelProps) {
+export default function MemberPanel({ basePath, service, description, workspaceProof }: MemberPanelProps) {
   const {members,myRole,myUserId,loading,email,role,busy,inviteUrl,error,notice,loaded,canManage,unknown,
-    setEmail,setRole,invite,changeRole,remove,load,session}=useOrgMemberManagement(service,basePath)
+    setEmail,setRole,invite,changeRole,remove,load,session}=useOrgMemberManagement(service,basePath,workspaceProof)
   const disabled=!!busy||unknown||!loaded
 
   return (

@@ -9,8 +9,17 @@
 
 import MemberPanel from '@/components/org/MemberPanel'
 import AishodanHeading from '@/components/aishodan/AishodanHeading'
+import SignInReturnLink from '@/components/SignInReturnLink'
+import { useOptionalOrganizationWorkspace, useWorkspaceProof } from '@/components/org/OrganizationWorkspaceBoundary'
 
 export default function AishodanSettingsPage() {
+  const workspace = useOptionalOrganizationWorkspace()
+  if (!workspace) return <main className="p-8"><SignInReturnLink fallback="/aishodan/settings" className="text-blue-700 underline">ログインして設定を開く</SignInReturnLink></main>
+  return <AishodanSettingsWorkspace />
+}
+
+function AishodanSettingsWorkspace() {
+  const proof = useWorkspaceProof()
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <div>
@@ -23,6 +32,7 @@ export default function AishodanSettingsPage() {
       <MemberPanel
         basePath="/api/aishodan"
         service="aishodan"
+        workspaceProof={proof}
         description="招待した方は、この組織の商材・商談シナリオと商談ログを扱えるようになります。"
       />
     </main>

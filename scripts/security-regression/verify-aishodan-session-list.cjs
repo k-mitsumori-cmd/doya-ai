@@ -34,8 +34,7 @@ async function run(response) {
     setNextCursor: (value) => { cursor = value; },
     setTotal: (value) => { total = value; },
     parseAishodanPage,
-    withOrg: (_service, path) => path,
-    ensureSelectedOrg: async () => {},
+    proof: { api: path => path, current: () => true },
     fetch: async () => response,
     Error,
   });

@@ -8,6 +8,8 @@ import AishodanAppLayout from '@/components/aishodan/AishodanAppLayout'
 import AishodanShellFrame from '@/components/aishodan/AishodanShellFrame'
 import { isShellEnabled } from '@/lib/ui-shell'
 import { FAQ } from './lp-data'
+import { Suspense } from 'react'
+import { OrganizationWorkspaceBoundary } from '@/components/org/OrganizationWorkspaceBoundary'
 
 // ⚠️ これが無いと canonical がルートlayoutの既定（サイトトップ）のままになり、
 //    検索エンジンからは「トップページの重複」に見えて一切拾われない。
@@ -38,7 +40,7 @@ export default async function AishodanLayout({ children }: { children: React.Rea
       {/* ⚠️ ログイン後はサイドバー付きのアプリ枠で包む（reference/06-ui-patterns.md §7）。
            ToolSwitcherMenu はサイドバーの中にある。独自ヘッダーを作らないこと。 */}
       {/* 共通の枠（UI_SHELL_SERVICES に aishodan）が有効なときは ToolFrame だけ。枠そのものは (shell)/layout.tsx が出す */}
-      {!session?.user ? children : isShellEnabled('aishodan') ? <AishodanShellFrame>{children}</AishodanShellFrame> : <AishodanAppLayout>{children}</AishodanAppLayout>}
+      {!session?.user ? children : <Suspense fallback={<div role="status">組織を確認しています…</div>}><OrganizationWorkspaceBoundary>{isShellEnabled('aishodan') ? <AishodanShellFrame>{children}</AishodanShellFrame> : <AishodanAppLayout>{children}</AishodanAppLayout>}</OrganizationWorkspaceBoundary></Suspense>}
     </>
   )
 }

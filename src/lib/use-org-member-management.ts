@@ -6,21 +6,25 @@ import { QuoteWorkspaceContext } from '@/lib/quote/workspace-context'
 import { parseQuoteOrganizations } from '@/lib/quote/organization-response'
 import { requestOrgJson, orgErrorMessage } from '@/lib/org-client-response'
 import { MEMBER_ROLE_RANK, normalizeMemberInvitation, parseOrganizationMembers, parseMemberInvitationAcknowledgement, isMemberMutationAcknowledgement, type OrganizationMemberRow, type MemberService } from '@/lib/org-member-response'
+import type { WorkspaceProof } from '@/lib/organization-workspace-selection'
 
 type Pending = {kind:'invite'|'role'|'remove';id?:string;email?:string;role?:string;beforeIds:Set<string>}
 const fresh=()=>({members:[] as OrganizationMemberRow[],myRole:'member',myUserId:null as string|null,email:'',role:'member',inviteUrl:'',inviteMemberId:null as string|null,notice:'',org:null as string|null})
-export function useOrgMemberManagement(service:MemberService,basePath:string) {
+export function useOrgMemberManagement(service:MemberService,basePath:string,workspaceProof?:WorkspaceProof) {
   const {data:session,status}=useSession()
   const lastActor=useRef('')
   if(status==='authenticated')lastActor.current=session?.user?.id||''
   if(status==='unauthenticated')lastActor.current=''
   const actor=status==='loading'?lastActor.current:session?.user?.id||''
-  const selection=getSelectedOrg(service)
-  const holder=useRef<{service:MemberService;context:QuoteWorkspaceContext}|null>(null)
-  if(!holder.current||holder.current.service!==service){holder.current?.context.invalidate();holder.current={service,context:new QuoteWorkspaceContext(()=>getSelectedOrg(service),service)}}
+  const selection=workspaceProof?.organization.slug??getSelectedOrg(service)
+  const proofRef=useRef(workspaceProof);proofRef.current=workspaceProof
+  const proofIdentity=workspaceProof?JSON.stringify([workspaceProof.actorId,workspaceProof.organization.id,workspaceProof.organization.slug]):null
+  const holder=useRef<{service:MemberService;proofIdentity:string|null;context:QuoteWorkspaceContext}|null>(null)
+  if(!holder.current||holder.current.service!==service||holder.current.proofIdentity!==proofIdentity){holder.current?.context.invalidate();holder.current={service,proofIdentity,context:new QuoteWorkspaceContext(()=>{const proof=proofRef.current;return proof?(proof.current()?proof.organization.slug:null):getSelectedOrg(service)},service)}}
   const context=holder.current.context
-  const epoch=context.update({actor,selection,status})
-  const identity=JSON.stringify([actor,service,selection])
+  const proofValid=!workspaceProof||workspaceProof.current()&&workspaceProof.actorId===actor
+  const epoch=context.update({actor,selection,status:proofValid?status:'loading'})
+  const identity=JSON.stringify([actor,service,selection,proofIdentity])
   const scope=JSON.stringify([identity,epoch])
   const lastIdentity=useRef(identity)
   const state=useRef(fresh())
@@ -41,19 +45,23 @@ export function useOrgMemberManagement(service:MemberService,basePath:string) {
     if(basePath!==`/api/${service}`){setLoading(false);setError('メンバー管理の画面を確認してください');return}
     const ticket=context.begin('members-read',true,epoch)
     if(!ticket)return
+    const active=()=>ticket.current()&&(!workspaceProof||workspaceProof.current())
     setLoading(true);setReady(null);setError('')
     try{
-      const orgs=await requestOrgJson(service,`${basePath}/organizations`,selection,{signal:ticket.signal})
-      if(!ticket.current())return
-      if(!orgs.res.ok)throw new Error(orgErrorMessage(orgs.data,orgs.res.status,false))
-      const org=parseQuoteOrganizations(orgs.data).current
+      const org=workspaceProof?workspaceProof.organization:(await (async()=>{
+        const orgs=await requestOrgJson(service,`${basePath}/organizations`,selection,{signal:ticket.signal})
+        if(!active())return null
+        if(!orgs.res.ok)throw new Error(orgErrorMessage(orgs.data,orgs.res.status,false))
+        return parseQuoteOrganizations(orgs.data).current
+      })())
+      if(!active())return
       if(!org||selection!==null&&org.slug!==selection)throw new Error('組織の所属を確認できませんでした')
       // Default organizations can also change server-side without a storage event.
       if(state.current.org!==null&&state.current.org!==org.slug){state.current=fresh();pending.current=null;changed();return}
       if(!context.verifyOrganization(epoch,org.slug))return
       state.current.org=org.slug
       const {res,data}=await requestOrgJson(service,`${basePath}/members`,org.slug,{signal:ticket.signal})
-      if(!ticket.current())return
+      if(!active())return
       if(!res.ok)throw new Error(orgErrorMessage(data,res.status,false))
       const parsed=parseOrganizationMembers(data,actor,org.role)
       Object.assign(state.current,parsed)
@@ -73,11 +81,11 @@ export function useOrgMemberManagement(service:MemberService,basePath:string) {
         }
       }
       setReady(scope)
-    }catch(e){if(ticket.current())setError(e instanceof Error?e.message:'メンバー一覧を取得できませんでした')}
-    finally{if(ticket.current()){setLoading(false);redraw(n=>n+1)}ticket.end()}
-  },[actor,basePath,changed,context,epoch,scope,selection,service])
+    }catch(e){if(active())setError(e instanceof Error?e.message:'メンバー一覧を取得できませんでした')}
+    finally{if(active()){setLoading(false);redraw(n=>n+1)}ticket.end()}
+  },[actor,basePath,changed,context,epoch,scope,selection,service,workspaceProof])
   useEffect(()=>{void load()},[load])
-  const loaded=ready===scope&&context.isCurrent(epoch)
+  const loaded=ready===scope&&context.isCurrent(epoch)&&proofValid
   const currentBusy=busy?.scope===scope&&context.isCurrent(epoch)?busy.key:null
   const canManage=loaded&&MEMBER_ROLE_RANK[state.current.myRole]>=MEMBER_ROLE_RANK.admin
   const mutate=async(kind:Pending['kind'],id?:string,next?:string)=>{
@@ -92,6 +100,7 @@ export function useOrgMemberManagement(service:MemberService,basePath:string) {
     }
     const ticket=context.begin('member-mutation',false,epoch)
     if(!ticket)return
+    const active=()=>ticket.current()&&(!workspaceProof||workspaceProof.current())
     const intent:Pending={kind,id,email:sent?.email,role:sent?.role||next,beforeIds:new Set(state.current.members.map(m=>m.id))}
     pending.current=intent;setBusy({scope,key:kind==='invite'?'invite':`${kind==='role'?'role':'member'}-${id}`});setError('');state.current.notice=''
     if(kind==='invite'){state.current.inviteUrl='';state.current.inviteMemberId=null}
@@ -99,7 +108,7 @@ export function useOrgMemberManagement(service:MemberService,basePath:string) {
       const method=kind==='invite'?'POST':kind==='role'?'PATCH':'DELETE'
       const {res,data}=await requestOrgJson(service,kind==='invite'?`${basePath}/members`:`${basePath}/members/${encodeURIComponent(id!)}`,ticket.organization,
         {method,headers:{'Content-Type':'application/json'},...(kind==='remove'?{}:{body:JSON.stringify(sent||{role:next})}),signal:ticket.signal})
-      if(!ticket.current())return
+      if(!active())return
       if(!res.ok){if(res.status<500)pending.current=null;if([401,403].includes(res.status))setReady(null);throw new Error(orgErrorMessage(data,res.status,true))}
       if(kind==='invite'&&sent){
         const ack=parseMemberInvitationAcknowledgement(data,sent,service,window.location.origin)
@@ -116,8 +125,8 @@ export function useOrgMemberManagement(service:MemberService,basePath:string) {
       }
       pending.current=null
       await load() // Read failure must not turn a confirmed mutation into an unconfirmed one.
-    }catch(e){if(ticket.current())setError(e instanceof Error?e.message:'操作結果を確認できませんでした')}
-    finally{if(ticket.current()){setBusy(value=>value?.scope===scope?null:value);redraw(n=>n+1)}ticket.end()}
+    }catch(e){if(active())setError(e instanceof Error?e.message:'操作結果を確認できませんでした')}
+    finally{if(active()){setBusy(value=>value?.scope===scope?null:value);redraw(n=>n+1)}ticket.end()}
   }
   return {
     members:loaded?state.current.members:[],myRole:loaded?state.current.myRole:'member',myUserId:loaded?state.current.myUserId:null,

@@ -1,11 +1,11 @@
 'use client'
 
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { usePathname } from 'next/navigation'
-import { CheckoutButton } from '@/components/CheckoutButton'
+import { CheckoutButton, type CheckoutActionGuard } from '@/components/CheckoutButton'
 import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallout'
 import { getServiceById, getPublicServices } from '@/lib/services'
 import { higherPlan, tierFrom } from '@/lib/plan-utils'
@@ -18,6 +18,37 @@ import {
 
 const BRAND = '#0066ff'
 const ACCENT = '#ff1e72'
+
+export interface PortalNavigationGuard {
+  identity: string
+  current: () => boolean
+  verify: (signal: AbortSignal) => Promise<boolean>
+  prepareReturn: (navigationId: string) => boolean
+}
+
+export function GuardedPortalLink({ guard }: { guard: PortalNavigationGuard }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(false)
+  const controller = useRef<AbortController | null>(null)
+  useEffect(() => () => { controller.current?.abort(); controller.current = null }, [guard.identity])
+  const open = async () => {
+    if (controller.current || !guard.current()) return
+    const own = new AbortController(); controller.current = own
+    setBusy(true); setError(false)
+    try {
+      if (!await guard.verify(own.signal) || own.signal.aborted || !guard.current()) throw new Error('scope changed')
+      const navigationId = crypto.randomUUID()
+      if (!guard.prepareReturn(navigationId) || own.signal.aborted || !guard.current()) throw new Error('return unavailable')
+      const returnTo = `/aishodan/billing-return/${navigationId}`
+      window.location.assign(`/api/stripe/portal?returnTo=${encodeURIComponent(returnTo)}`)
+    } catch { if (!own.signal.aborted && guard.current()) setError(true) }
+    finally { if (controller.current === own) { controller.current = null; own.abort(); setBusy(false) } }
+  }
+  return <><button type="button" onClick={() => void open()} disabled={busy || !guard.current()}
+    className="text-xs font-bold text-slate-400 transition hover:text-slate-600 hover:underline disabled:opacity-50">
+    ご契約中の方：プラン変更・お支払い方法の変更・解約はこちら
+  </button>{error && <p role="alert" className="mt-2 text-xs text-rose-700">組織と戻り先を確認できませんでした。再読み込みしてお試しください。</p>}</>
+}
 
 function Sym({ name, size = 20, className = '', fill = false, style }: { name: string; size?: number; className?: string; fill?: boolean; style?: CSSProperties }) {
   return (
@@ -33,6 +64,10 @@ function Sym({ name, size = 20, className = '', fill = false, style }: { name: s
 export function UnifiedPricingPlans({
   serviceId,
   billingOrganization,
+  checkoutActionGuard,
+  portalNavigationGuard,
+  loginCallbackUrl,
+  workspaceHomeHref,
   currentPlan,
   planSource = 'account',
   canPurchase = true,
@@ -40,6 +75,10 @@ export function UnifiedPricingPlans({
 }: {
   serviceId: string
   billingOrganization?: { actor: string; organizationId: string }
+  checkoutActionGuard?: CheckoutActionGuard
+  portalNavigationGuard?: PortalNavigationGuard
+  loginCallbackUrl?: string
+  workspaceHomeHref?: string
   currentPlan?: string | null
   planSource?: 'account' | 'organization'
   canPurchase?: boolean
@@ -144,7 +183,7 @@ export function UnifiedPricingPlans({
           {isFree ? (
             <span className="block w-full rounded-full bg-slate-100 px-6 py-3.5 text-center text-sm font-black text-slate-500 ring-1 ring-slate-200">{planSource === 'organization' ? '組織の現在のプラン' : '現在のプラン'}</span>
           ) : (
-            <Link href={svc.dashboardHref} className="block w-full rounded-full bg-white px-6 py-3.5 text-center text-sm font-black text-slate-900 ring-2 ring-slate-300 transition hover:bg-slate-50">
+            <Link href={workspaceHomeHref || svc.dashboardHref} className="block w-full rounded-full bg-white px-6 py-3.5 text-center text-sm font-black text-slate-900 ring-2 ring-slate-300 transition hover:bg-slate-50">
               無料ではじめる
             </Link>
           )}
@@ -197,8 +236,9 @@ export function UnifiedPricingPlans({
           ) : (
             <CheckoutButton
               billingOrganization={billingOrganization}
+              actionGuard={checkoutActionGuard}
               planId={UNIFIED_PRO_PLAN_ID}
-              loginCallbackUrl={returnTo}
+              loginCallbackUrl={loginCallbackUrl || returnTo}
               variant="secondary"
               className="flex w-full items-center justify-center gap-2 rounded-full bg-[#ffd400] px-6 py-4 text-center text-base font-black text-[#0a2540] shadow-xl ring-1 ring-[#ffe066] transition hover:bg-[#ffdd33] hover:-translate-y-0.5 active:scale-[0.98]"
             >
@@ -315,9 +355,10 @@ export function UnifiedPricingPlans({
 
       {/* プラン管理・解約 */}
       {canPurchase && <div className="mt-4 text-center">
-        <a href={`/api/stripe/portal?returnTo=${encodeURIComponent(returnTo)}`} className="text-xs font-bold text-slate-400 transition hover:text-slate-600 hover:underline">
-          ご契約中の方：プラン変更・お支払い方法の変更・解約はこちら
-        </a>
+        {portalNavigationGuard ? <GuardedPortalLink key={portalNavigationGuard.identity} guard={portalNavigationGuard} /> :
+          <a href={`/api/stripe/portal?returnTo=${encodeURIComponent(returnTo)}`} className="text-xs font-bold text-slate-400 transition hover:text-slate-600 hover:underline">
+            ご契約中の方：プラン変更・お支払い方法の変更・解約はこちら
+          </a>}
       </div>}
     </section>
   )

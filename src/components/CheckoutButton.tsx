@@ -14,9 +14,18 @@ const UNKNOWN_CHECKOUT = '先ほどのお申し込みの状態を確認してく
 const UNKNOWN_PORTAL = 'プラン変更画面を開けたか確認できませんでした。新しいお申し込みをせず、契約状況をご確認ください。'
 const UNKNOWN_SYNC = '契約の反映を確認できませんでした。新しいお申し込みをせず、契約状況をご確認ください。'
 
+/** UI-only proof for an organization entry point. Checkout authority remains User scoped. */
+export interface CheckoutActionGuard {
+  identity: string
+  current: () => boolean
+  verify: (signal: AbortSignal) => Promise<boolean>
+  onCanonical?: (operationId: string, actorId: string) => void
+}
+
 interface CheckoutButtonProps {
   planId: string
   billingOrganization?: { actor: string; organizationId: string }
+  actionGuard?: CheckoutActionGuard
   billingPeriod?: 'monthly' | 'yearly'
   loginCallbackUrl?: string
   className?: string
@@ -24,7 +33,7 @@ interface CheckoutButtonProps {
   variant?: 'primary' | 'secondary'
 }
 
-export function CheckoutButton({ planId, billingOrganization, billingPeriod = 'monthly', loginCallbackUrl,
+export function CheckoutButton({ planId, billingOrganization, actionGuard, billingPeriod = 'monthly', loginCallbackUrl,
   className = '', children, variant = 'primary' }: CheckoutButtonProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname()
@@ -44,7 +53,7 @@ export function CheckoutButton({ planId, billingOrganization, billingPeriod = 'm
     organization: organizationId && organizationActor ? { actor: organizationActor, organizationId } : null }),
   [planId, billingPeriod, serviceId, currentPath, organizationId, organizationActor])
   const scopeKey = checkoutScopeKey(intent)
-  const contextKey = JSON.stringify([status, actorId, scopeKey])
+  const contextKey = JSON.stringify([status, actorId, scopeKey, actionGuard?.identity])
   const context = useRef(contextKey); context.current = contextKey
   const lease = useRef<{ active: boolean } | null>(null)
   const active = useRef<AbortController | null>(null)
@@ -72,17 +81,19 @@ export function CheckoutButton({ planId, billingOrganization, billingPeriod = 'm
       router.push(`/auth/signin?callbackUrl=${encodeURIComponent(loginCallbackUrl || (serviceId === 'banner' ? '/banner' : `/${serviceId}/pricing`))}`)
       return
     }
-    if (status !== 'authenticated' || !actorId || !manager || !organizationValid || foreignScope && !abortedForeign || active.current || snapshot.busy) return
+    if (status !== 'authenticated' || !actorId || !manager || !organizationValid || actionGuard && !actionGuard.current() || foreignScope && !abortedForeign || active.current || snapshot.busy) return
     const ownLease = lease.current
     if (!ownLease?.active) return
     const controller = new AbortController(); active.current = controller
     const current = () => ownLease.active && lease.current === ownLease && context.current === contextKey &&
-      active.current === controller && !controller.signal.aborted
+      active.current === controller && !controller.signal.aborted && (!actionGuard || actionGuard.current())
     const fail = (message: string) => { if (current()) { setNotice({ scopeKey, message }); toast.error(message, { id: toastId }) } }
     let stage: 'checkout' | 'portal' | 'sync' = 'checkout'
     let navigating = false
     setIsLoading(true); setNotice(null)
     try {
+      if (actionGuard && !await actionGuard.verify(controller.signal)) { fail('組織の契約を確認できませんでした。再読み込みしてください。'); return }
+      if (!current()) return
       let outcome: CheckoutOutcome | null = null
       const phase = snapshot.phase
       if (!snapshot.handle && phase === 'idle') outcome = await manager.start(intent, current)
@@ -94,6 +105,8 @@ export function CheckoutButton({ planId, billingOrganization, billingPeriod = 'm
       else if (ownHandle && (phase === 'expired' || phase === 'aborted')) outcome = await manager.newAfterTerminal(intent, current)
       else if (ownHandle && ['unknown', 'executing', 'checking'].includes(phase)) await manager.status(intent, current)
       if (!current()) return
+      const canonical = manager.snapshot().handle
+      if (canonical && canonical.actorId === actorId && canonical.scopeKey === scopeKey && actionGuard?.onCanonical) actionGuard.onCanonical(canonical.operationId, actorId)
       if (outcome?.kind === 'ready') {
         if (manager.snapshot().handle?.scopeKey !== scopeKey) throw new BillingResponseError()
         window.location.href = outcome.url; navigating = true; return
@@ -123,7 +136,10 @@ export function CheckoutButton({ planId, billingOrganization, billingPeriod = 'm
       if (error instanceof BillingResponseError && error.cancelled) return
       fail(stage === 'portal' ? UNKNOWN_PORTAL : stage === 'sync' ? UNKNOWN_SYNC : UNKNOWN_CHECKOUT)
     } finally {
-      if (current() && !navigating) { active.current = null; controller.abort(); setIsLoading(false) }
+      if (active.current === controller && !navigating) {
+        active.current = null; controller.abort()
+        if (ownLease.active && lease.current === ownLease && context.current === contextKey) setIsLoading(false)
+      }
     }
   }
 
@@ -135,7 +151,7 @@ export function CheckoutButton({ planId, billingOrganization, billingPeriod = 'm
     ownHandle && phase === 'provider_complete' ? '契約状況を確認' :
     ownHandle && (phase === 'expired' || phase === 'aborted') ? '新しく申し込む' :
     ownHandle && ['unknown', 'executing'].includes(phase) ? '申込状況を確認' : children || 'プランを選択'
-  const disabled = isLoading || snapshot.busy || (status === 'authenticated' && (phase === 'checking' || phase === 'blocked' || foreignScope && !abortedForeign || !actorId || !organizationValid)) || status === 'loading'
+  const disabled = isLoading || snapshot.busy || (status === 'authenticated' && (phase === 'checking' || phase === 'blocked' || foreignScope && !abortedForeign || !actorId || !organizationValid || actionGuard && !actionGuard.current())) || status === 'loading'
   const baseStyles = 'flex items-center justify-center gap-2 font-bold rounded-xl transition-all disabled:opacity-50'
   const variantStyles = variant === 'primary' ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white' : ''
   return <>
