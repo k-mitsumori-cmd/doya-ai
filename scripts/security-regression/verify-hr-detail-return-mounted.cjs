@@ -1,3 +1,5 @@
+process.env.NODE_ENV = 'test'
+
 const fs = require('node:fs')
 const pathModule = require('node:path')
 const vm = require('node:vm')
