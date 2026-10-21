@@ -884,6 +884,13 @@ if (navigation.error || navigation.status !== 0) {
   console.error('Security regression failed: verify-active-service-navigation.cjs');
   process.exit(1);
 }
+for (const file of ['verify-banner-kantan-work-navigation.cjs', 'verify-banner-auth-navigation.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, file)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) {
+    console.error('Security regression failed:', file);
+    process.exit(result.status || 1);
+  }
+}
 const sfaPricingContext = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-pricing-context.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaPricingContext.error || sfaPricingContext.status !== 0) {
   console.error('Security regression failed: verify-sfa-pricing-context.cjs');

@@ -500,7 +500,7 @@ ${inputValue}
       `}>
         {/* ロゴ */}
         <div className="p-5 flex items-center justify-between">
-          <Link href="/kantan" className="flex items-center gap-2">
+          <Link href="/kantan/dashboard/text" className="flex items-center gap-2">
             <span className="text-xl font-bold tracking-tight">カンタンマーケ</span>
           </Link>
           <button 
