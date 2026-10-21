@@ -30,7 +30,7 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   // 最近使ったツール（新しい見た目のときだけ。最初の描画から並べ、あとから押し下げない）
   const initialRecent = uiNext ? parseRecent((await cookies()).get(RECENT_COOKIE)?.value) : undefined
   return (
-    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
+    <ShellGate signedIn={Boolean(session?.user)} serverActorId={session?.user?.id ?? null} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
       {children}
     </ShellGate>
   )

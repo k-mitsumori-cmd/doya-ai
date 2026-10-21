@@ -181,6 +181,11 @@ if (invitationActorMounted.status !== 0) {
   console.error('Security regression failed: verify-invitation-actor-mounted.cjs');
   process.exit(invitationActorMounted.status || 1);
 }
+const shellActorMounted = spawnSync(process.execPath, [path.join(__dirname, 'verify-shell-actor-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shellActorMounted.error || shellActorMounted.status !== 0) {
+  console.error('Security regression failed: verify-shell-actor-mounted.cjs');
+  process.exit(shellActorMounted.status || 1);
+}
 const hrInviteStates = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-invite-states.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrInviteStates.error || hrInviteStates.status !== 0) {
   console.error('Security regression failed: verify-hr-invite-states.cjs');
