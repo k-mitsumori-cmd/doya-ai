@@ -84,6 +84,9 @@ const mocks = {
   'next-auth': { getServerSession: async () => active.serverSession },
   '@/lib/auth': { authOptions: {} },
   '@/lib/prisma': { prisma },
+  // The mounted reader enters the actual workspace GET first. This fixture has
+  // legacy-only rows, so the full workspace store has no saved record.
+  '@/lib/tenjikai/workspace-store': { readFullTenjikaiWorkspace: async () => null },
   '@/lib/billing-response-client': { readBillingResponse: async () => { throw Error('Unexpected billing read') } },
   '@/lib/tenjikai/engine': engine,
   'framer-motion': { motion, AnimatePresence: wrap },
@@ -143,13 +146,14 @@ function load(file) {
 const App = load(path.join(rootPath, 'src/components/tenjikai/TenjikaiApp.tsx')).default
 const Shell = load(path.join(rootPath, 'src/components/tenjikai/TenjikaiShellFrame.tsx')).default
 const routeGET = load(path.join(rootPath, 'src/app/api/tenjikai/projects/[id]/route.ts')).GET
+const workspaceGET = load(path.join(rootPath, 'src/app/api/tenjikai/projects/[id]/workspace/route.ts')).GET
 
 async function fixture({ route = '/tenjikai/overview?project=P', shell = false } = {}) {
   const container = document.createElement('div')
   document.body.append(container)
   const oldFetch = global.fetch
   const f = {
-    route, shell, container, root: createRoot(container), oldCalls: [], dbCalls: [], fetchCalls: [], nav: [], checks: [],
+    route, shell, container, root: createRoot(container), oldCalls: [], dbCalls: [], fetchCalls: [], workspaceCalls: [], legacyCalls: [], nav: [], checks: [],
     rows: [{ id: 'P', userId: 'A', value: saved('P') }, { id: 'P', userId: 'B', value: saved('P', { name: 'PRIVATE_B_P' }) }, { id: 'Q', userId: 'A', value: saved('Q') }, { id: 'Q', userId: 'B', value: saved('Q', { name: 'PRIVATE_B_Q' }) },
       { id: 'foreign', userId: 'B', value: saved('foreign') }],
     auth: { status: 'authenticated', data: { user: { id: 'A' } } },
@@ -175,8 +179,12 @@ async function fixture({ route = '/tenjikai/overview?project=P', shell = false }
   f.defaultFetch = async (url, options) => {
     f.fetchCalls.push({ url, options })
     assert.equal(options.cache, 'no-store')
-    const id = decodeURIComponent(new URL(url, 'https://example.test').pathname.split('/').at(-1))
-    return routeGET(new NextRequest(new URL(url, 'https://example.test')), { params: Promise.resolve({ id }) })
+    const target = new URL(url, 'https://example.test')
+    const workspace = target.pathname.endsWith('/workspace')
+    const id = decodeURIComponent(target.pathname.split('/').at(workspace ? -2 : -1))
+    assert.match(target.pathname, /^\/api\/tenjikai\/projects\/[A-Za-z0-9_-]+(?:\/workspace)?$/)
+    ;(workspace ? f.workspaceCalls : f.legacyCalls).push({ url, options })
+    return (workspace ? workspaceGET : routeGET)(new NextRequest(target), { params: Promise.resolve({ id }) })
   }
   f.fetcher = f.defaultFetch
   global.fetch = (...args) => f.fetcher(...args)
@@ -251,6 +259,10 @@ test('Tenjikai saved project actual mounted boundary', async t => {
     assert.match(f.text(), /会場情報は確認できません/)
     assert.match(f.text(), /ブース案・制作物・ノベルティ・予算内訳・資料・締切は、この画面では確認できません/)
     assert.deepEqual(f.oldCalls, [])
+    assert.equal(f.workspaceCalls.length, 1, 'workspace GET must precede the legacy partial detail')
+    assert.equal(f.legacyCalls.length, 1, 'partial workspace must continue to the legacy detail GET')
+    assert.match(f.workspaceCalls[0].url, /\/P\/workspace\?expectedActor=A$/)
+    assert.match(f.legacyCalls[0].url, /\/P\?expectedActor=A$/)
     assert.deepEqual(f.dbCalls[0].where, { id: 'P', userId: 'A' })
     for (const section of ['booth', 'creatives', 'novelty', 'budget', 'vendors', 'docs', 'overview']) {
       await f.navigate(`/tenjikai/${section}?project=P`)
@@ -397,13 +409,14 @@ test('Tenjikai saved project actual mounted boundary', async t => {
   await check('same-scope reloads resolve in reverse and ignore late fetch and body', {}, async f => {
     const first = deferred(), second = deferred(), body = deferred()
     let number = 0
-    f.fetcher = (url, options) => {
-      f.fetchCalls.push({ url, options })
-      return ++number === 1 ? first.promise : second.promise
-    }
+    f.fetcher = (url, options) => url.includes('/P?')
+      ? (f.fetchCalls.push({ url, options }), ++number === 1 ? first.promise : second.promise)
+      : f.defaultFetch(url, options)
     await f.click('再読み込み')
     assert.ok(!f.text().includes('PRIVATE_'))
     await f.click('再読み込み')
+    assert.equal(f.workspaceCalls.length, 3, 'initial and two reloads must pass workspace first')
+    assert.equal(number, 2, 'both delayed responses belong to the legacy detail GET')
     const currentResponse = await routeGET(new NextRequest('https://example.test/api/tenjikai/projects/P?expectedActor=A'), { params: Promise.resolve({ id: 'P' }) })
     await f.act(() => second.resolve(currentResponse))
     assert.match(f.text(), /PRIVATE_P/)
@@ -472,9 +485,20 @@ test('Tenjikai saved project actual mounted boundary', async t => {
   await check('wrong or absent server actor, wrong project, ready and malformed body are rejected', {}, async f => {
     const actual = await routeGET(new NextRequest('https://example.test/api/tenjikai/projects/P?expectedActor=A'), { params: Promise.resolve({ id: 'P' }) })
     const body = await actual.json()
+    const serveLegacy = changed => (url, options) => {
+      if (!url.includes('/P?')) return f.defaultFetch(url, options)
+      assert.equal(options.cache, 'no-store')
+      f.fetchCalls.push({ url, options })
+      f.legacyCalls.push({ url, options })
+      return Promise.resolve({ ok: true, status: 200, json: async () => changed })
+    }
+    f.fetcher = serveLegacy(body)
+    await f.click('再読み込み')
+    assert.match(f.text(), /PRIVATE_P/, 'actual unchanged legacy DTO must pass after workspace partial read')
+    assert.equal(f.workspaceCalls.length, 2)
     for (const changed of [{ ...body, actorId: 'B' }, { ...body, actorId: undefined },
       { ...body, project: { ...body.project, id: 'Q' } }, { ...body, state: 'ready' }, { nope: true }]) {
-      f.fetcher = async () => ({ ok: true, status: 200, json: async () => changed })
+      f.fetcher = serveLegacy(changed)
       await f.click('再読み込み')
       assert.match(f.text(), /保存内容を読み込めませんでした/)
       assert.ok(!f.text().includes('PRIVATE_'))
@@ -520,7 +544,8 @@ test('Tenjikai saved project actual mounted boundary', async t => {
     const reads = f.dbCalls.length
     f.serverSession = { user: { id: 'B' } }
     await f.changeAuth('B')
-    assert.equal(f.dbCalls.length, reads + 1, 'B needs its own server read')
+    assert.equal(f.dbCalls.length, reads + 2, 'B needs its own workspace and legacy partial reads')
+    assert.deepEqual(f.dbCalls.at(-2).where, { id: 'P', userId: 'B' })
     assert.equal(f.dbCalls.at(-1).where.userId, 'B')
     assert.ok(!f.text().includes('PRIVATE_P'))
     f.serverSession = { user: { id: 'A' } }
