@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');const {load,check,results}=require('./verify-data-integrity.cjs');
-const stripeModule=load('src/lib/stripe.ts',{stripe:class{},'node:crypto':require('node:crypto')});const ids=Array.from(stripeModule.ALL_SERVICE_IDS);
+const stripeModule=load('src/lib/stripe.ts',{stripe:class{},'node:crypto':require('node:crypto'),'./checkout-legacy-guard':load('src/lib/checkout-legacy-guard.ts')});const ids=Array.from(stripeModule.ALL_SERVICE_IDS);
 const subscriptionNotice=load('src/lib/billing-subscription-notice.ts');
 const grants=load('src/lib/billing-manual-grants.ts',{'@/lib/prisma':{prisma:{}}});
 const json=v=>JSON.parse(JSON.stringify(v));

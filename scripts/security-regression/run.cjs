@@ -121,6 +121,16 @@ if (checkoutReservation.error || checkoutReservation.status !== 0) {
   console.error('Security regression failed: verify-checkout-reservation.cjs');
   process.exit(1);
 }
+const checkoutLegacyClosed = spawnSync(process.execPath, [path.join(__dirname, 'verify-checkout-legacy-closed.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (checkoutLegacyClosed.error || checkoutLegacyClosed.status !== 0) {
+  console.error('Security regression failed: verify-checkout-legacy-closed.cjs');
+  process.exit(1);
+}
+const checkoutCutoverReadiness = spawnSync(process.execPath, [path.join(__dirname, 'verify-checkout-cutover-readiness.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (checkoutCutoverReadiness.error || checkoutCutoverReadiness.status !== 0) {
+  console.error('Security regression failed: verify-checkout-cutover-readiness.cjs');
+  process.exit(1);
+}
 const adimageLogoAvailability = spawnSync(process.execPath, [path.join(__dirname, 'verify-adimage-logo-availability.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adimageLogoAvailability.error || adimageLogoAvailability.status !== 0) {
   console.error('Security regression failed: verify-adimage-logo-availability.cjs');

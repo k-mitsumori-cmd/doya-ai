@@ -41,6 +41,7 @@ const stripe = {
 const stripeModule = load('src/lib/stripe.ts', {
   stripe: function () { return stripe },
   'node:crypto': require('node:crypto'),
+  './checkout-legacy-guard': load('src/lib/checkout-legacy-guard.ts'),
 }, { process: { env } })
 const response = (data, init = {}) => Response.json(data, init)
 const checkoutPrisma = { user: { findUnique: async () => ({ id: 'owner', email: 'owner@example.invalid', stripeCustomerId: 'cus_owner' }) } }
