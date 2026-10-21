@@ -54,7 +54,7 @@ export async function readOrganizationWorkspace(actorId: string, selected: Organ
     clearTimeout(timeout)
     signal.removeEventListener('abort', cancel)
     controller.abort()
-    if (reader) void reader.cancel().catch(() => {})
+    if (reader) void (reader as ReadableStreamDefaultReader<Uint8Array>).cancel().catch(() => {})
   }
 }
 
