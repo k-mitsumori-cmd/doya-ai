@@ -5,9 +5,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle2, CircleDashed, Copy as CopyIcon, ImagePlus, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import type { PopupDto } from '@/lib/popup/dto'
 import type { SiteDetail } from '@/lib/popup/popup-read'
+import { isId } from '@/lib/popup/schema'
+import { safeSignInCallbackUrl } from '@/lib/safe-signin-callback'
 import PopupPreview from '@/components/popup/PopupPreview'
 import {
   ConfirmDialog,
@@ -29,6 +32,22 @@ import {
 } from '@/components/popup/ui'
 
 type Action = 'live' | 'paused' | 'up' | 'down' | 'duplicate' | 'delete'
+type Lease = { scope: string; epoch: number; siteId: string }
+type ActionLease = Lease & { token: number }
+
+function isSiteDetail(value: unknown, siteId: string, days: number): value is SiteDetail {
+  if (!value || typeof value !== 'object') return false
+  const detail = value as Partial<SiteDetail>
+  const site = detail.site
+  const totals = site?.totals
+  return detail.days === days && site?.id === siteId && typeof site.name === 'string' &&
+    typeof site.sourceUrl === 'string' && typeof site.embedCode === 'string' &&
+    totals !== undefined && typeof totals.impressions === 'number' &&
+    typeof totals.clicks === 'number' && typeof totals.closes === 'number' &&
+    (totals.ctr === null || typeof totals.ctr === 'number') &&
+    Array.isArray(detail.popups) && detail.popups.every(p => p && isId(p.id) &&
+      typeof p.name === 'string' && p.totals && typeof p.totals.impressions === 'number')
+}
 
 function InstallCard({ site }: { site: SiteDetail['site'] }) {
   return (
@@ -160,119 +179,291 @@ function PopupRow({ p, first, last, busy, onAction }: { p: PopupDto; first: bool
   )
 }
 
-export default function SiteDetailClient({ initial, created }: { initial: SiteDetail; created: boolean }) {
+export default function SiteDetailClient({ initial, serverActorId, created }: {
+  initial: SiteDetail; serverActorId: string; created: boolean
+}) {
   const router = useRouter()
+  const { data: session, status } = useSession()
+  const sdkActor = status === 'authenticated' && typeof session?.user?.id === 'string' && session.user.id.trim()
+    ? session.user.id : null
+  const scope = sdkActor === serverActorId ? `${serverActorId}:${initial.site.id}` : null
   const [days, setDays] = useState<7 | 30 | 90>(30)
   const [data, setData] = useState<SiteDetail>(initial)
+  const [dataEpoch, setDataEpoch] = useState(-1)
   const [loadError, setLoadError] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [actionError, setActionError] = useState<{ message: string; issues: string[] } | null>(null)
   const [confirm, setConfirm] = useState<null | { kind: 'popup'; p: PopupDto } | { kind: 'site' }>(null)
   const { show, node: toast } = useToast()
-  const first = useRef(true)
-
-  useEffect(() => {
-    if (created) show({ message: 'ポップアップの案ができました。プレビューで確かめて、使う案を公開してください。' })
-  }, [created, show])
-
-  const load = useCallback(
-    async (d: number) => {
-      setLoadError(false)
-      // 300ms 未満で終わるなら骨組みを出さない（§11）
-      const t = setTimeout(() => setSwitching(true), 300)
-      try {
-        const res = await fetch(`/api/popup/sites/${initial.site.id}?days=${d}`, { cache: 'no-store' })
-        if (res.status === 401) {
-          window.location.href = `/auth/signin?callbackUrl=/popup/sites/${initial.site.id}`
-          return
-        }
-        if (!res.ok) throw new Error('load')
-        setData(await res.json())
-      } catch {
-        setLoadError(true)
-      } finally {
-        clearTimeout(t)
-        setSwitching(false)
+  const [toastEpoch, setToastEpoch] = useState(-1)
+  const [restoreTick, setRestoreTick] = useState(0)
+  const container = useRef<HTMLDivElement>(null)
+  const firstSnapshot = useRef(true)
+  const lastPeriod = useRef<{ scope: string | null; days: 7 | 30 | 90 } | null>(null)
+  const currentDays = useRef(days)
+  currentDays.current = days
+  const life = useRef<{ scope: string | null; siteId: string; epoch: number; active: boolean;
+    mounted: boolean; readSeq: number; readAbort: AbortController | null;
+    readTimer: ReturnType<typeof setTimeout> | null; nextToken: number;
+    busyToken: number | null; undoSeq: number; pending: Set<() => void> }>({
+    scope: null, siteId: initial.site.id, epoch: 0, active: false, mounted: true,
+    readSeq: 0, readAbort: null, readTimer: null, nextToken: 0, busyToken: null, undoSeq: 0,
+    pending: new Set(),
+  })
+  const retire = useCallback(() => {
+    const state = life.current
+    state.epoch++
+    state.active = false
+    state.readSeq++
+    state.readAbort?.abort()
+    state.readAbort = null
+    if (state.readTimer) clearTimeout(state.readTimer)
+    state.readTimer = null
+    for (const cancel of state.pending) cancel()
+    state.busyToken = null
+    state.undoSeq++
+  }, [])
+  // Render-time scope comparison closes the render → passive-effect gap, including A→B→A.
+  if (life.current.scope !== scope || life.current.siteId !== initial.site.id) {
+    retire()
+    life.current.scope = scope
+    life.current.siteId = initial.site.id
+    life.current.active = Boolean(scope)
+    if (status === 'unauthenticated' || status === 'authenticated' && !scope) firstSnapshot.current = false
+  }
+  const lease = (): Lease | null => {
+    const state = life.current
+    return state.mounted && state.active && state.scope ?
+      { scope: state.scope, epoch: state.epoch, siteId: state.siteId } : null
+  }
+  const current = (ticket: Lease | null) => Boolean(ticket && life.current.mounted && life.current.active &&
+    life.current.scope === ticket.scope && life.current.epoch === ticket.epoch &&
+    life.current.siteId === ticket.siteId)
+  const actionCurrent = (ticket: ActionLease) => current(ticket) && life.current.busyToken === ticket.token
+  const begin = (label: string): ActionLease | null => {
+    const ticket = lease()
+    if (!ticket || life.current.busyToken !== null || dataEpoch !== ticket.epoch ||
+        data.site.id !== ticket.siteId || data.days !== currentDays.current) return null
+    const token = ++life.current.nextToken
+    life.current.busyToken = token
+    life.current.undoSeq++
+    setBusy(label)
+    setActionError(null)
+    return { ...ticket, token }
+  }
+  const finish = (ticket: ActionLease) => {
+    if (!actionCurrent(ticket)) return
+    life.current.busyToken = null
+    setBusy(null)
+  }
+  const notify = (ticket: Lease, message: string, undo?: () => void) => {
+    if (!current(ticket)) return
+    setToastEpoch(ticket.epoch)
+    show({ message, undo })
+  }
+  const bounded = <T,>(promise: Promise<T>): Promise<T> => new Promise((resolve, reject) => {
+    const pending = life.current.pending
+    const uncertain = () => new Error('結果を確認できませんでした。サイトの一覧を確認してください。')
+    const cancel = () => { clearTimeout(timer); pending.delete(cancel); reject(uncertain()) }
+    const timer = setTimeout(cancel, 15_000)
+    pending.add(cancel)
+    promise.then(value => { clearTimeout(timer); pending.delete(cancel); resolve(value) },
+      error => { clearTimeout(timer); pending.delete(cancel); reject(error) })
+  })
+  const load = useCallback(async (d: 7 | 30 | 90) => {
+    const state = life.current
+    const ticket = state.mounted && state.active && state.scope ?
+      { scope: state.scope, epoch: state.epoch, siteId: state.siteId } : null
+    if (!ticket) return
+    const seq = ++state.readSeq
+    state.readAbort?.abort()
+    if (state.readTimer) clearTimeout(state.readTimer)
+    const controller = new AbortController()
+    state.readAbort = controller
+    const isReadCurrent = () => state.mounted && state.active && state.scope === ticket.scope &&
+      state.epoch === ticket.epoch && state.siteId === ticket.siteId && state.readSeq === seq
+    setLoadError(false)
+    setSwitching(false)
+    state.readTimer = setTimeout(() => { if (isReadCurrent()) setSwitching(true) }, 300)
+    try {
+      const res = await fetch(`/api/popup/sites/${encodeURIComponent(ticket.siteId)}?days=${d}`, {
+        cache: 'no-store', signal: controller.signal,
+      })
+      if (!isReadCurrent()) return
+      if (res.status === 401) {
+        const callback = safeSignInCallbackUrl(`/popup/sites/${encodeURIComponent(ticket.siteId)}`)
+        window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(callback)}`
+        return
       }
-    },
-    [initial.site.id]
-  )
+      if (!res.ok) throw new Error('load')
+      const body: unknown = await res.json()
+      if (!isReadCurrent()) return
+      if (!isSiteDetail(body, ticket.siteId, d)) throw new Error('load')
+      setData(body)
+      setDataEpoch(ticket.epoch)
+      if (container.current) { container.current.hidden = false; container.current.removeAttribute('inert') }
+    } catch {
+      if (isReadCurrent()) setLoadError(true)
+    } finally {
+      if (state.readTimer && isReadCurrent()) clearTimeout(state.readTimer)
+      if (isReadCurrent()) { state.readTimer = null; state.readAbort = null; setSwitching(false) }
+    }
+  }, [])
+
+  // Mount the lifecycle before any effect can start a read. StrictMode replays
+  // setup after cleanup, where cleanup has retired and marked it unmounted.
+  useEffect(() => {
+    const state = life.current
+    state.mounted = true
+    const hide = () => {
+      retire()
+      if (container.current) { container.current.hidden = true; container.current.setAttribute('inert', '') }
+    }
+    const restore = (event: PageTransitionEvent) => { if (event.persisted) { hide(); setRestoreTick(x => x + 1) } }
+    window.addEventListener('pagehide', hide)
+    window.addEventListener('pageshow', restore)
+    return () => {
+      state.mounted = false
+      retire()
+      window.removeEventListener('pagehide', hide)
+      window.removeEventListener('pageshow', restore)
+    }
+  }, [retire])
 
   useEffect(() => {
-    if (first.current) {
-      first.current = false
-      return
+    if (!scope) return
+    life.current.active = true
+    // A BFCache return renders a neutral skeleton first; make that retry surface
+    // visible even when the fresh private read fails.
+    if (container.current) { container.current.hidden = false; container.current.removeAttribute('inert') }
+    setBusy(null)
+    setConfirm(null)
+    setActionError(null)
+    if (firstSnapshot.current && initial.days === currentDays.current && initial.site.id === life.current.siteId) {
+      firstSnapshot.current = false
+      setData(initial)
+      setDataEpoch(life.current.epoch)
+      if (created) {
+        setToastEpoch(life.current.epoch)
+        show({ message: 'ポップアップの案ができました。プレビューで確かめて、使う案を公開してください。' })
+      }
+    } else {
+      firstSnapshot.current = false
+      void load(currentDays.current)
     }
-    void load(days)
-  }, [days, load])
+  }, [scope, restoreTick, initial, created, load, show])
 
-  const patchPopup = async (popupId: string, body: Record<string, unknown>) => {
-    const res = await fetch(`/api/popup/popups/${popupId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) throw Object.assign(new Error(json?.error || '操作に失敗しました。'), { issues: Array.isArray(json?.issues) ? json.issues : [] })
+  useEffect(() => {
+    const previous = lastPeriod.current
+    lastPeriod.current = { scope, days }
+    if (scope && previous?.scope === scope && previous.days !== days) void load(days)
+  }, [days, scope, load])
+
+  const patchPopup = async (ticket: ActionLease, popupId: string, body: Record<string, unknown>) => {
+    if (!actionCurrent(ticket) || !isId(popupId)) return
+    const res = await bounded(fetch(`/api/popup/popups/${encodeURIComponent(popupId)}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    }))
+    if (!actionCurrent(ticket)) return
+    const json = await bounded(res.json().catch(() => ({})))
+    if (!actionCurrent(ticket)) return
+    if (!res.ok) throw Object.assign(new Error(json?.error || '操作に失敗しました。'),
+      { issues: Array.isArray(json?.issues) ? json.issues : [] })
   }
 
   const run = async (p: PopupDto, action: Action) => {
-    if (busy) return
-    setBusy(p.id)
-    setActionError(null)
+    const ticket = begin(p.id)
+    if (!ticket || !isId(p.id) || !data.popups.some(x => x.id === p.id)) { if (ticket) finish(ticket); return }
+    const captured = { id: p.id, name: p.name, status: p.status, siteId: ticket.siteId }
     try {
       if (action === 'live' || action === 'paused') {
-        await patchPopup(p.id, { status: action })
-        show({
-          message: action === 'live' ? `「${p.name}」を公開しました。サイトに1分ほどで反映されます。` : `「${p.name}」を停止しました。`,
-          undo: () => void patchPopup(p.id, { status: p.status }).then(() => load(days)),
+        await patchPopup(ticket, captured.id, { status: action })
+        if (!actionCurrent(ticket)) return
+        const undoSeq = life.current.undoSeq
+        notify(ticket, action === 'live' ? `「${captured.name}」を公開しました。サイトに1分ほどで反映されます。` :
+          `「${captured.name}」を停止しました。`, () => {
+          if (!current(ticket) || life.current.undoSeq !== undoSeq || life.current.busyToken !== null) return
+          void (async () => {
+            const undoTicket = begin(captured.id)
+            if (!undoTicket) return
+            try { await patchPopup(undoTicket, captured.id, { status: captured.status }); if (actionCurrent(undoTicket)) await load(currentDays.current) }
+            catch (e) { if (actionCurrent(undoTicket)) setActionError({ message: (e as Error).message || '操作に失敗しました。', issues: [] }) }
+            finally { finish(undoTicket) }
+          })()
         })
       } else if (action === 'up' || action === 'down') {
         const list = [...data.popups]
-        const i = list.findIndex((x) => x.id === p.id)
+        const i = list.findIndex(x => x.id === captured.id)
         const j = action === 'up' ? i - 1 : i + 1
         if (j < 0 || j >= list.length) return
         ;[list[i], list[j]] = [list[j], list[i]]
-        await Promise.all(list.map((x, idx) => (x.sortOrder === idx ? null : patchPopup(x.id, { sortOrder: idx }))))
+        await Promise.all(list.map((x, idx) => x.sortOrder === idx ? null : patchPopup(ticket, x.id, { sortOrder: idx })))
       } else if (action === 'duplicate') {
-        const res = await fetch(`/api/popup/sites/${data.site.id}/popups`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ duplicateOf: p.id }) })
-        const json = await res.json().catch(() => ({}))
+        const res = await bounded(fetch(`/api/popup/sites/${encodeURIComponent(captured.siteId)}/popups`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ duplicateOf: captured.id }),
+        }))
+        if (!actionCurrent(ticket)) return
+        const json = await bounded(res.json().catch(() => ({})))
+        if (!actionCurrent(ticket)) return
         if (!res.ok) throw new Error(json?.error || '複製に失敗しました。')
-        show({ message: `「${p.name}」を複製しました（下書き）。` })
+        notify(ticket, `「${captured.name}」を複製しました（下書き）。`)
       } else if (action === 'delete') {
-        const res = await fetch(`/api/popup/popups/${p.id}`, { method: 'DELETE' })
+        const res = await bounded(fetch(`/api/popup/popups/${encodeURIComponent(captured.id)}`, { method: 'DELETE' }))
+        if (!actionCurrent(ticket)) return
         if (!res.ok) throw new Error('削除に失敗しました。')
-        show({ message: `「${p.name}」を削除しました。` })
+        notify(ticket, `「${captured.name}」を削除しました。`)
       }
-      await load(days)
+      if (actionCurrent(ticket)) await load(currentDays.current)
     } catch (e) {
-      setActionError({ message: (e as Error).message || '操作に失敗しました。', issues: (e as { issues?: string[] }).issues || [] })
-    } finally {
-      setBusy(null)
-    }
+      if (actionCurrent(ticket)) setActionError({ message: (e as Error).message || '操作に失敗しました。', issues: (e as { issues?: string[] }).issues || [] })
+    } finally { finish(ticket) }
   }
 
   const addPopup = async (kind: 'image' | 'cta') => {
-    if (busy) return
-    setBusy('add')
+    const ticket = begin('add')
+    if (!ticket) return
     try {
-      const res = await fetch(`/api/popup/sites/${data.site.id}/popups`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind }) })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || !json?.popup?.id) throw new Error(json?.error || '追加に失敗しました。')
-      router.push(`/popup/edit/${json.popup.id}`)
+      const res = await bounded(fetch(`/api/popup/sites/${encodeURIComponent(ticket.siteId)}/popups`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind }),
+      }))
+      if (!actionCurrent(ticket)) return
+      const json = await bounded(res.json().catch(() => ({})))
+      if (!actionCurrent(ticket)) return
+      if (!res.ok || !isId(json?.popup?.id)) throw new Error(json?.error || '追加に失敗しました。')
+      router.push(`/popup/edit/${encodeURIComponent(json.popup.id)}`)
     } catch (e) {
-      setActionError({ message: (e as Error).message, issues: [] })
-      setBusy(null)
-    }
+      if (actionCurrent(ticket)) setActionError({ message: (e as Error).message || '結果を確認できませんでした。サイトの一覧を確認してください。', issues: [] })
+    } finally { finish(ticket) }
   }
 
   const deleteSite = async () => {
-    const res = await fetch(`/api/popup/sites/${data.site.id}`, { method: 'DELETE' })
-    if (res.ok) router.push('/popup')
-    else setActionError({ message: '削除に失敗しました。', issues: [] })
+    const ticket = begin('site')
+    if (!ticket) return
+    try {
+      const res = await bounded(fetch(`/api/popup/sites/${encodeURIComponent(ticket.siteId)}`, { method: 'DELETE' }))
+      if (!actionCurrent(ticket)) return
+      if (!res.ok) throw new Error('削除に失敗しました。')
+      router.push('/popup')
+    } catch (e) {
+      if (actionCurrent(ticket)) setActionError({ message: (e as Error).message || '結果を確認できませんでした。サイトの一覧を確認してください。', issues: [] })
+    } finally { finish(ticket) }
   }
 
+  if (!scope) return (
+    <div className="pd-page mx-auto max-w-3xl px-4 py-12 md:px-8" role="status">
+      {status === 'loading' ? 'ログイン状態を確認しています。' : 'ログイン状態が変わりました。最新の画面を開き直してください。'}
+    </div>
+  )
+  if (!life.current.active || dataEpoch !== life.current.epoch || data.site.id !== initial.site.id) return (
+    <div ref={container} className="pd-page mx-auto max-w-6xl px-4 py-8 md:px-8">
+      {loadError ? <ErrorState message="サイトを確認できませんでした。少し待ってからもう一度お試しください。" onRetry={() => void load(currentDays.current)} /> : <SkeletonDetail />}
+    </div>
+  )
   const { site, popups } = data
   return (
-    <div className="pd-page mx-auto max-w-6xl px-4 py-8 md:px-8">
-      {toast}
+    <div ref={container} className="pd-page mx-auto max-w-6xl px-4 py-8 md:px-8">
+      {toastEpoch === life.current.epoch && toast}
       <PageHeader
         back={{ href: '/popup', label: 'サイト一覧' }}
         title={site.name}
@@ -304,7 +495,7 @@ export default function SiteDetailClient({ initial, created }: { initial: SiteDe
         <div className="mt-6">
           <ErrorState message="集計を読み込めませんでした。少し待ってからもう一度お試しください。" onRetry={() => void load(days)} />
         </div>
-      ) : switching ? (
+      ) : switching || data.days !== days ? (
         <div className="mt-6">
           <SkeletonDetail />
         </div>
@@ -359,8 +550,8 @@ export default function SiteDetailClient({ initial, created }: { initial: SiteDe
                     p={p}
                     first={i === 0}
                     last={i === popups.length - 1}
-                    busy={busy === p.id}
-                    onAction={(a) => (a === 'delete' ? setConfirm({ kind: 'popup', p }) : void run(p, a))}
+                    busy={!!busy}
+                    onAction={(a) => (a === 'delete' ? (life.current.busyToken === null && setConfirm({ kind: 'popup', p })) : void run(p, a))}
                   />
                 ))
               )}
@@ -370,7 +561,7 @@ export default function SiteDetailClient({ initial, created }: { initial: SiteDe
       )}
 
       <section className="mt-12 border-t border-[color:var(--line)] pt-6">
-        <button type="button" onClick={() => setConfirm({ kind: 'site' })} className="pd-btn-danger">
+        <button type="button" disabled={!!busy} onClick={() => { if (life.current.busyToken === null) setConfirm({ kind: 'site' }) }} className="pd-btn-danger">
           <Trash2 className="h-4 w-4" aria-hidden />
           このサイトを削除する
         </button>
