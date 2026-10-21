@@ -1422,7 +1422,7 @@ for (const verifier of [
   'verify-tenjikai-project-detail-route.cjs', 'verify-tenjikai-project-detail-mounted.cjs',
   'verify-tenjikai-login-return.cjs',
   'verify-tenjikai-c3a-generation.cjs', 'verify-tenjikai-c3a-mounted.cjs', 'verify-tenjikai-c3a-tier.cjs',
-  'verify-tenjikai-c3c-studio.cjs', 'verify-tenjikai-c3c-mounted.cjs', 'verify-tenjikai-c3c-auth.cjs', 'verify-tenjikai-c3c-save-chain.cjs',
+  'verify-tenjikai-c3c-studio.cjs', 'verify-tenjikai-c3c-mounted.cjs', 'verify-tenjikai-c3c-auth.cjs', 'verify-tenjikai-c3c-save-chain.cjs', 'verify-tenjikai-c3c-save-lifecycle-mounted.cjs',
   'verify-expense-query-scope.cjs', 'verify-case-study-form-mounted.cjs',
   'verify-promane-nullable-compat.cjs',
   'verify-home-popup.cjs',
