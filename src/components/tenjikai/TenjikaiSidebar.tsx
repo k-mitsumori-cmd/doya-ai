@@ -43,6 +43,7 @@ type Props = SidebarProps & {
   go: (s: Section) => void
   projectName?: string
   savedMode?: boolean
+  workingMode?: boolean
   loginCallbackUrl?: string
 }
 
@@ -96,6 +97,7 @@ function TenjikaiSidebarImpl({
   go,
   projectName,
   savedMode = false,
+  workingMode = false,
   loginCallbackUrl = '/tenjikai',
 }: Props) {
   const { data: session } = useSession()
@@ -152,7 +154,7 @@ function TenjikaiSidebarImpl({
                 <p className="text-xs font-black text-white">開発中のサービスです</p>
               </div>
               <p className="text-[11px] text-white/80 font-bold leading-relaxed">
-                {savedMode ? '保存されている入力内容と分析結果を表示しています。この画面では編集・保存はできません。' : '画面はお試し用です。入力した内容は保存されません。'}
+                {savedMode ? '保存されている入力内容と分析結果を表示しています。この画面では編集・保存はできません。' : workingMode ? '案件の基本情報のみ保存しています。会場の指定や編集中の案は、この画面を閉じると失われます。' : '新規案件の作成前です。入力内容はまだ保存されていません。'}
               </p>
             </div>
           )}

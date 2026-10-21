@@ -26,7 +26,7 @@ function TenjikaiShellFrameContent() {
   if (overviewHref && section === 'new') return <p role="status" className="p-6">保存内容を読み込んでいます。</p>
   const nav = mode.kind === 'new' ? TENJIKAI_NAV : TENJIKAI_NAV.map(item => ({ ...item, href: projectSectionHref(item.section, mode) }))
   return (
-    <ToolFrame serviceId="tenjikai" title={mode.kind === 'new' ? undefined : '保存内容の確認'} description={mode.kind === 'new' ? 'URLと出展条件から、ブース・制作物・ノベルティ・予算・業者・締切をまとめて用意します。' : '保存されている入力内容と分析結果を表示しています。この画面では編集・保存はできません。'} nav={nav}>
+    <ToolFrame serviceId="tenjikai" title={mode.kind === 'new' ? undefined : '出展プロジェクト'} description={mode.kind === 'new' ? 'URLと出展条件から、ブース・制作物・ノベルティ・予算・業者・締切をまとめて用意します。' : '生成直後の作業内容はこのタブ内で保持します。再読み込み後は確認できる保存内容だけを表示します。'} nav={nav}>
       <TenjikaiApp shell />
     </ToolFrame>
   )

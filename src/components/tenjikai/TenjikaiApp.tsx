@@ -1,6 +1,9 @@
 'use client'
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { flushSync } from 'react-dom'
+import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -33,6 +36,7 @@ import {
   type GeneratedPlan,
   type ProjectInput,
 } from '@/lib/tenjikai/engine'
+import type { GenerationResult, GenerationSave } from '@/lib/tenjikai/generation-result'
 
 type Phase = 'input' | 'generating' | 'ready'
 
@@ -45,9 +49,53 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
 function TenjikaiAppBoundary({ shell }: { shell: boolean }) {
   const mode = projectModeFromQuery(useSearchParams())
   const scope = useEntryActorScope()
+  const { update } = useSession()
+  const [working, setWorking] = useState<{ actor: string; epoch: number; projectId: string } | null>(null)
+  const [workspaceEpoch, setWorkspaceEpoch] = useState(0)
+  const [blocked, setBlocked] = useState(false)
+  const verificationSeq = useRef(0)
+  const currentWorking = working?.actor === scope.actor && working.epoch === scope.version && scope.status === 'authenticated' ? working : null
+  const modeKind = mode.kind
+  const modeId = mode.kind === 'saved' ? mode.id : null
+  const previousMode = useRef({ kind: modeKind, id: modeId })
+  const leavingWorking = previousMode.current.kind === 'saved'
+    && (modeKind === 'new' || modeKind === 'saved' && modeId !== previousMode.current.id)
+  useEffect(() => {
+    previousMode.current = { kind: modeKind, id: modeId }
+    if (leavingWorking) { setWorking(null); setWorkspaceEpoch(value => value + 1) }
+  }, [modeKind, modeId, leavingWorking])
+  useEffect(() => { verificationSeq.current += 1; setBlocked(false) }, [scope.version])
+  const currentScope = scope.current
+  useEffect(() => {
+    const verify = () => {
+      const seq = ++verificationSeq.current
+      void update().then(checked => {
+        if (seq === verificationSeq.current && currentScope() && checked?.user?.id === scope.actor && scope.status === 'authenticated') setBlocked(false)
+      }).catch(() => {})
+    }
+    const hide = () => flushSync(() => { verificationSeq.current += 1; setBlocked(true); setWorking(null) })
+    const show = (event: PageTransitionEvent) => {
+      if (event.persisted) { hide(); verify() }
+    }
+    window.addEventListener('pagehide', hide)
+    window.addEventListener('pageshow', show)
+    return () => { verificationSeq.current += 1; window.removeEventListener('pagehide', hide); window.removeEventListener('pageshow', show) }
+  }, [update, currentScope, scope.actor, scope.status])
+  if (blocked || scope.status === 'loading') return <div role="status" className="p-6">ログイン状態を確認しています。
+    {blocked && <button type="button" className="ml-3 underline" onClick={() => {
+      const seq = ++verificationSeq.current
+      void update().then(checked => {
+        if (seq === verificationSeq.current && scope.current() && checked?.user?.id === scope.actor && scope.status === 'authenticated') setBlocked(false)
+      }).catch(() => {})
+    }}>再読み込み</button>}
+  </div>
+  if (leavingWorking) return <p role="status" className="p-6">案件の表示を切り替えています。</p>
   if (mode.kind === 'invalid') return <InvalidProjectMode shell={shell} mode={mode} />
-  if (mode.kind === 'saved') return <SavedProjectMode shell={shell} mode={mode} />
-  return <TenjikaiAppContent key={scope.version} shell={shell} currentActor={scope.current} />
+  if (mode.kind === 'saved' && mode.id !== currentWorking?.projectId) return <SavedProjectMode shell={shell} mode={mode} />
+  return <TenjikaiAppContent key={`${scope.version}:${workspaceEpoch}`} shell={shell} currentActor={() => scope.status === 'authenticated' && !!scope.actor && scope.current()}
+    actorId={scope.actor} activeProjectId={currentWorking?.projectId ?? null}
+    onWorking={projectId => setWorking({ actor: scope.actor, epoch: scope.version, projectId })}
+    onNew={() => { setWorking(null); setWorkspaceEpoch(value => value + 1) }} onAuthChanged={() => { setWorking(null); setBlocked(true) }} />
 }
 
 function SavedProjectMode({ shell, mode }: { shell: boolean; mode: Extract<ProjectMode, { kind: 'saved' }> }) {
@@ -99,7 +147,10 @@ function ProjectModeFrame({ shell, mode, section, projectName, children }: {
   </div>
 }
 
-function TenjikaiAppContent({ shell, currentActor }: { shell: boolean; currentActor: () => boolean }) {
+function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onWorking, onNew, onAuthChanged }: {
+  shell: boolean; currentActor: () => boolean; actorId: string; activeProjectId: string | null
+  onWorking: (projectId: string) => void; onNew: () => void; onAuthChanged: () => void
+}) {
   const router = useRouter()
   const section = sectionFromPath(usePathname())
   const [phase, setPhase] = useState<Phase>('input')
@@ -115,10 +166,15 @@ function TenjikaiAppContent({ shell, currentActor }: { shell: boolean; currentAc
 
   // 文面（解析・ブース案・制作物）は API で作り、寸法・金額はルール計算に重ねる
   const [generated, setGenerated] = useState<GeneratedPlan>(() => mockGeneratedPlan(SAMPLE_INPUT))
+  const [save, setSave] = useState<GenerationSave | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [failureKind, setFailureKind] = useState<'unknown' | 'known' | 'rejected' | null>(null)
+  const [projectId, setProjectId] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [animDone, setAnimDone] = useState(false)
   const requestSeq = useRef(0)
-  useEffect(() => () => { requestSeq.current++ }, [])
+  const requestController = useRef<AbortController | null>(null)
+  useEffect(() => () => { requestSeq.current++; requestController.current?.abort() }, [])
 
   const analysis = generated.analysis
   const plans = useMemo(() => applyBoothCopy(generateBoothPlans(input), generated.boothCopy), [input, generated.boothCopy])
@@ -132,39 +188,65 @@ function TenjikaiAppContent({ shell, currentActor }: { shell: boolean; currentAc
   )
 
   const start = (next: ProjectInput) => {
-    if (!currentActor()) return
-    setDocs([])
-    setDone([])
-    setPanelImages({})
+    if (!currentActor() || requestController.current || failureKind === 'unknown' || failureKind === 'known' && !!projectId) return
+    setError(null)
+    setFailureKind(null)
     setInput(next)
     setSelectedNovelty(generateNovelties(next).filter((n) => n.recommended).map((n) => n.id))
     setVariant(next.goal === 'demo' ? 'A' : next.goal === 'brand' ? 'B' : 'C')
-    setGenerated(mockGeneratedPlan(next))
     setAnimDone(false)
     setPending(true)
     setPhase('generating')
     const seq = ++requestSeq.current
-    requestGeneratedPlan(next).then((g) => {
+    const requestId = crypto.randomUUID()
+    const controller = new AbortController()
+    requestController.current = controller
+    requestGeneratedPlan(next, actorId, requestId, controller.signal).then((result: GenerationResult) => {
       if (!currentActor() || seq !== requestSeq.current) return
-      setGenerated(g)
+      if (result.state === 'generated') {
+        setDocs([])
+        setDone([])
+        setPanelImages({})
+        setGenerated(result.plan)
+        setProjectId(result.projectId)
+        setSave(result.save)
+        setFailureKind(null)
+        onWorking(result.projectId)
+      } else if (result.state === 'auth_changed') {
+        onAuthChanged()
+        return
+      } else {
+        setError(result.message)
+        setProjectId(result.projectId)
+        setSave(result.save)
+        setFailureKind(result.state === 'outcome_unknown' ? 'unknown' : result.state === 'generation_failed' ? 'known' : 'rejected')
+        setPhase('input')
+      }
       setPending(false)
-    })
+    }).catch(() => {
+      if (currentActor() && seq === requestSeq.current) {
+        setError('案件の作成結果を確認できませんでした。再度作成せず、保存状況をご確認ください。')
+        setFailureKind('unknown')
+        setPhase('input')
+        setPending(false)
+      }
+    }).finally(() => { if (requestController.current === controller) requestController.current = null })
   }
 
   const onGeneratingDone = useCallback(() => setAnimDone(true), [])
 
   // 演出と API の両方が終わってから結果画面へ
   useEffect(() => {
-    if (currentActor() && phase === 'generating' && animDone && !pending) {
+    if (currentActor() && phase === 'generating' && animDone && !pending && projectId && activeProjectId === projectId) {
       setPhase('ready')
       // 条件を入れたら、次は 3D で確かめる（利用者の流れ。2026-10-19 ユーザー指示）
-      router.push(sectionHref('booth'))
+      router.push(projectSectionHref('booth', { kind: 'saved', id: projectId }))
     }
-  }, [phase, animDone, pending, router, currentActor])
+  }, [phase, animDone, pending, router, currentActor, projectId, activeProjectId])
 
   const go = (s: Section) => {
-    if (s === 'new') setPhase('input')
-    router.push(sectionHref(s))
+    if (s === 'new') { requestSeq.current++; requestController.current?.abort(); requestController.current = null; setPhase('input'); setProjectId(null); setError(null); setFailureKind(null); onNew() }
+    router.push(s === 'new' || !activeProjectId ? sectionHref(s) : projectSectionHref(s, { kind: 'saved', id: activeProjectId }))
     setMobileOpen(false)
   }
 
@@ -172,12 +254,12 @@ function TenjikaiAppContent({ shell, currentActor }: { shell: boolean; currentAc
     if (phase === 'generating')
       return (
         <Generating
-          analysis={analysis}
+          analysis={pending ? null : analysis}
           input={input}
           onDone={onGeneratingDone}
         />
       )
-    if (phase === 'input' || section === 'new') return <Wizard initial={input} onSubmit={start} />
+    if (phase === 'input' || section === 'new') return <Wizard initial={input} onSubmit={start} submitDisabled={failureKind === 'unknown' || failureKind === 'known' && !!projectId} />
     switch (section) {
       case 'overview':
         return <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} />
@@ -200,9 +282,19 @@ function TenjikaiAppContent({ shell, currentActor }: { shell: boolean; currentAc
 
   const body = (
     <>
-      {phase === 'ready' && section !== 'new' && generated.notice && (
+      {error && <div role="alert" className="mx-auto max-w-6xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 md:mx-8">
+        <p>{error}{failureKind === 'unknown' && ' 作成された可能性があるため、ここからの再送は停止しています。'}</p>
+        {projectId ? <Link href={projectSectionHref('overview', { kind: 'saved', id: projectId })} className="mt-2 inline-block font-semibold underline">保存案件の基本情報を確認</Link>
+          : failureKind === 'unknown' ? <Link href="/home" className="mt-2 inline-block font-semibold underline">ホームで保存案件を確認</Link> : null}
+        {failureKind === 'unknown' && <p className="mt-2">一覧に見つからない場合も、案件が作成されなかった証明にはなりません。</p>}
+      </div>}
+      {phase === 'ready' && section !== 'new' && save && (
         <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">
-          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900">{generated.notice}</p>
+          <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900">
+            案件の基本情報を保存しました。会場の指定やブース案などは、この画面内にのみ保持されています。
+            {save.analysis !== 'saved' && ' 分析結果の保存を確認できません。この画面を閉じると失われる可能性があります。'}
+            {generated.notice && ` ${generated.notice}`}
+          </p>
         </div>
       )}
       {/* 画面の切り替えにアニメーションを付けない。前の画面が消えるのを待つ作りだと、
@@ -219,7 +311,7 @@ function TenjikaiAppContent({ shell, currentActor }: { shell: boolean; currentAc
   return (
     <div className="tenjikai-root flex h-screen overflow-hidden bg-[var(--bg)] text-ink">
       <div className="hidden md:flex">
-        <TenjikaiSidebar section={phase === 'ready' ? section : 'new'} ready={phase === 'ready'} go={go} isCollapsed={collapsed} onToggle={setCollapsed} projectName={phase === 'input' ? undefined : input.eventName} />
+        <TenjikaiSidebar section={phase === 'ready' ? section : 'new'} ready={phase === 'ready'} go={go} isCollapsed={collapsed} onToggle={setCollapsed} projectName={phase === 'input' ? undefined : input.eventName} workingMode={!!activeProjectId} />
       </div>
 
       <AnimatePresence>
@@ -227,7 +319,7 @@ function TenjikaiAppContent({ shell, currentActor }: { shell: boolean; currentAc
           <>
             <motion.div initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} />
             <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ duration: 0.2, ease: 'easeOut' }} className="fixed inset-y-0 left-0 z-50 md:hidden">
-              <TenjikaiSidebar section={phase === 'ready' ? section : 'new'} ready={phase === 'ready'} go={go} forceExpanded isMobile onToggle={() => setMobileOpen(false)} projectName={phase === 'input' ? undefined : input.eventName} />
+              <TenjikaiSidebar section={phase === 'ready' ? section : 'new'} ready={phase === 'ready'} go={go} forceExpanded isMobile onToggle={() => setMobileOpen(false)} projectName={phase === 'input' ? undefined : input.eventName} workingMode={!!activeProjectId} />
             </motion.div>
           </>
         )}

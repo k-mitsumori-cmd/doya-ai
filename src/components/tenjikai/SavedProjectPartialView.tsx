@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { Section } from '@/lib/tenjikai/nav'
 import type { ProjectDetailResponse } from '@/lib/tenjikai/project-detail-mode'
 import type { SavedDetailPhase } from '@/lib/tenjikai/use-saved-project-detail'
+import { GOAL_LABEL, POSITION_LABEL, type Goal, type BoothPosition } from '@/lib/tenjikai/engine'
 
 type Phase = SavedDetailPhase | 'invalid_project'
 
@@ -13,6 +14,8 @@ function safeHttpUrl(value: string): string | null {
     return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null
   } catch { return null }
 }
+
+const savedLabel = (value: string | undefined, labels: Record<string, string>) => value && Object.prototype.hasOwnProperty.call(labels, value) ? labels[value] : '保存された値を確認できません。'
 
 export default function SavedProjectPartialView({ phase, detail, section, onReload, loginCallbackUrl }: {
   phase: Phase
@@ -68,9 +71,9 @@ export default function SavedProjectPartialView({ phase, detail, section, onRelo
               <div><dt className="text-sm text-[var(--sub)]">会場ID</dt><dd>{project?.venueId ?? '会場情報は確認できません。'}</dd></div>
               <div><dt className="text-sm text-[var(--sub)]">小間数</dt><dd>{project?.komaCols}列 × {project?.komaRows}行</dd></div>
               <div><dt className="text-sm text-[var(--sub)]">ブース寸法</dt><dd>{project?.boothWidthM}m × {project?.boothDepthM}m</dd></div>
-              <div><dt className="text-sm text-[var(--sub)]">ブース位置</dt><dd>{project?.boothPosition}</dd></div>
+              <div><dt className="text-sm text-[var(--sub)]">ブース位置</dt><dd>{savedLabel(project?.boothPosition, POSITION_LABEL satisfies Record<BoothPosition, string>)}</dd></div>
               <div><dt className="text-sm text-[var(--sub)]">入力予算</dt><dd>{project?.budgetYen.toLocaleString('ja-JP')}円</dd></div>
-              <div><dt className="text-sm text-[var(--sub)]">目的</dt><dd>{project?.goal}</dd></div>
+              <div><dt className="text-sm text-[var(--sub)]">目的</dt><dd>{savedLabel(project?.goal, GOAL_LABEL satisfies Record<Goal, string>)}</dd></div>
               <div><dt className="text-sm text-[var(--sub)]">担当人数</dt><dd>{project?.staffCount}人</dd></div>
               <div><dt className="text-sm text-[var(--sub)]">サービスURL</dt><dd className="break-all">{website ? <a href={website} target="_blank" rel="noopener noreferrer" className="text-[var(--blue-deep)] underline">{project?.serviceUrl}</a> : project?.serviceUrl}</dd></div>
             </dl>

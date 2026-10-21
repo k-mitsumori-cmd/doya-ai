@@ -12,6 +12,9 @@ const { JSDOM } = require('jsdom')
 const rootPath = path.resolve(__dirname, '../..')
 const req = Module.createRequire(path.join(rootPath, 'package.json'))
 const ts = req('typescript')
+const engineModule = new Module(path.join(rootPath, 'src/lib/tenjikai/engine.ts'))
+engineModule._compile(ts.transpileModule(fs.readFileSync(engineModule.id, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, engineModule.id)
+const actualLabels = engineModule.exports
 const { NextRequest } = req('next/server')
 const dom = new JSDOM('<body></body>', { url: 'https://example.test/tenjikai' })
 global.window = dom.window
@@ -31,6 +34,8 @@ const motion = new Proxy({}, { get: (_, name) => ({ children, ...props }) => Rea
   Object.fromEntries(Object.entries(props).filter(([key]) => !['initial', 'animate', 'exit', 'transition', 'layout', 'layoutId', 'whileHover'].includes(key))), children) })
 const Link = ({ children, href, ...props }) => React.createElement('a', { ...props, href }, children)
 const engine = {
+  GOAL_LABEL: actualLabels.GOAL_LABEL,
+  POSITION_LABEL: actualLabels.POSITION_LABEL,
   SAMPLE_INPUT: { eventName: 'SAMPLE_SENTINEL', goal: 'lead' },
   mockGeneratedPlan: () => { active.oldCalls.push('mockGeneratedPlan'); return { analysis: {}, boothCopy: null, creativeCopy: null } },
   generateBoothPlans: () => { active.oldCalls.push('generateBoothPlans'); return [{ variant: 'A' }] },
@@ -252,6 +257,23 @@ test('Tenjikai saved project actual mounted boundary', async t => {
       assert.match(f.text(), /PRIVATE_P/)
       assert.deepEqual(f.oldCalls, [], `legacy calculation on ${section}`)
     }
+  })
+  await check('known goal and booth position use actual Japanese labels; unknown is not inferred', {}, async f => {
+    for (const [goal, label] of Object.entries(actualLabels.GOAL_LABEL)) {
+      f.rows.find(row => row.id === 'P' && row.userId === 'A').value = saved('P', { goal })
+      await f.click('再読み込み')
+      assert.ok(f.text().includes(label))
+    }
+    for (const [boothPosition, label] of Object.entries(actualLabels.POSITION_LABEL)) {
+      f.rows.find(row => row.id === 'P' && row.userId === 'A').value = saved('P', { boothPosition })
+      await f.click('再読み込み')
+      assert.ok(f.text().includes(label))
+    }
+    f.rows.find(row => row.id === 'P' && row.userId === 'A').value = saved('P', { goal: 'unknown_goal', boothPosition: 'unknown_position' })
+    await f.click('再読み込み')
+    assert.ok(f.text().includes('保存された値を確認できません。'))
+    assert.ok(f.text().includes('会場情報は確認できません。'))
+    assert.deepEqual(f.oldCalls, [])
   })
   await check('root alias replaces overview before wizard mounts, and all shell tabs keep project', { route: '/tenjikai?project=P', shell: true }, async f => {
     assert.equal(f.nav[0].method, 'replace')
