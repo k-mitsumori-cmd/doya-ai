@@ -2,7 +2,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -18,8 +19,12 @@ export async function GET(_req: NextRequest) {
     const u = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } })
     userId = u?.id
   }
+  const expectedActor = _req.headers.get('X-Aio-Actor-Id')
   if (!userId) {
-    return NextResponse.json({ authenticated: false, onboarded: false, memberships: [] }, { headers: { 'Cache-Control': 'no-store' } })
+    return privateApiJson({ authenticated: false, actorId: null, onboarded: false, memberships: [], ...(expectedActor !== null ? { code: 'ACTOR_REQUIRED' } : {}) }, { status: expectedActor !== null ? 401 : 200 })
+  }
+  if (expectedActor !== null && expectedActor !== userId) {
+    return privateApiJson({ error: 'ログイン状態が変わりました。もう一度確認してください。', code: 'ACTOR_CHANGED' }, { status: 409 })
   }
 
   // userId 既知のため再解決せず、独立クエリは並列実行
@@ -31,19 +36,19 @@ export async function GET(_req: NextRequest) {
   let organizationPlan: string | null = null
   if (requestedOrg) {
     const ctx = await getAioContext(requestedOrg)
-    if (!ctx) return NextResponse.json({ error: '組織にアクセスできません' }, { status: 403 })
+    if (!ctx) return privateApiJson({ error: '組織にアクセスできません' }, { status: 403 })
     const billing = await getAioBilling(prisma, ctx.organizationId)
-    if (!billing) return NextResponse.json({ error: '組織の契約情報を確認できません', code: 'BILLING_OWNER' }, { status: 409 })
+    if (!billing) return privateApiJson({ error: '組織の契約情報を確認できません', code: 'BILLING_OWNER' }, { status: 409 })
     organizationPlan = billing.plan
   }
-  return NextResponse.json(
+  return privateApiJson(
     {
       authenticated: true,
+      actorId: userId,
       onboarded: memberships.length > 0,
       memberships,
       plan: organizationPlan ?? user?.plan ?? 'FREE',
       name: user?.name || null,
-    },
-    { headers: { 'Cache-Control': 'no-store' } }
+    }
   )
 }
