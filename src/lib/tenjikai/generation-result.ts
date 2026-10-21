@@ -1,14 +1,15 @@
 import type { GeneratedPlan } from './engine'
+import { readFullTenjikaiWorkspaceDto, type FullTenjikaiWorkspace } from './workspace-dto'
 
 export type GenerationSave = {
   project: 'basic' | 'unknown' | 'not_created'
   venue: 'not_saved'
   analysis: 'saved' | 'unknown' | 'not_saved'
-  plan: 'not_saved'
+  plan: 'not_saved' | 'saved'
 }
 
 export type GenerationResult =
-  | { state: 'generated'; actorId: string; clientRequestId: string; operationId?: string | null; projectId: string; plan: GeneratedPlan; save: GenerationSave }
+  | { state: 'generated'; actorId: string; clientRequestId: string; operationId?: string | null; projectId: string; plan: GeneratedPlan; workspace?: FullTenjikaiWorkspace; save: GenerationSave }
   | { state: 'generation_failed'; actorId: string; clientRequestId: string; operationId?: string | null; projectId: string; message: string; save: GenerationSave }
   | { state: 'auth_changed'; actorId: string; clientRequestId: string; operationId?: string | null; projectId: null; message: string; save: GenerationSave }
   | { state: 'rejected' | 'outcome_unknown'; actorId: string | null; clientRequestId: string | null; operationId?: string | null; projectId: string | null; message: string; save: GenerationSave }
@@ -48,9 +49,13 @@ export function readGenerationResult(body: unknown, actorId: string, requestId: 
   if (operationId !== undefined && row.operationId !== operationId) return null
   const save = object(row.save)
   if (!save || !['basic', 'unknown', 'not_created'].includes(String(save.project)) || save.venue !== 'not_saved'
-      || !['saved', 'unknown', 'not_saved'].includes(String(save.analysis)) || save.plan !== 'not_saved') return null
+      || !['saved', 'unknown', 'not_saved'].includes(String(save.analysis)) || !['not_saved', 'saved'].includes(String(save.plan))) return null
   if (row.state === 'generated') {
     if (!nonempty(row.projectId) || save.project !== 'basic' || !validPlan(row.plan)) return null
+    if (save.plan === 'saved') {
+      const workspace = readFullTenjikaiWorkspaceDto(row.workspace)
+      if (!workspace || workspace.actorId !== actorId || workspace.projectId !== row.projectId || save.analysis !== 'saved') return null
+    } else if (row.workspace !== undefined) return null
   } else if (row.state === 'generation_failed') {
     if (!nonempty(row.projectId) || save.project !== 'basic' || !nonempty(row.message)) return null
   } else if (row.state === 'rejected' || row.state === 'outcome_unknown') {

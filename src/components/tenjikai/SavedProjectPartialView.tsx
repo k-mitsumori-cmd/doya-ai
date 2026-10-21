@@ -6,7 +6,7 @@ import type { ProjectDetailResponse } from '@/lib/tenjikai/project-detail-mode'
 import type { SavedDetailPhase } from '@/lib/tenjikai/use-saved-project-detail'
 import { GOAL_LABEL, POSITION_LABEL, type Goal, type BoothPosition } from '@/lib/tenjikai/engine'
 
-type Phase = SavedDetailPhase | 'invalid_project'
+type Phase = Exclude<SavedDetailPhase, 'ready_full'> | 'invalid_project'
 
 function safeHttpUrl(value: string): string | null {
   try {

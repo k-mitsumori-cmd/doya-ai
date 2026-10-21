@@ -47,13 +47,17 @@ const route = load('src/app/api/tenjikai/generate/route.ts')
 const generation = load('src/lib/tenjikai/generation-operation.ts')
 const revision = load('src/lib/tenjikai/project-revision.ts')
 const generationReceipts = load('src/lib/tenjikai/generation-receipts.ts')
+const workspaceStore = load('src/lib/tenjikai/workspace-store.ts')
+const workspaceSave = load('src/lib/tenjikai/workspace-save.ts')
 const statusRoute = load('src/app/api/tenjikai/generate/status/route.ts')
 const quote = value => '"' + value.replaceAll('"', '""') + '"'
 async function setup() {
   const info = await db.$queryRawUnsafe("SELECT inet_server_addr() AS address,current_user AS role,current_setting('data_directory') AS folder")
   assert.equal(info[0].address, null); assert.equal(info[0].role, 'doya_tenjikai_c3b'); assert.equal(info[0].folder, folder + '/data')
   await db.$executeRawUnsafe('CREATE SCHEMA tenjikai_fixture')
-  for (const name of ['User', 'SystemSetting', 'TenjikaiProject', 'TenjikaiSiteAnalysis']) {
+  for (const name of ['User', 'SystemSetting', 'TenjikaiProject', 'TenjikaiSiteAnalysis',
+    'TenjikaiBoothPlan', 'TenjikaiBoothElement', 'TenjikaiGraphicPanel', 'TenjikaiCreative',
+    'TenjikaiNovelty', 'TenjikaiBudgetLine', 'TenjikaiDocument', 'TenjikaiTask']) {
     const model = Prisma.dmmf.datamodel.models.find(item => item.name === name)
     assert(model, name)
     const cols = model.fields.filter(field => field.kind !== 'object').map(field => {
@@ -68,13 +72,27 @@ async function setup() {
     if (model.primaryKey?.fields?.length) cols.push('PRIMARY KEY (' + model.primaryKey.fields.map(quote).join(',') + ')')
     await db.$executeRawUnsafe('CREATE TABLE ' + quote(model.dbName || name) + ' (' + cols.join(',') + ')')
   }
+  for (const [child, column, parent, target] of [
+    ['tenjikai_project', 'userId', '"User"', 'id'],
+    ['tenjikai_site_analysis', 'projectId', 'tenjikai_project', 'id'],
+    ...['tenjikai_booth_plan', 'tenjikai_creative', 'tenjikai_novelty', 'tenjikai_budget_line', 'tenjikai_document', 'tenjikai_task']
+      .map(table => [table, 'projectId', 'tenjikai_project', 'id']),
+    ...['tenjikai_booth_element', 'tenjikai_graphic_panel'].map(table => [table, 'planId', 'tenjikai_booth_plan', 'id']),
+  ]) await db.$executeRawUnsafe(`ALTER TABLE ${child} ADD FOREIGN KEY (${quote(column)}) REFERENCES ${parent}(${quote(target)}) ON DELETE CASCADE`)
+  await db.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS tenjikai_booth_element_plan_id_uq ON tenjikai_booth_element("planId",id)')
+  await db.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS tenjikai_document_project_id_uq ON tenjikai_document("projectId",id)')
+  await db.$executeRawUnsafe('ALTER TABLE tenjikai_graphic_panel ADD CONSTRAINT tenjikai_graphic_panel_element_same_plan_fkey FOREIGN KEY ("planId","elementId") REFERENCES tenjikai_booth_element("planId",id) ON DELETE NO ACTION ON UPDATE CASCADE')
+  await db.$executeRawUnsafe('ALTER TABLE tenjikai_task ADD CONSTRAINT tenjikai_task_document_same_project_fkey FOREIGN KEY ("projectId","documentId") REFERENCES tenjikai_document("projectId",id) ON DELETE NO ACTION ON UPDATE CASCADE')
+  await db.$executeRawUnsafe('CREATE UNIQUE INDEX tenjikai_booth_plan_one_selected_uq ON tenjikai_booth_plan("projectId") WHERE selected = true')
+  await db.$executeRawUnsafe('ALTER TABLE tenjikai_booth_plan ADD CONSTRAINT tenjikai_booth_plan_electric_pair_ck CHECK (("electricYen" IS NULL AND "electricDetail" IS NULL) OR ("electricYen" IS NOT NULL AND "electricYen" >= 0 AND "electricDetail" IS NOT NULL AND char_length("electricDetail") BETWEEN 1 AND 240))')
 }
 async function reset() {
-  await db.$executeRawUnsafe('TRUNCATE "User","SystemSetting",tenjikai_project,tenjikai_site_analysis')
+  await db.$executeRawUnsafe('TRUNCATE "User","SystemSetting",tenjikai_project,tenjikai_site_analysis,tenjikai_booth_plan,tenjikai_booth_element,tenjikai_graphic_panel,tenjikai_creative,tenjikai_novelty,tenjikai_budget_line,tenjikai_document,tenjikai_task')
   await db.user.create({ data: { id: actor, email: 'tenjikai-c3b@example.invalid', plan: 'FREE' } })
   session = { user: { id: actor } }; aiWait = null; provider = 0
 }
 const opId = () => generation.createGenerationOperationId()
+const saveOpId = () => `save.${Date.now()}.${crypto.randomUUID()}`
 const request = (operationId = opId(), input = engine.SAMPLE_INPUT) => new NextRequest('https://example.invalid/api/tenjikai/generate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
   ...input, expectedActor: actor, clientRequestId: crypto.randomUUID(), operationId,
 }) })
@@ -108,6 +126,71 @@ async function check(name, run) { await reset(); await run(); cases.push(name) }
       assert.equal(result.status, 200, JSON.stringify(result.body)); assert.equal(result.body.state, 'generated')
       assert.equal(provider, 1); assert.equal(await db.tenjikaiProject.count(), 1); assert.equal(await db.tenjikaiSiteAnalysis.count(), 1)
       assert.equal((await db.tenjikaiProject.findFirst({ where: { userId: actor } })).revision, 1n)
+      const projectId = result.body.projectId
+      const saved = await workspaceStore.readFullTenjikaiWorkspace(actor, projectId, db)
+      assert.deepEqual(saved, result.body.workspace)
+      assert.equal(saved.revision, '1')
+      assert.deepEqual(saved.plans.map(item => item.plan.variant), ['A', 'B', 'C'])
+      assert.equal(saved.plans.every(item => Number.isInteger(item.electric.amountYen) && item.electric.detail.length > 0), true)
+      assert.equal(await db.tenjikaiBoothPlan.count(), 3)
+      assert.equal(await db.tenjikaiCreative.count(), 6)
+      assert.equal(await db.tenjikaiTask.count(), 10)
+    })
+    await check('generated full workspace saves variant by CAS with persisted electric snapshot and idempotent replay', async () => {
+      const operationId = opId(), result = await post(operationId)
+      assert.equal(result.status, 200, JSON.stringify(result.body))
+      const projectId = result.body.projectId, saveId = saveOpId()
+      const before = result.body.workspace
+      const saved = await workspaceSave.saveTenjikaiWorkspace(actor, projectId, saveId, '1', { variant: 'B' }, db)
+      assert.equal(saved.state, 'committed')
+      assert.equal(saved.workspace.revision, '2')
+      assert.equal(saved.workspace.selectedVariant, 'B')
+      const chosen = before.plans.find(item => item.plan.variant === 'B')
+      const electric = saved.workspace.budgetLines.find(item => item.sourceLineKey === 'electric')
+      assert.deepEqual({ amountYen: electric.amountYen, detail: electric.detail }, chosen.electric)
+      assert.deepEqual(await workspaceStore.readFullTenjikaiWorkspace(actor, projectId, db), saved.workspace)
+      const replay = await workspaceSave.saveTenjikaiWorkspace(actor, projectId, saveId, '1', { variant: 'B' }, db)
+      assert.deepEqual(replay, saved)
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: projectId } })).revision, 2n)
+      const oldGeneration = await generation.statusGeneration(actor, operationId, db)
+      assert.equal(oldGeneration.state, 'superseded')
+      assert.equal(oldGeneration.terminalConfirmed, true)
+    })
+    await check('normalized writer obeys same-plan FK, electric pair check and parent cascade', async () => {
+      const result = await post()
+      assert.equal(result.status, 200, JSON.stringify(result.body))
+      const a = await db.tenjikaiBoothPlan.findFirst({ where: { projectId: result.body.projectId, variant: 'A' }, include: { panels: true } })
+      const b = await db.tenjikaiBoothPlan.findFirst({ where: { projectId: result.body.projectId, variant: 'B' }, include: { elements: true } })
+      assert.ok(a.panels.length && b.elements.length)
+      await assert.rejects(db.$executeRaw`UPDATE tenjikai_graphic_panel SET "elementId" = ${b.elements[0].id} WHERE id = ${a.panels[0].id}`)
+      await assert.rejects(db.$executeRaw`UPDATE tenjikai_booth_plan SET "electricDetail" = NULL WHERE id = ${a.id}`)
+      assert.ok(await workspaceStore.readFullTenjikaiWorkspace(actor, result.body.projectId, db))
+      await db.user.delete({ where: { id: actor } })
+      for (const model of ['tenjikaiProject', 'tenjikaiSiteAnalysis', 'tenjikaiBoothPlan', 'tenjikaiBoothElement',
+        'tenjikaiGraphicPanel', 'tenjikaiCreative', 'tenjikaiNovelty', 'tenjikaiBudgetLine', 'tenjikaiTask']) {
+        assert.equal(await db[model].count(), 0, model)
+      }
+    })
+    await check('two connections race same saved revision; one CAS winner and one unknown-safe rejection', async () => {
+      const result = await post(), projectId = result.body.projectId
+      assert.equal(result.status, 200)
+      const firstId = saveOpId(), secondId = saveOpId()
+      const first = workspaceSave.saveTenjikaiWorkspace(actor, projectId, firstId, '1', { variant: 'B' }, db)
+      const second = workspaceSave.saveTenjikaiWorkspace(actor, projectId, secondId, '1', { variant: 'C' }, locker)
+      const results = await Promise.allSettled([first, second])
+      assert.equal(results.filter(row => row.status === 'fulfilled').length, 1)
+      assert.equal(results.filter(row => row.status === 'rejected').length, 1)
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: projectId } })).revision, 2n)
+      assert.equal((await db.tenjikaiBoothPlan.findMany({ where: { projectId, selected: true } })).length, 1)
+      const loserId = results[0].status === 'rejected' ? firstId : secondId
+      assert.equal((await workspaceSave.statusWorkspaceSave(actor, loserId, db)).state, 'missing')
+      assert.equal((await workspaceSave.cancelMissingWorkspaceSave(actor, loserId, db)).state, 'canceled')
+      await assert.rejects(workspaceSave.saveTenjikaiWorkspace(actor, projectId, loserId, '1', { variant: 'A' }, db))
+      const latest = await workspaceStore.readFullTenjikaiWorkspace(actor, projectId, db)
+      assert.equal(latest.revision, '2')
+      const next = await workspaceSave.saveTenjikaiWorkspace(actor, projectId, saveOpId(), latest.revision, { budgetYen: latest.input.budgetYen + 1 }, db)
+      assert.equal(next.state, 'committed')
+      assert.equal(next.workspace.revision, '3')
     })
     await check('preexisting real retirement fence denies project before AI', async () => {
       await store.reserveLifecycleOperation(reserver, identity(), digest)
@@ -494,7 +577,7 @@ async function check(name, run) { await reset(); await run(); cases.push(name) }
     const report = { runId: process.env.DOYA_TENJIKAI_C3B_RUN_ID, accepted: true, passed: cases.length, cases,
       scope: 'Actual route, plan tier, Prisma and lifecycle store with owned private PostgreSQL; synthetic session/AI; no external provider or HTTP server',
       generatedClient: { resolvedPath: fs.realpathSync(req.resolve('@prisma/client')), dmmfSha256: crypto.createHash('sha256').update(JSON.stringify(Prisma.dmmf.datamodel.models)).digest('hex') },
-      sourceHashes: Object.fromEntries([...source, 'prisma/schema.prisma', 'prisma/manual-migrations/2026-10-22-tenjikai-workspace-revision.sql', 'scripts/security-regression/verify-tenjikai-c3b2-migration.py', 'scripts/security-regression/verify-tenjikai-c3b-postgres.cjs', 'scripts/security-regression/verify-tenjikai-c3b-postgres.py'].map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(repo, file))).digest('hex')])) }
+      sourceHashes: Object.fromEntries([...source, 'prisma/schema.prisma', 'prisma/manual-migrations/2026-10-22-tenjikai-workspace-revision.sql', 'prisma/manual-migrations/2026-10-22-tenjikai-electric-snapshot.sql', 'scripts/security-regression/verify-tenjikai-c3b2-migration.py', 'scripts/security-regression/verify-tenjikai-c3c-migration.py', 'scripts/security-regression/verify-tenjikai-c3b-postgres.cjs', 'scripts/security-regression/verify-tenjikai-c3b-postgres.py'].map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(repo, file))).digest('hex')])) }
     const target = path.join(process.env.DOYA_TENJIKAI_C3B_EVIDENCE_DIR, 'postgres-results-' + report.runId + '.json')
     fs.writeFileSync(target, JSON.stringify(report, null, 2) + '\n'); console.log(JSON.stringify({ target, passed: cases.length }))
   } finally { await Promise.all([db.$disconnect(), locker.$disconnect(), reserver.$disconnect()]) }

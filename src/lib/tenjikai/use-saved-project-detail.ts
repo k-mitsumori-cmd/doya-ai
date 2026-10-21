@@ -4,9 +4,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useSession } from 'next-auth/react'
 import { readProjectDetailResponse, type ProjectDetailResponse } from './project-detail-mode'
+import { readSavedTenjikaiWorkspace } from './workspace-client'
+import type { FullTenjikaiWorkspace } from './workspace-dto'
 
-export type SavedDetailPhase = 'checking_auth' | 'loading' | 'ready_partial' | 'not_found' | 'error' | 'unauthenticated' | 'auth_changed'
-type ReadState = { phase: SavedDetailPhase; epoch: number; detail: ProjectDetailResponse | null }
+export type SavedDetailPhase = 'checking_auth' | 'loading' | 'ready_full' | 'ready_partial' | 'not_found' | 'error' | 'unauthenticated' | 'auth_changed'
+type ReadState = { phase: SavedDetailPhase; epoch: number; detail: ProjectDetailResponse | null; workspace?: FullTenjikaiWorkspace | null }
 
 /** 保存値は現在のactor・project・世代と一致するrenderでだけ外に出す。 */
 export function useSavedProjectDetail(projectId: string) {
@@ -145,6 +147,20 @@ export function useSavedProjectDetail(projectId: string) {
     const url = `/api/tenjikai/projects/${encodeURIComponent(projectId)}?${query.toString()}`
     void (async () => {
       try {
+        const saved = await readSavedTenjikaiWorkspace(actor, projectId, controller.signal)
+        if (!current()) return
+        if (saved.state === 'unauthenticated' || saved.state === 'auth_changed') {
+          blockedRef.current = true
+          setBlocked(true)
+          setState({ phase: saved.state, epoch, detail: null })
+          return
+        }
+        if (saved.state === 'ready_full') {
+          setState({ phase: 'ready_full', epoch, detail: null, workspace: saved.workspace })
+          return
+        }
+        if (saved.state === 'not_found') { setState({ phase: 'not_found', epoch, detail: null }); return }
+        if (saved.state !== 'ready_partial') { setState({ phase: 'error', epoch, detail: null }); return }
         const response = await fetch(url, { cache: 'no-store', signal: controller.signal })
         if (!current()) return
         if (response.status === 401 || response.status === 409) {
@@ -173,6 +189,7 @@ export function useSavedProjectDetail(projectId: string) {
     : !actor.trim() ? 'auth_changed'
     : state.epoch === epoch ? state.phase : 'loading'
   const detail = phase === 'ready_partial' && state.epoch === epoch ? state.detail : null
+  const workspace = phase === 'ready_full' && state.epoch === epoch ? state.workspace ?? null : null
 
   const reload = useCallback(() => {
     if (blockedRef.current || state.phase === 'unauthenticated' || state.phase === 'auth_changed') {
@@ -183,5 +200,5 @@ export function useSavedProjectDetail(projectId: string) {
     setAttempt(value => value + 1)
   }, [state.phase, verifySession])
 
-  return { phase, detail, reload }
+  return { phase, detail, workspace, reload }
 }

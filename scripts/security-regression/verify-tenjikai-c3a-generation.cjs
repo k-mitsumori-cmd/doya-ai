@@ -61,16 +61,17 @@ function load(relative) {
         state.operations.set(operationId, state.operation)
         return { operation: state.operation, claim: { actor: 'actor-a', operationId, projectId: 'project-a', token: 'synthetic-claim' } }
       },
-      finalizeGeneration: async (claim, analysis) => {
+      finalizeGeneration: async (claim, analysis, _db, _now, _provenance, materialized) => {
         state.transactions++
         if (state.fence) throw new SyntheticLifecycleError('Synthetic fence')
         if (!state.project) throw new SyntheticOperationError('PROJECT_CHANGED')
         if (state.mode === 'analysis_failure') throw Error('Synthetic analysis DB failure')
         if (analysis) state.analysis = analysis
+        if (analysis && materialized) state.workspace = syntheticWorkspace(materialized)
         state.operation = { ...state.operations.get(claim.operationId), state: analysis ? 'completed' : 'failed', analysis: analysis ? 'saved' : 'not_saved' }
         state.operations.set(claim.operationId, state.operation)
         if (state.mode === 'analysis_unknown') throw Error('Synthetic post-commit analysis uncertainty')
-        return { operation: state.operation, committed: true }
+        return { operation: state.operation, committed: true, workspace: state.workspace }
       },
       degradeGeneration: async claim => { state.transactions++; state.operation = { ...state.operations.get(claim.operationId), state: 'degraded', analysis: 'unknown' }; state.operations.set(claim.operationId, state.operation); return { operation: state.operation, committed: true } },
       statusGeneration: async (_actor, operationId) => {
@@ -89,6 +90,7 @@ function load(relative) {
     }
     if (id === '@/lib/account-lifecycle/state') return { LifecycleError: SyntheticLifecycleError }
     if (id === '@/lib/tenjikai/engine') return engine
+    if (id === '@/lib/tenjikai/workspace-store') return { readFullTenjikaiWorkspace: async () => state.workspace }
     if (id.startsWith('@/')) return load('src/' + id.slice(2) + '.ts')
     if (id.startsWith('.')) return load(path.relative(root, path.resolve(path.dirname(file), id)) + '.ts')
     return req(id)
@@ -111,13 +113,35 @@ const db = {
   },
 }
 const engine = load('src/lib/tenjikai/engine.ts')
+function syntheticWorkspace(m) {
+  const plans = m.plans.map(({ plan, panels, cost, electric }, pi) => {
+    const elements = plan.elements.map((item, order) => ({ ...item, z: item.z ?? 0, dbId: `element-${pi}-${order}`, sortOrder: order }))
+    const bySource = new Map(elements.map(item => [item.id, item.dbId]))
+    return { dbId: `plan-${pi}`, plan: { ...plan, elements }, cost, electric, elements,
+      panels: panels.map((item, order) => ({ ...item, dbId: `panel-${pi}-${order}`,
+        elementDbId: bySource.get(item.elementId), sortOrder: order })) }
+  })
+  const venue = engine.VENUES.find(item => item.id === m.input.venueId)
+  return { schemaVersion: 1, actorId: 'actor-a', projectId: 'project-a', revision: '1',
+    coverage: { graph: 'saved', images: 'not_saved', documents: 'not_saved', vendors: 'illustrative' },
+    input: m.input, venueSnapshot: { code: venue.id, name: venue.name, note: venue.note,
+      komaSizeM: venue.komaM, komaPriceYen: venue.komaPriceYen, maxHeightM: venue.maxHeightM, source: 'design_reference' },
+    analysis: { ...m.analysis, source: m.source, notice: m.notice, modelId: null },
+    projectedVisitors: m.projectedVisitors, selectedVariant: m.selectedVariant, plans,
+    creatives: m.creatives.map((item, order) => ({ ...item, dbId: `creative-${order}`, sortOrder: order })),
+    novelties: m.novelties.map(({ novelty, quantity, selected }, order) => ({ ...novelty,
+      dbId: `novelty-${order}`, quantity, selected, sortOrder: order })),
+    budgetLines: m.budgetLines.map((item, order) => ({ ...item, dbId: `budget-${order}`, source: 'ai', status: 'planned' })),
+    deadlines: m.deadlines.map((item, order) => ({ ...item, dbId: `deadline-${order}`, done: false, sortOrder: order })),
+  }
+}
 const statusClient = load('src/lib/tenjikai/generation-status-client.ts')
 const { POST } = load('src/app/api/tenjikai/generate/route.ts')
 const statusRoute = load('src/app/api/tenjikai/generate/status/route.ts')
 const requestId = 'b7d7a6e2-36bf-4c3d-9ec6-1a51afc24175'
 const operationId = `${Date.now()}.${requestId}`
 function reset(mode) {
-  state = { mode, session: { user: { id: 'actor-a' } }, project: null, analysis: null, operation: null, operations: new Map(), provider: 0, creates: 0, transactions: 0, events: [], fence: false }
+  state = { mode, session: { user: { id: 'actor-a' } }, project: null, analysis: null, workspace: null, operation: null, operations: new Map(), provider: 0, creates: 0, transactions: 0, events: [], fence: false }
   state.tx = {
     tenjikaiProject: {
       count: async () => state.mode === 'quota' ? 3 : 0,

@@ -7,6 +7,9 @@ import { planTierOf } from '@/lib/plan-limit'
 import { boothSize, expectedVisitors, type ProjectInput, type SiteAnalysis } from './engine'
 import { generationReceiptPrefix, TENJIKAI_GENERATION_PREFIX } from './generation-receipts'
 import { advanceTenjikaiRevision, lockOwnedTenjikaiRevision, lockTenjikaiActor, parseTenjikaiRevision, TenjikaiRevisionError } from './project-revision'
+import { readFullTenjikaiWorkspaceTx, writeInitialTenjikaiWorkspace } from './workspace-store'
+import type { MaterializedWorkspace } from './workspace-materialize'
+import type { FullTenjikaiWorkspace } from './workspace-dto'
 
 const PREFIX = TENJIKAI_GENERATION_PREFIX
 const OWNER_PREFIX = 'tenjikai-generate-owner:v1:'
@@ -25,7 +28,7 @@ type ReceiptBase = { actorHash: string; operationId: string; fingerprint: string
 type LegacyReceipt = ReceiptBase & { version: 1 }
 type RevisionReceipt = ReceiptBase & { version: 2; baseRevision: string | null; resultRevision: string | null }
 type Receipt = LegacyReceipt | RevisionReceipt
-export type GenerationOperation = { operationId: string; state: Exclude<OperationPhase, 'claimed'> | 'processing' | 'missing' | 'unknown' | 'deleted'; projectId: string | null; analysis: Receipt['analysis']; code: Receipt['code']; dispatchAllowed: boolean }
+export type GenerationOperation = { operationId: string; state: Exclude<OperationPhase, 'claimed'> | 'processing' | 'missing' | 'unknown' | 'deleted'; projectId: string | null; analysis: Receipt['analysis']; code: Receipt['code']; dispatchAllowed: boolean; terminalConfirmed?: boolean }
 export type GenerationClaim = { actor: string; operationId: string; fingerprint: string; projectId: string; projectHash: string; token: string; baseRevision: string }
 export type GenerationAdmission = { operation: GenerationOperation; claim: GenerationClaim | null; quota?: Awaited<ReturnType<typeof assertLimitForTier>> }
 export class GenerationOperationError extends Error { constructor(readonly status: number, readonly code: string) { super('生成操作の状態を確認できません。') } }
@@ -99,7 +102,12 @@ async function view(tx: Prisma.TransactionClient, actor: string, operationId: st
   const expected = r.version === 2 ? r.resultRevision ?? r.baseRevision : null
   const revisionChanged = r.version === 2 && !!project && (revisionRows.length !== 1 || expected === null || revisionRows[0].revision.toString() !== expected)
   const state = r.projectId && !project ? 'deleted' : project && (projectHash(project) !== r.projectHash || analysisMissing || revisionChanged) ? 'superseded' : r.phase === 'claimed' ? now.getTime() - Date.parse(r.claimedAt!) >= 150_000 ? 'unknown' : 'processing' : r.phase
-  return { operationId, state, projectId: project?.id ?? null, analysis: analysisMissing ? 'unknown' : r.analysis, code: r.code, dispatchAllowed: r.version === 2 && state === 'reserved' && !!project }
+  // A later legitimate workspace CAS changes the derived view to superseded.
+  // The validated, owned receipt phase still proves that this ID cannot dispatch again.
+  const terminalConfirmed = ['completed', 'degraded', 'failed', 'canceled'].includes(r.phase) &&
+    (r.phase === 'canceled' || !!project)
+  return { operationId, state, projectId: project?.id ?? null, analysis: analysisMissing ? 'unknown' : r.analysis, code: r.code,
+    dispatchAllowed: r.version === 2 && state === 'reserved' && !!project, terminalConfirmed }
 }
 async function txRetry<T>(db: Pick<PrismaClient, '$transaction'>, work: (tx: Prisma.TransactionClient) => Promise<T>) {
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -177,7 +185,7 @@ export async function claimGeneration(actor: string, operationId: string, input:
     return { operation: await view(tx, i.actor, i.operationId, next, now), claim: { actor: i.actor, operationId: i.operationId, fingerprint, projectId: r.projectId!, projectHash: r.projectHash!, token, baseRevision: r.baseRevision } }
   })
 }
-export async function finalizeGeneration(claim: GenerationClaim, analysis: SiteAnalysis | null, db: Pick<PrismaClient, '$transaction'> = prisma, now = new Date(), provenance?: { source: 'ai' | 'mock'; notice?: string; modelId?: string }) {
+export async function finalizeGeneration(claim: GenerationClaim, analysis: SiteAnalysis | null, db: Pick<PrismaClient, '$transaction'> = prisma, now = new Date(), provenance?: { source: 'ai' | 'mock'; notice?: string; modelId?: string }, workspace?: MaterializedWorkspace) {
   const i = identity(claim.actor, claim.operationId)
   if (!uuid.test(claim.token) || !/^[0-9a-f]{64}$/.test(claim.fingerprint) || !/^[0-9a-f]{64}$/.test(claim.projectHash)) throw new GenerationOperationError(400, 'INVALID_CLAIM')
   parseTenjikaiRevision(claim.baseRevision)
@@ -188,16 +196,16 @@ export async function finalizeGeneration(claim: GenerationClaim, analysis: SiteA
     if (!saved) throw new GenerationOperationError(409, 'OPERATION_MISSING')
     const r = saved.value
     if (r.version === 1) throw new GenerationOperationError(409, 'LEGACY_OPERATION_REQUIRES_REVIEW')
-    if (r.phase !== 'claimed' || r.claim !== claim.token || r.projectId !== claim.projectId || r.fingerprint !== claim.fingerprint || r.projectHash !== claim.projectHash || r.baseRevision !== claim.baseRevision) return { operation: await view(tx, i.actor, i.operationId, r, now), committed: false }
+    if (r.phase !== 'claimed' || r.claim !== claim.token || r.projectId !== claim.projectId || r.fingerprint !== claim.fingerprint || r.projectHash !== claim.projectHash || r.baseRevision !== claim.baseRevision) return { operation: await view(tx, i.actor, i.operationId, r, now), committed: false, workspace: null as FullTenjikaiWorkspace | null }
     try { await lockOwnedTenjikaiRevision(tx, i.actor, claim.projectId, r.baseRevision!) }
     catch (error) {
       if (!(error instanceof TenjikaiRevisionError)) throw error
       const superseded: RevisionReceipt = { ...r, phase: 'superseded', code: 'SUPERSEDED', analysis: 'not_saved', settledAt: now.toISOString() }
       await write(tx, i.actor, i.operationId, superseded, saved.raw)
-      return { operation: await view(tx, i.actor, i.operationId, superseded, now), committed: false }
+      return { operation: await view(tx, i.actor, i.operationId, superseded, now), committed: false, workspace: null as FullTenjikaiWorkspace | null }
     }
     const project = await tx.tenjikaiProject.findFirst({ where: { id: claim.projectId, userId: i.actor }, select: projectSelect })
-    if (!project) return { operation: await view(tx, i.actor, i.operationId, r, now), committed: false }
+    if (!project) return { operation: await view(tx, i.actor, i.operationId, r, now), committed: false, workspace: null as FullTenjikaiWorkspace | null }
     if (projectHash(project) !== r.projectHash) throw new GenerationOperationError(409, 'PROJECT_CHANGED')
     let phase: OperationPhase = analysis ? 'completed' : 'failed'
     let code: Receipt['code'] = analysis ? 'NONE' : 'GENERATION_FAILED'
@@ -205,12 +213,18 @@ export async function finalizeGeneration(claim: GenerationClaim, analysis: SiteA
     let resultRevision: string | null = null
     if (analysis) {
       await tx.tenjikaiSiteAnalysis.create({ data: { projectId: claim.projectId, brand: analysis.brand, category: analysis.category, headline: analysis.headline, subline: analysis.subline, valueProps: analysis.valueProps, targets: analysis.targets, brandColors: analysis.colors, tone: analysis.tone, domain: analysis.domain, generatedSource: provenance?.source ?? null, generationNotice: provenance?.notice ?? null, generationOperationId: i.operationId, modelId: provenance?.modelId ?? null } })
+      if (workspace) {
+        if (workspace.analysis !== analysis && JSON.stringify(workspace.analysis) !== JSON.stringify(analysis)) throw new GenerationOperationError(409, 'WORKSPACE_ANALYSIS_CHANGED')
+        await writeInitialTenjikaiWorkspace(tx, claim.projectId, workspace)
+      }
       resultRevision = await advanceTenjikaiRevision(tx, i.actor, claim.projectId, BigInt(r.baseRevision!))
       analysisState = 'saved'
     }
     const next: RevisionReceipt = { ...r, phase, code, analysis: analysisState, resultRevision, settledAt: now.toISOString() }
     await write(tx, i.actor, i.operationId, next, saved.raw)
-    return { operation: await view(tx, i.actor, i.operationId, next, now), committed: true }
+    const persistedWorkspace = workspace ? await readFullTenjikaiWorkspaceTx(tx, i.actor, claim.projectId) : null
+    if (workspace && !persistedWorkspace) throw new GenerationOperationError(409, 'WORKSPACE_NOT_SAVED')
+    return { operation: await view(tx, i.actor, i.operationId, next, now), committed: true, workspace: persistedWorkspace }
   })
 }
 /** Only a still-claimed generation may be downgraded after a failed/uncertain analysis commit. */

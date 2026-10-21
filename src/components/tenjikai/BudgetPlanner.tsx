@@ -14,7 +14,7 @@ function Donut({ lines, total }: { lines: BudgetLine[]; total: number }) {
     <svg viewBox="0 0 200 200" className="h-56 w-56" role="img" aria-label="予算内訳の円グラフ">
       <circle cx="100" cy="100" r={r} fill="none" stroke={ds.track} strokeWidth="26" />
       {lines.map((l, i) => {
-        const frac = l.amountYen / total
+        const frac = total > 0 ? l.amountYen / total : 0
         const offset = acc
         acc += frac
         return (
@@ -43,7 +43,7 @@ function Donut({ lines, total }: { lines: BudgetLine[]; total: number }) {
 export default function BudgetPlanner({ input, setInput, budget }: { input: ProjectInput; setInput: (i: ProjectInput) => void; budget: BudgetLine[] }) {
   const total = budget.reduce((s, b) => s + b.amountYen, 0)
   const diff = input.budgetYen - total
-  const usage = Math.min(1.3, total / input.budgetYen)
+  const usage = input.budgetYen > 0 ? Math.min(1.3, total / input.budgetYen) : total > 0 ? 1.3 : 0
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
@@ -90,7 +90,7 @@ export default function BudgetPlanner({ input, setInput, budget }: { input: Proj
                   <td className="hidden px-5 py-3 text-xs text-gray-500 sm:table-cell">
                     {b.detail}
                     <div className="mt-1 h-1 rounded-full bg-gray-100">
-                      <motion.div className="h-full rounded-full" style={{ background: BUDGET_META[b.category].color }} initial={false} animate={{ width: `${(b.amountYen / total) * 100}%` }} transition={{ duration: 0.4 }} />
+                      <motion.div className="h-full rounded-full" style={{ background: BUDGET_META[b.category].color }} initial={false} animate={{ width: `${total > 0 ? b.amountYen / total * 100 : 0}%` }} transition={{ duration: 0.4 }} />
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-5 py-3 text-right font-mono tabular text-ink">{yen(b.amountYen)}</td>

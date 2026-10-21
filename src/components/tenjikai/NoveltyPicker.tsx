@@ -6,19 +6,21 @@ import { clsx } from 'clsx'
 import { CountUp, PageHeader, cardIn } from './ui'
 import { expectedVisitors, noveltyQty, recommendPrinters, yen, type Novelty, type ProjectInput } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
+import type { SavedNovelty } from '@/lib/tenjikai/workspace-dto'
 
 const TIERS: Novelty['tier'][] = ['商談者', '名刺交換者', '来場者全員']
 
-export default function NoveltyPicker({ input, novelties, selected, setSelected }: { input: ProjectInput; novelties: Novelty[]; selected: string[]; setSelected: (s: string[]) => void }) {
+export default function NoveltyPicker({ input, novelties, selected, setSelected, savedNovelties, projectedVisitors }: { input: ProjectInput; novelties: Novelty[]; selected: string[]; setSelected: (s: string[]) => void; savedNovelties?: SavedNovelty[]; projectedVisitors?: number }) {
   const toggle = (id: string) => setSelected(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id])
-  const total = novelties.filter((n) => selected.includes(n.id)).reduce((s, n) => s + n.unitYen * noveltyQty(n, input), 0)
+  const quantity = (n: Novelty) => savedNovelties ? savedNovelties.find(item => item.id === n.id)?.quantity ?? 0 : noveltyQty(n, input)
+  const total = novelties.filter((n) => selected.includes(n.id)).reduce((s, n) => s + n.unitYen * quantity(n), 0)
   const partners = recommendPrinters('novelty')
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
       <PageHeader
         title="ノベルティ"
-        desc={`想定の来場者は ${expectedVisitors(input).toLocaleString()} 人です。商談者・名刺交換者・来場者全員の3段に分けて、渡すものと数量を提案します。`}
+        desc={`想定の来場者は ${(projectedVisitors ?? expectedVisitors(input)).toLocaleString()} 人です。商談者・名刺交換者・来場者全員の3段に分けて、渡すものと数量を提案します。`}
         right={
           <div className="rounded-[var(--r-sm)] border border-gray-200 bg-white px-4 py-3 text-right">
             <p className="text-[11px] font-black text-gray-500">選択中の合計</p>
@@ -37,7 +39,7 @@ export default function NoveltyPicker({ input, novelties, selected, setSelected 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {novelties.filter((n) => n.tier === tier).map((n, i) => {
                 const on = selected.includes(n.id)
-                const qty = noveltyQty(n, input)
+                const qty = quantity(n)
                 return (
                   <motion.button
                     key={n.id}

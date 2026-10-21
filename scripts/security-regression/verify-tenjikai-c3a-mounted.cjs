@@ -115,7 +115,7 @@ async function check(name, mode, shell, run, initialRoute, preserveState = false
     await view.click('start')
     assert.equal(view.route, '/tenjikai/booth?project=project-a')
     assert.match(view.container.textContent, /3D:実入力の展示会:ドヤAI/)
-    assert.match(view.container.textContent, /基本情報を保存しました/)
+    assert.match(view.container.textContent, /設計内容は保存済みです/)
     await view.click('nav-overview'); assert.equal(view.route, '/tenjikai/overview?project=project-a')
     await view.click('nav-booth'); assert.match(view.container.textContent, /3D:実入力の展示会/)
   })

@@ -38,8 +38,13 @@ import {
 } from '@/lib/tenjikai/engine'
 import type { GenerationResult, GenerationSave } from '@/lib/tenjikai/generation-result'
 import { readGenerationStatus, cancelGenerationStatus, validOperationHandle, withGenerationOperation, type ClientOperationStatus } from '@/lib/tenjikai/generation-status-client'
+import { previewWorkspaceBudget, type FullTenjikaiWorkspace } from '@/lib/tenjikai/workspace-dto'
+import { readSavedTenjikaiWorkspace } from '@/lib/tenjikai/workspace-client'
+import { cancelMissingSave, newSaveHandle, readSaveStatus, saveWorkspace, validSaveHandle, withSaveHandle, type SaveResponse, type WorkspacePatch } from '@/lib/tenjikai/workspace-save-client'
 
 type Phase = 'input' | 'generating' | 'ready'
+const isTerminalRecovery = (status: ClientOperationStatus | null): boolean =>
+  !!status?.terminalConfirmed && ['completed', 'degraded', 'failed', 'canceled', 'superseded'].includes(status.state)
 
 // ⚠️ src/app/(shell)/tenjikai/layout.tsx に置く。セクション（/tenjikai/<section>）を移っても、ここの状態は残る。
 // shell=true のときは共通シェル（AppShell＋ToolFrame）の中身だけを描き、独自のサイドバーと外枠を出さない。
@@ -106,25 +111,274 @@ function TenjikaiAppBoundary({ shell }: { shell: boolean }) {
   </div>
   if (leavingWorking) return <p role="status" className="p-6">案件の表示を切り替えています。</p>
   if (mode.kind === 'invalid') return <InvalidProjectMode shell={shell} mode={mode} />
-  if (mode.kind === 'saved' && mode.id !== currentWorking?.projectId) return <SavedProjectMode shell={shell} mode={mode} recoveryOperationId={recoveryOperationId} />
+  if (mode.kind === 'saved' && mode.id !== currentWorking?.projectId) return <SavedProjectMode shell={shell} mode={mode} recoveryOperationId={recoveryOperationId} onRecoveryOperation={rememberRecovery} />
   return <TenjikaiAppContent key={`${scope.version}:${workspaceEpoch}`} shell={shell} currentActor={currentActor}
     actorId={scope.actor} activeProjectId={currentWorking?.projectId ?? null} recoveryOperationId={recoveryOperationId} onRecoveryOperation={rememberRecovery}
     onWorking={projectId => setWorking({ actor: scope.actor, epoch: scope.version, projectId })}
     onNew={() => { setWorking(null); setWorkspaceEpoch(value => value + 1) }} onAuthChanged={() => { setWorking(null); setBlocked(true) }} />
 }
 
-function SavedProjectMode({ shell, mode, recoveryOperationId }: { shell: boolean; mode: Extract<ProjectMode, { kind: 'saved' }>; recoveryOperationId: string | null }) {
+function SavedProjectMode({ shell, mode, recoveryOperationId, onRecoveryOperation }: {
+  shell: boolean; mode: Extract<ProjectMode, { kind: 'saved' }>; recoveryOperationId: string | null
+  onRecoveryOperation: (operationId: string | null) => void
+}) {
   const router = useRouter()
   const pathname = usePathname()
+  const query = useSearchParams()
+  const rawSave = query.get('saveOperation')
+  const saveOperationId = validSaveHandle(rawSave) ? rawSave : null
   const section = sectionFromPath(pathname)
-  const { phase, detail, reload } = useSavedProjectDetail(mode.id)
-  const overviewHref = withGenerationOperation(projectSectionHref('overview', mode), recoveryOperationId)
+  const { phase, detail, workspace, reload } = useSavedProjectDetail(mode.id)
+  const scope = useEntryActorScope()
+  const [recovery, setRecovery] = useState<ClientOperationStatus | null>(null)
+  const recoveryActor = scope.actor
+  const recoveryCurrent = scope.current
+  const recoveryStatus = scope.status
+  const recoveryVersion = scope.version
+  const recoverySeq = useRef(0)
+  const checkRecovery = useCallback(() => {
+    if (!recoveryOperationId || recoveryStatus !== 'authenticated' || !recoveryActor || !recoveryCurrent()) return
+    const seq = ++recoverySeq.current
+    const controller = new AbortController()
+    void readGenerationStatus(recoveryActor, recoveryOperationId, controller.signal).then(result => {
+      if (!controller.signal.aborted && seq === recoverySeq.current && recoveryCurrent()) setRecovery(result)
+    })
+    return () => controller.abort()
+  }, [recoveryOperationId, recoveryStatus, recoveryActor, recoveryCurrent])
+  useEffect(() => {
+    setRecovery(null)
+    const cleanup = checkRecovery()
+    return () => cleanup?.()
+  }, [checkRecovery, recoveryVersion])
+  const cancelRecovery = () => {
+    if (recovery?.state !== 'missing' || !recoveryOperationId || !recoveryActor || !recoveryCurrent()) return
+    const seq = ++recoverySeq.current
+    const controller = new AbortController()
+    void cancelGenerationStatus(recoveryActor, recoveryOperationId, controller.signal).then(result => {
+      if (seq === recoverySeq.current && recoveryCurrent()) setRecovery(result)
+    })
+  }
+  const terminalRecovery = !!recoveryOperationId && recovery?.operationId === recoveryOperationId && isTerminalRecovery(recovery)
+  const releaseRecovery = () => { if (terminalRecovery) onRecoveryOperation(null) }
+  const recoveryBanner = recoveryOperationId ? <div role="status" className="mx-auto my-3 max-w-6xl rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm md:mx-8">
+    <p>前の生成操作を確認しています。状態が確定するまで新しい案件は開始できません。</p>
+    <button type="button" className="mt-2 mr-4 font-semibold underline" onClick={checkRecovery}>生成状態を確認</button>
+    {recovery?.state === 'reserved' && recovery.dispatchAllowed && <button type="button" className="mt-2 mr-4 font-semibold underline"
+      onClick={() => router.push(withGenerationOperation(sectionHref('new'), recoveryOperationId))}>同じ生成操作を続ける</button>}
+    {recovery?.state === 'missing' && <button type="button" className="mt-2 mr-4 font-semibold underline" onClick={cancelRecovery}>遅れて届く生成を取り消す</button>}
+    {terminalRecovery && <button type="button" className="mt-2 font-semibold underline" onClick={() => { releaseRecovery(); router.push(sectionHref('new')) }}>別の案件を新規作成</button>}
+  </div> : null
+  const overviewHref = withSaveHandle(withGenerationOperation(projectSectionHref('overview', mode), recoveryOperationId), saveOperationId)
   useEffect(() => {
     if (section === 'new') router.replace(overviewHref)
   }, [section, overviewHref, router])
   if (section === 'new') return <p role="status" className="p-6">保存内容を読み込んでいます。</p>
-  return <ProjectModeFrame shell={shell} mode={mode} section={section} projectName={detail?.project.projectName} recoveryOperationId={recoveryOperationId}>
-    <SavedProjectPartialView phase={phase} detail={detail} section={section} onReload={reload} loginCallbackUrl={withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId)} newProjectHref={withGenerationOperation(sectionHref('new'), recoveryOperationId)} />
+  if (phase === 'ready_full' && workspace) return <FullSavedProjectMode key={`${mode.id}:${workspace.revision}`} shell={shell} mode={mode} section={section} workspace={workspace} recoveryOperationId={recoveryOperationId} onNewConfirmed={terminalRecovery ? releaseRecovery : undefined} recoveryBanner={recoveryBanner} />
+  return <ProjectModeFrame shell={shell} mode={mode} section={section} projectName={detail?.project.projectName} recoveryOperationId={recoveryOperationId} saveOperationId={saveOperationId} onNewConfirmed={terminalRecovery ? releaseRecovery : undefined}>
+    {recoveryBanner}
+    <SavedProjectPartialView phase={phase === 'ready_full' ? 'loading' : phase} detail={detail} section={section} onReload={reload}
+      loginCallbackUrl={withSaveHandle(withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId), saveOperationId)}
+      newProjectHref={saveOperationId ? withSaveHandle(withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId), saveOperationId) : withGenerationOperation(sectionHref('new'), recoveryOperationId)} />
+  </ProjectModeFrame>
+}
+
+function FullSavedProjectMode({ shell, mode, section, workspace, recoveryOperationId, onWorkspace, onNewConfirmed, recoveryBanner }: {
+  shell: boolean; mode: Extract<ProjectMode, { kind: 'saved' }>; section: Section
+  workspace: FullTenjikaiWorkspace; recoveryOperationId: string | null; onWorkspace?: (workspace: FullTenjikaiWorkspace) => void
+  onNewConfirmed?: () => void; recoveryBanner?: ReactNode
+}) {
+  const router = useRouter()
+  const query = useSearchParams()
+  const scope = useEntryActorScope()
+  const scopeCurrent = scope.current
+  const scopeStatus = scope.status
+  const scopeVersion = scope.version
+  const [currentWorkspace, setCurrentWorkspace] = useState(workspace)
+  const [saveState, setSaveState] = useState<SaveResponse['state'] | null>(null)
+  const [saveReadError, setSaveReadError] = useState<string | null>(null)
+  const [activeSave, setActiveSave] = useState<string | null>(null)
+  const saveSeq = useRef(0)
+  const saveController = useRef<AbortController | null>(null)
+  const localSave = useRef<string | null>(null)
+  const urlSave = query.get('saveOperation')
+  const pendingSave = validSaveHandle(urlSave) ? urlSave : activeSave
+  const actor = scope.actor
+  const workspaceActor = currentWorkspace.actorId
+  const currentActor = useCallback(() => scopeStatus === 'authenticated' && actor === workspaceActor && scopeCurrent(), [scopeStatus, actor, workspaceActor, scopeCurrent])
+  useEffect(() => () => { saveSeq.current++; saveController.current?.abort() }, [])
+  useEffect(() => {
+    if (!validSaveHandle(urlSave) || !currentActor() || saveController.current && localSave.current === urlSave) return
+    const seq = ++saveSeq.current
+    const controller = new AbortController()
+    void readSaveStatus(currentWorkspace.actorId, currentWorkspace.projectId, urlSave, controller.signal).then(result => {
+      if (controller.signal.aborted || seq !== saveSeq.current || !currentActor()) return
+      setSaveState(result.state)
+      if (result.state === 'committed' && result.workspace) {
+        setCurrentWorkspace(result.workspace)
+        onWorkspace?.(result.workspace)
+        setInput(result.workspace.input)
+        setVariant(result.workspace.selectedVariant)
+        setSelectedNovelty(result.workspace.novelties.filter(item => item.selected).map(item => item.id))
+        setDone(result.workspace.deadlines.filter(item => item.done).map(item => item.id))
+        setLocalChanges(false)
+        setActiveSave(null)
+        localSave.current = null
+        router.replace(withGenerationOperation(projectSectionHref(section, { kind: 'saved', id: mode.id }), recoveryOperationId))
+      }
+    })
+    return () => controller.abort()
+  }, [urlSave, scopeVersion, scopeStatus, actor, currentWorkspace.actorId, currentWorkspace.projectId, mode.id, section, recoveryOperationId, router, onWorkspace, currentActor])
+  const [variant, setVariant] = useState(workspace.selectedVariant)
+  const [selectedNovelty, setSelectedNovelty] = useState(workspace.novelties.filter(item => item.selected).map(item => item.id))
+  const [input, setInput] = useState(workspace.input)
+  const [done, setDone] = useState(workspace.deadlines.filter(item => item.done).map(item => item.id))
+  const [docs, setDocs] = useState<TenjikaiDocumentDraft[]>([])
+  const [panelImages, setPanelImages] = useState<Record<string, string>>({})
+  const [localChanges, setLocalChanges] = useState(false)
+  const plans = currentWorkspace.plans.map(item => item.plan)
+  const plan = plans.find(item => item.variant === variant) ?? plans[0]
+  const creatives = currentWorkspace.creatives
+  const novelties = currentWorkspace.novelties
+  const deadlines = currentWorkspace.deadlines
+  const analysis = currentWorkspace.analysis
+  const budget = previewWorkspaceBudget(currentWorkspace, variant, selectedNovelty)
+  const go = (next: Section) => router.push(withSaveHandle(withGenerationOperation(projectSectionHref(next, mode), recoveryOperationId), pendingSave))
+  const changeVariant = (next: 'A' | 'B' | 'C') => { if (pendingSave) return; setVariant(next); setLocalChanges(true) }
+  const changeNovelty = (next: string[]) => { if (pendingSave) return; setSelectedNovelty(next); setLocalChanges(true) }
+  const changeInput = (next: ProjectInput) => { if (pendingSave) return; setInput(next); setLocalChanges(true) }
+  const changeDone: typeof setDone = next => { if (pendingSave) return; setDone(next); setLocalChanges(true) }
+  const adoptSaved = (result: SaveResponse) => {
+    if (result.state !== 'committed' || !result.workspace || !currentActor()) return false
+    setCurrentWorkspace(result.workspace)
+    onWorkspace?.(result.workspace)
+    setInput(result.workspace.input)
+    setVariant(result.workspace.selectedVariant)
+    setSelectedNovelty(result.workspace.novelties.filter(item => item.selected).map(item => item.id))
+    setDone(result.workspace.deadlines.filter(item => item.done).map(item => item.id))
+    setLocalChanges(false)
+    setSaveState(null)
+    setActiveSave(null)
+    localSave.current = null
+    router.replace(withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId))
+    return true
+  }
+  const checkSave = () => {
+    const operationId = pendingSave
+    if (!operationId || !currentActor()) return
+    const seq = ++saveSeq.current
+    const controller = new AbortController()
+    void readSaveStatus(currentWorkspace.actorId, currentWorkspace.projectId, operationId, controller.signal).then(result => {
+      if (seq !== saveSeq.current || !currentActor()) return
+      if (!adoptSaved(result)) setSaveState(result.state)
+    })
+  }
+  const saveChanges = () => {
+    if (!localChanges || pendingSave || saveController.current || !currentActor()) return
+    const operationId = newSaveHandle()
+    const patch: WorkspacePatch = {}
+    if (variant !== currentWorkspace.selectedVariant) patch.variant = variant
+    const oldSelected = currentWorkspace.novelties.filter(item => item.selected).map(item => item.id)
+    if ([...selectedNovelty].sort().join(',') !== oldSelected.sort().join(',')) patch.selectedNoveltyIds = selectedNovelty
+    if (input.budgetYen !== currentWorkspace.input.budgetYen) patch.budgetYen = input.budgetYen
+    const oldDone = currentWorkspace.deadlines.filter(item => item.done).map(item => item.id)
+    if ([...done].sort().join(',') !== oldDone.sort().join(',')) patch.doneDeadlineIds = done
+    if (!Object.keys(patch).length) { setLocalChanges(false); return }
+    const seq = ++saveSeq.current
+    const controller = new AbortController()
+    saveController.current = controller
+    localSave.current = operationId
+    setActiveSave(operationId)
+    setSaveState(null)
+    router.replace(withSaveHandle(withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId), operationId))
+    void saveWorkspace(currentWorkspace.actorId, currentWorkspace.projectId, currentWorkspace.revision, operationId, patch, controller.signal).then(result => {
+      if (seq !== saveSeq.current || !currentActor()) return
+      if (!adoptSaved(result)) {
+        setSaveState(result.state)
+        if (result.state === 'outcome_unknown' || result.state === 'rejected') checkSave()
+      }
+    }).finally(() => { if (saveController.current === controller) saveController.current = null })
+  }
+  const cancelMissing = () => {
+    const operationId = pendingSave
+    if (!operationId || saveState !== 'missing' || !currentActor()) return
+    const seq = ++saveSeq.current
+    const controller = new AbortController()
+    void cancelMissingSave(currentWorkspace.actorId, currentWorkspace.projectId, operationId, controller.signal).then(result => {
+      if (seq !== saveSeq.current || !currentActor()) return
+      if (!adoptSaved(result)) setSaveState(result.state)
+    })
+  }
+  const adoptLatestAfterCancel = () => {
+    if (saveState !== 'canceled' || !pendingSave || !currentActor()) return
+    const seq = ++saveSeq.current
+    const controller = new AbortController()
+    setSaveReadError(null)
+    void readSavedTenjikaiWorkspace(currentWorkspace.actorId, currentWorkspace.projectId, controller.signal).then(result => {
+      if (seq !== saveSeq.current || !currentActor()) return
+      if (result.state !== 'ready_full') {
+        setSaveReadError('最新の保存内容を確認できませんでした。保存操作を解除せず、後で再確認してください。')
+        return
+      }
+      setCurrentWorkspace(result.workspace)
+      onWorkspace?.(result.workspace)
+      setInput(result.workspace.input)
+      setVariant(result.workspace.selectedVariant)
+      setSelectedNovelty(result.workspace.novelties.filter(item => item.selected).map(item => item.id))
+      setDone(result.workspace.deadlines.filter(item => item.done).map(item => item.id))
+      setLocalChanges(false)
+      setSaveState(null)
+      setActiveSave(null)
+      localSave.current = null
+      router.replace(withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId))
+    })
+  }
+  const adoptLatestAfterConflict = () => {
+    if (saveState !== 'superseded' || !pendingSave || !currentActor()) return
+    const seq = ++saveSeq.current
+    const controller = new AbortController()
+    void readSavedTenjikaiWorkspace(currentWorkspace.actorId, currentWorkspace.projectId, controller.signal).then(result => {
+      if (seq !== saveSeq.current || !currentActor() || result.state !== 'ready_full') return
+      setCurrentWorkspace(result.workspace)
+      onWorkspace?.(result.workspace)
+      setInput(result.workspace.input)
+      setVariant(result.workspace.selectedVariant)
+      setSelectedNovelty(result.workspace.novelties.filter(item => item.selected).map(item => item.id))
+      setDone(result.workspace.deadlines.filter(item => item.done).map(item => item.id))
+      setLocalChanges(false)
+      setSaveState(null)
+      setActiveSave(null)
+      localSave.current = null
+      router.replace(withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId))
+    })
+  }
+  const content = section === 'overview' ? <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} savedWorkspace={currentWorkspace} />
+    : section === 'booth' ? <BoothStudio plans={plans} variant={variant} setVariant={changeVariant} input={input} analysis={analysis} panelImages={panelImages} setPanelImages={setPanelImages} savedPlans={currentWorkspace.plans} />
+    : section === 'creatives' ? <CreativeStudio creatives={creatives} analysis={analysis} />
+    : section === 'novelty' ? <NoveltyPicker input={input} novelties={novelties} selected={selectedNovelty} setSelected={changeNovelty} savedNovelties={novelties} projectedVisitors={currentWorkspace.projectedVisitors} />
+    : section === 'budget' ? <BudgetPlanner input={input} setInput={changeInput} budget={budget} />
+    : section === 'vendors' ? <VendorBoard input={input} plan={plan} creatives={creatives} analysis={analysis} budget={budget} savedWorkspace={currentWorkspace} />
+    : <DocsVault deadlines={deadlines} input={input} docs={docs} setDocs={setDocs} done={done} setDone={changeDone} />
+  return <ProjectModeFrame shell={shell} mode={mode} section={section} projectName={input.eventName} recoveryOperationId={recoveryOperationId} saveOperationId={pendingSave} onNewConfirmed={onNewConfirmed}>
+    {!pendingSave && recoveryBanner}
+    <p role="status" className="mx-auto mt-4 max-w-6xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900 md:mx-8">
+      設計内容は保存済みです。画像・資料ファイル・業者選択はこの端末の画面内だけです。
+      {localChanges && ' 変更中の選択と予算・締切はまだ保存されていません。'}
+    </p>
+    <div className="mx-auto mt-2 flex max-w-6xl flex-wrap items-center gap-3 px-4 text-xs md:px-8">
+      <button type="button" onClick={saveChanges} disabled={!localChanges || !!pendingSave || !!saveController.current}
+        className="rounded-lg bg-doya-500 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">変更を保存</button>
+      {pendingSave && <p role="status">保存操作 {saveState === 'committed' ? '確認済み' : saveState === 'missing' ? '未到着の可能性' : saveState === 'superseded' ? '別の変更と競合' : saveState === 'canceled' ? '取消済み' : '確認中'}。新しい保存操作は確認まで開始できません。</p>}
+      {pendingSave && <p>保存状態が確定するまで、この画面の編集操作は一時停止しています。</p>}
+      {pendingSave && <button type="button" className="font-bold underline" onClick={checkSave}>保存状態を確認</button>}
+      {saveState === 'missing' && <button type="button" className="font-bold underline" onClick={cancelMissing}>遅れて届く保存を取り消す</button>}
+      {saveState === 'canceled' && <button type="button" className="font-bold underline" onClick={adoptLatestAfterCancel}>未保存変更を破棄して最新の保存内容を確認し、編集を続ける</button>}
+      {saveReadError && <p role="alert">{saveReadError}</p>}
+      {saveState === 'superseded' && <p>変更中の値は画面内に残しています。現在の保存内容と照合してください。</p>}
+      {saveState === 'superseded' && <button type="button" className="font-bold underline" onClick={adoptLatestAfterConflict}>
+        未保存変更を破棄して最新の保存内容を読み込む
+      </button>}
+    </div>
+    <fieldset disabled={!!pendingSave} className="min-w-0 border-0 p-0">{content}</fieldset>
   </ProjectModeFrame>
 }
 
@@ -136,20 +390,25 @@ function InvalidProjectMode({ shell, mode }: { shell: boolean; mode: Extract<Pro
   </ProjectModeFrame>
 }
 
-function ProjectModeFrame({ shell, mode, section, projectName, recoveryOperationId, children }: {
-  shell: boolean; mode: ProjectMode; section: Section; projectName?: string; recoveryOperationId?: string | null; children: ReactNode
+function ProjectModeFrame({ shell, mode, section, projectName, recoveryOperationId, saveOperationId, onNewConfirmed, children }: {
+  shell: boolean; mode: ProjectMode; section: Section; projectName?: string; recoveryOperationId?: string | null; saveOperationId?: string | null; onNewConfirmed?: () => void; children: ReactNode
 }) {
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
-  const go = (next: Section) => { router.push(withGenerationOperation(projectSectionHref(next, mode), recoveryOperationId ?? null)); setMobileOpen(false) }
+  const callback = withSaveHandle(withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId ?? null), saveOperationId ?? null)
+  const go = (next: Section) => {
+    if (next === 'new' && (saveOperationId || recoveryOperationId && !onNewConfirmed)) { setMobileOpen(false); return }
+    if (next === 'new') onNewConfirmed?.()
+    router.push(withSaveHandle(withGenerationOperation(projectSectionHref(next, mode), next === 'new' && onNewConfirmed ? null : recoveryOperationId ?? null), saveOperationId ?? null)); setMobileOpen(false)
+  }
   if (shell) return <div className="tenjikai-root text-ink">{children}</div>
   return <div className="tenjikai-root flex h-screen overflow-hidden bg-[var(--bg)] text-ink">
-    <div className="hidden md:flex"><TenjikaiSidebar section={section} ready go={go} isCollapsed={collapsed} onToggle={setCollapsed} projectName={projectName} savedMode loginCallbackUrl={withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId ?? null)} /></div>
+    <div className="hidden md:flex"><TenjikaiSidebar section={section} ready go={go} isCollapsed={collapsed} onToggle={setCollapsed} projectName={projectName} savedMode loginCallbackUrl={callback} /></div>
     <AnimatePresence>{mobileOpen && <>
       <motion.div initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} />
       <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ duration: 0.2, ease: 'easeOut' }} className="fixed inset-y-0 left-0 z-50 md:hidden">
-        <TenjikaiSidebar section={section} ready go={go} forceExpanded isMobile onToggle={() => setMobileOpen(false)} projectName={projectName} savedMode loginCallbackUrl={withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId ?? null)} />
+        <TenjikaiSidebar section={section} ready go={go} forceExpanded isMobile onToggle={() => setMobileOpen(false)} projectName={projectName} savedMode loginCallbackUrl={callback} />
       </motion.div>
     </>}</AnimatePresence>
     <main className="flex flex-1 flex-col overflow-hidden transition-[margin] duration-200 md:ml-[var(--tenjikai-sidebar-w)]" style={{ ['--tenjikai-sidebar-w' as string]: collapsed ? '72px' : '240px' }}>
@@ -182,6 +441,7 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, rec
 
   // 文面（解析・ブース案・制作物）は API で作り、寸法・金額はルール計算に重ねる
   const [generated, setGenerated] = useState<GeneratedPlan>(() => mockGeneratedPlan(SAMPLE_INPUT))
+  const [fullWorkspace, setFullWorkspace] = useState<FullTenjikaiWorkspace | null>(null)
   const [save, setSave] = useState<GenerationSave | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [failureKind, setFailureKind] = useState<'unknown' | 'known' | 'rejected' | null>(null)
@@ -197,7 +457,7 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, rec
 
   const activeRecoveryHandle = recoveryOperationId
   const recoveredStatus = operationStatus?.operationId === activeRecoveryHandle ? operationStatus : null
-  const terminalRecovery = recoveredStatus && ['completed', 'degraded', 'failed', 'canceled'].includes(recoveredStatus.state)
+  const terminalRecovery = isTerminalRecovery(recoveredStatus)
   const recoveryBlocksNew = !!activeRecoveryHandle && !terminalRecovery
   useEffect(() => {
     if (!activeRecoveryHandle || requestController.current || locallyStartedOperation.current === activeRecoveryHandle) return
@@ -215,7 +475,7 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, rec
       }
       setOperationStatus(status)
       onRecoveryOperation(activeRecoveryHandle)
-      setError(status.state === 'reserved'
+      setError(status.state === 'reserved' && status.dispatchAllowed
         ? '作成結果を確認できませんでした。操作はAI開始前です。元と同じ入力で続けられます。'
         : status.state === 'missing'
           ? 'この操作はまだ到着していない可能性があります。遅れて届く操作の取消を確認するまで、新しい操作は開始できません。'
@@ -247,23 +507,24 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, rec
     })
   }
 
-  const analysis = generated.analysis
-  const plans = useMemo(() => applyBoothCopy(generateBoothPlans(input), generated.boothCopy), [input, generated.boothCopy])
+  const analysis = fullWorkspace?.analysis ?? generated.analysis
+  const plans = useMemo(() => fullWorkspace ? fullWorkspace.plans.map(item => item.plan) : applyBoothCopy(generateBoothPlans(input), generated.boothCopy), [fullWorkspace, input, generated.boothCopy])
   const plan = plans.find((p) => p.variant === variant) ?? plans[0]
-  const creatives = useMemo(() => applyCreativeCopy(generateCreatives(analysis, input), generated.creativeCopy), [analysis, input, generated.creativeCopy])
-  const novelties = useMemo(() => generateNovelties(input), [input])
-  const deadlines = useMemo(() => generateDeadlines(input), [input])
+  const creatives = useMemo(() => fullWorkspace?.creatives ?? applyCreativeCopy(generateCreatives(analysis, input), generated.creativeCopy), [fullWorkspace, analysis, input, generated.creativeCopy])
+  const novelties = useMemo(() => fullWorkspace?.novelties ?? generateNovelties(input), [fullWorkspace, input])
+  const deadlines = useMemo(() => fullWorkspace?.deadlines ?? generateDeadlines(input), [fullWorkspace, input])
   const budget = useMemo(
-    () => computeBudget(input, plan, creatives, novelties, selectedNovelty),
-    [input, plan, creatives, novelties, selectedNovelty],
+    () => fullWorkspace?.budgetLines ?? computeBudget(input, plan, creatives, novelties, selectedNovelty),
+    [fullWorkspace, input, plan, creatives, novelties, selectedNovelty],
   )
 
   const start = (next: ProjectInput, explicitSameOperation = false) => {
     if (!currentActor() || requestController.current || failureKind === 'unknown' && !explicitSameOperation || failureKind === 'known' && !!projectId) return
-    if (activeRecoveryHandle && !(explicitSameOperation && recoveredStatus?.state === 'reserved')) return
-    if (explicitSameOperation && recoveredStatus?.state !== 'reserved') return
+    if (activeRecoveryHandle && !(explicitSameOperation && recoveredStatus?.state === 'reserved' && recoveredStatus.dispatchAllowed)) return
+    if (explicitSameOperation && !(recoveredStatus?.state === 'reserved' && recoveredStatus.dispatchAllowed)) return
     setError(null)
     setFailureKind(null)
+    setFullWorkspace(null)
     setInput(next)
     setSelectedNovelty(generateNovelties(next).filter((n) => n.recommended).map((n) => n.id))
     setVariant(next.goal === 'demo' ? 'A' : next.goal === 'brand' ? 'B' : 'C')
@@ -293,9 +554,14 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, rec
         setDone([])
         setPanelImages({})
         setGenerated(result.plan)
+        setFullWorkspace(result.workspace ?? null)
+        if (result.workspace) {
+          setVariant(result.workspace.selectedVariant)
+          setSelectedNovelty(result.workspace.novelties.filter(item => item.selected).map(item => item.id))
+        }
         setProjectId(result.projectId)
         setSave(result.save)
-        setOperationStatus({ actorId, operationId, state: result.save.analysis === 'saved' ? 'completed' : 'degraded', projectId: result.projectId, analysis: result.save.analysis, dispatchAllowed: false })
+        setOperationStatus({ actorId, operationId, state: result.save.analysis === 'saved' ? 'completed' : 'degraded', projectId: result.projectId, analysis: result.save.analysis, dispatchAllowed: false, terminalConfirmed: true })
         setFailureKind(null)
         onWorking(result.projectId)
       } else if (result.state === 'auth_changed') {
@@ -306,7 +572,7 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, rec
         setProjectId(result.projectId)
         setSave(result.save)
         setFailureKind(result.state === 'outcome_unknown' ? 'unknown' : result.state === 'generation_failed' ? 'known' : 'rejected')
-        if (result.state === 'generation_failed') setOperationStatus({ actorId, operationId, state: 'failed', projectId: result.projectId, analysis: 'not_saved', dispatchAllowed: false })
+        if (result.state === 'generation_failed') setOperationStatus({ actorId, operationId, state: 'failed', projectId: result.projectId, analysis: 'not_saved', dispatchAllowed: false, terminalConfirmed: true })
         setPhase('input')
         if (result.state === 'outcome_unknown' || result.state === 'rejected') recoverAfterUnknown()
       }
@@ -335,9 +601,15 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, rec
 
   const go = (s: Section) => {
     if (s === 'new' && (requestController.current || recoveryBlocksNew)) return
-    if (s === 'new') { requestSeq.current++; requestController.current?.abort(); requestController.current = null; operationRef.current = null; locallyStartedOperation.current = null; onRecoveryOperation(null); setOperationStatus(null); setPhase('input'); setProjectId(null); setError(null); setFailureKind(null); onNew() }
+    if (s === 'new') { requestSeq.current++; requestController.current?.abort(); requestController.current = null; operationRef.current = null; locallyStartedOperation.current = null; onRecoveryOperation(null); setOperationStatus(null); setPhase('input'); setProjectId(null); setError(null); setFailureKind(null); setFullWorkspace(null); onNew() }
     router.push(s === 'new' || !activeProjectId ? sectionHref(s) : projectSectionHref(s, { kind: 'saved', id: activeProjectId }))
     setMobileOpen(false)
+  }
+
+  if (phase === 'ready' && fullWorkspace && activeProjectId === fullWorkspace.projectId && section !== 'new') {
+    return <FullSavedProjectMode shell={shell} mode={{ kind: 'saved', id: fullWorkspace.projectId }} section={section}
+      workspace={fullWorkspace} recoveryOperationId={null} onWorkspace={setFullWorkspace}
+      onNewConfirmed={() => { onRecoveryOperation(null); onNew() }} />
   }
 
   const content = (() => {
@@ -349,20 +621,20 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, rec
           onDone={onGeneratingDone}
         />
       )
-    if (phase === 'input' || section === 'new') return <Wizard initial={input} onSubmit={next => start(next, recoveredStatus?.state === 'reserved')} submitLabel={recoveredStatus?.state === 'reserved' ? '同じ操作で生成を続ける' : undefined} submitDisabled={!!activeRecoveryHandle && recoveredStatus?.state !== 'reserved' || failureKind === 'unknown' && recoveredStatus?.state !== 'reserved' || failureKind === 'known' && !!projectId} />
+    if (phase === 'input' || section === 'new') return <Wizard initial={input} onSubmit={next => start(next, recoveredStatus?.state === 'reserved' && recoveredStatus.dispatchAllowed)} submitLabel={recoveredStatus?.state === 'reserved' && recoveredStatus.dispatchAllowed ? '同じ操作で生成を続ける' : undefined} submitDisabled={!!activeRecoveryHandle && !(recoveredStatus?.state === 'reserved' && recoveredStatus.dispatchAllowed) || failureKind === 'unknown' && !(recoveredStatus?.state === 'reserved' && recoveredStatus.dispatchAllowed) || failureKind === 'known' && !!projectId} />
     switch (section) {
       case 'overview':
-        return <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} />
+        return <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} savedWorkspace={fullWorkspace ?? undefined} />
       case 'booth':
-        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} panelImages={panelImages} setPanelImages={setPanelImages} />
+        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} panelImages={panelImages} setPanelImages={setPanelImages} savedPlans={fullWorkspace?.plans} />
       case 'creatives':
         return <CreativeStudio creatives={creatives} analysis={analysis} />
       case 'novelty':
-        return <NoveltyPicker input={input} novelties={novelties} selected={selectedNovelty} setSelected={setSelectedNovelty} />
+        return <NoveltyPicker input={input} novelties={novelties} selected={selectedNovelty} setSelected={setSelectedNovelty} savedNovelties={fullWorkspace?.novelties} projectedVisitors={fullWorkspace?.projectedVisitors} />
       case 'budget':
         return <BudgetPlanner input={input} setInput={setInput} budget={budget} />
       case 'vendors':
-        return <VendorBoard input={input} plan={plan} creatives={creatives} analysis={analysis} budget={budget} />
+        return <VendorBoard input={input} plan={plan} creatives={creatives} analysis={analysis} budget={budget} savedWorkspace={fullWorkspace ?? undefined} />
       case 'docs':
         return <DocsVault deadlines={deadlines} input={input} docs={docs} setDocs={setDocs} done={done} setDone={setDone} />
     }
@@ -379,7 +651,7 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, rec
         {(failureKind === 'unknown' || failureKind === 'rejected') && <>
           {failureKind === 'unknown' && <p className="mt-2">一覧に見つからない場合も、案件が作成されなかった証明にはなりません。</p>}
           {activeRecoveryHandle && <button type="button" className="mt-2 block font-semibold underline" onClick={checkOperation}>この操作の状態を確認</button>}
-          {recoveredStatus?.state === 'reserved' && <p className="mt-2">AIはまだ開始されていません。元と同じ入力を確認してから、同じ操作として生成を続けられます。</p>}
+          {recoveredStatus?.state === 'reserved' && recoveredStatus.dispatchAllowed && <p className="mt-2">AIはまだ開始されていません。元と同じ入力を確認してから、同じ操作として生成を続けられます。</p>}
           {recoveredStatus?.state === 'missing' && <button type="button" className="mt-2 block font-semibold underline" onClick={cancelMissingOperation}>遅れて届く操作を取り消す</button>}
           {terminalRecovery && <button type="button" className="mt-2 block font-semibold underline" onClick={() => go('new')}>別の案件を新規作成</button>}
           {recoveredStatus?.projectId && <Link href={withGenerationOperation(projectSectionHref('overview', { kind: 'saved', id: recoveredStatus.projectId }), activeRecoveryHandle)} className="mt-2 block font-semibold underline">確認できる保存案件を開く</Link>}
@@ -390,7 +662,7 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, rec
       {phase === 'ready' && section !== 'new' && save && (
         <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">
           <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900">
-            案件の基本情報を保存しました。会場の指定やブース案などは、この画面内にのみ保持されています。
+            {fullWorkspace ? '案件の設計内容を保存しました。画像・資料ファイル・業者選択はこの画面内だけです。' : '案件の基本情報を保存しました。会場の指定やブース案などは、この画面内にのみ保持されています。'}
             {save.analysis !== 'saved' && ' 分析結果の保存を確認できません。この画面を閉じると失われる可能性があります。'}
             {generated.notice && ` ${generated.notice}`}
           </p>

@@ -4821,6 +4821,8 @@ model TenjikaiBoothPlan {
   carpetYen   Int?
   designYen   Int?
   laborYen    Int?
+  electricYen Int?
+  electricDetail String?
   selected    Boolean                @default(false)
   renderUrls  String[] // 画像生成した完成予想図
   elements    TenjikaiBoothElement[]

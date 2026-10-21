@@ -17,7 +17,7 @@
     "test:asklink": "tsx --test src/lib/asklink/link.test.ts src/lib/asklink/scope.test.ts",
     "test:popup": "tsx --test src/lib/popup/schema.test.ts src/lib/popup/scope.test.ts src/lib/popup/read.test.ts",
     "test:syscheck": "tsx --test src/lib/syscheck-guards.test.ts src/lib/server-daily-quota.test.ts src/lib/drip-click-link.test.ts src/lib/mitsuboshi/nagusame/guest.test.ts src/lib/interview/file-signature.test.ts src/lib/doyaslide/file-urls.test.ts src/lib/ui-next.test.ts src/lib/shell/company.test.ts 'src/app/(shell)/home/today.test.ts' src/components/shell/heading-guard.test.ts src/lib/shell/recent.test.ts",
-    "test:tenjikai": "tsx --test src/lib/tenjikai/engine.test.ts src/lib/tenjikai/generation-result.test.ts src/lib/tenjikai/tenjikai-read.test.ts src/lib/tenjikai/image-route.test.ts src/lib/tenjikai/project-detail-read.test.ts",
+    "test:tenjikai": "tsx --test src/lib/tenjikai/engine.test.ts src/lib/tenjikai/generation-result.test.ts src/lib/tenjikai/tenjikai-read.test.ts src/lib/tenjikai/image-route.test.ts src/lib/tenjikai/project-detail-read.test.ts src/lib/tenjikai/workspace-dto.test.ts",
     "test:tenjikai:c3a": "node scripts/security-regression/verify-tenjikai-c3a-generation.cjs && node scripts/security-regression/verify-tenjikai-c3a-mounted.cjs && node scripts/security-regression/verify-tenjikai-c3a-tier.cjs",
     "test:shanai": "tsx --test src/lib/shanai/shanai.test.ts",
     "test:income": "tsx --test src/lib/income/calc.test.ts src/lib/income/scope.test.ts src/lib/income/agent.test.ts",

@@ -11,6 +11,8 @@ import { privateApiJson } from '@/lib/private-api-response'
 import { LifecycleError } from '@/lib/account-lifecycle/state'
 import { admitGeneration, claimGeneration, degradeGeneration, finalizeGeneration, statusGeneration, validGenerationOperationId, GenerationOperationError } from '@/lib/tenjikai/generation-operation'
 import { basicProjectSave, noProjectSave, unknownProjectSave, type GenerationResult, type GenerationSave } from '@/lib/tenjikai/generation-result'
+import { materializeTenjikaiWorkspace, type MaterializedWorkspace } from '@/lib/tenjikai/workspace-materialize'
+import { readFullTenjikaiWorkspace } from '@/lib/tenjikai/workspace-store'
 
 // ドヤ展示会: サイト解析・ブース案・制作物の文面を LLM で作る。
 // ⚠️ ログイン必須。利用枠（plan-limit.ts の tenjikaiPlans）は TenjikaiProject の作成数で数える。
@@ -56,28 +58,30 @@ export async function POST(req: NextRequest) {
   if (expectedActor !== actor) return reject(409, 'rejected', 'ログイン状態が変わりました。', actor)
   const input = parseInput(body)
   if (!input) return reject(400, 'rejected', '入力内容が正しくありません。', actor)
+  const stableInput = Object.freeze({ ...input })
   try {
-    const admitted = await admitGeneration(actor, operationId, input)
+    const admitted = await admitGeneration(actor, operationId, stableInput)
     if (admitted.quota && !admitted.quota.ok) return reject(429, 'rejected', admitted.quota.reason ?? '利用の上限に達しました。', actor)
     if (admitted.operation.state === 'deleted' || admitted.operation.state === 'superseded') return reject(409, 'rejected', '現在の案件と作成操作が一致しません。', actor)
     if (admitted.operation.state !== 'reserved') return reject(202, 'outcome_unknown', '作成操作の状態をご確認ください。再送ではAIを再実行しません。', actor, unknownProjectSave)
-    const claimed = await claimGeneration(actor, operationId, input)
+    const claimed = await claimGeneration(actor, operationId, stableInput)
     if (!claimed.claim) return reject(202, 'outcome_unknown', '作成操作の状態をご確認ください。再送ではAIを再実行しません。', actor, unknownProjectSave)
     const claim = claimed.claim
     let plan: Awaited<ReturnType<typeof aiGeneratePlan>> | null = null
-    try { plan = await aiGeneratePlan(input) }
-    catch (e) { console.error('[tenjikai] generate failed', { name: (e as { name?: string })?.name }) }
+    let workspace: MaterializedWorkspace | null = null
+    try { plan = await aiGeneratePlan(stableInput); workspace = materializeTenjikaiWorkspace(stableInput, plan) }
+    catch (e) { plan = null; workspace = null; console.error('[tenjikai] generate failed', { name: (e as { name?: string })?.name }) }
     let settled: Awaited<ReturnType<typeof finalizeGeneration>>
-    try { settled = await finalizeGeneration(claim, plan?.analysis ?? null, undefined, undefined, plan ? { source: plan.source, notice: plan.notice } : undefined) }
+    try { settled = await finalizeGeneration(claim, workspace?.analysis ?? null, undefined, undefined, plan ? { source: plan.source, notice: plan.notice } : undefined, workspace ?? undefined) }
     catch (analysisError) {
       if (!plan) throw analysisError
       // The failed commit may have succeeded. Read the same owned operation first;
       // only a still-claimed generation can be marked analysis-unknown.
       const observed = await statusGeneration(actor, operationId)
       if (observed.state === 'completed' && observed.projectId === claim.projectId) {
-        settled = { operation: observed, committed: true }
+        settled = { operation: observed, committed: true, workspace: await readFullTenjikaiWorkspace(actor, claim.projectId) }
       } else if (observed.state === 'processing' && observed.projectId === claim.projectId) {
-        settled = await degradeGeneration(claim)
+        settled = { ...await degradeGeneration(claim), workspace: null }
       } else throw analysisError
     }
     if (settled.operation.state === 'deleted' || settled.operation.state === 'superseded') return reject(409, 'rejected', '現在の案件と作成操作が一致しません。', actor)
@@ -87,8 +91,12 @@ export async function POST(req: NextRequest) {
     if (current.state !== settled.operation.state || current.projectId !== claim.projectId) return reject(202, 'outcome_unknown', '作成操作の状態をご確認ください。', actor, unknownProjectSave)
     if (!plan) return privateApiJson({ state: 'generation_failed', actorId: actor, clientRequestId: requestId, operationId, projectId: claim.projectId,
       message: 'AIでの作成に失敗しました。案件の基本情報は保存されています。', save: basicProjectSave } satisfies GenerationResult, { status: 502 })
+    if (!settled.workspace && current.state === 'degraded') return privateApiJson({ state: 'generated', actorId: actor,
+      clientRequestId: requestId, operationId, projectId: claim.projectId, plan,
+      save: { ...basicProjectSave, analysis: 'unknown', plan: 'not_saved' } } satisfies GenerationResult)
+    if (!settled.workspace) return reject(202, 'outcome_unknown', '保存済みの設計内容を確認できませんでした。操作の状態をご確認ください。', actor, unknownProjectSave)
     return privateApiJson({ state: 'generated', actorId: actor, clientRequestId: requestId, operationId, projectId: claim.projectId,
-      plan, save: { ...basicProjectSave, analysis: current.analysis } } satisfies GenerationResult)
+      plan, workspace: settled.workspace, save: { ...basicProjectSave, analysis: current.analysis, plan: 'saved' } } satisfies GenerationResult)
   } catch (e) {
     console.error('[tenjikai] generation operation failed', { code: (e as { code?: string })?.code })
     if (e instanceof LifecycleError) return reject(e.status, 'rejected', '案件の権限を確認できませんでした。', actor)
