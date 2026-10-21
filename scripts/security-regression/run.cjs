@@ -155,6 +155,11 @@ if (hrLoadErrorUi.error || hrLoadErrorUi.status !== 0) {
   console.error('Security regression failed: verify-hr-load-error-ui.cjs');
   process.exit(1);
 }
+const hrDetailReturn = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-detail-return-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrDetailReturn.error || hrDetailReturn.status !== 0) {
+  console.error('Security regression failed: verify-hr-detail-return-mounted.cjs');
+  process.exit(1);
+}
 const signInCallback = spawnSync(process.execPath, [path.join(__dirname, 'verify-signin-callback.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (signInCallback.error || signInCallback.status !== 0) {
   console.error('Security regression failed: verify-signin-callback.cjs');
