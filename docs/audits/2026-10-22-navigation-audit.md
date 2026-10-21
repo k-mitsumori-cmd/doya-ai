@@ -4,6 +4,6 @@
 
 Astra の分類514件は静的なリンク候補を網羅した台帳であり、実ブラウザで全サービス・全権限・動的IDが到達する証明ではない。認証参照112件も別に列挙した。`UnifiedPlanPromo` の7件は未使用の内部メタデータを台帳と一致させたもので、現在の表示ではロゴにリンクがなく、利用者に見える修復件数には含めない。
 
-候補の実mounted試験では navigation recovery 13件、Home 62件、組織layout 28件、subscription management 72件、Popup固定時計55件が成功。7つの既存サービス試験も終了コード0。変更対象の ESLint は error 0、既存警告23件、追加警告0で、警告は元の47aec2d8と規則・内容・該当ソース行まで一致した。新helperと追加fixtureの `--max-warnings 0` は成功した。CIの参照元検査も成功。ローカルの全security試験は新importに試験fixtureが未追従だった2回の停止を修正後、ディスク空きが公式8GiB条件を下回り再実行できていない。候補コミットのリモートCIで全件とビルドを判定する予定であり、現時点では未合格とする。
+候補の実mounted試験では navigation recovery 13件、Home 62件、組織layout 28件、subscription management 72件、Popup固定時計55件が成功。7つの既存サービス試験も終了コード0。変更対象の ESLint は error 0、既存警告23件、追加警告0で、警告は元の47aec2d8と規則・内容・該当ソース行まで一致した。新helperと追加fixtureの `--max-warnings 0` は成功した。CIの参照元検査も成功。ローカルの全security試験は新importに試験fixtureが未追従だった2回の停止を修正後、ディスク空きが公式8GiB条件を下回り再実行できていない。候補コミットのリモートCIで全体security・型・Lintを判定する。Next本番ビルドとPreview確認は別の検証項目であり、いずれも現時点では未確認とする。
 
 この変更は候補ソースであり、本番には未反映。実ブラウザでの全22サービスと権限別導線、動的ID、多タブ、決済の確認は残っている。
