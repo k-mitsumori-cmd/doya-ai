@@ -13,7 +13,7 @@ try:
  bridgePaths={'scripts/security-regression/shodan-core-import-fixture.cjs','src/lib/account-lifecycle/state.ts','src/lib/account-lifecycle/store.ts','src/lib/account-lifecycle/organization-fence.ts'}
  sourceHashes=proof.get('sourceHashes',{});bridgeHashes=proof.get('importBridgeHashes',{})
  rejectionCases=proof.get('rejectionCases',[])
- evidenceValid=proof.get('passed')==120 and len(proof.get('cases',[]))==120 and proof.get('checkedAt','')>=state['startedAt'] and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in sourceHashes.items()) and len(sourceHashes)==7 and set(bridgeHashes)==bridgePaths and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in bridgeHashes.items()) and rejectionCases==[{'service':'shodan','mode':'POST','status':409,'memberUnchanged':True}]
+ evidenceValid=proof.get('passed')==120 and len(proof.get('cases',[]))==120 and proof.get('checkedAt','')>=state['startedAt'] and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in sourceHashes.items()) and len(sourceHashes)==7 and set(bridgeHashes)==bridgePaths and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in bridgeHashes.items()) and rejectionCases==[{'service':service,'mode':'POST','status':409,'memberUnchanged':True} for service in ('shodan','quote','mensetsu','aishodan')]
  state.update(probeExitCode=result.returncode,evidenceValid=evidenceValid,status='passed' if result.returncode==0 and evidenceValid else 'failed')
 finally:
  if started:

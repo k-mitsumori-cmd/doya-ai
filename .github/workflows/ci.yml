@@ -435,6 +435,17 @@ jobs:
       - name: membership-invitation-role (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-invitation-role-integrated-postgres-supervise.py
 
+      - name: Preserve membership-invitation private PostgreSQL diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: membership-invitation-private-postgres
+          if-no-files-found: ignore
+          path: |
+            docs/audits/2026-10-06-all-services-recheck/membership-invitation-role-integrated-postgres.log
+            docs/audits/2026-10-06-all-services-recheck/membership-invitation-role-integrated-postgres-supervisor.json
+            docs/audits/2026-10-06-all-services-recheck/membership-invitation-role-integrated-postgres-results.json
+
       - name: Kintai and Promane invitation roles (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-additional-invite-integrated-postgres-supervise.py
 
