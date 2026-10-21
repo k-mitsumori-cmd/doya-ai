@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 import { getOrCreateOrganization } from '@/lib/aio/access'
 
 // POST /api/aio/organization — 組織を作成（初回オンボーディング）
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
     const org = await getOrCreateOrganization(userId, name.slice(0, 120), memberName.slice(0, 80))
     return NextResponse.json({ organization: { id: org.id, name: org.name, slug: org.slug } })
   } catch (e: any) {
+    if (e instanceof LifecycleError) return NextResponse.json({ error: e.message, code: e.code }, { status: e.status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
     if (e instanceof Error && 'code' in e && e.code === 'INVALID_MEMBERSHIP_ROLE') return NextResponse.json({ error: '組織の権限を確認できません。管理者に確認してください。', code: 'INVALID_MEMBERSHIP_ROLE' }, { status: 403 })
     console.error('[aio/organization]')
     return NextResponse.json({ error: '組織の作成に失敗しました' }, { status: 500 })

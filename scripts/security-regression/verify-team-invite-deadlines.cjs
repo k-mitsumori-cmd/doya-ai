@@ -6,7 +6,7 @@ function fixture(service, { offset = -1, delayAt = '', existing = false, changed
  let now=epoch+offset, audits=0, writes=0, rollbacks=0;
  class Clock extends Date { constructor(...args){super(...(args.length?args:[now]))} static now(){return now} }
  const delay=stage=>{if(stage===delayAt)now=epoch};
- let member={id:'invite',organizationId:'org',organization:{id:'org',name:'Synthetic',slug:'team'},status:'PENDING',role:service==='hr'?'MEMBER':'member',token,inviteToken:token,email:'qa@example.invalid',inviteEmail:'qa@example.invalid',createdAt:new Date(epoch-ttl),expiresAt:new Date(epoch),acceptedAt:null};
+ let member={id:'invite',organizationId:'org',organization:{id:'org',name:'Synthetic',slug:'team'},userId:service==='aio'?null:undefined,status:'PENDING',role:service==='hr'?'MEMBER':'member',token,inviteToken:token,email:'qa@example.invalid',inviteEmail:'qa@example.invalid',createdAt:new Date(epoch-ttl),expiresAt:new Date(epoch),acceptedAt:null};
  let created=0;
  const model={
   findUnique:async({where})=>{if(where.inviteToken||where.token)return structuredClone(member);delay('read');return structuredClone({...member,...changed})},
@@ -27,7 +27,7 @@ function fixture(service, { offset = -1, delayAt = '', existing = false, changed
  };
  const prisma={...tx,$transaction:async work=>{const before=structuredClone(member),beforeCreated=created;try{return await work(tx)}catch(error){member=before;created=beforeCreated;rollbacks++;throw error}}};
  /* Explicit normal owner/User seeds omitted by the original actor/token fixture; not an anomaly repair. */
-const lifecycle=service==='shodan'?shodanLifecycleFixture(prisma,{mode:'claim',userIds:['user','owner-user'],authorityRows:()=>[{ id: 'canonical-owner', userId: 'owner-user', role: 'owner', status: 'ACTIVE', pendingEmail: null, inviteToken: null }],user:tx.user,globals:{Date:Clock},target:tx=>tx.shodanMember.findUnique({where:{id:'invite'}})}):{};
+const lifecycle=['shodan','aio'].includes(service)?shodanLifecycleFixture(prisma,{service,mode:'claim',userIds:['user','owner-user'],authorityRows:()=>[{ id: 'canonical-owner', userId: 'owner-user', role: 'owner', status: 'ACTIVE', pendingEmail: null, inviteToken: null }],user:tx.user,globals:{Date:Clock},target:tx=>tx[`${service}Member`].findUnique({where:{id:'invite'}})}):{};
  const common={...lifecycle,'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{id:'user',email:'qa@example.invalid'}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma},[`@/lib/${service}/access`]:{resolveUserId:async()=>'user'},'@/lib/hr/audit':{logAudit:async()=>{audits++}},'@/lib/hr/billing':{getOrgPlan:async()=>'FREE',getOrgPlanLimits:()=>({maxMembers:2})}};
  if(service==='hr')prisma.hrOrganizationMember={findFirst:async()=>null};
  const api=load(service==='hr'?'src/app/api/hr/organization/invite/accept/route.ts':`src/app/api/${service}/invite/[token]/route.ts`,common,{Date:Clock});

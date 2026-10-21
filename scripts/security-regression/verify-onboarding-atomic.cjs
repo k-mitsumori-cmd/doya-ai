@@ -39,7 +39,7 @@ function fixture(service, { failMember = false, conflictOnce = false, existingSl
     catch (error) { organizations.splice(0, organizations.length, ...before.organizations); members.splice(0, members.length, ...before.members); profiles.splice(0, profiles.length, ...before.profiles); prompts.splice(0, prompts.length, ...before.prompts); throw error; }
   } };
   /* Explicit normal owner/User seeds omitted by the original actor/token fixture; not an anomaly repair. */
-const lifecycle = service === 'shodan' ? shodanLifecycleFixture(prisma, { mode: 'creation', userIds: ['user'] }) : {};
+const lifecycle = shodanLifecycleFixture(prisma, { service, mode: 'creation', userIds: ['user'] });
   const deps = {
     ...lifecycle,
     'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
@@ -76,7 +76,7 @@ const lifecycle = service === 'shodan' ? shodanLifecycleFixture(prisma, { mode: 
 
     let calls = 0;
     const route = load(`src/app/api/${service}/organization/route.ts`, {
-      ...(service === 'shodan' ? shodanLifecycleFixture({ $transaction: async fn => fn({}) }, { mode: 'creation', userIds: ['user'] }) : {}),
+      ...shodanLifecycleFixture({ $transaction: async fn => fn({}) }, { service, mode: 'creation', userIds: ['user'] }),
       'next/server': { NextResponse: Response },
       'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
       '@/lib/auth': { authOptions: {} },
@@ -118,12 +118,14 @@ const lifecycle = service === 'shodan' ? shodanLifecycleFixture(prisma, { mode: 
     'next-auth': { getServerSession: async () => ({ user: { id: 'user', name: 'Owner' } }) },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma: { aioMember: { findMany: async () => [] } } },
+    '@/lib/account-lifecycle/state': { LifecycleError: class extends Error {} },
     'node:crypto': require('node:crypto'),
     '@/lib/operational-json': load('src/lib/operational-json.ts', {}, { TextDecoder, Uint8Array }),
     '@/lib/aio/quick-start-operation': {
       AioStartError: class extends Error {},
       beginAioQuickStart: async () => ({ state: 'started', leaseToken: 'synthetic' }),
       recoverAioQuickStart: async () => ({ state: 'pending' }),
+      assertAioQuickStartGrantAllowed: async () => { sequence.push('grant-gate'); },
       failAioQuickStart: async () => ({ state: 'failed' }),
       finishAioQuickStart: async (_worker, initialize) => {
         const org = await initialize({
@@ -149,7 +151,7 @@ const lifecycle = service === 'shodan' ? shodanLifecycleFixture(prisma, { mode: 
   }
   assert.equal((await quickStartRoute.POST(request({ url: 'https://example.com' }))).status, 409);
   assert.equal((await quickStartRoute.POST(request({ operationId: uuid, url: 'https://example.com' }))).status, 200);
-  assert.deepEqual(sequence, ['derive', 'suggest', 'create']);
+  assert.deepEqual(sequence, ['derive', 'grant-gate', 'suggest', 'create']);
   assert.equal(saved.profiles[0].brandUrl, 'https://example.com');
   assert.equal(saved.prompts.length, 1);
   console.log('PASS Shodan/AIO onboarding: validation, atomic owner creation, idempotency and slug retry');

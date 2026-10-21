@@ -2,8 +2,18 @@ const { load } = require('./load-typescript.cjs')
 const { Prisma } = require('@prisma/client')
 const crypto = require('node:crypto')
 
+/** Load the real lifecycle implementation for native private-Postgres suites. */
+function aioLifecycleImports() {
+  const state = load('src/lib/account-lifecycle/state.ts', { 'node:crypto': crypto })
+  const store = load('src/lib/account-lifecycle/store.ts', { 'node:crypto': crypto, '@prisma/client': { Prisma }, './state': state })
+  const fence = load('src/lib/account-lifecycle/organization-fence.ts', { '@prisma/client': { Prisma }, './state': state, './store': store })
+  return { '@/lib/account-lifecycle/state': state, '@/lib/account-lifecycle/store': store, '@/lib/account-lifecycle/organization-fence': fence }
+}
+
 /** Legacy offline fixture bridge only: actual state/store/fence, synthetic rows and empty KV. */
 function shodanLifecycleFixture(prisma, options = {}) {
+  const service = options.service || 'shodan'
+  if (!['shodan', 'aio'].includes(service)) throw Error('Unsupported lifecycle fixture service')
   const globals = options.globals || {}, userId = options.userId || 'user', memberId = options.memberId || 'actor', orgId = options.organizationId || 'org'
   const state = load('src/lib/account-lifecycle/state.ts', { 'node:crypto': crypto }, globals)
   const store = load('src/lib/account-lifecycle/store.ts', { 'node:crypto': crypto, '@prisma/client': { Prisma }, './state': state }, globals)
@@ -41,18 +51,18 @@ function shodanLifecycleFixture(prisma, options = {}) {
         const text = (Array.isArray(sql) ? sql.join('?') : sql.sql).replaceAll('"', '')
         const parameters = Array.isArray(sql) ? values : sql.values
         if (text.includes('FROM User')) return [...new Set(parameters)].filter(id => userIds.has(id)).sort().map(id => ({ id }))
-        if (text.includes('FROM shodan_organizations')) {
+        if (text.includes(`FROM ${service}_organizations`)) {
           if (text.includes('FOR UPDATE') && previousRaw) await previousRaw(Array.isArray(sql) ? sql : sql.strings, ...parameters)
           return [{ id: orgId }]
         }
-        if (text.includes('FROM shodan_members')) {
+        if (text.includes(`FROM ${service}_members`)) {
           if (/SELECT role FROM/.test(text)) return previousRaw(Array.isArray(sql) ? sql : sql.strings, ...parameters)
           return rows(tx)
         }
-        throw Error('Unexpected Shodan fixture SQL')
+        throw Error(`Unexpected ${service} fixture SQL`)
       },
     })
   }, config)
   return { '@/lib/account-lifecycle/state': state, '@/lib/account-lifecycle/store': store, '@/lib/account-lifecycle/organization-fence': fence }
 }
-module.exports = { shodanLifecycleFixture }
+module.exports = { shodanLifecycleFixture, aioLifecycleImports }

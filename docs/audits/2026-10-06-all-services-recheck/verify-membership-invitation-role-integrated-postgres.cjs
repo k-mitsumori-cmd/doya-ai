@@ -1,3 +1,4 @@
+const aioLifecycle = require('../../../scripts/security-regression/shodan-lifecycle-fixture.cjs').aioLifecycleImports();
 const fs=require('node:fs'),crypto=require('node:crypto'),assert=require('node:assert/strict'),{PrismaClient,Prisma}=require('@prisma/client'),{load}=require('../../../scripts/security-regression/load-typescript.cjs'),{shodanCoreImports}=require('../../../scripts/security-regression/shodan-core-import-fixture.cjs');
 const base='docs/audits/2026-10-06-all-services-recheck/';
 const shodanCore=shodanCoreImports(),shodanFence=load('src/lib/account-lifecycle/organization-fence.ts',{'@prisma/client':{Prisma},'./state':shodanCore['@/lib/account-lifecycle/state'],'./store':shodanCore['@/lib/account-lifecycle/store']});
@@ -28,15 +29,15 @@ for(const service of ['aio','shodan','quote','mensetsu','aishodan']){
   const known=['admin','manager','member'].includes(role);
   for(const mode of ['GET','POST','role-change-before-lock']){
    await db[model].deleteMany();const token='synthetic-invitation-token';
-   if(service==='shodan')await seed('ShodanMember',{organizationId:org.id,userId:'owner',role:'owner',status:'ACTIVE',inviteToken:null,inviteEmail:null});
-   const member=await seed(service[0].toUpperCase()+service.slice(1)+'Member',{organizationId:org.id,userId:service==='shodan'?null:'pending',role:mode==='role-change-before-lock'?'member':role,status:'PENDING',inviteToken:token,inviteEmail:'synthetic@example.invalid',createdAt:new Date()});
+   if(service==='shodan'||service==='aio')await seed(service[0].toUpperCase()+service.slice(1)+'Member',{organizationId:org.id,userId:'owner',role:'owner',status:'ACTIVE',inviteToken:null,inviteEmail:null});
+   const member=await seed(service[0].toUpperCase()+service.slice(1)+'Member',{organizationId:org.id,userId:['shodan','aio'].includes(service)?null:'pending',role:mode==='role-change-before-lock'?'member':role,status:'PENDING',inviteToken:token,inviteEmail:'synthetic@example.invalid',createdAt:new Date()});
    const wrapper={[model]:db[model],user:db.user,$transaction:async(fn,options)=>db.$transaction(async tx=>{if(mode==='role-change-before-lock')await tx[model].update({where:{id:member.id},data:{role}});return fn(tx)},options)};
-   const route=load(file,{...(service==='shodan'?shodanLifecycle:{}),'next/server':{NextResponse:{json:(data,options={})=>({status:options.status||200,json:async()=>data})}},'next-auth':{getServerSession:async()=>({user:{id:'synthetic',email:'synthetic@example.invalid',name:'Synthetic'}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:wrapper},['@/lib/'+service+'/access']:{resolveUserId:async()=> 'synthetic'}});
+   const route=load(file,{...(service==='shodan'?shodanLifecycle:service==='aio'?aioLifecycle:{}),'next/server':{NextResponse:{json:(data,options={})=>({status:options.status||200,json:async()=>data})}},'next-auth':{getServerSession:async()=>({user:{id:'synthetic',email:'synthetic@example.invalid',name:'Synthetic'}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:wrapper},['@/lib/'+service+'/access']:{resolveUserId:async()=> 'synthetic'}});
    const response=await route[mode==='GET'?'GET':'POST']({}, {params:Promise.resolve({token})});
    const expected=candidate&&!known?(mode==='role-change-before-lock'?409:404):mode!=='GET'&&role==='owner'?409:200;
    assert.equal(response.status,expected,service+' '+JSON.stringify(role)+' '+mode);
    const saved=await db[model].findUnique({where:{id:member.id}});assert.equal(saved.status,mode!=='GET'&&expected===200?'ACTIVE':'PENDING');
-   if(saved.status==='ACTIVE'){assert.equal(saved.userId,'synthetic');assert.equal(saved.inviteToken,null)}else assert.equal(saved.userId,service==='shodan'?null:'pending');
+   if(saved.status==='ACTIVE'){assert.equal(saved.userId,'synthetic');assert.equal(saved.inviteToken,null)}else assert.equal(saved.userId,['shodan','aio'].includes(service)?null:'pending');
    observations.push({service,role,mode,status:response.status,savedStatus:saved.status});cases.push(service+' '+JSON.stringify(role)+' '+mode);
   }
  }

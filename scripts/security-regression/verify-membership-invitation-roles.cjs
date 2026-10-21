@@ -7,12 +7,12 @@ for(const service of ['aio','shodan','quote','mensetsu','aishodan']){
  for(const role of ['admin','manager','member','owner','__UNRECOGNIZED__','','constructor','admin ']){
   const known=['admin','manager','member'].includes(role);
   for(const mode of ['GET','POST','role-change-before-lock']){
-   const token='synthetic-invitation-token',initial={id:'invite',organizationId:'org',userId:service==='shodan'?null:'pending',role:mode==='role-change-before-lock'?'member':role,status:'PENDING',inviteToken:token,inviteEmail:'synthetic@example.invalid',createdAt:new Date(),organization:{id:'org',name:'Synthetic',slug:'synthetic'}};
+   const token='synthetic-invitation-token',initial={id:'invite',organizationId:'org',userId:['shodan','aio'].includes(service)?null:'pending',role:mode==='role-change-before-lock'?'member':role,status:'PENDING',inviteToken:token,inviteEmail:'synthetic@example.invalid',createdAt:new Date(),organization:{id:'org',name:'Synthetic',slug:'synthetic'}};
    const locked={...initial,role};let writes=0;
    const memberModel=service+'Member';const tx={$queryRaw:async()=>[{id:'org'}],user:{findUnique:async()=>({email:'synthetic@example.invalid'})},[memberModel]:{findUnique:async()=>locked,findFirst:async()=>null,updateMany:async()=>{writes++;return{count:1}},deleteMany:async()=>{writes++;return{count:1}}}};
    const db={[memberModel]:{findUnique:async()=>initial},$transaction:async fn=>fn(tx)};
    /* Explicit normal owner/User seeds omitted by the original actor/token fixture; not an anomaly repair. */
-const lifecycle=service==='shodan'?shodanLifecycleFixture(db,{mode:'claim',userId:'synthetic',userIds:['synthetic','owner-user'],authorityRows:()=>[{ id: 'canonical-owner', userId: 'owner-user', role: 'owner', status: 'ACTIVE', pendingEmail: null, inviteToken: null }],user:tx.user,target:tx=>tx.shodanMember.findUnique({where:{id:'invite'}})}):{};
+const lifecycle=['shodan','aio'].includes(service)?shodanLifecycleFixture(db,{service,mode:'claim',userId:'synthetic',userIds:['synthetic','owner-user'],authorityRows:()=>[{ id: 'canonical-owner', userId: 'owner-user', role: 'owner', status: 'ACTIVE', pendingEmail: null, inviteToken: null }],user:tx.user,target:tx=>tx[memberModel].findUnique({where:{id:'invite'}})}):{};
    const route=load(file,{...lifecycle,'next/server':{NextResponse:{json:(data,options={})=>({status:options.status||200,json:async()=>data})}},'next-auth':{getServerSession:async()=>({user:{id:'synthetic',email:'synthetic@example.invalid',name:'Synthetic'}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db},['@/lib/'+service+'/access']:{resolveUserId:async()=> 'synthetic'}});
    const response=await route[mode==='GET'?'GET':'POST']({}, {params:Promise.resolve({token})});
    const expected=candidate&&!known?(mode==='role-change-before-lock'?409:404):mode!=='GET'&&role==='owner'?409:200;

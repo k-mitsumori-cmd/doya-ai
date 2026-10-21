@@ -21,6 +21,7 @@ function fixture(service, action, scenario) {
     return { ...target }
   }
   const prisma = {
+    ...(service === 'aio' ? { [model]: { findFirst: async ({ where }) => where.id === target.id ? { ...target, userId: 'other' } : null } } : {}),
     $transaction: async (fn, options) => {
       assert.equal(options.isolationLevel, 'Serializable')
       attempts++
@@ -32,7 +33,7 @@ function fixture(service, action, scenario) {
         findFirst: async ({ where }) => {
           assert.equal(where.organizationId, 'org')
           if (where.userId) return actor.status === 'ACTIVE' && ['owner', 'admin'].includes(actor.role) ? { ...actor } : null
-          return where.id === target.id ? { ...target } : null
+          return where.id === target.id ? { ...target, userId: service === 'aio' ? 'other' : undefined } : null
         },
         update: async ({ data }) => mutate(data),
         delete: async () => mutate({ deleted: true }),
@@ -40,6 +41,16 @@ function fixture(service, action, scenario) {
     },
   }
   let lifecycleMocks = {}
+  if (service === 'aio') {
+    // This legacy fixture checks the route's actor/rank behavior. The actual
+    // User/org/member lock and retirement fence require the separate PG gate.
+    lifecycleMocks = {
+      '@/lib/account-lifecycle/state': { LifecycleError: class extends Error {} },
+      '@/lib/account-lifecycle/organization-fence': {
+        withLifecycleOrganizationWrite: async (_db, _scope, work) => prisma.$transaction(work, { isolationLevel: 'Serializable' }),
+      },
+    }
+  }
   if (service === 'shodan') {
     const { Prisma } = require('@prisma/client')
     const crypto = require('node:crypto')

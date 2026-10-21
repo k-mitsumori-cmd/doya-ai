@@ -5,6 +5,8 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
+import { withLifecycleOrganizationWrite } from '@/lib/account-lifecycle/organization-fence'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 import { escapeHtml } from '@/lib/html-escape'
 import { getAioContext, hasMinRole, orgSlugFrom } from '@/lib/aio/access'
 import { ROLE_HIERARCHY } from '@/lib/aio/types'
@@ -54,9 +56,13 @@ export async function POST(req: NextRequest) {
   const inviteToken = crypto.randomUUID()
   let result
   try {
-    result = await prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM aio_organizations WHERE id = ${ctx.organizationId} FOR UPDATE`
-      if (rows.length === 0) return { kind: 'missing' as const }
+    // The invitation remains unbound (PENDING/userId null), while every current
+    // participant is locked before organization/member rows are touched.
+    result = await withLifecycleOrganizationWrite(prisma, {
+      service: 'aio', organizationId: ctx.organizationId, actorUserId: ctx.userId, access: 'member',
+      targetMemberIds: [], targetUserIds: [], targetEmails: [email], grantsAuthority: false,
+      pendingClaimUserId: null, repairsUnknownTargetRole: false,
+    }, async (tx) => {
       const actor = await tx.$queryRaw<{ role: string }[]>`SELECT role FROM aio_members
         WHERE id = ${ctx.memberId} AND "organizationId" = ${ctx.organizationId}
         AND "userId" = ${ctx.userId} AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
@@ -66,19 +72,27 @@ export async function POST(req: NextRequest) {
         where: { organizationId: ctx.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: cutoff } }] },
       })
       if (duplicate) return { kind: 'duplicate' as const, status: duplicate.status }
+      // An anomalous legacy PENDING row already bound to a User cannot be
+      // cleaned under an invitation scope that did not discover that User.
+      const boundExpired = await tx.aioMember.findFirst({
+        where: { organizationId: ctx.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lte: cutoff }, userId: { not: null } },
+        select: { id: true },
+      })
+      if (boundExpired) return { kind: 'unavailable' as const }
       await tx.aioMember.deleteMany({
-        where: { organizationId: ctx.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lte: cutoff } },
+        where: { organizationId: ctx.organizationId, inviteEmail: email, status: 'PENDING', userId: null, createdAt: { lte: cutoff } },
       })
       const member = await tx.aioMember.create({
         data: { organizationId: ctx.organizationId, role, status: 'PENDING', inviteEmail: email, inviteToken },
       })
       return { kind: 'created' as const, member }
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof LifecycleError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
     return NextResponse.json({ error: '招待の作成に失敗しました（既に招待済みかもしれません）' }, { status: 409 })
   }
-  if (result.kind === 'missing') return NextResponse.json({ error: '組織が見つかりません' }, { status: 404 })
   if (result.kind === 'forbidden') return NextResponse.json({ error: '招待権限がありません。再読み込みしてください' }, { status: 403 })
+  if (result.kind === 'unavailable') return NextResponse.json({ error: '招待の状態を確認できません。管理者にお問い合わせください' }, { status: 409 })
   if (result.kind === 'duplicate') {
     return NextResponse.json({ error: result.status === 'ACTIVE' ? '既に参加済みのメンバーです' : '既に招待済みです' }, { status: 409 })
   }

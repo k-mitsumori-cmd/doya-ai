@@ -22,7 +22,7 @@ function fixture(service, { deliverySuccess = true, role = 'owner', currentRole 
   };
   if (lifecycleSettings) prisma.systemSetting = lifecycleSettings;
   // These actor/delivery tests omitted normal DB owner/User rows; seed them explicitly, with abnormal overrides preserved.
-  const lifecycle = service === 'shodan' ? shodanLifecycleFixture(prisma, { mode: 'issue', role: () => currentRole, userIds: lifecycleUsers || ['user', 'owner-user'], authorityRows: lifecycleAuthorityRows || (() => currentRole === 'owner' ? [] : [{ id: 'canonical-owner', userId: 'owner-user', role: 'owner', status: 'ACTIVE', pendingEmail: null, inviteToken: null }]) }) : {};
+  const lifecycle = ['shodan', 'aio'].includes(service) ? shodanLifecycleFixture(prisma, { service, mode: 'issue', role: () => currentRole, userIds: lifecycleUsers || ['user', 'owner-user'], authorityRows: lifecycleAuthorityRows || (() => currentRole === 'owner' ? [] : [{ id: 'canonical-owner', userId: 'owner-user', role: 'owner', status: 'ACTIVE', pendingEmail: null, inviteToken: null }]) }) : {};
   const api = load(`src/app/api/${service}/members/route.ts`, {
     ...lifecycle,
     'next/server': { NextResponse: Response },

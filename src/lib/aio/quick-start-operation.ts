@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { assertRetirementMembershipWritable } from '@/lib/account-lifecycle/store'
 
 type Identity = { userId: string; operationId: string }
 type Phase = 'ready' | 'pending' | 'cancelling' | 'completed' | 'failed' | 'cancelled' | 'linked'
@@ -139,10 +140,18 @@ export async function beginAioQuickStart(input: Identity & { url: string }, db: 
     }
     if (rows.length >= AIO_MAX_WORKSPACES) return result(tx, i, await terminal(tx, r, 'failed', 'WORKSPACE_LIMIT'))
     if (rows.length + reserved >= AIO_MAX_WORKSPACES) { await write(tx, r); return result(tx, i, r, 'busy') }
+    await assertRetirementMembershipWritable(tx, [i.userId])
     r = { ...r, phase: 'pending', at: now.toISOString(), token: randomUUID() }
     await write(tx, r)
     await tx.systemSetting.create({ data: { key: activeKey(r), value: key(r) } })
     return { ...await result(tx, i, r, 'started'), leaseToken: r.token }
+  })
+}
+/** Recheck authority between external stages without holding a DB lock during either call. */
+export async function assertAioQuickStartGrantAllowed(input: Identity, db: Db = prisma) {
+  const i = identity(input)
+  return transaction(i, db, async tx => {
+    await assertRetirementMembershipWritable(tx, [i.userId])
   })
 }
 export async function recoverAioQuickStart(input: Identity, cancel = false, db: Db = prisma, now = new Date()) {
@@ -170,6 +179,7 @@ export async function finishAioQuickStart(input: Identity & { leaseToken: string
     if (r.phase === 'cancelling') return result(tx, i, await terminal(tx, r, 'cancelled', null))
     if (r.phase !== 'pending') return result(tx, i, r)
     if (r.token !== input.leaseToken) throw new AioStartError('LEASE_CHANGED')
+    await assertRetirementMembershipWritable(tx, [i.userId])
     const rows = await memberships(tx, i.userId)
     const matched = rows.find(m => knownMemberRole(m.role) && matchesBrandUrl(m.organization.profile?.brandUrl, r!.hostHash))
     if (!matched && rows.length + await held(tx, i, now, i.operationId) >= AIO_MAX_WORKSPACES) return result(tx, i, await terminal(tx, r, 'failed', 'WORKSPACE_LIMIT'))
