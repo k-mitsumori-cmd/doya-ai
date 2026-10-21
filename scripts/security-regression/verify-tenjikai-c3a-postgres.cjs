@@ -57,7 +57,7 @@ async function setup() {
       if (field.isList) type += '[]'
       let def = ''
       if (field.type === 'DateTime' && (field.isUpdatedAt || field.default?.name === 'now')) def = ' DEFAULT CURRENT_TIMESTAMP'
-      else if (field.hasDefaultValue && ['string', 'number', 'boolean'].includes(typeof field.default)) def = ' DEFAULT ' + (typeof field.default === 'string' ? "'" + field.default.replaceAll("'", "''") + "'" : String(field.default))
+      else if (field.hasDefaultValue && ['string', 'number', 'boolean', 'bigint'].includes(typeof field.default)) def = ' DEFAULT ' + (typeof field.default === 'string' ? "'" + field.default.replaceAll("'", "''") + "'" : String(field.default))
       return quote(field.dbName || field.name) + ' ' + type + (field.isRequired ? ' NOT NULL' : '') + def + (field.isId ? ' PRIMARY KEY' : '') + (field.isUnique ? ' UNIQUE' : '')
     })
     for (const fields of model.uniqueFields) cols.push('UNIQUE (' + fields.map(quote).join(',') + ')')

@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     try { plan = await aiGeneratePlan(input) }
     catch (e) { console.error('[tenjikai] generate failed', { name: (e as { name?: string })?.name }) }
     let settled: Awaited<ReturnType<typeof finalizeGeneration>>
-    try { settled = await finalizeGeneration(claim, plan?.analysis ?? null) }
+    try { settled = await finalizeGeneration(claim, plan?.analysis ?? null, undefined, undefined, plan ? { source: plan.source, notice: plan.notice } : undefined) }
     catch (analysisError) {
       if (!plan) throw analysisError
       // The failed commit may have succeeded. Read the same owned operation first;

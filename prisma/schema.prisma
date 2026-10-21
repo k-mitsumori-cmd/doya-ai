@@ -4738,6 +4738,14 @@ model TenjikaiProject {
   user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   venueId        String?
   venue          TenjikaiVenue?          @relation(fields: [venueId], references: [id])
+  /// UIの設計参考値。TenjikaiVenue の検証済みmaster FKとは独立させる。
+  planningVenueCode String?
+  planningVenueName String?
+  planningVenueNote String?
+  planningKomaSizeM Float?
+  planningKomaPriceYen Int?
+  planningMaxHeightM Float?
+  planningVenueSource String?
   name           String
   serviceUrl     String
   eventName      String
@@ -4752,6 +4760,10 @@ model TenjikaiProject {
   goal           String // lead | brand | demo
   staffCount     Int                     @default(4)
   status         String                  @default("draft") // draft | planning | ordering | ready | done
+  /// 全project graph writerに共通する単調CAS。updatedAtは表示専用。
+  revision       BigInt                  @default(0)
+  workspaceSchemaVersion Int?
+  projectedVisitors Int?
   /// 会社情報（リニューアルの CompanyProfile）への予約列。null 可・FK なし（ADDON-SERVICES R-5）
   companyProfileId String?
   createdAt      DateTime                @default(now())
@@ -4784,6 +4796,11 @@ model TenjikaiSiteAnalysis {
   brandColors Json
   tone        String
   logoUrl     String?
+  domain      String?
+  generatedSource String?
+  generationNotice String?
+  generationOperationId String?
+  modelId     String?
   createdAt   DateTime        @default(now())
 
   @@map("tenjikai_site_analysis")
@@ -4799,13 +4816,18 @@ model TenjikaiBoothPlan {
   concept     String
   flow        String
   estimateYen Int
+  widthM      Float?
+  depthM      Float?
+  carpetYen   Int?
+  designYen   Int?
+  laborYen    Int?
   selected    Boolean                @default(false)
   renderUrls  String[] // 画像生成した完成予想図
   elements    TenjikaiBoothElement[]
   panels      TenjikaiGraphicPanel[]
   createdAt   DateTime               @default(now())
 
-  @@index([projectId, variant])
+  @@unique([projectId, variant], map: "tenjikai_booth_plan_project_variant_uq")
   @@map("tenjikai_booth_plan")
 }
 
@@ -4813,6 +4835,10 @@ model TenjikaiBoothElement {
   id      String            @id @default(cuid())
   planId  String
   plan    TenjikaiBoothPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  panels  TenjikaiGraphicPanel[]
+  sourceElementId String?
+  note    String?
+  sortOrder Int?
   kind    String // wall | monitor | counter | table | demo | rollup | storage | sign
   label   String
   x       Float
@@ -4823,6 +4849,8 @@ model TenjikaiBoothElement {
   h       Float
   costYen Int
 
+  @@unique([planId, id], map: "tenjikai_booth_element_plan_id_uq")
+  @@unique([planId, sourceElementId], map: "tenjikai_booth_element_source_uq")
   @@map("tenjikai_booth_element")
 }
 
@@ -4832,6 +4860,9 @@ model TenjikaiGraphicPanel {
   planId        String
   plan          TenjikaiBoothPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   elementId     String
+  element       TenjikaiBoothElement @relation(fields: [planId, elementId], references: [planId, id], onDelete: NoAction, map: "tenjikai_graphic_panel_element_same_plan_fkey")
+  sourcePanelId String?
+  sortOrder     Int?
   face          String // front | side
   name          String
   offsetMm      Int
@@ -4848,6 +4879,7 @@ model TenjikaiGraphicPanel {
   createdAt     DateTime          @default(now())
 
   @@index([planId])
+  @@unique([planId, sourcePanelId], map: "tenjikai_graphic_panel_source_uq")
   @@map("tenjikai_graphic_panel")
 }
 
@@ -4856,6 +4888,9 @@ model TenjikaiCreative {
   projectId        String
   project          TenjikaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   kind             String // backwall | rollup | flyer | clearfile | card | loop
+  name             String?
+  displaySize      String?
+  sortOrder        Int?
   widthMm          Int
   heightMm         Int
   qty              Int
@@ -4868,6 +4903,7 @@ model TenjikaiCreative {
   version          Int             @default(1)
   createdAt        DateTime        @default(now())
 
+  @@unique([projectId, kind], map: "tenjikai_creative_project_kind_uq")
   @@map("tenjikai_creative")
 }
 
@@ -4882,7 +4918,11 @@ model TenjikaiNovelty {
   leadDays  Int
   reason    String
   selected  Boolean         @default(true)
+  sourceNoveltyId String?
+  recommended Boolean?
+  sortOrder Int?
 
+  @@unique([projectId, sourceNoveltyId], map: "tenjikai_novelty_source_uq")
   @@map("tenjikai_novelty")
 }
 
@@ -4896,7 +4936,10 @@ model TenjikaiBudgetLine {
   source    String          @default("ai") // ai | manual | quote
   /// 発注済み（ordered）以降が支出管理への取り込み対象（ADDON-SERVICES §6 #12）
   status    String          @default("planned") // planned | ordered | paid
+  sourceLineKey String?
+  sortOrder Int?
 
+  @@unique([projectId, sourceLineKey], map: "tenjikai_budget_line_source_uq")
   @@map("tenjikai_budget_line")
 }
 
@@ -4940,6 +4983,7 @@ model TenjikaiDocument {
   createdAt DateTime        @default(now())
   tasks     TenjikaiTask[]
 
+  @@unique([projectId, id], map: "tenjikai_document_project_id_uq")
   @@map("tenjikai_document")
 }
 
@@ -4948,7 +4992,9 @@ model TenjikaiTask {
   projectId  String
   project    TenjikaiProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   documentId String?
-  document   TenjikaiDocument? @relation(fields: [documentId], references: [id])
+  document   TenjikaiDocument? @relation(fields: [projectId, documentId], references: [projectId, id], onDelete: NoAction, map: "tenjikai_task_document_same_project_fkey")
+  sourceDeadlineId String?
+  sortOrder Int?
   title      String
   /// カレンダーに出す締切の種類。task 以外がホームのカレンダー対象（ADDON-SERVICES §4）
   kind       String            @default("task") // task | application | submission | order
@@ -4958,6 +5004,7 @@ model TenjikaiTask {
   done       Boolean           @default(false)
 
   @@index([projectId, dueAt])
+  @@unique([projectId, sourceDeadlineId], map: "tenjikai_task_source_uq")
   @@map("tenjikai_task")
 }
 

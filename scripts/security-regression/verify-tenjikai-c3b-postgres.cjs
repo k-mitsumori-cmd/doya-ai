@@ -45,6 +45,7 @@ const lifecycleState = load('src/lib/account-lifecycle/state.ts')
 const store = load('src/lib/account-lifecycle/store.ts')
 const route = load('src/app/api/tenjikai/generate/route.ts')
 const generation = load('src/lib/tenjikai/generation-operation.ts')
+const revision = load('src/lib/tenjikai/project-revision.ts')
 const generationReceipts = load('src/lib/tenjikai/generation-receipts.ts')
 const statusRoute = load('src/app/api/tenjikai/generate/status/route.ts')
 const quote = value => '"' + value.replaceAll('"', '""') + '"'
@@ -60,7 +61,7 @@ async function setup() {
       if (field.isList) type += '[]'
       let def = ''
       if (field.type === 'DateTime' && (field.isUpdatedAt || field.default?.name === 'now')) def = ' DEFAULT CURRENT_TIMESTAMP'
-      else if (field.hasDefaultValue && ['string', 'number', 'boolean'].includes(typeof field.default)) def = ' DEFAULT ' + (typeof field.default === 'string' ? "'" + field.default.replaceAll("'", "''") + "'" : String(field.default))
+      else if (field.hasDefaultValue && ['string', 'number', 'boolean', 'bigint'].includes(typeof field.default)) def = ' DEFAULT ' + (typeof field.default === 'string' ? "'" + field.default.replaceAll("'", "''") + "'" : String(field.default))
       return quote(field.dbName || field.name) + ' ' + type + (field.isRequired ? ' NOT NULL' : '') + def + (field.isId ? ' PRIMARY KEY' : '') + (field.isUnique ? ' UNIQUE' : '')
     })
     for (const fields of model.uniqueFields) cols.push('UNIQUE (' + fields.map(quote).join(',') + ')')
@@ -106,6 +107,7 @@ async function check(name, run) { await reset(); await run(); cases.push(name) }
       const result = await post()
       assert.equal(result.status, 200, JSON.stringify(result.body)); assert.equal(result.body.state, 'generated')
       assert.equal(provider, 1); assert.equal(await db.tenjikaiProject.count(), 1); assert.equal(await db.tenjikaiSiteAnalysis.count(), 1)
+      assert.equal((await db.tenjikaiProject.findFirst({ where: { userId: actor } })).revision, 1n)
     })
     await check('preexisting real retirement fence denies project before AI', async () => {
       await store.reserveLifecycleOperation(reserver, identity(), digest)
@@ -189,8 +191,13 @@ async function check(name, run) { await reset(); await run(); cases.push(name) }
     await check('durable reserved status permits the original explicit operation only', async () => {
       const id = opId(); const admitted = await generation.admitGeneration(actor, id, engine.SAMPLE_INPUT, db)
       assert.equal(admitted.operation.state, 'reserved'); assert.equal(provider, 0); assert.equal(await db.tenjikaiProject.count(), 1)
+      const project = await db.tenjikaiProject.findFirst({ where: { userId: actor } })
+      assert.equal(project.revision, 0n); assert.equal(project.planningVenueCode, engine.SAMPLE_INPUT.venueId)
+      assert.equal(project.planningVenueSource, 'design_reference'); assert.equal(project.venueId, null)
       const seen = await status(id); assert.equal(seen.body.state, 'reserved'); assert.equal(seen.body.dispatchAllowed, true)
       const result = await post(id); assert.equal(result.status, 200, JSON.stringify(result)); assert.equal(provider, 1)
+      const raw = await db.systemSetting.findFirst({ where: { key: { startsWith: 'tenjikai-generate:v1:' } } })
+      const receipt = JSON.parse(raw.value); assert.equal(receipt.version, 2); assert.equal(receipt.baseRevision, '0'); assert.equal(receipt.resultRevision, '1')
     })
     await check('claimed operation after process loss never dispatches again', async () => {
       const id = opId(); await generation.admitGeneration(actor, id, engine.SAMPLE_INPUT, db)
@@ -297,9 +304,197 @@ async function check(name, run) { await reset(); await run(); cases.push(name) }
       assert.equal((await status(old)).body.state, 'unknown')
       assert.equal((await post(old)).status, 409); assert.equal(provider, 0)
     })
+    await check('same expected revision permits one committed child edit and rejects stale parent edit', async () => {
+      const id = opId(); assert.equal((await post(id)).status, 200)
+      const project = await db.tenjikaiProject.findFirst({ where: { userId: actor } })
+      const saved = await db.$transaction(async tx => {
+        await revision.lockTenjikaiActor(tx, actor)
+        const expected = await revision.lockOwnedTenjikaiRevision(tx, actor, project.id, '1')
+        await tx.tenjikaiSiteAnalysis.update({ where: { projectId: project.id }, data: { headline: '保存済み編集' } })
+        return revision.advanceTenjikaiRevision(tx, actor, project.id, expected)
+      })
+      assert.equal(saved, '2')
+      await assert.rejects(db.$transaction(async tx => {
+        await revision.lockTenjikaiActor(tx, actor)
+        await revision.lockOwnedTenjikaiRevision(tx, actor, project.id, '1')
+        await tx.tenjikaiProject.update({ where: { id: project.id }, data: { eventName: '古い親編集' } })
+      }), error => error.code === 'REVISION_CONFLICT')
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: project.id } })).revision, 2n)
+      assert.equal((await db.tenjikaiSiteAnalysis.findUnique({ where: { projectId: project.id } })).headline, '保存済み編集')
+    })
+    await check('parent edit advances revision and rejects a stale child edit', async () => {
+      assert.equal((await post(opId())).status, 200)
+      const project = await db.tenjikaiProject.findFirst({ where: { userId: actor } })
+      await db.$transaction(async tx => {
+        await revision.lockTenjikaiActor(tx, actor)
+        const expected = await revision.lockOwnedTenjikaiRevision(tx, actor, project.id, '1')
+        await tx.tenjikaiProject.update({ where: { id: project.id }, data: { name: '親の新しい名称' } })
+        await revision.advanceTenjikaiRevision(tx, actor, project.id, expected)
+      })
+      await assert.rejects(db.$transaction(async tx => {
+        await revision.lockTenjikaiActor(tx, actor)
+        await revision.lockOwnedTenjikaiRevision(tx, actor, project.id, '1')
+        await tx.tenjikaiSiteAnalysis.update({ where: { projectId: project.id }, data: { headline: '古い子編集' } })
+      }), error => error.code === 'REVISION_CONFLICT')
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: project.id } })).revision, 2n)
+      assert.notEqual((await db.tenjikaiSiteAnalysis.findUnique({ where: { projectId: project.id } })).headline, '古い子編集')
+    })
+    await check('editor revision during synthetic AI makes late finalize superseded without another provider call', async () => {
+      const id = opId(), gate = defer(); aiWait = gate.promise
+      const pending = post(id)
+      for (let n = 0; n < 60 && provider === 0; n++) await sleep(50)
+      assert.equal(provider, 1)
+      const project = await db.tenjikaiProject.findFirst({ where: { userId: actor } })
+      await db.$transaction(async tx => {
+        await revision.lockTenjikaiActor(tx, actor)
+        const expected = await revision.lockOwnedTenjikaiRevision(tx, actor, project.id, '0')
+        await tx.tenjikaiProject.update({ where: { id: project.id }, data: { name: '別操作の編集' } })
+        await revision.advanceTenjikaiRevision(tx, actor, project.id, expected)
+      })
+      gate.resolve()
+      const result = await pending
+      assert.equal(result.status, 409, JSON.stringify(result)); assert.equal(result.body.state, 'rejected')
+      assert.equal(await db.tenjikaiSiteAnalysis.count(), 0)
+      assert.equal((await status(id)).body.state, 'superseded')
+      assert.equal((await post(id)).status, 409); assert.equal(provider, 1)
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: project.id } })).revision, 1n)
+    })
+    await check('lost finalize response recovers completed without second revision or degradation', async () => {
+      const id = opId(); await generation.admitGeneration(actor, id, engine.SAMPLE_INPUT, db)
+      const claimed = await generation.claimGeneration(actor, id, engine.SAMPLE_INPUT, db); assert(claimed.claim)
+      const lost = { $transaction: async (...args) => { await db.$transaction(...args); throw Error('synthetic response lost after commit') } }
+      await assert.rejects(generation.finalizeGeneration(claimed.claim, engine.analyzeSite(engine.SAMPLE_INPUT.serviceUrl), lost), /synthetic response lost/)
+      assert.equal((await status(id)).body.state, 'completed')
+      const degraded = await generation.degradeGeneration(claimed.claim, db)
+      assert.equal(degraded.committed, false); assert.equal(degraded.operation.state, 'completed')
+      assert.equal((await db.tenjikaiProject.findFirst({ where: { userId: actor } })).revision, 1n)
+      assert.equal(await db.tenjikaiSiteAnalysis.count(), 1); assert.equal(provider, 0)
+    })
+    await check('two PostgreSQL connections with one expected revision commit exactly one graph edit', async () => {
+      assert.equal((await post(opId())).status, 200)
+      const project = await db.tenjikaiProject.findFirst({ where: { userId: actor } })
+      const held = defer(), release = defer()
+      const blocker = locker.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${actor} FOR UPDATE`
+        held.resolve(); await release.promise
+      }, { maxWait: 10000, timeout: 20000 })
+      await held.promise
+      const edit = (client, label) => client.$transaction(async tx => {
+        await revision.lockTenjikaiActor(tx, actor)
+        const expected = await revision.lockOwnedTenjikaiRevision(tx, actor, project.id, '1')
+        await tx.tenjikaiSiteAnalysis.update({ where: { projectId: project.id }, data: { headline: label } })
+        return revision.advanceTenjikaiRevision(tx, actor, project.id, expected)
+      }, { isolationLevel: 'ReadCommitted', maxWait: 10000, timeout: 20000 })
+      const first = edit(db, 'editor A'), second = edit(reserver, 'editor B')
+      const waiters = await waitForLocks()
+      release.resolve(); await blocker
+      const outcomes = await Promise.allSettled([first, second])
+      assert.equal(outcomes.filter(x => x.status === 'fulfilled').length, 1, JSON.stringify(outcomes))
+      assert.equal(outcomes.filter(x => x.status === 'rejected' && x.reason.code === 'REVISION_CONFLICT').length, 1, JSON.stringify(outcomes))
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: project.id } })).revision, 2n)
+      cases.push(`revision race observed ${waiters} PostgreSQL User lock waiters`)
+    })
+    await check('revision above JS safe integer survives decimal-string roundtrip and rollback', async () => {
+      const id = opId(); assert.equal((await post(id)).status, 200)
+      const project = await db.tenjikaiProject.findFirst({ where: { userId: actor } })
+      await db.$executeRaw`UPDATE tenjikai_project SET revision = 9007199254740993 WHERE id = ${project.id}`
+      const next = await db.$transaction(async tx => {
+        await revision.lockTenjikaiActor(tx, actor)
+        const expected = await revision.lockOwnedTenjikaiRevision(tx, actor, project.id, '9007199254740993')
+        return revision.advanceTenjikaiRevision(tx, actor, project.id, expected)
+      })
+      assert.equal(next, '9007199254740994')
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: project.id } })).revision, 9007199254740994n)
+      await assert.rejects(db.$transaction(async tx => {
+        await revision.lockTenjikaiActor(tx, actor)
+        const expected = await revision.lockOwnedTenjikaiRevision(tx, actor, project.id, next)
+        await tx.tenjikaiSiteAnalysis.update({ where: { projectId: project.id }, data: { headline: 'rollback marker' } })
+        await revision.advanceTenjikaiRevision(tx, actor, project.id, expected)
+        throw Error('synthetic rollback')
+      }), /synthetic rollback/)
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: project.id } })).revision, 9007199254740994n)
+      assert.notEqual((await db.tenjikaiSiteAnalysis.findUnique({ where: { projectId: project.id } })).headline, 'rollback marker')
+    })
+    await check('legacy v1 reserved receipt cannot create a new provider claim', async () => {
+      const id = opId(); await generation.admitGeneration(actor, id, engine.SAMPLE_INPUT, db)
+      const row = await db.systemSetting.findFirst({ where: { key: { startsWith: 'tenjikai-generate:v1:' } } })
+      const old = JSON.parse(row.value); delete old.baseRevision; delete old.resultRevision; old.version = 1
+      await db.systemSetting.update({ where: { key: row.key }, data: { value: JSON.stringify(old) } })
+      const result = await post(id)
+      assert.equal(result.status, 409, JSON.stringify(result)); assert.equal(provider, 0)
+      assert.equal((await status(id)).body.dispatchAllowed, false)
+    })
+    await check('legacy v1 claimed receipt cannot be finalized by the new revision writer', async () => {
+      const id = opId(); await generation.admitGeneration(actor, id, engine.SAMPLE_INPUT, db)
+      const claimed = await generation.claimGeneration(actor, id, engine.SAMPLE_INPUT, db); assert(claimed.claim)
+      const row = await db.systemSetting.findFirst({ where: { key: { startsWith: 'tenjikai-generate:v1:' } } })
+      const old = JSON.parse(row.value); delete old.baseRevision; delete old.resultRevision; old.version = 1
+      await db.systemSetting.update({ where: { key: row.key }, data: { value: JSON.stringify(old) } })
+      await assert.rejects(generation.finalizeGeneration(claimed.claim, engine.analyzeSite(engine.SAMPLE_INPUT.serviceUrl), db), error => error.code === 'LEGACY_OPERATION_REQUIRES_REVIEW')
+      assert.equal(await db.tenjikaiSiteAnalysis.count(), 0)
+      assert.equal((await db.tenjikaiProject.findFirst({ where: { userId: actor } })).revision, 0n)
+      assert.equal(provider, 0)
+    })
+    await check('legacy v1 reserved cancel blocks delayed provider dispatch', async () => {
+      const id = opId(); await generation.admitGeneration(actor, id, engine.SAMPLE_INPUT, db)
+      const row = await db.systemSetting.findFirst({ where: { key: { startsWith: 'tenjikai-generate:v1:' } } })
+      const old = JSON.parse(row.value); delete old.baseRevision; delete old.resultRevision; old.version = 1
+      await db.systemSetting.update({ where: { key: row.key }, data: { value: JSON.stringify(old) } })
+      assert.equal((await cancel(id)).body.state, 'canceled')
+      assert.equal((await post(id)).status, 202); assert.equal(provider, 0)
+    })
+    await check('malformed v2 receipt and invalid revision strings fail closed', async () => {
+      for (const invalid of ['-1', '01', '1.0', '9223372036854775808']) {
+        assert.throws(() => revision.parseTenjikaiRevision(invalid), error => error.code === 'INVALID_REVISION')
+      }
+      const id = opId(); await generation.admitGeneration(actor, id, engine.SAMPLE_INPUT, db)
+      const row = await db.systemSetting.findFirst({ where: { key: { startsWith: 'tenjikai-generate:v1:' } } })
+      const malformed = JSON.parse(row.value); malformed.baseRevision = null
+      await db.systemSetting.update({ where: { key: row.key }, data: { value: JSON.stringify(malformed) } })
+      assert.equal((await status(id)).status, 409)
+      assert.equal((await post(id)).status, 409); assert.equal(provider, 0)
+      assert.equal(await db.tenjikaiSiteAnalysis.count(), 0)
+    })
+    await check('revision ceiling refuses a business mutation without partial write', async () => {
+      const id = opId(); assert.equal((await post(id)).status, 200)
+      const project = await db.tenjikaiProject.findFirst({ where: { userId: actor } })
+      await db.$executeRaw`UPDATE tenjikai_project SET revision = 9223372036854775807 WHERE id = ${project.id}`
+      await assert.rejects(db.$transaction(async tx => {
+        await revision.lockTenjikaiActor(tx, actor)
+        await revision.lockOwnedTenjikaiRevision(tx, actor, project.id, '9223372036854775807')
+        await tx.tenjikaiSiteAnalysis.update({ where: { projectId: project.id }, data: { headline: 'overflow marker' } })
+      }), error => error.code === 'REVISION_EXHAUSTED')
+      assert.equal((await db.tenjikaiProject.findUnique({ where: { id: project.id } })).revision, 9223372036854775807n)
+      assert.notEqual((await db.tenjikaiSiteAnalysis.findUnique({ where: { projectId: project.id } })).headline, 'overflow marker')
+    })
+    await check('same and backward wall clock cannot decrease project revision', async () => {
+      const now = new Date(), id = generation.createGenerationOperationId(now)
+      await generation.admitGeneration(actor, id, engine.SAMPLE_INPUT, db, now)
+      const claimed = await generation.claimGeneration(actor, id, engine.SAMPLE_INPUT, db, now); assert(claimed.claim)
+      const earlier = new Date(now.getTime() - 1000)
+      const settled = await generation.finalizeGeneration(claimed.claim, engine.analyzeSite(engine.SAMPLE_INPUT.serviceUrl), db, earlier)
+      assert.equal(settled.committed, true); assert.equal(settled.operation.state, 'completed')
+      const project = await db.tenjikaiProject.findFirst({ where: { userId: actor } })
+      const next = await db.$transaction(async tx => {
+        await revision.lockTenjikaiActor(tx, actor)
+        const expected = await revision.lockOwnedTenjikaiRevision(tx, actor, project.id, '1')
+        return revision.advanceTenjikaiRevision(tx, actor, project.id, expected)
+      })
+      assert.equal(next, '2'); assert.equal(provider, 0)
+    })
+    await check('legacy v1 completed receipt remains readable as partial history', async () => {
+      const id = opId(); assert.equal((await post(id)).status, 200)
+      const row = await db.systemSetting.findFirst({ where: { key: { startsWith: 'tenjikai-generate:v1:' } } })
+      const old = JSON.parse(row.value); delete old.baseRevision; delete old.resultRevision; old.version = 1
+      await db.systemSetting.update({ where: { key: row.key }, data: { value: JSON.stringify(old) } })
+      const seen = await status(id)
+      assert.equal(seen.status, 200); assert.equal(seen.body.state, 'completed'); assert.equal(seen.body.analysis, 'saved')
+      assert.equal((await post(id)).status, 202); assert.equal(provider, 1)
+    })
     const report = { runId: process.env.DOYA_TENJIKAI_C3B_RUN_ID, accepted: true, passed: cases.length, cases,
       scope: 'Actual route, plan tier, Prisma and lifecycle store with owned private PostgreSQL; synthetic session/AI; no external provider or HTTP server',
-      sourceHashes: Object.fromEntries([...source, 'scripts/security-regression/verify-tenjikai-c3b-postgres.cjs', 'scripts/security-regression/verify-tenjikai-c3b-postgres.py'].map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(repo, file))).digest('hex')])) }
+      generatedClient: { resolvedPath: fs.realpathSync(req.resolve('@prisma/client')), dmmfSha256: crypto.createHash('sha256').update(JSON.stringify(Prisma.dmmf.datamodel.models)).digest('hex') },
+      sourceHashes: Object.fromEntries([...source, 'prisma/schema.prisma', 'prisma/manual-migrations/2026-10-22-tenjikai-workspace-revision.sql', 'scripts/security-regression/verify-tenjikai-c3b2-migration.py', 'scripts/security-regression/verify-tenjikai-c3b-postgres.cjs', 'scripts/security-regression/verify-tenjikai-c3b-postgres.py'].map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(repo, file))).digest('hex')])) }
     const target = path.join(process.env.DOYA_TENJIKAI_C3B_EVIDENCE_DIR, 'postgres-results-' + report.runId + '.json')
     fs.writeFileSync(target, JSON.stringify(report, null, 2) + '\n'); console.log(JSON.stringify({ target, passed: cases.length }))
   } finally { await Promise.all([db.$disconnect(), locker.$disconnect(), reserver.$disconnect()]) }
