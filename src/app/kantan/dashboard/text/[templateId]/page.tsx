@@ -447,6 +447,7 @@ export default function TemplateDetailPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
   const templateId = params.templateId as string
+  const signInHref = `/auth/signin?service=kantan&callbackUrl=${encodeURIComponent(`/kantan/dashboard/text/${encodeURIComponent(templateId)}`)}`
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   // テンプレート取得
@@ -858,7 +859,7 @@ ${inputMessage}
                   </p>
                 </div>
               </div>
-              <Link href="/auth/signin?service=kantan&callbackUrl=/kantan/dashboard">
+              <Link href={signInHref}>
                 <button className="w-full sm:w-auto px-3 lg:px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs lg:text-sm font-bold rounded-lg lg:rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-transform shadow-lg">
                   <LogIn className="w-4 h-4" />
                   ログインで10回に！
@@ -965,7 +966,7 @@ ${inputMessage}
             {!canGenerate && isGuest && !canGuestGenerate && (
                 <p className="text-center text-xs text-gray-400 mt-3">
                 本日の無料お試しは上限に達しました。
-                  <Link href="/auth/signin?service=kantan&callbackUrl=/kantan/dashboard" className="text-blue-500 hover:underline ml-1">
+                  <Link href={signInHref} className="text-blue-500 hover:underline ml-1">
                   ログインで続ける
                 </Link>
               </p>

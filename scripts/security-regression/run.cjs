@@ -904,7 +904,7 @@ if (navigation.error || navigation.status !== 0) {
   console.error('Security regression failed: verify-active-service-navigation.cjs');
   process.exit(1);
 }
-for (const file of ['verify-banner-kantan-work-navigation.cjs', 'verify-banner-auth-navigation.cjs', 'verify-kantan-dashboard-entry.cjs']) {
+for (const file of ['verify-banner-kantan-work-navigation.cjs', 'verify-banner-auth-navigation.cjs', 'verify-kantan-dashboard-entry.cjs', 'verify-kantan-auth-return-mounted.cjs']) {
   const result = spawnSync(process.execPath, [path.join(__dirname, file)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) {
     console.error('Security regression failed:', file);
