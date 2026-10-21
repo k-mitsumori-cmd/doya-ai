@@ -1,0 +1,84 @@
+{
+  "classification": "seven_connected_membership_orm_callsites_not_seven_defects",
+  "writeCallsites": [
+    {
+      "source": "src/lib/shodan/access.ts",
+      "line": 126,
+      "call": "await tx.shodanMember.create(",
+      "purpose": "初回owner作成",
+      "connectedHelper": "getOrCreateOrganization",
+      "transactionBoundary": "Serializable User lock → existing membership reread → org+owner create same transaction",
+      "retirementGuard": "lockLifecycleUsers existence + assertRetirementMembershipWritable before new organization",
+      "fixture": "closure61: creation retirement first/writer first/missing User/concurrent first/replay/unknown role"
+    },
+    {
+      "source": "src/app/api/shodan/members/route.ts",
+      "line": 74,
+      "call": "await tx.shodanMember.deleteMany(",
+      "purpose": "48h期限切れ招待置換",
+      "connectedHelper": "withLifecycleOrganizationWrite (member, no live target grant)",
+      "transactionBoundary": "actual sorted User(actor/owner) → org → member/signature; locked actor role + duplicate + expired cleanup + create in same transaction",
+      "retirementGuard": "strict actor/canonicalowner retirement; recipient not linked or inspected",
+      "fixture": "closure61: duplicate/expired replacement/concurrent issue"
+    },
+    {
+      "source": "src/app/api/shodan/members/route.ts",
+      "line": 77,
+      "call": "await tx.shodanMember.create(",
+      "purpose": "unbound PENDING招待発行",
+      "connectedHelper": "withLifecycleOrganizationWrite (member, no live target grant)",
+      "transactionBoundary": "actual sorted User(actor/owner) → org → member/signature; locked actor role + duplicate + expired cleanup + create in same transaction",
+      "retirementGuard": "strict actor/canonicalowner retirement; recipient not linked or inspected",
+      "fixture": "closure61: registered/unregistered/retiring/retired recipient same contract; actor/owner retirement both orders; postcommit mail"
+    },
+    {
+      "source": "src/app/api/shodan/invite/[token]/route.ts",
+      "line": 83,
+      "call": "await tx.shodanMember.deleteMany(",
+      "purpose": "既参加時の同token招待掃除",
+      "connectedHelper": "withLifecycleOrganizationWrite (invitation, exact pending claim or same-User bound real target)",
+      "transactionBoundary": "actual sorted User(recipient/owner) → org → target member/signature; locked DB email + role + binding + token + 48h, exact CAS, postwrite expiry rollback",
+      "retirementGuard": "strict recipient/canonicalowner retirement; no historical assertion",
+      "fixture": "closure61: already-member/expiry crossing cleanup rollback"
+    },
+    {
+      "source": "src/app/api/shodan/invite/[token]/route.ts",
+      "line": 87,
+      "call": "const claimed = await tx.shodanMember.updateMany(",
+      "purpose": "招待受諾CAS",
+      "connectedHelper": "withLifecycleOrganizationWrite (invitation, exact pending claim or same-User bound real target)",
+      "transactionBoundary": "actual sorted User(recipient/owner) → org → target member/signature; locked DB email + role + binding + token + 48h, exact CAS, postwrite expiry rollback",
+      "retirementGuard": "strict recipient/canonicalowner retirement; no historical assertion",
+      "fixture": "closure61: DB owner current/stale/missing SDK email; unbound and same-User bound; mismatch/binding/role/token/expiry races; retirement both orders"
+    },
+    {
+      "source": "src/lib/shodan/member-write.ts",
+      "line": 52,
+      "call": "const member = await tx.shodanMember.update(",
+      "purpose": "固定role変更のみ",
+      "connectedHelper": "mutateShodanMember fixed update/delete",
+      "transactionBoundary": "discovery → User sorted → org → members sorted → signature/status/role reread → ACL → one fixed mutation same transaction",
+      "retirementGuard": "strict actor/canonicalowner/live target; purpose-bound historical INACTIVE exception uses private fence parser",
+      "fixture": "member82 actual PG + original AIO/Shodan/SFA fixture assertions preserved"
+    },
+    {
+      "source": "src/lib/shodan/member-write.ts",
+      "line": 55,
+      "call": "await tx.shodanMember.delete(",
+      "purpose": "exact target削除のみ",
+      "connectedHelper": "mutateShodanMember fixed update/delete",
+      "transactionBoundary": "discovery → User sorted → org → members sorted → signature/status/role reread → ACL → one fixed mutation same transaction",
+      "retirementGuard": "strict actor/canonicalowner/live target; purpose-bound historical INACTIVE exception uses private fence parser",
+      "fixture": "member82 actual PG + original AIO/Shodan/SFA fixture assertions preserved"
+    }
+  ],
+  "routeCallers": [
+    "src/app/api/shodan/organization/route.ts → getOrCreateOrganization",
+    "src/app/api/shodan/members/[id]/route.ts → mutateShodanMember"
+  ],
+  "exclusions": [
+    "Shodan ordinary data/AI/content writers are not part of this membership closure",
+    "Other services/global R1/R2/R3 and original two global unsafe observations remain open",
+    "No coordinator delete enablement, live rollout or old-worker drain is proven"
+  ]
+}

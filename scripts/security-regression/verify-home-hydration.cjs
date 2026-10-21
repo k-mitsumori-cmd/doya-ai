@@ -17,6 +17,7 @@ const RealDate = Date;
 const cache = new Map();
 const Link = ({children, href, prefetch, ...props}) => React.createElement('a', {...props, href}, children);
 const mocks = {
+  'next-auth/react':{useSession:()=>({data:{user:{id:'viewer'}},status:'authenticated',update:async()=>({user:{id:'viewer'}})})},
   'next/link': {__esModule:true, default:Link},
   'next/navigation': { useRouter: () => ({push(){}}) },
   'lucide-react': new Proxy({}, {get: (_,k) => k==='__esModule'?false:() => React.createElement('svg')}),
@@ -51,7 +52,7 @@ function clock(iso,tz) {
   global.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[epoch]))} static now(){return epoch}};
 }
 function fixture(at) {return {
-  generatedAt:at,sources:{revenue:'sfa_quote',cost:'promane'},user:{name:null,email:null},
+  actorId:'viewer',generatedAt:at,sources:{revenue:'sfa_quote',cost:'promane'},user:{name:null,email:null},
   contract:{tier:'FREE',label:'無料',paid:false,status:null,currentPeriodEnd:'2026-10-31T15:30:00Z',cancelAtPeriodEnd:false},
   sales:{state:'empty',href:'/sfa',wonThisMonth:0,wonCountThisMonth:0,openPipeline:0,weightedPipeline:0,openDeals:0,stages:[],openTasks:0,overdueTasks:0,newLeads:0},
   quotes:{state:'empty',href:'/quote',confirmedThisMonth:0,draftCount:0,sentCount:0},
@@ -61,7 +62,7 @@ function fixture(at) {return {
 };}
 async function probe(componentName,c) {
   const Component=load(path.join(repo,'src/app/(shell)/home',componentName+'.tsx')).default;
-  const props={initial:fixture(c.summaryAt === undefined ? c.server : c.summaryAt)};
+  const props={serverActorId:'viewer',initial:fixture(c.summaryAt === undefined ? c.server : c.summaryAt)};
   if (c.events) props.initial.events = c.events;
   clock(c.server,c.serverTZ);
   const html=renderToString(React.createElement(Component,props));

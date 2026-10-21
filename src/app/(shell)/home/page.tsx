@@ -26,12 +26,12 @@ export const dynamic = 'force-dynamic'
 export default async function HomePage() {
   const session = await getServerSession(authOptions)
   const userId = (session?.user as { id?: string } | undefined)?.id
-  if (!userId) redirect('/auth/signin?callbackUrl=/home')
+  if (typeof userId !== 'string' || !userId.trim()) redirect('/auth/signin?callbackUrl=/home')
 
   const [summary, uiNext] = await Promise.all([getHomeSummary(userId), isUiNext()])
   // 枠（AppShell）は src/app/(shell)/layout.tsx が出す。
   // 入力が主役の新しいホーム（UI 品質 H-2）は、新しい見た目（チェックリスト §5.1）のときだけ
-  if (!uiNext) return <HomeDashboardLegacy initial={summary} />
+  if (!uiNext) return <HomeDashboardLegacy key={userId} serverActorId={userId} initial={summary} />
   const setupHidden = (await cookies()).get(SETUP_HIDE_COOKIE)?.value === '1'
-  return <HomeDashboard initial={summary} setupHidden={setupHidden} />
+  return <HomeDashboard key={userId} serverActorId={userId} initial={summary} setupHidden={setupHidden} />
 }

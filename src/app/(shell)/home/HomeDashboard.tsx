@@ -24,6 +24,8 @@ import { useAccountCompany } from '@/components/shell/company-context'
 import { useToolHref } from '@/components/shell/ui-next-context'
 import FinanceOverview from './FinanceOverview'
 import PopupOverview from './PopupOverview'
+import SavedTenjikaiOverview from './SavedTenjikaiOverview'
+import HomeActorBoundary, { type HomeActorView } from './HomeActorBoundary'
 import styles from './home.module.css'
 
 const man = (n: number) => {
@@ -35,16 +37,17 @@ const man = (n: number) => {
 const STEP_MS = 520
 
 /** API 経由のリダイレクト（決済ポータル等）は画面遷移ではなく通常のリンクで開く */
-function SmartLink({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) {
-  if (href.startsWith('/api/')) return <a href={href} className={className}>{children}</a>
-  return <Link href={href} className={className}>{children}</Link>
+function SmartLink({ href, className, children, current }: { href: string; className?: string; children: React.ReactNode; current: () => boolean }) {
+  const guard = (event: React.MouseEvent) => { if (!current()) { event.preventDefault(); event.stopPropagation() } }
+  if (href.startsWith('/api/')) return <a href={href} className={className} onClick={guard}>{children}</a>
+  return <Link href={href} className={className} onClick={guard}>{children}</Link>
 }
 
 /* ---------------- エージェント ---------------- */
 
 type RunState = { plan: AgentPlan; query: string; shown: number; status: 'running' | 'done' | 'stopped' }
 
-function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: string }) {
+function AgentPanel({ summary, greeting, current }: { summary: HomeSummary; greeting: string; current: () => boolean }) {
   // 組織を選ぶツールは、入口ではなく組織のページへ（新しい見た目のときだけ中身がある）
   const toHref = useToolHref()
   const router = useRouter()
@@ -57,6 +60,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
   useEffect(() => clear, [])
 
   const start = useCallback((query: string) => {
+    if (!current()) return
     const q = query.trim()
     if (!q) return
     clear()
@@ -74,19 +78,19 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
     const plan = planAgent(q, summary)
     setRun({ plan, query: q, shown: 0, status: 'running' })
     setInput('')
-  }, [summary, router, toHref])
+  }, [summary, router, toHref, current])
 
   useEffect(() => {
-    if (!run || run.status !== 'running') return
+    if (!current() || !run || run.status !== 'running') return
     if (run.shown >= run.plan.steps.length) {
       setRun((r) => (r ? { ...r, status: 'done' } : r))
       return
     }
-    timer.current = setTimeout(() => setRun((r) => (r && r.status === 'running' ? { ...r, shown: r.shown + 1 } : r)), STEP_MS)
+    timer.current = setTimeout(() => setRun((r) => (current() && r && r.status === 'running' ? { ...r, shown: r.shown + 1 } : r)), STEP_MS)
     return clear
-  }, [run])
+  }, [run, current])
 
-  const stop = () => { clear(); setRun((r) => (r ? { ...r, status: 'stopped' } : r)) }
+  const stop = () => { if (!current()) return; clear(); setRun((r) => (r ? { ...r, status: 'stopped' } : r)) }
 
   return (
     <section className={styles.agent} aria-label="やりたいことを頼む">
@@ -173,7 +177,7 @@ function AgentPanel({ summary, greeting }: { summary: HomeSummary; greeting: str
               {run.plan.actions.length ? (
                 <div className={styles.actions}>
                   {run.plan.actions.map((a) => (
-                    <SmartLink key={a.label} href={a.href} className={styles.action}>
+                    <SmartLink key={a.label} href={a.href} className={styles.action} current={current}>
                       {a.label} <ArrowRight size={15} />
                     </SmartLink>
                   ))}
@@ -373,25 +377,11 @@ function EmptyCard({ text, href, cta }: { text: string; href: string; cta: strin
 /* ---------------- 本体 ---------------- */
 
 // setupHidden: 会社の登録の案内を閉じたか（サーバーが cookie から読む。最初の描画から出す・出さないを決め、あとから出さない）
-export default function HomeDashboard({ initial, setupHidden = false }: { initial: HomeSummary; setupHidden?: boolean }) {
-  const [summary, setSummary] = useState(initial)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export default function HomeDashboard({ initial, serverActorId, setupHidden = false }: { initial: HomeSummary; serverActorId: string; setupHidden?: boolean }) {
+  return <HomeActorBoundary initial={initial} serverActorId={serverActorId}>{view => <HomeDashboardView {...view} setupHidden={setupHidden} />}</HomeActorBoundary>
+}
 
-  const refresh = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/home/summary', { cache: 'no-store' })
-      if (!res.ok) throw new Error()
-      setSummary(await res.json())
-    } catch {
-      setError('最新の数字を取得できませんでした。時間をおいて再度お試しください。')
-    } finally {
-      setLoading(false)
-    }
-  }
-
+export function HomeDashboardView({ summary, loading, error, refresh, current, setupHidden }: HomeActorView & { setupHidden: boolean }) {
   const s = summary
   const c = s.contract
   const clock = homeSnapshotClock(s.generatedAt)
@@ -404,7 +394,7 @@ export default function HomeDashboard({ initial, setupHidden = false }: { initia
   return (
     <div className={styles.page}>
       {/* 入力が主役（UI 品質 H-2）。集計は、その下に置く */}
-      <AgentPanel summary={s} greeting={`${clock.greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
+      <AgentPanel summary={s} current={current} greeting={`${clock.greeting}${s.user.name ? `、${s.user.name}さん` : ''}`} />
       {/* 会社の登録の案内は、入力（主役）の下に1行で（UI 品質 B-1・S-9） */}
       <CompanySetupNote initiallyHidden={setupHidden} />
 
@@ -423,6 +413,7 @@ export default function HomeDashboard({ initial, setupHidden = false }: { initia
 
       {s.finance ? <FinanceOverview finance={s.finance} /> : null}
       <PopupOverview popup={s.popup} />
+      <SavedTenjikaiOverview tenjikai={s.tenjikai} />
       {useLegacyRevenue ? (<section className={styles.kpis} aria-label="今月の主要な数字">
         <Kpi icon={TrendingUp} label="今月の受注" value={s.sales.state === 'ready' ? s.sales.wonThisMonth : null} sub={s.sales.state === 'ready' ? `${s.sales.wonCountThisMonth}件` : '営業管理が未使用'} href={s.sales.href} muted={s.sales.state !== 'ready'} />
         <Kpi icon={FileText} label="今月確定した見積" value={s.quotes.state === 'ready' ? s.quotes.confirmedThisMonth : null} sub={s.quotes.state === 'ready' ? `下書き ${s.quotes.draftCount}件` : '見積が未使用'} href={s.quotes.href} muted={s.quotes.state !== 'ready'} />
@@ -497,7 +488,7 @@ export default function HomeDashboard({ initial, setupHidden = false }: { initia
             <div><dt>状態</dt><dd>{c.cancelAtPeriodEnd ? '期間終了で解約予定' : c.paid ? '契約中' : '無料'}</dd></div>
             {periodEnd ? <div><dt>{c.cancelAtPeriodEnd ? '利用できる期限' : '次回更新日'}</dt><dd>{periodEnd}</dd></div> : null}
           </dl>
-          <SmartLink href={c.paid ? '/api/stripe/portal?returnTo=/home' : '/pricing'} className={styles.cardLink}>
+          <SmartLink href={c.paid ? '/api/stripe/portal?returnTo=/home' : '/pricing'} className={styles.cardLink} current={current}>
             {c.paid ? '契約内容・お支払い方法を確認' : '料金プランを見る'}
           </SmartLink>
         </section>

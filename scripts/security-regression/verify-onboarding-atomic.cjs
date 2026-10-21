@@ -1,3 +1,4 @@
+const { shodanLifecycleFixture } = require('./shodan-lifecycle-fixture.cjs');
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
@@ -37,7 +38,10 @@ function fixture(service, { failMember = false, conflictOnce = false, existingSl
     try { return await callback(tx); }
     catch (error) { organizations.splice(0, organizations.length, ...before.organizations); members.splice(0, members.length, ...before.members); profiles.splice(0, profiles.length, ...before.profiles); prompts.splice(0, prompts.length, ...before.prompts); throw error; }
   } };
+  /* Explicit normal owner/User seeds omitted by the original actor/token fixture; not an anomaly repair. */
+const lifecycle = service === 'shodan' ? shodanLifecycleFixture(prisma, { mode: 'creation', userIds: ['user'] }) : {};
   const deps = {
+    ...lifecycle,
     'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma },
@@ -72,6 +76,7 @@ function fixture(service, { failMember = false, conflictOnce = false, existingSl
 
     let calls = 0;
     const route = load(`src/app/api/${service}/organization/route.ts`, {
+      ...(service === 'shodan' ? shodanLifecycleFixture({ $transaction: async fn => fn({}) }, { mode: 'creation', userIds: ['user'] }) : {}),
       'next/server': { NextResponse: Response },
       'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
       '@/lib/auth': { authOptions: {} },

@@ -1,0 +1,68 @@
+{
+  "status": "same_head_ci_success_preview_ready",
+  "checkedAt": "2026-10-20T22:42:06.285811+00:00",
+  "head": "02f9a4eb30a9c334e3685ee59269d70d90573031",
+  "commitTree": "3885fa0c0fd1bf2c66d9cf998a4fe6e078054e9a",
+  "commitCandidateMapping": {
+    "files": 55,
+    "sourceTargets": 26,
+    "documents": 29,
+    "executableSourceFiles": 5163,
+    "digest": "1911fa562884af739a2ea3f9fca61e5695032de9aa71c838d94deeb1d9e392a7",
+    "allMatched": true
+  },
+  "local": {
+    "summary": "summary.json",
+    "gatesPassed": 27,
+    "priorFailedAttemptPreserved": true
+  },
+  "githubCi": {
+    "checkedAt": "2026-10-20T22:40:33.180102+00:00",
+    "runId": 39459307710,
+    "headSha": "02f9a4eb30a9c334e3685ee59269d70d90573031",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/k-mitsumori-cmd/doya-ai/actions/runs/39459307710",
+    "jobs": [
+      {
+        "jobId": 118754273220,
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "actualCheckout": {
+    "runId": 39459307710,
+    "jobId": 118754273220,
+    "requestedHead": "02f9a4eb30a9c334e3685ee59269d70d90573031",
+    "actualCheckout": "e4c1d61907e8a18d70f76b0a73b0be642de6e7ce",
+    "actualCheckoutSource": "GitHub job git log -1 --format=%H output",
+    "checkoutParents": [
+      "2b88ca32d3c187e754eb93daa20819d2171a2c39",
+      "02f9a4eb30a9c334e3685ee59269d70d90573031"
+    ],
+    "headTree": "3885fa0c0fd1bf2c66d9cf998a4fe6e078054e9a",
+    "checkoutTree": "3885fa0c0fd1bf2c66d9cf998a4fe6e078054e9a",
+    "sameTree": true,
+    "testedSourceBlobModePathCount": 5163,
+    "testedSourceBlobModePathsetSha256": "1911fa562884af739a2ea3f9fca61e5695032de9aa71c838d94deeb1d9e392a7",
+    "commitSourceMatchesSnapshot": true
+  },
+  "vercel": {
+    "checkedAt": "2026-10-20T22:40:35.296363+00:00",
+    "id": "dpl_5vhRpHT3xG6iJKKY2ZtUDpGBuKYs",
+    "state": "READY",
+    "url": "doya-6fm65zv5u-surisutas-projects.vercel.app",
+    "gitSha": "02f9a4eb30a9c334e3685ee59269d70d90573031",
+    "target": null,
+    "source": "Authenticated read-only GET /v13/deployments/{id}"
+  },
+  "previewUrl": "https://doya-6fm65zv5u-surisutas-projects.vercel.app",
+  "browserQa": "Not executed on this head. Prior07 attempt stopped at visible Vercel login.",
+  "remaining": [
+    "Inherited Home actor key/props tracking/refresh binding gap remains; no production actor isolation claim.",
+    "OWNER 62 safe contracts plus two unresolved unsafe observations remain unaccepted.",
+    "Other service/global writer integrations, migration/retirement enabling, authenticated UI and production reflection remain incomplete."
+  ],
+  "productionReflected": false
+}

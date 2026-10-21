@@ -5,6 +5,7 @@ import type { HomeSummary } from '@/lib/home/summary'
 import { todayItems } from './today'
 
 const base = (over: Partial<HomeSummary> = {}): HomeSummary => ({
+  actorId: 'viewer',
   generatedAt: '', sources: { revenue: 'sfa_quote', cost: 'promane' }, user: { name: null, email: null },
   contract: { tier: 'FREE', label: '', paid: false, status: null, currentPeriodEnd: null, cancelAtPeriodEnd: false },
   sales: { state: 'ready', href: '/sfa/a', wonThisMonth: 0, wonCountThisMonth: 0, openPipeline: 0, weightedPipeline: 0, openDeals: 0, stages: [], openTasks: 0, overdueTasks: 0, newLeads: 0 },

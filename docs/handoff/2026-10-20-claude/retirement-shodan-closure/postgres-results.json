@@ -1,0 +1,327 @@
+{
+  "executed": 61,
+  "contractPassed": 61,
+  "cases": [
+    {
+      "name": "issue registered recipient uses the same private unbound PENDING contract",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue unregistered recipient uses the same private unbound PENDING contract",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue retiring recipient uses the same private unbound PENDING contract",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue retired recipient uses the same private unbound PENDING contract",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue refuses retiring owner without DB mutation or delivery",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue refuses retiring actor without DB mutation or delivery",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue successful delivery omits fallback URL while preserving pending row",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue delivery unknown leaves durable pending invitation without automatic resend",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue duplicate ACTIVE preserves existing conflict and sends zero mail",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue duplicate PENDING preserves existing conflict and sends zero mail",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue expired pending is replaced once preserving 48-hour policy",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "simultaneous issue saves one invitation and sends one mail",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue actor revoked after discovery is forbidden without mail",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue writer first makes retirement wait on actual owner User lock",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue invalid owner role and peer grants keep original refusal",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim DB owner accepts current session email using authenticated id",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim DB owner accepts stale session email using authenticated id",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim DB owner accepts missing session email using authenticated id",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim DB mismatch is 403 despite matching stale session email",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim DB email changes before core discovery returns precise 403 without write",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim role/token changes together with DB email do not get misclassified as 403",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim dangling nonnull PENDING is rejected without creating or rebinding a User",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim normal registered recipient already bound to its PENDING invitation remains accepted",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim PENDING bound to another real User is not rebound by email",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim same-User bound PENDING rejects missing-User without rebind or activation",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim same-User bound PENDING rejects email-mismatch without rebind or activation",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim same-User bound PENDING rejects expired without rebind or activation",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim same-User bound PENDING rejects retiring-recipient without rebind or activation",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim same-User bound PENDING rejects retiring-owner without rebind or activation",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim same-User bound PENDING rejects role-change without rebind or activation",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim same-User bound PENDING rejects token-change without rebind or activation",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim same-User bound PENDING rejects binding-change without rebind or activation",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim same-User bound PENDING rejects status-change without rebind or activation",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim same-User bound PENDING expires after CAS and rolls back fully",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim DB email changes after core discovery and remains exact 403 without write",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim DB email becomes null after discovery and remains explicit 403 without write",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue replacement retiring canonical owner is re-discovered before saving or mail",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim refuses retiring owner with token and membership unchanged",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim refuses retiring recipient with token and membership unchanged",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim writer first makes retirement wait on recipient User lock",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim already-member cleanup is atomic without duplicate membership",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim expiry crosses claim and rolls token and membership fully back",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim expiry crosses already-cleanup and rolls token and membership fully back",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim expires while waiting for User admission and performs no acceptance",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim expired initial invite preserves original 410 without mutation",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim same token races and accepts once without duplicate live member",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim cancelled before admission cannot resurrect the member",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim DB write failure keeps pending token and creates no live membership",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim different authenticated User cannot consume invitation",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim missing session is unauthorized without write",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "creation new account creates one owner organization and normal replay reuses it",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "creation simultaneous first requests preserve one owner organization",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "creation missing User does not recreate organization or owner",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "creation retirement first prevents any new organization or membership",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "creation writer first holds actual User lock before new organization",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "creation existing valid replay remains readable during retirement without writes",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "creation unknown ACTIVE role retains explicit 403 rather than another owner",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "creation failure rolls back organization and membership together",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "issue ordinary membership purpose remains usable with valid non-retirement checkout unknown",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "claim ordinary membership purpose remains usable with valid non-retirement checkout unknown",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    },
+    {
+      "name": "creation ordinary membership purpose remains usable with valid non-retirement checkout unknown",
+      "passed": true,
+      "classification": "actual_shodan_creation_issue_claim_contract"
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/shodan/access.ts": "9a06c1d8038f152e37d019da43160b746a399dab2257c83c4d2183ad503148d8",
+    "src/app/api/shodan/organization/route.ts": "3d0e4c860790bb43e4097cc678cec452f4f4c709d80d1ef3683d2e1a70922312",
+    "src/app/api/shodan/members/route.ts": "0f0c8860169e366297ed821fc21e9f9c27f5ab31441248fe211b8b5d555f640c",
+    "src/app/api/shodan/invite/[token]/route.ts": "c3b9c69d355b23d23a66ffd4e2dcb2599190ec087f02f99b5c1ea11309437709",
+    "scripts/security-regression/verify-shodan-closure-postgres.cjs": "4e71ad21e88803a2d4e9dae0fd8581733fad8e75c7f2b0ba35cd522baeeb8069",
+    "scripts/security-regression/verify-shodan-closure-postgres.py": "e431f73c3e8018e968e6088681c4f7b41c1173f265e305d037f9c7bd760ab416",
+    "scripts/security-regression/shodan-lifecycle-fixture.cjs": "c8f3f459061398c2950d5f4d7ba65930e0003fb9f9bcf101c9a820cbf4883537",
+    "scripts/security-regression/verify-team-invite-delivery.cjs": "6645228ae648aa148d7ff2529395c82cb780e938b0d58c5bf8f6012443cf22e0",
+    "scripts/security-regression/verify-onboarding-atomic.cjs": "83d82f57468a94aab96117896f9404da598161d285e7cf78a7801abbc83e8fe1",
+    "scripts/security-regression/verify-team-invite-deadlines.cjs": "f7029dafcea6c20e1852dfc5e4387d8e18d9b3cfcc175845c6832c1932bd3e7c",
+    "scripts/security-regression/verify-org-team-contracts.cjs": "10759a5ab5482271f24eb39e8755cffb47308821907883752753d799e8a46c0a",
+    "scripts/security-regression/verify-membership-invitation-roles.cjs": "a8512b14a005e220328677371d3825e2207848981d2ae739d338cb047367f457",
+    "scripts/security-regression/verify-team-invite-integrity.cjs": "0b68487aff77448358ccfb79815c7948b0d330268b87831254c08b8d93b633c7"
+  },
+  "scope": "Actual Shodan access/organization create/invitation issue+claim and actual lifecycle core with owned Unix PG. Clock/session/delivery synthetic only; actual email/provider calls 0. Existing member6 remains separately frozen. Global R1/R2/R3 and unsafe2 are not closed."
+}

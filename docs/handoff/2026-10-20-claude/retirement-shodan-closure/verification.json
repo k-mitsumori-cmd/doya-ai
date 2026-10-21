@@ -1,0 +1,132 @@
+{
+  "status": "author_targeted_pass_integration_pending",
+  "inputSetSha256": "58c83cb8b4a017242921e058338b1d480d56b09bdf296904c7dec1c5f2615725",
+  "combinedShodan19InputSetSha256": "e979c9c3b038a6bb2d58bbe7038e6ad2d9f99cac6cae5bf0ea40027becbacb07",
+  "closurePostgres": {
+    "executed": 61,
+    "contractPassed": 61,
+    "results": "postgres-results.json",
+    "supervisor": {
+      "startedAt": "2026-10-20T23:28:11.374080+00:00",
+      "scope": "Owned ephemeral Unix socket PostgreSQL, synthetic data only; no production connection",
+      "privateRoot": "/tmp/doya-shodan-closure-de92ffc5",
+      "testExitCode": 0,
+      "stopExitCode": 0,
+      "endedAt": "2026-10-20T23:28:13.164284+00:00",
+      "removedOwnedDirectory": true
+    },
+    "log": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-pg.log",
+    "logSha256": "03b5183d0495ad3df875cb363ba8f4516f508991fb22484d10f31fc98780fe8c"
+  },
+  "memberPostgresRegression": {
+    "executed": 82,
+    "contractPassed": 82,
+    "supervisor": {
+      "startedAt": "2026-10-20T23:24:19.467513+00:00",
+      "scope": "Owned ephemeral Unix socket PostgreSQL, synthetic data only; no production connection",
+      "privateRoot": "/tmp/doya-shodan-members-58c483c7",
+      "testExitCode": 0,
+      "stopExitCode": 0,
+      "endedAt": "2026-10-20T23:24:21.354696+00:00",
+      "removedOwnedDirectory": true
+    },
+    "log": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-member-regression.log",
+    "logSha256": "661b13b9a1a531f952e8ecb9cb27f788f748e7dd08a2075a332a9075b3073e2a",
+    "frozenMember6HashesMatched": true,
+    "additionalActualAccessDependencySha256": "9a06c1d8038f152e37d019da43160b746a399dab2257c83c4d2183ad503148d8"
+  },
+  "legacySixFixtures": [
+    {
+      "script": "scripts/security-regression/verify-team-invite-delivery.cjs",
+      "beforeImportFailureLog": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-before-verify-team-invite-delivery.log",
+      "beforeLogSha256": "6a6b49d73bb0a4589eb423b54969f39c078c2b2798da198074b09e1b2177381f",
+      "afterExitCode": 0,
+      "afterLog": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-after-verify-team-invite-delivery.log",
+      "afterLogSha256": "a184a8c90837a5e497a4109bffaa3e1a1fc7a3c34c33c31866fec750bc45ac5a"
+    },
+    {
+      "script": "scripts/security-regression/verify-onboarding-atomic.cjs",
+      "beforeImportFailureLog": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-before-verify-onboarding-atomic.log",
+      "beforeLogSha256": "7b426c31ceff7de0f806967681b3e45c86375ba1b8c1a0f114b07fa1a1d9944c",
+      "afterExitCode": 0,
+      "afterLog": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-after-verify-onboarding-atomic.log",
+      "afterLogSha256": "0812cb768ba472d2123a8d27e42c6bdd5049724ade28eeaf40dea6fc3bc90f6d"
+    },
+    {
+      "script": "scripts/security-regression/verify-team-invite-deadlines.cjs",
+      "beforeImportFailureLog": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-before-verify-team-invite-deadlines.log",
+      "beforeLogSha256": "a94bd19e4983a8a429ad72fc807eb975480e7642aaa810e32891a7a1354c1b87",
+      "afterExitCode": 0,
+      "afterLog": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-after-verify-team-invite-deadlines.log",
+      "afterLogSha256": "12d8092b0b6419f1236c2d00a0eabb13b5fab06c330a007ec4892768363ac5dc"
+    },
+    {
+      "script": "scripts/security-regression/verify-org-team-contracts.cjs",
+      "beforeImportFailureLog": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-before-verify-org-team-contracts.log",
+      "beforeLogSha256": "c8abe579233399dd8764628feb1a014211fa7c0ca3be5501fecfedddc3910be0",
+      "afterExitCode": 0,
+      "afterLog": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-after-verify-org-team-contracts.log",
+      "afterLogSha256": "5237fb21d8c58b0843afe45663acd90f20ac9f983f40ba6ea5392ebdc8ad3f9f"
+    },
+    {
+      "script": "scripts/security-regression/verify-membership-invitation-roles.cjs",
+      "beforeImportFailureLog": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-before-verify-membership-invitation-roles.log",
+      "beforeLogSha256": "13d773a8855a4ee32d390fd1465b827b99668a2bd0063e7aee953052e7619ba3",
+      "afterExitCode": 0,
+      "afterLog": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-after-verify-membership-invitation-roles.log",
+      "afterLogSha256": "5bd1f32d7f5ca3deab3fc2d1a62e3eaf101fe4585db1ade3f4f297b333e39130"
+    },
+    {
+      "script": "scripts/security-regression/verify-team-invite-integrity.cjs",
+      "beforeImportFailureLog": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-before-verify-team-invite-integrity.log",
+      "beforeLogSha256": "7dbecd51997d9065805bc13e043e0b1832160efc01f330ca5e0efa66106d7dba",
+      "afterExitCode": 0,
+      "afterLog": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-after-verify-team-invite-integrity.log",
+      "afterLogSha256": "92610e22655aa6ec9cc6596661632cde91bd914360bf726752d16b45b60aaa7d"
+    }
+  ],
+  "legacyAssertAST": {
+    "oldNodes": 135,
+    "retainedAll": true,
+    "addedNodes": 7,
+    "roleRuntimeExpected": 120,
+    "details": "legacy-assert-integrity.json"
+  },
+  "core86": {
+    "status": "prior_same_store_hash_pass",
+    "proof": "../retirement-shodan-member-write/verification.json",
+    "storeSha256": "9aa59f20d9a4a4e77af6251bc614f5f7223f3f0871445e16377ec05b1502ba0f",
+    "note": "This closure13 does not change core; existing R086 proof is referenced, not reported as a new run."
+  },
+  "targetLint": {
+    "exitCode": 0,
+    "scope": [
+      "src/lib/shodan/access.ts",
+      "src/app/api/shodan/organization/route.ts",
+      "src/app/api/shodan/members/route.ts",
+      "src/app/api/shodan/invite/[token]/route.ts"
+    ],
+    "log": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-lint.log",
+    "sha256": "126461655dea274e8fd1cbc5d718d82dc6d4bec6d9cc7a0696270bf8b8130728"
+  },
+  "narrowTypecheck": {
+    "exitCode": 0,
+    "config": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-narrow-type/tsconfig.json",
+    "configSha256": "0dda162c0638d76afc5e61201d74fec38934047e733cc23d325fa5b267919a07",
+    "log": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-types.log",
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "limitation": "Actual runtime/core source with typed synthetic Prisma/auth/email boundaries; not whole-repository tsc/Next build. Integration owner executes full gate once."
+  },
+  "syntaxAndDiffCheck": "final check passed",
+  "mailActualSendCount": 0,
+  "paidProviderCallCount": 0,
+  "productionConnectionCount": 0,
+  "priorMember6AndIncome5Unchanged": true,
+  "generatedAuditSideEffect": {
+    "file": "docs/audits/2026-10-06-all-services-recheck/membership-invitation-role-integrated-results.json",
+    "source": "existing role120 fixture output",
+    "action": "preserved; not part of this13 source set; integration owner to include only intentional small evidence"
+  },
+  "integrationFullTypeBuild": "pending integration owner",
+  "globalUnsafeObservationsClosed": 0
+}

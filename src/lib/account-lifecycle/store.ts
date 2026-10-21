@@ -61,6 +61,16 @@ export async function assertRetirementMembershipWritable(tx: Tx, ids: string[]):
   }
 }
 
+/** Shodan fixed historical role edits/removals only; caller locks actor/owner and the INACTIVE member. */
+export async function assertHistoricalShodanMemberWritable(tx: Tx, userId: string): Promise<void> {
+  if (!validLifecycleUser(userId)) throw new LifecycleError('INVALID_LIFECYCLE_PARTICIPANTS', 400)
+  // Do not add a User lock after org/member locks. Rediscovery must acquire it first if the User returned.
+  if (await tx.user.findUnique({ where: { id: userId }, select: { id: true } })) throw new LifecycleError('LIFECYCLE_PARTICIPANTS_CHANGED')
+  const current = await fence(tx, userId)
+  // fence() validates receipt/ledger/target/generation; only a verified completed retirement is terminal here.
+  if (current?.value.state === 'active') throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
+}
+
 /** Only the invitation recipient may be deferred. Call after its User lock; never use this for actor/authority or a general target grant. */
 export async function lifecycleInvitationRecipientDisposition(tx: Tx, userId: string): Promise<'ACTIVE' | 'PENDING'> {
   if (!validLifecycleUser(userId)) throw new LifecycleError('INVALID_LIFECYCLE_PARTICIPANTS', 400)

@@ -1,0 +1,156 @@
+{
+  "state": "source frozen; targeted synthetic tests passed; integration and real browser pending",
+  "head": "02f9a4eb30a9c334e3685ee59269d70d90573031",
+  "allOwnedCount": 24,
+  "allOwnedSha256": "fc92adaaacf1fbac3fdc7466f71dda101053ae5e55d9ba3cfc7212f03be1592b",
+  "actorDeltaCount": 14,
+  "actorDeltaSha256": "d02f9af8b4d4554959149578b6154eca04668ddf6c2c76d71059810f494d82e1",
+  "sourceManifest": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/actor-source-freeze.json",
+  "immutableFinalPhysicalCopy": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/final-source",
+  "immutableB15PhysicalCopy": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/baseline-b15",
+  "newAcceptance": {
+    "total": 59,
+    "actualBothUiMounted": 54,
+    "apiPagePreview": 5,
+    "nodeTests": 60,
+    "exitCode": 0,
+    "productionParent": true,
+    "isolatedChildNodeEnv": "test",
+    "fakeActorBoundary": false,
+    "testOnlyDashboardKey": false,
+    "nativeInputEvent": true,
+    "sameFixtureMajorBeforeFailures": 6,
+    "sameFixtureMajorAfterPasses": 6,
+    "sessionOwnershipTargetedBeforeFailures": 10,
+    "sessionOwnershipAfterPasses": 10,
+    "sessionBeforeBoundarySha256": "18dbe22cc8c616b0fc5d3617b716ebed37adf60c7e5842dd501f7e766a4c90d8"
+  },
+  "existingRegressions": {
+    "financeAcceptance": 28,
+    "popupHomeAcceptance": 47,
+    "popupHomeNodeTests": 48,
+    "savedHomeAcceptance": 40,
+    "savedHomeNodeTests": 41,
+    "hydrationActualSsrClientCases": 16,
+    "hydrationRecoveriesWarnings": 0,
+    "clockToday": 11,
+    "savedRead": 23,
+    "tenjikai": 32,
+    "popup": 55,
+    "allExitCodes": 0
+  },
+  "targetedType": {
+    "rootCount": 13,
+    "transitiveProgramFiles": 761,
+    "diagnostics": 0,
+    "incremental": false,
+    "fullRepository": false,
+    "freshNextRouteContracts": false
+  },
+  "lint": {
+    "exitCode": 0,
+    "warnings": 0,
+    "nextLintDeprecationNotice": true
+  },
+  "qualityChecklist": {
+    "skill": "vercel:react-best-practices",
+    "bothDefaultUisAlwaysUseActualBoundary": true,
+    "serverPageActorIdAndKey": true,
+    "previewProduction404AndSerializableDto": true,
+    "initialSdkLoadingRealSsrHydrate": true,
+    "strictModeEffectReplayAndPostUnmountGuard": true,
+    "effectListenersAndAbortCleanup": true,
+    "noSharedModuleRequestState": true,
+    "maskRoleStatusAndNativeButtons": true,
+    "noSuppressHydrationWarning": true
+  },
+  "fixtureAdapter": {
+    "scope": "Only existing Popup/HomeSaved scripts bootstrap JSDOM before react-dom/client and actual TSX imports; cleanup local globals",
+    "counterexample": "Same final application source; removing only bootstrap makes native input fixture fail (Popup16 and HomeSaved19 child failures plus parent), restored bootstrap passes original native input/product assertions",
+    "actualBrowserClaim": false,
+    "assertPreservation": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/fixture-assert-preservation.json"
+  },
+  "command": {
+    "script": "scripts/security-regression/verify-home-actor.cjs",
+    "launch": "node scripts/security-regression/verify-home-actor.cjs",
+    "env": "none; own process sets NODE_ENV=test before React import; production parent unaffected",
+    "recommendedTimeoutSeconds": 60,
+    "externalNetworkDbProvidersBrowser": false
+  },
+  "unchangedGuardInputsAtEnd": true,
+  "allOwnedLiveAndPhysicalHashesMatch": true,
+  "logs": {
+    "actor": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/actor-final4.log",
+      "sha256": "8069f1452ce8d1fb0b4222d3d385c549cd2704442b29539287a8282ba57e734e"
+    },
+    "majorAfter": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/major-after-closed.log",
+      "sha256": "d3946e2b2d7ccce821f6aa0619d8fb9082e7432c05ff1a2a8ce85318f56cb51a"
+    },
+    "majorBefore": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/baseline-major.log",
+      "sha256": "087acb218ab09b2adec413902394ed087932e6d4b61410a6cfb417796a6e4920"
+    },
+    "sessionBefore": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/session-ownership-before.log",
+      "sha256": "5f83ac458aabdc16a81e34804fff34898ebe9e5b38c9b984b36f62741a283f09"
+    },
+    "finance": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/finance-closed.log",
+      "sha256": "04d600fcaee74cf1a65de4f24b1f459ec19bebc7a9c04df98260b243b1ab26e5"
+    },
+    "popupHome": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/popup-home-closed.log",
+      "sha256": "f235582ee70211029710a2ad73479a91a657ff0f65b14bb232ad07c6730a0fde"
+    },
+    "savedHome": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/saved-home-closed.log",
+      "sha256": "b11fc1de3dc7ca1891f455f8018a6b327df5efd4c3b89ce1fc86a29485138f18"
+    },
+    "hydration": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/hydration-closed.log",
+      "sha256": "24e7eb866d412d53f6f0209a9ff1d2205f5b548d7420844e9be2aa803d978918"
+    },
+    "clock": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/clock-closed.log",
+      "sha256": "cb0498e6dc0f45bbbb3c5c7449653e2baee96b5b682bb6702340b415803380e9"
+    },
+    "savedRead": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/saved-read-closed.log",
+      "sha256": "c2379db53d01a890dd3a18c7676543f1e91cb6fd33681d1de2b49129e719b117"
+    },
+    "tenjikai": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/tenjikai-closed.log",
+      "sha256": "780b1957ee1150c4fbca1f078d3ae69fe7ba0462251b4da19253e43e326e7bbb"
+    },
+    "popup": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/popup-closed.log",
+      "sha256": "749fc041647437142425bdfbcbda1401a1bdac06ad8c94a1c110fb61086bb620"
+    },
+    "type": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/type-closed.log",
+      "sha256": "0a95eb4be6f9b6c34448b996a1ecd68f874f562784cecceea1ef2fce3b74e8d5"
+    },
+    "lint": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/lint-closed.log",
+      "sha256": "126461655dea274e8fd1cbc5d718d82dc6d4bec6d9cc7a0696270bf8b8130728"
+    },
+    "importPopupBefore": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/import-order-popup-closed-before.log",
+      "sha256": "81b2106fd01794bbd41fed12768ee45e3bdb7bb4eeaaca16e81ef53e6f81f92f"
+    },
+    "importSavedBefore": {
+      "path": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/home-actor-20261021/import-order-saved-closed-before.log",
+      "sha256": "d167ce0ff11efbe6704c9f38f8cc1dfcbd1aeeddbea457b2256cbbb75d064854"
+    }
+  },
+  "remaining": [
+    "common runner registration",
+    "full repository type gate and Next build",
+    "authenticated actual browser/BFCache/navigation/device QA and CLS",
+    "deployment/production reflection",
+    "Tenjikai c1 and c persistence/restore/CAS/storage/full Home integration",
+    "initial SDK loading requires one fresh Home aggregate; no performance optimization mixed in"
+  ]
+}

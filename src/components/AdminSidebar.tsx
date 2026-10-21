@@ -59,7 +59,7 @@ const kintaiNavItems = [
 
 const serviceLinks = [
   { emoji: '🎨', label: 'ドヤバナーAI', href: '/banner/dashboard', gradient: 'from-violet-500 to-fuchsia-500' },
-  { emoji: '✍️', label: 'ドヤライティングAI', href: '/seo/dashboard', gradient: 'from-emerald-500 to-cyan-500' },
+  { emoji: '✍️', label: 'ドヤライティングAI', href: '/seo', gradient: 'from-emerald-500 to-cyan-500' },
   { emoji: '⏰', label: 'ドヤ勤怠', href: '/kintai/dashboard', gradient: 'from-purple-500 to-indigo-500' },
 ]
 

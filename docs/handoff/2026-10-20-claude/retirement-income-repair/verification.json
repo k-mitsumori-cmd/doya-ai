@@ -1,0 +1,42 @@
+{
+  "status": "targeted_author_pass_integration_pending",
+  "inputSetSha256": "2c7050279781ce41b5a17c77da283f240a26986ae6cdf045fdeb65a1bfd214f0",
+  "postgres": {
+    "passed": 24,
+    "providerCalls": 0,
+    "privateSocketOnly": true,
+    "supervisor": "postgres-supervisor.json"
+  },
+  "offlineUi": {
+    "passed": 17,
+    "actualComponents": [
+      "fetchJson",
+      "ApiError",
+      "Gate",
+      "EmptyState",
+      "Button"
+    ],
+    "syntheticOnly": true,
+    "knownUnavailableCodesMounted": 2,
+    "automaticRetry": 0,
+    "browserVisualQa": false
+  },
+  "lint": {
+    "targetFiles": 2,
+    "passed": true,
+    "log": "lint.log"
+  },
+  "syntax": {
+    "nodeCheck": 2,
+    "pythonAstParse": 1,
+    "passed": true
+  },
+  "frozenR1InputsUnchanged": 13,
+  "globalTypecheck": "not run by author; current candidate25 is separately frozen/in integration, next integration owner performs nonincremental typecheck/build",
+  "limitations": [
+    "Initial new organization/member admission only, not all31 Income API data writers",
+    "Existing global Stripe/membership retirement gaps remain outside this scope",
+    "Already-affiliated reads intentionally remain available during retirement",
+    "No production DB/API/provider/storage, email, migration, commit, push or deployment performed"
+  ]
+}

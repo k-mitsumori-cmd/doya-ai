@@ -1,3 +1,4 @@
+const { shodanLifecycleFixture } = require('./shodan-lifecycle-fixture.cjs');
 const assert = require('node:assert/strict')
 const crypto = require('node:crypto')
 const { load, check, results } = require('./load-typescript.cjs')
@@ -47,7 +48,10 @@ function acceptanceFixture(service, { createdAt = new Date(), role = 'member', e
     user: { findUnique: async () => ({ email: accountEmail }) },
   }
   const prisma = { [service.model]: membership, $transaction: async fn => fn(tx) }
+  /* Explicit normal owner/User seeds omitted by the original actor/token fixture; not an anomaly repair. */
+const lifecycle = service.id === 'shodan' ? shodanLifecycleFixture(prisma, { mode: 'claim', userIds: ['user','owner-user'], authorityRows: () => [{ id: 'canonical-owner', userId: 'owner-user', role: 'owner', status: 'ACTIVE', pendingEmail: null, inviteToken: null }], user: tx.user, target: tx => tx.shodanMember.findUnique({ where: { id: 'invite' } }) }) : {};
   const api = load(`src/app/api/${service.id}/invite/[token]/route.ts`, {
+    ...lifecycle,
     'next/server': response,
     'next-auth': { getServerSession: async () => ({ user: { id: 'user', email: invitedEmail, name: 'Invited' } }) },
     '@/lib/auth': { authOptions: {} },
@@ -99,7 +103,10 @@ function creationFixture(service, { currentRole = 'owner', clock = Date } = {}) 
       return result
     },
   }
+  /* Explicit normal owner/User seeds omitted by the original actor/token fixture; not an anomaly repair. */
+const lifecycle = service.id === 'shodan' ? shodanLifecycleFixture(prisma, { mode: 'issue', userId: 'owner', userIds: ['owner','owner-user'], authorityRows: () => currentRole === 'owner' ? [] : [{ id: 'canonical-owner', userId: 'owner-user', role: 'owner', status: 'ACTIVE', pendingEmail: null, inviteToken: null }], role: () => currentRole, globals: { Date: clock } }) : {};
   const api = load(`src/app/api/${service.id}/members/route.ts`, {
+    ...lifecycle,
     'next/server': response,
     crypto,
     '@/lib/prisma': { prisma },

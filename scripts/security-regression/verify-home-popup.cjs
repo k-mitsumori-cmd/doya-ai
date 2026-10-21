@@ -11,6 +11,15 @@ const ts = req('typescript');
 const React = req('react');
 const {renderToStaticMarkup} = req('react-dom/server');
 const {JSDOM} = req('jsdom');
+// The actual Home boundary imports react-dom for pagehide flushSync. Initialize the
+// DOM event runtime inside a synthetic DOM before loading TSX; assertions/input events stay unchanged.
+const eventDom = new JSDOM('');
+const eventGlobals = Object.fromEntries(['window','document'].map(key=>[key,Object.getOwnPropertyDescriptor(global,key)]));
+for(const [key,value] of Object.entries({window:eventDom.window,document:eventDom.window.document}))Object.defineProperty(global,key,{configurable:true,writable:true,value});
+req('react-dom/client');
+for(const [key,descriptor]of Object.entries(eventGlobals)){if(descriptor)Object.defineProperty(global,key,descriptor);else delete global[key];}
+eventDom.window.close();
+
 const network = [], writes = [], navigations = [];
 global.fetch = async () => { network.push('fetch'); throw Error('Network forbidden'); };
 const at = new Date('2026-10-20T15:00:00Z'); // JST 10/21 midnight
@@ -58,6 +67,7 @@ const prisma = new Proxy({}, {get:(_,model)=>new Proxy({}, {get:(_,method)=>asyn
 }})});
 const Link=({children,href,prefetch,...props})=>React.createElement('a',{...props,href},children);
 const mocks={
+  'next-auth/react':{useSession:()=>({data:{user:{id:'viewer'}},status:'authenticated',update:async()=>({user:{id:'viewer'}})})},
   '@/lib/prisma':{prisma},
   '@/lib/home/finance-read':{loadHomeFinance:async()=>({month:'2026-10',income:{state:'unused',organization:null,value:null},expense:{state:'unused',organization:null,value:null}})},
   'next/link':{__esModule:true,default:Link},'next/navigation':{useRouter:()=>({push:href=>navigations.push(href)})},
@@ -90,7 +100,7 @@ const {getHomeSummary}=source('src/lib/home/summary.ts');
 const {planAgent}=source('src/app/(shell)/home/agent.ts');
 const dashboards=['HomeDashboard','HomeDashboardLegacy'].map(name=>[name,source(`src/app/(shell)/home/${name}.tsx`).default]);
 async function summary() {return getHomeSummary('viewer',at);}
-function card(Component,s) {const dom=new JSDOM(renderToStaticMarkup(React.createElement(Component,{initial:s})));const node=dom.window.document.querySelector('section[aria-label="集客の数字（7日）"]');const out=node?{text:node.textContent,href:node.querySelector('a')?.getAttribute('href')}:null;dom.window.close();return out;}
+function card(Component,s) {const dom=new JSDOM(renderToStaticMarkup(React.createElement(Component,{initial:s,serverActorId:s.actorId})));const node=dom.window.document.querySelector('section[aria-label="集客の数字（7日）"]');const out=node?{text:node.textContent,href:node.querySelector('a')?.getAttribute('href')}:null;dom.window.close();return out;}
 test('popup home fixed JST window, shared read, UI and agent',async t=>{
   const oldError=console.error;console.error=()=>{};
   try {
@@ -130,7 +140,7 @@ test('popup home fixed JST window, shared read, UI and agent',async t=>{
       global.IS_REACT_ACT_ENVIRONMENT=true;
       const {createRoot}=req('react-dom/client');let mounted;
       try {
-        await React.act(async()=>{mounted=createRoot(document.getElementById('root'));mounted.render(React.createElement(dashboards[0][1],{initial:s}));});
+        await React.act(async()=>{mounted=createRoot(document.getElementById('root'));mounted.render(React.createElement(dashboards[0][1],{initial:s,serverActorId:s.actorId}));});
         const buttons=[...document.querySelectorAll('button')];const stats=buttons.find(b=>b.textContent==='ポップアップの7日の数字は？');assert.ok(stats);
         await React.act(async()=>stats.click());
         assert.equal(navigations.length,0);assert.ok(document.querySelector('ol'));
@@ -168,7 +178,7 @@ test('popup home fixed JST window, shared read, UI and agent',async t=>{
         for(const [key,value] of Object.entries({window:dom.window,document:dom.window.document,navigator:dom.window.navigator,IS_REACT_ACT_ENVIRONMENT:true})) Object.defineProperty(global,key,{configurable:true,writable:true,value});
         const {createRoot}=req('react-dom/client');let mounted;const navBefore=navigations.length;
         try {
-          await React.act(async()=>{mounted=createRoot(document.getElementById('root'));mounted.render(React.createElement(Component,{initial:s}));});
+          await React.act(async()=>{mounted=createRoot(document.getElementById('root'));mounted.render(React.createElement(Component,{initial:s,serverActorId:s.actorId}));});
           const input=document.querySelector('input[aria-label="エージェントへの依頼"]');
           await React.act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(input,c.query);input.dispatchEvent(new dom.window.Event('input',{bubbles:true}));});
           assert.equal(document.querySelector('button[type="submit"]').disabled,false,'Actual input must update React state');

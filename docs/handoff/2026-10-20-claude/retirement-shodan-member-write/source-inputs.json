@@ -1,0 +1,20 @@
+{
+  "status": "author_frozen_targeted_pass_service_closure_pending",
+  "baseCommit": "02f9a4eb30a9c334e3685ee59269d70d90573031",
+  "ownedSourceInputs": {
+    "src/app/api/shodan/members/[id]/route.ts": "c32224a1cce86b81b9a750475e5cdb19f7de6b92dcd711976667c9b4361312d6",
+    "src/lib/shodan/member-write.ts": "a959d2ae01b76566d2d308428fa9a27eef2fe7bfbc186941d5876b6c0647df6d",
+    "scripts/security-regression/verify-shodan-membership-postgres.cjs": "d959ab03fa413d190545afb4dc697d574ac33171cd783d3b0892928b789b6150",
+    "scripts/security-regression/verify-shodan-membership-postgres.py": "cc83b993a714bcb873f0c7fdb91d062df055fdc1d456a97bce0dec7ddf9ae456",
+    "scripts/security-regression/verify-aio-member-mutation-atomic.cjs": "f77ff739a3a96819f1482fc505c206ebb752d586d84840e8a4a58e7f7d522de9",
+    "src/lib/account-lifecycle/store.ts": "9aa59f20d9a4a4e77af6251bc614f5f7223f3f0871445e16377ec05b1502ba0f"
+  },
+  "inputSetSha256": "35e3c35116267feb512ee3b04e99eb415e3d12878b5bf3c3e49916f612e12fa0",
+  "digestDefinition": "sha256 UTF-8 sorted path + NUL + lowercase SHA256 + LF",
+  "runtimeFiles": 3,
+  "testFiles": 3,
+  "storeDelta": "Only new purpose-limited assertion delegating to existing private fence parser; baseline top-level AST unchanged",
+  "priorR1Other13InputsUnchanged": true,
+  "income5InputsUnchanged": true,
+  "noCommitPush": true
+}

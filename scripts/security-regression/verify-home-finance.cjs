@@ -63,6 +63,7 @@ function query(model, method, input = {}) {
 const prisma=new Proxy({}, {get:(_,model)=>new Proxy({}, {get:(_,method)=>(input)=>query(model,method,input)})});
 const Link=({children,href,prefetch,...props})=>React.createElement('a',{...props,href},children);
 const mocks={
+  'next-auth/react':{useSession:()=>({data:{user:{id:'viewer'}},status:'authenticated',update:async()=>({user:{id:'viewer'}})})},
   '@/lib/prisma':{prisma}, '@/lib/auth':{authOptions:{}},
   'next-auth':{getServerSession:async()=>({user:{id:'viewer',name:'Synthetic'}})},
   'next/link':{__esModule:true,default:Link}, 'next/navigation':{useRouter:()=>({push(){}})},
@@ -124,7 +125,7 @@ const results=[];
 async function run(name,fn){reset();await fn();results.push(name);}
 function rendered(summary,component) {
   const Component=source('src/app/(shell)/home/'+component+'.tsx').default;
-  return new JSDOM(renderToStaticMarkup(React.createElement(Component,{initial:summary}))).window.document;
+  return new JSDOM(renderToStaticMarkup(React.createElement(Component,{initial:summary,serverActorId:summary.actorId}))).window.document;
 }
 test('home finance real read, API, UI and agent regression without writes or providers',async()=>{
   const oldFetch=global.fetch,oldDate=Date,oldTZ=process.env.TZ;
@@ -256,7 +257,7 @@ test('home finance real read, API, UI and agent regression without writes or pro
       assert.ok(planAgent('今日やること',s).rows.some(x=>x.value==='入金遅延 Synthetic Client'));
     });
     await run('GET executes the actual summary and leaves all writes forbidden',async()=>{
-      const {GET}=source('src/app/api/home/summary/route.ts');const response=await GET();assert.equal(response.status,200);const data=await response.json();assert.equal(data.finance.income.value.profit,60);assert.equal(data.finance.expense.organization.id,'e1');assert.ok(response.headers.get('cache-control').includes('private'));
+      const {GET}=source('src/app/api/home/summary/route.ts');const response=await GET({nextUrl:new URL('https://example.test/api/home/summary?expectedActor=viewer')});assert.equal(response.status,200);const data=await response.json();assert.equal(data.finance.income.value.profit,60);assert.equal(data.finance.expense.organization.id,'e1');assert.ok(response.headers.get('cache-control').includes('private'));
     });
     assert.equal(results.length,28);assert.deepEqual(writes,[]);assert.deepEqual(network,[]);
     const inputs=['src/lib/home/finance-read.ts','src/lib/home/summary.ts','src/lib/income/summary-read.ts','src/lib/income/expense-source.ts','src/lib/expense/expense-read.ts','src/lib/expense/income-source.ts','src/lib/expense/aggregate.ts','src/app/(shell)/home/HomeDashboard.tsx','src/app/(shell)/home/HomeDashboardLegacy.tsx','src/app/(shell)/home/FinanceOverview.tsx','src/app/(shell)/home/today.ts','src/app/(shell)/home/agent.ts'];

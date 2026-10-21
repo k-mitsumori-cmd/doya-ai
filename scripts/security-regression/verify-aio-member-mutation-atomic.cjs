@@ -39,7 +39,45 @@ function fixture(service, action, scenario) {
       } })
     },
   }
+  let lifecycleMocks = {}
+  if (service === 'shodan') {
+    const { Prisma } = require('@prisma/client')
+    const crypto = require('node:crypto')
+    const state = load('src/lib/account-lifecycle/state.ts', { 'node:crypto': crypto })
+    const store = load('src/lib/account-lifecycle/store.ts', { 'node:crypto': crypto, '@prisma/client': { Prisma }, './state': state })
+    const types = load('src/lib/shodan/types.ts')
+    // Supply real participant projections without changing the existing observable target object.
+    const rows = () => [
+      { id: 'owner', organizationId: 'org', userId: 'owner-user', role: 'owner', status: 'ACTIVE', inviteEmail: null, inviteToken: null },
+      { ...actor, inviteEmail: null, inviteToken: null },
+      { ...target, userId: 'other', inviteEmail: null, inviteToken: null },
+    ].sort((a, b) => a.id.localeCompare(b.id))
+    prisma[model] = { findMany: async () => rows() }
+    prisma.$transaction = async (fn, options) => {
+      assert.equal(options.isolationLevel, 'Serializable')
+      attempts++
+      return fn({
+        $queryRaw: async sql => {
+          const query = Array.isArray(sql) ? sql.join('?') : sql.sql
+          if (query.includes('FROM "User"')) {
+            assert.match(query, /ORDER BY id FOR UPDATE/)
+            assert.deepEqual(sql.values, ['other', 'owner-user', 'user'])
+            return ['other', 'owner-user', 'user'].map(id => ({ id }))
+          }
+          if (query.includes('FROM shodan_organizations')) return [{ id: 'org' }]
+          assert.match(query, /FROM shodan_members/)
+          assert.match(query, /ORDER BY id FOR UPDATE/)
+          return rows().map(({ id }) => ({ id }))
+        },
+        systemSetting: { findUnique: async () => null },
+        [model]: { findMany: async () => rows(), update: async ({ data }) => mutate(data), delete: async () => mutate({ deleted: true }) },
+      })
+    }
+    const writer = load('src/lib/shodan/member-write.ts', { '@/lib/prisma': { prisma }, '@/lib/account-lifecycle/state': state, '@/lib/account-lifecycle/store': store, './types': types })
+    lifecycleMocks = { '@/lib/shodan/member-write': writer, '@/lib/account-lifecycle/state': state }
+  }
   const route = load(`src/app/api/${service}/members/[id]/route.ts`, {
+    ...lifecycleMocks,
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     [`@/lib/${service}/access`]: {

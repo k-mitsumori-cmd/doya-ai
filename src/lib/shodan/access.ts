@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth'
 import type { NextRequest } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { assertRetirementMembershipWritable, lockLifecycleUsers } from '@/lib/account-lifecycle/store'
 import { ROLE_HIERARCHY, type ShodanContext, type ShodanRole } from './types'
 
 const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
@@ -108,12 +109,15 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await prisma.$transaction(async (tx) => {
+        await lockLifecycleUsers(tx, [userId])
         const existing = await tx.shodanMember.findFirst({
           where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
           include: { organization: true },
         })
         if (existing) return existing.organization
         if (await tx.shodanMember.findFirst({ where: { userId, status: 'ACTIVE' }, select: { id: true } })) throw Object.assign(new Error('組織の権限を確認できません。管理者に確認してください。'), { code: 'INVALID_MEMBERSHIP_ROLE' })
+
+        await assertRetirementMembershipWritable(tx, [userId])
 
         const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
         const dup = await tx.shodanOrganization.findUnique({ where: { slug: base } })

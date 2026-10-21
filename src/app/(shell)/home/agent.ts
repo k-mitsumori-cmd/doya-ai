@@ -47,6 +47,7 @@ export const AGENT_SUGGESTIONS = [
   '契約中のプランを確認したい',
   '集客を強化したい',
   'ポップアップの7日の数字は？',
+  '保存された展示会の出展条件は？',
 ]
 
 const notReady = (name: string) => `${name}はまだ使い始めていません`
@@ -71,12 +72,33 @@ export function isPopupStatsQuestion(raw: string): boolean {
 }
 
 /** 他サービス・サービス不明の数字質問も、作成画面へ転送せず出所を案内する。 */
+function tenjikaiQuestion(raw: string): 'saved' | 'progress' | 'open' | null {
+  const q = raw.replace(/\s+/g, '').toLowerCase()
+  if (!has(q, ['展示会', 'tenjikai'])) return null
+  if (has(q, ['作りたい', '作って', '作成したい', '生成したい', '準備したい', '出展したい'])) return 'open'
+  if (has(q, ['タスク', '予算', '資料', '進捗', '準備状況', '準備完了', '支出', '売上', '収入', '契約', '発注', '支払', '出金', '入金', '費用', '金額', 'クリック', 'ctr'])) return 'progress'
+  return has(q, ['保存', '登録済', '出展条件', '案件名', '会期', '何日']) ? 'saved' : 'open'
+}
+
 export function isHomeMetricsQuestion(raw: string): boolean {
-  return metricQuestion(raw) !== null
+  const exhibition = tenjikaiQuestion(raw)
+  return exhibition ? exhibition !== 'open' : metricQuestion(raw) !== null
 }
 
 export function planAgent(raw: string, s: HomeSummary): AgentPlan {
   const q = raw.replace(/\s+/g, '')
+  const exhibition = tenjikaiQuestion(q)
+  if (exhibition === 'saved') return savedTenjikaiPlan(s)
+  if (exhibition === 'progress') return {
+    intent: 'tenjikai-progress-unavailable', title: '展示会の準備状況・業務指標', steps: [],
+    lead: 'ホームでは、展示会の準備状況や売上・支出・契約などの業務指標をまだ取得していません。保存された出展条件だけを確認できます。',
+    rows: [], actions: [{ label: '展示会を開く', href: '/tenjikai' }],
+  }
+  if (exhibition === 'open') return {
+    intent: 'tenjikai-open', title: '展示会を開く', steps: [],
+    lead: '展示会の作業は専用画面で進めてください。保存した案件を再表示する機能はまだ未対応です。',
+    rows: [], actions: [{ label: '展示会を開く', href: '/tenjikai' }],
+  }
   const metric = metricQuestion(q)
   if (metric === 'asklink') return {
     intent: 'asklink', title: '質問リンクの計測', steps: [],
@@ -375,5 +397,20 @@ function popupPlan(s: HomeSummary): AgentPlan {
           : 'ポップアップは未使用です。サイトを登録すると、ここで計測を確認できます。',
     rows: ready ? popupRows(s) : [],
     actions: [{ label: 'ポップアップを開く', href: '/popup' }],
+  }
+}
+
+
+function savedTenjikaiPlan(s: HomeSummary): AgentPlan {
+  const saved = s.tenjikai
+  return {
+    intent: 'tenjikai-saved', title: '保存された出展条件',
+    steps: [{ tool: '展示会', label: '保存された案件名と会期を確認' }],
+    lead: !saved ? '保存された出展条件は未取得です。ホームを更新してください。'
+      : saved.state === 'error' ? '保存された出展条件を取得できませんでした。ホームを更新してください。'
+        : saved.items.length === 0 ? '今日から60日以内に始まる、保存された出展条件はありません。'
+          : '保存された出展条件です。生成や準備の完了を示すものではありません。展示会の画面で、保存した案件を再表示する機能はまだ未対応です。',
+    rows: saved?.state === 'ready' ? saved.items.map(project => ({ label: project.projectName, value: `${project.eventName} / ${project.eventDate}（JST） / 会期初日まで${project.daysUntil}日` })) : [],
+    actions: [{ label: '展示会を開く', href: '/tenjikai' }],
   }
 }

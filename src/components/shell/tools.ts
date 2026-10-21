@@ -103,7 +103,8 @@ function buildTools(): ShellTool[] {
     return {
       id: s.id,
       name: meta?.name ?? s.shortName ?? s.name,
-      href: meta?.href ?? s.href,
+      // 公開LP用hrefではなく、作業入口を共通shellの全導線で使う。
+      href: meta?.href ?? s.dashboardHref,
       icon: meta?.icon ?? 'LayoutGrid',
       hint: meta?.hint ?? s.description,
       stage: meta?.stage ?? 'other',

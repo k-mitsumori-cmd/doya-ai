@@ -1,0 +1,56 @@
+{
+  "baseline": "Actual pre-Income source copied before editing, same fixtures; core dependencies unchanged",
+  "baselineRuntimeHashes": {
+    "src/lib/income/access.ts": "de69fa394f0b3cfde04f14e339b1da639e56c19501e1f755690449d28419c9e1",
+    "src/components/income/ui.tsx": "095d087593e9f5dd26ab558af9790432bde3abde078c833617fc2348bc3625d9"
+  },
+  "finalRuntimeHashes": {
+    "src/lib/income/access.ts": "7806beb9e91cf1929453ea7392748c77b6b8c9d92fa6ffdfbf2a9cfca625ed22",
+    "src/components/income/ui.tsx": "8ec05ae1e99fb9d91f23069eac7b3807dd7d0ae8941a440985f694dfe921e0a5"
+  },
+  "fixtureHashes": {
+    "scripts/security-regression/verify-income-membership-postgres.cjs": "eb091ed98bfab9a5625aeb6508de83e3fd31379dacc7334a02bda2d3d602f2b8",
+    "scripts/security-regression/verify-income-membership-postgres.py": "283089584f3c87c55f078b1b8caa7be89dfe68e4f70d08f907eb0615d620c0ca",
+    "scripts/security-regression/verify-income-retirement-ui.cjs": "db621fe71de17c4ee536e9e01c90181aa2c154dcdba70ef9eab2bc7915e81c18"
+  },
+  "cases": [
+    {
+      "condition": "deleted User session initial organization read",
+      "actualBaselineObserved": "200 instead of expected 409",
+      "expectedBaselineFailure": true,
+      "safeExpectedAfter": "same fixture passes current source",
+      "ownedPgCleanup": {
+        "testExitCode": 1,
+        "stopExitCode": 0,
+        "removedOwnedDirectory": true
+      },
+      "logSha256": "7035cf9457bd17533ffb1820389253263605a6e278175b28adf63258fab9f455"
+    },
+    {
+      "condition": "retirement reservation before initial organization creation",
+      "actualBaselineObserved": "200 instead of expected 409",
+      "expectedBaselineFailure": true,
+      "safeExpectedAfter": "same fixture passes current source",
+      "ownedPgCleanup": {
+        "testExitCode": 1,
+        "stopExitCode": 0,
+        "removedOwnedDirectory": true
+      },
+      "logSha256": "cba924db54251b36d2989a623d6af0b23b7f8924c7d4c108262acf17c353db1b"
+    },
+    {
+      "condition": "known account-state-unavailable 409 in Gate",
+      "actualBaselineObserved": "generic communication retry instead of dedicated account-state explanation",
+      "expectedBaselineFailure": true,
+      "safeExpectedAfter": "same fixture passes current source",
+      "ownedPgCleanup": null,
+      "logSha256": "0e96fcf719aff427b33dfe3c17cadad148b4416d2bc8bc6eea6533c377f260e8"
+    }
+  ],
+  "after": {
+    "postgresContracts": 24,
+    "uiContracts": 17,
+    "unsafeAccepted": 0
+  },
+  "scope": "Bounded initial Income membership admission and error UX; not global retirement closure."
+}

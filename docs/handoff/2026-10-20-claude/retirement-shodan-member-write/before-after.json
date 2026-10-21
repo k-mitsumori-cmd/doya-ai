@@ -1,0 +1,39 @@
+{
+  "actualBaselineRuntimeHash": "54b1c9610c06f62b9a5e99f6dba88c6e571ca7b073224bac8ad1be014a6742dc",
+  "finalRuntimeHash": "c32224a1cce86b81b9a750475e5cdb19f7de6b92dcd711976667c9b4361312d6",
+  "sameFixtureSha256": "d959ab03fa413d190545afb4dc697d574ac33171cd783d3b0892928b789b6150",
+  "retiringCanonicalOwner": {
+    "beforeActualStatus": 200,
+    "requiredAfterStatus": 409,
+    "beforeExpectedFailure": true,
+    "beforeSupervisor": {
+      "startedAt": "2026-10-20T22:40:54.400204+00:00",
+      "scope": "Owned ephemeral Unix socket PostgreSQL, synthetic data only; no production connection",
+      "privateRoot": "/tmp/doya-shodan-members-010f9e40",
+      "testExitCode": 1,
+      "stopExitCode": 0,
+      "endedAt": "2026-10-20T22:40:55.517562+00:00",
+      "removedOwnedDirectory": true
+    },
+    "afterMatchedCase": "PATCH retiring owner refuses third-party mutation with zero writes"
+  },
+  "missingHistoricalUserCompatibility": {
+    "beforeActualSourcePassed": true,
+    "beforeSupervisor": {
+      "startedAt": "2026-10-20T22:42:28.102467+00:00",
+      "scope": "Owned ephemeral Unix socket PostgreSQL, synthetic data only; no production connection",
+      "privateRoot": "/tmp/doya-shodan-members-c2760bef",
+      "testExitCode": 0,
+      "stopExitCode": 0,
+      "endedAt": "2026-10-20T22:42:29.223760+00:00",
+      "removedOwnedDirectory": true
+    },
+    "afterPassesAbsentAndCompleted": true
+  },
+  "oldFixture": {
+    "before": "Unmocked @/lib/shodan/member-write",
+    "after": "all original assertions pass with actual writer/store",
+    "assertIntegrity": "ast-integrity.json"
+  },
+  "historicalRunSourceNote": "Baseline VM selects saved actual route through DOYA_TEST_BASELINE; baseline route SHA above identifies executed old runtime. Managed sourceHashes printed by fixture describe current candidate inputs, not executed baseline runtime."
+}

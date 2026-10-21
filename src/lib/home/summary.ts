@@ -14,6 +14,7 @@
 // ⚠️ 契約情報（User.plan / Subscription）は表示のみ。変更は既存の課金画面に任せる。
 import { prisma } from '@/lib/prisma'
 import { getPopupSummary, type PopupSummary } from '@/lib/popup/popup-read'
+import { readSavedTenjikaiProjects, type SavedTenjikaiProjects } from '@/lib/tenjikai/saved-projects-read'
 import { loadHomeFinance, type HomeFinance } from './finance-read'
 import { tierFrom, planLabel, isPaidTier, type PlanTier } from '@/lib/plan-utils'
 import { laborCostForEntry } from '@/lib/promane/labor-cost'
@@ -59,9 +60,13 @@ export type HomePopup =
   | { state: 'error'; value: null }
 
 export interface HomeSummary {
+  /** 認証したserver actor。集計の部分失敗でも欠落させない。 */
+  actorId: string
   generatedAt: string
   /** 旧 snapshot は省略可。未使用（siteCount=0）と取得失敗を分ける。 */
   popup?: HomePopup
+  /** 保存された出展条件だけ。進捗や生成成功は示さない。旧snapshotは省略可。 */
+  tenjikai?: SavedTenjikaiProjects
   sources: { revenue: HomeRevenueSource; cost: HomeCostSource }
   /** 古いスナップショットとの互換性のため省略可。現在の集計は必ず返す。 */
   finance?: HomeFinance
@@ -409,7 +414,7 @@ export async function getHomeSummary(userId: string, reference: Date = new Date(
   const months = lastMonths(6, monthStart)
   const trendStart = months[0].start
 
-  const [contractR, salesR, quotesR, projectsR, attendanceR, peopleR, financeR, popupR] = await Promise.allSettled([
+  const [contractR, salesR, quotesR, projectsR, attendanceR, peopleR, financeR, popupR, tenjikaiR] = await Promise.allSettled([
     loadContract(userId),
     loadSales(userId, monthStart, trendStart, reference),
     loadQuotes(userId, monthStart, trendStart, reference),
@@ -418,6 +423,7 @@ export async function getHomeSummary(userId: string, reference: Date = new Date(
     loadPeople(userId),
     loadHomeFinance(userId, reference),
     getPopupSummary(prisma, userId, 7, reference),
+    readSavedTenjikaiProjects({ db: prisma, userId }, reference),
   ])
 
   const contract = contractR.status === 'fulfilled' ? contractR.value : null
@@ -463,8 +469,10 @@ export async function getHomeSummary(userId: string, reference: Date = new Date(
   if (popupR.status === 'rejected') console.error('[home/summary] popup load failed', safeErrorInfo(popupR.reason))
 
   return {
+    actorId: userId,
     generatedAt: reference.toISOString(),
     popup,
+    tenjikai: tenjikaiR.status === 'fulfilled' ? tenjikaiR.value : { state: 'error', items: null, href: '/tenjikai' },
     sources: { revenue: finance.income.state === 'ready' ? 'income' : finance.income.state === 'unused' ? 'sfa_quote' : 'unavailable', cost: finance.expense.state === 'ready' ? 'expense' : finance.expense.state === 'unused' ? 'promane' : 'unavailable' },
     finance,
     user: contract?.user ?? { name: null, email: null },

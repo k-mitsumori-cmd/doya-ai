@@ -1,0 +1,84 @@
+{
+  "at": "2026-10-20T23:39:45.886962+00:00",
+  "head": "02f9a4eb30a9c334e3685ee59269d70d90573031",
+  "scope": "Navigation only; separate unit from frozen Home24 and paused Tenjikai c1",
+  "algorithm": "sha256 sorted UTF-8 path NUL sha256 LF",
+  "inputCount": 4,
+  "sourceSha256": "cd24d59feb52fa27670e9496e3d4921ac83318e636f00d650051f1ddf9257854",
+  "inputs": {
+    "scripts/security-regression/verify-active-service-navigation.cjs": "4a0809a1c1e2d5f47d9ed74915365d3ff57b6ca74612b08daabe72838d84496a",
+    "src/components/AdminSidebar.tsx": "bf690150d01412bbe486950f5726defa564ce018f90a5393725817352dd511a7",
+    "src/components/doyaslide/DoyaSlideSidebar.tsx": "78a21abbb27835227af744d45da3995964c21f0c970ceb6cfff225752064cba4",
+    "src/components/shell/tools.ts": "e26a4f750b900ee27621153ab05aff8816b6e520f004ea1eb8fd3e61b6125bfa"
+  },
+  "home24Sha256": "fc92adaaacf1fbac3fdc7466f71dda101053ae5e55d9ba3cfc7212f03be1592b",
+  "home24Unchanged": true,
+  "registryUnchangedSha256": "3f755d469790c7df788d3acd4f428c050e9d9b84cb079e774637e01500b47467",
+  "commonRunnerUnchangedByThisUnit": true,
+  "state": "source frozen; local targeted pass; candidate integration/deployment pending",
+  "semanticCases": 15,
+  "actualMountedCases": 11,
+  "staticContractCases": 4,
+  "baselineFailedCases": 10,
+  "afterPassedCases": 15,
+  "activeServices": 22,
+  "existingDistinctRegistryRoutes": 49,
+  "navDataRoutes": 113,
+  "productionParentTested": true,
+  "testProcessEnvironment": "NODE_ENV=test set only inside standalone child",
+  "sourceManifest": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/navigation-20261021/source-freeze.json",
+  "physicalFinalCopy": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020/navigation-20261021/final-source",
+  "regressions": {
+    "uiNextPreview": "exit0",
+    "betaHiddenServices": "exit0",
+    "servicePlanFallback": "exit0",
+    "slideCunningLayoutMounted": 33
+  },
+  "targetedType": {
+    "roots": 3,
+    "programFiles": 632,
+    "diagnostics": 0,
+    "incremental": false,
+    "fullRepository": false
+  },
+  "lint": {
+    "errors": 0,
+    "existingWarnings": 1,
+    "warning": "unchanged DoyaSlideSidebar img line103; no-img-element",
+    "nextLintDeprecation": true
+  },
+  "reactQualityChecklist": {
+    "skill": "vercel:react-best-practices",
+    "multipleTsxReviewed": true,
+    "sourceChangesOnlyHrefConstants": true,
+    "nativeNextLinkAndKeyboardBehaviorPreserved": true,
+    "noNewEffectsOrRequestState": true,
+    "noNewDeps": true,
+    "registryFlagsAndPublicLpUnchanged": true
+  },
+  "browser": {
+    "productionBaseline": "authenticated /home actual sidebar Slide clicked -> /doyaslide LP, reproduced",
+    "existingDestination": "direct /doyaslide/new -> real スライドを作る Wizard, empty inputs, disabled generation button",
+    "publicationGenerationInputSubmissionChanges": false,
+    "patchedSidebarProductionReflection": false,
+    "allServiceAuthenticatedOrGuestRealBrowserQA": false,
+    "responsiveVisualOrCls": false
+  },
+  "leftOutOfScope": [
+    "retired TenkaiSidebar /tenkai/help missing route, service remains retired",
+    "Tenjikai c1 paused and source files not created",
+    "full repository type/Next build",
+    "candidate authenticated browser/all service auth/org/permission visual QA",
+    "deployment/remote/production reflection"
+  ],
+  "logs": {
+    "baseline-complete.log": "e93430206a738bf06ffd3725ba7812f84e21c5b2ee064a4206f01b1d999aaf7d",
+    "final.log": "64cc11c7eaf4ae68c8cf248a98f12a0513ed341edbc49b904583b89e96728c99",
+    "lint.log": "0c101d60a273519c1625bbe809261e60e5fde5f9745646b931c4e8a9ae9a2393",
+    "type.log": "9d6b98e23148f7f44dee1060fca6e65b4981ccd37207914421dc4e95e8142c62",
+    "verify-ui-next-preview.cjs.log": "1d9896951de1316f279686c42ebc0345d592852dfa3aac321a511af22e152897",
+    "verify-beta-hidden-services.cjs.log": "aca20af92067769370abd4aeb92261a5a368025c48a2cb9772eaa8653de224f9",
+    "verify-service-plan-fallback.cjs.log": "42068cab943bea56e4b84f7126542a8ffd1fedb91407ed212b1609e67ba47859",
+    "verify-slide-cunning-layout-mounted.cjs.log": "d0ec19e03e519d5d3041f97d49c4b9ee73eb98a2e4edb9b1124bff0d063843be"
+  }
+}

@@ -3,7 +3,7 @@
 import { notFound } from 'next/navigation'
 import AppShell from '@/components/shell/AppShell'
 import type { HomeSummary } from '@/lib/home/summary'
-import HomeDashboard from '../HomeDashboard'
+import HomePreviewDashboard from './HomePreviewDashboard'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +17,7 @@ function sample(): HomeSummary {
   const won = [2_400_000, 3_100_000, 2_800_000, 4_200_000, 3_900_000, 2_650_000]
   const quoted = [2_900_000, 3_300_000, 3_600_000, 4_000_000, 4_500_000, 3_200_000]
   return {
+    actorId: 'development-preview-sample',
     generatedAt: now.toISOString(),
     sources: { revenue: 'sfa_quote', cost: 'promane' },
     user: { name: 'サンプル', email: null },
@@ -58,7 +59,7 @@ export default function HomePreviewPage() {
   if (process.env.NODE_ENV === 'production') notFound()
   return (
     <AppShell userName="サンプル">
-      <HomeDashboard initial={sample()} />
+      <HomePreviewDashboard initial={sample()} />
     </AppShell>
   )
 }

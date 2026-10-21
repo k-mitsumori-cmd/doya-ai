@@ -1387,9 +1387,19 @@ for (const verifier of [
   'verify-expense-query-scope.cjs', 'verify-case-study-form-mounted.cjs',
   'verify-promane-nullable-compat.cjs',
   'verify-home-popup.cjs',
+  'verify-home-tenjikai-saved.cjs', 'verify-home-actor.cjs',
+  'verify-income-retirement-ui.cjs',
 ]) {
   const result = spawnSync(process.execPath, [path.join(__dirname, verifier)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Security regression failed:', verifier); process.exit(1); }
+}
+
+const savedTenjikaiRead = spawnSync(process.execPath, [
+  path.join(__dirname, '../../node_modules/tsx/dist/cli.mjs'), '--test',
+  path.join(__dirname, '../../src/lib/tenjikai/saved-projects-read.test.ts'),
+], { stdio: 'inherit', timeout: 60000 });
+if (savedTenjikaiRead.error || savedTenjikaiRead.status !== 0) {
+  console.error('Security regression failed: saved-projects-read.test.ts'); process.exit(1);
 }
 
 // CI source manifests are verified by explicit steps in .github/workflows/ci.yml.

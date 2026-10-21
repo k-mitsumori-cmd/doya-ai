@@ -9,6 +9,8 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { lockLifecycleUsers, assertRetirementMembershipWritable } from '@/lib/account-lifecycle/store'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 
 import { ROLE_HIERARCHY, hasMinRole, type IncomeRole } from './roles'
 export { ROLE_HIERARCHY, hasMinRole, type IncomeRole }
@@ -53,7 +55,8 @@ async function resolveUser(): Promise<{ id: string; name: string | null } | unde
 /** 初回アクセスで自分の組織を作る（設計書 §12 Q2a）。同時アクセスでも 1 つだけ */
 async function createOwnOrganization(userId: string, userName: string | null) {
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
+    await lockLifecycleUsers(tx, [userId])
+    await assertRetirementMembershipWritable(tx, [userId])
     const existing = await tx.incomeMember.findFirst({
       where: { userId, status: 'ACTIVE', role: { in: VALID_ROLES } },
       include: { organization: true },
@@ -124,6 +127,7 @@ export class IncomeError extends Error {
 }
 
 export function errorResponse(error: unknown) {
+  if (error instanceof LifecycleError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status })
   if (error instanceof IncomeError) return NextResponse.json({ error: error.message }, { status: error.status })
   // Serializable の競合（同時操作）。やり直せば通る
   if ((error as { code?: string })?.code === 'P2034') return NextResponse.json({ error: '同時に別の操作が行われました。もう一度お試しください。' }, { status: 409 })
