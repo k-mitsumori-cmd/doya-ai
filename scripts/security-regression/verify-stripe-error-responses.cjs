@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
+const { routeUnitDeps } = require('./checkout-route-unit-fixture.cjs')
 
 const secret = 'PRIVATE_STRIPE_INTERNAL'
 const common = {
@@ -24,9 +25,10 @@ const common = {
   for (const routePath of [
     'checkout', 'portal', 'sync', 'sync/latest', 'subscription/cancel', 'subscription/resume',
   ]) {
-    const route = load(`src/app/api/stripe/${routePath}/route.ts`, common)
-    const response = await route.POST(new Request('https://example.test/api/stripe/test', { method: 'POST', body: '{}' }))
-    assert.equal(response.status, 500, routePath)
+    const route = load(`src/app/api/stripe/${routePath}/route.ts`, routePath === 'checkout' ? { ...common, ...routeUnitDeps({ prisma: {} }) } : common)
+    const requestBody = routePath === 'checkout' ? JSON.stringify({ action: 'status', operationId: require('node:crypto').randomUUID() }) : '{}'
+    const response = await route.POST(new Request('https://example.test/api/stripe/test', { method: 'POST', body: requestBody }))
+    assert.equal(response.status, routePath === 'checkout' ? 503 : 500, routePath)
     const body = await response.json()
     assert.equal(typeof body.error, 'string')
     assert.equal(JSON.stringify(body).includes(secret), false, routePath)

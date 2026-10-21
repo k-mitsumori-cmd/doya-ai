@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { Prisma } from '@prisma/client'
-import { LifecycleError, lifecycleIdentity, lifecycleReceiptKey, lifecycleFenceKey, lifecycleLedgerKey, lifecycleActionKey, readLifecycleReceipt, readLifecycleFence, readLifecycleLedger, validLifecycleDigest, validLifecycleUuid, type LifecycleIdentity, type LifecycleClaim, type LifecycleReceipt, type LifecycleLedger, type LifecycleResource } from './state'
-import { assertGlobalLifecycleOperationIdFree, completeLifecycleOperation, resumeLifecycleOperation, type LifecycleDb } from './store'
+import { LifecycleError, assertLifecycleIdentity, lifecycleIdentity, lifecycleReceiptKey, lifecycleFenceKey, lifecycleLedgerKey, lifecycleActionKey, readLifecycleReceipt, readLifecycleFence, readLifecycleLedger, validLifecycleDigest, validLifecycleUuid, type LifecycleIdentity, type LifecycleClaim, type LifecycleReceipt, type LifecycleLedger, type LifecycleResource } from './state'
+import { abortUnstartedLifecycleOperation, assertGlobalLifecycleOperationIdFree, completeLifecycleOperation, resumeLifecycleOperation, type LifecycleDb } from './store'
 import { checkoutKeys, checkoutDigest, checkoutPayloadDigest, sealedCheckoutRequest, parseCheckoutPlan, parseCheckoutCapability, parseCheckoutDispatch, parseCheckoutIndex, checkoutUnavailable, exactCheckoutObject, assertCheckoutClaim, type CheckoutRequest, type CheckoutPlan, type CheckoutDispatch, type CheckoutCapability, type CheckoutIndex } from './checkout-receipt'
 import { classifyLegacyV1, verifiedLegacySignature, type LegacySignatureParts } from './checkout-legacy'
 import { assertVerifiedCheckoutFact, assertVerifiedCustomerReuse, assertVerifiedLegacyCheckout, checkoutDispatchIdempotencyKey, type VerifiedCheckoutFact, type VerifiedCustomerReuse, type VerifiedLegacyCheckout } from './checkout-provider'
@@ -108,16 +108,23 @@ async function assertCheckoutCutover(tx: Tx, p: CheckoutPlan, mappedLegacy = fal
         cap.customerId && !index.value.resources.some(r => r.type === 'customer' && r.id === cap.customerId && r.operationId === mapping.operationId)) return checkoutUnavailable()
   }
 }
-async function checkoutAdmissionUser(tx: Tx, request: CheckoutRequest) {
-  if (!await userExists(tx, request.identity.targetUserId)) throw new LifecycleError('LIFECYCLE_USER_UNAVAILABLE')
-  const user = await tx.user.findUnique({ where: { id: request.identity.targetUserId }, select: { email: true, stripeCustomerId: true } })
-  if (!user || user.email?.trim().toLowerCase() !== request.terms.email || request.customerMode === 'reuse' && user.stripeCustomerId !== request.customerId) throw new LifecycleError('CHECKOUT_IDENTITY_CHANGED')
-  if (request.source === 'hr') {
-    const org = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM hr_organizations WHERE id = ${request.organizationId} FOR UPDATE`
-    const members = await tx.$queryRaw<Array<{ userId: string; role: string; status: string }>>`SELECT "userId",role,status FROM hr_organization_members WHERE "organizationId" = ${request.organizationId} ORDER BY id FOR UPDATE`
-    const mine = members.filter(m => m.userId === request.identity.targetUserId)
+async function checkoutBoundUser(tx: Tx, plan: CheckoutPlan) {
+  if (!await userExists(tx, plan.identity.targetUserId)) throw new LifecycleError('LIFECYCLE_USER_UNAVAILABLE')
+  const user = await tx.user.findUnique({ where: { id: plan.identity.targetUserId }, select: { email: true, name: true, stripeCustomerId: true } })
+  if (!user) throw new LifecycleError('CHECKOUT_IDENTITY_CHANGED')
+  if (plan.customerMode === 'reuse' && user.stripeCustomerId !== plan.expectedCustomerId) throw new LifecycleError('CHECKOUT_CUSTOMER_REFERENCE_CONFLICT')
+  if (plan.organizationId !== null || plan.source === 'hr') {
+    if (plan.organizationId === null) throw new LifecycleError('HR_BILLING_OWNER_REQUIRED', 403)
+    const org = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM hr_organizations WHERE id = ${plan.organizationId} FOR UPDATE`
+    const members = await tx.$queryRaw<Array<{ userId: string; role: string; status: string }>>`SELECT "userId",role,status FROM hr_organization_members WHERE "organizationId" = ${plan.organizationId} ORDER BY id FOR UPDATE`
+    const mine = members.filter(m => m.userId === plan.identity.targetUserId)
     if (org.length !== 1 || mine.length !== 1 || mine[0].status !== 'ACTIVE' || mine[0].role !== 'OWNER') throw new LifecycleError('HR_BILLING_OWNER_REQUIRED', 403)
   }
+  return user
+}
+async function checkoutAdmissionUser(tx: Tx, request: CheckoutRequest) {
+  const user = await checkoutBoundUser(tx, sealedCheckoutRequest(request))
+  if (user.email?.trim().toLowerCase() !== request.terms.email || request.customerMode === 'reuse' && user.stripeCustomerId !== request.customerId) throw new LifecycleError('CHECKOUT_IDENTITY_CHANGED')
   return user
 }
 /** Classify the current pointer without treating a legacy UUID as an ordinary plan. */
@@ -160,7 +167,7 @@ export async function readCheckoutCurrentKind(db: LifecycleDb, request: Checkout
     if (!ordinary) return checkoutUnavailable()
     const oldPlan = parseCheckoutPlan(ordinary.value)
     if (oldPlan.targetHash !== plan.targetHash || oldPlan.mode !== plan.mode || oldPlan.source !== plan.source || oldPlan.identity.operationId !== index.value.currentOperationId) return checkoutUnavailable()
-    return { kind: 'ordinary' as const, operationId: index.value.currentOperationId }
+    return { kind: 'ordinary' as const, operationId: index.value.currentOperationId, version: oldPlan.version }
   }, options)
 }
 /** A saved provider terminal fact is sufficient only when every old ordinary authority joins exactly. */
@@ -221,7 +228,9 @@ export async function admitCheckoutLifecycle(db: LifecycleDb, request: CheckoutR
       const cap = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.capability(previous.identity.operationId) }, select: { value: true } })
       const capability = cap ? parseCheckoutCapability(cap.value) : null
       if (!capability || capability.status !== 'expired') {
-        if (previous.inputDigest !== proposed.inputDigest || previous.identity.operator.kind !== proposed.identity.operator.kind || previous.identity.operator.id !== proposed.identity.operator.id) throw new LifecycleError('CHECKOUT_IN_PROGRESS')
+        const sameSealedInput = previous.inputDigest === proposed.inputDigest || previous.version === 2 && proposed.version === 2 &&
+          sealedCheckoutRequest({ ...request, identity: { ...request.identity, operationId: previous.identity.operationId }, terms: { ...request.terms, expiresAt: previous.expiresAt } }).inputDigest === previous.inputDigest
+        if (!sameSealedInput || previous.identity.operator.kind !== proposed.identity.operator.kind || previous.identity.operator.id !== proposed.identity.operator.id) throw new LifecycleError('CHECKOUT_IN_PROGRESS')
         const r = await receipt(tx, previous.identity), f = await fence(tx, request.identity.targetUserId)
         if (!r || (capability ? r.value.phase !== 'completed' || f !== null : f?.value.operationId !== previous.identity.operationId)) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
         return { identity: previous.identity, plan: previous, phase: r.value.phase, claim: null }
@@ -237,9 +246,10 @@ export async function admitCheckoutLifecycle(db: LifecycleDb, request: CheckoutR
     const now = new Date().toISOString(), r: LifecycleReceipt = { version: 2, targetHash: proposed.targetHash, operationId: request.identity.operationId, operator: request.identity.operator, kind: 'checkout', inputDigest: proposed.inputDigest, generation: randomUUID(), token: randomUUID(), revision: 0, phase: 'reserved', reason: null, createdAt: now, updatedAt: now }
     await tx.systemSetting.create({ data: { key: lifecycleReceiptKey(request.identity), value: JSON.stringify(r) } })
     await tx.systemSetting.create({ data: { key: lifecycleFenceKey(request.identity.targetUserId), value: JSON.stringify({ version: 2, operationId: r.operationId, generation: r.generation, kind: 'checkout', state: 'active' }) } })
-    await tx.systemSetting.create({ data: { key: checkoutKeys.plan(r.operationId), value: JSON.stringify(proposed) } })
+    const boundPlan: CheckoutPlan = proposed.version === 2 ? { ...proposed, previousOperationId: index.value.currentOperationId } : proposed
+    await tx.systemSetting.create({ data: { key: checkoutKeys.plan(r.operationId), value: JSON.stringify(boundPlan) } })
     await putCheckoutValue(tx, key, index.raw, { ...index.value, currentOperationId: r.operationId, revision: nextRevision(index.value.revision) })
-    return { identity: request.identity, plan: proposed, phase: r.phase, claim: { ...request.identity, generation: r.generation, token: r.token } as LifecycleClaim }
+    return { identity: request.identity, plan: boundPlan, phase: r.phase, claim: { ...request.identity, generation: r.generation, token: r.token } as LifecycleClaim }
   }, options)
 }
 export async function recoverCheckoutLifecycle(db: LifecycleDb, request: CheckoutRequest) {
@@ -385,32 +395,48 @@ export async function recordCheckoutAckAndReady(db: LifecycleDb, claim: Lifecycl
     return { operationId: claim.operationId, phase: 'completed' as const, capabilityRecorded: true }
   }, options)
 }
-export async function captureCheckoutReadyRead(db: LifecycleDb, request: CheckoutRequest) {
-  const proposed = sealedCheckoutRequest(request)
+export async function captureCheckoutReadyRead(db: LifecycleDb, request: CheckoutRequest | LifecycleIdentity) {
+  const full = 'terms' in request
+  const proposed = 'terms' in request ? sealedCheckoutRequest(request) : null
+  const identity = 'identity' in request ? request.identity : request
+  assertLifecycleIdentity(identity)
   return db.$transaction(async tx => {
-    const user = await checkoutAdmissionUser(tx, request)
-    await assertCheckoutCutover(tx, proposed)
-    if (await fence(tx, request.identity.targetUserId)) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
-    const p = await checkoutPlan(tx, request.identity), r = await receipt(tx, request.identity), index = await checkoutIndex(tx, p.value.targetHash)
+    const p = await checkoutPlan(tx, identity)
+    if (!full && p.value.version !== 2) return checkoutUnavailable()
+    const user = 'terms' in request ? await checkoutAdmissionUser(tx, request) : await checkoutBoundUser(tx, p.value)
+    await assertCheckoutCutover(tx, p.value)
+    if (await fence(tx, identity.targetUserId)) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
+    const r = await receipt(tx, identity), index = await checkoutIndex(tx, p.value.targetHash)
     if (p.value.customerMode === 'create' && user.stripeCustomerId !== p.value.customerId) throw new LifecycleError('CHECKOUT_CUSTOMER_REFERENCE_CONFLICT')
-    if (!r || r.value.phase !== 'completed' || p.value.inputDigest !== proposed.inputDigest || index.value.dirty || index.value.currentOperationId !== request.identity.operationId) return changed()
-    const row = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.capability(request.identity.operationId) }, select: { value: true } })
-    const l = await ledger(tx, request.identity, r.value), action = l?.value.actions.find(a => a.type === 'checkout_create')
-    if (!row || !action?.dispatchToken) return checkoutUnavailable()
-    const dispatch = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.dispatch(action.dispatchToken) }, select: { value: true } })
-    if (!dispatch) return checkoutUnavailable()
-    return { plan: p.value, capability: parseCheckoutCapability(row.value), dispatch: parseCheckoutDispatch(dispatch.value), indexRevision: index.value.revision, capabilityRaw: row.value }
+    if (!r || r.value.phase !== 'completed' || proposed && p.value.inputDigest !== proposed.inputDigest || index.value.dirty || index.value.currentOperationId !== identity.operationId) return changed()
+    const row = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.capability(identity.operationId) }, select: { value: true } })
+    const l = await ledger(tx, identity, r.value), action = l?.value.actions.find(a => a.type === 'checkout_create')
+    if (!row || !action?.dispatchToken || action.phase !== 'confirmed' || r.value.inputDigest !== p.value.inputDigest || r.value.targetHash !== p.value.targetHash) return checkoutUnavailable()
+    const dispatchRow = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.dispatch(action.dispatchToken) }, select: { value: true } })
+    if (!dispatchRow) return checkoutUnavailable()
+    const capability = parseCheckoutCapability(row.value), dispatch = parseCheckoutDispatch(dispatchRow.value)
+    if (capability.operationId !== identity.operationId || capability.targetHash !== p.value.targetHash || capability.inputDigest !== p.value.inputDigest || capability.mode !== p.value.mode ||
+        dispatch.identity.operationId !== identity.operationId || dispatch.generation !== r.value.generation || dispatch.inputDigest !== p.value.inputDigest || dispatch.targetHash !== p.value.targetHash || dispatch.mode !== p.value.mode ||
+        dispatch.dispatchToken !== action.dispatchToken || dispatch.actionKey !== action.key || dispatch.type !== 'checkout_create' || JSON.stringify(dispatch.plan) !== p.raw) return checkoutUnavailable()
+    return { plan: p.value, capability, dispatch, indexRevision: index.value.revision, capabilityRaw: row.value }
   }, options)
 }
-export async function authorizeCheckoutReadyRead(db: LifecycleDb, request: CheckoutRequest, ticket: Awaited<ReturnType<typeof captureCheckoutReadyRead>>, fact: VerifiedCheckoutFact) {
+export async function authorizeCheckoutReadyRead(db: LifecycleDb, request: CheckoutRequest | LifecycleIdentity, ticket: Awaited<ReturnType<typeof captureCheckoutReadyRead>>, fact: VerifiedCheckoutFact) {
   assertVerifiedCheckoutFact(fact)
+  const full = 'terms' in request
+  const identity = 'identity' in request ? request.identity : request
+  assertLifecycleIdentity(identity)
   return db.$transaction(async tx => {
-    const user = await checkoutAdmissionUser(tx, request)
-    await assertCheckoutCutover(tx, sealedCheckoutRequest(request))
-    if (await fence(tx, request.identity.targetUserId)) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
-    const p = await correlatedDispatch(tx, fact), index = await checkoutIndex(tx, p.value.targetHash), row = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.capability(request.identity.operationId) }, select: { value: true } })
+    const p = await correlatedDispatch(tx, fact)
+    if (!full && p.value.version !== 2) return checkoutUnavailable()
+    const user = 'terms' in request ? await checkoutAdmissionUser(tx, request) : await checkoutBoundUser(tx, p.value)
+    await assertCheckoutCutover(tx, p.value)
+    if (await fence(tx, identity.targetUserId)) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
+    const index = await checkoutIndex(tx, p.value.targetHash), row = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.capability(identity.operationId) }, select: { value: true } }), r = await receipt(tx, identity)
+    const l = r ? await ledger(tx, identity, r.value) : null
     if (p.value.customerMode === 'create' && user.stripeCustomerId !== p.value.customerId) throw new LifecycleError('CHECKOUT_CUSTOMER_REFERENCE_CONFLICT')
-    if (request.identity.operationId !== p.value.identity.operationId || sealedCheckoutRequest(request).inputDigest !== p.value.inputDigest || !row || row.value !== ticket.capabilityRaw || index.value.revision !== ticket.indexRevision || index.value.dirty || index.value.currentOperationId !== request.identity.operationId || fact.resourceId !== ticket.capability.sessionId || fact.kind !== 'checkout') return changed()
+    if (identity.operationId !== p.value.identity.operationId || 'terms' in request && sealedCheckoutRequest(request).inputDigest !== p.value.inputDigest || !r || r.value.phase !== 'completed' || r.value.inputDigest !== p.value.inputDigest || r.value.generation !== fact.dispatch.generation ||
+        !l?.value.actions.some(a => a.type === 'checkout_create' && a.phase === 'confirmed' && a.dispatchToken === fact.dispatch.dispatchToken) || !row || row.value !== ticket.capabilityRaw || index.value.revision !== ticket.indexRevision || index.value.dirty || index.value.currentOperationId !== identity.operationId || fact.resourceId !== ticket.capability.sessionId || fact.kind !== 'checkout') return changed()
     if (fact.status !== 'open' || fact.expiresAt * 1000 <= Date.now() || !fact.url) throw new LifecycleError(fact.status === 'complete' ? 'CHECKOUT_ALREADY_COMPLETED' : 'CHECKOUT_IN_PROGRESS')
     return { id: fact.resourceId, url: fact.url }
   }, options)
@@ -430,6 +456,82 @@ export async function readCheckoutRecovery(db: LifecycleDb, request: CheckoutReq
     const index = await checkoutIndex(tx, p.value.targetHash)
     return { plan: p.value, phase: r.value.phase, reason: r.value.reason ?? (index.value.dirty ? 'NEEDS_REVIEW' as const : null), operationRevision: r.value.revision, ledgerRevision: l?.value.revision ?? null, claim: { ...request.identity, generation: r.value.generation, token: r.value.token } as LifecycleClaim, dispatch }
   }, options)
+}
+/** Read a newly bound operation without recreating its email/name input digest. */
+export async function readCheckoutBoundOperation(db: LifecycleDb, identity: LifecycleIdentity, allowHistoricalTerminal = false) {
+  assertLifecycleIdentity(identity)
+  if (identity.kind !== 'checkout' || identity.operator.kind !== 'user' || identity.operator.id !== identity.targetUserId) throw new LifecycleError('INVALID_LIFECYCLE_IDENTITY', 400)
+  return db.$transaction(async tx => {
+    if (!await userExists(tx, identity.targetUserId)) throw new LifecycleError('LIFECYCLE_USER_UNAVAILABLE')
+    const r = await receipt(tx, identity)
+    if (!r) {
+      await assertGlobalLifecycleOperationIdFree(tx, identity.operationId)
+      return { phase: 'missing' as const, plan: null, reason: null, dispatched: false, email: null, name: null }
+    }
+    if (r.value.phase === 'aborted') {
+      const row = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.plan(identity.operationId) }, select: { value: true } })
+      const plan = row ? parseCheckoutPlan(row.value) : null
+      if (plan && (plan.version !== 2 || plan.identity.targetUserId !== identity.targetUserId || plan.inputDigest !== r.value.inputDigest)) return checkoutUnavailable()
+      return { phase: 'aborted' as const, plan, reason: null, dispatched: false, email: null, name: null }
+    }
+    const p = await checkoutPlan(tx, identity)
+    if (p.value.version !== 2 || r.value.inputDigest !== p.value.inputDigest) return checkoutUnavailable()
+    const user = await checkoutBoundUser(tx, p.value)
+    await assertCheckoutCutover(tx, p.value)
+    const index = await checkoutIndex(tx, p.value.targetHash), f = await fence(tx, identity.targetUserId)
+    if (index.value.dirty || ['reserved', 'executing'].includes(r.value.phase) && (index.value.currentOperationId !== identity.operationId || f?.value.operationId !== identity.operationId)) return checkoutUnavailable()
+    if (r.value.phase === 'completed' && index.value.currentOperationId !== identity.operationId) {
+      if (!allowHistoricalTerminal || !index.value.currentOperationId) return checkoutUnavailable()
+      const currentRow = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.plan(index.value.currentOperationId) }, select: { value: true } })
+      if (!currentRow) return checkoutUnavailable()
+      const current = parseCheckoutPlan(currentRow.value)
+      if (current.version !== 2 || current.previousOperationId !== identity.operationId || current.targetHash !== p.value.targetHash || current.mode !== p.value.mode || current.source !== p.value.source || current.organizationId !== p.value.organizationId || f && f.value.operationId !== current.identity.operationId) return checkoutUnavailable()
+      await assertStoredExpiredOrdinary(tx, { ...index.value, currentOperationId: identity.operationId }, current)
+    } else if (r.value.phase === 'completed' && f !== null) return checkoutUnavailable()
+    if (p.value.customerMode === 'create' && user.stripeCustomerId !== p.value.customerId) throw new LifecycleError('CHECKOUT_CUSTOMER_REFERENCE_CONFLICT')
+    const l = await ledger(tx, identity, r.value)
+    return { phase: r.value.phase, plan: p.value, reason: r.value.reason, dispatched: Boolean(l?.value.actions.some(a => a.phase === 'dispatched')), email: user.email?.trim().toLowerCase() ?? null, name: user.name ?? '' }
+  }, options)
+}
+/** Abort keeps the tombstone and restores the exact prior terminal pointer. */
+export async function abortCheckoutBoundOperation(db: LifecycleDb, identity: LifecycleIdentity) {
+  const observed = await readCheckoutBoundOperation(db, identity)
+  if (!['missing', 'reserved', 'aborted'].includes(observed.phase)) throw new LifecycleError('LIFECYCLE_CANNOT_ABORT')
+  const digest = observed.plan?.inputDigest ?? checkoutDigest(['checkout-abort-before-admission', identity.targetUserId, identity.operationId])
+  await abortUnstartedLifecycleOperation(db, identity, digest)
+  if (!observed.plan) return { operationId: identity.operationId, phase: 'aborted' as const }
+  await db.$transaction(async tx => {
+    if (!await userExists(tx, identity.targetUserId)) throw new LifecycleError('LIFECYCLE_USER_UNAVAILABLE')
+    const p = await checkoutPlan(tx, identity), r = await receipt(tx, identity), f = await fence(tx, identity.targetUserId)
+    if (p.value.version !== 2 || !r || r.value.phase !== 'aborted' || r.value.inputDigest !== p.value.inputDigest || f !== null) return checkoutUnavailable()
+    const index = await checkoutIndex(tx, p.value.targetHash)
+    if (index.value.dirty || index.value.currentOperationId !== identity.operationId || index.value.resources.some(item => item.operationId === identity.operationId)) return checkoutUnavailable()
+    const l = await ledger(tx, identity, r.value)
+    if (l?.value.actions.some(action => action.phase !== 'planned')) return checkoutUnavailable()
+    const prior = p.value.previousOperationId ?? null
+    if (prior) {
+      const ordinary = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.plan(prior) }, select: { value: true } })
+      if (ordinary) {
+        await assertStoredExpiredOrdinary(tx, { ...index.value, currentOperationId: prior }, p.value)
+      } else {
+        const mapped = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.legacyMapping(p.value.targetHash, p.value.mode) }, select: { value: true } })
+        if (!mapped) return checkoutUnavailable()
+        const mapping = parseLegacyMapping(mapped.value)
+        const raw = await tx.systemSetting.findUnique({ where: { key: legacyRawKey(p.value) }, select: { value: true } })
+        const capRow = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.capability(prior) }, select: { value: true } })
+        if (!capRow || !raw || mapping.operationId !== prior || mapping.targetHash !== p.value.targetHash || mapping.mode !== p.value.mode || mapping.source !== p.value.source || raw.value !== legacyTombstone(mapping)) return checkoutUnavailable()
+        const cap = parseCheckoutCapability(capRow.value)
+        if (cap.operationId !== prior || cap.targetHash !== p.value.targetHash || cap.inputDigest !== mapping.inputDigest || cap.mode !== p.value.mode || cap.status !== 'expired' || cap.subscriptionId !== null || cap.sessionId !== mapping.sessionId) return checkoutUnavailable()
+        for (const item of index.value.resources.filter(item => item.operationId === prior)) {
+          const resource = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.resource(p.value.mode, item.type, item.id) }, select: { value: true } })
+          if (resource?.value !== JSON.stringify({ version: 1, targetHash: p.value.targetHash, operationId: prior, mode: p.value.mode, type: item.type, id: item.id })) return checkoutUnavailable()
+        }
+        if (!index.value.resources.some(item => item.type === 'checkout' && item.id === mapping.sessionId && item.operationId === prior)) return checkoutUnavailable()
+      }
+    } else if (index.value.resources.length !== 0) return checkoutUnavailable()
+    await putCheckoutValue(tx, checkoutKeys.index(p.value.targetHash), index.raw, { ...index.value, currentOperationId: prior, revision: nextRevision(index.value.revision) })
+  }, options)
+  return { operationId: identity.operationId, phase: 'aborted' as const }
 }
 export async function recordLegacyCheckoutClassification(db: LifecycleDb, request: CheckoutRequest) {
   const p = sealedCheckoutRequest(request)

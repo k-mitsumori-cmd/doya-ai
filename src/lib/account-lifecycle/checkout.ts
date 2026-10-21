@@ -1,9 +1,10 @@
-import { LifecycleError, type LifecycleClaim } from './state'
+import { LifecycleError, type LifecycleClaim, type LifecycleIdentity } from './state'
 import { startLifecycleOperation, markLifecycleUnknown, abortUnstartedLifecycleOperation, type LifecycleDb } from './store'
 import { sealedCheckoutRequest, type CheckoutRequest } from './checkout-receipt'
+import { checkoutUrls } from './checkout-urls'
 import { type VerifiedCheckoutFact, type CheckoutProviderAdapter } from './checkout-provider'
 import { type LegacySignatureParts } from './checkout-legacy'
-import { admitCheckoutLifecycle, recoverCheckoutLifecycle, prepareCheckoutLifecycle, dispatchCheckoutLifecycle, recordCustomerAckAndPlanCheckout, recordCheckoutAckAndReady, ingestCorrelatedCheckoutLateFact, captureCheckoutReadyRead, authorizeCheckoutReadyRead, readCheckoutRecovery, recordLegacyCheckoutClassification, captureLegacyCheckoutReady, adoptLegacyCheckoutReady, authorizeLegacyCheckoutReady, admitAfterExpiredLegacyCheckout, readCheckoutCurrentKind } from './checkout-store'
+import { abortCheckoutBoundOperation, readCheckoutBoundOperation, admitCheckoutLifecycle, recoverCheckoutLifecycle, prepareCheckoutLifecycle, dispatchCheckoutLifecycle, recordCustomerAckAndPlanCheckout, recordCheckoutAckAndReady, ingestCorrelatedCheckoutLateFact, captureCheckoutReadyRead, authorizeCheckoutReadyRead, readCheckoutRecovery, recordLegacyCheckoutClassification, captureLegacyCheckoutReady, adoptLegacyCheckoutReady, authorizeLegacyCheckoutReady, admitAfterExpiredLegacyCheckout, readCheckoutCurrentKind } from './checkout-store'
 
 /** Unconnected internal coordinator. No module import performs I/O; the server supplies a provider adapter explicitly. */
 export function checkoutCoordinator(db: LifecycleDb, provider: CheckoutProviderAdapter) {
@@ -27,13 +28,29 @@ export function checkoutCoordinator(db: LifecycleDb, provider: CheckoutProviderA
       try { fact = await provider.createCustomer(request, sent.plan, sent.dispatch); plan = (await recordCustomerAckAndPlanCheckout(db, claim, fact, sent)).plan }
       catch (error) { return failed(claim, sent, error, fact) }
     }
-    const reuse = plan.customerMode === 'reuse' ? await provider.reuseCustomer(plan) : undefined
+    const reuse = plan.customerMode === 'reuse' ? await provider.reuseCustomer(plan, request) : undefined
     const sent = await dispatchCheckoutLifecycle(db, claim, 'checkout_create', request, reuse)
     let fact: VerifiedCheckoutFact | undefined
     try { fact = await provider.createCheckout(request, sent.plan, sent.dispatch); await recordCheckoutAckAndReady(db, claim, fact) }
     catch (error) { return failed(claim, sent, error, fact) }
     const ticket = await captureCheckoutReadyRead(db, request)
-    return authorizeCheckoutReadyRead(db, request, ticket, fact)
+    const ready = await authorizeCheckoutReadyRead(db, request, ticket, fact)
+    return { ...ready, operationId: claim.operationId }
+  }
+  async function boundRequest(identity: LifecycleIdentity, allowHistoricalTerminal = false) {
+    const r = await readCheckoutBoundOperation(db, identity, allowHistoricalTerminal)
+    if (!r.plan || !r.plan.recovery || !r.email) throw new LifecycleError('CHECKOUT_NEEDS_REVIEW')
+    const urls = checkoutUrls(r.plan.recovery, r.plan.planId, r.plan.serviceId)
+    const request: CheckoutRequest = {
+      cutoverEpoch: r.plan.cutoverEpoch, identity, mode: r.plan.mode, source: r.plan.source,
+      organizationId: r.plan.organizationId, customerMode: r.plan.customerMode,
+      customerId: r.plan.expectedCustomerId,
+      terms: { priceId: r.plan.priceId, planId: r.plan.planId, serviceId: r.plan.serviceId,
+        trialDays: r.plan.trialDays, successUrl: urls.successUrl, cancelUrl: urls.cancelUrl,
+        email: r.email, name: r.name, expiresAt: r.plan.expiresAt }, recovery: r.plan.recovery,
+    }
+    if (sealedCheckoutRequest(request).inputDigest !== r.plan.inputDigest) throw new LifecycleError('CHECKOUT_NEEDS_REVIEW')
+    return { request, phase: r.phase, reason: r.reason, dispatched: r.dispatched }
   }
   return {
     async admit(request: CheckoutRequest) {
@@ -44,10 +61,11 @@ export function checkoutCoordinator(db: LifecycleDb, provider: CheckoutProviderA
       const admission = await admitCheckoutLifecycle(db, request)
       if (admission.claim) return execute(request, admission.claim)
       if (admission.phase === 'completed') {
-        const sameOperation = { ...request, identity: admission.identity }
+        const sameOperation = { ...request, identity: admission.identity, terms: { ...request.terms, expiresAt: admission.plan.expiresAt } }
         const ticket = await captureCheckoutReadyRead(db, sameOperation), fact = await provider.readReady(ticket.plan, ticket.dispatch, ticket.capability)
         await ingestCorrelatedCheckoutLateFact(db, fact)
-        return authorizeCheckoutReadyRead(db, sameOperation, ticket, fact)
+        const ready = await authorizeCheckoutReadyRead(db, sameOperation, ticket, fact)
+        return { ...ready, operationId: admission.identity.operationId }
       }
       return { operationId: admission.identity.operationId, phase: admission.phase, resultUnknown: true }
     },
@@ -70,6 +88,28 @@ export function checkoutCoordinator(db: LifecycleDb, provider: CheckoutProviderA
     async status(request: CheckoutRequest) {
       const r = await readCheckoutRecovery(db, request)
       return { operationId: request.identity.operationId, phase: r.phase, reason: r.reason, dispatched: r.dispatch !== null }
+    },
+    async statusByHandle(identity: LifecycleIdentity) {
+      const r = await readCheckoutBoundOperation(db, identity)
+      return { operationId: identity.operationId, phase: r.phase, reason: r.reason, dispatched: r.dispatched }
+    },
+    async resumeByHandle(identity: LifecycleIdentity) {
+      const bound = await boundRequest(identity)
+      if (!['reserved', 'executing'].includes(bound.phase) || bound.reason !== null || bound.dispatched) throw new LifecycleError('CHECKOUT_NEEDS_REVIEW')
+      return execute(bound.request, await recoverCheckoutLifecycle(db, bound.request))
+    },
+    async readyByHandle(identity: LifecycleIdentity) {
+      const ticket = await captureCheckoutReadyRead(db, identity)
+      const fact = await provider.readReady(ticket.plan, ticket.dispatch, ticket.capability)
+      await ingestCorrelatedCheckoutLateFact(db, fact)
+      const ready = await authorizeCheckoutReadyRead(db, identity, ticket, fact)
+      return { ...ready, operationId: identity.operationId }
+    },
+    abortByHandle(identity: LifecycleIdentity) { return abortCheckoutBoundOperation(db, identity) },
+    async advanceAfterTerminalByHandle(previousIdentity: LifecycleIdentity, nextRequest: CheckoutRequest) {
+      const previous = await boundRequest(previousIdentity, true)
+      if (previous.phase !== 'completed') throw new LifecycleError('CHECKOUT_IN_PROGRESS')
+      return this.advanceAfterTerminal(previous.request, nextRequest)
     },
     async abort(request: CheckoutRequest) { return abortUnstartedLifecycleOperation(db, request.identity, sealedCheckoutRequest(request).inputDigest) },
     classifyLegacy(request: CheckoutRequest) { return recordLegacyCheckoutClassification(db, request) },
@@ -95,7 +135,10 @@ export function checkoutCoordinator(db: LifecycleDb, provider: CheckoutProviderA
       if (current.kind === 'ordinary') {
         if (current.operationId !== previous.identity.operationId) {
           // A concurrent request already switched the pointer. Recover its exact sealed input.
-          const currentNext: CheckoutRequest = fixed({ ...next, identity: { ...next.identity, operationId: current.operationId } })
+          const live = current.version === 2 ? await readCheckoutBoundOperation(db, { ...next.identity, operationId: current.operationId }) : null
+          const currentNext: CheckoutRequest = fixed({ ...next, identity: { ...next.identity, operationId: current.operationId },
+            terms: { ...next.terms, expiresAt: live?.plan?.version === 2 ? live.plan.expiresAt : next.terms.expiresAt } })
+          if (live?.plan?.version === 2 && sealedCheckoutRequest(currentNext).inputDigest !== live.plan.inputDigest) throw new LifecycleError('CHECKOUT_IN_PROGRESS')
           const result = await readCheckoutRecovery(db, currentNext)
           unchanged()
           if (result.phase !== 'completed') {
@@ -107,7 +150,7 @@ export function checkoutCoordinator(db: LifecycleDb, provider: CheckoutProviderA
           await ingestCorrelatedCheckoutLateFact(db, fact)
           const ready = await authorizeCheckoutReadyRead(db, currentNext, ticket, fact)
           unchanged()
-          return ready
+          return { ...ready, operationId: current.operationId }
         }
         if (current.operationId === next.identity.operationId) throw new LifecycleError('CHECKOUT_IN_PROGRESS')
         const ticket = await captureCheckoutReadyRead(db, previous)
@@ -120,7 +163,7 @@ export function checkoutCoordinator(db: LifecycleDb, provider: CheckoutProviderA
           if (oldPlan.inputDigest !== nextPlan.inputDigest) throw new LifecycleError('CHECKOUT_IN_PROGRESS')
           const ready = await authorizeCheckoutReadyRead(db, previous, ticket, fact)
           unchanged()
-          return ready
+          return { ...ready, operationId: previous.identity.operationId }
         }
         if (fact.status === 'complete') throw new LifecycleError('CHECKOUT_ALREADY_COMPLETED')
         const admitted = await admitCheckoutLifecycle(db, next)
@@ -145,7 +188,7 @@ export function checkoutCoordinator(db: LifecycleDb, provider: CheckoutProviderA
       if (result.status === 'open') {
         if (oldPlan.inputDigest !== nextPlan.inputDigest || !result.url) throw new LifecycleError('CHECKOUT_IN_PROGRESS')
         unchanged()
-        return { id: result.sessionId, url: result.url }
+        return { id: result.sessionId, url: result.url, operationId: previous.identity.operationId }
       }
       if (result.status === 'complete') throw new LifecycleError('CHECKOUT_ALREADY_COMPLETED')
       const finalTicket = await captureLegacyCheckoutReady(db, previous, parts)

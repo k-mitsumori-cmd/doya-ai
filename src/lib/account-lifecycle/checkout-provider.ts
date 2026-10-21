@@ -1,9 +1,10 @@
 import { LifecycleError, type LifecycleClaim } from './state'
 import { assertCheckoutClaim, checkoutDigest, checkoutPayloadDigest, customerIdValid, sessionIdValid, subscriptionIdValid, sealedCheckoutRequest, parseCheckoutDispatch, type CheckoutCapability, type CheckoutDispatch, type CheckoutPlan, type CheckoutRequest } from './checkout-receipt'
+import { checkoutUrls } from './checkout-urls'
 
 type Metadata = Record<string, string>
-export type ProviderCustomer = { id: string; livemode: boolean; deleted?: boolean; metadata: Metadata }
-export type ProviderCheckout = { id: string; livemode: boolean; mode: string; status: string | null; client_reference_id: string | null; metadata: Metadata | null; customer: string | null; customer_email?: string | null; subscription: string | null; url: string | null; success_url?: string | null; cancel_url?: string | null; expires_at: number; line_items: { data: { quantity: number | null; price: { id: string } | null }[] } }
+export type ProviderCustomer = { id: string; livemode: boolean; deleted?: boolean; email?: string | null; metadata: Metadata }
+export type ProviderCheckout = { id: string; livemode: boolean; mode: string; status: string | null; client_reference_id: string | null; metadata: Metadata | null; customer: string | null; customer_email?: string | null; subscription: string | null; url: string | null; success_url?: string | null; cancel_url?: string | null; expires_at: number; line_items: { data: { quantity: number | null; price: { id: string } | null }[]; has_more?: boolean } }
 export type CheckoutProvider = {
   createCustomer: (params: { email: string; name: string; metadata: Metadata }, options: { idempotencyKey: string }) => Promise<ProviderCustomer>
   retrieveCustomer: (id: string) => Promise<ProviderCustomer>
@@ -37,7 +38,8 @@ function customerFact(raw: ProviderCustomer, p: CheckoutPlan, d: CheckoutDispatc
 }
 function checkoutFact(raw: ProviderCheckout, p: CheckoutPlan, d: CheckoutDispatch): VerifiedCheckoutFact {
   dispatchMatches(d, p, 'checkout_create'); metaMatches(raw.metadata, p, d)
-  if (!sessionIdValid(raw.id) || raw.livemode !== (p.mode === 'live') || raw.mode !== 'subscription' || raw.client_reference_id !== p.identity.targetUserId || !['open', 'complete', 'expired'].includes(raw.status || '') || !Number.isSafeInteger(raw.expires_at) || raw.expires_at !== p.expiresAt || !(raw.customer === null || customerIdValid(raw.customer)) || !(raw.subscription === null || subscriptionIdValid(raw.subscription)) || p.customerId !== null && raw.customer !== p.customerId || !raw.line_items || raw.line_items.data.length !== 1 || raw.line_items.data[0].quantity !== 1 || raw.line_items.data[0].price?.id !== p.priceId || raw.status === 'complete' && (!raw.customer || !raw.subscription)) return mismatch()
+  if (p.version === 2 && (!p.recovery || raw.success_url !== checkoutUrls(p.recovery, p.planId, p.serviceId).successUrl || raw.cancel_url !== checkoutUrls(p.recovery, p.planId, p.serviceId).cancelUrl)) return mismatch()
+  if (!sessionIdValid(raw.id) || raw.livemode !== (p.mode === 'live') || raw.mode !== 'subscription' || raw.client_reference_id !== p.identity.targetUserId || !['open', 'complete', 'expired'].includes(raw.status || '') || !Number.isSafeInteger(raw.expires_at) || raw.expires_at !== p.expiresAt || !(raw.customer === null || customerIdValid(raw.customer)) || !(raw.subscription === null || subscriptionIdValid(raw.subscription)) || p.customerId !== null && raw.customer !== p.customerId || !raw.line_items || !Array.isArray(raw.line_items.data) || raw.line_items.has_more === true || raw.line_items.data.length !== 1 || raw.line_items.data[0].quantity !== 1 || raw.line_items.data[0].price?.id !== p.priceId || raw.status === 'complete' && (!raw.customer || !raw.subscription)) return mismatch()
   if (raw.status === 'open') { try { if (!raw.url || new URL(raw.url).protocol !== 'https:') return mismatch() } catch { return mismatch() } }
   const f = immutable({ kind: 'checkout' as const, dispatch: immutable(parseCheckoutDispatch(JSON.stringify(d))), resourceId: raw.id, customerId: raw.customer, subscriptionId: raw.subscription, status: raw.status as 'open' | 'complete' | 'expired', expiresAt: raw.expires_at, url: raw.status === 'open' ? raw.url : null }); facts.add(f); return f
 }
@@ -62,10 +64,11 @@ export function checkoutProviderAdapter(provider: CheckoutProvider) {
       const raw = await provider.createCustomer({ email: request.terms.email, name: request.terms.name, metadata: metadata(plan, d) }, { idempotencyKey: d.idempotencyKey })
       return customerFact(raw, plan, d)
     },
-    async reuseCustomer(plan: CheckoutPlan): Promise<VerifiedCustomerReuse> {
+    async reuseCustomer(plan: CheckoutPlan, request: CheckoutRequest): Promise<VerifiedCustomerReuse> {
       if (plan.customerMode !== 'reuse' || !plan.expectedCustomerId) return mismatch()
       const raw = await provider.retrieveCustomer(plan.expectedCustomerId)
-      if (raw.id !== plan.expectedCustomerId || raw.deleted || raw.livemode !== (plan.mode === 'live') || raw.metadata?.userId !== plan.identity.targetUserId) return mismatch()
+      if (raw.id !== plan.expectedCustomerId || raw.deleted || raw.livemode !== (plan.mode === 'live') || raw.metadata?.userId !== plan.identity.targetUserId ||
+          plan.version === 2 && (sealedCheckoutRequest(request).inputDigest !== plan.inputDigest || raw.email?.trim().toLowerCase() !== request.terms.email)) return mismatch()
       const f = immutable({ kind: 'reuse' as const, operationId: plan.identity.operationId, targetHash: plan.targetHash, inputDigest: plan.inputDigest, customerId: raw.id, mode: plan.mode }); reuses.add(f); return f
     },
     async createCheckout(request: CheckoutRequest, plan: CheckoutPlan, d: CheckoutDispatch): Promise<VerifiedCheckoutFact> {

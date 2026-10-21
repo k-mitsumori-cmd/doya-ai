@@ -36,11 +36,12 @@ async function setup(){
  const selected=models;for(const model of Prisma.dmmf.datamodel.models.filter(m=>selected.includes(m.name))){for(const field of model.fields.filter(f=>f.kind==='object'&&f.relationFromFields?.length&&selected.includes(f.type))){const target=Prisma.dmmf.datamodel.models.find(m=>m.name===field.type),onDelete=field.relationOnDelete||(!field.isRequired?'SetNull':'Restrict'),action={Cascade:'CASCADE',SetNull:'SET NULL',Restrict:'RESTRICT',NoAction:'NO ACTION'}[onDelete];await db.$executeRawUnsafe('ALTER TABLE '+quote(model.dbName||model.name)+' ADD FOREIGN KEY ('+field.relationFromFields.map(quote).join(',')+') REFERENCES '+quote(target.dbName||target.name)+' ('+field.relationToFields.map(quote).join(',')+') ON DELETE '+action)}}
 }
 
-const checkoutReceipt=load('src/lib/account-lifecycle/checkout-receipt.ts',{'node:crypto':crypto,'./state':state});
-const checkoutProvider=load('src/lib/account-lifecycle/checkout-provider.ts',{'./state':state,'./checkout-receipt':checkoutReceipt});
+const checkoutUrls=load('src/lib/account-lifecycle/checkout-urls.ts',{});
+const checkoutReceipt=load('src/lib/account-lifecycle/checkout-receipt.ts',{'node:crypto':crypto,'./state':state,'./checkout-urls':checkoutUrls});
+const checkoutProvider=load('src/lib/account-lifecycle/checkout-provider.ts',{'./state':state,'./checkout-receipt':checkoutReceipt,'./checkout-urls':checkoutUrls});
 const checkoutLegacy=load('src/lib/account-lifecycle/checkout-legacy.ts',{'./checkout-receipt':checkoutReceipt,'./state':state});
 const checkoutStore=load('src/lib/account-lifecycle/checkout-store.ts',{'node:crypto':crypto,'@prisma/client':{Prisma},'./state':state,'./store':store,'./checkout-receipt':checkoutReceipt,'./checkout-provider':checkoutProvider,'./checkout-legacy':checkoutLegacy});
-const coordinator=load('src/lib/account-lifecycle/checkout.ts',{'./state':state,'./store':store,'./checkout-receipt':checkoutReceipt,'./checkout-provider':checkoutProvider,'./checkout-store':checkoutStore});
+const coordinator=load('src/lib/account-lifecycle/checkout.ts',{'./state':state,'./store':store,'./checkout-receipt':checkoutReceipt,'./checkout-urls':checkoutUrls,'./checkout-provider':checkoutProvider,'./checkout-store':checkoutStore});
 const epoch=crypto.randomUUID(),expiry=Math.floor(Date.now()/1000)+2400;
 async function reset(){await baseReset();await db.systemSetting.create({data:{key:checkoutReceipt.checkoutKeys.cutover('test'),value:JSON.stringify({version:1,mode:'test',epoch,coverage:'old_ingress_stopped_and_workers_reconciled',evidenceDigest:digest})}})}
 const request=(overrides={})=>({cutoverEpoch:epoch,identity:identity('checkout',target,crypto.randomUUID(),{kind:'user',id:target}),mode:'test',source:'generic',organizationId:null,customerMode:'implicit',customerId:null,terms:{priceId:'price_synthetic',planId:'pro',serviceId:'synthetic',trialDays:0,successUrl:'https://example.invalid/success',cancelUrl:'https://example.invalid/cancel',email:target+'@example.invalid',name:'Synthetic',expiresAt:expiry},...overrides});
@@ -412,5 +413,180 @@ await check('B1 different payload during a new provider write cannot join or rep
  assert.equal(p.counts.checkoutCreate,1);assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(second.identity.operationId)),null);
  release.resolve();await creating;
 });
-console.log(JSON.stringify({executed:cases.length,contractPassed:cases.length,classification:'R2_B1_INTERNAL_INTEROP_ONLY',scope:'Actual internal coordinator/core and isolated Prisma transactions with synthetic provider. Legacy/ordinary terminal interop is not connected to either HTTP route. No B2/B3, R2-C, R3, unsafe2 closure, operational old-worker drain or real provider proof.',cases,providerIO:'synthetic only',operationalCutover:'fixture-seeded evidence only, not production drain'},null,2));
+// B2a: actual route -> shared HTTP bridge -> coordinator/store -> synthetic Stripe SDK transport.
+const b2env={STRIPE_SECRET_KEY:'sk_test_synthetic',NEXT_PUBLIC_APP_URL:'https://example.invalid',NEXTAUTH_URL:'https://example.invalid'};
+const b2process={env:b2env};
+const b2sdkState={customers:new Map(),sessions:new Map(),customerWrites:0,checkoutWrites:0,checkoutReads:0,customerReads:0,incomplete:false,beforeCustomerWrite:null,beforeCheckoutRead:null,reset(){this.customers.clear();this.sessions.clear();this.customerWrites=0;this.checkoutWrites=0;this.checkoutReads=0;this.customerReads=0;this.incomplete=false;this.beforeCustomerWrite=null;this.beforeCheckoutRead=null}};
+const b2sdk={
+ customers:{
+  create:async(params,options)=>{assert(options.idempotencyKey);if(b2sdkState.beforeCustomerWrite)await b2sdkState.beforeCustomerWrite();const id='cus_b2_'+(++b2sdkState.customerWrites),raw={id,livemode:false,email:params.email,name:params.name,metadata:params.metadata};b2sdkState.customers.set(id,raw);return raw},
+  retrieve:async id=>{b2sdkState.customerReads++;const raw=b2sdkState.customers.get(id);assert(raw);return raw},
+ },
+ checkout:{sessions:{
+  create:async(params,options)=>{assert(options.idempotencyKey);const id='cs_b2_'+(++b2sdkState.checkoutWrites),raw={id,livemode:false,mode:params.mode,status:'open',client_reference_id:params.client_reference_id,metadata:params.metadata,customer:params.customer||null,customer_email:params.customer_email||null,subscription:null,url:'https://checkout.example.invalid/'+id,success_url:params.success_url,cancel_url:params.cancel_url,expires_at:params.expires_at,line_items:{data:[{quantity:1,price:{id:params.line_items[0].price}}],has_more:b2sdkState.incomplete}};b2sdkState.sessions.set(id,raw);return raw},
+  retrieve:async id=>{b2sdkState.checkoutReads++;if(b2sdkState.beforeCheckoutRead)await b2sdkState.beforeCheckoutRead();const raw=b2sdkState.sessions.get(id);assert(raw);return raw},
+ }}
+};
+const b2prices=new Proxy({},{get:()=>new Proxy({},{get:()=>({monthly:'price_synthetic',yearly:'price_synthetic'})})});
+const b2stripeLib={stripe:b2sdk,STRIPE_PRICE_IDS:b2prices,findActiveLikeSubscriptions:async()=>[]};
+const b2sdkProvider=load('src/lib/account-lifecycle/checkout-stripe-provider.ts',{'server-only':{},'./state':state},{process:b2process});
+const b2http=load('src/lib/account-lifecycle/checkout-http.ts',{'server-only':{},'./state':state,'./checkout-receipt':checkoutReceipt,'./checkout':coordinator,'./checkout-store':checkoutStore,'./checkout-provider':checkoutProvider,'./checkout-stripe-provider':b2sdkProvider,'@/lib/stripe':b2stripeLib,'@/lib/prisma':{prisma:db}},{process:b2process});
+let b2session={user:{id:target,email:target+'@example.invalid',name:'Synthetic'}},b2hrContext=null;
+const b2next={NextResponse:{json:(body,options={})=>Response.json(body,options)}};
+const b2routeMocks={'next/server':b2next,'next-auth':{getServerSession:async()=>b2session},'@/lib/auth':{authOptions:{}},'@/lib/stripe':b2stripeLib,'@/lib/prisma':{prisma:db},'@/lib/account-lifecycle/state':state,'@/lib/account-lifecycle/checkout-urls':checkoutUrls,'@/lib/account-lifecycle/checkout-http':b2http,'@/lib/account-lifecycle/checkout-stripe-provider':b2sdkProvider};
+const b2organizationSelection=load('src/lib/hr/organization-selection.ts');
+const b2generic=load('src/app/api/stripe/checkout/route.ts',{...b2routeMocks,'@/lib/unified-plan':{UNIFIED_TRIAL_DAYS:30},'@/lib/trial':{isTrialEligible:async()=>false},'@/lib/hr/organization-selection':b2organizationSelection},{process:b2process});
+const b2hr=load('src/app/api/hr/billing/checkout/route.ts',{...b2routeMocks,'@/lib/hr/access':{getHrContext:async()=>b2hrContext},'@/lib/hr/types':{HrMemberRole:{OWNER:'OWNER'}},'@/lib/hr/audit':{logAudit:async()=>{}}},{process:b2process});
+const b2post=async(route,body,headers={})=>{const response=await route.POST(new Request('https://example.invalid/api/checkout',{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(body)}));return{response,body:await response.json()}};
+const b2start=id=>({action:'start',operationId:id,planId:'banner-pro',billingPeriod:'monthly',serviceId:'banner',returnTo:'/banner'});
+const b2hrStart=id=>({action:'start',operationId:id,plan:'pro',interval:'monthly'});
+const b2reset=()=>{b2sdkState.reset();b2session={user:{id:target,email:target+'@example.invalid',name:'Synthetic'}};b2hrContext=null;b2env.STRIPE_SECRET_KEY='sk_test_synthetic'};
+await check('B2a generic actual route stores private v2 recipe and returns only exact ready URL',async()=>{
+ b2reset();const id=crypto.randomUUID(),started=await b2post(b2generic,b2start(id));assert.equal(started.response.status,200);assert.equal(started.response.headers.get('cache-control'),'private, no-store');assert.equal(started.response.headers.get('vary'),'Cookie');assert.equal(started.body.operationId,id);assert.equal(started.body.actorId,target);assert.match(started.body.url,/^https:\/\/checkout\.example\.invalid\//);
+ const row=await keyRow(checkoutReceipt.checkoutKeys.plan(id)),plan=checkoutReceipt.parseCheckoutPlan(row.value);assert.equal(plan.version,2);assert.equal(plan.recovery.origin,'https://example.invalid');assert.equal(plan.recovery.returnPath,'/banner');assert.equal(plan.trialDays,0);assert(!row.value.includes(target+'@example.invalid'));assert(!row.value.includes('Synthetic'));assert(!row.value.includes(started.body.url));
+ const session=b2sdkState.sessions.get(started.body.sessionId);assert.equal(session.success_url,'https://example.invalid/banner?success=true&plan=pro&session_id={CHECKOUT_SESSION_ID}');assert.equal(session.cancel_url,'https://example.invalid/banner?payment=cancelled');
+ const before=b2sdkState.checkoutWrites,status=await b2post(b2generic,{action:'status',operationId:id}),ready=await b2post(b2generic,{action:'ready',operationId:id});assert.equal(status.body.phase,'completed');assert.equal(status.body.actorId,target);assert.equal(ready.body.actorId,target);assert.equal(ready.body.sessionId,started.body.sessionId);assert.equal(ready.body.id,undefined);assert.equal(ready.body.url,started.body.url);assert.equal(b2sdkState.checkoutWrites,before)
+});
+await check('B2a generic same intent with distinct UUID converges to one current operation',async()=>{
+ b2reset();const first=crypto.randomUUID(),second=crypto.randomUUID();const initial=await b2post(b2generic,b2start(first));assert.equal(initial.response.status,200);assert.equal(initial.body.operationId,first);const again=await b2post(b2generic,b2start(second));assert.equal(again.response.status,200);assert.equal(again.body.operationId,first);assert.equal(again.body.sessionId,'cs_b2_1');assert.equal(b2sdkState.checkoutWrites,1);assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(second)),null)
+});
+await check('B2a missing handle abort tombstones UUID and prevents late start',async()=>{
+ b2reset();const id=crypto.randomUUID();const missing=await b2post(b2generic,{action:'status',operationId:id});assert.equal(missing.body.phase,'missing');assert.equal(missing.body.actorId,target);const aborted=await b2post(b2generic,{action:'abort',operationId:id});assert.equal(aborted.body.phase,'aborted');assert.equal(aborted.body.actorId,target);const late=await b2post(b2generic,b2start(id));assert.notEqual(late.response.status,200);assert.equal(b2sdkState.checkoutWrites,0)
+});
+await check('B2a HR admission reserves before first Customer write and joins provider fact',async()=>{
+ b2reset();const {org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});b2hrContext={userId:target,organizationId:org.id,role:'OWNER'};const id=crypto.randomUUID();b2sdkState.beforeCustomerWrite=async()=>{assert(await keyRow(checkoutReceipt.checkoutKeys.plan(id)));assert.equal((await db.user.findUnique({where:{id:target},select:{stripeCustomerId:true}})).stripeCustomerId,null)};
+ const started=await b2post(b2hr,b2hrStart(id));assert.equal(started.response.status,200);assert.equal(started.body.success,true);assert.equal(started.body.actorId,target);const plan=checkoutReceipt.parseCheckoutPlan((await keyRow(checkoutReceipt.checkoutKeys.plan(id))).value);assert.equal(plan.source,'hr');assert.equal(plan.organizationId,org.id);assert.equal(plan.customerMode,'create');assert.equal(plan.trialDays,0);assert.equal(b2sdkState.customerWrites,1);assert.equal(b2sdkState.checkoutWrites,1);assert.equal((await db.user.findUnique({where:{id:target},select:{stripeCustomerId:true}})).stripeCustomerId,'cus_b2_1');
+ const session=b2sdkState.sessions.get(started.body.sessionId);assert.equal(session.success_url,'https://example.invalid/hr/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}');assert.equal(session.cancel_url,'https://example.invalid/hr/settings/billing')
+});
+await check('B2a owner downgrade blocks ready before provider retrieve',async()=>{
+ b2reset();const {org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});b2hrContext={userId:target,organizationId:org.id,role:'OWNER'};const id=crypto.randomUUID();assert.equal((await b2post(b2hr,b2hrStart(id))).response.status,200);await db.hrOrganizationMember.update({where:{id:chief.id},data:{role:'MEMBER'}});const reads=b2sdkState.checkoutReads,ready=await b2post(b2hr,{action:'ready',operationId:id});assert.equal(ready.response.status,403);assert.equal(b2sdkState.checkoutReads,reads)
+});
+await check('B2a actual routes reject mismatched session identity before operation and provider reads',async()=>{
+ b2reset();b2session={user:{id:target,email:second+'@example.invalid'}};const id=crypto.randomUUID(),before=await stateRows();for(const route of [b2generic,b2hr]){const result=await b2post(route,{action:'status',operationId:id});assert.equal(result.response.status,403);assert.equal(result.body.code,'CHECKOUT_ACTOR_MISMATCH')}assert.deepEqual(await stateRows(),before);assert.equal(b2sdkState.checkoutReads,0)
+});
+await check('B2a incomplete SDK line items become unknown and never retry provider write',async()=>{
+ b2reset();b2sdkState.incomplete=true;const id=crypto.randomUUID(),started=await b2post(b2generic,b2start(id));assert.notEqual(started.response.status,200);const status=await b2post(b2generic,{action:'status',operationId:id});assert.equal(status.body.phase,'executing');assert.equal(status.body.dispatched,true);assert.equal(b2sdkState.checkoutWrites,1);const resume=await b2post(b2generic,{action:'resume',operationId:id});assert.notEqual(resume.response.status,200);assert.equal(b2sdkState.checkoutWrites,1)
+});
+await check('B2a both actual routes fail private for missing actor and unavailable User',async()=>{
+ b2reset();const id=crypto.randomUUID();for(const route of [b2generic,b2hr]){
+  b2session=null;const unauth=await b2post(route,{action:'status',operationId:id});assert.equal(unauth.response.status,401);assert.equal(unauth.response.headers.get('cache-control'),'private, no-store');assert.equal(unauth.response.headers.get('vary'),'Cookie');
+  b2session={user:{id:'missing_actor'}};const missing=await b2post(route,{action:'status',operationId:id});assert.equal(missing.response.status,404);assert.equal(missing.response.headers.get('cache-control'),'private, no-store');
+ }assert.equal(b2sdkState.checkoutReads,0);assert.equal(b2sdkState.checkoutWrites,0)
+});
+await check('B2a strict action and unknown provider mode fail before mutation',async()=>{
+ b2reset();const id=crypto.randomUUID(),before=await stateRows();const malformed=await b2post(b2generic,{...b2start(id),extra:'ignored'});assert.equal(malformed.response.status,400);
+ b2env.STRIPE_SECRET_KEY='not-a-stripe-secret';const mode=await b2post(b2generic,b2start(id));assert.equal(mode.response.status,503);assert.equal(mode.body.code,'CHECKOUT_STRIPE_MODE_UNKNOWN');assert.deepEqual(await stateRows(),before);assert.equal(b2sdkState.checkoutWrites,0)
+});
+await check('B2a unconfigured origin never trusts request Host for either route',async()=>{
+ b2reset();const savedPublic=b2env.NEXT_PUBLIC_APP_URL,savedAuth=b2env.NEXTAUTH_URL;
+ delete b2env.NEXT_PUBLIC_APP_URL;delete b2env.NEXTAUTH_URL;
+ try{
+  const {org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});b2hrContext={userId:target,organizationId:org.id,role:'OWNER'};
+  const before=await stateRows();
+  for(const [route,body] of [[b2generic,b2start(crypto.randomUUID())],[b2hr,b2hrStart(crypto.randomUUID())]]){
+   const response=await route.POST(new Request('https://host-spoof.example.invalid/api/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));
+   assert.equal(response.status,503);assert.equal((await response.json()).code,'CHECKOUT_ORIGIN_UNAVAILABLE');
+  }
+  assert.deepEqual(await stateRows(),before);assert.equal(b2sdkState.customerWrites,0);assert.equal(b2sdkState.checkoutWrites,0);
+ }finally{b2env.NEXT_PUBLIC_APP_URL=savedPublic;b2env.NEXTAUTH_URL=savedAuth}
+});
+await check('B2a missing cutover evidence refuses Checkout before provider write',async()=>{
+ b2reset();const id=crypto.randomUUID(),key=checkoutReceipt.checkoutKeys.cutover('test');await db.systemSetting.delete({where:{key}});const before=await stateRows(),result=await b2post(b2generic,b2start(id));assert.equal(result.response.status,503);assert.equal(result.body.code,'CHECKOUT_CUTOVER_NOT_VERIFIED');assert.deepEqual(await stateRows(),before);assert.equal(b2sdkState.checkoutWrites,0)
+});
+await check('B2a generic HR retains generic source and selected organization OWNER seal',async()=>{
+ b2reset();const {org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});const id=crypto.randomUUID(),headers={'X-HR-Selected-Organization':org.id,'X-HR-Selected-Actor':target,'X-HR-Organization-Id':org.id};const started=await b2post(b2generic,{...b2start(id),serviceId:'hr',returnTo:'/hr'},headers);assert.equal(started.response.status,200);
+ const plan=checkoutReceipt.parseCheckoutPlan((await keyRow(checkoutReceipt.checkoutKeys.plan(id))).value);assert.equal(plan.source,'generic');assert.equal(plan.organizationId,org.id);assert.equal(plan.customerMode,'implicit');assert.equal(plan.recovery.recipe,'generic');
+ await db.hrOrganizationMember.update({where:{id:chief.id},data:{role:'MEMBER'}});const reads=b2sdkState.checkoutReads,ready=await b2post(b2generic,{action:'ready',operationId:id},headers);assert.equal(ready.response.status,403);assert.equal(b2sdkState.checkoutReads,reads)
+});
+await check('B2a generic HR without selected OWNER refuses reservation and provider write',async()=>{
+ b2reset();const id=crypto.randomUUID(),before=await stateRows(),result=await b2post(b2generic,{...b2start(id),serviceId:'hr',returnTo:'/hr'});assert.equal(result.response.status,403);assert.deepEqual(await stateRows(),before);assert.equal(b2sdkState.checkoutWrites,0)
+});
+await check('B2a generic HR handle requires the same currently selected organization',async()=>{
+ b2reset();const a=await seedOrg('hr'),b=await seedOrg('hr');for(const chief of [a.chief,b.chief])await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});
+ const id=crypto.randomUUID(),aHeaders={'X-HR-Selected-Organization':a.org.id,'X-HR-Selected-Actor':target},bHeaders={'X-HR-Selected-Organization':b.org.id,'X-HR-Selected-Actor':target};
+ const started=await b2post(b2generic,{...b2start(id),serviceId:'hr',returnTo:'/hr'},aHeaders);assert.equal(started.response.status,200);
+ const reads=b2sdkState.checkoutReads,writes=b2sdkState.checkoutWrites;for(const headers of [{},bHeaders,{'X-HR-Selected-Organization':a.org.id,'X-HR-Selected-Actor':'wrong'}]){
+  const ready=await b2post(b2generic,{action:'ready',operationId:id},headers);assert.equal(ready.response.status,403);assert.equal(ready.body.code,'HR_BILLING_OWNER_REQUIRED');assert.equal(ready.body.url,undefined);
+ }assert.equal(b2sdkState.checkoutReads,reads);assert.equal(b2sdkState.checkoutWrites,writes);
+ const ready=await b2post(b2generic,{action:'ready',operationId:id},aHeaders);assert.equal(ready.response.status,200);assert.equal(ready.body.actorId,target);assert.equal(ready.body.url,started.body.url)
+});
+await check('B2a dedicated HR handle binds current selected organization and endpoint source',async()=>{
+ b2reset();const a=await seedOrg('hr'),b=await seedOrg('hr');for(const chief of [a.chief,b.chief])await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});
+ b2hrContext={userId:target,organizationId:a.org.id,role:'OWNER'};const id=crypto.randomUUID(),started=await b2post(b2hr,b2hrStart(id));assert.equal(started.response.status,200);
+ const reads=b2sdkState.checkoutReads,writes=b2sdkState.checkoutWrites;b2hrContext={userId:target,organizationId:b.org.id,role:'OWNER'};
+ for(const action of ['status','resume','ready','abort']){const denied=await b2post(b2hr,{action,operationId:id});assert.equal(denied.response.status,403);assert.equal(denied.body.code,'HR_BILLING_OWNER_REQUIRED');assert.equal(denied.body.url,undefined)}
+ assert.equal(b2sdkState.checkoutReads,reads);assert.equal(b2sdkState.checkoutWrites,writes);
+ b2hrContext={userId:target,organizationId:a.org.id,role:'OWNER'};const ready=await b2post(b2hr,{action:'ready',operationId:id});assert.equal(ready.response.status,200);assert.equal(ready.body.actorId,target);assert.equal(ready.body.sessionId,started.body.sessionId);
+ const generic=await b2post(b2generic,{action:'ready',operationId:id},{'X-HR-Selected-Organization':a.org.id,'X-HR-Selected-Actor':target});assert.equal(generic.response.status,409);assert.equal(generic.body.code,'CHECKOUT_IDENTITY_CHANGED');
+ const genericId=crypto.randomUUID(),genericStart=await b2post(b2generic,b2start(genericId));assert.equal(genericStart.response.status,200);const cross=await b2post(b2hr,{action:'ready',operationId:genericId});assert.equal(cross.response.status,409);assert.equal(cross.body.code,'CHECKOUT_IDENTITY_CHANGED')
+});
+await check('B2a generic HR OWNER downgrade during ready provider read returns no URL',async()=>{
+ b2reset();const {org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});
+ const headers={'X-HR-Selected-Organization':org.id,'X-HR-Selected-Actor':target},id=crypto.randomUUID();const started=await b2post(b2generic,{...b2start(id),serviceId:'hr',returnTo:'/hr'},headers);assert.equal(started.response.status,200);
+ const writes=b2sdkState.checkoutWrites;b2sdkState.beforeCheckoutRead=async()=>{b2sdkState.beforeCheckoutRead=null;await db.hrOrganizationMember.update({where:{id:chief.id},data:{role:'MEMBER'}})};
+ const ready=await b2post(b2generic,{action:'ready',operationId:id},headers);assert.equal(ready.response.status,403);assert.equal(ready.body.code,'HR_BILLING_OWNER_REQUIRED');assert.equal(ready.body.url,undefined);assert.equal(b2sdkState.checkoutWrites,writes)
+});
+await check('B2a dedicated HR new UUID after Customer creation cannot reinterpret old create intent',async()=>{
+ b2reset();const {org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});b2hrContext={userId:target,organizationId:org.id,role:'OWNER'};
+ const first=crypto.randomUUID(),started=await b2post(b2hr,b2hrStart(first));assert.equal(started.response.status,200);const customerWrites=b2sdkState.customerWrites,checkoutWrites=b2sdkState.checkoutWrites;
+ const second=crypto.randomUUID(),again=await b2post(b2hr,b2hrStart(second));assert.equal(again.response.status,409);assert.equal(again.body.url,undefined);assert.equal(b2sdkState.customerWrites,customerWrites);assert.equal(b2sdkState.checkoutWrites,checkoutWrites);assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(second)),null);
+ const ready=await b2post(b2hr,{action:'ready',operationId:first});assert.equal(ready.response.status,200);assert.equal(ready.body.actorId,target);assert.equal(ready.body.operationId,first);assert.equal(ready.body.url,started.body.url)
+});
+await check('B2a reserved exact handle resumes once and status never writes',async()=>{
+ b2reset();const id=crypto.randomUUID(),recovery={version:1,recipe:'generic',origin:'https://example.invalid',returnPath:'/banner'},urls=checkoutUrls.checkoutUrls(recovery,'banner-pro','banner');
+ const r={cutoverEpoch:epoch,identity:b2http.checkoutIdentity(target,id),mode:'test',source:'generic',organizationId:null,customerMode:'implicit',customerId:null,recovery,terms:{priceId:'price_synthetic',planId:'banner-pro',serviceId:'banner',trialDays:0,successUrl:urls.successUrl,cancelUrl:urls.cancelUrl,email:target+'@example.invalid',name:'',expiresAt:Math.floor(Date.now()/1000)+2400}};
+ const admitted=await checkoutStore.admitCheckoutLifecycle(db,r);assert(admitted.claim);const observed=await b2post(b2generic,{action:'status',operationId:id});assert.equal(observed.body.phase,'reserved');assert.equal(b2sdkState.checkoutWrites,0);
+ const resumed=await b2post(b2generic,{action:'resume',operationId:id});assert.equal(resumed.response.status,200);assert.match(resumed.body.url,/^https:\/\/checkout\.example\.invalid\//);assert.equal(b2sdkState.checkoutWrites,1);
+ const again=await b2post(b2generic,{action:'resume',operationId:id});assert.notEqual(again.response.status,200);assert.equal(b2sdkState.checkoutWrites,1)
+});
+await check('B2a reserved Customer-create handle refuses changed Stripe transport mode before any I/O',async()=>{
+ b2reset();const {org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});b2hrContext={userId:target,organizationId:org.id,role:'OWNER'};
+ const id=crypto.randomUUID(),recovery={version:1,recipe:'hr',origin:'https://example.invalid',returnPath:null},urls=checkoutUrls.checkoutUrls(recovery,'hr-pro','hr');
+ const r={cutoverEpoch:epoch,identity:b2http.checkoutIdentity(target,id),mode:'test',source:'hr',organizationId:org.id,customerMode:'create',customerId:null,recovery,terms:{priceId:'price_synthetic',planId:'hr-pro',serviceId:'hr',trialDays:0,successUrl:urls.successUrl,cancelUrl:urls.cancelUrl,email:target+'@example.invalid',name:'',expiresAt:Math.floor(Date.now()/1000)+2400}};
+ assert((await checkoutStore.admitCheckoutLifecycle(db,r)).claim);b2env.STRIPE_SECRET_KEY='sk_live_synthetic';
+ try{for(const action of ['resume','ready']){const response=await b2post(b2hr,{action,operationId:id});assert.equal(response.response.status,409);assert.equal(response.body.code,'CHECKOUT_STRIPE_MODE_MISMATCH');assert.equal(response.body.url,undefined)}
+  assert.equal(b2sdkState.customerReads,0);assert.equal(b2sdkState.customerWrites,0);assert.equal(b2sdkState.checkoutReads,0);assert.equal(b2sdkState.checkoutWrites,0)
+ }finally{b2env.STRIPE_SECRET_KEY='sk_test_synthetic'}
+ const resumed=await b2post(b2hr,{action:'resume',operationId:id});assert.equal(resumed.response.status,200);assert.equal(resumed.body.actorId,target);assert.match(resumed.body.url,/^https:\/\/checkout\.example\.invalid\//)
+});
+await check('B2a reserved handle refuses changed live User name without write',async()=>{
+ b2reset();const id=crypto.randomUUID(),recovery={version:1,recipe:'generic',origin:'https://example.invalid',returnPath:'/banner'},urls=checkoutUrls.checkoutUrls(recovery,'banner-pro','banner');
+ const r={cutoverEpoch:epoch,identity:b2http.checkoutIdentity(target,id),mode:'test',source:'generic',organizationId:null,customerMode:'implicit',customerId:null,recovery,terms:{priceId:'price_synthetic',planId:'banner-pro',serviceId:'banner',trialDays:0,successUrl:urls.successUrl,cancelUrl:urls.cancelUrl,email:target+'@example.invalid',name:'',expiresAt:Math.floor(Date.now()/1000)+2400}};
+ await checkoutStore.admitCheckoutLifecycle(db,r);await db.user.update({where:{id:target},data:{name:'Changed'}});const result=await b2post(b2generic,{action:'resume',operationId:id});assert.equal(result.response.status,409);assert.equal(b2sdkState.checkoutWrites,0)
+});
+await check('B2a expired ordinary starts a new explicit UUID and preserves old resources',async()=>{
+ b2reset();const prior=crypto.randomUUID(),started=await b2post(b2generic,b2start(prior));assert.equal(started.response.status,200);const oldSession=b2sdkState.sessions.get(started.body.sessionId);oldSession.status='expired';oldSession.url=null;
+ const next=crypto.randomUUID(),advanced=await b2post(b2generic,{...b2start(next),action:'start_after_terminal',previousOperationId:prior});assert.equal(advanced.response.status,200);assert.equal(advanced.body.operationId,next);assert.equal(b2sdkState.checkoutWrites,2);
+ const secondCaller=await b2post(b2generic,{...b2start(crypto.randomUUID()),action:'start_after_terminal',previousOperationId:prior});assert.equal(secondCaller.response.status,200);assert.equal(secondCaller.body.operationId,next);assert.equal(secondCaller.body.sessionId,advanced.body.sessionId);assert.equal(b2sdkState.checkoutWrites,2);
+ const index=JSON.parse((await keyRow(checkoutReceipt.checkoutKeys.index(state.lifecycleSubject(target)))).value);assert.equal(index.currentOperationId,next);assert(index.resources.some(item=>item.operationId===prior&&item.id===started.body.sessionId));assert(index.resources.some(item=>item.operationId===next&&item.id===advanced.body.sessionId))
+});
+await check('B2a completed ordinary rejects a second purchase UUID',async()=>{
+ b2reset();const prior=crypto.randomUUID(),started=await b2post(b2generic,b2start(prior));assert.equal(started.response.status,200);const oldSession=b2sdkState.sessions.get(started.body.sessionId);oldSession.status='complete';oldSession.url=null;oldSession.subscription='sub_b2_paid';
+ const next=crypto.randomUUID(),advanced=await b2post(b2generic,{...b2start(next),action:'start_after_terminal',previousOperationId:prior});assert.equal(advanced.response.status,409);assert.equal(b2sdkState.checkoutWrites,1);assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(next)),null)
+});
+for(const fault of ['foreign-email','foreign-owner'])await check('B2a HR reused Customer '+fault+' blocks Checkout write',async()=>{
+ b2reset();const {org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});b2hrContext={userId:target,organizationId:org.id,role:'OWNER'};
+ const customerId='cus_b2_existing';await db.user.update({where:{id:target},data:{stripeCustomerId:customerId}});b2sdkState.customers.set(customerId,{id:customerId,livemode:false,email:fault==='foreign-email'?'other@example.invalid':target+'@example.invalid',metadata:{userId:fault==='foreign-owner'?second:target}});
+ const started=await b2post(b2hr,b2hrStart(crypto.randomUUID()));assert.equal(started.response.status,409);assert.equal(b2sdkState.customerReads,1);assert.equal(b2sdkState.customerWrites,0);assert.equal(b2sdkState.checkoutWrites,0)
+});
+await check('B2a reused Customer reference change blocks handle ready before provider read',async()=>{
+ b2reset();const {org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});b2hrContext={userId:target,organizationId:org.id,role:'OWNER'};
+ const customerId='cus_b2_original';await db.user.update({where:{id:target},data:{stripeCustomerId:customerId}});b2sdkState.customers.set(customerId,{id:customerId,livemode:false,email:target+'@example.invalid',metadata:{userId:target}});
+ const id=crypto.randomUUID(),started=await b2post(b2hr,b2hrStart(id));assert.equal(started.response.status,200);await db.user.update({where:{id:target},data:{stripeCustomerId:'cus_b2_other'}});
+ const reads=b2sdkState.checkoutReads,ready=await b2post(b2hr,{action:'ready',operationId:id});assert.equal(ready.response.status,409);assert.equal(ready.body.code,'CHECKOUT_CUSTOMER_REFERENCE_CONFLICT');assert.equal(ready.body.url,undefined);assert.equal(b2sdkState.checkoutReads,reads);
+ const status=await b2post(b2hr,{action:'status',operationId:id});assert.equal(status.response.status,409);assert.equal(status.body.code,'CHECKOUT_CUSTOMER_REFERENCE_CONFLICT')
+});
+await check('B2a reused Customer reference change during provider read blocks ready URL',async()=>{
+ b2reset();const {org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});b2hrContext={userId:target,organizationId:org.id,role:'OWNER'};
+ const customerId='cus_b2_original';await db.user.update({where:{id:target},data:{stripeCustomerId:customerId}});b2sdkState.customers.set(customerId,{id:customerId,livemode:false,email:target+'@example.invalid',metadata:{userId:target}});
+ const id=crypto.randomUUID(),started=await b2post(b2hr,b2hrStart(id));assert.equal(started.response.status,200);const writes=b2sdkState.checkoutWrites;
+ b2sdkState.beforeCheckoutRead=async()=>{b2sdkState.beforeCheckoutRead=null;await db.user.update({where:{id:target},data:{stripeCustomerId:'cus_b2_other'}})};
+ const ready=await b2post(b2hr,{action:'ready',operationId:id});assert.equal(ready.response.status,409);assert.equal(ready.body.code,'CHECKOUT_CUSTOMER_REFERENCE_CONFLICT');assert.equal(ready.body.url,undefined);assert.equal(b2sdkState.checkoutWrites,writes)
+});
+await check('B2a corrupted saved plan refuses ready before provider retrieve',async()=>{
+ b2reset();const id=crypto.randomUUID(),started=await b2post(b2generic,b2start(id));assert.equal(started.response.status,200);const key=checkoutReceipt.checkoutKeys.plan(id),row=await keyRow(key),plan=JSON.parse(row.value);
+ plan.inputDigest='f'.repeat(64);plan.customerDigest=checkoutReceipt.checkoutDigest([plan.inputDigest,'customer']);plan.checkoutDigest=checkoutReceipt.checkoutPayloadDigest(plan,plan.customerId);
+ await db.systemSetting.update({where:{key},data:{value:JSON.stringify(plan)}});const reads=b2sdkState.checkoutReads,ready=await b2post(b2generic,{action:'ready',operationId:id});assert.equal(ready.response.status,409);assert.equal(b2sdkState.checkoutReads,reads)
+});
+console.log(JSON.stringify({executed:cases.length,contractPassed:cases.length,classification:'R2_B2A_SYNTHETIC_HTTP_ONLY',scope:'Actual generic and HR POST routes through coordinator/core and isolated Prisma transactions with synthetic Stripe SDK transport. B2b UI, B3, R2-C, R3, unsafe2 closure, operational old-worker drain and real provider proof remain outstanding.',cases,providerIO:'synthetic only',operationalCutover:'fixture-seeded evidence only, not production drain'},null,2));
 }finally{await db.$disconnect()}})().catch(error=>{console.error(error);process.exitCode=1});

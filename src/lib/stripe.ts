@@ -793,24 +793,10 @@ export async function getOrCreateCustomer({
   name?: string
   userId: string
 }) {
-  // 既存のカスタマーを検索
-  const existingCustomers = await stripe.customers.list({
-    email,
-    limit: 1,
-  })
-
-  if (existingCustomers.data.length > 0) {
-    return existingCustomers.data[0]
-  }
-
-  // 新規作成
-  return await stripe.customers.create({
-    email,
-    name,
-    metadata: {
-      userId,
-    },
-  })
+  // No caller currently uses this legacy helper. A future checkout must reserve
+  // its operation and dispatch token before any Customer lookup or write.
+  void email; void name; void userId
+  throw new Error('UNGUARDED_CUSTOMER_CREATE_DISABLED')
 }
 
 // ========================================
