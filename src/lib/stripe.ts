@@ -713,15 +713,13 @@ export async function getSubscription(subscriptionId: string) {
 }
 
 export async function cancelSubscription(subscriptionId: string) {
-  return await stripe.subscriptions.update(subscriptionId, {
-    cancel_at_period_end: true,
-  })
+  void subscriptionId
+  throw new Error('SUBSCRIPTION_OPERATION_REQUIRED')
 }
 
 export async function resumeSubscription(subscriptionId: string) {
-  return await stripe.subscriptions.update(subscriptionId, {
-    cancel_at_period_end: false,
-  })
+  void subscriptionId
+  throw new Error('SUBSCRIPTION_OPERATION_REQUIRED')
 }
 
 // ========================================

@@ -11,6 +11,7 @@ import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import SeoCancelScheduleNotice from '@/components/SeoCancelScheduleNotice'
 import { useSubscriptionManagement } from '@/hooks/useSubscriptionManagement'
+import { SubscriptionOperationNotice } from '@/components/SubscriptionOperationNotice'
 
 function formatRemainingDays(unixSeconds: number) {
   const end = unixSeconds * 1000
@@ -31,7 +32,6 @@ export default function SeoPlanPage() {
   const management = useSubscriptionManagement('seo')
   const sub = management.data?.hasSubscription ? management.data : null
   const busy = management.busy
-  const error = management.message
   const [cancelConfirmKey, setCancelConfirmKey] = useState<string | null>(null)
   const [resumeConfirmKey, setResumeConfirmKey] = useState<string | null>(null)
   const cancelConfirm = cancelConfirmKey === management.scopeKey
@@ -185,12 +185,7 @@ export default function SeoPlanPage() {
                   </div>
                 </div>
 
-                {error && (
-                  <div className="mt-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold p-4">
-                    {error}
-                    <button type="button" disabled={busy} onClick={() => void management.recheck()} className="block mt-2 underline">契約状態を再確認</button>
-                  </div>
-                )}
+                <SubscriptionOperationNotice management={management} />
               </div>
 
               {/* 料金プラン（無料 / プロ） - 統一プラン */}

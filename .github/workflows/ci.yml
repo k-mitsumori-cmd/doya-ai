@@ -77,6 +77,19 @@ jobs:
           path: ${{ runner.temp }}/checkout-lifecycle-postgres/
           if-no-files-found: ignore
 
+      - name: Subscription operation lifecycle regression (private Unix socket)
+        env:
+          DOYA_SUBSCRIPTION_EVIDENCE_DIR: ${{ runner.temp }}/subscription-operation-postgres
+        run: python3 scripts/security-regression/verify-subscription-operation-postgres.py
+
+      - name: Preserve subscription operation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: subscription-operation-postgres
+          path: ${{ runner.temp }}/subscription-operation-postgres/
+          if-no-files-found: ignore
+
       - name: Tenjikai c3a generation and retirement regression (private Unix socket)
         env:
           DOYA_TENJIKAI_C3A_EVIDENCE_DIR: ${{ runner.temp }}/tenjikai-c3a-postgres

@@ -14,6 +14,7 @@ import { CheckoutButton } from '@/components/CheckoutButton'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { AccountSummaryCard } from '@/components/AccountSummaryCard'
 import { useSubscriptionManagement } from '@/hooks/useSubscriptionManagement'
+import { SubscriptionOperationNotice } from '@/components/SubscriptionOperationNotice'
 
 export default function SettingsPage() {
   // 新しい見た目（チェックリスト §5.1）では、枠の見出し・タブと重なる旧来の見出しの帯を出さない（h1 を1つにする。S-57）
@@ -71,7 +72,7 @@ export default function SettingsPage() {
   return (
     <DashboardLayout>
       <Toaster position="top-center" />
-      {management.message && <div role="status" className="p-4 text-slate-700 bg-slate-50"><p>{management.message}</p><button type="button" disabled={management.busy} onClick={() => void management.recheck()} className="mt-2 underline">契約状態を再確認</button></div>}
+      <SubscriptionOperationNotice management={management} />
       <div className={uiNext ? 'max-w-2xl mx-auto space-y-8 px-4 py-6 sm:px-8 sm:py-8' : 'max-w-2xl mx-auto space-y-8'}>
         <div>
           {uiNext ? <h2 className="text-2xl font-black text-slate-900">設定</h2> : <h1 className="text-2xl font-black text-slate-900">設定</h1>}
