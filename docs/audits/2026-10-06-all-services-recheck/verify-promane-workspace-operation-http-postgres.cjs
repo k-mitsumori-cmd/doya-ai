@@ -5,11 +5,13 @@ const fixture=base+'verify-adimage-operation-postgres.cjs';
 const prefix=fs.readFileSync(fixture,'utf8').split('async function makeBudget()')[0].replace("'AdImageFeedback']","'AdImageFeedback','PromaneWorkspace','PromaneMember','PromaneProject']");
 const {db,setupDb}=new Function('require','__dirname',prefix+'\nreturn {db,setupDb};')(createRequire(path.resolve(fixture)),path.dirname(path.resolve(fixture)));
 const operation=load(root+'workspace-operation.ts',{'node:crypto':crypto}),input=load(root+'workspace-input.ts');
+const lifecycleState=load('src/lib/account-lifecycle/state.ts',{'node:crypto':crypto});
+const lifecycleStore=load('src/lib/account-lifecycle/store.ts',{'node:crypto':crypto,'@prisma/client':{Prisma:require('@prisma/client').Prisma},'./state':lifecycleState});
 const limits=load('src/lib/promane/limits.ts',{'@/lib/prisma':{prisma:db},'@/lib/plan-utils':load('src/lib/plan-utils.ts')});
-const api=load(root+'workspace-mutations.ts',{'node:crypto':crypto,'@/lib/prisma':{prisma:db},'@/lib/promane/limits':limits,'./workspace-input':input,'./workspace-operation':operation});
+const api=load(root+'workspace-mutations.ts',{'node:crypto':crypto,'@/lib/prisma':{prisma:db},'@/lib/promane/limits':limits,'./workspace-input':input,'./workspace-operation':operation,'@/lib/account-lifecycle/store':lifecycleStore});
 
 let actor='owner',usage=[],usageFailure=false;
-const response=load(root+'workspace-response.ts',{'next/server':{NextResponse:Response},'./workspace-mutations':api,'./workspace-operation':operation});
+const response=load(root+'workspace-response.ts',{'next/server':{NextResponse:Response},'./workspace-mutations':api,'./workspace-operation':operation,'@/lib/account-lifecycle/state':lifecycleState});
 const common={'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>actor===null?null:{user:{id:actor}}},'@/lib/auth':{},'@/lib/promane/workspace-mutations':api,'@/lib/promane/workspace-response':response,'@/lib/service-usage':{recordServiceUsage:async entry=>{usage.push(entry);if(usageFailure)throw new Error('Synthetic telemetry failure')}}};
 const routes=Object.fromEntries(['create','[id]','recover'].map(n=>[n,load((process.env.DOYA_WORKSPACE_SOURCE_ROOT||'.')+'/src/app/api/promane/workspaces/'+n+'/route.ts',common)]));
 const op='10000000-0000-4000-8000-000000000001',op2='20000000-0000-4000-8000-000000000002';

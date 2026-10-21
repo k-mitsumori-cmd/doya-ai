@@ -98,11 +98,14 @@ export async function runPromaneWorkspaceOnce<T extends Row>(
 
 /** Read never writes. Missing-operation cancellation fences even a delayed original request. */
 export async function recoverPromaneWorkspaceOperation<T extends Row>(
-  tx: Store, scope: PromaneWorkspaceOperationScope, operation: string, find: (id: string) => Promise<T | null>, cancelIfMissing = false,
+  tx: Store, scope: PromaneWorkspaceOperationScope, operation: string, find: (id: string) => Promise<T | null>, cancelIfMissing: boolean,
+  authorizeCurrentTarget: () => Promise<void>, authorizeMissingCancel: () => Promise<void>,
 ): Promise<PromaneWorkspaceSaved<T> | PromaneWorkspaceRejection | { state: 'missing' | 'cancelled' | 'unavailable'; entry: null }> {
   const key = keyFor(scope, operation), existing = await locked(tx, key);
+  await authorizeCurrentTarget();
   if (!existing) {
     if (!cancelIfMissing) return { state: 'missing', entry: null };
+    await authorizeMissingCancel();
     await record(tx, key, { state: 'cancelled' });
     return { state: 'cancelled', entry: null };
   }

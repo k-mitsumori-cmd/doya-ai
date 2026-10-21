@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PromaneWorkspaceRequestError } from './workspace-mutations';
 import { PromaneWorkspaceOperationError } from './workspace-operation';
+import { LifecycleError } from '@/lib/account-lifecycle/state';
 
 type Outcome = { state: string; entry?: unknown; code?: string };
 export function promaneWorkspaceResponse(result: Outcome) {
@@ -11,6 +12,7 @@ export function promaneWorkspaceResponse(result: Outcome) {
 export function promaneWorkspaceFailure(error: unknown) {
   if (error instanceof PromaneWorkspaceRequestError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
   if (error instanceof PromaneWorkspaceOperationError) return NextResponse.json({ error: error.message, code: 'OPERATION_CONFLICT' }, { status: 409 });
+  if (error instanceof LifecycleError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
   console.error('[promane/workspaces] operation failed');
   return NextResponse.json({ error: '保存状態を確認できません。入力を保管し、保存状態を確認してください', code: 'UNKNOWN_OUTCOME' }, { status: 500 });
 }

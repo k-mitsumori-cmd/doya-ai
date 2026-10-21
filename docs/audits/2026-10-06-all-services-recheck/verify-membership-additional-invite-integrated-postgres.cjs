@@ -2,7 +2,7 @@ const fs=require('node:fs'),crypto=require('node:crypto'),assert=require('node:a
 const base='docs/audits/2026-10-06-all-services-recheck/';
 (async()=>{const socket=process.env.DOYA_SFA_AUTHORITY_PG_SOCKET,port=Number(process.env.DOYA_SFA_AUTHORITY_PG_PORT);assert.match(socket||'',/^\/tmp\/doya-sfa-authority-[a-f0-9]{8}\/socket$/);assert(port>1024&&port<65536);const db=new PrismaClient({datasources:{db:{url:`postgresql://doya_sfa@localhost:${port}/postgres?host=${encodeURIComponent(socket)}&schema=membership_roles&connection_limit=12`}}});try{const conn=await db.$queryRawUnsafe('SELECT inet_server_addr() AS address,current_user AS role');assert.equal(conn[0].address,null);assert.equal(conn[0].role,'doya_sfa');await db.$executeRawUnsafe('CREATE SCHEMA membership_roles');
   const quote=s=>'"'+s.replaceAll('"','""')+'"',sqlTypes={DateTime:'TIMESTAMP(3)',Int:'INTEGER',Float:'DOUBLE PRECISION',Boolean:'BOOLEAN',Json:'JSONB',BigInt:'BIGINT',Decimal:'DECIMAL',Bytes:'BYTEA'};
-  for(const name of ['User','AioOrganization','AioMember','SfaOrganization','SfaMember','ShodanOrganization','ShodanMember','QuoteOrganization','QuoteMember','MensetsuOrganization','MensetsuMember','AishodanOrganization','AishodanMember','HrOrganization','HrOrganizationMember','KintaiOrganization','KintaiMember','KintaiEmployee','PromaneWorkspace','PromaneMember','PromaneInvitation']){
+  for(const name of ['User','SystemSetting','AioOrganization','AioMember','SfaOrganization','SfaMember','ShodanOrganization','ShodanMember','QuoteOrganization','QuoteMember','MensetsuOrganization','MensetsuMember','AishodanOrganization','AishodanMember','HrOrganization','HrOrganizationMember','KintaiOrganization','KintaiMember','KintaiEmployee','PromaneWorkspace','PromaneMember','PromaneInvitation']){
     const m=Prisma.dmmf.datamodel.models.find(m=>m.name===name);
     const fields=m.fields.filter(f=>f.kind!=='object').map(f=>{
       const type=sqlTypes[f.type]||'TEXT';let def='';
@@ -37,7 +37,10 @@ for(const role of ['admin','member','guest','owner','__UNRECOGNIZED__','','const
  observations.push({service:'promane',role,status:r.success?200:r.response.status,memberCreated:r.success});cases.push('promane '+role);
 }
 
-const afile='src/lib/promane/auth.ts',auth=load(afile,{'next-auth':{getServerSession:async()=>({user:{id:'synthetic'}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db},'next/navigation':{redirect:()=>{throw Error('unexpected redirect')}},crypto});
+const lifecycleState=load('src/lib/account-lifecycle/state.ts',{'node:crypto':crypto});
+const lifecycleStore=load('src/lib/account-lifecycle/store.ts',{'node:crypto':crypto,'@prisma/client':{Prisma},'./state':lifecycleState});
+const operation=load('src/lib/promane/workspace-operation.ts',{'node:crypto':crypto});
+const afile='src/lib/promane/auth.ts',auth=load(afile,{'next-auth':{getServerSession:async()=>({user:{id:'synthetic'}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db},'next/navigation':{redirect:()=>{throw Error('unexpected redirect')}},crypto,'@/lib/account-lifecycle/store':lifecycleStore,'./workspace-operation':operation});
 for(const role of ['owner','admin','member','guest','__UNRECOGNIZED__','','constructor','admin ']){
  await db.promaneInvitation.deleteMany();await db.promaneMember.deleteMany();await seed('PromaneMember',{workspaceId:workspace.id,userId:'synthetic',role,isActive:true});const known=['owner','admin','member','guest'].includes(role);
  const read=await auth.getWorkspaceBySlug('owned','synthetic');assert.equal(!!read,candidate?known:true);cases.push('promane read '+role);

@@ -359,6 +359,28 @@ jobs:
           python3 docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-mutations-postgres-supervise.py
           python3 docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-http-postgres-supervise.py
 
+      - name: Promane retirement create before and after (private Unix socket)
+        run: |
+          mkdir -p "$RUNNER_TEMP/promane-retirement-create"
+          DOYA_PROMANE_R1_EXPECT=before \
+          DOYA_PROMANE_R1_EVIDENCE="$RUNNER_TEMP/promane-retirement-create/before-results.json" \
+          DOYA_PROMANE_R1_SUPERVISOR="$RUNNER_TEMP/promane-retirement-create/before-supervisor.json" \
+          DOYA_PROMANE_R1_PROBE_LOG="$RUNNER_TEMP/promane-retirement-create/before-probe.log" \
+          python3 docs/audits/2026-10-06-all-services-recheck/promane-retirement-create-postgres-supervise.py
+          DOYA_PROMANE_R1_EXPECT=after \
+          DOYA_PROMANE_R1_EVIDENCE="$RUNNER_TEMP/promane-retirement-create/after-results.json" \
+          DOYA_PROMANE_R1_SUPERVISOR="$RUNNER_TEMP/promane-retirement-create/after-supervisor.json" \
+          DOYA_PROMANE_R1_PROBE_LOG="$RUNNER_TEMP/promane-retirement-create/after-probe.log" \
+          python3 docs/audits/2026-10-06-all-services-recheck/promane-retirement-create-postgres-supervise.py
+
+      - name: Preserve Promane retirement create diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promane-retirement-create-before-after-private-postgres
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/promane-retirement-create/*
+
       - name: Promane workspace create and settings recovery UI (offline)
         run: |
           node docs/audits/2026-10-06-all-services-recheck/verify-promane-workspace-operation-mounted.cjs

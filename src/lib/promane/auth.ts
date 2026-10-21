@@ -3,6 +3,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import crypto from 'crypto'
+import { assertRetirementMembershipWritable, lockLifecycleUsers } from '@/lib/account-lifecycle/store'
+import { isPromaneWorkspaceReceiptConflict } from './workspace-operation'
 
 const liveUserId = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0
 
@@ -35,31 +37,42 @@ export async function requirePromaneAuthAction() {
 
 export async function getOrCreateWorkspace(userId: string) {
   if (!liveUserId(userId)) throw new Error('ログイン状態を確認してください')
-  return prisma.$transaction(async (tx) => {
-    const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
-    if (users.length === 0) throw new Error('Promane account not found')
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        await lockLifecycleUsers(tx, [userId])
+        await assertRetirementMembershipWritable(tx, [userId])
 
-    const membership = await tx.promaneMember.findFirst({
-      where: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } },
-      include: { workspace: true },
-      orderBy: { createdAt: 'asc' },
-    })
-    if (membership) return membership.workspace
+        const membership = await tx.promaneMember.findFirst({
+          where: { userId, isActive: true, role: { in: VALID_MEMBER_ROLES } },
+          include: { workspace: true },
+          orderBy: { createdAt: 'asc' },
+        })
+        if (membership) return membership.workspace
 
-    // 所有WSのアクセス権が無効化されている場合は勝手に再有効化しない。
-    const owned = await tx.promaneWorkspace.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } })
-    if (owned) return null
+        // 所有WSのアクセス権が無効化されている場合は勝手に再有効化しない。
+        const owned = await tx.promaneWorkspace.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } })
+        if (owned) return null
 
-    const user = await tx.user.findUnique({ where: { id: userId }, select: { name: true } })
-    return tx.promaneWorkspace.create({
-      data: {
-        userId,
-        name: 'マイワークスペース',
-        slug: `ws-${crypto.randomBytes(8).toString('hex')}`,
-        members: { create: { userId, role: 'owner', displayName: user?.name || 'オーナー' } },
-      },
-    })
-  })
+        const user = await tx.user.findUnique({ where: { id: userId }, select: { name: true } })
+        return tx.promaneWorkspace.create({
+          data: {
+            userId,
+            name: 'マイワークスペース',
+            slug: `ws-${crypto.randomBytes(8).toString('hex')}`,
+            members: { create: { userId, role: 'owner', displayName: user?.name || 'オーナー' } },
+          },
+        })
+      }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'LIFECYCLE_USER_UNAVAILABLE') throw new Error('Promane account not found')
+      const slugConflict = error && typeof error === 'object' && 'code' in error && error.code === 'P2002' &&
+        'meta' in error && error.meta && typeof error.meta === 'object' && 'target' in error.meta &&
+        Array.isArray(error.meta.target) && error.meta.target.length === 1 && error.meta.target[0] === 'slug'
+      if (attempt === 2 || !isPromaneWorkspaceReceiptConflict(error) && !slugConflict) throw error
+    }
+  }
+  throw new Error('ワークスペースの状態を確認できません')
 }
 
 export async function getWorkspaceBySlug(slug: string, userId: string) {

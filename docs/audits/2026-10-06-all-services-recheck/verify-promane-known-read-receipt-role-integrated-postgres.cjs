@@ -22,7 +22,10 @@ await seed('User',{id:'synthetic',email:'synthetic@example.invalid'});await seed
 const workspace=await seed('PromaneWorkspace',{userId:'synthetic',name:'Synthetic Private Workspace',slug:'owned'}),project=await seed('PromaneProject',{workspaceId:workspace.id,name:'Synthetic Private Project'});
 const apiFile='src/app/api/promane/workspaces/route.ts',timeFile='src/lib/promane/timesheet-read.ts',pageFile='src/app/(shell)/promane/page.tsx',authFile='src/lib/promane/auth.ts';
 let session={user:{id:'synthetic',email:'synthetic@example.invalid'}};
-const common={'next-auth':{getServerSession:async()=>session},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db},'next/navigation':{redirect:url=>{throw Error('Unexpected redirect '+url)}},crypto};
+const lifecycleState=load('src/lib/account-lifecycle/state.ts',{'node:crypto':crypto});
+const lifecycleStore=load('src/lib/account-lifecycle/store.ts',{'node:crypto':crypto,'@prisma/client':{Prisma},'./state':lifecycleState});
+const operation=load('src/lib/promane/workspace-operation.ts',{'node:crypto':crypto});
+const common={'next-auth':{getServerSession:async()=>session},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db},'next/navigation':{redirect:url=>{throw Error('Unexpected redirect '+url)}},crypto,'@/lib/account-lifecycle/store':lifecycleStore,'./workspace-operation':operation};
 const api=load(apiFile,{...common,'next/server':{NextResponse:Response}}),times=load(timeFile,{'@prisma/client':{Prisma}}),auth=load(authFile,common);
 const React=require('react'),render=require('react-dom/server').renderToStaticMarkup,vm=require('node:vm'),ts=require('typescript');const component=({children})=>React.createElement('span',null,children);const exports={};
 const code=ts.transpileModule(fs.readFileSync(process.env.DOYA_TEST_BASELINE&&fs.existsSync(process.env.DOYA_TEST_BASELINE+'/'+pageFile)?process.env.DOYA_TEST_BASELINE+'/'+pageFile:pageFile,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
@@ -48,8 +51,8 @@ for(const role of ['admin','member','guest','owner','__UNRECOGNIZED__','','const
 }
 
 const mutationFile='src/lib/promane/workspace-mutations.ts', operationFile='src/lib/promane/workspace-operation.ts', inputFile='src/lib/promane/workspace-input.ts';
-const operation=load(operationFile,{'node:crypto':crypto});const input=load(inputFile);
-const mutation=load(mutationFile,{'node:crypto':crypto,'@/lib/prisma':{prisma:db},'@/lib/promane/limits':{getUserPromaneLimits:async()=>({maxWorkspaces:30,tier:'PRO'}),countUserWorkspaces:async()=>db.promaneWorkspace.count()},'./workspace-input':input,'./workspace-operation':operation});
+const input=load(inputFile);
+const mutation=load(mutationFile,{'node:crypto':crypto,'@/lib/prisma':{prisma:db},'@/lib/promane/limits':{getUserPromaneLimits:async()=>({maxWorkspaces:30,tier:'PRO'}),countUserWorkspaces:async()=>db.promaneWorkspace.count()},'./workspace-input':input,'./workspace-operation':operation,'@/lib/account-lifecycle/store':lifecycleStore});
 const operationId=crypto.randomUUID(),body={expectedUserId:'synthetic',operationId,name:'Synthetic Receipt Workspace'};
 const saved=await mutation.createPromaneWorkspaceOperation('synthetic',body);assert.equal(saved.state,'saved');const created=saved.entry.id;
 for(const role of ['owner','admin','member','guest','__UNRECOGNIZED__','','constructor','admin ']){
