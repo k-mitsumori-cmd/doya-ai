@@ -1,4 +1,10 @@
 process.env.NODE_ENV = 'test'
+const lifecycle = require('./shodan-core-import-fixture.cjs').shodanCoreImports()
+const organizationFence = require('./load-typescript.cjs').load('src/lib/account-lifecycle/organization-fence.ts', {
+ '@prisma/client': { Prisma: require('@prisma/client').Prisma },
+ './state': lifecycle['@/lib/account-lifecycle/state'], './store': lifecycle['@/lib/account-lifecycle/store'],
+})
+lifecycle['@/lib/account-lifecycle/organization-fence'] = organizationFence
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript'),React=require('react'),crypto=require('node:crypto'),{JSDOM}=require('jsdom')
 const rootPath=path.resolve(__dirname,'../..'),readSource=file=>fs.readFileSync(file,'utf8')
 const dom=new JSDOM('<body></body>',{url:'https://example.invalid/expense'});global.window=dom.window;global.document=dom.window.document;global.IS_REACT_ACT_ENVIRONMENT=true
@@ -50,7 +56,7 @@ const isForm=f=>f.c.querySelectorAll('input').length===2,unknown=f=>{assert(!isF
  ]) await check('actual access and usage '+name,async()=>{
   const records=rows.map(x=>({...x,userId:'alpha',organizationId:x.id,organization:{slug:x.id,name:'Synthetic organization'}}));let writes=0,handled=0;
   const db={user:{findUnique:async()=>({email:null})},expenseMember:{findFirst:async q=>{const scope=records.filter(x=>x.userId===q.where.userId&&(!q.where.organization||x.organization.slug===q.where.organization.slug));return q.where.status?scope.find(x=>x.status==='ACTIVE'&&(!q.where.role||q.where.role.in.includes(x.role)))||null:scope.at(-1)||null},findMany:async()=>records.filter(x=>x.status==='ACTIVE'&&['owner','admin','manager','member'].includes(x.role)),update:async()=>{writes++;throw Error('Unexpected write')},updateMany:async()=>{writes++;throw Error('Unexpected write')}}};
-  const load=loader({'@prisma/client':{Prisma:require('@prisma/client').Prisma},'node:crypto':crypto,'crypto':{__esModule:true,default:crypto},'next-auth':{getServerSession:async()=>({user:{id:'alpha'}})},'next/server':{NextResponse:Response},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db}});
+  const load=loader({...lifecycle,'@prisma/client':{Prisma:require('@prisma/client').Prisma},'node:crypto':crypto,'crypto':{__esModule:true,default:crypto},'next-auth':{getServerSession:async()=>({user:{id:'alpha'}})},'next/server':{NextResponse:Response},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db}});
   const access=load('src/lib/expense/access.ts'),ctx=await access.getExpenseContext(slug);assert.equal(Boolean(ctx),expected===200&&rows.length>0);
   const req=new Request('https://example.invalid/api/expense/usage'+(slug?'?org='+slug:''));const response=await load('src/app/api/expense/usage/route.ts').GET(req);assert.equal(response.status,expected);const body=await response.json();if(!rows.length)assert.equal(body.onboarded,false);if(slug&&expected===200)assert.equal(body.organization.slug,slug);
   for(const path of ['?org=old','?org=foreign','']){const request=new Request('https://example.invalid/api/expense/summary'+path);Object.defineProperty(request,'nextUrl',{value:new URL(request.url)});const result=await access.withExpense(request,'member',async()=>{handled++;return Response.json({ok:true})});assert.equal(result.status,!path?400:path.includes('foreign')||!rows.some(x=>x.id==='old'&&x.status==='ACTIVE')?403:200)}assert.equal(writes,0);
