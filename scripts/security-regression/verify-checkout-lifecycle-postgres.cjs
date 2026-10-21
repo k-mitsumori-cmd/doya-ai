@@ -179,5 +179,238 @@ await check('ordinary checkout-first UUID blocks foreign legacy adoption',async(
 await check('parallel ordinary checkout admission and legacy adoption share UUID lock',async()=>{const p=providerFixture(),shared=crypto.randomUUID(),ordinary=request({identity:{...request().identity,operationId:shared}}),r=request({identity:identity('checkout',second,shared,{kind:'user',id:second}),terms:{...ordinary.terms,email:second+'@example.invalid'}}),old=await legacyReady(p,r),results=await Promise.allSettled([checkoutStore.admitCheckoutLifecycle(db,ordinary),p.client.legacyReady(r,old.parts)]);assert.equal(results.filter(x=>x.status==='fulfilled').length,1);assert.equal(await db.systemSetting.count({where:{key:{in:[`doya-account-operation:v2:${shared}`,checkoutReceipt.checkoutKeys.capability(shared)]}}}),1)});
 async function seedOrphanLedger(shape,shared){if(shape==='malformed'){await db.systemSetting.create({data:{key:`doya-account-action:v2:${shared}`,value:'{broken'}});return}const id=identity('retirement',target,shared),old=await store.reserveLifecycleOperation(db,id,digest);await store.prepareLifecycleActions(db,old.claim,[resource()]);await db.systemSetting.delete({where:{key:state.lifecycleReceiptKey(id)}});await db.systemSetting.delete({where:{key:state.lifecycleFenceKey(target)}})}
 for(const shape of ['same-target-old-generation','foreign-target','malformed'])for(const creator of ['reserve','abort','admit','legacy'])await check('ledger-only '+shape+' UUID rejects '+creator+' before mutation',async()=>{const shared=crypto.randomUUID();await seedOrphanLedger(shape,shared);const user=shape==='foreign-target'?second:target,p=providerFixture(),id=identity('checkout',user,shared,{kind:'user',id:user}),r=request({identity:id,terms:{...request().terms,email:user+'@example.invalid'}}),old=creator==='legacy'?await legacyReady(p,r):null,before=await stateRows();if(creator==='reserve')await rejects(()=>store.reserveLifecycleOperation(db,identity('retirement',user,shared),digest));else if(creator==='abort')await rejects(()=>store.abortUnstartedLifecycleOperation(db,identity('retirement',user,shared),digest));else if(creator==='admit')await rejects(()=>checkoutStore.admitCheckoutLifecycle(db,r));else await rejects(()=>p.client.legacyReady(r,old.parts));assert.deepEqual(await stateRows(),before);assert.equal(p.counts.checkoutCreate,0);assert.equal(p.counts.customerCreate,0)});
-console.log(JSON.stringify({executed:cases.length,contractPassed:cases.length,classification:'R2-A_UNCONNECTED_FOUNDATION_ONLY',scope:'Actual new coordinator/core and real isolated Prisma transactions with injected synthetic provider. Existing HTTP callers remain unchanged. No R3/route retirement closure, old two unsafe observations, operational legacy drain or real provider proof.',cases,providerIO:'synthetic only',operationalCutover:'fixture-seeded evidence only, not production drain'},null,2));
+await check('B1 expired legacy switches atomically to one ordinary Checkout and preserves history',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired');
+ const next=request({terms:{...previous.terms,expiresAt:expiry+600}});
+ const result=await p.client.advanceAfterTerminal(previous,next,old.parts);
+ assert.match(result.id,/^cs_synthetic_/);assert.equal(p.counts.checkoutCreate,1);
+ const index=JSON.parse((await keyRow(checkoutReceipt.checkoutKeys.index(state.lifecycleSubject(target)))).value);
+ assert.equal(index.currentOperationId,next.identity.operationId);
+ assert(index.resources.some(x=>x.id===old.sessionId&&x.operationId===previous.identity.operationId));
+ assert(index.resources.some(x=>x.id===result.id&&x.operationId===next.identity.operationId));
+ assert((await keyRow(`checkout-reservation:v1:test:${target}`)).value.includes('"phase":"migrated"'));
+ assert(await keyRow(checkoutReceipt.checkoutKeys.legacyMapping(state.lifecycleSubject(target),'test')));
+ assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(previous.identity.operationId)),null);
+ const replay=request({terms:{...next.terms}}),again=await p.client.advanceAfterTerminal(previous,replay,old.parts);
+ assert.equal(again.id,result.id);assert.equal(p.counts.checkoutCreate,1);
+});
+for(const damage of ['subscription','resource'])await check('B1 moved legacy '+damage+' corruption blocks current recovery',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired');
+ const next=request({terms:{...previous.terms,expiresAt:expiry+600}}),result=await p.client.advanceAfterTerminal(previous,next,old.parts);
+ assert(result.id);const key=damage==='subscription'?checkoutReceipt.checkoutKeys.capability(previous.identity.operationId):checkoutReceipt.checkoutKeys.resource('test','checkout',old.sessionId);
+ const row=await keyRow(key),value=JSON.parse(row.value);
+ await db.systemSetting.update({where:{key},data:{value:JSON.stringify(damage==='subscription'?{...value,subscriptionId:'sub_foreign'}:{...value,targetHash:'0'.repeat(64)})}});
+ const before=await stateRows(),reads=p.counts.checkoutRead;
+ await rejects(()=>p.client.advanceAfterTerminal(previous,request({terms:{...next.terms}}),old.parts));
+ assert.deepEqual(await stateRows(),before);assert.equal(p.counts.checkoutRead,reads);assert.equal(p.counts.checkoutCreate,1);
+});
+await check('B1 complete legacy refuses a second purchase and keeps exact subscription',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'complete'),next=request({terms:{...previous.terms,expiresAt:expiry+600}});
+ await rejects(()=>p.client.advanceAfterTerminal(previous,next,old.parts));
+ const cap=JSON.parse((await keyRow(checkoutReceipt.checkoutKeys.capability(previous.identity.operationId))).value);
+ assert.equal(cap.status,'complete');assert.equal(cap.subscriptionId,'sub_legacy');
+ assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(next.identity.operationId)),null);
+ assert.equal(p.counts.checkoutCreate,0);
+});
+await check('B1 ordinary expired Checkout uses exact retrieve before new UUID admission',async()=>{
+ const p=providerFixture(),previous=request(),initial=await p.client.create(previous),raw=p.sessions.get(initial.id);
+ raw.status='expired';raw.url=null;
+ const next=request({terms:{...previous.terms,expiresAt:expiry+600}}),result=await p.client.advanceAfterTerminal(previous,next);
+ assert.notEqual(result.id,initial.id);assert.equal(p.counts.checkoutCreate,2);
+ const index=JSON.parse((await keyRow(checkoutReceipt.checkoutKeys.index(state.lifecycleSubject(target)))).value);
+ assert.equal(index.currentOperationId,next.identity.operationId);
+ assert(index.resources.some(x=>x.id===initial.id&&x.operationId===previous.identity.operationId));
+});
+await check('B1 ordinary complete Checkout records exact subscription but does not unlock repurchase',async()=>{
+ const p=providerFixture(),previous=request(),initial=await p.client.create(previous),raw=p.sessions.get(initial.id);
+ raw.status='complete';raw.customer='cus_exact';raw.subscription='sub_exact';raw.url=null;
+ const next=request({terms:{...previous.terms,expiresAt:expiry+600}});
+ await rejects(()=>p.client.advanceAfterTerminal(previous,next));
+ const cap=JSON.parse((await keyRow(checkoutReceipt.checkoutKeys.capability(previous.identity.operationId))).value);
+ assert.equal(cap.status,'complete');assert.equal(cap.subscriptionId,'sub_exact');
+ assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(next.identity.operationId)),null);
+ assert.equal(p.counts.checkoutCreate,1);
+});
+for(const damage of ['missing_fact','old_generation_fact','foreign_capability','missing_dispatch','foreign_resource'])await check('B1 direct ordinary admit rejects '+damage+' despite expired capability',async()=>{
+ const p=providerFixture(),previous=request(),initial=await p.client.create(previous),ticket=await checkoutStore.captureCheckoutReadyRead(db,previous),raw=p.sessions.get(initial.id);
+ raw.status='expired';raw.url=null;await rejects(()=>p.client.authorizeReadyRead(previous));
+ const capKey=checkoutReceipt.checkoutKeys.capability(previous.identity.operationId),factKey=checkoutReceipt.checkoutKeys.fact(ticket.dispatch.dispatchToken),dispatchKey=checkoutReceipt.checkoutKeys.dispatch(ticket.dispatch.dispatchToken),resourceKey=checkoutReceipt.checkoutKeys.resource('test','checkout',initial.id);
+ if(damage==='missing_fact')await db.systemSetting.delete({where:{key:factKey}});
+ if(damage==='missing_dispatch')await db.systemSetting.delete({where:{key:dispatchKey}});
+ if(damage==='old_generation_fact'){const fact=JSON.parse((await keyRow(factKey)).value);await db.systemSetting.update({where:{key:factKey},data:{value:JSON.stringify({...fact,generation:crypto.randomUUID()})}})}
+ if(damage==='foreign_capability'){const cap=JSON.parse((await keyRow(capKey)).value);await db.systemSetting.update({where:{key:capKey},data:{value:JSON.stringify({...cap,targetHash:'0'.repeat(64)})}})}
+ if(damage==='foreign_resource'){const resource=JSON.parse((await keyRow(resourceKey)).value);await db.systemSetting.update({where:{key:resourceKey},data:{value:JSON.stringify({...resource,targetHash:'0'.repeat(64)})}})}
+ const next=request({terms:{...previous.terms,expiresAt:expiry+600}}),before=await stateRows();
+ await rejects(()=>checkoutStore.admitCheckoutLifecycle(db,next));
+ assert.deepEqual(await stateRows(),before);assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(next.identity.operationId)),null);assert.equal(p.counts.checkoutCreate,1);
+});
+await check('B1 direct ordinary admit joins a known Customer to its stored plan',async()=>{
+ const p=providerFixture(),customer='cus_known';await db.user.update({where:{id:target},data:{stripeCustomerId:customer}});
+ p.customers.set(customer,{id:customer,livemode:false,metadata:{userId:target}});
+ const previous=request({customerMode:'reuse',customerId:customer}),initial=await p.client.create(previous),ticket=await checkoutStore.captureCheckoutReadyRead(db,previous),raw=p.sessions.get(initial.id);
+ raw.status='expired';raw.url=null;await rejects(()=>p.client.authorizeReadyRead(previous));
+ for(const key of [checkoutReceipt.checkoutKeys.capability(previous.identity.operationId),checkoutReceipt.checkoutKeys.fact(ticket.dispatch.dispatchToken)]){
+  const row=await keyRow(key),value=JSON.parse(row.value);await db.systemSetting.update({where:{key},data:{value:JSON.stringify({...value,customerId:'cus_foreign'})}});
+ }
+ const next=request({customerMode:'reuse',customerId:customer,terms:{...previous.terms,expiresAt:expiry+600}}),before=await stateRows();
+ await rejects(()=>checkoutStore.admitCheckoutLifecycle(db,next));
+ assert.deepEqual(await stateRows(),before);assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(next.identity.operationId)),null);assert.equal(p.counts.checkoutCreate,1);
+});
+await check('B1 HR expired legacy reuses Customer without reassigning its historical resource',async()=>{
+ const p=providerFixture(),{org,chief}=await seedOrg('hr');
+ await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});
+ const customer='cus_hr_legacy';await db.user.update({where:{id:target},data:{stripeCustomerId:customer}});
+ p.customers.set(customer,{id:customer,livemode:false,metadata:{userId:target}});
+ const baseUrl='https://example.invalid',terms={...request().terms,planId:'hr-pro',serviceId:'hr',successUrl:`${baseUrl}/hr/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,cancelUrl:`${baseUrl}/hr/settings/billing`};
+ const previous=request({source:'hr',organizationId:org.id,customerMode:'reuse',customerId:customer,terms});
+ const parts={priceId:terms.priceId,plan:'pro',interval:'monthly',stripeCustomerId:customer,baseUrl},signature=checkoutLegacy.verifiedLegacySignature(previous,parts),sessionId='cs_hr_old';
+ await db.systemSetting.create({data:{key:`checkout-reservation:v1:test:${target}`,value:JSON.stringify({phase:'ready',signature,sessionId,url:'https://checkout.example.invalid/old',expiresAt:terms.expiresAt})}});
+ p.sessions.set(sessionId,{id:sessionId,livemode:false,mode:'subscription',status:'expired',client_reference_id:target,metadata:{userId:target,planId:'hr-pro',serviceId:'hr'},customer,customer_email:null,subscription:null,url:null,success_url:terms.successUrl,cancel_url:terms.cancelUrl,expires_at:terms.expiresAt,line_items:{data:[{quantity:1,price:{id:terms.priceId}}]}});
+ const next=request({source:'hr',organizationId:org.id,customerMode:'reuse',customerId:customer,terms:{...terms,expiresAt:expiry+600}});
+ const result=await p.client.advanceAfterTerminal(previous,next,parts);assert.match(result.id,/^cs_synthetic_/);
+ const index=JSON.parse((await keyRow(checkoutReceipt.checkoutKeys.index(state.lifecycleSubject(target)))).value);
+ assert(index.resources.some(x=>x.type==='customer'&&x.id===customer&&x.operationId===previous.identity.operationId));
+ const resource=JSON.parse((await keyRow(checkoutReceipt.checkoutKeys.resource('test','customer',customer))).value);
+ assert.equal(resource.operationId,previous.identity.operationId);assert.equal(p.counts.customerCreate,0);assert.equal(p.counts.checkoutCreate,1);
+});
+await check('B1 HR ordinary expired Checkout reuses existing Customer with one new session',async()=>{
+ const p=providerFixture(),{org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});
+ const customer='cus_hr_existing';await db.user.update({where:{id:target},data:{stripeCustomerId:customer}});p.customers.set(customer,{id:customer,livemode:false,metadata:{userId:target}});
+ const terms={...request().terms,planId:'hr-pro',serviceId:'hr'},previous=request({source:'hr',organizationId:org.id,customerMode:'reuse',customerId:customer,terms});
+ const initial=await p.client.create(previous),raw=p.sessions.get(initial.id);raw.status='expired';raw.url=null;
+ const next=request({source:'hr',organizationId:org.id,customerMode:'reuse',customerId:customer,terms:{...terms,expiresAt:expiry+600}}),result=await p.client.advanceAfterTerminal(previous,next);
+ assert.notEqual(result.id,initial.id);assert.equal(p.counts.checkoutCreate,2);assert.equal(p.counts.customerCreate,0);
+ const index=JSON.parse((await keyRow(checkoutReceipt.checkoutKeys.index(state.lifecycleSubject(target)))).value);
+ assert(index.resources.some(x=>x.type==='customer'&&x.id===customer&&x.operationId===previous.identity.operationId));
+});
+await check('B1 open legacy returns only the same sealed input and never creates another Checkout',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous),same=request({terms:{...previous.terms}});
+ assert.equal((await p.client.advanceAfterTerminal(previous,same,old.parts)).id,old.sessionId);
+ await rejects(()=>p.client.advanceAfterTerminal(previous,request({terms:{...previous.terms,priceId:'price_other'}}),old.parts));
+ assert.equal(p.counts.checkoutCreate,0);
+});
+for(const namespace of ['receipt','ledger','plan','capability'])await check('B1 expired legacy '+namespace+' UUID collision rolls back pointer and new receipt',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired');
+ await rejects(()=>p.client.legacyReady(previous,old.parts));
+ const next=request({terms:{...previous.terms,expiresAt:expiry+600}}),key=namespace==='receipt'?`doya-account-operation:v2:${next.identity.operationId}`:namespace==='ledger'?`doya-account-action:v2:${next.identity.operationId}`:checkoutReceipt.checkoutKeys[namespace](next.identity.operationId);
+ await db.systemSetting.create({data:{key,value:'{orphan'}});
+ const before=await stateRows();await rejects(()=>p.client.advanceAfterTerminal(previous,next,old.parts));
+ assert.deepEqual(await stateRows(),before);assert.equal(p.counts.checkoutCreate,0);
+});
+await check('B1 stale mapped index revision rejects pointer switch with no new receipt',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired');
+ await rejects(()=>p.client.legacyReady(previous,old.parts));
+ const ticket=await checkoutStore.captureLegacyCheckoutReady(db,previous,old.parts);
+ const fact=await p.adapter.readLegacyReady(previous,ticket.sessionId,ticket.rawHash,ticket.signature);
+ const key=checkoutReceipt.checkoutKeys.index(state.lifecycleSubject(target)),row=await keyRow(key),index=JSON.parse(row.value);
+ await db.systemSetting.update({where:{key},data:{value:JSON.stringify({...index,revision:index.revision+1})}});
+ const next=request({terms:{...previous.terms,expiresAt:expiry+600}}),before=await stateRows();
+ await rejects(()=>checkoutStore.admitAfterExpiredLegacyCheckout(db,previous,next,ticket,fact));
+ assert.deepEqual(await stateRows(),before);assert.equal(p.counts.checkoutCreate,0);
+});
+await check('B1 foreign legacy resource prevents new pointer and provider write',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired');
+ await rejects(()=>p.client.legacyReady(previous,old.parts));
+ const key=checkoutReceipt.checkoutKeys.resource('test','checkout',old.sessionId),resource=JSON.parse((await keyRow(key)).value);
+ await db.systemSetting.update({where:{key},data:{value:JSON.stringify({...resource,targetHash:'0'.repeat(64)})}});
+ const next=request({terms:{...previous.terms,expiresAt:expiry+600}}),before=await stateRows();
+ await rejects(()=>p.client.advanceAfterTerminal(previous,next,old.parts));
+ assert.deepEqual(await stateRows(),before);assert.equal(p.counts.checkoutCreate,0);
+});
+await check('B1 legacy UUID with a forged ordinary plan is never classified as either owner',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired');
+ await rejects(()=>p.client.legacyReady(previous,old.parts));
+ const key=checkoutReceipt.checkoutKeys.plan(previous.identity.operationId);
+ await db.systemSetting.create({data:{key,value:'{forged'}});
+ const next=request({terms:{...previous.terms,expiresAt:expiry+600}}),before=await stateRows();
+ await rejects(()=>p.client.advanceAfterTerminal(previous,next,old.parts));
+ assert.deepEqual(await stateRows(),before);assert.equal(p.counts.checkoutCreate,0);
+});
+await check('B1 full historical resource index is not trimmed to admit a new Checkout',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired');
+ await rejects(()=>p.client.legacyReady(previous,old.parts));
+ const key=checkoutReceipt.checkoutKeys.index(state.lifecycleSubject(target)),index=JSON.parse((await keyRow(key)).value);
+ for(let i=0;i<125;i++){
+  const id='cus_history_'+i,resource={version:1,targetHash:index.targetHash,operationId:previous.identity.operationId,mode:'test',type:'customer',id};
+  await db.systemSetting.create({data:{key:checkoutReceipt.checkoutKeys.resource('test','customer',id),value:JSON.stringify(resource)}});
+  index.resources.push({type:'customer',id,operationId:previous.identity.operationId});
+ }
+ await db.systemSetting.update({where:{key},data:{value:JSON.stringify(index)}});
+ const next=request({terms:{...previous.terms,expiresAt:expiry+600}}),before=await stateRows();
+ await rejects(()=>p.client.advanceAfterTerminal(previous,next,old.parts));
+ assert.deepEqual(await stateRows(),before);assert.equal(p.counts.checkoutCreate,0);
+});
+await check('B1 new plan write failure rolls back receipt fence and pointer together',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired');
+ await rejects(()=>p.client.legacyReady(previous,old.parts));
+ const next=request({terms:{...previous.terms,expiresAt:expiry+600}}),before=await stateRows();let once=true;
+ const faulty={$transaction:(fn,opts)=>db.$transaction(tx=>fn(new Proxy(tx,{get(t,k){if(k==='systemSetting')return new Proxy(t.systemSetting,{get(m,n){if(n==='create')return args=>{if(once&&args.data.key===checkoutReceipt.checkoutKeys.plan(next.identity.operationId)){once=false;throw Error('Synthetic plan failure')}return m.create(args)};return Reflect.get(m,n)}});return Reflect.get(t,k)}})),opts)};
+ await rejects(()=>coordinator.checkoutCoordinator(faulty,p.adapter).advanceAfterTerminal(previous,next,old.parts));
+ assert.deepEqual(await stateRows(),before);assert.equal(p.counts.checkoutCreate,0);
+});
+await check('B1 provider wait permits independent User update then rejects mutated request',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired'),next=request({terms:{...previous.terms,expiresAt:expiry+600}}),seen=defer(),release=defer();
+ p.hooks.checkoutRead=async()=>{seen.resolve();await release.promise};
+ const moving=p.client.advanceAfterTerminal(previous,next,old.parts).then(()=>null,error=>error);
+ await seen.promise;
+ await db.user.update({where:{id:target},data:{name:'Independent'}});
+ next.terms.priceId='price_changed';release.resolve();
+ assert(await moving instanceof Error);assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(next.identity.operationId)),null);assert.equal(p.counts.checkoutCreate,0);
+});
+await check('B1 retirement during legacy retrieve refuses new pointer and Checkout write',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired'),next=request({terms:{...previous.terms,expiresAt:expiry+600}}),seen=defer(),release=defer();
+ p.hooks.checkoutRead=async()=>{seen.resolve();await release.promise};
+ const moving=p.client.advanceAfterTerminal(previous,next,old.parts).then(()=>null,error=>error);
+ await seen.promise;assert((await store.reserveLifecycleOperation(db,identity('retirement'),digest)).claim);
+ release.resolve();assert(await moving instanceof Error);
+ assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(next.identity.operationId)),null);assert.equal(p.counts.checkoutCreate,0);
+});
+await check('B1 cutover epoch change during retrieve refuses new pointer',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired'),next=request({terms:{...previous.terms,expiresAt:expiry+600}}),seen=defer(),release=defer();
+ p.hooks.checkoutRead=async()=>{seen.resolve();await release.promise};
+ const moving=p.client.advanceAfterTerminal(previous,next,old.parts).then(()=>null,error=>error);
+ await seen.promise;
+ const key=checkoutReceipt.checkoutKeys.cutover('test'),marker=JSON.parse((await keyRow(key)).value);
+ await db.systemSetting.update({where:{key},data:{value:JSON.stringify({...marker,epoch:crypto.randomUUID()})}});
+ release.resolve();assert(await moving instanceof Error);
+ assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(next.identity.operationId)),null);assert.equal(p.counts.checkoutCreate,0);
+});
+await check('B1 HR OWNER downgrade during retrieve refuses new pointer',async()=>{
+ const p=providerFixture(),{org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});
+ const customer='cus_hr_legacy';await db.user.update({where:{id:target},data:{stripeCustomerId:customer}});
+ const baseUrl='https://example.invalid',terms={...request().terms,planId:'hr-pro',serviceId:'hr',successUrl:`${baseUrl}/hr/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,cancelUrl:`${baseUrl}/hr/settings/billing`};
+ const previous=request({source:'hr',organizationId:org.id,customerMode:'reuse',customerId:customer,terms}),parts={priceId:terms.priceId,plan:'pro',interval:'monthly',stripeCustomerId:customer,baseUrl},signature=checkoutLegacy.verifiedLegacySignature(previous,parts),sessionId='cs_hr_old';
+ await db.systemSetting.create({data:{key:`checkout-reservation:v1:test:${target}`,value:JSON.stringify({phase:'ready',signature,sessionId,url:'https://checkout.example.invalid/old',expiresAt:terms.expiresAt})}});
+ p.sessions.set(sessionId,{id:sessionId,livemode:false,mode:'subscription',status:'expired',client_reference_id:target,metadata:{userId:target,planId:'hr-pro',serviceId:'hr'},customer,customer_email:null,subscription:null,url:null,success_url:terms.successUrl,cancel_url:terms.cancelUrl,expires_at:terms.expiresAt,line_items:{data:[{quantity:1,price:{id:terms.priceId}}]}});
+ const next=request({source:'hr',organizationId:org.id,customerMode:'reuse',customerId:customer,terms:{...terms,expiresAt:expiry+600}}),seen=defer(),release=defer();
+ p.hooks.checkoutRead=async()=>{seen.resolve();await release.promise};
+ const moving=p.client.advanceAfterTerminal(previous,next,parts).then(()=>null,error=>error);
+ await seen.promise;await db.hrOrganizationMember.update({where:{id:chief.id},data:{role:'MEMBER'}});
+ release.resolve();assert(await moving instanceof Error);
+ assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(next.identity.operationId)),null);assert.equal(p.counts.checkoutCreate,0);
+});
+await check('B1 two distinct UUID callers with the same payload converge without a second provider write',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired');
+ const first=request({terms:{...previous.terms,expiresAt:expiry+600}}),second=request({terms:{...first.terms}}),seen=defer(),release=defer();
+ p.hooks.checkoutCreate=async()=>{seen.resolve();await release.promise};
+ const creating=p.client.advanceAfterTerminal(previous,first,old.parts);
+ await seen.promise;
+ const pending=await p.client.advanceAfterTerminal(previous,second,old.parts);
+ assert.equal(pending.operationId,first.identity.operationId);assert.equal(pending.resultUnknown,true);
+ assert.equal(p.counts.checkoutCreate,1);
+ release.resolve();const ready=await creating;
+ assert.equal((await p.client.advanceAfterTerminal(previous,second,old.parts)).id,ready.id);
+ assert.equal(p.counts.checkoutCreate,1);
+ assert.equal(await db.systemSetting.count({where:{key:{startsWith:'doya-checkout-plan:v2:'}}}),1);
+});
+await check('B1 different payload during a new provider write cannot join or replace current',async()=>{
+ const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired');
+ const first=request({terms:{...previous.terms,expiresAt:expiry+600}}),second=request({terms:{...previous.terms,expiresAt:expiry+900}}),seen=defer(),release=defer();
+ p.hooks.checkoutCreate=async()=>{seen.resolve();await release.promise};
+ const creating=p.client.advanceAfterTerminal(previous,first,old.parts);
+ await seen.promise;await rejects(()=>p.client.advanceAfterTerminal(previous,second,old.parts));
+ assert.equal(p.counts.checkoutCreate,1);assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(second.identity.operationId)),null);
+ release.resolve();await creating;
+});
+console.log(JSON.stringify({executed:cases.length,contractPassed:cases.length,classification:'R2_B1_INTERNAL_INTEROP_ONLY',scope:'Actual internal coordinator/core and isolated Prisma transactions with synthetic provider. Legacy/ordinary terminal interop is not connected to either HTTP route. No B2/B3, R2-C, R3, unsafe2 closure, operational old-worker drain or real provider proof.',cases,providerIO:'synthetic only',operationalCutover:'fixture-seeded evidence only, not production drain'},null,2));
 }finally{await db.$disconnect()}})().catch(error=>{console.error(error);process.exitCode=1});

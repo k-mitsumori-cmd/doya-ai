@@ -89,8 +89,24 @@ async function assertCheckoutCutover(tx: Tx, p: CheckoutPlan, mappedLegacy = fal
   const v: unknown = row ? JSON.parse(row.value) : null
   if (!exactCheckoutObject(v, 'version,mode,epoch,coverage,evidenceDigest') || v.version !== 1 || v.mode !== p.mode || v.epoch !== p.cutoverEpoch || v.coverage !== 'old_ingress_stopped_and_workers_reconciled' || !validLifecycleDigest(v.evidenceDigest)) throw new LifecycleError('CHECKOUT_CUTOVER_NOT_VERIFIED')
   const legacy = await tx.systemSetting.findUnique({ where: { key: `checkout-reservation:v1:${p.mode}:${p.identity.targetUserId}` }, select: { value: true } })
-  // R2-A cannot manufacture the operational drain/adoption proof. Existing rows remain blocked until an exact migration is adopted.
-  if (legacy && !mappedLegacy) throw new LifecycleError('CHECKOUT_LEGACY_RECONCILIATION_REQUIRED')
+  // An adopted v1 row remains intact after the current pointer moves to a new ordinary operation.
+  // Its tombstone alone is not authority: the mapping, capability and current index must agree.
+  if (legacy && !mappedLegacy) {
+    const mapped = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.legacyMapping(p.targetHash, p.mode) }, select: { value: true } })
+    if (!mapped) throw new LifecycleError('CHECKOUT_LEGACY_RECONCILIATION_REQUIRED')
+    const mapping = parseLegacyMapping(mapped.value)
+    const index = await optionalIndex(tx, p.targetHash)
+    const capRow = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.capability(mapping.operationId) }, select: { value: true } })
+    if (mapping.targetHash !== p.targetHash || mapping.mode !== p.mode || mapping.source !== p.source || legacy.value !== legacyTombstone(mapping) || !index || index.value.dirty || !index.value.currentOperationId || index.value.currentOperationId === mapping.operationId || !capRow) throw new LifecycleError('CHECKOUT_LEGACY_RECONCILIATION_REQUIRED')
+    const cap = parseCheckoutCapability(capRow.value)
+    if (cap.operationId !== mapping.operationId || cap.targetHash !== mapping.targetHash || cap.inputDigest !== mapping.inputDigest || cap.mode !== mapping.mode || cap.sessionId !== mapping.sessionId || cap.status !== 'expired' || cap.subscriptionId !== null) return checkoutUnavailable()
+    for (const item of index.value.resources.filter(r => r.operationId === mapping.operationId)) {
+      const row = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.resource(mapping.mode, item.type, item.id) }, select: { value: true } })
+      if (row?.value !== JSON.stringify({ version: 1, targetHash: mapping.targetHash, operationId: mapping.operationId, mode: mapping.mode, type: item.type, id: item.id })) return checkoutUnavailable()
+    }
+    if (!index.value.resources.some(r => r.type === 'checkout' && r.id === mapping.sessionId && r.operationId === mapping.operationId) ||
+        cap.customerId && !index.value.resources.some(r => r.type === 'customer' && r.id === cap.customerId && r.operationId === mapping.operationId)) return checkoutUnavailable()
+  }
 }
 async function checkoutAdmissionUser(tx: Tx, request: CheckoutRequest) {
   if (!await userExists(tx, request.identity.targetUserId)) throw new LifecycleError('LIFECYCLE_USER_UNAVAILABLE')
@@ -103,6 +119,88 @@ async function checkoutAdmissionUser(tx: Tx, request: CheckoutRequest) {
     if (org.length !== 1 || mine.length !== 1 || mine[0].status !== 'ACTIVE' || mine[0].role !== 'OWNER') throw new LifecycleError('HR_BILLING_OWNER_REQUIRED', 403)
   }
   return user
+}
+/** Classify the current pointer without treating a legacy UUID as an ordinary plan. */
+export async function readCheckoutCurrentKind(db: LifecycleDb, request: CheckoutRequest) {
+  const plan = sealedCheckoutRequest(request)
+  return db.$transaction(async tx => {
+    await checkoutAdmissionUser(tx, request)
+    await assertCheckoutCutover(tx, plan, true)
+    const active = await fence(tx, request.identity.targetUserId)
+    const index = await optionalIndex(tx, plan.targetHash)
+    if (index?.value.dirty) throw new LifecycleError('CHECKOUT_NEEDS_REVIEW')
+    if (active && (!index?.value.currentOperationId || active.value.operationId !== index.value.currentOperationId)) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
+    const raw = await tx.systemSetting.findUnique({ where: { key: legacyRawKey(plan) }, select: { value: true } })
+    const mapped = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.legacyMapping(plan.targetHash, plan.mode) }, select: { value: true } })
+    if (mapped) {
+      const mapping = parseLegacyMapping(mapped.value)
+      const capRow = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.capability(mapping.operationId) }, select: { value: true } })
+      if (!raw || raw.value !== legacyTombstone(mapping) || !index || !capRow || mapping.targetHash !== plan.targetHash || mapping.mode !== plan.mode || mapping.source !== plan.source) return checkoutUnavailable()
+      const cap = parseCheckoutCapability(capRow.value)
+      if (cap.operationId !== mapping.operationId || cap.targetHash !== mapping.targetHash || cap.inputDigest !== mapping.inputDigest || cap.mode !== mapping.mode || cap.sessionId !== mapping.sessionId) return checkoutUnavailable()
+      if (index.value.currentOperationId === mapping.operationId) {
+        if (await tx.systemSetting.findUnique({ where: { key: checkoutKeys.plan(mapping.operationId) }, select: { key: true } })) return checkoutUnavailable()
+        if (active) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
+        return { kind: 'legacy' as const, operationId: mapping.operationId }
+      }
+      if (cap.status !== 'expired' || cap.subscriptionId !== null) return checkoutUnavailable()
+      for (const item of index.value.resources.filter(r => r.operationId === mapping.operationId)) {
+        const resource = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.resource(mapping.mode, item.type, item.id) }, select: { value: true } })
+        if (resource?.value !== JSON.stringify({ version: 1, targetHash: mapping.targetHash, operationId: mapping.operationId, mode: mapping.mode, type: item.type, id: item.id })) return checkoutUnavailable()
+      }
+      if (!index.value.resources.some(r => r.type === 'checkout' && r.id === mapping.sessionId && r.operationId === mapping.operationId) ||
+          cap.customerId && !index.value.resources.some(r => r.type === 'customer' && r.id === cap.customerId && r.operationId === mapping.operationId)) return checkoutUnavailable()
+    } else if (raw) {
+      const classified = classifyLegacyV1({ key: legacyRawKey(plan), raw: raw.value, userId: request.identity.targetUserId, targetHash: plan.targetHash, mode: plan.mode })
+      if (classified.classification !== 'ready_needs_exact_provider' || index?.value.currentOperationId) throw new LifecycleError('CHECKOUT_LEGACY_RECONCILIATION_REQUIRED')
+      return { kind: 'legacy' as const, operationId: null }
+    }
+    if (!index?.value.currentOperationId) return { kind: 'empty' as const, operationId: null }
+    const ordinary = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.plan(index.value.currentOperationId) }, select: { value: true } })
+    if (!ordinary) return checkoutUnavailable()
+    const oldPlan = parseCheckoutPlan(ordinary.value)
+    if (oldPlan.targetHash !== plan.targetHash || oldPlan.mode !== plan.mode || oldPlan.source !== plan.source || oldPlan.identity.operationId !== index.value.currentOperationId) return checkoutUnavailable()
+    return { kind: 'ordinary' as const, operationId: index.value.currentOperationId }
+  }, options)
+}
+/** A saved provider terminal fact is sufficient only when every old ordinary authority joins exactly. */
+async function assertStoredExpiredOrdinary(tx: Tx, index: CheckoutIndex, proposed: CheckoutPlan) {
+  if (!index.currentOperationId) return checkoutUnavailable()
+  const planRow = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.plan(index.currentOperationId) }, select: { value: true } })
+  if (!planRow) return checkoutUnavailable()
+  const previous = parseCheckoutPlan(planRow.value)
+  if (previous.identity.operationId !== index.currentOperationId || previous.targetHash !== proposed.targetHash || previous.mode !== proposed.mode || previous.source !== proposed.source || previous.cutoverEpoch !== proposed.cutoverEpoch || previous.organizationId !== proposed.organizationId ||
+      previous.identity.targetUserId !== proposed.identity.targetUserId || previous.identity.operator.kind !== proposed.identity.operator.kind || previous.identity.operator.id !== proposed.identity.operator.id) return checkoutUnavailable()
+  const r = await receipt(tx, previous.identity)
+  if (!r || r.value.kind !== 'checkout' || r.value.phase !== 'completed' || r.value.inputDigest !== previous.inputDigest || r.value.targetHash !== previous.targetHash) return checkoutUnavailable()
+  const capRow = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.capability(previous.identity.operationId) }, select: { value: true } })
+  if (!capRow) return checkoutUnavailable()
+  const cap = parseCheckoutCapability(capRow.value)
+  if (cap.operationId !== previous.identity.operationId || cap.targetHash !== previous.targetHash || cap.inputDigest !== previous.inputDigest || cap.mode !== previous.mode || cap.status !== 'expired' || cap.subscriptionId !== null || cap.expiresAt !== previous.expiresAt ||
+      previous.customerId !== null && cap.customerId !== previous.customerId) return checkoutUnavailable()
+  const l = await ledger(tx, previous.identity, r.value), action = l?.value.actions.find(a => a.type === 'checkout_create')
+  if (!action || action.phase !== 'confirmed' || !action.dispatchToken || l?.value.actions.some(a => a.phase !== 'confirmed')) return checkoutUnavailable()
+  const dispatchRow = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.dispatch(action.dispatchToken) }, select: { value: true } })
+  if (!dispatchRow) return checkoutUnavailable()
+  const dispatch = parseCheckoutDispatch(dispatchRow.value)
+  if (JSON.stringify(dispatch.plan) !== planRow.value || dispatch.identity.operationId !== previous.identity.operationId || dispatch.generation !== r.value.generation || dispatch.inputDigest !== previous.inputDigest || dispatch.targetHash !== previous.targetHash || dispatch.mode !== previous.mode || dispatch.actionKey !== action.key || dispatch.dispatchToken !== action.dispatchToken || dispatch.type !== 'checkout_create') return checkoutUnavailable()
+  const factRow = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.fact(action.dispatchToken) }, select: { value: true } })
+  if (!factRow) return checkoutUnavailable()
+  let fact: unknown
+  try { fact = JSON.parse(factRow.value) } catch { return checkoutUnavailable() }
+  if (!exactCheckoutObject(fact, 'version,operationId,generation,targetHash,dispatchToken,actionKey,inputDigest,payloadDigest,mode,kind,resourceId,customerId,subscriptionId,status,expiresAt') ||
+      fact.version !== 1 || fact.operationId !== previous.identity.operationId || fact.generation !== r.value.generation || fact.targetHash !== previous.targetHash || fact.dispatchToken !== action.dispatchToken || fact.actionKey !== action.key || fact.inputDigest !== previous.inputDigest || fact.payloadDigest !== dispatch.payloadDigest || fact.mode !== previous.mode || fact.kind !== 'checkout' || fact.resourceId !== cap.sessionId || fact.customerId !== cap.customerId || fact.subscriptionId !== null || fact.status !== 'expired' || fact.expiresAt !== cap.expiresAt) return checkoutUnavailable()
+  const checkout = index.resources.find(item => item.type === 'checkout' && item.id === cap.sessionId && item.operationId === previous.identity.operationId)
+  if (!checkout) return checkoutUnavailable()
+  const checkoutResource = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.resource(previous.mode, 'checkout', cap.sessionId) }, select: { value: true } })
+  if (checkoutResource?.value !== JSON.stringify({ version: 1, targetHash: previous.targetHash, operationId: previous.identity.operationId, mode: previous.mode, type: 'checkout', id: cap.sessionId })) return checkoutUnavailable()
+  if (cap.customerId) {
+    const customer = index.resources.find(item => item.type === 'customer' && item.id === cap.customerId)
+    if (!customer) return checkoutUnavailable()
+    const resource = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.resource(previous.mode, 'customer', cap.customerId) }, select: { value: true } })
+    if (resource?.value !== JSON.stringify({ version: 1, targetHash: previous.targetHash, operationId: customer.operationId, mode: previous.mode, type: 'customer', id: cap.customerId })) return checkoutUnavailable()
+  }
+  return { previous, cap }
 }
 /** Authentication is performed by the server caller. Only an exactly bound user principal may enter this internal checkout lane. */
 export async function admitCheckoutLifecycle(db: LifecycleDb, request: CheckoutRequest) {
@@ -128,9 +226,11 @@ export async function admitCheckoutLifecycle(db: LifecycleDb, request: CheckoutR
         if (!r || (capability ? r.value.phase !== 'completed' || f !== null : f?.value.operationId !== previous.identity.operationId)) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
         return { identity: previous.identity, plan: previous, phase: r.value.phase, claim: null }
       }
+      await assertStoredExpiredOrdinary(tx, index.value, proposed)
     }
     if (await fence(tx, request.identity.targetUserId)) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
     if (request.customerMode === 'create' && user.stripeCustomerId !== null) throw new LifecycleError('CHECKOUT_IDENTITY_CHANGED')
+    if (index.value.resources.length > 125) return checkoutUnavailable()
     const old = await receipt(tx, request.identity)
     if (old) throw new LifecycleError('LIFECYCLE_INPUT_CONFLICT')
     await assertGlobalLifecycleOperationIdFree(tx, request.identity.operationId)
@@ -384,6 +484,7 @@ export async function captureLegacyCheckoutReady(db: LifecycleDb, request: Check
     if (index?.value.dirty) throw new LifecycleError('CHECKOUT_NEEDS_REVIEW')
     if (mapRow) {
       const mapping = parseLegacyMapping(mapRow.value), capRow = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.capability(mapping.operationId) }, select: { value: true } })
+      if (await tx.systemSetting.findUnique({ where: { key: checkoutKeys.plan(mapping.operationId) }, select: { key: true } })) return checkoutUnavailable()
       if (mapping.targetHash !== plan.targetHash || mapping.mode !== plan.mode || mapping.source !== plan.source || mapping.inputDigest !== plan.inputDigest || mapping.signature !== signature || rawRow.value !== legacyTombstone(mapping) || !index || index.value.currentOperationId !== mapping.operationId || !capRow) throw new LifecycleError('CHECKOUT_LEGACY_MAPPING_CONFLICT')
       const cap = parseCheckoutCapability(capRow.value)
       if (cap.operationId !== mapping.operationId || cap.sessionId !== mapping.sessionId || cap.targetHash !== plan.targetHash || cap.inputDigest !== plan.inputDigest || cap.mode !== mapping.mode) return checkoutUnavailable()
@@ -454,6 +555,51 @@ export async function authorizeLegacyCheckoutReady(db: LifecycleDb, request: Che
     }
     if (cap.status !== fact.status || cap.sessionId !== fact.sessionId || cap.customerId !== fact.customerId && cap.customerId !== null || cap.subscriptionId !== fact.subscriptionId && cap.subscriptionId !== null || cap.status === 'open' && cap.url !== fact.url) throw new LifecycleError('CHECKOUT_LEGACY_MAPPING_CONFLICT')
     return { status: fact.status, sessionId: fact.sessionId, url: fact.url }
+  }, options)
+}
+
+/** B1: move only an exact, expired legacy current operation to a newly reserved ordinary operation. */
+export async function admitAfterExpiredLegacyCheckout(db: LifecycleDb, previous: CheckoutRequest, next: CheckoutRequest, ticket: LegacyTicket, fact: VerifiedLegacyCheckout) {
+  assertVerifiedLegacyCheckout(fact)
+  const oldPlan = sealedCheckoutRequest(previous), nextPlan = sealedCheckoutRequest(next)
+  if (ticket.kind !== 'mapped' || !ticket.mappingRaw || !ticket.capabilityRaw || !ticket.indexRaw ||
+      oldPlan.targetHash !== nextPlan.targetHash || oldPlan.mode !== nextPlan.mode || oldPlan.source !== nextPlan.source ||
+      oldPlan.organizationId !== nextPlan.organizationId || oldPlan.cutoverEpoch !== nextPlan.cutoverEpoch ||
+      oldPlan.identity.operator.kind !== nextPlan.identity.operator.kind || oldPlan.identity.operator.id !== nextPlan.identity.operator.id ||
+      previous.identity.operationId === next.identity.operationId || fact.status !== 'expired' || fact.url !== null) return changed()
+  const mapping = parseLegacyMapping(ticket.mappingRaw), cap = parseCheckoutCapability(ticket.capabilityRaw)
+  if (mapping.targetHash !== oldPlan.targetHash || mapping.mode !== oldPlan.mode || mapping.source !== oldPlan.source || mapping.inputDigest !== oldPlan.inputDigest || mapping.signature !== ticket.signature || mapping.rawHash !== ticket.rawHash || mapping.sessionId !== ticket.sessionId ||
+      cap.operationId !== mapping.operationId || cap.targetHash !== mapping.targetHash || cap.inputDigest !== mapping.inputDigest || cap.mode !== mapping.mode || cap.sessionId !== mapping.sessionId || cap.status !== 'expired' || cap.customerId !== fact.customerId || cap.subscriptionId !== null || fact.subscriptionId !== null || cap.expiresAt !== fact.expiresAt ||
+      fact.targetHash !== mapping.targetHash || fact.inputDigest !== mapping.inputDigest || fact.mode !== mapping.mode || fact.source !== mapping.source || fact.sessionId !== mapping.sessionId || fact.rawHash !== mapping.rawHash || fact.signature !== mapping.signature || fact.expiresAt !== oldPlan.expiresAt) return changed()
+  return db.$transaction(async tx => {
+    const user = await checkoutAdmissionUser(tx, next)
+    await checkoutAdmissionUser(tx, previous)
+    await assertCheckoutCutover(tx, oldPlan, true)
+    if (await fence(tx, next.identity.targetUserId)) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
+    const rawRow = await tx.systemSetting.findUnique({ where: { key: legacyRawKey(oldPlan) }, select: { value: true } })
+    const mapRow = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.legacyMapping(oldPlan.targetHash, oldPlan.mode) }, select: { value: true } })
+    const capRow = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.capability(mapping.operationId) }, select: { value: true } })
+    if (await tx.systemSetting.findUnique({ where: { key: checkoutKeys.plan(mapping.operationId) }, select: { key: true } })) return checkoutUnavailable()
+    const index = await optionalIndex(tx, oldPlan.targetHash)
+    if (rawRow?.value !== ticket.raw || rawRow.value !== legacyTombstone(mapping) || mapRow?.value !== ticket.mappingRaw || capRow?.value !== ticket.capabilityRaw || index?.raw !== ticket.indexRaw || index.value.revision !== ticket.indexRevision || index.value.dirty || index.value.currentOperationId !== mapping.operationId) return changed()
+    // Keep historical ownership, including a Customer reused by the new operation, on the old resource row.
+    for (const item of index.value.resources.filter(r => r.operationId === mapping.operationId)) {
+      const row = await tx.systemSetting.findUnique({ where: { key: checkoutKeys.resource(mapping.mode, item.type, item.id) }, select: { value: true } })
+      if (row?.value !== JSON.stringify({ version: 1, targetHash: mapping.targetHash, operationId: mapping.operationId, mode: mapping.mode, type: item.type, id: item.id })) return checkoutUnavailable()
+    }
+    if (!index.value.resources.some(r => r.type === 'checkout' && r.id === mapping.sessionId && r.operationId === mapping.operationId) ||
+        cap.customerId && !index.value.resources.some(r => r.type === 'customer' && r.id === cap.customerId && r.operationId === mapping.operationId) ||
+        cap.subscriptionId && !index.value.resources.some(r => r.type === 'subscription' && r.id === cap.subscriptionId && r.operationId === mapping.operationId)) return checkoutUnavailable()
+    if (index.value.resources.length > 125) return checkoutUnavailable()
+    if (next.customerMode === 'create' && user.stripeCustomerId !== null) throw new LifecycleError('CHECKOUT_IDENTITY_CHANGED')
+    if (await receipt(tx, next.identity)) throw new LifecycleError('LIFECYCLE_INPUT_CONFLICT')
+    await assertGlobalLifecycleOperationIdFree(tx, next.identity.operationId)
+    const now = new Date().toISOString(), r: LifecycleReceipt = { version: 2, targetHash: nextPlan.targetHash, operationId: next.identity.operationId, operator: next.identity.operator, kind: 'checkout', inputDigest: nextPlan.inputDigest, generation: randomUUID(), token: randomUUID(), revision: 0, phase: 'reserved', reason: null, createdAt: now, updatedAt: now }
+    await tx.systemSetting.create({ data: { key: lifecycleReceiptKey(next.identity), value: JSON.stringify(r) } })
+    await tx.systemSetting.create({ data: { key: lifecycleFenceKey(next.identity.targetUserId), value: JSON.stringify({ version: 2, operationId: r.operationId, generation: r.generation, kind: 'checkout', state: 'active' }) } })
+    await tx.systemSetting.create({ data: { key: checkoutKeys.plan(r.operationId), value: JSON.stringify(nextPlan) } })
+    await putCheckoutValue(tx, checkoutKeys.index(nextPlan.targetHash), index.raw, { ...index.value, currentOperationId: r.operationId, revision: nextRevision(index.value.revision) })
+    return { identity: next.identity, plan: nextPlan, phase: r.phase, claim: { ...next.identity, generation: r.generation, token: r.token } as LifecycleClaim }
   }, options)
 }
 

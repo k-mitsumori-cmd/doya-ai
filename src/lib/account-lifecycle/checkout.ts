@@ -3,10 +3,13 @@ import { startLifecycleOperation, markLifecycleUnknown, abortUnstartedLifecycleO
 import { sealedCheckoutRequest, type CheckoutRequest } from './checkout-receipt'
 import { type VerifiedCheckoutFact, type CheckoutProviderAdapter } from './checkout-provider'
 import { type LegacySignatureParts } from './checkout-legacy'
-import { admitCheckoutLifecycle, recoverCheckoutLifecycle, prepareCheckoutLifecycle, dispatchCheckoutLifecycle, recordCustomerAckAndPlanCheckout, recordCheckoutAckAndReady, ingestCorrelatedCheckoutLateFact, captureCheckoutReadyRead, authorizeCheckoutReadyRead, readCheckoutRecovery, recordLegacyCheckoutClassification, captureLegacyCheckoutReady, adoptLegacyCheckoutReady, authorizeLegacyCheckoutReady } from './checkout-store'
+import { admitCheckoutLifecycle, recoverCheckoutLifecycle, prepareCheckoutLifecycle, dispatchCheckoutLifecycle, recordCustomerAckAndPlanCheckout, recordCheckoutAckAndReady, ingestCorrelatedCheckoutLateFact, captureCheckoutReadyRead, authorizeCheckoutReadyRead, readCheckoutRecovery, recordLegacyCheckoutClassification, captureLegacyCheckoutReady, adoptLegacyCheckoutReady, authorizeLegacyCheckoutReady, admitAfterExpiredLegacyCheckout, readCheckoutCurrentKind } from './checkout-store'
 
 /** Unconnected internal coordinator. No module import performs I/O; the server supplies a provider adapter explicitly. */
 export function checkoutCoordinator(db: LifecycleDb, provider: CheckoutProviderAdapter) {
+  const fixed = <T extends object>(value: T): T => Object.freeze(Object.fromEntries(
+    Object.entries(value).map(([key, child]) => [key, child && typeof child === 'object' ? fixed(child) : child]),
+  )) as T
   async function failed(claim: LifecycleClaim, dispatch: Awaited<ReturnType<typeof dispatchCheckoutLifecycle>>, error: unknown, fact?: VerifiedCheckoutFact): Promise<never> {
     // If the provider acknowledged before the DB transaction failed, retain its exact resource without granting URL/entitlements.
     if (fact) { try { await ingestCorrelatedCheckoutLateFact(db, fact) } catch { /* The dispatched row itself remains durable and blocks new work. */ } }
@@ -76,6 +79,82 @@ export function checkoutCoordinator(db: LifecycleDb, provider: CheckoutProviderA
       const result = ticket.kind === 'ready' ? await adoptLegacyCheckoutReady(db, request, ticket, fact, parts) : await authorizeLegacyCheckoutReady(db, request, ticket, fact)
       if (result.status !== 'open' || !result.url) throw new LifecycleError(result.status === 'complete' ? 'CHECKOUT_ALREADY_COMPLETED' : 'CHECKOUT_IN_PROGRESS')
       return { id: result.sessionId, url: result.url }
+    },
+    /** B1 internal interop only. HTTP routes and real provider wiring remain separate units. */
+    async advanceAfterTerminal(previousInput: CheckoutRequest, nextInput: CheckoutRequest, partsInput?: LegacySignatureParts) {
+      const previous = fixed(previousInput), next = fixed(nextInput), parts = partsInput ? fixed(partsInput) : undefined
+      const oldPlan = sealedCheckoutRequest(previous), nextPlan = sealedCheckoutRequest(next)
+      if (oldPlan.targetHash !== nextPlan.targetHash || oldPlan.mode !== nextPlan.mode || oldPlan.source !== nextPlan.source || oldPlan.organizationId !== nextPlan.organizationId || oldPlan.cutoverEpoch !== nextPlan.cutoverEpoch ||
+          oldPlan.identity.operator.kind !== nextPlan.identity.operator.kind || oldPlan.identity.operator.id !== nextPlan.identity.operator.id) throw new LifecycleError('CHECKOUT_IDENTITY_CHANGED')
+      const unchanged = () => {
+        if (JSON.stringify(sealedCheckoutRequest(previousInput)) !== JSON.stringify(oldPlan) || JSON.stringify(sealedCheckoutRequest(nextInput)) !== JSON.stringify(nextPlan) || partsInput && JSON.stringify(partsInput) !== JSON.stringify(parts)) throw new LifecycleError('LIFECYCLE_INPUT_CONFLICT')
+      }
+      const current = await readCheckoutCurrentKind(db, previous)
+      unchanged()
+      if (current.kind === 'empty') throw new LifecycleError('CHECKOUT_RECONCILIATION_NOT_AVAILABLE')
+      if (current.kind === 'ordinary') {
+        if (current.operationId !== previous.identity.operationId) {
+          // A concurrent request already switched the pointer. Recover its exact sealed input.
+          const currentNext: CheckoutRequest = fixed({ ...next, identity: { ...next.identity, operationId: current.operationId } })
+          const result = await readCheckoutRecovery(db, currentNext)
+          unchanged()
+          if (result.phase !== 'completed') {
+            // A second caller must not rotate the active claim while the first provider write is in flight.
+            return { operationId: current.operationId, phase: result.phase, resultUnknown: true }
+          }
+          const ticket = await captureCheckoutReadyRead(db, currentNext), fact = await provider.readReady(ticket.plan, ticket.dispatch, ticket.capability)
+          unchanged()
+          await ingestCorrelatedCheckoutLateFact(db, fact)
+          const ready = await authorizeCheckoutReadyRead(db, currentNext, ticket, fact)
+          unchanged()
+          return ready
+        }
+        if (current.operationId === next.identity.operationId) throw new LifecycleError('CHECKOUT_IN_PROGRESS')
+        const ticket = await captureCheckoutReadyRead(db, previous)
+        const fact = await provider.readReady(ticket.plan, ticket.dispatch, ticket.capability)
+        unchanged()
+        if (fact.status === 'open' && oldPlan.inputDigest !== nextPlan.inputDigest) throw new LifecycleError('CHECKOUT_IN_PROGRESS')
+        await ingestCorrelatedCheckoutLateFact(db, fact)
+        unchanged()
+        if (fact.status === 'open') {
+          if (oldPlan.inputDigest !== nextPlan.inputDigest) throw new LifecycleError('CHECKOUT_IN_PROGRESS')
+          const ready = await authorizeCheckoutReadyRead(db, previous, ticket, fact)
+          unchanged()
+          return ready
+        }
+        if (fact.status === 'complete') throw new LifecycleError('CHECKOUT_ALREADY_COMPLETED')
+        const admitted = await admitCheckoutLifecycle(db, next)
+        unchanged()
+        if (!admitted.claim) throw new LifecycleError('CHECKOUT_IN_PROGRESS')
+        const ready = await execute(next, admitted.claim)
+        unchanged()
+        return ready
+      }
+      if (!parts) throw new LifecycleError('CHECKOUT_LEGACY_RECONCILIATION_REQUIRED')
+      const first = await captureLegacyCheckoutReady(db, previous, parts)
+      const fact = await provider.readLegacyReady(previous, first.sessionId, first.rawHash, first.signature)
+      unchanged()
+      if (fact.status === 'open' && oldPlan.inputDigest !== nextPlan.inputDigest) throw new LifecycleError('CHECKOUT_IN_PROGRESS')
+      if (first.kind === 'ready') await adoptLegacyCheckoutReady(db, previous, first, fact, parts)
+      else await authorizeLegacyCheckoutReady(db, previous, first, fact)
+      unchanged()
+      const mapped = await captureLegacyCheckoutReady(db, previous, parts)
+      if (mapped.kind !== 'mapped') throw new LifecycleError('CHECKOUT_LEGACY_MAPPING_CONFLICT')
+      const result = await authorizeLegacyCheckoutReady(db, previous, mapped, fact)
+      unchanged()
+      if (result.status === 'open') {
+        if (oldPlan.inputDigest !== nextPlan.inputDigest || !result.url) throw new LifecycleError('CHECKOUT_IN_PROGRESS')
+        unchanged()
+        return { id: result.sessionId, url: result.url }
+      }
+      if (result.status === 'complete') throw new LifecycleError('CHECKOUT_ALREADY_COMPLETED')
+      const finalTicket = await captureLegacyCheckoutReady(db, previous, parts)
+      unchanged()
+      const admitted = await admitAfterExpiredLegacyCheckout(db, previous, next, finalTicket, fact)
+      unchanged()
+      const ready = await execute(next, admitted.claim)
+      unchanged()
+      return ready
     },
   }
 }
