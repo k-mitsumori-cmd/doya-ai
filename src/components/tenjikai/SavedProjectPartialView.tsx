@@ -17,12 +17,13 @@ function safeHttpUrl(value: string): string | null {
 
 const savedLabel = (value: string | undefined, labels: Record<string, string>) => value && Object.prototype.hasOwnProperty.call(labels, value) ? labels[value] : '保存された値を確認できません。'
 
-export default function SavedProjectPartialView({ phase, detail, section, onReload, loginCallbackUrl }: {
+export default function SavedProjectPartialView({ phase, detail, section, onReload, loginCallbackUrl, newProjectHref = '/tenjikai' }: {
   phase: Phase
   detail: ProjectDetailResponse | null
   section: Section
   onReload: () => void
   loginCallbackUrl: string
+  newProjectHref?: string
 }) {
   const messages: Record<Exclude<Phase, 'ready_partial'>, string> = {
     checking_auth: 'ログイン状態を確認しています。',
@@ -102,7 +103,7 @@ export default function SavedProjectPartialView({ phase, detail, section, onRelo
           <button type="button" onClick={onReload} className="rounded-[var(--r-sm)] border border-[var(--blue-deep)] px-4 py-2 text-sm font-semibold text-[var(--blue-deep)]">再読み込み</button>
         </>
       )}
-      <Link href="/tenjikai" className="inline-block text-sm font-semibold text-[var(--blue-deep)] underline">新規出展プロジェクト</Link>
+      <Link href={newProjectHref} className="inline-block text-sm font-semibold text-[var(--blue-deep)] underline">新規出展プロジェクト</Link>
     </div>
   )
 }

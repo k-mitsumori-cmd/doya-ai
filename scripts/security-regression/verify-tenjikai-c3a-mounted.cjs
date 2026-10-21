@@ -42,7 +42,7 @@ const mocks = {
       onClick: () => go(section) }, `nav-${section}`))) },
   './Wizard': { __esModule: true, default: ({ initial, onSubmit, submitDisabled, submitLabel }) => React.createElement('div', null,
     React.createElement('span', null, `input:${initial.eventName}`),
-    React.createElement('button', { disabled: submitDisabled, onClick: () => onSubmit({ ...initial, eventName: '実入力の展示会' }) }, submitLabel === '同じ操作で生成を続ける' ? 'resume-same-operation' : 'start')) },
+    React.createElement('button', { disabled: submitDisabled, onClick: () => onSubmit({ ...initial, eventName: '実入力の展示会', ...(f.nextInputOverride || {}) }) }, submitLabel === '同じ操作で生成を続ける' ? 'resume-same-operation' : 'start')) },
   './Generating': { __esModule: true, default: SyntheticGenerating },
   './BoothStudio': { __esModule: true, default: ({ input, analysis }) => React.createElement('p', null, `3D:${input.eventName}:${analysis.brand}`) },
   './Overview': { __esModule: true, default: ({ input }) => React.createElement('p', null, `overview:${input.eventName}`) },
@@ -50,7 +50,9 @@ const mocks = {
   './BudgetPlanner': { __esModule: true, default: no }, './VendorBoard': { __esModule: true, default: no },
   './DocsVault': { __esModule: true, default: no },
   '@/lib/tenjikai/use-saved-project-detail': { useSavedProjectDetail: () => ({ phase: 'loading', detail: null, reload: () => {} }) },
-  './SavedProjectPartialView': { __esModule: true, default: () => React.createElement('p', null, '保存内容の部分表示') },
+  './SavedProjectPartialView': { __esModule: true, default: props => React.createElement(React.Fragment, null,
+    React.createElement('p', null, '保存内容の部分表示'),
+    React.createElement(load(path.join(rootPath, 'src/components/tenjikai/SavedProjectPartialView.tsx')).default, props)) },
   '@/components/shell/ToolFrame': { __esModule: true, default: ({ children, nav }) => React.createElement('div', null,
     React.createElement('nav', null, nav.map(item => React.createElement('button', { key: item.section, onClick: () => f.router.push(item.href) }, `shell-${item.section}`))), children) },
 }
@@ -117,6 +119,14 @@ async function check(name, mode, shell, run, initialRoute, preserveState = false
     await view.click('nav-overview'); assert.equal(view.route, '/tenjikai/overview?project=project-a')
     await view.click('nav-booth'); assert.match(view.container.textContent, /3D:実入力の展示会/)
   })
+  await check('normal confirmed success allows explicit sidebar new and next generation', 'success', false, async view => {
+    await view.click('start')
+    assert.match(view.container.textContent, /3D:実入力の展示会/)
+    await view.click('nav-new')
+    assert.equal(view.route, '/tenjikai')
+    await view.click('start')
+    assert.equal(harness.getState().creates, 2); assert.equal(harness.getState().provider, 2)
+  })
   await check('success shell nav keeps project', 'success', true, async view => {
     await view.click('start'); assert.equal(view.route, '/tenjikai/booth?project=project-a')
     await view.click('shell-overview'); assert.equal(view.route, '/tenjikai/overview?project=project-a')
@@ -162,6 +172,30 @@ async function check(name, mode, shell, run, initialRoute, preserveState = false
     assert.match(view.container.textContent, /input:実入力の展示会/)
     assert.doesNotMatch(view.container.textContent, /基本情報を保存しました/)
     assert.equal(harness.getState().provider, 0)
+  })
+  await check('429 rejected operation recovers missing tombstone before a new ID', 'quota', false, async view => {
+    await view.click('start')
+    assert.match(view.container.textContent, /上限/)
+    assert.equal(harness.getState().creates, 0)
+    await view.click('start'); assert.equal(harness.getState().creates, 0)
+    await view.click('遅れて届く操作を取り消す')
+    assert.match(view.container.textContent, /取消済み/)
+    await view.click('別の案件を新規作成')
+    harness.getState().mode = 'success'
+    await view.click('start')
+    assert.equal(harness.getState().creates, 1)
+  })
+  await check('400 corrected input needs missing tombstone then explicit new ID', 'success', false, async view => {
+    view.nextInputOverride = { eventStart: '2026-02-31' }
+    await view.click('start')
+    assert.match(view.container.textContent, /入力内容が正しくありません/)
+    assert.equal(harness.getState().creates, 0)
+    await view.click('start'); assert.equal(harness.getState().creates, 0)
+    await view.click('遅れて届く操作を取り消す')
+    await view.click('別の案件を新規作成')
+    view.nextInputOverride = null
+    await view.click('start')
+    assert.equal(harness.getState().creates, 1)
   })
   await check('unknown keeps input and disables ordinary resend', 'commit_then_p2028', false, async view => {
     await view.click('start')
@@ -222,30 +256,33 @@ async function check(name, mode, shell, run, initialRoute, preserveState = false
     assert.equal(view.routes.length, before)
     assert.doesNotMatch(view.container.textContent, /3D:/)
   })
-  await check('explicit new retires old callback and project', 'success', false, async view => {
+  await check('live claimed request cannot be abandoned as proof of cancellation', 'success', false, async view => {
     let resume
     harness.getState().aiWait = new Promise(resolve => { resume = resolve })
     await view.click('start')
+    const pendingUrl = view.route
     await view.click('nav-new')
     const before = view.routes.length
-    const staleAnimation = view.animationDone
-    await view.act(() => { staleAnimation(); resume() })
-    assert.equal(view.routes.length, before)
-    assert.equal(view.route, '/tenjikai')
-    assert.doesNotMatch(view.container.textContent, /3D:/)
-  })
-  await check('old failure and finally cannot overwrite a newer generation', 'ai_failure', false, async view => {
-    let resume
-    harness.getState().aiWait = new Promise(resolve => { resume = resolve })
-    await view.click('start')
-    await view.click('nav-new')
-    harness.getState().mode = 'success'
-    harness.getState().aiWait = null
-    await view.click('start')
+    assert.equal(view.route, pendingUrl)
+    assert.equal(harness.getState().creates, 1); assert.equal(harness.getState().provider, 1)
+    await view.act(() => { view.animationDone(); resume() })
+    assert.equal(view.routes.length, before + 1)
     assert.equal(view.route, '/tenjikai/booth?project=project-a')
-    const before = view.routes.length
+    assert.match(view.container.textContent, /3D:/)
+  })
+  await check('failed live request requires actual terminal confirmation and explicit next project', 'ai_failure', false, async view => {
+    let resume
+    harness.getState().aiWait = new Promise(resolve => { resume = resolve })
+    await view.click('start')
+    await view.click('nav-new')
+    assert.equal(harness.getState().creates, 1)
     await view.act(() => resume())
-    assert.equal(view.routes.length, before)
+    assert.match(view.container.textContent, /AIでの作成に失敗/)
+    await view.click('nav-new')
+    assert.equal(view.route, '/tenjikai')
+    harness.getState().mode = 'success'; harness.getState().aiWait = null
+    await view.click('start')
+    assert.equal(harness.getState().creates, 2)
     assert.match(view.container.textContent, /3D:実入力の展示会:ドヤAI/)
     assert.doesNotMatch(view.container.textContent, /AIでの作成に失敗/)
   })
@@ -303,6 +340,118 @@ async function check(name, mode, shell, run, initialRoute, preserveState = false
     assert.equal(view.route, '/tenjikai/booth?project=project-a')
     assert.match(view.container.textContent, /3D:実入力の展示会/)
   })
+  await check('reload missing handle cannot allocate a second operation before tombstone', 'success', false, async view => {
+    assert.equal(harness.getState().creates, 0)
+    assert.match(view.container.textContent, /遅れて届く操作の取消を確認するまで/)
+    assert.equal([...view.container.querySelectorAll('button')].find(item => item.textContent === 'start')?.disabled, true)
+    await view.click('start')
+    await view.click('nav-new')
+    assert.equal(view.route, `/tenjikai?operation=${harness.operationId}`)
+    assert.equal(harness.getState().creates, 0)
+    assert.equal(harness.getState().provider, 0)
+    await view.click('遅れて届く操作を取り消す')
+    assert.match(view.container.textContent, /取消済み/)
+    const delayed = await harness.POST(new NextRequest('https://example.invalid/api/tenjikai/generate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+      ...harness.engine.SAMPLE_INPUT, expectedActor: 'actor-a', clientRequestId: harness.requestId, operationId: harness.operationId,
+    }) }))
+    assert.equal(delayed.status, 202)
+    assert.equal(harness.getState().creates, 0); assert.equal(harness.getState().provider, 0)
+    await view.click('別の案件を新規作成')
+    assert.equal(view.route, '/tenjikai')
+    await view.click('start')
+    assert.equal(harness.getState().creates, 1); assert.equal(harness.getState().provider, 1)
+  }, `/tenjikai?operation=${harness.operationId}`)
+  await check('shell navigation cannot discard missing-operation recovery context', 'success', true, async view => {
+    await view.click('shell-new')
+    assert.equal(view.route, `/tenjikai?operation=${harness.operationId}`)
+    await view.click('start')
+    assert.equal(harness.getState().creates, 0); assert.equal(harness.getState().provider, 0)
+    await view.click('遅れて届く操作を取り消す')
+    assert.match(view.container.textContent, /取消済み/)
+    await view.click('別の案件を新規作成')
+    await view.click('start')
+    assert.equal(harness.getState().creates, 1)
+  }, `/tenjikai?operation=${harness.operationId}`)
+  await check('status request failure keeps operation URL locked and permits later explicit check', 'success', false, async view => {
+    const routeFetch = global.fetch
+    global.fetch = async (url, init) => new URL(url, 'https://example.invalid').pathname.endsWith('/generate/status') && init?.method !== 'POST'
+      ? new Response('{"state":"unknown"}', { status: 503, headers: { 'content-type': 'application/json' } }) : routeFetch(url, init)
+    await view.act(() => view.router.push(`/tenjikai?operation=${harness.operationId}`))
+    assert.match(view.container.textContent, /保存状態を確認できませんでした/)
+    await view.click('start'); assert.equal(harness.getState().creates, 0)
+    global.fetch = routeFetch
+    await view.click('この操作の状態を確認')
+    assert.match(view.container.textContent, /取消を確認するまで|未到着の可能性/)
+    await view.click('遅れて届く操作を取り消す')
+    assert.match(view.container.textContent, /取消済み/)
+  })
+  await check('pending status response cannot issue a second operation', 'success', false, async view => {
+    const routeFetch = global.fetch
+    let release
+    global.fetch = async (url, init) => new URL(url, 'https://example.invalid').pathname.endsWith('/generate/status') && init?.method !== 'POST'
+      ? new Promise(resolve => { release = () => resolve(routeFetch(url, init)) }) : routeFetch(url, init)
+    await view.act(() => view.router.push(`/tenjikai?operation=${harness.operationId}`))
+    assert.equal(typeof release, 'function')
+    assert.equal([...view.container.querySelectorAll('button')].find(item => item.textContent === 'start')?.disabled, true)
+    await view.click('start'); assert.equal(harness.getState().creates, 0)
+    await view.act(() => release())
+    global.fetch = routeFetch
+    assert.match(view.container.textContent, /遅れて届く操作の取消を確認するまで/)
+  })
+  await check('lost tombstone response remains blocked until status confirms cancellation', 'success', false, async view => {
+    const routeFetch = global.fetch
+    global.fetch = async (url, init) => {
+      if (new URL(url, 'https://example.invalid').pathname.endsWith('/generate/status') && init?.method === 'POST') {
+        await routeFetch(url, init)
+        return new Response('{"state":"unknown"}', { status: 503, headers: { 'content-type': 'application/json' } })
+      }
+      return routeFetch(url, init)
+    }
+    await view.click('遅れて届く操作を取り消す')
+    await view.click('start')
+    assert.equal(harness.getState().creates, 0)
+    global.fetch = routeFetch
+    await view.click('この操作の状態を確認')
+    assert.match(view.container.textContent, /取消済み/)
+    await view.click('別の案件を新規作成')
+    await view.click('start')
+    assert.equal(harness.getState().creates, 1)
+  }, `/tenjikai?operation=${harness.operationId}`)
+  for (const shell of [false, true]) await check(`saved partial round-trip retains unresolved operation shell=${shell}`, 'success', shell, async view => {
+    await view.act(() => view.router.push(`/tenjikai/overview?project=project-a&operation=${harness.operationId}`))
+    assert.match(view.container.textContent, /保存内容の部分表示/)
+    const href = view.container.querySelector('a[href*="operation="]')?.getAttribute('href')
+    assert.equal(href, `/tenjikai?operation=${harness.operationId}`)
+    await view.act(() => view.router.push(href))
+    await view.click('start')
+    assert.equal(harness.getState().creates, 0); assert.equal(harness.getState().provider, 0)
+  }, `/tenjikai?operation=${harness.operationId}`)
+  for (const terminal of ['completed', 'degraded', 'failed', 'canceled']) {
+    harness.reset('success')
+    if (terminal !== 'canceled') harness.getState().project = { id: 'project-a', userId: 'actor-a' }
+    harness.getState().operations.set(harness.operationId, { operationId: harness.operationId, state: terminal,
+      projectId: terminal === 'canceled' ? null : 'project-a', analysis: terminal === 'completed' ? 'saved' : 'not_saved', dispatchAllowed: false })
+    await check(`only explicit separate-project action releases confirmed ${terminal}`, 'success', false, async view => {
+      await view.click('start')
+      assert.equal(harness.getState().creates, 0)
+      await view.click('nav-new')
+      assert.equal(view.route, '/tenjikai')
+      await view.click('start')
+      assert.equal(harness.getState().creates, 1)
+    }, `/tenjikai?operation=${harness.operationId}`, true)
+  }
+  for (const nonterminal of ['processing', 'unknown', 'superseded', 'deleted']) {
+    harness.reset('success')
+    harness.getState().project = { id: 'project-a', userId: 'actor-a' }
+    harness.getState().operations.set(harness.operationId, { operationId: harness.operationId, state: nonterminal,
+      projectId: 'project-a', analysis: 'unknown', dispatchAllowed: false })
+    await check(`unproven ${nonterminal} cannot release operation handle`, 'success', false, async view => {
+      assert.equal([...view.container.querySelectorAll('button')].some(item => item.textContent === '別の案件を新規作成'), false)
+      await view.click('nav-new')
+      await view.click('start')
+      assert.equal(harness.getState().creates, 0); assert.equal(harness.getState().provider, 0)
+    }, `/tenjikai?operation=${harness.operationId}`, true)
+  }
   harness.reset('success')
   harness.getState().project = { id: 'project-a', userId: 'actor-a' }
   harness.getState().operations.set(harness.operationId, { operationId: harness.operationId, state: 'completed', projectId: 'project-a', analysis: 'saved', dispatchAllowed: false })
@@ -327,6 +476,16 @@ async function check(name, mode, shell, run, initialRoute, preserveState = false
     assert.equal(harness.getState().provider, 0)
     assert.doesNotMatch(view.container.textContent, /3D:/)
   })
+  await check('old actor context cannot blind a new actor existing operation URL', 'success', false, async view => {
+    const otherOperation = `${Date.now()}.${crypto.randomUUID()}`
+    await view.auth('actor-b')
+    harness.getState().project = { id: 'project-b', userId: 'actor-b' }
+    harness.getState().operations.set(otherOperation, { operationId: otherOperation, state: 'claimed', projectId: 'project-b', analysis: 'not_saved', dispatchAllowed: false })
+    await view.act(() => view.router.push(`/tenjikai?operation=${otherOperation}`))
+    assert.match(view.container.textContent, /AI実行結果を確認中/)
+    await view.click('start')
+    assert.equal(harness.getState().creates, 0); assert.equal(harness.getState().provider, 0)
+  }, `/tenjikai?operation=${harness.operationId}`)
   const hashes = Object.fromEntries([...source].map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(rootPath, file))).digest('hex')]))
   console.log(JSON.stringify({ accepted: true, scope: 'Actual route, adapter and mounted TenjikaiApp/ShellFrame with synthetic auth/DB/AI/router/visual children; no external calls.', passed: cases.length, cases, sourceHashes: hashes }, null, 2))
   dom.window.close()

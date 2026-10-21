@@ -77,7 +77,7 @@ function load(relative) {
         state.transactions++
         if (state.mode === 'final_unknown') throw Error('Synthetic final ownership read unavailable')
         if (state.fence) throw new SyntheticLifecycleError('Synthetic fence')
-        if (!state.project && state.operations.has(operationId)) throw new SyntheticOperationError('PROJECT_CHANGED')
+        if (!state.project && state.operations.get(operationId)?.projectId) throw new SyntheticOperationError('PROJECT_CHANGED')
         const saved = state.operations.get(operationId)
         return saved?.state === 'claimed' ? { ...saved, state: 'processing' } : saved || { operationId, state: 'missing', projectId: null, analysis: 'not_saved', dispatchAllowed: false }
       },

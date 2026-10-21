@@ -37,7 +37,7 @@ import {
   type ProjectInput,
 } from '@/lib/tenjikai/engine'
 import type { GenerationResult, GenerationSave } from '@/lib/tenjikai/generation-result'
-import { readGenerationStatus, cancelGenerationStatus, validOperationHandle, type ClientOperationStatus } from '@/lib/tenjikai/generation-status-client'
+import { readGenerationStatus, cancelGenerationStatus, validOperationHandle, withGenerationOperation, type ClientOperationStatus } from '@/lib/tenjikai/generation-status-client'
 
 type Phase = 'input' | 'generating' | 'ready'
 
@@ -48,8 +48,20 @@ export default function TenjikaiApp({ shell = false }: { shell?: boolean }) {
 }
 
 function TenjikaiAppBoundary({ shell }: { shell: boolean }) {
-  const mode = projectModeFromQuery(useSearchParams())
+  const query = useSearchParams()
+  const mode = projectModeFromQuery(query)
   const scope = useEntryActorScope()
+  const urlOperation = query.get('operation')
+  const [recoveryContext, setRecoveryContext] = useState<{ actor: string; version: number; operationId: string } | null>(null)
+  const recoveryOperationId = validOperationHandle(urlOperation) ? urlOperation
+    : recoveryContext?.version === scope.version && recoveryContext.actor === scope.actor ? recoveryContext.operationId : null
+  useEffect(() => {
+    if (scope.status !== 'authenticated' || !scope.actor || !validOperationHandle(urlOperation)) return
+    setRecoveryContext(previous => previous?.actor && previous.actor !== scope.actor ? previous
+      : { actor: scope.actor, version: scope.version, operationId: urlOperation })
+  }, [urlOperation, scope.actor, scope.version, scope.status])
+  const rememberRecovery = useCallback((operationId: string | null) => setRecoveryContext(operationId && scope.actor
+    ? { actor: scope.actor, version: scope.version, operationId } : null), [scope.actor, scope.version])
   const scopeCurrent = scope.current, scopeActor = scope.actor, scopeStatus = scope.status
   const currentActor = useCallback(() => scopeStatus === 'authenticated' && !!scopeActor && scopeCurrent(), [scopeStatus, scopeActor, scopeCurrent])
   const { update } = useSession()
@@ -94,25 +106,25 @@ function TenjikaiAppBoundary({ shell }: { shell: boolean }) {
   </div>
   if (leavingWorking) return <p role="status" className="p-6">案件の表示を切り替えています。</p>
   if (mode.kind === 'invalid') return <InvalidProjectMode shell={shell} mode={mode} />
-  if (mode.kind === 'saved' && mode.id !== currentWorking?.projectId) return <SavedProjectMode shell={shell} mode={mode} />
+  if (mode.kind === 'saved' && mode.id !== currentWorking?.projectId) return <SavedProjectMode shell={shell} mode={mode} recoveryOperationId={recoveryOperationId} />
   return <TenjikaiAppContent key={`${scope.version}:${workspaceEpoch}`} shell={shell} currentActor={currentActor}
-    actorId={scope.actor} activeProjectId={currentWorking?.projectId ?? null}
+    actorId={scope.actor} activeProjectId={currentWorking?.projectId ?? null} recoveryOperationId={recoveryOperationId} onRecoveryOperation={rememberRecovery}
     onWorking={projectId => setWorking({ actor: scope.actor, epoch: scope.version, projectId })}
     onNew={() => { setWorking(null); setWorkspaceEpoch(value => value + 1) }} onAuthChanged={() => { setWorking(null); setBlocked(true) }} />
 }
 
-function SavedProjectMode({ shell, mode }: { shell: boolean; mode: Extract<ProjectMode, { kind: 'saved' }> }) {
+function SavedProjectMode({ shell, mode, recoveryOperationId }: { shell: boolean; mode: Extract<ProjectMode, { kind: 'saved' }>; recoveryOperationId: string | null }) {
   const router = useRouter()
   const pathname = usePathname()
   const section = sectionFromPath(pathname)
   const { phase, detail, reload } = useSavedProjectDetail(mode.id)
-  const overviewHref = projectSectionHref('overview', mode)
+  const overviewHref = withGenerationOperation(projectSectionHref('overview', mode), recoveryOperationId)
   useEffect(() => {
     if (section === 'new') router.replace(overviewHref)
   }, [section, overviewHref, router])
   if (section === 'new') return <p role="status" className="p-6">保存内容を読み込んでいます。</p>
-  return <ProjectModeFrame shell={shell} mode={mode} section={section} projectName={detail?.project.projectName}>
-    <SavedProjectPartialView phase={phase} detail={detail} section={section} onReload={reload} loginCallbackUrl={projectSectionHref(section, mode)} />
+  return <ProjectModeFrame shell={shell} mode={mode} section={section} projectName={detail?.project.projectName} recoveryOperationId={recoveryOperationId}>
+    <SavedProjectPartialView phase={phase} detail={detail} section={section} onReload={reload} loginCallbackUrl={withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId)} newProjectHref={withGenerationOperation(sectionHref('new'), recoveryOperationId)} />
   </ProjectModeFrame>
 }
 
@@ -124,20 +136,20 @@ function InvalidProjectMode({ shell, mode }: { shell: boolean; mode: Extract<Pro
   </ProjectModeFrame>
 }
 
-function ProjectModeFrame({ shell, mode, section, projectName, children }: {
-  shell: boolean; mode: ProjectMode; section: Section; projectName?: string; children: ReactNode
+function ProjectModeFrame({ shell, mode, section, projectName, recoveryOperationId, children }: {
+  shell: boolean; mode: ProjectMode; section: Section; projectName?: string; recoveryOperationId?: string | null; children: ReactNode
 }) {
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
-  const go = (next: Section) => { router.push(projectSectionHref(next, mode)); setMobileOpen(false) }
+  const go = (next: Section) => { router.push(withGenerationOperation(projectSectionHref(next, mode), recoveryOperationId ?? null)); setMobileOpen(false) }
   if (shell) return <div className="tenjikai-root text-ink">{children}</div>
   return <div className="tenjikai-root flex h-screen overflow-hidden bg-[var(--bg)] text-ink">
-    <div className="hidden md:flex"><TenjikaiSidebar section={section} ready go={go} isCollapsed={collapsed} onToggle={setCollapsed} projectName={projectName} savedMode loginCallbackUrl={projectSectionHref(section, mode)} /></div>
+    <div className="hidden md:flex"><TenjikaiSidebar section={section} ready go={go} isCollapsed={collapsed} onToggle={setCollapsed} projectName={projectName} savedMode loginCallbackUrl={withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId ?? null)} /></div>
     <AnimatePresence>{mobileOpen && <>
       <motion.div initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} />
       <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ duration: 0.2, ease: 'easeOut' }} className="fixed inset-y-0 left-0 z-50 md:hidden">
-        <TenjikaiSidebar section={section} ready go={go} forceExpanded isMobile onToggle={() => setMobileOpen(false)} projectName={projectName} savedMode loginCallbackUrl={projectSectionHref(section, mode)} />
+        <TenjikaiSidebar section={section} ready go={go} forceExpanded isMobile onToggle={() => setMobileOpen(false)} projectName={projectName} savedMode loginCallbackUrl={withGenerationOperation(projectSectionHref(section, mode), recoveryOperationId ?? null)} />
       </motion.div>
     </>}</AnimatePresence>
     <main className="flex flex-1 flex-col overflow-hidden transition-[margin] duration-200 md:ml-[var(--tenjikai-sidebar-w)]" style={{ ['--tenjikai-sidebar-w' as string]: collapsed ? '72px' : '240px' }}>
@@ -150,12 +162,12 @@ function ProjectModeFrame({ shell, mode, section, projectName, children }: {
   </div>
 }
 
-function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onWorking, onNew, onAuthChanged }: {
+function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, recoveryOperationId, onRecoveryOperation, onWorking, onNew, onAuthChanged }: {
   shell: boolean; currentActor: () => boolean; actorId: string; activeProjectId: string | null
+  recoveryOperationId: string | null; onRecoveryOperation: (operationId: string | null) => void
   onWorking: (projectId: string) => void; onNew: () => void; onAuthChanged: () => void
 }) {
   const router = useRouter()
-  const query = useSearchParams()
   const section = sectionFromPath(usePathname())
   const [phase, setPhase] = useState<Phase>('input')
   const [input, setInput] = useState<ProjectInput>(SAMPLE_INPUT)
@@ -179,41 +191,59 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
   const requestSeq = useRef(0)
   const requestController = useRef<AbortController | null>(null)
   const operationRef = useRef<string | null>(null)
+  const locallyStartedOperation = useRef<string | null>(null)
   const [operationStatus, setOperationStatus] = useState<ClientOperationStatus | null>(null)
   useEffect(() => () => { requestSeq.current++; requestController.current?.abort() }, [])
 
-  const urlOperation = query.get('operation')
+  const activeRecoveryHandle = recoveryOperationId
+  const recoveredStatus = operationStatus?.operationId === activeRecoveryHandle ? operationStatus : null
+  const terminalRecovery = recoveredStatus && ['completed', 'degraded', 'failed', 'canceled'].includes(recoveredStatus.state)
+  const recoveryBlocksNew = !!activeRecoveryHandle && !terminalRecovery
   useEffect(() => {
-    if (!validOperationHandle(urlOperation) || requestController.current) return
-    operationRef.current = urlOperation
+    if (!activeRecoveryHandle || requestController.current || locallyStartedOperation.current === activeRecoveryHandle) return
+    operationRef.current = activeRecoveryHandle
+    setOperationStatus(previous => previous?.operationId === activeRecoveryHandle ? previous : null)
+    setFailureKind('unknown')
+    setError('この操作の保存状態を確認しています。確認が終わるまで新しい操作は開始できません。')
     const controller = new AbortController()
-    void readGenerationStatus(actorId, urlOperation, controller.signal).then(status => {
-      if (controller.signal.aborted || !currentActor() || !status) return
-      setOperationStatus(status)
-      if (status.state !== 'missing') {
-        setFailureKind('unknown')
-        setError(status.state === 'reserved'
-          ? '作成結果を確認できませんでした。操作はAI開始前です。元と同じ入力で続けられます。'
-          : '操作の保存状態を確認しました。保存済みの範囲をご確認ください。')
+    void readGenerationStatus(actorId, activeRecoveryHandle, controller.signal).then(status => {
+      if (controller.signal.aborted || !currentActor()) return
+      if (!status) {
+        setOperationStatus(null)
+        setError('この操作の保存状態を確認できませんでした。新しい操作を始めず、状態を再確認してください。')
+        return
       }
+      setOperationStatus(status)
+      onRecoveryOperation(activeRecoveryHandle)
+      setError(status.state === 'reserved'
+        ? '作成結果を確認できませんでした。操作はAI開始前です。元と同じ入力で続けられます。'
+        : status.state === 'missing'
+          ? 'この操作はまだ到着していない可能性があります。遅れて届く操作の取消を確認するまで、新しい操作は開始できません。'
+          : '操作の保存状態を確認しました。保存済みの範囲をご確認ください。')
     })
     return () => controller.abort()
-  }, [urlOperation, actorId, currentActor])
+  }, [activeRecoveryHandle, actorId, currentActor, onRecoveryOperation])
 
   const checkOperation = () => {
-    const operationId = operationRef.current
+    const operationId = activeRecoveryHandle
     if (!operationId || !currentActor()) return
     const controller = new AbortController()
     void readGenerationStatus(actorId, operationId, controller.signal).then(status => {
-      if (currentActor() && operationRef.current === operationId && status) setOperationStatus(status)
+      if (!currentActor() || operationRef.current !== operationId) return
+      setOperationStatus(status)
+      if (!status) setError('この操作の保存状態を確認できませんでした。新しい操作を始めず、状態を再確認してください。')
     })
   }
   const cancelMissingOperation = () => {
-    const operationId = operationRef.current
-    if (!operationId || operationStatus?.state !== 'missing' || !currentActor()) return
+    const operationId = activeRecoveryHandle
+    if (!operationId || recoveredStatus?.state !== 'missing' || !currentActor()) return
     const controller = new AbortController()
     void cancelGenerationStatus(actorId, operationId, controller.signal).then(status => {
-      if (currentActor() && operationRef.current === operationId && status) setOperationStatus(status)
+      if (!currentActor() || operationRef.current !== operationId) return
+      if (status) setOperationStatus(status)
+      setError(status?.state === 'canceled'
+        ? '遅れて届く操作の取消を確認しました。新しい操作を始められます。'
+        : '取消を確認できませんでした。新しい操作を始めず、状態を再確認してください。')
     })
   }
 
@@ -230,7 +260,8 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
 
   const start = (next: ProjectInput, explicitSameOperation = false) => {
     if (!currentActor() || requestController.current || failureKind === 'unknown' && !explicitSameOperation || failureKind === 'known' && !!projectId) return
-    if (explicitSameOperation && operationStatus?.state !== 'reserved') return
+    if (activeRecoveryHandle && !(explicitSameOperation && recoveredStatus?.state === 'reserved')) return
+    if (explicitSameOperation && recoveredStatus?.state !== 'reserved') return
     setError(null)
     setFailureKind(null)
     setInput(next)
@@ -241,12 +272,20 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
     setPhase('generating')
     const seq = ++requestSeq.current
     const requestId = crypto.randomUUID()
-    const operationId = explicitSameOperation && operationRef.current ? operationRef.current : `${Date.now()}.${crypto.randomUUID()}`
+    const operationId = explicitSameOperation && activeRecoveryHandle ? activeRecoveryHandle : `${Date.now()}.${crypto.randomUUID()}`
     operationRef.current = operationId
+    locallyStartedOperation.current = operationId
+    onRecoveryOperation(operationId)
     setOperationStatus(null)
-    router.replace(`${sectionHref('new')}?operation=${encodeURIComponent(operationId)}`)
     const controller = new AbortController()
     requestController.current = controller
+    router.replace(`${sectionHref('new')}?operation=${encodeURIComponent(operationId)}`)
+    const recoverAfterUnknown = () => {
+      const statusController = new AbortController()
+      void readGenerationStatus(actorId, operationId, statusController.signal).then(status => {
+        if (currentActor() && seq === requestSeq.current && operationRef.current === operationId && status) setOperationStatus(status)
+      })
+    }
     requestGeneratedPlan(next, actorId, operationId, requestId, controller.signal).then((result: GenerationResult) => {
       if (!currentActor() || seq !== requestSeq.current) return
       if (result.state === 'generated') {
@@ -256,6 +295,7 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
         setGenerated(result.plan)
         setProjectId(result.projectId)
         setSave(result.save)
+        setOperationStatus({ actorId, operationId, state: result.save.analysis === 'saved' ? 'completed' : 'degraded', projectId: result.projectId, analysis: result.save.analysis, dispatchAllowed: false })
         setFailureKind(null)
         onWorking(result.projectId)
       } else if (result.state === 'auth_changed') {
@@ -266,7 +306,9 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
         setProjectId(result.projectId)
         setSave(result.save)
         setFailureKind(result.state === 'outcome_unknown' ? 'unknown' : result.state === 'generation_failed' ? 'known' : 'rejected')
+        if (result.state === 'generation_failed') setOperationStatus({ actorId, operationId, state: 'failed', projectId: result.projectId, analysis: 'not_saved', dispatchAllowed: false })
         setPhase('input')
+        if (result.state === 'outcome_unknown' || result.state === 'rejected') recoverAfterUnknown()
       }
       setPending(false)
     }).catch(() => {
@@ -275,6 +317,7 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
         setFailureKind('unknown')
         setPhase('input')
         setPending(false)
+        recoverAfterUnknown()
       }
     }).finally(() => { if (requestController.current === controller) requestController.current = null })
   }
@@ -291,7 +334,8 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
   }, [phase, animDone, pending, router, currentActor, projectId, activeProjectId])
 
   const go = (s: Section) => {
-    if (s === 'new') { requestSeq.current++; requestController.current?.abort(); requestController.current = null; operationRef.current = null; setOperationStatus(null); setPhase('input'); setProjectId(null); setError(null); setFailureKind(null); onNew() }
+    if (s === 'new' && (requestController.current || recoveryBlocksNew)) return
+    if (s === 'new') { requestSeq.current++; requestController.current?.abort(); requestController.current = null; operationRef.current = null; locallyStartedOperation.current = null; onRecoveryOperation(null); setOperationStatus(null); setPhase('input'); setProjectId(null); setError(null); setFailureKind(null); onNew() }
     router.push(s === 'new' || !activeProjectId ? sectionHref(s) : projectSectionHref(s, { kind: 'saved', id: activeProjectId }))
     setMobileOpen(false)
   }
@@ -305,7 +349,7 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
           onDone={onGeneratingDone}
         />
       )
-    if (phase === 'input' || section === 'new') return <Wizard initial={input} onSubmit={next => start(next, operationStatus?.state === 'reserved')} submitLabel={operationStatus?.state === 'reserved' ? '同じ操作で生成を続ける' : undefined} submitDisabled={failureKind === 'unknown' && operationStatus?.state !== 'reserved' || failureKind === 'known' && !!projectId} />
+    if (phase === 'input' || section === 'new') return <Wizard initial={input} onSubmit={next => start(next, recoveredStatus?.state === 'reserved')} submitLabel={recoveredStatus?.state === 'reserved' ? '同じ操作で生成を続ける' : undefined} submitDisabled={!!activeRecoveryHandle && recoveredStatus?.state !== 'reserved' || failureKind === 'unknown' && recoveredStatus?.state !== 'reserved' || failureKind === 'known' && !!projectId} />
     switch (section) {
       case 'overview':
         return <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} />
@@ -332,15 +376,16 @@ function TenjikaiAppContent({ shell, currentActor, actorId, activeProjectId, onW
         <p>{error}{failureKind === 'unknown' && ' 作成された可能性があるため、ここからの再送は停止しています。'}</p>
         {projectId ? <Link href={projectSectionHref('overview', { kind: 'saved', id: projectId })} className="mt-2 inline-block font-semibold underline">保存案件の基本情報を確認</Link>
           : failureKind === 'unknown' ? <Link href="/home" className="mt-2 inline-block font-semibold underline">ホームで保存案件を確認</Link> : null}
-        {failureKind === 'unknown' && <>
-          <p className="mt-2">一覧に見つからない場合も、案件が作成されなかった証明にはなりません。</p>
-          {operationRef.current && <button type="button" className="mt-2 block font-semibold underline" onClick={checkOperation}>この操作の状態を確認</button>}
-          {operationStatus?.state === 'reserved' && <p className="mt-2">AIはまだ開始されていません。元と同じ入力を確認してから、同じ操作として生成を続けられます。</p>}
-          {operationStatus?.state === 'missing' && <button type="button" className="mt-2 block font-semibold underline" onClick={cancelMissingOperation}>遅れて届く操作を取り消す</button>}
-          {operationStatus?.state === 'canceled' && <button type="button" className="mt-2 block font-semibold underline" onClick={() => go('new')}>新しい操作を始める</button>}
-          {operationStatus?.projectId && <Link href={projectSectionHref('overview', { kind: 'saved', id: operationStatus.projectId })} className="mt-2 block font-semibold underline">確認できる保存案件を開く</Link>}
-          {operationStatus && <p className="mt-2">操作状態: {operationStatus.state === 'completed' ? '基本情報と分析を保存済み' : operationStatus.state === 'degraded' ? '基本情報のみ確認済み' : operationStatus.state === 'failed' ? '生成に失敗しました' : operationStatus.state === 'reserved' ? 'AI開始前' : operationStatus.state === 'processing' || operationStatus.state === 'unknown' ? 'AI実行結果を確認中' : operationStatus.state === 'missing' ? '未到着の可能性があります' : operationStatus.state === 'canceled' ? '取消済み' : operationStatus.state === 'deleted' ? '案件を確認できません' : '現在の案件と一致しません'}。元の3D案は再現されません。</p>}
+        {(failureKind === 'unknown' || failureKind === 'rejected') && <>
+          {failureKind === 'unknown' && <p className="mt-2">一覧に見つからない場合も、案件が作成されなかった証明にはなりません。</p>}
+          {activeRecoveryHandle && <button type="button" className="mt-2 block font-semibold underline" onClick={checkOperation}>この操作の状態を確認</button>}
+          {recoveredStatus?.state === 'reserved' && <p className="mt-2">AIはまだ開始されていません。元と同じ入力を確認してから、同じ操作として生成を続けられます。</p>}
+          {recoveredStatus?.state === 'missing' && <button type="button" className="mt-2 block font-semibold underline" onClick={cancelMissingOperation}>遅れて届く操作を取り消す</button>}
+          {terminalRecovery && <button type="button" className="mt-2 block font-semibold underline" onClick={() => go('new')}>別の案件を新規作成</button>}
+          {recoveredStatus?.projectId && <Link href={withGenerationOperation(projectSectionHref('overview', { kind: 'saved', id: recoveredStatus.projectId }), activeRecoveryHandle)} className="mt-2 block font-semibold underline">確認できる保存案件を開く</Link>}
+          {recoveredStatus && <p className="mt-2">操作状態: {recoveredStatus.state === 'completed' ? '基本情報と分析を保存済み' : recoveredStatus.state === 'degraded' ? '基本情報のみ確認済み' : recoveredStatus.state === 'failed' ? '生成に失敗しました' : recoveredStatus.state === 'reserved' ? 'AI開始前' : recoveredStatus.state === 'processing' || recoveredStatus.state === 'unknown' ? 'AI実行結果を確認中' : recoveredStatus.state === 'missing' ? '未到着の可能性があります' : recoveredStatus.state === 'canceled' ? '取消済み' : recoveredStatus.state === 'deleted' ? '案件を確認できません' : '現在の案件と一致しません'}。元の3D案は再現されません。</p>}
         </>}
+        {failureKind === 'known' && terminalRecovery && <button type="button" className="mt-2 block font-semibold underline" onClick={() => go('new')}>別の案件を新規作成</button>}
       </div>}
       {phase === 'ready' && section !== 'new' && save && (
         <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8">

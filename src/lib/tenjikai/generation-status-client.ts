@@ -3,6 +3,12 @@ import { readGenerationEnvelope } from './generation-client'
 export type ClientOperationStatus = { actorId: string; operationId: string; state: 'missing' | 'reserved' | 'processing' | 'unknown' | 'completed' | 'degraded' | 'failed' | 'canceled' | 'superseded' | 'deleted'; projectId: string | null; analysis: 'saved' | 'unknown' | 'not_saved'; dispatchAllowed: boolean }
 const states = ['missing', 'reserved', 'processing', 'unknown', 'completed', 'degraded', 'failed', 'canceled', 'superseded', 'deleted']
 export function validOperationHandle(value: unknown): value is string { return typeof value === 'string' && /^\d{13}\.[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) }
+export function withGenerationOperation(href: string, operationId: string | null): string {
+  if (!validOperationHandle(operationId)) return href
+  const url = new URL(href, 'https://tenjikai.invalid')
+  url.searchParams.set('operation', operationId)
+  return url.pathname + url.search
+}
 function parse(body: unknown, actorId: string, operationId: string): ClientOperationStatus | null {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null
   const r = body as Record<string, unknown>
