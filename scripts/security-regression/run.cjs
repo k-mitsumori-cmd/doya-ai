@@ -1384,6 +1384,8 @@ for (const verifier of [
   'verify-home-hydration.cjs', 'verify-organization-entry-mounted.cjs',
   'verify-home-finance.cjs', 'verify-asklink-creation-client.cjs',
   'verify-expense-entry-mounted.cjs', 'verify-tenjikai-draft-mounted.cjs',
+  'verify-tenjikai-project-detail-route.cjs', 'verify-tenjikai-project-detail-mounted.cjs',
+  'verify-tenjikai-login-return.cjs',
   'verify-expense-query-scope.cjs', 'verify-case-study-form-mounted.cjs',
   'verify-promane-nullable-compat.cjs',
   'verify-home-popup.cjs',
