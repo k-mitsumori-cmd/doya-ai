@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+import OrganizationUnavailable from '@/components/OrganizationUnavailable'
 import { getShodanContext } from '@/lib/shodan/access'
 import { prisma } from '@/lib/prisma'
 import { getShodanBilling } from '@/lib/shodan/billing'
@@ -31,8 +31,8 @@ export default async function ShodanOrgLayout(
   const orgSlug = p.orgSlug
 
   const ctx = await getShodanContext(orgSlug)
-  // 当該組織のACTIVEメンバーでなければ入口へ（他組織は解決されない＝IDOR安全）
-  if (!ctx || ctx.organizationSlug !== orgSlug) redirect('/shodan')
+  // 他組織へ自動で切り替えず、権限や組織が変わったことを案内する。
+  if (!ctx || ctx.organizationSlug !== orgSlug) return <OrganizationUnavailable serviceHref="/shodan" serviceName="商談準備" />
 
   const [org, billing] = await Promise.all([
     prisma.shodanOrganization.findUnique({ where: { id: ctx.organizationId }, select: { name: true } }),

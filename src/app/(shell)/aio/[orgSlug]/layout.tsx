@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+import OrganizationUnavailable from '@/components/OrganizationUnavailable'
 import { getAioContext } from '@/lib/aio/access'
 import { getAioBilling } from '@/lib/aio/billing'
 import { prisma } from '@/lib/prisma'
@@ -26,7 +26,7 @@ export default async function AioOrgLayout(
   const orgSlug = decodeURIComponent(p.orgSlug)
 
   const ctx = await getAioContext(orgSlug)
-  if (!ctx || ctx.organizationSlug !== orgSlug) redirect('/aio')
+  if (!ctx || ctx.organizationSlug !== orgSlug) return <OrganizationUnavailable serviceHref="/aio" serviceName="AI検索対策" />
 
   // 共通の枠が有効なときは、ツール内のナビ（ToolFrame）だけを出す。枠そのものは (shell)/layout.tsx が出す
   if (isShellEnabled('aio')) return <AioShellFrame orgSlug={orgSlug}>{children}</AioShellFrame>

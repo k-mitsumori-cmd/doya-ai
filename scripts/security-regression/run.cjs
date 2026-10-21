@@ -885,6 +885,11 @@ if (sfaPricingContext.error || sfaPricingContext.status !== 0) {
   console.error('Security regression failed: verify-sfa-pricing-context.cjs');
   process.exit(1);
 }
+const organizationUnavailable = spawnSync(process.execPath, [path.join(__dirname, 'verify-organization-unavailable-navigation.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (organizationUnavailable.error || organizationUnavailable.status !== 0) {
+  console.error('Security regression failed: verify-organization-unavailable-navigation.cjs');
+  process.exit(1);
+}
 const navigationRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-navigation-recovery-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (navigationRecovery.error || navigationRecovery.status !== 0) {
   console.error('Security regression failed: verify-navigation-recovery-mounted.cjs');
