@@ -73,7 +73,7 @@ class GateTests(unittest.TestCase):
             with mock.patch.object(gate, "ROOT", root):
                 self.assertEqual(gate.ignored_source_files(), [])
                 (audits / "verify-example.cjs").write_text("throw Error('ignored')")
-                self.assertEqual(gate.ignored_source_files(), ["docs/audits/verify-example.cjs"])
+                self.assertEqual(gate.ignored_source_files(), [str(Path("docs") / "audits" / "verify-example.cjs")])
                 with mock.patch.object(gate, "run_git", return_value="a" * 40), \
                      mock.patch.object(gate, "working_changes", return_value=[]):
                     with self.assertRaises(gate.GateError):
@@ -171,8 +171,8 @@ class GateTests(unittest.TestCase):
 
     def test_report_outputs_are_recordable_but_source_mutation_is_rejected(self):
         self.assertFalse(gate.is_source_path("docs/audits/report.json"))
-        self.assertTrue(gate.is_source_path("docs/audits/2026-10-06-all-services-recheck/verify-example.cjs"))
-        self.assertTrue(gate.is_source_path("src/app/page.tsx"))
+        self.assertTrue(gate.is_source_path(str(Path("docs") / "audits" / "2026-10-06-all-services-recheck" / "verify-example.cjs")))
+        self.assertTrue(gate.is_source_path(str(Path("src") / "app" / "page.tsx")))
         self.assertTrue(gate.is_source_path("package-lock.json"))
         event = "a" * 40
         with mock.patch.object(gate, "run_git", side_effect=lambda *args: event if args[-1] == "HEAD" else "b" * 40), \
@@ -185,13 +185,13 @@ class GateTests(unittest.TestCase):
         with mock.patch.object(gate, "run_git", return_value=event), \
              mock.patch.object(gate, "reject_env_files"), \
              mock.patch.object(gate, "ignored_source_files", return_value=[]), \
-             mock.patch.object(gate, "working_changes", return_value=["src/app/page.tsx"]):
+             mock.patch.object(gate, "working_changes", return_value=[str(Path("src") / "app" / "page.tsx")]):
             with self.assertRaises(gate.GateError):
                 gate.validate_checkout(event)
         with mock.patch.object(gate, "run_git", return_value=event), \
              mock.patch.object(gate, "reject_env_files"), \
              mock.patch.object(gate, "ignored_source_files", return_value=[]), \
-             mock.patch.object(gate, "working_changes", return_value=["docs/audits/x/verify-example.cjs"]):
+             mock.patch.object(gate, "working_changes", return_value=[str(Path("docs") / "audits" / "x" / "verify-example.cjs")]):
             with self.assertRaises(gate.GateError):
                 gate.validate_checkout(event)
 
