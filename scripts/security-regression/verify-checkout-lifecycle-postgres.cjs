@@ -527,8 +527,13 @@ await check('B2a dedicated HR handle binds current selected organization and end
  for(const action of ['status','resume','ready','abort']){const denied=await b2post(b2hr,{action,operationId:id});assert.equal(denied.response.status,403);assert.equal(denied.body.code,'HR_BILLING_OWNER_REQUIRED');assert.equal(denied.body.url,undefined)}
  assert.equal(b2sdkState.checkoutReads,reads);assert.equal(b2sdkState.checkoutWrites,writes);
  b2hrContext={userId:target,organizationId:a.org.id,role:'OWNER'};const ready=await b2post(b2hr,{action:'ready',operationId:id});assert.equal(ready.response.status,200);assert.equal(ready.body.actorId,target);assert.equal(ready.body.sessionId,started.body.sessionId);
- const generic=await b2post(b2generic,{action:'ready',operationId:id},{'X-HR-Selected-Organization':a.org.id,'X-HR-Selected-Actor':target});assert.equal(generic.response.status,409);assert.equal(generic.body.code,'CHECKOUT_IDENTITY_CHANGED');
- const genericId=crypto.randomUUID(),genericStart=await b2post(b2generic,b2start(genericId));assert.equal(genericStart.response.status,200);const cross=await b2post(b2hr,{action:'ready',operationId:genericId});assert.equal(cross.response.status,409);assert.equal(cross.body.code,'CHECKOUT_IDENTITY_CHANGED')
+ const crossReads=b2sdkState.checkoutReads,crossWrites=b2sdkState.checkoutWrites;
+ const generic=await b2post(b2generic,{action:'ready',operationId:id},{'X-HR-Selected-Organization':a.org.id,'X-HR-Selected-Actor':target});assert.equal(generic.response.status,409);assert.equal(generic.body.code,'CHECKOUT_IDENTITY_CHANGED');assert.equal(generic.body.url,undefined);assert.equal(b2sdkState.checkoutReads,crossReads);assert.equal(b2sdkState.checkoutWrites,crossWrites)
+});
+await check('B2a dedicated HR handle rejects a separately admitted generic source',async()=>{
+ b2reset();const {org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});b2hrContext={userId:target,organizationId:org.id,role:'OWNER'};
+ const genericId=crypto.randomUUID(),genericStart=await b2post(b2generic,b2start(genericId));assert.equal(genericStart.response.status,200);
+ const reads=b2sdkState.checkoutReads,writes=b2sdkState.checkoutWrites,cross=await b2post(b2hr,{action:'ready',operationId:genericId});assert.equal(cross.response.status,409);assert.equal(cross.body.code,'CHECKOUT_IDENTITY_CHANGED');assert.equal(cross.body.url,undefined);assert.equal(b2sdkState.checkoutReads,reads);assert.equal(b2sdkState.checkoutWrites,writes)
 });
 await check('B2a generic HR OWNER downgrade during ready provider read returns no URL',async()=>{
  b2reset();const {org,chief}=await seedOrg('hr');await db.hrOrganizationMember.update({where:{id:chief.id},data:{userId:target}});
