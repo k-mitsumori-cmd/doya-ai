@@ -17,7 +17,7 @@ BEGIN
     WHERE i.indrelid = 'tenjikai_booth_plan'::regclass
       AND idx.relname = 'tenjikai_booth_plan_projectId_variant_idx'
       AND NOT i.indisunique AND NOT i.indisprimary AND i.indnkeyatts = 2
-      AND (SELECT array_agg(a.attname ORDER BY key.ordinality)
+      AND (SELECT array_agg(a.attname::text ORDER BY key.ordinality)
            FROM unnest(i.indkey::smallint[]) WITH ORDINALITY AS key(attnum, ordinality)
            JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = key.attnum)
           = ARRAY['projectId', 'variant']
@@ -30,11 +30,11 @@ BEGIN
       AND c.conname = 'tenjikai_task_documentId_fkey'
       AND c.contype = 'f' AND c.confrelid = 'tenjikai_document'::regclass
       AND c.confdeltype = 'n' AND c.confupdtype = 'c'
-      AND (SELECT array_agg(a.attname ORDER BY key.ordinality)
+      AND (SELECT array_agg(a.attname::text ORDER BY key.ordinality)
            FROM unnest(c.conkey) WITH ORDINALITY AS key(attnum, ordinality)
            JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = key.attnum)
           = ARRAY['documentId']
-      AND (SELECT array_agg(a.attname ORDER BY key.ordinality)
+      AND (SELECT array_agg(a.attname::text ORDER BY key.ordinality)
            FROM unnest(c.confkey) WITH ORDINALITY AS key(attnum, ordinality)
            JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = key.attnum)
           = ARRAY['id']

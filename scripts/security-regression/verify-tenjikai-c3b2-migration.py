@@ -99,7 +99,7 @@ try:
                 raise AssertionError(f'{name}: revision column missing')
             indexes = sql(schema, """SELECT count(*) FROM pg_index i JOIN pg_class idx ON idx.oid=i.indexrelid
                 WHERE i.indrelid IN ('tenjikai_booth_plan'::regclass,'tenjikai_booth_element'::regclass,'tenjikai_graphic_panel'::regclass,'tenjikai_creative'::regclass,'tenjikai_novelty'::regclass,'tenjikai_budget_line'::regclass,'tenjikai_document'::regclass,'tenjikai_task'::regclass)
-                AND i.indisunique AND idx.relname = ANY(ARRAY[
+                AND i.indisunique AND idx.relname::text = ANY(ARRAY[
                   'tenjikai_booth_plan_project_variant_uq','tenjikai_booth_plan_one_selected_uq',
                   'tenjikai_booth_element_plan_id_uq','tenjikai_booth_element_source_uq',
                   'tenjikai_graphic_panel_source_uq','tenjikai_creative_project_kind_uq',
@@ -111,7 +111,7 @@ try:
                 FROM pg_index i JOIN pg_class idx ON idx.oid=i.indexrelid
                 JOIN LATERAL unnest(i.indkey::smallint[]) WITH ORDINALITY k(attnum,ordinality) ON TRUE
                 JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=k.attnum
-                WHERE idx.relnamespace=current_schema()::regnamespace AND idx.relname=ANY(ARRAY[
+                WHERE idx.relnamespace=current_schema()::regnamespace AND idx.relname::text=ANY(ARRAY[
                   'tenjikai_booth_plan_project_variant_uq','tenjikai_booth_plan_one_selected_uq',
                   'tenjikai_booth_element_plan_id_uq','tenjikai_booth_element_source_uq',
                   'tenjikai_graphic_panel_source_uq','tenjikai_creative_project_kind_uq',
