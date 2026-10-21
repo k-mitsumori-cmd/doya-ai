@@ -303,13 +303,13 @@ export function AdminSidebar({ isMobile }: { isMobile?: boolean } = {}) {
 
       {/* Footer */}
       <div className="p-4 border-t border-white/5">
-        <Link href="/">
+        <Link href="/home">
           <motion.div
             whileHover={{ scale: 1.02 }}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/50 hover:bg-white/5 hover:text-white transition-all mb-2"
           >
             <Home className="w-4 h-4" />
-            <span className="font-medium">ポータルへ戻る</span>
+            <span className="font-medium">ツールのホームへ</span>
           </motion.div>
         </Link>
         <button

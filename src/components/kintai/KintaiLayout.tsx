@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { useSession, signOut } from 'next-auth/react'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { usePathname } from 'next/navigation'
@@ -129,7 +130,7 @@ export default function KintaiLayout({ children, renderFrame }: KintaiLayoutProp
     return <>{children}</>
   }
 
-  if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
+  if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<SignInReturnLink fallback="/kintai/dashboard" className="ml-2 underline">再度ログインする</SignInReturnLink></div>
 
   if (framedNext && renderFrame && usageError && session?.user && !knownScope) {
     return <>{renderFrame({ role: 'employee', employeeActive: true, children: <div style={{ padding: 24 }}><ErrorNotice what="勤怠の情報を読み込めませんでした。組織の状態は変わっていません。" how="時間をおいて、もう一度お試しください。" onRetry={() => void loadUsage()} retryLabel="再読み込み" /></div> })}</>
@@ -176,13 +177,12 @@ export default function KintaiLayout({ children, renderFrame }: KintaiLayoutProp
           </div>
           
           <p className="text-slate-500 mb-6">ログインして勤怠管理を始めましょう</p>
-          <a
-            href="/auth/signin?callbackUrl=/kintai/clock"
+          <SignInReturnLink fallback="/kintai/dashboard"
             className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-[#7f19e6] to-[#5b0fb3] text-white font-bold rounded-xl hover:shadow-lg hover:shadow-[#7f19e6]/20 transition-all"
           >
             <span className="material-symbols-outlined">login</span>
             ログイン
-          </a>
+          </SignInReturnLink>
         </div>
       </div>
     )

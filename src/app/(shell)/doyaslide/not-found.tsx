@@ -23,10 +23,10 @@ export default function DoyaSlideNotFound() {
         お探しのページは存在しないか、移動した可能性があります。
       </p>
       <Link
-        href="/doyaslide"
+        href="/doyaslide/projects"
         className="px-6 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors"
       >
-        ドヤスライドのトップへ
+        プロジェクト一覧へ
       </Link>
       <a
         href={SUPPORT_CONTACT_URL}

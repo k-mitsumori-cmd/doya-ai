@@ -103,7 +103,7 @@ async function checkWorkEntries() {
   const {UiNextContext,ShellToolHrefsContext}=source('src/components/shell/ui-next-context.tsx')
   const AppShell=source('src/components/shell/AppShell.tsx').default
   const {ToolSwitcherMenu}=source('src/components/ToolSwitcherMenu.tsx')
-  const ServiceNav=source('src/components/ServiceNav.tsx').default
+  const {default:ServiceNav,OtherServicesCard}=source('src/components/ServiceNav.tsx')
   const {AdminSidebar}=source('src/components/AdminSidebar.tsx')
   const {SidebarUserProfile}=source('src/components/sidebar/SidebarUserProfile.tsx')
   const {SidebarNavLink}=source('src/components/sidebar/SidebarNavLink.tsx')
@@ -155,6 +155,8 @@ async function checkWorkEntries() {
       })
     })
     await check('ServiceNav existing switcher uses registry work paths',async()=>{await mount(React.createElement(ServiceNav,{}),async()=>{await click(document.querySelector('button'));for(const s of services)assert.ok([...document.querySelectorAll('a')].some(a=>a.getAttribute('href')===expected[s.id]),s.id)})})
+    await check('latent service card returns to authenticated tool home, not public site',async()=>{await mount(React.createElement(OtherServicesCard,{currentService:'hr'}),async()=>{const home=[...document.querySelectorAll('a')].find(a=>a.textContent.includes('ツールのホームへ'));assert.ok(home);assert.equal(home.getAttribute('href'),'/home');assert.ok(![...document.querySelectorAll('a')].some(a=>a.getAttribute('href')==='/'))})})
+    await check('unused unified promo keeps its rendered pricing CTA and no public-LP work link',async()=>{const Promo=source('src/components/UnifiedPlanPromo.tsx').default;await mount(React.createElement(Promo,{}),async()=>{const anchors=[...document.querySelectorAll('a')];assert.deepEqual(anchors.map(a=>a.getAttribute('href')),['/all-in-one'])})})
     for(const guest of [false,true])await check((guest?'guest':'authenticated')+' slide local sidebar/profile/login returns to real workspace without changing public LP',async()=>{
       authenticated=!guest;pathname='/doyaslide/new'
       await mount(React.createElement(SlideSidebar,{isMobile:true,forceExpanded:true,plan:guest?'GUEST':'FREE'}),async()=>{
@@ -167,6 +169,7 @@ async function checkWorkEntries() {
     for(const mobile of [false,true])await check((mobile?'mobile':'desktop')+' admin service links reach existing work screens',async()=>{
       pathname='/admin'
       await mount(React.createElement(AdminSidebar,{isMobile:mobile}),async()=>{
+        const home=[...document.querySelectorAll('a')].find(a=>a.textContent.includes('ツールのホームへ'));assert.ok(home);assert.equal(home.getAttribute('href'),'/home')
         for(const [label,href]of [['ドヤバナーAI','/banner/dashboard'],['ドヤライティングAI','/seo'],['ドヤ勤怠','/kintai/dashboard']]){
           const anchor=[...document.querySelectorAll('a')].find(a=>a.textContent.includes(label));assert.ok(anchor);assert.equal(anchor.getAttribute('href'),href)
         }

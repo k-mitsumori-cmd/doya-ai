@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
@@ -108,11 +109,9 @@ export default function SeoPricingPage() {
               </button>
             </Link>
           ) : (
-            <Link href="/auth/signin">
-              <button className="px-8 py-4 rounded-full bg-blue-600 text-white font-black text-base hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">
-                ログインして無料プランを始める
-              </button>
-            </Link>
+            <SignInReturnLink fallback="/seo/pricing" className="px-8 py-4 rounded-full bg-blue-600 text-white font-black text-base hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">
+              ログインして無料プランを始める
+            </SignInReturnLink>
           )}
         </div>
       </main>

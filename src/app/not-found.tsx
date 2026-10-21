@@ -26,11 +26,9 @@ export default function NotFound() {
         
         {/* ナビゲーション */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="/">
-            <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all">
-              <Home className="w-5 h-5" />
-              トップへ戻る
-            </button>
+          <Link href="/" className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all">
+            <Home className="w-5 h-5" />
+            サイトトップへ
           </Link>
           
           <button 
@@ -46,8 +44,8 @@ export default function NotFound() {
         <div className="mt-10 pt-8 border-t border-gray-200">
           <p className="text-sm text-gray-500 mb-4">お探しですか？</p>
           <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
-            <Link href="/kantan/dashboard" className="text-violet-600 hover:underline">
-              カンタンドヤAI
+            <Link href="/home" className="text-violet-600 hover:underline">
+              ツールのホームへ
             </Link>
             <Link href="/banner/dashboard" className="text-violet-600 hover:underline">
               ドヤバナーAI

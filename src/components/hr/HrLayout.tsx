@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -210,7 +211,7 @@ export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
     return <>{children}</>
   }
 
-  if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
+  if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<SignInReturnLink fallback="/hr/dashboard" className="ml-2 underline">再度ログインする</SignInReturnLink></div>
 
   if ((usageError || selectionError) && session?.user && !knownScope && renderFrame && toolNext) {
     return framed(<div className="p-4 sm:p-6"><ErrorNotice what="組織の情報を読み込めませんでした。組織の状態は変わっていません。" how={selectionError || '時間をおいて、もう一度お試しください。'} onRetry={() => void loadUsage()} retryLabel="再読み込み" /></div>)
@@ -239,13 +240,12 @@ export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
         <div className="text-center bg-white rounded-3xl border border-slate-200 shadow-xl p-12 max-w-md">
           <img src="/hr/logo.png" alt="ドヤHR" className="w-56 mx-auto mb-6 drop-shadow" />
           <p className="text-slate-500 mb-6">ログインしてタレントマネジメントを始めましょう</p>
-          <a
-            href="/auth/signin?callbackUrl=/hr/dashboard"
+          <SignInReturnLink fallback="/hr/dashboard"
             className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-sky-500/20 transition-all"
           >
             <span className="material-symbols-outlined">login</span>
             ログイン
-          </a>
+          </SignInReturnLink>
         </div>
       </div>
     )

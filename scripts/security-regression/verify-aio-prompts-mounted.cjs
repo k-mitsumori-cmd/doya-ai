@@ -11,7 +11,7 @@ const client=createOrgClient('aio',{fetch:async(url,init={})=>{const u=new URL(u
 function load(file){if(modules.has(file))return modules.get(file);const exports={};modules.set(file,exports);vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports,require:n=>{
  if(n==='react'||n==='react/jsx-runtime')return req(n);
  if(n==='next/link')return{__esModule:true,default:({children,href,...p})=>React.createElement('a',{href,...p},children)};
- if(n==='next/navigation')return{useParams:()=>({orgSlug:org})};
+ if(n==='next/navigation')return{useParams:()=>({orgSlug:org}),usePathname:()=>window.location.pathname};
  if(n==='next-auth/react')return{useSession:()=>({status:auth,data:actor?{user:{id:actor}}:null})};
  if(n==='@/lib/aio/client'||n==='./client')return client;
  if(n==='@/components/TrialCallout')return{TrialNote:()=>{trialRenders++;return React.createElement('span',null,'synthetic eligible trial')}};

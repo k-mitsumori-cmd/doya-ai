@@ -413,7 +413,7 @@ function HomeDashboardLegacyView({ summary, loading, error, refresh, current }: 
               <div><dt>残業</dt><dd>{s.attendance.overtimeHoursThisMonth}時間</dd></div>
               <div><dt>承認待ち</dt><dd>{s.attendance.pendingRequests}件</dd></div>
             </dl>
-          ) : <EmptyCard text="打刻と残業をここでまとめます。" href="/kintai" cta="勤怠をはじめる" />}
+          ) : <EmptyCard text="打刻と残業をここでまとめます。" href="/kintai/dashboard" cta="勤怠をはじめる" />}
         </section>
         <section className={styles.card}>
           <div className={styles.cardHead}><h2><Users size={16} /> 人と組織</h2></div>
@@ -422,7 +422,7 @@ function HomeDashboardLegacyView({ summary, loading, error, refresh, current }: 
               <div><dt>在籍者</dt><dd>{s.people.activeEmployees}名</dd></div>
               <div><dt>部署</dt><dd>{s.people.departments}</dd></div>
             </dl>
-          ) : <EmptyCard text="社員・部署・評価をここでまとめます。" href="/hr" cta="人事をはじめる" />}
+          ) : <EmptyCard text="社員・部署・評価をここでまとめます。" href="/hr/dashboard" cta="人事をはじめる" />}
         </section>
         <section className={styles.card}>
           <div className={styles.cardHead}><h2><CreditCard size={16} /> ご契約</h2></div>

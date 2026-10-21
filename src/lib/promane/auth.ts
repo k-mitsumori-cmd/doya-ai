@@ -10,8 +10,8 @@ const VALID_MEMBER_ROLES = ['owner', 'admin', 'member', 'guest']
 
 /**
  * ページ用: 未ログインなら /auth/signin にリダイレクト
- * ⚠️ callbackUrl を必ず付ける。付けないと signin 側の既定('/seo')が効いて
- *    ログイン後にドヤ記事作成へ飛ばされる
+ * ⚠️ callbackUrl を必ず付ける。付けないと signin 側の既定('/home')が効いて
+ *    ログイン後に汎用ツールホームへ移るため、この作業画面へ戻れない
  * Server Action からは使わないこと（Action 内 redirect は Server Components error を引き起こす）
  */
 export async function requirePromaneAuth() {

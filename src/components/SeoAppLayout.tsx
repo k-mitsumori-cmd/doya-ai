@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import React from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ExternalLink, Menu, Plus, Timer, X } from 'lucide-react'
@@ -171,12 +172,10 @@ export function SeoAppLayout({
               </div>
             </Link>
             {!isLoggedIn && (
-              <Link href="/auth/signin">
-                <button className="h-10 px-3 sm:px-4 rounded-xl bg-white border border-gray-200 text-gray-700 text-xs font-black hover:bg-gray-50 transition-colors inline-flex items-center gap-1.5 sm:gap-2" title="ログイン">
-                  <ExternalLink className="w-4 h-4" />
-                  <span className="hidden sm:inline">ログイン</span>
-                </button>
-              </Link>
+              <SignInReturnLink fallback="/seo" className="h-10 px-3 sm:px-4 rounded-xl bg-white border border-gray-200 text-gray-700 text-xs font-black hover:bg-gray-50 transition-colors inline-flex items-center gap-1.5 sm:gap-2" title="ログイン">
+                <ExternalLink className="w-4 h-4" />
+                <span className="hidden sm:inline">ログイン</span>
+              </SignInReturnLink>
             )}
             <Link href="/seo/create">
               <button className="h-10 px-3 sm:px-4 rounded-xl bg-[#2563EB] text-white text-xs font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 sm:gap-2" title="新規記事作成">

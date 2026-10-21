@@ -2,64 +2,71 @@
 
 import Link from 'next/link';
 import NextImage from 'next/image';
+import { getServiceById } from '@/lib/services';
 
 type PromoService = {
   id: string;
   name: string;
   description: string;
-  href: string;
+  dashboardHref: string;
   logo: string;
 };
 
 // 統一プラン対象のアクティブ7サービス（ロゴ画像があるもののみ掲載）
+function workHref(id: string): string {
+  const service = getServiceById(id);
+  if (!service) throw new Error(`Unknown promo service: ${id}`);
+  return service.dashboardHref;
+}
+
 const ACTIVE_SERVICES: PromoService[] = [
   {
     id: 'banner',
     name: 'ドヤバナーAI',
     description: 'プロ品質バナー自動生成',
-    href: '/banner',
+    dashboardHref: workHref('banner'),
     logo: '/banner/logo.png',
   },
   {
     id: 'seo',
     name: 'ドヤ記事作成',
     description: 'SEO+LLMO長文記事',
-    href: '/seo',
+    dashboardHref: workHref('seo'),
     logo: '/seo/logo.png',
   },
   {
     id: 'interview',
     name: 'ドヤインタビュー',
     description: '音声から記事自動生成',
-    href: '/interview',
+    dashboardHref: workHref('interview'),
     logo: '/interview/logo.png',
   },
   {
     id: 'persona',
     name: 'ドヤペルソナAI',
     description: 'ペルソナ自動生成',
-    href: '/persona',
+    dashboardHref: workHref('persona'),
     logo: '/persona/logo.png',
   },
   {
     id: 'kintai',
     name: 'ドヤ勤怠',
     description: 'クラウド勤怠管理',
-    href: '/kintai',
+    dashboardHref: workHref('kintai'),
     logo: '/kintai/logo.png',
   },
   {
     id: 'doyalist',
     name: 'ドヤリスト',
     description: '営業リスト生成+営業文面',
-    href: '/doyalist',
+    dashboardHref: workHref('doyalist'),
     logo: '/doyalist/logo.png',
   },
   {
     id: 'promane',
     name: 'ドヤプロマネ',
     description: '案件の進捗収支管理',
-    href: '/promane',
+    dashboardHref: workHref('promane'),
     logo: '/promane/logo.png',
   },
 ];

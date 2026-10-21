@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import Link from 'next/link'
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -500,7 +501,7 @@ export default function SeoCreateWizardPage() {
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
         if (res.status === 401) {
-          setErrorCta({ label: 'ログインする', href: '/auth/signin' })
+          setErrorCta({ label: 'ログインする', href: `/auth/signin?callbackUrl=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}` })
         }
         throw new Error(json?.error || `エラーが発生しました (${res.status})`)
       }
@@ -715,7 +716,7 @@ export default function SeoCreateWizardPage() {
                     {titleError ? (
                       <p className="mt-2 text-xs font-bold text-red-600">
                         {titleError}
-                        {!session?.user && <Link href="/auth/signin" className="ml-2 underline">ログインする</Link>}
+                        {!session?.user && <SignInReturnLink fallback="/seo/create" className="ml-2 underline">ログインする</SignInReturnLink>}
                       </p>
                     ) : (
                       <p className="mt-2 text-xs text-gray-400 font-medium">

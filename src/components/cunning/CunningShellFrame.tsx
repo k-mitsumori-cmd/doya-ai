@@ -5,6 +5,7 @@
 // ============================================
 // ⚠️ 枠（AppShell）は src/app/(shell)/layout.tsx が出す。ここでは AppShell を使わない。
 // ⚠️ 今の CunningLayoutShell と同じく、アカウントが切り替わったら子の入力を捨て、確定前は子を隠して操作させない
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { useActorServicePlan } from '@/components/sidebar/useActorServicePlan'
 import { Toaster } from 'react-hot-toast'
 import ToolFrame from '@/components/shell/ToolFrame'
@@ -14,7 +15,7 @@ export default function CunningShellFrame({ children }: { children: React.ReactN
   const account = useActorServicePlan('cunning')
 
   if (account.status === 'loading' && !account.knownActor) return <div role="status" className="p-6 text-center">認証情報を確認しています。</div>
-  if (account.status === 'authenticated' && !account.actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
+  if (account.status === 'authenticated' && !account.actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<SignInReturnLink fallback="/cunning" className="ml-2 underline">再度ログインする</SignInReturnLink></div>
 
   return (
     <div key={account.actorKey}>

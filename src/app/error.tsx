@@ -47,14 +47,14 @@ export default function Error({
             再試行する
           </button>
           
-          <Link href="/">
-            <button className="flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-full transition-colors">
-              <Home className="w-5 h-5" />
-              トップへ戻る
-            </button>
+          <Link href="/" className="flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-full transition-colors">
+            <Home className="w-5 h-5" />
+            サイトトップへ
           </Link>
         </div>
         
+        <Link href="/home" className="mt-4 inline-block text-sm font-bold text-violet-600 hover:underline">ツールのホームへ</Link>
+
         {/* エラー詳細（開発環境のみ） */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-10 p-4 bg-red-50 border border-red-200 rounded-xl text-left">

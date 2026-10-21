@@ -87,7 +87,7 @@ export default function HrPricingPage() {
           )}
           {status === 'authenticated' && !verifying && needsOrganization && (
             <div role="status" className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-6 text-sm leading-7 text-slate-700">
-              組織を確認できませんでした。<Link href="/hr" className="ml-1 font-bold text-blue-700 underline">ドヤHRで設定状況を確認する</Link>
+              組織を確認できませんでした。<Link href="/hr/dashboard" className="ml-1 font-bold text-blue-700 underline">ドヤHRで設定状況を確認する</Link>
             </div>
           )}
           {status === 'authenticated' && !verifying && !loadError && billing && !billing.canManageBilling && (

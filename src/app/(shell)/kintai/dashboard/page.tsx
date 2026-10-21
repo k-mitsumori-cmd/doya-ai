@@ -58,7 +58,8 @@ export default function DashboardPage() {
         <p className="text-base font-bold text-red-600 bg-red-50 border-2 border-red-200 rounded-2xl px-5 py-3 max-w-lg text-center">{error || '不明なエラー'}</p>
         <div className="flex gap-3">
           <button onClick={() => window.location.reload()} className="px-6 py-3 bg-purple-600 text-white font-black rounded-full shadow-lg">再試行する</button>
-          <Link href="/kintai" className="px-6 py-3 bg-white text-slate-700 font-bold rounded-full border-2 border-slate-200">トップへ戻る</Link>
+          <Link href="/kintai/dashboard" className="px-6 py-3 bg-white text-slate-700 font-bold rounded-full border-2 border-slate-200">勤怠ダッシュボードへ</Link>
+          <Link href="/home" className="px-6 py-3 bg-white text-slate-700 font-bold rounded-full border-2 border-slate-200">ツールのホームへ</Link>
         </div>
       </div>
     )

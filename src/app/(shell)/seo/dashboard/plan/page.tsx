@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -126,9 +127,9 @@ export default function SeoPlanPage() {
             <p className="text-lg font-black text-gray-900">ログインが必要です</p>
             <p className="mt-2 text-sm text-gray-500 font-bold">プラン管理はログイン後に利用できます。</p>
             <div className="mt-6 flex items-center justify-center gap-3">
-              <Link href="/auth/signin" className="h-11 px-6 rounded-xl bg-blue-600 text-white font-black text-sm inline-flex items-center gap-2 hover:bg-blue-700">
+              <SignInReturnLink fallback="/seo/dashboard/plan" className="h-11 px-6 rounded-xl bg-blue-600 text-white font-black text-sm inline-flex items-center gap-2 hover:bg-blue-700">
                 ログインする <ExternalLink className="w-4 h-4" />
-              </Link>
+              </SignInReturnLink>
               <Link href="/seo/pricing" className="h-11 px-6 rounded-xl bg-white border border-gray-200 text-gray-700 font-black text-sm hover:bg-gray-50">
                 料金を見る
               </Link>

@@ -860,6 +860,11 @@ if (navigation.error || navigation.status !== 0) {
   console.error('Security regression failed: verify-active-service-navigation.cjs');
   process.exit(1);
 }
+const navigationRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-navigation-recovery-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (navigationRecovery.error || navigationRecovery.status !== 0) {
+  console.error('Security regression failed: verify-navigation-recovery-mounted.cjs');
+  process.exit(1);
+}
 const sfaDealsPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-deals-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaDealsPagination.error || sfaDealsPagination.status !== 0) {
   console.error('Security regression failed: verify-sfa-deals-pagination.cjs');

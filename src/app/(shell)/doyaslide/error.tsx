@@ -41,10 +41,10 @@ export default function DoyaSlideError({
           再試行する
         </button>
         <Link
-          href="/doyaslide"
+          href="/doyaslide/projects"
           className="px-6 py-2.5 border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors"
         >
-          トップへ戻る
+          プロジェクト一覧へ
         </Link>
       </div>
       <a

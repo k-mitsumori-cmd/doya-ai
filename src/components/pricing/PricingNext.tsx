@@ -171,7 +171,7 @@ export default function PricingNext({ canceled, inShell = false, serverSignedIn,
                 {g.rows.map(({ service, icon }) => (
                   <tr key={service.id}>
                     <th scope="row">
-                      <Link href={service.href} className={styles.tool}>
+                      <Link href={service.dashboardHref} className={styles.tool}>
                         <span className={styles.toolIcon}><ShellIcon name={icon} size={16} /></span>
                         <span>{service.name}</span>
                       </Link>

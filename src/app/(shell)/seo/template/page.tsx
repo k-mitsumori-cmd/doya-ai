@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import Link from 'next/link'
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -123,7 +124,7 @@ function parseUrlListText(text: string, max: number) {
 export default function SeoTestPage() {
   const { data: session, status } = useSession()
   const actor = session?.user?.id || session?.user?.email || ''
-  if (status === 'authenticated' && !actor) return <p role="alert">ログイン情報を確認できません。<Link href="/auth/signin">再度ログインする</Link></p>
+  if (status === 'authenticated' && !actor) return <p role="alert">ログイン情報を確認できません。<SignInReturnLink fallback="/seo/template">再度ログインする</SignInReturnLink></p>
   return <>
     {status === 'loading' && <p role="status">認証情報を確認しています。</p>}
     <div hidden={status === 'loading'} ref={element => { if (element) element.inert = status === 'loading' }}>
@@ -552,7 +553,7 @@ function SeoTemplateWorkspace() {
                       </div>
                       <div className="h-2 bg-slate-100 rounded-full overflow-hidden" />
                       <p className="text-[10px] text-slate-400 mt-1.5">
-                        <a href="/auth/signin" className="text-blue-500 hover:underline font-bold">ログイン</a>すると月3回まで無料で生成できます
+                        <SignInReturnLink fallback="/seo/template" className="text-blue-500 hover:underline font-bold">ログイン</SignInReturnLink>すると月3回まで無料で生成できます
                       </p>
                     </div>
                   )
@@ -777,7 +778,7 @@ function SeoTemplateWorkspace() {
                           />
                           {titleError && <p className="mt-2 text-xs font-bold text-red-500">
                             {titleError}
-                            {!session?.user && <Link href="/auth/signin" className="ml-2 underline">ログインする</Link>}
+                            {!session?.user && <SignInReturnLink fallback="/seo/template" className="ml-2 underline">ログインする</SignInReturnLink>}
                           </p>}
                           {titleCandidates.length > 0 && (
                             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
