@@ -144,11 +144,11 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/hr/employees')}
             className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4 transition-colors"
           >
             <span className="material-symbols-outlined text-lg">arrow_back</span>
-            戻る
+            従業員一覧に戻る
           </button>
           <div className="flex items-center gap-3">
             <PageTitle className="text-3xl font-black text-slate-900">従業員を追加</PageTitle>
@@ -415,7 +415,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
             <div className="hidden sm:flex justify-end gap-3 pt-4">
               <button
                 type="button"
-                onClick={() => router.back()}
+                onClick={() => router.push('/hr/employees')}
                 className="px-6 py-3.5 bg-white text-slate-700 rounded-full text-base font-bold shadow-md hover:shadow-lg transition-all"
               >
                 キャンセル
@@ -435,7 +435,7 @@ function NewEmployeeForActor({ actor }: { actor: string }) {
           <div className="sm:hidden sticky bottom-0 bg-white/80 backdrop-blur-md p-4 border-t border-slate-200 -mx-6 mt-4 flex gap-3 z-30">
             <button
               type="button"
-              onClick={() => router.back()}
+              onClick={() => router.push('/hr/employees')}
               className="flex-1 px-4 py-3 bg-white text-slate-700 rounded-full text-base font-bold shadow-md transition-all"
             >
               キャンセル

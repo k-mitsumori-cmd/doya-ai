@@ -94,7 +94,9 @@ export default function NewProject() {
       {/* ヘッダー */}
       <div className="flex items-center gap-3 mb-8">
         <button
-          onClick={() => router.back()}
+          type="button"
+          aria-label="プロジェクト一覧に戻る"
+          onClick={() => router.push('/interview/projects')}
           className="w-10 h-10 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
         >
           <span className="material-symbols-outlined text-slate-600">arrow_back</span>
@@ -263,7 +265,7 @@ export default function NewProject() {
         <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => router.push('/interview/projects')}
             className="flex items-center justify-center gap-2 px-6 py-2.5 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 text-sm transition-colors"
           >
             <span className="material-symbols-outlined text-lg">close</span>

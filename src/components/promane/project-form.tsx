@@ -270,7 +270,9 @@ export function ProjectForm({
             <Button type="submit" disabled={loading}>
               {loading ? "保存中..." : project ? "更新" : "作成"}
             </Button>
-            <Button type="button" variant="outline" onClick={() => router.back()}>
+            <Button type="button" variant="outline" onClick={() => router.push(project
+              ? `/promane/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(project.id)}`
+              : `/promane/${encodeURIComponent(workspaceSlug)}/projects`)}>
               キャンセル
             </Button>
           </div>

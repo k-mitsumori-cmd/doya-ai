@@ -160,6 +160,11 @@ if (hrDetailReturn.error || hrDetailReturn.status !== 0) {
   console.error('Security regression failed: verify-hr-detail-return-mounted.cjs');
   process.exit(1);
 }
+const formExitReturn = spawnSync(process.execPath, [path.join(__dirname, 'verify-form-exit-return-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (formExitReturn.error || formExitReturn.status !== 0) {
+  console.error('Security regression failed: verify-form-exit-return-mounted.cjs');
+  process.exit(1);
+}
 const signInCallback = spawnSync(process.execPath, [path.join(__dirname, 'verify-signin-callback.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (signInCallback.error || signInCallback.status !== 0) {
   console.error('Security regression failed: verify-signin-callback.cjs');
