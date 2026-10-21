@@ -178,8 +178,11 @@ const selfPlan = operationId => selfPlans.makeSubscriptionPlan({ identity: { ope
           return input
         },
       }, 'test'), id = crypto.randomUUID()
+      const model = Prisma.dmmf.datamodel.models.find(item => item.name === failure.table)
+      assert(model, failure.table)
+      const physicalTable = quote(model.dbName || model.name)
       await db.$executeRawUnsafe(`CREATE FUNCTION deny_admin_projection() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF ${failure.condition} THEN RAISE EXCEPTION 'synthetic projection rollback'; END IF; RETURN NEW; END $$`)
-      await db.$executeRawUnsafe(`CREATE TRIGGER deny_admin_projection BEFORE ${failure.event} ON ${quote(failure.table)} FOR EACH ROW EXECUTE FUNCTION deny_admin_projection()`)
+      await db.$executeRawUnsafe(`CREATE TRIGGER deny_admin_projection BEFORE ${failure.event} ON ${physicalTable} FOR EACH ROW EXECUTE FUNCTION deny_admin_projection()`)
       try {
         const pending = await c.handle(ctx, action(id, 'immediate_cancel'))
         assert.equal(pending.phase, 'executing'); assert.equal(pending.actionPhase, 'confirmed')
@@ -195,7 +198,7 @@ const selfPlan = operationId => selfPlans.makeSubscriptionPlan({ identity: { ope
         assert(beforeFinal, 'provider fact was confirmed before the injected final transaction')
         assert.deepEqual(await snapshot(), beforeFinal, 'receipt, fence, fact and coverage were not partially changed')
       } finally {
-        await db.$executeRawUnsafe(`DROP TRIGGER deny_admin_projection ON ${quote(failure.table)}`)
+        await db.$executeRawUnsafe(`DROP TRIGGER deny_admin_projection ON ${physicalTable}`)
         await db.$executeRawUnsafe('DROP FUNCTION deny_admin_projection()')
       }
       const done = await c.handle(ctx, action(id, 'immediate_cancel', 'reconcile'))
