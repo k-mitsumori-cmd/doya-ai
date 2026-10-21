@@ -38,7 +38,7 @@ function threadInterviewRoute(state) {
   return load('src/app/api/interview/projects/[id]/thumbnail/route.ts', {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma: {
-      interviewProject: { findUnique: async () => project },
+      interviewProject: { findUnique: async () => state.leases && state.afterLeaseProject !== undefined ? state.afterLeaseProject : project },
       interviewDraft: { findFirst: async () => null },
       interviewTranscription: { findMany: async () => [] },
       $transaction: async fn => fn({ $executeRaw: async () => {}, interviewProject: {
@@ -64,8 +64,8 @@ function threadInterviewRoute(state) {
     },
     '@/lib/interview/thumbnail-lease': {
       ThumbnailGenerationInProgressError: lease.ThumbnailGenerationInProgressError,
-      claimThumbnailLease: async () => { state.leases++; return 'token' },
-      releaseThumbnailLease: async () => {},
+      claimThumbnailLease: async () => { state.leases++; if (state.leaseBlocked) throw new lease.ThumbnailGenerationInProgressError(); return 'token' },
+      releaseThumbnailLease: async () => { state.releases++ },
     },
     '@/lib/interview/aux-budget': {
       claimAuxBudget: async () => { state.budgetClaims++; return state.budgetLeft > 0 ? (state.budgetLeft--, { state: 'allowed', claim: { key: 'k', day: 'd' } }) : { state: 'limit', limit: 5 } },
@@ -75,7 +75,7 @@ function threadInterviewRoute(state) {
   }, { process: { env: { GOOGLE_GENAI_API_KEY: 'test-key' } } })
 }
 
-const newState = (over = {}) => ({ userId: 'u1', project: { id: 'p1', userId: 'u1', guestId: null, thumbnailUrl: null, updatedAt: new Date(1000), title: 'T', genre: 'OTHER' }, settings: new Map(), providerCalls: 0, providerFails: false, leases: 0, budgetClaims: 0, budgetLeft: 5, refunds: 0, ...over })
+const newState = (over = {}) => ({ userId: 'u1', project: { id: 'p1', userId: 'u1', guestId: null, thumbnailUrl: null, updatedAt: new Date(1000), title: 'T', genre: 'OTHER' }, settings: new Map(), providerCalls: 0, providerFails: false, leases: 0, releases: 0, budgetClaims: 0, budgetLeft: 5, refunds: 0, ...over })
 const ctx = { params: Promise.resolve({ id: 'p1' }) }
 const post = (api, body) => api.POST({ json: async () => body, cookies: {} }, ctx)
 
@@ -218,5 +218,137 @@ const post = (api, body) => api.POST({ json: async () => body, cookies: {} }, ct
     assert.equal((await post(threadInterviewRoute(state), { force: true })).status, 500)
     assert.equal(state.refunds, 1)
     assert.equal(state.budgetLeft, 5)
+  })
+
+  await check('interview: force-only cannot create an absent thumbnail', async () => {
+    const state = newState({ budgetLeft: 0 }), api = threadInterviewRoute(state)
+    for (const body of [{ force: true }, { force: true, manual: false }, {}, { force: true, manual: 'true' }]) {
+      const response = await post(api, body)
+      assert.equal(response.status, 200)
+      const result = await response.json()
+      assert.equal(result.code, 'THUMBNAIL_AUTO_SKIPPED')
+    }
+    assert.equal(state.leases, 0)
+    assert.equal(state.budgetClaims, 0)
+    assert.equal(state.providerCalls, 0)
+  })
+
+  await check('interview: auto wins over manual and force for absent and saved thumbnails', async () => {
+    for (const thumbnailUrl of [null, 'marker']) {
+      const state = newState({ project: { ...newState().project, thumbnailUrl } })
+      const response = await post(threadInterviewRoute(state), { auto: true, manual: true, force: true })
+      assert.equal((await response.json()).code, 'THUMBNAIL_AUTO_SKIPPED')
+      assert.equal(state.leases, 0)
+      assert.equal(state.budgetClaims, 0)
+      assert.equal(state.providerCalls, 0)
+    }
+  })
+
+  await check('interview: current image after lease is reused and current owner is rechecked', async () => {
+    const cached = newState({ afterLeaseProject: { ...newState().project, thumbnailUrl: 'marker' }, budgetLeft: 0 })
+    const reply = await post(threadInterviewRoute(cached), { manual: true, force: false })
+    assert.equal(reply.status, 200)
+    assert.equal((await reply.json()).thumbnailUrl, '/thumb')
+    assert.equal(cached.leases, 1)
+    assert.equal(cached.releases, 1)
+    assert.equal(cached.providerCalls, 0)
+    assert.equal(cached.budgetClaims, 0)
+    const changed = newState({ afterLeaseProject: { ...newState().project, userId: 'other' } })
+    assert.equal((await post(threadInterviewRoute(changed), { manual: true, force: false })).status, 404)
+    assert.equal(changed.providerCalls, 0)
+    assert.equal(changed.releases, 1)
+  })
+
+  await check('interview: foreign account and guest cannot create a first thumbnail', async () => {
+    const cases = [
+      newState({ project: { ...newState().project, userId: 'other' } }),
+      newState({ userId: null, project: { ...newState().project, userId: null, guestId: 'other' } }),
+    ]
+    for (const state of cases) {
+      const reply = await post(threadInterviewRoute(state), { manual: true, force: false })
+      assert.equal(reply.status, 404)
+      assert.equal(state.leases, 0)
+      assert.equal(state.budgetClaims, 0)
+      assert.equal(state.providerCalls, 0)
+    }
+  })
+
+  await check('interview: project disappearing after lease cannot reach provider', async () => {
+    const state = newState({ afterLeaseProject: null })
+    assert.equal((await post(threadInterviewRoute(state), { manual: true, force: false })).status, 404)
+    assert.equal(state.leases, 1)
+    assert.equal(state.releases, 1)
+    assert.equal(state.budgetClaims, 0)
+    assert.equal(state.providerCalls, 0)
+  })
+
+  await check('interview: force-only legacy request cannot create after current image disappears', async () => {
+    const state = newState({ project: { ...newState().project, thumbnailUrl: 'marker' }, afterLeaseProject: { ...newState().project, thumbnailUrl: null } })
+    const reply = await post(threadInterviewRoute(state), { force: true })
+    assert.equal(reply.status, 200)
+    assert.equal((await reply.json()).code, 'THUMBNAIL_AUTO_SKIPPED')
+    assert.equal(state.leases, 1)
+    assert.equal(state.releases, 1)
+    assert.equal(state.providerCalls, 0)
+    assert.equal(state.budgetClaims, 0)
+  })
+
+  await check('interview: actual project-list buttons send initial and regeneration intent to actual route', async () => {
+    const state = newState({ budgetLeft: 0 }), api = threadInterviewRoute(state)
+    const bodies = []
+    const row = () => ({ ...state.project, status: 'DRAFT', intervieweeName: null, intervieweeCompany: null,
+      materialCount: 0, draftCount: 0, articleTitle: null, articleSummary: null, transcriptionSummary: null,
+      transcriptionExcerpt: null, createdAt: new Date(1000).toISOString(), updatedAt: new Date(1000).toISOString() })
+    const fetcher = async (url, init = {}) => {
+      if (url.startsWith('/api/interview/projects?')) return Response.json({ success: true, projects: [row()], totalCount: 1, filteredCount: 1, statusCounts: { DRAFT: 1 } })
+      assert.equal(url, '/api/interview/projects/p1/thumbnail')
+      const body = JSON.parse(init.body)
+      bodies.push(body)
+      return post(api, body)
+    }
+    const motion = new Proxy({}, { get: (_, tag) => React.forwardRef(function MotionFixture(props, ref) {
+      const clean = { ...props, ref }
+      for (const key of ['initial', 'animate', 'exit', 'transition', 'whileHover', 'whileTap', 'variants', 'layout']) delete clean[key]
+      return React.createElement(tag, clean)
+    }) })
+    let outerClicks = 0
+    const mocks = {
+      react: React, 'react/jsx-runtime': require('react/jsx-runtime'),
+      'next/link': ({ children, ...props }) => React.createElement('a', { ...props, onClick: () => { outerClicks++ } }, children),
+      'framer-motion': { motion, AnimatePresence: ({ children }) => React.createElement(React.Fragment, null, children) },
+      'react-hot-toast': { success() {}, error() {} }, '@/components/EmptyState': { EmptyState: () => null },
+      '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://example.invalid/contact' },
+    }
+    const ts = require('typescript'), fs = require('node:fs'), vm = require('node:vm')
+    const page = {}
+    vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/(shell)/interview/projects/page.tsx', 'utf8'), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
+    }).outputText, { exports: page, require: name => { assert.ok(name in mocks, name); return mocks[name] }, fetch: fetcher, setTimeout, clearTimeout, AbortController, URLSearchParams, window, document, console })
+    const c = document.createElement('div'); document.body.append(c)
+    const root = createRoot(c)
+    const act = fn => React.act(async () => { await fn(); await new Promise(resolve => setTimeout(resolve, 240)); for (let i = 0; i < 8; i++) await new Promise(resolve => setImmediate(resolve)) })
+    const button = text => [...c.querySelectorAll('button')].find(item => item.textContent.includes(text))
+    await React.act(async () => root.render(React.createElement(page.default)))
+    await act(async () => {})
+    assert.ok(button('AI生成'))
+    const firstClick = new window.MouseEvent('click', { bubbles: true, cancelable: true })
+    await act(() => button('AI生成').dispatchEvent(firstClick))
+    assert.equal(firstClick.defaultPrevented, true)
+    assert.equal(outerClicks, 0)
+    assert.deepEqual(bodies[0], { manual: true, force: false })
+    assert.equal(state.providerCalls, 1)
+    assert.equal(state.budgetClaims, 0)
+    assert.equal(state.project.thumbnailUrl, 'marker')
+    assert.ok(button('再生成'))
+    state.budgetLeft = 1
+    const secondClick = new window.MouseEvent('click', { bubbles: true, cancelable: true })
+    await act(() => button('再生成').dispatchEvent(secondClick))
+    assert.equal(secondClick.defaultPrevented, true)
+    assert.equal(outerClicks, 0)
+    assert.deepEqual(bodies[1], { manual: true, force: true })
+    assert.equal(state.providerCalls, 2)
+    assert.equal(state.budgetClaims, 1)
+    assert.equal(state.budgetLeft, 0)
+    await act(() => root.unmount()); c.remove()
   })
 })().catch(error => { console.error(error); process.exitCode = 1 })

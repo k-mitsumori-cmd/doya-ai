@@ -246,7 +246,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     // 画面を開いただけで生成しない。旧画面の auto なし・force=false も抑止する。
     // 新画面は manual=true を送り、作成は force=false、再生成は force=true と区別する。
     // 他のタブで初回画像が完成していれば再利用し、意図しない追加枠の消費を防ぐ。
-    if (auto || (!manual && !force && !project.thumbnailUrl)) {
+    if (auto || (!manual && !project.thumbnailUrl)) {
       return NextResponse.json({ success: false, skipped: true, code: 'THUMBNAIL_AUTO_SKIPPED' })
     }
     if (project.thumbnailUrl && !force) {
@@ -263,6 +263,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
     if (current.thumbnailUrl && !force) {
       return NextResponse.json({ success: true, thumbnailUrl: thumbnailUrlForClient(id, current.thumbnailUrl, current.updatedAt) })
+    }
+    // A force-only legacy request may regenerate an existing image, but cannot
+    // create the first image if the current project has none.
+    if (!current.thumbnailUrl && !manual) {
+      return NextResponse.json({ success: false, skipped: true, code: 'THUMBNAIL_AUTO_SKIPPED' })
     }
     const apiKey = process.env.GOOGLE_GENAI_API_KEY
     if (!apiKey) {

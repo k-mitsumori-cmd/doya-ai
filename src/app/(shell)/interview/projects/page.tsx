@@ -127,13 +127,13 @@ export default function ProjectsPage() {
     return `/interview/projects/${p.id}/materials`
   }
 
-  const handleGenerateThumbnail = async (e: React.MouseEvent, projectId: string) => {
+  const handleGenerateThumbnail = async (e: React.MouseEvent, projectId: string, hasThumbnail: boolean) => {
     e.preventDefault()
     e.stopPropagation()
     setGeneratingThumbnail(projectId)
     try {
       const res = await fetch(`/api/interview/projects/${projectId}/thumbnail`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force: true }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ manual: true, force: hasThumbnail }),
       })
       const data = await res.json()
       if (data.success && data.thumbnailUrl) {
@@ -320,7 +320,7 @@ export default function ProjectsPage() {
                       </div>
                       {/* サムネイル再生成ボタン */}
                       <button
-                        onClick={(e) => handleGenerateThumbnail(e, p.id)}
+                        onClick={(e) => handleGenerateThumbnail(e, p.id, Boolean(p.thumbnailUrl))}
                         disabled={isGenerating}
                         className={`absolute bottom-2 right-2 px-2 py-1 rounded-lg text-[10px] font-bold backdrop-blur-sm transition-all flex items-center gap-1 disabled:opacity-70 ${
                           p.thumbnailUrl
