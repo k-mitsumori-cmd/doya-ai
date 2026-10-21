@@ -44,6 +44,10 @@ const checkoutLegacy=load('src/lib/account-lifecycle/checkout-legacy.ts',{'./che
 const checkoutStore=load('src/lib/account-lifecycle/checkout-store.ts',{'node:crypto':crypto,'@prisma/client':{Prisma},'./state':state,'./store':store,'./checkout-receipt':checkoutReceipt,'./checkout-provider':checkoutProvider,'./checkout-legacy':checkoutLegacy});
 const coordinator=load('src/lib/account-lifecycle/checkout.ts',{'./state':state,'./store':store,'./checkout-receipt':checkoutReceipt,'./checkout-urls':checkoutUrls,'./checkout-provider':checkoutProvider,'./checkout-store':checkoutStore});
 const subscriptionPlan=load('src/lib/account-lifecycle/subscription-plan.ts',{'node:crypto':crypto,'./state':state});
+const adminSubscriptionPlan=load('src/lib/account-lifecycle/admin-subscription-plan.ts',{'node:crypto':crypto,'./state':state});
+const adminSubscriptionFact=load('src/lib/account-lifecycle/admin-subscription-fact.ts',{'./state':state,'./admin-subscription-plan':adminSubscriptionPlan});
+const selfSettlement=load('src/lib/account-lifecycle/self-subscription-settlement.ts',{'./state':state});
+const adminStore=load('src/lib/account-lifecycle/store.ts',{'node:crypto':crypto,'@prisma/client':{Prisma},'./state':state,'./admin-subscription-plan':adminSubscriptionPlan,'./admin-subscription-fact':adminSubscriptionFact,'@/lib/admin-auth':{verifyAdminAuthorityTx:async()=>true},'@/lib/billing-sync':{projectUnifiedBilling:async()=>{throw Error('not used by admission')}}});
 const epoch=crypto.randomUUID(),expiry=Math.floor(Date.now()/1000)+2400;
 async function reset(){await baseReset();await db.systemSetting.create({data:{key:checkoutReceipt.checkoutKeys.cutover('test'),value:JSON.stringify({version:1,mode:'test',epoch,coverage:'old_ingress_stopped_and_workers_reconciled',evidenceDigest:digest})}})}
 const request=(overrides={})=>({cutoverEpoch:epoch,identity:identity('checkout',target,crypto.randomUUID(),{kind:'user',id:target}),mode:'test',source:'generic',organizationId:null,customerMode:'implicit',customerId:null,terms:{priceId:'price_synthetic',planId:'pro',serviceId:'synthetic',trialDays:0,successUrl:'https://example.invalid/success',cancelUrl:'https://example.invalid/cancel',email:target+'@example.invalid',name:'Synthetic',expiresAt:expiry},...overrides});
@@ -62,6 +66,19 @@ async function started(r){const admitted=await checkoutStore.admitCheckoutLifecy
 async function keyRow(key){return db.systemSetting.findUnique({where:{key}})}
 async function stateRows(){return plain(await snapshot())}
 const subscriptionFactOnly=(operationId,shape)=>shape==='complete'?JSON.stringify({operationId,actionKey:'a'.repeat(64),subscriptionId:'sub_synthetic',customerId:'cus_synthetic',mode:'test',status:'active',cancelAtPeriodEnd:true,currentPeriodEnd:1900000000,outcome:{proof:'ack',resourceId:'sub_synthetic',status:'scheduled_cancel'}}):'{malformed';
+const makeAdminPlan=(shared,user=target)=>adminSubscriptionPlan.makeAdminSubscriptionPlan({identity:identity('cancel',user,shared,{kind:'admin',id:'synthetic_admin_principal'}),intent:'period_end_cancel',mode:'test',email:user+'@example.invalid',expectedCustomerId:null,expectedSubscriptionId:'sub_synthetic',expectedPriceId:null,target:{id:'sub_synthetic',customerId:'cus_synthetic',status:'active',cancelAtPeriodEnd:false,currentPeriodEnd:1900000000}});
+function c3aOrphan(namespace,shared,shape){
+ const admin=makeAdminPlan(shared);
+ const self=subscriptionPlan.makeSubscriptionPlan({identity:identity('cancel',target,shared,{kind:'user',id:target}),mode:'test',email:target+'@example.invalid',expectedCustomerId:null,expectedSubscriptionId:null,serviceId:'banner',cancelMode:'immediate',targets:[{id:'sub_synthetic',customerId:'cus_synthetic',status:'active',cancelAtPeriodEnd:false,currentPeriodEnd:1900000000}]});
+ const rows={
+  adminPlan:[adminSubscriptionPlan.adminSubscriptionPlanKey(shared),JSON.stringify(admin)],
+  adminFact:[adminSubscriptionPlan.adminSubscriptionFactKey(shared),JSON.stringify(adminSubscriptionFact.verifyAdminSubscriptionFact(admin,{proof:'write_ack',status:'active',cancelAtPeriodEnd:true,currentPeriodEnd:1900000000}))],
+  adminSettlement:[adminSubscriptionPlan.adminSubscriptionSettlementKey(shared),JSON.stringify({version:1,source:'admin',settlementPolicyVersion:1,operationId:shared,targetHash:admin.targetHash,planDigest:admin.inputDigest,projected:false,userPlan:null,appliedAt:new Date().toISOString()})],
+  selfRequirement:[selfSettlement.selfSettlementRequirementKey(shared),JSON.stringify(selfSettlement.makeSelfSettlementRequirement(self))],
+  selfCoverage:[selfSettlement.selfSettlementCoverageKey(shared),JSON.stringify({version:1,source:'self_service',policyVersion:1,operationId:shared,targetHash:self.targetHash,planDigest:self.inputDigest,userPlan:'FREE',appliedAt:new Date().toISOString()})],
+ };
+ const [key,value]=rows[namespace];return{key,value:shape==='complete'?value:'{malformed'};
+}
 function legacyParts(r){return{priceId:r.terms.priceId,planId:r.terms.planId,service:r.terms.serviceId,email:r.terms.email,successUrl:r.terms.successUrl,cancelUrl:r.terms.cancelUrl,...(r.terms.trialDays?{trialDays:r.terms.trialDays}:{})}}
 async function legacyReady(p,r,status='open'){
  const parts=legacyParts(r),signature=checkoutLegacy.verifiedLegacySignature(r,parts),sessionId='cs_legacy',url='https://checkout.example.invalid/legacy';
@@ -205,6 +222,26 @@ for(const shape of ['complete','malformed'])for(const creator of ['admit','legac
  }
  assert.equal(p.counts.customerCreate,0);assert.equal(p.counts.checkoutCreate,0);
 });
+for(const namespace of ['adminPlan','adminFact','adminSettlement','selfRequirement','selfCoverage'])for(const shape of ['complete','malformed'])for(const creator of ['admit','legacy-adopt','expired-legacy-next'])await check('C3a '+namespace+' orphan '+shape+' rejects actual Checkout '+creator+' mutation zero',async()=>{
+ const p=providerFixture(),shared=crypto.randomUUID(),orphan=c3aOrphan(namespace,shared,shape);
+ if(creator==='admit'){
+  const r=request({identity:identity('checkout',target,shared,{kind:'user',id:target})});
+  await db.systemSetting.create({data:orphan});const before=await stateRows();
+  await assert.rejects(()=>checkoutStore.admitCheckoutLifecycle(db,r),e=>e.code==='LIFECYCLE_IDENTITY_CONFLICT');assert.deepEqual(await stateRows(),before);
+ }else if(creator==='legacy-adopt'){
+  const r=request({identity:identity('checkout',target,shared,{kind:'user',id:target})}),old=await legacyReady(p,r),ticket=await checkoutStore.captureLegacyCheckoutReady(db,r,old.parts),fact=await p.adapter.readLegacyReady(r,ticket.sessionId,ticket.rawHash,ticket.signature);
+  await db.systemSetting.create({data:orphan});const before=await stateRows();
+  await assert.rejects(()=>checkoutStore.adoptLegacyCheckoutReady(db,r,ticket,fact,old.parts),e=>e.code==='LIFECYCLE_IDENTITY_CONFLICT');assert.deepEqual(await stateRows(),before);
+  assert.equal((await keyRow(`checkout-reservation:v1:test:${target}`)).value,old.raw);
+ }else{
+  const previous=request(),old=await legacyReady(p,previous,'expired');await rejects(()=>p.client.legacyReady(previous,old.parts));
+  const next=request({identity:identity('checkout',target,shared,{kind:'user',id:target}),terms:{...previous.terms,expiresAt:expiry+600}}),ticket=await checkoutStore.captureLegacyCheckoutReady(db,previous,old.parts),fact=await p.adapter.readLegacyReady(previous,ticket.sessionId,ticket.rawHash,ticket.signature);
+  await db.systemSetting.create({data:orphan});const before=await stateRows();
+  await assert.rejects(()=>checkoutStore.admitAfterExpiredLegacyCheckout(db,previous,next,ticket,fact),e=>e.code==='LIFECYCLE_IDENTITY_CONFLICT');assert.deepEqual(await stateRows(),before);
+  assert.equal(await keyRow(checkoutReceipt.checkoutKeys.plan(shared)),null);
+ }
+ assert.equal(p.counts.customerCreate,0);assert.equal(p.counts.checkoutCreate,0);
+});
 await check('C1 parallel actual Checkout and Subscription creators share global UUID lock',async()=>{
  const shared=crypto.randomUUID(),checkout=request({identity:identity('checkout',target,shared,{kind:'user',id:target})});
  const subscription=subscriptionPlan.makeSubscriptionPlan({identity:identity('cancel',second,shared,{kind:'user',id:second}),mode:'test',email:second+'@example.invalid',expectedCustomerId:null,expectedSubscriptionId:null,serviceId:'banner',cancelMode:'period_end',targets:[{id:'sub_synthetic',customerId:'cus_synthetic',status:'active',cancelAtPeriodEnd:false,currentPeriodEnd:1900000000}]});
@@ -227,6 +264,28 @@ await check('C1 parallel actual Checkout and Subscription creators share global 
  assert.equal(await db.systemSetting.count({where:{key:{in:[`doya-account-operation:v2:${shared}`,checkoutReceipt.checkoutKeys.plan(shared),subscriptionPlan.subscriptionPlanKey(shared)]}}}),2);
  const checkoutPlan=await keyRow(checkoutReceipt.checkoutKeys.plan(shared)),subscriptionRow=await keyRow(subscriptionPlan.subscriptionPlanKey(shared));
  assert.equal(Boolean(checkoutPlan)+Boolean(subscriptionRow),1);
+});
+await check('C3a admin and Checkout actual creators wait on one UUID and leave one plan/fence',async()=>{
+ const shared=crypto.randomUUID(),checkout=request({identity:identity('checkout',target,shared,{kind:'user',id:target})});
+ await db.user.update({where:{id:second},data:{stripeSubscriptionId:'sub_synthetic'}});
+ const admin=makeAdminPlan(shared,second),acquired=defer(),release=defer();
+ const blocker=db.$transaction(async tx=>{await tx.$queryRaw`SELECT 1::integer AS locked FROM pg_advisory_xact_lock(hashtext(${shared})::bigint)`;acquired.resolve();await release.promise},{timeout:10000});
+ await acquired.promise;
+ const pending=Promise.allSettled([checkoutStore.admitCheckoutLifecycle(db,checkout),adminStore.admitAdminSubscriptionLifecycle(db,admin,'synthetic-test-token')]);
+ let waiting=0;
+ try{
+  for(let n=0;n<200;n++){
+   const rows=await db.$queryRawUnsafe("SELECT count(*)::int AS count FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid WHERE l.locktype='advisory' AND NOT l.granted AND a.usename='doya_checkout' AND a.query LIKE '%pg_advisory_xact_lock%'");
+   waiting=rows[0].count;if(waiting>=2)break;await new Promise(r=>setTimeout(r,10));
+  }
+  assert.equal(waiting,2,'both actual creators reached the same advisory UUID lock');
+ }finally{release.resolve();await blocker}
+ const outcome=await pending;
+ assert.equal(outcome.filter(x=>x.status==='fulfilled').length,1);
+ assert.equal(outcome.find(x=>x.status==='rejected').reason.code,'LIFECYCLE_IDENTITY_CONFLICT');
+ assert.equal(await db.systemSetting.count({where:{key:{in:[`doya-account-operation:v2:${shared}`,checkoutReceipt.checkoutKeys.plan(shared),adminSubscriptionPlan.adminSubscriptionPlanKey(shared)]}}}),2);
+ assert.equal(Number(Boolean(await keyRow(checkoutReceipt.checkoutKeys.plan(shared))))+Number(Boolean(await keyRow(adminSubscriptionPlan.adminSubscriptionPlanKey(shared)))),1);
+ assert.equal(await db.systemSetting.count({where:{key:{startsWith:'doya-account-fence:v2:'}}}),1);
 });
 await check('B1 expired legacy switches atomically to one ordinary Checkout and preserves history',async()=>{
  const p=providerFixture(),previous=request(),old=await legacyReady(p,previous,'expired');

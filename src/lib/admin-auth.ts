@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { prisma } from './prisma'
+import type { Prisma } from '@prisma/client'
 
 // JWT秘密鍵（環境変数から取得）
 // 本番で未設定のときに公開リポジトリ上の固定文字列で署名・検証すると管理者トークンを偽造できるため、
@@ -173,6 +174,20 @@ export async function verifyAdminSession(token: string | null): Promise<{
       name: adminUser.name,
     },
   }
+}
+
+/** Recheck the actual admin principal inside a short billing transaction. Never persist the raw token. */
+export async function verifyAdminAuthorityTx(tx: Prisma.TransactionClient, token: string | null, expectedAdminId: string): Promise<boolean> {
+  if (!token || !expectedAdminId) return false
+  const decoded = verifyToken(token)
+  if (!decoded || decoded.adminUserId !== expectedAdminId) return false
+  // Caller holds the target User lock first. Keep this authority row order fixed.
+  const admins = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "AdminUser" WHERE id = ${expectedAdminId} FOR SHARE`
+  if (admins.length !== 1) return false
+  const admin = await tx.adminUser.findUnique({ where: { id: expectedAdminId }, select: { id: true, isActive: true } })
+  if (!admin?.isActive) return false
+  const sessions = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "AdminSession" WHERE token = ${token} AND "adminUserId" = ${expectedAdminId} AND "expiresAt" > NOW() FOR SHARE`
+  return sessions.length === 1
 }
 
 // セッション作成

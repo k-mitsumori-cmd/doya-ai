@@ -7,17 +7,19 @@ import { makeSubscriptionPlan, subscriptionActionKeys, type SubscriptionPlan } f
 import { verifySubscriptionFact } from './subscription-provider'
 import {
   abortUnstartedLifecycleOperation, admitSubscriptionLifecycle, assertSubscriptionDispatchBound,
-  completeSubscriptionLifecycle, confirmSubscriptionAction, dispatchSubscriptionAction,
+  attachSelfImmediateSettlementRequirement, completeSubscriptionLifecycle, confirmSubscriptionAction, dispatchSubscriptionAction,
   markSubscriptionUnknown, readSubscriptionLifecycle, readSubscriptionServerState,
   resumeLifecycleOperation, startLifecycleOperation,
 } from './store'
 import type { SubscriptionActor } from './subscription-stripe-provider'
+import type { BillingSyncInput } from '@/lib/billing-sync'
 
 export type SubscriptionProvider = {
   discover(actor: SubscriptionActor, kind: 'cancel' | 'resume'): Promise<SubscriptionPlan['targets']>
   mutate(plan: SubscriptionPlan, target: SubscriptionPlan['targets'][number], actionKey: string,
     actor: SubscriptionActor, beforeWrite: () => Promise<void>): Promise<import('./subscription-provider').VerifiedSubscriptionFact>
   readExact(id: string, actor: SubscriptionActor): Promise<Stripe.Subscription>
+  settlement?(plan: SubscriptionPlan, actor: SubscriptionActor): Promise<BillingSyncInput>
 }
 
 export type SubscriptionAction =
@@ -32,6 +34,31 @@ const identity = (actorId: string, operationId: string, kind: 'cancel' | 'resume
 export function subscriptionCoordinator(db: PrismaClient, provider: SubscriptionProvider, mode: 'test' | 'live') {
   async function view(id: LifecycleIdentity, actorId: string) {
     return { ...(await readSubscriptionLifecycle(db, id)), actorId }
+  }
+  async function settle(plan: SubscriptionPlan, actor: SubscriptionActor, claim: NonNullable<Awaited<ReturnType<typeof readSubscriptionServerState>>>['claim']) {
+    if (!claim) throw new LifecycleError('LIFECYCLE_CLAIM_CHANGED')
+    if (plan.identity.kind === 'cancel' && plan.cancelMode === 'immediate') {
+      if (!provider.settlement) throw new LifecycleError('SUBSCRIPTION_SETTLEMENT_UNAVAILABLE')
+      const projection = await provider.settlement(plan, actor)
+      return completeSubscriptionLifecycle(db, claim, projection)
+    }
+    return completeSubscriptionLifecycle(db, claim)
+  }
+  async function prepareOldImmediate(plan: SubscriptionPlan, actor: SubscriptionActor,
+    state: NonNullable<Awaited<ReturnType<typeof readSubscriptionServerState>>>) {
+    if (plan.identity.kind !== 'cancel' || plan.cancelMode !== 'immediate' || !state.claim) return
+    // Explicit same-ID recovery only: current provider state is read, never mutated here.
+    for (const target of plan.targets) {
+      const action = state.actions.find(a => a.resourceId === target.id)
+      if (!action) throw new LifecycleError('SUBSCRIPTION_SETTLEMENT_UNAVAILABLE')
+      const raw = await provider.readExact(target.id, actor)
+      const cid = typeof raw.customer === 'string' ? raw.customer : raw.customer?.id || ''
+      if (raw.id !== target.id || raw.livemode !== (plan.mode === 'live') || cid !== target.customerId) throw new LifecycleError('SUBSCRIPTION_SETTLEMENT_UNAVAILABLE')
+      if (action.phase === 'confirmed' ? raw.status !== 'canceled' :
+          action.phase === 'planned' ? raw.status !== target.status || raw.cancel_at_period_end !== target.cancelAtPeriodEnd || raw.current_period_end !== target.currentPeriodEnd :
+            !['canceled', target.status].includes(raw.status)) throw new LifecycleError('SUBSCRIPTION_SETTLEMENT_UNAVAILABLE')
+    }
+    await attachSelfImmediateSettlementRequirement(db, state.claim)
   }
   async function execute(id: LifecycleIdentity, actor: SubscriptionActor, plan: SubscriptionPlan,
     claim: NonNullable<Awaited<ReturnType<typeof readSubscriptionServerState>>>['claim']) {
@@ -56,7 +83,7 @@ export function subscriptionCoordinator(db: PrismaClient, provider: Subscription
     }
     const current = await readSubscriptionServerState(db, id)
     if (current?.claim && current.phase === 'executing' && current.reason === null && current.actions.length === plan.targets.length && current.actions.every(a => a.phase === 'confirmed')) {
-      try { await completeSubscriptionLifecycle(db, current.claim) } catch { /* Persistent facts remain for explicit settlement. */ }
+      try { await settle(plan, actor, current.claim) } catch { /* Persistent facts remain for explicit settlement. */ }
     }
     return view(id, actor.id)
   }
@@ -94,7 +121,10 @@ export function subscriptionCoordinator(db: PrismaClient, provider: Subscription
           }
           const updated = await readSubscriptionServerState(db, id)
           if (updated?.claim && updated.actions.length > 0 && updated.actions.every(a => a.phase === 'confirmed')) {
-            try { await completeSubscriptionLifecycle(db, updated.claim) } catch { /* Keep local settlement pending. */ }
+            try {
+              await prepareOldImmediate(updated.plan!, actor, updated)
+              await settle(updated.plan!, actor, updated.claim)
+            } catch { /* Keep local settlement pending. */ }
           }
         }
         return view(id, actor.id)
@@ -103,6 +133,7 @@ export function subscriptionCoordinator(db: PrismaClient, provider: Subscription
         const current = await readSubscriptionServerState(db, id)
         if (!current?.plan || !current.claim || current.reason !== null || current.actions.some(a => a.phase === 'dispatched')) throw new LifecycleError('LIFECYCLE_RESULT_UNCONFIRMED')
         if (current.plan.mode !== mode) throw new LifecycleError('SUBSCRIPTION_STRIPE_MODE_MISMATCH')
+        await prepareOldImmediate(current.plan, actor, current)
         const claim = await resumeLifecycleOperation(db, id)
         if (current.phase === 'reserved') await startLifecycleOperation(db, claim)
         return execute(id, actor, current.plan, claim)

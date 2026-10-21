@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { Prisma, type PrismaClient } from '@prisma/client'
 import {
   LifecycleError, assertLifecycleIdentity, lifecycleIdentity, lifecycleSubject, lifecycleReceiptKey, lifecycleFenceKey,
@@ -9,6 +9,14 @@ import {
 } from './state'
 import { parseSubscriptionPlan, subscriptionPlanKey, subscriptionResources, type SubscriptionPlan } from './subscription-plan'
 import { assertVerifiedSubscriptionFact, type VerifiedSubscriptionFact } from './subscription-provider'
+import { selfSettlementRequirementKey, selfSettlementCoverageKey, makeSelfSettlementRequirement,
+  readSelfSettlementRequirement, readSelfSettlementCoverage, type SelfSettlementCoverage } from './self-subscription-settlement'
+import { adminSubscriptionPlanKey, adminSubscriptionFactKey, adminSubscriptionSettlementKey, adminSubscriptionResource,
+  adminSubscriptionActionKey, parseAdminSubscriptionPlan, readAdminSubscriptionSettlement, type AdminSubscriptionPlan,
+  type AdminSubscriptionSettlement } from './admin-subscription-plan'
+import { assertAdminSubscriptionFact, type AdminSubscriptionFact } from './admin-subscription-fact'
+import { verifyAdminAuthorityTx } from '@/lib/admin-auth'
+import { projectUnifiedBilling, type BillingSyncInput } from '@/lib/billing-sync'
 
 type Tx = Prisma.TransactionClient
 export type LifecycleDb = Pick<PrismaClient, '$transaction'>
@@ -20,7 +28,7 @@ const rawReceiptKey = (userId: string, operationId: string) => `doya-account-ope
 export async function assertGlobalLifecycleOperationIdFree(tx: Tx, operationId: string): Promise<void> {
   if (!validLifecycleUuid(operationId)) return unavailable()
   await tx.$queryRaw`SELECT 1::integer AS locked FROM pg_advisory_xact_lock(hashtext(${operationId})::bigint)`
-  const keys = [rawReceiptKey('', operationId), `doya-account-action:v2:${operationId}`, `doya-checkout-plan:v2:${operationId}`, `doya-checkout-capability:v2:${operationId}`, `doya-subscription-plan:v1:${operationId}`]
+  const keys = [rawReceiptKey('', operationId), `doya-account-action:v2:${operationId}`, `doya-checkout-plan:v2:${operationId}`, `doya-checkout-capability:v2:${operationId}`, `doya-subscription-plan:v1:${operationId}`, selfSettlementRequirementKey(operationId), selfSettlementCoverageKey(operationId), `doya-admin-subscription-plan:v1:${operationId}`, `doya-admin-subscription-fact:v1:${operationId}`, `doya-admin-subscription-settlement:v1:${operationId}`]
   if (await tx.systemSetting.count({ where: { key: { in: keys } } })) throw new LifecycleError('LIFECYCLE_IDENTITY_CONFLICT')
   if (await tx.systemSetting.findFirst({ where: { key: { startsWith: `doya-subscription-fact:v1:${operationId}:` } }, select: { key: true } })) throw new LifecycleError('LIFECYCLE_IDENTITY_CONFLICT')
 }
@@ -44,6 +52,307 @@ async function subscriptionUser(tx: Tx, plan: SubscriptionPlan) {
   return user
 }
 
+async function adminSubscriptionPlan(tx: Tx, identity: LifecycleIdentity): Promise<AdminSubscriptionPlan> {
+  const row = await tx.systemSetting.findUnique({ where: { key: adminSubscriptionPlanKey(identity.operationId) }, select: { value: true } })
+  if (!row) return unavailable()
+  const plan = parseAdminSubscriptionPlan(row.value)
+  if (JSON.stringify(plan.identity) !== JSON.stringify(identity)) return unavailable()
+  return plan
+}
+
+async function adminSubscriptionUser(tx: Tx, plan: AdminSubscriptionPlan) {
+  const user = await tx.user.findUnique({ where: { id: plan.identity.targetUserId }, select: {
+    id: true, email: true, stripeCustomerId: true, stripeSubscriptionId: true, stripePriceId: true,
+  } })
+  if (!user || user.email?.trim().toLowerCase() !== plan.email ||
+      user.stripeCustomerId !== plan.expectedCustomerId ||
+      user.stripeSubscriptionId !== plan.expectedSubscriptionId ||
+      user.stripePriceId !== plan.expectedPriceId) throw new LifecycleError('ADMIN_SUBSCRIPTION_REFERENCE_CHANGED')
+  return user
+}
+
+async function adminAuthority(tx: Tx, identity: LifecycleIdentity, sessionToken: string) {
+  if (identity.operator.kind !== 'admin' ||
+      !await verifyAdminAuthorityTx(tx, sessionToken, identity.operator.id)) throw new LifecycleError('ADMIN_AUTHORITY_CHANGED', 403)
+}
+
+/** User -> current AdminUser/AdminSession -> UUID; all authority rows and the new operation commit together. */
+export async function admitAdminSubscriptionLifecycle(db: LifecycleDb, plan: AdminSubscriptionPlan, sessionToken: string) {
+  parseAdminSubscriptionPlan(JSON.stringify(plan))
+  const identity = plan.identity
+  const resource = adminSubscriptionResource(plan)
+  const action = { ...resource, key: adminSubscriptionActionKey(plan), phase: 'planned' as const, dispatchToken: null, outcome: null }
+  return db.$transaction(async tx => {
+    if (!await userExists(tx, identity.targetUserId)) throw new LifecycleError('LIFECYCLE_USER_UNAVAILABLE')
+    await adminAuthority(tx, identity, sessionToken)
+    await adminSubscriptionUser(tx, plan)
+    const old = await receipt(tx, identity), f = await fence(tx, identity.targetUserId)
+    if (old) {
+      const saved = await adminSubscriptionPlan(tx, identity)
+      if (old.value.inputDigest !== plan.inputDigest || JSON.stringify(saved) !== JSON.stringify(plan)) throw new LifecycleError('LIFECYCLE_INPUT_CONFLICT')
+      const l = await ledger(tx, identity, old.value)
+      if (!l || l.value.actions.length !== 1 || l.value.actions[0]?.key !== action.key) return unavailable()
+      if (['reserved', 'executing'].includes(old.value.phase) && f?.value.operationId !== identity.operationId) return unavailable()
+      return { ...view(old.value), created: false, claim: ['reserved', 'executing'].includes(old.value.phase)
+        ? { ...identity, generation: old.value.generation, token: old.value.token } as LifecycleClaim : null }
+    }
+    if (f) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
+    await assertGlobalLifecycleOperationIdFree(tx, identity.operationId)
+    const now = new Date().toISOString()
+    const r: LifecycleReceipt = { version: 2, targetHash: plan.targetHash, operationId: identity.operationId,
+      operator: identity.operator, kind: identity.kind, inputDigest: plan.inputDigest,
+      generation: randomUUID(), token: randomUUID(), revision: 0, phase: 'reserved', reason: null,
+      createdAt: now, updatedAt: now }
+    const f2: LifecycleFence = { version: 2, operationId: identity.operationId, generation: r.generation, kind: identity.kind, state: 'active' }
+    const l: LifecycleLedger = { version: 2, targetHash: r.targetHash, operationId: identity.operationId,
+      generation: r.generation, revision: 0, actions: [action] }
+    readLifecycleLedger(JSON.stringify(l), r)
+    await tx.systemSetting.create({ data: { key: lifecycleReceiptKey(identity), value: JSON.stringify(r) } })
+    await tx.systemSetting.create({ data: { key: lifecycleFenceKey(identity.targetUserId), value: JSON.stringify(f2) } })
+    await tx.systemSetting.create({ data: { key: adminSubscriptionPlanKey(identity.operationId), value: JSON.stringify(plan) } })
+    await tx.systemSetting.create({ data: { key: lifecycleLedgerKey(identity), value: JSON.stringify(l) } })
+    return { ...view(r), created: true, claim: { ...identity, generation: r.generation, token: r.token } as LifecycleClaim }
+  }, options)
+}
+
+/** Status is a private, authority-checked observation; it never dispatches or clears a fence. */
+export async function readAdminSubscriptionServerState(db: LifecycleDb, identity: LifecycleIdentity, sessionToken: string) {
+  assertLifecycleIdentity(identity)
+  if (identity.operator.kind !== 'admin' || !['cancel', 'resume'].includes(identity.kind)) throw new LifecycleError('INVALID_LIFECYCLE_IDENTITY', 400)
+  return db.$transaction(async tx => {
+    if (!await userExists(tx, identity.targetUserId)) throw new LifecycleError('LIFECYCLE_USER_UNAVAILABLE')
+    await adminAuthority(tx, identity, sessionToken)
+    const r = await receipt(tx, identity), f = await fence(tx, identity.targetUserId)
+    const pRow = await tx.systemSetting.findUnique({ where: { key: adminSubscriptionPlanKey(identity.operationId) }, select: { value: true } })
+    const factRow = await tx.systemSetting.findUnique({ where: { key: adminSubscriptionFactKey(identity.operationId) }, select: { value: true } })
+    const settledRow = await tx.systemSetting.findUnique({ where: { key: adminSubscriptionSettlementKey(identity.operationId) }, select: { value: true } })
+    if (!r) {
+      if (pRow || factRow || settledRow || await tx.systemSetting.findUnique({ where: { key: lifecycleLedgerKey(identity) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: subscriptionPlanKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementRequirementKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findFirst({ where: { key: { startsWith: `doya-subscription-fact:v1:${identity.operationId}:` } }, select: { key: true } }) ||
+          f?.value.operationId === identity.operationId) return unavailable()
+      return { phase: 'missing' as const, reason: null, plan: null, claim: null, action: null,
+        canAbort: !f, canContinue: false }
+    }
+    if (r.value.phase === 'aborted') {
+      if (f?.value.operationId === identity.operationId || factRow || settledRow ||
+          await tx.systemSetting.findUnique({ where: { key: subscriptionPlanKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementRequirementKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findFirst({ where: { key: { startsWith: `doya-subscription-fact:v1:${identity.operationId}:` } }, select: { key: true } }) ||
+          Boolean(pRow) !== Boolean(await tx.systemSetting.findUnique({ where: { key: lifecycleLedgerKey(identity) }, select: { key: true } }))) return unavailable()
+      if (pRow) {
+        const p = await adminSubscriptionPlan(tx, identity), l = await ledger(tx, identity, r.value)
+        if (!l || p.inputDigest !== r.value.inputDigest || l.value.actions.length !== 1 || l.value.actions[0]?.phase !== 'planned') return unavailable()
+      }
+      return { phase: 'aborted' as const, reason: null, plan: null, claim: null, action: null,
+        canAbort: false, canContinue: false }
+    }
+    if (!pRow) return unavailable()
+    const p = await adminSubscriptionPlan(tx, identity), l = await ledger(tx, identity, r.value)
+    if (!l || l.value.actions.length !== 1 || l.value.actions[0]?.key !== adminSubscriptionActionKey(p) ||
+        p.inputDigest !== r.value.inputDigest ||
+        ['reserved', 'executing'].includes(r.value.phase) && f?.value.operationId !== identity.operationId) return unavailable()
+    const action = l.value.actions[0]!
+    if (r.value.phase === 'completed') {
+      if (!settledRow) return unavailable()
+      readAdminSubscriptionSettlement(p, settledRow.value)
+    } else if (settledRow) return unavailable()
+    if (action.phase === 'confirmed') {
+      if (!factRow) return unavailable()
+      const fact = assertAdminSubscriptionFact(p, factRow.value)
+      if (JSON.stringify(fact.outcome) !== JSON.stringify(action.outcome)) return unavailable()
+    } else if (factRow) return unavailable()
+    return { phase: r.value.phase, reason: r.value.reason, plan: p,
+      claim: ['reserved', 'executing'].includes(r.value.phase)
+        ? { ...identity, generation: r.value.generation, token: r.value.token } as LifecycleClaim : null,
+      action: { ...action }, canAbort: r.value.phase === 'reserved',
+      canContinue: r.value.phase === 'reserved' || r.value.phase === 'executing' && r.value.reason === null && action.phase === 'planned' }
+  }, options)
+}
+
+export async function startAdminSubscriptionLifecycle(db: LifecycleDb, claim: LifecycleClaim, sessionToken: string) {
+  return db.$transaction(async tx => {
+    const { identity, r } = await authorize(tx, claim, ['reserved'])
+    await adminAuthority(tx, identity, sessionToken)
+    const p = await adminSubscriptionPlan(tx, identity)
+    await adminSubscriptionUser(tx, p)
+    const l = await ledger(tx, identity, r.value)
+    if (!l || r.value.inputDigest !== p.inputDigest || r.value.reason !== null || l.value.actions.length !== 1 ||
+        l.value.actions[0]?.phase !== 'planned') return unavailable()
+    await putReceipt(tx, identity, r.raw, { ...r.value, phase: 'executing', revision: nextRevision(r.value.revision), updatedAt: updateTime(r.value) })
+  }, options)
+}
+
+/** Explicit same-handle continuation only before dispatch; no unknown action rotates its claim. */
+export async function continueAdminSubscriptionLifecycle(db: LifecycleDb, identity: LifecycleIdentity, sessionToken: string) {
+  assertLifecycleIdentity(identity)
+  return db.$transaction(async tx => {
+    if (!await userExists(tx, identity.targetUserId)) throw new LifecycleError('LIFECYCLE_USER_UNAVAILABLE')
+    await adminAuthority(tx, identity, sessionToken)
+    const r = await receipt(tx, identity), f = await fence(tx, identity.targetUserId)
+    if (!r || !f || f.value.operationId !== identity.operationId || r.value.reason !== null ||
+        !['reserved', 'executing'].includes(r.value.phase)) return changed()
+    const p = await adminSubscriptionPlan(tx, identity)
+    await adminSubscriptionUser(tx, p)
+    const l = await ledger(tx, identity, r.value)
+    if (!l || l.value.actions.length !== 1 || l.value.actions[0]?.phase !== 'planned') throw new LifecycleError('LIFECYCLE_RESULT_UNCONFIRMED')
+    const updated: LifecycleReceipt = { ...r.value, generation: randomUUID(), token: randomUUID(), revision: nextRevision(r.value.revision), updatedAt: updateTime(r.value) }
+    await putReceipt(tx, identity, r.raw, updated)
+    await putLedger(tx, identity, l.raw, { ...l.value, generation: updated.generation, revision: nextRevision(l.value.revision) }, updated)
+    if ((await tx.systemSetting.updateMany({ where: { key: lifecycleFenceKey(identity.targetUserId), value: f.raw },
+      data: { value: JSON.stringify({ ...f.value, generation: updated.generation }) } })).count !== 1) return changed()
+    return { ...identity, generation: updated.generation, token: updated.token } as LifecycleClaim
+  }, options)
+}
+
+export async function dispatchAdminSubscriptionAction(db: LifecycleDb, claim: LifecycleClaim, sessionToken: string) {
+  return db.$transaction(async tx => {
+    const { identity, r } = await authorize(tx, claim, ['executing'])
+    await adminAuthority(tx, identity, sessionToken)
+    const p = await adminSubscriptionPlan(tx, identity)
+    await adminSubscriptionUser(tx, p)
+    const l = await ledger(tx, identity, r.value), key = adminSubscriptionActionKey(p)
+    if (!l || r.value.inputDigest !== p.inputDigest || r.value.reason !== null || l.value.actions.length !== 1 ||
+        l.value.actions[0]?.key !== key || l.value.actions[0].phase !== 'planned') throw new LifecycleError('LIFECYCLE_RESULT_UNCONFIRMED')
+    const action = l.value.actions[0]
+    action.phase = 'dispatched'; action.dispatchToken = randomUUID(); l.value.revision = nextRevision(l.value.revision)
+    await putLedger(tx, identity, l.raw, l.value, r.value)
+    return { plan: p, actionKey: key, dispatchToken: action.dispatchToken }
+  }, options)
+}
+
+/** Last short authority/read check before provider I/O; no transaction lock spans the SDK call. */
+export async function assertAdminSubscriptionDispatchBound(db: LifecycleDb, claim: LifecycleClaim,
+  sessionToken: string, dispatchToken: string) {
+  if (!validLifecycleUuid(dispatchToken)) throw new LifecycleError('INVALID_LIFECYCLE_ACTION', 400)
+  return db.$transaction(async tx => {
+    const { identity, r } = await authorize(tx, claim, ['executing'])
+    await adminAuthority(tx, identity, sessionToken)
+    const p = await adminSubscriptionPlan(tx, identity)
+    await adminSubscriptionUser(tx, p)
+    const l = await ledger(tx, identity, r.value)
+    if (!l || r.value.reason !== null || l.value.actions.length !== 1 ||
+        l.value.actions[0]?.key !== adminSubscriptionActionKey(p) || l.value.actions[0].phase !== 'dispatched' ||
+        l.value.actions[0].dispatchToken !== dispatchToken) return changed()
+    return p
+  }, options)
+}
+
+/** Persist exact provider evidence even if the admin was revoked after the external request. */
+export async function confirmAdminSubscriptionAction(db: LifecycleDb, claim: LifecycleClaim,
+  dispatchToken: string, fact: AdminSubscriptionFact) {
+  if (!validLifecycleUuid(dispatchToken)) throw new LifecycleError('INVALID_LIFECYCLE_ACTION', 400)
+  return db.$transaction(async tx => {
+    const { identity, r } = await authorize(tx, claim, ['executing'])
+    const p = await adminSubscriptionPlan(tx, identity)
+    assertAdminSubscriptionFact(p, JSON.stringify(fact))
+    const l = await ledger(tx, identity, r.value)
+    if (!l || r.value.inputDigest !== p.inputDigest || l.value.actions.length !== 1) return unavailable()
+    const action = l.value.actions[0]!
+    const saved = await tx.systemSetting.findUnique({ where: { key: adminSubscriptionFactKey(identity.operationId) }, select: { value: true } })
+    if (action.phase === 'confirmed') {
+      if (!saved || saved.value !== JSON.stringify(fact) || JSON.stringify(action.outcome) !== JSON.stringify(fact.outcome)) return unavailable()
+      return
+    }
+    if (action.phase !== 'dispatched' || action.dispatchToken !== dispatchToken || saved) return changed()
+    await tx.systemSetting.create({ data: { key: adminSubscriptionFactKey(identity.operationId), value: JSON.stringify(fact) } })
+    action.phase = 'confirmed'; action.outcome = fact.outcome; l.value.revision = nextRevision(l.value.revision)
+    await putLedger(tx, identity, l.raw, l.value, r.value)
+    if (r.value.reason !== null) await putReceipt(tx, identity, r.raw,
+      { ...r.value, reason: null, revision: nextRevision(r.value.revision), updatedAt: updateTime(r.value) })
+  }, options)
+}
+
+export async function markAdminSubscriptionUnknown(db: LifecycleDb, claim: LifecycleClaim, dispatchToken: string) {
+  if (!validLifecycleUuid(dispatchToken)) throw new LifecycleError('INVALID_LIFECYCLE_ACTION', 400)
+  return db.$transaction(async tx => {
+    const { identity, r } = await authorize(tx, claim, ['executing'])
+    const p = await adminSubscriptionPlan(tx, identity), l = await ledger(tx, identity, r.value)
+    if (!l || l.value.actions.length !== 1 || l.value.actions[0]?.key !== adminSubscriptionActionKey(p) ||
+        l.value.actions[0].phase !== 'dispatched' || l.value.actions[0].dispatchToken !== dispatchToken) return changed()
+    if (r.value.reason !== 'NEEDS_REVIEW') await putReceipt(tx, identity, r.raw,
+      { ...r.value, reason: 'EXTERNAL_UNKNOWN', revision: nextRevision(r.value.revision), updatedAt: updateTime(r.value) })
+  }, options)
+}
+
+export async function abortAdminSubscriptionLifecycle(db: LifecycleDb, identity: LifecycleIdentity, sessionToken: string) {
+  assertLifecycleIdentity(identity)
+  if (identity.operator.kind !== 'admin' || !['cancel', 'resume'].includes(identity.kind)) throw new LifecycleError('INVALID_LIFECYCLE_IDENTITY', 400)
+  return db.$transaction(async tx => {
+    if (!await userExists(tx, identity.targetUserId)) throw new LifecycleError('LIFECYCLE_USER_UNAVAILABLE')
+    await adminAuthority(tx, identity, sessionToken)
+    const r = await receipt(tx, identity), f = await fence(tx, identity.targetUserId)
+    if (r?.value.phase === 'aborted') {
+      if (f?.value.operationId === identity.operationId || await tx.systemSetting.findUnique({ where: { key: adminSubscriptionFactKey(identity.operationId) }, select: { key: true } })) return unavailable()
+      return view(r.value)
+    }
+    if (!r) {
+      if (f) throw new LifecycleError('ACCOUNT_OPERATION_IN_PROGRESS')
+      await assertGlobalLifecycleOperationIdFree(tx, identity.operationId)
+      const now = new Date().toISOString()
+      const inputDigest = createHash('sha256').update(JSON.stringify(['admin', identity, 'aborted-without-dispatch'])).digest('hex')
+      const aborted: LifecycleReceipt = { version: 2, targetHash: lifecycleSubject(identity.targetUserId), operationId: identity.operationId,
+        operator: identity.operator, kind: identity.kind, inputDigest, generation: randomUUID(), token: randomUUID(),
+        revision: 0, phase: 'aborted', reason: null, createdAt: now, updatedAt: now }
+      await tx.systemSetting.create({ data: { key: lifecycleReceiptKey(identity), value: JSON.stringify(aborted) } })
+      return view(aborted)
+    }
+    if (!f || f.value.operationId !== identity.operationId || r.value.phase !== 'reserved') throw new LifecycleError('LIFECYCLE_CANNOT_ABORT')
+    const p = await adminSubscriptionPlan(tx, identity), l = await ledger(tx, identity, r.value)
+    if (!l || p.inputDigest !== r.value.inputDigest || l.value.actions.length !== 1 || l.value.actions[0]?.phase !== 'planned' ||
+        await tx.systemSetting.findUnique({ where: { key: adminSubscriptionFactKey(identity.operationId) }, select: { key: true } })) return unavailable()
+    const aborted: LifecycleReceipt = { ...r.value, phase: 'aborted', generation: randomUUID(), token: randomUUID(), revision: nextRevision(r.value.revision), updatedAt: updateTime(r.value) }
+    await putReceipt(tx, identity, r.raw, aborted)
+    await putLedger(tx, identity, l.raw, { ...l.value, generation: aborted.generation, revision: nextRevision(l.value.revision) }, aborted)
+    if ((await tx.systemSetting.deleteMany({ where: { key: lifecycleFenceKey(identity.targetUserId), value: f.raw } })).count !== 1) return changed()
+    return view(aborted)
+  }, options)
+}
+
+/** Provider fact, current entitlement projection, completed receipt and fence release commit as one TX. */
+export async function completeAdminSubscriptionLifecycle(db: LifecycleDb, claim: LifecycleClaim,
+  sessionToken: string, settlement: BillingSyncInput | null) {
+  const identity = lifecycleIdentity(claim)
+  return db.$transaction(async tx => {
+    const { r } = await authorize(tx, claim, ['executing'])
+    await adminAuthority(tx, identity, sessionToken)
+    const p = await adminSubscriptionPlan(tx, identity)
+    await adminSubscriptionUser(tx, p)
+    const l = await ledger(tx, identity, r.value)
+    const factRow = await tx.systemSetting.findUnique({ where: { key: adminSubscriptionFactKey(identity.operationId) }, select: { value: true } })
+    if (!l || l.value.actions.length !== 1 || l.value.actions[0]?.phase !== 'confirmed' ||
+        r.value.inputDigest !== p.inputDigest || !factRow ||
+        await tx.systemSetting.findUnique({ where: { key: adminSubscriptionSettlementKey(identity.operationId) }, select: { key: true } })) return unavailable()
+    const fact = assertAdminSubscriptionFact(p, factRow.value)
+    if (JSON.stringify(l.value.actions[0].outcome) !== JSON.stringify(fact.outcome)) return unavailable()
+    if (p.intent === 'immediate_cancel') {
+      if (!settlement || settlement.userId !== identity.targetUserId ||
+          !['FREE', 'LIGHT', 'PRO', 'BUNDLE', 'ENTERPRISE'].includes(settlement.plan) ||
+          settlement.stripeSubscriptionId === undefined || settlement.stripePriceId === undefined ||
+          settlement.stripeCurrentPeriodEnd === undefined || settlement.preserveManualGrant === false ||
+          settlement.role !== undefined || settlement.notificationOnUpgrade !== undefined ||
+          (settlement.plan === 'FREE' ? settlement.stripeSubscriptionId !== null || settlement.stripePriceId !== null ||
+            settlement.stripeCurrentPeriodEnd !== null : typeof settlement.stripeSubscriptionId !== 'string' ||
+            typeof settlement.stripePriceId !== 'string' || !(settlement.stripeCurrentPeriodEnd instanceof Date))) return unavailable()
+    } else if (settlement !== null) return unavailable()
+    return completeLifecycleOperation(tx, claim, async () => {
+      const projected = settlement ? await projectUnifiedBilling(tx, settlement) : null
+      const coverage: AdminSubscriptionSettlement = {
+        version: 1, source: 'admin', settlementPolicyVersion: 1,
+        operationId: identity.operationId, targetHash: p.targetHash, planDigest: p.inputDigest,
+        projected: Boolean(projected), userPlan: projected?.userPlan ?? null, appliedAt: new Date().toISOString(),
+      }
+      readAdminSubscriptionSettlement(p, JSON.stringify(coverage))
+      await tx.systemSetting.create({ data: { key: adminSubscriptionSettlementKey(identity.operationId), value: JSON.stringify(coverage) } })
+      return { operationId: identity.operationId, phase: 'completed' as const, intent: p.intent,
+        subscriptionId: p.target.id, projectedPlan: projected?.userPlan ?? null }
+    })
+  }, { ...options, isolationLevel: 'Serializable' })
+}
+
 /** One transaction creates the complete subscription authority or nothing. */
 export async function admitSubscriptionLifecycle(db: LifecycleDb, plan: SubscriptionPlan) {
   parseSubscriptionPlan(JSON.stringify(plan))
@@ -55,7 +364,9 @@ export async function admitSubscriptionLifecycle(db: LifecycleDb, plan: Subscrip
     await subscriptionUser(tx, plan)
     const old = await receipt(tx, identity), f = await fence(tx, identity.targetUserId)
     if (old) {
-      if (old.value.phase === 'aborted' && await tx.systemSetting.findFirst({ where: { key: { startsWith: `doya-subscription-fact:v1:${identity.operationId}:` } }, select: { key: true } })) return unavailable()
+      if (old.value.phase === 'aborted' && (await tx.systemSetting.findFirst({ where: { key: { startsWith: `doya-subscription-fact:v1:${identity.operationId}:` } }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementRequirementKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { key: true } }))) return unavailable()
       const saved = await subscriptionPlan(tx, identity)
       if (old.value.inputDigest !== plan.inputDigest || JSON.stringify(saved) !== JSON.stringify(plan)) throw new LifecycleError('LIFECYCLE_INPUT_CONFLICT')
       const l = await ledger(tx, identity, old.value)
@@ -74,6 +385,9 @@ export async function admitSubscriptionLifecycle(db: LifecycleDb, plan: Subscrip
     await tx.systemSetting.create({ data: { key: lifecycleReceiptKey(identity), value: JSON.stringify(r) } })
     await tx.systemSetting.create({ data: { key: lifecycleFenceKey(identity.targetUserId), value: JSON.stringify(f2) } })
     await tx.systemSetting.create({ data: { key: subscriptionPlanKey(identity.operationId), value: JSON.stringify(plan) } })
+    if (identity.kind === 'cancel' && plan.cancelMode === 'immediate') await tx.systemSetting.create({
+      data: { key: selfSettlementRequirementKey(identity.operationId), value: JSON.stringify(makeSelfSettlementRequirement(plan)) },
+    })
     await tx.systemSetting.create({ data: { key: lifecycleLedgerKey(identity), value: JSON.stringify(l) } })
     return { ...view(r), created: true, claim: { ...identity, generation: r.generation, token: r.token } as LifecycleClaim }
   }, options)
@@ -134,6 +448,8 @@ async function assertStoredSubscriptionFacts(tx: Tx, plan: SubscriptionPlan, act
 }
 
 async function assertAbortedSubscriptionState(tx: Tx, identity: LifecycleIdentity, r: LifecycleReceipt) {
+  if (await tx.systemSetting.findUnique({ where: { key: selfSettlementRequirementKey(identity.operationId) }, select: { key: true } }) ||
+      await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { key: true } })) return unavailable()
   const planRow = await tx.systemSetting.findUnique({ where: { key: subscriptionPlanKey(identity.operationId) }, select: { key: true } })
   const ledgerRow = await tx.systemSetting.findUnique({ where: { key: lifecycleLedgerKey(identity) }, select: { key: true } })
   if (Boolean(planRow) !== Boolean(ledgerRow)) return unavailable()
@@ -191,8 +507,28 @@ export async function markSubscriptionUnknown(db: LifecycleDb, claim: LifecycleC
   }, options)
 }
 
-/** Terminal settlement is short, fenced, and does not call Stripe or send a notification. */
-export async function completeSubscriptionLifecycle(db: LifecycleDb, claim: LifecycleClaim) {
+/** Explicit same-ID recovery of a pre-policy in-flight immediate operation. Status GET never adds coverage. */
+export async function attachSelfImmediateSettlementRequirement(db: LifecycleDb, claim: LifecycleClaim) {
+  const identity = lifecycleIdentity(claim)
+  return db.$transaction(async tx => {
+    const { r } = await authorize(tx, claim, ['reserved', 'executing'])
+    const p = await subscriptionPlan(tx, identity)
+    if (p.identity.kind !== 'cancel' || p.cancelMode !== 'immediate' || p.inputDigest !== r.value.inputDigest) return unavailable()
+    await subscriptionUser(tx, p)
+    const l = await ledger(tx, identity, r.value)
+    if (!l) return unavailable()
+    await assertStoredSubscriptionFacts(tx, p, l.value.actions)
+    const key = selfSettlementRequirementKey(identity.operationId)
+    const old = await tx.systemSetting.findUnique({ where: { key }, select: { value: true } })
+    if (old) { readSelfSettlementRequirement(p, old.value); return false }
+    if (await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { key: true } })) return unavailable()
+    await tx.systemSetting.create({ data: { key, value: JSON.stringify(makeSelfSettlementRequirement(p)) } })
+    return true
+  }, options)
+}
+
+/** Terminal settlement is fenced; projection and receipt/fence commit in one transaction. */
+export async function completeSubscriptionLifecycle(db: LifecycleDb, claim: LifecycleClaim, settlement: BillingSyncInput | null = null) {
   const identity = lifecycleIdentity(claim)
   if (!['cancel', 'resume'].includes(claim.kind)) throw new LifecycleError('INVALID_LIFECYCLE_CLAIM', 400)
   return db.$transaction(async tx => completeLifecycleOperation(tx, claim, async () => {
@@ -202,13 +538,35 @@ export async function completeSubscriptionLifecycle(db: LifecycleDb, claim: Life
     if (!r || !l || p.inputDigest !== r.value.inputDigest) return unavailable()
     await assertStoredSubscriptionFacts(tx, p, l.value.actions)
     const primary = p.targets[0]!
-    await tx.user.update({ where: { id: claim.targetUserId }, data: {
-      stripeSubscriptionId: p.identity.kind === 'cancel' && p.cancelMode === 'immediate' ? null : primary.id,
-      stripeCustomerId: primary.customerId,
-    } })
+    const immediate = p.identity.kind === 'cancel' && p.cancelMode === 'immediate'
+    const required = await tx.systemSetting.findUnique({ where: { key: selfSettlementRequirementKey(identity.operationId) }, select: { value: true } })
+    const covered = await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { key: true } })
+    if (covered) return unavailable()
+    if (immediate) {
+      if (!required || !settlement || settlement.userId !== identity.targetUserId ||
+          !['FREE', 'LIGHT', 'PRO', 'BUNDLE', 'ENTERPRISE'].includes(settlement.plan) ||
+          settlement.stripeSubscriptionId === undefined || settlement.stripePriceId === undefined ||
+          settlement.stripeCurrentPeriodEnd === undefined || settlement.preserveManualGrant === false ||
+          settlement.role !== undefined || settlement.notificationOnUpgrade !== undefined ||
+          (settlement.plan === 'FREE' ? settlement.stripeSubscriptionId !== null || settlement.stripePriceId !== null ||
+            settlement.stripeCurrentPeriodEnd !== null : typeof settlement.stripeSubscriptionId !== 'string' ||
+            typeof settlement.stripePriceId !== 'string' || !(settlement.stripeCurrentPeriodEnd instanceof Date))) return unavailable()
+      readSelfSettlementRequirement(p, required.value)
+      const projection = await projectUnifiedBilling(tx, settlement)
+      const coverage: SelfSettlementCoverage = { version: 1, source: 'self_service', policyVersion: 1,
+        operationId: identity.operationId, targetHash: p.targetHash, planDigest: p.inputDigest,
+        userPlan: projection.userPlan as SelfSettlementCoverage['userPlan'], appliedAt: new Date().toISOString() }
+      readSelfSettlementCoverage(p, JSON.stringify(coverage))
+      await tx.systemSetting.create({ data: { key: selfSettlementCoverageKey(identity.operationId), value: JSON.stringify(coverage) } })
+    } else {
+      if (required || settlement) return unavailable()
+      await tx.user.update({ where: { id: claim.targetUserId }, data: {
+        stripeSubscriptionId: primary.id, stripeCustomerId: primary.customerId,
+      } })
+    }
     return { operationId: claim.operationId, phase: 'completed' as const, kind: claim.kind,
       results: l.value.actions.map(a => ({ subscriptionId: a.resourceId, status: a.outcome?.status })) }
-  }), options)
+  }), { ...options, isolationLevel: settlement ? 'Serializable' : options.isolationLevel })
 }
 
 export async function readSubscriptionLifecycle(db: LifecycleDb, identity: LifecycleIdentity) {
@@ -219,6 +577,11 @@ export async function readSubscriptionLifecycle(db: LifecycleDb, identity: Lifec
     const r = await receipt(tx, identity), f = await fence(tx, identity.targetUserId)
     if (!r) {
       if (await tx.systemSetting.findUnique({ where: { key: subscriptionPlanKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementRequirementKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: adminSubscriptionPlanKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: adminSubscriptionFactKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: adminSubscriptionSettlementKey(identity.operationId) }, select: { key: true } }) ||
           await tx.systemSetting.findUnique({ where: { key: lifecycleLedgerKey(identity) }, select: { key: true } }) ||
           await tx.systemSetting.findFirst({ where: { key: { startsWith: `doya-subscription-fact:v1:${identity.operationId}:` } }, select: { key: true } }) ||
           f?.value.operationId === identity.operationId) return unavailable()
@@ -226,6 +589,11 @@ export async function readSubscriptionLifecycle(db: LifecycleDb, identity: Lifec
     }
     if (r.value.phase === 'aborted') {
       if (f?.value.operationId === identity.operationId ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementRequirementKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: adminSubscriptionPlanKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: adminSubscriptionFactKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: adminSubscriptionSettlementKey(identity.operationId) }, select: { key: true } }) ||
           await tx.systemSetting.findFirst({ where: { key: { startsWith: `doya-subscription-fact:v1:${identity.operationId}:` } }, select: { key: true } })) return unavailable()
       await assertAbortedSubscriptionState(tx, identity, r.value)
       return { operationId: identity.operationId, kind: identity.kind, phase: 'aborted' as const, reason: null, actions: [], canAbort: false, canContinue: false }
@@ -233,6 +601,11 @@ export async function readSubscriptionLifecycle(db: LifecycleDb, identity: Lifec
     const p = await subscriptionPlan(tx, identity), l = await ledger(tx, identity, r.value)
     if (!l || p.inputDigest !== r.value.inputDigest || ['reserved', 'executing'].includes(r.value.phase) && f?.value.operationId !== identity.operationId) return unavailable()
     await assertStoredSubscriptionFacts(tx, p, l.value.actions)
+    const requirement = await tx.systemSetting.findUnique({ where: { key: selfSettlementRequirementKey(identity.operationId) }, select: { value: true } })
+    const coverage = await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { value: true } })
+    if (requirement) readSelfSettlementRequirement(p, requirement.value)
+    if (coverage) { if (!requirement || r.value.phase !== 'completed') return unavailable(); readSelfSettlementCoverage(p, coverage.value) }
+    if (r.value.phase === 'completed' && requirement && !coverage) return unavailable()
     const actions = l.value.actions.map(a => ({ subscriptionId: a.resourceId, phase: a.phase, status: a.outcome?.status ?? null }))
     return { operationId: identity.operationId, kind: identity.kind, phase: r.value.phase, reason: r.value.reason,
       actions, canAbort: r.value.phase === 'reserved', canContinue: r.value.phase === 'reserved' || r.value.phase === 'executing' && r.value.reason === null && !l.value.actions.some(a => a.phase === 'dispatched') }
@@ -248,6 +621,11 @@ export async function readSubscriptionServerState(db: LifecycleDb, identity: Lif
     const r = await receipt(tx, identity), f = await fence(tx, identity.targetUserId)
     if (!r) {
       if (await tx.systemSetting.findUnique({ where: { key: subscriptionPlanKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementRequirementKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: adminSubscriptionPlanKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: adminSubscriptionFactKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: adminSubscriptionSettlementKey(identity.operationId) }, select: { key: true } }) ||
           await tx.systemSetting.findUnique({ where: { key: lifecycleLedgerKey(identity) }, select: { key: true } }) ||
           await tx.systemSetting.findFirst({ where: { key: { startsWith: `doya-subscription-fact:v1:${identity.operationId}:` } }, select: { key: true } }) ||
           f?.value.operationId === identity.operationId) return unavailable()
@@ -255,6 +633,11 @@ export async function readSubscriptionServerState(db: LifecycleDb, identity: Lif
     }
     if (r.value.phase === 'aborted') {
       if (f?.value.operationId === identity.operationId ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementRequirementKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: adminSubscriptionPlanKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: adminSubscriptionFactKey(identity.operationId) }, select: { key: true } }) ||
+          await tx.systemSetting.findUnique({ where: { key: adminSubscriptionSettlementKey(identity.operationId) }, select: { key: true } }) ||
           await tx.systemSetting.findFirst({ where: { key: { startsWith: `doya-subscription-fact:v1:${identity.operationId}:` } }, select: { key: true } })) return unavailable()
       await assertAbortedSubscriptionState(tx, identity, r.value)
       return { phase: 'aborted' as const, plan: null, claim: null, actions: [], reason: null }
@@ -262,6 +645,11 @@ export async function readSubscriptionServerState(db: LifecycleDb, identity: Lif
     const p = await subscriptionPlan(tx, identity), l = await ledger(tx, identity, r.value)
     if (!l || r.value.inputDigest !== p.inputDigest || ['reserved', 'executing'].includes(r.value.phase) && f?.value.operationId !== identity.operationId) return unavailable()
     await assertStoredSubscriptionFacts(tx, p, l.value.actions)
+    const requirement = await tx.systemSetting.findUnique({ where: { key: selfSettlementRequirementKey(identity.operationId) }, select: { value: true } })
+    const coverage = await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { value: true } })
+    if (requirement) readSelfSettlementRequirement(p, requirement.value)
+    if (coverage) { if (!requirement || r.value.phase !== 'completed') return unavailable(); readSelfSettlementCoverage(p, coverage.value) }
+    if (r.value.phase === 'completed' && requirement && !coverage) return unavailable()
     return { phase: r.value.phase, plan: p, claim: ['reserved', 'executing'].includes(r.value.phase)
       ? { ...identity, generation: r.value.generation, token: r.value.token } as LifecycleClaim : null,
       actions: l.value.actions.map(a => ({ ...a })), reason: r.value.reason }
@@ -471,7 +859,11 @@ export async function abortUnstartedLifecycleOperation(db: LifecycleDb, identity
     const exists = await userExists(tx, identity.targetUserId), r = await receipt(tx, identity), f = await fence(tx, identity.targetUserId)
     if (f?.value.state === 'active' && !exists) return unavailable()
     if (r && r.value.inputDigest !== inputDigest) throw new LifecycleError('LIFECYCLE_INPUT_CONFLICT')
-    if (r?.value.phase === 'aborted') { if (f?.value.operationId === identity.operationId) return unavailable(); return view(r.value) }
+    if (r?.value.phase === 'aborted') {
+      if (f?.value.operationId === identity.operationId) return unavailable()
+      if (identity.operator.kind === 'user' && ['cancel', 'resume'].includes(identity.kind)) await assertAbortedSubscriptionState(tx, identity, r.value)
+      return view(r.value)
+    }
     if (!r) {
       await assertGlobalLifecycleOperationIdFree(tx, identity.operationId)
       const now = new Date().toISOString(), aborted: LifecycleReceipt = { version: 2, targetHash: lifecycleSubject(identity.targetUserId), operationId: identity.operationId, operator: { kind: identity.operator.kind, id: identity.operator.id }, kind: identity.kind, inputDigest, generation: randomUUID(), token: randomUUID(), revision: 0, phase: 'aborted', reason: null, createdAt: now, updatedAt: now }
@@ -481,9 +873,13 @@ export async function abortUnstartedLifecycleOperation(db: LifecycleDb, identity
     if (!exists || r.value.phase !== 'reserved' || f?.value.operationId !== identity.operationId) throw new LifecycleError('LIFECYCLE_CANNOT_ABORT')
     const l = await ledger(tx, identity, r.value)
     if (l?.value.actions.some(a => a.phase !== 'planned')) return unavailable()
+    const required = await tx.systemSetting.findUnique({ where: { key: selfSettlementRequirementKey(identity.operationId) }, select: { value: true } })
+    if (required) { const plan = await subscriptionPlan(tx, identity); readSelfSettlementRequirement(plan, required.value) }
+    if (await tx.systemSetting.findUnique({ where: { key: selfSettlementCoverageKey(identity.operationId) }, select: { key: true } })) return unavailable()
     const aborted = { ...r.value, phase: 'aborted' as const, token: randomUUID(), generation: randomUUID(), revision: nextRevision(r.value.revision), updatedAt: updateTime(r.value) }
     await putReceipt(tx, identity, r.raw, aborted)
     if (l) await putLedger(tx, identity, l.raw, { ...l.value, generation: aborted.generation, revision: nextRevision(l.value.revision) }, aborted)
+    if (required && (await tx.systemSetting.deleteMany({ where: { key: selfSettlementRequirementKey(identity.operationId), value: required.value } })).count !== 1) return changed()
     if ((await tx.systemSetting.deleteMany({ where: { key: lifecycleFenceKey(identity.targetUserId), value: f.raw } })).count !== 1) return changed()
     return view(aborted)
   }, options)

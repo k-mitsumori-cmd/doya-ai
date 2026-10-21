@@ -5,7 +5,14 @@ const state = load('src/lib/account-lifecycle/state.ts', { 'node:crypto': crypto
 const plans = load('src/lib/account-lifecycle/subscription-plan.ts', { 'node:crypto': crypto, './state': state })
 const facts = load('src/lib/account-lifecycle/subscription-provider.ts', { './state': state })
 const store = load('src/lib/account-lifecycle/store.ts', { 'node:crypto': crypto, '@prisma/client': { Prisma: {} },
-  './state': state, './subscription-plan': plans, './subscription-provider': facts })
+  './state': state, './subscription-plan': plans, './subscription-provider': facts,
+  '@/lib/billing-sync': { projectUnifiedBilling: async (tx, input) => {
+    const old = await tx.user.findUnique({ where: { id: input.userId } })
+    await tx.user.update({ where: { id: input.userId }, data: { plan: input.plan,
+      stripeSubscriptionId: input.stripeSubscriptionId, stripePriceId: input.stripePriceId } })
+    return { userPlan: input.plan, servicePlan: input.plan, previousPlan: old.plan || 'PRO' }
+  } },
+})
 const coordinator = load('src/lib/account-lifecycle/subscription.ts', { 'server-only': {}, 'node:crypto': crypto,
   './state': state, './subscription-plan': plans, './subscription-provider': facts, './store': store })
 const actor = { id: 'actor1', email: 'actor@example.invalid', stripeCustomerId: null, stripeSubscriptionId: null }
@@ -127,6 +134,31 @@ const fenceCount = db => [...db.rows().keys()].filter(k => k.startsWith('doya-ac
     await assert.rejects(c.handle('resume', actor, handle('abort', operationId)))
     assert.deepEqual([...db.rows()].sort(), before)
     assert.equal(p.calls.writes, 0); assert.equal(p.calls.reads, 0)
+  })
+  await check('new self immediate cancel requires atomic projected coverage; lost final receipt retries fact only', async () => {
+    const db = fixture(); let writes = 0, reads = 0
+    const implementation = {
+      discover: async () => [{ ...target }],
+      mutate: async (plan, item, key, _actor, beforeWrite) => {
+        await beforeWrite(); writes++
+        return facts.verifySubscriptionFact(plan, item, key, { id: item.id, customerId: item.customerId,
+          livemode: false, status: 'canceled', cancelAtPeriodEnd: false, currentPeriodEnd: item.currentPeriodEnd })
+      },
+      readExact: async () => { reads++; return { id: target.id, customer: target.customerId,
+        livemode: false, status: 'canceled', cancel_at_period_end: false, current_period_end: target.currentPeriodEnd } },
+      settlement: async () => ({ userId: actor.id, plan: 'FREE', stripeSubscriptionId: null,
+        stripePriceId: null, stripeCurrentPeriodEnd: null }),
+    }
+    const c = coordinator.subscriptionCoordinator(db, implementation, 'test'), operationId = crypto.randomUUID()
+    db.failCompletionReceipt()
+    const pending = await c.handle('cancel', actor, { ...action('cancel', operationId), mode: 'immediate' })
+    assert.equal(pending.phase, 'executing'); assert.equal(writes, 1); assert.equal(fenceCount(db), 1)
+    assert.ok(db.rows().has('doya-subscription-settlement-required:v1:' + operationId))
+    assert.equal(db.rows().has('doya-subscription-settlement-applied:v1:' + operationId), false)
+    const done = await c.handle('cancel', actor, handle('reconcile', operationId))
+    assert.equal(done.phase, 'completed'); assert.equal(db.user().plan, 'FREE')
+    assert.ok(db.rows().has('doya-subscription-settlement-applied:v1:' + operationId))
+    assert.equal(fenceCount(db), 0); assert.equal(writes, 1); assert.equal(reads, 1)
   })
   console.log(JSON.stringify({ passed: results.length, scope: 'actual coordinator/store with transactional synthetic DB; no PostgreSQL concurrency claim' }))
 })().catch(error => { console.error(error); process.exitCode = 1 })

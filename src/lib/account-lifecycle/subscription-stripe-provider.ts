@@ -3,7 +3,9 @@ import type Stripe from 'stripe'
 import { LifecycleError } from './state'
 import { verifySubscriptionFact, type VerifiedSubscriptionFact } from './subscription-provider'
 import type { SubscriptionPlan, SubscriptionTarget } from './subscription-plan'
-import { stripe, findActiveLikeSubscriptions, isDoyaSubscriptionOwnedByUser, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
+import { stripe, findActiveLikeSubscriptions, isDoyaSubscriptionOwnedByUser, ACTIVE_LIKE_STATUSES,
+  resolvePlanIdFromSubscription, planTierFromPlanId } from '@/lib/stripe'
+import type { BillingSyncInput } from '@/lib/billing-sync'
 
 export type SubscriptionActor = {
   id: string; email: string; stripeCustomerId: string | null; stripeSubscriptionId: string | null
@@ -11,6 +13,7 @@ export type SubscriptionActor = {
 }
 const unknown = (): never => { throw new LifecycleError('SUBSCRIPTION_PROVIDER_RESULT_UNKNOWN') }
 const customerId = (value: Stripe.Subscription['customer']) => typeof value === 'string' ? value : value?.id || ''
+const rank: Record<string, number> = { FREE: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
 
 /** The SDK is injected for isolated synthetic transport tests; no real call is made by construction. */
 export function subscriptionStripeProvider(sdk: Stripe, mode: 'test' | 'live', discover = findActiveLikeSubscriptions,
@@ -77,6 +80,26 @@ export function subscriptionStripeProvider(sdk: Stripe, mode: 'test' | 'live', d
       })
     },
     async readExact(id: string, actor: SubscriptionActor) { return exact(id, actor) },
+    async settlement(plan: SubscriptionPlan, actor: SubscriptionActor): Promise<BillingSyncInput> {
+      if (plan.identity.kind !== 'cancel' || plan.cancelMode !== 'immediate' || plan.mode !== mode ||
+          plan.identity.targetUserId !== actor.id || plan.email !== actor.email) return unknown()
+      const remaining = await discover({ userId: actor.id, email: actor.email, stripeCustomerId: actor.stripeCustomerId })
+      if (remaining.length > 128 || remaining.some(item => plan.targets.some(target => target.id === item.id))) return unknown()
+      const ranked = remaining.map(item => ({ item, tier: planTierFromPlanId(item.planId) }))
+      if (ranked.some(item => item.tier === 'FREE')) return unknown()
+      ranked.sort((a, b) => rank[b.tier]! - rank[a.tier]! || (a.item.id < b.item.id ? -1 : 1))
+      const best = ranked[0]
+      if (!best) return { userId: actor.id, plan: 'FREE', stripeCustomerId: plan.targets[0]!.customerId, stripeSubscriptionId: null,
+        stripePriceId: null, stripeCurrentPeriodEnd: null }
+      const raw = await exact(best.item.id, actor)
+      if (!ACTIVE_LIKE_STATUSES.has(raw.status) || customerId(raw.customer) !== best.item.customerId ||
+          !Number.isSafeInteger(raw.current_period_end) || raw.current_period_end <= 0) return unknown()
+      const resolved = resolvePlanIdFromSubscription(raw), tier = planTierFromPlanId(resolved.planId)
+      if (tier === 'FREE' || tier !== best.tier || resolved.priceId !== best.item.priceId) return unknown()
+      return { userId: actor.id, plan: tier, stripeCustomerId: customerId(raw.customer),
+        stripeSubscriptionId: raw.id, stripePriceId: resolved.priceId,
+        stripeCurrentPeriodEnd: new Date(raw.current_period_end * 1000) }
+    },
   }
 }
 

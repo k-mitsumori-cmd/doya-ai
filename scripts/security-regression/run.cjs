@@ -1272,6 +1272,13 @@ if (adminStripeOwnership.error || adminStripeOwnership.status !== 0) {
   console.error('Security regression failed: verify-admin-stripe-ownership.cjs');
   process.exit(1);
 }
+for (const script of ['verify-admin-subscription-plan.cjs', 'verify-admin-subscription-provider.cjs', 'verify-admin-subscription-settlement.cjs', 'verify-admin-subscription-mounted.cjs', 'verify-admin-subscription-page-mounted.cjs', 'verify-admin-subscription-http-integrated.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
+  if (result.error || result.status !== 0) {
+    console.error(`Security regression failed: ${script}`);
+    process.exit(1);
+  }
+}
 const billingAuditScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-billing-audit-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (billingAuditScope.error || billingAuditScope.status !== 0) {
   console.error('Security regression failed: verify-billing-audit-scope.cjs');

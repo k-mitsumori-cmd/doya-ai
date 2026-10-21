@@ -22,7 +22,14 @@ const state = load('src/lib/account-lifecycle/state.ts', { 'node:crypto': crypto
 const plans = load('src/lib/account-lifecycle/subscription-plan.ts', { 'node:crypto': crypto, './state': state })
 const facts = load('src/lib/account-lifecycle/subscription-provider.ts', { './state': state })
 const store = load('src/lib/account-lifecycle/store.ts', { 'node:crypto': crypto, '@prisma/client': { Prisma },
-  './state': state, './subscription-plan': plans, './subscription-provider': facts })
+  './state': state, './subscription-plan': plans, './subscription-provider': facts,
+  '@/lib/billing-sync': { projectUnifiedBilling: async (tx, input) => {
+    const old = await tx.user.findUnique({ where: { id: input.userId }, select: { plan: true } })
+    await tx.user.update({ where: { id: input.userId }, data: { plan: input.plan,
+      stripeSubscriptionId: input.stripeSubscriptionId, stripePriceId: input.stripePriceId,
+      stripeCurrentPeriodEnd: input.stripeCurrentPeriodEnd } })
+    return { userPlan: input.plan, servicePlan: input.plan, previousPlan: old.plan }
+  } } })
 const coordinator = load('src/lib/account-lifecycle/subscription.ts', { 'server-only': {}, 'node:crypto': crypto,
   './state': state, './subscription-plan': plans, './subscription-provider': facts, './store': store })
 const actor = { id: 'actor1', email: 'actor@example.invalid', stripeCustomerId: 'cus_one',
@@ -70,7 +77,7 @@ function provider(options = {}) {
   return { calls, implementation: {
     discover: async () => { calls.discover++; return targets },
     readExact: async id => { calls.reads++; return { id, customer: 'cus_one', livemode: false,
-      status: 'active', cancel_at_period_end: false, current_period_end: 1900000000 } },
+      status: options.readStatus || 'active', cancel_at_period_end: false, current_period_end: 1900000000 } },
     mutate: async (plan, item, key, _actor, beforeWrite) => {
       if (options.before) await options.before({ plan, item, key, calls })
       calls.before++; await beforeWrite()
@@ -80,6 +87,8 @@ function provider(options = {}) {
         livemode: false, status: plan.cancelMode === 'immediate' ? 'canceled' : 'active',
         cancelAtPeriodEnd: plan.identity.kind === 'cancel', currentPeriodEnd: item.currentPeriodEnd })
     },
+    settlement: async () => ({ userId: actor.id, plan: 'FREE', stripeSubscriptionId: null,
+      stripePriceId: null, stripeCurrentPeriodEnd: null }),
   } }
 }
 const client = fixture => coordinator.subscriptionCoordinator(db, fixture.implementation, 'test')
@@ -185,6 +194,56 @@ const client = fixture => coordinator.subscriptionCoordinator(db, fixture.implem
     assert.equal((await db.user.findUnique({ where: { id: actor.id } })).stripeSubscriptionId, null)
     assert.equal(await db.systemSetting.count({ where: { key: { startsWith: 'doya-account-fence:v2:' } } }), 0)
   })
+  await check('historical v1 completed without requirement remains legacy coverage and status writes zero', async () => {
+    const p = provider(), c = client(p), start = { ...action('cancel'), mode: 'immediate' }
+    assert.equal((await c.handle('cancel', actor, start)).phase, 'completed')
+    await db.systemSetting.delete({ where: { key: `doya-subscription-settlement-required:v1:${start.operationId}` } })
+    await db.systemSetting.delete({ where: { key: `doya-subscription-settlement-applied:v1:${start.operationId}` } })
+    await db.user.update({ where: { id: actor.id }, data: { plan: 'PRO',
+      stripeSubscriptionId: 'sub_one', stripeCustomerId: 'cus_one' } })
+    const before = await snapshot(), user = await db.user.findUnique({ where: { id: actor.id } })
+    const status = await c.handle('cancel', actor, { action: 'status', operationId: start.operationId,
+      expectedActorId: actor.id })
+    assert.equal(status.phase, 'completed'); assert.deepEqual(await snapshot(), before)
+    assert.equal((await db.user.findUnique({ where: { id: actor.id } })).plan, user.plan)
+    assert.equal(p.calls.reads, 0); assert.deepEqual(p.calls.writes, ['sub_one'])
+  })
+  await check('old confirmed executing fact gains requirement only on explicit same-ID continuation', async () => {
+    await db.$executeRawUnsafe("CREATE OR REPLACE FUNCTION deny_old_completion() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.key LIKE 'doya-account-operation:v2:%' AND NEW.value::jsonb ->> 'phase' = 'completed' THEN RAISE EXCEPTION 'synthetic old completion stop'; END IF; RETURN NEW; END $$")
+    await db.$executeRawUnsafe('CREATE TRIGGER deny_old_completion BEFORE UPDATE ON "SystemSetting" FOR EACH ROW EXECUTE FUNCTION deny_old_completion()')
+    const p = provider({ readStatus: 'canceled' }), c = client(p), start = { ...action('cancel'), mode: 'immediate' }
+    try {
+      const pending = await c.handle('cancel', actor, start)
+      assert.equal(pending.phase, 'executing'); assert.equal(pending.actions[0].phase, 'confirmed')
+      await db.systemSetting.delete({ where: { key: `doya-subscription-settlement-required:v1:${start.operationId}` } })
+    } finally { await db.$executeRawUnsafe('DROP TRIGGER deny_old_completion ON "SystemSetting"') }
+    const before = await snapshot()
+    assert.equal((await c.handle('cancel', actor, { action: 'status', operationId: start.operationId,
+      expectedActorId: actor.id })).phase, 'executing')
+    assert.deepEqual(await snapshot(), before, 'status cannot upgrade old requirement')
+    const done = await c.handle('cancel', actor, { action: 'continue', operationId: start.operationId,
+      expectedActorId: actor.id })
+    assert.equal(done.phase, 'completed'); assert.deepEqual(p.calls.writes, ['sub_one'])
+    assert.equal(await db.systemSetting.count({ where: { key: { startsWith: 'doya-subscription-settlement-required:v1:' } } }), 1)
+    assert.equal(await db.systemSetting.count({ where: { key: { startsWith: 'doya-subscription-settlement-applied:v1:' } } }), 1)
+    assert.equal((await db.user.findUnique({ where: { id: actor.id } })).plan, 'FREE')
+  })
+  await check('old reserved immediate handle gains requirement only on explicit same-ID continuation', async () => {
+    const id = identity('cancel'), plan = plans.makeSubscriptionPlan({ identity: id, mode: 'test', email: actor.email,
+      expectedCustomerId: actor.stripeCustomerId, expectedSubscriptionId: actor.stripeSubscriptionId,
+      serviceId: 'banner', cancelMode: 'immediate', targets: [target('sub_one')] })
+    await store.admitSubscriptionLifecycle(db, plan)
+    await db.systemSetting.delete({ where: { key: `doya-subscription-settlement-required:v1:${id.operationId}` } })
+    const before = await snapshot(), p = provider(), c = client(p)
+    assert.equal((await c.handle('cancel', actor, { action: 'status', operationId: id.operationId,
+      expectedActorId: actor.id })).phase, 'reserved')
+    assert.deepEqual(await snapshot(), before)
+    const done = await c.handle('cancel', actor, { action: 'continue', operationId: id.operationId,
+      expectedActorId: actor.id })
+    assert.equal(done.phase, 'completed'); assert.deepEqual(p.calls.writes, ['sub_one'])
+    assert.equal(await db.systemSetting.count({ where: { key: { startsWith: 'doya-subscription-settlement-required:v1:' } } }), 1)
+    assert.equal(await db.systemSetting.count({ where: { key: { startsWith: 'doya-subscription-settlement-applied:v1:' } } }), 1)
+  })
   await check('reserved abort preserves typed plan/ledger join and rejects orphaned aborted state', async () => {
     const id = identity(), plan = plans.makeSubscriptionPlan({ identity: id, mode: 'test', email: actor.email,
       expectedCustomerId: actor.stripeCustomerId, expectedSubscriptionId: actor.stripeSubscriptionId,
@@ -238,6 +297,17 @@ const client = fixture => coordinator.subscriptionCoordinator(db, fixture.implem
     assert.equal(attempts.filter(x => x.status === 'fulfilled').length, 1)
     assert.equal(p.calls.writes.length, 1)
     assert.equal(await db.systemSetting.count({ where: { key: { startsWith: 'doya-subscription-plan:v1:' } } }), 1)
+  })
+  await check('self immediate partial two-target result cannot project or release the fence', async () => {
+    const p = provider({ targets: [target('sub_one'), target('sub_two')], fail: ['sub_two'] }), c = client(p)
+    const start = { ...action('cancel'), mode: 'immediate' }, pending = await c.handle('cancel', actor, start)
+    assert.equal(pending.phase, 'executing'); assert.equal(pending.reason, 'EXTERNAL_UNKNOWN')
+    assert.equal((await db.user.findUnique({ where: { id: actor.id } })).plan, 'PRO')
+    assert.equal(await db.systemSetting.count({ where: { key: { startsWith: 'doya-subscription-settlement-applied:v1:' } } }), 0)
+    assert.equal(await db.systemSetting.count({ where: { key: { startsWith: 'doya-account-fence:v2:' } } }), 1)
+    assert.deepEqual(p.calls.writes, ['sub_one', 'sub_two'])
+    assert.equal((await c.handle('cancel', actor, start)).phase, 'executing')
+    assert.deepEqual(p.calls.writes, ['sub_one', 'sub_two'])
   })
   await check('partial two target result stays unknown, fences new UUID, queues one alert without delivery', async () => {
     const p = provider({ targets: [target('sub_one'), target('sub_two')], fail: ['sub_two'] }), c = client(p)
