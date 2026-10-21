@@ -42,7 +42,7 @@ const mocks = {
   './Wizard': { __esModule: true, default: ({ initial, onSubmit, submitDisabled }) => React.createElement('div', null,
     React.createElement('span', null, `input:${initial.eventName}`),
     React.createElement('button', { disabled: submitDisabled, onClick: () => onSubmit({ ...initial, eventName: '実入力の展示会' }) }, 'start')) },
-  './Generating': { __esModule: true, default: ({ onDone }) => { f.animationDone = onDone; React.useEffect(onDone, [onDone]); return React.createElement('p', null, 'generating') } },
+  './Generating': { __esModule: true, default: function SyntheticGenerating({ onDone }) { f.animationDone = onDone; React.useEffect(onDone, [onDone]); return React.createElement('p', null, 'generating') } },
   './BoothStudio': { __esModule: true, default: ({ input, analysis }) => React.createElement('p', null, `3D:${input.eventName}:${analysis.brand}`) },
   './Overview': { __esModule: true, default: ({ input }) => React.createElement('p', null, `overview:${input.eventName}`) },
   './CreativeStudio': { __esModule: true, default: no }, './NoveltyPicker': { __esModule: true, default: no },
