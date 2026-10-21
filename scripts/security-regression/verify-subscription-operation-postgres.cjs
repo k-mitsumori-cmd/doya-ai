@@ -179,7 +179,7 @@ const client = fixture => coordinator.subscriptionCoordinator(db, fixture.implem
   await check('terminal receipt failure rolls back User update and same handle settles confirmed fact once', async () => {
     await db.$executeRawUnsafe("CREATE OR REPLACE FUNCTION deny_subscription_completion() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.key LIKE 'doya-account-operation:v2:%' AND NEW.value::jsonb ->> 'phase' = 'completed' THEN RAISE EXCEPTION 'synthetic completion failure'; END IF; RETURN NEW; END $$")
     await db.$executeRawUnsafe('CREATE TRIGGER deny_subscription_completion BEFORE UPDATE ON "SystemSetting" FOR EACH ROW EXECUTE FUNCTION deny_subscription_completion()')
-    const p = provider(), c = client(p), start = { ...action('cancel'), mode: 'immediate' }
+    const p = provider({ readStatus: 'canceled' }), c = client(p), start = { ...action('cancel'), mode: 'immediate' }
     try {
       const pending = await c.handle('cancel', actor, start)
       assert.equal(pending.phase, 'executing'); assert.equal(pending.actions[0].phase, 'confirmed')
@@ -191,6 +191,7 @@ const client = fixture => coordinator.subscriptionCoordinator(db, fixture.implem
     const settled = await c.handle('cancel', actor, { action: 'continue', operationId: start.operationId,
       expectedActorId: actor.id })
     assert.equal(settled.phase, 'completed'); assert.deepEqual(p.calls.writes, ['sub_one'])
+    assert.equal(p.calls.reads, 1, 'same-ID recovery verifies the provider terminal without a second write')
     assert.equal((await db.user.findUnique({ where: { id: actor.id } })).stripeSubscriptionId, null)
     assert.equal(await db.systemSetting.count({ where: { key: { startsWith: 'doya-account-fence:v2:' } } }), 0)
   })
