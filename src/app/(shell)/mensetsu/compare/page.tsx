@@ -7,7 +7,9 @@
 // ⚠️ 点数の高い順に並べているが、これは意思決定そのものではない。
 //    情報不足の軸があると平均は上振れするため、必ず個別レポートを確認してもらう。
 
-import { PageTitle } from '@/components/mensetsu/ui-next'
+import { PageTitle, useToolUiNext } from '@/components/mensetsu/ui-next'
+import { Button, EmptyState, ErrorNotice, Skeleton } from '@/components/ds'
+import { LoadIssueNotice, NX_FOCUS, NX_TAP, loadIssueOf, type LoadIssue } from '@/components/mensetsu/states'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
@@ -72,14 +74,21 @@ export default function ComparePage() {
   const [revision, setRevision] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [templatesError, setTemplatesError] = useState<string | null>(null)
+  /** テンプレートを読めなかった理由（新しい見た目で、理由ごとに次にやることを出し分ける） */
+  const [templatesIssue, setTemplatesIssue] = useState<LoadIssue>('other')
   const requestVersion = useRef(0)
+  // 新しい見た目（枠の中で useUiNext() が真）のときだけ、空・エラーの表示と押しやすさを直す
+  const uiNext = useToolUiNext()
+  const nx = (legacy: string, extra = `${NX_TAP} ${NX_FOCUS}`) => (uiNext ? `${legacy} ${extra}` : legacy)
 
   const loadTemplates = useCallback(async () => {
     setTemplatesError(null)
+    setTemplatesIssue('other')
     setLoading(true)
     try {
       const res = await fetch('/api/mensetsu/templates', { cache: 'no-store' })
       const json = await res.json().catch(() => null)
+      if (!res.ok) setTemplatesIssue(loadIssueOf(res.status))
       if (!res.ok || !Array.isArray(json?.templates)) throw new Error('テンプレートを取得できませんでした')
       setTemplates(json.templates)
     } catch {
@@ -162,6 +171,20 @@ export default function ComparePage() {
 
   const sorted = candidates
 
+  /** 全職種に戻す（絞り込みで0件のときの出口） */
+  const showAll = () => { requestVersion.current++; setLoadingCompare(true); setTemplateId('all') }
+
+  if (loading && uiNext) {
+    return (
+      <main className="px-4 py-6 lg:px-8" aria-busy="true" aria-label="読み込み中">
+        <div className="mx-auto grid max-w-[1200px] gap-4">
+          <Skeleton lines={2} height={28} delayMs={0} />
+          <Skeleton lines={5} height={16} delayMs={0} />
+        </div>
+      </main>
+    )
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f2f6ff]">
@@ -173,7 +196,7 @@ export default function ComparePage() {
   return (
     <main className="min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8">
       <div className="mx-auto max-w-[1200px]">
-        <Link href="/mensetsu" className="text-xs font-black text-[#0066ff]">
+        <Link href="/mensetsu" className={nx('text-xs font-black text-[#0066ff]', `inline-flex min-h-11 items-center rounded ${NX_FOCUS}`)}>
           ← ダッシュボード
         </Link>
         <PageTitle className="mt-3 text-2xl font-black text-[#0a0f3c]">候補者の比較</PageTitle>
@@ -189,7 +212,16 @@ export default function ComparePage() {
           </p>
         </div>
 
-        {templatesError ? (
+        {templatesError && uiNext ? (
+          <div className="mt-6"><LoadIssueNotice issue={templatesIssue} subject="比較に使う質問セット" onRetry={() => void loadTemplates()} /></div>
+        ) : templates.length === 0 && uiNext ? (
+          <EmptyState
+            art="/mensetsu/empty-interviews.webp"
+            title="まだ質問セットはありません"
+            description="質問セットを作って面接を行うと、評価済みの候補者をここで並べて比べられます。"
+            action={<Button href="/mensetsu" icon="PenTool">質問セットを作る</Button>}
+          />
+        ) : templatesError ? (
           <div role="alert" className="mt-6 text-sm font-semibold text-[#c2185b]">{templatesError}<button type="button" onClick={() => void loadTemplates()} className="ml-3 underline">再読み込み</button></div>
         ) : templates.length === 0 ? (
           <p className="mt-6 text-sm font-semibold text-[#425071]">テンプレートがまだありません。</p>
@@ -198,7 +230,8 @@ export default function ComparePage() {
             <select
               value={templateId}
               onChange={(e) => { requestVersion.current++; setLoadingCompare(true); setTemplateId(e.target.value) }}
-              className="mt-5 rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
+              aria-label="比べる質問セット"
+              className={nx('mt-5 rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]', `min-h-11 w-full max-w-full sm:w-auto ${NX_FOCUS}`)}
             >
               <option value="all">すべて（職種横断・順位は参考）</option>
               {templates.map((t) => (
@@ -208,7 +241,11 @@ export default function ComparePage() {
               ))}
             </select>
 
-            {error && <div role="alert" className="mt-4 text-sm font-bold text-[#c2185b]">{error}<button type="button" onClick={() => void load()} className="ml-3 underline">最初から読み直す</button></div>}
+            {error && uiNext ? (
+              <div className="mt-4">
+                <ErrorNotice what="比較結果を読み込めませんでした。" how="時間をおいて、最初から読み直してください。" onRetry={() => void load()} retryLabel="最初から読み直す" />
+              </div>
+            ) : error && <div role="alert" className="mt-4 text-sm font-bold text-[#c2185b]">{error}<button type="button" onClick={() => void load()} className="ml-3 underline">最初から読み直す</button></div>}
 
             {templateId === 'all' && (
               <p className="mt-3 text-xs font-semibold leading-relaxed text-[#8a94ad]">
@@ -216,9 +253,27 @@ export default function ComparePage() {
               </p>
             )}
 
-            {loadingCompare ? (
+            {loadingCompare && uiNext ? (
+              <div className="mt-6" aria-busy="true" aria-label="比較結果を読み込み中"><Skeleton lines={4} height={16} /></div>
+            ) : loadingCompare ? (
               <p className="mt-6 text-sm font-semibold text-[#425071]">比較結果を読み込んでいます…</p>
-            ) : error && sorted.length === 0 ? null : sorted.length === 0 ? (
+            ) : error && sorted.length === 0 ? null : sorted.length === 0 && uiNext ? (
+              templateId === 'all' ? (
+                <EmptyState
+                  art="/mensetsu/empty-interviews.webp"
+                  title="評価済みの面接はまだありません"
+                  description="面接が終わって評価すると、候補者がここに並びます。"
+                  action={<Button href="/mensetsu" icon="UserCheck">面接一覧を見る</Button>}
+                />
+              ) : (
+                <EmptyState
+                  kind="no-results"
+                  title="この質問セットで評価済みの面接はありません"
+                  description="ほかの質問セットを選ぶか、すべての職種に戻して確かめてください。"
+                  action={<Button onClick={showAll} variant="secondary" icon="RotateCcw">すべての職種に戻す</Button>}
+                />
+              )
+            ) : sorted.length === 0 ? (
               <p className="mt-6 text-sm font-semibold text-[#425071]">
                 評価済みの面接はまだありません。
               </p>
@@ -273,7 +328,7 @@ export default function ComparePage() {
 
                     <Link
                       href={`/mensetsu/sessions/${c.id}`}
-                      className="mt-4 block rounded-xl border-2 border-[#d8e7ff] py-2.5 text-center text-sm font-black text-[#0066ff]"
+                      className={nx('mt-4 block rounded-xl border-2 border-[#d8e7ff] py-2.5 text-center text-sm font-black text-[#0066ff]', NX_FOCUS)}
                     >
                       評価の詳細を見る
                     </Link>
@@ -338,7 +393,7 @@ export default function ComparePage() {
                         <td className="px-3 py-3 text-right">
                           <Link
                             href={`/mensetsu/sessions/${c.id}`}
-                            className="whitespace-nowrap rounded-lg border border-[#d8e7ff] px-3 py-1.5 text-[11px] font-black text-[#0066ff]"
+                            className={nx('whitespace-nowrap rounded-lg border border-[#d8e7ff] px-3 py-1.5 text-[11px] font-black text-[#0066ff]')}
                           >
                             詳細
                           </Link>
@@ -349,7 +404,7 @@ export default function ComparePage() {
                 </table>
               </div>
               {nextCursor && (
-                <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="mt-5 block w-full rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-bold text-[#0066ff] disabled:opacity-50">
+                <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className={nx('mt-5 block w-full rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-bold text-[#0066ff] disabled:opacity-50', NX_FOCUS)}>
                   {loadingMore ? '読み込み中…' : `さらに表示（${sorted.length}/${total}人）`}
                 </button>
               )}

@@ -1,9 +1,10 @@
 'use client'
 
 // ドヤ社内インタビュー 画面の共通部品
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Check, Loader2 } from 'lucide-react'
-import { EmptyState as DsEmptyState } from '@/components/ds'
+import { Button as DsButton, EmptyState as DsEmptyState, ErrorNotice } from '@/components/ds'
+import { useUiNext } from '@/components/shell/ui-next-context'
 import { useInShanaiShell } from './shell-context'
 
 export const ACCENT = 'var(--blue)'
@@ -55,6 +56,8 @@ type BtnProps = {
 }
 
 export function Button({ children, onClick, disabled, loading, variant = 'primary', type = 'button', className = '' }: BtnProps) {
+  // 新しい見た目では、キーボードで移ったときに枠を出す・短いラベルを途中で折り返さない
+  const next = useUiNext() ? ' whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] focus-visible:ring-offset-2' : ''
   const cls =
     variant === 'primary'
       ? 'bg-[var(--blue)] text-white hover:bg-[var(--blue-deep)] disabled:bg-[var(--line-strong)]'
@@ -68,9 +71,9 @@ export function Button({ children, onClick, disabled, loading, variant = 'primar
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-[var(--r-sm)] px-4 py-2.5 text-sm font-black transition-colors disabled:cursor-not-allowed ${cls} ${className}`}
+      className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-[var(--r-sm)] px-4 py-2.5 text-sm font-black transition-colors disabled:cursor-not-allowed ${cls}${next} ${className}`}
     >
-      {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+      {loading && <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
       {children}
     </button>
   )
@@ -201,7 +204,96 @@ export function EmptyState({ image, title, desc, action }: { image: string; titl
   return <DsEmptyState kind={kind ?? 'zero'} art={kind ? undefined : image} title={title} description={desc} action={action} />
 }
 
-export function ErrorState({ message, onRetry }: { message?: string; onRetry?: () => void }) {
+// ---------- 失敗の伝え方（新しい見た目だけで使う。チェックリスト §11） ----------
+// ⚠️ 生のエラー文（err.message・ステータス番号・英語の技術的な文）は画面に出さない。
+//    サーバーの 4xx の日本語文（入力の誤りなど、利用者向けに書いたもの）だけはそのまま使う
+
+export type ShanaiErrorKind = 'auth' | 'forbidden' | 'limit' | 'busy' | 'other'
+export interface ShanaiUserError {
+  kind: ShanaiErrorKind
+  /** 何が起きたか */
+  what: string
+  /** どうすればよいか */
+  how?: string
+}
+
+const RETRY_LATER = '通信が混み合っているか、一時的な不具合が起きています。少し時間をおいてから、もう一度お試しください。'
+
+/** サーバーの文が、そのまま利用者に見せてよい日本語の文か（URL は除いて判定する） */
+function userText(raw: unknown): string | null {
+  if (typeof raw !== 'string' || !raw.trim()) return null
+  const s = raw.replace(/https?:\/\/\S+/g, '')
+  if (!/[ぁ-んァ-ヶ]/.test(s)) return null
+  if (/[A-Za-z]{5,}/.test(s) || /[（(]\d{3}[）)]/.test(s)) return null
+  return raw.trim()
+}
+
+/**
+ * 失敗を「何が起きたか・どうすればよいか」に置き換える。
+ * scene='load' は画面の読み込み（404 も「表示できない」に寄せる）、'action' はボタンを押したときの処理
+ */
+export function describeError(e: unknown, scene: 'load' | 'action' = 'action'): ShanaiUserError {
+  const err = (e ?? {}) as { status?: number; data?: any }
+  const status = err.status
+  const data = err.data
+  if (status === 401) return { kind: 'auth', what: 'ログインの有効期限が切れました。', how: 'もう一度ログインし直してください。' }
+  if (status === 403 || (scene === 'load' && status === 404)) {
+    return { kind: 'forbidden', what: 'このページを表示する権限がありません。', how: '削除されたか、別のアカウントで作成されたインタビューです。作成した方に共有を依頼するか、管理者にお問い合わせください。' }
+  }
+  if (data?.limitReached || data?.upgradeUrl) {
+    return {
+      kind: 'limit',
+      what: typeof data?.limit === 'number' ? `今月の利用上限（${data.limit}回）に達しました。` : '今月の利用上限に達しました。',
+      how: '料金プランを見直すと、続けて使えます。来月になると、また使えるようになります。',
+    }
+  }
+  const text = userText(data?.error)
+  if (status === 429) return text ? { kind: 'busy', what: text } : { kind: 'busy', what: '短い時間に続けて操作したため、受け付けられませんでした。', how: '少し時間をおいてから、もう一度お試しください。' }
+  if (status && status >= 400 && status < 500) return text ? { kind: 'other', what: text } : { kind: 'other', what: '処理できませんでした。', how: '入力した内容を確かめて、もう一度お試しください。' }
+  return { kind: 'other', what: scene === 'load' ? '読み込めませんでした。' : '処理できませんでした。', how: RETRY_LATER }
+}
+
+/** ボタンを押した処理の失敗（新しい見た目）。上限のときは料金プランへの道を出す */
+export function ActionError({ error, onRetry }: { error: ShanaiUserError | null; onRetry?: () => void }) {
+  if (!error) return null
+  if (error.kind === 'limit') return <LimitState what={error.what} how={error.how} />
+  if (error.kind === 'auth') {
+    return (
+      <div className="space-y-3">
+        <ErrorNotice what={error.what} how={error.how} />
+        <DsButton variant="secondary" href="/auth/signin?callbackUrl=/shanai" icon="DoorOpen">ログインし直す</DsButton>
+      </div>
+    )
+  }
+  return <ErrorNotice what={error.what} how={error.how} onRetry={onRetry} />
+}
+
+/** 今月の上限に達したとき（新しい見た目）。料金プランへの道を1つ出す */
+export function LimitState({ what = '今月の利用上限に達しました。', how = '料金プランを見直すと、続けて使えます。来月になると、また使えるようになります。' }: { what?: string; how?: string }) {
+  return (
+    <div className="space-y-3">
+      <ErrorNotice what={what} how={how} />
+      <DsButton variant="secondary" href="/shanai/pricing" icon="CreditCard">料金プランを見る</DsButton>
+    </div>
+  )
+}
+
+/**
+ * 画面の読み込みに失敗したとき。
+ * 新しい見た目では ds の ErrorNotice（何が起きたか・どうすればよいか・やり直す）。生の文は出さず error（status 付き）から組み立てる。
+ * 今までの見た目では、これまで通り message をそのまま出す
+ */
+export function ErrorState({ message, onRetry, error }: { message?: string; onRetry?: () => void; error?: unknown }) {
+  const uiNext = useUiNext()
+  if (uiNext) {
+    const d = describeError(error, 'load')
+    if (d.kind === 'forbidden') return <ForbiddenState />
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+        <ActionError error={d} onRetry={onRetry} />
+      </div>
+    )
+  }
   return (
     <EmptyState
       image="/empty/error.svg"
@@ -213,6 +305,19 @@ export function ErrorState({ message, onRetry }: { message?: string; onRetry?: (
 }
 
 export function ForbiddenState({ backHref = '/shanai' }: { backHref?: string }) {
+  const uiNext = useUiNext()
+  if (uiNext) {
+    // 新しい見た目: ErrorNotice と同じ形（何が起きたか・どうすればよいか）＋戻る道を1つ
+    return (
+      <div className="mx-auto max-w-3xl space-y-3 px-4 py-8 sm:px-6 sm:py-10">
+        <ErrorNotice
+          what="このインタビューを表示する権限がありません。"
+          how="削除されたか、別のアカウントで作成されたインタビューです。作成した方に共有を依頼するか、管理者にお問い合わせください。"
+        />
+        <DsButton variant="secondary" href={backHref} icon="List">インタビュー一覧に戻る</DsButton>
+      </div>
+    )
+  }
   return (
     <EmptyState
       image="/empty/forbidden.svg"
@@ -289,6 +394,12 @@ export function ConfirmDialog({
   onConfirm: () => void
   onClose: () => void
 }) {
+  const uiNext = useUiNext()
+  const boxRef = useRef<HTMLDivElement>(null)
+  // 新しい見た目: 開いたらダイアログに移す（キーボード・読み上げで、いま何を聞かれているかが分かるように）
+  useEffect(() => {
+    if (open && uiNext) boxRef.current?.focus()
+  }, [open, uiNext])
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -299,17 +410,19 @@ export function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(10,15,60,0.45)] p-4 sm:items-center" onClick={onClose}>
       <div
+        ref={boxRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="shanai-confirm-title"
-        className="w-full max-w-md rounded-[var(--r)] bg-[var(--paper)] p-6 shadow-[var(--shadow-lg)]"
+        tabIndex={-1}
+        className="w-full max-w-md rounded-[var(--r)] bg-[var(--paper)] p-6 shadow-[var(--shadow-lg)] focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <p id="shanai-confirm-title" className="text-[18px] font-bold text-[var(--ink)]">
           {title}
         </p>
         {body && <p className="mt-2 text-[14px] font-medium leading-[1.7] text-[var(--sub)]">{body}</p>}
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
             やめる
           </Button>

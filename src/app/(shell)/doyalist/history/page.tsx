@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import { EmptyState } from '@/components/EmptyState'
-import { EmptyState as DsEmptyState } from '@/components/ds'
+import { EmptyState as DsEmptyState, ErrorNotice } from '@/components/ds'
+import { doyalistErrorCopy } from '@/components/doyalist/errorCopy'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { UiIcon, type UiIconName } from '@/components/icons'
 import { appendApproachPage, parseApproachPage, type ApproachSummaryCounts } from '@/lib/doyalist/approach-pages'
@@ -61,6 +62,9 @@ export default function HistoryPage() {
   const [loadingMoreProjects, setLoadingMoreProjects] = useState(false)
   const [projectsError, setProjectsError] = useState('')
   const [approachesError, setApproachesError] = useState('')
+  // 新しい見た目で、失敗の理由（401・403・429 など）を文に置き換えるための status。0 は通信・応答の形の失敗
+  const [projectsErrorStatus, setProjectsErrorStatus] = useState(0)
+  const [approachesErrorStatus, setApproachesErrorStatus] = useState(0)
   const [approachSummary, setApproachSummary] = useState<ApproachSummaryCounts | null>(null)
   const [projectSummary, setProjectSummary] = useState<ProjectSummaryCounts | null>(null)
   const [projectTotal, setProjectTotal] = useState(0)
@@ -73,9 +77,11 @@ export default function HistoryPage() {
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const loadProjects = useCallback(async () => {
+  // reportStatus: 失敗の status を知らせる先（新しい見た目の文の出し分け用）。呼ぶ側が setXxxErrorStatus を渡す
+  const loadProjects = useCallback(async (reportStatus: (status: number) => void = () => {}) => {
     const version = ++projectRequestVersion.current
     setProjectsError('')
+    reportStatus(0)
     setLoadingProjects(true)
     setLoadingMoreProjects(false)
     setLists([])
@@ -87,6 +93,7 @@ export default function HistoryPage() {
       if (search.trim()) params.set('search', search.trim())
       const response = await fetch(`/api/doyalist/projects?${params}`, { cache: 'no-store' })
       const data = await response.json().catch(() => null)
+      if (!response.ok && version === projectRequestVersion.current) reportStatus(response.status)
       if (!response.ok) throw new Error(response.status === 401 ? '履歴の確認にはログインが必要です' : 'リスト履歴を取得できませんでした')
       const page = parseProjectPage<ListSummary>(data)
       if (version !== projectRequestVersion.current) return
@@ -101,9 +108,10 @@ export default function HistoryPage() {
     }
   }, [search])
 
-  const loadApproaches = useCallback(async () => {
+  const loadApproaches = useCallback(async (reportStatus: (status: number) => void = () => {}) => {
     const version = ++requestVersion.current
     setApproachesError('')
+    reportStatus(0)
     setLoadingApproaches(true)
     setLoadingMore(false)
     setApproaches([])
@@ -114,6 +122,7 @@ export default function HistoryPage() {
       if (search.trim()) params.set('search', search.trim())
       const response = await fetch(`/api/doyalist/approaches?${params}`, { cache: 'no-store' })
       const data = await response.json().catch(() => null)
+      if (!response.ok && version === requestVersion.current) reportStatus(response.status)
       if (!response.ok) throw new Error(data?.error || '営業文履歴を取得できませんでした')
       const page = parseApproachPage<ApproachSummary>(data)
       if (version !== requestVersion.current) return
@@ -129,27 +138,29 @@ export default function HistoryPage() {
   }, [search, tab])
 
   useEffect(() => {
-    const timer = setTimeout(() => void loadProjects(), search.trim() ? 250 : 0)
+    const timer = setTimeout(() => void loadProjects(setProjectsErrorStatus), search.trim() ? 250 : 0)
     const versionRef = projectRequestVersion
     return () => { clearTimeout(timer); versionRef.current++ }
   }, [loadProjects, search])
   useEffect(() => {
-    const timer = setTimeout(() => void loadApproaches(), search.trim() ? 250 : 0)
+    const timer = setTimeout(() => void loadApproaches(setApproachesErrorStatus), search.trim() ? 250 : 0)
     const versionRef = requestVersion
     return () => { clearTimeout(timer); versionRef.current++ }
   }, [loadApproaches, search])
 
-  async function loadMore() {
+  async function loadMore(reportStatus: (status: number) => void = () => {}) {
     if (!nextCursor || loadingMore) return
     const version = requestVersion.current
     setLoadingMore(true)
     setApproachesError('')
+    reportStatus(0)
     try {
       const params = new URLSearchParams({ cursor: nextCursor })
       if (tab !== 'all' && tab !== 'list') params.set('type', tab)
       if (search.trim()) params.set('search', search.trim())
       const response = await fetch(`/api/doyalist/approaches?${params}`, { cache: 'no-store' })
       const data = await response.json().catch(() => null)
+      if (!response.ok && version === requestVersion.current) reportStatus(response.status)
       if (!response.ok) throw new Error(data?.error || '営業文履歴の続きを取得できませんでした')
       const page = parseApproachPage<ApproachSummary>(data)
       if (version !== requestVersion.current) return
@@ -163,16 +174,18 @@ export default function HistoryPage() {
     }
   }
 
-  async function loadMoreProjects() {
+  async function loadMoreProjects(reportStatus: (status: number) => void = () => {}) {
     if (!projectNextCursor || loadingMoreProjects) return
     const version = projectRequestVersion.current
     setLoadingMoreProjects(true)
     setProjectsError('')
+    reportStatus(0)
     try {
       const params = new URLSearchParams({ limit: '50', cursor: projectNextCursor })
       if (search.trim()) params.set('search', search.trim())
       const response = await fetch(`/api/doyalist/projects?${params}`, { cache: 'no-store' })
       const data = await response.json().catch(() => null)
+      if (!response.ok && version === projectRequestVersion.current) reportStatus(response.status)
       if (!response.ok) throw new Error(data?.error || 'リスト履歴の続きを取得できませんでした')
       const page = parseProjectPage<ListSummary>(data)
       if (version !== projectRequestVersion.current) return
@@ -195,8 +208,8 @@ export default function HistoryPage() {
       setLists((prev) => prev.filter((l) => l.id !== id))
       setApproachSummary(null)
       setExpandedId(null)
-      void loadProjects()
-      void loadApproaches()
+      void loadProjects(setProjectsErrorStatus)
+      void loadApproaches(setApproachesErrorStatus)
     } catch (e: any) {
       toast.error(e?.message || '削除に失敗しました')
     }
@@ -211,7 +224,7 @@ export default function HistoryPage() {
       setApproaches((prev) => prev.filter((a) => a.id !== id))
       setApproachSummary(null)
       setExpandedId(null)
-      void loadApproaches()
+      void loadApproaches(setApproachesErrorStatus)
     } catch (e: any) {
       toast.error(e?.message || '削除に失敗しました')
     }
@@ -238,11 +251,25 @@ export default function HistoryPage() {
 
   const isEmpty = filteredLists.length === 0 && filteredApproaches.length === 0
 
+  // 新しい見た目: 失敗の知らせ（ErrorNotice）。サーバーの文字列は出さず、status から文を選ぶ（UI 品質 S-20）
+  const errorNotice = (status: number, subject: string, retry: () => void) => {
+    const copy = doyalistErrorCopy(status, subject, '/doyalist/history')
+    const next = copy.next
+    return <ErrorNotice what={copy.what} how={copy.how} onRetry={next ? () => { window.location.href = next.href } : retry} retryLabel={next?.label ?? 'もう一度読み込む'} />
+  }
+  // 新しい見た目: 空のときの次の操作（タブに合わせて1つだけ）
+  const emptyAction = tab === 'form' || tab === 'email' || tab === 'phone'
+    ? { href: `/doyalist/tools/${tab}`, label: tab === 'form' ? 'フォーム営業文を作る' : tab === 'email' ? 'メール文面を作る' : '電話スクリプトを作る' }
+    : { href: '/doyalist', label: 'リストを作る' }
+  // 新しい見た目: 押せる場所の大きさ（44px）とキーボードの枠
+  const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-1'
+  const iconBtn = uiNext ? `inline-flex h-11 w-11 items-center justify-center ${focusRing}` : 'p-1.5'
+
   if (loadingProjects) {
     return (
       <div className={uiNext ? 'flex items-center justify-center py-24' : 'min-h-screen flex items-center justify-center bg-slate-50'}>
         <div className="flex flex-col items-center gap-4">
-          <img src={CHARS.thinking} alt="" className="w-28 h-28 animate-bounce" />
+          <img src={CHARS.thinking} alt="" className={`w-28 h-28 animate-bounce${uiNext ? ' motion-reduce:animate-none' : ''}`} />
           <p className="text-sm font-medium text-slate-500">読み込み中...</p>
         </div>
       </div>
@@ -255,15 +282,15 @@ export default function HistoryPage() {
 
       <div className="max-w-7xl mx-auto pb-20">
         <div className="flex items-center gap-3 mb-6">
-          <div className={uiNext ? 'w-12 h-12 rounded-2xl bg-blue-50 text-[#0066ff] flex items-center justify-center' : 'w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-white'}><UiIcon name="book" size={uiNext ? 24 : 26} /></div>
-          <div>
+          <div className={uiNext ? 'w-12 h-12 shrink-0 rounded-2xl bg-blue-50 text-[#0066ff] flex items-center justify-center' : 'w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-white'}><UiIcon name="book" size={uiNext ? 24 : 26} /></div>
+          <div className={uiNext ? 'min-w-0' : undefined}>
             <Heading className={`${uiNext ? 'text-xl lg:text-2xl' : 'text-2xl lg:text-3xl'} font-black text-[#0a1530]`}>生成履歴</Heading>
-            <p className="text-sm font-medium text-slate-500 mt-0.5">これまでに作成したリスト・営業文・メール・スクリプトをまとめて管理できます</p>
+            <p className={`text-sm font-medium text-slate-500 mt-0.5${uiNext ? ' [text-wrap:balance]' : ''}`}>これまでに作成したリスト・営業文・メール・スクリプトをまとめて管理できます</p>
           </div>
         </div>
 
-        {projectsError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{projectsError}<button type="button" onClick={() => void loadProjects()} className="ml-3 underline">再読み込み</button></div>}
-        {approachesError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{approachesError}<button type="button" onClick={() => void loadApproaches()} className="ml-3 underline">再読み込み</button></div>}
+        {!uiNext && projectsError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{projectsError}<button type="button" onClick={() => void loadProjects(setProjectsErrorStatus)} className="ml-3 underline">再読み込み</button></div>}
+        {!uiNext && approachesError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{approachesError}<button type="button" onClick={() => void loadApproaches(setApproachesErrorStatus)} className="ml-3 underline">再読み込み</button></div>}
 
         {!projectsError && projectSummary && approachSummary && <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <StatCard icon="chart" label="合計件数" value={stats.total} color="cyan" />
@@ -273,7 +300,7 @@ export default function HistoryPage() {
 
         <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center gap-3">
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex gap-1 flex-wrap" role={uiNext ? 'group' : undefined} aria-label={uiNext ? '履歴の種類' : undefined}>
               {TABS.map((t) => {
                 const count = t.v === 'all' ? (projectSummary?.allTotal || 0) + (approachSummary?.allTotal || 0)
                   : t.v === 'list' ? (projectSummary?.allTotal || 0)
@@ -282,7 +309,8 @@ export default function HistoryPage() {
                   <button
                     key={t.v}
                     onClick={() => { if (t.v !== tab) { requestVersion.current++; setLoadingApproaches(true); setTab(t.v) } }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                    aria-pressed={uiNext ? tab === t.v : undefined}
+                    className={`${uiNext ? `min-h-11 whitespace-nowrap ${focusRing} ` : ''}px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
                       tab === t.v ? 'bg-[#0a1530] text-white' : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
@@ -294,30 +322,53 @@ export default function HistoryPage() {
                 )
               })}
             </div>
-            <div className="flex-1 min-w-[200px]" />
+            {/* 新しい見た目: 375px で空の行ができないよう、すき間は sm 以上だけ。検索欄は幅いっぱい */}
+            <div className={uiNext ? 'hidden sm:block flex-1' : 'flex-1 min-w-[200px]'} />
             <input
-              type="text"
+              type={uiNext ? 'search' : 'text'}
               value={search}
               maxLength={200}
               onChange={(e) => { requestVersion.current++; setLoadingApproaches(true); setSearch(e.target.value) }}
               placeholder="検索"
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100 min-w-[200px]"
+              aria-label={uiNext ? '履歴を検索' : undefined}
+              className={uiNext
+                ? 'min-h-11 w-full min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0066ff] focus:ring-2 focus:ring-blue-100 sm:w-64'
+                : 'px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100 min-w-[200px]'}
             />
           </div>
 
+          {/* 新しい見た目: 読み込みの失敗は、表の上にまとめて出す（理由に合わせた文と、次の操作を1つ） */}
+          {uiNext && (projectsError || approachesError) && (
+            <div className="space-y-2 px-5 pt-4">
+              {projectsError && errorNotice(projectsErrorStatus, 'リスト履歴', () => void loadProjects(setProjectsErrorStatus))}
+              {approachesError && tab !== 'list' && errorNotice(approachesErrorStatus, '営業文の履歴', () => void loadApproaches(setApproachesErrorStatus))}
+            </div>
+          )}
+
           {loadingApproaches && tab !== 'list' ? (
             <p className="px-5 py-8 text-center text-sm font-semibold text-slate-500">営業文履歴を読み込んでいます…</p>
+          ) : uiNext && isEmpty && (projectsError || (approachesError && tab !== 'list')) ? (
+            // 新しい見た目: 失敗の知らせは上に出しているので、ここは空のまま（同じ知らせを二度出さない）
+            <div className="pb-4" />
           ) : approachesError && tab !== 'list' && filteredLists.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm font-semibold text-rose-700">履歴を取得できませんでした。再読み込みしてください。</p>
           ) : projectsError && filteredLists.length === 0 && filteredApproaches.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm font-semibold text-rose-700">リスト履歴を取得できませんでした。再読み込みしてください。</p>
+          ) : isEmpty && uiNext && search.trim() ? (
+            // 新しい見た目: 検索で0件。絵は出さず、検索を消す操作を1つ（UI 品質 S-17）
+            <DsEmptyState
+              kind="no-results"
+              title="検索に一致する履歴はありません"
+              description="言葉を短くするか、検索を消してすべての履歴を見てください。"
+              action={<button type="button" onClick={() => { requestVersion.current++; setLoadingApproaches(true); setSearch('') }} className={`inline-flex min-h-11 items-center rounded-xl border border-[#0066ff]/40 px-5 text-sm font-bold text-[#0066ff] hover:bg-blue-50 ${focusRing}`}>検索をクリア</button>}
+            />
           ) : isEmpty && uiNext ? (
             // 新しい見た目: ツールの空状態の画像と、次にやることを1つ（UI 品質 S-17）
             <DsEmptyState
-              title="該当する履歴がありません"
-              description="リストを作ると、ここに履歴が並びます。条件を変えて探すこともできます。"
+              title={tab === 'all' || tab === 'list' ? 'まだ履歴がありません' : `まだ${TABS.find((t) => t.v === tab)?.l ?? ''}の履歴がありません`}
+              description={tab === 'all' || tab === 'list' ? 'リストを作ると、ここに履歴が並びます。CSV・Excel でいつでも書き出せます。' : '文面を作ると、ここに履歴が並びます。あとからコピーして使えます。'}
               art="/doyalist/empty-lists.webp"
-              action={<Link href="/doyalist" className="inline-flex rounded-xl bg-[#0066ff] px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#0052cc]">リストを作る</Link>}
+              action={<Link href={emptyAction.href} className={`inline-flex min-h-11 items-center rounded-xl bg-[#0066ff] px-6 text-sm font-bold text-white transition-all hover:bg-[#0052cc] ${focusRing}`}>{emptyAction.label}</Link>}
             />
           ) : isEmpty ? (
             <EmptyState
@@ -333,7 +384,7 @@ export default function HistoryPage() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className={`w-full text-sm${uiNext ? ' min-w-[640px] [&_th]:whitespace-nowrap' : ''}`}>
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     <th className="px-5 py-3 text-left font-bold text-slate-600 text-xs">タイプ</th>
@@ -361,14 +412,14 @@ export default function HistoryPage() {
                         <span className="font-bold text-[#0a1530]">{l.companyCount.toLocaleString()}</span>
                         <span className="text-xs text-slate-400 ml-0.5">社</span>
                       </td>
-                      <td className="px-5 py-3 text-xs text-slate-500">
+                      <td className={`px-5 py-3 text-xs text-slate-500${uiNext ? ' whitespace-nowrap' : ''}`}>
                         {new Date(l.updatedAt).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-center gap-1">
-                          <a href={`/api/doyalist/export?projectId=${l.id}&format=csv`} title="CSVダウンロード" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg"><UiIcon name="download" size={14} /></a>
-                          <a href={`/api/doyalist/export?projectId=${l.id}&format=excel`} title="Excelダウンロード" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg"><UiIcon name="chart" size={14} /></a>
-                          <button onClick={() => handleDeleteList(l.id, l.name)} title="削除" aria-label={`${l.name}を削除`} className="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg"><UiIcon name="trash" size={14} /></button>
+                          <a href={`/api/doyalist/export?projectId=${l.id}&format=csv`} title="CSVダウンロード" aria-label={uiNext ? `${l.name}をCSVでダウンロード` : undefined} className={`${iconBtn} bg-slate-100 hover:bg-slate-200 rounded-lg`}><UiIcon name="download" size={uiNext ? 16 : 14} /></a>
+                          <a href={`/api/doyalist/export?projectId=${l.id}&format=excel`} title="Excelダウンロード" aria-label={uiNext ? `${l.name}をExcelでダウンロード` : undefined} className={`${iconBtn} bg-slate-100 hover:bg-slate-200 rounded-lg`}><UiIcon name="chart" size={uiNext ? 16 : 14} /></a>
+                          <button type={uiNext ? 'button' : undefined} onClick={() => handleDeleteList(l.id, l.name)} title="削除" aria-label={`${l.name}を削除`} className={`${iconBtn} bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg`}><UiIcon name="trash" size={uiNext ? 16 : 14} /></button>
                         </div>
                       </td>
                     </tr>
@@ -387,25 +438,30 @@ export default function HistoryPage() {
                         <td className="px-5 py-3 max-w-[400px]">
                           <p className="font-bold text-[#0a1530] text-sm truncate">{a.subject || '(無題)'}</p>
                           <button
+                            type={uiNext ? 'button' : undefined}
                             onClick={() => setExpandedId(isExpanded ? null : a.id)}
-                            className="text-[11px] text-slate-500 mt-1 hover:text-cyan-600 transition-colors"
+                            aria-expanded={uiNext ? isExpanded : undefined}
+                            aria-controls={uiNext ? `doyalist-approach-${a.id}` : undefined}
+                            className={uiNext
+                              ? `mt-1 inline-flex min-h-11 items-center text-xs text-slate-500 hover:text-[#0066ff] transition-colors ${focusRing}`
+                              : 'text-[11px] text-slate-500 mt-1 hover:text-cyan-600 transition-colors'}
                           >
                             {isExpanded ? '▲ 閉じる' : '▼ 全文を表示'}
                           </button>
                           {isExpanded && (
-                            <div className="mt-2 p-3 bg-slate-50 rounded-lg max-h-64 overflow-y-auto">
+                            <div id={uiNext ? `doyalist-approach-${a.id}` : undefined} className="mt-2 p-3 bg-slate-50 rounded-lg max-h-64 overflow-y-auto">
                               <pre className="whitespace-pre-wrap text-xs text-slate-700 leading-relaxed font-sans">{a.body}</pre>
                             </div>
                           )}
                         </td>
                         <td className="px-5 py-3 text-center text-xs text-slate-400">—</td>
-                        <td className="px-5 py-3 text-xs text-slate-500">
+                        <td className={`px-5 py-3 text-xs text-slate-500${uiNext ? ' whitespace-nowrap' : ''}`}>
                           {new Date(a.createdAt).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="px-5 py-3">
                           <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => handleCopy(a.body)} title="コピー" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg"><UiIcon name="copy" size={14} /></button>
-                            <button onClick={() => handleDeleteApproach(a.id)} title="削除" aria-label="削除" className="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg"><UiIcon name="trash" size={14} /></button>
+                            <button type={uiNext ? 'button' : undefined} onClick={() => handleCopy(a.body)} title="コピー" aria-label={uiNext ? `「${a.subject || '無題'}」をコピー` : undefined} className={`${iconBtn} bg-slate-100 hover:bg-slate-200 rounded-lg`}><UiIcon name="copy" size={uiNext ? 16 : 14} /></button>
+                            <button type={uiNext ? 'button' : undefined} onClick={() => handleDeleteApproach(a.id)} title="削除" aria-label={uiNext ? `「${a.subject || '無題'}」を削除` : '削除'} className={`${iconBtn} bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg`}><UiIcon name="trash" size={uiNext ? 16 : 14} /></button>
                           </div>
                         </td>
                       </tr>
@@ -415,8 +471,8 @@ export default function HistoryPage() {
               </table>
             </div>
           )}
-          {tab !== 'list' && nextCursor && !loadingApproaches && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50">{loadingMore ? '読み込み中…' : `営業文履歴をさらに表示（${approaches.length}/${approachTotal}件）`}</button></div>}
-          {(tab === 'all' || tab === 'list') && projectNextCursor && !loadingProjects && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMoreProjects()} disabled={loadingMoreProjects} className="rounded-lg border border-cyan-300 px-4 py-2 text-sm font-bold text-cyan-700 disabled:opacity-50">{loadingMoreProjects ? '読み込み中…' : `リスト履歴をさらに表示（${lists.length}/${projectTotal}件）`}</button></div>}
+          {tab !== 'list' && nextCursor && !loadingApproaches && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMore(setApproachesErrorStatus)} disabled={loadingMore} className={`${uiNext ? `min-h-11 ${focusRing} ` : ''}rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50`}>{loadingMore ? '読み込み中…' : `営業文履歴をさらに表示（${approaches.length}/${approachTotal}件）`}</button></div>}
+          {(tab === 'all' || tab === 'list') && projectNextCursor && !loadingProjects && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMoreProjects(setProjectsErrorStatus)} disabled={loadingMoreProjects} className={`${uiNext ? `min-h-11 ${focusRing} ` : ''}rounded-lg border border-cyan-300 px-4 py-2 text-sm font-bold text-cyan-700 disabled:opacity-50`}>{loadingMoreProjects ? '読み込み中…' : `リスト履歴をさらに表示（${lists.length}/${projectTotal}件）`}</button></div>}
         </div>
       </div>
     </div>

@@ -7,9 +7,10 @@ import { withOrg, fetchAllSfaAccounts } from '@/lib/sfa/client'
 import { sfaJson, sfaValidRows, SfaClientRejection, isSfaClientTask, isSfaClientActivity, type SfaClientTask, isSfaClientDeal, type SfaClientDeal, type SfaClientNextAction } from '@/lib/sfa/client-response'
 import { useSfaClientMutations, useSfaDraftSnapshot } from '@/lib/sfa/use-client-mutations'
 import MutationRecovery from '@/components/sfa/MutationRecovery'
+import SfaLoadError from '@/components/sfa/SfaLoadError'
 import { useUiNext } from '@/components/shell/ui-next-context'
-import { Button, EmptyState } from '@/components/ds'
-import { Building2, Clock, Download, GripVertical, Plus, Sparkles, UserRound } from 'lucide-react'
+import { Button, EmptyState, ErrorNotice } from '@/components/ds'
+import { Building2, Clock, Download, GripVertical, Plus, Sparkles, UserRound, X } from 'lucide-react'
 import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
@@ -105,6 +106,8 @@ export default function SfaDealsPage() {
   const [detailTasksRetryPage, setDetailTasksRetryPage] = useState(1)
   const [dealsLoading, setDealsLoading] = useState(true)
   const [dealsError, setDealsError] = useState(false)
+  // 新しい見た目のとき、失敗の種類（ログイン切れ・権限なし・通信）で案内を変えるために、投げられたエラーを持つ
+  const [dealsFailure, setDealsFailure] = useState<unknown>(null)
   const [skippedDeals, setSkippedDeals] = useState(0)
   const [tasksError, setTasksError] = useState(false)
   const [accountsError, setAccountsError] = useState(false)
@@ -153,7 +156,7 @@ export default function SfaDealsPage() {
           setTotalCount(d.totalCount); setStageSummary(d.stageSummary)
         }
       })
-      .catch(() => { if (!controller.signal.aborted && mutations.active()) setDealsError(true) })
+      .catch((e) => { if (!controller.signal.aborted && mutations.active()) { setDealsFailure(e); setDealsError(true) } })
       .finally(() => { if (!controller.signal.aborted && mutations.active()) setDealsLoading(false) })
     sfaJson('/api/sfa/summary', orgSlug, { signal: controller.signal })
       .then((data) => {
@@ -487,6 +490,19 @@ export default function SfaDealsPage() {
   const taskDraft = useSfaDraftSnapshot([newTaskTitle, newTaskDue, detail?.id])
   const activityDraft = useSfaDraftSnapshot([actType, actSubject, detail?.id])
   const closeDetail = () => { ++detailEpoch.current; detailRef.current = null; detailTasksRequest.current?.abort(); activitiesRequest.current?.abort(); setDetail(null); setTaskBusy(false); setActBusy(false); setSaving(false) }
+  // 新しい見た目: Esc で開いている窓（AI次アクション → 商談の詳細の順）を閉じる
+  const closeTopRef = useRef<() => boolean>(() => false)
+  closeTopRef.current = () => {
+    if (aiModal) { closeAi(); return true }
+    if (detail) { closeDetail(); return true }
+    return false
+  }
+  useEffect(() => {
+    if (!uiNext) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && closeTopRef.current()) e.preventDefault() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [uiNext])
   useEffect(() => { setBusy(false); setSaving(false); setTaskBusy(false); setActBusy(false); setAiAdding(false); ++detailEpoch.current; ++aiEpoch.current; }, [mutations.key])
 
   const openDetail = (d: Deal) => {
@@ -590,11 +606,11 @@ export default function SfaDealsPage() {
             カードをドラッグしてステージを移動できます
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <a href={withOrg('/api/sfa/export?type=deals', orgSlug)} className={uiNext ? 'px-4 py-3 rounded-full bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 flex items-center gap-1 whitespace-nowrap' : 'px-4 py-3 rounded-full bg-white border border-slate-200 text-green-700 font-black shadow-sm hover:shadow flex items-center gap-1'}>
+        <div className={uiNext ? 'flex flex-wrap items-center gap-2' : 'flex items-center gap-2'}>
+          <a href={withOrg('/api/sfa/export?type=deals', orgSlug)} className={uiNext ? 'min-h-11 px-4 py-3 rounded-full bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'px-4 py-3 rounded-full bg-white border border-slate-200 text-green-700 font-black shadow-sm hover:shadow flex items-center gap-1'}>
             {uiNext ? <Download className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined">download</span>}CSV出力
           </a>
-          <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className={uiNext ? 'px-5 py-3 rounded-full bg-[#0066ff] hover:bg-[#0052cc] text-white font-bold shadow-sm transition-colors flex items-center gap-1 whitespace-nowrap' : 'px-5 py-3 rounded-full bg-gradient-to-r from-green-500 to-lime-600 text-white font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-1'}>
+          <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className={uiNext ? 'min-h-11 px-5 py-3 rounded-full bg-[#0066ff] hover:bg-[#0052cc] text-white font-bold shadow-sm transition-colors flex items-center gap-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2' : 'px-5 py-3 rounded-full bg-gradient-to-r from-green-500 to-lime-600 text-white font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-1'}>
             {uiNext ? <Plus className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined">add</span>}商談を追加
           </button>
         </div>
@@ -605,7 +621,16 @@ export default function SfaDealsPage() {
           {skippedDeals}件の商談は内容を確認できなかったため表示していません。件数・金額の集計には含まれています。
         </p>
       )}
-      {(dealsError || tasksError || accountsError || summaryError) && (
+      {/* 新しい見た目: 何が起きたか・どうすればよいか・やり直しを、読み込めなかったものごとに出す（UI 品質 S-20） */}
+      {uiNext && (dealsError || tasksError || accountsError || summaryError) && (
+        <div className="mb-4 grid gap-2">
+          {dealsError && <SfaLoadError error={dealsFailure} what="商談" onRetry={load} orgSlug={orgSlug} />}
+          {tasksError && <ErrorNotice what="タスクを読み込めませんでした。" how="表示中のタスクは更新前の情報です。時間をおいてもう一度お試しください。" onRetry={loadTasks} retryLabel="再試行" />}
+          {accountsError && <ErrorNotice what="取引先を読み込めませんでした。" how="商談の取引先を選べません。時間をおいてもう一度お試しください。" onRetry={loadAccounts} retryLabel="再試行" />}
+          {summaryError && !dealsError && <ErrorNotice what="金額の集計を読み込めませんでした。" how="時間をおいてもう一度お試しください。" onRetry={load} retryLabel="再試行" />}
+        </div>
+      )}
+      {!uiNext && (dealsError || tasksError || accountsError || summaryError) && (
         <div role="alert" className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800 space-y-2">
           {dealsError && <p>商談を読み込めませんでした。表示中の商談がある場合は更新前の情報です。</p>}
           {tasksError && <p>タスクを読み込めませんでした。表示中のタスクがある場合は更新前の情報です。</p>}
@@ -622,23 +647,23 @@ export default function SfaDealsPage() {
       {open && (
         <div className="bg-white rounded-2xl shadow-sm p-5 mb-4 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
           <div className="sm:col-span-2">
-            <label className="block text-xs font-black text-slate-500 mb-1">商談名</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 新規SaaS導入" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
+            <label htmlFor="sfa-deal-new-name" className="block text-xs font-black text-slate-500 mb-1">商談名</label>
+            <input id="sfa-deal-new-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 新規SaaS導入" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
           </div>
           <div>
-            <label className="block text-xs font-black text-slate-500 mb-1">金額(円)</label>
-            <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1000000" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
+            <label htmlFor="sfa-deal-new-amount" className="block text-xs font-black text-slate-500 mb-1">金額(円)</label>
+            <input id="sfa-deal-new-amount" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1000000" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
           </div>
           <div>
-            <label className="block text-xs font-black text-slate-500 mb-1">取引先</label>
-            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={accountsLoading || accountsError} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold disabled:opacity-50">
+            <label htmlFor="sfa-deal-new-account" className="block text-xs font-black text-slate-500 mb-1">取引先</label>
+            <select id="sfa-deal-new-account" value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={accountsLoading || accountsError} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold disabled:opacity-50">
               <option value="">{accountsLoading ? '取引先を読み込み中' : '未選択'}</option>
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-black text-slate-500 mb-1">商談日</label>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
+            <label htmlFor="sfa-deal-new-start" className="block text-xs font-black text-slate-500 mb-1">商談日</label>
+            <input id="sfa-deal-new-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
           </div>
           <div className="sm:col-span-4">
             <button onClick={create} disabled={busy || !ready || mutations.creationBlocked('deal')} className={`px-5 py-2.5 rounded-xl text-white font-black disabled:opacity-50 ${uiNext ? 'bg-[#0066ff] hover:bg-[#0052cc]' : 'bg-green-600'}`}>{busy ? '追加中…' : '追加する'}</button>
@@ -712,11 +737,12 @@ export default function SfaDealsPage() {
                           role="button"
                           tabIndex={0}
                           onClick={() => { if (movedRef.current) { movedRef.current = false; return } openDetail(d) }}
-                          onKeyDown={(e) => { if (e.key === 'Enter') openDetail(d) }}
-                          className="block w-full text-left group cursor-pointer"
+                          onKeyDown={(e) => { if (e.key === 'Enter') openDetail(d); else if (uiNext && e.key === ' ') { e.preventDefault(); openDetail(d) } }}
+                          aria-label={uiNext ? `${d.name}の詳細を開く` : undefined}
+                          className={uiNext ? 'block w-full text-left group cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2' : 'block w-full text-left group cursor-pointer'}
                         >
                           <div className="flex items-start justify-between gap-1">
-                            <p className="font-black text-slate-800 text-sm leading-snug group-hover:text-green-700 transition-colors">{d.name}</p>
+                            <p className={`font-black text-slate-800 text-sm leading-snug group-hover:text-green-700 transition-colors${uiNext ? ' min-w-0 break-words' : ''}`}>{d.name}</p>
                             {isStale(d) && <span title="14日以上停滞" className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5 flex-shrink-0">停滞</span>}
                           </div>
                           {(d.accountName || d.contactName) && (
@@ -749,8 +775,12 @@ export default function SfaDealsPage() {
                               <div key={t.id} className="flex items-center gap-1.5">
                                 <button
                                   disabled={mutations.blocked('task:' + t.id) || !ready} onClick={() => toggleTask(t)}
-                                  className="w-4 h-4 rounded border-2 border-slate-300 hover:border-green-500 flex-shrink-0 flex items-center justify-center"
+                                  // 新しい見た目: 見た目の大きさは変えず、押せる範囲だけ 40px 四方に広げる。キーボードの枠も付ける
+                                  className={uiNext
+                                    ? 'relative w-4 h-4 rounded border-2 border-slate-300 hover:border-green-500 flex-shrink-0 flex items-center justify-center before:absolute before:-inset-3 before:content-[""] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-1'
+                                    : 'w-4 h-4 rounded border-2 border-slate-300 hover:border-green-500 flex-shrink-0 flex items-center justify-center'}
                                   title="完了にする"
+                                  aria-label={`「${t.title}」を完了にする`}
                                 />
                                 <span className="text-[11px] font-bold text-slate-600 truncate flex-1">{t.title}</span>
                                 {t.dueDate && (
@@ -773,7 +803,8 @@ export default function SfaDealsPage() {
                           value={d.stageId || ''}
                           disabled={!ready || mutations.blocked('deal:' + d.id)}
                           onChange={(e) => moveStage(d, e.target.value)}
-                          className="mt-2 w-full text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1.5 bg-slate-50"
+                          aria-label={`${d.name}のステージ`}
+                          className={uiNext ? 'mt-2 w-full min-h-11 text-xs font-bold rounded-lg border border-slate-200 px-2 py-1.5 bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'mt-2 w-full text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1.5 bg-slate-50'}
                         >
                           {!knownStageIds.has(d.stageId || '') && <option value="" disabled>ステージを選択</option>}
                           {stages.map((s) => <option key={s.id} value={s.id}>→ {s.name}</option>)}
@@ -782,7 +813,7 @@ export default function SfaDealsPage() {
                           data-no-drag
                           onClick={() => aiNextAction(d)}
                           disabled={!!aiDealId || mutations.creationBlocked('next-action')}
-                          className={`mt-1.5 w-full text-[11px] font-black rounded-lg py-1.5 flex items-center justify-center gap-0.5 disabled:opacity-50 ${uiNext ? 'text-[#0066ff] hover:bg-[#0066ff]/10' : 'text-[#7f19e6] hover:bg-purple-50'}`}
+                          className={`mt-1.5 w-full text-[11px] font-black rounded-lg py-1.5 flex items-center justify-center gap-0.5 disabled:opacity-50 ${uiNext ? 'min-h-11 text-xs text-[#0066ff] hover:bg-[#0066ff]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'text-[#7f19e6] hover:bg-purple-50'}`}
                         >
                           {uiNext ? <Sparkles className="h-3.5 w-3.5" aria-hidden /> : <span className="material-symbols-outlined text-[14px]">auto_awesome</span>}
                           {aiDealId === d.id ? 'AI考え中…' : 'AI次アクション'}
@@ -838,8 +869,8 @@ export default function SfaDealsPage() {
                 <p className="text-xs text-slate-500">実行時点の情報による提案です。その後の変更は含まれません。</p>
                 <h2 className="text-lg font-black text-slate-900 leading-snug">{aiModal.deal.name}</h2>
               </div>
-              <button onClick={closeAi} className="text-slate-300 hover:text-slate-500">
-                <span className="material-symbols-outlined">close</span>
+              <button onClick={closeAi} aria-label="閉じる" className={uiNext ? 'grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'text-slate-300 hover:text-slate-500'}>
+                {uiNext ? <X className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined">close</span>}
               </button>
             </div>
 
@@ -894,12 +925,12 @@ export default function SfaDealsPage() {
       {/* ===== 商談詳細モーダル（プロパティ編集 + タスク + 活動タイムライン） ===== */}
       {detail && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeDetail}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-labelledby="sfa-deal-detail-title" className={uiNext ? 'bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto p-4 sm:p-6 break-words' : 'bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto p-6'} onClick={(e) => e.stopPropagation()}>
             <MutationRecovery mutations={mutations} />
             <div className="flex items-start justify-between gap-2 mb-4">
-              <h2 className="text-lg font-black text-slate-900">商談の詳細</h2>
-              <button onClick={closeDetail} className="text-slate-300 hover:text-slate-500">
-                <span className="material-symbols-outlined">close</span>
+              <h2 id="sfa-deal-detail-title" className="text-lg font-black text-slate-900">商談の詳細</h2>
+              <button onClick={closeDetail} aria-label="閉じる" className={uiNext ? 'grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066ff]' : 'text-slate-300 hover:text-slate-500'}>
+                {uiNext ? <X className="h-5 w-5" aria-hidden /> : <span className="material-symbols-outlined">close</span>}
               </button>
             </div>
 
@@ -954,16 +985,17 @@ export default function SfaDealsPage() {
               <p className="text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
                 <span className="material-symbols-outlined text-[18px]">check_box</span>タスク
               </p>
-              <div className="flex gap-2 mb-2">
+              <div className={uiNext ? 'flex flex-wrap gap-2 mb-2' : 'flex gap-2 mb-2'}>
                 <input
+                  aria-label="商談のタスク"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && addDetailTask()}
                   placeholder="やることを入力（例: 見積を送る）"
-                  className="flex-1 rounded-xl border border-slate-200 px-3 py-2 font-bold text-sm"
+                  className={uiNext ? 'min-h-11 min-w-0 basis-full sm:basis-auto flex-1 rounded-xl border border-slate-200 px-3 py-2 font-bold text-sm' : 'flex-1 rounded-xl border border-slate-200 px-3 py-2 font-bold text-sm'}
                 />
-                <input type="date" value={newTaskDue} onChange={(e) => setNewTaskDue(e.target.value)} className="rounded-xl border border-slate-200 px-2 py-2 font-bold text-xs w-[8.5rem]" />
-                <button onClick={addDetailTask} disabled={taskBusy || mutations.creationBlocked('task') || !ready || !newTaskTitle.trim()} className="px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50">追加</button>
+                <input type="date" aria-label="タスクの期日" value={newTaskDue} onChange={(e) => setNewTaskDue(e.target.value)} className="rounded-xl border border-slate-200 px-2 py-2 font-bold text-xs w-[8.5rem]" />
+                <button onClick={addDetailTask} disabled={taskBusy || mutations.creationBlocked('task') || !ready || !newTaskTitle.trim()} className={uiNext ? 'min-h-11 whitespace-nowrap px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50' : 'px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50'}>追加</button>
               </div>
               <div className="space-y-1.5">
                 {detailTasksError && <p role="alert" className="text-xs font-bold text-red-700">商談のタスクを読み込めませんでした。<button type="button" onClick={() => loadDetailTasks(detail.id, detailTasksRetryPage)} className="underline">再試行</button></p>}
@@ -995,8 +1027,8 @@ export default function SfaDealsPage() {
               <p className="text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
                 <span className="material-symbols-outlined text-[18px]">history</span>活動タイムライン
               </p>
-              <div className="flex gap-2 mb-2">
-                <select value={actType} onChange={(e) => setActType(e.target.value as ActivityType)} className="rounded-xl border border-slate-200 px-2 py-2 font-bold text-xs">
+              <div className={uiNext ? 'flex flex-wrap gap-2 mb-2' : 'flex gap-2 mb-2'}>
+                <select aria-label="活動の種類" value={actType} onChange={(e) => setActType(e.target.value as ActivityType)} className={uiNext ? 'min-h-11 rounded-xl border border-slate-200 px-2 py-2 font-bold text-xs' : 'rounded-xl border border-slate-200 px-2 py-2 font-bold text-xs'}>
                   {(Object.keys(ACTIVITY_TYPE_LABEL) as ActivityType[]).map((k) => (
                     <option key={k} value={k}>{ACTIVITY_TYPE_LABEL[k]}</option>
                   ))}
@@ -1006,7 +1038,8 @@ export default function SfaDealsPage() {
                   onChange={(e) => setActSubject(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229 && addActivity()}
                   placeholder="活動内容を入力（例: 初回ヒアリング実施）"
-                  className="flex-1 rounded-xl border border-slate-200 px-3 py-2 font-bold text-sm"
+                  aria-label="活動内容"
+                  className={uiNext ? 'min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 font-bold text-sm' : 'flex-1 rounded-xl border border-slate-200 px-3 py-2 font-bold text-sm'}
                 />
                 <button onClick={addActivity} disabled={actBusy || mutations.creationBlocked('activity') || !ready || !actSubject.trim()} className="px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50">追加</button>
               </div>

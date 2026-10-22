@@ -6,7 +6,10 @@
 // スコア・根拠引用・逐語ログを表示する。
 // ⚠️ AIの判定は「推薦度」であり最終決定ではない旨を、画面上に常時明示する（C2）。
 
-import { PageTitle } from '@/components/mensetsu/ui-next'
+import { PageTitle, useToolUiNext } from '@/components/mensetsu/ui-next'
+import { Button, EmptyState, ErrorNotice, Skeleton } from '@/components/ds'
+import { LoadIssueNotice, NX_FOCUS, NX_TAP, friendlyText, loadIssueOf } from '@/components/mensetsu/states'
+import { ShellIcon } from '@/components/shell/icons'
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
@@ -33,6 +36,11 @@ export default function MensetsuReportPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshError, setRefreshError] = useState(false)
+  /** 最初の読み込みで返った状態コード（新しい見た目で、見つからない・権限なし・その他を出し分ける） */
+  const [loadStatus, setLoadStatus] = useState<number | null>(null)
+  // 新しい見た目（枠の中で useUiNext() が真）のときだけ、空・エラーの表示と押しやすさを直す
+  const uiNext = useToolUiNext()
+  const nx = (legacy: string, extra = `${NX_TAP} ${NX_FOCUS}`) => (uiNext ? `${legacy} ${extra}` : legacy)
   const [tab, setTab] = useState<'report' | 'transcript'>('report')
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [audioBusy, setAudioBusy] = useState(false)
@@ -137,12 +145,14 @@ export default function MensetsuReportPage() {
       const json = await res.json()
       if (!res.ok) {
         if (background) setRefreshError(true)
-        else notifyError(setError, json?.error || '取得できませんでした')
+        else setLoadStatus(res.status)
+        if (!background) notifyError(setError, json?.error || '取得できませんでした')
         return
       }
       setRefreshError(false)
       setData(json)
     } catch {
+      if (!background) setLoadStatus(0)
       if (background) setRefreshError(true)
       else notifyError(setError, '評価結果を取得できませんでした。再読み込みしてください。')
     } finally {
@@ -172,6 +182,38 @@ export default function MensetsuReportPage() {
     const timer = window.setInterval(() => { void load(true) }, 10000)
     return () => window.clearInterval(timer)
   }, [data?.session?.status, load])
+
+  if (loading && uiNext) {
+    return (
+      <main className="px-4 py-6 lg:px-8" aria-busy="true" aria-label="読み込み中">
+        <div className="mx-auto grid max-w-[900px] gap-4">
+          <Skeleton lines={2} height={28} delayMs={0} />
+          <Skeleton lines={6} height={16} delayMs={0} />
+        </div>
+      </main>
+    )
+  }
+  if (!data?.session && uiNext) {
+    return (
+      <main className="px-4 py-6 lg:px-8">
+        <div className="mx-auto max-w-[900px]">
+          {loadStatus === 404 ? (
+            <EmptyState
+              kind="no-results"
+              title="この面接は見つかりませんでした"
+              description="削除されたか、保持期間を過ぎて記録が消えた可能性があります。面接一覧から開き直してください。"
+              action={<Button href="/mensetsu" icon="UserCheck">面接一覧へ戻る</Button>}
+            />
+          ) : (
+            <div className="grid gap-3">
+              <LoadIssueNotice issue={loadIssueOf(loadStatus ?? 0)} subject="評価レポート" onRetry={() => { setLoading(true); void load() }} />
+              <div><Button href="/mensetsu" variant="secondary" icon="UserCheck">面接一覧へ戻る</Button></div>
+            </div>
+          )}
+        </div>
+      </main>
+    )
+  }
 
   if (loading) {
     return (
@@ -204,18 +246,20 @@ export default function MensetsuReportPage() {
   return (
     <main className="min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8">
       <div className="mx-auto max-w-[900px]">
-        <Link href="/mensetsu" className="text-xs font-black text-[#0066ff]">
+        <Link href="/mensetsu" className={nx('text-xs font-black text-[#0066ff]', `inline-flex min-h-11 items-center rounded ${NX_FOCUS}`)}>
           ← 面接一覧
         </Link>
 
-        <PageTitle className="mt-3 text-2xl font-black text-[#0a0f3c]">
+        <PageTitle className={uiNext ? 'mt-1 break-words text-2xl font-black text-[#0a0f3c]' : 'mt-3 text-2xl font-black text-[#0a0f3c]'}>
           {s.candidateName || '（名前未入力）'}
         </PageTitle>
         <p className="mt-1 text-sm font-semibold text-[#425071]">
           {s.template.jobTitle} / {s.template.durationMin}分 /{' '}
           {s.endedAt ? new Date(s.endedAt).toLocaleString('ja-JP') : '未実施'}
         </p>
-        {error && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p>}
+        {error && uiNext ? (
+          <div className="mt-4"><ErrorNotice what={friendlyText(error, '処理を完了できませんでした。')} how="時間をおいてもう一度お試しください。続く場合は画面を再読み込みしてください。" /></div>
+        ) : error && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p>}
 
         {/* AI判定の位置づけを常時明示（C2） */}
         <div className="mt-5 rounded-lg border border-[#ffe0b2] bg-[#fff8e1] p-4">
@@ -235,7 +279,7 @@ export default function MensetsuReportPage() {
                 : '評価中です。完了するとこの画面を更新します。'}
             {evaluationStale && !!s.evaluatedAt && (
               <button type="button" onClick={runEvaluate} disabled={evaluating}
-                className="mt-3 block rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-black text-white disabled:bg-[#b9cdf5]">
+                className={nx('mt-3 block rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-black text-white disabled:bg-[#b9cdf5]', `min-h-11 ${NX_FOCUS}`)}>
                 {evaluating ? '再評価中…' : '再評価する'}
               </button>
             )}
@@ -283,10 +327,12 @@ export default function MensetsuReportPage() {
           {(['report', 'transcript'] as const).map((t) => (
             <button
               key={t}
+              type="button"
               onClick={() => setTab(t)}
-              className={`rounded-lg px-4 py-2 text-xs font-black ${
+              aria-pressed={tab === t}
+              className={nx(`rounded-lg px-4 py-2 text-xs font-black ${
                 tab === t ? 'bg-[#0066ff] text-white' : 'bg-white text-[#425071]'
-              }`}
+              }`)}
             >
               {t === 'report' ? '評価' : '逐語ログ'}
             </button>
@@ -294,17 +340,17 @@ export default function MensetsuReportPage() {
 
           {/* PDFは評価済みのときだけ。未評価だとAPIが400を返すため、押せるのに進まないボタンにしない */}
           {s.evaluatedAt && (
-            <div className="ml-auto flex items-center gap-2">
+            <div className={uiNext ? 'ml-auto flex flex-wrap items-center gap-2' : 'ml-auto flex items-center gap-2'}>
               <a
                 href={`/api/mensetsu/sessions/${id}/pdf`}
-                className="flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#0066ff]"
+                className={nx('flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#0066ff]', `min-h-11 whitespace-nowrap ${NX_FOCUS}`)}
               >
-                <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                {uiNext ? <ShellIcon name="FileText" size={16} /> : <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>}
                 レポートPDF
               </a>
               <a
                 href={`/api/mensetsu/sessions/${id}/pdf?transcript=1`}
-                className="rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#425071]"
+                className={nx('rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#425071]')}
                 title="応募者の発言そのものが綴じ込まれます。取り扱いにご注意ください。"
               >
                 逐語ログ付き
@@ -327,9 +373,9 @@ export default function MensetsuReportPage() {
                 <button
                   onClick={loadRecording}
                   disabled={audioBusy}
-                  className="flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff] disabled:opacity-50"
+                  className={nx('flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff] disabled:opacity-50', `min-h-11 whitespace-nowrap ${NX_FOCUS}`)}
                 >
-                  <span className="material-symbols-outlined text-[16px]">play_circle</span>
+                  {uiNext ? <ShellIcon name="Headphones" size={16} /> : <span className="material-symbols-outlined text-[16px]">play_circle</span>}
                   {audioBusy ? '準備中…' : '録音を再生'}
                 </button>
               )}
@@ -344,7 +390,7 @@ export default function MensetsuReportPage() {
           // ⚠️ 未評価の面接で評価軸を「情報不足」で埋めて表示しない。
           //    まだ採点していないだけなのに、AIがそう判定したように見えてしまう。
           <section className="mt-4 rounded-lg bg-white p-8 text-center shadow-sm">
-            <span className="material-symbols-outlined text-3xl text-[#8a94ad] font-medium">fact_check</span>
+            {uiNext ? <ShellIcon name="ListChecks" size={30} className="mx-auto text-[#8a94ad]" /> : <span className="material-symbols-outlined text-3xl text-[#8a94ad] font-medium">fact_check</span>}
             <p className="mt-2 text-sm font-black text-[#0a0f3c]">まだ評価していません</p>
             <p className="mt-1 text-xs font-semibold leading-relaxed text-[#425071]">
               {s.status === 'evaluating' && !evaluationStale
@@ -359,7 +405,7 @@ export default function MensetsuReportPage() {
               <button
                 onClick={runEvaluate}
                 disabled={evaluating}
-                className="mt-4 rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                className={nx('mt-4 rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:bg-[#b9cdf5]')}
               >
                 {evaluating ? '評価中…' : '評価する'}
               </button>
@@ -373,7 +419,7 @@ export default function MensetsuReportPage() {
                 return (
                   <div key={c.id} className="rounded-lg bg-white p-5 shadow-sm">
                     <div className="flex items-start justify-between gap-4">
-                      <div>
+                      <div className={uiNext ? 'min-w-0 break-words' : undefined}>
                         <p className="text-sm font-black text-[#0a0f3c]">{c.name}</p>
                         {c.description && (
                           <p className="mt-1 text-xs font-semibold text-[#425071]">{c.description}</p>
@@ -446,7 +492,8 @@ export default function MensetsuReportPage() {
                       <select
                         value={hrOrgId}
                         onChange={(e) => setHrOrgId(e.target.value)}
-                        className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#0066ff] font-medium"
+                        aria-label="登録先のドヤHRの組織"
+                        className={nx('flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#0066ff] font-medium', `min-h-11 min-w-0 ${NX_FOCUS}`)}
                       >
                         {hr.organizations.map((o: any) => (
                           <option key={o.id} value={o.id}>{o.name}</option>
@@ -467,18 +514,18 @@ export default function MensetsuReportPage() {
                             setHr((prev: any) => ({ ...prev, alreadyHandedOff: true }))
                             setHrMsg('ドヤHRへ登録しました。')
                           } catch (e) {
-                            setHrMsg(e instanceof Error ? e.message : '登録できませんでした')
+                            setHrMsg(uiNext ? friendlyText(e, '登録できませんでした。時間をおいてもう一度お試しください。') : e instanceof Error ? e.message : '登録できませんでした')
                           } finally {
                             setHrBusy(false)
                           }
                         }}
                         disabled={hrBusy || !hrOrgId}
-                        className="rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                        className={nx('rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:bg-[#b9cdf5]')}
                       >
                         {hrBusy ? '登録中…' : 'ドヤHRへ登録'}
                       </button>
                     </div>
-                    {hrMsg && <p className="mt-2 text-xs font-bold text-[#425071]">{hrMsg}</p>}
+                    {hrMsg && <p role="status" className="mt-2 text-xs font-bold text-[#425071]">{hrMsg}</p>}
                     <p className="mt-2 text-[11px] font-semibold leading-relaxed text-[#8a94ad]">
                       お名前とメールアドレスのみを引き渡します。生年月日・性別は面接で
                       収集していないため登録されません。
@@ -490,7 +537,14 @@ export default function MensetsuReportPage() {
           </>
         ) : (
           <section className="mt-4 rounded-lg bg-white p-6 shadow-sm">
-            {s.turns.length === 0 ? (
+            {s.turns.length === 0 && uiNext ? (
+              <EmptyState
+                art="/mensetsu/empty-interviews.webp"
+                title="発話の記録はまだありません"
+                description="応募者が面接を受けると、面接官と応募者の発言がここに順に残ります。"
+                action={<Button onClick={() => setTab('report')} variant="secondary" icon="ListChecks">評価に戻る</Button>}
+              />
+            ) : s.turns.length === 0 ? (
               <p className="text-sm font-semibold text-[#425071]">発話ログがありません。</p>
             ) : (
               s.turns.map((t: any, i: number) => {
@@ -518,37 +572,45 @@ export default function MensetsuReportPage() {
                           採点例に登録しました（{done === 'good' ? '良い例' : '良くない例'}）
                         </p>
                       ) : labeling === t.id ? (
-                        <div className="mt-1.5 rounded-lg bg-[#f7faff] p-3">
-                          <p className="text-[11px] font-bold text-[#425071]">どの評価軸の例にしますか</p>
+                        <div
+                          className="mt-1.5 rounded-lg bg-[#f7faff] p-3"
+                          // Esc で「やめる」と同じ（新しい見た目のとき）
+                          onKeyDown={uiNext ? (e) => { if (e.key === 'Escape') { setLabeling(null); setLabelError('') } } : undefined}
+                        >
+                          <p id={`label-q-${t.id}`} className="text-[11px] font-bold text-[#425071]">どの評価軸の例にしますか</p>
                           <select
                             value={labelCriterion}
                             onChange={(e) => setLabelCriterion(e.target.value)}
-                            className="mt-1 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#0066ff] font-medium"
+                            aria-labelledby={`label-q-${t.id}`}
+                            aria-invalid={uiNext && labelError ? true : undefined}
+                            aria-describedby={uiNext && labelError ? `label-err-${t.id}` : undefined}
+                            autoFocus={uiNext}
+                            className={nx('mt-1 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#0066ff] font-medium', `min-h-11 ${NX_FOCUS}`)}
                           >
                             <option value="">選んでください</option>
                             {criteria.map((c: any) => (
                               <option key={c.key} value={c.key}>{c.name}</option>
                             ))}
                           </select>
-                          {labelError && <p className="mt-1 text-[11px] font-bold text-[#c5221f]">{labelError}</p>}
+                          {labelError && <p id={`label-err-${t.id}`} role="alert" className="mt-1 text-[11px] font-bold text-[#c5221f]">{uiNext ? friendlyText(labelError, '登録できませんでした。時間をおいてもう一度お試しください。') : labelError}</p>}
                           <div className="mt-2 flex flex-wrap gap-2">
                             <button
                               onClick={() => addSample(t, 'good', questionText)}
                               disabled={labelBusy}
-                              className="rounded-lg bg-[#137333] px-3 py-1.5 text-xs font-black text-white disabled:opacity-40"
+                              className={nx('rounded-lg bg-[#137333] px-3 py-1.5 text-xs font-black text-white disabled:opacity-40')}
                             >
                               良い例として登録
                             </button>
                             <button
                               onClick={() => addSample(t, 'bad', questionText)}
                               disabled={labelBusy}
-                              className="rounded-lg bg-[#c5221f] px-3 py-1.5 text-xs font-black text-white disabled:opacity-40"
+                              className={nx('rounded-lg bg-[#c5221f] px-3 py-1.5 text-xs font-black text-white disabled:opacity-40')}
                             >
                               良くない例として登録
                             </button>
                             <button
                               onClick={() => { setLabeling(null); setLabelError('') }}
-                              className="rounded-lg border border-[#d8e7ff] px-3 py-1.5 text-xs font-bold text-[#425071]"
+                              className={nx('rounded-lg border border-[#d8e7ff] px-3 py-1.5 text-xs font-bold text-[#425071]')}
                             >
                               やめる
                             </button>
@@ -557,7 +619,7 @@ export default function MensetsuReportPage() {
                       ) : (
                         <button
                           onClick={() => { setLabeling(t.id); setLabelError('') }}
-                          className="mt-0.5 text-[11px] font-bold text-[#0066ff] hover:underline"
+                          className={nx('mt-0.5 text-[11px] font-bold text-[#0066ff] hover:underline', `min-h-11 rounded ${NX_FOCUS}`)}
                         >
                           この回答を採点例にする
                         </button>
