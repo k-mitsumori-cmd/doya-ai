@@ -279,9 +279,11 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 |------|------|------|
 | 日数 | 30日（`UNIFIED_TRIAL_DAYS`） | `src/lib/unified-plan.ts` |
 | 付与条件(a) | **月額のみ**。年額・`enterprise`・`bundle` には付けない | `checkout/route.ts` |
-| 付与条件(b) | **実サブスク履歴のない新規顧客のみ** | `isTrialEligible()`（`src/lib/trial.ts`） |
-| 判定方法 | メール横断で全 Stripe 顧客の契約履歴を照会（INV-6）。`incomplete` 系は履歴に数えない | 同上 |
-| 判定失敗時 | **fail-closed（付与しない）** | trial cycling（解約→再契約で無料を繰り返す）を防ぐ |
+| 付与条件(b) | **今 DB で有料でなく、実サブスク履歴もない新規顧客のみ** | `isTrialEligible()`（`src/lib/trial.ts`） |
+| 判定方法(1) DB | `User.plan` が有料（`isPaidPlan()`、INV-1）か、`UserServiceSubscription.plan` のいずれかの行が有料なら**対象外**。このときは Stripe を照会しない。管理者の付与など、Stripe の履歴を持たずに有料になった利用者に「初月無料」を出さないため | `hasPaidPlanInDb()`（同上） |
+| 判定方法(2) Stripe | (1) で無料のときだけ、メール横断で全 Stripe 顧客の契約履歴を照会（INV-6）。`incomplete` 系は履歴に数えない | `isTrialEligible()` |
+| 判定の共有 | checkout（実付与）と `/api/stripe/trial-eligibility`（表示）は、同じ select（`TRIAL_USER_SELECT`）で読んだ DB の値を `isTrialEligible()` に渡す。`plan` / `servicePlans` は引数の必須キーにしてあり、渡し忘れを型で防ぐ | `src/lib/trial.ts` |
+| 判定失敗時 | **fail-closed（付与しない）**。Stripe 照会の失敗時、checkout は `503 TRIAL_CHECK_UNAVAILABLE` で決済を作らず、表示 API は `503` と `eligible:false` を返す。DB で有料と分かる利用者は、Stripe の障害中でも対象外のまま | trial cycling（解約→再契約で無料を繰り返す）を防ぐ |
 | 支払方法未登録で終了 | 自動解約 | `trial_settings.end_behavior.missing_payment_method: 'cancel'` |
 | 表示 | **「初月無料」を直書きしない。必ず `src/components/TrialCallout.tsx` 経由** | `TrialBadge` / `TrialNote` / `TrialCallout` / `TrialInlineSuffix` / `useTrialEligible()` |
 | 表示の既定 | 対象外なら**何も描画しない**（既定非表示・確定時のみ表示・fail-closed） | `/api/stripe/trial-eligibility` |
@@ -519,7 +521,7 @@ curl -s -H "Authorization: Bearer $CRON_SECRET" \
 |---------|------|
 | `src/lib/unified-plan.ts` | 価格・プランID・トライアル日数・`isPaidPlan()` の**単一ソース** |
 | `src/lib/stripe.ts` | Stripe クライアント・価格IDマップ・`ALL_SERVICE_IDS`・階層判定・契約検索・Checkout/ポータル生成 |
-| `src/lib/trial.ts` | トライアル資格判定（メール横断・fail-closed） |
+| `src/lib/trial.ts` | トライアル資格判定（DB の有料状態 → メール横断の Stripe 履歴・fail-closed）。回帰テストは `scripts/security-regression/verify-trial-paid-plan.cjs` / `verify-trial-failure.cjs` |
 | `src/lib/billing-audit.ts` | Stripe を正とした日次突き合わせ・Slack 本文生成 |
 | `src/app/api/stripe/checkout/route.ts` | Checkout 作成・二重契約ガード・トライアル付与・提供終了プランの遮断 |
 | `src/app/api/stripe/webhook/route.ts` | 本流の反映（作成/更新/解約/支払い） |

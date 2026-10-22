@@ -56,7 +56,7 @@ for (const script of ['verify-auth-registration.cjs', 'verify-registration-class
   const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
 }
-for (const script of ['verify-trial-eligibility-client.cjs', 'verify-trial-eligibility-mounted.cjs']) {
+for (const script of ['verify-trial-eligibility-client.cjs', 'verify-trial-eligibility-mounted.cjs', 'verify-trial-paid-plan.cjs']) {
   const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
 }
