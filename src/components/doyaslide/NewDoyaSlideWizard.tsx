@@ -29,6 +29,7 @@ import DoyaChar from '@/components/doyaslide/DoyaChar'
 import SlideImage from '@/components/doyaslide/SlideImage'
 import { doyaslideImageSrc } from '@/lib/doyaslide/file-urls'
 import { useUiNext } from '@/components/shell/ui-next-context'
+import { ShellCostBadge } from '@/components/shell/power'
 
 type Aspect = 'wide' | 'square' | 'vertical'
 const GENERATED_PREVIEW_STYLES = STYLE_PRESETS.filter(preset => !preset.sampleImages?.length).map(preset => preset.value)
@@ -885,6 +886,7 @@ export default function NewDoyaSlideWizard() {
           >
             <span className="material-symbols-outlined">auto_awesome</span>
             {recoveryProjectId ? '作成済み資料の処理を再試行' : '構成を作って画像生成へ'}
+            <ShellCostBadge action="slide.generate" />
           </button>
         </div>
       </div>

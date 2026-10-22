@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { Button, Card } from '@/components/ds'
 import { CostBadge, DoyaPowerGauge, LowPowerNotice, MorningRecoveryToast, PowerEquivalents, type DoyaPowerFx, type PowerConversion } from './index'
+import { ShellCostBadge } from '@/components/shell/power'
 
 const LIMIT = 1000
 const CONVERSIONS: PowerConversion[] = [
@@ -77,9 +78,13 @@ export default function DoyaPowerDemo() {
 
       <Card title="ボタンに減る量を付ける" icon="MousePointerClick">
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Button icon="Image">バナーを作る<CostBadge cost={10} /></Button>
-          <Button variant="secondary" icon="FileText">記事を書く<CostBadge cost={3} /></Button>
-          <Button variant="ghost" size="sm" icon="Presentation">資料にする<CostBadge cost={25} /></Button>
+          {/* 減る量は、表（src/lib/doya-power/costs.ts。仮・2026-10-23）から引く */}
+          <Button icon="Image">バナーを作る<ShellCostBadge action="banner.generate" /></Button>
+          <Button variant="secondary" icon="FileText">SEO記事を書く<ShellCostBadge action="seo.article" /></Button>
+          <Button variant="ghost" size="sm" icon="Presentation">スライドを作る<ShellCostBadge action="slide.generate" /></Button>
+          <Button variant="secondary" icon="Link2">商談URLを発行する<ShellCostBadge action="voice.minute" per="分" /></Button>
+          <Button variant="secondary" icon="Search">スキャン実行（質問3件）<ShellCostBadge action="aio.scan.question" units={3} /></Button>
+          <Button variant="ghost" size="sm" icon="Clock">勤怠（減らない）<ShellCostBadge action="kintai" /></Button>
           <Button variant="secondary" icon="Presentation" disabled>資料にする<CostBadge cost={25} short /></Button>
         </div>
       </Card>

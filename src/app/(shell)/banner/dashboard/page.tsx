@@ -19,6 +19,7 @@ import ShellLoading from '@/components/shell/ShellLoading'
 import { Button, ToolHero } from '@/components/ds'
 import nextStyles from '@/components/banner/banner-next.module.css'
 import { galleryTheme, GalleryCategoryHeading, GalleryGenreTabs, GalleryMoreTile, GalleryPlanTabs, GallerySkeleton, GalleryTemplateCard } from '@/components/banner/BannerTemplateGallery'
+import { ShellCostBadge } from '@/components/shell/power'
 
 type BannerTemplate = {
   id: string
@@ -2191,6 +2192,7 @@ function BannerTestPageInner() {
                     >
                       <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                       <span className="text-center">このバナーをベースに{generateCount}種類のバリエーションを生成</span>
+                      <ShellCostBadge action="banner.generate" />
                     </button>
                   )}
                 </div>
@@ -3101,6 +3103,7 @@ function BannerTestPageInner() {
                         この指示で修正する
                       </>
                     )}
+                    <ShellCostBadge action="image.refine" />
                   </button>
                 </div>
               </div>

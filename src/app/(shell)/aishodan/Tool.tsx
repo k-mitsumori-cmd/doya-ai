@@ -20,6 +20,7 @@ import { useUiNext } from '@/components/shell/ui-next-context'
 import { Button, EmptyState, FirstSteps, Skeleton, StatTile, ToolHero } from '@/components/ds'
 import { Stagger, StaggerItem } from '@/components/ds/motion'
 import { AISHODAN_TAP, AishodanFailureNotice, AishodanHttpError, describeAishodanFailure, failureStatus, fetchAishodanJson, type AishodanFailure } from '@/components/aishodan/failure'
+import { ShellCostBadge } from '@/components/shell/power'
 
 interface Product {
   id: string
@@ -634,6 +635,7 @@ export default function AishodanTool() {
                       className={`mt-3 w-full rounded-xl bg-[#0066ff] px-6 py-4 text-base font-black text-white shadow-lg transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:bg-slate-200 sm:text-lg${tap}`}
                     >
                       {issuing ? '発行中…' : '商談URLを発行する'}
+                      <ShellCostBadge action="voice.minute" per="分" />
                     </button>
                   )}
                 </div>

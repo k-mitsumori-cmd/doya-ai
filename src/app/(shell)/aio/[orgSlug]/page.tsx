@@ -16,6 +16,7 @@ import { AreaChart, Bars, Donut, Ring } from '@/components/ds/charts'
 import { UiIcon } from '@/components/icons'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
 import { useUiNext } from '@/components/shell/ui-next-context'
+import { ShellCostBadge } from '@/components/shell/power'
 
 type Tab = 'visibility' | 'sov' | 'citations' | 'recommend'
 
@@ -260,6 +261,8 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
       className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-50">
       <span className="material-symbols-outlined text-[20px]">{running ? 'hourglass_top' : 'play_arrow'}</span>
       {running ? 'スキャン中…' : 'スキャン実行'}
+      {/* 減る量は、今のスキャンで聞く質問の数ぶん（ドヤパワーの旗の内側だけ） */}
+      <ShellCostBadge action="aio.scan.question" units={Math.max(1, activePrompts ?? 0)} />
     </button>
   )
 

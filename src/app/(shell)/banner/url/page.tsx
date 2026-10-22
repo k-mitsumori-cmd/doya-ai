@@ -14,6 +14,7 @@ import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, ENTERPRISE_CONTACT_MAILTO, isWi
 import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { TrialNote, useTrialEligible, TRIAL_DAYS } from '@/components/TrialCallout'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { ShellCostBadge } from '@/components/shell/power'
 
 const DEFAULT_FREE_SIZE = '1080x1080'
 const SIZE_OPTIONS: { label: string; value: string }[] = [
@@ -512,6 +513,7 @@ function BannerUrlAutoPageInner() {
               >
                 {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
                 URLだけでバナー生成
+                <ShellCostBadge action="banner.generate" />
               </button>
 
               {usedModelDisplay && (

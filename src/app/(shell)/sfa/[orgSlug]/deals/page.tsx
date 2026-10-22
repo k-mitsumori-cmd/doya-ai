@@ -15,6 +15,7 @@ import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
 import { isSfaSummary, summaryYen, type SfaSummary } from '@/lib/sfa/summary'
+import { ShellCostBadge } from '@/components/shell/power'
 
 interface Stage { id: string; name: string; order: number; probability: number; color: string; isWon: boolean; isLost: boolean }
 interface Deal extends SfaClientDeal {
@@ -817,6 +818,7 @@ export default function SfaDealsPage() {
                         >
                           {uiNext ? <Sparkles className="h-3.5 w-3.5" aria-hidden /> : <span className="material-symbols-outlined text-[14px]">auto_awesome</span>}
                           {aiDealId === d.id ? 'AI考え中…' : 'AI次アクション'}
+                          <ShellCostBadge action="text.generate" />
                         </button>
                       </div>
                     </div>

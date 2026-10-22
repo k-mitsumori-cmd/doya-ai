@@ -18,6 +18,7 @@ import { useBannerRefineRecovery } from '@/lib/banner/use-refine-recovery'
 import BannerRefineRecovery from '@/components/banner/BannerRefineRecovery'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 import { getBannerMaxImagesPerRequest } from '@/lib/pricing'
+import { ShellCostBadge } from '@/components/shell/power'
 
 type ChatMsg = {
   id: string
@@ -922,6 +923,7 @@ function BannerChatWorkspace() {
                       >
                         <Sparkles className="w-5 h-5" />
                         このプランでバナーを生成する
+                        <ShellCostBadge action="banner.generate" />
                       </button>
                     </div>
                   )}
@@ -1033,6 +1035,7 @@ function BannerChatWorkspace() {
                       >
                         <Wand2 className="w-5 h-5" />
                         この案をAIで修正する
+                        <ShellCostBadge action="image.refine" />
                       </button>
                     ) : (
                       <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">

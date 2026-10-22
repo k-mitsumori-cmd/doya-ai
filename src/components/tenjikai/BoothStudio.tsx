@@ -16,6 +16,7 @@ import { buildPanelPrompt, generateGraphicPlan, type GraphicPanel } from '@/lib/
 import { KIND_LABEL, man, planCost, yen, type BoothPlan, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
 import Image from 'next/image'
+import { ShellCostBadge } from '@/components/shell/power'
 
 function PlanView({ plan, selectedId, onSelect }: { plan: BoothPlan; selectedId?: string; onSelect: (id: string) => void }) {
   const s = 60
@@ -191,6 +192,8 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           <button disabled={batch.running} onClick={() => setBatchOpen(true)} className="inline-flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 rounded-[var(--r-sm)] bg-doya-500 px-5 text-sm font-black text-white shadow-lg shadow-doya-500/30 disabled:opacity-50">
             {batch.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
             {batch.running ? '作っています' : `面の画像をまとめて作る（${missing.length}面）`}
+            {/* 減る量は、作る面の数ぶん（ドヤパワーの旗の内側だけ） */}
+            <ShellCostBadge action="tenjikai.image" units={Math.max(1, missing.length)} />
           </button>
         )}
       </div>

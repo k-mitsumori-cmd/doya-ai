@@ -29,6 +29,7 @@ import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 import { useBannerRequestFence } from '@/lib/banner/use-request-fence'
 import { useBannerRefineRecovery } from '@/lib/banner/use-refine-recovery'
 import BannerRefineRecovery from '@/components/banner/BannerRefineRecovery'
+import { ShellCostBadge } from '@/components/shell/power'
 // AIバナーコーチ機能は廃止
 
 // ========================================
@@ -2354,6 +2355,7 @@ function BannerDashboardWorkspace() {
                     <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform flex-shrink-0" />
                   </>
                 )}
+                <ShellCostBadge action="banner.generate" />
               </button>
 
               {sessionStatus === 'unauthenticated' && !isGenerating && remainingCount <= 0 && (
