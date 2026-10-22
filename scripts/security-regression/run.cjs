@@ -1577,3 +1577,23 @@ for (const mode of ['old-reject', 'old-body', 'actor-change', 'child-unmount']) 
     { stdio: 'inherit', timeout: 60000, env: { ...hrOwnerEnv, DOYA_HR_SEARCH_VARIANT: mode } });
   if (result.error || result.status !== 0) { console.error('Security regression failed: HR employee search lifetime', mode); process.exit(1); }
 }
+
+// HR owner E3-E5: actual mounted clients/Settings with synthetic transport, storage and lock queue.
+for (const verifier of ['verify-hr-owner-panel-lifetime-writes-mounted.cjs', 'verify-hr-owner-transport-deadline-mounted.cjs', 'verify-hr-owner-storage-concurrency-mounted.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, 'hr-owner', verifier)],
+    { stdio: 'inherit', timeout: 60000, env: hrOwnerEnv });
+  if (result.error || result.status !== 0) { console.error('Security regression failed: HR owner E3-E5', verifier); process.exit(1); }
+}
+for (const mode of ['old-success', 'old-body', 'old-reject', 'actor-change', 'child-unmount']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, 'hr-owner', 'verify-settings-owner-two-consumers-mounted.cjs')],
+    { stdio: 'inherit', timeout: 60000, env: { ...hrOwnerEnv, DOYA_HR_SEARCH_VARIANT: mode } });
+  if (result.error || result.status !== 0) { console.error('Security regression failed: HR owner two consumers', mode); process.exit(1); }
+}
+for (const kind of ['invite', 'save', 'member', 'delete']) {
+  for (const variant of ['headers-success', 'headers-401', 'headers-reject', 'body-success', 'body-401', 'body-reject', 'network-reject']) {
+    const mode = kind + '-' + variant;
+    const result = spawnSync(process.execPath, [path.join(__dirname, 'hr-owner', 'verify-settings-deadline-mounted.cjs')],
+      { stdio: 'inherit', timeout: 60000, env: { ...hrOwnerEnv, DOYA_HR_SETTINGS_DEADLINE_VARIANT: mode } });
+    if (result.error || result.status !== 0) { console.error('Security regression failed: HR owner Settings deadline', mode); process.exit(1); }
+  }
+}
