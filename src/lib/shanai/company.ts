@@ -229,7 +229,7 @@ async function extractProfileItems(
 
     let raw: { items?: RawItem[] } | null = null
     try {
-      raw = await geminiGenerateJson<{ items?: RawItem[] }>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { temperature: 0.2 } }, 'ShanaiCompanyProfile')
+      raw = await geminiGenerateJson<{ items?: RawItem[] }>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } }, 'ShanaiCompanyProfile')
     } catch (e) {
       console.warn('[shanai] profile extraction failed', (e as Error)?.name)
       continue

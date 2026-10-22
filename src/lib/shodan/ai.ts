@@ -102,7 +102,7 @@ export async function analyzeCompany(research: CompanyResearch, own?: OwnCompany
     '}',
   ].join('\n')
 
-  const r = await geminiGenerateJson<CompanyAnalysis>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT }, 'ShodanAnalysis')
+  const r = await geminiGenerateJson<CompanyAnalysis>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 } }, 'ShodanAnalysis')
   const analysis = {
     currentStateAssessment: r?.currentStateAssessment || '',
     strengths: Array.isArray(r?.strengths) ? r!.strengths.filter(Boolean).slice(0, 6) : [],
@@ -203,7 +203,7 @@ export async function generateSlides(
     '{ "slides": [ {"type":"cover|agenda|content|closing","title":"見出し","subtitle":"任意の副題","bullets":["要点", "..."],"note":"任意の補足"} ] }',
   ].join('\n')
 
-  const r = await geminiGenerateJson<{ slides: ProposalSlide[] }>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT }, 'ShodanSlides')
+  const r = await geminiGenerateJson<{ slides: ProposalSlide[] }>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 } }, 'ShodanSlides')
   const slides = Array.isArray(r?.slides) ? r!.slides : []
   return slides
     .filter((s) => s && typeof (s as any).title === 'string')

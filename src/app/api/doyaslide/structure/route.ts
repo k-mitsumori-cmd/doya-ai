@@ -99,7 +99,8 @@ export async function POST(req: NextRequest) {
     })
 
     const result = await geminiGenerateJson<{ slides: SlideStructure[] }>(
-      { prompt, model: GEMINI_TEXT_MODEL_DEFAULT },
+      // 最大12枚分の見出し・本文・画像指示を返すため、既定の4,096トークンより大きくする
+      { prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { maxOutputTokens: 8192 } },
       'SlideStructure'
     )
 
