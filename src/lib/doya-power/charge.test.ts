@@ -32,6 +32,7 @@ function setup(over: Partial<ChargeDeps> & { rolloutValue?: string; enabled?: bo
       refund: (...a) => { calls.push('refund'); return ledger.refund(...a) },
       grantMonthlyForPlan: (...a) => { calls.push('grant'); return ledger.grantMonthlyForPlan(...a) },
       balance: (...a) => { calls.push('balance'); return ledger.balance(...a) },
+      operationStatus: (...a) => { calls.push('status'); return ledger.operationStatus(...a) },
     },
     isPaidPlan: isPaid,
     now: clock,
@@ -126,6 +127,7 @@ test('台帳が読めなければ 503 で止め、有料の API を呼ばない'
       refund: async () => ({ ok: false, reason: 'not_found' }),
       grantMonthlyForPlan: async () => ({ ok: true, granted: 0, skipped: 'free_plan' }),
       balance: async () => null,
+      operationStatus: async () => 'none',
     },
   })
   let called = 0
@@ -147,4 +149,37 @@ test('枠のゲージの上限は、有料の人は毎月の付与、無料の�
   const s = setup()
   const st = await s.charger.shellState()
   assert.deepEqual(st, { balance: { remaining: SOLO_PRO_MONTHLY_GRANT + DAILY_RECOVERY_AMOUNT, limit: SOLO_PRO_MONTHLY_GRANT + DAILY_RECOVERY_AMOUNT }, costs: {} })
+})
+
+test('同じ ID の2回目が失敗しても、前の成功の分は戻らない（同じ ID の使い回しで、タダで作り直せない）', async () => {
+  const s = setup()
+  const full = SOLO_PRO_MONTHLY_GRANT + DAILY_RECOVERY_AMOUNT
+  const cost = DOYA_POWER_COSTS['image.refine']
+  const first = await s.charger.run(await s.charger.charge('image.refine', { key: 'op-x' }), async () => ok())
+  assert.equal(first.status, 200)
+  assert.equal(await s.remaining(), full - cost)
+  const again = await s.charger.charge('image.refine', { key: 'op-x' })
+  assert.equal(again.kind, 'charged')
+  if (again.kind === 'charged') assert.equal(again.duplicated, true)
+  const second = await s.charger.run(again, async () => new Response('{}', { status: 500 }))
+  assert.equal(second.status, 500)
+  // 1回目の成功の分は戻らない
+  assert.equal(await s.remaining(), full - cost)
+})
+
+test('前に戻した操作の ID がもう一度来たら、新しい操作として減らし直す', async () => {
+  const s = setup()
+  const full = SOLO_PRO_MONTHLY_GRANT + DAILY_RECOVERY_AMOUNT
+  const cost = DOYA_POWER_COSTS['image.refine']
+  // 1回目は失敗して戻る
+  await s.charger.run(await s.charger.charge('image.refine', { key: 'op-y' }), async () => new Response('{}', { status: 502 }))
+  assert.equal(await s.remaining(), full)
+  // 同じ ID で作り直すと、また減る（タダにならない）
+  const retry = await s.charger.charge('image.refine', { key: 'op-y' })
+  assert.equal(retry.kind, 'charged')
+  if (retry.kind === 'charged') {
+    assert.equal(retry.duplicated, false)
+    assert.match(retry.operationId, /:op-y:retry-/)
+  }
+  assert.equal(await s.remaining(), full - cost)
 })

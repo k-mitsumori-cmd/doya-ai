@@ -158,7 +158,7 @@ async function postHandler(req: NextRequest) {
 
 // ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 生成の前に減らし、失敗なら戻す。off のときは今までどおり（src/lib/doya-power/charge.ts）
 export const POST = withDoyaPowerCharge({
-  // 構成づくりのときに1回だけ減らす（同じ資料では1回。続く画像の生成はこの中に含める）
+  // 構成づくりのたびに減らす（続く画像の生成はこの量に含める）。
+  // ⚠️ 資料の ID を操作の ID にしない（作り直しのたびに有料の処理が動くのに、2回目から減らなくなるため）
   action: 'slide.generate',
-  key: (b) => (typeof b?.projectId === 'string' ? `project-${b.projectId}` : undefined),
 }, postHandler)

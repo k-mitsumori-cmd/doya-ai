@@ -325,7 +325,21 @@ export function createDoyaPowerLedger(db: LedgerDb, options: { now?: () => Date 
     return company ? balance(company.id) : null
   }
 
-  return { consume, refund, grant, grantMonthlyForPlan, balance, balanceForUser }
+  /**
+   * 操作の ID の今の状態（読むだけ）。none … まだ無い / consumed … 減らしたまま / refunded … 減らしたあと戻した
+   * 同じ ID がもう一度来たとき、戻した操作をもう一度タダで動かさないために使う（charge-core.ts）
+   */
+  async function operationStatus(operationId: string): Promise<'none' | 'consumed' | 'refunded'> {
+    if (!validId(operationId)) return 'none'
+    return db.$transaction(async (tx) => {
+      const consumed = await tx.doyaPowerTransaction.findUnique({ where: { operationId } })
+      if (!consumed || consumed.type !== 'consume') return 'none'
+      const refunded = await tx.doyaPowerTransaction.findUnique({ where: { refundOf: operationId } })
+      return refunded ? 'refunded' : 'consumed'
+    })
+  }
+
+  return { consume, refund, grant, grantMonthlyForPlan, balance, balanceForUser, operationStatus }
 }
 
 export type DoyaPowerLedger = ReturnType<typeof createDoyaPowerLedger>

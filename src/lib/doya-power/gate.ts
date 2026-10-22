@@ -34,5 +34,6 @@ export function createGatedLedger(getDb: () => LedgerDb, allowed: () => boolean,
     grantMonthlyForPlan: async (...a: Parameters<Ledger['grantMonthlyForPlan']>) => open().grantMonthlyForPlan(...a),
     balance: async (...a: Parameters<Ledger['balance']>) => open().balance(...a),
     balanceForUser: async (...a: Parameters<Ledger['balanceForUser']>) => open().balanceForUser(...a),
+    operationStatus: async (...a: Parameters<Ledger['operationStatus']>) => open().operationStatus(...a),
   }
 }

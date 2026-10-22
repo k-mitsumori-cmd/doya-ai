@@ -13,7 +13,7 @@ import { isUiNext } from '@/lib/ui-next'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { currentUserId } from '@/lib/shell/company.server'
 import { doyaPowerRollout, isDoyaPowerEnabled } from './flag'
-import { consume, refund, grantMonthlyForPlan, balance } from './index'
+import { consume, refund, grantMonthlyForPlan, balance, operationStatus } from './index'
 import { createDoyaPowerCharger } from './charge-core'
 import type { DoyaPowerAction } from './costs'
 
@@ -30,7 +30,7 @@ export const doyaPowerCharger = createDoyaPowerCharger({
     ])
     return company ? { companyId: company.id, plan: user?.plan ?? null } : null
   },
-  ledger: { consume, refund, grantMonthlyForPlan, balance },
+  ledger: { consume, refund, grantMonthlyForPlan, balance, operationStatus },
   isPaidPlan,
 })
 

@@ -20,6 +20,7 @@ export type ChargeLedger = {
   refund: (operationId: string, opts?: { companyId?: string }) => Promise<RefundResult>
   grantMonthlyForPlan: (companyId: string, plan: string | null | undefined) => Promise<GrantResult | { ok: true; granted: 0; skipped: 'free_plan' }>
   balance: (companyId: string) => Promise<BalanceResult | null>
+  operationStatus: (operationId: string) => Promise<'none' | 'consumed' | 'refunded'>
 }
 
 export type ChargeDeps = {
@@ -85,12 +86,18 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
     if (!who) return { kind: 'skip' }
     const amount = doyaPowerCost(action, opts.units ?? 1)
     if (amount === null || amount <= 0) return { kind: 'skip' }
-    const operationId = `${action}:${who.companyId}:${cleanKey(opts.key) ?? newKey()}`
+    const key = cleanKey(opts.key)
+    let operationId = `${action}:${who.companyId}:${key ?? newKey()}`
     try {
       // 有料の人の毎月の付与は、残りを使うときに足りない分を付ける（月に1回だけ。cron に頼らない）。毎日の回復は台帳が足す
       await deps.ledger.grantMonthlyForPlan(who.companyId, who.plan)
+      // ⚠️ 前に失敗して戻した操作の ID がもう一度来たら、新しい操作として減らし直す（戻した操作をタダで動かさない）
+      if (key && (await deps.ledger.operationStatus(operationId)) === 'refunded') operationId = `${operationId}:retry-${newKey()}`
       const r = await deps.ledger.consume(who.companyId, amount, operationId)
       if (r.ok) {
+        // ⚠️ 同じ ID の2回目（duplicated）は、この呼び出しでは減らしていないので、失敗しても戻さない。
+        //    戻すと、前の呼び出しで成功した分まで戻ってしまう（同じ ID を使い回して、タダで作り直せてしまう）
+        if (r.duplicated) return { kind: 'charged', operationId, amount: r.amount, duplicated: true, refund: async () => {} }
         const refund = async () => {
           try {
             await deps.ledger.refund(operationId, { companyId: who.companyId })

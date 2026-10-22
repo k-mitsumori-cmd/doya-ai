@@ -17,6 +17,7 @@ export const grant = doyaPower.grant
 export const grantMonthlyForPlan = doyaPower.grantMonthlyForPlan
 export const balance = doyaPower.balance
 export const balanceForUser = doyaPower.balanceForUser
+export const operationStatus = doyaPower.operationStatus
 
 export * from './rules'
 export { DoyaPowerDisabledError } from './gate'
