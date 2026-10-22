@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { load, check, results } = require('./load-typescript.cjs');
+const { actualMembership, state: hrLifecycleState } = require('./hr-membership-fixture-bridge.cjs');
 const crypto = require('node:crypto'), Prisma = require('@prisma/client').Prisma;
 const lifecycleState = load('src/lib/account-lifecycle/state.ts', { 'node:crypto': crypto });
 const lifecycleStore = load('src/lib/account-lifecycle/store.ts', { 'node:crypto': crypto, '@prisma/client': { Prisma }, './state': lifecycleState });
@@ -38,19 +39,26 @@ function promane({ stage = 'lookup', offset = 0, role = 'member' } = {}) {
 }
 function hr({ offset = 0, delayCreation = false } = {}) {
   const c = clockFixture(); let writes = 0, deliveries = 0, audits = 0, deliveredExpiry;
+  const members = { findMany: async () => [
+    { id: 'owner', userId: 'owner-user', role: 'OWNER', status: 'ACTIVE' },
+    { id: 'actor', userId: 'admin', role: 'ADMIN', status: 'ACTIVE' },
+  ], count: async () => 1, findFirst: async () => null };
   const tx = {
-    $queryRaw: async () => [{ id: 'org' }], hrOrganizationMember: { findFirst: async () => null },
+    $queryRaw: async () => [{ id: 'org' }], hrOrganizationMember: members,
+    user: { findUnique: async () => null },
     hrInvitation: {
       findFirst: async ({ where }) => { const row = expiry > where.expiresAt.gt.getTime() ? { id: 'old', expiresAt: new Date(expiry) } : null; c.set(expiry + offset); return row; },
       create: async ({ data }) => { writes++; return { id: 'new', ...data }; },
     },
     hrOrganization: { findUnique: async () => { if (delayCreation) c.set(expiry + 5000); return { name: 'Team' }; } },
   };
+  const prisma = { ...tx, $transaction: async fn => fn(tx) };
   const api = load('src/app/api/hr/organization/invite/route.ts', {
     'next/server': { NextResponse: Response }, 'next-auth': { getServerSession: async () => ({ user: { id: 'admin' } }) }, '@/lib/auth': { authOptions: {} },
-    '@/lib/prisma': { prisma: { $transaction: async fn => fn(tx) } },
+    '@/lib/prisma': { prisma },
     '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org', memberId: 'actor', userId: 'admin', role: 'ADMIN' }), hasMinRole: () => true },
-    '@/lib/hr/types': { HrMemberRole: { MEMBER: 'MEMBER', ADMIN: 'ADMIN', OWNER: 'OWNER' } }, '@/lib/hr/billing': { checkMemberLimit: async () => null },
+    '@/lib/hr/types': { HrMemberRole: { MEMBER: 'MEMBER', ADMIN: 'ADMIN', OWNER: 'OWNER' } }, '@/lib/hr/billing': { getOrgPlan: async () => 'FREE', getOrgPlanLimits: () => ({ maxMembers: 2 }) },
+    '@/lib/hr/membership-write': actualMembership(prisma), '@/lib/account-lifecycle/state': hrLifecycleState,
     '@/lib/hr/email': { sendInvitationEmail: async args => { deliveries++; deliveredExpiry = args.expiresAt.getTime(); return false; } },
     '@/lib/hr/audit': { logAudit: async () => { audits++; } }, crypto: require('node:crypto'),
   }, { Date: c.Clock });

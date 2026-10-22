@@ -1,0 +1,8 @@
+{
+  "baseCommit": "36dbd63230056cedd762dff9617f3f8955991dc2",
+  "baseTree": "f9bdd5999e01ee5f9c8fa37ef2ba6704942dde24",
+  "path": "src/app/api/hr/organization/transfer-owner/route.ts",
+  "gitBlob": "6a542ecde3420f2427f1d40e1f5de12f3b0cbb4e",
+  "sha256": "8919e1a8210e8a2488ffbf4e8ee497592c5c8960c7aefbd5e5d3e77301f9c924",
+  "dataPath": "scripts/security-regression/fixtures/hr-owner-before36/transfer-owner.route.txt"
+}

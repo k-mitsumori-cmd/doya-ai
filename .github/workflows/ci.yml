@@ -556,6 +556,19 @@ jobs:
       - name: Organization onboarding and HR role boundaries (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-postgres-supervise.py
 
+      - name: HR owner transfer v6 before and current after (private Unix PostgreSQL)
+        env:
+          DOYA_OWNER_HR_H5_EVIDENCE_DIR: ${{ runner.temp }}/hr-owner-cohort
+        run: python3 scripts/security-regression/verify-hr-owner-cohort-postgres.py
+
+      - name: Preserve HR owner cohort private PostgreSQL diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hr-owner-cohort-private-postgres
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/hr-owner-cohort/
+
       - name: Preserve membership-onboarding private PostgreSQL diagnostics
         if: always()
         uses: actions/upload-artifact@v4

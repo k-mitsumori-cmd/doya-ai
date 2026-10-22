@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
+const { actualMembership, state } = require('./hr-membership-fixture-bridge.cjs');
 
 const escapeHtml = load('src/lib/html-escape.ts');
 
@@ -28,6 +29,10 @@ const escapeHtml = load('src/lib/html-escape.ts');
   const invitations = [];
   let previous = Promise.resolve();
   let deliveries = 0;
+  const members = [
+    { id: 'owner', userId: 'owner-user', role: 'OWNER', status: 'ACTIVE' },
+    { id: 'admin-member', userId: 'admin', role: 'ADMIN', status: 'ACTIVE' },
+  ];
   const prisma = {
     $transaction: async (work) => {
       let release;
@@ -35,7 +40,8 @@ const escapeHtml = load('src/lib/html-escape.ts');
       previous = new Promise((resolve) => { release = resolve; });
       const tx = {
         $queryRaw: async () => { await before; return [{ id: 'org' }]; },
-        hrOrganizationMember: { findFirst: async () => null },
+        user: { findUnique: async () => null },
+        hrOrganizationMember: { findMany: async () => members, findFirst: async () => null, count: async () => 1 },
         hrInvitation: {
           findFirst: async ({ where }) => invitations.find((row) => row.email === where.email && row.expiresAt > new Date()) || null,
           create: async ({ data }) => { const row = { ...data, id: `inv-${invitations.length + 1}` }; invitations.push(row); return row; },
@@ -44,15 +50,20 @@ const escapeHtml = load('src/lib/html-escape.ts');
       };
       try { return await work(tx); } finally { release(); }
     },
+    user: { findUnique: async () => null },
+    hrOrganizationMember: { findMany: async () => members },
   };
+  const membership = actualMembership(prisma);
   const { POST } = load('src/app/api/hr/organization/invite/route.ts', {
     'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
     'next-auth': { getServerSession: async () => ({ user: { id: 'admin', name: 'Admin' } }) },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma },
-    '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org', userId: 'admin', role: 'ADMIN' }), hasMinRole: () => true },
+    '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org', memberId: 'admin-member', userId: 'admin', role: 'ADMIN' }), hasMinRole: () => true },
     '@/lib/hr/types': { HrMemberRole: { MEMBER: 'MEMBER', ADMIN: 'ADMIN', OWNER: 'OWNER' } },
-    '@/lib/hr/billing': { checkMemberLimit: async () => null },
+    '@/lib/hr/billing': { getOrgPlan: async () => 'FREE', getOrgPlanLimits: () => ({ maxMembers: 2 }) },
+    '@/lib/hr/membership-write': membership,
+    '@/lib/account-lifecycle/state': state,
     '@/lib/hr/email': { sendInvitationEmail: async () => { deliveries++; return false; } },
     '@/lib/hr/audit': { logAudit: async () => {} },
     crypto: require('node:crypto'),
@@ -62,6 +73,8 @@ const escapeHtml = load('src/lib/html-escape.ts');
   assert.deepEqual(responses.map((response) => response.status).sort(), [200, 400]);
   assert.equal(invitations.length, 1);
   assert.equal(deliveries, 1);
+  assert.equal(members.filter((row) => row.role === 'OWNER').length, 1);
+  assert.equal(members.find((row) => row.userId === 'admin').role, 'ADMIN');
   assert.equal((await responses.find((response) => response.status === 200).json()).emailSent, false);
   console.log('PASS HR invite issuance: concurrent duplicate guard, truthful delivery, escaped HTML, no token logs');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

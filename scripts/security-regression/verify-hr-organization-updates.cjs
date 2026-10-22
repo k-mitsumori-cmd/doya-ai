@@ -1,9 +1,12 @@
 const privateApiResponse = require('./load-typescript.cjs').load('src/lib/private-api-response.ts', { 'next/server': { NextResponse: Response } });
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
+const { actualMembership, state } = require('./hr-membership-fixture-bridge.cjs');
 
 function fixture(routePath, method, role = 'ADMIN', failSave = false) {
   const writes = [];
+  const owner = { id: 'owner', userId: 'user-owner', role: 'OWNER', status: 'ACTIVE' };
+  const actor = { id: 'actor', userId: 'user-admin', role: 'ADMIN', status: 'ACTIVE' };
   const prisma = { hrOrganization: {
     update: async ({ where, data }) => {
       if (failSave) throw Error('PRIVATE_DATABASE_DETAIL');
@@ -11,9 +14,13 @@ function fixture(routePath, method, role = 'ADMIN', failSave = false) {
       writes.push(data);
       return { id: 'org', ...data };
     },
-  } };
+  }, hrOrganizationMember: {
+    findMany: async () => [owner, actor],
+    findFirst: async () => ({ id: actor.id }),
+  }, $queryRaw: async () => [{ id: 'org' }] };
+  prisma.$transaction = async work => work(prisma);
   const access = {
-    getHrContext: async () => role === 'anonymous' ? null : { organizationId: 'org', role },
+    getHrContext: async () => role === 'anonymous' ? null : { organizationId: 'org', role, userId: actor.userId, memberId: actor.id },
     hasMinRole: (actual) => actual === 'ADMIN' || actual === 'OWNER',
   };
   const api = load(routePath, {
@@ -25,6 +32,8 @@ function fixture(routePath, method, role = 'ADMIN', failSave = false) {
     '@/lib/prisma': { prisma },
     '@/lib/hr/access': access,
     '@/lib/hr/types': { HrMemberRole: { ADMIN: 'ADMIN' } },
+    '@/lib/hr/membership-write': actualMembership(prisma),
+    '@/lib/account-lifecycle/state': state,
   });
   return { request: (body) => api[method]({ json: async () => body }), writes };
 }

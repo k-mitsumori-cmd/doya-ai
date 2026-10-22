@@ -9,7 +9,18 @@ const publicClasses = {
   HrEvaluationPeriodOperationAccessError: '@/lib/hr/evaluation-period-operation',
   HrEvaluationOverviewError: '@/lib/hr/evaluation-period-overview',
   HrDetailTransferError: '@/lib/hr/evaluation-detail-transfer-server',
+  LifecycleError: '@/lib/account-lifecycle/state',
+  OwnerTransferError: '@/lib/hr/owner-transfer/types',
 };
+function trustedGuard(node, variable, imported, ast) {
+  if (ts.isParenthesizedExpression(node)) return trustedGuard(node.expression, variable, imported, ast);
+  if (!ts.isBinaryExpression(node)) return false;
+  if (node.operatorToken.kind === ts.SyntaxKind.BarBarToken) {
+    return trustedGuard(node.left, variable, imported, ast) && trustedGuard(node.right, variable, imported, ast);
+  }
+  return node.operatorToken.kind === ts.SyntaxKind.InstanceOfKeyword &&
+    node.left.getText(ast) === variable && imported.has(node.right.getText(ast));
+}
 function assertPrivateErrorResponses(source, filename = 'route.ts') {
   const ast = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true);
   const imported = new Map();
@@ -41,8 +52,7 @@ function assertPrivateErrorResponses(source, filename = 'route.ts') {
         let guard = null;
         for (let parent = node.parent; parent; parent = parent.parent) {
           if (ts.isIfStatement(parent) && node.pos >= parent.thenStatement.pos && node.end <= parent.thenStatement.end &&
-              ts.isBinaryExpression(parent.expression) && parent.expression.operatorToken.kind === ts.SyntaxKind.InstanceOfKeyword &&
-              parent.expression.left.getText(ast) === variable && imported.has(parent.expression.right.getText(ast))) { guard = parent; break; }
+              trustedGuard(parent.expression, variable, imported, ast)) { guard = parent; break; }
         }
         assert(guard, filename + ' exposes an untrusted exception message');
         const call = node.parent.parent;

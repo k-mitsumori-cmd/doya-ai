@@ -1541,3 +1541,26 @@ for (const script of ['verify-aio-billing-button-mounted.cjs', 'verify-aio-billi
   const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
 }
+
+// HR owner transfer source cohort: current-source light fixtures and both stale manual-read modes.
+const hrOwnerEnv = { ...process.env, NODE_ENV: 'test' };
+for (const key of ['DOYA_TEST_BASELINE', 'DOYA_TEST_ROOT', 'DOYA_HR_SETTINGS_SOURCE', 'DOYA_HR_STALE_BODY']) delete hrOwnerEnv[key];
+for (const verifier of [
+  'verify-candidates-light.cjs', 'verify-hr-creator-retry-light.cjs', 'verify-hr-invite-discovery-light.cjs',
+  'verify-hr-member-writers-light.cjs', 'verify-hr-owner-panel-mounted.cjs', 'verify-route-light.cjs',
+  'verify-settings-actual-department-recovery.cjs', 'verify-settings-actual-owner-mounted.cjs',
+  'verify-settings-authority-mounted.cjs', 'verify-settings-definitive-rejection-mounted.cjs',
+  'verify-settings-old-get-rejection-mounted.cjs', 'verify-settings-pending-retire-mounted.cjs',
+  'verify-settings-unknown-read-mounted.cjs', 'verify-settings-unknown-write-mounted.cjs',
+  'verify-invite-quota-fresh-authority.cjs',
+]) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, 'hr-owner', verifier)],
+    { stdio: 'inherit', timeout: 60000, env: hrOwnerEnv });
+  if (result.error || result.status !== 0) { console.error('Security regression failed: HR owner', verifier); process.exit(1); }
+}
+for (const mode of ['rejection', 'invalid']) {
+  const result = spawnSync(process.execPath,
+    [path.join(__dirname, 'hr-owner', 'verify-settings-manual-stale.cjs')],
+    { stdio: 'inherit', timeout: 60000, env: { ...hrOwnerEnv, DOYA_HR_STALE_BODY: mode } });
+  if (result.error || result.status !== 0) { console.error('Security regression failed: HR manual stale', mode); process.exit(1); }
+}

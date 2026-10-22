@@ -2,7 +2,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { privateApiJson } from '@/lib/private-api-response'
 import { getServerSession } from 'next-auth'
 import { Prisma } from '@prisma/client'
@@ -11,28 +11,30 @@ import { prisma } from '@/lib/prisma'
 import { getHrContext, getOrCreateOrganization, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { readHrOrganizationChoicesPage, HrOrganizationChoicesError } from '@/lib/hr/organization-choices'
+import { withHrMembershipWrite, HrMembershipChanged } from '@/lib/hr/membership-write'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await req.json().catch(() => null)
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '入力内容が正しくありません' }, { status: 400 })
     }
     const { name, slug, industry, size } = body
     if (typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json({ error: 'name is required' }, { status: 400 })
+      return privateApiJson({ error: 'name is required' }, { status: 400 })
     }
     if (slug != null && (typeof slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))) {
-      return NextResponse.json({ error: 'slugの形式が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: 'slugの形式が正しくありません' }, { status: 400 })
     }
     if ((industry != null && typeof industry !== 'string') || (size != null && typeof size !== 'string')) {
-      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '入力内容が正しくありません' }, { status: 400 })
     }
 
     const org = await getOrCreateOrganization(userId, name.trim().slice(0, 120), {
@@ -41,11 +43,12 @@ export async function POST(req: NextRequest) {
       size: size?.trim().slice(0, 50) || undefined,
     })
 
-    return NextResponse.json({ success: true, organization: org })
+    return privateApiJson({ success: true, organization: org })
   } catch (e) {
-    if (e instanceof Error && 'code' in e && e.code === 'INVALID_MEMBERSHIP_ROLE') return NextResponse.json({ error: '組織の権限を確認できません。管理者に確認してください。', code: 'INVALID_MEMBERSHIP_ROLE' }, { status: 403 })
+    if (e instanceof LifecycleError) return privateApiJson({ error: e.message, code: e.code }, { status: e.status })
+    if (e instanceof Error && 'code' in e && e.code === 'INVALID_MEMBERSHIP_ROLE') return privateApiJson({ error: '組織の権限を確認できません。管理者に確認してください。', code: 'INVALID_MEMBERSHIP_ROLE' }, { status: 403 })
     console.error('[hr/organization] Error:')
-    return NextResponse.json({ error: '組織の作成に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '組織の作成に失敗しました' }, { status: 500 })
   }
 }
 
@@ -99,16 +102,16 @@ export async function PATCH(req: NextRequest) {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return privateApiJson({ error: 'Unauthorized' }, { status: 401 })
     }
 
     if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return privateApiJson({ error: 'Forbidden' }, { status: 403 })
     }
 
     const body = await req.json().catch(() => null)
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '入力内容が正しくありません' }, { status: 400 })
     }
     const {
       name,
@@ -124,26 +127,26 @@ export async function PATCH(req: NextRequest) {
     } = body
 
     if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
-      return NextResponse.json({ error: '組織名を入力してください' }, { status: 400 })
+      return privateApiJson({ error: '組織名を入力してください' }, { status: 400 })
     }
     const nullableStrings = { logoUrl, industry, size, address, website }
     if (Object.values(nullableStrings).some((value) => value != null && typeof value !== 'string')) {
-      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '入力内容が正しくありません' }, { status: 400 })
     }
     if (fiscalMonth !== undefined && (!Number.isInteger(fiscalMonth) || fiscalMonth < 1 || fiscalMonth > 12)) {
-      return NextResponse.json({ error: '期首月は1〜12月で指定してください' }, { status: 400 })
+      return privateApiJson({ error: '期首月は1〜12月で指定してください' }, { status: 400 })
     }
     if (evaluationType !== undefined && (typeof evaluationType !== 'string' || !evaluationType.trim() || evaluationType.length > 32)) {
-      return NextResponse.json({ error: '評価方式の形式が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '評価方式の形式が正しくありません' }, { status: 400 })
     }
     if (evaluationCycle !== undefined && !['MONTHLY', 'QUARTERLY', 'SEMI', 'ANNUAL'].includes(evaluationCycle)) {
-      return NextResponse.json({ error: '評価期間の形式が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '評価期間の形式が正しくありません' }, { status: 400 })
     }
     if (customFields !== undefined && customFields !== null && (typeof customFields !== 'object' || JSON.stringify(customFields).length > 20000)) {
-      return NextResponse.json({ error: '追加項目の形式が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '追加項目の形式が正しくありません' }, { status: 400 })
     }
     if (website && !/^https?:\/\//i.test(website.trim())) {
-      return NextResponse.json({ error: 'WebサイトのURLを確認してください' }, { status: 400 })
+      return privateApiJson({ error: 'WebサイトのURLを確認してください' }, { status: 400 })
     }
     const data: Record<string, any> = {}
     if (name !== undefined) data.name = name.trim().slice(0, 120)
@@ -157,17 +160,23 @@ export async function PATCH(req: NextRequest) {
     if (evaluationCycle !== undefined) data.evaluationCycle = evaluationCycle
     if (customFields !== undefined) data.customFields = customFields === null ? Prisma.DbNull : customFields
     if (Object.keys(data).length === 0) {
-      return NextResponse.json({ error: '変更内容を指定してください' }, { status: 400 })
+      return privateApiJson({ error: '変更内容を指定してください' }, { status: 400 })
     }
 
-    const org = await prisma.hrOrganization.update({
-      where: { id: ctx.organizationId },
-      data,
-    })
+    const org = await withHrMembershipWrite({ organizationId: ctx.organizationId, actorUserId: ctx.userId,
+      requestedMemberIds: [ctx.memberId], run: async (tx) => {
+        const actor = await tx.hrOrganizationMember.findFirst({ where: { id: ctx.memberId,
+          organizationId: ctx.organizationId, userId: ctx.userId, status: 'ACTIVE',
+          role: { in: [HrMemberRole.OWNER, HrMemberRole.ADMIN] } }, select: { id: true } })
+        if (!actor) throw new HrMembershipChanged()
+        return tx.hrOrganization.update({ where: { id: ctx.organizationId }, data })
+      } })
 
-    return NextResponse.json({ success: true, organization: org })
+    return privateApiJson({ success: true, organization: org })
   } catch (e) {
+    if (e instanceof LifecycleError) return privateApiJson({ error: e.message, code: e.code }, { status: e.status })
+    if (e instanceof HrMembershipChanged) return privateApiJson({ error: '組織の状態が変わりました。再読み込みしてください' }, { status: 409 })
     console.error('[hr/organization PATCH]')
-    return NextResponse.json({ error: '組織情報の更新に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '組織情報の更新に失敗しました' }, { status: 500 })
   }
 }

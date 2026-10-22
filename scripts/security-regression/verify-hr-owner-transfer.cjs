@@ -1,118 +1,115 @@
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
-
-const roles = { OWNER: 'OWNER', ADMIN: 'ADMIN', MANAGER: 'MANAGER', MEMBER: 'MEMBER' }
-const common = {
-  'next/server': { NextResponse: Response },
-  '@/lib/hr/types': { HrMemberRole: roles },
-  '@/lib/hr/constants': { ROLE_HIERARCHY: { OWNER: 4, ADMIN: 3, MANAGER: 2, MEMBER: 1 } },
+const { state } = require('./hr-membership-fixture-bridge.cjs')
+const { createHash } = require('node:crypto')
+const Prisma = {
+  raw: value => value,
+  sql(strings, ...values) { return { text: strings.join('?'), values } },
 }
-
-function memberRoute({ targetRole = 'MEMBER', changedBeforeWrite = false } = {}) {
-  let writes = 0
-  const tx = {
-    $queryRaw: async sql => sql.join('?').includes('hr_organizations') ? [{ id: 'org' }] : [{ id: 'actor' }, { id: 'target' }],
-    hrOrganizationMember: {
-      findFirst: async ({ where }) => where.id === 'actor'
-        ? { id: 'actor', userId: 'user-actor', role: 'OWNER', status: 'ACTIVE' }
-        : { id: 'target', userId: 'user-target', role: targetRole, status: 'ACTIVE' },
-      findUnique: async () => ({ id: 'target' }),
-      updateMany: async ({ where }) => {
-        assert.equal(where.role, targetRole)
-        writes++
-        return { count: changedBeforeWrite ? 0 : 1 }
-      },
-      deleteMany: async ({ where }) => {
-        assert.equal(where.role, targetRole)
-        writes++
-        return { count: changedBeforeWrite ? 0 : 1 }
-      },
-    },
+const types = load('src/lib/hr/owner-transfer/types.ts', { 'node:crypto': { createHash }, '@/lib/account-lifecycle/state': state })
+const receipt = load('src/lib/hr/owner-transfer/receipt.ts', { './types': types, '@/lib/account-lifecycle/state': state })
+const selection = load('src/lib/hr/organization-selection.ts')
+const operation = '123e4567-e89b-42d3-a456-426614174000'
+const secondOperation = '123e4567-e89b-42d3-a456-426614174001'
+const input = { expectedOwnerMemberId: 'actor', targetMemberId: 'target', targetUserId: 'user-target', targetRole: 'ADMIN', targetPlan: 'PRO' }
+const headers = new Headers({ 'X-HR-Selected-Actor': 'user-actor', 'X-HR-Selected-Organization': 'org', 'X-HR-Organization-Id': 'org' })
+const request = (body, h = headers) => ({ url: 'https://example.invalid/api/hr/organization/transfer-owner', headers: h, text: async () => JSON.stringify(body) })
+function scenario({ duplicateOwner = false } = {}) {
+  const rows = [
+    { id: 'actor', userId: 'user-actor', role: 'OWNER', status: 'ACTIVE', name: null },
+    { id: 'target', userId: 'user-target', role: 'ADMIN', status: 'ACTIVE', name: null },
+    ...(duplicateOwner ? [{ id: 'other-owner', userId: 'third', role: 'OWNER', status: 'ACTIVE', name: null }] : []),
+  ]
+  const settings = new Map()
+  let writes = 0, userLocks = 0, fenceChecks = 0
+  const userLockTrace = []
+  const query = async sql => {
+    const text = sql.text || sql.join('?')
+    const values = sql.values || []
+    if (text.includes('pg_advisory_xact_lock')) return [{ locked: 1 }]
+    if (text.includes('SELECT id, slug, name')) return [{ id: 'org', slug: 'long-slug', name: 'Org' }]
+    if (text.includes('NULL::text AS name')) return rows.map(row => ({ ...row }))
+    if (text.includes('hr_organizations') || values.includes('hr_organizations')) return [{ id: 'org' }]
+    if (text.includes('hr_organization_members') || values.includes('hr_organization_members')) return rows.map(row => ({ id: row.id }))
+    throw Error('Unknown SQL ' + text)
   }
-  const prisma = { $transaction: async fn => fn(tx) }
-  const route = load('src/app/api/hr/organization/members/[id]/route.ts', {
-    ...common,
-    '@/lib/prisma': { prisma },
-    '@/lib/hr/access': {
-      getHrContext: async () => ({ organizationId: 'org', memberId: 'actor', userId: 'user-actor', role: 'OWNER' }),
-      hasMinRole: () => true,
+  const db = {
+    $queryRaw: query,
+    $transaction: async (work, options) => {
+      assert.ok(['ReadCommitted', 'Serializable'].includes(options.isolationLevel))
+      const beforeRows = structuredClone(rows), beforeSettings = new Map(settings), beforeWrites = writes
+      try { return await work(db) }
+      catch (error) { rows.splice(0, rows.length, ...beforeRows); settings.clear(); for (const [key, value] of beforeSettings) settings.set(key, value); writes = beforeWrites; throw error }
     },
+    $executeRaw: async sql => {
+      const text = sql.text || sql.join('?')
+      const row = rows.find(item => item.id === (text.includes("role = 'ADMIN'") ? 'actor' : 'target'))
+      if (text.includes("role = 'ADMIN'")) { if (row.role !== 'OWNER') return 0; row.role = 'ADMIN' }
+      else if (text.includes("role = 'OWNER'")) { if (row.role !== 'ADMIN') return 0; row.role = 'OWNER' }
+      else throw Error('Unknown write SQL ' + text)
+      writes++
+      return 1
+    },
+    systemSetting: { findUnique: async ({ where }) => settings.has(where.key) ? { value: settings.get(where.key) } : null,
+      create: async ({ data }) => { assert.equal(settings.has(data.key), false); settings.set(data.key, data.value); return data } },
+    user: { findUnique: async ({ where }) => where.id === 'user-target' ? { id: 'user-target', plan: 'PRO' } : { id: 'user-actor' },
+      findMany: async () => [{ id: 'user-actor' }, { id: 'user-target' }] },
+  }
+  const store = load('src/lib/hr/owner-transfer/store.ts', {
+    '@prisma/client': { Prisma }, '@/lib/prisma': { prisma: db },
+    '@/lib/account-lifecycle/store': {
+      lockLifecycleUsers: async (_tx, ids) => {
+        userLocks++
+        const actual = [...ids]
+        assert.deepEqual(actual, [...actual].sort())
+        assert.ok([
+          'user-actor',
+          'user-actor,user-target',
+          'third,user-actor,user-target',
+        ].includes(actual.join(',')))
+        userLockTrace.push(actual)
+      },
+      assertRetirementMembershipWritable: async () => { fenceChecks++ },
+    },
+    './types': types, './receipt': receipt,
   })
-  const ctx = { params: Promise.resolve({ id: 'target' }) }
-  return { writes, patch: body => route.PATCH({ json: async () => body }, ctx), remove: () => route.DELETE({}, ctx), count: () => writes }
-}
-
-function transferRoute({ duplicateOwner = false } = {}) {
-  const members = {
-    actor: { id: 'actor', userId: 'user-actor', role: 'OWNER', status: 'ACTIVE' },
-    target: { id: 'target', userId: 'user-target', role: 'ADMIN', status: 'ACTIVE', user: { name: 'Target' } },
-  }
-  let locks = 0
-  let writes = 0
-  const tx = {
-    $queryRaw: async () => { locks++; return [{ id: 'org' }] },
-    hrOrganizationMember: {
-      findMany: async () => duplicateOwner
-        ? [{ id: 'actor' }, { id: 'other-owner' }]
-        : Object.values(members).filter(m => m.role === 'OWNER' && m.status === 'ACTIVE').map(m => ({ id: m.id })),
-      findFirst: async ({ where }) => {
-        const member = members[where.id]
-        return member?.status === 'ACTIVE' && member.role !== 'OWNER' ? member : null
-      },
-      updateMany: async ({ where, data }) => {
-        const member = members[where.id]
-        if (!member || member.status !== where.status ||
-          (typeof where.role === 'string' && member.role !== where.role) ||
-          (where.role?.not && member.role === where.role.not)) return { count: 0 }
-        writes++
-        member.role = data.role
-        return { count: 1 }
-      },
-    },
-  }
-  const prisma = { $transaction: async fn => {
-    const previous = structuredClone(members)
-    try { return await fn(tx) } catch (error) { Object.assign(members, previous); throw error }
-  } }
   const route = load('src/app/api/hr/organization/transfer-owner/route.ts', {
-    ...common,
-    '@/lib/prisma': { prisma },
-    '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org', memberId: 'actor', userId: 'user-actor', role: 'OWNER' }) },
-    '@/lib/hr/audit': { logAudit: async () => {} },
+    'next-auth': { getServerSession: async () => ({ user: { id: 'user-actor' } }) },
+    '@/lib/auth': { authOptions: {} }, '@/lib/account-lifecycle/state': state,
+    '@/lib/hr/organization-selection': selection, '@/lib/hr/owner-transfer/store': store,
+    '@/lib/hr/owner-transfer/types': types,
   })
-  return {
-    members, count: () => writes, locks: () => locks,
-    request: () => route.POST({ json: async () => ({ targetMemberId: 'target' }) }),
-  }
+  const transfer = (id = operation) => route.POST(request({ action: 'transfer', expectedActor: 'user-actor', orgId: 'org', operationId: id, input }))
+  const status = id => route.GET({ ...request(null), url: request(null).url + `?action=status&expectedActor=user-actor&orgId=org&operationId=${id}` })
+  return { rows, transfer, status, count: () => writes, locks: () => userLocks, lockTrace: () => userLockTrace, fences: () => fenceChecks, receipts: () => settings.size }
 }
-
 ;(async () => {
-  await check('generic member editing cannot grant or mutate OWNER', async () => {
-    const ordinary = memberRoute()
-    assert.equal((await ordinary.patch({ role: 'OWNER' })).status, 400)
-    const owner = memberRoute({ targetRole: 'OWNER' })
-    assert.equal((await owner.patch({ status: 'SUSPENDED' })).status, 403)
-    assert.equal((await owner.remove()).status, 403)
-    assert.equal(ordinary.count() + owner.count(), 0)
-  })
-  await check('member update and deletion cannot affect a newly promoted owner', async () => {
-    const race = memberRoute({ changedBeforeWrite: true })
-    assert.equal((await race.patch({ status: 'SUSPENDED' })).status, 409)
-    assert.equal((await race.remove()).status, 409)
-  })
-  await check('transfer changes exactly one owner and rejects a stale second request', async () => {
-    const transfer = transferRoute()
-    assert.equal((await transfer.request()).status, 200)
-    assert.equal(transfer.members.actor.role, 'ADMIN')
-    assert.equal(transfer.members.target.role, 'OWNER')
-    assert.equal((await transfer.request()).status, 409)
+  await check('transfer changes exactly one owner; same-ID replay is durable and new-ID stale owner is rejected', async () => {
+    const transfer = scenario()
+    assert.equal((await transfer.transfer()).status, 200)
+    assert.equal(transfer.rows.find(row => row.id === 'actor').role, 'ADMIN')
+    assert.equal(transfer.rows.find(row => row.id === 'target').role, 'OWNER')
     assert.equal(transfer.count(), 2)
-    assert.equal(transfer.locks(), 2)
+    assert.equal(transfer.receipts(), 1)
+    assert.equal((await transfer.transfer()).status, 200)
+    assert.equal((await transfer.status(operation)).status, 200)
+    assert.equal(transfer.count(), 2)
+    assert.equal((await transfer.transfer(secondOperation)).status, 409)
+    assert.equal(transfer.count(), 2)
+    assert.equal(transfer.receipts(), 1)
+    assert.ok(transfer.locks() >= 3)
+    assert.deepEqual(transfer.lockTrace(), [
+      ['user-actor'], ['user-actor', 'user-target'],
+      ['user-actor'], ['user-actor'],
+      ['user-actor', 'user-target'],
+    ])
+    assert.ok(transfer.fences() >= 1)
   })
   await check('transfer refuses an organization with multiple active owners', async () => {
-    const transfer = transferRoute({ duplicateOwner: true })
-    assert.equal((await transfer.request()).status, 409)
+    const transfer = scenario({ duplicateOwner: true })
+    assert.equal((await transfer.transfer()).status, 409)
     assert.equal(transfer.count(), 0)
+    assert.equal(transfer.receipts(), 0)
   })
-  console.log(JSON.stringify({ passed: results.length, results }))
+  console.log(JSON.stringify({ passed: results.length, results, scope: 'actual HR route/types/receipt/store; synthetic Prisma rows and lifecycle lock/fence leaves' }))
 })().catch(error => { console.error(error); process.exitCode = 1 })
