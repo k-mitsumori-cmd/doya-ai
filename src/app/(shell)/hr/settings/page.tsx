@@ -333,27 +333,32 @@ function HrSettingsForActor({ actor, authProof, active }: { actor: string; authP
   }
 
   useEffect(() => {
-    if (!linkingMemberId) return
+    if (!linkingMemberId || !active || !settings.id) return
     const controller = new AbortController()
+    const captured = lifetime.current
+    const currentSearch = () => active && authProofRef.current === authProof &&
+      lifetime.current === captured && !captured.controller?.signal.aborted &&
+      organizationScope.isCurrent() && !controller.signal.aborted
     setSearchingEmployees(true)
     const timer = window.setTimeout(async () => {
       try {
         const params = new URLSearchParams({ search: employeeSearch.trim(), pageSize: '20' })
         const res = await fetch(`/api/hr/employees?${params}`, { signal: controller.signal })
+        if (!currentSearch()) return
         if (!res.ok) throw new Error('従業員候補を取得できませんでした')
         const data = await res.json()
-        setEmployeeOptions(data.items ?? [])
+        if (currentSearch()) setEmployeeOptions(data.items ?? [])
       } catch (error) {
-        if (!controller.signal.aborted) {
+        if (currentSearch()) {
           setEmployeeOptions([])
           toast.error(error instanceof Error ? error.message : '従業員候補を取得できませんでした')
         }
       } finally {
-        if (!controller.signal.aborted) setSearchingEmployees(false)
+        if (currentSearch()) setSearchingEmployees(false)
       }
     }, 250)
     return () => { window.clearTimeout(timer); controller.abort() }
-  }, [linkingMemberId, employeeSearch])
+  }, [linkingMemberId, employeeSearch, authProof, active, settings.id])
 
   const changeEmployeeLink = async (member: OrgMember, employeeId: string | null) => {
     if (!actionCurrent() || !roleVerified || uncertainWriteKinds.current.has('member')) return

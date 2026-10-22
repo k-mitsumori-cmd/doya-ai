@@ -231,5 +231,13 @@ export function useOwnerTransfer(args: {
     } catch { if (current(ticket)) publish({ message: '現在のオーナー権限を確認できません。操作履歴は保持しました。' }) }
   }, [owner, handlerEpoch, current, lock, publish, organizationSlug, organizationId, endpoint, service, actorId])
 
-  return { state: stateScopeRef.current === scope ? state : empty(), refreshCandidates, moreCandidates, start, status: () => status(), cancelMissing, newAfterTerminal }
+  // UI read handlers belong to the render that exposed them. Internal restore
+  // deliberately obtains a new ticket after pageshow; a retained old handler must not.
+  const exposedRead = (work: () => Promise<void>) => () => {
+    if (handlerEpoch !== epoch.current || !current(handlerEpoch)) return
+    void work()
+  }
+  return { state: stateScopeRef.current === scope ? state : empty(),
+    refreshCandidates: exposedRead(refreshCandidates), moreCandidates: exposedRead(moreCandidates),
+    start, status: exposedRead(() => status()), cancelMissing, newAfterTerminal }
 }

@@ -1570,3 +1570,10 @@ for (const script of ['verify-popup-publish-contract.cjs', 'verify-popup-publish
   const result = spawnSync(process.execPath, [path.join(__dirname, script)], { stdio: 'inherit', timeout: 60000 });
   if (result.error || result.status !== 0) { console.error('Security regression failed:', script); process.exit(1); }
 }
+
+// HR owner read-callback and employee-search proof lifetimes: retain original default cases and run distinct late outcomes.
+for (const mode of ['old-reject', 'old-body', 'actor-change', 'child-unmount']) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, 'hr-owner', 'verify-settings-actual-owner-mounted.cjs')],
+    { stdio: 'inherit', timeout: 60000, env: { ...hrOwnerEnv, DOYA_HR_SEARCH_VARIANT: mode } });
+  if (result.error || result.status !== 0) { console.error('Security regression failed: HR employee search lifetime', mode); process.exit(1); }
+}

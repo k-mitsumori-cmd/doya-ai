@@ -23,10 +23,13 @@ Object.defineProperty(window.crypto, 'randomUUID', { value: crypto.randomUUID, c
 window.navigator.locks = { request: async (_name, _options, callback) => callback() }
 let auth = { status: 'authenticated', data: { user: { id: 'actor' } } }
 const listeners = new Set()
-function setAuth(status) { auth = { status, data: { user: { id: 'actor' } } }; for (const listener of listeners) listener() }
-const payload = role => ({ settings: { id: 'org', name: 'Org', industry: '', employeeScale: '', fiscalYearStart: '04' }, members: [], myRole: role, myMemberId: 'owner' })
-function deferred() { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }
-const pending = new Map(), requests = []
+function setAuth(status, actorId = 'actor') { auth = { status, data: { user: { id: actorId } } }; for (const listener of listeners) listener() }
+const payload = role => ({ settings: { id: 'org', name: 'Org', industry: '', employeeScale: '', fiscalYearStart: '04' }, members: [{ id: 'peer', name: 'Peer', email: 'peer@example.invalid', role: 'MEMBER', joinedAt: '2026-10-23T00:00:00Z', employeeId: null }], myRole: role, myMemberId: 'owner' })
+function deferred() { let resolve, reject; const promise = new Promise((r, j) => { resolve = r; reject = j }); return { promise, resolve, reject } }
+const pending = new Map(), employeePending = new Map(), requests = []
+const variant = process.env.DOYA_HR_SEARCH_VARIANT || 'old-success'
+const employeeBody = deferred(), toastErrors = []
+let employeeReads = 0
 const ownerServer = { phase: 'missing', input: null }
 let settingsReads = 0
 async function syntheticFetch(url, init = {}) {
@@ -36,6 +39,7 @@ async function syntheticFetch(url, init = {}) {
     if (pending.has(settingsReads)) return pending.get(settingsReads).promise
     return Response.json(payload('OWNER'))
   }
+  if (String(url).startsWith('/api/hr/employees?')) { employeeReads++; if (employeeReads === 1 && variant === 'old-body') return { status: 200, json: () => employeeBody.promise }; if (employeePending.has(employeeReads)) return employeePending.get(employeeReads).promise; return Response.json({ items: [] }) }
   if (url === '/api/hr/organization/invite') return Response.json({ success: true, emailSent: false, inviteUrl: 'https://example.invalid/hr/invite/token' })
   if (url === '/api/hr/audit-logs?pageSize=10') return Response.json({ items: [] })
   if (String(url).startsWith('/api/hr/organization/transfer-owner')) {
@@ -87,7 +91,7 @@ const mocks = {
   '@/lib/hr/department-settings-client': { parseSettingsDepartmentList: () => [], confirmSettingsDepartmentDeletion: () => {}, readDepartmentSettingsResponse: async (url, init) => { const res = await syntheticFetch(url, init); return { status: res.status, data: await res.json() } } },
   'next/link': { __esModule: true, default: ({ children, ...props }) => React.createElement('a', props, children) },
   'next-auth/react': { useSession }, '@/lib/hr/use-department-creation': { useHrDepartmentCreation: creation },
-  'framer-motion': { motion }, 'react-hot-toast': { __esModule: true, default: Object.assign(() => {}, { success: () => {}, error: () => {} }) },
+  'framer-motion': { motion }, 'react-hot-toast': { __esModule: true, default: Object.assign(() => {}, { success: () => {}, error: message => { toastErrors.push(String(message)) } }) },
 }
 const moduleExports = {}
 const code = ts.transpileModule(fs.readFileSync(source, 'utf8'), { fileName: source, compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText
@@ -95,7 +99,7 @@ vm.runInNewContext(code, { exports: moduleExports, require: name => { assert.ok(
   window, document, navigator: window.navigator, setTimeout, clearTimeout, AbortController, Response, URL, URLSearchParams, Error, console }, { filename: source })
 const tick = () => new Promise(resolve => setImmediate(resolve))
 const act = async task => React.act(async () => { await task(); await tick(); await tick() })
-const host = document.createElement('div'); document.body.append(host); const root = createRoot(host)
+const host = document.createElement('div'); document.body.append(host); let root = createRoot(host)
 const button = text => [...host.querySelectorAll('button')].find(element => element.textContent.trim() === text || element.textContent.trim().endsWith(text))
 const handler = element => element[Object.keys(element).find(key => key.startsWith('__reactProps$'))].onClick
 function setInput(input, value) { Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, value); input.dispatchEvent(new window.Event('input', { bubbles: true })) }
@@ -137,5 +141,45 @@ function setInput(input, value) { Object.getOwnPropertyDescriptor(window.HTMLInp
   assert.equal(requests.filter(row => row.url === '/api/hr/organization/invite').length, writesBeforeOldCallback)
   await act(() => button('招待').click())
   assert.equal(requests.filter(row => row.url === '/api/hr/organization/invite').length, writesBeforeOldCallback + 1)
-  console.log(JSON.stringify({ passed: 3, settingsReads, oldGetCannotReinstateOwner: true, sameActorDraftElementRetained: true, maskedUntilFreshAuthority: true, retiredInviteWrite0AndFreshInviteWrite1: true }))
+  if (variant !== 'old-body') employeePending.set(1, deferred())
+  await act(() => button('従業員連携').click())
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) })
+  assert.equal(employeeReads, 1, 'initial employee search')
+  const picker = host.querySelector('[role="dialog"][aria-label="従業員情報の紐付け"]')
+  assert.ok(picker)
+  await act(() => setAuth('loading'))
+  assert.strictEqual(host.querySelector('[role="dialog"][aria-label="従業員情報の紐付け"]'), picker)
+  employeePending.set(2, deferred())
+  await act(() => setAuth('authenticated'))
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) })
+  assert.equal(employeeReads, 2, 'fresh proof must issue a new employee search')
+  await act(() => employeePending.get(2).resolve(Response.json({ items: [{ id: 'fresh', lastName: 'Fresh', firstName: 'Employee', email: 'fresh@example.invalid' }] })))
+  assert.match(picker.textContent, /Fresh Employee/)
+  const errorsBeforeOld = toastErrors.length
+  if (variant === 'old-body') await act(() => employeeBody.resolve({ items: [{ id: 'old', lastName: 'Old', firstName: 'Employee', email: 'old@example.invalid' }] }))
+  else if (variant === 'old-reject') await act(() => employeePending.get(1).reject(Error('old network failure')))
+  else await act(() => employeePending.get(1).resolve(Response.json({ items: [{ id: 'old', lastName: 'Old', firstName: 'Employee', email: 'old@example.invalid' }] })))
+  assert.match(picker.textContent, /Fresh Employee/)
+  assert.doesNotMatch(picker.textContent, /Old Employee/)
+  assert.equal(toastErrors.length, errorsBeforeOld, 'retired search must not toast')
+  if (variant === 'actor-change' || variant === 'child-unmount') {
+    employeePending.set(3, deferred())
+    await act(() => setInput(picker.querySelector('input[placeholder="氏名・メール・社員番号で検索"]'), 'pending-scope-change'))
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) })
+    assert.equal(employeeReads, 3)
+    const errorsBeforeRetire = toastErrors.length
+    if (variant === 'actor-change') await act(() => setAuth('authenticated', 'other-actor'))
+    else await act(() => root.unmount())
+    await act(() => employeePending.get(3).reject(Error('retired employee search')))
+    assert.equal(toastErrors.length, errorsBeforeRetire)
+    assert.doesNotMatch(host.textContent, /retired employee search/)
+    if (variant === 'child-unmount') { root = createRoot(host); await act(() => root.render(React.createElement(moduleExports.default))) }
+    employeePending.set(4, deferred())
+    await act(() => button('従業員連携').click())
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)) })
+    assert.equal(employeeReads, 4)
+    await act(() => employeePending.get(4).resolve(Response.json({ items: [{ id: 'current', lastName: 'Current', firstName: 'Employee', email: 'current@example.invalid' }] })))
+    assert.match(host.textContent, /Current Employee/)
+  }
+  console.log(JSON.stringify({ passed: variant === 'actor-change' || variant === 'child-unmount' ? 5 : 4, variant, settingsReads, employeeReads, oldGetCannotReinstateOwner: true, sameActorDraftElementRetained: true, maskedUntilFreshAuthority: true, retiredInviteWrite0AndFreshInviteWrite1: true, freshSearchPreserved: true, retiredToast0: true }))
 })().catch(error => { console.error(error); process.exitCode = 1 }).finally(async () => { await act(() => root.unmount()); host.remove(); dom.window.close() })
