@@ -1,6 +1,7 @@
 'use client'
 
 import { useUiNext } from '@/components/shell/ui-next-context'
+import { Bars } from '@/components/ds/charts'
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -552,7 +553,13 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
               業種別ランキング
             </h2>
             
-            {topCategories.length > 0 ? (
+            {topCategories.length > 0 && uiNext ? (
+              // 新しい見た目: 共通の Bars（順位と業種名・件数を文字で出す）
+              <Bars
+                data={topCategories.map(([cat, count], i) => ({ label: `${i + 1}位 ${categoryLabels[cat] || cat}`, value: count }))}
+                format={(n) => `${n.toLocaleString('ja-JP')}件`}
+              />
+            ) : topCategories.length > 0 ? (
               <div className="space-y-3">
                 {topCategories.map(([cat, count], i) => {
                   const maxCount = Math.max(...topCategories.map(([_, c]) => c), 1)

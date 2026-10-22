@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { Ring } from '@/components/ds/charts'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { readArticleInput, ArticleInputError } from '@/lib/interview/article-input-client'
@@ -252,6 +254,22 @@ function ScoreGauge({ score, size = 160, strokeWidth = 14 }: { score: number; si
   const offset = circumference * (1 - score / 100)
   const color = score >= 80 ? '#22c55e' : score >= 60 ? '#eab308' : '#ef4444'
   const label = score >= 80 ? '素晴らしい！' : score >= 60 ? '良い仕上がり' : '改善の余地あり'
+  const uiNext = useUiNext()
+
+  if (uiNext) {
+    // 新しい見た目: 共通の Ring（大きさは旧ゲージと同じ）。評価は色だけでなく文字でも出す
+    return (
+      <div className="relative flex flex-col items-center">
+        <Ring value={Math.max(0, Math.min(100, score)) / 100} size={size} label={`採点 ${score}点（100点満点）${label}`}>
+          <div className="flex flex-col items-center leading-none">
+            <span className="text-5xl font-black text-slate-900 tabular-nums">{score}</span>
+            <span className="text-sm text-slate-500 font-medium mt-1">点</span>
+          </div>
+        </Ring>
+        <p className="text-sm font-bold mt-3 text-slate-700">{label}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="relative flex flex-col items-center">
