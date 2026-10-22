@@ -14,7 +14,15 @@ function fixture({ role = 'admin', revokeOnConflict = false, duplicate = false, 
       const before = writes
       let row = { id: 'w', name: '旧名', slug: 'old', userId: 'u', updatedAt: new Date('2026-09-30T00:00:00.000Z') }
       const result = await fn({
-        $queryRaw: async strings => strings.join('').includes('promane_members') ? (['owner','admin'].includes(currentRole) ? [{ id: 'actor' }] : []) : [{ id: 'u' }],
+        $queryRaw: async query => {
+          // Member lookup uses a template tag; the shared User lock passes Prisma.sql.
+          const strings = Array.isArray(query) ? query : query?.strings
+          assert(Array.isArray(strings), 'Expected a tagged SQL query or Prisma.sql object')
+          const sql = strings.join('')
+          if (sql.includes('promane_members')) return ['owner','admin'].includes(currentRole) ? [{ id: 'actor' }] : []
+          assert(sql.includes('FROM "User"'), 'Unexpected query in settings lock fixture')
+          return [{ id: 'u' }]
+        },
         promaneMember: { findFirst: async ({ where }) => where.role.in.includes(currentRole) ? { id: 'actor' } : null },
         promaneWorkspace: {
           findUnique: async () => row,
