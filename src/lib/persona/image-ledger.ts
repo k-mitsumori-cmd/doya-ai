@@ -1,13 +1,26 @@
 import { randomUUID } from 'crypto'
 import type { PrismaClient, Prisma } from '@prisma/client'
 import { isPaidPlan } from '@/lib/unified-plan'
-import type { PersonaImageIntent } from './image-entitlements'
+import { personaSlotIncludedForPlan, type PersonaImageIntent } from './image-entitlements'
 import { personaUsageDay } from './usage-day'
 import { releasePersonaProjectReservation } from './project-ledger'
 export { personaUsageDay } from './usage-day'
 
 export function personaExtraImageLimit(plan: string | null): number {
   return isPaidPlan(plan) ? 30 : 5
+}
+
+/**
+ * 付属枠（included）の画像にも1日の上限を付ける（日本時間0時で戻る）。
+ * - 無料: 8枚。ペルソナ生成の上限5回ぶんの肖像5枚と、ボタンで作るシーン3枚ぶん。
+ *   1枚あたり約6円（gpt-image-2 / medium / 1024x1024）として、付属枠だけで1人1日約48円が上限。
+ * - 有料: 40枚。生成30回ぶんの肖像と、シーン10枚ぶん。1人1日約240円が上限。
+ * 追加枠（extra / regenerate）の上限は personaExtraImageLimit で別に数える。
+ */
+export const PERSONA_INCLUDED_IMAGE_DAILY_LIMIT = { free: 8, paid: 40 } as const
+
+export function personaIncludedImageLimit(plan: string | null): number {
+  return isPaidPlan(plan) ? PERSONA_INCLUDED_IMAGE_DAILY_LIMIT.paid : PERSONA_INCLUDED_IMAGE_DAILY_LIMIT.free
 }
 
 type ReserveImage = {
@@ -38,6 +51,8 @@ export async function reservePersonaImage(db: PrismaClient, input: ReserveImage,
       if (!Array.isArray(grants) || !grants.some(slot => slot && typeof slot === 'object' && !Array.isArray(slot) && slot.key === input.slotKey && slot.kind === input.kind)) {
         return { state: 'invalid_grant' as const }
       }
+      // 無料プランの付属枠は肖像1枚＋シーン2枚まで。残りは追加枠で作る。
+      if (!personaSlotIncludedForPlan(grants, input.slotKey, isPaidPlan(user.plan))) return { state: 'not_included' as const }
     }
     // Old workers cannot settle after expiry. A new token fences any retried attempt.
     const expired = await tx.personaImageJob.findMany({
@@ -59,6 +74,15 @@ export async function reservePersonaImage(db: PrismaClient, input: ReserveImage,
       if (!original) return { state: 'missing_original' as const }
     }
     const usageDay = personaUsageDay(now)
+    if (input.intent === 'included') {
+      // 失敗した付属画像の再試行は数えない（pending と succeeded だけ数える）。
+      const includedLimit = personaIncludedImageLimit(user.plan)
+      const includedUsed = await tx.personaImageJob.count({ where: {
+        project: { userId: input.userId }, intent: 'included', usageDay, status: { in: ['pending', 'succeeded'] },
+      } })
+      if (includedUsed >= includedLimit) return { state: 'limit' as const, scope: 'included' as const, used: includedUsed, limit: includedLimit,
+        resetAt: new Date(usageDay.getTime() + 86400000).toISOString(), upgradeAvailable: !isPaidPlan(user.plan) }
+    }
     const limit = personaExtraImageLimit(user.plan)
     if (input.intent !== 'included') {
       const bucket = await tx.personaImageUsageDay.upsert({
@@ -66,7 +90,7 @@ export async function reservePersonaImage(db: PrismaClient, input: ReserveImage,
         create: { userId: input.userId, day: usageDay }, update: {},
       })
       const used = bucket.reserved + bucket.used
-      if (used >= limit) return { state: 'limit' as const, used, limit, resetAt: new Date(usageDay.getTime() + 86400000).toISOString(), upgradeAvailable: !isPaidPlan(user.plan) }
+      if (used >= limit) return { state: 'limit' as const, scope: 'extra' as const, used, limit, resetAt: new Date(usageDay.getTime() + 86400000).toISOString(), upgradeAvailable: !isPaidPlan(user.plan) }
       await tx.personaImageUsageDay.update({ where: { userId_day: { userId: input.userId, day: usageDay } }, data: { reserved: { increment: 1 } } })
     }
     const leaseToken = randomUUID()

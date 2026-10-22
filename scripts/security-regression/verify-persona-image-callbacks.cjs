@@ -28,7 +28,8 @@ function fixture(kind, scenario) {
   const state = { image: '/api/persona/images/previous', error: '', loading: false, writes: 0, usage: 0, quota: null, action: null };
   const set = key => value => { state[key] = typeof value === 'function' ? value(state[key]) : value; };
   const env = {
-    crypto: require('node:crypto'), AbortController,
+    crypto: require('node:crypto'), AbortController, plan: 'PRO', isPaidPlan: () => true,
+    personaSceneIntent: (_data, _key, hasImage) => hasImage ? 'regenerate' : 'included',
     generatedData: persona, currentPersona: { current: persona }, currentRecordId: { current: 'synthetic' },
     portraitImage: state.image, sceneImages: { 'scene-1': state.image }, imageAttempts: { current: {} },
     imageRequests: { current: {} }, scenePending: { current: new Set() }, scenePrompts: { current: {} },
