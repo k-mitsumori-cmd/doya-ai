@@ -142,6 +142,9 @@ function CommandPalette({ open, onClose, withIntents }: { open: boolean; onClose
   )
 }
 
+/** HubSpot のポップアップの要素（CompanyDialog.tsx で会社情報の画面を開いている間に隠すものと同じ） */
+const HIDE_HUBSPOT_CSS = '[id^="hs-web-interactives"],[class*="hs-web-interactive"],#hubspot-messages-iframe-container,.hs-overlay-container{display:none!important}'
+
 export default function AppShell({ children, userName, initialRecent }: {
   children: ReactNode
   userName?: string | null
@@ -230,6 +233,9 @@ export default function AppShell({ children, userName, initialRecent }: {
     <InShellContext.Provider value={true}>
     <ShellUsageProvider>
     <div className={`${ds.ds} ${styles.shell}`} data-ui-next={uiNext ? 'true' : undefined}>
+      {/* 枠の中のアプリの画面では、HubSpot のポップアップ（GTM のカスタム HTML タグから出る）を出さない。
+          375px で画面の下と下のタブを覆うため。ログインしていない人の LP（枠の外）には、この style は出ないので今のまま出る */}
+      <style>{HIDE_HUBSPOT_CSS}</style>
       <a href="#shell-main" className={styles.skip}>本文へ移動</a>
       <header className={styles.topbar}>
         <button type="button" className={styles.iconButton} onClick={() => setOpen(true)} aria-label="メニューを開く">
