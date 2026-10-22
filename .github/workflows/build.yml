@@ -1,0 +1,71 @@
+name: Build
+
+# PR と main への push で、本番と同じ手順のうち「秘密の値が要らない部分」を確かめる。
+# - 既存の CI（ci.yml）は tsc・test:security・lint と DB を使う回帰テストを受け持つ。
+#   ここでは、そこに入っていない tsx のテスト（test:asklink〜test:expense）と next build を受け持つ。
+# - 秘密の値は使わない。ビルドに要る環境変数は、存在しない宛先のダミーにする。
+#   本番の DB・外部 API には接続しない。
+# - main の保護（Branch protection）で、このジョブと ci.yml の check を merge の必須条件にする想定。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      NODE_OPTIONS: '--max-old-space-size=6144'
+      # ダミー。ビルドとテストは DB に接続しない。存在しない宛先にして、誤って接続しても失敗するようにする
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:1/ci_dummy
+      DIRECT_URL: postgresql://ci:ci@127.0.0.1:1/ci_dummy
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ci-build-only-not-a-secret
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Unit tests (tsx)
+        run: |
+          npm run test:asklink
+          npm run test:popup
+          npm run test:syscheck
+          npm run test:tenjikai
+          npm run test:shanai
+          npm run test:income
+          npm run test:expense
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
+      - name: Next build
+        run: npx next build
