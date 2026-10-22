@@ -3,8 +3,11 @@ const fs = require('node:fs')
 const path = require('node:path')
 const vm = require('node:vm')
 const ts = require('typescript')
+const { load } = require('./load-typescript.cjs')
+const selection = load('src/lib/organization-workspace-selection.ts')
 
-const source = fs.readFileSync(path.join(__dirname, '../../src/app/api/mensetsu/sessions/route.ts'), 'utf8')
+const repoRoot = process.env.DOYA_TEST_REPO_ROOT || path.join(__dirname, '../..')
+const source = fs.readFileSync(path.join(repoRoot, 'src/app/api/mensetsu/sessions/route.ts'), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 
 async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails = false, member = false, archiveBeforeCommit = false } = {}) {
@@ -52,7 +55,8 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
     },
     '@/lib/organization-quota-ledger': { getOrganizationQuotaUsage: async (_db, _key, _org, _period, countLive) => countLive(), recordOrganizationQuotaUsage: async () => {} },
     '@/lib/service-usage': { recordServiceUsage: async ({ summary }) => { usageSummary = summary } },
-    '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: member ? 'member' : 'user', role: member ? 'member' : 'owner' }), orgSlugFrom: () => 'org' },
+    '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', organizationSlug: 'org', userId: member ? 'member' : 'user', role: member ? 'member' : 'owner' }), orgSlugFrom: () => 'org' },
+    '@/lib/organization-workspace-selection': selection,
   }
   const exports = {}
   vm.runInNewContext(compiled, { exports, require: (name) => { assert.ok(name in dependencies, name); return dependencies[name] }, console, Date, URL })
@@ -70,7 +74,7 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
   assert.equal(archived.status, 409)
   assert.equal(archived.creates, 0)
 
-  for (const [limit, expectedUpgrade] of [[3, '/mensetsu/pricing'], [30, undefined]]) {
+  for (const [limit, expectedUpgrade] of [[3, '/mensetsu/pricing?org=org'], [30, undefined]]) {
     const blocked = await exercise({ limit, used: limit, conflictOnce: true })
     assert.equal(blocked.status, 402)
     assert.equal(blocked.attempts, 2)
@@ -106,7 +110,8 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
       '@/lib/mensetsu/interview-url': { interviewUrl: token => `https://example.com/interview/${token}` },
       '@/lib/plan-limit': { assertFreeLimit: async (_key, count) => { const used = await count(); return { ok: used < 3, used, limit: 3, reason: '上限に達しました' } }, FREE_LIMITS: { mensetsuSessions: 3 }, jstStartOfMonthUtc: () => new Date() },
       '@/lib/organization-quota-ledger': ledger, '@/lib/service-usage': { recordServiceUsage: async () => {} },
-      '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: 'user', role: 'owner' }), orgSlugFrom: () => 'org' },
+      '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', organizationSlug: 'org', userId: 'user', role: 'owner' }), orgSlugFrom: () => 'org' },
+      '@/lib/organization-workspace-selection': selection,
     }
     const exports = {}
     vm.runInNewContext(compiled, { exports, require: name => { assert.ok(name in dependencies, name); return dependencies[name] }, console, Date, URL })
