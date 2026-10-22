@@ -36,15 +36,19 @@ function extract(file, functionName) {
   return ts.transpileModule(`(${code})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
 }
 
-function run(code, response) {
-  const state = { loading: false, loadError: false, auditLogsError: false, canCreatePeriods: false, stats: null, periods: null, settings: null, departments: null }
+function run(code, response, proof = { current: true, version: 1, ref: { current: 1 }, roleReadVersion: { current: 0 } }) {
+  // This VM extracts only the read callback: retain its actor/scope proof and role-version checks.
+  const state = { loading: false, loadError: false, refreshError: false, auditLogsError: false, roleVerified: false, canCreatePeriods: false, stats: null, periods: null, settings: null, departments: null }
   const controller = new AbortController()
   const candidateFetch = async (...args) => typeof response === 'function' ? response(...args) : response
   const { loadHrDepartmentList } = load('src/lib/hr/department-list-client.ts', {}, { fetch: candidateFetch, AbortController, TextDecoder, Uint8Array, setTimeout, clearTimeout })
   const periodClient = load('src/lib/hr/evaluation-period-list-client.ts', {}, { fetch: candidateFetch, AbortController, TextDecoder, Uint8Array, setTimeout, clearTimeout })
   const env = {
     ...periodClient,
-    organizationScope: { request: candidateFetch, isCurrent: () => true },
+    organizationScope: { request: candidateFetch, isCurrent: () => proof.current },
+    authProof: proof.version, authProofRef: proof.ref, roleReadVersion: proof.roleReadVersion,
+    active: proof.current, live: () => proof.current && proof.ref.current === proof.version && !controller.signal.aborted,
+    settings: {}, loadError: false,
     hint: { ready: true }, scopeError: '', expectedOrganization: 'synthetic-org',
     loadedSnapshot: { current: null }, revision: 0,
     setOrganizationId: () => {}, setLoginRequired: () => {},
@@ -56,6 +60,8 @@ function run(code, response) {
     ROLE_RANK: { OWNER: 4, ADMIN: 3, MANAGER: 2, MEMBER: 1 },
     setLoading: value => { state.loading = value },
     setLoadError: value => { state.loadError = Boolean(value) },
+    setRefreshError: value => { state.refreshError = Boolean(value) },
+    setRoleVerified: value => { state.roleVerified = Boolean(value) },
     setAuditLogsError: value => { state.auditLogsError = value },
     setStats: value => { state.stats = value },
     setRecentOneOnOnes: () => {},
@@ -122,5 +128,29 @@ function run(code, response) {
     assert.equal(state.settings.name, 'Example')
     assert.equal(state.departments.length, 0)
     assert.equal(state.auditLogsError, true)
+  })
+
+  await check('settings: malformed role never verifies authority', async () => {
+    const code = extract('src/app/(shell)/hr/settings/page.tsx', 'fetchSettings')
+    const state = await run(code, Response.json({ settings: { id: 'synthetic-org', name: 'Example' }, members: [], myRole: 'UNKNOWN', myMemberId: 'member' }))
+    assert.equal(state.loadError, true)
+    assert.equal(state.roleVerified, false)
+    assert.equal(state.settings, null)
+  })
+  await check('settings: retired proof cannot adopt delayed response or verified role', async () => {
+    const code = extract('src/app/(shell)/hr/settings/page.tsx', 'fetchSettings')
+    const proof = { current: true, version: 1, ref: { current: 1 }, roleReadVersion: { current: 0 } }
+    let release
+    const delayed = new Promise(resolve => { release = resolve })
+    const pending = run(code, async () => delayed, proof)
+    await Promise.resolve()
+    proof.current = false
+    proof.ref.current = 2
+    proof.roleReadVersion.current++
+    release(Response.json({ settings: { id: 'synthetic-org', name: 'Stale' }, members: [], myRole: 'OWNER', myMemberId: 'member' }))
+    const state = await pending
+    assert.equal(state.settings, null)
+    assert.equal(state.roleVerified, false)
+    assert.equal(state.loadError, false)
   })
 })().catch(error => { console.error(error); process.exitCode = 1 })
