@@ -4,6 +4,28 @@ import { useEffect, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { readBillingResponse } from '@/lib/billing-response-client'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { useUiNext } from '@/components/shell/ui-next-context'
+
+// 新しい見た目の利用枠の1行。項目名は太字、残りは大きな数字、残りの割合を細い棒で見せる（2026-10-23 ユーザー「文字が細くて見づらい」）
+function UsageMeter({ label, remaining, limit, unit, reserved }: { label: string; remaining: number | null; limit: number | null; unit: string; reserved: number }) {
+  const unlimited = remaining === null || limit === null
+  const pct = unlimited ? 100 : Math.max(0, Math.min(100, Math.round(((remaining as number) / Math.max(1, limit as number)) * 100)))
+  const low = !unlimited && pct <= 20
+  return (
+    <div className="min-w-0 flex-1">
+      <p className="text-[13px] font-bold text-[#0a0f3c]">{label}</p>
+      <p className="mt-1 flex items-baseline gap-1 tabular-nums">
+        {unlimited ? <span className="text-xl font-black text-[#0066ff]">上限なし</span> : <>
+          <span className="text-xs font-bold text-slate-500">残り</span>
+          <span className={`text-2xl font-black ${low ? 'text-[#e5254d]' : 'text-[#0066ff]'}`}>{remaining}</span>
+          <span className="text-sm font-bold text-slate-500">/ {limit}{unit}</span>
+        </>}
+      </p>
+      {!unlimited && <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#e8f0ff]" role="presentation"><div className={`h-full rounded-full ${low ? 'bg-[#e5254d]' : 'bg-gradient-to-r from-[#0066ff] to-[#00e0ff]'}`} style={{ width: `${pct}%` }} /></div>}
+      {reserved > 0 && <p className="mt-1 text-xs font-bold text-slate-500">処理中の{reserved}{unit}は予約済み</p>}
+    </div>
+  )
+}
 
 type Quota = { used: number; reserved: number; limit: number; remaining: number | null }
 type Usage = { planLabel: string; text: Quota; extraImages: Quota; resetAt: string }
@@ -25,6 +47,7 @@ export function parsePersonaUsage(value: unknown): Usage | null {
 }
 
 export default function PersonaUsagePanel({ refreshKey }: { refreshKey: string }) {
+  const uiNext = useUiNext()
   const { data: session, status } = useSession()
   const user = session?.user as { id?: string; plan?: string } | undefined
   const allowed = status === 'authenticated' && Boolean(user?.id)
@@ -69,6 +92,18 @@ export default function PersonaUsagePanel({ refreshKey }: { refreshKey: string }
     window.addEventListener('focus', refresh)
     return () => { alive = false; pending?.abort(); window.clearInterval(interval); window.removeEventListener('focus', refresh) }
   }, [allowed, key, user?.id])
+
+  if (uiNext) return <section aria-label="本日の利用枠" className="mb-6 rounded-2xl border border-[#dbe5f7] bg-white p-5 text-sm text-[#0a0f3c] shadow-sm">
+    <p className="text-base font-black">本日の利用枠{usage ? <span className="ml-2 rounded-full bg-[#e8f0ff] px-2 py-0.5 text-xs font-bold text-[#0066ff]">{usage.planLabel}</span> : null}</p>
+    {usage ? <>
+      <div className="mt-4 flex flex-col gap-5 sm:flex-row sm:gap-8">
+        <UsageMeter label="ペルソナ生成・文章変更" remaining={usage.text.remaining} limit={usage.text.limit} unit="回" reserved={usage.text.reserved} />
+        <UsageMeter label="追加画像・再生成" remaining={usage.extraImages.remaining} limit={usage.extraImages.limit} unit="枚" reserved={usage.extraImages.reserved} />
+      </div>
+      <p className="mt-4 text-xs font-bold leading-relaxed text-slate-600">付属画像は最大16枚までペルソナ1件に含まれ、追加枠を消費しません。利用枠は毎日0時（日本時間）に戻ります。</p>
+      {(usage.text.remaining === 0 || usage.extraImages.remaining === 0) && <p className="mt-3 font-bold">本日の利用枠が上限に達しました。<a href={usage.planLabel === 'PRO' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="ml-2 font-black text-[#0066ff] underline">{usage.planLabel === 'PRO' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a></p>}
+    </> : <p className="mt-3 font-bold text-slate-600" role="status">{failed ? '利用状況を取得できませんでした。残り枠は未確認です。' : '利用状況を確認しています。'}{failed && <button type="button" onClick={() => setRetry(value => value + 1)} className="ml-2 font-black text-[#0066ff] underline">再取得する</button>}</p>}
+  </section>
 
   return <section aria-label="本日の利用枠" className="mb-6 rounded-xl border border-purple-200 bg-white p-4 text-sm text-gray-700">
     <p className="font-bold">本日の利用枠{usage ? `（${usage.planLabel}）` : ''}</p>
