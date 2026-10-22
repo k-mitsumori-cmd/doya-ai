@@ -6,7 +6,8 @@ const ts = require('typescript')
 const React = require('react')
 const { renderToStaticMarkup } = require('react-dom/server')
 
-const source = fs.readFileSync(path.resolve(__dirname, '../../src/app/(shell)/aio/pricing/page.tsx'), 'utf8')
+const source = fs.readFileSync(process.env.AIO_PRICING_SOURCE || path.resolve(__dirname, '../../src/app/(shell)/aio/pricing/page.tsx'), 'utf8')
+const selection = require('./load-typescript.cjs').load('src/lib/organization-workspace-selection.ts')
 const compiled = ts.transpileModule(source, { compilerOptions: {
   module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,
 } }).outputText
@@ -22,6 +23,7 @@ const mocks = {
   '@/components/aio/ui': { DoyaKun: () => null },
   '@/lib/aio/access': { getAioContext: async () => { contextReads++; return context } },
   '@/lib/aio/billing': { getAioBilling: async () => billing },
+  '@/lib/organization-workspace-selection': selection,
   '@/lib/prisma': { prisma: {} },
 }
 vm.runInNewContext(compiled, { exports: pageExports, require: name => {
@@ -50,6 +52,11 @@ async function render(org) {
   assert.equal(priceProps.canPurchase, false)
   assert.ok(memberHtml.includes('ご自身のプランを購入しても、この組織の利用枠は増えません'))
   assert.ok(memberHtml.includes('href="/aio/workspace"'))
+  const longMemberSlug = 'a'.repeat(120) + '-1234567890123'
+  const longMemberHtml = await render(longMemberSlug)
+  assert.equal(priceProps.planSource, 'organization')
+  assert.equal(priceProps.canPurchase, false)
+  assert.ok(longMemberHtml.includes(`href="/aio/${longMemberSlug}"`))
 
   billing = { plan: 'PRO' }
   await render('workspace')
@@ -71,6 +78,14 @@ async function render(org) {
   const emptyHtml = await render('')
   assert.equal(priceProps, null)
   assert.ok(emptyHtml.includes('契約情報を確認できません'))
+
+  for (const invalid of [' bad ', 'a'.repeat(513), ['workspace', 'foreign']]) {
+    const before = contextReads
+    const html = await render(invalid)
+    assert.equal(contextReads, before)
+    assert.equal(priceProps, null)
+    assert.ok(html.includes('契約情報を確認できません'))
+  }
 
   context = { organizationId: 'org', role: 'member' }
   billing = null

@@ -123,10 +123,13 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
       toast.error(msg, { id: 'scan' })
       if (e instanceof AioApiError && e.code === 'LIMIT') {
         setScanLimit(msg)
-        setScanLimitAction(e.canManageBilling === false ? 'owner'
-          : e.upgradeUrl === '/aio/pricing' ? 'upgrade'
-          : e.contactUrl === HIGH_USAGE_CONTACT_URL ? 'contact'
-          : isOwner ? isPaid ? 'contact' : 'upgrade' : 'owner')
+        // The server's current org billing action takes precedence over the last loaded plan.
+        // A stale local plan must never turn a missing or foreign destination into a purchase CTA.
+        const scopedPricing = `/aio/pricing?org=${encodeURIComponent(orgSlug)}`
+        setScanLimitAction(e.canManageBilling !== true ? 'owner'
+          : e.upgradeUrl === scopedPricing && !e.contactUrl ? 'upgrade'
+          : e.contactUrl === HIGH_USAGE_CONTACT_URL && !e.upgradeUrl ? 'contact'
+          : 'owner')
       } else {
         setErrorSource('scan')
         setError(msg)

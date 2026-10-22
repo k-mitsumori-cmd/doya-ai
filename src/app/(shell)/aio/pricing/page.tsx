@@ -3,13 +3,14 @@ import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { DoyaKun } from '@/components/aio/ui'
 import { getAioContext } from '@/lib/aio/access'
 import { getAioBilling } from '@/lib/aio/billing'
+import { validWorkspaceSlug } from '@/lib/organization-workspace-selection'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AioPricingPage({ searchParams }: { searchParams: Promise<{ org?: string }> }) {
   const requestedOrg = (await searchParams).org
-  const orgSlug = typeof requestedOrg === 'string' && requestedOrg.trim() && requestedOrg.length <= 100 ? requestedOrg.trim() : null
+  const orgSlug = validWorkspaceSlug(requestedOrg) ? requestedOrg : null
   const context = orgSlug ? await getAioContext(orgSlug) : null
   const billing = context ? await getAioBilling(prisma, context.organizationId) : null
   if (requestedOrg !== undefined && (!orgSlug || !context || !billing)) return (

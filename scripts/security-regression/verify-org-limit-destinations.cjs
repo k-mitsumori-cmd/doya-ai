@@ -73,6 +73,6 @@ check('public Aishodan preview excluded', null, classify('/api/aishodan/room/tok
   { code: 'PREVIEW_DAILY_LIMIT', error: '本日の練習回数の上限に達しました。' }))
 check('Shodan existing scoped behavior', '/shodan/pricing?org=alpha', classify('/api/shodan/preparations', 402,
   { code: 'LIMIT', canManageBilling: true, error: '無料プランの上限に達しました。', upgradeUrl: '/shodan/pricing?org=alpha' })?.pricingHref)
-check('AIO residual remains unscoped', '/aio/pricing', classify('/api/aio/scan', 402,
-  { code: 'LIMIT', canManageBilling: true, error: '無料プランの上限に達しました。', upgradeUrl: '/aio/pricing' })?.pricingHref)
+check('AIO owner LIMIT uses exact org', '/aio/pricing?org=alpha', classify('/api/aio/scan', 402,
+  { code: 'LIMIT', canManageBilling: true, error: '無料プランの上限に達しました。', upgradeUrl: '/aio/pricing?org=alpha' })?.pricingHref)
 console.log(JSON.stringify({ passed: cases.length, cases }, null, 2))

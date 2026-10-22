@@ -780,6 +780,13 @@ if (aioPlanCta.error || aioPlanCta.status !== 0) {
   console.error('Security regression failed: verify-aio-plan-cta.cjs');
   process.exit(1);
 }
+for (const file of ['verify-aio-quota-roundtrip.cjs', 'verify-aio-classifier.cjs', 'verify-aio-scan-quota-page-mounted.cjs']) {
+  const aioScopedLimit = spawnSync(process.execPath, [path.join(__dirname, file)], { stdio: 'inherit', timeout: 60000 });
+  if (aioScopedLimit.error || aioScopedLimit.status !== 0) {
+    console.error('Security regression failed: ' + file);
+    process.exit(1);
+  }
+}
 const unifiedPricingOrg = spawnSync(process.execPath, [path.join(__dirname, 'verify-unified-pricing-org.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (unifiedPricingOrg.error || unifiedPricingOrg.status !== 0) {
   console.error('Security regression failed: verify-unified-pricing-org.cjs');

@@ -25,6 +25,16 @@ function scopedOrganizationPricing(service: ScopedPricingService, value: unknown
   return workspaceHref(`/${service}/pricing`, slug, service)
 }
 
+/** AIO has a personal checkout lane, but the quota notice still belongs to one organization. */
+function aioOrganizationPricing(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.startsWith('/aio/pricing?org=')) return null
+  const raw = value.slice('/aio/pricing?org='.length)
+  if (!raw || /[&?#]/.test(raw)) return null
+  let slug: string
+  try { slug = decodeURIComponent(raw.replace(/\+/g, ' ')) } catch { return null }
+  return validWorkspaceSlug(slug) && !/[&=]/.test(slug) ? `/aio/pricing?org=${encodeURIComponent(slug)}` : null
+}
+
 /** Only product allowance/feature errors qualify. A status code alone is never sufficient. */
 export function classifyServiceLimit(path: string, status: number, data: unknown): ServiceLimit | null {
   if (![400, 402, 403, 429].includes(status) || !data || typeof data !== 'object') return null
@@ -47,13 +57,16 @@ export function classifyServiceLimit(path: string, status: number, data: unknown
   const scopedUpgrade = scopedService && body.canManageBilling === true ? scopedOrganizationPricing(scopedService, body.upgradeUrl) : null
   const scopedContactPricing = scopedService && body.canManageBilling === true ? scopedOrganizationPricing(scopedService, body.pricingUrl) : null
   const scopedPricing = body.upgradeUrl !== undefined && body.pricingUrl !== undefined ? null : scopedUpgrade || scopedContactPricing
+  const aioPricing = service === 'aio' && code === 'LIMIT' && body.canManageBilling === true
+    && !(body.upgradeUrl !== undefined && body.pricingUrl !== undefined)
+    ? aioOrganizationPricing(body.upgradeUrl ?? body.pricingUrl) : null
   const kind = service === 'promane' && ['LIMIT', 'PROMANE_MEMBER_LIMIT_REACHED'].includes(code) && body.canManageBilling === false
     ? 'owner'
     : service === 'shodan' && ['PLAN', 'LIMIT'].includes(code) && body.canManageBilling === false
     ? 'owner'
     : scopedService && code === 'LIMIT_REACHED' && (body.canManageBilling !== true || !scopedPricing)
     ? 'owner'
-    : service === 'aio' && code === 'LIMIT' && body.canManageBilling === false
+    : service === 'aio' && code === 'LIMIT' && !/不要なワークスペースを整理/.test(message) && (body.canManageBilling !== true || !aioPricing)
     ? 'owner'
     : service === 'kintai' && code === 'KINTAI_EMPLOYEE_LIMIT' && body.canManageBilling === false
     ? 'owner'
@@ -62,7 +75,7 @@ export function classifyServiceLimit(path: string, status: number, data: unknown
     : service === 'hr' && /^HR_ORG_(EMPLOYEE|MEMBER|AI)_LIMIT$/.test(code)
     ? body.canManageBilling === true ? 'organization' : 'owner'
     : /不要なワークスペースを整理/.test(message) ? 'capacity' : /^\/api\/(?:aishodan\/room|mensetsu\/live)\//.test(path) ? 'owner' : quota ? 'quota' : 'feature'
-  const pricingHref = scopedPricing || (service === 'shodan' && body.canManageBilling === true && typeof body.upgradeUrl === 'string'
+  const pricingHref = scopedPricing || aioPricing || (service === 'shodan' && body.canManageBilling === true && typeof body.upgradeUrl === 'string'
     && /^\/shodan\/pricing\?org=[a-z0-9-]{1,100}$/.test(body.upgradeUrl)
     ? body.upgradeUrl : config.pricingHref)
   // APIが明示した導線を優先する。LIGHTとPROで同じ枠のサービスでは
