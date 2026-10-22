@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "e0840743a568becade86706cc4f15d200311e5d5",
+  "sourceCommit": "6bca43eca0dd16bc31e4d07f039a71ddd0b63e17",
   "models": {
     "Account": {
       "group": "core",
@@ -1373,9 +1373,24 @@
       "evidence": "src/lib/shell/company.server.ts",
       "actualRoute": "src/lib/shell/company.ts",
       "directModelUse": true
+    },
+    "DoyaPowerAccount": {
+      "group": "core",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/doya-power/ledger.ts"
+    },
+    "DoyaPowerGrant": {
+      "group": "core",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/doya-power/ledger.ts"
+    },
+    "DoyaPowerTransaction": {
+      "group": "core",
+      "basis": "actual-model-caller",
+      "evidence": "src/lib/doya-power/ledger.ts"
     }
   },
-  "schemaSha256": "7e8359729a998a68b5ebb9e336ea65cf5aed3f82abc4ab3712238d5d1c995964",
+  "schemaSha256": "12e8a7da80d07b572d2e2c52c1efc52fe9a424e9f8befbb6a21f11bf86609f49",
   "evidenceSha256": {
     "docs/architecture/2026-10-06-er/data.json": "4d3c54a5a36d1d16c51d9cf443f0ec76e20d8cad042453a233fd908bd120a6b1",
     "src/app/api/asklink/runs/[id]/route.ts": "122695280fd2cb625ea987e318849d95f8b6c1dd6730e75a939ec719284b3954",
@@ -1415,6 +1430,7 @@
     "src/lib/tenjikai/generation-operation.ts": "612cb3b1920ebbebb911abb3e8d9547024384620b220ac5c3f39c91109fdd953",
     "src/lib/tenjikai/tenjikai-read.ts": "9ddb7057e222546d29eb311bad472af7481fc59a020094cca1d7d19a47c628d6",
     "src/lib/tenjikai/workspace-store.ts": "60b04da5ed7bba05d837e80249d99e9d8c20abe62a4264cc90036809d6e295ff",
-    "src/lib/usage-summary.ts": "5f53f38c3f08b050ee1332df3e5e42a66f13bea78a602ba0d98c27333adb1926"
+    "src/lib/usage-summary.ts": "5f53f38c3f08b050ee1332df3e5e42a66f13bea78a602ba0d98c27333adb1926",
+    "src/lib/doya-power/ledger.ts": "3bf3050a202f01df002ddaaa992b1b892ccad12b133d02f9d5088094c2402ef2"
   }
 }
