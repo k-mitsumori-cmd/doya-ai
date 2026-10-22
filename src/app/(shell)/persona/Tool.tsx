@@ -590,8 +590,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
       if (!res.ok || !data) {
         if (data?.code === 'REQUEST_CONFLICT') delete imageAttempts.current.portrait
         if (data?.code === 'DAILY_LIMIT_REACHED') { setQuotaNotice('image'); setQuotaAction(personaQuotaAction(data)) }
-        const message = data?.code === 'DAILY_LIMIT_REACHED' && typeof data?.error === 'string' && data.error
-          ? data.error : '本日の追加画像・再生成の上限に達しました。利用枠をご確認ください。'
+        const message = '本日の画像の上限に達しました。利用枠をご確認ください。'
         throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(message) : new Error(message)
       }
 
@@ -647,8 +646,9 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
       if (!res.ok) {
         if (data?.code === 'REQUEST_CONFLICT') delete imageAttempts.current[sceneKey]
         if (data?.code === 'DAILY_LIMIT_REACHED') { setQuotaNotice('image'); setQuotaAction(personaQuotaAction(data)) }
-        const message = (data?.code === 'DAILY_LIMIT_REACHED' || data?.code === 'NOT_INCLUDED') && typeof data?.error === 'string' && data.error
-          ? data.error : '本日の追加画像・再生成の上限に達しました。利用枠をご確認ください。'
+        // サーバーの文面はそのまま出さない。コードごとに決まった文面を出す。
+        const message = data?.code === 'NOT_INCLUDED' ? 'この画像は無料プランの付属枠に含まれません。追加枠で作れます。'
+          : '本日の画像の上限に達しました。利用枠をご確認ください。'
         throw data?.code === 'DAILY_LIMIT_REACHED' || data?.code === 'NOT_INCLUDED' ? new PersonaQuotaError(message) : new Error(message)
       }
       if (!validPersonaImageResponse(data)) throw new PersonaImageResponseError('画像の保存先を確認できませんでした。履歴を確認するか、同じ操作を再試行してください。')
