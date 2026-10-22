@@ -487,7 +487,7 @@ export default function AishodanTool() {
           <ToolHero
             title="AIが一次商談を進め、適合度まで残す。"
             lead="自社サービスのURLを取り込むと、AIが商材を覚えて商談のシナリオを作ります。発行したURLを送るだけで、相手はログインせずに商談を始められます。"
-            art="/aishodan/hero.webp"
+            tool="aishodan"
           />
           <FirstSteps
             id="aishodan"

@@ -29,7 +29,7 @@ import { Button as DsButton, EmptyState, Skeleton, ToolHero } from '@/components
 import { ErrorNotice } from '@/components/ds/feedback'
 
 // 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/seo.webp）が置かれるまでは、LP の画面の絵を仮に出す
-const HERO_ART = '/seo/hero.webp'
+const HERO_ART = '/ui-renewal/keyart/seo.webp'
 
 type SeoArticleRow = {
   id: string

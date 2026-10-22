@@ -35,7 +35,7 @@ export default function ShodanListPage() {
           title="今、ドヤれる商談を、URL1本で。"
           lead="商談先のURLを入れるだけで、企業の調査・課題の仮説・提案資料までAIがまとめます。"
           action={<Button href={`${base}/new`} icon="Plus">商談準備をつくる</Button>}
-          art="/shodan/hero.webp"
+          tool="shodan"
         />
         <FirstSteps
           id="shodan"

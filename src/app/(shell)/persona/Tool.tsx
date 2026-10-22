@@ -919,7 +919,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
             <ToolHero
               title={<>サイトのURLから、<wbr />お客さまの人物像を描きます</>}
               lead={<>URLを入れるだけで、年齢・仕事・悩み・<wbr />1日の過ごし方まで、具体的なペルソナにまとめます。<wbr />似顔絵と履歴書の形で、チームに共有できます。</>}
-              art="/persona/hero.webp"
+              tool="persona"
             />
             <FirstSteps
               id="persona"

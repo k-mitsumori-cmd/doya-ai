@@ -16,7 +16,7 @@ import { EmptyState, Skeleton, ToolHero } from '@/components/ds'
 import { ErrorNotice } from '@/components/ds/feedback'
 
 // 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/interview.webp）が置かれるまでは、LP の画面の絵を仮に出す
-const HERO_ART = '/interview/hero.webp'
+const HERO_ART = '/ui-renewal/keyart/interview.webp'
 
 interface Project {
   id: string

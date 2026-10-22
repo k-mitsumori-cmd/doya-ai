@@ -155,7 +155,7 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
           title="今日の営業状況を、ひと目で。"
           lead={doya.message}
           action={<Button href={`${base}/deals`} icon="Kanban">商談パイプラインを開く</Button>}
-          art="/sfa/hero.webp"
+          tool="sfa"
           artAlt=""
         />
         <FirstSteps

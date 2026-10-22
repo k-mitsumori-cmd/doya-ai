@@ -535,7 +535,7 @@ export default function AdImageTool() {
             title="URLひとつで、媒体ごとの広告画像をまとめて。"
             lead="サービスのページを読み取って、コピーを考え、Meta・Google・X・LINE などのサイズで文字入りの広告画像をつくります。"
             action={<Button href="/adimage/history" variant="secondary" icon="History">これまでの画像</Button>}
-            art="/ui-renewal/mascots/adimage.webp"
+            tool="adimage"
           />
         </div>
       ) : (
