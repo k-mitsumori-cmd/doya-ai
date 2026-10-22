@@ -205,8 +205,8 @@ export function AreaChart({ labels, series, height = 200, format, yTicks, domain
           })}
           {labels.map((l, i) => {
             const last = labels.length - 1
-            // 間引くときも最後の文字は出す（その直前に出す文字が近すぎるときは、そちらを省く）
-            const show = i === last || (i % every === 0 && !(last % every !== 0 && last - i < every * 0.6))
+            // 間引くときも最後の文字は出す（その直前に出す文字との間が、間引きの間隔より狭いときは、そちらを省く）
+            const show = i === last || (i % every === 0 && !(last % every !== 0 && last - i < every))
             if (!show) return null
             const anchor = labels.length > 1 && i === 0 ? 'start' : labels.length > 1 && i === last ? 'end' : 'middle'
             return <text key={l + i} x={padL + i * step} y={height - 8} textAnchor={anchor} className={styles.axis}>{l}</text>
@@ -453,7 +453,7 @@ function ColumnPlot({ groups, labels, lo, hi, ticks, height, tickFormat, label, 
           </div>
         </div>
       </div>
-      <div className={styles.colLabels} style={{ marginLeft: yw, gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }} aria-hidden>
+      <div className={styles.colLabels} style={{ marginLeft: yw, gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }} aria-hidden data-dense={n > 8 ? 'true' : undefined}>
         {labels.map((l, i) => <span key={i} title={l}>{l}</span>)}
       </div>
       {legend && legend.length > 1 ? (
