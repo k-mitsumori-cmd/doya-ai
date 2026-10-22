@@ -46,6 +46,16 @@ const before=(src,a,b,msg)=>{const i=src.indexOf(a),j=src.indexOf(b);assert.ok(i
     assert.match(cron,/if \(closed\.count === 1\) await voiceCharger\.settle\('mensetsu'/);
     assert.match(code('src/app/api/aishodan/room/[token]/end/route.ts'),/voiceCharger\.settle\('aishodan', s\.organizationId, `session-\$\{s\.id\}`/);
     assert.match(code('src/lib/aishodan/recover-stale-sessions.ts'),/voiceCharger\.settle\('aishodan', a\.organizationId, `session-\$\{row\.id\}`/);
+    // 始まらなかった商談の仮に減らした分は、中止にしてから0分で戻す（旗が off なら何も読まない）
+    const rec=code('src/lib/aishodan/recover-stale-sessions.ts');
+    assert.match(rec,/export async function releaseUnstartedAishodanHolds\(\) \{\n  const stats = \{ checked: 0, released: 0 \}\n  if \(doyaPowerRollout\(\) === 'off'\) return stats/);
+    before(rec,"data: { status: 'aborted', endedAt: new Date() }","voiceCharger.settle('aishodan', row.organizationId, `session-${row.id}`, 0)");
+    assert.match(code('src/app/api/cron/aishodan-work-cleanup/route.ts'),/await releaseUnstartedAishodanHolds\(\)\.catch\(/);
+  });
+  await check('The guest-facing AI商談 start never shows the issuing company balance',async()=>{
+    const s=code('src/app/api/aishodan/room/[token]/start/route.ts');
+    assert.ok(!s.includes('return voice.response'));
+    assert.match(s,/voice\.reason === 'insufficient'\n\s+\? NextResponse\.json\(\{ error: unavailable \}, \{ status: 429 \}\)/);
   });
   await check('The insufficient notice is one shared watcher, active only when the flag allows it',async()=>{
     const w=code('src/components/shell/low-power.tsx');

@@ -2,10 +2,13 @@ import { prisma } from '@/lib/prisma'
 import { enqueueEvaluation } from './evaluation-task'
 import { voiceCharger } from '@/lib/doya-power/voice'
 import { voiceActualMinutes } from '@/lib/doya-power/voice-core'
+import { doyaPowerRollout } from '@/lib/doya-power/flag'
 
 const CURSOR_KEY = 'aishodan-stale-session-cursor:v1'
 const RECONNECT_GRACE_MS = 15 * 60 * 1000
 const RECENT_ACTIVITY_MS = 5 * 60 * 1000
+/** 同意してからこの時間たっても始まらない商談は、中止にして、仮に減らしたドヤパワーを戻す */
+const UNSTARTED_HOLD_MS = 60 * 60 * 1000
 
 /** Close abandoned conversations without running AI or delivering notifications here. */
 export async function recoverStaleAishodanSessions() {
@@ -57,5 +60,40 @@ export async function recoverStaleAishodanSessions() {
   }
   const next = rows.length === 0 || (rows.length < 25 && stats.checked === rows.length) ? '' : last
   await prisma.systemSetting.upsert({ where: { key: CURSOR_KEY }, create: { key: CURSOR_KEY, value: next }, update: { value: next } })
+  return stats
+}
+
+/**
+ * ドヤパワー（旗の内側だけ）: 同意したまま始まらなかった商談の、仮に減らした分を戻す。
+ * ⚠️ ルームの URL は誰でも開けるので、/start だけを繰り返されると、発行した会社の残りが仮に減ったまま残る。
+ *    1時間たっても始まらない商談を中止にしてから（もう始められない）、0分で清算する。
+ * - 台帳に仮に減らした記録がある商談だけを中止にする（旗を入れる前の商談・減らさない会社の商談には触れない）
+ * - 旗が off なら、何も読まない
+ */
+export async function releaseUnstartedAishodanHolds() {
+  const stats = { checked: 0, released: 0 }
+  if (doyaPowerRollout() === 'off') return stats
+  const rows = await prisma.aishodanSession.findMany({
+    where: { status: 'pending', startedAt: null, endedAt: null, createdAt: { lt: new Date(Date.now() - UNSTARTED_HOLD_MS), gt: new Date(Date.now() - 7 * 24 * 3600_000) } },
+    select: { id: true, organizationId: true, room: { select: { scenario: { select: { durationMin: true } } } } },
+    orderBy: { createdAt: 'asc' }, take: 50,
+  })
+  for (const row of rows) {
+    stats.checked++
+    try {
+      const held = await voiceCharger.allowance('aishodan', row.organizationId, `session-${row.id}`, row.room.scenario.durationMin)
+      if (!held || held === 'closed') continue
+      const closed = await prisma.aishodanSession.updateMany({
+        where: { id: row.id, status: 'pending', startedAt: null, endedAt: null },
+        data: { status: 'aborted', endedAt: new Date() },
+      })
+      if (closed.count === 1) {
+        await voiceCharger.settle('aishodan', row.organizationId, `session-${row.id}`, 0)
+        stats.released++
+      }
+    } catch {
+      console.error('[aishodan-work-cleanup] unstarted hold release failed')
+    }
+  }
   return stats
 }

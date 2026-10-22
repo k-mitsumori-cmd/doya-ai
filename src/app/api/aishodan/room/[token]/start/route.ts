@@ -96,9 +96,14 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   // 操作の ID は商談の ID（ここで先に決める）。終わったら実際の分数との差を戻す（end・放置の自動完了）
   const sessionId = randomUUID().replace(/-/g, '')
   const voice = await voiceCharger.hold('aishodan', room.organizationId, `session-${sessionId}`, voiceChargeMinutes(room.scenario.durationMin), {
-    insufficient: 'いまは商談を始められません。時間をおいてお試しいただくか、ご担当者にお問い合わせください。',
+    insufficient: unavailable,
   })
-  if (voice.kind === 'blocked') return voice.response
+  // ⚠️ ここはログインしていない見込み客の API。会社の残りの量（402 の balance・required）を見せず、ほかの上限と同じ案内を返す
+  if (voice.kind === 'blocked') {
+    return voice.reason === 'insufficient'
+      ? NextResponse.json({ error: unavailable }, { status: 429 })
+      : NextResponse.json({ error: '商談を開始できませんでした。時間をおいてもう一度お試しください。' }, { status: 503 })
+  }
   const releaseVoice = async () => { if (voice.kind === 'charged') await voice.refund() }
 
   let result: { kind: 'created'; session: Awaited<ReturnType<typeof prisma.aishodanSession.create>> } | { kind: 'unavailable' } | { kind: 'expired' } | { kind: 'changed' } | { kind: 'previewLimit' } | { kind: 'previewUnauthorized' } | null = null

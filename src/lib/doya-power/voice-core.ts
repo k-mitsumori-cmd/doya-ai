@@ -39,7 +39,7 @@ export type VoiceDeps = {
 export type VoiceCharge =
   | { kind: 'skip' }
   | { kind: 'charged'; operationId: string; amount: number; refund: () => Promise<void> }
-  | { kind: 'blocked'; response: NextResponse }
+  | { kind: 'blocked'; reason: 'insufficient' | 'unavailable'; response: NextResponse }
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' }
 
@@ -90,14 +90,15 @@ export function createVoiceCharger(deps: VoiceDeps) {
         return { kind: 'charged', operationId, amount: r.amount, refund }
       }
       if (r.reason === 'insufficient') {
-        return { kind: 'blocked', response: NextResponse.json({ error: message.insufficient, code: 'DOYA_POWER_INSUFFICIENT', balance: r.balance, required: amount }, { status: 402, headers: NO_STORE }) }
+        // ⚠️ 残りの量（balance・required）は、ログインした発行側の API にだけ返す。相手側の API は response を使わず、reason を見て自分の案内を返す
+        return { kind: 'blocked', reason: 'insufficient', response: NextResponse.json({ error: message.insufficient, code: 'DOYA_POWER_INSUFFICIENT', balance: r.balance, required: amount }, { status: 402, headers: NO_STORE }) }
       }
       log('[doya-power/voice] hold skipped', { service, reason: r.reason })
       return { kind: 'skip' }
     } catch (e) {
       if ((e as { name?: string })?.name === 'DoyaPowerDisabledError') return { kind: 'skip' }
       log('[doya-power/voice] hold failed', { service, name: (e as { name?: string })?.name, code: (e as { code?: string })?.code })
-      return { kind: 'blocked', response: NextResponse.json({ error: '利用できる量を確かめられませんでした。時間をおいて、もう一度お試しください。', code: 'DOYA_POWER_UNAVAILABLE' }, { status: 503, headers: NO_STORE }) }
+      return { kind: 'blocked', reason: 'unavailable', response: NextResponse.json({ error: '利用できる量を確かめられませんでした。時間をおいて、もう一度お試しください。', code: 'DOYA_POWER_UNAVAILABLE' }, { status: 503, headers: NO_STORE }) }
     }
   }
 

@@ -93,6 +93,8 @@ test('足りなければ 402 で、発行（開始）しない', async () => {
   const h = await s.voice.hold('aishodan', 'org', 'k4', voiceChargeMinutes(45), msg)
   assert.equal(h.kind, 'blocked')
   if (h.kind === 'blocked') {
+    // 相手側の API（商談の開始）は response を使わず、reason を見て残りの量を出さない案内を返す
+    assert.equal(h.reason, 'insufficient')
     assert.equal(h.response.status, 402)
     const j = await h.response.json()
     assert.equal(j.code, 'DOYA_POWER_INSUFFICIENT')
