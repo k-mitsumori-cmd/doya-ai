@@ -13,7 +13,7 @@ const NAV: ShellNavItem[] = [
   { label: 'グラフ', href: '/ds-preview/charts', icon: 'BarChart3' },
   { label: '商品', href: '/ds-preview/products', icon: 'Receipt' },
   { label: '設定', href: '/ds-preview/settings', icon: 'Settings' },
-  { label: '対応表に無い名前', href: '/ds-preview/unknown', icon: 'NoSuchIcon' },
+  { label: '未登録の名前', href: '/ds-preview/unknown', icon: 'NoSuchIcon' },
 ]
 
 export default function DsPreviewLayout({ children }: { children: ReactNode }) {

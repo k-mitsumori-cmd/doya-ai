@@ -29,7 +29,7 @@
 .gaugeSmall { font-size: 13px; color: var(--sub, #4a5375); font-weight: 600; }
 .gaugeValue { font-size: 28px; line-height: 1; font-weight: 800; letter-spacing: -0.01em; min-width: 3ch; text-align: right; display: inline-block; }
 
-.gaugeBody { display: flex; align-items: center; gap: 12px; height: 48px; }
+.gaugeBody { display: flex; align-items: center; gap: 12px; height: 64px; }
 .track {
   position: relative; flex: 1; min-width: 0; height: 16px; border-radius: 999px; overflow: hidden;
   background: var(--bg, #f4f7fd);
@@ -49,7 +49,7 @@
 }
 @keyframes shine { from { transform: translateX(0); } 60%, to { transform: translateX(350%); } }
 .tick { position: absolute; top: 3px; bottom: 3px; width: 2px; margin-left: -1px; border-radius: 1px; background: rgba(255, 255, 255, 0.7); mix-blend-mode: normal; }
-.gaugeMascot { width: 48px; height: 48px; flex: none; }
+.gaugeMascot { width: 64px; height: 64px; flex: none; }
 .gauge[data-motion='on'] .gaugeMascot { animation: bob 3.2s var(--ease-io, ease-in-out) infinite; }
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 
@@ -75,7 +75,7 @@
   padding: 16px 20px; border-radius: var(--r-sm, 14px);
   background: var(--note-bg, #fff7d6); border: 1px solid #f3e2a0; color: var(--ink, #101633);
 }
-.noticeMascot { width: 56px; height: 56px; flex: none; }
+.noticeMascot { width: 64px; height: 64px; flex: none; }
 .noticeIcon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--paper, #fff); color: var(--note-ink, #7a5b00); flex: none; }
 .noticeText { flex: 1; min-width: 0; display: grid; gap: 4px; }
 .noticeTitle { margin: 0; font-size: 15px; font-weight: 800; line-height: 1.5; }
@@ -93,6 +93,52 @@
   background: transparent; color: var(--muted, #7a83a3); cursor: pointer;
 }
 .close:hover { background: rgba(16, 22, 51, 0.06); color: var(--ink, #101633); }
+
+/* ---- 残りが 0 のときの3つの選択肢 ---- */
+.choices { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.choices > li { display: grid; min-width: 0; }
+.choice {
+  display: flex; align-items: flex-start; gap: 10px; min-width: 0; min-height: 44px; padding: 12px;
+  border-radius: 12px; background: var(--paper, #fff); border: 1px solid #ecd98a; color: var(--ink, #101633); text-decoration: none;
+}
+a.choice:hover { border-color: var(--blue, #0066ff); }
+a.choice:focus-visible { outline: 2px solid var(--blue, #0066ff); outline-offset: 2px; }
+.choiceIcon { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 9px; background: var(--note-bg, #fff7d6); color: var(--note-ink, #7a5b00); }
+.choiceText { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.choiceTitle { font-size: 14px; font-weight: 800; line-height: 1.5; }
+.choiceSub { font-size: 13px; line-height: 1.6; color: var(--sub, #4a5375); }
+.choiceGo { flex: none; align-self: center; color: var(--blue, #0066ff); }
+.choice { word-break: auto-phrase; line-break: strict; overflow-wrap: break-word; }
+.choiceTitle { text-wrap: balance; }
+.choiceSub { text-wrap: pretty; }
+@media (max-width: 860px) { .choices { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- ドヤくんと動きの設定 ---- */
+.fx {
+  display: grid; gap: 10px; min-width: 0; padding: 20px 24px; border-radius: var(--r, 22px);
+  background: var(--paper, #fff); border: 1px solid var(--line, #e3e8f4); color: var(--ink, #101633);
+  word-break: auto-phrase; line-break: strict; overflow-wrap: break-word;
+}
+.fxTitle { margin: 0; font-size: 16px; font-weight: 800; }
+.fxLead { margin: 0; font-size: 14px; line-height: 1.75; color: var(--sub, #4a5375); text-wrap: pretty; }
+.fxGroups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.fxGroup { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.fxGroupTitle { margin: 0; font-size: 13px; font-weight: 800; color: var(--sub, #4a5375); }
+.fxList { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.fxLabel {
+  display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 10px 12px; cursor: pointer;
+  border: 1px solid var(--line, #e3e8f4); border-radius: 12px; background: var(--bg, #f4f7fd);
+}
+.fxLabel[data-disabled='true'] { cursor: not-allowed; opacity: 0.85; }
+.fxLabel:focus-within { outline: 2px solid var(--blue, #0066ff); outline-offset: 2px; }
+.fxCheck { width: 20px; height: 20px; margin-top: 1px; flex: none; accent-color: var(--blue, #0066ff); }
+.fxText { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.fxName { font-size: 14px; font-weight: 700; }
+.fxHint { font-size: 13px; line-height: 1.6; color: var(--sub, #4a5375); }
+.fxState { flex: none; font-size: 13px; font-weight: 800; color: var(--sub, #4a5375); }
+.fxStatus { margin: 0; min-height: 22px; font-size: 13px; color: var(--ok-ink, #0a6b3a); }
+.fxStatus[data-kind='error'] { color: var(--err-ink, #a11a1a); }
+@media (max-width: 760px) { .fxGroups { grid-template-columns: minmax(0, 1fr); } .fx { padding: 16px; } }
 
 /* ---- 朝の回復（重ねて出す。まわりを押さない） ---- */
 .toast {
@@ -127,7 +173,7 @@
   .gauge { padding: 16px; }
   .gaugeValue { font-size: 24px; }
   .notice { padding: 14px 16px; gap: 12px; }
-  .noticeMascot { width: 44px; height: 44px; }
+  .noticeMascot { width: 64px; height: 64px; }
   .toast { gap: 10px; padding: 12px; }
   .toastMascot { width: 40px; height: 40px; }
   .toast[data-placement='fixed'] { right: 16px; left: 16px; width: auto; bottom: calc(80px + env(safe-area-inset-bottom)); }

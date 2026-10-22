@@ -3,6 +3,8 @@
 // ⚠️ 本番では 404（ds-preview の layout が止める）。台帳にはつながない。
 import { useState } from 'react'
 import { Button, Card } from '@/components/ds'
+import DoyaPowerFxSettings from './DoyaPowerFxSettings'
+import { DoyaPowerFxProvider } from './fx-context'
 import { CostBadge, DoyaPowerGauge, LowPowerNotice, MorningRecoveryToast, PowerEquivalents, type DoyaPowerFx, type PowerConversion } from './index'
 import { ShellCostBadge } from '@/components/shell/power'
 
@@ -92,8 +94,15 @@ export default function DoyaPowerDemo() {
       <Card title="残りが少ないとき" icon="Lightbulb">
         <div style={{ display: 'grid', gap: 12 }}>
           <LowPowerNotice remaining={80} limit={LIMIT} conversions={CONVERSIONS} nextRecoveryAt={NEXT_RECOVERY} now={NOW} moreHref="#more" fx={fx} />
-          <LowPowerNotice remaining={0} limit={LIMIT} nextRecoveryAt={NEXT_RECOVERY} now={NOW} moreHref="#more" fx={quiet} />
+          <LowPowerNotice remaining={0} limit={LIMIT} nextRecoveryAt={NEXT_RECOVERY} now={NOW} recoveryAmount={10} fx={fx} />
+          <LowPowerNotice remaining={0} limit={LIMIT} nextRecoveryAt={NEXT_RECOVERY} now={NOW} recoveryAmount={10} fx={quiet} />
         </div>
+      </Card>
+
+      <Card title="ドヤくんと動きの設定（会社・個人）" icon="Settings">
+        <DoyaPowerFxProvider fx={{ org: { mascot: true, effects: true }, user: { mascot: true, effects: true } }}>
+          <DoyaPowerFxSettings canEditOrg onSave={async () => ({ ok: true })} />
+        </DoyaPowerFxProvider>
       </Card>
 
       <Card title="朝の回復の知らせ" icon="Sparkles">

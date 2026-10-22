@@ -12,35 +12,22 @@
 // ⚠️ 演出の設定（組織・個人）でドヤくんと動きを切れる。どちらかがオフならオフ。prefers-reduced-motion でも動かさない。
 // ⚠️ メール・通知は送らない。知らせは画面の中だけ。
 import { useEffect, useState, type ComponentProps, type CSSProperties, type ReactNode } from 'react'
-import { ArrowRight, BatteryLow, Sunrise, X } from 'lucide-react'
+import { ArrowRight, BatteryLow, Clock, Plus, Sunrise, Users, X } from 'lucide-react'
 import { ShellIcon, type ShellIconName } from '@/components/shell/icons'
-import { CountUp, useInViewOnce, usePrefersReducedMotion } from '@/components/ds/motion'
+import { CountUp, useInViewOnce } from '@/components/ds/motion'
+import { resolveDoyaPowerFx, type DoyaPowerFx, type DoyaPowerFxSetting, type ResolvedFx } from '@/lib/doya-power/fx'
 import { jstDateKey, jstDateTime, recoveryLabel } from './time'
+import { useDoyaPowerFx } from './fx-context'
 import styles from './doya-power.module.css'
 import { useDoyaPower } from './doya-power-context'
 
 export { CostBadge } from '@/components/ds/cost-badge'
 
 /* ---- 表示の設定（演出） ---- */
+// 組織と個人の設定は src/lib/doya-power/fx.ts。props の fx が無ければ、画面が渡した設定（fx-context.tsx）を見る。
 
-/** 組織と個人の、表示の設定。省略したものは「オン」 */
-export type DoyaPowerFxSetting = { mascot?: boolean; effects?: boolean }
-export type DoyaPowerFx = { org?: DoyaPowerFxSetting; user?: DoyaPowerFxSetting }
-export type ResolvedFx = { mascot: boolean; effects: boolean }
-
-/** 組織と個人の設定を合わせる。どちらかがオフならオフ（組織がオフにしたものは、個人で戻せない） */
-export function resolveDoyaPowerFx(fx?: DoyaPowerFx): ResolvedFx {
-  return {
-    mascot: fx?.org?.mascot !== false && fx?.user?.mascot !== false,
-    effects: fx?.org?.effects !== false && fx?.user?.effects !== false,
-  }
-}
-
-/** 実際に動かしてよいか（設定がオン かつ 動きを減らす設定ではない） */
-function useMotionOn(fx: ResolvedFx): boolean {
-  const reduced = usePrefersReducedMotion()
-  return fx.effects && !reduced
-}
+export { resolveDoyaPowerFx }
+export type { DoyaPowerFx, DoyaPowerFxSetting, ResolvedFx }
 
 /* ---- 換算の表 ---- */
 
@@ -106,8 +93,7 @@ function DoyaPowerGaugeBody({
   fx?: DoyaPowerFx
   className?: string
 }) {
-  const f = resolveDoyaPowerFx(fx)
-  const motion = useMotionOn(f)
+  const { mascot: showMascot, motion } = useDoyaPowerFx(fx)
   const { ref, seen } = useInViewOnce<HTMLDivElement>()
   const max = Math.max(0, limit)
   const value = Math.min(Math.max(0, remaining), max)
@@ -152,7 +138,7 @@ function DoyaPowerGaugeBody({
           {/* 目盛り（25・50・75%）。インフォグラフィックの目安 */}
           {[25, 50, 75].map((t) => <span key={t} className={styles.tick} style={{ left: `${t}%` }} aria-hidden />)}
         </div>
-        {f.mascot ? <Mascot pose={low ? 'thinking' : 'thumbsup'} size={48} className={styles.gaugeMascot} /> : null}
+        {showMascot ? <Mascot pose={low ? 'thinking' : 'thumbsup'} size={64} className={styles.gaugeMascot} /> : null}
       </div>
 
       <div className={styles.gaugeFoot}>
@@ -211,6 +197,8 @@ function LowPowerNoticeBody({
   title: titleOverride,
   recoveryAmount,
   blockedText,
+  addHref = '/pricing',
+  teamHref = '/pricing',
 }: {
   remaining: number
   limit: number
@@ -224,6 +212,10 @@ function LowPowerNoticeBody({
   blockedText?: string
   /** 渡すと「あと バナー2枚分」のように言い換える（いちばん軽いもの1つ） */
   conversions?: PowerConversion[]
+  /** 残りが 0 のときの選択肢「追加する」の行き先（購入の機能はまだ無い。今は料金のページへ案内する） */
+  addHref?: string
+  /** 残りが 0 のときの選択肢「チームにする」の行き先 */
+  teamHref?: string
   /** 増やし方への案内の行き先 */
   moreHref?: string
   moreLabel?: string
@@ -232,15 +224,14 @@ function LowPowerNoticeBody({
   onClose?: () => void
   className?: string
 }) {
-  const f = resolveDoyaPowerFx(fx)
-  const motion = useMotionOn(f)
+  const { mascot: showMascot, motion } = useDoyaPowerFx(fx)
   const value = Math.max(0, remaining)
   const recovery = nextRecoveryAt !== undefined ? recoveryLabel(nextRecoveryAt, now) : null
   const lightest = conversions ? powerEquivalents(value, conversions).sort((a, b) => a.cost - b.cost)[0] : undefined
   const title = titleOverride ?? (value <= 0 ? `今日の${label}を使い切りました` : `${label}が残り少なくなっています`)
   return (
     <section className={`${styles.notice} ${className ?? ''}`} role="status" data-motion={motion ? 'on' : 'off'}>
-      {f.mascot ? <Mascot pose="thinking" size={56} className={styles.noticeMascot} /> : <span className={styles.noticeIcon}><BatteryLow size={20} aria-hidden /></span>}
+      {showMascot ? <Mascot pose="thinking" size={64} className={styles.noticeMascot} /> : <span className={styles.noticeIcon}><BatteryLow size={20} aria-hidden /></span>}
       <div className={styles.noticeText}>
         <p className={styles.noticeTitle}>{title}</p>
         <p className={styles.noticeBody}>
@@ -250,7 +241,38 @@ function LowPowerNoticeBody({
             : <><span className={styles.nobr}>{recovery} に</span> {fmt(limit)} まで回復します。</>) : null}
           {blockedText ?? (value > 0 ? 'いま作っているものは、そのまま続けられます。' : '回復するまで、作ったものの確認や編集はそのままできます。')}
         </p>
-        {moreHref ? (
+        {value <= 0 ? (
+          <ul className={styles.choices} aria-label="残りが 0 のときの選択肢">
+            <li className={styles.choice}>
+              <span className={styles.choiceIcon}><Clock size={18} aria-hidden /></span>
+              <span className={styles.choiceText}>
+                <b className={styles.choiceTitle}>{recovery ? `${recovery} に回復するのを待つ` : '回復するのを待つ'}</b>
+                <span className={styles.choiceSub}>{recoveryAmount !== undefined ? `毎日 ${fmt(recoveryAmount)} ずつ回復します。` : '毎日、少しずつ回復します。'}</span>
+              </span>
+            </li>
+            <li>
+              <a href={addHref} className={styles.choice}>
+                <span className={styles.choiceIcon}><Plus size={18} aria-hidden /></span>
+                <span className={styles.choiceText}>
+                  <b className={styles.choiceTitle}>追加する</b>
+                  <span className={styles.choiceSub}>料金のページで、追加の方法を確認できます。</span>
+                </span>
+                <ArrowRight size={16} aria-hidden className={styles.choiceGo} />
+              </a>
+            </li>
+            <li>
+              <a href={teamHref} className={styles.choice}>
+                <span className={styles.choiceIcon}><Users size={18} aria-hidden /></span>
+                <span className={styles.choiceText}>
+                  <b className={styles.choiceTitle}>チームにする</b>
+                  <span className={styles.choiceSub}>組織で使うプランを、料金のページで確認できます。</span>
+                </span>
+                <ArrowRight size={16} aria-hidden className={styles.choiceGo} />
+              </a>
+            </li>
+          </ul>
+        ) : null}
+        {moreHref && value > 0 ? (
           <a href={moreHref} className={styles.noticeLink}>{moreLabel}<ArrowRight size={14} aria-hidden /></a>
         ) : null}
       </div>
@@ -300,8 +322,7 @@ function MorningRecoveryToastBody({
   /** この時間が過ぎたら閉じる（0 で閉じない）。動きを切っているときも閉じる */
   autoHideMs?: number
 }) {
-  const f = resolveDoyaPowerFx(fx)
-  const motion = useMotionOn(f)
+  const { mascot: showMascot, motion } = useDoyaPowerFx(fx)
   const [open, setOpen] = useState(false)
   const key = `${TOAST_KEY}${scope}`
 
@@ -328,7 +349,7 @@ function MorningRecoveryToastBody({
   const top = conversions ? powerEquivalents(limit, conversions).slice(0, 2) : []
   return (
     <div className={styles.toast} data-placement={placement} data-motion={motion ? 'on' : 'off'} role="status" aria-live="polite">
-      {f.mascot ? <Mascot pose="hello" size={52} className={styles.toastMascot} /> : <span className={styles.toastIcon}><Sunrise size={20} aria-hidden /></span>}
+      {showMascot ? <Mascot pose="hello" size={52} className={styles.toastMascot} /> : <span className={styles.toastIcon}><Sunrise size={20} aria-hidden /></span>}
       <div className={styles.toastText}>
         <p className={styles.toastTitle}><span>おはようございます。</span><span>{label}が回復しました</span></p>
         <p className={styles.toastBody}>
