@@ -22,6 +22,8 @@ import { CompanyRegisterButton, ShellCompanyTag } from '@/components/shell/Shell
 import { useAccountCompany } from '@/components/shell/company-context'
 import { useToolHref } from '@/components/shell/ui-next-context'
 import styles from './home.module.css'
+import { DoyaPowerHomeCard } from '@/components/doya-power/DoyaPowerHome'
+import type { DoyaPowerHomeView } from '@/lib/doya-power/home.server'
 
 const man = (n: number) => {
   if (Math.abs(n) >= 100_000_000) return `${(Math.round(n / 10_000_000) / 10).toLocaleString('ja-JP')}億円`
@@ -376,7 +378,7 @@ function EmptyCard({ text, href, cta }: { text: string; href: string; cta: strin
 /* ---------------- 本体 ---------------- */
 
 // setupHidden: 会社の登録の案内を閉じたか（サーバーが cookie から読む。最初の描画から出す・出さないを決め、あとから出さない）
-export default function HomeDashboard({ initial, setupHidden = false }: { initial: HomeSummary; setupHidden?: boolean }) {
+export default function HomeDashboard({ initial, setupHidden = false, power = null }: { initial: HomeSummary; setupHidden?: boolean; power?: DoyaPowerHomeView | null }) {
   const [summary, setSummary] = useState(initial)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -415,6 +417,9 @@ export default function HomeDashboard({ initial, setupHidden = false }: { initia
       <CompanySetupNote initiallyHidden={setupHidden} />
 
       <TodayCard summary={s} />
+
+      {/* ドヤパワーの残り・次の回復・期限が近い分（旗の内側だけ。渡されなければ何も出さない）。枠のゲージは #doya-power と内訳・履歴へ来る */}
+      <DoyaPowerHomeCard view={power} />
 
       <header className={styles.hero}>
         <div>

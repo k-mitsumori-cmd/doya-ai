@@ -21,7 +21,7 @@
     "test:shanai": "tsx --test src/lib/shanai/shanai.test.ts",
     "test:income": "tsx --test src/lib/income/calc.test.ts src/lib/income/scope.test.ts src/lib/income/agent.test.ts",
     "test:expense": "tsx --test src/lib/expense/calc.test.ts src/lib/expense/scope.test.ts src/lib/expense/members.test.ts",
-    "test:doyapower": "tsx --test src/lib/doya-power/ledger.test.ts src/lib/doya-power/charge.test.ts src/lib/doya-power/voice.test.ts src/lib/doya-power/count.test.ts src/components/doya-power/insufficient.test.ts src/lib/collection/collection.test.ts src/lib/missions/missions.test.ts",
+    "test:doyapower": "tsx --test src/lib/doya-power/ledger.test.ts src/lib/doya-power/charge.test.ts src/lib/doya-power/voice.test.ts src/lib/doya-power/count.test.ts src/lib/doya-power/history.test.ts src/components/doya-power/insufficient.test.ts src/lib/collection/collection.test.ts src/lib/missions/missions.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

@@ -14,6 +14,7 @@ import { shellEnabledIds } from '@/lib/ui-shell'
 import { uiNextMode } from '@/lib/ui-next'
 import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
 import { doyaPowerCharger } from '@/lib/doya-power/charge'
+import { loadDoyaPowerFxForUser } from '@/lib/doya-power/fx.server'
 import { getAccountCompanyName } from '@/lib/shell/company.server'
 import { shellToolHrefs } from '@/lib/shell/tool-hrefs.server'
 import { cookies } from 'next/headers'
@@ -36,8 +37,11 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   // ドヤパワーの残り（枠のゲージ）。旗が出すと決めた人だけ、本人の会社の台帳を読む（毎月の付与・毎日の回復は読むときに足す）。
   // ⚠️ 旗が off・会社が未登録・読めないときは null（ゲージは出ない）。off なら台帳に触れない
   const doyaPowerState = doyaPower ? await doyaPowerCharger.shellState().catch(() => null) : null
+  // ドヤくんの絵と演出の設定（会社・個人）。旗が出すと決めた人だけ読む（off なら DB に触れない）。枠のゲージや中のツールの部品が見る
+  const userId = (session?.user as { id?: string } | undefined)?.id
+  const doyaPowerFx = doyaPower && userId ? (await loadDoyaPowerFxForUser(userId).catch(() => null))?.fx ?? undefined : undefined
   return (
-    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} doyaPower={doyaPower} doyaPowerState={doyaPowerState} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
+    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} doyaPower={doyaPower} doyaPowerState={doyaPowerState} doyaPowerFx={doyaPowerFx} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
       {children}
     </ShellGate>
   )

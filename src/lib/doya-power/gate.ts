@@ -37,5 +37,6 @@ export function createGatedLedger(getDb: () => LedgerDb, allowed: () => boolean,
     operationStatus: async (...a: Parameters<Ledger['operationStatus']>) => open().operationStatus(...a),
     operationInfo: async (...a: Parameters<Ledger['operationInfo']>) => open().operationInfo(...a),
     recentConsume: async (...a: Parameters<Ledger['recentConsume']>) => open().recentConsume(...a),
+    history: async (...a: Parameters<Ledger['history']>) => open().history(...a),
   }
 }

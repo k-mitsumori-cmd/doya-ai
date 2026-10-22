@@ -29,6 +29,7 @@ export const balanceForUser = doyaPower.balanceForUser
 export const operationStatus = doyaPower.operationStatus
 export const operationInfo = doyaPower.operationInfo
 export const recentConsume = doyaPower.recentConsume
+export const history = doyaPower.history
 
 export * from './rules'
 export { DoyaPowerDisabledError } from './gate'

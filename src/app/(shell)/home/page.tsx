@@ -13,6 +13,8 @@ import { getHomeSummary } from '@/lib/home/summary'
 import { cookies } from 'next/headers'
 import { isUiNext } from '@/lib/ui-next'
 import { SETUP_HIDE_COOKIE } from './cookies'
+import { isDoyaPowerEnabled } from '@/lib/doya-power/flag'
+import { loadDoyaPowerHome } from '@/lib/doya-power/home.server'
 import HomeDashboard from './HomeDashboard'
 import HomeDashboardLegacy from './HomeDashboardLegacy'
 
@@ -33,5 +35,7 @@ export default async function HomePage() {
   // 入力が主役の新しいホーム（UI 品質 H-2）は、新しい見た目（チェックリスト §5.1）のときだけ
   if (!uiNext) return <HomeDashboardLegacy initial={summary} />
   const setupHidden = (await cookies()).get(SETUP_HIDE_COOKIE)?.value === '1'
-  return <HomeDashboard initial={summary} setupHidden={setupHidden} />
+  // ドヤパワーの欄（旗 DOYA_POWER_ROLLOUT の内側だけ。off なら台帳もセッションも読まずに null。読めないときも null で、欄を出さない）
+  const power = (await isDoyaPowerEnabled()) ? await loadDoyaPowerHome() : null
+  return <HomeDashboard initial={summary} setupHidden={setupHidden} power={power} />
 }
