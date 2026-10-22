@@ -3,7 +3,29 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const crypto = require('node:crypto')
+const sourceLockPath = process.env.DOYA_PROMANE_R1_SOURCE_LOCK
+assert(sourceLockPath && path.isAbsolute(sourceLockPath), 'Promane phase source lock required')
+const sourceLockBytes = fs.readFileSync(sourceLockPath)
+const sourceLockSha256 = crypto.createHash('sha256').update(sourceLockBytes).digest('hex')
+const sourceLock = JSON.parse(sourceLockBytes.toString('utf8'))
+assert.equal(sourceLock.phase, process.env.DOYA_PROMANE_R1_EXPECT)
+const inputNames = sourceLock.loadedSourcePaths
+assert(Array.isArray(inputNames) && new Set(inputNames).size === inputNames.length)
+assert.deepEqual(Object.keys(sourceLock.sourceHashes).sort(), [...inputNames].sort())
+const hashInputs = () => Object.fromEntries(inputNames.map(name =>
+  [name, crypto.createHash('sha256').update(fs.readFileSync(name)).digest('hex')]))
+const inputHashesAtStart = hashInputs()
+assert.deepEqual(inputHashesAtStart, sourceLock.sourceHashes, 'Inputs changed before first require/load')
 const { Prisma } = require('@prisma/client')
+const { assertPromaneSchemaCompatibility } = require('../../../scripts/security-regression/fixtures/promane-schema-compat/verify-contract.cjs')
+assert.deepEqual(assertPromaneSchemaCompatibility(Prisma), sourceLock.compatibility)
+const installedClientVersion = JSON.parse(fs.readFileSync('node_modules/@prisma/client/package.json', 'utf8')).version
+assert.equal(Prisma.prismaVersion.client, installedClientVersion)
+const prismaClient = { version: installedClientVersion,
+  generatedSchemaSha256: inputHashesAtStart['node_modules/.prisma/client/schema.prisma'],
+  generatedImplementationSha256: inputHashesAtStart['node_modules/.prisma/client/index.js'],
+  packageSha256: inputHashesAtStart['node_modules/@prisma/client/package.json'],
+  dmmfModelCount: Prisma.dmmf.datamodel.models.length }
 const { createRequire } = require('node:module')
 const { load } = require('../../../scripts/security-regression/load-typescript.cjs')
 const base = 'docs/audits/2026-10-06-all-services-recheck/'
@@ -310,7 +332,7 @@ async function check(name, work) {
     const manifestPath = 'scripts/security-regression/fixtures/promane-r1-46a9/manifest.json'
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
     const source = [...Object.keys(manifest.entries), manifestPath, base + 'verify-promane-retirement-create-postgres.cjs']
-    const sourcePath = file => before && manifest.entries[file]?.source === 'pinned' ? manifest.entries[file].dataPath : file
+    const sourcePath = file => before && ['pinned', 'pinned-data'].includes(manifest.entries[file]?.source) ? manifest.entries[file].dataPath : file
     if (before) {
       assert.equal(manifest.baseCommit, '46a9e4fc4a93f49fa3cd2157252aa6cf5ee69006')
       for (const [file, entry] of Object.entries(manifest.entries)) {
@@ -323,8 +345,11 @@ async function check(name, work) {
     const expected = before ? 2 : 18
     assert.equal(observed.length + cases.length, expected)
     if (!before) assert.equal(lockWaitEvidence.length, 6)
+    const inputHashesAtEnd = hashInputs()
+    assert.deepEqual(inputHashesAtEnd, inputHashesAtStart, 'Inputs changed before report completion')
     const report = { checkedAt: new Date().toISOString(), expected, passed: observed.length + cases.length, phase: before ? 'before_gap_observed' : 'after_guard_verified', baseCommit: before ? manifest.baseCommit : null, observed, cases, sourceHashes,
-      lockWaitEvidence, scope: 'Actual current Promane creators, lifecycle retirement reserve and actual preflight on owned Unix PostgreSQL, synthetic actor, no external provider/DB/send. Six actual User lock waits across retirement and cancel/create orderings, plus first-setup concurrency and read/replay/malformed controls. Full HTTP matrix and other Promane writers remain pending.' }
+      lockWaitEvidence, sourceLockSha256, inputHashesAtStart, inputHashesAtEnd, compatibility: sourceLock.compatibility, prismaClient,
+      scope: 'Historical three Promane runtime blobs with inert old schema evidence versus current generated Prisma 249 client, verified full DMMF shape for 33 relevant models. Actual current Promane creators, lifecycle retirement reserve and actual preflight on owned Unix PostgreSQL, synthetic actor, no external provider/DB/send. Six actual User lock waits across retirement and cancel/create orderings, plus first-setup concurrency and read/replay/malformed controls. Full HTTP matrix and other Promane writers remain pending.' }
     fs.writeFileSync(process.env.DOYA_PROMANE_R1_EVIDENCE || base + 'promane-retirement-create-postgres-results.json', JSON.stringify(report, null, 2) + '\n')
     console.log(JSON.stringify(report))
   } finally { await db.$disconnect() }

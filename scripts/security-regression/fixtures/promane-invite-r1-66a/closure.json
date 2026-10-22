@@ -16,7 +16,8 @@
     },
     "prisma/schema.prisma": {
       "baseSha256": "7e8359729a998a68b5ebb9e336ea65cf5aed3f82abc4ab3712238d5d1c995964",
-      "afterSha256": "7e8359729a998a68b5ebb9e336ea65cf5aed3f82abc4ab3712238d5d1c995964"
+      "afterSha256": "12e8a7da80d07b572d2e2c52c1efc52fe9a424e9f8befbb6a21f11bf86609f49",
+      "oldDataPath": "scripts/security-regression/fixtures/promane-schema-compat/legacy-schema.prisma.txt"
     },
     "src/lib/private-api-response.ts": {
       "baseSha256": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0",

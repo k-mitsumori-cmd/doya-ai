@@ -1,22 +1,25 @@
 {
   "baseCommit": "46a9e4fc4a93f49fa3cd2157252aa6cf5ee69006",
   "baseTree": "c32d6d1becb58c0c3f9c670bca0ae38c027e26f4",
-  "scope": "Exact old runtime data for Promane R1 pre-fix probe. Only three changed TypeScript files are pinned as inert .txt; every fallback loaded source must retain the base blob SHA. No runtime/source overwrite.",
+  "scope": "Exact old runtime data for Promane R1 pre-fix probe. Only three changed TypeScript files are overlaid from inert .txt; the old Prisma schema is pinned as inert historical data and is never loaded for DDL. Every unchanged fallback source retains its base blob SHA. No runtime/source overwrite.",
   "entries": {
     "src/lib/promane/auth.ts": {
       "sha256": "0827bcc3d530c637be74d36c944f14a8c24f444de92347ebcfa1664cec2a96eb",
       "source": "pinned",
-      "dataPath": "scripts/security-regression/fixtures/promane-r1-46a9/src/lib/promane/auth.ts.txt"
+      "dataPath": "scripts/security-regression/fixtures/promane-r1-46a9/src/lib/promane/auth.ts.txt",
+      "afterSha256": "783493d3876592b2dc15a3ea02ff139ec8d80b06d28fc7ed96ee23a738efc985"
     },
     "src/lib/promane/workspace-mutations.ts": {
       "sha256": "6109376542179f3350a4607c6e18b0950c08b8b7726e1af1ce9760ee138fe97b",
       "source": "pinned",
-      "dataPath": "scripts/security-regression/fixtures/promane-r1-46a9/src/lib/promane/workspace-mutations.ts.txt"
+      "dataPath": "scripts/security-regression/fixtures/promane-r1-46a9/src/lib/promane/workspace-mutations.ts.txt",
+      "afterSha256": "7c1162da343d61ade4fce4fe5a223e369aef3dab46a9b605d4806d7f306a49ae"
     },
     "src/lib/promane/workspace-operation.ts": {
       "sha256": "19ff4b3dcf0167d8841e7ede41b32c370667a32d5e2dc002eb9bf196b433cb92",
       "source": "pinned",
-      "dataPath": "scripts/security-regression/fixtures/promane-r1-46a9/src/lib/promane/workspace-operation.ts.txt"
+      "dataPath": "scripts/security-regression/fixtures/promane-r1-46a9/src/lib/promane/workspace-operation.ts.txt",
+      "afterSha256": "f1aff03e81a5fa43f65a5b9226dc2a290b548648db9be3b9a08b48703ca396a8"
     },
     "src/lib/promane/workspace-input.ts": {
       "sha256": "459cb71604c1a6a6c3255fe3bb5e073cef8f66d582cd906762a2f1c6bd0b6343",
@@ -76,7 +79,8 @@
     },
     "prisma/schema.prisma": {
       "sha256": "7e8359729a998a68b5ebb9e336ea65cf5aed3f82abc4ab3712238d5d1c995964",
-      "source": "current-exact-base"
+      "source": "pinned-data",
+      "dataPath": "scripts/security-regression/fixtures/promane-schema-compat/legacy-schema.prisma.txt"
     }
   }
 }

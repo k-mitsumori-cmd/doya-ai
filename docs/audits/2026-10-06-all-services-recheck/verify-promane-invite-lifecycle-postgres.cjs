@@ -21,6 +21,9 @@ const hashInputs = () => Object.fromEntries(inputNames.map(name =>
 const inputHashesAtStart = hashInputs()
 assert.deepEqual(inputHashesAtStart, sourceLock.sourceHashes, 'Inputs changed before first require/load')
 const { Prisma, PrismaClient } = require('@prisma/client')
+const { assertPromaneSchemaCompatibility } = require('../../../scripts/security-regression/fixtures/promane-schema-compat/verify-contract.cjs')
+const compatibility = assertPromaneSchemaCompatibility(Prisma)
+assert.deepEqual(compatibility, sourceLock.compatibility)
 const { load } = require('../../../scripts/security-regression/load-typescript.cjs')
 
 // Reuse the repository's existing private-socket DMMF table builder, never an external DB.
@@ -635,7 +638,7 @@ async function check(label, work) { await work(); cases.push(label); console.log
     const inputHashesAtEnd = hashInputs()
     assert.deepEqual(inputHashesAtEnd, inputHashesAtStart, 'Inputs changed during phase')
     const report = { checkedAt: now(), phase: before ? 'before_gap_observed' : serializable ? 'serializable_phantom_observed' : 'after_guard_verified', passed: cases.length,
-      cases, observed, waitEvidence: waits, sourceHashes, inputHashesAtStart, inputHashesAtEnd, sourceLockSha256, prismaClient, scope: 'Actual 2 route handlers, admission helper, lifecycle store and owned private PostgreSQL. Session and email synthetic; no provider delivery or production DB.' }
+      cases, observed, waitEvidence: waits, sourceHashes, inputHashesAtStart, inputHashesAtEnd, sourceLockSha256, prismaClient, compatibility, scope: 'Historical before runtime overlay and inert old schema data, verified against current generated Prisma client with 33 full model shapes. Actual 2 route handlers, admission helper, lifecycle store and owned private PostgreSQL. Session and email synthetic; no provider delivery or production DB.' }
     const output = process.env.DOYA_PROMANE_INVITE_EVIDENCE
     assert(output && path.isAbsolute(output))
     fs.writeFileSync(output, JSON.stringify(report, null, 2) + '\n')

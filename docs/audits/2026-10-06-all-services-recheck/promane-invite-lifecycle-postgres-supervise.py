@@ -12,6 +12,12 @@ BASE = pathlib.Path('docs/audits/2026-10-06-all-services-recheck')
 PIN = pathlib.Path('scripts/security-regression/fixtures/promane-invite-r1-66a/manifest.json')
 SERIAL_PIN = pathlib.Path('scripts/security-regression/fixtures/promane-invite-r1-serializable/manifest.json')
 CLOSURE = pathlib.Path('scripts/security-regression/fixtures/promane-invite-r1-66a/closure.json')
+COMPAT = pathlib.Path('scripts/security-regression/fixtures/promane-schema-compat')
+OLD_SCHEMA = COMPAT / 'legacy-schema.prisma.txt'
+CONTRACT = COMPAT / 'model-contract.json'
+CHECK = COMPAT / 'verify-contract.cjs'
+CURRENT_SCHEMA = '12e8a7da80d07b572d2e2c52c1efc52fe9a424e9f8befbb6a21f11bf86609f49'
+OLD_SCHEMA_SHA = '7e8359729a998a68b5ebb9e336ea65cf5aed3f82abc4ab3712238d5d1c995964'
 PHASE = os.environ.get('DOYA_PROMANE_INVITE_EXPECT', 'after')
 if PHASE not in ('before', 'serializable', 'after'):
     raise SystemExit('DOYA_PROMANE_INVITE_EXPECT must be before, serializable, or after')
@@ -26,11 +32,20 @@ serial_manifest = json.loads(SERIAL_PIN.read_text())
 closure = json.loads(CLOSURE.read_text())
 if closure.get('baseCommit') != manifest['baseCommit'] or len(closure.get('entries', {})) != 18:
     raise SystemExit('Invitation source closure is not the reviewed base')
+schema_entry = closure['entries'].get('prisma/schema.prisma', {})
+if (schema_entry.get('baseSha256') != OLD_SCHEMA_SHA or schema_entry.get('afterSha256') != CURRENT_SCHEMA
+        or schema_entry.get('oldDataPath') != str(OLD_SCHEMA)
+        or hashlib.sha256(OLD_SCHEMA.read_bytes()).hexdigest() != OLD_SCHEMA_SHA):
+    raise SystemExit('Old schema inert data or current schema contract changed')
 for name, entry in closure['entries'].items():
     if not (isinstance(entry.get('baseSha256'), str) and isinstance(entry.get('afterSha256'), str)):
         raise SystemExit('Malformed invitation closure entry: ' + name)
-    if name not in manifest['pinnedSources'] and hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest() != entry['baseSha256']:
-        raise SystemExit('Unpinned base66 source changed: ' + name)
+    if name == 'prisma/schema.prisma':
+        expected = CURRENT_SCHEMA
+    else:
+        expected = entry['baseSha256']
+    if name not in manifest['pinnedSources'] and hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest() != expected:
+        raise SystemExit('Unpinned current source changed: ' + name)
 serial_name = pathlib.Path('src/lib/promane/invite-admission.ts')
 if (serial_manifest.get('pinnedSerializableHelperSha256') !=
         hashlib.sha256((SERIAL_PIN.parent / serial_name).read_bytes()).hexdigest()):
@@ -73,10 +88,13 @@ try:
                     str(BASE / 'promane-invite-lifecycle-postgres-supervise.py')]
     overlay_names = set(manifest['pinnedSources']) if PHASE == 'before' else {str(serial_name)} if PHASE == 'serializable' else set()
     loaded_sources = {(str(baseline / name) if name in overlay_names else name): name for name in source_names}
-    generated_inputs = ['node_modules/.prisma/client/schema.prisma', 'node_modules/.prisma/client/index.js',
+    generated_inputs = [str(OLD_SCHEMA), str(CONTRACT), str(CHECK), 'package.json', 'package-lock.json',
+                        'node_modules/.prisma/client/schema.prisma', 'node_modules/.prisma/client/index.js',
                         'node_modules/.prisma/client/default.js',
                         'node_modules/@prisma/client/package.json', 'node_modules/@prisma/client/default.js',
-                        'node_modules/prisma/package.json']
+                        'node_modules/@prisma/client/runtime/library.js',
+                        'node_modules/prisma/package.json', 'node_modules/typescript/package.json',
+                        'node_modules/typescript/lib/typescript.js']
     input_paths = [*loaded_sources, *generated_inputs]
     if len(input_paths) != len(set(input_paths)) or not all(pathlib.Path(name).is_file() for name in input_paths):
         raise RuntimeError('Invitation input path missing or duplicate')
@@ -87,11 +105,22 @@ try:
             expected = (entry['baseSha256'] if PHASE == 'before' else serial_manifest['pinnedSerializableHelperSha256']) if logical_name in overlay_names else entry['afterSha256']
             if source_start[actual_path] != expected:
                 raise RuntimeError('Invitation phase input differs from pinned source: ' + actual_path)
-    if pathlib.Path(generated_inputs[0]).stat().st_size <= 1000:
+    locked_packages = json.loads(pathlib.Path('package-lock.json').read_text())['packages']
+    for package in ('typescript', 'prisma', '@prisma/client'):
+        installed = json.loads(pathlib.Path('node_modules', package, 'package.json').read_text())['version']
+        if installed != locked_packages['node_modules/' + package]['version']:
+            raise RuntimeError('Installed package differs from current lockfile: ' + package)
+    if pathlib.Path('node_modules/.prisma/client/schema.prisma').stat().st_size <= 1000:
         raise RuntimeError('Actual generated Prisma schema input is required')
+    compatible = subprocess.run(['node', str(CHECK)], env=env, capture_output=True, text=True,
+                                timeout=15, check=True)
+    compatibility = json.loads(compatible.stdout)
+    if compatibility['compatibleModels'] != 33:
+        raise RuntimeError('Promane generated-client model count changed')
     source_lock = folder / 'source-lock.json'
     source_lock.write_text(json.dumps({'phase': PHASE, 'sourceHashes': source_start,
-                                       'loadedSourcePaths': list(loaded_sources), 'generatedInputs': generated_inputs}, sort_keys=True) + '\n')
+                                       'loadedSourcePaths': list(loaded_sources), 'generatedInputs': generated_inputs,
+                                       'compatibility': compatibility}, sort_keys=True) + '\n')
     status['sourceLockSha256'] = hashlib.sha256(source_lock.read_bytes()).hexdigest()
     with (folder / 'init.log').open('w') as output:
         subprocess.run([str(pg / 'initdb'), '-D', str(folder / 'data'), '-U', 'doya_sfa',
@@ -166,6 +195,7 @@ try:
     valid = (source_start == source_end and proof.get('inputHashesAtStart') == source_start
              and proof.get('inputHashesAtEnd') == source_end
              and proof.get('sourceLockSha256') == status['sourceLockSha256']
+             and proof.get('compatibility') == compatibility
              and result.returncode == 0 and proof.get('passed') == expected and proof.get('cases') == expected_cases
              and len(proof.get('observed', [])) == {'before': 2, 'serializable': 1, 'after': 7}[PHASE]
              and [item.get('label') for item in proof.get('waitEvidence', [])] == expected_wait_labels
@@ -176,7 +206,8 @@ try:
              and set(proof.get('sourceHashes', {})) == expected_sources
              and isinstance(proof.get('prismaClient', {}).get('version'), str)
              and len(proof.get('prismaClient', {}).get('generatedSchemaSha256', '')) == 64
-             and proof.get('prismaClient', {}).get('dmmfModelCount') == 246
+             and proof.get('prismaClient', {}).get('dmmfModelCount') == 249
+             and proof.get('prismaClient', {}).get('generatedSchemaSha256') == source_start['node_modules/.prisma/client/schema.prisma']
              and all(pathlib.Path(name).is_file() and hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest() == digest
                      for name, digest in proof.get('sourceHashes', {}).items()))
     status.update(probeExitCode=result.returncode, evidenceValid=valid, status='passed' if valid else 'failed')
