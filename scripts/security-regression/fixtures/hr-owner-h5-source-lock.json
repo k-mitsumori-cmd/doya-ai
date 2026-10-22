@@ -44,7 +44,7 @@
     "scripts/security-regression/hr-owner/verify-two-settings-owner-shared-slot-mounted.cjs": "948245cf7753dc0cf865413db9f5a518cb79833828e241e2602349093d5f51c1",
     "scripts/security-regression/load-typescript.cjs": "56ac874824dac61870b3867b0b9416af6ce0a23126dcbc71ebb2a77045432a43",
     "scripts/security-regression/retirement-fixture.cjs": "bf80337e9a7c14200d5d4410b45390a30a57e39b323d4e8fa23c338a1de499e4",
-    "scripts/security-regression/run.cjs": "dc4470f0f454f35f1b525d122d361e49cc7795eff5a9e2bf82ae91500a663bd3",
+    "scripts/security-regression/run.cjs": "986a4f35339fe8f5a86918fd43d9a5fc592f4ca2877b5d103d14926bd7b63926",
     "scripts/security-regression/verify-hr-additional-get-cache.cjs": "df256544e951f9b8418d611092d0a9cffb71ec1e2fe3d34443861338baae1cc1",
     "scripts/security-regression/verify-hr-error-sanitization.cjs": "90c8dac2dda5ac9420538ec67bcc9927ca3fcbb54147017fbcf1f6ec71950b23",
     "scripts/security-regression/verify-hr-invite-final-null-counter-postgres.py": "e37cad9108985d736ed1c0581b00e98820807c630867f5ca13fef2b5d9a29454",
@@ -104,7 +104,8 @@
     "src/lib/owner-transfer/store.ts": "ccff67bc1d5f68706f2e992b31c97cd535d828217886b8e5bb85c27784d29628",
     "src/lib/owner-transfer/types.ts": "6b231148e00bbcaa2a2bc3097690cca1df54db6ff79009ba337ed0ed6d7b4e1e",
     "src/lib/private-api-response.ts": "d42bec0d81e4212af273c3fe7283388d959bd3ca106853c895e3ac6f564484f0",
-    "src/lib/use-owner-transfer.ts": "dcfda479a6c654d2896affcfa63953625e865ae8e5bc261012e512ea70ab3e45"
+    "src/lib/use-owner-transfer.ts": "dcfda479a6c654d2896affcfa63953625e865ae8e5bc261012e512ea70ab3e45",
+    "scripts/security-regression/verify-three-service-workspace-retry-mounted.cjs": "f292980efefe878633b9c7670bc51f1f27d92adf895d04bc58336468bbb0bf1c"
   },
   "baselineData": {
     "scripts/security-regression/fixtures/hr-owner-v6-before/src/app/api/hr/organization/invite/[token]/route.ts.txt": "84ebdccaf8b58181d6915a0cc49f65ab5cbde8a795212af26eca1c16e128fb47",

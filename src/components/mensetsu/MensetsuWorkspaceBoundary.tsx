@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useSession } from 'next-auth/react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -19,6 +19,7 @@ type Scope = { kind: 'loading' | 'denied' | 'unavailable'; key: string } |
   { kind: 'select'; key: string; memberships: WorkspaceOrganization[] } |
   { kind: 'return'; key: string; memberships: WorkspaceOrganization[]; origin: WorkspaceOrganization | null }
 type Value = { scope: Scope; switchTo: (slug: string) => void; retry: () => void; suspended?: boolean }
+type RetryLease = { context: string; active: boolean }
 const Context = createContext<Value | null>(null)
 const retainNode = (node: HTMLDivElement | null) => { node?.setAttribute('inert', '') }
 const releaseNode = (node: HTMLDivElement | null) => { node?.removeAttribute('inert') }
@@ -69,10 +70,36 @@ export function MensetsuWorkspaceBoundary({ children }: { children: ReactNode })
   const pageRetained = useRef<Scope | null>(null)
   const didPageHide = useRef(false)
   const epoch = useRef(0)
+  const retryLeaseRef = useRef<RetryLease | null>(null)
+  const retryHidden = useRef(false)
+  const retryMounted = useRef(true)
+  const [retryLeaseGeneration, refreshRetryLease] = useState(0)
   const key = JSON.stringify([actor, status, pathname, search, retryNumber, guest, returnVisit ? snapshot.handle?.operationId : null, returnVisit ? snapshot.phase : null])
   const renderedKey = useRef(key)
   renderedKey.current = key
-  const retry = useCallback(() => { epoch.current++; setRetryNumber(value => value + 1) }, [])
+  const retryContext = JSON.stringify([key, returnVisit, checkoutHint, portalHint, state.kind, state.key,
+    state.kind === 'ready' ? state.proof.revision : null])
+  const retryLease = useMemo<RetryLease>(() => ({ context: retryContext, active: true }), [retryContext, retryLeaseGeneration])
+  const retry = useCallback(() => {
+    if (!retryLease?.active || retryLeaseRef.current !== retryLease || retryHidden.current || !retryMounted.current) return
+    retryLease.active = false
+    retryLeaseRef.current = null
+    epoch.current++
+    setRetryNumber(value => value + 1)
+  }, [retryLease])
+  useLayoutEffect(() => {
+    // Publish only committed callbacks. A discarded render must not retire the visible callback.
+    if (!retryLease.active) { refreshRetryLease(value => value + 1); return }
+    const previous = retryLeaseRef.current
+    if (previous && previous !== retryLease) previous.active = false
+    retryLeaseRef.current = retryLease
+    retryMounted.current = true
+    return () => {
+      retryLease.active = false
+      if (retryLeaseRef.current === retryLease) retryLeaseRef.current = null
+      retryMounted.current = false
+    }
+  }, [retryLease])
   useEffect(() => { if (manager && !guest) manager.inspectStored() }, [manager, guest])
 
   useEffect(() => {
@@ -150,9 +177,12 @@ export function MensetsuWorkspaceBoundary({ children }: { children: ReactNode })
 
   useEffect(() => {
     if (guest) return
-    const hide = () => { didPageHide.current = true; if (stateRef.current.kind === 'ready' || stateRef.current.kind === 'empty') pageRetained.current = stateRef.current; epoch.current++; setState({ kind: 'loading', key: '' }) }
+    const hide = () => { retryHidden.current = true; if (retryLeaseRef.current) retryLeaseRef.current.active = false; retryLeaseRef.current = null; didPageHide.current = true; if (stateRef.current.kind === 'ready' || stateRef.current.kind === 'empty') pageRetained.current = stateRef.current; epoch.current++; setState({ kind: 'loading', key: '' }) }
     const show = (event: PageTransitionEvent) => {
       if (!event.persisted) return
+      if (retryLeaseRef.current) retryLeaseRef.current.active = false
+      retryLeaseRef.current = null
+      retryHidden.current = true
       if (!didPageHide.current) {
         // BFCache may deliver persisted pageshow without a matching pagehide.
         // Retire the proof immediately, but keep this actor's mounted draft inert
@@ -163,6 +193,7 @@ export function MensetsuWorkspaceBoundary({ children }: { children: ReactNode })
         setState({ kind: 'loading', key: '' })
       }
       didPageHide.current = false
+      retryHidden.current = false
       setRetryNumber(value => value + 1)
     }
     window.addEventListener('pagehide', hide)

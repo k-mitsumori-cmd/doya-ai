@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useSession } from 'next-auth/react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -18,6 +18,7 @@ type Scope = { kind: 'loading' | 'empty' | 'denied' | 'unavailable'; key: string
   { kind: 'select'; key: string; memberships: WorkspaceOrganization[] } |
   { kind: 'return'; key: string; memberships: WorkspaceOrganization[]; origin: WorkspaceOrganization | null }
 type Value = { scope: Scope; switchTo: (slug: string) => void; retry: () => void }
+type RetryLease = { context: string; active: boolean }
 type ReadyScope = Extract<Scope, { kind: 'ready' }>
 const Context = createContext<Value | null>(null)
 const retainNode = (node: HTMLDivElement | null) => { node?.setAttribute('inert', '') }
@@ -67,13 +68,36 @@ export function OrganizationWorkspaceBoundary({ children }: { children: ReactNod
   stateRef.current = state
   const retryRetained = useRef<ReadyScope | null>(null)
   const epoch = useRef(0)
+  const retryLeaseRef = useRef<RetryLease | null>(null)
+  const retryHidden = useRef(false)
+  const retryMounted = useRef(true)
+  const [retryLeaseGeneration, refreshRetryLease] = useState(0)
   const currentKey = JSON.stringify([actorId, status, pathname, searchKey, retryNumber, guest, returnVisit ? snapshot.handle?.operationId : null, returnVisit ? snapshot.phase : null])
   const renderedKey = useRef(currentKey)
   renderedKey.current = currentKey
+  const retryContext = JSON.stringify([currentKey, returnVisit, originHint, portalHint, state.kind, state.key,
+    state.kind === 'ready' ? state.proof.revision : null])
+  const retryLease = useMemo<RetryLease>(() => ({ context: retryContext, active: true }), [retryContext, retryLeaseGeneration])
   const retry = useCallback(() => {
+    if (!retryLease?.active || retryLeaseRef.current !== retryLease || retryHidden.current || !retryMounted.current) return
+    retryLease.active = false
+    retryLeaseRef.current = null
     if (stateRef.current.kind === 'ready' && stateRef.current.proof.current()) retryRetained.current = stateRef.current
     epoch.current++; setRetryNumber(value => value + 1)
-  }, [])
+  }, [retryLease])
+  useLayoutEffect(() => {
+    // Publish only committed callbacks. A discarded render must not retire the visible callback.
+    if (!retryLease.active) { refreshRetryLease(value => value + 1); return }
+    const previous = retryLeaseRef.current
+    if (previous && previous !== retryLease) previous.active = false
+    retryLeaseRef.current = retryLease
+    retryMounted.current = true
+    return () => {
+      retryLease.active = false
+      if (retryLeaseRef.current === retryLease) retryLeaseRef.current = null
+      retryMounted.current = false
+    }
+  }, [retryLease])
 
   useEffect(() => { if (manager && !guest) manager.inspectStored() }, [manager, guest])
 
@@ -164,8 +188,8 @@ export function OrganizationWorkspaceBoundary({ children }: { children: ReactNod
 
   useEffect(() => {
     if (guest) return
-    const hide = () => { retryRetained.current = null; epoch.current++; setState({ kind: 'loading', key: '' }) }
-    const show = (event: PageTransitionEvent) => { if (event.persisted) { hide(); setRetryNumber(value => value + 1) } }
+    const hide = () => { retryHidden.current = true; if (retryLeaseRef.current) retryLeaseRef.current.active = false; retryLeaseRef.current = null; retryRetained.current = null; epoch.current++; setState({ kind: 'loading', key: '' }) }
+    const show = (event: PageTransitionEvent) => { if (event.persisted) { hide(); retryHidden.current = false; setRetryNumber(value => value + 1) } }
     window.addEventListener('pagehide', hide)
     window.addEventListener('pageshow', show)
     return () => { window.removeEventListener('pagehide', hide); window.removeEventListener('pageshow', show) }

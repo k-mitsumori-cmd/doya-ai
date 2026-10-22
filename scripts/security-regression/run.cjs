@@ -2,6 +2,8 @@ for (const file of ['verify-organization-workspace-client-deadline.cjs', 'verify
   const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], { stdio: 'inherit', timeout: 60000 })
   if (result.error || result.status !== 0) { console.error('AI商談 organization workspace regression failed:', file); process.exit(result.status || 1) }
 }
+const workspaceRetry = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-three-service-workspace-retry-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (workspaceRetry.error || workspaceRetry.status !== 0) { console.error('Three-service workspace retry regression failed'); process.exit(workspaceRetry.status || 1); }
 for (const file of ['verify-owner-transfer-routes.cjs', 'verify-owner-transfer-client.cjs', 'verify-owner-transfer-mounted.cjs',
   'verify-owner-transfer-member-parent-mounted.cjs', 'verify-owner-transfer-member-read-race-mounted.cjs', 'verify-owner-transfer-quote-parent-mounted.cjs',
   'verify-owner-transfer-mensetsu-parent-mounted.cjs', 'verify-owner-transfer-aishodan-parent-mounted.cjs']) {
