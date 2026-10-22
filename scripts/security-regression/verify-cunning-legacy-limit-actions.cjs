@@ -7,7 +7,7 @@ const paths = ['answer', 'prep']
 async function run(path, code, upgradeAvailable) {
   let providers = 0
   const api = load(`src/app/api/cunning/${path}/route.ts`, {
-    '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': { NextResponse: { json: (data, init) => Response.json(data, init) } },
+    '@/lib/beta-service.server':require('./beta-allow-fixture.cjs').forService('cunning'), 'next/server': { NextResponse: { json: (data, init) => Response.json(data, init) } },
     '@/lib/prisma': { prisma: {} },
     '@/lib/cunning/access': { getUserId: async () => 'owner' },
     '@/lib/cunning/limits': { canStartSession: async () => ({ ok: false, code, reason: '利用上限です', upgradeAvailable }) },

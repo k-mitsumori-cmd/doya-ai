@@ -107,7 +107,7 @@ export interface OrgSwitcherProps {
   memberships: Membership[]
   currentSlug: string | null
   /** 切替後に呼ばれる（呼び出し側で再読み込みする） */
-  onChange: () => void
+  onChange: (slug: string) => void
 }
 
 export default function OrgSwitcher({ service, memberships, currentSlug, onChange }: OrgSwitcherProps) {
@@ -121,7 +121,7 @@ export default function OrgSwitcher({ service, memberships, currentSlug, onChang
     (slug: string) => {
       setValue(slug)
       selectOrganization(service, slug)
-      onChange()
+      onChange(slug)
     },
     [onChange, service]
   )

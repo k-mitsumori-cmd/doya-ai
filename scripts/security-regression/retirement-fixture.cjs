@@ -1,0 +1,3 @@
+// Current-schema models required by the real retirement guard in isolated PG fixtures.
+const retirementModels = ['CaseStudyApplication','HrOrganization','HrOrganizationMember','HrInvitation','KintaiOrganization','KintaiMember','SfaOrganization','SfaMember','ShodanOrganization','ShodanMember','AioOrganization','AioMember','MensetsuOrganization','MensetsuMember','QuoteOrganization','QuoteMember','AishodanOrganization','AishodanMember','IncomeOrganization','IncomeMember','ExpenseOrganization','ExpenseMember','PromaneWorkspace','PromaneMember','PromaneInvitation']
+module.exports = { retirementModels }

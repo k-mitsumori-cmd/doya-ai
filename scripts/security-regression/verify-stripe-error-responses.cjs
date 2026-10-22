@@ -1,6 +1,10 @@
 const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
+const { routeUnitDeps } = require('./checkout-route-unit-fixture.cjs')
 
+const lifecycleState = load('src/lib/account-lifecycle/state.ts', { 'node:crypto': require('node:crypto') })
+let unexpectedSubscriptionWorkCalls = 0
+const unexpectedSubscriptionWork = () => { unexpectedSubscriptionWorkCalls++; throw new Error('Authentication must fail before parsing or dispatch') }
 const secret = 'PRIVATE_STRIPE_INTERNAL'
 const common = {
   '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),
@@ -8,6 +12,9 @@ const common = {
   'next/server': { NextResponse: Response },
   'next-auth': { getServerSession: async () => { throw new Error(secret) } },
   '@/lib/auth': { authOptions: {} },
+  '@/lib/account-lifecycle/state': lifecycleState,
+  // This fixture injects a session lookup failure; subscription work must remain unreachable.
+  '@/lib/account-lifecycle/subscription-http': { parseSubscriptionHttpAction: unexpectedSubscriptionWork, runSubscriptionHttpAction: unexpectedSubscriptionWork },
   '@/lib/stripe': {},
   '@/lib/checkout-reservation': { CheckoutReservationError: class extends Error {} },
   '@/lib/prisma': { prisma: {} },
@@ -24,13 +31,19 @@ const common = {
   for (const routePath of [
     'checkout', 'portal', 'sync', 'sync/latest', 'subscription/cancel', 'subscription/resume',
   ]) {
-    const route = load(`src/app/api/stripe/${routePath}/route.ts`, common)
-    const response = await route.POST(new Request('https://example.test/api/stripe/test', { method: 'POST', body: '{}' }))
-    assert.equal(response.status, 500, routePath)
+    const route = load(`src/app/api/stripe/${routePath}/route.ts`, routePath === 'checkout' ? { ...common, ...routeUnitDeps({ prisma: {} }) } : common)
+    const requestBody = routePath === 'checkout' ? JSON.stringify({ action: 'status', operationId: require('node:crypto').randomUUID() }) : '{}'
+    const response = await route.POST(new Request('https://example.test/api/stripe/test', { method: 'POST', body: requestBody }))
+    assert.equal(response.status, routePath === 'checkout' ? 503 : 500, routePath)
     const body = await response.json()
     assert.equal(typeof body.error, 'string')
     assert.equal(JSON.stringify(body).includes(secret), false, routePath)
+    if (routePath.startsWith('subscription/')) {
+      assert.equal(response.headers.get('cache-control'), 'private, no-store')
+      assert.equal(response.headers.get('vary'), 'Cookie')
+    }
   }
+  assert.equal(unexpectedSubscriptionWorkCalls, 0, 'Session failure must not parse or dispatch a subscription operation')
 
   const webhookMocks = {
     'next/server': { NextResponse: Response },

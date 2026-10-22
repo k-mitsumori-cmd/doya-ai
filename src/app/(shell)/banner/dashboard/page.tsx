@@ -1675,7 +1675,7 @@ function BannerTestPageInner() {
           </div>
 
           {/* ジャンルフィルタタブ + ギャラリーに戻るボタン（部品は src/components/banner/BannerTemplateGallery.tsx。新しい見た目では白〜淡い青） */}
-          <div className={`w-full relative z-10 ${gt.filterBar} transition-all duration-500 ease-in-out ${
+          <div data-ui="gallery-filters" className={`w-full relative z-10 ${gt.filterBar} transition-all duration-500 ease-in-out ${
               isHeroCollapsed
                 ? 'pt-[6vh] sm:pt-[6vh] md:pt-[4vh] lg:pt-[4vh]'
                 : isFormVisible
@@ -1706,7 +1706,7 @@ function BannerTestPageInner() {
 
           {/* 一部表示中の案内 */}
           {!isLoadingTemplates && templates.length > 0 && (
-            <div className={`px-2 sm:px-4 md:px-8 lg:px-12 pt-2 ${gt.notice}`}>
+            <div data-ui="gallery-note" className={`px-2 sm:px-4 md:px-8 lg:px-12 pt-2 ${gt.notice}`}>
               <div className={`flex items-center gap-2 text-[11px] sm:text-xs ${gt.noticeText}`}>
                 <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
                 <span>
@@ -2880,7 +2880,7 @@ function BannerTestPageInner() {
                   </button>
                   {lockModalType === 'login' ? (
                     <a
-                      href="/auth/signin?callbackUrl=/banner/test"
+                      href="/auth/signin?callbackUrl=/banner/dashboard"
                       className="flex-1 py-2.5 sm:py-3 px-3 sm:px-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
                     >
                       <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />

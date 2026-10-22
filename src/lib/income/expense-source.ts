@@ -7,6 +7,7 @@
 //      import { expenseMonthly, expenseCashOut, canReadExpenseOrganization, listReadableExpenseOrganizations } from '@/lib/expense/income-source'
 //      expense: { id: 'expense', label: 'ドヤ支出管理', canRead: async (u, id) => ..., listLinkable: listReadableExpenseOrganizations, monthly: expenseMonthly, cashOut: expenseCashOut }
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import { laborCostForEntry } from '@/lib/promane/labor-cost'
 import { addMonthsYm, formatYmd, parseYmd } from './dates'
 import { EXPENSE_SOURCE_LABEL, EXPENSE_SOURCE_NOTE, expenseCashOut, expenseMonthly, listReadableExpenseOrganizations, readableExpenseOrganization } from '@/lib/expense/income-source'
@@ -54,8 +55,8 @@ export type ExpenseResult =
 const PROMANE_FINANCE_ROLES = ['owner', 'admin']
 
 /** 収入側の利用者が、そのプロマネのワークスペースの財務を見られるか */
-export async function canReadPromaneWorkspace(userId: string, workspaceId: string) {
-  const m = await prisma.promaneMember.findFirst({
+export async function canReadPromaneWorkspace(userId: string, workspaceId: string, reader: Pick<Prisma.TransactionClient, 'promaneMember'> = prisma) {
+  const m = await reader.promaneMember.findFirst({
     where: { userId, workspaceId, isActive: true, role: { in: PROMANE_FINANCE_ROLES } },
     include: { workspace: { select: { id: true, name: true } } },
   })

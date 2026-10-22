@@ -1,0 +1,69 @@
+{
+  "at": "2026-10-20T16:11:16.025530+00:00",
+  "head": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+  "state": "a JST-only source/test frozen; b/c preparation only; no Home/Popup edits",
+  "targetFiles": [
+    "src/lib/tenjikai/tenjikai-read.ts",
+    "src/lib/tenjikai/tenjikai-read.test.ts"
+  ],
+  "sourceHashes": {
+    "src/lib/tenjikai/tenjikai-read.ts": "9ddb7057e222546d29eb311bad472af7481fc59a020094cca1d7d19a47c628d6",
+    "src/lib/tenjikai/tenjikai-read.test.ts": "a632f979ad9f7991d403d852166485f652bc5ba10de2247928b66b683087bb87"
+  },
+  "candidateSha256": "b3e075dcf817635aa2b17ae6ae4d254ed5632d0b68fbfef96a9ca9292d7d8f61",
+  "beforeSourceSha256": "e8d601d24eb1cc2cd87c3006427017349882eff80e13608aeafeead8d9366b18",
+  "originalReadTestsPrefixUnchanged": true,
+  "sameFixtureBeforeAfterSha256": "a632f979ad9f7991d403d852166485f652bc5ba10de2247928b66b683087bb87",
+  "checks": {
+    "beforeRead": {
+      "exit": 1,
+      "tests": 23,
+      "passed": 7,
+      "failed": 16,
+      "scope": "old actual read source physical sandbox copy + identical final test file"
+    },
+    "afterRead": {
+      "exit": 0,
+      "tests": 23,
+      "passed": 23,
+      "productionParent": true
+    },
+    "fullTenjikaiSuite": {
+      "exit": 0,
+      "tests": 32,
+      "originalAssertionsPreserved": true,
+      "command": "NODE_ENV=production npm run test:tenjikai"
+    },
+    "targetLint": {
+      "exit": 0,
+      "warnings": 0
+    },
+    "targetType": {
+      "exit": 0,
+      "programFiles": 604,
+      "diagnostics": 0,
+      "scope": "two changed Tenjikai roots + ambient declarations + transitive imports; not whole repo/Next build"
+    },
+    "diffCheck": {
+      "exit": 0
+    },
+    "popup8FrozenUnchanged": {
+      "src/lib/popup/popup-read.ts": true,
+      "src/lib/home/summary.ts": true,
+      "src/app/(shell)/home/HomeDashboard.tsx": true,
+      "src/app/(shell)/home/HomeDashboardLegacy.tsx": true,
+      "src/app/(shell)/home/agent.ts": true,
+      "src/app/(shell)/home/PopupOverview.tsx": true,
+      "src/app/(shell)/home/popup-overview.module.css": true,
+      "scripts/security-regression/verify-home-popup.cjs": true
+    }
+  },
+  "notDone": [
+    "Home integration b/c",
+    "source saved plan restoration or persistence API",
+    "production DB/model existence",
+    "browser/device or provider verification",
+    "full repo build/gate/commit/push"
+  ],
+  "provenance": "Author isolated synthetic JST date verification. No Home integration, runtime provider, production or browser proof."
+}

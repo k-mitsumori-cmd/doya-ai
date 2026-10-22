@@ -1,0 +1,215 @@
+{
+  "status": "passed",
+  "scripts": 52,
+  "providerNetworkPermitted": false,
+  "results": [
+    {
+      "file": "scripts/security-regression/verify-adimage-analysis-source-paths.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "scripts/security-regression/verify-ci-source-paths.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-private-image-bucket-policy.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-private-image-preflight.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-shodan-private-compose.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-additional-private-storage.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-shodan-logo-preflight.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-media-storage-privacy.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-interview-storage-limits.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-hr-private-photo-storage.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-hr-private-photo-read.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-hr-photo-write-scope.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-lifecycle.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-hr-upload-source-validation.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-ack.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-kintai-work-rule-input.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-kintai-settings-revision-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-kintai-schedule-preview.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-kintai-schedule-consistency.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-kintai-work-rule-creation-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-kintai-access-provider-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "scripts/security-regression/verify-quote-document-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-quote-document-revision-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-quote-document-unknown-resume-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-time-creation-client-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-timesheet-creation-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-time-note-boundary-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-time-note-boundary-client.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-project-input.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-project-operation-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-project-operation-view-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-workspace-operation-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-workspace-operation-view-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-unavailable-recovery-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-task-creation-client-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-task-creation-view-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-client-creation-client-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-client-creation-view-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-expense-creation-client-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-expense-creation-view-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-timesheet-member-draft.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-canonical-scope-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-promane-pending-scope-migration.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-transport.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-hook-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-preview-wizard-mounted.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-analysis-transport.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-analysis-route.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-intent-client.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-operation-transport.cjs",
+      "exitCode": 0
+    },
+    {
+      "file": "docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-import-mounted.cjs",
+      "exitCode": 0
+    }
+  ]
+}

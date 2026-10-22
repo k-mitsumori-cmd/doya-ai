@@ -30,7 +30,7 @@ const prisma = { $queryRaw: async sql => {
 const route = load('src/app/api/aio/scans/route.ts', {
   'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma },
   '@prisma/client': { Prisma: require('@prisma/client').Prisma },
-  '@/lib/aio/access': { getAioContext: async slug => ({ organizationId: slug === 'other' ? 'org-other' : 'org-main' }), orgSlugFrom: req => req.nextUrl.searchParams.get('org') },
+  '@/lib/organization-workspace-selection':load('src/lib/organization-workspace-selection.ts'),'@/lib/aio/access': { getAioContext: async slug => ({ organizationId: slug === 'other' ? 'org-other' : 'org-main' }), orgSlugFrom: req => req.nextUrl.searchParams.get('org') },
   '@/lib/aio/types': { effectiveScanStatus: status => status },
   '@/lib/aio/run': {}, '@/lib/service-usage': {}, '@/lib/aio/scan-cursor': cursors, '@/lib/aio/coverage': coverage,
   '@/lib/pricing': { HIGH_USAGE_CONTACT_URL: 'https://example.com/contact' },

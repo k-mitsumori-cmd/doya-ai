@@ -2,16 +2,18 @@
 
 import Link from 'next/link'
 import { OrganizationPricingPlans } from '@/components/OrganizationPricingPlans'
+import { useOptionalMensetsuWorkspace } from '@/components/mensetsu/MensetsuWorkspaceBoundary'
 
 // ⚠️ 料金は統一プラン。サービスごとに個別課金しないこと。
 //    金額の正本は src/lib/unified-plan.ts と UnifiedPricingPlans。ここには書かない。
 export default function MensetsuPricingPage() {
+  const scope = useOptionalMensetsuWorkspace()?.scope
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-5xl px-6 py-12">
         <div className="mb-10 text-center">
           <Link
-            href="/mensetsu"
+            href={scope?.kind === 'ready' ? scope.proof.href('/mensetsu') : '/mensetsu'}
             className="mb-4 inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-slate-700"
           >
             <span className="material-symbols-outlined text-lg font-medium">arrow_back</span>
@@ -22,7 +24,7 @@ export default function MensetsuPricingPage() {
             無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。
           </p>
         </div>
-        <OrganizationPricingPlans serviceId="mensetsu" />
+        <OrganizationPricingPlans serviceId="mensetsu" workspaceProof={scope?.kind === 'ready' ? scope.proof : undefined} />
       </div>
     </div>
   )

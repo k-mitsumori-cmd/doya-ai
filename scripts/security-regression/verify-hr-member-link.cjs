@@ -1,11 +1,17 @@
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
+const { actualMembership, state } = require('./hr-membership-fixture-bridge.cjs')
 
 function fixture({ role = 'ADMIN', foreign = false, occupied = false, uniqueRace = false } = {}) {
   const writes = []
   const tx = {
     $queryRaw: async sql => sql.join('?').includes('hr_organizations') ? [{ id: 'org' }] : [{ id: 'admin' }, { id: 'target' }],
     hrOrganizationMember: {
+      findMany: async () => [
+        { id: 'owner', userId: 'user-owner', role: 'OWNER', status: 'ACTIVE' },
+        { id: 'admin', userId: 'user-admin', role, status: 'ACTIVE' },
+        { id: 'target', userId: 'user-target', role: 'MEMBER', status: 'ACTIVE' },
+      ],
       findFirst: async ({ where }) => {
         if (where.id === 'admin') return { id: 'admin', role, status: 'ACTIVE', userId: 'user-admin' }
         if (where.id === 'target') return { id: 'target', role: 'MEMBER', status: 'ACTIVE', userId: 'user-target', employeeId: null }
@@ -26,7 +32,7 @@ function fixture({ role = 'ADMIN', foreign = false, occupied = false, uniqueRace
       },
     },
   }
-  const prisma = { $transaction: async fn => fn(tx) }
+  const prisma = { hrOrganizationMember: tx.hrOrganizationMember, $transaction: async fn => fn(tx) }
   const api = load('src/app/api/hr/organization/members/[id]/route.ts', {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
@@ -36,6 +42,8 @@ function fixture({ role = 'ADMIN', foreign = false, occupied = false, uniqueRace
     },
     '@/lib/hr/types': { HrMemberRole: { OWNER: 'OWNER', ADMIN: 'ADMIN', MANAGER: 'MANAGER', MEMBER: 'MEMBER' } },
     '@/lib/hr/constants': { ROLE_HIERARCHY: { OWNER: 4, ADMIN: 3, MANAGER: 2, MEMBER: 1 } },
+    '@/lib/hr/membership-write': actualMembership(prisma),
+    '@/lib/account-lifecycle/state': state,
   })
   return {
     writes,

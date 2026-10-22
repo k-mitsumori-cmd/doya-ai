@@ -1,0 +1,445 @@
+{
+  "executed": 86,
+  "contractPassed": 86,
+  "scope": "UNCONNECTED R0 core only; real current-schema isolated PostgreSQL User/org/member locks and CAS; no existing application writer closure, provider calls or HTTP authentication proof. The prior two unsafe application observations remain open until R1/R2/R3 integration.",
+  "cases": [
+    {
+      "name": "strict identity requires every field and rejects extra or coerced values",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "single reserve produces authority once and exact replay has no claim or mutation",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "same target lane serializes simultaneous reservations",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "global UUID binds target and principal across every operation entry",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "global UUID simultaneous different targets allows only one binding",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "different operation cannot overwrite input or active pointer",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "missing User never admits new work",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "malformed receipt is fail closed 7",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "malformed receipt is fail closed 8",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "malformed receipt is fail closed 9",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "malformed receipt is fail closed 10",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "malformed receipt is fail closed 11",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "malformed receipt is fail closed 12",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "malformed receipt is fail closed 13",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "malformed receipt is fail closed 14",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "fence missing receipt or mismatched target never behaves as absent",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "abort before delayed reservation stores tombstone and rejects delayed execution",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "unaccepted abort preserves a different active operation pointer",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "abort invalidates prepared old claim and cannot abort executing",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "explicit same operation resumes safely before-prepare",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "explicit same operation resumes safely after-prepare",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "explicit same operation resumes safely before-dispatch",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "explicit same operation resumes safely after-confirm",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "explicit same operation resumes safely before-finalize",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "prepare validates type payload duplicates and frozen plan",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "dispatch is exactly once under simultaneous worker claims",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "checkout must be exactly expired before subscription cancellation",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "unknown keeps User and fence with no timeout resume abort or new operation",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "exact acknowledgement rejects wrong generation token resource and mutable-state proof",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "completed User deletion and returned value commit atomically and replay without User",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "DB callback error rolls deletion and all operation state back",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "nonretirement completion cannot delete User and has no terminal retirement pointer",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "hr organization contract locks authority actor and third-party target",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "kintai organization contract locks authority actor and third-party target",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "sfa organization contract locks authority actor and third-party target",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "shodan organization contract locks authority actor and third-party target",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "aio organization contract locks authority actor and third-party target",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "mensetsu organization contract locks authority actor and third-party target",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "quote organization contract locks authority actor and third-party target",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "aishodan organization contract locks authority actor and third-party target",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "income organization contract locks authority actor and third-party target",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "expense organization contract locks authority actor and third-party target",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "promane organization contract locks authority actor and third-party target",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "checkout unknown blocks account lane but allows ordinary membership work",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "cancel unknown blocks account lane but allows ordinary membership work",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "resume unknown blocks account lane but allows ordinary membership work",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "change unknown blocks account lane but allows ordinary membership work",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "portal unknown blocks account lane but allows ordinary membership work",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "Kintai multiple active administrators include every authority retirement z_owner",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "Kintai multiple active administrators include every authority retirement a_actor",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "Kintai disabled employee is not active authority but oldest plan reference remains protected",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "Kintai missing final active administrator fails closed without assuming an owner",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "kintai normal pending claim does not lock a placeholder as User",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "kintai normal pending reinivite does not lock a placeholder as User",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "kintai normal pending cancel does not lock a placeholder as User",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "expense normal pending claim does not lock a placeholder as User",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "expense normal pending reinivite does not lock a placeholder as User",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "expense normal pending cancel does not lock a placeholder as User",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "Kintai claim keeps current employee email fallback when inviteEmail is null",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "kintai pending claim rejects wrong email and retired recipient before any mutation",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "expense pending claim rejects wrong email and retired recipient before any mutation",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "Expense multiple owners remain a normal authority set",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "HR current INVITED target remains editable and can be reactivated",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "HR current SUSPENDED target remains editable and can be reactivated",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "unknown status and active fake placeholder cannot bypass User validation",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "Expense detached ACTIVE or INACTIVE null never gains new authority",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "actual User lock serializes retirement admission against an in-progress membership transaction",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "multi-org contract acquires all User locks before all organizations and members",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "Expense explicit owner repair preserves unknown-target recovery without accepting an unknown actor",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "authority change between discovery and User locks causes complete replan and rejects new retiring owner",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "pending email registration after discovery causes full User replan before callback",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "retirement reserved first prevents DB membership mutation in opposite race order",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "pending missing or undefined scope property cannot fall through truthiness",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "membership prelude rejects broken nonretirement missing-ledger",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "membership prelude rejects broken nonretirement malformed-ledger",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "membership prelude rejects broken nonretirement malformed-fence",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "membership prelude rejects broken nonretirement foreign-generation",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "pending operation with missing User refuses status resume and a separate new operation",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "persisted action kind and target binding fail closed wrong-kind",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "persisted action kind and target binding fail closed foreign-create-subject",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "sfa explicit pending null invitation preserves ordinary binding contract",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "shodan explicit pending null invitation preserves ordinary binding contract",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "aio explicit pending null invitation preserves ordinary binding contract",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "mensetsu explicit pending null invitation preserves ordinary binding contract",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "quote explicit pending null invitation preserves ordinary binding contract",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    },
+    {
+      "name": "aishodan explicit pending null invitation preserves ordinary binding contract",
+      "classification": "unconnected_core_contract",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/account-lifecycle/state.ts": "3360865f72ec324b5f1332672fca09cb6bff01c31934b80945f64696e0d281df",
+    "src/lib/account-lifecycle/store.ts": "fc961245469c8c4f0efdf4f8a9cce222f7e6f0cb81e8ce026b46bd0b50a179f9",
+    "src/lib/account-lifecycle/organization-fence.ts": "df6399c484b59f5cdc282d3e28114fd004cb749a3e87122f039218281b8a4ae9",
+    "scripts/security-regression/verify-account-lifecycle-postgres.cjs": "9fe16d848a4f1b31599b916bf16b15201a7803c6e9b827d132a33fa603ec10fe",
+    "scripts/security-regression/verify-account-lifecycle-postgres.py": "8996540f143fada91e4355298ce5e3051416182ea9f6e8d5d5c5cfd963686113",
+    "prisma/schema.prisma": "f4a8411f093f9d8bee2da793f2761685edf9f7a359bd2d7ea9a4c1163db1127b"
+  }
+}

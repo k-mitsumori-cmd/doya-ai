@@ -10,7 +10,10 @@ try:
  with (base/'membership-invitation-role-integrated-postgres.log').open('w') as out:result=subprocess.run(['node',str(base/'verify-membership-invitation-role-integrated-postgres.cjs')],env=childEnv,stdout=out,stderr=subprocess.STDOUT,timeout=180)
  evidence=base/'membership-invitation-role-integrated-postgres-results.json'
  proof=json.loads(evidence.read_text()) if evidence.exists() else {}
- evidenceValid=proof.get('passed')==120 and len(proof.get('cases',[]))==120 and proof.get('checkedAt','')>=state['startedAt'] and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in proof.get('sourceHashes',{}).items()) and len(proof.get('sourceHashes',{}))==7
+ bridgePaths={'scripts/security-regression/shodan-core-import-fixture.cjs','src/lib/account-lifecycle/state.ts','src/lib/account-lifecycle/store.ts','src/lib/account-lifecycle/organization-fence.ts'}
+ sourceHashes=proof.get('sourceHashes',{});bridgeHashes=proof.get('importBridgeHashes',{})
+ rejectionCases=proof.get('rejectionCases',[])
+ evidenceValid=proof.get('passed')==120 and len(proof.get('cases',[]))==120 and proof.get('checkedAt','')>=state['startedAt'] and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in sourceHashes.items()) and len(sourceHashes)==7 and set(bridgeHashes)==bridgePaths and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in bridgeHashes.items()) and rejectionCases==[{'service':service,'mode':'POST','status':409,'memberUnchanged':True} for service in ('shodan','quote','mensetsu','aishodan')]
  state.update(probeExitCode=result.returncode,evidenceValid=evidenceValid,status='passed' if result.returncode==0 and evidenceValid else 'failed')
 finally:
  if started:

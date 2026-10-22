@@ -262,11 +262,16 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 | `past_due` | **有料を維持** | 支払い失敗中の猶予。ダンニング中に機能を止めない |
 | `unpaid` | **FREE** | ダンニングが尽きた終端。ここで落とさないと未入金のまま PRO が残る |
 | `canceled` | **FREE** | 期間終了時の解約 / トライアル終了時に支払方法なし（`missing_payment_method: 'cancel'`） |
+| `paused` | **この契約からの有料権利を解除** | 別の`active`/`trialing`/`past_due`契約があればその階層で同期し、なければFREE。明示的な手動付与は保護する。`pause_collection`だけが設定されたactive契約とは区別する |
 | `incomplete` / `incomplete_expired` | 変更しない | 実際に開始していない。トライアル資格判定でも履歴に数えない |
 
 > **解約イベントで FREE に落とす前に、他に生きている契約が無いことを必ず確認する。**
 > 二重契約の片方を解約したときに、残っている有効な契約を無視して FREE に落とすと
 > 「支払っているのに使えない」状態になる（`handleSubscriptionDeleted()` の残存契約チェック）。
+
+`customer.subscription.paused`・`customer.subscription.resumed`も更新イベントと同じ現在状態の照会を通す。遅延した停止イベントで再開済み契約を無料へ落とさず、再開イベントで過去の停止状態を復活させない。停止時の通知は解約とは別の`subscription_paused`として扱う。残存契約も適用直前に状態と本人性を確認し、不一致や照会失敗は権利を書き換えず500で再送を受ける。
+
+本番への反映前にWebhook購読へ`customer.subscription.paused`・`customer.subscription.resumed`を含める（`*`なら追加不要）。コードは購読を自動変更しない。監査は不足を検出する。参考: [Stripeの契約イベント](https://docs.stripe.com/billing/subscriptions/webhooks)、[支払い回収の一時停止](https://docs.stripe.com/billing/subscriptions/pause-payment)。
 
 「生きている契約」= **`active` / `trialing` / `past_due`**（`ACTIVE_LIKE`）。
 この集合は `stripe.ts` / `sync/latest` / `billing-audit` の3箇所に定義があるが**必ず同じ内容にすること**。
@@ -388,7 +393,7 @@ HTTP成功に加え、`ok === true`、契約有無の真偽値、矛盾しない
 | ID | 内容 | 影響 | 状態 |
 |----|------|------|------|
 | **R-1** | Webhook のユーザー特定が `stripeCustomerId` **単独**だった。顧客分裂（§2.3）で別顧客の契約だと**ユーザーが見つからず解約が反映されない** | 解約したのに PRO のまま | **対応済**: `findUserForSubscription()` が metadata.userId → customerId → Stripe顧客のメール の3段で解決 |
-| **R-2** | `handleSubscriptionDeleted()` が「他に生きている契約があるか」を確認せずに FREE に落としていた | 二重契約の片方を解約した瞬間、残った有効契約があるのに FREE に落ちる | **対応済**: 残存契約があれば FREE にせず、最上位の契約で再反映する（照会失敗時は従来どおり FREE） |
+| **R-2** | `handleSubscriptionDeleted()` が「他に生きている契約があるか」を確認せずに FREE に落としていた | 二重契約の片方を解約した瞬間、残った有効契約があるのに FREE に落ちる | **対応済**: 残存契約があれば FREE にせず、最上位の契約で再反映する（照会失敗時は変更せず再送を受ける） |
 | **R-3** | 日次監査の反映漏れ判定が `User.plan` しか見ておらず、`UserServiceSubscription` 行のズレ（INV-2 違反）を検出しなかった | 障害#5 と同じ状態が再発しても監査が沈黙する | **対応済**: `serviceDrift`（INV-2違反）と `overGranted`（過剰付与）を追加 |
 | **R-4** | Webhook 受信イベントの記録テーブルが無い | 「Webhook が届いていたか」を事後に検証できない | **対応済(2026-10-01)**: `StripeWebhookEvent` を本番DBへ先行追加し、イベントID・状態・試行回数を記録。完了済み通知の重複処理を防止。署名付きの無害な本番テスト通知で記録と再送を確認（Stripe実配送の往復試験は未実施） |
 | **R-7** | セッションのサービス別プラン（`seoPlan` 等）が `UserServiceSubscription` の行だけから作られており、`User.plan` との上位採用になっていない。消費側が `x || plan` 形式で `'FREE'` が truthy なため、行が古いとそのサービスだけ無料に落ちる | INV-2 が破れると権利が消える | **対応済**: `src/lib/auth.ts` の `session()` が `higherPlan(User.plan, サービス行)` で上位採用（`src/lib/plan-utils.ts`）。行が欠けても権利を失わず、管理画面での個別付与も失われない |
@@ -625,3 +630,15 @@ GETは結果確認のみを行い、利用枠や保存内容を変更しない�
 - 上限の理由は当該操作の応答として保持し、別操作や現在のプランについて推測しない。完了・終了・別操作では解除し、上限応答から自動再生成はしない。
 - 組織の選択はタブごとに保持する。HRの取得・変更・課金開始要求は選択した組織と利用者を送信し、サーバーは現在の所属・役割を確認する。別組織のオーナーであることや個人のPRO契約では、選択中の組織の課金権限を取得できない。
 - 選択した組織の所属が失われた場合は別の組織へ自動的に切り替えない。利用者が所属のある組織を明示的に選び直す。
+
+## ドヤAIOの個人契約から組織画面への復帰
+
+ドヤAIOの契約は従来どおり利用者単位であり、決済のprincipalやCheckout/Portalの保存記録を組織契約へ変更しない。`/aio/pricing?org=<slug>` では、離脱直前に現在の利用者・所属組織ID・slug・オーナー権限を再確認する。組織の復帰先は契約権限ではなく、このタブの画面移動用情報として扱う。
+
+新しく作成したCheckout操作が本人・操作ID・Checkout session IDを含む有効なready応答を返した場合に限り、そのsession IDへ元組織を一度だけ結び付ける。保存と読戻しができないときは外部決済画面へ移動しない。既存操作の再確認、canonical操作IDの採用、通信断後のready再取得では、現在表示している別組織を元組織として登録しない。既に同じsession IDの情報があれば上書きしない。
+
+決済成功の戻りではsession IDを専用URLのpathに残し、本人の現在の所属を再確認してから、登録済みの組織IDとslugが一致する場合だけ「元の組織」に戻るリンクを表示する。情報が無い・所属が変わった・取消でsession IDが無い場合は、現在所属する組織を利用者に明示して選んでもらう。PortalのGETとPOSTはそれぞれ離脱ごとに別のnavigation IDを発行し、queryの無い戻り先でも同じ方法で照合する。hintはプラン、決済成功、所属権限を証明しない。
+
+共通の決済同期は `success`、`session_id`、`portal_return`、`payment`、`plan` の重複と混在を厳格に判定する。不正な印では最初のsession IDを選んで自動同期しない。利用者が明示的に再確認する場合も、曖昧なIDを送らず現在の本人契約を確認する。有効なsession IDとAIO専用pathのIDが異なる場合、決済事実の同期対象は有効なsession IDのまま、組織復帰先は不明として扱う。通常の同期後にqueryを除いても専用pathは保つ。支払結果や契約状態の正本は既存のサーバー確認であり、画面のhintから推測しない。
+
+実ブラウザでの外部決済・ログイン・Portal往復と、provider/DBを伴う受入は別途確認する。

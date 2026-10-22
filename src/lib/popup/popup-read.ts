@@ -11,20 +11,19 @@
 // ⚠️ 必ず userId で絞る。他人のサイト・案は null を返す（存在するかどうかも漏らさない）。
 import type { PrismaClient } from '@prisma/client'
 import type { SiteProfile } from '@/lib/asklink/types'
-import { ctr } from './schema'
+import { ctr, jstDay } from './schema'
 import { embedCode, toPopupDto, toSiteDto, type PopupDto, type SiteDto } from './dto'
 import { emptyTotals, sinceDay, sumTotals, ymd, type DailyPoint, type StatTotals } from './stats'
 
 export type PopupDb = Pick<PrismaClient, 'popupSite' | 'popup' | 'popupStat'>
 
-/** 案ごとの合計（期間内） */
-// now はテストで日付を決めるため（省略すると今の時刻。2026-10-22 日付が進むとテストが落ちたため足した）
-export async function totalsByPopup(db: PopupDb, popupIds: string[], days: number, now: Date = new Date()): Promise<Map<string, StatTotals>> {
+/** 案ごとの合計。now 指定時は JST の当日まで（day は @db.Date の日付バケット）。 */
+export async function totalsByPopup(db: PopupDb, popupIds: string[], days: number, now?: Date): Promise<Map<string, StatTotals>> {
   const out = new Map<string, StatTotals>()
   if (popupIds.length === 0) return out
   const rows = await db.popupStat.groupBy({
     by: ['popupId'],
-    where: { popupId: { in: popupIds }, day: { gte: sinceDay(days, now) } },
+    where: { popupId: { in: popupIds }, day: { gte: sinceDay(days, now), ...(now ? { lte: jstDay(now) } : {}) } },
     _sum: { impressions: true, clicks: true, closes: true },
   })
   for (const r of rows) {

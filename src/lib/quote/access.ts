@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import type { NextRequest } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { assertRetirementMembershipWritable, lockLifecycleUsers } from '@/lib/account-lifecycle/store'
 import { ROLE_HIERARCHY, hasMinRole, type QuoteContext, type QuoteRole } from './types'
 
 const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
@@ -115,6 +116,8 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await prisma.$transaction(async (tx) => {
+        await lockLifecycleUsers(tx, [userId])
+        await assertRetirementMembershipWritable(tx, [userId])
         const existing = await tx.quoteMember.findFirst({
           where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } }, include: { organization: true },
         })
@@ -132,7 +135,7 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
     } catch (error) {
       const code = (error as { code?: string })?.code
-      if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw error
+      if (attempt === 2 || (code !== 'P2034' && code !== 'P2002' && !(code === 'P2010' && ['40001', '40P01'].includes((error as { meta?: { code?: string } }).meta?.code || '')))) throw error
     }
   }
   throw new Error('Organization creation retry exhausted')

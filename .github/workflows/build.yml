@@ -1,11 +1,9 @@
 name: Build
 
-# PR と main への push で、本番と同じ手順のうち「秘密の値が要らない部分」を確かめる。
-# - 既存の CI（ci.yml）は tsc・test:security・lint と DB を使う回帰テストを受け持つ。
-#   ここでは、そこに入っていない tsx のテスト（test:asklink〜test:expense）と next build を受け持つ。
-# - 秘密の値は使わない。ビルドに要る環境変数は、存在しない宛先のダミーにする。
-#   本番の DB・外部 API には接続しない。
-# - main の保護（Branch protection）で、このジョブと ci.yml の check を merge の必須条件にする想定。
+# main 由来の Build/build チェック名を維持する。
+# CI の既存検証に加え、同じ隔離手順で本番ビルドを確認する。
+# 依存取得・Prisma生成の後、Next build は秘密の値を渡さずネットワークを禁止する。
+# .next/cache は復元しない。隔離検証の fresh output と入力ハッシュを保持する。
 
 on:
   push:
@@ -23,49 +21,73 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    env:
-      NEXT_TELEMETRY_DISABLED: '1'
-      NODE_OPTIONS: '--max-old-space-size=6144'
-      # ダミー。ビルドとテストは DB に接続しない。存在しない宛先にして、誤って接続しても失敗するようにする
-      DATABASE_URL: postgresql://ci:ci@127.0.0.1:1/ci_dummy
-      DIRECT_URL: postgresql://ci:ci@127.0.0.1:1/ci_dummy
-      NEXTAUTH_URL: http://localhost:3000
-      NEXTAUTH_SECRET: ci-build-only-not-a-secret
+    timeout-minutes: 70
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout exact event commit without persisted credentials
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
 
       - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
 
-      - name: Install dependencies
+      - name: Record exact event source before dependencies
+        run: python3 scripts/ci/isolated-next-build.py prepare --evidence-dir "$RUNNER_TEMP/build-isolated"
+
+      - name: Install pinned dependencies
         run: npm ci
 
-      - name: Prisma generate
-        run: npx prisma generate
+      - name: Record isolated postinstall Prisma schema
+        run: sha256sum node_modules/.prisma/client/schema.prisma > "$RUNNER_TEMP/prisma-isolated-postinstall.sha256"
 
-      - name: Unit tests (tsx)
+      - name: Generate private Prisma client
         run: |
-          npm run test:asklink
-          npm run test:popup
-          npm run test:syscheck
-          npm run test:tenjikai
-          npm run test:shanai
-          npm run test:income
-          npm run test:expense
+          node scripts/prisma/generate.cjs
+          sha256sum node_modules/.prisma/client/schema.prisma > "$RUNNER_TEMP/prisma-isolated-explicit.sha256"
+          cmp "$RUNNER_TEMP/prisma-isolated-postinstall.sha256" "$RUNNER_TEMP/prisma-isolated-explicit.sha256"
 
-      - name: Type check
-        run: npx tsc --noEmit
+      - name: Verify isolated Prisma generator UTF-8 split repair
+        run: node fixtures/verify-prisma-generator-utf8.cjs "$GITHUB_WORKSPACE" --generated
 
-      - name: Restore Next.js build cache
-        uses: actions/cache@v4
+      - name: Verify isolated gate failure paths (no build)
+        run: python3 -B scripts/ci/test-isolated-next-build.py
+
+      - name: Run eight named suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          for suite in test:asklink test:popup test:syscheck test:tenjikai test:shanai test:income test:expense test:doyapower; do
+            echo "Running $suite"
+            npm run "$suite" 2>&1 | tee -a "$RUNNER_TEMP/build-isolated/named-suites.log"
+          done
+
+      - name: Fresh nonincremental TypeScript check
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/tsc --noEmit --incremental false 2>&1 | tee "$RUNNER_TEMP/build-isolated/type-before.log"
+
+      - name: Full Next production compile, prerender, and trace in a denied network namespace
+        run: python3 scripts/ci/isolated-next-build.py build --evidence-dir "$RUNNER_TEMP/build-isolated"
+
+      - name: Verify generated Next types against the same source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/tsc --noEmit --incremental false 2>&1 | tee "$RUNNER_TEMP/build-isolated/type-after.log"
+
+      - name: Finalize exact isolated build evidence
+        run: python3 scripts/ci/isolated-next-build.py finalize --evidence-dir "$RUNNER_TEMP/build-isolated"
+
+      - name: Preserve isolated build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
-          restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
-
-      - name: Next build
-        run: npx next build
+          name: build-isolated
+          path: ${{ runner.temp }}/build-isolated/
+          if-no-files-found: warn

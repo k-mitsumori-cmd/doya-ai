@@ -9,9 +9,10 @@
 // ⚠️ ガードレール（価格の扱い・触れない話題・根拠が無いときの挙動）は、
 //    そのまま相手に届く発言を規定する。ここは必ず人が確認できる形で出す。
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
+import { useOptionalOrganizationWorkspace, useWorkspaceProof } from '@/components/org/OrganizationWorkspaceBoundary'
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { useParams } from 'next/navigation'
 import { PRICE_POLICY_LABELS, type Guardrails, type Icp, type Persona, type Phase, type PricePolicy, type ProductProfile, type Slot } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
@@ -36,13 +37,22 @@ interface ScenarioData {
 }
 
 export default function AishodanScenarioPage() {
+  const workspace = useOptionalOrganizationWorkspace()
+  if (!workspace) return <main className="p-8"><SignInReturnLink fallback="/aishodan" className="text-blue-700 underline">ログインしてシナリオを開く</SignInReturnLink></main>
+  return <AishodanScenarioWorkspace />
+}
+
+function AishodanScenarioWorkspace() {
   // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
   const uiNext = useUiNext()
+  const proof = useWorkspaceProof()
   const params = useParams<{ id: string }>()
   const id = params?.id
   const [s, setS] = useState<ScenarioData | null>(null)
   const [loading, setLoading] = useState(true)
+  const loadVersion = useRef(0)
   const [saving, setSaving] = useState(false)
+  const [operationUnknown, setOperationUnknown] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   /** 読み込みに失敗したときの応答の状態（新しい見た目で、出す文と次の一手を決める。通信の失敗は 0） */
@@ -54,34 +64,50 @@ export default function AishodanScenarioPage() {
 
   const load = useCallback(async () => {
     if (!id) return
+    const version = ++loadVersion.current
     setLoading(true)
+    setError('')
     try {
-      await ensureSelectedOrg('aishodan')
-      const r = await fetch(withOrg('aishodan', `/api/aishodan/scenarios/${id}`))
+      const r = await fetch(proof.api(`/api/aishodan/scenarios/${id}`))
       const d = await r.json()
       if (!r.ok) throw new AishodanHttpError(d?.error || '読み込みに失敗しました', r.status)
+      if (version !== loadVersion.current || !proof.current()) return
       setS(d.scenario)
     } catch (e) {
-      setLoadStatus(failureStatus(e))
-      // 新しい見た目では、トーストにもサーバーの文を出さない
-      notifyError(setError, uiNext ? 'シナリオを読み込めませんでした。' : e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (version === loadVersion.current && proof.current()) {
+        setLoadStatus(failureStatus(e))
+        // 新しい見た目では、トーストにもサーバーの文を出さない
+        notifyError(setError, uiNext ? 'シナリオを読み込めませんでした。' : e instanceof Error ? e.message : '読み込みに失敗しました')
+      }
     } finally {
-      setLoading(false)
+      if (version === loadVersion.current && proof.current()) setLoading(false)
     }
-  }, [id, uiNext])
+  }, [id, proof, uiNext])
 
   useEffect(() => {
     void load()
+    const versionRef = loadVersion
+    return () => { versionRef.current++ }
   }, [load])
 
+  const operationProof = useRef(proof)
+  useEffect(() => {
+    if (operationProof.current === proof) return
+    operationProof.current = proof
+    if (!saving) return
+    setSaving(false)
+    setOperationUnknown(true)
+    setError('直前の保存結果を確認できません。シナリオを再読み込みして確認してください。')
+  }, [proof, saving])
+
   async function save() {
-    if (!id || !s) return
+    if (!id || !s || !proof.current()) return
     setSaving(true)
     setMessage('')
     setError('')
     setSaveFailure(null)
     try {
-      const r = await fetch(withOrg('aishodan', `/api/aishodan/scenarios/${id}`), {
+      const r = await fetch(proof.api(`/api/aishodan/scenarios/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,20 +124,24 @@ export default function AishodanScenarioPage() {
         }),
       })
       const d = await r.json()
+      if (!proof.current()) return
       if (!r.ok) throw new AishodanHttpError(d?.error || '保存に失敗しました', r.status)
+      if (!proof.current()) return
       setS(d.scenario)
       setMessage('保存しました')
     } catch (e) {
-      if (uiNext) {
-        // サーバーの文は、入力の誤りを伝える短い日本語の文（400 など）のときだけ出す
-        const f = describeAishodanFailure(failureStatus(e), 'シナリオを保存できませんでした。', { serverMessage: e instanceof AishodanHttpError ? e.message : undefined })
-        setSaveFailure(f)
-        notifyError(setError, f.what)
-        return
+      if (proof.current()) {
+        if (uiNext) {
+          // サーバーの文は、入力の誤りを伝える短い日本語の文（400 など）のときだけ出す
+          const f = describeAishodanFailure(failureStatus(e), 'シナリオを保存できませんでした。', { serverMessage: e instanceof AishodanHttpError ? e.message : undefined })
+          setSaveFailure(f)
+          notifyError(setError, f.what)
+          return
+        }
+        notifyError(setError, e instanceof Error ? e.message : '保存に失敗しました')
       }
-      notifyError(setError, e instanceof Error ? e.message : '保存に失敗しました')
     } finally {
-      setSaving(false)
+      if (proof.current()) setSaving(false)
     }
   }
 
@@ -138,8 +168,9 @@ export default function AishodanScenarioPage() {
         <AishodanFailureNotice
           failure={describeAishodanFailure(error ? loadStatus : 404, error && loadStatus !== 404 ? 'シナリオを読み込めませんでした。' : 'このシナリオは見つかりませんでした。')}
           onRetry={() => void load()}
-          backHref="/aishodan"
+          backHref={proof.href('/aishodan')}
           backLabel="ダッシュボードに戻る"
+          returnHref={proof.href(`/aishodan/scenarios/${id}`)}
         />
       </div>
     )
@@ -148,7 +179,7 @@ export default function AishodanScenarioPage() {
     return (
       <div className={uiNext ? 'flex flex-col items-center justify-center gap-4 px-4 py-16' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
         <p className="text-slate-600">{error || 'シナリオが見つかりません'}</p>
-        <Link href="/aishodan" className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードに戻る</Link>
+        <Link href={proof.href('/aishodan')} className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードに戻る</Link>
       </div>
     )
   }
@@ -161,13 +192,13 @@ export default function AishodanScenarioPage() {
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <Link href="/aishodan" className={`text-xs text-slate-500 hover:underline font-semibold${uiNext ? ` inline-flex items-center rounded-lg${tap}` : ''}`}>← ダッシュボード</Link>
+            <Link href={proof.href('/aishodan')} className={`text-xs text-slate-500 hover:underline font-semibold${uiNext ? ` inline-flex items-center rounded-lg${tap}` : ''}`}>← ダッシュボード</Link>
             <AishodanHeading className="truncate text-base font-bold text-slate-900">{s.name}</AishodanHeading>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {/* ⚠️ 直したら即その場で試せることが、品質調整を回す上で効く */}
             <Link
-              href="/aishodan/preview"
+              href={proof.href('/aishodan/preview')}
               className={`rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold${uiNext ? ` inline-flex items-center whitespace-nowrap${tap}` : ''}`}
             >
               試す
@@ -184,8 +215,12 @@ export default function AishodanScenarioPage() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
+        {operationUnknown && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          直前の保存の結果を確認できません。後から完了する場合があります。最新のシナリオを確認してから、次の操作を選んでください。
+          <button type="button" onClick={() => void load()} className="ml-2 font-bold text-blue-700 underline">最新のシナリオを読み込む</button>
+        </div>}
         {error && uiNext ? (
-          <AishodanFailureNotice failure={saveFailure ?? describeAishodanFailure(0, error)} />
+          <AishodanFailureNotice failure={saveFailure ?? describeAishodanFailure(0, error)} returnHref={proof.href(`/aishodan/scenarios/${id}`)} />
         ) : error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
         {message && <div role={uiNext ? 'status' : undefined} className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">{message}</div>}
 

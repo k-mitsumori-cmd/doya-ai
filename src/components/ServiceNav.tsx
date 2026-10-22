@@ -60,16 +60,16 @@ export default function ServiceNav({ currentService }: ServiceNavProps) {
 
       {isOpen && (
         <div className="absolute top-full right-0 sm:left-0 sm:right-auto mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50 animate-fade-in">
-          {/* ポータルへのリンク */}
-          <Link href="/" onClick={() => setIsOpen(false)}>
+          {/* ツールのホームへのリンク */}
+          <Link href="/home" onClick={() => setIsOpen(false)}>
             <div className="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900">ドヤAIポータル</p>
-                  <p className="text-xs text-gray-500">全サービス一覧・アカウント管理</p>
+                  <p className="font-bold text-gray-900">ツールのホーム</p>
+                  <p className="text-xs text-gray-500">利用中のツールを確認</p>
                 </div>
               </div>
             </div>
@@ -148,16 +148,16 @@ export default function ServiceNav({ currentService }: ServiceNavProps) {
             </div>
           </div>
 
-          {/* 管理画面へのリンク */}
+          {/* 共通ホームへのリンク */}
           <div className="p-2 border-t border-gray-100">
-            <Link href="/admin" onClick={() => setIsOpen(false)}>
+            <Link href="/home" onClick={() => setIsOpen(false)}>
               <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                 <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center">
-                  <span className="text-lg">⚙️</span>
+                  <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-gray-900 text-sm">管理画面</p>
-                  <p className="text-xs text-gray-500">統合ダッシュボード</p>
+                  <p className="font-bold text-gray-900 text-sm">ツールのホーム</p>
+                  <p className="text-xs text-gray-500">全ツールを探す</p>
                 </div>
               </div>
             </Link>
@@ -221,10 +221,10 @@ export function OtherServicesCard({ currentService }: { currentService: string }
         ))}
       </div>
       
-      <Link href="/">
+      <Link href="/home">
         <div className="mt-3 text-center py-2 text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center justify-center gap-1">
           <Sparkles className="w-3 h-3" />
-          ポータルに戻る
+          ツールのホームへ
         </div>
       </Link>
     </div>

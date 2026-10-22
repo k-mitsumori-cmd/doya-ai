@@ -1,0 +1,12 @@
+{
+  "baseline": "02f9a4eb",
+  "existingStoreTopLevelNodesUnchanged": true,
+  "addedStoreExport": "assertHistoricalShodanMemberWritable",
+  "oldFixtureAssertCalls": 11,
+  "newFixtureAssertCalls": 16,
+  "allPriorFixtureAssertAstTextsPreserved": true,
+  "sourceHashes": {
+    "src/lib/account-lifecycle/store.ts": "9aa59f20d9a4a4e77af6251bc614f5f7223f3f0871445e16377ec05b1502ba0f",
+    "scripts/security-regression/verify-aio-member-mutation-atomic.cjs": "f77ff739a3a96819f1482fc505c206ebb752d586d84840e8a4a58e7f7d522de9"
+  }
+}

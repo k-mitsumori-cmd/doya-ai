@@ -1,5 +1,11 @@
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const crypto = require('node:crypto')
 const { load, check } = require('./load-typescript.cjs')
+const pinnedLegacy = 'scripts/security-regression/fixtures/checkout-reservation-v1-91f5c8af.ts'
+assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.resolve(__dirname, '../..', pinnedLegacy))).digest('hex'),
+  '11dab2b148831dbb3e7afd5d87bf0670aabd69550e2d28b8e4c01c307dc3c803')
 
 function fixture() {
   const rows = new Map()
@@ -17,7 +23,7 @@ function fixture() {
   } }
   let now = 1_800_000_000_000
   const FakeDate = class extends Date { static now() { return now } }
-  const module = load('src/lib/checkout-reservation.ts', {
+  const module = load(pinnedLegacy, {
     'node:crypto': require('node:crypto'),
     '@/lib/prisma': { prisma: db },
     '@/lib/stripe': { stripe: { checkout: { sessions: { retrieve: async () => ({ status: 'open' }) } } } },

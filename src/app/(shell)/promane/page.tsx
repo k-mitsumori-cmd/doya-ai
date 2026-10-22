@@ -10,6 +10,7 @@ import { Button } from '@/components/promane/ui/button'
 import { Badge } from '@/components/promane/ui/badge'
 import { CreateWorkspaceButton } from '@/components/promane/create-workspace-button'
 import { isUiNext } from '@/lib/ui-next'
+import SignInReturnLink from '@/components/SignInReturnLink'
 
 const ROLE_LABELS: Record<string, string> = {
   owner: '👑 オーナー',
@@ -25,11 +26,21 @@ export default async function PromaneEntryPage({
 }: {
   searchParams?: Promise<{ select?: string }>
 }) {
+  const params = await searchParams
+  const forceSelect = params?.select === '1'
   const session = await getServerSession(authOptions)
   // 未ログイン（＝クローラや初見ユーザー）には公開LPを返す。
   // 以前はここで /auth/signin にリダイレクトしていたため「ドヤプロマネ」でクロールされる
   // ページが存在せず、指名検索の受け皿が無かった。
-  if (!session?.user) return <PromaneLp />
+  if (!session?.user || typeof session.user.id !== 'string' || !session.user.id.trim()) {
+    if (!forceSelect) return <PromaneLp />
+    return (
+      <main className="mx-auto max-w-xl p-8 text-center">
+        <h1 className="text-xl font-bold">ワークスペースを選択するにはログインが必要です</h1>
+        <SignInReturnLink fallback="/promane?select=1" className="mt-4 inline-block rounded-lg px-3 py-2 font-bold text-blue-700 underline underline-offset-4">ログインしてワークスペースを選ぶ</SignInReturnLink>
+      </main>
+    )
+  }
 
   const userId = (session.user as any).id
   const userEmail = session.user.email?.toLowerCase()
@@ -68,22 +79,20 @@ export default async function PromaneEntryPage({
     })
   }
 
-  const params = await searchParams
-  const forceSelect = params?.select === '1'
-
   // 単一ワークスペース & 招待なし & forceSelect でない → 自動リダイレクト
   if (memberships.length === 1 && pendingInvites.length === 0 && !forceSelect) {
     redirect(`/promane/${memberships[0].workspace.slug}`)
   }
 
-  // 0個でも招待もなければ自動作成
-  if (memberships.length === 0 && pendingInvites.length === 0) {
+  // 通常入口で所属0件・招待0件なら既存の初期設定へ進む
+  if (memberships.length === 0 && pendingInvites.length === 0 && !forceSelect) {
     const ws = await getOrCreateWorkspace(userId)
     if (ws) redirect(`/promane/${ws.slug}`)
     return (
       <main className="mx-auto max-w-xl p-8 text-center">
         <h1 className="text-xl font-bold">ワークスペースにアクセスできません</h1>
         <p className="mt-3 text-gray-600">所有するワークスペースの利用権限が無効です。管理者にご確認ください。</p>
+        <Link href="/home" className="mt-4 block rounded-lg px-3 py-2 font-bold text-blue-700 underline underline-offset-4">経営ホームへ戻る</Link>
         <Link href="https://doyamarke.surisuta.jp/contact" className="mt-4 inline-block font-bold text-blue-700 underline">お問い合わせ</Link>
       </main>
     )
@@ -95,6 +104,9 @@ export default async function PromaneEntryPage({
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-violet-50 p-6">
       <div className="max-w-4xl mx-auto pt-6">
+        <nav aria-label="共通メニュー" className="mb-4">
+          <Link href="/home" className="inline-flex rounded-lg px-3 py-2 text-sm font-bold text-blue-700 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">経営ホームへ戻る</Link>
+        </nav>
         {/* ロゴ */}
         <div className="flex justify-center mb-6 animate-slide-up">
           <Image
@@ -134,7 +146,7 @@ export default async function PromaneEntryPage({
                       <p className="text-[12px] font-black opacity-80">{uiNext ? '招待が届いています' : '📩 招待が届いています'}</p>
                       <p className="text-[22px] font-black mt-1 truncate">{inv.workspace.name}</p>
                       <p className="text-[13px] font-bold opacity-90 mt-1">
-                        {inv.invitedBy.name || inv.invitedBy.email} さんから
+                        {inv.invitedBy?.name || inv.invitedBy?.email || '退会済みの招待者'} さんから
                         <span className="ml-2 px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-black">
                           {roleLabels[inv.role] || inv.role}
                         </span>
@@ -153,6 +165,13 @@ export default async function PromaneEntryPage({
         )}
 
         {/* My Workspaces */}
+        {memberships.length === 0 && pendingInvites.length === 0 && (
+          <div className="rounded-2xl border border-blue-100 bg-white p-6 text-center shadow-sm">
+            <p className="font-bold text-gray-800">参加中のワークスペースがありません。</p>
+            <p className="mt-2 text-sm text-gray-600">初期設定では、利用状況に応じてワークスペースの作成やアクセス確認が行われます。</p>
+            <Link href="/promane" className="mt-4 inline-block rounded-lg px-3 py-2 font-bold text-blue-700 underline underline-offset-4">初期設定を開始する</Link>
+          </div>
+        )}
         {memberships.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">

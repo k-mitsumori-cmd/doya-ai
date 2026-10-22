@@ -1,0 +1,58 @@
+{
+  "startedAt": "2026-10-20T04:03:41.565136+00:00",
+  "status": "passed",
+  "steps": [
+    {
+      "name": "typecheck",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "lint",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:asklink",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:popup",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:syscheck",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:tenjikai",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:shanai",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:income",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "name": "test:expense",
+      "status": "passed",
+      "exitCode": 0
+    }
+  ],
+  "providerNetworkPermitted": false,
+  "productionReflected": false,
+  "persistentDatabaseProvisioned": false,
+  "sourceInventorySha256": "f129377f1c48a36821b57e2ab78b4403501c702ce07cea8eb6281bdfd7fb6a25",
+  "sourceHashesUnchanged": true,
+  "endedAt": "2026-10-20T04:03:56.166867+00:00",
+  "processStopped": true
+}

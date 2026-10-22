@@ -1,8 +1,9 @@
+const lifecycle = require('../../../scripts/security-regression/shodan-core-import-fixture.cjs').shodanCoreImports();
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{createRequire}=require('node:module'),{Prisma}=require('@prisma/client')
 const {load}=require('../../../scripts/security-regression/load-typescript.cjs'),base='docs/audits/2026-10-06-all-services-recheck/',file=base+'verify-adimage-operation-postgres.cjs'
 const prefix=fs.readFileSync(file,'utf8').split(';(async()=>')[0].replace("'AdImageFeedback']","'AdImageFeedback','ShodanOrganization','ShodanMember','ShodanPreparation']")
 const {db,setupDb}=new Function('require','__dirname',prefix+'\nreturn {db,setupDb};')(createRequire(path.resolve(file)),path.dirname(path.resolve(file)))
-const types=load('src/lib/shodan/types.ts'),access=load('src/lib/shodan/access.ts',{'next-auth':{getServerSession:async()=>({user:{id:'actor'}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db},'./types':types})
+const types=load('src/lib/shodan/types.ts'),access=load('src/lib/shodan/access.ts',{...lifecycle,'next-auth':{getServerSession:async()=>({user:{id:'actor'}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db},'./types':types})
 let hook,signs;const cases=[],failures=[]
 const lease=load('src/lib/shodan/slide-generation-lease.ts',{'node:crypto':crypto,'@/lib/prisma':{prisma:db}})
 const route=load('src/app/api/shodan/preparations/[id]/route.ts',{'next/server':{NextResponse:Response},'@prisma/client':{Prisma},'@/lib/prisma':{prisma:db},'@/lib/shodan/access':access,'@/lib/shodan/types':types,'@/lib/shodan/slide-generation-lease':lease,'@/lib/org-profile-version':load('src/lib/org-profile-version.ts'),'@/lib/shodan/slide-image-identity':load('src/lib/shodan/slide-image-identity.ts',{'node:crypto':crypto}),'@/lib/shodan/storage':{signedUrl:async()=>{signs++;if(hook){const h=hook;hook=null;await h()}return 'https://local.test/private-signed.png'}}})

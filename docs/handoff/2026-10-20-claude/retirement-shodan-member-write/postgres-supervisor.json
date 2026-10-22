@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-10-20T22:41:40.537434+00:00",
+  "scope": "Owned ephemeral Unix socket PostgreSQL, synthetic data only; no production connection",
+  "privateRoot": "/tmp/doya-shodan-members-74995d20",
+  "testExitCode": 0,
+  "stopExitCode": 0,
+  "endedAt": "2026-10-20T22:41:43.067331+00:00",
+  "removedOwnedDirectory": true
+}

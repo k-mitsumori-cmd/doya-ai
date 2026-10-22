@@ -4,6 +4,7 @@
 // 集計（HomeSummary）から、今日手を付けたほうがよいものだけを並べる。数字が0のものは出さない。
 // ⚠️ 新しい数字は取らない。getHomeSummary() がすでに読んだ値だけを使う。
 import type { HomeSummary } from '@/lib/home/summary'
+import { homeJstDateKey, homeSnapshotEpoch } from './clock'
 
 export interface TodayItem {
   key: string
@@ -16,12 +17,17 @@ export interface TodayItem {
 const DAY = 24 * 3600_000
 
 /** JST の日付（YYYY-MM-DD） */
-function jstDay(t: number): string {
-  return new Date(t + 9 * 3600_000).toISOString().slice(0, 10)
+function jstDay(t: number): string | null {
+  const date = new Date(t + 9 * 3600_000)
+  return Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 10) : null
 }
 
-export function todayItems(s: HomeSummary, now: number = Date.now()): TodayItem[] {
+export function todayItems(s: HomeSummary, now: number | null = homeSnapshotEpoch(s.generatedAt)): TodayItem[] {
   const items: TodayItem[] = []
+  const billing = s.finance?.income.state === 'ready' ? s.finance.income.value?.todo ?? [] : []
+  for (const [index, item] of billing.entries()) {
+    items.push({ key: `income:${item.kind}:${index}`, label: item.title, href: item.href, urgent: item.kind === 'leak' || item.kind === 'overdue' })
+  }
   if (s.sales.state === 'ready' && s.sales.overdueTasks > 0) {
     items.push({ key: 'overdue', label: `期日を過ぎたタスクが ${s.sales.overdueTasks}件あります`, href: `${s.sales.href}/tasks`, urgent: true })
   }
@@ -29,12 +35,12 @@ export function todayItems(s: HomeSummary, now: number = Date.now()): TodayItem[
     items.push({ key: 'approvals', label: `承認を待っている勤怠の申請が ${s.attendance.pendingRequests}件あります`, href: '/kintai/approvals' })
   }
   // 今日と明日の予定（受注予定・タスクの期日・納期・見積の有効期限）
-  const today = jstDay(now)
-  const tomorrow = jstDay(now + DAY)
+  const today = now !== null ? jstDay(now) : null
+  const tomorrow = now !== null ? jstDay(now + DAY) : null
   for (const e of s.events) {
-    const t = Date.parse(e.date)
-    if (!Number.isFinite(t)) continue
-    const d = jstDay(t)
+    if (!today || !tomorrow) break
+    const d = homeJstDateKey(e.date)
+    if (!d) continue
     if (d !== today && d !== tomorrow) continue
     items.push({ key: `event:${e.id}`, label: `${d === today ? '今日' : '明日'}: ${e.title}`, href: e.href, urgent: d === today })
   }

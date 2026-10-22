@@ -20,13 +20,218 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Record postinstall Prisma schema for repeatability
+        run: sha256sum node_modules/.prisma/client/schema.prisma > "$RUNNER_TEMP/prisma-postinstall.sha256"
+
       - name: Prisma generate
-        run: npx prisma generate
+        run: |
+          node scripts/prisma/generate.cjs
+          sha256sum node_modules/.prisma/client/schema.prisma > "$RUNNER_TEMP/prisma-explicit.sha256"
+          cmp "$RUNNER_TEMP/prisma-postinstall.sha256" "$RUNNER_TEMP/prisma-explicit.sha256"
+
+      - name: Verify actual Prisma generator UTF-8 split repair
+        run: node fixtures/verify-prisma-generator-utf8.cjs "$GITHUB_WORKSPACE" --generated
+
+      - name: Verify source-only ER export with a synthetic client
+        run: python3 fixtures/verify-er-source-only.py --dependency-root "$GITHUB_WORKSPACE"
+
+      - name: Verify generated ER viewer async and SVG guards
+        run: DOYA_ER_GENERATOR="$GITHUB_WORKSPACE/scripts/architecture/make-er-html.py" DOYA_ER_EXPECT=after node scripts/architecture/fixtures/verify-er-viewer-functions.cjs
+
+      - name: Export exact source-only ER inputs after fresh Prisma generate
+        run: |
+          ER_SHA="$(git rev-parse HEAD)"
+          mkdir -p "$RUNNER_TEMP/er-inputs"
+          mkdir -p "$RUNNER_TEMP/er-export-diagnostics"
+          node scripts/architecture/export-er-inputs.cjs \
+            --root "$GITHUB_WORKSPACE" \
+            --out-dir "$RUNNER_TEMP/er-inputs/$ER_SHA" \
+            --diagnostics-dir "$RUNNER_TEMP/er-export-diagnostics/$ER_SHA" \
+            --date 2026-10-22
+
+      - name: Preserve exact source-only ER inputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: er-inputs-source-only
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/er-inputs/*/*
+
+      - name: Preserve ER export failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: er-export-diagnostics
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/er-export-diagnostics/*/source.raw.prisma
+            ${{ runner.temp }}/er-export-diagnostics/*/generated.raw.prisma
+            ${{ runner.temp }}/er-export-diagnostics/*/source.formatted.prisma
+            ${{ runner.temp }}/er-export-diagnostics/*/generated.formatted.prisma
+            ${{ runner.temp }}/er-export-diagnostics/*/manifest.json
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: CI regression source paths (offline)
+        run: |
+          node scripts/security-regression/verify-adimage-analysis-source-paths.cjs
+          node scripts/security-regression/verify-ci-source-paths.cjs
 
       - name: Install PostgreSQL for isolated operation regression
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends postgresql
+
+      - name: AskLink creation and expiry regression (private Unix socket)
+        run: python3 scripts/security-regression/verify-asklink-creation-postgres.py
+
+      - name: AskLink account storage purge regression (private Unix socket, synthetic storage)
+        run: python3 scripts/security-regression/verify-asklink-privacy-postgres.py
+
+      - name: Account ownership and CaseStudy retirement regression (private Unix socket)
+        run: python3 scripts/security-regression/verify-account-retirement-postgres.py
+
+      - name: Five-service owner transfer and recovery (private Unix PostgreSQL)
+        env:
+          DOYA_OWNER_T1_EVIDENCE_DIR: ${{ runner.temp }}/owner-transfer-postgres
+        run: python3 scripts/security-regression/verify-owner-transfer-postgres.py
+
+      - name: Preserve owner transfer private PostgreSQL diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: owner-transfer-postgres
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/owner-transfer-postgres/
+
+      - name: Account lifecycle unconnected core regression (private Unix socket)
+        run: python3 scripts/security-regression/verify-account-lifecycle-postgres.py
+
+      - name: Expense membership retirement fence regression (private Unix socket)
+        run: python3 scripts/security-regression/verify-membership-retirement-postgres.py
+
+      - name: Income membership retirement fence regression (private Unix socket)
+        run: python3 scripts/security-regression/verify-income-membership-postgres.py
+
+      - name: Income domain writer regression (private Unix socket)
+        env:
+          DOYA_INCOME_R1_EVIDENCE_DIR: ${{ runner.temp }}/income-domain-postgres
+        run: python3 scripts/security-regression/verify-income-domain-postgres.py
+
+      - name: Preserve Income domain writer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: income-domain-postgres
+          path: ${{ runner.temp }}/income-domain-postgres/
+          if-no-files-found: ignore
+
+      - name: Checkout lifecycle core regression (private Unix socket)
+        env:
+          DOYA_R2_EVIDENCE_DIR: ${{ runner.temp }}/checkout-lifecycle-postgres
+        run: python3 scripts/security-regression/verify-checkout-lifecycle-postgres.py
+
+      - name: Preserve checkout lifecycle core evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkout-lifecycle-postgres
+          path: ${{ runner.temp }}/checkout-lifecycle-postgres/
+          if-no-files-found: ignore
+
+      - name: Subscription operation lifecycle regression (private Unix socket)
+        env:
+          DOYA_SUBSCRIPTION_EVIDENCE_DIR: ${{ runner.temp }}/subscription-operation-postgres
+        run: python3 scripts/security-regression/verify-subscription-operation-postgres.py
+
+      - name: Preserve subscription operation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: subscription-operation-postgres
+          path: ${{ runner.temp }}/subscription-operation-postgres/
+          if-no-files-found: ignore
+
+      - name: Admin subscription operation and atomic billing projection regression (private Unix socket)
+        env:
+          DOYA_ADMIN_SUBSCRIPTION_EVIDENCE_DIR: ${{ runner.temp }}/admin-subscription-postgres
+        run: python3 scripts/security-regression/verify-admin-subscription-postgres.py
+
+      - name: Preserve admin subscription operation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-subscription-postgres
+          path: ${{ runner.temp }}/admin-subscription-postgres/
+          if-no-files-found: ignore
+
+      - name: Tenjikai c3a generation and retirement regression (private Unix socket)
+        env:
+          DOYA_TENJIKAI_C3A_EVIDENCE_DIR: ${{ runner.temp }}/tenjikai-c3a-postgres
+        run: python3 scripts/security-regression/verify-tenjikai-c3a-postgres.py
+
+      - name: Preserve Tenjikai c3a PostgreSQL evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenjikai-c3a-postgres
+          path: ${{ runner.temp }}/tenjikai-c3a-postgres/
+          if-no-files-found: ignore
+
+      - name: Tenjikai c3b/c3c durable generation and workspace regression (private Unix socket)
+        env:
+          DOYA_TENJIKAI_C3B_EVIDENCE_DIR: ${{ runner.temp }}/tenjikai-c3b-postgres
+        run: python3 scripts/security-regression/verify-tenjikai-c3b-postgres.py
+
+      - name: Preserve Tenjikai c3b PostgreSQL evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenjikai-c3b-postgres
+          path: ${{ runner.temp }}/tenjikai-c3b-postgres/
+          if-no-files-found: ignore
+
+      - name: Tenjikai c3b2 manual migration preflight (private Unix socket)
+        env:
+          DOYA_TENJIKAI_C3B2_EVIDENCE_DIR: ${{ runner.temp }}/tenjikai-c3b2-migration
+        run: python3 scripts/security-regression/verify-tenjikai-c3b2-migration.py
+
+      - name: Preserve Tenjikai c3b2 migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenjikai-c3b2-migration
+          path: ${{ runner.temp }}/tenjikai-c3b2-migration/
+          if-no-files-found: ignore
+
+      - name: Tenjikai c3c electric snapshot migration (private Unix socket)
+        env:
+          DOYA_TENJIKAI_C3C_EVIDENCE_DIR: ${{ runner.temp }}/tenjikai-c3c-migration
+        run: python3 scripts/security-regression/verify-tenjikai-c3c-migration.py
+
+      - name: Preserve Tenjikai c3c migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenjikai-c3c-migration
+          path: ${{ runner.temp }}/tenjikai-c3c-migration/
+          if-no-files-found: ignore
+
+      - name: Shodan member retirement fence regression (private Unix socket)
+        run: python3 scripts/security-regression/verify-shodan-membership-postgres.py
+
+      - name: Shodan invitation and organization closure regression (private Unix socket)
+        run: python3 scripts/security-regression/verify-shodan-closure-postgres.py
+
+      - name: AIO membership and quick-start retirement fence regression (private Unix socket)
+        run: python3 scripts/security-regression/verify-aio-lifecycle-postgres.py
+
+      - name: Quote Mensetsu Aishodan membership retirement fence regression (private Unix socket)
+        run: python3 scripts/security-regression/verify-r1-three-membership-postgres.py
 
       - name: New service existing paid user backfill (private Unix socket, no external providers)
         run: python3 docs/audits/2026-10-06-all-services-recheck/new-service-backfill-private-postgres-supervise.py
@@ -214,6 +419,28 @@ jobs:
           python3 docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-mutations-postgres-supervise.py
           python3 docs/audits/2026-10-06-all-services-recheck/promane-workspace-operation-http-postgres-supervise.py
 
+      - name: Promane retirement create before and after (private Unix socket)
+        run: |
+          mkdir -p "$RUNNER_TEMP/promane-retirement-create"
+          DOYA_PROMANE_R1_EXPECT=before \
+          DOYA_PROMANE_R1_EVIDENCE="$RUNNER_TEMP/promane-retirement-create/before-results.json" \
+          DOYA_PROMANE_R1_SUPERVISOR="$RUNNER_TEMP/promane-retirement-create/before-supervisor.json" \
+          DOYA_PROMANE_R1_PROBE_LOG="$RUNNER_TEMP/promane-retirement-create/before-probe.log" \
+          python3 docs/audits/2026-10-06-all-services-recheck/promane-retirement-create-postgres-supervise.py
+          DOYA_PROMANE_R1_EXPECT=after \
+          DOYA_PROMANE_R1_EVIDENCE="$RUNNER_TEMP/promane-retirement-create/after-results.json" \
+          DOYA_PROMANE_R1_SUPERVISOR="$RUNNER_TEMP/promane-retirement-create/after-supervisor.json" \
+          DOYA_PROMANE_R1_PROBE_LOG="$RUNNER_TEMP/promane-retirement-create/after-probe.log" \
+          python3 docs/audits/2026-10-06-all-services-recheck/promane-retirement-create-postgres-supervise.py
+
+      - name: Preserve Promane retirement create diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promane-retirement-create-before-after-private-postgres
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/promane-retirement-create/*
+
       - name: Promane workspace create and settings recovery UI (offline)
         run: |
           node docs/audits/2026-10-06-all-services-recheck/verify-promane-workspace-operation-mounted.cjs
@@ -273,20 +500,85 @@ jobs:
       - name: membership-known-role (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-known-role-integrated-postgres-supervise.py
 
+      - name: Preserve membership-known-role private PostgreSQL diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: membership-known-role-private-postgres
+          if-no-files-found: ignore
+          path: |
+            docs/audits/2026-10-06-all-services-recheck/membership-known-role-integrated-postgres.log
+            docs/audits/2026-10-06-all-services-recheck/membership-known-role-integrated-postgres-supervisor.json
+            docs/audits/2026-10-06-all-services-recheck/membership-known-role-integrated-postgres-results.json
+
       - name: membership-aio-operation (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-aio-operation-integrated-postgres-supervise.py
 
       - name: membership-invitation-role (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-invitation-role-integrated-postgres-supervise.py
 
+      - name: Preserve membership-invitation private PostgreSQL diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: membership-invitation-private-postgres
+          if-no-files-found: ignore
+          path: |
+            docs/audits/2026-10-06-all-services-recheck/membership-invitation-role-integrated-postgres.log
+            docs/audits/2026-10-06-all-services-recheck/membership-invitation-role-integrated-postgres-supervisor.json
+            docs/audits/2026-10-06-all-services-recheck/membership-invitation-role-integrated-postgres-results.json
+
       - name: Kintai and Promane invitation roles (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-additional-invite-integrated-postgres-supervise.py
+
+      - name: Promane invitation retirement before and after (private Unix PostgreSQL)
+        run: |
+          mkdir -p "$RUNNER_TEMP/promane-invite-lifecycle"
+          for phase in before serializable after; do
+            DOYA_PROMANE_INVITE_EXPECT="$phase" \
+            DOYA_PROMANE_INVITE_SUPERVISOR="$RUNNER_TEMP/promane-invite-lifecycle/$phase-supervisor.json" \
+            DOYA_PROMANE_INVITE_EVIDENCE="$RUNNER_TEMP/promane-invite-lifecycle/$phase-results.json" \
+            DOYA_PROMANE_INVITE_PROBE_LOG="$RUNNER_TEMP/promane-invite-lifecycle/$phase-probe.log" \
+            python3 docs/audits/2026-10-06-all-services-recheck/promane-invite-lifecycle-postgres-supervise.py
+          done
+
+      - name: Preserve Promane invitation retirement private PostgreSQL diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promane-invite-lifecycle-before-serializable-after-private-postgres
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/promane-invite-lifecycle/*
 
       - name: Promane read and receipt role boundaries (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/promane-known-read-receipt-role-integrated-postgres-supervise.py
 
       - name: Organization onboarding and HR role boundaries (private Unix PostgreSQL)
         run: python3 docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-postgres-supervise.py
+
+      - name: HR owner v6 before, current 74, H3 snapshot and final-null counter (private Unix PostgreSQL)
+        env:
+          DOYA_OWNER_HR_H5_EVIDENCE_DIR: ${{ runner.temp }}/hr-owner-cohort
+        run: python3 scripts/security-regression/verify-hr-owner-cohort-postgres.py
+
+      - name: Preserve HR owner cohort private PostgreSQL diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hr-owner-cohort-private-postgres
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/hr-owner-cohort/
+
+      - name: Preserve membership-onboarding private PostgreSQL diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: membership-onboarding-private-postgres
+          if-no-files-found: ignore
+          path: |
+            docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-postgres.log
+            docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-candidate-postgres-supervisor.json
+            docs/audits/2026-10-06-all-services-recheck/membership-onboarding-role-integrated-candidate-postgres-results.json
 
       - name: Security and incident regression tests (offline)
         run: npm run test:security
@@ -305,8 +597,88 @@ jobs:
           node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-operation-transport.cjs
           node docs/audits/2026-10-06-all-services-recheck/verify-doyaslide-url-import-mounted.cjs
 
-      - name: Type check
-        run: npx tsc --noEmit
+      - name: Isolated regression failure diagnostics
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          base = Path('docs/audits/2026-10-06-all-services-recheck')
+          # These CI probes contain only synthetic data and private temporary DBs.
+          for path in sorted(base.glob('*.log'), key=lambda p: p.stat().st_mtime, reverse=True)[:3]:
+              print('Regression log:', path)
+              print('\n'.join(path.read_text(errors='replace').splitlines()[-80:])[-24000:])
+          PY
 
-      - name: Lint
-        run: npm run lint
+  next-build-isolated:
+    name: Next build (isolated font fixture)
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact event commit without persisted credentials
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Record exact event source before dependencies
+        run: python3 scripts/ci/isolated-next-build.py prepare --evidence-dir "$RUNNER_TEMP/next-build-isolated"
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      - name: Record isolated postinstall Prisma schema
+        run: sha256sum node_modules/.prisma/client/schema.prisma > "$RUNNER_TEMP/prisma-isolated-postinstall.sha256"
+
+      - name: Generate private Prisma client
+        run: |
+          node scripts/prisma/generate.cjs
+          sha256sum node_modules/.prisma/client/schema.prisma > "$RUNNER_TEMP/prisma-isolated-explicit.sha256"
+          cmp "$RUNNER_TEMP/prisma-isolated-postinstall.sha256" "$RUNNER_TEMP/prisma-isolated-explicit.sha256"
+
+      - name: Verify isolated Prisma generator UTF-8 split repair
+        run: node fixtures/verify-prisma-generator-utf8.cjs "$GITHUB_WORKSPACE" --generated
+
+      - name: Verify isolated gate failure paths (no build)
+        run: python3 -B scripts/ci/test-isolated-next-build.py
+
+      - name: Run eight named suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          for suite in test:asklink test:popup test:syscheck test:tenjikai test:shanai test:income test:expense test:doyapower; do
+            echo "Running $suite"
+            npm run "$suite" 2>&1 | tee -a "$RUNNER_TEMP/next-build-isolated/named-suites.log"
+          done
+
+      - name: Fresh nonincremental TypeScript check
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/tsc --noEmit --incremental false 2>&1 | tee "$RUNNER_TEMP/next-build-isolated/type-before.log"
+
+      - name: Full Next production compile, prerender, and trace in a denied network namespace
+        run: python3 scripts/ci/isolated-next-build.py build --evidence-dir "$RUNNER_TEMP/next-build-isolated"
+
+      - name: Verify generated Next types against the same source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/tsc --noEmit --incremental false 2>&1 | tee "$RUNNER_TEMP/next-build-isolated/type-after.log"
+
+      - name: Finalize exact isolated build evidence
+        run: python3 scripts/ci/isolated-next-build.py finalize --evidence-dir "$RUNNER_TEMP/next-build-isolated"
+
+      - name: Preserve isolated build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build-isolated
+          path: ${{ runner.temp }}/next-build-isolated/
+          if-no-files-found: warn

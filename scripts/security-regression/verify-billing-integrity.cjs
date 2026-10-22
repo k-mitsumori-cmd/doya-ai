@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');const {load,check,results}=require('./verify-data-integrity.cjs');
-const stripeModule=load('src/lib/stripe.ts',{stripe:class{},'node:crypto':require('node:crypto')});const ids=Array.from(stripeModule.ALL_SERVICE_IDS);
+const stripeModule=load('src/lib/stripe.ts',{stripe:class{},'node:crypto':require('node:crypto'),'./checkout-legacy-guard':load('src/lib/checkout-legacy-guard.ts')});const ids=Array.from(stripeModule.ALL_SERVICE_IDS);
 const subscriptionNotice=load('src/lib/billing-subscription-notice.ts');
 const grants=load('src/lib/billing-manual-grants.ts',{'@/lib/prisma':{prisma:{}}});
 const json=v=>JSON.parse(JSON.stringify(v));
@@ -36,11 +36,12 @@ async function atomic(){
 }
 const Resp={json:(body,opts)=>({body,status:opts?.status??200})};
 function routeFixture(){
+ const enqueued=[];
  const f=fixture();let signed=true,writes=0,notices=0,queued=null,legacyEmail='owner@example.test';let checkout={id:'cs1',client_reference_id:'u1',customer_email:'owner@example.test',customer:'cus1',subscription:'sub1',status:'complete',currency:'jpy',amount_total:9980,payment_status:'paid'};
  let sub={id:'sub1',customer:'cus1',status:'active',metadata:{userId:'u1',planId:'banner-pro'},current_period_end:1900000000,items:{data:[{price:{id:'price_banner_pro_monthly',unit_amount:9980}}]},trial_end:null};
  const stripe={checkout:{sessions:{retrieve:async()=>checkout}},customers:{retrieve:async()=>({id:'cus1',email:legacyEmail}),list:async()=>({data:[{id:'cus1'}]})},subscriptions:{retrieve:async()=>sub,list:async()=>({data:[sub]})}};
- const mocks={'node:crypto':require('node:crypto'),'next/server':{NextResponse:Resp},'next-auth':{getServerSession:async()=>signed?{user:{email:'owner@example.test'}}:null},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:{user:{findUnique:async()=>f.state.user,update:async()=>{throw Error('Non-atomic user write')}}}},'@/lib/stripe':{...stripeModule,stripe,findActiveLikeSubscriptions:async()=>stripeModule.isDoyaSubscription(sub)?[{id:sub.id,status:sub.status,customerId:typeof sub.customer==='string'?sub.customer:sub.customer.id,priceId:sub.items.data[0]?.price.id||null,planId:stripeModule.resolvePlanIdFromSubscription(sub).planId}]:[]},'@/lib/billing-subscription-notice':subscriptionNotice,'@/lib/billing-sync':{syncUnifiedBilling:async i=>{writes++;return f.sync(i)}},'@/lib/notifications':{sendEventNotification:async()=>{notices++}},'@/lib/stripe-webhook-receipts':{claimStripeWebhookEvent:async()=>({kind:'claimed',token:'test-claim'}),finishStripeWebhookEvent:async()=>{}},'@/lib/stripe-webhook-notifications':{enqueueStripeWebhookNotification:async(_id,_type,_token,payload)=>{queued=payload},deliverStripeWebhookNotification:async id=>{const row=f.state.notices[id];if(row&&row.status==='pending'){row.status='sent';notices++;return 'sent'}if(queued){queued=null;notices++;return 'sent'}return 'skipped'}}};
- return {f,checkout,sub,mocks,get writes(){return writes},get notices(){return notices},set signed(x){signed=x},set legacyEmail(x){legacyEmail=x}};
+ const mocks={'node:crypto':require('node:crypto'),'next/server':{NextResponse:Resp},'next-auth':{getServerSession:async()=>signed?{user:{email:'owner@example.test'}}:null},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:{user:{findUnique:async()=>f.state.user,update:async()=>{throw Error('Non-atomic user write')}}}},'@/lib/stripe':{...stripeModule,stripe,findActiveLikeSubscriptions:async()=>stripeModule.isDoyaSubscription(sub)?[{id:sub.id,status:sub.status,customerId:typeof sub.customer==='string'?sub.customer:sub.customer.id,priceId:sub.items.data[0]?.price.id||null,planId:stripeModule.resolvePlanIdFromSubscription(sub).planId}]:[]},'@/lib/billing-subscription-notice':subscriptionNotice,'@/lib/billing-sync':{syncUnifiedBilling:async i=>{writes++;return f.sync(i)}},'@/lib/notifications':{sendEventNotification:async()=>{notices++}},'@/lib/stripe-webhook-receipts':{claimStripeWebhookEvent:async()=>({kind:'claimed',token:'test-claim'}),finishStripeWebhookEvent:async()=>{}},'@/lib/stripe-webhook-notifications':{enqueueStripeWebhookNotification:async(_id,_type,_token,payload)=>{queued=payload;enqueued.push(payload)},deliverStripeWebhookNotification:async id=>{const row=f.state.notices[id];if(row&&row.status==='pending'){row.status='sent';notices++;return 'sent'}if(queued){queued=null;notices++;return 'sent'}return 'skipped'}}};
+ return {f,checkout,sub,mocks,enqueued,get writes(){return writes},get notices(){return notices},set signed(x){signed=x},set legacyEmail(x){legacyEmail=x}};
 }
 function splitSubscriptionFixture(){
  const f=routeFixture();f.sub.metadata.planId='banner-light';f.sub.items.data[0].price.id='price_banner_light_monthly';
@@ -124,7 +125,54 @@ async function routes(){
  await check(route+' manual enterprise entitlement survives',async()=>{let f=routeFixture();await f.f.sync({userId:'u1',plan:'ENTERPRISE',preserveManualGrant:false});f.f.grant='owner@example.test';assert.equal((await load('src/app/api/stripe/'+route+'/route.ts',f.mocks).POST(req())).status,200);assert.equal(f.f.state.user.plan,'ENTERPRISE')});
  }
 }
+async function lifecycleResponse(f,type,snapshot=structuredClone(f.sub)) {
+ const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+  '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt-lifecycle',type,data:{object:snapshot}})}};
+ return load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+}
+async function pausedLifecycle(){
+ for(const type of ['customer.subscription.created','customer.subscription.updated','customer.subscription.paused','customer.subscription.resumed']) await check(type+' uses current paused status and clears all subscription rights',async()=>{
+  const f=routeFixture();await f.f.sync({userId:'u1',plan:'PRO',stripeSubscriptionId:'sub1'});
+  const stale=structuredClone(f.sub);f.sub.status='paused';
+  const response=await lifecycleResponse(f,type,stale);
+  assert.equal(response.status,200);assert.equal(f.f.state.user.plan,'FREE');assert.equal(f.f.state.user.stripeSubscriptionId,null);
+  assert(ids.every(id=>f.f.state.services[id].plan==='FREE'));assert.equal(f.f.state.hr,'FREE');
+  assert.equal(f.f.state.services.banner.dailyUsage,7);assert.equal(f.f.state.services.banner.monthlyUsage,29);
+  if(type!=='customer.subscription.created'){assert.equal(f.enqueued.length,1);assert.equal(f.enqueued[0].type,'subscription_paused');assert.match(f.enqueued[0].details,/paused/)}
+ });
+ for(const type of ['customer.subscription.paused','customer.subscription.resumed']) await check(type+' delayed paused snapshot cannot revoke a resumed contract',async()=>{
+  const f=routeFixture();const stale={...structuredClone(f.sub),status:'paused'};
+  const response=await lifecycleResponse(f,type,stale);assert.equal(response.status,200);
+  assert.equal(f.f.state.user.plan,'PRO');assert(ids.every(id=>f.f.state.services[id].plan==='PRO'));assert.equal(f.enqueued.length,0);
+ });
+ await check('collection pause on active subscription does not remove paid access',async()=>{
+  const f=routeFixture();f.sub.pause_collection={behavior:'void'};
+  assert.equal((await lifecycleResponse(f,'customer.subscription.updated')).status,200);assert.equal(f.f.state.user.plan,'PRO');assert.equal(f.enqueued.length,0);
+ });
+ for(const failure of ['none','lookup','paused-after-list','foreign-after-list']) await check('paused subscription remaining-contract reconciliation: '+failure,async()=>{
+  const f=routeFixture();await f.f.sync({userId:'u1',plan:'PRO',stripeSubscriptionId:'sub1'});f.sub.status='paused';
+  const other={...structuredClone(f.sub),id:'other',status:'active',metadata:{userId:'u1',planId:'banner-light'},items:{data:[{price:{id:'price_banner_light_monthly'}}]}};
+  f.mocks['@/lib/stripe'].findActiveLikeSubscriptions=async()=>{if(failure==='lookup')throw Error('Synthetic discovery outage');return[{id:'other',status:'active',planId:'banner-light',customerId:'cus1'}]};
+  if(failure==='paused-after-list')other.status='paused';
+  if(failure==='foreign-after-list')other.metadata.userId='foreign';
+  f.mocks['@/lib/stripe'].stripe.subscriptions.retrieve=async id=>id==='other'?other:f.sub;
+  const before=json(f.f.state);const response=await lifecycleResponse(f,'customer.subscription.paused');
+  assert.equal(response.status,failure==='none'?200:500);
+  if(failure==='none'){assert.equal(f.f.state.user.plan,'LIGHT');assert.equal(f.f.state.user.stripeSubscriptionId,'other');assert(ids.every(id=>f.f.state.services[id].plan==='LIGHT'));assert.equal(f.f.state.hr,'STARTER')}
+  else {assert.deepEqual(json(f.f.state),before);assert.equal(f.writes,0)}
+  assert.equal(f.enqueued.length,0);
+ });
+ await check('paused subscription preserves an explicit manual grant',async()=>{
+  const f=routeFixture();await f.f.sync({userId:'u1',plan:'ENTERPRISE',preserveManualGrant:false});f.f.grant='owner@example.test';f.sub.status='paused';
+  assert.equal((await lifecycleResponse(f,'customer.subscription.paused')).status,200);assert.equal(f.f.state.user.plan,'ENTERPRISE');assert(ids.every(id=>f.f.state.services[id].plan==='ENTERPRISE'));
+ });
+ await check('paused subscription service sync failure rolls back and retries',async()=>{
+  const f=routeFixture();await f.f.sync({userId:'u1',plan:'PRO',stripeSubscriptionId:'sub1'});const before=json(f.f.state);f.sub.status='paused';f.f.fail='seo';
+  assert.equal((await lifecycleResponse(f,'customer.subscription.paused')).status,500);assert.deepEqual(json(f.f.state),before);assert.equal(f.enqueued.length,0);
+ });
+}
 async function webhook(){
+ await pausedLifecycle();
  for(const type of ['customer.subscription.created','customer.subscription.updated'])await check(type+' uses current Stripe plan instead of delayed event snapshot',async()=>{
   let f=routeFixture();const stale=structuredClone(f.sub);
   f.sub.metadata.planId='banner-light';f.sub.items.data[0].price.id='price_banner_light_monthly';

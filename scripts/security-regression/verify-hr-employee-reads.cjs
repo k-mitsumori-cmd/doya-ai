@@ -80,5 +80,37 @@ const next = { '@/lib/hr/org-chart-pagination': { readHrOrgChartPage() { throw E
       assert.equal(where.id, 'm')
     }
   })
+
+  for (const scenario of [
+    { name: 'anonymous refusal', actor: null, status: 401 },
+    { name: 'other employee refusal', role: 'MEMBER', employeeId: 'own', target: 'other', status: 404 },
+    { name: 'missing employee refusal', role: 'OWNER', missing: true, status: 404 },
+    { name: 'own employee success', role: 'MEMBER', employeeId: 'own', status: 200 },
+    { name: 'owner employee success', role: 'OWNER', status: 200 },
+    { name: 'unexpected read failure', role: 'OWNER', fail: true, status: 500 },
+  ]) {
+    await check(`employee detail ${scenario.name} is private and never cached`, async () => {
+      const context = scenario.actor === null ? null : { organizationId: 'o', userId: 'u', memberId: 'm', role: scenario.role, employeeId: scenario.employeeId || null }
+      const detail = load('src/app/api/hr/employees/[id]/route.ts', {
+        'next/server': { NextResponse: Response },
+        'next-auth': {}, '@/lib/auth': {}, '@/lib/hr/billing': {},
+        '@/lib/organization-billing-owner': { organizationBillingErrorResponse: () => scenario.billing ? { status: 503, body: { code: 'BILLING_AUTHORITY_UNAVAILABLE' } } : null },
+        '@/lib/hr/access': { getHrContext: async () => context, hasMinRole: (role) => ['MANAGER', 'ADMIN', 'OWNER'].includes(role) },
+        '@/lib/hr/types': { HrMemberRole: { MANAGER: 'MANAGER', ADMIN: 'ADMIN', OWNER: 'OWNER' } },
+        '@/lib/hr/evaluation-access': { getEvaluationReadWhere: async () => ({ organizationId: 'o' }) },
+        '@/lib/hr/one-on-one-access': { getOneOnOneReadWhere: async () => ({ organizationId: 'o' }), getOneOnOneViewer: async () => ({ employeeId: context?.employeeId || null }), filterOneOnOneFields: record => record },
+        '@/lib/prisma': { prisma: { hrEmployee: { findFirst: async () => { if (scenario.fail) throw Error('Synthetic private DB error'); return scenario.missing ? null : { id: scenario.target || 'own', oneOnOnesAsEmployee: [] } } } } },
+      })
+      const response = await detail.GET({}, { params: Promise.resolve({ id: scenario.target || 'own' }) })
+      assert.equal(response.status, scenario.status)
+      assert.equal(response.headers.get('cache-control'), 'private, no-store')
+      assert(response.headers.get('vary').split(',').some(value => value.trim().toLowerCase() === 'cookie'))
+      const data = await response.json()
+      if (scenario.billing) assert.equal(data.code, 'BILLING_AUTHORITY_UNAVAILABLE')
+      if (scenario.status === 200) assert.equal(data.employee.id, scenario.target || 'own')
+      assert(!JSON.stringify(data).includes('Synthetic private DB error'))
+    })
+  }
+
   console.log(JSON.stringify({ passed: results.length, results }))
 })().catch(error => { console.error(error); process.exitCode = 1 })

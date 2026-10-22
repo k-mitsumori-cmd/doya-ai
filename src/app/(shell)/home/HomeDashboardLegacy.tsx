@@ -13,6 +13,11 @@ import type { HomeSummary, HomeEvent } from '@/lib/home/summary'
 import { shellGroups } from '@/components/shell/tools'
 import { ShellIcon } from '@/components/shell/icons'
 import { AGENT_SUGGESTIONS, planAgent, type AgentPlan } from './agent'
+import { homeContractDate, homeJstDateKey, homeSnapshotClock } from './clock'
+import FinanceOverview, { FinanceBillingTasks } from './FinanceOverview'
+import PopupOverview from './PopupOverview'
+import SavedTenjikaiOverview from './SavedTenjikaiOverview'
+import HomeActorBoundary, { type HomeActorView } from './HomeActorBoundary'
 import styles from './home-legacy.module.css'
 
 const man = (n: number) => {
@@ -24,16 +29,17 @@ const man = (n: number) => {
 const STEP_MS = 520
 
 /** API 経由のリダイレクト（決済ポータル等）は画面遷移ではなく通常のリンクで開く */
-function SmartLink({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) {
-  if (href.startsWith('/api/')) return <a href={href} className={className}>{children}</a>
-  return <Link href={href} className={className}>{children}</Link>
+function SmartLink({ href, className, children, current }: { href: string; className?: string; children: React.ReactNode; current: () => boolean }) {
+  const guard = (event: React.MouseEvent) => { if (!current()) { event.preventDefault(); event.stopPropagation() } }
+  if (href.startsWith('/api/')) return <a href={href} className={className} onClick={guard}>{children}</a>
+  return <Link href={href} className={className} onClick={guard}>{children}</Link>
 }
 
 /* ---------------- エージェント ---------------- */
 
 type RunState = { plan: AgentPlan; query: string; shown: number; status: 'running' | 'done' | 'stopped' }
 
-function AgentPanel({ summary }: { summary: HomeSummary }) {
+function AgentPanel({ summary, current }: { summary: HomeSummary; current: () => boolean }) {
   const [input, setInput] = useState('')
   const [run, setRun] = useState<RunState | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -42,25 +48,26 @@ function AgentPanel({ summary }: { summary: HomeSummary }) {
   useEffect(() => clear, [])
 
   const start = useCallback((query: string) => {
+    if (!current()) return
     const q = query.trim()
     if (!q) return
     clear()
     const plan = planAgent(q, summary)
     setRun({ plan, query: q, shown: 0, status: 'running' })
     setInput('')
-  }, [summary])
+  }, [summary, current])
 
   useEffect(() => {
-    if (!run || run.status !== 'running') return
+    if (!current() || !run || run.status !== 'running') return
     if (run.shown >= run.plan.steps.length) {
       setRun((r) => (r ? { ...r, status: 'done' } : r))
       return
     }
-    timer.current = setTimeout(() => setRun((r) => (r && r.status === 'running' ? { ...r, shown: r.shown + 1 } : r)), STEP_MS)
+    timer.current = setTimeout(() => setRun((r) => (current() && r && r.status === 'running' ? { ...r, shown: r.shown + 1 } : r)), STEP_MS)
     return clear
-  }, [run])
+  }, [run, current])
 
-  const stop = () => { clear(); setRun((r) => (r ? { ...r, status: 'stopped' } : r)) }
+  const stop = () => { if (!current()) return; clear(); setRun((r) => (r ? { ...r, status: 'stopped' } : r)) }
 
   return (
     <section className={styles.agent} aria-label="経営エージェント">
@@ -127,7 +134,7 @@ function AgentPanel({ summary }: { summary: HomeSummary }) {
               {run.plan.actions.length ? (
                 <div className={styles.actions}>
                   {run.plan.actions.map((a) => (
-                    <SmartLink key={a.label} href={a.href} className={styles.action}>
+                    <SmartLink key={a.label} href={a.href} className={styles.action} current={current}>
                       {a.label} <ArrowRight size={15} />
                     </SmartLink>
                   ))}
@@ -236,14 +243,7 @@ function Pipeline({ sales }: { sales: HomeSummary['sales'] }) {
 
 const KIND_LABEL: Record<HomeEvent['kind'], string> = { deal: '受注予定', task: 'タスク', project: '納期', quote: '見積期限' }
 
-function jstDateKey(iso: string | Date) {
-  const d = new Date(typeof iso === 'string' ? iso : iso.getTime())
-  const j = new Date(d.getTime() + 9 * 3600_000)
-  return `${j.getUTCFullYear()}-${String(j.getUTCMonth() + 1).padStart(2, '0')}-${String(j.getUTCDate()).padStart(2, '0')}`
-}
-
-function MiniCalendar({ events }: { events: HomeEvent[] }) {
-  const today = jstDateKey(new Date())
+function MiniCalendar({ events, today }: { events: HomeEvent[]; today: string }) {
   const [offset, setOffset] = useState(0)
   const [selected, setSelected] = useState(today)
   const [y0, m0] = today.split('-').map(Number)
@@ -256,7 +256,8 @@ function MiniCalendar({ events }: { events: HomeEvent[] }) {
   const byDay = useMemo(() => {
     const m = new Map<string, HomeEvent[]>()
     events.forEach((e) => {
-      const k = jstDateKey(e.date)
+      const k = homeJstDateKey(e.date)
+      if (!k) return
       m.set(k, [...(m.get(k) ?? []), e])
     })
     return m
@@ -321,72 +322,59 @@ function EmptyCard({ text, href, cta }: { text: string; href: string; cta: strin
 
 /* ---------------- 本体 ---------------- */
 
-export default function HomeDashboardLegacy({ initial }: { initial: HomeSummary }) {
-  const [summary, setSummary] = useState(initial)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export default function HomeDashboardLegacy({ initial, serverActorId }: { initial: HomeSummary; serverActorId: string }) {
+  return <HomeActorBoundary initial={initial} serverActorId={serverActorId}>{view => <HomeDashboardLegacyView {...view} />}</HomeActorBoundary>
+}
 
-  const refresh = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/home/summary', { cache: 'no-store' })
-      if (!res.ok) throw new Error()
-      setSummary(await res.json())
-    } catch {
-      setError('最新の数字を取得できませんでした。時間をおいて再度お試しください。')
-    } finally {
-      setLoading(false)
-    }
-  }
-
+function HomeDashboardLegacyView({ summary, loading, error, refresh, current }: HomeActorView) {
   const s = summary
   const c = s.contract
-  const greeting = (() => {
-    const h = new Date().getHours()
-    return h < 11 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'おつかれさまです'
-  })()
-  const updated = new Date(s.generatedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+  const clock = homeSnapshotClock(s.generatedAt)
   // 数字の出所（ADDON-SERVICES §4）。収入管理・支出管理を使っている組織では、そちらが正本になる
-  const revenueSource = s.sources.revenue === 'income' ? '収入管理' : '営業管理・見積'
-  const costSource = s.sources.cost === 'expense' ? '支出管理' : 'プロマネ（経費と人件費）'
-  const periodEnd = c.currentPeriodEnd ? new Date(c.currentPeriodEnd).toLocaleDateString('ja-JP') : null
+  const revenueSource = s.sources.revenue === 'income' ? '収入管理' : s.sources.revenue === 'unavailable' ? '未取得' : '営業管理・見積（参考）'
+  const costSource = s.sources.cost === 'expense' ? '支出管理' : s.sources.cost === 'unavailable' ? '未取得' : 'プロマネ（案件経費・人件費の参考値）'
+  const useLegacyRevenue = !s.finance || s.finance.income.state === 'unused'
+  const periodEnd = homeContractDate(c.currentPeriodEnd)
 
   return (
     <div className={styles.page}>
       <header className={styles.hero}>
         <div>
           <p className={styles.eyebrow}>経営ホーム</p>
-          <h1 className={styles.title}>{greeting}{s.user.name ? `、${s.user.name}さん` : ''}</h1>
+          <h1 className={styles.title}>{clock.greeting}{s.user.name ? `、${s.user.name}さん` : ''}</h1>
           <p className={styles.subtitle}>売上・収入・予定・人の状態を、全ツールからまとめています。</p>
           <p className={styles.sources}>売上は{revenueSource}、支出は{costSource}の数字です。</p>
         </div>
         <button type="button" className={styles.refresh} onClick={refresh} disabled={loading}>
-          <RefreshCw size={15} className={loading ? styles.spin : undefined} /> {updated} 時点
+          <RefreshCw size={15} className={loading ? styles.spin : undefined} /> {clock.updated} 時点
         </button>
       </header>
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
 
-      <AgentPanel summary={s} />
+      <AgentPanel summary={s} current={current} />
 
-      <section className={styles.kpis} aria-label="今月の主要な数字">
+      {s.finance ? <FinanceOverview finance={s.finance} /> : null}
+      <PopupOverview popup={s.popup} />
+      <SavedTenjikaiOverview tenjikai={s.tenjikai} />
+      <FinanceBillingTasks finance={s.finance} />
+      {useLegacyRevenue ? (<section className={styles.kpis} aria-label="今月の主要な数字">
         <Kpi icon={TrendingUp} label="今月の受注" value={s.sales.state === 'ready' ? man(s.sales.wonThisMonth) : '—'} sub={s.sales.state === 'ready' ? `${s.sales.wonCountThisMonth}件` : '営業管理が未使用'} href={s.sales.href} muted={s.sales.state !== 'ready'} />
         <Kpi icon={FileText} label="今月確定した見積" value={s.quotes.state === 'ready' ? man(s.quotes.confirmedThisMonth) : '—'} sub={s.quotes.state === 'ready' ? `下書き ${s.quotes.draftCount}件` : '見積が未使用'} href={s.quotes.href} muted={s.quotes.state !== 'ready'} />
         <Kpi icon={Wallet} label="受注見込み（確度で加重）" value={s.sales.state === 'ready' ? man(s.sales.weightedPipeline) : '—'} sub={s.sales.state === 'ready' ? `進行中 ${s.sales.openDeals}件 / ${man(s.sales.openPipeline)}` : undefined} href={s.sales.state === 'ready' ? `${s.sales.href}/deals` : '/sfa'} muted={s.sales.state !== 'ready'} />
-        <Kpi icon={FolderKanban} label="プロジェクト利益" value={s.projects.state === 'ready' ? man(s.projects.profit) : '—'} sub={s.projects.state === 'ready' ? `売上 ${man(s.projects.revenue)} ・ 原価 ${man(s.projects.cost)}` : 'プロマネが未使用'} href={s.projects.href} muted={s.projects.state !== 'ready'} />
-      </section>
+        {!s.finance || s.finance.expense.state === 'unused' ? (<Kpi icon={FolderKanban} label="プロジェクト利益" value={s.projects.state === 'ready' ? man(s.projects.profit) : '—'} sub={s.projects.state === 'ready' ? `売上 ${man(s.projects.revenue)} ・ 原価 ${man(s.projects.cost)}` : 'プロマネが未使用'} href={s.projects.href} muted={s.projects.state !== 'ready'} />) : null}
+      </section>) : null}
 
-      <div className={styles.gridWide}>
-        <section className={styles.card}>
+      <div className={styles.gridWide} data-single={!useLegacyRevenue ? 'true' : undefined}>
+        {useLegacyRevenue ? (<section className={styles.card}>
           <div className={styles.cardHead}>
-            <h2>売上の推移</h2>
+            <h2>営業の推移（参考）</h2>
             <span className={styles.cardMeta}>直近6か月</span>
           </div>
           <TrendChart trend={s.trend} />
-        </section>
+        </section>) : null}
         <section className={styles.card}>
           <div className={styles.cardHead}>
-            <h2>パイプライン</h2>
+            <h2>パイプライン（営業管理・参考）</h2>
             {s.sales.state === 'ready' ? <Link href={`${s.sales.href}/deals`} className={styles.cardLink}>開く</Link> : null}
           </div>
           <Pipeline sales={s.sales} />
@@ -396,10 +384,10 @@ export default function HomeDashboardLegacy({ initial }: { initial: HomeSummary 
       <div className={styles.gridWide}>
         <section className={styles.card}>
           <div className={styles.cardHead}><h2>カレンダー</h2><span className={styles.badge}>仮</span></div>
-          <MiniCalendar events={s.events} />
+          {clock.today ? <MiniCalendar key={clock.today} events={s.events} today={clock.today} /> : <p className={styles.muted}>日付を取得できませんでした。最新の数字を取得してください。</p>}
         </section>
         <section className={styles.card}>
-          <div className={styles.cardHead}><h2>プロジェクト収支</h2>{s.projects.state === 'ready' ? <Link href={s.projects.href} className={styles.cardLink}>レポート</Link> : null}</div>
+          <div className={styles.cardHead}><h2>案件別収支（プロマネ・参考）</h2>{s.projects.state === 'ready' ? <Link href={s.projects.href} className={styles.cardLink}>レポート</Link> : null}</div>
           {s.projects.state === 'ready' && s.projects.top.length ? (
             <ul className={styles.projectList}>
               {s.projects.top.map((p) => (
@@ -425,7 +413,7 @@ export default function HomeDashboardLegacy({ initial }: { initial: HomeSummary 
               <div><dt>残業</dt><dd>{s.attendance.overtimeHoursThisMonth}時間</dd></div>
               <div><dt>承認待ち</dt><dd>{s.attendance.pendingRequests}件</dd></div>
             </dl>
-          ) : <EmptyCard text="打刻と残業をここでまとめます。" href="/kintai" cta="勤怠をはじめる" />}
+          ) : <EmptyCard text="打刻と残業をここでまとめます。" href="/kintai/dashboard" cta="勤怠をはじめる" />}
         </section>
         <section className={styles.card}>
           <div className={styles.cardHead}><h2><Users size={16} /> 人と組織</h2></div>
@@ -434,7 +422,7 @@ export default function HomeDashboardLegacy({ initial }: { initial: HomeSummary 
               <div><dt>在籍者</dt><dd>{s.people.activeEmployees}名</dd></div>
               <div><dt>部署</dt><dd>{s.people.departments}</dd></div>
             </dl>
-          ) : <EmptyCard text="社員・部署・評価をここでまとめます。" href="/hr" cta="人事をはじめる" />}
+          ) : <EmptyCard text="社員・部署・評価をここでまとめます。" href="/hr/dashboard" cta="人事をはじめる" />}
         </section>
         <section className={styles.card}>
           <div className={styles.cardHead}><h2><CreditCard size={16} /> ご契約</h2></div>
@@ -443,7 +431,7 @@ export default function HomeDashboardLegacy({ initial }: { initial: HomeSummary 
             <div><dt>状態</dt><dd>{c.cancelAtPeriodEnd ? '期間終了で解約予定' : c.paid ? '契約中' : '無料'}</dd></div>
             {periodEnd ? <div><dt>{c.cancelAtPeriodEnd ? '利用できる期限' : '次回更新日'}</dt><dd>{periodEnd}</dd></div> : null}
           </dl>
-          <SmartLink href={c.paid ? '/api/stripe/portal?returnTo=/home' : '/pricing'} className={styles.cardLink}>
+          <SmartLink href={c.paid ? '/api/stripe/portal?returnTo=/home' : '/pricing'} className={styles.cardLink} current={current}>
             {c.paid ? '契約内容・お支払い方法を確認' : '料金プランを見る'}
           </SmartLink>
         </section>

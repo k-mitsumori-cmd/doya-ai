@@ -5,6 +5,7 @@ export const maxDuration = 300
 // GET  /api/quote/documents — 見積書一覧
 // POST /api/quote/documents — 見積書を作成（品目つき）
 import { NextRequest, NextResponse } from 'next/server'
+import { workspaceHref } from '@/lib/organization-workspace-selection'
 import { prisma } from '@/lib/prisma'
 import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
@@ -113,8 +114,8 @@ export async function POST(req: NextRequest) {
     used: checked.used,
     limit: checked.limit,
     ...(canManageBilling ? checked.limit === FREE_LIMITS.quoteDocuments
-      ? { upgradeUrl: '/quote/pricing' }
-      : { contactUrl: SUPPORT_CONTACT_URL } : {}),
+      ? { upgradeUrl: workspaceHref('/quote/pricing', ctx.organizationSlug, 'quote') }
+      : { contactUrl: SUPPORT_CONTACT_URL, pricingUrl: workspaceHref('/quote/pricing', ctx.organizationSlug, 'quote') } : {}),
   }, { status: 402 })
   const quota = await checkQuota()
   if (!quota.ok) return quotaResponse(quota)

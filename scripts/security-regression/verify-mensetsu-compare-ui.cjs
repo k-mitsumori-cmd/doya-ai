@@ -21,7 +21,7 @@ const compile = (node) => ts.transpileModule(`(${node.getText(ast)})`, { compile
 async function first(response) {
   const state = { candidates: ['stale'], error: null, loading: false, cursor: 'old', total: -1, revision: 'old' }
   const load = vm.runInNewContext(compile(functions.load), {
-    requestVersion: { current: 0 }, templateId: 'all', Error,
+    requestVersion: { current: 0 }, templateId: 'all', proof: { current: () => true }, Error,
     fetch: async () => response,
     notifyError: (_, message) => { state.error = message },
     setError: (value) => { state.error = value },
@@ -56,7 +56,7 @@ async function first(response) {
   const state = { candidates: [{ id: 'first' }], error: null, loading: false }
   const loadMore = vm.runInNewContext(compile(functions.loadMore), {
     nextCursor: 'first', loadingMore: false, requestVersion: { current: 0 },
-    templateId: 'all', revision, total: 2, candidates: state.candidates,
+    templateId: 'all', revision, total: 2, candidates: state.candidates, proof: { current: () => true },
     URLSearchParams, Error,
     fetch: async () => Response.json({ error: '比較結果が更新されました。最初から読み直してください' }, { status: 409 }),
     notifyError: (_, message) => { state.error = message },

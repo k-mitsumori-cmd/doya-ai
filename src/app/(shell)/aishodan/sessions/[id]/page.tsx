@@ -6,9 +6,10 @@
 // 全文ログ・要約・ヒアリング結果・答えられなかった質問・適合判定。
 // ⚠️ スコアは参考値である旨を必ず画面に出す。人が上書きできるようにする。
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
+import { useOptionalOrganizationWorkspace, useWorkspaceProof } from '@/components/org/OrganizationWorkspaceBoundary'
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { useParams } from 'next/navigation'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
@@ -60,13 +61,22 @@ const VERDICT_STYLE: Record<string, string> = {
 const MANUAL_FIT_SCORE: Record<Verdict, number> = { hot: 85, warm: 65, cold: 40, unfit: 15 }
 
 export default function AishodanSessionDetail() {
+  const workspace = useOptionalOrganizationWorkspace()
+  if (!workspace) return <main className="p-8"><SignInReturnLink fallback="/aishodan/sessions" className="text-blue-700 underline">ログインして商談ログを開く</SignInReturnLink></main>
+  return <AishodanSessionWorkspace />
+}
+
+function AishodanSessionWorkspace() {
   // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
   const uiNext = useUiNext()
+  const proof = useWorkspaceProof()
   const params = useParams<{ id: string }>()
   const id = params?.id
   const [d, setD] = useState<Detail | null>(null)
   const [loading, setLoading] = useState(true)
+  const loadVersion = useRef(0)
   const [saving, setSaving] = useState(false)
+  const [operationUnknown, setOperationUnknown] = useState(false)
   const [error, setError] = useState('')
   /** 読み込みに失敗したときの応答の状態（新しい見た目で、出す文と次の一手を決める。通信の失敗は 0） */
   const [loadStatus, setLoadStatus] = useState(0)
@@ -96,28 +106,44 @@ export default function AishodanSessionDetail() {
 
   const load = useCallback(async () => {
     if (!id) return
+    const version = ++loadVersion.current
     setLoading(true)
+    setError('')
     try {
-      await ensureSelectedOrg('aishodan')
-      const r = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}`))
+      const r = await fetch(proof.api(`/api/aishodan/sessions/${id}`))
       const j = await r.json()
       if (!r.ok) throw new AishodanHttpError(j?.error || '読み込みに失敗しました', r.status)
+      if (version !== loadVersion.current || !proof.current()) return
       setD(j.session)
     } catch (e) {
-      setLoadStatus(failureStatus(e))
-      // 新しい見た目では、トーストにもサーバーの文を出さない
-      notifyError(setError, uiNext ? '商談を読み込めませんでした。' : e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (version === loadVersion.current && proof.current()) {
+        setLoadStatus(failureStatus(e))
+        // 新しい見た目では、トーストにもサーバーの文を出さない
+        notifyError(setError, uiNext ? '商談を読み込めませんでした。' : e instanceof Error ? e.message : '読み込みに失敗しました')
+      }
     } finally {
-      setLoading(false)
+      if (version === loadVersion.current && proof.current()) setLoading(false)
     }
-  }, [id, uiNext])
+  }, [id, proof, uiNext])
 
   useEffect(() => {
     void load()
+    const versionRef = loadVersion
+    return () => { versionRef.current++ }
   }, [load])
 
+  const operationProof = useRef(proof)
+  useEffect(() => {
+    if (operationProof.current === proof) return
+    operationProof.current = proof
+    if (!saving) return
+    setSaving(false)
+    setOperationUnknown(true)
+    setError('直前の判定結果を確認できません。商談ログを再読み込みして確認してください。')
+  }, [proof, saving])
+
   async function override(verdict: Verdict, onRejected?: (status: number, serverMessage: string | undefined) => void) {
-    if (!id) return
+    if (!id || !proof.current()) return
     setSaving(true)
     setError('')
     try {
@@ -125,37 +151,39 @@ export default function AishodanSessionDetail() {
       //    サーバ側は判定と適合度が揃って初めて新規作成する。
       const body: Record<string, unknown> = { verdict }
       if (!d?.outcome) body.fitScore = MANUAL_FIT_SCORE[verdict]
-      const res = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}`), {
+      const res = await fetch(proof.api(`/api/aishodan/sessions/${id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+      if (!proof.current()) return
       if (!res.ok) {
         const j = await res.json().catch(() => null)
-        if (onRejected) onRejected(res.status, j?.error)
-        else notifyError(setError, j?.error || '判定を保存できませんでした')
+        if (proof.current() && onRejected) onRejected(res.status, j?.error)
+        else if (proof.current()) notifyError(setError, j?.error || '判定を保存できませんでした')
         return
       }
       await load()
     } catch {
-      notifyError(setError, '判定の保存結果を確認できませんでした。画面を再読み込みしてから、判定をご確認ください。')
+      if (proof.current()) notifyError(setError, '判定の保存結果を確認できませんでした。画面を再読み込みしてから、判定をご確認ください。')
     } finally {
-      setSaving(false)
+      if (proof.current()) setSaving(false)
     }
   }
 
   /** 自動判定をやり直す。生成に失敗した商談を救うための導線 */
   async function reEvaluate(overwriteManual = false, onRejected?: (status: number, serverMessage: string | undefined) => void) {
-    if (!id) return
+    if (!id || !proof.current()) return
     setSaving(true)
     setError('')
     try {
-      const res = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}/re-evaluate`), {
+      const res = await fetch(proof.api(`/api/aishodan/sessions/${id}/re-evaluate`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ overwriteManual }),
       })
       const j = await res.json().catch(() => null)
+      if (!proof.current()) return
       if (!res.ok) {
         // 手入力を上書きしてよいか、一度だけ確かめる
         if (j?.needsConfirm && !overwriteManual) {
@@ -170,9 +198,9 @@ export default function AishodanSessionDetail() {
       }
       await load()
     } catch {
-      notifyError(setError, '再評価の結果を確認できませんでした。画面を再読み込みしてから、判定をご確認ください。')
+      if (proof.current()) notifyError(setError, '再評価の結果を確認できませんでした。画面を再読み込みしてから、判定をご確認ください。')
     } finally {
-      setSaving(false)
+      if (proof.current()) setSaving(false)
     }
   }
 
@@ -195,8 +223,9 @@ export default function AishodanSessionDetail() {
         <AishodanFailureNotice
           failure={describeAishodanFailure(error ? loadStatus : 404, error && loadStatus !== 404 ? '商談を読み込めませんでした。' : 'この商談は見つかりませんでした。')}
           onRetry={() => void load()}
-          backHref="/aishodan/sessions"
+          backHref={proof.href('/aishodan/sessions')}
           backLabel="商談ログに戻る"
+          returnHref={proof.href(`/aishodan/sessions/${id}`)}
         />
       </div>
     )
@@ -205,7 +234,7 @@ export default function AishodanSessionDetail() {
     return (
       <div className={uiNext ? 'flex flex-col items-center justify-center gap-4 px-4 py-16' : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50'}>
         <p className="text-slate-600">{error || '商談が見つかりません'}</p>
-        <Link href="/aishodan/sessions" className="text-sm text-[#0066ff] underline font-semibold">商談一覧に戻る</Link>
+        <Link href={proof.href('/aishodan/sessions')} className="text-sm text-[#0066ff] underline font-semibold">商談一覧に戻る</Link>
       </div>
     )
   }
@@ -220,7 +249,7 @@ export default function AishodanSessionDetail() {
     <div className={uiNext ? 'pb-12' : 'min-h-screen bg-slate-50 pb-24'}>
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-4xl px-4 py-4">
-          <Link href="/aishodan/sessions" className={`text-xs text-slate-500 hover:underline font-semibold${uiNext ? ` inline-flex items-center rounded-lg${tap}` : ''}`}>← 商談ログ</Link>
+          <Link href={proof.href('/aishodan/sessions')} className={`text-xs text-slate-500 hover:underline font-semibold${uiNext ? ` inline-flex items-center rounded-lg${tap}` : ''}`}>← 商談ログ</Link>
           <AishodanHeading className={`text-lg font-bold text-slate-900${uiNext ? ' break-words [text-wrap:balance]' : ''}`}>
             {d.guestCompany || '会社名未取得'} {d.guestName ? `／ ${d.guestName}` : ''}
           </AishodanHeading>
@@ -232,6 +261,10 @@ export default function AishodanSessionDetail() {
       </header>
 
       <main className="mx-auto max-w-4xl space-y-5 px-4 py-6">
+        {operationUnknown && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          直前の判定の結果を確認できません。後から保存される場合があります。最新の商談ログを確認してから、次の操作を選んでください。
+          <button type="button" onClick={() => void load()} className="ml-2 font-bold text-blue-700 underline">最新の商談ログを読み込む</button>
+        </div>}
         {d.evaluationStatus && !['ready', 'manual'].includes(d.evaluationStatus) && (
           <section role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-950 ring-1 ring-amber-200">
             <p className="font-bold">
@@ -325,7 +358,7 @@ export default function AishodanSessionDetail() {
                 自動判定をやり直す
               </button>
               {error && uiNext ? (
-                <div className="mt-3"><AishodanFailureNotice failure={actionFailure ?? describeAishodanFailure(0, error)} /></div>
+                <div className="mt-3"><AishodanFailureNotice failure={actionFailure ?? describeAishodanFailure(0, error)} returnHref={proof.href(`/aishodan/sessions/${id}`)} /></div>
               ) : error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
               <p className="mt-4 text-xs text-slate-500 font-semibold">判定を変える</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -376,7 +409,7 @@ export default function AishodanSessionDetail() {
               ))}
             </div>
             {error && uiNext ? (
-              <div className="mt-3"><AishodanFailureNotice failure={actionFailure ?? describeAishodanFailure(0, error)} /></div>
+              <div className="mt-3"><AishodanFailureNotice failure={actionFailure ?? describeAishodanFailure(0, error)} returnHref={proof.href(`/aishodan/sessions/${id}`)} /></div>
             ) : error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
           </section>
         )}

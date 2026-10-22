@@ -36,6 +36,7 @@ export function KintaiDashboardError({ message }: { message: string }) {
   return (
     <div className={styles.page}>
       <ErrorNotice what="マイページを読み込めませんでした。" how={`時間をおいて、もう一度お試しください（${message}）。`} onRetry={() => window.location.reload()} retryLabel="再読み込み" />
+      <Link href="/home">ツールのホームへ</Link>
     </div>
   )
 }

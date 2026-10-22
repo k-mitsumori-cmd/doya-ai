@@ -36,7 +36,7 @@ const access = {
     }
     const prisma = { $transaction: async (fn) => fn(tx) }
     const route = load('src/app/api/aio/prompts/[id]/route.ts', {
-      'next/server': { NextResponse: { json } }, '@/lib/prisma': { prisma }, '@/lib/aio/access': access, '@/lib/aio/prompt-mutation': helper, '@/lib/org-profile-version': version,
+      'next/server': { NextResponse: { json } }, '@/lib/prisma': { prisma }, '@/lib/organization-workspace-selection':load('src/lib/organization-workspace-selection.ts'),'@/lib/aio/access': access, '@/lib/aio/prompt-mutation': helper, '@/lib/org-profile-version': version,
     })
     const response = await route.DELETE({ text: async () => '' }, { params: Promise.resolve({ id: 'prompt-1' }) })
     assert.equal(response.status, 200)
@@ -63,7 +63,7 @@ const access = {
       }),
     }
     const route = load('src/app/api/aio/prompts/route.ts', { '@/lib/aio/types': load('src/lib/aio/types.ts'),
-      'next/server': { NextResponse: { json } }, '@/lib/prisma': { prisma }, '@/lib/aio/access': access, '@/lib/aio/prompt-mutation': helper, '@/lib/org-profile-version': version,
+      'next/server': { NextResponse: { json } }, '@/lib/prisma': { prisma }, '@/lib/organization-workspace-selection':load('src/lib/organization-workspace-selection.ts'),'@/lib/aio/access': access, '@/lib/aio/prompt-mutation': helper, '@/lib/org-profile-version': version,
       '@/lib/aio/billing': { getAioBilling: async () => ({ plan: 'FREE' }) },
       '@/lib/unified-plan': { isPaidPlan: () => false },
     })
@@ -81,7 +81,7 @@ const access = {
         assert.equal(where.archivedAt, null)
         return null
       } } }) } },
-      '@/lib/aio/access': access, '@/lib/aio/prompt-mutation': helper, '@/lib/org-profile-version': version,
+      '@/lib/organization-workspace-selection':load('src/lib/organization-workspace-selection.ts'),'@/lib/aio/access': access, '@/lib/aio/prompt-mutation': helper, '@/lib/org-profile-version': version,
     })
     const response = await route.PATCH({ text: async () => JSON.stringify({ isActive: true }) }, { params: Promise.resolve({ id: 'archived' }) })
     assert.equal(response.status, 404)

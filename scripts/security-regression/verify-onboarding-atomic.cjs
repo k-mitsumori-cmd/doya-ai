@@ -1,7 +1,8 @@
+const { shodanLifecycleFixture } = require('./shodan-lifecycle-fixture.cjs');
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
-function fixture(service, { failMember = false, conflictOnce = false, existingSlug = false } = {}) {
+function fixture(service, { failMember = false, conflictOnce = false, rawConflictOnce = null, existingSlug = false } = {}) {
   const organizations = existingSlug ? [{ id: 'prior', name: 'Prior', slug: 'acme' }] : [];
   const members = [];
   const profiles = [];
@@ -33,11 +34,15 @@ function fixture(service, { failMember = false, conflictOnce = false, existingSl
     transactions++;
     if (options) assert.equal(options.isolationLevel, 'Serializable');
     if (conflictOnce && transactions === 1) throw Object.assign(Error('serialization conflict'), { code: 'P2034' });
+    if (rawConflictOnce && transactions === 1) throw Object.assign(Error('raw lock conflict'), { code: 'P2010', meta: { code: rawConflictOnce } });
     const before = { organizations: structuredClone(organizations), members: structuredClone(members), profiles: structuredClone(profiles), prompts: structuredClone(prompts) };
     try { return await callback(tx); }
     catch (error) { organizations.splice(0, organizations.length, ...before.organizations); members.splice(0, members.length, ...before.members); profiles.splice(0, profiles.length, ...before.profiles); prompts.splice(0, prompts.length, ...before.prompts); throw error; }
   } };
+  /* Explicit normal owner/User seeds omitted by the original actor/token fixture; not an anomaly repair. */
+const lifecycle = shodanLifecycleFixture(prisma, { service, mode: 'creation', userIds: ['user'] });
   const deps = {
+    ...lifecycle,
     'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma },
@@ -72,6 +77,7 @@ function fixture(service, { failMember = false, conflictOnce = false, existingSl
 
     let calls = 0;
     const route = load(`src/app/api/${service}/organization/route.ts`, {
+      ...shodanLifecycleFixture({ $transaction: async fn => fn({}) }, { service, mode: 'creation', userIds: ['user'] }),
       'next/server': { NextResponse: Response },
       'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
       '@/lib/auth': { authOptions: {} },
@@ -102,6 +108,20 @@ function fixture(service, { failMember = false, conflictOnce = false, existingSl
   assert.notEqual(created.slug, 'acme');
   assert.equal(collidedQuickStart.organizations.length, 2);
   assert.equal(collidedQuickStart.members.length, 1);
+  for (const creator of ['create', 'quickStart']) {
+    for (const sqlstate of ['40001', '40P01']) {
+      const retried = fixture('aio', { rawConflictOnce: sqlstate });
+      await retried[creator]();
+      assert.equal(retried.transactions, 2, `${creator} ${sqlstate}`);
+      assert.equal(retried.organizations.length, 1);
+      assert.equal(retried.members.length, 1);
+    }
+    const unrelated = fixture('aio', { rawConflictOnce: '23505' });
+    await assert.rejects(unrelated[creator](), error => error.code === 'P2010' && error.meta?.code === '23505');
+    assert.equal(unrelated.transactions, 1, `${creator} unrelated raw error`);
+    assert.equal(unrelated.organizations.length, 0);
+    assert.equal(unrelated.members.length, 0);
+  }
 
   const sequence = [];
   const saved = { profiles: [], prompts: [] };
@@ -113,12 +133,14 @@ function fixture(service, { failMember = false, conflictOnce = false, existingSl
     'next-auth': { getServerSession: async () => ({ user: { id: 'user', name: 'Owner' } }) },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma: { aioMember: { findMany: async () => [] } } },
+    '@/lib/account-lifecycle/state': { LifecycleError: class extends Error {} },
     'node:crypto': require('node:crypto'),
     '@/lib/operational-json': load('src/lib/operational-json.ts', {}, { TextDecoder, Uint8Array }),
     '@/lib/aio/quick-start-operation': {
       AioStartError: class extends Error {},
       beginAioQuickStart: async () => ({ state: 'started', leaseToken: 'synthetic' }),
       recoverAioQuickStart: async () => ({ state: 'pending' }),
+      assertAioQuickStartGrantAllowed: async () => { sequence.push('grant-gate'); },
       failAioQuickStart: async () => ({ state: 'failed' }),
       finishAioQuickStart: async (_worker, initialize) => {
         const org = await initialize({
@@ -144,7 +166,7 @@ function fixture(service, { failMember = false, conflictOnce = false, existingSl
   }
   assert.equal((await quickStartRoute.POST(request({ url: 'https://example.com' }))).status, 409);
   assert.equal((await quickStartRoute.POST(request({ operationId: uuid, url: 'https://example.com' }))).status, 200);
-  assert.deepEqual(sequence, ['derive', 'suggest', 'create']);
+  assert.deepEqual(sequence, ['derive', 'grant-gate', 'suggest', 'create']);
   assert.equal(saved.profiles[0].brandUrl, 'https://example.com');
   assert.equal(saved.prompts.length, 1);
   console.log('PASS Shodan/AIO onboarding: validation, atomic owner creation, idempotency and slug retry');

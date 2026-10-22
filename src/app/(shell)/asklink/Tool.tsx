@@ -2,7 +2,9 @@
 
 // ドヤAI質問リンク 作成画面（ログイン後）
 // 流れ: URL → 抽出＋質問リンク2本（数秒〜十数秒）→ バナー3枚を1枚ずつ（1枚1〜2分）
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import AskLinkAuthenticatedScope from '@/components/asklink/AskLinkAuthenticatedScope'
+import { useAskLinkCreation } from '@/components/asklink/useAskLinkCreation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { AlertTriangle, Link2, Loader2 } from 'lucide-react'
@@ -12,8 +14,8 @@ import type { RunDto } from '@/lib/asklink/dto'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { ToolHero } from '@/components/ds'
 import { DoneBanner, ErrorNotice } from '@/components/ds/feedback'
+import styles from './Tool.module.css'
 import AskLinkErrorNotice from '@/components/asklink/AskLinkErrorNotice'
-import { statusError, statusOf } from '@/components/asklink/errors'
 
 // 新しい見た目のキービジュアル。シロクマの絵（public/ui-renewal/mascots/asklink.webp）が置かれるまでは、LP の絵を仮に出す
 const HERO_ART = '/asklink/hero.webp'
@@ -52,74 +54,45 @@ function Guide() {
 }
 
 export default function AskLinkTool() {
-  const [url, setUrl] = useState('')
-  const [manualText, setManualText] = useState('')
-  const [needManual, setNeedManual] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  // 新しい見た目では、サーバーの文言ではなく状態から案内を決める（0 は通信の失敗）
-  const [errStatus, setErrStatus] = useState<number | null>(null)
-  const [limit, setLimit] = useState<{ message: string; upgradeUrl?: string } | null>(null)
+  return <AskLinkAuthenticatedScope callbackUrl="/asklink"><AskLinkCreationTool /></AskLinkAuthenticatedScope>
+}
+
+function AskLinkCreationTool() {
   const [run, setRun] = useState<RunDto | null>(null)
-  const queue = useBannerQueue(setRun)
+  const queue = useBannerQueue(setRun, run?.id ?? null)
   const uiNext = useUiNext()
   const [doneShown, setDoneShown] = useState(false)
 
-  // 入力の誤り（400）を、どの欄の誤りかとして支援技術に伝える
+  const [autoQueueRun, setAutoQueueRun] = useState<string | null>(null)
+  const freshRun = useRef<string | null>(null)
+  const creation = useAskLinkCreation(setRun, setAutoQueueRun)
+  const { url, manualText, needManual } = creation.draft
+  const loading = creation.busy, error = creation.error
+  const limit = creation.quota ? { message: creation.quota.reason, upgradeUrl: '/asklink/pricing' } : null
+  const locked = loading || !creation.ready || !!creation.intent || creation.authorityRejected
+
+  useEffect(() => {
+    if (!run || autoQueueRun !== run.id || freshRun.current === run.id) return
+    freshRun.current = run.id
+    setAutoQueueRun(null)
+    setDoneShown(true)
+    void queue.generate(run.id, run.banners.map(b => b.kind))
+  }, [autoQueueRun, run, queue])
+
+  const create = () => creation.create()
+
+  const errStatus = creation.errorStatus
   const urlInvalid = Boolean(error) && errStatus === 400 && !needManual
   const manualInvalid = Boolean(error) && errStatus === 400 && needManual
-
-  const create = async () => {
-    if (loading) return
-    setLoading(true)
-    setError(null)
-    setErrStatus(null)
-    setLimit(null)
-    try {
-      const res = await fetch('/api/asklink/runs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, manualText: needManual ? manualText : undefined }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (res.status === 401) {
-        window.location.href = '/auth/signin?callbackUrl=/asklink'
-        return
-      }
-      if (res.status === 429 && data?.limitReached) {
-        setLimit({ message: data.error, upgradeUrl: data.upgradeUrl })
-        return
-      }
-      if (res.status === 422 && data?.canUseManualInput) {
-        setNeedManual(true)
-        setError(data.error)
-        setErrStatus(422)
-        return
-      }
-      if (!res.ok || !data?.run) throw statusError(data?.error || '作成に失敗しました。', res.status)
-      setRun(data.run)
-      setNeedManual(false)
-      setManualText('')
-      setDoneShown(true)
-      window.dispatchEvent(new Event('asklink:generated'))
-      // リンクを先に見せ、画像は順に作る
-      void queue.generate(data.run.id, data.run.banners.map((b: { kind: string }) => b.kind))
-    } catch (e) {
-      setError((e as Error).message)
-      setErrStatus(statusOf(e))
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
       {uiNext ? (
         // 見出し（h1）は枠（ToolFrame）が出すので、ここは「何ができるか」を h2 で書く
-        <div className="mb-6">
+        <div className={`mb-6 ${styles.hero}`}>
           <ToolHero
-            title={<>サイトのURLから、<wbr />「AIに聞く」リンクを</>}
-            lead="URLを1つ入れると、ChatGPTに質問が届くリンク2本と、ポップアップ用のバナー3枚を作ります。"
+            title="URLから質問リンクを作成"
+            lead="ChatGPTへの質問リンク2本と、ポップアップ用バナー3枚を作成します。"
             art={HERO_ART}
             artAlt="サイトのポップアップの「AIに聞く」ボタンから、ChatGPTで相談が始まる様子"
           />
@@ -152,7 +125,8 @@ export default function AskLinkTool() {
               type="text"
               inputMode="url"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => creation.setDraft({ url: e.target.value })}
+              disabled={locked}
               placeholder="https://example.co.jp/"
               className={`w-full rounded-xl border border-slate-300 py-3 pl-9 pr-3 text-sm font-bold text-slate-800 focus:border-[#0066ff] focus:outline-none${
                 uiNext ? ' min-h-11 min-w-0 text-base focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-0 sm:text-sm' : ''
@@ -164,7 +138,7 @@ export default function AskLinkTool() {
           </div>
           <button
             type="submit"
-            disabled={loading || !url.trim() || (needManual && manualText.trim().length < 20)}
+            disabled={locked || !url.trim() || (needManual && manualText.trim().length < 20)}
             className={`inline-flex items-center justify-center gap-2 rounded-xl bg-[#0066ff] px-6 py-3 text-sm font-black text-white shadow transition hover:bg-blue-700 disabled:opacity-50${
               uiNext ? ' min-h-11 whitespace-nowrap focus-visible:ring-2 focus-visible:ring-[#0066ff] focus-visible:ring-offset-2 focus-visible:ring-offset-white' : ''
             }`}
@@ -182,7 +156,8 @@ export default function AskLinkTool() {
             <textarea
               id="asklink-manual"
               value={manualText}
-              onChange={(e) => setManualText(e.target.value)}
+              onChange={(e) => creation.setDraft({ manualText: e.target.value })}
+              disabled={locked}
               rows={5}
               maxLength={3000}
               placeholder="会社名・サービスの内容・強み・対象のお客さまなどを、20字以上で入力してください。"
@@ -215,7 +190,11 @@ export default function AskLinkTool() {
         )}
         {error && uiNext && (
           <div id="asklink-form-error" className="mt-3">
-            {errStatus === 422 ? (
+            {creation.authorityRejected && (errStatus === 401 || errStatus === 403) ? (
+              <AskLinkErrorNotice status={errStatus} action="create" />
+            ) : creation.intent ? (
+              <ErrorNotice what={error} how="新しく作成せず、「保存結果を確認」を押してください。" />
+            ) : errStatus === 422 ? (
               <ErrorNotice
                 what="このサイトは読み取れませんでした。"
                 how="下の欄にサービスの説明を入れて、もう一度「作成する」を押してください。"
@@ -226,7 +205,7 @@ export default function AskLinkTool() {
                 how={needManual ? 'サービスの説明を20〜3,000字で入れて、もう一度「作成する」を押してください。' : '「https://」から始まるサイトのURLを入れて、もう一度「作成する」を押してください。'}
               />
             ) : (
-              <AskLinkErrorNotice status={errStatus ?? 500} action="create" onRetry={() => void create()} />
+              <AskLinkErrorNotice status={errStatus ?? 500} action="create" onRetry={creation.ready && !creation.authorityRejected ? () => void create() : undefined} />
             )}
           </div>
         )}
@@ -235,6 +214,16 @@ export default function AskLinkTool() {
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             {error}
           </p>
+        )}
+        {creation.intent && (
+          <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-slate-700">
+            <p role="status">{creation.operation?.state === 'completed' ? '作成結果は保存されています。' : creation.operation?.state === 'expired' ? 'この操作の確認期間が終了しました。保存済みの結果は履歴からご確認ください。' : '前の作成操作が記録されています。新しく作成する前に結果をご確認ください。'}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={() => void creation.verify()} disabled={loading || creation.authorityRejected} className="rounded-lg border border-blue-300 bg-white px-3 py-2 font-bold disabled:opacity-50">保存結果を確認</button>
+              {creation.operation && (creation.operation.state === 'missing' || creation.operation.canFinalize) && <button type="button" onClick={() => void creation.finish()} disabled={loading || creation.authorityRejected} className="rounded-lg border border-blue-300 bg-white px-3 py-2 font-bold disabled:opacity-50">この操作を終了</button>}
+              {creation.operation && ['completed', 'failed', 'canceled', 'deleted', 'superseded', 'expired'].includes(creation.operation.state) && <button type="button" onClick={() => void creation.startNew()} disabled={loading || creation.authorityRejected} className="rounded-lg border border-blue-300 bg-white px-3 py-2 font-bold disabled:opacity-50">新しい作成へ進む</button>}
+            </div>
+          </div>
         )}
         {limit && uiNext && (
           <div className="mt-3">

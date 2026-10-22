@@ -1,48 +1,205 @@
-process.env.NODE_ENV='test';
-const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),React=require('react'),{JSDOM}=require('jsdom'),{load}=require('./load-typescript.cjs');
-const dom=new JSDOM('<!doctype html><body></body>',{url:'https://example.invalid/persona/pricing'});
-global.window=dom.window;global.document=dom.window.document;global.navigator=dom.window.navigator;global.IS_REACT_ACT_ENVIRONMENT=true;
-const {createRoot}=require('react-dom/client'),tick=()=>new Promise(resolve=>setImmediate(resolve)),runtime=require('react/jsx-runtime');
-const source=ts.transpileModule(fs.readFileSync('src/components/CheckoutButton.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
-const warnings=[],originalError=console.error;console.error=(...args)=>warnings.push(args.map(String).join(' '));
-const planUtils=load('src/lib/plan-utils.ts');
-async function fixture(){
- let status='authenticated',data={user:{id:'owner'}},props={planId:'banner-pro'},reply=async()=>Response.json({sessionId:'cs_synthetic',url:'https://checkout.stripe.com/c/pay/synthetic'}),seq=0,handler,closed=false;
- const timers=new Map(),requests=[],navigations=[],notices=[],dismissals=[];
- const clock={setTimeout:(fn,ms)=>{assert.equal(ms,35000);timers.set(++seq,fn);return seq},clearTimeout:id=>timers.delete(id)};
- const helper=load('src/lib/billing-response-client.ts',{}, {AbortController,TextDecoder,Uint8Array,...clock,fetch:(url,init)=>{requests.push({url,init,body:init.body?JSON.parse(init.body):null});return reply(url,init)}});
- const jsx={...runtime};for(const method of ['jsx','jsxs'])jsx[method]=(type,p,...args)=>{if(type==='button')handler=p.onClick;return runtime[method](type,p,...args)};
- const location={pathname:'/persona/pricing',set href(url){navigations.push({type:'href',url})},reload(){navigations.push({type:'reload'})}};
- const toast={loading:(message,options)=>notices.push({type:'loading',message,options}),success:(message,options)=>notices.push({type:'success',message,options}),error:(message,options)=>notices.push({type:'error',message,options}),dismiss:id=>dismissals.push(id)};
- const mocks={'react':React,'react/jsx-runtime':jsx,'next-auth/react':{useSession:()=>({status,data})},'next/navigation':{useRouter:()=>({push:url=>navigations.push({type:'router',url})})},'lucide-react':{Loader2:()=>null,Zap:()=>null,CreditCard:()=>null},'react-hot-toast':toast,'@/lib/billing-response-client':helper,'@/lib/plan-utils':planUtils};
- const exportsObject={};vm.runInNewContext(source,{exports:exportsObject,require:name=>{assert.ok(name in mocks,name);return mocks[name]},window:{location},AbortController,console});
- const container=document.createElement('div');document.body.append(container);const root=createRoot(container);
- const flush=async()=>{await tick();await tick()};
- const render=()=>React.act(async()=>{root.render(React.createElement(React.StrictMode,null,React.createElement(exportsObject.CheckoutButton,props)));await flush()});
- const click=()=>React.act(async()=>{container.querySelector('button').dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true}));await flush()});
- const directTwice=()=>React.act(async()=>{void handler();void handler();await flush()});
- const expire=()=>React.act(async()=>{for(const fn of [...timers.values()])fn();await flush()});
- const close=()=>React.act(async()=>{if(!closed){closed=true;root.unmount()}await flush();assert.equal(timers.size,0);container.remove()});
- await render();return{container,requests,navigations,notices,dismissals,timers,render,click,directTwice,expire,close,reply:fn=>{reply=fn},auth:(s,u)=>{status=s;data=u},props:p=>{props={...props,...p}},settle:fn=>React.act(async()=>{fn();await flush()})};
+process.env.NODE_ENV = 'test'
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const crypto = require('node:crypto')
+const vm = require('node:vm')
+const ts = require('typescript')
+const React = require('react')
+const { JSDOM } = require('jsdom')
+const { load } = require('./load-typescript.cjs')
+const dom = new JSDOM('<!doctype html><body></body>', { url: 'https://example.invalid/banner/pricing' })
+global.window = dom.window; global.document = dom.window.document; global.navigator = dom.window.navigator; global.IS_REACT_ACT_ENVIRONMENT = true
+const { createRoot } = require('react-dom/client')
+const runtime = require('react/jsx-runtime')
+const tick = () => new Promise(resolve => setImmediate(resolve))
+const source = ts.transpileModule(fs.readFileSync('src/components/CheckoutButton.tsx', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText
+const billing = load('src/lib/billing-response-client.ts')
+const recovery = load('src/lib/checkout-recovery-client.ts', { './billing-response-client': billing }, { AbortController })
+const planUtils = load('src/lib/plan-utils.ts')
+const warnings = [], originalError = console.error
+console.error = (...args) => warnings.push(args.map(String).join(' '))
+async function fixture(realClient = false) {
+  let status = 'authenticated', data = { user: { id: 'actor-one' } }, props = { planId: 'banner-pro' }, pathname = '/banner/pricing', onClick
+  let readReply = async () => { throw Error('unexpected response read') }
+  let checkoutReply = async () => { throw Error('unexpected checkout action') }
+  const checkoutCalls = [], durable = new Map()
+  const navigations = [], notices = [], calls = []
+  const mockManager = {
+    value: { phase: 'idle', handle: null, busy: false, dispatched: false, message: null },
+    listeners: new Set(), subscribe(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn) }, snapshot() { return this.value },
+    set(value) { this.value = { ...this.value, ...value }; for (const fn of this.listeners) fn() },
+    async observe(intent, lease) { calls.push(['observe', intent]); if (!lease()) throw Error('stale') },
+    async start(intent, lease) { calls.push(['start', intent]); if (!lease()) return null; this.set({ phase: 'completed', handle: { actorId: 'actor-one', scopeKey: recovery.checkoutScopeKey(intent) } }); return { kind: 'ready', url: 'https://checkout.stripe.com/c/pay/synthetic' } },
+    async status(intent) { calls.push(['status', intent]) },
+    async abortMissing(intent) { calls.push(['abort', intent]) },
+    async resume(intent) { calls.push(['resume', intent]); return { kind: 'ready', url: 'https://checkout.stripe.com/c/pay/resumed' } },
+    async readyAgain(intent) { calls.push(['ready', intent]); return { kind: 'ready', url: 'https://checkout.stripe.com/c/pay/ready' } },
+    async newAfterTerminal(intent) { calls.push(['new', intent]); return { kind: 'ready', url: 'https://checkout.stripe.com/c/pay/new' } },
+  }
+  const manager = realClient ? new recovery.CheckoutRecoveryClient('actor-one', () => ({
+    getItem: key => durable.get(key) ?? null, setItem: (key, value) => durable.set(key, value), removeItem: key => durable.delete(key),
+  }), (body, headers, signal) => { checkoutCalls.push({ body, headers, signal }); return checkoutReply(body, headers, signal) }, () => crypto.randomUUID()) : mockManager
+  const jsx = { ...runtime }
+  for (const method of ['jsx', 'jsxs']) jsx[method] = (type, p, ...rest) => { if (type === 'button') onClick = p.onClick; return runtime[method](type, p, ...rest) }
+  const location = { pathname, set href(url) { navigations.push(['href', url]) }, reload() { navigations.push(['reload']) } }
+  const mocks = {
+    react: React, 'react/jsx-runtime': jsx,
+    'next-auth/react': { useSession: () => ({ status, data }) },
+    'next/navigation': { usePathname: () => pathname, useRouter: () => ({ push: url => navigations.push(['router', url]) }) },
+    'lucide-react': { Loader2: () => null, Zap: () => null, CreditCard: () => null },
+    'react-hot-toast': { error: (message, options) => notices.push(['error', message, options]), loading: (message, options) => notices.push(['loading', message, options]), success: (message, options) => notices.push(['success', message, options]), dismiss() {} },
+    '@/lib/billing-response-client': { ...billing, readBillingResponse: (...args) => readReply(...args) }, '@/lib/checkout-recovery-client': recovery,
+    '@/components/CheckoutRecoveryProvider': { useCheckoutRecovery: () => ({ manager, snapshot: React.useSyncExternalStore(manager.subscribe.bind(manager), manager.snapshot.bind(manager)) }) },
+    '@/lib/plan-utils': planUtils,
+  }
+  const exports = {}; vm.runInNewContext(source, { exports, require: name => { assert.ok(name in mocks, name); return mocks[name] }, window: { location }, AbortController, console })
+  const container = document.createElement('div'); document.body.append(container); const root = createRoot(container)
+  const flush = async () => { await tick(); await tick() }
+  const render = () => React.act(async () => { root.render(React.createElement(React.StrictMode, null, React.createElement(exports.CheckoutButton, props))); await flush() })
+  const click = () => React.act(async () => { container.querySelector('button').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); await flush() })
+  const directTwice = () => React.act(async () => { void onClick(); void onClick(); await flush() })
+  const change = value => React.act(async () => { manager.set(value); await flush() })
+  const close = () => React.act(async () => { root.unmount(); if (realClient) manager.dispose(); await flush(); container.remove() })
+  await render()
+  return { container, navigations, notices, calls, manager, checkoutCalls, durable, render, click, directTwice, change, close,
+    auth: (s, user) => { status = s; data = user }, props: value => { props = { ...props, ...value } }, path: value => { pathname = value },
+    reply: fn => { readReply = fn }, checkoutReply: fn => { checkoutReply = fn } }
 }
-(async()=>{
- const results=[];const run=async(name,check)=>{const f=await fixture();try{await check(f);results.push(name)}finally{await f.close()}};
- await run('Loading or missing identity cannot submit even through a direct handler',async f=>{f.auth('loading',null);await f.render();await f.directTwice();assert.equal(f.requests.length,0);assert.equal(f.container.querySelector('button').disabled,true);f.auth('authenticated',{user:{}});await f.render();await f.directTwice();assert.equal(f.requests.length,0);assert.equal(f.container.querySelector('button').disabled,true)});
- await run('Guest login keeps the current service callback; button never submits a parent form',async f=>{f.auth('unauthenticated',null);await f.render();await f.click();assert.equal(f.requests.length,0);assert.equal(f.navigations[0].url,'/auth/signin?callbackUrl=%2Fpersona%2Fpricing');assert.equal(f.container.querySelector('button').type,'button')});
- await run('Valid checkout preserves origin, period and redirect while retaining the navigation lock',async f=>{await f.click();assert.equal(f.requests.length,1);assert.equal(f.requests[0].body.serviceId,'persona');assert.equal(f.requests[0].body.returnTo,'/persona/pricing');assert.equal(f.requests[0].body.billingPeriod,'monthly');assert.equal(f.navigations[0].url,'https://checkout.stripe.com/c/pay/synthetic');assert.equal(f.container.querySelector('button').disabled,true);await f.directTwice();assert.equal(f.requests.length,1)});
- await run('Same-frame duplicate handlers send once; timeout restores operation and keeps an unknown-outcome notice',async f=>{let late;f.reply(()=>new Promise(resolve=>{late=resolve}));await f.directTwice();assert.equal(f.requests.length,1);assert.equal(f.container.querySelector('button').disabled,true);await f.expire();assert.equal(f.requests[0].init.signal.aborted,true);assert.equal(f.container.querySelector('button').disabled,false);assert.match(f.container.querySelector('[role="status"]').textContent,/新しいお申し込みを繰り返さず/);assert.equal(f.container.querySelector('button').getAttribute('aria-describedby'),f.container.querySelector('[role="status"]').id);await f.settle(()=>late(Response.json({sessionId:'cs_late',url:'https://checkout.stripe.com/late'})));assert.equal(f.navigations.length,0);assert.equal(f.timers.size,0)});
- for(const make of [()=>new Response('private diagnostic'),()=>Response.json({url:'https://checkout.stripe.com/x'}),()=>Response.json({sessionId:'cs_x',url:'javascript:alert(1)'}),()=>Response.json({sessionId:'cs_x',url:'https://owner:secret@checkout.stripe.com/x'}),()=>Response.json({sessionId:'cs_x',url:'https://checkout.stripe.com/x',error:'private diagnostic'}),()=>Response.json([])])await run('Invalid success reply never navigates: '+make().status+' '+results.length,async f=>{f.reply(async()=>make());await f.click();assert.equal(f.navigations.length,0);assert.equal(f.container.querySelector('button').disabled,false);assert.ok(f.container.querySelector('[role="status"]'));assert.ok(!f.container.textContent.includes('private diagnostic'))});
- await run('Strict existing-contract response synchronizes once and reloads only on confirmed paid-plan success',async f=>{f.reply(async url=>url.endsWith('/checkout')?Response.json({code:'ALREADY_SUBSCRIBED'},{status:409}):Response.json({ok:true,plan:'PRO'}));await f.click();assert.deepEqual(f.requests.map(x=>x.url),['/api/stripe/checkout','/api/stripe/sync/latest']);assert.equal(f.navigations[0].type,'reload');assert.equal(f.notices.filter(x=>x.type==='success').length,1);await f.directTwice();assert.equal(f.requests.length,2)});
- for(const value of [{ok:'true'},{ok:true,error:'private diagnostic'},{ok:false},{ok:true},{ok:true,plan:'FREE'},{ok:true,plan:'NOT_PRO'},{ok:true,plan:['PRO']}])await run('Unconfirmed sync never claims reflection or submits another checkout: '+JSON.stringify(value),async f=>{f.reply(async url=>url.endsWith('/checkout')?Response.json({code:'ALREADY_SUBSCRIBED'},{status:409}):Response.json(value));await f.click();assert.equal(f.requests.length,2);assert.equal(f.navigations.length,0);assert.equal(f.notices.filter(x=>x.type==='success').length,0);assert.match(f.container.textContent,/プランの反映を確認できませんでした/)});
- await run('Sync timeout replaces the loading toast with truthful persistent recovery guidance',async f=>{f.reply(url=>url.endsWith('/checkout')?Promise.resolve(Response.json({code:'ALREADY_SUBSCRIBED'},{status:409})):new Promise(()=>{}));await f.click();await f.expire();assert.equal(f.navigations.length,0);assert.equal(f.notices.at(-1).type,'error');assert.equal(f.notices.at(-1).options.id,f.notices.find(x=>x.type==='loading').options.id);assert.match(f.container.textContent,/新しいお申し込みをせず/);assert.equal(f.container.querySelector('button').disabled,false)});
- await run('Plan change uses the existing portal without creating a second checkout',async f=>{f.reply(async url=>url.endsWith('/checkout')?Response.json({code:'PLAN_CHANGE_REQUIRED'},{status:409}):Response.json({url:'https://billing.stripe.com/p/session/synthetic'}));await f.click();assert.equal(f.requests[1].url,'/api/stripe/portal');assert.equal(f.requests[1].body.purpose,'plan_change');assert.equal(f.requests.length,2);assert.equal(f.navigations[0].url,'https://billing.stripe.com/p/session/synthetic')});
- await run('Portal timeout does not claim cancellation or repeat checkout',async f=>{f.reply(url=>url.endsWith('/checkout')?Promise.resolve(Response.json({code:'PLAN_CHANGE_REQUIRED'},{status:409})):new Promise(()=>{}));await f.click();await f.expire();assert.equal(f.requests.length,2);assert.equal(f.navigations.length,0);assert.match(f.container.textContent,/プラン変更画面を開けたか確認できませんでした/);assert.equal(f.container.querySelector('button').disabled,false)});
- for(const code of ['STRIPE_MODE_MISMATCH','TRIAL_CHECK_UNAVAILABLE','CHECKOUT_IN_PROGRESS','CHECKOUT_ALREADY_COMPLETED','SUBSCRIPTION_CHECK_UNAVAILABLE','HR_BILLING_OWNER_REQUIRED','constructor'])await run('Known error has local recovery wording; unknown code stays unknown: '+code,async f=>{const statuses={STRIPE_MODE_MISMATCH:400,TRIAL_CHECK_UNAVAILABLE:503,CHECKOUT_IN_PROGRESS:409,CHECKOUT_ALREADY_COMPLETED:409,SUBSCRIPTION_CHECK_UNAVAILABLE:503,HR_BILLING_OWNER_REQUIRED:403,constructor:500};f.reply(async()=>Response.json({code,error:'private diagnostic sk_live_SECRET'},{status:statuses[code]}));await f.click();assert.equal(f.navigations.length,0);assert.ok(!f.container.textContent.includes('private'));assert.ok(!f.notices.some(x=>x.message.includes('sk_live')));assert.equal(f.container.querySelector('button').disabled,false);if(code==='TRIAL_CHECK_UNAVAILABLE'||code==='SUBSCRIPTION_CHECK_UNAVAILABLE')assert.match(f.container.textContent,/決済を開始していません/);if(code==='HR_BILLING_OWNER_REQUIRED')assert.match(f.container.textContent,/オーナーのみ変更/)});
- await run('Wrong status cannot activate a contract-sync or portal branch',async f=>{f.reply(async()=>Response.json({code:'ALREADY_SUBSCRIBED'},{status:503}));await f.click();assert.equal(f.requests.length,1);assert.equal(f.navigations.length,0);assert.ok(!f.container.textContent.includes('ご契約は確認できました'))});
- await run('Retired plan has a current-pricing explanation without a redirect or retry submission',async f=>{f.reply(async()=>Response.json({error:'private diagnostic'},{status:410}));await f.click();assert.match(f.container.textContent,/プランは提供を終了/);assert.equal(f.requests.length,1);assert.equal(f.navigations.length,0);assert.equal(f.container.querySelector('button').disabled,false)});
- await run('Account transition aborts pending request and ignores its late redirect or toast',async f=>{let late;f.reply(()=>new Promise(resolve=>{late=resolve}));await f.click();f.auth('authenticated',{user:{id:'other'}});await f.render();assert.equal(f.requests[0].init.signal.aborted,true);await f.settle(()=>late(Response.json({sessionId:'cs_x',url:'https://checkout.stripe.com/late'})));assert.equal(f.navigations.length,0);assert.equal(f.notices.filter(x=>x.type==='error').length,0);assert.equal(f.container.querySelector('button').disabled,false)});
- await run('Changing selected plan or period cancels the obsolete attempt',async f=>{let late;f.reply(()=>new Promise(resolve=>{late=resolve}));await f.click();f.props({billingPeriod:'yearly',planId:'banner-light'});await f.render();assert.equal(f.requests[0].init.signal.aborted,true);await f.settle(()=>late(Response.json({sessionId:'cs_x',url:'https://checkout.stripe.com/late'})));assert.equal(f.navigations.length,0);assert.equal(f.timers.size,0)});
- await run('Authentication refresh aborts old operation, preserves unknown outcome and never auto-resubmits',async f=>{f.reply(()=>new Promise(()=>{}));await f.click();f.auth('loading',null);await f.render();assert.equal(f.requests[0].init.signal.aborted,true);assert.equal(f.container.querySelector('button').disabled,true);assert.equal(f.container.querySelector('[role="status"]'),null);f.auth('authenticated',{user:{id:'owner'}});await f.render();assert.equal(f.requests.length,1);assert.equal(f.container.querySelector('button').disabled,false);assert.match(f.container.querySelector('[role="status"]').textContent,/新しいお申し込みを繰り返さず/)});
- await run('Unmount cancels a noncooperating wait and ignores a late redirect or toast',async f=>{let late;f.reply(()=>new Promise(resolve=>{late=resolve}));await f.click();const count=f.notices.length;await f.close();assert.equal(f.requests[0].init.signal.aborted,true);await f.settle(()=>late(Response.json({sessionId:'cs_x',url:'https://checkout.stripe.com/late'})));assert.equal(f.navigations.length,0);assert.equal(f.notices.length,count)});
- assert.equal(warnings.length,0,JSON.stringify(warnings));console.log(JSON.stringify({passed:results.length,results,scope:'Actual CheckoutButton TSX and bounded reader mounted under React18 StrictMode/jsdom with synthetic auth/fetch/clock/navigation/toast. No actual checkout/portal/Stripe/DB, real browser or customer data.'}));
-})().catch(error=>{console.error=originalError;console.error(error);process.exitCode=1}).finally(()=>{console.error=originalError;dom.window.close()});
+(async () => {
+  const results = []
+  const run = async (name, check, realClient = false) => { const f = await fixture(realClient); try { await check(f); results.push(name) } finally { await f.close() } }
+  await run('Loading and missing actual actor never dispatch', async f => {
+    f.auth('loading', null); await f.render(); await f.directTwice(); assert.equal(f.calls.filter(x => x[0] === 'start').length, 0)
+    f.auth('authenticated', { user: {} }); await f.render(); await f.directTwice(); assert.equal(f.calls.filter(x => x[0] === 'start').length, 0)
+  })
+  await run('Guest login keeps callback and never submits checkout', async f => {
+    f.auth('unauthenticated', null); await f.render(); await f.click()
+    assert.deepEqual(f.navigations[0], ['router', '/auth/signin?callbackUrl=%2Fbanner'])
+    assert.equal(f.container.querySelector('button').type, 'button')
+    assert.equal(f.calls.filter(x => x[0] === 'start').length, 0)
+  })
+  await run('One click passes exact scoped intent and redirects only after manager authorization', async f => {
+    await f.click(); const start = f.calls.find(x => x[0] === 'start'); assert.equal(start[1].serviceId, 'banner')
+    assert.equal(start[1].returnTo, '/banner/pricing'); assert.equal(start[1].billingPeriod, 'monthly')
+    assert.deepEqual(f.navigations[0], ['href', 'https://checkout.stripe.com/c/pay/synthetic'])
+  })
+  await run('Unknown and dispatched state only observe status', async f => {
+    const handle = { actorId: 'actor-one', scopeKey: recovery.checkoutScopeKey({ planId: 'banner-pro', serviceId: 'banner', billingPeriod: 'monthly', returnTo: '/banner/pricing', organization: null }) }
+    await f.change({ phase: 'unknown', handle, dispatched: true }); await f.click()
+    assert.equal(f.calls.filter(x => x[0] === 'status').length, 1)
+    assert.equal(f.calls.filter(x => ['start', 'resume'].includes(x[0])).length, 0)
+  })
+  await run('Missing requires explicit abort and cannot silently start', async f => {
+    const handle = { actorId: 'actor-one', scopeKey: recovery.checkoutScopeKey({ planId: 'banner-pro', serviceId: 'banner', billingPeriod: 'monthly', returnTo: '/banner/pricing', organization: null }) }
+    await f.change({ phase: 'missing', handle }); await f.click()
+    assert.equal(f.calls.filter(x => x[0] === 'abort').length, 1)
+    assert.equal(f.calls.filter(x => x[0] === 'start').length, 0)
+  })
+  await run('Foreign organization or plan handle cannot write or navigate', async f => {
+    await f.change({ phase: 'completed', handle: { actorId: 'actor-one', scopeKey: 'other-org' } })
+    assert.equal(f.container.querySelector('button').disabled, true); await f.directTwice()
+    assert.equal(f.calls.filter(x => x[0] !== 'observe').length, 0); assert.equal(f.navigations.length, 0)
+  })
+  await run('Reserved resumes the same handle, completed reauthorizes ready', async f => {
+    const handle = { actorId: 'actor-one', scopeKey: recovery.checkoutScopeKey({ planId: 'banner-pro', serviceId: 'banner', billingPeriod: 'monthly', returnTo: '/banner/pricing', organization: null }) }
+    await f.change({ phase: 'reserved', handle, dispatched: false }); await f.click()
+    assert.equal(f.calls.at(-1)[0], 'resume'); assert.equal(f.navigations[0][1], 'https://checkout.stripe.com/c/pay/resumed')
+  })
+  await run('Completed handle reauthorizes ready without a new start', async f => {
+    const handle = { actorId: 'actor-one', scopeKey: recovery.checkoutScopeKey({ planId: 'banner-pro', serviceId: 'banner', billingPeriod: 'monthly', returnTo: '/banner/pricing', organization: null }) }
+    await f.change({ phase: 'completed', handle }); await f.click()
+    assert.equal(f.calls.at(-1)[0], 'ready'); assert.equal(f.calls.filter(x => x[0] === 'start').length, 0)
+    assert.equal(f.navigations[0][1], 'https://checkout.stripe.com/c/pay/ready')
+  })
+  await run('Verified expiry requires explicit successor action', async f => {
+    const handle = { actorId: 'actor-one', scopeKey: recovery.checkoutScopeKey({ planId: 'banner-pro', serviceId: 'banner', billingPeriod: 'monthly', returnTo: '/banner/pricing', organization: null }) }
+    await f.change({ phase: 'expired', handle }); assert.match(f.container.querySelector('button').textContent, /新しく申し込む/)
+    assert.equal(f.calls.filter(x => x[0] === 'new').length, 0); await f.click(); assert.equal(f.calls.at(-1)[0], 'new')
+  })
+  await run('Plan change keeps the existing portal branch and its return path', async f => {
+    f.manager.start = async intent => { f.calls.push(['start', intent]); return { kind: 'plan_change' } }
+    f.reply(async (path, init) => { assert.equal(path, '/api/stripe/portal'); assert.deepEqual(JSON.parse(init.body), { returnTo: '/banner/pricing', purpose: 'plan_change' }); return { ok: true, data: { url: 'https://billing.stripe.com/p/synthetic' } } })
+    await f.click(); assert.equal(f.calls.filter(x => x[0] === 'start').length, 1)
+    assert.equal(f.navigations[0][1], 'https://billing.stripe.com/p/synthetic')
+  })
+  await run('Subscription sync claims reflection only after confirmed paid tier', async f => {
+    f.manager.start = async intent => { f.calls.push(['start', intent]); return { kind: 'subscribed' } }
+    f.reply(async path => { assert.equal(path, '/api/stripe/sync/latest'); return { ok: true, data: { ok: true, plan: 'PRO' } } })
+    await f.click(); assert.equal(f.navigations[0][0], 'reload'); assert.equal(f.notices.filter(x => x[0] === 'success').length, 1)
+  })
+  await run('Provider Session completion is not a paid claim until sync confirms the tier', async f => {
+    const handle = { actorId: 'actor-one', scopeKey: recovery.checkoutScopeKey({ planId: 'banner-pro', serviceId: 'banner', billingPeriod: 'monthly', returnTo: '/banner/pricing', organization: null }) }
+    await f.change({ phase: 'provider_complete', handle }); f.reply(async path => { assert.equal(path, '/api/stripe/sync/latest'); return { ok: true, data: { ok: true, plan: 'FREE' } } })
+    await f.click(); assert.equal(f.navigations.length, 0); assert.equal(f.notices.filter(x => x[0] === 'success').length, 0)
+  })
+  await run('Unconfirmed subscription sync never claims reflection', async f => {
+    f.manager.start = async intent => { f.calls.push(['start', intent]); return { kind: 'subscribed' } }
+    f.reply(async () => ({ ok: true, data: { ok: true, plan: 'FREE' } }))
+    await f.click(); assert.equal(f.navigations.length, 0); assert.equal(f.notices.filter(x => x[0] === 'success').length, 0)
+    assert.match(f.container.textContent, /契約の反映を確認できませんでした/)
+  })
+  await run('Invalid organization actor blocks purchase before the manager', async f => {
+    f.props({ billingOrganization: { actor: 'other', organizationId: 'org-a' } }); await f.render(); await f.directTwice()
+    assert.equal(f.container.querySelector('button').disabled, true)
+    assert.equal(f.calls.filter(x => x[0] === 'start').length, 0)
+  })
+  for (const [code, secondary] of [['PLAN_CHANGE_REQUIRED', 'portal'], ['ALREADY_SUBSCRIBED', 'sync']]) {
+    await run(`${code} secondary ${secondary} failure leaves explicit status recovery enabled`, async f => {
+      f.checkoutReply(async body => body.action === 'start'
+        ? { ok: false, status: 409, data: { code } }
+        : { ok: true, status: 200, data: { actorId: 'actor-one', operationId: body.operationId, phase: 'missing', dispatched: false } })
+      f.reply(async path => secondary === 'portal'
+        ? Promise.reject(Error('synthetic portal outage'))
+        : { ok: true, data: { ok: true, plan: 'FREE' } })
+      await f.click()
+      assert.equal(f.checkoutCalls[0].body.action, 'start')
+      assert.equal(f.manager.snapshot().phase, 'unknown')
+      assert.equal(f.container.querySelector('button').disabled, false)
+      assert.match(f.container.querySelector('button').textContent, /申込状況を確認/)
+      assert.equal(f.navigations.length, 0)
+      await f.click()
+      assert.deepEqual(f.checkoutCalls.map(x => x.body.action), ['start', 'status'])
+      assert.equal(f.manager.snapshot().phase, 'missing')
+      assert.equal(f.checkoutCalls[0].body.operationId, f.checkoutCalls[1].body.operationId)
+    }, true)
+  }
+  await run('Aborted monthly handle permits an explicit yearly start without reusing an expired predecessor', async f => {
+    let initialOperation
+    f.checkoutReply(async body => {
+      if (body.action === 'start') {
+        if (!initialOperation) initialOperation = body.operationId
+        return { ok: true, status: 200, data: { actorId: 'actor-one', operationId: body.operationId, url: 'https://checkout.stripe.com/c/pay/synthetic' } }
+      }
+      if (body.action === 'ready') return { ok: true, status: 200, data: { actorId: 'actor-one', operationId: body.operationId, sessionId: 'cs_synthetic', url: 'https://checkout.stripe.com/c/pay/synthetic' } }
+      if (body.action === 'status') return { ok: true, status: 200, data: { actorId: 'actor-one', operationId: body.operationId, phase: 'aborted', dispatched: false } }
+      throw Error(`unexpected action ${body.action}`)
+    })
+    await f.click()
+    assert.equal(f.manager.snapshot().phase, 'completed')
+    await React.act(async () => { await f.manager.status({ planId: 'banner-pro', billingPeriod: 'monthly', serviceId: 'banner', returnTo: '/banner/pricing', organization: null }) })
+    assert.equal(f.manager.snapshot().phase, 'aborted')
+    f.props({ billingPeriod: 'yearly' }); await f.render()
+    assert.equal(f.container.querySelector('button').disabled, false)
+    assert.match(f.container.querySelector('button').textContent, /新しく申し込む/)
+    await f.click()
+    assert.deepEqual(f.checkoutCalls.filter(x => x.body.action === 'start').map(x => x.body.billingPeriod), ['monthly', 'yearly'])
+    assert.equal(f.checkoutCalls.filter(x => x.body.action === 'start_after_terminal').length, 0)
+    assert.notEqual(f.manager.snapshot().handle.operationId, initialOperation)
+  }, true)
+  await run('Expired monthly handle keeps a different yearly intent blocked', async f => {
+    let readyReads = 0
+    f.checkoutReply(async body => body.action === 'start' || body.action === 'ready' && ++readyReads === 1
+      ? { ok: true, status: 200, data: { actorId: 'actor-one', operationId: body.operationId, sessionId: 'cs_synthetic', url: 'https://checkout.stripe.com/c/pay/synthetic' } }
+      : { ok: false, status: 409, data: { code: 'CHECKOUT_EXPIRED' } })
+    await f.click()
+    await React.act(async () => { await f.manager.readyAgain({ planId: 'banner-pro', billingPeriod: 'monthly', serviceId: 'banner', returnTo: '/banner/pricing', organization: null }) })
+    assert.equal(f.manager.snapshot().phase, 'expired')
+    f.props({ billingPeriod: 'yearly' }); await f.render()
+    assert.equal(f.container.querySelector('button').disabled, true)
+    await f.directTwice()
+    assert.equal(f.checkoutCalls.filter(x => x.body.action === 'start').length, 1)
+    assert.equal(f.checkoutCalls.filter(x => x.body.action === 'start_after_terminal').length, 0)
+  }, true)
+  assert.equal(warnings.length, 0, JSON.stringify(warnings))
+  console.log(JSON.stringify({ passed: results.length, results, scope: 'Actual CheckoutButton mounted in React StrictMode; synthetic shared manager, auth, navigation. Real Stripe/DB not used.' }))
+})().catch(error => { console.error = originalError; console.error(error); process.exitCode = 1 }).finally(() => { console.error = originalError; dom.window.close() })

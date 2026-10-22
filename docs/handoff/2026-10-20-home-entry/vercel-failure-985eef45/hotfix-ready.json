@@ -1,0 +1,38 @@
+{
+  "verifiedAt": "2026-10-20T11:07:27.932683+00:00",
+  "commit": "d48052fab934c00ca3bbb3af11eaf981e11dd619",
+  "ci": {
+    "conclusion": "success",
+    "headSha": "d48052fab934c00ca3bbb3af11eaf981e11dd619",
+    "url": "https://github.com/k-mitsumori-cmd/doya-ai/actions/runs/39410339824"
+  },
+  "deployment": {
+    "id": "dpl_Q62ohnMVuKbpgiqxjMys8MqiwMgV",
+    "name": "doya-ai",
+    "url": "doya-754xk9okg-surisutas-projects.vercel.app",
+    "target": "preview",
+    "readyState": "READY",
+    "createdAt": 1792493207345,
+    "contextName": "surisutas-projects"
+  },
+  "githubChecks": [
+    {
+      "link": "https://vercel.com/github",
+      "name": "Vercel Preview Comments",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/k-mitsumori-cmd/doya-ai/actions/runs/39410339824/job/118586269060",
+      "name": "check",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://vercel.com/surisutas-projects/doya-ai/Q62ohnMVuKbpgiqxjMys8MqiwMgV",
+      "name": "Vercel",
+      "state": "SUCCESS"
+    }
+  ],
+  "previewBuildRecovered": true,
+  "authenticatedBrowserQa": false,
+  "productionReflected": false
+}

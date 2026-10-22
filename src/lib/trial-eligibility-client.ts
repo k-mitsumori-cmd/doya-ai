@@ -1,69 +1,106 @@
-export type ConfirmedTrialEligibility = { value: boolean; expires: number }
+export type TrialPrincipal = { kind: 'guest' } | { kind: 'authenticated'; actorId: string }
+export type TrialRead = { kind: 'confirmed'; value: boolean; expires: number } | { kind: 'reauth' } | { kind: 'unknown' }
 const CACHE_MS = 60_000
 const MAX_BYTES = 16 * 1024
 const DEADLINE_MS = 15_000
-const cache = new Map<string, ConfirmedTrialEligibility>()
-const pending = new Map<string, Promise<ConfirmedTrialEligibility | null>>()
-// Multiple callouts may retry in separate timer callbacks after the same failure.
-// Briefly coalesce unknown results without treating them as confirmed ineligible.
-const unknownUntil = new Map<string, number>()
 
-async function readEligibility(): Promise<boolean | null> {
-  const controller = new AbortController()
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const deadline = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => { controller.abort(); reject(new Error('Trial check timed out')) }, DEADLINE_MS)
-  })
-  const work = (async () => {
-    const response = await fetch('/api/stripe/trial-eligibility', { cache: 'no-store', signal: controller.signal })
-    if (controller.signal.aborted || !response.ok || !response.body) return null
-    if (Number(response.headers.get('content-length')) > MAX_BYTES) return null
-    reader = response.body.getReader()
-    const chunks: Uint8Array[] = []
-    let size = 0
-    while (true) {
-      const chunk = await reader.read()
-      if (controller.signal.aborted) return null
-      if (chunk.done) break
-      size += chunk.value.byteLength
-      if (size > MAX_BYTES) return null
-      chunks.push(chunk.value)
+// A reader belongs to exactly one committed provider epoch.
+export function createTrialEligibilityReader(principal: TrialPrincipal) {
+  let active = true
+  let sequence = 0
+  let confirmed: Extract<TrialRead, { kind: 'confirmed' }> | null = null
+  let pending: Promise<TrialRead> | null = null
+  let unknownUntil = 0
+  const controllers = new Set<AbortController>()
+  const current = (request: number) => active && request === sequence
+
+  async function readEligibility(request: number, controller: AbortController): Promise<TrialRead> {
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const unknown: TrialRead = { kind: 'unknown' }
+    // AbortSignal alone does not settle a fetch or reader that ignores abort.
+    const retired = new Promise<TrialRead>(resolve => {
+      controller.signal.addEventListener('abort', () => resolve(unknown), { once: true })
+    })
+    const deadline = new Promise<TrialRead>(resolve => {
+      timer = setTimeout(() => { controller.abort(); resolve(unknown) }, DEADLINE_MS)
+    })
+    const work = (async (): Promise<TrialRead> => {
+      const params = new URLSearchParams({ expectedKind: principal.kind })
+      if (principal.kind === 'authenticated') params.set('expectedActor', principal.actorId)
+      if (!current(request)) return unknown
+      const response = await fetch(`/api/stripe/trial-eligibility?${params}`, { cache: 'no-store', signal: controller.signal })
+      if (!current(request) || controller.signal.aborted) return unknown
+      if (response.status === 401 || response.status === 409) return { kind: 'reauth' }
+      if (!response.ok || !response.body) return unknown
+      const length = response.headers.get('content-length')
+      if (length !== null && Number(length) > MAX_BYTES) return unknown
+      reader = response.body.getReader()
+      const chunks: Uint8Array[] = []
+      let size = 0
+      while (true) {
+        const chunk = await reader.read()
+        if (!current(request) || controller.signal.aborted) return unknown
+        if (chunk.done) break
+        size += chunk.value.byteLength
+        if (size > MAX_BYTES) return unknown
+        chunks.push(chunk.value)
+      }
+      const bytes = new Uint8Array(size)
+      let offset = 0
+      for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength }
+      const data: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes))
+      if (!current(request) || controller.signal.aborted || !data || typeof data !== 'object' || Array.isArray(data)) return unknown
+      const dto = data as Record<string, unknown>
+      const actual = dto.principal
+      if (dto.version !== 1 || typeof dto.eligible !== 'boolean' || dto.code !== undefined || dto.error !== undefined ||
+          !actual || typeof actual !== 'object' || Array.isArray(actual)) return unknown
+      const returned = actual as Record<string, unknown>
+      if (principal.kind === 'guest' ? returned.kind !== 'guest' || returned.actorId !== undefined :
+          returned.kind !== 'authenticated' || returned.actorId !== principal.actorId) return unknown
+      return { kind: 'confirmed', value: dto.eligible, expires: Date.now() + CACHE_MS }
+    })()
+    try { return await Promise.race([work, deadline, retired]) } catch { return unknown } finally {
+      clearTimeout(timer)
+      controller.abort()
+      if (reader) { try { void reader.cancel().catch(() => {}) } catch {} }
     }
-    const bytes = new Uint8Array(size)
-    let offset = 0
-    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength }
-    const data = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes))
-    if (!data || typeof data !== 'object' || Array.isArray(data) || typeof data.eligible !== 'boolean' || data.code !== undefined || data.error !== undefined) return null
-    return data.eligible as boolean
-  })()
-  try { return await Promise.race([work, deadline]) } catch { return null } finally {
-    clearTimeout(timer)
-    controller.abort()
-    if (reader) { try { void reader.cancel().catch(() => {}) } catch {} }
   }
-}
 
-/** Unknown results are never cached as ineligible and never grant a trial. */
-export function fetchTrialEligibility(key: string): Promise<ConfirmedTrialEligibility | null> {
-  const confirmed = cache.get(key)
-  if (confirmed && confirmed.expires > Date.now()) return Promise.resolve(confirmed)
-  cache.delete(key)
-  const existing = pending.get(key)
-  if (existing) return existing
-  if ((unknownUntil.get(key) ?? 0) > Date.now()) return Promise.resolve(null)
-  unknownUntil.delete(key)
-  const request = readEligibility().then(value => {
-    if (value === null) {
-      unknownUntil.set(key, Date.now() + 1_000)
-      if (unknownUntil.size > 100) unknownUntil.delete(unknownUntil.keys().next().value!)
-      return null
-    }
-    const result = { value, expires: Date.now() + CACHE_MS }
-    cache.set(key, result)
-    if (cache.size > 100) cache.delete(cache.keys().next().value!)
-    return result
-  }).finally(() => { if (pending.get(key) === request) pending.delete(key) })
-  pending.set(key, request)
-  return request
+  return {
+    peek(): TrialRead | null {
+      if (!active || !confirmed || confirmed.expires <= Date.now()) return null
+      return confirmed
+    },
+    read(): Promise<TrialRead> {
+      if (!active) return Promise.resolve({ kind: 'unknown' })
+      if (confirmed && confirmed.expires > Date.now()) return Promise.resolve(confirmed)
+      confirmed = null
+      if (pending) return pending
+      if (unknownUntil > Date.now()) return Promise.resolve({ kind: 'unknown' })
+      const request = ++sequence
+      const controller = new AbortController()
+      controllers.add(controller)
+      const promise = readEligibility(request, controller).then(result => {
+        if (!current(request)) return { kind: 'unknown' } as TrialRead
+        if (result.kind === 'confirmed') confirmed = result
+        else if (result.kind === 'unknown') unknownUntil = Date.now() + 1_000
+        return result
+      }).finally(() => {
+        controllers.delete(controller)
+        if (pending === promise) pending = null
+      })
+      pending = promise
+      return promise
+    },
+    retire() {
+      active = false
+      sequence++
+      confirmed = null
+      pending = null
+      unknownUntil = 0
+      for (const controller of controllers) controller.abort()
+      controllers.clear()
+    },
+  }
 }

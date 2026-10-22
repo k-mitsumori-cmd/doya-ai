@@ -120,6 +120,7 @@
 
 /* ---- カード ---- */
 .gridWide { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; }
+.gridWide[data-single="true"] { grid-template-columns: minmax(0, 1fr); }
 .gridThree { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); padding: 24px; min-width: 0; }
 .cardHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }

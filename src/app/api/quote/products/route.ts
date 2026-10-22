@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 // GET  /api/quote/products — 商材一覧
 // POST /api/quote/products — 商材を登録（URL解析つき）
 import { NextRequest, NextResponse } from 'next/server'
+import { workspaceHref } from '@/lib/organization-workspace-selection'
 import { prisma } from '@/lib/prisma'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { FREE_LIMITS, jstStartOfMonthUtc } from '@/lib/plan-limit'
@@ -117,7 +118,7 @@ export async function POST(req: NextRequest) {
     used: outcome.used,
     limit: FREE_LIMITS.quoteProducts,
     canManageBilling: outcome.canManageBilling,
-    ...(outcome.canManageBilling ? { upgradeUrl: '/quote/pricing' } : {}),
+    ...(outcome.canManageBilling ? { upgradeUrl: workspaceHref('/quote/pricing', ctx.organizationSlug, 'quote') } : {}),
   }, { status: 402 })
   return NextResponse.json({ product: outcome.product })
 }

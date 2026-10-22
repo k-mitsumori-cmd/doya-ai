@@ -27,10 +27,10 @@ export default function KintaiError({
           再試行する
         </button>
         <a
-          href="/kintai"
+          href="/kintai/dashboard"
           className="px-6 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors"
         >
-          トップへ戻る
+          勤怠ダッシュボードへ
         </a>
       </div>
     </div>

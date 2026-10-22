@@ -1,0 +1,47 @@
+{
+  "status": "author_frozen_targeted_pass_integration_typecheck_pending",
+  "priorR1InputSetSha256": "3ed5f9aee04d4d68f3bf3e6eb9f5b9365d3b95221763cc03bd8980e2ec7bdd83",
+  "deltaSourceInputs": {
+    "src/app/api/expense/members/route.ts": "07eeefaef4d588b37a1afdaf742cfc164480727aa30ca573f1dccc4e0b2bb294",
+    "src/lib/expense/members.test.ts": "fe4596d75d4c3b76add613b2395ad957ea28d3c25459cc44d77133e0e138bc09"
+  },
+  "deltaInputSetSha256": "6b246598e7427754dbe7954ef6efec70103dd86b9f6f086275b1cee749c50e72",
+  "resultingR1SourceInputs": {
+    "src/lib/account-lifecycle/store.ts": "b2f4357a042c9abf0b63e8a22b85abe074211cf6587d8db05fdb5dbbb882730f",
+    "src/lib/account-lifecycle/organization-fence.ts": "9ed18ed0e4af505c105db387b04f97b48113dcdf5cdef3a22e93f9e12739d301",
+    "src/lib/expense/member-write.ts": "43c867440e1fc365f1c2c6779122278c37b977d1d89b65e903b20b395cb41db6",
+    "src/lib/expense/access.ts": "e34a6d64595941f0264e3796021e1c2ee6692aa71e6e541fc53306a9b011ec32",
+    "src/lib/expense/setup.ts": "fa2708e7132350ce273071d90852d57ff6ff1a8b0a38883eae876b945bf854ee",
+    "src/app/api/expense/members/route.ts": "07eeefaef4d588b37a1afdaf742cfc164480727aa30ca573f1dccc4e0b2bb294",
+    "src/app/api/expense/members/[id]/route.ts": "49c0c88dfae0ddab17e252fd957f62c9f42560f3577886f14a14ce492ea04f24",
+    "src/app/api/expense/usage/route.ts": "1b1bf9cbcff83e0a773351539b793f616adeabdbaa125f5868d76206187eadc7",
+    "src/app/api/expense/organization/route.ts": "29bea3115d6d93c5baa2901f6cdf4c4ec388ab42d220351c28a3d5e1e87b4e46",
+    "scripts/security-regression/verify-membership-retirement-postgres.cjs": "011922baeca22daad5a71c08c7561fada45e182aaf8b6728ce3bd280070e63a6",
+    "scripts/security-regression/verify-membership-retirement-postgres.py": "593b9ba3fd7adee52b2809a470bc339a48fa3a499fb2ee60b26c719b975aac1f",
+    "scripts/security-regression/verify-expense-entry-mounted.cjs": "7dcfbb83d44aff5366752348033734ce6ecc034d3bd753071d1791babd1acdd7",
+    "scripts/security-regression/verify-account-retirement-postgres.cjs": "66b4946a3a262733f8b5fc3a063c1eca08e5746468f48287a7d222e1ffc8371e",
+    "src/lib/expense/members.test.ts": "fe4596d75d4c3b76add613b2395ad957ea28d3c25459cc44d77133e0e138bc09"
+  },
+  "resultingR1InputSetSha256": "eb52ed434c9226f2440fc70bfe68113f6b9599dbf281283753b8ff49e5b3d097",
+  "resultingR1InputCount": 14,
+  "changedWithinPrior13": [
+    "src/app/api/expense/members/route.ts"
+  ],
+  "addedBeyondPrior13": [
+    "src/lib/expense/members.test.ts"
+  ],
+  "otherPrior12Unchanged": true,
+  "priorSnapshotEvidence": "docs/handoff/2026-10-21-r1-popup-jst/expense.log",
+  "beforeExpense": {
+    "passed": 88,
+    "failed": 5
+  },
+  "testIntegrity": {
+    "testNamesUnchanged": true,
+    "testCount": 9,
+    "assertCallsBefore": 27,
+    "assertCallsAfter": 57,
+    "scopeTestSha256Unchanged": "51188dcc2ecd328d93872639341b4f72dd5a2049391cfc50bbae45b7d5ac8359"
+  },
+  "incomeFiveUnchanged": true
+}

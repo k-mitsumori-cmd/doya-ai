@@ -86,29 +86,36 @@ function UsageBar({ label, used, limit, icon, color, canUpgrade = true }: {
 export default function BillingPage() {
   const organizationScope = useHrOrganizationRequest()
   const { request: fetch } = organizationScope
+  const scopeKey = JSON.stringify([organizationScope.actor, organizationScope.organizationId])
   const [billing, setBilling] = useState<BillingInfo | null>(null)
+  const [billingScope, setBillingScope] = useState('')
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
+    let active = true
+    setLoading(true); setLoadError(false); setBilling(null)
     async function fetchBilling() {
       try {
         const res = await fetch('/api/hr/usage')
+        if (!active || !organizationScope.isCurrent()) return
         if (res.ok) {
           const data = await res.json()
+          if (!active || !organizationScope.isCurrent()) return
           setBilling(data)
         } else {
           setLoadError(true)
         }
       } catch {
-        setLoadError(true)
+        if (active && organizationScope.isCurrent()) setLoadError(true)
       } finally {
-        setLoading(false)
+        if (active && organizationScope.isCurrent()) { setBillingScope(scopeKey); setLoading(false) }
       }
     }
-    fetchBilling()
-  }, [])
+    void fetchBilling()
+    return () => { active = false }
+  }, [fetch, organizationScope, scopeKey])
 
   const handlePortal = async () => {
     setPortalLoading(true)
@@ -132,7 +139,7 @@ export default function BillingPage() {
     }
   }
 
-  if (loading) {
+  if (loading || billingScope !== scopeKey || !organizationScope.isCurrent()) {
     return (
       <div className="p-6 lg:p-10 max-w-5xl mx-auto">
         <div className="animate-pulse space-y-6">
@@ -277,7 +284,8 @@ export default function BillingPage() {
             プラン一覧
           </h2>
           {billing.canManageBilling ? (
-            <UnifiedPricingPlans serviceId="hr" currentPlan={billing.plan} />
+            <UnifiedPricingPlans serviceId="hr" currentPlan={billing.plan} planSource="organization"
+              canPurchase={billing.canManageBilling} billingOrganization={{ actor: organizationScope.actor, organizationId: organizationScope.organizationId }} />
           ) : (
             <div className="rounded-2xl bg-white p-6 text-sm leading-7 text-slate-700 shadow-md">
               組織のプランはオーナーが管理しています。変更が必要な場合は、オーナーにご確認ください。

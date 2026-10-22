@@ -50,7 +50,7 @@ const { load, check } = require('./load-typescript.cjs')
       },
     }
     const route = load('src/app/api/cunning/knowledge/[id]/ingest/route.ts', {
-      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': { NextResponse: Response },
+      '@/lib/beta-service.server':require('./beta-allow-fixture.cjs').forService('cunning'), 'next/server': { NextResponse: Response },
       '@/lib/prisma': { prisma: db },
       '@/lib/cunning/access': { getUserId: async () => 'owner' },
       '@/lib/cunning/rag': { chunkText: () => ['Chunk'], CUNNING_KNOWLEDGE_MAX_CHUNKS: 500 },

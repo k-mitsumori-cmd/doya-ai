@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-20T16:11:06.150930+00:00",
+  "commit": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+  "remoteBranchShaMatches": true,
+  "prHeadAndBodyMatch": true,
+  "pr": "https://github.com/k-mitsumori-cmd/doya-ai/pull/3",
+  "ci": {
+    "checkedAt": "2026-10-20T16:09:26.298395+00:00",
+    "runId": 39452537086,
+    "status": "completed",
+    "conclusion": "success",
+    "headSha": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+    "url": "https://github.com/k-mitsumori-cmd/doya-ai/actions/runs/39452537086",
+    "actualCheckoutSha": "2753c522397e546e3bfaa9ff22e9d79fde9f36eb",
+    "checkoutTree": "439c188e9020ab9f2e3866ae0af2b2412bd3f3ef",
+    "jobConclusion": "success"
+  },
+  "vercel": {
+    "checkedAt": "2026-10-20T16:09:22.864599+00:00",
+    "id": "dpl_4fQMoD1GkF22gTEa9XqRdsUfnrH6",
+    "readyState": "READY",
+    "url": "doya-lt37dp7df-surisutas-projects.vercel.app",
+    "commit": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+    "target": null,
+    "source": "Vercel authenticated GET deployment metadata, selected safe fields"
+  },
+  "actualCICheckoutSha": "2753c522397e546e3bfaa9ff22e9d79fde9f36eb",
+  "ciCheckoutTreeMatchesSnapshotAndHead": true,
+  "localSnapshotGatesPassed": 28,
+  "sourceTargetBlobHashesMatched": 21,
+  "executionSourceBlobsModesPathsMatched": 5157,
+  "vercelNextCompiledAndDeploymentCompleted": true,
+  "newWorkingTreeR1PopupJstChangesCovered": false,
+  "r0ExistingAppConnections": 0,
+  "knownUnsafeApplicationObservations": 2,
+  "productionReflected": false,
+  "authenticatedBrowserQA": false
+}

@@ -6,7 +6,8 @@
 // 枠（AppShell）も作り直されず、左のメニューや開いていた引き出しの状態が残る。
 // ⚠️ 枠を出す・出さないが切り替わるとき（LP⇔アプリ、公開の画面）だけ、中身が作り直される。
 import { usePathname } from 'next/navigation'
-import { Suspense, type ReactNode } from 'react'
+import { useSession } from 'next-auth/react'
+import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { UiNextMode } from '@/lib/ui-next'
 import type { AccountCompany } from '@/lib/shell/company'
 import { AccountCompanyContext } from './company-context'
@@ -20,8 +21,10 @@ import { ShellPowerProvider, type ShellPowerState } from './power'
 
 const EMPTY: Record<string, string> = {}
 
-export default function ShellGate({ signedIn, userName, enabledIds, uiNext = null, doyaPower = false, doyaPowerState = null, company = undefined, always = false, toolHrefs, initialRecent, children }: {
+export default function ShellGate({ signedIn, serverActorId, userName, enabledIds, uiNext = null, doyaPower = false, doyaPowerState = null, company = undefined, always = false, toolHrefs, initialRecent, children }: {
   signedIn: boolean
+  /** Principal of the server snapshot; never infer it from a name or email. */
+  serverActorId: string | null
   /** ドヤパワーを出すか（サーバーの isDoyaPowerEnabled() で決めて渡す。新しい見た目のときだけ真になる） */
   doyaPower?: boolean
   /** ドヤパワーの残りと減る量の表（旗が出すと決めた人だけ。台帳の表が入るまでは null。src/components/shell/power.tsx） */
@@ -42,24 +45,81 @@ export default function ShellGate({ signedIn, userName, enabledIds, uiNext = nul
   children: ReactNode
 }) {
   const pathname = usePathname()
+  const { data: session, status } = useSession()
+  const privateContainer = useRef<HTMLDivElement | null>(null)
+  const retired = useRef(false)
+  const [, updateLifecycle] = useState(0)
+  const serverActor = typeof serverActorId === 'string' && serverActorId.trim() ? serverActorId : null
+  const sdkActor = status === 'authenticated' && typeof session?.user?.id === 'string' && session.user.id.trim() ? session.user.id : null
+  const invalidSnapshot = signedIn !== Boolean(serverActor)
+  const confirmed = status === 'unauthenticated' || (status === 'authenticated' && sdkActor !== null)
+  // A late RSC payload or A→B→A must not restore a snapshot retired in this document.
+  if (invalidSnapshot || (confirmed && sdkActor !== serverActor)) retired.current = true
+  const blocked = retired.current
+  const waiting = signedIn && (status === 'loading' || (status === 'authenticated' && sdkActor === null))
+  const privateReady = signedIn && !blocked && !waiting && sdkActor === serverActor
+
+  useEffect(() => {
+    const retire = () => {
+      if (!signedIn) return
+      retired.current = true
+      // Hide before a possible BFCache freeze, without waiting for React to commit.
+      if (privateContainer.current) {
+        privateContainer.current.hidden = true
+        privateContainer.current.setAttribute('inert', '')
+      }
+      updateLifecycle(value => value + 1)
+    }
+    const restore = (event: PageTransitionEvent) => { if (event.persisted) retire() }
+    window.addEventListener('pagehide', retire)
+    window.addEventListener('pageshow', restore)
+    return () => {
+      window.removeEventListener('pagehide', retire)
+      window.removeEventListener('pageshow', restore)
+    }
+  }, [signedIn])
+
+  if (blocked) return (
+    <section role="alert" className="mx-auto max-w-lg p-6 text-sm text-slate-700">
+      <h1 className="font-bold text-slate-900">ログイン状態を確認し直してください</h1>
+      <p className="mt-2">アカウントが変わったか、以前の画面に戻りました。最新の画面を読み込んでください。</p>
+      <button type="button" onClick={() => window.location.reload()} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 font-bold text-white">最新の画面を読み込む</button>
+    </section>
+  )
+
   const inner = (always ? signedIn : shouldShowShell(pathname, { signedIn, enabledIds }))
-    ? <AppShell userName={userName} initialRecent={uiNext ? initialRecent : undefined}>{children}</AppShell>
+    ? <AppShell userName={privateReady ? userName : null} initialRecent={privateReady && uiNext ? initialRecent : undefined}>{children}</AppShell>
     : <>{children}</>
   return (
-    <UiNextContext.Provider value={uiNext}>
-      <AccountCompanyContext.Provider value={uiNext ? company : undefined}>
-      <ShellToolHrefsContext.Provider value={uiNext && toolHrefs ? toolHrefs : EMPTY}>
-      <DoyaPowerContext.Provider value={Boolean(uiNext && doyaPower)}>
-      <ShellPowerProvider value={uiNext && doyaPower ? doyaPowerState : null}>
+    <>
+    {waiting && <div className="p-6 text-center text-sm">
+      <p role="status">ログイン状態を確認しています…</p>
+      <button type="button" onClick={() => window.location.reload()} className="mt-2 font-bold text-blue-700 underline">ログイン状態を読み込み直す</button>
+    </div>}
+    <div ref={node => {
+      privateContainer.current = node
+      if (node) {
+        // React 18 does not serialize an unknown boolean inert prop consistently.
+        if (waiting) node.setAttribute('inert', '')
+        else node.removeAttribute('inert')
+      }
+    }} hidden={waiting}>
+    <UiNextContext.Provider value={signedIn ? uiNext : null}>
+      <AccountCompanyContext.Provider value={privateReady && uiNext ? company : undefined}>
+      <ShellToolHrefsContext.Provider value={privateReady && uiNext && toolHrefs ? toolHrefs : EMPTY}>
+      <DoyaPowerContext.Provider value={Boolean(privateReady && uiNext && doyaPower)}>
+      <ShellPowerProvider value={privateReady && uiNext && doyaPower ? doyaPowerState : null}>
       {inner}
       {/* useSearchParams を使うので Suspense で包む（静的な画面の書き出しを止めない） */}
-      <Suspense fallback={null}><UiNextBadge /></Suspense>
+      <Suspense fallback={null}>{privateReady ? <UiNextBadge /> : null}</Suspense>
       {/* 表示の速さを測る（新しい見た目のときだけ。外には送らない。UI 品質 S-45） */}
-      {uiNext ? <ShellVitals /> : null}
+      {privateReady && uiNext ? <ShellVitals /> : null}
       </ShellPowerProvider>
       </DoyaPowerContext.Provider>
       </ShellToolHrefsContext.Provider>
       </AccountCompanyContext.Provider>
     </UiNextContext.Provider>
+    </div>
+    </>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { useParams } from 'next/navigation'
 import { useAioPrompts } from '@/lib/aio/use-prompts'
 import { AIO_MAX_PROMPTS_PER_SCAN } from '@/lib/aio/types'
@@ -25,7 +26,7 @@ export default function AioPromptsPage() {
   const uiNext = useUiNext()
   const { prompts, text, busy, quota, error, notice, loaded, pending } = state
   const disabled = busy || pending || !state.allowed || !state.canEdit
-  if (state.requiresLogin) return <div className="p-6" role="alert">ログイン状態を確認できません。再ログインしてください。<Link href="/auth/signin" className="ml-2 underline">ログインする</Link></div>
+  if (state.requiresLogin) return <div className="p-6" role="alert">ログイン状態を確認できません。再ログインしてください。<SignInReturnLink fallback={`/aio/${encodeURIComponent(orgSlug)}/prompts`} className="ml-2 underline">ログインする</SignInReturnLink></div>
 
   return (
     <div className="max-w-2xl mx-auto p-6">

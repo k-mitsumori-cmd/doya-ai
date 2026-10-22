@@ -18,7 +18,8 @@ function expression(file, variable) {
 }
 
 async function pricing(service, response, org = '') {
-  const file = `src/app/${fs.existsSync(`src/app/(shell)/${service}`) ? '(shell)/' : ''}${service}/pricing/page.tsx`
+  const file = service === 'sfa' ? 'src/app/(shell)/sfa/pricing/PricingClient.tsx'
+    : `src/app/${fs.existsSync(`src/app/(shell)/${service}`) ? '(shell)/' : ''}${service}/pricing/page.tsx`
   // useCallback wraps the actual async callback.
   const source = fs.readFileSync(file, 'utf8')
   const original = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
@@ -30,7 +31,7 @@ async function pricing(service, response, org = '') {
   visit(original)
   assert.ok(callback)
   const js = ts.transpileModule(`(${callback.getText(original)})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
-  const state = { plan: 'previous', error: false, role: null, loading: true, url: null }
+  const state = { plan: 'previous', error: false, role: null, loading: true, url: null, validatedOrg: 'previous' }
   const loadPlan = vm.runInNewContext(js, {
     fetch: async (url) => { state.url = url; return response }, Error, URLSearchParams, encodeURIComponent,
     window: { location: { search: org ? `?org=${encodeURIComponent(org)}` : '' } },
@@ -38,6 +39,8 @@ async function pricing(service, response, org = '') {
     setPlanError: (value) => { state.error = value },
     setRole: (value) => { state.role = value },
     setLoading: (value) => { state.loading = value },
+    org: org || null,
+    setValidatedOrg: (value) => { state.validatedOrg = value },
   })
   await loadPlan()
   return state
@@ -64,10 +67,14 @@ function sidebar(service, plan, isLoggedIn) {
   }
   const guest = await pricing('sfa', Response.json({ onboarded: false, memberships: [] }))
   assert.equal(guest.plan, null); assert.equal(guest.error, false); assert.equal(guest.role, null)
-  const member = await pricing('sfa', Response.json({ plan: 'FREE', role: 'member', onboarded: true }), 'team-a')
+  const member = await pricing('sfa', Response.json({ plan: 'FREE', role: 'member', onboarded: true, organization: { slug: 'team-a' } }), 'team-a')
   assert.equal(member.url, '/api/sfa/usage?org=team-a'); assert.equal(member.role, 'member'); assert.equal(member.loading, false)
+  assert.equal(member.validatedOrg, 'team-a')
+  const mismatch = await pricing('sfa', Response.json({ plan: 'PRO', role: 'owner', onboarded: true, organization: { slug: 'other' } }), 'team-a')
+  assert.equal(mismatch.error, true); assert.equal(mismatch.plan, null); assert.equal(mismatch.validatedOrg, null)
   const foreign = await pricing('sfa', Response.json({ onboarded: false, memberships: [] }), 'foreign')
   assert.equal(foreign.error, true, 'an invalid selected organization cannot be treated as a new account')
+  assert.equal(foreign.validatedOrg, null)
   assert.equal(sidebar('sfa', 'LIGHT', true), 'LIGHT')
   assert.equal(planUtils.higherPlan('FREE', 'BUNDLE'), 'PRO')
   for (const [raw, expected] of [['BANNER_PRO', 'PRO'], ['PRO_MONTHLY', 'PRO'], ['BASIC', 'PRO'], ['PREMIUM', 'PRO'], ['BANNER_LIGHT', 'LIGHT'], ['ENTERPRISE_MONTHLY', 'ENTERPRISE']]) {

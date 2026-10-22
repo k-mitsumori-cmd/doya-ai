@@ -2007,8 +2007,7 @@ export function getRunningServices(): Service[] {
   return SERVICES
     .filter(s => !RETIRED_SERVICE_IDS.has(s.id))
     // ⚠️ 開発中（UNLISTED_SERVICE_IDS）は status が 'coming_soon' でも**残す**。
-    //    実際に動いていて開発・検証に使うので、ここから外すとログイン後の
-    //    ツール切替から消え、URL直打ちでしか行けなくなる（2026-08-23にやった）。
+    //    実際に動いていて開発・検証に使う画面を、ポップアップ判定から外さない。
     .filter(s => s.status === 'active' || s.status === 'beta' || UNLISTED_SERVICE_IDS.has(s.id))
     .sort((a, b) => a.order - b.order)
 }
@@ -2037,7 +2036,7 @@ export function getServicesByCategory(category: ServiceCategory): Service[] {
 //    RETIRED を先に弾かないと畳んだサービスが「利用可能」と判定される。
 export function isServiceAvailable(serviceId: string): boolean {
   const service = getServiceById(serviceId)
-  if (!service || RETIRED_SERVICE_IDS.has(service.id)) return false
+  if (!service || RETIRED_SERVICE_IDS.has(service.id) || BETA_HIDDEN_SERVICE_IDS.has(service.id)) return false
   return service.status === 'active' || service.status === 'beta'
 }
 

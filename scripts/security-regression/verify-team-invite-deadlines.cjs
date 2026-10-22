@@ -1,11 +1,13 @@
+const { shodanLifecycleFixture } = require('./shodan-lifecycle-fixture.cjs');
 const assert = require('node:assert/strict');
 const { load, check, results } = require('./load-typescript.cjs');
+const { actualMembership, state } = require('./hr-membership-fixture-bridge.cjs');
 const epoch = Date.parse('2026-10-06T04:00:00Z'), ttl = 48*60*60*1000, token = 'synthetic-token-long-enough';
 function fixture(service, { offset = -1, delayAt = '', existing = false, changed = {}, changedAfterRead = {}, full = false } = {}) {
  let now=epoch+offset, audits=0, writes=0, rollbacks=0;
  class Clock extends Date { constructor(...args){super(...(args.length?args:[now]))} static now(){return now} }
  const delay=stage=>{if(stage===delayAt)now=epoch};
- let member={id:'invite',organizationId:'org',organization:{id:'org',name:'Synthetic',slug:'team'},status:'PENDING',role:service==='hr'?'MEMBER':'member',token,inviteToken:token,email:'qa@example.invalid',inviteEmail:'qa@example.invalid',createdAt:new Date(epoch-ttl),expiresAt:new Date(epoch),acceptedAt:null};
+ let member={id:'invite',organizationId:'org',organization:{id:'org',name:'Synthetic',slug:'team'},userId:service==='hr'?undefined:null,status:'PENDING',role:service==='hr'?'MEMBER':'member',token,inviteToken:token,email:'qa@example.invalid',inviteEmail:'qa@example.invalid',createdAt:new Date(epoch-ttl),expiresAt:new Date(epoch),acceptedAt:null};
  let created=0;
  const model={
   findUnique:async({where})=>{if(where.inviteToken||where.token)return structuredClone(member);delay('read');return structuredClone({...member,...changed})},
@@ -21,12 +23,21 @@ function fixture(service, { offset = -1, delayAt = '', existing = false, changed
  const tx={
   $queryRaw:async()=>{delay('lock');return[{id:'org'}]},
   [`${service}Member`]:model,hrInvitation:model,
-  hrOrganizationMember:{count:async()=>{delay('quota');return full?2:1},create:async()=>{writes++;created++;delay('create');return{id:'new-member'}}},
+  hrOrganizationMember:{
+   findMany:async()=>[{id:'owner',userId:'owner-user',role:'OWNER',status:'ACTIVE'}],
+   count:async()=>{delay('quota');return full?2:1},create:async()=>{writes++;created++;delay('create');return{id:'new-member'}},
+  },
   user:{findUnique:async()=>{delay('account');return{email:'qa@example.invalid'}}},
  };
  const prisma={...tx,$transaction:async work=>{const before=structuredClone(member),beforeCreated=created;try{return await work(tx)}catch(error){member=before;created=beforeCreated;rollbacks++;throw error}}};
- const common={'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{id:'user',email:'qa@example.invalid'}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma},[`@/lib/${service}/access`]:{resolveUserId:async()=>'user'},'@/lib/hr/audit':{logAudit:async()=>{audits++}},'@/lib/hr/billing':{getOrgPlan:async()=>'FREE',getOrgPlanLimits:()=>({maxMembers:2})}};
- if(service==='hr')prisma.hrOrganizationMember={findFirst:async()=>null};
+ /* Explicit normal owner/User seeds omitted by the original actor/token fixture; not an anomaly repair. */
+const lifecycle=service!=='hr'?shodanLifecycleFixture(prisma,{service,mode:'claim',userIds:['user','owner-user'],authorityRows:()=>[{ id: 'canonical-owner', userId: 'owner-user', role: 'owner', status: 'ACTIVE', pendingEmail: null, inviteToken: null }],user:tx.user,globals:{Date:Clock},target:tx=>tx[`${service}Member`].findUnique({where:{id:'invite'}})}):{};
+ const common={...lifecycle,'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{id:'user',email:'qa@example.invalid'}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma},[`@/lib/${service}/access`]:{resolveUserId:async()=>'user'},'@/lib/hr/audit':{logAudit:async()=>{audits++}},'@/lib/hr/billing':{getOrgPlan:async()=>'FREE',getOrgPlanLimits:()=>({maxMembers:2})}};
+ if(service==='hr'){
+  prisma.hrOrganizationMember={findMany:tx.hrOrganizationMember.findMany,findFirst:async()=>null};
+  common['@/lib/hr/membership-write']=actualMembership(prisma);
+  common['@/lib/account-lifecycle/state']=state;
+ }
  const api=load(service==='hr'?'src/app/api/hr/organization/invite/accept/route.ts':`src/app/api/${service}/invite/[token]/route.ts`,common,{Date:Clock});
  return{post:()=>api.POST({json:async()=>({token})},{params:Promise.resolve({token})}),get:()=>api.GET({}, {params:Promise.resolve({token})}),state:()=>structuredClone({member,created}),stats:()=>({writes,rollbacks,audits})};
 }

@@ -1,0 +1,139 @@
+{
+  "executed": 24,
+  "contractPassed": 24,
+  "scope": "Actual Income access/withIncome and organization GET source with isolated current-schema PG; synthetic session and linkable-source adapters only. New organization/member admission only; not all31 data writers/global retirement completion.",
+  "cases": [
+    {
+      "name": "normal unaffiliated access auto-creates exactly one owner organization",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "simultaneous initial reads preserve one organization and member",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "missing User session cannot recreate organization or membership",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "retirement reserved first rejects creation with exact lifecycle boundary and no data writes",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "creation first holds actual User lock and retirement waits then observes the committed member",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "existing active membership read remains available during retirement without creation",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "other account retirement does not block independent auto-creation",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "normal checkout unknown does not block ordinary new membership creation",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "malformed-fence fails closed before new organization writes",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "missing-receipt fails closed before new organization writes",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "malformed-receipt fails closed before new organization writes",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "explicit missing slug never falls back to creation or another organization",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "INACTIVE membership returns null and cannot auto-create a replacement",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "PENDING membership returns null and cannot auto-create a replacement",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "unknown existing role cannot be repaired by auto-creating another owner organization",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "explicit organization ignores another active organization instead of selecting it",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "current role hierarchy still refuses admin handler to ordinary member",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "missing session stays unauthorized and never auto-creates as guest",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "session failure stays error instead of guest or an empty organization response",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "existing explicit email fallback resolves current User before protected creation",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "create failure rolls back organization and member while preserving retirement state",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "safe retirement abort permits a later normal creation without automatic resume",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "plain error object cannot impersonate a typed lifecycle refusal",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    },
+    {
+      "name": "existing Income business conflict retains its response contract",
+      "classification": "actual_income_creation_and_context_contract",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/lib/income/access.ts": "7806beb9e91cf1929453ea7392748c77b6b8c9d92fa6ffdfbf2a9cfca625ed22",
+    "src/components/income/ui.tsx": "8ec05ae1e99fb9d91f23069eac7b3807dd7d0ae8941a440985f694dfe921e0a5",
+    "scripts/security-regression/verify-income-membership-postgres.cjs": "eb091ed98bfab9a5625aeb6508de83e3fd31379dacc7334a02bda2d3d602f2b8",
+    "scripts/security-regression/verify-income-membership-postgres.py": "283089584f3c87c55f078b1b8caa7be89dfe68e4f70d08f907eb0615d620c0ca",
+    "scripts/security-regression/verify-income-retirement-ui.cjs": "db621fe71de17c4ee536e9e01c90181aa2c154dcdba70ef9eab2bc7915e81c18"
+  },
+  "sharedCoreHashes": {
+    "src/lib/account-lifecycle/state.ts": "3360865f72ec324b5f1332672fca09cb6bff01c31934b80945f64696e0d281df",
+    "src/lib/account-lifecycle/store.ts": "b2f4357a042c9abf0b63e8a22b85abe074211cf6587d8db05fdb5dbbb882730f",
+    "src/lib/account-lifecycle/organization-fence.ts": "9ed18ed0e4af505c105db387b04f97b48113dcdf5cdef3a22e93f9e12739d301"
+  }
+}

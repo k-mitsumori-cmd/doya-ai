@@ -10,7 +10,7 @@ try:
  with (base/'membership-onboarding-role-integrated-postgres.log').open('w') as out:result=subprocess.run(['node',str(base/'verify-membership-onboarding-role-integrated-postgres.cjs')],env=childEnv,stdout=out,stderr=subprocess.STDOUT,timeout=180)
  evidence=base/('membership-onboarding-role-integrated-'+('candidate' if candidate else 'baseline')+'-postgres-results.json')
  proof=json.loads(evidence.read_text()) if evidence.exists() else {}
- evidenceValid=proof.get('passed')==195 and len(proof.get('cases',[]))==195 and proof.get('checkedAt','')>=state['startedAt'] and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in proof.get('sourceHashes',{}).items()) and len(proof.get('sourceHashes',{}))==31
+ evidenceValid=proof.get('passed')==195 and len(proof.get('cases',[]))==195 and proof.get('checkedAt','')>=state['startedAt'] and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in proof.get('sourceHashes',{}).items()) and len(proof.get('sourceHashes',{}))==32
  state.update(probeExitCode=result.returncode,evidenceValid=evidenceValid,status='passed' if result.returncode==0 and evidenceValid else 'failed')
 finally:
  if started:

@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -21,7 +22,7 @@ export default function CunningLayoutShell({ children }: { children: React.React
   }, [pathname])
 
   if (account.status === 'loading' && !account.knownActor) return <div role="status" className="p-6 text-center">認証情報を確認しています。</div>
-  if (account.status === 'authenticated' && !account.actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
+  if (account.status === 'authenticated' && !account.actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<SignInReturnLink fallback="/cunning" className="ml-2 underline">再度ログインする</SignInReturnLink></div>
 
   return (
     <div key={account.actorKey} className="flex h-screen bg-slate-50 overflow-hidden">

@@ -195,8 +195,8 @@ function DoyaSlideSidebarImpl({
           isCollapsed={isCollapsed}
           isMobile={isMobile}
           theme={doyaslideTheme}
-          settingsHref="/doyaslide"
-          loginCallbackUrl="/doyaslide"
+          settingsHref="/doyaslide/new"
+          loginCallbackUrl="/doyaslide/new"
           onLogout={() => setIsLogoutDialogOpen(true)}
           renderExtra={() => (
             <p className="text-[11px] font-bold text-white/60 truncate">

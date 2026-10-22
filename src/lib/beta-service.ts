@@ -10,6 +10,14 @@ import { canPreviewUiNext, uiPreviewEmails } from '@/lib/ui-next'
 
 export const BETA_HIDDEN_MESSAGE = 'このツールは開発中のベータ版です。いまはご利用いただけません。'
 
+/** 既存のプレビュー許可と、ベータ専用の許可を同じ判定へ渡す。 */
+export function betaAllowEmails(
+  preview: string | undefined = process.env.UI_PREVIEW_EMAILS,
+  extra: string | undefined = process.env.BETA_SERVICE_EMAILS,
+): string[] {
+  return [...uiPreviewEmails(preview), ...uiPreviewEmails(extra)]
+}
+
 /** このメールの人が、このツールを使ってよいか。ベータで隠していないツールは誰でも true */
 export function canUseBetaService(
   serviceId: string,
@@ -18,5 +26,5 @@ export function canUseBetaService(
 ): boolean {
   const hiddenIds = opts.hiddenIds ?? BETA_HIDDEN_SERVICE_IDS
   if (!hiddenIds.has(serviceId)) return true
-  return canPreviewUiNext(email, opts.allow ?? uiPreviewEmails())
+  return canPreviewUiNext(email, opts.allow ?? betaAllowEmails())
 }

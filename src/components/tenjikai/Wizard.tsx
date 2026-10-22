@@ -27,7 +27,7 @@ function PositionIcon({ p, active }: { p: BoothPosition; active: boolean }) {
   )
 }
 
-export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; onSubmit: (i: ProjectInput) => void }) {
+export default function Wizard({ initial, onSubmit, submitDisabled = false, submitLabel = '展示会の準備を一括作成' }: { initial: ProjectInput; onSubmit: (i: ProjectInput) => void; submitDisabled?: boolean; submitLabel?: string }) {
   const [f, setF] = useState<ProjectInput>(initial)
   const [hover, setHover] = useState<{ c: number; r: number } | null>(null)
   // 読み込みが終わる前に押されると、ブラウザーがフォームをそのまま送ってページが読み直される。終わるまで押せないようにする
@@ -67,7 +67,7 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
       <motion.form
         onSubmit={(e) => {
           e.preventDefault()
-          onSubmit(f)
+          if (!submitDisabled) onSubmit(f)
         }}
         className="flex flex-col gap-6 rounded-[var(--r)] border border-gray-200 bg-white p-5 shadow-[0_20px_60px_-30px_rgba(0,102,255,.45)] md:p-7"
       >
@@ -197,8 +197,8 @@ export default function Wizard({ initial, onSubmit }: { initial: ProjectInput; o
           <p className="text-xs font-bold leading-relaxed text-doya-700">
             想定来場 <span className="font-mono text-sm">{expectedVisitors(f).toLocaleString()}</span> 人（{f.days}日間）をもとに、制作物とノベルティの数量を計算します。
           </p>
-          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} type="submit" disabled={!hydrated} className="group inline-flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 rounded-xl bg-doya-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-doya-500/30 disabled:opacity-60">
-            展示会の準備を一括作成
+          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} type="submit" disabled={!hydrated || submitDisabled} className="group inline-flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 rounded-xl bg-doya-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-doya-500/30 disabled:opacity-60">
+            {submitLabel}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </motion.button>
         </div>

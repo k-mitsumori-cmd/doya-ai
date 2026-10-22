@@ -7,6 +7,8 @@ import { IncomeError, audit } from '@/lib/income/access'
 import { EXPENSE_ADAPTERS, canReadPromaneWorkspace, listLinkablePromaneWorkspaces, type ExpenseSourceId } from '@/lib/income/expense-source'
 import { asBody, reqStr, str } from '@/lib/income/parse'
 import { readJson, withIncome } from '@/lib/income/route'
+import { withIncomeWrite } from '@/lib/income/route'
+import { readableExpenseOrganization } from '@/lib/expense/income-source'
 
 const ORG_SELECT = { id: true, name: true, slug: true, promaneWorkspaceId: true, expenseSourceId: true, expenseOrganizationId: true } as const
 
@@ -29,7 +31,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  return withIncome(req, 'admin', async (ctx) => {
+  return withIncomeWrite(req, 'admin', async () => {
     const body = asBody(await readJson(req))
     const data: { name?: string; promaneWorkspaceId?: string | null; expenseSourceId?: string | null; expenseOrganizationId?: string | null } = {}
     if ('name' in body) data.name = reqStr(body, 'name', '組織名', 80)
@@ -37,7 +39,6 @@ export async function PATCH(req: NextRequest) {
     if ('promaneWorkspaceId' in body) {
       const wsId = str(body, 'promaneWorkspaceId', '支出の取り込み元', { max: 64 })
       // 他社のプロマネを結べないように、自分が財務を見られるワークスペースだけ
-      if (wsId && !(await canReadPromaneWorkspace(ctx.userId, wsId))) throw new IncomeError('そのワークスペースの経費を見る権限がありません', 403)
       Object.assign(data, { promaneWorkspaceId: wsId, expenseSourceId: wsId ? 'promane' : null, expenseOrganizationId: null })
     }
     // 新形式: { expenseSourceId, expenseRefId } … 取り込み元は 1 つだけ（両方は足さない）
@@ -46,16 +47,20 @@ export async function PATCH(req: NextRequest) {
       const refId = str(body, 'expenseRefId', '支出の取り込み先', { max: 64 })
       if (!sourceId) Object.assign(data, { expenseSourceId: null, promaneWorkspaceId: null, expenseOrganizationId: null })
       else {
-        const adapter = EXPENSE_ADAPTERS[sourceId as ExpenseSourceId]
+        const adapter = (sourceId === 'promane' || sourceId === 'expense') ? EXPENSE_ADAPTERS[sourceId] : undefined
         if (!adapter) throw new IncomeError('その取り込み元はまだ使えません')
-        if (!refId || !(await adapter.canRead(ctx.userId, refId))) throw new IncomeError('その取り込み先を見る権限がありません', 403)
+        if (!refId) throw new IncomeError('その取り込み先を見る権限がありません', 403)
         Object.assign(data, sourceId === 'promane'
           ? { expenseSourceId: 'promane', promaneWorkspaceId: refId, expenseOrganizationId: null }
           : { expenseSourceId: 'expense', expenseOrganizationId: refId, promaneWorkspaceId: null })
       }
     }
-    const org = await prisma.incomeOrganization.update({ where: { id: ctx.organizationId }, data, select: ORG_SELECT })
-    await audit(prisma, ctx, 'organization.update', 'organization', ctx.organizationId, data)
+    return data
+  }, async (ctx, tx, data) => {
+    if (data.promaneWorkspaceId && !(await canReadPromaneWorkspace(ctx.userId, data.promaneWorkspaceId, tx))) throw new IncomeError('そのワークスペースの経費を見る権限がありません', 403)
+    if (data.expenseOrganizationId && !(await readableExpenseOrganization(ctx.userId, data.expenseOrganizationId, tx))) throw new IncomeError('その取り込み先を見る権限がありません', 403)
+    const org = await tx.incomeOrganization.update({ where: { id: ctx.organizationId }, data, select: ORG_SELECT })
+    await audit(tx, ctx, 'organization.update', 'organization', ctx.organizationId, data)
     return NextResponse.json({ organization: org })
   })
 }

@@ -12,7 +12,10 @@ const initial=new Date('2026-09-01T00:00:00.000Z'),applied=new Date('2026-09-02T
 async function tx(s,work){for(let i=0;i<3;i++){try{return await db.$transaction(async t=>{const users=await t.$queryRaw`SELECT id FROM "User" WHERE id=${s.userId} FOR UPDATE`;assert.equal(users.length,1);return work(t)},{isolationLevel:'Serializable'})}catch(e){if(!helper.isPromaneWorkspaceReceiptConflict(e)||i===2)throw e}}}
 const find=(t,s,id)=>t.promaneWorkspace.findFirst({where:{id,...(s.mode==='update'?{id:s.workspaceId}:{userId:s.userId})}});
 const run=(s=scope,input={name:'Synthetic'},work,operation=op)=>tx(s,t=>helper.runPromaneWorkspaceOnce(t,s,operation,input,id=>find(t,s,id),async()=>{calls++;return work?work(t):{state:'saved',entry:await t.promaneWorkspace.create({data:{userId:s.userId,name:input.name,slug:'synthetic-'+crypto.randomUUID(),members:{create:{userId:s.userId,role:'owner',displayName:'Synthetic'}}}})}}));
-const recover=(s=scope,cancel=false,operation=op)=>tx(s,t=>helper.recoverPromaneWorkspaceOperation(t,s,operation,id=>find(t,s,id),cancel));
+// This receipt-only fixture supplies its synthetic target authorization; the missing-cancel write still uses the actual retirement guard.
+const lifecycleState=load('src/lib/account-lifecycle/state.ts',{'node:crypto':crypto});
+const lifecycleStore=load('src/lib/account-lifecycle/store.ts',{'node:crypto':crypto,'@prisma/client':{Prisma:require('@prisma/client').Prisma},'./state':lifecycleState});
+const recover=(s=scope,cancel=false,operation=op)=>tx(s,t=>helper.recoverPromaneWorkspaceOperation(t,s,operation,id=>find(t,s,id),cancel,async()=>{},()=>lifecycleStore.assertRetirementMembershipWritable(t,[s.userId])));
 const seed=()=>db.promaneWorkspace.create({data:{id:'existing',userId:'owner',name:'Original',slug:'existing',updatedAt:initial}});
 const update=t=>t.promaneWorkspace.update({where:{id:'existing',updatedAt:initial},data:{name:'Updated',updatedAt:applied}}).then(entry=>({state:'saved',entry}));
 async function reset(){calls=0;await db.promaneMember.deleteMany();await db.promaneWorkspace.deleteMany();await db.systemSetting.deleteMany();await db.$executeRawUnsafe('TRUNCATE "User"');for(const id of ['owner','other'])await db.$executeRawUnsafe('INSERT INTO "User" (id,plan) VALUES ($1,$2)',id,'PRO')}

@@ -50,11 +50,12 @@ export default function DashboardErrorBoundary({
           再試行する
         </button>
         <a
-          href="/kintai"
+          href="/kintai/dashboard"
           className="px-6 py-3 bg-white text-slate-700 font-bold rounded-full border-2 border-slate-200 hover:bg-slate-50 transition-all text-base"
         >
-          トップへ戻る
+          勤怠ダッシュボードへ
         </a>
+        <a href="/home" className="px-6 py-3 bg-white text-slate-700 font-bold rounded-full border-2 border-slate-200 hover:bg-slate-50 transition-all text-base">ツールのホームへ</a>
       </div>
 
       {!showReport && !sent && (

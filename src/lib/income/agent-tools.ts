@@ -12,6 +12,7 @@ import { fromDbDate, isMonthKey, isYmd, todayJst } from './dates'
 import { buildDunningDraft } from './dunning'
 import { confirmInvoice, draftFromSchedules, paymentState } from './invoices'
 import { buildSummary } from './summary-read'
+import { withIncomeWrite } from './write'
 
 type Reversibility = 'read' | 'reversible' | 'irreversible'
 type CostClass = 'none' | 'low' | 'high'
@@ -111,9 +112,12 @@ export const incomeDraftInvoiceTool: IncomeAgentTool<typeof draftInvoiceInput> =
   timeoutMs: 30_000,
   async run(ctx, input) {
     guard(ctx, this)
-    const ids = await prisma.$transaction((tx) => draftFromSchedules(tx, ctx, input.scheduleIds, input.issueDate ?? todayJst()), { timeout: 30000, isolationLevel: 'Serializable' })
-    for (const id of ids) await audit(prisma, ctx, 'invoice.create', 'invoice', id, { from: 'agent' })
-    return { invoiceIds: ids, hrefs: ids.map((id) => `/income/invoices/${id}`) }
+    const issueDate = input.issueDate ?? todayJst()
+    return withIncomeWrite(ctx, this.minServiceRole, async (tx, locked) => {
+      const ids = await draftFromSchedules(tx, locked, input.scheduleIds, issueDate)
+      for (const id of ids) await audit(tx, locked, 'invoice.create', 'invoice', id, { from: 'agent' })
+      return { invoiceIds: ids, hrefs: ids.map((id) => `/income/invoices/${id}`) }
+    })
   },
 }
 
@@ -136,9 +140,11 @@ export const incomeIssueInvoiceTool: IncomeAgentTool<typeof issueInput> = {
   timeoutMs: 15_000,
   async run(ctx, input) {
     guard(ctx, this)
-    const inv = await prisma.$transaction((tx) => confirmInvoice(tx, ctx, input.invoiceId), { isolationLevel: 'Serializable' })
-    await audit(prisma, ctx, 'invoice.confirm', 'invoice', inv.id, { invoiceNo: inv.invoiceNo, from: 'agent' })
-    return { invoiceId: inv.id, invoiceNo: inv.invoiceNo, href: `/income/invoices/${inv.id}` }
+    return withIncomeWrite(ctx, this.minServiceRole, async (tx, locked) => {
+      const inv = await confirmInvoice(tx, locked, input.invoiceId)
+      await audit(tx, locked, 'invoice.confirm', 'invoice', inv.id, { invoiceNo: inv.invoiceNo, from: 'agent' })
+      return { invoiceId: inv.id, invoiceNo: inv.invoiceNo, href: `/income/invoices/${inv.id}` }
+    })
   },
 }
 

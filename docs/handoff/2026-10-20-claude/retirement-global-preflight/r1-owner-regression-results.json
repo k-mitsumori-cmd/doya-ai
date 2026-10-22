@@ -1,0 +1,603 @@
+{
+  "executed": 64,
+  "contractPassed": 62,
+  "unresolvedObservations": 2,
+  "scope": "Actual current admin/adapter/ASK deletion and CaseStudy API with schema-derived real FK graph and User locks on owned isolated PG. Synthetic auth/Stripe/notifications only. Includes explicitly unresolved membership/Stripe race observations; no production, external sends or paid providers.",
+  "cases": [
+    {
+      "name": "hr owner with another member is blocked before billing and all writes",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "hr solo valid owner can retire without deleting organization",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "organizationPreserved": true
+      }
+    },
+    {
+      "name": "kintai owner with another member is blocked before billing and all writes",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "kintai solo valid owner can retire without deleting organization",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "organizationPreserved": true
+      }
+    },
+    {
+      "name": "sfa owner with another member is blocked before billing and all writes",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "sfa solo valid owner can retire without deleting organization",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "organizationPreserved": true
+      }
+    },
+    {
+      "name": "shodan owner with another member is blocked before billing and all writes",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "shodan solo valid owner can retire without deleting organization",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "organizationPreserved": true
+      }
+    },
+    {
+      "name": "aio owner with another member is blocked before billing and all writes",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "aio solo valid owner can retire without deleting organization",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "organizationPreserved": true
+      }
+    },
+    {
+      "name": "mensetsu owner with another member is blocked before billing and all writes",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "mensetsu solo valid owner can retire without deleting organization",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "organizationPreserved": true
+      }
+    },
+    {
+      "name": "quote owner with another member is blocked before billing and all writes",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "quote solo valid owner can retire without deleting organization",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "organizationPreserved": true
+      }
+    },
+    {
+      "name": "aishodan owner with another member is blocked before billing and all writes",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "aishodan solo valid owner can retire without deleting organization",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "organizationPreserved": true
+      }
+    },
+    {
+      "name": "income owner with another member is blocked before billing and all writes",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "income solo valid owner can retire without deleting organization",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "organizationPreserved": true
+      }
+    },
+    {
+      "name": "expense owner with another member is blocked before billing and all writes",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "expense solo valid owner can retire without deleting organization",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "organizationPreserved": true
+      }
+    },
+    {
+      "name": "hr valid nonowner retirement preserves the remaining owner",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "remainingOwnerPreserved": true
+      }
+    },
+    {
+      "name": "kintai valid nonowner retirement preserves the remaining owner",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "remainingOwnerPreserved": true
+      }
+    },
+    {
+      "name": "sfa valid nonowner retirement preserves the remaining owner",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "remainingOwnerPreserved": true
+      }
+    },
+    {
+      "name": "shodan valid nonowner retirement preserves the remaining owner",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "remainingOwnerPreserved": true
+      }
+    },
+    {
+      "name": "aio valid nonowner retirement preserves the remaining owner",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "remainingOwnerPreserved": true
+      }
+    },
+    {
+      "name": "mensetsu valid nonowner retirement preserves the remaining owner",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "remainingOwnerPreserved": true
+      }
+    },
+    {
+      "name": "quote valid nonowner retirement preserves the remaining owner",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "remainingOwnerPreserved": true
+      }
+    },
+    {
+      "name": "aishodan valid nonowner retirement preserves the remaining owner",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "remainingOwnerPreserved": true
+      }
+    },
+    {
+      "name": "income valid nonowner retirement preserves the remaining owner",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "remainingOwnerPreserved": true
+      }
+    },
+    {
+      "name": "expense valid nonowner retirement preserves the remaining owner",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "remainingOwnerPreserved": true
+      }
+    },
+    {
+      "name": "ambiguous or shared membership is blocked {\"mineStatus\":\"INACTIVE\"}",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "ambiguous or shared membership is blocked {\"mineStatus\":\"PENDING\"}",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "ambiguous or shared membership is blocked {\"mineRole\":\"unknown-role\"}",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "ambiguous or shared membership is blocked {\"peerRole\":\"unknown-role\"}",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "ambiguous or shared membership is blocked {\"peerStatus\":\"unknown-status\"}",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "ambiguous or shared membership is blocked {\"peerRole\":\"owner\"}",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "ambiguous or shared membership is blocked {\"peerStatus\":\"INACTIVE\"}",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "ambiguous or shared membership is blocked {\"peerStatus\":\"PENDING\"}",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "HR separate pending invitation blocks solo owner retirement",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "Promane shared workspace owner cannot erase peer history",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "databaseUnchanged": true,
+        "stripeCalls": 0
+      }
+    },
+    {
+      "name": "Promane transferred former member cannot cascade shared time and comments",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "historyPreserved": true
+      }
+    },
+    {
+      "name": "linked application is anonymized only by exact userId with metadata preserved",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "exactActorOnly": true,
+        "metadataPreserved": true,
+        "guestAndPeerUnchanged": true
+      }
+    },
+    {
+      "name": "adapter preserves raw return and anonymizes with ASK cleanup atomically",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "rawReturnAndP2025Preserved": true
+      }
+    },
+    {
+      "name": "callback exception rolls anonymization User and ASK outbox back",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "allRolledBack": true,
+        "identicalError": true
+      }
+    },
+    {
+      "name": "retired authenticated session cannot create or fallback to guest",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "applications": 0,
+        "notifications": 0
+      }
+    },
+    {
+      "name": "actor context mismatch cannot reclassify authenticated request null",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "writes": 0,
+        "notifications": 0
+      }
+    },
+    {
+      "name": "actor context mismatch cannot reclassify authenticated request {\"user\":{}}",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 401,
+        "writes": 0,
+        "notifications": 0
+      }
+    },
+    {
+      "name": "actor context mismatch cannot reclassify authenticated request {\"user\":{\"id\":\"synthetic_other\"}}",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "writes": 0,
+        "notifications": 0
+      }
+    },
+    {
+      "name": "missing old client context returns explicit428 without writing",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "oldStatus": 428,
+        "writes": 0,
+        "notifications": 0
+      }
+    },
+    {
+      "name": "genuine guest application remains available with explicit guest context",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "guestAvailable": true
+      }
+    },
+    {
+      "name": "application lock first commits then retirement anonymizes that application",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "realLockWait": true,
+        "applicationAnonymized": true
+      }
+    },
+    {
+      "name": "retirement lock first rejects queued application after User disappears",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "realLockWait": true,
+        "applications": 0
+      }
+    },
+    {
+      "name": "preflight disappearance stops Stripe with state-change code while retaining ASK records",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "stripeCalls": 0,
+        "askRecordsPreserved": true
+      }
+    },
+    {
+      "name": "session retrieval failure cannot become a guest application",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 503,
+        "applications": 0
+      }
+    },
+    {
+      "name": "authenticated context without id is not silently guest",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 401,
+        "applications": 0
+      }
+    },
+    {
+      "name": "authenticated session cannot submit a guest-context draft",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "status": 409,
+        "applications": 0
+      }
+    },
+    {
+      "name": "malformed context rejects before DB or notification",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "applications": 0
+      }
+    },
+    {
+      "name": "anonymization write failure rolls User ASK and application back",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "allRolledBack": true
+      }
+    },
+    {
+      "name": "outbox queue failure rolls preceding anonymization back",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "allRolledBack": true
+      }
+    },
+    {
+      "name": "adapter blocks current ownership risk and leaves all records unchanged",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "blocked": true,
+        "historyPreserved": true
+      }
+    },
+    {
+      "name": "KNOWN LIMITATION new membership during external Stripe interval can stop DB delete after cancellation",
+      "classification": "unresolved_unsafe_observation",
+      "accepted": false,
+      "observed": {
+        "unresolved": true,
+        "externalCancellationObserved": 1,
+        "userPreserved": true,
+        "requiresMembershipWriterRetirementFence": true
+      }
+    },
+    {
+      "name": "KNOWN LIMITATION checkout reservation can become payable during retirement gap",
+      "classification": "unresolved_unsafe_observation",
+      "accepted": false,
+      "observed": {
+        "unresolved": true,
+        "syntheticPayableSession": 1,
+        "userDeleted": true,
+        "actualSubscriptionCompletionNotExercised": true,
+        "requiresCheckoutRetirementFence": true
+      }
+    },
+    {
+      "name": "same mounted actual Form and API reject old draft after cookie-lost",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "wrongActorWrites": 0,
+        "notifications": 0,
+        "oldDraftClearedOnConfirmedContext": true
+      }
+    },
+    {
+      "name": "same mounted actual Form and API reject old draft after actor-switched",
+      "classification": "contract_regression",
+      "accepted": true,
+      "observed": {
+        "wrongActorWrites": 0,
+        "notifications": 0,
+        "oldDraftClearedOnConfirmedContext": true
+      }
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/expense/members/route.ts": "9ea8ea295ab4e5dab61512d9ae27b5e458dd27f7532227312d5c70a1a9bfb300",
+    "src/lib/checkout-reservation.ts": "11dab2b148831dbb3e7afd5d87bf0670aabd69550e2d28b8e4c01c307dc3c803",
+    "src/lib/account-retirement.ts": "cd4fde365e99ca0276bdff4f30c00c52899679a2ddd809d6e1cbe8b31948142e",
+    "src/lib/case-study/submission-context.ts": "6249193b6698546b40ae6aa1c46171fa28d8eb4eac444785c21353fc41f13c85",
+    "src/app/api/admin/users/route.ts": "dfee5c30af59ab5879860624e6d7ef927dd223a1fb933feb3d9f7d91ac201185",
+    "src/lib/asklink/creation-adapter.ts": "d7bd5f0f41d150f3de6027001bfafbf093bbbe078d085a2572f279c051280529",
+    "src/lib/asklink/account-cleanup.ts": "9fcf900bbabea8917ca1df20130df90a6ff03e4985cb460fdd31b87ac442460c",
+    "src/app/api/campaign/case-study/route.ts": "5641c95cd4207baa5b15822a8c3619c152ce2d0fdbcced74be44df5cceb884a4",
+    "src/app/campaign/case-study/Form.tsx": "047ed68a18bd4bc1af080bbcad33d81ef9951b15c379a1e99194b03effc791f3",
+    "prisma/schema.prisma": "f4a8411f093f9d8bee2da793f2761685edf9f7a359bd2d7ea9a4c1163db1127b"
+  }
+}

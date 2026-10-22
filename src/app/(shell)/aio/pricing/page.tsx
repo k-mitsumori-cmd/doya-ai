@@ -3,19 +3,31 @@ import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { DoyaKun } from '@/components/aio/ui'
 import { getAioContext } from '@/lib/aio/access'
 import { getAioBilling } from '@/lib/aio/billing'
+import { validWorkspaceSlug } from '@/lib/organization-workspace-selection'
 import { prisma } from '@/lib/prisma'
+import { redirect } from 'next/navigation'
+import { aioReturnRedirect } from '@/lib/aio/billing-return-route'
+import { AioPricingScope } from '@/components/aio/AioPricingScope'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AioPricingPage({ searchParams }: { searchParams: Promise<{ org?: string }> }) {
-  const requestedOrg = (await searchParams).org
-  const orgSlug = typeof requestedOrg === 'string' && requestedOrg.trim() && requestedOrg.length <= 100 ? requestedOrg.trim() : null
+export default async function AioPricingPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams
+  const returnPath = aioReturnRedirect(params)
+  if (returnPath) redirect(returnPath)
+  const requestedOrg = params.org
+  const orgSlug = validWorkspaceSlug(requestedOrg) ? requestedOrg : null
   const context = orgSlug ? await getAioContext(orgSlug) : null
   const billing = context ? await getAioBilling(prisma, context.organizationId) : null
+  const guest = orgSlug && !context ? !await getServerSession(authOptions) : false
   if (requestedOrg !== undefined && (!orgSlug || !context || !billing)) return (
     <div role="alert" className="mx-auto mt-12 max-w-xl rounded-xl border border-red-200 bg-red-50 p-6 text-red-900">
       <p className="font-bold">組織の契約情報を確認できませんでした。</p>
       <p className="mt-2 text-sm">組織の画面から開き直してください。確認できない状態では契約変更を案内しません。</p>
+      {guest && orgSlug && <Link href={`/auth/signin?callbackUrl=${encodeURIComponent(`/aio/pricing?org=${encodeURIComponent(orgSlug)}`)}`}
+        className="mt-4 mr-4 inline-block text-sm font-bold underline">ログインして再確認する</Link>}
       <Link href="/aio" className="mt-4 inline-block text-sm font-bold underline">ドヤAIOに戻る</Link>
     </div>
   )
@@ -37,7 +49,9 @@ export default async function AioPricingPage({ searchParams }: { searchParams: P
           <p className="font-bold">この組織の利用枠は、組織オーナーの契約で決まります。</p>
           {context.role !== 'owner' && <p className="mt-1">ご自身のプランを購入しても、この組織の利用枠は増えません。契約変更は組織オーナーにご相談ください。</p>}
         </div>}
-        <UnifiedPricingPlans serviceId="aio" currentPlan={billing?.plan} planSource={context ? 'organization' : 'account'} canPurchase={!context || context.role === 'owner'} />
+        {context && billing ? <AioPricingScope expected={{ actorId: context.userId, organizationId: context.organizationId,
+          slug: context.organizationSlug, role: context.role, plan: billing.plan }} /> :
+          <UnifiedPricingPlans serviceId="aio" currentPlan={billing?.plan} planSource="account" canPurchase />}
       </div>
     </div>
   )

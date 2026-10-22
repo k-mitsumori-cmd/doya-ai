@@ -1,8 +1,9 @@
 'use client'
 
 // ドヤ支出管理: クライアントから API を呼ぶ小さな部品
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { requestOrgJson } from '@/lib/org-client-response'
+import { useExpenseReadScope } from '@/lib/expense/use-read-scope'
 
 /** API の失敗。HTTP ステータスと code を持つ（403 は権限なしとして扱う） */
 export class ExpenseApiError extends Error {
@@ -33,36 +34,46 @@ export function jsonInit(method: 'POST' | 'PATCH' | 'PUT' | 'DELETE', body?: unk
 
 /** 一覧・詳細の取得（path が変わると取り直す。reload() で再取得） */
 export function useExpenseQuery<T = any>(path: string | null, orgSlug: string) {
-  const [data, setData] = useState<T | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [forbidden, setForbidden] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const scope = useExpenseReadScope(orgSlug, path)
+  const { key, current, enabled, actor, status: sessionStatus } = scope
+  type Result = { key: string; data: T | null; error: string | null; forbidden: boolean; loading: boolean; status: number | null }
+  const [stored, setStored] = useState<Result | null>(null)
   const [tick, setTick] = useState(0)
+  const sequence = useRef(0)
 
   useEffect(() => {
-    if (!path || !orgSlug) return
+    if (!enabled || !path) return
     let alive = true
-    setLoading(true)
-    expenseApi<T>(path, orgSlug)
+    const request = ++sequence.current
+    const controller = new AbortController()
+    const active = () => alive && !controller.signal.aborted && current() && sequence.current === request
+    setStored(previous => ({ key, data: previous?.key === key ? previous.data : null, error: null, forbidden: false, loading: true, status: null }))
+    expenseApi<T>(path, orgSlug, { signal: controller.signal })
       .then((d) => {
-        if (!alive) return
-        setData(d)
-        setError(null)
-        setForbidden(false)
+        if (!active()) return
+        setStored({ key, data: d, error: null, forbidden: false, loading: false, status: null })
       })
       .catch((e: Error) => {
-        if (!alive) return
-        setError(e.message)
-        setForbidden(isForbidden(e))
+        if (!active()) return
+        const httpStatus = (e as Error & { status?: unknown }).status
+        const status = typeof httpStatus === 'number' ? httpStatus : null
+        setStored({ key, data: null, error: e.message, forbidden: status === 403, loading: false, status })
       })
       .finally(() => {
-        if (alive) setLoading(false)
+        if (active()) setStored(previous => previous?.key === key ? { ...previous, loading: false } : previous)
       })
     return () => {
       alive = false
+      controller.abort()
     }
-  }, [path, orgSlug, tick])
+  }, [path, orgSlug, tick, key, current, enabled])
 
-  const reload = useCallback(() => setTick((t) => t + 1), [])
-  return { data, error, forbidden, loading, reload }
+  const reload = useCallback(() => { if (current()) setTick(t => t + 1) }, [current])
+  const empty: Result = { key, data: null, error: null, forbidden: false, loading: sessionStatus === 'loading' || enabled, status: null }
+  if (path && orgSlug && sessionStatus !== 'loading' && !enabled) {
+    empty.error = actor ? '読み込みを開始できませんでした。' : 'ログイン状態を確認してください。'
+    empty.status = sessionStatus === 'unauthenticated' ? 401 : null
+  }
+  const view = enabled && stored?.key === key ? stored : empty
+  return { ...view, reload, scopeKey: key, isCurrent: current }
 }

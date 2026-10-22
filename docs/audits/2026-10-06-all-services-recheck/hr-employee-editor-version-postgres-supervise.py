@@ -10,7 +10,7 @@ try:
  with (base/'hr-employee-editor-version-postgres.log').open('w') as out:result=subprocess.run(['node',str(base/'verify-hr-employee-editor-version-postgres.cjs')],env=childEnv,stdout=out,stderr=subprocess.STDOUT,timeout=180)
  evidence=base/'hr-employee-editor-version-postgres-results.json'
  proof=json.loads(evidence.read_text()) if evidence.exists() else {}
- evidenceValid=proof.get('passed')==4 and len(proof.get('cases',[]))==4 and proof.get('checkedAt','')>=state['startedAt'] and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in proof.get('sourceHashes',{}).items()) and len(proof.get('sourceHashes',{}))==3
+ evidenceValid=proof.get('passed')==4 and len(proof.get('cases',[]))==4 and proof.get('checkedAt','')>=state['startedAt'] and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in proof.get('sourceHashes',{}).items()) and len(proof.get('sourceHashes',{}))==12
  state.update(probeExitCode=result.returncode,evidenceValid=evidenceValid,status='passed' if result.returncode==0 and evidenceValid else 'failed')
 finally:
  if started:

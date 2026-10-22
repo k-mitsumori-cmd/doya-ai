@@ -18,7 +18,7 @@
   margin: 0 24px 24px;
   border-radius: var(--r, 16px);
   overflow: hidden;
-  background: #000;
+  background: var(--paper, #fff);
   box-shadow: var(--shadow, 0 8px 24px rgba(10, 15, 60, 0.08));
 }
 .scroller { height: 100%; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
@@ -48,3 +48,45 @@
 
 /* 隠れているツールチップ（統計の画面）などで、ページが横にはみ出さないようにする */
 .next { overflow-x: clip; }
+
+/* ---- 見本の一覧（絞り込みのボタンとカードの並び）を、新しい見た目の色にする（統括の確認 2026-10-19） ----
+ * 旧来の黒い一覧は、白い画面の下で浮いて見えた。地を白、文字を紺、選んだボタンをブランドの青にする。
+ * ⚠️ 見本の画像と、画像の上の文字（白い文字・暗いグラデーション）はそのまま。上の大きなプレビュー（画像）も暗いまま。
+ * ⚠️ .stage は新しい見た目のときだけ出る（page.tsx）。今の見た目には効かない。 */
+.stage :global([data-ui='gallery-filters']),
+.stage :global([data-ui='gallery-filters'] .bg-black\/95) {
+  background: rgba(255, 255, 255, 0.97) !important;
+  border-color: var(--line, #e3e8f4) !important;
+  box-shadow: none !important;
+}
+.stage :global([data-ui='gallery-filters'] .border-gray-800\/30),
+.stage :global([data-ui='gallery-filters'] .border-gray-800\/50) { border-color: var(--line, #e3e8f4) !important; }
+.stage :global([data-ui='gallery-filters'] :is(.text-gray-400, .text-gray-500)) { color: var(--sub, #4a5375) !important; }
+/* 選んでいないボタン */
+.stage :global([data-ui='gallery-filters'] button.bg-gray-800\/60),
+.stage :global([data-ui='gallery-filters'] button.bg-gray-800) {
+  background: var(--paper, #fff) !important;
+  color: var(--ink, #101633) !important;
+  border: 1px solid var(--line, #e3e8f4) !important;
+}
+.stage :global([data-ui='gallery-filters'] button.bg-gray-800\/60:hover) { border-color: var(--blue-line, #d7e5ff) !important; background: var(--blue-soft, #e8f0ff) !important; }
+/* 選んだボタン（すべて・業種）はブランドの青。プランの色付き（無料の緑・プロの黄）は意味があるのでそのまま */
+.stage :global([data-ui='gallery-filters'] button.bg-white.text-black) {
+  background: var(--blue, #0066ff) !important;
+  color: #fff !important;
+  border: 1px solid var(--blue, #0066ff) !important;
+}
+.stage :global([data-ui='gallery-note'] .text-blue-400\/80) { color: var(--blue, #0066ff) !important; }
+
+/* カードの並び */
+.stage :global([data-tour='gallery-grid']) { background: var(--paper, #fff) !important; }
+.stage :global([data-tour='gallery-grid'] > div > h3),
+.stage :global([data-tour='gallery-grid'] h3.text-gray-400) { color: var(--ink, #101633) !important; }
+.stage :global([data-tour='gallery-grid'] h3 .text-gray-600) { color: var(--muted, #7a83a3) !important; }
+/* 画像の無いとき・読み込み中の地と、「もっと見る」のタイル */
+.stage :global([data-tour='gallery-grid'] :is(.from-gray-800, .bg-gray-800\/80, .bg-gray-800\/50)) {
+  background: var(--bg, #f4f7fd) !important;
+}
+.stage :global([data-tour='gallery-grid'] .border-gray-600) { border-color: var(--line-strong, #c6cde0) !important; }
+.stage :global([data-tour='gallery-grid'] button :is(.text-gray-300, .text-gray-400, .text-gray-500)) { color: var(--sub, #4a5375) !important; }
+.stage :global([data-tour='gallery-grid'] :is(.ring-gray-800\/50, .ring-gray-800\/30)) { --tw-ring-color: var(--line, #e3e8f4) !important; }

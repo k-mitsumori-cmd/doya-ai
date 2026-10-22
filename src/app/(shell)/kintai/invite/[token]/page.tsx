@@ -1,5 +1,6 @@
 'use client'
 
+import { useSession } from 'next-auth/react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -8,7 +9,14 @@ import { useInvitationRecovery } from '@/lib/use-invitation-recovery'
 export default function InvitePage() {
   const params = useParams<{ token: string }>()
   const token = String(params?.token || '')
-  return <InviteContent key={token} token={token} />
+  const { data: session, status } = useSession()
+  const actorId = status === 'authenticated' ? session?.user?.id : null
+  if (status === 'loading' || (status === 'authenticated' && !actorId)) {
+    return <p role="status" className="p-6 text-center text-sm">ログイン状態を確認しています…</p>
+  }
+  // A new actor must not adopt the previous account's lookup, acceptance or redirect.
+  const invitationScope = JSON.stringify([token, status, actorId])
+  return <InviteContent key={invitationScope} token={token} />
 }
 
 function InviteContent({ token }: { token: string }) {
@@ -33,8 +41,8 @@ function InviteContent({ token }: { token: string }) {
           <p role="alert" className="text-base font-bold text-slate-500 mb-6">{error}</p>
           {accountAction && <button onClick={signInOrSwitch} disabled={joining} className="w-full mb-3 px-6 py-3 bg-[#7f19e6] text-white font-bold rounded-full disabled:opacity-50">{joining ? 'ログイン処理中…' : accountAction === 'switch' ? '別のアカウントでログイン' : 'Googleでログイン'}</button>}
           {state === 'error' && <button onClick={verifyAgain} disabled={joining} className="w-full mb-3 px-6 py-3 bg-purple-50 text-purple-700 font-bold rounded-full disabled:opacity-50">招待の状態を再確認</button>}
-          <Link href="/kintai" className="inline-flex items-center gap-2 px-8 py-3 bg-[#7f19e6] text-white font-bold rounded-full hover:bg-[#6a14c2] transition-all shadow-lg">
-            トップに戻る
+          <Link href="/kintai/dashboard" className="inline-flex items-center gap-2 px-8 py-3 bg-[#7f19e6] text-white font-bold rounded-full hover:bg-[#6a14c2] transition-all shadow-lg">
+            勤怠を開く
           </Link>
         </div>
       </div>

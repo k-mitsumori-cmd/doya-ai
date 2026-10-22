@@ -13,6 +13,7 @@ import { LoadIssueNotice, NX_FOCUS, NX_TAP, loadIssueOf, type LoadIssue } from '
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
+import { useMensetsuRequest } from '@/components/mensetsu/useMensetsuRequest'
 
 interface Criterion {
   key: string
@@ -59,6 +60,7 @@ function cellStyle(v: number | null, median: number | null): string {
 }
 
 export default function ComparePage() {
+  const { proof, request: fetch } = useMensetsuRequest()
   const [templates, setTemplates] = useState<TemplateRow[]>([])
   // ⚠️ 既定は「すべて」。以前は最初のテンプレートを選ぶまで何も出ず、
   //    「選ばないと表示されない」状態だった。
@@ -88,6 +90,7 @@ export default function ComparePage() {
     try {
       const res = await fetch('/api/mensetsu/templates', { cache: 'no-store' })
       const json = await res.json().catch(() => null)
+      if (!proof.current()) return
       if (!res.ok) setTemplatesIssue(loadIssueOf(res.status))
       if (!res.ok || !Array.isArray(json?.templates)) throw new Error('テンプレートを取得できませんでした')
       setTemplates(json.templates)
@@ -96,7 +99,7 @@ export default function ComparePage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [fetch, proof])
 
   useEffect(() => { void loadTemplates() }, [loadTemplates])
 
@@ -120,7 +123,7 @@ export default function ComparePage() {
           !json.template || !Array.isArray(json.template.criteria) || !json.medians) {
         throw new Error('比較結果の応答が正しくありません')
       }
-      if (version !== requestVersion.current) return
+      if (version !== requestVersion.current || !proof.current()) return
       setCriteria(json.template.criteria)
       setCandidates(json.candidates)
       setMedians(json.medians)
@@ -128,11 +131,11 @@ export default function ComparePage() {
       setNextCursor(json.nextCursor)
       setRevision(json.revision)
     } catch (cause) {
-      if (version === requestVersion.current) notifyError(setError, cause instanceof Error ? cause.message : '比較結果を取得できませんでした')
+      if (version === requestVersion.current && proof.current()) notifyError(setError, cause instanceof Error ? cause.message : '比較結果を取得できませんでした')
     } finally {
-      if (version === requestVersion.current) setLoadingCompare(false)
+      if (version === requestVersion.current && proof.current()) setLoadingCompare(false)
     }
-  }, [templateId])
+  }, [templateId, fetch, proof])
 
   useEffect(() => {
     void load()
@@ -141,7 +144,7 @@ export default function ComparePage() {
   }, [load])
 
   const loadMore = async () => {
-    if (!nextCursor || loadingMore) return
+    if (!proof.current() || !nextCursor || loadingMore) return
     const version = requestVersion.current
     setLoadingMore(true)
     setError(null)
@@ -158,14 +161,14 @@ export default function ComparePage() {
           json.candidates.some((candidate: Candidate) => candidates.some((current) => current.id === candidate.id))) {
         throw new Error('比較結果が更新されました。最初から読み直してください')
       }
-      if (version !== requestVersion.current) return
+      if (version !== requestVersion.current || !proof.current()) return
       setCandidates(candidates.concat(json.candidates))
       setNextCursor(json.nextCursor)
       setMedians(json.medians)
     } catch (cause) {
-      if (version === requestVersion.current) notifyError(setError, cause instanceof Error ? cause.message : '続きを取得できませんでした')
+      if (version === requestVersion.current && proof.current()) notifyError(setError, cause instanceof Error ? cause.message : '続きを取得できませんでした')
     } finally {
-      if (version === requestVersion.current) setLoadingMore(false)
+      if (version === requestVersion.current && proof.current()) setLoadingMore(false)
     }
   }
 
@@ -196,7 +199,7 @@ export default function ComparePage() {
   return (
     <main className="min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8">
       <div className="mx-auto max-w-[1200px]">
-        <Link href="/mensetsu" className={nx('text-xs font-black text-[#0066ff]', `inline-flex min-h-11 items-center rounded ${NX_FOCUS}`)}>
+        <Link href={proof.href('/mensetsu')} className={nx('text-xs font-black text-[#0066ff]', `inline-flex min-h-11 items-center rounded ${NX_FOCUS}`)}>
           ← ダッシュボード
         </Link>
         <PageTitle className="mt-3 text-2xl font-black text-[#0a0f3c]">候補者の比較</PageTitle>
@@ -213,13 +216,13 @@ export default function ComparePage() {
         </div>
 
         {templatesError && uiNext ? (
-          <div className="mt-6"><LoadIssueNotice issue={templatesIssue} subject="比較に使う質問セット" onRetry={() => void loadTemplates()} /></div>
+          <div className="mt-6"><LoadIssueNotice issue={templatesIssue} subject="比較に使う質問セット" onRetry={() => void loadTemplates()} returnHref={proof.href('/mensetsu/compare')} /></div>
         ) : templates.length === 0 && uiNext ? (
           <EmptyState
             art="/mensetsu/empty-interviews.webp"
             title="まだ質問セットはありません"
             description="質問セットを作って面接を行うと、評価済みの候補者をここで並べて比べられます。"
-            action={<Button href="/mensetsu" icon="PenTool">質問セットを作る</Button>}
+            action={<Button href={proof.href('/mensetsu')} icon="PenTool">質問セットを作る</Button>}
           />
         ) : templatesError ? (
           <div role="alert" className="mt-6 text-sm font-semibold text-[#c2185b]">{templatesError}<button type="button" onClick={() => void loadTemplates()} className="ml-3 underline">再読み込み</button></div>
@@ -263,7 +266,7 @@ export default function ComparePage() {
                   art="/mensetsu/empty-interviews.webp"
                   title="評価済みの面接はまだありません"
                   description="面接が終わって評価すると、候補者がここに並びます。"
-                  action={<Button href="/mensetsu" icon="UserCheck">面接一覧を見る</Button>}
+                  action={<Button href={proof.href('/mensetsu')} icon="UserCheck">面接一覧を見る</Button>}
                 />
               ) : (
                 <EmptyState
@@ -327,7 +330,7 @@ export default function ComparePage() {
                     )}
 
                     <Link
-                      href={`/mensetsu/sessions/${c.id}`}
+                      href={proof.href(`/mensetsu/sessions/${c.id}`)}
                       className={nx('mt-4 block rounded-xl border-2 border-[#d8e7ff] py-2.5 text-center text-sm font-black text-[#0066ff]', NX_FOCUS)}
                     >
                       評価の詳細を見る
@@ -392,7 +395,7 @@ export default function ComparePage() {
                         })}
                         <td className="px-3 py-3 text-right">
                           <Link
-                            href={`/mensetsu/sessions/${c.id}`}
+                            href={proof.href(`/mensetsu/sessions/${c.id}`)}
                             className={nx('whitespace-nowrap rounded-lg border border-[#d8e7ff] px-3 py-1.5 text-[11px] font-black text-[#0066ff]')}
                           >
                             詳細

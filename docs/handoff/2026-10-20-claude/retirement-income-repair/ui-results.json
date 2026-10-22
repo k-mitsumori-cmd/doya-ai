@@ -1,0 +1,79 @@
+{
+  "passed": 17,
+  "failed": 0,
+  "cases": [
+    {
+      "name": "retirement 409 displays processing explanation instead of onboarding or communication advice",
+      "passed": true
+    },
+    {
+      "name": "LIFECYCLE_USER_UNAVAILABLE 409 explains unknown account state without communication retry",
+      "passed": true
+    },
+    {
+      "name": "LIFECYCLE_STATE_UNAVAILABLE 409 explains unknown account state without communication retry",
+      "passed": true
+    },
+    {
+      "name": "existing generic error behavior preserved 409/\"OTHER_CONFLICT\"",
+      "passed": true
+    },
+    {
+      "name": "existing generic error behavior preserved 409/undefined",
+      "passed": true
+    },
+    {
+      "name": "existing generic error behavior preserved 409/\"LIFECYCLE_STATE_UNAVAILABLE_EXTRA\"",
+      "passed": true
+    },
+    {
+      "name": "existing generic error behavior preserved 409/[\"LIFECYCLE_STATE_UNAVAILABLE\"]",
+      "passed": true
+    },
+    {
+      "name": "existing generic error behavior preserved 500/\"ACCOUNT_RETIREMENT_IN_PROGRESS\"",
+      "passed": true
+    },
+    {
+      "name": "existing generic error behavior preserved 500/\"LIFECYCLE_USER_UNAVAILABLE\"",
+      "passed": true
+    },
+    {
+      "name": "existing generic error behavior preserved 400/\"LIFECYCLE_STATE_UNAVAILABLE\"",
+      "passed": true
+    },
+    {
+      "name": "existing 401 meaning takes priority over any lifecycle code",
+      "passed": true
+    },
+    {
+      "name": "existing 403 meaning takes priority over any lifecycle code",
+      "passed": true
+    },
+    {
+      "name": "existing 404 list navigation is preserved",
+      "passed": true
+    },
+    {
+      "name": "known data remains visible without invoking account retry",
+      "passed": true
+    },
+    {
+      "name": "network failure retains generic connection error without account-state assertion",
+      "passed": true
+    },
+    {
+      "name": "successful response contract is unchanged",
+      "passed": true
+    },
+    {
+      "name": "processing state retries only after an explicit user click",
+      "passed": true
+    }
+  ],
+  "sourceHashes": {
+    "src/components/income/ui.tsx": "8ec05ae1e99fb9d91f23069eac7b3807dd7d0ae8941a440985f694dfe921e0a5",
+    "src/components/income/ds.tsx": "418b0e28cd4a1144783f75764a2f1f5186a7588a368e58b6622b9c21970dff76"
+  },
+  "scope": "Actual Income fetchJson/ApiError/Gate and actual EmptyState/Button components with synthetic HTTP, CSS/icons and React SSR/mounted DOM; no browser automation, real API, DB, provider or UI rendering claim outside this bounded fixture."
+}

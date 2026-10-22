@@ -1,0 +1,86 @@
+{
+  "batch": "home-entry",
+  "status": "local_passed_remote_pending",
+  "sourceHead": "cedb601aa4d6f9f4f998bb8b8690199838c4e973",
+  "verifiedAt": "2026-10-20T06:43:57.658424+00:00",
+  "sourceFiles": 4241,
+  "sourceManifestSha256": "76599482c5f7cec289d34b58686f7e5f3dd2151991f9174cf9c6f0272bb17806",
+  "sourceInputsUnchanged": true,
+  "sourcePathSetUnchanged": true,
+  "targetChangeSha256": {
+    "scripts/security-regression/run.cjs": "9152f3496ddd99c71b2adfc5ebcc17f308564dbfda6f9ea9da548f56a1ece4b8",
+    "scripts/security-regression/verify-entry-submission.cjs": "6ac4b1db0678857c4960e2ac023ee35e476dbf90711400ed769b87cc802cab0d",
+    "scripts/security-regression/verify-home-hydration.cjs": "2f1f4a38a24b9ccf35a6b43f15397a631e33fa86d1e71c205d657a421c16ead5",
+    "scripts/security-regression/verify-organization-entry-mounted.cjs": "740f4697ab03d03189d8012175278c65d7fbd6d19fae031ce97ca841177ae98a",
+    "src/app/(shell)/home/HomeDashboard.tsx": "508cfa630c268972532b9ec6d91e19c0c37e51d4121b138285dfdb6746c3eab9",
+    "src/app/(shell)/home/HomeDashboardLegacy.tsx": "37d51805f5b214dcd4074f81957d8432fc6f0f922e55b7b37304f8d6d04574a6",
+    "src/app/(shell)/home/clock.test.ts": "3f6530362f39550fe1e799965275bf8260c38d053b41987c87409b54947eae60",
+    "src/app/(shell)/home/clock.ts": "a2ef320a1b2a15d00991ac617f25034bab2c9894c2f9126c1895bef60e8a9740",
+    "src/app/(shell)/home/today.test.ts": "b052600bf00844645b61171b5b81b1183beb42ad78744bc74e7a1ad9a9d91200",
+    "src/app/(shell)/home/today.ts": "33100627f7ec8a3acb5abe4ddf9fddf7c304492e8db9cb132578c2ad52ca509a",
+    "src/app/(shell)/sfa/Entry.tsx": "d477f7eaac979839b70319b99db2d75aecc6b0912a48774963d30130b4cf466c",
+    "src/app/(shell)/shodan/Entry.tsx": "e86a1aa59606e5a28d4622fc7018edb20cfaccbb04877bb9111ab78bee7692f9",
+    "src/lib/use-entry-organization.ts": "75f67ef1249feabb4d30d1b9451a62035c1a1b482cfadf68b8a983c8cbbed0cb"
+  },
+  "localGates": {
+    "homeSsrHydrationConditions": 16,
+    "homeClockAndTodayUnits": 11,
+    "existingUiNextUnits": 5,
+    "entryMountedCases": 42,
+    "existingEntryReaderCases": 18,
+    "uiPreview": "passed",
+    "adimageSourceManifestInputs": 10,
+    "ciSourcePaths": {
+      "scripts": 160,
+      "references": 655
+    },
+    "changedTypescriptLint": {
+      "passed": true,
+      "files": 9,
+      "warnings": 0,
+      "errors": 0
+    },
+    "cjsSyntax": "passed: runner and both mounted/SSR regressions",
+    "typecheck": "passed: one tsc --noEmit",
+    "gateCount": 12
+  },
+  "runnerIntegration": {
+    "scripts": [
+      "verify-home-hydration.cjs",
+      "verify-organization-entry-mounted.cjs"
+    ],
+    "childNodeProcesses": true,
+    "timeoutMsEach": 60000,
+    "nonzeroOrSpawnError": "exit 1",
+    "packageChanged": false
+  },
+  "environment": {
+    "physicalNodeModules": true,
+    "realDotenvFilesUsed": false,
+    "syntheticDataOnly": true,
+    "network": "all outbound denied by macOS sandbox",
+    "productionCalls": false,
+    "paidApiCalls": false
+  },
+  "remoteGates": {
+    "status": "not_started_for_candidate",
+    "required": [
+      "GitHub CI including full security and 7 service suites",
+      "Vercel full npm run build/Next production build on final same-source commit"
+    ]
+  },
+  "localFullBuildRunForThisBatch": false,
+  "previousBillingFullBuild": "cedb601a proof is a prior source state; not reused as this batch full-build success.",
+  "localOnlyEvidence": [
+    "release-scope-inventory.json",
+    "local-gates.json",
+    "*.log",
+    "verify-driver.py"
+  ],
+  "remaining": [
+    "Full security regression, seven service suites and Next production build require final same-source remote CI/Vercel checks.",
+    "Authenticated real-browser checks, production hydration recovery and live API/OAuth/DB/provider behavior remain unverified."
+  ],
+  "productionReflected": false,
+  "lunaUsed": false
+}

@@ -103,7 +103,8 @@ function toShellTool(s: Service): ShellTool {
   return {
     id: s.id,
     name: meta?.name ?? s.shortName ?? s.name,
-    href: meta?.href ?? s.href,
+    // アプリ内の全導線は、紹介ページではなく作業入口を使う。
+    href: meta?.href ?? s.dashboardHref,
     icon: meta?.icon ?? 'LayoutGrid',
     hint: meta?.hint ?? s.description,
     stage: meta?.stage ?? 'other',

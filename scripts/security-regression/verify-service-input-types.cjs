@@ -21,7 +21,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/doyaslide/analyze/route.ts', {
-      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
+      '@/lib/beta-service.server':require('./beta-allow-fixture.cjs').forService('doyaslide'), 'next/server': server,
       '@seo/lib/gemini': { geminiGenerateJson: async () => ({ title: 'Title', brief: 'Brief' }), GEMINI_TEXT_MODEL_DEFAULT: 'mock' },
       '@/lib/doyaslide/access': { getUserId: async () => 'user' },
       '@/lib/doyaslide/url-analysis-operation': {
@@ -40,7 +40,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/cunning/company/analyze/route.ts', {
-      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
+      '@/lib/beta-service.server':require('./beta-allow-fixture.cjs').forService('cunning'), 'next/server': server,
       '@/lib/prisma': { prisma: { cunningCompanyProfile: { create: async () => ({ id: 'profile' }) } } },
       '@/lib/cunning/access': { getUserId: async () => 'user' },
       '@/lib/cunning/company-budget': { reserveCunningCompanyAnalysis: async () => {}, CUNNING_COMPANY_DAILY_LIMIT: 50, CunningCompanyDailyLimitError: class extends Error {} },
@@ -57,7 +57,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/cunning/knowledge/route.ts', {
-      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
+      '@/lib/beta-service.server':require('./beta-allow-fixture.cjs').forService('cunning'), 'next/server': server,
       '@/lib/prisma': { prisma: { cunningKnowledgeBase: { create: async () => { calls++; return { id: 'base' }; } } } },
       '@/lib/cunning/access': { getUserId: async () => 'user' },
       '@/lib/cunning/limits': { getCunningLimits: async () => ({ maxKnowledgeBases: -1 }) },
@@ -67,7 +67,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/cunning/knowledge/[id]/ingest/route.ts', {
-      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
+      '@/lib/beta-service.server':require('./beta-allow-fixture.cjs').forService('cunning'), 'next/server': server,
       '@/lib/prisma': { prisma: {
         cunningKnowledgeBase: { findUnique: async () => ({ userId: 'user' }), update: async () => ({}) },
         cunningKnowledgeChunk: { count: async () => 0, createMany: async () => { calls++; return { count: 1 }; } },
@@ -88,7 +88,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/cunning/profiles/route.ts', {
-      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
+      '@/lib/beta-service.server':require('./beta-allow-fixture.cjs').forService('cunning'), 'next/server': server,
       '@/lib/prisma': { prisma: { cunningApplicantProfile: { create: async () => { calls++; return { id: 'profile' }; } } } },
       '@/lib/cunning/access': { getUserId: async () => 'user' },
     });
@@ -100,7 +100,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
     let calls = 0;
     const route = load('src/app/api/shodan/preparations/[id]/slides/regenerate/route.ts', {
       ...require('./shodan-editor-test-helpers.cjs'),
-      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
+      '@/lib/beta-service.server':require('./beta-allow-fixture.cjs').forService('shodan'), 'next/server': server,
       '@/lib/prisma': { prisma: {
         user: { findUnique: async () => ({ plan: 'PRO' }) },
         shodanPreparation: { findFirst: async () => ({ id: 'item', slidesJson: [{ title: 'Slide' }], slideImages: [{ imagePath: 'old' }] }) },
@@ -122,7 +122,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
     let calls = 0;
     const route = load('src/app/api/shodan/company-profile/route.ts', {
       '@/lib/org-profile-version': load('src/lib/org-profile-version.ts'),
-      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
+      '@/lib/beta-service.server':require('./beta-allow-fixture.cjs').forService('shodan'), 'next/server': server,
       '@/lib/prisma': { prisma: { shodanCompanyProfile: { upsert: async () => { calls++; return { logoPath: null }; } } } },
       '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'org', role: 'owner' }), hasMinRole: () => true, orgSlugFrom: () => 'org' },
       '@/lib/shodan/storage': { signedUrl: async () => null },
@@ -134,7 +134,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
   {
     let calls = 0;
     const route = load('src/app/api/shodan/company-profile/extract/route.ts', {
-      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': server,
+      '@/lib/beta-service.server':require('./beta-allow-fixture.cjs').forService('shodan'), 'next/server': server,
       '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'org', role: 'owner' }), hasMinRole: () => true, orgSlugFrom: () => 'org' },
       '@/lib/shodan/research': { researchCompany: async () => { calls++; return { companyName: 'Acme' }; } },
       '@/lib/shodan/ai': { draftOwnProfile: async () => ({ companyName: 'Acme', gaps: [] }) },

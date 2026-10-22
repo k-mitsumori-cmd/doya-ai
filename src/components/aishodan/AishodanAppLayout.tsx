@@ -8,12 +8,14 @@ import { isGuestPath } from '@/lib/ui/guest-path'
 import { Menu } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AishodanSidebar from './AishodanSidebar'
+import { useOptionalOrganizationWorkspace } from '@/components/org/OrganizationWorkspaceBoundary'
 
 export default function AishodanAppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   // ⚠️ 第三者が開く画面ではアプリ枠を出さない（社内のサービス一覧を見せない）。
   //    ログイン済みでも面接URLや招待URLを開くことがあるので、セッションだけで判定しない。
   const guest = isGuestPath(pathname)
+  const workspace = useOptionalOrganizationWorkspace()
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -27,6 +29,7 @@ export default function AishodanAppLayout({ children }: { children: React.ReactN
   }, [])
 
   if (guest) return <>{children}</>
+  if (pathname === '/aishodan' && workspace?.scope.kind === 'empty') return <>{children}</>
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">

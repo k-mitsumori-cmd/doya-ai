@@ -6,7 +6,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
+import { useOptionalOrganizationWorkspace, useWorkspaceProof } from '@/components/org/OrganizationWorkspaceBoundary'
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import { DoyaKun } from '@/components/lp'
 import { EmptyState } from '@/components/EmptyState'
@@ -50,8 +51,15 @@ const FILTERS: Array<{ key: string; label: string }> = [
 const LOAD_FORBIDDEN_MESSAGE = '選択中の組織にアクセスできません。ダッシュボードで組織を選び直してください。'
 
 export default function AishodanSessionsPage() {
+  const workspace = useOptionalOrganizationWorkspace()
+  if (!workspace) return <main className="p-8"><SignInReturnLink fallback="/aishodan/sessions" className="text-blue-700 underline">ログインして商談ログを開く</SignInReturnLink></main>
+  return <AishodanSessionsWorkspace />
+}
+
+function AishodanSessionsWorkspace() {
   // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）。見出しは h2（h1 は枠の ToolFrame）
   const uiNext = useUiNext()
+  const proof = useWorkspaceProof()
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [verdict, setVerdict] = useState('')
@@ -72,24 +80,23 @@ export default function AishodanSessionsPage() {
     setSessions([])
     setNextCursor(null)
     try {
-      await ensureSelectedOrg('aishodan')
       const q = verdict ? `?verdict=${encodeURIComponent(verdict)}` : ''
-      const r = await fetch(withOrg('aishodan', `/api/aishodan/sessions${q}`))
+      const r = await fetch(proof.api(`/api/aishodan/sessions${q}`))
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(r.status === 403
         ? '選択中の組織にアクセスできません。ダッシュボードで組織を選び直してください。'
         : d?.error || '商談ログを取得できませんでした')
       const page = parseAishodanPage<SessionRow>(d, 'sessions', 200)
-      if (version !== loadVersion.current) return
+      if (version !== loadVersion.current || !proof.current()) return
       setSessions(page.items)
       setNextCursor(page.nextCursor)
       setTotal(page.total)
     } catch (e) {
-      if (version === loadVersion.current) setError(e instanceof Error ? e.message : '商談ログを取得できませんでした')
+      if (version === loadVersion.current && proof.current()) setError(e instanceof Error ? e.message : '商談ログを取得できませんでした')
     } finally {
-      if (version === loadVersion.current) setLoading(false)
+      if (version === loadVersion.current && proof.current()) setLoading(false)
     }
-  }, [verdict])
+  }, [verdict, proof])
 
   async function loadMore() {
     if (!nextCursor || loadingMore) return
@@ -97,35 +104,36 @@ export default function AishodanSessionsPage() {
     setLoadingMore(true)
     setError('')
     try {
-      await ensureSelectedOrg('aishodan')
       const params = new URLSearchParams({ cursor: nextCursor })
       if (verdict) params.set('verdict', verdict)
-      const r = await fetch(withOrg('aishodan', `/api/aishodan/sessions?${params}`))
+      const r = await fetch(proof.api(`/api/aishodan/sessions?${params}`))
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new AishodanHttpError(d?.error || '商談ログの続きを取得できませんでした', r.status)
       const page = parseAishodanPage<SessionRow>(d, 'sessions', 200)
-      if (version !== loadVersion.current) return
+      if (version !== loadVersion.current || !proof.current()) return
       setSessions(appendAishodanPage(sessions, page, total))
       setNextCursor(page.nextCursor)
     } catch (e) {
-      if (version === loadVersion.current) {
+      if (version === loadVersion.current && proof.current()) {
         setError(e instanceof Error ? e.message : '商談ログの続きを取得できませんでした')
         setErrorStatus(failureStatus(e))
       }
     } finally {
-      if (version === loadVersion.current) setLoadingMore(false)
+      if (version === loadVersion.current && proof.current()) setLoadingMore(false)
     }
   }
 
   useEffect(() => {
     void load()
+    const versionRef = loadVersion
+    return () => { versionRef.current++ }
   }, [load])
 
   return (
     <div className={uiNext ? 'pb-12' : 'min-h-screen bg-slate-50 pb-24'}>
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-4xl px-4 py-4">
-          <Link href="/aishodan" className={`text-xs text-slate-500 hover:underline font-semibold${uiNext ? ` inline-flex items-center rounded-lg${tap}` : ''}`}>← ダッシュボード</Link>
+          <Link href={proof.href('/aishodan')} className={`text-xs text-slate-500 hover:underline font-semibold${uiNext ? ` inline-flex items-center rounded-lg${tap}` : ''}`}>← ダッシュボード</Link>
           <AishodanHeading className="text-lg font-bold text-slate-900">商談ログ</AishodanHeading>
         </div>
       </header>
@@ -158,14 +166,15 @@ export default function AishodanSessionsPage() {
               failure={describeAishodanFailure(error === LOAD_FORBIDDEN_MESSAGE ? 403 : 0, '商談ログを読み込めませんでした。')}
               onRetry={() => void load()}
               retryLabel="再読み込みする"
-              backHref="/aishodan"
+              backHref={proof.href('/aishodan')}
               backLabel="ダッシュボードで組織を選び直す"
+              returnHref={proof.href('/aishodan/sessions')}
             />
           ) : error && sessions.length === 0 ? (
             <div role="alert" className="py-6 text-center">
               <p className="text-sm font-semibold text-red-700">{error}</p>
               <button type="button" onClick={() => void load()} className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">再読み込みする</button>
-              <Link href="/aishodan" className="ml-3 inline-block text-sm font-bold text-blue-700 underline">組織を確認する</Link>
+              <Link href={proof.href('/aishodan')} className="ml-3 inline-block text-sm font-bold text-blue-700 underline">組織を確認する</Link>
             </div>
           ) : sessions.length === 0 && uiNext ? (
             <DsEmptyState
@@ -174,7 +183,7 @@ export default function AishodanSessionsPage() {
               description={verdict === '' ? '商談URLを相手に送ると、発話の記録と適合度の判定がここに残ります。' : 'ほかの判定を選ぶと、商談が見つかるかもしれません。'}
               art={verdict === '' ? '/aishodan/empty-sessions.webp' : undefined}
               action={verdict === ''
-                ? <Button href="/aishodan" icon="Link2">商談URLを発行する</Button>
+                ? <Button href={proof.href('/aishodan')} icon="Link2">商談URLを発行する</Button>
                 : <Button onClick={() => { loadVersion.current++; setVerdict('') }} variant="secondary" icon="RotateCcw">すべての判定を表示</Button>}
             />
           ) : sessions.length === 0 ? (
@@ -187,13 +196,13 @@ export default function AishodanSessionsPage() {
             <div>
             {error && uiNext ? (
               <div className="mb-3">
-                <AishodanFailureNotice failure={describeAishodanFailure(errorStatus, '続きを読み込めませんでした。')} onRetry={() => void loadMore()} retryLabel="もう一度読み込む" />
+                <AishodanFailureNotice failure={describeAishodanFailure(errorStatus, '続きを読み込めませんでした。')} onRetry={() => void loadMore()} retryLabel="もう一度読み込む" returnHref={proof.href('/aishodan/sessions')} />
               </div>
             ) : error && <div role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
             <div className="divide-y divide-slate-100">
               {sessions.map((s) => (
                 // 新しい見た目: 375px では札（練習・日程調整済み・適合・判定）を名前の下に回す。横に並べると名前が数文字しか見えない
-                <Link key={s.id} href={`/aishodan/sessions/${s.id}`} className={uiNext
+                <Link key={s.id} href={proof.href(`/aishodan/sessions/${s.id}`)} className={uiNext
                   ? `flex flex-col gap-2 rounded-lg px-1 py-3 hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:gap-3${tap}`
                   : 'flex items-center justify-between gap-3 py-3 hover:bg-slate-50'}>
                   <div className="min-w-0">

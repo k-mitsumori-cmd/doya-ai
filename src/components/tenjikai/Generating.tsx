@@ -9,10 +9,10 @@ import Image from 'next/image'
 
 const STEP_MS = 520
 
-export default function Generating({ analysis, input, onDone }: { analysis: SiteAnalysis; input: ProjectInput; onDone: () => void }) {
+export default function Generating({ analysis, input, onDone }: { analysis: SiteAnalysis | null; input: ProjectInput; onDone: () => void }) {
   const { w, d, venue } = boothSize(input)
   const steps = [
-    `${analysis.domain} を読み込み`,
+    'サイトの内容を確認',
     '訴求点とターゲットを抽出',
     'ブランドカラーを取得',
     `${venue.name} の規定を確認（高さ ${venue.maxHeightM}m）`,
@@ -47,12 +47,12 @@ export default function Generating({ analysis, input, onDone }: { analysis: Site
         </div>
         <div className="space-y-3">
           <div className="h-5 w-1/3 rounded bg-gray-100" />
-          <p className="whitespace-pre-line font-display text-2xl leading-snug" style={{ color: analysis.colors.secondary }}>
-            {analysis.headline}
+          <p className="whitespace-pre-line font-display text-2xl leading-snug" style={{ color: analysis?.colors.secondary }}>
+            {analysis?.headline ?? 'サイトを解析しています'}
           </p>
           <div className="grid grid-cols-3 gap-2 pt-2">
-            {analysis.valueProps.map((v, i) => (
-              <motion.div key={v.title} initial={{ opacity: 0.4 }} animate={{ opacity: done > 1 ? 1 : 0.4, borderColor: done > 1 ? analysis.colors.primary : ds.line }} transition={{ delay: i * 0.1 }} className="rounded-xl border-2 p-2">
+            {(analysis?.valueProps ?? []).map((v, i) => (
+              <motion.div key={v.title} initial={{ opacity: 0.4 }} animate={{ opacity: done > 1 ? 1 : 0.4, borderColor: done > 1 ? analysis?.colors.primary : ds.line }} transition={{ delay: i * 0.1 }} className="rounded-xl border-2 p-2">
                 <p className="text-[11px] font-black text-ink">{v.title}</p>
                 <div className="mt-1 h-1.5 w-full rounded bg-gray-100" />
                 <div className="mt-1 h-1.5 w-2/3 rounded bg-gray-100" />
@@ -69,7 +69,7 @@ export default function Generating({ analysis, input, onDone }: { analysis: Site
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
         />
         <AnimatePresence>
-          {done > 2 && (
+          {analysis && done > 2 && (
             <motion.div initial={false} animate={{ opacity: 1, y: 0 }} className="absolute bottom-4 right-4 flex gap-1.5 rounded-full bg-white/90 p-1.5 shadow-lg backdrop-blur">
               {Object.values(analysis.colors).map((c, i) => (
                 <motion.span key={c} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.08, type: 'spring' }} className="h-6 w-6 rounded-full ring-2 ring-white" style={{ background: c }} />

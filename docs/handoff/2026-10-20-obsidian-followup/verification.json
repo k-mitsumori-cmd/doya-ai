@@ -1,0 +1,21 @@
+{
+  "status": "local-gates-passed",
+  "baseCandidate": "9c985e761bf9be41fa5d8c4f8525a968b3eb27a6",
+  "sourceInventorySha256": "f129377f1c48a36821b57e2ab78b4403501c702ce07cea8eb6281bdfd7fb6a25",
+  "sourceHashesUnchanged": true,
+  "streamProviderCasesPassed": 21,
+  "blockedRequestCases": 12,
+  "browserCompatibilityCases": 4,
+  "unitSuites": 7,
+  "typecheck": "passed",
+  "lint": "passed-with-existing-warnings",
+  "commonSecurityRegression": "passed",
+  "productionReflected": false,
+  "paidProviderCalls": false,
+  "productionDatabaseWrites": false,
+  "remaining": [
+    "GitHub CI and preview on the new commit",
+    "Real authenticated browser and provider QA",
+    "Production release"
+  ]
+}

@@ -23,5 +23,5 @@ export default async function SiteDetailPage({ params, searchParams }: Props) {
       </div>
     )
   }
-  return <SiteDetailClient initial={detail} created={sp.created === '1'} />
+  return <SiteDetailClient key={`${userId}:${id}`} initial={detail} serverActorId={userId} created={sp.created === '1'} />
 }

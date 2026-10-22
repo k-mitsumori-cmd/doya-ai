@@ -23,7 +23,8 @@ export async function requestOrgJson(service: 'aio' | 'shodan' | 'quote' | 'aish
   if (url.origin !== 'https://org-client.invalid' || !url.pathname.startsWith(`/api/${service}/`) || url.hash) throw new OrgResponseError(writing)
   // Replace any earlier org query so the explicit current scope always wins.
   if (orgSlug === null) {
-    if (!['quote', 'aishodan'].includes(service) || url.pathname !== `/api/${service}/organizations`) throw new OrgResponseError(writing)
+    if (!['quote', 'aishodan'].includes(service) || url.pathname !== `/api/${service}/organizations`
+      || writing && !(service === 'quote' && init.method === 'POST')) throw new OrgResponseError(writing)
     url.searchParams.delete('org')
   } else url.searchParams.set('org', orgSlug)
   const controller = new AbortController()

@@ -11,8 +11,9 @@ import { INTERVIEW_NAV } from '@/lib/interview/nav'
 
 export default function InterviewShellFrame({ children }: { children: React.ReactNode }) {
   const uiNext = useUiNext()
+  const pathname = usePathname()
   // 記事エディタは画面いっぱいに使うので、余白を付けない
-  const padded = uiNext && !/\/edit\/?$/.test(usePathname() || '')
+  const padded = uiNext && !/\/edit\/?$/.test(pathname || '')
   return (
     <ToolFrame
       serviceId="interview"

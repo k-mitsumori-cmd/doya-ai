@@ -1,0 +1,47 @@
+{
+  "checkedAt": "2026-10-20T06:42:09.893368+00:00",
+  "head": "cedb601aa4d6f9f4f998bb8b8690199838c4e973",
+  "files": [
+    "src/app/(shell)/sfa/Entry.tsx",
+    "src/app/(shell)/shodan/Entry.tsx",
+    "src/lib/use-entry-organization.ts",
+    "scripts/security-regression/verify-organization-entry-mounted.cjs",
+    "scripts/security-regression/verify-entry-submission.cjs"
+  ],
+  "sha256": {
+    "src/app/(shell)/sfa/Entry.tsx": "d477f7eaac979839b70319b99db2d75aecc6b0912a48774963d30130b4cf466c",
+    "src/app/(shell)/shodan/Entry.tsx": "e86a1aa59606e5a28d4622fc7018edb20cfaccbb04877bb9111ab78bee7692f9",
+    "src/lib/use-entry-organization.ts": "75f67ef1249feabb4d30d1b9451a62035c1a1b482cfadf68b8a983c8cbbed0cb",
+    "scripts/security-regression/verify-organization-entry-mounted.cjs": "740f4697ab03d03189d8012175278c65d7fbd6d19fae031ce97ca841177ae98a",
+    "scripts/security-regression/verify-entry-submission.cjs": "6ac4b1db0678857c4960e2ac023ee35e476dbf90711400ed769b87cc802cab0d"
+  },
+  "baselineSha256": {
+    "sfa": "da167e699c98615f67475096c6dc8c0c687f791d8ba60ae2cbe077e778933e40",
+    "shodan": "498be6faece54ac9c4aa584ea242f374d7694d4fb39c5949f8940b991bf3fb88"
+  },
+  "before": {
+    "passed": 10,
+    "failed": 32,
+    "meaning": "42 same mounted checks on original entry sources; failure count is not a defect count"
+  },
+  "after": {
+    "passed": 42,
+    "failed": 0
+  },
+  "existingSubmissionCases": {
+    "passed": 18,
+    "assertionsRemoved": 0,
+    "fixtureChange": "scope.current() returns true for the original extracted create-handler cases"
+  },
+  "targetedLint": "passed, no warnings or errors",
+  "typecheck": {
+    "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false",
+    "exitCode": 0,
+    "logBytes": 0,
+    "boundary": "Entry targeted source complete; parent will run one integrated typecheck after home freeze"
+  },
+  "productionWrites": false,
+  "paidProviders": false,
+  "realOAuth": false,
+  "commitOrPush": false
+}

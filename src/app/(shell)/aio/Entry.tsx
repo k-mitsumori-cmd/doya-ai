@@ -18,6 +18,7 @@ import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from '@/app/(shell)/aio/lp-data'
 import { AioSovMock, AioEnginesMock, AioCitationsMock } from '@/app/(shell)/aio/mocks'
 
 const SVC = getServiceById('aio')!
+type EntryPhase = 'loading' | 'empty' | 'guest' | 'error' | 'reauth'
 
 const ROWS: ShowcaseRow[] = [
   {
@@ -44,13 +45,16 @@ export default function AioEntryPage() {
   // 新しい見た目（チェックリスト §5.1）かどうか
   const uiNext = useUiNext()
   const router = useRouter()
-  const [phase, setPhase] = useState<'loading' | 'ready'>('loading')
-  const [authed, setAuthed] = useState(false)
+  const [entry, setEntry] = useState<{ version: number; phase: EntryPhase }>({ version: 0, phase: 'loading' })
+  const [attempt, setAttempt] = useState(0)
   const [serviceUrl, setServiceUrl] = useState('')
   const { data: session, status } = useSession()
   const actor = status === 'authenticated' ? session?.user?.id || '' : ''
+  const previousActor = useRef(actor)
   const identity = useRef({ actor, status, version: 0 })
   if (identity.current.actor !== actor || identity.current.status !== status) identity.current = { actor, status, version: identity.current.version + 1 }
+  const phase = status === 'loading' || entry.version !== identity.current.version ? 'loading' : entry.phase
+  const authed = status === 'authenticated' && !!actor
   const flow = useAioQuickStart({
     url: serviceUrl,
     onComplete: (slug, autoScan) => router.replace(`/aio/${encodeURIComponent(slug)}${autoScan ? '?scan=1' : ''}`),
@@ -63,69 +67,72 @@ export default function AioEntryPage() {
     const controller = new AbortController()
     const version = identity.current.version
     const current = () => !controller.signal.aborted && identity.current.version === version
-    setPhase('loading')
-    setAuthed(status === 'authenticated')
-    void readBillingResponse('/api/aio/me', { method: 'GET' }, controller.signal)
-      .then(({ ok, data }) => {
+    const show = (next: EntryPhase) => { if (current()) setEntry({ version, phase: next }) }
+    if (previousActor.current !== actor) {
+      previousActor.current = actor
+      setServiceUrl('')
+    }
+    if (status === 'unauthenticated') {
+      show('guest')
+      return () => controller.abort()
+    }
+    if (!actor) {
+      show('reauth')
+      return () => controller.abort()
+    }
+    show('loading')
+    void readBillingResponse('/api/aio/me', { method: 'GET', headers: { 'X-Aio-Actor-Id': actor } }, controller.signal)
+      .then(({ ok, status: responseStatus, data }) => {
         if (!current()) return
+        if (responseStatus === 401 || responseStatus === 409) { show('reauth'); return }
         if (!ok || typeof data.authenticated !== 'boolean' || !Array.isArray(data.memberships)) throw new Error('Invalid workspace response')
+        if (!data.authenticated || data.actorId !== actor) { show('reauth'); return }
         const memberships = data.memberships
-        if (data.authenticated && memberships.length) {
-          const last = memberships[memberships.length - 1]
-          if (!last || typeof last !== 'object' || typeof last.slug !== 'string' || !last.slug || last.slug.length > 180 || /[\s/\\?#\u0000-\u001f\u007f]/.test(last.slug)) throw new Error('Invalid workspace slug')
-          // The destination also recovers the saved operation with GET only.
-          router.replace(`/aio/${encodeURIComponent(last.slug)}/scan`)
+        if (typeof data.onboarded !== 'boolean' || data.onboarded !== (memberships.length > 0)) throw new Error('Inconsistent workspace response')
+        const slugs = memberships.map(member => {
+          if (!member || typeof member !== 'object') throw new Error('Invalid workspace membership')
+          const slug = (member as { slug?: unknown }).slug
+          if (typeof slug !== 'string' || !slug || slug === '.' || slug === '..' || slug.length > 180 || /[\s/\\?#\u0000-\u001f\u007f]/.test(slug)) throw new Error('Invalid workspace slug')
+          return slug
+        })
+        if (slugs.length) {
+          const slug = slugs[slugs.length - 1]
+          // Remain in the loading view until the owned workspace opens.
+          router.replace(`/aio/${encodeURIComponent(slug)}/scan`)
+          return
         }
-        setPhase('ready')
+        show('empty')
       })
-      .catch(() => { if (current()) setPhase('ready') })
+      .catch(() => { show('error') })
     return () => controller.abort()
-  }, [router, actor, status])
+  }, [router, actor, status, attempt])
+
+  useEffect(() => {
+    const retire = () => {
+      identity.current.version += 1
+      setEntry({ version: identity.current.version, phase: 'loading' })
+    }
+    const restore = (event: PageTransitionEvent) => {
+      if (!event.persisted) return
+      retire()
+      setAttempt(value => value + 1)
+    }
+    window.addEventListener('pagehide', retire)
+    window.addEventListener('pageshow', restore)
+    return () => {
+      window.removeEventListener('pagehide', retire)
+      window.removeEventListener('pageshow', restore)
+    }
+  }, [])
 
   const start = async () => {
-    if (flow.disabled) return
+    if (flow.disabled || entry.version !== identity.current.version || (phase !== 'empty' && phase !== 'guest')) return
     if (!serviceUrl.trim()) { toast.error('URLを入力してください'); return }
     await flow.start()
   }
 
-  if (phase === 'loading' && uiNext) {
-    // 新しい見た目: 全画面の水色の読み込みにせず、中身の場所にだけ小さく出す（UI 品質 C-1・C-2・F-2）
-    return (
-      <div role="status" className="grid place-items-center py-20 text-center">
-        <DoyaKun mood="thinking" size={72} float={false} />
-        <p className="mt-3 text-sm text-slate-500 font-bold">組織を確認しています…</p>
-      </div>
-    )
-  }
-
-  if (phase === 'loading') {
-    return (
-      <div className="min-h-screen grid place-items-center bg-gradient-to-b from-white to-cyan-50">
-        <div className="text-center">
-          <DoyaKun mood="thinking" size={88} />
-          <p className="mt-3 text-slate-400 font-bold">読み込み中…</p>
-        </div>
-      </div>
-    )
-  }
-
-  // 未ログイン / 未ワークスペース = ランディング（URLクイックスタートは温存）
-  return (
-    <LpShell serviceName="ドヤAIO" icon="query_stats" ctaHref={CTA} loginHref="/auth/signin?callbackUrl=/aio" ctaLabel="無料で診断する" accent={ACCENT}>
-      <ProductHero
-        eyebrow="AI可視性 / AEO"
-        title="そのブランド、"
-        highlight="AIは推してる？"
-        subtitle="ChatGPT・Gemini・Claude・Perplexityでの言及・引用・順位を測定。URLを入れるだけで、AIからの見られ方がわかります。"
-        note="Googleアカウントで無料ではじめられます"
-        ctaHref={CTA}
-        ctaLabel="無料で診断する"
-        subCtaHref="#start"
-        subCtaLabel="URLで今すぐ診断"
-        visual={<MockWindow title="AI可視性ランキング"><AioSovMock /></MockWindow>}
-      />
-
-      {/* URLクイックスタート（既存の quick-start ロジックを温存） */}
+  const homeLink = <nav aria-label="共通メニュー" className="mx-auto max-w-5xl px-4 pt-4"><a href="/home" className="inline-flex rounded-lg px-3 py-2 text-sm font-bold text-blue-700 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">経営ホームへ戻る</a></nav>
+  const quickStart = (
       <section id="start" className="relative -mt-6 md:-mt-10 pb-4">
         <div className="max-w-xl mx-auto px-5">
           <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-5 sm:p-6"
@@ -159,6 +166,66 @@ export default function AioEntryPage() {
           </div>
         </div>
       </section>
+  )
+
+  if (phase === 'error' || phase === 'reauth') {
+    return <>{homeLink}<section role="alert" className="mx-auto max-w-xl px-5 py-10">
+      <h1 className="text-xl font-bold">{phase === 'reauth' ? 'ログイン状態を確認できませんでした' : '組織情報を確認できませんでした'}</h1>
+      <p className="mt-3 text-sm text-slate-600">{phase === 'reauth' ? 'もう一度ログインしてから、作業を続けてください。' : '通信状況をご確認のうえ、もう一度確認してください。組織の新規作成は行っていません。'}</p>
+      {flow.view?.intent && <div role="status" className="mt-4 rounded-xl border border-slate-200 p-4">
+        <p>前の開始処理が残っています。新しく開始せず、保存状況を確認できます。</p>
+        <button type="button" disabled={flow.view.busy} onClick={() => void flow.recover()} className="mt-3 rounded-lg border border-blue-700 px-3 py-2 font-bold text-blue-700 disabled:opacity-50">保存状況を確認</button>
+      </div>}
+      {phase === 'reauth' ? <a href="/auth/signin?callbackUrl=%2Faio" className="mt-4 inline-flex rounded-xl bg-blue-700 px-4 py-3 font-bold text-white">ログインする</a> : <button type="button" onClick={() => setAttempt(value => value + 1)} className="mt-4 rounded-xl bg-blue-700 px-4 py-3 font-bold text-white">もう一度確認する</button>}
+    </section></>
+  }
+  if (phase === 'empty') {
+    return <>{homeLink}<main className="mx-auto max-w-3xl px-5 py-10">
+      <h1 className="text-2xl font-bold">AI検索対策をはじめる</h1>
+      <p className="mt-3 mb-10 text-slate-600">自社サイトのURLを入れると、作業スペースを作成し、AI検索での見られ方を調べます。</p>
+      {quickStart}
+    </main></>
+  }
+
+  if (phase === 'loading' && uiNext) {
+    // 新しい見た目: 全画面の水色の読み込みにせず、中身の場所にだけ小さく出す（UI 品質 C-1・C-2・F-2）
+    return (
+      <>{homeLink}<div role="status" className="grid place-items-center py-20 text-center">
+        <DoyaKun mood="thinking" size={72} float={false} />
+        <p className="mt-3 text-sm text-slate-500 font-bold">組織を確認しています…</p>
+      </div></>
+    )
+  }
+
+  if (phase === 'loading') {
+    return (
+      <>{homeLink}<div className="min-h-screen grid place-items-center bg-gradient-to-b from-white to-cyan-50">
+        <div className="text-center">
+          <DoyaKun mood="thinking" size={88} />
+          <p className="mt-3 text-slate-400 font-bold">読み込み中…</p>
+        </div>
+      </div></>
+    )
+  }
+
+  // 未ログイン時の紹介表示。確認済みの未所属ユーザーには上の作業入口を表示する。
+  return (
+    <LpShell serviceName="ドヤAIO" icon="query_stats" ctaHref={CTA} loginHref="/auth/signin?callbackUrl=/aio" ctaLabel="無料で診断する" accent={ACCENT}>
+      <ProductHero
+        eyebrow="AI可視性 / AEO"
+        title="そのブランド、"
+        highlight="AIは推してる？"
+        subtitle="ChatGPT・Gemini・Claude・Perplexityでの言及・引用・順位を測定。URLを入れるだけで、AIからの見られ方がわかります。"
+        note="Googleアカウントで無料ではじめられます"
+        ctaHref={CTA}
+        ctaLabel="無料で診断する"
+        subCtaHref="#start"
+        subCtaLabel="URLで今すぐ診断"
+        visual={<MockWindow title="AI可視性ランキング"><AioSovMock /></MockWindow>}
+      />
+
+      {quickStart}
+
 
       <HowItWorks
         title={<>URLを入れるだけの<br className="md:hidden" />3ステップ</>}

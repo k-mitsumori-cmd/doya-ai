@@ -1,6 +1,7 @@
 'use client'
 import { PageTitle } from '@/components/hr/ui-next'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
+import HrOwnerTransferPanel from '@/components/hr/HrOwnerTransferPanel'
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { loadHrDepartmentList } from '@/lib/hr/department-list-client'
@@ -97,36 +98,45 @@ function getColorByIndex(arr: string[], name: string) {
 export default function HrSettingsPage() {
   const { data: session, status } = useSession()
   const actor = (session?.user as { id?: string } | undefined)?.id ?? ''
+  const retainedActor = useRef('')
+  if (status === 'authenticated' && actor) retainedActor.current = actor
+  const visibleActor = status === 'loading' ? retainedActor.current : actor
   const scope = JSON.stringify([status, actor])
   const epoch = useRef({ scope, version: 0 })
   if (epoch.current.scope !== scope) epoch.current = { scope, version: epoch.current.version + 1 }
-  if (status === 'loading') return <div role="status">認証情報を確認しています。</div>
-  if (status !== 'authenticated' || !actor) return <div role="alert">設定を確認するにはログインしてください。<Link href="/auth/signin?callbackUrl=/hr/settings">ログインする</Link></div>
-  return <HrSettingsForActor key={JSON.stringify([actor, epoch.current.version])} actor={actor} />
+  if (status === 'loading' && !visibleActor) return <div role="status">認証情報を確認しています。</div>
+  if (status !== 'loading' && (status !== 'authenticated' || !actor)) return <div role="alert">設定を確認するにはログインしてください。<Link href="/auth/signin?callbackUrl=/hr/settings">ログインする</Link></div>
+  return <>
+    {status === 'loading' && <div role="status">認証情報を確認しています。</div>}
+    <div ref={element => { if (element) element.inert = status !== 'authenticated' }} style={status === 'loading' ? { display: 'none' } : undefined}>
+      <HrSettingsForActor key={visibleActor} actor={visibleActor} authProof={epoch.current.version} active={status === 'authenticated'} />
+    </div>
+  </>
 }
 
 /** Each authentication scope owns its form, authority, pending requests and notifications. */
-function HrSettingsForActor({ actor }: { actor: string }) {
+function HrSettingsForActor({ actor, authProof, active }: { actor: string; authProof: number; active: boolean }) {
   const organizationScope = useHrOrganizationRequest()
   const lifetime = useRef<{ generation: number; controller: AbortController | null }>({ generation: 0, controller: null })
   useLayoutEffect(() => {
     const controller = new AbortController()
     lifetime.current = { generation: lifetime.current.generation + 1, controller }
     return () => { controller.abort() }
-  }, [])
+  }, [authProof])
   const live = () => Boolean(organizationScope.isCurrent() && lifetime.current.controller && !lifetime.current.controller.signal.aborted)
-  const toast = Object.assign((...args: Parameters<typeof rawToast>) => { if (live()) return rawToast(...args) }, {
-    success: (...args: Parameters<typeof rawToast.success>) => { if (live()) return rawToast.success(...args) },
-    error: (...args: Parameters<typeof rawToast.error>) => { if (live()) return rawToast.error(...args) },
+  const toast = Object.assign((...args: Parameters<typeof rawToast>) => { if (actionCurrent()) return rawToast(...args) }, {
+    success: (...args: Parameters<typeof rawToast.success>) => { if (actionCurrent()) return rawToast.success(...args) },
+    error: (...args: Parameters<typeof rawToast.error>) => { if (actionCurrent()) return rawToast.error(...args) },
   })
   const fetch = async (url: string, init: RequestInit = {}) => {
     const captured = lifetime.current
-    if (!captured.controller || captured.controller.signal.aborted) throw Error('操作が中断されました。')
+    if (!active || authProofRef.current !== authProof || !captured.controller || captured.controller.signal.aborted) throw Error('操作が中断されました。')
     const controller = new AbortController()
     const abort = () => controller.abort()
     const signals = [captured.controller.signal, init.signal].filter((signal): signal is AbortSignal => Boolean(signal))
     for (const signal of signals) { signal.addEventListener('abort', abort, { once: true }); if (signal.aborted) abort() }
-    const current = () => organizationScope.isCurrent() && lifetime.current === captured && !captured.controller?.signal.aborted && !controller.signal.aborted
+    const current = () => active && authProofRef.current === authProof && organizationScope.isCurrent() &&
+      lifetime.current === captured && !captured.controller?.signal.aborted && !controller.signal.aborted
     try {
       const response = await readDepartmentSettingsResponse(url, init, controller.signal, organizationScope.request)
       if (!current()) throw Error('操作が中断されました。')
@@ -147,6 +157,13 @@ function HrSettingsForActor({ actor }: { actor: string }) {
   const [members, setMembers] = useState<OrgMember[]>([])
   /** 自分の権限。誰にどの操作を出すかの判断に使う */
   const [myRole, setMyRole] = useState<string>('MEMBER')
+  const [roleReadState, setRoleReadState] = useState({ verified: false, proof: -1 })
+  const roleVerified = active && roleReadState.verified && roleReadState.proof === authProof
+  const setRoleVerified = (verified: boolean) => setRoleReadState({ verified, proof: verified ? authProof : -1 })
+  const roleReadVersion = useRef(0)
+  const authProofRef = useRef(authProof)
+  if (authProofRef.current !== authProof) { authProofRef.current = authProof; roleReadVersion.current++ }
+  const actionCurrent = () => active && authProofRef.current === authProof && live()
   const [myMemberId, setMyMemberId] = useState<string>('')
   const [memberBusy, setMemberBusy] = useState<string | null>(null)
   const [memberMsg, setMemberMsg] = useState<{ id: string; ok: boolean; text: string } | null>(null)
@@ -156,6 +173,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
   const [searchingEmployees, setSearchingEmployees] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  const [refreshError, setRefreshError] = useState(false)
   const [auditLogsError, setAuditLogsError] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -173,6 +191,34 @@ function HrSettingsForActor({ actor }: { actor: string }) {
   const [refreshingDepartments, setRefreshingDepartments] = useState(false)
   const departmentMutationBusy = useRef(false)
   const departmentRefreshBusy = useRef(false)
+  const pendingWrites = useRef(new Map<symbol, string>())
+  const uncertainWriteKinds = useRef(new Set<string>())
+  const [uncertainWrites, setUncertainWrites] = useState<string[]>([])
+  const beginWrite = (kind: string) => {
+    const ticket = Symbol(kind)
+    pendingWrites.current.set(ticket, kind)
+    return ticket
+  }
+  const finishWrite = (_kind: string, ticket: symbol) => { pendingWrites.current.delete(ticket) }
+  const markWriteUnknown = (kind: string) => {
+    uncertainWriteKinds.current.add(kind)
+    setUncertainWrites(previous => [...new Set([...previous, kind])])
+  }
+  useLayoutEffect(() => {
+    const uncertain = [...pendingWrites.current.values()]
+    pendingWrites.current.clear()
+    for (const kind of uncertain) uncertainWriteKinds.current.add(kind)
+    if (uncertain.length) setUncertainWrites(previous => [...new Set([...previous, ...uncertain])])
+    setInviting(false)
+    setSaving(false)
+    setMemberBusy(null)
+    departmentMutationBusy.current = false
+    departmentRefreshBusy.current = false
+    setCreatingDept(false)
+    setDeletingDeptId(null)
+    setRefreshingDepartments(false)
+    if (uncertain.includes('department-delete')) setDepartmentListWarning('前回の部署削除結果を確認できません。削除を繰り返さず、部署一覧を再取得してください。')
+  }, [authProof])
   const departmentLife = useRef(0)
   const departmentNetwork = useRef<AbortController | null>(null)
   useEffect(() => {
@@ -180,22 +226,24 @@ function HrSettingsForActor({ actor }: { actor: string }) {
     const controller = new AbortController()
     departmentNetwork.current = controller
     return () => { controller.abort(); if (departmentLife.current === life) departmentLife.current++ }
-  }, [])
+  }, [authProof])
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [inviteUrl, setInviteUrl] = useState('')
   const [inviteEmailSent, setInviteEmailSent] = useState(false)
   const [inviteUrlCopied, setInviteUrlCopied] = useState(false)
   const [generatingInviteUrl, setGeneratingInviteUrl] = useState(false)
-  const [showTransferModal, setShowTransferModal] = useState(false)
-  const [transferEmail, setTransferEmail] = useState('')
-  const [transferring, setTransferring] = useState(false)
 
   useEffect(() => {
+    if (!active || (settings.id && !loadError && retryKey === 0)) return
     const controller = new AbortController()
     async function fetchSettings() {
-      setLoading(true)
+      const readProof = authProof
+      const refreshExisting = Boolean(settings.id && !loadError)
+      if (!refreshExisting) setLoading(true)
       setLoadError(false)
+      setRefreshError(false)
       setAuditLogsError(false)
+      const authorityRead = ++roleReadVersion.current
       try {
         const settingsRes = await fetch('/api/hr/settings', { cache: 'no-store', signal: controller.signal })
         if (!settingsRes.ok) throw new Error('設定を取得できませんでした')
@@ -211,11 +259,16 @@ function HrSettingsForActor({ actor }: { actor: string }) {
           typeof data.settings.id !== 'string' || !data.settings.id || deptData.organizationId !== data.settings.id
         ) throw new Error('設定の応答が不正です')
         const departmentRows = parseSettingsDepartmentList(deptData, data.settings.id)
-        if (controller.signal.aborted) return
-        setSettings(data.settings)
-        setMembers(data.members)
-        setMyRole(data.myRole)
-        setMyMemberId(data.myMemberId)
+        if (controller.signal.aborted || !live() || authProofRef.current !== readProof || authorityRead !== roleReadVersion.current) return
+        if (settings.id && data.settings.id !== settings.id) throw new Error('組織の選択が変わりました')
+        // A manual authority check must not overwrite an unsaved settings draft.
+        if (!settings.id) setSettings(data.settings)
+        if (authorityRead === roleReadVersion.current) {
+          setMembers(data.members)
+          setMyRole(data.myRole)
+          setMyMemberId(data.myMemberId)
+          setRoleVerified(true)
+        }
         setDepartments(departmentRows)
         // Fetch audit logs
         try {
@@ -224,7 +277,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
           const logData = await logRes.json()
           const rawLogs = logData.items ?? logData.logs
           if (!Array.isArray(rawLogs)) throw new Error('監査ログの応答が不正です')
-          if (!controller.signal.aborted) setAuditLogs(rawLogs.map((l: any) => ({
+          if (!controller.signal.aborted && live() && authProofRef.current === readProof && authorityRead === roleReadVersion.current) setAuditLogs(rawLogs.map((l: any) => ({
             id: l.id,
             action: l.action,
             actor: l.userName || l.actor || '',
@@ -232,52 +285,85 @@ function HrSettingsForActor({ actor }: { actor: string }) {
             timestamp: l.createdAt || l.timestamp || '',
           })))
         } catch {
-          if (!controller.signal.aborted) setAuditLogsError(true)
+          if (!controller.signal.aborted && live() && authProofRef.current === readProof && authorityRead === roleReadVersion.current) setAuditLogsError(true)
         }
       } catch {
-        if (!controller.signal.aborted) setLoadError(true)
+        if (!controller.signal.aborted && live() && authProofRef.current === readProof && authorityRead === roleReadVersion.current) {
+          if (refreshExisting) setRefreshError(true)
+          else setLoadError(true)
+          setRoleVerified(false)
+        }
       } finally {
-        if (!controller.signal.aborted) setLoading(false)
+        if (!refreshExisting && !controller.signal.aborted && live() && authProofRef.current === readProof) setLoading(false)
       }
     }
     void fetchSettings()
     return () => controller.abort()
-  }, [retryKey])
+  }, [retryKey, authProof, active])
 
   /** メンバー一覧を読み直す */
   const reloadMembers = async () => {
-    const res = await fetch('/api/hr/settings')
-    if (!res.ok) return
-    const d = await res.json()
-    if (d.members) setMembers(d.members)
-    if (d.myRole) setMyRole(d.myRole)
-    if (d.myMemberId) setMyMemberId(d.myMemberId)
+    if (!actionCurrent()) return false
+    const read = ++roleReadVersion.current
+    try {
+      const res = await fetch('/api/hr/settings', { cache: 'no-store' })
+      if (!res.ok) throw new Error('権限を再確認できませんでした')
+      const d = await res.json()
+      if (!actionCurrent() || read !== roleReadVersion.current || d?.settings?.id !== settings.id ||
+          !Array.isArray(d.members) || !ROLE_RANK[d.myRole] || typeof d.myMemberId !== 'string') return false
+      setMembers(d.members)
+      setMyRole(d.myRole)
+      setMyMemberId(d.myMemberId)
+      setRoleVerified(true)
+      return true
+    } catch {
+      if (actionCurrent() && read === roleReadVersion.current) setRoleVerified(false)
+      return false
+    }
+  }
+  useEffect(() => {
+    if (!active || !settings.id) return
+    setRoleVerified(false)
+    void reloadMembers()
+  }, [authProof, active])
+  const refreshAuthorityAfterTransfer = () => {
+    if (!actionCurrent()) return
+    setRoleVerified(false)
+    void reloadMembers()
   }
 
   useEffect(() => {
-    if (!linkingMemberId) return
+    if (!linkingMemberId || !active || !settings.id) return
     const controller = new AbortController()
+    const captured = lifetime.current
+    const currentSearch = () => active && authProofRef.current === authProof &&
+      lifetime.current === captured && !captured.controller?.signal.aborted &&
+      organizationScope.isCurrent() && !controller.signal.aborted
     setSearchingEmployees(true)
     const timer = window.setTimeout(async () => {
       try {
         const params = new URLSearchParams({ search: employeeSearch.trim(), pageSize: '20' })
         const res = await fetch(`/api/hr/employees?${params}`, { signal: controller.signal })
+        if (!currentSearch()) return
         if (!res.ok) throw new Error('従業員候補を取得できませんでした')
         const data = await res.json()
-        setEmployeeOptions(data.items ?? [])
+        if (currentSearch()) setEmployeeOptions(data.items ?? [])
       } catch (error) {
-        if (!controller.signal.aborted) {
+        if (currentSearch()) {
           setEmployeeOptions([])
           toast.error(error instanceof Error ? error.message : '従業員候補を取得できませんでした')
         }
       } finally {
-        if (!controller.signal.aborted) setSearchingEmployees(false)
+        if (currentSearch()) setSearchingEmployees(false)
       }
     }, 250)
     return () => { window.clearTimeout(timer); controller.abort() }
-  }, [linkingMemberId, employeeSearch])
+  }, [linkingMemberId, employeeSearch, authProof, active, settings.id])
 
   const changeEmployeeLink = async (member: OrgMember, employeeId: string | null) => {
+    if (!actionCurrent() || !roleVerified || uncertainWriteKinds.current.has('member')) return
+    const ticket = beginWrite('member')
+    let observedResponse = false
     setMemberBusy(member.id)
     setMemberMsg(null)
     try {
@@ -287,14 +373,20 @@ function HrSettingsForActor({ actor }: { actor: string }) {
         body: JSON.stringify({ employeeId }),
       })
       const data = await res.json().catch(() => null)
+      observedResponse = !res.ok || data !== null
+      if (!observedResponse) throw new Error('変更結果を確認できませんでした')
+      if (!actionCurrent()) return
       if (!res.ok) throw new Error(data?.error || '従業員との紐付けを変更できませんでした')
       await reloadMembers()
+      if (!actionCurrent()) return
       setMemberMsg({ id: member.id, ok: true, text: employeeId ? '従業員情報を紐付けました。' : '従業員情報の紐付けを解除しました。' })
       setLinkingMemberId(null)
     } catch (error) {
-      setMemberMsg({ id: member.id, ok: false, text: error instanceof Error ? error.message : '従業員との紐付けを変更できませんでした' })
+      if (!observedResponse && actionCurrent()) markWriteUnknown('member')
+      if (actionCurrent()) setMemberMsg({ id: member.id, ok: false, text: error instanceof Error ? error.message : '従業員との紐付けを変更できませんでした' })
     } finally {
-      setMemberBusy(null)
+      finishWrite('member', ticket)
+      if (actionCurrent()) setMemberBusy(null)
     }
   }
 
@@ -303,7 +395,9 @@ function HrSettingsForActor({ actor }: { actor: string }) {
    * ⚠️ APIは自分より上の権限を付与できない。UIでも選択肢を自分の権限までに絞る。
    */
   const changeRole = async (member: OrgMember, role: string) => {
-    if (role === member.role) return
+    if (!actionCurrent() || !roleVerified || role === member.role || uncertainWriteKinds.current.has('member')) return
+    const ticket = beginWrite('member')
+    let observedResponse = false
     setMemberBusy(member.id)
     setMemberMsg(null)
     try {
@@ -313,6 +407,9 @@ function HrSettingsForActor({ actor }: { actor: string }) {
         body: JSON.stringify({ role }),
       })
       const d = await res.json().catch(() => null)
+      observedResponse = !res.ok || d !== null
+      if (!observedResponse) throw new Error('変更結果を確認できませんでした')
+      if (!actionCurrent()) return
       if (!res.ok) {
         setMemberMsg({ id: member.id, ok: false, text: d?.error || '権限を変更できませんでした' })
         return
@@ -324,9 +421,11 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       })
       await reloadMembers()
     } catch (error) {
-      if (live()) setMemberMsg({ id: member.id, ok: false, text: error instanceof Error ? error.message : 'メンバー情報を更新できませんでした' })
+      if (!observedResponse && actionCurrent()) markWriteUnknown('member')
+      if (actionCurrent()) setMemberMsg({ id: member.id, ok: false, text: error instanceof Error ? error.message : 'メンバー情報を更新できませんでした' })
     } finally {
-      setMemberBusy(null)
+      finishWrite('member', ticket)
+      if (actionCurrent()) setMemberBusy(null)
     }
   }
 
@@ -336,15 +435,21 @@ function HrSettingsForActor({ actor }: { actor: string }) {
    *    APIはオーナーと自分自身の削除を拒否する。
    */
   const removeMember = async (member: OrgMember) => {
+    if (!actionCurrent() || !roleVerified || uncertainWriteKinds.current.has('member')) return
     const label = member.name || member.email
     if (!window.confirm(`${label} をこの組織から外します。よろしいですか。\n\n従業員データは残りますが、この方はドヤHRにアクセスできなくなります。`)) {
       return
     }
+    const ticket = beginWrite('member')
+    let observedResponse = false
     setMemberBusy(member.id)
     setMemberMsg(null)
     try {
       const res = await fetch(`/api/hr/organization/members/${member.id}`, { method: 'DELETE' })
       const d = await res.json().catch(() => null)
+      observedResponse = !res.ok || d !== null
+      if (!observedResponse) throw new Error('変更結果を確認できませんでした')
+      if (!actionCurrent()) return
       if (!res.ok) {
         setMemberMsg({ id: member.id, ok: false, text: d?.error || 'メンバーを外せませんでした' })
         return
@@ -352,24 +457,29 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       setMemberMsg({ id: member.id, ok: true, text: `${label} を組織から外しました。` })
       await reloadMembers()
     } catch (error) {
-      if (live()) setMemberMsg({ id: member.id, ok: false, text: error instanceof Error ? error.message : 'メンバー情報を更新できませんでした' })
+      if (!observedResponse && actionCurrent()) markWriteUnknown('member')
+      if (actionCurrent()) setMemberMsg({ id: member.id, ok: false, text: error instanceof Error ? error.message : 'メンバー情報を更新できませんでした' })
     } finally {
-      setMemberBusy(null)
+      finishWrite('member', ticket)
+      if (actionCurrent()) setMemberBusy(null)
     }
   }
 
   /** メンバーを管理できるか（APIは ADMIN 以上を要求する） */
-  const canManageMembers = ROLE_RANK[myRole] >= ROLE_RANK.ADMIN
+  const canManageMembers = roleVerified && ROLE_RANK[myRole] >= ROLE_RANK.ADMIN
   /**
    * 付与できる権限。
    * ⚠️ 自分より上は選ばせない。ADMIN が他人を OWNER に上げられると、
    *    実質オーナーを増やせてしまう（APIでも拒否している）。
    */
   const assignableRoles = ['ADMIN', 'MANAGER', 'MEMBER'].filter(
-    (r) => ROLE_RANK[r] <= ROLE_RANK[myRole]
+    (r) => roleVerified && ROLE_RANK[r] <= ROLE_RANK[myRole]
   )
 
   const handleSave = async () => {
+    if (!actionCurrent() || uncertainWriteKinds.current.has('settings')) return
+    const ticket = beginWrite('settings')
+    let observedResponse = false
     setSaving(true)
     try {
       const res = await fetch('/api/hr/settings', {
@@ -377,17 +487,23 @@ function HrSettingsForActor({ actor }: { actor: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       })
+      observedResponse = true
+      if (!actionCurrent()) return
       if (!res.ok) throw new Error('設定の保存に失敗しました')
       toast.success('設定を保存しました')
     } catch (e: any) {
-      toast.error(e.message)
+      if (!observedResponse && actionCurrent()) markWriteUnknown('settings')
+      if (actionCurrent()) toast.error(e.message)
     } finally {
-      setSaving(false)
+      finishWrite('settings', ticket)
+      if (actionCurrent()) setSaving(false)
     }
   }
 
   const handleInvite = async () => {
-    if (!inviteEmail) return
+    if (!actionCurrent() || !roleVerified || !inviteEmail || uncertainWriteKinds.current.has('invite')) return
+    const ticket = beginWrite('invite')
+    let observedResponse = false
     setInviting(true)
     try {
       const res = await fetch('/api/hr/organization/invite', {
@@ -396,6 +512,8 @@ function HrSettingsForActor({ actor }: { actor: string }) {
         body: JSON.stringify({ email: inviteEmail }),
       })
       const data = await res.json()
+      observedResponse = true
+      if (!actionCurrent()) return
       if (res.status === 403 && data.code === 'HR_ORG_MEMBER_LIMIT') {
         setInviteLimitNotice({
           message: data.error || 'メンバー数の上限に達しています。',
@@ -415,43 +533,41 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       if (data.inviteUrl) {
         setInviteUrl(data.inviteUrl)
       }
-      const settingsRes = await fetch('/api/hr/settings')
-      if (settingsRes.ok) {
-        const settingsData = await settingsRes.json()
-        if (settingsData.members) setMembers(settingsData.members)
-        if (settingsData.myRole) setMyRole(settingsData.myRole)
-        if (settingsData.myMemberId) setMyMemberId(settingsData.myMemberId)
-      }
+      await reloadMembers()
     } catch (e: any) {
-      toast.error(e.message)
+      if (!observedResponse && actionCurrent()) markWriteUnknown('invite')
+      if (actionCurrent()) toast.error(e.message)
     } finally {
-      setInviting(false)
+      finishWrite('invite', ticket)
+      if (actionCurrent()) setInviting(false)
     }
   }
 
   const fetchDepartments = async () => {
-    if (departmentRefreshBusy.current) return false
+    if (!actionCurrent() || departmentRefreshBusy.current) return false
     const life = departmentLife.current
     departmentRefreshBusy.current = true
     setRefreshingDepartments(true)
     try {
       const listing = await loadHrDepartmentList(departmentNetwork.current?.signal, settings.id ?? '', organizationScope.request)
       const rows = parseSettingsDepartmentList({ success: true, organizationId: listing.organizationId, flat: listing.rows }, settings.id ?? '')
-      if (departmentLife.current !== life) return false
+      if (!actionCurrent() || departmentLife.current !== life) return false
       setDepartments(rows)
       setDepartmentListWarning(null)
       return true
     } catch {
-      if (departmentLife.current === life) setDepartmentListWarning('部署一覧を更新できませんでした。表示が最新ではない可能性があります。作成・削除を繰り返さず、一覧を再取得してください。')
+      if (actionCurrent() && departmentLife.current === life) setDepartmentListWarning('部署一覧を更新できませんでした。表示が最新ではない可能性があります。作成・削除を繰り返さず、部署一覧を再取得してください。')
       return false
     } finally {
-      departmentRefreshBusy.current = false
-      if (departmentLife.current === life) setRefreshingDepartments(false)
+      if (actionCurrent() && departmentLife.current === life) {
+        departmentRefreshBusy.current = false
+        setRefreshingDepartments(false)
+      }
     }
   }
 
   const applyDepartmentCreation = async (result: DepartmentCreationResult) => {
-    if (result.state !== 'created') return
+    if (!actionCurrent() || result.state !== 'created') return
     const department = result.department
     setDepartments(rows => [...rows.filter(row => row.id !== department.id), department].sort((a, b) => a.sortOrder - b.sortOrder))
     setNewDeptName('')
@@ -463,72 +579,82 @@ function HrSettingsForActor({ actor }: { actor: string }) {
   }
 
   const handleCreateDept = async () => {
-    if (!newDeptName.trim() || !departmentCreation.ready || departmentCreation.intent || departmentCreation.busy ||
+    if (!actionCurrent() || !newDeptName.trim() || !departmentCreation.ready || departmentCreation.intent || departmentCreation.busy ||
       departmentMutationBusy.current || departmentRefreshBusy.current || departmentListWarning) return
     const life = departmentLife.current, current = departmentCreation.isCurrent
     departmentMutationBusy.current = true
     setCreatingDept(true)
     try {
       const result = await departmentCreation.create({ name: newDeptName, code: newDeptCode || null, sortOrder: newDeptSortOrder })
-      if (departmentLife.current !== life || !current()) return
+      if (!actionCurrent() || departmentLife.current !== life || !current()) return
       if (result) await applyDepartmentCreation(result)
       else toast.error('部署の作成結果を確認できませんでした。結果確認から再確認してください。')
     } finally {
-      departmentMutationBusy.current = false
-      if (departmentLife.current === life) setCreatingDept(false)
+      if (actionCurrent() && departmentLife.current === life) {
+        departmentMutationBusy.current = false
+        setCreatingDept(false)
+      }
     }
   }
 
   const handleDepartmentRecovery = async (action: 'check' | 'retry' | 'cancel') => {
-    if (departmentMutationBusy.current || departmentRefreshBusy.current) return
+    if (!actionCurrent() || departmentMutationBusy.current || departmentRefreshBusy.current) return
     const life = departmentLife.current, current = departmentCreation.isCurrent
     const result = await (action === 'retry' ? departmentCreation.retry() : departmentCreation.recover(action === 'cancel'))
-    if (departmentLife.current === life && current() && result) await applyDepartmentCreation(result)
+    if (actionCurrent() && departmentLife.current === life && current() && result) await applyDepartmentCreation(result)
   }
 
   const handleDeleteDept = async (id: string) => {
-    if (departmentMutationBusy.current || departmentRefreshBusy.current || departmentListWarning) return
+    if (!actionCurrent() || departmentMutationBusy.current || departmentRefreshBusy.current || departmentListWarning || uncertainWriteKinds.current.has('department-delete')) return
+    const ticket = beginWrite('department-delete')
+    let observedResponse = false
     const life = departmentLife.current
     departmentMutationBusy.current = true
     setDeletingDeptId(id)
     try {
       const res = await readDepartmentSettingsResponse(`/api/hr/departments/${encodeURIComponent(id)}`, { method: 'DELETE' }, departmentNetwork.current?.signal, organizationScope.request)
+      observedResponse = true
       if (res.status !== 200) throw new Error('部署の削除結果を確認できませんでした。部署一覧を再取得してください。')
       confirmSettingsDepartmentDeletion(res.data)
-      if (departmentLife.current !== life) return
+      if (!actionCurrent() || departmentLife.current !== life) return
       setDepartments(rows => rows.filter(row => row.id !== id))
       toast.success('部署を削除しました')
       await fetchDepartments()
     } catch (e: unknown) {
-      if (departmentLife.current === life) {
+      if (!observedResponse && actionCurrent() && departmentLife.current === life) markWriteUnknown('department-delete')
+      if (actionCurrent() && departmentLife.current === life) {
         toast.error(e instanceof Error ? e.message : '部署の削除結果を確認できませんでした。部署一覧を確認してください。')
         setDepartmentListWarning('部署の削除結果を確認できませんでした。削除を繰り返さず、部署一覧を再取得してください。')
       }
     } finally {
-      departmentMutationBusy.current = false
-      if (departmentLife.current === life) setDeletingDeptId(null)
+      finishWrite('department-delete', ticket)
+      if (actionCurrent() && departmentLife.current === life) {
+        departmentMutationBusy.current = false
+        setDeletingDeptId(null)
+      }
     }
   }
 
   const handleGenerateInviteUrl = () => {
+    if (!actionCurrent()) return
     toast('招待URLを取得するには、まずメールアドレスで招待を送信してください。送信後にURLが表示されます。')
   }
 
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (copiedTimer.current !== null) clearTimeout(copiedTimer.current) }, [])
   const handleCopyInviteUrl = async () => {
-    if (!inviteUrl || !live()) return
+    if (!inviteUrl || !actionCurrent()) return
     const copied = () => {
-      if (!live()) return
+      if (!actionCurrent()) return
       setInviteUrlCopied(true)
       if (copiedTimer.current !== null) clearTimeout(copiedTimer.current)
-      copiedTimer.current = setTimeout(() => { if (live()) setInviteUrlCopied(false) }, 2000)
+      copiedTimer.current = setTimeout(() => { if (actionCurrent()) setInviteUrlCopied(false) }, 2000)
     }
     try {
       await navigator.clipboard.writeText(inviteUrl)
       copied()
     } catch {
-      if (!live()) return
+      if (!actionCurrent()) return
       const ta = document.createElement('textarea')
       ta.value = inviteUrl
       try {
@@ -537,37 +663,8 @@ function HrSettingsForActor({ actor }: { actor: string }) {
         if (!document.execCommand('copy')) throw Error('コピーできませんでした')
         copied()
       } catch {
-        if (live()) toast.error('招待リンクをコピーできませんでした。リンクを選択して手動でコピーしてください。')
+        if (actionCurrent()) toast.error('招待リンクをコピーできませんでした。リンクを選択して手動でコピーしてください。')
       } finally { ta.remove() }
-    }
-  }
-
-  const handleTransferOwnership = async () => {
-    if (!transferEmail) return
-    setTransferring(true)
-    try {
-      // メールアドレスから対象メンバーを特定
-      const targetMember = members.find((m) => m.email === transferEmail)
-      if (!targetMember) {
-        throw new Error('指定されたメールアドレスのメンバーが見つかりません')
-      }
-      const res = await fetch('/api/hr/organization/transfer-owner', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetMemberId: targetMember.id }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'オーナー移譲に失敗しました')
-      }
-      setShowTransferModal(false)
-      setTransferEmail('')
-      await reloadMembers()
-      toast.success('オーナーを移譲しました')
-    } catch (e: any) {
-      toast.error(e.message)
-    } finally {
-      setTransferring(false)
     }
   }
 
@@ -619,7 +716,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       <div role="alert" className="p-6 lg:p-10 max-w-3xl mx-auto">
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
           <PageTitle className="text-xl font-black text-rose-800">組織設定を取得できませんでした</PageTitle>
-          <p className="mt-2 text-sm font-bold text-rose-700">設定や部署の情報は変更されていません。時間をおいて再試行してください。</p>
+          <p className="mt-2 text-sm font-bold text-rose-700">{uncertainWrites.length ? '前回の変更結果は未確認です。再送信せず、現在の情報を読み直してください。' : '現在の情報を確認できません。時間をおいて再試行してください。'}</p>
           <button type="button" onClick={() => setRetryKey((key) => key + 1)} className="mt-4 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">
             再試行する
           </button>
@@ -642,6 +739,15 @@ function HrSettingsForActor({ actor }: { actor: string }) {
           </div>
           <p className="text-sm text-slate-500 mt-1">組織情報とメンバーを管理</p>
         </div>
+        {uncertainWrites.length > 0 && <div role="alert" className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-bold">前回の変更結果を確認できませんでした。</p>
+          <p>変更結果を確認できません。変更や招待を繰り返さず、現在の設定・メンバー・招待状況を確認してください。</p>
+          <button type="button" className="mt-2 font-bold underline" onClick={() => setRetryKey(key => key + 1)}>現在の情報を読み直す</button>
+        </div>}
+        {refreshError && <div role="alert" className="mb-6 rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-950">
+          現在の情報を確認できませんでした。入力中の内容を残しています。再送信せず、もう一度読み直してください。
+          <button type="button" className="ml-2 font-bold underline" onClick={() => setRetryKey(key => key + 1)}>もう一度読み直す</button>
+        </div>}
 
         {/* 1. Department Management — most frequently used */}
         <div className="bg-white rounded-3xl shadow-md p-6 mb-6">
@@ -814,7 +920,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
             />
             <button
               onClick={handleInvite}
-              disabled={inviting || !inviteEmail}
+              disabled={inviting || !inviteEmail || uncertainWrites.includes('invite')}
               className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-lg">send</span>
@@ -894,7 +1000,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
                       <div className="flex items-center gap-2">
                         <select
                           value={member.role}
-                          disabled={memberBusy === member.id}
+                          disabled={memberBusy === member.id || uncertainWrites.includes('member')}
                           onChange={(e) => void changeRole(member, e.target.value)}
                           className="px-3 py-1.5 rounded-full text-sm font-bold bg-slate-100 text-slate-700 border-0 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
                         >
@@ -904,14 +1010,14 @@ function HrSettingsForActor({ actor }: { actor: string }) {
                         </select>
                         <button
                           onClick={() => { setEmployeeOptions([]); setLinkingMemberId(member.id); setEmployeeSearch(member.email) }}
-                          disabled={memberBusy === member.id}
+                          disabled={memberBusy === member.id || uncertainWrites.includes('member')}
                           className="rounded-full border border-blue-200 px-3 py-1.5 text-sm font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
                         >
                           従業員連携
                         </button>
                         <button
                           onClick={() => void removeMember(member)}
-                          disabled={memberBusy === member.id}
+                          disabled={memberBusy === member.id || uncertainWrites.includes('member')}
                           title="この組織から外す"
                           className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
                         >
@@ -960,7 +1066,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
                   <button
                     key={employee.id}
                     type="button"
-                    disabled={memberBusy === linkingMemberId}
+                    disabled={memberBusy === linkingMemberId || uncertainWrites.includes('member')}
                     onClick={() => void changeEmployeeLink(members.find(member => member.id === linkingMemberId)!, employee.id)}
                     className="block w-full rounded-xl border border-slate-200 px-3 py-2 text-left text-sm hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50"
                   >
@@ -974,7 +1080,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
               {members.find(member => member.id === linkingMemberId)?.employeeId && (
                 <button
                   type="button"
-                  disabled={memberBusy === linkingMemberId}
+                  disabled={memberBusy === linkingMemberId || uncertainWrites.includes('member')}
                   onClick={() => void changeEmployeeLink(members.find(member => member.id === linkingMemberId)!, null)}
                   className="mt-4 text-sm font-bold text-rose-600 disabled:opacity-50"
                 >
@@ -1052,7 +1158,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
           <div className="mt-6 flex justify-end">
             <button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || uncertainWrites.includes('settings')}
               className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-lg">save</span>
@@ -1155,90 +1261,12 @@ function HrSettingsForActor({ actor }: { actor: string }) {
           )}
         </div>
 
-        {/* Danger Zone: Owner Transfer */}
-        <div className="bg-white rounded-3xl shadow-md p-6 border border-red-100">
-          <h2 className="text-lg font-bold text-red-600 mb-4 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center">
-              <span className="material-symbols-outlined text-red-500">warning</span>
-            </div>
-            危険な操作
-          </h2>
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-red-50">
-            <div>
-              <p className="text-sm font-bold text-slate-900">オーナー権限の移譲</p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                組織のオーナー権限を別のメンバーに移譲します。この操作は取り消せません。
-              </p>
-            </div>
-            <button
-              onClick={() => setShowTransferModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded-full text-sm font-bold hover:bg-red-50 transition-all"
-            >
-              <span className="material-symbols-outlined text-sm">swap_horiz</span>
-              移譲する
-            </button>
-          </div>
-        </div>
-
-        {/* Owner Transfer Modal */}
-        {showTransferModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/30" onClick={() => setShowTransferModal(false)} />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md mx-4"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-red-500">warning</span>
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">オーナー権限の移譲</h2>
-                  <p className="text-xs text-red-500 font-bold">この操作は取り消せません</p>
-                </div>
-              </div>
-              <div className="mb-4 p-3 bg-red-50 rounded-xl">
-                <p className="text-sm text-red-700">
-                  オーナー権限を移譲すると、あなたの権限は「管理者」に変更されます。
-                  新しいオーナーは組織の全設定を変更できるようになります。
-                </p>
-                <p className="text-sm text-red-700 mt-2">
-                  組織の利用上限は新しいオーナーの契約プランで判定されます。
-                  現在のオーナーの有料契約は引き継がれません。移譲先のプランを事前に確認してください。
-                </p>
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-bold text-slate-700 mb-1">
-                  新しいオーナーのメールアドレス
-                </label>
-                <input
-                  type="email"
-                  value={transferEmail}
-                  onChange={(e) => setTransferEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all"
-                  placeholder="example@company.com"
-                />
-              </div>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowTransferModal(false)}
-                  className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
-                >
-                  キャンセル
-                </button>
-                <button
-                  onClick={handleTransferOwnership}
-                  disabled={transferring || !transferEmail}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-red-500 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-red-600 transition-all disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined text-sm">swap_horiz</span>
-                  {transferring ? '処理中...' : '移譲を実行'}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
+        {settings.id && <div className="mb-6">
+          {!roleVerified && <p role="alert" className="mb-2 text-sm text-amber-800">現在の権限を確認できていません。<button type="button" className="underline" onClick={() => void reloadMembers().catch(() => setRoleVerified(false))}>再確認する</button></p>}
+          <HrOwnerTransferPanel actorId={actor} organizationId={settings.id} organizationSlug={settings.id}
+            role={roleVerified ? myRole : 'UNKNOWN'} request={organizationScope.request} current={live}
+            onCommitted={refreshAuthorityAfterTransfer} />
+        </div>}
       </motion.div>
     </div>
   )

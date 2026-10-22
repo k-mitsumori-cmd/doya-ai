@@ -23,15 +23,15 @@ function makeHandler(name, env) {
 }
 
 async function verifyOrganization() {
-  let error = '', loading = false, fetches = 0, loads = 0
+  let error = '', loading = false, fetches = 0, loads = 0, navigations = []
   const pending = []
   const env = {
-    Error, OrgResponseError, context: { isCurrent: () => true }, epoch: 1,
+    Error, OrgResponseError, context: { isCurrent: () => true, invalidate() {} }, epoch: 1,
     orgName: 'テスト組織',orgNameRef:{current:'テスト組織'}, creatingOrgRequest: { current: false },
     setCreatingOrg: value => { loading = value }, setError: value => { error = value }, setQuotaAction() {},
-    notifyError: (setter, message) => setter(message), withOrg: (_service, route) => route,
+    notifyError: (setter, message) => setter(message), withOrg: (_service, route) => route, scoped: route => route,
     fetch: () => { fetches++; return new Promise((resolve, reject) => pending.push({ resolve, reject })) },
-    load: async () => { loads++ }, setOrganizationUncertain() {}, selectOrganization() {}, changeOrganization() { loads++ },
+    load: async () => { loads++ }, setOrganizationUncertain() {}, selectOrganization() {}, router: { push: url => navigations.push(url) }, workspaceHref: (path, slug) => path + '?org=' + slug,
   }
   const createOrg = makeHandler('createOrg', env)
   const first = createOrg()
@@ -48,7 +48,7 @@ async function verifyOrganization() {
   pending[1].resolve(Response.json({ slug: 'test', name:'テスト組織' }))
   await retry
   assert.equal(fetches, 2)
-  assert.equal(loads, 1)
+  assert.equal(loads, 0); assert.deepEqual(navigations, ['/quote?org=test'])
   console.log('PASS quote organization unknown result blocks retained retry; fresh-context confirmed acknowledgement selects organization')
 }
 
@@ -61,7 +61,7 @@ async function verifyProduct() {
     savingProductRequest: { current: false },savedProductRef:{current:null},setSavedProduct() {},isQuoteProductAcknowledgement:require('./load-typescript.cjs').load('src/lib/quote/response-shape.ts').isQuoteProductAcknowledgement,
     setSavingProduct: value => { loading = value }, setError: value => { error = value }, setQuotaAction() {},
     setProductSaveUncertain: value => { uncertain = value },
-    notifyError: (setter, message) => setter(message), withOrg: (_service, route) => route,
+    notifyError: (setter, message) => setter(message), withOrg: (_service, route) => route, scoped: route => route,
     fetch: () => { fetches++; return new Promise((resolve, reject) => pending.push({ resolve, reject })) },
     setDraftProfile: value => { cleared = value === null;env.draftProfileRef.current=value }, setUrl(value) {env.urlRef.current=value}, setProductName(value) {env.productNameRef.current=value},
     load: async () => { loads++ }, setOrganizationUncertain() {}, selectOrganization() {}, changeOrganization() { loads++ }, setSelectedProduct: value => { selected = value },

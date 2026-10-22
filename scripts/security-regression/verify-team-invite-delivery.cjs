@@ -1,7 +1,8 @@
+const { shodanLifecycleFixture } = require('./shodan-lifecycle-fixture.cjs');
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
-function fixture(service, { deliverySuccess = true, role = 'owner', currentRole = role, expiredInvite = false } = {}) {
+function fixture(service, { deliverySuccess = true, role = 'owner', currentRole = role, expiredInvite = false, lifecycleAuthorityRows, lifecycleUsers, lifecycleSettings } = {}) {
   let creations = 0;
   let emails = 0;
   let staleRemoved = 0;
@@ -19,7 +20,11 @@ function fixture(service, { deliverySuccess = true, role = 'owner', currentRole 
       : [{ id: 'org' }],
     $transaction: async (fn) => fn(prisma),
   };
+  if (lifecycleSettings) prisma.systemSetting = lifecycleSettings;
+  // These actor/delivery tests omitted normal DB owner/User rows; seed them explicitly, with abnormal overrides preserved.
+  const lifecycle = ['shodan', 'aio'].includes(service) ? shodanLifecycleFixture(prisma, { service, mode: 'issue', role: () => currentRole, userIds: lifecycleUsers || ['user', 'owner-user'], authorityRows: lifecycleAuthorityRows || (() => currentRole === 'owner' ? [] : [{ id: 'canonical-owner', userId: 'owner-user', role: 'owner', status: 'ACTIVE', pendingEmail: null, inviteToken: null }]) }) : {};
   const api = load(`src/app/api/${service}/members/route.ts`, {
+    ...lifecycle,
     'next/server': { NextResponse: Response },
     crypto: { randomUUID: () => 'token' },
     '@/lib/prisma': { prisma },
@@ -75,5 +80,24 @@ function fixture(service, { deliverySuccess = true, role = 'owner', currentRole 
       assert.equal(stale.emails, 0);
     }
   }
+  const authority = (id, userId, role = 'owner') => ({ id, userId, role, status: 'ACTIVE', pendingEmail: null, inviteToken: null });
+  for (const [name, rows, users] of [
+    ['missing owner', [], ['user']],
+    ['unknown authority', [authority('bad', 'owner-user', 'toString')], ['user', 'owner-user']],
+    ['multiple owners', [authority('one', 'owner-user'), authority('two', 'other-owner')], ['user', 'owner-user', 'other-owner']],
+    ['ACTIVE null authority', [authority('bad', null)], ['user']],
+    ['missing authority User', [authority('bad', 'missing-user')], ['user']],
+  ]) {
+    const bad = fixture('shodan', { role: 'admin', lifecycleAuthorityRows: () => rows, lifecycleUsers: users });
+    assert.equal((await bad.post({ email: 'valid@example.com' })).status, 409, name);
+    assert.equal(bad.creations, 0, name);
+    assert.equal(bad.emails, 0, name);
+  }
+  const corrupt = fixture('shodan', { role: 'admin', lifecycleSettings: { findUnique: async () => ({ value: 'malformed' }) } });
+  const corruptResponse = await corrupt.post({ email: 'valid@example.com' });
+  assert.equal(corruptResponse.status, 409);
+  assert.equal((await corruptResponse.json()).code, 'LIFECYCLE_STATE_UNAVAILABLE');
+  assert.equal(corrupt.creations, 0);
+  assert.equal(corrupt.emails, 0);
   console.log('PASS SFA/AIO/Shodan team invites: malformed input rejected before send and delivery truth reported');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

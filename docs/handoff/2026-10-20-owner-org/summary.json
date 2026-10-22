@@ -1,0 +1,122 @@
+{
+  "recordedAt": "2026-10-20T14:51:29.026031+00:00",
+  "sourceHead": "b1103f912e72903dd062cac4f89252b59289b992",
+  "status": "local_checks_passed_known_safety_gaps_remote_pending",
+  "localGateExecutions": 29,
+  "allGateExitCodesZero": true,
+  "sourceFiles": 5141,
+  "targetInputs": 22,
+  "sourceAndPathSetUnchanged": true,
+  "majorDependencyFingerprintsUnchanged": true,
+  "manifestSha256": "91b9b673cc706989cea5b441ee37818056d1dc56887f97d8ff87d7186d95c551",
+  "ownerA": {
+    "postgresAssertionsExecuted": 64,
+    "safetyContractRegressionsPassed": 62,
+    "unresolvedUnsafeObservations": 2,
+    "acceptedUnsafeObservations": 0,
+    "observations": [
+      {
+        "name": "KNOWN LIMITATION new membership during external Stripe interval can stop DB delete after cancellation",
+        "classification": "unresolved_unsafe_observation",
+        "accepted": false,
+        "observed": {
+          "unresolved": true,
+          "externalCancellationObserved": 1,
+          "userPreserved": true,
+          "requiresMembershipWriterRetirementFence": true
+        }
+      },
+      {
+        "name": "KNOWN LIMITATION checkout reservation can become payable during retirement gap",
+        "classification": "unresolved_unsafe_observation",
+        "accepted": false,
+        "observed": {
+          "unresolved": true,
+          "syntheticPayableSession": 1,
+          "userDeleted": true,
+          "actualSubscriptionCompletionNotExercised": true,
+          "requiresCheckoutRetirementFence": true
+        }
+      }
+    ],
+    "notClaimed": "64 safe retirement cases or full account-deletion closure"
+  },
+  "regressions": {
+    "caseStudyMounted": 19,
+    "expenseOrgDisplayRead": 38,
+    "existingExpenseEntry": 54,
+    "askCreationPostgres": 32,
+    "askPrivacyPostgres": 41,
+    "askClient": 32,
+    "serviceSuites": {
+      "asklink": 24,
+      "popup": 55,
+      "syscheck": 51,
+      "tenjikai": 16,
+      "shanai": 7,
+      "income": 68,
+      "expense": 93
+    },
+    "serviceTestsTotal": 314,
+    "homeClockUnits": 5,
+    "changedTsLintInputs": 9,
+    "ciSourceScripts": 167,
+    "ciSourceReferences": 718
+  },
+  "fixtureHotfix": {
+    "commit": "b1103f912e72903dd062cac4f89252b59289b992",
+    "scriptSha256": "a2bb53f926a234fdf45dc0aa012ecd12a4fcaeb2c4276118183f0fa44e93b5b5",
+    "isolatedFailed72dRuntime": true,
+    "originalScenarioAssertionsByteIdentical": true,
+    "beforeDelayedActualCrypto": "case15 fails after14 pass with same Missing button error",
+    "afterDelayedAndNormal": "32pass each, busy and duplicatePOST0 retained",
+    "proof": "../2026-10-20-privacy-expense-docs/vercel-fixture-failure-72d471ca.json",
+    "currentCandidateCommonRegression": "32pass under this frozen5141input gate"
+  },
+  "targetInputSha256": {
+    ".github/workflows/ci.yml": "bdb744a6aaee7c58fdc9a4e1eaa658fbcbb249eba7d470ef74de69cfa5d4776d",
+    "scripts/security-regression/retirement-fixture.cjs": "bf80337e9a7c14200d5d4410b45390a30a57e39b323d4e8fa23c338a1de499e4",
+    "scripts/security-regression/run.cjs": "7c350d4564e66a736e6c85f48f1155a05ed9509199e3e28e09828ad055dd5ee0",
+    "scripts/security-regression/verify-account-retirement-postgres.cjs": "5a95af9be491578e1c1b1074b7cedf33860dcfcf091a73b3007af53479148a6a",
+    "scripts/security-regression/verify-account-retirement-postgres.py": "d3b379ec22f88fb2eecd959e3a8501241dc5376467f6b096f26f8fd055914f25",
+    "scripts/security-regression/verify-admin-billing-integrity.cjs": "0415a6d9a7a20e3012edcd3d70c8916869874b75643524f5a55a20669abba435",
+    "scripts/security-regression/verify-admin-user-quotas.cjs": "daf5a173eadbad9128341bbce8d13c476f7df720bf8413da211d5ca2f4943693",
+    "scripts/security-regression/verify-asklink-creation-operation.cjs": "db5cf4ea73928ac500379c95b49b7400c33ee2cf3ca993f77ddd4426cd25218c",
+    "scripts/security-regression/verify-asklink-privacy-postgres.cjs": "7d036e35303f79280465a1d2003f8f59be820df9585fafefb899ad25369f5fec",
+    "scripts/security-regression/verify-auth-registration.cjs": "5e1f2110a5fdd9fe1f6d09c4d45413acd738250fec9340d3761cbfe91a4838c8",
+    "scripts/security-regression/verify-case-study-form-mounted.cjs": "1845e908753e9bab76030d5de7aa165732a63ee66f33c8e51353e863f78bd79f",
+    "scripts/security-regression/verify-expense-entry-mounted.cjs": "05bd48cd07d94880f00c128e8936e8f1393e67477fa2b10bec3dd8740afc9930",
+    "scripts/security-regression/verify-expense-query-scope.cjs": "c1e2eb7ce1d42af0dec0b26262fe5943eeff7a9b3c7a7fd1f8a35b954423d125",
+    "src/app/(shell)/expense/[orgSlug]/layout.tsx": "d03ea2fd89b231e075e85f50bf604962a34361a1a7dceded685490c7a26411e6",
+    "src/app/api/admin/users/route.ts": "dfee5c30af59ab5879860624e6d7ef927dd223a1fb933feb3d9f7d91ac201185",
+    "src/app/api/campaign/case-study/route.ts": "5641c95cd4207baa5b15822a8c3619c152ce2d0fdbcced74be44df5cceb884a4",
+    "src/app/campaign/case-study/Form.tsx": "047ed68a18bd4bc1af080bbcad33d81ef9951b15c379a1e99194b03effc791f3",
+    "src/components/expense/api.ts": "ef67df8d48f923f41d9b403e1d037cdb97a144d80068dfd7f85284e83d842a7b",
+    "src/lib/account-retirement.ts": "cd4fde365e99ca0276bdff4f30c00c52899679a2ddd809d6e1cbe8b31948142e",
+    "src/lib/asklink/creation-adapter.ts": "d7bd5f0f41d150f3de6027001bfafbf093bbbe078d085a2572f279c051280529",
+    "src/lib/case-study/submission-context.ts": "6249193b6698546b40ae6aa1c46171fa28d8eb4eac444785c21353fc41f13c85",
+    "src/lib/expense/use-read-scope.ts": "97ffdc5094b7a1511e570bedf22e22a40b3a3c178cd62a87de73a019613ff427"
+  },
+  "environment": "node_modules root physical; React/ReactDOM/TypeScript/Prisma tool packages shared via read-only use; Prisma client/generated directory independent; minimal synthetic env; no real dotenv. Major dependency realpaths/versions/runtime hashes checked before/after.",
+  "network": "OS denies outbound for offline checks; private-PG supervisor separately creates TCP-disabled owned Unix socket and checks role/data_directory.",
+  "postgresCleanup": "All3 owned private Unix PG supervisors test0/stop0/removedOwnedDirectory true; actual DB semantics with synthetic auth/Stripe/Storage/notifications. No production access.",
+  "remote": {
+    "lastPushedHead": "72d471caf245072215414115a6b58fb6a3751295",
+    "ciRun": 39418890840,
+    "ci": "success",
+    "vercel": "ERROR in ASK client fixture before Next build",
+    "fixtureCommitPushed": false,
+    "currentCandidateCi": "pending combined push",
+    "currentCandidateNextBuild": "pending same-source combined-head Vercel build"
+  },
+  "nextBuildRunLocally": false,
+  "prismaGeneratedForGate": false,
+  "productionReflected": false,
+  "limitations": [
+    "Two OWNER retirement races remain unresolved and unaccepted",
+    "ORG38 covers display/read scope only; mutation expectedActor and all form callbacks remain",
+    "Authenticated browser375/1280, native history/BFCache, real Storage/provider/Stripe, guest transfer, OWNER transfer UI and production are unverified or separate"
+  ],
+  "localArtifacts": "Full manifest, dependency snapshots and29step logs retained locally; not staged.",
+  "luna": "Unused; standard Codex verification"
+}

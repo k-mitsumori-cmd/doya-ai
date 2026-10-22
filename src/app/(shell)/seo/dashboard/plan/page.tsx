@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -10,6 +11,7 @@ import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import SeoCancelScheduleNotice from '@/components/SeoCancelScheduleNotice'
 import { useSubscriptionManagement } from '@/hooks/useSubscriptionManagement'
+import { SubscriptionOperationNotice } from '@/components/SubscriptionOperationNotice'
 
 function formatRemainingDays(unixSeconds: number) {
   const end = unixSeconds * 1000
@@ -30,7 +32,6 @@ export default function SeoPlanPage() {
   const management = useSubscriptionManagement('seo')
   const sub = management.data?.hasSubscription ? management.data : null
   const busy = management.busy
-  const error = management.message
   const [cancelConfirmKey, setCancelConfirmKey] = useState<string | null>(null)
   const [resumeConfirmKey, setResumeConfirmKey] = useState<string | null>(null)
   const cancelConfirm = cancelConfirmKey === management.scopeKey
@@ -126,9 +127,9 @@ export default function SeoPlanPage() {
             <p className="text-lg font-black text-gray-900">ログインが必要です</p>
             <p className="mt-2 text-sm text-gray-500 font-bold">プラン管理はログイン後に利用できます。</p>
             <div className="mt-6 flex items-center justify-center gap-3">
-              <Link href="/auth/signin" className="h-11 px-6 rounded-xl bg-blue-600 text-white font-black text-sm inline-flex items-center gap-2 hover:bg-blue-700">
+              <SignInReturnLink fallback="/seo/dashboard/plan" className="h-11 px-6 rounded-xl bg-blue-600 text-white font-black text-sm inline-flex items-center gap-2 hover:bg-blue-700">
                 ログインする <ExternalLink className="w-4 h-4" />
-              </Link>
+              </SignInReturnLink>
               <Link href="/seo/pricing" className="h-11 px-6 rounded-xl bg-white border border-gray-200 text-gray-700 font-black text-sm hover:bg-gray-50">
                 料金を見る
               </Link>
@@ -184,12 +185,7 @@ export default function SeoPlanPage() {
                   </div>
                 </div>
 
-                {error && (
-                  <div className="mt-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold p-4">
-                    {error}
-                    <button type="button" disabled={busy} onClick={() => void management.recheck()} className="block mt-2 underline">契約状態を再確認</button>
-                  </div>
-                )}
+                <SubscriptionOperationNotice management={management} />
               </div>
 
               {/* 料金プラン（無料 / プロ） - 統一プラン */}

@@ -1,0 +1,17 @@
+.overview { display: grid; gap: 18px; min-width: 0; }
+.heading { margin: 0 0 12px; font-size: 18px; color: var(--ink); text-wrap: pretty; }
+.heading small { display: block; margin-top: 4px; color: var(--sub); font-size: 12px; font-weight: 400; overflow-wrap: anywhere; }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.money { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--paper); color: var(--ink); text-decoration: none; }
+.money:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.money > span { font-size: 13px; }
+.money strong { font-size: 24px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.money small, .note { color: var(--sub); font-size: 12px; line-height: 1.7; text-wrap: pretty; }
+.note { margin: 0; }
+.trend, .cash { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: var(--r); background: var(--paper); }
+.trend { margin-top: 14px; }
+.trend h3 { margin: 0 0 10px; font-size: 14px; }
+.cash ul { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.8; }
+.cash li a { color: var(--blue); }
+@media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .grid { grid-template-columns: minmax(0, 1fr); } }

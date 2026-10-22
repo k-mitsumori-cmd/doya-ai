@@ -24,8 +24,8 @@ export interface LpShellProps {
   /**
    * ヘッダー「ログイン」の遷移先。
    * 未指定なら ctaHref が /auth/signin?callbackUrl=... のときそれを流用する。
-   * ⚠️ ここを素の '/auth/signin' にすると、signin 側の既定 callbackUrl('/seo') が効いて
-   *    ログイン後に別サービス（ドヤ記事作成）へ飛ぶ。CTAが署名URLでないLPは明示すること。
+   * ⚠️ ここを素の '/auth/signin' にすると、signin 側の既定 callbackUrl('/home') が効いて
+   *    ログイン後に汎用ツールホームへ飛ぶ。サービス固有の開始画面へ戻すLPは明示すること。
    */
   loginHref?: string;
   /** サービス別アクセント色 */

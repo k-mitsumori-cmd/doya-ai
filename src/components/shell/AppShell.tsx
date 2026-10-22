@@ -23,6 +23,7 @@ import { ALL_SHELL_TOOLS, SHELL_HOME, shellGroups, type ShellTool } from './tool
 import { useToolHref, useUiNext } from './ui-next-context'
 import ShellCompanyCard from './ShellCompanyCard'
 import { demoteExtraH1 } from './heading-guard'
+import { HIDE_HUBSPOT_CSS } from './hide-hubspot'
 import { RECENT_COOKIE, serializeRecent } from '@/lib/shell/recent'
 import styles from './AppShell.module.css'
 import { ShellPowerMeter } from './power'
@@ -142,9 +143,6 @@ function CommandPalette({ open, onClose, withIntents }: { open: boolean; onClose
     </div>
   )
 }
-
-/** HubSpot のポップアップの要素（CompanyDialog.tsx で会社情報の画面を開いている間に隠すものと同じ） */
-const HIDE_HUBSPOT_CSS = '[id^="hs-web-interactives"],[class*="hs-web-interactive"],#hubspot-messages-iframe-container,.hs-overlay-container{display:none!important}'
 
 export default function AppShell({ children, userName, initialRecent }: {
   children: ReactNode

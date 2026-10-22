@@ -1,3 +1,4 @@
+// Ownership checks run after beta eligibility; beta admission itself is covered by verify-beta-hidden-services.cjs.
 const assert=require('node:assert/strict');const {load,check,results}=require('./verify-data-integrity.cjs');const Resp={json:(body,opts)=>({body,status:opts?.status??200})};const req=new Request('https://local.test');const ctx={params:Promise.resolve({id:'r1'})};
 async function owners(){
  for(const [service,model] of [['cunning','cunningSession'],['doyalist','doyalistProject'],['doyaslide','doyaSlideProject']]){

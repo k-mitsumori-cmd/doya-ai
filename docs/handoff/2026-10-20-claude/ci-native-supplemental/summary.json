@@ -1,0 +1,27 @@
+{
+  "results": [
+    {
+      "name": "kintai-work-rule-revision-postgres",
+      "exitCode": 0,
+      "status": "passed",
+      "dbStopped": true,
+      "ownedFixtureRemoved": true
+    },
+    {
+      "name": "kintai-work-rule-cross-field-boundaries",
+      "exitCode": 0,
+      "status": "passed",
+      "dbStopped": true,
+      "ownedFixtureRemoved": true
+    },
+    {
+      "name": "promane-known-read-receipt-role-integrated-postgres",
+      "exitCode": 0,
+      "status": "passed",
+      "dbStopped": true,
+      "ownedFixtureRemoved": true
+    }
+  ],
+  "persistentDatabaseProvisioned": false,
+  "providerNetworkPermitted": false
+}

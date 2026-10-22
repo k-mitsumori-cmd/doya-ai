@@ -1,0 +1,37 @@
+{
+  "recordedAt": "2026-10-20T07:05:12.906883+00:00",
+  "failedCommit": "985eef450404db8e4d01a8d931c7b59fec3ebef7",
+  "ci": {
+    "conclusion": "success",
+    "headSha": "985eef450404db8e4d01a8d931c7b59fec3ebef7",
+    "url": "https://github.com/k-mitsumori-cmd/doya-ai/actions/runs/39382541393"
+  },
+  "vercel": {
+    "deploymentId": "dpl_BuipqYtmSdZen3eNPzLsum5grBwq",
+    "project": "surisutas-projects/doya-ai",
+    "target": "preview",
+    "status": "ERROR",
+    "firstFatal": "React act unsupported in production React at verify-home-hydration.cjs:76",
+    "buildCommand": "prisma generate && npm run test:security && tsc --noEmit && next build",
+    "failureBeforeTypecheckAndNext": true
+  },
+  "fix": {
+    "path": "scripts/security-regression/verify-home-hydration.cjs",
+    "addedLine": "process.env.NODE_ENV = 'test';",
+    "scope": "Only isolated regression child process, before React loads",
+    "assertionsUnchanged": true,
+    "verifiedOnFailedCommitSnapshot": true,
+    "beforeExitCode": 1,
+    "afterHomeConditions": 16,
+    "afterEntryCases": 42,
+    "afterExitCodes": [
+      0,
+      0
+    ],
+    "parentNodeEnvBeforeAndAfter": "production"
+  },
+  "dependencyDisclosure": "Worktree node_modules is a physical directory containing individual package symlinks; it is not an entirely independent dependency tree. Earlier sharedNodeModules:false metadata should be read with this correction.",
+  "appSourcesChangedForFix": false,
+  "remoteFixValidated": false,
+  "productionReflected": false
+}

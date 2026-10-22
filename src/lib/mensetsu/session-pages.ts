@@ -1,4 +1,5 @@
-import { fetchOrgJson } from '@/lib/org-fetch'
+import { readMensetsuStaffJson } from '@/lib/mensetsu/staff-request-client'
+import type { WorkspaceProof } from '@/lib/organization-workspace-selection'
 
 export type MensetsuSessionPage<T> = {
   sessions: T[]
@@ -34,7 +35,10 @@ export function appendMensetsuSessionPage<T extends { id: string }>(
   return merged
 }
 
-export async function fetchMensetsuSessionPage<T extends { id: string }>(cursor?: string | null): Promise<MensetsuSessionPage<T>> {
+export async function fetchMensetsuSessionPage<T extends { id: string }>(proof: WorkspaceProof, cursor?: string | null): Promise<MensetsuSessionPage<T>> {
+  if (!proof.current()) throw new Error('組織の確認が切り替わりました')
   const url = cursor ? `/api/mensetsu/sessions?cursor=${encodeURIComponent(cursor)}` : '/api/mensetsu/sessions'
-  return parseMensetsuSessionPage<T>(await fetchOrgJson(url))
+  const page = parseMensetsuSessionPage<T>(await readMensetsuStaffJson(proof, url))
+  if (!proof.current()) throw new Error('組織の確認が切り替わりました')
+  return page
 }

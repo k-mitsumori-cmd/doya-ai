@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { load, check } = require('./load-typescript.cjs')
+const { load, check } = require('./load-org-limit-fixture.cjs')
 
 const sessions = Array.from({ length: 451 }, (_, index) => ({
   id: `session-${String(451 - index).padStart(3, '0')}`,
@@ -34,7 +34,7 @@ const route = load('src/app/api/mensetsu/sessions/route.ts', {
   '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'own-org' }), orgSlugFrom: () => 'own-org' },
 })
 const helpers = load('src/lib/mensetsu/session-pages.ts', {
-  '@/lib/org-fetch': { fetchOrgJson: async () => { throw new Error('取得失敗') } },
+  '@/lib/mensetsu/staff-request-client': { readMensetsuStaffJson: async () => { throw new Error('取得失敗') } },
 })
 const { parseMensetsuSessionPage, appendMensetsuSessionPage, fetchMensetsuSessionPage } = helpers
 
@@ -74,7 +74,7 @@ const { parseMensetsuSessionPage, appendMensetsuSessionPage, fetchMensetsuSessio
     assert.equal(page.nextCursor, page.sessions.at(-1).id)
   })
   await check('failed and inconsistent interview pages never become an empty success', async () => {
-    await assert.rejects(fetchMensetsuSessionPage(), /取得失敗/)
+    await assert.rejects(fetchMensetsuSessionPage({ current: () => true }), /取得失敗/)
     const firstRows = Array.from({ length: 200 }, (_, index) => ({ id: `session-${index}` }))
     const current = appendMensetsuSessionPage([], { sessions: firstRows, nextCursor: 'session-199', total: 201 }, 201)
     assert.equal(current.length, 200)

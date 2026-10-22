@@ -8,6 +8,7 @@ import { StackedBar100 } from '@/components/ds/charts'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import type { Section } from './TenjikaiSidebar'
 import { BUDGET_META, POSITION_LABEL, boothSize, daysUntil, expectedVisitors, man, type BoothPlan, type BudgetLine, type Creative, type Deadline, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
+import type { FullTenjikaiWorkspace } from '@/lib/tenjikai/workspace-dto'
 
 interface Props {
   input: ProjectInput
@@ -17,20 +18,23 @@ interface Props {
   deadlines: Deadline[]
   creatives: Creative[]
   go: (s: Section) => void
+  savedWorkspace?: FullTenjikaiWorkspace
 }
 
-export default function Overview({ input, analysis, plan, budget, deadlines, creatives, go }: Props) {
+export default function Overview({ input, analysis, plan, budget, deadlines, creatives, go, savedWorkspace }: Props) {
   const uiNext = useUiNext()
   const total = budget.reduce((s, b) => s + b.amountYen, 0)
   const diff = input.budgetYen - total
-  const { venue, w, d } = boothSize(input)
+  const budgetBarTotal = Math.max(total, input.budgetYen)
+  const size = savedWorkspace ? { venue: { name: savedWorkspace.venueSnapshot.name }, w: plan.widthM, d: plan.depthM } : boothSize(input)
+  const { venue, w, d } = size
   const toEvent = daysUntil(input.eventStart)
   const upcoming = deadlines.filter((x) => daysUntil(x.date) >= 0).slice(0, 4)
 
   const kpis = [
     { label: '見積合計 / 予算', value: total, fmt: man, sub: diff >= 0 ? `予算内（残り ${man(diff)}）` : `${man(-diff)} 超過`, tone: diff >= 0 ? 'text-emerald-600' : 'text-rose-600' },
     { label: '会期まで', value: toEvent, fmt: (n: number) => `${Math.round(n)}日`, sub: `${input.eventStart} から${input.days}日間`, tone: 'text-gray-500' },
-    { label: '想定来場者', value: expectedVisitors(input), fmt: (n: number) => `${Math.round(n).toLocaleString()}人`, sub: '小間数・目的・日数から推計', tone: 'text-gray-500' },
+    { label: '想定来場者', value: savedWorkspace?.projectedVisitors ?? expectedVisitors(input), fmt: (n: number) => `${Math.round(n).toLocaleString()}人`, sub: '小間数・目的・日数から推計', tone: 'text-gray-500' },
     { label: '用意した制作物', value: creatives.length, fmt: (n: number) => `${Math.round(n)}点`, sub: 'ポスター・チラシ・A4ファイルほか', tone: 'text-gray-500' },
   ]
 
@@ -94,7 +98,7 @@ export default function Overview({ input, analysis, plan, budget, deadlines, cre
               <>
               <div className="flex h-4 overflow-hidden rounded-full bg-gray-100">
                 {budget.map((b, i) => (
-                  <motion.div key={b.category} title={BUDGET_META[b.category].label} initial={{ width: 0 }} animate={{ width: `${(b.amountYen / Math.max(total, input.budgetYen)) * 100}%` }} transition={{ delay: 0.3 + i * 0.07, duration: 0.6 }} style={{ background: BUDGET_META[b.category].color }} />
+                  <motion.div key={b.category} title={BUDGET_META[b.category].label} initial={{ width: 0 }} animate={{ width: `${budgetBarTotal > 0 ? b.amountYen / budgetBarTotal * 100 : 0}%` }} transition={{ delay: 0.3 + i * 0.07, duration: 0.6 }} style={{ background: BUDGET_META[b.category].color }} />
                 ))}
               </div>
               <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1">

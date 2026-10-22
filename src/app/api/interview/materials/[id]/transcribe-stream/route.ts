@@ -42,7 +42,42 @@ async function resolveId(ctx: Ctx): Promise<string> {
   return p.id
 }
 
+function isSameOriginEventStream(req: NextRequest): boolean {
+  try {
+    const h = req.headers
+    const target = new URL(req.url).origin
+    const accept = h.get('accept')
+    const acceptsStream = (accept || '').split(',').some(value => value.trim().split(';')[0].toLowerCase() === 'text/event-stream')
+    const site = h.get('sec-fetch-site')
+    const mode = h.get('sec-fetch-mode')
+    const destination = h.get('sec-fetch-dest')
+    if (site && site !== 'same-origin') return false
+    if (mode && mode !== 'cors' && mode !== 'same-origin') return false
+    if (destination && destination !== 'empty') return false
+    // EventSource's Accept header is optional in HTML. Complete Fetch Metadata
+    // can independently distinguish a stream request from document navigation.
+    const metadataStream = site === 'same-origin' && (mode === 'cors' || mode === 'same-origin') && destination === 'empty'
+    if (!acceptsStream && !(metadataStream && (!accept || accept.trim() === '*/*'))) return false
+    const origin = h.get('origin')
+    const referer = h.get('referer')
+    if (origin && origin !== target) return false
+    if (referer && new URL(referer).origin !== target) return false
+    // Older clients without Fetch Metadata must still identify the same origin.
+    return site === 'same-origin' || origin === target || !!referer
+  } catch {
+    return false
+  }
+}
+
 export async function GET(req: NextRequest, ctx: Ctx) {
+  // This GET can submit a paid job. Only accept same-origin EventSource requests,
+  // never a document navigation, cross-site embed or headerless request.
+  if (!isSameOriginEventStream(req)) {
+    return Response.json({ error: '文字起こし画面から操作してください。', code: 'TRANSCRIPTION_STREAM_REQUEST_REJECTED' }, {
+      status: 403,
+      headers: { 'Cache-Control': 'private, no-store', Vary: 'Origin, Referer, Sec-Fetch-Site, Sec-Fetch-Mode, Sec-Fetch-Dest, Accept' },
+    })
+  }
   const materialId = await resolveId(ctx)
 
   const stream = new ReadableStream({
@@ -452,7 +487,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
+      'Cache-Control': 'private, no-store, no-transform',
+      Vary: 'Cookie, Origin, Referer, Sec-Fetch-Site, Sec-Fetch-Mode, Sec-Fetch-Dest, Accept',
       Connection: 'keep-alive',
     },
   })

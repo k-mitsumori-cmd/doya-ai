@@ -1,0 +1,67 @@
+{
+  "status": "both_prior_observations_now_safe_contracts_in_expense_subset",
+  "before": [
+    {
+      "case": "recipient retirement and unregistered response both accept real pending invitations privately",
+      "sameFixtureSha256": "011922baeca22daad5a71c08c7561fada45e182aaf8b6728ce3bd280070e63a6",
+      "baselineRuntimeMatchesPriorFreeze7": true,
+      "baselineRuntimeHashes": {
+        "src/app/api/expense/organization/route.ts": "29bea3115d6d93c5baa2901f6cdf4c4ec388ab42d220351c28a3d5e1e87b4e46",
+        "src/app/api/expense/usage/route.ts": "1b1bf9cbcff83e0a773351539b793f616adeabdbaa125f5868d76206187eadc7",
+        "src/app/api/expense/members/route.ts": "5bbd36e205bfb9f600104e7fa1b14d17330c243b62620ad9457f58a86ca3ebdb",
+        "src/app/api/expense/members/[id]/route.ts": "49c0c88dfae0ddab17e252fd957f62c9f42560f3577886f14a14ce492ea04f24",
+        "src/lib/account-lifecycle/organization-fence.ts": "df6399c484b59f5cdc282d3e28114fd004cb749a3e87122f039218281b8a4ae9",
+        "src/lib/account-lifecycle/store.ts": "fc961245469c8c4f0efdf4f8a9cce222f7e6f0cb81e8ce026b46bd0b50a179f9",
+        "src/lib/expense/setup.ts": "fa2708e7132350ce273071d90852d57ff6ff1a8b0a38883eae876b945bf854ee",
+        "src/lib/expense/access.ts": "e34a6d64595941f0264e3796021e1c2ee6692aa71e6e541fc53306a9b011ec32",
+        "src/lib/expense/member-write.ts": "51dae1be659d0d7c1ca7578337f64cec6674b784fb4084d037ac6793ac764ed8"
+      },
+      "baselineExpectedSafeStatus": 200,
+      "baselineActualStatus": 409,
+      "baselineTestExitCode": 1,
+      "scope": "Expected safety failure on exact hash-matched prior R1 runtime plus committed pre-delta core; no provider or production access",
+      "supervisor": {
+        "startedAt": "2026-10-20T16:06:48.563987+00:00",
+        "scope": "Owned ephemeral Unix socket PostgreSQL, synthetic data only; no production connection",
+        "privateRoot": "/tmp/doya-r1-members-8fe023d7",
+        "testExitCode": 1,
+        "stopExitCode": 0,
+        "endedAt": "2026-10-20T16:06:50.489760+00:00",
+        "removedOwnedDirectory": true
+      },
+      "afterCasePassed": true
+    },
+    {
+      "case": "canceled unbound owner history remains unchanged",
+      "sameFixtureSha256": "011922baeca22daad5a71c08c7561fada45e182aaf8b6728ce3bd280070e63a6",
+      "baselineRuntimeMatchesPriorFreeze7": true,
+      "baselineRuntimeHashes": {
+        "src/app/api/expense/organization/route.ts": "29bea3115d6d93c5baa2901f6cdf4c4ec388ab42d220351c28a3d5e1e87b4e46",
+        "src/app/api/expense/usage/route.ts": "1b1bf9cbcff83e0a773351539b793f616adeabdbaa125f5868d76206187eadc7",
+        "src/app/api/expense/members/route.ts": "5bbd36e205bfb9f600104e7fa1b14d17330c243b62620ad9457f58a86ca3ebdb",
+        "src/app/api/expense/members/[id]/route.ts": "49c0c88dfae0ddab17e252fd957f62c9f42560f3577886f14a14ce492ea04f24",
+        "src/lib/account-lifecycle/organization-fence.ts": "df6399c484b59f5cdc282d3e28114fd004cb749a3e87122f039218281b8a4ae9",
+        "src/lib/account-lifecycle/store.ts": "fc961245469c8c4f0efdf4f8a9cce222f7e6f0cb81e8ce026b46bd0b50a179f9",
+        "src/lib/expense/setup.ts": "fa2708e7132350ce273071d90852d57ff6ff1a8b0a38883eae876b945bf854ee",
+        "src/lib/expense/access.ts": "e34a6d64595941f0264e3796021e1c2ee6692aa71e6e541fc53306a9b011ec32",
+        "src/lib/expense/member-write.ts": "51dae1be659d0d7c1ca7578337f64cec6674b784fb4084d037ac6793ac764ed8"
+      },
+      "baselineExpectedSafeStatus": 200,
+      "baselineActualStatus": 409,
+      "baselineTestExitCode": 1,
+      "scope": "Expected safety failure on exact hash-matched prior R1 runtime plus committed pre-delta core; no provider or production access",
+      "supervisor": {
+        "startedAt": "2026-10-20T16:06:48.563462+00:00",
+        "scope": "Owned ephemeral Unix socket PostgreSQL, synthetic data only; no production connection",
+        "privateRoot": "/tmp/doya-r1-members-d567a2fb",
+        "testExitCode": 1,
+        "stopExitCode": 0,
+        "endedAt": "2026-10-20T16:06:50.481469+00:00",
+        "removedOwnedDirectory": true
+      },
+      "afterCasePassed": true
+    }
+  ],
+  "afterResult": "r1-expense-postgres-results.json",
+  "globalOWNER_AObservationsStillUnresolved": 2
+}

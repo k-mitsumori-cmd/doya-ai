@@ -1,5 +1,5 @@
 const {connect,request:operationRequest}=require('./adimage-operation-http-fixture.cjs');
-const assert=require('node:assert/strict'),{load,check}=require('./load-typescript.cjs');let logs=[];
+const assert=require('node:assert/strict'),{load,check}=require('./load-org-limit-fixture.cjs');let logs=[];
 const unified=load('src/lib/unified-plan.ts'),services=load('src/lib/services.ts',{'./unified-plan':unified}),ui=load('src/lib/service-limit-ui.ts',{'./services':services});
 function fixture(today,month,concepts,at='2026-09-20T02:58:19Z'){const RealDate=Date;class FixedDate extends Date{constructor(...a){super(...(a.length?a:[at]))}static now(){return +new RealDate(at)}};
  let imageReads=0;const access=load('src/lib/adimage/access.ts',{'crypto':require('crypto'),'next-auth':{},'@/lib/auth':{},'@/lib/prisma':{prisma:{adImageCreative:{count:async()=>++imageReads===1?today:month},adImageConcept:{count:async()=>concepts}}}},{Date:FixedDate,console:{info:(...args)=>logs.push(args),error:()=>{throw Error('No incident for quota')}}});return access}

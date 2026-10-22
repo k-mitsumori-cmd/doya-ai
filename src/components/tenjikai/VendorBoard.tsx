@@ -7,12 +7,13 @@ import { clsx } from 'clsx'
 import IsoBooth from './IsoBooth'
 import { Modal, PageHeader, cardIn } from './ui'
 import { BUDGET_META, KIND_LABEL, POSITION_LABEL, PRINT_PARTNERS, VENDORS, boothSize, generateDeadlines, man, recommendPrinters, yen, type BoothPlan, type BudgetLine, type Creative, type ProjectInput, type SiteAnalysis, type Vendor } from '@/lib/tenjikai/engine'
+import type { FullTenjikaiWorkspace } from '@/lib/tenjikai/workspace-dto'
 
 const CATS: Vendor['category'][] = ['装飾・施工', '印刷', 'ノベルティ', '人材']
 
-function specText(input: ProjectInput, plan: BoothPlan, creatives: Creative[], analysis: SiteAnalysis, picked: Vendor[]) {
-  const { venue } = boothSize(input)
-  const dl = generateDeadlines(input)
+function specText(input: ProjectInput, plan: BoothPlan, creatives: Creative[], analysis: SiteAnalysis, picked: Vendor[], savedWorkspace?: FullTenjikaiWorkspace) {
+  const venue = savedWorkspace?.venueSnapshot ?? boothSize(input).venue
+  const dl = savedWorkspace?.deadlines ?? generateDeadlines(input)
   return [
     `【発注仕様書】${input.eventName} 出展ブース`,
     `出展社：${analysis.brand}`,
@@ -36,14 +37,14 @@ function specText(input: ProjectInput, plan: BoothPlan, creatives: Creative[], a
   ].join('\n')
 }
 
-export default function VendorBoard({ input, plan, creatives, analysis, budget }: { input: ProjectInput; plan: BoothPlan; creatives: Creative[]; analysis: SiteAnalysis; budget: BudgetLine[] }) {
+export default function VendorBoard({ input, plan, creatives, analysis, budget, savedWorkspace }: { input: ProjectInput; plan: BoothPlan; creatives: Creative[]; analysis: SiteAnalysis; budget: BudgetLine[]; savedWorkspace?: FullTenjikaiWorkspace }) {
   const [cat, setCat] = useState<Vendor['category']>('装飾・施工')
   const [picked, setPicked] = useState<string[]>(['v1', 'v4', 'v5'])
   const [specOpen, setSpecOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const pickedVendors = VENDORS.filter((v) => picked.includes(v.id))
   const buildBudget = budget.find((b) => b.category === 'build')?.amountYen ?? 0
-  const text = specText(input, plan, creatives, analysis, pickedVendors)
+  const text = specText(input, plan, creatives, analysis, pickedVendors, savedWorkspace)
 
   const copy = async () => {
     try {

@@ -25,7 +25,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
   const [company, toolHrefs] = await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({}))])
   const initialRecent = parseRecent((await cookies()).get(RECENT_COOKIE)?.value)
   return (
-    <ShellGate signedIn userName={session.user.name ?? null} enabledIds={[]} uiNext={uiNext} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} always>
+    <ShellGate signedIn serverActorId={session.user.id ?? null} userName={session.user.name ?? null} enabledIds={[]} uiNext={uiNext} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} always>
       <PricingNext canceled={canceled} inShell serverSignedIn serverPlan={(session.user as { plan?: string }).plan ?? null} />
     </ShellGate>
   )

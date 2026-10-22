@@ -122,7 +122,7 @@ function NewRequestContent() {
 
   const goBack = () => {
     if (step === 1) {
-      router.back()
+      router.push('/kintai/requests')
     } else {
       setStep(1)
       setType('')
@@ -227,7 +227,7 @@ function NewRequestContent() {
       <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-6">
         {/* Header with back button */}
         <div className="flex items-center gap-3">
-          <button onClick={goBack} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+          <button type="button" onClick={goBack} aria-label={step === 1 ? '申請一覧に戻る' : '申請の種類を選び直す'} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
           <div className="flex-1">

@@ -55,6 +55,10 @@ async function fixture(kind) {
     'react-hot-toast': { __esModule: true, default: { error: inert, success: inert, loading: inert }, Toaster: inert },
     '@/components/UnifiedPricingPlans': { UnifiedPricingPlans: inert },
   };
+  // Load the actual notice; this focused resync fixture has no active management operation.
+  mocks['@/components/SubscriptionOperationNotice'] = {
+    SubscriptionOperationNotice: component('src/components/SubscriptionOperationNotice.tsx', { 'react/jsx-runtime': jsx }).SubscriptionOperationNotice,
+  };
   const location = { reload: () => { if (callbackFails) throw Error('synthetic private callback error'); navigations.push('reload'); } };
   const windowMock = { location, dispatchEvent: event => { if (callbackFails) throw Error('synthetic private callback error'); events.push(event); return true; } };
   mocks['@/hooks/useBannerPlanStats'] = component('src/hooks/useBannerPlanStats.ts', { react: React, 'next-auth/react': auth, '@/lib/billing-response-client': { readBillingResponse: async () => ({ ok: true, status: 200, data: { totalBanners: 0, monthlyUsage: 0, monthlyLimit: 150 } }) } });
@@ -152,5 +156,5 @@ async function run(kind, name, fn) { const f = await fixture(kind); try { await 
   });
   await run('pricing', 'Unknown service changes do not violate hook ordering', async f => { f.props({ serviceId: 'synthetic_unknown' }); await f.render(); assert.equal(f.container.textContent, ''); });
   assert.equal(warnings.length, 0, JSON.stringify(warnings));
-  console.log(JSON.stringify({ passed: results.length, results, scope: 'Actual full shared pricing and banner plan TSX plus shared resync hook/reader and actual plan/service modules mounted in React18 StrictMode/jsdom. Decorative children, stats/status and auth/API/navigation are synthetic. No real checkout, Stripe, customer data, email or DB.' }));
+  console.log(JSON.stringify({ passed: results.length, results, scope: 'Actual full shared pricing and banner plan TSX plus shared resync hook/reader and actual plan/service modules mounted in React18 StrictMode/jsdom. Actual SubscriptionOperationNotice is imported but inactive under the synthetic management hook. Decorative children, stats/status and auth/API/navigation are synthetic. No real checkout, Stripe, customer data, email or DB.' }));
 })().catch(error => { console.error = originalError; console.error(error); process.exitCode = 1; }).finally(() => { console.error = originalError; dom.window.close(); });

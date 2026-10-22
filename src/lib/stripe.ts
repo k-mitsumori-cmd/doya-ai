@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import { createHash } from 'node:crypto'
+import { rejectLegacyCheckout } from './checkout-legacy-guard'
 
 // ========================================
 // Stripe設定
@@ -495,18 +496,8 @@ export function getPlanIdFromStripePriceId(priceId: string | null | undefined): 
 // ========================================
 // Checkout Session作成
 // ========================================
-export async function createCheckoutSession({
-  priceId,
-  userId,
-  userEmail,
-  successUrl,
-  cancelUrl,
-  metadata,
-  mode = 'subscription',
-  trialDays,
-  idempotencyKey,
-  expiresAt,
-}: {
+/** @deprecated Kept for source compatibility; new Checkout uses the lifecycle provider. */
+export async function createCheckoutSession(_options: {
   priceId: string
   userId: string
   userEmail: string
@@ -519,55 +510,7 @@ export async function createCheckoutSession({
   idempotencyKey?: string
   expiresAt?: number
 }) {
-  // 1日以上のときだけトライアルを付与（0/未指定はトライアル無し）
-  const trial = mode === 'subscription' && typeof trialDays === 'number' && trialDays >= 1
-    ? Math.floor(trialDays)
-    : undefined
-
-  const session = await stripe.checkout.sessions.create({
-    mode,
-    payment_method_types: ['card'],
-    allow_promotion_codes: true,
-    ...(expiresAt ? { expires_at: expiresAt } : {}),
-    line_items: [
-      {
-        price: priceId,
-        quantity: 1,
-      },
-    ],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    customer_email: userEmail,
-    client_reference_id: userId,
-    metadata: {
-      ...(metadata || {}),
-      app: 'doya-ai',
-      userId,
-    },
-    // 日本語化
-    locale: 'ja',
-    // サブスクリプション設定
-    subscription_data: mode === 'subscription' ? {
-      metadata: {
-        ...(metadata || {}),
-        app: 'doya-ai',
-        userId,
-      },
-      // 初月無料トライアル。トライアル中に支払い方法が無ければ更新せず解約（請求事故防止）。
-      ...(trial ? {
-        trial_period_days: trial,
-        trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
-      } : {}),
-    } : undefined,
-    // 請求先住所を収集しない（シンプル化）
-    billing_address_collection: 'auto',
-    // 税金自動計算（日本向け）
-    automatic_tax: {
-      enabled: false, // 税込み価格のため無効
-    },
-  }, idempotencyKey ? { idempotencyKey } : undefined)
-
-  return session
+  return rejectLegacyCheckout()
 }
 
 // ========================================
@@ -770,15 +713,13 @@ export async function getSubscription(subscriptionId: string) {
 }
 
 export async function cancelSubscription(subscriptionId: string) {
-  return await stripe.subscriptions.update(subscriptionId, {
-    cancel_at_period_end: true,
-  })
+  void subscriptionId
+  throw new Error('SUBSCRIPTION_OPERATION_REQUIRED')
 }
 
 export async function resumeSubscription(subscriptionId: string) {
-  return await stripe.subscriptions.update(subscriptionId, {
-    cancel_at_period_end: false,
-  })
+  void subscriptionId
+  throw new Error('SUBSCRIPTION_OPERATION_REQUIRED')
 }
 
 // ========================================
@@ -793,24 +734,10 @@ export async function getOrCreateCustomer({
   name?: string
   userId: string
 }) {
-  // 既存のカスタマーを検索
-  const existingCustomers = await stripe.customers.list({
-    email,
-    limit: 1,
-  })
-
-  if (existingCustomers.data.length > 0) {
-    return existingCustomers.data[0]
-  }
-
-  // 新規作成
-  return await stripe.customers.create({
-    email,
-    name,
-    metadata: {
-      userId,
-    },
-  })
+  // No caller currently uses this legacy helper. A future checkout must reserve
+  // its operation and dispatch token before any Customer lookup or write.
+  void email; void name; void userId
+  throw new Error('UNGUARDED_CUSTOMER_CREATE_DISABLED')
 }
 
 // ========================================

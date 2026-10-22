@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-10-20T00:34:41.522514+00:00",
+  "rows": [
+    {
+      "branch": "feat/shell-usage-panel",
+      "commitsNotInMain": 0,
+      "disposition": "Review against handoff branch and current main"
+    },
+    {
+      "branch": "feat/ui-tools-base",
+      "commitsNotInMain": 0,
+      "disposition": "Review against handoff branch and current main"
+    },
+    {
+      "branch": "feat/tenjikai-flow",
+      "commitsNotInMain": 0,
+      "disposition": "Review against handoff branch and current main"
+    },
+    {
+      "branch": "feat/ds-charts-replace-1",
+      "commitsNotInMain": 0,
+      "disposition": "Review against handoff branch and current main"
+    },
+    {
+      "branch": "fix/cost-persona-seo",
+      "commitsNotInMain": 0,
+      "disposition": "Review against handoff branch and current main"
+    },
+    {
+      "branch": "fix/cost-text-shodan",
+      "commitsNotInMain": 0,
+      "disposition": "Review against handoff branch and current main"
+    },
+    {
+      "branch": "fix/trial-eligibility-plan",
+      "commitsNotInMain": 0,
+      "disposition": "Review against handoff branch and current main"
+    },
+    {
+      "branch": "fix/cost-image",
+      "commitsNotInMain": 1,
+      "disposition": "Review against handoff branch and current main"
+    },
+    {
+      "branch": "fix/cost-cunning-adimage",
+      "commitsNotInMain": 1,
+      "disposition": "Review against handoff branch and current main"
+    },
+    {
+      "branch": "fix/cost-cunning-wip",
+      "commitsNotInMain": 1,
+      "disposition": "Do not apply WIP: original commit explicitly records user deferral"
+    },
+    {
+      "branch": "feat/ui-quality-shell",
+      "commitsNotInMain": 3,
+      "disposition": "Review against handoff branch and current main"
+    },
+    {
+      "branch": "docs/dev-foundation",
+      "commitsNotInMain": 1,
+      "disposition": "Review against handoff branch and current main"
+    }
+  ]
+}

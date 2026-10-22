@@ -1,0 +1,130 @@
+{
+  "at": "2026-10-20T15:58:56.978217+00:00",
+  "head": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+  "state": "eight input source/test refrozen after metric-source peer fix; separate next cohort; not current R0+Promane21 gate",
+  "targetFiles": [
+    "src/lib/popup/popup-read.ts",
+    "src/lib/home/summary.ts",
+    "src/app/(shell)/home/HomeDashboard.tsx",
+    "src/app/(shell)/home/HomeDashboardLegacy.tsx",
+    "src/app/(shell)/home/agent.ts",
+    "src/app/(shell)/home/PopupOverview.tsx",
+    "src/app/(shell)/home/popup-overview.module.css",
+    "scripts/security-regression/verify-home-popup.cjs"
+  ],
+  "sourceHashes": {
+    "src/lib/popup/popup-read.ts": "e35f4f59dfdafb75f8874660140195f8c38caad48f753cf2fc939940d53e7401",
+    "src/lib/home/summary.ts": "6bd7f97eafd65195ee958df894aa69e197fd2a3b1f4eae062bd334a47fe1e2e6",
+    "src/app/(shell)/home/HomeDashboard.tsx": "49147c4b14e0ed55b5594d1b77b24edd7de191b0637d90ec14ea8d380c0ad9fb",
+    "src/app/(shell)/home/HomeDashboardLegacy.tsx": "259a1fa748a48318b05f3e2eae1270e9d4c0986cd42a2a305346a7259c6eb1b6",
+    "src/app/(shell)/home/agent.ts": "3a9ae40a1fa2daea0e408151aa148fe85c4c148af3b75c156b9e86e314ab64e1",
+    "src/app/(shell)/home/PopupOverview.tsx": "58416125019f2d5a1f50788d0e0e3d2067f61f6bcc5f553b66497407e9d65764",
+    "src/app/(shell)/home/popup-overview.module.css": "26d24a519374a21bb18da4b06a070667a48156bf6ba667624a28e1f7e92e10d0",
+    "scripts/security-regression/verify-home-popup.cjs": "f058b5064c898f28af84cd36b1a71614204dda04d746f11779d8a97c1238dcf2"
+  },
+  "candidateSha256": "83eb79ba382e7e974fab82c2646a2d356a54584940a35819c4e93e2cfe6e2cd5",
+  "verification": {
+    "newRegression": {
+      "command": "NODE_ENV=production node scripts/security-regression/verify-home-popup.cjs",
+      "exit": 0,
+      "acceptanceCases": 47,
+      "nodeTestsIncludingParent": 48,
+      "productionParent": true,
+      "isolatedChildNodeEnv": "test",
+      "baselineAcceptanceCases": 20,
+      "baselinePassed": 4,
+      "baselineFailed": 16,
+      "baselineNodeParentFailureAdditional": 1,
+      "assertionsPreserved": true,
+      "extraCase": "existing 21 retained, added 8 question categories x actual agent + both mounted UIs, unqualified metric variants, revenue precedence",
+      "previousFrozenSourceReplay": {
+        "agentSnapshotSha256": "d00f1d0cb5c76f8ca4f599035f74514b8557093c82aced563da829bbab7b2686",
+        "dashboardSnapshotSha256": "c79946b490112070e544590753970f13729de2e77725140dc96a11976240fbf0",
+        "previousHashesMatch": true,
+        "sameFinalFixture": true,
+        "nodeTestsIncludingParent": 48,
+        "passed": 27,
+        "failed": 21,
+        "acceptancePassed": 27,
+        "acceptanceFailed": 20,
+        "parentFailedAdditional": 1,
+        "note": "actual mounted Banner/LP/CTR wrongly expose 1000/19/1.9% in old source; some new classifier contract assertions also fail because old helper was absent"
+      }
+    },
+    "popupExisting": {
+      "exit": 0,
+      "tests": 55
+    },
+    "homeFinanceExisting": {
+      "exit": 0,
+      "syntheticCases": 28,
+      "note": "existing fixture has no popup tables; new popup settles error while original finance assertions remain unchanged"
+    },
+    "homeHydrationExisting": {
+      "exit": 0,
+      "syntheticCases": 16
+    },
+    "clockTodayUnits": {
+      "exit": 0,
+      "tests": 11
+    },
+    "targetLint": {
+      "exit": 0,
+      "warnings": 0
+    },
+    "targetTypes": {
+      "exit": 0,
+      "programFiles": 719,
+      "diagnostics": 0,
+      "scope": "six changed TS roots plus ambient declarations and transitive imports; not whole repository route contracts"
+    },
+    "gitDiffCheck": {
+      "exit": 0
+    },
+    "frozenPromane14Unchanged": {
+      "src/lib/promane/auth.ts": true,
+      "src/lib/promane/actions-tasks.ts": true,
+      "src/lib/promane/actions-time-entries.ts": true,
+      "src/app/(shell)/promane/page.tsx": true,
+      "src/app/(shell)/promane/[workspaceSlug]/members/page.tsx": true,
+      "src/app/(shell)/promane/[workspaceSlug]/projects/[projectId]/page.tsx": true,
+      "src/app/api/promane/invite/[token]/route.ts": true,
+      "src/app/api/promane/invitations/route.ts": true,
+      "src/components/promane/task-edit-modal.tsx": true,
+      "scripts/security-regression/verify-promane-time-input.cjs": true,
+      "scripts/security-regression/verify-promane-time-project.cjs": true,
+      "scripts/security-regression/verify-promane-record-delete-atomic.cjs": true,
+      "scripts/security-regression/verify-related-records.cjs": true,
+      "scripts/security-regression/verify-promane-nullable-compat.cjs": true
+    }
+  },
+  "limitations": [
+    "No browser or device visuals/CLS measurement",
+    "No real DB/provider/production interaction",
+    "No current cohort full gate/commit/push/CI/Vercel proof",
+    "PopupStat.day is @db.Date: upper bound is canonical JST current day bucket; intraday future event timestamps are unavailable in this model",
+    "Existing HomeSummary API cache/auth contract unchanged; old snapshot omission remains supported"
+  ],
+  "reactReview": [
+    "shared pure typed component, no extra fetch/effect, user scoped settled read",
+    "no date locale ambient render, deterministic explicit ja-JP formatting",
+    "semantic heading/dl, labelled section/status, focus-visible link",
+    "token colors, min-width/overflow-wrap and single column <=520px; browser not measured"
+  ],
+  "metricSourcePolicy": {
+    "popup": "explicit Popup stats, bare named Popup overview retained",
+    "asklink": "unmeasured; no Popup substitution",
+    "other": "explicit Banner/LP metric unavailable",
+    "ambiguous": "unqualified CTR/click/impression or multiple named sources require service confirmation",
+    "creation": "Popup creation/delivery keeps new UI navigation and legacy action link",
+    "sharedClassifier": "metricQuestion used by isPopupStatsQuestion, isHomeMetricsQuestion and planAgent"
+  },
+  "integrationFollowup": {
+    "status": "snapshot_local_27_passed_remote_pending",
+    "summary": "../2026-10-21-r1-popup-jst-delta/summary.json",
+    "sourceFiles": 5163,
+    "typecheckExitCode": 0,
+    "sameCandidateOnly": true,
+    "productionReflected": false
+  }
+}

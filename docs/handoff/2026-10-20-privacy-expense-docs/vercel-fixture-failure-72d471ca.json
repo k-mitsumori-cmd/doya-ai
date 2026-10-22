@@ -1,0 +1,39 @@
+{
+  "failedCommit": "72d471caf245072215414115a6b58fb6a3751295",
+  "originalFixtureSha256": "36a9e265dbf1fae383b6011e498e08f49ebb5ad6569b9c4cde16cecff65f00fb",
+  "candidateFixtureSha256": "a2bb53f926a234fdf45dc0aa012ecd12a4fcaeb2c4276118183f0fa44e93b5b5",
+  "originalScenarioAndAssertionSectionByteIdentical": true,
+  "runtimeSnapshotSourceFiles": 2510,
+  "runtimeSnapshotMatchesFailedCommit": true,
+  "beforeDelayedActualDigest": {
+    "delayMs": 25,
+    "failedCase": 15,
+    "passedBeforeFailure": 14,
+    "error": "Missing button 保存結果を確認",
+    "exitCode": 1
+  },
+  "afterDelayedActualDigest": {
+    "cases": 32,
+    "exitCode": 0,
+    "duringDelayBusy": true,
+    "duplicateProviderPosts": 0
+  },
+  "afterNormal": {
+    "cases": 32,
+    "exitCode": 0
+  },
+  "scope": "Failed-head src snapshot, unchanged actual runtime, original32 assertions retained. Real WebCrypto result with controlled case15 delay; synthetic HTTP/storage/locks, outbound OS denied, dependencies read-only via NODE_PATH. No application mutation or current next-batch sources used.",
+  "recordedAt": "2026-10-20T12:17:22.608522+00:00",
+  "remoteCi": {
+    "run": 39418890840,
+    "conclusion": "success"
+  },
+  "remoteVercel": {
+    "id": "dpl_9sPLEmirqpf4wz7juL4EcHFLWj2k",
+    "state": "ERROR",
+    "stage": "common-security/verify-asklink-creation-client.cjs before Next production compile"
+  },
+  "hotfixScope": "Only fixture asynchronous wait helpers; no app/runtime or scenario assertion changes.",
+  "candidateNextBuild": "Not yet run; needs future same-head Vercel",
+  "productionReflected": false
+}

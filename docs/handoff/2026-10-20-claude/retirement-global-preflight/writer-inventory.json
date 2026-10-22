@@ -1,0 +1,1342 @@
+{
+  "auxiliaryExternalWrites": [
+    {
+      "path": "src/lib/stripe.ts",
+      "line": 662,
+      "expression": "stripe.billingPortal.configurations.create",
+      "category": "shared_portal_configuration_write"
+    },
+    {
+      "path": "src/lib/stripe.ts",
+      "line": 807,
+      "expression": "stripe.customers.create",
+      "category": "external_customer_write"
+    },
+    {
+      "path": "src/app/api/hr/billing/checkout/route.ts",
+      "line": 130,
+      "expression": "stripe.customers.create",
+      "category": "external_customer_write"
+    }
+  ],
+  "kind": "read_only_design_inventory_not_runtime_coverage_proof",
+  "baseCommit": "7672cb8f12a0062b73668a0efdb673e87aca1884",
+  "scannedSourceFiles": 2428,
+  "scope": "Current src TS/TSX excluding tests/declarations; AST direct ORM calls, nested owner creates, external billing writes and imports of known helpers. Dynamic/reflected operations require manual review. Counts are call sites, not defects or accepted fixes.",
+  "membershipAndDeletionSites": [
+    {
+      "path": "src/app/api/admin/users/route.ts",
+      "line": 311,
+      "enclosingFunction": "DELETE",
+      "delegate": "user",
+      "operation": "delete",
+      "expression": "tx.user.delete",
+      "category": "user_deletion"
+    },
+    {
+      "path": "src/app/api/aio/invite/[token]/route.ts",
+      "line": 75,
+      "enclosingFunction": "POST",
+      "delegate": "aioMember",
+      "operation": "deleteMany",
+      "expression": "tx.aioMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/aio/invite/[token]/route.ts",
+      "line": 79,
+      "enclosingFunction": "POST",
+      "delegate": "aioMember",
+      "operation": "updateMany",
+      "expression": "tx.aioMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/aio/members/[id]/route.ts",
+      "line": 33,
+      "enclosingFunction": "mutateMember",
+      "delegate": "aioMember",
+      "operation": "update",
+      "expression": "tx.aioMember.update",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/aio/members/[id]/route.ts",
+      "line": 36,
+      "enclosingFunction": "mutateMember",
+      "delegate": "aioMember",
+      "operation": "delete",
+      "expression": "tx.aioMember.delete",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/aio/members/route.ts",
+      "line": 69,
+      "enclosingFunction": "POST",
+      "delegate": "aioMember",
+      "operation": "deleteMany",
+      "expression": "tx.aioMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/aio/members/route.ts",
+      "line": 72,
+      "enclosingFunction": "POST",
+      "delegate": "aioMember",
+      "operation": "create",
+      "expression": "tx.aioMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/aio/quick-start/route.ts",
+      "line": 60,
+      "enclosingFunction": "handle",
+      "delegate": "aioMember",
+      "operation": "create",
+      "expression": "tx.aioMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/aishodan/invite/[token]/route.ts",
+      "line": 84,
+      "enclosingFunction": "POST",
+      "delegate": "aishodanMember",
+      "operation": "deleteMany",
+      "expression": "tx.aishodanMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/aishodan/invite/[token]/route.ts",
+      "line": 88,
+      "enclosingFunction": "POST",
+      "delegate": "aishodanMember",
+      "operation": "updateMany",
+      "expression": "tx.aishodanMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/aishodan/members/[id]/route.ts",
+      "line": 37,
+      "enclosingFunction": "mutateMember",
+      "delegate": "aishodanMember",
+      "operation": "update",
+      "expression": "tx.aishodanMember.update",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/aishodan/members/[id]/route.ts",
+      "line": 40,
+      "enclosingFunction": "mutateMember",
+      "delegate": "aishodanMember",
+      "operation": "delete",
+      "expression": "tx.aishodanMember.delete",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/aishodan/members/route.ts",
+      "line": 89,
+      "enclosingFunction": "POST",
+      "delegate": "aishodanMember",
+      "operation": "deleteMany",
+      "expression": "tx.aishodanMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/aishodan/members/route.ts",
+      "line": 90,
+      "enclosingFunction": "POST",
+      "delegate": "aishodanMember",
+      "operation": "create",
+      "expression": "tx.aishodanMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/expense/members/[id]/route.ts",
+      "line": 41,
+      "enclosingFunction": "PATCH",
+      "delegate": "expenseMember",
+      "operation": "update",
+      "expression": "prisma.expenseMember.update",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/expense/members/[id]/route.ts",
+      "line": 54,
+      "enclosingFunction": "DELETE",
+      "delegate": "expenseMember",
+      "operation": "update",
+      "expression": "prisma.expenseMember.update",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/expense/members/route.ts",
+      "line": 60,
+      "enclosingFunction": "POST",
+      "delegate": "expenseMember",
+      "operation": "update",
+      "expression": "prisma.expenseMember.update",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/expense/members/route.ts",
+      "line": 61,
+      "enclosingFunction": "POST",
+      "delegate": "expenseMember",
+      "operation": "create",
+      "expression": "prisma.expenseMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/hr/organization/invite/[token]/route.ts",
+      "line": 37,
+      "enclosingFunction": "GET",
+      "delegate": "hrInvitation",
+      "operation": "updateMany",
+      "expression": "prisma.hrInvitation.updateMany",
+      "category": "separate_invitation"
+    },
+    {
+      "path": "src/app/api/hr/organization/invite/accept/route.ts",
+      "line": 59,
+      "enclosingFunction": "POST",
+      "delegate": "hrInvitation",
+      "operation": "updateMany",
+      "expression": "prisma.hrInvitation.updateMany",
+      "category": "separate_invitation"
+    },
+    {
+      "path": "src/app/api/hr/organization/invite/accept/route.ts",
+      "line": 104,
+      "enclosingFunction": "POST",
+      "delegate": "hrInvitation",
+      "operation": "updateMany",
+      "expression": "tx.hrInvitation.updateMany",
+      "category": "separate_invitation"
+    },
+    {
+      "path": "src/app/api/hr/organization/invite/accept/route.ts",
+      "line": 113,
+      "enclosingFunction": "POST",
+      "delegate": "hrOrganizationMember",
+      "operation": "create",
+      "expression": "tx.hrOrganizationMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/hr/organization/invite/route.ts",
+      "line": 79,
+      "enclosingFunction": "POST",
+      "delegate": "hrInvitation",
+      "operation": "create",
+      "expression": "tx.hrInvitation.create",
+      "category": "separate_invitation"
+    },
+    {
+      "path": "src/app/api/hr/organization/members/[id]/route.ts",
+      "line": 45,
+      "enclosingFunction": "mutateMember",
+      "delegate": "hrOrganizationMember",
+      "operation": "deleteMany",
+      "expression": "tx.hrOrganizationMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/hr/organization/members/[id]/route.ts",
+      "line": 61,
+      "enclosingFunction": "mutateMember",
+      "delegate": "hrOrganizationMember",
+      "operation": "updateMany",
+      "expression": "tx.hrOrganizationMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/hr/organization/transfer-owner/route.ts",
+      "line": 64,
+      "enclosingFunction": "POST",
+      "delegate": "hrOrganizationMember",
+      "operation": "updateMany",
+      "expression": "tx.hrOrganizationMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/hr/organization/transfer-owner/route.ts",
+      "line": 69,
+      "enclosingFunction": "POST",
+      "delegate": "hrOrganizationMember",
+      "operation": "updateMany",
+      "expression": "tx.hrOrganizationMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/kintai/employees/[id]/invite/route.ts",
+      "line": 42,
+      "enclosingFunction": "POST",
+      "delegate": "kintaiMember",
+      "operation": "updateMany",
+      "expression": "tx.kintaiMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/kintai/employees/[id]/route.ts",
+      "line": 165,
+      "enclosingFunction": "PATCH",
+      "delegate": "kintaiMember",
+      "operation": "update",
+      "expression": "tx.kintaiMember.update",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/kintai/invite/[token]/route.ts",
+      "line": 109,
+      "enclosingFunction": "POST",
+      "delegate": "kintaiMember",
+      "operation": "updateMany",
+      "expression": "tx.kintaiMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/kintai/invite/[token]/route.ts",
+      "line": 113,
+      "enclosingFunction": "POST",
+      "delegate": "kintaiMember",
+      "operation": "updateMany",
+      "expression": "tx.kintaiMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/mensetsu/invite/[token]/route.ts",
+      "line": 84,
+      "enclosingFunction": "POST",
+      "delegate": "mensetsuMember",
+      "operation": "deleteMany",
+      "expression": "tx.mensetsuMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/mensetsu/invite/[token]/route.ts",
+      "line": 88,
+      "enclosingFunction": "POST",
+      "delegate": "mensetsuMember",
+      "operation": "updateMany",
+      "expression": "tx.mensetsuMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/mensetsu/members/[id]/route.ts",
+      "line": 37,
+      "enclosingFunction": "mutateMember",
+      "delegate": "mensetsuMember",
+      "operation": "update",
+      "expression": "tx.mensetsuMember.update",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/mensetsu/members/[id]/route.ts",
+      "line": 40,
+      "enclosingFunction": "mutateMember",
+      "delegate": "mensetsuMember",
+      "operation": "delete",
+      "expression": "tx.mensetsuMember.delete",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/mensetsu/members/route.ts",
+      "line": 86,
+      "enclosingFunction": "POST",
+      "delegate": "mensetsuMember",
+      "operation": "deleteMany",
+      "expression": "tx.mensetsuMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/mensetsu/members/route.ts",
+      "line": 87,
+      "enclosingFunction": "POST",
+      "delegate": "mensetsuMember",
+      "operation": "create",
+      "expression": "tx.mensetsuMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/promane/invitations/route.ts",
+      "line": 146,
+      "enclosingFunction": "DELETE",
+      "delegate": "promaneInvitation",
+      "operation": "deleteMany",
+      "expression": "tx.promaneInvitation.deleteMany",
+      "category": "separate_invitation"
+    },
+    {
+      "path": "src/app/api/promane/members/[id]/rate/route.ts",
+      "line": 64,
+      "enclosingFunction": "PATCH",
+      "delegate": "promaneMember",
+      "operation": "updateMany",
+      "expression": "tx.promaneMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/promane/repair/route.ts",
+      "line": 65,
+      "enclosingFunction": "POST",
+      "delegate": "promaneMember",
+      "operation": "updateMany",
+      "expression": "tx.promaneMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/quote/invite/[token]/route.ts",
+      "line": 84,
+      "enclosingFunction": "POST",
+      "delegate": "quoteMember",
+      "operation": "deleteMany",
+      "expression": "tx.quoteMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/quote/invite/[token]/route.ts",
+      "line": 88,
+      "enclosingFunction": "POST",
+      "delegate": "quoteMember",
+      "operation": "updateMany",
+      "expression": "tx.quoteMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/quote/members/[id]/route.ts",
+      "line": 37,
+      "enclosingFunction": "mutateMember",
+      "delegate": "quoteMember",
+      "operation": "update",
+      "expression": "tx.quoteMember.update",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/quote/members/[id]/route.ts",
+      "line": 40,
+      "enclosingFunction": "mutateMember",
+      "delegate": "quoteMember",
+      "operation": "delete",
+      "expression": "tx.quoteMember.delete",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/quote/members/route.ts",
+      "line": 89,
+      "enclosingFunction": "POST",
+      "delegate": "quoteMember",
+      "operation": "deleteMany",
+      "expression": "tx.quoteMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/quote/members/route.ts",
+      "line": 90,
+      "enclosingFunction": "POST",
+      "delegate": "quoteMember",
+      "operation": "create",
+      "expression": "tx.quoteMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/sfa/invite/[token]/route.ts",
+      "line": 75,
+      "enclosingFunction": "POST",
+      "delegate": "sfaMember",
+      "operation": "deleteMany",
+      "expression": "tx.sfaMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/sfa/invite/[token]/route.ts",
+      "line": 83,
+      "enclosingFunction": "POST",
+      "delegate": "sfaMember",
+      "operation": "updateMany",
+      "expression": "tx.sfaMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/sfa/members/[id]/route.ts",
+      "line": 33,
+      "enclosingFunction": "mutateMember",
+      "delegate": "sfaMember",
+      "operation": "update",
+      "expression": "tx.sfaMember.update",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/sfa/members/[id]/route.ts",
+      "line": 36,
+      "enclosingFunction": "mutateMember",
+      "delegate": "sfaMember",
+      "operation": "delete",
+      "expression": "tx.sfaMember.delete",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/sfa/members/route.ts",
+      "line": 77,
+      "enclosingFunction": "POST",
+      "delegate": "sfaMember",
+      "operation": "deleteMany",
+      "expression": "tx.sfaMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/sfa/members/route.ts",
+      "line": 80,
+      "enclosingFunction": "POST",
+      "delegate": "sfaMember",
+      "operation": "create",
+      "expression": "tx.sfaMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/shodan/invite/[token]/route.ts",
+      "line": 75,
+      "enclosingFunction": "POST",
+      "delegate": "shodanMember",
+      "operation": "deleteMany",
+      "expression": "tx.shodanMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/shodan/invite/[token]/route.ts",
+      "line": 79,
+      "enclosingFunction": "POST",
+      "delegate": "shodanMember",
+      "operation": "updateMany",
+      "expression": "tx.shodanMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/shodan/members/[id]/route.ts",
+      "line": 33,
+      "enclosingFunction": "mutateMember",
+      "delegate": "shodanMember",
+      "operation": "update",
+      "expression": "tx.shodanMember.update",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/shodan/members/[id]/route.ts",
+      "line": 36,
+      "enclosingFunction": "mutateMember",
+      "delegate": "shodanMember",
+      "operation": "delete",
+      "expression": "tx.shodanMember.delete",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/shodan/members/route.ts",
+      "line": 69,
+      "enclosingFunction": "POST",
+      "delegate": "shodanMember",
+      "operation": "deleteMany",
+      "expression": "tx.shodanMember.deleteMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/app/api/shodan/members/route.ts",
+      "line": 72,
+      "enclosingFunction": "POST",
+      "delegate": "shodanMember",
+      "operation": "create",
+      "expression": "tx.shodanMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/aio/access.ts",
+      "line": 123,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "aioMember",
+      "operation": "create",
+      "expression": "tx.aioMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/aio/access.ts",
+      "line": 154,
+      "enclosingFunction": "createAioOrganization",
+      "delegate": "aioMember",
+      "operation": "create",
+      "expression": "tx.aioMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/aishodan/access.ts",
+      "line": 132,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "aishodanMember",
+      "operation": "create",
+      "expression": "tx.aishodanMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/asklink/creation-adapter.ts",
+      "line": 9,
+      "enclosingFunction": "withAskLinkReceiptCleanup",
+      "delegate": "user",
+      "operation": "delete",
+      "expression": "tx.user.delete",
+      "category": "user_deletion"
+    },
+    {
+      "path": "src/lib/expense/access.ts",
+      "line": 64,
+      "enclosingFunction": "claimPendingMemberships",
+      "delegate": "expenseMember",
+      "operation": "update",
+      "expression": "prisma.expenseMember.update",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/expense/access.ts",
+      "line": 67,
+      "enclosingFunction": "claimPendingMemberships",
+      "delegate": "expenseMember",
+      "operation": "updateMany",
+      "expression": "prisma.expenseMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/expense/access.ts",
+      "line": 151,
+      "enclosingFunction": "createOrganization",
+      "delegate": "expenseMember",
+      "operation": "create",
+      "expression": "tx.expenseMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/expense/setup.ts",
+      "line": 37,
+      "enclosingFunction": "initExpenseForCompany",
+      "delegate": "expenseMember",
+      "operation": "create",
+      "expression": "tx.expenseMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/hr/access.ts",
+      "line": 63,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "hrOrganization",
+      "operation": "create",
+      "expression": "tx.hrOrganization.create",
+      "category": "nested_owner_membership"
+    },
+    {
+      "path": "src/lib/income/access.ts",
+      "line": 68,
+      "enclosingFunction": "createOwnOrganization",
+      "delegate": "incomeMember",
+      "operation": "create",
+      "expression": "tx.incomeMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/kintai/access.ts",
+      "line": 62,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "kintaiMember",
+      "operation": "create",
+      "expression": "tx.kintaiMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/mensetsu/access.ts",
+      "line": 119,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "mensetsuMember",
+      "operation": "create",
+      "expression": "tx.mensetsuMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/promane/actions-time-entries.ts",
+      "line": 224,
+      "enclosingFunction": "updateMemberRate",
+      "delegate": "promaneMember",
+      "operation": "updateMany",
+      "expression": "tx.promaneMember.updateMany",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/promane/auth.ts",
+      "line": 54,
+      "enclosingFunction": "getOrCreateWorkspace",
+      "delegate": "promaneWorkspace",
+      "operation": "create",
+      "expression": "tx.promaneWorkspace.create",
+      "category": "canonical_workspace"
+    },
+    {
+      "path": "src/lib/promane/auth.ts",
+      "line": 54,
+      "enclosingFunction": "getOrCreateWorkspace",
+      "delegate": "promaneWorkspace",
+      "operation": "create",
+      "expression": "tx.promaneWorkspace.create",
+      "category": "nested_owner_membership"
+    },
+    {
+      "path": "src/lib/promane/invite-admission.ts",
+      "line": 90,
+      "enclosingFunction": "issuePromaneInvitation",
+      "delegate": "promaneInvitation",
+      "operation": "create",
+      "expression": "tx.promaneInvitation.create",
+      "category": "separate_invitation"
+    },
+    {
+      "path": "src/lib/promane/invite-admission.ts",
+      "line": 162,
+      "enclosingFunction": "acceptPromaneInvitation",
+      "delegate": "promaneMember",
+      "operation": "create",
+      "expression": "tx.promaneMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/promane/invite-admission.ts",
+      "line": 171,
+      "enclosingFunction": "acceptPromaneInvitation",
+      "delegate": "promaneInvitation",
+      "operation": "update",
+      "expression": "tx.promaneInvitation.update",
+      "category": "separate_invitation"
+    },
+    {
+      "path": "src/lib/promane/workspace-mutations.ts",
+      "line": 59,
+      "enclosingFunction": "createPromaneWorkspaceOperation",
+      "delegate": "promaneWorkspace",
+      "operation": "create",
+      "expression": "tx.promaneWorkspace.create",
+      "category": "canonical_workspace"
+    },
+    {
+      "path": "src/lib/promane/workspace-mutations.ts",
+      "line": 59,
+      "enclosingFunction": "createPromaneWorkspaceOperation",
+      "delegate": "promaneWorkspace",
+      "operation": "create",
+      "expression": "tx.promaneWorkspace.create",
+      "category": "nested_owner_membership"
+    },
+    {
+      "path": "src/lib/promane/workspace-mutations.ts",
+      "line": 78,
+      "enclosingFunction": "updatePromaneWorkspaceOperation",
+      "delegate": "promaneWorkspace",
+      "operation": "updateMany",
+      "expression": "tx.promaneWorkspace.updateMany",
+      "category": "canonical_workspace"
+    },
+    {
+      "path": "src/lib/quote/access.ts",
+      "line": 128,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "quoteMember",
+      "operation": "create",
+      "expression": "tx.quoteMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/sfa/access.ts",
+      "line": 119,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "sfaMember",
+      "operation": "create",
+      "expression": "tx.sfaMember.create",
+      "category": "membership"
+    },
+    {
+      "path": "src/lib/shodan/access.ts",
+      "line": 122,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "shodanMember",
+      "operation": "create",
+      "expression": "tx.shodanMember.create",
+      "category": "membership"
+    }
+  ],
+  "organizationSites": [
+    {
+      "path": "src/app/api/aio/quick-start/route.ts",
+      "line": 59,
+      "enclosingFunction": "handle",
+      "delegate": "aioOrganization",
+      "operation": "create",
+      "expression": "tx.aioOrganization.create",
+      "category": "organization_creation"
+    },
+    {
+      "path": "src/app/api/expense/organization/route.ts",
+      "line": 56,
+      "enclosingFunction": "PATCH",
+      "delegate": "expenseOrganization",
+      "operation": "update",
+      "expression": "tx.expenseOrganization.update",
+      "category": "organization_metadata_or_counter"
+    },
+    {
+      "path": "src/app/api/hr/organization/route.ts",
+      "line": 163,
+      "enclosingFunction": "PATCH",
+      "delegate": "hrOrganization",
+      "operation": "update",
+      "expression": "prisma.hrOrganization.update",
+      "category": "organization_metadata_or_counter"
+    },
+    {
+      "path": "src/app/api/hr/settings/route.ts",
+      "line": 91,
+      "enclosingFunction": "PUT",
+      "delegate": "hrOrganization",
+      "operation": "update",
+      "expression": "prisma.hrOrganization.update",
+      "category": "organization_metadata_or_counter"
+    },
+    {
+      "path": "src/app/api/income/organization/route.ts",
+      "line": 57,
+      "enclosingFunction": "PATCH",
+      "delegate": "incomeOrganization",
+      "operation": "update",
+      "expression": "prisma.incomeOrganization.update",
+      "category": "organization_metadata_or_counter"
+    },
+    {
+      "path": "src/app/api/mensetsu/organizations/settings/route.ts",
+      "line": 32,
+      "enclosingFunction": "PATCH",
+      "delegate": "mensetsuOrganization",
+      "operation": "update",
+      "expression": "prisma.mensetsuOrganization.update",
+      "category": "organization_metadata_or_counter"
+    },
+    {
+      "path": "src/lib/aio/access.ts",
+      "line": 122,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "aioOrganization",
+      "operation": "create",
+      "expression": "tx.aioOrganization.create",
+      "category": "organization_creation"
+    },
+    {
+      "path": "src/lib/aio/access.ts",
+      "line": 153,
+      "enclosingFunction": "createAioOrganization",
+      "delegate": "aioOrganization",
+      "operation": "create",
+      "expression": "tx.aioOrganization.create",
+      "category": "organization_creation"
+    },
+    {
+      "path": "src/lib/aishodan/access.ts",
+      "line": 131,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "aishodanOrganization",
+      "operation": "create",
+      "expression": "tx.aishodanOrganization.create",
+      "category": "organization_creation"
+    },
+    {
+      "path": "src/lib/billing-sync.ts",
+      "line": 73,
+      "enclosingFunction": "syncUnifiedBilling",
+      "delegate": "hrOrganization",
+      "operation": "updateMany",
+      "expression": "tx.hrOrganization.updateMany",
+      "category": "organization_metadata_or_counter"
+    },
+    {
+      "path": "src/lib/expense/access.ts",
+      "line": 150,
+      "enclosingFunction": "createOrganization",
+      "delegate": "expenseOrganization",
+      "operation": "create",
+      "expression": "tx.expenseOrganization.create",
+      "category": "organization_creation"
+    },
+    {
+      "path": "src/lib/expense/setup.ts",
+      "line": 28,
+      "enclosingFunction": "initExpenseForCompany",
+      "delegate": "expenseOrganization",
+      "operation": "create",
+      "expression": "tx.expenseOrganization.create",
+      "category": "organization_creation"
+    },
+    {
+      "path": "src/lib/hr/access.ts",
+      "line": 63,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "hrOrganization",
+      "operation": "create",
+      "expression": "tx.hrOrganization.create",
+      "category": "organization_creation"
+    },
+    {
+      "path": "src/lib/hr/billing.ts",
+      "line": 166,
+      "enclosingFunction": "reserveAiUsageInTransaction",
+      "delegate": "hrOrganization",
+      "operation": "update",
+      "expression": "tx.hrOrganization.update",
+      "category": "organization_metadata_or_counter"
+    },
+    {
+      "path": "src/lib/hr/billing.ts",
+      "line": 177,
+      "enclosingFunction": "releaseAiUsage",
+      "delegate": "hrOrganization",
+      "operation": "updateMany",
+      "expression": "prisma.hrOrganization.updateMany",
+      "category": "organization_metadata_or_counter"
+    },
+    {
+      "path": "src/lib/hr/evaluation-ai-operation.ts",
+      "line": 76,
+      "enclosingFunction": "endHrEvaluationAiOperation",
+      "delegate": "hrOrganization",
+      "operation": "updateMany",
+      "expression": "tx.hrOrganization.updateMany",
+      "category": "organization_metadata_or_counter"
+    },
+    {
+      "path": "src/lib/income/access.ts",
+      "line": 65,
+      "enclosingFunction": "createOwnOrganization",
+      "delegate": "incomeOrganization",
+      "operation": "create",
+      "expression": "tx.incomeOrganization.create",
+      "category": "organization_creation"
+    },
+    {
+      "path": "src/lib/kintai/access.ts",
+      "line": 61,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "kintaiOrganization",
+      "operation": "create",
+      "expression": "tx.kintaiOrganization.create",
+      "category": "organization_creation"
+    },
+    {
+      "path": "src/lib/mensetsu/access.ts",
+      "line": 118,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "mensetsuOrganization",
+      "operation": "create",
+      "expression": "tx.mensetsuOrganization.create",
+      "category": "organization_creation"
+    },
+    {
+      "path": "src/lib/quote/access.ts",
+      "line": 127,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "quoteOrganization",
+      "operation": "create",
+      "expression": "tx.quoteOrganization.create",
+      "category": "organization_creation"
+    },
+    {
+      "path": "src/lib/sfa/access.ts",
+      "line": 117,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "sfaOrganization",
+      "operation": "create",
+      "expression": "tx.sfaOrganization.create",
+      "category": "organization_creation"
+    },
+    {
+      "path": "src/lib/shodan/access.ts",
+      "line": 121,
+      "enclosingFunction": "getOrCreateOrganization",
+      "delegate": "shodanOrganization",
+      "operation": "create",
+      "expression": "tx.shodanOrganization.create",
+      "category": "organization_creation"
+    }
+  ],
+  "externalBillingWrites": [
+    {
+      "path": "src/app/api/admin/stripe/route.ts",
+      "line": 129,
+      "enclosingFunction": "POST",
+      "expression": "stripe.subscriptions.update",
+      "category": "external_billing_write"
+    },
+    {
+      "path": "src/app/api/admin/stripe/route.ts",
+      "line": 136,
+      "enclosingFunction": "POST",
+      "expression": "stripe.subscriptions.cancel",
+      "category": "external_billing_write"
+    },
+    {
+      "path": "src/app/api/admin/stripe/route.ts",
+      "line": 177,
+      "enclosingFunction": "POST",
+      "expression": "stripe.subscriptions.update",
+      "category": "external_billing_write"
+    },
+    {
+      "path": "src/app/api/admin/users/route.ts",
+      "line": 303,
+      "enclosingFunction": "DELETE",
+      "expression": "stripe.subscriptions.cancel",
+      "category": "external_billing_write"
+    },
+    {
+      "path": "src/app/api/hr/billing/checkout/route.ts",
+      "line": 174,
+      "enclosingFunction": "POST",
+      "expression": "stripe.checkout.sessions.create",
+      "category": "external_billing_write"
+    },
+    {
+      "path": "src/app/api/stripe/subscription/cancel/route.ts",
+      "line": 123,
+      "enclosingFunction": "POST",
+      "expression": "stripe.subscriptions.cancel",
+      "category": "external_billing_write"
+    },
+    {
+      "path": "src/app/api/stripe/subscription/cancel/route.ts",
+      "line": 124,
+      "enclosingFunction": "POST",
+      "expression": "stripe.subscriptions.update",
+      "category": "external_billing_write"
+    },
+    {
+      "path": "src/app/api/stripe/subscription/resume/route.ts",
+      "line": 61,
+      "enclosingFunction": "POST",
+      "expression": "stripe.subscriptions.update",
+      "category": "external_billing_write"
+    },
+    {
+      "path": "src/lib/stripe.ts",
+      "line": 527,
+      "enclosingFunction": "createCheckoutSession",
+      "expression": "stripe.checkout.sessions.create",
+      "category": "external_billing_write"
+    },
+    {
+      "path": "src/lib/stripe.ts",
+      "line": 586,
+      "enclosingFunction": "createCustomerPortalSession",
+      "expression": "stripe.billingPortal.sessions.create",
+      "category": "external_billing_write"
+    },
+    {
+      "path": "src/lib/stripe.ts",
+      "line": 773,
+      "enclosingFunction": "cancelSubscription",
+      "expression": "stripe.subscriptions.update",
+      "category": "external_billing_write"
+    },
+    {
+      "path": "src/lib/stripe.ts",
+      "line": 779,
+      "enclosingFunction": "resumeSubscription",
+      "expression": "stripe.subscriptions.update",
+      "category": "external_billing_write"
+    }
+  ],
+  "helperCallers": [
+    {
+      "path": "src/app/(shell)/expense/page.tsx",
+      "line": 25,
+      "enclosingFunction": "ExpensePage",
+      "symbol": "claimPendingMemberships",
+      "from": "@/lib/expense/access",
+      "localName": "claimPendingMemberships"
+    },
+    {
+      "path": "src/app/(shell)/promane/page.tsx",
+      "line": 81,
+      "enclosingFunction": "PromaneEntryPage",
+      "symbol": "getOrCreateWorkspace",
+      "from": "@/lib/promane/auth",
+      "localName": "getOrCreateWorkspace"
+    },
+    {
+      "path": "src/app/api/admin/stripe/route.ts",
+      "line": 165,
+      "enclosingFunction": "POST",
+      "symbol": "syncUnifiedBilling",
+      "from": "@/lib/billing-sync",
+      "localName": "syncUnifiedBilling"
+    },
+    {
+      "path": "src/app/api/admin/stripe/route.ts",
+      "line": 169,
+      "enclosingFunction": "POST",
+      "symbol": "syncUnifiedBilling",
+      "from": "@/lib/billing-sync",
+      "localName": "syncUnifiedBilling"
+    },
+    {
+      "path": "src/app/api/admin/users/route.ts",
+      "line": 168,
+      "enclosingFunction": "PATCH",
+      "symbol": "syncUnifiedBilling",
+      "from": "@/lib/billing-sync",
+      "localName": "syncUnifiedBilling"
+    },
+    {
+      "path": "src/app/api/cron/daily-summary/route.ts",
+      "line": 92,
+      "enclosingFunction": "resetExpiredSubscriptions",
+      "symbol": "syncUnifiedBilling",
+      "from": "@/lib/billing-sync",
+      "localName": "syncUnifiedBilling"
+    },
+    {
+      "path": "src/app/api/expense/organization/route.ts",
+      "line": 20,
+      "enclosingFunction": "POST",
+      "symbol": "createOrganization",
+      "from": "@/lib/expense/access",
+      "localName": "createOrganization"
+    },
+    {
+      "path": "src/app/api/expense/usage/route.ts",
+      "line": 14,
+      "enclosingFunction": "GET",
+      "symbol": "claimPendingMemberships",
+      "from": "@/lib/expense/access",
+      "localName": "claimPendingMemberships"
+    },
+    {
+      "path": "src/app/api/hr/billing/checkout/route.ts",
+      "line": 171,
+      "enclosingFunction": "POST",
+      "symbol": "createReservedCheckoutSession",
+      "from": "@/lib/checkout-reservation",
+      "localName": "createReservedCheckoutSession"
+    },
+    {
+      "path": "src/app/api/hr/billing/portal/route.ts",
+      "line": 54,
+      "enclosingFunction": "POST",
+      "symbol": "createCustomerPortalSession",
+      "from": "@/lib/stripe",
+      "localName": "createCustomerPortalSession"
+    },
+    {
+      "path": "src/app/api/promane/invite/[token]/route.ts",
+      "line": 82,
+      "enclosingFunction": "POST",
+      "symbol": "acceptPromaneInvitation",
+      "from": "@/lib/promane/invite-admission",
+      "localName": "acceptPromaneInvitation"
+    },
+    {
+      "path": "src/app/api/promane/invite/route.ts",
+      "line": 38,
+      "enclosingFunction": "POST",
+      "symbol": "issuePromaneInvitation",
+      "from": "@/lib/promane/invite-admission",
+      "localName": "issuePromaneInvitation"
+    },
+    {
+      "path": "src/app/api/promane/workspaces/[id]/route.ts",
+      "line": 16,
+      "enclosingFunction": "PATCH",
+      "symbol": "updatePromaneWorkspaceOperation",
+      "from": "@/lib/promane/workspace-mutations",
+      "localName": "updatePromaneWorkspaceOperation"
+    },
+    {
+      "path": "src/app/api/promane/workspaces/create/route.ts",
+      "line": 16,
+      "enclosingFunction": "POST",
+      "symbol": "createPromaneWorkspaceOperation",
+      "from": "@/lib/promane/workspace-mutations",
+      "localName": "createPromaneWorkspaceOperation"
+    },
+    {
+      "path": "src/app/api/promane/workspaces/recover/route.ts",
+      "line": 16,
+      "enclosingFunction": "POST",
+      "symbol": "recoverPromaneWorkspaceMutation",
+      "from": "@/lib/promane/workspace-mutations",
+      "localName": "recoverPromaneWorkspaceMutation"
+    },
+    {
+      "path": "src/app/api/stripe/checkout/route.ts",
+      "line": 221,
+      "enclosingFunction": "POST",
+      "symbol": "createReservedCheckoutSession",
+      "from": "@/lib/checkout-reservation",
+      "localName": "createReservedCheckoutSession"
+    },
+    {
+      "path": "src/app/api/stripe/checkout/route.ts",
+      "line": 224,
+      "enclosingFunction": "POST",
+      "symbol": "createCheckoutSession",
+      "from": "@/lib/stripe",
+      "localName": "createCheckoutSession"
+    },
+    {
+      "path": "src/app/api/stripe/portal/redirect/route.ts",
+      "line": 69,
+      "enclosingFunction": "GET",
+      "symbol": "createCustomerPortalSession",
+      "from": "@/lib/stripe",
+      "localName": "createCustomerPortalSession"
+    },
+    {
+      "path": "src/app/api/stripe/portal/route.ts",
+      "line": 74,
+      "enclosingFunction": "GET",
+      "symbol": "createCustomerPortalSession",
+      "from": "@/lib/stripe",
+      "localName": "createCustomerPortalSession"
+    },
+    {
+      "path": "src/app/api/stripe/portal/route.ts",
+      "line": 129,
+      "enclosingFunction": "POST",
+      "symbol": "createCustomerPortalSession",
+      "from": "@/lib/stripe",
+      "localName": "createCustomerPortalSession"
+    },
+    {
+      "path": "src/app/api/stripe/sync/latest/route.ts",
+      "line": 75,
+      "enclosingFunction": "POST",
+      "symbol": "syncUnifiedBilling",
+      "from": "@/lib/billing-sync",
+      "localName": "syncUnifiedBilling"
+    },
+    {
+      "path": "src/app/api/stripe/sync/route.ts",
+      "line": 115,
+      "enclosingFunction": "POST",
+      "symbol": "syncUnifiedBilling",
+      "from": "@/lib/billing-sync",
+      "localName": "syncUnifiedBilling"
+    },
+    {
+      "path": "src/app/api/stripe/webhook/route.ts",
+      "line": 413,
+      "enclosingFunction": "handleSubscriptionDeleted",
+      "symbol": "syncUnifiedBilling",
+      "from": "@/lib/billing-sync",
+      "localName": "syncUnifiedBilling"
+    },
+    {
+      "path": "src/app/api/stripe/webhook/route.ts",
+      "line": 489,
+      "enclosingFunction": "updateUserSubscription",
+      "symbol": "syncUnifiedBilling",
+      "from": "@/lib/billing-sync",
+      "localName": "syncUnifiedBilling"
+    }
+  ],
+  "unreferencedExportCandidates": [
+    {
+      "symbol": "cancelSubscription",
+      "srcNamedImportCallCount": 0,
+      "definition": "src/lib/stripe.ts",
+      "status": "no static named-import call found; not proof against future/dynamic consumers"
+    },
+    {
+      "symbol": "resumeSubscription",
+      "srcNamedImportCallCount": 0,
+      "definition": "src/lib/stripe.ts",
+      "status": "no static named-import call found; not proof against future/dynamic consumers"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/(shell)/expense/page.tsx": "ff732a31e363dfea738008c9fa621cc1a2cc116fe4b39f5b3d5b0a2eecd7aa1e",
+    "src/app/(shell)/promane/page.tsx": "4c57f4e4223b95326a36bfe24c9fa23cb4644ab0c96b0b679acc9c33821b2954",
+    "src/app/api/admin/stripe/route.ts": "25056d2d7dd5661d3657df542ff2637d1b5ee9058360fcad9c417ea911ce9620",
+    "src/app/api/admin/users/route.ts": "dfee5c30af59ab5879860624e6d7ef927dd223a1fb933feb3d9f7d91ac201185",
+    "src/app/api/aio/invite/[token]/route.ts": "a38b737ded470d1f80006fc9444f0322fcfd13dc19c4a40059ab765cee87cb1b",
+    "src/app/api/aio/members/[id]/route.ts": "e0a4ce47bef3e438692dfc9301110e7c26de90063f40b5ea8c6c7b03f86dedba",
+    "src/app/api/aio/members/route.ts": "d592c92f8347ae01edd1314e6a640dd9486fbcc1360e0926c55b1ae40c486c29",
+    "src/app/api/aio/quick-start/route.ts": "ac24731343dd957ad335a6f215efcd0d68e414c40b12d182fc425c72f2575241",
+    "src/app/api/aishodan/invite/[token]/route.ts": "ebbafe712ccb131c39b531d98b81d71ba8439d437273b78ad5c63df0872ff2e1",
+    "src/app/api/aishodan/members/[id]/route.ts": "d65875e87fe0f3370ef0dfaf68c82b6418317f227667884239c4f643e9ace2fc",
+    "src/app/api/aishodan/members/route.ts": "697015d3d9d1442cd6d82e8c4a3ef5a5be23bebb67b283879f63be996abd6e08",
+    "src/app/api/cron/daily-summary/route.ts": "236310daa726ef33ca93a5b0ed2c4fe98cb8ecde953944fb73b41c31c87bf289",
+    "src/app/api/expense/members/[id]/route.ts": "b11cbdf7cd8f01dadfd0234510277f5e61f49bd454e6ffa71f20da4080829437",
+    "src/app/api/expense/members/route.ts": "f2cc4a71fcd5263623455c50f2376c20580036cf75fdb67c62a70756d95e7997",
+    "src/app/api/expense/organization/route.ts": "fd8df0766d5a638fb80b59dc159c0e133c88e06dda3e843a895a0e8af880ee93",
+    "src/app/api/expense/usage/route.ts": "a690548f7f647146be5e86218f375afe25fe5aa42ed520ee2c222b4966ef6830",
+    "src/app/api/hr/billing/checkout/route.ts": "041f02793c09ef7d5661a41fba4bc93570ff9699cfb180995b50e069916163d7",
+    "src/app/api/hr/billing/portal/route.ts": "8a3d41a74eac27ed06f51f5c805ebc99b0aa5f9d79accb477442982a91097803",
+    "src/app/api/hr/organization/invite/[token]/route.ts": "439a5ece767e0f7c887a6d65d51db418de24f64ddb89931ce480568cefe7c41d",
+    "src/app/api/hr/organization/invite/accept/route.ts": "6483915994f9853f125683bde7b09e15ab08573edc5d860aa63b365435367f7f",
+    "src/app/api/hr/organization/invite/route.ts": "1d31e51f18be4381976d85d956784057a84c152841a13614e260c42b503d69af",
+    "src/app/api/hr/organization/members/[id]/route.ts": "18f7ad94d046a299dee096be35f03fb035e823d041744e956cefa30692a887cd",
+    "src/app/api/hr/organization/route.ts": "9ae0383575cb67ade1b4a46b3abae1bc91553782df07ca3f276a48309ad10876",
+    "src/app/api/hr/organization/transfer-owner/route.ts": "8919e1a8210e8a2488ffbf4e8ee497592c5c8960c7aefbd5e5d3e77301f9c924",
+    "src/app/api/hr/settings/route.ts": "b7d132d1688cea4747a7d765408e5c327e3b004fdb880881e53eb1e70dd04fbd",
+    "src/app/api/income/organization/route.ts": "fcf008ec6c1138d93fbe63853c93dd3345b85e8de6cb16d3bb9ee30612e8f7af",
+    "src/app/api/kintai/employees/[id]/invite/route.ts": "1e96173e27d8334a1273d2267eae65f3ac91faff392bc9758516f376b6570c02",
+    "src/app/api/kintai/employees/[id]/route.ts": "93b30b1eaafcafd5d317f2347b42ab23b93fd4de49aa97ecaa0b1faffdda677c",
+    "src/app/api/kintai/invite/[token]/route.ts": "1b8ddec33906502b3192e2dc9f504363d12b6284d83f3df965bdd99ac0a8b990",
+    "src/app/api/mensetsu/invite/[token]/route.ts": "a5887c41801fdc3dd0441692d2980f7c6caa523cbbed5910bad4162a3ded15bb",
+    "src/app/api/mensetsu/members/[id]/route.ts": "baad7b55dbffd45917c1e97258a0bb70fe1c0b9a76d6ad32291104dec49e93b6",
+    "src/app/api/mensetsu/members/route.ts": "c0e2de1a154d934d1cfd54b5ddc1691a4f6bead1edfeb32c94c919759332d4c0",
+    "src/app/api/mensetsu/organizations/settings/route.ts": "563860ef949607c6f6d22df78a8e8eb30c49f1ee500a7fc8941a7c350a61b5f0",
+    "src/app/api/promane/invitations/route.ts": "fc1ec657fed9e5d0b4a19d37d9e81cc7da308e6fa061515ee33d2025d4c08684",
+    "src/app/api/promane/invite/[token]/route.ts": "adfeec2afbdee352f378f03c69680be8ab1539a0e23a07333068c29a8a5e3da8",
+    "src/app/api/promane/invite/route.ts": "616a2371db6cf8779f9bb04f5463a91e7ef580c2b724b7ddd48793f3bdbf6341",
+    "src/app/api/promane/members/[id]/rate/route.ts": "26555689bfe6a989ae8d9e8b0eb756827f62968aaa2498e0bd59f3e530b17141",
+    "src/app/api/promane/repair/route.ts": "48e39aed0568b564b32969e78d032621bd1bc2fd1467659987f9a583feba3443",
+    "src/app/api/promane/workspaces/[id]/route.ts": "bc89e7513d57f2a07b994e6d6aa3169fdfbfa9c35805f1efc7452f7c2e99efec",
+    "src/app/api/promane/workspaces/create/route.ts": "6d3c296779b58355a32f4847cf42b660cfe6f1da2a5800c641d319eedb1a2d9f",
+    "src/app/api/promane/workspaces/recover/route.ts": "e96780a650ce5ec7cd34faa23d86abdabdf3c6c2a135d743c2f67f7917238876",
+    "src/app/api/quote/invite/[token]/route.ts": "b3bdca6c3a62849d9231f2a631d22c546922a2efc09cdc1c4b38422810ee4d20",
+    "src/app/api/quote/members/[id]/route.ts": "2042dc18f774e4b956c3b3a0324892147bb33e92550fd702b5d27ac65e4c3e79",
+    "src/app/api/quote/members/route.ts": "1f3cf844994ed924db96fa51bbfe1f00c7a3f55a987613d4d3a4462be72b2be7",
+    "src/app/api/sfa/invite/[token]/route.ts": "100250309db35df0a9e460ae74ec2dcee62156d332dc3fa3cebfc4e5c36636b0",
+    "src/app/api/sfa/members/[id]/route.ts": "5151fdd17903347030add04a37ea4292282c670212465e241e7e69d7b65f8015",
+    "src/app/api/sfa/members/route.ts": "37ef87c09035d61f0de752ffaf77cd1df11862802a48c120a250f2b615e1c766",
+    "src/app/api/shodan/invite/[token]/route.ts": "1e95e7057c85edaa05ff721dde1e78dab4e198f58314f087cb88c00e5bb6261d",
+    "src/app/api/shodan/members/[id]/route.ts": "54b1c9610c06f62b9a5e99f6dba88c6e571ca7b073224bac8ad1be014a6742dc",
+    "src/app/api/shodan/members/route.ts": "14498bc998d6c943d55028ee538da99cee7652e5c1c733505a0323d1aa71b989",
+    "src/app/api/stripe/checkout/route.ts": "aac0df9c6ccad0ceb51269cb2c5c1a689525e078737e1303c8e732e23c960589",
+    "src/app/api/stripe/portal/redirect/route.ts": "9ea68efb336579181cd66373c6b356167a0f779e39316e0502142188861adabd",
+    "src/app/api/stripe/portal/route.ts": "2f0c614e7108eef1ddd67abfc42b099b59a9cc3ad530bc5d9e6b1953a6ab727f",
+    "src/app/api/stripe/subscription/cancel/route.ts": "8deaee3272c9d26a0997369df71fb0f4fa274649947a55641fc8b3b419047f7a",
+    "src/app/api/stripe/subscription/resume/route.ts": "c40f303d33ef0f89b4329593f0da92fc760c2c74ecd39a2edee5f1bd1b6cd720",
+    "src/app/api/stripe/sync/latest/route.ts": "a46acf8dbe2b4951cbb48f502cfae91dd0caa0d8eb72f364cf7196f7a4a34a28",
+    "src/app/api/stripe/sync/route.ts": "e31f7a026b5a14df2f2e98b3fe4e07bee354a3bf5f9aa28d5b101f28f832b0d7",
+    "src/app/api/stripe/webhook/route.ts": "6e32abc10f1dbe7d29781d9abe12bec680b7bbd0b9e0709669adef3428fbc6fc",
+    "src/lib/aio/access.ts": "800b35fc876910c5cf41a01c66cec4dc7592bf5d7822183d44d1dc7d5cc4062b",
+    "src/lib/aishodan/access.ts": "c20c17e6b48dcb6ba7d0c93c01a41d9a007bc643032b06acb0bc0dc2d79c3c3c",
+    "src/lib/asklink/creation-adapter.ts": "d7bd5f0f41d150f3de6027001bfafbf093bbbe078d085a2572f279c051280529",
+    "src/lib/billing-sync.ts": "55eb8262948b77f3e13c31aed26c7e0063b84c1f299ec36439740901c074b4a5",
+    "src/lib/expense/access.ts": "9985bc44adab8672b57ffcd3bd378844f3d074a43a506fdf8939f03d0e17ca02",
+    "src/lib/expense/setup.ts": "2dd4117f879891f2203730c58d42b24af5ddc491dfb8f85857d1f0eb17af2b39",
+    "src/lib/hr/access.ts": "7cc27846bcd5d6d4a3504ca860dc9f3d6e2a25161ac3d7286c22d9de3ba05ecd",
+    "src/lib/hr/billing.ts": "f6e40f8a885c86a02eeb4b79fe5ca6400b3f535fff72f86960ff35f61e77f133",
+    "src/lib/hr/evaluation-ai-operation.ts": "b17efe0c062772625d9c47ffd0498e67f368b1da8a54fcb0a187b36ef9148a9c",
+    "src/lib/income/access.ts": "de69fa394f0b3cfde04f14e339b1da639e56c19501e1f755690449d28419c9e1",
+    "src/lib/kintai/access.ts": "ee199f906c08b7aa9c512260aede437d6be07b0a142f038c3f03aa9fe3a28c05",
+    "src/lib/mensetsu/access.ts": "1fccfb693652c80d5f30575d703ff68928d0181e4aac7a97af6d56cfd11c7405",
+    "src/lib/promane/actions-time-entries.ts": "6307d59b65aef30c64c1287b8653fea9162d66feb0d194c88b5298584cd00a83",
+    "src/lib/promane/auth.ts": "df3f0e7462ac0be195559233e0aa4a11feab2ca90d35a9e03f5229122bc8a259",
+    "src/lib/promane/invite-admission.ts": "687b7136a3fbd28c90ca55c133d5795985b6be0ac9f968d3acac5ac01cd2b90a",
+    "src/lib/promane/workspace-mutations.ts": "6109376542179f3350a4607c6e18b0950c08b8b7726e1af1ce9760ee138fe97b",
+    "src/lib/quote/access.ts": "533090029769dccb4ceb6ea88fe1761bbeee4efc3330101aabb7d1716b643279",
+    "src/lib/sfa/access.ts": "dfe2d95ed798f05974ccb3696e41aaf5add29359d509e50d50a20678511faf41",
+    "src/lib/shodan/access.ts": "e1b56c3529aa6bd11b209825f09e88baa0327b7ee6fce0a32f36cbf3e2c0a654",
+    "src/lib/stripe.ts": "1a99725e0961aa2d99a9dcb6a216aee138be8dd2f79e03db427752816da09ecb"
+  },
+  "includesUncommittedInputs": true,
+  "snapshotMeaning": "Current candidate source hashes include uncommitted Promane compatibility and unconnected R0; baseCommit is the last committed baseline, not a claim that hashes equal HEAD."
+}

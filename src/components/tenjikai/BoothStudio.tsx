@@ -16,6 +16,7 @@ import { buildPanelPrompt, generateGraphicPlan, type GraphicPanel } from '@/lib/
 import { KIND_LABEL, man, planCost, yen, type BoothPlan, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
 import Image from 'next/image'
+import type { SavedPlan } from '@/lib/tenjikai/workspace-dto'
 
 function PlanView({ plan, selectedId, onSelect }: { plan: BoothPlan; selectedId?: string; onSelect: (id: string) => void }) {
   const s = 60
@@ -56,6 +57,7 @@ interface StudioProps {
   analysis: SiteAnalysis
   panelImages: Images
   setPanelImages: (f: (m: Images) => Images) => void
+  savedPlans?: SavedPlan[]
 }
 
 const VIEW_LABEL = { '3d': '3D', iso: '等角模型', plan: '平面図' } as const
@@ -115,13 +117,18 @@ async function exportPack(plan: BoothPlan, panels: GraphicPanel[], images: Image
   }
 }
 
-export default function BoothStudio({ plans, variant, setVariant, input, analysis, panelImages, setPanelImages }: StudioProps) {
+export default function BoothStudio({ plans, variant, setVariant, input, analysis, panelImages, setPanelImages, savedPlans }: StudioProps) {
   const [view, setView] = useState<'3d' | 'iso' | 'plan'>('3d')
   const [selectedId, setSelectedId] = useState<string>()
   const plan = plans.find((p) => p.variant === variant) ?? plans[0]
-  const cost = planCost(plan, input)
+  const savedPlan = savedPlans?.find(item => item.plan.variant === variant)
+  const cost = savedPlans ? savedPlan!.cost : planCost(plan, input)
   const selected = plan.elements.find((e) => e.id === selectedId)
-  const panels = useMemo(() => generateGraphicPlan(plan, analysis), [plan, analysis])
+  const panels = useMemo(() => savedPlans ? savedPlan?.panels ?? [] : generateGraphicPlan(plan, analysis), [savedPlans, savedPlan, plan, analysis])
+  const currentImages = useMemo(() => Object.fromEntries(panels.flatMap(panel => {
+    const image = panelImages[`${variant}:${panel.id}`]
+    return image ? [[panel.id, image]] : []
+  })), [panels, panelImages, variant])
   const [panelId, setPanelId] = useState<string>()
   const [panelTarget, setPanelTarget] = useState<GraphicPanel | null>(null)
   const { quota, refresh } = useImageQuota()
@@ -130,7 +137,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
   const threeRef = useRef<HTMLDivElement>(null)
   const exportRef = useRef<HTMLDivElement>(null)
 
-  const missing = panels.filter((p) => !panelImages[p.id])
+  const missing = panels.filter((p) => !currentImages[p.id])
   const madeCount = panels.length - missing.length
   const allMade = panels.length > 0 && missing.length === 0
   const step = allMade ? 3 : 2
@@ -159,7 +166,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
         void refresh()
         return
       }
-      setPanelImages((m) => ({ ...m, [p.id]: r.images[0] }))
+      setPanelImages((m) => ({ ...m, [`${variant}:${p.id}`]: r.images[0] }))
       setBatch({ running: true, done: i + 1, total: todo.length })
     }
     setBatch({ running: false, done: todo.length, total: todo.length })
@@ -184,7 +191,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           {left && !allMade && <p className="mt-0.5 text-[13px] text-[var(--sub)]">{left}</p>}
         </div>
         {allMade ? (
-          <button onClick={() => void exportPack(plan, panels, panelImages)} className="inline-flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 rounded-[var(--r-sm)] bg-doya-500 px-5 text-sm font-black text-white shadow-lg shadow-doya-500/30">
+          <button onClick={() => void exportPack(plan, panels, currentImages)} className="inline-flex min-h-[44px] flex-shrink-0 items-center justify-center gap-2 rounded-[var(--r-sm)] bg-doya-500 px-5 text-sm font-black text-white shadow-lg shadow-doya-500/30">
             <Download className="h-4 w-4" /> 書き出す
           </button>
         ) : (
@@ -236,7 +243,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           <div className={clsx('aspect-[4/3] min-h-[280px] w-full', view !== '3d' && 'p-3')}>
             {view === '3d' ? (
               // 3D は入りのアニメーションで傾けない（傾いたまま倍率を測ると崩れるため）
-              <Booth3D plan={plan} analysis={analysis} panels={panels} images={panelImages} selectedId={selectedId} onSelect={selectElement} selectedPanelId={panelId} onSelectPanel={selectPanel} />
+              <Booth3D plan={plan} analysis={analysis} panels={panels} images={currentImages} selectedId={selectedId} onSelect={selectElement} selectedPanelId={panelId} onSelectPanel={selectPanel} />
             ) : (
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div key={`${variant}-${view}`} initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="h-full w-full">
@@ -289,7 +296,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
         </div>
       </div>
 
-      <GraphicPlanner panels={panels} analysis={analysis} images={panelImages} selectedPanelId={panelId} onSelectPanel={selectPanel} onGenerate={setPanelTarget} />
+      <GraphicPlanner panels={panels} analysis={analysis} images={currentImages} selectedPanelId={panelId} onSelectPanel={selectPanel} onGenerate={setPanelTarget} />
 
       {/* 書き出し */}
       <div ref={exportRef} className="flex flex-col gap-4 rounded-[var(--r)] border border-gray-200 bg-white p-5 sm:flex-row sm:items-center">
@@ -303,7 +310,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           <h2 className="text-[18px] font-bold text-ink">書き出す</h2>
           <p className="text-[14px] leading-relaxed text-[var(--sub)]">グラフィックの割付表（CSV）と、作った面の画像を保存します。印刷会社への入稿の相談に使えます。</p>
           <div>
-            <button disabled={madeCount === 0} onClick={() => void exportPack(plan, panels, panelImages)} className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--r-sm)] border-2 border-doya-500 px-5 text-sm font-black text-doya-600 disabled:cursor-not-allowed disabled:opacity-40">
+            <button disabled={madeCount === 0} onClick={() => void exportPack(plan, panels, currentImages)} className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--r-sm)] border-2 border-doya-500 px-5 text-sm font-black text-doya-600 disabled:cursor-not-allowed disabled:opacity-40">
               <Download className="h-4 w-4" /> 割付表と画像を保存（{madeCount}面）
             </button>
             {madeCount === 0 && <p className="mt-1 text-[12px] text-[var(--muted)]">面の画像を作ると、保存できます。</p>}
@@ -333,7 +340,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           title={`${panelTarget.name}の画像を作る`}
           prompt={buildPanelPrompt(panelTarget, analysis)}
           aspectRatio={nearestRatio(panelTarget.widthMm, panelTarget.heightMm)}
-          onResult={(imgs) => imgs[0] && setPanelImages((m) => ({ ...m, [panelTarget.id]: imgs[0] }))}
+          onResult={(imgs) => imgs[0] && setPanelImages((m) => ({ ...m, [`${variant}:${panelTarget.id}`]: imgs[0] }))}
         />
       )}
     </div>

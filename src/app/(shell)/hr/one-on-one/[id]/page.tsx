@@ -4,8 +4,9 @@ import { useHrPageLifetime } from '@/lib/hr/use-page-lifetime'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import OneOnOneForm from '@/components/hr/OneOnOneForm'
 
 interface OneOnOneData {
@@ -31,7 +32,7 @@ function localInputDate(value: string): string | undefined {
 
 export default function OneOnOneDetailPage() {
   const { request: fetch } = useHrOrganizationRequest()
-  const { router } = useHrPageLifetime()
+  useHrPageLifetime()
   const params = useParams()
   const id = params?.id as string
 
@@ -95,9 +96,9 @@ export default function OneOnOneDetailPage() {
         <div className="text-center py-20 text-slate-400">
           <span className="material-symbols-outlined text-5xl mb-3 block">error</span>
           <p className="text-lg font-medium">{error || '1on1データが見つかりません'}</p>
-          <button onClick={() => router.back()} className="mt-4 text-sm font-semibold text-sky-600 hover:text-sky-700">
-            戻る
-          </button>
+          <Link href="/hr/one-on-one" className="mt-4 inline-block text-sm font-semibold text-sky-600 hover:text-sky-700">
+            1on1一覧に戻る
+          </Link>
         </div>
       </div>
     )
@@ -107,13 +108,13 @@ export default function OneOnOneDetailPage() {
     <div className="p-6 lg:p-10 max-w-4xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Back */}
-        <button
-          onClick={() => router.back()}
+        <Link
+          href="/hr/one-on-one"
           className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors"
         >
           <span className="material-symbols-outlined text-lg">arrow_back</span>
-          戻る
-        </button>
+          1on1一覧に戻る
+        </Link>
 
         <PageTitle className="text-3xl font-black text-slate-900 mb-6">1on1詳細</PageTitle>
 

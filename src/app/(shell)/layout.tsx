@@ -35,7 +35,7 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   // ドヤパワーの残りと減る量の表。⚠️ 台帳の表（doya_power_*）が本番DBに入るまでは読まない。旗が off なら、いつも null
   const doyaPowerState = null
   return (
-    <ShellGate signedIn={Boolean(session?.user)} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} doyaPower={doyaPower} doyaPowerState={doyaPowerState} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
+    <ShellGate signedIn={Boolean(session?.user)} serverActorId={session?.user?.id ?? null} userName={session?.user?.name ?? null} enabledIds={shellEnabledIds()} uiNext={uiNext} doyaPower={doyaPower} doyaPowerState={doyaPowerState} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent}>
       {children}
     </ShellGate>
   )

@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { seoLimitActionFromResponse, type SeoLimitAction } from '@/lib/seo-limit-action'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
@@ -591,7 +592,7 @@ export default function SwipeArticlePage() {
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
             <p className="text-red-700 font-bold">{error}</p>
             {!session?.user && error.includes('ログイン') && (
-              <Link href="/auth/signin" className="mt-2 inline-block text-sm font-bold text-red-700 underline">ログインする</Link>
+              <SignInReturnLink fallback="/seo/swipe" className="mt-2 inline-block text-sm font-bold text-red-700 underline">ログインする</SignInReturnLink>
             )}
             {articleLimitAction && <Link href={articleLimitAction.href} className="mt-2 inline-block text-sm font-bold text-red-700 underline">{articleLimitAction.label}</Link>}
           </div>

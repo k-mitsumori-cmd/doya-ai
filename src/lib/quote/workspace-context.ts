@@ -3,6 +3,7 @@ export interface QuoteWorkspaceIdentity {
   actor: string
   selection: string | null
   status: 'loading' | 'authenticated' | 'unauthenticated'
+  revision?: number
 }
 export class QuoteWorkspaceContext {
   private epoch = 0
@@ -13,8 +14,8 @@ export class QuoteWorkspaceContext {
   constructor(private readonly selectedOrganization: () => string | null, private readonly service: 'quote' | 'aishodan' = 'quote') {}
 
   update(identity: QuoteWorkspaceIdentity) {
-    if (identity.actor !== this.identity.actor || identity.selection !== this.identity.selection || identity.status !== this.identity.status) {
-      if (identity.actor !== this.identity.actor || identity.selection !== this.identity.selection || identity.status === 'unauthenticated') this.deniedIdentity = null
+    if (identity.actor !== this.identity.actor || identity.selection !== this.identity.selection || identity.status !== this.identity.status || identity.revision !== this.identity.revision) {
+      if (identity.actor !== this.identity.actor || identity.selection !== this.identity.selection || identity.revision !== this.identity.revision || identity.status === 'unauthenticated') this.deniedIdentity = null
       this.invalidate()
       this.organization = null
       this.identity = { ...identity }

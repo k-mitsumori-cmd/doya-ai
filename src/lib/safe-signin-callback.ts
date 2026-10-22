@@ -2,13 +2,13 @@ const CALLBACK_BASE = 'https://doya-signin.invalid'
 
 /** Keep sign-in return destinations on this site, including guest navigation links. */
 export function safeSignInCallbackUrl(raw: string | null): string {
-  if (!raw?.startsWith('/') || raw.includes('\\')) return '/seo'
+  if (!raw?.startsWith('/') || raw.includes('\\')) return '/home'
   try {
     const url = new URL(raw, CALLBACK_BASE)
-    if (url.origin !== CALLBACK_BASE) return '/seo'
+    if (url.origin !== CALLBACK_BASE) return '/home'
     return `${url.pathname}${url.search}${url.hash}`
   } catch {
-    return '/seo'
+    return '/home'
   }
 }
 
@@ -16,7 +16,7 @@ export function safeSignInCallbackUrl(raw: string | null): string {
 // The regression check compares this routing with the current public service catalog.
 const PUBLIC_INTRO_SERVICES = new Set([
   'banner', 'seo', 'interview', 'persona', 'hr', 'kintai', 'doyalist', 'promane',
-  'doyaslide', 'cunning', 'sfa', 'shodan', 'aio', 'mensetsu', 'quote', 'aishodan', 'adimage',
+  'doyaslide', 'sfa', 'shodan', 'aio', 'mensetsu', 'quote', 'aishodan', 'adimage',
   'asklink', 'popup',
 ])
 

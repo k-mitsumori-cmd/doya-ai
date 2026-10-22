@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { load, check } = require('./load-typescript.cjs')
+const { load, check } = require('./load-org-limit-fixture.cjs')
 
 const templates = []
 let nextId = 0
@@ -54,7 +54,7 @@ const route = load('src/app/api/mensetsu/templates/route.ts', {
     const used = await count()
     return used >= 1 ? { ok: false, used, limit: 1, reason: '無料枠に達しました' } : { ok: true, used, limit: 1 }
   } },
-  '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: 'user', role: 'owner' }), orgSlugFrom: () => 'org' },
+  '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', organizationSlug: 'org', userId: 'user', role: 'owner' }), orgSlugFrom: () => 'org' },
   '@/lib/mensetsu/template': { generateTemplate: async () => {
     generateCalls++
     if (waitForGeneration) await waitForGeneration
@@ -87,7 +87,7 @@ const post = (body = { jobTitle: '営業' }) => route.POST(new Request('http://o
   await check('free cap blocks provider and returns pricing route', async () => {
     const blocked = await post()
     assert.equal(blocked.status, 402)
-    assert.equal((await blocked.json()).upgradeUrl, '/mensetsu/pricing')
+    assert.equal((await blocked.json()).upgradeUrl, '/mensetsu/pricing?org=org')
     assert.equal(generateCalls, 1)
   })
   await check('archived question set keeps history while freeing one active slot', async () => {

@@ -4,6 +4,8 @@ import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { findActiveLikeSubscriptions, isDoyaSubscriptionOwnedByUser, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
 import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
+import { deleteAskLinkAccount } from '@/lib/asklink/account-cleanup'
+import { AccountRetirementBlocked, checkAccountRetirementSafe, deleteAccountWithRetirement } from '@/lib/account-retirement'
 import { summarizeBannerMonthlyQuota } from '@/lib/admin/banner-quota'
 import { getSeoMonthlyLimitByUserPlan, shouldResetDailyUsage, shouldResetMonthlyUsage } from '@/lib/pricing'
 import { getSeoArticleMonthlyUsageForUsers } from '@/lib/seo-article-admission'
@@ -271,6 +273,8 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
     }
 
+    await checkAccountRetirementSafe(prisma, userId)
+
     // 契約照会・停止に失敗した場合はアカウントを残す。課金中の顧客を孤立させない。
     const live = await findActiveLikeSubscriptions({ userId: user.id, email: user.email, stripeCustomerId: user.stripeCustomerId })
     const ids = new Set(live.map((subscription) => subscription.id))
@@ -299,19 +303,20 @@ export async function DELETE(req: NextRequest) {
     for (const subscriptionId of cancelIds) await stripe.subscriptions.cancel(subscriptionId)
 
     // 部分削除を防ぐ。外部のStripe操作はトランザクションの外に置く。
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction((tx) => deleteAccountWithRetirement(tx, userId, () => deleteAskLinkAccount(tx, userId, async () => {
       await tx.userServiceSubscription.deleteMany({ where: { userId } })
       await tx.generation.deleteMany({ where: { userId } })
       await tx.session.deleteMany({ where: { userId } })
       await tx.account.deleteMany({ where: { userId } })
       await tx.user.delete({ where: { id: userId } })
-    })
+    })))
 
     return NextResponse.json({ 
       success: true, 
       message: `ユーザー ${user.email || userId} を削除しました` 
     })
   } catch (error) {
+    if (error instanceof AccountRetirementBlocked) return NextResponse.json({ error: error.message, code: error.code }, { status: 409 })
     console.error('Admin user delete error:')
     return NextResponse.json(
       { error: 'ユーザーの削除に失敗しました' },

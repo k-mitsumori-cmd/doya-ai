@@ -1,0 +1,317 @@
+{
+  "checkedAt": "2026-10-20T15:49:33.904298+00:00",
+  "status": "snapshot_local_and_exact_head_remote_passed",
+  "baseCommit": "7672cb8f12a0062b73668a0efdb673e87aca1884",
+  "candidateConstruction": "Physical Git HEAD tree plus only 21 explicitly frozen source/test/config blobs. No working-tree R1/Popup files, dotenv, .git or stale .next copied. Final commit must match the entire execution-source blob/path set.",
+  "candidateManifestSha256": "c7c96f8d9b89066b133973ad93391d8248fa2f6a3b0976849c91e1b485f9ce54",
+  "fullExecutionSourceFiles": 5157,
+  "fullExecutionSourceBlobSetSha256": "236f032ac681f173e2a57347712263345f3c817600c12bd10c040fb2551e7461",
+  "blobSetDigestDefinition": "sha256 of sorted UTF-8 path + NUL + Git mode + NUL + Git blob object ID + LF",
+  "targetFiles": {
+    ".github/workflows/ci.yml": {
+      "sha256": "8995521f295fd1c094cca8e29b76610723384c3f575ccc6b4baad9aebc86b7e0",
+      "mode": "100644",
+      "blob": "070fecaa57eecd5ce8c994d45cddbfa6ae0e8935"
+    },
+    "scripts/security-regression/run.cjs": {
+      "sha256": "aac20a3a121d270e160f8472308264704638429dc9779d4899b21455cceadec8",
+      "mode": "100644",
+      "blob": "d91ef3018b2564c7afe331dc9ffe795d4be6ed76"
+    },
+    "scripts/security-regression/verify-account-lifecycle-postgres.cjs": {
+      "sha256": "9fe16d848a4f1b31599b916bf16b15201a7803c6e9b827d132a33fa603ec10fe",
+      "mode": "100644",
+      "blob": "d1da49e4929446e503d907f235ae18a41b3311f3"
+    },
+    "scripts/security-regression/verify-account-lifecycle-postgres.py": {
+      "sha256": "8996540f143fada91e4355298ce5e3051416182ea9f6e8d5d5c5cfd963686113",
+      "mode": "100644",
+      "blob": "b392d46033cef0c9b7d5e0cdd7a1a574dbd28aff"
+    },
+    "scripts/security-regression/verify-promane-nullable-compat.cjs": {
+      "sha256": "2995faeda714291a019628e37b8665081507c6a101cfabd81496a4ed295bf2c6",
+      "mode": "100644",
+      "blob": "5999cb0f3e288bcf3939bf84028caaaabcbc8022"
+    },
+    "scripts/security-regression/verify-promane-record-delete-atomic.cjs": {
+      "sha256": "da15be10705b91803df0a630c50bbe1415d84ded824aaa353d39173a0013411c",
+      "mode": "100644",
+      "blob": "ce1af8873a58574ee05bbf6bb5517ebbb47b12c5"
+    },
+    "scripts/security-regression/verify-promane-time-input.cjs": {
+      "sha256": "24c07387b0adccaf70984e575f1b260652e1fb5d38b98f2bb55091910738d964",
+      "mode": "100644",
+      "blob": "1d20287857b9b2d7502fa65cf7623e1d1d54c654"
+    },
+    "scripts/security-regression/verify-promane-time-project.cjs": {
+      "sha256": "0f08b266143124e03a926214e0c4d12e35584e3e45640bea23decbda24e1447d",
+      "mode": "100644",
+      "blob": "b6f123bc568de8086bfba4ba5261c9beb3453f66"
+    },
+    "scripts/security-regression/verify-related-records.cjs": {
+      "sha256": "f22924f5adabbc60695629a63837674f9436c9226209756729123c4c5b5eca6c",
+      "mode": "100644",
+      "blob": "31c96787e2011c81ce8629bf361d49c3a3323f3f"
+    },
+    "src/app/(shell)/promane/[workspaceSlug]/members/page.tsx": {
+      "sha256": "6d5c105f973c39a2b83d01927891bc2fa0656fc95d7a3ab27ab2dfa3ac933fa1",
+      "mode": "100644",
+      "blob": "9a89f0eb592aac32e2ec7f855e309b016b9ea504"
+    },
+    "src/app/(shell)/promane/[workspaceSlug]/projects/[projectId]/page.tsx": {
+      "sha256": "de393744f40d6599f5c5356ef6e0e44c416b912bf7dbc45d94adae32c22b4b81",
+      "mode": "100644",
+      "blob": "a68af8ef06226a41bd7f4b08a0cbe01ce56e7203"
+    },
+    "src/app/(shell)/promane/page.tsx": {
+      "sha256": "4c57f4e4223b95326a36bfe24c9fa23cb4644ab0c96b0b679acc9c33821b2954",
+      "mode": "100644",
+      "blob": "f18b05d101c3eb4f2e1f2882a155bd61643b86ec"
+    },
+    "src/app/api/promane/invitations/route.ts": {
+      "sha256": "fc1ec657fed9e5d0b4a19d37d9e81cc7da308e6fa061515ee33d2025d4c08684",
+      "mode": "100644",
+      "blob": "940b84bbdfa7f5d8bcdf9b5537380a2d53fb2fb0"
+    },
+    "src/app/api/promane/invite/[token]/route.ts": {
+      "sha256": "adfeec2afbdee352f378f03c69680be8ab1539a0e23a07333068c29a8a5e3da8",
+      "mode": "100644",
+      "blob": "caf19a73a94da46f1e0e052559869c1c4111414b"
+    },
+    "src/components/promane/task-edit-modal.tsx": {
+      "sha256": "21ab82e5365f0b1f8de2db718578b55e20047fc50905a677449d996233e0f536",
+      "mode": "100644",
+      "blob": "6770870d02e675c38d429fb103b09ba55b60dca4"
+    },
+    "src/lib/account-lifecycle/organization-fence.ts": {
+      "sha256": "df6399c484b59f5cdc282d3e28114fd004cb749a3e87122f039218281b8a4ae9",
+      "mode": "100644",
+      "blob": "c44406ee2cc9b316148ca089efd2b6ad333406ac"
+    },
+    "src/lib/account-lifecycle/state.ts": {
+      "sha256": "3360865f72ec324b5f1332672fca09cb6bff01c31934b80945f64696e0d281df",
+      "mode": "100644",
+      "blob": "00313e399234b63f187cb22e41efa1ff3e9de32e"
+    },
+    "src/lib/account-lifecycle/store.ts": {
+      "sha256": "fc961245469c8c4f0efdf4f8a9cce222f7e6f0cb81e8ce026b46bd0b50a179f9",
+      "mode": "100644",
+      "blob": "978e3e1cd23b9317063e1f3e1b7b83d8c687a56b"
+    },
+    "src/lib/promane/actions-tasks.ts": {
+      "sha256": "d8f6cc27cf0223164f5534a84ba5147d1b791de6a09beb6fdbfaa537e4235b22",
+      "mode": "100644",
+      "blob": "a8115262a49f1387dae91c2a9fbdeeb88cb5f928"
+    },
+    "src/lib/promane/actions-time-entries.ts": {
+      "sha256": "6307d59b65aef30c64c1287b8653fea9162d66feb0d194c88b5298584cd00a83",
+      "mode": "100644",
+      "blob": "4193c93c36e27b4a9c9b293a4194d3086f8c9a47"
+    },
+    "src/lib/promane/auth.ts": {
+      "sha256": "df3f0e7462ac0be195559233e0aa4a11feab2ca90d35a9e03f5229122bc8a259",
+      "mode": "100644",
+      "blob": "49bd650a1d2cdc88657d96387ca1f476a224883d"
+    }
+  },
+  "localGates": {
+    "executed": 28,
+    "allExitZero": true,
+    "results": [
+      {
+        "name": "syntax-run.cjs",
+        "exitCode": 0
+      },
+      {
+        "name": "syntax-verify-account-lifecycle-postgres.cjs",
+        "exitCode": 0
+      },
+      {
+        "name": "syntax-verify-account-lifecycle-postgres.py",
+        "exitCode": 0
+      },
+      {
+        "name": "syntax-verify-promane-nullable-compat.cjs",
+        "exitCode": 0
+      },
+      {
+        "name": "syntax-verify-promane-record-delete-atomic.cjs",
+        "exitCode": 0
+      },
+      {
+        "name": "syntax-verify-promane-time-input.cjs",
+        "exitCode": 0
+      },
+      {
+        "name": "syntax-verify-promane-time-project.cjs",
+        "exitCode": 0
+      },
+      {
+        "name": "syntax-verify-related-records.cjs",
+        "exitCode": 0
+      },
+      {
+        "name": "resolver-preflight",
+        "exitCode": 0
+      },
+      {
+        "name": "ci-yaml",
+        "exitCode": 0
+      },
+      {
+        "name": "adimage-ci-paths",
+        "exitCode": 0
+      },
+      {
+        "name": "ci-source-paths",
+        "exitCode": 0
+      },
+      {
+        "name": "account-lifecycle-postgres",
+        "exitCode": 0
+      },
+      {
+        "name": "ask-privacy-postgres",
+        "exitCode": 0
+      },
+      {
+        "name": "ask-creation-postgres",
+        "exitCode": 0
+      },
+      {
+        "name": "account-retirement-postgres",
+        "exitCode": 0
+      },
+      {
+        "name": "common-security",
+        "exitCode": 0
+      },
+      {
+        "name": "asklink",
+        "exitCode": 0
+      },
+      {
+        "name": "popup",
+        "exitCode": 0
+      },
+      {
+        "name": "syscheck",
+        "exitCode": 0
+      },
+      {
+        "name": "tenjikai",
+        "exitCode": 0
+      },
+      {
+        "name": "shanai",
+        "exitCode": 0
+      },
+      {
+        "name": "income",
+        "exitCode": 0
+      },
+      {
+        "name": "expense",
+        "exitCode": 0
+      },
+      {
+        "name": "home-clock-units",
+        "exitCode": 0
+      },
+      {
+        "name": "changed-lint",
+        "exitCode": 0
+      },
+      {
+        "name": "fresh-route-types",
+        "exitCode": 0
+      },
+      {
+        "name": "typecheck",
+        "exitCode": 0
+      }
+    ],
+    "promaneSyntheticNullableCases": 47,
+    "r0Postgres": {
+      "executed": 86,
+      "contractPassed": 86,
+      "classification": "unconnected_core_contract",
+      "existingApplicationConnections": 0
+    },
+    "privacyPostgresCases": 41,
+    "creationPostgresCases": 32,
+    "existingRetirementPostgres": {
+      "executed": 64,
+      "safeContractsPassed": 62,
+      "unresolvedUnsafeObservations": 2,
+      "unsafeAccepted": false
+    },
+    "privatePostgresAllStoppedAndOwnedDirectoriesRemoved": true,
+    "sevenExistingSuites": {
+      "asklink": 24,
+      "popup": 55,
+      "syscheck": 51,
+      "tenjikai": 16,
+      "shanai": 7,
+      "income": 68,
+      "expense": 93
+    },
+    "sevenExistingSuiteTests": 314,
+    "promaneExistingThirteenSuites": "Included in common security runner; original assertions retained.",
+    "freshRouteTypeGeneration": {
+      "command": "next typegen",
+      "exitCode": 0,
+      "generatedTypeFiles": 2,
+      "nextEnvGenerated": true,
+      "nextEnvSha256": "85ae5aee75f011967cf2d25cbc342f62d69314e9d925f7f4aa3456fc2cffcca6",
+      "fullBuild": false
+    },
+    "nonincrementalGlobalTypecheckExitCode": 0,
+    "targetLintInputs": 12,
+    "ciReferences": {
+      "scripts": 169,
+      "sourceReferences": 724
+    }
+  },
+  "stability": {
+    "sourcePathsetUnchanged": true,
+    "sourceHashesUnchanged": true,
+    "snapshotDependencyUnchanged": true,
+    "workDependencyUnchanged": true,
+    "frozenTargetsUnchanged": true,
+    "externalToolsUnchanged": true
+  },
+  "dependencies": "Physical root; shared major package realpaths/versions/entry hashes unchanged. Independent physical snapshot copies of @prisma/client and .prisma/client. No install or Prisma generate for this gate.",
+  "network": "Offline gates denied outbound traffic at OS level. Private PG uses only owned TCP-disabled Unix sockets and synthetic data.",
+  "disk": {
+    "diskBeforeBytes": 12203053056,
+    "diskAfterBytes": 11090784256,
+    "diskFinalBytes": 11959898112
+  },
+  "remoteSameCommitCI": "success",
+  "remoteSameCommitNextBuild": "READY",
+  "separateSandboxNullableSchemaAndFontFixtureProof": "Not reused for this candidate. Repository schema/client unchanged; migration, real-font QA and unmodified Next success not claimed.",
+  "r1WorkingTreeChangesCovered": false,
+  "popupWorkingTreeChangesCovered": false,
+  "retirementUnsafeGapsResolved": 0,
+  "productionReflected": false,
+  "authenticatedBrowserQA": false,
+  "r1AcceptanceFollowup": [
+    "Expense pending-null role edits and inactive former-owner history require dedicated transitions; not ordinary live authority.",
+    "Recipient-retirement handling must preserve EXP-F05 email-registration nondisclosure.",
+    "Actual route PostgreSQL coverage and Astra review required before R1/core delta acceptance; 86 unconnected contracts do not cover every normal Expense state."
+  ],
+  "remoteVerification": {
+    "checkedAt": "2026-10-20T16:10:50.244151+00:00",
+    "commit": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+    "ciRunId": 39452537086,
+    "ciConclusion": "success",
+    "actualCICheckoutSha": "2753c522397e546e3bfaa9ff22e9d79fde9f36eb",
+    "ciCheckoutTree": "439c188e9020ab9f2e3866ae0af2b2412bd3f3ef",
+    "headAndSnapshotTreeMatch": true,
+    "vercelDeployment": "dpl_4fQMoD1GkF22gTEa9XqRdsUfnrH6",
+    "vercelState": "READY",
+    "vercelCommit": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+    "currentWorkingTreeR1PopupJstCovered": false
+  }
+}

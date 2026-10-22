@@ -60,8 +60,8 @@ export async function GET() {
       { id: 'lp', name: 'ドヤLP AI', icon: '📄', path: '/lp', status: 'active', stats: { projects: lpProjects }, color: 'cyan' },
       { id: 'voice', name: 'ドヤボイスAI', icon: '🔊', path: '/voice', status: 'active', stats: { projects: voiceProjects }, color: 'indigo' },
       { id: 'movie', name: 'ドヤ動画AI', icon: '🎬', path: '/movie', status: 'active', stats: { projects: movieProjects }, color: 'pink' },
-      { id: 'kintai', name: 'ドヤ勤怠', icon: '⏰', path: '/kintai', status: 'active', stats: { organizations: kintaiOrgs, employees: kintaiEmployees, clockRecords: kintaiClockRecords }, color: 'purple' },
-      { id: 'hr', name: 'ドヤHR', icon: '💼', path: '/hr', status: 'active', stats: { organizations: hrOrgs, employees: hrEmployees }, color: 'blue' },
+      { id: 'kintai', name: 'ドヤ勤怠', icon: '⏰', path: '/kintai/dashboard', status: 'active', stats: { organizations: kintaiOrgs, employees: kintaiEmployees, clockRecords: kintaiClockRecords }, color: 'purple' },
+      { id: 'hr', name: 'ドヤHR', icon: '💼', path: '/hr/dashboard', status: 'active', stats: { organizations: hrOrgs, employees: hrEmployees }, color: 'blue' },
       { id: 'tenkai', name: 'ドヤ展開AI', icon: '🔄', path: '/tenkai', status: 'coming_soon', stats: { projects: tenkaiProjects }, color: 'teal' },
       { id: 'adsim', name: 'ドヤ広告シミュレーション', icon: '📊', path: '/adsim', status: 'coming_soon', stats: { projects: adSimProjects }, color: 'orange' },
     ]

@@ -1,0 +1,1986 @@
+{
+  "status": "R0_author_frozen_unconnected_R1_R2_R3_planned",
+  "baseCommit": "7672cb8f12a0062b73668a0efdb673e87aca1884",
+  "groups": [
+    {
+      "id": "R0",
+      "kind": "new_db_only_core",
+      "newFiles": [
+        "src/lib/account-lifecycle/state.ts",
+        "src/lib/account-lifecycle/store.ts",
+        "src/lib/account-lifecycle/organization-fence.ts"
+      ],
+      "testFiles": [
+        "scripts/security-regression/verify-account-lifecycle-postgres.cjs",
+        "scripts/security-regression/verify-account-lifecycle-postgres.py"
+      ],
+      "activation": "No API or existing application caller in this unit; unsafe observations remain unresolved until integration.",
+      "verification": "86 unconnected core PG contracts; narrow core tsc, targeted lint and syntax pass; hashes in r0-source-inputs.json. Existing application gaps remain open."
+    },
+    {
+      "id": "R1",
+      "kind": "membership_fence_connection",
+      "candidateFiles": [
+        "src/app/api/aio/invite/[token]/route.ts",
+        "src/app/api/aio/members/[id]/route.ts",
+        "src/app/api/aio/members/route.ts",
+        "src/app/api/aio/quick-start/route.ts",
+        "src/app/api/aishodan/invite/[token]/route.ts",
+        "src/app/api/aishodan/members/[id]/route.ts",
+        "src/app/api/aishodan/members/route.ts",
+        "src/app/api/expense/members/[id]/route.ts",
+        "src/app/api/expense/members/route.ts",
+        "src/app/api/hr/organization/invite/[token]/route.ts",
+        "src/app/api/hr/organization/invite/accept/route.ts",
+        "src/app/api/hr/organization/invite/route.ts",
+        "src/app/api/hr/organization/members/[id]/route.ts",
+        "src/app/api/hr/organization/transfer-owner/route.ts",
+        "src/app/api/kintai/employees/[id]/invite/route.ts",
+        "src/app/api/kintai/employees/[id]/route.ts",
+        "src/app/api/kintai/invite/[token]/route.ts",
+        "src/app/api/mensetsu/invite/[token]/route.ts",
+        "src/app/api/mensetsu/members/[id]/route.ts",
+        "src/app/api/mensetsu/members/route.ts",
+        "src/app/api/promane/invitations/route.ts",
+        "src/app/api/promane/members/[id]/rate/route.ts",
+        "src/app/api/promane/repair/route.ts",
+        "src/app/api/quote/invite/[token]/route.ts",
+        "src/app/api/quote/members/[id]/route.ts",
+        "src/app/api/quote/members/route.ts",
+        "src/app/api/sfa/invite/[token]/route.ts",
+        "src/app/api/sfa/members/[id]/route.ts",
+        "src/app/api/sfa/members/route.ts",
+        "src/app/api/shodan/invite/[token]/route.ts",
+        "src/app/api/shodan/members/[id]/route.ts",
+        "src/app/api/shodan/members/route.ts",
+        "src/lib/aio/access.ts",
+        "src/lib/aishodan/access.ts",
+        "src/lib/expense/access.ts",
+        "src/lib/expense/setup.ts",
+        "src/lib/hr/access.ts",
+        "src/lib/income/access.ts",
+        "src/lib/kintai/access.ts",
+        "src/lib/mensetsu/access.ts",
+        "src/lib/promane/actions-time-entries.ts",
+        "src/lib/promane/auth.ts",
+        "src/lib/promane/invite-admission.ts",
+        "src/lib/promane/workspace-mutations.ts",
+        "src/lib/quote/access.ts",
+        "src/lib/sfa/access.ts",
+        "src/lib/shodan/access.ts"
+      ],
+      "additionalDependencies": [
+        "src/lib/sfa/limits.ts",
+        "src/lib/promane/workspace-operation.ts",
+        "src/lib/organization-quota-ledger.ts"
+      ],
+      "activation": "Integrate User-first prelude without changing existing quotas/ACL. Nested creates, invitation expiration/claim and owner replan included."
+    },
+    {
+      "id": "R2",
+      "kind": "billing_capability_and_fact",
+      "candidateFiles": [
+        "src/lib/checkout-reservation.ts",
+        "src/lib/stripe.ts",
+        "src/lib/billing-sync.ts",
+        "src/lib/stripe-webhook-receipts.ts",
+        "src/app/api/stripe/checkout/route.ts",
+        "src/app/api/hr/billing/checkout/route.ts",
+        "src/app/api/stripe/subscription/cancel/route.ts",
+        "src/app/api/stripe/subscription/resume/route.ts",
+        "src/app/api/admin/stripe/route.ts",
+        "src/app/api/stripe/portal/route.ts",
+        "src/app/api/stripe/portal/redirect/route.ts",
+        "src/app/api/hr/billing/portal/route.ts",
+        "src/app/api/stripe/webhook/route.ts",
+        "src/app/api/stripe/sync/route.ts",
+        "src/app/api/stripe/sync/latest/route.ts",
+        "src/app/api/cron/daily-summary/route.ts"
+      ],
+      "activation": "All creation/reuse/settle and external mutation paths must be fenced; provider facts retained separately from manual commands. Existing Portal capability boundary remains."
+    },
+    {
+      "id": "R3",
+      "kind": "retirement_coordinator_and_ui",
+      "candidateFiles": [
+        "src/app/api/admin/users/route.ts",
+        "src/lib/asklink/creation-adapter.ts",
+        "src/lib/account-retirement.ts",
+        "src/app/admin/users/page.tsx"
+      ],
+      "newApi": "Exact API/action shape requires parent review; strict operator/target/opId binding, same-origin mutations, DB-only private GET status. No new public self-deletion rights by implication.",
+      "activation": "Enable new retirement intake only after R1/R2 coverage gates, UI unknown/refusal/recovery and safe replacements of both unsafe observations pass."
+    }
+  ],
+  "ownership": "Author owns proposed state/store/fence and scoped integration; common runner/CI billing-owned; Promane schema/consumer coordination parent-owned.",
+  "noSchemaChange": true,
+  "retention": "Pending/unknown/terminal retained indefinitely; no automatic GC or timeout unlock in R0.",
+  "unsafeObservedBaseline": "../owner-a-repair/unresolved-observations.json",
+  "candidateConnectionMatrix": [
+    {
+      "path": "src/app/(shell)/expense/page.tsx",
+      "sourceHash": "ff732a31e363dfea738008c9fa621cc1a2cc116fe4b39f5b3d5b0a2eecd7aa1e",
+      "phase": "R1",
+      "classification": "shared_helper",
+      "plannedConnection": "claimPendingMemberships",
+      "transactionBoundary": "GET-render side effect must enter the same User/org/member Tx in expense/access; no outer-only authorization.",
+      "candidateSites": [
+        {
+          "line": 25,
+          "function": "ExpensePage",
+          "operation": "claimPendingMemberships",
+          "category": "claimPendingMemberships"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "pending claim/retirement both orders"
+    },
+    {
+      "path": "src/app/(shell)/promane/page.tsx",
+      "sourceHash": "4c57f4e4223b95326a36bfe24c9fa23cb4644ab0c96b0b679acc9c33821b2954",
+      "phase": "R1",
+      "classification": "shared_helper",
+      "plannedConnection": "getOrCreateWorkspace",
+      "transactionBoundary": "Creation must use guarded auth helper; current nullable consumer cohort remains independent.",
+      "candidateSites": [
+        {
+          "line": 81,
+          "function": "PromaneEntryPage",
+          "operation": "getOrCreateWorkspace",
+          "category": "getOrCreateWorkspace"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "workspace nested owner creation"
+    },
+    {
+      "path": "src/app/api/admin/stripe/route.ts",
+      "sourceHash": "25056d2d7dd5661d3657df542ff2637d1b5ee9058360fcad9c417ea911ce9620",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 129,
+          "function": "POST",
+          "operation": "stripe.subscriptions.update",
+          "category": "external_billing_write"
+        },
+        {
+          "line": 136,
+          "function": "POST",
+          "operation": "stripe.subscriptions.cancel",
+          "category": "external_billing_write"
+        },
+        {
+          "line": 177,
+          "function": "POST",
+          "operation": "stripe.subscriptions.update",
+          "category": "external_billing_write"
+        },
+        {
+          "line": 165,
+          "function": "POST",
+          "operation": "syncUnifiedBilling",
+          "category": "syncUnifiedBilling"
+        },
+        {
+          "line": 169,
+          "function": "POST",
+          "operation": "syncUnifiedBilling",
+          "category": "syncUnifiedBilling"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/admin/users/route.ts",
+      "sourceHash": "dfee5c30af59ab5879860624e6d7ef927dd223a1fb933feb3d9f7d91ac201185",
+      "phase": "R3",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Final User lock + guard + cleanup/anonymization/delete/completion in same Tx; no fallback direct delete.",
+      "candidateSites": [
+        {
+          "line": 311,
+          "function": "DELETE",
+          "operation": "delete",
+          "category": "user_deletion"
+        },
+        {
+          "line": 303,
+          "function": "DELETE",
+          "operation": "stripe.subscriptions.cancel",
+          "category": "external_billing_write"
+        },
+        {
+          "line": 168,
+          "function": "PATCH",
+          "operation": "syncUnifiedBilling",
+          "category": "syncUnifiedBilling"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/aio/invite/[token]/route.ts",
+      "sourceHash": "a38b737ded470d1f80006fc9444f0322fcfd13dc19c4a40059ab765cee87cb1b",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 75,
+          "function": "POST",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 79,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/aio/members/[id]/route.ts",
+      "sourceHash": "e0a4ce47bef3e438692dfc9301110e7c26de90063f40b5ea8c6c7b03f86dedba",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 33,
+          "function": "mutateMember",
+          "operation": "update",
+          "category": "membership"
+        },
+        {
+          "line": 36,
+          "function": "mutateMember",
+          "operation": "delete",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/aio/members/route.ts",
+      "sourceHash": "d592c92f8347ae01edd1314e6a640dd9486fbcc1360e0926c55b1ae40c486c29",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 69,
+          "function": "POST",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 72,
+          "function": "POST",
+          "operation": "create",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/aio/quick-start/route.ts",
+      "sourceHash": "ac24731343dd957ad335a6f215efcd0d68e414c40b12d182fc425c72f2575241",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 60,
+          "function": "handle",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 59,
+          "function": "handle",
+          "operation": "create",
+          "category": "organization_creation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/aishodan/invite/[token]/route.ts",
+      "sourceHash": "ebbafe712ccb131c39b531d98b81d71ba8439d437273b78ad5c63df0872ff2e1",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 84,
+          "function": "POST",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 88,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/aishodan/members/[id]/route.ts",
+      "sourceHash": "d65875e87fe0f3370ef0dfaf68c82b6418317f227667884239c4f643e9ace2fc",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 37,
+          "function": "mutateMember",
+          "operation": "update",
+          "category": "membership"
+        },
+        {
+          "line": 40,
+          "function": "mutateMember",
+          "operation": "delete",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/aishodan/members/route.ts",
+      "sourceHash": "697015d3d9d1442cd6d82e8c4a3ef5a5be23bebb67b283879f63be996abd6e08",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 89,
+          "function": "POST",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 90,
+          "function": "POST",
+          "operation": "create",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/cron/daily-summary/route.ts",
+      "sourceHash": "236310daa726ef33ca93a5b0ed2c4fe98cb8ecde953944fb73b41c31c87bf289",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 92,
+          "function": "resetExpiredSubscriptions",
+          "operation": "syncUnifiedBilling",
+          "category": "syncUnifiedBilling"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/expense/members/[id]/route.ts",
+      "sourceHash": "b11cbdf7cd8f01dadfd0234510277f5e61f49bd454e6ffa71f20da4080829437",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 41,
+          "function": "PATCH",
+          "operation": "update",
+          "category": "membership"
+        },
+        {
+          "line": 54,
+          "function": "DELETE",
+          "operation": "update",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/expense/members/route.ts",
+      "sourceHash": "f2cc4a71fcd5263623455c50f2376c20580036cf75fdb67c62a70756d95e7997",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 60,
+          "function": "POST",
+          "operation": "update",
+          "category": "membership"
+        },
+        {
+          "line": 61,
+          "function": "POST",
+          "operation": "create",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/expense/organization/route.ts",
+      "sourceHash": "fd8df0766d5a638fb80b59dc159c0e133c88e06dda3e843a895a0e8af880ee93",
+      "phase": "excluded_membership",
+      "classification": "metadata",
+      "plannedConnection": "expense organization PATCH",
+      "transactionBoundary": "Organization name/settings metadata do not grant membership or change billing subject. Existing authorization remains; no membership-coverage credit.",
+      "candidateSites": [
+        {
+          "line": 56,
+          "function": "PATCH",
+          "operation": "update",
+          "category": "organization_metadata_or_counter"
+        },
+        {
+          "line": 20,
+          "function": "POST",
+          "operation": "createOrganization",
+          "category": "createOrganization"
+        }
+      ],
+      "currentConnection": "excluded_from_this_membership_batch_with_reason",
+      "fixtureCoverage": "not covered by R0; no claim of all data-writer fence"
+    },
+    {
+      "path": "src/app/api/expense/usage/route.ts",
+      "sourceHash": "a690548f7f647146be5e86218f375afe25fe5aa42ed520ee2c222b4966ef6830",
+      "phase": "R1",
+      "classification": "shared_helper",
+      "plannedConnection": "claimPendingMemberships",
+      "transactionBoundary": "GET side effect must share full claim Tx; source read-only response does not imply no write.",
+      "candidateSites": [
+        {
+          "line": 14,
+          "function": "GET",
+          "operation": "claimPendingMemberships",
+          "category": "claimPendingMemberships"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "pending email claim/fence"
+    },
+    {
+      "path": "src/app/api/hr/billing/checkout/route.ts",
+      "sourceHash": "041f02793c09ef7d5661a41fba4bc93570ff9699cfb180995b50e069916163d7",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 174,
+          "function": "POST",
+          "operation": "stripe.checkout.sessions.create",
+          "category": "external_billing_write"
+        },
+        {
+          "line": 171,
+          "function": "POST",
+          "operation": "createReservedCheckoutSession",
+          "category": "createReservedCheckoutSession"
+        },
+        {
+          "line": 130,
+          "function": null,
+          "operation": "stripe.customers.create",
+          "category": "external_customer_write"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/hr/billing/portal/route.ts",
+      "sourceHash": "8a3d41a74eac27ed06f51f5c805ebc99b0aa5f9d79accb477442982a91097803",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 54,
+          "function": "POST",
+          "operation": "createCustomerPortalSession",
+          "category": "createCustomerPortalSession"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/hr/organization/invite/[token]/route.ts",
+      "sourceHash": "439a5ece767e0f7c887a6d65d51db418de24f64ddb89931ce480568cefe7c41d",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 37,
+          "function": "GET",
+          "operation": "updateMany",
+          "category": "separate_invitation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/hr/organization/invite/accept/route.ts",
+      "sourceHash": "6483915994f9853f125683bde7b09e15ab08573edc5d860aa63b365435367f7f",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 59,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "separate_invitation"
+        },
+        {
+          "line": 104,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "separate_invitation"
+        },
+        {
+          "line": 113,
+          "function": "POST",
+          "operation": "create",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/hr/organization/invite/route.ts",
+      "sourceHash": "1d31e51f18be4381976d85d956784057a84c152841a13614e260c42b503d69af",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 79,
+          "function": "POST",
+          "operation": "create",
+          "category": "separate_invitation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/hr/organization/members/[id]/route.ts",
+      "sourceHash": "18f7ad94d046a299dee096be35f03fb035e823d041744e956cefa30692a887cd",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 45,
+          "function": "mutateMember",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 61,
+          "function": "mutateMember",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/hr/organization/route.ts",
+      "sourceHash": "9ae0383575cb67ade1b4a46b3abae1bc91553782df07ca3f276a48309ad10876",
+      "phase": "excluded_membership",
+      "classification": "metadata",
+      "plannedConnection": "HR organization PATCH",
+      "transactionBoundary": "Name/industry/size/fiscal metadata only; no membership/canonical owner mutation.",
+      "candidateSites": [
+        {
+          "line": 163,
+          "function": "PATCH",
+          "operation": "update",
+          "category": "organization_metadata_or_counter"
+        }
+      ],
+      "currentConnection": "excluded_from_this_membership_batch_with_reason",
+      "fixtureCoverage": "not covered by R0"
+    },
+    {
+      "path": "src/app/api/hr/organization/transfer-owner/route.ts",
+      "sourceHash": "8919e1a8210e8a2488ffbf4e8ee497592c5c8960c7aefbd5e5d3e77301f9c924",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 64,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "membership"
+        },
+        {
+          "line": 69,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/hr/settings/route.ts",
+      "sourceHash": "b7d132d1688cea4747a7d765408e5c327e3b004fdb880881e53eb1e70dd04fbd",
+      "phase": "excluded_membership",
+      "classification": "metadata",
+      "plannedConnection": "HR settings PATCH",
+      "transactionBoundary": "Organization display/settings update, not membership.",
+      "candidateSites": [
+        {
+          "line": 91,
+          "function": "PUT",
+          "operation": "update",
+          "category": "organization_metadata_or_counter"
+        }
+      ],
+      "currentConnection": "excluded_from_this_membership_batch_with_reason",
+      "fixtureCoverage": "not covered by R0"
+    },
+    {
+      "path": "src/app/api/income/organization/route.ts",
+      "sourceHash": "fcf008ec6c1138d93fbe63853c93dd3345b85e8de6cb16d3bb9ee30612e8f7af",
+      "phase": "excluded_membership",
+      "classification": "metadata_with_cross_resource_link",
+      "plannedConnection": "income organization PATCH",
+      "transactionBoundary": "Expense-source references/metadata use current access checks but do not create member/owner. Broader resource-write fencing is separate, not credited as connected.",
+      "candidateSites": [
+        {
+          "line": 57,
+          "function": "PATCH",
+          "operation": "update",
+          "category": "organization_metadata_or_counter"
+        }
+      ],
+      "currentConnection": "excluded_from_this_membership_batch_with_reason",
+      "fixtureCoverage": "existing cross-resource authorization suites; not R0 closure"
+    },
+    {
+      "path": "src/app/api/kintai/employees/[id]/invite/route.ts",
+      "sourceHash": "1e96173e27d8334a1273d2267eae65f3ac91faff392bc9758516f376b6570c02",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 42,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/kintai/employees/[id]/route.ts",
+      "sourceHash": "93b30b1eaafcafd5d317f2347b42ab23b93fd4de49aa97ecaa0b1faffdda677c",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 165,
+          "function": "PATCH",
+          "operation": "update",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/kintai/invite/[token]/route.ts",
+      "sourceHash": "1b8ddec33906502b3192e2dc9f504363d12b6284d83f3df965bdd99ac0a8b990",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 109,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "membership"
+        },
+        {
+          "line": 113,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/mensetsu/invite/[token]/route.ts",
+      "sourceHash": "a5887c41801fdc3dd0441692d2980f7c6caa523cbbed5910bad4162a3ded15bb",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 84,
+          "function": "POST",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 88,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/mensetsu/members/[id]/route.ts",
+      "sourceHash": "baad7b55dbffd45917c1e97258a0bb70fe1c0b9a76d6ad32291104dec49e93b6",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 37,
+          "function": "mutateMember",
+          "operation": "update",
+          "category": "membership"
+        },
+        {
+          "line": 40,
+          "function": "mutateMember",
+          "operation": "delete",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/mensetsu/members/route.ts",
+      "sourceHash": "c0e2de1a154d934d1cfd54b5ddc1691a4f6bead1edfeb32c94c919759332d4c0",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 86,
+          "function": "POST",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 87,
+          "function": "POST",
+          "operation": "create",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/mensetsu/organizations/settings/route.ts",
+      "sourceHash": "563860ef949607c6f6d22df78a8e8eb30c49f1ee500a7fc8941a7c350a61b5f0",
+      "phase": "excluded_membership",
+      "classification": "metadata",
+      "plannedConnection": "Mensetsu settings PATCH",
+      "transactionBoundary": "Consent/retention settings are organization metadata; do not alter membership or owner.",
+      "candidateSites": [
+        {
+          "line": 32,
+          "function": "PATCH",
+          "operation": "update",
+          "category": "organization_metadata_or_counter"
+        }
+      ],
+      "currentConnection": "excluded_from_this_membership_batch_with_reason",
+      "fixtureCoverage": "not covered by R0"
+    },
+    {
+      "path": "src/app/api/promane/invitations/route.ts",
+      "sourceHash": "fc1ec657fed9e5d0b4a19d37d9e81cc7da308e6fa061515ee33d2025d4c08684",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 146,
+          "function": "DELETE",
+          "operation": "deleteMany",
+          "category": "separate_invitation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/promane/invite/[token]/route.ts",
+      "sourceHash": "adfeec2afbdee352f378f03c69680be8ab1539a0e23a07333068c29a8a5e3da8",
+      "phase": "R1",
+      "classification": "shared_helper",
+      "plannedConnection": "acceptPromaneInvitation",
+      "transactionBoundary": "Helper User-first prelude before current invite/member locks; route actor/email checks preserved.",
+      "candidateSites": [
+        {
+          "line": 82,
+          "function": "POST",
+          "operation": "acceptPromaneInvitation",
+          "category": "acceptPromaneInvitation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "same token/recipient/retirement/quota"
+    },
+    {
+      "path": "src/app/api/promane/invite/route.ts",
+      "sourceHash": "616a2371db6cf8779f9bb04f5463a91e7ef580c2b724b7ddd48793f3bdbf6341",
+      "phase": "R1",
+      "classification": "shared_helper",
+      "plannedConnection": "issuePromaneInvitation",
+      "transactionBoundary": "Helper same Tx includes inviter/workspace/invitation/quota; notification after commit is stubbed in tests.",
+      "candidateSites": [
+        {
+          "line": 38,
+          "function": "POST",
+          "operation": "issuePromaneInvitation",
+          "category": "issuePromaneInvitation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "issue/reuse/cancel/fence"
+    },
+    {
+      "path": "src/app/api/promane/members/[id]/rate/route.ts",
+      "sourceHash": "26555689bfe6a989ae8d9e8b0eb756827f62968aaa2498e0bd59f3e530b17141",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 64,
+          "function": "PATCH",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/promane/repair/route.ts",
+      "sourceHash": "48e39aed0568b564b32969e78d032621bd1bc2fd1467659987f9a583feba3443",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 65,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/promane/workspaces/[id]/route.ts",
+      "sourceHash": "bc89e7513d57f2a07b994e6d6aa3169fdfbfa9c35805f1efc7452f7c2e99efec",
+      "phase": "R1",
+      "classification": "shared_helper",
+      "plannedConnection": "updatePromaneWorkspaceOperation",
+      "transactionBoundary": "Lifecycle prelude must precede workspace-operation/advisory locks; preserve exact operation DTO.",
+      "candidateSites": [
+        {
+          "line": 16,
+          "function": "PATCH",
+          "operation": "updatePromaneWorkspaceOperation",
+          "category": "updatePromaneWorkspaceOperation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "rename/member effects and lock order"
+    },
+    {
+      "path": "src/app/api/promane/workspaces/create/route.ts",
+      "sourceHash": "6d3c296779b58355a32f4847cf42b660cfe6f1da2a5800c641d319eedb1a2d9f",
+      "phase": "R1",
+      "classification": "shared_helper",
+      "plannedConnection": "createPromaneWorkspaceOperation",
+      "transactionBoundary": "User-first creation transaction; nested owner and quota/operation receipt in same Tx.",
+      "candidateSites": [
+        {
+          "line": 16,
+          "function": "POST",
+          "operation": "createPromaneWorkspaceOperation",
+          "category": "createPromaneWorkspaceOperation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "nested create/rollback"
+    },
+    {
+      "path": "src/app/api/promane/workspaces/recover/route.ts",
+      "sourceHash": "e96780a650ce5ec7cd34faa23d86abdabdf3c6c2a135d743c2f67f7917238876",
+      "phase": "R1",
+      "classification": "shared_helper",
+      "plannedConnection": "recoverPromaneWorkspaceMutation",
+      "transactionBoundary": "Recovery capable of mutation must enter guarded same Tx; observation/replay cannot recreate retired User.",
+      "candidateSites": [
+        {
+          "line": 16,
+          "function": "POST",
+          "operation": "recoverPromaneWorkspaceMutation",
+          "category": "recoverPromaneWorkspaceMutation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "recovery/late outcome"
+    },
+    {
+      "path": "src/app/api/quote/invite/[token]/route.ts",
+      "sourceHash": "b3bdca6c3a62849d9231f2a631d22c546922a2efc09cdc1c4b38422810ee4d20",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 84,
+          "function": "POST",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 88,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/quote/members/[id]/route.ts",
+      "sourceHash": "2042dc18f774e4b956c3b3a0324892147bb33e92550fd702b5d27ac65e4c3e79",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 37,
+          "function": "mutateMember",
+          "operation": "update",
+          "category": "membership"
+        },
+        {
+          "line": 40,
+          "function": "mutateMember",
+          "operation": "delete",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/quote/members/route.ts",
+      "sourceHash": "1f3cf844994ed924db96fa51bbfe1f00c7a3f55a987613d4d3a4462be72b2be7",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 89,
+          "function": "POST",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 90,
+          "function": "POST",
+          "operation": "create",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/sfa/invite/[token]/route.ts",
+      "sourceHash": "100250309db35df0a9e460ae74ec2dcee62156d332dc3fa3cebfc4e5c36636b0",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 75,
+          "function": "POST",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 83,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/sfa/members/[id]/route.ts",
+      "sourceHash": "5151fdd17903347030add04a37ea4292282c670212465e241e7e69d7b65f8015",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 33,
+          "function": "mutateMember",
+          "operation": "update",
+          "category": "membership"
+        },
+        {
+          "line": 36,
+          "function": "mutateMember",
+          "operation": "delete",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/sfa/members/route.ts",
+      "sourceHash": "37ef87c09035d61f0de752ffaf77cd1df11862802a48c120a250f2b615e1c766",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 77,
+          "function": "POST",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 80,
+          "function": "POST",
+          "operation": "create",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/shodan/invite/[token]/route.ts",
+      "sourceHash": "1e95e7057c85edaa05ff721dde1e78dab4e198f58314f087cb88c00e5bb6261d",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 75,
+          "function": "POST",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 79,
+          "function": "POST",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/shodan/members/[id]/route.ts",
+      "sourceHash": "54b1c9610c06f62b9a5e99f6dba88c6e571ca7b073224bac8ad1be014a6742dc",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 33,
+          "function": "mutateMember",
+          "operation": "update",
+          "category": "membership"
+        },
+        {
+          "line": 36,
+          "function": "mutateMember",
+          "operation": "delete",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/shodan/members/route.ts",
+      "sourceHash": "14498bc998d6c943d55028ee538da99cee7652e5c1c733505a0323d1aa71b989",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 69,
+          "function": "POST",
+          "operation": "deleteMany",
+          "category": "membership"
+        },
+        {
+          "line": 72,
+          "function": "POST",
+          "operation": "create",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/stripe/checkout/route.ts",
+      "sourceHash": "aac0df9c6ccad0ceb51269cb2c5c1a689525e078737e1303c8e732e23c960589",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 221,
+          "function": "POST",
+          "operation": "createReservedCheckoutSession",
+          "category": "createReservedCheckoutSession"
+        },
+        {
+          "line": 224,
+          "function": "POST",
+          "operation": "createCheckoutSession",
+          "category": "createCheckoutSession"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/stripe/portal/redirect/route.ts",
+      "sourceHash": "9ea68efb336579181cd66373c6b356167a0f779e39316e0502142188861adabd",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 69,
+          "function": "GET",
+          "operation": "createCustomerPortalSession",
+          "category": "createCustomerPortalSession"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/stripe/portal/route.ts",
+      "sourceHash": "2f0c614e7108eef1ddd67abfc42b099b59a9cc3ad530bc5d9e6b1953a6ab727f",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 74,
+          "function": "GET",
+          "operation": "createCustomerPortalSession",
+          "category": "createCustomerPortalSession"
+        },
+        {
+          "line": 129,
+          "function": "POST",
+          "operation": "createCustomerPortalSession",
+          "category": "createCustomerPortalSession"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/stripe/subscription/cancel/route.ts",
+      "sourceHash": "8deaee3272c9d26a0997369df71fb0f4fa274649947a55641fc8b3b419047f7a",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 123,
+          "function": "POST",
+          "operation": "stripe.subscriptions.cancel",
+          "category": "external_billing_write"
+        },
+        {
+          "line": 124,
+          "function": "POST",
+          "operation": "stripe.subscriptions.update",
+          "category": "external_billing_write"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/stripe/subscription/resume/route.ts",
+      "sourceHash": "c40f303d33ef0f89b4329593f0da92fc760c2c74ecd39a2edee5f1bd1b6cd720",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 61,
+          "function": "POST",
+          "operation": "stripe.subscriptions.update",
+          "category": "external_billing_write"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/stripe/sync/latest/route.ts",
+      "sourceHash": "a46acf8dbe2b4951cbb48f502cfae91dd0caa0d8eb72f364cf7196f7a4a34a28",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 75,
+          "function": "POST",
+          "operation": "syncUnifiedBilling",
+          "category": "syncUnifiedBilling"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/stripe/sync/route.ts",
+      "sourceHash": "e31f7a026b5a14df2f2e98b3fe4e07bee354a3bf5f9aa28d5b101f28f832b0d7",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 115,
+          "function": "POST",
+          "operation": "syncUnifiedBilling",
+          "category": "syncUnifiedBilling"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/app/api/stripe/webhook/route.ts",
+      "sourceHash": "6e32abc10f1dbe7d29781d9abe12bec680b7bbd0b9e0709669adef3428fbc6fc",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 413,
+          "function": "handleSubscriptionDeleted",
+          "operation": "syncUnifiedBilling",
+          "category": "syncUnifiedBilling"
+        },
+        {
+          "line": 489,
+          "function": "updateUserSubscription",
+          "operation": "syncUnifiedBilling",
+          "category": "syncUnifiedBilling"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/aio/access.ts",
+      "sourceHash": "800b35fc876910c5cf41a01c66cec4dc7592bf5d7822183d44d1dc7d5cc4062b",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 123,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 154,
+          "function": "createAioOrganization",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 122,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "organization_creation"
+        },
+        {
+          "line": 153,
+          "function": "createAioOrganization",
+          "operation": "create",
+          "category": "organization_creation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/aishodan/access.ts",
+      "sourceHash": "c20c17e6b48dcb6ba7d0c93c01a41d9a007bc643032b06acb0bc0dc2d79c3c3c",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 132,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 131,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "organization_creation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/asklink/creation-adapter.ts",
+      "sourceHash": "d7bd5f0f41d150f3de6027001bfafbf093bbbe078d085a2572f279c051280529",
+      "phase": "R3",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Final User lock + guard + cleanup/anonymization/delete/completion in same Tx; no fallback direct delete.",
+      "candidateSites": [
+        {
+          "line": 9,
+          "function": "withAskLinkReceiptCleanup",
+          "operation": "delete",
+          "category": "user_deletion"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/billing-sync.ts",
+      "sourceHash": "55eb8262948b77f3e13c31aed26c7e0063b84c1f299ec36439740901c074b4a5",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 73,
+          "function": "syncUnifiedBilling",
+          "operation": "updateMany",
+          "category": "organization_metadata_or_counter"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/expense/access.ts",
+      "sourceHash": "9985bc44adab8672b57ffcd3bd378844f3d074a43a506fdf8939f03d0e17ca02",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 64,
+          "function": "claimPendingMemberships",
+          "operation": "update",
+          "category": "membership"
+        },
+        {
+          "line": 67,
+          "function": "claimPendingMemberships",
+          "operation": "updateMany",
+          "category": "membership"
+        },
+        {
+          "line": 151,
+          "function": "createOrganization",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 150,
+          "function": "createOrganization",
+          "operation": "create",
+          "category": "organization_creation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/expense/setup.ts",
+      "sourceHash": "2dd4117f879891f2203730c58d42b24af5ddc491dfb8f85857d1f0eb17af2b39",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 37,
+          "function": "initExpenseForCompany",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 28,
+          "function": "initExpenseForCompany",
+          "operation": "create",
+          "category": "organization_creation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/hr/access.ts",
+      "sourceHash": "7cc27846bcd5d6d4a3504ca860dc9f3d6e2a25161ac3d7286c22d9de3ba05ecd",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 63,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "nested_owner_membership"
+        },
+        {
+          "line": 63,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "organization_creation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/hr/billing.ts",
+      "sourceHash": "f6e40f8a885c86a02eeb4b79fe5ca6400b3f535fff72f86960ff35f61e77f133",
+      "phase": "excluded_membership",
+      "classification": "quota_helper",
+      "plannedConnection": "HR organization usage/admission",
+      "transactionBoundary": "Org plan read, counters/employee quota are not account membership. If caller changes User-first order, preserve same Tx/quota lock and test deadlock separately.",
+      "candidateSites": [
+        {
+          "line": 166,
+          "function": "reserveAiUsageInTransaction",
+          "operation": "update",
+          "category": "organization_metadata_or_counter"
+        },
+        {
+          "line": 177,
+          "function": "releaseAiUsage",
+          "operation": "updateMany",
+          "category": "organization_metadata_or_counter"
+        }
+      ],
+      "currentConnection": "excluded_from_this_membership_batch_with_reason",
+      "fixtureCoverage": "not R0 membership connection proof"
+    },
+    {
+      "path": "src/lib/hr/evaluation-ai-operation.ts",
+      "sourceHash": "b17efe0c062772625d9c47ffd0498e67f368b1da8a54fcb0a187b36ef9148a9c",
+      "phase": "excluded_membership",
+      "classification": "quota_counter",
+      "plannedConnection": "HR AI operation usage",
+      "transactionBoundary": "AI usage counter/reset only. No role/owner/target User assignment; AI caps remain unchanged.",
+      "candidateSites": [
+        {
+          "line": 76,
+          "function": "endHrEvaluationAiOperation",
+          "operation": "updateMany",
+          "category": "organization_metadata_or_counter"
+        }
+      ],
+      "currentConnection": "excluded_from_this_membership_batch_with_reason",
+      "fixtureCoverage": "existing HR AI regressions; not R0 closure"
+    },
+    {
+      "path": "src/lib/income/access.ts",
+      "sourceHash": "de69fa394f0b3cfde04f14e339b1da639e56c19501e1f755690449d28419c9e1",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 68,
+          "function": "createOwnOrganization",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 65,
+          "function": "createOwnOrganization",
+          "operation": "create",
+          "category": "organization_creation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/kintai/access.ts",
+      "sourceHash": "ee199f906c08b7aa9c512260aede437d6be07b0a142f038c3f03aa9fe3a28c05",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 62,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 61,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "organization_creation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/mensetsu/access.ts",
+      "sourceHash": "1fccfb693652c80d5f30575d703ff68928d0181e4aac7a97af6d56cfd11c7405",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 119,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 118,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "organization_creation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/promane/actions-time-entries.ts",
+      "sourceHash": "6307d59b65aef30c64c1287b8653fea9162d66feb0d194c88b5298584cd00a83",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 224,
+          "function": "updateMemberRate",
+          "operation": "updateMany",
+          "category": "membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/promane/auth.ts",
+      "sourceHash": "df3f0e7462ac0be195559233e0aa4a11feab2ca90d35a9e03f5229122bc8a259",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 54,
+          "function": "getOrCreateWorkspace",
+          "operation": "create",
+          "category": "canonical_workspace"
+        },
+        {
+          "line": 54,
+          "function": "getOrCreateWorkspace",
+          "operation": "create",
+          "category": "nested_owner_membership"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/promane/invite-admission.ts",
+      "sourceHash": "687b7136a3fbd28c90ca55c133d5795985b6be0ac9f968d3acac5ac01cd2b90a",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 90,
+          "function": "issuePromaneInvitation",
+          "operation": "create",
+          "category": "separate_invitation"
+        },
+        {
+          "line": 162,
+          "function": "acceptPromaneInvitation",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 171,
+          "function": "acceptPromaneInvitation",
+          "operation": "update",
+          "category": "separate_invitation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/promane/workspace-mutations.ts",
+      "sourceHash": "6109376542179f3350a4607c6e18b0950c08b8b7726e1af1ce9760ee138fe97b",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 59,
+          "function": "createPromaneWorkspaceOperation",
+          "operation": "create",
+          "category": "canonical_workspace"
+        },
+        {
+          "line": 59,
+          "function": "createPromaneWorkspaceOperation",
+          "operation": "create",
+          "category": "nested_owner_membership"
+        },
+        {
+          "line": 78,
+          "function": "updatePromaneWorkspaceOperation",
+          "operation": "updateMany",
+          "category": "canonical_workspace"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/quote/access.ts",
+      "sourceHash": "533090029769dccb4ceb6ea88fe1761bbeee4efc3330101aabb7d1716b643279",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 128,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 127,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "organization_creation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/sfa/access.ts",
+      "sourceHash": "dfe2d95ed798f05974ccb3696e41aaf5add29359d509e50d50a20678511faf41",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 119,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 117,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "organization_creation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/shodan/access.ts",
+      "sourceHash": "e1b56c3529aa6bd11b209825f09e88baa0327b7ee6fce0a32f36cbf3e2c0a654",
+      "phase": "R1",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "User/org/member locks, current authorization/quota and all mutations/audit in one transaction; global prisma calls cannot remain inside guarded callback.",
+      "candidateSites": [
+        {
+          "line": 122,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "membership"
+        },
+        {
+          "line": 121,
+          "function": "getOrCreateOrganization",
+          "operation": "create",
+          "category": "organization_creation"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    },
+    {
+      "path": "src/lib/stripe.ts",
+      "sourceHash": "1a99725e0961aa2d99a9dcb6a216aee138be8dd2f79e03db427752816da09ecb",
+      "phase": "R2",
+      "classification": "direct_candidate",
+      "plannedConnection": "planned lifecycle User-first prelude + existing scoped helper",
+      "transactionBoundary": "Short User-first receipt/dispatch/settle/fact transactions; never hold DB locks across provider I/O.",
+      "candidateSites": [
+        {
+          "line": 527,
+          "function": "createCheckoutSession",
+          "operation": "stripe.checkout.sessions.create",
+          "category": "external_billing_write"
+        },
+        {
+          "line": 586,
+          "function": "createCustomerPortalSession",
+          "operation": "stripe.billingPortal.sessions.create",
+          "category": "external_billing_write"
+        },
+        {
+          "line": 773,
+          "function": "cancelSubscription",
+          "operation": "stripe.subscriptions.update",
+          "category": "external_billing_write"
+        },
+        {
+          "line": 779,
+          "function": "resumeSubscription",
+          "operation": "stripe.subscriptions.update",
+          "category": "external_billing_write"
+        },
+        {
+          "line": 662,
+          "function": null,
+          "operation": "stripe.billingPortal.configurations.create",
+          "category": "shared_portal_configuration_write"
+        },
+        {
+          "line": 807,
+          "function": null,
+          "operation": "stripe.customers.create",
+          "category": "external_customer_write"
+        }
+      ],
+      "currentConnection": "unconnected",
+      "fixtureCoverage": "planned route/helper integration; R0 DB-only cases are not route coverage"
+    }
+  ],
+  "manualSupplement": [
+    {
+      "path": "src/app/api/kintai/employees/route.ts",
+      "phase": "R1",
+      "reason": "Singular nested employee.member.create is not captured by the scanner plural-members nested-create regex. Explicit User/admin-set/org/member/employee prelude required before admission/role checks/create.",
+      "coverage": "planned actual route create/reinvite/retirement and unchanged quota"
+    },
+    {
+      "path": "src/lib/kintai/employee-admission.ts",
+      "phase": "R1_dependency",
+      "reason": "Quota uses oldest createdAt system_admin WITHOUT ACTIVE/employee filter; keep source calculation, protect all real references separately from active authority set.",
+      "coverage": "planned paid/free mixed admins and inactive oldest reference"
+    },
+    {
+      "path": "src/lib/kintai/manager-admission.ts",
+      "phase": "R1_dependency",
+      "reason": "Existing member/employee lock must follow User/org prelude; do not nest reverse order.",
+      "coverage": "planned actual role authority and lock-order"
+    },
+    {
+      "path": "src/lib/promane/actions-tasks.ts",
+      "phase": "R1_assignment_separate",
+      "reason": "New assignee User existence check in nullable compatibility is not serialization. Resolve target assignee User and workspace canonical User before member locks.",
+      "coverage": "planned target retirement/assignment both orders; not membership site-count credit"
+    },
+    {
+      "path": "src/lib/promane/actions-time-entries.ts",
+      "phase": "R1_assignment_separate",
+      "reason": "Time-entry target member and canonical User must participate before current member FOR UPDATE / operation/advisory locks.",
+      "coverage": "planned assignee retirement/SetNull + time entry race"
+    },
+    {
+      "path": "src/lib/promane/actions-projects.ts",
+      "phase": "lock_order_dependency",
+      "reason": "requireCurrentTaskWriter/current member-first path is relevant to deadlock ordering even without direct member mutation.",
+      "coverage": "planned User-first vs member/advisory actual lock test"
+    },
+    {
+      "path": "src/lib/promane/actions-clients.ts",
+      "phase": "lock_order_dependency",
+      "reason": "Existing member/advisory order must be audited when shared guard/auth layer is changed.",
+      "coverage": "planned no inverted lock test"
+    },
+    {
+      "path": "src/lib/account-retirement.ts",
+      "phase": "R3",
+      "reason": "OWNER-A currently conservative multiple-owner/system_admin refusal is not normal membership policy; service-specific retirement/handover rules remain to implement.",
+      "coverage": "planned valid multi-admin/multi-owner retirement decisions; no policy change claimed now"
+    },
+    {
+      "path": "manual raw SQL / dynamic delegates / nested writes",
+      "phase": "manual_audit_required",
+      "reason": "AST candidate count cannot prove absence of rawSQL UPDATE/DELETE/INSERT, computed Prisma delegate, singular nested create or indirect $transaction callback. rg supplement and direct helper-consumer read required per integration phase.",
+      "coverage": "not proven absent; no all-78-connected claim"
+    }
+  ],
+  "R2CompletionRequirements": [
+    "Existing Portal capability cannot be assumed expired at creation+1h. Exact canceled-terminal subscription proof plus all creation/reuse/late settle/schedule/facts/legacy-writer closure are prerequisites; unknown evidence keeps User/fence needs_review. No shared config disable or Customer deletion added.",
+    "Include explicit customers.create in HR checkout before reservation plus User customer-ID save, stripe.ts getOrCreateCustomer, Checkout implicit Customer creation, and separately shared Portal configuration create.",
+    "Exact Checkout complete racing expire adds owned/mode/correlated subscription to a revisioned same-operation plan; never replace dispatched/confirmed payload. Current R0 checkout_expire accepts expired only; R2 extension is still required.",
+    "Provider resource IDs map to minimum technical retirement record after User deletion; never email reassociate or upsert User/rights.",
+    "Verified provider facts are durably preserved during fence; new resource/revision dirties plan and finalization must re-read. No blind webhook drop.",
+    "Document old deployment/worker drain evidence for unrecorded legacy customer/checkout/cancel/resume/portal work; fixed wait alone cannot prove drain."
+  ],
+  "R1CompletionRequirements": [
+    "Membership retirement-only prelude differs from all-kind account external lane. Billing-subject/owner transfer uses a separate strict lane; ordinary invitations with unrelated billing unknown remain available.",
+    "Kintai all active system_admin plus active employee authority; multiple normal admins, exact pending_UUID placeholder, employee.email fallback. Accept moves memberships in OTHER organizations: discover every affected org/User/admin before locking.",
+    "Expense multiple active owners normal; last owner count + target/update/audit all same provided Tx. Real route concurrent demotions cannot leave zero. Unknown target role repair allowed only known owner; unknown actor/authority rejected.",
+    "HR member ACTIVE/INVITED/SUSPENDED; separate invitation PENDING/ACCEPTED/EXPIRED等 statuses are not member statuses. Promane boolean isActive and separate invitation acceptedAt retain current contracts.",
+    "Current R0 DB-only callbacks do not prove existing route authorization, last-admin concurrent demotion, whole Kintai transfer, provider quota or external writer drain."
+  ]
+}

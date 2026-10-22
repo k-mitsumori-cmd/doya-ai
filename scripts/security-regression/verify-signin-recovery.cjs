@@ -122,7 +122,7 @@ function fixture(callback = '/hr/dashboard', behavior = () => Promise.resolve(),
     assert.equal(invitation.calls[0][2].prompt, 'select_account')
     const external = fixture('//external.example/private')
     await external.button().props.onClick()
-    assert.equal(external.calls[0][1].callbackUrl, '/seo')
+    assert.equal(external.calls[0][1].callbackUrl, '/home')
     assert.equal(external.calls[0][2], undefined)
   })
   await check('all nine invitation services prompt for the recipient account while other routes keep normal sign-in',async()=>{for(const service of ['aio','shodan','hr','quote','mensetsu','aishodan','sfa','promane','kintai']){const f=fixture(`/${service}/invite/synthetic%3Ftoken?return=details`);await f.button().props.onClick();assert.equal(f.calls[0][2].prompt,'select_account');assert.equal(Object.keys(f.calls[0][2]).length,1);assert.equal(f.calls[0][1].callbackUrl,`/${service}/invite/synthetic%3Ftoken?return=details`)}for(const callback of ['/aio/team','/shodan/invite','/aio/invite/synthetic/nested','/hr/inviteevil/token']){const f=fixture(callback);await f.button().props.onClick();assert.equal(f.calls[0][2],undefined)}})

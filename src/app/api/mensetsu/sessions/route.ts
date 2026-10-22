@@ -6,6 +6,7 @@ export const maxDuration = 300
 // POST /api/mensetsu/sessions — ワンタイム面接URLを発行（F5-2）
 import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
+import { workspaceHref } from '@/lib/organization-workspace-selection'
 import { prisma } from '@/lib/prisma'
 import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { interviewUrl } from '@/lib/mensetsu/interview-url'
@@ -95,8 +96,8 @@ export async function POST(req: NextRequest) {
     used: checked.used,
     limit: checked.limit,
     ...(canManageBilling ? checked.limit === FREE_LIMITS.mensetsuSessions
-      ? { upgradeUrl: '/mensetsu/pricing' }
-      : { contactUrl: SUPPORT_CONTACT_URL } : {}),
+      ? { upgradeUrl: workspaceHref('/mensetsu/pricing', ctx.organizationSlug, 'mensetsu') }
+      : { contactUrl: SUPPORT_CONTACT_URL, pricingUrl: workspaceHref('/mensetsu/pricing', ctx.organizationSlug, 'mensetsu') } : {}),
   }, { status: 402 })
   let quota: Awaited<ReturnType<typeof checkQuota>>
   try {

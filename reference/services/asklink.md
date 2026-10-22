@@ -261,3 +261,26 @@
 - `UNLISTED_SERVICE_IDS` から外し、`status: 'active'`（`badge: 'BETA'` / `isNew` は adimage と同じ扱い）。LP・料金ページの `noindex` を外した。トップ・sitemap・llms.txt・料金ページ・ツール切替は services.ts から派生するので個別の追記は無し。
 - 未ログインの紹介リンク許可リスト（`src/lib/safe-signin-callback.ts` の `PUBLIC_INTRO_SERVICES`）と指名検索の別表記（`src/lib/seo.ts` の `SERVICE_ALIASES`）に追加。
 - 公開サービス数の固定値（`scripts/security-regression/verify-google-analytics-services.cjs`）を17→18へ更新。
+
+
+## 作成と結果回復の限定補修（2026-10-20・本番未反映）
+
+作成POSTは、期待する利用者IDヘッダーと、時刻入りv2操作IDを受け付けます。User行lockの同一Serializableトランザクションで現在plan・利用枠・run予約・受付を確定します。同じIDの再送は既存結果を返し、生成を再実行しません。別の入力で同じIDを使うと409で拒否します。本文は32KiB・10秒で受付確認します。
+
+未受付のIDは発行時刻から24時間だけ新規受付できます。既存受付はサーバーのfirstAcceptedAtから30日間回復でき、GETや再送で期限を延長しません。期限切れIDは受付のGC後も410で拒否します。実行leaseは6分で、APIの300秒とは別に管理します。lease後の古いworkerは保存できません。
+
+応答消失やDTO障害は生成失敗と区別し、完成runを削除しません。画面は同じIDのGET確認へ進み、新しいIDでの自動再送をしません。新規作成は既存操作の終端確認後の明示操作です。GET/再送では初回バナー生成を再開しません。Web Locks・永続storageが使えないときは作成を停止します。POST応答の確認期限は本文込み330秒、GETは70秒・本文512KiB上限です。
+
+受付はSystemSettingのasklink-create:v2: prefixへ保存します。User lock用のopaque利用者ID、ID/hash/claim/状態/予約照合情報のみで、氏名・email・URL原文・手入力・生成本文を複製しません。1利用者512件の受付保存上限は技術上の保護であり、無料3回/プロ30回等の生成上限は変更していません。
+
+GCは専用CRON_SECRET付きAPIと毎時の設定コードを追加しました。本番の定期実行開始は未実施です。User lock・claim・予約CASで未保存予約だけを整理し、完成runと他サービスprefixを保持します。カーソルを進め、先頭の有効受付だけで後続が詰まらないようにします。
+
+管理者DELETEとPrismaAdapterのdeleteUserは、User lockと自prefix受付削除を同じ削除トランザクションへ接続しました。既存AskLinkRun/Banner/Storageの退会後残置は独立したprivacy P1です。今回の受付対策だけで退会時の全データ削除を完了したとは扱いません。共通DTO、履歴GET、バナー再生成の契約は維持しています。
+
+初回バナーqueueは作成画面の表示runを受け取り、run別tokenで管理します。別runの生成を並行開始しても旧応答を新しい結果へ反映しません。同じrunの重複は抑え、旧runの残り画像は同じ利用者のTool内で順番に要求します。unmount後の表示と後続POSTは止めますが、実行中providerの停止は保証しません。履歴画面の1引数queue呼出しは従来のsingle busyを維持します。
+
+## 退会時のASK画像整理（2026-10-20・本番未反映）
+
+管理者DELETEとPrismaAdapterの削除は、User lock・専用outbox・own run/Banner cascade・receipt・Userを同Txで扱います。banner writerはupload前ticketとUser/own run再確認、token/generation CASで遅延保存を抑えます。専用Storage workerは厳密なASK namespaceと既知exact keyを整理し、unknown/needs_reviewは空一覧でも完了にしません。scan前後のticket signatureが変わった場合は再走査します。正常settledと確定not-writtenだけを24時間後に整理し、不明ticketやoutbox actorを残します。
+
+専用cronは設定コードまでです。本番稼働・過去退会の一括backfill・ticketのない旧writerのdrainは別gateです。owner引継、事例PII匿名化、guest移管や退会全体の対応完了とは扱いません。41件の実PG/Storage mock証跡はdocs/handoff/2026-10-20-claude/ask-privacy-repair/に保存しています。

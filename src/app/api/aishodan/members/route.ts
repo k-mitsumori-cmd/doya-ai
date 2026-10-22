@@ -9,6 +9,8 @@ export const maxDuration = 300
 import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { withLifecycleOrganizationWrite } from '@/lib/account-lifecycle/organization-fence'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/access'
 import { sendEmail } from '@/lib/email'
 import { escapeHtml } from '@/lib/html-escape'
@@ -70,12 +72,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'オーナー権限は招待では付与できません' }, { status: 400 })
   }
 
+  // Check duplicates with current actor/owner authority before inspecting the
+  // recipient's retirement state. Duplicate responses do not disclose it.
+  const probeDuplicate = () => withLifecycleOrganizationWrite(prisma, {
+    service: 'aishodan', organizationId: c.organizationId, actorUserId: c.userId, access: 'member',
+    targetMemberIds: [], targetUserIds: [], targetEmails: [], grantsAuthority: false,
+    pendingClaimUserId: null, repairsUnknownTargetRole: false,
+  }, async tx => {
+    const actor = await tx.$queryRaw<{ role: AishodanRole }[]>`SELECT role FROM aishodan_members
+      WHERE "organizationId" = ${c.organizationId} AND "userId" = ${c.userId}
+      AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
+    if (!actor.length || ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[actor[0].role]) return { kind: 'forbidden' as const }
+    const duplicate = await tx.aishodanMember.findFirst({
+      where: { organizationId: c.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gt: new Date(Date.now() - INVITE_TTL_MS) } }] },
+      select: { status: true },
+    })
+    return duplicate ? { kind: 'duplicate' as const, status: duplicate.status } : { kind: 'none' as const }
+  })
+  const duplicateResponse = (status: string) => NextResponse.json({ error: status === 'ACTIVE' ? 'このメールの方は既にメンバーです' : '既に招待済みです' }, { status: 409 })
   const token = randomBytes(24).toString('base64url')
   let result
   try {
-    result = await prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM aishodan_organizations WHERE id = ${c.organizationId} FOR UPDATE`
-      if (rows.length === 0) return { kind: 'missing' as const }
+    const previous = await probeDuplicate()
+    if (previous.kind === 'forbidden') return NextResponse.json({ error: 'メンバーを招待する権限がありません。再読み込みしてください' }, { status: 403 })
+    if (previous.kind === 'duplicate') return duplicateResponse(previous.status)
+    result = await withLifecycleOrganizationWrite(prisma, {
+      service: 'aishodan', organizationId: c.organizationId, actorUserId: c.userId, access: 'member',
+      targetMemberIds: [], targetUserIds: [], targetEmails: [email], grantsAuthority: false,
+      pendingClaimUserId: null, repairsUnknownTargetRole: false,
+    }, async (tx) => {
       const actor = await tx.$queryRaw<{ role: AishodanRole }[]>`SELECT role FROM aishodan_members
         WHERE "organizationId" = ${c.organizationId} AND "userId" = ${c.userId}
         AND status = 'ACTIVE' AND role IN ('owner', 'admin') FOR UPDATE`
@@ -86,19 +111,33 @@ export async function POST(req: NextRequest) {
         select: { status: true },
       })
       if (duplicate) return { kind: 'duplicate' as const, status: duplicate.status }
-      await tx.aishodanMember.deleteMany({ where: { organizationId: c.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lte: cutoff } } })
+      const boundExpired = await tx.aishodanMember.findFirst({
+        where: { organizationId: c.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lte: cutoff }, userId: { not: null } },
+        select: { id: true },
+      })
+      if (boundExpired) return { kind: 'unavailable' as const }
+      await tx.aishodanMember.deleteMany({ where: { organizationId: c.organizationId, inviteEmail: email, status: 'PENDING', userId: null, createdAt: { lte: cutoff } } })
       const member = await tx.aishodanMember.create({
         data: { organizationId: c.organizationId, role, status: 'PENDING', inviteEmail: email, inviteToken: token },
         select: { id: true, role: true, status: true, inviteEmail: true },
       })
       return { kind: 'created' as const, member }
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof LifecycleError) {
+      if (error.code === 'ACCOUNT_RETIREMENT_IN_PROGRESS' || error.code === 'LIFECYCLE_STATE_UNAVAILABLE') {
+        try {
+          const previous = await probeDuplicate()
+          if (previous.kind === 'duplicate') return duplicateResponse(previous.status)
+        } catch { /* retain the original lifecycle denial */ }
+      }
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+    }
     return NextResponse.json({ error: '招待を作成できませんでした。再試行してください' }, { status: 409 })
   }
-  if (result.kind === 'missing') return NextResponse.json({ error: '組織が見つかりません' }, { status: 404 })
+  if (result.kind === 'unavailable') return NextResponse.json({ error: '招待の状態を確認できません。管理者にお問い合わせください' }, { status: 409 })
   if (result.kind === 'forbidden') return NextResponse.json({ error: 'メンバーを招待する権限がありません。再読み込みしてください' }, { status: 403 })
-  if (result.kind === 'duplicate') return NextResponse.json({ error: result.status === 'ACTIVE' ? 'このメールの方は既にメンバーです' : '既に招待済みです' }, { status: 409 })
+  if (result.kind === 'duplicate') return duplicateResponse(result.status)
   const member = result.member
 
   // ⚠️ 外部向けリンクに VERCEL_URL を使わない（デプロイ保護でログイン画面に飛ぶ）

@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { HrMemberRole, HrContext } from './types'
 import { ROLE_HIERARCHY } from './constants'
+import { lockLifecycleUsers, assertRetirementMembershipWritable } from '@/lib/account-lifecycle/store'
 
 const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
 
@@ -51,11 +52,13 @@ export async function getOrCreateOrganization(
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await prisma.$transaction(async (tx) => {
+        await lockLifecycleUsers(tx, [userId])
         const existing = await tx.hrOrganizationMember.findFirst({
           where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } }, include: { organization: true },
         })
         if (existing) return existing.organization
         if (await tx.hrOrganizationMember.findFirst({ where: { userId, status: 'ACTIVE' }, select: { id: true } })) throw Object.assign(new Error('組織の権限を確認できません。管理者に確認してください。'), { code: 'INVALID_MEMBERSHIP_ROLE' })
+        await assertRetirementMembershipWritable(tx, [userId])
 
         const base = options?.slug || orgName.toLowerCase().replace(/[^a-z0-9　-鿿]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
         const existingSlug = await tx.hrOrganization.findUnique({ where: { slug: base } })
@@ -68,8 +71,10 @@ export async function getOrCreateOrganization(
         })
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
     } catch (error) {
-      const code = (error as { code?: string })?.code
-      if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw error
+      const failure = error as { code?: string; meta?: { code?: string } }
+      const retryable = failure?.code === 'P2034' || failure?.code === 'P2002' ||
+        failure?.code === 'P2010' && ['40001', '40P01'].includes(failure.meta?.code ?? '')
+      if (attempt === 2 || !retryable) throw error
     }
   }
   throw new Error('Organization creation retry exhausted')

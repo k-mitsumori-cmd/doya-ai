@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { withLifecycleOrganizationWrite } from '@/lib/account-lifecycle/organization-fence'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 
 type Ctx = { params: Promise<{ token: string }> }
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
@@ -21,6 +23,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   if (Date.now() - member.createdAt.getTime() >= INVITE_TTL_MS) {
     return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
+
   return NextResponse.json({
     organizationName: member.organization.name,
     organizationSlug: member.organization.slug,
@@ -50,6 +53,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
 
+  // Pending invitations are unbound. A legacy bound row must not be silently
+  // transferred to another account by matching only its email.
+  if (member.userId !== null && member.userId !== userId) return NextResponse.json({ error: 'この招待のアカウント状態を確認できません', code: 'INVITE_UNAVAILABLE' }, { status: 409 })
+
   // 招待は宛先メール本人だけが承諾できる（リンク転送によるなりすまし防止）
   if (!sessionEmail || sessionEmail !== member.inviteEmail?.trim().toLowerCase()) {
     return NextResponse.json(
@@ -59,11 +66,13 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   }
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM aio_organizations WHERE id = ${member.organizationId} FOR UPDATE`
-      if (rows.length === 0) return 'unavailable' as const
+    const result = await withLifecycleOrganizationWrite(prisma, {
+      service: 'aio', organizationId: member.organizationId, actorUserId: userId, access: 'invitation',
+      targetMemberIds: [member.id], targetUserIds: [userId], targetEmails: [member.inviteEmail!.trim().toLowerCase()],
+      grantsAuthority: true, pendingClaimUserId: member.userId === null ? userId : null, repairsUnknownTargetRole: false,
+    }, async (tx) => {
       const invite = await tx.aioMember.findUnique({ where: { id: member.id } })
-      if (!invite || invite.organizationId !== member.organizationId || invite.status !== 'PENDING' || invite.inviteToken !== p.token) return 'unavailable' as const
+      if (!invite || invite.organizationId !== member.organizationId || invite.status !== 'PENDING' || invite.inviteToken !== p.token || invite.userId !== member.userId || member.userId !== null && invite.role !== member.role) return 'unavailable' as const
       const now = new Date()
       if (invite.createdAt.getTime() <= now.getTime() - INVITE_TTL_MS) return 'expired' as const
       const account = await tx.user.findUnique({ where: { id: userId }, select: { email: true } })
@@ -77,7 +86,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         return 'already' as const
       }
       const claimed = await tx.aioMember.updateMany({
-        where: { id: invite.id, organizationId: member.organizationId, role: invite.role, inviteEmail: invite.inviteEmail, status: 'PENDING', inviteToken: p.token, createdAt: { gt: new Date(Date.now() - INVITE_TTL_MS) } },
+        where: { id: invite.id, organizationId: member.organizationId, role: invite.role, userId: member.userId, inviteEmail: invite.inviteEmail, status: 'PENDING', inviteToken: p.token, createdAt: { gt: new Date(Date.now() - INVITE_TTL_MS) } },
         data: { userId, name: userName, status: 'ACTIVE', acceptedAt: now, inviteToken: null },
       })
       if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
@@ -88,6 +97,18 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (result === 'unavailable') return NextResponse.json({ error: 'この招待は既に使用済みです' }, { status: 409 })
     return NextResponse.json({ ok: true, organizationSlug: member.organization.slug, ...(result === 'already' ? { alreadyMember: true } : {}) })
   } catch (error) {
+    if (error instanceof LifecycleError) {
+      if (error.code === 'LIFECYCLE_PENDING_CLAIM_UNAVAILABLE') {
+        const [currentInvite, currentAccount] = await Promise.all([
+          prisma.aioMember.findUnique({ where: { id: member.id } }),
+          prisma.user.findUnique({ where: { id: userId }, select: { email: true } }),
+        ])
+        if (currentInvite?.status === 'PENDING' && currentInvite.organizationId === member.organizationId && currentInvite.role === member.role && currentInvite.userId === member.userId && currentInvite.inviteToken === p.token && currentInvite.inviteEmail && currentAccount && (!currentAccount.email || currentAccount.email.trim().toLowerCase() !== currentInvite.inviteEmail.trim().toLowerCase())) {
+          return NextResponse.json({ error: '招待先のメールアドレスでログインしてください' }, { status: 403 })
+        }
+      }
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+    }
     if (error instanceof InvitationExpired) return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
     return NextResponse.json({ error: '招待を承諾できませんでした。再読み込みしてください' }, { status: 409 })
   }

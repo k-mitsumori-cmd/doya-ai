@@ -9,7 +9,8 @@ import CashBars from '@/components/expense/CashBars'
 import { Button as DsButton, StatTile } from '@/components/ds'
 import { useUiNext } from '@/components/shell/ui-next-context'
 import { ExpenseHero, MonthDonut, YenCount } from '@/components/expense/next'
-import { Badge, Card, EmptyState, ErrorBox, Loading, PageBody, PageHeader, StatusBadge, addMonths, currentYm, fmtMonthDay, fmtMonthLabel, formatYen, todayYmd, type Tone, useExpenseOrg } from '@/components/expense/ui'
+import UpcomingPayments from '@/components/expense/UpcomingPayments'
+import { Badge, Card, EmptyState, ErrorBox, Loading, PageBody, PageHeader, addMonths, currentYm, fmtMonthLabel, formatYen, todayYmd, type Tone, useExpenseOrg } from '@/components/expense/ui'
 
 interface ActionItem { kind: string; scheduleId: string; title: string; dueOn: string; amount: number; detail: string }
 interface ContractAlert { kind: string; contractId: string; title: string; dueOn: string; detail: string }
@@ -48,9 +49,6 @@ export default function DashboardPage() {
 
   const today = todayYmd()
   const limit = new Date(Date.parse(today) + 14 * 86400000).toISOString().slice(0, 10)
-  const upcoming = [...(thisM.data?.schedules ?? []), ...(nextM.data?.schedules ?? [])]
-    .filter((s) => s.status !== 'paid' && s.status !== 'skipped' && s.plannedPayDate >= today && s.plannedPayDate <= limit)
-    .sort((a, b) => a.plannedPayDate.localeCompare(b.plannedPayDate))
 
   if (summary.loading && !summary.data) return <PageBody><Loading kpi /></PageBody>
   if (summary.error || !summary.data) return <PageBody><ErrorBox forbidden={summary.forbidden} onRetry={summary.reload} /></PageBody>
@@ -130,22 +128,8 @@ export default function DashboardPage() {
 
       <Card className="mt-4">
         <h2 className="mb-3 text-[18px] font-bold text-[var(--ink)]">今後14日の支払</h2>
-        {thisM.loading || nextM.loading ? (
-          <Loading rows={2} />
-        ) : upcoming.length === 0 ? (
-          <EmptyState image="/expense/empty-calendar.webp" alt="今後14日の支払予定は空です" text="今後14日に払う予定はありません。" actionLabel="支払予定を見る" href={`${base}/payables`} />
-        ) : (
-          <ul className="divide-y divide-[var(--line)]">
-            {upcoming.map((u) => (
-              <li key={u.id} className="flex items-center gap-3 py-2">
-                <span className="w-12 text-sm font-bold text-[var(--sub)]">{fmtMonthDay(u.plannedPayDate)}</span>
-                <span className="min-w-0 flex-1 truncate text-sm font-bold text-[var(--ink)]">{u.title}</span>
-                <StatusBadge status={u.status} />
-                <span className="w-28 text-right text-sm font-bold text-[var(--ink)]">{formatYen(u.netPayAmount)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <UpcomingPayments today={today} limit={limit} thisMonth={thisM} nextMonth={nextM} />
+        <Link href={`${base}/payables`} className="mt-3 inline-flex min-h-[44px] items-center text-sm font-bold text-[var(--blue)]">支払予定を見る</Link>
       </Card>
     </PageBody>
   )

@@ -49,6 +49,8 @@ export default async function ProjectDetailPage({
     include: { timeEntries: { where: { OR: [{ projectId: project.id }, { projectId: null, taskId: { in: project.tasks.map((t) => t.id) } }] } } },
   });
 
+  const assignableMembers = members.filter(member => member.isActive && !!member.userId);
+
   let laborCost = 0;
   let totalMinutes = 0;
   members.forEach((member) => {
@@ -200,7 +202,7 @@ export default async function ProjectDetailPage({
             workspaceSlug={workspaceSlug}
             workspaceId={workspace.id}
             projectId={projectId}
-            members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
+            members={assignableMembers.map((m) => ({ id: m.id, displayName: m.displayName }))}
           />
           <GanttChart
             tasks={project.tasks.map((t) => ({
@@ -217,7 +219,7 @@ export default async function ProjectDetailPage({
             workspaceSlug={workspaceSlug}
             projectStartDate={project.startDate?.toISOString() || null}
             projectEndDate={project.endDate?.toISOString() || null}
-            members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
+            members={assignableMembers.map((m) => ({ id: m.id, displayName: m.displayName }))}
           />
         </TabsContent>
 
@@ -226,7 +228,7 @@ export default async function ProjectDetailPage({
             workspaceSlug={workspaceSlug}
             workspaceId={workspace.id}
             projectId={projectId}
-            members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
+            members={assignableMembers.map((m) => ({ id: m.id, displayName: m.displayName }))}
           />
           <KanbanBoard
             tasks={project.tasks.map((t) => ({
@@ -243,7 +245,7 @@ export default async function ProjectDetailPage({
               totalMinutes: t.timeEntries.reduce((sum, te) => sum + te.duration, 0),
             }))}
             workspaceSlug={workspaceSlug}
-            members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
+            members={assignableMembers.map((m) => ({ id: m.id, displayName: m.displayName }))}
           />
         </TabsContent>
 

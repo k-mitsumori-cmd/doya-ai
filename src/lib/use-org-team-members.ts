@@ -12,17 +12,19 @@ export function useOrgTeamMembers(service:TeamService,orgSlug:string) {
   const key=JSON.stringify([service,guard.key])
   const identity=JSON.stringify([service,guard.identity])
   const lastIdentity=useRef(identity),state=useRef(fresh()),pending=useRef<Pending|null>(null)
-  if(lastIdentity.current!==identity){lastIdentity.current=identity;state.current=fresh();pending.current=null}
+  const transferRefresh=useRef('')
+  if(lastIdentity.current!==identity){lastIdentity.current=identity;state.current=fresh();pending.current=null;transferRefresh.current=''}
   const [,render]=useState(0),redraw=()=>render(n=>n+1)
   const current=()=>currentGuard.current.key===guard.key&&currentGuard.current.active()
   const load=useCallback(async()=>{
     const g=currentGuard.current
     if(JSON.stringify([service,g.key])!==key)return
     const ticket=g.begin('team-members-read');if(!ticket)return
+    if(transferRefresh.current===key)transferRefresh.current=''
     state.current.loading=key;state.current.ready='';state.current.error=null;redraw()
     try{
       const {res,data}=await requestOrgJson(service,`/api/${service}/members`,orgSlug,{signal:ticket.signal})
-      if(!ticket.current())return
+      if(!ticket.current()||transferRefresh.current===key)return
       if(!res.ok){if(res.status===401)g.rejectAuthentication();throw new Error(orgErrorMessage(data,res.status,false))}
       const parsed=readTeamMembers(data);Object.assign(state.current,parsed)
       if(state.current.inviteMemberId&&!parsed.members.some(m=>m.id===state.current.inviteMemberId&&m.status==='PENDING')){
@@ -35,9 +37,20 @@ export function useOrgTeamMembers(service:TeamService,orgSlug:string) {
         if(waiting.kind==='invite'&&state.current.email.trim().toLowerCase()===waiting.email&&state.current.role===waiting.role)state.current.email=''
       }
       state.current.ready=key
-    }catch(e){if(ticket.current())state.current.error={key,message:e instanceof Error?e.message:'メンバー一覧を確認できませんでした。'}}
-    finally{if(ticket.current()){state.current.loading='';redraw()}ticket.end()}
+    }catch(e){if(ticket.current()&&transferRefresh.current!==key)state.current.error={key,message:e instanceof Error?e.message:'メンバー一覧を確認できませんでした。'}}
+    finally{
+      const valid=ticket.current(),queued=valid&&transferRefresh.current===key
+      if(valid&&!queued){state.current.loading='';redraw()}
+      ticket.end()
+      if(queued)void load()
+    }
   },[key,orgSlug,service])
+  const refreshAfterTransfer=()=>{
+    if(!current()||JSON.stringify([service,currentGuard.current.key])!==key)return
+    transferRefresh.current=key
+    state.current.ready='';state.current.loading=key;state.current.error=null;redraw()
+    void load()
+  }
   useEffect(()=>{void load()},[load])
   const loaded=state.current.ready===key&&current()
   const canManage=loaded&&TEAM_ROLE_RANK[state.current.myRole]>=TEAM_ROLE_RANK.admin
@@ -87,5 +100,5 @@ export function useOrgTeamMembers(service:TeamService,orgSlug:string) {
     error:state.current.error?.key===key?state.current.error.message:null,notice:current()?state.current.notice:'',inviteUrl:current()?state.current.inviteUrl:'',
     setEmail:(email:string)=>{if(!current()||state.current.ready!==key||TEAM_ROLE_RANK[state.current.myRole]<TEAM_ROLE_RANK.admin)return;state.current.email=email;redraw()},
     setRole:(role:string)=>{if(!current()||state.current.ready!==key||TEAM_ROLE_RANK[state.current.myRole]<TEAM_ROLE_RANK.admin)return;state.current.role=role;redraw()},
-    canRemove:(id:string)=>canManage&&editable(id),invite:()=>mutate('invite'),remove:(id:string)=>mutate('remove',id),load}
+    canRemove:(id:string)=>canManage&&editable(id),invite:()=>mutate('invite'),remove:(id:string)=>mutate('remove',id),load,refreshAfterTransfer}
 }

@@ -1,4 +1,5 @@
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans';
+import Link from 'next/link';
 
 // title/canonical は layout.tsx（buildServiceSubMetadata）が正本。
 // ここで metadata を持つと layout の指定を上書きしてしまうため定義しない。
@@ -45,6 +46,7 @@ export default function PromanePricingPage() {
             プロジェクト管理をもっとシンプルに。まずは無料で始めて、必要になったらプロプランへ。
             プロプランなら、すべてのドヤAIサービスのプロ機能をプラン別の上限内で利用できます。
           </p>
+          <Link href="/promane?select=1" className="mt-6 inline-block rounded-lg px-3 py-2 font-bold text-blue-700 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">ワークスペース選択へ戻る</Link>
         </div>
       </section>
 

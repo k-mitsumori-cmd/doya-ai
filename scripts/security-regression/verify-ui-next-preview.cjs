@@ -76,11 +76,11 @@ const req=(q,headers={})=>new nextServer.NextRequest('https://doya-ai.example.in
     assert.match(read('src/app/(shell)/layout.tsx'),/session\?\.user \? await uiNextMode\(\) : null/);
     // 組織のページへのリンクの行き先も、新しい見た目の人のときだけ読んで渡す
     assert.match(read('src/app/(shell)/layout.tsx'),/const \[company, toolHrefs\] = uiNext\n\s*\? await Promise\.all/);
-    assert.match(read('src/components/shell/ShellGate.tsx'),/ShellToolHrefsContext\.Provider value=\{uiNext && toolHrefs \? toolHrefs : EMPTY\}/);
+    assert.match(read('src/components/shell/ShellGate.tsx'),/ShellToolHrefsContext\.Provider value=\{privateReady && uiNext && toolHrefs \? toolHrefs : EMPTY\}/);
     assert.doesNotMatch(read('src/lib/shell/tool-hrefs.server.ts'),/prisma\.|create|upsert|ensure\w*\(/);
     // 会社の名前は、新しい見た目の人のときだけ読んで渡す
     assert.match(read('src/app/(shell)/layout.tsx'),/getAccountCompanyName\(\)\.catch/);
-    assert.match(read('src/components/shell/ShellGate.tsx'),/AccountCompanyContext\.Provider value=\{uiNext \? company : undefined\}/);
+    assert.match(read('src/components/shell/ShellGate.tsx'),/AccountCompanyContext\.Provider value=\{privateReady && uiNext \? company : undefined\}/);
     // 候補はログイン中の人の所属だけを読む関数から作る（組織を作らない）
     const loader=read('src/lib/shell/company.server.ts');
     // 書き込むのは本人の会社の表（accountCompany）だけ。各ツールの組織は読むだけ（詳しくは verify-account-company-scope.cjs）

@@ -1,0 +1,8 @@
+{
+  "checkedAt": "2026-10-20T00:32:01.669938+00:00",
+  "status": "not-started-insufficient-disk",
+  "guardExitCode": 3,
+  "guardOutput": "ディスクの空きが 4GB で、8GB を切っています。ビルドしません。メイン（local_505613b0-da96-4115-8fd4-efb1c4d361be）に知らせてください。",
+  "nextBuildExecuted": false,
+  "minimumFreeGiB": 8
+}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { getSelectedOrg, orgStorageKey } from '@/components/org/OrgSwitcher'
+import { useQuoteWorkspace } from '@/components/quote/QuoteWorkspaceBoundary'
 import { QuoteWorkspaceContext } from '@/lib/quote/workspace-context'
 import { parseQuoteOrganizations } from '@/lib/quote/organization-response'
 import { requestOrgJson, orgErrorMessage } from '@/lib/org-client-response'
@@ -10,16 +10,20 @@ import { QUOTE_ISSUER_FIELDS, normalizeQuoteIssuer, isQuoteIssuerAcknowledgement
 
 type Form = Record<string, string>
 export function useQuoteIssuerSettings() {
+  const { scope } = useQuoteWorkspace()
+  const proof = scope.kind === 'ready' ? scope.proof : null
+  const proofRef = useRef(proof)
+  proofRef.current = proof
   const { data: session, status } = useSession()
   const lastActor = useRef('')
   if (status === 'authenticated') lastActor.current = session?.user?.id || ''
   if (status === 'unauthenticated') lastActor.current = ''
   const actor = status === 'loading' ? lastActor.current : session?.user?.id || ''
-  const selection = getSelectedOrg('quote')
+  const selection = proof?.organization.slug || null
   const contextRef = useRef<QuoteWorkspaceContext | null>(null)
-  if (!contextRef.current) contextRef.current = new QuoteWorkspaceContext(() => getSelectedOrg('quote'))
+  if (!contextRef.current) contextRef.current = new QuoteWorkspaceContext(() => proofRef.current?.current() ? proofRef.current.organization.slug : null)
   const context = contextRef.current
-  const epoch = context.update({ actor, selection, status })
+  const epoch = context.update({ actor, selection, status, revision: proof?.revision })
   const identity = JSON.stringify([actor, selection])
   const liveIdentity = useRef(identity)
   const draft = useRef<Form>({})
@@ -36,19 +40,7 @@ export function useQuoteIssuerSettings() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const changed = useCallback(() => { context.invalidate(); redraw(n => n + 1) }, [context])
-  useEffect(() => {
-    const storage = (e: StorageEvent) => { if (e.key === null || e.key === orgStorageKey('quote')) changed() }
-    window.addEventListener('quote:organization-changed', changed)
-    window.addEventListener('storage', storage)
-    // StrictMode re-mount also needs a fresh epoch after cleanup invalidates requests.
-    redraw(n => n + 1)
-    return () => {
-      window.removeEventListener('quote:organization-changed', changed)
-      window.removeEventListener('storage', storage)
-      context.invalidate()
-    }
-  }, [changed, context])
+  useEffect(() => { redraw(n => n + 1); return () => context.invalidate() }, [context])
 
   const load = useCallback(async () => {
     const ticket = context.begin('issuer-read', true, epoch)
@@ -59,7 +51,7 @@ export function useQuoteIssuerSettings() {
       if (!ticket.current()) return
       if (!orgs.res.ok) throw new Error(orgErrorMessage(orgs.data, orgs.res.status, false))
       const org = parseQuoteOrganizations(orgs.data).current
-      if (!org || !context.verifyOrganization(epoch, org.slug)) throw new Error('組織の所属を確認できませんでした')
+      if (!org || !proof?.current() || org.slug !== proof.organization.slug || org.role !== proof.organization.role || actor !== proof.actorId || !context.verifyOrganization(epoch, org.slug)) throw new Error('組織の所属を確認できませんでした')
       if (draftOrganization.current !== null && draftOrganization.current !== org.slug) {
         draft.current = {}; dirty.current = false; pending.current = null
       }
@@ -88,7 +80,7 @@ export function useQuoteIssuerSettings() {
       if (ticket.current()) setLoading(false)
       ticket.end()
     }
-  }, [context, epoch, selection])
+  }, [context, epoch, selection, proof, actor])
   useEffect(() => { void load() }, [load])
 
   const save = async () => {
@@ -121,10 +113,10 @@ export function useQuoteIssuerSettings() {
       ticket.end()
     }
   }
-  const loaded = ready?.epoch === epoch && context.isCurrent(epoch)
+  const loaded = ready?.epoch === epoch && context.isCurrent(epoch) && !!proof?.current()
   return {
     form: draft.current, loading: status === 'loading' || status === 'authenticated' && loading && !loaded,
-    loaded, saving, error: status === 'unauthenticated' ? 'ログインして設定をご確認ください。' : error, message, unknown: !!pending.current && !saving,
+    loaded, saving, hasUnsavedChanges: dirty.current, error: status === 'unauthenticated' ? 'ログインして設定をご確認ください。' : error, message, unknown: !!pending.current && !saving,
     canEdit: loaded && !!ready && ['owner', 'admin'].includes(ready.role),
     scopeKey: JSON.stringify([actor, ready?.slug, epoch]),
     update: (field: string, value: string) => {

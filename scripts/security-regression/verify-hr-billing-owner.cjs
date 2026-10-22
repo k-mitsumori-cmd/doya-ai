@@ -1,5 +1,7 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
+const { routeUnitDeps, routeUnitGlobals, genericStart, hrStart, state } = require('./checkout-route-unit-fixture.cjs');
+const TRIAL_USER_SELECT = load('src/lib/trial.ts', { '@/lib/stripe': { stripe: {} }, '@/lib/unified-plan': load('src/lib/unified-plan.ts') }).TRIAL_USER_SELECT;
 
 const HrMemberRole = { OWNER: 'OWNER', ADMIN: 'ADMIN' };
 const { getOrgPlanLimits } = load('src/lib/hr/billing.ts', { '@/lib/prisma': { prisma: {} } });
@@ -18,7 +20,7 @@ let checkoutOptions = null;
 let customerEmail = 'test@example.invalid';
 let customerOwnerId = 'u1';
 const prisma = {
-  user: { findUnique: async () => ({ id: 'u1', stripeCustomerId: 'cus_test', email: 'test@example.invalid', name: 'Test' }) },
+  user: { findUnique: async () => ({ id: 'u1', stripeCustomerId: 'cus_test', email: 'test@example.invalid', name: 'Test', plan: 'FREE', serviceSubscriptions: [] }) },
   hrOrganizationMember: { findFirst: async () => ({ role }) },
 };
 const stripe = {
@@ -38,8 +40,16 @@ const common = {
 };
 const checkout = load('src/app/api/hr/billing/checkout/route.ts', {
   ...common,
+  ...routeUnitDeps({ prisma, onStart: async request => {
+    const customer = await stripe.customers.retrieve(request.customerId);
+    if (customer.email !== request.terms.email || customer.metadata.userId !== request.identity.targetUserId) {
+      throw new state.LifecycleError('CUSTOMER_OWNERSHIP_MISMATCH');
+    }
+    checkoutCalls++; checkoutOptions = { success_url: request.terms.successUrl };
+    return { id: 'cs_test', url: 'https://offline.invalid/checkout' };
+  } }),
   '@/lib/stripe': { stripe, findActiveLikeSubscriptions: async () => existingSubscription ? [{ id: 'sub_existing' }] : [], STRIPE_PRICE_IDS: { hr: { starter: { monthly: 'price_test', yearly: 'price_yearly' }, pro: { monthly: 'price_test', yearly: 'price_yearly' }, enterprise: { monthly: 'price_test', yearly: 'price_yearly' } } } },
-});
+}, routeUnitGlobals);
 const portal = load('src/app/api/hr/billing/portal/route.ts', {
   ...common,
   '@/lib/stripe': {
@@ -58,30 +68,30 @@ const portal = load('src/app/api/hr/billing/portal/route.ts', {
   },
 });
 const generic = load('src/app/api/stripe/checkout/route.ts', {
+  ...routeUnitDeps({ prisma, onStart: async () => { genericCheckoutCalls++; return { id: 'cs_generic', url: 'https://offline.invalid/checkout' } } }),
   '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),
   'next/server': { NextResponse: Response },
   'next-auth': common['next-auth'],
   '@/lib/auth': common['@/lib/auth'],
   '@/lib/prisma': { prisma },
-  '@/lib/checkout-reservation': common['@/lib/checkout-reservation'],
   '@/lib/stripe': {
     STRIPE_PRICE_IDS: {},
     findActiveLikeSubscriptions: async () => [],
-    createCheckoutSession: async () => { genericCheckoutCalls++; return { url: 'https://offline.invalid/checkout' }; },
+    createCheckoutSession: async () => { throw Error('legacy Checkout entry must not write'); },
   },
   '@/lib/unified-plan': { UNIFIED_TRIAL_DAYS: 30 },
-  '@/lib/trial': { isTrialEligible: async () => true },
-});
+  '@/lib/trial': { isTrialEligible: async () => true, TRIAL_USER_SELECT },
+}, routeUnitGlobals);
 
 (async () => {
-  const req = { json: async () => ({ plan: 'pro' }) };
+  const req = { json: async () => hrStart() };
   let response = await checkout.POST(req);
   assert.equal(response.status, 403);
   assert.equal((await response.json()).code, 'HR_BILLING_OWNER_REQUIRED');
   response = await portal.POST({});
   assert.equal(response.status, 403);
   assert.equal((await response.json()).code, 'HR_BILLING_OWNER_REQUIRED');
-  response = await generic.POST(new Request('https://offline.invalid/api/stripe/checkout', { method: 'POST', body: JSON.stringify({ planId: 'banner-pro', serviceId: 'hr' }) }));
+  response = await generic.POST(new Request('https://offline.invalid/api/stripe/checkout', { method: 'POST', body: JSON.stringify(genericStart(undefined, { serviceId: 'hr' })) }));
   assert.equal(response.status, 403);
   assert.equal((await response.json()).code, 'HR_BILLING_OWNER_REQUIRED');
   assert.equal(customerCalls + checkoutCalls + portalCalls + genericCheckoutCalls, 0, 'ADMIN must not reach Stripe');
@@ -95,7 +105,7 @@ const generic = load('src/app/api/stripe/checkout/route.ts', {
   assert.equal(customerCalls + checkoutCalls + portalCalls, 0, 'mismatched identity must not reach Stripe');
 
   ctxUserId = 'u1';
-  response = await checkout.POST({ json: async () => ({ plan: 'pro', interval: 'weekly' }) });
+  response = await checkout.POST({ json: async () => hrStart(undefined, { interval: 'weekly' }) });
   assert.equal(response.status, 400);
   assert.equal(checkoutCalls, 0, 'invalid billing interval must not create a checkout');
   existingSubscription = true;

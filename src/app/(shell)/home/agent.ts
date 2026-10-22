@@ -46,12 +46,79 @@ export const AGENT_SUGGESTIONS = [
   '今月の残業と勤怠の状況は？',
   '契約中のプランを確認したい',
   '集客を強化したい',
+  'ポップアップの7日の数字は？',
+  '保存された展示会の出展条件は？',
 ]
 
 const notReady = (name: string) => `${name}はまだ使い始めていません`
 
+type MetricQuestion = 'popup' | 'asklink' | 'other' | 'ambiguous' | null
+
+/** 数字の出所を確定してから答える。作成・配信の依頼は従来の画面案内へ。 */
+function metricQuestion(raw: string): MetricQuestion {
+  const q = raw.replace(/\s+/g, '').toLowerCase()
+  if (has(q, ['作りたい', '作って', '作成したい', '配信したい', '設置したい', '出したい'])) return null
+  const popup = has(q, ['ポップアップ', 'popup'])
+  const asklink = has(q, ['asklink', '質問リンク'])
+  const other = has(q, ['バナー', 'banner', 'ランディングページ', '広告', 'seo', '記事']) || /(?:^|[^a-z])lp(?:[^a-z]|$)/.test(q)
+  const metric = has(q, ['クリック', '表示回数', 'ctr']) || ((popup || asklink || other) && has(q, ['数字', '計測', '実績', '何回']))
+  if (!metric && !/^(ポップアップ|popup)[？?]?$/.test(q)) return null
+  if (Number(popup) + Number(asklink) + Number(other) > 1) return 'ambiguous'
+  return popup ? 'popup' : asklink ? 'asklink' : other ? 'other' : 'ambiguous'
+}
+
+export function isPopupStatsQuestion(raw: string): boolean {
+  return metricQuestion(raw) === 'popup'
+}
+
+/** 他サービス・サービス不明の数字質問も、作成画面へ転送せず出所を案内する。 */
+function tenjikaiQuestion(raw: string): 'saved' | 'progress' | 'open' | null {
+  const q = raw.replace(/\s+/g, '').toLowerCase()
+  if (!has(q, ['展示会', 'tenjikai'])) return null
+  if (has(q, ['作りたい', '作って', '作成したい', '生成したい', '準備したい', '出展したい'])) return 'open'
+  if (has(q, ['タスク', '予算', '資料', '進捗', '準備状況', '準備完了', '支出', '売上', '収入', '契約', '発注', '支払', '出金', '入金', '費用', '金額', 'クリック', 'ctr'])) return 'progress'
+  return has(q, ['保存', '登録済', '出展条件', '案件名', '会期', '何日']) ? 'saved' : 'open'
+}
+
+export function isHomeMetricsQuestion(raw: string): boolean {
+  const exhibition = tenjikaiQuestion(raw)
+  return exhibition ? exhibition !== 'open' : metricQuestion(raw) !== null
+}
+
 export function planAgent(raw: string, s: HomeSummary): AgentPlan {
   const q = raw.replace(/\s+/g, '')
+  const exhibition = tenjikaiQuestion(q)
+  if (exhibition === 'saved') return savedTenjikaiPlan(s)
+  if (exhibition === 'progress') return {
+    intent: 'tenjikai-progress-unavailable', title: '展示会の準備状況・業務指標', steps: [],
+    lead: 'ホームでは、展示会の準備状況や売上・支出・契約などの業務指標をまだ取得していません。保存された出展条件だけを確認できます。',
+    rows: [], actions: [{ label: '展示会を開く', href: '/tenjikai' }],
+  }
+  if (exhibition === 'open') return {
+    intent: 'tenjikai-open', title: '展示会を開く', steps: [],
+    lead: '展示会の作業は専用画面で進めてください。保存した案件を再表示する機能はまだ未対応です。',
+    rows: [], actions: [{ label: '展示会を開く', href: '/tenjikai' }],
+  }
+  const metric = metricQuestion(q)
+  if (metric === 'asklink') return {
+    intent: 'asklink', title: '質問リンクの計測', steps: [],
+    lead: '質問リンク（AskLink）はクリック数を計測していません。ポップアップの数字で代替していません。',
+    rows: [], actions: [{ label: '質問リンクを開く', href: '/asklink' }],
+  }
+  if (metric === 'popup') return popupPlan(s)
+  if (metric === 'other' || metric === 'ambiguous') return {
+    intent: 'metrics-source', title: '計測するサービスの確認', steps: [],
+    lead: metric === 'other' ? 'このホームでは、指定されたサービスのクリック指標を取得していません。ポップアップの数字では代替できません。'
+      : 'どのサービスの指標か教えてください。ホームで取得しているのはポップアップの数字です。',
+    rows: [], actions: [],
+  }
+  if (has(q.toLowerCase(), ['ポップアップ', 'popup'])) return {
+    intent: 'popup-action', title: 'ポップアップの作成・配信', steps: [],
+    lead: 'ポップアップの作成・配信は、専用画面で内容を確認して進めてください。',
+    rows: [], actions: [{ label: 'ポップアップを開く', href: '/popup' }],
+  }
+
+  if (s.finance && has(q, ['売上', '収入', '入金', '請求漏れ', '入金遅延', '粗利', '支出', '出金'])) return financialPlan(s)
 
   if (has(q, ['契約', 'プラン', '請求', '支払', '解約', '料金'])) {
     const c = s.contract
@@ -100,6 +167,9 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
   if (has(q, ['今日', 'やること', 'タスク', 'やるべき', '優先', 'todo', 'TODO'])) {
     const rows: AgentRow[] = []
     const actions: AgentAction[] = []
+    const billing = s.finance?.income.state === 'ready' ? s.finance.income.value?.todo ?? [] : []
+    billing.forEach(item => rows.push({ label: '請求・入金', value: item.title, tone: item.kind === 'leak' || item.kind === 'overdue' ? 'warn' : 'muted' }))
+    if (billing.length) actions.push({ label: '請求・入金を確認する', href: '/income' })
     if (s.sales.state === 'ready') {
       rows.push({ label: '営業タスク（未完了）', value: `${s.sales.openTasks}件` })
       rows.push({ label: 'うち期限切れ', value: `${s.sales.overdueTasks}件`, tone: s.sales.overdueTasks > 0 ? 'warn' : 'good' })
@@ -127,7 +197,7 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
         { tool: '勤怠', label: '承認待ちの申請を確認' },
       ],
       lead: rows.length
-        ? s.sales.overdueTasks > 0
+        ? billing.length ? '請求・入金の要対応があります。内容と期日を確認してください。' : s.sales.overdueTasks > 0
           ? `期限切れの営業タスクが${s.sales.overdueTasks}件あります。まずはそこから片づけましょう。`
           : '期限切れはありません。近い期日のものから順に進めましょう。'
         : 'まだ各ツールにタスクが登録されていません。営業管理かプロマネから始めると、ここに並びます。',
@@ -174,11 +244,12 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
     return {
       intent: 'marketing',
       title: '集客を強化する',
-      steps: [{ tool: '営業管理', label: '今月の新規リードを確認' }],
+      steps: [{ tool: '営業管理', label: '今月の新規リードを確認' }, { tool: 'ポップアップ', label: '直近7日の計測を確認' }],
       lead: s.sales.state === 'ready'
         ? `今月の新規リードは${s.sales.newLeads}件です。入口を増やすなら、下の順で進めるのがおすすめです。`
         : '入口を増やすなら、下の順で進めるのがおすすめです。',
       rows: [
+        ...popupRows(s),
         { label: '1. 見られ方を知る', value: 'AI検索対策で現状を確認', tone: 'muted' },
         { label: '2. 受け皿を作る', value: 'LP・記事を用意', tone: 'muted' },
         { label: '3. 届ける', value: 'バナー・コピーで広告', tone: 'muted' },
@@ -225,6 +296,7 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
   }
 
   // 既定: 売上と収入の全体像
+  if (s.finance) return financialPlan(s)
   const sa = s.sales
   const pr = s.projects
   const income = sa.wonThisMonth
@@ -253,6 +325,41 @@ export function planAgent(raw: string, s: HomeSummary): AgentPlan {
   }
 }
 
+function financialPlan(s: HomeSummary): AgentPlan {
+  const finance = s.finance!
+  const { income, expense } = finance
+  const value = income.state === 'ready' ? income.value : null
+  const rows: AgentRow[] = []
+  const unavailable = (state: string) => state === 'no_access' ? '所属と権限を確認してください' : '取得できませんでした'
+  const note = value?.expenseConnection === 'no_access' ? '支出の所属と権限を確認してください'
+    : value?.expenseConnection === 'reference_only' ? 'プロマネは税区分が異なるため未算定'
+      : value?.expenseConnection === 'not_linked' ? '支出管理の取り込み元が未設定です' : '支出を取得できないため未算定'
+  if (income.state !== 'unused') {
+    rows.push(
+      { label: '売上予定（計上月・税抜）', value: value ? man(value.revenue.scheduled) : '—' },
+      { label: 'うち請求済み（税抜）', value: value ? man(value.revenue.invoiced) : '—' },
+      { label: '入金額（受取日・税込）', value: value ? man(value.revenue.received) : '—' },
+      { label: '粗利（予定・税抜）', value: value?.profit != null ? man(value.profit) : `— / ${value ? note : unavailable(income.state)}` },
+    )
+    if (value) rows.push({ label: '請求漏れ / 入金遅延', value: `${value.billing.leaks}件 / ${value.billing.overdue}件`, tone: value.billing.leaks || value.billing.overdue ? 'warn' : 'muted' })
+  } else {
+    // 正常な未使用のときだけ旧業務指標を参考値として返す。合算して売上にはしない。
+    rows.push({ label: '受注（営業管理・参考）', value: s.sales.state === 'ready' ? man(s.sales.wonThisMonth) : '—' }, { label: '確定見積（参考・税抜）', value: s.quotes.state === 'ready' ? man(s.quotes.confirmedThisMonth) : '—' })
+  }
+  if (expense.state !== 'unused') {
+    rows.push({ label: '今月の出金（支払日・税込、源泉税納付含む）', value: expense.state === 'ready' && expense.value ? man(expense.value.cashOut) : `— / ${unavailable(expense.state)}` })
+  } else if (income.state === 'unused') {
+    rows.push({ label: '案件経費・人件費（プロマネ・参考）', value: s.projects.state === 'ready' ? man(s.projects.cost) : '—' })
+  }
+  return {
+    intent: 'revenue', title: '売上・入金と出金',
+    steps: [{ tool: '収入管理', label: '計上月の売上と受取日の入金を確認' }, { tool: '支出管理', label: '選択した組織の計上費用と出金を確認' }],
+    lead: value ? `${finance.month}の収入管理${income.organization ? `（${income.organization.name}）` : ''}の数字です。売上と入金は基準が異なるため合算しません。`
+      : income.state === 'unused' ? '収入管理は未使用です。営業・見積・案件の数字は参考値として表示します。' : `${unavailable(income.state)}。売上を0円や参考値に置き換えていません。`,
+    rows, actions: [{ label: '収入管理を確認する', href: '/income' }, { label: '支出管理を確認する', href: expense.organization ? `/expense/${encodeURIComponent(expense.organization.slug)}` : '/expense' }],
+  }
+}
+
 function emptyTool(name: string, href: string, lead: string): AgentPlan {
   return {
     intent: 'empty',
@@ -261,5 +368,49 @@ function emptyTool(name: string, href: string, lead: string): AgentPlan {
     lead,
     rows: [],
     actions: [{ label: `${name}をはじめる`, href }],
+  }
+}
+
+/** UI と同じ HomeSummary の read 結果のみを参照する。AskLink の計測とは分ける。 */
+function popupRows(s: HomeSummary): AgentRow[] {
+  const popup = s.popup
+  if (!popup) return [{ label: 'ポップアップ（7日）', value: '未取得', tone: 'muted' }]
+  if (popup.state === 'error') return [{ label: 'ポップアップ（7日）', value: '取得できませんでした', tone: 'muted' }]
+  if (popup.value.siteCount === 0) return []
+  const { totals } = popup.value
+  return [
+    { label: '表示回数（7日）', value: `${totals.impressions.toLocaleString('ja-JP')}回` },
+    { label: 'クリック数（7日）', value: `${totals.clicks.toLocaleString('ja-JP')}回` },
+    { label: 'クリック率（7日）', value: totals.ctr === null ? '—' : `${totals.ctr.toLocaleString('ja-JP')}%` },
+  ]
+}
+
+function popupPlan(s: HomeSummary): AgentPlan {
+  const popup = s.popup
+  const ready = popup?.state === 'ready' && popup.value.siteCount > 0
+  return {
+    intent: 'popup', title: '集客の数字（7日）',
+    steps: [{ tool: 'ポップアップ', label: '直近7日の表示・クリックを確認' }],
+    lead: ready ? '今日を含む直近7日（JST）のポップアップの計測です。クリック率は全クリック数を全表示回数で割っています。'
+      : !popup ? 'ポップアップの数字は未取得です。ホームを更新してください。'
+        : popup.state === 'error' ? 'ポップアップの数字を取得できませんでした。ホームを更新してください。'
+          : 'ポップアップは未使用です。サイトを登録すると、ここで計測を確認できます。',
+    rows: ready ? popupRows(s) : [],
+    actions: [{ label: 'ポップアップを開く', href: '/popup' }],
+  }
+}
+
+
+function savedTenjikaiPlan(s: HomeSummary): AgentPlan {
+  const saved = s.tenjikai
+  return {
+    intent: 'tenjikai-saved', title: '保存された出展条件',
+    steps: [{ tool: '展示会', label: '保存された案件名と会期を確認' }],
+    lead: !saved ? '保存された出展条件は未取得です。ホームを更新してください。'
+      : saved.state === 'error' ? '保存された出展条件を取得できませんでした。ホームを更新してください。'
+        : saved.items.length === 0 ? '今日から60日以内に始まる、保存された出展条件はありません。'
+          : '保存された出展条件です。生成や準備の完了を示すものではありません。展示会の画面で、保存した案件を再表示する機能はまだ未対応です。',
+    rows: saved?.state === 'ready' ? saved.items.map(project => ({ label: project.projectName, value: `${project.eventName} / ${project.eventDate}（JST） / 会期初日まで${project.daysUntil}日` })) : [],
+    actions: [{ label: '展示会を開く', href: '/tenjikai' }],
   }
 }

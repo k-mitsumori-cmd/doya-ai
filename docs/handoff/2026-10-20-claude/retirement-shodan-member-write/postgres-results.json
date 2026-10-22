@@ -1,0 +1,427 @@
+{
+  "executed": 82,
+  "contractPassed": 82,
+  "scope": "Actual Shodan access + PATCH/DELETE + fixed writer + real existing lifecycle store on owned current-schema PG. No external APIs/mail/provider. Invitation creation/acceptance/initial organization and global retirement remain outside this partial unit.",
+  "cases": [
+    {
+      "name": "PATCH normal operation preserves exact response",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH retiring owner refuses third-party mutation with zero writes",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH retiring actor refuses third-party mutation with zero writes",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH retiring target refuses third-party mutation with zero writes",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH unbound PENDING stays a historical invitation without creating User or activation",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH unbound INACTIVE stays a historical invitation without creating User or activation",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH actor revoked after context/discovery returns old 403 contract",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH target promoted after discovery is re-read and forbidden",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH owner changes after discovery and retiring replacement owner remains protected",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH token/email/status changes are re-planned without stale overwrite",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH target removed after discovery returns original 404 without stale write",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH null target becomes linked during discovery gap and new User fence is enforced",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH changed invite expiry source createdAt forces full replan",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH writer first holds owner User lock and retirement waits for commit",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH failed write rolls back all member state with existing audit count zero",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH ACTIVE null target fails closed instead of granting live authority",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE normal operation preserves exact response",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE retiring owner refuses third-party mutation with zero writes",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE retiring actor refuses third-party mutation with zero writes",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE retiring target refuses third-party mutation with zero writes",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE unbound PENDING stays a historical invitation without creating User or activation",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE unbound INACTIVE stays a historical invitation without creating User or activation",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE actor revoked after context/discovery returns old 403 contract",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE target promoted after discovery is re-read and forbidden",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE owner changes after discovery and retiring replacement owner remains protected",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE token/email/status changes are re-planned without stale overwrite",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE target removed after discovery returns original 404 without stale write",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE null target becomes linked during discovery gap and new User fence is enforced",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE changed invite expiry source createdAt forces full replan",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE writer first holds owner User lock and retirement waits for commit",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE failed write rolls back all member state with existing audit count zero",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE ACTIVE null target fails closed instead of granting live authority",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical linked missing User preserves operation with absent",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical linked missing User preserves operation with completed-retirement",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects active-retirement with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects active-checkout with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects active-cancel with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects active-resume with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects active-change with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects active-portal with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects unknown-checkout with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects corrupt-fence with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects missing-receipt with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects missing-completed-ledger with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects malformed-completed-receipt with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects malformed-completed-ledger with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects completed-generation-mismatch with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical missing User rejects completed-target-mismatch with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH PENDING linked missing User cannot use historical exception",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical User reappears before admission and full replan protects its retirement",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical User returns without fence and full replan locks it first",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "PATCH historical target becomes ACTIVE before admission and is rediscovered fail-closed",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical linked missing User preserves operation with absent",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical linked missing User preserves operation with completed-retirement",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects active-retirement with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects active-checkout with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects active-cancel with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects active-resume with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects active-change with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects active-portal with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects unknown-checkout with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects corrupt-fence with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects missing-receipt with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects missing-completed-ledger with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects malformed-completed-receipt with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects malformed-completed-ledger with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects completed-generation-mismatch with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical missing User rejects completed-target-mismatch with write0",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE PENDING linked missing User cannot use historical exception",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical User reappears before admission and full replan protects its retirement",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical User returns without fence and full replan locks it first",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "DELETE historical target becomes ACTIVE before admission and is rediscovered fail-closed",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "existing missing rejection status and body remain unchanged",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "existing owner rejection status and body remain unchanged",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "existing self rejection status and body remain unchanged",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "unknown target role remains peer rejection without repair",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "actor admin cannot promote a target to peer admin",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "unknown canonical owner fails closed with no data writes",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "corrupt owner fence fails closed and typed error retains status/code",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "cross-organization target never changes another member",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "unrelated checkout unknown does not disable normal organization mutation",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    },
+    {
+      "name": "safe retirement abort permits a later explicit operation",
+      "passed": true,
+      "classification": "actual_shodan_member_fixed_operation_contract"
+    }
+  ],
+  "sourceHashes": {
+    "src/app/api/shodan/members/[id]/route.ts": "c32224a1cce86b81b9a750475e5cdb19f7de6b92dcd711976667c9b4361312d6",
+    "src/lib/shodan/member-write.ts": "a959d2ae01b76566d2d308428fa9a27eef2fe7bfbc186941d5876b6c0647df6d",
+    "scripts/security-regression/verify-shodan-membership-postgres.cjs": "d959ab03fa413d190545afb4dc697d574ac33171cd783d3b0892928b789b6150",
+    "scripts/security-regression/verify-shodan-membership-postgres.py": "cc83b993a714bcb873f0c7fdb91d062df055fdc1d456a97bce0dec7ddf9ae456",
+    "scripts/security-regression/verify-aio-member-mutation-atomic.cjs": "f77ff739a3a96819f1482fc505c206ebb752d586d84840e8a4a58e7f7d522de9",
+    "src/lib/account-lifecycle/store.ts": "9aa59f20d9a4a4e77af6251bc614f5f7223f3f0871445e16377ec05b1502ba0f"
+  },
+  "pendingCompatibility": [],
+  "historicalBoundary": "Only known INACTIVE nonowner nonself lower-role targets in fixed PATCH/DELETE, no activation/User creation. Actual application CUID creation does not reuse opaque IDs; manual DB replacement/writers outside this lock protocol are not a claim of global retirement safety."
+}

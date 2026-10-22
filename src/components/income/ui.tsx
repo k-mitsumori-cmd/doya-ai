@@ -85,7 +85,7 @@ export const ACCOUNT_TYPE_LABEL: Record<string, string> = { ordinary: '普通', 
 
 /** status は 401 / 403 / 404 の出し分けに使う。画面には出さない */
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(message: string, readonly status: number, readonly code?: string) {
     super(message)
   }
 }
@@ -109,7 +109,7 @@ export async function fetchJson<T = any>(url: string, init: { method?: string; b
   } catch {
     // JSON でない応答
   }
-  if (!res.ok) throw new ApiError(data?.error || '処理に失敗しました。時間をおいて再度お試しください。', res.status)
+  if (!res.ok) throw new ApiError(data?.error || '処理に失敗しました。時間をおいて再度お試しください。', res.status, typeof data?.code === 'string' ? data.code : undefined)
   return data as T
 }
 
@@ -170,6 +170,12 @@ export function Gate<T>({
   if (e) {
     if (e.status === 403) return <EmptyState variant="forbidden" message={FORBIDDEN_MESSAGE} />
     if (e.status === 401) return <EmptyState variant="unauth" message="ログインの有効期限が切れました。もう一度ログインしてください。" />
+    if (e.status === 409 && e.code === 'ACCOUNT_RETIREMENT_IN_PROGRESS') {
+      return <EmptyState variant="error" message="アカウントの処理中のため、組織を作成できません。管理者にお問い合わせください。" action={{ label: 'もう一度確認する', onClick: () => { void res.retry() } }} />
+    }
+    if (e.status === 409 && (e.code === 'LIFECYCLE_USER_UNAVAILABLE' || e.code === 'LIFECYCLE_STATE_UNAVAILABLE')) {
+      return <div role="alert"><EmptyState image="/empty/error.svg" message="アカウントの状態を確認できません。操作を繰り返さず、管理者にお問い合わせください。" /></div>
+    }
     if (e.status === 404 && listHref) {
       return <EmptyState variant="error" message="この情報は見つかりませんでした。削除されたか、リンクが正しくない可能性があります。" action={{ label: `${listLabel ?? '一覧'}へ戻る`, href: listHref }} />
     }

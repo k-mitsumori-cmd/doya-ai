@@ -10,12 +10,18 @@ import { isGuestPath } from '@/lib/ui/guest-path'
 import { AISHODAN_NAV } from '@/lib/aishodan/nav'
 import AishodanShellSwitcher from './AishodanShellSwitcher'
 import styles from './AishodanShellFrame.module.css'
+import { useOptionalOrganizationWorkspace } from '@/components/org/OrganizationWorkspaceBoundary'
 
 export default function AishodanShellFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  const workspace = useOptionalOrganizationWorkspace()
   if (isGuestPath(pathname)) return <>{children}</>
+  // The root creation form is itself the only safe content for a confirmed empty workspace.
+  if (pathname === '/aishodan' && workspace?.scope.kind === 'empty') return <>{children}</>
+  if (workspace?.scope.kind !== 'ready') return null
+  const proof = workspace.scope.proof
   return (
-    <ToolFrame serviceId="aishodan" nav={AISHODAN_NAV} switcher={<AishodanShellSwitcher />}>
+    <ToolFrame serviceId="aishodan" nav={AISHODAN_NAV.map(item => ({ ...item, href: proof.href(item.href) }))} switcher={<AishodanShellSwitcher />}>
       <div className={styles.content}>{children}</div>
     </ToolFrame>
   )

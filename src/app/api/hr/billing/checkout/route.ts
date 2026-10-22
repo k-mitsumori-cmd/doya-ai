@@ -3,205 +3,85 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
-import type Stripe from 'stripe'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
-import { stripe, STRIPE_PRICE_IDS, findActiveLikeSubscriptions } from '@/lib/stripe'
+import { STRIPE_PRICE_IDS, findActiveLikeSubscriptions } from '@/lib/stripe'
 import { getHrContext } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { logAudit } from '@/lib/hr/audit'
-import { CheckoutReservationError, createReservedCheckoutSession } from '@/lib/checkout-reservation'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
+import { checkoutUrls } from '@/lib/account-lifecycle/checkout-urls'
+import { currentCheckoutEpoch, checkoutHttpResult, checkoutIdentity, parseCheckoutHttpAction, resolveCheckoutActor, runCheckoutHttpAction } from '@/lib/account-lifecycle/checkout-http'
+import { stripeModeFromSecret } from '@/lib/account-lifecycle/checkout-stripe-provider'
+import type { CheckoutRecoveryBinding, CheckoutRequest } from '@/lib/account-lifecycle/checkout-receipt'
 
-// HR用Stripe価格IDマッピング（統一課金のSTRIPE_PRICE_IDSから取得）
 const HR_PLAN_PRICES: Record<string, { monthly: string; yearly: string }> = {
   starter: STRIPE_PRICE_IDS.hr.starter,
   pro: STRIPE_PRICE_IDS.hr.pro,
   enterprise: STRIPE_PRICE_IDS.hr.enterprise,
 }
+const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+const reply = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: privateHeaders })
+const publicError = 'アカウント操作の状態を確認できません。操作を繰り返さず、保存状況をご確認ください。'
 
-// POST /api/hr/billing/checkout
-// Stripe Checkoutセッションを作成（統一課金パターン）
-export async function POST(req: NextRequest) {
+function appOrigin(): string {
+  const raw = String(process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '').trim().replace(/\/+$/, '')
+  try { const url = new URL(raw); if (url.protocol === 'https:' && url.origin === raw && !url.username && !url.password) return raw } catch { /* fail closed */ }
+  throw new LifecycleError('CHECKOUT_ORIGIN_UNAVAILABLE', 503)
+}
+
+/** Dedicated HR pricing remains distinct from generic HR source and trial policy. */
+export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    const user = session?.user as any
-    if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const ctx = await getHrContext()
-    if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // 組織の上限は OWNER の User.plan で決まる。別メンバーが購入しても反映されない。
-    if (ctx.role !== HrMemberRole.OWNER || ctx.userId !== user.id) {
-      return NextResponse.json({ error: 'この組織のプランはオーナーのみ変更できます。', code: 'HR_BILLING_OWNER_REQUIRED' }, { status: 403 })
-    }
-
-    const body = await req.json()
-    const plan = body?.plan // plan: 'starter' | 'pro' | 'enterprise'
-    const interval = String(body?.interval ?? 'monthly') // 'monthly' | 'yearly'
-
-    if (!plan || !HR_PLAN_PRICES[plan]) {
-      return NextResponse.json(
-        { error: `無効なプランです: ${plan}` },
-        { status: 400 }
-      )
-    }
-
-    if (interval !== 'monthly' && interval !== 'yearly') {
-      return NextResponse.json({ error: `無効な課金間隔です: ${interval}` }, { status: 400 })
-    }
-
-    const priceId = HR_PLAN_PRICES[plan][interval]
-    if (!priceId) {
-      return NextResponse.json(
-        { error: `無効な課金間隔です: ${interval}` },
-        { status: 400 }
-      )
-    }
-
-    // User.stripeCustomerIdを使用（組織ではなくユーザーレベル）
-    const dbUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { stripeCustomerId: true, email: true, name: true },
-    })
-    if (!dbUser) {
-      return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
-    }
-    const expectedEmail = String(dbUser.email || user.email || '').trim().toLowerCase()
-    if (!expectedEmail) {
-      return NextResponse.json({ error: '契約者のメールアドレスを確認できませんでした。' }, { status: 409 })
-    }
-
-    // 旧HR専用入口も共通Checkoutと同じ二重契約ガードを通す。
-    try {
-      const existing = await findActiveLikeSubscriptions({
-        userId: user.id,
-        email: dbUser.email || user.email,
-        stripeCustomerId: dbUser.stripeCustomerId,
-      })
-      if (existing.length > 0) {
-        const planChange = existing.length === 1 && !!existing[0]?.priceId && existing[0].priceId !== priceId
-        return NextResponse.json({
-          code: planChange ? 'PLAN_CHANGE_REQUIRED' : 'ALREADY_SUBSCRIBED',
-          error: planChange
-            ? '現在のご契約のプラン変更は契約管理画面で行ってください。'
-            : 'すでにご契約が有効です。二重のご請求を防ぐため決済を中断しました。',
-        }, { status: 409 })
-      }
-    } catch {
-      return NextResponse.json({
-        code: 'SUBSCRIPTION_CHECK_UNAVAILABLE',
-        error: '契約状況を確認できなかったため決済を開始していません。時間をおいて再度お試しください。',
-      }, { status: 503 })
-    }
-
-    let stripeCustomerId = dbUser.stripeCustomerId
-
-    // 保存済み顧客IDが現在のStripeモード(本番/テスト)に存在するか検証。
-    // 別モードで作られたID等は resource_missing になるためクリアして作り直す（自己修復）
-    if (stripeCustomerId) {
-      try {
-        const existing = await stripe.customers.retrieve(stripeCustomerId)
-        if ('deleted' in existing && existing.deleted) stripeCustomerId = null
-        else if (
-          existing.email?.trim().toLowerCase() !== expectedEmail ||
-          (existing.metadata?.userId && existing.metadata.userId !== user.id)
-        ) {
-          return NextResponse.json({
-            error: '保存済みのStripe顧客が契約者と一致しません。決済を開始していません。',
-            code: 'CUSTOMER_OWNERSHIP_MISMATCH',
-          }, { status: 409 })
-        }
-      } catch (err: any) {
-        if (err?.code === 'resource_missing' || err?.statusCode === 404) {
-          stripeCustomerId = null
-        } else {
-          throw err
-        }
-      }
-    }
-
-    // StripeCustomerがない場合は作成してUser.stripeCustomerIdに保存
-    if (!stripeCustomerId) {
-      const customer = await stripe.customers.create({
-        email: expectedEmail,
-        name: dbUser.name || user.name,
-        metadata: {
-          userId: user.id,
+    const raw: unknown = await request.json()
+    const action = parseCheckoutHttpAction(raw, ['plan', 'interval'])
+    const body = raw as Record<string, unknown>
+    const actor = await resolveCheckoutActor(await getServerSession(authOptions), action.expectedActorId)
+    if (action.action !== 'start' && action.action !== 'start_after_terminal') {
+      const result = await runCheckoutHttpAction(action, actor.id, undefined, {
+        source: 'hr',
+        authorizePlan: async plan => {
+          const ctx = await getHrContext()
+          if (!ctx || ctx.userId !== actor.id || ctx.role !== HrMemberRole.OWNER || plan && plan.organizationId !== ctx.organizationId) throw new LifecycleError('HR_BILLING_OWNER_REQUIRED', 403)
         },
       })
-      stripeCustomerId = customer.id
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { stripeCustomerId },
-      })
+      return reply(checkoutHttpResult(result, actor.id))
     }
-
-    const baseUrl = (process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp').replace(/\/+$/, '')
-
-    const checkoutParams: Stripe.Checkout.SessionCreateParams = {
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      allow_promotion_codes: true,
-      customer: stripeCustomerId,
-      line_items: [{ price: priceId, quantity: 1 }],
-      // 旧HR専用入口でもルートレイアウトの本人確認付き同期を必ず通す。
-      success_url: `${baseUrl}/hr/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/hr/settings/billing`,
-      locale: 'ja',
-      subscription_data: {
-        metadata: {
-          userId: user.id,
-          serviceId: 'hr',
-          planId: `hr-${plan}`,
-        },
-      },
-      metadata: {
-        userId: user.id,
-        serviceId: 'hr',
-        planId: `hr-${plan}`,
-      },
-      client_reference_id: user.id,
-    }
-    const checkoutSession = await createReservedCheckoutSession({
-      userId: user.id,
-      signatureParts: { priceId, plan, interval, stripeCustomerId, baseUrl },
-      create: (idempotencyKey, expiresAt) => stripe.checkout.sessions.create(
-        { ...checkoutParams, expires_at: expiresAt },
-        { idempotencyKey },
-      ),
+    const auditScope: { value: { organizationId: string; plan: string; interval: 'monthly' | 'yearly'; priceId: string } | null } = { value: null }
+    const result = await runCheckoutHttpAction(action, actor.id, async (): Promise<CheckoutRequest> => {
+      if (typeof body.plan !== 'string' || typeof body.interval !== 'string' || !['monthly', 'yearly'].includes(body.interval)) throw new LifecycleError('INVALID_CHECKOUT_ACTION', 400)
+      const plan = body.plan, interval = body.interval as 'monthly' | 'yearly'
+      if (!Object.prototype.hasOwnProperty.call(HR_PLAN_PRICES, plan)) throw new LifecycleError('INVALID_CHECKOUT_PLAN', 400)
+      const priceId = HR_PLAN_PRICES[plan][interval]
+      if (!priceId) throw new LifecycleError('INVALID_CHECKOUT_PLAN', 400)
+      const ctx = await getHrContext()
+      if (!ctx || ctx.userId !== actor.id || ctx.role !== HrMemberRole.OWNER) throw new LifecycleError('HR_BILLING_OWNER_REQUIRED', 403)
+      auditScope.value = { organizationId: ctx.organizationId, plan, interval, priceId }
+      const mode = stripeModeFromSecret(process.env.STRIPE_SECRET_KEY)
+      const cutoverEpoch = await currentCheckoutEpoch(mode)
+      if (!actor.email) throw new LifecycleError('CHECKOUT_ACTOR_UNAVAILABLE', 404)
+      let existing
+      try { existing = await findActiveLikeSubscriptions({ userId: actor.id, email: actor.email, stripeCustomerId: actor.stripeCustomerId }) }
+      catch { throw new LifecycleError('SUBSCRIPTION_CHECK_UNAVAILABLE', 503) }
+      if (existing.length) throw new LifecycleError(existing.length === 1 && existing[0]?.priceId && existing[0].priceId !== priceId ? 'PLAN_CHANGE_REQUIRED' : 'ALREADY_SUBSCRIBED')
+      const recovery: CheckoutRecoveryBinding = { version: 1, recipe: 'hr', origin: appOrigin(), returnPath: null }
+      const planId = `hr-${plan}`
+      const urls = checkoutUrls(recovery, planId, 'hr')
+      return { cutoverEpoch, identity: checkoutIdentity(actor.id, action.operationId), mode, source: 'hr', organizationId: ctx.organizationId,
+        customerMode: actor.stripeCustomerId ? 'reuse' : 'create', customerId: actor.stripeCustomerId,
+        recovery, terms: { priceId, planId, serviceId: 'hr', trialDays: 0, successUrl: urls.successUrl, cancelUrl: urls.cancelUrl,
+          email: actor.email.trim().toLowerCase(), name: actor.name || '', expiresAt: Math.floor(Date.now() / 1000) + 40 * 60 } }
     })
-
-    // 監査ログ
-    logAudit({
-      organizationId: ctx.organizationId,
-      userId: ctx.userId,
-      userName: user.name,
-      action: 'BILLING_CHECKOUT',
-      target: 'billing',
-      details: { plan, interval, priceId, checkoutSessionId: checkoutSession.id },
-    }).catch(() => {})
-
-    return NextResponse.json({
-      success: true,
-      url: checkoutSession.url,
-    })
-  } catch (e: any) {
-    console.error('[hr/billing/checkout] unexpected error')
-    if (e instanceof CheckoutReservationError) {
-      const userMessage = e.code === 'CHECKOUT_ALREADY_COMPLETED'
-        ? '直前のお申し込みを確認中です。画面を再読み込みしてください。'
-        : '決済画面がすでに開かれています。二重のお申し込みを防ぐため、先ほどの決済画面をご利用いただくか、有効期限が切れてから再度お試しください。'
-      return NextResponse.json({ code: e.code, error: userMessage }, { status: e.status })
+    if (result && typeof result === 'object' && 'id' in result) {
+      if (auditScope.value) {
+        logAudit({ organizationId: auditScope.value.organizationId, userId: actor.id, userName: actor.name,
+          action: 'BILLING_CHECKOUT', target: 'billing', details: { ...auditScope.value, operationId: result.operationId, checkoutSessionId: result.id } }).catch(() => {})
+      }
+      return reply({ success: true, ...checkoutHttpResult(result, actor.id) })
     }
-    return NextResponse.json(
-      { error: 'Failed to create checkout session' },
-      { status: 500 }
-    )
+    return reply(checkoutHttpResult(result, actor.id))
+  } catch (error) {
+    if (error instanceof LifecycleError) return reply({ code: error.code, error: publicError }, error.status)
+    return reply({ code: 'CHECKOUT_UNAVAILABLE', error: '決済状態を確認できませんでした。操作を繰り返さず、時間をおいてご確認ください。' }, 503)
   }
 }

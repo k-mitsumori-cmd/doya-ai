@@ -4,13 +4,27 @@
 // ⚠️ 未ログインでも申し込めるようにしてある。ここでログインを求めると、
 //    これから使う会社を弾いてしまう。
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { getPublicServices } from '@/lib/services'
+import type { CaseStudySubmissionContext } from '@/lib/case-study/submission-context'
 
 const SERVICES = getPublicServices()
 
 export default function CaseStudyForm() {
+  const { data: session, status } = useSession()
+  const userId = (session?.user as { id?: string } | undefined)?.id
+  // Never render another actor's draft while the session is unknown. A confirmed
+  // actor/guest change remounts the fields before effects, including A -> B -> A.
+  if (status === 'loading' || status === 'authenticated' && !userId) {
+    return <p role="status" className="rounded-2xl bg-white p-6 text-sm text-slate-600">利用者を確認しています。確認が終わるまでお待ちください。</p>
+  }
+  const context: CaseStudySubmissionContext = status === 'authenticated' && userId ? { mode: 'user', userId } : { mode: 'guest' }
+  return <CaseStudyFields key={context.mode === 'user' ? `user:${context.userId}` : 'guest'} context={context} />
+}
+
+function CaseStudyFields({ context }: { context: CaseStudySubmissionContext }) {
   const [companyName, setCompanyName] = useState('')
   const [contactName, setContactName] = useState('')
   const [email, setEmail] = useState('')
@@ -22,30 +36,64 @@ export default function CaseStudyForm() {
   const [allowName, setAllowName] = useState(true)
   const [sending, setSending] = useState(false)
   const [done, setDone] = useState(false)
+  const [unconfirmed, setUnconfirmed] = useState(false)
   const [error, setError] = useState('')
+  const active = useRef(false)
+  const pending = useRef<AbortController | null>(null)
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+      pending.current?.abort()
+    }
+  }, [])
 
   const submit = async () => {
+    if (!active.current || pending.current || unconfirmed) return
+    const request = new AbortController()
+    pending.current = request
+    let outcomeUnknown = false
     setSending(true)
     setError('')
     try {
       const res = await fetch('/api/campaign/case-study', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: request.signal,
         body: JSON.stringify({
           companyName, contactName, email, serviceUrl,
-          usingService, preferredAt, note, allowLogo, allowName,
+          usingService, preferredAt, note, allowLogo, allowName, submissionContext: context,
         }),
       })
-      const data = await res.json().catch(() => ({}))
+      const data = await res.json().catch(() => null)
+      if (!active.current || pending.current !== request) return
       if (!res.ok) {
-        setError(data?.error || '送信できませんでした。時間をおいてお試しください。')
+        if (res.status >= 500) {
+          outcomeUnknown = true
+          setUnconfirmed(true)
+          setError('送信結果を確認できませんでした。入力内容を控え、再送する前に受付状況をお問い合わせください。')
+          return
+        }
+        setError(typeof data?.error === 'string' ? data.error : '送信できませんでした。時間をおいてお試しください。')
+        return
+      }
+      if (data?.ok !== true || typeof data.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(data.id)) {
+        outcomeUnknown = true
+        setUnconfirmed(true)
+        setError('送信結果を確認できませんでした。入力内容を控え、再送する前に受付状況をお問い合わせください。')
         return
       }
       setDone(true)
     } catch {
-      setError('通信に失敗しました。時間をおいてお試しください。')
+      if (!active.current || pending.current !== request) return
+      outcomeUnknown = true
+      setUnconfirmed(true)
+      setError('通信が途切れたため、送信結果を確認できませんでした。入力内容を控え、再送する前に受付状況をお問い合わせください。')
     } finally {
-      setSending(false)
+      if (active.current && pending.current === request) {
+        if (!outcomeUnknown) pending.current = null
+        setSending(false)
+      }
     }
   }
 
@@ -77,6 +125,7 @@ export default function CaseStudyForm() {
       {error && (
         <p className="mb-5 rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{error}</p>
       )}
+      {unconfirmed && <a href="https://doyamarke.surisuta.jp/contact" target="_blank" rel="noreferrer" className="mb-5 inline-block text-sm font-semibold text-blue-700 underline">受付状況を問い合わせる</a>}
 
       <div className="space-y-5">
         <label className="block">
@@ -140,7 +189,7 @@ export default function CaseStudyForm() {
 
       <button
         onClick={submit}
-        disabled={sending || required}
+        disabled={sending || required || unconfirmed}
         className="mt-7 w-full rounded-full bg-[#0066ff] px-6 py-4 text-base font-black text-white transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
       >
         {sending ? '送信中…' : 'この内容で申し込む'}

@@ -1,0 +1,22 @@
+{
+  "status": "author_frozen_targeted_pass_integration_pending",
+  "baseCommit": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+  "ownedSourceInputs": {
+    "src/lib/income/access.ts": "7806beb9e91cf1929453ea7392748c77b6b8c9d92fa6ffdfbf2a9cfca625ed22",
+    "src/components/income/ui.tsx": "8ec05ae1e99fb9d91f23069eac7b3807dd7d0ae8941a440985f694dfe921e0a5",
+    "scripts/security-regression/verify-income-membership-postgres.cjs": "eb091ed98bfab9a5625aeb6508de83e3fd31379dacc7334a02bda2d3d602f2b8",
+    "scripts/security-regression/verify-income-membership-postgres.py": "283089584f3c87c55f078b1b8caa7be89dfe68e4f70d08f907eb0615d620c0ca",
+    "scripts/security-regression/verify-income-retirement-ui.cjs": "db621fe71de17c4ee536e9e01c90181aa2c154dcdba70ef9eab2bc7915e81c18"
+  },
+  "inputSetSha256": "2c7050279781ce41b5a17c77da283f240a26986ae6cdf045fdeb65a1bfd214f0",
+  "digestDefinition": "sha256 UTF-8 sorted path + NUL + lowercase SHA256 + LF",
+  "runtimeFiles": 2,
+  "testFiles": 3,
+  "frozenR1InputSet": "3ed5f9aee04d4d68f3bf3e6eb9f5b9365d3b95221763cc03bd8980e2ec7bdd83",
+  "frozenR1InputsUnchanged": true,
+  "sharedCoreHashes": {
+    "src/lib/account-lifecycle/state.ts": "3360865f72ec324b5f1332672fca09cb6bff01c31934b80945f64696e0d281df",
+    "src/lib/account-lifecycle/store.ts": "b2f4357a042c9abf0b63e8a22b85abe074211cf6587d8db05fdb5dbbb882730f",
+    "src/lib/account-lifecycle/organization-fence.ts": "9ed18ed0e4af505c105db387b04f97b48113dcdf5cdef3a22e93f9e12739d301"
+  }
+}

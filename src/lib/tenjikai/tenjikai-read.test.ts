@@ -109,3 +109,92 @@ test('summary は対象のプロジェクトが無ければ集計を問い合わ
   assert.deepEqual(await summary({ db, userId: 'u1' }), [])
   assert.equal(calls.length, 1)
 })
+
+
+/** Query predicates are executed against synthetic rows; no Prisma/provider/network is used. */
+function summaryFixture(reference: Date, today: Date, afterProjectRead?: () => void) {
+  const day = 86_400_000
+  const project = (id: string, offset: number, endOfDay = false) => ({
+    id, userId: 'u1', name: id, eventName: id, status: 'planning', budgetYen: 100,
+    eventStart: new Date(today.getTime() + offset * day + (endOfDay ? day - 1 : 0)),
+  })
+  const projects = [
+    project('past', -1, true), project('today', 0, true), project('day60', 60, true), project('day61', 61),
+    { ...project('done', 1), status: 'done' }, { ...project('foreign', 1), userId: 'u2' },
+  ]
+  const tasks = [
+    { projectId: 'today', done: false, dueAt: new Date(reference.getTime() - 1) },
+    { projectId: 'today', done: false, dueAt: new Date(reference) },
+    { projectId: 'today', done: false, dueAt: new Date(reference.getTime() + 1) },
+    { projectId: 'today', done: true, dueAt: new Date(reference.getTime() - 1) },
+    { projectId: 'foreign', done: false, dueAt: new Date(reference.getTime() - 1) },
+  ]
+  const budget = [
+    { projectId: 'today', status: 'ordered', amountYen: 40 }, { projectId: 'today', status: 'paid', amountYen: 10 },
+    { projectId: 'today', status: 'planned', amountYen: 900 }, { projectId: 'foreign', status: 'paid', amountYen: 999 },
+  ]
+  const calls: Call[] = []
+  const db = {
+    tenjikaiProject: { findMany: async (args: any) => {
+      calls.push({ model: 'tenjikaiProject', op: 'findMany', args })
+      const rows = projects.filter(p => p.userId === args.where.userId && p.status !== args.where.status.not && p.eventStart >= args.where.eventStart.gte && p.eventStart < args.where.eventStart.lt)
+      afterProjectRead?.()
+      return rows
+    } },
+    tenjikaiTask: { groupBy: async (args: any) => {
+      calls.push({ model: 'tenjikaiTask', op: 'groupBy', args })
+      const rows = tasks.filter(t => args.where.projectId.in.includes(t.projectId) && t.done === args.where.done && (!args.where.dueAt || t.dueAt < args.where.dueAt.lt))
+      return [...new Set(rows.map(t => t.projectId))].map(projectId => ({ projectId, _count: { _all: rows.filter(t => t.projectId === projectId).length } }))
+    } },
+    tenjikaiBudgetLine: { groupBy: async (args: any) => {
+      calls.push({ model: 'tenjikaiBudgetLine', op: 'groupBy', args })
+      const rows = budget.filter(b => args.where.projectId.in.includes(b.projectId) && args.where.status.in.includes(b.status))
+      return [...new Set(rows.map(b => b.projectId))].map(projectId => ({ projectId, _sum: { amountYen: rows.filter(b => b.projectId === projectId).reduce((sum, b) => sum + b.amountYen, 0) } }))
+    } },
+  }
+  return { db: db as unknown as TenjikaiReadCtx['db'], calls, projects }
+}
+
+const jstCases = [
+  { name: 'JST日替わり直前', reference: '2026-10-20T14:59:59.999Z', today: '2026-10-19T15:00:00Z' },
+  { name: 'JST日替わり直後', reference: '2026-10-20T15:00:00Z', today: '2026-10-20T15:00:00Z' },
+  { name: 'JST月替わり', reference: '2026-10-31T15:00:00Z', today: '2026-10-31T15:00:00Z' },
+  { name: 'JST年替わり', reference: '2026-12-31T15:00:00Z', today: '2026-12-31T15:00:00Z' },
+  { name: '米国DST切替日', reference: '2026-11-01T08:30:00Z', today: '2026-10-31T15:00:00Z' },
+]
+for (const zone of ['UTC', 'Asia/Tokyo', 'America/Los_Angeles']) {
+  for (const c of jstCases) test(`summary JST固定・D0〜D60・予算/期限: ${zone} / ${c.name}`, async () => {
+    const priorTZ = process.env.TZ
+    try {
+      process.env.TZ = zone
+      const reference = new Date(c.reference)
+      const today = new Date(c.today)
+      const { db, calls, projects } = summaryFixture(reference, today)
+      projects.find(p => p.id === 'day60')!.budgetYen = 0
+      const result = await summary({ db, userId: 'u1' }, reference)
+      assert.deepEqual(result.map(p => p.projectId), ['today', 'day60'], 'D0/D60 inclusive, D61/past/done/foreign excluded')
+      assert.deepEqual(result.map(p => p.daysUntil), [0, 60], 'Days are JST calendar ordinals, including events at the end of the day')
+      assert.equal(calls[0].args.where.eventStart.gte.toISOString(), today.toISOString())
+      assert.equal(calls[0].args.where.eventStart.lt.getTime(), today.getTime() + 61 * 86_400_000)
+      assert.equal(result[0].openTasks, 3)
+      assert.equal(result[0].overdueTasks, 1, 'dueAt equal to reference is not overdue')
+      assert.equal(result[0].committedYen, 50, 'Only ordered + paid, no planned or foreign amounts')
+      assert.equal(result[0].budgetUsedRatio, 0.5)
+      assert.equal(result[1].budgetUsedRatio, null, 'Zero budget is uncalculated, not 0%')
+      assert.equal(calls.find(c => c.args.where.dueAt)!.args.where.dueAt.lt.toISOString(), new Date(c.reference).toISOString())
+      assert.ok(calls.every(c => scopedToUser(c, 'u1')))
+      assert.equal(reference.toISOString(), new Date(c.reference).toISOString(), 'Input reference is not mutated')
+    } finally { if (priorTZ === undefined) delete process.env.TZ; else process.env.TZ = priorTZ }
+  })
+}
+
+test('summary は await 前のreferenceを保持し、呼出元のDate変更で期限判定が動かない', async () => {
+  const reference = new Date('2026-10-20T15:00:00Z')
+  const original = reference.toISOString()
+  const today = new Date(reference)
+  const { db, calls } = summaryFixture(reference, today, () => reference.setTime(reference.getTime() + 86_400_000))
+  const result = await summary({ db, userId: 'u1' }, reference)
+  assert.equal(calls.find(c => c.args.where.dueAt)!.args.where.dueAt.lt.toISOString(), original)
+  assert.equal(result[0].overdueTasks, 1)
+  assert.deepEqual(result.map(p => p.daysUntil), [0, 60])
+})

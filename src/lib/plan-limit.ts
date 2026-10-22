@@ -154,9 +154,9 @@ export function jstStartOfMonthUtc(now = new Date()): Date {
 export type PlanTier = 'FREE' | 'PRO' | 'ENTERPRISE'
 
 /** 指定ユーザーのプラン区分。未ログイン・不明は FREE 扱い */
-export async function planTierOf(userId: string | null | undefined): Promise<'FREE' | 'PRO' | 'ENTERPRISE'> {
+export async function planTierOf(userId: string | null | undefined, db: Pick<typeof prisma, 'user'> = prisma): Promise<'FREE' | 'PRO' | 'ENTERPRISE'> {
   if (!userId) return 'FREE'
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } })
+  const user = await db.user.findUnique({ where: { id: userId }, select: { plan: true } })
   if (String(user?.plan || '').toUpperCase() === 'ENTERPRISE') return 'ENTERPRISE'
   return isPaidPlan(user?.plan) ? 'PRO' : 'FREE'
 }
@@ -182,8 +182,8 @@ export async function assertFreeLimit(
 
 /**
  * プラン区分が分かっているときの判定（assertFreeLimit の本体）。
- * ⚠️ トランザクションの中で数えるときはこちらを使い、プラン区分はトランザクションの**外**で引くこと。
- *    中で別クライアントの問い合わせをすると、接続数が1のプールでは自分が握った接続を待って固まる。
+ * ⚠️ トランザクションの中で数えるときはこちらを使う。プラン区分も同じtxの
+ *    planTierOf(userId, tx)で読む。global prismaをtx内から呼ぶと接続待ちになる。
  */
 export async function assertLimitForTier(
   key: FreeLimitKey,

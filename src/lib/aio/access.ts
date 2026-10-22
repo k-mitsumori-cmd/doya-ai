@@ -7,9 +7,19 @@ import type { AioOrganization, Prisma } from '@prisma/client'
 import type { NextRequest } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { assertRetirementMembershipWritable, lockLifecycleUsers } from '@/lib/account-lifecycle/store'
 import { ROLE_HIERARCHY, type AioContext, type AioRole } from './types'
 
 const VALID_MEMBER_ROLES = Object.keys(ROLE_HIERARCHY)
+
+// A raw User row lock can surface PostgreSQL serialization/deadlock SQLSTATE
+// inside Prisma P2010 rather than P2034. Retry the whole transaction so the
+// next attempt reads the retirement fence under a fresh snapshot.
+function retryableCreationConflict(error: unknown): boolean {
+  const failure = error as { code?: string; meta?: { code?: string } } | null
+  return failure?.code === 'P2034' || failure?.code === 'P2002'
+    || failure?.code === 'P2010' && ['40001', '40P01'].includes(failure.meta?.code || '')
+}
 
 /** リクエストから対象ワークスペース(slug)を取り出す。クエリ ?org= 優先、無ければヘッダ x-aio-org */
 export function orgSlugFrom(req: NextRequest): string | undefined {
@@ -109,6 +119,8 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await prisma.$transaction(async (tx) => {
+        await lockLifecycleUsers(tx, [userId])
+        await assertRetirementMembershipWritable(tx, [userId])
         const existing = await tx.aioMember.findFirst({
           where: { userId, status: 'ACTIVE', role: { in: VALID_MEMBER_ROLES } },
           include: { organization: true },
@@ -126,8 +138,7 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
         return org
       }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
     } catch (error) {
-      const code = (error as { code?: string })?.code
-      if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw error
+      if (attempt === 2 || !retryableCreationConflict(error)) throw error
     }
   }
   throw new Error('Organization creation retry exhausted')
@@ -150,16 +161,17 @@ export async function createAioOrganization(
     const slug = attempt === 0 ? base : `${base}-${Date.now()}-${attempt}`
     try {
       return await prisma.$transaction(async (tx) => {
+        await lockLifecycleUsers(tx, [userId])
+        await assertRetirementMembershipWritable(tx, [userId])
         const org = await tx.aioOrganization.create({ data: { name: orgName, slug } })
         await tx.aioMember.create({
           data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
         })
         if (initialize) await initialize(tx, org)
         return org
-      })
+      }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
     } catch (error) {
-      const code = (error as { code?: string })?.code
-      if (attempt === 3 || code !== 'P2002') throw error
+      if (attempt === 3 || !retryableCreationConflict(error)) throw error
     }
   }
   throw new Error('Organization creation retry exhausted')

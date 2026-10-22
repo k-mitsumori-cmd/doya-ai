@@ -1,0 +1,66 @@
+{
+  "recordedAt": "2026-10-20T11:45:27.139471+00:00",
+  "head": "95063ec663378aa3e54770b41596ff246c6d7437",
+  "sourceFrozen": true,
+  "inputCount": 13,
+  "inputs": {
+    "src/app/(shell)/expense/Entry.tsx": "11c10c0505cbad4321b21b8cbbe30305e9b2f14206d893cd15bb79716967a948",
+    "src/app/(shell)/expense/page.tsx": "ff732a31e363dfea738008c9fa621cc1a2cc116fe4b39f5b3d5b0a2eecd7aa1e",
+    "src/app/(shell)/expense/[orgSlug]/layout.tsx": "57923a4f86d286c05c21efc26e98a721ddf9c48572da89810d0b4d94fdb63801",
+    "src/app/(shell)/expense/[orgSlug]/page.tsx": "2049a5bbb9cc73209cadf75b753387502d8ac7c7762b73c8f36fff86e78315ef",
+    "src/app/api/expense/usage/route.ts": "a690548f7f647146be5e86218f375afe25fe5aa42ed520ee2c222b4966ef6830",
+    "src/lib/expense/access.ts": "9985bc44adab8672b57ffcd3bd378844f3d074a43a506fdf8939f03d0e17ca02",
+    "src/lib/expense/entry-read.ts": "4242a13ab9ad409e762b5e1c33eab8ec0e63e99b28f7759b29efec1522d0a41f",
+    "src/lib/expense/entry-client.ts": "c7c1cdb5fe3aa7dd40acf7873e74709a25ba9c217d65122ffcf3e915d310168d",
+    "src/components/expense/UpcomingPayments.tsx": "3abe177958555ecedf66e320b2c7f7d262d5c015394ecea3621cd59cc7a4091d",
+    "scripts/security-regression/verify-expense-entry-mounted.cjs": "f1945d208d3b85aaa13c3713e13d74267df8a44951df018bb46a815fe0e59592",
+    "src/components/tenjikai/TenjikaiApp.tsx": "8f73e4fbf0e76e9dd7e43ea822541d9986289cf93de7ea28fede2bb797c4a542",
+    "src/components/tenjikai/DocsVault.tsx": "b8e3554c66a40c4edccad894d94a7bda854f6d5c34631e288253da451c45a5a3",
+    "scripts/security-regression/verify-tenjikai-draft-mounted.cjs": "4c6f01893aeb575ff77100502cd499549ea5642212acdfc09ff225b8023977a1"
+  },
+  "expense": {
+    "mountedSsrAfter": 54,
+    "mountedSsrBeforeFailed": 37,
+    "existingTests": 93
+  },
+  "tenjikai": {
+    "mountedAfter": 11,
+    "mountedBeforeFailed": 7,
+    "existingTests": 16
+  },
+  "productionParentCombined": {
+    "command": "NODE_ENV=production node --test scripts/security-regression/verify-expense-entry-mounted.cjs scripts/security-regression/verify-tenjikai-draft-mounted.cjs",
+    "nodeChildTests": 2,
+    "passed": 2,
+    "failed": 0,
+    "isolatedNodeEnv": "Both standalone test processes set NODE_ENV=test before loading React; parent/other child environment is not mutated."
+  },
+  "targetedLint": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "scriptSyntax": "pass",
+  "diffCheck": "pass",
+  "beforeAfterInputHashesUnchanged": true,
+  "artifactDirectory": "/Users/mitsumori_katsuki/Code/sandbox/doya-ui-qa-20261020",
+  "fullArtifactsStoredOutsideGit": true,
+  "pending": [
+    "Authenticated candidate375/1280, real back navigation and production verification"
+  ],
+  "notExecuted": [
+    "Browser/headless/CDP/local HTTP server",
+    "Actual provider/DB/OAuth/paid API",
+    "Prisma generation/full build/commit/push/deploy"
+  ],
+  "getWriteBoundary": "New membership selection helper only reads; existing usage invitation claiming remains. No whole-GET zero-write claim.",
+  "integratedVerification": {
+    "status": "local_passed_remote_next_pending",
+    "gateExecutions": 25,
+    "sourceFiles": 5133,
+    "sourceAndPathSetUnchanged": true,
+    "majorDependencyFingerprintsUnchanged": true,
+    "nonincrementalTypecheckExit": 0,
+    "evidence": "../2026-10-20-privacy-expense-docs/summary.json",
+    "remoteNextBuild": "Pending same-source commit and Vercel build"
+  }
+}

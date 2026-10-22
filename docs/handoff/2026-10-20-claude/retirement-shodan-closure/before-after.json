@@ -1,0 +1,89 @@
+{
+  "baselineRuntimeSourceRoot": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-before-source",
+  "baselineRuntimeSourceHashes": {
+    "src/lib/shodan/access.ts": "e1b56c3529aa6bd11b209825f09e88baa0327b7ee6fce0a32f36cbf3e2c0a654",
+    "src/app/api/shodan/organization/route.ts": "df0a96d4c36aea7ba707f994e77a6f0ac4554e2483da7336b3fcaafff4b76049",
+    "src/app/api/shodan/members/route.ts": "14498bc998d6c943d55028ee538da99cee7652e5c1c733505a0323d1aa71b989",
+    "src/app/api/shodan/invite/[token]/route.ts": "1e95e7057c85edaa05ff721dde1e78dab4e198f58314f087cb88c00e5bb6261d"
+  },
+  "baselineSelection": "DOYA_TEST_BASELINE selects saved runtime files only; sourceHashes printed by the runner otherwise identify current managed input files, not the executed old runtime. Actual baseline hashes above are authoritative.",
+  "counterexamples": [
+    {
+      "name": "issue-retiring",
+      "log": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-immutable-before-issue-retiring.log",
+      "logSha256": "fe78344d6becee32ceed5276fb4dcefc51251b9b83281a2239fcfa8a8e8db04a",
+      "actualBaselineStatus": 200,
+      "requiredCurrentStatus": 409,
+      "classification": "historical_counterexample_not_accepted",
+      "supervisor": {
+        "startedAt": "2026-10-20T23:31:04.152936+00:00",
+        "scope": "Owned ephemeral Unix socket PostgreSQL, synthetic data only; no production connection",
+        "privateRoot": "/tmp/doya-shodan-closure-32baa71e",
+        "testExitCode": 1,
+        "stopExitCode": 0,
+        "endedAt": "2026-10-20T23:31:06.584202+00:00",
+        "removedOwnedDirectory": true
+      },
+      "executedFixtureSha256": "4e71ad21e88803a2d4e9dae0fd8581733fad8e75c7f2b0ba35cd522baeeb8069"
+    },
+    {
+      "name": "missing-user",
+      "log": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-immutable-before-missing-user.log",
+      "logSha256": "038843c2fb24d9f43aef15f51638e269bac087d8689ca0f48180a30549c355cf",
+      "actualBaselineStatus": 200,
+      "requiredCurrentStatus": 409,
+      "classification": "historical_counterexample_not_accepted",
+      "supervisor": {
+        "startedAt": "2026-10-20T23:31:04.152923+00:00",
+        "scope": "Owned ephemeral Unix socket PostgreSQL, synthetic data only; no production connection",
+        "privateRoot": "/tmp/doya-shodan-closure-ddf3463f",
+        "testExitCode": 1,
+        "stopExitCode": 0,
+        "endedAt": "2026-10-20T23:31:06.584202+00:00",
+        "removedOwnedDirectory": true
+      },
+      "executedFixtureSha256": "4e71ad21e88803a2d4e9dae0fd8581733fad8e75c7f2b0ba35cd522baeeb8069"
+    },
+    {
+      "name": "stale-email",
+      "log": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-immutable-before-stale-email.log",
+      "logSha256": "31c9d24bbb09b5cac9f9f267a87946d7fb6aad75d061f605294ec659491a6cd1",
+      "actualBaselineStatus": 403,
+      "requiredCurrentStatus": 200,
+      "classification": "historical_counterexample_not_accepted",
+      "supervisor": {
+        "startedAt": "2026-10-20T23:31:04.152949+00:00",
+        "scope": "Owned ephemeral Unix socket PostgreSQL, synthetic data only; no production connection",
+        "privateRoot": "/tmp/doya-shodan-closure-a3060cbe",
+        "testExitCode": 1,
+        "stopExitCode": 0,
+        "endedAt": "2026-10-20T23:31:06.592536+00:00",
+        "removedOwnedDirectory": true
+      },
+      "executedFixtureSha256": "4e71ad21e88803a2d4e9dae0fd8581733fad8e75c7f2b0ba35cd522baeeb8069"
+    },
+    {
+      "name": "bound-pending",
+      "log": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-immutable-before-bound-pending.log",
+      "logSha256": "ec029516da0dd143304da962ceba5308fd96eafdfe14637f6422692c8a085a4c",
+      "actualBaselineStatus": 200,
+      "requiredCurrentStatus": 200,
+      "classification": "preserved_compatibility",
+      "supervisor": {
+        "startedAt": "2026-10-20T23:31:40.247731+00:00",
+        "scope": "Owned ephemeral Unix socket PostgreSQL, synthetic data only; no production connection",
+        "privateRoot": "/tmp/doya-shodan-closure-586d1233",
+        "testExitCode": 0,
+        "stopExitCode": 0,
+        "endedAt": "2026-10-20T23:31:41.369007+00:00",
+        "removedOwnedDirectory": true
+      },
+      "executedFixtureSha256": "4e71ad21e88803a2d4e9dae0fd8581733fad8e75c7f2b0ba35cd522baeeb8069"
+    }
+  ],
+  "afterResults": "postgres-results.json",
+  "intermediateBoundDiagnostic": {
+    "log": "/Users/mitsumori_katsuki/Code/sandbox/doya-retirement-global-preflight-20261020/shodan-closure-bound-before-fix.log",
+    "use": "diagnostic only; no immutable intermediate runtime snapshot, not a final before source claim"
+  }
+}

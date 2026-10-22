@@ -7,6 +7,8 @@ export const maxDuration = 60
 //    変更は admin 以上に限る。
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { withLifecycleOrganizationWrite } from '@/lib/account-lifecycle/organization-fence'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 import { getMensetsuContext, hasMinRole, orgSlugFrom } from '@/lib/mensetsu/access'
 
 export async function PATCH(req: NextRequest) {
@@ -29,17 +31,27 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: '変更内容がありません' }, { status: 400 })
   }
 
-  const org = await prisma.mensetsuOrganization.update({
-    where: { id: c.organizationId },
-    data,
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      recordAudio: true,
-      retentionDays: true,
-      discloseToCandidate: true,
-    },
-  })
-  return NextResponse.json({ organization: org })
+  try {
+    const result = await withLifecycleOrganizationWrite(prisma, {
+      service: 'mensetsu', organizationId: c.organizationId, actorUserId: c.userId, access: 'member',
+      targetMemberIds: [], targetUserIds: [], targetEmails: [], grantsAuthority: false,
+      pendingClaimUserId: null, repairsUnknownTargetRole: false,
+    }, async tx => {
+      const actor = await tx.mensetsuMember.findFirst({
+        where: { organizationId: c.organizationId, userId: c.userId, status: 'ACTIVE', role: { in: ['owner', 'admin'] } },
+        select: { id: true },
+      })
+      if (!actor) return { kind: 'forbidden' as const }
+      const org = await tx.mensetsuOrganization.update({
+        where: { id: c.organizationId }, data,
+        select: { id: true, name: true, slug: true, recordAudio: true, retentionDays: true, discloseToCandidate: true },
+      })
+      return { kind: 'updated' as const, org }
+    })
+    if (result.kind === 'forbidden') return NextResponse.json({ error: '設定を変更する権限がありません' }, { status: 403 })
+    return NextResponse.json({ organization: result.org })
+  } catch (error) {
+    if (error instanceof LifecycleError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+    throw error
+  }
 }

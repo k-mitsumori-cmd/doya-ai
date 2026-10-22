@@ -31,17 +31,21 @@ export function friendlyText(message: unknown, fallback: string): string {
 }
 
 /** 読み込みに失敗したときの表示。理由ごとに「何が起きたか」と「次にやること」を変える */
-export function LoadIssueNotice({ issue, subject, onRetry }: {
+export function LoadIssueNotice({ issue, subject, onRetry, pricingHref, returnHref }: {
   issue: LoadIssue
   /** 何を読み込もうとしたか（例: 面接の情報） */
   subject: string
   onRetry?: () => void
+  /** 応答に裏付けられた料金案内があるときだけ表示する。 */
+  pricingHref?: string
+  /** 現在の組織と画面に結び付いたログイン後の戻り先。 */
+  returnHref?: string
 }) {
   if (issue === 'login') {
     return (
       <div className="grid gap-3">
         <ErrorNotice what="ログインの有効期限が切れました。" how="もう一度ログインすると、続きから使えます。" />
-        <div><Button href="/auth/signin?callbackUrl=%2Fmensetsu" icon="DoorOpen">ログインし直す</Button></div>
+        {returnHref && <div><Button href={`/auth/signin?callbackUrl=${encodeURIComponent(returnHref)}`} icon="DoorOpen">ログインし直す</Button></div>}
       </div>
     )
   }
@@ -59,12 +63,12 @@ export function LoadIssueNotice({ issue, subject, onRetry }: {
     return (
       <div className="grid gap-3">
         <ErrorNotice
-          what="今月の利用上限に達したか、短い時間に操作が集中しました。"
-          how="少し時間をおいてからやり直すか、料金プランで上限をご確認ください。"
+          what="利用条件を確認できないか、短い時間に操作が集中しました。"
+          how="少し時間をおいて、現在の情報を確かめてからやり直してください。"
           onRetry={onRetry}
           retryLabel="やり直す"
         />
-        <div><Button href="/mensetsu/pricing" variant="secondary" icon="CreditCard">料金プランを見る</Button></div>
+        {pricingHref && <div><Button href={pricingHref} variant="secondary" icon="CreditCard">料金プランを見る</Button></div>}
       </div>
     )
   }

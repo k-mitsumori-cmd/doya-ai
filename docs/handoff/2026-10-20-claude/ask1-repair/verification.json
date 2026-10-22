@@ -1,0 +1,76 @@
+{
+  "recordedAt": "2026-10-20T11:02:46.118244+00:00",
+  "head": "d48052fab934c00ca3bbb3af11eaf981e11dd619",
+  "isolatedPostgres": {
+    "passed": 31,
+    "testExitCode": 0,
+    "stopExitCode": 0,
+    "removedOwnedDirectory": true,
+    "evidence": "postgres-results.json"
+  },
+  "clientMounted": {
+    "passed": 32,
+    "exitCode": 0,
+    "evidence": "client-results.json",
+    "beforeProof": "Final mounted fixture with HEAD legacy queue reproduces missing new-run initial request. Current queue passes all32. Independent peer old-first/new-first also passes."
+  },
+  "targetedLint": {
+    "exitCode": 0,
+    "warnings": 0,
+    "errors": 0,
+    "queueExtensionExitCode": 0
+  },
+  "existingTests": [
+    {
+      "name": "existing-asklink",
+      "command": [
+        "npm",
+        "run",
+        "test:asklink"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "existing-owner",
+      "command": [
+        "node",
+        "scripts/security-regression/verify-owner-boundaries.cjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "existing-admin-billing",
+      "command": [
+        "node",
+        "scripts/security-regression/verify-admin-billing-integrity.cjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "existing-admin-quota",
+      "command": [
+        "node",
+        "scripts/security-regression/verify-admin-user-quotas.cjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "existing-auth",
+      "command": [
+        "node",
+        "scripts/security-regression/verify-auth-registration.cjs"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "typecheck": "Final integration nonincremental tsc exited0. Original candidate:19 gates passed, typecheck TS2322 failed. Sole type-only adapter assertion emits byte-identical JS;5delta gates passed and5122source/path set+major dependencies unchanged. See ../../2026-10-20-finance-ask1/summary.json; remote same-candidate Next build pending.",
+  "ui": "Offline current Tool/ToolHero/ToolFrame/nav rendered at375/1280px; creation/auth/queue synthetic. Parent statically inspected saved images. CUA file display was denied; no alternate browser/HTTP bypass. No candidate E2E/native Web Locks/authenticated full-app QA.",
+  "production": "Not deployed; no production DB/provider/Stripe/network writes. Cron is draft configuration only.",
+  "luna": "Unused; standard Codex implementation and verification.",
+  "adapterTypeBoundary": {
+    "transpileJSByteIdentical": true,
+    "isolatedPostgresPassed": 31,
+    "evidence": "adapter-type-boundary.json",
+    "note": "Explicit AdapterUser assertion at installed PrismaAdapter return boundary; actual nullable email, full returned User, exceptions and rollback unchanged."
+  }
+}

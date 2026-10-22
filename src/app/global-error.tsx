@@ -4,7 +4,6 @@
 // これが無いと Next.js 既定の英語画面になるため、日本語で再試行と案内だけを出す。
 // layout.tsx の外側で描画されるので、html / body を自前で持ち、共通コンポーネントやCSSに頼らない。
 import { useEffect } from 'react'
-import Link from 'next/link'
 import { reportBrowserError } from '@/components/RuntimeErrorReporter'
 
 export default function GlobalError({
@@ -37,12 +36,21 @@ export default function GlobalError({
               >
                 再試行する
               </button>
-              <Link
+              {/* This root-layout fallback cannot rely on Next's router context. */}
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              <a
                 href="/"
                 style={{ padding: '12px 24px', borderRadius: 9999, background: '#f3f4f6', color: '#374151', fontWeight: 700, fontSize: 15, textDecoration: 'none' }}
               >
-                トップへ戻る
-              </Link>
+                サイトトップへ
+              </a>
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              <a
+                href="/home"
+                style={{ padding: '12px 24px', borderRadius: 9999, background: '#f3f4f6', color: '#374151', fontWeight: 700, fontSize: 15, textDecoration: 'none' }}
+              >
+                ツールのホームへ
+              </a>
             </div>
             {error?.digest ? (
               <p style={{ marginTop: 24, fontSize: 12, color: '#9ca3af' }}>エラーID: {error.digest}</p>

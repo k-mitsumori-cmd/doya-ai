@@ -2,6 +2,8 @@ import { Prisma } from '@prisma/client'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { getUserPromaneLimits } from '@/lib/promane/limits'
+import { assertRetirementMembershipWritable, lockLifecycleUsers } from '@/lib/account-lifecycle/store'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 
 type AdmissionError = {
   status: number
@@ -16,6 +18,44 @@ type AdmissionResult =
   | { success: false; response: AdmissionError }
 
 class InvitationExpired extends Error {}
+class InvitationParticipantsChanged extends Error {}
+
+const transactionOptions = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 30000 }
+// Issue discovery must see registrations committed while it waited for the owner User lock.
+// The workspace FOR UPDATE lock serializes every existing-workspace seat addition.
+const issueTransactionOptions = { ...transactionOptions, isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted }
+const retryable = (error: unknown) => {
+  const failure = error as { code?: string; meta?: { code?: string } }
+  return error instanceof InvitationParticipantsChanged || failure?.code === 'P2034' ||
+    failure?.code === 'P2010' && ['40001', '40P01'].includes(failure.meta?.code || '')
+}
+const lifecycleFailure = (error: unknown): AdmissionError | null => error instanceof LifecycleError
+  ? { status: error.status, code: error.code, error: error.message }
+  : null
+function changed(): never { throw new InvitationParticipantsChanged() }
+const recipientIds = (rows: Array<{ id: string; email: string | null }>, email: string) => {
+  const matched = rows.filter(row => row.email?.trim().toLowerCase() === email)
+  if (matched.length > 1) throw new LifecycleError('LIFECYCLE_TARGET_AMBIGUOUS')
+  return matched.map(row => row.id)
+}
+
+/** Discovery reads do not lock a scope. The caller locks every discovered User before this row. */
+async function lockWorkspace(tx: Prisma.TransactionClient, id: string, ownerId: string) {
+  const rows = await tx.$queryRaw<Array<{ id: string; userId: string }>>(Prisma.sql`
+    SELECT id, "userId" FROM promane_workspaces WHERE id = ${id} FOR UPDATE`)
+  if (rows.length !== 1 || rows[0].userId !== ownerId) changed()
+}
+async function lockInviter(tx: Prisma.TransactionClient, workspaceId: string, userId: string) {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT id FROM promane_members WHERE "workspaceId" = ${workspaceId} AND "userId" = ${userId} FOR UPDATE`)
+  if (rows.length !== 1) return false
+  return true
+}
+async function lockInvitation(tx: Prisma.TransactionClient, id: string, token: string) {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT id FROM promane_invitations WHERE id = ${id} AND token = ${token} FOR UPDATE`)
+  if (rows.length !== 1) changed()
+}
 
 type IssueResult =
   | { success: true; invitation: { token: string; expiresAt: Date }; workspaceName: string; reused: boolean }
@@ -31,6 +71,30 @@ export async function issuePromaneInvitation(args: {
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       return await prisma.$transaction(async (tx) => {
+        const initialInviter = await tx.promaneMember.findUnique({
+          where: { workspaceId_userId: { workspaceId: args.workspaceId, userId: args.userId } },
+        })
+        if (!initialInviter?.isActive || !['owner', 'admin'].includes(initialInviter.role)) {
+          return { success: false, response: { status: 403, error: '招待権限がありません（owner/admin のみ）' } }
+        }
+        const discoveredWorkspace = await tx.promaneWorkspace.findUnique({
+          where: { id: args.workspaceId }, select: { name: true, userId: true },
+        })
+        if (!discoveredWorkspace) return { success: false, response: { status: 404, error: 'ワークスペースが見つかりません' } }
+        const discoveredRecipients = recipientIds(await tx.user.findMany({
+          where: { email: { equals: args.email, mode: 'insensitive' } }, select: { id: true, email: true },
+        }), args.email)
+        const lockedIds = [args.userId, discoveredWorkspace.userId, ...discoveredRecipients]
+        await lockLifecycleUsers(tx, lockedIds)
+        await lockWorkspace(tx, args.workspaceId, discoveredWorkspace.userId)
+        const currentRecipients = recipientIds(await tx.user.findMany({
+          where: { email: { equals: args.email, mode: 'insensitive' } }, select: { id: true, email: true },
+        }), args.email)
+        if (JSON.stringify(currentRecipients.sort()) !== JSON.stringify(discoveredRecipients.sort())) changed()
+        await assertRetirementMembershipWritable(tx, lockedIds)
+        if (!await lockInviter(tx, args.workspaceId, args.userId)) {
+          return { success: false, response: { status: 403, error: '招待権限がありません（owner/admin のみ）' } }
+        }
         const inviter = await tx.promaneMember.findUnique({
           where: { workspaceId_userId: { workspaceId: args.workspaceId, userId: args.userId } },
         })
@@ -45,7 +109,7 @@ export async function issuePromaneInvitation(args: {
         const workspace = await tx.promaneWorkspace.findUnique({
           where: { id: args.workspaceId }, select: { name: true, userId: true },
         })
-        if (!workspace) return { success: false, response: { status: 404, error: 'ワークスペースが見つかりません' } }
+        if (!workspace || workspace.userId !== discoveredWorkspace.userId) changed()
         const limits = await getUserPromaneLimits(workspace.userId, tx)
         const active = await tx.promaneMember.count({ where: { workspaceId: args.workspaceId, isActive: true } })
         const atLimit = (count: number) => limits.maxMembersPerWorkspace >= 0 && count >= limits.maxMembersPerWorkspace
@@ -99,9 +163,12 @@ export async function issuePromaneInvitation(args: {
           select: { token: true, expiresAt: true },
         })
         return { success: true, invitation, workspaceName: workspace.name, reused: false }
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+      }, issueTransactionOptions)
     } catch (error) {
-      if ((error as { code?: string })?.code !== 'P2034' || attempt === 4) throw error
+      const denied = lifecycleFailure(error)
+      if (denied) return { success: false, response: denied }
+      if (!retryable(error)) throw error
+      if (attempt === 4) return { success: false, response: { status: 409, code: 'PROMANE_INVITE_STATE_CHANGED', error: '招待の状態が変わりました。再読み込みしてご確認ください。' } }
     }
   }
   throw new Error('Promane invitation issue retries exhausted')
@@ -117,10 +184,28 @@ export async function acceptPromaneInvitation(args: {
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       return await prisma.$transaction(async (tx) => {
+        const discovered = await tx.promaneInvitation.findUnique({
+          where: { token: args.token },
+          include: { workspace: { select: { id: true, slug: true, userId: true } } },
+        })
+        if (!discovered || !['admin', 'member', 'guest'].includes(discovered.role)) return { success: false, response: { status: 404, error: '招待リンクが見つかりません' } }
+        if (discovered.acceptedAt) return { success: false, response: { status: 410, error: '既に承諾済みです', code: 'PROMANE_INVITE_ACCEPTED' } }
+        if (discovered.expiresAt.getTime() <= Date.now()) return { success: false, response: { status: 410, error: '有効期限が切れています', code: 'PROMANE_INVITE_EXPIRED' } }
+        if (!args.email || args.email.toLowerCase() !== discovered.email.toLowerCase()) {
+          return { success: false, response: { status: 403, error: `この招待は ${discovered.email} 宛です。一旦ログアウトし、招待されたGoogleアカウントでログインしてください。`, code: 'email_mismatch', expectedEmail: discovered.email } }
+        }
+        const lockedIds = [args.userId, discovered.workspace.userId]
+        await lockLifecycleUsers(tx, lockedIds)
+        await lockWorkspace(tx, discovered.workspaceId, discovered.workspace.userId)
+        await lockInvitation(tx, discovered.id, args.token)
         const invitation = await tx.promaneInvitation.findUnique({
           where: { token: args.token },
           include: { workspace: { select: { id: true, slug: true, userId: true } } },
         })
+        if (!invitation || invitation.id !== discovered.id || invitation.workspaceId !== discovered.workspaceId ||
+            invitation.workspace.userId !== discovered.workspace.userId || invitation.email !== discovered.email ||
+            invitation.role !== discovered.role || invitation.expiresAt.getTime() !== discovered.expiresAt.getTime() ||
+            invitation.acceptedAt !== null) changed()
         if (!invitation || !['admin', 'member', 'guest'].includes(invitation.role)) return { success: false, response: { status: 404, error: '招待リンクが見つかりません' } }
         if (invitation.acceptedAt) return { success: false, response: { status: 410, error: '既に承諾済みです', code: 'PROMANE_INVITE_ACCEPTED' } }
         if (invitation.expiresAt.getTime() <= Date.now()) return { success: false, response: { status: 410, error: '有効期限が切れています', code: 'PROMANE_INVITE_EXPIRED' } }
@@ -135,6 +220,11 @@ export async function acceptPromaneInvitation(args: {
             },
           }
         }
+        const recipient = await tx.user.findUnique({ where: { id: args.userId }, select: { email: true } })
+        if (!recipient || recipient.email?.trim().toLowerCase() !== invitation.email.toLowerCase()) {
+          return { success: false, response: { status: 403, error: 'ログイン状態を確認してください。招待されたアカウントで再度お試しください。', code: 'email_mismatch' } }
+        }
+        await assertRetirementMembershipWritable(tx, lockedIds)
 
         const existing = await tx.promaneMember.findUnique({
           where: { workspaceId_userId: { workspaceId: invitation.workspaceId, userId: args.userId } },
@@ -142,6 +232,9 @@ export async function acceptPromaneInvitation(args: {
         if (invitation.expiresAt.getTime() <= Date.now()) throw new InvitationExpired()
         if (existing && !existing.isActive) {
           return { success: false, response: { status: 403, error: 'ワークスペースへのアクセスが停止されています。管理者にご確認ください。' } }
+        }
+        if (existing && !['owner', 'admin', 'member', 'guest'].includes(existing.role)) {
+          return { success: false, response: { status: 409, code: 'PROMANE_MEMBER_ROLE_UNAVAILABLE', error: '所属の役割を確認できません。管理者にご確認ください。' } }
         }
         if (!existing) {
           const limits = await getUserPromaneLimits(invitation.workspace.userId, tx)
@@ -172,10 +265,13 @@ export async function acceptPromaneInvitation(args: {
         // Throw outside the success path so the whole membership write rolls back.
         if (invitation.expiresAt.getTime() <= Date.now()) throw new InvitationExpired()
         return { success: true, workspaceSlug: invitation.workspace.slug, alreadyMember: !!existing }
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+      }, transactionOptions)
     } catch (error) {
       if (error instanceof InvitationExpired) return { success: false, response: { status: 410, error: '有効期限が切れています', code: 'PROMANE_INVITE_EXPIRED' } }
-      if ((error as { code?: string })?.code !== 'P2034' || attempt === 4) throw error
+      const denied = lifecycleFailure(error)
+      if (denied) return { success: false, response: denied }
+      if (!retryable(error)) throw error
+      if (attempt === 4) return { success: false, response: { status: 409, code: 'PROMANE_INVITE_STATE_CHANGED', error: '招待の状態が変わりました。再読み込みしてご確認ください。' } }
     }
   }
   throw new Error('Promane invitation admission retries exhausted')

@@ -47,7 +47,7 @@ export interface ShellUsage {
 }
 
 export const SHELL_SERVICES: ShellService[] = [
-  { id: 'home', basePath: '/home', always: true, inShell: (p) => !p.startsWith('/home/preview') },
+  { id: 'home', basePath: '/home', always: true, inShell: (p) => !p.startsWith('/home/preview') && p !== '/home/collection/preview' },
   { id: 'income', basePath: '/income', always: true },
   // 支出管理は組織を選んだあと（/expense/<組織>）だけ枠に入る。入口（/expense）と料金（/expense/pricing）は今までどおり
   { id: 'expense', basePath: '/expense', always: true, inShell: (p) => /^\/expense\/[^/]+/.test(p) && !p.startsWith('/expense/pricing') },

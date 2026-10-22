@@ -26,9 +26,11 @@ import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { resolveShellIcon } from '@/components/shell/icons'
 import { AISHODAN_BASE as BASE, AISHODAN_NAV, isNavActive } from '@/lib/aishodan/nav'
+import { useWorkspaceProof } from '@/components/org/OrganizationWorkspaceBoundary'
 
 function AishodanSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
+  const proof = useWorkspaceProof()
   const { data: session, status: sessionStatus } = useSession()
   // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
   //    表示だけを止める（fetch は止めない。Cookie認証なので未確定でも応答する）
@@ -39,10 +41,10 @@ function AishodanSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   // 項目は src/lib/aishodan/nav.ts が正本。ここでは部品に引き直して描くだけ
-  const NAV: NavItem[] = AISHODAN_NAV.map((item) => ({ href: item.href, label: item.label, icon: resolveShellIcon(item.icon), hot: item.hot }))
+  const NAV: NavItem[] = AISHODAN_NAV.map((item) => ({ href: proof.href(item.href), label: item.label, icon: resolveShellIcon(item.icon), hot: item.hot }))
 
   const isActive = (href: string) => {
-    const item = AISHODAN_NAV.find((n) => n.href === href)
+    const item = AISHODAN_NAV.find((n) => proof.href(n.href) === href)
     return item ? isNavActive(item, pathname) : false
   }
 
@@ -79,7 +81,7 @@ function AishodanSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
 
           {/* プラン案内。⚠️ 金額の正本は unified-plan.ts。ここに別の数字を書かない */}
           {/* 作った数と残り。数字は /api/usage/aishodan から受け取るだけ */}
-          <SidebarUsagePanel service="aishodan" show={sessionReady && (isMobile || !isCollapsed)} pricingHref="/aishodan/pricing" />
+          <SidebarUsagePanel service="aishodan" show={sessionReady && (isMobile || !isCollapsed)} organizationSlug={proof.organization.slug} pricingHref={proof.href('/aishodan/pricing')} />
         </div>
 
         <ToolSwitcherMenu currentService="aishodan" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 sm:px-4 pb-2" />
@@ -91,7 +93,7 @@ function AishodanSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
           isCollapsed={isCollapsed}
           isMobile={isMobile}
           theme={aishodanTheme}
-          loginCallbackUrl="/aishodan"
+          loginCallbackUrl={proof.href('/aishodan')}
           onLogout={() => setIsLogoutDialogOpen(true)}
         />
         <SidebarCollapseToggle isCollapsed={isCollapsed} onToggle={toggle} isMobile={isMobile} theme={aishodanTheme} />

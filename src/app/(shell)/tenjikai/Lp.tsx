@@ -5,10 +5,12 @@
 // 画像は Codex の定額枠で作ったもの（docs/design/images/tenjikai/PROMPTS.md）。
 import { LpShell, ProductHero, FeatureShowcase, HowItWorks, UseCases, FaqSection, CtaBand, type ShowcaseRow, type Step, type Faq } from '@/components/lp'
 import { getServiceById } from '@/lib/services'
+import { Suspense } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { tenjikaiLoginHref } from '@/lib/tenjikai/login-return'
 
 const SVC = getServiceById('tenjikai')!
 const ACCENT = '#0066ff'
-const CTA = '/auth/signin?callbackUrl=/tenjikai'
 
 const ROWS: ShowcaseRow[] = [
   {
@@ -48,15 +50,20 @@ const FAQ: Faq[] = [
 ]
 
 export default function TenjikaiLp() {
+  return <Suspense fallback={<p role="status">表示を確認しています。</p>}><TenjikaiLpContent /></Suspense>
+}
+
+function TenjikaiLpContent() {
+  const ctaHref = tenjikaiLoginHref(usePathname(), useSearchParams())
   return (
-    <LpShell serviceName={SVC.name} icon="storefront" ctaHref={CTA} ctaLabel="ログインしてはじめる" accent={ACCENT}>
+    <LpShell serviceName={SVC.name} icon="storefront" ctaHref={ctaHref} ctaLabel="ログインしてはじめる" accent={ACCENT}>
       <ProductHero
         eyebrow="ドヤAI（開発中）"
         title="URLを入れるだけで、"
         highlight="展示会の準備をまとめて用意。"
         subtitle="ブースの設営案、制作物、ノベルティ、予算、締切の一覧を、出展の条件から一度に作ります。"
         note={`無料プランは${SVC.pricing.free.limit}。クレジットカードの登録は要りません。`}
-        ctaHref={CTA}
+        ctaHref={ctaHref}
         ctaLabel="ログインしてはじめる"
         image={{ src: '/tenjikai/hero.webp', alt: '展示会のブースと、ブースの図面と予算の画面' }}
       />
@@ -79,7 +86,7 @@ export default function TenjikaiLp() {
       <CtaBand
         title="展示会の準備を、URLから始めましょう"
         subtitle="ログインすると、すぐに使えます。"
-        ctaHref={CTA}
+        ctaHref={ctaHref}
         ctaLabel="ログインしてはじめる"
       />
     </LpShell>

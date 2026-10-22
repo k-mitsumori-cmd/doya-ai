@@ -1,9 +1,10 @@
-// 開発用プレビュー: ツール図鑑と実績を見本の記録で表示する（ログイン・DB不要）
+// 開発用プレビュー: ツール図鑑と実績を見本の記録で表示する。
+// このページのデータは合成値。親レイアウトの認証・会社情報の読取と、AppShell の最近使ったツールの保存は通常どおり行う。
 // ⚠️ 本番では 404。画面確認のためだけに、COLLECTION_PREVIEW=1 のときは next start でも開ける。
 //    ?state=empty で「まだ何も使っていない」状態、?areas=none で「分野を選んでいない」状態を見る。
 import { notFound } from 'next/navigation'
 import { doyaPowerSampleAllowed } from '@/lib/doya-power/flag'
-import ShellGate from '@/components/shell/ShellGate'
+import CollectionPreviewFrame from './PreviewFrame'
 import { shellGroups } from '@/components/shell/tools'
 import { buildCatalog } from '@/lib/collection/catalog'
 import { evaluateBadges } from '@/lib/collection/badges'
@@ -42,8 +43,8 @@ export default async function CollectionPreviewPage({ searchParams }: { searchPa
   // 見本の会社: 採用はしない（採用の分野で減点されないことを見る）
   const areas: CollectionArea[] = sp.areas === 'none' ? [] : ['collect', 'sell', 'operate']
   return (
-    // 新しい見た目の枠で見る（uiNext="preview"）。ログインしていなくても枠を出す（always）
-    <ShellGate signedIn always uiNext="preview" enabledIds={[]} userName="サンプル">
+    // 見本専用の表示用contextで囲み、実アカウントの値を継承しない。
+    <CollectionPreviewFrame>
       <CollectionView
         tools={buildCatalog(shellGroups(true))}
         usage={facts.tools}
@@ -51,6 +52,6 @@ export default async function CollectionPreviewPage({ searchParams }: { searchPa
         initialAreas={areas}
         persistAreas={false}
       />
-    </ShellGate>
+    </CollectionPreviewFrame>
   )
 }

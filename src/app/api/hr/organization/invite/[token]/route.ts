@@ -33,12 +33,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
     // 期限切れチェック
     const expired = invitation.status === 'EXPIRED' || (invitation.status === 'PENDING' && invitation.expiresAt.getTime() <= Date.now())
-    if (expired && invitation.status === 'PENDING') {
-      await prisma.hrInvitation.updateMany({
-        where: { id: invitation.id, status: 'PENDING', expiresAt: { lte: new Date() } },
-        data: { status: 'EXPIRED' },
-      })
-    }
+    // Public GET reports the effective expiry without writing membership state.
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { useSession, signOut } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
@@ -103,22 +104,20 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
     )
   }
 
-  if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
+  if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<SignInReturnLink fallback="/doyalist" className="ml-2 underline">再度ログインする</SignInReturnLink></div>
 
   if (!session?.user || isSignedOut) {
-    const callback = encodeURIComponent(pathname || '/doyalist')
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
         <div className="text-center bg-white rounded-3xl border border-slate-200 shadow-xl p-12 max-w-md">
           <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-56 mx-auto mb-6" />
           <p className="text-slate-500 mb-6 font-medium">ログインして営業リスト生成を始めましょう</p>
-          <a
-            href={`/auth/signin?callbackUrl=${callback}`}
+          <SignInReturnLink fallback="/doyalist"
             className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#0a1530] text-white font-bold rounded-2xl hover:bg-[#13234d] hover:shadow-xl transition-all"
           >
             <span className="material-symbols-outlined">login</span>
             Googleでログイン
-          </a>
+          </SignInReturnLink>
         </div>
       </div>
     )

@@ -5,6 +5,7 @@
 // 作るもの: 組織（決算月）・オーナー・既定の支払方法（銀行振込）。契約や取引先は作らない（空のまま始める）
 // ⚠️ 呼ぶ側（ウィザード）が companyId の所有者であることを確かめてから呼ぶ。
 import { prisma } from '@/lib/prisma'
+import { lockLifecycleUsers, assertRetirementMembershipWritable } from '@/lib/account-lifecycle/store'
 
 export type ExpenseWizardInput = {
   companyId: string
@@ -21,6 +22,8 @@ export async function initExpenseForCompany(input: ExpenseWizardInput): Promise<
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await prisma.$transaction(async (tx) => {
+        await lockLifecycleUsers(tx, [input.userId])
+        await assertRetirementMembershipWritable(tx, [input.userId])
         const existing = await tx.expenseOrganization.findUnique({ where: { companyId: input.companyId }, select: { id: true, slug: true } })
         if (existing) return { organizationId: existing.id, slug: existing.slug, created: false }
         const base = input.companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || `org-${Date.now()}`

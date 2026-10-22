@@ -9,11 +9,9 @@
 // 既定は非表示（false）にし、対象だと確定したときだけ表示する。これにより既存顧客に一瞬でも
 // 「初月無料」が出ることを防ぐ（サーバの fail-closed と整合）。新規/未ログインは確定後すぐ表示される。
 // ============================================
-import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
 import { Gift, Sparkles } from 'lucide-react'
 import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
-import { fetchTrialEligibility } from '@/lib/trial-eligibility-client'
+import { useTrialEligibilitySnapshot } from '@/components/TrialEligibilityProvider'
 
 const BRAND = '#7f19e6'
 
@@ -25,53 +23,7 @@ export const TRIAL_SUBTEXT = `期間中はいつでも解約でき、料金は�
 type Tone = 'light' | 'dark'
 
 export function useTrialEligible(): boolean {
-  const { data: session, status } = useSession()
-  const user = session?.user as { id?: string; email?: string; plan?: string } | undefined
-  const identity = user?.id || user?.email
-  const key = status === 'loading' ? '' : status === 'authenticated' ? identity ? JSON.stringify([identity, user?.plan]) : '' : 'guest'
-  const [result, setResult] = useState<{ key: string; eligible: boolean }>({ key: '', eligible: false })
-  useEffect(() => {
-    if (!key) return
-    let mounted = true
-    let running = false
-    let retries = 0
-    let confirmedExpiry = 0
-    let timer: ReturnType<typeof setTimeout> | undefined
-    const visible = () => document.visibilityState !== 'hidden'
-    const run = async () => {
-      if (!mounted || running) return
-      running = true
-      clearTimeout(timer)
-      if (confirmedExpiry <= Date.now()) setResult({ key, eligible: false })
-      const confirmed = await fetchTrialEligibility(key)
-      running = false
-      if (!mounted) return
-      if (confirmed) {
-        retries = 0
-        confirmedExpiry = confirmed.expires
-        setResult({ key, eligible: confirmed.value })
-        timer = setTimeout(() => {
-          if (!mounted) return
-          setResult({ key, eligible: false })
-          if (visible()) void run()
-        }, Math.max(0, confirmed.expires - Date.now()))
-      } else if (retries < 2) {
-        const wait = ++retries === 1 ? 5_000 : 15_000
-        timer = setTimeout(() => { if (visible()) void run() }, wait)
-      }
-    }
-    const resume = () => { if (visible()) { retries = 0; void run() } }
-    void run()
-    window.addEventListener('focus', resume)
-    document.addEventListener('visibilitychange', resume)
-    return () => {
-      mounted = false
-      clearTimeout(timer)
-      window.removeEventListener('focus', resume)
-      document.removeEventListener('visibilitychange', resume)
-    }
-  }, [key])
-  return !!key && result.key === key && result.eligible
+  return useTrialEligibilitySnapshot()
 }
 
 /**

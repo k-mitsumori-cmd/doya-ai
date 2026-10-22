@@ -9,6 +9,10 @@ import type { Prisma } from '@prisma/client'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { EXPENSE_ROLES, ROLE_RANK, type ExpenseRole } from './constants'
+import { withLifecycleOrganizationWrite } from '@/lib/account-lifecycle/organization-fence'
+import { assertRetirementMembershipWritable, lockLifecycleUsers } from '@/lib/account-lifecycle/store'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
+import { readExpenseEntryMembership } from './entry-read'
 
 export type ExpenseContext = {
   userId: string
@@ -41,34 +45,51 @@ export function orgSlugFrom(req: NextRequest): string | undefined {
 export async function getExpenseContext(orgSlug?: string): Promise<ExpenseContext | null> {
   const userId = await resolveUserId()
   if (!userId) return null
-  const membership = await prisma.expenseMember.findFirst({
-    where: { userId, status: 'ACTIVE', role: { in: [...EXPENSE_ROLES] }, ...(orgSlug ? { organization: { slug: orgSlug } } : {}) },
-    include: { organization: { select: { slug: true } } },
-    orderBy: { createdAt: 'desc' },
-  })
-  if (!membership || !isRole(membership.role)) return null
-  return { userId, organizationId: membership.organizationId, organizationSlug: membership.organization.slug, role: membership.role, memberId: membership.id }
+  const selected = await readExpenseEntryMembership(userId, orgSlug)
+  if (selected.state !== 'found') return null
+  return { userId, organizationId: selected.organizationId, organizationSlug: selected.slug, role: selected.role, memberId: selected.memberId }
 }
 
 /**
  * 招待中（PENDING）のメンバーを、本人の ACTIVE にする（システム点検 EXP-F05）。
  * メールはセッションの申告ではなく、DB のユーザーのメールで照合する。入口（/api/expense/usage）で毎回呼ぶ。
  */
-export async function claimPendingMemberships(userId: string): Promise<number> {
+export async function claimPendingMemberships(userId: string, orgSlug?: string): Promise<number> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
   const email = user?.email?.toLowerCase()
   if (!email) return 0
-  const pending = await prisma.expenseMember.findMany({ where: { invitedEmail: email, status: 'PENDING', userId: null }, select: { id: true, organizationId: true } })
+  const pending = await prisma.expenseMember.findMany({ where: { invitedEmail: email, status: 'PENDING', userId: null, ...(orgSlug ? { organization: { slug: orgSlug } } : {}) }, select: { id: true, organizationId: true } })
   let claimed = 0
+  let deferred: LifecycleError | undefined
   for (const p of pending) {
-    // 同じ組織に本人の行が既にあれば（以前に外された等）、招待の行は使わずに取り消す
-    const own = await prisma.expenseMember.findFirst({ where: { organizationId: p.organizationId, userId }, select: { id: true } })
-    if (own) {
-      await prisma.expenseMember.update({ where: { id: p.id }, data: { status: 'INACTIVE' } })
-      continue
+    try {
+      claimed += await withLifecycleOrganizationWrite(prisma, {
+        service: 'expense', organizationId: p.organizationId, actorUserId: userId, access: 'invitation',
+        targetMemberIds: [p.id], targetUserIds: [userId], targetEmails: [email],
+        grantsAuthority: true, pendingClaimUserId: userId, repairsUnknownTargetRole: false,
+      }, async tx => {
+        const current = await tx.expenseMember.findFirst({ where: { id: p.id, organizationId: p.organizationId, invitedEmail: email, status: 'PENDING', userId: null } })
+        const recipient = await tx.user.findUnique({ where: { id: userId }, select: { email: true } })
+        if (!current || recipient?.email?.toLowerCase() !== email) throw new LifecycleError('LIFECYCLE_PENDING_CLAIM_UNAVAILABLE')
+        const own = await tx.expenseMember.findFirst({ where: { organizationId: p.organizationId, userId }, select: { id: true } })
+        if (own) {
+          await tx.expenseMember.update({ where: { id: p.id }, data: { status: 'INACTIVE' } })
+          return 0
+        }
+        const result = await tx.expenseMember.updateMany({ where: { id: p.id, organizationId: p.organizationId, invitedEmail: email, status: 'PENDING', userId: null }, data: { userId, status: 'ACTIVE' } })
+        if (result.count !== 1) throw new LifecycleError('LIFECYCLE_PARTICIPANTS_CHANGED')
+        return result.count
+      })
+    } catch (error) {
+      if (!(error instanceof LifecycleError) || orgSlug) throw error
+      // A background invitation in another organization cannot invalidate a verified active membership.
+      // Explicit org requests still return the exact refusal and never report acceptance.
+      deferred = error
     }
-    const r = await prisma.expenseMember.updateMany({ where: { id: p.id, status: 'PENDING', userId: null }, data: { userId, status: 'ACTIVE' } })
-    claimed += r.count
+  }
+  if (deferred) {
+    const active = await prisma.expenseMember.findFirst({ where: { userId, status: 'ACTIVE', role: { in: [...EXPENSE_ROLES] } }, select: { id: true } })
+    if (!active) throw deferred
   }
   return claimed
 }
@@ -114,6 +135,7 @@ export async function withExpense(
     if (!hasMinRole(ctx.role, minRole)) return NextResponse.json({ error: 'この操作を行う権限がありません' }, { status: 403 })
     return await handler(ctx)
   } catch (e) {
+    if (e instanceof LifecycleError) return NextResponse.json({ error: e.message, code: e.code }, { status: e.status })
     if (e instanceof ExpenseHttpError) return NextResponse.json({ error: e.message, ...(e.code ? { code: e.code } : {}) }, { status: e.status })
     // 為替レート未設定（plan.ts の FxRateMissingError）は利用者が直せる理由なので、そのまま伝える
     if ((e as Error)?.name === 'FxRateMissingError') return NextResponse.json({ error: (e as Error).message, code: 'FX_RATE_MISSING' }, { status: 400 })
@@ -144,6 +166,8 @@ export async function createOrganization(userId: string, orgName: string, member
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await prisma.$transaction(async (tx) => {
+        await lockLifecycleUsers(tx, [userId])
+        await assertRetirementMembershipWritable(tx, [userId])
         const existing = await tx.expenseMember.findFirst({ where: { userId, status: 'ACTIVE' }, include: { organization: true } })
         if (existing) return existing.organization
         // slug は ASCII のみ（URL 安全）。日本語の社名は org-<時刻> にする

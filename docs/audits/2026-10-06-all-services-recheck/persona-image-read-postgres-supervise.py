@@ -10,7 +10,7 @@ try:
  with (base/'persona-image-read-postgres.log').open('w') as out:result=subprocess.run(['node',str(base/'verify-persona-image-read-postgres.cjs')],env=childEnv,stdout=out,stderr=subprocess.STDOUT,timeout=180)
  evidence=base/'persona-image-read-postgres-results.json'
  proof=json.loads(evidence.read_text()) if evidence.exists() else {}
- evidenceValid=proof.get('passed')==7 and len(proof.get('cases',[]))==7 and proof.get('checkedAt','')>=state['startedAt'] and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in proof.get('sourceHashes',{}).items()) and len(proof.get('sourceHashes',{}))==2
+ evidenceValid=proof.get('passed')==7 and len(proof.get('cases',[]))==7 and proof.get('checkedAt','')>=state['startedAt'] and all(pathlib.Path(p).is_file() and hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==h for p,h in proof.get('sourceHashes',{}).items()) and set(proof.get('sourceHashes',{}))=={'src/app/api/persona/images/[id]/route.ts','src/lib/persona/image-ledger.ts','src/lib/persona/image-entitlements.ts'}
  state.update(probeExitCode=result.returncode,evidenceValid=evidenceValid,status='passed' if result.returncode==0 and evidenceValid else 'failed')
 finally:
  if started:

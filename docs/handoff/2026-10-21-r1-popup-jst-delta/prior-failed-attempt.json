@@ -1,0 +1,32 @@
+{
+  "status": "failed",
+  "baseCommit": "07e53d8b39b9de4c7d38e031649d9e2718387e66",
+  "plannedGates": 27,
+  "completedGates": 23,
+  "passedGates": 22,
+  "failedGates": [
+    {
+      "name": "expense",
+      "exitCode": 1
+    }
+  ],
+  "expense": {
+    "passed": 88,
+    "failed": 5,
+    "total": 93
+  },
+  "immutability": {
+    "sourceFiles": 5163,
+    "sourcePathsetUnchanged": true,
+    "sourceHashesUnchanged": true,
+    "snapshotDependencyUnchanged": true,
+    "workDependencyUnchanged": true,
+    "snapshotTargetsUnchanged": true,
+    "externalToolsUnchanged": true
+  },
+  "repairScope": [
+    "src/app/api/expense/members/route.ts",
+    "src/lib/expense/members.test.ts"
+  ],
+  "supersedingCandidateRequiresFreshFullGate": true
+}

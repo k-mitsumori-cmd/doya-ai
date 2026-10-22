@@ -1,0 +1,97 @@
+{
+  "status": "author_frozen_limited_expense_connections_integration_pending",
+  "baseCommit": "07e53d8b",
+  "inputManifest": "r1-source-inputs.json",
+  "inputSetSha256": "3ed5f9aee04d4d68f3bf3e6eb9f5b9365d3b95221763cc03bd8980e2ec7bdd83",
+  "safeExpenseContracts": 56,
+  "unresolvedExpenseObservations": 0,
+  "globalUnresolvedObservations": 2,
+  "records": [
+    {
+      "path": "src/lib/account-lifecycle/store.ts",
+      "sourceHash": "b2f4357a042c9abf0b63e8a22b85abe074211cf6587d8db05fdb5dbbb882730f",
+      "status": "connected_and_targeted_verified"
+    },
+    {
+      "path": "src/lib/account-lifecycle/organization-fence.ts",
+      "sourceHash": "9ed18ed0e4af505c105db387b04f97b48113dcdf5cdef3a22e93f9e12739d301",
+      "status": "connected_and_targeted_verified"
+    },
+    {
+      "path": "src/lib/expense/member-write.ts",
+      "sourceHash": "43c867440e1fc365f1c2c6779122278c37b977d1d89b65e903b20b395cb41db6",
+      "status": "connected_and_targeted_verified"
+    },
+    {
+      "path": "src/lib/expense/access.ts",
+      "sourceHash": "e34a6d64595941f0264e3796021e1c2ee6692aa71e6e541fc53306a9b011ec32",
+      "status": "connected_and_targeted_verified"
+    },
+    {
+      "path": "src/lib/expense/setup.ts",
+      "sourceHash": "fa2708e7132350ce273071d90852d57ff6ff1a8b0a38883eae876b945bf854ee",
+      "status": "connected_and_targeted_verified"
+    },
+    {
+      "path": "src/app/api/expense/members/route.ts",
+      "sourceHash": "9ea8ea295ab4e5dab61512d9ae27b5e458dd27f7532227312d5c70a1a9bfb300",
+      "status": "connected_and_targeted_verified"
+    },
+    {
+      "path": "src/app/api/expense/members/[id]/route.ts",
+      "sourceHash": "49c0c88dfae0ddab17e252fd957f62c9f42560f3577886f14a14ce492ea04f24",
+      "status": "connected_and_targeted_verified"
+    },
+    {
+      "path": "src/app/api/expense/usage/route.ts",
+      "sourceHash": "1b1bf9cbcff83e0a773351539b793f616adeabdbaa125f5868d76206187eadc7",
+      "status": "connected_and_targeted_verified"
+    },
+    {
+      "path": "src/app/api/expense/organization/route.ts",
+      "sourceHash": "29bea3115d6d93c5baa2901f6cdf4c4ec388ab42d220351c28a3d5e1e87b4e46",
+      "status": "connected_and_targeted_verified"
+    },
+    {
+      "path": "scripts/security-regression/verify-membership-retirement-postgres.cjs",
+      "sourceHash": "011922baeca22daad5a71c08c7561fada45e182aaf8b6728ce3bd280070e63a6",
+      "status": "test_input_verified"
+    },
+    {
+      "path": "scripts/security-regression/verify-membership-retirement-postgres.py",
+      "sourceHash": "593b9ba3fd7adee52b2809a470bc339a48fa3a499fb2ee60b26c719b975aac1f",
+      "status": "test_input_verified"
+    },
+    {
+      "path": "scripts/security-regression/verify-expense-entry-mounted.cjs",
+      "sourceHash": "7dcfbb83d44aff5366752348033734ce6ecc034d3bd753071d1791babd1acdd7",
+      "status": "test_input_verified"
+    },
+    {
+      "path": "scripts/security-regression/verify-account-retirement-postgres.cjs",
+      "sourceHash": "66b4946a3a262733f8b5fc3a063c1eca08e5746468f48287a7d222e1ffc8371e",
+      "status": "test_input_verified"
+    }
+  ],
+  "connectedExpenseHandlers": [
+    "members POST dedicated invite/reinvite",
+    "members/[id] PATCH/DELETE fresh authorization + target/count/update/audit same Tx",
+    "access claimPendingMemberships explicit org + background isolated failure",
+    "access createOrganization and setup initExpenseForCompany User existence/retirement admission",
+    "usage GET scope and lifecycle error response",
+    "organization POST lifecycle error response"
+  ],
+  "excludedInChangedFiles": [
+    "members GET and unrelated organization GET/PATCH metadata remain existing read/settings behavior",
+    "Existing membership data writes outside declared membership handlers are not blanket-fenced by this helper"
+  ],
+  "other10Services": "unconnected or pending; no all-78 candidate coverage claim",
+  "retirementCoordinatorAndBilling": "R2/R3 remain pending; old unsafe observations retained",
+  "proofs": [
+    "r1-expense-postgres-results.json",
+    "r1-r0-regression-results.json",
+    "r1-owner-regression-results.json",
+    "r1-existing-entry-results.json",
+    "r1-core-delta-before-after.json"
+  ]
+}

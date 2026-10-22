@@ -1,0 +1,12 @@
+/* AskLinkの帯だけを調整し、共通ToolHeroの既定表示は変えない。 */
+@media (max-width: 640px) {
+  .hero > section { gap: 8px; }
+  .hero > section > img {
+    width: 144px;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+    justify-self: start;
+    margin: 0;
+  }
+}

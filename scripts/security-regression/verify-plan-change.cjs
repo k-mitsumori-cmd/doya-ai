@@ -1,5 +1,7 @@
 const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
+const { routeUnitDeps, routeUnitGlobals, genericStart } = require('./checkout-route-unit-fixture.cjs')
+const TRIAL_USER_SELECT = load('src/lib/trial.ts', { '@/lib/stripe': { stripe: {} }, '@/lib/unified-plan': load('src/lib/unified-plan.ts') }).TRIAL_USER_SELECT;
 
 const env = {
   STRIPE_PRICE_BANNER_LIGHT_MONTHLY: 'price_light',
@@ -40,23 +42,26 @@ const stripe = {
 const stripeModule = load('src/lib/stripe.ts', {
   stripe: function () { return stripe },
   'node:crypto': require('node:crypto'),
+  './checkout-legacy-guard': load('src/lib/checkout-legacy-guard.ts'),
 }, { process: { env } })
 const response = (data, init = {}) => Response.json(data, init)
+const checkoutPrisma = { user: { findUnique: async () => ({ id: 'owner', email: 'owner@example.invalid', stripeCustomerId: 'cus_owner', plan: 'FREE', serviceSubscriptions: [] }) } }
 const checkout = load('src/app/api/stripe/checkout/route.ts', {
+  ...routeUnitDeps({ prisma: checkoutPrisma, onStart: async () => { checkoutCreated++; throw Error('second subscription') } }),
   '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),
   'next/server': { NextResponse: { json: response } },
   'next-auth': { getServerSession: async () => ({ user: { email: 'owner@example.invalid' } }) },
   '@/lib/auth': { authOptions: {} },
-  '@/lib/prisma': { prisma: { user: { findUnique: async () => ({ id: 'owner', stripeCustomerId: 'cus_owner' }) } } },
+  '@/lib/prisma': { prisma: checkoutPrisma },
   '@/lib/stripe': {
     STRIPE_PRICE_IDS: stripeModule.STRIPE_PRICE_IDS,
     findActiveLikeSubscriptions: async () => [{ id: 'sub_light', status: 'active', priceId: 'price_light' }],
     createCheckoutSession: async () => { checkoutCreated++; throw Error('second subscription') },
   },
   '@/lib/unified-plan': { UNIFIED_TRIAL_DAYS: 30 },
-  '@/lib/trial': { isTrialEligible: async () => true },
+  '@/lib/trial': { isTrialEligible: async () => true, TRIAL_USER_SELECT },
   '@/lib/checkout-reservation': { CheckoutReservationError: class extends Error {}, createReservedCheckoutSession: async () => { throw Error('unexpected reservation') } },
-})
+}, routeUnitGlobals)
 const portal = load('src/app/api/stripe/portal/route.ts', {
   'next/server': { NextResponse: { json: response } },
   'next-auth': { getServerSession: async () => ({ user: { email: 'owner@example.invalid' } }) },
@@ -79,7 +84,7 @@ const portal = load('src/app/api/stripe/portal/route.ts', {
   assert.equal(stripeModule.resolvePlanIdFromSubscription(legacy).planId, 'banner-light', 'unknown legacy price still uses metadata')
 
   const upgrade = await checkout.POST(new Request('https://offline.invalid/api/stripe/checkout', {
-    method: 'POST', body: JSON.stringify({ planId: 'banner-pro' }),
+    method: 'POST', body: JSON.stringify(genericStart()),
   }))
   assert.equal(upgrade.status, 409)
   assert.equal((await upgrade.json()).code, 'PLAN_CHANGE_REQUIRED')

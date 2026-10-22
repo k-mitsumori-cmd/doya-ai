@@ -27,7 +27,7 @@ export default async function SeoImageDetailPage(props: { params: Promise<{ id: 
               画像の詳細ページはログイン後に利用できます。ログインすると、この画像のプレビューや生成ログが確認できます。
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
-              <Link href={`/auth/signin?next=/seo/images/${id}`} className="inline-flex">
+              <Link href={`/auth/signin?callbackUrl=${encodeURIComponent(`/seo/images/${encodeURIComponent(id)}`)}`} className="inline-flex">
                 <span className="h-11 px-6 rounded-xl bg-gray-900 text-white font-black text-sm inline-flex items-center hover:bg-gray-800">
                   ログインする
                 </span>

@@ -7,10 +7,14 @@
 
 import QuotePageHeading from '@/components/quote/QuotePageHeading'
 import { useUiNext } from '@/components/shell/ui-next-context'
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { useQuoteIssuerSettings } from '@/lib/quote/use-issuer-settings'
 import MemberPanel from '@/components/org/MemberPanel'
 import { DoyaKun } from '@/components/lp'
+import { useQuoteWorkspace } from '@/components/quote/QuoteWorkspaceBoundary'
+import QuoteOrgSwitcher from '@/components/quote/QuoteOrgSwitcher'
+import OwnerTransferPanel from '@/components/org/OwnerTransferPanel'
 import { ErrorNotice } from '@/components/ds'
 import { quoteErrorCopy, quoteErrorKind } from '@/components/quote/error-copy'
 
@@ -33,15 +37,25 @@ const TEXTAREAS = [
 ] as const
 
 export default function QuoteSettingsPage() {
-  const { form, loading, loaded, saving, error, message, unknown, canEdit, update, load, save } = useQuoteIssuerSettings()
+  const { scope, retry } = useQuoteWorkspace()
+  const listHref = scope.kind === 'ready' ? scope.proof.href('/quote') : '/quote'
+  const { form, loading, loaded, saving, error, message, unknown, canEdit, hasUnsavedChanges, update, load, save } = useQuoteIssuerSettings()
   const uiNext = useUiNext()
+  useEffect(() => {
+    const beforeSwitch = (event: Event) => {
+      if ((hasUnsavedChanges || saving || unknown) && !window.confirm('未保存または確認中の変更があります。組織を切り替えると、この画面の入力内容は失われます。切り替えますか？')) event.preventDefault()
+    }
+    window.addEventListener('quote:before-org-switch', beforeSwitch)
+    return () => window.removeEventListener('quote:before-org-switch', beforeSwitch)
+  }, [hasUnsavedChanges, saving, unknown])
 
 
   return (
     <div className={uiNext ? 'pb-24' : 'min-h-screen bg-slate-50 pb-24'}>
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-2xl px-4 py-4">
-          <Link href="/quote" className={`${uiNext ? `inline-flex min-h-11 items-center rounded ${FOCUS} ` : ''}text-xs text-slate-500 hover:underline font-semibold`}>← 見積もり一覧</Link>
+          <Link href={listHref} className={`${uiNext ? `inline-flex min-h-11 items-center rounded ${FOCUS} ` : ''}text-xs text-slate-500 hover:underline font-semibold`}>← 見積もり一覧</Link>
+          {!uiNext && <QuoteOrgSwitcher />}
           <QuotePageHeading className="text-lg font-bold text-slate-900">設定</QuotePageHeading>
           <p className="text-xs text-slate-500 font-semibold">発行者情報とメンバーを管理します。</p>
         </div>
@@ -122,7 +136,10 @@ export default function QuoteSettingsPage() {
           basePath="/api/quote"
           service="quote"
           description="招待した方は、この組織の商材と見積書を扱えるようになります。"
+          workspaceProof={scope.kind === 'ready' ? scope.proof : undefined}
         />
+        {scope.kind === 'ready' && <OwnerTransferPanel service="quote" organizationSlug={scope.proof.organization.slug}
+          organizationId={scope.proof.organization.id} role={scope.proof.organization.role} proof={scope.proof} onCommitted={retry} />}
       </main>
     </div>
   )

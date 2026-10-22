@@ -1,18 +1,12 @@
-// 初月無料の対象判定に DB の契約状態を加えたことの回帰テスト。
-// - DB で有料（User.plan / UserServiceSubscription.plan）の利用者は、Stripe を照会せずに対象外
-// - 無料で Stripe 履歴の無い利用者は今どおり対象
-// - Stripe 照会の障害時は対象外（checkout は 503 で決済を作らない／表示 API は 503 eligible:false）
-// - checkout と trial-eligibility が同じ select（TRIAL_USER_SELECT）と同じ判定を使う
-// Stripe・DB・環境変数には触れず、すべてモックで確かめる。
+// DB paid projection and the v2 checkout/trial-eligibility principal contract.
+// Stripe, DB, and checkout coordinator are synthetic; the actual route builders and helper are loaded.
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
-// vm で読み込んだモジュールの値は別 realm のため、構造の比較は JSON で行う。
+const { routeUnitDeps, routeUnitGlobals, genericStart } = require('./checkout-route-unit-fixture.cjs')
 const sameShape = (a, b) => assert.equal(JSON.stringify(a), JSON.stringify(b))
-
 const EMAIL = 'test@example.invalid'
 const unifiedPlan = load('src/lib/unified-plan.ts')
 
-// kind: 'new'（履歴なし）/ 'old'（解約済み履歴あり）/ 'failure'（Stripe 照会が失敗）
 function makeStripe(kind) {
   const calls = []
   const stripe = {
@@ -46,49 +40,56 @@ function loadTrial(kind) {
 }
 
 function dbUser(plan, servicePlans) {
-  return {
-    id: 'u',
-    stripeCustomerId: null,
-    plan,
-    serviceSubscriptions: (servicePlans || []).map(p => ({ plan: p })),
-  }
+  return { id: 'u', email: EMAIL, stripeCustomerId: null, plan,
+    serviceSubscriptions: (servicePlans || []).map(p => ({ plan: p })) }
 }
 
 function loadCheckout(trialMod, user, captured) {
-  const prices = load('src/lib/stripe.ts', { stripe: function () {}, 'node:crypto': require('node:crypto') }).STRIPE_PRICE_IDS
+  const prices = load('src/lib/stripe.ts', { stripe: function () {}, 'node:crypto': require('node:crypto'),
+    './checkout-legacy-guard': load('src/lib/checkout-legacy-guard.ts') }).STRIPE_PRICE_IDS
+  const prisma = { user: { findUnique: async query => {
+    if (query.select) captured.select = query.select
+    return user
+  } } }
   return load('src/app/api/stripe/checkout/route.ts', {
+    ...routeUnitDeps({ prisma, onStart: async request => {
+      captured.args = request
+      return { id: 'cs_checkout', url: 'https://offline.invalid/checkout' }
+    } }),
     '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),
     'next/server': { NextResponse: Response },
-    'next-auth': { getServerSession: async () => ({ user: { email: EMAIL } }) },
-    '@/lib/auth': {},
-    '@/lib/prisma': { prisma: { user: { findUnique: async q => { captured.select = q.select; return user } } } },
-    '@/lib/unified-plan': { UNIFIED_TRIAL_DAYS: 30 },
-    '@/lib/trial': trialMod,
-    '@/lib/checkout-reservation': { CheckoutReservationError: class extends Error {}, createReservedCheckoutSession: ({ create }) => create('test-key', 1900000000) },
-    '@/lib/stripe': {
-      STRIPE_PRICE_IDS: prices,
-      findActiveLikeSubscriptions: async () => [],
-      createCheckoutSession: async a => { captured.args = a; return { id: 'checkout', url: 'https://offline.invalid' } },
-    },
-  })
+    'next-auth': { getServerSession: async () => ({ user: { id: 'u', email: EMAIL } }) },
+    '@/lib/auth': {}, '@/lib/prisma': { prisma },
+    '@/lib/unified-plan': { UNIFIED_TRIAL_DAYS: 30 }, '@/lib/trial': trialMod,
+    '@/lib/stripe': { STRIPE_PRICE_IDS: { ...prices, banner: { ...prices.banner,
+      pro: { monthly: 'price_synthetic', yearly: 'price_synthetic' } } },
+      findActiveLikeSubscriptions: async () => [] },
+  }, routeUnitGlobals)
 }
 
 function loadEligibility(trialMod, user, captured) {
+  const prisma = { user: { findUnique: async query => { captured.select = query.select; return user } } }
   return load('src/app/api/stripe/trial-eligibility/route.ts', {
     'next/server': { NextResponse: Response },
-    'next-auth': { getServerSession: async () => ({ user: { email: EMAIL } }) },
-    '@/lib/auth': {},
-    '@/lib/prisma': { prisma: { user: { findUnique: async q => { captured.select = q.select; return user } } } },
-    '@/lib/trial': trialMod,
+    'next-auth': { getServerSession: async () => ({ user: { id: 'u', email: EMAIL } }) },
+    '@/lib/auth': {}, '@/lib/prisma': { prisma }, '@/lib/trial': trialMod,
   })
 }
 
-async function postCheckout(api) {
-  return api.POST(new Request('https://offline.invalid', { method: 'POST', body: JSON.stringify({ planId: 'banner-pro' }) }))
+const eligibilityRequest = () => ({ nextUrl: new URL('https://offline.invalid/api/stripe/trial-eligibility?expectedKind=authenticated&expectedActor=u') })
+const postCheckout = api => api.POST(new Request('https://offline.invalid/api/stripe/checkout', {
+  method: 'POST', body: JSON.stringify(genericStart()),
+}))
+function assertProjectionSelect(select, mod) {
+  assert.equal(select.id, true)
+  assert.equal(select.email, true)
+  assert.equal(select.plan, true)
+  sameShape(select.serviceSubscriptions, { select: { plan: true } })
+  const { id, email, ...projection } = select
+  sameShape(projection, mod.TRIAL_USER_SELECT)
 }
 
 ;(async () => {
-  // ---- 判定関数そのもの ----
   for (const plan of ['PRO', 'pro', 'ENTERPRISE', 'BUNDLE', 'LIGHT']) {
     await check(`paid User.plan ${plan} is not eligible without querying Stripe`, async () => {
       const { mod, calls } = loadTrial('new')
@@ -96,19 +97,16 @@ async function postCheckout(api) {
       assert.deepEqual(calls, [])
     })
   }
-
   await check('paid service row is not eligible even when User.plan is FREE', async () => {
     const { mod, calls } = loadTrial('new')
     assert.equal(await mod.isTrialEligible({ email: EMAIL, plan: 'FREE', servicePlans: ['FREE', 'PRO'] }), false)
     assert.deepEqual(calls, [])
   })
-
   await check('paid DB user is not eligible even while Stripe is unavailable', async () => {
     const { mod, calls } = loadTrial('failure')
     assert.equal(await mod.isTrialEligible({ email: EMAIL, plan: 'PRO', servicePlans: [] }), false)
     assert.deepEqual(calls, [])
   })
-
   for (const plan of ['FREE', null, undefined, 'UNKNOWN']) {
     await check(`free user (${plan}) without Stripe history stays eligible`, async () => {
       const { mod, calls } = loadTrial('new')
@@ -116,24 +114,21 @@ async function postCheckout(api) {
       assert.ok(calls.includes('customers.list'))
     })
   }
-
   await check('free user with Stripe history stays not eligible', async () => {
     const { mod } = loadTrial('old')
     assert.equal(await mod.isTrialEligible({ email: EMAIL, plan: 'FREE', servicePlans: [] }), false)
   })
-
   await check('free user rejects when Stripe is unavailable (fail-closed)', async () => {
     const { mod } = loadTrial('failure')
     await assert.rejects(mod.isTrialEligible({ email: EMAIL, plan: 'FREE', servicePlans: [] }))
   })
 
-  // ---- checkout（実付与）----
   const cases = [
-    { name: 'paid DB user', kind: 'new', user: dbUser('PRO', ['PRO']), status: 200, trialDays: undefined, stripeCalled: false },
-    { name: 'paid service row only', kind: 'new', user: dbUser('FREE', ['PRO']), status: 200, trialDays: undefined, stripeCalled: false },
+    { name: 'paid DB user', kind: 'new', user: dbUser('PRO', ['PRO']), status: 200, trialDays: 0, stripeCalled: false },
+    { name: 'paid service row only', kind: 'new', user: dbUser('FREE', ['PRO']), status: 200, trialDays: 0, stripeCalled: false },
     { name: 'free new user', kind: 'new', user: dbUser('FREE', ['FREE']), status: 200, trialDays: 30, stripeCalled: true },
-    { name: 'free user with history', kind: 'old', user: dbUser('FREE', []), status: 200, trialDays: undefined, stripeCalled: true },
-    { name: 'free user during Stripe failure', kind: 'failure', user: dbUser('FREE', []), status: 503, trialDays: undefined, stripeCalled: true },
+    { name: 'free user with history', kind: 'old', user: dbUser('FREE', []), status: 200, trialDays: 0, stripeCalled: true },
+    { name: 'free user during Stripe failure', kind: 'failure', user: dbUser('FREE', []), status: 503, stripeCalled: true },
   ]
   for (const c of cases) {
     await check(`checkout trial: ${c.name}`, async () => {
@@ -141,52 +136,46 @@ async function postCheckout(api) {
       const captured = {}
       const res = await postCheckout(loadCheckout(mod, c.user, captured))
       assert.equal(res.status, c.status)
-      assert.equal(captured.select.plan, true)
-      sameShape(captured.select.serviceSubscriptions, { select: { plan: true } })
+      assertProjectionSelect(captured.select, mod)
       if (c.status === 503) {
         assert.equal((await res.json()).code, 'TRIAL_CHECK_UNAVAILABLE')
         assert.equal(captured.args, undefined)
-      } else {
-        assert.equal(captured.args.trialDays, c.trialDays)
-      }
+      } else assert.equal(captured.args.terms.trialDays, c.trialDays)
       assert.equal(calls.length > 0, c.stripeCalled)
     })
   }
 
-  // ---- trial-eligibility（表示の出し分け）----
   const displayCases = [
     { name: 'paid DB user', kind: 'new', user: dbUser('PRO', ['PRO']), status: 200, eligible: false, stripeCalled: false },
     { name: 'paid service row only', kind: 'new', user: dbUser('FREE', ['ENTERPRISE']), status: 200, eligible: false, stripeCalled: false },
     { name: 'free new user', kind: 'new', user: dbUser('FREE', ['FREE']), status: 200, eligible: true, stripeCalled: true },
-    { name: 'signed-in user without DB row', kind: 'new', user: null, status: 200, eligible: true, stripeCalled: true },
-    { name: 'free user during Stripe failure', kind: 'failure', user: dbUser('FREE', []), status: 503, eligible: false, stripeCalled: true },
+    { name: 'signed-in user without DB row', kind: 'new', user: null, status: 503, code: 'USER_UNAVAILABLE', stripeCalled: false },
+    { name: 'free user during Stripe failure', kind: 'failure', user: dbUser('FREE', []), status: 503, code: 'TRIAL_CHECK_UNAVAILABLE', stripeCalled: true },
   ]
   for (const c of displayCases) {
     await check(`eligibility display: ${c.name}`, async () => {
       const { mod, calls } = loadTrial(c.kind)
       const captured = {}
-      const res = await loadEligibility(mod, c.user, captured).GET()
+      const res = await loadEligibility(mod, c.user, captured).GET(eligibilityRequest())
       assert.equal(res.status, c.status)
+      assert.equal(res.headers.get('cache-control'), 'private, no-store')
+      assert.match(res.headers.get('vary'), /Cookie/i)
+      assertProjectionSelect(captured.select, mod)
       const body = await res.json()
-      assert.equal(body.eligible, c.eligible)
-      if (c.status === 503) assert.equal(body.code, 'TRIAL_CHECK_UNAVAILABLE')
-      assert.equal(captured.select.plan, true)
-      sameShape(captured.select.serviceSubscriptions, { select: { plan: true } })
+      if (c.status === 200) assert.equal(body.eligible, c.eligible)
+      else { assert.equal(body.code, c.code); assert.equal(Object.hasOwn(body, 'eligible'), false) }
       assert.equal(calls.length > 0, c.stripeCalled)
     })
   }
 
-  // ---- 両ルートが同じ select を使う ----
   await check('checkout and trial-eligibility share TRIAL_USER_SELECT', async () => {
     const { mod } = loadTrial('new')
     const a = {}, b = {}
     await postCheckout(loadCheckout(mod, dbUser('FREE', []), a))
-    await loadEligibility(mod, dbUser('FREE', []), b).GET()
-    const { id, ...checkoutRest } = a.select
-    assert.equal(id, true)
-    sameShape(checkoutRest, b.select)
-    sameShape(b.select, mod.TRIAL_USER_SELECT)
+    await loadEligibility(mod, dbUser('FREE', []), b).GET(eligibilityRequest())
+    assertProjectionSelect(a.select, mod)
+    assertProjectionSelect(b.select, mod)
+    sameShape(a.select, b.select)
   })
-
   console.log(JSON.stringify({ passed: results.length, results }, null, 2))
 })().catch(e => { console.error(e); process.exitCode = 1 })

@@ -3,46 +3,12 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { mutateShodanMember } from '@/lib/shodan/member-write'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 import { getShodanContext, hasMinRole, orgSlugFrom } from '@/lib/shodan/access'
-import { ROLE_HIERARCHY, type ShodanContext } from '@/lib/shodan/types'
 
 type Ctx = { params: Promise<{ id: string }> }
-const rank = (role: string) => ROLE_HIERARCHY[role] ?? 0
 const EDITABLE_ROLES = ['member', 'manager', 'admin']
-
-async function mutateMember(ctx: ShodanContext, targetId: string, action: 'update' | 'delete', role?: string) {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      return await prisma.$transaction(async tx => {
-        // Serialize role changes/removals with this mutation before rechecking both rows.
-        await tx.$queryRaw`SELECT id FROM shodan_members WHERE "organizationId" = ${ctx.organizationId}
-          AND id IN (${ctx.memberId}, ${targetId}) ORDER BY id FOR UPDATE`
-        const actor = await tx.shodanMember.findFirst({
-          where: { id: ctx.memberId, organizationId: ctx.organizationId, userId: ctx.userId, status: 'ACTIVE', role: { in: ['owner', 'admin'] } },
-          select: { id: true, role: true },
-        })
-        if (!actor) return { kind: 'forbidden' as const }
-        const target = await tx.shodanMember.findFirst({ where: { id: targetId, organizationId: ctx.organizationId } })
-        if (!target) return { kind: 'missing' as const }
-        if (target.role === 'owner') return { kind: 'owner' as const }
-        if (target.id === actor.id) return { kind: 'self' as const }
-        if (!Object.prototype.hasOwnProperty.call(ROLE_HIERARCHY, target.role) || rank(target.role) >= rank(actor.role)) return { kind: 'peer' as const }
-        if (action === 'update') {
-          if (!role || rank(role) >= rank(actor.role)) return { kind: 'role' as const }
-          const member = await tx.shodanMember.update({ where: { id: target.id }, data: { role } })
-          return { kind: 'updated' as const, member }
-        }
-        await tx.shodanMember.delete({ where: { id: target.id } })
-        return { kind: 'deleted' as const }
-      }, { isolationLevel: 'Serializable' })
-    } catch (error) {
-      if (!(error && typeof error === 'object' && 'code' in error && error.code === 'P2034')) throw error
-      if (attempt === 2) throw new Error('メンバー情報が同時に変更されました。再読み込みしてお試しください')
-    }
-  }
-  throw new Error('メンバーを変更できませんでした')
-}
 
 // PATCH /api/shodan/members/[id] — 権限変更（admin+）
 export async function PATCH(req: NextRequest, ctx: Ctx) {
@@ -54,7 +20,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const body = await req.json().catch(() => ({}))
   const role = EDITABLE_ROLES.includes(body?.role) ? (body.role as string) : null
   if (!role) return NextResponse.json({ error: '不正な権限です' }, { status: 400 })
-  const result = await mutateMember(sctx, p.id, 'update', role)
+  let result
+  try { result = await mutateShodanMember(sctx, p.id, 'update', role) } catch (error) {
+    if (error instanceof LifecycleError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status })
+    throw error
+  }
   if (result.kind === 'forbidden') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   if (result.kind === 'missing') return NextResponse.json({ error: 'メンバーが見つかりません' }, { status: 404 })
   if (result.kind === 'owner') return NextResponse.json({ error: 'オーナーの権限は変更できません' }, { status: 403 })
@@ -72,7 +42,11 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   if (!hasMinRole(sctx.role, 'admin')) return NextResponse.json({ error: '権限がありません' }, { status: 403 })
 
-  const result = await mutateMember(sctx, p.id, 'delete')
+  let result
+  try { result = await mutateShodanMember(sctx, p.id, 'delete') } catch (error) {
+    if (error instanceof LifecycleError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status })
+    throw error
+  }
   if (result.kind === 'forbidden') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   if (result.kind === 'missing') return NextResponse.json({ error: 'メンバーが見つかりません' }, { status: 404 })
   if (result.kind === 'owner') return NextResponse.json({ error: 'オーナーは削除できません' }, { status: 403 })

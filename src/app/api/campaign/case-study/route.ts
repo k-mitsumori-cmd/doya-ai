@@ -7,13 +7,16 @@ export const dynamic = 'force-dynamic'
 // ⚠️ 申込は商談そのもの。取りこぼすと機会損失になるため、
 //    「まずDBに保存 → そのあとSlack通知 → 通知が落ちたらアラート」の順を崩さない。
 //    （/api/feedback で同じ設計にしてある。通知失敗で黙るのが最悪。）
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { postToSlackBlocks } from '@/lib/notifications'
 import { notifyAlert } from '@/lib/alert'
 import { escapeHtml } from '@/lib/html-escape'
+import { privateApiJson } from '@/lib/private-api-response'
+import { lockRetirementUser } from '@/lib/account-retirement'
+import { CASE_STUDY_CONTEXT_REFRESH, readCaseStudySubmissionContext } from '@/lib/case-study/submission-context'
 
 const MAX = { short: 200, url: 500, note: 2000 }
 
@@ -23,6 +26,20 @@ function clean(v: unknown, max: number): string {
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
+  const context = readCaseStudySubmissionContext(body?.submissionContext)
+  if (!context) return privateApiJson({ error: CASE_STUDY_CONTEXT_REFRESH, code: 'CONTEXT_REQUIRED' }, { status: 428 })
+
+  let session
+  try {
+    session = await getServerSession(authOptions)
+  } catch {
+    return privateApiJson({ error: '利用者を確認できませんでした。時間をおいて再度お試しください。', code: 'CONTEXT_UNAVAILABLE' }, { status: 503 })
+  }
+  const userId = (session?.user as { id?: string } | undefined)?.id
+  if (session && !userId) return privateApiJson({ error: 'ログイン状態を確認できませんでした。再読み込みしてお試しください。', code: 'CONTEXT_INVALID' }, { status: 401 })
+  if (context.mode === 'guest' ? Boolean(session) : !userId || userId !== context.userId) {
+    return privateApiJson({ error: '利用者が変わりました。再読み込みしてから内容を入力し直してください。', code: 'CONTEXT_CHANGED' }, { status: 409 })
+  }
 
   const companyName = clean(body?.companyName, MAX.short)
   const contactName = clean(body?.contactName, MAX.short)
@@ -35,26 +52,21 @@ export async function POST(req: NextRequest) {
   const allowName = body?.allowName !== false
 
   if (!companyName || !contactName || !email) {
-    return NextResponse.json({ error: '会社名・お名前・メールアドレスは必須です' }, { status: 400 })
+    return privateApiJson({ error: '会社名・お名前・メールアドレスは必須です' }, { status: 400 })
   }
   // 厳密な検証はしない（弾きすぎる方が損）。形だけ確認する。
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    return NextResponse.json({ error: 'メールアドレスの形式をご確認ください' }, { status: 400 })
+    return privateApiJson({ error: 'メールアドレスの形式をご確認ください' }, { status: 400 })
   }
   // ⚠️ ロゴも社名も両方お断りだと、この特典の前提が成り立たない
   if (!allowLogo && !allowName) {
-    return NextResponse.json(
+    return privateApiJson(
       { error: 'ロゴまたは社名のいずれかの掲載にご同意いただく必要があります' },
       { status: 400 }
     )
   }
 
-  // ログインしていれば紐づける。未ログインでも申し込めるようにする（見込み客を弾かない）
-  const session = await getServerSession(authOptions).catch(() => null)
-  const userId = (session?.user as { id?: string } | undefined)?.id || null
-
-  const saved = await prisma.caseStudyApplication.create({
-    data: {
+  const application = {
       companyName,
       contactName,
       email,
@@ -64,10 +76,17 @@ export async function POST(req: NextRequest) {
       note: note || null,
       allowLogo,
       allowName,
-      userId,
-    },
-    select: { id: true },
-  })
+      userId: context.mode === 'user' ? context.userId : null,
+  }
+  // Genuine guests remain welcome. Authenticated writers serialize with retirement;
+  // an expired/deleted account must never be silently reclassified as a guest.
+  const saved = context.mode === 'guest'
+    ? await prisma.caseStudyApplication.create({ data: application, select: { id: true } })
+    : await prisma.$transaction(async tx => {
+      if (!await lockRetirementUser(tx, context.userId)) return null
+      return tx.caseStudyApplication.create({ data: application, select: { id: true } })
+    })
+  if (!saved) return privateApiJson({ error: 'このアカウントでは申し込めません。ログイン状態をご確認ください。', code: 'ACCOUNT_UNAVAILABLE' }, { status: 409 })
 
   const title = '活用事例／ロゴ掲載キャンペーンのお申し込み'
   const lines = [
@@ -110,5 +129,5 @@ export async function POST(req: NextRequest) {
     }).catch(() => {})
   }
 
-  return NextResponse.json({ ok: true, id: saved.id })
+  return privateApiJson({ ok: true, id: saved.id })
 }

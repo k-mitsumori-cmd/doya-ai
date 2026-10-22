@@ -1,0 +1,17 @@
+{
+  "runId": 39459307710,
+  "jobId": 118754273220,
+  "requestedHead": "02f9a4eb30a9c334e3685ee59269d70d90573031",
+  "actualCheckout": "e4c1d61907e8a18d70f76b0a73b0be642de6e7ce",
+  "actualCheckoutSource": "GitHub job git log -1 --format=%H output",
+  "checkoutParents": [
+    "2b88ca32d3c187e754eb93daa20819d2171a2c39",
+    "02f9a4eb30a9c334e3685ee59269d70d90573031"
+  ],
+  "headTree": "3885fa0c0fd1bf2c66d9cf998a4fe6e078054e9a",
+  "checkoutTree": "3885fa0c0fd1bf2c66d9cf998a4fe6e078054e9a",
+  "sameTree": true,
+  "testedSourceBlobModePathCount": 5163,
+  "testedSourceBlobModePathsetSha256": "1911fa562884af739a2ea3f9fca61e5695032de9aa71c838d94deeb1d9e392a7",
+  "commitSourceMatchesSnapshot": true
+}

@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { createHash } = require('node:crypto')
 const { z } = require('zod')
-const { load, check } = require('./load-typescript.cjs')
+const { load, check } = require('./load-org-limit-fixture.cjs')
 
 const budget = load('src/lib/cunning/company-budget.ts', {
   'node:crypto': { createHash },
@@ -49,7 +49,7 @@ function database(initial) {
     let writes = 0
     let limited = true
     const api = load('src/app/api/cunning/company/analyze/route.ts', {
-      '@/lib/beta-service.server':{betaServiceDenied:async()=>null}, 'next/server': { NextResponse: Response },
+      '@/lib/beta-service.server':require('./beta-allow-fixture.cjs').forService('cunning'), 'next/server': { NextResponse: Response },
       '@/lib/prisma': { prisma: { cunningCompanyProfile: { create: async () => { writes++; return { id: 'profile' } } } } },
       '@/lib/cunning/access': { getUserId: async () => 'owner' },
       '@/lib/cunning/company-budget': {

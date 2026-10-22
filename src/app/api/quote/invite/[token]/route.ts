@@ -6,6 +6,8 @@ export const maxDuration = 60
 // POST /api/quote/invite/[token] — 招待を受ける（要ログイン）
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { withLifecycleOrganizationWrite } from '@/lib/account-lifecycle/organization-fence'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 import { resolveUserId } from '@/lib/quote/access'
 
 type Ctx = { params: Promise<{ token: string }> }
@@ -67,12 +69,16 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   if (m.createdAt.getTime() <= Date.now() - INVITE_TTL_MS) {
     return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
+  // A legacy bound invitation may never be reassigned by email alone.
+  if (m.userId !== null && m.userId !== userId) return NextResponse.json({ error: 'この招待のアカウント状態を確認できません', code: 'INVITE_UNAVAILABLE' }, { status: 409 })
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM quote_organizations WHERE id = ${m.organization.id} FOR UPDATE`
-      if (rows.length === 0) return 'unavailable' as const
+    const result = await withLifecycleOrganizationWrite(prisma, {
+      service: 'quote', organizationId: m.organization.id, actorUserId: userId, access: 'invitation',
+      targetMemberIds: [m.id], targetUserIds: [userId], targetEmails: [m.inviteEmail!.trim().toLowerCase()],
+      grantsAuthority: true, pendingClaimUserId: m.userId === null ? userId : null, repairsUnknownTargetRole: false,
+    }, async (tx) => {
       const invite = await tx.quoteMember.findUnique({ where: { id: m.id } })
-      if (!invite || invite.organizationId !== m.organization.id || invite.status !== 'PENDING' || invite.inviteToken !== p.token) return 'unavailable' as const
+      if (!invite || invite.organizationId !== m.organization.id || invite.status !== 'PENDING' || invite.inviteToken !== p.token || invite.userId !== m.userId || invite.role !== m.role || invite.inviteEmail !== m.inviteEmail) return 'unavailable' as const
       const now = new Date()
       if (invite.createdAt.getTime() <= now.getTime() - INVITE_TTL_MS) return 'expired' as const
       const account = await tx.user.findUnique({ where: { id: userId }, select: { email: true } })
@@ -81,12 +87,12 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
       const already = await tx.quoteMember.findFirst({ where: { organizationId: m.organization.id, userId, status: 'ACTIVE' }, select: { id: true } })
       if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
       if (already) {
-        await tx.quoteMember.deleteMany({ where: { id: invite.id, organizationId: m.organization.id, role: invite.role, inviteEmail: invite.inviteEmail, status: 'PENDING', inviteToken: p.token } })
+        await tx.quoteMember.deleteMany({ where: { id: invite.id, organizationId: m.organization.id, role: invite.role, inviteEmail: invite.inviteEmail, status: 'PENDING', inviteToken: p.token, userId: m.userId } })
         if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
         return 'already' as const
       }
       const claimed = await tx.quoteMember.updateMany({
-        where: { id: invite.id, organizationId: m.organization.id, role: invite.role, inviteEmail: invite.inviteEmail, status: 'PENDING', inviteToken: p.token, createdAt: { gt: new Date(Date.now() - INVITE_TTL_MS) } },
+        where: { id: invite.id, organizationId: m.organization.id, role: invite.role, inviteEmail: invite.inviteEmail, status: 'PENDING', inviteToken: p.token, userId: m.userId, createdAt: { gt: new Date(Date.now() - INVITE_TTL_MS) } },
         data: { userId, status: 'ACTIVE', acceptedAt: now, inviteToken: null },
       })
       if (Date.now() - invite.createdAt.getTime() >= INVITE_TTL_MS) throw new InvitationExpired()
@@ -98,6 +104,18 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     if (result === 'already') return NextResponse.json({ ok: true, alreadyMember: true })
     return NextResponse.json({ ok: true, organizationName: m.organization.name })
   } catch (error) {
+    if (error instanceof LifecycleError) {
+      if (error.code === 'LIFECYCLE_PENDING_CLAIM_UNAVAILABLE') {
+        const [currentInvite, currentAccount] = await Promise.all([
+          prisma.quoteMember.findUnique({ where: { id: m.id } }),
+          prisma.user.findUnique({ where: { id: userId }, select: { email: true } }),
+        ])
+        if (currentInvite?.status === 'PENDING' && currentInvite.organizationId === m.organization.id && currentInvite.role === m.role && currentInvite.userId === m.userId && currentInvite.inviteToken === p.token && currentInvite.inviteEmail && currentAccount && (!currentAccount.email || currentAccount.email.trim().toLowerCase() !== currentInvite.inviteEmail.trim().toLowerCase())) {
+          return NextResponse.json({ error: '招待先のメールアドレスでログインしてください' }, { status: 403 })
+        }
+      }
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+    }
     if (error instanceof InvitationExpired) return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
     return NextResponse.json({ error: '招待を承諾できませんでした。再読み込みしてください' }, { status: 409 })
   }

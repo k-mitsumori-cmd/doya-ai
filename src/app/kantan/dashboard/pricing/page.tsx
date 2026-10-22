@@ -168,7 +168,7 @@ export default function KantanPricingPage() {
       `}>
         {/* ロゴ */}
         <div className="p-5 flex items-center justify-between">
-          <Link href="/kantan" className="flex items-center gap-2">
+          <Link href="/kantan/dashboard/text" className="flex items-center gap-2">
             <span className="text-xl font-bold tracking-tight">カンタンマーケ</span>
           </Link>
           <button 
@@ -366,7 +366,7 @@ export default function KantanPricingPage() {
                       </div>
                     </div>
                     <Link 
-                      href="/auth/signin?service=kantan&callbackUrl=/kantan/dashboard"
+                      href={`/auth/signin?service=kantan&callbackUrl=${encodeURIComponent('/kantan/dashboard/pricing')}`}
                       className="w-full sm:w-auto text-center px-4 lg:px-6 py-2 lg:py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-sm font-bold rounded-lg lg:rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
                     >
                       無料でログイン

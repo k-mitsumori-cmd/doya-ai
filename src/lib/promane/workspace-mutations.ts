@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getUserPromaneLimits, countUserWorkspaces } from '@/lib/promane/limits';
 import { parsePromaneWorkspaceCreate, parsePromaneWorkspacePatch } from './workspace-input';
 import { runPromaneWorkspaceOnce, recoverPromaneWorkspaceOperation, promaneWorkspaceOperationId, isPromaneWorkspaceReceiptConflict, type PromaneWorkspaceOperationScope } from './workspace-operation';
+import { assertRetirementMembershipWritable, lockLifecycleUsers } from '@/lib/account-lifecycle/store';
 
 export class PromaneWorkspaceRequestError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) { super(message); }
@@ -22,8 +23,12 @@ function target(value: unknown): string {
   return value;
 }
 async function lockAccount(tx: Prisma.TransactionClient, userId: string) {
-  const users=await tx.$queryRaw<{id:string}[]>`SELECT id FROM "User" WHERE id=${userId} FOR UPDATE`;
-  if (users.length !== 1) throw new PromaneWorkspaceRequestError(401,'AUTH_REQUIRED','ログイン状態を確認してください');
+  try { await lockLifecycleUsers(tx,[userId]); }
+  catch (error) {
+    if (error && typeof error==='object' && 'code' in error && error.code==='LIFECYCLE_USER_UNAVAILABLE')
+      throw new PromaneWorkspaceRequestError(401,'AUTH_REQUIRED','ログイン状態を確認してください');
+    throw error;
+  }
 }
 async function lockManager(tx: Prisma.TransactionClient, userId: string, workspaceId: string) {
   const members=await tx.$queryRaw<{id:string}[]>`SELECT id FROM promane_members WHERE "workspaceId"=${workspaceId} AND "userId"=${userId} AND "isActive"=true AND role IN ('owner','admin') FOR UPDATE`;
@@ -48,6 +53,7 @@ export async function createPromaneWorkspaceOperation(userId: string, body: unkn
     await lockAccount(tx,userId);
     return runPromaneWorkspaceOnce(tx,{userId,mode:'create',workspaceId:null},operationId,input,
       id=>tx.promaneWorkspace.findFirst({where:{id,userId,members:{some:{userId,isActive:true,role:{in:['owner','admin','member','guest']}}}},select}),async()=>{
+        await assertRetirementMembershipWritable(tx,[userId]);
         const limits=await getUserPromaneLimits(userId,tx), current=await countUserWorkspaces(userId,tx);
         if (limits.maxWorkspaces>=0 && current>=limits.maxWorkspaces) {
           const upgrade=limits.tier==='FREE'||limits.tier==='LIGHT';
@@ -89,11 +95,14 @@ export async function recoverPromaneWorkspaceMutation(userId: string, body: unkn
   const scope: PromaneWorkspaceOperationScope=data.mode==='create'?{userId,mode:'create',workspaceId:null}:{userId,mode:'update',workspaceId:target(data.workspaceId)};
   return transaction(async tx=>{
     await lockAccount(tx,userId);
-    if (scope.mode==='update') {
-      const existing=await tx.promaneWorkspace.findUnique({where:{id:scope.workspaceId},select:{id:true}});
-      // Existing targets always require current manager authority. A deleted target may only expose this user's operation outcome.
-      if (existing) await lockManager(tx,userId,scope.workspaceId);
-    }
-    return recoverPromaneWorkspaceOperation(tx,scope,operationId,id=>tx.promaneWorkspace.findFirst({where:scope.mode==='create'?{id,userId,members:{some:{userId,isActive:true,role:{in:['owner','admin','member','guest']}}}}:{id:scope.workspaceId,AND:{id}},select}),data.cancelIfMissing as boolean);
+    return recoverPromaneWorkspaceOperation(tx,scope,operationId,id=>tx.promaneWorkspace.findFirst({where:scope.mode==='create'?{id,userId,members:{some:{userId,isActive:true,role:{in:['owner','admin','member','guest']}}}}:{id:scope.workspaceId,AND:{id}},select}),data.cancelIfMissing as boolean,
+      async()=>{
+        if (scope.mode==='update') {
+          const existing=await tx.promaneWorkspace.findUnique({where:{id:scope.workspaceId},select:{id:true}});
+          // Existing targets require current manager authority even for receipt replay. A deleted target only exposes this user's outcome.
+          if (existing) await lockManager(tx,userId,scope.workspaceId);
+        }
+      },
+      ()=>assertRetirementMembershipWritable(tx,[userId]));
   });
 }

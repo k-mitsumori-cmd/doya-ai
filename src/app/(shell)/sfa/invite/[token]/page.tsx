@@ -1,5 +1,6 @@
 'use client'
 
+import { useSession } from 'next-auth/react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useInvitationRecovery } from '@/lib/use-invitation-recovery'
@@ -7,7 +8,14 @@ import { useInvitationRecovery } from '@/lib/use-invitation-recovery'
 export default function SfaInvitePage() {
   const params = useParams<{ token: string }>()
   const token = String(params?.token || '')
-  return <InviteContent key={token} token={token} />
+  const { data: session, status } = useSession()
+  const actorId = status === 'authenticated' ? session?.user?.id : null
+  if (status === 'loading' || (status === 'authenticated' && !actorId)) {
+    return <p role="status" className="p-6 text-center text-sm">ログイン状態を確認しています…</p>
+  }
+  // A new actor must not adopt the previous account's lookup, acceptance or redirect.
+  const invitationScope = JSON.stringify([token, status, actorId])
+  return <InviteContent key={invitationScope} token={token} />
 }
 
 function InviteContent({ token }: { token: string }) {

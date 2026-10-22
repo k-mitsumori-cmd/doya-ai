@@ -20,13 +20,18 @@ async function seed(name,overrides){const m=Prisma.dmmf.datamodel.models.find(x=
 
 await seed('User',{id:'synthetic',email:'synthetic@example.invalid'});await seed('User',{id:'pending',email:'pending@example.invalid'});
 const workspace=await seed('PromaneWorkspace',{userId:'synthetic',name:'Synthetic Private Workspace',slug:'owned'}),project=await seed('PromaneProject',{workspaceId:workspace.id,name:'Synthetic Private Project'});
-const apiFile='src/app/api/promane/workspaces/route.ts',timeFile='src/lib/promane/timesheet-read.ts',pageFile='src/app/promane/page.tsx',authFile='src/lib/promane/auth.ts';
+const apiFile='src/app/api/promane/workspaces/route.ts',timeFile='src/lib/promane/timesheet-read.ts',pageFile='src/app/(shell)/promane/page.tsx',authFile='src/lib/promane/auth.ts';
 let session={user:{id:'synthetic',email:'synthetic@example.invalid'}};
-const common={'next-auth':{getServerSession:async()=>session},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db},'next/navigation':{redirect:url=>{throw Error('Unexpected redirect '+url)}},crypto};
+const lifecycleState=load('src/lib/account-lifecycle/state.ts',{'node:crypto':crypto});
+const lifecycleStore=load('src/lib/account-lifecycle/store.ts',{'node:crypto':crypto,'@prisma/client':{Prisma},'./state':lifecycleState});
+const operation=load('src/lib/promane/workspace-operation.ts',{'node:crypto':crypto});
+const common={'next-auth':{getServerSession:async()=>session},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db},'next/navigation':{redirect:url=>{throw Error('Unexpected redirect '+url)}},crypto,'@/lib/account-lifecycle/store':lifecycleStore,'./workspace-operation':operation};
 const api=load(apiFile,{...common,'next/server':{NextResponse:Response}}),times=load(timeFile,{'@prisma/client':{Prisma}}),auth=load(authFile,common);
 const React=require('react'),render=require('react-dom/server').renderToStaticMarkup,vm=require('node:vm'),ts=require('typescript');const component=({children})=>React.createElement('span',null,children);const exports={};
 const code=ts.transpileModule(fs.readFileSync(process.env.DOYA_TEST_BASELINE&&fs.existsSync(process.env.DOYA_TEST_BASELINE+'/'+pageFile)?process.env.DOYA_TEST_BASELINE+'/'+pageFile:pageFile,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
-const mocks={...common,'react/jsx-runtime':require('react/jsx-runtime'),'@/lib/promane/auth':auth,'./PromaneLp':{PromaneLp:component},'next/image':component,'next/link':component,'@/components/promane/ui/button':{Button:component},'@/components/promane/ui/badge':{Badge:component},'@/components/promane/create-workspace-button':{CreateWorkspaceButton:component}};
+const uiMode=load('src/lib/ui-next.ts',{}, {process:{env:{UI_NEXT_ROLLOUT:'all'}}});
+// This role/receipt fixture renders the entry page with synthetic UI leaves; sign-in callback behavior is outside its scope.
+const mocks={...common,'@/lib/ui-next':uiMode,'react/jsx-runtime':require('react/jsx-runtime'),'@/lib/promane/auth':auth,'./PromaneLp':{PromaneLp:component},'next/image':component,'next/link':component,'@/components/SignInReturnLink':{__esModule:true,default:component},'@/components/promane/ui/button':{Button:component},'@/components/promane/ui/badge':{Badge:component},'@/components/promane/create-workspace-button':{CreateWorkspaceButton:component}};
 vm.runInNewContext(code,{exports,require:n=>{if(n in mocks)return mocks[n];throw Error('Unmocked '+n)},Date,Buffer,console},{filename:pageFile});
 async function check(role,active=true,foreign=false){
  await db.promaneTimeEntry.deleteMany();await db.promaneTask.deleteMany();await db.promaneMember.deleteMany();const member=await seed('PromaneMember',{workspaceId:workspace.id,userId:foreign?'pending':'synthetic',role,isActive:active});const task=await seed('PromaneTask',{projectId:project.id,assigneeId:member.id,title:'Synthetic Private Task'});await seed('PromaneTimeEntry',{projectId:project.id,taskId:task.id,memberId:member.id,duration:37,date:new Date('2026-10-08T00:00:00Z'),note:'Synthetic Private Note'});
@@ -46,8 +51,8 @@ for(const role of ['admin','member','guest','owner','__UNRECOGNIZED__','','const
 }
 
 const mutationFile='src/lib/promane/workspace-mutations.ts', operationFile='src/lib/promane/workspace-operation.ts', inputFile='src/lib/promane/workspace-input.ts';
-const operation=load(operationFile,{'node:crypto':crypto});const input=load(inputFile);
-const mutation=load(mutationFile,{'node:crypto':crypto,'@/lib/prisma':{prisma:db},'@/lib/promane/limits':{getUserPromaneLimits:async()=>({maxWorkspaces:30,tier:'PRO'}),countUserWorkspaces:async()=>db.promaneWorkspace.count()},'./workspace-input':input,'./workspace-operation':operation});
+const input=load(inputFile);
+const mutation=load(mutationFile,{'node:crypto':crypto,'@/lib/prisma':{prisma:db},'@/lib/promane/limits':{getUserPromaneLimits:async()=>({maxWorkspaces:30,tier:'PRO'}),countUserWorkspaces:async()=>db.promaneWorkspace.count()},'./workspace-input':input,'./workspace-operation':operation,'@/lib/account-lifecycle/store':lifecycleStore});
 const operationId=crypto.randomUUID(),body={expectedUserId:'synthetic',operationId,name:'Synthetic Receipt Workspace'};
 const saved=await mutation.createPromaneWorkspaceOperation('synthetic',body);assert.equal(saved.state,'saved');const created=saved.entry.id;
 for(const role of ['owner','admin','member','guest','__UNRECOGNIZED__','','constructor','admin ']){
@@ -63,5 +68,5 @@ for(const change of [{isActive:false},{isActive:true,userId:'pending'}]){
 }
 assert.equal(cases.length,76);
 
-const files=[apiFile,timeFile,pageFile,authFile,inviteFile,mutationFile,operationFile,inputFile,base+'verify-promane-known-read-receipt-role-integrated-postgres.cjs','prisma/schema.prisma'];const hashes=paths=>Object.fromEntries(paths.map(p=>[p,crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')]));const report={checkedAt:new Date().toISOString(),passed:76,cases,observations,sourceHashes:hashes(files),candidateHashes:{},scope:'Actual workspaces API, timesheet reader and async entry-page function/React server render with actual private Prisma/Unix PostgreSQL scalar tables. Synthetic sessions/UI leaf components, no native browser/Next routing/customer/providers; unknown stored roles presence in production unproven.'};fs.writeFileSync(base+'promane-known-read-receipt-role-integrated-'+(candidate?'candidate':'baseline')+'-postgres-results.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({passed:76,candidate}));
+const files=[apiFile,timeFile,pageFile,authFile,inviteFile,mutationFile,operationFile,inputFile,'src/lib/ui-next.ts',base+'verify-promane-known-read-receipt-role-integrated-postgres.cjs','prisma/schema.prisma'];const hashes=paths=>Object.fromEntries(paths.map(p=>[p,crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')]));const report={checkedAt:new Date().toISOString(),passed:76,cases,observations,sourceHashes:hashes(files),candidateHashes:{},scope:'Actual workspaces API, timesheet reader and async entry-page function/React server render with actual private Prisma/Unix PostgreSQL scalar tables. Synthetic sessions/UI leaf components, no native browser/Next routing/customer/providers; unknown stored roles presence in production unproven.'};fs.writeFileSync(base+'promane-known-read-receipt-role-integrated-'+(candidate?'candidate':'baseline')+'-postgres-results.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({passed:76,candidate}));
 }finally{await db.$disconnect()}})().catch(e=>{console.error(e);process.exitCode=1});

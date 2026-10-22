@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { load } = require('./load-typescript.cjs')
+const { load } = require('./load-org-limit-fixture.cjs')
 
 async function main() {
   const ownerLookups = []
@@ -26,24 +26,28 @@ async function main() {
   let selectedSlug
   const api = load('src/app/api/organization-billing/[service]/route.ts', {
     'next/server': { NextResponse: Response },
+    'next-auth': { getServerSession: async () => ({ user: { id: role === 'owner' ? 'owner' : 'member' } }) },
+    '@/lib/auth': { authOptions: {} },
+    '@/lib/organization-workspace-selection': load('src/lib/organization-workspace-selection.ts'),
     '@/lib/quote/access': { getQuoteContext: async slug => { selectedSlug = slug; return slug === 'foreign' ? null : { organizationId: 'org', userId: role === 'owner' ? 'owner' : 'member', role } } },
     '@/lib/mensetsu/access': { getMensetsuContext: async slug => { selectedSlug = slug; return slug === 'foreign' ? null : { organizationId: 'org', userId: role === 'owner' ? 'owner' : 'member', role } } },
-    '@/lib/aishodan/access': { getAishodanContext: async slug => { selectedSlug = slug; return slug === 'foreign' ? null : { organizationId: 'org', userId: role === 'owner' ? 'owner' : 'member', role } } },
+    '@/lib/aishodan/access': { getAishodanContext: async slug => { selectedSlug = slug; return slug === 'foreign' ? null : { organizationId: 'org', organizationSlug: slug, userId: role === 'owner' ? 'owner' : 'member', role } } },
     '@/lib/organization-billing': { getOrganizationBilling: async () => ({ ownerUserId: 'owner', plan: 'PRO' }) },
   })
   for (const service of ['quote', 'mensetsu', 'aishodan']) {
     const params = { params: Promise.resolve({ service }) }
-    const result = await api.GET(new Request(`https://example.invalid/api/organization-billing/${service}?org=team`), params)
+    const req = slug => new Request(`https://example.invalid/api/organization-billing/${service}?org=${slug}`, service === 'aishodan' ? { headers: { 'x-doya-workspace-actor': role === 'owner' ? 'owner' : 'member' } } : {})
+    const result = await api.GET(req('team'), params)
     assert.equal(result.status, 200)
     assert.equal(result.headers.get('cache-control'), 'private, no-store')
     assert.equal(result.headers.get('vary'), 'Cookie')
     assert.equal(selectedSlug, 'team')
-    assert.deepEqual(await result.json(), { organizationId: 'org', plan: 'PRO', canManageBilling: false })
+    assert.deepEqual(await result.json(), { organizationId: 'org', ...(service === 'aishodan' ? { actorId: 'member', organizationSlug: 'team' } : {}), plan: 'PRO', canManageBilling: false })
     role = 'owner'
-    const ownerResult = await api.GET(new Request(`https://example.invalid/api/organization-billing/${service}?org=team`), params)
+    const ownerResult = await api.GET(req('team'), params)
     assert.equal((await ownerResult.json()).canManageBilling, true)
     role = 'member'
-    const foreign = await api.GET(new Request(`https://example.invalid/api/organization-billing/${service}?org=foreign`), params)
+    const foreign = await api.GET(req('foreign'), params)
     assert.equal(foreign.status, 403)
   }
 
@@ -76,9 +80,9 @@ async function main() {
     let quotaOwner
     let ownerLookupFails = false
     let quotaChecks = 0
-    const access = { getQuoteContext: async () => ({ organizationId: 'org', userId: actorRole === 'owner' ? 'owner' : 'member', role: actorRole }),
-      getMensetsuContext: async () => ({ organizationId: 'org', userId: actorRole === 'owner' ? 'owner' : 'member', role: actorRole }),
-      getAishodanContext: async () => ({ organizationId: 'org', userId: actorRole === 'owner' ? 'owner' : 'member', role: actorRole }), orgSlugFrom: () => undefined }
+    const access = { getQuoteContext: async () => ({ organizationId: 'org', organizationSlug: 'org', userId: actorRole === 'owner' ? 'owner' : 'member', role: actorRole }),
+      getMensetsuContext: async () => ({ organizationId: 'org', organizationSlug: 'org', userId: actorRole === 'owner' ? 'owner' : 'member', role: actorRole }),
+      getAishodanContext: async () => ({ organizationId: 'org', organizationSlug: 'org', userId: actorRole === 'owner' ? 'owner' : 'member', role: actorRole }), orgSlugFrom: () => undefined }
     const quota = { quoteDocuments: 3, mensetsuSessions: 3, mensetsuTemplates: 1, aishodanProducts: 1 }
     const route = load(file, {
       crypto: { randomBytes: () => Buffer.alloc(24) },
@@ -115,7 +119,7 @@ async function main() {
     const ownerResponse = await route.POST(req())
     assert.equal(ownerResponse.status, 402)
     const ownerBody = await ownerResponse.json()
-    assert.equal(ownerBody.upgradeUrl, `/${service}/pricing`)
+    assert.equal(ownerBody.upgradeUrl, `/${service}/pricing?org=org`)
     assert.equal(ownerBody.canManageBilling, true)
     ownerLookupFails = true
     const failed = await route.POST(req())

@@ -1,12 +1,15 @@
 const assert=require('node:assert/strict');const {load,check,results}=require('./load-typescript.cjs');
+const {routeUnitDeps,routeUnitGlobals,genericStart}=require('./checkout-route-unit-fixture.cjs');
+const TRIAL_USER_SELECT = load('src/lib/trial.ts', { '@/lib/stripe': { stripe: {} }, '@/lib/unified-plan': load('src/lib/unified-plan.ts') }).TRIAL_USER_SELECT;
 const sub=(id,status='active')=>({id,status,metadata:{userId:'u1',planId:'banner-pro'},items:{data:[{price:{id:'price'}}]}});
 function fixture({customers=1,subscriptions=1,fail='',repeat=false,emptyStored=false}={}){
  const calls=[];
  const list=async(kind,q)=>{calls.push({kind,...q});if(fail===kind&&q.starting_after)throw Error('synthetic unavailable');const count=kind==='customers'?customers:emptyStored&&q.customer==='stale'?0:subscriptions;const prefix=kind==='customers'?'c':'s'+q.customer+'-';const start=q.starting_after?Number(q.starting_after.slice(prefix.length))+1:0;const data=Array.from({length:Math.max(0,Math.min(100,count-start))},(_,i)=>{if(kind==='customers')return{id:prefix+(start+i),email:q.email};const item=sub(prefix+(start+i),start+i===count-1?'trialing':'canceled');if(q.customer==='foreign')item.metadata.userId='other';return item});if(repeat)return{data:kind==='customers'?[{id:'same',email:q.email}]:[sub('same')],has_more:true};return{data,has_more:start+data.length<count}};
  const stripe={customers:{list:q=>list('customers',q),retrieve:async id=>({id,email:id==='foreign'?'other@example.invalid':'x@example.invalid'})},subscriptions:{list:q=>list('subscriptions',q)},invoices:{list:async()=>({data:[],has_more:false})}};
- const module=load('src/lib/stripe.ts',{stripe:function(){return stripe},'node:crypto':require('node:crypto')});return{module,calls};
+ const module=load('src/lib/stripe.ts',{stripe:function(){return stripe},'node:crypto':require('node:crypto'),'./checkout-legacy-guard':load('src/lib/checkout-legacy-guard.ts')});return{module,calls};
 }
 (async()=>{
+await check('unused legacy Customer helper cannot search or create without lifecycle admission',async()=>{const f=fixture();let created=0;f.module.stripe.customers.create=async()=>{created++};await assert.rejects(f.module.getOrCreateCustomer({email:'x@example.invalid',userId:'u1'}),/UNGUARDED_CUSTOMER_CREATE_DISABLED/);assert.equal(f.calls.length,0);assert.equal(created,0)});
 for(const n of [0,1,100,101,205])await check('all '+n+' customers searched, no duplicate stored customer',async()=>{const f=fixture({customers:n});const rows=await f.module.findActiveLikeSubscriptions({userId:'u1',email:'x@example.invalid',stripeCustomerId:n?'c0':null});assert.equal(rows.length,n);assert.equal(f.calls.filter(c=>c.kind==='subscriptions').length,n)});
 for(const n of [0,1,100,101,205])await check('active contract after '+n+' subscription records',async()=>{const f=fixture({subscriptions:n});const rows=await f.module.findActiveLikeSubscriptions({userId:'u1',stripeCustomerId:'c0'});assert.equal(rows.length,n?1:0);if(n)assert.equal(rows[0].id,'sc0-'+(n-1))});
 await check('shared-account discovery ignores foreign active subscriptions',async()=>{
@@ -79,9 +82,10 @@ for(const routePath of ['portal','portal/redirect'])await check(routePath+' logi
 });
 await check('repeating cursor rejected instead of infinite loop',async()=>{const f=fixture({repeat:true});await assert.rejects(f.module.findActiveLikeSubscriptions({userId:'u1',email:'x@example.invalid'}));assert.equal(f.calls.length,2)});
 for(const outcome of ['failure','existing','none'])await check('checkout gate '+outcome,async()=>{
- const f=fixture();let created=0;const api=load('src/app/api/stripe/checkout/route.ts',{
-  '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{email:'x@example.invalid'}})},'@/lib/auth':{},'@/lib/prisma':{prisma:{user:{findUnique:async()=>({id:'user'})}}},'@/lib/unified-plan':{UNIFIED_TRIAL_DAYS:30},'@/lib/trial':{isTrialEligible:async()=>true},'@/lib/checkout-reservation':{CheckoutReservationError:class extends Error{},createReservedCheckoutSession:({create})=>create('test-key',1900000000)},'@/lib/stripe':{...f.module,findActiveLikeSubscriptions:async()=>{if(outcome==='failure')throw Error('offline');return outcome==='none'?[]:[{id:'s',status:'active'}]},createCheckoutSession:async()=>{created++;return{id:'session',url:'https://offline.invalid/checkout'}}}});
- const res=await api.POST(new Request('https://offline.invalid/api/stripe/checkout',{method:'POST',body:JSON.stringify({planId:'banner-pro'})}));assert.equal(res.status,outcome==='failure'?503:outcome==='none'?200:409);assert.equal(created,outcome==='none'?1:0);
+ const f=fixture();let created=0;const prisma={user:{findUnique:async()=>({id:'user',email:'x@example.invalid',stripeCustomerId:null,plan:'FREE',serviceSubscriptions:[]})}};const api=load('src/app/api/stripe/checkout/route.ts',{
+  ...routeUnitDeps({prisma,onStart:async()=>{created++;return{id:'cs_synthetic',url:'https://offline.invalid/checkout'}}}),
+  '@/lib/hr/organization-selection': load('src/lib/hr/organization-selection.ts'),'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{email:'x@example.invalid'}})},'@/lib/auth':{},'@/lib/prisma':{prisma},'@/lib/unified-plan':{UNIFIED_TRIAL_DAYS:30},'@/lib/trial':{isTrialEligible:async()=>true,TRIAL_USER_SELECT},'@/lib/stripe':{...f.module,STRIPE_PRICE_IDS:{...f.module.STRIPE_PRICE_IDS,banner:{pro:{monthly:'price_synthetic',yearly:'price_synthetic'}}},findActiveLikeSubscriptions:async()=>{if(outcome==='failure')throw Error('offline');return outcome==='none'?[]:[{id:'s',status:'active'}]}}},routeUnitGlobals);
+ const res=await api.POST(new Request('https://offline.invalid/api/stripe/checkout',{method:'POST',body:JSON.stringify(genericStart())}));assert.equal(res.status,outcome==='failure'?503:outcome==='none'?200:409);assert.equal(created,outcome==='none'?1:0);
 });
 console.log(JSON.stringify({passed:results.length,results},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { isPaidTier, tierFrom } from '@/lib/plan-utils'
+import { useAdminSubscriptionOperation } from '@/lib/admin-subscription-client'
 
 interface ServiceSubscription {
   id: string
@@ -76,6 +77,7 @@ const rowVariants = {
 
 export default function AdminUsersPage() {
   const router = useRouter()
+  const subscriptionOperation = useAdminSubscriptionOperation()
   const [users, setUsers] = useState<User[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [planFilter, setPlanFilter] = useState<string>('all')
@@ -299,6 +301,51 @@ export default function AdminUsersPage() {
   return (
     <div className="min-h-screen bg-[#0A0A0F] text-white p-6">
       <Toaster position="top-right" />
+      {subscriptionOperation.handle && (
+        <section className="max-w-7xl mx-auto mb-5 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4" aria-live="polite">
+          <p className="text-sm font-semibold text-amber-200">保存された課金操作があります</p>
+          <p className="text-xs text-white/70 mt-1">対象: {subscriptionOperation.handle.targetUserId} ／ 操作: {
+            subscriptionOperation.handle.intent === 'resume' ? '解約予約を取り消す' :
+            subscriptionOperation.handle.intent === 'period_end_cancel' ? '期間終了時にキャンセル' : '即時キャンセル'
+          } ／ 番号: {subscriptionOperation.handle.operationId}</p>
+          <p className="text-xs text-white/70 mt-1">状態: {subscriptionOperation.view?.phase ?? '未確認'}
+            {subscriptionOperation.view?.reason ? ` (${subscriptionOperation.view.reason})` : ''}</p>
+          {subscriptionOperation.error && <p className="text-xs text-red-300 mt-1">{subscriptionOperation.error}</p>}
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button type="button" disabled={subscriptionOperation.busy}
+              onClick={() => void subscriptionOperation.refreshPrincipal()}
+              className="px-3 py-1 rounded bg-white/15 disabled:opacity-50">管理者認証を再確認</button>
+            <button type="button" disabled={subscriptionOperation.busy || !subscriptionOperation.actorId}
+              onClick={() => void subscriptionOperation.act('status')}
+              className="px-3 py-1 rounded bg-white/15 disabled:opacity-50">保存状態を確認</button>
+            {subscriptionOperation.view?.canContinue && <button type="button" disabled={subscriptionOperation.busy}
+              onClick={() => void subscriptionOperation.act('continue')}
+              className="px-3 py-1 rounded bg-white/15 disabled:opacity-50">未送信操作を続ける</button>}
+            {subscriptionOperation.view?.actionPhase === 'dispatched' && <button type="button" disabled={subscriptionOperation.busy}
+              onClick={() => void subscriptionOperation.act('reconcile')}
+              className="px-3 py-1 rounded bg-white/15 disabled:opacity-50">送信結果を読取確認</button>}
+            {subscriptionOperation.view?.actionPhase === 'confirmed' && subscriptionOperation.view.phase !== 'completed' &&
+              <button type="button" disabled={subscriptionOperation.busy}
+                onClick={() => void subscriptionOperation.act('reconcile')}
+                className="px-3 py-1 rounded bg-white/15 disabled:opacity-50">保存済み結果を反映</button>}
+            {subscriptionOperation.view?.canAbort && <button type="button" disabled={subscriptionOperation.busy}
+              onClick={() => void subscriptionOperation.act('abort')}
+              className="px-3 py-1 rounded bg-white/15 disabled:opacity-50">未送信操作を中止</button>}
+            {(subscriptionOperation.view?.phase === 'completed' || subscriptionOperation.view?.phase === 'aborted') &&
+              <button type="button" disabled={subscriptionOperation.busy} onClick={() => void subscriptionOperation.clearTerminal()}
+                className="px-3 py-1 rounded bg-white/15 disabled:opacity-50">確認済み操作を閉じる</button>}
+            {subscriptionOperation.view?.phase === 'completed' &&
+              <button type="button" disabled={subscriptionOperation.busy} onClick={() => void fetchUsers()}
+                className="px-3 py-1 rounded bg-white/15 disabled:opacity-50">ユーザー情報を再読込</button>}
+          </div>
+        </section>
+      )}
+      {!subscriptionOperation.handle && subscriptionOperation.error &&
+        <div className="max-w-7xl mx-auto mb-4 text-sm text-red-300" role="alert">
+          <p>{subscriptionOperation.error}</p>
+          <button type="button" onClick={() => void subscriptionOperation.refreshPrincipal()}
+            className="mt-2 px-3 py-1 rounded bg-white/15 text-white">管理者認証を再確認</button>
+        </div>}
       
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -912,25 +959,8 @@ export default function AdminUsersPage() {
                     <div className="flex gap-2">
                       {editingUser.stripeInfo?.cancelAtPeriodEnd ? (
                         <button
-                          onClick={async () => {
-                            try {
-                              const res = await fetch('/api/admin/stripe', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: 'include',
-                                body: JSON.stringify({ userId: editingUser.id, action: 'resume' }),
-                              })
-                              if (res.ok) {
-                                toast.success('解約予約を取り消しました')
-                                await fetchUsers()
-                              } else {
-                                toast.error('操作に失敗しました')
-                              }
-                            } catch (e) {
-                              toast.error('エラーが発生しました')
-                            }
-                          }}
-                          disabled={isSaving}
+                          onClick={() => void subscriptionOperation.start(editingUser.id, 'resume')}
+                          disabled={isSaving || subscriptionOperation.busy || !subscriptionOperation.actorId || Boolean(subscriptionOperation.handle)}
                           className="flex-1 px-3 py-2 text-xs bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
                         >
                           解約予約を取り消す
@@ -939,24 +969,9 @@ export default function AdminUsersPage() {
                         <button
                           onClick={async () => {
                             if (!confirm('この期間の終了時にサブスクリプションをキャンセルしますか？')) return
-                            try {
-                              const res = await fetch('/api/admin/stripe', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: 'include',
-                                body: JSON.stringify({ userId: editingUser.id, action: 'cancel' }),
-                              })
-                              if (res.ok) {
-                                toast.success('キャンセル予約しました')
-                                await fetchUsers()
-                              } else {
-                                toast.error('キャンセルに失敗しました')
-                              }
-                            } catch (e) {
-                              toast.error('エラーが発生しました')
-                            }
+                            await subscriptionOperation.start(editingUser.id, 'period_end_cancel')
                           }}
-                          disabled={isSaving}
+                          disabled={isSaving || subscriptionOperation.busy || !subscriptionOperation.actorId || Boolean(subscriptionOperation.handle)}
                           className="flex-1 px-3 py-2 text-xs bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors disabled:opacity-50"
                         >
                           期間終了時にキャンセル
@@ -965,26 +980,9 @@ export default function AdminUsersPage() {
                       <button
                         onClick={async () => {
                           if (!confirm('即座にサブスクリプションをキャンセルしますか？この操作は取り消せません。')) return
-                          try {
-                            const res = await fetch('/api/admin/stripe', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              credentials: 'include',
-                              body: JSON.stringify({ userId: editingUser.id, action: 'cancel_immediately' }),
-                            })
-                            if (res.ok) {
-                              toast.success('サブスクリプションをキャンセルしました')
-                              await fetchUsers()
-                            } else {
-                              const body = await res.json().catch(() => ({}))
-                              toast.error(body?.error || 'キャンセルに失敗しました')
-                              if (body?.code === 'BILLING_SYNC_INCOMPLETE') await fetchUsers()
-                            }
-                          } catch (e) {
-                            toast.error('エラーが発生しました')
-                          }
+                          await subscriptionOperation.start(editingUser.id, 'immediate_cancel')
                         }}
-                        disabled={isSaving}
+                        disabled={isSaving || subscriptionOperation.busy || !subscriptionOperation.actorId || Boolean(subscriptionOperation.handle)}
                         className="flex-1 px-3 py-2 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors disabled:opacity-50"
                       >
                         即時キャンセル

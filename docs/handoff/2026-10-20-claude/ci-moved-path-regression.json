@@ -1,0 +1,68 @@
+{
+  "filesChanged": [
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-ack.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-lifecycle.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-kintai-schedule-consistency.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-kintai-schedule-preview.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-kintai-settings-revision-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-quote-document-revision-mounted.cjs",
+    "docs/audits/2026-10-06-all-services-recheck/verify-quote-document-unknown-resume-mounted.cjs"
+  ],
+  "results": [
+    {
+      "file": "verify-hr-employee-editor-ack.cjs",
+      "exitCode": 0,
+      "casesPassed": 4
+    },
+    {
+      "file": "verify-hr-employee-editor-lifecycle.cjs",
+      "exitCode": 0,
+      "casesPassed": 3
+    },
+    {
+      "file": "verify-hr-employee-editor-mounted.cjs",
+      "exitCode": 0,
+      "casesPassed": 4
+    },
+    {
+      "file": "verify-kintai-schedule-consistency.cjs",
+      "exitCode": 0,
+      "casesPassed": 6
+    },
+    {
+      "file": "verify-kintai-schedule-preview.cjs",
+      "exitCode": 0,
+      "casesPassed": 9
+    },
+    {
+      "file": "verify-kintai-settings-revision-mounted.cjs",
+      "exitCode": 0,
+      "casesPassed": 21
+    },
+    {
+      "file": "verify-quote-document-revision-mounted.cjs",
+      "exitCode": 0,
+      "casesPassed": 5
+    },
+    {
+      "file": "verify-quote-document-unknown-resume-mounted.cjs",
+      "exitCode": 0,
+      "casesPassed": 4
+    }
+  ],
+  "providerNetworkPermitted": false,
+  "status": "passed",
+  "totalCasesPassed": 56,
+  "harnessChanges": "Moved source paths; TSX resolution; actual display heading and shell-context imports. Existing assertions preserved.",
+  "sourceHashes": {
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-ack.cjs": "7e1a0249ee439d85f48ef41fa4775340fbb193fae31de0c4fc3b2c2a78f15d22",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-lifecycle.cjs": "3821e6457c1b0bd7ecdee7b927585d12cb13368acf0f321d2ce5d76a0b71a9d0",
+    "docs/audits/2026-10-06-all-services-recheck/verify-hr-employee-editor-mounted.cjs": "331bc0cd0ab970ab3e59ed33a673d74c6e238ab70612bbf00ba040dd1266abe0",
+    "docs/audits/2026-10-06-all-services-recheck/verify-kintai-schedule-consistency.cjs": "6f538cfe8bac19900b5306b3f2d8836beac37911560f78ddb78bc355445ebf67",
+    "docs/audits/2026-10-06-all-services-recheck/verify-kintai-schedule-preview.cjs": "5c2c140818d8798a189e4126f9faaf937de8e287a4ceff5e6eea43d120fc62a3",
+    "docs/audits/2026-10-06-all-services-recheck/verify-kintai-settings-revision-mounted.cjs": "bd85c6768bb78c8dd2eee43a0704e6e2eb6daa77daafdae575548145537588a5",
+    "docs/audits/2026-10-06-all-services-recheck/verify-quote-document-revision-mounted.cjs": "628d3a6e677b8e774e86d9d879a0a6e8b220586891d349ab8e75dec8f1eec02e",
+    "docs/audits/2026-10-06-all-services-recheck/verify-quote-document-unknown-resume-mounted.cjs": "58d3653ab4bd2b900fd9dffd84a8480c563d331d46fb59b4523311f3ae782457"
+  }
+}

@@ -500,7 +500,7 @@ ${inputValue}
       `}>
         {/* ロゴ */}
         <div className="p-5 flex items-center justify-between">
-          <Link href="/kantan" className="flex items-center gap-2">
+          <Link href="/kantan/dashboard/text" className="flex items-center gap-2">
             <span className="text-xl font-bold tracking-tight">カンタンマーケ</span>
           </Link>
           <button 
@@ -833,7 +833,7 @@ ${inputValue}
                     🆓 お試しモード：残り <strong className="text-blue-600">{guestRemainingCount}回</strong>
                   </p>
                 </div>
-                <Link href="/auth/signin?service=kantan&callbackUrl=/kantan/dashboard">
+                <Link href={`/auth/signin?service=kantan&callbackUrl=${encodeURIComponent('/kantan/dashboard/chat')}`}>
                   <button className="w-full sm:w-auto px-3 lg:px-4 py-1.5 lg:py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs lg:text-sm font-medium rounded-lg transition-colors">
                     ログインで10回/日に！
                   </button>

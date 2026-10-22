@@ -1,0 +1,9 @@
+{
+  "baseCommit": "66a60eee39f06fed34abdbcc24ab3468f3563eb7",
+  "baseTree": "94136a6289c6202d4612f1ce49a167c634792663",
+  "pinnedSources": {
+    "src/lib/promane/invite-admission.ts": "687b7136a3fbd28c90ca55c133d5795985b6be0ac9f968d3acac5ac01cd2b90a",
+    "src/app/api/promane/invite/route.ts": "616a2371db6cf8779f9bb04f5463a91e7ef580c2b724b7ddd48793f3bdbf6341",
+    "src/app/api/promane/invite/[token]/route.ts": "adfeec2afbdee352f378f03c69680be8ab1539a0e23a07333068c29a8a5e3da8"
+  }
+}

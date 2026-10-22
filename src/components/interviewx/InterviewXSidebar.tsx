@@ -2,7 +2,7 @@
 
 import React, { memo, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
   Send,
   LayoutDashboard,
@@ -10,12 +10,10 @@ import {
   LayoutTemplate,
   CreditCard,
   Zap,
-  Loader2,
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { markLogoutToastPending } from '@/components/LogoutToastListener'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
-import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { interviewxTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -45,13 +43,11 @@ function InterviewXSidebarImpl({
   forceExpanded,
 }: SidebarProps) {
   const pathname = usePathname()
-  const router = useRouter()
   const { data: session } = useSession()
   const { isCollapsed, showLabel, toggle } = useSidebarState({ controlledIsCollapsed, onToggle, forceExpanded, isMobile })
   const isLoggedIn = !!session?.user
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [isUpgrading, setIsUpgrading] = useState(false)
 
   const planLabel = useMemo(() => {
     const globalPlan = String((session?.user as any)?.plan || '').toUpperCase()
@@ -79,27 +75,6 @@ function InterviewXSidebarImpl({
     } finally {
       setIsLoggingOut(false)
       setIsLogoutDialogOpen(false)
-    }
-  }
-
-  const handleUpgrade = async (planId: string) => {
-    if (!isLoggedIn) {
-      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/interviewx')}`)
-      return
-    }
-    setIsUpgrading(true)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId, billingPeriod: 'monthly' }),
-      })
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
-    } catch (e) {
-      console.error('Checkout error:')
-    } finally {
-      setIsUpgrading(false)
     }
   }
 
@@ -137,21 +112,15 @@ function InterviewXSidebarImpl({
 
     return (
       <div className="mx-3 mb-2">
-        <button
-          onClick={() => handleUpgrade(nextPlanLabel === 'LIGHT' ? 'interviewx-light' : nextPlanLabel === 'PRO' ? 'interviewx-pro' : 'interviewx-enterprise')}
-          disabled={isUpgrading}
-          className="w-full flex items-center gap-2.5 p-2.5 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition-colors disabled:opacity-60"
-        >
+        <div role="status" className="w-full flex items-center gap-2.5 p-2.5 rounded-xl bg-white/10 border border-white/10">
           <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-            {isUpgrading ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Zap className="w-3.5 h-3.5 text-white" />}
+            <Zap className="w-3.5 h-3.5 text-white" />
           </div>
           <div className="flex-1 min-w-0 text-left">
-            <p className="text-[11px] font-black text-white">{nextPlanLabel}にアップグレード</p>
-            <p className="text-[9px] text-white/50 font-bold">
-              {nextPlanLabel === 'LIGHT' ? <>月額¥2,980<TrialInlineSuffix /></> : nextPlanLabel === 'PRO' ? <>月額¥9,980<TrialInlineSuffix /></> : <>月額¥49,800<TrialInlineSuffix /></>}
-            </p>
+            <p className="text-[11px] font-black text-white">新規のお申し込みは終了しました</p>
+            <p className="text-[9px] text-white/50 font-bold">現在のご契約はそのままご確認いただけます</p>
           </div>
-        </button>
+        </div>
       </div>
     )
   }

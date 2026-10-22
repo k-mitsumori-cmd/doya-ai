@@ -25,6 +25,6 @@ export async function betaServiceDenied(serviceId: string): Promise<NextResponse
   if (await canAccessBetaService(serviceId)) return null
   return NextResponse.json(
     { error: BETA_HIDDEN_MESSAGE, code: 'BETA_HIDDEN' },
-    { status: 403, headers: { 'Cache-Control': 'private, no-store' } },
+    { status: 403, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } },
   )
 }

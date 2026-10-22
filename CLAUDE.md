@@ -46,7 +46,7 @@ vercel ls doya-ai --scope=surisutas-projects
 | `reference/01-overview.md` | プロジェクト概要・ディレクトリ構成 |
 | `reference/02-architecture.md` | アーキテクチャ・データフロー |
 | `reference/03-api-reference.md` | 全APIエンドポイント一覧（150+） |
-| `reference/04-database.md` | Prismaスキーマ・テーブル設計（正本は `prisma/schema.prisma`＝103モデル） |
+| `reference/04-database.md` | Prismaスキーマ・テーブル設計（正本は `prisma/schema.prisma`。モデル数は変更時に再計測） |
 | `reference/05-auth-payments.md` | 認証・管理者認証・Stripe決済・アクセス制御 |
 | `reference/06-ui-patterns.md` | UIコンポーネント・デザインパターン |
 | `reference/07-dev-guide.md` | 開発パターン・デプロイ・トラブルシューティング |
@@ -62,7 +62,7 @@ vercel ls doya-ai --scope=surisutas-projects
 
 | カテゴリ | 技術 |
 |---------|------|
-| フレームワーク | Next.js 14 (App Router) + React 18 + TypeScript |
+| フレームワーク | Next.js 15 (App Router) + React 18 + TypeScript（正確なバージョンは package.json / package-lock.json） |
 | DB/ORM | Prisma 5.7+ + PostgreSQL (Supabase) |
 | 認証 | NextAuth.js (Google OAuth) |
 | CSS | Tailwind CSS |
@@ -181,7 +181,7 @@ project.analysis as Record<string, unknown>  // or as any
 ### DB テーブルプレフィックス
 - interview系: `@@map("interview_xxx")`
 - tenkai系: `@@map("tenkai_xxx")`
-- Prismaスキーマ: `prisma/schema.prisma`（103モデル）
+- Prismaスキーマ: `prisma/schema.prisma`（モデル数は変更時に再計測）
 - Prisma再生成: `npx prisma generate`（モデル追加後に必須）
 
 ---

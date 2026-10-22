@@ -11,7 +11,8 @@ import { getAioBilling } from '@/lib/aio/billing'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { AIO_FREE_PROMPT_LIMIT } from '@/lib/aio/types'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
-import { beginAioQuickStart, recoverAioQuickStart, finishAioQuickStart, failAioQuickStart, AioStartError } from '@/lib/aio/quick-start-operation'
+import { beginAioQuickStart, recoverAioQuickStart, finishAioQuickStart, failAioQuickStart, assertAioQuickStartGrantAllowed, AioStartError } from '@/lib/aio/quick-start-operation'
+import { LifecycleError } from '@/lib/account-lifecycle/state'
 import { suggestBrandSetup, deriveBrandFromUrl, normalizeUrl } from '@/lib/aio/suggest'
 
 const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
@@ -52,6 +53,7 @@ async function handle(req: NextRequest, method: 'GET' | 'POST' | 'DELETE') {
     const current = await recoverAioQuickStart(identity)
     if (current.state === 'cancelling') return response(await failAioQuickStart(worker))
     if (current.state !== 'pending') return response(current)
+    await assertAioQuickStartGrantAllowed(identity)
     const setup = await suggestBrandSetup({ brandName, url })
     const memberName = (session?.user?.name?.trim() || 'オーナー').slice(0, 80)
     const operation = await finishAioQuickStart(worker, async tx => {
@@ -74,6 +76,7 @@ async function handle(req: NextRequest, method: 'GET' | 'POST' | 'DELETE') {
       catch { console.error('[aio/quick-start] Failure acknowledgement unavailable') }
     }
     if (error instanceof OperationalBodyError) return NextResponse.json({ error: '入力形式またはサイズを確認してください' }, { status: error.status, headers })
+    if (error instanceof LifecycleError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status, headers })
     if (error instanceof AioStartError) return NextResponse.json({ error: '開始処理の保存状況を確認してください。', code: error.code }, { status: error.status, headers })
     console.error('[aio/quick-start]')
     return NextResponse.json({ error: '保存状況を確認できません。新しく開始せず、保存状況を確認してください。' }, { status: 500, headers })

@@ -1,0 +1,43 @@
+{
+  "status": "targeted_author_pass_full_service_integration_pending",
+  "inputSetSha256": "35e3c35116267feb512ee3b04e99eb415e3d12878b5bf3c3e49916f612e12fa0",
+  "actualShodanPg": {
+    "passed": 82,
+    "failed": 0,
+    "scope": "fixed PATCH/DELETE only, history matrix and lock order included",
+    "cleanup": "postgres-supervisor.json"
+  },
+  "r0Pg": {
+    "passed": 86,
+    "classification": "unconnected_core_contract",
+    "cleanup": "r0-regression-supervisor.json"
+  },
+  "legacyFixture": {
+    "passed": true,
+    "allOriginalAssertAstPreserved": true,
+    "beforeAssertNodes": 11,
+    "afterAssertNodes": 16,
+    "realWriterAndStore": true
+  },
+  "lint": {
+    "runtimeFiles": 3,
+    "passed": true
+  },
+  "syntax": {
+    "cjsFiles": 2,
+    "pythonAst": true,
+    "passed": true
+  },
+  "types": {
+    "passed": true,
+    "kind": "narrow nonincremental actual runtime3 plus current state/types; typed Prisma/access boundary declarations, not full-project typecheck",
+    "configSha256": "58c3f260e14f3469c9ffda613b8521b1dfcb15fdca5831132cad103e84d95c8e"
+  },
+  "boundaries": [
+    "No new live User/activation; historical PATCH allows role and model automatic updatedAt only, all remaining row fields and other rows/Users/receipts verified unchanged. DELETE exact target only.",
+    "Manual insertion of the same opaque User ID during an existing SERIALIZABLE snapshot is not globally serialized by this unit. Normal application User creation generates new CUID IDs; controlled reappearance after discovery/before admission triggers full replan and User-first lock.",
+    "Shodan invitation issue/acceptance/initial organization creation remain unconnected; global R2/R3 and unsafe2 remain open.",
+    "No new audit/last-owner/quota behavior added: existing route has no audit, owner mutation is forbidden.",
+    "No provider/production/notification/schema/package/runner/CI/Home changes."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "installedAdapterPackage": "1.0.7",
+  "installedRuntimeContract": "node_modules/@next-auth/prisma-adapter/dist/index.js:218 deleteUser returns p.user.delete({where:{id}})",
+  "installedTypeContract": "node_modules/@next-auth/prisma-adapter/dist/index.d.ts declares PrismaAdapter(...): Adapter",
+  "before": "docs/handoff/2026-10-20-finance-ask1/attempts/typecheck-failure/creation-adapter.ts",
+  "after": "src/lib/asklink/creation-adapter.ts",
+  "transpileSettings": "load-typescript.cjs CommonJS/ES2022/esModuleInterop:true",
+  "transpiledJavaScriptByteIdentical": true,
+  "jsSha256": "cbe095c6f3e21262aa40733c16963100a21309b0c5bb890772661c4079212ccd",
+  "beforeSourceSha256": "4ac534c70b2ea75d245ac93268fd37cfc250f5639fad111aaee7c0177992f8b0",
+  "afterSourceSha256": "4b02db22259cc4e8f333bb57244fb91caeb75794039aad54b80db2667ff65709",
+  "scope": "Type assertion only, returned nullable email is unchanged at runtime; no email filling, new exception, or void return."
+}

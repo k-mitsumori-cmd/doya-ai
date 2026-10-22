@@ -9,7 +9,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import OrgSwitcher, { clearSelectedOrg, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
+import OrgSwitcher, { type Membership } from '@/components/org/OrgSwitcher'
+import { useOrganizationWorkspace } from '@/components/org/OrganizationWorkspaceBoundary'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import AishodanLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
@@ -72,6 +73,8 @@ export default function AishodanTool() {
   // 新しい見た目（UI 品質 §5.1）: 全画面の高さ・読み込みを出さない（C-2）、ToolHero・StatTile・空状態の絵。
   // ページの見出しは h2（h1 は枠の ToolFrame）
   const uiNext = useUiNext()
+  const workspace = useOrganizationWorkspace()
+  const proof = workspace.scope.kind === 'ready' ? workspace.scope.proof : null
   const [loading, setLoading] = useState(true)
   const [org, setOrg] = useState<{ slug: string; name: string; role: string } | null>(null)
   const [orgName, setOrgName] = useState('')
@@ -102,6 +105,7 @@ export default function AishodanTool() {
   const [issuing, setIssuing] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [operationUnknown, setOperationUnknown] = useState(false)
   // 新しい見た目だけ: サーバーの文の代わりに出す「何が起きたか・どうすればよいか」（UI 品質 S-20）
   const [loadFailure, setLoadFailure] = useState<AishodanFailure | null>(null)
   const [actionFailure, setActionFailure] = useState<AishodanFailure | null>(null)
@@ -139,35 +143,23 @@ export default function AishodanTool() {
     setRoomCursor(null)
     setLoadingMore(null)
     try {
-      const r = await fetch('/api/aishodan/organizations')
-      if (r.status === 401) {
-        if (version === loadVersion.current) setNeedsLogin(true)
-        return
-      }
-      if (!r.ok) throw new AishodanHttpError('組織一覧を取得できませんでした', r.status)
-      let d = await r.json()
-      const memberships = Array.isArray(d.memberships) ? d.memberships : []
-      if (reconcileSelectedOrg('aishodan', memberships)) {
-        const scoped = await fetch(withOrg('aishodan', '/api/aishodan/organizations'))
-        if (!scoped.ok) throw new AishodanHttpError('選択中の組織を確認できませんでした', scoped.status)
-        const scopedData = await scoped.json()
-        if (scopedData?.current) d = scopedData
-        else clearSelectedOrg('aishodan')
-      }
+      if (!proof?.current()) return
+      const memberships: Membership[] = workspace.scope.kind === 'ready' ? workspace.scope.memberships : []
+      const d = { current: proof.organization }
       if (d.current) {
         const [pr, rr, sr, st] = await Promise.all([
           // fetchOrgJson と同じ動き。失敗したときに応答の状態（403・上限など）も分かる
-          fetchAishodanJson(withOrg('aishodan', '/api/aishodan/products')),
-          fetchAishodanJson(withOrg('aishodan', '/api/aishodan/rooms')),
-          fetchAishodanJson(withOrg('aishodan', '/api/aishodan/sessions')),
-          fetchAishodanJson<Stats>(withOrg('aishodan', '/api/aishodan/stats')),
+          fetchAishodanJson(proof.api('/api/aishodan/products')),
+          fetchAishodanJson(proof.api('/api/aishodan/rooms')),
+          fetchAishodanJson(proof.api('/api/aishodan/sessions')),
+          fetchAishodanJson<Stats>(proof.api('/api/aishodan/stats')),
         ])
         if (!Array.isArray(sr.sessions)) {
           throw new Error('組織のデータを確認できませんでした')
         }
         const productPage = parseAishodanPage<Product>(pr, 'products', 100)
         const roomPage = parseAishodanPage<Room>(rr, 'rooms', 100)
-        if (version !== loadVersion.current) return
+        if (version !== loadVersion.current || !proof.current()) return
         setOrg(d.current)
         setMemberships(memberships)
         setProducts(productPage.items)
@@ -178,30 +170,31 @@ export default function AishodanTool() {
         setRoomTotal(roomPage.total)
         setSessions(sr.sessions || [])
         setStats(st)
-      } else if (version === loadVersion.current) {
+      } else if (version === loadVersion.current && proof?.current()) {
         setMemberships(memberships)
       }
     } catch (e) {
-      if (version === loadVersion.current) {
+      if (version === loadVersion.current && proof?.current()) {
         // 新しい見た目では、画面にもトーストにも、サーバーの文ではなく状態に合わせた文を出す
         const failure = describeAishodanFailure(failureStatus(e), '商談のデータを読み込めませんでした。')
         setLoadFailure(failure)
         notifyError(setError, uiNext ? failure.what : e instanceof Error ? e.message : '読み込みに失敗しました')
       }
     } finally {
-      if (version === loadVersion.current) setLoading(false)
+      if (version === loadVersion.current && proof?.current()) setLoading(false)
     }
-  }, [uiNext])
+  }, [proof, workspace.scope, uiNext])
 
   async function loadMore(kind: 'products' | 'rooms') {
+    if (!proof?.current()) return
     const cursor = kind === 'products' ? productCursor : roomCursor
     if (!cursor || loadingMore) return
     const version = loadVersion.current
     setLoadingMore(kind)
     setError('')
     try {
-      const data = await fetchAishodanJson(withOrg('aishodan', `/api/aishodan/${kind}?cursor=${encodeURIComponent(cursor)}`))
-      if (version !== loadVersion.current) return
+      const data = await fetchAishodanJson(proof.api(`/api/aishodan/${kind}?cursor=${encodeURIComponent(cursor)}`))
+      if (version !== loadVersion.current || !proof.current()) return
       if (kind === 'products') {
         const page = parseAishodanPage<Product>(data, kind, 100)
         setProducts(appendAishodanPage(products, page, productTotal))
@@ -212,20 +205,36 @@ export default function AishodanTool() {
         setRoomCursor(page.nextCursor)
       }
     } catch (e) {
-      if (version === loadVersion.current) reportFailure(e, '続きを読み込めませんでした。', '続きを取得できませんでした')
+      if (version === loadVersion.current && proof?.current()) reportFailure(e, '続きを読み込めませんでした。', '続きを取得できませんでした')
     } finally {
-      if (version === loadVersion.current) setLoadingMore(null)
+      if (version === loadVersion.current && proof?.current()) setLoadingMore(null)
     }
   }
 
   useEffect(() => {
+    if (workspace.scope.kind === 'empty') { setOrg(null); setLoading(false); return }
     void load()
-  }, [load])
+    const versionRef = loadVersion
+    return () => { versionRef.current++ }
+  }, [load, workspace.scope.kind])
+
+  const operationProof = useRef(proof)
+  useEffect(() => {
+    if (operationProof.current === proof) return
+    operationProof.current = proof
+    if (!importing && !issuing && !deletingId) return
+    setImporting(false)
+    setIssuing(false)
+    setDeletingId('')
+    setOperationUnknown(true)
+    setError('直前の操作結果を確認できません。組織の内容を再読み込みして確認してください。')
+  }, [proof, importing, issuing, deletingId])
 
   async function createOrg() {
     if (!orgName.trim()) return
     setError('')
-    const r = await fetch(withOrg('aishodan', '/api/aishodan/organizations'), {
+    if (workspace.scope.kind !== 'empty') return
+    const r = await fetch('/api/aishodan/organizations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: orgName.trim() }),
@@ -236,31 +245,33 @@ export default function AishodanTool() {
       setError(message)
       return
     }
-    await load()
+    workspace.retry()
   }
 
   async function importProduct() {
-    if (!url.trim()) return
+    if (!url.trim() || !proof?.current()) return
     setImporting(true)
     setError('')
     setImportResult(null)
     setImportIssue(null)
     let upgradeUrl: string | undefined
     try {
-      const r = await fetch(withOrg('aishodan', '/api/aishodan/products'), {
+      const r = await fetch(proof.api('/api/aishodan/products'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim() }),
       })
       const d = await r.json()
+      if (!proof.current()) return
       if (!r.ok) {
-        if (r.status === 402 && d?.code === 'LIMIT_REACHED' && d?.upgradeUrl === '/aishodan/pricing') upgradeUrl = d.upgradeUrl
+        if (r.status === 402 && d?.code === 'LIMIT_REACHED' && d?.canManageBilling === true && proof.organization.role === 'owner' && d?.upgradeUrl === proof.href('/aishodan/pricing')) upgradeUrl = d.upgradeUrl
         throw new AishodanHttpError(d?.error || '取り込みに失敗しました', r.status, d?.code)
       }
       setImportResult(`「${d.product.name}」を取り込みました（${d.pageCount}ページ / ${d.chunkCount}件のナレッジ）`)
       setUrl('')
       await load()
     } catch (e) {
+      if (!proof.current()) return
       const message = e instanceof Error ? e.message : '取り込みに失敗しました'
       // 新しい見た目では、サーバーの文ではなく「何が起きたか・どうすればよいか」を出す（上限なら料金プランへ）
       const failure = uiNext
@@ -269,26 +280,28 @@ export default function AishodanTool() {
       setImportIssue({ message, upgradeUrl, failure })
       notifyError(setError, failure ? failure.what : message)
     } finally {
-      setImporting(false)
+      if (proof.current()) setImporting(false)
     }
   }
 
   async function issueRoom(scenarioId: string) {
+    if (!proof?.current()) return
     setIssuing(true)
     setError('')
     try {
-      const r = await fetch(withOrg('aishodan', '/api/aishodan/rooms'), {
+      const r = await fetch(proof.api('/api/aishodan/rooms'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenarioId }),
       })
       const d = await r.json()
+      if (!proof.current()) return
       if (!r.ok) throw new AishodanHttpError(d?.error || 'ルームを発行できませんでした', r.status, d?.code)
       await load()
     } catch (e) {
-      reportFailure(e, '商談URLを発行できませんでした。', 'ルームを発行できませんでした')
+      if (proof.current()) reportFailure(e, '商談URLを発行できませんでした。', 'ルームを発行できませんでした')
     } finally {
-      setIssuing(false)
+      if (proof.current()) setIssuing(false)
     }
   }
 
@@ -303,22 +316,23 @@ export default function AishodanTool() {
     ]
       .filter(Boolean)
       .join('\n')
-    if (!window.confirm(warn)) return
+    if (!proof?.current() || !window.confirm(warn)) return
 
     setDeletingId(prod.id)
     setError('')
     try {
-      const r = await fetch(withOrg('aishodan', `/api/aishodan/products/${prod.id}`), {
+      const r = await fetch(proof.api(`/api/aishodan/products/${prod.id}`), {
         method: 'DELETE',
       })
       const d = await r.json().catch(() => ({}))
+      if (!proof.current()) return
       if (!r.ok) throw new AishodanHttpError(d?.error || '削除できませんでした', r.status, d?.code)
       await load()
       setImportResult(d.archived ? `「${prod.name}」を保管しました。商談記録は残り、商談URLの公開は停止しました。` : `「${prod.name}」を削除しました。`)
     } catch (e) {
-      reportFailure(e, '商材を削除・保管できませんでした。', '削除できませんでした')
+      if (proof.current()) reportFailure(e, '商材を削除・保管できませんでした。', '削除できませんでした')
     } finally {
-      setDeletingId('')
+      if (proof.current()) setDeletingId('')
     }
   }
 
@@ -344,31 +358,33 @@ export default function AishodanTool() {
     ]
       .filter(Boolean)
       .join('\n')
-    if (!window.confirm(warn)) return
+    if (!proof?.current() || !window.confirm(warn)) return
 
     setDeletingId(room.id)
     setError('')
     try {
-      const r = await fetch(withOrg('aishodan', `/api/aishodan/rooms/${room.id}`), {
+      const r = await fetch(proof.api(`/api/aishodan/rooms/${room.id}`), {
         method: 'DELETE',
       })
       const d = await r.json().catch(() => ({}))
+      if (!proof.current()) return
       if (!r.ok) throw new AishodanHttpError(d?.error || '削除できませんでした', r.status, d?.code)
       await load()
     } catch (e) {
-      reportFailure(e, '商談URLを削除できませんでした。', '削除できませんでした')
+      if (proof.current()) reportFailure(e, '商談URLを削除できませんでした。', '削除できませんでした')
     } finally {
-      setDeletingId('')
+      if (proof.current()) setDeletingId('')
     }
   }
 
   async function toggleRoom(room: Room) {
-    await fetch(withOrg('aishodan', `/api/aishodan/rooms/${room.id}`), {
+    if (!proof?.current()) return
+    await fetch(proof.api(`/api/aishodan/rooms/${room.id}`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive: !room.isActive }),
     })
-    await load()
+    if (proof.current()) await load()
   }
 
   /**
@@ -425,6 +441,7 @@ export default function AishodanTool() {
           failure={loadFailure ?? describeAishodanFailure(0, '商談のデータを読み込めませんでした。')}
           onRetry={() => void load()}
           retryLabel="もう一度読み込む"
+          returnHref={proof?.current() ? proof.href('/aishodan') : '/aishodan'}
         />
       </div>
     )
@@ -470,6 +487,8 @@ export default function AishodanTool() {
     )
   }
 
+  if (!proof?.current()) return null
+
   return (
     <div className={uiNext ? 'pb-12' : 'min-h-screen bg-slate-50 pb-24'}>
       {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
@@ -509,7 +528,7 @@ export default function AishodanTool() {
               service="aishodan"
               memberships={memberships}
               currentSlug={org.slug}
-              onChange={() => void load()}
+              onChange={workspace.switchTo}
             />
             {/* ⚠️ 「練習モード」「商談ログ」はサイドバーにある。ここに同じ導線を
                  並べると同じ場所へ行くボタンが2つになるので置かないこと。
@@ -522,15 +541,19 @@ export default function AishodanTool() {
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
         {/* 新しい見た目: サーバーの文ではなく「何が起きたか・どうすればよいか」（商材の取り込みの失敗は、取り込み欄の下に出す） */}
         {uiNext ? (
-          actionFailure && <AishodanFailureNotice failure={actionFailure} />
+          actionFailure && <AishodanFailureNotice failure={actionFailure} returnHref={proof.href('/aishodan')} />
         ) : (
           error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>
         )}
+        {operationUnknown && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          直前の操作結果を確認できません。後から完了する場合があります。最新の組織内容を確認してから、次の操作を選んでください。
+          <button type="button" onClick={() => void load()} className="ml-2 font-bold text-blue-700 underline">最新の組織内容を読み込む</button>
+        </div>}
 
         {/* 指標 */}
         {uiNext && stats && stats.total > 0 && (
           <Stagger as="section" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StaggerItem index={0}><StatTile label="保存期間内の商談数" value={stats.total} unit="件" icon="MessagesSquare" href="/aishodan/sessions" /></StaggerItem>
+            <StaggerItem index={0}><StatTile label="保存期間内の商談数" value={stats.total} unit="件" icon="MessagesSquare" href={proof.href('/aishodan/sessions')} /></StaggerItem>
             <StaggerItem index={1}><StatTile label="完了率" value={stats.completionRate} unit="%" icon="CheckSquare" /></StaggerItem>
             <StaggerItem index={2}><StatTile label="平均所要" value={stats.avgMin} unit="分" icon="Timer" /></StaggerItem>
             <StaggerItem index={3}><StatTile label="日程調整" value={stats.scheduled} unit="件" icon="CalendarDays" sub={`調整率 ${stats.schedulingRate}%`} /></StaggerItem>
@@ -574,7 +597,7 @@ export default function AishodanTool() {
           </div>
           {importIssue?.failure && uiNext ? (
             <div id="aishodan-import-issue" className="mt-3">
-              <AishodanFailureNotice failure={importIssue.failure} />
+              <AishodanFailureNotice failure={importIssue.failure} returnHref={proof.href('/aishodan')} pricingHref={importIssue.upgradeUrl} />
             </div>
           ) : importIssue && (
             <div role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
@@ -601,13 +624,13 @@ export default function AishodanTool() {
                     {p.scenarios[0] && (
                       <>
                         <Link
-                          href={`/aishodan/scenarios/${p.scenarios[0].id}`}
+                          href={proof.href(`/aishodan/scenarios/${p.scenarios[0].id}`)}
                           className={`rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold${uiNext ? ` inline-flex items-center whitespace-nowrap${tap}` : ''}`}
                         >
                           シナリオを編集
                         </Link>
                         <Link
-                          href="/aishodan/preview"
+                          href={proof.href('/aishodan/preview')}
                           className={`rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold${uiNext ? ` inline-flex items-center whitespace-nowrap${tap}` : ''}`}
                         >
                           練習する
@@ -728,7 +751,7 @@ export default function AishodanTool() {
         <section className={`rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 ${uiNext ? 'p-4 sm:p-6' : 'p-6'}`}>
           <div className={uiNext ? 'flex items-center justify-between gap-3' : 'flex items-baseline justify-between'}>
             <h2 className="text-base font-bold text-slate-900">直近の商談</h2>
-            <Link href="/aishodan/sessions" className={`text-xs text-[#0066ff] hover:underline font-semibold${uiNext ? ` inline-flex items-center whitespace-nowrap rounded-lg px-2${tap}` : ''}`}>
+            <Link href={proof.href('/aishodan/sessions')} className={`text-xs text-[#0066ff] hover:underline font-semibold${uiNext ? ` inline-flex items-center whitespace-nowrap rounded-lg px-2${tap}` : ''}`}>
               すべて見る
             </Link>
           </div>
@@ -741,14 +764,14 @@ export default function AishodanTool() {
               art="/aishodan/empty-sessions.webp"
               action={products.length === 0
                 ? <Button onClick={() => document.getElementById('aishodan-import-url')?.focus()} icon="Plus">商材を取り込む</Button>
-                : <Button href="/aishodan/preview" variant="secondary" icon="Mic">練習モードで試す</Button>}
+                : <Button href={proof.href('/aishodan/preview')} variant="secondary" icon="Mic">練習モードで試す</Button>}
             />
           ) : sessions.length === 0 ? (
             <p className="mt-3 text-sm text-slate-500 font-semibold">まだ商談はありません。</p>
           ) : (
             <div className="mt-4 divide-y divide-slate-100">
               {sessions.slice(0, 8).map((s) => (
-                <Link key={s.id} href={`/aishodan/sessions/${s.id}`} className={`flex items-center justify-between gap-3 py-3 hover:bg-slate-50${uiNext ? ` rounded-lg px-1${tap}` : ''}`}>
+                <Link key={s.id} href={proof.href(`/aishodan/sessions/${s.id}`)}>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-900">
                       {s.guestCompany || '会社名未取得'} {s.guestName ? `／ ${s.guestName}` : ''}

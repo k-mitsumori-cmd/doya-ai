@@ -1,0 +1,53 @@
+{
+  "results": [
+    {
+      "name": "verify-team-invite-delivery",
+      "file": "scripts/security-regression/verify-team-invite-delivery.cjs",
+      "beforeAssertNodes": 20,
+      "afterAssertNodes": 27,
+      "allPriorAssertAstPreserved": true,
+      "sourceSha256": "6645228ae648aa148d7ff2529395c82cb780e938b0d58c5bf8f6012443cf22e0"
+    },
+    {
+      "name": "verify-onboarding-atomic",
+      "file": "scripts/security-regression/verify-onboarding-atomic.cjs",
+      "beforeAssertNodes": 29,
+      "afterAssertNodes": 29,
+      "allPriorAssertAstPreserved": true,
+      "sourceSha256": "83d82f57468a94aab96117896f9404da598161d285e7cf78a7801abbc83e8fe1"
+    },
+    {
+      "name": "verify-team-invite-deadlines",
+      "file": "scripts/security-regression/verify-team-invite-deadlines.cjs",
+      "beforeAssertNodes": 35,
+      "afterAssertNodes": 35,
+      "allPriorAssertAstPreserved": true,
+      "sourceSha256": "f7029dafcea6c20e1852dfc5e4387d8e18d9b3cfcc175845c6832c1932bd3e7c"
+    },
+    {
+      "name": "verify-org-team-contracts",
+      "file": "scripts/security-regression/verify-org-team-contracts.cjs",
+      "beforeAssertNodes": 18,
+      "afterAssertNodes": 18,
+      "allPriorAssertAstPreserved": true,
+      "sourceSha256": "10759a5ab5482271f24eb39e8755cffb47308821907883752753d799e8a46c0a"
+    },
+    {
+      "name": "verify-membership-invitation-roles",
+      "file": "scripts/security-regression/verify-membership-invitation-roles.cjs",
+      "beforeAssertNodes": 3,
+      "afterAssertNodes": 3,
+      "allPriorAssertAstPreserved": true,
+      "sourceSha256": "a8512b14a005e220328677371d3825e2207848981d2ae739d338cb047367f457"
+    },
+    {
+      "name": "verify-team-invite-integrity",
+      "file": "scripts/security-regression/verify-team-invite-integrity.cjs",
+      "beforeAssertNodes": 30,
+      "afterAssertNodes": 30,
+      "allPriorAssertAstPreserved": true,
+      "sourceSha256": "0b68487aff77448358ccfb79815c7948b0d330268b87831254c08b8d93b633c7"
+    }
+  ],
+  "pendingSyntheticDataCorrection": "Only Shodan intended normal unbound PENDING fixture userId pending marker corrected to null; actual PG retains dangling refusal plus registered same-User bound success."
+}

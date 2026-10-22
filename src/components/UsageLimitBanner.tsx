@@ -1,5 +1,6 @@
 'use client'
 
+import SignInReturnLink from '@/components/SignInReturnLink'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useSession } from 'next-auth/react'
@@ -75,13 +76,12 @@ export function UsageLimitBanner() {
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Link
-              href="/auth/signin"
+            <SignInReturnLink fallback="/home"
               className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors flex-1 sm:flex-none justify-center"
             >
               <UserPlus className="w-4 h-4" />
               無料で登録
-            </Link>
+            </SignInReturnLink>
             <button
               onClick={() => setDismissed(true)}
               className="p-1.5 text-amber-400 hover:text-amber-600 transition-colors"
@@ -186,13 +186,12 @@ export function UsageLimitModal({
 
         {tier === 'guest' ? (
           <div className="space-y-3">
-            <Link
-              href="/auth/signin"
+            <SignInReturnLink fallback="/home"
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary-500 to-accent-500 text-white font-medium rounded-xl hover:opacity-90 transition-opacity"
             >
               <UserPlus className="w-5 h-5" />
               無料で登録する（月15回）
-            </Link>
+            </SignInReturnLink>
             <button
               onClick={onClose}
               className="w-full px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"

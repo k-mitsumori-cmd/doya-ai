@@ -1,106 +1,81 @@
+import { getServerSession } from 'next-auth'
+import type { NextRequest } from 'next/server'
+import { authOptions } from '@/lib/auth'
+import { validLifecycleUser, LifecycleError } from '@/lib/account-lifecycle/state'
+import { parseHrOrganizationSelection } from '@/lib/hr/organization-selection'
+import { privateApiJson } from '@/lib/private-api-response'
+import { cancelOwnerTransfer, ownerTransferCandidates, ownerTransferStatus, transferOwner } from '@/lib/hr/owner-transfer/store'
+import { exactObject, validOwnerTransferId, OwnerTransferError, type OwnerTransferIdentity, type OwnerTransferInput } from '@/lib/hr/owner-transfer/types'
+
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { getHrContext } from '@/lib/hr/access'
-import { HrMemberRole } from '@/lib/hr/types'
-import { logAudit } from '@/lib/hr/audit'
-
-class TransferConflict extends Error {}
-
-// POST /api/hr/organization/transfer-owner
-// オーナー権限を別メンバーに譲渡する
-export async function POST(req: NextRequest) {
-  try {
-    const ctx = await getHrContext()
-    if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // OWNERのみ実行可能
-    if (ctx.role !== HrMemberRole.OWNER) {
-      return NextResponse.json(
-        { error: 'オーナーのみがオーナー権限を譲渡できます' },
-        { status: 403 }
-      )
-    }
-
-    const body = await req.json()
-    const { targetMemberId } = body
-
-    if (!targetMemberId || typeof targetMemberId !== 'string') {
-      return NextResponse.json({ error: 'targetMemberId is required' }, { status: 400 })
-    }
-
-    if (targetMemberId === ctx.memberId) {
-      return NextResponse.json(
-        { error: '自分自身にオーナーを譲渡することはできません' },
-        { status: 400 }
-      )
-    }
-
-    // 同じ組織への譲渡を直列化し、ロック後の権限と在籍状態を再確認する。
-    const targetMember = await prisma.$transaction(async (tx) => {
-      const organizations = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${ctx.organizationId} FOR UPDATE`
-      if (organizations.length === 0) throw new TransferConflict('組織が見つかりません')
-
-      const owners = await tx.hrOrganizationMember.findMany({
-        where: { organizationId: ctx.organizationId, role: HrMemberRole.OWNER, status: 'ACTIVE' },
-        select: { id: true },
-        take: 2,
-      })
-      if (owners.length !== 1 || owners[0].id !== ctx.memberId) {
-        throw new TransferConflict('オーナー権限が変更されました。再読み込みしてください')
-      }
-
-      const target = await tx.hrOrganizationMember.findFirst({
-        where: { id: targetMemberId, organizationId: ctx.organizationId, status: 'ACTIVE', role: { not: HrMemberRole.OWNER } },
-        include: { user: { select: { name: true, email: true } } },
-      })
-      if (!target) throw new TransferConflict('譲渡先の状態が変わりました。再読み込みしてください')
-
-      const promoted = await tx.hrOrganizationMember.updateMany({
-        where: { id: targetMemberId, organizationId: ctx.organizationId, status: 'ACTIVE', role: { not: HrMemberRole.OWNER } },
-        data: { role: HrMemberRole.OWNER },
-      })
-      if (promoted.count !== 1) throw new TransferConflict('譲渡先の状態が変わりました。再読み込みしてください')
-      const demoted = await tx.hrOrganizationMember.updateMany({
-        where: { id: ctx.memberId, organizationId: ctx.organizationId, status: 'ACTIVE', role: HrMemberRole.OWNER },
-        data: { role: HrMemberRole.ADMIN },
-      })
-      if (demoted.count !== 1) throw new TransferConflict('オーナー権限が変更されました。再読み込みしてください')
-      return target
-    })
-
-    // 監査ログ
-    logAudit({
-      organizationId: ctx.organizationId,
-      userId: ctx.userId,
-      action: 'TRANSFER_OWNER',
-      target: 'organization',
-      targetId: ctx.organizationId,
-      details: {
-        fromUserId: ctx.userId,
-        toUserId: targetMember.userId,
-        toMemberId: targetMemberId,
-        toUserName: targetMember.user?.name,
-      },
-    }).catch(() => {})
-
-    return NextResponse.json({
-      success: true,
-      message: `オーナー権限を ${targetMember.user?.name || targetMember.user?.email || targetMemberId} に譲渡しました`,
-    })
-  } catch (e: any) {
-    if (e instanceof TransferConflict) {
-      return NextResponse.json({ error: 'オーナー権限または譲渡先の状態が変わりました。再読み込みしてください' }, { status: 409 })
-    }
-    console.error('[hr/organization/transfer-owner] unexpected error')
-    return NextResponse.json(
-      { error: 'Failed to transfer ownership' },
-      { status: 500 }
-    )
+type Context = { actorId: string; service: 'hr'; organizationId: string; operationId: string }
+function respondError(error: unknown, context?: Context) {
+  if (error instanceof OwnerTransferError || error instanceof LifecycleError) {
+    return privateApiJson({ code: error.code, error: error.message, ...context }, { status: error.status })
   }
+  console.error('[hr/owner-transfer] operation unavailable')
+  return privateApiJson({ code: 'OWNER_TRANSFER_UNAVAILABLE', error: '引継ぎ状況を確認できません。' }, { status: 503 })
+}
+async function principal(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  const actor = (session?.user as { id?: unknown } | undefined)?.id
+  if (!validLifecycleUser(actor)) throw new OwnerTransferError('OWNER_TRANSFER_AUTH_REQUIRED', 401)
+  const selection = parseHrOrganizationSelection(request.headers, actor)
+  if (selection.kind !== 'selected' || !validOwnerTransferId(selection.organizationId)) {
+    throw new OwnerTransferError('OWNER_TRANSFER_ORG_SELECTION_REQUIRED', 403)
+  }
+  return { actor, organizationId: selection.organizationId }
+}
+function field(value: unknown, name: string) {
+  if (!validOwnerTransferId(value)) throw new OwnerTransferError(`INVALID_${name.toUpperCase()}`, 400)
+  return value
+}
+function identity(actor: string, organizationId: string, operationId: string): OwnerTransferIdentity {
+  return { service: 'hr', actorUserId: actor, organizationId, operationId }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { actor, organizationId } = await principal(request)
+    const query = new URL(request.url).searchParams
+    if (query.get('expectedActor') !== actor) throw new OwnerTransferError('OWNER_TRANSFER_ACTOR_CHANGED')
+    if (query.get('orgId') !== organizationId) throw new OwnerTransferError('OWNER_TRANSFER_ORG_SELECTION_CHANGED')
+    if (query.get('action') === 'candidates') {
+      if (!['action,expectedActor,orgId', 'action,cursor,expectedActor,orgId'].includes([...query.keys()].sort().join(','))) throw new OwnerTransferError('INVALID_OWNER_TRANSFER_QUERY', 400)
+      const cursor = query.has('cursor') ? field(query.get('cursor'), 'cursor') : undefined
+      return privateApiJson(await ownerTransferCandidates('hr', organizationId, actor, cursor))
+    }
+    if (query.get('action') === 'status') {
+      if ([...query.keys()].sort().join(',') !== 'action,expectedActor,operationId,orgId') throw new OwnerTransferError('INVALID_OWNER_TRANSFER_QUERY', 400)
+      return privateApiJson(await ownerTransferStatus(identity(actor, organizationId, field(query.get('operationId'), 'operationId'))))
+    }
+    throw new OwnerTransferError('INVALID_OWNER_TRANSFER_ACTION', 400)
+  } catch (error) { return respondError(error) }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { actor, organizationId } = await principal(request)
+    const raw = await request.text()
+    if (Buffer.byteLength(raw) > 4096) throw new OwnerTransferError('INVALID_OWNER_TRANSFER_BODY', 400)
+    let body: unknown
+    try { body = JSON.parse(raw) } catch { throw new OwnerTransferError('INVALID_OWNER_TRANSFER_BODY', 400) }
+    if (exactObject(body, 'action,expectedActor,orgId,operationId') && body.action === 'cancel') {
+      if (body.expectedActor !== actor) throw new OwnerTransferError('OWNER_TRANSFER_ACTOR_CHANGED')
+      if (body.orgId !== organizationId) throw new OwnerTransferError('OWNER_TRANSFER_ORG_SELECTION_CHANGED')
+      const operation = identity(actor, organizationId, field(body.operationId, 'operationId'))
+      return privateApiJson(await cancelOwnerTransfer(operation))
+    }
+    if (exactObject(body, 'action,expectedActor,orgId,operationId,input') && body.action === 'transfer') {
+      if (body.expectedActor !== actor) throw new OwnerTransferError('OWNER_TRANSFER_ACTOR_CHANGED')
+      if (body.orgId !== organizationId) throw new OwnerTransferError('OWNER_TRANSFER_ORG_SELECTION_CHANGED')
+      const operation = identity(actor, organizationId, field(body.operationId, 'operationId'))
+      try { return privateApiJson(await transferOwner(operation, body.input as OwnerTransferInput)) }
+      catch (error) { return respondError(error, { actorId: actor, service: 'hr', organizationId, operationId: operation.operationId }) }
+    }
+    throw new OwnerTransferError('INVALID_OWNER_TRANSFER_BODY', 400)
+  } catch (error) { return respondError(error) }
 }

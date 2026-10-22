@@ -63,8 +63,8 @@ const JA = /[぀-ヿ一-龯]/
  * @param serverMessage サーバーの error 文（400・409・422 の日本語の短い文のときだけ使う）
  */
 export function describeAishodanFailure(status: number, subject: string, opts: { serverMessage?: string; limit?: boolean } = {}): AishodanFailure {
-  if (opts.limit || status === 402 || status === 429) {
-    return { kind: 'limit', what: '今月の利用の上限に達しました。', how: '料金プランを確かめると、上限を増やせます。来月になると、また使えるようになります。' }
+  if (opts.limit) {
+    return { kind: 'limit', what: subject, how: '案内された利用条件と料金プランを確認してください。' }
   }
   if (status === 401) {
     return { kind: 'auth', what: subject, how: 'ログインの有効期限が切れています。ログインし直してから、もう一度お試しください。' }
@@ -83,17 +83,21 @@ export function describeAishodanFailure(status: number, subject: string, opts: {
 }
 
 /** 失敗の表示（ErrorNotice）と、状態に合った次の一手のボタン */
-export function AishodanFailureNotice({ failure, onRetry, retryLabel = 'もう一度読み込む', backHref, backLabel }: {
+export function AishodanFailureNotice({ failure, onRetry, retryLabel = 'もう一度読み込む', backHref, backLabel, pricingHref, returnHref }: {
   failure: AishodanFailure
   onRetry?: () => void
   retryLabel?: string
   /** 権限なし・見つからないときに戻る先 */
   backHref?: string
   backLabel?: string
+  /** 現在の組織で検証できた料金導線だけを渡す。未確認なら表示しない。 */
+  pricingHref?: string
+  /** 現在の画面と組織に結び付いた、再ログイン後の戻り先。 */
+  returnHref?: string
 }) {
   const action =
-    failure.kind === 'limit' ? <Button href="/aishodan/pricing" icon="CreditCard">料金プランを見る</Button>
-      : failure.kind === 'auth' ? <Button href="/auth/signin?callbackUrl=%2Faishodan" icon="CircleUser">ログインし直す</Button>
+    failure.kind === 'limit' && pricingHref ? <Button href={pricingHref} icon="CreditCard">料金プランを見る</Button>
+      : failure.kind === 'auth' && returnHref ? <Button href={`/auth/signin?callbackUrl=${encodeURIComponent(returnHref)}`} icon="CircleUser">ログインし直す</Button>
       : (failure.kind === 'forbidden' || failure.kind === 'notfound') && backHref ? <Button href={backHref} variant="secondary">{backLabel ?? '一覧に戻る'}</Button>
       : null
   return (

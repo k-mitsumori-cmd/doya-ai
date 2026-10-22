@@ -11,6 +11,7 @@ import { CheckoutButton } from '@/components/CheckoutButton'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { useBillingPlanResync } from '@/hooks/useBillingPlanResync'
 import { useSubscriptionManagement } from '@/hooks/useSubscriptionManagement'
+import { SubscriptionOperationNotice } from '@/components/SubscriptionOperationNotice'
 import { useBannerPlanStats } from '@/hooks/useBannerPlanStats'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import {
@@ -145,7 +146,7 @@ export default function BannerPlanPage() {
         <DashboardSidebar />
       </div>
       <Toaster position="top-center" />
-      {management.message && <div role="status" className="p-4 text-slate-700 bg-slate-50"><p>{management.message}</p><button type="button" disabled={management.busy} onClick={() => void management.recheck()} className="mt-2 underline">契約状態を再確認</button></div>}
+      <SubscriptionOperationNotice management={management} />
       <div className="md:pl-[240px] transition-all duration-200">
         {/* ========================================
             Header - Doya Banner Style

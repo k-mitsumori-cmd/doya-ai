@@ -42,6 +42,9 @@ type Props = SidebarProps & {
   ready: boolean
   go: (s: Section) => void
   projectName?: string
+  savedMode?: boolean
+  workingMode?: boolean
+  loginCallbackUrl?: string
 }
 
 // ドヤ展示会は1画面の中でセクションを切り替えるため、共通の SidebarNavLink（href 遷移）ではなく
@@ -93,6 +96,9 @@ function TenjikaiSidebarImpl({
   ready,
   go,
   projectName,
+  savedMode = false,
+  workingMode = false,
+  loginCallbackUrl = '/tenjikai',
 }: Props) {
   const { data: session } = useSession()
   const { isCollapsed, showLabel, toggle } = useSidebarState({ controlledIsCollapsed, onToggle, forceExpanded, isMobile })
@@ -148,7 +154,7 @@ function TenjikaiSidebarImpl({
                 <p className="text-xs font-black text-white">開発中のサービスです</p>
               </div>
               <p className="text-[11px] text-white/80 font-bold leading-relaxed">
-                画面はお試し用です。入力した内容は保存されません。
+                {savedMode ? '保存されている入力内容と分析結果を表示しています。この画面では編集・保存はできません。' : workingMode ? '案件の基本情報のみ保存しています。会場の指定や編集中の案は、この画面を閉じると失われます。' : '新規案件の作成前です。入力内容はまだ保存されていません。'}
               </p>
             </div>
           )}
@@ -162,7 +168,7 @@ function TenjikaiSidebarImpl({
           isCollapsed={isCollapsed}
           isMobile={isMobile}
           theme={tenjikaiTheme}
-          loginCallbackUrl="/tenjikai"
+          loginCallbackUrl={loginCallbackUrl}
           onLogout={() => setIsLogoutDialogOpen(true)}
         />
         <SidebarCollapseToggle isCollapsed={isCollapsed} onToggle={toggle} isMobile={isMobile} theme={tenjikaiTheme} />

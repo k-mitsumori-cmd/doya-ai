@@ -2,7 +2,7 @@
 // 読み取りの正本（popup-read.ts）・エージェントの道具（agent-tools.ts）・ナビ（nav.ts）の単体テスト。
 // 統合仕様 D-5: read の道具（popup.stats）が *-read.ts の関数として呼べること。
 // ⚠️ DB は偽物を渡す（本物の DB に触れない）。where に userId が入っているかもここで確かめる。
-import { test } from 'node:test'
+import { after, mock, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -12,6 +12,8 @@ import { POPUP_NAV, isPopupNavActive } from './nav'
 import { jstDay } from './schema'
 
 const NOW = new Date('2026-10-18T03:00:00Z') // JST 2026-10-18 12:00
+mock.timers.enable({ apis: ['Date'], now: NOW })
+after(() => mock.timers.reset())
 
 const SITE_PROFILE = { name: 'サンプル', summary: '', strengths: [], target: '', contactUrl: 'https://example.com/contact', downloadUrl: null, pricingUrl: null, pages: [], colors: ['#0a58ca'] }
 

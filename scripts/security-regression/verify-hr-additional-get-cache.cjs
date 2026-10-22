@@ -23,6 +23,8 @@ function fixture(file, mode) {
     '@/lib/hr/types': { HrMemberRole: roles },
     '@/lib/hr/organization-choices': load('src/lib/hr/organization-choices.ts', { 'node:crypto': crypto, './types': { HrMemberRole: roles } }, { Buffer }),
     '@/lib/hr/access': { getHrContext: context, getOrCreateOrganization: () => { throw Error('Writes forbidden'); }, hasMinRole: () => false },
+    '@/lib/hr/membership-write': { withHrMembershipWrite: async () => { throw Error('GET attempted a membership write') }, HrMembershipChanged: class HrMembershipChanged extends Error {} },
+    '@/lib/account-lifecycle/state': require('./hr-membership-fixture-bridge.cjs').state,
     '@/lib/prisma': { prisma: {
       hrOrganization: { findUnique: read({ id: 'org-synthetic', name: 'SYNTHETIC_PRIVATE_ORGANIZATION' }) },
       hrOrganizationMember: { findMany: read(file.includes('/settings/') ? [{ id: 'member-synthetic', role: 'MEMBER', employeeId: 'employee-synthetic', user: { name: 'SYNTHETIC_PRIVATE_MEMBER', email: 'synthetic@example.invalid', image: null }, createdAt: new Date('2026-01-01') }] : [{ id: 'member-synthetic', role: 'MEMBER', organization: { id: 'org-synthetic', name: 'SYNTHETIC_PRIVATE_ORGANIZATION' } }]) },
