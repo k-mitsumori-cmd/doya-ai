@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { personaBrowserStorage } from '@/lib/persona/browser-storage'
 import { savePersonaRecord, savePersonaImage, savedPersonaPath } from '@/lib/persona/history-records'
 import { readPersonaImageResponse, validPersonaImageResponse, personaImageError, PersonaImageResponseError } from '@/lib/persona/image-response'
-import { includedPersonaImages } from '@/lib/persona/image-entitlements'
+import { includedPersonaImages, personaSceneIntent } from '@/lib/persona/image-entitlements'
 import { isPersonaDisplayData, hasValidPersonaImages } from '@/lib/persona/display-data'
 import PersonaUsagePanel from '@/components/persona/PersonaUsagePanel'
 import PersonaBannerGenerator from '@/components/persona/PersonaBannerGenerator'
@@ -482,19 +482,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
     }
   }, [generatedData, portraitImage, portraitLoading, imageGenerationRequest])
 
-  // シーン画像の自動生成
-  useEffect(() => {
-    if (!generatedData?.persona || autoGenerateFor.current !== generatedData || sceneAutoTriggered.current) return
-    sceneAutoTriggered.current = true
-    const timers: ReturnType<typeof setTimeout>[] = []
-    let delay = 1500
-    for (const slot of includedPersonaImages(generatedData)) {
-      if (slot.kind !== 'scene' || !slot.prompt || sceneImages[slot.key]) continue
-      timers.push(setTimeout(() => handleGenerateScene(slot.prompt!, slot.key), delay))
-      delay += 3000
-    }
-    return () => timers.forEach(clearTimeout)
-  }, [generatedData, imageGenerationRequest])
+  // シーン画像は自動では作らない。利用者が各場面の「画像を作る」を押したときだけ作る（原価を抑えるため）。
 
   const handleGenerate = async () => {
     if (!alive.current || textRequest.current) return
@@ -602,7 +590,8 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
       if (!res.ok || !data) {
         if (data?.code === 'REQUEST_CONFLICT') delete imageAttempts.current.portrait
         if (data?.code === 'DAILY_LIMIT_REACHED') { setQuotaNotice('image'); setQuotaAction(personaQuotaAction(data)) }
-        const message = '本日の追加画像・再生成の上限に達しました。利用枠をご確認ください。'
+        const message = data?.code === 'DAILY_LIMIT_REACHED' && typeof data?.error === 'string' && data.error
+          ? data.error : '本日の追加画像・再生成の上限に達しました。利用枠をご確認ください。'
         throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(message) : new Error(message)
       }
 
@@ -628,7 +617,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
     if (!generatedData?.persona || currentPersona.current !== generatedData) return
     const recordId = currentRecordId.current
     if (!recordId) { setSceneErrors(prev => ({ ...prev, [sceneKey]: 'この履歴にはサーバーの保存情報がありません。新しくペルソナを生成してください。' })); return }
-    const intent = sceneImages[sceneKey] ? 'regenerate' : 'included'
+    const intent = personaSceneIntent(generatedData, sceneKey, Boolean(sceneImages[sceneKey]), isPaidPlan(plan))
     if (imageAttempts.current[sceneKey]?.projectId !== recordId || imageAttempts.current[sceneKey]?.intent !== intent) {
       imageAttempts.current[sceneKey] = { projectId: recordId, intent, key: crypto.randomUUID() }
     }
@@ -658,8 +647,9 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
       if (!res.ok) {
         if (data?.code === 'REQUEST_CONFLICT') delete imageAttempts.current[sceneKey]
         if (data?.code === 'DAILY_LIMIT_REACHED') { setQuotaNotice('image'); setQuotaAction(personaQuotaAction(data)) }
-        const message = '本日の追加画像・再生成の上限に達しました。利用枠をご確認ください。'
-        throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(message) : new Error(message)
+        const message = (data?.code === 'DAILY_LIMIT_REACHED' || data?.code === 'NOT_INCLUDED') && typeof data?.error === 'string' && data.error
+          ? data.error : '本日の追加画像・再生成の上限に達しました。利用枠をご確認ください。'
+        throw data?.code === 'DAILY_LIMIT_REACHED' || data?.code === 'NOT_INCLUDED' ? new PersonaQuotaError(message) : new Error(message)
       }
       if (!validPersonaImageResponse(data)) throw new PersonaImageResponseError('画像の保存先を確認できませんでした。履歴を確認するか、同じ操作を再試行してください。')
       if (data.image) {
@@ -678,7 +668,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         setSceneLoading(prev => isCurrent() ? { ...prev, [sceneKey]: false } : prev)
       }
     }
-  }, [generatedData, accountStorage, sceneImages])
+  }, [generatedData, accountStorage, sceneImages, plan])
 
   // ペルソナ変更
   const handleModify = async () => {
@@ -890,7 +880,21 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
         </div>
       )
     }
-    return null
+    // まだ画像が無い場面は、押したときだけ作る。付属枠の外は追加枠を1枚使う。
+    let slotPrompt: string | null = null
+    try { slotPrompt = generatedData ? includedPersonaImages(generatedData).find(slot => slot.kind === 'scene' && slot.key === sceneKey)?.prompt || null : null }
+    catch { slotPrompt = null }
+    if (!slotPrompt) return null
+    const extra = personaSceneIntent(generatedData, sceneKey, false, isPaidPlan(plan)) === 'extra'
+    return (
+      <div className={`rounded-lg border border-dashed border-purple-200 bg-purple-50/60 p-3 flex flex-col items-center justify-center gap-2 export-hide ${className}`}>
+        <p className="text-xs text-gray-600">この場面の画像はまだありません。</p>
+        <button type="button" onClick={() => void handleGenerateScene(slotPrompt!, sceneKey)}
+          className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white hover:bg-purple-700">
+          {extra ? '画像を作る（追加枠1枚）' : '画像を作る'}
+        </button>
+      </div>
+    )
   }
 
   const persona = generatedData?.persona
@@ -1202,10 +1206,10 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
               initialImage={initialRecord?.id === currentRecordId.current ? initialRecord.bannerImage : undefined}
               onUsageChanged={() => setBannerUsageRevision(value => value + 1)}
             />
-            {autoGenerateFor.current !== generatedData && (
+            {autoGenerateFor.current !== generatedData && !portraitImage && (
               <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 export-hide">
-                <p className="text-sm text-gray-700">履歴の閲覧では画像を自動生成しません。必要な場合は、未保存の画像を生成できます。ボタンを押すと画像生成を実行します。</p>
-                <button type="button" onClick={requestMissingImages} disabled={loading || modifying || portraitLoading || Object.values(sceneLoading).some(Boolean)} className="mt-3 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">不足している画像を生成する</button>
+                <p className="text-sm text-gray-700">履歴の閲覧では画像を自動で作りません。似顔絵が無い場合は、ボタンを押すと作ります。場面の画像は、各場面の「画像を作る」から作れます。</p>
+                <button type="button" onClick={requestMissingImages} disabled={loading || modifying || portraitLoading || Object.values(sceneLoading).some(Boolean)} className="mt-3 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">似顔絵を作る</button>
               </div>
             )}
             {/* ペルソナ変更入力エリア */}

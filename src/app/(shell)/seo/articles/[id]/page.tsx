@@ -912,7 +912,7 @@ function SeoArticleInner() {
     })()
   }, [tab, entitlements])
 
-  async function ensureImages() {
+  async function ensureImages(trigger: 'auto' | 'manual' = 'manual') {
     if (mediaBusy) return
     setMediaBusy(true)
     setMediaError(null)
@@ -933,12 +933,15 @@ function SeoArticleInner() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          // 'auto' はサーバー側で1記事1回だけ受け付ける。ボタンは 'manual'。
+          trigger,
           bannerPromptTemplate: bannerPromptTemplate?.trim() || undefined,
           diagramPromptTemplate: diagramPromptTemplate?.trim() || undefined,
         }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) throw new Error(json?.error || `生成に失敗しました (${res.status})`)
+      if (json?.skipped) return
       await load({ showLoading: false })
     } catch (e: any) {
       setMediaError(e?.message || '画像生成に失敗しました')
@@ -965,8 +968,8 @@ function SeoArticleInner() {
         if (!res.ok || json?.success !== true) return
         if (!json?.isLoggedIn) return
         if (!json?.canUseSeoImages) return
-        // 失敗してもUIは壊さない（ネットワーク/生成失敗など）
-        await ensureImages()
+        // 失敗してもUIは壊さない（ネットワーク/生成失敗など）。自動はサーバー側で1記事1回だけ。
+        await ensureImages('auto')
       } catch {
         // ignore
       }
@@ -1882,7 +1885,7 @@ function SeoArticleInner() {
                   {(!entitlements || entitlements.canUseSeoImages) && (
                     <div className="mb-6 flex flex-wrap items-center gap-2">
                       <button
-                        onClick={ensureImages}
+                        onClick={() => void ensureImages('manual')}
                         disabled={mediaBusy}
                         className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-sm shadow-lg shadow-blue-500/20 hover:opacity-95 disabled:opacity-50"
                       >

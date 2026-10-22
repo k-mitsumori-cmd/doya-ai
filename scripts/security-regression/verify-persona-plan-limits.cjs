@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript'),vm=require('node:vm'),React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),{load}=require('./load-typescript.cjs');
-const unified=load('src/lib/unified-plan.ts'),pricing=load('src/lib/pricing.ts',{'./unified-plan':unified}),images=load('src/lib/persona/image-ledger.ts',{crypto:require('node:crypto'),'@/lib/unified-plan':unified,'./usage-day':{},'./project-ledger':{}});
+const unified=load('src/lib/unified-plan.ts'),pricing=load('src/lib/pricing.ts',{'./unified-plan':unified}),images=load('src/lib/persona/image-ledger.ts',{crypto:require('node:crypto'),'@/lib/unified-plan':unified,'./usage-day':{},'./project-ledger':{},'./image-entitlements':load('src/lib/persona/image-entitlements.ts')});
 for(const plan of [null,undefined,'','FREE','GUEST','free']){assert.equal(pricing.getPersonaDailyLimitByUserPlan(plan),5);assert.equal(images.personaExtraImageLimit(plan),5)}
 for(const plan of ['PRO','pro','LIGHT','light','BASIC','STARTER','BUSINESS','BUNDLE','ENTERPRISE']){assert.equal(pricing.getPersonaDailyLimitByUserPlan(plan),30);assert.equal(images.personaExtraImageLimit(plan),30)}
 console.log('PASS FREE/GUEST/unset and nine paid compatibility forms share text/image limits');
