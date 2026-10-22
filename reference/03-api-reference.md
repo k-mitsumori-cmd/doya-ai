@@ -73,8 +73,8 @@ const id = p.id
 ### テンプレート・画像
 | メソッド | パス | 説明 |
 |---------|------|------|
-| GET/PUT | `/api/admin/templates` | テンプレート管理 |
-| POST | `/api/admin/templates/generate-batch` | テンプレート一括生成 |
+| — | `/api/admin/templates` | GET/PUTルートは未実装。旧テキストテンプレート管理の保存APIはありません |
+| POST | `/api/admin/templates/generate-batch` | バナーテンプレート一括生成（旧テキストテンプレート管理とは別機能） |
 | GET/POST | `/api/admin/doyamana/categories` | ドヤマナカテゴリ CRUD |
 | GET/PATCH/DELETE | `/api/admin/doyamana/categories/[id]` | カテゴリ個別操作 |
 | GET/POST | `/api/admin/doyamana/images` | ドヤマナ画像 CRUD |
@@ -96,7 +96,7 @@ const id = p.id
 | `/admin/analytics` | 分析 (生成数推移, サービス別統計) |
 | `/admin/billing` | 請求 (月間売上, MRR, ユーザー内訳) |
 | `/admin/settings` | 設定 (管理者アカウント管理) |
-| `/admin/templates` | テンプレート管理 |
+| `/admin/templates` | 旧カンタンマーケAIの提供終了案内（追加・編集・公開操作なし） |
 | `/admin/admins` | 管理者ユーザー管理 |
 | `/admin/admin-users` | 管理者ユーザー一覧 (CRUD) |
 | `/admin/doyamana-categories` | ドヤマナカテゴリ管理 |

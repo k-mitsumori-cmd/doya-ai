@@ -411,6 +411,11 @@ if (bannerMaintenanceBatch.error || bannerMaintenanceBatch.status !== 0) {
   console.error('Security regression failed: verify-banner-maintenance-batch.cjs');
   process.exit(1);
 }
+const adminLegacyTemplates = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-legacy-templates.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (adminLegacyTemplates.status !== 0) {
+  console.error('Security regression failed: verify-admin-legacy-templates.cjs');
+  process.exit(adminLegacyTemplates.status || 1);
+}
 const adminTemplateErrors = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-template-errors.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adminTemplateErrors.error || adminTemplateErrors.status !== 0) {
   console.error('Security regression failed: verify-admin-template-errors.cjs');
