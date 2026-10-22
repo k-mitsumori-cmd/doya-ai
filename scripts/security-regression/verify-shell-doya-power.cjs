@@ -19,11 +19,12 @@ const code=f=>read(f).replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:])\/\/.*$/g
     const layout=code('src/app/(shell)/layout.tsx');
     assert.match(layout,/const doyaPowerState = null/);
     assert.doesNotMatch(layout,/doya-power\/(ledger|index)|getBalance|\/api\/doya-power/);
-    assert.match(read('src/components/shell/ShellGate.tsx'),/<ShellPowerProvider value=\{uiNext && doyaPower \? doyaPowerState : null\}>/);
-    assert.match(read('src/components/shell/ShellGate.tsx'),/<DoyaPowerContext\.Provider value=\{Boolean\(uiNext && doyaPower\)\}>/);
+    assert.match(read('src/components/shell/ShellGate.tsx'),/const privateReady = signedIn && !blocked && !waiting && sdkActor === serverActor/);
+    assert.match(read('src/components/shell/ShellGate.tsx'),/<ShellPowerProvider value=\{privateReady && uiNext && doyaPower \? doyaPowerState : null\}>/);
+    assert.match(read('src/components/shell/ShellGate.tsx'),/<DoyaPowerContext\.Provider value=\{Boolean\(privateReady && uiNext && doyaPower\)\}>/);
   });
   await check('No balance API route is added before the ledger table is in production',async()=>{
-    assert.equal(fs.existsSync(path.join(root,'src/app/api/doya-power/balance/route.ts')),false);
+    assert.equal(fs.existsSync(path.join(root,'src/app/api/doya-power/balance','route.ts')),false);
   });
   console.log(JSON.stringify({scope:'Shell DoyaPower placement: flag-off renders nothing and never reads the ledger. Static source checks only.'}));
 })().catch(e=>{console.error(e);process.exitCode=1});
