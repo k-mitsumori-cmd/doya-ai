@@ -508,12 +508,27 @@ async function check(label, work) { await work(); cases.push(label); console.log
           entered.resolve((await tx.$queryRawUnsafe('SELECT pg_backend_pid() AS pid'))[0].pid)
           await bounded(release.promise, 'recipient email holder release')
         }, { maxWait: 10000, timeout: 30000 })
+        // Observe a concurrent transaction rejection before this test reaches its await.
+        void holder.catch(() => undefined)
         const holderPid = await bounded(entered.promise, 'recipient email owner lock')
         const delivery = { calls: 0 }, writer = actualApi(db2, delivery).accept()
+        void writer.catch(() => undefined)
+        let originalError
         try {
           await waitForUserLock(holderPid, 'recipient account email drift')
-          await db.user.update({ where: { id: 'recipient' }, data: { email: 'changed@example.test' } })
-        } finally { release.resolve() }
+          await db.user.update({ where: { id: 'recipient' }, data: { email: 'changed@example.test' }, select: { email: true } })
+        } catch (error) { originalError = error }
+        finally {
+          release.resolve()
+          let drainError
+          try { await bounded(Promise.allSettled([holder, writer]), 'recipient email concurrent operations settled') }
+          catch (error) { drainError = error }
+          if (originalError) {
+            if (drainError) console.error('Secondary recipient email drain failure:', drainError)
+            throw originalError
+          }
+          if (drainError) throw drainError
+        }
         await holder
         const response = await bounded(writer, 'recipient account email drift accept')
         assert.equal(response.status, 403)
