@@ -14,6 +14,7 @@ import MemberPanel from '@/components/org/MemberPanel'
 import { DoyaKun } from '@/components/lp'
 import { useQuoteWorkspace } from '@/components/quote/QuoteWorkspaceBoundary'
 import QuoteOrgSwitcher from '@/components/quote/QuoteOrgSwitcher'
+import OwnerTransferPanel from '@/components/org/OwnerTransferPanel'
 
 const FIELDS = [
   { key: 'companyName', label: '会社名', placeholder: '株式会社スリスタ', required: true },
@@ -31,7 +32,7 @@ const TEXTAREAS = [
 ] as const
 
 export default function QuoteSettingsPage() {
-  const { scope } = useQuoteWorkspace()
+  const { scope, retry } = useQuoteWorkspace()
   const listHref = scope.kind === 'ready' ? scope.proof.href('/quote') : '/quote'
   const { form, loading, loaded, saving, error, message, unknown, canEdit, hasUnsavedChanges, update, load, save } = useQuoteIssuerSettings()
   const uiNext = useUiNext()
@@ -122,6 +123,8 @@ export default function QuoteSettingsPage() {
           description="招待した方は、この組織の商材と見積書を扱えるようになります。"
           workspaceProof={scope.kind === 'ready' ? scope.proof : undefined}
         />
+        {scope.kind === 'ready' && <OwnerTransferPanel service="quote" organizationSlug={scope.proof.organization.slug}
+          organizationId={scope.proof.organization.id} role={scope.proof.organization.role} proof={scope.proof} onCommitted={retry} />}
       </main>
     </div>
   )

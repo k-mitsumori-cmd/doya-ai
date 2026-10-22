@@ -5,6 +5,7 @@ import { useOrgTeamMembers } from '@/lib/use-org-team-members'
 import { ROLE_LABEL } from '@/lib/shodan/types'
 import { PageHeader } from '@/components/shodan/ui'
 import { InviteDeliveryNotice } from '@/components/InviteDeliveryNotice'
+import OwnerTransferPanel from '@/components/org/OwnerTransferPanel'
 
 const sym = (name: string, size = 18) => <span className="material-symbols-outlined" style={{ fontSize: size }}>{name}</span>
 
@@ -12,7 +13,7 @@ export default function ShodanMembersPage() {
   const params = useParams<{ orgSlug: string }>()
   const orgSlug = String(params.orgSlug)
   const { members, myRole, email, role, loaded, canManage, busy, unknown, loading, error, notice, inviteUrl, requiresLogin,
-    setEmail, setRole, canRemove, invite, remove, load } = useOrgTeamMembers('shodan', orgSlug)
+    setEmail, setRole, canRemove, invite, remove, load, refreshAfterTransfer } = useOrgTeamMembers('shodan', orgSlug)
   const disabled = !!busy || unknown || !loaded
 
   return (
@@ -76,6 +77,7 @@ export default function ShodanMembersPage() {
           ))
         )}
       </div>
+      <div className="mt-6"><OwnerTransferPanel service="shodan" organizationSlug={orgSlug} role={myRole} onCommitted={refreshAfterTransfer} /></div>
     </div>
   )
 }

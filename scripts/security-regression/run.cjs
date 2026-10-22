@@ -2,6 +2,12 @@ for (const file of ['verify-organization-workspace-client-deadline.cjs', 'verify
   const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], { stdio: 'inherit', timeout: 60000 })
   if (result.error || result.status !== 0) { console.error('AI商談 organization workspace regression failed:', file); process.exit(result.status || 1) }
 }
+for (const file of ['verify-owner-transfer-routes.cjs', 'verify-owner-transfer-client.cjs', 'verify-owner-transfer-mounted.cjs',
+  'verify-owner-transfer-member-parent-mounted.cjs', 'verify-owner-transfer-member-read-race-mounted.cjs', 'verify-owner-transfer-quote-parent-mounted.cjs',
+  'verify-owner-transfer-mensetsu-parent-mounted.cjs', 'verify-owner-transfer-aishodan-parent-mounted.cjs']) {
+  const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], { stdio: 'inherit', timeout: 60000 })
+  if (result.error || result.status !== 0) { console.error('Five-service owner transfer regression failed:', file); process.exit(result.status || 1) }
+}
 for (const file of ['verify-hr-department-operation.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 for (const file of ['verify-hr-department-input.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }
 for (const file of ['verify-hr-org-chart-visibility.cjs', 'verify-hr-org-chart-paged-client.cjs']) { const r = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, file)], {stdio:'inherit',timeout:60000}); if(r.error || r.status!==0) process.exit(r.status || 1); }

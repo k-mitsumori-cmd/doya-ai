@@ -93,6 +93,7 @@ function component(file){
   '@/components/mensetsu/ui-next':ui,'@/components/ds':ds,
   '@/lib/ui/notify':{notifyError:(setter,message)=>setter(message)},
   '@/lib/org-fetch':{fetchOrgJson},'@/lib/mensetsu/session-pages':sessionPages,
+  '@/components/org/OwnerTransferPanel':{__esModule:true,default:no},
   '@/components/LoadingProgress':{__esModule:true,default:no},'./Lp':{__esModule:true,default:no},
   '@/lib/mensetsu/types':types,
   '@/lib/mensetsu/staff-request-client':staffRequest,

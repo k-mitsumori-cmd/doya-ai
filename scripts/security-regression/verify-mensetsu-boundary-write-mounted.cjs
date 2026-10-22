@@ -87,6 +87,8 @@ const mocks = {
   '@/lib/checkout-recovery-client': { checkoutStoredIntent: () => null },
   '@/components/mensetsu/ui-next': { PageTitle: ({ children, ...props }) => React.createElement('h1', props, children), useToolUiNext: () => false },
   '@/components/ds': { EmptyState: no, ErrorNotice: no, Skeleton: no, ToolHero: no },
+  // Owner transfer has a dedicated actual mounted fixture; this test owns Mensetsu's existing write boundary.
+  '@/components/org/OwnerTransferPanel': { __esModule: true, default: no },
   '@/components/LoadingProgress': { __esModule: true, default: no }, './Lp': { __esModule: true, default: no },
   '@/lib/ui/notify': { notifyError: (setter, message) => { notifications.push(message); setter(message) } },
   '@/lib/mensetsu/types': { EVALUATION_STALE_MS: 1000 },

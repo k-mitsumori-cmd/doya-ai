@@ -13,7 +13,9 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
 import { useMensetsuRequest } from '@/components/mensetsu/useMensetsuRequest'
+import { useMensetsuWorkspace } from '@/components/mensetsu/MensetsuWorkspaceBoundary'
 import { useMensetsuOperation } from '@/components/mensetsu/useMensetsuOperation'
+import OwnerTransferPanel from '@/components/org/OwnerTransferPanel'
 
 interface Org {
   id: string
@@ -42,6 +44,7 @@ const ROLE_LABEL: Record<string, string> = {
 const ROLE_RANK: Record<string, number> = { owner: 4, admin: 3, manager: 2, member: 1 }
 
 export default function MensetsuSettingsPage() {
+  const { retry: retryWorkspace } = useMensetsuWorkspace()
   const { proof, request: fetch } = useMensetsuRequest()
   const operation = useMensetsuOperation(proof)
   const unknownWrite = operation.unknown
@@ -277,6 +280,9 @@ export default function MensetsuSettingsPage() {
           <p className="mt-4 text-xs font-semibold text-[#8a94ad]">メンバーの招待は管理者以上が行えます。</p>
         )}
       </section>
+
+      <div className="mt-6"><OwnerTransferPanel service="mensetsu" organizationSlug={proof.organization.slug}
+        organizationId={proof.organization.id} role={myRole} proof={proof} onCommitted={retryWorkspace} /></div>
 
       {/* --- 記録の設定 --- */}
       <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">

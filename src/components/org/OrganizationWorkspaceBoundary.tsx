@@ -18,7 +18,10 @@ type Scope = { kind: 'loading' | 'empty' | 'denied' | 'unavailable'; key: string
   { kind: 'select'; key: string; memberships: WorkspaceOrganization[] } |
   { kind: 'return'; key: string; memberships: WorkspaceOrganization[]; origin: WorkspaceOrganization | null }
 type Value = { scope: Scope; switchTo: (slug: string) => void; retry: () => void }
+type ReadyScope = Extract<Scope, { kind: 'ready' }>
 const Context = createContext<Value | null>(null)
+const retainNode = (node: HTMLDivElement | null) => { node?.setAttribute('inert', '') }
+const releaseNode = (node: HTMLDivElement | null) => { node?.removeAttribute('inert') }
 
 export function useOptionalOrganizationWorkspace() { return useContext(Context) }
 
@@ -60,11 +63,17 @@ export function OrganizationWorkspaceBoundary({ children }: { children: ReactNod
   const returnVisit = Boolean(portalNavigationId) || explicitSelection.kind === 'absent' && /^\/aishodan(?:\/pricing)?$/.test(pathname) && (originHint !== 'missing' || returnMarker)
   const [retryNumber, setRetryNumber] = useState(0)
   const [state, setState] = useState<Scope>({ kind: 'loading', key: '' })
+  const stateRef = useRef(state)
+  stateRef.current = state
+  const retryRetained = useRef<ReadyScope | null>(null)
   const epoch = useRef(0)
   const currentKey = JSON.stringify([actorId, status, pathname, searchKey, retryNumber, guest, returnVisit ? snapshot.handle?.operationId : null, returnVisit ? snapshot.phase : null])
   const renderedKey = useRef(currentKey)
   renderedKey.current = currentKey
-  const retry = useCallback(() => { epoch.current++; setRetryNumber(value => value + 1) }, [])
+  const retry = useCallback(() => {
+    if (stateRef.current.kind === 'ready' && stateRef.current.proof.current()) retryRetained.current = stateRef.current
+    epoch.current++; setRetryNumber(value => value + 1)
+  }, [])
 
   useEffect(() => { if (manager && !guest) manager.inspectStored() }, [manager, guest])
 
@@ -155,7 +164,7 @@ export function OrganizationWorkspaceBoundary({ children }: { children: ReactNod
 
   useEffect(() => {
     if (guest) return
-    const hide = () => { epoch.current++; setState({ kind: 'loading', key: '' }) }
+    const hide = () => { retryRetained.current = null; epoch.current++; setState({ kind: 'loading', key: '' }) }
     const show = (event: PageTransitionEvent) => { if (event.persisted) { hide(); setRetryNumber(value => value + 1) } }
     window.addEventListener('pagehide', hide)
     window.addEventListener('pageshow', show)
@@ -164,6 +173,7 @@ export function OrganizationWorkspaceBoundary({ children }: { children: ReactNod
 
   const switchTo = useCallback((slug: string) => {
     if (state.kind !== 'ready' || state.key !== currentKey || !state.proof.current() || !state.memberships.some(row => row.slug === slug)) return
+    retryRetained.current = null
     epoch.current++
     setState({ kind: 'loading', key: '' })
     selectOrganization('aishodan', slug)
@@ -172,16 +182,30 @@ export function OrganizationWorkspaceBoundary({ children }: { children: ReactNod
     router.push(workspaceHref(destination + (destination === pathname ? window.location.search + window.location.hash : ''), slug))
   }, [state, currentKey, pathname, router])
   const value = useMemo<Value>(() => ({ scope: state.key === currentKey && (state.kind !== 'ready' || state.proof.current()) ? state : { kind: 'loading', key: currentKey }, switchTo, retry }), [state, currentKey, switchTo, retry])
-  const priorPath = (() => { try { return JSON.parse(state.key)[2] as unknown } catch { return null } })()
-  const retainSameWorkspace = state.kind === 'ready' && priorPath === pathname &&
-    (status === 'loading' || actorId === state.proof.actorId) &&
-    (explicitSelection.kind === 'selected' && explicitSelection.slug === state.proof.organization.slug || explicitSelection.kind === 'absent' && !returnVisit)
+  const retryCandidate = retryRetained.current
+  if (retryCandidate) {
+    let priorPath: unknown = null
+    try { priorPath = JSON.parse(retryCandidate.key)[2] } catch {}
+    if (actorId !== retryCandidate.proof.actorId || explicitSlug !== retryCandidate.proof.organization.slug ||
+        returnVisit || priorPath !== pathname) retryRetained.current = null
+  }
+  if (state.kind === 'ready' && state.key === currentKey && state.proof.current()) retryRetained.current = null
+  const retained = state.kind === 'ready' ? state : retryRetained.current
+  const priorPath = (() => { try { return JSON.parse(retained?.key || '')[2] as unknown } catch { return null } })()
+  const retainSameWorkspace = retained?.kind === 'ready' && priorPath === pathname &&
+    (status === 'loading' || actorId === retained.proof.actorId) &&
+    (explicitSelection.kind === 'selected' && explicitSelection.slug === retained.proof.organization.slug || explicitSelection.kind === 'absent' && !returnVisit)
 
   if (guest) return <>{children}</>
-  if (value.scope.kind === 'loading') return retainSameWorkspace ? <Context.Provider value={{ scope: state, switchTo, retry }}><div hidden aria-hidden="true">{children}</div><div role="status" className="mx-auto max-w-xl p-8 text-center text-sm text-slate-600">組織を確認しています…</div></Context.Provider>
+  if (value.scope.kind === 'loading') return retainSameWorkspace && retained?.kind === 'ready' ? <Context.Provider value={{ scope: retained, switchTo, retry }}><div ref={retainNode} hidden aria-hidden="true">{children}</div><div role="status" className="mx-auto max-w-xl p-8 text-center text-sm text-slate-600">組織を確認しています…</div></Context.Provider>
     : <div role="status" className="mx-auto max-w-xl p-8 text-center text-sm text-slate-600">組織を確認しています…</div>
   if (value.scope.kind === 'denied') return <div role="alert" className="mx-auto max-w-xl space-y-3 p-8 text-center text-sm text-slate-700"><p>この組織を表示する権限を確認できませんでした。</p><SignInReturnLink fallback="/aishodan" className="text-blue-700 underline">ログイン状態を確認する</SignInReturnLink><Link href="/home" className="ml-3 text-blue-700 underline">ホームに戻る</Link></div>
-  if (value.scope.kind === 'unavailable') return <div role="alert" className="mx-auto max-w-xl space-y-3 p-8 text-center text-sm text-slate-700"><p>組織を確認できませんでした。通信状態をご確認ください。</p><button type="button" onClick={retry} className="text-blue-700 underline">再読み込みする</button></div>
+  if (value.scope.kind === 'unavailable') {
+    const notice = <div role="alert" className="mx-auto max-w-xl space-y-3 p-8 text-center text-sm text-slate-700"><p>組織を確認できませんでした。通信状態をご確認ください。</p><button type="button" onClick={retry} className="text-blue-700 underline">再読み込みする</button></div>
+    return retainSameWorkspace && retained?.kind === 'ready' && explicitSelection.kind === 'selected'
+      ? <Context.Provider value={{ scope: retained, switchTo, retry }}><div ref={retainNode} hidden aria-hidden="true">{children}</div>{notice}</Context.Provider>
+      : notice
+  }
   if (value.scope.kind === 'select') return <div role="status" className="mx-auto max-w-xl space-y-3 p-8 text-sm text-slate-700">
     <p>前回の組織を確認できませんでした。所属先から選んでください。</p>
     {value.scope.memberships.map(org => <Link key={org.id} href={workspaceHref('/aishodan', org.slug)} className="block font-bold text-blue-700 underline">{org.name}を開く</Link>)}
@@ -194,5 +218,5 @@ export function OrganizationWorkspaceBoundary({ children }: { children: ReactNod
     <Link href="/home" className="block text-blue-700 underline">ホームに戻る</Link>
   </div>
   if (value.scope.kind === 'empty' && pathname !== '/aishodan') return <div role="status" className="mx-auto max-w-xl p-8 text-center text-sm text-slate-700">所属する組織がありません。<Link href="/aishodan" className="ml-2 text-blue-700 underline">サービス画面を開く</Link></div>
-  return <Context.Provider value={value}><div style={{ display: 'contents' }}>{children}</div></Context.Provider>
+  return <Context.Provider value={value}><div ref={releaseNode} style={{ display: 'contents' }}>{children}</div></Context.Provider>
 }
