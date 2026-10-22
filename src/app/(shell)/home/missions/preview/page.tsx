@@ -16,7 +16,7 @@ export default async function MissionsPreviewPage() {
   // 本番と、ドヤパワーの旗（DOYA_POWER_ROLLOUT）が off のときは 404
   if (process.env.NODE_ENV === 'production' || !doyaPowerSampleAllowed()) notFound()
   const now = Date.now()
-  const board = <MissionsBoard view={buildMissionsView(sampleMissionsInput(now), now)} />
+  const board = <MissionsBoard view={buildMissionsView(sampleMissionsInput(now), now)} sample />
   const signedIn = Boolean((await getServerSession(authOptions).catch(() => null))?.user)
   return signedIn ? board : <AppShell userName="サンプル">{board}</AppShell>
 }

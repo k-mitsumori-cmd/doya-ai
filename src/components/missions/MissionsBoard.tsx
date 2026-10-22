@@ -1,3 +1,4 @@
+'use client'
 // ============================================
 // ドヤパワー: 今日のミッション・はじめの手順・今月のドヤ実績
 // ============================================
@@ -9,6 +10,9 @@ import Link from 'next/link'
 import { UiIcon } from '@/components/icons'
 import { formatMinutes, formatYen } from '@/lib/missions/achievements'
 import type { MissionsView } from '@/lib/missions/view'
+import type { DoyaPowerFx } from '@/lib/doya-power/fx'
+import { DoyaPowerFxProvider, useDoyaPowerFx } from '@/components/doya-power/fx-context'
+import DoyaPowerFxSettings from '@/components/doya-power/DoyaPowerFxSettings'
 import styles from './MissionsBoard.module.css'
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
@@ -31,7 +35,18 @@ function Mark({ done }: { done: boolean }) {
     : <span className={styles.mark} />
 }
 
-export default function MissionsBoard({ view }: { view: MissionsView }) {
+export default function MissionsBoard({ view, fx, canEditOrgFx = false, sample = false }: { view: MissionsView; fx?: DoyaPowerFx; canEditOrgFx?: boolean; sample?: boolean }) {
+  return (
+    <DoyaPowerFxProvider fx={fx}>
+      <MissionsBody view={view} canEditOrgFx={canEditOrgFx} sample={sample} />
+    </DoyaPowerFxProvider>
+  )
+}
+
+const sampleSave = async () => ({ ok: true as const })
+
+function MissionsBody({ view, canEditOrgFx, sample }: { view: MissionsView; canEditOrgFx: boolean; sample: boolean }) {
+  const { motion } = useDoyaPowerFx()
   const { daily, quests, power, achievements } = view
   const ratio = power.cap > 0 ? Math.min(1, power.thisMonth / power.cap) : 0
   const questsDone = quests.filter((q) => q.done).length
@@ -39,7 +54,7 @@ export default function MissionsBoard({ view }: { view: MissionsView }) {
   const toolReady = (href: string) => (href.startsWith('/quote') ? view.tools.quote : href.startsWith('/sfa') ? view.tools.sfa : true)
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-motion={motion ? 'on' : 'off'}>
       <header className={styles.hero}>
         <div>
           <p className={styles.eyebrow}>ドヤパワー</p>
@@ -163,6 +178,8 @@ export default function MissionsBoard({ view }: { view: MissionsView }) {
           単価は、クラウドソーシングや制作会社の公開の相場の低めの側に寄せた目安です。請求や契約の根拠にはしないでください。
         </p>
       </section>
+
+      <DoyaPowerFxSettings canEditOrg={canEditOrgFx || sample} onSave={sample ? sampleSave : undefined} />
     </div>
   )
 }
