@@ -159,7 +159,7 @@ def build(root, inp, out, date, mermaid_source, group_map_file):
         if not file.is_file() or sha(file.read_bytes()) != expected:
             fail('Group map caller changed: ' + relative)
         try:
-            authored = subprocess.check_output(['git', '-C', str(root), 'show',
+            authored = subprocess.check_output(['git', '-C', str(root), 'cat-file', 'blob',
                                                 groups['sourceCommit'] + ':' + relative])
         except subprocess.CalledProcessError:
             fail('Group map source commit lacks caller: ' + relative)

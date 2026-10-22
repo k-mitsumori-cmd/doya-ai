@@ -21,7 +21,7 @@ function args(argv) {
 }
 function git(root, ...argv) { return cp.execFileSync('git', ['-C', root, ...argv], { encoding: 'utf8' }).trim() }
 function committedBytes(root, name) {
-  try { return cp.execFileSync('git', ['-C', root, 'show', 'HEAD:' + name], { encoding: 'buffer', maxBuffer: 32 * 1024 * 1024 }) }
+  try { return cp.execFileSync('git', ['-C', root, 'cat-file', 'blob', 'HEAD:' + name], { encoding: 'buffer', maxBuffer: 32 * 1024 * 1024 }) }
   catch { throw Error('Source closure is not present in HEAD: ' + name) }
 }
 function inside(root, file) { return file === root || file.startsWith(root + path.sep) }

@@ -55,6 +55,32 @@ def main(dependency_root):
     command(*build)
     command('python3',str(BASE/'make-er-html.py'),*common)
     good=command('python3',str(BASE/'validate-er.py'),*common)
+    bracket_evidence='src/lib/shell/[untracked].ts'
+    (root/bracket_evidence).write_bytes(b'')
+    bracket_groups=copy.deepcopy(json.loads(groups.read_text()))
+    bracket_groups['evidenceSha256']={bracket_evidence:sha(b'')}
+    for decision in bracket_groups['models'].values(): decision['evidence']=bracket_evidence
+    bracket_map=temp/'groups-bracket.json';bracket_map.write_text(json.dumps(bracket_groups))
+    absent_ref=commit+':'+bracket_evidence
+    old_show=subprocess.run(['git','-C',str(root),'show',absent_ref],capture_output=True)
+    exact_blob=subprocess.run(['git','-C',str(root),'cat-file','blob',absent_ref],capture_output=True)
+    assert old_show.returncode==0 and old_show.stdout==b'' and exact_blob.returncode!=0
+    reject('Group map source commit lacks caller: '+bracket_evidence,
+           'python3',str(BASE/'build-er.py'),'--root',str(root),'--input-dir',str(inp),
+           '--out-dir',str(temp/'absent-bracket-evidence'),'--date',DATE,
+           '--mermaid-source',str(mermaid),'--group-map',str(bracket_map))
+    command('git','add',bracket_evidence,cwd=root)
+    command('git','commit','-qm','track empty bracket evidence',cwd=root)
+    bracket_commit=command('git','rev-parse','HEAD',cwd=root).strip()
+    bracket_tree=command('git','rev-parse','HEAD^{tree}',cwd=root).strip()
+    bracket_groups['sourceCommit']=bracket_commit;bracket_map.write_text(json.dumps(bracket_groups))
+    original_input_manifest=(inp/'manifest.json').read_bytes()
+    bracket_manifest=copy.deepcopy(manifest);bracket_manifest['sourceCommit']=bracket_commit;bracket_manifest['sourceTree']=bracket_tree
+    (inp/'manifest.json').write_text(json.dumps(bracket_manifest))
+    command('python3',str(BASE/'build-er.py'),'--root',str(root),'--input-dir',str(inp),
+            '--out-dir',str(temp/'tracked-empty-evidence'),'--date',DATE,
+            '--mermaid-source',str(mermaid),'--group-map',str(bracket_map))
+    (inp/'manifest.json').write_bytes(original_input_manifest)
     output_manifest_path=out/'manifest.json';output_manifest=json.loads(output_manifest_path.read_text())
     entity_file=out/'entities.csv';original_entities=entity_file.read_bytes()
     entity_file.write_bytes(original_entities.replace(b'parents_a',b'wrong_tbl',1))
@@ -230,7 +256,30 @@ def main(dependency_root):
     (root/'src/lib/untracked.ts').write_text('export const EXTRA = []\n')
     assert command('git','status','--porcelain','--untracked-files=no',cwd=root).strip()==''
     reject('Source closure is not present in HEAD: src/lib/untracked.ts','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'untracked-relative'),'--date',DATE)
-    print(json.dumps({'passed':True,'valid':json.loads(good)['passed'],'models':3,'orderedRelations':3,'exporterPositive':True,'negativeCases':['invalid_inline_js','entity_csv_semantic_with_rehashed_output','relation_csv_semantic_with_rehashed_output','output_collision','missing_or_reversed_mermaid_field','caller_evidence_drift','stale_dmmf_model_set','unknown_external_service_import','service_closure_drift','duplicate_export_arg','symlink_output_inside_root','initial_dirty_tracked_source','stale_generated_schema','generated_attribute_drift','generated_comment_drift','formatter_failure','untracked_relative_import','diagnostic_path_boundary','diagnostic_mismatch_capture','diagnostic_partial_formatter_capture','diagnostic_env_sentinel'],'scope':'Synthetic small schema and client only; current 246-model DMMF not exported or accepted.'}))
+    empty_import="import './plain_empty'\n"+original_services
+    (root/'src/lib/plain_empty.ts').write_bytes(b'')
+    services_file.write_text(empty_import)
+    command('git','add','src/lib/services.ts',cwd=root)
+    command('git','commit','-qm','tracked empty importer',cwd=root)
+    reject('Source closure is not present in HEAD: src/lib/plain_empty.ts','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'untracked-empty'),'--date',DATE)
+    bracket_target=root/'src/lib/[untracked].ts';bracket_target.write_bytes(b'')
+    (root/'src/lib/alias.ts').symlink_to('[untracked].ts')
+    services_file.write_text("import './[untracked]'\n"+original_services)
+    reject('Unknown/external service import ./[untracked]','node','-e','require(process.argv[1]).readClosure(process.argv[2],require(process.argv[3]))',str(exporter),str(root),str(typescript))
+    services_file.write_text("import './alias'\n"+original_services)
+    command('git','add','src/lib/services.ts',cwd=root)
+    command('git','commit','-qm','tracked alias importer',cwd=root)
+    alias_closure=json.loads(command('node','-e','process.stdout.write(JSON.stringify(require(process.argv[1]).readClosure(process.argv[2],require(process.argv[3])).closure))',str(exporter),str(root),str(typescript)))
+    assert alias_closure['src/lib/[untracked].ts']==sha(b'')
+    old_show=subprocess.run(['git','-C',str(root),'show','HEAD:src/lib/[untracked].ts'],capture_output=True)
+    assert old_show.returncode==0 and old_show.stdout==b''
+    reject('Source closure is not present in HEAD: src/lib/[untracked].ts','node',str(exporter),'--root',str(root),'--out-dir',str(temp/'untracked-empty-alias'),'--date',DATE)
+    command('git','add','src/lib/alias.ts','src/lib/[untracked].ts',cwd=root)
+    command('git','commit','-qm','track empty symlink target',cwd=root)
+    tracked_empty=json.loads(command('node',str(exporter),'--root',str(root),'--out-dir',str(temp/'tracked-empty-alias'),'--date',DATE))
+    tracked_manifest=json.loads((temp/'tracked-empty-alias/manifest.json').read_text())
+    assert tracked_empty['passed'] and tracked_manifest['closureSha256']['src/lib/[untracked].ts']==sha(b'')
+    print(json.dumps({'passed':True,'valid':json.loads(good)['passed'],'models':3,'orderedRelations':3,'exporterPositive':True,'negativeCases':['invalid_inline_js','entity_csv_semantic_with_rehashed_output','relation_csv_semantic_with_rehashed_output','output_collision','missing_or_reversed_mermaid_field','caller_evidence_drift','stale_dmmf_model_set','unknown_external_service_import','service_closure_drift','duplicate_export_arg','symlink_output_inside_root','initial_dirty_tracked_source','stale_generated_schema','generated_attribute_drift','generated_comment_drift','formatter_failure','untracked_relative_import','diagnostic_path_boundary','diagnostic_mismatch_capture','diagnostic_partial_formatter_capture','diagnostic_env_sentinel','absent_bracket_caller_evidence','ordinary_untracked_empty_import','direct_bracket_import_rejected','alias_to_untracked_bracket_empty'],'positiveCases':['tracked_empty_bracket_evidence','tracked_empty_alias_export'],'scope':'Synthetic small schema and client only; current 246-model DMMF not exported or accepted.'}))
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--dependency-root',type=pathlib.Path,required=True)
