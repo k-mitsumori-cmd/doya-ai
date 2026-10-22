@@ -5,6 +5,8 @@ import { clsx } from 'clsx'
 import { CountUp, PageHeader, cardIn } from './ui'
 import { BUDGET_META, man, yen, type BudgetLine, type ProjectInput } from '@/lib/tenjikai/engine'
 import { ds } from '@/lib/tenjikai/tokens'
+import { useUiNext } from '@/components/shell/ui-next-context'
+import { Bars } from '@/components/ds/charts'
 
 function Donut({ lines, total }: { lines: BudgetLine[]; total: number }) {
   const r = 70
@@ -44,6 +46,7 @@ export default function BudgetPlanner({ input, setInput, budget }: { input: Proj
   const total = budget.reduce((s, b) => s + b.amountYen, 0)
   const diff = input.budgetYen - total
   const usage = Math.min(1.3, total / input.budgetYen)
+  const uiNext = useUiNext()
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:px-8">
@@ -89,9 +92,11 @@ export default function BudgetPlanner({ input, setInput, budget }: { input: Proj
                   </td>
                   <td className="hidden px-5 py-3 text-xs text-gray-500 sm:table-cell">
                     {b.detail}
-                    <div className="mt-1 h-1 rounded-full bg-gray-100">
-                      <motion.div className="h-full rounded-full" style={{ background: BUDGET_META[b.category].color }} initial={false} animate={{ width: `${(b.amountYen / total) * 100}%` }} transition={{ duration: 0.4 }} />
-                    </div>
+                    {!uiNext && (
+                      <div className="mt-1 h-1 rounded-full bg-gray-100">
+                        <motion.div className="h-full rounded-full" style={{ background: BUDGET_META[b.category].color }} initial={false} animate={{ width: `${(b.amountYen / total) * 100}%` }} transition={{ duration: 0.4 }} />
+                      </div>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-5 py-3 text-right font-mono tabular text-ink">{yen(b.amountYen)}</td>
                 </motion.tr>
@@ -104,6 +109,16 @@ export default function BudgetPlanner({ input, setInput, budget }: { input: Proj
             </tbody>
           </table>
         </motion.div>
+        {uiNext && budget.length > 0 && (
+          // 新しい見た目: 表の行ごとの細い棒をやめ、共通の Bars で費目ごとの金額と割合を並べる
+          <motion.div {...cardIn(2)} className="rounded-[var(--r)] border border-gray-200 bg-white p-5 lg:col-span-2">
+            <h3 className="mb-3 text-sm font-black text-ink">費目ごとの金額</h3>
+            <Bars
+              data={budget.map((b) => ({ label: BUDGET_META[b.category].label, value: b.amountYen, sub: `${total > 0 ? Math.round((b.amountYen / total) * 100) : 0}%` }))}
+              format={(n) => yen(n)}
+            />
+          </motion.div>
+        )}
       </div>
       <p className="text-[11px] text-gray-400">小間料と単価は目安です。実際の金額は、主催者の料金表と業者の見積で確かめてください。</p>
     </div>
