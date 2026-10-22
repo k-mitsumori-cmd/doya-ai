@@ -18,12 +18,13 @@ import { emptyTotals, sinceDay, sumTotals, ymd, type DailyPoint, type StatTotals
 export type PopupDb = Pick<PrismaClient, 'popupSite' | 'popup' | 'popupStat'>
 
 /** 案ごとの合計（期間内） */
-export async function totalsByPopup(db: PopupDb, popupIds: string[], days: number): Promise<Map<string, StatTotals>> {
+// now はテストで日付を決めるため（省略すると今の時刻。2026-10-22 日付が進むとテストが落ちたため足した）
+export async function totalsByPopup(db: PopupDb, popupIds: string[], days: number, now: Date = new Date()): Promise<Map<string, StatTotals>> {
   const out = new Map<string, StatTotals>()
   if (popupIds.length === 0) return out
   const rows = await db.popupStat.groupBy({
     by: ['popupId'],
-    where: { popupId: { in: popupIds }, day: { gte: sinceDay(days) } },
+    where: { popupId: { in: popupIds }, day: { gte: sinceDay(days, now) } },
     _sum: { impressions: true, clicks: true, closes: true },
   })
   for (const r of rows) {
@@ -165,13 +166,13 @@ export interface PopupSummary {
  * ホームの「集客の数字（7日）」とエージェントの道具 popup.stats の正本。
  * サイトが1つも無ければ siteCount=0（ホームはカードを出さない。空のカードを出さない）。
  */
-export async function getPopupSummary(db: PopupDb, userId: string, days = 7): Promise<PopupSummary> {
+export async function getPopupSummary(db: PopupDb, userId: string, days = 7, now: Date = new Date()): Promise<PopupSummary> {
   const popups = await db.popup.findMany({
     where: { userId, site: { deletedAt: null } },
     select: { id: true, name: true, status: true, siteId: true, site: { select: { name: true } } },
   })
   const siteCount = await db.popupSite.count({ where: { userId, deletedAt: null } })
-  const totals = await totalsByPopup(db, popups.map((p) => p.id), days)
+  const totals = await totalsByPopup(db, popups.map((p) => p.id), days, now)
   const top = popups
     .map((p) => {
       const t = totals.get(p.id) || emptyTotals()
