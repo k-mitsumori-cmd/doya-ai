@@ -6,8 +6,10 @@ import { personaUsageDay } from './usage-day'
 import { releasePersonaProjectReservation } from './project-ledger'
 export { personaUsageDay } from './usage-day'
 
+// 追加枠（付属枠の外）の1日の上限。有料は 2026-10-23 のユーザーの判断で 30 → 15 枚に下げた
+// （上限まで使うと原価が月額 9,980円を上回るため。PRICING-POINTS・原価の調べ）
 export function personaExtraImageLimit(plan: string | null): number {
-  return isPaidPlan(plan) ? 30 : 5
+  return isPaidPlan(plan) ? 15 : 5
 }
 
 /**
