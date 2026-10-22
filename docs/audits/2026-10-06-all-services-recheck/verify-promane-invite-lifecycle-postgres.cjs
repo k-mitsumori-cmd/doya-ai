@@ -90,7 +90,12 @@ async function setup() {
     for (const fields of model.uniqueFields) columns.push('UNIQUE (' + fields.map(quote).join(',') + ')')
     await db.$executeRawUnsafe('CREATE TABLE ' + quote(model.dbName || name) + ' (' + columns.join(',') + ')')
   }
-  await db.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN name TEXT, ADD COLUMN email TEXT UNIQUE')
+  const userUpdatedAt = Prisma.dmmf.datamodel.models.find(model => model.name === 'User')?.fields.find(field => field.name === 'updatedAt')
+  assert(userUpdatedAt?.kind === 'scalar' && userUpdatedAt.type === 'DateTime' && userUpdatedAt.isRequired &&
+    userUpdatedAt.isUpdatedAt && !userUpdatedAt.hasDefaultValue, 'Exact User @updatedAt DMMF shape')
+  // The default seeds this private four-column User fixture; production schema is unchanged.
+  await db.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN name TEXT, ADD COLUMN email TEXT UNIQUE, ADD COLUMN ' +
+    quote(userUpdatedAt.dbName || userUpdatedAt.name) + ' TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP')
   await db.$executeRawUnsafe('ALTER TABLE promane_workspaces ADD FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
   await db.$executeRawUnsafe('ALTER TABLE promane_members ADD FOREIGN KEY ("workspaceId") REFERENCES promane_workspaces(id) ON DELETE CASCADE')
   await db.$executeRawUnsafe('ALTER TABLE promane_members ADD FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
