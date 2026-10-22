@@ -87,7 +87,8 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
     const amount = doyaPowerCost(action, opts.units ?? 1)
     if (amount === null || amount <= 0) return { kind: 'skip' }
     const key = cleanKey(opts.key)
-    let operationId = `${action}:${who.companyId}:${key ?? newKey()}`
+    // 操作の ID に量も含める（同じキーで量だけ変えた呼び出しを、同じ操作として扱わない）
+    let operationId = `${action}:${who.companyId}:${key ?? newKey()}:${amount}`
     try {
       // 有料の人の毎月の付与は、残りを使うときに足りない分を付ける（月に1回だけ。cron に頼らない）。毎日の回復は台帳が足す
       await deps.ledger.grantMonthlyForPlan(who.companyId, who.plan)
@@ -96,7 +97,9 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
       const r = await deps.ledger.consume(who.companyId, amount, operationId)
       if (r.ok) {
         // ⚠️ 同じ ID の2回目（duplicated）は、この呼び出しでは減らしていないので、失敗しても戻さない。
-        //    戻すと、前の呼び出しで成功した分まで戻ってしまう（同じ ID を使い回して、タダで作り直せてしまう）
+        //    戻すと、前の呼び出しで成功した分まで戻ってしまう（同じ ID を使い回して、タダで作り直せてしまう）。
+        // ⚠️ 2回目を減らさずに通すのは、処理の側が同じキーで結果を返し直す（または食い違いを断る）API だけに限る。
+        //    クライアントのキーを渡してよい API は、verify-doya-power-charge-routes.cjs の KEYED で固定している
         if (r.duplicated) return { kind: 'charged', operationId, amount: r.amount, duplicated: true, refund: async () => {} }
         const refund = async () => {
           try {

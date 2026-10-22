@@ -14,7 +14,22 @@ const WRAPPED={
   'banner/test/generate':'banner.generate','banner/from-url':'banner.generate','banner/generate':'banner.generate','banner/refine':'image.refine',
   'tenjikai/image':'tenjikai.image','doyaslide/structure':'slide.generate',
 };
+// クライアントのキー（同じ操作をまとめる ID）を渡してよい API。どれも、処理の側が同じキーで結果を返し直すか、
+// 食い違い（本文の違い）を断る作り（receipt・operation・reserve）。ここに無い API でキーを渡したら落とす
+const KEYED={'interview/articles/generate':'operationId','adimage/concepts/[id]/refine':'operationId','sfa/ai/score':'operationId','sfa/ai/next-action':'operationId','persona/generate':'requestKey','seo/articles':'operationId','banner/refine':'operationId'};
 (async()=>{
+  await check('Only routes whose handlers dedupe on the same key pass a client key',async()=>{
+    for(const p of Object.keys(WRAPPED)){
+      const src=code('src/app/api/'+p+'/route.ts');
+      const m=src.match(/export const POST = withDoyaPowerCharge\(([\s\S]*?), postHandler\)/);
+      assert.ok(m,p);
+      const keyed=/key:/.test(m[1]);
+      if(KEYED[p])assert.ok(m[1].includes('b?.'+KEYED[p]),p+' key '+KEYED[p]);
+      else assert.equal(keyed,false,p+' must not pass a client key');
+    }
+    // 操作の ID には量も入る（同じキーで量だけ変えた呼び出しを、同じ操作にしない）
+    assert.match(code('src/lib/doya-power/charge-core.ts'),/let operationId = `\$\{action\}:\$\{who\.companyId\}:\$\{key \?\? newKey\(\)\}:\$\{amount\}`/);
+  });
   await check('Every paid route behind a cost badge charges before generating',async()=>{
     for(const [p,action] of Object.entries(WRAPPED)){
       const src=code('src/app/api/'+p+'/route.ts');

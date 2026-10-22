@@ -179,7 +179,7 @@ test('前に戻した操作の ID がもう一度来たら、新しい操作と�
   assert.equal(retry.kind, 'charged')
   if (retry.kind === 'charged') {
     assert.equal(retry.duplicated, false)
-    assert.match(retry.operationId, /:op-y:retry-/)
+    assert.match(retry.operationId, /:op-y:\d+:retry-/)
   }
   assert.equal(await s.remaining(), full - cost)
 })
