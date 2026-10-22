@@ -12,6 +12,8 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getMensetsuContext, hasMinRole, orgSlugFrom } from '@/lib/mensetsu/access'
+import { voiceCharger, voiceTokenKey } from '@/lib/doya-power/voice'
+import { voiceActualMinutes } from '@/lib/doya-power/voice-core'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -31,6 +33,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       status: true,
       startedAt: true,
       updatedAt: true,
+      token: true,
       _count: { select: { turns: true } },
       turns: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
     },
@@ -67,6 +70,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     data: { status: next, endedAt: new Date(), updatedAt: new Date(Math.max(Date.now(), s.updatedAt.getTime() + 1)) },
   })
   if (closed.count !== 1) return NextResponse.json({ error: '面接の状態が変わりました。再読み込みしてください。' }, { status: 409 })
+  // ドヤパワー（旗の内側だけ）: 仮に減らした分を戻し、実際の分数ぶんを減らし直す。
+  // 担当者が閉じるのは放置のあとなので、終わりの時刻は「最後の発話」（発話が無ければ 0分）
+  await voiceCharger.settle('mensetsu', c.organizationId, voiceTokenKey('mensetsu', s.token), voiceActualMinutes(s.startedAt, lastTurnAt ?? s.startedAt))
   return NextResponse.json({ ok: true, status: next })
 }
 
@@ -88,7 +94,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
   const s = await prisma.mensetsuSession.findFirst({
     where: { id: p.id, organizationId: c.organizationId },
-    select: { id: true, status: true, expiresAt: true, updatedAt: true, _count: { select: { turns: true } } },
+    select: { id: true, status: true, expiresAt: true, updatedAt: true, token: true, _count: { select: { turns: true } } },
   })
   if (!s) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   if (s.status !== 'aborted' && s.status !== 'expired') {
@@ -102,6 +108,11 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   }
   if (s.expiresAt.getTime() < Date.now()) {
     return NextResponse.json({ error: '有効期限が切れています。URLを再発行してください。' }, { status: 410 })
+  }
+  // ドヤパワー（旗の内側だけ）: 中止のときに仮に減らした分を戻したので、同じ URL では受け直せない（減らさずに動いてしまうため）。
+  // 新しい URL の発行を案内する（発行のときに、あらためて仮に減らす）
+  if ((await voiceCharger.allowance('mensetsu', c.organizationId, voiceTokenKey('mensetsu', s.token), 10)) === 'closed') {
+    return NextResponse.json({ error: 'この面接は、ドヤパワーの清算が済んでいるため戻せません。新しい面接URLを発行してください。' }, { status: 409 })
   }
 
   const restored = await prisma.mensetsuSession.updateMany({

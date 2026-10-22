@@ -3,13 +3,15 @@ export const dynamic = 'force-dynamic'
 
 // POST /api/aishodan/room/[token]/start — 同意を記録してセッションを作る
 // ⚠️ 未認証。ゲストは Cookie の guestId で識別する（adbanner のパターンを踏襲）。
-import { randomBytes } from 'crypto'
+import { randomBytes, randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { assertRoomUsable, loadRoomByToken, toPublicSession } from '@/lib/aishodan/public'
 import { resolveUserId } from '@/lib/aishodan/access'
 import { assertFreeLimit, jstStartOfMonthUtc, FREE_LIMITS } from '@/lib/plan-limit'
 import { getOrganizationQuotaUsage, recordOrganizationQuotaUsage } from '@/lib/organization-quota-ledger'
+import { voiceCharger } from '@/lib/doya-power/voice'
+import { voiceChargeMinutes } from '@/lib/doya-power/voice-core'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -89,6 +91,16 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   }
 
   const unavailable = '現在この商談ルームはご利用いただけません。お手数ですが担当者までご連絡ください。'
+  // ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）: 商談を始める前に、最大の分数ぶん（シナリオの分数 + 3分）を、
+  // ルームを出している組織の持ち主の会社から仮に減らす。⚠️ ルームの URL は何回も使えるので、商談ごとに減らす。
+  // 操作の ID は商談の ID（ここで先に決める）。終わったら実際の分数との差を戻す（end・放置の自動完了）
+  const sessionId = randomUUID().replace(/-/g, '')
+  const voice = await voiceCharger.hold('aishodan', room.organizationId, `session-${sessionId}`, voiceChargeMinutes(room.scenario.durationMin), {
+    insufficient: 'いまは商談を始められません。時間をおいてお試しいただくか、ご担当者にお問い合わせください。',
+  })
+  if (voice.kind === 'blocked') return voice.response
+  const releaseVoice = async () => { if (voice.kind === 'charged') await voice.refund() }
+
   let result: { kind: 'created'; session: Awaited<ReturnType<typeof prisma.aishodanSession.create>> } | { kind: 'unavailable' } | { kind: 'expired' } | { kind: 'changed' } | { kind: 'previewLimit' } | { kind: 'previewUnauthorized' } | null = null
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
@@ -138,6 +150,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
 
         const session = await tx.aishodanSession.create({
           data: {
+            id: sessionId,
             organizationId: room.organizationId,
             roomId: room.id,
             guestId,
@@ -162,9 +175,12 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     } catch (error: any) {
       if ((error?.code === 'P2034' || error?.code === 'P2002') && attempt < 4) continue
       console.error('[aishodan/room/start] create failed', error?.code || 'unknown')
+      await releaseVoice()
       return NextResponse.json({ error: '商談を開始できませんでした。時間をおいてもう一度お試しください。' }, { status: 503 })
     }
   }
+  // 商談を作れなかったら、仮に減らした分を戻す
+  if (result?.kind !== 'created') await releaseVoice()
   if (result?.kind === 'expired') return NextResponse.json({ error: 'この商談ルームの公開期間は終了しました。' }, { status: 410 })
   if (result?.kind === 'changed') return NextResponse.json({ error: '商談ルームの設定が更新されました。再読み込みしてください。' }, { status: 409 })
   if (result?.kind === 'previewUnauthorized') return NextResponse.json({ error: 'この組織の練習ルームはご利用いただけません。' }, { status: 403 })

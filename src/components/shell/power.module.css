@@ -15,3 +15,7 @@
 .sidebarMeter { align-self: flex-start; margin: 4px 12px 0; }
 /* 768〜1279px のアイコンだけのサイドバーでは、数字と棒を隠して稲妻だけにする */
 @media (min-width: 768px) and (max-width: 1279px) { .sidebarMeter .num, .sidebarMeter .track { display: none; } .sidebarMeter { padding: 0 8px; } }
+
+/* 「足りない」の知らせ。右下に出す（スマホでは下のタブとプレビューの札の上） */
+.lowPower { position: fixed; right: 16px; bottom: 24px; z-index: 70; width: min(420px, calc(100vw - 32px)); }
+@media (max-width: 767px) { .lowPower { right: 12px; left: 12px; width: auto; bottom: calc(128px + env(safe-area-inset-bottom, 0px)); } }

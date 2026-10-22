@@ -17,6 +17,7 @@ import UiNextBadge from './UiNextBadge'
 import ShellVitals from './ShellVitals'
 import { DoyaPowerContext } from '@/components/doya-power/doya-power-context'
 import { ShellPowerProvider, type ShellPowerState } from './power'
+import { DoyaPowerFetchWatcher, ShellLowPowerNotice } from './low-power'
 
 const EMPTY: Record<string, string> = {}
 
@@ -52,6 +53,9 @@ export default function ShellGate({ signedIn, userName, enabledIds, uiNext = nul
       <DoyaPowerContext.Provider value={Boolean(uiNext && doyaPower)}>
       <ShellPowerProvider value={uiNext && doyaPower ? doyaPowerState : null}>
       {inner}
+      {/* 「ドヤパワーが足りない」（402）の知らせ。旗が出すと決めた人だけ動く */}
+      <DoyaPowerFetchWatcher />
+      <ShellLowPowerNotice />
       {/* useSearchParams を使うので Suspense で包む（静的な画面の書き出しを止めない） */}
       <Suspense fallback={null}><UiNextBadge /></Suspense>
       {/* 表示の速さを測る（新しい見た目のときだけ。外には送らない。UI 品質 S-45） */}

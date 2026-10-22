@@ -117,6 +117,8 @@ export function createDoyaPowerCharger(deps: ChargeDeps) {
               code: 'DOYA_POWER_INSUFFICIENT',
               balance: r.balance,
               required: amount,
+              limit: gaugeLimit(r.balance, who.plan, deps.isPaidPlan),
+              recoveryAmount: DAILY_RECOVERY_AMOUNT,
               nextRecoveryAt: next.toISOString(),
             },
             { status: 402, headers: NO_STORE },

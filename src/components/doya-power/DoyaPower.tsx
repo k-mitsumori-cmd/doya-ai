@@ -208,11 +208,20 @@ function LowPowerNoticeBody({
   fx,
   onClose,
   className,
+  title: titleOverride,
+  recoveryAmount,
+  blockedText,
 }: {
   remaining: number
   limit: number
   nextRecoveryAt?: Date | string | number
   now?: Date | string | number
+  /** 見出しを変えるとき（例: 「この操作にはドヤパワーが 50 要ります」） */
+  title?: string
+  /** 回復するときに増える量。渡すと「〜に 10 回復します」と出す（渡さないと「〜に 上限 まで回復します」） */
+  recoveryAmount?: number
+  /** 本文の最後の1文を変えるとき */
+  blockedText?: string
   /** 渡すと「あと バナー2枚分」のように言い換える（いちばん軽いもの1つ） */
   conversions?: PowerConversion[]
   /** 増やし方への案内の行き先 */
@@ -228,7 +237,7 @@ function LowPowerNoticeBody({
   const value = Math.max(0, remaining)
   const recovery = nextRecoveryAt !== undefined ? recoveryLabel(nextRecoveryAt, now) : null
   const lightest = conversions ? powerEquivalents(value, conversions).sort((a, b) => a.cost - b.cost)[0] : undefined
-  const title = value <= 0 ? `今日の${label}を使い切りました` : `${label}が残り少なくなっています`
+  const title = titleOverride ?? (value <= 0 ? `今日の${label}を使い切りました` : `${label}が残り少なくなっています`)
   return (
     <section className={`${styles.notice} ${className ?? ''}`} role="status" data-motion={motion ? 'on' : 'off'}>
       {f.mascot ? <Mascot pose="thinking" size={56} className={styles.noticeMascot} /> : <span className={styles.noticeIcon}><BatteryLow size={20} aria-hidden /></span>}
@@ -236,8 +245,10 @@ function LowPowerNoticeBody({
         <p className={styles.noticeTitle}>{title}</p>
         <p className={styles.noticeBody}>
           {value > 0 ? <>残りは <b className={styles.noticeNum}>{fmt(value)}</b> / {fmt(limit)} です{lightest && lightest.count > 0 ? `（あと ${lightest.label}${fmt(lightest.count)}${lightest.unit}分）` : ''}。</> : <>たくさん使っていただき、ありがとうございます。</>}
-          {recovery ? <><span className={styles.nobr}>{recovery} に</span> {fmt(limit)} まで回復します。</> : null}
-          {value > 0 ? 'いま作っているものは、そのまま続けられます。' : '回復するまで、作ったものの確認や編集はそのままできます。'}
+          {recovery ? (recoveryAmount !== undefined
+            ? <><span className={styles.nobr}>{recovery} に</span> {fmt(recoveryAmount)} 回復します。</>
+            : <><span className={styles.nobr}>{recovery} に</span> {fmt(limit)} まで回復します。</>) : null}
+          {blockedText ?? (value > 0 ? 'いま作っているものは、そのまま続けられます。' : '回復するまで、作ったものの確認や編集はそのままできます。')}
         </p>
         {moreHref ? (
           <a href={moreHref} className={styles.noticeLink}>{moreLabel}<ArrowRight size={14} aria-hidden /></a>

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { purgeQueuedMensetsuRecordings } from '@/lib/mensetsu/recording-purge-queue'
 import { EVALUATION_STALE_MS } from '@/lib/mensetsu/types'
+import { voiceCharger, voiceTokenKey } from '@/lib/doya-power/voice'
+import { voiceActualMinutes } from '@/lib/doya-power/voice-core'
+import { doyaPowerRollout } from '@/lib/doya-power/flag'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -48,6 +51,17 @@ export async function GET(req: NextRequest) {
     data: { status: 'expired' },
   })
 
+  // 1a) ドヤパワー（旗の内側だけ）: 始まらずに期限切れになった面接は、仮に減らした分をすべて戻す。
+  //     何度呼んでも1回だけ戻るので、直近7日に期限が来たものを毎回見る。旗が off なら読まない
+  if (doyaPowerRollout() !== 'off') {
+    const unstarted = await prisma.mensetsuSession.findMany({
+      where: { status: 'expired', startedAt: null, expiresAt: { lt: now, gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
+      select: { organizationId: true, token: true },
+      take: BATCH,
+    })
+    for (const u of unstarted) await voiceCharger.settle('mensetsu', u.organizationId, voiceTokenKey('mensetsu', u.token), 0)
+  }
+
   // 1b) 放置された実施中セッションを回収する。
   // ⚠️ 応募者のブラウザがクラッシュすると /end に到達せず status='live' のまま残る。
   //    1件でも残るとテンプレートの質問編集が 409 で永久にブロックされるため、
@@ -57,7 +71,7 @@ export async function GET(req: NextRequest) {
   const staleBefore = new Date(now.getTime() - STALE_HOURS * 60 * 60 * 1000)
   const staleLive = await prisma.mensetsuSession.findMany({
     where: { status: 'live', startedAt: { lt: staleBefore } },
-    select: { id: true, _count: { select: { turns: true } } },
+    select: { id: true, organizationId: true, token: true, startedAt: true, _count: { select: { turns: true } }, turns: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } } },
     orderBy: { startedAt: 'asc' },
     take: BATCH,
   })
@@ -69,6 +83,8 @@ export async function GET(req: NextRequest) {
         data: { status: s._count.turns > 0 ? 'completed' : 'aborted', endedAt: now },
       })
       closedStaleLive += closed.count
+      // ドヤパワー（旗の内側だけ）: 放置のあとに閉じたので、終わりの時刻は「最後の発話」（発話が無ければ 0分）
+      if (closed.count === 1) await voiceCharger.settle('mensetsu', s.organizationId, voiceTokenKey('mensetsu', s.token), voiceActualMinutes(s.startedAt, s.turns[0]?.createdAt ?? s.startedAt))
     } catch {
       // 1件の終了失敗で保持期限切れデータの削除まで止めない。
       console.error('[mensetsu-purge] stale live close failed')

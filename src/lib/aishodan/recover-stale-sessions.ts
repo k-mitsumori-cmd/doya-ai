@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { enqueueEvaluation } from './evaluation-task'
+import { voiceCharger } from '@/lib/doya-power/voice'
+import { voiceActualMinutes } from '@/lib/doya-power/voice-core'
 
 const CURSOR_KEY = 'aishodan-stale-session-cursor:v1'
 const RECONNECT_GRACE_MS = 15 * 60 * 1000
@@ -21,6 +23,7 @@ export async function recoverStaleAishodanSessions() {
     if (Date.now() >= stopAt) break
     last = row.id
     stats.checked++
+    const toSettle: { args: { organizationId: string; startedAt: Date; lastActivity: Date } | null } = { args: null }
     try {
       const status = await prisma.$transaction(async tx => {
         await tx.$queryRaw`SELECT id FROM aishodan_sessions WHERE id = ${row.id} FOR NO KEY UPDATE`
@@ -37,8 +40,13 @@ export async function recoverStaleAishodanSessions() {
         const revision = new Date(Math.max(Date.now(), current.updatedAt.getTime() + 1))
         await tx.aishodanSession.update({ where: { id: current.id }, data: { status, endedAt: new Date(), updatedAt: revision } })
         if (status === 'completed') await enqueueEvaluation(tx, current.id, current.organizationId, revision)
+        // ドヤパワーの清算のために、始めた時刻と最後の動き（updatedAt）を返す。放置のあとに閉じるので、終わりは最後の動き
+        toSettle.args = { organizationId: current.organizationId, startedAt: current.startedAt, lastActivity: current.updatedAt }
         return status
       }, { isolationLevel: 'ReadCommitted', timeout: 15000 })
+      // ドヤパワー（旗の内側だけ）: 仮に減らした分を戻し、実際の分数ぶんを減らし直す
+      const a = toSettle.args
+      if (a) await voiceCharger.settle('aishodan', a.organizationId, `session-${row.id}`, voiceActualMinutes(a.startedAt, a.lastActivity))
       if (status === 'completed') stats.completed++
       else if (status === 'aborted') stats.aborted++
       else stats.skipped++
