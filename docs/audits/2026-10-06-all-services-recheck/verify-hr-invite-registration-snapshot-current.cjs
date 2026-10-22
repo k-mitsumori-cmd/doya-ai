@@ -350,14 +350,16 @@ function tracedH3Db(email) {
       h3Attempts.push(attempt)
       try {
         const value = await target.$transaction(async tx => {
-          // First statement fixes the actual Serializable snapshot before the User lock.
+          // Record the first ReadCommitted statement snapshot before the User lock.
+          // Later statements must not be described as sharing a transaction snapshot.
           const [seen] = await tx.$queryRawUnsafe(`SELECT pg_backend_pid() AS pid,
             current_setting('transaction_isolation') AS isolation,
             txid_current_snapshot()::text AS snapshot`)
-          assert.equal(seen.isolation.toLowerCase(), 'serializable')
+          assert.equal(seen.isolation.toLowerCase(), 'read committed')
           attempt.pid = seen.pid
-          attempt.snapshot = seen.snapshot
-          event('serializable-snapshot', { attempt: attempt.index, pid: seen.pid, snapshot: seen.snapshot })
+          attempt.isolationObserved = seen.isolation.toLowerCase()
+          attempt.statementSnapshot = seen.snapshot
+          event('read-committed-statement', { attempt: attempt.index, pid: seen.pid, snapshot: seen.snapshot })
           const observedTx = new Proxy(tx, { get(inner, key) {
             if (key === 'user') return probeUser(inner.user, 'inner', attempt.index, email)
             return Reflect.get(inner, key, inner)
@@ -379,8 +381,24 @@ function tracedH3Db(email) {
 }
 function actualH3InviteRoute(email) {
   const observedDb = tracedH3Db(email)
+  const observedLifecycle = { ...lifecycle,
+    lockLifecycleUsers: async (tx, ids) => {
+      const attempt = h3Attempts.at(-1)?.index
+      event('user-lock-requested', { attempt, ids: [...ids] })
+      await lifecycle.lockLifecycleUsers(tx, ids)
+      event('user-lock-acquired', { attempt, ids: [...ids] })
+    },
+    assertRetirementMembershipWritable: async (tx, ids) => {
+      const attempt = h3Attempts.at(-1)?.index
+      try { return await lifecycle.assertRetirementMembershipWritable(tx, ids) }
+      catch (error) {
+        event('retirement-fence-rejected', { attempt, ids: [...ids], code: error?.code || null })
+        throw error
+      }
+    },
+  }
   const observedMembership = load('src/lib/hr/membership-write.ts', {
-    '@prisma/client': { Prisma }, '@/lib/prisma': { prisma: observedDb }, '@/lib/account-lifecycle/store': lifecycle,
+    '@prisma/client': { Prisma }, '@/lib/prisma': { prisma: observedDb }, '@/lib/account-lifecycle/store': observedLifecycle,
   })
   return load('src/app/api/hr/organization/invite/route.ts', {
     ...routeMocks, '@/lib/hr/membership-write': observedMembership,
@@ -420,7 +438,7 @@ async function currentH3Race() {
     const wait = await waitForH3Owner(holderPid)
     assert.ok(h3Discoveries.some(row => row.place === 'outer' && row.id === null))
     assert.equal(h3Attempts[0]?.pid, wait.waiterPid)
-    assert.ok(h3Events.some(row => row.name === 'serializable-snapshot' && row.pid === wait.waiterPid))
+    assert.ok(h3Events.some(row => row.name === 'read-committed-statement' && row.pid === wait.waiterPid))
     event('actual-user-wait', wait)
     await db.user.create({ data: { id: 'late', email, plan: 'PRO' } })
     event('late-registration-committed')
@@ -490,12 +508,28 @@ async function currentH3Race() {
     'Rejected invite must not mutate any User, subscription, receipt, organization, member, or invitation row')
   assert.equal(receipt?.value, visibleReceiptValue, 'Retirement receipt must survive unchanged')
   for (const [before, after] of [
-    ['serializable-snapshot', 'actual-user-wait'], ['actual-user-wait', 'late-registration-committed'],
+    ['read-committed-statement', 'actual-user-wait'], ['actual-user-wait', 'late-registration-committed'],
     ['late-registration-committed', 'late-retirement-reservation-committed'],
     ['late-retirement-reservation-committed', 'external-late-user-and-receipt-visible'],
     ['external-late-user-and-receipt-visible', 'owner-holder-released'],
   ]) assert.ok(order(before) < order(after), 'H3 schedule order: ' + before + ' -> ' + after)
-  assert.ok(['fence-rejected', 'membership-changed-rejected'].includes(classification), JSON.stringify(result))
+  const attempted = h3Attempts.slice(0, 2)
+  const firstInner = h3Discoveries.find(row => row.place === 'inner' && row.attempt === 1)
+  const secondOuter = h3Events.find(row => row.name === 'recipient-discovery' && row.place === 'outer' && row.id === 'late')
+  const firstRejected = h3Events.find(row => row.name === 'transaction-rejected' && row.attempt === 1)
+  const secondLock = h3Events.find(row => row.name === 'user-lock-requested' && row.attempt === 2)
+  const secondFence = h3Events.find(row => row.name === 'retirement-fence-rejected' && row.attempt === 2)
+  assert.equal(h3Attempts.length, 2, 'drift must retry the whole transaction exactly once')
+  assert.deepEqual(attempted.map(row => [row.index, row.isolationRequested, row.isolationObserved, row.outcome, row.errorCode]),
+    [[1, 'ReadCommitted', 'read committed', 'rejected', 'HR_MEMBERSHIP_CHANGED'],
+      [2, 'ReadCommitted', 'read committed', 'rejected', 'ACCOUNT_RETIREMENT_IN_PROGRESS']])
+  assert.equal(firstInner?.id, 'late', 'first post-wait statement must see the committed recipient')
+  assert.ok(firstRejected && secondOuter && secondLock && secondFence &&
+    firstRejected.order < secondOuter.order && secondOuter.order < secondLock.order && secondLock.order < secondFence.order,
+  'fresh outside discovery must rebuild User locks before the second fence')
+  assert.deepEqual(secondLock.ids, ['late', 'old'], 'second attempt locks sorted actor/owner and recipient Users')
+  assert.deepEqual(secondFence.ids, ['late', 'old'])
+  assert.equal(classification, 'fence-rejected', JSON.stringify(result))
   assert.equal(invitationRows.length, 0)
   assert.equal(lateMembers.length, 0)
   assert.equal(syntheticMailCalls, 0)
@@ -507,6 +541,7 @@ async function currentH3Positive() {
   const item = await seed()
   const email = 'late@example.invalid'
   const route = actualH3InviteRoute(email)
+  const attemptBefore = h3Attempts.length
   const result = await route.POST(request({ email }))
   privateStatus(result, 200)
   const body = await result.json()
@@ -520,7 +555,11 @@ async function currentH3Positive() {
   assert.ok(invitations[0].expiresAt.getTime() - Date.now() <= 7 * 86400000)
   assert.equal(syntheticMailCalls, 1)
   assert.equal(syntheticAuditCalls, 1)
+  assert.equal(h3Attempts.length, attemptBefore + 1)
+  assert.equal(h3Attempts[attemptBefore].isolationRequested, 'ReadCommitted')
+  assert.equal(h3Attempts[attemptBefore].isolationObserved, 'read committed')
   return { name: 'current-after unregistered recipient positive', httpStatus: result.status,
+    issueIsolation: h3Attempts[attemptBefore].isolationObserved,
     invitations: invitations.length, invitationRole: invitations[0].role,
     invitationStatus: invitations[0].status, invitedBy: invitations[0].invitedBy,
     invitationExpiresInDays: (invitations[0].expiresAt.getTime() - Date.now()) / 86400000,

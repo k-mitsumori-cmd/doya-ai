@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { getOrgPlan, getOrgPlanLimits } from '@/lib/hr/billing'
-import { withHrMembershipWrite, HrMembershipChanged } from '@/lib/hr/membership-write'
+import { withHrInvitationIssue, HrMembershipChanged } from '@/lib/hr/membership-write'
 import { LifecycleError } from '@/lib/account-lifecycle/state'
 import { privateApiJson } from '@/lib/private-api-response'
 import { sendInvitationEmail } from '@/lib/hr/email'
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const inviteRole = HrMemberRole.MEMBER
 
     const token = randomBytes(32).toString('hex')
-    const result = await withHrMembershipWrite({ organizationId: ctx.organizationId, actorUserId: ctx.userId,
+    const result = await withHrInvitationIssue({ organizationId: ctx.organizationId, actorUserId: ctx.userId,
       requestedMemberIds: [ctx.memberId], discoverUserIds: async db => {
         const recipient = await db.user.findUnique({ where: { email: emailNorm }, select: { id: true } })
         return recipient ? [recipient.id] : []
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
         AND "userId" = ${ctx.userId} AND status = 'ACTIVE' AND role IN ('OWNER', 'ADMIN') FOR UPDATE`
       if (actor.length === 0) return { status: 403 as const, error: '招待権限が変更されました。再読み込みしてください' }
       const currentRecipient = await tx.user.findUnique({ where: { email: emailNorm }, select: { id: true } })
-      if (currentRecipient?.id !== snapshot.discoveredUsers[0]) throw Object.assign(new Error('招待先の状態が変わりました'), { code: 'HR_MEMBERSHIP_CHANGED' })
+      if (currentRecipient?.id !== snapshot.discoveredUsers[0]) throw Object.assign(new HrMembershipChanged(), { code: 'HR_MEMBERSHIP_CHANGED' })
       const plan = await getOrgPlan(ctx.organizationId, tx)
       const limit = getOrgPlanLimits(plan).maxMembers
       if (process.env.DOYA_DISABLE_LIMITS !== '1' && limit >= 0) {

@@ -31,11 +31,14 @@ async function participants(db: Tx | PrismaClient, organizationId: string, reque
  * the organization and member rows. A changed owner/target restarts the whole
  * transaction; no new User lock is acquired after the organization lock.
  */
-export async function withHrMembershipWrite<T>(input: {
+type MembershipWriteInput<T> = {
   organizationId: string; actorUserId: string; requestedMemberIds?: string[]; knownUserIds?: string[]
   discoverUserIds?: (db: Tx | PrismaClient) => Promise<string[]>
   run: (tx: Tx, snapshot: Snapshot) => Promise<T>
-}, db: PrismaClient = prisma): Promise<T> {
+}
+
+async function writeMembership<T>(input: MembershipWriteInput<T>, db: PrismaClient,
+  isolationLevel: 'Serializable' | 'ReadCommitted'): Promise<T> {
   for (let attempt = 0; attempt < 4; attempt++) {
     const requested = input.requestedMemberIds ?? []
     const discovered = await participants(db, input.organizationId, requested)
@@ -61,10 +64,23 @@ export async function withHrMembershipWrite<T>(input: {
         await tx.$queryRaw(Prisma.sql`SELECT id FROM hr_organization_members WHERE "organizationId" = ${input.organizationId}
           AND id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`)
         return input.run(tx, current)
-      }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+      }, { isolationLevel, maxWait: 10000, timeout: 30000 })
     } catch (error) {
       if (!retryable(error) || attempt === 3) throw error
     }
   }
   throw new HrMembershipChanged()
+}
+
+/** All existing membership writers retain Serializable admission. */
+export function withHrMembershipWrite<T>(input: MembershipWriteInput<T>, db: PrismaClient = prisma): Promise<T> {
+  return writeMembership(input, db, 'Serializable')
+}
+
+/** Invitation issuance alone must recheck a newly registered recipient after a User-lock wait. */
+export function withHrInvitationIssue<T>(input: MembershipWriteInput<T> & {
+  discoverUserIds: (db: Tx | PrismaClient) => Promise<string[]>
+}, db: PrismaClient = prisma): Promise<T> {
+  if (typeof input.discoverUserIds !== 'function') throw new HrMembershipChanged()
+  return writeMembership(input, db, 'ReadCommitted')
 }

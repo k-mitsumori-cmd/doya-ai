@@ -27,25 +27,34 @@ def valid_race(results):
     attempts = race.get('attempts', [])
     discoveries = race.get('discoveries', [])
     wait = next((row for row in events if row.get('name') == 'actual-user-wait'), {})
-    snapshots = [row for row in events if row.get('name') == 'serializable-snapshot']
-    retry_trace = (1 <= len(attempts) <= 4
-                   and all(row.get('index') == index + 1 and row.get('isolationRequested') == 'Serializable'
-                           and isinstance(row.get('pid'), int) and row.get('snapshot')
-                           and row.get('outcome') == 'rejected'
-                           for index, row in enumerate(attempts))
-                   and any(row.get('place') == 'outer' and row.get('id') is None for row in discoveries))
-    if len(attempts) > 1:
-        for index in range(2, len(attempts) + 1):
-            prior = next((row.get('order') for row in events if row.get('name') == 'transaction-rejected'
-                          and row.get('attempt') == index - 1), None)
-            rediscovery = next((row.get('order') for row in events if row.get('name') == 'recipient-discovery'
-                                and row.get('place') == 'outer' and row.get('attempt') is None
-                                and row.get('order', -1) > (prior or 10**9)), None)
-            next_snapshot = next((row.get('order') for row in events if row.get('name') == 'serializable-snapshot'
-                                  and row.get('attempt') == index), None)
-            retry_trace = retry_trace and prior is not None and rediscovery is not None and next_snapshot is not None \
-                and prior < rediscovery < next_snapshot
-    return (race.get('classification') in {'fence-rejected', 'membership-changed-rejected'}
+    statements = [row for row in events if row.get('name') == 'read-committed-statement']
+    first_rejected = next((row for row in events if row.get('name') == 'transaction-rejected' and row.get('attempt') == 1), {})
+    second_outer = next((row for row in events if row.get('name') == 'recipient-discovery'
+                         and row.get('place') == 'outer' and row.get('id') == 'late'
+                         and row.get('order', -1) > first_rejected.get('order', 10**9)), {})
+    second_lock = next((row for row in events if row.get('name') == 'user-lock-requested' and row.get('attempt') == 2), {})
+    second_fence = next((row for row in events if row.get('name') == 'retirement-fence-rejected' and row.get('attempt') == 2), {})
+    retry_trace = (
+        len(attempts) == 2
+        and [(row.get('index'), row.get('isolationRequested'), row.get('isolationObserved'),
+              row.get('outcome'), row.get('errorCode')) for row in attempts]
+            == [(1, 'ReadCommitted', 'read committed', 'rejected', 'HR_MEMBERSHIP_CHANGED'),
+                (2, 'ReadCommitted', 'read committed', 'rejected', 'ACCOUNT_RETIREMENT_IN_PROGRESS')]
+        and all(isinstance(row.get('pid'), int) and isinstance(row.get('statementSnapshot'), str)
+                and bool(row.get('statementSnapshot')) for row in attempts)
+        and len(statements) == 2
+        and [row.get('attempt') for row in statements] == [1, 2]
+        and any(row.get('place') == 'outer' and row.get('id') is None for row in discoveries)
+        and any(row.get('place') == 'inner' and row.get('attempt') == 1 and row.get('id') == 'late'
+                for row in discoveries)
+        and first_rejected.get('code') == 'HR_MEMBERSHIP_CHANGED'
+        and second_lock.get('ids') == ['late', 'old']
+        and second_fence.get('ids') == ['late', 'old']
+        and second_fence.get('code') == 'ACCOUNT_RETIREMENT_IN_PROGRESS'
+        and first_rejected.get('order', 10**9) < second_outer.get('order', -1)
+        < second_lock.get('order', -1) < second_fence.get('order', -1)
+    )
+    return (race.get('classification') == 'fence-rejected'
             and race.get('httpStatus') == 409 and race.get('invitations') == 0
             and race.get('fullGraphUnchanged') is True
             and race.get('privateCacheControl') is True and race.get('varyCookie') is True
@@ -58,13 +67,13 @@ def valid_race(results):
                     for detail in race['graphChanges'].values())
             and race.get('lateMembers') == 0 and race.get('syntheticMailCalls') == 0
             and race.get('syntheticAuditCalls') == 0
-            and retry_trace and len(snapshots) == len(attempts)
-            and snapshots[0].get('pid') == wait.get('waiterPid')
+            and retry_trace and statements[0].get('pid') == wait.get('waiterPid')
             and wait.get('waitEventType') == 'Lock' and wait.get('queryContainsUser') is True
             and isinstance(wait.get('holderPid'), int) and isinstance(wait.get('waiterPid'), int)
             and wait['holderPid'] != wait['waiterPid']
             and wait['holderPid'] in wait.get('blockingPids', [])
             and positive.get('httpStatus') == 200 and positive.get('invitations') == 1
+            and positive.get('issueIsolation') == 'read committed'
             and positive.get('invitationRole') == 'MEMBER'
             and positive.get('invitationStatus') == 'PENDING'
             and positive.get('invitedBy') == 'old'
