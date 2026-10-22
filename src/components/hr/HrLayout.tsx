@@ -206,12 +206,17 @@ export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
   }, [pathname])
 
   if (isPublicPage) {
+    // 新しい見た目の枠の中では、料金のページもほかのタブと同じ枠（renderFrame）で包む。組織の切り替えは枠の switcher に出す。
+    // ⚠️ ほかのタブと同じ包み方にするので、料金とほかのタブを移っても、組織の読み込みをやり直さない（2026-10-23）
+    const pricingFramed = isPricingPage && Boolean(renderFrame) && toolNext
+    const wrap = (node: ReactNode) => pricingFramed ? framed(node) : <>{node}</>
+    const picker = pricingFramed ? null : organizationPicker
     if (isPricingPage && allowed) {
-      if (usageError || selectionError) return <>{organizationPicker}<div role="alert" className="p-6">組織のプランを確認できませんでした。<button type="button" onClick={() => void loadUsage()} className="ml-2 underline">再取得する</button></div></>
-      if (!knownScope) return <p role="status" className="p-6">組織のプランを確認しています。</p>
-      if (hasOrg) return <>{organizationPicker}<HrOrganizationScope key={JSON.stringify([actor, confirmedOrganization, selection.revision])} actor={actor} organizationId={confirmedOrganization} enabled={allowed && knownScope}>{children}</HrOrganizationScope></>
+      if (usageError || selectionError) return wrap(<>{picker}<div role="alert" className="p-6">組織のプランを確認できませんでした。<button type="button" onClick={() => void loadUsage()} className="ml-2 underline">再取得する</button></div></>)
+      if (!knownScope) return wrap(<p role="status" className="p-6">組織のプランを確認しています。</p>)
+      if (hasOrg) return wrap(<>{picker}<HrOrganizationScope key={JSON.stringify([actor, confirmedOrganization, selection.revision])} actor={actor} organizationId={confirmedOrganization} enabled={allowed && knownScope}>{children}</HrOrganizationScope></>)
     }
-    return <>{children}</>
+    return wrap(children)
   }
 
   if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>

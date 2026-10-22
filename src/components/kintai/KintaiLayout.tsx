@@ -126,6 +126,11 @@ export default function KintaiLayout({ children, renderFrame }: KintaiLayoutProp
 
   // Public pages render children directly
   if (isPublicPage) {
+    // 新しい見た目の枠の中では、料金のページもほかのタブと同じ枠（renderFrame）で包む（読み込んだ役割のタブを出す）。
+    // ⚠️ ほかのタブと同じ包み方にするので、料金とほかのタブを移っても、勤怠の情報の読み込みをやり直さない（2026-10-23）
+    if (isPricingPage && framedNext && renderFrame) {
+      return <>{renderFrame({ role: usage?.role || 'employee', employeeActive: usage?.isActive !== false, children })}</>
+    }
     return <>{children}</>
   }
 

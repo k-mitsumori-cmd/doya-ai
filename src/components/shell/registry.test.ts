@@ -8,6 +8,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { SHELL_SERVICES, shouldShowShell } from './registry'
 import { isEntryPath } from './entry-path'
+import { isNavActive } from './nav'
 import { ADIMAGE_NAV } from '@/lib/adimage/nav'
 import { buildAioNav } from '@/lib/aio/nav'
 import { AISHODAN_NAV } from '@/lib/aishodan/nav'
@@ -105,4 +106,12 @@ test('組織を選ぶ前の画面（入口と料金）だけに、見出しの�
   for (const [svc, p] of [['sfa', '/sfa/acme'], ['sfa', '/sfa/invite/tok'], ['aio', '/aio/acme/scan'], ['promane', '/promane/ws'], ['sfa', '/sfaa']]) {
     assert.equal(isEntryPath(svc, p), false, p)
   }
+})
+
+test('料金のタブは、href に ?org= があっても、料金のページで選ばれた形になる', () => {
+  const pricing = sfaNav('acme').find((n) => n.href.startsWith('/sfa/pricing'))!
+  assert.equal(isNavActive('/sfa/pricing', pricing), true)
+  assert.equal(isNavActive('/sfa/acme', pricing), false)
+  const aio = buildAioNav('acme').find((n) => n.href.startsWith('/aio/pricing'))!
+  assert.equal(isNavActive('/aio/pricing', aio), true)
 })

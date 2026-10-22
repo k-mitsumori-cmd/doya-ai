@@ -8,7 +8,6 @@
 //    HrLayout が組織の切り替え（<select>）を switcher として渡し、ここで ToolFrame に入れる
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import ToolFrame from '@/components/shell/ToolFrame'
 import { ShellUsageSlot } from '@/components/shell/ShellUsage'
 import { planLabel, tierFrom } from '@/lib/plan-utils'
@@ -19,16 +18,6 @@ import { useToolUiNext } from './ui-next'
 export default function HrShellFrame({ children }: { children: ReactNode }) {
   // 新しい見た目では「従業員を追加」をタブに出さない（/hr/employees/new でタブが2つ選ばれる S-33）。追加はダッシュボードと一覧の主ボタンから
   const uiNext = useToolUiNext()
-  const pathname = usePathname()
-  // 料金のページは HrLayout では「公開の画面」として枠（ToolFrame）を付けない。新しい見た目のときだけ、ここで見出しの帯とタブを付ける
-  // （2026-10-23 ユーザーの指摘。料金のタブを押すと上の帯が消えていた）
-  if (uiNext && pathname === '/hr/pricing') {
-    return (
-      <ToolFrame serviceId="hr" title="ドヤHR" nav={hrShellNav(false)}>
-        <HrLayout>{children}</HrLayout>
-      </ToolFrame>
-    )
-  }
   return (
     <HrLayout
       renderFrame={({ switcher, canManageEmployees, usage, children: content }) => (

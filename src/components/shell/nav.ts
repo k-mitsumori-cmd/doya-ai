@@ -18,6 +18,8 @@ export interface ShellNavItem {
 }
 
 export function isNavActive(pathname: string, item: Pick<ShellNavItem, 'href' | 'exact'>): boolean {
-  if (item.exact) return pathname === item.href
-  return pathname === item.href || pathname.startsWith(`${item.href}/`)
+  // href のクエリ（料金の ?org= など）は、選択中かの判定には使わない（パスだけで比べる）
+  const href = item.href.split(/[?#]/)[0]
+  if (item.exact) return pathname === href
+  return pathname === href || pathname.startsWith(`${href}/`)
 }
