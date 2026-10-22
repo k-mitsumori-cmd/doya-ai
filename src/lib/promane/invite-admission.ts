@@ -32,7 +32,7 @@ const retryable = (error: unknown) => {
 const lifecycleFailure = (error: unknown): AdmissionError | null => error instanceof LifecycleError
   ? { status: error.status, code: error.code, error: error.message }
   : null
-const changed = () => { throw new InvitationParticipantsChanged() }
+function changed(): never { throw new InvitationParticipantsChanged() }
 const recipientIds = (rows: Array<{ id: string; email: string | null }>, email: string) => {
   const matched = rows.filter(row => row.email?.trim().toLowerCase() === email)
   if (matched.length > 1) throw new LifecycleError('LIFECYCLE_TARGET_AMBIGUOUS')
@@ -205,7 +205,7 @@ export async function acceptPromaneInvitation(args: {
         if (!invitation || invitation.id !== discovered.id || invitation.workspaceId !== discovered.workspaceId ||
             invitation.workspace.userId !== discovered.workspace.userId || invitation.email !== discovered.email ||
             invitation.role !== discovered.role || invitation.expiresAt.getTime() !== discovered.expiresAt.getTime() ||
-            (invitation.acceptedAt?.getTime() ?? null) !== (discovered.acceptedAt?.getTime() ?? null)) changed()
+            invitation.acceptedAt !== null) changed()
         if (!invitation || !['admin', 'member', 'guest'].includes(invitation.role)) return { success: false, response: { status: 404, error: '招待リンクが見つかりません' } }
         if (invitation.acceptedAt) return { success: false, response: { status: 410, error: '既に承諾済みです', code: 'PROMANE_INVITE_ACCEPTED' } }
         if (invitation.expiresAt.getTime() <= Date.now()) return { success: false, response: { status: 410, error: '有効期限が切れています', code: 'PROMANE_INVITE_EXPIRED' } }
